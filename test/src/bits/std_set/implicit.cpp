@@ -6,7 +6,7 @@
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_CHECK_EQUAL_COLLECTIONS
 #include <test/flat_set.hpp>            // IWYU pragma: keep; TEST_HAS_FLAT_SET
 #include <test/uint128.hpp>             // TEST_HAS_UINT128, uint128
-#include <xstd/bits/bit_finite_set.hpp> // bit_finite_set
+#include <xstd/bits/bit_static_set.hpp> // bit_static_set
 #include <algorithm>                    // copy
 #include <cstddef>                      // size_t
 #include <cstdint>                      // uint16_t, uint32_t, uint64_t
@@ -24,25 +24,25 @@ using Types = std::tuple
 #ifdef TEST_HAS_FLAT_SET
 ,       std::flat_set<std::size_t>
 #endif
-,       xstd::bit_finite_set< 32, uint16_t>
-,       xstd::bit_finite_set< 33, uint16_t>
-,       xstd::bit_finite_set< 48, uint16_t>
-,       xstd::bit_finite_set< 32, uint32_t>
-,       xstd::bit_finite_set< 33, uint32_t>
-,       xstd::bit_finite_set< 64, uint32_t>
-,       xstd::bit_finite_set< 65, uint32_t>
-,       xstd::bit_finite_set< 96, uint32_t>
-,       xstd::bit_finite_set< 64, uint64_t>
-,       xstd::bit_finite_set< 65, uint64_t>
-,       xstd::bit_finite_set<128, uint64_t>
-,       xstd::bit_finite_set<129, uint64_t>
-,       xstd::bit_finite_set<192, uint64_t>
+,       xstd::bit_static_set< 32, uint16_t>
+,       xstd::bit_static_set< 33, uint16_t>
+,       xstd::bit_static_set< 48, uint16_t>
+,       xstd::bit_static_set< 32, uint32_t>
+,       xstd::bit_static_set< 33, uint32_t>
+,       xstd::bit_static_set< 64, uint32_t>
+,       xstd::bit_static_set< 65, uint32_t>
+,       xstd::bit_static_set< 96, uint32_t>
+,       xstd::bit_static_set< 64, uint64_t>
+,       xstd::bit_static_set< 65, uint64_t>
+,       xstd::bit_static_set<128, uint64_t>
+,       xstd::bit_static_set<129, uint64_t>
+,       xstd::bit_static_set<192, uint64_t>
 #ifdef TEST_HAS_UINT128
-,       xstd::bit_finite_set<128, xstd::uint128>
-,       xstd::bit_finite_set<129, xstd::uint128>
-,       xstd::bit_finite_set<256, xstd::uint128>
-,       xstd::bit_finite_set<257, xstd::uint128>
-,       xstd::bit_finite_set<384, xstd::uint128>
+,       xstd::bit_static_set<128, xstd::uint128>
+,       xstd::bit_static_set<129, xstd::uint128>
+,       xstd::bit_static_set<256, xstd::uint128>
+,       xstd::bit_static_set<257, xstd::uint128>
+,       xstd::bit_static_set<384, xstd::uint128>
 #endif
 >;
 

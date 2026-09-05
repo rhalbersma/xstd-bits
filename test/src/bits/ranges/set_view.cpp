@@ -36,7 +36,7 @@ auto eight_bits_with_three_set() -> T
 
 }  // namespace
 
-// The types a set_view exists for: those holding a set of positions without offering it, which bit_finite_set already does.
+// The types a set_view exists for: those holding a set of positions without offering it, which bit_static_set already does.
 BOOST_AUTO_TEST_CASE(TheViewedTypesAreTheOnesHoldingASetWithoutOfferingIt)
 {
         static_assert(xstd::ranges::set_range<std::bitset<8>>);

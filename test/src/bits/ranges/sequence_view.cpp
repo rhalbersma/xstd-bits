@@ -6,7 +6,7 @@
 #include <boost/test/unit_test.hpp>               // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <test/sequence/ordering.hpp>             // ordering_agrees_with_vector_bool
 #include <xstd/bits/bit_array.hpp>                // bit_array
-#include <xstd/bits/bit_finite_set.hpp>           // bit_finite_set
+#include <xstd/bits/bit_static_set.hpp>           // bit_static_set
 #include <xstd/bits/bitset.hpp>                   // sequence_find over xstd::bitset
 #include <xstd/bits/ext/boost/dynamic_bitset.hpp> // sequence_find over boost::dynamic_bitset
 #include <xstd/bits/ext/std/bitset.hpp>           // sequence_find over std::bitset
@@ -28,8 +28,8 @@ BOOST_AUTO_TEST_CASE(TheViewedTypesAreTheOnesHoldingBoolsWithoutOfferingThem)
         static_assert(std::ranges::random_access_range<xstd::sequence_view<std::bitset<8>>>);
         static_assert(std::ranges::random_access_range<xstd::sequence_view<xstd::bitset<8>>>);
 
-        // bit_finite_set is not a sequence of bools; it is a set of keys.
-        static_assert(not xstd::ranges::sequence_range<xstd::bit_finite_set<8>>);
+        // bit_static_set is not a sequence of bools; it is a set of keys.
+        static_assert(not xstd::ranges::sequence_range<xstd::bit_static_set<8>>);
 }
 
 // The sequence reading is the bools at every position, checked against the std::array<bool, N> holding the same bits.

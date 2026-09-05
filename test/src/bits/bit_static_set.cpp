@@ -7,7 +7,7 @@
 #include <test/block_types.hpp>         // graded_extents
 #include <test/set/concepts.hpp>        // bit_set
 #include <test/value_reference.hpp>     // value_reference
-#include <xstd/bits/bit_finite_set.hpp> // bit_finite_set
+#include <xstd/bits/bit_static_set.hpp> // bit_static_set
 #include <concepts>                     // regular, totally_ordered
 #include <cstddef>                      // size_t
 #include <iterator>                     // bidirectional_iterator
@@ -16,7 +16,7 @@
 BOOST_AUTO_TEST_SUITE(BitFiniteSet)
 
 // Every Block model within one block and the narrow ones across boundaries; the grading is in test/block_types.hpp.
-using Types = test::graded_extents<xstd::bit_finite_set>;
+using Types = test::graded_extents<xstd::bit_static_set>;
 
 // The clauses one at a time, so a failure names which one; the umbrella asserts the composite.
 BOOST_AUTO_TEST_CASE_TEMPLATE(IsRegular, T, Types)
