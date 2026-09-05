@@ -72,7 +72,7 @@ target_sources(
         include/xstd/bits.hpp
         include/xstd/bits/bit_array.hpp
         include/xstd/bits/bitset.hpp
-        include/xstd/bits/bit_finite_set.hpp
+        include/xstd/bits/bit_static_set.hpp
         include/xstd/bits/bit_traits.hpp
         include/xstd/bits/block_sequence.hpp
         include/xstd/bits/detail/intrin.hpp

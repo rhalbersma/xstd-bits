@@ -56,7 +56,7 @@ A defaulted default constructor plus an NSDMI, rather than two constructors cons
 Inclusive and exclusive name the only thing separating the two forward scans: whether `n` itself is a
 candidate. That is a property of the scan rather than of a reading, which is why this is not called
 `lower_bound` — that is the set reading's word, and this layer serves the sequence reading equally.
-`bit_finite_set::lower_bound` is where the set name belongs, and it maps here one for one.
+`bit_static_set::lower_bound` is where the set name belongs, and it maps here one for one.
 
 The inclusive form is the primitive and the exclusive one is derived, because the reverse does not close:
 
@@ -493,7 +493,7 @@ which is the one to take, the position being a precondition asserted just below,
 
 ### total-lookups-on-the-container
 
-Every `bit_finite_set` lookup is total over `key_type`, because `std::set`'s is: a key outside `[0, N)` names
+Every `bit_static_set` lookup is total over `key_type`, because `std::set`'s is: a key outside `[0, N)` names
 no element, so it answers *absent* rather than reaching the bit. `block_sequence` asserts `is_valid` on every
 position it accepts and offers no total spelling of any of these — that is the layering working, not a gap in
 it. **The precondition is the sequence's; the guard is the container's.**

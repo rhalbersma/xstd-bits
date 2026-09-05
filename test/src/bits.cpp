@@ -22,7 +22,7 @@ BOOST_AUTO_TEST_CASE(EveryContainerArrivesThroughTheOneDoor)
 {
         // The two containers that are ranges on their own terms: one indexed by position, one iterating its elements.
         static_assert(std::ranges::random_access_range<xstd::bit_array<8>>);
-        static_assert(std::ranges::bidirectional_range<xstd::bit_finite_set<8>>);
+        static_assert(std::ranges::bidirectional_range<xstd::bit_static_set<8>>);
 
         // xstd::bitset is deliberately not a range, reproducing std::bitset, so the door has to deliver a working view over it.
         static_assert(not std::ranges::range<xstd::bitset<8>>);
@@ -63,7 +63,7 @@ BOOST_AUTO_TEST_CASE(APackedSetIsTheSetItPacks)
         static_assert(bit_set<std::flat_set<std::size_t>>);
 #endif
 
-        using packed = test::graded_extents<xstd::bit_finite_set>;
+        using packed = test::graded_extents<xstd::bit_static_set>;
         [] <std::size_t... I> (std::index_sequence<I...>) {
                 static_assert((bit_set<std::tuple_element_t<I, packed>> and ...));
         }(std::make_index_sequence<std::tuple_size_v<packed>>{});

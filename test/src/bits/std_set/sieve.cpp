@@ -8,7 +8,7 @@
 #include <fmt/ranges.h>                 // IWYU pragma: keep; the range formatters
 #include <opt/set/sieve.hpp>            // filter_twins, sift_primes0, sift_primes1
 #include <test/flat_set.hpp>            // IWYU pragma: keep; TEST_HAS_FLAT_SET
-#include <xstd/bits/bit_finite_set.hpp> // bit_finite_set
+#include <xstd/bits/bit_static_set.hpp> // bit_static_set
 #include <cstddef>                      // size_t
 #include <set>                          // set
 #include <tuple>                        // tuple
@@ -23,7 +23,7 @@ using Types = std::tuple
 #ifdef TEST_HAS_FLAT_SET
 ,       std::flat_set<std::size_t>
 #endif
-,       xstd::bit_finite_set<N>
+,       xstd::bit_static_set<N>
 >;
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheSiftedPrimesAndTwinsFormatAsExpected, T, Types)

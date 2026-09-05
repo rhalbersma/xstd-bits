@@ -3,12 +3,12 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/bit_finite_set.hpp>
+#include <xstd/bits/bit_static_set.hpp>
 
 int main()
 {
         constexpr auto N = 100;
-        auto s = xstd::bit_finite_set<N>();
+        auto s = xstd::bit_static_set<N>();
         s.insert(1);
         s.insert(2);
         s.insert(3);

@@ -8,7 +8,7 @@
 #include <test/set/exhaustive.hpp>      // all_singleton_set_triples
 #include <test/set/primitives.hpp>      // op_less
 #include <test/uint128.hpp>             // TEST_HAS_UINT128, uint128
-#include <xstd/bits/bit_finite_set.hpp> // bit_finite_set
+#include <xstd/bits/bit_static_set.hpp> // bit_static_set
 #include <cstddef>                      // size_t
 #include <cstdint>                      // uint8_t, uint16_t, uint32_t, uint64_t
 #include <set>                          // set
@@ -25,15 +25,15 @@ using Types = std::tuple
 #ifdef TEST_HAS_FLAT_SET
 ,       std::flat_set<std::size_t>
 #endif
-,       xstd::bit_finite_set< 0, uint8_t>
-,       xstd::bit_finite_set< 8, uint8_t>
-,       xstd::bit_finite_set< 9, uint8_t>
-,       xstd::bit_finite_set<17, uint8_t>
-,       xstd::bit_finite_set<17, uint16_t>
-,       xstd::bit_finite_set<17, uint32_t>
-,       xstd::bit_finite_set<17, uint64_t>
+,       xstd::bit_static_set< 0, uint8_t>
+,       xstd::bit_static_set< 8, uint8_t>
+,       xstd::bit_static_set< 9, uint8_t>
+,       xstd::bit_static_set<17, uint8_t>
+,       xstd::bit_static_set<17, uint16_t>
+,       xstd::bit_static_set<17, uint32_t>
+,       xstd::bit_static_set<17, uint64_t>
 #ifdef TEST_HAS_UINT128
-,       xstd::bit_finite_set<17, xstd::uint128>
+,       xstd::bit_static_set<17, xstd::uint128>
 #endif
 >;
 

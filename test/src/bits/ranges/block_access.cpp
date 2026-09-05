@@ -6,7 +6,7 @@
 #include <boost/test/unit_test.hpp>               // BOOST_CHECK_EQUAL, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <test/bitset/factory.hpp>                // make_bitset
 #include <xstd/bits/bit_array.hpp>                // bit_array
-#include <xstd/bits/bit_finite_set.hpp>           // bit_finite_set
+#include <xstd/bits/bit_static_set.hpp>           // bit_static_set
 #include <xstd/bits/bitset.hpp>                   // bitset
 #include <xstd/bits/ext/boost/dynamic_bitset.hpp> // the one that stays element-wise
 #include <xstd/bits/ext/std/bitset.hpp>           // block_access over std::bitset, where the words are reachable
@@ -35,8 +35,8 @@ auto sweep() -> void
 
         for (auto i = 0UZ; i < (1UZ << N); ++i) {
                 for (auto j = 0UZ; j < (1UZ << N); ++j) {
-                        auto sx = xstd::bit_finite_set<N, Block>();
-                        auto sy = xstd::bit_finite_set<N, Block>();
+                        auto sx = xstd::bit_static_set<N, Block>();
+                        auto sy = xstd::bit_static_set<N, Block>();
                         auto ax = xstd::bit_array<N, Block>();
                         auto ay = xstd::bit_array<N, Block>();
                         auto kx = std::set<std::size_t>();
@@ -104,7 +104,7 @@ BOOST_AUTO_TEST_CASE(OursSayWhereTheirBlocksAre)
 {
         using Block = std::uint8_t;
 
-        static_assert(xstd::ranges::block_range<xstd::bit_finite_set<9, Block>>);
+        static_assert(xstd::ranges::block_range<xstd::bit_static_set<9, Block>>);
         static_assert(xstd::ranges::block_range<xstd::bit_array<9, Block>>);
         static_assert(xstd::ranges::block_range<xstd::bitset<9, Block>>);
 

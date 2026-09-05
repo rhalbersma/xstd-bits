@@ -8,7 +8,7 @@ The whole library is two storage vehicles carrying the same three interfaces.
 | ------------------- | -------------------------- | ----------------------------- |
 | storage             | `block_array<Block, N>`    | `block_vector<Block, Alloc>`  |
 | `<array>`/`<vector>`| `bit_array<N, Block>`      | `bit_vector<Block, Alloc>`    |
-| `<set>`             | `bit_finite_set<N, Block>` | `bit_set<Block, Alloc>`       |
+| `<set>`             | `bit_static_set<N, Block>` | `bit_set<Block, Alloc>`       |
 | `<bitset>`          | `bitset<N, Block>`         | `dynamic_bitset<Block, Alloc>`|
 
 Both storage rows are `xstd::block_sequence<Blocks, N>`, which is public rather than
@@ -19,20 +19,30 @@ and `block_vector<Block, Alloc>` read as `std::array` and `std::vector` do.
 
 Rows are Standard sections, columns are vehicles. The four containers are named by
 one rule: `bit_` and the container it packs, for `container` in {`array`, `vector`,
-`finite_set`, `set`}.
+`static_set`, `set`}.
 
 `bit_` is a storage-strategy prefix, and the Standard already has the other one.
 `std::flat_set` and `std::flat_map` keep a sorted sequence of the elements that are
 there, so they are sparse in the universe of possible keys; `bit_set` keeps one bit
 per position in that universe, so it is dense but packed. Same container, same
 interface, different representation, and the prefix is what says which -- which is
-why it has to lead. `finite_bit_set` reads as a qualified `bit_set` and breaks the
-parallel with `flat_set`; `bit_finite_set` is `bit_` applied to a `finite_set`, the
+why it has to lead. `static_bit_set` reads as a qualified `bit_set` and breaks the
+parallel with `flat_set`; `bit_static_set` is `bit_` applied to a `static_set`, the
 way `flat_set` is `flat_` applied to a `set`.
 
 Within the rule the unqualified name goes to the dynamic member of each pair, as
-`std::vector` has it against `std::array`, so the fixed-size set is `bit_finite_set`
+`std::vector` has it against `std::array`, so the fixed-size set is `bit_static_set`
 and the dynamic one is `bit_set`.
+
+The qualifier is `static` rather than `finite` because `finite` selected nothing:
+`bit_set<Block, Alloc>` is a finite set of positions too, as every bit set is. What
+separates them is that `N` is a compile-time constant, which is *static*, and
+static/dynamic is one of the two axes the design is built on -- so the name reads off
+the design rather than off a true-but-non-distinguishing adjective. Recorded against
+it: P0843 renamed `boost::static_vector` to `std::inplace_vector` partly because
+*static* is overloaded in C++. Accepted anyway, because `inplace` names where the
+storage lives, which is the interesting property for a vector with static
+capacity and runtime size, where ours is a genuinely fixed compile-time extent.
 
 `bitset` and `dynamic_bitset` are outside the rule on purpose: they are not `bit_`
 anything, they are the legacy types reproduced under their own names.
@@ -44,7 +54,7 @@ interface over the array implementation throws nothing away.
 
 Every container the library provides is one header named after the type it
 declares, directly under `xstd/bits`. A directory per Standard section was tried
-and dropped: with one entity behind each, `xstd/bits/set/bit_finite_set.hpp` and
+and dropped: with one entity behind each, `xstd/bits/set/bit_static_set.hpp` and
 `xstd/bits/bitset/bitset.hpp` spent a path component to say what the filename
 already said, and the section umbrellas above them re-exported a single header
 apiece. The Standard's own sections are still the organizing idea -- they are the
@@ -54,7 +64,7 @@ rows of the table above -- they are just not directories.
 xstd/bits.hpp                 the front door, over every container and the views
 xstd/bits/bit_array.hpp       one header per container, named for the type
 xstd/bits/bitset.hpp
-xstd/bits/bit_finite_set.hpp
+xstd/bits/bit_static_set.hpp
 xstd/bits/detail/             the vehicles and the block operations, namespace xstd::detail::bits
 xstd/bits/ranges/             set_view, sequence_view, bit_extent
 xstd/bits/ext/                the adaptors, asked for by name
@@ -238,7 +248,7 @@ directory, named for the cost they carry (`constant`, `linear`, `quadratic`,
 The type lists live in one header per contract rather than being copy-pasted per
 source, the way `exact_width_types.hpp` does it in xstd:
 
-- set-like: `std::set<size_t>`, `std::flat_set<size_t>`, `bit_finite_set<N, Block>`,
+- set-like: `std::set<size_t>`, `std::flat_set<size_t>`, `bit_static_set<N, Block>`,
   `bit_set<Block, Alloc>`, and `set_view` over each legacy bitset.
 - sequence-like: `std::array<bool, N>`, `bit_array<N, Block>`, `std::vector<bool>`,
   `bit_vector<Block, Alloc>`, and `sequence_view` over each legacy bitset.
@@ -250,5 +260,5 @@ they need rather than per type: nothing has to be carved out for a type whose vi
 lacks a member.
 
 The prime sieve is a benchmark of dynamic containers only, so that it compares
-like with like. A fixed-size `bit_finite_set<N>` sifting a universe it was sized
+like with like. A fixed-size `bit_static_set<N>` sifting a universe it was sized
 for is not measuring the same thing as a `std::set` growing and shrinking.
