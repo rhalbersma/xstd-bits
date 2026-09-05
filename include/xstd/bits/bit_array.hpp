@@ -159,6 +159,36 @@ template<std::size_t N, xstd::unsigned_integer Block>
 
 template<std::size_t N, xstd::unsigned_integer Block> constexpr void swap(bit_array<N, Block>& x, bit_array<N, Block>& y) noexcept(noexcept(x.swap(y))) { x.swap(y); }
 
+
+// Each entry unwraps to the storage's own door, which already answers all of them. [design.md#the-door]
+template<std::size_t N, xstd::unsigned_integer Block>
+struct bit_traits<bit_array<N, Block>>
+{
+        using bits_type = bit_array<N, Block>;
+        using backend   = bit_traits<block_array<Block, N>>;
+
+        static constexpr std::size_t extent = N;
+
+        [[nodiscard]] static constexpr auto size (bits_type const& c)                noexcept -> std::size_t { return backend::size(c.m_bits);  }
+        [[nodiscard]] static constexpr auto at   (bits_type const& c, std::size_t n) noexcept -> bool        { return backend::at(c.m_bits, n); }
+        [[nodiscard]] static constexpr auto count(bits_type const& c)                noexcept -> std::size_t { return backend::count(c.m_bits); }
+
+        static constexpr void assign(bits_type& c, std::size_t n, bool value) noexcept { backend::assign(c.m_bits, n, value); }
+        static constexpr void insert(bits_type& c, std::size_t n)             noexcept { backend::insert(c.m_bits, n);        }
+        static constexpr void fill  (bits_type& c, bool value)                noexcept { backend::fill(c.m_bits, value);      }
+
+        [[nodiscard]] static constexpr auto num_blocks(bits_type const& c)                noexcept -> std::size_t { return backend::num_blocks(c.m_bits); }
+        [[nodiscard]] static constexpr auto block     (bits_type const& c, std::size_t i) noexcept                { return backend::block(c.m_bits, i);   }
+
+        [[nodiscard]] static constexpr auto find_first(bits_type const& c)                noexcept -> std::size_t { return backend::find_first(c.m_bits);   }
+        [[nodiscard]] static constexpr auto find_last (bits_type const& c)                noexcept -> std::size_t { return backend::find_last(c.m_bits);    }
+        [[nodiscard]] static constexpr auto find_next (bits_type const& c, std::size_t n) noexcept -> std::size_t { return backend::find_next(c.m_bits, n); }
+        [[nodiscard]] static constexpr auto find_prev (bits_type const& c, std::size_t n) noexcept -> std::size_t { return backend::find_prev(c.m_bits, n); }
+
+        [[nodiscard]] static constexpr auto set_three_way     (bits_type const& x, bits_type const& y) noexcept -> std::strong_ordering { return backend::set_three_way(x.m_bits, y.m_bits);      }
+        [[nodiscard]] static constexpr auto sequence_three_way(bits_type const& x, bits_type const& y) noexcept -> std::strong_ordering { return backend::sequence_three_way(x.m_bits, y.m_bits); }
+};
+
 }       // namespace xstd
 
 #endif // XSTD_BITS_BIT_ARRAY_HPP

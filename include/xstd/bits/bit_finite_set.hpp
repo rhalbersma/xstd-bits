@@ -66,6 +66,9 @@ class bit_finite_set
 {
         block_array<Block, N> m_bits{};
 
+        // The door reaches the storage; nothing else needs to. [design.md#the-door]
+        friend struct bit_traits<bit_finite_set>;
+
         // ADL rather than a specialization, because this type is ours to add hidden friends to.
         [[nodiscard]] friend constexpr auto block_count(const bit_finite_set& c) noexcept -> std::size_t { return c.m_bits.num_blocks(); }
         [[nodiscard]] friend constexpr auto block_at(const bit_finite_set& c, std::size_t i) noexcept -> Block { return c.m_bits.block(i); }
@@ -320,6 +323,36 @@ template<std::size_t N, xstd::unsigned_integer Block> [[nodiscard]] constexpr au
 
 template<std::size_t N, xstd::unsigned_integer Block> [[nodiscard]] constexpr auto operator<<(const bit_finite_set<N, Block>& lhs, std::size_t n) noexcept -> bit_finite_set<N, Block> { auto nrv = lhs; nrv <<= n; return nrv; }
 template<std::size_t N, xstd::unsigned_integer Block> [[nodiscard]] constexpr auto operator>>(const bit_finite_set<N, Block>& lhs, std::size_t n) noexcept -> bit_finite_set<N, Block> { auto nrv = lhs; nrv >>= n; return nrv; }
+
+
+// Each entry unwraps to the storage's own door; one friend declaration replaces the six hidden friends. [design.md#the-door]
+template<std::size_t N, xstd::unsigned_integer Block>
+struct bit_traits<bit_finite_set<N, Block>>
+{
+        using bits_type = bit_finite_set<N, Block>;
+        using backend   = bit_traits<block_array<Block, N>>;
+
+        static constexpr std::size_t extent = N;
+
+        [[nodiscard]] static constexpr auto size (bits_type const& c)                noexcept -> std::size_t { return backend::size(c.m_bits);  }
+        [[nodiscard]] static constexpr auto at   (bits_type const& c, std::size_t n) noexcept -> bool        { return backend::at(c.m_bits, n); }
+        [[nodiscard]] static constexpr auto count(bits_type const& c)                noexcept -> std::size_t { return backend::count(c.m_bits); }
+
+        static constexpr void assign(bits_type& c, std::size_t n, bool value) noexcept { backend::assign(c.m_bits, n, value); }
+        static constexpr void insert(bits_type& c, std::size_t n)             noexcept { backend::insert(c.m_bits, n);        }
+        static constexpr void fill  (bits_type& c, bool value)                noexcept { backend::fill(c.m_bits, value);      }
+
+        [[nodiscard]] static constexpr auto num_blocks(bits_type const& c)                noexcept -> std::size_t { return backend::num_blocks(c.m_bits); }
+        [[nodiscard]] static constexpr auto block     (bits_type const& c, std::size_t i) noexcept                { return backend::block(c.m_bits, i);   }
+
+        [[nodiscard]] static constexpr auto find_first(bits_type const& c)                noexcept -> std::size_t { return backend::find_first(c.m_bits);   }
+        [[nodiscard]] static constexpr auto find_last (bits_type const& c)                noexcept -> std::size_t { return backend::find_last(c.m_bits);    }
+        [[nodiscard]] static constexpr auto find_next (bits_type const& c, std::size_t n) noexcept -> std::size_t { return backend::find_next(c.m_bits, n); }
+        [[nodiscard]] static constexpr auto find_prev (bits_type const& c, std::size_t n) noexcept -> std::size_t { return backend::find_prev(c.m_bits, n); }
+
+        [[nodiscard]] static constexpr auto set_three_way     (bits_type const& x, bits_type const& y) noexcept -> std::strong_ordering { return backend::set_three_way(x.m_bits, y.m_bits);      }
+        [[nodiscard]] static constexpr auto sequence_three_way(bits_type const& x, bits_type const& y) noexcept -> std::strong_ordering { return backend::sequence_three_way(x.m_bits, y.m_bits); }
+};
 
 }       // namespace xstd
 

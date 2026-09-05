@@ -4,7 +4,9 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <boost/test/unit_test.hpp>      // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <test/door.hpp>          // door_disagreements
 #include <test/block_types.hpp>          // graded_extents
+#include <xstd/bits/bit_traits.hpp>      // bit_storage, bit_traits, block_readable, static_bit_extent
 #include <xstd/bits/bitset.hpp>          // bitset
 #include <xstd/bits/ranges/set_view.hpp> // set_view
 #include <concepts>                      // regular, totally_ordered
@@ -84,6 +86,31 @@ BOOST_AUTO_TEST_CASE(TheMutableSubscriptHandsOutAnAssignableProxy)
         swap(z, b[2]);
         BOOST_CHECK(b[2]);
         BOOST_CHECK(not z);
+}
+
+
+// Every entry unwraps to the storage's own door, and none is silently dropped. [design.md#the-door]
+BOOST_AUTO_TEST_CASE_TEMPLATE(TheDoorAdaptsIt, T, Types)
+{
+        using traits = xstd::bit_traits<T>;
+
+        static_assert(xstd::bit_storage<T>);
+        static_assert(xstd::static_bit_extent<T>);
+        static_assert(xstd::block_readable<traits, T>);
+
+        BOOST_CHECK_EQUAL(test::door_disagreements<T>(), 0);
+}
+
+// The position-dependent entries, at every position the width offers. [design.md#per-instantiation-slots]
+BOOST_AUTO_TEST_CASE_TEMPLATE(TheDoorAnswersAtEveryPosition, T, Types)
+{
+        BOOST_CHECK_EQUAL(test::door_disagreements_at_positions<T>(), 0);
+}
+
+// Both orderings reach the storage's native block-wise members. [design.md#two-readings-disagree]
+BOOST_AUTO_TEST_CASE_TEMPLATE(TheDoorNamesBothOrderings, T, Types)
+{
+        BOOST_CHECK_EQUAL(test::door_ordering_disagreements<T>(), 0);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
