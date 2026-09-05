@@ -513,8 +513,10 @@ The pointer is to the **storage** an owner wraps, never to the owner: `bit_stati
 
 The set reading's proxy is read-only whatever the qualification of `Bits`, because a key is nothing to write
 through: assigning to a position would mean moving an element, which a set has no spelling for. It earns its
-keep anyway — `operator&` round-trips to the iterator, and the conversion to any class constructible from
-`size_t` lets `*it` initialize a strong index type, explicitly exactly where a `size_t` would.
+keep anyway — `operator&` round-trips to the iterator, and the conversion to any class a `size_t` converts to
+lets `*it` initialize a strong index type in one step, where the two user-defined conversions of going through
+`size_t` would be one too many. A type with an explicit constructor takes the `size_t` route, `index(*it)`,
+and the proxy offers no explicit conversion of its own: MSVC cannot resolve one beside that constructor.
 
 ### the-one-adl-exception
 

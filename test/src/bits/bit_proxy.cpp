@@ -5,6 +5,7 @@
 
 #include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <test/block_types.hpp>                   // graded_extents
+#include <test/value_reference.hpp>               // value_reference
 #include <xstd/bits/bit_proxy.hpp>                // bit_sequence_iterator, bit_sequence_reference, bit_set_iterator, bit_set_reference
 #include <xstd/bits/bit_traits.hpp>               // bit_traits, find_next, find_prev
 #include <xstd/bits/block_sequence.hpp>           // block_array
@@ -37,7 +38,13 @@ struct floor_traits
         [[nodiscard]] static constexpr auto at(Bits const& c, std::size_t n) noexcept -> bool { return xstd::bit_traits<Bits>::at(c, n); }
 };
 
-// A strong index and a strong flag, to receive what the proxies convert to.
+// Strong types to receive what the proxies convert to: one that takes a size_t implicitly, one only explicitly, and a flag.
+struct key
+{
+        std::size_t value;
+        constexpr explicit(false) key(std::size_t v) noexcept : value(v) {}  // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
+};
+
 struct index
 {
         std::size_t value;
@@ -97,7 +104,9 @@ auto check_set_walk(T const& empty, std::set<std::size_t> const& model) -> void
         for (auto it = first; it != last; ++it) {
                 BOOST_CHECK(&*it == it);
                 forward.insert(*it);
-                BOOST_CHECK_EQUAL(static_cast<index>(*it).value, static_cast<std::size_t>(*it));
+                key const k = *it;
+                BOOST_CHECK_EQUAL(k.value, static_cast<std::size_t>(*it));
+                BOOST_CHECK_EQUAL(index(*it).value, k.value);
         }
         BOOST_CHECK(forward == model);
 
@@ -236,6 +245,18 @@ BOOST_AUTO_TEST_CASE(ConstnessLivesInTheBitsAndWritabilityInTheDoor)
         static_assert(not std::is_assignable_v<xstd::bit_set_reference<Bits> const&, std::size_t>);
         static_assert(std::is_convertible_v<xstd::bit_set_reference<Bits>, std::size_t>);
         static_assert(std::is_convertible_v<xstd::bit_set_reference<Bits const>, std::size_t>);
+}
+
+// What a container's const_reference must be: trivially copyable, never assignable, comparable by value.
+BOOST_AUTO_TEST_CASE(TheReadOnlyProxiesAreValues)
+{
+        static_assert(test::value_reference<xstd::bit_set_reference<Bits>>);
+        static_assert(test::value_reference<xstd::bit_set_reference<Bits const>>);
+        static_assert(test::value_reference<xstd::bit_sequence_reference<Bits const>>);
+        static_assert(test::value_reference<xstd::bit_sequence_reference<Bits, floor_traits<Bits>>>);
+
+        // The writable proxy is the one exception, by design: its assignment writes the bit.
+        static_assert(not test::value_reference<xstd::bit_sequence_reference<Bits>>);
 }
 
 BOOST_AUTO_TEST_CASE(AMutableSequenceIteratorConvertsToItsConstTwin)

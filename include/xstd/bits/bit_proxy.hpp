@@ -9,7 +9,7 @@
 #include <xstd/bits/bit_traits.hpp> // bit_storage, bit_traits, find_next, find_prev
 #include <cassert>                  // assert
 #include <compare>                  // strong_ordering
-#include <concepts>                 // constructible_from, same_as
+#include <concepts>                 // same_as
 #include <cstddef>                  // ptrdiff_t, size_t
 #include <iterator>                 // bidirectional_iterator_tag, random_access_iterator_tag
 #include <type_traits>              // is_class_v, is_const_v, is_convertible_v, is_nothrow_constructible_v, remove_const_t
@@ -105,6 +105,9 @@ public:
                 assert(m_ptr != nullptr);
         }
 
+        // A value, not a handle to rebind: copyable, never assignable, as a reference to a key is.
+        constexpr auto operator=(bit_set_reference const&) -> bit_set_reference& = delete;
+
         [[nodiscard]] constexpr auto operator&() const noexcept
                 -> iterator
         {
@@ -116,12 +119,12 @@ public:
                 return m_idx;
         }
 
-        // A strong index type initializes from *it, explicitly when it would from a size_t.
-        template<std::constructible_from<value_type> T>
-        [[nodiscard]] constexpr explicit(not std::is_convertible_v<value_type, T>) operator T() const noexcept(std::is_nothrow_constructible_v<T, value_type>)  // NOLINT(misc-explicit-constructor)
-                requires std::is_class_v<T>
+        // A strong index type initializes from *it in one step; one with an explicit constructor takes the size_t route. [design.md#read-only-set-proxy]
+        template<class T>
+        [[nodiscard]] constexpr explicit(false) operator T() const noexcept(std::is_nothrow_constructible_v<T, value_type>)  // NOLINT(misc-explicit-constructor)
+                requires std::is_class_v<T> and std::is_convertible_v<value_type, T>
         {
-                return static_cast<T>(m_idx);
+                return m_idx;
         }
 
         // fmt's protocol, found by ADL on the proxy: the same value the conversion yields.
@@ -264,11 +267,11 @@ public:
                 return Traits::at(*m_ptr, m_idx);
         }
 
-        template<std::constructible_from<value_type> T>
-        [[nodiscard]] constexpr explicit(not std::is_convertible_v<value_type, T>) operator T() const noexcept(std::is_nothrow_constructible_v<T, value_type>)  // NOLINT(misc-explicit-constructor)
-                requires std::is_class_v<T>
+        template<class T>
+        [[nodiscard]] constexpr explicit(false) operator T() const noexcept(std::is_nothrow_constructible_v<T, value_type>)  // NOLINT(misc-explicit-constructor)
+                requires std::is_class_v<T> and std::is_convertible_v<value_type, T>
         {
-                return static_cast<T>(Traits::at(*m_ptr, m_idx));
+                return Traits::at(*m_ptr, m_idx);
         }
 
         // [bitset.refs]'s spelling of not, here so basic_bitset::reference can be this class.
