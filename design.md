@@ -178,6 +178,52 @@ constraint.
 Down here nothing is visible unqualified from `xstd`, so the qualification is enforced by **scoping** rather
 than by remembering a prefix at every call site — which is what a class was previously substituting for.
 
+### what-the-door-reconciles
+
+Almost everything the two readings ask of a `Bits` is already an entry, or is the same operation under
+another name:
+
+| what a reading calls | door entry | |
+|---|---|---|
+| set `size()` (cardinality) | `count` | |
+| set `max_size()` (width) | `size` | |
+| `contains(n)` | `at(c, n)` | the same operation |
+| set `erase(n)` | `assign(c, n, false)` | the same operation |
+| set `clear()` | `fill(c, false)` | |
+| sequence `size()` / `assign` | `size` / `assign` | |
+| `bit_extent<Bits>` | `extent` | |
+
+Two entries are left over, and they are the two the readings cannot synthesize:
+
+- **`insert`** is the only operation that can *grow*, and it is exactly what the adapted types disagree
+  about: `boost::dynamic_bitset` resizes, `std::bitset` cannot, `block_sequence` asserts. Reconciling that
+  is what the door is for. It is not `assign(c, n, true)`, which has no answer for a position past the width.
+- **`fill`** is bulk, and `clear` is `fill(false)`.
+
+### the-two-reserved-names
+
+`std::bitset`'s two implementation hooks are **complementary, not paired** — which is the opposite of what
+it looks like, and worth stating because the wrong guess silently costs a tier:
+
+| | `_Getword` | `_Find_first` / `_Find_next` |
+|---|---|---|
+| libstdc++ | no — it is `_M_getword`, on an inaccessible base | yes |
+| MSVC | yes | no |
+| libc++ | no | no |
+
+So neither implies the other, and each is worth a constrained entry on its own. Where `_Getword` is
+reachable the walks run block-wise, including a `find_prev` neither library supplies; where `_Find_first` is
+reachable the forward scans are native. Both return `N` when nothing is set, which is already the door's
+total contract, so no `npos` mapping is needed — unlike boost, whose `find_first` answers `npos`.
+
+### proxies-compare-themselves
+
+Neither ordering needs a comparator. A proxy reference converts implicitly to its `value_type`, and that
+conversion is what satisfies `three_way_comparable` — checked for both this library's `sequence_reference`
+and `std::vector<bool>::reference`, on which `lexicographical_compare_three_way` works with no comparator
+at all. An explicit `[](bool a, bool b) { return int(a) <=> int(b); }` says nothing the conversion has not
+already said.
+
 ### block-writes
 
 `set_block` is the write side of `block()`, and deliberately not a trait entry: block writes are only ever

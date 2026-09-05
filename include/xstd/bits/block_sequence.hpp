@@ -845,6 +845,17 @@ struct bit_traits<block_sequence<Blocks, N>>
 
         [[nodiscard]] static constexpr auto count(bits_type const& c) noexcept -> std::size_t { return c.count(); }
 
+        // The two entries the readings cannot synthesize: insert is the one operation that can grow, and fill is bulk. [design.md#what-the-door-reconciles]
+        static constexpr void insert(bits_type& c, std::size_t n) noexcept { c.set(n); }
+        static constexpr void fill(bits_type& c, bool value) noexcept
+        {
+                if (value) {
+                        c.set();
+                } else {
+                        c.reset();
+                }
+        }
+
         [[nodiscard]] static constexpr auto num_blocks(bits_type const& c) noexcept -> std::size_t { return c.num_blocks(); }
         [[nodiscard]] static constexpr auto block(bits_type const& c, std::size_t i) noexcept { return c.block(i); }
 

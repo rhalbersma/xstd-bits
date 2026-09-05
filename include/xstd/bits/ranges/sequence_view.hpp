@@ -95,15 +95,14 @@ struct sequence_ops
         }
 };
 
-// The sequence ordering, defined once: the bools in position order, compared lexicographically through value_type.
+// The sequence ordering, defined once: the bools in position order, lexicographically, no comparator. [design.md#proxies-compare-themselves]
 template<std::ranges::input_range X, std::ranges::input_range Y>
 [[nodiscard]] constexpr auto sequence_three_way(X const& x, Y const& y) noexcept
         -> std::strong_ordering
 {
         return std::lexicographical_compare_three_way(
                 std::ranges::begin(x), std::ranges::end(x),
-                std::ranges::begin(y), std::ranges::end(y),
-                [](bool a, bool b) static noexcept -> std::strong_ordering { return static_cast<int>(a) <=> static_cast<int>(b); }
+                std::ranges::begin(y), std::ranges::end(y)
         );
 }
 

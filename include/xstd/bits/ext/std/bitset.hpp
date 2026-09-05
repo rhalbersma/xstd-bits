@@ -8,6 +8,7 @@
 
 // IWYU pragma: always_keep
 
+#include <xstd/bits/bit_traits.hpp>                // bit_traits
 #include <xstd/bits/ranges/bit_extent.hpp>         // bit_extent
 #include <xstd/bits/ranges/block_access.hpp>       // block_access
 #include <xstd/bits/ranges/sequence_view.hpp>      // sequence_find, sequence_view
@@ -17,11 +18,79 @@
 #include <bitset>                                  // IWYU pragma: export; bitset
 #include <cassert>                                 // assert
 #include <compare>                                 // strong_ordering
+#include <concepts>                                // convertible_to
 #include <cstddef>                                 // size_t
 #include <limits>                                  // numeric_limits
 #include <ranges>                                  // find_if
 #include <utility>                                 // declval
                                                    // iota
+
+// The one door for std::bitset; [namespace.std] forbids ADL hooks here, and a specialization needs none. [design.md#the-door]
+namespace xstd {
+
+template<std::size_t N>
+struct bit_traits<std::bitset<N>>
+{
+        using bits_type = std::bitset<N>;
+
+        static constexpr std::size_t extent = N;
+
+        [[nodiscard]] static constexpr auto size (bits_type const&)                  noexcept -> std::size_t { return N;         }
+        [[nodiscard]] static constexpr auto at   (bits_type const& c, std::size_t n) noexcept -> bool        { return c[n];      }
+        [[nodiscard]] static constexpr auto count(bits_type const& c)                noexcept -> std::size_t { return c.count(); }
+
+        static constexpr void assign(bits_type& c, std::size_t n, bool value) noexcept { c[n] = value; }
+
+        // A static width cannot grow, so inserting is assigning with the position as a precondition. [design.md#what-the-door-reconciles]
+        static constexpr void insert(bits_type& c, std::size_t n) noexcept
+        {
+                assert(n < N);
+                c[n] = true;
+        }
+
+        static constexpr void fill(bits_type& c, bool value) noexcept
+        {
+                if (value) {
+                        c.set();
+                } else {
+                        c.reset();
+                }
+        }
+
+        // Constrained, not guarded on the platform: without _Getword block_readable goes unsatisfied and the walks stay element-wise. [design.md#detection-by-absence]
+        [[nodiscard]] static constexpr auto num_blocks(bits_type const& c) noexcept
+                -> std::size_t
+                requires requires { { c._Getword(0UZ) } -> xstd::unsigned_integer; }
+        {
+                constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<decltype(c._Getword(0UZ))>::digits);
+                return N == 0UZ ? 1UZ : (N + digits - 1UZ) / digits;
+        }
+
+        [[nodiscard]] static constexpr auto block(bits_type const& c, std::size_t i) noexcept
+                requires requires { { c._Getword(0UZ) } -> xstd::unsigned_integer; }
+        {
+                return c._Getword(i);
+        }
+
+        // The two reserved names are COMPLEMENTARY, not paired: libstdc++ has these and no reachable _Getword, MSVC the reverse. [design.md#the-two-reserved-names]
+        [[nodiscard]] static constexpr auto find_first(bits_type const& c) noexcept
+                -> std::size_t
+                requires requires { { c._Find_first() } -> std::convertible_to<std::size_t>; }
+        {
+                return c._Find_first();
+        }
+
+        [[nodiscard]] static constexpr auto find_next(bits_type const& c, std::size_t n) noexcept
+                -> std::size_t
+                requires requires { { c._Find_next(n) } -> std::convertible_to<std::size_t>; }
+        {
+                return c._Find_next(n);
+        }
+
+        // No find_last or find_prev: the width answers one and neither library scans backwards. [design.md#the-two-reserved-names]
+};
+
+}       // namespace xstd
 
 // std::bitset's only associated namespace is std, where [namespace.std] forbids adding ADL hooks, so specialize set_find instead.
 namespace xstd::ranges {
