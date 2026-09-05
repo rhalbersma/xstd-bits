@@ -178,6 +178,14 @@ constraint.
 Down here nothing is visible unqualified from `xstd`, so the qualification is enforced by **scoping** rather
 than by remembering a prefix at every call site — which is what a class was previously substituting for.
 
+### the-trait-is-a-parameter
+
+`bit_storage` and `static_bit_extent` take the trait first and the storage second, as `block_readable`
+already did, so that a type-constraint can name the trait: `bit_storage<Bits> Traits` expands to
+`bit_storage<Traits, Bits>`, a type-constraint binding its own parameter first. That is what lets every
+consumer of the door carry `Traits = bit_traits<Bits>` as an explicit parameter, `basic_string`-style, and
+what turns the tier into a knob over identical storage — one `block_array`, two traits, one variable.
+
 ### what-the-door-reconciles
 
 Almost everything the two readings ask of a `Bits` is already an entry, or is the same operation under
@@ -490,6 +498,31 @@ until the stack is gone**.
 Where `set(n, value)` does exist the type is a concrete bitset, and its subscript is the unchecked way in —
 which is the one to take, the position being a precondition asserted just below, where `std::bitset::set` and
 `xstd::bitset::set` would check it again and throw out of a `noexcept`.
+
+### the-iterator-is-the-primitive
+
+`bit_set_iterator` and `bit_sequence_iterator` are a pointer and a position, and they reach the bits through
+the door alone. Their constructors are public, so an owner or a view builds one without being a friend: the
+dependency runs one way, from the container to the iterator, and the mutual friendship and forward
+declarations the earlier views needed (*"Clang requires it, GCC does not"*) have nothing left to declare.
+
+The pointer is to the **storage** an owner wraps, never to the owner: `bit_static_set` hands out
+`bit_set_iterator<block_array<B, N>>`, which is why no owning type ever needs a `bit_traits` of its own.
+
+### read-only-set-proxy
+
+The set reading's proxy is read-only whatever the qualification of `Bits`, because a key is nothing to write
+through: assigning to a position would mean moving an element, which a set has no spelling for. It earns its
+keep anyway — `operator&` round-trips to the iterator, and the conversion to any class constructible from
+`size_t` lets `*it` initialize a strong index type, explicitly exactly where a `size_t` would.
+
+### the-one-adl-exception
+
+The sequence iterator's `iter_move` and `iter_swap` are hidden friends found by ADL, and they stay under the
+no-ADL rule because they are `std::ranges`' own customization protocol: `ranges::sort` and `swap_ranges`
+reach a proxy only through them, and it is where `vector<bool>` historically fell down. The three `swap`
+overloads on the proxy are the pre-ranges spelling of the same thing, for `std::sort` and everything else
+still built on `std::iter_swap`. `format_as` is fmt's protocol in the same sense.
 
 ### total-lookups-on-the-container
 
