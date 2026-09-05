@@ -30,6 +30,7 @@ template<class charT, class traits, std::size_t N, xstd::unsigned_integer Block>
 
 #include <boost/hash2/fnv1a.hpp>                   // fnv1a_64
 #include <boost/hash2/hash_append.hpp>             // hash_append
+#include <xstd/bits/bit_traits.hpp>                // bit_traits
 #include <xstd/bits/block_sequence.hpp>            // block_array
 #include <xstd/bits/ranges/bit_extent.hpp>         // bit_extent
 #include <xstd/bits/ranges/sequence_view.hpp>      // sequence_find

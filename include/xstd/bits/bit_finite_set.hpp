@@ -41,6 +41,7 @@ using bit_finite_set = xstd::bit_finite_set<xstd::align_up(N, static_cast<std::s
 
 // NOLINTBEGIN(readability-duplicate-include): synopsis and implementation each list what that section needs.
 #include <boost/hash2/hash_append.hpp>             // hash_append
+#include <xstd/bits/bit_traits.hpp>                // bit_traits
 #include <xstd/bits/block_sequence.hpp>            // block_array
 #include <xstd/bits/ranges.hpp>                    // const_iterator, const_reference
 #include <cassert>                                 // assert

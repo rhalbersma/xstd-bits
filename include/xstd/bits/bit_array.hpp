@@ -35,6 +35,7 @@ using bit_array = xstd::bit_array<xstd::align_up(N, static_cast<std::size_t>(std
 }       // namespace xstd
 
 // NOLINTBEGIN(readability-duplicate-include): synopsis and implementation each list what that section needs.
+#include <xstd/bits/bit_traits.hpp>     // bit_traits
 #include <xstd/bits/block_sequence.hpp> // block_array
 #include <xstd/bits/ranges.hpp>         // begin, end, iterator, reference
 #include <xstd/ints/memory.hpp>         // align_up
