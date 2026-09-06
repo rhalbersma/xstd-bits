@@ -98,17 +98,20 @@ struct mem_bit_xor_assign
         }
 };
 
+// Set vocabulary, so a bitset at a static width has none of it, as std::bitset has none: guarded, like the three predicates below.
 struct mem_bit_minus_assign
 {
         template<class X>
         auto operator()(X& self, const X& rhs) const noexcept
         {
-                auto const src = self;
-                auto const& dst = self -= rhs;
-                for (auto const N = self.size(); auto i : std::views::iota(0uz, N)) {
-                        BOOST_CHECK_EQUAL(dst[i], rhs[i] ? false : src[i]);
+                if constexpr (requires { self -= rhs; }) {
+                        auto const src = self;
+                        auto const& dst = self -= rhs;
+                        for (auto const N = self.size(); auto i : std::views::iota(0uz, N)) {
+                                BOOST_CHECK_EQUAL(dst[i], rhs[i] ? false : src[i]);
+                        }
+                        BOOST_CHECK_EQUAL(std::addressof(dst), std::addressof(self));
                 }
-                BOOST_CHECK_EQUAL(std::addressof(dst), std::addressof(self));
         }
 };
 
@@ -513,8 +516,10 @@ struct op_bit_minus
         template<class X>
         auto operator()(const X& lhs, const X& rhs) const noexcept
         {
-                auto nrv = lhs;
-                BOOST_CHECK_EQUAL(lhs - rhs, nrv -= rhs);
+                if constexpr (requires { lhs - rhs; }) {
+                        auto nrv = lhs;
+                        BOOST_CHECK_EQUAL(lhs - rhs, nrv -= rhs);
+                }
         }
 };
 

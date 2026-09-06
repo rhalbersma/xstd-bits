@@ -8,6 +8,7 @@
 #include <fmt/ranges.h>                           // IWYU pragma: keep; the range formatters
 #include <opt/bitset/sieve.hpp>                   // filter_twins, sift_primes0, sift_primes1
 #include <xstd/bits/bit_static_set.hpp>           // bit_static_set
+#include <xstd/bits/basic_bitset.hpp>             // basic_bitset
 #include <xstd/bits/bitset.hpp>                   // bitset
 #include <xstd/bits/ext/boost/dynamic_bitset.hpp> // dynamic_bitset
 #include <xstd/bits/ext/std/bitset.hpp>           // bitset
@@ -24,6 +25,7 @@ inline constexpr auto N = 100UZ;
 using Types = std::tuple
 <       boost::dynamic_bitset<>
 ,         std::bitset<N>
+,        xstd::basic_bitset<std::bitset<N>>
 ,        xstd::bitset<N>
 ,        xstd::bit_static_set<N>
 >;

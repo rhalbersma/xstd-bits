@@ -5,6 +5,7 @@
 
 #include <boost/test/unit_test.hpp>      // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <test/block_types.hpp>          // graded_extents
+#include <xstd/bits/basic_bitset.hpp>    // swap
 #include <xstd/bits/bitset.hpp>          // bitset
 #include <xstd/bits/ranges/set_view.hpp> // set_view
 #include <concepts>                      // regular, totally_ordered

@@ -7,6 +7,7 @@
 #include <test/bitset/exhaustive.hpp>             // all_cardinality_sets, all_singleton_sets, all_valid, any_value, empty_set, full_set
 #include <test/bitset/primitives.hpp>             // mem_set, mem_reset, mem_bit_not, mem_flip,
 #include <test/uint128.hpp>                       // TEST_HAS_UINT128, uint128
+#include <xstd/bits/basic_bitset.hpp>             // basic_bitset
 #include <xstd/bits/bitset.hpp>                   // bitset
 #include <xstd/bits/ext/boost/dynamic_bitset.hpp> // dynamic_bitset
 #include <xstd/bits/ext/std/bitset.hpp>           // bitset
@@ -22,6 +23,9 @@ using Types = std::tuple
 ,         std::bitset<  0>
 ,         std::bitset<  1>
 ,         std::bitset< 64>
+,        xstd::basic_bitset<std::bitset< 0>>
+,        xstd::basic_bitset<std::bitset< 1>>
+,        xstd::basic_bitset<std::bitset<64>>
 ,        xstd::bitset< 0, uint8_t>
 ,        xstd::bitset< 1, uint8_t>
 ,        xstd::bitset< 8, uint8_t>

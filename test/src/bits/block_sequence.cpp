@@ -334,7 +334,7 @@ BOOST_AUTO_TEST_CASE(AStaticWidthAddsNothingToItsBlocks)
         static_assert(sizeof(xstd::block_array<std::uint8_t,    0>) == sizeof(std::array<std::uint8_t,   1>));
 
         static_assert(    xstd::block_array<std::size_t, 64>::has_static_size);
-        static_assert(not xstd::block_vector<>::has_static_size);
+        static_assert(not xstd::block_vector<std::size_t>::has_static_size);
 }
 
 // Both widths in a constant expression; the run-time one needs C++20 constexpr allocation.
