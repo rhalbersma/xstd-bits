@@ -49,6 +49,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItAnswersAsBoostDoes, T, Dynamic)
         BOOST_CHECK_EQUAL(d.find_first(), 0UZ);
         BOOST_CHECK_EQUAL(d.find_next(0), 2UZ);
         BOOST_CHECK_EQUAL(d.find_next(2), T::npos);
+        BOOST_CHECK_EQUAL(T(9).find_first(), T::npos);
 
         auto e = T(9);
         e.set(2);
