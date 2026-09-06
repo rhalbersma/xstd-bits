@@ -482,8 +482,9 @@ what `-Wunused-lambda-capture` reports.
 Three class templates carry the three readings: `basic_bit_set`, `basic_bit_sequence`, `basic_bitset`. Each
 is written against the door and never against a storage, so one adaptor serves `block_array`, `block_vector`,
 `std::bitset` and `boost::dynamic_bitset` alike, and no owning type ever needs a `bit_traits` of its own. The
-public names are aliases: `bit_static_set<N, B>` is `basic_bit_set<block_array<B, N>, owns>`, and
-`bit_array<N, B>` is `basic_bit_sequence<block_array<B, N>, owns, false>`.
+public names are aliases: `bit_static_set<N, B>` is `basic_bit_set<block_array<B, N>, owns>`,
+`bit_array<N, B>` is `basic_bit_sequence<block_array<B, N>, owns, false>`, and `bitset<N, B>` is
+`basic_bitset<block_array<B, N>>`.
 
 ### ownership-is-not-an-axis
 
@@ -518,6 +519,52 @@ The sequence row is named after the `std` container it packs, `bit_array` for `s
 therefore mark different columns, and that is correct by each row's own analogy rather than an inconsistency
 to fix.
 
+
+### the-idempotent-wrapper
+
+`basic_bitset<Bits>` is `[template.bitset]` over any `Bits` that speaks the vocabulary, and its requirement is
+the ceiling principle at the container layer: it adds only what `Bits` lacks and forwards everything `Bits`
+has. The vocabulary is the concept `has_bitops` -- the compound operators, the shifts, `set` `reset` `flip`
+`all` `any` `none` `count` `size` and regularity -- and a member the concept demanded is forwarded blind, one
+line each, provably native. The shifts stay in the concept although the door carries their contracts: without
+them a shiftless backend would fail inside an instantiation instead of at the class.
+
+The wrapper is idempotent **per counterpart**: `basic_bitset<std::bitset<N>>` answers as `std::bitset<N>`
+does, throw for throw, and the same wrapper over `block_array` is `xstd::bitset`, which answers the same way
+because `std::bitset` is the counterpart of both. So at a static width there is no `-=`, no `is_subset_of`,
+`is_proper_subset_of` or `intersects`: `std::bitset` has none, they are set vocabulary that had leaked into
+`xstd::bitset`, and `set_view` keeps every one of them. The test harness guards those four the way it already
+guarded the three predicates. A dynamic width, whose counterpart is `boost::dynamic_bitset`, has them
+natively and gets them back when `block_vector` arrives; until then the class asserts the width static.
+
+Not a range and no `<=>`, as its counterpart has neither; `set_view` and `sequence_view` reach it through the
+hidden friends every owner publishes until the rewire, and its set ordering is the door's word-wise entry
+where the door has one, the iteration otherwise. `block_type` is gone from the surface: nothing used it, and
+under idempotence a wrapper over a libc++ `std::bitset` would have none.
+
+### checked-and-unchecked
+
+Two members share a spelling with different contracts across the counterparts, and the door carries both
+families so the wrapper forwards a native guard rather than adding one on top of it: **the branch is
+relocated, never added**.
+
+**Shift.** `block_sequence`'s `<<=` is unchecked, with `n < size()` as its precondition; `std::bitset`'s and
+`boost::dynamic_bitset`'s are total and saturate to none. The trait of a total counterpart declares
+`checked_shift_left`/`checked_shift_right`, which the wrapper forwards as they are; where the door declares
+none, the storage's own `<<=` -- the one `has_bitops` demanded -- is the unchecked form, and the wrapper
+guards it: `n < size()`, else `reset()`. That hoists the guard `xstd::bitset` used to write by hand and skips
+it where the counterpart already has one. At width zero even `<<= 0` trips the storage's assert, so the
+wrapper's guard is what makes that instantiation well-formed.
+
+**Element access.** `set(pos)`, `reset(pos)`, `flip(pos)` and `test(pos)` throw on `std::bitset`, whose trait
+declares `checked_set`/`checked_reset`/`checked_flip`/`checked_test`, forwarded. The unchecked family is the
+door's `assign` and `at`, with `flip` synthesised as `assign(not at)` the way `basic_bit_set::complement` is;
+a `flip` entry of its own is an open call. Where no checked entry exists the wrapper guards and throws
+`out_of_range` at a static width, matching `std::bitset`, and will assert at a dynamic one, matching
+`boost::dynamic_bitset` -- a deliberate inconsistency between `xstd::bitset` and the coming
+`xstd::dynamic_bitset`, because it is exactly the one between their counterparts. The const subscript is
+unchecked on every counterpart, so it is the door's `at` unconditionally, and the proxy from the mutable one
+writes through `assign` alone.
 
 ### asking-is-total
 

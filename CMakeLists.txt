@@ -72,6 +72,7 @@ target_sources(
         include/xstd/bits.hpp
         include/xstd/bits/basic_bit_sequence.hpp
         include/xstd/bits/basic_bit_set.hpp
+        include/xstd/bits/basic_bitset.hpp
         include/xstd/bits/bit_array.hpp
         include/xstd/bits/bit_proxy.hpp
         include/xstd/bits/bitset.hpp
