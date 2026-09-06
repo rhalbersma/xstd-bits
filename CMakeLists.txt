@@ -70,7 +70,10 @@ target_sources(
     BASE_DIRS include
     FILES
         include/xstd/bits.hpp
+        include/xstd/bits/basic_bit_sequence.hpp
+        include/xstd/bits/basic_bit_set.hpp
         include/xstd/bits/bit_array.hpp
+        include/xstd/bits/bit_proxy.hpp
         include/xstd/bits/bitset.hpp
         include/xstd/bits/bit_static_set.hpp
         include/xstd/bits/bit_traits.hpp
@@ -83,6 +86,7 @@ target_sources(
         include/xstd/bits/ext/std/bitset.hpp
         include/xstd/bits/ext/xstd.hpp
         include/xstd/bits/ext/xstd/bitset.hpp
+        include/xstd/bits/ownership.hpp
         include/xstd/bits/ranges.hpp
         include/xstd/bits/ranges/bit_extent.hpp
         include/xstd/bits/ranges/block_access.hpp
