@@ -71,6 +71,7 @@ set(cxx_compile_options_warnings
         -Wno-stringop-overflow              # triggered by Boost.DynamicBitset for gcc >= 12 in Release mode
         -Wno-maybe-uninitialized            # false positive on detail::array's std::array member (WinLibs gcc 15.3.0, Release mode)
         -Wno-restrict                       # false positive on std::vector's copy inside block_sequence's, inlined into basic_bitset's non-member operators (gcc 17-SVN, Release mode)
+        -Wno-stringop-overread              # the same site, under the name gcc 17-SVN gives it once -Wrestrict is off
     >
     $<$<AND:$<BOOL:${XSTD_BITS_WARNINGS_AS_ERRORS}>,$<CXX_COMPILER_ID:MSVC>>:/WX>
     $<$<AND:$<BOOL:${XSTD_BITS_WARNINGS_AS_ERRORS}>,$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:GNU>>>:-Werror>
