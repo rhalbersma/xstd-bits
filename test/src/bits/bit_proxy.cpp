@@ -5,6 +5,7 @@
 
 #include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <test/block_types.hpp>                   // graded_extents
+#include <test/floor_traits.hpp>                  // floor_traits
 #include <test/value_reference.hpp>               // value_reference
 #include <xstd/bits/bit_proxy.hpp>                // bit_sequence_iterator, bit_sequence_reference, bit_set_iterator, bit_set_reference
 #include <xstd/bits/bit_traits.hpp>               // bit_traits, find_next, find_prev
@@ -20,23 +21,13 @@
 #include <iterator>                               // iter_move, next, prev, reverse_iterator
 #include <ranges>                                 // subrange
 #include <set>                                    // set
-#include <type_traits>                            // is_assignable_v, is_const_v, is_convertible_v
+#include <type_traits>                            // is_assignable_v, is_const_v, is_convertible_v, is_trivially_copy_constructible_v, is_trivially_destructible_v
 #include <vector>                                 // vector
 
 namespace {
 
 template<std::size_t N, class Block>
 using array_of = xstd::block_array<Block, N>;
-
-// The floor and nothing more, over the same storage the default trait serves natively: one variable, two tiers. [design.md#the-trait-is-a-parameter]
-template<class Bits>
-struct floor_traits
-{
-        static constexpr std::size_t extent = xstd::bit_traits<Bits>::extent;
-
-        [[nodiscard]] static constexpr auto size(Bits const& c) noexcept -> std::size_t { return xstd::bit_traits<Bits>::size(c); }
-        [[nodiscard]] static constexpr auto at(Bits const& c, std::size_t n) noexcept -> bool { return xstd::bit_traits<Bits>::at(c, n); }
-};
 
 // Strong types to receive what the proxies convert to: one that takes a size_t implicitly, one only explicitly, and a flag.
 // Copy-initialized, never cast: a cast is a direct-initialization with two routes in, and MSVC calls that no route at all.
@@ -82,6 +73,9 @@ auto check_steps_are_total(T const& c, std::set<std::size_t> const& model) -> vo
         }
 }
 
+template<class Traits, class Iterator>
+auto check_set_steps(Iterator first, Iterator last, std::set<std::size_t> const& model) -> void;
+
 // A zero width has nothing to step over, so nothing below the two positions is instantiated for it. [design.md#per-instantiation-slots]
 template<class Traits, bool Total, class T>
 auto check_set_walk(T const& empty, std::set<std::size_t> const& model) -> void
@@ -97,10 +91,15 @@ auto check_set_walk(T const& empty, std::set<std::size_t> const& model) -> void
         if constexpr (Total) {
                 check_steps_are_total<Traits>(c, model);
         }
-        if constexpr (Traits::extent == 0UZ) {
-                return;
+        // Behind if constexpr rather than after an early return, or MSVC reports the rest unreachable at a zero width, which it is.
+        if constexpr (Traits::extent != 0UZ) {
+                check_set_steps<Traits>(first, last, model);
         }
+}
 
+template<class Traits, class Iterator>
+auto check_set_steps(Iterator first, Iterator last, std::set<std::size_t> const& model) -> void
+{
         auto forward = std::set<std::size_t>();
         for (auto it = first; it != last; ++it) {
                 BOOST_CHECK(&*it == it);
@@ -204,11 +203,11 @@ BOOST_AUTO_TEST_CASE(AnIteratorIsAPointerAndAPosition)
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheSetIteratorIsBidirectionalAndTheSequenceIteratorRandomAccess, T, ArrayTypes)
 {
         static_assert(std::bidirectional_iterator<xstd::bit_set_iterator<T>>);
-        static_assert(std::bidirectional_iterator<xstd::bit_set_iterator<T, floor_traits<T>>>);
+        static_assert(std::bidirectional_iterator<xstd::bit_set_iterator<T, test::floor_traits<T>>>);
 
         static_assert(std::random_access_iterator<xstd::bit_sequence_iterator<T>>);
         static_assert(std::random_access_iterator<xstd::bit_sequence_iterator<T const>>);
-        static_assert(std::random_access_iterator<xstd::bit_sequence_iterator<T, floor_traits<T>>>);
+        static_assert(std::random_access_iterator<xstd::bit_sequence_iterator<T, test::floor_traits<T>>>);
 
         static_assert(    std::sortable<xstd::bit_sequence_iterator<T>>);
         static_assert(not std::sortable<xstd::bit_sequence_iterator<T const>>);
@@ -232,7 +231,7 @@ BOOST_AUTO_TEST_CASE(ConstnessLivesInTheBitsAndWritabilityInTheDoor)
 {
         using Ref      = xstd::bit_sequence_reference<Bits>;
         using ConstRef = xstd::bit_sequence_reference<Bits const>;
-        using FloorRef = xstd::bit_sequence_reference<Bits, floor_traits<Bits>>;
+        using FloorRef = xstd::bit_sequence_reference<Bits, test::floor_traits<Bits>>;
 
         static_assert(    std::is_assignable_v<Ref const&, bool>);
         static_assert(not std::is_assignable_v<ConstRef const&, bool>);
@@ -254,10 +253,13 @@ BOOST_AUTO_TEST_CASE(TheReadOnlyProxiesAreValues)
         static_assert(test::value_reference<xstd::bit_set_reference<Bits>>);
         static_assert(test::value_reference<xstd::bit_set_reference<Bits const>>);
         static_assert(test::value_reference<xstd::bit_sequence_reference<Bits const>>);
-        static_assert(test::value_reference<xstd::bit_sequence_reference<Bits, floor_traits<Bits>>>);
+        static_assert(test::value_reference<xstd::bit_sequence_reference<Bits, test::floor_traits<Bits>>>);
 
-        // The writable proxy is the one exception, by design: its assignment writes the bit.
+        // The writable proxy is the one exception, by design: its assignment writes the bit. Trivial to copy and destroy all the same.
         static_assert(not test::value_reference<xstd::bit_sequence_reference<Bits>>);
+        static_assert(std::is_trivially_copy_constructible_v<xstd::bit_sequence_reference<Bits>>);
+        static_assert(std::is_trivially_destructible_v<xstd::bit_sequence_reference<Bits>>);
+        static_assert(std::is_trivially_destructible_v<xstd::bit_sequence_iterator<Bits>> and std::is_trivially_destructible_v<xstd::bit_set_iterator<Bits>>);
 }
 
 BOOST_AUTO_TEST_CASE(AMutableSequenceIteratorConvertsToItsConstTwin)
@@ -281,7 +283,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheSetIteratorWalksThePositionsInBothDirections, T
 {
         check_every_set_pattern<xstd::bit_traits<T>, false>(T());
         if constexpr (xstd::bit_traits<T>::extent >= 2UZ) {
-                check_every_set_pattern<floor_traits<T>, true>(T());
+                check_every_set_pattern<test::floor_traits<T>, true>(T());
         }
 }
 
@@ -388,11 +390,11 @@ BOOST_AUTO_TEST_CASE(RangesAlgorithmsReachTheBitsThroughIterMoveAndIterSwap)
 
         // The pre-ranges algorithms on purpose: they reach the bits through std::iter_swap and the swap friends, not iter_swap.
         std::sort(first, last);  // NOLINT(modernize-use-ranges)
-        std::sort(model.begin(), model.end());
+        std::ranges::sort(model);
         BOOST_CHECK(as_vector(c) == model);
 
         std::reverse(first, last);  // NOLINT(modernize-use-ranges)
-        std::reverse(model.begin(), model.end());
+        std::ranges::reverse(model);
         BOOST_CHECK(as_vector(c) == model);
 
         std::ranges::iter_swap(first, std::prev(last));
