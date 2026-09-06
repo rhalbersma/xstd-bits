@@ -97,6 +97,7 @@ struct decrement_modulo
                         constexpr auto N = X::max_size();
                         BOOST_CHECK(
                                 (a >> n) == (a
+                                        | std::views::filter   ([=](auto x) { return x >= n; })
                                         | std::views::transform([=](auto x) { return x - n; })
                                         | std::views::filter   ([ ](auto x) { return x < N; })
                                         | std::ranges::to<X>()

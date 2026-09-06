@@ -7,7 +7,7 @@
 #define XSTD_BITS_BASIC_BIT_SEQUENCE_HPP
 
 #include <xstd/bits/bit_proxy.hpp>  // bit_sequence_iterator, bit_sequence_reference
-#include <xstd/bits/bit_traits.hpp> // bit_storage, bit_traits
+#include <xstd/bits/bit_traits.hpp> // bit_storage, bit_traits, static_bit_extent
 #include <xstd/bits/ownership.hpp>  // owned_bits_t, owned_storage, owned_traits_t, owner_of, ownership, owns
 #include <algorithm>                // lexicographical_compare_three_way
 #include <cassert>                  // assert
@@ -15,8 +15,10 @@
 #include <concepts>                 // convertible_to, swap, swappable
 #include <cstddef>                  // ptrdiff_t, size_t
 #include <format>                   // format
-#include <iterator>                 // make_reverse_iterator, reverse_iterator
-#include <ranges>                   // enable_borrowed_range, enable_view
+#include <initializer_list>         // initializer_list
+#include <iterator>                 // input_iterator, make_reverse_iterator, reverse_iterator, sentinel_for
+#include <limits>                   // numeric_limits
+#include <ranges>                   // begin, enable_borrowed_range, enable_view, end, from_range_t, input_range, range_reference_t
 #include <source_location>          // source_location
 #include <stdexcept>                // out_of_range
 #include <type_traits>              // conditional_t, is_nothrow_swappable_v, remove_const_t, remove_reference_t
@@ -34,6 +36,9 @@ class basic_bit_sequence
         static constexpr bool is_owner = owns(Own);
 
         using bits_type = std::remove_const_t<Bits>;
+
+        // Growth is the owner's over storage that grows: a view must never resize what it does not own. [design.md#growth]
+        static constexpr bool can_grow = is_owner and not static_bit_extent<Traits, bits_type> and requires (bits_type& b) { b.resize(0UZ, true); b.push_back(true); b.pop_back(); b.clear(); };
 
         std::conditional_t<is_owner, Bits, Bits*> m_bits;
 
@@ -74,8 +79,78 @@ public:
         using reverse_iterator       = std::reverse_iterator<iterator>;
         using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-        // construct/copy/destroy; an owner is built the way std::array is, a view only from what it views.
+        // construct/copy/destroy; an owner is built the way std::array is, or std::vector where the storage grows, a view only from what it views.
         [[nodiscard]] constexpr basic_bit_sequence() noexcept requires is_owner = default;
+
+        [[nodiscard]] constexpr explicit basic_bit_sequence(size_type n)
+                requires can_grow
+        :
+                m_bits(n)
+        {}
+
+        [[nodiscard]] constexpr basic_bit_sequence(size_type n, value_type const& value)
+                requires can_grow
+        :
+                m_bits(n)
+        {
+                if (value) {
+                        Traits::fill(m_bits, true);
+                }
+        }
+
+        template<std::input_iterator I, std::sentinel_for<I> S>
+                requires can_grow and std::constructible_from<value_type, std::iter_reference_t<I>>
+        [[nodiscard]] constexpr basic_bit_sequence(I first, S last)
+        {
+                for (; first != last; ++first) {
+                        m_bits.push_back(static_cast<value_type>(*first));
+                }
+        }
+
+        template<std::ranges::input_range R>
+                requires can_grow and std::constructible_from<value_type, std::ranges::range_reference_t<R>>
+        [[nodiscard]] constexpr basic_bit_sequence(std::from_range_t, R&& rg)
+        :
+                basic_bit_sequence(std::ranges::begin(rg), std::ranges::end(rg))
+        {}
+
+        [[nodiscard]] constexpr basic_bit_sequence(std::initializer_list<value_type> il)
+                requires can_grow
+        :
+                basic_bit_sequence(il.begin(), il.end())
+        {}
+
+        constexpr auto operator=(std::initializer_list<value_type> il)
+                -> basic_bit_sequence&
+                requires can_grow
+        {
+                assign(il.begin(), il.end());
+                return *this;
+        }
+
+        // [sequence.reqmts]: assign in its three shapes, each a clear and a refill.
+        constexpr void assign(size_type n, value_type const& value)
+                requires can_grow
+        {
+                m_bits.clear();
+                m_bits.resize(n, value);
+        }
+
+        template<std::input_iterator I, std::sentinel_for<I> S>
+                requires can_grow and std::constructible_from<value_type, std::iter_reference_t<I>>
+        constexpr void assign(I first, S last)
+        {
+                m_bits.clear();
+                for (; first != last; ++first) {
+                        m_bits.push_back(static_cast<value_type>(*first));
+                }
+        }
+
+        constexpr void assign(std::initializer_list<value_type> il)
+                requires can_grow
+        {
+                assign(il.begin(), il.end());
+        }
 
         [[nodiscard]] constexpr explicit basic_bit_sequence(Bits& c) noexcept
                 requires (not is_owner)
@@ -115,10 +190,53 @@ public:
         [[nodiscard]] constexpr auto crbegin() const noexcept -> const_reverse_iterator { return std::make_reverse_iterator(cend());   }
         [[nodiscard]] constexpr auto crend()   const noexcept -> const_reverse_iterator { return std::make_reverse_iterator(cbegin()); }
 
-        // capacity
+        // capacity; a static width is its own max_size, a growing one has the address space's.
         [[nodiscard]] constexpr auto    empty() const noexcept -> bool      { return size() == 0UZ; }
         [[nodiscard]] constexpr auto     size() const noexcept -> size_type { return Traits::size(storage()); }
-        [[nodiscard]] constexpr auto max_size() const noexcept -> size_type { return size(); }
+
+        [[nodiscard]] constexpr auto max_size() const noexcept
+                -> size_type
+        {
+                if constexpr (can_grow) {
+                        return std::numeric_limits<size_type>::max();
+                } else {
+                        return size();
+                }
+        }
+
+        // Growth, [vector]'s members over storage that spells them alike, so detected on the storage rather than reconciled by the trait. [design.md#growth]
+        constexpr void resize(size_type n)                          requires can_grow { m_bits.resize(n); }
+        constexpr void resize(size_type n, value_type const& value) requires can_grow { m_bits.resize(n, value); }
+        constexpr void clear() noexcept                             requires can_grow { m_bits.clear(); }
+        constexpr void push_back(value_type const& value)           requires can_grow { m_bits.push_back(value); }
+        constexpr void pop_back() noexcept                          requires can_grow { m_bits.pop_back(); }
+
+        constexpr auto emplace_back(value_type const& value)
+                -> reference
+                requires can_grow
+        {
+                m_bits.push_back(value);
+                return back();
+        }
+
+        constexpr void reserve(size_type n)
+                requires can_grow and requires (bits_type& b) { b.reserve(n); }
+        {
+                m_bits.reserve(n);
+        }
+
+        [[nodiscard]] constexpr auto capacity() const noexcept
+                -> size_type
+                requires can_grow and requires (bits_type const& b) { b.capacity(); }
+        {
+                return m_bits.capacity();
+        }
+
+        constexpr void shrink_to_fit()
+                requires can_grow and requires (bits_type& b) { b.shrink_to_fit(); }
+        {
+                m_bits.shrink_to_fit();
+        }
 
         // element access, [] unchecked and at() throwing as [array] has them. [design.md#asking-is-total]
         [[nodiscard]] constexpr auto operator[](this auto&& self, size_type n) noexcept

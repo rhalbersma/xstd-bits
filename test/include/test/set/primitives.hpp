@@ -7,7 +7,8 @@
 #define TEST_SET_PRIMITIVES_HPP
 
 #include <boost/test/unit_test.hpp>     // BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <xstd/bits/bit_static_set.hpp> // bit_static_set
+#include <xstd/bits/basic_bit_set.hpp> // basic_bit_set
+#include <xstd/bits/ownership.hpp>     // ownership
 #include <algorithm>                    // equal_range, lexicographical_compare_three_way
 #include <compare>                      // strong_ordering
 #include <concepts>                     // convertible_to, default_initializable, equality_comparable, integral, same_as, unsigned_integral
@@ -27,8 +28,9 @@ struct ref_same_as_pred
         static constexpr auto value = std::same_as<R, T>;
 };
 
-template<std::size_t N, std::unsigned_integral Block>
-struct ref_same_as_pred<xstd::bit_static_set<N, Block>>
+// Every set adaptor hands out a proxy converting to the key, whatever its storage or ownership.
+template<class Bits, xstd::ownership Own, class Traits>
+struct ref_same_as_pred<xstd::basic_bit_set<Bits, Own, Traits>>
 {
         template<class R, class T>
         static constexpr auto value = std::convertible_to<R, std::add_const_t<std::remove_reference_t<T>>&>;

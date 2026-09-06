@@ -17,7 +17,8 @@
 #include <cstdint>                            // uint8_t
 #include <functional>                         // hash
 #include <ranges>                             // range
-#include <stdexcept>                          // out_of_range
+#include <sstream>                            // istringstream
+#include <stdexcept>                          // out_of_range, overflow_error
 #include <string>                             // string
 #include <tuple>                              // tuple
 #include <type_traits>                        // is_nothrow_*, is_trivially_*
@@ -190,6 +191,49 @@ BOOST_AUTO_TEST_CASE(TheDerivedMembersHoldOverEitherStorage)
 
         // A count on the character-pointer form takes that many characters and no more.
         BOOST_CHECK_EQUAL(Packed("1111", 2).count(), 2UZ);
+}
+
+// [bitset.cons]/2 and [bitset.members]/34-37: the word in and the word out, the overflow where a set position lies beyond it.
+BOOST_AUTO_TEST_CASE(TheWordConstructorAndConversionsAgreeWithStdBitset)
+{
+        auto const s = std::bitset<9>(0b101ULL);
+        auto const w = xstd::basic_bitset<std::bitset<9>>(0b101ULL);
+        auto const p = xstd::bitset<9, std::uint8_t>(0b101ULL);
+        BOOST_CHECK_EQUAL(w.to_string(), s.to_string());
+        BOOST_CHECK_EQUAL(p.to_string(), s.to_string());
+        BOOST_CHECK_EQUAL(p.to_ullong(), s.to_ullong());
+        BOOST_CHECK_EQUAL(p.to_ulong(), s.to_ulong());
+
+        // The high bits of the value drop where the width is narrower, as [bitset.cons]/2 has it.
+        using Narrow = xstd::bitset<3, std::uint8_t>;
+        using Empty  = xstd::bitset<0, std::uint8_t>;
+        BOOST_CHECK_EQUAL(Narrow(0b1111ULL).to_ullong(), 7ULL);
+        BOOST_CHECK_EQUAL(Empty(0b1111ULL).to_ullong(), 0ULL);
+
+        auto wide = xstd::bitset<70, std::uint8_t>();
+        BOOST_CHECK_EQUAL(wide.to_ullong(), 0ULL);
+        wide.set(69);
+        BOOST_CHECK_THROW(static_cast<void>(wide.to_ullong()), std::overflow_error);
+        BOOST_CHECK_THROW(static_cast<void>(wide.to_ulong()), std::overflow_error);
+}
+
+// [bitset.operators]/6: a short read lands in the low bits, as std::bitset(str) puts it, and an empty read fails the stream.
+BOOST_AUTO_TEST_CASE(ExtractionOfAShortInputAgreesWithStdBitset)
+{
+        auto in = std::istringstream("1");
+        auto s = std::bitset<4>();
+        in >> s;
+        auto ours = std::istringstream("1");
+        auto x = xstd::bitset<4, std::uint8_t>();
+        ours >> x;
+        BOOST_CHECK_EQUAL(x.to_string(), s.to_string());
+        BOOST_CHECK_EQUAL(x.to_ullong(), 1ULL);
+
+        auto stop = std::istringstream("01x");
+        auto y = xstd::bitset<4, std::uint8_t>();
+        stop >> y;
+        BOOST_CHECK_EQUAL(y.to_string(), "0001");
+        BOOST_CHECK(not stop.fail());
 }
 
 // The text constructors reject as std::bitset's do: a stray character, and a position past the end.

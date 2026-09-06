@@ -13,17 +13,20 @@
 #include <xstd/bits/bit_traits.hpp>           // bit_storage, bit_traits, static_bit_extent, zero_width
 #include <xstd/bits/ownership.hpp>            // owned_storage, ownership
 #include <algorithm>                          // min
+#include <cassert>                            // assert
 #include <concepts>                           // convertible_to, regular, same_as
 #include <cstddef>                            // size_t
 #include <format>                             // format
 #include <functional>                         // hash
 #include <ios>                                // ios_base
 #include <iosfwd>                             // basic_istream, basic_ostream
+#include <iterator>                           // input_iterator
+#include <limits>                             // numeric_limits
 #include <locale>                             // ctype, use_facet
 #include <memory>                             // allocator
 #include <ranges>                             // iota
 #include <source_location>                    // source_location
-#include <stdexcept>                          // invalid_argument, out_of_range
+#include <stdexcept>                          // invalid_argument, out_of_range, overflow_error
 #include <string>                             // basic_string, char_traits
 #include <string_view>                        // basic_string_view
 #include <utility>                            // as_const
@@ -57,9 +60,10 @@ concept has_bitops =
 template<has_bitops Bits, bit_storage<Bits> Traits = bit_traits<Bits>>
 class basic_bitset
 {
-        static_assert(static_bit_extent<Traits, Bits>, "a dynamic width arrives with block_vector, in step 7 of #80");
+        // Two counterparts, one wrapper: std::bitset at a static width, boost::dynamic_bitset at a run-time one. [design.md#the-idempotent-wrapper]
+        static constexpr bool has_static_width = static_bit_extent<Traits, Bits>;
 
-        // No iteration and no <=> here by design, because std::bitset has neither: the two views refer into the storage instead. [design.md#views-over-owners]
+        // No iteration and no <=> here by design, because neither counterpart has them: the two views refer into the storage instead. [design.md#views-over-owners]
         Bits m_bits{};
 
         template<class B, ownership O, bit_storage<B> T>         friend class basic_bit_set;
@@ -72,6 +76,9 @@ class basic_bitset
         }
 
 public:
+        // boost's typedef, which the harness keys a run-time width on; std::bitset has none, and a typedef changes no answer.
+        using size_type = std::size_t;
+
         // [bitset.refs], reaching the bits only through the unchecked way in; its own class, with the flip and ~ the sequence proxy lacks. [design.md#unchecked-writes-in-views]
         class reference
         {
@@ -133,9 +140,26 @@ public:
                 }
         };
 
+        // boost's sentinel, for the two searches a run-time width answers with it.
+        static constexpr std::size_t npos = static_cast<std::size_t>(-1);
+
         // Constructors                                            [bitset.cons]
         [[nodiscard]] constexpr basic_bitset() noexcept = default;
-        [[nodiscard]] constexpr explicit(false) basic_bitset(unsigned long long val) noexcept = delete;       // TODO
+
+        // [bitset.cons]/2: the low bits of val, as many as the width admits; boost takes the width first and the value second.
+        [[nodiscard]] constexpr explicit(false) basic_bitset(unsigned long long val) noexcept  // NOLINT(misc-explicit-constructor)
+                requires has_static_width
+        {
+                from_ullong(val);
+        }
+
+        [[nodiscard]] constexpr explicit basic_bitset(std::size_t num_bits, unsigned long long val = 0ULL)
+                requires (not has_static_width)
+        :
+                m_bits(num_bits)
+        {
+                from_ullong(val);
+        }
 
         template<class charT, class traits, class Allocator>
         [[nodiscard]] constexpr explicit basic_bitset(
@@ -162,6 +186,10 @@ public:
                         throw out_of_range(pos);
                 }
                 auto const rlen = std::ranges::min(n, str.size() - pos);
+                // A run-time width is the characters read, as boost's is when no width is given.
+                if constexpr (not has_static_width) {
+                        m_bits.resize(rlen);
+                }
                 auto const M = std::ranges::min(size(), rlen);
                 for (auto const i : std::views::iota(0UZ, M)) {
                         auto const ch = str[pos + M - 1 - i];
@@ -219,10 +247,10 @@ public:
                 return *this;
         }
 
-        [[nodiscard]] constexpr auto operator<<(std::size_t pos) const noexcept -> basic_bitset { auto nrv = *this; nrv <<= pos; return nrv; }
-        [[nodiscard]] constexpr auto operator>>(std::size_t pos) const noexcept -> basic_bitset { auto nrv = *this; nrv >>= pos; return nrv; }
+        [[nodiscard]] constexpr auto operator<<(std::size_t pos) const noexcept(has_static_width) -> basic_bitset { auto nrv = *this; nrv <<= pos; return nrv; }
+        [[nodiscard]] constexpr auto operator>>(std::size_t pos) const noexcept(has_static_width) -> basic_bitset { auto nrv = *this; nrv >>= pos; return nrv; }
 
-        [[nodiscard]] constexpr auto operator~() const noexcept -> basic_bitset { auto nrv = *this; nrv.flip(); return nrv; }
+        [[nodiscard]] constexpr auto operator~() const noexcept(has_static_width) -> basic_bitset { auto nrv = *this; nrv.flip(); return nrv; }
 
         constexpr auto set  () noexcept -> basic_bitset& { m_bits.set  (); return *this; }
         constexpr auto reset() noexcept -> basic_bitset& { m_bits.reset(); return *this; }
@@ -234,10 +262,16 @@ public:
         {
                 if constexpr (requires { Traits::checked_set(m_bits, pos, val); }) {
                         Traits::checked_set(m_bits, pos, val);
-                } else if (pos < size()) {
-                        Traits::unchecked_assign(m_bits, pos, val);
+                } else if constexpr (has_static_width) {
+                        if (pos < size()) {
+                                Traits::unchecked_assign(m_bits, pos, val);
+                        } else {
+                                throw out_of_range(pos);
+                        }
                 } else {
-                        throw out_of_range(pos);
+                        // boost asserts, and so does its stand-in: the inconsistency with the static width is the counterparts' own. [design.md#checked-and-unchecked]
+                        assert(pos < size());
+                        Traits::unchecked_assign(m_bits, pos, val);
                 }
                 return *this;
         }
@@ -247,10 +281,15 @@ public:
         {
                 if constexpr (requires { Traits::checked_reset(m_bits, pos); }) {
                         Traits::checked_reset(m_bits, pos);
-                } else if (pos < size()) {
-                        Traits::unchecked_assign(m_bits, pos, false);
+                } else if constexpr (has_static_width) {
+                        if (pos < size()) {
+                                Traits::unchecked_assign(m_bits, pos, false);
+                        } else {
+                                throw out_of_range(pos);
+                        }
                 } else {
-                        throw out_of_range(pos);
+                        assert(pos < size());
+                        Traits::unchecked_assign(m_bits, pos, false);
                 }
                 return *this;
         }
@@ -260,10 +299,15 @@ public:
         {
                 if constexpr (requires { Traits::checked_flip(m_bits, pos); }) {
                         Traits::checked_flip(m_bits, pos);
-                } else if (pos < size()) {
-                        Traits::unchecked_assign(m_bits, pos, not Traits::at(m_bits, pos));
+                } else if constexpr (has_static_width) {
+                        if (pos < size()) {
+                                Traits::unchecked_assign(m_bits, pos, not Traits::at(m_bits, pos));
+                        } else {
+                                throw out_of_range(pos);
+                        }
                 } else {
-                        throw out_of_range(pos);
+                        assert(pos < size());
+                        Traits::unchecked_assign(m_bits, pos, not Traits::at(m_bits, pos));
                 }
                 return *this;
         }
@@ -281,8 +325,9 @@ public:
                 return { *this, pos };
         }
 
-        [[nodiscard]] constexpr auto to_ulong()  const -> unsigned long      = delete;  // TODO
-        [[nodiscard]] constexpr auto to_ullong() const -> unsigned long long = delete;  // TODO
+        // [bitset.members]/34-37: the value the bits spell, or overflow_error where a set position lies beyond the word; boost's to_ulong is the same contract.
+        [[nodiscard]] constexpr auto to_ulong()  const -> unsigned long      { return to_word<unsigned long>();      }
+        [[nodiscard]] constexpr auto to_ullong() const -> unsigned long long { return to_word<unsigned long long>(); }
 
         template<
                 class charT = char,
@@ -314,10 +359,14 @@ public:
         {
                 if constexpr (requires { { Traits::checked_test(m_bits, pos) } -> std::convertible_to<bool>; }) {
                         return Traits::checked_test(m_bits, pos);
-                } else if (pos < size()) {
-                        return Traits::at(m_bits, pos);
-                } else {
+                } else if constexpr (has_static_width) {
+                        if (pos < size()) {
+                                return Traits::at(m_bits, pos);
+                        }
                         throw out_of_range(pos);
+                } else {
+                        assert(pos < size());
+                        return Traits::at(m_bits, pos);
                 }
         }
 
@@ -325,9 +374,149 @@ public:
         [[nodiscard]] constexpr auto any()  const noexcept -> bool { return m_bits.any();  }
         [[nodiscard]] constexpr auto none() const noexcept -> bool { return m_bits.none(); }
 
-        // No -=, is_subset_of, is_proper_subset_of or intersects at a static width: std::bitset has none, and set_view keeps them. [design.md#the-idempotent-wrapper]
+        // The set vocabulary boost has and std::bitset has not, forwarded exactly where the counterpart is boost: a run-time width, whose storage spells them alike. [design.md#the-idempotent-wrapper]
+        constexpr auto operator-=(basic_bitset const& rhs) noexcept
+                -> basic_bitset&
+                requires (not has_static_width) and requires (Bits& b, Bits const& c) { b -= c; }
+        {
+                m_bits -= rhs.m_bits;
+                return *this;
+        }
+
+        [[nodiscard]] constexpr auto is_subset_of(basic_bitset const& rhs) const noexcept
+                -> bool
+                requires (not has_static_width) and requires (Bits const& c) { c.is_subset_of(c); }
+        {
+                return m_bits.is_subset_of(rhs.m_bits);
+        }
+
+        [[nodiscard]] constexpr auto is_proper_subset_of(basic_bitset const& rhs) const noexcept
+                -> bool
+                requires (not has_static_width) and requires (Bits const& c) { c.is_proper_subset_of(c); }
+        {
+                return m_bits.is_proper_subset_of(rhs.m_bits);
+        }
+
+        [[nodiscard]] constexpr auto intersects(basic_bitset const& rhs) const noexcept
+                -> bool
+                requires (not has_static_width) and requires (Bits const& c) { c.intersects(c); }
+        {
+                return m_bits.intersects(rhs.m_bits);
+        }
+
+        // boost's two searches, npos where the trait's total answer is the width.
+        [[nodiscard]] constexpr auto find_first() const noexcept
+                -> std::size_t
+                requires (not has_static_width)
+        {
+                auto const n = detail::bits::find_first<Traits>(m_bits);
+                return n == size() ? npos : n;
+        }
+
+        [[nodiscard]] constexpr auto find_next(std::size_t pos) const noexcept
+                -> std::size_t
+                requires (not has_static_width)
+        {
+                auto const n = detail::bits::find_next<Traits>(m_bits, pos);
+                return n == size() ? npos : n;
+        }
+
+        // Growth, boost's members, on storage that spells them alike: detected on the storage rather than reconciled by the trait. [design.md#growth]
+        [[nodiscard]] constexpr auto empty() const noexcept
+                -> bool
+                requires (not has_static_width)
+        {
+                return size() == 0UZ;
+        }
+
+        constexpr void resize(std::size_t num_bits, bool value = false)
+                requires requires (Bits& b) { b.resize(num_bits, value); }
+        {
+                m_bits.resize(num_bits, value);
+        }
+
+        constexpr void clear()
+                requires requires (Bits& b) { b.clear(); }
+        {
+                m_bits.clear();
+        }
+
+        constexpr void push_back(bool bit)
+                requires requires (Bits& b) { b.push_back(bit); }
+        {
+                m_bits.push_back(bit);
+        }
+
+        constexpr void pop_back()
+                requires requires (Bits& b) { b.pop_back(); }
+        {
+                m_bits.pop_back();
+        }
+
+        template<class Block>
+        constexpr void append(Block value)
+                requires requires (Bits& b) { b.append(value); }
+        {
+                m_bits.append(value);
+        }
+
+        template<std::input_iterator I>
+        constexpr void append(I first, I last)
+                requires requires (Bits& b) { b.append(first, last); }
+        {
+                m_bits.append(first, last);
+        }
+
+        constexpr void reserve(std::size_t num_bits)
+                requires requires (Bits& b) { b.reserve(num_bits); }
+        {
+                m_bits.reserve(num_bits);
+        }
+
+        [[nodiscard]] constexpr auto capacity() const noexcept
+                -> std::size_t
+                requires requires (Bits const& c) { c.capacity(); }
+        {
+                return m_bits.capacity();
+        }
+
+        constexpr void shrink_to_fit()
+                requires requires (Bits& b) { b.shrink_to_fit(); }
+        {
+                m_bits.shrink_to_fit();
+        }
 
 private:
+        constexpr void from_ullong(unsigned long long val) noexcept
+        {
+                constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<unsigned long long>::digits);
+                auto const M = std::ranges::min(size(), digits);
+                for (auto const i : std::views::iota(0UZ, M)) {
+                        if (((val >> i) & 1ULL) != 0ULL) {
+                                Traits::unchecked_assign(m_bits, i, true);
+                        }
+                }
+        }
+
+        // One position at a time over at most a word's worth, the overflow asked of the trait's search above the word.
+        template<class Word>
+        [[nodiscard]] constexpr auto to_word() const
+                -> Word
+        {
+                constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<Word>::digits);
+                if (size() > digits and detail::bits::find_next<Traits>(m_bits, digits - 1UZ) != size()) {
+                        throw overflow_error();
+                }
+                auto const M = std::ranges::min(size(), digits);
+                auto word = Word{0};
+                for (auto const i : std::views::iota(0UZ, M)) {
+                        if (Traits::at(m_bits, i)) {
+                                word |= static_cast<Word>(Word{1} << i);
+                        }
+                }
+                return word;
+        }
+
         template<class charT>
         static constexpr auto invalid_argument(
                 charT ch, charT zero = static_cast<charT>('0'), charT one = static_cast<charT>('1'),
@@ -348,6 +537,16 @@ private:
                         std::format(
                                 "{}:{}:{}: exception: ‘{}‘: argument ‘pos‘ is out of range [{} >= {}]",
                                 loc.file_name(), loc.line(), loc.column(), loc.function_name(), pos, size()
+                        )
+                );
+        }
+
+        [[nodiscard]] static constexpr auto overflow_error(std::source_location const& loc = std::source_location::current())
+        {
+                return std::overflow_error(
+                        std::format(
+                                "{}:{}:{}: exception: ‘{}‘: a set position lies beyond the word",
+                                loc.file_name(), loc.line(), loc.column(), loc.function_name()
                         )
                 );
         }
@@ -387,35 +586,40 @@ struct hash<xstd::basic_bitset<Bits, Traits>>
 namespace xstd {
 
 // bitset operators                                           [bitset.operators]
-template<class Bits, class Traits> [[nodiscard]] constexpr auto operator&(basic_bitset<Bits, Traits> const& lhs, basic_bitset<Bits, Traits> const& rhs) noexcept -> basic_bitset<Bits, Traits> { auto nrv = lhs; nrv &= rhs; return nrv; }
-template<class Bits, class Traits> [[nodiscard]] constexpr auto operator|(basic_bitset<Bits, Traits> const& lhs, basic_bitset<Bits, Traits> const& rhs) noexcept -> basic_bitset<Bits, Traits> { auto nrv = lhs; nrv |= rhs; return nrv; }
-template<class Bits, class Traits> [[nodiscard]] constexpr auto operator^(basic_bitset<Bits, Traits> const& lhs, basic_bitset<Bits, Traits> const& rhs) noexcept -> basic_bitset<Bits, Traits> { auto nrv = lhs; nrv ^= rhs; return nrv; }
+template<class Bits, class Traits> [[nodiscard]] constexpr auto operator&(basic_bitset<Bits, Traits> const& lhs, basic_bitset<Bits, Traits> const& rhs) noexcept(static_bit_extent<Traits, Bits>) -> basic_bitset<Bits, Traits> { auto nrv = lhs; nrv &= rhs; return nrv; }
+template<class Bits, class Traits> [[nodiscard]] constexpr auto operator|(basic_bitset<Bits, Traits> const& lhs, basic_bitset<Bits, Traits> const& rhs) noexcept(static_bit_extent<Traits, Bits>) -> basic_bitset<Bits, Traits> { auto nrv = lhs; nrv |= rhs; return nrv; }
+template<class Bits, class Traits> [[nodiscard]] constexpr auto operator^(basic_bitset<Bits, Traits> const& lhs, basic_bitset<Bits, Traits> const& rhs) noexcept(static_bit_extent<Traits, Bits>) -> basic_bitset<Bits, Traits> { auto nrv = lhs; nrv ^= rhs; return nrv; }
+template<class Bits, class Traits> [[nodiscard]] constexpr auto operator-(basic_bitset<Bits, Traits> const& lhs, basic_bitset<Bits, Traits> const& rhs) noexcept(static_bit_extent<Traits, Bits>) -> basic_bitset<Bits, Traits> requires requires (basic_bitset<Bits, Traits>& b) { b -= b; } { auto nrv = lhs; nrv -= rhs; return nrv; }
 
+// [bitset.operators]/6: up to N characters into a temporary string, then x = bitset(str), so a short read lands in the low bits as it does there;
+// a run-time width reads every 0 or 1 on offer and is as wide as the characters read, as boost's is.
 template<class charT, class traits, class Bits, class Traits>
 auto operator>>(std::basic_istream<charT, traits>& is, basic_bitset<Bits, Traits>& x)
         -> std::basic_istream<charT, traits>&
 {
-        auto const N = x.size();
-        auto str = std::basic_string<charT, traits>(N, is.widen('0'));  // NOLINT(bugprone-string-constructor)
+        auto const limit = [&] {
+                if constexpr (static_bit_extent<Traits, Bits>) {
+                        return x.size();
+                } else {
+                        return std::numeric_limits<std::size_t>::max();
+                }
+        }();
+        auto str = std::basic_string<charT, traits>();
         // Assigned inside an if constexpr the zero-width instantiation discards. [design.md#clang-tidy-false-positives]
         auto state = std::ios_base::goodbit;  // NOLINT(misc-const-correctness)
         charT ch;
-        auto i = 0UZ;
         // One peek per character: peeking twice sets eofbit then failbit, failing a short but valid extraction ([bitset.operators]/6).
-        while (i < N) {
+        while (str.size() < limit) {
                 auto const next = is.peek();
                 if (not traits::eq_int_type(next, is.widen('0')) and not traits::eq_int_type(next, is.widen('1'))) {
                         break;
                 }
                 is >> ch;
-                if (traits::eq(ch, is.widen('1'))) {
-                        str[i] = ch;
-                }
-                ++i;
+                str.push_back(ch);
         }
         x = basic_bitset<Bits, Traits>(str);
         if constexpr (not detail::bits::zero_width<Traits>) {
-                if (i == 0) {
+                if (str.empty()) {
                         state |= std::ios_base::failbit;
                         is.setstate(state);
                 }

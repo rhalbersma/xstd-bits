@@ -28,21 +28,17 @@ concept modern_bitset = requires(X& a, std::size_t pos)
         a.erase(pos);
 };
 
+// A static width is its own; a run-time one, boost's or ours, is resized to the count.
 template<class X>
 struct generate_empty
 {
-        auto operator()(std::size_t) const
-        {
-                return X();
-        }
-};
-
-template<xstd::unsigned_integer Block, class Allocator>
-struct generate_empty<boost::dynamic_bitset<Block, Allocator>>
-{
         auto operator()(std::size_t n) const
         {
-                return boost::dynamic_bitset<Block, Allocator>(n);
+                auto x = X();
+                if constexpr (requires { x.resize(n); }) {
+                        x.resize(n);
+                }
+                return x;
         }
 };
 

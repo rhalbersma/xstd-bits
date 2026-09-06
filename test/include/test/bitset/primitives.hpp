@@ -552,14 +552,14 @@ struct op_istream_failure
                                 BOOST_CHECK_EQUAL(is.fail(), N > 0);            // [bitset.operators]/6
                         }
 
-                        // Fewer digits than N: the loop stops on eof rather than on N, and what was read lands at the front.
+                        // Fewer digits than N: the loop stops on eof rather than on N, and x = X(str) puts what was read in the low bits.
                         if constexpr (N > 1) {
                                 auto is = std::istringstream("1");
                                 auto x = X();
                                 is >> x;
                                 BOOST_CHECK(not is.fail());
                                 BOOST_CHECK_EQUAL(x.count(), 1uz);
-                                BOOST_CHECK(x.test(N - 1));                     // [bitset.operators]/5
+                                BOOST_CHECK(x.test(0));                         // [bitset.operators]/6
                         }
                 }
         }

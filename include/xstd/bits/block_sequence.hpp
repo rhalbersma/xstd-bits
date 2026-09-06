@@ -23,6 +23,7 @@
 #include <cstddef>                                             // ptrdiff_t, size_t
 #include <functional>                                          // plus
 #include <iterator>                                            // distance, forward_iterator, input_iterator, prev
+#include <limits>                                              // numeric_limits
 #include <memory>                                              // allocator
 #include <ranges>                                              // begin, drop, iota, size, swap, transform, zip
                                                                // (views::drop_last when P22014R2 is accepted)
@@ -940,7 +941,17 @@ struct bit_traits<block_sequence<Blocks, N>>
         [[nodiscard]] static constexpr auto count(bits_type const& c) noexcept -> std::size_t { return c.count(); }
 
         // The two entries the readings cannot synthesize: insert is the one operation that can grow, and fill is bulk. [design.md#what-the-trait-reconciles]
-        static constexpr void insert(bits_type& c, std::size_t n) noexcept { c.set(n); }
+        // A run-time width grows to hold the position, as boost's does; n + 1 must be addressable, the ruled-out position being the one whose successor wraps.
+        static constexpr void insert(bits_type& c, std::size_t n) noexcept(bits_type::has_static_size)
+        {
+                if constexpr (not bits_type::has_static_size) {
+                        if (n >= c.size()) {
+                                assert(n < std::numeric_limits<std::size_t>::max());
+                                c.resize(n + 1UZ);
+                        }
+                }
+                c.set(n);
+        }
         static constexpr void fill(bits_type& c, bool value) noexcept
         {
                 if (value) {

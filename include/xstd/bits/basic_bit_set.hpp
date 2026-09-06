@@ -6,11 +6,12 @@
 #ifndef XSTD_BITS_BASIC_BIT_SET_HPP
 #define XSTD_BITS_BASIC_BIT_SET_HPP
 
-#include <boost/hash2/hash_append.hpp> // hash_append
+#include <boost/container_hash/is_range.hpp> // is_range
+#include <boost/hash2/hash_append.hpp> // hash_append, hash_append_tag
 #include <xstd/bits/bit_proxy.hpp>     // bit_set_iterator, bit_set_reference
 #include <xstd/bits/bit_traits.hpp>    // bit_storage, bit_traits, count, find_first, find_next, find_prev, static_bit_extent
 #include <xstd/bits/ownership.hpp>     // owned_bits_t, owned_storage, owned_traits_t, owner_of, ownership, owns
-#include <algorithm>                   // lexicographical_compare_three_way
+#include <algorithm>                   // any_of, equal, includes, lexicographical_compare_three_way
 #include <cassert>                     // assert
 #include <compare>                     // strong_ordering
 #include <concepts>                    // constructible_from, swappable
@@ -20,7 +21,7 @@
 #include <iterator>                    // input_iterator, iter_reference_t, make_reverse_iterator, reverse_iterator, sentinel_for
 #include <limits>                      // numeric_limits
 #include <ranges>                      // begin, enable_borrowed_range, enable_view, end, input_range, range_reference_t, from_range_t, swap
-#include <type_traits>                 // conditional_t, is_nothrow_swappable_v, remove_const_t, remove_reference_t
+#include <type_traits>                 // conditional_t, false_type, is_nothrow_swappable_v, remove_const_t, remove_reference_t
 #include <utility>                     // forward, pair
 
 // The set reading, [set] over any Bits with a bit_traits specialization, owning it or referring to it. [design.md#the-three-adaptors]
@@ -51,10 +52,18 @@ class basic_bit_set
         template<class B, ownership O, bit_storage<B> T>         friend class basic_bit_set;
         template<class B, ownership O, bool W, bit_storage<B> T> friend class basic_bit_sequence;
 
+        // The storage's own hash at a static width; the elements at a run-time width, where two equal sets need not share a storage. [design.md#width-is-capacity]
         template<class Provider, class Hash, class Flavor>
         friend constexpr void tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, basic_bit_set const* v) noexcept
         {
-                boost::hash2::hash_append(h, f, v->storage());
+                if constexpr (has_static_width) {
+                        boost::hash2::hash_append(h, f, v->storage());
+                } else {
+                        for (auto x : *v) {
+                                boost::hash2::hash_append(h, f, static_cast<std::size_t>(x));
+                        }
+                        boost::hash2::hash_append(h, f, v->size());
+                }
         }
 
 public:
@@ -64,6 +73,7 @@ public:
         using value_type             = key_type;
         using value_compare          = key_compare;
         using traits_type            = Traits;
+        static constexpr bool has_static_width = static_bit_extent<Traits, Bits>;
         using pointer                = void;
         using const_pointer          = pointer;
         using reference              = bit_set_reference<Bits, Traits>;
@@ -122,10 +132,14 @@ public:
         }
 
         // The storage's own equality, which every storage in the tree has; ordering is the trait's entry, or the invariant it must satisfy. [design.md#the-ordering-invariant]
+        // Both over the elements when two run-time widths differ: the storages then cannot agree, the sets still can. [design.md#width-is-capacity]
         [[nodiscard]] friend constexpr auto operator==(basic_bit_set const& x, basic_bit_set const& y) noexcept
                 -> bool
                 requires requires { { x.storage() == y.storage() } -> std::convertible_to<bool>; }
         {
+                if (not same_width(x, y)) {
+                        return std::ranges::equal(x, y);
+                }
                 return x.storage() == y.storage();
         }
 
@@ -133,10 +147,11 @@ public:
                 -> std::strong_ordering
         {
                 if constexpr (requires { Traits::set_three_way(x.storage(), y.storage()); }) {
-                        return Traits::set_three_way(x.storage(), y.storage());
-                } else {
-                        return std::lexicographical_compare_three_way(x.begin(), x.end(), y.begin(), y.end());
+                        if (same_width(x, y)) {
+                                return Traits::set_three_way(x.storage(), y.storage());
+                        }
                 }
+                return std::lexicographical_compare_three_way(x.begin(), x.end(), y.begin(), y.end());
         }
 
         // iterators; one type for both, this reading being read-only through its proxy. [design.md#read-only-set-proxy]
@@ -275,16 +290,97 @@ public:
                 Traits::unchecked_assign(self.storage(), x, not Traits::at(self.storage(), x));
         }
 
-        // Bulk, on the storage's own spelling: what every storage agrees on is required of it, not reconciled. [design.md#what-the-trait-reconciles]
         constexpr void complement(this auto&& self) noexcept requires requires { self.storage().flip(); } { self.storage().flip(); }
 
-        constexpr auto operator&=(this auto&& self, basic_bit_set const& other) noexcept -> auto& requires requires { self.storage() &= other.storage(); } { self.storage() &= other.storage(); return self; }
-        constexpr auto operator|=(this auto&& self, basic_bit_set const& other) noexcept -> auto& requires requires { self.storage() |= other.storage(); } { self.storage() |= other.storage(); return self; }
-        constexpr auto operator^=(this auto&& self, basic_bit_set const& other) noexcept -> auto& requires requires { self.storage() ^= other.storage(); } { self.storage() ^= other.storage(); return self; }
-        constexpr auto operator-=(this auto&& self, basic_bit_set const& other) noexcept -> auto& requires requires { self.storage() -= other.storage(); } { self.storage() -= other.storage(); return self; }
+        // Bulk, on the storage's own spelling: what every storage agrees on is required of it, not reconciled. [design.md#what-the-trait-reconciles]
+        // Two run-time widths that differ go element-wise instead, the storages' own being equal-width operations; the two that insert may then allocate. [design.md#width-is-capacity]
+        constexpr auto operator&=(this auto&& self, basic_bit_set const& other) noexcept
+                -> auto&
+                requires requires { self.storage() &= other.storage(); }
+        {
+                if (same_width(self, other)) {
+                        self.storage() &= other.storage();
+                } else {
+                        for (auto x : self) {
+                                if (not other.contains(x)) {
+                                        self.erase(x);
+                                }
+                        }
+                }
+                return self;
+        }
 
-        constexpr auto operator<<=(this auto&& self, std::size_t n) noexcept -> auto& requires requires { self.storage() <<= n; } { self.storage() <<= n; return self; }
-        constexpr auto operator>>=(this auto&& self, std::size_t n) noexcept -> auto& requires requires { self.storage() >>= n; } { self.storage() >>= n; return self; }
+        constexpr auto operator|=(this auto&& self, basic_bit_set const& other) noexcept(has_static_width)
+                -> auto&
+                requires requires { self.storage() |= other.storage(); }
+        {
+                if (same_width(self, other)) {
+                        self.storage() |= other.storage();
+                } else {
+                        for (auto x : other) {
+                                self.insert(x);
+                        }
+                }
+                return self;
+        }
+
+        constexpr auto operator^=(this auto&& self, basic_bit_set const& other) noexcept(has_static_width)
+                -> auto&
+                requires requires { self.storage() ^= other.storage(); }
+        {
+                if (same_width(self, other)) {
+                        self.storage() ^= other.storage();
+                } else {
+                        for (auto x : other) {
+                                if (self.erase(x) == 0UZ) {
+                                        self.insert(x);
+                                }
+                        }
+                }
+                return self;
+        }
+
+        constexpr auto operator-=(this auto&& self, basic_bit_set const& other) noexcept
+                -> auto&
+                requires requires { self.storage() -= other.storage(); }
+        {
+                if (same_width(self, other)) {
+                        self.storage() -= other.storage();
+                } else {
+                        for (auto x : other) {
+                                self.erase(x);
+                        }
+                }
+                return self;
+        }
+
+        // The shifts translate the set. A run-time width grows to hold a left shift and empties past a right one, the width being no precondition. [design.md#width-is-capacity]
+        constexpr auto operator<<=(this auto&& self, std::size_t n) noexcept(has_static_width)
+                -> auto&
+                requires requires { self.storage() <<= n; } and (has_static_width or requires { self.storage().resize(n); })
+        {
+                if constexpr (has_static_width) {
+                        self.storage() <<= n;
+                } else if (auto const width = Traits::size(self.storage()); width > 0UZ) {
+                        self.storage().resize(width + n);
+                        self.storage() <<= n;
+                }
+                return self;
+        }
+
+        constexpr auto operator>>=(this auto&& self, std::size_t n) noexcept
+                -> auto&
+                requires requires { self.storage() >>= n; }
+        {
+                if constexpr (not has_static_width) {
+                        if (n >= Traits::size(self.storage())) {
+                                Traits::fill(self.storage(), false);
+                                return self;
+                        }
+                }
+                self.storage() >>= n;
+                return self;
+        }
 
         // observers
         [[nodiscard]] constexpr auto   key_comp() const noexcept -> key_compare   { return {}; }
@@ -323,9 +419,13 @@ public:
         }
 
         // The storage's own member where it has one, its bulk operators otherwise: both block-wise, and every storage in the tree has one of the two.
+        // Two run-time widths that differ are asked element-wise, as the comparisons are. [design.md#width-is-capacity]
         [[nodiscard]] constexpr auto is_subset_of(basic_bit_set const& other) const noexcept
                 -> bool
         {
+                if (not same_width(*this, other)) {
+                        return std::ranges::includes(other, *this);
+                }
                 if constexpr (requires { storage().is_subset_of(other.storage()); }) {
                         return storage().is_subset_of(other.storage());
                 } else {
@@ -336,6 +436,9 @@ public:
         [[nodiscard]] constexpr auto is_proper_subset_of(basic_bit_set const& other) const noexcept
                 -> bool
         {
+                if (not same_width(*this, other)) {
+                        return is_subset_of(other) and size() != other.size();
+                }
                 if constexpr (requires { storage().is_proper_subset_of(other.storage()); }) {
                         return storage().is_proper_subset_of(other.storage());
                 } else {
@@ -346,6 +449,9 @@ public:
         [[nodiscard]] constexpr auto intersects(basic_bit_set const& other) const noexcept
                 -> bool
         {
+                if (not same_width(*this, other)) {
+                        return std::ranges::any_of(*this, [&other](auto x) { return other.contains(x); });
+                }
                 if constexpr (requires { storage().intersects(other.storage()); }) {
                         return storage().intersects(other.storage());
                 } else {
@@ -354,6 +460,17 @@ public:
         }
 
 private:
+        // Constantly true at a static width, so every arm above folds to the storage's own. [design.md#width-is-capacity]
+        [[nodiscard]] static constexpr auto same_width(basic_bit_set const& x [[maybe_unused]], basic_bit_set const& y [[maybe_unused]]) noexcept
+                -> bool
+        {
+                if constexpr (has_static_width) {
+                        return true;
+                } else {
+                        return Traits::size(x.storage()) == Traits::size(y.storage());
+                }
+        }
+
         // Traits::insert returns nothing, so "was it new" is asked first; total, an out-of-range key being the trait's precondition to refuse.
         constexpr auto do_insert(this auto&& self, value_type x)
                 -> std::pair<iterator, bool>
@@ -411,16 +528,16 @@ constexpr auto erase_if(basic_bit_set<Bits, Own, Traits>& c, Predicate pred)
         return original_size - c.size();
 }
 
-// The non-member forms copy, so they are the owner's alone: a copied view would write through to what it views.
-template<class Bits, ownership Own, class Traits> [[nodiscard]] constexpr auto operator~(basic_bit_set<Bits, Own, Traits> const& lhs) noexcept -> basic_bit_set<Bits, Own, Traits> requires (owns(Own)) and requires (basic_bit_set<Bits, Own, Traits> c) { c.complement(); } { auto nrv = lhs; nrv.complement(); return nrv; }
+// The non-member forms copy, so they are the owner's alone: a copied view would write through to what it views; the copy may allocate at a run-time width.
+template<class Bits, ownership Own, class Traits> [[nodiscard]] constexpr auto operator~(basic_bit_set<Bits, Own, Traits> const& lhs) noexcept(basic_bit_set<Bits, Own, Traits>::has_static_width) -> basic_bit_set<Bits, Own, Traits> requires (owns(Own)) and requires (basic_bit_set<Bits, Own, Traits> c) { c.complement(); } { auto nrv = lhs; nrv.complement(); return nrv; }
 
-template<class Bits, ownership Own, class Traits> [[nodiscard]] constexpr auto operator&(basic_bit_set<Bits, Own, Traits> const& lhs, basic_bit_set<Bits, Own, Traits> const& rhs) noexcept -> basic_bit_set<Bits, Own, Traits> requires (owns(Own)) and requires (basic_bit_set<Bits, Own, Traits> c) { c &= c; } { auto nrv = lhs; nrv &= rhs; return nrv; }
-template<class Bits, ownership Own, class Traits> [[nodiscard]] constexpr auto operator|(basic_bit_set<Bits, Own, Traits> const& lhs, basic_bit_set<Bits, Own, Traits> const& rhs) noexcept -> basic_bit_set<Bits, Own, Traits> requires (owns(Own)) and requires (basic_bit_set<Bits, Own, Traits> c) { c |= c; } { auto nrv = lhs; nrv |= rhs; return nrv; }
-template<class Bits, ownership Own, class Traits> [[nodiscard]] constexpr auto operator^(basic_bit_set<Bits, Own, Traits> const& lhs, basic_bit_set<Bits, Own, Traits> const& rhs) noexcept -> basic_bit_set<Bits, Own, Traits> requires (owns(Own)) and requires (basic_bit_set<Bits, Own, Traits> c) { c ^= c; } { auto nrv = lhs; nrv ^= rhs; return nrv; }
-template<class Bits, ownership Own, class Traits> [[nodiscard]] constexpr auto operator-(basic_bit_set<Bits, Own, Traits> const& lhs, basic_bit_set<Bits, Own, Traits> const& rhs) noexcept -> basic_bit_set<Bits, Own, Traits> requires (owns(Own)) and requires (basic_bit_set<Bits, Own, Traits> c) { c -= c; } { auto nrv = lhs; nrv -= rhs; return nrv; }
+template<class Bits, ownership Own, class Traits> [[nodiscard]] constexpr auto operator&(basic_bit_set<Bits, Own, Traits> const& lhs, basic_bit_set<Bits, Own, Traits> const& rhs) noexcept(basic_bit_set<Bits, Own, Traits>::has_static_width) -> basic_bit_set<Bits, Own, Traits> requires (owns(Own)) and requires (basic_bit_set<Bits, Own, Traits> c) { c &= c; } { auto nrv = lhs; nrv &= rhs; return nrv; }
+template<class Bits, ownership Own, class Traits> [[nodiscard]] constexpr auto operator|(basic_bit_set<Bits, Own, Traits> const& lhs, basic_bit_set<Bits, Own, Traits> const& rhs) noexcept(basic_bit_set<Bits, Own, Traits>::has_static_width) -> basic_bit_set<Bits, Own, Traits> requires (owns(Own)) and requires (basic_bit_set<Bits, Own, Traits> c) { c |= c; } { auto nrv = lhs; nrv |= rhs; return nrv; }
+template<class Bits, ownership Own, class Traits> [[nodiscard]] constexpr auto operator^(basic_bit_set<Bits, Own, Traits> const& lhs, basic_bit_set<Bits, Own, Traits> const& rhs) noexcept(basic_bit_set<Bits, Own, Traits>::has_static_width) -> basic_bit_set<Bits, Own, Traits> requires (owns(Own)) and requires (basic_bit_set<Bits, Own, Traits> c) { c ^= c; } { auto nrv = lhs; nrv ^= rhs; return nrv; }
+template<class Bits, ownership Own, class Traits> [[nodiscard]] constexpr auto operator-(basic_bit_set<Bits, Own, Traits> const& lhs, basic_bit_set<Bits, Own, Traits> const& rhs) noexcept(basic_bit_set<Bits, Own, Traits>::has_static_width) -> basic_bit_set<Bits, Own, Traits> requires (owns(Own)) and requires (basic_bit_set<Bits, Own, Traits> c) { c -= c; } { auto nrv = lhs; nrv -= rhs; return nrv; }
 
-template<class Bits, ownership Own, class Traits> [[nodiscard]] constexpr auto operator<<(basic_bit_set<Bits, Own, Traits> const& lhs, std::size_t n) noexcept -> basic_bit_set<Bits, Own, Traits> requires (owns(Own)) and requires (basic_bit_set<Bits, Own, Traits> c) { c <<= n; } { auto nrv = lhs; nrv <<= n; return nrv; }
-template<class Bits, ownership Own, class Traits> [[nodiscard]] constexpr auto operator>>(basic_bit_set<Bits, Own, Traits> const& lhs, std::size_t n) noexcept -> basic_bit_set<Bits, Own, Traits> requires (owns(Own)) and requires (basic_bit_set<Bits, Own, Traits> c) { c >>= n; } { auto nrv = lhs; nrv >>= n; return nrv; }
+template<class Bits, ownership Own, class Traits> [[nodiscard]] constexpr auto operator<<(basic_bit_set<Bits, Own, Traits> const& lhs, std::size_t n) noexcept(basic_bit_set<Bits, Own, Traits>::has_static_width) -> basic_bit_set<Bits, Own, Traits> requires (owns(Own)) and requires (basic_bit_set<Bits, Own, Traits> c) { c <<= n; } { auto nrv = lhs; nrv <<= n; return nrv; }
+template<class Bits, ownership Own, class Traits> [[nodiscard]] constexpr auto operator>>(basic_bit_set<Bits, Own, Traits> const& lhs, std::size_t n) noexcept(basic_bit_set<Bits, Own, Traits>::has_static_width) -> basic_bit_set<Bits, Own, Traits> requires (owns(Own)) and requires (basic_bit_set<Bits, Own, Traits> c) { c >>= n; } { auto nrv = lhs; nrv >>= n; return nrv; }
 // NOLINTEND(readability-redundant-parentheses)
 
 }       // namespace xstd
@@ -437,5 +554,13 @@ inline constexpr bool enable_borrowed_range<xstd::basic_bit_set<Bits, xstd::owne
 
 }       // namespace std::ranges
 // NOLINTEND(bugprone-std-namespace-modification)
+
+// Not a range to ContainerHash, so Hash2 takes the hook and not its range overload, which cannot hash the proxy the set iterator returns. [design.md#width-is-capacity]
+namespace boost::container_hash {
+
+template<class Bits, xstd::ownership Own, class Traits>
+struct is_range<xstd::basic_bit_set<Bits, Own, Traits>> : std::false_type {};
+
+}       // namespace boost::container_hash
 
 #endif  // XSTD_BITS_BASIC_BIT_SET_HPP

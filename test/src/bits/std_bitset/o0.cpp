@@ -9,6 +9,7 @@
 #include <test/uint128.hpp>                       // TEST_HAS_UINT128, uint128
 #include <xstd/bits/basic_bitset.hpp>             // basic_bitset
 #include <xstd/bits/bitset.hpp>                   // bitset
+#include <xstd/bits/dynamic_bitset.hpp>           // dynamic_bitset
 #include <xstd/bits/ext/boost/dynamic_bitset.hpp> // dynamic_bitset
 #include <xstd/bits/ext/std/bitset.hpp>           // bitset
 #include <xstd/bits/ext/xstd/bitset.hpp>          // bitset
@@ -71,6 +72,9 @@ using Types = std::tuple
 ,        xstd::bitset<128, xstd::uint128>
 ,        xstd::bitset<129, xstd::uint128>
 #endif
+,        xstd::basic_bitset<boost::dynamic_bitset<>>
+,        xstd::dynamic_bitset<uint8_t>
+,        xstd::dynamic_bitset<uint64_t>
 >;
 
 using namespace test::bitset;

@@ -32,6 +32,11 @@ BOOST_AUTO_TEST_CASE(EveryContainerArrivesThroughTheUmbrella)
 
         auto const packed = xstd::bit_array<8>();
         static_assert(std::ranges::random_access_range<decltype(xstd::sequence_view(packed))>);
+
+        // The dynamic column, one name per reading, all three over a block_vector.
+        static_assert(std::ranges::bidirectional_range<xstd::bit_set<std::size_t>>);
+        static_assert(std::ranges::random_access_range<xstd::bit_vector<std::size_t>>);
+        static_assert(not std::ranges::range<xstd::dynamic_bitset<std::size_t>>);
 }
 
 // A packed container satisfies the same interface as the one it packs, which means something only because std::array answers to it too.

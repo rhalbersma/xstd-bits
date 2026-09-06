@@ -16,6 +16,7 @@
 #include <cstddef>                           // size_t
 #include <cstdint>                           // uint64_t
 #include <iterator>                          // reverse_iterator
+#include <limits>                            // numeric_limits
 #include <ranges>                            // random_access_range
 #include <stdexcept>                         // out_of_range
 #include <type_traits>                       // is_const_v
@@ -180,6 +181,28 @@ BOOST_AUTO_TEST_CASE(TheOrderingIsTheLexicographicOrderOfTheBools)
                         BOOST_CHECK((s == t) == (p == q));
                 }
         }
+}
+
+// Dependent, so a constrained-away member is a false rather than a hard error.
+template<class X>
+constexpr bool can_grow = requires (X& x) { x.push_back(true); x.pop_back(); x.resize(1UZ); x.resize(1UZ, true); x.clear(); x.reserve(1UZ); x.shrink_to_fit(); };
+
+// Growth is the owner's over storage that grows; a static width and a view have none of it. [design.md#growth]
+BOOST_AUTO_TEST_CASE(GrowthIsTheOwnersOverStorageThatGrows)
+{
+        using Dynamic = xstd::basic_bit_sequence<xstd::block_vector<std::uint64_t>, xstd::ownership::owns, false>;
+        using Span    = xstd::basic_bit_sequence<xstd::block_vector<std::uint64_t>, xstd::ownership::refers, false>;
+
+        static_assert(    can_grow<Dynamic>);
+        static_assert(not can_grow<Owner>);
+        static_assert(not can_grow<Span>);
+
+        auto d = Dynamic(3, true);
+        d.push_back(false);
+        BOOST_CHECK_EQUAL(d.size(), 4UZ);
+        BOOST_CHECK(std::ranges::equal(d, std::vector<bool>{ true, true, true, false }));
+        BOOST_CHECK_EQUAL(d.max_size(), std::numeric_limits<std::size_t>::max());
+        BOOST_CHECK_EQUAL(Owner().max_size(), 100UZ);
 }
 
 BOOST_AUTO_TEST_CASE(AZeroWidthSequenceIsEmpty)

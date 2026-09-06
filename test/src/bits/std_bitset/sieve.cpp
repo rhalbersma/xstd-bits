@@ -10,11 +10,13 @@
 #include <xstd/bits/bit_static_set.hpp>           // bit_static_set
 #include <xstd/bits/basic_bitset.hpp>             // basic_bitset
 #include <xstd/bits/bitset.hpp>                   // bitset
+#include <xstd/bits/dynamic_bitset.hpp>           // dynamic_bitset
 #include <xstd/bits/ext/boost/dynamic_bitset.hpp> // dynamic_bitset
 #include <xstd/bits/ext/std/bitset.hpp>           // bitset
 #include <xstd/bits/ext/xstd/bitset.hpp>          // bitset
 #include <xstd/bits/ranges/set_view.hpp>          // set_view
 #include <bitset>                                 // bitset
+#include <cstddef>                                // size_t
 #include <tuple>                                  // tuple
 
 BOOST_AUTO_TEST_SUITE(StdBitset)
@@ -28,6 +30,8 @@ using Types = std::tuple
 ,        xstd::basic_bitset<std::bitset<N>>
 ,        xstd::bitset<N>
 ,        xstd::bit_static_set<N>
+,        xstd::basic_bitset<boost::dynamic_bitset<>>
+,        xstd::dynamic_bitset<std::size_t>
 >;
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheSiftedPrimesAndTwinsFormatAsExpected, T, Types)
