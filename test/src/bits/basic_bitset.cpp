@@ -208,6 +208,7 @@ BOOST_AUTO_TEST_CASE(TheWordConstructorAndConversionsAgreeWithStdBitset)
         using Narrow = xstd::bitset<3, std::uint8_t>;
         using Empty  = xstd::bitset<0, std::uint8_t>;
         BOOST_CHECK_EQUAL(Narrow(0b1111ULL).to_ullong(), 7ULL);
+        BOOST_CHECK_EQUAL(Narrow(0b1101ULL).to_ullong(), 5ULL);
         BOOST_CHECK_EQUAL(Empty(0b1111ULL).to_ullong(), 0ULL);
 
         auto wide = xstd::bitset<70, std::uint8_t>();

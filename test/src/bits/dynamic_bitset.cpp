@@ -15,7 +15,7 @@
 #include <cstdint>                                // uint8_t, uint64_t
 #include <memory>                                 // allocator
 #include <sstream>                                // istringstream, ostringstream
-#include <stdexcept>                              // overflow_error
+#include <stdexcept>                              // invalid_argument, out_of_range, overflow_error
 #include <string>                                 // string
 #include <tuple>                                  // tuple
 
@@ -114,6 +114,10 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItIsAsWideAsItsText, T, Dynamic)
         auto q = T();
         bad >> q;
         BOOST_CHECK(bad.fail());
+
+        // The text constructor's two throws, as [bitset.cons]/3-4 has them at a static width.
+        BOOST_CHECK_THROW(static_cast<void>(T(std::string("0101"), 5)), std::out_of_range);
+        BOOST_CHECK_THROW(static_cast<void>(T(std::string("0x01"))),   std::invalid_argument);
 }
 
 // Appending blocks is the storage's own where it has it: ours has, boost has, and the widths agree.
