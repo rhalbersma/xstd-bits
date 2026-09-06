@@ -12,11 +12,10 @@
 #include <algorithm>                // lexicographical_compare_three_way
 #include <cassert>                  // assert
 #include <compare>                  // strong_ordering
-#include <concepts>                 // convertible_to, swappable
+#include <concepts>                 // convertible_to, swap, swappable
 #include <cstddef>                  // ptrdiff_t, size_t
 #include <format>                   // format
 #include <iterator>                 // make_reverse_iterator, reverse_iterator
-#include <ranges>                   // swap
 #include <source_location>          // source_location
 #include <stdexcept>                // out_of_range
 #include <type_traits>              // conditional_t, is_nothrow_swappable_v, remove_const_t, remove_reference_t
