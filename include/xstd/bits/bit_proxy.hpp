@@ -105,7 +105,8 @@ public:
                 assert(m_ptr != nullptr);
         }
 
-        // A value, not a handle to rebind: copyable, never assignable, as a reference to a key is.
+        // A value, not a handle to rebind: trivially copyable, never assignable, as a reference to a key is.
+        constexpr bit_set_reference(bit_set_reference const&) noexcept = default;
         constexpr auto operator=(bit_set_reference const&) -> bit_set_reference& = delete;
 
         [[nodiscard]] constexpr auto operator&() const noexcept
@@ -234,7 +235,7 @@ public:
         }
 };
 
-// A proxy bool assigning back through the door; std::vector<bool>::reference is the precedent, const-qualified assignment included.
+// A proxy bool assigning back through the door; std::vector<bool>::reference is the precedent for the const-qualified assignment, and nothing more is borrowed: no flip, no ~.
 template<class Bits, bit_storage<Bits> Traits>
 class bit_sequence_reference
 {
@@ -274,13 +275,6 @@ public:
                 return Traits::at(*m_ptr, m_idx);
         }
 
-        // [bitset.refs]'s spelling of not, here so basic_bitset::reference can be this class.
-        [[nodiscard]] constexpr auto operator~() const noexcept
-                -> value_type
-        {
-                return not Traits::at(*m_ptr, m_idx);
-        }
-
         // const-qualified and returning a const reference, the proxy shape P2321R2 gave std::vector<bool>::reference.
         constexpr auto operator=(bool value) const noexcept  // NOLINT(misc-unconventional-assign-operator)
                 -> bit_sequence_reference const&
@@ -296,13 +290,6 @@ public:
                 requires is_writable
         {
                 return *this = static_cast<bool>(other);
-        }
-
-        constexpr auto flip() const noexcept  // NOLINT(modernize-use-nodiscard)
-                -> bit_sequence_reference const&
-                requires is_writable
-        {
-                return *this = not static_cast<bool>(*this);
         }
 
         // The pre-ranges spelling of iter_swap, for std::swap and the algorithms still built on it. [design.md#the-one-adl-exception]

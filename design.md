@@ -526,6 +526,9 @@ reach a proxy only through them, and it is where `vector<bool>` historically fel
 overloads on the proxy are the pre-ranges spelling of the same thing, for `std::sort` and everything else
 still built on `std::iter_swap`. `format_as` is fmt's protocol in the same sense.
 
+The sequence proxy borrows nothing else from `[bitset.refs]`: no `flip()` and no `operator~`. Those belong to
+the bitset reading, whose `reference` is its own class.
+
 ### total-lookups-on-the-container
 
 Every `bit_static_set` lookup is total over `key_type`, because `std::set`'s is: a key outside `[0, N)` names

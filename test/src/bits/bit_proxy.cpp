@@ -39,6 +39,7 @@ struct floor_traits
 };
 
 // Strong types to receive what the proxies convert to: one that takes a size_t implicitly, one only explicitly, and a flag.
+// Copy-initialized, never cast: a cast is a direct-initialization with two routes in, and MSVC calls that no route at all.
 struct key
 {
         std::size_t value;
@@ -151,7 +152,7 @@ auto check_every_set_pattern(T const& empty) -> void
         }
 }
 
-// One position: written, read back three ways, flipped, and reached again through the subscript.
+// One position: written, read back two ways, negated back through itself, and reached again through the subscript.
 template<class Iterator>
 auto check_position(Iterator first, std::size_t i, std::vector<bool>& model) -> void
 {
@@ -161,10 +162,10 @@ auto check_position(Iterator first, std::size_t i, std::vector<bool>& model) -> 
         *it = (i % 3 == 0);
         model[i] = (i % 3 == 0);
         BOOST_CHECK_EQUAL(static_cast<bool>(*it), model[i]);
-        BOOST_CHECK_EQUAL(static_cast<bool>(~*it), not model[i]);
-        BOOST_CHECK_EQUAL(static_cast<flag>(*it).value, model[i]);
+        flag const f = *it;
+        BOOST_CHECK_EQUAL(f.value, model[i]);
 
-        (*it).flip();
+        *it = not *it;
         model[i] = not model[i];
         BOOST_CHECK_EQUAL(static_cast<bool>(first[static_cast<std::ptrdiff_t>(i)]), model[i]);
 }
@@ -298,7 +299,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheSequenceIteratorReadsAndWritesThroughTheDoor, T
         constexpr auto N = xstd::bit_traits<T>::extent;
 
         auto c = T();
-        auto model = std::vector<bool>(N);
+        // Written through check_position below, which the check cannot see past a dependent call. [design.md#clang-tidy-false-positives]
+        auto model = std::vector<bool>(N);  // NOLINT(misc-const-correctness)
         auto const first = xstd::bit_sequence_iterator<T>(&c, 0UZ);
         BOOST_CHECK(first == xstd::bit_sequence_iterator<T const>(&c, 0UZ));
 
@@ -384,11 +386,12 @@ BOOST_AUTO_TEST_CASE(RangesAlgorithmsReachTheBitsThroughIterMoveAndIterSwap)
         std::ranges::reverse(model);
         BOOST_CHECK(as_vector(c) == model);
 
-        std::sort(first, last);
+        // The pre-ranges algorithms on purpose: they reach the bits through std::iter_swap and the swap friends, not iter_swap.
+        std::sort(first, last);  // NOLINT(modernize-use-ranges)
         std::sort(model.begin(), model.end());
         BOOST_CHECK(as_vector(c) == model);
 
-        std::reverse(first, last);
+        std::reverse(first, last);  // NOLINT(modernize-use-ranges)
         std::reverse(model.begin(), model.end());
         BOOST_CHECK(as_vector(c) == model);
 
@@ -410,7 +413,7 @@ BOOST_AUTO_TEST_CASE(TheForeignSequenceProxiesWriteThroughTheDoor)
         auto const sit = xstd::bit_sequence_iterator<std::bitset<9>>(&s, 4UZ);
         *sit = true;
         BOOST_CHECK(s.test(4));
-        (*sit).flip();
+        *sit = false;
         BOOST_CHECK(not s.test(4));
 
         auto d = boost::dynamic_bitset<>(9);
