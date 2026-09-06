@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_BIT_PROXY_HPP
 #define XSTD_BITS_BIT_PROXY_HPP
 
-#include <xstd/bits/bit_traits.hpp> // bit_storage, bit_traits, find_next, find_prev
+#include <xstd/bits/bit_traits.hpp> // bit_storage, bit_traits, find_next, find_prev, zero_width
 #include <cassert>                  // assert
 #include <compare>                  // strong_ordering
 #include <concepts>                 // same_as
@@ -49,11 +49,17 @@ public:
                 assert(m_ptr != nullptr);
         }
 
+        // A zero width has one position, so every iterator over it is the same one; said outright, every loop an optimizer
+        // sees into stops before its first step, which no spelling of the step itself achieved. [design.md#degenerate-widths]
         [[nodiscard]] friend constexpr auto operator==(bit_set_iterator lhs, bit_set_iterator rhs) noexcept
                 -> bool
         {
                 assert(lhs.m_ptr == rhs.m_ptr);
-                return lhs.m_idx == rhs.m_idx;
+                if constexpr (detail::bits::zero_width<Traits>) {
+                        return true;
+                } else {
+                        return lhs.m_idx == rhs.m_idx;
+                }
         }
 
         [[nodiscard]] constexpr auto operator*() const noexcept

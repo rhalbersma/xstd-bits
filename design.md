@@ -311,6 +311,19 @@ Everything wider shares the general arms. A single block still needs the block-l
 one-block instantiation cannot take a loop's exit branch -- which is why `first_difference` and `any_above`
 each spell out the one- and two-block cases the way `find_front` and `intersects` do.
 
+The four use-site dispatchers in `detail::bits` (`find_first`, `find_next`, `find_prev`, `count`) carry the
+width-zero arm too, ahead of the choice between the door's entry and the walk: at width zero every answer is
+zero -- the total answer, `size()` -- and no entry or walk is instantiated for it. The set iterator's
+equality takes an arm there too: a zero width has one position, so every iterator over it is the same one,
+and `operator==` says so outright. The point is the loops an optimizer sees into. Three spellings of the
+step failed: one that returned `size()` left every `while (it != last) ++it` provably unable to advance,
+which crashes MSVC's optimizer (range-v3's symmetric difference over a zero-extent set inside a zero-trip
+loop was the reproducer) and which gcc 15 diagnoses, through the counter overflow it implies in
+`ranges::distance`, as undefined behaviour; one marked `std::unreachable()` cured both and made MSVC report
+range-v3's code after it as unreachable (C4702), which `/external` does not silence; and one that simply
+moved the position brought MSVC's crash back. With equality constant instead, every such loop's condition
+is false before its first step, and the step itself stays as it is for every width.
+
 ### the-ordering-invariant
 
 Every ordering in the library satisfies
