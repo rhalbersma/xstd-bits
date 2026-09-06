@@ -115,9 +115,11 @@ BOOST_AUTO_TEST_CASE(AViewIsARangeInBothDirectionsAndAtThrowsPastTheEnd)
         BOOST_CHECK_EQUAL(v.max_size(), 100UZ);
         BOOST_CHECK(not v.empty());
 
+        // Named rather than a temporary: clang 23's lifetime analysis crashes on a deducing-this call with an rvalue self.
+        auto const r = Reader(c);
         BOOST_CHECK_THROW(static_cast<void>(v.at(100)), std::out_of_range);
-        BOOST_CHECK_THROW(static_cast<void>(Reader(c).at(100)), std::out_of_range);
-        BOOST_CHECK(Reader(c).at(99) == true);
+        BOOST_CHECK_THROW(static_cast<void>(r.at(100)), std::out_of_range);
+        BOOST_CHECK(r.at(99) == true);
 }
 
 BOOST_AUTO_TEST_CASE(TheBulkOperatorsAreTheStoragesOwn)
