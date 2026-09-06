@@ -59,7 +59,7 @@ class basic_bit_set
                 if constexpr (has_static_width) {
                         boost::hash2::hash_append(h, f, v->storage());
                 } else {
-                        for (auto x : *v) {
+                        for (auto const x : *v) {
                                 boost::hash2::hash_append(h, f, static_cast<std::size_t>(x));
                         }
                         boost::hash2::hash_append(h, f, v->size());
@@ -301,7 +301,7 @@ public:
                 if (same_width(self, other)) {
                         self.storage() &= other.storage();
                 } else {
-                        for (auto x : self) {
+                        for (auto const x : self) {
                                 if (not other.contains(x)) {
                                         self.erase(x);
                                 }
@@ -317,7 +317,7 @@ public:
                 if (same_width(self, other)) {
                         self.storage() |= other.storage();
                 } else {
-                        for (auto x : other) {
+                        for (auto const x : other) {
                                 self.insert(x);
                         }
                 }
@@ -331,7 +331,7 @@ public:
                 if (same_width(self, other)) {
                         self.storage() ^= other.storage();
                 } else {
-                        for (auto x : other) {
+                        for (auto const x : other) {
                                 if (self.erase(x) == 0UZ) {
                                         self.insert(x);
                                 }
@@ -347,7 +347,7 @@ public:
                 if (same_width(self, other)) {
                         self.storage() -= other.storage();
                 } else {
-                        for (auto x : other) {
+                        for (auto const x : other) {
                                 self.erase(x);
                         }
                 }
