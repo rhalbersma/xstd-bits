@@ -181,12 +181,14 @@ private:
 template<class Bits>
 basic_bit_sequence(Bits&) -> basic_bit_sequence<Bits, ownership::refers, false>;
 
+// NOLINTBEGIN(readability-redundant-parentheses): a call is no primary expression, so the requires-clause needs the parentheses the check reports as redundant.
 template<class Bits, ownership Own, bool Windowed, class Traits>
 constexpr void swap(basic_bit_sequence<Bits, Own, Windowed, Traits>& x, basic_bit_sequence<Bits, Own, Windowed, Traits>& y) noexcept(noexcept(x.swap(y)))
         requires (owns(Own))
 {
         x.swap(y);
 }
+// NOLINTEND(readability-redundant-parentheses)
 
 }       // namespace xstd
 

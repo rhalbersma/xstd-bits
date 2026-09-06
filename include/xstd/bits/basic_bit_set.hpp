@@ -372,6 +372,7 @@ private:
 template<class Bits>
 basic_bit_set(Bits&) -> basic_bit_set<Bits, ownership::refers>;
 
+// NOLINTBEGIN(readability-redundant-parentheses): a call is no primary expression, so the requires-clause needs the parentheses the check reports as redundant.
 template<class Bits, ownership Own, class Traits>
 constexpr void swap(basic_bit_set<Bits, Own, Traits>& x, basic_bit_set<Bits, Own, Traits>& y) noexcept(noexcept(x.swap(y)))
         requires (owns(Own))
@@ -405,6 +406,7 @@ template<class Bits, ownership Own, class Traits> [[nodiscard]] constexpr auto o
 
 template<class Bits, ownership Own, class Traits> [[nodiscard]] constexpr auto operator<<(basic_bit_set<Bits, Own, Traits> const& lhs, std::size_t n) noexcept -> basic_bit_set<Bits, Own, Traits> requires (owns(Own)) and requires (basic_bit_set<Bits, Own, Traits> c) { c <<= n; } { auto nrv = lhs; nrv <<= n; return nrv; }
 template<class Bits, ownership Own, class Traits> [[nodiscard]] constexpr auto operator>>(basic_bit_set<Bits, Own, Traits> const& lhs, std::size_t n) noexcept -> basic_bit_set<Bits, Own, Traits> requires (owns(Own)) and requires (basic_bit_set<Bits, Own, Traits> c) { c >>= n; } { auto nrv = lhs; nrv >>= n; return nrv; }
+// NOLINTEND(readability-redundant-parentheses)
 
 }       // namespace xstd
 
