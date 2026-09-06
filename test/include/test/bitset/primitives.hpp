@@ -8,6 +8,7 @@
 
 #include <boost/test/unit_test.hpp>      // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_NE, BOOST_CHECK_THROW
 #include <test/dynamic.hpp>              // dynamic
+#include <xstd/bits/ownership.hpp>       // owned_storage
 #include <xstd/bits/ranges/set_view.hpp> // view
 #include <cstddef>                       // size_t
 #include <memory>                        // addressof
@@ -24,6 +25,10 @@ namespace test::bitset {
 // These checks are on xstd::bitset's basic_string_view overload: std::bitset has none, and dynamic_bitset answers to its own contract.
 template<class X>
 concept fixed_string_view_constructible = requires { X(std::string_view()); } and not dynamic<X>;
+
+// The wrapper at a run-time width is one of ours and answers as boost does; boost itself, which has the overload from 1.87, asserts where the wrapper throws.
+template<class X>
+concept dynamic_string_view_constructible = requires { X(std::string_view()); typename xstd::owned_storage<X>::bits_type; } and dynamic<X>;
 
 template<class X>
 struct constructor
@@ -52,7 +57,7 @@ struct constructor
                                         (static_cast<void>(X(std::string_view(invalid)))), std::invalid_argument
                                 );
                         }
-                } else if constexpr (dynamic<X> and requires { X(std::string_view()); }) {
+                } else if constexpr (dynamic_string_view_constructible<X>) {
                         // A run-time width is boost's contract: the text read is the width, and the two throws are as at a static width.
                         BOOST_CHECK_EQUAL(X(std::string_view("0101")).size(), 4uz);
                         BOOST_CHECK(X(std::string_view("11")).all());
