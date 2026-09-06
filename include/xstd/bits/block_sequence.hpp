@@ -22,7 +22,7 @@
 #include <concepts>                                            // regular, swap
 #include <cstddef>                                             // ptrdiff_t, size_t
 #include <functional>                                          // plus
-#include <iterator>                                            // prev
+#include <iterator>                                            // distance, forward_iterator, input_iterator, prev
 #include <memory>                                              // allocator
 #include <ranges>                                              // begin, drop, iota, size, swap, transform, zip
                                                                // (views::drop_last when P22014R2 is accepted)
@@ -30,6 +30,10 @@
 #include <type_traits>                                         // conditional_t, is_const_v, is_nothrow_swappable_v, remove_reference_t
 #include <utility>                                             // pair
 #include <vector>                                              // vector
+#include <version>                                             // IWYU pragma: keep; __cpp_lib_inplace_vector
+#ifdef __cpp_lib_inplace_vector
+#include <inplace_vector>                                      // inplace_vector
+#endif
 
 namespace xstd {
 
@@ -76,13 +80,20 @@ private:
         static constexpr auto static_unused_bits     = static_cast<block_type>(~static_used_bits);
         static constexpr auto static_has_unused_bits = has_static_size and static_used_bits != ones;
 
+        // How many blocks a run-time width needs, floored at one like num_blocks_v. [design.md#the-one-vehicle]
+        [[nodiscard]] static constexpr auto blocks_for(std::size_t n) noexcept
+                -> std::size_t
+        {
+                return std::ranges::max(align_up(n, bits_per_block) / bits_per_block, 1UZ);
+        }
+
         // An NSDMI, not extent-constrained constructors: vector starts empty. [design.md#default-construction]
         [[nodiscard]] static constexpr auto make_blocks(std::size_t n) -> Blocks
         {
                 if constexpr (has_static_size) {
                         return Blocks{};
                 } else {
-                        return Blocks(std::ranges::max(align_up(n, bits_per_block) / bits_per_block, 1UZ));
+                        return Blocks(blocks_for(n));
                 }
         }
 
@@ -489,6 +500,89 @@ public:
                 std::ranges::swap(this->m_blocks, other.m_blocks);
         }
 
+        // Growth, at a run-time width alone; every path leaves the unused tail clear, so the block walks read nothing above size(). [design.md#growth]
+        constexpr void resize(std::size_t n, bool value = false)
+                requires (not has_static_size)
+        {
+                // Growing with ones: the tail above size() in the last block is clear by the invariant, and becomes the first new bits.
+                if (value and n > m_size) {
+                        m_blocks[last_block()] |= static_cast<block_type>(~used_bits());
+                }
+                m_blocks.resize(blocks_for(n), value ? ones : zero);
+                m_size = n;
+                erase_unused();
+        }
+
+        // Width zero, one block, all of it padding: the same object a default constructor makes. [design.md#default-construction]
+        constexpr void clear()
+                requires (not has_static_size)
+        {
+                resize(0UZ);
+        }
+
+        constexpr void push_back(bool value)
+                requires (not has_static_size)
+        {
+                resize(m_size + 1UZ, value);
+        }
+
+        constexpr void pop_back()
+                requires (not has_static_size)
+        {
+                assert(m_size != 0UZ);
+                resize(m_size - 1UZ);
+        }
+
+        // Boost's append: the block's bits become the positions [size(), size() + bits_per_block), split over two blocks where size() is not aligned.
+        constexpr void append(block_type value)
+                requires (not has_static_size)
+        {
+                auto const offset = m_size % bits_per_block;
+                if (offset != 0UZ) {
+                        m_blocks[last_block()] |= static_cast<block_type>(value << offset);
+                        m_blocks.push_back(static_cast<block_type>(value >> (bits_per_block - offset)));
+                } else if (m_size != 0UZ) {
+                        m_blocks.push_back(value);
+                } else {
+                        // The floor block is the fresh one.
+                        m_blocks[0] = value;
+                }
+                m_size += bits_per_block;
+        }
+
+        // Reserved first where the distance is known, so no push_back below can reallocate: the strong guarantee boost documents.
+        template<std::input_iterator I>
+        constexpr void append(I first, I last)
+                requires (not has_static_size)
+        {
+                if constexpr (std::forward_iterator<I> and requires (Blocks& b) { b.reserve(0UZ); }) {
+                        reserve(m_size + (static_cast<std::size_t>(std::ranges::distance(first, last)) * bits_per_block));
+                }
+                for (; first != last; ++first) {
+                        append(*first);
+                }
+        }
+
+        // In bits, where the blocks have the member: vector and inplace_vector do, array does not.
+        constexpr void reserve(std::size_t n)
+                requires (not has_static_size) and requires (Blocks& b) { b.reserve(0UZ); }
+        {
+                m_blocks.reserve(blocks_for(n));
+        }
+
+        [[nodiscard]] constexpr auto capacity() const noexcept
+                -> std::size_t
+                requires (not has_static_size) and requires (Blocks const& b) { b.capacity(); }
+        {
+                return m_blocks.capacity() * bits_per_block;
+        }
+
+        constexpr void shrink_to_fit()
+                requires (not has_static_size) and requires (Blocks& b) { b.shrink_to_fit(); }
+        {
+                m_blocks.shrink_to_fit();
+        }
+
         constexpr auto set(std::size_t n) noexcept -> block_sequence&
         {
                 assert(is_valid(n));
@@ -809,12 +903,18 @@ private:
         }
 };
 
-// The two vehicles shipped; std::inplace_vector needs no alias, already satisfying block_storage.
+// The three vehicles: a width in the type, a width on the heap, and a run-time width under a compile-time capacity of N bits.
 template<xstd::unsigned_integer Block, std::size_t N>
 using block_array = block_sequence<std::array<Block, num_blocks_v<Block, N>>, N>;
 
 template<xstd::unsigned_integer Block, class Allocator = std::allocator<Block>>
 using block_vector = block_sequence<std::vector<Block, Allocator>>;
+
+// Behind the feature macro until every library in the matrix has it; the storage needs nothing else, already satisfying block_storage.
+#ifdef __cpp_lib_inplace_vector
+template<xstd::unsigned_integer Block, std::size_t N>
+using block_inplace_vector = block_sequence<std::inplace_vector<Block, num_blocks_v<Block, N>>>;
+#endif
 
 // Forwards and nothing more, reaching none of the generic scans. [design.md#the-cheapest-contract]
 template<class Blocks, std::size_t N>

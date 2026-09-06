@@ -66,6 +66,10 @@ struct bit_traits<boost::dynamic_bitset<Block, Allocator>>
         }
 
         // No find_last, find_prev or block access: boost has none, so the generic scans synthesize what they can. [design.md#detection-by-absence]
+
+        // The shifts are total here, saturating to none: forwarded as they are, the guard being the counterpart's own. [design.md#checked-and-unchecked]
+        static constexpr void checked_shift_left (bits_type& c, std::size_t n) noexcept { c <<= n; }
+        static constexpr void checked_shift_right(bits_type& c, std::size_t n) noexcept { c >>= n; }
 };
 
 }       // namespace xstd

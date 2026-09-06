@@ -69,6 +69,18 @@ BOOST_AUTO_TEST_CASE(TheTraitsAdaptIt)
         traits::fill(c, false);
         BOOST_CHECK_EQUAL(traits::count(c), 0UZ);
 
+        // The checked shifts are boost's own, total and saturating, forwarded as they are. [design.md#checked-and-unchecked]
+        traits::insert(c, 1);
+        traits::checked_shift_left(c, 19);
+        BOOST_CHECK(traits::at(c, 20));
+        traits::checked_shift_right(c, 20);
+        BOOST_CHECK(traits::at(c, 0));
+        traits::checked_shift_left(c, 21);
+        BOOST_CHECK_EQUAL(traits::count(c), 0UZ);
+        traits::insert(c, 20);
+        traits::checked_shift_right(c, 100);
+        BOOST_CHECK_EQUAL(traits::count(c), 0UZ);
+
 }
 
 // The element-wise tier's not-found and boundary arms, which only a type without block access reaches. [design.md#per-instantiation-slots]
