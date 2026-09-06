@@ -459,7 +459,8 @@ template<class Block>
 auto append_to(model& m, Block value) -> void
 {
         for (auto i = 0UZ; i < test::digits_v<Block>; ++i) {
-                m.push_back(((value >> i) & Block{1}) != Block{0});
+                // Cast back before the mask: a shifted narrow word is an int, which bugprone-signed-bitwise reads as a signed operand.
+                m.push_back((static_cast<Block>(value >> i) & Block{1}) != Block{0});
         }
 }
 
