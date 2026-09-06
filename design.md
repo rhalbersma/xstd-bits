@@ -272,7 +272,9 @@ means rather than being handed whichever the door happened to pick.
 Both orderings are answered a word at a time, from two pieces:
 
 - **`first_difference`** returns the lowest block at which two values differ, together with that block's
-  `xor`. `countr_zero` of that `xor` is then the lowest position at which they differ.
+  `xor`. `countr_zero` of that `xor` is then the lowest position at which they differ. Equal values answer
+  the last block and a zero `xor`, from the unrolled arms and the loop alike: the loop runs to the block
+  before the last and returns that one's `xor` unconditionally, as the two-block arm does.
 - **`any_above`** asks whether one value holds anything strictly above a given position. The value's bit
   *at* that position is clear -- it is the one that lacked the differing bit -- so `block >> offset` leaves
   exactly what it holds above, and the shift is always defined because `offset < digits`. No two-step shift,

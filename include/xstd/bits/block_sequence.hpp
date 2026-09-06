@@ -693,7 +693,7 @@ public:
         }
 
 private:
-        // The lowest position at which two values differ, as its block and that block's xor; the index says nothing when the xor is zero. [design.md#the-ordering-primitive]
+        // The first block at which two values differ, with that block's xor; equal values answer the last block and a zero xor, every arm alike. [design.md#the-ordering-primitive]
         [[nodiscard]] constexpr auto first_difference(block_sequence const& other) const noexcept
                 -> std::pair<std::size_t, block_type>
         {
@@ -705,12 +705,13 @@ private:
                         }
                         return { 1UZ, static_cast<block_type>(this->m_blocks[1] ^ other.m_blocks[1]) };
                 } else {
-                        for (auto i = 0UZ, n = num_blocks(); i < n; ++i) {
+                        auto const last = num_blocks() - 1UZ;
+                        for (auto i = 0UZ; i < last; ++i) {
                                 if (auto const diff = static_cast<block_type>(this->m_blocks[i] ^ other.m_blocks[i]); diff != zero) {
                                         return { i, diff };
                                 }
                         }
-                        return { 0UZ, zero };
+                        return { last, static_cast<block_type>(this->m_blocks[last] ^ other.m_blocks[last]) };
                 }
         }
 
