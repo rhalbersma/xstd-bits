@@ -156,18 +156,23 @@ BOOST_AUTO_TEST_CASE(TheViewsReachAWrappedStdBitset)
         a.set(1); a.set(69);
         b.set(1); b.set(2);
 
+        // Named rather than called on the temporaries: clang 23's lifetime analysis crashes on a deducing-this member of a prvalue.
+        auto const va = xstd::set_view(a);
+        auto const vb = xstd::set_view(b);
+        auto const qa = xstd::sequence_view(a);
+
         auto keys = std::vector<std::size_t>();
-        for (auto const k : xstd::set_view(a)) {
+        for (auto const k : va) {
                 keys.push_back(k);
         }
         BOOST_CHECK((keys == std::vector<std::size_t>{ 1, 69 }));
 
-        BOOST_CHECK(xstd::set_view(a) != xstd::set_view(b));
-        BOOST_CHECK((xstd::set_view(b) <=> xstd::set_view(a)) < 0);
-        BOOST_CHECK(xstd::set_view(a).is_subset_of(xstd::set_view(a)));
-        BOOST_CHECK_EQUAL(xstd::sequence_view(a)[69], true);
+        BOOST_CHECK(va != vb);
+        BOOST_CHECK((vb <=> va) < 0);
+        BOOST_CHECK(va.is_subset_of(va));
+        BOOST_CHECK_EQUAL(qa[69], true);
 
-        static_assert(std::same_as<decltype(xstd::set_view(a)), xstd::basic_bit_set<std::bitset<70>, xstd::ownership::refers>>);
+        static_assert(std::same_as<decltype(va), xstd::basic_bit_set<std::bitset<70>, xstd::ownership::refers> const>);
         static_assert(std::same_as<decltype(xstd::set_view(std::as_const(a))), xstd::basic_bit_set<std::bitset<70> const, xstd::ownership::refers>>);
 }
 

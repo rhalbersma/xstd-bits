@@ -28,10 +28,13 @@ auto ordering_agrees_with_std_set(std::size_t universe = 4) -> void
                         auto kx = std::set<std::size_t>();
                         auto ky = std::set<std::size_t>();
 
-                        // Written through the view, in the set vocabulary, which is the interface under test rather than the bitset's own.
+                        // Written through the view, in the set vocabulary, which is the interface under test rather than the bitset's own;
+                        // named, because clang 23's lifetime analysis crashes on a deducing-this member called on a prvalue.
+                        auto const xw = xstd::set_view(x);
+                        auto const yw = xstd::set_view(y);
                         for (auto k = 0UZ; k < universe; ++k) {
-                                if (i >> k & 1UZ) { xstd::set_view(x).insert(k); kx.insert(k); }
-                                if (j >> k & 1UZ) { xstd::set_view(y).insert(k); ky.insert(k); }
+                                if (i >> k & 1UZ) { xw.insert(k); kx.insert(k); }
+                                if (j >> k & 1UZ) { yw.insert(k); ky.insert(k); }
                         }
 
                         auto const xv = xstd::set_view(x);

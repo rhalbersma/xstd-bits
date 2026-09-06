@@ -142,12 +142,13 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheLazySetAlgebraRunsOverTheView, T, ViewedTypes)
 {
         auto x = eight_bits_with_three_set<T>();
         auto y = eight_bits_with_three_set<T>();
-        xstd::set_view(x).insert({ 1, 5 });
-        xstd::set_view(y).insert({ 5, 7 });
 
         // Named, because range-v3's own viewable_range predates P2415 and takes a view only by lvalue or by its own view marker.
         auto const xv = xstd::set_view(x);
         auto const yv = xstd::set_view(y);
+        xv.insert({ 1, 5 });
+        yv.insert({ 5, 7 });
+
         auto merged = std::set<std::size_t>();
         for (std::size_t const k : ::ranges::views::set_union(xv, yv)) {
                 merged.insert(k);
