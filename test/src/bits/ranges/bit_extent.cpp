@@ -4,7 +4,8 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
-#include <xstd/bits/bitset.hpp>                   // bit_extent over xstd::bitset
+#include <xstd/bits/basic_bitset.hpp>             // bit_extent over basic_bitset
+#include <xstd/bits/bitset.hpp>                   // bitset
 #include <xstd/bits/ext/boost/dynamic_bitset.hpp> // bit_extent over boost::dynamic_bitset
 #include <xstd/bits/ext/std/bitset.hpp>           // bit_extent over std::bitset
 #include <xstd/bits/ranges/bit_extent.hpp>        // bit_extent, static_bit_extent

@@ -162,8 +162,8 @@ public:
                 std::basic_string<charT, traits, Allocator> const& str,
                 std::basic_string<charT, traits, Allocator>::size_type pos = 0,
                 std::basic_string<charT, traits, Allocator>::size_type n = std::basic_string<charT, traits, Allocator>::npos,
-                charT zero = charT('0'),
-                charT one  = charT('1')
+                charT zero = static_cast<charT>('0'),
+                charT one  = static_cast<charT>('1')
         )
         :
                 basic_bitset(std::basic_string_view<charT, traits>(str), pos, n, zero, one)
@@ -174,8 +174,8 @@ public:
                 std::basic_string_view<charT, traits> str,
                 std::basic_string_view<charT, traits>::size_type pos = 0,
                 std::basic_string_view<charT, traits>::size_type n = std::basic_string_view<charT, traits>::npos,
-                charT zero = charT('0'),
-                charT one  = charT('1')
+                charT zero = static_cast<charT>('0'),
+                charT one  = static_cast<charT>('1')
         )
         {
                 if (pos > str.size()) {
@@ -200,8 +200,8 @@ public:
         [[nodiscard]] constexpr explicit basic_bitset(
                 charT const* str,
                 std::basic_string_view<charT>::size_type n = std::basic_string_view<charT>::npos,
-                charT zero = charT('0'),
-                charT one  = charT('1')
+                charT zero = static_cast<charT>('0'),
+                charT one  = static_cast<charT>('1')
         )
         :
                 basic_bitset(n == std::basic_string_view<charT>::npos ? std::basic_string_view<charT>(str) : std::basic_string_view<charT>(str, n), 0, n, zero, one)
@@ -309,7 +309,7 @@ public:
                 class traits = std::char_traits<charT>,
                 class Allocator = std::allocator<charT>
         >
-        [[nodiscard]] constexpr auto to_string(charT zero = charT('0'), charT one = charT('1')) const
+        [[nodiscard]] constexpr auto to_string(charT zero = static_cast<charT>('0'), charT one = static_cast<charT>('1')) const
                 -> std::basic_string<charT, traits, Allocator>
         {
                 auto const N = size();
@@ -350,7 +350,7 @@ public:
 private:
         template<class charT>
         static constexpr auto invalid_argument(
-                charT ch, charT zero = charT('0'), charT one = charT('1'),
+                charT ch, charT zero = static_cast<charT>('0'), charT one = static_cast<charT>('1'),
                 std::source_location const& loc = std::source_location::current()
         )
         {

@@ -188,6 +188,12 @@ BOOST_AUTO_TEST_CASE(TheDerivedMembersHoldOverEitherStorage)
 
         // A count on the character-pointer form takes that many characters and no more.
         BOOST_CHECK_EQUAL(Packed("1111", 2).count(), 2UZ);
+}
+
+// The text constructors reject as std::bitset's do: a stray character, and a position past the end.
+BOOST_AUTO_TEST_CASE(TheTextConstructorsRejectWhatStdBitsetRejects)
+{
+        using Packed = xstd::bitset<9, std::uint8_t>;
 
         BOOST_CHECK_THROW(static_cast<void>(Packed("102")), std::invalid_argument);
         BOOST_CHECK_THROW(static_cast<void>(xstd::basic_bitset<std::bitset<9>>(std::string("102"))), std::invalid_argument);
