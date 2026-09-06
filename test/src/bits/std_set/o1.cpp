@@ -9,6 +9,7 @@
 #include <test/flat_set.hpp>            // TEST_HAS_FLAT_SET, is_flat_set
 #include <test/set/primitives.hpp>      // constructor, mem_const_reference, mem_const_iterator, mem_front, mem_back,
 #include <test/uint128.hpp>             // TEST_HAS_UINT128, uint128
+#include <xstd/bits/bit_set.hpp>        // bit_set
 #include <xstd/bits/bit_static_set.hpp> // bit_static_set
 #include <cstddef>                      // size_t
 #include <cstdint>                      // uint8_t, uint16_t, uint32_t, uint64_t
@@ -40,6 +41,8 @@ using Types = std::tuple
 #ifdef TEST_HAS_UINT128
 ,       xstd::bit_static_set<24, xstd::uint128>
 #endif
+,       xstd::bit_set<uint8_t>
+,       xstd::bit_set<uint64_t>
 >;
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheSetOperationsHoldOverEverySingleton, T, Types)

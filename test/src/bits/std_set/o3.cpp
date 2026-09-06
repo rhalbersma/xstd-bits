@@ -8,6 +8,7 @@
 #include <test/set/exhaustive.hpp>      // all_singleton_set_triples
 #include <test/set/primitives.hpp>      // op_less
 #include <test/uint128.hpp>             // TEST_HAS_UINT128, uint128
+#include <xstd/bits/bit_set.hpp>        // bit_set
 #include <xstd/bits/bit_static_set.hpp> // bit_static_set
 #include <cstddef>                      // size_t
 #include <cstdint>                      // uint8_t, uint16_t, uint32_t, uint64_t
@@ -35,6 +36,8 @@ using Types = std::tuple
 #ifdef TEST_HAS_UINT128
 ,       xstd::bit_static_set<17, xstd::uint128>
 #endif
+,       xstd::bit_set<uint8_t>
+,       xstd::bit_set<uint64_t>
 >;
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(LessIsTransitiveOverEverySingletonTriple, T, Types)

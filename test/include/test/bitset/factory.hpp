@@ -7,18 +7,22 @@
 #define TEST_BITSET_FACTORY_HPP
 
 #include <boost/dynamic_bitset_fwd.hpp> // dynamic_bitset
+#include <test/dynamic.hpp>             // dynamic
 #include <concepts>                     // unsigned_integral
 #include <cstddef>                      // size_t
 
 namespace test::bitset {
 
+// A static width ignores the count; a growing one, ours or boost's, is resized to it.
 template<class T>
 struct factory
 {
-        constexpr auto operator()(std::size_t, bool value = false) const noexcept
+        constexpr auto operator()(std::size_t num_bits, bool value = false) const noexcept
         {
                 T b;
-                if (value) {
+                if constexpr (dynamic<T>) {
+                        b.resize(num_bits, value);
+                } else if (value) {
                         b.set();
                 } else {
                         b.reset();

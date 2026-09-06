@@ -71,6 +71,16 @@ bits, behind `__cpp_lib_inplace_vector` until every library in the matrix has it
 own, `std::inplace_vector` satisfying `block_storage` as it is; `resize`, `reserve` and `push_back` past the
 capacity throw `std::bad_alloc`, as that library specifies.
 
+The adaptors take growth by detection on the storage, never through the trait: growth is a container's
+business and no view's, so it exists on an owner and on nothing else. `basic_bit_sequence` is
+`std::vector<bool>` where its storage grows -- the count and count-value constructors, the range and
+`initializer_list` constructors and assignments, `assign`, `resize`, `clear`, `push_back`, `pop_back`,
+`emplace_back`, with `reserve`, `capacity` and `shrink_to_fit` where the blocks have them -- and
+`std::array<bool, N>` where it does not, each member requiring the storage member it forwards to.
+`basic_bitset` at a run-time width takes `boost::dynamic_bitset`'s growth the same way. `basic_bit_set`
+takes none by name: a set grows by `insert`, and the trait's `insert` grows a run-time width to hold the
+key ([asking-is-total](#asking-is-total)).
+
 ## Scans
 
 ### inclusive-is-the-primitive
@@ -593,6 +603,32 @@ The sequence row is named after the `std` container it packs, `bit_array` for `s
 therefore mark different columns, and that is correct by each row's own analogy rather than an inconsistency
 to fix.
 
+One header per public name, each an alias over one storage: `bit_set`, `bit_vector` and `dynamic_bitset`
+over `block_vector<Block, Allocator>`, beside `bit_static_set`, `bit_array` and `bitset` over `block_array`.
+The header is the name's home and the only place it is spelled; `bits.hpp` includes them all.
+
+### width-is-capacity
+
+`std::set` has no width, so `bit_set` treats its run-time width as capacity, never as value: two sets holding
+the same positions are equal whatever their storages' widths, and the width neither orders, nor hashes, nor
+is a precondition of the set operations. The storage cannot say that -- `block_sequence`'s `==` is width
+first, which is what the sequence reading and `dynamic_bitset` mean, and its bulk operators and predicates
+assert equal widths -- so the set adaptor says it. Every comparison, predicate and compound operator asks
+`same_width` first and takes the storage's own answer at equal widths, which is every answer at a static
+width, where `same_width` is constantly true and the arm folds away. At two run-time widths that differ,
+`==` is `std::ranges::equal` over the elements, `<=>` is the invariant's own algorithm, `is_subset_of` is
+`std::ranges::includes`, `intersects` walks one set asking the other, and `|=` `&=` `^=` `-=` insert and
+erase element by element, `insert` growing the narrower left operand as it grows for any key. The shifts
+translate the set, so `<<=` grows the width to hold the result and `>>=` empties past it. Hashing appends
+the elements and the count at a run-time width and the storage at a static one, where equal sets share a
+storage. The hook is reachable because the adaptor tells ContainerHash it is not a range: Hash2 chooses
+between its range overload and a `tag_invoke` hook by `enable_if`, so a range with a hook is ambiguous, and
+the range overload could not hash the proxy the set iterator returns anyway.
+
+The element walks are a fallback and priced as one: an operation at mismatched widths costs the elements
+rather than the blocks. A block-wise answer over the common prefix is an optimization the storage could
+offer later; nothing in the adaptor's contract would change.
+
 
 ### the-idempotent-wrapper
 
@@ -608,12 +644,25 @@ does, throw for throw, and the same wrapper over `block_array` is `xstd::bitset`
 because `std::bitset` is the counterpart of both. So at a static width there is no `-=`, no `is_subset_of`,
 `is_proper_subset_of` or `intersects`: `std::bitset` has none, they are set vocabulary that had leaked into
 `xstd::bitset`, and `set_view` keeps every one of them. The test harness guards those four the way it already
-guarded the three predicates. A dynamic width, whose counterpart is `boost::dynamic_bitset`, has them
-natively and gets them back when `block_vector` arrives; until then the class asserts the width static.
+guarded the three predicates. A run-time width, whose counterpart is `boost::dynamic_bitset`, has them
+natively and has them here: `xstd::dynamic_bitset` is the same wrapper over `block_vector`, and it answers as
+`basic_bitset<boost::dynamic_bitset<>>` does. That is boost's surface with two omissions. `operator<` is a
+third reading ([the-ordering-invariant](#the-ordering-invariant)) and stays out with `<=>`; the block-range
+constructor and `to_block_range`/`from_block_range` are a block interface the wrapper does not expose, since
+a `Bits` need not have blocks. Everything else is there and detected on `Bits`: the width-and-word and
+width-only constructors, `-=` and the three set predicates, `find_first` and `find_next` answering `npos`,
+`empty`, and growth ([growth](#growth)). The word conversions are the counterparts' own: `to_ulong` and
+`to_ullong` throw `overflow_error` when a set position lies past the word, asked of the door's `find_next`
+from the last position the word holds, and the word constructors take an `unsigned long long` at both widths.
 
 Not a range and no `<=>`, as its counterpart has neither; `set_view` and `sequence_view` refer into its storage
 ([views-over-owners](#views-over-owners)), and the set ordering is theirs. `block_type` is gone from the
 surface: nothing used it, and under idempotence a wrapper over a libc++ `std::bitset` would have none.
+
+Extraction is `[bitset.operators]/6` at both widths: the characters read become `x = basic_bitset(str)`,
+so a short read lands in the low positions, and a run-time width becomes the count of characters read,
+as boost's does. The static width reads at most `size()` characters; the run-time width reads to the first
+character that is neither `0` nor `1`.
 
 ### checked-and-unchecked
 
@@ -634,9 +683,9 @@ declares `checked_set`/`checked_reset`/`checked_flip`/`checked_test`, forwarded.
 door's `unchecked_assign` and `at`, with `flip` synthesised as `unchecked_assign(not at)` the way
 `basic_bit_set::complement` is;
 a `flip` entry of its own is an open call. Where no checked entry exists the wrapper guards and throws
-`out_of_range` at a static width, matching `std::bitset`, and will assert at a dynamic one, matching
-`boost::dynamic_bitset` -- a deliberate inconsistency between `xstd::bitset` and the coming
-`xstd::dynamic_bitset`, because it is exactly the one between their counterparts. The const subscript is
+`out_of_range` at a static width, matching `std::bitset`, and asserts at a run-time one, matching
+`boost::dynamic_bitset` -- a deliberate inconsistency between `xstd::bitset` and `xstd::dynamic_bitset`,
+because it is exactly the one between their counterparts. The const subscript is
 unchecked on every counterpart, so it is the door's `at` unconditionally, and the proxy from the mutable one
 writes through `unchecked_assign` alone.
 

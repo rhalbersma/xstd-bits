@@ -8,6 +8,7 @@
 
 #include <boost/test/unit_test.hpp>      // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_NE, BOOST_CHECK_THROW
 #include <test/dynamic.hpp>              // dynamic
+#include <xstd/bits/ownership.hpp>       // owned_storage
 #include <xstd/bits/ranges/set_view.hpp> // view
 #include <cstddef>                       // size_t
 #include <memory>                        // addressof
@@ -24,6 +25,10 @@ namespace test::bitset {
 // These checks are on xstd::bitset's basic_string_view overload: std::bitset has none, and dynamic_bitset answers to its own contract.
 template<class X>
 concept fixed_string_view_constructible = requires { X(std::string_view()); } and not dynamic<X>;
+
+// The wrapper at a run-time width is one of ours and answers as boost does; boost itself, which has the overload from 1.87, asserts where the wrapper throws.
+template<class X>
+concept dynamic_string_view_constructible = requires { X(std::string_view()); typename xstd::owned_storage<X>::bits_type; } and dynamic<X>;
 
 template<class X>
 struct constructor
@@ -52,6 +57,12 @@ struct constructor
                                         (static_cast<void>(X(std::string_view(invalid)))), std::invalid_argument
                                 );
                         }
+                } else if constexpr (dynamic_string_view_constructible<X>) {
+                        // A run-time width is boost's contract: the text read is the width, and the two throws are as at a static width.
+                        BOOST_CHECK_EQUAL(X(std::string_view("0101")).size(), 4uz);
+                        BOOST_CHECK(X(std::string_view("11")).all());
+                        BOOST_CHECK_THROW((static_cast<void>(X(std::string_view("01"), 3))),  std::out_of_range);
+                        BOOST_CHECK_THROW((static_cast<void>(X(std::string_view("012")))),   std::invalid_argument);
                 }
         }
 };
@@ -552,14 +563,14 @@ struct op_istream_failure
                                 BOOST_CHECK_EQUAL(is.fail(), N > 0);            // [bitset.operators]/6
                         }
 
-                        // Fewer digits than N: the loop stops on eof rather than on N, and what was read lands at the front.
+                        // Fewer digits than N: the loop stops on eof rather than on N, and x = X(str) puts what was read in the low bits.
                         if constexpr (N > 1) {
                                 auto is = std::istringstream("1");
                                 auto x = X();
                                 is >> x;
                                 BOOST_CHECK(not is.fail());
                                 BOOST_CHECK_EQUAL(x.count(), 1uz);
-                                BOOST_CHECK(x.test(N - 1));                     // [bitset.operators]/5
+                                BOOST_CHECK(x.test(0));                         // [bitset.operators]/6
                         }
                 }
         }

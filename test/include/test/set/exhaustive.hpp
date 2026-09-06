@@ -6,6 +6,8 @@
 #ifndef TEST_SET_EXHAUSTIVE_HPP
 #define TEST_SET_EXHAUSTIVE_HPP
 
+#include <xstd/bits/bit_traits.hpp> // static_bit_extent
+#include <xstd/bits/ownership.hpp>  // owned_storage
 #include <algorithm>        // max
 #include <array>            // array
 #include <cassert>          // assert
@@ -24,9 +26,13 @@ inline constexpr auto L2 =  64uz;
 inline constexpr auto L3 =  32uz;
 inline constexpr auto L4 =  16uz;
 
+// A static width is its own limit; a growing one, ours or the standard library's, takes the sweep's.
+template<class X>
+concept static_width = requires { typename xstd::owned_storage<X>::bits_type; } and xstd::static_bit_extent<typename X::traits_type, typename xstd::owned_storage<X>::bits_type>;
+
 template<class X, std::size_t Limit>
 inline constexpr auto limit_v = []() {
-        if constexpr (requires { X::max_size(); }) {
+        if constexpr (static_width<X>) {
                 return X::max_size();
         } else {
                 return Limit;

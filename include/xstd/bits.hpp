@@ -12,9 +12,12 @@
 #include <xstd/bits/basic_bitset.hpp>   // IWYU pragma: export; basic_bitset, has_bitops
 #include <xstd/bits/bit_array.hpp>      // IWYU pragma: export; bit_array
 #include <xstd/bits/bit_proxy.hpp>      // IWYU pragma: export; bit_set_iterator, bit_set_reference, bit_sequence_iterator, bit_sequence_reference
+#include <xstd/bits/bit_set.hpp>        // IWYU pragma: export; bit_set
 #include <xstd/bits/bit_static_set.hpp> // IWYU pragma: export; bit_static_set
+#include <xstd/bits/bit_vector.hpp>     // IWYU pragma: export; bit_vector
 #include <xstd/bits/bitset.hpp>         // IWYU pragma: export; bitset
-#include <xstd/bits/block_sequence.hpp> // IWYU pragma: export; block_sequence, block_array, block_vector
+#include <xstd/bits/block_sequence.hpp> // IWYU pragma: export; block_sequence, block_array, block_inplace_vector, block_vector
+#include <xstd/bits/dynamic_bitset.hpp> // IWYU pragma: export; dynamic_bitset
 #include <xstd/bits/ownership.hpp>      // IWYU pragma: export; ownership
 #include <xstd/bits/ranges.hpp>         // IWYU pragma: export; set_view, sequence_view
 

@@ -6,9 +6,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/dynamic_bitset_fwd.hpp>            // dynamic_bitset
 #include <xstd/bits/ranges/set_view.hpp>           // set_view
-#include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
 #include <cstddef>                                 // size_t
 #include <ranges>                                  // take_while
 
@@ -28,21 +26,17 @@ concept modern_bitset = requires(X& a, std::size_t pos)
         a.erase(pos);
 };
 
+// A static width is its own; a run-time one, boost's or ours, is resized to the count.
 template<class X>
 struct generate_empty
 {
-        auto operator()(std::size_t) const
-        {
-                return X();
-        }
-};
-
-template<xstd::unsigned_integer Block, class Allocator>
-struct generate_empty<boost::dynamic_bitset<Block, Allocator>>
-{
         auto operator()(std::size_t n) const
         {
-                return boost::dynamic_bitset<Block, Allocator>(n);
+                auto x = X();
+                if constexpr (requires { x.resize(n); }) {
+                        x.resize(n);
+                }
+                return x;
         }
 };
 
