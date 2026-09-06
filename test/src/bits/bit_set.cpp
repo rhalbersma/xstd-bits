@@ -12,9 +12,10 @@
 #include <xstd/bits/block_sequence.hpp> // block_vector
 #include <xstd/bits/ownership.hpp>      // ownership
 #include <xstd/bits/ranges/set_view.hpp> // set_view
+#include <algorithm>                    // equal
 #include <concepts>                     // same_as
 #include <cstddef>                      // size_t
-#include <cstdint>                      // uint8_t
+#include <cstdint>                      // uint8_t, uint64_t
 #include <limits>                       // numeric_limits
 #include <memory>                       // allocator
 #include <ranges>                       // iota, to
@@ -74,11 +75,11 @@ BOOST_AUTO_TEST_CASE(ItIsBuiltAndOrderedLikeAStdSet)
 // The width is capacity, never value: two sets holding the same positions agree on everything std::set answers, whatever their storages' widths. [design.md#width-is-capacity]
 BOOST_AUTO_TEST_CASE(TheWidthIsCapacityNotValue)
 {
-        auto narrow = T({ 1, 3 });
-        auto wide   = T({ 1, 3 });
+        auto const narrow = T({ 1, 3 });
+        auto wide = T({ 1, 3 });
         wide.insert(100);
         wide.erase(100);
-        auto const digest = [](T const& s) { auto h = boost::hash2::fnv1a_64(); boost::hash2::hash_append(h, {}, s); return h.result(); };
+        auto const digest = [](T const& s) -> std::uint64_t { auto h = boost::hash2::fnv1a_64(); boost::hash2::hash_append(h, {}, s); return h.result(); };
         BOOST_CHECK(narrow == wide);
         BOOST_CHECK((narrow <=> wide) == 0);
         BOOST_CHECK_EQUAL(digest(narrow), digest(wide));
@@ -86,8 +87,11 @@ BOOST_AUTO_TEST_CASE(TheWidthIsCapacityNotValue)
         BOOST_CHECK(narrow.is_subset_of(wide) and wide.is_subset_of(narrow));
         BOOST_CHECK(not narrow.is_proper_subset_of(wide));
         BOOST_CHECK(narrow.intersects(wide));
+}
 
-        // The compound operators at two widths that differ, either way round, against the answers over the elements.
+// The compound operators and predicates at two widths that differ, either way round, against the answers over the elements. [design.md#width-is-capacity]
+BOOST_AUTO_TEST_CASE(TheSetOperationsIgnoreTheWidth)
+{
         auto const a = T({ 1, 3, 200 });
         auto const b = T({ 3, 5 });
         BOOST_CHECK((a | b) == T({ 1, 3, 5, 200 }));
@@ -99,12 +103,20 @@ BOOST_AUTO_TEST_CASE(TheWidthIsCapacityNotValue)
         BOOST_CHECK((a - b) == T({ 1, 200 }));
         BOOST_CHECK((b - a) == T({ 5 }));
         BOOST_CHECK(a < b);
-        BOOST_CHECK(b.is_proper_subset_of(a | b) and (a | b).intersects(b));
-        BOOST_CHECK(not b.is_subset_of(a) and not a.is_subset_of(b));
-        BOOST_CHECK(not a.is_proper_subset_of(b) and not b.is_proper_subset_of(a));
-        BOOST_CHECK(not T({ 5 }).intersects(a) and not a.intersects(T({ 5 })));
+        BOOST_CHECK(b.is_proper_subset_of(a | b));
+        BOOST_CHECK((a | b).intersects(b));
+        BOOST_CHECK(not b.is_subset_of(a));
+        BOOST_CHECK(not a.is_subset_of(b));
+        BOOST_CHECK(not a.is_proper_subset_of(b));
+        BOOST_CHECK(not b.is_proper_subset_of(a));
+        BOOST_CHECK(not T({ 5 }).intersects(a));
+        BOOST_CHECK(not a.intersects(T({ 5 })));
+}
 
-        // The shifts translate: left grows the width to hold the result, right empties past it, and neither has the width as a precondition.
+// The shifts translate: left grows the width to hold the result, right empties past it, and neither has the width as a precondition. [design.md#width-is-capacity]
+BOOST_AUTO_TEST_CASE(TheShiftsTranslateWhateverTheWidth)
+{
+        auto const b = T({ 3, 5 });
         BOOST_CHECK((b << 300) == T({ 303, 305 }));
         BOOST_CHECK((b >> 4) == T({ 1 }));
         BOOST_CHECK((b >> 300).empty());

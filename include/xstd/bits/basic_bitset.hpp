@@ -597,7 +597,7 @@ template<class charT, class traits, class Bits, class Traits>
 auto operator>>(std::basic_istream<charT, traits>& is, basic_bitset<Bits, Traits>& x)
         -> std::basic_istream<charT, traits>&
 {
-        auto const limit = [&] {
+        auto const limit = [&] -> std::size_t {
                 if constexpr (static_bit_extent<Traits, Bits>) {
                         return x.size();
                 } else {

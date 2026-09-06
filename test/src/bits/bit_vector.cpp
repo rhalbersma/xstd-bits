@@ -91,7 +91,7 @@ BOOST_AUTO_TEST_CASE(ItGrowsLikeAStdVector)
 
         v.clear();
         BOOST_CHECK(v.empty());
-        BOOST_CHECK(v == T());
+        BOOST_CHECK_EQUAL(v.size(), 0UZ);
 }
 
 // The view over it refers into the block_vector and cannot grow it. [design.md#views-over-owners]

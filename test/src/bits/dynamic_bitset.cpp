@@ -11,7 +11,6 @@
 #include <xstd/bits/ext/boost/dynamic_bitset.hpp> // bit_traits over boost::dynamic_bitset
 #include <array>                                  // array
 #include <concepts>                               // regular, same_as
-#include <cstddef>                                // size_t
 #include <cstdint>                                // uint8_t, uint64_t
 #include <memory>                                 // allocator
 #include <sstream>                                // istringstream, ostringstream
