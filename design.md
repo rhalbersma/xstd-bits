@@ -464,6 +464,48 @@ what `-Wunused-lambda-capture` reports.
 
 ## Views and containers
 
+### the-three-adaptors
+
+Three class templates carry the three readings: `basic_bit_set`, `basic_bit_sequence`, `basic_bitset`. Each
+is written against the door and never against a storage, so one adaptor serves `block_array`, `block_vector`,
+`std::bitset` and `boost::dynamic_bitset` alike, and no owning type ever needs a `bit_traits` of its own. The
+public names are aliases: `bit_static_set<N, B>` is `basic_bit_set<block_array<B, N>, owns>`, and
+`bit_array<N, B>` is `basic_bit_sequence<block_array<B, N>, owns, false>`.
+
+### ownership-is-not-an-axis
+
+Owning versus viewing is storage lifetime, not a third axis of the model, and it collapses to one template
+parameter: `ownership::owns` stores `Bits`, `ownership::refers` stores `Bits*`. Always present and only its
+type changes, so a plain `conditional_t` rather than `conditional_data_member_t`. One accessor, via deducing
+`this`, gives deep const to the owner — `(self.m_bits)` propagates `self`'s const — and shallow const to the
+view — `*self.m_bits` does not — for free.
+
+Every mutator is then gated on the door and nothing else: `requires requires { Traits::op(self.storage(), …) }`
+reads "the door lets *this handle* write". A const owner's accessor hands the door a `Bits const&`, which no
+`assign` accepts; a const view's hands it `Bits&`, which is what a view is for; a view over `Bits const`
+hands it `Bits const&` again. Const, ownership and a floor-only trait are all the same question, asked once.
+The exceptions are the constructors and, once storage grows, the growth members, which need an explicit
+`requires (owns(Own))`: the requires-expression tests what the storage can do, not what this handle may do
+to it, and a view over a `block_vector` must not be able to resize what it does not own.
+
+### views-follow-their-precedent
+
+`bit_set_view` follows `std::string_view`: a value that happens not to own its bytes, so it has `==` and
+`<=>`, and its ordering is exactly `std::set`'s. `bit_span` follows `std::span`, which P1085 stripped of both
+because "same referent" and "same contents" are both defensible readings of a handle. So `basic_bit_set`
+compares whatever it owns or views, and `basic_bit_sequence` compares only as an owner. The non-member copies
+— `~`, `&`, `|`, `^`, `-`, `<<`, `>>` — are the owner's alone in both readings: a copied view would write
+through to what it views.
+
+### the-public-names
+
+Twelve aliases, three primaries. The unmarked name goes to the flagship — `bit_set` is the dynamic set
+benchmarked against `std::set` and `std::flat_set` — and the qualifier marks the special case, `bit_static_set`.
+The sequence row is named after the `std` container it packs, `bit_array` for `std::array<bool, N>`. The rows
+therefore mark different columns, and that is correct by each row's own analogy rather than an inconsistency
+to fix.
+
+
 ### asking-is-total
 
 Asking is total whatever the extent: a position past the width is a key the set does not hold, which is an

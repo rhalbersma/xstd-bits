@@ -232,6 +232,28 @@ template<class Traits, class Bits>
 
 // The door's entry where the specialization declares one, the walk above where it does not. [design.md#detection-by-absence]
 template<class Traits, class Bits>
+[[nodiscard]] constexpr auto find_first(Bits const& c) noexcept
+        -> std::size_t
+{
+        if constexpr (requires { { Traits::find_first(c) } -> std::convertible_to<std::size_t>; }) {
+                return Traits::find_first(c);
+        } else {
+                return scan_first<Traits>(c);
+        }
+}
+
+template<class Traits, class Bits>
+[[nodiscard]] constexpr auto count(Bits const& c) noexcept
+        -> std::size_t
+{
+        if constexpr (requires { { Traits::count(c) } -> std::convertible_to<std::size_t>; }) {
+                return Traits::count(c);
+        } else {
+                return scan_count<Traits>(c);
+        }
+}
+
+template<class Traits, class Bits>
 [[nodiscard]] constexpr auto find_next(Bits const& c, std::size_t n) noexcept
         -> std::size_t
 {
