@@ -4,14 +4,16 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <boost/test/unit_test.hpp>    // BOOST_CHECK_EQUAL, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
-#include <test/block_types.hpp>        // graded_extents, word_types
+#include <test/block_types.hpp>        // digits_v, graded_extents, word_types
+#include <test/inplace_vector.hpp>     // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
 #include <xstd/bits/bit_traits.hpp>    // bit_storage, bit_traits, block_readable, static_bit_extent
-#include <xstd/bits/block_sequence.hpp> // block_array, block_sequence, block_storage, block_vector
+#include <xstd/bits/block_sequence.hpp> // block_array, block_inplace_vector, block_sequence, block_storage, block_vector
 #include <algorithm>                   // count, lexicographical_compare_three_way, min
 #include <array>                       // array
 #include <compare>                     // strong_ordering
 #include <cstddef>                     // size_t
 #include <cstdint>                     // uint8_t, uint64_t
+#include <new>                         // IWYU pragma: keep; bad_alloc, behind TEST_HAS_INPLACE_VECTOR
 #include <ranges>                      // iota
 #include <utility>                     // pair
 #include <vector>                      // vector
@@ -413,6 +415,216 @@ BOOST_AUTO_TEST_CASE(ADefaultConstructedRunTimeWidthIsZeroWidthWithOneBlock)
         BOOST_CHECK_EQUAL(b.num_blocks(), 1UZ);
         BOOST_CHECK(b == xstd::block_vector<std::uint8_t>(0));
 }
+
+namespace {
+
+// A run-time width built from the model, so equality against it doubles as the invariant check: a dirty tail compares unequal.
+template<class T>
+[[nodiscard]] auto from_model(model const& m) -> T
+{
+        auto b = T(m.size());
+        for (auto i = 0UZ; i < m.size(); ++i) {
+                if (m[i]) { b.set(i); }
+        }
+        return b;
+}
+
+// Two in three set, so both fill values and every block boundary change something.
+[[nodiscard]] auto patterned(std::size_t n) -> model
+{
+        auto m = model(n);
+        for (auto i = 0UZ; i < n; ++i) {
+                m[i] = i % 3 != 1;
+        }
+        return m;
+}
+
+// The same grading the static sweep uses: within one block, and across boundaries either side.
+template<class Block>
+[[nodiscard]] constexpr auto graded_widths() -> std::array<std::size_t, 10>
+{
+        constexpr auto D = test::digits_v<Block>;
+        return { 0UZ, 1UZ, D - 1, D, D + 1, (2 * D) - 1, 2 * D, (2 * D) + 1, 3 * D, (3 * D) + 1 };
+}
+
+template<class Block>
+[[nodiscard]] constexpr auto blocks_for(std::size_t n) -> std::size_t
+{
+        constexpr auto D = test::digits_v<Block>;
+        return std::ranges::max((n + D - 1) / D, 1UZ);
+}
+
+// What append(block) should do to the model: the block's bits, least significant first.
+template<class Block>
+auto append_to(model& m, Block value) -> void
+{
+        for (auto i = 0UZ; i < test::digits_v<Block>; ++i) {
+                // Cast back before the mask: a shifted narrow word is an int, which bugprone-signed-bitwise reads as a signed operand.
+                m.push_back((static_cast<Block>(value >> i) & Block{1}) != Block{0});
+        }
+}
+
+// Alternating pairs of bits, so a split at any offset lands ones on both sides.
+// Dependent, so a constrained-away member is a false rather than a hard error.
+template<class X> constexpr bool can_resize    = requires (X& x) { x.resize(1UZ); x.resize(1UZ, true); };
+template<class X> constexpr bool can_push_pop  = requires (X& x) { x.push_back(true); x.pop_back(); };
+template<class X> constexpr bool can_append    = requires (X& x) { x.append(x.block(0UZ)); };
+template<class X> constexpr bool can_clear     = requires (X& x) { x.clear(); };
+template<class X> constexpr bool can_reserve   = requires (X& x) { x.reserve(1UZ); x.shrink_to_fit(); };
+template<class X> constexpr bool has_capacity  = requires (X const& x) { x.capacity(); };
+
+template<class Block>
+[[nodiscard]] constexpr auto striped() -> Block
+{
+        auto value = Block{0};
+        for (auto i = 0UZ; i < test::digits_v<Block>; i += 4) {
+                value = static_cast<Block>(value | static_cast<Block>(Block{3} << i));
+        }
+        return value;
+}
+
+}       // namespace
+
+// Every resize path: each graded width to each other, with both fill values, against the model and against a fresh build from it. [design.md#growth]
+BOOST_AUTO_TEST_CASE_TEMPLATE(ResizingKeepsTheModelAndTheUnusedTailClear, Block, test::word_types)
+{
+        using T = xstd::block_vector<Block>;
+
+        auto disagreements = 0;
+        for (auto const from : graded_widths<Block>()) {
+                for (auto const to : graded_widths<Block>()) {
+                        for (auto const value : { false, true }) {
+                                auto m = patterned(from);
+                                auto b = from_model<T>(m);
+                                b.resize(to, value);
+                                m.resize(to, value);
+                                disagreements += static_cast<int>(reference(b) != m);
+                                disagreements += static_cast<int>(b != from_model<T>(m));
+                                disagreements += static_cast<int>(b.num_blocks() != blocks_for<Block>(to));
+                        }
+                }
+        }
+        BOOST_CHECK_EQUAL(disagreements, 0);
+}
+
+// push_back and pop_back are resize by one, checked at every width on the way up and back down.
+BOOST_AUTO_TEST_CASE_TEMPLATE(PushingAndPoppingAreResizeByOne, Block, test::word_types)
+{
+        using T = xstd::block_vector<Block>;
+        constexpr auto D = test::digits_v<Block>;
+
+        auto disagreements = 0;
+        auto b = T();
+        auto m = model();
+        for (auto i = 0UZ; i < (3 * D) + 1; ++i) {
+                auto const value = i % 3 != 1;
+                b.push_back(value);
+                m.push_back(value);
+                disagreements += static_cast<int>(b.size() != m.size());
+                disagreements += static_cast<int>(b != from_model<T>(m));
+        }
+        while (not m.empty()) {
+                b.pop_back();
+                m.pop_back();
+                disagreements += static_cast<int>(b.size() != m.size());
+                disagreements += static_cast<int>(b != from_model<T>(m));
+        }
+        BOOST_CHECK_EQUAL(disagreements, 0);
+        BOOST_CHECK_EQUAL(b.num_blocks(), 1UZ);
+}
+
+// Boost's append: a whole block at once, split across two where the width is not aligned; at width zero the floor block takes it.
+BOOST_AUTO_TEST_CASE_TEMPLATE(AppendingABlockSplitsItAtAnUnalignedWidth, Block, test::word_types)
+{
+        using T = xstd::block_vector<Block>;
+
+        auto disagreements = 0;
+        for (auto const n : graded_widths<Block>()) {
+                auto m = patterned(n);
+                auto b = from_model<T>(m);
+
+                b.append(striped<Block>());
+                append_to(m, striped<Block>());
+                disagreements += static_cast<int>(b != from_model<T>(m));
+
+                // And a range of blocks, reserved for first, so the width grows by one block per element.
+                auto const blocks = std::array{ striped<Block>(), static_cast<Block>(~striped<Block>()), Block{1} };
+                b.append(blocks.begin(), blocks.end());
+                for (auto const value : blocks) {
+                        append_to(m, value);
+                }
+                disagreements += static_cast<int>(b != from_model<T>(m));
+                disagreements += static_cast<int>(b.size() != n + (4 * test::digits_v<Block>));
+        }
+        BOOST_CHECK_EQUAL(disagreements, 0);
+}
+
+// Capacity is in bits and follows the blocks; reserving and shrinking change it and nothing else.
+BOOST_AUTO_TEST_CASE(ReservingAndShrinkingChangeCapacityNotTheBits)
+{
+        using T = xstd::block_vector<std::uint8_t>;
+
+        auto const m = patterned(17);
+        auto b = from_model<T>(m);
+
+        b.reserve(40);
+        BOOST_CHECK_GE(b.capacity(), 40UZ);
+        BOOST_CHECK_EQUAL(b.size(), 17UZ);
+        BOOST_CHECK(b == from_model<T>(m));
+
+        b.shrink_to_fit();
+        BOOST_CHECK_GE(b.capacity(), b.size());
+        BOOST_CHECK(b == from_model<T>(m));
+}
+
+// Width zero, one block, all padding: the object a default constructor makes. [design.md#default-construction]
+BOOST_AUTO_TEST_CASE(ClearingIsResizeToZero)
+{
+        using T = xstd::block_vector<std::uint8_t>;
+
+        auto b = from_model<T>(patterned(17));
+        b.clear();
+        BOOST_CHECK_EQUAL(b.size(), 0UZ);
+        BOOST_CHECK_EQUAL(b.num_blocks(), 1UZ);
+        BOOST_CHECK_EQUAL(b.block(0), 0U);
+        BOOST_CHECK(b == T());
+}
+
+// A static width has none of it: the members are constrained away rather than asserting.
+BOOST_AUTO_TEST_CASE(AStaticWidthDoesNotGrow)
+{
+        using S = xstd::block_array<std::uint8_t, 8>;
+        using D = xstd::block_vector<std::uint8_t>;
+
+        static_assert(not can_resize<S> and not can_push_pop<S> and not can_append<S> and not can_clear<S>);
+        static_assert(not can_reserve<S> and not has_capacity<S>);
+
+        static_assert(can_resize<D> and can_push_pop<D> and can_append<D> and can_clear<D>);
+        static_assert(can_reserve<D> and has_capacity<D>);
+}
+
+#ifdef TEST_HAS_INPLACE_VECTOR
+// The third storage: a run-time width under a compile-time capacity, the sweep unchanged over it, and growth past the capacity a bad_alloc. [design.md#growth]
+BOOST_AUTO_TEST_CASE(AnInplaceVectorIsARunTimeWidthUnderAStaticCapacity)
+{
+        using T = xstd::block_inplace_vector<std::uint8_t, 24>;
+        static_assert(not T::has_static_size);
+        static_assert(xstd::block_storage<std::inplace_vector<std::uint8_t, 3>>);
+
+        BOOST_CHECK_EQUAL(sweep(T(17)), 0);
+
+        auto b = T();
+        BOOST_CHECK_EQUAL(b.capacity(), 24UZ);
+        b.resize(24, true);
+        BOOST_CHECK(b.all());
+        BOOST_CHECK_EQUAL(b.num_blocks(), 3UZ);
+        BOOST_CHECK_THROW(b.push_back(true), std::bad_alloc);
+        BOOST_CHECK_THROW(b.resize(25), std::bad_alloc);
+        BOOST_CHECK_THROW(b.reserve(25), std::bad_alloc);
+        b.shrink_to_fit();
+        BOOST_CHECK_EQUAL(b.size(), 24UZ);
+}
+#endif
 
 // Each entry reaches the member it names, and every call stays inside the kept contracts. [design.md#the-cheapest-contract]
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheTraitsForwardToTheStorage, T, test::graded_extents<graded_block_array>)

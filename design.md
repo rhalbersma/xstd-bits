@@ -51,6 +51,26 @@ run-time width.
 A defaulted default constructor plus an NSDMI, rather than two constructors constrained on the extent:
 `std::vector` default-constructs empty, and the at-least-one-block invariant has to hold from the start.
 
+### growth
+
+Growth is the run-time width's alone, and every member of it leaves the unused tail clear. `resize(n, value)`
+resizes the blocks to what `n` needs, filled with `value`, moves the width, and masks the new last block;
+growing with ones first sets the old last block's tail, clear by the invariant, since those are the first new
+positions. `push_back` and `pop_back` are `resize` by one, `clear` is `resize(0)` -- the object a default
+constructor makes -- and `append(block)` is boost's: the block's bits become the next `bits_per_block`
+positions, split across two blocks where the width is not aligned, and the floor block takes the first one
+at width zero. `reserve`, `capacity` and `shrink_to_fit` are in bits and exist where the blocks have them:
+`std::vector` and `std::inplace_vector`, not `std::array`.
+
+`clear()` here is the sequence reading's, width to zero, which is what `std::vector<bool>` and
+`boost::dynamic_bitset` mean by it; the set reading's `clear()` is `fill(false)` and never reaches this
+member, so the landmine #80 recorded -- probing `clear()` on boost and emptying the width -- cannot recur.
+
+`block_inplace_vector<Block, N>` is the third storage: a run-time width under a compile-time capacity of `N`
+bits, behind `__cpp_lib_inplace_vector` until every library in the matrix has it. It needs nothing of its
+own, `std::inplace_vector` satisfying `block_storage` as it is; `resize`, `reserve` and `push_back` past the
+capacity throw `std::bad_alloc`, as that library specifies.
+
 ## Scans
 
 ### inclusive-is-the-primitive
