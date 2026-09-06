@@ -5,12 +5,10 @@
 
 #include <boost/dynamic_bitset.hpp>           // dynamic_bitset
 #include <boost/test/unit_test.hpp>           // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <xstd/bits/basic_bit_set.hpp>        // basic_bit_set
 #include <xstd/bits/basic_bitset.hpp>         // basic_bitset, has_bitops
 #include <xstd/bits/bitset.hpp>               // bitset
 #include <xstd/bits/block_sequence.hpp>       // block_array, block_vector
 #include <xstd/bits/ext/std/bitset.hpp>       // IWYU pragma: keep; bit_traits<std::bitset>
-#include <xstd/bits/ownership.hpp>            // ownership
 #include <xstd/bits/ranges/sequence_view.hpp> // sequence_view
 #include <xstd/bits/ranges/set_view.hpp>      // set_view
 #include <bitset>                             // bitset
@@ -172,8 +170,8 @@ BOOST_AUTO_TEST_CASE(TheViewsReachAWrappedStdBitset)
         BOOST_CHECK(va.is_subset_of(va));
         BOOST_CHECK_EQUAL(qa[69], true);
 
-        static_assert(std::same_as<decltype(va), xstd::basic_bit_set<std::bitset<70>, xstd::ownership::refers> const>);
-        static_assert(std::same_as<decltype(xstd::set_view(std::as_const(a))), xstd::basic_bit_set<std::bitset<70> const, xstd::ownership::refers>>);
+        static_assert(std::same_as<decltype(va), xstd::set_view<std::bitset<70>> const>);
+        static_assert(std::same_as<decltype(xstd::set_view(std::as_const(a))), xstd::set_view<std::bitset<70> const>>);
 }
 
 // Built from text, streamed back to text, and hashed: the derived members, over either storage.

@@ -15,7 +15,7 @@
 #include <xstd/bits/ownership.hpp>                // ownership
 #include <xstd/bits/ranges/set_view.hpp>          // set_view
 #include <bitset>                                 // bitset
-#include <concepts>                               // same_as
+#include <concepts>                               // derived_from, same_as
 #include <cstddef>                                // size_t
 #include <ranges>                                 // bidirectional_range, borrowed_range, range, view
 #include <set>                                    // set
@@ -50,14 +50,14 @@ using view_of = decltype(xstd::set_view(std::declval<T&>()));
 // The view is the referring adaptor under another name, and over an owner it refers into the storage the owner wraps. [design.md#the-views-are-the-adaptors]
 BOOST_AUTO_TEST_CASE(TheViewIsTheReferringAdaptor)
 {
-        static_assert(std::same_as<xstd::set_view<std::bitset<8>>, xstd::basic_bit_set<std::bitset<8>, xstd::ownership::refers>>);
-        static_assert(std::same_as<view_of<std::bitset<8>>,        xstd::basic_bit_set<std::bitset<8>, xstd::ownership::refers>>);
-        static_assert(std::same_as<view_of<std::bitset<8> const>,  xstd::basic_bit_set<std::bitset<8> const, xstd::ownership::refers>>);
-        static_assert(std::same_as<view_of<boost::dynamic_bitset<>>, xstd::basic_bit_set<boost::dynamic_bitset<>, xstd::ownership::refers>>);
+        static_assert(std::derived_from<xstd::set_view<std::bitset<8>>, xstd::basic_bit_set<std::bitset<8>, xstd::ownership::refers>>);
+        static_assert(std::same_as<view_of<std::bitset<8>>,          xstd::set_view<std::bitset<8>>>);
+        static_assert(std::same_as<view_of<std::bitset<8> const>,    xstd::set_view<std::bitset<8> const>>);
+        static_assert(std::same_as<view_of<boost::dynamic_bitset<>>, xstd::set_view<boost::dynamic_bitset<>>>);
 
-        static_assert(std::same_as<view_of<xstd::bitset<8>>,         xstd::basic_bit_set<xstd::block_array<std::size_t, 8>, xstd::ownership::refers>>);
-        static_assert(std::same_as<view_of<xstd::bitset<8> const>,   xstd::basic_bit_set<xstd::block_array<std::size_t, 8> const, xstd::ownership::refers>>);
-        static_assert(std::same_as<view_of<xstd::bit_static_set<8>>, xstd::basic_bit_set<xstd::block_array<std::size_t, 8>, xstd::ownership::refers>>);
+        static_assert(std::same_as<view_of<xstd::bitset<8>>,         xstd::set_view<xstd::block_array<std::size_t, 8>>>);
+        static_assert(std::same_as<view_of<xstd::bitset<8> const>,   xstd::set_view<xstd::block_array<std::size_t, 8> const>>);
+        static_assert(std::same_as<view_of<xstd::bit_static_set<8>>, xstd::set_view<xstd::block_array<std::size_t, 8>>>);
 }
 
 // The types a set_view exists for: those holding a set of positions without offering it, which bit_static_set already does.

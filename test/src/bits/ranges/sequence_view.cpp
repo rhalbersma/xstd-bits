@@ -17,7 +17,7 @@
 #include <algorithm>                              // equal
 #include <array>                                  // array
 #include <bitset>                                 // bitset
-#include <concepts>                               // equality_comparable, same_as, totally_ordered
+#include <concepts>                               // derived_from, equality_comparable, same_as, totally_ordered
 #include <cstddef>                                // size_t
 #include <ranges>                                 // borrowed_range, random_access_range, view
 #include <utility>                                // declval
@@ -35,11 +35,11 @@ using view_of = decltype(xstd::sequence_view(std::declval<T&>()));
 // The view is the referring adaptor under another name, and over an owner of either reading it refers into the storage the owner wraps. [design.md#the-views-are-the-adaptors]
 BOOST_AUTO_TEST_CASE(TheViewIsTheReferringAdaptor)
 {
-        static_assert(std::same_as<xstd::sequence_view<std::bitset<8>>, xstd::basic_bit_sequence<std::bitset<8>, xstd::ownership::refers, false>>);
-        static_assert(std::same_as<view_of<std::bitset<8>>,             xstd::basic_bit_sequence<std::bitset<8>, xstd::ownership::refers, false>>);
-        static_assert(std::same_as<view_of<std::bitset<8> const>,       xstd::basic_bit_sequence<std::bitset<8> const, xstd::ownership::refers, false>>);
-        static_assert(std::same_as<view_of<xstd::bitset<8>>,            xstd::basic_bit_sequence<xstd::block_array<std::size_t, 8>, xstd::ownership::refers, false>>);
-        static_assert(std::same_as<view_of<xstd::bit_static_set<8>>,    xstd::basic_bit_sequence<xstd::block_array<std::size_t, 8>, xstd::ownership::refers, false>>);
+        static_assert(std::derived_from<xstd::sequence_view<std::bitset<8>>, xstd::basic_bit_sequence<std::bitset<8>, xstd::ownership::refers, false>>);
+        static_assert(std::same_as<view_of<std::bitset<8>>,          xstd::sequence_view<std::bitset<8>>>);
+        static_assert(std::same_as<view_of<std::bitset<8> const>,    xstd::sequence_view<std::bitset<8> const>>);
+        static_assert(std::same_as<view_of<xstd::bitset<8>>,         xstd::sequence_view<xstd::block_array<std::size_t, 8>>>);
+        static_assert(std::same_as<view_of<xstd::bit_static_set<8>>, xstd::sequence_view<xstd::block_array<std::size_t, 8>>>);
 }
 
 BOOST_AUTO_TEST_CASE(TheViewedTypesAreTheOnesHoldingBoolsWithoutOfferingThem)

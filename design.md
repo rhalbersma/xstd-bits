@@ -529,12 +529,16 @@ them, which is what lets `ext/xstd/bitset.hpp` return `basic_bit_set(c).begin()`
 ### the-views-are-the-adaptors
 
 `set_view<Bits, Traits>` is `basic_bit_set<Bits, ownership::refers, Traits>` and `sequence_view<Bits, Traits>`
-is `basic_bit_sequence<Bits, ownership::refers, false, Traits>`: aliases, not a second implementation of either
-reading. The earlier views, with their own iterators, proxies and four customization points — `set_find`,
+is `basic_bit_sequence<Bits, ownership::refers, false, Traits>`, each a two-line derived class inheriting the
+adaptor's constructors and restating its two deduction guides: not a second implementation of either reading.
+The earlier views, with their own iterators, proxies and four customization points — `set_find`,
 `sequence_find`, `block_access`, `bit_extent` — were the door before there was a door, and once the adaptors
-read through `bit_traits` alone there was nothing left for them to do. Deduction goes through the primary's
-guides, which is class template argument deduction for alias templates (P1814), Clang 19 and GCC 10 upward.
-The escape, should a compiler in the matrix refuse it, is a two-line derived class with a guide of its own.
+read through `bit_traits` alone there was nothing left for them to do. An alias would have been the natural
+spelling, and deduction through one is class template argument deduction for alias templates (P1814), which
+Clang 19 and GCC 10 have and MSVC does not: `set_view(x)` on MSVC is "too few template arguments". The derived
+class is the escape #80 named, and it costs a restated constructor, guide and `enable_view` per view. The
+constructors are spelled out rather than inherited: inheriting them inherits the primary's guides as well
+(P2582, which GCC implements), and those tie with the restated ones.
 
 The sequence view pays the `span` half of [views-follow-their-precedent](#views-follow-their-precedent) by
 becoming the adaptor: it no longer has `==` or `<=>`, and the harness checks the sequence reading through the
