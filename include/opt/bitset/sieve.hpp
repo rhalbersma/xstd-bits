@@ -8,7 +8,6 @@
 
 #include <boost/dynamic_bitset_fwd.hpp>            // dynamic_bitset
 #include <xstd/bits/ranges/set_view.hpp>           // set_view
-#include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
 #include <cstddef>                                 // size_t
 #include <ranges>                                  // take_while
 
