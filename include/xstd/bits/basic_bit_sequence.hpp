@@ -207,9 +207,8 @@ constexpr void swap(basic_bit_sequence<Bits, Own, Windowed, Traits>& x, basic_bi
 
 }       // namespace xstd
 
-namespace std::ranges {
-
 // NOLINTBEGIN(bugprone-std-namespace-modification): the two opt-ins [range.view] and [range.range] invite for a program-defined type.
+namespace std::ranges {
 
 // A view is a std::ranges::view outright and borrowed, as basic_bit_set's is. [design.md#views-follow-their-precedent]
 template<class Bits, class Traits>
@@ -218,8 +217,7 @@ inline constexpr bool enable_view<xstd::basic_bit_sequence<Bits, xstd::ownership
 template<class Bits, class Traits>
 inline constexpr bool enable_borrowed_range<xstd::basic_bit_sequence<Bits, xstd::ownership::refers, false, Traits>> = true;
 
-// NOLINTEND(bugprone-std-namespace-modification)
-
 }       // namespace std::ranges
+// NOLINTEND(bugprone-std-namespace-modification)
 
 #endif  // XSTD_BITS_BASIC_BIT_SEQUENCE_HPP

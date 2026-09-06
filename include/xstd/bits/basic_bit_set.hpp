@@ -425,9 +425,8 @@ template<class Bits, ownership Own, class Traits> [[nodiscard]] constexpr auto o
 
 }       // namespace xstd
 
-namespace std::ranges {
-
 // NOLINTBEGIN(bugprone-std-namespace-modification): the two opt-ins [range.view] and [range.range] invite for a program-defined type.
+namespace std::ranges {
 
 // A view is a std::ranges::view outright, so a pipeline takes it as it is; and borrowed, its iterators pointing at the storage and not at it. [design.md#views-follow-their-precedent]
 template<class Bits, class Traits>
@@ -436,8 +435,7 @@ inline constexpr bool enable_view<xstd::basic_bit_set<Bits, xstd::ownership::ref
 template<class Bits, class Traits>
 inline constexpr bool enable_borrowed_range<xstd::basic_bit_set<Bits, xstd::ownership::refers, Traits>> = true;
 
-// NOLINTEND(bugprone-std-namespace-modification)
-
 }       // namespace std::ranges
+// NOLINTEND(bugprone-std-namespace-modification)
 
 #endif  // XSTD_BITS_BASIC_BIT_SET_HPP
