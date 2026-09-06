@@ -52,6 +52,12 @@ struct constructor
                                         (static_cast<void>(X(std::string_view(invalid)))), std::invalid_argument
                                 );
                         }
+                } else if constexpr (dynamic<X> and requires { X(std::string_view()); }) {
+                        // A run-time width is boost's contract: the text read is the width, and the two throws are as at a static width.
+                        BOOST_CHECK_EQUAL(X(std::string_view("0101")).size(), 4uz);
+                        BOOST_CHECK(X(std::string_view("11")).all());
+                        BOOST_CHECK_THROW((static_cast<void>(X(std::string_view("01"), 3))),  std::out_of_range);
+                        BOOST_CHECK_THROW((static_cast<void>(X(std::string_view("012")))),   std::invalid_argument);
                 }
         }
 };
