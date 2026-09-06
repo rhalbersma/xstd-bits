@@ -131,8 +131,8 @@ using BlockTypes   = test::graded_extents<block_bits>;
 // The floor is a width and an indexed read; nothing above it is required to satisfy bit_storage.
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheFloorIsAWidthAndAnIndexedRead, T, ElementTypes)
 {
-        static_assert(xstd::bit_storage<T>);
-        static_assert(xstd::static_bit_extent<T>);
+        static_assert(xstd::bit_storage<xstd::bit_traits<T>, T>);
+        static_assert(xstd::static_bit_extent<xstd::bit_traits<T>, T>);
 }
 
 // The tier split pinned down: one adapter answers block_readable, one does not. [design.md#detection-by-absence]

@@ -420,8 +420,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheDoorForwardsToTheStorage, T, test::graded_exten
         using traits = xstd::bit_traits<T>;
         constexpr auto N = traits::extent;
 
-        static_assert(xstd::bit_storage<T>);
-        static_assert(xstd::static_bit_extent<T>);
+        static_assert(xstd::bit_storage<xstd::bit_traits<T>, T>);
+        static_assert(xstd::static_bit_extent<xstd::bit_traits<T>, T>);
         static_assert(xstd::block_readable<traits, T>);
 
         auto c = T();

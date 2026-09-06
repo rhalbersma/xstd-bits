@@ -230,25 +230,83 @@ template<class Traits, class Bits>
         }
 }
 
+// A zero width answers zero to every question, and says so here, before an entry or a walk is instantiated for it. [design.md#degenerate-widths]
+template<class Traits>
+constexpr bool zero_width = Traits::extent == 0UZ;
+
+// The door's entry where the specialization declares one, the walk above where it does not. [design.md#detection-by-absence]
+template<class Traits, class Bits>
+[[nodiscard]] constexpr auto find_first(Bits const& c [[maybe_unused]]) noexcept
+        -> std::size_t
+{
+        if constexpr (zero_width<Traits>) {
+                return 0UZ;
+        } else if constexpr (requires { { Traits::find_first(c) } -> std::convertible_to<std::size_t>; }) {
+                return Traits::find_first(c);
+        } else {
+                return scan_first<Traits>(c);
+        }
+}
+
+template<class Traits, class Bits>
+[[nodiscard]] constexpr auto count(Bits const& c [[maybe_unused]]) noexcept
+        -> std::size_t
+{
+        if constexpr (zero_width<Traits>) {
+                return 0UZ;
+        } else if constexpr (requires { { Traits::count(c) } -> std::convertible_to<std::size_t>; }) {
+                return Traits::count(c);
+        } else {
+                return scan_count<Traits>(c);
+        }
+}
+
+template<class Traits, class Bits>
+[[nodiscard]] constexpr auto find_next(Bits const& c [[maybe_unused]], std::size_t n [[maybe_unused]]) noexcept
+        -> std::size_t
+{
+        if constexpr (zero_width<Traits>) {
+                return 0UZ;
+        } else if constexpr (requires { { Traits::find_next(c, n) } -> std::convertible_to<std::size_t>; }) {
+                return Traits::find_next(c, n);
+        } else {
+                return scan_next<Traits>(c, n);
+        }
+}
+
+template<class Traits, class Bits>
+[[nodiscard]] constexpr auto find_prev(Bits const& c [[maybe_unused]], std::size_t n [[maybe_unused]]) noexcept
+        -> std::size_t
+{
+        if constexpr (zero_width<Traits>) {
+                return 0UZ;
+        } else if constexpr (requires { { Traits::find_prev(c, n) } -> std::convertible_to<std::size_t>; }) {
+                return Traits::find_prev(c, n);
+        } else {
+                return scan_prev<Traits>(c, n);
+        }
+}
+
 } // namespace xstd::detail::bits
 
 namespace xstd {
 
 // The floor, gated as a concept so an unadapted type reads "constraint not satisfied". [design.md#opt-in]
-template<class Bits>
+// Two parameters like block_readable, so a type-constraint can name the trait: bit_storage<Bits> Traits. [design.md#the-trait-is-a-parameter]
+template<class Traits, class Bits>
 concept bit_storage =
         requires (Bits const& c, std::size_t n)
         {
                 // Inside the floor, not beside it, so static_bit_extent can read it without proving it exists.
-                { bit_traits<Bits>::extent   } -> std::convertible_to<std::size_t>;
-                { bit_traits<Bits>::size(c)  } -> std::convertible_to<std::size_t>;
-                { bit_traits<Bits>::at(c, n) } -> std::convertible_to<bool>;
+                { Traits::extent   } -> std::convertible_to<std::size_t>;
+                { Traits::size(c)  } -> std::convertible_to<std::size_t>;
+                { Traits::at(c, n) } -> std::convertible_to<bool>;
         }
 ;
 
 // A static width reaching the readings as a constant expression; replaces the bit_extent variable template.
-template<class Bits>
-concept static_bit_extent = bit_storage<Bits> and bit_traits<Bits>::extent != std::dynamic_extent;
+template<class Traits, class Bits>
+concept static_bit_extent = bit_storage<Traits, Bits> and Traits::extent != std::dynamic_extent;
 
 } // namespace xstd
 

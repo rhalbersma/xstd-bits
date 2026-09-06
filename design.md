@@ -178,6 +178,14 @@ constraint.
 Down here nothing is visible unqualified from `xstd`, so the qualification is enforced by **scoping** rather
 than by remembering a prefix at every call site — which is what a class was previously substituting for.
 
+### the-trait-is-a-parameter
+
+`bit_storage` and `static_bit_extent` take the trait first and the storage second, as `block_readable`
+already did, so that a type-constraint can name the trait: `bit_storage<Bits> Traits` expands to
+`bit_storage<Traits, Bits>`, a type-constraint binding its own parameter first. That is what lets every
+consumer of the door carry `Traits = bit_traits<Bits>` as an explicit parameter, `basic_string`-style, and
+what turns the tier into a knob over identical storage — one `block_array`, two traits, one variable.
+
 ### what-the-door-reconciles
 
 Almost everything the two readings ask of a `Bits` is already an entry, or is the same operation under
@@ -302,6 +310,19 @@ is an uncovered branch, and gcovr scores instantiations separately:
 Everything wider shares the general arms. A single block still needs the block-loop specialisations -- a
 one-block instantiation cannot take a loop's exit branch -- which is why `first_difference` and `any_above`
 each spell out the one- and two-block cases the way `find_front` and `intersects` do.
+
+The four use-site dispatchers in `detail::bits` (`find_first`, `find_next`, `find_prev`, `count`) carry the
+width-zero arm too, ahead of the choice between the door's entry and the walk: at width zero every answer is
+zero -- the total answer, `size()` -- and no entry or walk is instantiated for it. The set iterator's
+equality takes an arm there too: a zero width has one position, so every iterator over it is the same one,
+and `operator==` says so outright. The point is the loops an optimizer sees into. Three spellings of the
+step failed: one that returned `size()` left every `while (it != last) ++it` provably unable to advance,
+which crashes MSVC's optimizer (range-v3's symmetric difference over a zero-extent set inside a zero-trip
+loop was the reproducer) and which gcc 15 diagnoses, through the counter overflow it implies in
+`ranges::distance`, as undefined behaviour; one marked `std::unreachable()` cured both and made MSVC report
+range-v3's code after it as unreachable (C4702), which `/external` does not silence; and one that simply
+moved the position brought MSVC's crash back. With equality constant instead, every such loop's condition
+is false before its first step, and the step itself stays as it is for every width.
 
 ### the-ordering-invariant
 
@@ -456,6 +477,48 @@ what `-Wunused-lambda-capture` reports.
 
 ## Views and containers
 
+### the-three-adaptors
+
+Three class templates carry the three readings: `basic_bit_set`, `basic_bit_sequence`, `basic_bitset`. Each
+is written against the door and never against a storage, so one adaptor serves `block_array`, `block_vector`,
+`std::bitset` and `boost::dynamic_bitset` alike, and no owning type ever needs a `bit_traits` of its own. The
+public names are aliases: `bit_static_set<N, B>` is `basic_bit_set<block_array<B, N>, owns>`, and
+`bit_array<N, B>` is `basic_bit_sequence<block_array<B, N>, owns, false>`.
+
+### ownership-is-not-an-axis
+
+Owning versus viewing is storage lifetime, not a third axis of the model, and it collapses to one template
+parameter: `ownership::owns` stores `Bits`, `ownership::refers` stores `Bits*`. Always present and only its
+type changes, so a plain `conditional_t` rather than `conditional_data_member_t`. One accessor, via deducing
+`this`, gives deep const to the owner — `self.m_bits` propagates `self`'s const — and shallow const to the
+view — `*self.m_bits` does not — for free.
+
+Every mutator is then gated on the door and nothing else: `requires requires { Traits::op(self.storage(), …) }`
+reads "the door lets *this handle* write". A const owner's accessor hands the door a `Bits const&`, which no
+`assign` accepts; a const view's hands it `Bits&`, which is what a view is for; a view over `Bits const`
+hands it `Bits const&` again. Const, ownership and a floor-only trait are all the same question, asked once.
+The exceptions are the constructors and, once storage grows, the growth members, which need an explicit
+`requires (owns(Own))`: the requires-expression tests what the storage can do, not what this handle may do
+to it, and a view over a `block_vector` must not be able to resize what it does not own.
+
+### views-follow-their-precedent
+
+`bit_set_view` follows `std::string_view`: a value that happens not to own its bytes, so it has `==` and
+`<=>`, and its ordering is exactly `std::set`'s. `bit_span` follows `std::span`, which P1085 stripped of both
+because "same referent" and "same contents" are both defensible readings of a handle. So `basic_bit_set`
+compares whatever it owns or views, and `basic_bit_sequence` compares only as an owner. The non-member copies
+— `~`, `&`, `|`, `^`, `-`, `<<`, `>>` — are the owner's alone in both readings: a copied view would write
+through to what it views.
+
+### the-public-names
+
+Twelve aliases, three primaries. The unmarked name goes to the flagship — `bit_set` is the dynamic set
+benchmarked against `std::set` and `std::flat_set` — and the qualifier marks the special case, `bit_static_set`.
+The sequence row is named after the `std` container it packs, `bit_array` for `std::array<bool, N>`. The rows
+therefore mark different columns, and that is correct by each row's own analogy rather than an inconsistency
+to fix.
+
+
 ### asking-is-total
 
 Asking is total whatever the extent: a position past the width is a key the set does not hold, which is an
@@ -490,6 +553,36 @@ until the stack is gone**.
 Where `set(n, value)` does exist the type is a concrete bitset, and its subscript is the unchecked way in —
 which is the one to take, the position being a precondition asserted just below, where `std::bitset::set` and
 `xstd::bitset::set` would check it again and throw out of a `noexcept`.
+
+### the-iterator-is-the-primitive
+
+`bit_set_iterator` and `bit_sequence_iterator` are a pointer and a position, and they reach the bits through
+the door alone. Their constructors are public, so an owner or a view builds one without being a friend: the
+dependency runs one way, from the container to the iterator, and the mutual friendship and forward
+declarations the earlier views needed (*"Clang requires it, GCC does not"*) have nothing left to declare.
+
+The pointer is to the **storage** an owner wraps, never to the owner: `bit_static_set` hands out
+`bit_set_iterator<block_array<B, N>>`, which is why no owning type ever needs a `bit_traits` of its own.
+
+### read-only-set-proxy
+
+The set reading's proxy is read-only whatever the qualification of `Bits`, because a key is nothing to write
+through: assigning to a position would mean moving an element, which a set has no spelling for. It earns its
+keep anyway — `operator&` round-trips to the iterator, and the conversion to any class a `size_t` converts to
+lets `*it` initialize a strong index type in one step, where the two user-defined conversions of going through
+`size_t` would be one too many. A type with an explicit constructor takes the `size_t` route, `index(*it)`,
+and the proxy offers no explicit conversion of its own: MSVC cannot resolve one beside that constructor.
+
+### the-one-adl-exception
+
+The sequence iterator's `iter_move` and `iter_swap` are hidden friends found by ADL, and they stay under the
+no-ADL rule because they are `std::ranges`' own customization protocol: `ranges::sort` and `swap_ranges`
+reach a proxy only through them, and it is where `vector<bool>` historically fell down. The three `swap`
+overloads on the proxy are the pre-ranges spelling of the same thing, for `std::sort` and everything else
+still built on `std::iter_swap`. `format_as` is fmt's protocol in the same sense.
+
+The sequence proxy borrows nothing else from `[bitset.refs]`: no `flip()` and no `operator~`. Those belong to
+the bitset reading, whose `reference` is its own class.
 
 ### total-lookups-on-the-container
 

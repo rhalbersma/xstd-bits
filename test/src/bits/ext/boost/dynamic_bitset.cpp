@@ -32,8 +32,8 @@ BOOST_AUTO_TEST_CASE(TheDoorAdaptsIt)
 {
         using traits = xstd::bit_traits<T>;
 
-        static_assert(xstd::bit_storage<T>);
-        static_assert(not xstd::static_bit_extent<T>);
+        static_assert(xstd::bit_storage<xstd::bit_traits<T>, T>);
+        static_assert(not xstd::static_bit_extent<xstd::bit_traits<T>, T>);
         static_assert(not xstd::block_readable<traits, T>);
 
         auto c = T(9);
