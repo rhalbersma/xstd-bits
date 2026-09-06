@@ -4,14 +4,16 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <boost/test/unit_test.hpp>           // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
-#include <xstd/bits/bit_traits.hpp>           // bit_storage, bit_traits, static_bit_extent
+#include <xstd/bits/bit_traits.hpp>           // bit_storage, bit_traits, block_readable, static_bit_extent
 #include <xstd/bits/bitset.hpp>               // bitset
-#include <xstd/bits/ext/std/bitset.hpp>       // bit_extent, bit_traits, set_find, sequence_find
-#include <xstd/bits/ranges/sequence_view.hpp> // sequence_range
-#include <xstd/bits/ranges/set_view.hpp>      // set_range, set_view
+#include <xstd/bits/ext/std/bitset.hpp>       // bit_traits over std::bitset
+#include <xstd/bits/ranges/sequence_view.hpp> // sequence_view
+#include <xstd/bits/ranges/set_view.hpp>      // set_view
 #include <bitset>                             // bitset
 #include <concepts>                           // regular, totally_ordered
-#include <ranges>                             // range
+#include <cstddef>                            // size_t
+#include <limits>                             // numeric_limits
+#include <ranges>                             // bidirectional_range, random_access_range, range
 #include <tuple>                              // tuple
 #include <type_traits>                        // is_nothrow_*, is_trivially_*
 
@@ -58,7 +60,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheDoorAdaptsIt, T, Types)
                 BOOST_CHECK_EQUAL(xstd::detail::bits::scan_prev<traits>(c, N), i);
                 BOOST_CHECK_EQUAL(xstd::detail::bits::scan_next<traits>(c, i), N);
 
-                traits::assign(c, i, false);
+                traits::unchecked_assign(c, i, false);
                 BOOST_CHECK(not traits::at(c, i));
         }
 
@@ -115,12 +117,37 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(OrderedThroughTheViewRatherThanInfix, T, Types)
         static_assert(    std::totally_ordered<xstd::set_view<T>>);
 }
 
-// Both readings are reachable, which is what bit_extent, set_find and sequence_find are specialized here for.
+// Both readings are reachable through the one door, as views over it.
 BOOST_AUTO_TEST_CASE_TEMPLATE(BothReadingsAreReachable, T, Types)
 {
         static_assert(not std::ranges::range<T>);
-        static_assert(xstd::ranges::set_range<T>);
-        static_assert(xstd::ranges::sequence_range<T>);
+        static_assert(std::ranges::bidirectional_range<xstd::set_view<T>>);
+        static_assert(std::ranges::random_access_range<xstd::sequence_view<T>>);
+}
+
+// Dependent, so a standard library without the member is a substitution failure rather than a hard error.
+template<class B>
+constexpr bool has_getword = requires (B const& c) { c._Getword(0UZ); };
+
+// A width that fits one unsigned long long reads its block through to_ullong on every library; above that, only where the reserved word read exists.
+BOOST_AUTO_TEST_CASE(TheBlockReadIsPortableUpToOneWord)
+{
+        constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<unsigned long long>::digits);
+
+        static_assert(xstd::block_readable<xstd::bit_traits<std::bitset<0>>,      std::bitset<0>>);
+        static_assert(xstd::block_readable<xstd::bit_traits<std::bitset<1>>,      std::bitset<1>>);
+        static_assert(xstd::block_readable<xstd::bit_traits<std::bitset<digits>>, std::bitset<digits>>);
+        static_assert(xstd::block_readable<xstd::bit_traits<std::bitset<digits + 1>>, std::bitset<digits + 1>> == has_getword<std::bitset<digits + 1>>);
+
+        using T = std::bitset<digits>;
+        using traits = xstd::bit_traits<T>;
+        auto c = T();
+        c.set(0);
+        c.set(digits - 1);
+        BOOST_CHECK_EQUAL(traits::num_blocks(c), 1UZ);
+        BOOST_CHECK_EQUAL(traits::block(c, 0UZ), c.to_ullong());
+        BOOST_CHECK_EQUAL(xstd::detail::bits::scan_prev<traits>(c, digits), digits - 1);
+        BOOST_CHECK_EQUAL(xstd::detail::bits::scan_next<traits>(c, 0UZ), digits - 1);
 }
 
 // Ours answers the same type-trait battery at the same widths, so nothing is given up by building it over the packed array.

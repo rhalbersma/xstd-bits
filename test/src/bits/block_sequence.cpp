@@ -439,14 +439,14 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheDoorForwardsToTheStorage, T, test::graded_exten
 
         // One position at a time, set then cleared: assign's two arms are the point.
         for (auto i = 0UZ; i < N; ++i) {
-                traits::assign(c, i, true);
+                traits::unchecked_assign(c, i, true);
                 BOOST_CHECK(traits::at(c, i));
                 BOOST_CHECK_EQUAL(traits::count(c), 1UZ);
                 BOOST_CHECK_EQUAL(traits::find_first(c), i);
                 BOOST_CHECK_EQUAL(traits::find_prev(c, i + 1UZ), i);
                 BOOST_CHECK_EQUAL(traits::find_next(c, i), N);
 
-                traits::assign(c, i, false);
+                traits::unchecked_assign(c, i, false);
                 BOOST_CHECK(not traits::at(c, i));
                 BOOST_CHECK_EQUAL(traits::count(c), 0UZ);
         }

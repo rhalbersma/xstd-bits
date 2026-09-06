@@ -249,7 +249,7 @@ class bit_sequence_reference
         std::size_t m_idx;
 
         // Writable where Bits is not const and the door has an entry to write through; a floor-only type reads only.
-        static constexpr bool is_writable = not std::is_const_v<Bits> and requires (Bits& c, std::size_t n, bool value) { Traits::assign(c, n, value); };
+        static constexpr bool is_writable = not std::is_const_v<Bits> and requires (Bits& c, std::size_t n, bool value) { Traits::unchecked_assign(c, n, value); };
 
 public:
         using value_type = bool;
@@ -286,7 +286,7 @@ public:
                 -> bit_sequence_reference const&
                 requires is_writable
         {
-                Traits::assign(*m_ptr, m_idx, value);
+                Traits::unchecked_assign(*m_ptr, m_idx, value);
                 return *this;
         }
 

@@ -198,16 +198,17 @@ another name:
 | set `size()` (cardinality) | `count` | |
 | set `max_size()` (width) | `size` | |
 | `contains(n)` | `at(c, n)` | the same operation |
-| set `erase(n)` | `assign(c, n, false)` | the same operation |
+| set `erase(n)` | `unchecked_assign(c, n, false)` | the same operation |
 | set `clear()` | `fill(c, false)` | |
-| sequence `size()` / `assign` | `size` / `assign` | |
-| `bit_extent<Bits>` | `extent` | |
+| sequence `size()` / `operator[]` | `size` / `unchecked_assign` | |
+| a view's static extent | `extent` | |
 
 Two entries are left over, and they are the two the readings cannot synthesize:
 
 - **`insert`** is the only operation that can *grow*, and it is exactly what the adapted types disagree
   about: `boost::dynamic_bitset` resizes, `std::bitset` cannot, `block_sequence` asserts. Reconciling that
-  is what the door is for. It is not `assign(c, n, true)`, which has no answer for a position past the width.
+  is what the door is for. It is not `unchecked_assign(c, n, true)`, which has no answer for a position past the
+  width.
 - **`fill`** is bulk, and `clear` is `fill(false)`.
 
 ### the-two-reserved-names
@@ -225,6 +226,12 @@ So neither implies the other, and each is worth a constrained entry on its own. 
 reachable the walks run block-wise, including a `find_prev` neither library supplies; where `_Find_first` is
 reachable the forward scans are native. Both return `N` when nothing is set, which is already the door's
 total contract, so no `npos` mapping is needed — unlike boost, whose `find_first` answers `npos`.
+
+The third row is not the end of block access on libc++. A width that fits one `unsigned long long` reads
+its single block through `to_ullong()`: portable, `constexpr`, no reserved name, and the constraint
+`N <= numeric_limits<unsigned long long>::digits` puts the `overflow_error` it could throw out of reach, so
+`std::bitset<64>` runs the block walks on every library. Above one word it is `_Getword` or nothing:
+shifting and calling `to_ullong` per block is O(N) each, worse than the element walk it would replace.
 
 ### proxies-compare-themselves
 
@@ -498,8 +505,8 @@ view — `*self.m_bits` does not — for free.
 
 Every mutator is then gated on the door and nothing else: `requires requires { Traits::op(self.storage(), …) }`
 reads "the door lets *this handle* write". A const owner's accessor hands the door a `Bits const&`, which no
-`assign` accepts; a const view's hands it `Bits&`, which is what a view is for; a view over `Bits const`
-hands it `Bits const&` again. Const, ownership and a floor-only trait are all the same question, asked once.
+`unchecked_assign` accepts; a const view's hands it `Bits&`, which is what a view is for; a view over
+`Bits const` hands it `Bits const&` again. Const, ownership and a floor-only trait are all the same question, asked once.
 The exceptions are the constructors and, once storage grows, the growth members, which need an explicit
 `requires (owns(Own))`: the requires-expression tests what the storage can do, not what this handle may do
 to it, and a view over a `block_vector` must not be able to resize what it does not own.
@@ -512,6 +519,41 @@ because "same referent" and "same contents" are both defensible readings of a ha
 compares whatever it owns or views, and `basic_bit_sequence` compares only as an owner. The non-member copies
 — `~`, `&`, `|`, `^`, `-`, `<<`, `>>` — are the owner's alone in both readings: a copied view would write
 through to what it views.
+
+Both referring adaptors opt into `std::ranges::enable_view` and `enable_borrowed_range`, the two
+specializations [range.view] and [range.range] invite for a program-defined type. The first makes
+`set_view(x) | views::take_while(…)` take the view as it is rather than wrapping it in an `owning_view`;
+the second says what `span` says, that the iterators point at the storage and outlive the handle that made
+them, which is what lets `ext/xstd/bitset.hpp` return `basic_bit_set(c).begin()` from a temporary.
+
+### the-views-are-the-adaptors
+
+`set_view<Bits, Traits>` is `basic_bit_set<Bits, ownership::refers, Traits>` and `sequence_view<Bits, Traits>`
+is `basic_bit_sequence<Bits, ownership::refers, false, Traits>`: aliases, not a second implementation of either
+reading. The earlier views, with their own iterators, proxies and four customization points — `set_find`,
+`sequence_find`, `block_access`, `bit_extent` — were the door before there was a door, and once the adaptors
+read through `bit_traits` alone there was nothing left for them to do. Deduction goes through the primary's
+guides, which is class template argument deduction for alias templates (P1814), Clang 19 and GCC 10 upward.
+The escape, should a compiler in the matrix refuse it, is a two-line derived class with a guide of its own.
+
+The sequence view pays the `span` half of [views-follow-their-precedent](#views-follow-their-precedent) by
+becoming the adaptor: it no longer has `==` or `<=>`, and the harness checks the sequence reading through the
+iterators instead.
+
+### views-over-owners
+
+An owner has no door of its own — `bit_static_set`, `bit_array` and `bitset` are thin wrappers over a
+`block_array` that already has one — so a view over an owner is a view over the storage it wraps:
+`set_view(xstd::bitset<64>&)` is `basic_bit_set<block_array<size_t, 64>, refers>`, and the pointer in the
+iterator is to the `block_array`, never to the `bitset`. The owner hands its storage over through
+`owned_storage<Owner>`, declared beside it as `bit_traits` is beside a storage and never defined for anything
+else, so `owner_of<Owner, Bits, Traits>` reads "this owner wraps exactly the storage and door this view
+refers through". Const flows one way: a const owner gives a view over `Bits const`, a mutable owner either.
+
+The view's converting constructor takes the owner's private member directly, which is why each owner
+befriends the two referring adaptors — the one friendship in the tree that runs upward, from a container to
+the views over it, and it grants access to a member and to nothing that member's type does not already expose.
+Storage stays private; nothing on an owner's surface says `block_array`.
 
 ### the-public-names
 
@@ -539,10 +581,9 @@ because `std::bitset` is the counterpart of both. So at a static width there is 
 guarded the three predicates. A dynamic width, whose counterpart is `boost::dynamic_bitset`, has them
 natively and gets them back when `block_vector` arrives; until then the class asserts the width static.
 
-Not a range and no `<=>`, as its counterpart has neither; `set_view` and `sequence_view` reach it through the
-hidden friends every owner publishes until the rewire, and its set ordering is the door's word-wise entry
-where the door has one, the iteration otherwise. `block_type` is gone from the surface: nothing used it, and
-under idempotence a wrapper over a libc++ `std::bitset` would have none.
+Not a range and no `<=>`, as its counterpart has neither; `set_view` and `sequence_view` refer into its storage
+([views-over-owners](#views-over-owners)), and the set ordering is theirs. `block_type` is gone from the
+surface: nothing used it, and under idempotence a wrapper over a libc++ `std::bitset` would have none.
 
 ### checked-and-unchecked
 
@@ -560,21 +601,22 @@ wrapper's guard is what makes that instantiation well-formed.
 
 **Element access.** `set(pos)`, `reset(pos)`, `flip(pos)` and `test(pos)` throw on `std::bitset`, whose trait
 declares `checked_set`/`checked_reset`/`checked_flip`/`checked_test`, forwarded. The unchecked family is the
-door's `assign` and `at`, with `flip` synthesised as `assign(not at)` the way `basic_bit_set::complement` is;
+door's `unchecked_assign` and `at`, with `flip` synthesised as `unchecked_assign(not at)` the way
+`basic_bit_set::complement` is;
 a `flip` entry of its own is an open call. Where no checked entry exists the wrapper guards and throws
 `out_of_range` at a static width, matching `std::bitset`, and will assert at a dynamic one, matching
 `boost::dynamic_bitset` -- a deliberate inconsistency between `xstd::bitset` and the coming
 `xstd::dynamic_bitset`, because it is exactly the one between their counterparts. The const subscript is
 unchecked on every counterpart, so it is the door's `at` unconditionally, and the proxy from the mutable one
-writes through `assign` alone.
+writes through `unchecked_assign` alone.
 
 ### asking-is-total
 
 Asking is total whatever the extent: a position past the width is a key the set does not hold, which is an
 answer and not a precondition violation. That is what `[set]` gives `contains` and `find` — `s.find(k)`
 returns `end()` for any `k` it does not hold, never refuses the question — and it is the difference between
-the set reading and the sequence reading, where `sequence_view::operator[]` indexes and out of range is out
-of bounds.
+the set reading and the sequence reading, where `basic_bit_sequence::operator[]` indexes and out of range is
+out of bounds.
 
 `insert` carries no `noexcept`, for the reason `std::set::insert` carries none: growing a dynamic extent
 allocates. It is the one operation a set can be unable to satisfy, and only a **static** extent ever is — a
@@ -595,13 +637,12 @@ proxy that writes without checking.
 
 ### the-proxy-recursion-trap
 
-`sequence_view` refuses the `operator[]` fallback for a type without `set(n, value)`. Were such a type's
-`operator[]` to return our own proxy, that proxy's assignment would land back in the fallback and **recurse
-until the stack is gone**.
-
-Where `set(n, value)` does exist the type is a concrete bitset, and its subscript is the unchecked way in —
-which is the one to take, the position being a precondition asserted just below, where `std::bitset::set` and
-`xstd::bitset::set` would check it again and throw out of a `noexcept`.
+The sequence proxy writes through the door's `unchecked_assign` and never through a subscript. The earlier
+view fell back on `c[n] = value` for a type without `set(n, value)`, and were such a type's `operator[]` to
+return our own proxy, that proxy's assignment would land back in the fallback and **recurse until the stack
+is gone**. An entry the specialization spells cannot loop back into the proxy, which is one more reason the
+write is a door entry rather than a probe; where the counterpart's subscript is the unchecked way in, as
+`std::bitset`'s and `boost::dynamic_bitset`'s are, the specialization says so.
 
 ### the-iterator-is-the-primitive
 

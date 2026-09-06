@@ -7,8 +7,8 @@
 #define XSTD_BITS_BASIC_BIT_SEQUENCE_HPP
 
 #include <xstd/bits/bit_proxy.hpp>  // bit_sequence_iterator, bit_sequence_reference
-#include <xstd/bits/bit_traits.hpp> // bit_storage, bit_traits, block_readable
-#include <xstd/bits/ownership.hpp>  // ownership, owns
+#include <xstd/bits/bit_traits.hpp> // bit_storage, bit_traits
+#include <xstd/bits/ownership.hpp>  // owned_bits_t, owned_storage, owned_traits_t, owner_of, ownership, owns
 #include <algorithm>                // lexicographical_compare_three_way
 #include <cassert>                  // assert
 #include <compare>                  // strong_ordering
@@ -16,6 +16,7 @@
 #include <cstddef>                  // ptrdiff_t, size_t
 #include <format>                   // format
 #include <iterator>                 // make_reverse_iterator, reverse_iterator
+#include <ranges>                   // enable_borrowed_range, enable_view
 #include <source_location>          // source_location
 #include <stdexcept>                // out_of_range
 #include <type_traits>              // conditional_t, is_nothrow_swappable_v, remove_const_t, remove_reference_t
@@ -54,14 +55,9 @@ class basic_bit_sequence
         template<class Self> using iterator_t  = bit_sequence_iterator <storage_t<Self>, Traits>;
         template<class Self> using reference_t = bit_sequence_reference<storage_t<Self>, Traits>;
 
-        // Still published for sequence_view and block_range, until the rewire routes them through the door. [design.md#the-iterator-is-the-primitive]
-        [[nodiscard]] friend constexpr auto block_count(basic_bit_sequence const& c) noexcept -> std::size_t requires block_readable<Traits, bits_type> { return Traits::num_blocks(c.storage()); }
-        [[nodiscard]] friend constexpr auto block_at(basic_bit_sequence const& c, std::size_t i) noexcept requires block_readable<Traits, bits_type> { return Traits::block(c.storage(), i); }
-
-        [[nodiscard]] friend constexpr auto find_first(basic_bit_sequence const&)                  noexcept -> std::size_t { return 0UZ; }
-        [[nodiscard]] friend constexpr auto find_last (basic_bit_sequence const& c)                noexcept -> std::size_t { return Traits::size(c.storage()); }
-        [[nodiscard]] friend constexpr auto find_at   (basic_bit_sequence const& c, std::size_t n) noexcept -> bool        { return Traits::at(c.storage(), n); }
-        friend constexpr void assign_at(basic_bit_sequence& c, std::size_t n, bool value) noexcept requires requires { Traits::assign(c.storage(), n, value); } { Traits::assign(c.storage(), n, value); }
+        // Either reading's view refers into this owner's storage, and nothing else outside does. [design.md#views-over-owners]
+        template<class B, ownership O, bit_storage<B> T>         friend class basic_bit_set;
+        template<class B, ownership O, bool W, bit_storage<B> T> friend class basic_bit_sequence;
 
 public:
         // types
@@ -85,6 +81,14 @@ public:
                 requires (not is_owner)
         :
                 m_bits(&c)
+        {}
+
+        // A view over an owner is a view over the storage it wraps, the owner having befriended this template. [design.md#views-over-owners]
+        template<owner_of<Bits, Traits> Owner>
+        [[nodiscard]] constexpr explicit basic_bit_sequence(Owner& c) noexcept
+                requires (not is_owner)
+        :
+                m_bits(&c.m_bits)
         {}
 
         constexpr void fill(this auto&& self, value_type const& u) noexcept
@@ -176,9 +180,21 @@ private:
         }
 };
 
-// A view deduces the constness of what it views, the way span<T> and span<T const> do.
+// A view deduces the constness of what it views, the way span<T> and span<T const> do; over an owner, of the storage it wraps.
 template<class Bits>
 basic_bit_sequence(Bits&) -> basic_bit_sequence<Bits, ownership::refers, false>;
+
+template<class Owner>
+        requires requires { typename owned_storage<std::remove_const_t<Owner>>::bits_type; }
+basic_bit_sequence(Owner&) -> basic_bit_sequence<owned_bits_t<Owner>, ownership::refers, false, owned_traits_t<Owner>>;
+
+// The owner's side of the protocol above.
+template<class Bits, class Traits>
+struct owned_storage<basic_bit_sequence<Bits, ownership::owns, false, Traits>>
+{
+        using bits_type   = Bits;
+        using traits_type = Traits;
+};
 
 // NOLINTBEGIN(readability-redundant-parentheses): a call is no primary expression, so the requires-clause needs the parentheses the check reports as redundant.
 template<class Bits, ownership Own, bool Windowed, class Traits>
@@ -190,5 +206,20 @@ constexpr void swap(basic_bit_sequence<Bits, Own, Windowed, Traits>& x, basic_bi
 // NOLINTEND(readability-redundant-parentheses)
 
 }       // namespace xstd
+
+namespace std::ranges {
+
+// NOLINTBEGIN(bugprone-std-namespace-modification): the two opt-ins [range.view] and [range.range] invite for a program-defined type.
+
+// A view is a std::ranges::view outright and borrowed, as basic_bit_set's is. [design.md#views-follow-their-precedent]
+template<class Bits, class Traits>
+inline constexpr bool enable_view<xstd::basic_bit_sequence<Bits, xstd::ownership::refers, false, Traits>> = true;
+
+template<class Bits, class Traits>
+inline constexpr bool enable_borrowed_range<xstd::basic_bit_sequence<Bits, xstd::ownership::refers, false, Traits>> = true;
+
+// NOLINTEND(bugprone-std-namespace-modification)
+
+}       // namespace std::ranges
 
 #endif  // XSTD_BITS_BASIC_BIT_SEQUENCE_HPP

@@ -89,8 +89,6 @@ target_sources(
         include/xstd/bits/ext/xstd/bitset.hpp
         include/xstd/bits/ownership.hpp
         include/xstd/bits/ranges.hpp
-        include/xstd/bits/ranges/bit_extent.hpp
-        include/xstd/bits/ranges/block_access.hpp
         include/xstd/bits/ranges/sequence_view.hpp
         include/xstd/bits/ranges/set_view.hpp
 )

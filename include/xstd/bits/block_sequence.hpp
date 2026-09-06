@@ -33,7 +33,7 @@
 
 namespace xstd {
 
-// Whether a range IS blocks; block_range asks if a container hands its blocks over. [design.md#block-storage]
+// Whether a range IS blocks; block_readable asks if a door hands a container's blocks over. [design.md#block-storage]
 template<class R>
 concept block_storage =
         std::regular<R> and
@@ -124,7 +124,7 @@ public:
                 }
         }
 
-        // The block, for xstd::ranges::block_access; padding above size() stays zero, which is what makes whole-block comparison mean anything.
+        // The block, for the door's block entry; padding above size() stays zero, which is what makes whole-block comparison mean anything.
         [[nodiscard]] constexpr auto block(std::size_t i) const noexcept
                 -> block_type
         {
@@ -827,7 +827,7 @@ struct bit_traits<block_sequence<Blocks, N>>
         [[nodiscard]] static constexpr auto at(bits_type const& c, std::size_t n) noexcept -> bool { return c.test(n); }
 
         // set(n)/reset(n), there being no set(n, value) here; both assert, so the position is a precondition.
-        static constexpr void assign(bits_type& c, std::size_t n, bool value) noexcept
+        static constexpr void unchecked_assign(bits_type& c, std::size_t n, bool value) noexcept
         {
                 if (value) {
                         c.set(n);

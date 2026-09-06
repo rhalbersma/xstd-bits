@@ -9,14 +9,14 @@
 #include <boost/test/unit_test.hpp>           // BOOST_CHECK_EQUAL
 #include <test/bitset/factory.hpp>            // make_bitset
 #include <xstd/bits/ranges/sequence_view.hpp> // sequence_view
-#include <algorithm>                          // lexicographical_compare
+#include <algorithm>                          // equal, lexicographical_compare, lexicographical_compare_three_way
 #include <compare>                            // strong_ordering
 #include <cstddef>                            // size_t
 #include <vector>                             // vector
 
 namespace test::sequence {
 
-// What the sequence reading must order like, against the container defining the relation; both of sequence_view's routes must agree.
+// What the sequence reading must order like, against the container defining the relation; the view itself neither compares nor orders, following span, so the question goes through its iterators.
 template<class Bits>
 auto ordering_agrees_with_vector_bool(std::size_t universe = 4) -> void
 {
@@ -43,11 +43,10 @@ auto ordering_agrees_with_vector_bool(std::size_t universe = 4) -> void
                         for (auto k = 0UZ; k < xv.size(); ++k) { vx[k] = static_cast<bool>(xv[k]); }
                         for (auto k = 0UZ; k < yv.size(); ++k) { vy[k] = static_cast<bool>(yv[k]); }
 
-                        BOOST_CHECK_EQUAL(xv == yv, vx == vy);
-                        BOOST_CHECK_EQUAL((xv <=> yv) < 0,
-                                          std::lexicographical_compare(vx.begin(), vx.end(), vy.begin(), vy.end()));
-                        BOOST_CHECK_EQUAL((xv <=> yv) > 0,
-                                          std::lexicographical_compare(vy.begin(), vy.end(), vx.begin(), vx.end()));
+                        BOOST_CHECK_EQUAL(std::ranges::equal(xv, yv), vx == vy);
+                        auto const order = std::lexicographical_compare_three_way(xv.begin(), xv.end(), yv.begin(), yv.end());
+                        BOOST_CHECK_EQUAL(order < 0, std::lexicographical_compare(vx.begin(), vx.end(), vy.begin(), vy.end()));
+                        BOOST_CHECK_EQUAL(order > 0, std::lexicographical_compare(vy.begin(), vy.end(), vx.begin(), vx.end()));
                 }
         }
 }

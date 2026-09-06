@@ -8,8 +8,8 @@
 
 #include <boost/hash2/hash_append.hpp> // hash_append
 #include <xstd/bits/bit_proxy.hpp>     // bit_set_iterator, bit_set_reference
-#include <xstd/bits/bit_traits.hpp>    // bit_storage, bit_traits, block_readable, count, find_first, find_next, find_prev, static_bit_extent
-#include <xstd/bits/ownership.hpp>     // ownership, owns
+#include <xstd/bits/bit_traits.hpp>    // bit_storage, bit_traits, count, find_first, find_next, find_prev, static_bit_extent
+#include <xstd/bits/ownership.hpp>     // owned_bits_t, owned_storage, owned_traits_t, owner_of, ownership, owns
 #include <algorithm>                   // lexicographical_compare_three_way
 #include <cassert>                     // assert
 #include <compare>                     // strong_ordering
@@ -19,7 +19,7 @@
 #include <initializer_list>            // initializer_list
 #include <iterator>                    // input_iterator, iter_reference_t, make_reverse_iterator, reverse_iterator, sentinel_for
 #include <limits>                      // numeric_limits
-#include <ranges>                      // begin, end, input_range, range_reference_t, from_range_t, swap
+#include <ranges>                      // begin, enable_borrowed_range, enable_view, end, input_range, range_reference_t, from_range_t, swap
 #include <type_traits>                 // conditional_t, is_nothrow_swappable_v, remove_const_t, remove_reference_t
 #include <utility>                     // forward, pair
 
@@ -47,14 +47,9 @@ class basic_bit_set
                 }
         }
 
-        // Still published for set_view and block_range, until the rewire routes them through the door. [design.md#the-iterator-is-the-primitive]
-        [[nodiscard]] friend constexpr auto block_count(basic_bit_set const& c) noexcept -> std::size_t requires block_readable<Traits, bits_type> { return Traits::num_blocks(c.storage()); }
-        [[nodiscard]] friend constexpr auto block_at(basic_bit_set const& c, std::size_t i) noexcept requires block_readable<Traits, bits_type> { return Traits::block(c.storage(), i); }
-
-        [[nodiscard]] friend constexpr auto find_first(basic_bit_set const& c)                noexcept -> std::size_t { return detail::bits::find_first<Traits>(c.storage());   }
-        [[nodiscard]] friend constexpr auto find_last (basic_bit_set const& c)                noexcept -> std::size_t { return Traits::size(c.storage());                       }
-        [[nodiscard]] friend constexpr auto find_next (basic_bit_set const& c, std::size_t n) noexcept -> std::size_t { return detail::bits::find_next<Traits>(c.storage(), n); }
-        [[nodiscard]] friend constexpr auto find_prev (basic_bit_set const& c, std::size_t n) noexcept -> std::size_t { return detail::bits::find_prev<Traits>(c.storage(), n); }
+        // Either reading's view refers into this owner's storage, and nothing else outside does. [design.md#views-over-owners]
+        template<class B, ownership O, bit_storage<B> T>         friend class basic_bit_set;
+        template<class B, ownership O, bool W, bit_storage<B> T> friend class basic_bit_sequence;
 
         template<class Provider, class Hash, class Flavor>
         friend constexpr void tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, basic_bit_set const* v) noexcept
@@ -107,6 +102,14 @@ public:
                 requires (not is_owner)
         :
                 m_bits(&c)
+        {}
+
+        // A view over an owner is a view over the storage it wraps, the owner having befriended this template. [design.md#views-over-owners]
+        template<owner_of<Bits, Traits> Owner>
+        [[nodiscard]] constexpr explicit basic_bit_set(Owner& c) noexcept
+                requires (not is_owner)
+        :
+                m_bits(&c.m_bits)
         {}
 
         constexpr auto operator=(std::initializer_list<value_type> il)
@@ -221,33 +224,33 @@ public:
         // The successor first: exclusive_find_next never reads the position it steps from, but the order costs nothing and says so.
         constexpr auto erase(this auto&& self, const_iterator position) noexcept
                 -> iterator
-                requires requires { Traits::assign(self.storage(), 0UZ, false); }
+                requires requires { Traits::unchecked_assign(self.storage(), 0UZ, false); }
         {
                 assert(position != self.end());
                 auto nrv = position;
                 ++nrv;
-                Traits::assign(self.storage(), *position, false);
+                Traits::unchecked_assign(self.storage(), *position, false);
                 return nrv;
         }
 
         // Total over key_type, as std::set's is: an absent key is the no-op returning zero. [design.md#total-lookups-on-the-container]
         constexpr auto erase(this auto&& self, key_type const& x) noexcept
                 -> size_type
-                requires requires { Traits::assign(self.storage(), 0UZ, false); }
+                requires requires { Traits::unchecked_assign(self.storage(), 0UZ, false); }
         {
                 if (not self.contains(x)) {
                         return 0UZ;
                 }
-                Traits::assign(self.storage(), x, false);
+                Traits::unchecked_assign(self.storage(), x, false);
                 return 1UZ;
         }
 
         constexpr auto erase(this auto&& self, const_iterator first, const_iterator last) noexcept
                 -> iterator
-                requires requires { Traits::assign(self.storage(), 0UZ, false); }
+                requires requires { Traits::unchecked_assign(self.storage(), 0UZ, false); }
         {
                 while (first != last) {
-                        Traits::assign(self.storage(), *first++, false);
+                        Traits::unchecked_assign(self.storage(), *first++, false);
                 }
                 return last;
         }
@@ -266,10 +269,10 @@ public:
         }
 
         constexpr void complement(this auto&& self, value_type x) noexcept
-                requires requires { Traits::assign(self.storage(), x, true); }
+                requires requires { Traits::unchecked_assign(self.storage(), x, true); }
         {
                 assert(x < Traits::size(self.storage()));
-                Traits::assign(self.storage(), x, not Traits::at(self.storage(), x));
+                Traits::unchecked_assign(self.storage(), x, not Traits::at(self.storage(), x));
         }
 
         // Bulk, on the storage's own spelling: what every storage agrees on is required of it, not reconciled. [design.md#what-the-door-reconciles]
@@ -368,9 +371,21 @@ private:
         }
 };
 
-// A view deduces the constness of what it views, the way span<T> and span<T const> do.
+// A view deduces the constness of what it views, the way span<T> and span<T const> do; over an owner, of the storage it wraps.
 template<class Bits>
 basic_bit_set(Bits&) -> basic_bit_set<Bits, ownership::refers>;
+
+template<class Owner>
+        requires requires { typename owned_storage<std::remove_const_t<Owner>>::bits_type; }
+basic_bit_set(Owner&) -> basic_bit_set<owned_bits_t<Owner>, ownership::refers, owned_traits_t<Owner>>;
+
+// The owner's side of the protocol above.
+template<class Bits, class Traits>
+struct owned_storage<basic_bit_set<Bits, ownership::owns, Traits>>
+{
+        using bits_type   = Bits;
+        using traits_type = Traits;
+};
 
 // NOLINTBEGIN(readability-redundant-parentheses): a call is no primary expression, so the requires-clause needs the parentheses the check reports as redundant.
 template<class Bits, ownership Own, class Traits>
@@ -409,5 +424,20 @@ template<class Bits, ownership Own, class Traits> [[nodiscard]] constexpr auto o
 // NOLINTEND(readability-redundant-parentheses)
 
 }       // namespace xstd
+
+namespace std::ranges {
+
+// NOLINTBEGIN(bugprone-std-namespace-modification): the two opt-ins [range.view] and [range.range] invite for a program-defined type.
+
+// A view is a std::ranges::view outright, so a pipeline takes it as it is; and borrowed, its iterators pointing at the storage and not at it. [design.md#views-follow-their-precedent]
+template<class Bits, class Traits>
+inline constexpr bool enable_view<xstd::basic_bit_set<Bits, xstd::ownership::refers, Traits>> = true;
+
+template<class Bits, class Traits>
+inline constexpr bool enable_borrowed_range<xstd::basic_bit_set<Bits, xstd::ownership::refers, Traits>> = true;
+
+// NOLINTEND(bugprone-std-namespace-modification)
+
+}       // namespace std::ranges
 
 #endif  // XSTD_BITS_BASIC_BIT_SET_HPP

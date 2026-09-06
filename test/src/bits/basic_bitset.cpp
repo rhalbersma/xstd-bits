@@ -5,12 +5,12 @@
 
 #include <boost/dynamic_bitset.hpp>           // dynamic_bitset
 #include <boost/test/unit_test.hpp>           // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
+#include <xstd/bits/basic_bit_set.hpp>        // basic_bit_set
 #include <xstd/bits/basic_bitset.hpp>         // basic_bitset, has_bitops
-#include <xstd/bits/bit_traits.hpp>           // bit_traits
 #include <xstd/bits/bitset.hpp>               // bitset
 #include <xstd/bits/block_sequence.hpp>       // block_array, block_vector
 #include <xstd/bits/ext/std/bitset.hpp>       // IWYU pragma: keep; bit_traits<std::bitset>
-#include <xstd/bits/ranges/block_access.hpp>  // block_range
+#include <xstd/bits/ownership.hpp>            // ownership
 #include <xstd/bits/ranges/sequence_view.hpp> // sequence_view
 #include <xstd/bits/ranges/set_view.hpp>      // set_view
 #include <bitset>                             // bitset
@@ -23,6 +23,7 @@
 #include <string>                             // string
 #include <tuple>                              // tuple
 #include <type_traits>                        // is_nothrow_*, is_trivially_*
+#include <utility>                            // as_const, declval
 #include <vector>                             // vector
 
 BOOST_AUTO_TEST_SUITE(BasicBitset)
@@ -67,10 +68,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(WrappingStdBitsetKeepsItsShape, T, Wrapped)
         static_assert(std::is_trivially_copy_constructible_v<T>);
         static_assert(std::is_trivially_copy_assignable_v<T>);
         static_assert(std::is_trivially_destructible_v<T>);
-        static_assert(xstd::ranges::set_range<T>);
-        static_assert(xstd::ranges::sequence_range<T>);
-        static_assert(std::ranges::bidirectional_range<xstd::set_view<T>>);
-        static_assert(std::ranges::random_access_range<xstd::sequence_view<T>>);
+        static_assert(std::ranges::bidirectional_range<decltype(xstd::set_view(std::declval<T&>()))>);
+        static_assert(std::ranges::random_access_range<decltype(xstd::sequence_view(std::declval<T&>()))>);
 }
 
 // Idempotence, member by member: the wrapper answers exactly as the std::bitset it wraps, throw for throw.
@@ -149,7 +148,7 @@ BOOST_AUTO_TEST_CASE(TheProxyOverStdBitsetStorageWritesThrough)
         BOOST_CHECK(z and not w[3]);
 }
 
-// The views reach a wrapped std::bitset through the same hidden friends the packed one publishes: the ordering, the keys, the blocks where readable.
+// The views reach a wrapped std::bitset by referring into it: the ordering, the keys, the blocks where readable. [design.md#views-over-owners]
 BOOST_AUTO_TEST_CASE(TheViewsReachAWrappedStdBitset)
 {
         auto a = xstd::basic_bitset<std::bitset<70>>();
@@ -168,8 +167,8 @@ BOOST_AUTO_TEST_CASE(TheViewsReachAWrappedStdBitset)
         BOOST_CHECK(xstd::set_view(a).is_subset_of(xstd::set_view(a)));
         BOOST_CHECK_EQUAL(xstd::sequence_view(a)[69], true);
 
-        static_assert(xstd::ranges::block_range<xstd::bitset<70>>);
-        static_assert(xstd::ranges::block_range<xstd::basic_bitset<std::bitset<70>>> == xstd::block_readable<xstd::bit_traits<std::bitset<70>>, std::bitset<70>>);
+        static_assert(std::same_as<decltype(xstd::set_view(a)), xstd::basic_bit_set<std::bitset<70>, xstd::ownership::refers>>);
+        static_assert(std::same_as<decltype(xstd::set_view(std::as_const(a))), xstd::basic_bit_set<std::bitset<70> const, xstd::ownership::refers>>);
 }
 
 // Built from text, streamed back to text, and hashed: the derived members, over either storage.

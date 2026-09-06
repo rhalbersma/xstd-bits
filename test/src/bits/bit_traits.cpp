@@ -56,6 +56,9 @@ struct bit_traits<block_bits<N, Block>>
 
 namespace {
 
+// A type nobody has adapted, for the case below.
+struct unknown_to_the_library {};
+
 namespace bits = xstd::detail::bits;
 
 template<class T>
@@ -133,6 +136,13 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheFloorIsAWidthAndAnIndexedRead, T, ElementTypes)
 {
         static_assert(xstd::bit_storage<xstd::bit_traits<T>, T>);
         static_assert(xstd::static_bit_extent<xstd::bit_traits<T>, T>);
+}
+
+// The primary is declared and never defined, so a type nobody adapted is a constraint not satisfied, never a silent dynamic width. [design.md#opt-in]
+BOOST_AUTO_TEST_CASE(SayingNothingMeansNotAdaptable)
+{
+        static_assert(not xstd::bit_storage<xstd::bit_traits<unknown_to_the_library>, unknown_to_the_library>);
+        static_assert(not xstd::static_bit_extent<xstd::bit_traits<unknown_to_the_library>, unknown_to_the_library>);
 }
 
 // The tier split pinned down: one adapter answers block_readable, one does not. [design.md#detection-by-absence]

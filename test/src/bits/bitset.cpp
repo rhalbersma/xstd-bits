@@ -10,6 +10,7 @@
 #include <xstd/bits/ranges/set_view.hpp> // set_view
 #include <concepts>                      // regular, totally_ordered
 #include <type_traits>                   // is_nothrow_*, is_trivially_*
+#include <utility>                       // declval
 
 BOOST_AUTO_TEST_SUITE(Bitset)
 
@@ -24,7 +25,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(IsRegular, T, Types)
 BOOST_AUTO_TEST_CASE_TEMPLATE(OrderedThroughTheViewRatherThanInfix, T, Types)
 {
         static_assert(not std::totally_ordered<T>);
-        static_assert(    std::totally_ordered<xstd::set_view<T>>);
+        static_assert(    std::totally_ordered<decltype(xstd::set_view(std::declval<T&>()))>);
 }
 
 // A fixed-width bitset owns no storage, so every operation on it is nothrow.

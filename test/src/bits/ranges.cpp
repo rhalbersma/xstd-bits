@@ -4,12 +4,13 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_AUTO_TEST_CASE
-#include <xstd/bits/ext/std/bitset.hpp> // the hooks that make std::bitset a bit range
-#include <xstd/bits/ranges.hpp>         // sequence_view, set_view and their proxies
+#include <xstd/bits/bit_proxy.hpp>      // bit_sequence_iterator, bit_sequence_reference, bit_set_iterator, bit_set_reference
+#include <xstd/bits/ext/std/bitset.hpp> // the door that makes std::bitset viewable
+#include <xstd/bits/ranges.hpp>         // sequence_view, set_view
 #include <bitset>                       // bitset
 #include <concepts>                     // same_as
 #include <cstddef>                      // size_t
-#include <type_traits>                  // is_convertible_v
+#include <type_traits>                  // is_assignable_v, is_convertible_v
 #include <utility>                      // declval
 
 BOOST_AUTO_TEST_SUITE(Ranges)
@@ -18,16 +19,25 @@ namespace {
 
 using Bits = std::bitset<64>;
 
-using SetIt   = xstd::ranges::set_iterator<Bits>;
-using SetRef  = xstd::ranges::set_reference<Bits>;
-using ArrIt   = xstd::ranges::sequence_iterator<Bits, false>;
-using ArrRef  = xstd::ranges::sequence_reference<Bits, false>;
+using SetIt   = xstd::bit_set_iterator<Bits>;
+using SetRef  = xstd::bit_set_reference<Bits>;
+using ArrIt   = xstd::bit_sequence_iterator<Bits>;
+using ArrRef  = xstd::bit_sequence_reference<Bits>;
 
 // Dependent, so a type without the member is a substitution failure rather than a hard error.
 template<class R>
 constexpr bool has_address_of = requires(R r) { r.operator&(); };
 
 }       // namespace
+
+// The two views hand out the proxies of bit_proxy.hpp and nothing of their own. [design.md#the-iterator-is-the-primitive]
+BOOST_AUTO_TEST_CASE(TheViewsIterateWithTheSharedProxies)
+{
+        static_assert(std::same_as<xstd::set_view<Bits>::iterator,       SetIt>);
+        static_assert(std::same_as<xstd::set_view<Bits>::reference,      SetRef>);
+        static_assert(std::same_as<xstd::sequence_view<Bits>::iterator,  ArrIt>);
+        static_assert(std::same_as<xstd::sequence_view<Bits>::reference, ArrRef>);
+}
 
 // One shape asked twice: * gives a proxy, & gives an iterator back, and the value comes only by converting; the standard says nothing here, so only our own guarantees are asserted.
 BOOST_AUTO_TEST_CASE(DereferencingYieldsAProxyRatherThanTheValue)
@@ -54,12 +64,12 @@ BOOST_AUTO_TEST_CASE(AddressOfAProxyYieldsAnIterator)
 // The const path is a proxy too, the same one minus the assignment -- not the plain bool libstdc++ hands back.
 BOOST_AUTO_TEST_CASE(TheConstPathIsAProxyAsWell)
 {
-        using ConstArrRef = xstd::ranges::sequence_reference<Bits, true>;
+        using ConstArrRef = xstd::bit_sequence_reference<Bits const>;
 
+        static_assert(std::same_as<xstd::sequence_view<Bits const>::reference, ConstArrRef>);
         static_assert(std::is_convertible_v<ConstArrRef, bool>);
         static_assert(has_address_of<ConstArrRef>);
-        static_assert(std::same_as<decltype(&std::declval<ConstArrRef const&>()),
-                                   xstd::ranges::sequence_iterator<Bits, true>>);
+        static_assert(std::same_as<decltype(&std::declval<ConstArrRef const&>()), xstd::bit_sequence_iterator<Bits const>>);
 
         // and it is exactly the assignment that the const one drops.
         static_assert(    std::is_assignable_v<ArrRef const&, bool>);
