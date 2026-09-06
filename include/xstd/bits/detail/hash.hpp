@@ -21,10 +21,10 @@ namespace xstd::detail::bits {
 template<class Hash, class Flavor, class Block>
 constexpr void hash_append_block(Hash& h, Flavor const& f, Block b)
 {
-        constexpr auto digits = std::numeric_limits<Block>::digits;
-        if constexpr (digits > std::numeric_limits<std::uint64_t>::digits) {
+        constexpr auto half = static_cast<unsigned>(std::numeric_limits<std::uint64_t>::digits);
+        if constexpr (std::numeric_limits<Block>::digits > std::numeric_limits<std::uint64_t>::digits) {
                 boost::hash2::hash_append(h, f, static_cast<std::uint64_t>(b));
-                boost::hash2::hash_append(h, f, static_cast<std::uint64_t>(b >> std::numeric_limits<std::uint64_t>::digits));
+                boost::hash2::hash_append(h, f, static_cast<std::uint64_t>(b >> half));
         } else {
                 boost::hash2::hash_append(h, f, b);
         }
