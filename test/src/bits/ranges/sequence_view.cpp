@@ -5,31 +5,54 @@
 
 #include <boost/test/unit_test.hpp>               // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <test/sequence/ordering.hpp>             // ordering_agrees_with_vector_bool
+#include <xstd/bits/basic_bit_sequence.hpp>       // basic_bit_sequence
 #include <xstd/bits/bit_array.hpp>                // bit_array
 #include <xstd/bits/bit_static_set.hpp>           // bit_static_set
-#include <xstd/bits/bitset.hpp>                   // sequence_find over xstd::bitset
-#include <xstd/bits/ext/boost/dynamic_bitset.hpp> // sequence_find over boost::dynamic_bitset
-#include <xstd/bits/ext/std/bitset.hpp>           // sequence_find over std::bitset
-#include <xstd/bits/ranges/sequence_view.hpp>     // sequence_view, sequence_range
+#include <xstd/bits/bitset.hpp>                   // bitset
+#include <xstd/bits/block_sequence.hpp>           // block_array
+#include <xstd/bits/ext/boost/dynamic_bitset.hpp> // bit_traits over boost::dynamic_bitset
+#include <xstd/bits/ext/std/bitset.hpp>           // bit_traits over std::bitset
+#include <xstd/bits/ownership.hpp>                // ownership
+#include <xstd/bits/ranges/sequence_view.hpp>     // sequence_view
 #include <algorithm>                              // equal
 #include <array>                                  // array
 #include <bitset>                                 // bitset
-#include <ranges>                                 // random_access_range
+#include <concepts>                               // derived_from, equality_comparable, same_as, totally_ordered
+#include <cstddef>                                // size_t
+#include <ranges>                                 // borrowed_range, random_access_range, view
+#include <utility>                                // declval
 
 BOOST_AUTO_TEST_SUITE(Ranges)
 BOOST_AUTO_TEST_SUITE(SequenceView)
 
+namespace {
+
+template<class T>
+using view_of = decltype(xstd::sequence_view(std::declval<T&>()));
+
+}  // namespace
+
+// The view is the referring adaptor under another name, and over an owner of either reading it refers into the storage the owner wraps. [design.md#the-views-are-the-adaptors]
+BOOST_AUTO_TEST_CASE(TheViewIsTheReferringAdaptor)
+{
+        static_assert(std::derived_from<xstd::sequence_view<std::bitset<8>>, xstd::basic_bit_sequence<std::bitset<8>, xstd::ownership::refers, false>>);
+        static_assert(std::same_as<view_of<std::bitset<8>>,          xstd::sequence_view<std::bitset<8>>>);
+        static_assert(std::same_as<view_of<std::bitset<8> const>,    xstd::sequence_view<std::bitset<8> const>>);
+        static_assert(std::same_as<view_of<xstd::bitset<8>>,         xstd::sequence_view<xstd::block_array<std::size_t, 8>>>);
+        static_assert(std::same_as<view_of<xstd::bit_static_set<8>>, xstd::sequence_view<xstd::block_array<std::size_t, 8>>>);
+}
+
 BOOST_AUTO_TEST_CASE(TheViewedTypesAreTheOnesHoldingBoolsWithoutOfferingThem)
 {
-        static_assert(xstd::ranges::sequence_range<std::bitset<8>>);
-        static_assert(xstd::ranges::sequence_range<xstd::bitset<8>>);
-        static_assert(xstd::ranges::sequence_range<boost::dynamic_bitset<>>);
+        static_assert(std::ranges::random_access_range<view_of<std::bitset<8>>>);
+        static_assert(std::ranges::random_access_range<view_of<xstd::bitset<8>>>);
+        static_assert(std::ranges::random_access_range<view_of<boost::dynamic_bitset<>>>);
 
-        static_assert(std::ranges::random_access_range<xstd::sequence_view<std::bitset<8>>>);
-        static_assert(std::ranges::random_access_range<xstd::sequence_view<xstd::bitset<8>>>);
-
-        // bit_static_set is not a sequence of bools; it is a set of keys.
-        static_assert(not xstd::ranges::sequence_range<xstd::bit_static_set<8>>);
+        // A view in std::ranges' sense and borrowed, like span; and like span it neither compares nor orders. [design.md#views-follow-their-precedent]
+        static_assert(std::ranges::view<view_of<std::bitset<8>>>);
+        static_assert(std::ranges::borrowed_range<view_of<std::bitset<8>>>);
+        static_assert(not std::equality_comparable<view_of<std::bitset<8>>>);
+        static_assert(not std::totally_ordered<view_of<std::bitset<8>>>);
 }
 
 // The sequence reading is the bools at every position, checked against the std::array<bool, N> holding the same bits.
@@ -76,7 +99,7 @@ BOOST_AUTO_TEST_CASE(APackedArrayAgreesWithItsOwnView)
                 BOOST_CHECK_EQUAL(static_cast<bool>(view[k]), static_cast<bool>(packed[k]));
         }
 
-        // Both directions, through both proxies: only setting was exercised at first, leaving the clearing half of assign_at unreached.
+        // Both directions, through both proxies.
         packed[1] = false;
         BOOST_CHECK(not static_cast<bool>(packed[1]));
         BOOST_CHECK(not static_cast<bool>(view[1]));
@@ -88,8 +111,8 @@ BOOST_AUTO_TEST_CASE(APackedArrayAgreesWithItsOwnView)
         BOOST_CHECK(static_cast<bool>(packed[0]));
 }
 
-// The sequence ordering against std::vector<bool>, over both routes: block-streaming where the type says where its blocks are, element-wise where not.
-BOOST_AUTO_TEST_CASE(EveryViewedTypeOrdersLikeAVectorBool)
+// The sequence reading against std::vector<bool>, through the iterators the view hands out, for every viewed type.
+BOOST_AUTO_TEST_CASE(EveryViewedTypeReadsLikeAVectorBool)
 {
         test::sequence::ordering_agrees_with_vector_bool<xstd::bitset<8>>();
         test::sequence::ordering_agrees_with_vector_bool<std::bitset<8>>();

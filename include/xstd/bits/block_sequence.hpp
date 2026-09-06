@@ -33,7 +33,7 @@
 
 namespace xstd {
 
-// Whether a range IS blocks; block_range asks if a container hands its blocks over. [design.md#block-storage]
+// Whether a range IS blocks; block_readable asks if a trait hands a container's blocks over. [design.md#block-storage]
 template<class R>
 concept block_storage =
         std::regular<R> and
@@ -124,7 +124,7 @@ public:
                 }
         }
 
-        // The block, for xstd::ranges::block_access; padding above size() stays zero, which is what makes whole-block comparison mean anything.
+        // The block, behind the trait's block entry; padding above size() stays zero, which is what makes whole-block comparison mean anything.
         [[nodiscard]] constexpr auto block(std::size_t i) const noexcept
                 -> block_type
         {
@@ -140,7 +140,7 @@ public:
                 erase_unused();
         }
 
-        // Memberwise, width first: the unused bits are kept clear, so the blocks compare as the bits do, and a zero width through its floor block too. [design.md#block-storage]
+        // Memberwise, width first: the unused bits are kept clear, so the blocks compare as the bits do, and a zero width through the one block it still holds. [design.md#block-storage]
         [[nodiscard]] friend constexpr auto operator==(block_sequence const&, block_sequence const&) noexcept -> bool = default;
 
         // No operator<=>: block_sequence is pure storage with no opinion on which reading orders it, so it names both and picks neither. [design.md#two-readings-disagree]
@@ -693,7 +693,7 @@ public:
         }
 
 private:
-        // The lowest position at which two values differ, as its block and that block's xor; the index says nothing when the xor is zero. [design.md#the-ordering-primitive]
+        // The first block at which two values differ, with that block's xor; equal values answer the last block and a zero xor, every arm alike. [design.md#the-ordering-primitive]
         [[nodiscard]] constexpr auto first_difference(block_sequence const& other) const noexcept
                 -> std::pair<std::size_t, block_type>
         {
@@ -705,12 +705,13 @@ private:
                         }
                         return { 1UZ, static_cast<block_type>(this->m_blocks[1] ^ other.m_blocks[1]) };
                 } else {
-                        for (auto i = 0UZ, n = num_blocks(); i < n; ++i) {
+                        auto const last = num_blocks() - 1UZ;
+                        for (auto i = 0UZ; i < last; ++i) {
                                 if (auto const diff = static_cast<block_type>(this->m_blocks[i] ^ other.m_blocks[i]); diff != zero) {
                                         return { i, diff };
                                 }
                         }
-                        return { 0UZ, zero };
+                        return { last, static_cast<block_type>(this->m_blocks[last] ^ other.m_blocks[last]) };
                 }
         }
 
@@ -815,7 +816,7 @@ using block_array = block_sequence<std::array<Block, num_blocks_v<Block, N>>, N>
 template<xstd::unsigned_integer Block, class Allocator = std::allocator<Block>>
 using block_vector = block_sequence<std::vector<Block, Allocator>>;
 
-// Forwards and nothing more, reaching none of the walks. [design.md#the-ceiling-principle]
+// Forwards and nothing more, reaching none of the generic scans. [design.md#the-cheapest-contract]
 template<class Blocks, std::size_t N>
 struct bit_traits<block_sequence<Blocks, N>>
 {
@@ -827,7 +828,7 @@ struct bit_traits<block_sequence<Blocks, N>>
         [[nodiscard]] static constexpr auto at(bits_type const& c, std::size_t n) noexcept -> bool { return c.test(n); }
 
         // set(n)/reset(n), there being no set(n, value) here; both assert, so the position is a precondition.
-        static constexpr void assign(bits_type& c, std::size_t n, bool value) noexcept
+        static constexpr void unchecked_assign(bits_type& c, std::size_t n, bool value) noexcept
         {
                 if (value) {
                         c.set(n);
@@ -838,7 +839,7 @@ struct bit_traits<block_sequence<Blocks, N>>
 
         [[nodiscard]] static constexpr auto count(bits_type const& c) noexcept -> std::size_t { return c.count(); }
 
-        // The two entries the readings cannot synthesize: insert is the one operation that can grow, and fill is bulk. [design.md#what-the-door-reconciles]
+        // The two entries the readings cannot synthesize: insert is the one operation that can grow, and fill is bulk. [design.md#what-the-trait-reconciles]
         static constexpr void insert(bits_type& c, std::size_t n) noexcept { c.set(n); }
         static constexpr void fill(bits_type& c, bool value) noexcept
         {
@@ -855,7 +856,7 @@ struct bit_traits<block_sequence<Blocks, N>>
         [[nodiscard]] static constexpr auto find_first(bits_type const& c) noexcept -> std::size_t { return c.find_first(); }
         [[nodiscard]] static constexpr auto find_last (bits_type const& c) noexcept -> std::size_t { return c.find_last();  }
 
-        // The door keeps the cheaper contracts. [design.md#the-ceiling-principle]
+        // The trait keeps the cheaper contracts. [design.md#the-cheapest-contract]
         [[nodiscard]] static constexpr auto find_next(bits_type const& c, std::size_t n) noexcept -> std::size_t { return c.exclusive_find_next(n); }
         [[nodiscard]] static constexpr auto find_prev(bits_type const& c, std::size_t n) noexcept -> std::size_t { return c.exclusive_find_prev(n); }
 

@@ -10,12 +10,9 @@
 
 #include <boost/hash2/fnv1a.hpp>              // fnv1a_64
 #include <boost/hash2/hash_append.hpp>        // hash_append
-#include <xstd/bits/bit_traits.hpp>           // bit_storage, bit_traits, block_readable, find_first, find_next, find_prev, static_bit_extent, zero_width
-#include <xstd/bits/ranges/bit_extent.hpp>    // bit_extent
-#include <xstd/bits/ranges/sequence_view.hpp> // sequence_find
-#include <xstd/bits/ranges/set_view.hpp>      // set_compare, set_three_way, set_view
+#include <xstd/bits/bit_traits.hpp>           // bit_storage, bit_traits, static_bit_extent, zero_width
+#include <xstd/bits/ownership.hpp>            // owned_storage, ownership
 #include <algorithm>                          // min
-#include <compare>                            // strong_ordering
 #include <concepts>                           // convertible_to, regular, same_as
 #include <cstddef>                            // size_t
 #include <format>                             // format
@@ -34,7 +31,7 @@
 namespace xstd {
 
 // The bitset vocabulary a storage speaks natively, one line each in the wrapper; a backend missing a member fails here, at the class.
-// The shifts stay in although the door carries their contracts: without them a shiftless backend would fail inside an instantiation. [design.md#the-idempotent-wrapper]
+// The shifts stay in although bit_traits carries their contracts: without them a shiftless backend would fail inside an instantiation. [design.md#the-idempotent-wrapper]
 template<class Bits>
 concept has_bitops =
         std::regular<Bits> and
@@ -56,34 +53,17 @@ concept has_bitops =
         }
 ;
 
-// [template.bitset] over any Bits that speaks the vocabulary: what Bits has is forwarded, what it lacks is added through the door. [design.md#the-idempotent-wrapper]
+// [template.bitset] over any Bits that speaks the vocabulary: what Bits has is forwarded, what it lacks is added through Traits. [design.md#the-idempotent-wrapper]
 template<has_bitops Bits, bit_storage<Bits> Traits = bit_traits<Bits>>
 class basic_bitset
 {
         static_assert(static_bit_extent<Traits, Bits>, "a dynamic width arrives with block_vector, in step 7 of #80");
 
-        // No iteration and no <=> here by design, because std::bitset has neither: choose set_view or sequence_view.
+        // No iteration and no <=> here by design, because std::bitset has neither: the two views refer into the storage instead. [design.md#views-over-owners]
         Bits m_bits{};
 
-        // Still published for set_view and block_range, until the rewire routes them through the door. [design.md#the-iterator-is-the-primitive]
-        [[nodiscard]] friend constexpr auto block_count(basic_bitset const& c) noexcept -> std::size_t requires block_readable<Traits, Bits> { return Traits::num_blocks(c.m_bits); }
-        [[nodiscard]] friend constexpr auto block_at(basic_bitset const& c, std::size_t i) noexcept requires block_readable<Traits, Bits> { return Traits::block(c.m_bits, i); }
-
-        [[nodiscard]] friend constexpr auto find_first(basic_bitset const& c)                noexcept -> std::size_t { return detail::bits::find_first<Traits>(c.m_bits);   }
-        [[nodiscard]] friend constexpr auto find_last (basic_bitset const& c)                noexcept -> std::size_t { return Traits::size(c.m_bits);                       }
-        [[nodiscard]] friend constexpr auto find_next (basic_bitset const& c, std::size_t n) noexcept -> std::size_t { return detail::bits::find_next<Traits>(c.m_bits, n); }
-        [[nodiscard]] friend constexpr auto find_prev (basic_bitset const& c, std::size_t n) noexcept -> std::size_t { return detail::bits::find_prev<Traits>(c.m_bits, n); }
-
-        // The set ordering for set_view's <=>, the door's word-wise entry where it has one, the iteration otherwise. [design.md#two-readings-disagree]
-        [[nodiscard]] friend constexpr auto set_three_way(basic_bitset const& x, basic_bitset const& y) noexcept
-                -> std::strong_ordering
-        {
-                if constexpr (requires { Traits::set_three_way(x.m_bits, y.m_bits); }) {
-                        return Traits::set_three_way(x.m_bits, y.m_bits);
-                } else {
-                        return xstd::ranges::set_three_way(xstd::ranges::set_view(x), xstd::ranges::set_view(y));
-                }
-        }
+        template<class B, ownership O, bit_storage<B> T>         friend class basic_bit_set;
+        template<class B, ownership O, bool W, bit_storage<B> T> friend class basic_bit_sequence;
 
         template<class Provider, class Hash, class Flavor>
         friend constexpr void tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, basic_bitset const* v) noexcept
@@ -127,7 +107,7 @@ public:
                 // A proxy reference assigns through a const proxy, the shape the standard gives vector<bool>::reference.
                 constexpr auto operator=(bool x) const noexcept -> reference const&  // NOLINT(misc-unconventional-assign-operator)
                 {
-                        Traits::assign(m_ptr->m_bits, m_idx, x);
+                        Traits::unchecked_assign(m_ptr->m_bits, m_idx, x);
                         return *this;
                 }
 
@@ -148,7 +128,7 @@ public:
                 constexpr auto flip() noexcept
                         -> reference&
                 {
-                        Traits::assign(m_ptr->m_bits, m_idx, not Traits::at(m_ptr->m_bits, m_idx));
+                        Traits::unchecked_assign(m_ptr->m_bits, m_idx, not Traits::at(m_ptr->m_bits, m_idx));
                         return *this;
                 }
         };
@@ -189,7 +169,7 @@ public:
                                 continue;
                         }
                         if (traits::eq(ch, one)) {
-                                Traits::assign(m_bits, i, true);
+                                Traits::unchecked_assign(m_bits, i, true);
                         } else {
                                 throw invalid_argument(ch, zero, one);
                         }
@@ -212,7 +192,7 @@ public:
         constexpr auto operator|=(basic_bitset const& rhs) noexcept -> basic_bitset& { m_bits |= rhs.m_bits; return *this; }
         constexpr auto operator^=(basic_bitset const& rhs) noexcept -> basic_bitset& { m_bits ^= rhs.m_bits; return *this; }
 
-        // Same spelling, two contracts: the door's checked entry is total and forwarded as is; the storage's own shift is the unchecked one, guarded here. [design.md#checked-and-unchecked]
+        // Same spelling, two contracts: the trait's checked entry is total and forwarded as is; the storage's own shift is the unchecked one, guarded here. [design.md#checked-and-unchecked]
         constexpr auto operator<<=(std::size_t pos) noexcept
                 -> basic_bitset&
         {
@@ -248,14 +228,14 @@ public:
         constexpr auto reset() noexcept -> basic_bitset& { m_bits.reset(); return *this; }
         constexpr auto flip () noexcept -> basic_bitset& { m_bits.flip (); return *this; }
 
-        // Element access, both families: the door's checked entry where the counterpart throws natively, else the guard and the unchecked write. [design.md#checked-and-unchecked]
+        // Element access, both families: the trait's checked entry where the counterpart throws natively, else the guard and the unchecked write. [design.md#checked-and-unchecked]
         constexpr auto set(std::size_t pos, bool val = true)
                 -> basic_bitset&
         {
                 if constexpr (requires { Traits::checked_set(m_bits, pos, val); }) {
                         Traits::checked_set(m_bits, pos, val);
                 } else if (pos < size()) {
-                        Traits::assign(m_bits, pos, val);
+                        Traits::unchecked_assign(m_bits, pos, val);
                 } else {
                         throw out_of_range(pos);
                 }
@@ -268,7 +248,7 @@ public:
                 if constexpr (requires { Traits::checked_reset(m_bits, pos); }) {
                         Traits::checked_reset(m_bits, pos);
                 } else if (pos < size()) {
-                        Traits::assign(m_bits, pos, false);
+                        Traits::unchecked_assign(m_bits, pos, false);
                 } else {
                         throw out_of_range(pos);
                 }
@@ -281,14 +261,14 @@ public:
                 if constexpr (requires { Traits::checked_flip(m_bits, pos); }) {
                         Traits::checked_flip(m_bits, pos);
                 } else if (pos < size()) {
-                        Traits::assign(m_bits, pos, not Traits::at(m_bits, pos));
+                        Traits::unchecked_assign(m_bits, pos, not Traits::at(m_bits, pos));
                 } else {
                         throw out_of_range(pos);
                 }
                 return *this;
         }
 
-        // The const subscript is unchecked on every counterpart, so it is the door's at() unconditionally.
+        // The const subscript is unchecked on every counterpart, so it is Traits::at unconditionally.
         [[nodiscard]] constexpr auto operator[](std::size_t pos) const noexcept
                 -> bool
         {
@@ -373,35 +353,15 @@ private:
         }
 };
 
+// The owner's side of the view protocol: what a set_view or sequence_view over a bitset refers into. [design.md#views-over-owners]
+template<class Bits, class Traits>
+struct owned_storage<basic_bitset<Bits, Traits>>
+{
+        using bits_type   = Bits;
+        using traits_type = Traits;
+};
+
 }       // namespace xstd
-
-// The two readings and the width, published to the views the way the hidden friends above are: until the rewire.
-namespace xstd::ranges {
-
-template<class Bits, class Traits>
-inline constexpr std::size_t bit_extent<xstd::basic_bitset<Bits, Traits>> = Traits::extent;
-
-// The sequence reading, trivial because the const subscript answers every position; without it we would be a set and not a sequence.
-template<class Bits, class Traits>
-struct sequence_find<xstd::basic_bitset<Bits, Traits>>
-{
-        [[nodiscard]] static constexpr auto first(xstd::basic_bitset<Bits, Traits> const&)                  noexcept -> std::size_t { return 0UZ;      }
-        [[nodiscard]] static constexpr auto last (xstd::basic_bitset<Bits, Traits> const& c)                noexcept -> std::size_t { return c.size(); }
-        [[nodiscard]] static constexpr auto at   (xstd::basic_bitset<Bits, Traits> const& c, std::size_t n) noexcept -> bool        { return c[n];     }
-};
-
-// No <=> of its own, so opt in to the set ordering explicitly, as std::bitset and dynamic_bitset do.
-template<class Bits, class Traits>
-struct set_compare<xstd::basic_bitset<Bits, Traits>>
-{
-        [[nodiscard]] static constexpr auto lexicographical_three_way(xstd::basic_bitset<Bits, Traits> const& x, xstd::basic_bitset<Bits, Traits> const& y) noexcept
-                -> std::strong_ordering
-        {
-                return set_three_way(x, y);
-        }
-};
-
-}       // namespace xstd::ranges
 
 namespace std {
 

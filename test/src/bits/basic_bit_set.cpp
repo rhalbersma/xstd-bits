@@ -4,7 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <test/floor_traits.hpp>                  // floor_traits
+#include <test/minimal_traits.hpp>                // minimal_traits
 #include <xstd/bits/basic_bit_set.hpp>            // basic_bit_set
 #include <xstd/bits/bit_static_set.hpp>           // bit_static_set
 #include <xstd/bits/block_sequence.hpp>           // block_array, block_vector
@@ -30,7 +30,7 @@ using Storage = xstd::block_array<std::uint64_t, 100>;
 using Owner   = xstd::bit_static_set<100, std::uint64_t>;
 using View    = xstd::basic_bit_set<Storage, xstd::ownership::refers>;
 using Reader  = xstd::basic_bit_set<Storage const, xstd::ownership::refers>;
-using Floor   = xstd::basic_bit_set<Storage, xstd::ownership::refers, test::floor_traits<Storage>>;
+using Minimal = xstd::basic_bit_set<Storage, xstd::ownership::refers, test::minimal_traits<Storage>>;
 
 // Dependent, so an absent member is a false rather than a hard error.
 template<class S> constexpr bool can_insert     = requires (S s) { s.insert(0UZ); };
@@ -107,8 +107,8 @@ BOOST_AUTO_TEST_CASE(AnOwnerIsRegularAndAViewIsCopyable)
         static_assert(not std::default_initializable<View>);
 }
 
-// Where the door does not let this handle write, the member is not there to call.
-BOOST_AUTO_TEST_CASE(WritingIsGatedByTheDoorNotByThisConst)
+// Where the trait does not let this handle write, the member is not there to call.
+BOOST_AUTO_TEST_CASE(WritingIsGatedByTheTraitsNotByThisConst)
 {
         static_assert(can_insert<View> and can_erase<View> and can_clear<View> and can_fill<View>);
         static_assert(can_insert<View const> and can_erase<View const> and can_clear<View const>);
@@ -116,7 +116,7 @@ BOOST_AUTO_TEST_CASE(WritingIsGatedByTheDoorNotByThisConst)
 
         static_assert(not can_insert<Reader> and not can_erase<Reader> and not can_clear<Reader> and not can_fill<Reader>);
         static_assert(not can_insert<Owner const> and not can_erase<Owner const> and not can_clear<Owner const>);
-        static_assert(not can_insert<Floor>);
+        static_assert(not can_insert<Minimal>);
         static_assert(not can_swap<View> and not has_complement<View>);
 }
 
@@ -184,7 +184,7 @@ BOOST_AUTO_TEST_CASE(TheViewsAnswerEveryReadOverEveryStorage)
                         d.set(p);
                 }
                 check_reads(View(a), model, 100UZ);
-                check_reads(Floor(a), model, 100UZ);
+                check_reads(Minimal(a), model, 100UZ);
                 check_reads(xstd::basic_bit_set<xstd::block_vector<std::uint64_t>, xstd::ownership::refers>(v), model, 100UZ);
                 check_reads(xstd::basic_bit_set<std::bitset<100>, xstd::ownership::refers>(s), model, 100UZ);
                 check_reads(xstd::basic_bit_set<boost::dynamic_bitset<>, xstd::ownership::refers>(d), model, 100UZ);

@@ -14,7 +14,7 @@
 #include <span>                                    // dynamic_extent
 #include <type_traits>                             // remove_cvref_t
 
-// The one door: everything above asks bit_traits<Bits> and never the type itself. [design.md#the-door]
+// The one point of adaptation: everything above asks bit_traits<Bits> and never the type itself. [design.md#the-trait]
 namespace xstd {
 
 // Declared, never defined: an unadapted type is an error, not a silent fallback. [design.md#opt-in]
@@ -234,7 +234,7 @@ template<class Traits, class Bits>
 template<class Traits>
 constexpr bool zero_width = Traits::extent == 0UZ;
 
-// The door's entry where the specialization declares one, the walk above where it does not. [design.md#detection-by-absence]
+// The trait's entry where the specialization declares one, the generic scan above where it does not. [design.md#detection-by-absence]
 template<class Traits, class Bits>
 [[nodiscard]] constexpr auto find_first(Bits const& c [[maybe_unused]]) noexcept
         -> std::size_t
@@ -291,13 +291,13 @@ template<class Traits, class Bits>
 
 namespace xstd {
 
-// The floor, gated as a concept so an unadapted type reads "constraint not satisfied". [design.md#opt-in]
+// The three required entries, gated as a concept so an unadapted type reads "constraint not satisfied". [design.md#opt-in]
 // Two parameters like block_readable, so a type-constraint can name the trait: bit_storage<Bits> Traits. [design.md#the-trait-is-a-parameter]
 template<class Traits, class Bits>
 concept bit_storage =
         requires (Bits const& c, std::size_t n)
         {
-                // Inside the floor, not beside it, so static_bit_extent can read it without proving it exists.
+                // Required rather than optional, so static_bit_extent can read it without proving it exists.
                 { Traits::extent   } -> std::convertible_to<std::size_t>;
                 { Traits::size(c)  } -> std::convertible_to<std::size_t>;
                 { Traits::at(c, n) } -> std::convertible_to<bool>;

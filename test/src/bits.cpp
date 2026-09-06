@@ -17,14 +17,14 @@
 #include <utility>                    // index_sequence, make_index_sequence
 
 
-// Every entity the front door promises, reached through it alone: no leaf test sees the door at all.
-BOOST_AUTO_TEST_CASE(EveryContainerArrivesThroughTheOneDoor)
+// Every entity the umbrella promises, reached through it alone: no leaf test sees the umbrella at all.
+BOOST_AUTO_TEST_CASE(EveryContainerArrivesThroughTheUmbrella)
 {
         // The two containers that are ranges on their own terms: one indexed by position, one iterating its elements.
         static_assert(std::ranges::random_access_range<xstd::bit_array<8>>);
         static_assert(std::ranges::bidirectional_range<xstd::bit_static_set<8>>);
 
-        // xstd::bitset is deliberately not a range, reproducing std::bitset, so the door has to deliver a working view over it.
+        // xstd::bitset is deliberately not a range, reproducing std::bitset, so the trait has to deliver a working view over it.
         static_assert(not std::ranges::range<xstd::bitset<8>>);
 
         auto const legacy = xstd::bitset<8>();

@@ -3,12 +3,12 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/test/unit_test.hpp>           // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
-#include <xstd/bits/ext/boost.hpp>            // the Boost adaptors, asked for by name
-#include <xstd/bits/ranges/bit_extent.hpp>    // bit_extent
-#include <xstd/bits/ranges/sequence_view.hpp> // sequence_range
-#include <xstd/bits/ranges/set_view.hpp>      // set_range
-#include <span>                               // dynamic_extent
+#include <boost/test/unit_test.hpp>      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <xstd/bits/bit_traits.hpp>      // bit_storage, bit_traits, static_bit_extent
+#include <xstd/bits/ext/boost.hpp>       // the Boost adaptors, asked for by name
+#include <xstd/bits/ranges/set_view.hpp> // set_view
+#include <ranges>                        // bidirectional_range
+#include <span>                          // dynamic_extent
 
 BOOST_AUTO_TEST_SUITE(Ext)
 BOOST_AUTO_TEST_SUITE(Boost)
@@ -16,9 +16,10 @@ BOOST_AUTO_TEST_SUITE(Boost)
 // As for the std umbrella, asking by name is enough; this is the only adapted type carrying its width in the object.
 BOOST_AUTO_TEST_CASE(AskingForItByNameIsEnough)
 {
-        static_assert(xstd::ranges::set_range<boost::dynamic_bitset<>>);
-        static_assert(xstd::ranges::sequence_range<boost::dynamic_bitset<>>);
-        static_assert(xstd::ranges::bit_extent<boost::dynamic_bitset<>> == std::dynamic_extent);
+        static_assert(xstd::bit_storage<xstd::bit_traits<boost::dynamic_bitset<>>, boost::dynamic_bitset<>>);
+        static_assert(not xstd::static_bit_extent<xstd::bit_traits<boost::dynamic_bitset<>>, boost::dynamic_bitset<>>);
+        static_assert(xstd::bit_traits<boost::dynamic_bitset<>>::extent == std::dynamic_extent);
+        static_assert(std::ranges::bidirectional_range<xstd::set_view<boost::dynamic_bitset<>>>);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

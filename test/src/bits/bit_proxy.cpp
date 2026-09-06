@@ -5,7 +5,7 @@
 
 #include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <test/block_types.hpp>                   // graded_extents
-#include <test/floor_traits.hpp>                  // floor_traits
+#include <test/minimal_traits.hpp>                // minimal_traits
 #include <test/value_reference.hpp>               // value_reference
 #include <xstd/bits/bit_proxy.hpp>                // bit_sequence_iterator, bit_sequence_reference, bit_set_iterator, bit_set_reference
 #include <xstd/bits/bit_traits.hpp>               // bit_traits, find_next, find_prev
@@ -205,18 +205,18 @@ BOOST_AUTO_TEST_CASE(AnIteratorIsAPointerAndAPosition)
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheSetIteratorIsBidirectionalAndTheSequenceIteratorRandomAccess, T, ArrayTypes)
 {
         static_assert(std::bidirectional_iterator<xstd::bit_set_iterator<T>>);
-        static_assert(std::bidirectional_iterator<xstd::bit_set_iterator<T, test::floor_traits<T>>>);
+        static_assert(std::bidirectional_iterator<xstd::bit_set_iterator<T, test::minimal_traits<T>>>);
 
         static_assert(std::random_access_iterator<xstd::bit_sequence_iterator<T>>);
         static_assert(std::random_access_iterator<xstd::bit_sequence_iterator<T const>>);
-        static_assert(std::random_access_iterator<xstd::bit_sequence_iterator<T, test::floor_traits<T>>>);
+        static_assert(std::random_access_iterator<xstd::bit_sequence_iterator<T, test::minimal_traits<T>>>);
 
         static_assert(    std::sortable<xstd::bit_sequence_iterator<T>>);
         static_assert(not std::sortable<xstd::bit_sequence_iterator<T const>>);
 }
 
-// The same over the two foreign types, which is what the door is for.
-BOOST_AUTO_TEST_CASE(TheForeignTypesIterateThroughTheirDoor)
+// The same over the two foreign types, which is what bit_traits is for.
+BOOST_AUTO_TEST_CASE(TheForeignTypesIterateThroughTheirTraits)
 {
         static_assert(std::bidirectional_iterator<xstd::bit_set_iterator<std::bitset<9>>>);
         static_assert(std::bidirectional_iterator<xstd::bit_set_iterator<boost::dynamic_bitset<>>>);
@@ -228,20 +228,20 @@ BOOST_AUTO_TEST_CASE(TheForeignTypesIterateThroughTheirDoor)
         static_assert(std::sortable<xstd::bit_sequence_iterator<boost::dynamic_bitset<>>>);
 }
 
-// Const is in the Bits, not in a flag, and a floor-only trait has no way to write either.
-BOOST_AUTO_TEST_CASE(ConstnessLivesInTheBitsAndWritabilityInTheDoor)
+// Const is in the Bits, not in a flag, and a trait with only the required entries has no way to write either.
+BOOST_AUTO_TEST_CASE(ConstnessLivesInTheBitsAndWritabilityInTheTraits)
 {
         using Ref      = xstd::bit_sequence_reference<Bits>;
         using ConstRef = xstd::bit_sequence_reference<Bits const>;
-        using FloorRef = xstd::bit_sequence_reference<Bits, test::floor_traits<Bits>>;
+        using MinimalRef = xstd::bit_sequence_reference<Bits, test::minimal_traits<Bits>>;
 
         static_assert(    std::is_assignable_v<Ref const&, bool>);
         static_assert(not std::is_assignable_v<ConstRef const&, bool>);
-        static_assert(not std::is_assignable_v<FloorRef const&, bool>);
+        static_assert(not std::is_assignable_v<MinimalRef const&, bool>);
 
         static_assert(std::is_convertible_v<Ref, bool>);
         static_assert(std::is_convertible_v<ConstRef, bool>);
-        static_assert(std::is_convertible_v<FloorRef, bool>);
+        static_assert(std::is_convertible_v<MinimalRef, bool>);
 
         // The set proxy never writes, so nothing distinguishes its const spelling.
         static_assert(not std::is_assignable_v<xstd::bit_set_reference<Bits> const&, std::size_t>);
@@ -255,7 +255,7 @@ BOOST_AUTO_TEST_CASE(TheReadOnlyProxiesAreValues)
         static_assert(test::value_reference<xstd::bit_set_reference<Bits>>);
         static_assert(test::value_reference<xstd::bit_set_reference<Bits const>>);
         static_assert(test::value_reference<xstd::bit_sequence_reference<Bits const>>);
-        static_assert(test::value_reference<xstd::bit_sequence_reference<Bits, test::floor_traits<Bits>>>);
+        static_assert(test::value_reference<xstd::bit_sequence_reference<Bits, test::minimal_traits<Bits>>>);
 
         // The writable proxy is the one exception, by design: its assignment writes the bit. Trivial to copy and destroy all the same.
         static_assert(not test::value_reference<xstd::bit_sequence_reference<Bits>>);
@@ -279,17 +279,17 @@ BOOST_AUTO_TEST_CASE(AMutableSequenceIteratorConvertsToItsConstTwin)
         BOOST_CHECK(*cit == false);
 }
 
-// The native trait keeps block_sequence's preconditions and is stepped within them; the floor trait is total and asked everything.
-// The floor trait from width 2, where an iterator first reaches the element-wise forward walk rather than its width guard.
+// The native trait keeps block_sequence's preconditions and is stepped within them; the minimal trait is total and asked everything.
+// The minimal trait from width 2, where an iterator first reaches the element-wise forward walk rather than its width guard.
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheSetIteratorWalksThePositionsInBothDirections, T, ArrayTypes)
 {
         check_every_set_pattern<xstd::bit_traits<T>, false>(T());
         if constexpr (xstd::bit_traits<T>::extent >= 2UZ) {
-                check_every_set_pattern<test::floor_traits<T>, true>(T());
+                check_every_set_pattern<test::minimal_traits<T>, true>(T());
         }
 }
 
-// std::bitset scans forward natively and backward synthesized on libstdc++, boost the same, and both doors are total.
+// std::bitset scans forward natively and backward synthesized on libstdc++, boost the same, and both traits are total.
 BOOST_AUTO_TEST_CASE(TheForeignSetIteratorsWalkThePositionsInBothDirections)
 {
         check_every_set_pattern<xstd::bit_traits<std::bitset<0>>, true>(std::bitset<0>());
@@ -298,7 +298,7 @@ BOOST_AUTO_TEST_CASE(TheForeignSetIteratorsWalkThePositionsInBothDirections)
         check_every_set_pattern<xstd::bit_traits<boost::dynamic_bitset<>>, true>(boost::dynamic_bitset<>(66));
 }
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(TheSequenceIteratorReadsAndWritesThroughTheDoor, T, ArrayTypes)
+BOOST_AUTO_TEST_CASE_TEMPLATE(TheSequenceIteratorReadsAndWritesThroughTheTraits, T, ArrayTypes)
 {
         constexpr auto N = xstd::bit_traits<T>::extent;
 
@@ -411,7 +411,7 @@ BOOST_AUTO_TEST_CASE(RangesAlgorithmsReachTheBitsThroughIterMoveAndIterSwap)
 }
 
 // The foreign sequence proxies write through their own unchecked subscript.
-BOOST_AUTO_TEST_CASE(TheForeignSequenceProxiesWriteThroughTheDoor)
+BOOST_AUTO_TEST_CASE(TheForeignSequenceProxiesWriteThroughTheTraits)
 {
         auto s = std::bitset<9>();
         auto const sit = xstd::bit_sequence_iterator<std::bitset<9>>(&s, 4UZ);
