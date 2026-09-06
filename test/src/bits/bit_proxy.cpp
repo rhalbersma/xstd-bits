@@ -133,20 +133,22 @@ auto check_set_steps(Iterator first, Iterator last, std::set<std::size_t> const&
 template<class Traits, bool Total, class T>
 auto check_every_set_pattern(T const& empty) -> void
 {
-        auto const size = Traits::size(empty);
-
         check_set_walk<Traits, Total>(empty, {});
 
-        auto full = std::set<std::size_t>();
-        for (auto i = 0UZ; i < size; ++i) {
-                full.insert(i);
-        }
-        check_set_walk<Traits, Total>(empty, full);
+        // Behind if constexpr, or MSVC's analyzer reports loops whose body never runs at a zero width, which is so.
+        if constexpr (Traits::extent != 0UZ) {
+                auto const size = Traits::size(empty);
+                auto full = std::set<std::size_t>();
+                for (auto i = 0UZ; i < size; ++i) {
+                        full.insert(i);
+                }
+                check_set_walk<Traits, Total>(empty, full);
 
-        for (auto i = 0UZ; i < size; ++i) {
-                check_set_walk<Traits, Total>(empty, { i });
-                if (i + 1UZ < size) {
-                        check_set_walk<Traits, Total>(empty, { i, i + 1UZ });
+                for (auto i = 0UZ; i < size; ++i) {
+                        check_set_walk<Traits, Total>(empty, { i });
+                        if (i + 1UZ < size) {
+                                check_set_walk<Traits, Total>(empty, { i, i + 1UZ });
+                        }
                 }
         }
 }
