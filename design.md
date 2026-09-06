@@ -10,7 +10,8 @@ file holds what has landed.
 
 ### block-storage
 
-`block_storage` asks whether a range **is** blocks: a contiguous, sized range of unsigned integers.
+`block_storage` asks whether a range **is** blocks: a regular, contiguous, sized range of unsigned integers.
+Regular is what lets `block_sequence` default its `==` over the blocks and the width.
 `std::array` and `std::vector` both qualify, and so does `std::inplace_vector` — a runtime width over
 static capacity, for free.
 

@@ -32,7 +32,7 @@ BOOST_AUTO_TEST_CASE(TheVocabularyIsWhatTheThreeStoragesSpeak)
 {
         static_assert(xstd::has_bitops<xstd::block_array<std::uint8_t, 0>>);
         static_assert(xstd::has_bitops<xstd::block_array<std::uint64_t, 100>>);
-        static_assert(xstd::has_bitops<xstd::block_vector<>>);
+        static_assert(xstd::has_bitops<xstd::block_vector<std::size_t>>);
         static_assert(xstd::has_bitops<std::bitset<0>>);
         static_assert(xstd::has_bitops<std::bitset<100>>);
         static_assert(xstd::has_bitops<boost::dynamic_bitset<>>);

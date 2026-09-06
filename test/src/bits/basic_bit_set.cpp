@@ -196,7 +196,7 @@ BOOST_AUTO_TEST_CASE(MaxSizeIsStaticWhereTheWidthIs)
 {
         static_assert(Owner::max_size() == 100UZ);
         static_assert(View::max_size() == 100UZ);
-        static_assert(xstd::basic_bit_set<xstd::block_vector<>, xstd::ownership::refers>::max_size() == std::numeric_limits<std::size_t>::max() - 1UZ);
+        static_assert(xstd::basic_bit_set<xstd::block_vector<std::size_t>, xstd::ownership::refers>::max_size() == std::numeric_limits<std::size_t>::max() - 1UZ);
         static_assert(xstd::basic_bit_set<boost::dynamic_bitset<>, xstd::ownership::refers>::max_size() == std::numeric_limits<std::size_t>::max() - 1UZ);
 
         auto v = xstd::block_vector<std::uint64_t>(10UZ);

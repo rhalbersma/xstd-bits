@@ -15,11 +15,11 @@
 #include <xstd/ints/limits.hpp>                                // numeric_limits
 #include <xstd/ints/memory.hpp>                                // align_up
 #include <xstd/misc/type_traits/conditional_data_member.hpp>   // XSTD_NO_UNIQUE_ADDRESS, conditional_data_member_t
-#include <algorithm>                                           // all_of, any_of, equal, fill, fill_n, fold_left, max, shift_left, shift_right
+#include <algorithm>                                           // all_of, any_of, fill, fill_n, fold_left, max, shift_left, shift_right
 #include <array>                                               // array
 #include <cassert>                                             // assert
 #include <compare>                                             // strong_ordering
-#include <concepts>                                            // swap
+#include <concepts>                                            // regular, swap
 #include <cstddef>                                             // ptrdiff_t, size_t
 #include <functional>                                          // plus
 #include <iterator>                                            // prev
@@ -36,6 +36,7 @@ namespace xstd {
 // Whether a range IS blocks; block_range asks if a container hands its blocks over. [design.md#block-storage]
 template<class R>
 concept block_storage =
+        std::regular<R> and
         std::ranges::contiguous_range<R> and
         std::ranges::sized_range<R> and
         xstd::unsigned_integer<std::ranges::range_value_t<R>>
@@ -138,17 +139,8 @@ public:
                 erase_unused();
         }
 
-        [[nodiscard]] friend constexpr auto operator==(block_sequence const& x [[maybe_unused]], block_sequence const& y [[maybe_unused]]) noexcept
-                -> bool
-        {
-                if constexpr (has_static_size and N == 0) {
-                        return true;
-                } else if constexpr (has_static_size) {
-                        return std::ranges::equal(x.m_blocks, y.m_blocks);
-                } else {
-                        return x.m_size == y.m_size and std::ranges::equal(x.m_blocks, y.m_blocks);
-                }
-        }
+        // Memberwise: the unused bits are kept clear, so the blocks compare as the bits do, and a zero width through its floor block too. [design.md#block-storage]
+        [[nodiscard]] friend constexpr auto operator==(block_sequence const&, block_sequence const&) noexcept -> bool = default;
 
         // No operator<=>: block_sequence is pure storage with no opinion on which reading orders it, so it names both and picks neither. [design.md#two-readings-disagree]
 
@@ -819,7 +811,7 @@ private:
 template<xstd::unsigned_integer Block, std::size_t N>
 using block_array = block_sequence<std::array<Block, num_blocks_v<Block, N>>, N>;
 
-template<xstd::unsigned_integer Block = std::size_t, class Allocator = std::allocator<Block>>
+template<xstd::unsigned_integer Block, class Allocator = std::allocator<Block>>
 using block_vector = block_sequence<std::vector<Block, Allocator>>;
 
 // Forwards and nothing more, reaching none of the walks. [design.md#the-ceiling-principle]
