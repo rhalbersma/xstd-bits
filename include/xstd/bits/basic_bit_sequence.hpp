@@ -36,12 +36,12 @@ class basic_bit_sequence
 
         std::conditional_t<is_owner, Bits, Bits*> m_bits;
 
-        // One accessor: (self.m_bits) propagates the owner's const, *self.m_bits keeps the view shallow. [design.md#ownership-is-not-an-axis]
+        // One accessor: self.m_bits propagates the owner's const, *self.m_bits keeps the view shallow. [design.md#ownership-is-not-an-axis]
         [[nodiscard]] constexpr auto storage(this auto&& self) noexcept
                 -> auto&&
         {
                 if constexpr (is_owner) {
-                        return (self.m_bits);
+                        return self.m_bits;
                 } else {
                         return *self.m_bits;
                 }

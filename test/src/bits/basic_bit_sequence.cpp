@@ -61,7 +61,7 @@ BOOST_AUTO_TEST_CASE(AnOwnerIsRegularAndAViewIsCopyable)
 // Deep const for the owner, shallow for the view: what each hands out says which.
 BOOST_AUTO_TEST_CASE(ConstIsDeepForTheOwnerAndShallowForTheView)
 {
-        auto a = Owner();
+        auto a = Owner();  // NOLINT(misc-const-correctness): the non-const overloads are what the decltypes below ask about
         auto const& ca = a;
         static_assert(std::same_as<decltype(a.begin()),  Owner::iterator>);
         static_assert(std::same_as<decltype(ca.begin()), Owner::const_iterator>);

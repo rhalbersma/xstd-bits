@@ -64,7 +64,7 @@ auto check_key(Set const& s, std::set<std::size_t> const& model, std::size_t x) 
 {
         BOOST_CHECK_EQUAL(s.contains(x), model.contains(x));
         BOOST_CHECK_EQUAL(s.count(x), model.count(x));
-        BOOST_CHECK((s.find(x) == s.end()) == (model.find(x) == model.end()));
+        BOOST_CHECK((s.find(x) == s.end()) == not model.contains(x));
 
         auto const lower = model.lower_bound(x);
         BOOST_CHECK((s.lower_bound(x) == s.end()) == (lower == model.end()));

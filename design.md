@@ -477,7 +477,7 @@ public names are aliases: `bit_static_set<N, B>` is `basic_bit_set<block_array<B
 Owning versus viewing is storage lifetime, not a third axis of the model, and it collapses to one template
 parameter: `ownership::owns` stores `Bits`, `ownership::refers` stores `Bits*`. Always present and only its
 type changes, so a plain `conditional_t` rather than `conditional_data_member_t`. One accessor, via deducing
-`this`, gives deep const to the owner — `(self.m_bits)` propagates `self`'s const — and shallow const to the
+`this`, gives deep const to the owner — `self.m_bits` propagates `self`'s const — and shallow const to the
 view — `*self.m_bits` does not — for free.
 
 Every mutator is then gated on the door and nothing else: `requires requires { Traits::op(self.storage(), …) }`
