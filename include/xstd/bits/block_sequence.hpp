@@ -86,11 +86,12 @@ private:
                 }
         }
 
-        Blocks m_blocks = make_blocks(0UZ);
-
         // Dynamic widths only; the tag keeps the absent member distinct from any other in an enclosing layout.
+        // Declared first, so the defaulted == rejects on the width before it reads a block. [design.md#block-storage]
         [[XSTD_NO_UNIQUE_ADDRESS]]
         conditional_data_member_t<not has_static_size, std::size_t, struct size_tag> m_size{};
+
+        Blocks m_blocks = make_blocks(0UZ);
 
 public:
         block_sequence() = default;
@@ -99,8 +100,8 @@ public:
         [[nodiscard]] constexpr explicit block_sequence(std::size_t n)
                 requires (not has_static_size)
         :
-                m_blocks(make_blocks(n)),
-                m_size(n)
+                m_size(n),
+                m_blocks(make_blocks(n))
         {}
 
         [[nodiscard]] constexpr auto size() const noexcept
@@ -139,7 +140,7 @@ public:
                 erase_unused();
         }
 
-        // Memberwise: the unused bits are kept clear, so the blocks compare as the bits do, and a zero width through its floor block too. [design.md#block-storage]
+        // Memberwise, width first: the unused bits are kept clear, so the blocks compare as the bits do, and a zero width through its floor block too. [design.md#block-storage]
         [[nodiscard]] friend constexpr auto operator==(block_sequence const&, block_sequence const&) noexcept -> bool = default;
 
         // No operator<=>: block_sequence is pure storage with no opinion on which reading orders it, so it names both and picks neither. [design.md#two-readings-disagree]
@@ -484,8 +485,8 @@ public:
         constexpr void swap(block_sequence& other) noexcept(std::is_nothrow_swappable_v<Blocks>)
         {
                 // m_size is empty_type under a static width, and swapping that is a no-op.
-                std::ranges::swap(this->m_blocks, other.m_blocks);
                 std::ranges::swap(this->m_size,   other.m_size);
+                std::ranges::swap(this->m_blocks, other.m_blocks);
         }
 
         constexpr auto set(std::size_t n) noexcept -> block_sequence&
