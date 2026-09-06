@@ -13,7 +13,7 @@
 BOOST_AUTO_TEST_SUITE(Ext)
 BOOST_AUTO_TEST_SUITE(Std)
 
-// One adapted library and no umbrella above it, so the front door never puts someone else's headers on a consumer's path.
+// One adapted library and no umbrella above it, so the umbrella never puts someone else's headers on a consumer's path.
 BOOST_AUTO_TEST_CASE(AskingForItByNameIsEnough)
 {
         static_assert(xstd::bit_storage<xstd::bit_traits<std::bitset<8>>, std::bitset<8>>);

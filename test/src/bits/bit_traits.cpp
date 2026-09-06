@@ -13,7 +13,7 @@
 // Two adapters over identical storage, differing only in whether they hand their blocks over. [design.md#detection-by-absence]
 namespace {
 
-// The floor and nothing more: a width and an indexed read.
+// The required entries and nothing more: a width and an indexed read.
 template<std::size_t N, class Block>
 struct element_bits
 {
@@ -131,8 +131,8 @@ BOOST_AUTO_TEST_SUITE(BitTraits)
 using ElementTypes = test::graded_extents<element_bits>;
 using BlockTypes   = test::graded_extents<block_bits>;
 
-// The floor is a width and an indexed read; nothing above it is required to satisfy bit_storage.
-BOOST_AUTO_TEST_CASE_TEMPLATE(TheFloorIsAWidthAndAnIndexedRead, T, ElementTypes)
+// The required entries are a width and an indexed read; nothing else is needed to satisfy bit_storage.
+BOOST_AUTO_TEST_CASE_TEMPLATE(TheRequiredEntriesAreAWidthAndAnIndexedRead, T, ElementTypes)
 {
         static_assert(xstd::bit_storage<xstd::bit_traits<T>, T>);
         static_assert(xstd::static_bit_extent<xstd::bit_traits<T>, T>);
@@ -166,6 +166,6 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(BlockWiseScansAgreeWithStdSet, T, BlockTypes)
         check_every_pattern<T>();
 }
 
-// No ordering case: the door carries none, the two readings disagreeing. [design.md#two-readings-disagree]
+// No ordering case: the trait carries none, the two readings disagreeing. [design.md#two-readings-disagree]
 
 BOOST_AUTO_TEST_SUITE_END()

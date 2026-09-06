@@ -36,8 +36,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(IsRegular, T, Types)
         static_assert(std::regular<T>);
 }
 
-// One specialization where five stood, and every entry the readings will ask for. [design.md#the-door]
-BOOST_AUTO_TEST_CASE_TEMPLATE(TheDoorAdaptsIt, T, Types)
+// One specialization where five stood, and every entry the readings will ask for. [design.md#the-trait]
+BOOST_AUTO_TEST_CASE_TEMPLATE(TheTraitsAdaptIt, T, Types)
 {
         using traits = xstd::bit_traits<T>;
         constexpr auto N = traits::extent;
@@ -117,7 +117,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(OrderedThroughTheViewRatherThanInfix, T, Types)
         static_assert(    std::totally_ordered<xstd::set_view<T>>);
 }
 
-// Both readings are reachable through the one door, as views over it.
+// Both readings are reachable through the one specialization, as views over it.
 BOOST_AUTO_TEST_CASE_TEMPLATE(BothReadingsAreReachable, T, Types)
 {
         static_assert(not std::ranges::range<T>);

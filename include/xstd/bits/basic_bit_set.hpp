@@ -23,7 +23,7 @@
 #include <type_traits>                 // conditional_t, is_nothrow_swappable_v, remove_const_t, remove_reference_t
 #include <utility>                     // forward, pair
 
-// The set reading, [set] over any Bits with a door, owning it or referring to it. [design.md#the-three-adaptors]
+// The set reading, [set] over any Bits with a bit_traits specialization, owning it or referring to it. [design.md#the-three-adaptors]
 namespace xstd {
 
 template<class Bits, ownership Own, bit_storage<Bits> Traits = bit_traits<std::remove_const_t<Bits>>>
@@ -121,7 +121,7 @@ public:
                 return *this;
         }
 
-        // The storage's own equality, which every storage in the tree has; ordering is the door's, or the invariant it must satisfy. [design.md#the-ordering-invariant]
+        // The storage's own equality, which every storage in the tree has; ordering is the trait's entry, or the invariant it must satisfy. [design.md#the-ordering-invariant]
         [[nodiscard]] friend constexpr auto operator==(basic_bit_set const& x, basic_bit_set const& y) noexcept
                 -> bool
                 requires requires { { x.storage() == y.storage() } -> std::convertible_to<bool>; }
@@ -172,7 +172,7 @@ public:
         [[nodiscard]] constexpr auto front() const noexcept -> const_reference { return *begin(); }
         [[nodiscard]] constexpr auto back()  const noexcept -> const_reference { return { &storage(), detail::bits::find_prev<Traits>(storage(), Traits::size(storage())) }; }
 
-        // modifiers; each writes through the door, so each exists exactly where the door lets this handle write. [design.md#ownership-is-not-an-axis]
+        // modifiers; each writes through Traits, so each exists exactly where Traits lets this handle write. [design.md#ownership-is-not-an-axis]
         template<class... Args>
         constexpr auto emplace(this auto&& self, Args&&... args)
                 -> std::pair<iterator, bool>
@@ -275,7 +275,7 @@ public:
                 Traits::unchecked_assign(self.storage(), x, not Traits::at(self.storage(), x));
         }
 
-        // Bulk, on the storage's own spelling: what every storage agrees on is required of it, not reconciled. [design.md#what-the-door-reconciles]
+        // Bulk, on the storage's own spelling: what every storage agrees on is required of it, not reconciled. [design.md#what-the-trait-reconciles]
         constexpr void complement(this auto&& self) noexcept requires requires { self.storage().flip(); } { self.storage().flip(); }
 
         constexpr auto operator&=(this auto&& self, basic_bit_set const& other) noexcept -> auto& requires requires { self.storage() &= other.storage(); } { self.storage() &= other.storage(); return self; }
@@ -290,7 +290,7 @@ public:
         [[nodiscard]] constexpr auto   key_comp() const noexcept -> key_compare   { return {}; }
         [[nodiscard]] constexpr auto value_comp() const noexcept -> value_compare { return {}; }
 
-        // set operations, every one total over key_type as std::set's are; the width is the guard, the door's read the precondition. [design.md#total-lookups-on-the-container]
+        // set operations, every one total over key_type as std::set's are; the width is the guard, Traits::at the read behind it. [design.md#total-lookups-on-the-container]
         [[nodiscard]] constexpr auto contains(key_type const& x) const noexcept -> bool      { return x < Traits::size(storage()) and Traits::at(storage(), x); }
         [[nodiscard]] constexpr auto count   (key_type const& x) const noexcept -> size_type { return contains(x); }
 
@@ -354,7 +354,7 @@ public:
         }
 
 private:
-        // The door's insert returns nothing, so "was it new" is asked first; total, an out-of-range key being the door's precondition to refuse.
+        // Traits::insert returns nothing, so "was it new" is asked first; total, an out-of-range key being the trait's precondition to refuse.
         constexpr auto do_insert(this auto&& self, value_type x)
                 -> std::pair<iterator, bool>
         {

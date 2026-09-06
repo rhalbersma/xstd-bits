@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_HPP
 #define XSTD_BITS_HPP
 
-// The front door over every container; not the ext adaptors, which would put Boost on every consumer path.
+// The umbrella over every container; not the ext adaptors, which would put Boost on every consumer path.
 #include <xstd/bits/basic_bit_sequence.hpp> // IWYU pragma: export; basic_bit_sequence
 #include <xstd/bits/basic_bit_set.hpp>  // IWYU pragma: export; basic_bit_set
 #include <xstd/bits/basic_bitset.hpp>   // IWYU pragma: export; basic_bitset, has_bitops

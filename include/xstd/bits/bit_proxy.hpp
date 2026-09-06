@@ -14,7 +14,7 @@
 #include <iterator>                 // bidirectional_iterator_tag, random_access_iterator_tag
 #include <type_traits>              // is_class_v, is_const_v, is_convertible_v, is_nothrow_constructible_v, remove_const_t
 
-// The iterators are the primitive: a pointer and a position, reaching the bits through the door alone. [design.md#the-iterator-is-the-primitive]
+// The iterators are the primitive: a pointer and a position, reaching the bits through Traits alone. [design.md#the-iterator-is-the-primitive]
 namespace xstd {
 
 template<class Bits, bit_storage<Bits> Traits = bit_traits<std::remove_const_t<Bits>>> class bit_set_iterator;
@@ -69,7 +69,7 @@ public:
                 return { m_ptr, m_idx };
         }
 
-        // Both steps through the door, native or synthesized as the specialization decides. [design.md#detection-by-absence]
+        // Both steps through the trait, native where its specialization declares the entry and synthesized where it does not. [design.md#detection-by-absence]
         constexpr auto operator++() noexcept
                 -> bit_set_iterator&
         {
@@ -241,14 +241,14 @@ public:
         }
 };
 
-// A proxy bool assigning back through the door; std::vector<bool>::reference is the precedent for the const-qualified assignment, and nothing more is borrowed: no flip, no ~.
+// A proxy bool assigning back through the trait; std::vector<bool>::reference is the precedent for the const-qualified assignment, and nothing more is borrowed: no flip, no ~.
 template<class Bits, bit_storage<Bits> Traits>
 class bit_sequence_reference
 {
         Bits* m_ptr;
         std::size_t m_idx;
 
-        // Writable where Bits is not const and the door has an entry to write through; a floor-only type reads only.
+        // Writable where Bits is not const and the trait declares unchecked_assign; a trait with only the required entries reads only.
         static constexpr bool is_writable = not std::is_const_v<Bits> and requires (Bits& c, std::size_t n, bool value) { Traits::unchecked_assign(c, n, value); };
 
 public:

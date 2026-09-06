@@ -121,7 +121,7 @@ BOOST_AUTO_TEST_CASE(TheShiftsOverStdBitsetSaturateAsStdBitsetDoes)
         BOOST_CHECK_EQUAL((w >> 1).to_string(), (s >> 1).to_string());
 }
 
-// The proxy over std::bitset storage writes and reads through the door, and swaps as a value.
+// The proxy over std::bitset storage writes and reads through the trait, and swaps as a value.
 BOOST_AUTO_TEST_CASE(TheProxyOverStdBitsetStorageWritesThrough)
 {
         auto w = xstd::basic_bitset<std::bitset<8>>();

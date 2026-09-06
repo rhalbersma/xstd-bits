@@ -31,7 +31,7 @@
 namespace xstd {
 
 // The bitset vocabulary a storage speaks natively, one line each in the wrapper; a backend missing a member fails here, at the class.
-// The shifts stay in although the door carries their contracts: without them a shiftless backend would fail inside an instantiation. [design.md#the-idempotent-wrapper]
+// The shifts stay in although bit_traits carries their contracts: without them a shiftless backend would fail inside an instantiation. [design.md#the-idempotent-wrapper]
 template<class Bits>
 concept has_bitops =
         std::regular<Bits> and
@@ -53,7 +53,7 @@ concept has_bitops =
         }
 ;
 
-// [template.bitset] over any Bits that speaks the vocabulary: what Bits has is forwarded, what it lacks is added through the door. [design.md#the-idempotent-wrapper]
+// [template.bitset] over any Bits that speaks the vocabulary: what Bits has is forwarded, what it lacks is added through Traits. [design.md#the-idempotent-wrapper]
 template<has_bitops Bits, bit_storage<Bits> Traits = bit_traits<Bits>>
 class basic_bitset
 {
@@ -192,7 +192,7 @@ public:
         constexpr auto operator|=(basic_bitset const& rhs) noexcept -> basic_bitset& { m_bits |= rhs.m_bits; return *this; }
         constexpr auto operator^=(basic_bitset const& rhs) noexcept -> basic_bitset& { m_bits ^= rhs.m_bits; return *this; }
 
-        // Same spelling, two contracts: the door's checked entry is total and forwarded as is; the storage's own shift is the unchecked one, guarded here. [design.md#checked-and-unchecked]
+        // Same spelling, two contracts: the trait's checked entry is total and forwarded as is; the storage's own shift is the unchecked one, guarded here. [design.md#checked-and-unchecked]
         constexpr auto operator<<=(std::size_t pos) noexcept
                 -> basic_bitset&
         {
@@ -228,7 +228,7 @@ public:
         constexpr auto reset() noexcept -> basic_bitset& { m_bits.reset(); return *this; }
         constexpr auto flip () noexcept -> basic_bitset& { m_bits.flip (); return *this; }
 
-        // Element access, both families: the door's checked entry where the counterpart throws natively, else the guard and the unchecked write. [design.md#checked-and-unchecked]
+        // Element access, both families: the trait's checked entry where the counterpart throws natively, else the guard and the unchecked write. [design.md#checked-and-unchecked]
         constexpr auto set(std::size_t pos, bool val = true)
                 -> basic_bitset&
         {
@@ -268,7 +268,7 @@ public:
                 return *this;
         }
 
-        // The const subscript is unchecked on every counterpart, so it is the door's at() unconditionally.
+        // The const subscript is unchecked on every counterpart, so it is Traits::at unconditionally.
         [[nodiscard]] constexpr auto operator[](std::size_t pos) const noexcept
                 -> bool
         {

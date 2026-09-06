@@ -16,7 +16,7 @@
 #include <cstddef>                                 // size_t
 #include <limits>                                  // numeric_limits
 
-// The one door for std::bitset; [namespace.std] forbids ADL hooks here, and a specialization needs none. [design.md#the-door]
+// The one adaptation of std::bitset; [namespace.std] forbids ADL hooks here, and a specialization needs none. [design.md#the-trait]
 namespace xstd {
 
 template<std::size_t N>
@@ -32,7 +32,7 @@ struct bit_traits<std::bitset<N>>
 
         static constexpr void unchecked_assign(bits_type& c, std::size_t n, bool value) noexcept { c[n] = value; }
 
-        // A static width cannot grow, so inserting is assigning with the position as a precondition. [design.md#what-the-door-reconciles]
+        // A static width cannot grow, so inserting is assigning with the position as a precondition. [design.md#what-the-trait-reconciles]
         static constexpr void insert(bits_type& c, std::size_t n) noexcept
         {
                 assert(n < N);

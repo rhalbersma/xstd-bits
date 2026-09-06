@@ -5,7 +5,7 @@
 
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_AUTO_TEST_CASE
 #include <xstd/bits/bit_proxy.hpp>      // bit_sequence_iterator, bit_sequence_reference, bit_set_iterator, bit_set_reference
-#include <xstd/bits/ext/std/bitset.hpp> // the door that makes std::bitset viewable
+#include <xstd/bits/ext/std/bitset.hpp> // the trait that makes std::bitset viewable
 #include <xstd/bits/ranges.hpp>         // sequence_view, set_view
 #include <bitset>                       // bitset
 #include <concepts>                     // same_as

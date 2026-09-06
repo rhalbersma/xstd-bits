@@ -414,8 +414,8 @@ BOOST_AUTO_TEST_CASE(ADefaultConstructedRunTimeWidthIsZeroWidthWithOneBlock)
         BOOST_CHECK(b == xstd::block_vector<std::uint8_t>(0));
 }
 
-// Each entry reaches the member it names, and every call stays inside the kept contracts. [design.md#the-ceiling-principle]
-BOOST_AUTO_TEST_CASE_TEMPLATE(TheDoorForwardsToTheStorage, T, test::graded_extents<graded_block_array>)
+// Each entry reaches the member it names, and every call stays inside the kept contracts. [design.md#the-cheapest-contract]
+BOOST_AUTO_TEST_CASE_TEMPLATE(TheTraitsForwardToTheStorage, T, test::graded_extents<graded_block_array>)
 {
         using traits = xstd::bit_traits<T>;
         constexpr auto N = traits::extent;
@@ -452,8 +452,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheDoorForwardsToTheStorage, T, test::graded_exten
         }
 }
 
-// The two entries the readings cannot synthesize, in their own case: insert can grow where the storage allows, and fill is bulk. [design.md#what-the-door-reconciles]
-BOOST_AUTO_TEST_CASE_TEMPLATE(TheDoorInsertsAndFills, T, test::graded_extents<graded_block_array>)
+// The two entries the readings cannot synthesize, in their own case: insert can grow where the storage allows, and fill is bulk. [design.md#what-the-trait-reconciles]
+BOOST_AUTO_TEST_CASE_TEMPLATE(TheTraitsInsertAndFill, T, test::graded_extents<graded_block_array>)
 {
         using traits = xstd::bit_traits<T>;
         constexpr auto N = traits::extent;
@@ -606,7 +606,7 @@ BOOST_AUTO_TEST_CASE(TheSetOrderingPutsAPrefixFirst)
 }
 
 // Two named entries, so a caller says which reading it means rather than being handed one. [design.md#two-readings-disagree]
-BOOST_AUTO_TEST_CASE_TEMPLATE(TheDoorNamesBothOrderings, T, test::graded_extents<graded_block_array>)
+BOOST_AUTO_TEST_CASE_TEMPLATE(TheTraitsNameBothOrderings, T, test::graded_extents<graded_block_array>)
 {
         using traits = xstd::bit_traits<T>;
 

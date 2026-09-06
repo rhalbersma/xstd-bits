@@ -22,7 +22,7 @@
 #include <type_traits>              // conditional_t, is_nothrow_swappable_v, remove_const_t, remove_reference_t
 #include <utility>                  // as_const, declval
 
-// The sequence reading, [array] over any Bits with a door, owning it or referring to it. [design.md#the-three-adaptors]
+// The sequence reading, [array] over any Bits with a bit_traits specialization, owning it or referring to it. [design.md#the-three-adaptors]
 namespace xstd {
 
 template<class Bits, ownership Own, bool Windowed, bit_storage<Bits> Traits = bit_traits<std::remove_const_t<Bits>>>
@@ -159,7 +159,7 @@ public:
                 }
         }
 
-        // Bulk, on the storage's own spelling: on packed bits the pointwise operation and the set operation are one instruction. [design.md#what-the-door-reconciles]
+        // Bulk, on the storage's own spelling: on packed bits the pointwise operation and the set operation are one instruction. [design.md#what-the-trait-reconciles]
         constexpr auto operator&=(this auto&& self, basic_bit_sequence const& other) noexcept -> auto& requires requires { self.storage() &= other.storage(); } { self.storage() &= other.storage(); return self; }
         constexpr auto operator|=(this auto&& self, basic_bit_sequence const& other) noexcept -> auto& requires requires { self.storage() |= other.storage(); } { self.storage() |= other.storage(); return self; }
         constexpr auto operator^=(this auto&& self, basic_bit_sequence const& other) noexcept -> auto& requires requires { self.storage() ^= other.storage(); } { self.storage() ^= other.storage(); return self; }

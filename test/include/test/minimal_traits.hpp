@@ -3,17 +3,17 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef TEST_FLOOR_TRAITS_HPP
-#define TEST_FLOOR_TRAITS_HPP
+#ifndef TEST_MINIMAL_TRAITS_HPP
+#define TEST_MINIMAL_TRAITS_HPP
 
 #include <xstd/bits/bit_traits.hpp> // bit_traits
 #include <cstddef>                  // size_t
 
 namespace test {
 
-// The floor and nothing more, over storage whose own trait answers everything natively: one variable, two tiers. [design.md#the-trait-is-a-parameter]
+// The three required entries and nothing more, over storage whose own trait answers everything natively: one variable, two tiers. [design.md#the-trait-is-a-parameter]
 template<class Bits>
-struct floor_traits
+struct minimal_traits
 {
         static constexpr std::size_t extent = xstd::bit_traits<Bits>::extent;
 
@@ -23,4 +23,4 @@ struct floor_traits
 
 } // namespace test
 
-#endif // TEST_FLOOR_TRAITS_HPP
+#endif // TEST_MINIMAL_TRAITS_HPP

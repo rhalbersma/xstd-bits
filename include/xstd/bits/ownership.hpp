@@ -31,7 +31,7 @@ using owned_bits_t = std::conditional_t<std::is_const_v<Owner>, typename owned_s
 template<class Owner>
 using owned_traits_t = owned_storage<std::remove_const_t<Owner>>::traits_type;
 
-// Whether a view over Bits through Traits can refer into Owner: the same storage and door, and const flowing only from the owner into the view.
+// Whether a view over Bits through Traits can refer into Owner: the same storage and the same trait, and const flowing only from the owner into the view.
 template<class Owner, class Bits, class Traits>
 concept owner_of =
         requires { typename owned_storage<std::remove_const_t<Owner>>::bits_type; } and

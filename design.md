@@ -135,7 +135,7 @@ the position actually scanned from is one this container has.
 which no width admits — so this states `1 <= n <= size()` without a second predicate. `is_valid` alone
 would be wrong: `size()` is a legitimate argument, meaning "from the end".
 
-### the-ceiling-principle
+### the-cheapest-contract
 
 The door's contract is the most efficient form, so `bit_traits<block_sequence<...>>` keeps the contracts
 `block_sequence` gives it rather than widening to the total ones the synthesised walks happen to provide.
@@ -145,7 +145,11 @@ The door's contract is the most efficient form, so `bit_traits<block_sequence<..
 So `find_next` requires `is_valid(n)`, and `find_prev` requires a set position strictly below `n` — which
 `any()` does not establish, a container whose set positions all lie above `n` having none below it.
 
-## The door
+## The trait
+
+The prose below calls `bit_traits<Bits>` *the door*: the one thing the readings ask, and the one thing a
+storage answers. The three entries every specialization must have — `extent`, `size`, `at` — are *the floor*.
+The headers say `bit_traits`, `Traits` and "the required entries" and point here for the reasoning.
 
 ### opt-in
 
@@ -188,7 +192,7 @@ already did, so that a type-constraint can name the trait: `bit_storage<Bits> Tr
 consumer of the door carry `Traits = bit_traits<Bits>` as an explicit parameter, `basic_string`-style, and
 what turns the tier into a knob over identical storage — one `block_array`, two traits, one variable.
 
-### what-the-door-reconciles
+### what-the-trait-reconciles
 
 Almost everything the two readings ask of a `Bits` is already an entry, or is the same operation under
 another name:
@@ -300,7 +304,7 @@ and is the whole of what separates the two readings.
 **The fallback is the specification.** A `Bits` that will not show its words -- `std::bitset` under libc++,
 `boost::dynamic_bitset` -- falls back to that standard algorithm over the reading's own iterators, which is
 [the invariant](#the-ordering-invariant) itself. So the door's contract stays the efficient form and the
-fallback can only be more generous, never less ([the ceiling principle](#the-ceiling-principle)), and the
+fallback can only be more generous, never less ([the cheapest contract](#the-cheapest-contract)), and the
 test is that the two paths agree.
 
 ### degenerate-widths

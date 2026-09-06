@@ -6,7 +6,7 @@
 #include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <test/dynamic.hpp>                       // dynamic
 #include <xstd/bits/bit_traits.hpp>               // bit_storage, bit_traits, block_readable, static_bit_extent
-#include <xstd/bits/ext/boost/dynamic_bitset.hpp> // the door that makes dynamic_bitset viewable
+#include <xstd/bits/ext/boost/dynamic_bitset.hpp> // the trait that makes dynamic_bitset viewable
 #include <xstd/bits/ranges/sequence_view.hpp>     // sequence_view
 #include <xstd/bits/ranges/set_view.hpp>          // set_view
 #include <algorithm>                              // lexicographical_compare
@@ -28,8 +28,8 @@ BOOST_AUTO_TEST_CASE(IsRegular)
         static_assert(std::regular<T>);
 }
 
-// One specialization where three stood; the only adapted type whose width grows, and the only one with no block access. [design.md#the-door]
-BOOST_AUTO_TEST_CASE(TheDoorAdaptsIt)
+// One specialization where three stood; the only adapted type whose width grows, and the only one with no block access. [design.md#the-trait]
+BOOST_AUTO_TEST_CASE(TheTraitsAdaptIt)
 {
         using traits = xstd::bit_traits<T>;
 
@@ -41,7 +41,7 @@ BOOST_AUTO_TEST_CASE(TheDoorAdaptsIt)
         BOOST_CHECK_EQUAL(traits::size(c), 9UZ);
         BOOST_CHECK_EQUAL(traits::count(c), 0UZ);
 
-        // npos becomes size(), the door being total where boost is not. [design.md#total-versus-precondition]
+        // npos becomes size(), the trait being total where boost is not. [design.md#total-versus-precondition]
         BOOST_CHECK_EQUAL(traits::find_first(c), 9UZ);
 
         traits::insert(c, 3);

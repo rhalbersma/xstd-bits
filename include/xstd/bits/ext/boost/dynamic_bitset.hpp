@@ -15,7 +15,7 @@
 #include <cstddef>                                 // size_t
 #include <span>                                    // dynamic_extent
 
-// The one door for boost::dynamic_bitset; a specialization cannot be shadowed by a future upstream member, as an ADL hook could. [design.md#the-door]
+// The one adaptation of boost::dynamic_bitset; a specialization cannot be shadowed by a future upstream member, as an ADL hook could. [design.md#the-trait]
 namespace xstd {
 
 template<xstd::unsigned_integer Block, class Allocator>
@@ -31,7 +31,7 @@ struct bit_traits<boost::dynamic_bitset<Block, Allocator>>
 
         static constexpr void unchecked_assign(bits_type& c, std::size_t n, bool value) noexcept { c[n] = value; }
 
-        // The one entry a dynamic width answers by growing; n + 1 must be addressable, the ruled-out position being the one whose successor wraps. [design.md#what-the-door-reconciles]
+        // The one entry a dynamic width answers by growing; n + 1 must be addressable, the ruled-out position being the one whose successor wraps. [design.md#what-the-trait-reconciles]
         static constexpr void insert(bits_type& c, std::size_t n)
         {
                 if (n >= c.size()) {
@@ -50,7 +50,7 @@ struct bit_traits<boost::dynamic_bitset<Block, Allocator>>
                 }
         }
 
-        // Native and worth keeping, the element-wise fallback being a test per position; npos becomes size(), the door being total. [design.md#total-versus-precondition]
+        // Native and worth keeping, the element-wise fallback being a test per position; npos becomes size(), every entry here being total. [design.md#total-versus-precondition]
         [[nodiscard]] static auto find_first(bits_type const& c) noexcept
                 -> std::size_t
         {
@@ -65,7 +65,7 @@ struct bit_traits<boost::dynamic_bitset<Block, Allocator>>
                 return next == bits_type::npos ? c.size() : next;
         }
 
-        // No find_last, find_prev or block access: boost has none, so the door synthesizes what it can. [design.md#detection-by-absence]
+        // No find_last, find_prev or block access: boost has none, so the generic scans synthesize what they can. [design.md#detection-by-absence]
 };
 
 }       // namespace xstd
