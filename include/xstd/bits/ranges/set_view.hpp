@@ -6,11 +6,13 @@
 #ifndef XSTD_BITS_RANGES_SET_VIEW_HPP
 #define XSTD_BITS_RANGES_SET_VIEW_HPP
 
+#include <boost/container_hash/is_range.hpp> // is_range
 #include <xstd/bits/basic_bit_set.hpp> // basic_bit_set
 #include <xstd/bits/bit_traits.hpp>    // bit_storage, bit_traits
 #include <xstd/bits/ownership.hpp>     // owned_bits_t, owned_storage, owned_traits_t, owner_of, ownership
+#include <functional>                  // hash
 #include <ranges>                      // enable_borrowed_range, enable_view
-#include <type_traits>                 // remove_const_t
+#include <type_traits>                 // false_type, remove_const_t
 
 // The set reading over bits it does not own: the referring adaptor under the name the sieve calls it by. [design.md#the-views-are-the-adaptors]
 namespace xstd::ranges {
@@ -56,5 +58,22 @@ inline constexpr bool enable_borrowed_range<xstd::ranges::set_view<Bits, Traits>
 
 }       // namespace std::ranges
 // NOLINTEND(bugprone-std-namespace-modification)
+
+// A derived class is not its base to a partial specialization, so the view restates what the adaptor declares: it hashes as std::string_view does, and is no range to ContainerHash. [design.md#the-hashing-invariant]
+// NOLINTBEGIN(bugprone-std-namespace-modification)
+namespace std {
+
+template<class Bits, class Traits>
+struct hash<xstd::set_view<Bits, Traits>> : hash<xstd::basic_bit_set<Bits, xstd::ownership::refers, Traits>> {};
+
+}       // namespace std
+// NOLINTEND(bugprone-std-namespace-modification)
+
+namespace boost::container_hash {
+
+template<class Bits, class Traits>
+struct is_range<xstd::set_view<Bits, Traits>> : std::false_type {};
+
+}       // namespace boost::container_hash
 
 #endif  // XSTD_BITS_RANGES_SET_VIEW_HPP

@@ -80,6 +80,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheSetOperationsHoldOnAnEmptyPair, T, Types)
 
         on0::empty_set_pair<T>(op_equal_to());
         on0::empty_set_pair<T>(op_not_equal_to());
+        on0::empty_set_pair<T>(op_hash());
 
         on0::empty_set_pair<T>(op_compare_three_way());
         on0::empty_set_pair<T>(op_less());

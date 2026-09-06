@@ -77,6 +77,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheComparisonsHoldOverEverySingletonPair, T, Types
 {
         on2::all_singleton_set_pairs<T>(mem_equal_to());
         on2::all_singleton_set_pairs<T>(mem_compare_three_way());
+        on2::all_singleton_set_pairs<T>(op_hash());
         on2::all_singleton_set_pairs<T>(mem_is_subset_of());
         on2::all_singleton_set_pairs<T>(mem_is_proper_subset_of());
         on2::all_singleton_set_pairs<T>(mem_intersects());

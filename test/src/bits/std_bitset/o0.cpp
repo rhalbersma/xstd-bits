@@ -100,6 +100,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheComparisonsAndSetPredicatesHoldOnAnEmptyPair, T
         on0::empty_set_pair<T>(mem_is_proper_subset_of());
         on0::empty_set_pair<T>(mem_is_proper_subset_of_edges());
         on0::empty_set_pair<T>(mem_intersects());
+        on0::empty_set_pair<T>(op_hash());
 }
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheBitwiseOperatorsHoldOnAnEmptyPairAndExtractionRespectsFailbit, T, Types)

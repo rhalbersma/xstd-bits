@@ -8,9 +8,9 @@
 
 // Bitsets [bitset], Header <bitset> synopsis [bitset.syn]
 
-#include <boost/hash2/fnv1a.hpp>              // fnv1a_64
-#include <boost/hash2/hash_append.hpp>        // hash_append
+#include <boost/hash2/hash_append.hpp>        // hash_append_tag
 #include <xstd/bits/bit_traits.hpp>           // bit_storage, bit_traits, static_bit_extent, zero_width
+#include <xstd/bits/detail/hash.hpp>          // hash_append_bits, std_hash
 #include <xstd/bits/ownership.hpp>            // owned_storage, ownership
 #include <algorithm>                          // min
 #include <cassert>                            // assert
@@ -69,10 +69,11 @@ class basic_bitset
         template<class B, ownership O, bit_storage<B> T>         friend class basic_bit_set;
         template<class B, ownership O, bool W, bit_storage<B> T> friend class basic_bit_sequence;
 
+        // The value through the door, so a wrapper over std::bitset hashes on every library, whether or not its bits can be read by block. [design.md#the-hashing-invariant]
         template<class Provider, class Hash, class Flavor>
         friend constexpr void tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, basic_bitset const* v) noexcept
         {
-                boost::hash2::hash_append(h, f, v->m_bits);
+                detail::bits::hash_append_bits<Traits>(h, f, v->m_bits);
         }
 
 public:
@@ -573,9 +574,7 @@ struct hash<xstd::basic_bitset<Bits, Traits>>
         [[nodiscard]] constexpr auto operator()(xstd::basic_bitset<Bits, Traits> const& v) const noexcept
                 -> std::size_t
         {
-                boost::hash2::fnv1a_64 h;
-                boost::hash2::hash_append(h, {}, v);
-                return boost::hash2::get_integral_result<std::size_t>(h);
+                return xstd::detail::bits::std_hash(v);
         }
 };
 

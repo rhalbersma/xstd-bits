@@ -6,11 +6,12 @@
 #ifndef XSTD_BITS_RANGES_SEQUENCE_VIEW_HPP
 #define XSTD_BITS_RANGES_SEQUENCE_VIEW_HPP
 
+#include <boost/container_hash/is_range.hpp> // is_range
 #include <xstd/bits/basic_bit_sequence.hpp> // basic_bit_sequence
 #include <xstd/bits/bit_traits.hpp>         // bit_storage, bit_traits
 #include <xstd/bits/ownership.hpp>          // owned_bits_t, owned_storage, owned_traits_t, owner_of, ownership
 #include <ranges>                           // enable_borrowed_range, enable_view
-#include <type_traits>                      // remove_const_t
+#include <type_traits>                      // false_type, remove_const_t
 
 // The sequence reading over bits it does not own: the referring adaptor, which like std::span neither compares nor orders. [design.md#the-views-are-the-adaptors]
 namespace xstd::ranges {
@@ -56,5 +57,13 @@ inline constexpr bool enable_borrowed_range<xstd::ranges::sequence_view<Bits, Tr
 
 }       // namespace std::ranges
 // NOLINTEND(bugprone-std-namespace-modification)
+
+// A derived class is not its base to a partial specialization, so the view restates that it is no range to ContainerHash; it has no hook, as it has no ==. [design.md#the-hashing-invariant]
+namespace boost::container_hash {
+
+template<class Bits, class Traits>
+struct is_range<xstd::sequence_view<Bits, Traits>> : std::false_type {};
+
+}       // namespace boost::container_hash
 
 #endif  // XSTD_BITS_RANGES_SEQUENCE_VIEW_HPP

@@ -14,9 +14,11 @@
 #include <concepts>                          // same_as
 #include <cstddef>                           // size_t
 #include <cstdint>                           // uint8_t
+#include <functional>                         // hash
 #include <limits>                            // numeric_limits
 #include <memory>                            // allocator
 #include <ranges>                            // iota, transform
+#include <type_traits>                       // is_default_constructible_v
 #include <vector>                            // vector
 
 BOOST_AUTO_TEST_SUITE(BitVector)
@@ -92,6 +94,16 @@ BOOST_AUTO_TEST_CASE(ItGrowsLikeAStdVector)
         v.clear();
         BOOST_CHECK(v.empty());
         BOOST_CHECK_EQUAL(v.size(), 0UZ);
+}
+
+// The owner hashes as std::vector<bool> does, equal values equal; the view over it no more than std::span does. [design.md#the-hashing-invariant]
+BOOST_AUTO_TEST_CASE(TheOwnerHashesAndTheViewDoesNot)
+{
+        auto const h = std::hash<T>();
+        BOOST_CHECK_EQUAL(h(T({ true, false, true })), h(T({ true, false, true })));
+        BOOST_CHECK(h(T({ true, false, true })) != h(T({ true, false, true, false })));
+        BOOST_CHECK(h(T()) != h(T(1)));
+        static_assert(not std::is_default_constructible_v<std::hash<xstd::sequence_view<xstd::block_vector<std::uint8_t>>>>);
 }
 
 // The view over it refers into the block_vector and cannot grow it. [design.md#views-over-owners]

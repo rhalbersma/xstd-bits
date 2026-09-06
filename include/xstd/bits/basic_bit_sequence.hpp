@@ -6,8 +6,11 @@
 #ifndef XSTD_BITS_BASIC_BIT_SEQUENCE_HPP
 #define XSTD_BITS_BASIC_BIT_SEQUENCE_HPP
 
+#include <boost/container_hash/is_range.hpp> // is_range
+#include <boost/hash2/hash_append.hpp> // hash_append_tag
 #include <xstd/bits/bit_proxy.hpp>  // bit_sequence_iterator, bit_sequence_reference
 #include <xstd/bits/bit_traits.hpp> // bit_storage, bit_traits, static_bit_extent
+#include <xstd/bits/detail/hash.hpp> // hash_append_bits, std_hash
 #include <xstd/bits/ownership.hpp>  // owned_bits_t, owned_storage, owned_traits_t, owner_of, ownership, owns
 #include <algorithm>                // lexicographical_compare_three_way
 #include <cassert>                  // assert
@@ -15,13 +18,14 @@
 #include <concepts>                 // convertible_to, swap, swappable
 #include <cstddef>                  // ptrdiff_t, size_t
 #include <format>                   // format
+#include <functional>               // hash
 #include <initializer_list>         // initializer_list
 #include <iterator>                 // input_iterator, make_reverse_iterator, reverse_iterator, sentinel_for
 #include <limits>                   // numeric_limits
 #include <ranges>                   // begin, enable_borrowed_range, enable_view, end, from_range_t, input_range, range_reference_t
 #include <source_location>          // source_location
 #include <stdexcept>                // out_of_range
-#include <type_traits>              // conditional_t, is_nothrow_swappable_v, remove_const_t, remove_reference_t
+#include <type_traits>              // conditional_t, false_type, is_nothrow_swappable_v, remove_const_t, remove_reference_t
 #include <utility>                  // as_const, declval
 
 // The sequence reading, [array] over any Bits with a bit_traits specialization, owning it or referring to it. [design.md#the-three-adaptors]
@@ -63,6 +67,14 @@ class basic_bit_sequence
         // Either reading's view refers into this owner's storage, and nothing else outside does. [design.md#views-over-owners]
         template<class B, ownership O, bit_storage<B> T>         friend class basic_bit_set;
         template<class B, ownership O, bool W, bit_storage<B> T> friend class basic_bit_sequence;
+
+        // The value under the sequence reading, the owner's alone as == is: a view follows span and hashes no more than it compares. [design.md#the-hashing-invariant]
+        template<class Provider, class Hash, class Flavor>
+        friend constexpr void tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, basic_bit_sequence const* v) noexcept
+                requires is_owner
+        {
+                detail::bits::hash_append_bits<Traits>(h, f, v->storage());
+        }
 
 public:
         // types
@@ -337,5 +349,30 @@ inline constexpr bool enable_borrowed_range<xstd::basic_bit_sequence<Bits, xstd:
 
 }       // namespace std::ranges
 // NOLINTEND(bugprone-std-namespace-modification)
+
+// NOLINTBEGIN(bugprone-std-namespace-modification)
+namespace std {
+
+// The owner hashes as std::vector<bool> does; a view no more than std::span does. [design.md#the-hashing-invariant]
+template<class Bits, bool Windowed, class Traits>
+struct hash<xstd::basic_bit_sequence<Bits, xstd::ownership::owns, Windowed, Traits>>
+{
+        [[nodiscard]] constexpr auto operator()(xstd::basic_bit_sequence<Bits, xstd::ownership::owns, Windowed, Traits> const& v) const noexcept
+                -> std::size_t
+        {
+                return xstd::detail::bits::std_hash(v);
+        }
+};
+
+}       // namespace std
+// NOLINTEND(bugprone-std-namespace-modification)
+
+// Not a range to ContainerHash, so Hash2 takes the hook and not its range overload, which cannot hash the proxy the iterator returns. [design.md#the-hashing-invariant]
+namespace boost::container_hash {
+
+template<class Bits, xstd::ownership Own, bool Windowed, class Traits>
+struct is_range<xstd::basic_bit_sequence<Bits, Own, Windowed, Traits>> : std::false_type {};
+
+}       // namespace boost::container_hash
 
 #endif  // XSTD_BITS_BASIC_BIT_SEQUENCE_HPP

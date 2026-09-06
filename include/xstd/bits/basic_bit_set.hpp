@@ -7,16 +7,17 @@
 #define XSTD_BITS_BASIC_BIT_SET_HPP
 
 #include <boost/container_hash/is_range.hpp> // is_range
-#include <boost/hash2/hash_append.hpp> // hash_append, hash_append_tag
+#include <boost/hash2/hash_append.hpp> // hash_append_tag
 #include <xstd/bits/bit_proxy.hpp>     // bit_set_iterator, bit_set_reference
 #include <xstd/bits/bit_traits.hpp>    // bit_storage, bit_traits, count, find_first, find_next, find_prev, static_bit_extent
+#include <xstd/bits/detail/hash.hpp>   // hash_append_bits, hash_append_positions, std_hash
 #include <xstd/bits/ownership.hpp>     // owned_bits_t, owned_storage, owned_traits_t, owner_of, ownership, owns
 #include <algorithm>                   // any_of, equal, includes, lexicographical_compare_three_way
 #include <cassert>                     // assert
 #include <compare>                     // strong_ordering
 #include <concepts>                    // constructible_from, swappable
 #include <cstddef>                     // ptrdiff_t, size_t
-#include <functional>                  // less
+#include <functional>                  // hash, less
 #include <initializer_list>            // initializer_list
 #include <iterator>                    // input_iterator, iter_reference_t, make_reverse_iterator, reverse_iterator, sentinel_for
 #include <limits>                      // numeric_limits
@@ -52,17 +53,14 @@ class basic_bit_set
         template<class B, ownership O, bit_storage<B> T>         friend class basic_bit_set;
         template<class B, ownership O, bool W, bit_storage<B> T> friend class basic_bit_sequence;
 
-        // The storage's own hash at a static width; the elements at a run-time width, where two equal sets need not share a storage. [design.md#width-is-capacity]
+        // The value under the set reading, owned or viewed as == is: the bits at a static width, the positions at a run-time one, where two equal sets need not share a width. [design.md#the-hashing-invariant]
         template<class Provider, class Hash, class Flavor>
         friend constexpr void tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, basic_bit_set const* v) noexcept
         {
                 if constexpr (has_static_width) {
-                        boost::hash2::hash_append(h, f, v->storage());
+                        detail::bits::hash_append_bits<Traits>(h, f, v->storage());
                 } else {
-                        for (auto const x : *v) {
-                                boost::hash2::hash_append(h, f, static_cast<std::size_t>(x));
-                        }
-                        boost::hash2::hash_append(h, f, v->size());
+                        detail::bits::hash_append_positions<Traits>(h, f, v->storage());
                 }
         }
 
@@ -555,7 +553,24 @@ inline constexpr bool enable_borrowed_range<xstd::basic_bit_set<Bits, xstd::owne
 }       // namespace std::ranges
 // NOLINTEND(bugprone-std-namespace-modification)
 
-// Not a range to ContainerHash, so Hash2 takes the hook and not its range overload, which cannot hash the proxy the set iterator returns. [design.md#width-is-capacity]
+// NOLINTBEGIN(bugprone-std-namespace-modification)
+namespace std {
+
+// Owned or viewed, as std::string_view hashes and std::set does not. [design.md#the-hashing-invariant]
+template<class Bits, xstd::ownership Own, class Traits>
+struct hash<xstd::basic_bit_set<Bits, Own, Traits>>
+{
+        [[nodiscard]] constexpr auto operator()(xstd::basic_bit_set<Bits, Own, Traits> const& v) const noexcept
+                -> std::size_t
+        {
+                return xstd::detail::bits::std_hash(v);
+        }
+};
+
+}       // namespace std
+// NOLINTEND(bugprone-std-namespace-modification)
+
+// Not a range to ContainerHash, so Hash2 takes the hook and not its range overload, which cannot hash the proxy the set iterator returns. [design.md#the-hashing-invariant]
 namespace boost::container_hash {
 
 template<class Bits, xstd::ownership Own, class Traits>

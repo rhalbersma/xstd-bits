@@ -153,6 +153,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheSetOperationsHoldOverEverySingleton, T, Types)
 
         on1::all_cardinality_sets<T>(op_compare_three_way());
         on1::all_singleton_sets<T>(op_compare_three_way());
+        on1::all_singleton_sets<T>(op_hash());
 
         on1::all_cardinality_sets<T>([](auto& is) {
                 fn_iterator()(is);

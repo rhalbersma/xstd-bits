@@ -9,6 +9,7 @@
 #include <test/value_reference.hpp>   // value_reference
 #include <xstd/bits/bit_array.hpp>    // bit_array
 #include <concepts>                   // regular, totally_ordered
+#include <functional>                 // hash
 #include <iterator>                   // random_access_iterator
 #include <ranges>                     // random_access_range
 
@@ -42,6 +43,18 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItsIteratorIsRandomAccess, T, Types)
 BOOST_AUTO_TEST_CASE_TEMPLATE(ItsConstReferenceIsAValue, T, Types)
 {
         static_assert(test::value_reference<typename T::const_reference>);
+}
+
+// Every owner hashes, this one although std::array<bool, N> does not: equal values equal, at every extent. [design.md#the-hashing-invariant]
+BOOST_AUTO_TEST_CASE_TEMPLATE(ItHashesAsAnOwner, T, Types)
+{
+        auto const h = std::hash<T>();
+        BOOST_CHECK_EQUAL(h(T()), h(T()));
+        if constexpr (T().size() > 0UZ) {
+                auto x = T();
+                x[0] = true;
+                BOOST_CHECK(h(x) != h(T()));
+        }
 }
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(IsABitSequence, T, Types)

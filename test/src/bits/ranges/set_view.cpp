@@ -17,6 +17,7 @@
 #include <bitset>                                 // bitset
 #include <concepts>                               // derived_from, same_as
 #include <cstddef>                                // size_t
+#include <functional>                             // hash
 #include <ranges>                                 // bidirectional_range, borrowed_range, range, view
 #include <set>                                    // set
 #include <tuple>                                  // tuple
@@ -74,6 +75,22 @@ BOOST_AUTO_TEST_CASE(TheViewedTypesAreTheOnesHoldingASetWithoutOfferingIt)
         static_assert(std::ranges::view<view_of<std::bitset<8>>>);
         static_assert(std::ranges::borrowed_range<view_of<std::bitset<8>>>);
         static_assert(not std::ranges::view<xstd::bit_static_set<8>>);
+}
+
+// The view hashes as std::string_view does: the set it presents, so the owner's set reading of the same bits hashes the same, and at a run-time width the width is capacity there too. [design.md#the-hashing-invariant]
+BOOST_AUTO_TEST_CASE(TheViewHashesAsAValue)
+{
+        auto bits = xstd::bitset<8>("00101010");
+        auto const owned = xstd::bit_static_set<8>({ 1, 3, 5 });
+        BOOST_CHECK_EQUAL(std::hash<view_of<xstd::bitset<8>>>()(xstd::set_view(bits)), std::hash<xstd::bit_static_set<8>>()(owned));
+
+        auto narrow = boost::dynamic_bitset<>(8);
+        auto wide   = boost::dynamic_bitset<>(64);
+        for (auto const i : { 1UZ, 3UZ, 5UZ }) {
+                narrow.set(i);
+                wide.set(i);
+        }
+        BOOST_CHECK_EQUAL(std::hash<view_of<boost::dynamic_bitset<>>>()(xstd::set_view(narrow)), std::hash<view_of<boost::dynamic_bitset<>>>()(xstd::set_view(wide)));
 }
 
 // Asking is total whatever the extent, exactly as [set] has it. [design.md#asking-is-total]
