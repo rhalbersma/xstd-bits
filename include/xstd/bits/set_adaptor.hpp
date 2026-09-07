@@ -278,6 +278,13 @@ public:
                 std::ranges::swap(this->m_bits, other.m_bits);
         }
 
+        // Asking the storage, as the other two adaptors do: a set over an allocating storage has one to show. [design.md#the-generated-table]
+        [[nodiscard]] constexpr auto get_allocator() const noexcept
+                requires is_owner and requires (Bits const& b) { b.get_allocator(); }
+        {
+                return m_bits.get_allocator();
+        }
+
         constexpr void clear(this auto&& self) noexcept
                 requires requires { Traits::fill(self.storage(), false); }
         {

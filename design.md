@@ -790,6 +790,33 @@ tail: `aligned::bitset<9>` is `bitset<64>` and `aligned::basic_bitset<9, std::ui
 `basic_bitset<16, std::uint8_t>`. The inplace column has no `aligned` form, its `N` being a capacity the storage
 already rounds up rather than a width to round.
 
+### the-generated-table
+
+Nine cells over three adaptors over three storages is the shape where an inconsistency hides in one cell and
+nowhere else, so what the compiler generates is a table, held by `test/src/bits/generated.cpp` rather than by
+whichever cell was read last.
+
+Every cell answers the same to all but one column: default-constructible, copyable, movable, `==`, `<=>`,
+`swap` as both a member and a free function, and **nothing-throwing** in both move directions -- a move that
+could throw would cost every growing container its strong guarantee.
+
+The allocator is the exception, and it follows the **column, not the row**: the dynamic column allocates and
+all three of its readings answer `get_allocator`; the static column is a `std::array` and has none to show;
+the inplace column holds its blocks inline and has none either. So `bit_set`, `bit_vector` and `dynamic_bitset`
+have it and the other six do not, which is a fact about `block_vector` rather than about sets, sequences or
+bitsets.
+
+Two of those answers were the same fact arriving late. `set_adaptor` was the one owning adaptor without
+`get_allocator`, so `bit_set` alone could not be asked for an allocator it demonstrably had; and
+`bitset_adaptor` was the one without `swap`, which `std::bitset` also lacks but
+`boost::dynamic_bitset` has -- and the two widths share one surface, an extension may add
+([a-strict-extension](#a-strict-extension)), so it is there at both. Neither absence was a decision; both were
+a cell nobody had read across.
+
+`swap` is not merely `std::swappable`, which the implicit moves would satisfy on their own. It is the storage's
+own exchange through `std::ranges::swap`, so the test checks that values actually move rather than only that
+the expression compiles.
+
 ### the-inplace-column
 
 The third storage point gets public names, one per reading and each an alias like every other name below the
