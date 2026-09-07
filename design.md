@@ -148,10 +148,16 @@ where `r = pos % digits`. Two things make it total where it is called. A shift b
 an aligned read is the block itself with no second term; and the last block has nothing above it, so the
 read stops there rather than asking for a block past the end. What the word reaches beyond the width is the
 clear tail, and it is the caller's to trim. It is the one primitive under every unaligned read: the sequence
-adaptor's `append_range` from a sequence read by block ([the-range-members](#the-range-members)), and the
-bitset reading's order at unequal widths ([the-ordering-invariant](#the-ordering-invariant)), where each
-operand's top window is read as words at its own alignment and both windows end at their own width, so the
-tail needs no mask.
+adaptor's `append_range` from a sequence read by block ([the-range-members](#the-range-members)), the bulk
+operations on a window ([windows](#windows)), and the bitset reading's order at unequal widths
+([the-ordering-invariant](#the-ordering-invariant)), where each operand's top window is read as words at its
+own alignment and both windows end at their own width, so the tail needs no mask.
+
+`block_sequence::set_word(pos, value, mask)` is its write side, on our storage alone as `set_block` is: the
+bits of `value` under `mask` land at `[pos, pos + digits)`, split over two blocks where `pos` is not aligned,
+the tail kept clear. Every masked write goes through it: boost's ranged `set`, `reset` and `flip`, a window's
+`fill`, and a window's bulk operators, each walking the words a range spans with the mask of what each holds,
+whole words and a partial one at the end.
 
 ## Contracts
 
@@ -670,10 +676,15 @@ view's 8. The offset is applied once, in a private `offset()` that answers zero 
 The three members are [span.sub]'s, on a view and never on an owner, since `std::array` and `std::vector`
 have no subviews either; they assert their preconditions rather than throw, and `std::dynamic_extent` is the
 to-the-end sentinel. A window is a view in `std::ranges`' sense and borrowed like `span`, and like `span` it
-neither compares nor hashes ([views-follow-their-precedent](#views-follow-their-precedent)). It has no bulk
-operators and no `fill`: on packed bits those are block-wise, a window's end blocks are shared with what lies
-outside it, and masking them is the work that arrives with the blit. Until then a window is read and written
-one position at a time, which `std::ranges::fill` over its iterators already does.
+neither compares nor hashes ([views-follow-their-precedent](#views-follow-their-precedent)).
+
+A window's end blocks are shared with what lies outside it, so its bulk operations are masked words: `fill`
+over a window of ours is `block_sequence::set(pos, len, value)`, a word at a time through `set_word`, and one
+position at a time over a window of anything else; `&=`, `|=`, `^=` and `-=` on a window of ours take a source
+of any shape that reads blocks of the same block type, a window at any other alignment included, reading both
+sides through `word_at` and writing through `set_word` masked to the window ([the-blit](#the-blit)). The two
+must be of one size, and must not overlap short of coinciding, `w ^= w` being fine. A window has no shifts:
+shifting within a window is nobody's counterpart.
 
 ### the-range-members
 
@@ -795,7 +806,7 @@ in at both widths, every storage under the wrapper having blocks: `block_type`, 
 with the tail masked rather than trusted, and the block-range constructor at a run-time width, a whole number
 of blocks wide. The rest of boost's surface is there too, at both widths where a width does not preclude it:
 the throwing `at(pos)`, `test_set`, the ranged `set`/`reset`/`flip(pos, len)` behind the one guard on the whole
-range, element-wise until the blit brings the masked block; `max_size()` in bits, the width at a static one and
+range and then a masked word at a time ([the-blit](#the-blit)); `max_size()` in bits, the width at a static one and
 the widest whole number of blocks the blocks and the address space admit at a run-time one; and where the
 storage takes an allocator, `allocator_type`, `get_allocator()` and the allocator arguments on the
 constructors. The name `allocator_type` is an empty base a class either has or has not, a class having no
@@ -960,3 +971,13 @@ Four findings are suppressed because the checker cannot see what makes them righ
   instantiation discards; it sees only that one and asks for a `const` that would stop every other
   instantiation compiling.
 - `misc-redundant-expression` on a reflexivity check, which cannot be written without naming the object twice.
+
+### clang-crashes-on-a-foreign-bulk-source
+
+Asking whether a bulk operator accepts a view over a foreign storage -- `ours &= bit_span(a_std_bitset)`, in
+a `requires`-expression or written out -- crashes clang 18 and clang 20 alike with an internal error, and it
+did so before the windowed operators existed, so the trigger is the whole view's `&=` seeing a foreign
+`sequence_adaptor` as its argument. gcc rejects the expression as it should. The expression is ill-formed
+either way, since bulk on a window takes a source of the destination's own block type and the whole view's
+takes its own type, so nothing in the library or the tests spells it; the crash is recorded here so nobody
+adds the assertion that would.

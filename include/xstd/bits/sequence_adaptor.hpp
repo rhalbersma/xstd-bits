@@ -9,7 +9,7 @@
 #include <boost/container_hash/is_range.hpp> // is_range
 #include <boost/hash2/hash_append.hpp>       // hash_append_tag
 #include <xstd/bits/bit_proxy.hpp>           // bit_sequence_iterator, bit_sequence_reference
-#include <xstd/bits/bit_traits.hpp>          // bit_storage, bit_traits, static_bit_extent
+#include <xstd/bits/bit_traits.hpp>          // bit_storage, bit_traits, static_bit_extent, word_at
 #include <xstd/bits/detail/hash.hpp>         // hash_append_bits, std_hash
 #include <xstd/bits/ownership.hpp>           // owned_bits_t, owned_storage, owned_traits_t, owner_of, ownership, owns
 #include <cassert>                           // assert
@@ -21,6 +21,7 @@
 #include <initializer_list>                  // initializer_list
 #include <iterator>                          // input_iterator, make_reverse_iterator, reverse_iterator, sentinel_for
 #include <limits>                            // numeric_limits
+#include <algorithm>                         // min
 #include <ranges>                            // begin, enable_borrowed_range, enable_view, end, from_range_t, input_range, range_reference_t, size, sized_range, subrange
 #include <source_location>                   // source_location
 #include <span>                              // dynamic_extent
@@ -30,6 +31,15 @@
 
 // The sequence reading, [array] over any Bits with a bit_traits specialization, owning it or referring to it. [design.md#the-three-adaptors]
 namespace xstd {
+
+// A sequence adaptor of any shape, told by its public typedefs, whose trait reads blocks of the given type: what a blit reads. [design.md#the-blit]
+template<class S, class Block>
+concept blit_source =
+        requires { typename S::subspan_type; typename S::traits_type; typename S::traits_type::bits_type; } and
+        requires (typename S::traits_type::bits_type const& c) {
+                { S::traits_type::block(c, 0UZ) } -> std::same_as<Block>;
+                { S::traits_type::num_blocks(c) } -> std::convertible_to<std::size_t>;
+        };
 
 template<class Bits, ownership Own, bool Windowed, bit_storage<Bits> Traits = bit_traits<std::remove_const_t<Bits>>>
 class sequence_adaptor
@@ -90,6 +100,13 @@ class sequence_adaptor
 
         template<class Self> using iterator_t  = bit_sequence_iterator <storage_t<Self>, Traits>;
         template<class Self> using reference_t = bit_sequence_reference<storage_t<Self>, Traits>;
+
+        // A source the blit can read by block, of this storage's own block type. [design.md#the-blit]
+        template<class S>
+        static constexpr bool blittable = blit_source<S, typename bits_type::block_type>;
+
+        // A storage that takes a masked word at any position: ours, which is what a window's bulk operators write through.
+        static constexpr bool word_writable = requires (bits_type& b, typename bits_type::block_type w) { b.set_word(0UZ, w, w); };
 
         // Either reading's view refers into this owner's storage, and nothing else outside does. [design.md#views-over-owners]
         template<class B, ownership O, bit_storage<B> T>         friend class set_adaptor;
@@ -313,11 +330,19 @@ public:
                 return { &storage(), offset() + off, count == std::dynamic_extent ? size() - off : count };
         }
 
-        // Bulk on a window is the masked-block work that arrives with the blit; until then a window is read and written one position at a time. [design.md#windows]
+        // fill: the trait's entry over the whole, a masked word at a time over a window of ours, one position at a time over a window of anything else. [design.md#windows]
         constexpr void fill(this auto&& self, value_type const& u) noexcept
-                requires (not is_window) and requires { Traits::fill(self.storage(), u); }
+                requires (is_window and requires { Traits::unchecked_assign(self.storage(), 0UZ, u); }) or (not is_window and requires { Traits::fill(self.storage(), u); })
         {
-                Traits::fill(self.storage(), u);
+                if constexpr (not is_window) {
+                        Traits::fill(self.storage(), u);
+                } else if constexpr (requires { self.storage().set(0UZ, 0UZ, u); }) {
+                        self.storage().set(self.offset(), self.size(), u);
+                } else {
+                        for (auto i = self.offset(), last = self.offset() + self.size(); i < last; ++i) {
+                                Traits::unchecked_assign(self.storage(), i, u);
+                        }
+                }
         }
 
         // The storage's own swap through the customization point, std::bitset having no member to call.
@@ -438,17 +463,34 @@ public:
         constexpr auto operator<<=(this auto&& self, std::size_t n) noexcept -> auto& requires (not is_window) and requires { self.storage() <<= n; } { self.storage() <<= n; return self; }
         constexpr auto operator>>=(this auto&& self, std::size_t n) noexcept -> auto& requires (not is_window) and requires { self.storage() >>= n; } { self.storage() >>= n; return self; }
 
+        // Bulk on a window of ours, against a source of any shape read by block: a word at a time at either alignment, through word_at and set_word; equal sizes, and no overlap short of coincidence. [design.md#windows]
+        template<class Other> constexpr auto operator&=(this auto&& self, Other const& other) noexcept -> auto& requires is_window and word_writable and blittable<Other> { self.combine(other, [](auto a, auto b) { return static_cast<decltype(a)>(a & b);  }); return self; }
+        template<class Other> constexpr auto operator|=(this auto&& self, Other const& other) noexcept -> auto& requires is_window and word_writable and blittable<Other> { self.combine(other, [](auto a, auto b) { return static_cast<decltype(a)>(a | b);  }); return self; }
+        template<class Other> constexpr auto operator^=(this auto&& self, Other const& other) noexcept -> auto& requires is_window and word_writable and blittable<Other> { self.combine(other, [](auto a, auto b) { return static_cast<decltype(a)>(a ^ b);  }); return self; }
+        template<class Other> constexpr auto operator-=(this auto&& self, Other const& other) noexcept -> auto& requires is_window and word_writable and blittable<Other> { self.combine(other, [](auto a, auto b) { return static_cast<decltype(a)>(a & ~b); }); return self; }
+
         // [vector.bool]'s two: flip every bit, a bulk operation like the ones above, and swap two proxies, which the proxies' own swap already does.
         constexpr void flip(this auto&& self) noexcept requires (not is_window) and requires { self.storage().flip(); } { self.storage().flip(); }
 
         static constexpr void swap(reference x, reference y) noexcept { bool const t = x; x = y; y = t; }
 
 private:
-        // A source the blit can read by block: a sequence adaptor of any shape whose trait reads blocks of this storage's own block type. [design.md#the-blit]
-        template<class S>
-        static constexpr bool blittable =
-                requires (S const& s) { s.storage(); s.offset(); s.size(); typename S::traits_type; } and
-                requires (S const& s) { { S::traits_type::block(s.storage(), 0UZ) } -> std::same_as<typename bits_type::block_type>; S::traits_type::num_blocks(s.storage()); };
+        // The words of this window against the words of another at its own alignment, each masked to what the window holds.
+        template<class Other, class F>
+        constexpr void combine(this auto&& self, Other const& other, F f) noexcept
+        {
+                using block_type = bits_type::block_type;
+                constexpr auto digits = bits_type::bits_per_block;
+                constexpr auto unit = block_type{1};
+                assert(self.size() == other.size());
+                for (auto k = 0UZ; k < self.size(); k += digits) {
+                        auto const count = std::ranges::min(digits, self.size() - k);
+                        auto const mask = count == digits ? static_cast<block_type>(~block_type{}) : static_cast<block_type>(static_cast<block_type>(unit << count) - unit);
+                        auto const mine   = detail::bits::word_at<Traits>(self.storage(), self.offset() + k);
+                        auto const theirs = detail::bits::word_at<typename Other::traits_type>(other.storage(), other.offset() + k);
+                        self.storage().set_word(self.offset() + k, f(mine, theirs), mask);
+                }
+        }
 
         // Tier one: the source's bits as words at its own alignment, appended a word at a time and trimmed to the count; a source in this very storage reads only below the old width, which no append touches. [design.md#the-blit]
         template<class STraits, class SBits>

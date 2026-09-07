@@ -876,4 +876,64 @@ BOOST_AUTO_TEST_CASE(TheAllocatorAndTheMaximumWidth)
         static_assert(A().max_size() == 9UZ);
 }
 
+// A word read and written at any position: aligned, straddling two blocks, in the last block; the ranged forms over it, against a model. [design.md#the-blit]
+using WordTypes = std::tuple<xstd::block_array<std::uint8_t, 20>, xstd::block_vector<std::uint8_t>>;
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(WordsAreReadAndWrittenAtAnyPosition, T, WordTypes)
+{
+        constexpr auto D = 8UZ;
+        auto make = [] {
+                auto b = T();
+                if constexpr (requires { b.resize(20UZ); }) {
+                        b.resize(20UZ);
+                }
+                for (auto const i : { 0UZ, 3UZ, 7UZ, 8UZ, 12UZ, 15UZ, 19UZ }) {
+                        b.set(i);
+                }
+                return b;
+        };
+        auto const c = make();
+        // Blocks: 0b1000'1001, 0b1001'0001, 0b0000'1000.
+        BOOST_CHECK_EQUAL(c.word_at(0UZ),  0b1000'1001);
+        BOOST_CHECK_EQUAL(c.word_at(8UZ),  0b1001'0001);
+        BOOST_CHECK_EQUAL(c.word_at(3UZ),  0b0011'0001);
+        BOOST_CHECK_EQUAL(c.word_at(12UZ), 0b1000'1001);
+        BOOST_CHECK_EQUAL(c.word_at(16UZ), 0b0000'1000);
+        BOOST_CHECK_EQUAL(c.word_at(17UZ), 0b0000'0100);
+
+        // set_word lands the masked bits and nothing else, across two blocks and into the tail, which stays clear.
+        auto d = make();
+        d.set_word(3UZ, 0b1111'1111, 0b0001'1110);
+        auto m = reference(c);
+        for (auto const i : { 4UZ, 5UZ, 6UZ, 7UZ }) { m[i] = true; }
+        BOOST_CHECK(reference(d) == m);
+        d.set_word(5UZ, 0b0000'0000, 0b0111'1000);
+        for (auto const i : { 8UZ, 9UZ, 10UZ, 11UZ }) { m[i] = false; }
+        BOOST_CHECK(reference(d) == m);
+        d.set_word(16UZ, 0b1111'1111, 0b1111'1111);
+        for (auto const i : { 16UZ, 17UZ, 18UZ, 19UZ }) { m[i] = true; }
+        BOOST_CHECK(reference(d) == m);
+        BOOST_CHECK_EQUAL(d.block(2), 0b0000'1111);
+
+        // The ranged forms: every start and length, whole words and partial ones, against the model.
+        for (auto const n : { 0UZ, 1UZ, 7UZ, 8UZ, 9UZ, 15UZ }) {
+                for (auto const len : { 0UZ, 1UZ, D - 1, D, D + 1, 20UZ - n }) {
+                        if (n + len > 20UZ) {
+                                continue;
+                        }
+                        auto e = make();
+                        auto r = reference(c);
+                        e.set(n, len, true);
+                        for (auto i = n; i < n + len; ++i) { r[i] = true; }
+                        BOOST_CHECK(reference(e) == r);
+                        e.flip(n, len);
+                        for (auto i = n; i < n + len; ++i) { r[i] = not r[i]; }
+                        BOOST_CHECK(reference(e) == r);
+                        e.set(n, len, false);
+                        for (auto i = n; i < n + len; ++i) { r[i] = false; }
+                        BOOST_CHECK(reference(e) == r);
+                }
+        }
+}
+
 BOOST_AUTO_TEST_SUITE_END()

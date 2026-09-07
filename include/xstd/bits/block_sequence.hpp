@@ -186,6 +186,50 @@ public:
                 erase_unused();
         }
 
+        // A word at any position, aligned or not: the bits [n, n + bits_per_block), the clear tail and nothing beyond the last block. [design.md#the-blit]
+        [[nodiscard]] constexpr auto word_at(std::size_t n) const noexcept
+                -> block_type
+        {
+                auto const [ index, offset ] = index_offset(n);
+                assert(index < num_blocks());
+                auto const low = static_cast<block_type>(m_blocks[index] >> offset);
+                if (offset == 0UZ or index == last_block()) {
+                        return low;
+                }
+                return static_cast<block_type>(low | static_cast<block_type>(m_blocks[index + 1UZ] << (bits_per_block - offset)));
+        }
+
+        // The write side of word_at, masked: the bits of value under mask land at [n, n + bits_per_block), split over two blocks where n is not aligned, and the tail stays clear. [design.md#the-blit]
+        constexpr void set_word(std::size_t n, block_type value, block_type mask) noexcept
+        {
+                auto const [ index, offset ] = index_offset(n);
+                assert(index < num_blocks());
+                auto const bits = static_cast<block_type>(value & mask);
+                m_blocks[index] = static_cast<block_type>((m_blocks[index] & static_cast<block_type>(~static_cast<block_type>(mask << offset))) | static_cast<block_type>(bits << offset));
+                if (offset != 0UZ and index != last_block()) {
+                        auto const shift = bits_per_block - offset;
+                        m_blocks[index + 1UZ] = static_cast<block_type>((m_blocks[index + 1UZ] & static_cast<block_type>(~static_cast<block_type>(mask >> shift))) | static_cast<block_type>(bits >> shift));
+                }
+                erase_unused();
+        }
+
+        // boost's ranged forms, a word at a time through set_word: [n, n + len) set, cleared or flipped, the rest untouched. [design.md#the-blit]
+        constexpr auto set(std::size_t n, std::size_t len, bool value) noexcept
+                -> block_sequence&
+        {
+                assert(n + len <= size());
+                for_each_word(n, len, [&](std::size_t pos, block_type mask) { set_word(pos, value ? ones : zero, mask); });
+                return *this;
+        }
+
+        constexpr auto flip(std::size_t n, std::size_t len) noexcept
+                -> block_sequence&
+        {
+                assert(n + len <= size());
+                for_each_word(n, len, [&](std::size_t pos, block_type mask) { set_word(pos, static_cast<block_type>(~word_at(pos)), mask); });
+                return *this;
+        }
+
         // Memberwise, width first: the unused bits are kept clear, so the blocks compare as the bits do, and a zero width through the one block it still holds. [design.md#block-storage]
         [[nodiscard]] friend constexpr auto operator==(block_sequence const&, block_sequence const&) noexcept -> bool = default;
 
@@ -889,6 +933,16 @@ private:
                 -> std::size_t
         {
                 return num_blocks() - 1UZ;
+        }
+
+        // The words a range of positions spans, each with the mask of what it holds: whole words, and a partial one at the end.
+        template<class F>
+        constexpr void for_each_word(std::size_t n, std::size_t len, F f) const noexcept
+        {
+                for (auto pos = n; pos < n + len; pos += bits_per_block) {
+                        auto const count = std::ranges::min(bits_per_block, n + len - pos);
+                        f(pos, count == bits_per_block ? ones : static_cast<block_type>(static_cast<block_type>(unit << count) - unit));
+                }
         }
 
         // An iterator pair, not views::take, which libc++ 18 cannot form here. [design.md#libcxx-views-take]

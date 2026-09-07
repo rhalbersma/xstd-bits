@@ -332,14 +332,12 @@ public:
                 return *this;
         }
 
-        // boost's ranged forms, the one guard on the whole range; element-wise until the blit brings the masked block. [design.md#the-one-guard]
+        // boost's ranged forms, the one guard on the whole range, then the storage's own a word at a time. [design.md#the-one-guard]
         constexpr auto set(std::size_t pos, std::size_t len, bool val)
                 -> bitset_adaptor&
         {
                 guard_range(pos, len);
-                for (auto const i : std::views::iota(pos, pos + len)) {
-                        Traits::unchecked_assign(m_bits, i, val);
-                }
+                m_bits.set(pos, len, val);
                 return *this;
         }
 
@@ -353,9 +351,7 @@ public:
                 -> bitset_adaptor&
         {
                 guard_range(pos, len);
-                for (auto const i : std::views::iota(pos, pos + len)) {
-                        Traits::unchecked_assign(m_bits, i, not Traits::at(m_bits, i));
-                }
+                m_bits.flip(pos, len);
                 return *this;
         }
 
