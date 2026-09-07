@@ -6,6 +6,7 @@
 #include <boost/test/unit_test.hpp>   // BOOST_AUTO_TEST_CASE
 #include <test/block_types.hpp>       // graded_extents
 #include <test/flat_set.hpp>          // IWYU pragma: keep; TEST_HAS_FLAT_SET
+#include <test/inplace_vector.hpp>    // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
 #include <test/sequence/concepts.hpp> // bit_sequence
 #include <test/set/concepts.hpp>      // bit_set
 #include <xstd/bits.hpp>              // the whole bits surface
@@ -52,7 +53,17 @@ BOOST_AUTO_TEST_CASE(EveryContainerArrivesThroughTheUmbrella)
         static_assert(std::same_as<xstd::bit_vector,     xstd::basic_bit_vector<std::size_t, std::allocator<std::size_t>>>);
         static_assert(std::same_as<xstd::dynamic_bitset, xstd::basic_dynamic_bitset<std::size_t, std::allocator<std::size_t>>>);
 
-        // Every static name has an aligned form in both layers, its width rounded up to whole blocks. [design.md#the-public-names]
+#ifdef TEST_HAS_INPLACE_VECTOR
+        // The inplace column, the third storage point, one name per reading and every one of them an alias like the rest. [design.md#the-inplace-column]
+        static_assert(std::ranges::bidirectional_range<xstd::basic_bit_inplace_set<8, std::uint8_t>>);
+        static_assert(std::ranges::random_access_range<xstd::basic_bit_inplace_vector<8, std::uint8_t>>);
+        static_assert(not std::ranges::range<xstd::basic_inplace_bitset<8, std::uint8_t>>);
+        static_assert(std::same_as<xstd::bit_inplace_set<8>,    xstd::basic_bit_inplace_set<8, std::size_t>>);
+        static_assert(std::same_as<xstd::bit_inplace_vector<8>, xstd::basic_bit_inplace_vector<8, std::size_t>>);
+        static_assert(std::same_as<xstd::inplace_bitset<8>,     xstd::basic_inplace_bitset<8, std::size_t>>);
+#endif
+
+        // Every static name has an aligned form in both layers, its width rounded up to whole blocks; the inplace column has none, its capacity already being whole blocks. [design.md#the-public-names]
         static_assert(std::same_as<xstd::aligned::bit_static_set<9>, xstd::bit_static_set<std::numeric_limits<std::size_t>::digits>>);
         static_assert(std::same_as<xstd::aligned::bit_array<9>,      xstd::bit_array<std::numeric_limits<std::size_t>::digits>>);
         static_assert(std::same_as<xstd::aligned::bitset<9>,         xstd::bitset<std::numeric_limits<std::size_t>::digits>>);

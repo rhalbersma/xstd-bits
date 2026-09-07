@@ -133,11 +133,60 @@ concept vector_bool = container_members<C> and requires (C c, C o, C const cc, t
         { std::hash<C>()(cc) } -> std::same_as<std::size_t>;
 };
 
+// [vector.bool] minus the allocator, which is every line a fixed-capacity sequence can answer. P0843 declined a bool
+// specialization, so this checklist has no inplace model of its own and std::vector<bool> stands in for the lines it shares.
+template<class C>
+concept inplace_vector_bool = container_members<C> and requires (C c, C o, C const cc, typename C::size_type n, bool b, std::initializer_list<bool> il, bool const* first, bool const* last, typename C::const_iterator p) {
+        C();
+        C(n);
+        C(n, b);
+        C(first, last);
+        C(cc);
+        C(std::move(o));
+        C(il);
+        c = cc;
+        c = std::move(o);
+        c = il;
+        c.assign(first, last);
+        c.assign(n, b);
+        c.assign(il);
+        { cc.capacity()      } -> std::same_as<typename C::size_type>;
+        c.resize(n);
+        c.resize(n, b);
+        c.reserve(n);
+        c.shrink_to_fit();
+        { c.emplace_back(b)  } -> std::same_as<typename C::reference>;
+        c.push_back(b);
+        c.pop_back();
+        { c.emplace(p, b)             } -> std::same_as<typename C::iterator>;
+        { c.insert(p, b)              } -> std::same_as<typename C::iterator>;
+        { c.insert(p, n, b)           } -> std::same_as<typename C::iterator>;
+        { c.insert(p, first, last)    } -> std::same_as<typename C::iterator>;
+        { c.insert(p, il)             } -> std::same_as<typename C::iterator>;
+        { c.erase(p)                  } -> std::same_as<typename C::iterator>;
+        { c.erase(p, p)               } -> std::same_as<typename C::iterator>;
+        c.clear();
+        c.flip();
+        C::swap(c[n], c[n]);
+        { erase(c, b)                          } -> std::same_as<typename C::size_type>;
+        { erase_if(c, [](bool) { return true; }) } -> std::same_as<typename C::size_type>;
+        { std::hash<C>()(cc) } -> std::same_as<std::size_t>;
+};
+
 // [vector.bool]'s C++23 lines, apart so the model can be held to them where its standard library has them (__cpp_lib_containers_ranges).
 template<class C, class A = C::allocator_type>
 concept vector_bool_ranges = requires (C c, A a, std::initializer_list<bool> il, typename C::const_iterator p) {
         C(std::from_range, il);
         C(std::from_range, il, a);
+        c.assign_range(il);
+        { c.insert_range(p, il) } -> std::same_as<typename C::iterator>;
+        c.append_range(il);
+};
+
+// The same lines without the allocator-extended constructor, for the column that has no allocator to extend them with.
+template<class C>
+concept inplace_vector_bool_ranges = requires (C c, std::initializer_list<bool> il, typename C::const_iterator p) {
+        C(std::from_range, il);
         c.assign_range(il);
         { c.insert_range(p, il) } -> std::same_as<typename C::iterator>;
         c.append_range(il);
