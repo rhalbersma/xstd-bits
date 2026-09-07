@@ -37,7 +37,7 @@ namespace xstd {
 template<class S, class Block>
 concept blit_source =
         requires { typename S::subspan_type; typename S::traits_type; typename S::traits_type::bits_type; } and
-        requires (typename S::traits_type::bits_type const& c) {
+        requires (S::traits_type::bits_type const& c) {
                 { S::traits_type::block(c, 0UZ) } -> std::same_as<Block>;
                 { S::traits_type::num_blocks(c) } -> std::convertible_to<std::size_t>;
         };
@@ -108,7 +108,7 @@ class sequence_adaptor : public std::conditional_t<owns(Own), detail::bits::allo
         static constexpr bool blittable = blit_source<S, typename bits_type::block_type>;
 
         // A storage that takes a masked word at any position: ours, which is what a window's bulk operators write through.
-        static constexpr bool word_writable = requires (bits_type& b, typename bits_type::block_type w) { b.set_word(0UZ, w, w); };
+        static constexpr bool word_writable = requires (bits_type& b, bits_type::block_type w) { b.set_word(0UZ, w, w); };
 
         // Either reading's view refers into this owner's storage, and nothing else outside does. [design.md#views-over-owners]
         template<class B, ownership O, bit_storage<B> T>         friend class set_adaptor;
@@ -674,18 +674,18 @@ constexpr void swap(sequence_adaptor<Bits, Own, Windowed, Traits>& x, sequence_a
 // [vector.erasure], over the owner's own erase: the proxies move and swap, so remove_if runs unchanged over the packed bits. [design.md#the-sequence-contract]
 template<class Bits, ownership Own, bool Windowed, class Traits, class Pred>
 constexpr auto erase_if(sequence_adaptor<Bits, Own, Windowed, Traits>& c, Pred pred)
-        -> typename sequence_adaptor<Bits, Own, Windowed, Traits>::size_type
+        -> sequence_adaptor<Bits, Own, Windowed, Traits>::size_type
         requires requires { c.erase(c.cbegin(), c.cend()); }
 {
         auto const [first, last] = std::ranges::remove_if(c, pred);
-        auto const n = static_cast<typename sequence_adaptor<Bits, Own, Windowed, Traits>::size_type>(last - first);
+        auto const n = static_cast<sequence_adaptor<Bits, Own, Windowed, Traits>::size_type>(last - first);
         c.erase(first, last);
         return n;
 }
 
 template<class Bits, ownership Own, bool Windowed, class Traits, class U = bool>
 constexpr auto erase(sequence_adaptor<Bits, Own, Windowed, Traits>& c, U const& value)
-        -> typename sequence_adaptor<Bits, Own, Windowed, Traits>::size_type
+        -> sequence_adaptor<Bits, Own, Windowed, Traits>::size_type
         requires requires { c.erase(c.cbegin(), c.cend()); }
 {
         return xstd::erase_if(c, [&](bool x) { return x == value; });

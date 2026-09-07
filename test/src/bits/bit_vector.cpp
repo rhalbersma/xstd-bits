@@ -328,8 +328,12 @@ BOOST_AUTO_TEST_CASE(FlipAndSwapAreStdVectorBools)
         m.flip();
         BOOST_CHECK(std::ranges::equal(v, m));
 
+        // Ours is [vector.bool]'s static swap, which the clause still has; the model's own is deprecated by C++26
+        // (LWG-3638, P3612R1) and MSVC 2026 says so under /WX, so the model's two bits are exchanged directly.
         T::swap(v[0], v[1]);
-        std::vector<bool>::swap(m[0], m[1]);
+        auto const m0 = static_cast<bool>(m[0]);
+        m[0] = static_cast<bool>(m[1]);
+        m[1] = m0;
         BOOST_CHECK(std::ranges::equal(v, m));
 
         // A view flips what it views, a window does not. [design.md#windows]
