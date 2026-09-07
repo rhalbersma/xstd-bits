@@ -29,9 +29,9 @@
 
 BOOST_AUTO_TEST_SUITE(BitsetAdaptor)
 
-// Dependent, so an unsatisfied class constraint is a false rather than a hard error.
+// Dependent, so an unsatisfied class constraint is a false rather than a hard error; an expression rather than a type requirement, which clang-tidy 22 misreads.
 template<class B>
-constexpr bool wrappable = requires { typename xstd::bitset_adaptor<B>; };
+constexpr bool wrappable = requires { sizeof(xstd::bitset_adaptor<B>); };
 
 // The vocabulary is our storages': std::bitset's members and boost's set vocabulary, read by block. The counterparts themselves are not wrapped. [design.md#owning-is-ours]
 BOOST_AUTO_TEST_CASE(TheVocabularyIsWhatOurStoragesSpeakAndTheCounterpartsDoNot)
