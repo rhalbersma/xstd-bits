@@ -7,12 +7,12 @@
 #define XSTD_BITS_BIT_SET_VIEW_HPP
 
 #include <boost/container_hash/is_range.hpp> // is_range
-#include <xstd/bits/basic_bit_set.hpp> // basic_bit_set
-#include <xstd/bits/bit_traits.hpp>    // bit_storage, bit_traits
-#include <xstd/bits/ownership.hpp>     // owned_bits_t, owned_storage, owned_traits_t, owner_of, ownership
-#include <functional>                  // hash
-#include <ranges>                      // enable_borrowed_range, enable_view
-#include <type_traits>                 // false_type, remove_const_t
+#include <xstd/bits/set_adaptor.hpp>         // set_adaptor
+#include <xstd/bits/bit_traits.hpp>          // bit_storage, bit_traits
+#include <xstd/bits/ownership.hpp>           // owned_bits_t, owned_storage, owned_traits_t, owner_of, ownership
+#include <functional>                        // hash
+#include <ranges>                            // enable_borrowed_range, enable_view
+#include <type_traits>                       // false_type, remove_const_t
 
 // The set reading over bits it does not own: the referring adaptor under the name the sieve calls it by. [design.md#the-views-are-the-adaptors]
 namespace xstd {
@@ -20,9 +20,9 @@ namespace xstd {
 // Derived rather than aliased, MSVC deducing no arguments through an alias template; the constructors are spelled out rather than
 // inherited, because inheriting them inherits the primary's guides too (P2582), which would tie with the ones restated below.
 template<class Bits, bit_storage<std::remove_const_t<Bits>> Traits = bit_traits<std::remove_const_t<Bits>>>
-class bit_set_view : public basic_bit_set<Bits, ownership::refers, Traits>
+class bit_set_view : public set_adaptor<Bits, ownership::refers, Traits>
 {
-        using base = basic_bit_set<Bits, ownership::refers, Traits>;
+        using base = set_adaptor<Bits, ownership::refers, Traits>;
 
 public:
         [[nodiscard]] constexpr explicit bit_set_view(Bits& c) noexcept : base(c) {}
@@ -58,7 +58,7 @@ inline constexpr bool enable_borrowed_range<xstd::bit_set_view<Bits, Traits>> = 
 namespace std {
 
 template<class Bits, class Traits>
-struct hash<xstd::bit_set_view<Bits, Traits>> : hash<xstd::basic_bit_set<Bits, xstd::ownership::refers, Traits>> {};
+struct hash<xstd::bit_set_view<Bits, Traits>> : hash<xstd::set_adaptor<Bits, xstd::ownership::refers, Traits>> {};
 
 }       // namespace std
 // NOLINTEND(bugprone-std-namespace-modification)

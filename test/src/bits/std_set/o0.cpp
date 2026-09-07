@@ -28,46 +28,46 @@ using Types = std::tuple
 #ifdef TEST_HAS_FLAT_SET
 ,       std::flat_set<std::size_t>
 #endif
-,       xstd::bit_static_set<  0, uint8_t>
-,       xstd::bit_static_set<  1, uint8_t>
-,       xstd::bit_static_set<  7, uint8_t>
-,       xstd::bit_static_set<  8, uint8_t>
-,       xstd::bit_static_set<  9, uint8_t>
-,       xstd::bit_static_set< 15, uint8_t>
-,       xstd::bit_static_set< 16, uint8_t>
-,       xstd::bit_static_set< 17, uint8_t>
-,       xstd::bit_static_set< 24, uint8_t>
-,       xstd::bit_static_set<  0, uint16_t>
-,       xstd::bit_static_set<  1, uint16_t>
-,       xstd::bit_static_set< 15, uint16_t>
-,       xstd::bit_static_set< 16, uint16_t>
-,       xstd::bit_static_set< 17, uint16_t>
-,       xstd::bit_static_set< 31, uint16_t>
-,       xstd::bit_static_set< 32, uint16_t>
-,       xstd::bit_static_set< 33, uint16_t>
-,       xstd::bit_static_set< 48, uint16_t>
-,       xstd::bit_static_set<  0, uint32_t>
-,       xstd::bit_static_set<  1, uint32_t>
-,       xstd::bit_static_set< 31, uint32_t>
-,       xstd::bit_static_set< 32, uint32_t>
-,       xstd::bit_static_set< 33, uint32_t>
-,       xstd::bit_static_set< 63, uint32_t>
-,       xstd::bit_static_set< 64, uint32_t>
-,       xstd::bit_static_set< 65, uint32_t>
-,       xstd::bit_static_set<  0, uint64_t>
-,       xstd::bit_static_set<  1, uint64_t>
-,       xstd::bit_static_set< 63, uint64_t>
-,       xstd::bit_static_set< 64, uint64_t>
-,       xstd::bit_static_set< 65, uint64_t>
+,       xstd::basic_bit_static_set<  0, uint8_t>
+,       xstd::basic_bit_static_set<  1, uint8_t>
+,       xstd::basic_bit_static_set<  7, uint8_t>
+,       xstd::basic_bit_static_set<  8, uint8_t>
+,       xstd::basic_bit_static_set<  9, uint8_t>
+,       xstd::basic_bit_static_set< 15, uint8_t>
+,       xstd::basic_bit_static_set< 16, uint8_t>
+,       xstd::basic_bit_static_set< 17, uint8_t>
+,       xstd::basic_bit_static_set< 24, uint8_t>
+,       xstd::basic_bit_static_set<  0, uint16_t>
+,       xstd::basic_bit_static_set<  1, uint16_t>
+,       xstd::basic_bit_static_set< 15, uint16_t>
+,       xstd::basic_bit_static_set< 16, uint16_t>
+,       xstd::basic_bit_static_set< 17, uint16_t>
+,       xstd::basic_bit_static_set< 31, uint16_t>
+,       xstd::basic_bit_static_set< 32, uint16_t>
+,       xstd::basic_bit_static_set< 33, uint16_t>
+,       xstd::basic_bit_static_set< 48, uint16_t>
+,       xstd::basic_bit_static_set<  0, uint32_t>
+,       xstd::basic_bit_static_set<  1, uint32_t>
+,       xstd::basic_bit_static_set< 31, uint32_t>
+,       xstd::basic_bit_static_set< 32, uint32_t>
+,       xstd::basic_bit_static_set< 33, uint32_t>
+,       xstd::basic_bit_static_set< 63, uint32_t>
+,       xstd::basic_bit_static_set< 64, uint32_t>
+,       xstd::basic_bit_static_set< 65, uint32_t>
+,       xstd::basic_bit_static_set<  0, uint64_t>
+,       xstd::basic_bit_static_set<  1, uint64_t>
+,       xstd::basic_bit_static_set< 63, uint64_t>
+,       xstd::basic_bit_static_set< 64, uint64_t>
+,       xstd::basic_bit_static_set< 65, uint64_t>
 #ifdef TEST_HAS_UINT128
-,       xstd::bit_static_set<  0, xstd::uint128>
-,       xstd::bit_static_set<  1, xstd::uint128>
-,       xstd::bit_static_set<127, xstd::uint128>
-,       xstd::bit_static_set<128, xstd::uint128>
-,       xstd::bit_static_set<129, xstd::uint128>
+,       xstd::basic_bit_static_set<  0, xstd::uint128>
+,       xstd::basic_bit_static_set<  1, xstd::uint128>
+,       xstd::basic_bit_static_set<127, xstd::uint128>
+,       xstd::basic_bit_static_set<128, xstd::uint128>
+,       xstd::basic_bit_static_set<129, xstd::uint128>
 #endif
-,       xstd::bit_set<uint8_t>
-,       xstd::bit_set<uint64_t>
+,       xstd::basic_bit_set<uint8_t>
+,       xstd::basic_bit_set<uint64_t>
 >;
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheSetOperationsHoldOnAnEmptyPair, T, Types)

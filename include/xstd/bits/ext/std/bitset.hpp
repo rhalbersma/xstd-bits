@@ -99,7 +99,7 @@ struct bit_traits<std::bitset<N>>
 
         // No find_last or find_prev: the width answers one and neither library scans backwards. [design.md#the-two-reserved-names]
 
-        // The checked family, native and throwing here alone; basic_bitset forwards it rather than guarding a second time. [design.md#checked-and-unchecked]
+        // The checked family, native and throwing here alone; bitset_adaptor forwards it rather than guarding a second time. [design.md#checked-and-unchecked]
         static constexpr void checked_set  (bits_type& c, std::size_t n, bool value) { c.set(n, value); }
         static constexpr void checked_reset(bits_type& c, std::size_t n)             { c.reset(n);      }
         static constexpr void checked_flip (bits_type& c, std::size_t n)             { c.flip(n);       }

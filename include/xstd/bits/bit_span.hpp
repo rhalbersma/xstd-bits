@@ -7,11 +7,11 @@
 #define XSTD_BITS_BIT_SPAN_HPP
 
 #include <boost/container_hash/is_range.hpp> // is_range
-#include <xstd/bits/basic_bit_sequence.hpp> // basic_bit_sequence
-#include <xstd/bits/bit_traits.hpp>         // bit_storage, bit_traits
-#include <xstd/bits/ownership.hpp>          // owned_bits_t, owned_storage, owned_traits_t, owner_of, ownership
-#include <ranges>                           // enable_borrowed_range, enable_view
-#include <type_traits>                      // false_type, remove_const_t
+#include <xstd/bits/sequence_adaptor.hpp>    // sequence_adaptor
+#include <xstd/bits/bit_traits.hpp>          // bit_storage, bit_traits
+#include <xstd/bits/ownership.hpp>           // owned_bits_t, owned_storage, owned_traits_t, owner_of, ownership
+#include <ranges>                            // enable_borrowed_range, enable_view
+#include <type_traits>                       // false_type, remove_const_t
 
 // The sequence reading over bits it does not own: the referring adaptor, which like std::span neither compares nor orders. [design.md#the-views-are-the-adaptors]
 namespace xstd {
@@ -19,9 +19,9 @@ namespace xstd {
 // Derived rather than aliased, MSVC deducing no arguments through an alias template; the constructors are spelled out rather than
 // inherited, because inheriting them inherits the primary's guides too (P2582), which would tie with the ones restated below.
 template<class Bits, bit_storage<std::remove_const_t<Bits>> Traits = bit_traits<std::remove_const_t<Bits>>>
-class bit_span : public basic_bit_sequence<Bits, ownership::refers, false, Traits>
+class bit_span : public sequence_adaptor<Bits, ownership::refers, false, Traits>
 {
-        using base = basic_bit_sequence<Bits, ownership::refers, false, Traits>;
+        using base = sequence_adaptor<Bits, ownership::refers, false, Traits>;
 
 public:
         [[nodiscard]] constexpr explicit bit_span(Bits& c) noexcept : base(c) {}

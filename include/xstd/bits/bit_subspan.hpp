@@ -6,16 +6,16 @@
 #ifndef XSTD_BITS_BIT_SUBSPAN_HPP
 #define XSTD_BITS_BIT_SUBSPAN_HPP
 
-#include <xstd/bits/basic_bit_sequence.hpp> // basic_bit_sequence
-#include <xstd/bits/bit_traits.hpp>         // bit_storage, bit_traits
-#include <xstd/bits/ownership.hpp>          // ownership
-#include <type_traits>                      // remove_const_t
+#include <xstd/bits/sequence_adaptor.hpp> // sequence_adaptor
+#include <xstd/bits/bit_traits.hpp>       // bit_storage, bit_traits
+#include <xstd/bits/ownership.hpp>        // ownership
+#include <type_traits>                    // remove_const_t
 
 namespace xstd {
 
 // A window on the sequence reading: what first, last and subspan return on a bit_span or on another window, and never deduced, so an alias suffices. [design.md#windows]
 template<class Bits, bit_storage<std::remove_const_t<Bits>> Traits = bit_traits<std::remove_const_t<Bits>>>
-using bit_subspan = basic_bit_sequence<Bits, ownership::refers, true, Traits>;
+using bit_subspan = sequence_adaptor<Bits, ownership::refers, true, Traits>;
 
 }       // namespace xstd
 

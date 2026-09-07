@@ -5,7 +5,7 @@
 
 #include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <test/minimal_traits.hpp>                // minimal_traits
-#include <xstd/bits/basic_bit_set.hpp>            // basic_bit_set
+#include <xstd/bits/set_adaptor.hpp>            // set_adaptor
 #include <xstd/bits/bit_static_set.hpp>           // bit_static_set
 #include <xstd/bits/block_sequence.hpp>           // block_array, block_vector
 #include <xstd/bits/ext/boost/dynamic_bitset.hpp> // bit_traits over boost::dynamic_bitset
@@ -27,10 +27,10 @@
 namespace {
 
 using Storage = xstd::block_array<std::uint64_t, 100>;
-using Owner   = xstd::bit_static_set<100, std::uint64_t>;
-using View    = xstd::basic_bit_set<Storage, xstd::ownership::refers>;
-using Reader  = xstd::basic_bit_set<Storage const, xstd::ownership::refers>;
-using Minimal = xstd::basic_bit_set<Storage, xstd::ownership::refers, test::minimal_traits<Storage>>;
+using Owner   = xstd::basic_bit_static_set<100, std::uint64_t>;
+using View    = xstd::set_adaptor<Storage, xstd::ownership::refers>;
+using Reader  = xstd::set_adaptor<Storage const, xstd::ownership::refers>;
+using Minimal = xstd::set_adaptor<Storage, xstd::ownership::refers, test::minimal_traits<Storage>>;
 
 // Dependent, so an absent member is a false rather than a hard error.
 template<class S> constexpr bool can_insert     = requires (S s) { s.insert(0UZ); };
@@ -93,7 +93,7 @@ auto check_reads(Set const& s, std::set<std::size_t> const& model, std::size_t w
 
 }       // namespace
 
-BOOST_AUTO_TEST_SUITE(BasicBitSet)
+BOOST_AUTO_TEST_SUITE(SetAdaptor)
 
 BOOST_AUTO_TEST_CASE(AnOwnerIsRegularAndAViewIsCopyable)
 {
@@ -185,9 +185,9 @@ BOOST_AUTO_TEST_CASE(TheViewsAnswerEveryReadOverEveryStorage)
                 }
                 check_reads(View(a), model, 100UZ);
                 check_reads(Minimal(a), model, 100UZ);
-                check_reads(xstd::basic_bit_set<xstd::block_vector<std::uint64_t>, xstd::ownership::refers>(v), model, 100UZ);
-                check_reads(xstd::basic_bit_set<std::bitset<100>, xstd::ownership::refers>(s), model, 100UZ);
-                check_reads(xstd::basic_bit_set<boost::dynamic_bitset<>, xstd::ownership::refers>(d), model, 100UZ);
+                check_reads(xstd::set_adaptor<xstd::block_vector<std::uint64_t>, xstd::ownership::refers>(v), model, 100UZ);
+                check_reads(xstd::set_adaptor<std::bitset<100>, xstd::ownership::refers>(s), model, 100UZ);
+                check_reads(xstd::set_adaptor<boost::dynamic_bitset<>, xstd::ownership::refers>(d), model, 100UZ);
         }
 }
 
@@ -196,11 +196,11 @@ BOOST_AUTO_TEST_CASE(MaxSizeIsStaticWhereTheWidthIs)
 {
         static_assert(Owner::max_size() == 100UZ);
         static_assert(View::max_size() == 100UZ);
-        static_assert(xstd::basic_bit_set<xstd::block_vector<std::size_t>, xstd::ownership::refers>::max_size() == std::numeric_limits<std::size_t>::max() - 1UZ);
-        static_assert(xstd::basic_bit_set<boost::dynamic_bitset<>, xstd::ownership::refers>::max_size() == std::numeric_limits<std::size_t>::max() - 1UZ);
+        static_assert(xstd::set_adaptor<xstd::block_vector<std::size_t>, xstd::ownership::refers>::max_size() == std::numeric_limits<std::size_t>::max() - 1UZ);
+        static_assert(xstd::set_adaptor<boost::dynamic_bitset<>, xstd::ownership::refers>::max_size() == std::numeric_limits<std::size_t>::max() - 1UZ);
 
         auto v = xstd::block_vector<std::uint64_t>(10UZ);
-        auto const view = xstd::basic_bit_set<xstd::block_vector<std::uint64_t>, xstd::ownership::refers>(v);
+        auto const view = xstd::set_adaptor<xstd::block_vector<std::uint64_t>, xstd::ownership::refers>(v);
         BOOST_CHECK(not view.full());
         view.fill();
         BOOST_CHECK(not view.full());
@@ -216,7 +216,7 @@ BOOST_AUTO_TEST_CASE(TheSetPredicatesAgreeAcrossStorages)
         a.set(1);
         b.set(1);
         b.set(3);
-        using S = xstd::basic_bit_set<std::bitset<9>, xstd::ownership::refers>;
+        using S = xstd::set_adaptor<std::bitset<9>, xstd::ownership::refers>;
         auto const x = S(a);
         auto const y = S(b);
 
@@ -245,7 +245,7 @@ BOOST_AUTO_TEST_CASE(TheOrderingIsTheLexicographicOrderOfTheKeys)
                         auto t = std::bitset<100>();
                         for (auto const i : p) { s.set(i); }
                         for (auto const i : q) { t.set(i); }
-                        using S = xstd::basic_bit_set<std::bitset<100>, xstd::ownership::refers>;
+                        using S = xstd::set_adaptor<std::bitset<100>, xstd::ownership::refers>;
                         BOOST_CHECK((S(s) <=> S(t)) == (p <=> q));
                         BOOST_CHECK((S(s) == S(t)) == (p == q));
                 }

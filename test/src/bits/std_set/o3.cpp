@@ -26,18 +26,18 @@ using Types = std::tuple
 #ifdef TEST_HAS_FLAT_SET
 ,       std::flat_set<std::size_t>
 #endif
-,       xstd::bit_static_set< 0, uint8_t>
-,       xstd::bit_static_set< 8, uint8_t>
-,       xstd::bit_static_set< 9, uint8_t>
-,       xstd::bit_static_set<17, uint8_t>
-,       xstd::bit_static_set<17, uint16_t>
-,       xstd::bit_static_set<17, uint32_t>
-,       xstd::bit_static_set<17, uint64_t>
+,       xstd::basic_bit_static_set< 0, uint8_t>
+,       xstd::basic_bit_static_set< 8, uint8_t>
+,       xstd::basic_bit_static_set< 9, uint8_t>
+,       xstd::basic_bit_static_set<17, uint8_t>
+,       xstd::basic_bit_static_set<17, uint16_t>
+,       xstd::basic_bit_static_set<17, uint32_t>
+,       xstd::basic_bit_static_set<17, uint64_t>
 #ifdef TEST_HAS_UINT128
-,       xstd::bit_static_set<17, xstd::uint128>
+,       xstd::basic_bit_static_set<17, xstd::uint128>
 #endif
-,       xstd::bit_set<uint8_t>
-,       xstd::bit_set<uint64_t>
+,       xstd::basic_bit_set<uint8_t>
+,       xstd::basic_bit_set<uint64_t>
 >;
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(LessIsTransitiveOverEverySingletonTriple, T, Types)

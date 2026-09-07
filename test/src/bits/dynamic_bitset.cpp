@@ -5,7 +5,7 @@
 
 #include <boost/dynamic_bitset.hpp>               // dynamic_bitset
 #include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <xstd/bits/basic_bitset.hpp>             // basic_bitset
+#include <xstd/bits/bitset_adaptor.hpp>             // bitset_adaptor
 #include <xstd/bits/block_sequence.hpp>           // block_vector
 #include <xstd/bits/dynamic_bitset.hpp>           // dynamic_bitset
 #include <xstd/bits/ext/boost/dynamic_bitset.hpp> // bit_traits over boost::dynamic_bitset
@@ -24,16 +24,16 @@ BOOST_AUTO_TEST_SUITE(DynamicBitset)
 // boost::dynamic_bitset's counterpart over a heap of blocks: the same wrapper, at a run-time width. [design.md#the-idempotent-wrapper]
 BOOST_AUTO_TEST_CASE(TheDynamicBitsetIsTheWrapperOverAHeapOfBlocks)
 {
-        static_assert(std::same_as<xstd::dynamic_bitset<std::uint8_t>, xstd::basic_bitset<xstd::block_vector<std::uint8_t>>>);
-        static_assert(std::same_as<xstd::dynamic_bitset<std::uint8_t, std::allocator<std::uint8_t>>, xstd::dynamic_bitset<std::uint8_t>>);
-        static_assert(std::regular<xstd::dynamic_bitset<std::uint8_t>>);
+        static_assert(std::same_as<xstd::basic_dynamic_bitset<std::uint8_t>, xstd::bitset_adaptor<xstd::block_vector<std::uint8_t>>>);
+        static_assert(std::same_as<xstd::basic_dynamic_bitset<std::uint8_t, std::allocator<std::uint8_t>>, xstd::basic_dynamic_bitset<std::uint8_t>>);
+        static_assert(std::regular<xstd::basic_dynamic_bitset<std::uint8_t>>);
 }
 
 // Ours over a block_vector, ours over boost itself: the counterpart's contract on both.
 using Dynamic = std::tuple
-<       xstd::dynamic_bitset<std::uint8_t>
-,       xstd::dynamic_bitset<std::uint64_t>
-,       xstd::basic_bitset<boost::dynamic_bitset<>>
+<       xstd::basic_dynamic_bitset<std::uint8_t>
+,       xstd::basic_dynamic_bitset<std::uint64_t>
+,       xstd::bitset_adaptor<boost::dynamic_bitset<>>
 >;
 
 // The width-and-value constructor, the searches with boost's sentinel, and the set vocabulary boost has.
@@ -127,7 +127,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItIsAsWideAsItsText, T, Dynamic)
 // Appending blocks is the storage's own where it has it: ours has, boost has, and the widths agree.
 BOOST_AUTO_TEST_CASE(AppendingBlocksWidensByAWord)
 {
-        using T = xstd::dynamic_bitset<std::uint8_t>;
+        using T = xstd::basic_dynamic_bitset<std::uint8_t>;
         auto d = T(3, 0b111ULL);
         d.append(std::uint8_t{0b1});
         BOOST_CHECK_EQUAL(d.size(), 11UZ);

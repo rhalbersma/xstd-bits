@@ -7,7 +7,7 @@
 #include <test/bitset/exhaustive.hpp>             // empty_set_pair
 #include <test/bitset/primitives.hpp>             // constructor,
 #include <test/uint128.hpp>                       // TEST_HAS_UINT128, uint128
-#include <xstd/bits/basic_bitset.hpp>             // basic_bitset
+#include <xstd/bits/bitset_adaptor.hpp>             // bitset_adaptor
 #include <xstd/bits/bitset.hpp>                   // bitset
 #include <xstd/bits/dynamic_bitset.hpp>           // dynamic_bitset
 #include <xstd/bits/ext/boost/dynamic_bitset.hpp> // dynamic_bitset
@@ -30,51 +30,51 @@ using Types = std::tuple
 ,         std::bitset< 63>
 ,         std::bitset< 64>
 ,         std::bitset< 65>
-,        xstd::basic_bitset<std::bitset<  0>>
-,        xstd::basic_bitset<std::bitset<  1>>
-,        xstd::basic_bitset<std::bitset< 64>>
-,        xstd::basic_bitset<std::bitset< 65>>
-,        xstd::bitset<  0, uint8_t>
-,        xstd::bitset<  1, uint8_t>
-,        xstd::bitset<  7, uint8_t>
-,        xstd::bitset<  8, uint8_t>
-,        xstd::bitset<  9, uint8_t>
-,        xstd::bitset< 15, uint8_t>
-,        xstd::bitset< 16, uint8_t>
-,        xstd::bitset< 17, uint8_t>
-,        xstd::bitset< 24, uint8_t>
-,        xstd::bitset<  0, uint16_t>
-,        xstd::bitset<  1, uint16_t>
-,        xstd::bitset< 15, uint16_t>
-,        xstd::bitset< 16, uint16_t>
-,        xstd::bitset< 17, uint16_t>
-,        xstd::bitset< 31, uint16_t>
-,        xstd::bitset< 32, uint16_t>
-,        xstd::bitset< 33, uint16_t>
-,        xstd::bitset< 48, uint16_t>
-,        xstd::bitset<  0, uint32_t>
-,        xstd::bitset<  1, uint32_t>
-,        xstd::bitset< 31, uint32_t>
-,        xstd::bitset< 32, uint32_t>
-,        xstd::bitset< 33, uint32_t>
-,        xstd::bitset< 63, uint32_t>
-,        xstd::bitset< 64, uint32_t>
-,        xstd::bitset< 65, uint32_t>
-,        xstd::bitset<  0, uint64_t>
-,        xstd::bitset<  1, uint64_t>
-,        xstd::bitset< 63, uint64_t>
-,        xstd::bitset< 64, uint64_t>
-,        xstd::bitset< 65, uint64_t>
+,        xstd::bitset_adaptor<std::bitset<  0>>
+,        xstd::bitset_adaptor<std::bitset<  1>>
+,        xstd::bitset_adaptor<std::bitset< 64>>
+,        xstd::bitset_adaptor<std::bitset< 65>>
+,        xstd::basic_bitset<  0, uint8_t>
+,        xstd::basic_bitset<  1, uint8_t>
+,        xstd::basic_bitset<  7, uint8_t>
+,        xstd::basic_bitset<  8, uint8_t>
+,        xstd::basic_bitset<  9, uint8_t>
+,        xstd::basic_bitset< 15, uint8_t>
+,        xstd::basic_bitset< 16, uint8_t>
+,        xstd::basic_bitset< 17, uint8_t>
+,        xstd::basic_bitset< 24, uint8_t>
+,        xstd::basic_bitset<  0, uint16_t>
+,        xstd::basic_bitset<  1, uint16_t>
+,        xstd::basic_bitset< 15, uint16_t>
+,        xstd::basic_bitset< 16, uint16_t>
+,        xstd::basic_bitset< 17, uint16_t>
+,        xstd::basic_bitset< 31, uint16_t>
+,        xstd::basic_bitset< 32, uint16_t>
+,        xstd::basic_bitset< 33, uint16_t>
+,        xstd::basic_bitset< 48, uint16_t>
+,        xstd::basic_bitset<  0, uint32_t>
+,        xstd::basic_bitset<  1, uint32_t>
+,        xstd::basic_bitset< 31, uint32_t>
+,        xstd::basic_bitset< 32, uint32_t>
+,        xstd::basic_bitset< 33, uint32_t>
+,        xstd::basic_bitset< 63, uint32_t>
+,        xstd::basic_bitset< 64, uint32_t>
+,        xstd::basic_bitset< 65, uint32_t>
+,        xstd::basic_bitset<  0, uint64_t>
+,        xstd::basic_bitset<  1, uint64_t>
+,        xstd::basic_bitset< 63, uint64_t>
+,        xstd::basic_bitset< 64, uint64_t>
+,        xstd::basic_bitset< 65, uint64_t>
 #ifdef TEST_HAS_UINT128
-,        xstd::bitset<  0, xstd::uint128>
-,        xstd::bitset<  1, xstd::uint128>
-,        xstd::bitset<127, xstd::uint128>
-,        xstd::bitset<128, xstd::uint128>
-,        xstd::bitset<129, xstd::uint128>
+,        xstd::basic_bitset<  0, xstd::uint128>
+,        xstd::basic_bitset<  1, xstd::uint128>
+,        xstd::basic_bitset<127, xstd::uint128>
+,        xstd::basic_bitset<128, xstd::uint128>
+,        xstd::basic_bitset<129, xstd::uint128>
 #endif
-,        xstd::basic_bitset<boost::dynamic_bitset<>>
-,        xstd::dynamic_bitset<uint8_t>
-,        xstd::dynamic_bitset<uint64_t>
+,        xstd::bitset_adaptor<boost::dynamic_bitset<>>
+,        xstd::basic_dynamic_bitset<uint8_t>
+,        xstd::basic_dynamic_bitset<uint64_t>
 >;
 
 using namespace test::bitset;

@@ -5,7 +5,7 @@
 
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <test/set/concepts.hpp>        // bit_set
-#include <xstd/bits/basic_bit_set.hpp>  // basic_bit_set
+#include <xstd/bits/set_adaptor.hpp>  // set_adaptor
 #include <xstd/bits/bit_set.hpp>        // bit_set
 #include <xstd/bits/block_sequence.hpp> // block_vector
 #include <xstd/bits/ownership.hpp>      // ownership
@@ -22,13 +22,13 @@
 
 BOOST_AUTO_TEST_SUITE(BitSet)
 
-using T = xstd::bit_set<std::uint8_t>;
+using T = xstd::basic_bit_set<std::uint8_t>;
 
 // The flagship: the set reading over a heap of blocks, an alias and nothing more. [design.md#the-public-names]
 BOOST_AUTO_TEST_CASE(TheDynamicSetIsTheSetAdaptorOverAHeapOfBlocks)
 {
-        static_assert(std::same_as<T, xstd::basic_bit_set<xstd::block_vector<std::uint8_t>, xstd::ownership::owns>>);
-        static_assert(std::same_as<xstd::bit_set<std::uint8_t, std::allocator<std::uint8_t>>, T>);
+        static_assert(std::same_as<T, xstd::set_adaptor<xstd::block_vector<std::uint8_t>, xstd::ownership::owns>>);
+        static_assert(std::same_as<xstd::basic_bit_set<std::uint8_t, std::allocator<std::uint8_t>>, T>);
         static_assert(test::set::bit_set<T>);
 }
 

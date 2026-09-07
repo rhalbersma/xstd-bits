@@ -5,7 +5,7 @@
 
 #include <boost/dynamic_bitset.hpp>               // dynamic_bitset
 #include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <xstd/bits/basic_bit_sequence.hpp>       // basic_bit_sequence
+#include <xstd/bits/sequence_adaptor.hpp>       // sequence_adaptor
 #include <xstd/bits/bit_array.hpp>                // bit_array
 #include <xstd/bits/bit_span.hpp>                 // bit_span
 #include <xstd/bits/bit_subspan.hpp>              // bit_subspan
@@ -34,7 +34,7 @@ BOOST_AUTO_TEST_SUITE(BitSubspan)
 namespace {
 
 using Blocks = xstd::block_array<std::uint8_t, 20>;
-using Owner  = xstd::bit_array<20, std::uint8_t>;
+using Owner  = xstd::basic_bit_array<20, std::uint8_t>;
 using Span   = xstd::bit_span<Blocks>;
 using Sub    = xstd::bit_subspan<Blocks>;
 
@@ -54,14 +54,14 @@ auto twenty()
         return x;
 }
 
-using ViewedTypes = std::tuple<Owner, xstd::bit_vector<std::uint8_t>, std::bitset<20>, boost::dynamic_bitset<>>;
+using ViewedTypes = std::tuple<Owner, xstd::basic_bit_vector<std::uint8_t>, std::bitset<20>, boost::dynamic_bitset<>>;
 
 }  // namespace
 
 // A window is the referring adaptor windowed, an alias since nothing deduces it; it stores what std::span stores, three words beside the whole view's one. [design.md#windows]
 BOOST_AUTO_TEST_CASE(TheWindowIsTheAdaptorWindowed)
 {
-        static_assert(std::same_as<Sub, xstd::basic_bit_sequence<Blocks, xstd::ownership::refers, true>>);
+        static_assert(std::same_as<Sub, xstd::sequence_adaptor<Blocks, xstd::ownership::refers, true>>);
         static_assert(sizeof(Span) == sizeof(void*));
         static_assert(sizeof(Sub)  == 3 * sizeof(std::size_t));
 
@@ -149,7 +149,7 @@ BOOST_AUTO_TEST_CASE(WindowsCompose)
         BOOST_CHECK(v.first(0).empty());
         BOOST_CHECK(v.last(0).empty());
         BOOST_CHECK(v.subspan(20).begin() == v.subspan(20).end());
-        auto z = xstd::bit_array<0, std::uint8_t>();
+        auto z = xstd::basic_bit_array<0, std::uint8_t>();
         BOOST_CHECK(xstd::bit_span(z).subspan(0).empty());
 }
 
