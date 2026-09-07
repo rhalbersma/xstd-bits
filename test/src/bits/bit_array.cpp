@@ -3,15 +3,17 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/test/unit_test.hpp>   // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <boost/test/unit_test.hpp>   // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <test/block_types.hpp>       // graded_extents
 #include <test/sequence/concepts.hpp> // bit_sequence
 #include <test/value_reference.hpp>   // value_reference
 #include <xstd/bits/bit_array.hpp>    // bit_array
+#include <algorithm>                  // equal, none_of
+#include <array>                      // array
 #include <concepts>                   // regular, totally_ordered
-#include <functional>                 // hash
+#include <functional>                 // hash, identity
 #include <iterator>                   // random_access_iterator
-#include <ranges>                     // random_access_range
+#include <ranges>                     // drop, random_access_range, take
 
 BOOST_AUTO_TEST_SUITE(BitArray)
 
@@ -60,6 +62,26 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItHashesAsAnOwner, T, Types)
 BOOST_AUTO_TEST_CASE_TEMPLATE(IsABitSequence, T, Types)
 {
         static_assert(test::sequence::bit_sequence<T>);
+}
+
+// [array]'s synopsis line by line, the model first so the checklist is known to be honest. [design.md#the-sequence-contract]
+static_assert(test::sequence::array_bool<std::array<bool, 5>>);
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(ItAnswersEveryLineOfStdArrayBool, T, Types)
+{
+        static_assert(test::sequence::array_bool<T>);
+}
+
+// std::array's aggregate initialization: what is listed leads and the rest stays false.
+BOOST_AUTO_TEST_CASE_TEMPLATE(ItIsListInitializedLikeAStdArray, T, Types)
+{
+        if constexpr (T().size() >= 3UZ) {
+                auto const a = T{ true, false, true };
+                auto m = std::array<bool, 3>{ true, false, true };
+                BOOST_CHECK(std::ranges::equal(a | std::views::take(3), m));
+                BOOST_CHECK(std::ranges::none_of(a | std::views::drop(3), std::identity()));
+        }
+        BOOST_CHECK(T{} == T());
 }
 
 BOOST_AUTO_TEST_SUITE_END()

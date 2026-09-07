@@ -6,28 +6,29 @@
 #ifndef XSTD_BITS_SEQUENCE_ADAPTOR_HPP
 #define XSTD_BITS_SEQUENCE_ADAPTOR_HPP
 
-#include <boost/container_hash/is_range.hpp> // is_range
-#include <boost/hash2/hash_append.hpp>       // hash_append_tag
-#include <xstd/bits/bit_proxy.hpp>           // bit_sequence_iterator, bit_sequence_reference
-#include <xstd/bits/bit_traits.hpp>          // bit_storage, bit_traits, static_bit_extent, word_at
-#include <xstd/bits/detail/hash.hpp>         // hash_append_bits, std_hash
-#include <xstd/bits/ownership.hpp>           // owned_bits_t, owned_storage, owned_traits_t, owner_of, ownership, owns
-#include <cassert>                           // assert
-#include <compare>                           // strong_ordering
-#include <concepts>                          // constructible_from, convertible_to, same_as, swap, swappable
-#include <cstddef>                           // ptrdiff_t, size_t
-#include <format>                            // format
-#include <functional>                        // hash
-#include <initializer_list>                  // initializer_list
-#include <iterator>                          // input_iterator, make_reverse_iterator, reverse_iterator, sentinel_for
-#include <limits>                            // numeric_limits
-#include <algorithm>                         // min
-#include <ranges>                            // begin, enable_borrowed_range, enable_view, end, from_range_t, input_range, range_reference_t, size, sized_range, subrange
-#include <source_location>                   // source_location
-#include <span>                              // dynamic_extent
-#include <stdexcept>                         // out_of_range
-#include <type_traits>                       // conditional_t, false_type, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
-#include <utility>                           // as_const, declval, forward
+#include <boost/container_hash/is_range.hpp>      // is_range
+#include <boost/hash2/hash_append.hpp>            // hash_append_tag
+#include <xstd/bits/bit_proxy.hpp>                // bit_sequence_iterator, bit_sequence_reference
+#include <xstd/bits/bit_traits.hpp>               // bit_storage, bit_traits, static_bit_extent, word_at
+#include <xstd/bits/detail/allocator_typedef.hpp> // allocator_typedef, no_typedef
+#include <xstd/bits/detail/hash.hpp>              // hash_append_bits, std_hash
+#include <xstd/bits/ownership.hpp>                // owned_bits_t, owned_storage, owned_traits_t, owner_of, ownership, owns
+#include <cassert>                                // assert
+#include <compare>                                // strong_ordering
+#include <concepts>                               // constructible_from, convertible_to, same_as, swap, swappable
+#include <cstddef>                                // ptrdiff_t, size_t
+#include <format>                                 // format
+#include <functional>                             // hash
+#include <initializer_list>                       // initializer_list
+#include <iterator>                               // input_iterator, make_reverse_iterator, reverse_iterator, sentinel_for
+#include <limits>                                 // numeric_limits
+#include <algorithm>                              // copy, min, remove_if
+#include <ranges>                                 // begin, enable_borrowed_range, enable_view, end, from_range_t, input_range, range_reference_t, size, sized_range, subrange
+#include <source_location>                        // source_location
+#include <span>                                   // dynamic_extent
+#include <stdexcept>                              // out_of_range
+#include <type_traits>                            // conditional_t, false_type, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
+#include <utility>                                // as_const, declval, forward, move
 
 // The sequence reading, [array] over any Bits with a bit_traits specialization, owning it or referring to it. [design.md#the-three-adaptors]
 namespace xstd {
@@ -41,8 +42,9 @@ concept blit_source =
                 { S::traits_type::num_blocks(c) } -> std::convertible_to<std::size_t>;
         };
 
+// An owner names its storage's allocator, as std::vector<bool> names its own; a view names none, owning nothing. [design.md#the-sequence-contract]
 template<class Bits, ownership Own, bool Windowed, bit_storage<Bits> Traits = bit_traits<std::remove_const_t<Bits>>>
-class sequence_adaptor
+class sequence_adaptor : public std::conditional_t<owns(Own), detail::bits::allocator_typedef<std::remove_const_t<Bits>>, detail::bits::no_typedef>
 {
         static constexpr bool is_owner  = owns(Own);
         static constexpr bool is_window = Windowed;
@@ -175,6 +177,87 @@ public:
         :
                 sequence_adaptor(il.begin(), il.end())
         {}
+
+        // std::array's aggregate initialization, as a constructor: what is listed leads and the rest stays false, a longer list being the error it is there. [design.md#the-sequence-contract]
+        constexpr sequence_adaptor(std::initializer_list<value_type> il)
+                requires is_owner and (not can_grow)
+        :
+                m_bits()
+        {
+                assert(il.size() <= size());
+                std::ranges::copy(il, begin());
+        }
+
+        // [vector.bool]'s allocator arguments, where the storage takes one: deduced and matched, so a storage without one has no such constructor. [design.md#the-sequence-contract]
+        template<class Alloc>
+                requires can_grow and std::same_as<Alloc, typename bits_type::allocator_type>
+        [[nodiscard]] constexpr explicit sequence_adaptor(Alloc const& alloc)
+        :
+                m_bits(alloc)
+        {}
+
+        template<class Alloc>
+                requires can_grow and std::same_as<Alloc, typename bits_type::allocator_type>
+        [[nodiscard]] constexpr sequence_adaptor(size_type n, Alloc const& alloc)
+        :
+                m_bits(n, alloc)
+        {}
+
+        template<class Alloc>
+                requires can_grow and std::same_as<Alloc, typename bits_type::allocator_type>
+        [[nodiscard]] constexpr sequence_adaptor(size_type n, value_type const& value, Alloc const& alloc)
+        :
+                m_bits(n, alloc)
+        {
+                if (value) {
+                        Traits::fill(m_bits, true);
+                }
+        }
+
+        template<std::input_iterator I, std::sentinel_for<I> S, class Alloc>
+                requires can_grow and std::constructible_from<value_type, std::iter_reference_t<I>> and std::same_as<Alloc, typename bits_type::allocator_type>
+        [[nodiscard]] constexpr sequence_adaptor(I first, S last, Alloc const& alloc)
+        :
+                m_bits(alloc)
+        {
+                for (; first != last; ++first) {
+                        m_bits.push_back(static_cast<value_type>(*first));
+                }
+        }
+
+        template<std::ranges::input_range R, class Alloc>
+                requires can_grow and std::constructible_from<value_type, std::ranges::range_reference_t<R>> and std::same_as<Alloc, typename bits_type::allocator_type>
+        [[nodiscard]] constexpr sequence_adaptor(std::from_range_t, R&& rg, Alloc const& alloc)
+        :
+                sequence_adaptor(std::ranges::begin(rg), std::ranges::end(rg), alloc)
+        {}
+
+        template<class Alloc>
+                requires can_grow and std::same_as<Alloc, typename bits_type::allocator_type>
+        [[nodiscard]] constexpr sequence_adaptor(sequence_adaptor const& other, Alloc const& alloc)
+        :
+                m_bits(other.m_bits, alloc)
+        {}
+
+        template<class Alloc>
+                requires can_grow and std::same_as<Alloc, typename bits_type::allocator_type>
+        [[nodiscard]] constexpr sequence_adaptor(sequence_adaptor&& other, Alloc const& alloc)
+        :
+                m_bits(std::move(other.m_bits), alloc)
+        {}
+
+        template<class Alloc>
+                requires can_grow and std::same_as<Alloc, typename bits_type::allocator_type>
+        [[nodiscard]] constexpr sequence_adaptor(std::initializer_list<value_type> il, Alloc const& alloc)
+        :
+                sequence_adaptor(il.begin(), il.end(), alloc)
+        {}
+
+        [[nodiscard]] constexpr auto get_allocator() const noexcept
+                requires is_owner and requires (bits_type const& b) { b.get_allocator(); }
+        {
+                return m_bits.get_allocator();
+        }
 
         constexpr auto operator=(std::initializer_list<value_type> il)
                 -> sequence_adaptor&
@@ -441,10 +524,7 @@ public:
         [[nodiscard]] constexpr auto back (this auto&& self) noexcept -> reference_t<decltype(self)> { return { &self.storage(), self.offset() + self.size() - 1UZ }; }
 
         // The owner's alone, following span: a handle declines to say whether it compares its referent or its contents. Defaulted, the storage being the one member. [design.md#views-follow-their-precedent]
-        [[nodiscard]] friend constexpr auto operator==(sequence_adaptor const& x, sequence_adaptor const& y) noexcept
-                -> bool
-                requires is_owner
-        = default;
+        [[nodiscard]] friend constexpr auto operator==(sequence_adaptor const& x, sequence_adaptor const& y) noexcept -> bool requires is_owner = default;
 
         // The trait's entry and nothing else: an owner is over storage of ours, which has one. [design.md#owning-is-ours]
         [[nodiscard]] friend constexpr auto operator<=>(sequence_adaptor const& x, sequence_adaptor const& y) noexcept
@@ -590,6 +670,26 @@ constexpr void swap(sequence_adaptor<Bits, Own, Windowed, Traits>& x, sequence_a
         x.swap(y);
 }
 // NOLINTEND(readability-redundant-parentheses)
+
+// [vector.erasure], over the owner's own erase: the proxies move and swap, so remove_if runs unchanged over the packed bits. [design.md#the-sequence-contract]
+template<class Bits, ownership Own, bool Windowed, class Traits, class Pred>
+constexpr auto erase_if(sequence_adaptor<Bits, Own, Windowed, Traits>& c, Pred pred)
+        -> typename sequence_adaptor<Bits, Own, Windowed, Traits>::size_type
+        requires requires { c.erase(c.cbegin(), c.cend()); }
+{
+        auto const [first, last] = std::ranges::remove_if(c, pred);
+        auto const n = static_cast<typename sequence_adaptor<Bits, Own, Windowed, Traits>::size_type>(last - first);
+        c.erase(first, last);
+        return n;
+}
+
+template<class Bits, ownership Own, bool Windowed, class Traits, class U = bool>
+constexpr auto erase(sequence_adaptor<Bits, Own, Windowed, Traits>& c, U const& value)
+        -> typename sequence_adaptor<Bits, Own, Windowed, Traits>::size_type
+        requires requires { c.erase(c.cbegin(), c.cend()); }
+{
+        return xstd::erase_if(c, [&](bool x) { return x == value; });
+}
 
 }       // namespace xstd
 

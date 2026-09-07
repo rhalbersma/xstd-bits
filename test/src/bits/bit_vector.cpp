@@ -19,9 +19,11 @@
 #include <iterator>                          // next
 #include <limits>                            // numeric_limits
 #include <memory>                            // allocator
-#include <ranges>                            // equal, iota, next, transform
+#include <ranges>                            // equal, from_range, iota, next, transform
 #include <type_traits>                       // is_default_constructible_v
+#include <utility>                           // move
 #include <vector>                            // vector
+#include <version>                           // IWYU pragma: keep; __cpp_lib_containers_ranges
 
 BOOST_AUTO_TEST_SUITE(BitVector)
 
@@ -46,6 +48,20 @@ BOOST_AUTO_TEST_CASE(TheDynamicSequenceIsTheSequenceAdaptorOverAHeapOfBlocks)
 }
 
 // [vector]'s constructors, every shape, against std::vector<bool> built the same way.
+// [vector.bool]'s synopsis line by line, the model first so the checklist is known to be honest. [design.md#the-sequence-contract]
+BOOST_AUTO_TEST_CASE(ItAnswersEveryLineOfStdVectorBool)
+{
+        static_assert(test::sequence::vector_bool<std::vector<bool>>);
+        static_assert(test::sequence::vector_bool<T>);
+        static_assert(test::sequence::vector_bool<xstd::bit_vector>);
+#if defined(__cpp_lib_containers_ranges)
+        static_assert(test::sequence::vector_bool_ranges<std::vector<bool>>);
+#endif
+        static_assert(test::sequence::vector_bool_ranges<T>);
+        static_assert(test::sequence::vector_bool_ranges<xstd::bit_vector>);
+        static_assert(std::same_as<T::allocator_type, std::allocator<std::uint8_t>>);
+}
+
 BOOST_AUTO_TEST_CASE(ItIsBuiltLikeAStdVector)
 {
         auto const pattern = std::views::iota(0UZ, 20UZ) | std::views::transform([](auto i) { return i % 3 == 0; });
@@ -68,6 +84,41 @@ BOOST_AUTO_TEST_CASE(ItIsBuiltLikeAStdVector)
         BOOST_CHECK(std::ranges::equal(v, model));
         v.assign({ true });
         BOOST_CHECK(std::ranges::equal(v, std::vector<bool>{ true }));
+}
+
+// The allocator forms, each against the one without: the allocator is a construction argument, never part of the value.
+BOOST_AUTO_TEST_CASE(ItIsBuiltWithAnAllocatorLikeAStdVector)
+{
+        auto const pattern = std::views::iota(0UZ, 20UZ) | std::views::transform([](auto i) { return i % 3 == 0; });
+        auto const alloc = std::allocator<std::uint8_t>();
+        auto const model = T(pattern.begin(), pattern.end());
+
+        BOOST_CHECK(T(alloc).get_allocator() == alloc);
+        BOOST_CHECK(T(alloc).empty());
+        BOOST_CHECK(T(17, alloc) == T(17));
+        BOOST_CHECK(T(5, true, alloc) == T(5, true));
+        BOOST_CHECK(T(5, false, alloc) == T(5, false));
+        BOOST_CHECK(T(pattern.begin(), pattern.end(), alloc) == model);
+        BOOST_CHECK(T(std::from_range, pattern, alloc) == model);
+        BOOST_CHECK(T(model, alloc) == model);
+        BOOST_CHECK(T({ true, false, true }, alloc) == T({ true, false, true }));
+
+        auto source = model;
+        auto const moved = T(std::move(source), alloc);
+        BOOST_CHECK(moved == model);
+        BOOST_CHECK(source.empty());  // NOLINT(bugprone-use-after-move,hicpp-invalid-access-moved): the moved-from is empty by contract, which is the check.
+}
+
+// [vector.erasure] against the model, erasing a value and then a predicate.
+BOOST_AUTO_TEST_CASE(ErasureIsTheStdVectorsOwn)
+{
+        auto v = T{ true, false, true, true, false, false, true };
+        auto m = std::vector<bool>{ true, false, true, true, false, false, true };
+        BOOST_CHECK_EQUAL(erase(v, true), std::erase(m, true));
+        BOOST_CHECK(std::ranges::equal(v, m));
+        BOOST_CHECK_EQUAL(erase_if(v, [](bool x) { return not x; }), std::erase_if(m, [](bool x) { return not x; }));
+        BOOST_CHECK(v.empty());
+        BOOST_CHECK_EQUAL(erase(v, false), 0UZ);
 }
 
 // Growth is the owner's: push, pop, emplace, resize, reserve, shrink and clear, each against the model.

@@ -25,6 +25,9 @@ struct allocator_typedef<Storage>
         [[nodiscard]] friend constexpr auto operator==(allocator_typedef const&, allocator_typedef const&) noexcept -> bool = default;
 };
 
+// A view's base in the same position: no typedef, owning nothing, and no comparison, a view being as incomparable as std::span. [design.md#views-follow-their-precedent]
+struct no_typedef {};
+
 }       // namespace xstd::detail::bits
 
 #endif  // XSTD_BITS_DETAIL_ALLOCATOR_TYPEDEF_HPP

@@ -708,6 +708,32 @@ the suffix stays available as a later optimization behind profiling.
 view have it and a window does not; the static `swap(reference, reference)` is the proxies' own swap under
 the name the standard gives it.
 
+### the-sequence-contract
+
+`bit_vector` answers every line of `[vector.bool]`'s synopsis and `bit_array<N>` every line of `[array]`'s,
+and the test says so as a checklist rather than a claim: `test/sequence/concepts.hpp` spells each synopsis
+as one requires-expression, `vector_bool` and `array_bool`, and `std::vector<bool>` and `std::array<bool, N>`
+are asserted against it first. A line the model itself fails is a wrong line, so the checklist is known to
+be honest before ours is held to it; the C++23 range members are a second concept, `vector_bool_ranges`, so
+the model is held to them only where its standard library has them.
+
+The sweep found what the range members had not needed. The allocator: `allocator_type` through the same
+empty base `bitset_adaptor` has, `get_allocator`, and the allocator-extended constructors,
+`[container.alloc.reqmts]`'s copy and move included, which `block_sequence` gains beneath them, deduced and
+matched to the storage's own so a static owner has none. `[vector.erasure]`'s `erase` and `erase_if` as
+non-members over the owner's `erase(first, last)`, `std::ranges::remove_if` running unchanged over the
+proxies, which move and swap. And `std::array`'s aggregate initialization as an `initializer_list`
+constructor on the static owner, the listed values leading and the rest false, a longer list being the
+error it is on `std::array`.
+
+Three things are not offered, each because packed bits have no address. `data()`, and the `pointer` and
+`const_pointer` typedefs, name what a proxy cannot give; the checklist leaves them out of
+`[container.reqmts]`'s typedefs rather than inventing a pointer to a bit. `std::array`'s tuple interface,
+`get<I>`, `tuple_size` and `tuple_element`, is left out with them: it is `std::array`'s claim to be a
+product of `N` objects, and a packed sequence is one object. `std::hash` is asked of the vector alone,
+`std::array` having none, while `bit_array` hashes as every owner does
+([the-hashing-invariant](#the-hashing-invariant)).
+
 ### views-over-owners
 
 An owner has no trait of its own — `bit_static_set`, `bit_array` and `bitset` are thin wrappers over a
@@ -929,6 +955,29 @@ single-block set proves nothing on its own. And `erase` was an out-of-bounds *wr
 failed on its returned value rather than on memory at all: `find_next`'s `++n` wrapped before it could test
 the bound, so it answered with a real element where `end()` was due. That second one is why this stays a gate
 on the jobs that build without sanitizers.
+
+### the-sieve
+
+The two sieves under `include/opt/` are the library's worked example and its bench, and each speaks one
+vocabulary. `opt/set/sieve.hpp` runs over any ordered set of integers, `std::set`, `std::flat_set`,
+`bit_static_set` or `bit_set`: the candidates are `iota(2, n)` converted to the set, and a sift is `erase`.
+`opt/bitset/sieve.hpp` runs over any bitset, `std::bitset`, `boost::dynamic_bitset` or ours, in the same
+vocabulary through `bit_set_view`: the storage is resized to the count where it can be, then the view
+`fill`s and `erase`s 0 and 1, and every sift is an `erase` through it. The `legacy_bitset`/`modern_bitset`
+ladders, the `generate_empty` trait and the `static_assert(false)` arms that #84 catalogued are gone with
+the absence they papered over: the view is what reconciles `set(pos)`/`reset(pos)` with `insert`/`erase`,
+and a bitset's own spelling reaches the sieve through it and nowhere else. A bitset's `erase` invalidates no
+iterator, so the bitset sieve walks the view live where the set sieve walks a snapshot.
+
+The benches are dynamic containers only, so each compares like with like: the set bench holds
+`std::flat_set`, `std::set` and `bit_set`, the bitset bench `boost::dynamic_bitset<>` and `dynamic_bitset`.
+A `bit_static_set<N>` sifting a universe it was sized for is not measuring what a `std::set` growing and
+shrinking is. `bit_set` is on the set bench and not the bitset one: a set has no `resize`, its width being
+capacity ([width-is-capacity](#width-is-capacity)), and it shares `block_sequence` with `dynamic_bitset`,
+so the bitset bench would only time the same storage twice. The tests keep the static types, `std::bitset<N>`,
+`xstd::bitset<N>` and `bit_static_set<N>`, since the sieve is an example before it is a bench; the two-bit
+sieve that runs `sift_primes1` to exhaustion is over the run-time widths, boost's and ours, as only they can
+be that small.
 
 ## Platform and tooling, continued
 

@@ -30,7 +30,7 @@
                                                                // (views::drop_last when P22014R2 is accepted)
 #include <span>                                                // dynamic_extent
 #include <type_traits>                                         // conditional_t, is_const_v, is_nothrow_swappable_v, remove_reference_t
-#include <utility>                                             // pair
+#include <utility>                                             // exchange, move, pair
 #include <vector>                                              // vector
 #include <version>                                             // IWYU pragma: keep; __cpp_lib_inplace_vector
 #ifdef __cpp_lib_inplace_vector
@@ -132,6 +132,25 @@ public:
                 m_size(n),
                 m_blocks(blocks_for(n), alloc)
         {}
+
+        // [container.alloc.reqmts]'s allocator-extended copy and move; the moved-from is left empty whichever way the blocks went.
+        template<class Alloc>
+                requires (not has_static_size) and std::same_as<Alloc, typename Blocks::allocator_type>
+        [[nodiscard]] constexpr block_sequence(block_sequence const& other, Alloc const& alloc)
+        :
+                m_size(other.m_size),
+                m_blocks(other.m_blocks, alloc)
+        {}
+
+        template<class Alloc>
+                requires (not has_static_size) and std::same_as<Alloc, typename Blocks::allocator_type>
+        [[nodiscard]] constexpr block_sequence(block_sequence&& other, Alloc const& alloc)
+        :
+                m_size(std::exchange(other.m_size, 0UZ)),
+                m_blocks(std::move(other.m_blocks), alloc)
+        {
+                other.m_blocks.clear();
+        }
 
         [[nodiscard]] constexpr auto get_allocator() const noexcept
                 requires requires (Blocks const& b) { b.get_allocator(); }
