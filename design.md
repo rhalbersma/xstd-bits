@@ -635,7 +635,12 @@ to fix.
 
 One header per public name, each an alias over one storage: `bit_set`, `bit_vector` and `dynamic_bitset`
 over `block_vector<Block, Allocator>`, beside `bit_static_set`, `bit_array` and `bitset` over `block_array`.
-The header is the name's home and the only place it is spelled; `bits.hpp` includes them all.
+The header is the name's home and the only place it is spelled; `bits.hpp` includes them all. Every name
+takes `std::size_t` as its block unless told otherwise, the static ones as `<N, Block>` and the dynamic ones
+as `<Block, Allocator>`, so `bit_set<>` is the flagship at the machine word. Each static name has an
+`aligned` form in the namespace of that name, its width rounded up to whole blocks so that no block carries
+an unused tail: `aligned::bitset<9>` is `bitset<64>` and `aligned::bitset<9, std::uint8_t>` is
+`bitset<16, std::uint8_t>`.
 
 ### width-is-capacity
 
