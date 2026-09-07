@@ -8,6 +8,7 @@
 
 #include <boost/hash2/hash_append_fwd.hpp>                     // hash_append, hash_append_tag
 #include <xstd/bits/bit_traits.hpp>                            // bit_traits
+#include <xstd/bits/detail/allocator_typedef.hpp>              // allocator_typedef
 #include <xstd/bits/detail/intrin.hpp>                         // countl_zero, countr_zero, popcount
 #include <xstd/bits/detail/pred.hpp>                           // intersects, is_subset_of, not_equal_to
 #include <xstd/ints/concepts/unsigned_integer.hpp>             // unsigned_integer
@@ -15,11 +16,11 @@
 #include <xstd/ints/limits.hpp>                                // numeric_limits
 #include <xstd/ints/memory.hpp>                                // align_up
 #include <xstd/misc/type_traits/conditional_data_member.hpp>   // XSTD_NO_UNIQUE_ADDRESS, conditional_data_member_t
-#include <algorithm>                                           // all_of, any_of, fill, fill_n, fold_left, max, shift_left, shift_right
+#include <algorithm>                                           // all_of, any_of, fill, fill_n, fold_left, max, min, shift_left, shift_right
 #include <array>                                               // array
 #include <cassert>                                             // assert
 #include <compare>                                             // strong_ordering
-#include <concepts>                                            // regular, swap
+#include <concepts>                                            // regular, same_as, swap
 #include <cstddef>                                             // ptrdiff_t, size_t
 #include <functional>                                          // plus
 #include <iterator>                                            // distance, forward_iterator, input_iterator, prev
@@ -57,7 +58,7 @@ inline constexpr auto num_blocks_v = std::ranges::max(
 
 // The one vehicle: it owns the unused-tail invariant, and has no iterators. [design.md#the-one-vehicle]
 template<block_storage Blocks, std::size_t N = std::dynamic_extent>
-class block_sequence
+class block_sequence : public detail::bits::allocator_typedef<Blocks>
 {
 public:
         using block_type = std::ranges::range_value_t<Blocks>;
@@ -115,6 +116,39 @@ public:
                 m_size(n),
                 m_blocks(make_blocks(n))
         {}
+
+        // boost's allocator arguments, where the blocks take one: deduced and matched, so a storage without an allocator has no such constructor. [design.md#a-strict-extension]
+        template<class Alloc>
+                requires (not has_static_size) and std::same_as<Alloc, typename Blocks::allocator_type>
+        [[nodiscard]] constexpr explicit block_sequence(Alloc const& alloc)
+        :
+                m_blocks(blocks_for(0UZ), alloc)
+        {}
+
+        template<class Alloc>
+                requires (not has_static_size) and std::same_as<Alloc, typename Blocks::allocator_type>
+        [[nodiscard]] constexpr block_sequence(std::size_t n, Alloc const& alloc)
+        :
+                m_size(n),
+                m_blocks(blocks_for(n), alloc)
+        {}
+
+        [[nodiscard]] constexpr auto get_allocator() const noexcept
+                requires requires (Blocks const& b) { b.get_allocator(); }
+        {
+                return m_blocks.get_allocator();
+        }
+
+        // In bits: the width, or the widest whole number of blocks the blocks can hold and the address space can count. [design.md#a-strict-extension]
+        [[nodiscard]] constexpr auto max_size() const noexcept
+                -> std::size_t
+        {
+                if constexpr (has_static_size) {
+                        return N;
+                } else {
+                        return std::ranges::min(m_blocks.max_size(), std::numeric_limits<std::size_t>::max() / bits_per_block) * bits_per_block;
+                }
+        }
 
         [[nodiscard]] constexpr auto size() const noexcept
                 -> std::size_t

@@ -11,6 +11,7 @@
 #include <xstd/bits/bitset.hpp>                   // basic_bitset, bitset
 #include <xstd/bits/bitset_adaptor.hpp>           // bitset_adaptor, has_bitops
 #include <xstd/bits/block_sequence.hpp>           // block_array, block_vector
+#include <xstd/bits/dynamic_bitset.hpp>           // basic_dynamic_bitset
 #include <xstd/bits/ext/boost/dynamic_bitset.hpp> // IWYU pragma: keep; bit_traits<boost::dynamic_bitset>
 #include <xstd/bits/ext/std/bitset.hpp>           // IWYU pragma: keep; bit_traits<std::bitset>
 #include <algorithm>                              // equal
@@ -36,6 +37,13 @@ BOOST_AUTO_TEST_SUITE(BitsetAdaptor)
 // Dependent, so an unsatisfied class constraint is a false rather than a hard error; an expression rather than a type requirement, which clang-tidy 22 misreads.
 template<class B>
 constexpr bool wrappable = requires { sizeof(xstd::bitset_adaptor<B>); };
+
+// Dependent likewise, so a storage without an allocator answers false; the alias spells the typedef without a typename, which clang-tidy 22 reads as redundant.
+template<class X>
+using allocator_of = X::allocator_type;
+
+template<class X>
+constexpr bool has_allocator = requires (X const& x) { sizeof(allocator_of<X>); x.get_allocator(); };
 
 // The vocabulary is our storages': std::bitset's members and boost's set vocabulary, read by block. The counterparts themselves are not wrapped. [design.md#owning-is-ours]
 BOOST_AUTO_TEST_CASE(TheVocabularyIsWhatOurStoragesSpeakAndTheCounterpartsDoNot)
@@ -279,6 +287,38 @@ BOOST_AUTO_TEST_CASE(TheBlockInterfaceIsBoosts)
         from_block_range(dirty.begin(), dirty.begin() + 1, c);
         BOOST_CHECK_EQUAL(c.count(), 2UZ);
         BOOST_CHECK(c.test(7) and c.test(8));
+}
+
+// boost's remaining members at a static width, where every guard throws: at, test_set, the ranged forms, max_size; no allocator, the storage having none. [design.md#a-strict-extension]
+BOOST_AUTO_TEST_CASE(TheRestOfBoostsSurfaceIsThereAtAStaticWidth)
+{
+        static_assert(not has_allocator<Ours>);
+        static_assert(has_allocator<xstd::basic_dynamic_bitset<std::uint8_t>>);
+        BOOST_CHECK_EQUAL(Ours().max_size(), 9UZ);
+
+        auto d = Ours(0b101ULL);
+        BOOST_CHECK_EQUAL(d.at(0), true);
+        BOOST_CHECK_EQUAL(std::as_const(d).at(1), false);
+        d.at(1) = true;
+        BOOST_CHECK(d.test(1));
+        BOOST_CHECK_THROW(static_cast<void>(d.at(9)), std::out_of_range);
+        BOOST_CHECK_THROW(static_cast<void>(std::as_const(d).at(9)), std::out_of_range);
+
+        BOOST_CHECK_EQUAL(d.test_set(1, false), true);
+        BOOST_CHECK_EQUAL(d.test_set(1), false);
+        BOOST_CHECK(d.test(1));
+        BOOST_CHECK_THROW(static_cast<void>(d.test_set(9)), std::out_of_range);
+
+        d.set(3, 5, true);
+        BOOST_CHECK_EQUAL(d.to_ullong(), 0b1111'1111ULL - 0b100ULL + 0b100ULL);
+        d.reset(0, 2);
+        BOOST_CHECK_EQUAL(d.to_ullong(), 0b1111'1100ULL);
+        d.flip(0, 9);
+        BOOST_CHECK_EQUAL(d.to_ullong(), 0b1'0000'0011ULL);
+        d.set(9, 0, true);
+        BOOST_CHECK_THROW(d.set(8, 2, true), std::out_of_range);
+        BOOST_CHECK_THROW(d.reset(9, 1), std::out_of_range);
+        BOOST_CHECK_THROW(d.flip(5, 5), std::out_of_range);
 }
 
 // The views reach a bitset by referring into its storage: the ordering, the keys, the blocks. [design.md#views-over-owners]
