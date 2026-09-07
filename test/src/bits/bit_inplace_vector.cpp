@@ -15,7 +15,6 @@
 #include <concepts>                              // same_as
 #include <cstddef>                               // size_t
 #include <cstdint>                               // uint8_t
-#include <limits>                                // numeric_limits
 #include <new>                                   // bad_alloc
 #include <ranges>                                // count, iota, to, transform
 #include <vector>                                // vector

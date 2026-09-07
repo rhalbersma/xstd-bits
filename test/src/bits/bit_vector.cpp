@@ -17,7 +17,6 @@
 #include <cstdint>                           // uint8_t
 #include <functional>                        // hash
 #include <iterator>                          // next
-#include <limits>                            // numeric_limits
 #include <memory>                            // allocator
 #include <ranges>                            // equal, from_range, iota, next, transform
 #include <type_traits>                       // is_default_constructible_v

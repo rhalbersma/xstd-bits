@@ -15,7 +15,6 @@
 #include <cstddef>                      // size_t
 #include <cstdint>                      // uint8_t
 #include <functional>                   // hash
-#include <limits>                       // numeric_limits
 #include <memory>                       // allocator
 #include <ranges>                       // iota, to
 #include <set>                          // set
