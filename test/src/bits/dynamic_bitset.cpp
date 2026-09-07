@@ -3,19 +3,25 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <boost/dynamic_bitset.hpp>               // dynamic_bitset, to_string
 #include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <xstd/bits/bitset_adaptor.hpp>             // bitset_adaptor
 #include <xstd/bits/block_sequence.hpp>           // block_vector
 #include <xstd/bits/dynamic_bitset.hpp>           // dynamic_bitset
+#include <algorithm>                              // equal
 #include <array>                                  // array
-#include <concepts>                               // regular, same_as
+#include <concepts>                               // regular, same_as, totally_ordered
 #include <cstdint>                                // uint8_t, uint64_t
 #include <functional>                             // hash
+#include <iterator>                               // back_inserter
 #include <memory>                                 // allocator
+#include <ranges>                                 // equal, iota
 #include <sstream>                                // istringstream, ostringstream
 #include <stdexcept>                              // invalid_argument, out_of_range, overflow_error
 #include <string>                                 // string
 #include <tuple>                                  // tuple
+#include <utility>                                // pair
+#include <vector>                                 // vector
 
 BOOST_AUTO_TEST_SUITE(DynamicBitset)
 
@@ -63,6 +69,74 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItAnswersAsBoostDoes, T, Dynamic)
         d -= e;
         BOOST_CHECK(f == d);
         BOOST_CHECK_EQUAL(d.count(), 1UZ);
+}
+
+// The reverse pair at a run-time width: the highest set position below pos, npos where none, a pos past the width meaning from the end.
+BOOST_AUTO_TEST_CASE_TEMPLATE(TheReverseSearchesMirrorTheForwardOnes, T, Dynamic)
+{
+        auto d = T(70);
+        d.set(1);
+        d.set(69);
+        BOOST_CHECK_EQUAL(d.find_last(), 69UZ);
+        BOOST_CHECK_EQUAL(d.find_prev(69), 1UZ);
+        BOOST_CHECK_EQUAL(d.find_prev(1), T::npos);
+        BOOST_CHECK_EQUAL(d.find_prev(T::npos), 69UZ);
+        BOOST_CHECK_EQUAL(T(9).find_last(), T::npos);
+        BOOST_CHECK_EQUAL(T().find_last(), T::npos);
+        BOOST_CHECK_EQUAL(T().find_prev(0), T::npos);
+}
+
+// The ordering is boost's, pair for pair: every value at every width up to nine against every other, unequal widths included. [design.md#the-ordering-invariant]
+BOOST_AUTO_TEST_CASE_TEMPLATE(TheOrderingIsBoosts, T, Dynamic)
+{
+        static_assert(std::totally_ordered<T>);
+
+        auto values = std::vector<std::pair<T, boost::dynamic_bitset<>>>();
+        for (auto const w : std::views::iota(0UZ, 10UZ)) {
+                for (auto const v : std::views::iota(0ULL, 1ULL << w)) {
+                        values.emplace_back(T(w, v), boost::dynamic_bitset<>(w, static_cast<unsigned long>(v)));
+                }
+        }
+        auto disagreements = 0;
+        for (auto const& [ x, bx ] : values) {
+                for (auto const& [ y, by ] : values) {
+                        auto const cmp = x <=> y;
+                        disagreements += static_cast<int>((cmp < 0) != (bx < by));
+                        disagreements += static_cast<int>((cmp > 0) != (by < bx));
+                        disagreements += static_cast<int>((cmp == 0) != (bx == by));
+                        disagreements += static_cast<int>(cmp != (x.to_string() <=> y.to_string()));
+                }
+        }
+        BOOST_CHECK_EQUAL(disagreements, 0);
+}
+
+// boost's block interface: the block-range constructor, every block out, at most every block in.
+BOOST_AUTO_TEST_CASE(TheBlockInterfaceIsBoosts)
+{
+        using T = xstd::basic_dynamic_bitset<std::uint8_t>;
+        static_assert(std::same_as<T::block_type, std::uint8_t>);
+        static_assert(T::bits_per_block == 8UZ);
+
+        auto const blocks = std::array<std::uint8_t, 2>{ 0b1000'0001, 0b11 };
+        auto const d = T(blocks.begin(), blocks.end());
+        auto const b = boost::dynamic_bitset<std::uint8_t>(blocks.begin(), blocks.end());
+        BOOST_CHECK_EQUAL(d.size(), 16UZ);
+        BOOST_CHECK_EQUAL(d.num_blocks(), 2UZ);
+        BOOST_CHECK_EQUAL(d.count(), 4UZ);
+        auto s = std::string();
+        boost::to_string(b, s);
+        BOOST_CHECK_EQUAL(d.to_string(), s);
+
+        auto out = std::vector<std::uint8_t>();
+        to_block_range(d, std::back_inserter(out));
+        BOOST_CHECK(std::ranges::equal(out, blocks));
+
+        auto e = T(16);
+        from_block_range(blocks.begin(), blocks.end(), e);
+        BOOST_CHECK(e == d);
+
+        // The two-argument form stays the width-and-value constructor, as boost's dispatch keeps it.
+        BOOST_CHECK_EQUAL(T(3, 7).to_ullong(), 7ULL);
 }
 
 // Growth, boost's members: resize with either fill, push and pop, append a block and a range, reserve, shrink, clear.

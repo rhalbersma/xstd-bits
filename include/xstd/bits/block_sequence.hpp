@@ -155,7 +155,7 @@ public:
         // Memberwise, width first: the unused bits are kept clear, so the blocks compare as the bits do, and a zero width through the one block it still holds. [design.md#block-storage]
         [[nodiscard]] friend constexpr auto operator==(block_sequence const&, block_sequence const&) noexcept -> bool = default;
 
-        // No operator<=>: block_sequence is pure storage with no opinion on which reading orders it, so it names both and picks neither. [design.md#two-readings-disagree]
+        // No operator<=>: block_sequence is pure storage with no opinion on which reading orders it, so it names all three and picks none. [design.md#two-readings-disagree]
 
         // The set reading a word at a time: whoever HOLDS the lowest differing position is greater, unless the other holds nothing above it. [design.md#the-ordering-primitive]
         [[nodiscard]] constexpr auto set_three_way(block_sequence const& other [[maybe_unused]]) const noexcept
@@ -197,6 +197,25 @@ public:
                                 ? std::strong_ordering::greater
                                 : std::strong_ordering::less
                         ;
+                }
+        }
+
+        // The bitset reading a word at a time: the bit string, most significant position first, is the blocks from the top block down, the unused tail being clear. [design.md#the-ordering-primitive]
+        [[nodiscard]] constexpr auto bitset_three_way(block_sequence const& other [[maybe_unused]]) const noexcept
+                -> std::strong_ordering
+        {
+                assert(this->size() == other.size());
+                if constexpr (has_static_size and N == 0) {
+                        return std::strong_ordering::equal;
+                } else if constexpr (has_static_size and static_num_blocks == 1) {
+                        return this->m_blocks[0] <=> other.m_blocks[0];
+                } else {
+                        for (auto i = num_blocks(); i-- != 0UZ;) {
+                                if (auto const cmp = this->m_blocks[i] <=> other.m_blocks[i]; cmp != std::strong_ordering::equal) {
+                                        return cmp;
+                                }
+                        }
+                        return std::strong_ordering::equal;
                 }
         }
 
@@ -971,9 +990,10 @@ struct bit_traits<block_sequence<Blocks, N>>
         [[nodiscard]] static constexpr auto find_next(bits_type const& c, std::size_t n) noexcept -> std::size_t { return c.exclusive_find_next(n); }
         [[nodiscard]] static constexpr auto find_prev(bits_type const& c, std::size_t n) noexcept -> std::size_t { return c.exclusive_find_prev(n); }
 
-        // Two named entries, never one "lexicographical_three_way": the readings disagree, so the caller names the one it means. [design.md#two-readings-disagree]
+        // Three named entries, never one "lexicographical_three_way": the readings disagree, so the caller names the one it means. [design.md#two-readings-disagree]
         [[nodiscard]] static constexpr auto set_three_way     (bits_type const& x, bits_type const& y) noexcept -> std::strong_ordering { return x.set_three_way(y);      }
         [[nodiscard]] static constexpr auto sequence_three_way(bits_type const& x, bits_type const& y) noexcept -> std::strong_ordering { return x.sequence_three_way(y); }
+        [[nodiscard]] static constexpr auto bitset_three_way  (bits_type const& x, bits_type const& y) noexcept -> std::strong_ordering { return x.bitset_three_way(y);   }
 };
 
 }       // namespace xstd

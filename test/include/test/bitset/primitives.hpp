@@ -350,31 +350,39 @@ struct mem_equal_to
         }
 };
 
+// The bit string, most significant position first: the member where the type has one, boost's free function otherwise.
+template<class X>
+[[nodiscard]] auto bit_string(const X& x)
+{
+        if constexpr (requires { x.to_string(); }) {
+                return x.to_string();
+        } else {
+                auto s = std::string();
+                to_string(x, s);
+                return s;
+        }
+}
+
+// Two orderings. The set view's is std::set's over ascending positions, re-derived from each type's own iteration; the type's own, where it has one, is the bit string's, which is boost's operator<. [design.md#the-ordering-invariant]
 struct mem_compare_three_way
 {
-        template<class X>
-        [[nodiscard]] static auto fn_compare_three_way(const X& lhs, const X& rhs) noexcept
-        {
-                if constexpr (requires { lhs <=> rhs; }) {
-                        return lhs <=> rhs;
-                } else {
-                        return xstd::bit_set_view(lhs) <=> xstd::bit_set_view(rhs);
-                }
-        }
-
-        // The view-based check re-derives the order from each type's own ascending iteration, so it holds at any cardinality.
         template<class X>
         auto operator()(const X& self, const X& rhs) const noexcept
         {
                 auto const lhs_view = xstd::bit_set_view(self);
                 auto const rhs_view = xstd::bit_set_view(rhs);
                 BOOST_CHECK(
-                        fn_compare_three_way(self, rhs) ==
+                        (lhs_view <=> rhs_view) ==
                         std::lexicographical_compare_three_way(
                                 lhs_view.begin(), lhs_view.end(),
                                 rhs_view.begin(), rhs_view.end()
                         )
                 );
+                if constexpr (requires { self <=> rhs; }) {
+                        BOOST_CHECK((self <=> rhs) == (bit_string(self) <=> bit_string(rhs)));
+                } else if constexpr (requires { self < rhs; }) {
+                        BOOST_CHECK_EQUAL(self < rhs, bit_string(self) < bit_string(rhs));
+                }
         }
 };
 

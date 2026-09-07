@@ -13,12 +13,16 @@
 #include <xstd/bits/block_sequence.hpp>           // block_array, block_vector
 #include <xstd/bits/ext/boost/dynamic_bitset.hpp> // IWYU pragma: keep; bit_traits<boost::dynamic_bitset>
 #include <xstd/bits/ext/std/bitset.hpp>           // IWYU pragma: keep; bit_traits<std::bitset>
+#include <algorithm>                              // equal
+#include <array>                                  // array
 #include <bitset>                                 // bitset
-#include <concepts>                               // regular, same_as
+#include <compare>                                // strong_ordering
+#include <concepts>                               // regular, same_as, totally_ordered
 #include <cstddef>                                // size_t
 #include <cstdint>                                // uint8_t, uint64_t
 #include <functional>                             // hash
-#include <ranges>                                 // range
+#include <iterator>                               // back_inserter
+#include <ranges>                                 // equal, iota, range, reverse
 #include <sstream>                                // istringstream
 #include <stdexcept>                              // out_of_range, overflow_error
 #include <string>                                 // string
@@ -191,6 +195,90 @@ BOOST_AUTO_TEST_CASE(TheExtensionIsThereAtAStaticWidth)
         BOOST_CHECK(f == d);
         BOOST_CHECK_EQUAL(d.count(), 1UZ);
         BOOST_CHECK(d.test(0) and not d.test(2));
+}
+
+// The reverse pair mirrors boost's forward pair: the highest set position below pos, npos where none, a pos past the width meaning from the end.
+BOOST_AUTO_TEST_CASE(TheReverseSearchesMirrorTheForwardOnes)
+{
+        auto const d = Ours(0b101ULL);
+        BOOST_CHECK_EQUAL(d.find_last(), 2UZ);
+        BOOST_CHECK_EQUAL(d.find_prev(2), 0UZ);
+        BOOST_CHECK_EQUAL(d.find_prev(1), 0UZ);
+        BOOST_CHECK_EQUAL(d.find_prev(0), Ours::npos);
+        BOOST_CHECK_EQUAL(d.find_prev(100), 2UZ);
+        BOOST_CHECK_EQUAL(d.find_prev(Ours::npos), d.find_last());
+        BOOST_CHECK_EQUAL(Ours().find_last(), Ours::npos);
+
+        using Empty = xstd::basic_bitset<0, std::uint8_t>;
+        BOOST_CHECK_EQUAL(Empty().find_last(), Empty::npos);
+        BOOST_CHECK_EQUAL(Empty().find_prev(0), Empty::npos);
+
+        // The two loops are each other's reverse, across blocks.
+        using Wide = xstd::basic_bitset<70, std::uint8_t>;
+        auto w = Wide();
+        w.set(1); w.set(8); w.set(9); w.set(69);
+        auto forward = std::vector<std::size_t>();
+        for (auto i = w.find_first(); i != Wide::npos; i = w.find_next(i)) {
+                forward.push_back(i);
+        }
+        auto backward = std::vector<std::size_t>();
+        for (auto i = w.find_last(); i != Wide::npos; i = w.find_prev(i)) {
+                backward.push_back(i);
+        }
+        BOOST_CHECK((forward == std::vector<std::size_t>{ 1, 8, 9, 69 }));
+        BOOST_CHECK(std::ranges::equal(forward, std::views::reverse(backward)));
+}
+
+// The ordering is the bit string's, to_string() compared, which within a word is the number's. [design.md#the-ordering-invariant]
+BOOST_AUTO_TEST_CASE(TheOrderingIsTheBitStrings)
+{
+        static_assert(std::totally_ordered<Ours>);
+        for (auto const a : std::views::iota(0ULL, 512ULL)) {
+                for (auto const b : std::views::iota(0ULL, 512ULL)) {
+                        auto const x = Ours(a);
+                        auto const y = Ours(b);
+                        BOOST_CHECK((x <=> y) == (a <=> b));
+                        BOOST_CHECK((x <=> y) == (x.to_string() <=> y.to_string()));
+                }
+        }
+
+        // Across blocks: the top block decides before the lower ones say anything.
+        using Wide = xstd::basic_bitset<70, std::uint8_t>;
+        auto top = Wide();
+        top.set(69);
+        auto rest = Wide();
+        rest.set();
+        rest.reset(69);
+        BOOST_CHECK(rest < top);
+        BOOST_CHECK((Wide() <=> Wide()) == std::strong_ordering::equal);
+        BOOST_CHECK(Wide() < top);
+}
+
+// boost's block interface: the block type and its width, the block count, every block out and at most every block in, the tail kept clear. [design.md#a-strict-extension]
+BOOST_AUTO_TEST_CASE(TheBlockInterfaceIsBoosts)
+{
+        static_assert(std::same_as<Ours::block_type, std::uint8_t>);
+        static_assert(Ours::bits_per_block == 8UZ);
+        BOOST_CHECK_EQUAL(Ours().num_blocks(), 2UZ);
+
+        auto const b = Ours("101000001");
+        auto out = std::vector<std::uint8_t>();
+        to_block_range(b, std::back_inserter(out));
+        BOOST_CHECK((out == std::vector<std::uint8_t>{ 0b0100'0001, 0b1 }));
+
+        auto c = Ours();
+        from_block_range(out.begin(), out.end(), c);
+        BOOST_CHECK(c == b);
+
+        // Fewer blocks than there are leaves the rest alone; a dirty tail is masked rather than kept.
+        auto const dirty = std::array<std::uint8_t, 2>{ 0b1000'0000, 0b1111'1111 };
+        auto e = Ours();
+        from_block_range(dirty.begin(), dirty.end(), e);
+        BOOST_CHECK_EQUAL(e.count(), 2UZ);
+        BOOST_CHECK(e.test(7) and e.test(8));
+        from_block_range(dirty.begin(), dirty.begin() + 1, c);
+        BOOST_CHECK_EQUAL(c.count(), 2UZ);
+        BOOST_CHECK(c.test(7) and c.test(8));
 }
 
 // The views reach a bitset by referring into its storage: the ordering, the keys, the blocks. [design.md#views-over-owners]

@@ -13,9 +13,10 @@
 #include <compare>                     // strong_ordering
 #include <cstddef>                     // size_t
 #include <cstdint>                     // uint8_t, uint64_t
+#include <initializer_list>            // initializer_list
 #include <new>                         // IWYU pragma: keep; bad_alloc, behind TEST_HAS_INPLACE_VECTOR
 #include <ranges>                      // iota
-#include <utility>                     // pair
+#include <tuple>                       // get, tuple
 #include <vector>                      // vector
 
 BOOST_AUTO_TEST_SUITE(BitBlocks)
@@ -735,7 +736,7 @@ auto probes(BB const& empty) -> std::vector<BB>
         return out;
 }
 
-// The invariant on both readings: the block-wise answer is the standard algorithm's, or it is wrong. [design.md#the-ordering-invariant]
+// The invariant on all three readings: the block-wise answer is the standard algorithm's, or it is wrong. [design.md#the-ordering-invariant]
 template<class BB>
 auto disagreements(BB const& empty) -> int
 {
@@ -754,6 +755,10 @@ auto disagreements(BB const& empty) -> int
                         if (std::lexicographical_compare_three_way(qx.begin(), qx.end(), qy.begin(), qy.end()) != x.sequence_three_way(y)) {
                                 ++n;
                         }
+                        // The bitset reading is the sequence reading traversed from the top, which is the bit string's order.
+                        if (std::lexicographical_compare_three_way(qx.rbegin(), qx.rend(), qy.rbegin(), qy.rend()) != x.bitset_three_way(y)) {
+                                ++n;
+                        }
                 }
         }
         return n;
@@ -761,14 +766,14 @@ auto disagreements(BB const& empty) -> int
 
 }       // namespace
 
-// Both orderings, at every static extent, against the algorithms that define them. [design.md#the-ordering-invariant]
-BOOST_AUTO_TEST_CASE_TEMPLATE(BothOrderingsAgreeWithTheirReading, T, test::graded_extents<graded_block_array>)
+// All three orderings, at every static extent, against the algorithms that define them. [design.md#the-ordering-invariant]
+BOOST_AUTO_TEST_CASE_TEMPLATE(AllThreeOrderingsAgreeWithTheirReading, T, test::graded_extents<graded_block_array>)
 {
         BOOST_CHECK_EQUAL(disagreements(T()), 0);
 }
 
 // The same at a run-time width, which shares no instantiation with the static one. [design.md#per-instantiation-slots]
-BOOST_AUTO_TEST_CASE_TEMPLATE(BothOrderingsAgreeAtARunTimeWidth, Block, test::word_types)
+BOOST_AUTO_TEST_CASE_TEMPLATE(AllThreeOrderingsAgreeAtARunTimeWidth, Block, test::word_types)
 {
         using T = xstd::block_vector<Block>;
         constexpr auto D = test::digits_v<Block>;
@@ -780,23 +785,31 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(BothOrderingsAgreeAtARunTimeWidth, Block, test::wo
         BOOST_CHECK_EQUAL(disagreed, 0);
 }
 
-// The pair that separates the readings: {0,1} holds the lower position, and holds more. [design.md#two-readings-disagree]
-BOOST_AUTO_TEST_CASE(TheTwoOrderingsDisagree)
+// Two pairs that separate the three readings pairwise: {0} against {1}, and {0,1} against {1}. [design.md#two-readings-disagree]
+BOOST_AUTO_TEST_CASE(TheThreeOrderingsDisagree)
 {
         using T = xstd::block_array<std::uint8_t, 9>;
 
-        using orderings = std::pair<std::strong_ordering, std::strong_ordering>;
-        constexpr auto disagreed = [] -> orderings {
+        using orderings = std::tuple<std::strong_ordering, std::strong_ordering, std::strong_ordering>;
+        constexpr auto compare = [](std::initializer_list<std::size_t> p, std::initializer_list<std::size_t> q) -> orderings {
                 auto x = T();
-                x.set(0);
-                x.set(1);
+                for (auto const i : p) { x.set(i); }
                 auto y = T();
-                y.set(1);
-                return std::pair{ x.set_three_way(y), x.sequence_three_way(y) };
-        }();
+                for (auto const i : q) { y.set(i); }
+                return { x.set_three_way(y), x.sequence_three_way(y), x.bitset_three_way(y) };
+        };
 
-        static_assert(disagreed.first  == std::strong_ordering::less);
-        static_assert(disagreed.second == std::strong_ordering::greater);
+        // {0} against {1}: [0] < [1]; [1,0] > [0,1]; "01" < "10".
+        constexpr auto singletons = compare({ 0 }, { 1 });
+        static_assert(std::get<0>(singletons) == std::strong_ordering::less);
+        static_assert(std::get<1>(singletons) == std::strong_ordering::greater);
+        static_assert(std::get<2>(singletons) == std::strong_ordering::less);
+
+        // {0,1} against {1}: [0,1] < [1]; [1,1] > [0,1]; "11" > "10".
+        constexpr auto prefix = compare({ 0, 1 }, { 1 });
+        static_assert(std::get<0>(prefix) == std::strong_ordering::less);
+        static_assert(std::get<1>(prefix) == std::strong_ordering::greater);
+        static_assert(std::get<2>(prefix) == std::strong_ordering::greater);
 }
 
 // The prefix clause, which is the whole of what the set reading adds: {1} beats {} only by being longer.
@@ -817,8 +830,8 @@ BOOST_AUTO_TEST_CASE(TheSetOrderingPutsAPrefixFirst)
         BOOST_CHECK(x.set_three_way(z) == std::strong_ordering::less);
 }
 
-// Two named entries, so a caller says which reading it means rather than being handed one. [design.md#two-readings-disagree]
-BOOST_AUTO_TEST_CASE_TEMPLATE(TheTraitsNameBothOrderings, T, test::graded_extents<graded_block_array>)
+// Three named entries, so a caller says which reading it means rather than being handed one. [design.md#two-readings-disagree]
+BOOST_AUTO_TEST_CASE_TEMPLATE(TheTraitsNameAllThreeOrderings, T, test::graded_extents<graded_block_array>)
 {
         using traits = xstd::bit_traits<T>;
 
@@ -828,6 +841,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheTraitsNameBothOrderings, T, test::graded_extent
                 for (auto const& y : values) {
                         BOOST_CHECK(traits::set_three_way(x, y)      == x.set_three_way(y));
                         BOOST_CHECK(traits::sequence_three_way(x, y) == x.sequence_three_way(y));
+                        BOOST_CHECK(traits::bitset_three_way(x, y)   == x.bitset_three_way(y));
                 }
         }
 }

@@ -21,11 +21,11 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(IsRegular, T, Types)
         static_assert(std::regular<T>);
 }
 
-// Deliberately not orderable by itself, because std::bitset is not: the ordering is reached through the set reading.
-BOOST_AUTO_TEST_CASE_TEMPLATE(OrderedThroughTheViewRatherThanInfix, T, Types)
+// Two orderings at every width: its own is the bit string's, boost's, and the set reading's is reached through the view. [design.md#the-ordering-invariant]
+BOOST_AUTO_TEST_CASE_TEMPLATE(OrderedInfixAndThroughTheView, T, Types)
 {
-        static_assert(not std::totally_ordered<T>);
-        static_assert(    std::totally_ordered<decltype(xstd::bit_set_view(std::declval<T&>()))>);
+        static_assert(std::totally_ordered<T>);
+        static_assert(std::totally_ordered<decltype(xstd::bit_set_view(std::declval<T&>()))>);
 }
 
 // A fixed-width bitset owns no storage, so every operation on it is nothrow.

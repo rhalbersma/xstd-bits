@@ -157,7 +157,8 @@ BOOST_AUTO_TEST_CASE(OursReproducesItsTraits)
         using ours   = xstd::bitset<64>;
 
         static_assert(std::regular<theirs>       == std::regular<ours>);
-        static_assert(std::totally_ordered<theirs> == std::totally_ordered<ours>);
+        // The one trait ours adds rather than reproduces: the bit string's order. [design.md#a-strict-extension]
+        static_assert(not std::totally_ordered<theirs> and std::totally_ordered<ours>);
 
         static_assert(std::is_nothrow_default_constructible_v<theirs> == std::is_nothrow_default_constructible_v<ours>);
         static_assert(std::is_nothrow_copy_constructible_v<theirs>    == std::is_nothrow_copy_constructible_v<ours>);
