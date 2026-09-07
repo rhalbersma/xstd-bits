@@ -46,6 +46,21 @@ padding where in truth the sole block is all of it — and it gets a selection i
 answers C4293, *shift count too big*, on the arm it discards. `used_bits()` is the same two cases at a
 run-time width.
 
+The width member takes the blocks' alignment where they out-align a `std::size_t`:
+
+```cpp
+using width_type = std::conditional_t<(alignof(std::size_t) >= alignof(Blocks)), std::size_t, block_type>;
+```
+
+Only a storage holding its blocks inline out-aligns a `size_t`, and it does so by the blocks' own alignment, so
+`block_type` is both wide enough to hold any width and exactly the size of the gap it fills -- `block_sequence`
+is then its two members and nothing else, at the same size the padding cost. `std::array` reaches none of this,
+a static width carrying no member at all, and neither does `std::vector`, whose alignment is a pointer's whatever
+it holds; `block_inplace_vector<xstd::uint128, N>` is the one cell that does. The `static_assert` beside the
+alias holds the two facts that make `block_type` the right carrier, so a storage over-aligned for some other
+reason fails loudly rather than truncating a width. Every reader goes through `size()`, which converts once, so
+the arithmetic stays a `size_t`'s.
+
 ### default-construction
 
 A defaulted default constructor plus an NSDMI, rather than two constructors constrained on the extent:
@@ -810,12 +825,11 @@ So `inplace_bitset<24>` answers 24 and `bit_inplace_vector<24>` answers the addr
 `capacity()` on the sequence and bitset readings. The set reading has neither, `std::set` having no `capacity()`
 and a set growing by `insert` ([growth](#growth)), so there a capacity is only ever felt at the throw.
 
-The column is not swept over `xstd::uint128`, and that is the storage's property rather than the names': a
-16-byte-aligned block after `block_sequence`'s `std::size_t` width pads the class, which `-Wpadded` reports and
-`-Werror` rejects. Neither other column reaches it -- a static width carries no width member at all, and
-`std::vector`'s alignment is a pointer's -- so the combination is `block_inplace_vector<xstd::uint128, N>`'s and
-predates these aliases. The tests grade the column over the machine word, where the arithmetic that is its own
-follows `digits` and not the carrier.
+The column is graded over every block the other two are, `xstd::uint128` included, which it can be because the
+width member now carries its own alignment ([padding](#padding)). Before that, a 16-byte-aligned block after a
+`std::size_t` width padded the class, and `-Wpadded` under `-Werror` rejected it; the inplace column was the only
+cell that could reach it, a static width carrying no width member at all and `std::vector`'s alignment being a
+pointer's whatever it holds.
 
 Every leg without the storage compiles each of the three tests' `#else` arm, one case asserting the absence,
 because a Boost.Test module whose test tree is empty is a setup error rather than a pass.

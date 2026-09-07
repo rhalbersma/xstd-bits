@@ -87,6 +87,14 @@ BOOST_AUTO_TEST_CASE(APackedArrayIsTheArrayItPacks)
         [] <std::size_t... I> (std::index_sequence<I...>) {
                 static_assert((bit_sequence<std::tuple_element_t<I, packed>> and ...));
         }(std::make_index_sequence<std::tuple_size_v<packed>>{});
+
+#ifdef TEST_HAS_INPLACE_VECTOR
+        // Storage is the second dimension of the grading: the same claim over the same extents, read as capacities. [design.md#the-inplace-column]
+        using inplace = test::graded_extents<xstd::basic_bit_inplace_vector>;
+        [] <std::size_t... I> (std::index_sequence<I...>) {
+                static_assert((bit_sequence<std::tuple_element_t<I, inplace>> and ...));
+        }(std::make_index_sequence<std::tuple_size_v<inplace>>{});
+#endif
 }
 
 // The same claim on the other reading: a set of keys and a sequence of bools are different interfaces.
@@ -104,4 +112,12 @@ BOOST_AUTO_TEST_CASE(APackedSetIsTheSetItPacks)
         [] <std::size_t... I> (std::index_sequence<I...>) {
                 static_assert((bit_set<std::tuple_element_t<I, packed>> and ...));
         }(std::make_index_sequence<std::tuple_size_v<packed>>{});
+
+#ifdef TEST_HAS_INPLACE_VECTOR
+        // And the same second dimension on this reading. [design.md#the-inplace-column]
+        using inplace = test::graded_extents<xstd::basic_bit_inplace_set>;
+        [] <std::size_t... I> (std::index_sequence<I...>) {
+                static_assert((bit_set<std::tuple_element_t<I, inplace>> and ...));
+        }(std::make_index_sequence<std::tuple_size_v<inplace>>{});
+#endif
 }
