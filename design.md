@@ -284,22 +284,22 @@ needed on storage we control, and the unused tail is `block_sequence`'s to keep.
 
 ### two-readings-disagree
 
-"Lexicographic" is underspecified below the reading layer. Both readings are lexicographic; they order over
-different sequences, and **they disagree**:
+"Lexicographic" is underspecified below the reading layer. All three readings are lexicographic; they order
+over different sequences, and **they disagree**, pairwise, as two pairs show:
 
-| `{0,1}` against `{1}` | compared as | result |
-|---|---|---|
-| set reading | ascending positions, `[0,1]` against `[1]` | `{0,1} < {1}` |
-| sequence reading | bools from index 0, `[1,1,0…]` against `[0,1,0…]` | `{0,1} > {1}` |
+| pair | set reading, ascending positions | sequence reading, bools from index 0 | bitset reading, bools from the top |
+|---|---|---|---|
+| `{0}` against `{1}` | `[0]` vs `[1]`: less | `[1,0]` vs `[0,1]`: greater | `"01"` vs `"10"`: less |
+| `{0,1}` against `{1}` | `[0,1]` vs `[1]`: less | `[1,1]` vs `[0,1]`: greater | `"11"` vs `"10"`: greater |
 
 A trait serving three readings cannot hold one of their orderings without choosing for its callers, so it
-holds neither under that name. It holds **both, separately named**: `bit_traits` has a `set_three_way` entry
-and a `sequence_three_way` entry, never one `lexicographical_three_way`, so a caller says which reading it
-means rather than being handed whichever the trait happened to pick.
+holds none under that name. It holds **all three, separately named**: `bit_traits` has a `set_three_way`
+entry, a `sequence_three_way` entry and a `bitset_three_way` entry, never one `lexicographical_three_way`, so a
+caller says which reading it means rather than being handed whichever the trait happened to pick.
 
 ### the-ordering-primitive
 
-Both orderings are answered a word at a time, from two pieces:
+The first two orderings are answered a word at a time, from two pieces:
 
 - **`first_difference`** returns the lowest block at which two values differ, together with that block's
   `xor`. `countr_zero` of that `xor` is then the lowest position at which they differ. Equal values answer
@@ -327,6 +327,11 @@ makes the two comparable, both exiting at once.
 `[i, n)` on **one** operand, the one that lacked the bit. Block `i` is the only one touched twice, so the
 pair costs `n + 1` block reads. And when the values are equal `any_above` is never reached at all, since
 `first_difference` already settles it.
+
+**The bitset reading needs neither piece.** The bit string, most significant position first, is the blocks
+from the top block down, with the unused tail kept clear, so `bitset_three_way` is the plain `<=>` of the
+blocks from the top: one comparison at a static width within a word, a loop from the last block otherwise,
+equal only when every block is. It is the one reading whose order is plain lexicographic over words.
 
 **The prefix clause is not removable.** Set order is not plain lexicographic over words under *any*
 comparator. At `digits = 4`, `A = {1}` and `B = {5}` differ in word 0, where `A₀ = {1}` and `B₀ = {}`; a
@@ -380,19 +385,20 @@ std::lexicographical_compare_three_way(a.begin(), a.end(), b.begin(), b.end()) =
 which is stated on the **reading**, never on the storage: `block_sequence` has no `begin()`/`end()`, and
 `boost::dynamic_bitset` has no public iterators, so it cannot be written against a backend at all.
 
-`bitset_adaptor` therefore has no `operator<=>`, because it does not iterate — the existing "no iteration and
-no `<=>` here by design" is a consequence rather than a separate rule.
+`bitset_adaptor` does not iterate, so its left-hand side is the sequence reading's traversal **reversed**:
+`std::views::reverse` over the bools, the order `to_string()` writes them in. That is `boost::dynamic_bitset::operator<`
+exactly, a **third** reading. Boost pairs *a*'s highest bit with *b*'s highest, second with second, then
+breaks a tie on width -- the standard algorithm over reverse iterators. Verified over 1,046,529 pairs
+spanning every width 0-9 against every other: zero mismatches against reverse-lex, 223,893 against numeric
+order. It is *not* magnitude ordering, though it coincides with one at equal width: `"1"` and `"01"` are both
+the number 1, and boost orders them strictly, the shorter first. The harness pins it three ways: against
+boost's own `<` pair for pair over those widths, against `to_string()` compared as strings, and within a word
+against `to_ullong()`.
 
-`boost::dynamic_bitset::operator<` is a **third** reading, not an unreachable one. It pairs *a*'s highest bit
-with *b*'s highest, second with second, then breaks a tie on width — which is that same standard algorithm
-over **reverse** iterators. Verified over 1,046,529 pairs spanning every width 0-9 against every other: zero
-mismatches against reverse-lex, 223,893 against numeric order. It is *not* magnitude ordering, though it
-coincides with one at equal width, which is the only case our operators admit: `"1"` and `"01"` are both the
-number 1, and boost orders them strictly.
-
-So it stays out of `operator<=>` because that is defined by *forward* iteration, not because nothing could
-reach it — and should a dynamic bitset ever want boost's exact ordering, it costs no new algorithm, being
-`sequence_three_way` over `rbegin`/`rend`.
+`bitset_adaptor::operator<=>` is `bitset_three_way` at equal widths, and at unequal ones boost's own walk,
+the top `min(size())` positions paired from the top and then the shorter first; the block-wise form of that
+walk needs shifted reads and arrives with the blit. `==` stays width-first, and `<=>` never answers equal at
+unequal widths, so the two agree ([the-hashing-invariant](#the-hashing-invariant)).
 
 Where a specialization offers nothing faster, the default is that standard algorithm over the reading's own
 iterators — so the default cannot disagree with the specification, and only an optimization can.
@@ -742,13 +748,24 @@ width ([growth](#growth)): `empty`, `resize`, `clear`, `push_back`, `pop_back`, 
 trait's `find_next` from the last position the word holds, and the word constructors take an
 `unsigned long long` at both widths, boost's taking the width first.
 
+Three additions are ours, with no counterpart on either side. `find_last()` and `find_prev(pos)` mirror
+boost's forward pair: the highest set position below `pos`, `npos` where none, a `pos` past the width meaning
+from the end, so `find_prev(npos)` is `find_last()` the way boost's `find_next(npos)` wraps to `find_first()`,
+and the two loops are each other's reverse. They are total, so they take the generic walk rather than the
+trait's `find_prev`, whose contract is the iterator's cheaper one ([total-versus-precondition](#total-versus-precondition)).
+`operator<=>` is the bit string's order, boost's, at both widths ([the-ordering-invariant](#the-ordering-invariant)),
+so `std::set<xstd::bitset<N>>` works and boost's `<` is no longer an omission. And boost's block interface is
+in at both widths, every storage under the wrapper having blocks: `block_type`, `bits_per_block`, `num_blocks()`,
+`to_block_range` writing every block including the clear tail, `from_block_range` reading at most every block
+with the tail masked rather than trusted, and the block-range constructor at a run-time width, a whole number
+of blocks wide. Nothing of boost's is left out.
+
 What ours does not add is a range: becoming one would change what generic code does with it, from `fmt` to
 `std::ranges::to`, which is the one addition a strict extension cannot make. `bit_set_view` and `bit_span`
 refer into its storage ([views-over-owners](#views-over-owners)) and carry the readings, and
-`ext/xstd/bitset.hpp` is the opt-in that makes iteration reachable by name. `block_type` is gone from the
-surface, since nothing used it. The remainder of the extension -- `find_last` and `find_prev`, `operator<=>`
-under boost's bit-string ordering ([the-ordering-invariant](#the-ordering-invariant)), and boost's block
-interface -- is #80's next step.
+`ext/xstd/bitset.hpp` is the opt-in that makes iteration reachable by name. Nor a `const_reference` proxy
+from the const subscript, libc++'s way: `auto x = cb[i]` would change type and could dangle, and a strict
+extension re-types nothing.
 
 Extraction is `[bitset.operators]/6` at both widths: the characters read become `x = bitset_adaptor(str)`,
 so a short read lands in the low positions, and a run-time width becomes the count of characters read,

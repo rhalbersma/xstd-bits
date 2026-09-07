@@ -9,18 +9,19 @@
 // Bitsets [bitset], Header <bitset> synopsis [bitset.syn]
 
 #include <boost/hash2/hash_append.hpp> // hash_append_tag
-#include <xstd/bits/bit_traits.hpp>    // bit_storage, bit_traits, block_readable, static_bit_extent, zero_width
+#include <xstd/bits/bit_traits.hpp>    // bit_storage, bit_traits, block_readable, scan_prev, static_bit_extent, zero_width
 #include <xstd/bits/detail/hash.hpp>   // hash_append_bits, std_hash
 #include <xstd/bits/ownership.hpp>     // owned_storage, ownership
 #include <algorithm>                   // min
 #include <cassert>                     // assert
+#include <compare>                     // strong_ordering
 #include <concepts>                    // convertible_to, regular, same_as
 #include <cstddef>                     // size_t
 #include <format>                      // format
 #include <functional>                  // hash
 #include <ios>                         // ios_base
 #include <iosfwd>                      // basic_istream, basic_ostream
-#include <iterator>                    // input_iterator
+#include <iterator>                    // input_iterator, iter_value_t, output_iterator, sentinel_for
 #include <limits>                      // numeric_limits
 #include <locale>                      // ctype, use_facet
 #include <memory>                      // allocator
@@ -29,6 +30,7 @@
 #include <stdexcept>                   // invalid_argument, out_of_range, overflow_error
 #include <string>                      // basic_string, char_traits
 #include <string_view>                 // basic_string_view
+#include <type_traits>                 // remove_cvref_t
 #include <utility>                     // as_const
 
 namespace xstd {
@@ -70,6 +72,9 @@ class bitset_adaptor
         // No iteration here by design, because neither counterpart has it: the two views refer into the storage instead. [design.md#views-over-owners]
         Bits m_bits{};
 
+        template<std::input_iterator I>
+        static constexpr bool block_iterator = std::same_as<std::remove_cvref_t<std::iter_value_t<I>>, typename Bits::block_type>;
+
         template<class B, ownership O, bit_storage<B> T>         friend class set_adaptor;
         template<class B, ownership O, bool W, bit_storage<B> T> friend class sequence_adaptor;
 
@@ -81,8 +86,10 @@ class bitset_adaptor
         }
 
 public:
-        // boost's typedef, which the harness keys a run-time width on; std::bitset has none, and a typedef changes no answer.
-        using size_type = std::size_t;
+        // boost's typedefs; std::bitset has none, and a typedef changes no answer. The block is in the open again, boost's block interface being part of the extension. [design.md#a-strict-extension]
+        using size_type  = std::size_t;
+        using block_type = Bits::block_type;
+        static constexpr std::size_t bits_per_block = Bits::bits_per_block;
 
         // [bitset.refs], reaching the bits only through the unchecked way in; its own class, with the flip and ~ the sequence proxy lacks. [design.md#unchecked-writes-in-views]
         class reference
@@ -164,6 +171,14 @@ public:
                 m_bits(num_bits)
         {
                 from_ullong(val);
+        }
+
+        // boost's block-range constructor: the first block's low bit is position zero, and the width is a whole number of blocks.
+        template<std::input_iterator I, std::sentinel_for<I> S>
+        [[nodiscard]] constexpr bitset_adaptor(I first, S last)
+                requires (not has_static_width) and block_iterator<I>
+        {
+                m_bits.append(first, last);
         }
 
         template<class charT, class traits, class Allocator>
@@ -343,10 +358,23 @@ public:
         }
 
         // observers
-        [[nodiscard]] constexpr auto count() const noexcept -> std::size_t { return m_bits.count(); }
-        [[nodiscard]] constexpr auto size()  const noexcept -> std::size_t { return m_bits.size();  }
+        [[nodiscard]] constexpr auto count()      const noexcept -> std::size_t { return m_bits.count();      }
+        [[nodiscard]] constexpr auto size()       const noexcept -> std::size_t { return m_bits.size();       }
+        [[nodiscard]] constexpr auto num_blocks() const noexcept -> std::size_t { return m_bits.num_blocks(); }
 
         [[nodiscard]] constexpr auto operator==(bitset_adaptor const& rhs) const noexcept -> bool = default;
+
+        // The bit string's order, most significant position first, which is boost's: the storage's entry at equal widths, and boost's own walk over the top min(size()) positions with the shorter one first otherwise. [design.md#the-ordering-invariant]
+        [[nodiscard]] friend constexpr auto operator<=>(bitset_adaptor const& lhs, bitset_adaptor const& rhs) noexcept
+                -> std::strong_ordering
+        {
+                if constexpr (not has_static_width) {
+                        if (lhs.size() != rhs.size()) {
+                                return lhs.top_aligned_three_way(rhs);
+                        }
+                }
+                return Traits::bitset_three_way(lhs.m_bits, rhs.m_bits);
+        }
 
         [[nodiscard]] constexpr auto test(std::size_t pos) const
                 -> bool
@@ -373,7 +401,7 @@ public:
         [[nodiscard]] constexpr auto is_proper_subset_of(bitset_adaptor const& rhs) const noexcept -> bool { return m_bits.is_proper_subset_of(rhs.m_bits); }
         [[nodiscard]] constexpr auto intersects         (bitset_adaptor const& rhs) const noexcept -> bool { return m_bits.intersects         (rhs.m_bits); }
 
-        // boost's two searches at both widths, npos where the trait's total answer is the width; a zero width answers npos outright, its only answer. [design.md#degenerate-widths]
+        // boost's two searches and their mirror at both widths, npos where the total answer is the width; a zero width answers npos outright, its only answer. [design.md#degenerate-widths]
         [[nodiscard]] constexpr auto find_first() const noexcept
                 -> std::size_t
         {
@@ -393,6 +421,44 @@ public:
                 } else {
                         auto const n = detail::bits::find_next<Traits>(m_bits, pos);
                         return n == size() ? npos : n;
+                }
+        }
+
+        // The reverse pair, ours: find_prev(pos) is the highest set position below pos, a pos past the width meaning from the end, so find_prev(npos) is find_last().
+        // Total, so the generic walk rather than the trait's entry, whose contract is the iterator's cheaper one. [design.md#total-versus-precondition]
+        [[nodiscard]] constexpr auto find_last() const noexcept
+                -> std::size_t
+        {
+                return find_prev(size());
+        }
+
+        [[nodiscard]] constexpr auto find_prev(std::size_t pos) const noexcept
+                -> std::size_t
+        {
+                if constexpr (detail::bits::zero_width<Traits>) {
+                        return npos;
+                } else {
+                        auto const n = detail::bits::scan_prev<Traits>(m_bits, pos);
+                        return n == size() ? npos : n;
+                }
+        }
+
+        // boost's block interface: every block out, including the clear tail, and at most every block in, the tail kept clear. [design.md#a-strict-extension]
+        template<std::output_iterator<block_type> O>
+        friend constexpr void to_block_range(bitset_adaptor const& b, O result)
+        {
+                for (auto const i : std::views::iota(0UZ, b.num_blocks())) {
+                        *result++ = Traits::block(b.m_bits, i);
+                }
+        }
+
+        template<std::input_iterator I, std::sentinel_for<I> S>
+                requires block_iterator<I>
+        friend constexpr void from_block_range(I first, S last, bitset_adaptor& result)
+        {
+                for (auto i = 0UZ; first != last; ++first, ++i) {
+                        assert(i < result.num_blocks());
+                        result.m_bits.set_block(i, *first);
                 }
         }
 
@@ -462,6 +528,20 @@ public:
         }
 
 private:
+        // boost's unequal-width order: the highest positions paired first over the common length, then the shorter is less.
+        [[nodiscard]] constexpr auto top_aligned_three_way(bitset_adaptor const& rhs) const noexcept
+                -> std::strong_ordering
+        {
+                auto const m = std::ranges::min(size(), rhs.size());
+                for (auto const i : std::views::iota(0UZ, m)) {
+                        if (auto const cmp = Traits::at(m_bits, size() - 1UZ - i) <=> Traits::at(rhs.m_bits, rhs.size() - 1UZ - i); cmp != std::strong_ordering::equal) {
+                                return cmp;
+                        }
+                }
+                // The widths differ, which is how this walk was reached, so equal is not an answer here.
+                return size() < rhs.size() ? std::strong_ordering::less : std::strong_ordering::greater;
+        }
+
         constexpr void from_ullong(unsigned long long val) noexcept
         {
                 constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<unsigned long long>::digits);
