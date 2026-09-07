@@ -40,7 +40,7 @@ auto sift_primes0(std::size_t n)
         auto primes = generate_candidates<X>(n);
         for (std::size_t p
                 : xstd::bit_set_view(primes)
-                | std::views::take_while([&](std::size_t x) { return x * x < n; })
+                | std::views::take_while([&](std::size_t x) -> bool { return x * x < n; })
         ) {
                 for (auto m = p * p; m < n; m += p) {
                         sift(primes, m);

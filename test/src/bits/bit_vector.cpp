@@ -54,7 +54,7 @@ BOOST_AUTO_TEST_CASE(ItAnswersEveryLineOfStdVectorBool)
         static_assert(test::sequence::vector_bool<std::vector<bool>>);
         static_assert(test::sequence::vector_bool<T>);
         static_assert(test::sequence::vector_bool<xstd::bit_vector>);
-#if defined(__cpp_lib_containers_ranges)
+#ifdef __cpp_lib_containers_ranges
         static_assert(test::sequence::vector_bool_ranges<std::vector<bool>>);
 #endif
         static_assert(test::sequence::vector_bool_ranges<T>);

@@ -317,7 +317,7 @@ public:
                 -> iterator
         {
                 auto const pos = index_of(position);
-                return rebuild(pos, pos, [&](sequence_adaptor& tmp) { tmp.append_range(std::forward<R>(rg)); });
+                return rebuild(pos, pos, [&](sequence_adaptor& tmp) -> void { tmp.append_range(std::forward<R>(rg)); });
         }
 
         constexpr auto insert(const_iterator position, value_type const& value)
@@ -332,7 +332,7 @@ public:
                 requires can_grow
         {
                 auto const pos = index_of(position);
-                return rebuild(pos, pos, [&](sequence_adaptor& tmp) { tmp.m_bits.resize(tmp.size() + n, value); });
+                return rebuild(pos, pos, [&](sequence_adaptor& tmp) -> void { tmp.m_bits.resize(tmp.size() + n, value); });
         }
 
         template<std::input_iterator I, std::sentinel_for<I> S>
@@ -368,7 +368,7 @@ public:
                 -> iterator
                 requires can_grow
         {
-                return rebuild(index_of(first), index_of(last), [](sequence_adaptor&) {});
+                return rebuild(index_of(first), index_of(last), [](sequence_adaptor&) -> void {});
         }
 
         [[nodiscard]] constexpr explicit sequence_adaptor(Bits& c) noexcept
@@ -547,7 +547,7 @@ public:
         template<class Other> constexpr auto operator&=(this auto&& self, Other const& other) noexcept -> auto& requires is_window and word_writable and blittable<Other> { self.combine(other, [](auto a, auto b) { return static_cast<decltype(a)>(a & b);  }); return self; }
         template<class Other> constexpr auto operator|=(this auto&& self, Other const& other) noexcept -> auto& requires is_window and word_writable and blittable<Other> { self.combine(other, [](auto a, auto b) { return static_cast<decltype(a)>(a | b);  }); return self; }
         template<class Other> constexpr auto operator^=(this auto&& self, Other const& other) noexcept -> auto& requires is_window and word_writable and blittable<Other> { self.combine(other, [](auto a, auto b) { return static_cast<decltype(a)>(a ^ b);  }); return self; }
-        template<class Other> constexpr auto operator-=(this auto&& self, Other const& other) noexcept -> auto& requires is_window and word_writable and blittable<Other> { self.combine(other, [](auto a, auto b) { return static_cast<decltype(a)>(a & ~b); }); return self; }
+        template<class Other> constexpr auto operator-=(this auto&& self, Other const& other) noexcept -> auto& requires is_window and word_writable and blittable<Other> { self.combine(other, [](auto a, auto b) { return static_cast<decltype(a)>(a & static_cast<decltype(b)>(~b)); }); return self; }
 
         // [vector.bool]'s two: flip every bit, a bulk operation like the ones above, and swap two proxies, which the proxies' own swap already does.
         constexpr void flip(this auto&& self) noexcept requires (not is_window) and requires { self.storage().flip(); } { self.storage().flip(); }
@@ -688,7 +688,7 @@ constexpr auto erase(sequence_adaptor<Bits, Own, Windowed, Traits>& c, U const& 
         -> sequence_adaptor<Bits, Own, Windowed, Traits>::size_type
         requires requires { c.erase(c.cbegin(), c.cend()); }
 {
-        return xstd::erase_if(c, [&](bool x) { return x == value; });
+        return xstd::erase_if(c, [&](bool x) -> bool { return x == value; });
 }
 
 }       // namespace xstd

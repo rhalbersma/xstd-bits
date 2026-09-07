@@ -11,6 +11,7 @@
 #include <algorithm>                              // equal
 #include <array>                                  // array
 #include <concepts>                               // regular, same_as, totally_ordered
+#include <cstddef>                                // size_t
 #include <cstdint>                                // uint8_t, uint64_t
 #include <functional>                             // hash
 #include <iterator>                               // back_inserter
@@ -108,24 +109,44 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheOrderingIsBoosts, T, Dynamic)
                 }
         }
         BOOST_CHECK_EQUAL(disagreements, 0);
+}
 
-        // And across blocks at unequal widths, where the top windows are read a word at a time at either alignment. [design.md#the-blit]
+namespace {
+
+// One pair of narrow bitsets against boost's own, at two widths and two patterns; a function rather than a loop body
+// so the case that sweeps it stays under readability-function-cognitive-complexity's threshold.
+auto disagreements_against_boost(std::size_t w, std::size_t u, unsigned long long p, unsigned long long q) -> int
+{
         using Narrow = xstd::basic_dynamic_bitset<std::uint8_t>;
+        auto x  = Narrow(w, p);
+        auto y  = Narrow(u, q);
+        auto bx = boost::dynamic_bitset<std::uint8_t>(w, static_cast<unsigned long>(p));
+        auto by = boost::dynamic_bitset<std::uint8_t>(u, static_cast<unsigned long>(q));
+
+        // Past the sixty-four bits a constructor takes, so the comparison has blocks above them to walk.
+        if (w > 64) { x.set(69); bx.set(69); }
+        if (u > 64) { y.set(65); by.set(65); }
+
+        auto const cmp = x <=> y;
+        return static_cast<int>((cmp <  0) != (bx <  by))
+             + static_cast<int>((cmp >  0) != (by <  bx))
+             + static_cast<int>((cmp == 0) != (bx == by));
+}
+
+}       // namespace
+
+// And across blocks at unequal widths, where the top windows are read a word at a time at either alignment. [design.md#the-blit]
+BOOST_AUTO_TEST_CASE(TheOrderingIsBoostsAcrossBlocksAtUnequalWidths)
+{
+        constexpr auto widths   = std::array{ 0UZ, 3UZ, 8UZ, 9UZ, 16UZ, 17UZ, 25UZ, 70UZ };
+        constexpr auto patterns = std::array{ 0ULL, 1ULL, 0b1010'1010ULL, 0b1'0000'0000ULL, 0xFFFFULL, 0x8001ULL, 0x1F'FFFFULL };
+
         auto wide = 0;
-        for (auto const w : { 0UZ, 3UZ, 8UZ, 9UZ, 16UZ, 17UZ, 25UZ, 70UZ }) {
-                for (auto const u : { 0UZ, 3UZ, 8UZ, 9UZ, 16UZ, 17UZ, 25UZ, 70UZ }) {
-                        for (auto const p : { 0ULL, 1ULL, 0b1010'1010ULL, 0b1'0000'0000ULL, 0xFFFFULL, 0x8001ULL, 0x1F'FFFFULL }) {
-                                for (auto const q : { 0ULL, 1ULL, 0b1010'1010ULL, 0b1'0000'0000ULL, 0xFFFFULL, 0x8001ULL, 0x1F'FFFFULL }) {
-                                        auto x = Narrow(w, p);
-                                        auto y = Narrow(u, q);
-                                        auto bx = boost::dynamic_bitset<std::uint8_t>(w, static_cast<unsigned long>(p));
-                                        auto by = boost::dynamic_bitset<std::uint8_t>(u, static_cast<unsigned long>(q));
-                                        if (w > 64) { x.set(69); bx.set(69); }
-                                        if (u > 64) { y.set(65); by.set(65); }
-                                        auto const cmp = x <=> y;
-                                        wide += static_cast<int>((cmp < 0) != (bx < by));
-                                        wide += static_cast<int>((cmp > 0) != (by < bx));
-                                        wide += static_cast<int>((cmp == 0) != (bx == by));
+        for (auto const w : widths) {
+                for (auto const u : widths) {
+                        for (auto const p : patterns) {
+                                for (auto const q : patterns) {
+                                        wide += disagreements_against_boost(w, u, p, q);
                                 }
                         }
                 }
