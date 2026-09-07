@@ -13,7 +13,7 @@
 #include <xstd/bits/ext/boost/dynamic_bitset.hpp> // bit_traits over boost::dynamic_bitset
 #include <xstd/bits/ext/std/bitset.hpp>           // bit_traits over std::bitset
 #include <xstd/bits/ownership.hpp>                // ownership
-#include <xstd/bits/ranges/set_view.hpp>          // set_view
+#include <xstd/bits/bit_set_view.hpp>          // bit_set_view
 #include <bitset>                                 // bitset
 #include <concepts>                               // derived_from, same_as
 #include <cstddef>                                // size_t
@@ -23,8 +23,7 @@
 #include <tuple>                                  // tuple
 #include <utility>                                // declval
 
-BOOST_AUTO_TEST_SUITE(Ranges)
-BOOST_AUTO_TEST_SUITE(SetView)
+BOOST_AUTO_TEST_SUITE(BitSetView)
 
 namespace {
 
@@ -44,24 +43,24 @@ auto eight_bits_with_three_set() -> T
 }
 
 template<class T>
-using view_of = decltype(xstd::set_view(std::declval<T&>()));
+using view_of = decltype(xstd::bit_set_view(std::declval<T&>()));
 
 }  // namespace
 
 // The view is the referring adaptor under another name, and over an owner it refers into the storage the owner wraps. [design.md#the-views-are-the-adaptors]
 BOOST_AUTO_TEST_CASE(TheViewIsTheReferringAdaptor)
 {
-        static_assert(std::derived_from<xstd::set_view<std::bitset<8>>, xstd::basic_bit_set<std::bitset<8>, xstd::ownership::refers>>);
-        static_assert(std::same_as<view_of<std::bitset<8>>,          xstd::set_view<std::bitset<8>>>);
-        static_assert(std::same_as<view_of<std::bitset<8> const>,    xstd::set_view<std::bitset<8> const>>);
-        static_assert(std::same_as<view_of<boost::dynamic_bitset<>>, xstd::set_view<boost::dynamic_bitset<>>>);
+        static_assert(std::derived_from<xstd::bit_set_view<std::bitset<8>>, xstd::basic_bit_set<std::bitset<8>, xstd::ownership::refers>>);
+        static_assert(std::same_as<view_of<std::bitset<8>>,          xstd::bit_set_view<std::bitset<8>>>);
+        static_assert(std::same_as<view_of<std::bitset<8> const>,    xstd::bit_set_view<std::bitset<8> const>>);
+        static_assert(std::same_as<view_of<boost::dynamic_bitset<>>, xstd::bit_set_view<boost::dynamic_bitset<>>>);
 
-        static_assert(std::same_as<view_of<xstd::bitset<8>>,         xstd::set_view<xstd::block_array<std::size_t, 8>>>);
-        static_assert(std::same_as<view_of<xstd::bitset<8> const>,   xstd::set_view<xstd::block_array<std::size_t, 8> const>>);
-        static_assert(std::same_as<view_of<xstd::bit_static_set<8>>, xstd::set_view<xstd::block_array<std::size_t, 8>>>);
+        static_assert(std::same_as<view_of<xstd::bitset<8>>,         xstd::bit_set_view<xstd::block_array<std::size_t, 8>>>);
+        static_assert(std::same_as<view_of<xstd::bitset<8> const>,   xstd::bit_set_view<xstd::block_array<std::size_t, 8> const>>);
+        static_assert(std::same_as<view_of<xstd::bit_static_set<8>>, xstd::bit_set_view<xstd::block_array<std::size_t, 8>>>);
 }
 
-// The types a set_view exists for: those holding a set of positions without offering it, which bit_static_set already does.
+// The types a bit_set_view exists for: those holding a set of positions without offering it, which bit_static_set already does.
 BOOST_AUTO_TEST_CASE(TheViewedTypesAreTheOnesHoldingASetWithoutOfferingIt)
 {
         // None of them is a range on its own; that is what the view supplies, and it is a view in std::ranges' sense, borrowed like span. [design.md#views-follow-their-precedent]
@@ -82,7 +81,7 @@ BOOST_AUTO_TEST_CASE(TheViewHashesAsAValue)
 {
         auto bits = xstd::bitset<8>("00101010");
         auto const owned = xstd::bit_static_set<8>({ 1, 3, 5 });
-        BOOST_CHECK_EQUAL(std::hash<view_of<xstd::bitset<8>>>()(xstd::set_view(bits)), std::hash<xstd::bit_static_set<8>>()(owned));
+        BOOST_CHECK_EQUAL(std::hash<view_of<xstd::bitset<8>>>()(xstd::bit_set_view(bits)), std::hash<xstd::bit_static_set<8>>()(owned));
 
         auto narrow = boost::dynamic_bitset<>(8);
         auto wide   = boost::dynamic_bitset<>(64);
@@ -90,14 +89,14 @@ BOOST_AUTO_TEST_CASE(TheViewHashesAsAValue)
                 narrow.set(i);
                 wide.set(i);
         }
-        BOOST_CHECK_EQUAL(std::hash<view_of<boost::dynamic_bitset<>>>()(xstd::set_view(narrow)), std::hash<view_of<boost::dynamic_bitset<>>>()(xstd::set_view(wide)));
+        BOOST_CHECK_EQUAL(std::hash<view_of<boost::dynamic_bitset<>>>()(xstd::bit_set_view(narrow)), std::hash<view_of<boost::dynamic_bitset<>>>()(xstd::bit_set_view(wide)));
 }
 
 // Asking is total whatever the extent, exactly as [set] has it. [design.md#asking-is-total]
 BOOST_AUTO_TEST_CASE_TEMPLATE(EveryExtentAnswersForPositionsPastItsWidth, T, ViewedTypes)
 {
         auto bits = eight_bits_with_three_set<T>();
-        auto const v = xstd::set_view(bits);
+        auto const v = xstd::bit_set_view(bits);
 
         // Both ways round, so that find and lower_bound are each seen taking either arm.
         BOOST_CHECK(v.contains(3));
@@ -126,7 +125,7 @@ BOOST_AUTO_TEST_CASE(ADynamicExtentGrowsToHoldAPositionPastItsCurrentSize)
 {
         auto bits = boost::dynamic_bitset<>(8);
         bits.set(3);
-        auto const v = xstd::set_view(bits);
+        auto const v = xstd::bit_set_view(bits);
 
         auto const [ where, inserted ] = v.insert(99);
         BOOST_CHECK(inserted);
@@ -161,8 +160,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheLazySetAlgebraRunsOverTheView, T, ViewedTypes)
         auto y = eight_bits_with_three_set<T>();
 
         // Named, because range-v3's own viewable_range predates P2415 and takes a view only by lvalue or by its own view marker.
-        auto const xv = xstd::set_view(x);
-        auto const yv = xstd::set_view(y);
+        auto const xv = xstd::bit_set_view(x);
+        auto const yv = xstd::bit_set_view(y);
         xv.insert({ 1, 5 });
         yv.insert({ 5, 7 });
 
@@ -173,5 +172,4 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheLazySetAlgebraRunsOverTheView, T, ViewedTypes)
         BOOST_CHECK((merged == std::set<std::size_t>{ 1, 3, 5, 7 }));
 }
 
-BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()

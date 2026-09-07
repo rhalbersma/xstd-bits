@@ -10,7 +10,10 @@
 #include <test/set/concepts.hpp>      // bit_set
 #include <xstd/bits.hpp>              // the whole bits surface
 #include <array>                      // array
+#include <concepts>                   // same_as
 #include <cstddef>                    // size_t
+#include <cstdint>                    // uint8_t
+#include <limits>                     // numeric_limits
 #include <ranges>                     // bidirectional_range, random_access_range
 #include <set>                        // set
 #include <tuple>                      // tuple_element_t, tuple_size_v
@@ -28,15 +31,25 @@ BOOST_AUTO_TEST_CASE(EveryContainerArrivesThroughTheUmbrella)
         static_assert(not std::ranges::range<xstd::bitset<8>>);
 
         auto const legacy = xstd::bitset<8>();
-        static_assert(std::ranges::bidirectional_range<decltype(xstd::set_view(legacy))>);
+        static_assert(std::ranges::bidirectional_range<decltype(xstd::bit_set_view(legacy))>);
 
         auto const packed = xstd::bit_array<8>();
-        static_assert(std::ranges::random_access_range<decltype(xstd::sequence_view(packed))>);
+        static_assert(std::ranges::random_access_range<decltype(xstd::bit_span(packed))>);
 
         // The dynamic column, one name per reading, all three over a block_vector.
         static_assert(std::ranges::bidirectional_range<xstd::bit_set<std::size_t>>);
         static_assert(std::ranges::random_access_range<xstd::bit_vector<std::size_t>>);
         static_assert(not std::ranges::range<xstd::dynamic_bitset<std::size_t>>);
+
+        // Every public name takes size_t as its block unless told otherwise, and every static name has an aligned form, its width rounded up to whole blocks. [design.md#the-public-names]
+        static_assert(std::same_as<xstd::bit_set<>,        xstd::bit_set<std::size_t>>);
+        static_assert(std::same_as<xstd::bit_vector<>,     xstd::bit_vector<std::size_t>>);
+        static_assert(std::same_as<xstd::dynamic_bitset<>, xstd::dynamic_bitset<std::size_t>>);
+        static_assert(std::same_as<xstd::aligned::bit_static_set<9>, xstd::bit_static_set<std::numeric_limits<std::size_t>::digits>>);
+        static_assert(std::same_as<xstd::aligned::bit_array<9>,      xstd::bit_array<std::numeric_limits<std::size_t>::digits>>);
+        static_assert(std::same_as<xstd::aligned::bitset<9>,         xstd::bitset<std::numeric_limits<std::size_t>::digits>>);
+        static_assert(std::same_as<xstd::aligned::bitset<9, std::uint8_t>, xstd::bitset<16, std::uint8_t>>);
+        static_assert(std::same_as<xstd::aligned::bitset<0, std::uint8_t>, xstd::bitset< 0, std::uint8_t>>);
 }
 
 // A packed container satisfies the same interface as the one it packs, which means something only because std::array answers to it too.

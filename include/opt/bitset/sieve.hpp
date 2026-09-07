@@ -6,7 +6,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/ranges/set_view.hpp>           // set_view
+#include <xstd/bits/bit_set_view.hpp>           // bit_set_view
 #include <cstddef>                                 // size_t
 #include <ranges>                                  // take_while
 
@@ -82,7 +82,7 @@ auto sift_primes0(std::size_t n)
 {
         auto primes = generate_candidates<X>()(n);
         for (std::size_t p
-                : xstd::set_view(primes)
+                : xstd::bit_set_view(primes)
                 | std::views::take_while([&](std::size_t x) { return x * x < n; })
         ) {
                 for (auto m = p * p; m < n; m += p) {
@@ -96,7 +96,7 @@ template<class X>
 auto sift_primes1(std::size_t n)
 {
         auto primes = generate_candidates<X>()(n);
-        for (std::size_t p : xstd::set_view(primes)) {
+        for (std::size_t p : xstd::bit_set_view(primes)) {
                 if (std::size_t m = p * p; m < n) {
                         do {
                                 sift(primes, m);

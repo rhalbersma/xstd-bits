@@ -7,7 +7,7 @@
 #include <test/block_types.hpp>          // graded_extents
 #include <xstd/bits/basic_bitset.hpp>    // swap
 #include <xstd/bits/bitset.hpp>          // bitset
-#include <xstd/bits/ranges/set_view.hpp> // set_view
+#include <xstd/bits/bit_set_view.hpp> // bit_set_view
 #include <concepts>                      // regular, totally_ordered
 #include <type_traits>                   // is_nothrow_*, is_trivially_*
 #include <utility>                       // declval
@@ -25,7 +25,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(IsRegular, T, Types)
 BOOST_AUTO_TEST_CASE_TEMPLATE(OrderedThroughTheViewRatherThanInfix, T, Types)
 {
         static_assert(not std::totally_ordered<T>);
-        static_assert(    std::totally_ordered<decltype(xstd::set_view(std::declval<T&>()))>);
+        static_assert(    std::totally_ordered<decltype(xstd::bit_set_view(std::declval<T&>()))>);
 }
 
 // A fixed-width bitset owns no storage, so every operation on it is nothrow.
@@ -50,7 +50,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(IsTrivial, T, Types)
         static_assert(    std::is_trivially_move_assignable_v<T>);
 }
 
-// The proxy from sequence_view: b[i] = b[j] must move the bit, not the proxy, or swap breaks.
+// The proxy from bit_span: b[i] = b[j] must move the bit, not the proxy, or swap breaks.
 BOOST_AUTO_TEST_CASE(TheMutableSubscriptHandsOutAnAssignableProxy)
 {
         auto b = xstd::bitset<8>{};

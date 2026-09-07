@@ -9,7 +9,7 @@
 #include <xstd/bits/bit_set.hpp>        // bit_set
 #include <xstd/bits/block_sequence.hpp> // block_vector
 #include <xstd/bits/ownership.hpp>      // ownership
-#include <xstd/bits/ranges/set_view.hpp> // set_view
+#include <xstd/bits/bit_set_view.hpp> // bit_set_view
 #include <algorithm>                    // equal
 #include <concepts>                     // same_as
 #include <cstddef>                      // size_t
@@ -66,7 +66,7 @@ BOOST_AUTO_TEST_CASE(ItIsBuiltAndOrderedLikeAStdSet)
         BOOST_CHECK(t.intersects(s));
 
         // The view over it refers into the block_vector, as over every owner. [design.md#views-over-owners]
-        auto const v = xstd::set_view(t);
+        auto const v = xstd::bit_set_view(t);
         BOOST_CHECK(*v.begin() == 0UZ);
         BOOST_CHECK_EQUAL(v.size(), t.size());
 }

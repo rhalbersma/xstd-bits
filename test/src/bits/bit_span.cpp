@@ -13,7 +13,7 @@
 #include <xstd/bits/ext/boost/dynamic_bitset.hpp> // bit_traits over boost::dynamic_bitset
 #include <xstd/bits/ext/std/bitset.hpp>           // bit_traits over std::bitset
 #include <xstd/bits/ownership.hpp>                // ownership
-#include <xstd/bits/ranges/sequence_view.hpp>     // sequence_view
+#include <xstd/bits/bit_span.hpp>     // bit_span
 #include <algorithm>                              // equal
 #include <array>                                  // array
 #include <bitset>                                 // bitset
@@ -22,24 +22,23 @@
 #include <ranges>                                 // borrowed_range, random_access_range, view
 #include <utility>                                // declval
 
-BOOST_AUTO_TEST_SUITE(Ranges)
-BOOST_AUTO_TEST_SUITE(SequenceView)
+BOOST_AUTO_TEST_SUITE(BitSpan)
 
 namespace {
 
 template<class T>
-using view_of = decltype(xstd::sequence_view(std::declval<T&>()));
+using view_of = decltype(xstd::bit_span(std::declval<T&>()));
 
 }  // namespace
 
 // The view is the referring adaptor under another name, and over an owner of either reading it refers into the storage the owner wraps. [design.md#the-views-are-the-adaptors]
 BOOST_AUTO_TEST_CASE(TheViewIsTheReferringAdaptor)
 {
-        static_assert(std::derived_from<xstd::sequence_view<std::bitset<8>>, xstd::basic_bit_sequence<std::bitset<8>, xstd::ownership::refers, false>>);
-        static_assert(std::same_as<view_of<std::bitset<8>>,          xstd::sequence_view<std::bitset<8>>>);
-        static_assert(std::same_as<view_of<std::bitset<8> const>,    xstd::sequence_view<std::bitset<8> const>>);
-        static_assert(std::same_as<view_of<xstd::bitset<8>>,         xstd::sequence_view<xstd::block_array<std::size_t, 8>>>);
-        static_assert(std::same_as<view_of<xstd::bit_static_set<8>>, xstd::sequence_view<xstd::block_array<std::size_t, 8>>>);
+        static_assert(std::derived_from<xstd::bit_span<std::bitset<8>>, xstd::basic_bit_sequence<std::bitset<8>, xstd::ownership::refers, false>>);
+        static_assert(std::same_as<view_of<std::bitset<8>>,          xstd::bit_span<std::bitset<8>>>);
+        static_assert(std::same_as<view_of<std::bitset<8> const>,    xstd::bit_span<std::bitset<8> const>>);
+        static_assert(std::same_as<view_of<xstd::bitset<8>>,         xstd::bit_span<xstd::block_array<std::size_t, 8>>>);
+        static_assert(std::same_as<view_of<xstd::bit_static_set<8>>, xstd::bit_span<xstd::block_array<std::size_t, 8>>>);
 }
 
 BOOST_AUTO_TEST_CASE(TheViewedTypesAreTheOnesHoldingBoolsWithoutOfferingThem)
@@ -66,7 +65,7 @@ BOOST_AUTO_TEST_CASE(TheSequenceReadingIsTheArrayOfBools)
                         if ((i >> k & 1UZ) != 0UZ) { packed.set(k); plain[k] = true; }
                 }
 
-                auto const view = xstd::sequence_view(packed);
+                auto const view = xstd::bit_span(packed);
                 BOOST_CHECK_EQUAL(view.size(), N);
                 BOOST_CHECK(std::ranges::equal(view, plain));
         }
@@ -76,7 +75,7 @@ BOOST_AUTO_TEST_CASE(TheSequenceReadingIsTheArrayOfBools)
 BOOST_AUTO_TEST_CASE(WritingThroughTheViewWritesTheBits)
 {
         auto packed = xstd::bitset<8>();
-        auto const view = xstd::sequence_view(packed);
+        auto const view = xstd::bit_span(packed);
 
         view[3] = true;
         BOOST_CHECK(packed.test(3));
@@ -94,7 +93,7 @@ BOOST_AUTO_TEST_CASE(APackedArrayAgreesWithItsOwnView)
         packed[1] = true;
         packed[6] = true;
 
-        auto const view = xstd::sequence_view(packed);
+        auto const view = xstd::bit_span(packed);
         for (auto k = 0UZ; k < 8UZ; ++k) {
                 BOOST_CHECK_EQUAL(static_cast<bool>(view[k]), static_cast<bool>(packed[k]));
         }
@@ -119,5 +118,4 @@ BOOST_AUTO_TEST_CASE(EveryViewedTypeReadsLikeAVectorBool)
         test::sequence::ordering_agrees_with_vector_bool<boost::dynamic_bitset<>>();
 }
 
-BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()

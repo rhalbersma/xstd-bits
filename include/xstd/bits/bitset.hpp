@@ -9,7 +9,9 @@
 #include <xstd/bits/basic_bitset.hpp>              // basic_bitset
 #include <xstd/bits/block_sequence.hpp>            // block_array
 #include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
+#include <xstd/ints/memory.hpp>                    // align_up
 #include <cstddef>                                 // size_t
+#include <limits>                                  // digits
 
 namespace xstd {
 
@@ -17,6 +19,13 @@ namespace xstd {
 template<std::size_t N, xstd::unsigned_integer Block = std::size_t>
 using bitset = basic_bitset<block_array<Block, N>>;
 
+// The width rounded up to whole blocks, as the other two static names offer: no unused tail, so every block is the value. [design.md#the-public-names]
+namespace aligned {
+
+template<std::size_t N, xstd::unsigned_integer Block = std::size_t>
+using bitset = xstd::bitset<xstd::align_up(N, static_cast<std::size_t>(std::numeric_limits<Block>::digits)), Block>;
+
+}       // namespace aligned
 }       // namespace xstd
 
 #endif // XSTD_BITS_BITSET_HPP

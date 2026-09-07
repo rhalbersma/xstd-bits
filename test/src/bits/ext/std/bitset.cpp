@@ -7,8 +7,8 @@
 #include <xstd/bits/bit_traits.hpp>           // bit_storage, bit_traits, block_readable, static_bit_extent
 #include <xstd/bits/bitset.hpp>               // bitset
 #include <xstd/bits/ext/std/bitset.hpp>       // bit_traits over std::bitset
-#include <xstd/bits/ranges/sequence_view.hpp> // sequence_view
-#include <xstd/bits/ranges/set_view.hpp>      // set_view
+#include <xstd/bits/bit_span.hpp> // bit_span
+#include <xstd/bits/bit_set_view.hpp>      // bit_set_view
 #include <bitset>                             // bitset
 #include <concepts>                           // regular, totally_ordered
 #include <cstddef>                            // size_t
@@ -114,15 +114,15 @@ BOOST_AUTO_TEST_CASE(WhicheverTierThePlatformOffersIsTheOneTaken)
 BOOST_AUTO_TEST_CASE_TEMPLATE(OrderedThroughTheViewRatherThanInfix, T, Types)
 {
         static_assert(not std::totally_ordered<T>);
-        static_assert(    std::totally_ordered<xstd::set_view<T>>);
+        static_assert(    std::totally_ordered<xstd::bit_set_view<T>>);
 }
 
 // Both readings are reachable through the one specialization, as views over it.
 BOOST_AUTO_TEST_CASE_TEMPLATE(BothReadingsAreReachable, T, Types)
 {
         static_assert(not std::ranges::range<T>);
-        static_assert(std::ranges::bidirectional_range<xstd::set_view<T>>);
-        static_assert(std::ranges::random_access_range<xstd::sequence_view<T>>);
+        static_assert(std::ranges::bidirectional_range<xstd::bit_set_view<T>>);
+        static_assert(std::ranges::random_access_range<xstd::bit_span<T>>);
 }
 
 // Dependent, so a standard library without the member is a substitution failure rather than a hard error.

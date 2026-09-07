@@ -7,8 +7,8 @@
 #include <test/dynamic.hpp>                       // dynamic
 #include <xstd/bits/bit_traits.hpp>               // bit_storage, bit_traits, block_readable, static_bit_extent
 #include <xstd/bits/ext/boost/dynamic_bitset.hpp> // the trait that makes dynamic_bitset viewable
-#include <xstd/bits/ranges/sequence_view.hpp>     // sequence_view
-#include <xstd/bits/ranges/set_view.hpp>          // set_view
+#include <xstd/bits/bit_span.hpp>     // bit_span
+#include <xstd/bits/bit_set_view.hpp>          // bit_set_view
 #include <algorithm>                              // lexicographical_compare
 #include <compare>                                // strong_ordering
 #include <concepts>                               // regular, totally_ordered
@@ -113,7 +113,7 @@ BOOST_AUTO_TEST_CASE(TheWalksAnswerAtTheBoundaries)
 BOOST_AUTO_TEST_CASE(TheViewReplacesItsOrderingRatherThanTrustingIt)
 {
         static_assert(std::totally_ordered<T>);
-        static_assert(std::totally_ordered<xstd::set_view<T>>);
+        static_assert(std::totally_ordered<xstd::bit_set_view<T>>);
 
         constexpr auto N = 4UZ;
         auto disagreements = 0;
@@ -131,7 +131,7 @@ BOOST_AUTO_TEST_CASE(TheViewReplacesItsOrderingRatherThanTrustingIt)
                         // What the keys themselves say, which is what the set reading means.
                         auto const expected = std::ranges::lexicographical_compare(kx, ky);
 
-                        BOOST_CHECK_EQUAL((xstd::set_view(x) <=> xstd::set_view(y)) < 0, expected);
+                        BOOST_CHECK_EQUAL((xstd::bit_set_view(x) <=> xstd::bit_set_view(y)) < 0, expected);
                         disagreements += static_cast<int>((x < y) != expected);
                 }
         }
@@ -142,8 +142,8 @@ BOOST_AUTO_TEST_CASE(TheViewReplacesItsOrderingRatherThanTrustingIt)
 
 BOOST_AUTO_TEST_CASE(BothReadingsAreReachable)
 {
-        static_assert(std::ranges::bidirectional_range<xstd::set_view<T>>);
-        static_assert(std::ranges::random_access_range<xstd::sequence_view<T>>);
+        static_assert(std::ranges::bidirectional_range<xstd::bit_set_view<T>>);
+        static_assert(std::ranges::random_access_range<xstd::bit_span<T>>);
 }
 
 // It owns its storage, so the extent is a run-time value and the trivial and nothrow batteries do not apply.

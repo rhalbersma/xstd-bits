@@ -553,7 +553,7 @@ private:
         }
 };
 
-// The owner's side of the view protocol: what a set_view or sequence_view over a bitset refers into. [design.md#views-over-owners]
+// The owner's side of the view protocol: what a bit_set_view or bit_span over a bitset refers into. [design.md#views-over-owners]
 template<class Bits, class Traits>
 struct owned_storage<basic_bitset<Bits, Traits>>
 {

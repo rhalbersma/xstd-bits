@@ -16,7 +16,7 @@ two run-time widths part on the width before a block is read.
 `std::array` and `std::vector` both qualify, and so does `std::inplace_vector` — a runtime width over
 static capacity, for free.
 
-`xstd::ranges::block_range` is the other side of the same word, and asks whether a bit container will
+`xstd::block_range` is the other side of the same word, and asks whether a bit container will
 **hand its blocks over**. Nothing models both, and no scope sees both unqualified.
 
 ### the-one-vehicle
@@ -421,7 +421,7 @@ width appends the positions held and their count instead, since equal sets need 
 
 Who hashes follows [views-follow-their-precedent](#views-follow-their-precedent): the set adaptor owned or
 viewed, as `std::string_view` hashes; the sequence adaptor as an owner alone, as `std::span` does not, so its
-hook is constrained on ownership and a `sequence_view` hashes no more than it compares; `basic_bitset` as
+hook is constrained on ownership and a `bit_span` hashes no more than it compares; `basic_bitset` as
 `std::bitset` does. Both range adaptors tell ContainerHash they are not ranges: Hash2 chooses between its
 range overload and a hook by `enable_if`, a range with a hook is ambiguous, and the range overload could not
 hash the proxy the iterators return anyway. The harness checks the invariant beside `==`, wherever a
@@ -588,20 +588,22 @@ through to what it views.
 
 Both referring adaptors opt into `std::ranges::enable_view` and `enable_borrowed_range`, the two
 specializations [range.view] and [range.range] invite for a program-defined type. The first makes
-`set_view(x) | views::take_while(…)` take the view as it is rather than wrapping it in an `owning_view`;
+`bit_set_view(x) | views::take_while(…)` take the view as it is rather than wrapping it in an `owning_view`;
 the second says what `span` says, that the iterators point at the storage and outlive the handle that made
 them, which is what lets `ext/xstd/bitset.hpp` return `basic_bit_set(c).begin()` from a temporary.
 
 ### the-views-are-the-adaptors
 
-`set_view<Bits, Traits>` is `basic_bit_set<Bits, ownership::refers, Traits>` and `sequence_view<Bits, Traits>`
+`bit_set_view<Bits, Traits>` is `basic_bit_set<Bits, ownership::refers, Traits>` and `bit_span<Bits, Traits>`
 is `basic_bit_sequence<Bits, ownership::refers, false, Traits>`, each a two-line derived class inheriting the
 adaptor's constructors and restating its two deduction guides: not a second implementation of either reading.
+They carry the names of [the-public-names](#the-public-names), one header each beside the owners; the
+`set_view` and `sequence_view` of the rewire were the same classes before the viewing column was filled.
 The earlier views, with their own iterators, proxies and four customization points — `set_find`,
 `sequence_find`, `block_access`, `bit_extent` — were the door before there was a door, and once the adaptors
 read through `bit_traits` alone there was nothing left for them to do. An alias would have been the natural
 spelling, and deduction through one is class template argument deduction for alias templates (P1814), which
-Clang 19 and GCC 10 have and MSVC does not: `set_view(x)` on MSVC is "too few template arguments". The derived
+Clang 19 and GCC 10 have and MSVC does not: `bit_set_view(x)` on MSVC is "too few template arguments". The derived
 class is the escape #80 named, and it costs a restated constructor, guide and `enable_view` per view. The
 constructors are spelled out rather than inherited: inheriting them inherits the primary's guides as well
 (P2582, which GCC implements), and those tie with the restated ones.
@@ -610,11 +612,29 @@ The sequence view pays the `span` half of [views-follow-their-precedent](#views-
 becoming the adaptor: it no longer has `==` or `<=>`, and the harness checks the sequence reading through the
 iterators instead.
 
+### windows
+
+`bit_subspan<Bits, Traits>` is `basic_bit_sequence<Bits, refers, true, Traits>`: the referring adaptor
+windowed, an alias rather than a derived class because nothing deduces it -- it is what `first`, `last` and
+`subspan` return on a `bit_span` or on another window, and never spelled at a call site. It stores what
+`std::span` stores, a pointer and a size, with the pointer's role split over a pointer and a position
+because bits are not addressable: the sequence iterator's two fields and a count, 24 bytes beside the whole
+view's 8. The offset is applied once, in a private `offset()` that answers zero for every other shape, so
+`begin()`, `operator[]`, `at`, `front` and `back` are written the same way for all three.
+
+The three members are [span.sub]'s, on a view and never on an owner, since `std::array` and `std::vector`
+have no subviews either; they assert their preconditions rather than throw, and `std::dynamic_extent` is the
+to-the-end sentinel. A window is a view in `std::ranges`' sense and borrowed like `span`, and like `span` it
+neither compares nor hashes ([views-follow-their-precedent](#views-follow-their-precedent)). It has no bulk
+operators and no `fill`: on packed bits those are block-wise, a window's end blocks are shared with what lies
+outside it, and masking them is the work that arrives with the blit. Until then a window is read and written
+one position at a time, which `std::ranges::fill` over its iterators already does.
+
 ### views-over-owners
 
 An owner has no door of its own — `bit_static_set`, `bit_array` and `bitset` are thin wrappers over a
 `block_array` that already has one — so a view over an owner is a view over the storage it wraps:
-`set_view(xstd::bitset<64>&)` is `basic_bit_set<block_array<size_t, 64>, refers>`, and the pointer in the
+`bit_set_view(xstd::bitset<64>&)` is `basic_bit_set<block_array<size_t, 64>, refers>`, and the pointer in the
 iterator is to the `block_array`, never to the `bitset`. The owner hands its storage over through
 `owned_storage<Owner>`, declared beside it as `bit_traits` is beside a storage and never defined for anything
 else, so `owner_of<Owner, Bits, Traits>` reads "this owner wraps exactly the storage and door this view
@@ -635,7 +655,12 @@ to fix.
 
 One header per public name, each an alias over one storage: `bit_set`, `bit_vector` and `dynamic_bitset`
 over `block_vector<Block, Allocator>`, beside `bit_static_set`, `bit_array` and `bitset` over `block_array`.
-The header is the name's home and the only place it is spelled; `bits.hpp` includes them all.
+The header is the name's home and the only place it is spelled; `bits.hpp` includes them all. Every name
+takes `std::size_t` as its block unless told otherwise, the static ones as `<N, Block>` and the dynamic ones
+as `<Block, Allocator>`, so `bit_set<>` is the flagship at the machine word. Each static name has an
+`aligned` form in the namespace of that name, its width rounded up to whole blocks so that no block carries
+an unused tail: `aligned::bitset<9>` is `bitset<64>` and `aligned::bitset<9, std::uint8_t>` is
+`bitset<16, std::uint8_t>`.
 
 ### width-is-capacity
 
@@ -671,7 +696,7 @@ The wrapper is idempotent **per counterpart**: `basic_bitset<std::bitset<N>>` an
 does, throw for throw, and the same wrapper over `block_array` is `xstd::bitset`, which answers the same way
 because `std::bitset` is the counterpart of both. So at a static width there is no `-=`, no `is_subset_of`,
 `is_proper_subset_of` or `intersects`: `std::bitset` has none, they are set vocabulary that had leaked into
-`xstd::bitset`, and `set_view` keeps every one of them. The test harness guards those four the way it already
+`xstd::bitset`, and `bit_set_view` keeps every one of them. The test harness guards those four the way it already
 guarded the three predicates. A run-time width, whose counterpart is `boost::dynamic_bitset`, has them
 natively and has them here: `xstd::dynamic_bitset` is the same wrapper over `block_vector`, and it answers as
 `basic_bitset<boost::dynamic_bitset<>>` does. That is boost's surface with two omissions. `operator<` is a
@@ -683,7 +708,7 @@ width-only constructors, `-=` and the three set predicates, `find_first` and `fi
 `to_ullong` throw `overflow_error` when a set position lies past the word, asked of the door's `find_next`
 from the last position the word holds, and the word constructors take an `unsigned long long` at both widths.
 
-Not a range and no `<=>`, as its counterpart has neither; `set_view` and `sequence_view` refer into its storage
+Not a range and no `<=>`, as its counterpart has neither; `bit_set_view` and `bit_span` refer into its storage
 ([views-over-owners](#views-over-owners)), and the set ordering is theirs. `block_type` is gone from the
 surface: nothing used it, and under idempotence a wrapper over a libc++ `std::bitset` would have none.
 

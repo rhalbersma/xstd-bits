@@ -8,7 +8,7 @@
 
 #include <boost/test/unit_test.hpp>           // BOOST_CHECK_EQUAL
 #include <test/bitset/factory.hpp>            // make_bitset
-#include <xstd/bits/ranges/sequence_view.hpp> // sequence_view
+#include <xstd/bits/bit_span.hpp> // bit_span
 #include <algorithm>                          // equal, lexicographical_compare, lexicographical_compare_three_way
 #include <compare>                            // strong_ordering
 #include <cstddef>                            // size_t
@@ -27,15 +27,15 @@ auto ordering_agrees_with_vector_bool(std::size_t universe = 4) -> void
                         auto y = test::bitset::make_bitset<Bits>(universe);
 
                         // Written through the view; named rather than inlined, because CTAD followed by [k] parses as an array declaration.
-                        auto xw = xstd::sequence_view(x);
-                        auto yw = xstd::sequence_view(y);
+                        auto xw = xstd::bit_span(x);
+                        auto yw = xstd::bit_span(y);
                         for (auto k = 0UZ; k < universe; ++k) {
                                 xw[k] = (i >> k & 1UZ) != 0UZ;
                                 yw[k] = (j >> k & 1UZ) != 0UZ;
                         }
 
-                        auto const xv = xstd::sequence_view(x);
-                        auto const yv = xstd::sequence_view(y);
+                        auto const xv = xstd::bit_span(x);
+                        auto const yv = xstd::bit_span(y);
 
                         // The reference holds the same bools at the same positions, over the whole width the view reports.
                         auto vx = std::vector<bool>(xv.size());
