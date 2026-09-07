@@ -12,7 +12,6 @@
 #include <xstd/bits/bit_traits.hpp>          // bit_storage, bit_traits, static_bit_extent
 #include <xstd/bits/detail/hash.hpp>         // hash_append_bits, std_hash
 #include <xstd/bits/ownership.hpp>           // owned_bits_t, owned_storage, owned_traits_t, owner_of, ownership, owns
-#include <algorithm>                         // lexicographical_compare_three_way
 #include <cassert>                           // assert
 #include <compare>                           // strong_ordering
 #include <concepts>                          // convertible_to, swap, swappable
