@@ -17,7 +17,6 @@
 #include <cstdint>                           // uint8_t
 #include <functional>                        // hash
 #include <iterator>                          // next
-#include <limits>                            // numeric_limits
 #include <memory>                            // allocator
 #include <ranges>                            // equal, from_range, iota, next, transform
 #include <type_traits>                       // is_default_constructible_v
@@ -148,7 +147,7 @@ BOOST_AUTO_TEST_CASE(ItGrowsLikeAStdVector)
         v.shrink_to_fit();
         BOOST_CHECK_GE(v.capacity(), v.size());
 
-        BOOST_CHECK_EQUAL(v.max_size(), std::numeric_limits<std::size_t>::max());
+        BOOST_CHECK_EQUAL(v.max_size(), xstd::block_vector<std::uint8_t>().max_size());
 
         v.clear();
         BOOST_CHECK(v.empty());

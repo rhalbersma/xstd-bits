@@ -200,7 +200,8 @@ BOOST_AUTO_TEST_CASE(GrowthIsTheOwnersOverStorageThatGrows)
         d.push_back(false);
         BOOST_CHECK_EQUAL(d.size(), 4UZ);
         BOOST_CHECK(std::ranges::equal(d, std::vector<bool>{ true, true, true, false }));
-        BOOST_CHECK_EQUAL(d.max_size(), std::numeric_limits<std::size_t>::max());
+        BOOST_CHECK_EQUAL(d.max_size(), xstd::block_vector<std::uint64_t>().max_size());
+        BOOST_CHECK_LT(d.max_size(), std::numeric_limits<std::size_t>::max());
         BOOST_CHECK_EQUAL(Owner().max_size(), 100UZ);
 }
 

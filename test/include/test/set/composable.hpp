@@ -76,11 +76,11 @@ struct increment_modulo
         auto operator()(const X& a, std::size_t n) const
         {
                 if constexpr (requires { a << n; }) {
-                        constexpr auto N = X::max_size();
+                        auto const N = a.max_size();
                         BOOST_CHECK(
                                 (a << n) == (a
                                         | std::views::transform([=](auto x) { return x + n; })
-                                        | std::views::filter   ([ ](auto x) { return x < N; })
+                                        | std::views::filter   ([=](auto x) { return x < N; })
                                         | std::ranges::to<X>()
                                 )
                         );
@@ -94,12 +94,12 @@ struct decrement_modulo
         auto operator()(const X& a, std::size_t n) const
         {
                 if constexpr (requires { a >> n; }) {
-                        constexpr auto N = X::max_size();
+                        auto const N = a.max_size();
                         BOOST_CHECK(
                                 (a >> n) == (a
                                         | std::views::filter   ([=](auto x) { return x >= n; })
                                         | std::views::transform([=](auto x) { return x - n; })
-                                        | std::views::filter   ([ ](auto x) { return x < N; })
+                                        | std::views::filter   ([=](auto x) { return x < N; })
                                         | std::ranges::to<X>()
                                 )
                         );

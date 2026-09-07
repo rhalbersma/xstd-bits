@@ -20,7 +20,6 @@
 #include <functional>                        // hash, less
 #include <initializer_list>                  // initializer_list
 #include <iterator>                          // input_iterator, iter_reference_t, make_reverse_iterator, reverse_iterator, sentinel_for
-#include <limits>                            // numeric_limits
 #include <ranges>                            // begin, enable_borrowed_range, enable_view, end, input_range, range_reference_t, from_range_t, swap
 #include <type_traits>                       // conditional_t, false_type, is_nothrow_swappable_v, remove_const_t, remove_reference_t
 #include <utility>                           // forward, pair
@@ -164,20 +163,24 @@ public:
         [[nodiscard]] constexpr auto crbegin() const noexcept -> const_reverse_iterator { return rbegin(); }
         [[nodiscard]] constexpr auto crend()   const noexcept -> const_reverse_iterator { return rend();   }
 
-        // capacity; a bitset's count() is a set's size(), and a static width is the set's max_size(), a dynamic one grows to the last addressable position.
+        // capacity; a bitset's count() is a set's size(), and max_size() is the positions there are to hold. [design.md#max-size-is-the-bits]
         [[nodiscard]] constexpr auto empty() const noexcept -> bool { return begin() == end(); }
         [[nodiscard]] constexpr auto full()  const noexcept -> bool { return size() == max_size(); }
 
         [[nodiscard]] constexpr auto size() const noexcept -> size_type { return detail::bits::count<Traits>(storage()); }
 
-        [[nodiscard]] static constexpr auto max_size() noexcept
+        // [container.reqmts]/56, distance(begin(), end()) for the largest possible container: every position set, so the
+        // width. A width in the type is that width, an owner grows to what its storage can address, and a view cannot
+        // grow what it views, so it is that storage's width now. [design.md#max-size-is-the-bits]
+        [[nodiscard]] constexpr auto max_size() const noexcept
                 -> size_type
         {
                 if constexpr (static_bit_extent<Traits, bits_type>) {
                         return Traits::extent;
+                } else if constexpr (owns(Own)) {
+                        return storage().max_size();
                 } else {
-                        // n + 1 must be addressable: the one position ruled out is the one whose successor wraps to zero. [design.md#asking-is-total]
-                        return std::numeric_limits<size_type>::max() - 1UZ;
+                        return Traits::size(storage());
                 }
         }
 

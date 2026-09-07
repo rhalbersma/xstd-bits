@@ -15,7 +15,6 @@
 #include <cstddef>                      // size_t
 #include <cstdint>                      // uint8_t
 #include <functional>                   // hash
-#include <limits>                       // numeric_limits
 #include <memory>                       // allocator
 #include <ranges>                       // iota, to
 #include <set>                          // set
@@ -37,7 +36,7 @@ BOOST_AUTO_TEST_CASE(InsertingPastTheWidthGrowsIt)
 {
         auto s = T();
         BOOST_CHECK(s.empty());
-        BOOST_CHECK_EQUAL(T::max_size(), std::numeric_limits<std::size_t>::max() - 1UZ);
+        BOOST_CHECK_EQUAL(s.max_size(), xstd::block_vector<std::uint8_t>().max_size());
 
         auto const [ where, inserted ] = s.insert(100);
         BOOST_CHECK(inserted);
