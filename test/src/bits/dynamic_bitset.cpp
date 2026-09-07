@@ -3,12 +3,10 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/dynamic_bitset.hpp>               // dynamic_bitset
 #include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <xstd/bits/bitset_adaptor.hpp>             // bitset_adaptor
 #include <xstd/bits/block_sequence.hpp>           // block_vector
 #include <xstd/bits/dynamic_bitset.hpp>           // dynamic_bitset
-#include <xstd/bits/ext/boost/dynamic_bitset.hpp> // bit_traits over boost::dynamic_bitset
 #include <array>                                  // array
 #include <concepts>                               // regular, same_as
 #include <cstdint>                                // uint8_t, uint64_t
@@ -21,7 +19,7 @@
 
 BOOST_AUTO_TEST_SUITE(DynamicBitset)
 
-// boost::dynamic_bitset's counterpart over a heap of blocks: the same wrapper, at a run-time width. [design.md#the-idempotent-wrapper]
+// boost::dynamic_bitset's counterpart over a heap of blocks: the same wrapper, at a run-time width. [design.md#a-strict-extension]
 BOOST_AUTO_TEST_CASE(TheDynamicBitsetIsTheWrapperOverAHeapOfBlocks)
 {
         static_assert(std::same_as<xstd::basic_dynamic_bitset<std::uint8_t>, xstd::bitset_adaptor<xstd::block_vector<std::uint8_t>>>);
@@ -29,11 +27,10 @@ BOOST_AUTO_TEST_CASE(TheDynamicBitsetIsTheWrapperOverAHeapOfBlocks)
         static_assert(std::regular<xstd::basic_dynamic_bitset<std::uint8_t>>);
 }
 
-// Ours over a block_vector, ours over boost itself: the counterpart's contract on both.
+// Ours over a block_vector at two block widths: the counterpart's contract on both.
 using Dynamic = std::tuple
 <       xstd::basic_dynamic_bitset<std::uint8_t>
 ,       xstd::basic_dynamic_bitset<std::uint64_t>
-,       xstd::bitset_adaptor<boost::dynamic_bitset<>>
 >;
 
 // The width-and-value constructor, the searches with boost's sentinel, and the set vocabulary boost has.

@@ -158,27 +158,26 @@ BOOST_AUTO_TEST_CASE(TheBulkOperatorsAreTheStoragesOwn)
         BOOST_CHECK(x[3] and y[1]);
 }
 
-// The ordering invariant on both the native entry and the fallback. [design.md#the-ordering-invariant]
+// The ordering invariant on the trait's entry, the only ordering an owner has. [design.md#the-ordering-invariant]
 BOOST_AUTO_TEST_CASE(TheOrderingIsTheLexicographicOrderOfTheBools)
 {
-        using Foreign = xstd::sequence_adaptor<std::bitset<9>, xstd::ownership::owns, false>;
-        static_assert(std::regular<Foreign> and std::totally_ordered<Foreign>);
+        using Packed = xstd::basic_bit_array<9, std::uint8_t>;
+        static_assert(std::regular<Packed> and std::totally_ordered<Packed>);
+
+        // An owner over storage without the entry has no ordering rather than a synthesized one. [design.md#owning-is-ours]
+        static_assert(not std::totally_ordered<xstd::sequence_adaptor<std::bitset<9>, xstd::ownership::owns, false>>);
 
         auto const patterns = std::vector<std::vector<std::size_t>>{ {}, { 0 }, { 1 }, { 0, 1 }, { 8 }, { 0, 8 } };
         for (auto const& p : patterns) {
                 for (auto const& q : patterns) {
-                        auto x = xstd::basic_bit_array<9, std::uint8_t>();
-                        auto y = xstd::basic_bit_array<9, std::uint8_t>();
-                        auto s = Foreign();
-                        auto t = Foreign();
-                        for (auto const i : p) { x[i] = true; s[i] = true; }
-                        for (auto const i : q) { y[i] = true; t[i] = true; }
+                        auto x = Packed();
+                        auto y = Packed();
+                        for (auto const i : p) { x[i] = true; }
+                        for (auto const i : q) { y[i] = true; }
 
                         auto const expected = std::lexicographical_compare_three_way(x.begin(), x.end(), y.begin(), y.end());
                         BOOST_CHECK((x <=> y) == expected);
-                        BOOST_CHECK((s <=> t) == expected);
                         BOOST_CHECK((x == y) == (p == q));
-                        BOOST_CHECK((s == t) == (p == q));
                 }
         }
 }

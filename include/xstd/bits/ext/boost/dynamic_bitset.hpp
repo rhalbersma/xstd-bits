@@ -15,7 +15,8 @@
 #include <cstddef>                                 // size_t
 #include <span>                                    // dynamic_extent
 
-// The one adaptation of boost::dynamic_bitset; a specialization cannot be shadowed by a future upstream member, as an ADL hook could. [design.md#the-trait]
+// The one adaptation of boost::dynamic_bitset, and the view's contract alone: what bit_set_view and bit_span ask, nothing an owner would. [design.md#owning-is-ours]
+// A specialization cannot be shadowed by a future upstream member, as an ADL hook could. [design.md#the-trait]
 namespace xstd {
 
 template<xstd::unsigned_integer Block, class Allocator>
@@ -66,10 +67,6 @@ struct bit_traits<boost::dynamic_bitset<Block, Allocator>>
         }
 
         // No find_last, find_prev or block access: boost has none, so the generic scans synthesize what they can. [design.md#detection-by-absence]
-
-        // The shifts are total here, saturating to none: forwarded as they are, the guard being the counterpart's own. [design.md#checked-and-unchecked]
-        static constexpr void checked_shift_left (bits_type& c, std::size_t n) noexcept { c <<= n; }
-        static constexpr void checked_shift_right(bits_type& c, std::size_t n) noexcept { c >>= n; }
 };
 
 }       // namespace xstd

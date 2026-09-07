@@ -30,7 +30,7 @@ constexpr void hash_append_block(Hash& h, Flavor const& f, Block b)
         }
 }
 
-// The value through the door: the blocks and the width where the storage reads by block, every position and the width otherwise. Equal values hash equal whatever holds them, so no storage's own hook is asked. [design.md#the-hashing-invariant]
+// The value through the trait: the blocks and the width where the storage reads by block, every position and the width otherwise. Equal values hash equal whatever holds them, so no storage's own hook is asked. [design.md#the-hashing-invariant]
 template<class Traits, class Hash, class Flavor, class Bits>
 constexpr void hash_append_bits(Hash& h, Flavor const& f, Bits const& c)
 {

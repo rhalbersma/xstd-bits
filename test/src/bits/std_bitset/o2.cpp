@@ -7,7 +7,6 @@
 #include <test/bitset/exhaustive.hpp>             // all_singleton_sets, all_singleton_set_pairs, all_doubleton_sets, any_value, empty_set, full_set
 #include <test/bitset/primitives.hpp>             // mem_bit_and_assign, mem_bit_or_assign, mem_bit_xor_assign, mem_bit_minus_assign,
 #include <test/uint128.hpp>                       // TEST_HAS_UINT128, uint128
-#include <xstd/bits/bitset_adaptor.hpp>             // bitset_adaptor
 #include <xstd/bits/bitset.hpp>                   // bitset
 #include <xstd/bits/dynamic_bitset.hpp>           // dynamic_bitset
 #include <xstd/bits/ext/boost/dynamic_bitset.hpp> // dynamic_bitset
@@ -24,8 +23,6 @@ using Types = std::tuple
 <       boost::dynamic_bitset<>
 ,         std::bitset<0>
 ,         std::bitset<8>
-,        xstd::bitset_adaptor<std::bitset< 0>>
-,        xstd::bitset_adaptor<std::bitset< 8>>
 ,        xstd::basic_bitset< 0, uint8_t>
 ,        xstd::basic_bitset< 8, uint8_t>
 ,        xstd::basic_bitset< 9, uint8_t>
@@ -36,7 +33,6 @@ using Types = std::tuple
 #ifdef TEST_HAS_UINT128
 ,        xstd::basic_bitset< 8, xstd::uint128>
 #endif
-,        xstd::bitset_adaptor<boost::dynamic_bitset<>>
 ,        xstd::basic_dynamic_bitset<uint8_t>
 ,        xstd::basic_dynamic_bitset<uint64_t>
 >;
