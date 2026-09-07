@@ -3,8 +3,6 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/hash2/fnv1a.hpp>        // fnv1a_64
-#include <boost/hash2/hash_append.hpp>  // hash_append
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <test/set/concepts.hpp>        // bit_set
 #include <xstd/bits/basic_bit_set.hpp>  // basic_bit_set
@@ -15,7 +13,8 @@
 #include <algorithm>                    // equal
 #include <concepts>                     // same_as
 #include <cstddef>                      // size_t
-#include <cstdint>                      // uint8_t, uint64_t
+#include <cstdint>                      // uint8_t
+#include <functional>                   // hash
 #include <limits>                       // numeric_limits
 #include <memory>                       // allocator
 #include <ranges>                       // iota, to
@@ -79,7 +78,7 @@ BOOST_AUTO_TEST_CASE(TheWidthIsCapacityNotValue)
         auto wide = T({ 1, 3 });
         wide.insert(100);
         wide.erase(100);
-        auto const digest = [](T const& s) -> std::uint64_t { auto h = boost::hash2::fnv1a_64(); boost::hash2::hash_append(h, {}, s); return h.result(); };
+        auto const digest = std::hash<T>();
         BOOST_CHECK(narrow == wide);
         BOOST_CHECK((narrow <=> wide) == 0);
         BOOST_CHECK_EQUAL(digest(narrow), digest(wide));

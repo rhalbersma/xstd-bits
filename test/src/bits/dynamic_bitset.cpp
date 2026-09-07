@@ -12,6 +12,7 @@
 #include <array>                                  // array
 #include <concepts>                               // regular, same_as
 #include <cstdint>                                // uint8_t, uint64_t
+#include <functional>                             // hash
 #include <memory>                                 // allocator
 #include <sstream>                                // istringstream, ostringstream
 #include <stdexcept>                              // invalid_argument, out_of_range, overflow_error
@@ -49,6 +50,10 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItAnswersAsBoostDoes, T, Dynamic)
         BOOST_CHECK_EQUAL(d.find_next(0), 2UZ);
         BOOST_CHECK_EQUAL(d.find_next(2), T::npos);
         BOOST_CHECK_EQUAL(T(9).find_first(), T::npos);
+
+        // Hashed as boost's counterpart is not, equal values equal. [design.md#the-hashing-invariant]
+        BOOST_CHECK_EQUAL(std::hash<T>()(d), std::hash<T>()(T(std::string("000000101"))));
+        BOOST_CHECK(std::hash<T>()(d) != std::hash<T>()(T(9)));
 
         auto e = T(9);
         e.set(2);

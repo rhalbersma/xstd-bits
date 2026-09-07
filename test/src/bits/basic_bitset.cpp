@@ -189,6 +189,11 @@ BOOST_AUTO_TEST_CASE(TheDerivedMembersHoldOverEitherStorage)
         BOOST_CHECK_EQUAL(hash(packed), hash(Packed("101000001")));
         BOOST_CHECK(hash(packed) != hash(Packed()));
 
+        // The wrapper over std::bitset hashes on every library, through the door rather than through a hook std::bitset lacks. [design.md#the-hashing-invariant]
+        using OverStd = xstd::basic_bitset<std::bitset<9>>;
+        BOOST_CHECK_EQUAL(std::hash<OverStd>()(wrapped), std::hash<OverStd>()(OverStd(std::string("101000001"))));
+        BOOST_CHECK(std::hash<OverStd>()(wrapped) != std::hash<OverStd>()(OverStd()));
+
         // A count on the character-pointer form takes that many characters and no more.
         BOOST_CHECK_EQUAL(Packed("1111", 2).count(), 2UZ);
 }

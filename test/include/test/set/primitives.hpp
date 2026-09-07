@@ -13,6 +13,7 @@
 #include <compare>                      // strong_ordering
 #include <concepts>                     // convertible_to, default_initializable, equality_comparable, integral, same_as, unsigned_integral
 #include <cstddef>                      // ptrdiff_t
+#include <functional>                   // hash
 #include <initializer_list>             // initializer_list
 #include <iterator>                     // distance, empty, iter_difference_t, iter_value_t, next, prev, reverse_iterator, size, ssize
 #include <ranges>                       // count, equal, find, lexicographical_compare, lower_bound, , subrange, upper_bound
@@ -226,6 +227,26 @@ struct op_equal_to
                 static_assert(std::convertible_to<decltype(a == b), bool>);             // [container.reqmts]/40
                 BOOST_CHECK_EQUAL(a == b, std::ranges::equal(a, b));                    // [container.reqmts]/41
                 static_assert(std::equivalence_relation<std::equal_to<X>, X, X>);       // [container.reqmts]/43
+        }
+};
+
+// Equal values hash equal wherever a std::hash exists: the set adaptor has one as std::string_view does, std::set none. [design.md#the-hashing-invariant]
+struct op_hash
+{
+        template<class X>
+        auto operator()(const X& a) const noexcept
+        {
+                if constexpr (requires { std::hash<X>()(a); }) {
+                        BOOST_CHECK_EQUAL(std::hash<X>()(a), std::hash<X>()(X(a)));
+                }
+        }
+
+        template<class X>
+        auto operator()(const X& a, const X& b) const noexcept
+        {
+                if constexpr (requires { std::hash<X>()(a); }) {
+                        BOOST_CHECK(a != b or std::hash<X>()(a) == std::hash<X>()(b));
+                }
         }
 };
 

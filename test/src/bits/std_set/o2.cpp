@@ -141,6 +141,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheSetOperationsHoldOverEveryDoubletonAndSingleton
         });
 
         on2::all_singleton_set_pairs<T>(op_not_equal_to());
+        on2::all_singleton_set_pairs<T>(op_hash());
 
         on2::all_singleton_set_pairs<T>(op_compare_three_way());
         on2::all_singleton_set_pairs<T>(op_less());

@@ -397,6 +397,36 @@ reach it — and should a dynamic bitset ever want boost's exact ordering, it co
 Where a specialization offers nothing faster, the default is that standard algorithm over the reading's own
 iterators — so the default cannot disagree with the specification, and only an optimization can.
 
+### the-hashing-invariant
+
+Every value the library compares, it hashes, and
+
+```cpp
+a == b  implies  hash(a) == hash(b)
+```
+
+under every reading. The counterpart rule ([the-idempotent-wrapper](#the-idempotent-wrapper)) governs a
+wrapper's member surface, not the cross-cutting protocols -- equality, ordering, formatting, ranges, hashing
+-- which follow the reading: the standard's own coverage, `std::bitset`, `std::vector<bool>` and
+`std::string` hashing while `std::array`, `std::set` and `std::pair` do not, is history rather than design.
+
+The engine is Boost.Hash2: each adaptor carries a `tag_invoke` hook for `hash_append`, and `std::hash` is
+one detail helper over it, `fnv1a_64` folded by `get_integral_result`, so the algorithm is chosen in exactly
+one place and a caller wanting another brings it through `hash_append`. What a hook appends is the value
+**through the door**, never a storage's own hook: the blocks and the width where the trait reads by block,
+every position and the width otherwise. So equal values hash equal whatever holds them, and a wrapper over
+`std::bitset` hashes on every library whether or not `_Getword` is reachable. The set reading at a run-time
+width appends the positions held and their count instead, since equal sets need not share a width
+([width-is-capacity](#width-is-capacity)).
+
+Who hashes follows [views-follow-their-precedent](#views-follow-their-precedent): the set adaptor owned or
+viewed, as `std::string_view` hashes; the sequence adaptor as an owner alone, as `std::span` does not, so its
+hook is constrained on ownership and a `sequence_view` hashes no more than it compares; `basic_bitset` as
+`std::bitset` does. Both range adaptors tell ContainerHash they are not ranges: Hash2 chooses between its
+range overload and a hook by `enable_if`, a range with a hook is ambiguous, and the range overload could not
+hash the proxy the iterators return anyway. The harness checks the invariant beside `==`, wherever a
+`std::hash` exists.
+
 ## Coverage
 
 ### per-instantiation-slots
@@ -552,7 +582,7 @@ to it, and a view over a `block_vector` must not be able to resize what it does 
 `bit_set_view` follows `std::string_view`: a value that happens not to own its bytes, so it has `==` and
 `<=>`, and its ordering is exactly `std::set`'s. `bit_span` follows `std::span`, which P1085 stripped of both
 because "same referent" and "same contents" are both defensible readings of a handle. So `basic_bit_set`
-compares whatever it owns or views, and `basic_bit_sequence` compares only as an owner. The non-member copies
+compares and hashes whatever it owns or views, and `basic_bit_sequence` compares and hashes only as an owner. The non-member copies
 — `~`, `&`, `|`, `^`, `-`, `<<`, `>>` — are the owner's alone in both readings: a copied view would write
 through to what it views.
 
@@ -620,10 +650,8 @@ width, where `same_width` is constantly true and the arm folds away. At two run-
 `std::ranges::includes`, `intersects` walks one set asking the other, and `|=` `&=` `^=` `-=` insert and
 erase element by element, `insert` growing the narrower left operand as it grows for any key. The shifts
 translate the set, so `<<=` grows the width to hold the result and `>>=` empties past it. Hashing appends
-the elements and the count at a run-time width and the storage at a static one, where equal sets share a
-storage. The hook is reachable because the adaptor tells ContainerHash it is not a range: Hash2 chooses
-between its range overload and a `tag_invoke` hook by `enable_if`, so a range with a hook is ambiguous, and
-the range overload could not hash the proxy the set iterator returns anyway.
+the positions and the count at a run-time width and the bits at a static one, where equal sets share a
+width ([the-hashing-invariant](#the-hashing-invariant)).
 
 The element walks are a fallback and priced as one: an operation at mismatched widths costs the elements
 rather than the blocks. A block-wise answer over the common prefix is an optimization the storage could

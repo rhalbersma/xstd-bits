@@ -11,6 +11,7 @@
 #include <xstd/bits/ownership.hpp>       // owned_storage
 #include <xstd/bits/ranges/set_view.hpp> // view
 #include <cstddef>                       // size_t
+#include <functional>                    // hash
 #include <memory>                        // addressof
 #include <set>                           // set
 #include <sstream>                       // istringstream, stringstream
@@ -493,7 +494,18 @@ struct mem_intersects
         }
 };
 
-// [bitset.hash]/1 stipulates a std::hash<std::bitset<N>> specialization
+// [bitset.hash]/1 stipulates a std::hash<std::bitset<N>> specialization; equal values hash equal wherever one exists, and boost has none. [design.md#the-hashing-invariant]
+struct op_hash
+{
+        template<class X>
+        auto operator()(const X& lhs, const X& rhs) const noexcept
+        {
+                if constexpr (requires { std::hash<X>()(lhs); }) {
+                        BOOST_CHECK_EQUAL(std::hash<X>()(lhs), std::hash<X>()(X(lhs)));
+                        BOOST_CHECK(lhs != rhs or std::hash<X>()(lhs) == std::hash<X>()(rhs));
+                }
+        }
+};
 
 struct op_bit_and
 {
