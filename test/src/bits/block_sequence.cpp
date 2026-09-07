@@ -848,9 +848,12 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheTraitsNameAllThreeOrderings, T, test::graded_ex
         }
 }
 
-// Dependent, so a storage without an allocator answers false.
+// Dependent, so a storage without an allocator answers false; the alias spells the typedef without a typename, which clang-tidy 22 reads as redundant.
 template<class X>
-constexpr bool has_allocator = requires (X const& x) { sizeof(typename X::allocator_type); x.get_allocator(); };
+using allocator_of = X::allocator_type;
+
+template<class X>
+constexpr bool has_allocator = requires (X const& x) { sizeof(allocator_of<X>); x.get_allocator(); };
 
 // The allocator where the blocks have one, and max_size in bits at both widths. [design.md#a-strict-extension]
 BOOST_AUTO_TEST_CASE(TheAllocatorAndTheMaximumWidth)

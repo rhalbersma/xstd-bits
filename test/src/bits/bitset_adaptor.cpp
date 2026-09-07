@@ -38,9 +38,12 @@ BOOST_AUTO_TEST_SUITE(BitsetAdaptor)
 template<class B>
 constexpr bool wrappable = requires { sizeof(xstd::bitset_adaptor<B>); };
 
-// Dependent likewise, so a storage without an allocator answers false.
+// Dependent likewise, so a storage without an allocator answers false; the alias spells the typedef without a typename, which clang-tidy 22 reads as redundant.
 template<class X>
-constexpr bool has_allocator = requires (X const& x) { sizeof(typename X::allocator_type); x.get_allocator(); };
+using allocator_of = X::allocator_type;
+
+template<class X>
+constexpr bool has_allocator = requires (X const& x) { sizeof(allocator_of<X>); x.get_allocator(); };
 
 // The vocabulary is our storages': std::bitset's members and boost's set vocabulary, read by block. The counterparts themselves are not wrapped. [design.md#owning-is-ours]
 BOOST_AUTO_TEST_CASE(TheVocabularyIsWhatOurStoragesSpeakAndTheCounterpartsDoNot)
