@@ -8,6 +8,7 @@
 
 #include <xstd/bits/detail/intrin.hpp>             // countl_zero, countr_zero, popcount
 #include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
+#include <cassert>                                 // assert
 #include <concepts>                                // convertible_to
 #include <cstddef>                                 // size_t
 #include <limits>                                  // digits
@@ -228,6 +229,24 @@ template<class Traits, class Bits>
                 }
                 return n;
         }
+}
+
+// The block-wide word at any position, aligned or not: the bits [pos, pos + digits) of c, read through the trait, so a source's alignment is the reader's problem and never the writer's. [design.md#the-blit]
+// pos must lie within the blocks; what the word reaches beyond the width is the clear tail, and beyond the last block nothing at all.
+template<class Traits, class Bits>
+[[nodiscard]] constexpr auto word_at(Bits const& c, std::size_t pos) noexcept
+{
+        using block_type = std::remove_cvref_t<decltype(Traits::block(c, 0UZ))>;
+        constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<block_type>::digits);
+        auto const index = pos / digits;
+        auto const offset = pos % digits;
+        assert(index < Traits::num_blocks(c));
+        auto const low = static_cast<block_type>(Traits::block(c, index) >> offset);
+        // No shift by digits, which is undefined: an aligned read is the block itself, and the last block has nothing above it.
+        if (offset == 0UZ or index + 1UZ == Traits::num_blocks(c)) {
+                return low;
+        }
+        return static_cast<block_type>(low | static_cast<block_type>(Traits::block(c, index + 1UZ) << (digits - offset)));
 }
 
 // A zero width answers zero to every question, and says so here, before an entry or a walk is instantiated for it. [design.md#degenerate-widths]

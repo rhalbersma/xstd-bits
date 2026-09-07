@@ -5,9 +5,10 @@
 
 #include <boost/test/unit_test.hpp>      // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <test/block_types.hpp>          // graded_extents
-#include <xstd/bits/bit_traits.hpp>      // bit_storage, bit_traits, block_readable, scan_*, static_bit_extent
+#include <xstd/bits/bit_traits.hpp>      // bit_storage, bit_traits, block_readable, scan_*, static_bit_extent, word_at
 #include <xstd/bits/block_sequence.hpp>  // block_array
 #include <cstddef>                       // size_t
+#include <cstdint>                       // uint8_t
 #include <set>                           // set
 
 // Two adapters over identical storage, differing only in whether they hand their blocks over. [design.md#detection-by-absence]
@@ -167,5 +168,24 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(BlockWiseScansAgreeWithStdSet, T, BlockTypes)
 }
 
 // No ordering case: the trait carries none, the two readings disagreeing. [design.md#two-readings-disagree]
+
+// The word at any position: aligned, straddling two blocks, and in the last block with nothing above it. [design.md#the-blit]
+BOOST_AUTO_TEST_CASE(TheWordAtAPositionReadsAcrossBlocks)
+{
+        using T = xstd::block_array<std::uint8_t, 20>;
+        using traits = xstd::bit_traits<T>;
+        auto c = T();
+        for (auto const i : { 0UZ, 3UZ, 7UZ, 8UZ, 12UZ, 15UZ, 19UZ }) {
+                c.set(i);
+        }
+        // Blocks: 0b1000'1001, 0b1001'0001, 0b0000'1000.
+        BOOST_CHECK_EQUAL(xstd::detail::bits::word_at<traits>(c, 0UZ),  0b1000'1001);
+        BOOST_CHECK_EQUAL(xstd::detail::bits::word_at<traits>(c, 8UZ),  0b1001'0001);
+        BOOST_CHECK_EQUAL(xstd::detail::bits::word_at<traits>(c, 3UZ),  0b0011'0001);
+        BOOST_CHECK_EQUAL(xstd::detail::bits::word_at<traits>(c, 7UZ),  0b0010'0011);
+        BOOST_CHECK_EQUAL(xstd::detail::bits::word_at<traits>(c, 12UZ), 0b1000'1001);
+        BOOST_CHECK_EQUAL(xstd::detail::bits::word_at<traits>(c, 16UZ), 0b0000'1000);
+        BOOST_CHECK_EQUAL(xstd::detail::bits::word_at<traits>(c, 17UZ), 0b0000'0100);
+}
 
 BOOST_AUTO_TEST_SUITE_END()

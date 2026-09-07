@@ -140,6 +140,25 @@ A plain index walk rather than `drop` + `find_if`, and a descending one rather t
 position, so it never needed recovering. The reverse form composed two adaptors only to have `distance()`
 undo them.
 
+### the-blit
+
+`word_at<Traits>(c, pos)` is the block-wide word at any position of any storage the trait reads by block:
+the bits `[pos, pos + digits)`, assembled from `block(pos / digits) >> r` and the next block `<< (digits - r)`
+where `r = pos % digits`. Two things make it total where it is called. A shift by `digits` is undefined, so
+an aligned read is the block itself with no second term; and the last block has nothing above it, so the
+read stops there rather than asking for a block past the end. What the word reaches beyond the width is the
+clear tail, and it is the caller's to trim. It is the one primitive under every unaligned read: the sequence
+adaptor's `append_range` from a sequence read by block ([the-range-members](#the-range-members)), the bulk
+operations on a window ([windows](#windows)), and the bitset reading's order at unequal widths
+([the-ordering-invariant](#the-ordering-invariant)), where each operand's top window is read as words at its
+own alignment and both windows end at their own width, so the tail needs no mask.
+
+`block_sequence::set_word(pos, value, mask)` is its write side, on our storage alone as `set_block` is: the
+bits of `value` under `mask` land at `[pos, pos + digits)`, split over two blocks where `pos` is not aligned,
+the tail kept clear. Every masked write goes through it: boost's ranged `set`, `reset` and `flip`, a window's
+`fill`, and a window's bulk operators, each walking the words a range spans with the mask of what each holds,
+whole words and a partial one at the end.
+
 ## Contracts
 
 ### total-versus-precondition
@@ -396,9 +415,9 @@ boost's own `<` pair for pair over those widths, against `to_string()` compared 
 against `to_ullong()`.
 
 `bitset_adaptor::operator<=>` is `bitset_three_way` at equal widths, and at unequal ones boost's own walk,
-the top `min(size())` positions paired from the top and then the shorter first; the block-wise form of that
-walk needs shifted reads and arrives with the blit. `==` stays width-first, and `<=>` never answers equal at
-unequal widths, so the two agree ([the-hashing-invariant](#the-hashing-invariant)).
+the top `min(size())` positions paired from the top and then the shorter first, a word at a time through
+`word_at` ([the-blit](#the-blit)). `==` stays width-first, and `<=>` never answers equal at unequal widths,
+so the two agree ([the-hashing-invariant](#the-hashing-invariant)).
 
 Where a specialization offers nothing faster, the default is that standard algorithm over the reading's own
 iterators — so the default cannot disagree with the specification, and only an optimization can.
@@ -657,10 +676,63 @@ view's 8. The offset is applied once, in a private `offset()` that answers zero 
 The three members are [span.sub]'s, on a view and never on an owner, since `std::array` and `std::vector`
 have no subviews either; they assert their preconditions rather than throw, and `std::dynamic_extent` is the
 to-the-end sentinel. A window is a view in `std::ranges`' sense and borrowed like `span`, and like `span` it
-neither compares nor hashes ([views-follow-their-precedent](#views-follow-their-precedent)). It has no bulk
-operators and no `fill`: on packed bits those are block-wise, a window's end blocks are shared with what lies
-outside it, and masking them is the work that arrives with the blit. Until then a window is read and written
-one position at a time, which `std::ranges::fill` over its iterators already does.
+neither compares nor hashes ([views-follow-their-precedent](#views-follow-their-precedent)).
+
+A window's end blocks are shared with what lies outside it, so its bulk operations are masked words: `fill`
+over a window of ours is `block_sequence::set(pos, len, value)`, a word at a time through `set_word`, and one
+position at a time over a window of anything else; `&=`, `|=`, `^=` and `-=` on a window of ours take a source
+of any shape that reads blocks of the same block type, a window at any other alignment included, reading both
+sides through `word_at` and writing through `set_word` masked to the window ([the-blit](#the-blit)). The two
+must be of one size, and must not overlap short of coinciding, `w ^= w` being fine. A window has no shifts:
+shifting within a window is nobody's counterpart.
+
+### the-range-members
+
+`append_range` has two tiers. Where the source is a sequence adaptor of any shape, owner, view or window,
+whose trait reads blocks of the destination's block type, the source's bits are read as words at the source's
+own alignment through `word_at` and appended a word at a time through `block_sequence::append(block)`, which
+splits each word over the destination's own alignment; then the width is trimmed to the count, `resize`
+clearing whatever the last word carried past it. Everything else, a `std::vector<bool>`, an `iota` under a
+`transform`, a sequence over another block type, is packed a word at a time, which is boost's private
+`bit_appender`, and trimmed the same way. A source inside the very storage being appended to is safe: the
+blit reads positions below the old width alone, and no append writes one.
+
+`insert_range`, `insert` in its four shapes, `emplace` and both `erase`s rebuild rather than shift: the head
+through `first(pos)`, the middle, the tail through `subspan(pos)`, into a fresh sequence that is then swapped
+in. Every step runs at the blit's tier, insertion into a packed sequence is linear however it is done, and
+the strong exception guarantee comes free, which is what `std::vector::insert_range` gives on reallocation.
+`subspan` pays for itself here, the head and the tail being exactly windows. In-place block-wise shifting of
+the suffix stays available as a later optimization behind profiling.
+
+`flip()` is `[vector.bool]`'s, a bulk operation like the six operators beside it, so an owner and a whole
+view have it and a window does not; the static `swap(reference, reference)` is the proxies' own swap under
+the name the standard gives it.
+
+### the-sequence-contract
+
+`bit_vector` answers every line of `[vector.bool]`'s synopsis and `bit_array<N>` every line of `[array]`'s,
+and the test says so as a checklist rather than a claim: `test/sequence/concepts.hpp` spells each synopsis
+as one requires-expression, `vector_bool` and `array_bool`, and `std::vector<bool>` and `std::array<bool, N>`
+are asserted against it first. A line the model itself fails is a wrong line, so the checklist is known to
+be honest before ours is held to it; the C++23 range members are a second concept, `vector_bool_ranges`, so
+the model is held to them only where its standard library has them.
+
+The sweep found what the range members had not needed. The allocator: `allocator_type` through the same
+empty base `bitset_adaptor` has, `get_allocator`, and the allocator-extended constructors,
+`[container.alloc.reqmts]`'s copy and move included, which `block_sequence` gains beneath them, deduced and
+matched to the storage's own so a static owner has none. `[vector.erasure]`'s `erase` and `erase_if` as
+non-members over the owner's `erase(first, last)`, `std::ranges::remove_if` running unchanged over the
+proxies, which move and swap. And `std::array`'s aggregate initialization as an `initializer_list`
+constructor on the static owner, the listed values leading and the rest false, a longer list being the
+error it is on `std::array`.
+
+Three things are not offered, each because packed bits have no address. `data()`, and the `pointer` and
+`const_pointer` typedefs, name what a proxy cannot give; the checklist leaves them out of
+`[container.reqmts]`'s typedefs rather than inventing a pointer to a bit. `std::array`'s tuple interface,
+`get<I>`, `tuple_size` and `tuple_element`, is left out with them: it is `std::array`'s claim to be a
+product of `N` objects, and a packed sequence is one object. `std::hash` is asked of the vector alone,
+`std::array` having none, while `bit_array` hashes as every owner does
+([the-hashing-invariant](#the-hashing-invariant)).
 
 ### views-over-owners
 
@@ -760,7 +832,7 @@ in at both widths, every storage under the wrapper having blocks: `block_type`, 
 with the tail masked rather than trusted, and the block-range constructor at a run-time width, a whole number
 of blocks wide. The rest of boost's surface is there too, at both widths where a width does not preclude it:
 the throwing `at(pos)`, `test_set`, the ranged `set`/`reset`/`flip(pos, len)` behind the one guard on the whole
-range, element-wise until the blit brings the masked block; `max_size()` in bits, the width at a static one and
+range and then a masked word at a time ([the-blit](#the-blit)); `max_size()` in bits, the width at a static one and
 the widest whole number of blocks the blocks and the address space admit at a run-time one; and where the
 storage takes an allocator, `allocator_type`, `get_allocator()` and the allocator arguments on the
 constructors. The name `allocator_type` is an empty base a class either has or has not, a class having no
@@ -884,6 +956,29 @@ failed on its returned value rather than on memory at all: `find_next`'s `++n` w
 the bound, so it answered with a real element where `end()` was due. That second one is why this stays a gate
 on the jobs that build without sanitizers.
 
+### the-sieve
+
+The two sieves under `include/opt/` are the library's worked example and its bench, and each speaks one
+vocabulary. `opt/set/sieve.hpp` runs over any ordered set of integers, `std::set`, `std::flat_set`,
+`bit_static_set` or `bit_set`: the candidates are `iota(2, n)` converted to the set, and a sift is `erase`.
+`opt/bitset/sieve.hpp` runs over any bitset, `std::bitset`, `boost::dynamic_bitset` or ours, in the same
+vocabulary through `bit_set_view`: the storage is resized to the count where it can be, then the view
+`fill`s and `erase`s 0 and 1, and every sift is an `erase` through it. The `legacy_bitset`/`modern_bitset`
+ladders, the `generate_empty` trait and the `static_assert(false)` arms that #84 catalogued are gone with
+the absence they papered over: the view is what reconciles `set(pos)`/`reset(pos)` with `insert`/`erase`,
+and a bitset's own spelling reaches the sieve through it and nowhere else. A bitset's `erase` invalidates no
+iterator, so the bitset sieve walks the view live where the set sieve walks a snapshot.
+
+The benches are dynamic containers only, so each compares like with like: the set bench holds
+`std::flat_set`, `std::set` and `bit_set`, the bitset bench `boost::dynamic_bitset<>` and `dynamic_bitset`.
+A `bit_static_set<N>` sifting a universe it was sized for is not measuring what a `std::set` growing and
+shrinking is. `bit_set` is on the set bench and not the bitset one: a set has no `resize`, its width being
+capacity ([width-is-capacity](#width-is-capacity)), and it shares `block_sequence` with `dynamic_bitset`,
+so the bitset bench would only time the same storage twice. The tests keep the static types, `std::bitset<N>`,
+`xstd::bitset<N>` and `bit_static_set<N>`, since the sieve is an example before it is a bench; the two-bit
+sieve that runs `sift_primes1` to exhaustion is over the run-time widths, boost's and ours, as only they can
+be that small.
+
 ## Platform and tooling, continued
 
 ### uint128-support
@@ -925,3 +1020,13 @@ Four findings are suppressed because the checker cannot see what makes them righ
   instantiation discards; it sees only that one and asks for a `const` that would stop every other
   instantiation compiling.
 - `misc-redundant-expression` on a reflexivity check, which cannot be written without naming the object twice.
+
+### clang-crashes-on-a-foreign-bulk-source
+
+Asking whether a bulk operator accepts a view over a foreign storage -- `ours &= bit_span(a_std_bitset)`, in
+a `requires`-expression or written out -- crashes clang 18 and clang 20 alike with an internal error, and it
+did so before the windowed operators existed, so the trigger is the whole view's `&=` seeing a foreign
+`sequence_adaptor` as its argument. gcc rejects the expression as it should. The expression is ill-formed
+either way, since bulk on a window takes a source of the destination's own block type and the whole view's
+takes its own type, so nothing in the library or the tests spells it; the crash is recorded here so nobody
+adds the assertion that would.

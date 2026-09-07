@@ -1,7 +1,7 @@
 #ifndef OPT_SET_SIEVE_HPP
 #define OPT_SET_SIEVE_HPP
 
-//          Copyright Rein Halbersma 2014-2025.
+//          Copyright Rein Halbersma 2014-2026.
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
@@ -18,20 +18,18 @@ auto sift(X& primes, std::size_t m)
         primes.erase(m);
 }
 
+// The sieve over any ordered set of integers, std::set's, std::flat_set's or ours. [design.md#the-sieve]
 template<class X>
-struct generate_candidates
+auto generate_candidates(std::size_t n)
 {
-        auto operator()(std::size_t n) const
-        {
-                return std::views::iota(2UZ, n) | std::ranges::to<X>();
-        }
-};
+        return std::views::iota(2UZ, n) | std::ranges::to<X>();
+}
 
 // Iterate a snapshot and guard with contains(): sift() erases, which invalidates a vector-backed X's cached end().
 template<class X>
 auto sift_primes0(std::size_t n)
 {
-        auto primes = generate_candidates<X>()(n);
+        auto primes = generate_candidates<X>(n);
         auto const candidates = primes;
         for (auto p
                 : candidates
@@ -50,7 +48,7 @@ auto sift_primes0(std::size_t n)
 template<class X>
 auto sift_primes1(std::size_t n)
 {
-        auto primes = generate_candidates<X>()(n);
+        auto primes = generate_candidates<X>(n);
         auto const candidates = primes;
         for (auto p : candidates) {
                 if (auto m = p * p; m < n) {

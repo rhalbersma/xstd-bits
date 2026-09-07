@@ -30,7 +30,7 @@
                                                                // (views::drop_last when P22014R2 is accepted)
 #include <span>                                                // dynamic_extent
 #include <type_traits>                                         // conditional_t, is_const_v, is_nothrow_swappable_v, remove_reference_t
-#include <utility>                                             // pair
+#include <utility>                                             // exchange, move, pair
 #include <vector>                                              // vector
 #include <version>                                             // IWYU pragma: keep; __cpp_lib_inplace_vector
 #ifdef __cpp_lib_inplace_vector
@@ -133,6 +133,25 @@ public:
                 m_blocks(blocks_for(n), alloc)
         {}
 
+        // [container.alloc.reqmts]'s allocator-extended copy and move; the moved-from is left empty whichever way the blocks went.
+        template<class Alloc>
+                requires (not has_static_size) and std::same_as<Alloc, typename Blocks::allocator_type>
+        [[nodiscard]] constexpr block_sequence(block_sequence const& other, Alloc const& alloc)
+        :
+                m_size(other.m_size),
+                m_blocks(other.m_blocks, alloc)
+        {}
+
+        template<class Alloc>
+                requires (not has_static_size) and std::same_as<Alloc, typename Blocks::allocator_type>
+        [[nodiscard]] constexpr block_sequence(block_sequence&& other, Alloc const& alloc)
+        :
+                m_size(std::exchange(other.m_size, 0UZ)),
+                m_blocks(std::move(other.m_blocks), alloc)
+        {
+                other.m_blocks.clear();
+        }
+
         [[nodiscard]] constexpr auto get_allocator() const noexcept
                 requires requires (Blocks const& b) { b.get_allocator(); }
         {
@@ -184,6 +203,54 @@ public:
                 assert(i < num_blocks());
                 m_blocks[i] = value;
                 erase_unused();
+        }
+
+        // A word at any position, aligned or not: the bits [n, n + bits_per_block), the clear tail and nothing beyond the last block. [design.md#the-blit]
+        [[nodiscard]] constexpr auto word_at(std::size_t n) const noexcept
+                -> block_type
+        {
+                auto const [ index, offset ] = index_offset(n);
+                assert(index < num_blocks());
+                auto const low = static_cast<block_type>(m_blocks[index] >> offset);
+                if (offset == 0UZ or index == last_block()) {
+                        return low;
+                }
+                return static_cast<block_type>(low | static_cast<block_type>(m_blocks[index + 1UZ] << (bits_per_block - offset)));
+        }
+
+        // The write side of word_at, masked: the bits of value under mask land at [n, n + bits_per_block), split over two blocks where n is not aligned, and the tail stays clear. [design.md#the-blit]
+        constexpr void set_word(std::size_t n, block_type value, block_type mask) noexcept
+        {
+                auto const [ index, offset ] = index_offset(n);
+                assert(index < num_blocks());
+                auto const bits = static_cast<block_type>(value & mask);
+
+                // Each step lands back in block_type: a promoted operand feeding the next bitwise operator is what bugprone-signed-bitwise reads. [design.md#block-writes]
+                auto const low_kept = static_cast<block_type>(m_blocks[index] & static_cast<block_type>(~static_cast<block_type>(mask << offset)));
+                m_blocks[index] = static_cast<block_type>(low_kept | static_cast<block_type>(bits << offset));
+                if (offset != 0UZ and index != last_block()) {
+                        auto const shift = bits_per_block - offset;
+                        auto const high_kept = static_cast<block_type>(m_blocks[index + 1UZ] & static_cast<block_type>(~static_cast<block_type>(mask >> shift)));
+                        m_blocks[index + 1UZ] = static_cast<block_type>(high_kept | static_cast<block_type>(bits >> shift));
+                }
+                erase_unused();
+        }
+
+        // boost's ranged forms, a word at a time through set_word: [n, n + len) set, cleared or flipped, the rest untouched. [design.md#the-blit]
+        constexpr auto set(std::size_t n, std::size_t len, bool value) noexcept
+                -> block_sequence&
+        {
+                assert(n + len <= size());
+                for_each_word(n, len, [&](std::size_t pos, block_type mask) -> void { set_word(pos, value ? ones : zero, mask); });
+                return *this;
+        }
+
+        constexpr auto flip(std::size_t n, std::size_t len) noexcept
+                -> block_sequence&
+        {
+                assert(n + len <= size());
+                for_each_word(n, len, [&](std::size_t pos, block_type mask) -> void { set_word(pos, static_cast<block_type>(~word_at(pos)), mask); });
+                return *this;
         }
 
         // Memberwise, width first: the unused bits are kept clear, so the blocks compare as the bits do, and a zero width through the one block it still holds. [design.md#block-storage]
@@ -889,6 +956,16 @@ private:
                 -> std::size_t
         {
                 return num_blocks() - 1UZ;
+        }
+
+        // The words a range of positions spans, each with the mask of what it holds: whole words, and a partial one at the end.
+        template<class F>
+        constexpr void for_each_word(std::size_t n, std::size_t len, F f) const noexcept
+        {
+                for (auto pos = n; pos < n + len; pos += bits_per_block) {
+                        auto const count = std::ranges::min(bits_per_block, n + len - pos);
+                        f(pos, count == bits_per_block ? ones : static_cast<block_type>(static_cast<block_type>(unit << count) - unit));
+                }
         }
 
         // An iterator pair, not views::take, which libc++ 18 cannot form here. [design.md#libcxx-views-take]

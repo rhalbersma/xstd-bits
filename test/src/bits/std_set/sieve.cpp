@@ -1,4 +1,4 @@
-//          Copyright Rein Halbersma 2014-2025.
+//          Copyright Rein Halbersma 2014-2026.
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
@@ -8,6 +8,7 @@
 #include <fmt/ranges.h>                 // IWYU pragma: keep; the range formatters
 #include <opt/set/sieve.hpp>            // filter_twins, sift_primes0, sift_primes1
 #include <test/flat_set.hpp>            // IWYU pragma: keep; TEST_HAS_FLAT_SET
+#include <xstd/bits/bit_set.hpp>        // bit_set
 #include <xstd/bits/bit_static_set.hpp> // bit_static_set
 #include <cstddef>                      // size_t
 #include <set>                          // set
@@ -24,6 +25,7 @@ using Types = std::tuple
 ,       std::flat_set<std::size_t>
 #endif
 ,       xstd::bit_static_set<N>
+,       xstd::bit_set
 >;
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheSiftedPrimesAndTwinsFormatAsExpected, T, Types)

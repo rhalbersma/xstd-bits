@@ -9,7 +9,7 @@
 // Bitsets [bitset], Header <bitset> synopsis [bitset.syn]
 
 #include <boost/hash2/hash_append.hpp>            // hash_append_tag
-#include <xstd/bits/bit_traits.hpp>               // bit_storage, bit_traits, block_readable, scan_prev, static_bit_extent, zero_width
+#include <xstd/bits/bit_traits.hpp>               // bit_storage, bit_traits, block_readable, scan_prev, static_bit_extent, word_at, zero_width
 #include <xstd/bits/detail/allocator_typedef.hpp> // allocator_typedef
 #include <xstd/bits/detail/hash.hpp>              // hash_append_bits, std_hash
 #include <xstd/bits/ownership.hpp>                // owned_storage, ownership
@@ -332,14 +332,12 @@ public:
                 return *this;
         }
 
-        // boost's ranged forms, the one guard on the whole range; element-wise until the blit brings the masked block. [design.md#the-one-guard]
+        // boost's ranged forms, the one guard on the whole range, then the storage's own a word at a time. [design.md#the-one-guard]
         constexpr auto set(std::size_t pos, std::size_t len, bool val)
                 -> bitset_adaptor&
         {
                 guard_range(pos, len);
-                for (auto const i : std::views::iota(pos, pos + len)) {
-                        Traits::unchecked_assign(m_bits, i, val);
-                }
+                m_bits.set(pos, len, val);
                 return *this;
         }
 
@@ -353,9 +351,7 @@ public:
                 -> bitset_adaptor&
         {
                 guard_range(pos, len);
-                for (auto const i : std::views::iota(pos, pos + len)) {
-                        Traits::unchecked_assign(m_bits, i, not Traits::at(m_bits, i));
-                }
+                m_bits.flip(pos, len);
                 return *this;
         }
 
@@ -612,13 +608,18 @@ private:
                 }
         }
 
-        // boost's unequal-width order: the highest positions paired first over the common length, then the shorter is less.
+        // boost's unequal-width order, a word at a time: the top min(size()) positions of each paired from the top, read as words at either one's own alignment, then the shorter is less. [design.md#the-blit]
+        // The top word of each window ends at its own width, so what it reads above the common length is the clear tail on both sides and needs no mask.
         [[nodiscard]] constexpr auto top_aligned_three_way(bitset_adaptor const& rhs) const noexcept
                 -> std::strong_ordering
         {
                 auto const m = std::ranges::min(size(), rhs.size());
-                for (auto const i : std::views::iota(0UZ, m)) {
-                        if (auto const cmp = Traits::at(m_bits, size() - 1UZ - i) <=> Traits::at(rhs.m_bits, rhs.size() - 1UZ - i); cmp != std::strong_ordering::equal) {
+                auto const lhs_start = size() - m;
+                auto const rhs_start = rhs.size() - m;
+                for (auto k = (m + bits_per_block - 1UZ) / bits_per_block; k-- != 0UZ;) {
+                        auto const lhs_word = detail::bits::word_at<Traits>(m_bits, lhs_start + (k * bits_per_block));
+                        auto const rhs_word = detail::bits::word_at<Traits>(rhs.m_bits, rhs_start + (k * bits_per_block));
+                        if (auto const cmp = lhs_word <=> rhs_word; cmp != std::strong_ordering::equal) {
                                 return cmp;
                         }
                 }
