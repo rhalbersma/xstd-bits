@@ -336,13 +336,11 @@ public:
         [[nodiscard]] constexpr auto front(this auto&& self) noexcept -> reference_t<decltype(self)> { return { &self.storage(), self.offset() }; }
         [[nodiscard]] constexpr auto back (this auto&& self) noexcept -> reference_t<decltype(self)> { return { &self.storage(), self.offset() + self.size() - 1UZ }; }
 
-        // The owner's alone, following span: a handle declines to say whether it compares its referent or its contents. [design.md#views-follow-their-precedent]
+        // The owner's alone, following span: a handle declines to say whether it compares its referent or its contents. Defaulted, the storage being the one member. [design.md#views-follow-their-precedent]
         [[nodiscard]] friend constexpr auto operator==(basic_bit_sequence const& x, basic_bit_sequence const& y) noexcept
                 -> bool
-                requires is_owner and requires { { x.storage() == y.storage() } -> std::convertible_to<bool>; }
-        {
-                return x.storage() == y.storage();
-        }
+                requires is_owner
+        = default;
 
         [[nodiscard]] friend constexpr auto operator<=>(basic_bit_sequence const& x, basic_bit_sequence const& y) noexcept
                 -> std::strong_ordering
