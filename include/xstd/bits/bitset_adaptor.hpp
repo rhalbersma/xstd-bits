@@ -224,10 +224,12 @@ public:
                 }
         }
 
+        // Constrained to the character types, so a pointer to a block reaches the block-range constructor above and never instantiates a string_view over the block. [design.md#a-strict-extension]
         template<class charT>
+                requires (std::same_as<charT, char> or std::same_as<charT, wchar_t> or std::same_as<charT, char8_t> or std::same_as<charT, char16_t> or std::same_as<charT, char32_t>)
         [[nodiscard]] constexpr explicit bitset_adaptor(
                 charT const* str,
-                std::basic_string_view<charT>::size_type n = std::basic_string_view<charT>::npos,
+                std::size_t n = std::basic_string_view<charT>::npos,
                 charT zero = static_cast<charT>('0'),
                 charT one  = static_cast<charT>('1')
         )
