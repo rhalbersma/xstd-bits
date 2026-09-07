@@ -80,7 +80,7 @@ struct increment_modulo
                         BOOST_CHECK(
                                 (a << n) == (a
                                         | std::views::transform([=](auto x) { return x + n; })
-                                        | std::views::filter   ([ ](auto x) { return x < N; })
+                                        | std::views::filter   ([=](auto x) { return x < N; })
                                         | std::ranges::to<X>()
                                 )
                         );
@@ -99,7 +99,7 @@ struct decrement_modulo
                                 (a >> n) == (a
                                         | std::views::filter   ([=](auto x) { return x >= n; })
                                         | std::views::transform([=](auto x) { return x - n; })
-                                        | std::views::filter   ([ ](auto x) { return x < N; })
+                                        | std::views::filter   ([=](auto x) { return x < N; })
                                         | std::ranges::to<X>()
                                 )
                         );
