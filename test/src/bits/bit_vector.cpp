@@ -5,7 +5,7 @@
 
 #include <boost/test/unit_test.hpp>          // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <test/sequence/concepts.hpp>        // bit_sequence
-#include <xstd/bits/basic_bit_sequence.hpp>  // basic_bit_sequence
+#include <xstd/bits/sequence_adaptor.hpp>  // sequence_adaptor
 #include <xstd/bits/bit_vector.hpp>          // bit_vector
 #include <xstd/bits/block_sequence.hpp>      // block_vector
 #include <xstd/bits/ownership.hpp>           // ownership
@@ -23,7 +23,7 @@
 
 BOOST_AUTO_TEST_SUITE(BitVector)
 
-using T = xstd::bit_vector<std::uint8_t>;
+using T = xstd::basic_bit_vector<std::uint8_t>;
 
 // Dependent, so a constrained-away member is a false rather than a hard error.
 template<class X>
@@ -32,8 +32,8 @@ constexpr bool can_grow = requires (X& x) { x.push_back(true); x.resize(1UZ); };
 // std::vector<bool> under its own name: the sequence adaptor over a heap of blocks. [design.md#the-public-names]
 BOOST_AUTO_TEST_CASE(TheDynamicSequenceIsTheSequenceAdaptorOverAHeapOfBlocks)
 {
-        static_assert(std::same_as<T, xstd::basic_bit_sequence<xstd::block_vector<std::uint8_t>, xstd::ownership::owns, false>>);
-        static_assert(std::same_as<xstd::bit_vector<std::uint8_t, std::allocator<std::uint8_t>>, T>);
+        static_assert(std::same_as<T, xstd::sequence_adaptor<xstd::block_vector<std::uint8_t>, xstd::ownership::owns, false>>);
+        static_assert(std::same_as<xstd::basic_bit_vector<std::uint8_t, std::allocator<std::uint8_t>>, T>);
         static_assert(test::sequence::bit_sequence<T>);
 }
 

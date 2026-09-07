@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_BIT_SET_HPP
 #define XSTD_BITS_BIT_SET_HPP
 
-#include <xstd/bits/basic_bit_set.hpp>             // basic_bit_set
+#include <xstd/bits/set_adaptor.hpp>               // set_adaptor
 #include <xstd/bits/block_sequence.hpp>            // block_vector
 #include <xstd/bits/ownership.hpp>                 // ownership
 #include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
@@ -16,8 +16,10 @@
 namespace xstd {
 
 // The set reading over a heap of blocks: the flagship, benchmarked against std::set, and the one name without a qualifier. [design.md#the-public-names]
-template<xstd::unsigned_integer Block = std::size_t, class Allocator = std::allocator<Block>>
-using bit_set = basic_bit_set<block_vector<Block, Allocator>, ownership::owns>;
+template<xstd::unsigned_integer Block, class Allocator = std::allocator<Block>>
+using basic_bit_set = set_adaptor<block_vector<Block, Allocator>, ownership::owns>;
+
+using bit_set = basic_bit_set<std::size_t>;
 
 }       // namespace xstd
 

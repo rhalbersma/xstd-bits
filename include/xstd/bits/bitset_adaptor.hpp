@@ -3,33 +3,33 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_BASIC_BITSET_HPP
-#define XSTD_BITS_BASIC_BITSET_HPP
+#ifndef XSTD_BITS_BITSET_ADAPTOR_HPP
+#define XSTD_BITS_BITSET_ADAPTOR_HPP
 
 // Bitsets [bitset], Header <bitset> synopsis [bitset.syn]
 
-#include <boost/hash2/hash_append.hpp>        // hash_append_tag
-#include <xstd/bits/bit_traits.hpp>           // bit_storage, bit_traits, static_bit_extent, zero_width
-#include <xstd/bits/detail/hash.hpp>          // hash_append_bits, std_hash
-#include <xstd/bits/ownership.hpp>            // owned_storage, ownership
-#include <algorithm>                          // min
-#include <cassert>                            // assert
-#include <concepts>                           // convertible_to, regular, same_as
-#include <cstddef>                            // size_t
-#include <format>                             // format
-#include <functional>                         // hash
-#include <ios>                                // ios_base
-#include <iosfwd>                             // basic_istream, basic_ostream
-#include <iterator>                           // input_iterator
-#include <limits>                             // numeric_limits
-#include <locale>                             // ctype, use_facet
-#include <memory>                             // allocator
-#include <ranges>                             // iota
-#include <source_location>                    // source_location
-#include <stdexcept>                          // invalid_argument, out_of_range, overflow_error
-#include <string>                             // basic_string, char_traits
-#include <string_view>                        // basic_string_view
-#include <utility>                            // as_const
+#include <boost/hash2/hash_append.hpp> // hash_append_tag
+#include <xstd/bits/bit_traits.hpp>    // bit_storage, bit_traits, static_bit_extent, zero_width
+#include <xstd/bits/detail/hash.hpp>   // hash_append_bits, std_hash
+#include <xstd/bits/ownership.hpp>     // owned_storage, ownership
+#include <algorithm>                   // min
+#include <cassert>                     // assert
+#include <concepts>                    // convertible_to, regular, same_as
+#include <cstddef>                     // size_t
+#include <format>                      // format
+#include <functional>                  // hash
+#include <ios>                         // ios_base
+#include <iosfwd>                      // basic_istream, basic_ostream
+#include <iterator>                    // input_iterator
+#include <limits>                      // numeric_limits
+#include <locale>                      // ctype, use_facet
+#include <memory>                      // allocator
+#include <ranges>                      // iota
+#include <source_location>             // source_location
+#include <stdexcept>                   // invalid_argument, out_of_range, overflow_error
+#include <string>                      // basic_string, char_traits
+#include <string_view>                 // basic_string_view
+#include <utility>                     // as_const
 
 namespace xstd {
 
@@ -58,7 +58,7 @@ concept has_bitops =
 
 // [template.bitset] over any Bits that speaks the vocabulary: what Bits has is forwarded, what it lacks is added through Traits. [design.md#the-idempotent-wrapper]
 template<has_bitops Bits, bit_storage<Bits> Traits = bit_traits<Bits>>
-class basic_bitset
+class bitset_adaptor
 {
         // Two counterparts, one wrapper: std::bitset at a static width, boost::dynamic_bitset at a run-time one. [design.md#the-idempotent-wrapper]
         static constexpr bool has_static_width = static_bit_extent<Traits, Bits>;
@@ -66,12 +66,12 @@ class basic_bitset
         // No iteration and no <=> here by design, because neither counterpart has them: the two views refer into the storage instead. [design.md#views-over-owners]
         Bits m_bits{};
 
-        template<class B, ownership O, bit_storage<B> T>         friend class basic_bit_set;
-        template<class B, ownership O, bool W, bit_storage<B> T> friend class basic_bit_sequence;
+        template<class B, ownership O, bit_storage<B> T>         friend class set_adaptor;
+        template<class B, ownership O, bool W, bit_storage<B> T> friend class sequence_adaptor;
 
         // The value through the door, so a wrapper over std::bitset hashes on every library, whether or not its bits can be read by block. [design.md#the-hashing-invariant]
         template<class Provider, class Hash, class Flavor>
-        friend constexpr void tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, basic_bitset const* v) noexcept
+        friend constexpr void tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, bitset_adaptor const* v) noexcept
         {
                 detail::bits::hash_append_bits<Traits>(h, f, v->m_bits);
         }
@@ -84,12 +84,12 @@ public:
         class reference
         {
                 // A pointer, not a reference, so the copy constructor stays defaulted as [bitset.refs] declares it.
-                basic_bitset* m_ptr{};
+                bitset_adaptor* m_ptr{};
                 std::size_t m_idx{};
 
-                friend basic_bitset;
+                friend bitset_adaptor;
 
-                [[nodiscard]] constexpr reference(basic_bitset& c, std::size_t idx) noexcept
+                [[nodiscard]] constexpr reference(bitset_adaptor& c, std::size_t idx) noexcept
                 :
                         m_ptr(&c),
                         m_idx(idx)
@@ -145,16 +145,16 @@ public:
         static constexpr std::size_t npos = static_cast<std::size_t>(-1);
 
         // Constructors                                            [bitset.cons]
-        [[nodiscard]] constexpr basic_bitset() noexcept = default;
+        [[nodiscard]] constexpr bitset_adaptor() noexcept = default;
 
         // [bitset.cons]/2: the low bits of val, as many as the width admits; boost takes the width first and the value second.
-        [[nodiscard]] constexpr explicit(false) basic_bitset(unsigned long long val) noexcept  // NOLINT(misc-explicit-constructor)
+        [[nodiscard]] constexpr explicit(false) bitset_adaptor(unsigned long long val) noexcept  // NOLINT(misc-explicit-constructor)
                 requires has_static_width
         {
                 from_ullong(val);
         }
 
-        [[nodiscard]] constexpr explicit basic_bitset(std::size_t num_bits, unsigned long long val = 0ULL)
+        [[nodiscard]] constexpr explicit bitset_adaptor(std::size_t num_bits, unsigned long long val = 0ULL)
                 requires (not has_static_width)
         :
                 m_bits(num_bits)
@@ -163,7 +163,7 @@ public:
         }
 
         template<class charT, class traits, class Allocator>
-        [[nodiscard]] constexpr explicit basic_bitset(
+        [[nodiscard]] constexpr explicit bitset_adaptor(
                 std::basic_string<charT, traits, Allocator> const& str,
                 std::basic_string<charT, traits, Allocator>::size_type pos = 0,
                 std::basic_string<charT, traits, Allocator>::size_type n = std::basic_string<charT, traits, Allocator>::npos,
@@ -171,11 +171,11 @@ public:
                 charT one  = static_cast<charT>('1')
         )
         :
-                basic_bitset(std::basic_string_view<charT, traits>(str), pos, n, zero, one)
+                bitset_adaptor(std::basic_string_view<charT, traits>(str), pos, n, zero, one)
         {}
 
         template<class charT, class traits>
-        [[nodiscard]] constexpr explicit basic_bitset(
+        [[nodiscard]] constexpr explicit bitset_adaptor(
                 std::basic_string_view<charT, traits> str,
                 std::basic_string_view<charT, traits>::size_type pos = 0,
                 std::basic_string_view<charT, traits>::size_type n = std::basic_string_view<charT, traits>::npos,
@@ -206,24 +206,24 @@ public:
         }
 
         template<class charT>
-        [[nodiscard]] constexpr explicit basic_bitset(
+        [[nodiscard]] constexpr explicit bitset_adaptor(
                 charT const* str,
                 std::basic_string_view<charT>::size_type n = std::basic_string_view<charT>::npos,
                 charT zero = static_cast<charT>('0'),
                 charT one  = static_cast<charT>('1')
         )
         :
-                basic_bitset(n == std::basic_string_view<charT>::npos ? std::basic_string_view<charT>(str) : std::basic_string_view<charT>(str, n), 0, n, zero, one)
+                bitset_adaptor(n == std::basic_string_view<charT>::npos ? std::basic_string_view<charT>(str) : std::basic_string_view<charT>(str, n), 0, n, zero, one)
         {}
 
         // Members                                              [bitset.members]
-        constexpr auto operator&=(basic_bitset const& rhs) noexcept -> basic_bitset& { m_bits &= rhs.m_bits; return *this; }
-        constexpr auto operator|=(basic_bitset const& rhs) noexcept -> basic_bitset& { m_bits |= rhs.m_bits; return *this; }
-        constexpr auto operator^=(basic_bitset const& rhs) noexcept -> basic_bitset& { m_bits ^= rhs.m_bits; return *this; }
+        constexpr auto operator&=(bitset_adaptor const& rhs) noexcept -> bitset_adaptor& { m_bits &= rhs.m_bits; return *this; }
+        constexpr auto operator|=(bitset_adaptor const& rhs) noexcept -> bitset_adaptor& { m_bits |= rhs.m_bits; return *this; }
+        constexpr auto operator^=(bitset_adaptor const& rhs) noexcept -> bitset_adaptor& { m_bits ^= rhs.m_bits; return *this; }
 
         // Same spelling, two contracts: the trait's checked entry is total and forwarded as is; the storage's own shift is the unchecked one, guarded here. [design.md#checked-and-unchecked]
         constexpr auto operator<<=(std::size_t pos) noexcept
-                -> basic_bitset&
+                -> bitset_adaptor&
         {
                 if constexpr (requires { Traits::checked_shift_left(m_bits, pos); }) {
                         Traits::checked_shift_left(m_bits, pos);
@@ -236,7 +236,7 @@ public:
         }
 
         constexpr auto operator>>=(std::size_t pos) noexcept
-                -> basic_bitset&
+                -> bitset_adaptor&
         {
                 if constexpr (requires { Traits::checked_shift_right(m_bits, pos); }) {
                         Traits::checked_shift_right(m_bits, pos);
@@ -248,18 +248,18 @@ public:
                 return *this;
         }
 
-        [[nodiscard]] constexpr auto operator<<(std::size_t pos) const noexcept(has_static_width) -> basic_bitset { auto nrv = *this; nrv <<= pos; return nrv; }
-        [[nodiscard]] constexpr auto operator>>(std::size_t pos) const noexcept(has_static_width) -> basic_bitset { auto nrv = *this; nrv >>= pos; return nrv; }
+        [[nodiscard]] constexpr auto operator<<(std::size_t pos) const noexcept(has_static_width) -> bitset_adaptor { auto nrv = *this; nrv <<= pos; return nrv; }
+        [[nodiscard]] constexpr auto operator>>(std::size_t pos) const noexcept(has_static_width) -> bitset_adaptor { auto nrv = *this; nrv >>= pos; return nrv; }
 
-        [[nodiscard]] constexpr auto operator~() const noexcept(has_static_width) -> basic_bitset { auto nrv = *this; nrv.flip(); return nrv; }
+        [[nodiscard]] constexpr auto operator~() const noexcept(has_static_width) -> bitset_adaptor { auto nrv = *this; nrv.flip(); return nrv; }
 
-        constexpr auto set  () noexcept -> basic_bitset& { m_bits.set  (); return *this; }
-        constexpr auto reset() noexcept -> basic_bitset& { m_bits.reset(); return *this; }
-        constexpr auto flip () noexcept -> basic_bitset& { m_bits.flip (); return *this; }
+        constexpr auto set  () noexcept -> bitset_adaptor& { m_bits.set  (); return *this; }
+        constexpr auto reset() noexcept -> bitset_adaptor& { m_bits.reset(); return *this; }
+        constexpr auto flip () noexcept -> bitset_adaptor& { m_bits.flip (); return *this; }
 
         // Element access, both families: the trait's checked entry where the counterpart throws natively, else the guard and the unchecked write. [design.md#checked-and-unchecked]
         constexpr auto set(std::size_t pos, bool val = true)
-                -> basic_bitset&
+                -> bitset_adaptor&
         {
                 if constexpr (requires { Traits::checked_set(m_bits, pos, val); }) {
                         Traits::checked_set(m_bits, pos, val);
@@ -278,7 +278,7 @@ public:
         }
 
         constexpr auto reset(std::size_t pos)
-                -> basic_bitset&
+                -> bitset_adaptor&
         {
                 if constexpr (requires { Traits::checked_reset(m_bits, pos); }) {
                         Traits::checked_reset(m_bits, pos);
@@ -296,7 +296,7 @@ public:
         }
 
         constexpr auto flip(std::size_t pos)
-                -> basic_bitset&
+                -> bitset_adaptor&
         {
                 if constexpr (requires { Traits::checked_flip(m_bits, pos); }) {
                         Traits::checked_flip(m_bits, pos);
@@ -353,7 +353,7 @@ public:
         [[nodiscard]] constexpr auto count() const noexcept -> std::size_t { return m_bits.count(); }
         [[nodiscard]] constexpr auto size()  const noexcept -> std::size_t { return m_bits.size();  }
 
-        [[nodiscard]] constexpr auto operator==(basic_bitset const& rhs) const noexcept -> bool = default;
+        [[nodiscard]] constexpr auto operator==(bitset_adaptor const& rhs) const noexcept -> bool = default;
 
         [[nodiscard]] constexpr auto test(std::size_t pos) const
                 -> bool
@@ -376,29 +376,29 @@ public:
         [[nodiscard]] constexpr auto none() const noexcept -> bool { return m_bits.none(); }
 
         // The set vocabulary boost has and std::bitset has not, forwarded exactly where the counterpart is boost: a run-time width, whose storage spells them alike. [design.md#the-idempotent-wrapper]
-        constexpr auto operator-=(basic_bitset const& rhs) noexcept
-                -> basic_bitset&
+        constexpr auto operator-=(bitset_adaptor const& rhs) noexcept
+                -> bitset_adaptor&
                 requires (not has_static_width) and requires (Bits& b, Bits const& c) { b -= c; }
         {
                 m_bits -= rhs.m_bits;
                 return *this;
         }
 
-        [[nodiscard]] constexpr auto is_subset_of(basic_bitset const& rhs) const noexcept
+        [[nodiscard]] constexpr auto is_subset_of(bitset_adaptor const& rhs) const noexcept
                 -> bool
                 requires (not has_static_width) and requires (Bits const& c) { c.is_subset_of(c); }
         {
                 return m_bits.is_subset_of(rhs.m_bits);
         }
 
-        [[nodiscard]] constexpr auto is_proper_subset_of(basic_bitset const& rhs) const noexcept
+        [[nodiscard]] constexpr auto is_proper_subset_of(bitset_adaptor const& rhs) const noexcept
                 -> bool
                 requires (not has_static_width) and requires (Bits const& c) { c.is_proper_subset_of(c); }
         {
                 return m_bits.is_proper_subset_of(rhs.m_bits);
         }
 
-        [[nodiscard]] constexpr auto intersects(basic_bitset const& rhs) const noexcept
+        [[nodiscard]] constexpr auto intersects(bitset_adaptor const& rhs) const noexcept
                 -> bool
                 requires (not has_static_width) and requires (Bits const& c) { c.intersects(c); }
         {
@@ -555,7 +555,7 @@ private:
 
 // The owner's side of the view protocol: what a bit_set_view or bit_span over a bitset refers into. [design.md#views-over-owners]
 template<class Bits, class Traits>
-struct owned_storage<basic_bitset<Bits, Traits>>
+struct owned_storage<bitset_adaptor<Bits, Traits>>
 {
         using bits_type   = Bits;
         using traits_type = Traits;
@@ -569,9 +569,9 @@ namespace std {
 
 // bitset hash support [bitset.hash]; no redeclaration of std::hash's primary template, which [namespace.std] forbids.
 template<class Bits, class Traits>
-struct hash<xstd::basic_bitset<Bits, Traits>>
+struct hash<xstd::bitset_adaptor<Bits, Traits>>
 {
-        [[nodiscard]] constexpr auto operator()(xstd::basic_bitset<Bits, Traits> const& v) const noexcept
+        [[nodiscard]] constexpr auto operator()(xstd::bitset_adaptor<Bits, Traits> const& v) const noexcept
                 -> std::size_t
         {
                 return xstd::detail::bits::std_hash(v);
@@ -585,15 +585,15 @@ struct hash<xstd::basic_bitset<Bits, Traits>>
 namespace xstd {
 
 // bitset operators                                           [bitset.operators]
-template<class Bits, class Traits> [[nodiscard]] constexpr auto operator&(basic_bitset<Bits, Traits> const& lhs, basic_bitset<Bits, Traits> const& rhs) noexcept(static_bit_extent<Traits, Bits>) -> basic_bitset<Bits, Traits> { auto nrv = lhs; nrv &= rhs; return nrv; }
-template<class Bits, class Traits> [[nodiscard]] constexpr auto operator|(basic_bitset<Bits, Traits> const& lhs, basic_bitset<Bits, Traits> const& rhs) noexcept(static_bit_extent<Traits, Bits>) -> basic_bitset<Bits, Traits> { auto nrv = lhs; nrv |= rhs; return nrv; }
-template<class Bits, class Traits> [[nodiscard]] constexpr auto operator^(basic_bitset<Bits, Traits> const& lhs, basic_bitset<Bits, Traits> const& rhs) noexcept(static_bit_extent<Traits, Bits>) -> basic_bitset<Bits, Traits> { auto nrv = lhs; nrv ^= rhs; return nrv; }
-template<class Bits, class Traits> [[nodiscard]] constexpr auto operator-(basic_bitset<Bits, Traits> const& lhs, basic_bitset<Bits, Traits> const& rhs) noexcept(static_bit_extent<Traits, Bits>) -> basic_bitset<Bits, Traits> requires requires (basic_bitset<Bits, Traits>& b) { b -= b; } { auto nrv = lhs; nrv -= rhs; return nrv; }
+template<class Bits, class Traits> [[nodiscard]] constexpr auto operator&(bitset_adaptor<Bits, Traits> const& lhs, bitset_adaptor<Bits, Traits> const& rhs) noexcept(static_bit_extent<Traits, Bits>) -> bitset_adaptor<Bits, Traits> { auto nrv = lhs; nrv &= rhs; return nrv; }
+template<class Bits, class Traits> [[nodiscard]] constexpr auto operator|(bitset_adaptor<Bits, Traits> const& lhs, bitset_adaptor<Bits, Traits> const& rhs) noexcept(static_bit_extent<Traits, Bits>) -> bitset_adaptor<Bits, Traits> { auto nrv = lhs; nrv |= rhs; return nrv; }
+template<class Bits, class Traits> [[nodiscard]] constexpr auto operator^(bitset_adaptor<Bits, Traits> const& lhs, bitset_adaptor<Bits, Traits> const& rhs) noexcept(static_bit_extent<Traits, Bits>) -> bitset_adaptor<Bits, Traits> { auto nrv = lhs; nrv ^= rhs; return nrv; }
+template<class Bits, class Traits> [[nodiscard]] constexpr auto operator-(bitset_adaptor<Bits, Traits> const& lhs, bitset_adaptor<Bits, Traits> const& rhs) noexcept(static_bit_extent<Traits, Bits>) -> bitset_adaptor<Bits, Traits> requires requires (bitset_adaptor<Bits, Traits>& b) { b -= b; } { auto nrv = lhs; nrv -= rhs; return nrv; }
 
 // [bitset.operators]/6: up to N characters into a temporary string, then x = bitset(str), so a short read lands in the low bits as it does there;
 // a run-time width reads every 0 or 1 on offer and is as wide as the characters read, as boost's is.
 template<class charT, class traits, class Bits, class Traits>
-auto operator>>(std::basic_istream<charT, traits>& is, basic_bitset<Bits, Traits>& x)
+auto operator>>(std::basic_istream<charT, traits>& is, bitset_adaptor<Bits, Traits>& x)
         -> std::basic_istream<charT, traits>&
 {
         auto const limit = [&] -> std::size_t {
@@ -616,7 +616,7 @@ auto operator>>(std::basic_istream<charT, traits>& is, basic_bitset<Bits, Traits
                 is >> ch;
                 str.push_back(ch);
         }
-        x = basic_bitset<Bits, Traits>(str);
+        x = bitset_adaptor<Bits, Traits>(str);
         if constexpr (not detail::bits::zero_width<Traits>) {
                 if (str.empty()) {
                         state |= std::ios_base::failbit;
@@ -627,7 +627,7 @@ auto operator>>(std::basic_istream<charT, traits>& is, basic_bitset<Bits, Traits
 }
 
 template<class charT, class traits, class Bits, class Traits>
-auto operator<<(std::basic_ostream<charT, traits>& os, basic_bitset<Bits, Traits> const& x)
+auto operator<<(std::basic_ostream<charT, traits>& os, bitset_adaptor<Bits, Traits> const& x)
         -> std::basic_ostream<charT, traits>&
 {
         return os << x.template to_string<charT, traits, std::allocator<charT>>(
@@ -638,4 +638,4 @@ auto operator<<(std::basic_ostream<charT, traits>& os, basic_bitset<Bits, Traits
 
 }       // namespace xstd
 
-#endif // XSTD_BITS_BASIC_BITSET_HPP
+#endif // XSTD_BITS_BITSET_ADAPTOR_HPP

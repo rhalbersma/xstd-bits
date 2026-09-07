@@ -5,7 +5,7 @@
 
 #include <boost/dynamic_bitset.hpp>           // dynamic_bitset
 #include <boost/test/unit_test.hpp>           // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <xstd/bits/basic_bitset.hpp>         // basic_bitset, has_bitops
+#include <xstd/bits/bitset_adaptor.hpp>         // bitset_adaptor, has_bitops
 #include <xstd/bits/bitset.hpp>               // bitset
 #include <xstd/bits/block_sequence.hpp>       // block_array, block_vector
 #include <xstd/bits/ext/std/bitset.hpp>       // IWYU pragma: keep; bit_traits<std::bitset>
@@ -25,7 +25,7 @@
 #include <utility>                            // as_const, declval
 #include <vector>                             // vector
 
-BOOST_AUTO_TEST_SUITE(BasicBitset)
+BOOST_AUTO_TEST_SUITE(BitsetAdaptor)
 
 // The counterparts that speak the vocabulary, and one that does not.
 BOOST_AUTO_TEST_CASE(TheVocabularyIsWhatTheThreeStoragesSpeak)
@@ -44,17 +44,17 @@ BOOST_AUTO_TEST_CASE(TheVocabularyIsWhatTheThreeStoragesSpeak)
 // The public name is the wrapper over a packed array, with the word type in the open.
 BOOST_AUTO_TEST_CASE(TheBitsetIsTheWrapperOverAPackedArray)
 {
-        static_assert(std::same_as<xstd::bitset<9, std::uint8_t>, xstd::basic_bitset<xstd::block_array<std::uint8_t, 9>>>);
-        static_assert(std::same_as<xstd::bitset<64>, xstd::basic_bitset<xstd::block_array<std::size_t, 64>>>);
-        static_assert(std::same_as<xstd::bitset<64>, xstd::basic_bitset<xstd::block_array<std::size_t, 64>, xstd::bit_traits<xstd::block_array<std::size_t, 64>>>>);
+        static_assert(std::same_as<xstd::basic_bitset<9, std::uint8_t>, xstd::bitset_adaptor<xstd::block_array<std::uint8_t, 9>>>);
+        static_assert(std::same_as<xstd::bitset<64>, xstd::bitset_adaptor<xstd::block_array<std::size_t, 64>>>);
+        static_assert(std::same_as<xstd::bitset<64>, xstd::bitset_adaptor<xstd::block_array<std::size_t, 64>, xstd::bit_traits<xstd::block_array<std::size_t, 64>>>>);
 }
 
 using Wrapped = std::tuple
-<       xstd::basic_bitset<std::bitset<  0>>
-,       xstd::basic_bitset<std::bitset<  1>>
-,       xstd::basic_bitset<std::bitset< 64>>
-,       xstd::basic_bitset<std::bitset< 65>>
-,       xstd::basic_bitset<std::bitset<128>>
+<       xstd::bitset_adaptor<std::bitset<  0>>
+,       xstd::bitset_adaptor<std::bitset<  1>>
+,       xstd::bitset_adaptor<std::bitset< 64>>
+,       xstd::bitset_adaptor<std::bitset< 65>>
+,       xstd::bitset_adaptor<std::bitset<128>>
 >;
 
 // Wrapping std::bitset gives back a regular, nothrow, trivially copyable type that is not a range: what std::bitset is.
@@ -74,7 +74,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(WrappingStdBitsetKeepsItsShape, T, Wrapped)
 // Idempotence, member by member: the wrapper answers exactly as the std::bitset it wraps, throw for throw.
 BOOST_AUTO_TEST_CASE(TheWrapperOverStdBitsetAnswersAsStdBitsetDoes)
 {
-        auto w = xstd::basic_bitset<std::bitset<9>>();
+        auto w = xstd::bitset_adaptor<std::bitset<9>>();
         auto s = std::bitset<9>();
         BOOST_CHECK_EQUAL(w.size(), s.size());
         BOOST_CHECK(w.none() and s.none());
@@ -94,7 +94,7 @@ BOOST_AUTO_TEST_CASE(TheWrapperOverStdBitsetAnswersAsStdBitsetDoes)
 // The checked family throws where std::bitset throws, forwarded rather than guarded a second time.
 BOOST_AUTO_TEST_CASE(TheCheckedFamilyOverStdBitsetThrowsAsStdBitsetDoes)
 {
-        auto w = xstd::basic_bitset<std::bitset<9>>();
+        auto w = xstd::bitset_adaptor<std::bitset<9>>();
         BOOST_CHECK_THROW(w.set(9), std::out_of_range);
         BOOST_CHECK_THROW(w.reset(9), std::out_of_range);
         BOOST_CHECK_THROW(w.flip(9), std::out_of_range);
@@ -104,7 +104,7 @@ BOOST_AUTO_TEST_CASE(TheCheckedFamilyOverStdBitsetThrowsAsStdBitsetDoes)
 // The shifts are total on both counterparts, saturating to none, and the derived operators compose on a copy.
 BOOST_AUTO_TEST_CASE(TheShiftsOverStdBitsetSaturateAsStdBitsetDoes)
 {
-        auto w = xstd::basic_bitset<std::bitset<9>>();
+        auto w = xstd::bitset_adaptor<std::bitset<9>>();
         auto s = std::bitset<9>();
 
         w.set(); s.set();
@@ -125,7 +125,7 @@ BOOST_AUTO_TEST_CASE(TheShiftsOverStdBitsetSaturateAsStdBitsetDoes)
 // The proxy over std::bitset storage writes and reads through the trait, and swaps as a value.
 BOOST_AUTO_TEST_CASE(TheProxyOverStdBitsetStorageWritesThrough)
 {
-        auto w = xstd::basic_bitset<std::bitset<8>>();
+        auto w = xstd::bitset_adaptor<std::bitset<8>>();
 
         w[3] = true;
         BOOST_CHECK(w[3] and w.test(3));
@@ -150,8 +150,8 @@ BOOST_AUTO_TEST_CASE(TheProxyOverStdBitsetStorageWritesThrough)
 // The views reach a wrapped std::bitset by referring into it: the ordering, the keys, the blocks where readable. [design.md#views-over-owners]
 BOOST_AUTO_TEST_CASE(TheViewsReachAWrappedStdBitset)
 {
-        auto a = xstd::basic_bitset<std::bitset<70>>();
-        auto b = xstd::basic_bitset<std::bitset<70>>();
+        auto a = xstd::bitset_adaptor<std::bitset<70>>();
+        auto b = xstd::bitset_adaptor<std::bitset<70>>();
         a.set(1); a.set(69);
         b.set(1); b.set(2);
 
@@ -178,9 +178,9 @@ BOOST_AUTO_TEST_CASE(TheViewsReachAWrappedStdBitset)
 // Built from text, streamed back to text, and hashed: the derived members, over either storage.
 BOOST_AUTO_TEST_CASE(TheDerivedMembersHoldOverEitherStorage)
 {
-        using Packed = xstd::bitset<9, std::uint8_t>;
+        using Packed = xstd::basic_bitset<9, std::uint8_t>;
         auto const packed  = Packed("101000001");
-        auto const wrapped = xstd::basic_bitset<std::bitset<9>>(std::string("101000001"));
+        auto const wrapped = xstd::bitset_adaptor<std::bitset<9>>(std::string("101000001"));
         BOOST_CHECK_EQUAL(packed.to_string(), wrapped.to_string());
         BOOST_CHECK_EQUAL(packed.count(), 3UZ);
         BOOST_CHECK(packed.test(0) and packed.test(6) and packed.test(8));
@@ -190,7 +190,7 @@ BOOST_AUTO_TEST_CASE(TheDerivedMembersHoldOverEitherStorage)
         BOOST_CHECK(hash(packed) != hash(Packed()));
 
         // The wrapper over std::bitset hashes on every library, through the door rather than through a hook std::bitset lacks. [design.md#the-hashing-invariant]
-        using OverStd = xstd::basic_bitset<std::bitset<9>>;
+        using OverStd = xstd::bitset_adaptor<std::bitset<9>>;
         BOOST_CHECK_EQUAL(std::hash<OverStd>()(wrapped), std::hash<OverStd>()(OverStd(std::string("101000001"))));
         BOOST_CHECK(std::hash<OverStd>()(wrapped) != std::hash<OverStd>()(OverStd()));
 
@@ -202,21 +202,21 @@ BOOST_AUTO_TEST_CASE(TheDerivedMembersHoldOverEitherStorage)
 BOOST_AUTO_TEST_CASE(TheWordConstructorAndConversionsAgreeWithStdBitset)
 {
         auto const s = std::bitset<9>(0b101ULL);
-        auto const w = xstd::basic_bitset<std::bitset<9>>(0b101ULL);
-        auto const p = xstd::bitset<9, std::uint8_t>(0b101ULL);
+        auto const w = xstd::bitset_adaptor<std::bitset<9>>(0b101ULL);
+        auto const p = xstd::basic_bitset<9, std::uint8_t>(0b101ULL);
         BOOST_CHECK_EQUAL(w.to_string(), s.to_string());
         BOOST_CHECK_EQUAL(p.to_string(), s.to_string());
         BOOST_CHECK_EQUAL(p.to_ullong(), s.to_ullong());
         BOOST_CHECK_EQUAL(p.to_ulong(), s.to_ulong());
 
         // The high bits of the value drop where the width is narrower, as [bitset.cons]/2 has it.
-        using Narrow = xstd::bitset<3, std::uint8_t>;
-        using Empty  = xstd::bitset<0, std::uint8_t>;
+        using Narrow = xstd::basic_bitset<3, std::uint8_t>;
+        using Empty  = xstd::basic_bitset<0, std::uint8_t>;
         BOOST_CHECK_EQUAL(Narrow(0b1111ULL).to_ullong(), 7ULL);
         BOOST_CHECK_EQUAL(Narrow(0b1101ULL).to_ullong(), 5ULL);
         BOOST_CHECK_EQUAL(Empty(0b1111ULL).to_ullong(), 0ULL);
 
-        auto wide = xstd::bitset<70, std::uint8_t>();
+        auto wide = xstd::basic_bitset<70, std::uint8_t>();
         BOOST_CHECK_EQUAL(wide.to_ullong(), 0ULL);
         wide.set(69);
         BOOST_CHECK_THROW(static_cast<void>(wide.to_ullong()), std::overflow_error);
@@ -230,13 +230,13 @@ BOOST_AUTO_TEST_CASE(ExtractionOfAShortInputAgreesWithStdBitset)
         auto s = std::bitset<4>();
         in >> s;
         auto ours = std::istringstream("1");
-        auto x = xstd::bitset<4, std::uint8_t>();
+        auto x = xstd::basic_bitset<4, std::uint8_t>();
         ours >> x;
         BOOST_CHECK_EQUAL(x.to_string(), s.to_string());
         BOOST_CHECK_EQUAL(x.to_ullong(), 1ULL);
 
         auto stop = std::istringstream("01x");
-        auto y = xstd::bitset<4, std::uint8_t>();
+        auto y = xstd::basic_bitset<4, std::uint8_t>();
         stop >> y;
         BOOST_CHECK_EQUAL(y.to_string(), "0001");
         BOOST_CHECK(not stop.fail());
@@ -245,11 +245,11 @@ BOOST_AUTO_TEST_CASE(ExtractionOfAShortInputAgreesWithStdBitset)
 // The text constructors reject as std::bitset's do: a stray character, and a position past the end.
 BOOST_AUTO_TEST_CASE(TheTextConstructorsRejectWhatStdBitsetRejects)
 {
-        using Packed = xstd::bitset<9, std::uint8_t>;
+        using Packed = xstd::basic_bitset<9, std::uint8_t>;
 
         BOOST_CHECK_THROW(static_cast<void>(Packed("102")), std::invalid_argument);
-        BOOST_CHECK_THROW(static_cast<void>(xstd::basic_bitset<std::bitset<9>>(std::string("102"))), std::invalid_argument);
-        BOOST_CHECK_THROW(static_cast<void>(xstd::basic_bitset<std::bitset<9>>(std::string("101"), 4)), std::out_of_range);
+        BOOST_CHECK_THROW(static_cast<void>(xstd::bitset_adaptor<std::bitset<9>>(std::string("102"))), std::invalid_argument);
+        BOOST_CHECK_THROW(static_cast<void>(xstd::bitset_adaptor<std::bitset<9>>(std::string("101"), 4)), std::out_of_range);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

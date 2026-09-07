@@ -5,7 +5,7 @@
 
 #include <boost/test/unit_test.hpp>               // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <test/sequence/ordering.hpp>             // ordering_agrees_with_vector_bool
-#include <xstd/bits/basic_bit_sequence.hpp>       // basic_bit_sequence
+#include <xstd/bits/sequence_adaptor.hpp>       // sequence_adaptor
 #include <xstd/bits/bit_array.hpp>                // bit_array
 #include <xstd/bits/bit_static_set.hpp>           // bit_static_set
 #include <xstd/bits/bitset.hpp>                   // bitset
@@ -34,7 +34,7 @@ using view_of = decltype(xstd::bit_span(std::declval<T&>()));
 // The view is the referring adaptor under another name, and over an owner of either reading it refers into the storage the owner wraps. [design.md#the-views-are-the-adaptors]
 BOOST_AUTO_TEST_CASE(TheViewIsTheReferringAdaptor)
 {
-        static_assert(std::derived_from<xstd::bit_span<std::bitset<8>>, xstd::basic_bit_sequence<std::bitset<8>, xstd::ownership::refers, false>>);
+        static_assert(std::derived_from<xstd::bit_span<std::bitset<8>>, xstd::sequence_adaptor<std::bitset<8>, xstd::ownership::refers, false>>);
         static_assert(std::same_as<view_of<std::bitset<8>>,          xstd::bit_span<std::bitset<8>>>);
         static_assert(std::same_as<view_of<std::bitset<8> const>,    xstd::bit_span<std::bitset<8> const>>);
         static_assert(std::same_as<view_of<xstd::bitset<8>>,         xstd::bit_span<xstd::block_array<std::size_t, 8>>>);
@@ -89,7 +89,7 @@ BOOST_AUTO_TEST_CASE(WritingThroughTheViewWritesTheBits)
 // The same reading over the type this library packs, so bit_array's own operator[] and the view agree position by position.
 BOOST_AUTO_TEST_CASE(APackedArrayAgreesWithItsOwnView)
 {
-        auto packed = xstd::bit_array<8, unsigned char>{};
+        auto packed = xstd::basic_bit_array<8, unsigned char>{};
         packed[1] = true;
         packed[6] = true;
 

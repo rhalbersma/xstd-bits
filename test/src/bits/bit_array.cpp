@@ -16,7 +16,7 @@
 BOOST_AUTO_TEST_SUITE(BitArray)
 
 // Every Block model within one block and the narrow ones across boundaries; the grading is in test/block_types.hpp.
-using Types = test::graded_extents<xstd::bit_array>;
+using Types = test::graded_extents<xstd::basic_bit_array>;
 
 // The clauses one at a time, so a failure names which one; the umbrella asserts the composite.
 BOOST_AUTO_TEST_CASE_TEMPLATE(IsRegular, T, Types)

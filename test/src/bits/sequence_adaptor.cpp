@@ -4,7 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <boost/test/unit_test.hpp>          // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <xstd/bits/basic_bit_sequence.hpp>  // basic_bit_sequence
+#include <xstd/bits/sequence_adaptor.hpp>  // sequence_adaptor
 #include <xstd/bits/bit_array.hpp>           // bit_array
 #include <xstd/bits/block_sequence.hpp>      // block_array, block_vector
 #include <xstd/bits/ext/std/bitset.hpp>      // bit_traits over std::bitset
@@ -25,9 +25,9 @@
 namespace {
 
 using Storage = xstd::block_array<std::uint64_t, 100>;
-using Owner   = xstd::bit_array<100, std::uint64_t>;
-using View    = xstd::basic_bit_sequence<Storage, xstd::ownership::refers, false>;
-using Reader  = xstd::basic_bit_sequence<Storage const, xstd::ownership::refers, false>;
+using Owner   = xstd::basic_bit_array<100, std::uint64_t>;
+using View    = xstd::sequence_adaptor<Storage, xstd::ownership::refers, false>;
+using Reader  = xstd::sequence_adaptor<Storage const, xstd::ownership::refers, false>;
 
 // Dependent, so an absent member is a false rather than a hard error.
 template<class S> constexpr bool can_fill  = requires (S s) { s.fill(true); };
@@ -42,7 +42,7 @@ template<class Seq>
 
 }       // namespace
 
-BOOST_AUTO_TEST_SUITE(BasicBitSequence)
+BOOST_AUTO_TEST_SUITE(SequenceAdaptor)
 
 BOOST_AUTO_TEST_CASE(AnOwnerIsRegularAndAViewIsCopyable)
 {
@@ -161,14 +161,14 @@ BOOST_AUTO_TEST_CASE(TheBulkOperatorsAreTheStoragesOwn)
 // The ordering invariant on both the native entry and the fallback. [design.md#the-ordering-invariant]
 BOOST_AUTO_TEST_CASE(TheOrderingIsTheLexicographicOrderOfTheBools)
 {
-        using Foreign = xstd::basic_bit_sequence<std::bitset<9>, xstd::ownership::owns, false>;
+        using Foreign = xstd::sequence_adaptor<std::bitset<9>, xstd::ownership::owns, false>;
         static_assert(std::regular<Foreign> and std::totally_ordered<Foreign>);
 
         auto const patterns = std::vector<std::vector<std::size_t>>{ {}, { 0 }, { 1 }, { 0, 1 }, { 8 }, { 0, 8 } };
         for (auto const& p : patterns) {
                 for (auto const& q : patterns) {
-                        auto x = xstd::bit_array<9, std::uint8_t>();
-                        auto y = xstd::bit_array<9, std::uint8_t>();
+                        auto x = xstd::basic_bit_array<9, std::uint8_t>();
+                        auto y = xstd::basic_bit_array<9, std::uint8_t>();
                         auto s = Foreign();
                         auto t = Foreign();
                         for (auto const i : p) { x[i] = true; s[i] = true; }
@@ -190,8 +190,8 @@ constexpr bool can_grow = requires (X& x) { x.push_back(true); x.pop_back(); x.r
 // Growth is the owner's over storage that grows; a static width and a view have none of it. [design.md#growth]
 BOOST_AUTO_TEST_CASE(GrowthIsTheOwnersOverStorageThatGrows)
 {
-        using Dynamic = xstd::basic_bit_sequence<xstd::block_vector<std::uint64_t>, xstd::ownership::owns, false>;
-        using Span    = xstd::basic_bit_sequence<xstd::block_vector<std::uint64_t>, xstd::ownership::refers, false>;
+        using Dynamic = xstd::sequence_adaptor<xstd::block_vector<std::uint64_t>, xstd::ownership::owns, false>;
+        using Span    = xstd::sequence_adaptor<xstd::block_vector<std::uint64_t>, xstd::ownership::refers, false>;
 
         static_assert(    can_grow<Dynamic>);
         static_assert(not can_grow<Owner>);
@@ -207,10 +207,10 @@ BOOST_AUTO_TEST_CASE(GrowthIsTheOwnersOverStorageThatGrows)
 
 BOOST_AUTO_TEST_CASE(AZeroWidthSequenceIsEmpty)
 {
-        auto const a = xstd::bit_array<0, std::uint8_t>();
+        auto const a = xstd::basic_bit_array<0, std::uint8_t>();
         BOOST_CHECK(a.empty() and a.begin() == a.end());
         auto c = xstd::block_array<std::uint8_t, 0>();
-        auto const v = xstd::basic_bit_sequence<xstd::block_array<std::uint8_t, 0>, xstd::ownership::refers, false>(c);
+        auto const v = xstd::sequence_adaptor<xstd::block_array<std::uint8_t, 0>, xstd::ownership::refers, false>(c);
         BOOST_CHECK(v.empty() and v.begin() == v.end());
 }
 

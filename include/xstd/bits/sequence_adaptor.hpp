@@ -3,37 +3,37 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_BASIC_BIT_SEQUENCE_HPP
-#define XSTD_BITS_BASIC_BIT_SEQUENCE_HPP
+#ifndef XSTD_BITS_SEQUENCE_ADAPTOR_HPP
+#define XSTD_BITS_SEQUENCE_ADAPTOR_HPP
 
 #include <boost/container_hash/is_range.hpp> // is_range
-#include <boost/hash2/hash_append.hpp> // hash_append_tag
-#include <xstd/bits/bit_proxy.hpp>  // bit_sequence_iterator, bit_sequence_reference
-#include <xstd/bits/bit_traits.hpp> // bit_storage, bit_traits, static_bit_extent
-#include <xstd/bits/detail/hash.hpp> // hash_append_bits, std_hash
-#include <xstd/bits/ownership.hpp>  // owned_bits_t, owned_storage, owned_traits_t, owner_of, ownership, owns
-#include <algorithm>                // lexicographical_compare_three_way
-#include <cassert>                  // assert
-#include <compare>                  // strong_ordering
-#include <concepts>                 // convertible_to, swap, swappable
-#include <cstddef>                  // ptrdiff_t, size_t
-#include <format>                   // format
-#include <functional>               // hash
-#include <initializer_list>         // initializer_list
-#include <iterator>                 // input_iterator, make_reverse_iterator, reverse_iterator, sentinel_for
-#include <limits>                   // numeric_limits
-#include <ranges>                   // begin, enable_borrowed_range, enable_view, end, from_range_t, input_range, range_reference_t
-#include <source_location>          // source_location
-#include <span>                     // dynamic_extent
-#include <stdexcept>                // out_of_range
-#include <type_traits>              // conditional_t, false_type, is_nothrow_swappable_v, remove_const_t, remove_reference_t
-#include <utility>                  // as_const, declval
+#include <boost/hash2/hash_append.hpp>       // hash_append_tag
+#include <xstd/bits/bit_proxy.hpp>           // bit_sequence_iterator, bit_sequence_reference
+#include <xstd/bits/bit_traits.hpp>          // bit_storage, bit_traits, static_bit_extent
+#include <xstd/bits/detail/hash.hpp>         // hash_append_bits, std_hash
+#include <xstd/bits/ownership.hpp>           // owned_bits_t, owned_storage, owned_traits_t, owner_of, ownership, owns
+#include <algorithm>                         // lexicographical_compare_three_way
+#include <cassert>                           // assert
+#include <compare>                           // strong_ordering
+#include <concepts>                          // convertible_to, swap, swappable
+#include <cstddef>                           // ptrdiff_t, size_t
+#include <format>                            // format
+#include <functional>                        // hash
+#include <initializer_list>                  // initializer_list
+#include <iterator>                          // input_iterator, make_reverse_iterator, reverse_iterator, sentinel_for
+#include <limits>                            // numeric_limits
+#include <ranges>                            // begin, enable_borrowed_range, enable_view, end, from_range_t, input_range, range_reference_t
+#include <source_location>                   // source_location
+#include <span>                              // dynamic_extent
+#include <stdexcept>                         // out_of_range
+#include <type_traits>                       // conditional_t, false_type, is_nothrow_swappable_v, remove_const_t, remove_reference_t
+#include <utility>                           // as_const, declval
 
 // The sequence reading, [array] over any Bits with a bit_traits specialization, owning it or referring to it. [design.md#the-three-adaptors]
 namespace xstd {
 
 template<class Bits, ownership Own, bool Windowed, bit_storage<Bits> Traits = bit_traits<std::remove_const_t<Bits>>>
-class basic_bit_sequence
+class sequence_adaptor
 {
         static constexpr bool is_owner  = owns(Own);
         static constexpr bool is_window = Windowed;
@@ -79,7 +79,7 @@ class basic_bit_sequence
         }
 
         // The window's constructor, which first, last and subspan call and nothing else does.
-        [[nodiscard]] constexpr basic_bit_sequence(Bits* ptr, std::size_t offset, std::size_t size) noexcept
+        [[nodiscard]] constexpr sequence_adaptor(Bits* ptr, std::size_t offset, std::size_t size) noexcept
                 requires is_window
         :
                 m_bits{ ptr, offset, size }
@@ -93,12 +93,12 @@ class basic_bit_sequence
         template<class Self> using reference_t = bit_sequence_reference<storage_t<Self>, Traits>;
 
         // Either reading's view refers into this owner's storage, and nothing else outside does. [design.md#views-over-owners]
-        template<class B, ownership O, bit_storage<B> T>         friend class basic_bit_set;
-        template<class B, ownership O, bool W, bit_storage<B> T> friend class basic_bit_sequence;
+        template<class B, ownership O, bit_storage<B> T>         friend class set_adaptor;
+        template<class B, ownership O, bool W, bit_storage<B> T> friend class sequence_adaptor;
 
         // The value under the sequence reading, the owner's alone as == is: a view follows span and hashes no more than it compares. [design.md#the-hashing-invariant]
         template<class Provider, class Hash, class Flavor>
-        friend constexpr void tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, basic_bit_sequence const* v) noexcept
+        friend constexpr void tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, sequence_adaptor const* v) noexcept
                 requires is_owner
         {
                 detail::bits::hash_append_bits<Traits>(h, f, v->storage());
@@ -120,15 +120,15 @@ public:
         using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
         // construct/copy/destroy; an owner is built the way std::array is, or std::vector where the storage grows, a view only from what it views.
-        [[nodiscard]] constexpr basic_bit_sequence() noexcept requires is_owner = default;
+        [[nodiscard]] constexpr sequence_adaptor() noexcept requires is_owner = default;
 
-        [[nodiscard]] constexpr explicit basic_bit_sequence(size_type n)
+        [[nodiscard]] constexpr explicit sequence_adaptor(size_type n)
                 requires can_grow
         :
                 m_bits(n)
         {}
 
-        [[nodiscard]] constexpr basic_bit_sequence(size_type n, value_type const& value)
+        [[nodiscard]] constexpr sequence_adaptor(size_type n, value_type const& value)
                 requires can_grow
         :
                 m_bits(n)
@@ -140,7 +140,7 @@ public:
 
         template<std::input_iterator I, std::sentinel_for<I> S>
                 requires can_grow and std::constructible_from<value_type, std::iter_reference_t<I>>
-        [[nodiscard]] constexpr basic_bit_sequence(I first, S last)
+        [[nodiscard]] constexpr sequence_adaptor(I first, S last)
         {
                 for (; first != last; ++first) {
                         m_bits.push_back(static_cast<value_type>(*first));
@@ -149,19 +149,19 @@ public:
 
         template<std::ranges::input_range R>
                 requires can_grow and std::constructible_from<value_type, std::ranges::range_reference_t<R>>
-        [[nodiscard]] constexpr basic_bit_sequence(std::from_range_t, R&& rg)
+        [[nodiscard]] constexpr sequence_adaptor(std::from_range_t, R&& rg)
         :
-                basic_bit_sequence(std::ranges::begin(rg), std::ranges::end(rg))
+                sequence_adaptor(std::ranges::begin(rg), std::ranges::end(rg))
         {}
 
-        [[nodiscard]] constexpr basic_bit_sequence(std::initializer_list<value_type> il)
+        [[nodiscard]] constexpr sequence_adaptor(std::initializer_list<value_type> il)
                 requires can_grow
         :
-                basic_bit_sequence(il.begin(), il.end())
+                sequence_adaptor(il.begin(), il.end())
         {}
 
         constexpr auto operator=(std::initializer_list<value_type> il)
-                -> basic_bit_sequence&
+                -> sequence_adaptor&
                 requires can_grow
         {
                 assign(il.begin(), il.end());
@@ -192,7 +192,7 @@ public:
                 assign(il.begin(), il.end());
         }
 
-        [[nodiscard]] constexpr explicit basic_bit_sequence(Bits& c) noexcept
+        [[nodiscard]] constexpr explicit sequence_adaptor(Bits& c) noexcept
                 requires (not is_owner) and (not is_window)
         :
                 m_bits(&c)
@@ -200,14 +200,14 @@ public:
 
         // A view over an owner is a view over the storage it wraps, the owner having befriended this template. [design.md#views-over-owners]
         template<owner_of<Bits, Traits> Owner>
-        [[nodiscard]] constexpr explicit basic_bit_sequence(Owner& c) noexcept
+        [[nodiscard]] constexpr explicit sequence_adaptor(Owner& c) noexcept
                 requires (not is_owner) and (not is_window)
         :
                 m_bits(&c.m_bits)
         {}
 
         // [span.sub]'s three, on a view and never on an owner, since std::array and std::vector have no subviews; asserting their preconditions, dynamic_extent reaching the end. [design.md#windows]
-        using subspan_type = basic_bit_sequence<Bits, ownership::refers, true, Traits>;
+        using subspan_type = sequence_adaptor<Bits, ownership::refers, true, Traits>;
 
         [[nodiscard]] constexpr auto first(size_type count) const noexcept
                 -> subspan_type
@@ -242,7 +242,7 @@ public:
         }
 
         // The storage's own swap through the customization point, std::bitset having no member to call.
-        constexpr void swap(basic_bit_sequence& other) noexcept(std::is_nothrow_swappable_v<Bits>)
+        constexpr void swap(sequence_adaptor& other) noexcept(std::is_nothrow_swappable_v<Bits>)
                 requires is_owner and std::swappable<Bits>
         {
                 std::ranges::swap(this->m_bits, other.m_bits);
@@ -337,12 +337,12 @@ public:
         [[nodiscard]] constexpr auto back (this auto&& self) noexcept -> reference_t<decltype(self)> { return { &self.storage(), self.offset() + self.size() - 1UZ }; }
 
         // The owner's alone, following span: a handle declines to say whether it compares its referent or its contents. Defaulted, the storage being the one member. [design.md#views-follow-their-precedent]
-        [[nodiscard]] friend constexpr auto operator==(basic_bit_sequence const& x, basic_bit_sequence const& y) noexcept
+        [[nodiscard]] friend constexpr auto operator==(sequence_adaptor const& x, sequence_adaptor const& y) noexcept
                 -> bool
                 requires is_owner
         = default;
 
-        [[nodiscard]] friend constexpr auto operator<=>(basic_bit_sequence const& x, basic_bit_sequence const& y) noexcept
+        [[nodiscard]] friend constexpr auto operator<=>(sequence_adaptor const& x, sequence_adaptor const& y) noexcept
                 -> std::strong_ordering
                 requires is_owner
         {
@@ -354,10 +354,10 @@ public:
         }
 
         // Bulk, on the storage's own spelling: on packed bits the pointwise operation and the set operation are one instruction; not on a window, whose blocks are not its own. [design.md#what-the-trait-reconciles]
-        constexpr auto operator&=(this auto&& self, basic_bit_sequence const& other) noexcept -> auto& requires (not is_window) and requires { self.storage() &= other.storage(); } { self.storage() &= other.storage(); return self; }
-        constexpr auto operator|=(this auto&& self, basic_bit_sequence const& other) noexcept -> auto& requires (not is_window) and requires { self.storage() |= other.storage(); } { self.storage() |= other.storage(); return self; }
-        constexpr auto operator^=(this auto&& self, basic_bit_sequence const& other) noexcept -> auto& requires (not is_window) and requires { self.storage() ^= other.storage(); } { self.storage() ^= other.storage(); return self; }
-        constexpr auto operator-=(this auto&& self, basic_bit_sequence const& other) noexcept -> auto& requires (not is_window) and requires { self.storage() -= other.storage(); } { self.storage() -= other.storage(); return self; }
+        constexpr auto operator&=(this auto&& self, sequence_adaptor const& other) noexcept -> auto& requires (not is_window) and requires { self.storage() &= other.storage(); } { self.storage() &= other.storage(); return self; }
+        constexpr auto operator|=(this auto&& self, sequence_adaptor const& other) noexcept -> auto& requires (not is_window) and requires { self.storage() |= other.storage(); } { self.storage() |= other.storage(); return self; }
+        constexpr auto operator^=(this auto&& self, sequence_adaptor const& other) noexcept -> auto& requires (not is_window) and requires { self.storage() ^= other.storage(); } { self.storage() ^= other.storage(); return self; }
+        constexpr auto operator-=(this auto&& self, sequence_adaptor const& other) noexcept -> auto& requires (not is_window) and requires { self.storage() -= other.storage(); } { self.storage() -= other.storage(); return self; }
 
         constexpr auto operator<<=(this auto&& self, std::size_t n) noexcept -> auto& requires (not is_window) and requires { self.storage() <<= n; } { self.storage() <<= n; return self; }
         constexpr auto operator>>=(this auto&& self, std::size_t n) noexcept -> auto& requires (not is_window) and requires { self.storage() >>= n; } { self.storage() >>= n; return self; }
@@ -376,15 +376,15 @@ private:
 
 // A view deduces the constness of what it views, the way span<T> and span<T const> do; over an owner, of the storage it wraps.
 template<class Bits>
-basic_bit_sequence(Bits&) -> basic_bit_sequence<Bits, ownership::refers, false>;
+sequence_adaptor(Bits&) -> sequence_adaptor<Bits, ownership::refers, false>;
 
 template<class Owner>
         requires requires { typename owned_storage<std::remove_const_t<Owner>>::bits_type; }
-basic_bit_sequence(Owner&) -> basic_bit_sequence<owned_bits_t<Owner>, ownership::refers, false, owned_traits_t<Owner>>;
+sequence_adaptor(Owner&) -> sequence_adaptor<owned_bits_t<Owner>, ownership::refers, false, owned_traits_t<Owner>>;
 
 // The owner's side of the protocol above.
 template<class Bits, class Traits>
-struct owned_storage<basic_bit_sequence<Bits, ownership::owns, false, Traits>>
+struct owned_storage<sequence_adaptor<Bits, ownership::owns, false, Traits>>
 {
         using bits_type   = Bits;
         using traits_type = Traits;
@@ -392,7 +392,7 @@ struct owned_storage<basic_bit_sequence<Bits, ownership::owns, false, Traits>>
 
 // NOLINTBEGIN(readability-redundant-parentheses): a call is no primary expression, so the requires-clause needs the parentheses the check reports as redundant.
 template<class Bits, ownership Own, bool Windowed, class Traits>
-constexpr void swap(basic_bit_sequence<Bits, Own, Windowed, Traits>& x, basic_bit_sequence<Bits, Own, Windowed, Traits>& y) noexcept(noexcept(x.swap(y)))
+constexpr void swap(sequence_adaptor<Bits, Own, Windowed, Traits>& x, sequence_adaptor<Bits, Own, Windowed, Traits>& y) noexcept(noexcept(x.swap(y)))
         requires (owns(Own))
 {
         x.swap(y);
@@ -404,12 +404,12 @@ constexpr void swap(basic_bit_sequence<Bits, Own, Windowed, Traits>& x, basic_bi
 // NOLINTBEGIN(bugprone-std-namespace-modification): the two opt-ins [range.view] and [range.range] invite for a program-defined type.
 namespace std::ranges {
 
-// A view is a std::ranges::view outright and borrowed, as basic_bit_set's is. [design.md#views-follow-their-precedent]
+// A view is a std::ranges::view outright and borrowed, as set_adaptor's is. [design.md#views-follow-their-precedent]
 template<class Bits, bool Windowed, class Traits>
-inline constexpr bool enable_view<xstd::basic_bit_sequence<Bits, xstd::ownership::refers, Windowed, Traits>> = true;
+inline constexpr bool enable_view<xstd::sequence_adaptor<Bits, xstd::ownership::refers, Windowed, Traits>> = true;
 
 template<class Bits, bool Windowed, class Traits>
-inline constexpr bool enable_borrowed_range<xstd::basic_bit_sequence<Bits, xstd::ownership::refers, Windowed, Traits>> = true;
+inline constexpr bool enable_borrowed_range<xstd::sequence_adaptor<Bits, xstd::ownership::refers, Windowed, Traits>> = true;
 
 }       // namespace std::ranges
 // NOLINTEND(bugprone-std-namespace-modification)
@@ -419,9 +419,9 @@ namespace std {
 
 // The owner hashes as std::vector<bool> does; a view no more than std::span does. [design.md#the-hashing-invariant]
 template<class Bits, bool Windowed, class Traits>
-struct hash<xstd::basic_bit_sequence<Bits, xstd::ownership::owns, Windowed, Traits>>
+struct hash<xstd::sequence_adaptor<Bits, xstd::ownership::owns, Windowed, Traits>>
 {
-        [[nodiscard]] constexpr auto operator()(xstd::basic_bit_sequence<Bits, xstd::ownership::owns, Windowed, Traits> const& v) const noexcept
+        [[nodiscard]] constexpr auto operator()(xstd::sequence_adaptor<Bits, xstd::ownership::owns, Windowed, Traits> const& v) const noexcept
                 -> std::size_t
         {
                 return xstd::detail::bits::std_hash(v);
@@ -435,8 +435,8 @@ struct hash<xstd::basic_bit_sequence<Bits, xstd::ownership::owns, Windowed, Trai
 namespace boost::container_hash {
 
 template<class Bits, xstd::ownership Own, bool Windowed, class Traits>
-struct is_range<xstd::basic_bit_sequence<Bits, Own, Windowed, Traits>> : std::false_type {};
+struct is_range<xstd::sequence_adaptor<Bits, Own, Windowed, Traits>> : std::false_type {};
 
 }       // namespace boost::container_hash
 
-#endif  // XSTD_BITS_BASIC_BIT_SEQUENCE_HPP
+#endif  // XSTD_BITS_SEQUENCE_ADAPTOR_HPP

@@ -6,7 +6,7 @@
 #include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <range/v3/view/set_algorithm.hpp>        // set_union
 #include <test/set/ordering.hpp>                  // ordering_agrees_with_std_set
-#include <xstd/bits/basic_bit_set.hpp>            // basic_bit_set
+#include <xstd/bits/set_adaptor.hpp>            // set_adaptor
 #include <xstd/bits/bit_static_set.hpp>           // bit_static_set
 #include <xstd/bits/bitset.hpp>                   // bitset
 #include <xstd/bits/block_sequence.hpp>           // block_array
@@ -50,7 +50,7 @@ using view_of = decltype(xstd::bit_set_view(std::declval<T&>()));
 // The view is the referring adaptor under another name, and over an owner it refers into the storage the owner wraps. [design.md#the-views-are-the-adaptors]
 BOOST_AUTO_TEST_CASE(TheViewIsTheReferringAdaptor)
 {
-        static_assert(std::derived_from<xstd::bit_set_view<std::bitset<8>>, xstd::basic_bit_set<std::bitset<8>, xstd::ownership::refers>>);
+        static_assert(std::derived_from<xstd::bit_set_view<std::bitset<8>>, xstd::set_adaptor<std::bitset<8>, xstd::ownership::refers>>);
         static_assert(std::same_as<view_of<std::bitset<8>>,          xstd::bit_set_view<std::bitset<8>>>);
         static_assert(std::same_as<view_of<std::bitset<8> const>,    xstd::bit_set_view<std::bitset<8> const>>);
         static_assert(std::same_as<view_of<boost::dynamic_bitset<>>, xstd::bit_set_view<boost::dynamic_bitset<>>>);

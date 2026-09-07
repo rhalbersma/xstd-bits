@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_BIT_ARRAY_HPP
 #define XSTD_BITS_BIT_ARRAY_HPP
 
-#include <xstd/bits/basic_bit_sequence.hpp>        // basic_bit_sequence
+#include <xstd/bits/sequence_adaptor.hpp>          // sequence_adaptor
 #include <xstd/bits/block_sequence.hpp>            // block_array
 #include <xstd/bits/ownership.hpp>                 // ownership
 #include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
@@ -17,13 +17,19 @@
 namespace xstd {
 
 // The packed std::array<bool, N>, named after the container it packs. [design.md#the-public-names]
-template<std::size_t N, xstd::unsigned_integer Block = std::size_t>
-using bit_array = basic_bit_sequence<block_array<Block, N>, ownership::owns, false>;
+template<std::size_t N, xstd::unsigned_integer Block>
+using basic_bit_array = sequence_adaptor<block_array<Block, N>, ownership::owns, false>;
+
+template<std::size_t N>
+using bit_array = basic_bit_array<N, std::size_t>;
 
 namespace aligned {
 
-template<std::size_t N, xstd::unsigned_integer Block = std::size_t>
-using bit_array = xstd::bit_array<xstd::align_up(N, static_cast<std::size_t>(std::numeric_limits<Block>::digits)), Block>;
+template<std::size_t N, xstd::unsigned_integer Block>
+using basic_bit_array = xstd::basic_bit_array<xstd::align_up(N, static_cast<std::size_t>(std::numeric_limits<Block>::digits)), Block>;
+
+template<std::size_t N>
+using bit_array = basic_bit_array<N, std::size_t>;
 
 }       // namespace aligned
 }       // namespace xstd

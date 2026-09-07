@@ -16,7 +16,7 @@
 BOOST_AUTO_TEST_SUITE(BitFiniteSet)
 
 // Every Block model within one block and the narrow ones across boundaries; the grading is in test/block_types.hpp.
-using Types = test::graded_extents<xstd::bit_static_set>;
+using Types = test::graded_extents<xstd::basic_bit_static_set>;
 
 // The clauses one at a time, so a failure names which one; the umbrella asserts the composite.
 BOOST_AUTO_TEST_CASE_TEMPLATE(IsRegular, T, Types)

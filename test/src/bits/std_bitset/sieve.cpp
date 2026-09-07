@@ -8,7 +8,7 @@
 #include <fmt/ranges.h>                           // IWYU pragma: keep; the range formatters
 #include <opt/bitset/sieve.hpp>                   // filter_twins, sift_primes0, sift_primes1
 #include <xstd/bits/bit_static_set.hpp>           // bit_static_set
-#include <xstd/bits/basic_bitset.hpp>             // basic_bitset
+#include <xstd/bits/bitset_adaptor.hpp>             // bitset_adaptor
 #include <xstd/bits/bitset.hpp>                   // bitset
 #include <xstd/bits/dynamic_bitset.hpp>           // dynamic_bitset
 #include <xstd/bits/ext/boost/dynamic_bitset.hpp> // dynamic_bitset
@@ -27,11 +27,11 @@ inline constexpr auto N = 100UZ;
 using Types = std::tuple
 <       boost::dynamic_bitset<>
 ,         std::bitset<N>
-,        xstd::basic_bitset<std::bitset<N>>
+,        xstd::bitset_adaptor<std::bitset<N>>
 ,        xstd::bitset<N>
 ,        xstd::bit_static_set<N>
-,        xstd::basic_bitset<boost::dynamic_bitset<>>
-,        xstd::dynamic_bitset<std::size_t>
+,        xstd::bitset_adaptor<boost::dynamic_bitset<>>
+,        xstd::basic_dynamic_bitset<std::size_t>
 >;
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheSiftedPrimesAndTwinsFormatAsExpected, T, Types)

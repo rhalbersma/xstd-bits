@@ -14,6 +14,7 @@
 #include <cstddef>                    // size_t
 #include <cstdint>                    // uint8_t
 #include <limits>                     // numeric_limits
+#include <memory>                     // allocator
 #include <ranges>                     // bidirectional_range, random_access_range
 #include <set>                        // set
 #include <tuple>                      // tuple_element_t, tuple_size_v
@@ -37,19 +38,26 @@ BOOST_AUTO_TEST_CASE(EveryContainerArrivesThroughTheUmbrella)
         static_assert(std::ranges::random_access_range<decltype(xstd::bit_span(packed))>);
 
         // The dynamic column, one name per reading, all three over a block_vector.
-        static_assert(std::ranges::bidirectional_range<xstd::bit_set<std::size_t>>);
-        static_assert(std::ranges::random_access_range<xstd::bit_vector<std::size_t>>);
-        static_assert(not std::ranges::range<xstd::dynamic_bitset<std::size_t>>);
+        static_assert(std::ranges::bidirectional_range<xstd::basic_bit_set<std::size_t>>);
+        static_assert(std::ranges::random_access_range<xstd::basic_bit_vector<std::size_t>>);
+        static_assert(not std::ranges::range<xstd::basic_dynamic_bitset<std::size_t>>);
 
-        // Every public name takes size_t as its block unless told otherwise, and every static name has an aligned form, its width rounded up to whole blocks. [design.md#the-public-names]
-        static_assert(std::same_as<xstd::bit_set<>,        xstd::bit_set<std::size_t>>);
-        static_assert(std::same_as<xstd::bit_vector<>,     xstd::bit_vector<std::size_t>>);
-        static_assert(std::same_as<xstd::dynamic_bitset<>, xstd::dynamic_bitset<std::size_t>>);
+        // Three layers: the primaries take the storage, the basic_ layer chooses it and leaves the block open, the restricted layer fixes size_t and std::allocator. [design.md#the-public-names]
+        static_assert(std::same_as<xstd::basic_bit_static_set<8, std::uint8_t>, xstd::set_adaptor<xstd::block_array<std::uint8_t, 8>, xstd::ownership::owns>>);
+        static_assert(std::same_as<xstd::basic_bit_set<std::uint8_t>,          xstd::set_adaptor<xstd::block_vector<std::uint8_t>, xstd::ownership::owns>>);
+        static_assert(std::same_as<xstd::bit_static_set<8>, xstd::basic_bit_static_set<8, std::size_t>>);
+        static_assert(std::same_as<xstd::bit_array<8>,      xstd::basic_bit_array<8, std::size_t>>);
+        static_assert(std::same_as<xstd::bitset<8>,         xstd::basic_bitset<8, std::size_t>>);
+        static_assert(std::same_as<xstd::bit_set,        xstd::basic_bit_set<std::size_t, std::allocator<std::size_t>>>);
+        static_assert(std::same_as<xstd::bit_vector,     xstd::basic_bit_vector<std::size_t, std::allocator<std::size_t>>>);
+        static_assert(std::same_as<xstd::dynamic_bitset, xstd::basic_dynamic_bitset<std::size_t, std::allocator<std::size_t>>>);
+
+        // Every static name has an aligned form in both layers, its width rounded up to whole blocks. [design.md#the-public-names]
         static_assert(std::same_as<xstd::aligned::bit_static_set<9>, xstd::bit_static_set<std::numeric_limits<std::size_t>::digits>>);
         static_assert(std::same_as<xstd::aligned::bit_array<9>,      xstd::bit_array<std::numeric_limits<std::size_t>::digits>>);
         static_assert(std::same_as<xstd::aligned::bitset<9>,         xstd::bitset<std::numeric_limits<std::size_t>::digits>>);
-        static_assert(std::same_as<xstd::aligned::bitset<9, std::uint8_t>, xstd::bitset<16, std::uint8_t>>);
-        static_assert(std::same_as<xstd::aligned::bitset<0, std::uint8_t>, xstd::bitset< 0, std::uint8_t>>);
+        static_assert(std::same_as<xstd::aligned::basic_bitset<9, std::uint8_t>, xstd::basic_bitset<16, std::uint8_t>>);
+        static_assert(std::same_as<xstd::aligned::basic_bitset<0, std::uint8_t>, xstd::basic_bitset< 0, std::uint8_t>>);
 }
 
 // A packed container satisfies the same interface as the one it packs, which means something only because std::array answers to it too.
@@ -64,7 +72,7 @@ BOOST_AUTO_TEST_CASE(APackedArrayIsTheArrayItPacks)
         static_assert(bit_sequence<std::array<bool, 64>>);
 
         // And ours, over every Block model and extent the grading names.
-        using packed = test::graded_extents<xstd::bit_array>;
+        using packed = test::graded_extents<xstd::basic_bit_array>;
         [] <std::size_t... I> (std::index_sequence<I...>) {
                 static_assert((bit_sequence<std::tuple_element_t<I, packed>> and ...));
         }(std::make_index_sequence<std::tuple_size_v<packed>>{});
@@ -81,7 +89,7 @@ BOOST_AUTO_TEST_CASE(APackedSetIsTheSetItPacks)
         static_assert(bit_set<std::flat_set<std::size_t>>);
 #endif
 
-        using packed = test::graded_extents<xstd::bit_static_set>;
+        using packed = test::graded_extents<xstd::basic_bit_static_set>;
         [] <std::size_t... I> (std::index_sequence<I...>) {
                 static_assert((bit_set<std::tuple_element_t<I, packed>> and ...));
         }(std::make_index_sequence<std::tuple_size_v<packed>>{});
