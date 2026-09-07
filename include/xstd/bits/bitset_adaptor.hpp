@@ -9,7 +9,7 @@
 // Bitsets [bitset], Header <bitset> synopsis [bitset.syn]
 
 #include <boost/hash2/hash_append.hpp> // hash_append_tag
-#include <xstd/bits/bit_traits.hpp>    // bit_storage, bit_traits, static_bit_extent, zero_width
+#include <xstd/bits/bit_traits.hpp>    // bit_storage, bit_traits, block_readable, static_bit_extent, zero_width
 #include <xstd/bits/detail/hash.hpp>   // hash_append_bits, std_hash
 #include <xstd/bits/ownership.hpp>     // owned_storage, ownership
 #include <algorithm>                   // min
@@ -33,8 +33,7 @@
 
 namespace xstd {
 
-// The bitset vocabulary a storage speaks natively, one line each in the wrapper; a backend missing a member fails here, at the class.
-// The shifts stay in although bit_traits carries their contracts: without them a shiftless backend would fail inside an instantiation. [design.md#the-idempotent-wrapper]
+// The bitset vocabulary the storage speaks natively, one line each in the wrapper: std::bitset's members and boost's set vocabulary, so a storage missing one fails here, at the class. [design.md#a-strict-extension]
 template<class Bits>
 concept has_bitops =
         std::regular<Bits> and
@@ -43,6 +42,7 @@ concept has_bitops =
                 { b &= c    } -> std::same_as<Bits&>;
                 { b |= c    } -> std::same_as<Bits&>;
                 { b ^= c    } -> std::same_as<Bits&>;
+                { b -= c    } -> std::same_as<Bits&>;
                 { b <<= n   } -> std::same_as<Bits&>;
                 { b >>= n   } -> std::same_as<Bits&>;
                 { b.set()   } -> std::same_as<Bits&>;
@@ -53,23 +53,27 @@ concept has_bitops =
                 { c.none()  } -> std::same_as<bool>;
                 { c.count() } -> std::convertible_to<std::size_t>;
                 { c.size()  } -> std::convertible_to<std::size_t>;
+                { c.is_subset_of(c)        } -> std::same_as<bool>;
+                { c.is_proper_subset_of(c) } -> std::same_as<bool>;
+                { c.intersects(c)          } -> std::same_as<bool>;
         }
 ;
 
-// [template.bitset] over any Bits that speaks the vocabulary: what Bits has is forwarded, what it lacks is added through Traits. [design.md#the-idempotent-wrapper]
+// [template.bitset] over a storage of ours, which speaks the vocabulary and reads by block: what the storage has is forwarded, what it lacks is added through Traits. [design.md#owning-is-ours]
 template<has_bitops Bits, bit_storage<Bits> Traits = bit_traits<Bits>>
+        requires block_readable<Traits, Bits>
 class bitset_adaptor
 {
-        // Two counterparts, one wrapper: std::bitset at a static width, boost::dynamic_bitset at a run-time one. [design.md#the-idempotent-wrapper]
+        // One wrapper, two counterparts it strictly extends: std::bitset at a static width, boost::dynamic_bitset at a run-time one. [design.md#a-strict-extension]
         static constexpr bool has_static_width = static_bit_extent<Traits, Bits>;
 
-        // No iteration and no <=> here by design, because neither counterpart has them: the two views refer into the storage instead. [design.md#views-over-owners]
+        // No iteration here by design, because neither counterpart has it: the two views refer into the storage instead. [design.md#views-over-owners]
         Bits m_bits{};
 
         template<class B, ownership O, bit_storage<B> T>         friend class set_adaptor;
         template<class B, ownership O, bool W, bit_storage<B> T> friend class sequence_adaptor;
 
-        // The value through the door, so a wrapper over std::bitset hashes on every library, whether or not its bits can be read by block. [design.md#the-hashing-invariant]
+        // The value through the door: the blocks and the width. [design.md#the-hashing-invariant]
         template<class Provider, class Hash, class Flavor>
         friend constexpr void tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, bitset_adaptor const* v) noexcept
         {
@@ -141,7 +145,7 @@ public:
                 }
         };
 
-        // boost's sentinel, for the two searches a run-time width answers with it.
+        // boost's sentinel, which the searches answer at both widths.
         static constexpr std::size_t npos = static_cast<std::size_t>(-1);
 
         // Constructors                                            [bitset.cons]
@@ -221,13 +225,11 @@ public:
         constexpr auto operator|=(bitset_adaptor const& rhs) noexcept -> bitset_adaptor& { m_bits |= rhs.m_bits; return *this; }
         constexpr auto operator^=(bitset_adaptor const& rhs) noexcept -> bitset_adaptor& { m_bits ^= rhs.m_bits; return *this; }
 
-        // Same spelling, two contracts: the trait's checked entry is total and forwarded as is; the storage's own shift is the unchecked one, guarded here. [design.md#checked-and-unchecked]
+        // The counterparts' shifts are total and saturate to none; the storage's are unchecked, with pos < size() as their precondition, so the guard lives here. [design.md#the-one-guard]
         constexpr auto operator<<=(std::size_t pos) noexcept
                 -> bitset_adaptor&
         {
-                if constexpr (requires { Traits::checked_shift_left(m_bits, pos); }) {
-                        Traits::checked_shift_left(m_bits, pos);
-                } else if (pos < size()) {
+                if (pos < size()) {
                         m_bits <<= pos;
                 } else {
                         m_bits.reset();
@@ -238,9 +240,7 @@ public:
         constexpr auto operator>>=(std::size_t pos) noexcept
                 -> bitset_adaptor&
         {
-                if constexpr (requires { Traits::checked_shift_right(m_bits, pos); }) {
-                        Traits::checked_shift_right(m_bits, pos);
-                } else if (pos < size()) {
+                if (pos < size()) {
                         m_bits >>= pos;
                 } else {
                         m_bits.reset();
@@ -257,20 +257,17 @@ public:
         constexpr auto reset() noexcept -> bitset_adaptor& { m_bits.reset(); return *this; }
         constexpr auto flip () noexcept -> bitset_adaptor& { m_bits.flip (); return *this; }
 
-        // Element access, both families: the trait's checked entry where the counterpart throws natively, else the guard and the unchecked write. [design.md#checked-and-unchecked]
+        // Element access: the guard, then the unchecked write. It throws out_of_range at a static width as std::bitset does and asserts at a run-time one as boost does: the inconsistency is the counterparts' own. [design.md#the-one-guard]
         constexpr auto set(std::size_t pos, bool val = true)
                 -> bitset_adaptor&
         {
-                if constexpr (requires { Traits::checked_set(m_bits, pos, val); }) {
-                        Traits::checked_set(m_bits, pos, val);
-                } else if constexpr (has_static_width) {
+                if constexpr (has_static_width) {
                         if (pos < size()) {
                                 Traits::unchecked_assign(m_bits, pos, val);
                         } else {
                                 throw out_of_range(pos);
                         }
                 } else {
-                        // boost asserts, and so does its stand-in: the inconsistency with the static width is the counterparts' own. [design.md#checked-and-unchecked]
                         assert(pos < size());
                         Traits::unchecked_assign(m_bits, pos, val);
                 }
@@ -280,9 +277,7 @@ public:
         constexpr auto reset(std::size_t pos)
                 -> bitset_adaptor&
         {
-                if constexpr (requires { Traits::checked_reset(m_bits, pos); }) {
-                        Traits::checked_reset(m_bits, pos);
-                } else if constexpr (has_static_width) {
+                if constexpr (has_static_width) {
                         if (pos < size()) {
                                 Traits::unchecked_assign(m_bits, pos, false);
                         } else {
@@ -298,9 +293,7 @@ public:
         constexpr auto flip(std::size_t pos)
                 -> bitset_adaptor&
         {
-                if constexpr (requires { Traits::checked_flip(m_bits, pos); }) {
-                        Traits::checked_flip(m_bits, pos);
-                } else if constexpr (has_static_width) {
+                if constexpr (has_static_width) {
                         if (pos < size()) {
                                 Traits::unchecked_assign(m_bits, pos, not Traits::at(m_bits, pos));
                         } else {
@@ -358,9 +351,7 @@ public:
         [[nodiscard]] constexpr auto test(std::size_t pos) const
                 -> bool
         {
-                if constexpr (requires { { Traits::checked_test(m_bits, pos) } -> std::convertible_to<bool>; }) {
-                        return Traits::checked_test(m_bits, pos);
-                } else if constexpr (has_static_width) {
+                if constexpr (has_static_width) {
                         if (pos < size()) {
                                 return Traits::at(m_bits, pos);
                         }
@@ -375,51 +366,34 @@ public:
         [[nodiscard]] constexpr auto any()  const noexcept -> bool { return m_bits.any();  }
         [[nodiscard]] constexpr auto none() const noexcept -> bool { return m_bits.none(); }
 
-        // The set vocabulary boost has and std::bitset has not, forwarded exactly where the counterpart is boost: a run-time width, whose storage spells them alike. [design.md#the-idempotent-wrapper]
-        constexpr auto operator-=(bitset_adaptor const& rhs) noexcept
-                -> bitset_adaptor&
-                requires (not has_static_width) and requires (Bits& b, Bits const& c) { b -= c; }
-        {
-                m_bits -= rhs.m_bits;
-                return *this;
-        }
+        // The set vocabulary boost has and std::bitset has not, at both widths: the storage spells it alike, and an extension may add. [design.md#a-strict-extension]
+        constexpr auto operator-=(bitset_adaptor const& rhs) noexcept -> bitset_adaptor& { m_bits -= rhs.m_bits; return *this; }
 
-        [[nodiscard]] constexpr auto is_subset_of(bitset_adaptor const& rhs) const noexcept
-                -> bool
-                requires (not has_static_width) and requires (Bits const& c) { c.is_subset_of(c); }
-        {
-                return m_bits.is_subset_of(rhs.m_bits);
-        }
+        [[nodiscard]] constexpr auto is_subset_of       (bitset_adaptor const& rhs) const noexcept -> bool { return m_bits.is_subset_of       (rhs.m_bits); }
+        [[nodiscard]] constexpr auto is_proper_subset_of(bitset_adaptor const& rhs) const noexcept -> bool { return m_bits.is_proper_subset_of(rhs.m_bits); }
+        [[nodiscard]] constexpr auto intersects         (bitset_adaptor const& rhs) const noexcept -> bool { return m_bits.intersects         (rhs.m_bits); }
 
-        [[nodiscard]] constexpr auto is_proper_subset_of(bitset_adaptor const& rhs) const noexcept
-                -> bool
-                requires (not has_static_width) and requires (Bits const& c) { c.is_proper_subset_of(c); }
-        {
-                return m_bits.is_proper_subset_of(rhs.m_bits);
-        }
-
-        [[nodiscard]] constexpr auto intersects(bitset_adaptor const& rhs) const noexcept
-                -> bool
-                requires (not has_static_width) and requires (Bits const& c) { c.intersects(c); }
-        {
-                return m_bits.intersects(rhs.m_bits);
-        }
-
-        // boost's two searches, npos where the trait's total answer is the width.
+        // boost's two searches at both widths, npos where the trait's total answer is the width; a zero width answers npos outright, its only answer. [design.md#degenerate-widths]
         [[nodiscard]] constexpr auto find_first() const noexcept
                 -> std::size_t
-                requires (not has_static_width)
         {
-                auto const n = detail::bits::find_first<Traits>(m_bits);
-                return n == size() ? npos : n;
+                if constexpr (detail::bits::zero_width<Traits>) {
+                        return npos;
+                } else {
+                        auto const n = detail::bits::find_first<Traits>(m_bits);
+                        return n == size() ? npos : n;
+                }
         }
 
         [[nodiscard]] constexpr auto find_next(std::size_t pos) const noexcept
                 -> std::size_t
-                requires (not has_static_width)
         {
-                auto const n = detail::bits::find_next<Traits>(m_bits, pos);
-                return n == size() ? npos : n;
+                if constexpr (detail::bits::zero_width<Traits>) {
+                        return npos;
+                } else {
+                        auto const n = detail::bits::find_next<Traits>(m_bits, pos);
+                        return n == size() ? npos : n;
+                }
         }
 
         // Growth, boost's members, on storage that spells them alike: detected on the storage rather than reconciled by the trait. [design.md#growth]
@@ -588,7 +562,7 @@ namespace xstd {
 template<class Bits, class Traits> [[nodiscard]] constexpr auto operator&(bitset_adaptor<Bits, Traits> const& lhs, bitset_adaptor<Bits, Traits> const& rhs) noexcept(static_bit_extent<Traits, Bits>) -> bitset_adaptor<Bits, Traits> { auto nrv = lhs; nrv &= rhs; return nrv; }
 template<class Bits, class Traits> [[nodiscard]] constexpr auto operator|(bitset_adaptor<Bits, Traits> const& lhs, bitset_adaptor<Bits, Traits> const& rhs) noexcept(static_bit_extent<Traits, Bits>) -> bitset_adaptor<Bits, Traits> { auto nrv = lhs; nrv |= rhs; return nrv; }
 template<class Bits, class Traits> [[nodiscard]] constexpr auto operator^(bitset_adaptor<Bits, Traits> const& lhs, bitset_adaptor<Bits, Traits> const& rhs) noexcept(static_bit_extent<Traits, Bits>) -> bitset_adaptor<Bits, Traits> { auto nrv = lhs; nrv ^= rhs; return nrv; }
-template<class Bits, class Traits> [[nodiscard]] constexpr auto operator-(bitset_adaptor<Bits, Traits> const& lhs, bitset_adaptor<Bits, Traits> const& rhs) noexcept(static_bit_extent<Traits, Bits>) -> bitset_adaptor<Bits, Traits> requires requires (bitset_adaptor<Bits, Traits>& b) { b -= b; } { auto nrv = lhs; nrv -= rhs; return nrv; }
+template<class Bits, class Traits> [[nodiscard]] constexpr auto operator-(bitset_adaptor<Bits, Traits> const& lhs, bitset_adaptor<Bits, Traits> const& rhs) noexcept(static_bit_extent<Traits, Bits>) -> bitset_adaptor<Bits, Traits> { auto nrv = lhs; nrv -= rhs; return nrv; }
 
 // [bitset.operators]/6: up to N characters into a temporary string, then x = bitset(str), so a short read lands in the low bits as it does there;
 // a run-time width reads every 0 or 1 on offer and is as wide as the characters read, as boost's is.

@@ -16,7 +16,8 @@
 #include <cstddef>                                 // size_t
 #include <limits>                                  // numeric_limits
 
-// The one adaptation of std::bitset; [namespace.std] forbids ADL hooks here, and a specialization needs none. [design.md#the-trait]
+// The one adaptation of std::bitset, and the view door alone: what bit_set_view and bit_span ask, nothing an owner would. [design.md#owning-is-ours]
+// [namespace.std] forbids ADL hooks here, and a specialization needs none. [design.md#the-trait]
 namespace xstd {
 
 template<std::size_t N>
@@ -98,41 +99,8 @@ struct bit_traits<std::bitset<N>>
         }
 
         // No find_last or find_prev: the width answers one and neither library scans backwards. [design.md#the-two-reserved-names]
-
-        // The checked family, native and throwing here alone; bitset_adaptor forwards it rather than guarding a second time. [design.md#checked-and-unchecked]
-        static constexpr void checked_set  (bits_type& c, std::size_t n, bool value) { c.set(n, value); }
-        static constexpr void checked_reset(bits_type& c, std::size_t n)             { c.reset(n);      }
-        static constexpr void checked_flip (bits_type& c, std::size_t n)             { c.flip(n);       }
-        [[nodiscard]] static constexpr auto checked_test(bits_type const& c, std::size_t n) -> bool { return c.test(n); }
-
-        // The shifts are total here, saturating to none: forwarded as they are, the guard being the counterpart's own. [design.md#checked-and-unchecked]
-        static constexpr void checked_shift_left (bits_type& c, std::size_t n) noexcept { c <<= n; }
-        static constexpr void checked_shift_right(bits_type& c, std::size_t n) noexcept { c >>= n; }
 };
 
 }       // namespace xstd
-
-// is_subset_of, is_proper_subset_of, intersects and <=> come from bit_set_view; operator-= and operator- stay, reachable only from std.
-namespace std {
-
-// NOLINTBEGIN(bugprone-std-namespace-modification)
-
-template<std::size_t N>
-auto operator-=(bitset<N>& lhs, const bitset<N>& rhs) noexcept
-        -> bitset<N>&
-{
-        return lhs &= ~rhs;
-}
-
-template<std::size_t N>
-auto operator-(const bitset<N>& lhs, const bitset<N>& rhs) noexcept
-        -> bitset<N>
-{
-        auto nrv = lhs; nrv -= rhs; return nrv;
-}
-
-// NOLINTEND(bugprone-std-namespace-modification)
-
-}       // namespace std
 
 #endif // XSTD_BITS_EXT_STD_BITSET_HPP

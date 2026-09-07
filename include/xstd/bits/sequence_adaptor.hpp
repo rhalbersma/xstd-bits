@@ -342,15 +342,12 @@ public:
                 requires is_owner
         = default;
 
+        // The door's entry and nothing else: an owner is over storage of ours, which has one. [design.md#owning-is-ours]
         [[nodiscard]] friend constexpr auto operator<=>(sequence_adaptor const& x, sequence_adaptor const& y) noexcept
                 -> std::strong_ordering
-                requires is_owner
+                requires is_owner and requires { Traits::sequence_three_way(x.storage(), y.storage()); }
         {
-                if constexpr (requires { Traits::sequence_three_way(x.storage(), y.storage()); }) {
-                        return Traits::sequence_three_way(x.storage(), y.storage());
-                } else {
-                        return std::lexicographical_compare_three_way(x.begin(), x.end(), y.begin(), y.end());
-                }
+                return Traits::sequence_three_way(x.storage(), y.storage());
         }
 
         // Bulk, on the storage's own spelling: on packed bits the pointwise operation and the set operation are one instruction; not on a window, whose blocks are not its own. [design.md#what-the-trait-reconciles]
