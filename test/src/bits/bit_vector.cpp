@@ -116,7 +116,7 @@ BOOST_AUTO_TEST_CASE(ErasureIsTheStdVectorsOwn)
         auto m = std::vector<bool>{ true, false, true, true, false, false, true };
         BOOST_CHECK_EQUAL(erase(v, true), std::erase(m, true));
         BOOST_CHECK(std::ranges::equal(v, m));
-        BOOST_CHECK_EQUAL(erase_if(v, [](bool x) { return not x; }), std::erase_if(m, [](bool x) { return not x; }));
+        BOOST_CHECK_EQUAL(erase_if(v, [](bool x) -> bool { return not x; }), std::erase_if(m, [](bool x) -> bool { return not x; }));
         BOOST_CHECK(v.empty());
         BOOST_CHECK_EQUAL(erase(v, false), 0UZ);
 }

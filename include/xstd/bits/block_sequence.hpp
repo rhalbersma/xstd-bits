@@ -224,10 +224,14 @@ public:
                 auto const [ index, offset ] = index_offset(n);
                 assert(index < num_blocks());
                 auto const bits = static_cast<block_type>(value & mask);
-                m_blocks[index] = static_cast<block_type>((m_blocks[index] & static_cast<block_type>(~static_cast<block_type>(mask << offset))) | static_cast<block_type>(bits << offset));
+
+                // Each step lands back in block_type: a promoted operand feeding the next bitwise operator is what bugprone-signed-bitwise reads. [design.md#block-writes]
+                auto const low_kept = static_cast<block_type>(m_blocks[index] & static_cast<block_type>(~static_cast<block_type>(mask << offset)));
+                m_blocks[index] = static_cast<block_type>(low_kept | static_cast<block_type>(bits << offset));
                 if (offset != 0UZ and index != last_block()) {
                         auto const shift = bits_per_block - offset;
-                        m_blocks[index + 1UZ] = static_cast<block_type>((m_blocks[index + 1UZ] & static_cast<block_type>(~static_cast<block_type>(mask >> shift))) | static_cast<block_type>(bits >> shift));
+                        auto const high_kept = static_cast<block_type>(m_blocks[index + 1UZ] & static_cast<block_type>(~static_cast<block_type>(mask >> shift)));
+                        m_blocks[index + 1UZ] = static_cast<block_type>(high_kept | static_cast<block_type>(bits >> shift));
                 }
                 erase_unused();
         }
@@ -237,7 +241,7 @@ public:
                 -> block_sequence&
         {
                 assert(n + len <= size());
-                for_each_word(n, len, [&](std::size_t pos, block_type mask) { set_word(pos, value ? ones : zero, mask); });
+                for_each_word(n, len, [&](std::size_t pos, block_type mask) -> void { set_word(pos, value ? ones : zero, mask); });
                 return *this;
         }
 
@@ -245,7 +249,7 @@ public:
                 -> block_sequence&
         {
                 assert(n + len <= size());
-                for_each_word(n, len, [&](std::size_t pos, block_type mask) { set_word(pos, static_cast<block_type>(~word_at(pos)), mask); });
+                for_each_word(n, len, [&](std::size_t pos, block_type mask) -> void { set_word(pos, static_cast<block_type>(~word_at(pos)), mask); });
                 return *this;
         }
 
