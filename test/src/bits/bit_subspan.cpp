@@ -153,7 +153,7 @@ BOOST_AUTO_TEST_CASE(WindowsCompose)
         BOOST_CHECK(xstd::bit_span(z).subspan(0).empty());
 }
 
-// Every viewed storage windows the same way, ours and the two foreign ones alike, through the door. [design.md#windows]
+// Every viewed storage windows the same way, ours and the two foreign ones alike, through the trait. [design.md#windows]
 BOOST_AUTO_TEST_CASE_TEMPLATE(EveryViewedStorageWindows, T, ViewedTypes)
 {
         auto bits = twenty<T>();

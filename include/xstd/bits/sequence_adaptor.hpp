@@ -342,7 +342,7 @@ public:
                 requires is_owner
         = default;
 
-        // The door's entry and nothing else: an owner is over storage of ours, which has one. [design.md#owning-is-ours]
+        // The trait's entry and nothing else: an owner is over storage of ours, which has one. [design.md#owning-is-ours]
         [[nodiscard]] friend constexpr auto operator<=>(sequence_adaptor const& x, sequence_adaptor const& y) noexcept
                 -> std::strong_ordering
                 requires is_owner and requires { Traits::sequence_three_way(x.storage(), y.storage()); }

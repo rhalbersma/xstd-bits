@@ -167,7 +167,7 @@ would be wrong: `size()` is a legitimate argument, meaning "from the end".
 
 ### the-cheapest-contract
 
-The door's contract is the most efficient form, so `bit_traits<block_sequence<...>>` keeps the contracts
+The trait's contract is the most efficient form, so `bit_traits<block_sequence<...>>` keeps the contracts
 `block_sequence` gives it rather than widening to the total ones the synthesised walks happen to provide.
 
 **A fallback synthesised for a foreign type may be more generous than the contract; it may not be less.**
@@ -177,7 +177,7 @@ So `find_next` requires `is_valid(n)`, and `find_prev` requires a set position s
 
 ## The trait
 
-The prose below calls `bit_traits<Bits>` *the door*: the one thing the readings ask, and the one thing a
+The prose below calls `bit_traits<Bits>` *the trait*: the one thing the readings ask, and the one thing a
 storage answers. The three entries every specialization must have — `extent`, `size`, `at` — are *the floor*.
 The headers say `bit_traits`, `Traits` and "the required entries" and point here for the reasoning.
 
@@ -185,7 +185,7 @@ The headers say `bit_traits`, `Traits` and "the required entries" and point here
 
 `bit_traits` is declared and never defined. Adaptation is opt-in rather than guessed, so a type nobody has
 adapted is a compile error naming an incomplete type, rather than a silent fallback onto whatever members
-happened to answer. That is the failure per-operation member probing walks into, and the door's reason for
+happened to answer. That is the failure per-operation member probing walks into, and the trait's reason for
 existing.
 
 `bit_storage` gates the adaptors on the floor rather than on `bit_traits<Bits>` being complete, which turns
@@ -219,7 +219,7 @@ than by remembering a prefix at every call site — which is what a class was pr
 `bit_storage` and `static_bit_extent` take the trait first and the storage second, as `block_readable`
 already did, so that a type-constraint can name the trait: `bit_storage<Bits> Traits` expands to
 `bit_storage<Traits, Bits>`, a type-constraint binding its own parameter first. That is what lets every
-consumer of the door carry `Traits = bit_traits<Bits>` as an explicit parameter, `basic_string`-style, and
+consumer of the trait carry `Traits = bit_traits<Bits>` as an explicit parameter, `basic_string`-style, and
 what turns the tier into a knob over identical storage — one `block_array`, two traits, one variable.
 
 ### what-the-trait-reconciles
@@ -227,7 +227,7 @@ what turns the tier into a knob over identical storage — one `block_array`, tw
 Almost everything the two readings ask of a `Bits` is already an entry, or is the same operation under
 another name:
 
-| what a reading calls | door entry | |
+| what a reading calls | trait entry | |
 |---|---|---|
 | set `size()` (cardinality) | `count` | |
 | set `max_size()` (width) | `size` | |
@@ -241,7 +241,7 @@ Two entries are left over, and they are the two the readings cannot synthesize:
 
 - **`insert`** is the only operation that can *grow*, and it is exactly what the adapted types disagree
   about: `boost::dynamic_bitset` resizes, `std::bitset` cannot, `block_sequence` asserts. Reconciling that
-  is what the door is for. It is not `unchecked_assign(c, n, true)`, which has no answer for a position past the
+  is what the trait is for. It is not `unchecked_assign(c, n, true)`, which has no answer for a position past the
   width.
 - **`fill`** is bulk, and `clear` is `fill(false)`.
 
@@ -258,7 +258,7 @@ it looks like, and worth stating because the wrong guess silently costs a tier:
 
 So neither implies the other, and each is worth a constrained entry on its own. Where `_Getword` is
 reachable the walks run block-wise, including a `find_prev` neither library supplies; where `_Find_first` is
-reachable the forward scans are native. Both return `N` when nothing is set, which is already the door's
+reachable the forward scans are native. Both return `N` when nothing is set, which is already the trait's
 total contract, so no `npos` mapping is needed — unlike boost, whose `find_first` answers `npos`.
 
 The third row is not the end of block access on libc++. A width that fits one `unsigned long long` reads
@@ -292,10 +292,10 @@ different sequences, and **they disagree**:
 | set reading | ascending positions, `[0,1]` against `[1]` | `{0,1} < {1}` |
 | sequence reading | bools from index 0, `[1,1,0…]` against `[0,1,0…]` | `{0,1} > {1}` |
 
-A door serving three readings cannot hold one of their orderings without choosing for its callers, so it
+A trait serving three readings cannot hold one of their orderings without choosing for its callers, so it
 holds neither under that name. It holds **both, separately named**: `bit_traits` has a `set_three_way` entry
 and a `sequence_three_way` entry, never one `lexicographical_three_way`, so a caller says which reading it
-means rather than being handed whichever the door happened to pick.
+means rather than being handed whichever the trait happened to pick.
 
 ### the-ordering-primitive
 
@@ -335,7 +335,7 @@ and is the whole of what separates the two readings.
 
 **The fallback is the specification.** A `Bits` that will not show its words -- `std::bitset` under libc++,
 `boost::dynamic_bitset` -- falls back to that standard algorithm over the reading's own iterators, which is
-[the invariant](#the-ordering-invariant) itself. So the door's contract stays the efficient form and the
+[the invariant](#the-ordering-invariant) itself. So the trait's contract stays the efficient form and the
 fallback can only be more generous, never less ([the cheapest contract](#the-cheapest-contract)), and the
 test is that the two paths agree.
 
@@ -357,7 +357,7 @@ one-block instantiation cannot take a loop's exit branch -- which is why `first_
 each spell out the one- and two-block cases the way `find_front` and `intersects` do.
 
 The four use-site dispatchers in `detail::bits` (`find_first`, `find_next`, `find_prev`, `count`) carry the
-width-zero arm too, ahead of the choice between the door's entry and the walk: at width zero every answer is
+width-zero arm too, ahead of the choice between the trait's entry and the walk: at width zero every answer is
 zero -- the total answer, `size()` -- and no entry or walk is instantiated for it. The set iterator's
 equality takes an arm there too: a zero width has one position, so every iterator over it is the same one,
 and `operator==` says so outright. The point is the loops an optimizer sees into. Three spellings of the
@@ -413,7 +413,7 @@ wrapper's member surface, not the cross-cutting protocols -- equality, ordering,
 The engine is Boost.Hash2: each adaptor carries a `tag_invoke` hook for `hash_append`, and `std::hash` is
 one detail helper over it, `fnv1a_64` folded by `get_integral_result`, so the algorithm is chosen in exactly
 one place and a caller wanting another brings it through `hash_append`. What a hook appends is the value
-**through the door**, never a storage's own hook: the blocks and the width where the trait reads by block,
+**through the trait**, never a storage's own hook: the blocks and the width where the trait reads by block,
 every position and the width otherwise. So equal values hash equal whatever holds them, and a set view over
 a `std::bitset` hashes on every library whether or not `_Getword` is reachable. The set reading at a run-time
 width appends the positions held and their count instead, since equal sets need not share a width
@@ -496,7 +496,7 @@ compile on libc++ where it happens to compile on libstdc++. `BOOST_CHECK` compar
 assignment that does not compile.
 
 The writable proxy belongs to the containers above, which is also where the checked reading lives —
-`std::bitset::test` throws where this asserts, a difference the door states as `unchecked_test` rather than
+`std::bitset::test` throws where this asserts, a difference the containers state as a guard rather than
 one this name should try to carry.
 
 ### qualifier-prefixes
@@ -595,8 +595,8 @@ type changes, so a plain `conditional_t` rather than `conditional_data_member_t`
 `this`, gives deep const to the owner — `self.m_bits` propagates `self`'s const — and shallow const to the
 view — `*self.m_bits` does not — for free.
 
-Every mutator is then gated on the door and nothing else: `requires requires { Traits::op(self.storage(), …) }`
-reads "the door lets *this handle* write". A const owner's accessor hands the door a `Bits const&`, which no
+Every mutator is then gated on the trait and nothing else: `requires requires { Traits::op(self.storage(), …) }`
+reads "the trait lets *this handle* write". A const owner's accessor hands the trait a `Bits const&`, which no
 `unchecked_assign` accepts; a const view's hands it `Bits&`, which is what a view is for; a view over
 `Bits const` hands it `Bits const&` again. Const, ownership and a floor-only trait are all the same question, asked once.
 The exceptions are the constructors and, once storage grows, the growth members, which need an explicit
@@ -626,7 +626,7 @@ adaptor's constructors and restating its two deduction guides: not a second impl
 They carry the names of [the-public-names](#the-public-names), one header each beside the owners; the
 `set_view` and `sequence_view` of the rewire were the same classes before the viewing column was filled.
 The earlier views, with their own iterators, proxies and four customization points — `set_find`,
-`sequence_find`, `block_access`, `bit_extent` — were the door before there was a door, and once the adaptors
+`sequence_find`, `block_access`, `bit_extent` — were the trait before there was one, and once the adaptors
 read through `bit_traits` alone there was nothing left for them to do. An alias would have been the natural
 spelling, and deduction through one is class template argument deduction for alias templates (P1814), which
 Clang 19 and GCC 10 have and MSVC does not: `bit_set_view(x)` on MSVC is "too few template arguments". The derived
@@ -658,12 +658,12 @@ one position at a time, which `std::ranges::fill` over its iterators already doe
 
 ### views-over-owners
 
-An owner has no door of its own — `bit_static_set`, `bit_array` and `bitset` are thin wrappers over a
+An owner has no trait of its own — `bit_static_set`, `bit_array` and `bitset` are thin wrappers over a
 `block_array` that already has one — so a view over an owner is a view over the storage it wraps:
 `bit_set_view(xstd::bitset<64>&)` is `set_adaptor<block_array<size_t, 64>, refers>`, and the pointer in the
 iterator is to the `block_array`, never to the `bitset`. The owner hands its storage over through
 `owned_storage<Owner>`, declared beside it as `bit_traits` is beside a storage and never defined for anything
-else, so `owner_of<Owner, Bits, Traits>` reads "this owner wraps exactly the storage and door this view
+else, so `owner_of<Owner, Bits, Traits>` reads "this owner wraps exactly the storage and trait this view
 refers through". Const flows one way: a const owner gives a view over `Bits const`, a mutable owner either.
 
 The view's converting constructor takes the owner's private member directly, which is why each owner
@@ -674,7 +674,7 @@ Storage stays private; nothing on an owner's surface says `block_array`.
 ### the-public-names
 
 Three layers of names. The primaries carry the reading and take the storage: `set_adaptor<Bits, Own, Traits>`,
-`sequence_adaptor<Bits, Own, Windowed, Traits>`, `bitset_adaptor<Bits, Traits>`, the parameters the door consumers
+`sequence_adaptor<Bits, Own, Windowed, Traits>`, `bitset_adaptor<Bits, Traits>`, the parameters the trait's consumers
 need and no more. The `basic_` layer chooses the storage and leaves the block open, `basic_string`-style:
 `basic_bit_static_set<N, Block>`, `basic_bit_set<Block, Allocator>` and their four siblings. The restricted layer
 fixes `std::size_t` and `std::allocator`: `bit_static_set<N>`, `bit_array<N>` and `bitset<N>` keep one parameter,
@@ -804,17 +804,17 @@ proxy that writes without checking.
 
 ### the-proxy-recursion-trap
 
-The sequence proxy writes through the door's `unchecked_assign` and never through a subscript. The earlier
+The sequence proxy writes through the trait's `unchecked_assign` and never through a subscript. The earlier
 view fell back on `c[n] = value` for a type without `set(n, value)`, and were such a type's `operator[]` to
 return our own proxy, that proxy's assignment would land back in the fallback and **recurse until the stack
 is gone**. An entry the specialization spells cannot loop back into the proxy, which is one more reason the
-write is a door entry rather than a probe; where the counterpart's subscript is the unchecked way in, as
+write is a trait entry rather than a probe; where the counterpart's subscript is the unchecked way in, as
 `std::bitset`'s and `boost::dynamic_bitset`'s are, the specialization says so.
 
 ### the-iterator-is-the-primitive
 
 `bit_set_iterator` and `bit_sequence_iterator` are a pointer and a position, and they reach the bits through
-the door alone. Their constructors are public, so an owner or a view builds one without being a friend: the
+the trait alone. Their constructors are public, so an owner or a view builds one without being a friend: the
 dependency runs one way, from the container to the iterator, and the mutual friendship and forward
 declarations the earlier views needed (*"Clang requires it, GCC does not"*) have nothing left to declare.
 

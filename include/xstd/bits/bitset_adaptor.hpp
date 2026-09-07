@@ -73,7 +73,7 @@ class bitset_adaptor
         template<class B, ownership O, bit_storage<B> T>         friend class set_adaptor;
         template<class B, ownership O, bool W, bit_storage<B> T> friend class sequence_adaptor;
 
-        // The value through the door: the blocks and the width. [design.md#the-hashing-invariant]
+        // The value through the trait: the blocks and the width. [design.md#the-hashing-invariant]
         template<class Provider, class Hash, class Flavor>
         friend constexpr void tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, bitset_adaptor const* v) noexcept
         {

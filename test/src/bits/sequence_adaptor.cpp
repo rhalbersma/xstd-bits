@@ -158,7 +158,7 @@ BOOST_AUTO_TEST_CASE(TheBulkOperatorsAreTheStoragesOwn)
         BOOST_CHECK(x[3] and y[1]);
 }
 
-// The ordering invariant on the door's entry, the only ordering an owner has. [design.md#the-ordering-invariant]
+// The ordering invariant on the trait's entry, the only ordering an owner has. [design.md#the-ordering-invariant]
 BOOST_AUTO_TEST_CASE(TheOrderingIsTheLexicographicOrderOfTheBools)
 {
         using Packed = xstd::basic_bit_array<9, std::uint8_t>;
