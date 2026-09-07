@@ -9,7 +9,7 @@
 #include <xstd/bits/bit_vector.hpp>          // bit_vector
 #include <xstd/bits/block_sequence.hpp>      // block_vector
 #include <xstd/bits/ownership.hpp>           // ownership
-#include <xstd/bits/ranges/sequence_view.hpp> // sequence_view
+#include <xstd/bits/bit_span.hpp> // bit_span
 #include <algorithm>                         // equal
 #include <concepts>                          // same_as
 #include <cstddef>                           // size_t
@@ -103,14 +103,14 @@ BOOST_AUTO_TEST_CASE(TheOwnerHashesAndTheViewDoesNot)
         BOOST_CHECK_EQUAL(h(T({ true, false, true })), h(T({ true, false, true })));
         BOOST_CHECK(h(T({ true, false, true })) != h(T({ true, false, true, false })));
         BOOST_CHECK(h(T()) != h(T(1)));
-        static_assert(not std::is_default_constructible_v<std::hash<xstd::sequence_view<xstd::block_vector<std::uint8_t>>>>);
+        static_assert(not std::is_default_constructible_v<std::hash<xstd::bit_span<xstd::block_vector<std::uint8_t>>>>);
 }
 
 // The view over it refers into the block_vector and cannot grow it. [design.md#views-over-owners]
 BOOST_AUTO_TEST_CASE(AViewOverItCannotGrowIt)
 {
         auto v = T(5);
-        auto const s = xstd::sequence_view(v);
+        auto const s = xstd::bit_span(v);
         s[2] = true;
         BOOST_CHECK(static_cast<bool>(v[2]));
 

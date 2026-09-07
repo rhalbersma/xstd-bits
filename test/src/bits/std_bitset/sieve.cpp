@@ -14,7 +14,7 @@
 #include <xstd/bits/ext/boost/dynamic_bitset.hpp> // dynamic_bitset
 #include <xstd/bits/ext/std/bitset.hpp>           // bitset
 #include <xstd/bits/ext/xstd/bitset.hpp>          // bitset
-#include <xstd/bits/ranges/set_view.hpp>          // set_view
+#include <xstd/bits/bit_set_view.hpp>          // bit_set_view
 #include <bitset>                                 // bitset
 #include <cstddef>                                // size_t
 #include <tuple>                                  // tuple
@@ -38,19 +38,19 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheSiftedPrimesAndTwinsFormatAsExpected, T, Types)
 {
         auto const primes0 = xstd::sift_primes0<T>(N);
         BOOST_CHECK_EQUAL(
-                fmt::format("{}", xstd::set_view(primes0)),
+                fmt::format("{}", xstd::bit_set_view(primes0)),
                 "{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97}")
         ;
 
         auto const primes1 = xstd::sift_primes1<T>(N);
         BOOST_CHECK_EQUAL(
-                fmt::format("{}", xstd::set_view(primes1)),
+                fmt::format("{}", xstd::bit_set_view(primes1)),
                 "{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97}")
         ;
 
         auto const twins = xstd::filter_twins(primes1);
         BOOST_CHECK_EQUAL(
-                fmt::format("{}", xstd::set_view(twins)),
+                fmt::format("{}", xstd::bit_set_view(twins)),
                 "{3, 5, 7, 11, 13, 17, 19, 29, 31, 41, 43, 59, 61, 71, 73}"
         );
 }

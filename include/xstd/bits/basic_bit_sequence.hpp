@@ -24,6 +24,7 @@
 #include <limits>                   // numeric_limits
 #include <ranges>                   // begin, enable_borrowed_range, enable_view, end, from_range_t, input_range, range_reference_t
 #include <source_location>          // source_location
+#include <span>                     // dynamic_extent
 #include <stdexcept>                // out_of_range
 #include <type_traits>              // conditional_t, false_type, is_nothrow_swappable_v, remove_const_t, remove_reference_t
 #include <utility>                  // as_const, declval
@@ -34,28 +35,55 @@ namespace xstd {
 template<class Bits, ownership Own, bool Windowed, bit_storage<Bits> Traits = bit_traits<std::remove_const_t<Bits>>>
 class basic_bit_sequence
 {
-        // A window stores an iterator and a size rather than a pointer, and arrives with subspan. [design.md#the-three-adaptors]
-        static_assert(not Windowed, "windowed sequences arrive with subspan");
-
-        static constexpr bool is_owner = owns(Own);
+        static constexpr bool is_owner  = owns(Own);
+        static constexpr bool is_window = Windowed;
+        static_assert(not (is_owner and is_window), "a window views what another owns");
 
         using bits_type = std::remove_const_t<Bits>;
 
         // Growth is the owner's over storage that grows: a view must never resize what it does not own. [design.md#growth]
         static constexpr bool can_grow = is_owner and not static_bit_extent<Traits, bits_type> and requires (bits_type& b) { b.resize(0UZ, true); b.push_back(true); b.pop_back(); b.clear(); };
 
-        std::conditional_t<is_owner, Bits, Bits*> m_bits;
+        // A window is what std::span stores, the pointer's role split over a pointer and a position because bits are not addressable: the iterator's two fields and a size. [design.md#windows]
+        struct window
+        {
+                Bits* ptr;
+                std::size_t offset;
+                std::size_t size;
+        };
 
-        // One accessor: self.m_bits propagates the owner's const, *self.m_bits keeps the view shallow. [design.md#ownership-is-not-an-axis]
+        std::conditional_t<is_owner, Bits, std::conditional_t<is_window, window, Bits*>> m_bits;
+
+        // One accessor: self.m_bits propagates the owner's const, *self.m_bits keeps the view shallow, a window's pointer likewise. [design.md#ownership-is-not-an-axis]
         [[nodiscard]] constexpr auto storage(this auto&& self) noexcept
                 -> auto&&
         {
                 if constexpr (is_owner) {
                         return self.m_bits;
+                } else if constexpr (is_window) {
+                        return *self.m_bits.ptr;
                 } else {
                         return *self.m_bits;
                 }
         }
+
+        // Where this sequence starts in the storage: zero but for a window, so every position below is offset once, here. [design.md#windows]
+        [[nodiscard]] constexpr auto offset() const noexcept
+                -> std::size_t
+        {
+                if constexpr (is_window) {
+                        return m_bits.offset;
+                } else {
+                        return 0UZ;
+                }
+        }
+
+        // The window's constructor, which first, last and subspan call and nothing else does.
+        [[nodiscard]] constexpr basic_bit_sequence(Bits* ptr, std::size_t offset, std::size_t size) noexcept
+                requires is_window
+        :
+                m_bits{ ptr, offset, size }
+        {}
 
         // What the accessor hands a given self, const included: the iterator and the proxy are spelled over exactly that.
         template<class Self>
@@ -165,7 +193,7 @@ public:
         }
 
         [[nodiscard]] constexpr explicit basic_bit_sequence(Bits& c) noexcept
-                requires (not is_owner)
+                requires (not is_owner) and (not is_window)
         :
                 m_bits(&c)
         {}
@@ -173,13 +201,42 @@ public:
         // A view over an owner is a view over the storage it wraps, the owner having befriended this template. [design.md#views-over-owners]
         template<owner_of<Bits, Traits> Owner>
         [[nodiscard]] constexpr explicit basic_bit_sequence(Owner& c) noexcept
-                requires (not is_owner)
+                requires (not is_owner) and (not is_window)
         :
                 m_bits(&c.m_bits)
         {}
 
+        // [span.sub]'s three, on a view and never on an owner, since std::array and std::vector have no subviews; asserting their preconditions, dynamic_extent reaching the end. [design.md#windows]
+        using subspan_type = basic_bit_sequence<Bits, ownership::refers, true, Traits>;
+
+        [[nodiscard]] constexpr auto first(size_type count) const noexcept
+                -> subspan_type
+                requires (not is_owner)
+        {
+                assert(count <= size());
+                return { &storage(), offset(), count };
+        }
+
+        [[nodiscard]] constexpr auto last(size_type count) const noexcept
+                -> subspan_type
+                requires (not is_owner)
+        {
+                assert(count <= size());
+                return { &storage(), offset() + (size() - count), count };
+        }
+
+        [[nodiscard]] constexpr auto subspan(size_type off, size_type count = std::dynamic_extent) const noexcept
+                -> subspan_type
+                requires (not is_owner)
+        {
+                assert(off <= size());
+                assert(count == std::dynamic_extent or count <= size() - off);
+                return { &storage(), offset() + off, count == std::dynamic_extent ? size() - off : count };
+        }
+
+        // Bulk on a window is the masked-block work that arrives with the blit; until then a window is read and written one position at a time. [design.md#windows]
         constexpr void fill(this auto&& self, value_type const& u) noexcept
-                requires requires { Traits::fill(self.storage(), u); }
+                requires (not is_window) and requires { Traits::fill(self.storage(), u); }
         {
                 Traits::fill(self.storage(), u);
         }
@@ -192,19 +249,28 @@ public:
         }
 
         // iterators, spelled over what the accessor hands this self: deep const for an owner, shallow for a view.
-        [[nodiscard]] constexpr auto begin (this auto&& self) noexcept -> iterator_t<decltype(self)> { return { &self.storage(), 0UZ }; }
-        [[nodiscard]] constexpr auto end   (this auto&& self) noexcept -> iterator_t<decltype(self)> { return { &self.storage(), Traits::size(self.storage()) }; }
+        [[nodiscard]] constexpr auto begin (this auto&& self) noexcept -> iterator_t<decltype(self)> { return { &self.storage(), self.offset() }; }
+        [[nodiscard]] constexpr auto end   (this auto&& self) noexcept -> iterator_t<decltype(self)> { return { &self.storage(), self.offset() + self.size() }; }
         [[nodiscard]] constexpr auto rbegin(this auto&& self) noexcept { return std::make_reverse_iterator(self.end());   }
         [[nodiscard]] constexpr auto rend  (this auto&& self) noexcept { return std::make_reverse_iterator(self.begin()); }
 
-        [[nodiscard]] constexpr auto cbegin()  const noexcept -> const_iterator         { return { &std::as_const(storage()), 0UZ }; }
-        [[nodiscard]] constexpr auto cend()    const noexcept -> const_iterator         { return { &std::as_const(storage()), Traits::size(storage()) }; }
+        [[nodiscard]] constexpr auto cbegin()  const noexcept -> const_iterator         { return { &std::as_const(storage()), offset() }; }
+        [[nodiscard]] constexpr auto cend()    const noexcept -> const_iterator         { return { &std::as_const(storage()), offset() + size() }; }
         [[nodiscard]] constexpr auto crbegin() const noexcept -> const_reverse_iterator { return std::make_reverse_iterator(cend());   }
         [[nodiscard]] constexpr auto crend()   const noexcept -> const_reverse_iterator { return std::make_reverse_iterator(cbegin()); }
 
-        // capacity; a static width is its own max_size, a growing one has the address space's.
-        [[nodiscard]] constexpr auto    empty() const noexcept -> bool      { return size() == 0UZ; }
-        [[nodiscard]] constexpr auto     size() const noexcept -> size_type { return Traits::size(storage()); }
+        // capacity; a static width is its own max_size, a growing one has the address space's, a window its own count.
+        [[nodiscard]] constexpr auto empty() const noexcept -> bool { return size() == 0UZ; }
+
+        [[nodiscard]] constexpr auto size() const noexcept
+                -> size_type
+        {
+                if constexpr (is_window) {
+                        return m_bits.size;
+                } else {
+                        return Traits::size(storage());
+                }
+        }
 
         [[nodiscard]] constexpr auto max_size() const noexcept
                 -> size_type
@@ -255,20 +321,20 @@ public:
                 -> reference_t<decltype(self)>
         {
                 assert(n < self.size());
-                return { &self.storage(), n };
+                return { &self.storage(), self.offset() + n };
         }
 
         [[nodiscard]] constexpr auto at(this auto&& self, size_type n)
                 -> reference_t<decltype(self)>
         {
                 if (n < self.size()) {
-                        return { &self.storage(), n };
+                        return { &self.storage(), self.offset() + n };
                 }
                 throw out_of_range(n, self.size());
         }
 
-        [[nodiscard]] constexpr auto front(this auto&& self) noexcept -> reference_t<decltype(self)> { return { &self.storage(), 0UZ }; }
-        [[nodiscard]] constexpr auto back (this auto&& self) noexcept -> reference_t<decltype(self)> { return { &self.storage(), self.size() - 1UZ }; }
+        [[nodiscard]] constexpr auto front(this auto&& self) noexcept -> reference_t<decltype(self)> { return { &self.storage(), self.offset() }; }
+        [[nodiscard]] constexpr auto back (this auto&& self) noexcept -> reference_t<decltype(self)> { return { &self.storage(), self.offset() + self.size() - 1UZ }; }
 
         // The owner's alone, following span: a handle declines to say whether it compares its referent or its contents. [design.md#views-follow-their-precedent]
         [[nodiscard]] friend constexpr auto operator==(basic_bit_sequence const& x, basic_bit_sequence const& y) noexcept
@@ -289,14 +355,14 @@ public:
                 }
         }
 
-        // Bulk, on the storage's own spelling: on packed bits the pointwise operation and the set operation are one instruction. [design.md#what-the-trait-reconciles]
-        constexpr auto operator&=(this auto&& self, basic_bit_sequence const& other) noexcept -> auto& requires requires { self.storage() &= other.storage(); } { self.storage() &= other.storage(); return self; }
-        constexpr auto operator|=(this auto&& self, basic_bit_sequence const& other) noexcept -> auto& requires requires { self.storage() |= other.storage(); } { self.storage() |= other.storage(); return self; }
-        constexpr auto operator^=(this auto&& self, basic_bit_sequence const& other) noexcept -> auto& requires requires { self.storage() ^= other.storage(); } { self.storage() ^= other.storage(); return self; }
-        constexpr auto operator-=(this auto&& self, basic_bit_sequence const& other) noexcept -> auto& requires requires { self.storage() -= other.storage(); } { self.storage() -= other.storage(); return self; }
+        // Bulk, on the storage's own spelling: on packed bits the pointwise operation and the set operation are one instruction; not on a window, whose blocks are not its own. [design.md#what-the-trait-reconciles]
+        constexpr auto operator&=(this auto&& self, basic_bit_sequence const& other) noexcept -> auto& requires (not is_window) and requires { self.storage() &= other.storage(); } { self.storage() &= other.storage(); return self; }
+        constexpr auto operator|=(this auto&& self, basic_bit_sequence const& other) noexcept -> auto& requires (not is_window) and requires { self.storage() |= other.storage(); } { self.storage() |= other.storage(); return self; }
+        constexpr auto operator^=(this auto&& self, basic_bit_sequence const& other) noexcept -> auto& requires (not is_window) and requires { self.storage() ^= other.storage(); } { self.storage() ^= other.storage(); return self; }
+        constexpr auto operator-=(this auto&& self, basic_bit_sequence const& other) noexcept -> auto& requires (not is_window) and requires { self.storage() -= other.storage(); } { self.storage() -= other.storage(); return self; }
 
-        constexpr auto operator<<=(this auto&& self, std::size_t n) noexcept -> auto& requires requires { self.storage() <<= n; } { self.storage() <<= n; return self; }
-        constexpr auto operator>>=(this auto&& self, std::size_t n) noexcept -> auto& requires requires { self.storage() >>= n; } { self.storage() >>= n; return self; }
+        constexpr auto operator<<=(this auto&& self, std::size_t n) noexcept -> auto& requires (not is_window) and requires { self.storage() <<= n; } { self.storage() <<= n; return self; }
+        constexpr auto operator>>=(this auto&& self, std::size_t n) noexcept -> auto& requires (not is_window) and requires { self.storage() >>= n; } { self.storage() >>= n; return self; }
 
 private:
         static constexpr auto out_of_range(std::size_t n, std::size_t size, std::source_location const& loc = std::source_location::current())
@@ -341,11 +407,11 @@ constexpr void swap(basic_bit_sequence<Bits, Own, Windowed, Traits>& x, basic_bi
 namespace std::ranges {
 
 // A view is a std::ranges::view outright and borrowed, as basic_bit_set's is. [design.md#views-follow-their-precedent]
-template<class Bits, class Traits>
-inline constexpr bool enable_view<xstd::basic_bit_sequence<Bits, xstd::ownership::refers, false, Traits>> = true;
+template<class Bits, bool Windowed, class Traits>
+inline constexpr bool enable_view<xstd::basic_bit_sequence<Bits, xstd::ownership::refers, Windowed, Traits>> = true;
 
-template<class Bits, class Traits>
-inline constexpr bool enable_borrowed_range<xstd::basic_bit_sequence<Bits, xstd::ownership::refers, false, Traits>> = true;
+template<class Bits, bool Windowed, class Traits>
+inline constexpr bool enable_borrowed_range<xstd::basic_bit_sequence<Bits, xstd::ownership::refers, Windowed, Traits>> = true;
 
 }       // namespace std::ranges
 // NOLINTEND(bugprone-std-namespace-modification)

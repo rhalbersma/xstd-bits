@@ -8,7 +8,7 @@
 
 #include <boost/test/unit_test.hpp>      // BOOST_CHECK_EQUAL
 #include <test/bitset/factory.hpp>       // make_bitset
-#include <xstd/bits/ranges/set_view.hpp> // set_view
+#include <xstd/bits/bit_set_view.hpp> // bit_set_view
 #include <algorithm>                     // lexicographical_compare
 #include <compare>                       // strong_ordering
 #include <cstddef>                       // size_t
@@ -30,15 +30,15 @@ auto ordering_agrees_with_std_set(std::size_t universe = 4) -> void
 
                         // Written through the view, in the set vocabulary, which is the interface under test rather than the bitset's own;
                         // named, because clang 23's lifetime analysis crashes on a deducing-this member called on a prvalue.
-                        auto const xw = xstd::set_view(x);
-                        auto const yw = xstd::set_view(y);
+                        auto const xw = xstd::bit_set_view(x);
+                        auto const yw = xstd::bit_set_view(y);
                         for (auto k = 0UZ; k < universe; ++k) {
                                 if (i >> k & 1UZ) { xw.insert(k); kx.insert(k); }
                                 if (j >> k & 1UZ) { yw.insert(k); ky.insert(k); }
                         }
 
-                        auto const xv = xstd::set_view(x);
-                        auto const yv = xstd::set_view(y);
+                        auto const xv = xstd::bit_set_view(x);
+                        auto const yv = xstd::bit_set_view(y);
 
                         BOOST_CHECK_EQUAL(xv == yv, kx == ky);
                         BOOST_CHECK_EQUAL((xv <=> yv) < 0,

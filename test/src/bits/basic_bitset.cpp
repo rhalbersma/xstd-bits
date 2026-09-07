@@ -9,8 +9,8 @@
 #include <xstd/bits/bitset.hpp>               // bitset
 #include <xstd/bits/block_sequence.hpp>       // block_array, block_vector
 #include <xstd/bits/ext/std/bitset.hpp>       // IWYU pragma: keep; bit_traits<std::bitset>
-#include <xstd/bits/ranges/sequence_view.hpp> // sequence_view
-#include <xstd/bits/ranges/set_view.hpp>      // set_view
+#include <xstd/bits/bit_span.hpp> // bit_span
+#include <xstd/bits/bit_set_view.hpp>      // bit_set_view
 #include <bitset>                             // bitset
 #include <concepts>                           // regular, same_as
 #include <cstddef>                            // size_t
@@ -67,8 +67,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(WrappingStdBitsetKeepsItsShape, T, Wrapped)
         static_assert(std::is_trivially_copy_constructible_v<T>);
         static_assert(std::is_trivially_copy_assignable_v<T>);
         static_assert(std::is_trivially_destructible_v<T>);
-        static_assert(std::ranges::bidirectional_range<decltype(xstd::set_view(std::declval<T&>()))>);
-        static_assert(std::ranges::random_access_range<decltype(xstd::sequence_view(std::declval<T&>()))>);
+        static_assert(std::ranges::bidirectional_range<decltype(xstd::bit_set_view(std::declval<T&>()))>);
+        static_assert(std::ranges::random_access_range<decltype(xstd::bit_span(std::declval<T&>()))>);
 }
 
 // Idempotence, member by member: the wrapper answers exactly as the std::bitset it wraps, throw for throw.
@@ -156,9 +156,9 @@ BOOST_AUTO_TEST_CASE(TheViewsReachAWrappedStdBitset)
         b.set(1); b.set(2);
 
         // Named rather than called on the temporaries: clang 23's lifetime analysis crashes on a deducing-this member of a prvalue.
-        auto const va = xstd::set_view(a);
-        auto const vb = xstd::set_view(b);
-        auto const qa = xstd::sequence_view(a);
+        auto const va = xstd::bit_set_view(a);
+        auto const vb = xstd::bit_set_view(b);
+        auto const qa = xstd::bit_span(a);
 
         auto keys = std::vector<std::size_t>();
         for (auto const k : va) {
@@ -171,8 +171,8 @@ BOOST_AUTO_TEST_CASE(TheViewsReachAWrappedStdBitset)
         BOOST_CHECK(va.is_subset_of(va));
         BOOST_CHECK_EQUAL(qa[69], true);
 
-        static_assert(std::same_as<decltype(va), xstd::set_view<std::bitset<70>> const>);
-        static_assert(std::same_as<decltype(xstd::set_view(std::as_const(a))), xstd::set_view<std::bitset<70> const>>);
+        static_assert(std::same_as<decltype(va), xstd::bit_set_view<std::bitset<70>> const>);
+        static_assert(std::same_as<decltype(xstd::bit_set_view(std::as_const(a))), xstd::bit_set_view<std::bitset<70> const>>);
 }
 
 // Built from text, streamed back to text, and hashed: the derived members, over either storage.

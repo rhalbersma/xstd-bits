@@ -112,7 +112,7 @@ struct bit_traits<std::bitset<N>>
 
 }       // namespace xstd
 
-// is_subset_of, is_proper_subset_of, intersects and <=> come from set_view; operator-= and operator- stay, reachable only from std.
+// is_subset_of, is_proper_subset_of, intersects and <=> come from bit_set_view; operator-= and operator- stay, reachable only from std.
 namespace std {
 
 // NOLINTBEGIN(bugprone-std-namespace-modification)

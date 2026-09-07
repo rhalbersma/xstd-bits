@@ -8,6 +8,8 @@
 #include <test/minimal_traits.hpp>                // minimal_traits
 #include <test/value_reference.hpp>               // value_reference
 #include <xstd/bits/bit_proxy.hpp>                // bit_sequence_iterator, bit_sequence_reference, bit_set_iterator, bit_set_reference
+#include <xstd/bits/bit_set_view.hpp>            // bit_set_view
+#include <xstd/bits/bit_span.hpp>                // bit_span
 #include <xstd/bits/bit_traits.hpp>               // bit_traits, find_next, find_prev
 #include <xstd/bits/block_sequence.hpp>           // block_array
 #include <xstd/bits/ext/boost/dynamic_bitset.hpp> // bit_traits over boost::dynamic_bitset
@@ -22,6 +24,7 @@
 #include <ranges>                                 // subrange
 #include <set>                                    // set
 #include <type_traits>                            // is_assignable_v, is_const_v, is_convertible_v, is_trivially_copy_constructible_v, is_trivially_destructible_v
+#include <utility>                                // declval
 #include <vector>                                 // vector
 
 namespace {
@@ -442,6 +445,118 @@ BOOST_AUTO_TEST_CASE(TheProxiesFormatAsTheirValues)
         BOOST_CHECK_EQUAL(format_as(*xstd::bit_set_iterator<Bits>(&c, 42UZ)), 42UZ);
         BOOST_CHECK_EQUAL(format_as(*xstd::bit_sequence_iterator<Bits>(&c, 42UZ)), true);
         BOOST_CHECK_EQUAL(format_as(*xstd::bit_sequence_iterator<Bits const>(&c, 41UZ)), false);
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+// The two views hand out these proxies and nothing of their own; what ranges.hpp once answered, now answered here. [design.md#the-iterator-is-the-primitive]
+BOOST_AUTO_TEST_SUITE(BitProxyThroughTheViews)
+
+namespace {
+
+using Viewed = std::bitset<64>;
+
+using SetIt   = xstd::bit_set_iterator<Viewed>;
+using SetRef  = xstd::bit_set_reference<Viewed>;
+using ArrIt   = xstd::bit_sequence_iterator<Viewed>;
+using ArrRef  = xstd::bit_sequence_reference<Viewed>;
+
+// Dependent, so a type without the member is a substitution failure rather than a hard error.
+template<class R>
+constexpr bool has_address_of = requires(R r) { r.operator&(); };
+
+}       // namespace
+
+// The two views hand out the proxies of bit_proxy.hpp and nothing of their own. [design.md#the-iterator-is-the-primitive]
+BOOST_AUTO_TEST_CASE(TheViewsIterateWithTheSharedProxies)
+{
+        static_assert(std::same_as<xstd::bit_set_view<Viewed>::iterator,       SetIt>);
+        static_assert(std::same_as<xstd::bit_set_view<Viewed>::reference,      SetRef>);
+        static_assert(std::same_as<xstd::bit_span<Viewed>::iterator,  ArrIt>);
+        static_assert(std::same_as<xstd::bit_span<Viewed>::reference, ArrRef>);
+}
+
+// One shape asked twice: * gives a proxy, & gives an iterator back, and the value comes only by converting; the standard says nothing here, so only our own guarantees are asserted.
+BOOST_AUTO_TEST_CASE(DereferencingYieldsAProxyRatherThanTheValue)
+{
+        static_assert(std::same_as<decltype(*std::declval<SetIt const&>()), SetRef>);
+        static_assert(std::same_as<decltype(*std::declval<ArrIt const&>()), ArrRef>);
+
+        static_assert(not std::same_as<decltype(*std::declval<SetIt const&>()), std::size_t>);
+        static_assert(not std::same_as<decltype(*std::declval<ArrIt const&>()), bool>);
+        BOOST_CHECK(true);
+}
+
+BOOST_AUTO_TEST_CASE(AddressOfAProxyYieldsAnIterator)
+{
+        static_assert(std::same_as<decltype(&std::declval<SetRef const&>()), SetIt>);
+        static_assert(std::same_as<decltype(&std::declval<ArrRef const&>()), ArrIt>);
+
+        static_assert(has_address_of<SetRef>);
+        static_assert(has_address_of<ArrRef>);
+
+        BOOST_CHECK(true);
+}
+
+// The const path is a proxy too, the same one minus the assignment -- not the plain bool libstdc++ hands back.
+BOOST_AUTO_TEST_CASE(TheConstPathIsAProxyAsWell)
+{
+        using ConstArrRef = xstd::bit_sequence_reference<Viewed const>;
+
+        static_assert(std::same_as<xstd::bit_span<Viewed const>::reference, ConstArrRef>);
+        static_assert(std::is_convertible_v<ConstArrRef, bool>);
+        static_assert(has_address_of<ConstArrRef>);
+        static_assert(std::same_as<decltype(&std::declval<ConstArrRef const&>()), xstd::bit_sequence_iterator<Viewed const>>);
+
+        // and it is exactly the assignment that the const one drops.
+        static_assert(    std::is_assignable_v<ArrRef const&, bool>);
+        static_assert(not std::is_assignable_v<ConstArrRef const&, bool>);
+
+        BOOST_CHECK(true);
+}
+
+BOOST_AUTO_TEST_CASE(TheValueArrivesByImplicitConversion)
+{
+        static_assert(std::is_convertible_v<SetRef, std::size_t>);
+        static_assert(std::is_convertible_v<ArrRef, bool>);
+
+        auto b = Viewed();
+        auto const v = xstd::bit_set_view(b);
+        v.insert({3, 5, 7});
+
+        // No cast at any of these.
+        std::size_t const key = *v.begin();
+        BOOST_CHECK_EQUAL(key, 3UZ);
+        BOOST_CHECK(*v.begin() == 3UZ);
+
+        auto const a = xstd::bit_span(b);
+        bool const bit = a[3];
+        BOOST_CHECK(bit);
+        BOOST_CHECK(a[5] == true);
+        BOOST_CHECK(a[4] == false);
+}
+
+// & . * and * . & are both the identity, which makes the pair a round trip rather than two one-way conversions.
+BOOST_AUTO_TEST_CASE(TheProxyPairRoundTrips)
+{
+        auto b = Viewed();
+        auto const v = xstd::bit_set_view(b);
+        v.insert({3, 5, 7, 11});
+
+        for (auto it = v.begin(); it != v.end(); ++it) {
+                BOOST_CHECK(&*it == it);
+                BOOST_CHECK(*&*it == *it);
+        }
+
+        auto const a = xstd::bit_span(b);
+        for (auto it = a.begin(); it != a.end(); ++it) {
+                BOOST_CHECK(&*it == it);
+                BOOST_CHECK(static_cast<bool>(*&*it) == static_cast<bool>(*it));
+        }
+
+        // and writing goes through the reference the round trip hands back.
+        *&a.begin()[4] = true;
+        BOOST_CHECK(b.test(4));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

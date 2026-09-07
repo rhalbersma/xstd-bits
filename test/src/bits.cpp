@@ -31,10 +31,10 @@ BOOST_AUTO_TEST_CASE(EveryContainerArrivesThroughTheUmbrella)
         static_assert(not std::ranges::range<xstd::bitset<8>>);
 
         auto const legacy = xstd::bitset<8>();
-        static_assert(std::ranges::bidirectional_range<decltype(xstd::set_view(legacy))>);
+        static_assert(std::ranges::bidirectional_range<decltype(xstd::bit_set_view(legacy))>);
 
         auto const packed = xstd::bit_array<8>();
-        static_assert(std::ranges::random_access_range<decltype(xstd::sequence_view(packed))>);
+        static_assert(std::ranges::random_access_range<decltype(xstd::bit_span(packed))>);
 
         // The dynamic column, one name per reading, all three over a block_vector.
         static_assert(std::ranges::bidirectional_range<xstd::bit_set<std::size_t>>);

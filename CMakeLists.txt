@@ -76,8 +76,11 @@ target_sources(
         include/xstd/bits/bit_array.hpp
         include/xstd/bits/bit_proxy.hpp
         include/xstd/bits/bit_set.hpp
+        include/xstd/bits/bit_set_view.hpp
+        include/xstd/bits/bit_span.hpp
         include/xstd/bits/bitset.hpp
         include/xstd/bits/bit_static_set.hpp
+        include/xstd/bits/bit_subspan.hpp
         include/xstd/bits/bit_vector.hpp
         include/xstd/bits/bit_traits.hpp
         include/xstd/bits/block_sequence.hpp
@@ -92,9 +95,6 @@ target_sources(
         include/xstd/bits/ext/xstd.hpp
         include/xstd/bits/ext/xstd/bitset.hpp
         include/xstd/bits/ownership.hpp
-        include/xstd/bits/ranges.hpp
-        include/xstd/bits/ranges/sequence_view.hpp
-        include/xstd/bits/ranges/set_view.hpp
 )
 
 target_link_libraries(

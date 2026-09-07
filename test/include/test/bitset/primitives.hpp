@@ -9,7 +9,7 @@
 #include <boost/test/unit_test.hpp>      // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_NE, BOOST_CHECK_THROW
 #include <test/dynamic.hpp>              // dynamic
 #include <xstd/bits/ownership.hpp>       // owned_storage
-#include <xstd/bits/ranges/set_view.hpp> // view
+#include <xstd/bits/bit_set_view.hpp> // view
 #include <cstddef>                       // size_t
 #include <functional>                    // hash
 #include <memory>                        // addressof
@@ -333,8 +333,8 @@ struct mem_equal_to
                                 return self[i] == rhs[i];
                         })
                 );                                                              // [bitset.members]/45
-                auto const lhs_view = xstd::set_view(self);
-                auto const rhs_view = xstd::set_view(rhs);
+                auto const lhs_view = xstd::bit_set_view(self);
+                auto const rhs_view = xstd::bit_set_view(rhs);
 #ifdef _MSC_VER
                 BOOST_CHECK_EQUAL(
                         self == rhs,
@@ -358,7 +358,7 @@ struct mem_compare_three_way
                 if constexpr (requires { lhs <=> rhs; }) {
                         return lhs <=> rhs;
                 } else {
-                        return xstd::set_view(lhs) <=> xstd::set_view(rhs);
+                        return xstd::bit_set_view(lhs) <=> xstd::bit_set_view(rhs);
                 }
         }
 
@@ -366,8 +366,8 @@ struct mem_compare_three_way
         template<class X>
         auto operator()(const X& self, const X& rhs) const noexcept
         {
-                auto const lhs_view = xstd::set_view(self);
-                auto const rhs_view = xstd::set_view(rhs);
+                auto const lhs_view = xstd::bit_set_view(self);
+                auto const rhs_view = xstd::bit_set_view(rhs);
                 BOOST_CHECK(
                         fn_compare_three_way(self, rhs) ==
                         std::lexicographical_compare_three_way(
@@ -422,7 +422,7 @@ struct mem_is_subset_of
                 if constexpr (requires { lhs.is_subset_of(rhs); }) {
                         return lhs.is_subset_of(rhs);
                 } else {
-                        return xstd::set_view(lhs).is_subset_of(xstd::set_view(rhs));
+                        return xstd::bit_set_view(lhs).is_subset_of(xstd::bit_set_view(rhs));
                 }
         }
 
@@ -441,7 +441,7 @@ struct mem_is_proper_subset_of
                 if constexpr (requires { lhs.is_proper_subset_of(rhs); }) {
                         return lhs.is_proper_subset_of(rhs);
                 } else {
-                        return xstd::set_view(lhs).is_proper_subset_of(xstd::set_view(rhs));
+                        return xstd::bit_set_view(lhs).is_proper_subset_of(xstd::bit_set_view(rhs));
                 }
         }
 
@@ -483,7 +483,7 @@ struct mem_intersects
                 if constexpr (requires { lhs.intersects(rhs); }) {
                         return lhs.intersects(rhs);
                 } else {
-                        return xstd::set_view(lhs).intersects(xstd::set_view(rhs));
+                        return xstd::bit_set_view(lhs).intersects(xstd::bit_set_view(rhs));
                 }
         }
 

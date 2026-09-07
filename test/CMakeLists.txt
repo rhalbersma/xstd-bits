@@ -152,7 +152,7 @@ list(FILTER mirrored_headers EXCLUDE REGEX "/detail/")
 
 set(unmirrored_headers)
 foreach(h ${mirrored_headers})
-    # xstd/bits/ranges/set_view.hpp is answered by test/src/bits/ranges/set_view.cpp.
+    # xstd/bits/bit_set_view.hpp is answered by test/src/bits/bit_set_view.cpp.
     string(REGEX REPLACE "^xstd/" "" mirrored ${h})
     string(REGEX REPLACE "[.]hpp$" ".cpp" mirrored ${mirrored})
     if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/src/${mirrored})
