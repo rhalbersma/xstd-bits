@@ -8,30 +8,31 @@
 
 // Bitsets [bitset], Header <bitset> synopsis [bitset.syn]
 
-#include <boost/hash2/hash_append.hpp> // hash_append_tag
-#include <xstd/bits/bit_traits.hpp>    // bit_storage, bit_traits, block_readable, scan_prev, static_bit_extent, zero_width
-#include <xstd/bits/detail/hash.hpp>   // hash_append_bits, std_hash
-#include <xstd/bits/ownership.hpp>     // owned_storage, ownership
-#include <algorithm>                   // min
-#include <cassert>                     // assert
-#include <compare>                     // strong_ordering
-#include <concepts>                    // convertible_to, regular, same_as
-#include <cstddef>                     // size_t
-#include <format>                      // format
-#include <functional>                  // hash
-#include <ios>                         // ios_base
-#include <iosfwd>                      // basic_istream, basic_ostream
-#include <iterator>                    // input_iterator, iter_value_t, output_iterator, sentinel_for
-#include <limits>                      // numeric_limits
-#include <locale>                      // ctype, use_facet
-#include <memory>                      // allocator
-#include <ranges>                      // iota
-#include <source_location>             // source_location
-#include <stdexcept>                   // invalid_argument, out_of_range, overflow_error
-#include <string>                      // basic_string, char_traits
-#include <string_view>                 // basic_string_view
-#include <type_traits>                 // remove_cvref_t
-#include <utility>                     // as_const
+#include <boost/hash2/hash_append.hpp>            // hash_append_tag
+#include <xstd/bits/bit_traits.hpp>               // bit_storage, bit_traits, block_readable, scan_prev, static_bit_extent, zero_width
+#include <xstd/bits/detail/allocator_typedef.hpp> // allocator_typedef
+#include <xstd/bits/detail/hash.hpp>              // hash_append_bits, std_hash
+#include <xstd/bits/ownership.hpp>                // owned_storage, ownership
+#include <algorithm>                              // min
+#include <cassert>                                // assert
+#include <compare>                                // strong_ordering
+#include <concepts>                               // convertible_to, regular, same_as
+#include <cstddef>                                // size_t
+#include <format>                                 // format
+#include <functional>                             // hash
+#include <ios>                                    // ios_base
+#include <iosfwd>                                 // basic_istream, basic_ostream
+#include <iterator>                               // input_iterator, iter_value_t, output_iterator, sentinel_for
+#include <limits>                                 // numeric_limits
+#include <locale>                                 // ctype, use_facet
+#include <memory>                                 // allocator
+#include <ranges>                                 // iota
+#include <source_location>                        // source_location
+#include <stdexcept>                              // invalid_argument, out_of_range, overflow_error
+#include <string>                                 // basic_string, char_traits
+#include <string_view>                            // basic_string_view
+#include <type_traits>                            // remove_cvref_t
+#include <utility>                                // as_const
 
 namespace xstd {
 
@@ -64,7 +65,7 @@ concept has_bitops =
 // [template.bitset] over a storage of ours, which speaks the vocabulary and reads by block: what the storage has is forwarded, what it lacks is added through Traits. [design.md#owning-is-ours]
 template<has_bitops Bits, bit_storage<Bits> Traits = bit_traits<Bits>>
         requires block_readable<Traits, Bits>
-class bitset_adaptor
+class bitset_adaptor : public detail::bits::allocator_typedef<Bits>
 {
         // One wrapper, two counterparts it strictly extends: std::bitset at a static width, boost::dynamic_bitset at a run-time one. [design.md#a-strict-extension]
         static constexpr bool has_static_width = static_bit_extent<Traits, Bits>;
@@ -181,6 +182,38 @@ public:
                 m_bits.append(first, last);
         }
 
+        // boost's allocator arguments, where the storage takes one. [design.md#a-strict-extension]
+        template<class Alloc>
+                requires (not has_static_width) and std::same_as<Alloc, typename Bits::allocator_type>
+        [[nodiscard]] constexpr explicit bitset_adaptor(Alloc const& alloc)
+        :
+                m_bits(alloc)
+        {}
+
+        template<class Alloc>
+                requires (not has_static_width) and std::same_as<Alloc, typename Bits::allocator_type>
+        [[nodiscard]] constexpr bitset_adaptor(std::size_t num_bits, unsigned long long val, Alloc const& alloc)
+        :
+                m_bits(num_bits, alloc)
+        {
+                from_ullong(val);
+        }
+
+        template<std::input_iterator I, std::sentinel_for<I> S, class Alloc>
+                requires (not has_static_width) and block_iterator<I> and std::same_as<Alloc, typename Bits::allocator_type>
+        [[nodiscard]] constexpr bitset_adaptor(I first, S last, Alloc const& alloc)
+        :
+                m_bits(alloc)
+        {
+                m_bits.append(first, last);
+        }
+
+        [[nodiscard]] constexpr auto get_allocator() const noexcept
+                requires requires (Bits const& b) { b.get_allocator(); }
+        {
+                return m_bits.get_allocator();
+        }
+
         template<class charT, class traits, class Allocator>
         [[nodiscard]] constexpr explicit bitset_adaptor(
                 std::basic_string<charT, traits, Allocator> const& str,
@@ -274,53 +307,66 @@ public:
         constexpr auto reset() noexcept -> bitset_adaptor& { m_bits.reset(); return *this; }
         constexpr auto flip () noexcept -> bitset_adaptor& { m_bits.flip (); return *this; }
 
-        // Element access: the guard, then the unchecked write. It throws out_of_range at a static width as std::bitset does and asserts at a run-time one as boost does: the inconsistency is the counterparts' own. [design.md#the-one-guard]
+        // Element access: the one guard, then the unchecked write. It throws out_of_range at a static width as std::bitset does and asserts at a run-time one as boost does: the inconsistency is the counterparts' own. [design.md#the-one-guard]
         constexpr auto set(std::size_t pos, bool val = true)
                 -> bitset_adaptor&
         {
-                if constexpr (has_static_width) {
-                        if (pos < size()) {
-                                Traits::unchecked_assign(m_bits, pos, val);
-                        } else {
-                                throw out_of_range(pos);
-                        }
-                } else {
-                        assert(pos < size());
-                        Traits::unchecked_assign(m_bits, pos, val);
-                }
+                guard(pos);
+                Traits::unchecked_assign(m_bits, pos, val);
                 return *this;
         }
 
         constexpr auto reset(std::size_t pos)
                 -> bitset_adaptor&
         {
-                if constexpr (has_static_width) {
-                        if (pos < size()) {
-                                Traits::unchecked_assign(m_bits, pos, false);
-                        } else {
-                                throw out_of_range(pos);
-                        }
-                } else {
-                        assert(pos < size());
-                        Traits::unchecked_assign(m_bits, pos, false);
-                }
+                guard(pos);
+                Traits::unchecked_assign(m_bits, pos, false);
                 return *this;
         }
 
         constexpr auto flip(std::size_t pos)
                 -> bitset_adaptor&
         {
-                if constexpr (has_static_width) {
-                        if (pos < size()) {
-                                Traits::unchecked_assign(m_bits, pos, not Traits::at(m_bits, pos));
-                        } else {
-                                throw out_of_range(pos);
-                        }
-                } else {
-                        assert(pos < size());
-                        Traits::unchecked_assign(m_bits, pos, not Traits::at(m_bits, pos));
+                guard(pos);
+                Traits::unchecked_assign(m_bits, pos, not Traits::at(m_bits, pos));
+                return *this;
+        }
+
+        // boost's ranged forms, the one guard on the whole range; element-wise until the blit brings the masked block. [design.md#the-one-guard]
+        constexpr auto set(std::size_t pos, std::size_t len, bool val)
+                -> bitset_adaptor&
+        {
+                guard_range(pos, len);
+                for (auto const i : std::views::iota(pos, pos + len)) {
+                        Traits::unchecked_assign(m_bits, i, val);
                 }
                 return *this;
+        }
+
+        constexpr auto reset(std::size_t pos, std::size_t len)
+                -> bitset_adaptor&
+        {
+                return set(pos, len, false);
+        }
+
+        constexpr auto flip(std::size_t pos, std::size_t len)
+                -> bitset_adaptor&
+        {
+                guard_range(pos, len);
+                for (auto const i : std::views::iota(pos, pos + len)) {
+                        Traits::unchecked_assign(m_bits, i, not Traits::at(m_bits, i));
+                }
+                return *this;
+        }
+
+        // boost's test_set: the old value out, the new one in, behind the one guard.
+        constexpr auto test_set(std::size_t pos, bool val = true)
+                -> bool
+        {
+                guard(pos);
+                auto const old = Traits::at(m_bits, pos);
+                Traits::unchecked_assign(m_bits, pos, val);
+                return old;
         }
 
         // The const subscript is unchecked on every counterpart, so it is Traits::at unconditionally.
@@ -334,6 +380,25 @@ public:
                 -> reference
         {
                 return { *this, pos };
+        }
+
+        // boost's at, throwing at both widths: an extension of std::bitset, which has none, and boost's own contract.
+        [[nodiscard]] constexpr auto at(std::size_t pos) const
+                -> bool
+        {
+                if (pos < size()) {
+                        return Traits::at(m_bits, pos);
+                }
+                throw out_of_range(pos);
+        }
+
+        [[nodiscard]] constexpr auto at(std::size_t pos)
+                -> reference
+        {
+                if (pos < size()) {
+                        return { *this, pos };
+                }
+                throw out_of_range(pos);
         }
 
         // [bitset.members]/34-37: the value the bits spell, or overflow_error where a set position lies beyond the word; boost's to_ulong is the same contract.
@@ -363,6 +428,7 @@ public:
         [[nodiscard]] constexpr auto count()      const noexcept -> std::size_t { return m_bits.count();      }
         [[nodiscard]] constexpr auto size()       const noexcept -> std::size_t { return m_bits.size();       }
         [[nodiscard]] constexpr auto num_blocks() const noexcept -> std::size_t { return m_bits.num_blocks(); }
+        [[nodiscard]] constexpr auto max_size()   const noexcept -> std::size_t { return m_bits.max_size();   }
 
         [[nodiscard]] constexpr auto operator==(bitset_adaptor const& rhs) const noexcept -> bool = default;
 
@@ -381,15 +447,8 @@ public:
         [[nodiscard]] constexpr auto test(std::size_t pos) const
                 -> bool
         {
-                if constexpr (has_static_width) {
-                        if (pos < size()) {
-                                return Traits::at(m_bits, pos);
-                        }
-                        throw out_of_range(pos);
-                } else {
-                        assert(pos < size());
-                        return Traits::at(m_bits, pos);
-                }
+                guard(pos);
+                return Traits::at(m_bits, pos);
         }
 
         [[nodiscard]] constexpr auto all()  const noexcept -> bool { return m_bits.all();  }
@@ -530,6 +589,29 @@ public:
         }
 
 private:
+        // The one guard: out_of_range at a static width, std::bitset's, an assert at a run-time one, boost's. [design.md#the-one-guard]
+        constexpr void guard(std::size_t pos) const
+        {
+                if constexpr (has_static_width) {
+                        if (pos >= size()) {
+                                throw out_of_range(pos);
+                        }
+                } else {
+                        assert(pos < size());
+                }
+        }
+
+        constexpr void guard_range(std::size_t pos, std::size_t len) const
+        {
+                if constexpr (has_static_width) {
+                        if (pos + len > size()) {
+                                throw out_of_range(pos + len);
+                        }
+                } else {
+                        assert(pos + len <= size());
+                }
+        }
+
         // boost's unequal-width order: the highest positions paired first over the common length, then the shorter is less.
         [[nodiscard]] constexpr auto top_aligned_three_way(bitset_adaptor const& rhs) const noexcept
                 -> std::strong_ordering

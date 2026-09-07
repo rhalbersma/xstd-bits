@@ -758,7 +758,15 @@ so `std::set<xstd::bitset<N>>` works and boost's `<` is no longer an omission. A
 in at both widths, every storage under the wrapper having blocks: `block_type`, `bits_per_block`, `num_blocks()`,
 `to_block_range` writing every block including the clear tail, `from_block_range` reading at most every block
 with the tail masked rather than trusted, and the block-range constructor at a run-time width, a whole number
-of blocks wide. Nothing of boost's is left out.
+of blocks wide. The rest of boost's surface is there too, at both widths where a width does not preclude it:
+the throwing `at(pos)`, `test_set`, the ranged `set`/`reset`/`flip(pos, len)` behind the one guard on the whole
+range, element-wise until the blit brings the masked block; `max_size()` in bits, the width at a static one and
+the widest whole number of blocks the blocks and the address space admit at a run-time one; and where the
+storage takes an allocator, `allocator_type`, `get_allocator()` and the allocator arguments on the
+constructors. The name `allocator_type` is an empty base a class either has or has not, a class having no
+conditional typedef. One boost constructor is left out on purpose: `dynamic_bitset(str, pos, n, num_bits,
+alloc)` puts a width where `std::bitset`'s `(str, pos, n, zero, one)` puts a character, and one signature
+cannot extend both; `std::bitset`'s wins, the width being the characters read.
 
 What ours does not add is a range: becoming one would change what generic code does with it, from `fmt` to
 `std::ranges::to`, which is the one addition a strict extension cannot make. `bit_set_view` and `bit_span`

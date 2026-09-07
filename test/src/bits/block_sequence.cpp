@@ -9,10 +9,12 @@
 #include <xstd/bits/bit_traits.hpp>    // bit_storage, bit_traits, block_readable, static_bit_extent
 #include <xstd/bits/block_sequence.hpp> // block_array, block_inplace_vector, block_sequence, block_storage, block_vector
 #include <algorithm>                   // count, lexicographical_compare_three_way, min
+#include <concepts>                    // same_as
 #include <array>                       // array
 #include <compare>                     // strong_ordering
 #include <cstddef>                     // size_t
 #include <cstdint>                     // uint8_t, uint64_t
+#include <memory>                      // allocator
 #include <initializer_list>            // initializer_list
 #include <new>                         // IWYU pragma: keep; bad_alloc, behind TEST_HAS_INPLACE_VECTOR
 #include <ranges>                      // iota
@@ -844,6 +846,31 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheTraitsNameAllThreeOrderings, T, test::graded_ex
                         BOOST_CHECK(traits::bitset_three_way(x, y)   == x.bitset_three_way(y));
                 }
         }
+}
+
+// Dependent, so a storage without an allocator answers false.
+template<class X>
+constexpr bool has_allocator = requires (X const& x) { sizeof(typename X::allocator_type); x.get_allocator(); };
+
+// The allocator where the blocks have one, and max_size in bits at both widths. [design.md#a-strict-extension]
+BOOST_AUTO_TEST_CASE(TheAllocatorAndTheMaximumWidth)
+{
+        using V = xstd::block_vector<std::uint8_t>;
+        static_assert(has_allocator<V>);
+        static_assert(std::same_as<V::allocator_type, std::allocator<std::uint8_t>>);
+        auto const alloc = std::allocator<std::uint8_t>();
+        auto const empty = V(alloc);
+        BOOST_CHECK_EQUAL(empty.size(), 0UZ);
+        BOOST_CHECK(empty.get_allocator() == alloc);
+        auto const nine = V(9UZ, alloc);
+        BOOST_CHECK_EQUAL(nine.size(), 9UZ);
+        BOOST_CHECK_EQUAL(nine.num_blocks(), 2UZ);
+        BOOST_CHECK_EQUAL(nine.max_size() % V::bits_per_block, 0UZ);
+        BOOST_CHECK_GE(nine.max_size(), std::vector<std::uint8_t>().max_size() / 2);
+
+        using A = xstd::block_array<std::uint8_t, 9>;
+        static_assert(not has_allocator<A>);
+        static_assert(A().max_size() == 9UZ);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

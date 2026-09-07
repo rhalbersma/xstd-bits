@@ -20,7 +20,7 @@
 #include <stdexcept>                              // invalid_argument, out_of_range, overflow_error
 #include <string>                                 // string
 #include <tuple>                                  // tuple
-#include <utility>                                // pair
+#include <utility>                                // as_const, pair
 #include <vector>                                 // vector
 
 BOOST_AUTO_TEST_SUITE(DynamicBitset)
@@ -137,6 +137,62 @@ BOOST_AUTO_TEST_CASE(TheBlockInterfaceIsBoosts)
 
         // The two-argument form stays the width-and-value constructor, as boost's dispatch keeps it.
         BOOST_CHECK_EQUAL(T(3, 7).to_ullong(), 7ULL);
+}
+
+// The rest of boost's surface, first the allocator and max_size. [design.md#a-strict-extension]
+BOOST_AUTO_TEST_CASE_TEMPLATE(TheAllocatorAndMaxSizeAreBoosts, T, Dynamic)
+{
+        using Block = T::block_type;
+        using Boost = boost::dynamic_bitset<Block>;
+        static_assert(std::same_as<typename T::allocator_type, std::allocator<Block>>);
+
+        auto const alloc = std::allocator<Block>();
+        auto const a = T(alloc);
+        BOOST_CHECK(a.empty());
+        BOOST_CHECK(a.get_allocator() == alloc);
+        auto const b = T(9, 0b101ULL, alloc);
+        BOOST_CHECK_EQUAL(b.to_ullong(), 5ULL);
+        auto const blocks = std::array<Block, 2>{ 1, 2 };
+        auto const c = T(blocks.begin(), blocks.end(), alloc);
+        BOOST_CHECK_EQUAL(c.num_blocks(), 2UZ);
+
+        // A whole number of blocks, no larger than boost's bound over the same blocks.
+        BOOST_CHECK_EQUAL(b.max_size() % T::bits_per_block, 0UZ);
+        BOOST_CHECK_GE(b.max_size(), b.size());
+        BOOST_CHECK_LE(b.max_size(), Boost(9).max_size());
+}
+
+// Then the throwing at and test_set. [design.md#a-strict-extension]
+BOOST_AUTO_TEST_CASE_TEMPLATE(AtAndTestSetAreBoosts, T, Dynamic)
+{
+        auto d = T(9, 0b101ULL);
+        BOOST_CHECK_EQUAL(d.at(0), true);
+        BOOST_CHECK_EQUAL(std::as_const(d).at(1), false);
+        d.at(1) = true;
+        BOOST_CHECK(d.test(1));
+        BOOST_CHECK_THROW(static_cast<void>(d.at(9)), std::out_of_range);
+        BOOST_CHECK_THROW(static_cast<void>(std::as_const(d).at(9)), std::out_of_range);
+
+        BOOST_CHECK_EQUAL(d.test_set(1, false), true);
+        BOOST_CHECK_EQUAL(d.test_set(1), false);
+        BOOST_CHECK(d.test(1));
+}
+
+// The ranged forms against boost's, across a block boundary and up to the last position.
+BOOST_AUTO_TEST_CASE_TEMPLATE(TheRangedFormsAreBoosts, T, Dynamic)
+{
+        using Boost = boost::dynamic_bitset<typename T::block_type>;
+
+        for (auto const& [ pos, len ] : { std::pair{ 0UZ, 0UZ }, std::pair{ 3UZ, 4UZ }, std::pair{ 6UZ, 14UZ }, std::pair{ 0UZ, 20UZ } }) {
+                auto ours = T(20, 0b1010'1010'1010'1010'1010ULL);
+                auto theirs = Boost(20, 0b1010'1010'1010'1010'1010UL);
+                ours.set(pos, len, true); theirs.set(pos, len, true);
+                BOOST_CHECK_EQUAL(ours.to_ullong(), theirs.to_ulong());
+                ours.flip(pos, len); theirs.flip(pos, len);
+                BOOST_CHECK_EQUAL(ours.to_ullong(), theirs.to_ulong());
+                ours.reset(pos, len); theirs.reset(pos, len);
+                BOOST_CHECK_EQUAL(ours.to_ullong(), theirs.to_ulong());
+        }
 }
 
 // Growth, boost's members: resize with either fill, push and pop, append a block and a range, reserve, shrink, clear.
