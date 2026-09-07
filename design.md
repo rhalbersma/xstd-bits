@@ -140,6 +140,19 @@ A plain index walk rather than `drop` + `find_if`, and a descending one rather t
 position, so it never needed recovering. The reverse form composed two adaptors only to have `distance()`
 undo them.
 
+### the-blit
+
+`word_at<Traits>(c, pos)` is the block-wide word at any position of any storage the trait reads by block:
+the bits `[pos, pos + digits)`, assembled from `block(pos / digits) >> r` and the next block `<< (digits - r)`
+where `r = pos % digits`. Two things make it total where it is called. A shift by `digits` is undefined, so
+an aligned read is the block itself with no second term; and the last block has nothing above it, so the
+read stops there rather than asking for a block past the end. What the word reaches beyond the width is the
+clear tail, and it is the caller's to trim. It is the one primitive under every unaligned read: the sequence
+adaptor's `append_range` from a sequence read by block ([the-range-members](#the-range-members)), and the
+bitset reading's order at unequal widths ([the-ordering-invariant](#the-ordering-invariant)), where each
+operand's top window is read as words at its own alignment and both windows end at their own width, so the
+tail needs no mask.
+
 ## Contracts
 
 ### total-versus-precondition
@@ -396,9 +409,9 @@ boost's own `<` pair for pair over those widths, against `to_string()` compared 
 against `to_ullong()`.
 
 `bitset_adaptor::operator<=>` is `bitset_three_way` at equal widths, and at unequal ones boost's own walk,
-the top `min(size())` positions paired from the top and then the shorter first; the block-wise form of that
-walk needs shifted reads and arrives with the blit. `==` stays width-first, and `<=>` never answers equal at
-unequal widths, so the two agree ([the-hashing-invariant](#the-hashing-invariant)).
+the top `min(size())` positions paired from the top and then the shorter first, a word at a time through
+`word_at` ([the-blit](#the-blit)). `==` stays width-first, and `<=>` never answers equal at unequal widths,
+so the two agree ([the-hashing-invariant](#the-hashing-invariant)).
 
 Where a specialization offers nothing faster, the default is that standard algorithm over the reading's own
 iterators — so the default cannot disagree with the specification, and only an optimization can.
@@ -661,6 +674,28 @@ neither compares nor hashes ([views-follow-their-precedent](#views-follow-their-
 operators and no `fill`: on packed bits those are block-wise, a window's end blocks are shared with what lies
 outside it, and masking them is the work that arrives with the blit. Until then a window is read and written
 one position at a time, which `std::ranges::fill` over its iterators already does.
+
+### the-range-members
+
+`append_range` has two tiers. Where the source is a sequence adaptor of any shape, owner, view or window,
+whose trait reads blocks of the destination's block type, the source's bits are read as words at the source's
+own alignment through `word_at` and appended a word at a time through `block_sequence::append(block)`, which
+splits each word over the destination's own alignment; then the width is trimmed to the count, `resize`
+clearing whatever the last word carried past it. Everything else, a `std::vector<bool>`, an `iota` under a
+`transform`, a sequence over another block type, is packed a word at a time, which is boost's private
+`bit_appender`, and trimmed the same way. A source inside the very storage being appended to is safe: the
+blit reads positions below the old width alone, and no append writes one.
+
+`insert_range`, `insert` in its four shapes, `emplace` and both `erase`s rebuild rather than shift: the head
+through `first(pos)`, the middle, the tail through `subspan(pos)`, into a fresh sequence that is then swapped
+in. Every step runs at the blit's tier, insertion into a packed sequence is linear however it is done, and
+the strong exception guarantee comes free, which is what `std::vector::insert_range` gives on reallocation.
+`subspan` pays for itself here, the head and the tail being exactly windows. In-place block-wise shifting of
+the suffix stays available as a later optimization behind profiling.
+
+`flip()` is `[vector.bool]`'s, a bulk operation like the six operators beside it, so an owner and a whole
+view have it and a window does not; the static `swap(reference, reference)` is the proxies' own swap under
+the name the standard gives it.
 
 ### views-over-owners
 

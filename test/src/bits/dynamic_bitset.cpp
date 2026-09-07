@@ -108,6 +108,29 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheOrderingIsBoosts, T, Dynamic)
                 }
         }
         BOOST_CHECK_EQUAL(disagreements, 0);
+
+        // And across blocks at unequal widths, where the top windows are read a word at a time at either alignment. [design.md#the-blit]
+        using Narrow = xstd::basic_dynamic_bitset<std::uint8_t>;
+        auto wide = 0;
+        for (auto const w : { 0UZ, 3UZ, 8UZ, 9UZ, 16UZ, 17UZ, 25UZ, 70UZ }) {
+                for (auto const u : { 0UZ, 3UZ, 8UZ, 9UZ, 16UZ, 17UZ, 25UZ, 70UZ }) {
+                        for (auto const p : { 0ULL, 1ULL, 0b1010'1010ULL, 0b1'0000'0000ULL, 0xFFFFULL, 0x8001ULL, 0x1F'FFFFULL }) {
+                                for (auto const q : { 0ULL, 1ULL, 0b1010'1010ULL, 0b1'0000'0000ULL, 0xFFFFULL, 0x8001ULL, 0x1F'FFFFULL }) {
+                                        auto x = Narrow(w, p);
+                                        auto y = Narrow(u, q);
+                                        auto bx = boost::dynamic_bitset<std::uint8_t>(w, static_cast<unsigned long>(p));
+                                        auto by = boost::dynamic_bitset<std::uint8_t>(u, static_cast<unsigned long>(q));
+                                        if (w > 64) { x.set(69); bx.set(69); }
+                                        if (u > 64) { y.set(65); by.set(65); }
+                                        auto const cmp = x <=> y;
+                                        wide += static_cast<int>((cmp < 0) != (bx < by));
+                                        wide += static_cast<int>((cmp > 0) != (by < bx));
+                                        wide += static_cast<int>((cmp == 0) != (bx == by));
+                                }
+                        }
+                }
+        }
+        BOOST_CHECK_EQUAL(wide, 0);
 }
 
 // boost's block interface: the block-range constructor, every block out, at most every block in.
