@@ -6,6 +6,7 @@
 #include <boost/test/unit_test.hpp>    // BOOST_CHECK_EQUAL, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <test/block_types.hpp>        // digits_v, graded_extents, word_types
 #include <test/inplace_vector.hpp>     // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
+#include <test/uint128.hpp>            // IWYU pragma: keep; TEST_HAS_UINT128, uint128
 #include <xstd/bits/bit_traits.hpp>    // bit_storage, bit_traits, block_readable, static_bit_extent
 #include <xstd/bits/block_sequence.hpp> // block_array, block_inplace_vector, block_sequence, block_storage, block_vector
 #include <algorithm>                   // count, lexicographical_compare_three_way, min
@@ -607,6 +608,31 @@ BOOST_AUTO_TEST_CASE(AStaticWidthDoesNotGrow)
 }
 
 #ifdef TEST_HAS_INPLACE_VECTOR
+// No hole in front of the blocks at any alignment: the width takes theirs where they out-align a size_t, so the
+// class is its two members and nothing else, which is what -Wpadded asks of it. [design.md#padding]
+BOOST_AUTO_TEST_CASE(TheWidthFillsWhatWouldOtherwisePadTheBlocks)
+{
+        // The width slot is a size_t, or the blocks' alignment where that is wider.
+        constexpr auto tiles = [](std::size_t whole, std::size_t blocks, std::size_t block_align) {
+                return whole == blocks + std::ranges::max(sizeof(std::size_t), block_align);
+        };
+
+        static_assert(tiles(sizeof(xstd::block_inplace_vector<std::uint8_t, 24>), sizeof(std::inplace_vector<std::uint8_t, 3>), alignof(std::inplace_vector<std::uint8_t, 3>)));
+        static_assert(tiles(sizeof(xstd::block_vector<std::uint8_t>), sizeof(std::vector<std::uint8_t>), alignof(std::vector<std::uint8_t>)));
+
+        // A static width carries no width member at all, so the class is its blocks exactly.
+        static_assert(sizeof(xstd::block_array<std::uint8_t, 24>) == sizeof(std::array<std::uint8_t, 3>));
+
+#ifdef TEST_HAS_UINT128
+        // The one cell that reaches an over-aligned storage: the width is a block there, and pays nothing for it.
+        static_assert(tiles(sizeof(xstd::block_inplace_vector<xstd::uint128, 384>), sizeof(std::inplace_vector<xstd::uint128, 3>), alignof(std::inplace_vector<xstd::uint128, 3>)));
+        static_assert(alignof(std::inplace_vector<xstd::uint128, 3>) > alignof(std::size_t));
+
+        // The heap column never reaches it: a vector is a pointer's alignment whatever it holds.
+        static_assert(sizeof(xstd::block_vector<xstd::uint128>) == sizeof(xstd::block_vector<std::uint64_t>));
+#endif
+}
+
 // The third storage: a run-time width under a compile-time capacity, the sweep unchanged over it, and growth past the capacity a bad_alloc. [design.md#growth]
 BOOST_AUTO_TEST_CASE(AnInplaceVectorIsARunTimeWidthUnderAStaticCapacity)
 {

@@ -46,6 +46,21 @@ padding where in truth the sole block is all of it — and it gets a selection i
 answers C4293, *shift count too big*, on the arm it discards. `used_bits()` is the same two cases at a
 run-time width.
 
+The width member takes the blocks' alignment where they out-align a `std::size_t`:
+
+```cpp
+using width_type = std::conditional_t<(alignof(std::size_t) >= alignof(Blocks)), std::size_t, block_type>;
+```
+
+Only a storage holding its blocks inline out-aligns a `size_t`, and it does so by the blocks' own alignment, so
+`block_type` is both wide enough to hold any width and exactly the size of the gap it fills -- `block_sequence`
+is then its two members and nothing else, at the same size the padding cost. `std::array` reaches none of this,
+a static width carrying no member at all, and neither does `std::vector`, whose alignment is a pointer's whatever
+it holds; `block_inplace_vector<xstd::uint128, N>` is the one cell that does. The `static_assert` beside the
+alias holds the two facts that make `block_type` the right carrier, so a storage over-aligned for some other
+reason fails loudly rather than truncating a width. Every reader goes through `size()`, which converts once, so
+the arithmetic stays a `size_t`'s.
+
 ### default-construction
 
 A defaulted default constructor plus an NSDMI, rather than two constructors constrained on the extent:
@@ -767,10 +782,57 @@ to fix.
 
 One header per restricted name, holding its `basic_` form beside it, each over one storage: `bit_set`,
 `bit_vector` and `dynamic_bitset` over `block_vector<Block, Allocator>`, beside `bit_static_set`, `bit_array` and
-`bitset` over `block_array<Block, N>`. The header is the name's home and the only place it is spelled; `bits.hpp`
-includes them all. Each static name has an `aligned` form in the namespace of that name, in both layers, its
-width rounded up to whole blocks so that no block carries an unused tail: `aligned::bitset<9>` is `bitset<64>`
-and `aligned::basic_bitset<9, std::uint8_t>` is `basic_bitset<16, std::uint8_t>`.
+`bitset` over `block_array<Block, N>`, and `bit_inplace_set`, `bit_inplace_vector` and `inplace_bitset` over
+`block_inplace_vector<Block, N>` ([the-inplace-column](#the-inplace-column)). The header is the name's home and
+the only place it is spelled; `bits.hpp` includes them all. Each static name has an `aligned` form in the
+namespace of that name, in both layers, its width rounded up to whole blocks so that no block carries an unused
+tail: `aligned::bitset<9>` is `bitset<64>` and `aligned::basic_bitset<9, std::uint8_t>` is
+`basic_bitset<16, std::uint8_t>`. The inplace column has no `aligned` form, its `N` being a capacity the storage
+already rounds up rather than a width to round.
+
+### the-inplace-column
+
+The third storage point gets public names, one per reading and each an alias like every other name below the
+adaptors: `basic_bit_inplace_set<N, Block>`, `basic_bit_inplace_vector<N, Block>` and
+`basic_inplace_bitset<N, Block>` over `block_inplace_vector<Block, N>`, with `bit_inplace_set<N>`,
+`bit_inplace_vector<N>` and `inplace_bitset<N>` at the machine word. `inplace_bitset` takes no `bit_` prefix
+because `bitset` already carries the word, and `inplace` is one storage word down each column rather than a
+second vocabulary for the same thing.
+
+`N` is a **capacity** in bits here, where the static column's `N` is a width. The names carry that and the
+parameter lists do not, which is the same hazard `bit_static_set<N, Block>` and `bit_inplace_set<N, Block>`
+share by shape. The capacity is rounded up to whole blocks by `block_inplace_vector` itself, so
+`basic_bit_inplace_vector<9, std::uint8_t>` holds sixteen bits; the width under it is a run-time one and carries
+an unused tail like any other.
+
+The whole column sits behind `__cpp_lib_inplace_vector`, in practice libstdc++ >= 16, which the matrix carries on
+gcc 16 and 17-SVN. An alias adds no capability, so the guard withholds a name rather than a feature, and each
+header's includes sit inside the guard too: on a library without the storage the header is its include guard and
+nothing else. Growth past the capacity throws `std::bad_alloc`, which is `std::inplace_vector`'s own answer
+reaching the caller unchanged; on the set reading that is where `insert` stops being total.
+
+P0843 declined to repeat `vector<bool>`, so there is no `std::inplace_vector<bool>` to check a packed sequence
+against. `test::sequence::inplace_vector_bool` is `[vector.bool]`'s checklist minus the lines the allocator
+reaches, and `std::vector<bool>` answers every line of it, so it is asserted on the model first exactly as
+`vector_bool` is ([the-sequence-contract](#the-sequence-contract)).
+
+`max_size()` splits by reading here, visibly rather than newly. The set and sequence readings report what a
+growing width can reach -- `numeric_limits<size_t>::max() - 1` and `numeric_limits<size_t>::max()`, the address
+space rather than any storage -- which is what their own tests pin at a run-time width and what the heap-backed
+pair report too. The bitset reading forwards to `block_sequence::max_size()`, which asks the blocks, because
+`boost::dynamic_bitset::max_size()` is a member a strict extension owes ([a-strict-extension](#a-strict-extension)).
+So `inplace_bitset<24>` answers 24 and `bit_inplace_vector<24>` answers the address space, and the capacity is
+`capacity()` on the sequence and bitset readings. The set reading has neither, `std::set` having no `capacity()`
+and a set growing by `insert` ([growth](#growth)), so there a capacity is only ever felt at the throw.
+
+The column is graded over every block the other two are, `xstd::uint128` included, which it can be because the
+width member now carries its own alignment ([padding](#padding)). Before that, a 16-byte-aligned block after a
+`std::size_t` width padded the class, and `-Wpadded` under `-Werror` rejected it; the inplace column was the only
+cell that could reach it, a static width carrying no width member at all and `std::vector`'s alignment being a
+pointer's whatever it holds.
+
+Every leg without the storage compiles each of the three tests' `#else` arm, one case asserting the absence,
+because a Boost.Test module whose test tree is empty is a setup error rather than a pass.
 
 ### width-is-capacity
 

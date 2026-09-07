@@ -76,6 +76,13 @@ private:
         static constexpr auto zero     = static_cast<block_type>( 0);
         static constexpr auto ones     = static_cast<block_type>(-1);
 
+        // The width is a size_t, unless the blocks out-align one: then it is a block, which fills what would
+        // otherwise be padding in front of them. Only a storage holding its blocks inline out-aligns a size_t,
+        // and it does so by their alignment, so a block is both wide enough to hold any width and exactly the
+        // size the gap is. [design.md#padding]
+        using width_type = std::conditional_t<(alignof(std::size_t) >= alignof(Blocks)), std::size_t, block_type>;
+        static_assert(sizeof(width_type) >= sizeof(std::size_t) and alignof(width_type) >= alignof(Blocks));
+
         // Width zero named, not computed: MSVC folds both ?: arms and answers C4293. [design.md#padding]
         static constexpr auto static_num_unused_bits = has_static_size ? static_num_bits - N : 0UZ;
         static constexpr auto static_used_bits       = has_static_size and N == 0 ? zero : static_cast<block_type>(ones >> static_num_unused_bits);
@@ -102,7 +109,7 @@ private:
         // Dynamic widths only; the tag keeps the absent member distinct from any other in an enclosing layout.
         // Declared first, so the defaulted == rejects on the width before it reads a block. [design.md#block-storage]
         [[XSTD_NO_UNIQUE_ADDRESS]]
-        conditional_data_member_t<not has_static_size, std::size_t, struct size_tag> m_size{};
+        conditional_data_member_t<not has_static_size, width_type, struct size_tag> m_size{};
 
         Blocks m_blocks = make_blocks(0UZ);
 
@@ -175,7 +182,7 @@ public:
                 if constexpr (has_static_size) {
                         return N;
                 } else {
-                        return m_size;
+                        return static_cast<std::size_t>(m_size);
                 }
         }
 
@@ -626,7 +633,7 @@ public:
                 requires (not has_static_size)
         {
                 // Growing with ones: the tail above size() in the last block is clear by the invariant, and becomes the first new bits.
-                if (value and n > m_size) {
+                if (value and n > size()) {
                         m_blocks[last_block()] |= static_cast<block_type>(~used_bits());
                 }
                 m_blocks.resize(blocks_for(n), value ? ones : zero);
@@ -644,25 +651,25 @@ public:
         constexpr void push_back(bool value)
                 requires (not has_static_size)
         {
-                resize(m_size + 1UZ, value);
+                resize(size() + 1UZ, value);
         }
 
         constexpr void pop_back()
                 requires (not has_static_size)
         {
-                assert(m_size != 0UZ);
-                resize(m_size - 1UZ);
+                assert(size() != 0UZ);
+                resize(size() - 1UZ);
         }
 
         // Boost's append: the block's bits become the positions [size(), size() + bits_per_block), split over two blocks where size() is not aligned.
         constexpr void append(block_type value)
                 requires (not has_static_size)
         {
-                auto const offset = m_size % bits_per_block;
+                auto const offset = size() % bits_per_block;
                 if (offset != 0UZ) {
                         m_blocks[last_block()] |= static_cast<block_type>(value << offset);
                         m_blocks.push_back(static_cast<block_type>(value >> (bits_per_block - offset)));
-                } else if (m_size != 0UZ) {
+                } else if (size() != 0UZ) {
                         m_blocks.push_back(value);
                 } else {
                         // The floor block is the fresh one.
@@ -677,7 +684,7 @@ public:
                 requires (not has_static_size)
         {
                 if constexpr (std::forward_iterator<I> and requires (Blocks& b) { b.reserve(0UZ); }) {
-                        reserve(m_size + (static_cast<std::size_t>(std::ranges::distance(first, last)) * bits_per_block));
+                        reserve(size() + (static_cast<std::size_t>(std::ranges::distance(first, last)) * bits_per_block));
                 }
                 for (; first != last; ++first) {
                         append(*first);
