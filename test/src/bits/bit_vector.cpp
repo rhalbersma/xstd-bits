@@ -148,7 +148,7 @@ BOOST_AUTO_TEST_CASE(ItGrowsLikeAStdVector)
         v.shrink_to_fit();
         BOOST_CHECK_GE(v.capacity(), v.size());
 
-        BOOST_CHECK_EQUAL(v.max_size(), std::numeric_limits<std::size_t>::max());
+        BOOST_CHECK_EQUAL(v.max_size(), xstd::block_vector<std::uint8_t>().max_size());
 
         v.clear();
         BOOST_CHECK(v.empty());

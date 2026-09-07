@@ -21,7 +21,6 @@
 #include <functional>                             // hash
 #include <initializer_list>                       // initializer_list
 #include <iterator>                               // input_iterator, make_reverse_iterator, reverse_iterator, sentinel_for
-#include <limits>                                 // numeric_limits
 #include <algorithm>                              // copy, min, remove_if
 #include <ranges>                                 // begin, enable_borrowed_range, enable_view, end, from_range_t, input_range, range_reference_t, size, sized_range, subrange
 #include <source_location>                        // source_location
@@ -446,7 +445,8 @@ public:
         [[nodiscard]] constexpr auto crbegin() const noexcept -> const_reverse_iterator { return std::make_reverse_iterator(cend());   }
         [[nodiscard]] constexpr auto crend()   const noexcept -> const_reverse_iterator { return std::make_reverse_iterator(cbegin()); }
 
-        // capacity; a static width is its own max_size, a growing one has the address space's, a window its own count.
+        // capacity; max_size() is the positions there are to hold: a growing one what its storage can address, and a
+        // static width, a view or a window their own, none of them able to grow. [design.md#max-size-is-the-bits]
         [[nodiscard]] constexpr auto empty() const noexcept -> bool { return size() == 0UZ; }
 
         [[nodiscard]] constexpr auto size() const noexcept
@@ -463,7 +463,7 @@ public:
                 -> size_type
         {
                 if constexpr (can_grow) {
-                        return std::numeric_limits<size_type>::max();
+                        return m_bits.max_size();
                 } else {
                         return size();
                 }

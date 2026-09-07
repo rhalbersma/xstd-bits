@@ -191,20 +191,32 @@ BOOST_AUTO_TEST_CASE(TheViewsAnswerEveryReadOverEveryStorage)
         }
 }
 
-// max_size is the width where the type carries one, and the last addressable position where it does not.
-BOOST_AUTO_TEST_CASE(MaxSizeIsStaticWhereTheWidthIs)
+// max_size is the positions there are to hold: the width in the type, what an owner's storage can address, or what a
+// view is looking at, none of which is the address space. [design.md#max-size-is-the-bits]
+BOOST_AUTO_TEST_CASE(MaxSizeIsThePositionsThereAreToHold)
 {
-        static_assert(Owner::max_size() == 100UZ);
-        static_assert(View::max_size() == 100UZ);
-        static_assert(xstd::set_adaptor<xstd::block_vector<std::size_t>, xstd::ownership::refers>::max_size() == std::numeric_limits<std::size_t>::max() - 1UZ);
-        static_assert(xstd::set_adaptor<boost::dynamic_bitset<>, xstd::ownership::refers>::max_size() == std::numeric_limits<std::size_t>::max() - 1UZ);
+        auto storage = Storage();
+        static_assert(Owner().max_size() == 100UZ);
+        BOOST_CHECK_EQUAL(View(storage).max_size(), 100UZ);
 
+        // An owner grows to what its storage can address, which is whole blocks of it and never the address space.
+        using Heap = xstd::set_adaptor<xstd::block_vector<std::uint64_t>, xstd::ownership::owns>;
+        BOOST_CHECK_EQUAL(Heap().max_size(), xstd::block_vector<std::uint64_t>().max_size());
+        BOOST_CHECK_LT(Heap().max_size(), std::numeric_limits<std::size_t>::max());
+
+        // A view cannot grow what it views, so its max_size is that width -- and filling it is what full() means.
         auto v = xstd::block_vector<std::uint64_t>(10UZ);
         auto const view = xstd::set_adaptor<xstd::block_vector<std::uint64_t>, xstd::ownership::refers>(v);
+        BOOST_CHECK_EQUAL(view.max_size(), 10UZ);
         BOOST_CHECK(not view.full());
         view.fill();
-        BOOST_CHECK(not view.full());
+        BOOST_CHECK(view.full());
         BOOST_CHECK_EQUAL(view.size(), 10UZ);
+
+        // Boost's own width, read through the view over it.
+        using Boost = xstd::set_adaptor<boost::dynamic_bitset<>, xstd::ownership::refers>;
+        auto b = boost::dynamic_bitset<>(9UZ);
+        BOOST_CHECK_EQUAL(Boost(b).max_size(), 9UZ);
 }
 
 // The set operations use the storage's members where it has them, and its bulk operators where it has not.

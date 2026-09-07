@@ -33,7 +33,7 @@ concept static_width = requires { typename xstd::owned_storage<X>::bits_type; } 
 template<class X, std::size_t Limit>
 inline constexpr auto limit_v = []() {
         if constexpr (static_width<X>) {
-                return X::max_size();
+                return X().max_size();
         } else {
                 return Limit;
         }

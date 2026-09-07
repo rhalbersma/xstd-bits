@@ -62,9 +62,8 @@ BOOST_AUTO_TEST_CASE(TheCapacityIsTheRequestedOneRoundedUpToWholeBlocks)
         BOOST_CHECK_EQUAL(v.capacity(), 24UZ);
         BOOST_CHECK(v.empty());
 
-        // max_size() is the address space's wherever a width grows, as it is on the heap-backed sequence; the capacity
-        // is capacity(), and where it bites is the throw below. [design.md#the-inplace-column]
-        BOOST_CHECK_EQUAL(v.max_size(), std::numeric_limits<std::size_t>::max());
+        // max_size() is the positions there are to hold, which under a static capacity is that capacity. [design.md#max-size-is-the-bits]
+        BOOST_CHECK_EQUAL(v.max_size(), 24UZ);
 
         v.resize(17, true);
         BOOST_CHECK_EQUAL(v.size(), 17UZ);

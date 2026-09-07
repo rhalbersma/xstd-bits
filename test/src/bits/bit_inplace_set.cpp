@@ -71,9 +71,9 @@ BOOST_AUTO_TEST_CASE(InsertingPastTheCapacityThrowsBadAlloc)
 {
         auto s = T();
 
-        // max_size() is the key domain a growing width admits, as it is on the heap-backed set; the capacity is
-        // felt at the throw below rather than reported. [design.md#the-inplace-column]
-        BOOST_CHECK_EQUAL(T::max_size(), std::numeric_limits<std::size_t>::max() - 1UZ);
+        // max_size() is the positions there are to hold, which under a static capacity is that capacity, the same
+        // answer the other two readings give over this storage. [design.md#max-size-is-the-bits]
+        BOOST_CHECK_EQUAL(s.max_size(), 24UZ);
         static_assert(not has_capacity<T>);
         BOOST_CHECK_THROW(s.insert(24), std::bad_alloc);
 

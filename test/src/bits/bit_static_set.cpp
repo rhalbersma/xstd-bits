@@ -73,7 +73,7 @@ auto check_key_outside_the_domain(X a, std::size_t x) -> void
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(LookupIsTotalOverKeyType, T, Types)
 {
-        auto const N = T::max_size();
+        auto const N = T().max_size();
         auto const full = std::views::iota(0UZ, N) | std::ranges::to<T>();
 
         // Just past the end, past the last block, and the value that would wrap any n + 1.

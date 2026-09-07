@@ -816,14 +816,11 @@ against. `test::sequence::inplace_vector_bool` is `[vector.bool]`'s checklist mi
 reaches, and `std::vector<bool>` answers every line of it, so it is asserted on the model first exactly as
 `vector_bool` is ([the-sequence-contract](#the-sequence-contract)).
 
-`max_size()` splits by reading here, visibly rather than newly. The set and sequence readings report what a
-growing width can reach -- `numeric_limits<size_t>::max() - 1` and `numeric_limits<size_t>::max()`, the address
-space rather than any storage -- which is what their own tests pin at a run-time width and what the heap-backed
-pair report too. The bitset reading forwards to `block_sequence::max_size()`, which asks the blocks, because
-`boost::dynamic_bitset::max_size()` is a member a strict extension owes ([a-strict-extension](#a-strict-extension)).
-So `inplace_bitset<24>` answers 24 and `bit_inplace_vector<24>` answers the address space, and the capacity is
-`capacity()` on the sequence and bitset readings. The set reading has neither, `std::set` having no `capacity()`
-and a set growing by `insert` ([growth](#growth)), so there a capacity is only ever felt at the throw.
+`max_size()` is 24 on all three names over `<24, std::uint8_t>`, this column being where the three readings
+first disagreed about it and the reason they no longer do ([max-size-is-the-bits](#max-size-is-the-bits)).
+`capacity()` is the sequence and bitset readings'; the set has neither, `std::set` having no `capacity()` and a
+set growing by `insert` ([growth](#growth)), so there a capacity is felt at the throw and reported by
+`max_size()`.
 
 The column is graded over every block the other two are, `xstd::uint128` included, which it can be because the
 width member now carries its own alignment ([padding](#padding)). Before that, a 16-byte-aligned block after a
@@ -833,6 +830,32 @@ pointer's whatever it holds.
 
 Every leg without the storage compiles each of the three tests' `#else` arm, one case asserting the absence,
 because a Boost.Test module whose test tree is empty is a setup error rather than a pass.
+
+### max-size-is-the-bits
+
+`[container.reqmts]/56` asks for `distance(begin(), end())` for the largest possible container, and under every
+reading of bits that is one number: **the positions there are to hold**. The set reading iterates the positions
+it holds, so its largest is every position set; the sequence reading iterates one `bool` per position; the
+bitset reading owes boost the same answer. There is no per-reading meaning of `max_size()` and no separate key
+domain -- a set over `[0, W)` holds at most `W` elements because there are `W` positions, which is the same `W`.
+
+So all three ask the same question of the same place, and only the answer's source differs by what can grow:
+
+| | `max_size()` |
+|---|---|
+| a width in the type | `Traits::extent` |
+| an owner over growing storage | the storage's `max_size()`, in bits |
+| a view, a window, a static owner | its own width, which it cannot grow |
+
+`block_sequence::max_size()` is where the real limit lives, and it is not `SIZE_MAX`: a width rounds up to whole
+blocks, so the largest addressable one is `min(blocks.max_size(), SIZE_MAX / bits_per_block) * bits_per_block`
+-- `SIZE_MAX - 63` at a `size_t` block, and `N` rounded up at an inplace one. Nothing above it needs to restate
+that arithmetic, and nothing above it should: a constant at the adaptor drifts from the storage the moment the
+storage learns something, which is how `set_adaptor` came to answer `SIZE_MAX - 1` while `dynamic_bitset`
+answered `SIZE_MAX - 63` over the same blocks.
+
+That the set's is not `static` follows: an owner must ask its storage and a view must ask what it views, neither
+of which a static member can reach. `std::set::max_size()` is not static either.
 
 ### width-is-capacity
 
@@ -947,9 +970,8 @@ out of bounds.
 `insert` carries no `noexcept`, for the reason `std::set::insert` carries none: growing a dynamic extent
 allocates. It is the one operation a set can be unable to satisfy, and only a **static** extent ever is — a
 fixed capacity cannot come to hold a position outside it, so that is the precondition violation. A dynamic
-extent grows to hold it, `[set]` giving `insert` no way to fail. Growing has a limit of its own: `n + 1` must
-be a width the container can address, and `dynamic_bitset::max_size()` being `SIZE_MAX`, the one position
-ruled out is the one whose successor wraps to zero.
+extent grows to hold it, `[set]` giving `insert` no way to fail. Growing has a limit of its own, and it is the
+storage's rather than the address space's: `max_size()` ([max-size-is-the-bits](#max-size-is-the-bits)).
 
 Erasing stays total like `contains`: removing what is not there is the no-op returning zero that
 `std::set::erase` is.
