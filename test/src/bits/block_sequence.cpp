@@ -921,6 +921,21 @@ auto word_sample() -> T
         return b;
 }
 
+// A whole number of blocks, so there is no unused tail. operator<<= masks one off at the end, and the case below is
+// about the splice rather than about that mask.
+template<class T>
+auto aligned_sample() -> T
+{
+        auto b = T();
+        if constexpr (requires { b.resize(24UZ); }) {
+                b.resize(24UZ);
+        }
+        for (auto const i : { 0UZ, 3UZ, 7UZ, 8UZ, 12UZ, 15UZ, 19UZ, 23UZ }) {
+                b.set(i);
+        }
+        return b;
+}
+
 // One start and length through set, flip and reset, each against the model; a function rather than a loop body so the
 // case that sweeps it stays under readability-function-cognitive-complexity's threshold.
 template<class T>
@@ -979,6 +994,36 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheRangedFormsGoAWordAtATime, T, WordTypes)
                         if (n + len <= 20UZ) {
                                 check_ranged_forms<T>(n, len);
                         }
+                }
+        }
+}
+
+// Three blocks with no tail, so a shift's destination block is exactly the splice and nothing masks it afterwards.
+using AlignedWordTypes = std::tuple<xstd::block_array<std::uint8_t, 24>, xstd::block_vector<std::uint8_t>>;
+
+// The identity that lets one primitive serve all three sites: a right shift's destination block is word_at at that
+// position of the operand, and a left shift's is the same read one block lower. Each holds only where the block
+// above it exists -- past that there is nothing left to splice, which is the edge both operators hoist out of their
+// loop rather than test per block. [design.md#the-funnel-shift]
+BOOST_AUTO_TEST_CASE_TEMPLATE(BothShiftsAreWordAtOnTheOperand, T, AlignedWordTypes)
+{
+        constexpr auto D = 8UZ;
+        auto const c = aligned_sample<T>();
+        auto const last = c.num_blocks() - 1UZ;
+
+        for (auto n = 0UZ; n < c.size(); ++n) {
+                auto const n_blocks = n / D;
+
+                auto r = c;
+                r >>= n;
+                for (auto i = 0UZ; i + n_blocks <= last; ++i) {
+                        BOOST_CHECK_EQUAL(r.block(i), c.word_at((i * D) + n));
+                }
+
+                auto l = c;
+                l <<= n;
+                for (auto i = n_blocks + 1UZ; i <= last; ++i) {
+                        BOOST_CHECK_EQUAL(l.block(i), c.word_at((i * D) - n));
                 }
         }
 }
