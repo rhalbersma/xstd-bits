@@ -27,6 +27,16 @@
 // The set reading, [set] over any Bits with a bit_traits specialization, owning it or referring to it. [design.md#the-three-adaptors]
 namespace xstd {
 
+namespace detail::set {
+
+// A range of consecutive ascending positions, which is what a block-wise fill needs and what a general input
+// range cannot be asked. std::views::iota is the one that says so in its type. [design.md#the-range-members]
+template<class R> inline constexpr bool is_consecutive = false;
+template<class W, class B> inline constexpr bool is_consecutive<std::ranges::iota_view<W, B>> = true;
+
+}       // namespace detail::set
+
+
 template<class Bits, ownership Own, bit_storage<Bits> Traits = bit_traits<std::remove_const_t<Bits>>>
 class set_adaptor
 {
@@ -218,11 +228,29 @@ public:
                 }
         }
 
+        // Ranged insertion has tiers, as the sequence reading's append_range does. [design.md#the-range-members]
         template<std::ranges::input_range R>
         constexpr void insert_range(this auto&& self, R&& rg)
                 requires std::constructible_from<value_type, std::ranges::range_reference_t<R>> and requires { Traits::insert(self.storage(), 0UZ); }
         {
-                self.insert(std::ranges::begin(rg), std::ranges::end(rg));
+                if constexpr (requires { self |= rg; }) {
+                        // Tier one: another set over the same storage, which is a union and already knows how to do
+                        // one block-wise, mismatched widths included.
+                        self |= rg;
+                } else if constexpr (detail::set::is_consecutive<std::remove_cvref_t<R>> and requires { self.storage().set(0UZ, 0UZ, true); }) {
+                        // Tier two: consecutive positions, so the first and last blocks are masked and everything
+                        // between them is written whole, which is what the ranged set does.
+                        if (not std::ranges::empty(rg)) {
+                                auto const lo  = static_cast<value_type>(*std::ranges::begin(rg));
+                                auto const len = static_cast<std::size_t>(std::ranges::distance(rg));
+                                // The last position first, so a growable storage is already wide enough for the fill
+                                // and a fixed one asserts exactly where an element-wise insert would have.
+                                Traits::insert(self.storage(), lo + len - 1UZ);
+                                self.storage().set(lo, len, true);
+                        }
+                } else {
+                        self.insert(std::ranges::begin(rg), std::ranges::end(rg));
+                }
         }
 
         constexpr void insert(this auto&& self, std::initializer_list<value_type> ilist)

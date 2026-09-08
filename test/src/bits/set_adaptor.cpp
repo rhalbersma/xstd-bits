@@ -6,6 +6,7 @@
 #include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <test/minimal_traits.hpp>                // minimal_traits
 #include <xstd/bits/set_adaptor.hpp>            // set_adaptor
+#include <xstd/bits/bit_set.hpp>                  // bit_set
 #include <xstd/bits/bit_static_set.hpp>           // bit_static_set
 #include <xstd/bits/block_sequence.hpp>           // block_array, block_vector
 #include <xstd/bits/ext/boost/dynamic_bitset.hpp> // bit_traits over boost::dynamic_bitset
@@ -20,7 +21,7 @@
 #include <cstdint>                                // uint8_t, uint64_t
 #include <initializer_list>                       // initializer_list
 #include <limits>                                 // numeric_limits
-#include <ranges>                                 // bidirectional_range
+#include <ranges>                                 // bidirectional_range, iota
 #include <set>                                    // set
 #include <vector>                                 // vector
 
@@ -283,6 +284,71 @@ BOOST_AUTO_TEST_CASE(TheNonMemberFormsAreTheOwners)
         BOOST_CHECK(keys(z) == std::set<std::size_t>({ 6 }));
         swap(z, z);
         BOOST_CHECK(keys(z) == std::set<std::size_t>({ 6 }));
+}
+
+// insert_range takes a tier above the element-wise loop where it can, and the point of every case here is that
+// the answer is the element-wise one. A block-wise fill has to mask its first and last block, so the boundaries
+// are where it would go wrong: a range inside one block, a range spanning several, and one of each degenerate
+// shape. [design.md#the-range-members]
+BOOST_AUTO_TEST_CASE(RangedInsertionAgreesWithTheElementwiseLoop)
+{
+        constexpr auto N = 100UZ;
+
+        // The consecutive tier, over every [lo, hi) the width admits.
+        for (auto lo = 0UZ; lo <= N; ++lo) {
+                for (auto hi = lo; hi <= N; ++hi) {
+                        auto ranged = xstd::bit_static_set<N>();
+                        ranged.insert_range(std::views::iota(lo, hi));
+
+                        auto elementwise = xstd::bit_static_set<N>();
+                        for (auto i = lo; i < hi; ++i) {
+                                elementwise.insert(i);
+                        }
+                        BOOST_CHECK(ranged == elementwise);
+                }
+        }
+
+        // It has to leave what lies outside the range alone, which a whole-block write would not.
+        auto seeded = xstd::bit_static_set<N>();
+        seeded.insert(0UZ); seeded.insert(70UZ); seeded.insert(99UZ);
+        auto expected = seeded;
+        seeded.insert_range(std::views::iota(10UZ, 65UZ));
+        for (auto i = 10UZ; i < 65UZ; ++i) {
+                expected.insert(i);
+        }
+        BOOST_CHECK(seeded == expected);
+
+        // The set tier: a union, and equally the element-wise answer.
+        auto lhs = xstd::bit_static_set<N>();
+        lhs.insert(1UZ); lhs.insert(64UZ);
+        auto const rhs = [] { auto s = xstd::bit_static_set<N>(); s.insert(64UZ); s.insert(99UZ); return s; }();
+        auto united = lhs;
+        united.insert_range(rhs);
+        for (auto const x : rhs) {
+                lhs.insert(x);
+        }
+        BOOST_CHECK(united == lhs);
+}
+
+// The dynamic width grows to hold what is inserted, and the ranged tier must grow the same way the loop does.
+BOOST_AUTO_TEST_CASE(RangedInsertionGrowsADynamicWidth)
+{
+        auto ranged = xstd::bit_set();
+        ranged.insert_range(std::views::iota(5UZ, 130UZ));
+
+        auto elementwise = xstd::bit_set();
+        for (auto i = 5UZ; i < 130UZ; ++i) {
+                elementwise.insert(i);
+        }
+        BOOST_CHECK(ranged == elementwise);
+        BOOST_CHECK_EQUAL(ranged.size(), 125UZ);
+
+        // Appending a second, disjoint stretch grows it again and keeps the first.
+        ranged.insert_range(std::views::iota(200UZ, 260UZ));
+        for (auto i = 200UZ; i < 260UZ; ++i) {
+                elementwise.insert(i);
+        }
+        BOOST_CHECK(ranged == elementwise);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
