@@ -1,3 +1,13 @@
+> **Superseded — kept for reference, not maintained.**
+>
+> The live design document is [`design.md`](../design.md) in the repository root: it is the one the
+> `[design.md#anchor]` comments throughout the headers point at, and the one kept current. This file
+> predates the adaptor refactor and the inplace column, and describes two storage vehicles carrying three
+> interfaces where there are now three of each. Where the two disagree, the root document is right.
+>
+> It is retained because its framing of the naming rule and of the views is still worth reading; folding
+> what survives into the root document and deleting this file is [#115](https://github.com/rhalbersma/xstd-bits/issues/115).
+
 # xstd-bits
 
 ## Two vehicles, three Standard sections

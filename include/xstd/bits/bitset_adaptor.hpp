@@ -16,7 +16,7 @@
 #include <algorithm>                              // min
 #include <cassert>                                // assert
 #include <compare>                                // strong_ordering
-#include <concepts>                               // convertible_to, regular, same_as
+#include <concepts>                               // convertible_to, regular, same_as, swappable
 #include <cstddef>                                // size_t
 #include <format>                                 // format
 #include <functional>                             // hash
@@ -26,12 +26,12 @@
 #include <limits>                                 // numeric_limits
 #include <locale>                                 // ctype, use_facet
 #include <memory>                                 // allocator
-#include <ranges>                                 // iota
+#include <ranges>                                 // iota, swap
 #include <source_location>                        // source_location
 #include <stdexcept>                              // invalid_argument, out_of_range, overflow_error
 #include <string>                                 // basic_string, char_traits
 #include <string_view>                            // basic_string_view
-#include <type_traits>                            // remove_cvref_t
+#include <type_traits>                            // is_nothrow_swappable_v, remove_cvref_t
 #include <utility>                                // as_const
 
 namespace xstd {
@@ -212,6 +212,13 @@ public:
                 requires requires (Bits const& b) { b.get_allocator(); }
         {
                 return m_bits.get_allocator();
+        }
+
+        // Boost's, and so ours at both widths: the storage spells it alike, and an extension may add. [design.md#a-strict-extension]
+        constexpr void swap(bitset_adaptor& other) noexcept(std::is_nothrow_swappable_v<Bits>)
+                requires std::swappable<Bits>
+        {
+                std::ranges::swap(m_bits, other.m_bits);
         }
 
         template<class charT, class traits, class Allocator>
@@ -691,6 +698,14 @@ private:
                 );
         }
 };
+
+// Boost has the free form beside the member; std::bitset has neither, and an extension may add. [design.md#a-strict-extension]
+template<class Bits, class Traits>
+constexpr void swap(bitset_adaptor<Bits, Traits>& x, bitset_adaptor<Bits, Traits>& y) noexcept(noexcept(x.swap(y)))
+        requires std::swappable<Bits>
+{
+        x.swap(y);
+}
 
 // The owner's side of the view protocol: what a bit_set_view or bit_span over a bitset refers into. [design.md#views-over-owners]
 template<class Bits, class Traits>

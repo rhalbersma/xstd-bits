@@ -66,6 +66,9 @@ auto sift_primes1(std::size_t n)
         return primes;
 }
 
+// The twin primes themselves, both members of each pair -- {3, 5, 7, 11, 13, ...}, OEIS A001097 -- and not the
+// lesser of each pair -- {3, 5, 11, 17, ...}, OEIS A001359. Both are called "the twin primes" in the wild, so the
+// choice is named here rather than left to be read off the expected output of a test.
 template<class X>
 auto filter_twins(X const& primes)
 {

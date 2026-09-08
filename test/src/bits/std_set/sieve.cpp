@@ -61,5 +61,15 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(SievesTooSmallForTheSquareBreakStillSiftCorrectly,
         BOOST_CHECK(xstd::filter_twins(one).empty());
 }
 
+// The README offers a word-at-a-time twins as the dense container's answer to the elementwise one; the two agreeing
+// is the whole claim, so it is asserted rather than described. [design.md#the-sieve]
+BOOST_AUTO_TEST_CASE(TheDataParallelTwinsAgreeWithTheElementwiseOnes)
+{
+        auto const primes = xstd::sift_primes1<xstd::bit_static_set<N>>(N);
+        auto const elementwise = xstd::filter_twins(primes);
+        auto const parallel = primes & (primes << 2 | primes >> 2);
+        BOOST_CHECK(elementwise == parallel);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()
