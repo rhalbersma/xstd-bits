@@ -100,7 +100,7 @@ BOOST_AUTO_TEST_CASE(TheIncrementalSieveGeneratesWithoutABound)
         // /WX turns into an error. Comparing the values is also the more direct assertion.
         auto const expected = std::vector<std::size_t>{
                 2UZ, 3UZ, 5UZ, 7UZ, 11UZ, 13UZ, 17UZ, 19UZ, 23UZ, 29UZ, 31UZ, 37UZ, 41UZ,
-                43UZ, 47UZ, 53UZ, 59UZ, 61UZ, 67UZ, 71UZ, 73UZ, 79UZ, 83UZ, 89UZ, 97UZ
+                43UZ, 47UZ, 53UZ, 59UZ, 61UZ, 67UZ, 71UZ, 73UZ, 79UZ, 83UZ, 89UZ, 97UZ,
         };
         BOOST_CHECK_EQUAL_COLLECTIONS(first.begin(), first.end(), expected.begin(), expected.end());
 
