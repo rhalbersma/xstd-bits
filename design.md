@@ -1151,6 +1151,44 @@ capacity ([width-is-capacity](#width-is-capacity)).
 by asking the sieve for the primes under nothing -- a question with an answer, none, rather than a contract to
 break. The two unbounded sieves compute their own inner bounds, so a guard there is worth more than a comment.
 
+### the-sequence-ladder
+
+The three bit benches ask different questions and so run different ladders, which is the point rather than an
+inconsistency.
+
+Each bench is one pairing with **one variable**: `xstd::bitset<N>` against `std::bitset<N>`,
+`xstd::dynamic_bitset` against `boost::dynamic_bitset<>`, `bit_vector` against `std::vector<bool>`. Same
+reading, same storage, ours against theirs -- so a row measures the implementation and nothing else. Putting
+`boost::dynamic_bitset` on the sequence row would compare a bitset against a sequence of `bool` and confound
+the two.
+
+`benchmark/src/bitset/ops.cpp` and `dynamic.cpp` are the **bitboard** question: a handful of words, ALU-bound,
+1 to 512 words. `benchmark/src/sequence/access.cpp` is the **endgame-database** question: a dense flat array
+indexed by a ranked position, where a lookup costs a cache miss and nothing else, so its ladder runs 8 KiB to
+32 MiB and reports latency per random read rather than bytes per second.
+
+What the three have found so far, on GCC 15.2, `-O3 -march=native`, x86-64:
+
+- **Against `boost::dynamic_bitset` we are ahead**, on the operations where a block representation should tell:
+  `count` by 2.6× at one word and 1.4× at 512, `scan` by 1.2× to 1.6× at every rung. The bitwise operators are
+  parity, as they are against `std::bitset`.
+- **Against `std::bitset` the scan is behind** (see [two-block-case](#two-block-case)). Both facts hold at once
+  and neither is a contradiction: libstdc++'s `_Find_first`/`_Find_next` are better than ours, boost's
+  `find_first`/`find_next` are worse. It is one measurement of our scan against two different implementations.
+- **A random bit read costs the same in `bit_vector` as in `std::vector<bool>`** -- 3.0 ns in cache, about
+  5.8 ns at 32 MiB for both, and construction is parity too. Representation does not matter to a lookup; only
+  footprint does. For a database that is the useful negative result: what buys a lookup is fewer bits per
+  position, not a better container.
+- **`std::count` over `bit_vector` is about 1.6× slower than over `std::vector<bool>`** -- 120 MiB/s against
+  186 -- and consistently so at every rung. libstdc++ specializes `std::count` for `std::vector<bool>::iterator`
+  and counts a word at a time; our proxy iterator gets the generic element-by-element path. A sequence reading
+  that owns its blocks should not lose a sweep to the one the Standard is embarrassed by, so this is a gap in the
+  library rather than in the bench.
+The sequence ladder's fixtures are the expensive part of a `ctest` smoke run: a 32 MiB fixture is filled a bit
+at a time, and the whole file costs about eleven seconds where the other three cost five between them. That is
+proportionate, and it is checked rather than assumed ([the-sieve](#the-sieve) records what happens when it is
+not).
+
 ## Platform and tooling, continued
 
 ### uint128-support
