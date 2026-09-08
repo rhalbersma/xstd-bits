@@ -780,6 +780,25 @@ The sequence row is named after the `std` container it packs, `bit_array` for `s
 therefore mark different columns, and that is correct by each row's own analogy rather than an inconsistency
 to fix.
 
+**Why the prefix leads.** `bit_` is a storage-strategy prefix, and the Standard already has the other one:
+`std::flat_set` keeps a sorted sequence of the elements that are there, so it is sparse in the universe of
+possible keys, where `bit_set` keeps one bit per position in that universe, so it is dense but packed. Same
+container, same interface, different representation — and the prefix is what says which, so it has to come
+first. `static_bit_set` would read as a qualified `bit_set`; `bit_static_set` is `bit_` applied to a
+`static_set`, the way `flat_set` is `flat_` applied to a `set`.
+
+**Why `static` and not `finite`.** `finite` selects nothing: `bit_set<Block, Allocator>` is a finite set of
+positions too, as every bit set is. What separates them is that `N` is a compile-time constant, which is
+*static*, and static-versus-dynamic is one of the two axes the whole design is built on — so the name reads off
+the design rather than off a true-but-non-distinguishing adjective. Recorded against it: P0843 renamed
+`boost::static_vector` to `std::inplace_vector` partly because *static* is overloaded in C++. Accepted anyway,
+because `inplace` names where the storage lives, which is the interesting property for a vector with static
+capacity and a run-time size, where a `bit_static_set`'s extent is genuinely fixed. The inplace column takes
+that name for exactly the case P0843 was naming ([the-inplace-column](#the-inplace-column)).
+
+`bitset` and `dynamic_bitset` sit outside the rule on purpose: they are not `bit_` anything, they are the
+counterparts reproduced under their own names ([a-strict-extension](#a-strict-extension)).
+
 One header per restricted name, holding its `basic_` form beside it, each over one storage: `bit_set`,
 `bit_vector` and `dynamic_bitset` over `block_vector<Block, Allocator>`, beside `bit_static_set`, `bit_array` and
 `bitset` over `block_array<Block, N>`, and `bit_inplace_set`, `bit_inplace_vector` and `inplace_bitset` over
@@ -842,6 +861,26 @@ P0843 declined to repeat `vector<bool>`, so there is no `std::inplace_vector<boo
 against. `test::sequence::inplace_vector_bool` is `[vector.bool]`'s checklist minus the lines the allocator
 reaches, and `std::vector<bool>` answers every line of it, so it is asserted on the model first exactly as
 `vector_bool` is ([the-sequence-contract](#the-sequence-contract)).
+
+**Building it at all is a separate problem from writing it.** `__cpp_lib_inplace_vector` is a C++26 macro, and
+the library asks for C++23; at that standard the guard closes and the three cells compile to nothing, so a suite
+that passes has never seen a third of the matrix. Measured: `bit_inplace_set`, `bit_inplace_vector` and
+`inplace_bitset` run **six** test cases between them at C++23 and **sixteen** at C++26, and
+`generated.cpp`'s inplace rows are inert at the lower standard as well.
+
+`XSTD_BITS_CXX_STANDARD` is how a build asks for more -- 23 by default, 26 to reach the column. It raises the
+standard for the tests and benchmarks only, deliberately: the `INTERFACE cxx_std_23` a consumer inherits is the
+library's real requirement and must not move because one column wants more. Verified at GCC 16 with
+`-std=gnu++26`, where all sixteen cases pass and the column behaves as the table says -- regular, swappable by
+member and free function, no allocator, and the two readings differing exactly where they should, the bitset
+starting at width zero and resizing while the set's width is its capacity ([width-is-capacity](#width-is-capacity)).
+
+What is still missing is CI. **CMake 3.28 cannot spell C++26 for GCC or Clang at all** -- not a GCC 16 gap, a
+CMake one -- and 3.28 is this project's declared minimum, so the option fails on the toolchain the matrix
+currently runs. It fails *legibly*: the configure step asks `CMAKE_CXX_COMPILE_FEATURES` what CMake actually
+knows and says so, rather than letting a `try_compile` blame the compiler for CMake's ignorance. Reaching the
+column in CI needs a newer CMake on one leg, which is a change to the shared workflow rather than to this
+repository.
 
 `max_size()` is 24 on all three names over `<24, std::uint8_t>`, this column being where the three readings
 first disagreed about it and the reason they no longer do ([max-size-is-the-bits](#max-size-is-the-bits)).
@@ -1116,6 +1155,78 @@ The test keeps the static types alongside the dynamic ones, `bit_static_set<N>` 
 `std::flat_set`, since the sieve is an example before it is a bench, and it keeps the degenerate widths: a
 two-candidate sieve runs `sift_primes1` to exhaustion, and a three-candidate one returns from `filter_twins`
 before it has a triple.
+
+### the-unbounded-sieves
+
+The sieve above needs its bound before it sifts anything: `generate_candidates` materializes every candidate
+below `n` first, which is what makes its space `O(n)` and what makes "give me the next prime" a question it
+cannot answer. Two variants remove the bound, and they remove it in different directions.
+
+The **incremental** sieve (O'Neill, *The Genuine Sieve of Eratosthenes*, JFP 19(1), 2009) has no candidate
+array at all. It keeps one entry per prime found so far -- the next composite that prime will strike, and which
+prime strikes it -- so its space is `O(pi(n))` and there is no `n`: `incremental_sieve::next()` generates
+forever. That is the whole of its case, because it is **slower**, and now measurably: 11.3 ms against
+`sift_primes1`'s 0.394 ms at `2^16`, about **29 times**. A map lookup per candidate is a large constant beside
+a strided write, and O'Neill's own point is that the naive "sieve" that trial-divides is not the sieve at all.
+It stops at `2^16` on the bench for the same reason `std::flat_set` does: the constant is the finding, and four
+more rungs would only re-derive it.
+
+The **segmented** sieve is the one that pays. Base primes below `sqrt(n)` once, then a single window walked
+over the rest, so peak memory is `O(sqrt(n) + W)` whatever `n` is. `Window` is a template parameter carrying
+its own extent, which makes `bit_static_set<W>` the natural argument: a compile-time width that allocates
+nothing in the loop, `fill`ed and struck and read once per segment.
+
+It is **faster than the bounded sieve, not merely thriftier**: 4.05 ms against 7.01 ms at `2^20`, about
+**1.7 times**, and ahead at every rung. Asymptotically the two do the same work; the difference is that a
+32768-bit window sits in L1 for its whole segment while a 2^20-bit sieve is a megabit walked with a stride.
+Less memory and less time is not the trade the issue expected to be recording, which is why it is recorded.
+
+Both are held to the bounded sieve by the test rather than described as equivalent -- every bound including
+the degenerate ones, and two window widths, so a window shorter than its tail is exercised beside one that
+swallows it. The bounds stop at `N` because one container under test is `N` bits wide, and a fixed width is a
+capacity ([width-is-capacity](#width-is-capacity)).
+
+`generate_candidates` is now total in `n`. `iota(2, n)` is a precondition violation below 2, and it was reached
+by asking the sieve for the primes under nothing -- a question with an answer, none, rather than a contract to
+break. The two unbounded sieves compute their own inner bounds, so a guard there is worth more than a comment.
+
+### the-sequence-ladder
+
+The three bit benches ask different questions and so run different ladders, which is the point rather than an
+inconsistency.
+
+Each bench is one pairing with **one variable**: `xstd::bitset<N>` against `std::bitset<N>`,
+`xstd::dynamic_bitset` against `boost::dynamic_bitset<>`, `bit_vector` against `std::vector<bool>`. Same
+reading, same storage, ours against theirs -- so a row measures the implementation and nothing else. Putting
+`boost::dynamic_bitset` on the sequence row would compare a bitset against a sequence of `bool` and confound
+the two.
+
+`benchmark/src/bitset/ops.cpp` and `dynamic.cpp` are the **bitboard** question: a handful of words, ALU-bound,
+1 to 512 words. `benchmark/src/sequence/access.cpp` is the **endgame-database** question: a dense flat array
+indexed by a ranked position, where a lookup costs a cache miss and nothing else, so its ladder runs 8 KiB to
+32 MiB and reports latency per random read rather than bytes per second.
+
+What the three have found so far, on GCC 15.2, `-O3 -march=native`, x86-64:
+
+- **Against `boost::dynamic_bitset` we are ahead**, on the operations where a block representation should tell:
+  `count` by 2.6× at one word and 1.4× at 512, `scan` by 1.2× to 1.6× at every rung. The bitwise operators are
+  parity, as they are against `std::bitset`.
+- **Against `std::bitset` the scan is behind** (see [two-block-case](#two-block-case)). Both facts hold at once
+  and neither is a contradiction: libstdc++'s `_Find_first`/`_Find_next` are better than ours, boost's
+  `find_first`/`find_next` are worse. It is one measurement of our scan against two different implementations.
+- **A random bit read costs the same in `bit_vector` as in `std::vector<bool>`** -- 3.0 ns in cache, about
+  5.8 ns at 32 MiB for both, and construction is parity too. Representation does not matter to a lookup; only
+  footprint does. For a database that is the useful negative result: what buys a lookup is fewer bits per
+  position, not a better container.
+- **`std::count` over `bit_vector` is about 1.6× slower than over `std::vector<bool>`** -- 120 MiB/s against
+  186 -- and consistently so at every rung. libstdc++ specializes `std::count` for `std::vector<bool>::iterator`
+  and counts a word at a time; our proxy iterator gets the generic element-by-element path. A sequence reading
+  that owns its blocks should not lose a sweep to the one the Standard is embarrassed by, so this is a gap in the
+  library rather than in the bench.
+The sequence ladder's fixtures are the expensive part of a `ctest` smoke run: a 32 MiB fixture is filled a bit
+at a time, and the whole file costs about eleven seconds where the other three cost five between them. That is
+proportionate, and it is checked rather than assumed ([the-sieve](#the-sieve) records what happens when it is
+not).
 
 ## Platform and tooling, continued
 

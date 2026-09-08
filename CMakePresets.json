@@ -43,14 +43,31 @@
     {
       "name": "dev-vcpkg",
       "displayName": "Developer debug build (test and benchmark dependencies via vcpkg, needs VCPKG_ROOT)",
-      "inherits": ["dev", "vcpkg"],
+      "inherits": [
+        "dev",
+        "vcpkg"
+      ],
       "binaryDir": "${sourceDir}/build/dev-vcpkg"
     },
     {
       "name": "release-vcpkg",
       "displayName": "Release build (test and benchmark dependencies via vcpkg, needs VCPKG_ROOT)",
-      "inherits": ["release", "vcpkg"],
+      "inherits": [
+        "release",
+        "vcpkg"
+      ],
       "binaryDir": "${sourceDir}/build/release-vcpkg"
+    },
+    {
+      "name": "dev-cxx26",
+      "displayName": "Developer debug build at C++26 (reaches the inplace column; needs a CMake that knows C++26)",
+      "inherits": [
+        "dev"
+      ],
+      "binaryDir": "${sourceDir}/build/dev-cxx26",
+      "cacheVariables": {
+        "XSTD_BITS_CXX_STANDARD": "26"
+      }
     }
   ],
   "buildPresets": [
@@ -73,6 +90,10 @@
     {
       "name": "release-vcpkg",
       "configurePreset": "release-vcpkg"
+    },
+    {
+      "name": "dev-cxx26",
+      "configurePreset": "dev-cxx26"
     }
   ],
   "testPresets": [
@@ -100,6 +121,13 @@
     {
       "name": "release-vcpkg",
       "configurePreset": "release-vcpkg",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "dev-cxx26",
+      "configurePreset": "dev-cxx26",
       "output": {
         "outputOnFailure": true
       }

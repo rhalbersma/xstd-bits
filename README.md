@@ -172,6 +172,23 @@ int main()
 
 Those two assertions are the ones [`test/src/bits/std_set/sieve.cpp`](test/src/bits/std_set/sieve.cpp) makes, over `std::set`, `std::flat_set`, `bit_static_set<N>` and `bit_set` alike.
 
+### Sieves that need no bound
+
+`generate_candidates` materializes every candidate below `n` before sifting one, which is what makes the sieve above `O(n)` in space and why it cannot answer "what is the next prime". The same header carries two variants that drop the bound, and they drop it in opposite directions:
+
+```cpp
+auto sieve = xstd::incremental_sieve();
+sieve.next();  // 2, then 3, 5, 7, ... forever, with no n anywhere
+
+auto primes = xstd::sift_primes_segmented<xstd::bit_set, xstd::bit_static_set<1 << 15>>(n);
+```
+
+The **incremental** sieve ([O'Neill 2009](https://www.cs.hmc.edu/~oneill/papers/Sieve-JFP.pdf)) keeps one entry per prime found — the next composite that prime will strike — so its space is `O(π(n))` and it generates without end. It is also about **29× slower**, which is the honest price of unboundedness and the reason it is measured rather than recommended.
+
+The **segmented** sieve is the one that pays. Base primes below `√n` once, then a single reusable window walked over the rest, so peak memory is `O(√n + W)` whatever `n` is. `Window` is a template parameter carrying its own extent, which makes `bit_static_set<W>` the natural argument: a compile-time width that allocates nothing in the loop. At `n = 2^20` it is **1.7× faster** than the bounded sieve as well as far thriftier — the window stays in L1 for a whole segment where a megabit sieve is walked with a stride. Less memory *and* less time is the unusual direction for that trade to run.
+
+All three agree, and the test asserts that rather than the README claiming it.
+
 ## Requirements for `set`-like behaviour
 
 Looking at the above code, the following four ingredients are necessary to implement the Sieve of Eratosthenes:
@@ -251,7 +268,7 @@ The **full** interface of `xstd::bit_static_set` is `constexpr`.
 
 Minor **semantic differences** between common functionality in `xstd::bit_static_set<N>` and `std::set<int>` are:
 
-- the `xstd::bit_static_set` member function `max_size` is a `static` member function (because `N` is a constant expression).
+- the `xstd::bit_static_set` member function `max_size` is `constexpr`, and at a static width its value is a constant expression usable wherever `N` is. It is a **member** rather than a `static` member function, because the same `max_size()` has to answer for the dynamic and inplace readings too, where it is the storage that knows ([design.md#max-size-is-the-bits](design.md#max-size-is-the-bits)). So `s.max_size()` is a constant expression and `decltype(s)::max_size()` does not compile.
 - the `xstd::bit_static_set` iterators are **proxy iterators**, and taking their address yields **proxy references**. The difference should be undetectable. See the FAQ at the end of this document.
 - the `xstd::bit_static_set` members `fill`, `complement`, `replace` and `full` do not exist for `std::set`.
 
@@ -271,7 +288,7 @@ Almost all existing `std::bitset<N>` code has **a direct translation** (i.e. ach
 | `bs.flip()`                     | `bs.complement()`               | not a member of `std::set<int>`                 |
 | `bs.flip(n)`                    | `bs.complement(n)`              | no bounds-checking or `out_of_range` exceptions <br> not a member of `std::set<int>` |
 | `bs.count()`                    | `bs.size()`                     | |
-| `bs.size()`                     | `bs.max_size()`                 | a `static` member                               |
+| `bs.size()`                     | `bs.max_size()`                 | `constexpr`; a constant expression at a static width |
 | `bs.test(n)` <br> `bs[n]`       | `bs.contains(n)`                | no bounds-checking or `out_of_range` exceptions |
 | `bs.all()`                      | `bs.full()`                     | not a member of `std::set<int>`                 |
 | `bs.any()`                      | `not bs.empty()`                | |
@@ -279,7 +296,7 @@ Almost all existing `std::bitset<N>` code has **a direct translation** (i.e. ach
 
 The semantic differences between `xstd::bit_static_set<N>` and `std::bitset<N>` are:
 
-- `xstd::bit_static_set<N>` has a `static` member function `max_size()`;
+- `xstd::bit_static_set<N>` answers `max_size()` as a `constexpr` member, where `std::bitset<N>` answers the same question with `size()`;
 - `xstd::bit_static_set<N>` does not do bounds-checking for its members `insert`, `erase`, `replace` and `contains`. Instead of throwing an `out_of_range` exception for argument values outside the range `[0, N)`, this **behavior is undefined**. This gives `xstd::bit_static_set<N>` a small performance benefit over `std::bitset<N>`.
 
 Functionality from `std::bitset<N>` that is not in `xstd::bit_static_set<N>`:

@@ -114,6 +114,27 @@ target_compile_features(
 if(PROJECT_IS_TOP_LEVEL)
     include(CTest)
     if(BUILD_TESTING)
+        # The library requires C++23 and says so above, in the INTERFACE a consumer inherits. The inplace column
+        # needs more: it is behind __cpp_lib_inplace_vector, which is C++26, so at the minimum those three of the
+        # nine cells compile to nothing and are never tested. Raising the standard here rather than in the
+        # INTERFACE keeps the requirement a consumer sees at 23 while letting a leg of the matrix build the whole
+        # matrix. [design.md#the-inplace-column]
+        set(XSTD_BITS_CXX_STANDARD 23 CACHE STRING "C++ standard for the tests and benchmarks: 23, or 26 to reach the inplace column")
+        set_property(CACHE XSTD_BITS_CXX_STANDARD PROPERTY STRINGS 23 26)
+
+        # Asking for a standard CMake cannot spell for this compiler fails deep inside a try_compile, with a
+        # message blaming the compiler. CMAKE_CXX_COMPILE_FEATURES is what CMake actually knows, so ask it.
+        if(NOT "cxx_std_${XSTD_BITS_CXX_STANDARD}" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
+            message(FATAL_ERROR
+                "XSTD_BITS_CXX_STANDARD=${XSTD_BITS_CXX_STANDARD} is not something CMake ${CMAKE_VERSION} can ask "
+                "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION} for. CMake 3.28 knows no C++26 for GCC or "
+                "Clang at all; a newer CMake does. The inplace column needs it, the other six cells do not."
+            )
+        endif()
+
+        set(CMAKE_CXX_STANDARD ${XSTD_BITS_CXX_STANDARD})
+        set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
         add_subdirectory(benchmark)
         add_subdirectory(test)
     endif()
