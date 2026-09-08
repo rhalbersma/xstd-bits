@@ -177,8 +177,16 @@ whole words and a partial one at the end.
 ### the-funnel-shift
 
 Under `word_at` and both shift operators is one operation: two adjacent blocks spliced into a double-width
-word and shifted down. `block_sequence::adjacent_blocks(index, offset)` is that splice, and the three sites
-now read as three uses of it rather than three spellings.
+word and shifted down. `block_sequence::straddled_block(index, R_shift, L_shift)` is that splice, and the three
+sites now read as three uses of it rather than three spellings.
+
+It takes the shift **and** its complement, named as both operators already name them, because both already hold
+the pair as loop invariants: passing only one would have the other derived back inside from what it was derived
+from outside. That round trip is one hoisted instruction, but it is also the thing that made the codegen differ
+at all -- with the pair passed, GCC emits the same instruction mix as the hand-written original (954 lines, 60
+subtractions, six `$64` immediates against 1016, 67 and twelve), differing only in register assignment. The two
+adding to the block width is the whole contract, and the assert says so. There is no one-shift overload:
+`word_at` holds only the offset and spells the complement at its single call site.
 
 They did not look alike, which is why it went unnoticed. `word_at(n)` takes `(index, offset)` from `n`.
 `operator>>=` reads `(i + n_blocks, R_shift)` — literally `word_at(i * digits + n)`, reached without

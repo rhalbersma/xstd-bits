@@ -221,7 +221,7 @@ public:
                 if (offset == 0UZ or index == last_block()) {
                         return static_cast<block_type>(m_blocks[index] >> offset);
                 }
-                return adjacent_blocks(index, offset);
+                return straddled_block(index, offset, bits_per_block - offset);
         }
 
         // The write side of word_at, masked: the bits of value under mask land at [n, n + bits_per_block), split over two blocks where n is not aligned, and the tail stays clear. [design.md#the-blit]
@@ -548,7 +548,7 @@ public:
                                 auto const R_shift = bits_per_block - L_shift;
                                 for (auto i = last_block(); i > n_blocks; --i) {
                                         // Read one block lower than the destination: the splice of [i - n_blocks - 1, i - n_blocks]. [design.md#the-funnel-shift]
-                                        m_blocks[i] = adjacent_blocks(i - n_blocks - 1UZ, R_shift);
+                                        m_blocks[i] = straddled_block(i - n_blocks - 1UZ, R_shift, L_shift);
                                 }
                                 m_blocks[n_blocks] = static_cast<block_type>(m_blocks[0] << L_shift);
                         }
@@ -571,9 +571,10 @@ public:
                         if (R_shift == 0) {
                                 std::shift_left(std::ranges::begin(m_blocks), std::ranges::end(m_blocks), static_cast<std::ptrdiff_t>(n_blocks));
                         } else {
+                                auto const L_shift = bits_per_block - R_shift;
                                 for (auto i = 0UZ; i + n_blocks < last_block(); ++i) {
                                         // Which is word_at(i * bits_per_block + n), reached without recomputing the division. [design.md#the-funnel-shift]
-                                        m_blocks[i] = adjacent_blocks(i + n_blocks, R_shift);
+                                        m_blocks[i] = straddled_block(i + n_blocks, R_shift, L_shift);
                                 }
                                 m_blocks[last_block() - n_blocks] = static_cast<block_type>(m_blocks[last_block()] >> R_shift);
                         }
@@ -929,16 +930,22 @@ private:
                 }
         }
 
-        // The blocks at index and index + 1 as one double-width word shifted down by offset: the funnel shift that
-        // word_at and both shift operators are each made of, spelled once. [design.md#the-funnel-shift]
-        [[nodiscard]] constexpr auto adjacent_blocks(std::size_t index, std::size_t offset) const noexcept
+        // The block straddling index and index + 1: the two spliced into one double-width word and shifted down by
+        // R_shift, which is the funnel shift word_at and both shift operators are each made of. [design.md#the-funnel-shift]
+        //
+        // Named as both shift operators name them, and taken as a pair: they already hold both halves as loop
+        // invariants, so neither has one derived back from what the other was derived from. word_at, holding only
+        // the one, spells the complement at its single call site. That the two add to the block width is the whole
+        // contract, and the assert says so.
+        [[nodiscard]] constexpr auto straddled_block(std::size_t index, std::size_t R_shift, std::size_t L_shift) const noexcept
                 -> block_type
         {
-                assert(0UZ < offset and offset < bits_per_block);
+                assert(R_shift + L_shift == bits_per_block);
+                assert(0UZ < R_shift and R_shift < bits_per_block);
                 assert(index + 1UZ < num_blocks());
                 return static_cast<block_type>(
-                        static_cast<block_type>(m_blocks[index] >> offset) |
-                        static_cast<block_type>(m_blocks[index + 1UZ] << (bits_per_block - offset))
+                        static_cast<block_type>(m_blocks[index] >> R_shift) |
+                        static_cast<block_type>(m_blocks[index + 1UZ] << L_shift)
                 );
         }
 
