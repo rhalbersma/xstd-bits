@@ -18,6 +18,10 @@
 #endif
 
 namespace test::bitset {
+// NOLINTBEGIN(misc-const-correctness): every object built below is handed to fun, and fun is the whole point --
+// some of the functors this harness is called with take their argument by non-const reference and write through
+// it, which is exactly what the set/reset/flip cases exist to check. clang-tidy sees one instantiation at a time
+// and proposes a const that would stop the mutating ones compiling. [design.md#clang-tidy-false-positives]
 
 template<class X, auto Limit>
 inline constexpr auto limit_v = dynamic<X> ? Limit : X().size();
@@ -59,7 +63,7 @@ namespace on1 {
 template<class X, auto N = limit_v<X, L1>>
 auto all_valid(auto fun)
 {
-        for (auto i : std::views::iota(0UZ, N)) {
+        for (auto const i : std::views::iota(0UZ, N)) {
                 fun(i);
         }
 }
@@ -67,7 +71,7 @@ auto all_valid(auto fun)
 template<class X, auto N = limit_v<X, L1>>
 auto any_value(auto fun)
 {
-        for (auto i : std::views::iota(0UZ, N + 1)) {
+        for (auto const i : std::views::iota(0UZ, N + 1)) {
                 fun(i);
         }
 }
@@ -75,9 +79,9 @@ auto any_value(auto fun)
 template<class X, auto N = limit_v<X, L1>>
 auto all_cardinality_sets(auto fun)
 {
-        for (auto i : std::views::iota(0UZ, N + 1)) {
+        for (auto const i : std::views::iota(0UZ, N + 1)) {
                 auto a = make_bitset<X>(N);
-                for (auto j : std::views::iota(0UZ, i)) {
+                for (auto const j : std::views::iota(0UZ, i)) {
                         a.set(j);
                 }
                 assert(a.count() == i);
@@ -88,7 +92,7 @@ auto all_cardinality_sets(auto fun)
 template<class X, auto N = limit_v<X, L1>>
 auto all_singleton_sets(auto fun)
 {
-        for (auto i : std::views::iota(0UZ, N)) {
+        for (auto const i : std::views::iota(0UZ, N)) {
                 auto a = make_bitset<X>(N); a.set(i); assert(a.count() == 1);
                 fun(a);
         }
@@ -101,8 +105,8 @@ namespace on2 {
 template<class X, auto N = limit_v<X, L2>>
 auto all_singleton_set_pairs(auto fun)
 {
-        for (auto i : std::views::iota(0UZ, N)) {
-                for (auto j : std::views::iota(0UZ, N)) {
+        for (auto const i : std::views::iota(0UZ, N)) {
+                for (auto const j : std::views::iota(0UZ, N)) {
                         auto a = make_bitset<X>(N); a.set(i); assert(a.count() == 1);
                         auto b = make_bitset<X>(N); b.set(j); assert(b.count() == 1);
                         fun(a, b);
@@ -113,8 +117,8 @@ auto all_singleton_set_pairs(auto fun)
 template<class X, auto N = limit_v<X, L2>>
 auto all_doubleton_sets(auto fun)
 {
-        for (auto j : std::views::iota(1UZ, std::ranges::max(N, 1UZ))) {
-                for (auto i : std::views::iota(0UZ, j)) {
+        for (auto const j : std::views::iota(1UZ, std::ranges::max(N, 1UZ))) {
+                for (auto const i : std::views::iota(0UZ, j)) {
                         auto a = make_bitset<X>(N); a.set(i); a.set(j); assert(a.count() == 2);
                         fun(a);
                 }
@@ -143,9 +147,9 @@ auto all_singleton_set_triples(auto fun)
 template<class X, auto N = limit_v<X, L3>>
 auto all_triplet_sets(auto fun)
 {
-        for (auto k : std::views::iota(2UZ, std::ranges::max(N, 2UZ))) {
-                for (auto j : std::views::iota(1UZ, k)) {
-                        for (auto i : std::views::iota(0UZ, j)) {
+        for (auto const k : std::views::iota(2UZ, std::ranges::max(N, 2UZ))) {
+                for (auto const j : std::views::iota(1UZ, k)) {
+                        for (auto const i : std::views::iota(0UZ, j)) {
                                 auto a = make_bitset<X>(N); a.set(i); a.set(j); a.set(k); assert(a.count() == 3);
                                 fun(a);
                         }
@@ -160,10 +164,10 @@ namespace on4 {
 template<class X, auto N = limit_v<X, L4>>
 auto all_doubleton_set_pairs(auto fun)
 {
-        for (auto j : std::views::iota(1UZ, std::ranges::max(N, 1UZ))) {
-                for (auto n : std::views::iota(1UZ, std::ranges::max(N, 1UZ))) {
-                        for (auto i : std::views::iota(0UZ, j)) {
-                                for (auto m : std::views::iota(0UZ, n)) {
+        for (auto const j : std::views::iota(1UZ, std::ranges::max(N, 1UZ))) {
+                for (auto const n : std::views::iota(1UZ, std::ranges::max(N, 1UZ))) {
+                        for (auto const i : std::views::iota(0UZ, j)) {
+                                for (auto const m : std::views::iota(0UZ, n)) {
                                         auto a = make_bitset<X>(N); a.set(i); a.set(j); assert(a.count() == 2);
                                         auto b = make_bitset<X>(N); b.set(m); b.set(n); assert(b.count() == 2);
                                         fun(a, b);
@@ -174,6 +178,8 @@ auto all_doubleton_set_pairs(auto fun)
 }
 
 }       // namespace on4
+
+// NOLINTEND(misc-const-correctness)
 
 } // namespace test::bitset
 

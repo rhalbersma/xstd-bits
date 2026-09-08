@@ -21,6 +21,10 @@
 #endif
 
 namespace test::set {
+// NOLINTBEGIN(misc-const-correctness): every object built below is handed to fun, and fun is the whole point --
+// some of the functors this harness is called with take their argument by non-const reference and write through
+// it, which is exactly what the set/reset/flip cases exist to check. clang-tidy sees one instantiation at a time
+// and proposes a const that would stop the mutating ones compiling. [design.md#clang-tidy-false-positives]
 
 inline constexpr auto L1 = 128UZ;
 inline constexpr auto L2 =  64UZ;
@@ -71,7 +75,7 @@ namespace on1 {
 template<class X, std::size_t N = limit_v<X, L1>>
 auto all_valid(auto fun)
 {
-        for (auto i : std::views::iota(0UZ, N)) {
+        for (auto const i : std::views::iota(0UZ, N)) {
                 fun(i);
         }
 }
@@ -79,7 +83,7 @@ auto all_valid(auto fun)
 template<class X, std::size_t N = limit_v<X, L1>>
 auto all_cardinality_sets(auto fun)
 {
-        for (auto i : std::views::iota(0UZ, N + 1)) {
+        for (auto const i : std::views::iota(0UZ, N + 1)) {
                 auto a = std::views::iota(0UZ, i) | std::ranges::to<X>(); assert(a.size() == i);
                 fun(a);
         }
@@ -88,7 +92,7 @@ auto all_cardinality_sets(auto fun)
 template<class X, std::size_t N = limit_v<X, L1>>
 auto all_singleton_arrays(auto fun)
 {
-        for (auto i : std::views::iota(0UZ, N)) {
+        for (auto const i : std::views::iota(0UZ, N)) {
                 auto a = std::array{ i }; assert(a.size() == 1);
                 fun(a);
         }
@@ -97,7 +101,7 @@ auto all_singleton_arrays(auto fun)
 template<class X, std::size_t N = limit_v<X, L1>>
 auto all_singleton_ilists(auto fun)
 {
-        for (auto i : std::views::iota(0UZ, N)) {
+        for (auto const i : std::views::iota(0UZ, N)) {
                 auto a = { i }; assert(a.size() == 1);
                 fun(a);
         }
@@ -106,7 +110,7 @@ auto all_singleton_ilists(auto fun)
 template<class X, std::size_t N = limit_v<X, L1>>
 auto all_singleton_sets(auto fun)
 {
-        for (auto i : std::views::iota(0UZ, N)) {
+        for (auto const i : std::views::iota(0UZ, N)) {
                 auto a = X({ i }); assert(a.size() == 1);
                 fun(a);
         }
@@ -119,8 +123,8 @@ namespace on2 {
 template<class X, std::size_t N = limit_v<X, L2>>
 auto all_doubleton_arrays(auto fun)
 {
-        for (auto j : std::views::iota(1UZ, std::ranges::max(N, 1UZ))) {
-                for (auto i : std::views::iota(0UZ, j)) {
+        for (auto const j : std::views::iota(1UZ, std::ranges::max(N, 1UZ))) {
+                for (auto const i : std::views::iota(0UZ, j)) {
                         auto a = std::array{ i, j }; assert(a.size() == 2);
                         fun(a);
                 }
@@ -130,8 +134,8 @@ auto all_doubleton_arrays(auto fun)
 template<class X, std::size_t N = limit_v<X, L2>>
 auto all_doubleton_ilists(auto fun)
 {
-        for (auto j : std::views::iota(1UZ, std::ranges::max(N, 1UZ))) {
-                for (auto i : std::views::iota(0UZ, j)) {
+        for (auto const j : std::views::iota(1UZ, std::ranges::max(N, 1UZ))) {
+                for (auto const i : std::views::iota(0UZ, j)) {
                         auto a = { i, j }; assert(a.size() == 2);
                         fun(a);
                 }
@@ -141,8 +145,8 @@ auto all_doubleton_ilists(auto fun)
 template<class X, std::size_t N = limit_v<X, L2>>
 auto all_doubleton_sets(auto fun)
 {
-        for (auto j : std::views::iota(1UZ, std::ranges::max(N, 1UZ))) {
-                for (auto i : std::views::iota(0UZ, j)) {
+        for (auto const j : std::views::iota(1UZ, std::ranges::max(N, 1UZ))) {
+                for (auto const i : std::views::iota(0UZ, j)) {
                         auto a = X({ i, j }); assert(a.size() == 2);
                         fun(a);
                 }
@@ -152,8 +156,8 @@ auto all_doubleton_sets(auto fun)
 template<class X, std::size_t N = limit_v<X, L2>>
 auto all_singleton_set_pairs(auto fun)
 {
-        for (auto i : std::views::iota(0UZ, N)) {
-                for (auto j : std::views::iota(0UZ, N)) {
+        for (auto const i : std::views::iota(0UZ, N)) {
+                for (auto const j : std::views::iota(0UZ, N)) {
                         auto a = X({ i }); assert(a.size() == 1);
                         auto b = X({ j }); assert(b.size() == 1);
                         fun(a, b);
@@ -168,9 +172,9 @@ namespace on3 {
 template<class X, std::size_t N = limit_v<X, L3>>
 auto all_singleton_set_triples(auto fun)
 {
-        for (auto i : std::views::iota(0UZ, N)) {
-                for (auto j : std::views::iota(0UZ, N)) {
-                        for (auto k : std::views::iota(0UZ, N)) {
+        for (auto const i : std::views::iota(0UZ, N)) {
+                for (auto const j : std::views::iota(0UZ, N)) {
+                        for (auto const k : std::views::iota(0UZ, N)) {
                                 auto a = X({ i }); assert(a.size() == 1);
                                 auto b = X({ j }); assert(b.size() == 1);
                                 auto c = X({ k }); assert(c.size() == 1);
@@ -187,10 +191,10 @@ namespace on4 {
 template<class X, std::size_t N = limit_v<X, L4>>
 auto all_doubleton_set_pairs(auto fun)
 {
-        for (auto j : std::views::iota(1UZ, std::ranges::max(N, 1UZ))) {
-                for (auto n : std::views::iota(1UZ, std::ranges::max(N, 1UZ))) {
-                        for (auto i : std::views::iota(0UZ, j)) {
-                                for (auto m : std::views::iota(0UZ, n)) {
+        for (auto const j : std::views::iota(1UZ, std::ranges::max(N, 1UZ))) {
+                for (auto const n : std::views::iota(1UZ, std::ranges::max(N, 1UZ))) {
+                        for (auto const i : std::views::iota(0UZ, j)) {
+                                for (auto const m : std::views::iota(0UZ, n)) {
                                         auto a = X({ i, j }); assert(a.size() == 2);
                                         auto b = X({ m, n }); assert(b.size() == 2);
                                         fun(a, b);
@@ -201,6 +205,8 @@ auto all_doubleton_set_pairs(auto fun)
 }
 
 }       // namespace on4
+
+// NOLINTEND(misc-const-correctness)
 
 } // namespace test::set
 

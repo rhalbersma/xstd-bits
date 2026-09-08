@@ -354,7 +354,7 @@ struct mem_emplace
                 // where a move is not a copy, and bugprone-use-after-move is right to say so.
                 auto const value = typename X::value_type(std::forward<Args>(args)...);
                 auto const emplaced = not a.contains(value);
-                auto r = a.emplace(value);                                                              // [associative.reqmts.general]/49
+                auto const r = a.emplace(value);                                                              // [associative.reqmts.general]/49
                                                                                 // [associative.reqmts.general]/50
                 BOOST_CHECK(r == std::make_pair(a.find(value), emplaced));
         }
@@ -373,7 +373,7 @@ struct mem_emplace_hint
                 );
                 // Built once, for the reason mem_emplace gives.
                 auto const value = typename X::value_type(std::forward<Args>(args)...);
-                auto r = a.emplace_hint(p, value);                                              // [associative.reqmts.general]/58
+                auto const r = a.emplace_hint(p, value);                                              // [associative.reqmts.general]/58
                 BOOST_CHECK(r == a.find(value));                                                // [associative.reqmts.general]/59
         }
 };
@@ -404,7 +404,7 @@ struct mem_insert
         template<class X>
         auto operator()(X& a, X::iterator p, X::value_type const& t) const
         {
-                auto r = a.insert(p, t);
+                auto r = a.insert(p, t);  // NOLINT(misc-const-correctness): the next line asserts decltype(r), so const would break the assertion this exists to make
                 static_assert(std::same_as<decltype(r), typename X::iterator>); // [associative.reqmts.general]/70
                 static_assert(requires { a.insert(p, t); });                    // [associative.reqmts.general]/71
                 BOOST_CHECK(r == a.find(t));                                    // [associative.reqmts.general]/73

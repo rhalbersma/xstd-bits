@@ -49,7 +49,7 @@ struct constructor
                         );
 
                         if constexpr (N > 0) {
-                                auto ones = std::string(N, '1');
+                                auto const ones = std::string(N, '1');
                                 BOOST_CHECK(X(std::string_view(ones)).all());   // [bitset.cons]/4
 
                                 auto invalid = zeros;
@@ -75,7 +75,7 @@ struct mem_bit_and_assign
         {
                 auto const src = self;
                 auto const& dst = self &= rhs;
-                for (auto const N = self.size(); auto i : std::views::iota(0UZ, N)) {
+                for (auto const N = self.size(); auto const i : std::views::iota(0UZ, N)) {
                         BOOST_CHECK_EQUAL(dst[i], not rhs[i] ? false : src[i]); // [bitset.members]/1
                 }
                 BOOST_CHECK_EQUAL(std::addressof(dst), std::addressof(self));   // [bitset.members]/2
@@ -89,7 +89,7 @@ struct mem_bit_or_assign
         {
                 auto const src = self;
                 auto const& dst = self |= rhs;
-                for (auto const N = self.size(); auto i : std::views::iota(0UZ, N)) {
+                for (auto const N = self.size(); auto const i : std::views::iota(0UZ, N)) {
                         BOOST_CHECK_EQUAL(dst[i], rhs[i] ? true : src[i]);      // [bitset.members]/3
                 }
                 BOOST_CHECK_EQUAL(std::addressof(dst), std::addressof(self));   // [bitset.members]/4
@@ -103,7 +103,7 @@ struct mem_bit_xor_assign
         {
                 auto const src = self;
                 auto const& dst = self ^= rhs;
-                for (auto const N = self.size(); auto i : std::views::iota(0UZ, N)) {
+                for (auto const N = self.size(); auto const i : std::views::iota(0UZ, N)) {
                         BOOST_CHECK_EQUAL(dst[i], rhs[i] ? not src[i] : src[i]);// [bitset.members]/5
                 }
                 BOOST_CHECK_EQUAL(std::addressof(dst), std::addressof(self));   // [bitset.members]/6
@@ -119,7 +119,7 @@ struct mem_bit_minus_assign
                 if constexpr (requires { self -= rhs; }) {
                         auto const src = self;
                         auto const& dst = self -= rhs;
-                        for (auto const N = self.size(); auto i : std::views::iota(0UZ, N)) {
+                        for (auto const N = self.size(); auto const i : std::views::iota(0UZ, N)) {
                                 BOOST_CHECK_EQUAL(dst[i], rhs[i] ? false : src[i]);
                         }
                         BOOST_CHECK_EQUAL(std::addressof(dst), std::addressof(self));
@@ -133,7 +133,7 @@ struct mem_shift_left_assign
         {
                 auto const src = self;
                 auto const& dst = self <<= pos;
-                for (auto const N = self.size(); auto I : std::views::iota(0UZ, N)) {
+                for (auto const N = self.size(); auto const I : std::views::iota(0UZ, N)) {
                         if (I < pos) {
                                 BOOST_CHECK(not dst[I]);                        // [bitset.members]/7.1
                         } else {
@@ -150,7 +150,7 @@ struct mem_shift_right_assign
         {
                 auto const src = self;
                 auto const& dst = self >>= pos;
-                for (auto const N = self.size(); auto I : std::views::iota(0UZ, N)) {
+                for (auto const N = self.size(); auto const I : std::views::iota(0UZ, N)) {
                         if (pos >= N - I) {
                                 BOOST_CHECK(not dst[I]);                        // [bitset.members]/9.1
                         } else {
@@ -193,7 +193,7 @@ struct mem_set
                 if (auto const N = self.size(); pos < N) {
                         auto const src = self;
                         auto const& dst = self.set(pos, val);
-                        for (auto i : std::views::iota(0UZ, N)) {
+                        for (auto const i : std::views::iota(0UZ, N)) {
                                 BOOST_CHECK_EQUAL(dst[i], i == pos ? val : src[i]);     // [bitset.members]/15
                         }
                         BOOST_CHECK_EQUAL(std::addressof(dst), std::addressof(self));   // [bitset.members]/16
@@ -217,7 +217,7 @@ struct mem_reset
                 if (auto const N = self.size(); pos < N) {
                         auto const src = self;
                         auto const& dst = self.reset(pos);
-                        for (auto i : std::views::iota(0UZ, N)) {
+                        for (auto const i : std::views::iota(0UZ, N)) {
                                 BOOST_CHECK_EQUAL(dst[i], i == pos ? false : src[i]);   // [bitset.members]/20
                         }
                         BOOST_CHECK_EQUAL(std::addressof(dst), std::addressof(self));   // [bitset.members]/21
@@ -243,7 +243,7 @@ struct mem_flip
         {
                 auto const src = self;
                 auto const& dst = self.flip();
-                for (auto const N = self.size(); auto i : std::views::iota(0UZ, N)) {
+                for (auto const N = self.size(); auto const i : std::views::iota(0UZ, N)) {
                         BOOST_CHECK_NE(dst[i], src[i]);                                 // [bitset.members]/25
                 }
                 BOOST_CHECK_EQUAL(std::addressof(dst), std::addressof(self));           // [bitset.members]/26
@@ -254,7 +254,7 @@ struct mem_flip
                 if (auto const N = self.size(); pos < N) {
                         auto const src = self;
                         auto const& dst = self.flip(pos);
-                        for (auto i : std::views::iota(0UZ, N)) {
+                        for (auto const i : std::views::iota(0UZ, N)) {
                                 BOOST_CHECK_EQUAL(dst[i], i == pos ? not src[i] : src[i]);      // [bitset.members]/27
                         }
                         BOOST_CHECK_EQUAL(std::addressof(dst), std::addressof(self));           // [bitset.members]/28
