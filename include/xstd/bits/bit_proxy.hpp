@@ -112,6 +112,7 @@ public:
         }
 
         // A value, not a handle to rebind: trivially copyable, never assignable, as a reference to a key is.
+        // [design.md#the-proxy-copies-the-handle]
         constexpr bit_set_reference(bit_set_reference const&) noexcept = default;
         constexpr auto operator=(bit_set_reference const&) -> bit_set_reference& = delete;
 
@@ -262,6 +263,11 @@ public:
         {
                 assert(m_ptr != nullptr);
         }
+
+        // Said out loud, because the assignments below are user-provided and that deprecates the implicit copy
+        // constructor: a copy duplicates the handle, where an assignment writes through it. The two do different
+        // things here, which is exactly why the compiler stops guessing. [design.md#the-proxy-copies-the-handle]
+        constexpr bit_sequence_reference(bit_sequence_reference const&) noexcept = default;
 
         [[nodiscard]] constexpr auto operator&() const noexcept
                 -> iterator

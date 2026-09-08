@@ -1116,6 +1116,19 @@ lets `*it` initialize a strong index type in one step, where the two user-define
 `size_t` would be one too many. A type with an explicit constructor takes the `size_t` route, `index(*it)`,
 and the proxy offers no explicit conversion of its own: MSVC cannot resolve one beside that constructor.
 
+### the-proxy-copies-the-handle
+
+Both proxies declare their copy constructor, and for opposite-looking reasons that are the same reason. The
+set proxy is `= default` beside a deleted `operator=`, because a reference to a key is a value: copyable,
+never assignable. The sequence proxy is `= default` beside two `operator=`s that write *through* the handle
+to the bit. That second pairing is exactly the case `[-Wdeprecated-copy-with-user-provided-copy]` names: a
+user-provided copy assignment makes the implicit copy constructor deprecated, because the compiler can no
+longer assume the two agree -- and here they genuinely do not, which is the whole point of a proxy. So the
+copy constructor is said out loud rather than inherited by default.
+
+Nothing else copy-constructs a proxy in this library, which is why nothing caught it until `<format>` arrived:
+`std::formatter`'s dispatch takes the element by value, and that first copy is where the deprecation lands.
+
 ### the-one-adl-exception
 
 The sequence iterator's `iter_move` and `iter_swap` are hidden friends found by ADL, and they stay under the
@@ -1328,7 +1341,7 @@ ever wrong.
 
 ### clang-tidy-false-positives
 
-Four findings are suppressed because the checker cannot see what makes them right:
+Five findings are suppressed because the checker cannot see what makes them right:
 
 - `bugprone-unhandled-self-assignment` on the bitset proxy's `operator=`, which owns no storage: `b[i] = b[i]`
   reads the bit and writes it back.
@@ -1338,6 +1351,10 @@ Four findings are suppressed because the checker cannot see what makes them righ
   instantiation discards; it sees only that one and asks for a `const` that would stop every other
   instantiation compiling.
 - `misc-redundant-expression` on a reflexivity check, which cannot be written without naming the object twice.
+- `bugprone-std-namespace-modification` on the two `std::formatter` specializations, which is precisely the
+  modification `[namespace.std]/2` allows: a specialization of a standard library template for a
+  program-defined type. clang-tidy 22 and 23 read the qualified definition as modifying the namespace; 24 no
+  longer does, and the suppression stays until the whole ladder is past 23.
 
 ### clang-crashes-on-a-foreign-bulk-source
 

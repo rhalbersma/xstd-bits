@@ -33,8 +33,11 @@
 // Not in <xstd/bits.hpp>: the umbrella keeps <format> off every consumer path for the same reason it keeps the
 // ext/ adaptors and Boost off it. A consumer who formats says so by including this header.
 
-// [namespace.std]/2 allows a specialization of a standard library template for a program-defined type.
+// [namespace.std]/2 allows a specialization of a standard library template for a program-defined type, which is
+// what these two are and all they are. clang-tidy 22 and 23 read the qualified definition as modifying namespace
+// std anyway; 24 no longer does. [design.md#clang-tidy-false-positives]
 template<class Bits, class Traits, class CharT>
+// NOLINTNEXTLINE(bugprone-std-namespace-modification)
 struct std::formatter<xstd::bit_set_reference<Bits, Traits>, CharT>
 :
         std::formatter<std::size_t, CharT>
@@ -47,6 +50,7 @@ struct std::formatter<xstd::bit_set_reference<Bits, Traits>, CharT>
 };
 
 template<class Bits, class Traits, class CharT>
+// NOLINTNEXTLINE(bugprone-std-namespace-modification)
 struct std::formatter<xstd::bit_sequence_reference<Bits, Traits>, CharT>
 :
         std::formatter<bool, CharT>
