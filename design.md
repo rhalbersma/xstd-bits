@@ -177,7 +177,7 @@ whole words and a partial one at the end.
 ### the-funnel-shift
 
 Under `word_at` and both shift operators is one operation: two adjacent blocks spliced into a double-width
-word and shifted down. `block_sequence::straddled_block(index, R_shift, L_shift)` is that splice, and the three
+word and shifted down. `block_sequence::straddled_block(index, L_shift, R_shift)` is that splice, and the three
 sites now read as three uses of it rather than three spellings.
 
 It takes the shift **and** its complement, named as both operators already name them, because both already hold
