@@ -104,12 +104,16 @@ auto filter_twins(X const& primes)
 
 namespace detail::sieve {
 
-// Newton, so the base bound is found in a few steps rather than a walk; the sieves below want it at run time.
+// Newton on x * x - n, so the base bound is found in a few steps rather than a walk; the sieves below want it at
+// run time. The step x <- (x + n / x) / 2 is exact in size_t: floor division keeps the sequence descending until it
+// reaches floor(sqrt(n)), which is where y < x first fails.
+//
+// No n < 2 guard, because the loop is already total there and one would be a line no caller can reach: at n == 0 the
+// seed y is 0 and the body never runs, so nothing divides by zero, and at n == 1 the seed equals x. For n >= 1 the
+// iterate stays >= 1, so the division inside the loop is safe. Asserted at both ends in the tests rather than argued
+// for here. [design.md#the-unbounded-sieves]
 constexpr auto isqrt(std::size_t n) noexcept -> std::size_t
 {
-        if (n < 2UZ) {
-                return n;
-        }
         auto x = n;
         auto y = (x + 1UZ) / 2UZ;
         while (y < x) {
@@ -187,22 +191,24 @@ auto sift_primes_segmented(std::size_t n)
                 primes.insert(static_cast<std::ranges::range_value_t<X>>(p));
         }
 
+        // Named in full rather than lo and hi, which the Windows headers declare at namespace scope: MSVC's C4459
+        // reports the shadowing, and the benchmark leg treats it as an error.
         auto window = Window();
-        for (auto lo = base_bound; lo < n; lo += width) {
-                auto const hi = std::ranges::min(lo + width, n);
+        for (auto segment_lo = base_bound; segment_lo < n; segment_lo += width) {
+                auto const segment_hi = std::ranges::min(segment_lo + width, n);
                 window.fill();
                 for (auto const p : base) {
-                        // The first multiple of p at or above lo, never below p * p, which the base pass covered.
-                        auto const first = std::ranges::max(p * p, ((lo + p - 1UZ) / p) * p);
-                        for (auto m = first; m < hi; m += p) {
-                                window.erase(m - lo);
+                        // The first multiple of p at or above segment_lo, never below p * p, which the base pass covered.
+                        auto const first = std::ranges::max(p * p, ((segment_lo + p - 1UZ) / p) * p);
+                        for (auto m = first; m < segment_hi; m += p) {
+                                window.erase(m - segment_lo);
                         }
                 }
                 for (auto const offset : window) {
-                        if (lo + offset >= hi) {
-                                break;  // the last window is short, and the tail above hi was never a candidate
+                        if (segment_lo + offset >= segment_hi) {
+                                break;  // the last window is short, and the tail above segment_hi was never a candidate
                         }
-                        primes.insert(static_cast<std::ranges::range_value_t<X>>(lo + offset));
+                        primes.insert(static_cast<std::ranges::range_value_t<X>>(segment_lo + offset));
                 }
         }
         return primes;
