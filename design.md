@@ -1096,10 +1096,17 @@ sift is a strided write ([index-walks](#index-walks)) and near width-indifferent
 block effect should show up as a divergence between the three benches rather than as one number.
 
 The ladder is what makes the shape visible, and the shape is not a constant factor. `std::flat_set` is the
-fastest of the three at the bottom rung and the slowest by four orders of magnitude at the top, because
-`erase` on a sorted vector is linear and the sieve does about `n log log n` of them. That is quadratic, and
-no amount of contiguity buys it back. A single measurement anywhere on that curve would have supported
-whichever conclusion the author already held.
+**fastest** of the three at the bottom rung -- 0.10 ms against `std::set`'s 0.17 -- and by `2^16` it is 215 ms
+against 7 ms, because `erase` on a sorted vector is linear and the sieve does about `n log log n` of them.
+That is quadratic, and no amount of contiguity buys it back. A single measurement anywhere on that curve
+would have supported whichever conclusion the author already held.
+
+Which is why `std::flat_set` stops at `2^16` while the other two run to `2^20`: the ceiling is a measurement
+decision before it is a budget one. Past that rung each doubling costs five times the last and establishes
+nothing the slope has not already shown -- carried to `2^20` it takes **107 seconds for a single iteration**,
+against `std::set`'s 0.94 and `bit_set`'s 0.0056, and spends six and a half minutes of every Release `ctest`
+run to re-derive a line visible four rungs earlier. Those three numbers were measured once, at `2^20`, before
+the ceiling was put in; the bench no longer produces the first of them.
 
 Under `ctest` a bench is a smoke test -- that it runs, not what it costs -- so the test invocation passes
 `--benchmark_min_time=1x`. Timing the full ladder in CI would put minutes of `std::set` at `2^20` into every
