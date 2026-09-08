@@ -780,6 +780,25 @@ The sequence row is named after the `std` container it packs, `bit_array` for `s
 therefore mark different columns, and that is correct by each row's own analogy rather than an inconsistency
 to fix.
 
+**Why the prefix leads.** `bit_` is a storage-strategy prefix, and the Standard already has the other one:
+`std::flat_set` keeps a sorted sequence of the elements that are there, so it is sparse in the universe of
+possible keys, where `bit_set` keeps one bit per position in that universe, so it is dense but packed. Same
+container, same interface, different representation — and the prefix is what says which, so it has to come
+first. `static_bit_set` would read as a qualified `bit_set`; `bit_static_set` is `bit_` applied to a
+`static_set`, the way `flat_set` is `flat_` applied to a `set`.
+
+**Why `static` and not `finite`.** `finite` selects nothing: `bit_set<Block, Allocator>` is a finite set of
+positions too, as every bit set is. What separates them is that `N` is a compile-time constant, which is
+*static*, and static-versus-dynamic is one of the two axes the whole design is built on — so the name reads off
+the design rather than off a true-but-non-distinguishing adjective. Recorded against it: P0843 renamed
+`boost::static_vector` to `std::inplace_vector` partly because *static* is overloaded in C++. Accepted anyway,
+because `inplace` names where the storage lives, which is the interesting property for a vector with static
+capacity and a run-time size, where a `bit_static_set`'s extent is genuinely fixed. The inplace column takes
+that name for exactly the case P0843 was naming ([the-inplace-column](#the-inplace-column)).
+
+`bitset` and `dynamic_bitset` sit outside the rule on purpose: they are not `bit_` anything, they are the
+counterparts reproduced under their own names ([a-strict-extension](#a-strict-extension)).
+
 One header per restricted name, holding its `basic_` form beside it, each over one storage: `bit_set`,
 `bit_vector` and `dynamic_bitset` over `block_vector<Block, Allocator>`, beside `bit_static_set`, `bit_array` and
 `bitset` over `block_array<Block, N>`, and `bit_inplace_set`, `bit_inplace_vector` and `inplace_bitset` over
