@@ -114,7 +114,7 @@ constexpr auto isqrt(std::size_t n) noexcept -> std::size_t
         auto y = (x + 1UZ) / 2UZ;
         while (y < x) {
                 x = y;
-                y = (x + n / x) / 2UZ;
+                y = (x + (n / x)) / 2UZ;
         }
         return x;
 }
