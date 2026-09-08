@@ -15,10 +15,15 @@ project(
 
 include(GNUInstallDirs)
 
+# The project's own name, spelled once. TOUPPER alone leaves XSTD-BITS, which no cache option can be called;
+# MAKE_C_IDENTIFIER alone leaves the lowercase form. Both, in this order, and test/ and benchmark/ inherit them.
+string(MAKE_C_IDENTIFIER ${PROJECT_NAME} project_id)            # xstd_bits
+string(TOUPPER ${project_id} project_option_prefix)             # XSTD_BITS
+
 # Warnings are errors while this library is being developed, which is what the presets ask for.
 # Declared here rather than under test/, as xstd and tabula do, because benchmark/ carries its
 # own warning set and has to be gated by the same switch.
-option(XSTD_BITS_WARNINGS_AS_ERRORS "Treat warnings as errors in xstd-bits tests and benchmarks" ${PROJECT_IS_TOP_LEVEL})
+option(${project_option_prefix}_WARNINGS_AS_ERRORS "Treat warnings as errors in ${PROJECT_NAME} tests and benchmarks" ${PROJECT_IS_TOP_LEVEL})
 
 # Prefer an installed xstd-ints so install(EXPORT) can record it as a dependency; a FetchContent build tree cannot be exported.
 find_package(xstd-ints 0.1.0 CONFIG QUIET)
@@ -88,6 +93,7 @@ target_sources(
         include/xstd/bits/detail/hash.hpp
         include/xstd/bits/detail/intrin.hpp
         include/xstd/bits/dynamic_bitset.hpp
+        include/xstd/bits/format.hpp
         include/xstd/bits/detail/pred.hpp
         include/xstd/bits/ext/boost.hpp
         include/xstd/bits/ext/boost/dynamic_bitset.hpp
@@ -119,21 +125,29 @@ if(PROJECT_IS_TOP_LEVEL)
         # nine cells compile to nothing and are never tested. Raising the standard here rather than in the
         # INTERFACE keeps the requirement a consumer sees at 23 while letting a leg of the matrix build the whole
         # matrix. [design.md#the-inplace-column]
-        set(XSTD_BITS_CXX_STANDARD 23 CACHE STRING "C++ standard for the tests and benchmarks: 23, or 26 to reach the inplace column")
-        set_property(CACHE XSTD_BITS_CXX_STANDARD PROPERTY STRINGS 23 26)
+        set(${project_option_prefix}_CXX_STANDARD 23 CACHE STRING "C++ standard for the tests and benchmarks: 23, or 26 to reach the inplace column")
+        set_property(CACHE ${project_option_prefix}_CXX_STANDARD PROPERTY STRINGS 23 26)
 
         # Asking for a standard CMake cannot spell for this compiler fails deep inside a try_compile, with a
         # message blaming the compiler. CMAKE_CXX_COMPILE_FEATURES is what CMake actually knows, so ask it.
-        if(NOT "cxx_std_${XSTD_BITS_CXX_STANDARD}" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
+        if(NOT "cxx_std_${${project_option_prefix}_CXX_STANDARD}" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
             message(FATAL_ERROR
-                "XSTD_BITS_CXX_STANDARD=${XSTD_BITS_CXX_STANDARD} is not something CMake ${CMAKE_VERSION} can ask "
+                "${project_option_prefix}_CXX_STANDARD=${${project_option_prefix}_CXX_STANDARD} is not something CMake ${CMAKE_VERSION} can ask "
                 "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION} for. CMake 3.28 knows no C++26 for GCC or "
                 "Clang at all; a newer CMake does. The inplace column needs it, the other six cells do not."
             )
         endif()
 
-        set(CMAKE_CXX_STANDARD ${XSTD_BITS_CXX_STANDARD})
+        set(CMAKE_CXX_STANDARD ${${project_option_prefix}_CXX_STANDARD})
         set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+        # Left ON, which is CMake's default, so the matrix compiles as gnu++23 where xstd and tabula compile as
+        # c++23. Stated rather than omitted, because the reason is specific and the difference is deliberate:
+        # <bit>'s functions take std::unsigned_integral alone, and libstdc++ and libc++ carry xstd::uint128 into
+        # that concept only outside __STRICT_ANSI__. Turning extensions off would drop the widest Block from
+        # every instantiation list rather than fail, which is the worse of the two outcomes.
+        # [design.md#uint128-support]
+        set(CMAKE_CXX_EXTENSIONS ON)
 
         add_subdirectory(benchmark)
         add_subdirectory(test)

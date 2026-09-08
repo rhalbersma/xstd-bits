@@ -48,9 +48,9 @@ template<template<std::size_t, class> class C, class Block>
 using straddling_extents = std::tuple
 <       C<    digits_v<Block> - 1, Block>
 ,       C<    digits_v<Block> + 1, Block>
-,       C<2 * digits_v<Block> - 1, Block>
+,       C<(2 * digits_v<Block>) - 1, Block>
 ,       C<2 * digits_v<Block>,     Block>
-,       C<2 * digits_v<Block> + 1, Block>
+,       C<(2 * digits_v<Block>) + 1, Block>
 ,       C<3 * digits_v<Block>,     Block>
 >;
 

@@ -787,7 +787,7 @@ container, same interface, different representation — and the prefix is what s
 first. `static_bit_set` would read as a qualified `bit_set`; `bit_static_set` is `bit_` applied to a
 `static_set`, the way `flat_set` is `flat_` applied to a `set`.
 
-**Why `static` and not `finite`.** `finite` selects nothing: `bit_set<Block, Allocator>` is a finite set of
+**Why `static` and not `finite`.** `finite` selects nothing: `bit_set` is a finite set of
 positions too, as every bit set is. What separates them is that `N` is a compile-time constant, which is
 *static*, and static-versus-dynamic is one of the two axes the whole design is built on — so the name reads off
 the design rather than off a true-but-non-distinguishing adjective. Recorded against it: P0843 renamed
@@ -846,7 +846,7 @@ because `bitset` already carries the word, and `inplace` is one storage word dow
 second vocabulary for the same thing.
 
 `N` is a **capacity** in bits here, where the static column's `N` is a width. The names carry that and the
-parameter lists do not, which is the same hazard `bit_static_set<N, Block>` and `bit_inplace_set<N, Block>`
+parameter lists do not, which is the same hazard `basic_bit_static_set<N, Block>` and `basic_bit_inplace_set<N, Block>`
 share by shape. The capacity is rounded up to whole blocks by `block_inplace_vector` itself, so
 `basic_bit_inplace_vector<9, std::uint8_t>` holds sixteen bits; the width under it is a run-time one and carries
 an unused tail like any other.
@@ -1068,6 +1068,45 @@ declarations the earlier views needed (*"Clang requires it, GCC does not"*) have
 The pointer is to the **storage** an owner wraps, never to the owner: `bit_static_set` hands out
 `bit_set_iterator<block_array<B, N>>`, which is why no owning type ever needs a `bit_traits` of its own.
 
+### the-set-for-each
+
+`for_each(f)` and `for_each_reverse(f)` on the set reading walk blocks where the iterator walks positions, and
+the difference is not word-parallelism -- the functor still sees every set position, one at a time. It is
+where the loop's state may live.
+
+`operator++` is **flat**. It has to re-derive the word from `(pointer, position)` on every step, because an
+iterator stays copyable and restartable and therefore cannot keep a partially consumed block between two
+increments. A loop has somewhere to put one. So `find_next` loads a block, masks off what is at or below the
+cursor, tests, possibly scans forward and takes a `countr_zero`, once per position; the walk loads once per
+block and then spends two instructions per position, `tzcnt` for the position and `blsr` to drop it.
+
+Measured against the range-for at 4.08x to 5.05x, on GCC 15 and clang 22, and the same on a two-word bitboard
+carrying twenty pieces as at 2^22 with 40% density. That stability is itself the point: `find_next` is
+inherently serial, no vectorizer engages on either side, and the answer does not move with the compiler --
+unlike the sequence reading, where the same question gives answers ranging from 1.24x ahead to 11.4x ahead
+depending on which one is asked ([the-sequence-ladder](#the-sequence-ladder)).
+
+Three decisions the shape forced:
+
+**A functor may return `bool` to mean "keep going".** A `void` one always continues. That is what a move
+generator wants once it has found its answer, and it is one `if constexpr` on `is_invocable_r_v<bool, F&,
+size_t>`. Nothing else is accepted: a functor returning something else is a caller error rather than a value
+to discard quietly.
+
+**The descending walk clears the bit it just reported.** `w & (w - 1)` drops the lowest set bit and has no
+descending twin, so `for_each_reverse` takes `digits - 1 - countl_zero(w)` for the position and clears exactly
+that bit. The set reading iterates both ways and so does this.
+
+**A storage with no block access takes the iterator.** `boost::dynamic_bitset` is the one, and there the walk
+falls back to the range-for it was written to beat, which is still correct and still the same answer. The
+same three tiers `fill` uses ([windows](#windows)).
+
+What is *not* here is a fat iterator carrying the residual word. It was measured -- 2.56x to 3.80x, against
+the walk's 4.00x to 5.27x -- so it is both slower than the member and the only one of the two that changes a
+contract: an iterator that caches a block stops observing an erase that lands ahead of it, where a closed loop
+caching the same block is unobservable. The member is the faster half and the safer half at once, which is
+rare enough to record.
+
 ### read-only-set-proxy
 
 The set reading's proxy is read-only whatever the qualification of `Bits`, because a key is nothing to write
@@ -1076,6 +1115,19 @@ keep anyway — `operator&` round-trips to the iterator, and the conversion to a
 lets `*it` initialize a strong index type in one step, where the two user-defined conversions of going through
 `size_t` would be one too many. A type with an explicit constructor takes the `size_t` route, `index(*it)`,
 and the proxy offers no explicit conversion of its own: MSVC cannot resolve one beside that constructor.
+
+### the-proxy-copies-the-handle
+
+Both proxies declare their copy constructor, and for opposite-looking reasons that are the same reason. The
+set proxy is `= default` beside a deleted `operator=`, because a reference to a key is a value: copyable,
+never assignable. The sequence proxy is `= default` beside two `operator=`s that write *through* the handle
+to the bit. That second pairing is exactly the case `[-Wdeprecated-copy-with-user-provided-copy]` names: a
+user-provided copy assignment makes the implicit copy constructor deprecated, because the compiler can no
+longer assume the two agree -- and here they genuinely do not, which is the whole point of a proxy. So the
+copy constructor is said out loud rather than inherited by default.
+
+Nothing else copy-constructs a proxy in this library, which is why nothing caught it until `<format>` arrived:
+`std::formatter`'s dispatch takes the element by value, and that first copy is where the deprecation lands.
 
 ### the-one-adl-exception
 
@@ -1087,6 +1139,36 @@ still built on `std::iter_swap`. `format_as` is fmt's protocol in the same sense
 
 The sequence proxy borrows nothing else from `[bitset.refs]`: no `flip()` and no `operator~`. Those belong to
 the bitset reading, whose `reference` is its own class.
+
+### formatting-the-proxies
+
+`std::format` over the containers needs nothing said about the containers. Every owner and view here is a
+range, so `[format.range.formatter]` would format each one already, except that it requires
+`formattable<ranges::range_reference_t<R>>` and a reference of ours is a proxy. So `xstd/bits/format.hpp`
+specializes `std::formatter` for the two proxies and stops there: `bit_set`, `bit_static_set`, `bit_vector`,
+`bit_array`, the views, the windows and the inplace column all follow from that, none of them mentioned.
+
+This is the same shape the proxies already had for fmt, in fmt's spelling. `format_as` is fmt's generic
+per-type hook: define it for one type and every range over that type formats, which is why the proxies carry
+it and no container does. `std::formatter` is the standard's hook for the same job. So each library gets one
+hook per proxy -- a hidden friend for fmt, a specialization for the standard -- and in both the containers
+follow for free. Nothing here is a special case for formatting; it is the general mechanism used twice.
+
+The readings then separate themselves. `[format.range.fmtkind]` picks `range_format::set` for a range with a
+`key_type` and `range_format::sequence` otherwise, so the set reading prints `{1, 3, 5}` and the sequence
+reading `[false, true, false, false]` -- the same split `format_as` arrives at for fmt, reached here through
+the standard's own machinery rather than by our choosing
+([two-readings-disagree](#two-readings-disagree)).
+
+Each specialization derives from `std::formatter<size_t>` or `std::formatter<bool>` instead of writing a
+`parse`, which is what keeps the whole spec: a width and a fill on a single proxy, and the nested spec a range
+formatter forwards, so `{::#x}` over the set reading and `{::d}` over the sequence reading reach the
+underlying formatter intact.
+
+The header is not in `xstd/bits.hpp`. The umbrella keeps `<format>` off every consumer path for the reason it
+keeps the `ext/` adaptors and Boost off it; a consumer who formats says so by including the header. Issue #20
+had this waiting on P3070R0, which is not what blocked it: the proxy's formattability was, and that is ours to
+fix.
 
 ### total-lookups-on-the-container
 
@@ -1259,7 +1341,7 @@ ever wrong.
 
 ### clang-tidy-false-positives
 
-Four findings are suppressed because the checker cannot see what makes them right:
+Five findings are suppressed because the checker cannot see what makes them right:
 
 - `bugprone-unhandled-self-assignment` on the bitset proxy's `operator=`, which owns no storage: `b[i] = b[i]`
   reads the bit and writes it back.
@@ -1269,6 +1351,16 @@ Four findings are suppressed because the checker cannot see what makes them righ
   instantiation discards; it sees only that one and asks for a `const` that would stop every other
   instantiation compiling.
 - `misc-redundant-expression` on a reflexivity check, which cannot be written without naming the object twice.
+- `bugprone-std-namespace-modification` on the two `std::formatter` specializations, which is precisely the
+  modification `[namespace.std]/2` allows: a specialization of a standard library template for a
+  program-defined type. clang-tidy 22 and 23 read the qualified definition as modifying the namespace; 24 no
+  longer does, and the suppression stays until the whole ladder is past 23.
+
+A sixth had a fix rather than a suppression. `modernize-use-nullptr` reads the `0` in `(a <=> b) < 0` as a
+null pointer constant, which is the same false positive `-Wno-zero-as-null-pointer-constant` already covers on
+the compiler side. Every site in the test sources says `std::is_lt`, `std::is_gt` or `std::is_eq` instead --
+the standard's own names for those three questions, which are clearer than the comparison against a literal
+and leave the check on to catch a real one. Do not spell them back.
 
 ### clang-crashes-on-a-foreign-bulk-source
 

@@ -17,7 +17,7 @@
 #include <algorithm>                              // equal
 #include <array>                                  // array
 #include <bitset>                                 // bitset
-#include <compare>                                // strong_ordering
+#include <compare>                                // is_lt, strong_ordering
 #include <concepts>                               // regular, same_as, totally_ordered
 #include <cstddef>                                // size_t
 #include <cstdint>                                // uint8_t, uint64_t
@@ -342,7 +342,7 @@ BOOST_AUTO_TEST_CASE(TheViewsReachABitset)
         BOOST_CHECK((keys == std::vector<std::size_t>{ 1, 69 }));
 
         BOOST_CHECK(va != vb);
-        BOOST_CHECK((vb <=> va) < 0);
+        BOOST_CHECK(std::is_lt(vb <=> va));
         BOOST_CHECK(va.is_subset_of(va));
         BOOST_CHECK_EQUAL(qa[69], true);
 

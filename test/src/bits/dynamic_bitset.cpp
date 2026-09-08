@@ -10,6 +10,7 @@
 #include <xstd/bits/dynamic_bitset.hpp>           // dynamic_bitset
 #include <algorithm>                              // equal
 #include <array>                                  // array
+#include <compare>                                // is_eq, is_gt, is_lt
 #include <concepts>                               // regular, same_as, totally_ordered
 #include <cstddef>                                // size_t
 #include <cstdint>                                // uint8_t, uint64_t
@@ -102,9 +103,9 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheOrderingIsBoosts, T, Dynamic)
         for (auto const& [ x, bx ] : values) {
                 for (auto const& [ y, by ] : values) {
                         auto const cmp = x <=> y;
-                        disagreements += static_cast<int>((cmp < 0) != (bx < by));
-                        disagreements += static_cast<int>((cmp > 0) != (by < bx));
-                        disagreements += static_cast<int>((cmp == 0) != (bx == by));
+                        disagreements += static_cast<int>(std::is_lt(cmp) != (bx <  by));
+                        disagreements += static_cast<int>(std::is_gt(cmp) != (by <  bx));
+                        disagreements += static_cast<int>(std::is_eq(cmp) != (bx == by));
                         disagreements += static_cast<int>(cmp != (x.to_string() <=> y.to_string()));
                 }
         }
@@ -128,9 +129,9 @@ auto disagreements_against_boost(std::size_t w, std::size_t u, unsigned long lon
         if (u > 64) { y.set(65); by.set(65); }
 
         auto const cmp = x <=> y;
-        return static_cast<int>((cmp <  0) != (bx <  by))
-             + static_cast<int>((cmp >  0) != (by <  bx))
-             + static_cast<int>((cmp == 0) != (bx == by));
+        return static_cast<int>(std::is_lt(cmp) != (bx <  by))
+             + static_cast<int>(std::is_gt(cmp) != (by <  bx))
+             + static_cast<int>(std::is_eq(cmp) != (bx == by));
 }
 
 }       // namespace

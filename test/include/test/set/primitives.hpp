@@ -346,10 +346,14 @@ struct mem_emplace
                 );
 
                 static_assert(std::constructible_from<typename X::value_type, Args...>);                // [associative.reqmts.general]/48
-                auto emplaced = not a.contains(typename X::value_type(std::forward<Args>(args)...));
-                auto r = a.emplace(std::forward<Args>(args)...);                                        // [associative.reqmts.general]/49
+                // Built once and then used three times. Forwarding three times reads args twice after moving
+                // from it: harmless where value_type is a size_t, wrong the moment this harness meets a type
+                // where a move is not a copy, and bugprone-use-after-move is right to say so.
+                auto const value = typename X::value_type(std::forward<Args>(args)...);
+                auto const emplaced = not a.contains(value);
+                auto r = a.emplace(value);                                                              // [associative.reqmts.general]/49
                                                                                 // [associative.reqmts.general]/50
-                BOOST_CHECK(r == std::make_pair(a.find(typename X::value_type(std::forward<Args>(args)...)), emplaced));
+                BOOST_CHECK(r == std::make_pair(a.find(value), emplaced));
         }
 };
 
@@ -364,8 +368,10 @@ struct mem_emplace_hint
                                 typename X::iterator
                         >
                 );
-                auto r = a.emplace_hint(p, std::forward<Args>(args)...);                        // [associative.reqmts.general]/58
-                BOOST_CHECK(r == a.find(typename X::value_type(std::forward<Args>(args)...)));  // [associative.reqmts.general]/59
+                // Built once, for the reason mem_emplace gives.
+                auto const value = typename X::value_type(std::forward<Args>(args)...);
+                auto r = a.emplace_hint(p, value);                                              // [associative.reqmts.general]/58
+                BOOST_CHECK(r == a.find(value));                                                // [associative.reqmts.general]/59
         }
 };
 

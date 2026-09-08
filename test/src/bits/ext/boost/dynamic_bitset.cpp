@@ -10,7 +10,7 @@
 #include <xstd/bits/bit_span.hpp>     // bit_span
 #include <xstd/bits/bit_set_view.hpp>          // bit_set_view
 #include <algorithm>                              // lexicographical_compare
-#include <compare>                                // strong_ordering
+#include <compare>                                // is_lt, strong_ordering
 #include <concepts>                               // regular, totally_ordered
 #include <cstddef>                                // size_t
 #include <ranges>                                 // bidirectional_range, random_access_range
@@ -118,7 +118,7 @@ BOOST_AUTO_TEST_CASE(TheViewReplacesItsOrderingRatherThanTrustingIt)
                         // What the keys themselves say, which is what the set reading means.
                         auto const expected = std::ranges::lexicographical_compare(kx, ky);
 
-                        BOOST_CHECK_EQUAL((xstd::bit_set_view(x) <=> xstd::bit_set_view(y)) < 0, expected);
+                        BOOST_CHECK_EQUAL(std::is_lt(xstd::bit_set_view(x) <=> xstd::bit_set_view(y)), expected);
                         disagreements += static_cast<int>((x < y) != expected);
                 }
         }
