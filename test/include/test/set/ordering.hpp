@@ -55,9 +55,9 @@ auto ordering_agrees_with_std_set(std::size_t universe = 4) -> void
 
                         equality_disagreements += static_cast<std::size_t>((xv == yv) != (kx == ky));
                         less_disagreements     += static_cast<std::size_t>(
-                                std::is_lt(xv <=> yv) != std::lexicographical_compare(kx.begin(), kx.end(), ky.begin(), ky.end()));
+                                std::is_lt(xv <=> yv) != std::ranges::lexicographical_compare(kx, ky));
                         greater_disagreements  += static_cast<std::size_t>(
-                                std::is_gt(xv <=> yv) != std::lexicographical_compare(ky.begin(), ky.end(), kx.begin(), kx.end()));
+                                std::is_gt(xv <=> yv) != std::ranges::lexicographical_compare(ky, kx));
                 }
         }
 
@@ -99,9 +99,9 @@ auto ordering_agrees_with_std_set_sampled(std::size_t universe, std::size_t tria
 
                 equality_disagreements += static_cast<std::size_t>((xv == yv) != (kx == ky));
                 less_disagreements     += static_cast<std::size_t>(
-                        std::is_lt(xv <=> yv) != std::lexicographical_compare(kx.begin(), kx.end(), ky.begin(), ky.end()));
+                        std::is_lt(xv <=> yv) != std::ranges::lexicographical_compare(kx, ky));
                 greater_disagreements  += static_cast<std::size_t>(
-                        std::is_gt(xv <=> yv) != std::lexicographical_compare(ky.begin(), ky.end(), kx.begin(), kx.end()));
+                        std::is_gt(xv <=> yv) != std::ranges::lexicographical_compare(ky, kx));
         }
 
         BOOST_CHECK_EQUAL(equality_disagreements, 0UZ);

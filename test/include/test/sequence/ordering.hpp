@@ -45,8 +45,8 @@ auto ordering_agrees_with_vector_bool(std::size_t universe = 4) -> void
 
                         BOOST_CHECK_EQUAL(std::ranges::equal(xv, yv), vx == vy);
                         auto const order = std::lexicographical_compare_three_way(xv.begin(), xv.end(), yv.begin(), yv.end());
-                        BOOST_CHECK_EQUAL(std::is_lt(order), std::lexicographical_compare(vx.begin(), vx.end(), vy.begin(), vy.end()));
-                        BOOST_CHECK_EQUAL(std::is_gt(order), std::lexicographical_compare(vy.begin(), vy.end(), vx.begin(), vx.end()));
+                        BOOST_CHECK_EQUAL(std::is_lt(order), std::ranges::lexicographical_compare(vx, vy));
+                        BOOST_CHECK_EQUAL(std::is_gt(order), std::ranges::lexicographical_compare(vy, vx));
                 }
         }
 }
