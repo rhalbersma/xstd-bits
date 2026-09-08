@@ -263,7 +263,8 @@ struct mem_swap
         auto operator()(auto& a, auto& b) const noexcept
         {
                 static_assert(std::same_as<decltype(a.swap(b)), void>);         // [container.reqmts]/45
-                auto a1 = a, b1 = b;
+                auto a1 = a;
+                auto b1 = b;
                 a1.swap(b1);
                 BOOST_CHECK(a1 == b and b1 == a);                               // [container.reqmts]/46
         }
@@ -273,8 +274,10 @@ struct fn_swap
 {
         auto operator()(auto& a, auto& b) const noexcept
         {
-                auto a1 = a, b1 = b;
-                auto a2 = a, b2 = b;
+                auto a1 = a;
+                auto b1 = b;
+                auto a2 = a;
+                auto b2 = b;
                 swap(a1, b1); a2.swap(b2);
                 BOOST_CHECK(a1 == a2 and b1 == b2);                             // [container.reqmts]/48
         }
