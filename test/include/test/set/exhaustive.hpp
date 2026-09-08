@@ -11,6 +11,7 @@
 #include <algorithm>        // max
 #include <array>            // array
 #include <cassert>          // assert
+#include <cstddef>          // size_t
 #include <initializer_list> // initializer_list
 #include <ranges>           // iota, to
 
@@ -31,7 +32,7 @@ template<class X>
 concept static_width = requires { typename xstd::owned_storage<X>::bits_type; } and xstd::static_bit_extent<typename X::traits_type, typename xstd::owned_storage<X>::bits_type>;
 
 template<class X, std::size_t Limit>
-inline constexpr auto limit_v = []() {
+inline constexpr auto limit_v = [] -> std::size_t {
         if constexpr (static_width<X>) {
                 return X().max_size();
         } else {

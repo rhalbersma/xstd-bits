@@ -472,8 +472,8 @@ struct mem_is_proper_subset_of_edges
                 }
                 auto const lo = 0UZ;
                 auto const hi = N - 1;
-                auto const one = [&](std::size_t i)                 { auto x = a; x.set(i);           return x; };
-                auto const two = [&](std::size_t i, std::size_t j)  { auto x = a; x.set(i); x.set(j); return x; };
+                auto const one = [&](std::size_t i)                -> X { auto x = a; x.set(i);           return x; };
+                auto const two = [&](std::size_t i, std::size_t j) -> X { auto x = a; x.set(i); x.set(j); return x; };
 
                 auto const check = mem_is_proper_subset_of();
                 check(one(lo), one(lo));                // equal: every block compares the same
