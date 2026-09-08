@@ -853,44 +853,14 @@ public:
                 }
         }
 
-        [[nodiscard]] constexpr auto is_proper_subset_of(block_sequence const& other [[maybe_unused]]) const noexcept
+        // A proper subset is a subset that differs, and both halves are already here: the unrolled arms are
+        // is_subset_of's, and != is the defaulted memberwise comparison. Nothing is left to walk by hand.
+        // [design.md#the-cheapest-contract]
+        [[nodiscard]] constexpr auto is_proper_subset_of(block_sequence const& other) const noexcept
                 -> bool
         {
                 assert(this->size() == other.size());
-                if constexpr (has_static_size and N == 0) {
-                        return false;
-                } else if constexpr (has_static_size and static_num_blocks == 1) {
-                        return
-                                detail::bits::is_subset_of (this->m_blocks[0], other.m_blocks[0]) and
-                                detail::bits::not_equal_to(this->m_blocks[0], other.m_blocks[0])
-                        ;
-                } else if constexpr (has_static_size and static_num_blocks == 2) {
-                        if (not detail::bits::is_subset_of(this->m_blocks[0], other.m_blocks[0])) {
-                                return false;
-                        }
-                        if (detail::bits::not_equal_to(this->m_blocks[0], other.m_blocks[0])) {
-                                return detail::bits::is_subset_of(this->m_blocks[1], other.m_blocks[1]);
-                        }
-                        return
-                                detail::bits::is_subset_of (this->m_blocks[1], other.m_blocks[1]) and
-                                detail::bits::not_equal_to(this->m_blocks[1], other.m_blocks[1])
-                        ;
-                } else {
-                        auto i = 0UZ;
-                        while (i < num_blocks()) {
-                                if (not detail::bits::is_subset_of(this->m_blocks[i], other.m_blocks[i])) {
-                                        return false;
-                                }
-                                if (    detail::bits::not_equal_to(this->m_blocks[i], other.m_blocks[i])) {
-                                        break;
-                                }
-                                ++i;
-                        }
-                        return (i == num_blocks()) ? false : std::ranges::all_of(
-                                std::views::zip(this->m_blocks, other.m_blocks) | std::views::drop(i), [](auto&& _) { auto&& [ lhs, rhs ] = _;
-                                return detail::bits::is_subset_of(lhs, rhs);
-                        });
-                }
+                return is_subset_of(other) and *this != other;
         }
 
         [[nodiscard]] constexpr auto intersects(block_sequence const& other [[maybe_unused]]) const noexcept
