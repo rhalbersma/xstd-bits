@@ -31,6 +31,46 @@ concept fixed_string_view_constructible = requires { X(std::string_view()); } an
 template<class X>
 concept dynamic_string_view_constructible = requires { X(std::string_view()); typename xstd::owned_storage<X>::bits_type; } and dynamic<X>;
 
+// One function per tier, because the tiers are what this checks and a BOOST_CHECK_THROW is three branches to
+// the complexity check: inline, the three of them nested under two if constexprs came to 64 against a threshold
+// of 25, and none of that 64 was the logic. [design.md#one-function-per-tier]
+
+// A width the text must fit: too long throws, whatever the text says.
+template<class X>
+auto check_string_view_at_a_static_width() -> void  // NOLINT(bugprone-exception-escape)
+{
+        constexpr auto N = X().size();
+        auto const zeros = std::string(N, '0');
+        BOOST_CHECK_THROW(                                                      // [bitset.cons]/3
+                (static_cast<void>(X(std::string_view(zeros), N + 1))), std::out_of_range
+        );
+}
+
+// The two a zero width has no room to state: every position set, and a character that is neither 0 nor 1.
+template<class X>
+auto check_string_view_at_a_nonzero_width() -> void  // NOLINT(bugprone-exception-escape)
+{
+        constexpr auto N = X().size();
+        auto const ones = std::string(N, '1');
+        BOOST_CHECK(X(std::string_view(ones)).all());                           // [bitset.cons]/4
+
+        auto invalid = std::string(N, '0');
+        invalid[N - 1] = '2';
+        BOOST_CHECK_THROW(                                                      // [bitset.cons]/5
+                (static_cast<void>(X(std::string_view(invalid)))), std::invalid_argument
+        );
+}
+
+// A run-time width is boost's contract: the text read is the width, and the two throws are as at a static width.
+template<class X>
+auto check_string_view_at_a_run_time_width() -> void  // NOLINT(bugprone-exception-escape)
+{
+        BOOST_CHECK_EQUAL(X(std::string_view("0101")).size(), 4UZ);
+        BOOST_CHECK(X(std::string_view("11")).all());
+        BOOST_CHECK_THROW((static_cast<void>(X(std::string_view("01"), 3))),  std::out_of_range);
+        BOOST_CHECK_THROW((static_cast<void>(X(std::string_view("012")))),   std::invalid_argument);
+}
+
 template<class X>
 struct constructor
 {
@@ -41,29 +81,12 @@ struct constructor
 
                 // [bitset.cons]/2 describes the constructor taking unsigned long long
                 if constexpr (fixed_string_view_constructible<X>) {
-                        constexpr auto N = X().size();
-                        auto const zeros = std::string(N, '0');
-
-                        BOOST_CHECK_THROW(                                      // [bitset.cons]/3
-                                (static_cast<void>(X(std::string_view(zeros), N + 1))), std::out_of_range
-                        );
-
-                        if constexpr (N > 0) {
-                                auto const ones = std::string(N, '1');
-                                BOOST_CHECK(X(std::string_view(ones)).all());   // [bitset.cons]/4
-
-                                auto invalid = zeros;
-                                invalid[N - 1] = '2';
-                                BOOST_CHECK_THROW(                              // [bitset.cons]/5
-                                        (static_cast<void>(X(std::string_view(invalid)))), std::invalid_argument
-                                );
+                        check_string_view_at_a_static_width<X>();
+                        if constexpr (X().size() > 0) {
+                                check_string_view_at_a_nonzero_width<X>();
                         }
                 } else if constexpr (dynamic_string_view_constructible<X>) {
-                        // A run-time width is boost's contract: the text read is the width, and the two throws are as at a static width.
-                        BOOST_CHECK_EQUAL(X(std::string_view("0101")).size(), 4UZ);
-                        BOOST_CHECK(X(std::string_view("11")).all());
-                        BOOST_CHECK_THROW((static_cast<void>(X(std::string_view("01"), 3))),  std::out_of_range);
-                        BOOST_CHECK_THROW((static_cast<void>(X(std::string_view("012")))),   std::invalid_argument);
+                        check_string_view_at_a_run_time_width<X>();
                 }
         }
 };
