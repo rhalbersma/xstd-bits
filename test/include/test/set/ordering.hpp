@@ -10,7 +10,7 @@
 #include <test/bitset/factory.hpp>       // make_bitset
 #include <xstd/bits/bit_set_view.hpp> // bit_set_view
 #include <algorithm>                     // lexicographical_compare
-#include <compare>                       // strong_ordering
+#include <compare>                       // is_gt, is_lt, strong_ordering
 #include <cstddef>                       // size_t
 #include <set>                           // set
 
@@ -55,9 +55,9 @@ auto ordering_agrees_with_std_set(std::size_t universe = 4) -> void
 
                         equality_disagreements += static_cast<std::size_t>((xv == yv) != (kx == ky));
                         less_disagreements     += static_cast<std::size_t>(
-                                ((xv <=> yv) < 0) != std::lexicographical_compare(kx.begin(), kx.end(), ky.begin(), ky.end()));
+                                std::is_lt(xv <=> yv) != std::lexicographical_compare(kx.begin(), kx.end(), ky.begin(), ky.end()));
                         greater_disagreements  += static_cast<std::size_t>(
-                                ((xv <=> yv) > 0) != std::lexicographical_compare(ky.begin(), ky.end(), kx.begin(), kx.end()));
+                                std::is_gt(xv <=> yv) != std::lexicographical_compare(ky.begin(), ky.end(), kx.begin(), kx.end()));
                 }
         }
 
@@ -99,9 +99,9 @@ auto ordering_agrees_with_std_set_sampled(std::size_t universe, std::size_t tria
 
                 equality_disagreements += static_cast<std::size_t>((xv == yv) != (kx == ky));
                 less_disagreements     += static_cast<std::size_t>(
-                        ((xv <=> yv) < 0) != std::lexicographical_compare(kx.begin(), kx.end(), ky.begin(), ky.end()));
+                        std::is_lt(xv <=> yv) != std::lexicographical_compare(kx.begin(), kx.end(), ky.begin(), ky.end()));
                 greater_disagreements  += static_cast<std::size_t>(
-                        ((xv <=> yv) > 0) != std::lexicographical_compare(ky.begin(), ky.end(), kx.begin(), kx.end()));
+                        std::is_gt(xv <=> yv) != std::lexicographical_compare(ky.begin(), ky.end(), kx.begin(), kx.end()));
         }
 
         BOOST_CHECK_EQUAL(equality_disagreements, 0UZ);

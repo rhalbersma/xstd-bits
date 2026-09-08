@@ -10,7 +10,7 @@
 #include <xstd/bits/set_adaptor.hpp> // set_adaptor
 #include <xstd/bits/ownership.hpp>     // ownership
 #include <algorithm>                    // equal_range, lexicographical_compare_three_way
-#include <compare>                      // strong_ordering
+#include <compare>                      // is_gteq, is_gt, is_lteq, is_lt, strong_ordering
 #include <concepts>                     // convertible_to, default_initializable, equality_comparable, integral, same_as, unsigned_integral
 #include <cstddef>                      // ptrdiff_t
 #include <functional>                   // hash
@@ -612,7 +612,7 @@ struct op_less
         auto operator()(auto const& a, auto const& b) const noexcept
         {                                                                       // [tab:container.opt]
                 static_assert(std::convertible_to<decltype(a < b), bool>);
-                BOOST_CHECK_EQUAL(a < b, (a <=> b) < 0);
+                BOOST_CHECK_EQUAL(a < b, std::is_lt(a <=> b));
                 BOOST_CHECK_EQUAL(a < b, std::ranges::lexicographical_compare(a, b));
                 BOOST_CHECK(not (a < b) or not (b < a));                        // asymmetric
         }
@@ -628,7 +628,7 @@ struct op_greater
         auto operator()(auto const& a, auto const& b) const noexcept
         {                                                                       // [tab:container.opt]
                 static_assert(std::convertible_to<decltype(a > b), bool>);
-                BOOST_CHECK_EQUAL(a > b, (a <=> b) > 0);
+                BOOST_CHECK_EQUAL(a > b, std::is_gt(a <=> b));
                 BOOST_CHECK_EQUAL(a > b, b < a);
         }
 };
@@ -638,7 +638,7 @@ struct op_less_equal
         auto operator()(auto const& a, auto const& b) const noexcept
         {                                                                       // [tab:container.opt]
                 static_assert(std::convertible_to<decltype(a <= b), bool>);
-                BOOST_CHECK_EQUAL(a <= b, (a <=> b) <= 0);
+                BOOST_CHECK_EQUAL(a <= b, std::is_lteq(a <=> b));
                 BOOST_CHECK_EQUAL(a <= b, not (b < a));
         }
 };
@@ -648,7 +648,7 @@ struct op_greater_equal
         auto operator()(auto const& a, auto const& b) const noexcept
         {                                                                       // [tab:container.opt]
                 static_assert(std::convertible_to<decltype(a >= b), bool>);
-                BOOST_CHECK_EQUAL(a >= b, (a <=> b) >= 0);
+                BOOST_CHECK_EQUAL(a >= b, std::is_gteq(a <=> b));
                 BOOST_CHECK_EQUAL(a >= b, not (a < b));
         }
 };
