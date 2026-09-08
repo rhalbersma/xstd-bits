@@ -1069,26 +1069,46 @@ on the jobs that build without sanitizers.
 
 ### the-sieve
 
-The two sieves under `include/opt/` are the library's worked example and its bench, and each speaks one
-vocabulary. `opt/set/sieve.hpp` runs over any ordered set of integers, `std::set`, `std::flat_set`,
-`bit_static_set` or `bit_set`: the candidates are `iota(2, n)` converted to the set, and a sift is `erase`.
-`opt/bitset/sieve.hpp` runs over any bitset, `std::bitset`, `boost::dynamic_bitset` or ours, in the same
-vocabulary through `bit_set_view`: the storage is resized to the count where it can be, then the view
-`fill`s and `erase`s 0 and 1, and every sift is an `erase` through it. The `legacy_bitset`/`modern_bitset`
-ladders, the `generate_empty` trait and the `static_assert(false)` arms that #84 catalogued are gone with
-the absence they papered over: the view is what reconciles `set(pos)`/`reset(pos)` with `insert`/`erase`,
-and a bitset's own spelling reaches the sieve through it and nowhere else. A bitset's `erase` invalidates no
-iterator, so the bitset sieve walks the view live where the set sieve walks a snapshot.
+The sieve under `include/opt/set/` is the library's worked example and its bench, and it speaks **one**
+vocabulary: an ordered set of integers. It runs over `std::set`, `std::flat_set`, `bit_static_set` or
+`bit_set`; the candidates are `iota(2, n)` converted to the set, and a sift is `erase`. Nothing
+bitset-shaped takes part.
 
-The benches are dynamic containers only, so each compares like with like: the set bench holds
-`std::flat_set`, `std::set` and `bit_set`, the bitset bench `boost::dynamic_bitset<>` and `dynamic_bitset`.
-A `bit_static_set<N>` sifting a universe it was sized for is not measuring what a `std::set` growing and
-shrinking is. `bit_set` is on the set bench and not the bitset one: a set has no `resize`, its width being
-capacity ([width-is-capacity](#width-is-capacity)), and it shares `block_sequence` with `dynamic_bitset`,
-so the bitset bench would only time the same storage twice. The tests keep the static types, `std::bitset<N>`,
-`xstd::bitset<N>` and `bit_static_set<N>`, since the sieve is an example before it is a bench; the two-bit
-sieve that runs `sift_primes1` to exhaustion is over the run-time widths, boost's and ours, as only they can
-be that small.
+There was a second sieve, `opt/bitset/sieve.hpp`, running the same shape over `std::bitset`,
+`boost::dynamic_bitset` or ours through `bit_set_view`. It is gone. Two sieves were two vocabularies for one
+algorithm, and the thing it was there to demonstrate -- that the view reconciles `set(pos)`/`reset(pos)`
+with `insert`/`erase` -- is what `test/src/bits/bit_set_view.cpp` already asserts directly, over all three
+bitsets, without a sieve in the way. An example earns its place by showing something no test does.
+Bitset performance is measured against `std::bitset` and boost on its own bench instead, at the widths a
+bitset is actually used at, rather than through an algorithm that suits a set.
+
+The bench is dynamic containers only, so it compares like with like: `std::flat_set`, `std::set` and
+`bit_set`, one of each representation -- sorted vector, node-based, dense bitmap. A `bit_static_set<N>`
+sifting a universe it was sized for is not measuring what a growing set is, so it stays in the test and off
+the bench.
+
+Two ladders cross. The bound doubles from `2^10` to `2^20` rather than stepping decades, because `bit_set`
+changes block count on exactly those boundaries: a doubling walks whole blocks, and a cache knee reads as a
+knee instead of smeared across a decade. The second ladder is `Block`, ours alone -- `std::set` and
+`std::flat_set` have none to choose. At a given `n` the footprint is the same count of bits whatever the
+block, so that axis is not about memory: it varies the block count against the cost per block, and since the
+sift is a strided write ([index-walks](#index-walks)) and near width-indifferent while the scans are not, a
+block effect should show up as a divergence between the three benches rather than as one number.
+
+The ladder is what makes the shape visible, and the shape is not a constant factor. `std::flat_set` is the
+fastest of the three at the bottom rung and the slowest by four orders of magnitude at the top, because
+`erase` on a sorted vector is linear and the sieve does about `n log log n` of them. That is quadratic, and
+no amount of contiguity buys it back. A single measurement anywhere on that curve would have supported
+whichever conclusion the author already held.
+
+Under `ctest` a bench is a smoke test -- that it runs, not what it costs -- so the test invocation passes
+`--benchmark_min_time=1x`. Timing the full ladder in CI would put minutes of `std::set` at `2^20` into every
+run for a number a shared runner cannot make meaningful anyway. A manual run takes the defaults.
+
+The test keeps the static types alongside the dynamic ones, `bit_static_set<N>` with `std::set` and
+`std::flat_set`, since the sieve is an example before it is a bench, and it keeps the degenerate widths: a
+two-candidate sieve runs `sift_primes1` to exhaustion, and a three-candidate one returns from `filter_twins`
+before it has a triple.
 
 ## Platform and tooling, continued
 

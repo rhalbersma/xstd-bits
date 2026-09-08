@@ -120,10 +120,15 @@ foreach(t ${targets})
         ${cxx_compile_options_mbig_obj}
     )
 
+    # Under ctest a benchmark is a smoke test: that it runs, not what it costs. Timing the full ladder here would
+    # put minutes of std::set at 2^20 into every CI run, and the number would be worthless on a shared runner
+    # anyway. A manual run takes the defaults and measures for real.
+    set(bench_smoke_args --benchmark_min_time=1x)
+
     # Release only, and by CONFIGURATIONS rather than if(): neither spelling alone works on both generator kinds (#32).
     if(xstd_bits_is_multi_config)
-        add_test(NAME ${target_id} CONFIGURATIONS Release COMMAND ${target_id})
+        add_test(NAME ${target_id} CONFIGURATIONS Release COMMAND ${target_id} ${bench_smoke_args})
     elseif(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
-        add_test(NAME ${target_id} COMMAND ${target_id})
+        add_test(NAME ${target_id} COMMAND ${target_id} ${bench_smoke_args})
     endif()
 endforeach()
