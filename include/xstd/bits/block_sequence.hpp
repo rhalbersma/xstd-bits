@@ -218,11 +218,10 @@ public:
         {
                 auto const [ index, offset ] = index_offset(n);
                 assert(index < num_blocks());
-                auto const low = static_cast<block_type>(m_blocks[index] >> offset);
                 if (offset == 0UZ or index == last_block()) {
-                        return low;
+                        return static_cast<block_type>(m_blocks[index] >> offset);
                 }
-                return static_cast<block_type>(low | static_cast<block_type>(m_blocks[index + 1UZ] << (bits_per_block - offset)));
+                return adjacent_blocks(index, offset);
         }
 
         // The write side of word_at, masked: the bits of value under mask land at [n, n + bits_per_block), split over two blocks where n is not aligned, and the tail stays clear. [design.md#the-blit]
@@ -548,7 +547,8 @@ public:
                         } else {
                                 auto const R_shift = bits_per_block - L_shift;
                                 for (auto i = last_block(); i > n_blocks; --i) {
-                                        m_blocks[i] = static_cast<block_type>(static_cast<block_type>(m_blocks[i - n_blocks] << L_shift) | static_cast<block_type>(m_blocks[i - n_blocks - 1] >> R_shift));
+                                        // Read one block lower than the destination: the splice of [i - n_blocks - 1, i - n_blocks]. [design.md#the-funnel-shift]
+                                        m_blocks[i] = adjacent_blocks(i - n_blocks - 1UZ, R_shift);
                                 }
                                 m_blocks[n_blocks] = static_cast<block_type>(m_blocks[0] << L_shift);
                         }
@@ -571,9 +571,9 @@ public:
                         if (R_shift == 0) {
                                 std::shift_left(std::ranges::begin(m_blocks), std::ranges::end(m_blocks), static_cast<std::ptrdiff_t>(n_blocks));
                         } else {
-                                auto const L_shift = bits_per_block - R_shift;
                                 for (auto i = 0UZ; i + n_blocks < last_block(); ++i) {
-                                        m_blocks[i] = static_cast<block_type>(static_cast<block_type>(m_blocks[i + n_blocks] >> R_shift) | static_cast<block_type>(m_blocks[i + n_blocks + 1] << L_shift));
+                                        // Which is word_at(i * bits_per_block + n), reached without recomputing the division. [design.md#the-funnel-shift]
+                                        m_blocks[i] = adjacent_blocks(i + n_blocks, R_shift);
                                 }
                                 m_blocks[last_block() - n_blocks] = static_cast<block_type>(m_blocks[last_block()] >> R_shift);
                         }
@@ -927,6 +927,19 @@ private:
                         }
                         return false;
                 }
+        }
+
+        // The blocks at index and index + 1 as one double-width word shifted down by offset: the funnel shift that
+        // word_at and both shift operators are each made of, spelled once. [design.md#the-funnel-shift]
+        [[nodiscard]] constexpr auto adjacent_blocks(std::size_t index, std::size_t offset) const noexcept
+                -> block_type
+        {
+                assert(0UZ < offset and offset < bits_per_block);
+                assert(index + 1UZ < num_blocks());
+                return static_cast<block_type>(
+                        static_cast<block_type>(m_blocks[index] >> offset) |
+                        static_cast<block_type>(m_blocks[index + 1UZ] << (bits_per_block - offset))
+                );
         }
 
         [[nodiscard]] constexpr auto last_block() const noexcept

@@ -174,6 +174,26 @@ the tail kept clear. Every masked write goes through it: boost's ranged `set`, `
 `fill`, and a window's bulk operators, each walking the words a range spans with the mask of what each holds,
 whole words and a partial one at the end.
 
+### the-funnel-shift
+
+Under `word_at` and both shift operators is one operation: two adjacent blocks spliced into a double-width
+word and shifted down. `block_sequence::adjacent_blocks(index, offset)` is that splice, and the three sites
+now read as three uses of it rather than three spellings.
+
+They did not look alike, which is why it went unnoticed. `word_at(n)` takes `(index, offset)` from `n`.
+`operator>>=` reads `(i + n_blocks, R_shift)` — literally `word_at(i * digits + n)`, reached without
+recomputing the division. `operator<<=` reads *one block below* its destination, `(i - n_blocks - 1,
+R_shift)`, because it walks down while writing up; its loop names `L_shift` and the complement is the
+offset, which is what hid the third one.
+
+**It asserts rather than guards, and that is the design content.** Every caller already handles its own edge,
+and they are different edges: `word_at`'s is a full-width shift or a missing block above, each operator's is
+the destination block with nothing beyond it, and — the one that matters — both operators branch on the
+*aligned* case **outside** their loop, into `std::shift_left` or `std::shift_right`. A guarded primitive
+called once per block would drag that test into the loop and cost the `memmove` fast path, which is the one
+thing those operators get for free. Keeping the check where it is preserves it, and the splice still exists
+once instead of three times.
+
 ## Contracts
 
 ### total-versus-precondition
