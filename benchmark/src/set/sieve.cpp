@@ -4,8 +4,9 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <benchmark/benchmark.h>        // DoNotOptimize, BENCHMARK_TEMPLATE1, BENCHMARK_MAIN, State
-#include <opt/set/sieve.hpp>            // filter_twins, sift_primes0, sift_primes1
+#include <opt/set/sieve.hpp>            // filter_twins, sift_primes0, sift_primes1, sift_primes_incremental, sift_primes_segmented
 #include <xstd/bits/bit_set.hpp>        // basic_bit_set, bit_set
+#include <xstd/bits/bit_static_set.hpp> // bit_static_set
 #include <cstddef>                      // size_t
 #include <cstdint>                      // int64_t, uint8_t, uint16_t, uint32_t
 #include <set>                          // set
@@ -56,6 +57,32 @@ void bm_sift_primes1(benchmark::State& state)
         auto const n = bound(state);
         for (auto _ : state) {
                 benchmark::DoNotOptimize(xstd::sift_primes1<X>(n));
+        }
+        per_candidate(state);
+}
+
+// The segmented sieve holds O(sqrt(n) + W) whatever n is, against the bounded sieve's O(n), and the window is a
+// compile-time width chosen to sit in L1. What the ladder is asked here is what that costs in time.
+// [design.md#the-unbounded-sieves]
+template<class X>
+void bm_sift_primes_segmented(benchmark::State& state)
+{
+        auto const n = bound(state);
+        for (auto _ : state) {
+                benchmark::DoNotOptimize(xstd::sift_primes_segmented<X, xstd::bit_static_set<1UZ << 15>>(n));
+        }
+        per_candidate(state);
+}
+
+// The incremental sieve is the price of needing no bound at all: one map entry per prime found, and a map lookup
+// per candidate where the array sieve has a strided write. O'Neill's own point is that it is slower; this is the
+// measurement of how much. [design.md#the-unbounded-sieves]
+template<class X>
+void bm_sift_primes_incremental(benchmark::State& state)
+{
+        auto const n = bound(state);
+        for (auto _ : state) {
+                benchmark::DoNotOptimize(xstd::sift_primes_incremental<X>(n));
         }
         per_candidate(state);
 }
@@ -119,6 +146,15 @@ void bm_filter_twins(benchmark::State& state)
 BENCH_REPRESENTATIONS(bm_sift_primes0);
 BENCH_REPRESENTATIONS(bm_sift_primes1);
 BENCH_REPRESENTATIONS(bm_filter_twins);
+
+// The two unbounded sieves, on the dense container alone: what is being priced is the algorithm against
+// sift_primes1 on the same row, not one container against another. The segmented one runs the full ladder, being
+// linearithmic and cheap; the incremental one stops at 2^16 for the same reason std::flat_set does -- a map lookup
+// per candidate is a large constant, and the curve is decided long before the top rung.
+// [design.md#the-unbounded-sieves]
+BENCH_LADDER(bm_sift_primes_segmented, xstd::bit_set);
+BENCHMARK_TEMPLATE1(bm_sift_primes_incremental, xstd::bit_set)
+        ->RangeMultiplier(2)->Range(lo, 1L << 16)->Unit(benchmark::kMillisecond);
 
 BENCH_BLOCKS(bm_sift_primes0);
 BENCH_BLOCKS(bm_sift_primes1);

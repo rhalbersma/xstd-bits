@@ -1117,6 +1117,40 @@ The test keeps the static types alongside the dynamic ones, `bit_static_set<N>` 
 two-candidate sieve runs `sift_primes1` to exhaustion, and a three-candidate one returns from `filter_twins`
 before it has a triple.
 
+### the-unbounded-sieves
+
+The sieve above needs its bound before it sifts anything: `generate_candidates` materializes every candidate
+below `n` first, which is what makes its space `O(n)` and what makes "give me the next prime" a question it
+cannot answer. Two variants remove the bound, and they remove it in different directions.
+
+The **incremental** sieve (O'Neill, *The Genuine Sieve of Eratosthenes*, JFP 19(1), 2009) has no candidate
+array at all. It keeps one entry per prime found so far -- the next composite that prime will strike, and which
+prime strikes it -- so its space is `O(pi(n))` and there is no `n`: `incremental_sieve::next()` generates
+forever. That is the whole of its case, because it is **slower**, and now measurably: 11.3 ms against
+`sift_primes1`'s 0.394 ms at `2^16`, about **29 times**. A map lookup per candidate is a large constant beside
+a strided write, and O'Neill's own point is that the naive "sieve" that trial-divides is not the sieve at all.
+It stops at `2^16` on the bench for the same reason `std::flat_set` does: the constant is the finding, and four
+more rungs would only re-derive it.
+
+The **segmented** sieve is the one that pays. Base primes below `sqrt(n)` once, then a single window walked
+over the rest, so peak memory is `O(sqrt(n) + W)` whatever `n` is. `Window` is a template parameter carrying
+its own extent, which makes `bit_static_set<W>` the natural argument: a compile-time width that allocates
+nothing in the loop, `fill`ed and struck and read once per segment.
+
+It is **faster than the bounded sieve, not merely thriftier**: 4.05 ms against 7.01 ms at `2^20`, about
+**1.7 times**, and ahead at every rung. Asymptotically the two do the same work; the difference is that a
+32768-bit window sits in L1 for its whole segment while a 2^20-bit sieve is a megabit walked with a stride.
+Less memory and less time is not the trade the issue expected to be recording, which is why it is recorded.
+
+Both are held to the bounded sieve by the test rather than described as equivalent -- every bound including
+the degenerate ones, and two window widths, so a window shorter than its tail is exercised beside one that
+swallows it. The bounds stop at `N` because one container under test is `N` bits wide, and a fixed width is a
+capacity ([width-is-capacity](#width-is-capacity)).
+
+`generate_candidates` is now total in `n`. `iota(2, n)` is a precondition violation below 2, and it was reached
+by asking the sieve for the primes under nothing -- a question with an answer, none, rather than a contract to
+break. The two unbounded sieves compute their own inner bounds, so a guard there is worth more than a comment.
+
 ## Platform and tooling, continued
 
 ### uint128-support

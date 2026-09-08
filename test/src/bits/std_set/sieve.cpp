@@ -6,13 +6,14 @@
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_AUTO_TEST_CASE_TEMPLATE
 #include <fmt/format.h>                 // format
 #include <fmt/ranges.h>                 // IWYU pragma: keep; the range formatters
-#include <opt/set/sieve.hpp>            // filter_twins, sift_primes0, sift_primes1
+#include <opt/set/sieve.hpp>            // filter_twins, generate_candidates, incremental_sieve, sift_primes0, sift_primes1, sift_primes_incremental, sift_primes_segmented
 #include <test/flat_set.hpp>            // IWYU pragma: keep; TEST_HAS_FLAT_SET
 #include <xstd/bits/bit_set.hpp>        // bit_set
 #include <xstd/bits/bit_static_set.hpp> // bit_static_set
 #include <cstddef>                      // size_t
 #include <set>                          // set
 #include <tuple>                        // tuple
+#include <vector>                       // vector
 
 BOOST_AUTO_TEST_SUITE(StdSet)
 BOOST_AUTO_TEST_SUITE(Sieve)
@@ -69,6 +70,47 @@ BOOST_AUTO_TEST_CASE(TheDataParallelTwinsAgreeWithTheElementwiseOnes)
         auto const elementwise = xstd::filter_twins(primes);
         auto const parallel = primes & (primes << 2 | primes >> 2);
         BOOST_CHECK(elementwise == parallel);
+}
+
+// The three sieves are one function of n, and the two unbounded ones earn their place by agreeing with the bounded
+// one rather than by being described as equivalent. Every bound below, degenerate ones included, and two window
+// widths, so a window shorter than the tail is exercised beside one that swallows it. [design.md#the-unbounded-sieves]
+// The bounds stop at N because one of the containers under test is N bits wide: a fixed width is a capacity, and
+// asking it for the candidates below N + 1 is asking it to hold N. [design.md#width-is-capacity]
+BOOST_AUTO_TEST_CASE_TEMPLATE(TheUnboundedSievesAgreeWithTheBoundedOne, T, Types)
+{
+        for (auto const n : {0UZ, 1UZ, 2UZ, 3UZ, 4UZ, 5UZ, 9UZ, 10UZ, N / 2UZ, N}) {
+                auto const bounded = xstd::sift_primes1<T>(n);
+                BOOST_CHECK(xstd::sift_primes_incremental<T>(n) == bounded);
+                BOOST_CHECK((xstd::sift_primes_segmented<T, xstd::bit_static_set<8>>(n)) == bounded);
+                BOOST_CHECK((xstd::sift_primes_segmented<T, xstd::bit_static_set<256>>(n)) == bounded);
+        }
+}
+
+// The point of the incremental sieve is that it has no bound at all: it is asked for primes it was never sized for.
+BOOST_AUTO_TEST_CASE(TheIncrementalSieveGeneratesWithoutABound)
+{
+        auto sieve = xstd::incremental_sieve();
+        auto first = std::vector<std::size_t>();
+        for (auto i = 0UZ; i < 25UZ; ++i) {
+                first.push_back(sieve.next());
+        }
+        BOOST_CHECK_EQUAL(
+                fmt::format("{}", first),
+                "[2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97]"
+        );
+
+        // And it keeps going past where the bounded sieve was asked to stop.
+        BOOST_CHECK_EQUAL(sieve.next(), 101UZ);
+}
+
+// generate_candidates is total in n: below two there is nothing to sift, which is an answer rather than a broken
+// precondition on iota. [design.md#the-unbounded-sieves]
+BOOST_AUTO_TEST_CASE_TEMPLATE(TheSieveIsTotalBelowTwo, T, Types)
+{
+        BOOST_CHECK(xstd::sift_primes0<T>(0UZ).empty());
+        BOOST_CHECK(xstd::sift_primes1<T>(1UZ).empty());
+        BOOST_CHECK(xstd::generate_candidates<T>(0UZ).empty());
 }
 
 BOOST_AUTO_TEST_SUITE_END()
