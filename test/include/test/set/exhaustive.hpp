@@ -21,10 +21,10 @@
 
 namespace test::set {
 
-inline constexpr auto L1 = 128uz;
-inline constexpr auto L2 =  64uz;
-inline constexpr auto L3 =  32uz;
-inline constexpr auto L4 =  16uz;
+inline constexpr auto L1 = 128UZ;
+inline constexpr auto L2 =  64UZ;
+inline constexpr auto L3 =  32UZ;
+inline constexpr auto L4 =  16UZ;
 
 // A static width is its own limit; a growing one, ours or the standard library's, takes the sweep's.
 template<class X>
@@ -51,7 +51,7 @@ auto empty_set(auto fun)
 template<class X, std::size_t N = limit_v<X, L1>>
 auto full_set(auto fun)
 {
-        auto a = std::views::iota(0uz, N) | std::ranges::to<X>(); assert(a.size() == N);
+        auto a = std::views::iota(0UZ, N) | std::ranges::to<X>(); assert(a.size() == N);
         fun(a);
 }
 
@@ -70,7 +70,7 @@ namespace on1 {
 template<class X, std::size_t N = limit_v<X, L1>>
 auto all_valid(auto fun)
 {
-        for (auto i : std::views::iota(0uz, N)) {
+        for (auto i : std::views::iota(0UZ, N)) {
                 fun(i);
         }
 }
@@ -78,8 +78,8 @@ auto all_valid(auto fun)
 template<class X, std::size_t N = limit_v<X, L1>>
 auto all_cardinality_sets(auto fun)
 {
-        for (auto i : std::views::iota(0uz, N + 1)) {
-                auto a = std::views::iota(0uz, i) | std::ranges::to<X>(); assert(a.size() == i);
+        for (auto i : std::views::iota(0UZ, N + 1)) {
+                auto a = std::views::iota(0UZ, i) | std::ranges::to<X>(); assert(a.size() == i);
                 fun(a);
         }
 }
@@ -87,7 +87,7 @@ auto all_cardinality_sets(auto fun)
 template<class X, std::size_t N = limit_v<X, L1>>
 auto all_singleton_arrays(auto fun)
 {
-        for (auto i : std::views::iota(0uz, N)) {
+        for (auto i : std::views::iota(0UZ, N)) {
                 auto a = std::array{ i }; assert(a.size() == 1);
                 fun(a);
         }
@@ -96,7 +96,7 @@ auto all_singleton_arrays(auto fun)
 template<class X, std::size_t N = limit_v<X, L1>>
 auto all_singleton_ilists(auto fun)
 {
-        for (auto i : std::views::iota(0uz, N)) {
+        for (auto i : std::views::iota(0UZ, N)) {
                 auto a = { i }; assert(a.size() == 1);
                 fun(a);
         }
@@ -105,7 +105,7 @@ auto all_singleton_ilists(auto fun)
 template<class X, std::size_t N = limit_v<X, L1>>
 auto all_singleton_sets(auto fun)
 {
-        for (auto i : std::views::iota(0uz, N)) {
+        for (auto i : std::views::iota(0UZ, N)) {
                 auto a = X({ i }); assert(a.size() == 1);
                 fun(a);
         }
@@ -118,8 +118,8 @@ namespace on2 {
 template<class X, std::size_t N = limit_v<X, L2>>
 auto all_doubleton_arrays(auto fun)
 {
-        for (auto j : std::views::iota(1uz, std::ranges::max(N, 1uz))) {
-                for (auto i : std::views::iota(0uz, j)) {
+        for (auto j : std::views::iota(1UZ, std::ranges::max(N, 1UZ))) {
+                for (auto i : std::views::iota(0UZ, j)) {
                         auto a = std::array{ i, j }; assert(a.size() == 2);
                         fun(a);
                 }
@@ -129,8 +129,8 @@ auto all_doubleton_arrays(auto fun)
 template<class X, std::size_t N = limit_v<X, L2>>
 auto all_doubleton_ilists(auto fun)
 {
-        for (auto j : std::views::iota(1uz, std::ranges::max(N, 1uz))) {
-                for (auto i : std::views::iota(0uz, j)) {
+        for (auto j : std::views::iota(1UZ, std::ranges::max(N, 1UZ))) {
+                for (auto i : std::views::iota(0UZ, j)) {
                         auto a = { i, j }; assert(a.size() == 2);
                         fun(a);
                 }
@@ -140,8 +140,8 @@ auto all_doubleton_ilists(auto fun)
 template<class X, std::size_t N = limit_v<X, L2>>
 auto all_doubleton_sets(auto fun)
 {
-        for (auto j : std::views::iota(1uz, std::ranges::max(N, 1uz))) {
-                for (auto i : std::views::iota(0uz, j)) {
+        for (auto j : std::views::iota(1UZ, std::ranges::max(N, 1UZ))) {
+                for (auto i : std::views::iota(0UZ, j)) {
                         auto a = X({ i, j }); assert(a.size() == 2);
                         fun(a);
                 }
@@ -151,8 +151,8 @@ auto all_doubleton_sets(auto fun)
 template<class X, std::size_t N = limit_v<X, L2>>
 auto all_singleton_set_pairs(auto fun)
 {
-        for (auto i : std::views::iota(0uz, N)) {
-                for (auto j : std::views::iota(0uz, N)) {
+        for (auto i : std::views::iota(0UZ, N)) {
+                for (auto j : std::views::iota(0UZ, N)) {
                         auto a = X({ i }); assert(a.size() == 1);
                         auto b = X({ j }); assert(b.size() == 1);
                         fun(a, b);
@@ -167,9 +167,9 @@ namespace on3 {
 template<class X, std::size_t N = limit_v<X, L3>>
 auto all_singleton_set_triples(auto fun)
 {
-        for (auto i : std::views::iota(0uz, N)) {
-                for (auto j : std::views::iota(0uz, N)) {
-                        for (auto k : std::views::iota(0uz, N)) {
+        for (auto i : std::views::iota(0UZ, N)) {
+                for (auto j : std::views::iota(0UZ, N)) {
+                        for (auto k : std::views::iota(0UZ, N)) {
                                 auto a = X({ i }); assert(a.size() == 1);
                                 auto b = X({ j }); assert(b.size() == 1);
                                 auto c = X({ k }); assert(c.size() == 1);
@@ -186,10 +186,10 @@ namespace on4 {
 template<class X, std::size_t N = limit_v<X, L4>>
 auto all_doubleton_set_pairs(auto fun)
 {
-        for (auto j : std::views::iota(1uz, std::ranges::max(N, 1uz))) {
-                for (auto n : std::views::iota(1uz, std::ranges::max(N, 1uz))) {
-                        for (auto i : std::views::iota(0uz, j)) {
-                                for (auto m : std::views::iota(0uz, n)) {
+        for (auto j : std::views::iota(1UZ, std::ranges::max(N, 1UZ))) {
+                for (auto n : std::views::iota(1UZ, std::ranges::max(N, 1UZ))) {
+                        for (auto i : std::views::iota(0UZ, j)) {
+                                for (auto m : std::views::iota(0UZ, n)) {
                                         auto a = X({ i, j }); assert(a.size() == 2);
                                         auto b = X({ m, n }); assert(b.size() == 2);
                                         fun(a, b);
