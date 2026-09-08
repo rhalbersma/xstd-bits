@@ -76,17 +76,20 @@ void bm_filter_twins(benchmark::State& state)
 #define BENCH_LADDER(fn, type) \
         BENCHMARK_TEMPLATE1(fn, type)->RangeMultiplier(2)->Range(lo, hi)->Unit(benchmark::kMillisecond)
 
-// std::flat_set stops at 2^16, and the ceiling is a measurement decision before it is a budget one. Its sift is
-// quadratic -- erase on a sorted vector is linear and the sieve does about n log log n of them -- so each rung
-// past that costs five times the last and establishes nothing the curve has not already shown. Carrying it to
-// 2^20 would spend six minutes of every Release ctest run to re-derive a slope visible four rungs earlier.
-#define BENCH_QUADRATIC(fn, type) \
-        BENCHMARK_TEMPLATE1(fn, type)->RangeMultiplier(2)->Range(lo, 1L << 16)->Unit(benchmark::kMillisecond)
-
 // The three representations: node-based, sorted-vector, and dense bitmap, one of each. Dynamic containers only,
 // so the bench compares like with like: a set sized for its universe is not measuring what a growing one is.
 // [design.md#the-sieve]
 #if defined(__cpp_lib_flat_set)
+
+// std::flat_set stops at 2^16, and the ceiling is a measurement decision before it is a budget one. Its sift is
+// quadratic -- erase on a sorted vector is linear and the sieve does about n log log n of them -- so each rung
+// past that costs five times the last and establishes nothing the curve has not already shown. Carrying it to
+// 2^20 would spend six minutes of every Release ctest run to re-derive a slope visible four rungs earlier.
+// Defined inside the guard rather than beside BENCH_LADDER: where there is no <flat_set> there is no user, and
+// -Weverything answers -Wunused-macros.
+#define BENCH_QUADRATIC(fn, type) \
+        BENCHMARK_TEMPLATE1(fn, type)->RangeMultiplier(2)->Range(lo, 1L << 16)->Unit(benchmark::kMillisecond)
+
 #define BENCH_REPRESENTATIONS(fn)                          \
         BENCH_QUADRATIC(fn, std::flat_set<std::size_t>);   \
         BENCH_LADDER(fn, std::set<std::size_t>);           \
