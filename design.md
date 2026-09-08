@@ -787,7 +787,7 @@ container, same interface, different representation — and the prefix is what s
 first. `static_bit_set` would read as a qualified `bit_set`; `bit_static_set` is `bit_` applied to a
 `static_set`, the way `flat_set` is `flat_` applied to a `set`.
 
-**Why `static` and not `finite`.** `finite` selects nothing: `bit_set<Block, Allocator>` is a finite set of
+**Why `static` and not `finite`.** `finite` selects nothing: `bit_set` is a finite set of
 positions too, as every bit set is. What separates them is that `N` is a compile-time constant, which is
 *static*, and static-versus-dynamic is one of the two axes the whole design is built on — so the name reads off
 the design rather than off a true-but-non-distinguishing adjective. Recorded against it: P0843 renamed
@@ -846,7 +846,7 @@ because `bitset` already carries the word, and `inplace` is one storage word dow
 second vocabulary for the same thing.
 
 `N` is a **capacity** in bits here, where the static column's `N` is a width. The names carry that and the
-parameter lists do not, which is the same hazard `bit_static_set<N, Block>` and `bit_inplace_set<N, Block>`
+parameter lists do not, which is the same hazard `basic_bit_static_set<N, Block>` and `basic_bit_inplace_set<N, Block>`
 share by shape. The capacity is rounded up to whole blocks by `block_inplace_vector` itself, so
 `basic_bit_inplace_vector<9, std::uint8_t>` holds sixteen bits; the width under it is a run-time one and carries
 an unused tail like any other.

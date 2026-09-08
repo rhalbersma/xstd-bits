@@ -61,11 +61,11 @@ Notes:
 
 The aforementioned issues with the current `bit` landscape can be resolved by implementing a single-purpose container for each cell of the design space. With three readings and three storages, that is nine — **and this library implements all nine**.
 
-|                              | static width                     | run-time width, static capacity     | dynamic                             |
-| :--------------------------- | :------------------------------- | :---------------------------------- | :---------------------------------- |
-| **ordered set of `int`**     | `xstd::bit_static_set<N, Block>` | `xstd::bit_inplace_set<N, Block>`   | `xstd::bit_set<Block, Allocator>`   |
-| **sequence of `bool`**       | `xstd::bit_array<N, Block>`      | `xstd::bit_inplace_vector<N, Block>`| `xstd::bit_vector<Block, Allocator>`|
-| **both readings (`bitset`)** | `xstd::bitset<N, Block>`         | `xstd::inplace_bitset<N, Block>`    | `xstd::dynamic_bitset<Block, Allocator>` |
+|                              | static width               | run-time width, static capacity | dynamic                  |
+| :--------------------------- | :------------------------- | :------------------------------ | :----------------------- |
+| **ordered set of `int`**     | `xstd::bit_static_set<N>`  | `xstd::bit_inplace_set<N>`      | `xstd::bit_set`          |
+| **sequence of `bool`**       | `xstd::bit_array<N>`       | `xstd::bit_inplace_vector<N>`   | `xstd::bit_vector`       |
+| **both readings (`bitset`)** | `xstd::bitset<N>`          | `xstd::inplace_bitset<N>`       | `xstd::dynamic_bitset`   |
 
 The columns are the three storages the one underlying vehicle is parameterized on — `std::array`, `std::inplace_vector` and `std::vector` — so a cell is a reading crossed with a storage, and nothing else.
 
@@ -75,7 +75,7 @@ Notes:
 2. The third row is the point the old two-by-two could not express. `std::bitset` and `boost::dynamic_bitset` are faulted above for being unclear about which interface they offer; the answer here is not to abolish the hybrid but to **name** it. A `bitset` row that offers both readings deliberately sits beside two rows that each offer exactly one, and `xstd::bitset<N>` is a strict extension of `std::bitset<N>` while `xstd::dynamic_bitset` is one of `boost::dynamic_bitset<>` — every expression valid on the counterpart is valid here, with the same result.
 3. The variable-size sequence of `bool` is named `xstd::bit_vector` and decoupled from the general `std::vector` class template.
 4. All containers use a dense (single bit per element) representation. Variable-size sparse sets of `int` can be provided by `flat_set`, either in [Boost](https://www.boost.org/doc/libs/1_80_0/doc/html/boost/container/flat_set.html) or in [C++ 23](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p1222r4.pdf).
-5. All containers allow storage configuration through their `Block` template parameter. The short name above defaults it to `std::size_t`; a `basic_` form of each (e.g. `xstd::basic_bit_static_set<N, Block>`) requires it explicitly.
+5. The names above are the short ones, which fix `Block` to `std::size_t` and so take only the width, or nothing at all in the dynamic column where there is no width to give. Each has a `basic_` form that leaves the block open: `xstd::basic_bit_static_set<N, Block>`, `xstd::basic_bit_array<N, Block>`, `xstd::basic_bitset<N, Block>` and their inplace siblings, and `xstd::basic_bit_set<Block, Allocator>`, `xstd::basic_bit_vector<Block, Allocator>`, `xstd::basic_dynamic_bitset<Block, Allocator>` down the dynamic column. So `xstd::bit_set` is an alias, not a template, and `xstd::basic_bit_set<std::uint8_t>` is how a block is chosen.
 6. Each static-width name has an `aligned` form in a nested namespace, its width rounded up to whole blocks so that no block carries an unused tail: `xstd::aligned::bitset<120>` is `xstd::bitset<128>`. That costs nothing in storage at a width already spanning whole blocks, and removes the tail-restoring mask from `fill`, `flip` and the left shift.
 
 The **middle column** is what allocates nothing and yet carries a run-time width. It depends on `std::inplace_vector`, so those three names exist only where the standard library provides it (`__cpp_lib_inplace_vector`); an alias withholds a name rather than a capability.
@@ -277,7 +277,7 @@ The **full** interface of `xstd::bit_static_set` is `constexpr`.
 `xstd::bit_static_set<N>` is a fixed-size ordered set of integers, providing conceptually the same functionality as `std::set<int, std::less<int>, Allocator>`, where `Allocator` statically allocates memory to store `N` integers. In particular, `xstd::bit_static_set<N>` has:
 
 - **No customized key comparison**: `xstd::bit_static_set` uses `std::less<int>` as its fixed comparator (accessible through its nested types `key_compare` and `value_compare`). In particular, the `xstd::bit_static_set` constructors do not take a comparator argument.
-- **No allocators**: `xstd::bit_static_set` is a fixed-size set of non-negative integers and does not dynamically allocate memory. In particular, `xstd::bit_static_set` does **not provide** a `get_allocator()` member function and its constructors do not take an allocator argument. Its allocating counterpart `xstd::bit_set<Block, Allocator>` does provide both — the allocator follows the storage column, not the set reading.
+- **No allocators**: `xstd::bit_static_set` is a fixed-size set of non-negative integers and does not dynamically allocate memory. In particular, `xstd::bit_static_set` does **not provide** a `get_allocator()` member function and its constructors do not take an allocator argument. Its allocating counterpart `xstd::bit_set` does provide both — the allocator follows the storage column, not the set reading.
 - **No splicing**: `xstd::bit_static_set` is **not a node-based container**, and does not provide the splicing operations as defined in [p0083r3](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2016/p0083r3.pdf). In particular, `xstd::bit_static_set` does **not provide** the nested types `node_type` and `insert_return_type`, the `extract()` or `merge()` member functions, or the `insert()` overloads taking a node handle.
 
 Minor **semantic differences** between common functionality in `xstd::bit_static_set<N>` and `std::set<int>` are:
@@ -426,7 +426,7 @@ auto b = a
 **A**: The least significant bit of the last array word maps onto set value `N - 1`.
 
 **Q**: I'm visually oriented, can you draw a diagram?  
-**A**: Sure, it looks like this for `bit_static_set<16, uint8_t>`:
+**A**: Sure, it looks like this for `basic_bit_static_set<16, std::uint8_t>`:
 
 |value |01234567|89ABCDEF|
 |:---- |-------:|-------:|
@@ -437,7 +437,7 @@ auto b = a
 **A**: To be able to use **data-parallelism** for `(a < b) == std::ranges::lexicographical_compare(a, b)`.
 
 **Q**: How is efficient set comparison connected to the bit-ordering within words?  
-**A**: Take `bit_static_set<8, uint8_t>` and consider when `sL < sR` for ordered sets of integers `sL` and `sR`.
+**A**: Take `basic_bit_static_set<8, std::uint8_t>` and consider when `sL < sR` for ordered sets of integers `sL` and `sR`.
 
 **Q**: Ah, lexicographical set comparison corresponds to bit comparison from most to least significant?  
 **A**: Indeed, and this is equivalent to doing the integer comparison `wL > wR` on the underlying words `wL` and `wR`.
