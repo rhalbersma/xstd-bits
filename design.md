@@ -1068,6 +1068,45 @@ declarations the earlier views needed (*"Clang requires it, GCC does not"*) have
 The pointer is to the **storage** an owner wraps, never to the owner: `bit_static_set` hands out
 `bit_set_iterator<block_array<B, N>>`, which is why no owning type ever needs a `bit_traits` of its own.
 
+### the-set-for-each
+
+`for_each(f)` and `for_each_reverse(f)` on the set reading walk blocks where the iterator walks positions, and
+the difference is not word-parallelism -- the functor still sees every set position, one at a time. It is
+where the loop's state may live.
+
+`operator++` is **flat**. It has to re-derive the word from `(pointer, position)` on every step, because an
+iterator stays copyable and restartable and therefore cannot keep a partially consumed block between two
+increments. A loop has somewhere to put one. So `find_next` loads a block, masks off what is at or below the
+cursor, tests, possibly scans forward and takes a `countr_zero`, once per position; the walk loads once per
+block and then spends two instructions per position, `tzcnt` for the position and `blsr` to drop it.
+
+Measured against the range-for at 4.08x to 5.05x, on GCC 15 and clang 22, and the same on a two-word bitboard
+carrying twenty pieces as at 2^22 with 40% density. That stability is itself the point: `find_next` is
+inherently serial, no vectorizer engages on either side, and the answer does not move with the compiler --
+unlike the sequence reading, where the same question gives answers ranging from 1.24x ahead to 11.4x ahead
+depending on which one is asked ([the-sequence-ladder](#the-sequence-ladder)).
+
+Three decisions the shape forced:
+
+**A functor may return `bool` to mean "keep going".** A `void` one always continues. That is what a move
+generator wants once it has found its answer, and it is one `if constexpr` on `is_invocable_r_v<bool, F&,
+size_t>`. Nothing else is accepted: a functor returning something else is a caller error rather than a value
+to discard quietly.
+
+**The descending walk clears the bit it just reported.** `w & (w - 1)` drops the lowest set bit and has no
+descending twin, so `for_each_reverse` takes `digits - 1 - countl_zero(w)` for the position and clears exactly
+that bit. The set reading iterates both ways and so does this.
+
+**A storage with no block access takes the iterator.** `boost::dynamic_bitset` is the one, and there the walk
+falls back to the range-for it was written to beat, which is still correct and still the same answer. The
+same three tiers `fill` uses ([windows](#windows)).
+
+What is *not* here is a fat iterator carrying the residual word. It was measured -- 2.56x to 3.80x, against
+the walk's 4.00x to 5.27x -- so it is both slower than the member and the only one of the two that changes a
+contract: an iterator that caches a block stops observing an erase that lands ahead of it, where a closed loop
+caching the same block is unobservable. The member is the faster half and the safer half at once, which is
+rare enough to record.
+
 ### read-only-set-proxy
 
 The set reading's proxy is read-only whatever the qualification of `Bits`, because a key is nothing to write

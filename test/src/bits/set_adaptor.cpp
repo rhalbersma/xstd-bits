@@ -7,6 +7,7 @@
 #include <test/minimal_traits.hpp>                // minimal_traits
 #include <xstd/bits/set_adaptor.hpp>            // set_adaptor
 #include <xstd/bits/bit_set.hpp>                  // bit_set
+#include <xstd/bits/bit_set_view.hpp>             // bit_set_view
 #include <xstd/bits/bit_static_set.hpp>           // bit_static_set
 #include <xstd/bits/block_sequence.hpp>           // block_array, block_vector
 #include <xstd/bits/ext/boost/dynamic_bitset.hpp> // bit_traits over boost::dynamic_bitset
@@ -321,7 +322,9 @@ BOOST_AUTO_TEST_CASE(RangedInsertionAgreesWithTheElementwiseLoop)
         // The set tier: a union, and equally the element-wise answer.
         auto lhs = xstd::bit_static_set<N>();
         lhs.insert(1UZ); lhs.insert(64UZ);
-        auto const rhs = [] { auto s = xstd::bit_static_set<N>(); s.insert(64UZ); s.insert(99UZ); return s; }();
+        auto rhs = xstd::bit_static_set<N>();
+        rhs.insert(64UZ);
+        rhs.insert(99UZ);
         auto united = lhs;
         united.insert_range(rhs);
         for (auto const x : rhs) {
@@ -349,6 +352,84 @@ BOOST_AUTO_TEST_CASE(RangedInsertionGrowsADynamicWidth)
                 elementwise.insert(i);
         }
         BOOST_CHECK(ranged == elementwise);
+}
+
+// for_each is the block-at-a-time walk an iterator cannot be, so what has to be shown is that it answers exactly
+// what iteration answers -- over a storage with block access and over one without, which takes the other arm.
+// [design.md#the-set-for-each]
+BOOST_AUTO_TEST_CASE(ForEachVisitsWhatIterationVisits)
+{
+        auto const positions = { 0UZ, 1UZ, 63UZ, 64UZ, 65UZ, 99UZ };
+
+        auto owner = Owner();
+        for (auto const p : positions) { owner.insert(p); }
+
+        auto foreign = std::bitset<100>();                      // block access through the trait
+        auto boosted = boost::dynamic_bitset<>(100);            // no block access: the position-at-a-time arm
+        for (auto const p : positions) { foreign.set(p); boosted.set(p); }
+        auto const fv = xstd::bit_set_view(foreign);
+        auto const bv = xstd::bit_set_view(boosted);
+
+        auto const collect         = [](auto const& s) -> std::vector<std::size_t> { auto v = std::vector<std::size_t>(); s.for_each        ([&](std::size_t p) -> void { v.push_back(p); }); return v; };
+        auto const collect_reverse = [](auto const& s) -> std::vector<std::size_t> { auto v = std::vector<std::size_t>(); s.for_each_reverse([&](std::size_t p) -> void { v.push_back(p); }); return v; };
+        auto const iterated        = [](auto const& s) -> std::vector<std::size_t> { return { s.begin(), s.end() }; };
+        auto const reversed        = [](auto const& s) -> std::vector<std::size_t> { return { s.rbegin(), s.rend() }; };
+
+        BOOST_CHECK(collect(owner) == iterated(owner));
+        BOOST_CHECK(collect(fv)    == iterated(fv));
+        BOOST_CHECK(collect(bv)    == iterated(bv));
+
+        BOOST_CHECK(collect_reverse(owner) == reversed(owner));
+        BOOST_CHECK(collect_reverse(fv)    == reversed(fv));
+        BOOST_CHECK(collect_reverse(bv)    == reversed(bv));
+
+        // An empty set calls nothing, in either direction, on either arm.
+        auto const empty  = Owner();
+        auto const bnone  = boost::dynamic_bitset<>(100);
+        auto const bnonev = xstd::bit_set_view(bnone);
+        auto calls = 0UZ;
+        empty .for_each        ([&](std::size_t) -> void { ++calls; });
+        empty .for_each_reverse([&](std::size_t) -> void { ++calls; });
+        bnonev.for_each        ([&](std::size_t) -> void { ++calls; });
+        bnonev.for_each_reverse([&](std::size_t) -> void { ++calls; });
+        BOOST_CHECK_EQUAL(calls, 0UZ);
+}
+
+// A functor returning bool means "keep going", which is what a move generator wants once it has its answer. A
+// void one always continues. Both arms honour it.
+BOOST_AUTO_TEST_CASE(ForEachStopsWhenTheFunctorSaysSo)
+{
+        auto const positions = { 0UZ, 1UZ, 63UZ, 64UZ, 65UZ, 99UZ };
+
+        auto owner = Owner();
+        for (auto const p : positions) { owner.insert(p); }
+        auto boosted = boost::dynamic_bitset<>(100);
+        for (auto const p : positions) { boosted.set(p); }
+        auto const bv = xstd::bit_set_view(boosted);
+
+        // Stop after the first position at or above 64, so the cut lands on a block boundary.
+        auto const upto = [](auto const& s) -> std::vector<std::size_t> {
+                auto v = std::vector<std::size_t>();
+                s.for_each([&](std::size_t p) -> bool { v.push_back(p); return p < 64UZ; });
+                return v;
+        };
+        auto const expected = std::vector<std::size_t>{ 0UZ, 1UZ, 63UZ, 64UZ };
+        BOOST_CHECK(upto(owner) == expected);
+        BOOST_CHECK(upto(bv)    == expected);
+
+        auto const downto = [](auto const& s) -> std::vector<std::size_t> {
+                auto v = std::vector<std::size_t>();
+                s.for_each_reverse([&](std::size_t p) -> bool { v.push_back(p); return p > 64UZ; });
+                return v;
+        };
+        auto const expected_reverse = std::vector<std::size_t>{ 99UZ, 65UZ, 64UZ };
+        BOOST_CHECK(downto(owner) == expected_reverse);
+        BOOST_CHECK(downto(bv)    == expected_reverse);
+
+        // Stopping at the very first position visits exactly one.
+        auto first_only = 0UZ;
+        owner.for_each([&](std::size_t) -> bool { ++first_only; return false; });
+        BOOST_CHECK_EQUAL(first_only, 1UZ);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
