@@ -5,12 +5,13 @@
 
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <test/set/concepts.hpp>        // bit_set
-#include <xstd/bits/set_adaptor.hpp>  // set_adaptor
+#include <xstd/bits/set_adaptor.hpp>    // set_adaptor
 #include <xstd/bits/bit_set.hpp>        // bit_set
 #include <xstd/bits/block_sequence.hpp> // block_vector
 #include <xstd/bits/ownership.hpp>      // ownership
-#include <xstd/bits/bit_set_view.hpp> // bit_set_view
+#include <xstd/bits/bit_set_view.hpp>   // bit_set_view
 #include <algorithm>                    // equal
+#include <compare>                      // is_eq
 #include <concepts>                     // same_as
 #include <cstddef>                      // size_t
 #include <cstdint>                      // uint8_t
@@ -79,7 +80,7 @@ BOOST_AUTO_TEST_CASE(TheWidthIsCapacityNotValue)
         wide.erase(100);
         auto const digest = std::hash<T>();
         BOOST_CHECK(narrow == wide);
-        BOOST_CHECK((narrow <=> wide) == 0);
+        BOOST_CHECK(std::is_eq(narrow <=> wide));
         BOOST_CHECK_EQUAL(digest(narrow), digest(wide));
         BOOST_CHECK(digest(narrow) != digest(T({ 1 })));
         BOOST_CHECK(narrow.is_subset_of(wide) and wide.is_subset_of(narrow));

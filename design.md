@@ -1356,6 +1356,12 @@ Five findings are suppressed because the checker cannot see what makes them righ
   program-defined type. clang-tidy 22 and 23 read the qualified definition as modifying the namespace; 24 no
   longer does, and the suppression stays until the whole ladder is past 23.
 
+A sixth had a fix rather than a suppression. `modernize-use-nullptr` reads the `0` in `(a <=> b) < 0` as a
+null pointer constant, which is the same false positive `-Wno-zero-as-null-pointer-constant` already covers on
+the compiler side. Every site in the test sources says `std::is_lt`, `std::is_gt` or `std::is_eq` instead --
+the standard's own names for those three questions, which are clearer than the comparison against a literal
+and leave the check on to catch a real one. Do not spell them back.
+
 ### clang-crashes-on-a-foreign-bulk-source
 
 Asking whether a bulk operator accepts a view over a foreign storage -- `ours &= bit_span(a_std_bitset)`, in

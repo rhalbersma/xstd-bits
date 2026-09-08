@@ -6,17 +6,18 @@
 #include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <range/v3/view/set_algorithm.hpp>        // set_union
 #include <test/set/ordering.hpp>                  // ordering_agrees_with_std_set
-#include <xstd/bits/set_adaptor.hpp>            // set_adaptor
+#include <xstd/bits/set_adaptor.hpp>              // set_adaptor
 #include <xstd/bits/bit_static_set.hpp>           // bit_static_set
 #include <xstd/bits/bitset.hpp>                   // bitset
 #include <xstd/bits/block_sequence.hpp>           // block_array
 #include <xstd/bits/ext/boost/dynamic_bitset.hpp> // bit_traits over boost::dynamic_bitset
 #include <xstd/bits/ext/std/bitset.hpp>           // bit_traits over std::bitset
 #include <xstd/bits/ownership.hpp>                // ownership
-#include <xstd/bits/bit_set_view.hpp>          // bit_set_view
+#include <xstd/bits/bit_set_view.hpp>             // bit_set_view
 #include <bitset>                                 // bitset
 #include <concepts>                               // derived_from, same_as
 #include <cstddef>                                // size_t
+#include <cstdint>                                // uint8_t
 #include <functional>                             // hash
 #include <ranges>                                 // bidirectional_range, borrowed_range, range, view
 #include <set>                                    // set

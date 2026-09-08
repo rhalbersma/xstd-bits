@@ -11,9 +11,12 @@
 #include <algorithm>                  // equal, none_of
 #include <array>                      // array
 #include <concepts>                   // regular, totally_ordered
+#include <cstddef>                    // size_t
 #include <functional>                 // hash, identity
 #include <iterator>                   // random_access_iterator
 #include <ranges>                     // drop, random_access_range, take
+#include <stdexcept>                  // out_of_range
+#include <vector>                     // vector
 
 BOOST_AUTO_TEST_SUITE(BitArray)
 
@@ -100,6 +103,69 @@ auto model_of(T const& a) -> std::vector<bool>
         return m;
 }
 
+// Every read path at every position, counted rather than asserted one at a time: a failure then names the
+// operation instead of drowning the log in one line per position. [design.md#counted-not-asserted]
+//
+// Taken by non-const reference and aliased to a const one inside, because these take an explicit object
+// parameter and the const and non-const paths are two different functions, both of them under test.
+template<class T>
+auto access_disagreements(T& a, std::vector<bool> const& m) -> std::size_t
+{
+        auto const& ca = a;
+        auto disagreements = 0UZ;
+        for (auto i = 0UZ; i < a.size(); ++i) {
+                disagreements += static_cast<std::size_t>(static_cast<bool>(a[i])     != m[i]);
+                disagreements += static_cast<std::size_t>(static_cast<bool>(ca[i])    != m[i]);
+                disagreements += static_cast<std::size_t>(static_cast<bool>(a.at(i))  != m[i]);
+                disagreements += static_cast<std::size_t>(static_cast<bool>(ca.at(i)) != m[i]);
+        }
+        return disagreements;
+}
+
+// front() and back() are the same four overloads over the two ends, and a zero extent has neither.
+template<class T>
+auto ends_disagreements(T& a, std::vector<bool> const& m) -> std::size_t
+{
+        if (a.empty()) {
+                return 0UZ;
+        }
+        auto const& ca = a;
+        return static_cast<std::size_t>(static_cast<bool>(a.front())  != m.front())
+             + static_cast<std::size_t>(static_cast<bool>(ca.front()) != m.front())
+             + static_cast<std::size_t>(static_cast<bool>(a.back())   != m.back())
+             + static_cast<std::size_t>(static_cast<bool>(ca.back())  != m.back());
+}
+
+// One bit of pattern p at position i. A lookup rather than a conditional chain: six patterns written as a
+// chain nest six deep, and the nesting is not what the test is about.
+auto pattern_bit(std::size_t p, std::size_t i, std::size_t n) -> bool
+{
+        switch (p) {
+        case 0UZ: return false;
+        case 1UZ: return true;
+        case 2UZ: return i == 0UZ;
+        case 3UZ: return i + 1UZ == n;
+        case 4UZ: return (i % 2UZ) == 0UZ;
+        default:  return (i % 3UZ) == 0UZ;
+        }
+}
+
+// Uniform both ways, single-ended both ways, and two strides: enough that every comparison lands on both
+// sides of itself, and cheaper than every pair of values.
+template<class T>
+auto comparison_patterns() -> std::vector<T>
+{
+        auto patterns = std::vector<T>();
+        for (auto p = 0UZ; p < 6UZ; ++p) {
+                auto a = T();
+                for (auto i = 0UZ; i < a.size(); ++i) {
+                        a[i] = pattern_bit(p, i, a.size());
+                }
+                patterns.push_back(a);
+        }
+        return patterns;
+}
+
 }       // namespace
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(ElementAccessAgreesWithTheModel, T, Types)
@@ -115,22 +181,12 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ElementAccessAgreesWithTheModel, T, Types)
         }
         BOOST_CHECK(std::ranges::equal(a, m));
 
-        // The four value categories, which matter here because these take an explicit object parameter.
-        auto const& ca = a;
-        for (auto i = 0UZ; i < a.size(); ++i) {
-                BOOST_CHECK_EQUAL(static_cast<bool>(a[i]),     m[i]);
-                BOOST_CHECK_EQUAL(static_cast<bool>(ca[i]),    m[i]);
-                BOOST_CHECK_EQUAL(static_cast<bool>(a.at(i)),  m[i]);
-                BOOST_CHECK_EQUAL(static_cast<bool>(ca.at(i)), m[i]);
-        }
-        if (not a.empty()) {
-                BOOST_CHECK_EQUAL(static_cast<bool>(a.front()),  m.front());
-                BOOST_CHECK_EQUAL(static_cast<bool>(ca.front()), m.front());
-                BOOST_CHECK_EQUAL(static_cast<bool>(a.back()),   m.back());
-                BOOST_CHECK_EQUAL(static_cast<bool>(ca.back()),  m.back());
-        }
+        // Both subscripts and both ends, in both qualifications.
+        BOOST_CHECK_EQUAL(access_disagreements(a, m), 0UZ);
+        BOOST_CHECK_EQUAL(ends_disagreements(a, m),   0UZ);
 
         // at() is the checked one, and std::array<bool, N>::at throws in the same place.
+        auto const& ca = a;
         BOOST_CHECK_THROW(static_cast<void>(a.at(a.size())),  std::out_of_range);
         BOOST_CHECK_THROW(static_cast<void>(ca.at(a.size())), std::out_of_range);
 }
@@ -187,35 +243,23 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(FillAndSwapAgreeWithTheModel, T, Types)
 // of patterns, which is cheaper than every pair of values and lands on both sides of each comparison.
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheComparisonsAgreeWithTheModel, T, Types)
 {
-        auto const patterns = [] {
-                auto v = std::vector<T>();
-                for (auto p = 0UZ; p < 6UZ; ++p) {
-                        auto a = T();
-                        for (auto i = 0UZ; i < a.size(); ++i) {
-                                a[i] = (p == 0UZ) ? false
-                                     : (p == 1UZ) ? true
-                                     : (p == 2UZ) ? (i == 0UZ)
-                                     : (p == 3UZ) ? (i + 1UZ == a.size())
-                                     : (p == 4UZ) ? ((i % 2UZ) == 0UZ)
-                                     :              ((i % 3UZ) == 0UZ);
-                        }
-                        v.push_back(a);
-                }
-                return v;
-        }();
+        auto const patterns = comparison_patterns<T>();
+        auto disagreements = 0UZ;
 
         for (auto const& x : patterns) {
                 for (auto const& y : patterns) {
                         auto const mx = model_of(x);
                         auto const my = model_of(y);
-                        BOOST_CHECK_EQUAL(x == y, mx == my);
-                        BOOST_CHECK_EQUAL(x != y, mx != my);
-                        BOOST_CHECK_EQUAL(x <  y, mx <  my);
-                        BOOST_CHECK_EQUAL(x >  y, mx >  my);
-                        BOOST_CHECK_EQUAL(x <= y, mx <= my);
-                        BOOST_CHECK_EQUAL(x >= y, mx >= my);
+                        disagreements += static_cast<std::size_t>((x == y) != (mx == my));
+                        disagreements += static_cast<std::size_t>((x != y) != (mx != my));
+                        disagreements += static_cast<std::size_t>((x <  y) != (mx <  my));
+                        disagreements += static_cast<std::size_t>((x >  y) != (mx >  my));
+                        disagreements += static_cast<std::size_t>((x <= y) != (mx <= my));
+                        disagreements += static_cast<std::size_t>((x >= y) != (mx >= my));
                 }
         }
+
+        BOOST_CHECK_EQUAL(disagreements, 0UZ);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
