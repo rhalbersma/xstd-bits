@@ -79,7 +79,7 @@ auto ordering_agrees_with_std_set_sampled(std::size_t universe, std::size_t tria
         // Fixed width, not ULL: the sequence a fixed seed reproduces should not depend on how wide the
         // platform makes unsigned long long.
         auto lcg = std::uint64_t{0x9E3779B97F4A7C15};
-        auto const next = [&lcg] -> std::uint64_t { lcg = (lcg * 6364136223846793005ULL) + 1442695040888963407ULL; return lcg >> 11; };
+        auto const next = [&lcg] -> std::uint64_t { lcg = (lcg * 6364136223846793005ULL) + 1442695040888963407ULL; return lcg >> 11U; };
 
         for (auto t = 0UZ; t < trials; ++t) {
                 auto const i = next();
