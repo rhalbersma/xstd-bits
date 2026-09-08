@@ -843,6 +843,26 @@ against. `test::sequence::inplace_vector_bool` is `[vector.bool]`'s checklist mi
 reaches, and `std::vector<bool>` answers every line of it, so it is asserted on the model first exactly as
 `vector_bool` is ([the-sequence-contract](#the-sequence-contract)).
 
+**Building it at all is a separate problem from writing it.** `__cpp_lib_inplace_vector` is a C++26 macro, and
+the library asks for C++23; at that standard the guard closes and the three cells compile to nothing, so a suite
+that passes has never seen a third of the matrix. Measured: `bit_inplace_set`, `bit_inplace_vector` and
+`inplace_bitset` run **six** test cases between them at C++23 and **sixteen** at C++26, and
+`generated.cpp`'s inplace rows are inert at the lower standard as well.
+
+`XSTD_BITS_CXX_STANDARD` is how a build asks for more -- 23 by default, 26 to reach the column. It raises the
+standard for the tests and benchmarks only, deliberately: the `INTERFACE cxx_std_23` a consumer inherits is the
+library's real requirement and must not move because one column wants more. Verified at GCC 16 with
+`-std=gnu++26`, where all sixteen cases pass and the column behaves as the table says -- regular, swappable by
+member and free function, no allocator, and the two readings differing exactly where they should, the bitset
+starting at width zero and resizing while the set's width is its capacity ([width-is-capacity](#width-is-capacity)).
+
+What is still missing is CI. **CMake 3.28 cannot spell C++26 for GCC or Clang at all** -- not a GCC 16 gap, a
+CMake one -- and 3.28 is this project's declared minimum, so the option fails on the toolchain the matrix
+currently runs. It fails *legibly*: the configure step asks `CMAKE_CXX_COMPILE_FEATURES` what CMake actually
+knows and says so, rather than letting a `try_compile` blame the compiler for CMake's ignorance. Reaching the
+column in CI needs a newer CMake on one leg, which is a change to the shared workflow rather than to this
+repository.
+
 `max_size()` is 24 on all three names over `<24, std::uint8_t>`, this column being where the three readings
 first disagreed about it and the reason they no longer do ([max-size-is-the-bits](#max-size-is-the-bits)).
 `capacity()` is the sequence and bitset readings'; the set has neither, `std::set` having no `capacity()` and a
