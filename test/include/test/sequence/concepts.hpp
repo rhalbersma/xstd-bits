@@ -47,7 +47,7 @@ concept reversible_container_typedefs = container_typedefs<C> and requires {
 
 // [container.reqmts] and [container.rev.reqmts]: what any container answers, on a const one and a mutable one.
 template<class C>
-concept container_members = reversible_container_typedefs<C> and requires (C c, C const cc, typename C::size_type n) {
+concept container_members = reversible_container_typedefs<C> and requires (C c, C const cc, C::size_type n) {
         { c.begin()    } -> std::same_as<typename C::iterator>;
         { c.end()      } -> std::same_as<typename C::iterator>;
         { cc.begin()   } -> std::same_as<typename C::const_iterator>;
@@ -87,7 +87,7 @@ concept array_bool = container_members<C> and requires (C c, bool b) {
 
 // [vector.bool]'s synopsis, likewise, with [vector.erasure] and the allocator: std::vector<bool> is the model and the packing answers every line of it.
 template<class C, class A = C::allocator_type>
-concept vector_bool = container_members<C> and requires (C c, C o, C const cc, typename C::size_type n, bool b, A a, std::initializer_list<bool> il, bool const* first, bool const* last, typename C::const_iterator p) {
+concept vector_bool = container_members<C> and requires (C c, C o, C const cc, C::size_type n, bool b, A a, std::initializer_list<bool> il, bool const* first, bool const* last, C::const_iterator p) {
         typename C::allocator_type;
         C();
         C(a);
@@ -136,7 +136,7 @@ concept vector_bool = container_members<C> and requires (C c, C o, C const cc, t
 // [vector.bool] minus the allocator, which is every line a fixed-capacity sequence can answer. P0843 declined a bool
 // specialization, so this checklist has no inplace model of its own and std::vector<bool> stands in for the lines it shares.
 template<class C>
-concept inplace_vector_bool = container_members<C> and requires (C c, C o, C const cc, typename C::size_type n, bool b, std::initializer_list<bool> il, bool const* first, bool const* last, typename C::const_iterator p) {
+concept inplace_vector_bool = container_members<C> and requires (C c, C o, C const cc, C::size_type n, bool b, std::initializer_list<bool> il, bool const* first, bool const* last, C::const_iterator p) {
         C();
         C(n);
         C(n, b);
@@ -175,7 +175,7 @@ concept inplace_vector_bool = container_members<C> and requires (C c, C o, C con
 
 // [vector.bool]'s C++23 lines, apart so the model can be held to them where its standard library has them (__cpp_lib_containers_ranges).
 template<class C, class A = C::allocator_type>
-concept vector_bool_ranges = requires (C c, A a, std::initializer_list<bool> il, typename C::const_iterator p) {
+concept vector_bool_ranges = requires (C c, A a, std::initializer_list<bool> il, C::const_iterator p) {
         C(std::from_range, il);
         C(std::from_range, il, a);
         c.assign_range(il);
@@ -185,7 +185,7 @@ concept vector_bool_ranges = requires (C c, A a, std::initializer_list<bool> il,
 
 // The same lines without the allocator-extended constructor, for the column that has no allocator to extend them with.
 template<class C>
-concept inplace_vector_bool_ranges = requires (C c, std::initializer_list<bool> il, typename C::const_iterator p) {
+concept inplace_vector_bool_ranges = requires (C c, std::initializer_list<bool> il, C::const_iterator p) {
         C(std::from_range, il);
         c.assign_range(il);
         { c.insert_range(p, il) } -> std::same_as<typename C::iterator>;

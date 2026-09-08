@@ -4,9 +4,15 @@
 #          http://www.boost.org/LICENSE_1_0.txt)
 
 ---
-# Static analysis for the public headers, run by the Clang-Tidy workflow
-# over the generated header self-sufficiency translation units (the
-# Boost.Test sources are excluded: test macros drown the signal in noise).
+# Static analysis for the public headers and for the test tree, run by the
+# Clang-Tidy workflow over two passes: the generated header self-sufficiency
+# translation units, and the test sources named by its sources_regex.
+#
+# The filter below carries test/include as well as include/xstd, because a
+# diagnostic raised inside a header is reported only if the header matches it.
+# Without that half the test headers were analyzed and then filtered out, and
+# the two genuine defects #126 found -- a use-after-move and a pair of missing
+# parentheses -- had been sitting there unreported.
 # bugprone-easily-swappable-parameters is off because both sites it reports
 # are fixed by the interface rather than chosen: to_string(charT zero, charT
 # one) is the signature std::bitset::to_string carries, and
@@ -31,7 +37,7 @@ Checks: >
   -readability-simplify-boolean-expr,
   -bugprone-easily-swappable-parameters
 WarningsAsErrors: '*'
-HeaderFilterRegex: 'include/xstd/.*'
+HeaderFilterRegex: '(include/xstd|test/include)/.*'
 FormatStyle: none
 CheckOptions:
   # Prefer alternative tokens for logical operators.

@@ -10,7 +10,7 @@
 #include <xstd/bits/set_adaptor.hpp> // set_adaptor
 #include <xstd/bits/ownership.hpp>     // ownership
 #include <algorithm>                    // equal_range, lexicographical_compare_three_way
-#include <compare>                      // strong_ordering
+#include <compare>                      // is_gteq, is_gt, is_lteq, is_lt, strong_ordering
 #include <concepts>                     // convertible_to, default_initializable, equality_comparable, integral, same_as, unsigned_integral
 #include <cstddef>                      // ptrdiff_t
 #include <functional>                   // hash
@@ -40,6 +40,11 @@ struct ref_same_as_pred<xstd::set_adaptor<Bits, Own, Traits>>
 template<class X, class R, class T>
 inline constexpr auto ref_same_as = ref_same_as_pred<X>::template value<R, T>;
 
+// typename stays here, and only here, of the eight sites P0634R3 made it redundant. MSVC 2022 rejects the
+// default argument of a constrained type-parameter without it -- "error C2061: syntax error: identifier
+// 'integral'" -- while GCC, clang, clang-cl and Apple clang all take it. The seven in sequence/concepts.hpp are
+// requires(...) parameter lists, which MSVC does accept.
+// NOLINTNEXTLINE(readability-redundant-typename)
 template<class X, std::integral T = typename X::key_type>
 struct nested_types
 {
@@ -263,7 +268,8 @@ struct mem_swap
         auto operator()(auto& a, auto& b) const noexcept
         {
                 static_assert(std::same_as<decltype(a.swap(b)), void>);         // [container.reqmts]/45
-                auto a1 = a, b1 = b;
+                auto a1 = a;
+                auto b1 = b;
                 a1.swap(b1);
                 BOOST_CHECK(a1 == b and b1 == a);                               // [container.reqmts]/46
         }
@@ -273,8 +279,10 @@ struct fn_swap
 {
         auto operator()(auto& a, auto& b) const noexcept
         {
-                auto a1 = a, b1 = b;
-                auto a2 = a, b2 = b;
+                auto a1 = a;
+                auto b1 = b;
+                auto a2 = a;
+                auto b2 = b;
                 swap(a1, b1); a2.swap(b2);
                 BOOST_CHECK(a1 == a2 and b1 == b2);                             // [container.reqmts]/48
         }
@@ -351,7 +359,7 @@ struct mem_emplace
                 // where a move is not a copy, and bugprone-use-after-move is right to say so.
                 auto const value = typename X::value_type(std::forward<Args>(args)...);
                 auto const emplaced = not a.contains(value);
-                auto r = a.emplace(value);                                                              // [associative.reqmts.general]/49
+                auto const r = a.emplace(value);                                                              // [associative.reqmts.general]/49
                                                                                 // [associative.reqmts.general]/50
                 BOOST_CHECK(r == std::make_pair(a.find(value), emplaced));
         }
@@ -370,7 +378,7 @@ struct mem_emplace_hint
                 );
                 // Built once, for the reason mem_emplace gives.
                 auto const value = typename X::value_type(std::forward<Args>(args)...);
-                auto r = a.emplace_hint(p, value);                                              // [associative.reqmts.general]/58
+                auto const r = a.emplace_hint(p, value);                                              // [associative.reqmts.general]/58
                 BOOST_CHECK(r == a.find(value));                                                // [associative.reqmts.general]/59
         }
 };
@@ -401,7 +409,7 @@ struct mem_insert
         template<class X>
         auto operator()(X& a, X::iterator p, X::value_type const& t) const
         {
-                auto r = a.insert(p, t);
+                auto r = a.insert(p, t);  // NOLINT(misc-const-correctness): the next line asserts decltype(r), so const would break the assertion this exists to make
                 static_assert(std::same_as<decltype(r), typename X::iterator>); // [associative.reqmts.general]/70
                 static_assert(requires { a.insert(p, t); });                    // [associative.reqmts.general]/71
                 BOOST_CHECK(r == a.find(t));                                    // [associative.reqmts.general]/73
@@ -612,7 +620,7 @@ struct op_less
         auto operator()(auto const& a, auto const& b) const noexcept
         {                                                                       // [tab:container.opt]
                 static_assert(std::convertible_to<decltype(a < b), bool>);
-                BOOST_CHECK_EQUAL(a < b, (a <=> b) < 0);
+                BOOST_CHECK_EQUAL(a < b, std::is_lt(a <=> b));
                 BOOST_CHECK_EQUAL(a < b, std::ranges::lexicographical_compare(a, b));
                 BOOST_CHECK(not (a < b) or not (b < a));                        // asymmetric
         }
@@ -628,7 +636,7 @@ struct op_greater
         auto operator()(auto const& a, auto const& b) const noexcept
         {                                                                       // [tab:container.opt]
                 static_assert(std::convertible_to<decltype(a > b), bool>);
-                BOOST_CHECK_EQUAL(a > b, (a <=> b) > 0);
+                BOOST_CHECK_EQUAL(a > b, std::is_gt(a <=> b));
                 BOOST_CHECK_EQUAL(a > b, b < a);
         }
 };
@@ -638,7 +646,7 @@ struct op_less_equal
         auto operator()(auto const& a, auto const& b) const noexcept
         {                                                                       // [tab:container.opt]
                 static_assert(std::convertible_to<decltype(a <= b), bool>);
-                BOOST_CHECK_EQUAL(a <= b, (a <=> b) <= 0);
+                BOOST_CHECK_EQUAL(a <= b, std::is_lteq(a <=> b));
                 BOOST_CHECK_EQUAL(a <= b, not (b < a));
         }
 };
@@ -648,7 +656,7 @@ struct op_greater_equal
         auto operator()(auto const& a, auto const& b) const noexcept
         {                                                                       // [tab:container.opt]
                 static_assert(std::convertible_to<decltype(a >= b), bool>);
-                BOOST_CHECK_EQUAL(a >= b, (a <=> b) >= 0);
+                BOOST_CHECK_EQUAL(a >= b, std::is_gteq(a <=> b));
                 BOOST_CHECK_EQUAL(a >= b, not (a < b));
         }
 };

@@ -10,8 +10,9 @@
 #include <test/bitset/factory.hpp>       // make_bitset
 #include <xstd/bits/bit_set_view.hpp> // bit_set_view
 #include <algorithm>                     // lexicographical_compare
-#include <compare>                       // strong_ordering
+#include <compare>                       // is_gt, is_lt, strong_ordering
 #include <cstddef>                       // size_t
+#include <cstdint>                       // uint64_t
 #include <set>                           // set
 
 namespace test::set {
@@ -55,9 +56,9 @@ auto ordering_agrees_with_std_set(std::size_t universe = 4) -> void
 
                         equality_disagreements += static_cast<std::size_t>((xv == yv) != (kx == ky));
                         less_disagreements     += static_cast<std::size_t>(
-                                ((xv <=> yv) < 0) != std::lexicographical_compare(kx.begin(), kx.end(), ky.begin(), ky.end()));
+                                std::is_lt(xv <=> yv) != std::ranges::lexicographical_compare(kx, ky));
                         greater_disagreements  += static_cast<std::size_t>(
-                                ((xv <=> yv) > 0) != std::lexicographical_compare(ky.begin(), ky.end(), kx.begin(), kx.end()));
+                                std::is_gt(xv <=> yv) != std::ranges::lexicographical_compare(ky, kx));
                 }
         }
 
@@ -75,8 +76,10 @@ auto ordering_agrees_with_std_set_sampled(std::size_t universe, std::size_t tria
         auto equality_disagreements = 0UZ;
         auto less_disagreements     = 0UZ;
         auto greater_disagreements  = 0UZ;
-        auto lcg = 0x9E3779B97F4A7C15ULL;
-        auto const next = [&lcg] { lcg = (lcg * 6364136223846793005ULL) + 1442695040888963407ULL; return lcg >> 11; };
+        // Fixed width, not ULL: the sequence a fixed seed reproduces should not depend on how wide the
+        // platform makes unsigned long long.
+        auto lcg = std::uint64_t{0x9E3779B97F4A7C15};
+        auto const next = [&lcg] -> std::uint64_t { lcg = (lcg * 6364136223846793005ULL) + 1442695040888963407ULL; return lcg >> 11U; };
 
         for (auto t = 0UZ; t < trials; ++t) {
                 auto const i = next();
@@ -99,9 +102,9 @@ auto ordering_agrees_with_std_set_sampled(std::size_t universe, std::size_t tria
 
                 equality_disagreements += static_cast<std::size_t>((xv == yv) != (kx == ky));
                 less_disagreements     += static_cast<std::size_t>(
-                        ((xv <=> yv) < 0) != std::lexicographical_compare(kx.begin(), kx.end(), ky.begin(), ky.end()));
+                        std::is_lt(xv <=> yv) != std::ranges::lexicographical_compare(kx, ky));
                 greater_disagreements  += static_cast<std::size_t>(
-                        ((xv <=> yv) > 0) != std::lexicographical_compare(ky.begin(), ky.end(), kx.begin(), kx.end()));
+                        std::is_gt(xv <=> yv) != std::ranges::lexicographical_compare(ky, kx));
         }
 
         BOOST_CHECK_EQUAL(equality_disagreements, 0UZ);
