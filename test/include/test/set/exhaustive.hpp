@@ -21,10 +21,6 @@
 #endif
 
 namespace test::set {
-// NOLINTBEGIN(misc-const-correctness): every object built below is handed to fun, and fun is the whole point --
-// some of the functors this harness is called with take their argument by non-const reference and write through
-// it, which is exactly what the set/reset/flip cases exist to check. clang-tidy sees one instantiation at a time
-// and proposes a const that would stop the mutating ones compiling. [design.md#clang-tidy-false-positives]
 
 inline constexpr auto L1 = 128UZ;
 inline constexpr auto L2 =  64UZ;
@@ -84,7 +80,7 @@ template<class X, std::size_t N = limit_v<X, L1>>
 auto all_cardinality_sets(auto fun)
 {
         for (auto const i : std::views::iota(0UZ, N + 1)) {
-                auto a = std::views::iota(0UZ, i) | std::ranges::to<X>(); assert(a.size() == i);
+                auto a = std::views::iota(0UZ, i) | std::ranges::to<X>(); assert(a.size() == i);  // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
                 fun(a);
         }
 }
@@ -93,7 +89,7 @@ template<class X, std::size_t N = limit_v<X, L1>>
 auto all_singleton_arrays(auto fun)
 {
         for (auto const i : std::views::iota(0UZ, N)) {
-                auto a = std::array{ i }; assert(a.size() == 1);
+                auto a = std::array{ i }; assert(a.size() == 1);  // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
                 fun(a);
         }
 }
@@ -102,7 +98,7 @@ template<class X, std::size_t N = limit_v<X, L1>>
 auto all_singleton_ilists(auto fun)
 {
         for (auto const i : std::views::iota(0UZ, N)) {
-                auto a = { i }; assert(a.size() == 1);
+                auto a = { i }; assert(a.size() == 1);  // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
                 fun(a);
         }
 }
@@ -111,7 +107,7 @@ template<class X, std::size_t N = limit_v<X, L1>>
 auto all_singleton_sets(auto fun)
 {
         for (auto const i : std::views::iota(0UZ, N)) {
-                auto a = X({ i }); assert(a.size() == 1);
+                auto a = X({ i }); assert(a.size() == 1);  // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
                 fun(a);
         }
 }
@@ -125,7 +121,7 @@ auto all_doubleton_arrays(auto fun)
 {
         for (auto const j : std::views::iota(1UZ, std::ranges::max(N, 1UZ))) {
                 for (auto const i : std::views::iota(0UZ, j)) {
-                        auto a = std::array{ i, j }; assert(a.size() == 2);
+                        auto a = std::array{ i, j }; assert(a.size() == 2);  // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
                         fun(a);
                 }
         }
@@ -136,7 +132,7 @@ auto all_doubleton_ilists(auto fun)
 {
         for (auto const j : std::views::iota(1UZ, std::ranges::max(N, 1UZ))) {
                 for (auto const i : std::views::iota(0UZ, j)) {
-                        auto a = { i, j }; assert(a.size() == 2);
+                        auto a = { i, j }; assert(a.size() == 2);  // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
                         fun(a);
                 }
         }
@@ -158,8 +154,8 @@ auto all_singleton_set_pairs(auto fun)
 {
         for (auto const i : std::views::iota(0UZ, N)) {
                 for (auto const j : std::views::iota(0UZ, N)) {
-                        auto a = X({ i }); assert(a.size() == 1);
-                        auto b = X({ j }); assert(b.size() == 1);
+                        auto a = X({ i }); assert(a.size() == 1);  // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
+                        auto b = X({ j }); assert(b.size() == 1);  // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
                         fun(a, b);
                 }
         }
@@ -175,9 +171,9 @@ auto all_singleton_set_triples(auto fun)
         for (auto const i : std::views::iota(0UZ, N)) {
                 for (auto const j : std::views::iota(0UZ, N)) {
                         for (auto const k : std::views::iota(0UZ, N)) {
-                                auto a = X({ i }); assert(a.size() == 1);
-                                auto b = X({ j }); assert(b.size() == 1);
-                                auto c = X({ k }); assert(c.size() == 1);
+                                auto a = X({ i }); assert(a.size() == 1);  // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
+                                auto b = X({ j }); assert(b.size() == 1);  // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
+                                auto c = X({ k }); assert(c.size() == 1);  // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
                                 fun(a, b, c);
                         }
                 }
@@ -195,8 +191,8 @@ auto all_doubleton_set_pairs(auto fun)
                 for (auto const n : std::views::iota(1UZ, std::ranges::max(N, 1UZ))) {
                         for (auto const i : std::views::iota(0UZ, j)) {
                                 for (auto const m : std::views::iota(0UZ, n)) {
-                                        auto a = X({ i, j }); assert(a.size() == 2);
-                                        auto b = X({ m, n }); assert(b.size() == 2);
+                                        auto a = X({ i, j }); assert(a.size() == 2);  // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
+                                        auto b = X({ m, n }); assert(b.size() == 2);  // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
                                         fun(a, b);
                                 }
                         }
@@ -205,8 +201,6 @@ auto all_doubleton_set_pairs(auto fun)
 }
 
 }       // namespace on4
-
-// NOLINTEND(misc-const-correctness)
 
 } // namespace test::set
 

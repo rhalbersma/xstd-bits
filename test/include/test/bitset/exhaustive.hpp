@@ -18,10 +18,6 @@
 #endif
 
 namespace test::bitset {
-// NOLINTBEGIN(misc-const-correctness): every object built below is handed to fun, and fun is the whole point --
-// some of the functors this harness is called with take their argument by non-const reference and write through
-// it, which is exactly what the set/reset/flip cases exist to check. clang-tidy sees one instantiation at a time
-// and proposes a const that would stop the mutating ones compiling. [design.md#clang-tidy-false-positives]
 
 template<class X, auto Limit>
 inline constexpr auto limit_v = dynamic<X> ? Limit : X().size();
@@ -37,22 +33,22 @@ namespace on0 {
 template<class X, auto N = limit_v<X, L0>>
 auto empty_set(auto fun)
 {
-        auto a = make_bitset<X>(N); assert(a.none());
+        auto a = make_bitset<X>(N); assert(a.none());  // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
         fun(a);
 }
 
 template<class X, auto N = limit_v<X, L0>>
 auto full_set(auto fun)
 {
-        auto a = make_bitset<X>(N, true); assert(a.all());
+        auto a = make_bitset<X>(N, true); assert(a.all());  // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
         fun(a);
 }
 
 template<class X, auto N = limit_v<X, L0>>
 auto empty_set_pair(auto fun)
 {
-        auto a = make_bitset<X>(N); assert(a.none());
-        auto b = make_bitset<X>(N); assert(b.none());
+        auto a = make_bitset<X>(N); assert(a.none());  // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
+        auto b = make_bitset<X>(N); assert(b.none());  // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
         fun(a, b);
 }
 
@@ -178,8 +174,6 @@ auto all_doubleton_set_pairs(auto fun)
 }
 
 }       // namespace on4
-
-// NOLINTEND(misc-const-correctness)
 
 } // namespace test::bitset
 
