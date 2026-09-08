@@ -138,19 +138,25 @@ void bm_scan(benchmark::State& state)
 
 // Three words breaks the doubling on purpose: it is the first width nobody has an unrolled arm for, and so the
 // control that says a two-word result is the specialization rather than noise.
-#define BM_LADDER(fn)     \
-        BM_RUNG(fn,    1); \
-        BM_RUNG(fn,    2); \
-        BM_RUNG(fn,    3); \
-        BM_RUNG(fn,    4); \
-        BM_RUNG(fn,    8); \
-        BM_RUNG(fn,   16); \
-        BM_RUNG(fn,   32); \
-        BM_RUNG(fn,   64); \
-        BM_RUNG(fn,  128); \
-        BM_RUNG(fn,  256); \
-        BM_RUNG(fn,  512); \
-        BM_RUNG(fn, 1024)
+//
+// The ladder stops at 512 words, which is 4 KiB per operand and 8 KiB for the two the binary operators hold on
+// one frame. A 1024-word rung put 16396 bytes there and MSVC /analyze answered C6262, rightly: nobody gives a
+// stack frame sixteen kilobytes of bitset. Heap-allocating the operands instead would silence it and measure
+// something else, an indirection on every access at the rungs where the interesting result lives. The rung is
+// no loss -- by 64 words everything is memory-bound and the curves have converged ([design.md#two-block-case]
+// is a claim about small widths) -- and 512 words still reaches 32768 bits, well clear of L1.
+#define BM_LADDER(fn)    \
+        BM_RUNG(fn,   1); \
+        BM_RUNG(fn,   2); \
+        BM_RUNG(fn,   3); \
+        BM_RUNG(fn,   4); \
+        BM_RUNG(fn,   8); \
+        BM_RUNG(fn,  16); \
+        BM_RUNG(fn,  32); \
+        BM_RUNG(fn,  64); \
+        BM_RUNG(fn, 128); \
+        BM_RUNG(fn, 256); \
+        BM_RUNG(fn, 512)
 
 BM_LADDER(bm_and);
 BM_LADDER(bm_or);
