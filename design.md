@@ -1088,6 +1088,36 @@ still built on `std::iter_swap`. `format_as` is fmt's protocol in the same sense
 The sequence proxy borrows nothing else from `[bitset.refs]`: no `flip()` and no `operator~`. Those belong to
 the bitset reading, whose `reference` is its own class.
 
+### formatting-the-proxies
+
+`std::format` over the containers needs nothing said about the containers. Every owner and view here is a
+range, so `[format.range.formatter]` would format each one already, except that it requires
+`formattable<ranges::range_reference_t<R>>` and a reference of ours is a proxy. So `xstd/bits/format.hpp`
+specializes `std::formatter` for the two proxies and stops there: `bit_set`, `bit_static_set`, `bit_vector`,
+`bit_array`, the views, the windows and the inplace column all follow from that, none of them mentioned.
+
+This is the same shape the proxies already had for fmt, in fmt's spelling. `format_as` is fmt's generic
+per-type hook: define it for one type and every range over that type formats, which is why the proxies carry
+it and no container does. `std::formatter` is the standard's hook for the same job. So each library gets one
+hook per proxy -- a hidden friend for fmt, a specialization for the standard -- and in both the containers
+follow for free. Nothing here is a special case for formatting; it is the general mechanism used twice.
+
+The readings then separate themselves. `[format.range.fmtkind]` picks `range_format::set` for a range with a
+`key_type` and `range_format::sequence` otherwise, so the set reading prints `{1, 3, 5}` and the sequence
+reading `[false, true, false, false]` -- the same split `format_as` arrives at for fmt, reached here through
+the standard's own machinery rather than by our choosing
+([two-readings-disagree](#two-readings-disagree)).
+
+Each specialization derives from `std::formatter<size_t>` or `std::formatter<bool>` instead of writing a
+`parse`, which is what keeps the whole spec: a width and a fill on a single proxy, and the nested spec a range
+formatter forwards, so `{::#x}` over the set reading and `{::d}` over the sequence reading reach the
+underlying formatter intact.
+
+The header is not in `xstd/bits.hpp`. The umbrella keeps `<format>` off every consumer path for the reason it
+keeps the `ext/` adaptors and Boost off it; a consumer who formats says so by including the header. Issue #20
+had this waiting on P3070R0, which is not what blocked it: the proxy's formattability was, and that is ours to
+fix.
+
 ### total-lookups-on-the-container
 
 Every `bit_static_set` lookup is total over `key_type`, because `std::set`'s is: a key outside `[0, N)` names

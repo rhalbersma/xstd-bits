@@ -219,6 +219,20 @@ What makes this work for a foreign container is `xstd::bit_traits`, a trait the 
 
 This is why ownership is not a fourth column of the table above: a view is not a fourth kind of container, it is the same three readings pointed at storage someone else owns.
 
+### Printing
+
+The snippets above use `fmt::format`, which finds the proxies through fmt's own `format_as`. `std::format` and `std::print` work too, by including one header:
+
+```cpp
+#include <xstd/bits/format.hpp>
+
+std::print("{}\n", primes);   // {2, 3, 5, 7, 11, ...}   the set reading, in braces
+std::print("{}\n", flags);    // [false, true, ...]      the sequence reading, in brackets
+std::print("{::#x}\n", primes);
+```
+
+It specializes `std::formatter` for the two proxy references and nothing else: every container over them is already a range, so [`[format.range.formatter]`](https://eel.is/c++draft/format.range.formatter) formats it once its reference is formattable. The braces-versus-brackets split is the standard's, not ours — `[format.range.fmtkind]` picks `range_format::set` for a range with a `key_type` — so each reading prints in its own vocabulary without being told to. The header is deliberately outside `<xstd/bits.hpp>`, which keeps `<format>` off the include path of consumers who do not format.
+
 ## Data-parallelism
 
 The `filter_twins` above walks the primes one at a time, because that is all `std::set` can do. A dense container can answer the same question a **word at a time**, without iterating at all. A prime is a twin exactly when it has a neighbour two away, so shifting the whole set by two in each direction and intersecting gives every twin in a handful of instructions per block:
