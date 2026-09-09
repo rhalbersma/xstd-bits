@@ -10,15 +10,16 @@
 #include <xstd/bits/bit_traits.hpp>    // bit_storage, bit_traits, block_readable, static_bit_extent
 #include <xstd/bits/block_sequence.hpp> // block_array, block_inplace_vector, block_sequence, block_vector, contiguous_block_container
 #include <algorithm>                   // count, lexicographical_compare_three_way, min
-#include <concepts>                    // same_as
+#include <concepts>                    // regular, same_as
 #include <array>                       // array
 #include <compare>                     // strong_ordering
 #include <cstddef>                     // size_t
 #include <cstdint>                     // uint8_t, uint64_t
-#include <memory>                      // allocator
+#include <memory>                      // addressof, allocator
 #include <initializer_list>            // initializer_list
+#include <iterator>                    // contiguous_iterator, iter_reference_t, random_access_iterator
 #include <new>                         // IWYU pragma: keep; bad_alloc, behind TEST_HAS_INPLACE_VECTOR
-#include <ranges>                      // iota
+#include <ranges>                      // begin, contiguous_range, iota, iterator_t, size, sized_range
 #include <tuple>                       // get, tuple
 #include <vector>                      // vector
 
@@ -351,6 +352,129 @@ BOOST_AUTO_TEST_CASE(ItsStorageIsAContiguousSizedRangeOfUnsignedIntegers)
 
         static_assert(not xstd::contiguous_block_container<std::vector<bool>>);      // not a contiguous range
         static_assert(not xstd::contiguous_block_container<std::vector<int>>);       // nor unsigned integers
+}
+
+namespace {
+
+// Named so the requirement is checked on a template parameter: spelling it on a concrete iterator type puts a
+// pointer in the requires-expression's parameter list, which reads as a const-able parameter to clang-tidy.
+template<class I>
+concept iterator_subscripts = requires (I i, std::size_t n) { { i[n] } -> std::same_as<std::iter_reference_t<I>>; };
+
+}       // namespace
+
+// Subscript is the range's own, and contiguous_range does not promise it: it promises data() and a
+// contiguous_iterator, and it is the ITERATOR that random_access_iterator obliges to have i[n].
+BOOST_AUTO_TEST_CASE(ItsStorageSubscriptIsTheRangesOwnAndNotTheIterators)
+{
+        // A regular, contiguous, sized range of unsigned integers whose iterator subscripts and which does not.
+        struct bare_blocks
+        {
+                std::array<std::uint64_t, 4> m_data {};
+
+                // Every member here exists to be asked about, never called, so the compiler is told not to expect a use.
+                [[nodiscard, maybe_unused]] constexpr auto begin()       -> std::uint64_t*       { return m_data.data(); }
+                [[nodiscard, maybe_unused]] constexpr auto begin() const -> std::uint64_t const* { return m_data.data(); }
+                [[nodiscard, maybe_unused]] constexpr auto end()         -> std::uint64_t*       { return m_data.data() + m_data.size(); }
+                [[nodiscard, maybe_unused]] constexpr auto end()   const -> std::uint64_t const* { return m_data.data() + m_data.size(); }
+                [[nodiscard, maybe_unused]] constexpr auto size()  const -> std::size_t          { return m_data.size(); }
+
+                [[maybe_unused]] auto operator==(bare_blocks const&) const -> bool = default;
+        };
+        using It = std::ranges::iterator_t<bare_blocks>;
+
+        static_assert(std::ranges::contiguous_range<bare_blocks>);
+        static_assert(std::ranges::sized_range<bare_blocks> and std::regular<bare_blocks>);
+        static_assert(std::contiguous_iterator<It> and std::random_access_iterator<It>);
+        static_assert(iterator_subscripts<It>);
+
+        static_assert(not xstd::contiguous_block_container<bare_blocks>);            // the four are not enough
+}
+
+// The semantic half a concept cannot check: a[i] is *(begin(a) + i), the same object and not merely an equal one.
+template<class Blocks>
+constexpr auto subscript_agrees_with_iteration(Blocks blocks) noexcept
+        -> bool
+{
+        // The index is the range's own difference_type, so begin(blocks) + i needs no conversion; subscript takes
+        // a size_type, which is the one cast, and naming it here keeps -Wsign-conversion honest.
+        for (auto i = std::ranges::range_difference_t<Blocks>{}; i < std::ranges::ssize(blocks); ++i) {
+                if (std::addressof(blocks[static_cast<std::size_t>(i)]) != std::addressof(*(std::ranges::begin(blocks) + i))) {
+                        return false;
+                }
+        }
+        return true;
+}
+
+BOOST_AUTO_TEST_CASE(ItsStorageSubscriptIsIterationAtTheSameAddress)
+{
+        static_assert(subscript_agrees_with_iteration(std::array<std::uint8_t, 4>{ 1, 2, 3, 4 }));
+        static_assert(subscript_agrees_with_iteration(std::vector<std::uint64_t>{ 1, 2, 3, 4 }));
+        BOOST_CHECK(subscript_agrees_with_iteration(std::vector<std::uint64_t>{ 1, 2, 3, 4 }));
+}
+
+// ranges::swap finds a free swap by ADL and a member never, so block_sequence needs the free one its three
+// adaptors already have: without it every container moves a whole block_sequence three times instead of
+// swapping its blocks once, and a storage with an optimized swap never sees it. [design.md#swap-goes-through-adl]
+namespace {
+
+int g_storage_swaps = 0;
+int g_storage_moves = 0;
+
+// A storage satisfying contiguous_block_container whose swap and moves are distinguishable.
+struct counting_blocks
+{
+        std::array<std::uint64_t, 4> m_data {};
+
+        // The move operations are counted rather than used: once the free swap exists nothing calls them, which
+        // is the point of the test, so they and the members that only satisfy the concept say so.
+        counting_blocks() = default;
+        [[maybe_unused]] counting_blocks(counting_blocks const&) = default;
+        [[maybe_unused]] auto operator=(counting_blocks const&) -> counting_blocks& = default;
+        [[maybe_unused]] counting_blocks(counting_blocks&& other) noexcept : m_data(other.m_data) { ++g_storage_moves; }
+        [[maybe_unused]] auto operator=(counting_blocks&& other) noexcept -> counting_blocks& { m_data = other.m_data; ++g_storage_moves; return *this; }
+        [[maybe_unused]] ~counting_blocks() = default;
+
+        [[nodiscard, maybe_unused]] auto begin()       -> std::uint64_t*       { return m_data.data(); }
+        [[nodiscard, maybe_unused]] auto begin() const -> std::uint64_t const* { return m_data.data(); }
+        [[nodiscard, maybe_unused]] auto end()         -> std::uint64_t*       { return m_data.data() + m_data.size(); }
+        [[nodiscard, maybe_unused]] auto end()   const -> std::uint64_t const* { return m_data.data() + m_data.size(); }
+        [[nodiscard, maybe_unused]] auto size()  const -> std::size_t          { return m_data.size(); }
+
+        [[nodiscard, maybe_unused]] auto operator[](std::size_t i)       -> std::uint64_t&       { return m_data[i]; }
+        [[nodiscard, maybe_unused]] auto operator[](std::size_t i) const -> std::uint64_t const& { return m_data[i]; }
+
+        [[maybe_unused]] auto operator==(counting_blocks const&) const -> bool = default;
+
+        friend auto swap(counting_blocks& x, counting_blocks& y) noexcept
+                -> void
+        {
+                ++g_storage_swaps;
+                x.m_data.swap(y.m_data);
+        }
+};
+static_assert(xstd::contiguous_block_container<counting_blocks>);
+
+}       // namespace
+
+BOOST_AUTO_TEST_CASE(ItsSwapIsReachedThroughAdlAndNotTheMoveFallback)
+{
+        using bits = xstd::block_sequence<counting_blocks, 256>;
+
+        auto a = bits();
+        auto b = bits();
+
+        g_storage_swaps = 0;
+        g_storage_moves = 0;
+        a.swap(b);
+        BOOST_CHECK_EQUAL(g_storage_swaps, 1);          // the member reaches the storage's swap
+        BOOST_CHECK_EQUAL(g_storage_moves, 0);
+
+        g_storage_swaps = 0;
+        g_storage_moves = 0;
+        std::ranges::swap(a, b);                        // and so does what every adaptor actually calls
+        BOOST_CHECK_EQUAL(g_storage_swaps, 1);          // 0 swaps and 3 moves before the free swap existed
+        BOOST_CHECK_EQUAL(g_storage_moves, 0);
 }
 
 // A compile-time width costs nothing: the absent size member takes no storage.

@@ -29,7 +29,7 @@
 #include <ranges>                                              // begin, drop, iota, size, swap, transform, zip
                                                                // (views::drop_last when P22014R2 is accepted)
 #include <span>                                                // dynamic_extent
-#include <type_traits>                                         // conditional_t, is_const_v, is_nothrow_swappable_v, remove_reference_t
+#include <type_traits>                                         // conditional_t, is_const_v, remove_reference_t
 #include <utility>                                             // exchange, move, pair
 #include <vector>                                              // vector
 #include <version>                                             // IWYU pragma: keep; __cpp_lib_inplace_vector
@@ -40,12 +40,19 @@
 namespace xstd {
 
 // Whether a range IS blocks; block_readable asks if a trait hands a container's blocks over. [design.md#contiguous-block-container]
+// Subscript is spelled out because contiguous_range promises data() and the ITERATOR's operator[], never the range's,
+// and a contiguous container generalizes a C array, whose defining operation is a[i]. [design.md#contiguous-block-container]
+// Semantic requirement, as random_access_iterator states for its own i[n]: r[i] is *(std::ranges::begin(r) + i).
 template<class R>
 concept contiguous_block_container =
         std::regular<R> and
         std::ranges::contiguous_range<R> and
         std::ranges::sized_range<R> and
-        xstd::unsigned_integer<std::ranges::range_value_t<R>>
+        xstd::unsigned_integer<std::ranges::range_value_t<R>> and
+        requires (R& r, R const& c, std::size_t i) {
+                { r[i] } -> std::same_as<std::ranges::range_reference_t<R>>;
+                { c[i] } -> std::same_as<std::ranges::range_reference_t<R const>>;
+        }
 ;
 
 // Floored at one so a zero width still names a block. [design.md#the-one-vehicle]
@@ -635,12 +642,22 @@ public:
                 return *this;
         }
 
-        constexpr auto swap(block_sequence& other) noexcept(std::is_nothrow_swappable_v<Blocks>)
+        constexpr auto swap(block_sequence& other)
+                noexcept(noexcept(std::ranges::swap(m_size, other.m_size)) and noexcept(std::ranges::swap(m_blocks, other.m_blocks)))
                 -> void
         {
                 // m_size is empty_type under a static width, and swapping that is a no-op.
                 std::ranges::swap(this->m_size,   other.m_size);
                 std::ranges::swap(this->m_blocks, other.m_blocks);
+        }
+
+        // ranges::swap finds a free swap by ADL and a member never, so without this every adaptor's
+        // ranges::swap(m_bits, other.m_bits) moves a whole block_sequence three times instead of swapping its
+        // blocks once, and the storage's own swap is never reached. [design.md#swap-goes-through-adl]
+        friend constexpr auto swap(block_sequence& x, block_sequence& y) noexcept(noexcept(x.swap(y)))
+                -> void
+        {
+                x.swap(y);
         }
 
         // Growth, at a run-time width alone; every path leaves the unused tail clear, so the block walks read nothing above size(). [design.md#growth]

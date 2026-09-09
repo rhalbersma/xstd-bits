@@ -10,11 +10,40 @@ file holds what has landed.
 
 ### contiguous-block-container
 
-`contiguous_block_container` asks whether a range **is** blocks: a regular, contiguous, sized range of
-unsigned integers. Regular is what lets `block_sequence` default its `==` over the width and the blocks, in
-that member order, so two run-time widths part on the width before a block is read.
+`contiguous_block_container` asks whether a range **is** blocks: a regular, contiguous, sized, subscriptable
+range of unsigned integers. Regular is what lets `block_sequence` default its `==` over the width and the
+blocks, in that member order, so two run-time widths part on the width before a block is read.
 `std::array` and `std::vector` both qualify, and so does `std::inplace_vector` — a runtime width over
 static capacity, for free.
+
+Subscript is spelled out rather than left to `std::ranges::contiguous_range`, which does not imply it.
+`contiguous_range` gives `data()` and a `contiguous_iterator`, and a `contiguous_iterator` is a
+`random_access_iterator`, so `i[n]` **is** required — of the *iterator*. The range itself is under no such
+obligation, and a plain buffer wrapper proves the gap: it satisfies the other four requirements, its
+iterator subscripts happily, and `r[n]` does not compile. `block_sequence` reaches for the range's
+subscript in 140 places, `block_mask` among them, so without this the concept admits storages the class
+cannot be instantiated over — the shortfall surfacing as a hard error inside the template rather than as an
+unsatisfied constraint, which is the failure mode
+[a-requires-clause-names-its-arguments](#a-requires-clause-names-its-arguments) exists to prevent.
+
+The requirement is written against the iterator's own reference type, `range_reference_t<R>`, rather than
+against `range_value_t<R>&`, because the point is not that subscript yields *a* reference but that it yields
+*the same* one iteration does. The rest of that is semantic and no concept can check it, so it is stated
+here as the standard states it for `random_access_iterator`'s `i[n]`:
+
+> `r[i]` is `*(std::ranges::begin(r) + i)`
+
+and asserted in the tests, by address rather than by value, for every storage shipped. An unchecked
+semantic requirement that no test pins is a comment.
+
+Naming it `container` follows from the same fact. A contiguous container generalizes the C array, and `a[i]`
+is the C array's defining operation; a concept claiming a range *is* blocks while unable to index one would
+be describing something else. The word is deliberately close to the standard's *contiguous container*
+([container.reqmts]/68) without claiming it: that term drags in the whole *Container* table — `empty()`,
+`max_size()`, `cbegin`/`cend`, member `swap`, seven nested typedefs — and `block_sequence` needs almost none
+of it. At a static width it needs none; at a run-time width it needs `max_size`, `resize`, `push_back` and
+`clear`, which are *sequence* container operations, not `Container` ones. Neither path draws the line where
+[container.reqmts]/68 draws it, so the concept states its own five requirements and borrows nothing.
 
 `block_readable` is the other side of the same word, and asks whether a bit container will
 **hand its blocks over**. Nothing models both, and no scope sees both unqualified.
@@ -1178,6 +1207,74 @@ declaration.
 **Lambdas keep their trailing return inline.** A lambda is an expression inside a statement, so there is no
 "above the body" to put anything on, and `modernize-use-trailing-return-type` requires the `-> void` there
 anyway. The convention is about named functions.
+
+### swap-goes-through-adl
+
+`std::ranges::swap` reaches a type's own `swap` by **ADL on a free function**, and a member `swap` is not
+found that way. When it finds none it falls back to a move-construct and two move-assignments, which is
+correct and, for a storage whose moves are cheap, not obviously worse -- which is how this went unnoticed.
+
+`set_adaptor`, `sequence_adaptor` and `bitset_adaptor` each ship a free `swap` beside the member.
+`block_sequence` had only the member, and every one of the nine containers swaps by
+`std::ranges::swap(m_bits, other.m_bits)` where `m_bits` **is** a `block_sequence`. So the member was
+unreachable from the containers, and a storage with an optimized `swap` never saw it. Measured over a
+storage whose swap and moves are counted, once per reading:
+
+| | before | after |
+| --- | --- | --- |
+| `sequence_adaptor` | 0 storage swaps, 3 moves | 1 swap, 0 moves |
+| `set_adaptor` | 0 storage swaps, 3 moves | 1 swap, 0 moves |
+| `bitset_adaptor` | 0 storage swaps, 3 moves | 1 swap, 0 moves |
+
+`block_sequence` now has the free `swap` too, as a hidden friend delegating to the member. Nothing else
+about swapping changed, and the storage is not asked for one: `std::regular` implies `copyable`, which
+implies `movable`, which **includes** `std::swappable`, so the concept already requires as much swapping as
+`ranges::swap` can need, and any better one arrives by ADL without being asked for.
+
+The `noexcept` moved with it. It read `noexcept(std::is_nothrow_swappable_v<Blocks>)` -- a trait of the
+`std::swap` family -- above a body calling `std::ranges::swap`, which is a different family with different
+rules (it suppresses the generic `std::swap` template when looking for an ADL candidate). They agree for
+every storage shipped here, so this is a latent mismatch and not a bug, but it is the same shape as the
+`is_invocable_r_v`-tests-a-prvalue-and-the-call-passes-an-lvalue disagreement in
+[the-functor-takes-a-value](#the-functor-takes-a-value), and the same fix applies: the specification names
+the calls the body makes, with the body's own arguments.
+
+### a-requires-clause-names-its-arguments
+
+A `requires` clause tests the call the body makes, with the body's own arguments. Twenty-odd of them tested
+something else: a literal, almost always `0UZ`, stood in for the argument and the body then passed a
+different type.
+
+```cpp
+requires requires { Traits::insert(self.storage(), 0UZ); }   // is a size_t insertable?
+{ self.insert(ilist.begin(), ilist.end()); }                 // ... a value_type is inserted
+```
+
+For every storage shipped here the two coincide, so nothing was ever caught. That is the danger, not the
+defence: a `value_type` not constructible from `std::size_t` would be *admitted by a satisfied constraint*
+and then fail inside the body, which is the hard error the constraint exists to prevent. A constraint that
+cannot say no about the call actually made is decoration.
+
+Where the function has the argument, the clause names it -- `*position`, `x`, `*first`, `*ilist.begin()`,
+`value_type(std::forward<Args>(args)...)`, `static_cast<value_type>(*std::ranges::begin(rg))`,
+`b.reserve(blocks_for(n))`. Where there is no call site to borrow from -- `can_grow`, `word_writable`,
+`blit_source`, the `for_each` block guards, `std::bitset`'s `num_blocks` -- the requires-expression declares
+its own parameters, which is what `std::declval` is for at namespace scope and what C++20 gave
+requires-expressions of their own:
+
+```cpp
+requires (bits_type& b, std::size_t n, bool value) {
+        b.resize(n, value); b.push_back(value); b.pop_back(); b.clear();
+}
+```
+
+Declaring one where the enclosing function already has that name is the same mistake one level up, and the
+compilers disagree about noticing: clang's `-Wshadow` rejected two such parameters that GCC accepted
+silently. If the function has an `n` or an `i`, the constraint uses it.
+
+The same rule reaches concepts, where the argument is the type: see
+[contiguous-block-container](#contiguous-block-container), whose subscript requirement exists because the
+class subscripts and `std::ranges::contiguous_range` does not promise that.
 
 ### the-functor-takes-a-value
 
