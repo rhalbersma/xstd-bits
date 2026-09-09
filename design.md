@@ -1019,10 +1019,23 @@ conditional typedef. One boost constructor is left out on purpose: `dynamic_bits
 alloc)` puts a width where `std::bitset`'s `(str, pos, n, zero, one)` puts a character, and one signature
 cannot extend both; `std::bitset`'s wins, the width being the characters read.
 
-What ours does not add is a range: becoming one would change what generic code does with it, from `fmt` to
-`std::ranges::to`, which is the one addition a strict extension cannot make. `bit_set_view` and `bit_span`
-refer into its storage ([views-over-owners](#views-over-owners)) and carry the readings, and
-`ext/xstd/bitset.hpp` is the opt-in that makes iteration reachable by name. Nor a `const_reference` proxy
+What ours does not add is a range, and there is no opt-in that adds one either. Becoming a range would change
+what generic code does with it, from `fmt` to `std::ranges::to`, which is the one addition a strict extension
+cannot make -- and `std::bitset` is already schizophrenic enough about its interface without our making it
+worse. `bit_set_view` and `bit_span` refer into its storage ([views-over-owners](#views-over-owners)) and
+carry the readings: bidirectional over positions, random access over bools, each said out loud at the call
+site. That is the whole iteration story.
+
+`ext/xstd/bitset.hpp` used to be a third answer -- twelve ADL `begin`/`end`/`rbegin`/`rend` overloads routing
+to the set reading -- justified in its own comment as keeping iteration "reachable by name and only by name,
+which is what a free function found by ADL is and what a member could never be". That reasoning was wrong:
+`std::ranges::begin` is *defined* to find ADL `begin`, so a free function is not a weaker form of a member but
+the primary one. Measured, including the header took `std::ranges::range<xstd::bitset<100>>` from `false` to
+`true` and let `std::ranges::to<std::vector<size_t>>` swallow a bitset -- the named prohibition, by the named
+mechanism. It is deleted. The asymmetry was the tell: `begin` is one name and there are two readings, so the
+set reading held it by fiat and the sequence reading could never have had it, which is not a design.
+
+Nor a `const_reference` proxy
 from the const subscript, libc++'s way: `auto x = cb[i]` would change type and could dangle, and a strict
 extension re-types nothing.
 

@@ -99,8 +99,6 @@ target_sources(
         include/xstd/bits/ext/boost/dynamic_bitset.hpp
         include/xstd/bits/ext/std.hpp
         include/xstd/bits/ext/std/bitset.hpp
-        include/xstd/bits/ext/xstd.hpp
-        include/xstd/bits/ext/xstd/bitset.hpp
         include/xstd/bits/ownership.hpp
 )
 
