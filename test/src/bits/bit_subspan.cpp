@@ -194,7 +194,8 @@ auto model_op(int op, bool a, bool b)
         }
 }
 
-void window_op(int op, auto const& w, auto const& o)
+auto window_op(int op, auto const& w, auto const& o)
+        -> void
 {
         switch (op) {
         case 0:  w &= o; break;
@@ -205,7 +206,8 @@ void window_op(int op, auto const& w, auto const& o)
 }
 
 // One combination: a window of the destination at off against a window of the source at other, count wide, against the bool model.
-void check_combination(int op, std::size_t off, std::size_t other, std::size_t count)
+auto check_combination(int op, std::size_t off, std::size_t other, std::size_t count)
+        -> void
 {
         auto source = xstd::basic_bit_vector<std::uint8_t>(std::from_range, pattern(40, 2));
         auto dest = xstd::basic_bit_vector<std::uint8_t>(std::from_range, pattern(40, 3));

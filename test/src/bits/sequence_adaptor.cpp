@@ -68,7 +68,8 @@ struct bit_traits<element_bits<N>>
         [[nodiscard]] static constexpr auto size(bits_type const&)                  noexcept -> std::size_t { return N; }
         [[nodiscard]] static constexpr auto at  (bits_type const& c, std::size_t n) noexcept -> bool        { return c.bits.test(n); }
 
-        static constexpr void unchecked_assign(bits_type& c, std::size_t n, bool value) noexcept
+        static constexpr auto unchecked_assign(bits_type& c, std::size_t n, bool value) noexcept
+                -> void
         {
                 if (value) {
                         c.bits.set(n);
@@ -429,9 +430,15 @@ struct void_probe
 {
         bool& took_a_reference;
 
-        void operator()(bool&&) const {}
+        auto operator()(bool&&) const
+                -> void
+        {}
         // Never called is exactly what is under test, so say so rather than let -Wunused-member-function say it.
-        [[maybe_unused]] void operator()(bool&) const { took_a_reference = true; }
+        [[maybe_unused]] auto operator()(bool&) const
+                -> void
+        {
+                took_a_reference = true;
+        }
 };
 
 struct bool_probe

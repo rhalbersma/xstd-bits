@@ -35,7 +35,8 @@ auto bound(benchmark::State const& state)
 }
 
 // Reported per candidate rather than per run, so the rungs are comparable down the ladder and not only across it.
-void per_candidate(benchmark::State& state)
+auto per_candidate(benchmark::State& state)
+        -> void
 {
         state.SetItemsProcessed(state.iterations() * static_cast<std::int64_t>(bound(state)));
 }
@@ -43,7 +44,8 @@ void per_candidate(benchmark::State& state)
 }       // namespace
 
 template<class X>
-void bm_sift_primes0(benchmark::State& state)
+auto bm_sift_primes0(benchmark::State& state)
+        -> void
 {
         auto const n = bound(state);
         for (auto _ : state) {
@@ -53,7 +55,8 @@ void bm_sift_primes0(benchmark::State& state)
 }
 
 template<class X>
-void bm_sift_primes1(benchmark::State& state)
+auto bm_sift_primes1(benchmark::State& state)
+        -> void
 {
         auto const n = bound(state);
         for (auto _ : state) {
@@ -66,7 +69,8 @@ void bm_sift_primes1(benchmark::State& state)
 // compile-time width chosen to sit in L1. What the ladder is asked here is what that costs in time.
 // [design.md#the-unbounded-sieves]
 template<class X>
-void bm_sift_primes_segmented(benchmark::State& state)
+auto bm_sift_primes_segmented(benchmark::State& state)
+        -> void
 {
         auto const n = bound(state);
         for (auto _ : state) {
@@ -79,7 +83,8 @@ void bm_sift_primes_segmented(benchmark::State& state)
 // per candidate where the array sieve has a strided write. O'Neill's own point is that it is slower; this is the
 // measurement of how much. [design.md#the-unbounded-sieves]
 template<class X>
-void bm_sift_primes_incremental(benchmark::State& state)
+auto bm_sift_primes_incremental(benchmark::State& state)
+        -> void
 {
         auto const n = bound(state);
         for (auto _ : state) {
@@ -91,7 +96,8 @@ void bm_sift_primes_incremental(benchmark::State& state)
 // The sieve is the setup, not the measurement, so it stays outside the loop; at the top rung it costs more than
 // the twins pass it feeds.
 template<class X>
-void bm_filter_twins(benchmark::State& state)
+auto bm_filter_twins(benchmark::State& state)
+        -> void
 {
         auto const n = bound(state);
         auto const primes = xstd::sift_primes1<X>(n);

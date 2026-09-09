@@ -36,16 +36,22 @@ struct bit_traits<std::bitset<N>>
         [[nodiscard]] static constexpr auto any  (bits_type const& c)                noexcept -> bool        { return c.any();   }
         [[nodiscard]] static constexpr auto none (bits_type const& c)                noexcept -> bool        { return c.none();  }
 
-        static constexpr void unchecked_assign(bits_type& c, std::size_t n, bool value) noexcept { c[n] = value; }
+        static constexpr auto unchecked_assign(bits_type& c, std::size_t n, bool value) noexcept
+                -> void
+        {
+                c[n] = value;
+        }
 
         // A static width cannot grow, so inserting is assigning with the position as a precondition. [design.md#what-the-trait-reconciles]
-        static constexpr void insert(bits_type& c, std::size_t n) noexcept
+        static constexpr auto insert(bits_type& c, std::size_t n) noexcept
+                -> void
         {
                 assert(n < N);
                 c[n] = true;
         }
 
-        static constexpr void fill(bits_type& c, bool value) noexcept
+        static constexpr auto fill(bits_type& c, bool value) noexcept
+                -> void
         {
                 if (value) {
                         c.set();

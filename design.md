@@ -1148,6 +1148,34 @@ contract: an iterator that caches a block stops observing an erase that lands ah
 caching the same block is unobservable. The member is the faster half and the safer half at once, which is
 rare enough to record.
 
+### void-is-a-return-type
+
+Every function names its return type after the parameter list, `void` included: `auto f() -> void`, with the
+`-> void` on its own line above the body wherever the body has lines of its own. 118 functions were declared
+`void f()` before this and 68 were already `auto f() -> void`; the split ran roughly along the library/test
+line, which is not a reason, so they are all one shape now.
+
+Three things were weighed and are recorded because the obvious readings of each are wrong.
+
+**clang-tidy does not ask for this and will not keep it.** `modernize-use-trailing-return-type` fires on a
+named, non-`void`, *leading* return type and rewrites that one; measured on rungs 22 and 24, it says nothing
+about `void f()`, nothing about `auto f()` with a deduced return, and nothing about `auto f() -> void`. So
+this is a convention the tooling is indifferent to, and only review keeps it -- which is an argument for
+[#70](https://github.com/rhalbersma/xstd-bits/issues/70)'s deferred `.clang-format`, not against the
+convention.
+
+**A deduced `auto f()` would have been the shorter road and is closed.** It reads as the same idea with less
+typing, but a deduced return type has to instantiate the body to be known, so any
+`requires { x.f(); }` that would have been answered from the declaration instead instantiates and can hard
+error where it should have said "no". That is not a stylistic loss; it is the mechanism
+[detection-by-absence](#detection-by-absence) is built on -- `can_grow`, `word_writable`, `blittable` and
+every trait tier ask exactly that question. Declared return types, trailing or leading, answer it from the
+declaration.
+
+**Lambdas keep their trailing return inline.** A lambda is an expression inside a statement, so there is no
+"above the body" to put anything on, and `modernize-use-trailing-return-type` requires the `-> void` there
+anyway. The convention is about named functions.
+
 ### the-functor-takes-a-value
 
 Both `for_each`es hand their functor a **prvalue** -- through a three-line `decay_copy`, not `auto(x)`: MSVC

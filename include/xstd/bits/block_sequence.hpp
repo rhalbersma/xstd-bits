@@ -206,7 +206,8 @@ public:
         }
 
         // The write side of block(), and no trait entry. [design.md#block-writes]
-        constexpr void set_block(std::size_t i, block_type value) noexcept
+        constexpr auto set_block(std::size_t i, block_type value) noexcept
+                -> void
         {
                 assert(i < num_blocks());
                 m_blocks[i] = value;
@@ -226,7 +227,8 @@ public:
         }
 
         // The write side of word_at, masked: the bits of value under mask land at [n, n + bits_per_block), split over two blocks where n is not aligned, and the tail stays clear. [design.md#the-blit]
-        constexpr void set_word(std::size_t n, block_type value, block_type mask) noexcept
+        constexpr auto set_word(std::size_t n, block_type value, block_type mask) noexcept
+                -> void
         {
                 auto const [ index, offset ] = index_offset(n);
                 assert(index < num_blocks());
@@ -328,7 +330,8 @@ public:
         }
 
         template<class Provider, class Hash, class Flavor>
-        friend constexpr void tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, block_sequence const* v) noexcept
+        friend constexpr auto tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, block_sequence const* v) noexcept
+                -> void
         {
                 boost::hash2::hash_append(h, f, v->m_blocks);
         }
@@ -632,7 +635,8 @@ public:
                 return *this;
         }
 
-        constexpr void swap(block_sequence& other) noexcept(std::is_nothrow_swappable_v<Blocks>)
+        constexpr auto swap(block_sequence& other) noexcept(std::is_nothrow_swappable_v<Blocks>)
+                -> void
         {
                 // m_size is empty_type under a static width, and swapping that is a no-op.
                 std::ranges::swap(this->m_size,   other.m_size);
@@ -640,7 +644,8 @@ public:
         }
 
         // Growth, at a run-time width alone; every path leaves the unused tail clear, so the block walks read nothing above size(). [design.md#growth]
-        constexpr void resize(std::size_t n, bool value = false)
+        constexpr auto resize(std::size_t n, bool value = false)
+                -> void
                 requires (not has_static_size)
         {
                 // Growing with ones: the tail above size() in the last block is clear by the invariant, and becomes the first new bits.
@@ -653,19 +658,22 @@ public:
         }
 
         // Width zero, one block, all of it padding: the same object a default constructor makes. [design.md#default-construction]
-        constexpr void clear()
+        constexpr auto clear()
+                -> void
                 requires (not has_static_size)
         {
                 resize(0UZ);
         }
 
-        constexpr void push_back(bool value)
+        constexpr auto push_back(bool value)
+                -> void
                 requires (not has_static_size)
         {
                 resize(size() + 1UZ, value);
         }
 
-        constexpr void pop_back()
+        constexpr auto pop_back()
+                -> void
                 requires (not has_static_size)
         {
                 assert(size() != 0UZ);
@@ -673,7 +681,8 @@ public:
         }
 
         // Boost's append: the block's bits become the positions [size(), size() + bits_per_block), split over two blocks where size() is not aligned.
-        constexpr void append(block_type value)
+        constexpr auto append(block_type value)
+                -> void
                 requires (not has_static_size)
         {
                 auto const offset = size() % bits_per_block;
@@ -691,7 +700,8 @@ public:
 
         // Reserved first where the distance is known, so no push_back below can reallocate: the strong guarantee boost documents.
         template<std::input_iterator I>
-        constexpr void append(I first, I last)
+        constexpr auto append(I first, I last)
+                -> void
                 requires (not has_static_size)
         {
                 if constexpr (std::forward_iterator<I> and requires (Blocks& b) { b.reserve(0UZ); }) {
@@ -703,7 +713,8 @@ public:
         }
 
         // In bits, where the blocks have the member: vector and inplace_vector do, array does not.
-        constexpr void reserve(std::size_t n)
+        constexpr auto reserve(std::size_t n)
+                -> void
                 requires (not has_static_size) and requires (Blocks& b) { b.reserve(0UZ); }
         {
                 m_blocks.reserve(blocks_for(n));
@@ -716,7 +727,8 @@ public:
                 return m_blocks.capacity() * bits_per_block;
         }
 
-        constexpr void shrink_to_fit()
+        constexpr auto shrink_to_fit()
+                -> void
                 requires (not has_static_size) and requires (Blocks& b) { b.shrink_to_fit(); }
         {
                 m_blocks.shrink_to_fit();
@@ -975,7 +987,8 @@ private:
 
         // The words a range of positions spans, each with the mask of what it holds: whole words, and a partial one at the end.
         template<class F>
-        constexpr void for_each_word(std::size_t n, std::size_t len, F f) const noexcept
+        constexpr auto for_each_word(std::size_t n, std::size_t len, F f) const noexcept
+                -> void
         {
                 for (auto pos = n; pos < n + len; pos += bits_per_block) {
                         auto const count = std::ranges::min(bits_per_block, n + len - pos);
@@ -1038,7 +1051,8 @@ private:
                 return { std::forward<decltype(self)>(self).m_blocks[index], static_cast<block_type>(unit << offset) };
         }
 
-        constexpr void erase_unused() noexcept
+        constexpr auto erase_unused() noexcept
+                -> void
         {
                 if constexpr (has_static_size and static_has_unused_bits) {
                         m_blocks[static_last_block] &= static_used_bits;
@@ -1074,7 +1088,8 @@ struct bit_traits<block_sequence<Blocks, N>>
         [[nodiscard]] static constexpr auto at(bits_type const& c, std::size_t n) noexcept -> bool { return c.test(n); }
 
         // set(n)/reset(n), there being no set(n, value) here; both assert, so the position is a precondition.
-        static constexpr void unchecked_assign(bits_type& c, std::size_t n, bool value) noexcept
+        static constexpr auto unchecked_assign(bits_type& c, std::size_t n, bool value) noexcept
+                -> void
         {
                 if (value) {
                         c.set(n);
@@ -1095,7 +1110,8 @@ struct bit_traits<block_sequence<Blocks, N>>
 
         // The two entries the readings cannot synthesize: insert is the one operation that can grow, and fill is bulk. [design.md#what-the-trait-reconciles]
         // A run-time width grows to hold the position, as boost's does; n + 1 must be addressable, the ruled-out position being the one whose successor wraps.
-        static constexpr void insert(bits_type& c, std::size_t n) noexcept(bits_type::has_static_size)
+        static constexpr auto insert(bits_type& c, std::size_t n) noexcept(bits_type::has_static_size)
+                -> void
         {
                 if constexpr (not bits_type::has_static_size) {
                         if (n >= c.size()) {
@@ -1105,7 +1121,8 @@ struct bit_traits<block_sequence<Blocks, N>>
                 }
                 c.set(n);
         }
-        static constexpr void fill(bits_type& c, bool value) noexcept
+        static constexpr auto fill(bits_type& c, bool value) noexcept
+                -> void
         {
                 if (value) {
                         c.set();

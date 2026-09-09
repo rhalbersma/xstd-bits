@@ -56,7 +56,8 @@ auto filled(std::size_t n)
 // The endgame-database lookup: one random read, and what it costs is a miss. Reported per item, because bytes per
 // second is meaningless when a lookup touches one bit and pays for a whole line.
 template<class T>
-void bm_random_read(benchmark::State& state)
+auto bm_random_read(benchmark::State& state)
+        -> void
 {
         auto const n = bits(state);
         auto const v = filled<T>(n);
@@ -71,7 +72,8 @@ void bm_random_read(benchmark::State& state)
 // The other half of a database pass: not a lookup but a sweep, where a container owning its blocks should have
 // the advantage over one that does not -- and does not, which is the finding. [design.md#the-sequence-ladder]
 template<class T>
-void bm_sequential_count(benchmark::State& state)
+auto bm_sequential_count(benchmark::State& state)
+        -> void
 {
         auto const n = bits(state);
         auto const v = filled<T>(n);
@@ -84,7 +86,8 @@ void bm_sequential_count(benchmark::State& state)
 
 // Building a slice: the allocation and the fill, which is what a database build pays once per slice.
 template<class T>
-void bm_construct(benchmark::State& state)
+auto bm_construct(benchmark::State& state)
+        -> void
 {
         auto const n = bits(state);
         for (auto _ : state) {

@@ -35,10 +35,15 @@ struct bit_traits<boost::dynamic_bitset<Block, Allocator>>
         [[nodiscard]] static constexpr auto any  (bits_type const& c)                noexcept -> bool        { return c.any();   }
         [[nodiscard]] static constexpr auto none (bits_type const& c)                noexcept -> bool        { return c.none();  }
 
-        static constexpr void unchecked_assign(bits_type& c, std::size_t n, bool value) noexcept { c[n] = value; }
+        static constexpr auto unchecked_assign(bits_type& c, std::size_t n, bool value) noexcept
+                -> void
+        {
+                c[n] = value;
+        }
 
         // The one entry a dynamic width answers by growing; n + 1 must be addressable, the ruled-out position being the one whose successor wraps. [design.md#what-the-trait-reconciles]
-        static constexpr void insert(bits_type& c, std::size_t n)
+        static constexpr auto insert(bits_type& c, std::size_t n)
+                -> void
         {
                 if (n >= c.size()) {
                         assert(n < c.max_size());
@@ -47,7 +52,8 @@ struct bit_traits<boost::dynamic_bitset<Block, Allocator>>
                 c[n] = true;
         }
 
-        static constexpr void fill(bits_type& c, bool value) noexcept
+        static constexpr auto fill(bits_type& c, bool value) noexcept
+                -> void
         {
                 if (value) {
                         c.set();

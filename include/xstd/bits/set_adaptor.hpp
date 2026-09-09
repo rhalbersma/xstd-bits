@@ -71,7 +71,8 @@ template<class F>
 
 // Blocks, lowest position first: load once per block, then tzcnt for the position and blsr to drop it.
 template<class Traits, class Bits, class F>
-constexpr void walk_blocks_ascending(Bits const& c, F& f)
+constexpr auto walk_blocks_ascending(Bits const& c, F& f)
+        -> void
 {
         using block_type = std::remove_cvref_t<decltype(Traits::block(c, 0UZ))>;
         constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<block_type>::digits);
@@ -90,7 +91,8 @@ constexpr void walk_blocks_ascending(Bits const& c, F& f)
 
 // The mirror. w & (w - 1) has no descending twin, so this clears the bit it just reported.
 template<class Traits, class Bits, class F>
-constexpr void walk_blocks_descending(Bits const& c, F& f)
+constexpr auto walk_blocks_descending(Bits const& c, F& f)
+        -> void
 {
         using block_type = std::remove_cvref_t<decltype(Traits::block(c, 0UZ))>;
         constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<block_type>::digits);
@@ -111,7 +113,8 @@ constexpr void walk_blocks_descending(Bits const& c, F& f)
 // The other tier: a storage with no block access -- boost::dynamic_bitset is the one -- walks positions, which
 // is what the iterator does and is still the same answer. [design.md#windows]
 template<class Range, class F>
-constexpr void walk_positions_ascending(Range const& r, F& f)
+constexpr auto walk_positions_ascending(Range const& r, F& f)
+        -> void
 {
         for (auto const pos : r) {
                 if (not invoke_continues(f, pos)) {
@@ -121,7 +124,8 @@ constexpr void walk_positions_ascending(Range const& r, F& f)
 }
 
 template<class Range, class F>
-constexpr void walk_positions_descending(Range const& r, F& f)
+constexpr auto walk_positions_descending(Range const& r, F& f)
+        -> void
 {
         for (auto it = r.rbegin(), last = r.rend(); it != last; ++it) {
                 if (not invoke_continues(f, *it)) {
@@ -160,7 +164,8 @@ class set_adaptor
 
         // The value under the set reading, owned or viewed as == is: the bits at a static width, the positions at a run-time one, where two equal sets need not share a width. [design.md#the-hashing-invariant]
         template<class Provider, class Hash, class Flavor>
-        friend constexpr void tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, set_adaptor const* v) noexcept
+        friend constexpr auto tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, set_adaptor const* v) noexcept
+                -> void
         {
                 if constexpr (has_static_width) {
                         detail::bits::hash_append_bits<Traits>(h, f, v->storage());
@@ -285,7 +290,8 @@ public:
         // [design.md#the-functor-takes-a-value]
         template<class F>
                 requires std::invocable<F&, std::size_t>
-        constexpr void for_each(this auto&& self, F f)
+        constexpr auto for_each(this auto&& self, F f)
+                -> void
         {
                 if constexpr (requires { Traits::block(self.storage(), 0UZ); Traits::num_blocks(self.storage()); }) {
                         detail::set::walk_blocks_ascending<Traits>(self.storage(), f);
@@ -298,7 +304,8 @@ public:
         // it just reported instead. The set reading iterates both ways, and so does this. [design.md#the-set-for-each]
         template<class F>
                 requires std::invocable<F&, std::size_t>
-        constexpr void for_each_reverse(this auto&& self, F f)
+        constexpr auto for_each_reverse(this auto&& self, F f)
+                -> void
         {
                 if constexpr (requires { Traits::block(self.storage(), 0UZ); Traits::num_blocks(self.storage()); }) {
                         detail::set::walk_blocks_descending<Traits>(self.storage(), f);
@@ -354,7 +361,8 @@ public:
         constexpr auto insert(this auto&& self, const_iterator position, value_type x) -> iterator requires requires { Traits::insert(self.storage(), x); } { return self.do_insert(position, x); }
 
         template<std::input_iterator I, std::sentinel_for<I> S>
-        constexpr void insert(this auto&& self, I first, S last)
+        constexpr auto insert(this auto&& self, I first, S last)
+                -> void
                 requires std::constructible_from<value_type, std::iter_reference_t<I>> and requires { Traits::insert(self.storage(), 0UZ); }
         {
                 for (; first != last; ++first) {
@@ -364,7 +372,8 @@ public:
 
         // Ranged insertion has tiers, as the sequence reading's append_range does. [design.md#the-range-members]
         template<std::ranges::input_range R>
-        constexpr void insert_range(this auto&& self, R&& rg)
+        constexpr auto insert_range(this auto&& self, R&& rg)
+                -> void
                 requires std::constructible_from<value_type, std::ranges::range_reference_t<R>> and requires { Traits::insert(self.storage(), 0UZ); }
         {
                 if constexpr (requires { self |= rg; }) {
@@ -387,13 +396,15 @@ public:
                 }
         }
 
-        constexpr void insert(this auto&& self, std::initializer_list<value_type> ilist)
+        constexpr auto insert(this auto&& self, std::initializer_list<value_type> ilist)
+                -> void
                 requires requires { Traits::insert(self.storage(), 0UZ); }
         {
                 self.insert(ilist.begin(), ilist.end());
         }
 
-        constexpr void fill(this auto&& self) noexcept
+        constexpr auto fill(this auto&& self) noexcept
+                -> void
                 requires requires { Traits::fill(self.storage(), true); }
         {
                 Traits::fill(self.storage(), true);
@@ -434,7 +445,8 @@ public:
         }
 
         // The storage's own swap through the customization point, std::bitset having no member to call.
-        constexpr void swap(set_adaptor& other) noexcept(std::is_nothrow_swappable_v<Bits>)
+        constexpr auto swap(set_adaptor& other) noexcept(std::is_nothrow_swappable_v<Bits>)
+                -> void
                 requires is_owner and std::swappable<Bits>
         {
                 std::ranges::swap(this->m_bits, other.m_bits);
@@ -447,20 +459,28 @@ public:
                 return m_bits.get_allocator();
         }
 
-        constexpr void clear(this auto&& self) noexcept
+        constexpr auto clear(this auto&& self) noexcept
+                -> void
                 requires requires { Traits::fill(self.storage(), false); }
         {
                 Traits::fill(self.storage(), false);
         }
 
-        constexpr void complement(this auto&& self, value_type x) noexcept
+        constexpr auto complement(this auto&& self, value_type x) noexcept
+                -> void
                 requires requires { Traits::unchecked_assign(self.storage(), x, true); }
         {
                 assert(x < Traits::size(self.storage()));
                 Traits::unchecked_assign(self.storage(), x, not Traits::at(self.storage(), x));
         }
 
-        constexpr void complement(this auto&& self) noexcept requires requires { self.storage().flip(); } { self.storage().flip(); }
+        constexpr auto complement(this auto&& self) noexcept
+                -> void
+                requires requires
+        {
+                self.storage().flip();
+                } { self.storage().flip();
+        }
 
         // Bulk, on the storage's own spelling: what every storage agrees on is required of it, not reconciled. [design.md#what-the-trait-reconciles]
         // Two run-time widths that differ go element-wise instead, the storages' own being equal-width operations; the two that insert may then allocate. [design.md#width-is-capacity]
@@ -676,7 +696,8 @@ struct owned_storage<set_adaptor<Bits, ownership::owns, Traits>>
 
 // NOLINTBEGIN(readability-redundant-parentheses): a call is no primary expression, so the requires-clause needs the parentheses the check reports as redundant.
 template<class Bits, ownership Own, class Traits>
-constexpr void swap(set_adaptor<Bits, Own, Traits>& x, set_adaptor<Bits, Own, Traits>& y) noexcept(noexcept(x.swap(y)))
+constexpr auto swap(set_adaptor<Bits, Own, Traits>& x, set_adaptor<Bits, Own, Traits>& y) noexcept(noexcept(x.swap(y)))
+        -> void
         requires (owns(Own))
 {
         x.swap(y);

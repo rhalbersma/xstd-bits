@@ -166,7 +166,8 @@ auto model_of(R const& r)
 
 // std::vector<bool>'s append_range and insert_range, spelled through insert for the standard libraries that lack them.
 template<class R>
-void append_to(std::vector<bool>& m, R const& r)
+auto append_to(std::vector<bool>& m, R const& r)
+        -> void
 {
         m.insert(m.end(), r.begin(), r.end());
 }

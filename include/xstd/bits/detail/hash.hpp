@@ -19,7 +19,8 @@ namespace xstd::detail::bits {
 
 // A block wider than Hash2 writes, the 128-bit one, goes in as its two halves, low first.
 template<class Hash, class Flavor, class Block>
-constexpr void hash_append_block(Hash& h, Flavor const& f, Block b)
+constexpr auto hash_append_block(Hash& h, Flavor const& f, Block b)
+        -> void
 {
         constexpr auto half = static_cast<unsigned>(std::numeric_limits<std::uint64_t>::digits);
         if constexpr (std::numeric_limits<Block>::digits > std::numeric_limits<std::uint64_t>::digits) {
@@ -32,7 +33,8 @@ constexpr void hash_append_block(Hash& h, Flavor const& f, Block b)
 
 // The value through the trait: the blocks and the width where the storage reads by block, every position and the width otherwise. Equal values hash equal whatever holds them, so no storage's own hook is asked. [design.md#the-hashing-invariant]
 template<class Traits, class Hash, class Flavor, class Bits>
-constexpr void hash_append_bits(Hash& h, Flavor const& f, Bits const& c)
+constexpr auto hash_append_bits(Hash& h, Flavor const& f, Bits const& c)
+        -> void
 {
         if constexpr (block_readable<Traits, Bits>) {
                 for (auto const i : std::views::iota(0UZ, Traits::num_blocks(c))) {
@@ -48,7 +50,8 @@ constexpr void hash_append_bits(Hash& h, Flavor const& f, Bits const& c)
 
 // The set reading at a run-time width: the positions held and their count, since equal sets need not share a width. [design.md#width-is-capacity]
 template<class Traits, class Hash, class Flavor, class Bits>
-constexpr void hash_append_positions(Hash& h, Flavor const& f, Bits const& c)
+constexpr auto hash_append_positions(Hash& h, Flavor const& f, Bits const& c)
+        -> void
 {
         for (auto n = find_first<Traits>(c); n != Traits::size(c); n = find_next<Traits>(c, n)) {
                 boost::hash2::hash_append(h, f, n);
