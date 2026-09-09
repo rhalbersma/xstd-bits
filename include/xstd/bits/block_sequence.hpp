@@ -39,9 +39,9 @@
 
 namespace xstd {
 
-// Whether a range IS blocks; block_readable asks if a trait hands a container's blocks over. [design.md#block-storage]
+// Whether a range IS blocks; block_readable asks if a trait hands a container's blocks over. [design.md#contiguous-block-container]
 template<class R>
-concept block_storage =
+concept contiguous_block_container =
         std::regular<R> and
         std::ranges::contiguous_range<R> and
         std::ranges::sized_range<R> and
@@ -57,7 +57,7 @@ inline constexpr auto num_blocks_v = std::ranges::max(
 );
 
 // The one vehicle: it owns the unused-tail invariant, and has no iterators. [design.md#the-one-vehicle]
-template<block_storage Blocks, std::size_t N = std::dynamic_extent>
+template<contiguous_block_container Blocks, std::size_t N = std::dynamic_extent>
 class block_sequence : public detail::bits::allocator_typedef<Blocks>
 {
 public:
@@ -108,7 +108,7 @@ private:
         }
 
         // Dynamic widths only; the tag keeps the absent member distinct from any other in an enclosing layout.
-        // Declared first, so the defaulted == rejects on the width before it reads a block. [design.md#block-storage]
+        // Declared first, so the defaulted == rejects on the width before it reads a block. [design.md#contiguous-block-container]
         [[XSTD_NO_UNIQUE_ADDRESS]]
         conditional_data_member_t<not has_static_size, width_type, struct size_tag> m_size{};
 
@@ -262,7 +262,7 @@ public:
                 return *this;
         }
 
-        // Memberwise, width first: the unused bits are kept clear, so the blocks compare as the bits do, and a zero width through the one block it still holds. [design.md#block-storage]
+        // Memberwise, width first: the unused bits are kept clear, so the blocks compare as the bits do, and a zero width through the one block it still holds. [design.md#contiguous-block-container]
         [[nodiscard]] friend constexpr auto operator==(block_sequence const&, block_sequence const&) noexcept -> bool = default;
 
         // No operator<=>: block_sequence is pure storage with no opinion on which reading orders it, so it names all three and picks none. [design.md#two-readings-disagree]
@@ -1070,7 +1070,7 @@ using block_array = block_sequence<std::array<Block, num_blocks_v<Block, N>>, N>
 template<xstd::unsigned_integer Block, class Allocator = std::allocator<Block>>
 using block_vector = block_sequence<std::vector<Block, Allocator>>;
 
-// Behind the feature macro until every library in the matrix has it; the storage needs nothing else, already satisfying block_storage.
+// Behind the feature macro until every library in the matrix has it; the storage needs nothing else, already satisfying contiguous_block_container.
 #ifdef __cpp_lib_inplace_vector
 template<xstd::unsigned_integer Block, std::size_t N>
 using block_inplace_vector = block_sequence<std::inplace_vector<Block, num_blocks_v<Block, N>>>;

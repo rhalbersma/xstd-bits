@@ -8,16 +8,19 @@ file holds what has landed.
 
 ## Storage and containers
 
-### block-storage
+### contiguous-block-container
 
-`block_storage` asks whether a range **is** blocks: a regular, contiguous, sized range of unsigned integers.
-Regular is what lets `block_sequence` default its `==` over the width and the blocks, in that member order, so
-two run-time widths part on the width before a block is read.
+`contiguous_block_container` asks whether a range **is** blocks: a regular, contiguous, sized range of
+unsigned integers. Regular is what lets `block_sequence` default its `==` over the width and the blocks, in
+that member order, so two run-time widths part on the width before a block is read.
 `std::array` and `std::vector` both qualify, and so does `std::inplace_vector` — a runtime width over
 static capacity, for free.
 
-`xstd::block_range` is the other side of the same word, and asks whether a bit container will
+`block_readable` is the other side of the same word, and asks whether a bit container will
 **hand its blocks over**. Nothing models both, and no scope sees both unqualified.
+The name says *container*, not *storage*, because that is the whole of what it asks: `bit_storage` and the
+`Storage` template parameters are about what an adaptor sits on, which is a different question and now a
+different word.
 
 ### the-one-vehicle
 
@@ -83,8 +86,8 @@ member, so the landmine #80 recorded -- probing `clear()` on boost and emptying 
 
 `block_inplace_vector<Block, N>` is the third storage: a run-time width under a compile-time capacity of `N`
 bits, behind `__cpp_lib_inplace_vector` until every library in the matrix has it. It needs nothing of its
-own, `std::inplace_vector` satisfying `block_storage` as it is; `resize`, `reserve` and `push_back` past the
-capacity throw `std::bad_alloc`, as that library specifies.
+own, `std::inplace_vector` satisfying `contiguous_block_container` as it is; `resize`, `reserve` and
+`push_back` past the capacity throw `std::bad_alloc`, as that library specifies.
 
 The adaptors take growth by detection on the storage, never through the trait: growth is a container's
 business and no view's, so it exists on an owner and on nothing else. `sequence_adaptor` is

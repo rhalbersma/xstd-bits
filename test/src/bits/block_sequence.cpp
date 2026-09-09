@@ -8,7 +8,7 @@
 #include <test/inplace_vector.hpp>     // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
 #include <test/uint128.hpp>            // IWYU pragma: keep; TEST_HAS_UINT128, uint128
 #include <xstd/bits/bit_traits.hpp>    // bit_storage, bit_traits, block_readable, static_bit_extent
-#include <xstd/bits/block_sequence.hpp> // block_array, block_inplace_vector, block_sequence, block_storage, block_vector
+#include <xstd/bits/block_sequence.hpp> // block_array, block_inplace_vector, block_sequence, block_vector, contiguous_block_container
 #include <algorithm>                   // count, lexicographical_compare_three_way, min
 #include <concepts>                    // same_as
 #include <array>                       // array
@@ -343,14 +343,14 @@ constexpr auto a_run_time_width_is_constexpr()
 
 } // namespace
 
-// Both shipped vehicles satisfy block_storage: growth is detected where it exists, never required.
+// Both shipped vehicles satisfy contiguous_block_container: growth is detected where it exists, never required.
 BOOST_AUTO_TEST_CASE(ItsStorageIsAContiguousSizedRangeOfUnsignedIntegers)
 {
-        static_assert(xstd::block_storage<std::array<std::uint8_t, 4>>);
-        static_assert(xstd::block_storage<std::vector<std::uint64_t>>);
+        static_assert(xstd::contiguous_block_container<std::array<std::uint8_t, 4>>);
+        static_assert(xstd::contiguous_block_container<std::vector<std::uint64_t>>);
 
-        static_assert(not xstd::block_storage<std::vector<bool>>);      // not a contiguous range
-        static_assert(not xstd::block_storage<std::vector<int>>);       // nor unsigned integers
+        static_assert(not xstd::contiguous_block_container<std::vector<bool>>);      // not a contiguous range
+        static_assert(not xstd::contiguous_block_container<std::vector<int>>);       // nor unsigned integers
 }
 
 // A compile-time width costs nothing: the absent size member takes no storage.
@@ -665,7 +665,7 @@ BOOST_AUTO_TEST_CASE(AnInplaceVectorIsARunTimeWidthUnderAStaticCapacity)
 {
         using T = xstd::block_inplace_vector<std::uint8_t, 24>;
         static_assert(not T::has_static_size);
-        static_assert(xstd::block_storage<std::inplace_vector<std::uint8_t, 3>>);
+        static_assert(xstd::contiguous_block_container<std::inplace_vector<std::uint8_t, 3>>);
 
         BOOST_CHECK_EQUAL(sweep(T(17)), 0);
 
