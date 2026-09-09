@@ -43,7 +43,41 @@ template<class Seq>
         return { s.begin(), s.end() };
 }
 
+// A storage that keeps its blocks to itself on every standard library, which a std::bitset is not: libc++ has no
+// block entry at all, libstdc++ none above the portable to_ullong() read, and MSVC one at every width through
+// _Getword. So the position tier gets a fixture of its own, the required entries and a write and nothing more,
+// as test/src/bits/bit_traits.cpp's element_bits is. [design.md#detection-by-absence]
+template<std::size_t N>
+struct element_bits
+{
+        xstd::block_array<std::uint8_t, N> bits{};
+};
+
 }       // namespace
+
+namespace xstd {
+
+template<std::size_t N>
+struct bit_traits<element_bits<N>>
+{
+        using bits_type = element_bits<N>;
+
+        static constexpr std::size_t extent = N;
+
+        [[nodiscard]] static constexpr auto size(bits_type const&)                  noexcept -> std::size_t { return N; }
+        [[nodiscard]] static constexpr auto at  (bits_type const& c, std::size_t n) noexcept -> bool        { return c.bits.test(n); }
+
+        static constexpr void unchecked_assign(bits_type& c, std::size_t n, bool value) noexcept
+        {
+                if (value) {
+                        c.bits.set(n);
+                } else {
+                        c.bits.reset(n);
+                }
+        }
+};
+
+}       // namespace xstd
 
 BOOST_AUTO_TEST_SUITE(SequenceAdaptor)
 
@@ -322,11 +356,11 @@ BOOST_AUTO_TEST_CASE(TheAggregatesAgreeWithTheModelOnAWindowOfOurs)
         BOOST_CHECK_EQUAL(disagreements, 0UZ);
 }
 
-// And over a window of a storage that keeps its blocks to itself, which is the one position-at-a-time tier: a
-// std::bitset too wide for the portable to_ullong() read has no block entry at all. [design.md#detection-by-absence]
+// And over a window of a storage that keeps its blocks to itself, which is the one position-at-a-time tier.
+// [design.md#detection-by-absence]
 BOOST_AUTO_TEST_CASE(TheAggregatesAgreeWithTheModelOnAWindowOfAnythingElse)
 {
-        using Wide = std::bitset<100>;
+        using Wide = element_bits<100>;
         static_assert(not xstd::block_readable<xstd::bit_traits<Wide>, Wide>);
 
         auto disagreements = 0UZ;
