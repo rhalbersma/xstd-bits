@@ -4,12 +4,15 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <boost/test/unit_test.hpp>          // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
+#include <test/block_types.hpp>              // graded_extents
 #include <xstd/bits/sequence_adaptor.hpp>  // sequence_adaptor
 #include <xstd/bits/bit_array.hpp>           // bit_array
+#include <xstd/bits/bit_traits.hpp>          // bit_traits, block_readable
+#include <xstd/bits/bit_span.hpp>            // bit_span
 #include <xstd/bits/block_sequence.hpp>      // block_array, block_vector
 #include <xstd/bits/ext/std/bitset.hpp>      // bit_traits over std::bitset
 #include <xstd/bits/ownership.hpp>           // ownership
-#include <algorithm>                         // lexicographical_compare_three_way, ranges::equal
+#include <algorithm>                         // all_of, any_of, count, equal, lexicographical_compare_three_way, mismatch, none_of
 #include <bitset>                            // bitset
 #include <compare>                           // strong_ordering
 #include <concepts>                          // copyable, equality_comparable, regular, same_as, totally_ordered
@@ -212,6 +215,195 @@ BOOST_AUTO_TEST_CASE(AZeroWidthSequenceIsEmpty)
         auto c = xstd::block_array<std::uint8_t, 0>();
         auto const v = xstd::sequence_adaptor<xstd::block_array<std::uint8_t, 0>, xstd::ownership::refers, false>(c);
         BOOST_CHECK(v.empty() and v.begin() == v.end());
+}
+
+// The sequence reading's own aggregates, against the reading they belong to rather than the set reading that
+// happens to answer the same integer for one of the eight. Every operation on the packing and on the
+// std::vector<bool> it is held against, at every graded extent and block type so a block boundary lands
+// mid-pattern, and at both values of the bool. [design.md#the-sequence-aggregates]
+namespace {
+
+using Graded = test::graded_extents<xstd::basic_bit_array>;
+
+// One bit of pattern p at position i, as bit_array's model cases have it. Empty and full are the two degenerate
+// widths the aggregates disagree about most: they are the fixed points of all and none.
+auto pattern_bit(std::size_t p, std::size_t i, std::size_t n) -> bool
+{
+        switch (p) {
+        case 0UZ: return false;
+        case 1UZ: return true;
+        case 2UZ: return i == 0UZ;
+        case 3UZ: return i + 1UZ == n;
+        case 4UZ: return (i % 2UZ) == 0UZ;
+        default:  return (i % 3UZ) == 0UZ;
+        }
+}
+
+// The model at the same extent, written through the sequence under test so the two are filled by one loop.
+template<class Seq>
+auto write_pattern(Seq& s, std::size_t p) -> std::vector<bool>
+{
+        auto m = std::vector<bool>(s.size());
+        for (auto i = 0UZ; i < s.size(); ++i) {
+                bool const bit = pattern_bit(p, i, s.size());
+                s[i] = bit;
+                m[i] = bit;
+        }
+        return m;
+}
+
+// Counted rather than asserted per position, so a failure names the operation instead of drowning the log.
+// [design.md#counted-not-asserted]
+template<class Seq>
+auto aggregate_disagreements(Seq const& s, std::vector<bool> const& m) -> std::size_t
+{
+        auto disagreements = 0UZ;
+        for (auto const value : { true, false }) {
+                auto const is = [value](bool b) -> bool { return b == value; };
+                disagreements += static_cast<std::size_t>(s.count(value) != static_cast<std::size_t>(std::ranges::count(m, value)));
+                disagreements += static_cast<std::size_t>(s.all (value) != std::ranges::all_of (m, is));
+                disagreements += static_cast<std::size_t>(s.any (value) != std::ranges::any_of (m, is));
+                disagreements += static_cast<std::size_t>(s.none(value) != std::ranges::none_of(m, is));
+        }
+        // The argument defaults to the true arm, which is where the bitset reading's four already are.
+        disagreements += static_cast<std::size_t>(s.count() != s.count(true));
+        disagreements += static_cast<std::size_t>(s.all()   != s.all(true));
+        disagreements += static_cast<std::size_t>(s.any()   != s.any(true));
+        disagreements += static_cast<std::size_t>(s.none()  != s.none(true));
+        // The four identities the false arms are, spelled here because they are the implementation.
+        disagreements += static_cast<std::size_t>(s.count(false) != s.size() - s.count(true));
+        disagreements += static_cast<std::size_t>(s.all(false)   != s.none(true));
+        disagreements += static_cast<std::size_t>(s.any(false)   != not s.all(true));
+        disagreements += static_cast<std::size_t>(s.none(false)  != s.all(true));
+        return disagreements;
+}
+
+// What for_each hands its functor, in the order it hands it: the range-for's own answer, which is the contract.
+template<class Seq>
+auto for_each_bools(Seq const& s) -> std::vector<bool>
+{
+        auto v = std::vector<bool>();
+        s.for_each([&v](bool b) -> void { v.push_back(b); });
+        return v;
+}
+
+}       // namespace
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(TheAggregatesAgreeWithTheModel, T, Graded)
+{
+        auto disagreements = 0UZ;
+        for (auto p = 0UZ; p < 6UZ; ++p) {
+                auto a = T();
+                auto const m = write_pattern(a, p);
+                disagreements += aggregate_disagreements(a, m);
+        }
+        BOOST_CHECK_EQUAL(disagreements, 0UZ);
+}
+
+// The same over a window, whose blocks are not its own: a masked word at a time, at every offset and every
+// length, so the mask is exercised at both ends of a word rather than only at the top. [design.md#windows]
+BOOST_AUTO_TEST_CASE(TheAggregatesAgreeWithTheModelOnAWindowOfOurs)
+{
+        using Storage24 = xstd::block_array<std::uint8_t, 24>;
+        auto disagreements = 0UZ;
+        for (auto p = 0UZ; p < 6UZ; ++p) {
+                auto c = Storage24();
+                auto v = xstd::bit_span(c);
+                auto const m = write_pattern(v, p);
+                for (auto off = 0UZ; off <= v.size(); ++off) {
+                        for (auto count = 0UZ; off + count <= v.size(); ++count) {
+                                auto const w = v.subspan(off, count);
+                                auto const mw = std::vector<bool>(m.begin() + static_cast<std::ptrdiff_t>(off), m.begin() + static_cast<std::ptrdiff_t>(off + count));
+                                disagreements += aggregate_disagreements(w, mw);
+                                disagreements += static_cast<std::size_t>(not std::ranges::equal(for_each_bools(w), mw));
+                        }
+                }
+        }
+        BOOST_CHECK_EQUAL(disagreements, 0UZ);
+}
+
+// And over a window of a storage that keeps its blocks to itself, which is the one position-at-a-time tier: a
+// std::bitset too wide for the portable to_ullong() read has no block entry at all. [design.md#detection-by-absence]
+BOOST_AUTO_TEST_CASE(TheAggregatesAgreeWithTheModelOnAWindowOfAnythingElse)
+{
+        using Wide = std::bitset<100>;
+        static_assert(not xstd::block_readable<xstd::bit_traits<Wide>, Wide>);
+
+        auto disagreements = 0UZ;
+        for (auto p = 0UZ; p < 6UZ; ++p) {
+                auto c = Wide();
+                auto v = xstd::bit_span(c);
+                auto const m = write_pattern(v, p);
+                for (auto const off : { 0UZ, 1UZ, 7UZ, 63UZ, 100UZ }) {
+                        for (auto const count : { 0UZ, 1UZ, 9UZ, 37UZ }) {
+                                if (off + count > v.size()) {
+                                        continue;
+                                }
+                                auto const w = v.subspan(off, count);
+                                auto const mw = std::vector<bool>(m.begin() + static_cast<std::ptrdiff_t>(off), m.begin() + static_cast<std::ptrdiff_t>(off + count));
+                                disagreements += aggregate_disagreements(w, mw);
+                                disagreements += static_cast<std::size_t>(not std::ranges::equal(for_each_bools(w), mw));
+
+                                // The position tier's own early exit, which the block tier's case below covers for it.
+                                auto seen = 0UZ;
+                                w.for_each([&seen](bool) -> bool { return ++seen < 3UZ; });
+                                disagreements += static_cast<std::size_t>(seen != std::ranges::min(w.size(), 3UZ));
+                        }
+                }
+        }
+        BOOST_CHECK_EQUAL(disagreements, 0UZ);
+}
+
+// std::mismatch's answer, over the machinery operator== is already made of: the position, or size() where the two
+// agree. Every pair of patterns, so the answer lands inside a block, on a boundary and past the end.
+BOOST_AUTO_TEST_CASE_TEMPLATE(MismatchAgreesWithTheModel, T, Graded)
+{
+        auto disagreements = 0UZ;
+        for (auto p = 0UZ; p < 6UZ; ++p) {
+                for (auto q = 0UZ; q < 6UZ; ++q) {
+                        auto x = T();
+                        auto y = T();
+                        auto const mx = write_pattern(x, p);
+                        auto const my = write_pattern(y, q);
+                        auto const [i, j] = std::ranges::mismatch(mx, my);
+                        auto const expected = static_cast<std::size_t>(i - mx.begin());
+                        disagreements += static_cast<std::size_t>(x.mismatch(y) != expected);
+                        // Symmetric, and equal values answer the width rather than any position in it.
+                        disagreements += static_cast<std::size_t>(y.mismatch(x) != expected);
+                        disagreements += static_cast<std::size_t>(x.mismatch(x) != x.size());
+                }
+        }
+        BOOST_CHECK_EQUAL(disagreements, 0UZ);
+}
+
+// Dependent, so a constrained-away member is a false rather than a hard error.
+template<class S> constexpr bool can_mismatch = requires (S const& a) { a.mismatch(a); };
+
+// A window's blocks are not its own, so it has no mismatch; nor has an owner over storage without the entry.
+BOOST_AUTO_TEST_CASE(MismatchIsTheOwnersOverStorageThatHasTheEntry)
+{
+        static_assert(can_mismatch<Owner>);
+        static_assert(can_mismatch<View>);
+        static_assert(not can_mismatch<View::subspan_type>);
+        static_assert(not can_mismatch<xstd::sequence_adaptor<std::bitset<9>, xstd::ownership::owns, false>>);
+}
+
+// for_each hands the functor what the iterator dereferences to, in the same order, and stops where a bool functor
+// says to: the range-for's answer by a loop structure no iterator can express. [design.md#the-sequence-for-each]
+BOOST_AUTO_TEST_CASE_TEMPLATE(ForEachAgreesWithTheRangeFor, T, Graded)
+{
+        auto disagreements = 0UZ;
+        for (auto p = 0UZ; p < 6UZ; ++p) {
+                auto a = T();
+                auto const m = write_pattern(a, p);
+                disagreements += static_cast<std::size_t>(not std::ranges::equal(for_each_bools(a), m));
+
+                // A void functor always continues; a bool one says, and three is inside every extent but the two smallest.
+                auto seen = 0UZ;
+                a.for_each([&seen](bool) -> bool { return ++seen < 3UZ; });
+                disagreements += static_cast<std::size_t>(seen != std::ranges::min(a.size(), 3UZ));
+        }
+        BOOST_CHECK_EQUAL(disagreements, 0UZ);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -1135,6 +1135,91 @@ contract: an iterator that caches a block stops observing an erase that lands ah
 caching the same block is unobservable. The member is the faster half and the safer half at once, which is
 rare enough to record.
 
+### the-sequence-aggregates
+
+The sequence reading answers `count`, `all`, `any`, `none` and `mismatch` in its own vocabulary, each taking
+the `bool` that [alg.count] and [alg.all.of] give them where the bitset reading's four take none. That is the
+shape this row already has: `fill` takes a `bool` where the bitset reading splits `set()` and `reset()`.
+
+They are not redundant with `bit_set_view(v).size()`, which already answers a word-parallel count over the
+same storage. That view asks a *different question* -- reinterpret these bools as a set of positions and give
+me its cardinality -- which happens to return the same integer for `value == true`, and has no spelling at all
+for `count(false)`, `all(false)` and `none(false)`. Three readings over one storage is the whole design, and
+[two-readings-disagree](#two-readings-disagree) exists to say they are not interchangeable; making a caller
+change reading to count their bools is the fault the README levels at the two containers this library replaces.
+
+**The `false` arms are identities, not second implementations**, and they hold on a window too:
+
+```
+count(false) == size() - count(true)      all(false)  == none(true)
+any(false)   == not all(true)             none(false) == all(true)
+```
+
+Short-circuiting survives them: `all(false)` really does stop at the first set bit, because it *is*
+`none(true)`. So there are four private helpers -- `count_true`, `any_true`, `all_true`, `none_true` -- and the
+public members are spelled over those, each helper choosing its tier once: the trait's door over the whole, a
+masked word at a time over a window of ours, one position at a time over a window of anything else, which is
+the same three tiers `fill` uses ([windows](#windows)). `none_true` is a helper of its own rather than `not
+any_true`, so a storage that spells `none()` itself is asked in its own words; all three adapted here do.
+
+`bit_traits` grows `all`, `any` and `none` doors beside `count`, taken from an entry where the storage has one
+-- `block_sequence`, `std::bitset` and `boost::dynamic_bitset` all spell all three themselves -- and
+synthesized where it does not. Neither synthesis walks a bit at a time that it could avoid: `any` is
+`find_first` compared against the width, and `all` is `count` compared against it, which is the block tier
+through `count`'s own door.
+
+`mismatch` is `block_sequence::first_difference` plus one `countr_zero`. That helper existed already, private
+and used only by `sequence_three_way`; it is now public, and **keeps its name**: it scans low block to high,
+which is the *ascending* orderings' answer, where `bitset_three_way` deliberately walks the other way and does
+not use it. Calling it `mismatch` on the storage would repeat the mistake `lexicographical_three_way` made
+([two-readings-disagree](#two-readings-disagree)). The counterpart name goes on the public member, which is
+the owner's alone: a window's blocks are not its own.
+
+Measured on GCC 15.2, `-O3 -march=native`, 20% density, best of fifteen:
+
+| | 2^16 | 2^20 | 2^24 |
+|---|---|---|---|
+| `bit_vector::count()` | 0.1 µs | 2.0 µs | 49.5 µs |
+| `std::count` over `bit_vector` | 54.6 µs | 889 µs | 15072 µs |
+| `std::count` over `std::vector<bool>` | 45.1 µs | 702 µs | 11590 µs |
+
+234x to 541x, and the two `std::count` columns are within 1.3x of each other, which settles what #121 asserted
+and this measurement contradicts: **libstdc++ does not specialize `std::count` for `_Bit_iterator`**. A
+specialization would show as two orders of magnitude, not as twenty percent. Under clang 22 the ordering
+inverts -- `std::count` over `bit_vector` runs 2074 µs at 2^24 against `std::vector<bool>`'s 15419 -- because
+our iterator's dereference is a pure function of its index and clang vectorizes it, where `_Bit_iterator`'s
+loop-carried state blocks vectorization everywhere. `count()` is still 47x ahead of the faster of the two.
+
+### the-sequence-for-each
+
+`for_each(f)` on the sequence reading is the set reading's member ([the-set-for-each](#the-set-for-each))
+transposed: an outer loop over words, an inner loop over the bits of one word, so the reload that
+`operator++` must perform on every step becomes the inner loop's exit test. The functor takes what this
+reading's iterator dereferences to, a `bool`, where the set reading's takes a position, and may return `void`,
+or `bool` to mean "keep going", by the same one `if constexpr`.
+
+The reason it has to be a member is the same and the payoff is **not**. Measured across GCC 15, GCC 16, clang
+20 and clang 22, no iterator layout beats the current `(container pointer, index)` on this reading: a block
+pointer plus offset ties, and a cached residual word is *worse*, because `operator++` is flat and the reload
+test becomes a per-bit branch. So whatever `for_each` wins is loop structure, and loop structure is exactly
+what a vectorizer needs:
+
+| GCC 15.2, 2^24 bits | `for_each` | range-for | ratio |
+|---|---|---|---|
+| `n += b` | 1685 µs | 13842 µs | 8.2x |
+| `h = h * 1000003 ^ b` | 18743 µs | 19154 µs | 1.02x |
+
+**The win is the vectorizer's, not the loop's.** Where the body carries a loop-carried dependence there is
+nothing to hoist and the two are parity; where it does not, the outer-loop-over-words shape lets GCC
+vectorize what the flat `operator++` hides. And under clang 22 the range-for already vectorizes -- 2021 µs
+against `for_each`'s 1900, 1.06x -- so on that compiler the member buys almost nothing on this reading.
+
+That is a narrower claim than the one #127 was filed with, and it is the measured one. `for_each` is still
+worth having: it is never slower, it is 8x ahead on the compiler and body shape where the range-for leaves
+the most on the table, and it is the spelling that lets the library choose the loop rather than the caller.
+There is no `for_each_reverse` here, because unlike the set reading's, nothing about this walk is asymmetric:
+a reverse sequence walk is `std::ranges::reverse_view` over a random-access range, and it costs the same.
+
 ### read-only-set-proxy
 
 The set reading's proxy is read-only whatever the qualification of `Bits`, because a key is nothing to write
@@ -1328,11 +1413,12 @@ What the three have found so far, on GCC 15.2, `-O3 -march=native`, x86-64:
   5.8 ns at 32 MiB for both, and construction is parity too. Representation does not matter to a lookup; only
   footprint does. For a database that is the useful negative result: what buys a lookup is fewer bits per
   position, not a better container.
-- **`std::count` over `bit_vector` is about 1.6× slower than over `std::vector<bool>`** -- 120 MiB/s against
-  186 -- and consistently so at every rung. libstdc++ specializes `std::count` for `std::vector<bool>::iterator`
-  and counts a word at a time; our proxy iterator gets the generic element-by-element path. A sequence reading
-  that owns its blocks should not lose a sweep to the one the Standard is embarrassed by, so this is a gap in the
-  library rather than in the bench.
+- **`std::count` is slow over both, and the explanation this once carried was wrong.** It reads about 1.2× to
+  1.3× slower over `bit_vector` than over `std::vector<bool>` on GCC, and this file used to say libstdc++
+  specializes `std::count` for `std::vector<bool>::iterator` and counts a word at a time. It does not: a word-at-
+  a-time count is two orders of magnitude ahead, not twenty percent, which is what `bit_vector::count()` now
+  measures at ([the-sequence-aggregates](#the-sequence-aggregates)). The gap was the generic path over two
+  different proxy iterators, and under clang it runs the other way, ours being the vectorizable one.
 The sequence ladder's fixtures are the expensive part of a `ctest` smoke run: a 32 MiB fixture is filled a bit
 at a time, and the whole file costs about eleven seconds where the other three cost five between them. That is
 proportionate, and it is checked rather than assumed ([the-sieve](#the-sieve) records what happens when it is
