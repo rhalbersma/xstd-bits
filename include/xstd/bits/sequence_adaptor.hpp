@@ -47,11 +47,19 @@ template<class Block>
         return count == digits ? static_cast<Block>(~Block{}) : static_cast<Block>(static_cast<Block>(Block{1} << count) - Block{1});
 }
 
+// [expr.type.conv]'s decay-copy, as a function rather than as auto(x): MSVC 2022 does not implement P0849R8, and
+// T{x} reads to clang-tidy as a cast to the type it already has. Returning by value is the whole of it -- that is
+// what makes the argument at the call below a prvalue. [design.md#the-functor-takes-a-value]
+template<class T>
+[[nodiscard]] constexpr auto decay_copy(T value) noexcept -> T
+{
+        return value;
+}
+
 // Continue unless the functor says otherwise: a void functor always continues, a bool one says. What the set
 // reading's for_each does, over what this reading's iterator dereferences to. [design.md#the-sequence-for-each]
 //
-// The bool is handed over as a prvalue -- auto(value), [expr.type.conv]'s decay-copy -- rather than as this
-// parameter's name. A named lvalue binds to a functor
+// The bool is handed over as a prvalue -- [expr.type.conv]'s decay-copy -- rather than as this parameter's name. A named lvalue binds to a functor
 // taking bool&, which then writes to a local that goes nowhere: the walk reads the storage through a const
 // reference and never writes back, so what looks like a mutating pass is a silent no-op. A prvalue makes that a
 // compile error, and it is what is_invocable_r_v just above already asks about, so the call and the detection
@@ -60,9 +68,9 @@ template<class F>
 [[nodiscard]] constexpr auto invoke_continues(F& f, bool value) -> bool
 {
         if constexpr (std::is_invocable_r_v<bool, F&, bool>) {
-                return f(auto(value));
+                return f(decay_copy(value));
         } else {
-                f(auto(value));
+                f(decay_copy(value));
                 return true;
         }
 }

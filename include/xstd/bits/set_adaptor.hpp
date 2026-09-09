@@ -36,11 +36,19 @@ namespace detail::set {
 template<class R> inline constexpr bool is_consecutive = false;
 template<class W, class B> inline constexpr bool is_consecutive<std::ranges::iota_view<W, B>> = true;
 
+// [expr.type.conv]'s decay-copy, as a function rather than as auto(x): MSVC 2022 does not implement P0849R8, and
+// T{x} reads to clang-tidy as a cast to the type it already has. Returning by value is the whole of it -- that is
+// what makes the argument at the call below a prvalue. [design.md#the-functor-takes-a-value]
+template<class T>
+[[nodiscard]] constexpr auto decay_copy(T value) noexcept -> T
+{
+        return value;
+}
+
 // Continue unless the functor says otherwise: a void functor always continues, a bool one says.
 // [design.md#the-set-for-each]
 //
-// The position is handed over as a prvalue -- auto(pos), [expr.type.conv]'s decay-copy -- rather than as this
-// parameter's name. A named lvalue binds to a
+// The position is handed over as a prvalue -- [expr.type.conv]'s decay-copy -- rather than as this parameter's name. A named lvalue binds to a
 // functor taking std::size_t&, which then writes to a local that goes nowhere -- a walk reports positions and
 // changes none, so the write is not merely lost but meaningless. A prvalue makes that a compile error, and it
 // is what is_invocable_r_v just above already asks about, so the call and the detection stop disagreeing about
@@ -49,9 +57,9 @@ template<class F>
 [[nodiscard]] constexpr auto invoke_continues(F& f, std::size_t pos) -> bool
 {
         if constexpr (std::is_invocable_r_v<bool, F&, std::size_t>) {
-                return f(auto(pos));
+                return f(decay_copy(pos));
         } else {
-                f(auto(pos));
+                f(decay_copy(pos));
                 return true;
         }
 }

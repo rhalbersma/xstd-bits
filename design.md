@@ -1137,8 +1137,9 @@ rare enough to record.
 
 ### the-functor-takes-a-value
 
-Both `for_each`es hand their functor a **prvalue**, and both members say so with `requires std::invocable<F&,
-bool>` and `requires std::invocable<F&, size_t>`. That is one fix for one defect, spelled in two places because
+Both `for_each`es hand their functor a **prvalue** -- through a three-line `decay_copy`, not `auto(x)`: MSVC
+2022 does not implement P0849R8, and `T{x}` reads to clang-tidy as a cast to the type it already has -- and
+both members say so with `requires std::invocable<F&, bool>` and `requires std::invocable<F&, size_t>`. That is one fix for one defect, spelled in two places because
 it is worth catching at the interface and worth being right in the body.
 
 The defect was that `invoke_continues` named its parameter and passed that name along. A named parameter is an
