@@ -52,7 +52,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(IsABitSet, T, Types)
 
 // Total lookups, swept over every width because no single one exposed all six operations. [design.md#total-lookups-on-the-container]
 template<class X>
-auto check_key_outside_the_domain(X a, std::size_t x) -> void
+auto check_key_outside_the_domain(X a, std::size_t x)
+        -> void
 {
         auto const original = a;
 

@@ -20,14 +20,16 @@ namespace {
 
 inline constexpr auto bits_per_word = 64UZ;
 
-auto words(benchmark::State const& state) -> std::size_t
+auto words(benchmark::State const& state)
+        -> std::size_t
 {
         return static_cast<std::size_t>(state.range(0));
 }
 
 // A board-game density rather than a uniform one, and deterministic, so the rungs compare with each other.
 template<class T>
-auto filled(std::size_t n, std::uint64_t seed) -> T
+auto filled(std::size_t n, std::uint64_t seed)
+        -> T
 {
         auto bits = T(n);
         auto lcg = seed | 1ULL;

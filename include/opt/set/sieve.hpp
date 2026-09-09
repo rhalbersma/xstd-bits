@@ -112,7 +112,8 @@ namespace detail::sieve {
 // seed y is 0 and the body never runs, so nothing divides by zero, and at n == 1 the seed equals x. For n >= 1 the
 // iterate stays >= 1, so the division inside the loop is safe. Asserted at both ends in the tests rather than argued
 // for here. [design.md#the-unbounded-sieves]
-constexpr auto isqrt(std::size_t n) noexcept -> std::size_t
+constexpr auto isqrt(std::size_t n) noexcept
+        -> std::size_t
 {
         auto x = n;
         auto y = (x + 1UZ) / 2UZ;
@@ -136,7 +137,8 @@ class incremental_sieve
         std::size_t m_candidate = 1UZ;
 
 public:
-        [[nodiscard]] auto next() -> std::size_t
+        [[nodiscard]] auto next()
+                -> std::size_t
         {
                 for (;;) {
                         ++m_candidate;

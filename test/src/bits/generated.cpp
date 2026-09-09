@@ -22,7 +22,8 @@ template<class T> concept has_get_allocator  = requires (T const& a) { a.get_all
 
 // Every cell answers the same to all of these; only the allocator differs, and by column. [design.md#the-generated-table]
 template<class T>
-constexpr auto is_regular_container() -> bool
+constexpr auto is_regular_container()
+        -> bool
 {
         static_assert(std::default_initializable<T>);
         static_assert(std::copyable<T>);

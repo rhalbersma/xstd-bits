@@ -94,7 +94,8 @@ namespace {
 
 // The model at the same extent, filled the same way, so any disagreement is the packing's.
 template<class T>
-auto model_of(T const& a) -> std::vector<bool>
+auto model_of(T const& a)
+        -> std::vector<bool>
 {
         auto m = std::vector<bool>(a.size());
         for (auto i = 0UZ; i < a.size(); ++i) {
@@ -109,7 +110,8 @@ auto model_of(T const& a) -> std::vector<bool>
 // Taken by non-const reference and aliased to a const one inside, because these take an explicit object
 // parameter and the const and non-const paths are two different functions, both of them under test.
 template<class T>
-auto access_disagreements(T& a, std::vector<bool> const& m) -> std::size_t
+auto access_disagreements(T& a, std::vector<bool> const& m)
+        -> std::size_t
 {
         auto const& ca = a;
         auto disagreements = 0UZ;
@@ -124,7 +126,8 @@ auto access_disagreements(T& a, std::vector<bool> const& m) -> std::size_t
 
 // front() and back() are the same four overloads over the two ends, and a zero extent has neither.
 template<class T>
-auto ends_disagreements(T& a, std::vector<bool> const& m) -> std::size_t
+auto ends_disagreements(T& a, std::vector<bool> const& m)
+        -> std::size_t
 {
         if (a.empty()) {
                 return 0UZ;
@@ -138,7 +141,8 @@ auto ends_disagreements(T& a, std::vector<bool> const& m) -> std::size_t
 
 // One bit of pattern p at position i. A lookup rather than a conditional chain: six patterns written as a
 // chain nest six deep, and the nesting is not what the test is about.
-auto pattern_bit(std::size_t p, std::size_t i, std::size_t n) -> bool
+auto pattern_bit(std::size_t p, std::size_t i, std::size_t n)
+        -> bool
 {
         switch (p) {
         case 0UZ: return false;
@@ -153,7 +157,8 @@ auto pattern_bit(std::size_t p, std::size_t i, std::size_t n) -> bool
 // Uniform both ways, single-ended both ways, and two strides: enough that every comparison lands on both
 // sides of itself, and cheaper than every pair of values.
 template<class T>
-auto comparison_patterns() -> std::vector<T>
+auto comparison_patterns()
+        -> std::vector<T>
 {
         auto patterns = std::vector<T>();
         for (auto p = 0UZ; p < 6UZ; ++p) {

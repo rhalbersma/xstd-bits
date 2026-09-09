@@ -51,7 +51,8 @@ template<class Block>
 // T{x} reads to clang-tidy as a cast to the type it already has. Returning by value is the whole of it -- that is
 // what makes the argument at the call below a prvalue. [design.md#the-functor-takes-a-value]
 template<class T>
-[[nodiscard]] constexpr auto decay_copy(T value) noexcept -> T
+[[nodiscard]] constexpr auto decay_copy(T value) noexcept
+        -> T
 {
         return value;
 }
@@ -65,7 +66,8 @@ template<class T>
 // compile error, and it is what is_invocable_r_v just above already asks about, so the call and the detection
 // stop disagreeing about the value category. [design.md#the-functor-takes-a-value]
 template<class F>
-[[nodiscard]] constexpr auto invoke_continues(F& f, bool value) -> bool
+[[nodiscard]] constexpr auto invoke_continues(F& f, bool value)
+        -> bool
 {
         if constexpr (std::is_invocable_r_v<bool, F&, bool>) {
                 return f(decay_copy(value));

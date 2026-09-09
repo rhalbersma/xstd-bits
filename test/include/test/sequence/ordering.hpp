@@ -18,7 +18,8 @@ namespace test::sequence {
 
 // What the sequence reading must order like, against the container defining the relation; the view itself neither compares nor orders, following span, so the question goes through its iterators.
 template<class Bits>
-auto ordering_agrees_with_vector_bool(std::size_t universe = 4) -> void
+auto ordering_agrees_with_vector_bool(std::size_t universe = 4)
+        -> void
 {
         auto const bound = 1UZ << universe;
         for (auto i = 0UZ; i < bound; ++i) {

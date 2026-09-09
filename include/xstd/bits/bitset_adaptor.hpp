@@ -111,7 +111,8 @@ public:
                 constexpr reference(reference const& x) noexcept = default;
                 constexpr ~reference() = default;
 
-                constexpr auto operator=(bool x) noexcept -> reference&
+                constexpr auto operator=(bool x) noexcept
+                        -> reference&
                 {
                         std::as_const(*this) = x;
                         return *this;
@@ -136,7 +137,8 @@ public:
                         return Traits::at(m_ptr->m_bits, m_idx);
                 }
 
-                [[nodiscard]] constexpr auto operator~() const noexcept -> bool
+                [[nodiscard]] constexpr auto operator~() const noexcept
+                        -> bool
                 {
                         return not Traits::at(m_ptr->m_bits, m_idx);
                 }

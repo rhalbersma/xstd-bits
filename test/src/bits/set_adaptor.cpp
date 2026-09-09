@@ -69,14 +69,16 @@ struct bool_probe
 };
 
 template<class Set>
-[[nodiscard]] auto keys(Set const& s) -> std::set<std::size_t>
+[[nodiscard]] auto keys(Set const& s)
+        -> std::set<std::size_t>
 {
         return { s.begin(), s.end() };
 }
 
 // Every reading-level question a view can answer, against std::set answering the same one: the whole first, then each key.
 template<class Set>
-auto check_whole(Set const& s, std::set<std::size_t> const& model) -> void
+auto check_whole(Set const& s, std::set<std::size_t> const& model)
+        -> void
 {
         BOOST_CHECK(keys(s) == model);
         BOOST_CHECK_EQUAL(s.size(), model.size());
@@ -88,7 +90,8 @@ auto check_whole(Set const& s, std::set<std::size_t> const& model) -> void
 }
 
 template<class Set>
-auto check_key(Set const& s, std::set<std::size_t> const& model, std::size_t x) -> void
+auto check_key(Set const& s, std::set<std::size_t> const& model, std::size_t x)
+        -> void
 {
         BOOST_CHECK_EQUAL(s.contains(x), model.contains(x));
         BOOST_CHECK_EQUAL(s.count(x), model.count(x));
@@ -111,7 +114,8 @@ auto check_key(Set const& s, std::set<std::size_t> const& model, std::size_t x) 
 }
 
 template<class Set>
-auto check_reads(Set const& s, std::set<std::size_t> const& model, std::size_t width) -> void
+auto check_reads(Set const& s, std::set<std::size_t> const& model, std::size_t width)
+        -> void
 {
         check_whole(s, model);
         for (auto x = 0UZ; x <= width + 1UZ; ++x) {

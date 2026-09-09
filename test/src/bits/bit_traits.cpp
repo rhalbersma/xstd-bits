@@ -70,7 +70,8 @@ inline constexpr auto extent_of = xstd::bit_traits<T>::extent;
 
 // The model and the container, built from one description so they cannot drift.
 template<class T>
-[[nodiscard]] auto make(std::set<std::size_t> const& model) -> T
+[[nodiscard]] auto make(std::set<std::size_t> const& model)
+        -> T
 {
         auto c = T();
         for (auto const p : model) {
@@ -83,7 +84,8 @@ template<class T>
 // fallback arm on both tiers, and at N == 0 the arm before either. Its own function, four BOOST_CHECK_EQUALs
 // being enough to put check_scans over the cognitive-complexity threshold. [design.md#one-function-per-tier]
 template<class T>
-auto check_aggregates(std::set<std::size_t> const& model) -> void
+auto check_aggregates(std::set<std::size_t> const& model)
+        -> void
 {
         auto const c = make<T>(model);
         constexpr auto N = extent_of<T>;
@@ -96,7 +98,8 @@ auto check_aggregates(std::set<std::size_t> const& model) -> void
 
 // Every scan, at every argument its domain admits, against std::set answering the same question.
 template<class T>
-auto check_scans(std::set<std::size_t> const& model) -> void
+auto check_scans(std::set<std::size_t> const& model)
+        -> void
 {
         auto const c = make<T>(model);
         constexpr auto N = extent_of<T>;
@@ -120,7 +123,8 @@ auto check_scans(std::set<std::size_t> const& model) -> void
 
 // Patterns rather than every subset: adjacent pairs put a set bit on both sides of every block boundary.
 template<class T>
-auto check_every_pattern() -> void
+auto check_every_pattern()
+        -> void
 {
         constexpr auto N = extent_of<T>;
 

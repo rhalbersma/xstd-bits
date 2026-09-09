@@ -116,7 +116,8 @@ namespace {
 
 // One pair of narrow bitsets against boost's own, at two widths and two patterns; a function rather than a loop body
 // so the case that sweeps it stays under readability-function-cognitive-complexity's threshold.
-auto disagreements_against_boost(std::size_t w, std::size_t u, unsigned long long p, unsigned long long q) -> int
+auto disagreements_against_boost(std::size_t w, std::size_t u, unsigned long long p, unsigned long long q)
+        -> int
 {
         using Narrow = xstd::basic_dynamic_bitset<std::uint8_t>;
         auto x  = Narrow(w, p);

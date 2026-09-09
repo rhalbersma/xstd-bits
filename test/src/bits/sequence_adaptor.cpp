@@ -38,7 +38,8 @@ template<class S> constexpr bool can_write = requires (S s) { s[0] = true; };
 template<class S> constexpr bool can_swap  = requires (S s) { s.swap(s); };
 
 template<class Seq>
-[[nodiscard]] auto bools(Seq const& s) -> std::vector<bool>
+[[nodiscard]] auto bools(Seq const& s)
+        -> std::vector<bool>
 {
         return { s.begin(), s.end() };
 }
@@ -261,7 +262,8 @@ using Graded = test::graded_extents<xstd::basic_bit_array>;
 
 // One bit of pattern p at position i, as bit_array's model cases have it. Empty and full are the two degenerate
 // widths the aggregates disagree about most: they are the fixed points of all and none.
-auto pattern_bit(std::size_t p, std::size_t i, std::size_t n) -> bool
+auto pattern_bit(std::size_t p, std::size_t i, std::size_t n)
+        -> bool
 {
         switch (p) {
         case 0UZ: return false;
@@ -275,7 +277,8 @@ auto pattern_bit(std::size_t p, std::size_t i, std::size_t n) -> bool
 
 // The model at the same extent, written through the sequence under test so the two are filled by one loop.
 template<class Seq>
-auto write_pattern(Seq& s, std::size_t p) -> std::vector<bool>
+auto write_pattern(Seq& s, std::size_t p)
+        -> std::vector<bool>
 {
         auto m = std::vector<bool>(s.size());
         for (auto i = 0UZ; i < s.size(); ++i) {
@@ -289,7 +292,8 @@ auto write_pattern(Seq& s, std::size_t p) -> std::vector<bool>
 // Counted rather than asserted per position, so a failure names the operation instead of drowning the log.
 // [design.md#counted-not-asserted]
 template<class Seq>
-auto aggregate_disagreements(Seq const& s, std::vector<bool> const& m) -> std::size_t
+auto aggregate_disagreements(Seq const& s, std::vector<bool> const& m)
+        -> std::size_t
 {
         auto disagreements = 0UZ;
         for (auto const value : { true, false }) {
@@ -314,7 +318,8 @@ auto aggregate_disagreements(Seq const& s, std::vector<bool> const& m) -> std::s
 
 // What for_each hands its functor, in the order it hands it: the range-for's own answer, which is the contract.
 template<class Seq>
-auto for_each_bools(Seq const& s) -> std::vector<bool>
+auto for_each_bools(Seq const& s)
+        -> std::vector<bool>
 {
         auto v = std::vector<bool>();
         s.for_each([&v](bool b) -> void { v.push_back(b); });

@@ -28,7 +28,8 @@ inline constexpr auto hi = 1L << 20;
 
 namespace {
 
-auto bound(benchmark::State const& state) -> std::size_t
+auto bound(benchmark::State const& state)
+        -> std::size_t
 {
         return static_cast<std::size_t>(state.range(0));
 }

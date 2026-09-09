@@ -24,7 +24,8 @@ inline constexpr auto bits_per_word = 64UZ;
 // A board-game density rather than a uniform one: an occupancy bitboard is neither empty nor full, and find_next
 // on a 1%-set bitset is a different benchmark from one on a 90%-set bitset. Deterministic, so the rungs compare.
 template<class T>
-auto filled(std::size_t n, std::uint64_t seed) -> T
+auto filled(std::size_t n, std::uint64_t seed)
+        -> T
 {
         auto bits = T();
         auto state = seed | 1ULL;

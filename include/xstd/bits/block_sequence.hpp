@@ -97,7 +97,8 @@ private:
         }
 
         // An NSDMI, not extent-constrained constructors: vector starts empty. [design.md#default-construction]
-        [[nodiscard]] static constexpr auto make_blocks(std::size_t n) -> Blocks
+        [[nodiscard]] static constexpr auto make_blocks(std::size_t n)
+                -> Blocks
         {
                 if constexpr (has_static_size) {
                         return Blocks{};
@@ -468,7 +469,8 @@ public:
                 }
         }
 
-        constexpr auto operator&=(block_sequence const& other [[maybe_unused]]) noexcept -> block_sequence&
+        constexpr auto operator&=(block_sequence const& other [[maybe_unused]]) noexcept
+                -> block_sequence&
         {
                 assert(this->size() == other.size());
                 if constexpr (has_static_size and N > 0 and static_num_blocks == 1) {
@@ -484,7 +486,8 @@ public:
                 return *this;
         }
 
-        constexpr auto operator|=(block_sequence const& other [[maybe_unused]]) noexcept -> block_sequence&
+        constexpr auto operator|=(block_sequence const& other [[maybe_unused]]) noexcept
+                -> block_sequence&
         {
                 assert(this->size() == other.size());
                 if constexpr (has_static_size and N > 0 and static_num_blocks == 1) {
@@ -500,7 +503,8 @@ public:
                 return *this;
         }
 
-        constexpr auto operator^=(block_sequence const& other [[maybe_unused]]) noexcept -> block_sequence&
+        constexpr auto operator^=(block_sequence const& other [[maybe_unused]]) noexcept
+                -> block_sequence&
         {
                 assert(this->size() == other.size());
                 if constexpr (has_static_size and N > 0 and static_num_blocks == 1) {
@@ -516,7 +520,8 @@ public:
                 return *this;
         }
 
-        constexpr auto operator-=(block_sequence const& other [[maybe_unused]]) noexcept -> block_sequence&
+        constexpr auto operator-=(block_sequence const& other [[maybe_unused]]) noexcept
+                -> block_sequence&
         {
                 assert(this->size() == other.size());
                 if constexpr (has_static_size and N > 0 and static_num_blocks == 1) {
@@ -532,7 +537,8 @@ public:
                 return *this;
         }
 
-        constexpr auto operator<<=(std::size_t n [[maybe_unused]]) noexcept -> block_sequence&
+        constexpr auto operator<<=(std::size_t n [[maybe_unused]]) noexcept
+                -> block_sequence&
         {
                 assert(is_valid(n));
                 if constexpr (has_static_size and static_num_blocks == 1) {
@@ -558,7 +564,8 @@ public:
                 return *this;
         }
 
-        constexpr auto operator>>=(std::size_t n [[maybe_unused]]) noexcept -> block_sequence&
+        constexpr auto operator>>=(std::size_t n [[maybe_unused]]) noexcept
+                -> block_sequence&
         {
                 assert(is_valid(n));
                 if constexpr (has_static_size and static_num_blocks == 1) {
@@ -583,7 +590,8 @@ public:
                 return *this;
         }
 
-        constexpr auto set() noexcept -> block_sequence&
+        constexpr auto set() noexcept
+                -> block_sequence&
         {
                 if constexpr (has_static_size and static_has_unused_bits) {
                         std::ranges::fill_n(std::ranges::begin(m_blocks), static_cast<std::ptrdiff_t>(static_last_block), ones);
@@ -599,14 +607,16 @@ public:
                 return *this;
         }
 
-        constexpr auto reset() noexcept -> block_sequence&
+        constexpr auto reset() noexcept
+                -> block_sequence&
         {
                 std::ranges::fill(m_blocks, zero);
                 assert(none());
                 return *this;
         }
 
-        constexpr auto flip() noexcept -> block_sequence&
+        constexpr auto flip() noexcept
+                -> block_sequence&
         {
                 if constexpr (has_static_size and N > 0 and static_num_blocks == 1) {
                         m_blocks[0] = static_cast<block_type>(~m_blocks[0]);
@@ -712,7 +722,8 @@ public:
                 m_blocks.shrink_to_fit();
         }
 
-        constexpr auto set(std::size_t n) noexcept -> block_sequence&
+        constexpr auto set(std::size_t n) noexcept
+                -> block_sequence&
         {
                 assert(is_valid(n));
                 auto&& [ block, mask ] = block_mask(n);
@@ -732,7 +743,8 @@ public:
                 return inserted;
         }
 
-        constexpr auto reset(std::size_t n) noexcept -> block_sequence&
+        constexpr auto reset(std::size_t n) noexcept
+                -> block_sequence&
         {
                 assert(is_valid(n));
                 auto&& [ block, mask ] = block_mask(n);
@@ -752,7 +764,8 @@ public:
                 return erased;
         }
 
-        constexpr auto flip(std::size_t n) noexcept -> block_sequence&
+        constexpr auto flip(std::size_t n) noexcept
+                -> block_sequence&
         {
                 assert(is_valid(n));
                 auto&& [ block, mask ] = block_mask(n);
