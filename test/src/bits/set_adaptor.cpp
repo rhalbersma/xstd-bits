@@ -42,6 +42,32 @@ template<class S> constexpr bool can_fill       = requires (S s) { s.fill(); s.c
 template<class S> constexpr bool can_swap       = requires (S s) { s.swap(s); };
 template<class S> constexpr bool has_complement = requires (S s) { ~s; s & s; };
 
+// What for_each accepts, dependent so a rejected functor is a false rather than a hard error.
+template<class S, class F> constexpr bool walks         = requires (S const& s, F f) { s.for_each(f); };
+template<class S, class F> constexpr bool walks_reverse = requires (S const& s, F f) { s.for_each_reverse(f); };
+
+// Functors overloaded on the value category. The constraint above cannot tell the two overloads apart -- both
+// make the functor invocable with a size_t -- so these, and only these, are what pin the prvalue at the call:
+// an lvalue at the call takes the && overload away and lands on the & one. One probe per arm, because
+// invoke_continues splits on the return type and each arm calls the functor for itself.
+struct void_probe
+{
+        bool& took_a_reference;
+
+        void operator()(std::size_t&&) const {}
+        // Never called is exactly what is under test, so say so rather than let -Wunused-member-function say it.
+        [[maybe_unused]] void operator()(std::size_t&) const { took_a_reference = true; }
+};
+
+struct bool_probe
+{
+        bool& took_a_reference;
+
+        auto operator()(std::size_t&&) const -> bool { return true; }
+        // Never called is exactly what is under test, so say so rather than let -Wunused-member-function say it.
+        [[maybe_unused]] auto operator()(std::size_t&) const -> bool { took_a_reference = true; return true; }
+};
+
 template<class Set>
 [[nodiscard]] auto keys(Set const& s) -> std::set<std::size_t>
 {
@@ -430,6 +456,43 @@ BOOST_AUTO_TEST_CASE(ForEachStopsWhenTheFunctorSaysSo)
         auto first_only = 0UZ;
         owner.for_each([&](std::size_t) -> bool { ++first_only; return false; });
         BOOST_CHECK_EQUAL(first_only, 1UZ);
+}
+
+// The functor is handed the position by value, and the constraint says so. Without that a functor asking for
+// size_t& binds to the walker's own local, and its write goes nowhere -- a walk reports positions and changes
+// none, so it is not a lost write but a meaningless one. [design.md#the-functor-takes-a-value]
+BOOST_AUTO_TEST_CASE(ForEachHandsThePositionByValue)
+{
+        // By value, generic or not, and by const reference: all four read what they are given.
+        static_assert(walks<Owner, decltype([](std::size_t) -> void {})>);
+        static_assert(walks<Owner, decltype([](auto) -> void {})>);
+        static_assert(walks<Owner, decltype([](std::size_t const&) -> void {})>);
+        static_assert(walks<Owner, decltype([](auto const&) -> void {})>);
+
+        // A plain function is a functor too, and stays one.
+        static_assert(walks<Owner, void (*)(std::size_t)>);
+
+        // A functor returning bool to mean "keep going" is the other accepted shape.
+        static_assert(walks<Owner, decltype([](std::size_t) -> bool { return true; })>);
+
+        // And the two that would have written to nothing.
+        static_assert(not walks<Owner, decltype([](std::size_t&) -> void {})>);
+        static_assert(not walks<Owner, decltype([](auto&) -> void {})>);
+
+        // The mirror is constrained alike, and so is a view over foreign storage.
+        static_assert(walks_reverse<Owner, decltype([](std::size_t) -> void {})>);
+        static_assert(not walks_reverse<Owner, decltype([](std::size_t&) -> void {})>);
+        static_assert(not walks<View, decltype([](std::size_t&) -> void {})>);
+
+        // And the overload resolution the constraint cannot reach: an lvalue at the call would take the reference.
+        // Both arms and both directions, each of which calls the functor for itself.
+        auto owner = Owner();
+        owner.insert(3UZ);
+        auto took_a_reference = false;
+        owner.for_each        (void_probe{ took_a_reference }); BOOST_CHECK(not took_a_reference);
+        owner.for_each        (bool_probe{ took_a_reference }); BOOST_CHECK(not took_a_reference);
+        owner.for_each_reverse(void_probe{ took_a_reference }); BOOST_CHECK(not took_a_reference);
+        owner.for_each_reverse(bool_probe{ took_a_reference }); BOOST_CHECK(not took_a_reference);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

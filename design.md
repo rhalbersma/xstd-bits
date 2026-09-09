@@ -1135,6 +1135,45 @@ contract: an iterator that caches a block stops observing an erase that lands ah
 caching the same block is unobservable. The member is the faster half and the safer half at once, which is
 rare enough to record.
 
+### the-functor-takes-a-value
+
+Both `for_each`es hand their functor a **prvalue**, and both members say so with `requires std::invocable<F&,
+bool>` and `requires std::invocable<F&, size_t>`. That is one fix for one defect, spelled in two places because
+it is worth catching at the interface and worth being right in the body.
+
+The defect was that `invoke_continues` named its parameter and passed that name along. A named parameter is an
+lvalue, so a functor asking for `bool&` or `size_t&` bound to it, compiled, and wrote to a local that the walk
+throws away. The walk reads its storage through a `const&` and never writes back, so what looked like a
+mutating pass was a silent no-op -- and on the set reading it was worse than lost, since a walk *reports*
+positions and changes none, so there is nothing a written-back position could have meant.
+
+`auto` does not save this. `[](auto& b) { b = true; }` is an `auto` parameter and was exactly as silent as
+`[](bool&)`; the axis is the value category, not the spelling of the type. Nor is "make them write `auto`"
+enforceable: a generic lambda is distinguishable from a non-generic one -- `requires { &F::operator(); }` is
+false for the generic one, its `operator()` being a template -- but that test also rejects a function pointer, a
+hand-written functor and `std::function`, all of them legitimate callers, and it asks about the functor's shape
+rather than about what it does with its argument.
+
+What the prvalue fixes is a **disagreement the code already contained**: `is_invocable_r_v<bool, F&, bool>`, one
+line above the call, tests with a prvalue, and the call used an lvalue. So the arm chosen and the call made
+could differ, and for the reference-taking functor they did.
+
+The two halves earn their place separately:
+
+- **The constraint** puts the rejection at the interface, where it reads "constraint not satisfied" and names
+  the member, instead of erupting somewhere inside `walk_words`. It is also what makes the rejection *testable*:
+  a hard error in a template body is not something `static_assert(not ...)` can see, which is why the first
+  attempt to probe this reported everything as fine.
+- **The prvalue** is what the constraint cannot reach. `std::invocable<F&, bool>` is satisfied by a functor
+  overloaded on the value category, so the constraint cannot say which overload runs; only the call can. The
+  tests pin it with exactly that: a functor with `operator()(bool&&)` and `operator()(bool&)` that records which
+  one it got, one per arm of the `if constexpr`, on both readings. Reverting either arm of either reading to an
+  lvalue fails the suite.
+
+Accepted, and unchanged: by value, by `auto`, by `const&`, by `auto const&`, a function pointer, and a functor
+returning `bool` to mean "keep going". Writing *through* the sequence is the range-for's job and remains so --
+`for (auto r : v) r = true;` writes, because the proxy is what an iterator dereferences to.
+
 ### the-sequence-aggregates
 
 The sequence reading answers `count`, `all`, `any`, `none` and `mismatch` in its own vocabulary, each taking

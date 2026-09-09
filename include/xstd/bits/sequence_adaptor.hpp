@@ -16,7 +16,7 @@
 #include <xstd/bits/ownership.hpp>                // owned_bits_t, owned_storage, owned_traits_t, owner_of, ownership, owns
 #include <cassert>                                // assert
 #include <compare>                                // strong_ordering
-#include <concepts>                               // constructible_from, convertible_to, same_as, swap, swappable
+#include <concepts>                               // constructible_from, convertible_to, invocable, same_as, swap, swappable
 #include <cstddef>                                // ptrdiff_t, size_t
 #include <format>                                 // format
 #include <functional>                             // hash
@@ -49,13 +49,20 @@ template<class Block>
 
 // Continue unless the functor says otherwise: a void functor always continues, a bool one says. What the set
 // reading's for_each does, over what this reading's iterator dereferences to. [design.md#the-sequence-for-each]
+//
+// The bool is handed over as a prvalue -- auto(value), [expr.type.conv]'s decay-copy -- rather than as this
+// parameter's name. A named lvalue binds to a functor
+// taking bool&, which then writes to a local that goes nowhere: the walk reads the storage through a const
+// reference and never writes back, so what looks like a mutating pass is a silent no-op. A prvalue makes that a
+// compile error, and it is what is_invocable_r_v just above already asks about, so the call and the detection
+// stop disagreeing about the value category. [design.md#the-functor-takes-a-value]
 template<class F>
 [[nodiscard]] constexpr auto invoke_continues(F& f, bool value) -> bool
 {
         if constexpr (std::is_invocable_r_v<bool, F&, bool>) {
-                return f(value);
+                return f(auto(value));
         } else {
-                f(value);
+                f(auto(value));
                 return true;
         }
 }
@@ -599,7 +606,11 @@ public:
         // The functor takes what this reading's iterator dereferences to, a bool, where the set reading's takes a
         // position; it may return void, or bool to mean "keep going". Nothing else is offered: a functor that returns
         // something else is a caller error rather than a value to discard silently. [design.md#the-set-for-each]
+        //
+        // It takes that bool by value, and the constraint says so, so a functor asking for bool& reads "constraint not
+        // satisfied" here rather than compiling into a write that goes nowhere. [design.md#the-functor-takes-a-value]
         template<class F>
+                requires std::invocable<F&, bool>
         constexpr void for_each(this auto&& self, F f)
         {
                 if constexpr (block_readable<Traits, bits_type>) {

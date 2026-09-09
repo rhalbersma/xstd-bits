@@ -16,7 +16,7 @@
 #include <algorithm>                         // any_of, equal, includes, lexicographical_compare_three_way
 #include <cassert>                           // assert
 #include <compare>                           // strong_ordering
-#include <concepts>                          // constructible_from, swappable
+#include <concepts>                          // constructible_from, invocable, swappable
 #include <cstddef>                           // ptrdiff_t, size_t
 #include <functional>                        // hash, less
 #include <initializer_list>                  // initializer_list
@@ -38,13 +38,20 @@ template<class W, class B> inline constexpr bool is_consecutive<std::ranges::iot
 
 // Continue unless the functor says otherwise: a void functor always continues, a bool one says.
 // [design.md#the-set-for-each]
+//
+// The position is handed over as a prvalue -- auto(pos), [expr.type.conv]'s decay-copy -- rather than as this
+// parameter's name. A named lvalue binds to a
+// functor taking std::size_t&, which then writes to a local that goes nowhere -- a walk reports positions and
+// changes none, so the write is not merely lost but meaningless. A prvalue makes that a compile error, and it
+// is what is_invocable_r_v just above already asks about, so the call and the detection stop disagreeing about
+// the value category. [design.md#the-functor-takes-a-value]
 template<class F>
 [[nodiscard]] constexpr auto invoke_continues(F& f, std::size_t pos) -> bool
 {
         if constexpr (std::is_invocable_r_v<bool, F&, std::size_t>) {
-                return f(pos);
+                return f(auto(pos));
         } else {
-                f(pos);
+                f(auto(pos));
                 return true;
         }
 }
@@ -262,7 +269,12 @@ public:
         // The functor may return void, or bool to mean "keep going", which is what a move generator wants when it
         // has found its answer. Nothing else is offered: a functor that returns something else is a caller error
         // rather than a value to discard silently.
+        //
+        // It takes the position by value, and the constraint says so, so a functor asking for size_t& reads
+        // "constraint not satisfied" here rather than compiling into a write that goes nowhere.
+        // [design.md#the-functor-takes-a-value]
         template<class F>
+                requires std::invocable<F&, std::size_t>
         constexpr void for_each(this auto&& self, F f)
         {
                 if constexpr (requires { Traits::block(self.storage(), 0UZ); Traits::num_blocks(self.storage()); }) {
@@ -275,6 +287,7 @@ public:
         // The mirror, highest position first. w & (w - 1) has no descending twin, so this one clears the top bit
         // it just reported instead. The set reading iterates both ways, and so does this. [design.md#the-set-for-each]
         template<class F>
+                requires std::invocable<F&, std::size_t>
         constexpr void for_each_reverse(this auto&& self, F f)
         {
                 if constexpr (requires { Traits::block(self.storage(), 0UZ); Traits::num_blocks(self.storage()); }) {
