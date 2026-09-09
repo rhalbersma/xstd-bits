@@ -30,6 +30,11 @@ struct bit_traits<boost::dynamic_bitset<Block, Allocator>>
         [[nodiscard]] static constexpr auto at   (bits_type const& c, std::size_t n) noexcept -> bool        { return c[n];      }
         [[nodiscard]] static constexpr auto count(bits_type const& c)                noexcept -> std::size_t { return c.count(); }
 
+        // The three the sequence reading asks, which dynamic_bitset spells itself: entries, so none is synthesized. [design.md#the-sequence-aggregates]
+        [[nodiscard]] static constexpr auto all  (bits_type const& c)                noexcept -> bool        { return c.all();   }
+        [[nodiscard]] static constexpr auto any  (bits_type const& c)                noexcept -> bool        { return c.any();   }
+        [[nodiscard]] static constexpr auto none (bits_type const& c)                noexcept -> bool        { return c.none();  }
+
         static constexpr void unchecked_assign(bits_type& c, std::size_t n, bool value) noexcept { c[n] = value; }
 
         // The one entry a dynamic width answers by growing; n + 1 must be addressable, the ruled-out position being the one whose successor wraps. [design.md#what-the-trait-reconciles]

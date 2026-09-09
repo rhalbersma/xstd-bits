@@ -280,6 +280,49 @@ template<class Traits, class Bits>
         }
 }
 
+// The three the sequence reading asks in its own vocabulary, each behind an entry where the storage has one and
+// synthesized where it does not. Neither synthesis walks a bit at a time that it could avoid: any is a scan that
+// stops at the first set position, and all counts, which is the block tier through count's own door.
+// [design.md#the-sequence-aggregates]
+template<class Traits, class Bits>
+[[nodiscard]] constexpr auto any(Bits const& c [[maybe_unused]]) noexcept
+        -> bool
+{
+        if constexpr (zero_width<Traits>) {
+                return false;
+        } else if constexpr (requires { { Traits::any(c) } -> std::convertible_to<bool>; }) {
+                return Traits::any(c);
+        } else {
+                return find_first<Traits>(c) != Traits::size(c);
+        }
+}
+
+template<class Traits, class Bits>
+[[nodiscard]] constexpr auto none(Bits const& c [[maybe_unused]]) noexcept
+        -> bool
+{
+        if constexpr (zero_width<Traits>) {
+                return true;
+        } else if constexpr (requires { { Traits::none(c) } -> std::convertible_to<bool>; }) {
+                return Traits::none(c);
+        } else {
+                return not any<Traits>(c);
+        }
+}
+
+template<class Traits, class Bits>
+[[nodiscard]] constexpr auto all(Bits const& c [[maybe_unused]]) noexcept
+        -> bool
+{
+        if constexpr (zero_width<Traits>) {
+                return true;
+        } else if constexpr (requires { { Traits::all(c) } -> std::convertible_to<bool>; }) {
+                return Traits::all(c);
+        } else {
+                return count<Traits>(c) == Traits::size(c);
+        }
+}
+
 template<class Traits, class Bits>
 [[nodiscard]] constexpr auto find_next(Bits const& c [[maybe_unused]], std::size_t n [[maybe_unused]]) noexcept
         -> std::size_t
