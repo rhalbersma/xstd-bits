@@ -31,6 +31,11 @@ struct bit_traits<std::bitset<N>>
         [[nodiscard]] static constexpr auto at   (bits_type const& c, std::size_t n) noexcept -> bool        { return c[n];      }
         [[nodiscard]] static constexpr auto count(bits_type const& c)                noexcept -> std::size_t { return c.count(); }
 
+        // The three the sequence reading asks, which std::bitset spells itself: entries, so none is synthesized. [design.md#the-sequence-aggregates]
+        [[nodiscard]] static constexpr auto all  (bits_type const& c)                noexcept -> bool        { return c.all();   }
+        [[nodiscard]] static constexpr auto any  (bits_type const& c)                noexcept -> bool        { return c.any();   }
+        [[nodiscard]] static constexpr auto none (bits_type const& c)                noexcept -> bool        { return c.none();  }
+
         static constexpr void unchecked_assign(bits_type& c, std::size_t n, bool value) noexcept { c[n] = value; }
 
         // A static width cannot grow, so inserting is assigning with the position as a precondition. [design.md#what-the-trait-reconciles]

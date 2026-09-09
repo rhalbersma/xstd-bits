@@ -5,7 +5,7 @@
 
 #include <boost/test/unit_test.hpp>      // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <test/block_types.hpp>          // graded_extents
-#include <xstd/bits/bit_traits.hpp>      // bit_storage, bit_traits, block_readable, scan_*, static_bit_extent, word_at
+#include <xstd/bits/bit_traits.hpp>      // all, any, bit_storage, bit_traits, block_readable, count, none, scan_*, static_bit_extent, word_at
 #include <xstd/bits/block_sequence.hpp>  // block_array
 #include <cstddef>                       // size_t
 #include <cstdint>                       // uint8_t
@@ -79,6 +79,21 @@ template<class T>
         return c;
 }
 
+// The four the sequence reading asks, synthesized here: neither adapter declares an entry, so this is the
+// fallback arm on both tiers, and at N == 0 the arm before either. Its own function, four BOOST_CHECK_EQUALs
+// being enough to put check_scans over the cognitive-complexity threshold. [design.md#one-function-per-tier]
+template<class T>
+auto check_aggregates(std::set<std::size_t> const& model) -> void
+{
+        auto const c = make<T>(model);
+        constexpr auto N = extent_of<T>;
+
+        BOOST_CHECK_EQUAL(bits::count<traits_of<T>>(c), model.size());
+        BOOST_CHECK_EQUAL(bits::any  <traits_of<T>>(c), not model.empty());
+        BOOST_CHECK_EQUAL(bits::none <traits_of<T>>(c), model.empty());
+        BOOST_CHECK_EQUAL(bits::all  <traits_of<T>>(c), model.size() == N);
+}
+
 // Every scan, at every argument its domain admits, against std::set answering the same question.
 template<class T>
 auto check_scans(std::set<std::size_t> const& model) -> void
@@ -110,17 +125,21 @@ auto check_every_pattern() -> void
         constexpr auto N = extent_of<T>;
 
         check_scans<T>({});
+        check_aggregates<T>({});
 
         auto full = std::set<std::size_t>();
         for (auto i = 0UZ; i < N; ++i) {
                 full.insert(i);
         }
         check_scans<T>(full);
+        check_aggregates<T>(full);
 
         for (auto i = 0UZ; i < N; ++i) {
                 check_scans<T>({ i });
+                check_aggregates<T>({ i });
                 if (i + 1UZ < N) {
                         check_scans<T>({ i, i + 1UZ });
+                        check_aggregates<T>({ i, i + 1UZ });
                 }
         }
 }

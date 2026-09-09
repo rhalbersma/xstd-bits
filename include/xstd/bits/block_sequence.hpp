@@ -885,8 +885,11 @@ public:
                 }
         }
 
-private:
         // The first block at which two values differ, with that block's xor; equal values answer the last block and a zero xor, every arm alike. [design.md#the-ordering-primitive]
+        //
+        // Public, because the sequence reading's mismatch is one countr_zero from it. The name stays: it scans
+        // low block to high, which is the ascending orderings' answer and not bitset_three_way's, so calling it
+        // mismatch here would repeat the mistake lexicographical_three_way made. [design.md#two-readings-disagree]
         [[nodiscard]] constexpr auto first_difference(block_sequence const& other) const noexcept
                 -> std::pair<std::size_t, block_type>
         {
@@ -908,6 +911,7 @@ private:
                 }
         }
 
+private:
         // Whether any position strictly above the given one is set; the bit there is clear, so one shift down leaves exactly what is above it. [design.md#the-ordering-primitive]
         [[nodiscard]] constexpr auto any_above(std::size_t index, std::size_t offset) const noexcept
                 -> bool
@@ -1067,6 +1071,14 @@ struct bit_traits<block_sequence<Blocks, N>>
         }
 
         [[nodiscard]] static constexpr auto count(bits_type const& c) noexcept -> std::size_t { return c.count(); }
+
+        // The three the sequence reading asks and the bitset reading already had: entries, so neither is synthesized here. [design.md#the-sequence-aggregates]
+        [[nodiscard]] static constexpr auto all (bits_type const& c) noexcept -> bool { return c.all();  }
+        [[nodiscard]] static constexpr auto any (bits_type const& c) noexcept -> bool { return c.any();  }
+        [[nodiscard]] static constexpr auto none(bits_type const& c) noexcept -> bool { return c.none(); }
+
+        // What mismatch is made of: the first differing block and its xor. [design.md#the-sequence-aggregates]
+        [[nodiscard]] static constexpr auto first_difference(bits_type const& x, bits_type const& y) noexcept { return x.first_difference(y); }
 
         // The two entries the readings cannot synthesize: insert is the one operation that can grow, and fill is bulk. [design.md#what-the-trait-reconciles]
         // A run-time width grows to hold the position, as boost's does; n + 1 must be addressable, the ruled-out position being the one whose successor wraps.

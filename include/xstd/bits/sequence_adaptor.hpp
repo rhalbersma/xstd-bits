@@ -9,9 +9,10 @@
 #include <boost/container_hash/is_range.hpp>      // is_range
 #include <boost/hash2/hash_append.hpp>            // hash_append_tag
 #include <xstd/bits/bit_proxy.hpp>                // bit_sequence_iterator, bit_sequence_reference
-#include <xstd/bits/bit_traits.hpp>               // bit_storage, bit_traits, static_bit_extent, word_at
+#include <xstd/bits/bit_traits.hpp>               // all, any, bit_storage, bit_traits, count, none, static_bit_extent, word_at
 #include <xstd/bits/detail/allocator_typedef.hpp> // allocator_typedef, no_typedef
 #include <xstd/bits/detail/hash.hpp>              // hash_append_bits, std_hash
+#include <xstd/bits/detail/intrin.hpp>            // countr_zero, popcount
 #include <xstd/bits/ownership.hpp>                // owned_bits_t, owned_storage, owned_traits_t, owner_of, ownership, owns
 #include <cassert>                                // assert
 #include <compare>                                // strong_ordering
@@ -21,16 +22,154 @@
 #include <functional>                             // hash
 #include <initializer_list>                       // initializer_list
 #include <iterator>                               // input_iterator, make_reverse_iterator, reverse_iterator, sentinel_for
+#include <limits>                                 // numeric_limits
 #include <algorithm>                              // copy, min, remove_if
 #include <ranges>                                 // begin, enable_borrowed_range, enable_view, end, from_range_t, input_range, range_reference_t, size, sized_range, subrange
 #include <source_location>                        // source_location
 #include <span>                                   // dynamic_extent
 #include <stdexcept>                              // out_of_range
-#include <type_traits>                            // conditional_t, false_type, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
-#include <utility>                                // as_const, declval, forward, move
+#include <type_traits>                            // conditional_t, false_type, is_invocable_r_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
+#include <utility>                                // as_const, declval, forward, move, pair
 
 // The sequence reading, [array] over any Bits with a bit_traits specialization, owning it or referring to it. [design.md#the-three-adaptors]
 namespace xstd {
+
+namespace detail::sequence {
+
+// The bits a window's word holds: every one but for the last word, which holds what is left over. The one
+// spelling of it, so the bulk operators and the aggregates below cannot disagree about the tail. [design.md#windows]
+template<class Block>
+[[nodiscard]] constexpr auto word_mask(std::size_t count) noexcept
+        -> Block
+{
+        constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<Block>::digits);
+        // No shift by digits, which is undefined: a full word is every bit, spelled without one.
+        return count == digits ? static_cast<Block>(~Block{}) : static_cast<Block>(static_cast<Block>(Block{1} << count) - Block{1});
+}
+
+// Continue unless the functor says otherwise: a void functor always continues, a bool one says. What the set
+// reading's for_each does, over what this reading's iterator dereferences to. [design.md#the-sequence-for-each]
+template<class F>
+[[nodiscard]] constexpr auto invoke_continues(F& f, bool value) -> bool
+{
+        if constexpr (std::is_invocable_r_v<bool, F&, bool>) {
+                return f(value);
+        } else {
+                f(value);
+                return true;
+        }
+}
+
+// One tier each, because the tier is the seam and sharing a body puts the whole over
+// readability-function-cognitive-complexity's threshold. [design.md#one-function-per-tier]
+
+// Every position, lowest first, a word at a time: the outer loop loads once per word and the reload becomes the
+// inner loop's exit test, which a flat operator++ can never express. That structure is the whole speedup, the
+// iterator's layout already being the fastest there is. [design.md#the-sequence-for-each]
+template<class Traits, class Bits, class F>
+constexpr void walk_words(Bits const& c, std::size_t offset, std::size_t size, F& f)
+{
+        using block_type = std::remove_cvref_t<decltype(Traits::block(c, 0UZ))>;
+        constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<block_type>::digits);
+
+        for (auto k = 0UZ; k < size; k += digits) {
+                auto const count = std::ranges::min(digits, size - k);
+                auto const word = detail::bits::word_at<Traits>(c, offset + k);
+                for (auto n = 0UZ; n < count; ++n) {
+                        if (not invoke_continues(f, (static_cast<block_type>(word >> n) & block_type{1}) != block_type{})) {
+                                return;
+                        }
+                }
+        }
+}
+
+// The other tier: a storage with no block access -- libc++'s std::bitset and boost's are the ones -- walks
+// positions, which is what the iterator does and is still the same answer. [design.md#windows]
+template<class Traits, class Bits, class F>
+constexpr void walk_positions(Bits const& c, std::size_t offset, std::size_t size, F& f)
+{
+        for (auto n = 0UZ; n < size; ++n) {
+                if (not invoke_continues(f, Traits::at(c, offset + n))) {
+                        return;
+                }
+        }
+}
+
+// The three aggregates over a window, each masked to what the window holds: a word at a time, so a window pays
+// what the whole pays and not a test per bit. A window of ours only -- the tail is clear where the mask does not
+// reach, and above the last word there is nothing. [design.md#windows]
+template<class Traits, class Bits>
+[[nodiscard]] constexpr auto count_words(Bits const& c, std::size_t offset, std::size_t size) noexcept
+        -> std::size_t
+{
+        using block_type = std::remove_cvref_t<decltype(Traits::block(c, 0UZ))>;
+        constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<block_type>::digits);
+
+        auto n = 0UZ;
+        for (auto k = 0UZ; k < size; k += digits) {
+                auto const mask = word_mask<block_type>(std::ranges::min(digits, size - k));
+                n += detail::bits::popcount(static_cast<block_type>(detail::bits::word_at<Traits>(c, offset + k) & mask));
+        }
+        return n;
+}
+
+template<class Traits, class Bits>
+[[nodiscard]] constexpr auto any_words(Bits const& c, std::size_t offset, std::size_t size) noexcept
+        -> bool
+{
+        using block_type = std::remove_cvref_t<decltype(Traits::block(c, 0UZ))>;
+        constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<block_type>::digits);
+
+        for (auto k = 0UZ; k < size; k += digits) {
+                auto const mask = word_mask<block_type>(std::ranges::min(digits, size - k));
+                if (static_cast<block_type>(detail::bits::word_at<Traits>(c, offset + k) & mask) != block_type{}) {
+                        return true;
+                }
+        }
+        return false;
+}
+
+template<class Traits, class Bits>
+[[nodiscard]] constexpr auto all_words(Bits const& c, std::size_t offset, std::size_t size) noexcept
+        -> bool
+{
+        using block_type = std::remove_cvref_t<decltype(Traits::block(c, 0UZ))>;
+        constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<block_type>::digits);
+
+        for (auto k = 0UZ; k < size; k += digits) {
+                auto const mask = word_mask<block_type>(std::ranges::min(digits, size - k));
+                if (static_cast<block_type>(detail::bits::word_at<Traits>(c, offset + k) & mask) != mask) {
+                        return false;
+                }
+        }
+        return true;
+}
+
+// The same three over a window of anything else, one position at a time, which is what that storage offers.
+template<class Traits, class Bits>
+[[nodiscard]] constexpr auto count_positions(Bits const& c, std::size_t offset, std::size_t size) noexcept
+        -> std::size_t
+{
+        auto n = 0UZ;
+        for (auto k = 0UZ; k < size; ++k) {
+                n += Traits::at(c, offset + k) ? 1UZ : 0UZ;
+        }
+        return n;
+}
+
+template<class Traits, class Bits>
+[[nodiscard]] constexpr auto any_positions(Bits const& c, std::size_t offset, std::size_t size, bool value) noexcept
+        -> bool
+{
+        for (auto k = 0UZ; k < size; ++k) {
+                if (Traits::at(c, offset + k) == value) {
+                        return true;
+                }
+        }
+        return false;
+}
+
+}       // namespace detail::sequence
 
 // A sequence adaptor of any shape, told by its public typedefs, whose trait reads blocks of the given type: what a blit reads. [design.md#the-blit]
 template<class S, class Block>
@@ -445,6 +584,31 @@ public:
         [[nodiscard]] constexpr auto crbegin() const noexcept -> const_reverse_iterator { return std::make_reverse_iterator(cend());   }
         [[nodiscard]] constexpr auto crend()   const noexcept -> const_reverse_iterator { return std::make_reverse_iterator(cbegin()); }
 
+        // The sequence reading a word at a time, which the range-for cannot be. operator++ is flat: it must re-derive
+        // the word from (pointer, position) on every step, because an iterator stays copyable and restartable. A loop
+        // has somewhere to keep the word between positions, so the reload becomes an inner loop's exit test.
+        //
+        // What that buys is the vectorizer's and not the loop's, and it is narrower than it first looked: on GCC 15 at
+        // 2^24 bits a counting body runs 8.2x ahead of the range-for and a body with a loop-carried dependence runs at
+        // parity, and under clang 22 the range-for already vectorizes, leaving 1.06x. Never slower, 8x where the
+        // range-for leaves the most on the table. It is loop structure and not layout: the iterator's (container
+        // pointer, index) is the fastest of the four shapes tried and the only one clang vectorizes, precisely because
+        // the dereference is a pure function of the index -- which is also why this has to be a member, no iterator
+        // being able to express the outer loop. [design.md#the-sequence-for-each]
+        //
+        // The functor takes what this reading's iterator dereferences to, a bool, where the set reading's takes a
+        // position; it may return void, or bool to mean "keep going". Nothing else is offered: a functor that returns
+        // something else is a caller error rather than a value to discard silently. [design.md#the-set-for-each]
+        template<class F>
+        constexpr void for_each(this auto&& self, F f)
+        {
+                if constexpr (block_readable<Traits, bits_type>) {
+                        detail::sequence::walk_words<Traits>(self.storage(), self.offset(), self.size(), f);
+                } else {
+                        detail::sequence::walk_positions<Traits>(self.storage(), self.offset(), self.size(), f);
+                }
+        }
+
         // capacity; max_size() is the positions there are to hold: a growing one what its storage can address, and a
         // static width, a view or a window their own, none of them able to grow. [design.md#max-size-is-the-bits]
         [[nodiscard]] constexpr auto empty() const noexcept -> bool { return size() == 0UZ; }
@@ -467,6 +631,53 @@ public:
                 } else {
                         return size();
                 }
+        }
+
+        // The sequence reading's aggregates, in its own vocabulary and with the bool that [alg.count] and [alg.all.of]
+        // give them, where the bitset reading's four take none. That is the shape this row already has: fill takes a
+        // bool where the bitset reading splits set() and reset().
+        //
+        // Not redundant with bit_set_view(*this).size(). That asks a different question -- reinterpret these bools as a
+        // set of positions and give me its cardinality -- which happens to answer the same integer for value == true,
+        // and has no spelling at all for count(false), all(false) and none(false). Making a caller change reading to
+        // count their bools is the exact fault this library levels at the two it replaces.
+        // [design.md#two-readings-disagree]
+        //
+        // The false arms are identities rather than second implementations, and they hold on a window too. Short
+        // circuiting survives them: all(false) really does stop at the first set bit, because it is none(true).
+        // [design.md#the-sequence-aggregates]
+        [[nodiscard]] constexpr auto count(value_type value = true) const noexcept
+                -> size_type
+        {
+                auto const n = count_true();
+                return value ? n : size() - n;
+        }
+
+        [[nodiscard]] constexpr auto all (value_type value = true) const noexcept -> bool { return value ? all_true()  : none_true(); }
+        [[nodiscard]] constexpr auto any (value_type value = true) const noexcept -> bool { return value ? any_true()  : not all_true(); }
+        [[nodiscard]] constexpr auto none(value_type value = true) const noexcept -> bool { return value ? none_true() : all_true(); }
+
+        // std::mismatch's answer over the machinery the orderings are already made of: the first differing block and
+        // its xor, one countr_zero from the position, and size() where the two agree, as [alg.mismatch] answers last.
+        // 208x over std::mismatch on the same bit_vector at 2^22, GCC 15.
+        // An owner's alone, and only over storage that has the entry: a window's blocks are not its own.
+        // [design.md#the-sequence-aggregates]
+        [[nodiscard]] constexpr auto mismatch(sequence_adaptor const& other) const noexcept
+                -> size_type
+                requires (not is_window) and requires { Traits::first_difference(std::declval<bits_type const&>(), std::declval<bits_type const&>()); }
+        {
+                assert(size() == other.size());
+                // A zero width has no blocks to ask about, and answers its own width, which is nought.
+                if (empty()) {
+                        return 0UZ;
+                }
+                auto const [ index, diff ] = Traits::first_difference(storage(), other.storage());
+                using block_type = std::remove_cvref_t<decltype(diff)>;
+                constexpr auto digits = static_cast<size_type>(std::numeric_limits<block_type>::digits);
+                if (diff == block_type{}) {
+                        return size();
+                }
+                return (index * digits) + detail::bits::countr_zero(diff);
         }
 
         // Growth, [vector]'s members over storage that spells them alike, so detected on the storage rather than reconciled by the trait. [design.md#growth]
@@ -555,17 +766,69 @@ public:
         static constexpr void swap(reference x, reference y) noexcept { bool const t = x; x = y; y = t; }
 
 private:
+        // One tier each for the three aggregates above, chosen once: the trait's door over the whole, a masked word at
+        // a time over a window of ours, one position at a time over a window of anything else. [design.md#windows]
+        [[nodiscard]] constexpr auto count_true() const noexcept
+                -> size_type
+        {
+                if constexpr (not is_window) {
+                        return detail::bits::count<Traits>(storage());
+                } else if constexpr (block_readable<Traits, bits_type>) {
+                        return detail::sequence::count_words<Traits>(storage(), offset(), size());
+                } else {
+                        return detail::sequence::count_positions<Traits>(storage(), offset(), size());
+                }
+        }
+
+        [[nodiscard]] constexpr auto any_true() const noexcept
+                -> bool
+        {
+                if constexpr (not is_window) {
+                        return detail::bits::any<Traits>(storage());
+                } else if constexpr (block_readable<Traits, bits_type>) {
+                        return detail::sequence::any_words<Traits>(storage(), offset(), size());
+                } else {
+                        return detail::sequence::any_positions<Traits>(storage(), offset(), size(), true);
+                }
+        }
+
+        // Its own helper rather than not any_true(), so a storage that spells none() itself is asked in its own
+        // words; every storage adapted here does.
+        [[nodiscard]] constexpr auto none_true() const noexcept
+                -> bool
+        {
+                if constexpr (not is_window) {
+                        return detail::bits::none<Traits>(storage());
+                } else if constexpr (block_readable<Traits, bits_type>) {
+                        return not detail::sequence::any_words<Traits>(storage(), offset(), size());
+                } else {
+                        return not detail::sequence::any_positions<Traits>(storage(), offset(), size(), true);
+                }
+        }
+
+        // Not count() == size(): a clear position ends it, which is what the position tier looks for and what a word
+        // that is not all ones is.
+        [[nodiscard]] constexpr auto all_true() const noexcept
+                -> bool
+        {
+                if constexpr (not is_window) {
+                        return detail::bits::all<Traits>(storage());
+                } else if constexpr (block_readable<Traits, bits_type>) {
+                        return detail::sequence::all_words<Traits>(storage(), offset(), size());
+                } else {
+                        return not detail::sequence::any_positions<Traits>(storage(), offset(), size(), false);
+                }
+        }
+
         // The words of this window against the words of another at its own alignment, each masked to what the window holds.
         template<class Other, class F>
         constexpr void combine(this auto&& self, Other const& other, F f) noexcept
         {
                 using block_type = bits_type::block_type;
                 constexpr auto digits = bits_type::bits_per_block;
-                constexpr auto unit = block_type{1};
                 assert(self.size() == other.size());
                 for (auto k = 0UZ; k < self.size(); k += digits) {
-                        auto const count = std::ranges::min(digits, self.size() - k);
-                        auto const mask = count == digits ? static_cast<block_type>(~block_type{}) : static_cast<block_type>(static_cast<block_type>(unit << count) - unit);
+                        auto const mask = detail::sequence::word_mask<block_type>(std::ranges::min(digits, self.size() - k));
                         auto const mine   = detail::bits::word_at<Traits>(self.storage(), self.offset() + k);
                         auto const theirs = detail::bits::word_at<typename Other::traits_type>(other.storage(), other.offset() + k);
                         self.storage().set_word(self.offset() + k, f(mine, theirs), mask);
