@@ -713,36 +713,11 @@ public:
         }
 
         // Growth, [vector]'s members over storage that spells them alike, so detected on the storage rather than reconciled by the trait. [design.md#growth]
-        constexpr auto resize(size_type n)
-                -> void
-                requires can_grow
-        {
-                m_bits.resize(n);
-        }
-        constexpr auto resize(size_type n, value_type const& value)
-                -> void
-                requires can_grow
-        {
-                m_bits.resize(n, value);
-        }
-        constexpr auto clear() noexcept
-                -> void
-                requires can_grow
-        {
-                m_bits.clear();
-        }
-        constexpr auto push_back(value_type const& value)
-                -> void
-                requires can_grow
-        {
-                m_bits.push_back(value);
-        }
-        constexpr auto pop_back() noexcept
-                -> void
-                requires can_grow
-        {
-                m_bits.pop_back();
-        }
+        constexpr auto resize(size_type n)                          -> void requires can_grow { m_bits.resize(n); }
+        constexpr auto resize(size_type n, value_type const& value) -> void requires can_grow { m_bits.resize(n, value); }
+        constexpr auto clear() noexcept                             -> void requires can_grow { m_bits.clear(); }
+        constexpr auto push_back(value_type const& value)           -> void requires can_grow { m_bits.push_back(value); }
+        constexpr auto pop_back() noexcept                          -> void requires can_grow { m_bits.pop_back(); }
 
         constexpr auto emplace_back(value_type const& value)
                 -> reference
@@ -820,21 +795,9 @@ public:
         template<class Other> constexpr auto operator-=(this auto&& self, Other const& other) noexcept -> auto& requires is_window and word_writable and blittable<Other> { self.combine(other, [](auto a, auto b) { return static_cast<decltype(a)>(a & static_cast<decltype(b)>(~b)); }); return self; }
 
         // [vector.bool]'s two: flip every bit, a bulk operation like the ones above, and swap two proxies, which the proxies' own swap already does.
-        constexpr auto flip(this auto&& self) noexcept
-                -> void
-                requires (not is_window) and requires
-        {
-                self.storage().flip();
-                } { self.storage().flip();
-        }
+        constexpr auto flip(this auto&& self) noexcept -> void requires (not is_window) and requires { self.storage().flip(); } { self.storage().flip(); }
 
-        static constexpr auto swap(reference x, reference y) noexcept
-                -> void
-        {
-                bool const t = x;
-                x = y;
-                y = t;
-        }
+        static constexpr auto swap(reference x, reference y) noexcept -> void { bool const t = x; x = y; y = t; }
 
 private:
         // One tier each for the three aggregates above, chosen once: the trait's door over the whole, a masked word at

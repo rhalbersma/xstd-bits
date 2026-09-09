@@ -144,27 +144,9 @@ public:
                         return not Traits::at(m_ptr->m_bits, m_idx);
                 }
 
-                friend constexpr auto swap(reference x, reference y) noexcept
-                        -> void
-                {
-                        bool const t = x;
-                        x = y;
-                        y = t;
-                }
-                friend constexpr auto swap(reference x,     bool& y) noexcept
-                        -> void
-                {
-                        bool const t = x;
-                        x = y;
-                        y = t;
-                }
-                friend constexpr auto swap(    bool& x, reference y) noexcept
-                        -> void
-                {
-                        bool const t = x;
-                        x = y;
-                        y = t;
-                }
+                friend constexpr auto swap(reference x, reference y) noexcept -> void { bool const t = x; x = y; y = t; }
+                friend constexpr auto swap(reference x,     bool& y) noexcept -> void { bool const t = x; x = y; y = t; }
+                friend constexpr auto swap(    bool& x, reference y) noexcept -> void { bool const t = x; x = y; y = t; }
 
                 constexpr auto flip() noexcept
                         -> reference&

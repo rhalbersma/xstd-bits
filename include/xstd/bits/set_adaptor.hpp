@@ -474,13 +474,7 @@ public:
                 Traits::unchecked_assign(self.storage(), x, not Traits::at(self.storage(), x));
         }
 
-        constexpr auto complement(this auto&& self) noexcept
-                -> void
-                requires requires
-        {
-                self.storage().flip();
-                } { self.storage().flip();
-        }
+        constexpr auto complement(this auto&& self) noexcept -> void requires requires { self.storage().flip(); } { self.storage().flip(); }
 
         // Bulk, on the storage's own spelling: what every storage agrees on is required of it, not reconciled. [design.md#what-the-trait-reconciles]
         // Two run-time widths that differ go element-wise instead, the storages' own being equal-width operations; the two that insert may then allocate. [design.md#width-is-capacity]
