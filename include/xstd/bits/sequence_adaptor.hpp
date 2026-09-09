@@ -194,8 +194,8 @@ template<class Traits, class Bits>
 template<class S, class Block>
 concept blit_source =
         requires { typename S::subspan_type; typename S::traits_type; typename S::traits_type::bits_type; } and
-        requires (S::traits_type::bits_type const& c) {
-                { S::traits_type::block(c, 0UZ) } -> std::same_as<Block>;
+        requires (S::traits_type::bits_type const& c, std::size_t i) {
+                { S::traits_type::block(c, i) } -> std::same_as<Block>;
                 { S::traits_type::num_blocks(c) } -> std::convertible_to<std::size_t>;
         };
 
@@ -210,7 +210,7 @@ class sequence_adaptor : public std::conditional_t<owns(Own), detail::bits::allo
         using bits_type = std::remove_const_t<Bits>;
 
         // Growth is the owner's over storage that grows: a view must never resize what it does not own. [design.md#growth]
-        static constexpr bool can_grow = is_owner and not static_bit_extent<Traits, bits_type> and requires (bits_type& b) { b.resize(0UZ, true); b.push_back(true); b.pop_back(); b.clear(); };
+        static constexpr bool can_grow = is_owner and not static_bit_extent<Traits, bits_type> and requires (bits_type& b, std::size_t n, bool value) { b.resize(n, value); b.push_back(value); b.pop_back(); b.clear(); };
 
         // A window is what std::span stores, the pointer's role split over a pointer and a position because bits are not addressable: the iterator's two fields and a size. [design.md#windows]
         struct window
@@ -265,7 +265,7 @@ class sequence_adaptor : public std::conditional_t<owns(Own), detail::bits::allo
         static constexpr bool blittable = blit_source<S, typename bits_type::block_type>;
 
         // A storage that takes a masked word at any position: ours, which is what a window's bulk operators write through.
-        static constexpr bool word_writable = requires (bits_type& b, bits_type::block_type w) { b.set_word(0UZ, w, w); };
+        static constexpr bool word_writable = requires (bits_type& b, std::size_t pos, bits_type::block_type w) { b.set_word(pos, w, w); };
 
         // Either reading's view refers into this owner's storage, and nothing else outside does. [design.md#views-over-owners]
         template<class B, ownership O, bit_storage<B> T>         friend class set_adaptor;
@@ -579,11 +579,11 @@ public:
         // fill: the trait's entry over the whole, a masked word at a time over a window of ours, one position at a time over a window of anything else. [design.md#windows]
         constexpr auto fill(this auto&& self, value_type const& u) noexcept
                 -> void
-                requires (is_window and requires { Traits::unchecked_assign(self.storage(), 0UZ, u); }) or (not is_window and requires { Traits::fill(self.storage(), u); })
+                requires (is_window and requires (std::size_t i) { Traits::unchecked_assign(self.storage(), i, u); }) or (not is_window and requires { Traits::fill(self.storage(), u); })
         {
                 if constexpr (not is_window) {
                         Traits::fill(self.storage(), u);
-                } else if constexpr (requires { self.storage().set(0UZ, 0UZ, u); }) {
+                } else if constexpr (requires { self.storage().set(self.offset(), self.size(), u); }) {
                         self.storage().set(self.offset(), self.size(), u);
                 } else {
                         for (auto i = self.offset(), last = self.offset() + self.size(); i < last; ++i) {
@@ -877,7 +877,7 @@ private:
         {
                 constexpr auto digits = bits_type::bits_per_block;
                 auto const old = size();
-                if constexpr (requires (bits_type& b) { b.reserve(0UZ); }) {
+                if constexpr (requires (bits_type& b, std::size_t n) { b.reserve(n); }) {
                         m_bits.reserve(old + count);
                 }
                 for (auto pos = first; pos < first + count; pos += digits) {
@@ -893,7 +893,7 @@ private:
         {
                 using block_type = bits_type::block_type;
                 constexpr auto digits = bits_type::bits_per_block;
-                if constexpr (std::ranges::sized_range<R> and requires (bits_type& b) { b.reserve(0UZ); }) {
+                if constexpr (std::ranges::sized_range<R> and requires (bits_type& b, std::size_t n) { b.reserve(n); }) {
                         m_bits.reserve(size() + std::ranges::size(rg));
                 }
                 auto word = block_type{};

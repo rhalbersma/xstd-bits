@@ -293,7 +293,7 @@ public:
         constexpr auto for_each(this auto&& self, F f)
                 -> void
         {
-                if constexpr (requires { Traits::block(self.storage(), 0UZ); Traits::num_blocks(self.storage()); }) {
+                if constexpr (requires (std::size_t i) { Traits::block(self.storage(), i); Traits::num_blocks(self.storage()); }) {
                         detail::set::walk_blocks_ascending<Traits>(self.storage(), f);
                 } else {
                         detail::set::walk_positions_ascending(self, f);
@@ -307,7 +307,7 @@ public:
         constexpr auto for_each_reverse(this auto&& self, F f)
                 -> void
         {
-                if constexpr (requires { Traits::block(self.storage(), 0UZ); Traits::num_blocks(self.storage()); }) {
+                if constexpr (requires (std::size_t i) { Traits::block(self.storage(), i); Traits::num_blocks(self.storage()); }) {
                         detail::set::walk_blocks_descending<Traits>(self.storage(), f);
                 } else {
                         detail::set::walk_positions_descending(self, f);
@@ -343,7 +343,7 @@ public:
         template<class... Args>
         constexpr auto emplace(this auto&& self, Args&&... args)
                 -> std::pair<iterator, bool>
-                requires (sizeof...(args) == 1) and requires { Traits::insert(self.storage(), 0UZ); }
+                requires (sizeof...(args) == 1) and requires { Traits::insert(self.storage(), value_type(std::forward<Args>(args)...)); }
         {
                 return self.do_insert(value_type(std::forward<Args>(args)...));
         }
@@ -351,7 +351,7 @@ public:
         template<class... Args>
         constexpr auto emplace_hint(this auto&& self, const_iterator position, Args&&... args)
                 -> iterator
-                requires (sizeof...(args) == 1) and requires { Traits::insert(self.storage(), 0UZ); }
+                requires (sizeof...(args) == 1) and requires { Traits::insert(self.storage(), value_type(std::forward<Args>(args)...)); }
         {
                 return self.do_insert(position, value_type(std::forward<Args>(args)...));
         }
@@ -363,7 +363,7 @@ public:
         template<std::input_iterator I, std::sentinel_for<I> S>
         constexpr auto insert(this auto&& self, I first, S last)
                 -> void
-                requires std::constructible_from<value_type, std::iter_reference_t<I>> and requires { Traits::insert(self.storage(), 0UZ); }
+                requires std::constructible_from<value_type, std::iter_reference_t<I>> and requires { Traits::insert(self.storage(), static_cast<value_type>(*first)); }
         {
                 for (; first != last; ++first) {
                         Traits::insert(self.storage(), static_cast<value_type>(*first));
@@ -374,13 +374,13 @@ public:
         template<std::ranges::input_range R>
         constexpr auto insert_range(this auto&& self, R&& rg)
                 -> void
-                requires std::constructible_from<value_type, std::ranges::range_reference_t<R>> and requires { Traits::insert(self.storage(), 0UZ); }
+                requires std::constructible_from<value_type, std::ranges::range_reference_t<R>> and requires { Traits::insert(self.storage(), static_cast<value_type>(*std::ranges::begin(rg))); }
         {
                 if constexpr (requires { self |= rg; }) {
                         // Tier one: another set over the same storage, which is a union and already knows how to do
                         // one block-wise, mismatched widths included.
                         self |= rg;
-                } else if constexpr (detail::set::is_consecutive<std::remove_cvref_t<R>> and requires { self.storage().set(0UZ, 0UZ, true); }) {
+                } else if constexpr (detail::set::is_consecutive<std::remove_cvref_t<R>> and requires (std::size_t pos, std::size_t len) { self.storage().set(pos, len, true); }) {
                         // Tier two: consecutive positions, so the first and last blocks are masked and everything
                         // between them is written whole, which is what the ranged set does.
                         if (not std::ranges::empty(rg)) {
@@ -398,7 +398,7 @@ public:
 
         constexpr auto insert(this auto&& self, std::initializer_list<value_type> ilist)
                 -> void
-                requires requires { Traits::insert(self.storage(), 0UZ); }
+                requires requires { Traits::insert(self.storage(), *ilist.begin()); }
         {
                 self.insert(ilist.begin(), ilist.end());
         }
@@ -413,7 +413,7 @@ public:
         // The successor first: exclusive_find_next never reads the position it steps from, but the order costs nothing and says so.
         constexpr auto erase(this auto&& self, const_iterator position) noexcept
                 -> iterator
-                requires requires { Traits::unchecked_assign(self.storage(), 0UZ, false); }
+                requires requires { Traits::unchecked_assign(self.storage(), *position, false); }
         {
                 assert(position != self.end());
                 auto nrv = position;
@@ -425,7 +425,7 @@ public:
         // Total over key_type, as std::set's is: an absent key is the no-op returning zero. [design.md#total-lookups-on-the-container]
         constexpr auto erase(this auto&& self, key_type const& x) noexcept
                 -> size_type
-                requires requires { Traits::unchecked_assign(self.storage(), 0UZ, false); }
+                requires requires { Traits::unchecked_assign(self.storage(), x, false); }
         {
                 if (not self.contains(x)) {
                         return 0UZ;
@@ -436,7 +436,7 @@ public:
 
         constexpr auto erase(this auto&& self, const_iterator first, const_iterator last) noexcept
                 -> iterator
-                requires requires { Traits::unchecked_assign(self.storage(), 0UZ, false); }
+                requires requires { Traits::unchecked_assign(self.storage(), *first, false); }
         {
                 while (first != last) {
                         Traits::unchecked_assign(self.storage(), *first++, false);

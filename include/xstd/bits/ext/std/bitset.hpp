@@ -78,14 +78,14 @@ struct bit_traits<std::bitset<N>>
         // Above that, the reserved word read, constrained and not guarded on the platform: without _Getword block_readable goes unsatisfied and the walks stay element-wise. [design.md#detection-by-absence]
         [[nodiscard]] static constexpr auto num_blocks(bits_type const& c) noexcept
                 -> std::size_t
-                requires (N > ullong_digits) and requires { { c._Getword(0UZ) } -> xstd::unsigned_integer; }
+                requires (N > ullong_digits) and requires (std::size_t i) { { c._Getword(i) } -> xstd::unsigned_integer; }
         {
                 constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<decltype(c._Getword(0UZ))>::digits);
                 return (N + digits - 1UZ) / digits;
         }
 
         [[nodiscard]] static constexpr auto block(bits_type const& c, std::size_t i) noexcept
-                requires (N > ullong_digits) and requires { { c._Getword(0UZ) } -> xstd::unsigned_integer; }
+                requires (N > ullong_digits) and requires { { c._Getword(i) } -> xstd::unsigned_integer; }
         {
                 return c._Getword(i);
         }

@@ -704,7 +704,7 @@ public:
                 -> void
                 requires (not has_static_size)
         {
-                if constexpr (std::forward_iterator<I> and requires (Blocks& b) { b.reserve(0UZ); }) {
+                if constexpr (std::forward_iterator<I> and requires (Blocks& b, std::size_t n) { b.reserve(n); }) {
                         reserve(size() + (static_cast<std::size_t>(std::ranges::distance(first, last)) * bits_per_block));
                 }
                 for (; first != last; ++first) {
@@ -715,7 +715,7 @@ public:
         // In bits, where the blocks have the member: vector and inplace_vector do, array does not.
         constexpr auto reserve(std::size_t n)
                 -> void
-                requires (not has_static_size) and requires (Blocks& b) { b.reserve(0UZ); }
+                requires (not has_static_size) and requires (Blocks& b) { b.reserve(blocks_for(n)); }
         {
                 m_blocks.reserve(blocks_for(n));
         }
