@@ -1251,10 +1251,10 @@ the bitset offers. [a-strict-extension](#a-strict-extension)
 
 ### what-a-view-costs
 
-Measured at `-O2` on the same backend `block_sequence` in every row -- an owner, a view holding a pointer to
-that storage, and a view over the `bitset_adaptor` wrapping it -- so the two layers price separately. Three
-independent runs, reported as a range rather than one run's medians, because one row is not stable and a
-single run would have hidden that:
+Measured on the same backend `block_sequence` in every row -- an owner, a view holding a pointer to that
+storage, and a view over the `bitset_adaptor` wrapping it -- so the two layers price separately. `benchmark/`
+builds at `-O3 -march=native`, which is what these numbers are; an earlier version of this section said `-O2`,
+which was never true of any build in the tree.
 
 | operation | bits | pointer costs | trait costs |
 | :--- | ---: | ---: | ---: |
@@ -1267,47 +1267,92 @@ single run would have hidden that:
 
 Run-to-run noise was ±0.5 to ±3%, so a figure inside a couple of percent is a zero.
 
-**The trait layer is free.** Every figure in that column sits inside the noise band with no consistent sign,
-so [a-bitset-reads-as-its-storage](#a-bitset-reads-as-its-storage) costs nothing at run time: a
-`bit_set_view<xstd::bitset<N>>` is as fast as one over the raw `block_array`, and the twenty forwarded
-entries inline away.
+**The trait layer is free, and not merely inside the noise.** Under callgrind, at 1024 bits, the view over a
+`bitset_adaptor` and the view over the raw `block_array` retire **6764 instructions per pass each**, equal to
+the digit, with the same 422 data reads, 1265 branches and 17 simulated mispredicts. So
+[a-bitset-reads-as-its-storage](#a-bitset-reads-as-its-storage) costs nothing at run time: the twenty
+forwarded entries inline away completely.
 
-**The pointer costs about ten percent, on set iteration only, and the cause is not known.** The effect is
-real: +7 to +13% across four runs against a percent of variation, and it survives every explanation tried so
-far. `count` does not show it because a straight-line word loop hoists the base address once and amortizes
-it; a random read does not show it because the LCG dominates.
+**The pointer costs about eight percent on set iteration, and the cause is one `lea`.** Instruction counts,
+differenced between two fixed iteration counts so startup cancels, at 1024 bits under GCC 15:
 
-What it is *not*, each ruled out by measurement rather than argument:
+| variant | Ir/pass | data reads | branches | mispredicts |
+| :--- | ---: | ---: | ---: | ---: |
+| owner | 6273 | 420 | 1250 | 11 |
+| owner twin | 6273 | 420 | 1250 | 11 |
+| view of storage | 6764 | 422 | 1265 | 17 |
+| view of bitset | 6764 | 422 | 1265 | 17 |
 
-| hypothesis | test | result |
-| :--- | :--- | :--- |
-| extra work in the loop | normalized asm diff of the two isolated functions | one instruction differs, `movq (REG), REG`, in the **prologue** -- the pointer is hoisted |
-| code layout | a byte-identical twin of the owner case, under another name | twin vs owner ±1.5%, so placement is worth about a percent |
-| data alignment | `alignas(64)` on every subject | gap holds at +7…+13% |
-| a spill in the hot loop | innermost loop of the real benchmark object | 6 instructions, zero stack traffic, in both |
-| a different amount of work | element count and checksum | 410 elements, sum 209305, all three variants |
++491 instructions is +7.8% against +7.0% of measured time, so the gap is **more work at essentially constant
+IPC** -- not a stall, not a misprediction. And 491 over the 410 set positions in the pass is one extra
+instruction per step, so it is in the per-step work, not in setup. The hot block confirms it: it executes
+492,000 times for 1200 passes, which is exactly 410 per pass, and the owner's copy of it is **eleven**
+instructions where the view's is **twelve**.
 
-The one lead left is that the real benchmark functions differ by seven instructions and a 32-byte-larger
-frame with an extra `push`, all of it **outside** the innermost loop -- so in the per-outer-iteration setup
-that builds `begin()` and `end()`. At roughly 410 inner steps per outer iteration that should be a fifth of a
-percent, not ten, which is why it is recorded as a lead and not as an answer. Distinguishing "more work" from
-"same work, worse predicted" wants `perf stat` on instructions retired against branch misses, which has not
-been run.
+The extra one is address arithmetic. GCC reaches the owner's blocks, which sit in the frame of the function
+running the loop, with the address folded into the load's own operand:
 
-An earlier version of this section asserted that the indirect load per block was "not hoisted out of the
-iterator's per-step work". The assembly refutes that, and it is recorded here because a plausible mechanism
-stated without checking the disassembly is exactly the kind of claim this file exists to prevent.
+```asm
+shrx  %rcx,0x10(%rsp,%rax,8),%rdx    ; owner: base+index*8+disp, one instruction
+```
 
-The guidance is unchanged and does not depend on the cause: own the bits when you iterate them hot, and
-reach for a view when the bits are someone else's -- where the alternative is not a container but no reading
-at all.
+and reaches a view's blocks, which are behind a pointer, in two:
 
-**One instantiation is bimodal and is not evidence.** `sequence count` at 4096 bits measured the pointer at
-+24.3%, -3.2% and +21.8% across the three runs, with the trait column swinging the opposite way each time to
-land the third variant back on the owner's time. Only the middle variant moves, and between two stable
-values. Reporting the first run alone would have turned it into a finding; it is a reminder that one run of a
-microbenchmark is an anecdote. (It was first attributed to code layout, before the twin control above showed
-layout is worth about a percent here -- so that too is unexplained rather than explained.)
+```asm
+lea   (%r12,%r8,8),%r10              ; view under GCC 15
+shrx  %rcx,(%r10),%rdx
+```
+
+**That fold is legal and GCC just does not take it.** `shrx`'s memory operand is a full ModRM+SIB address, so
+`base+index*8` is encodable with a register base exactly as it is with `%rsp`; clang emits precisely that:
+
+```asm
+shrx  %rsi,(%r12,%rdx,8),%rdi        ; view under clang 22, same operands, one instruction
+```
+
+Which is why the whole gap is compiler-specific. clang 22 retires **5829 instructions per pass for all three
+variants**, equal to the digit, and measures owner 1573 ns, twin 1564, view of storage 1571, view of bitset
+1548 -- a spread of ±1.6%, no gap at all.
+
+**How much of the eight percent is a view, and how much is GCC.** The benchmark views a *local*, and clang
+propagates that known frame address through the view's pointer member into the addressing mode, erasing the
+indirection the row means to price. A view exists for bits that live somewhere else, so the honest variant
+holds its blocks on the heap behind an asm-laundered pointer the optimizer cannot trace:
+
+| | owner | view of a local | view of opaque blocks |
+| :--- | ---: | ---: | ---: |
+| GCC 15 | 1565 ns | 1691 ns (+8.0%) | 1698 ns (+8.5%) |
+| clang 22 | 1546 ns | 1549 ns (+0.2%) | 1592 ns (+2.9%) |
+
+So a view over bits the compiler cannot trace costs about **three percent**, which is what the indirection is
+actually worth, and GCC adds **five more points** by not folding the address. Under GCC the cost does not
+depend on traceability at all -- the missed fold is charged either way.
+
+The guidance narrows accordingly, and it is no longer a property of views in general: own the bits when you
+iterate them hot *under GCC*; the abstraction itself is worth about three percent, and a view is still the
+right answer when the bits are someone else's, where the alternative is not a container but no reading at
+all.
+
+**Two earlier conclusions in this section were wrong, both from measuring the wrong program.** It first
+asserted that "the indirect load per block is not hoisted out of the iterator's per-step work", from no
+disassembly at all. It then replaced that with the opposite -- that the pointer *is* hoisted and only the
+prologue differs -- from an asm diff of small isolated functions written to stand in for the benchmark. Those
+stand-ins are not the benchmark: GCC compiles them to **15,824,004 instructions for every variant**, identical
+to the digit, because a subject that is a local of a tiny function has its address propagated the way clang
+propagates it above. The stand-in had optimized away the thing under test, and "extra work in the loop" was
+struck off the list on its evidence. The benchmark's own objects say the opposite.
+
+The same defect sank two harnesses written while chasing this: both passed the subject to one shared timing
+function as a `Subject const&`, which routes the **owner** through a pointer as well, makes every variant
+indirect, and reports no gap. A subject has to be a local of the function that runs the loop, as the
+benchmark's variants are, or the harness measures nothing.
+
+What is left over is small and unexplained: 491 extra instructions where the per-step `lea` accounts for 410,
+so about 80 sit in the block-advance path and the prologue, and `sequence count` at 4096 bits is bimodal --
++24.3%, -3.2% and +21.8% across three runs, with the trait column swinging the opposite way each time to land
+the third variant back on the owner's time. Only the middle variant moves, and between two stable values.
+That was first attributed to code layout, before a byte-identical twin of the owner case measured layout at
+about a percent here, so it stays recorded rather than explained. One run would have made it a finding.
 
 Two things about the measurement itself, because both were wrong on the first attempt. **Every subject goes
 through `DoNotOptimize` before the loop, owners included.** Without that an owner is a local the compiler
