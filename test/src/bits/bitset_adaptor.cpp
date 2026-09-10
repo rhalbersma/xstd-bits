@@ -415,4 +415,43 @@ BOOST_AUTO_TEST_CASE(TheTextConstructorsRejectWhatStdBitsetRejects)
         BOOST_CHECK_THROW(static_cast<void>(Ours(std::string("101"), 4)), std::out_of_range);
 }
 
+// One bit_traits specialization on bitset_adaptor gives all three bitsets the direct view spelling at once.
+// [design.md#a-bitset-reads-as-its-storage]
+BOOST_AUTO_TEST_CASE(ABitsetReadsAsItsStorage)
+{
+        using B = xstd::bitset<100>;
+        using D = xstd::basic_dynamic_bitset<std::size_t>;
+
+        // The three required entries, so a view may name the bitset itself.
+        static_assert(xstd::bit_storage<xstd::bit_traits<B>, B>);
+        static_assert(xstd::bit_storage<xstd::bit_traits<D>, D>);
+
+        // And the optional block entries, which is the point: a forwarder relaying only the required three would
+        // compile and be slower, every word-parallel walk falling back to one position at a time.
+        static_assert(xstd::block_readable<xstd::bit_traits<B>, B>);
+        static_assert(xstd::block_readable<xstd::bit_traits<D>, D>);
+
+        // Deduction is unchanged: over an owner a view still binds the storage it wraps, so the direct spelling and
+        // the deduced one coexist rather than tie.
+        static_assert(std::same_as<decltype(xstd::bit_set_view(std::declval<B&>())), xstd::bit_set_view<xstd::block_array<std::size_t, 100>>>);
+        static_assert(std::same_as<decltype(xstd::bit_span(std::declval<B&>())),     xstd::bit_span<xstd::block_array<std::size_t, 100>>>);
+
+        // Naming the bitset changes how a view is spelled, not what the bitset offers.
+        static_assert(not std::ranges::range<B>);
+
+        auto bs = B();
+        bs.set(3);
+        bs.set(41);
+
+        auto const sv = xstd::bit_set_view<B>(bs);
+        auto const sp = xstd::bit_span<B>(bs);
+        BOOST_CHECK_EQUAL(std::ranges::distance(sv), 2);
+        BOOST_CHECK_EQUAL(std::ranges::distance(sp), 100);
+        BOOST_CHECK(std::ranges::bidirectional_range<decltype(sv)>);
+        BOOST_CHECK(std::ranges::random_access_range<decltype(sp)>);
+
+        // The same positions the deduced view reports, through the other spelling.
+        BOOST_CHECK(std::ranges::equal(sv, xstd::bit_set_view(bs)));
+}
+
 BOOST_AUTO_TEST_SUITE_END()

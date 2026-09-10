@@ -1208,6 +1208,47 @@ declaration.
 "above the body" to put anything on, and `modernize-use-trailing-return-type` requires the `-> void` there
 anyway. The convention is about named functions.
 
+### a-bitset-reads-as-its-storage
+
+A `bitset` has a `bit_traits` of its own, so a view can name it: `bit_set_view<xstd::bitset<N>>` and
+`bit_span<xstd::bitset<N>>` are spellings, not errors. **One** specialization does it, on `bitset_adaptor`,
+because `xstd::bitset<N>`, `xstd::inplace_bitset<N>` and `xstd::dynamic_bitset` are all aliases of that one
+template over a different `block_sequence` -- so all three, and every `basic_` form, arrive together.
+
+This supersedes the reasoning recorded when `ext/xstd` was deleted, which concluded that a bitset needs no
+trait because it already joins through `owned_storage`. That is still how a view *deduces*: over an owner,
+`bit_set_view(bs)` binds the storage the owner wraps, and the deduced type is
+`bit_set_view<block_array<std::size_t, N>>`. What was missing is that the deduced spelling is the only one a
+reader can write down, and it names an implementation detail -- `block_array` is not in the landscape tables
+and should not have to be. Naming the bitset is what a reader means.
+
+The two coexist rather than compete, and one line keeps them from tying. The guide for a plain storage was
+unconstrained, viable for anything; it stayed out of the way for an owner only because
+`bit_traits<Owner>` was incomplete, which is precisely what this change undoes. Completing it makes both
+guides viable and `bit_set_view(bs)` **ambiguous**, so the storage guide is now constrained to non-owners:
+
+```cpp
+template<class Bits>
+        requires (not requires { typename owned_storage<std::remove_const_t<Bits>>::bits_type; })
+bit_set_view(Bits&) -> bit_set_view<Bits>;
+```
+
+The forwarding relays all twenty of the storage trait's entries, each behind its own `requires`, because
+absence is the mechanism the tiers select on ([detection-by-absence](#detection-by-absence)). A forwarder
+that relayed only the three required entries would compile and be **slower**: without `num_blocks` and
+`block` every word-parallel walk falls back to one position at a time, and nothing would have said so. The
+test asserts `block_readable` through the trait, not merely `bit_storage`, so a dropped entry fails rather
+than degrades.
+
+Scope stops at `bitset_adaptor`. A generic trait over every owner was tried first and rejected: it would
+complete `bit_traits` for `set_adaptor` and `sequence_adaptor` too, which is where the tier probes and the
+view constraints do their work, and it buys nothing -- a set view of a set is not a spelling anyone wants.
+The narrow specialization is also the one that matches the convention `ownership.hpp` already states, that a
+trait sits beside the thing it adapts.
+
+`xstd::bitset` still has no iterators and is still not a range; this changes how a view is *named*, not what
+the bitset offers. [a-strict-extension](#a-strict-extension)
+
 ### swap-goes-through-adl
 
 `std::ranges::swap` reaches a type's own `swap` by **ADL on a free function**, and a member `swap` is not
