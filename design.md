@@ -1272,22 +1272,42 @@ so [a-bitset-reads-as-its-storage](#a-bitset-reads-as-its-storage) costs nothing
 `bit_set_view<xstd::bitset<N>>` is as fast as one over the raw `block_array`, and the twenty forwarded
 entries inline away.
 
-**The pointer costs about ten percent, on set iteration only.** That is a real effect, not noise: it
-reproduced across two independent runs (+9.6/+11.4/+12.8% and +9.6/+8.5/+11.1%) against half a percent of
-variation. `count` does not show it because a straight-line word loop hoists the base address once and
-amortizes it over every block; a random read does not show it because the LCG dominates. Iteration is a long
-dependent chain of `find_next` calls, and there the indirect load per block is apparently not hoisted out of
-the iterator's per-step work.
+**The pointer costs about ten percent, on set iteration only, and the cause is not known.** The effect is
+real: +7 to +13% across four runs against a percent of variation, and it survives every explanation tried so
+far. `count` does not show it because a straight-line word loop hoists the base address once and amortizes
+it; a random read does not show it because the LCG dominates.
 
-So the guidance is the obvious one, now with a number on it: own the bits when you iterate them hot, and
+What it is *not*, each ruled out by measurement rather than argument:
+
+| hypothesis | test | result |
+| :--- | :--- | :--- |
+| extra work in the loop | normalized asm diff of the two isolated functions | one instruction differs, `movq (REG), REG`, in the **prologue** -- the pointer is hoisted |
+| code layout | a byte-identical twin of the owner case, under another name | twin vs owner ±1.5%, so placement is worth about a percent |
+| data alignment | `alignas(64)` on every subject | gap holds at +7…+13% |
+| a spill in the hot loop | innermost loop of the real benchmark object | 6 instructions, zero stack traffic, in both |
+| a different amount of work | element count and checksum | 410 elements, sum 209305, all three variants |
+
+The one lead left is that the real benchmark functions differ by seven instructions and a 32-byte-larger
+frame with an extra `push`, all of it **outside** the innermost loop -- so in the per-outer-iteration setup
+that builds `begin()` and `end()`. At roughly 410 inner steps per outer iteration that should be a fifth of a
+percent, not ten, which is why it is recorded as a lead and not as an answer. Distinguishing "more work" from
+"same work, worse predicted" wants `perf stat` on instructions retired against branch misses, which has not
+been run.
+
+An earlier version of this section asserted that the indirect load per block was "not hoisted out of the
+iterator's per-step work". The assembly refutes that, and it is recorded here because a plausible mechanism
+stated without checking the disassembly is exactly the kind of claim this file exists to prevent.
+
+The guidance is unchanged and does not depend on the cause: own the bits when you iterate them hot, and
 reach for a view when the bits are someone else's -- where the alternative is not a container but no reading
 at all.
 
 **One instantiation is bimodal and is not evidence.** `sequence count` at 4096 bits measured the pointer at
 +24.3%, -3.2% and +21.8% across the three runs, with the trait column swinging the opposite way each time to
-land the third variant back on the owner's time. Only the middle variant moves, and it moves between two
-stable values, which is what code layout does and not what an indirection does. Reporting the first run alone
-would have turned it into a finding; it is a reminder that one run of a microbenchmark is an anecdote.
+land the third variant back on the owner's time. Only the middle variant moves, and between two stable
+values. Reporting the first run alone would have turned it into a finding; it is a reminder that one run of a
+microbenchmark is an anecdote. (It was first attributed to code layout, before the twin control above showed
+layout is worth about a percent here -- so that too is unexplained rather than explained.)
 
 Two things about the measurement itself, because both were wrong on the first attempt. **Every subject goes
 through `DoNotOptimize` before the loop, owners included.** Without that an owner is a local the compiler

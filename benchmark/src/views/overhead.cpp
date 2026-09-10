@@ -80,6 +80,23 @@ auto set_iterate_owner(benchmark::State& state)
         }
 }
 
+// The control: byte-identical to set_iterate_owner above. Any gap between the two is not a difference in
+// what the code does, because there is none -- it is where the loop landed. [design.md#what-a-view-costs]
+template<std::size_t N>
+auto set_iterate_owner_twin(benchmark::State& state)
+        -> void
+{
+        auto s = filled<N, xstd::bit_static_set<N>>();
+        benchmark::DoNotOptimize(&s);
+        for (auto _ : state) {
+                auto sum = 0UZ;
+                for (auto const pos : s) {
+                        sum += pos;
+                }
+                benchmark::DoNotOptimize(sum);
+        }
+}
+
 template<std::size_t N>
 auto set_iterate_view_of_storage(benchmark::State& state)
         -> void
@@ -213,6 +230,7 @@ auto sequence_read_view_of_bitset(benchmark::State& state)
         BENCHMARK_TEMPLATE(fn, 256UZ * bits_per_word)
 
 LADDER(set_iterate_owner);
+LADDER(set_iterate_owner_twin);
 LADDER(set_iterate_view_of_storage);
 LADDER(set_iterate_view_of_bitset);
 
