@@ -19,7 +19,7 @@
 [![Coverage](https://codecov.io/gh/rhalbersma/xstd-bits/branch/main/graph/badge.svg)](https://codecov.io/gh/rhalbersma/xstd-bits)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/rhalbersma/xstd-bits/badge)](https://scorecard.dev/viewer/?uri=github.com/rhalbersma/xstd-bits)
 
-xstd-bits is a modern and opinionated reimagining of `std::bitset<N>`, keeping what time has proven to be effective, and throwing out what is not. It is **nine containers**: three readings of a block of bits — an ordered set of `int`, a sequence of `bool`, and the `bitset` that deliberately offers both — over three storages: a static width, a run-time width over static capacity, and a dynamic one.
+xstd-bits is a modern and opinionated reimagining of `std::bitset<N>`, keeping what time has proven to be effective, and throwing out what is not. It is **nine containers**: three readings of a block of bits — an ordered set of `int`, a sequence of `bool`, and the `bitset` that deliberately offers both — over three storages, which differ in whether size and capacity are static or dynamic: both static, a dynamic size within a static capacity, and both dynamic.
 
 Each does less work than `std::bitset` (e.g. no bounds-checking and no throwing of `out_of_range` exceptions) yet offers more (e.g. full `constexpr`-ness and bidirectional iterators over individual 1-bits). This enables **bit-twiddling with set-like syntax** (identical to `std::set<int>`), typically leading to cleaner, more expressive code that seamlessly interacts with the rest of the Standard Library.
 
@@ -37,7 +37,7 @@ The above quote is from the first C++ Standard Committee proposal on what would 
 1. a sequence of `bool` versus an ordered set of `int`;
 2. fixed-size versus variable-size storage.
 
-Thirty years of use have added a value to each axis. The first choice has a third answer that the quote itself takes for granted — a `bitset` that offers **both** readings on purpose, which is what `std::bitset` and `boost::dynamic_bitset` actually are. And the second is not a dichotomy but a spectrum with a middle: a **run-time width over static capacity**, which allocates nothing and yet resizes, and which C++26's `std::inplace_vector` finally makes expressible.
+Thirty years of use have added a value to each axis. The first choice has a third answer that the quote itself takes for granted — a `bitset` that offers **both** readings on purpose, which is what `std::bitset` and `boost::dynamic_bitset` actually are. And the second is not one choice but two, because **size** and **capacity** need not move together: fixing both gives `std::bitset`, letting both vary gives `std::vector<bool>`, and the pairing the quote had no word for is a **dynamic size over static capacity**, which allocates nothing and yet resizes, and which C++26's `std::inplace_vector` finally makes expressible. Both tables below are laid out on that one axis, so they read cell for cell.
 
 A `bitset` should also optimize for both space (using contiguous storage) and time (using CPU-intrinsics for data-parallelism) wherever possible.
 
@@ -45,10 +45,10 @@ A `bitset` should also optimize for both space (using contiguous storage) and ti
 
 The C++ Standard Library and Boost provide the following optimized data structures in the landscape spanned by the aforementioned design decisions and optimization directives, as shown in the table below.
 
-|                          | fixed-size        | variable-size |
-| :--------------------    | :---------        | :------------ |
-| **sequence of `bool`**   | `std::bitset<N>`  | `std::vector<bool, Allocator>` <br> `boost::dynamic_bitset<Block, Allocator>` |
-| **ordered set of `int`** | `std::bitset<N>`  | `boost::dynamic_bitset<Block, Allocator>` (dense) <br> `std:flat_set<int, Compare, Allocator>` (sparse) |
+|                          | static size and capacity | dynamic size and capacity |
+| :----------------------- | :----------------------- | :------------------------ |
+| **ordered set of `int`** | `std::bitset<N>`         | `boost::dynamic_bitset<>` (dense) <br> `std::flat_set<int>` (sparse) |
+| **sequence of `bool`**   | `std::bitset<N>`         | `std::vector<bool>` <br> `boost::dynamic_bitset<>` |
 
 Notes:
 
@@ -56,18 +56,19 @@ Notes:
 2. It [has been known](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n2130.html#96) for over two decades that providing a variable-size sequence of `bool` through specializing `std::vector<bool>` was an unfortunate design choice.
 3. For ordered sets, there is a further design choice whether to optimize for **dense** sets or for **sparse** sets. Dense sets require a single bit per **potential** element, whereas sparse sets require a single `int` per **actual** element. For 32-bit integers, if less (more) than 1 in 32 elements (3.125%) are actually present in a set, a dense representation will be less (more) compact than a sparse representation.
 4. Only `boost::dynamic_bitset` allows storage configuration through its `Block` template parameter (defaulted to `unsigned long`).
+5. The `Block`, `Allocator` and `Compare` parameters are omitted from both tables. They configure a storage; they do not place a container in the landscape, and spelling them out obscured the one axis the columns are measuring.
 
 ## A reimagined `bit` landscape
 
 The aforementioned issues with the current `bit` landscape can be resolved by implementing a single-purpose container for each cell of the design space. With three readings and three storages, that is nine — **and this library implements all nine**.
 
-|                              | static width               | run-time width, static capacity | dynamic                  |
-| :--------------------------- | :------------------------- | :------------------------------ | :----------------------- |
-| **ordered set of `int`**     | `xstd::bit_static_set<N>`  | `xstd::bit_inplace_set<N>`      | `xstd::bit_set`          |
-| **sequence of `bool`**       | `xstd::bit_array<N>`       | `xstd::bit_inplace_vector<N>`   | `xstd::bit_vector`       |
-| **both readings (`bitset`)** | `xstd::bitset<N>`          | `xstd::inplace_bitset<N>`       | `xstd::dynamic_bitset`   |
+|                              | static size and capacity  | dynamic size, static capacity | dynamic size and capacity |
+| :--------------------------- | :------------------------ | :---------------------------- | :------------------------ |
+| **ordered set of `int`**     | `xstd::bit_static_set<N>` | `xstd::bit_inplace_set<N>`    | `xstd::bit_set`           |
+| **sequence of `bool`**       | `xstd::bit_array<N>`      | `xstd::bit_inplace_vector<N>` | `xstd::bit_vector`        |
+| **both readings (`bitset`)** | `xstd::bitset<N>`         | `xstd::inplace_bitset<N>`     | `xstd::dynamic_bitset`    |
 
-The columns are the three storages the one underlying vehicle is parameterized on — `std::array`, `std::inplace_vector` and `std::vector` — so a cell is a reading crossed with a storage, and nothing else.
+The columns are the three storages the one underlying vehicle is parameterized on — `std::array` fixes size and capacity, `std::inplace_vector` varies size within a fixed capacity, `std::vector` varies both — so a cell is a reading crossed with a storage, and nothing else. The outer two columns are the ones the current landscape already has; the middle is the pairing it never named.
 
 Notes:
 
