@@ -757,7 +757,7 @@ STL and platform stay covered; only the MSVC 17 front end is gone from the matri
 that existed for MSVC 17 and nothing else. The first: `decay_copy` became `auto(x)`
 ([the-functor-takes-a-value](#the-functor-takes-a-value)), twenty lines for two. The second: the one
 `typename` still written in `test/include/test/set/primitives.hpp`, on the default argument of a constrained
-type-parameter -- `std::integral T = typename X::key_type`, which MSVC 17 rejected without it as `C2061:
+type-parameter -- `std::integral I = typename X::key_type`, which MSVC 17 rejected without it as `C2061:
 syntax error: identifier 'integral'` while GCC, clang, clang-cl and Apple clang all took it. It was the last
 site in the tree where [P0634R3](https://wg21.link/P0634R3) permits the omission and the keyword was still
 spelled; the remaining `typename X::value_type` sites are template arguments and functional casts, which
