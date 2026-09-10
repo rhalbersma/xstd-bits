@@ -14,6 +14,7 @@
 #include <xstd/bits/ext/std/bitset.hpp>           // bit_traits over std::bitset
 #include <xstd/bits/ownership.hpp>                // ownership
 #include <xstd/bits/bit_set_view.hpp>             // bit_set_view
+#include <xstd/bits/sequence_adaptor.hpp>          // sequence_adaptor
 #include <bitset>                                 // bitset
 #include <concepts>                               // derived_from, same_as
 #include <cstddef>                                // size_t
@@ -22,7 +23,8 @@
 #include <ranges>                                 // bidirectional_range, borrowed_range, range, view
 #include <set>                                    // set
 #include <tuple>                                  // tuple
-#include <utility>                                // declval
+#include <type_traits>                            // remove_const_t
+#include <utility>                                // declval, pair
 
 BOOST_AUTO_TEST_SUITE(BitSetView)
 
@@ -187,5 +189,48 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheLazySetAlgebraRunsOverTheView, T, ViewedTypes)
         }
         BOOST_CHECK((merged == std::set<std::size_t>{ 1, 3, 5, 7 }));
 }
+
+// Whether the views could be alias templates after all, which is the whole reason they are derived classes.
+// design.md#the-views-are-the-adaptors says P1814 is what MSVC lacks, but Microsoft's conformance table lists
+// "P1814R0 CTAD for alias templates" as VS 2019 16.7, so the feature is not what is missing -- some specific
+// shape of it is. These four assertions ask which, on every compiler in the matrix at once.
+//
+// Every probe takes its subject as a template parameter: a deduction failure is a substitution failure only
+// while the type is still dependent, and the same expression on a concrete type hard-errors instead of
+// yielding false. The pair rows are the controls -- one deducible, one not -- so a negative below is a real
+// negative and not the detection quietly failing.
+namespace alias_ctad {
+
+template<class X>
+using same_pair = std::pair<X, X>;
+
+template<class T, class U>
+concept pair_deduces = requires (T t, U u) { same_pair(t, u); };
+
+// The shape bit_set_view would need: one non-type parameter pinned by the alias, and a defaulted, constrained
+// trait parameter that depends on the first.
+template<class Bits, xstd::bit_storage<std::remove_const_t<Bits>> Traits = xstd::bit_traits<std::remove_const_t<Bits>>>
+using set_view = xstd::set_adaptor<Bits, xstd::ownership::refers, Traits>;
+
+template<class St>
+concept set_view_deduces = requires (St& s) { set_view(s); };
+
+// The sequence view's shape, which pins two non-type parameters rather than one.
+template<class Bits, xstd::bit_storage<std::remove_const_t<Bits>> Traits = xstd::bit_traits<std::remove_const_t<Bits>>>
+using bit_span = xstd::sequence_adaptor<Bits, xstd::ownership::refers, false, Traits>;
+
+template<class St>
+concept bit_span_deduces = requires (St& s) { bit_span(s); };
+
+using storage = xstd::block_array<std::size_t, 128>;
+
+// The controls first: if either of these two is wrong, the two below say nothing.
+static_assert(    pair_deduces<int, int>);
+static_assert(not pair_deduces<int, double>);
+
+static_assert(set_view_deduces<storage>,  "alias CTAD fails for the set view's shape on this compiler");
+static_assert(bit_span_deduces<storage>,  "alias CTAD fails for the sequence view's shape on this compiler");
+
+}       // namespace alias_ctad
 
 BOOST_AUTO_TEST_SUITE_END()
