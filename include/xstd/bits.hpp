@@ -13,7 +13,6 @@
 #include <xstd/bits/bit_array.hpp>          // IWYU pragma: export; bit_array
 #include <xstd/bits/bit_inplace_set.hpp>    // IWYU pragma: export; bit_inplace_set
 #include <xstd/bits/bit_inplace_vector.hpp> // IWYU pragma: export; bit_inplace_vector
-#include <xstd/bits/bit_proxy.hpp>          // IWYU pragma: export; bit_set_iterator, bit_set_reference, bit_sequence_iterator, bit_sequence_reference
 #include <xstd/bits/bit_set.hpp>            // IWYU pragma: export; bit_set
 #include <xstd/bits/bit_set_view.hpp>       // IWYU pragma: export; bit_set_view
 #include <xstd/bits/bit_span.hpp>           // IWYU pragma: export; bit_span

@@ -8,11 +8,11 @@
 
 #include <boost/container_hash/is_range.hpp>      // is_range
 #include <boost/hash2/hash_append.hpp>            // hash_append_tag
-#include <xstd/bits/bit_proxy.hpp>                // bit_sequence_iterator, bit_sequence_reference
 #include <xstd/bits/bit_traits.hpp>               // all, any, bit_storage, bit_traits, count, none, static_bit_extent, word_at
 #include <xstd/bits/detail/allocator_typedef.hpp> // allocator_typedef, no_typedef
 #include <xstd/bits/detail/hash.hpp>              // hash_append_bits, std_hash
 #include <xstd/bits/detail/intrin.hpp>            // countr_zero, popcount
+#include <xstd/bits/detail/random_access.hpp>     // random_access_bit_iterator, random_access_bit_reference
 #include <xstd/bits/ownership.hpp>                // owned_bits_t, owned_storage, owned_traits_t, owner_of, ownership, owns
 #include <cassert>                                // assert
 #include <compare>                                // strong_ordering
@@ -247,8 +247,8 @@ class sequence_adaptor : public std::conditional_t<owns(Own), detail::bits::allo
         template<class Self>
         using storage_t = std::remove_reference_t<decltype(std::declval<Self>().storage())>;
 
-        template<class Self> using iterator_t  = bit_sequence_iterator <storage_t<Self>, Traits>;
-        template<class Self> using reference_t = bit_sequence_reference<storage_t<Self>, Traits>;
+        template<class Self> using iterator_t  = detail::bits::random_access_bit_iterator <storage_t<Self>, Traits>;
+        template<class Self> using reference_t = detail::bits::random_access_bit_reference<storage_t<Self>, Traits>;
 
         // A source the blit can read by block, of this storage's own block type. [design.md#the-blit]
         template<class S>
@@ -276,12 +276,12 @@ public:
         using traits_type            = Traits;
         using pointer                = void;
         using const_pointer          = pointer;
-        using reference              = bit_sequence_reference<Bits, Traits>;
-        using const_reference        = bit_sequence_reference<Bits const, Traits>;
+        using reference              = detail::bits::random_access_bit_reference<Bits, Traits>;
+        using const_reference        = detail::bits::random_access_bit_reference<Bits const, Traits>;
         using size_type              = std::size_t;
         using difference_type        = std::ptrdiff_t;
-        using iterator               = bit_sequence_iterator<Bits, Traits>;
-        using const_iterator         = bit_sequence_iterator<Bits const, Traits>;
+        using iterator               = detail::bits::random_access_bit_iterator<Bits, Traits>;
+        using const_iterator         = detail::bits::random_access_bit_iterator<Bits const, Traits>;
         using reverse_iterator       = std::reverse_iterator<iterator>;
         using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 

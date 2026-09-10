@@ -6,9 +6,10 @@
 #ifndef XSTD_BITS_FORMAT_HPP
 #define XSTD_BITS_FORMAT_HPP
 
-#include <xstd/bits/bit_proxy.hpp>  // bit_sequence_reference, bit_set_reference
-#include <cstddef>                  // size_t
-#include <format>                   // formatter
+#include <xstd/bits/detail/bidirectional.hpp> // bidirectional_bit_reference
+#include <xstd/bits/detail/random_access.hpp> // random_access_bit_reference
+#include <cstddef>                            // size_t
+#include <format>                             // formatter
 
 // std::format over the containers, which needs nothing said about the containers themselves. [design.md#formatting-the-proxies]
 //
@@ -38,12 +39,12 @@
 // std anyway; 24 no longer does. [design.md#clang-tidy-false-positives]
 template<class Bits, class Traits, class CharT>
 // NOLINTNEXTLINE(bugprone-std-namespace-modification)
-struct std::formatter<xstd::bit_set_reference<Bits, Traits>, CharT>
+struct std::formatter<xstd::detail::bits::bidirectional_bit_reference<Bits, Traits>, CharT>
 :
         std::formatter<std::size_t, CharT>
 {
         template<class Context>
-        [[nodiscard]] constexpr auto format(xstd::bit_set_reference<Bits, Traits> ref, Context& ctx) const
+        [[nodiscard]] constexpr auto format(xstd::detail::bits::bidirectional_bit_reference<Bits, Traits> ref, Context& ctx) const
         {
                 return std::formatter<std::size_t, CharT>::format(static_cast<std::size_t>(ref), ctx);
         }
@@ -51,12 +52,12 @@ struct std::formatter<xstd::bit_set_reference<Bits, Traits>, CharT>
 
 template<class Bits, class Traits, class CharT>
 // NOLINTNEXTLINE(bugprone-std-namespace-modification)
-struct std::formatter<xstd::bit_sequence_reference<Bits, Traits>, CharT>
+struct std::formatter<xstd::detail::bits::random_access_bit_reference<Bits, Traits>, CharT>
 :
         std::formatter<bool, CharT>
 {
         template<class Context>
-        [[nodiscard]] constexpr auto format(xstd::bit_sequence_reference<Bits, Traits> ref, Context& ctx) const
+        [[nodiscard]] constexpr auto format(xstd::detail::bits::random_access_bit_reference<Bits, Traits> ref, Context& ctx) const
         {
                 return std::formatter<bool, CharT>::format(static_cast<bool>(ref), ctx);
         }

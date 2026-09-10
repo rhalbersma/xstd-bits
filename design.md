@@ -1165,13 +1165,32 @@ write is a trait entry rather than a probe; where the counterpart's subscript is
 
 ### the-iterator-is-the-primitive
 
-`bit_set_iterator` and `bit_sequence_iterator` are a pointer and a position, and they reach the bits through
-the trait alone. Their constructors are public, so an owner or a view builds one without being a friend: the
-dependency runs one way, from the container to the iterator, and the mutual friendship and forward
+`bidirectional_bit_iterator` and `random_access_bit_iterator` are a pointer and a position, and they reach the bits
+through the trait alone. Their constructors are public, so an owner or a view builds one without being a
+friend: the dependency runs one way, from the container to the iterator, and the mutual friendship and forward
 declarations the earlier views needed (*"Clang requires it, GCC does not"*) have nothing left to declare.
 
 The pointer is to the **storage** an owner wraps, never to the owner: `bit_static_set` hands out
-`bit_set_iterator<block_array<B, N>>`, which is why no owning type ever needs a `bit_traits` of its own.
+`detail::bits::bidirectional_bit_iterator<block_array<B, N>>`, which is why no owning type ever needs a
+`bit_traits` of its own.
+
+**Where they live, and what they are called.** Both pairs are in `detail/`, one header each --
+`detail/bidirectional.hpp` and `detail/random_access.hpp` -- because nobody spells these names: they are
+reached through a container's `iterator` and `reference` typedefs and through nothing else. The test tree
+mirrors that split rather than taking the exception `detail/` is granted: unnameable is not unobservable, and
+what these types do -- the concepts they model, the round trip, the writes -- is the observable behaviour of
+every container's `iterator`. So the contract is asserted through the containers, and these two sources assert
+white-box what the containers cannot say precisely. The header is
+therefore named after the iterator category rather than after the reading, which is what the two proxies
+differ by; the reading names the container that hands them out, and the category names the iterator itself.
+The `bit_` infix then says what is iterated, as `bit_` says what is stored in the container names
+([the-public-names](#the-public-names)) -- and it is what keeps `bidirectional_bit_iterator` clear of
+`std::bidirectional_iterator`, whose spelling the category alone would have taken.
+
+The walks stay qualified as `detail::bits::find_next<Traits>(...)` inside `xstd::detail::bits` itself. Dropping
+the qualification would read more naturally and reintroduce exactly the hazard the nesting exists to close: an
+unqualified call with an explicit template argument performs ADL, and the associated namespace of the storage
+being walked is `std` or `boost` ([why-nested](#why-nested)).
 
 ### the-set-for-each
 

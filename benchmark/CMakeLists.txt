@@ -35,7 +35,7 @@ set(cxx_compile_options_warnings
     $<$<CXX_COMPILER_ID:Clang>:
         -Weverything
         -Wno-unknown-warning-option         # forward compatibility for new Clang warnings
-        -Wno-lifetime-safety-intra-tu-suggestions             # Clang trunk (23-SVN); suggests [[clang::lifetimebound]] across xstd::proxy::bidirectional and xstd::bitset - not yet acted on
+        -Wno-lifetime-safety-intra-tu-suggestions             # Clang trunk (23-SVN); suggests [[clang::lifetimebound]] across xstd::detail::bits::bidirectional_bit_iterator and xstd::bitset - not yet acted on
         -Wno-lifetime-safety-intra-tu-constructor-suggestions # ditto, for constructors
         -Wno-lifetime-safety-invalidation                     # ditto; false positive on a.clear() in test/include/set/primitives.hpp treating the container itself as invalidated
         -Wno-c++98-compat
