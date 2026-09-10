@@ -512,8 +512,18 @@ wrapper's member surface, not the cross-cutting protocols -- equality, ordering,
 `std::string` hashing while `std::array`, `std::set` and `std::pair` do not, is history rather than design.
 
 The engine is Boost.Hash2: each adaptor carries a `tag_invoke` hook for `hash_append`, and `std::hash` is
-one detail helper over it, `fnv1a_64` folded by `get_integral_result`, so the algorithm is chosen in exactly
-one place and a caller wanting another brings it through `hash_append`. What a hook appends is the value
+one detail helper over it, a hash folded by `get_integral_result`. The algorithm is chosen in exactly one
+place, and it is chosen as a **default rather than a fact**: `std_hash` takes `Hash h = {}` over a defaulted
+`fnv1a_64`, so overriding it is an argument from outside rather than an edit here. Defaulted on the template
+parameter as well as the function parameter, because a default function argument is not a deduced context and
+`std_hash(v)` would otherwise fail to deduce `Hash`; and taken by value rather than by type alone, so a
+seeded instance substitutes and not only a default-constructed one.
+
+What `std::hash` itself gets is always that default. Its `operator()` takes one argument and has no second to
+forward, so all three specializations take `fnv1a_64` and the parameter is unreachable through them — which
+is why it is asserted directly, in `test/src/bits/detail/hash.cpp`, rather than through a specialization. A
+caller wanting another algorithm has the better door anyway: the adaptors' `hash_append` hooks, reached with
+a hash of their own. What a hook appends is the value
 **through the trait**, never a storage's own hook: the blocks and the width where the trait reads by block,
 every position and the width otherwise. So equal values hash equal whatever holds them, and a set view over
 a `std::bitset` hashes on every library whether or not `_Getword` is reachable. The set reading at a run-time
