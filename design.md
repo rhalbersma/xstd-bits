@@ -720,19 +720,51 @@ them, which is what lets `ext/xstd/bitset.hpp` return `set_adaptor(c).begin()` f
 
 ### the-views-are-the-adaptors
 
-`bit_set_view<Bits, Traits>` is `set_adaptor<Bits, ownership::refers, Traits>` and `bit_span<Bits, Traits>`
-is `sequence_adaptor<Bits, ownership::refers, false, Traits>`, each a two-line derived class inheriting the
-adaptor's constructors and restating its two deduction guides: not a second implementation of either reading.
-They carry the names of [the-public-names](#the-public-names), one header each beside the owners; the
-`set_view` and `sequence_view` of the rewire were the same classes before the viewing column was filled.
-The earlier views, with their own iterators, proxies and four customization points — `set_find`,
-`sequence_find`, `block_access`, `bit_extent` — were the trait before there was one, and once the adaptors
-read through `bit_traits` alone there was nothing left for them to do. An alias would have been the natural
-spelling, and deduction through one is class template argument deduction for alias templates (P1814), which
-Clang 19 and GCC 10 have and MSVC does not: `bit_set_view(x)` on MSVC is "too few template arguments". The derived
-class is the escape #80 named, and it costs a restated constructor, guide and `enable_view` per view. The
-constructors are spelled out rather than inherited: inheriting them inherits the primary's guides as well
-(P2582, which GCC implements), and those tie with the restated ones.
+`bit_set_view<Bits, Traits>` **is** `set_adaptor<Bits, ownership::refers, Traits>` and `bit_span<Bits, Traits>`
+**is** `sequence_adaptor<Bits, ownership::refers, false, Traits>` — alias templates, the way `bit_subspan`
+always was, and not a second implementation of either reading. They carry the names of
+[the-public-names](#the-public-names), one header each beside the owners; the `set_view` and `sequence_view` of
+the rewire were the same classes before the viewing column was filled. The earlier views, with their own
+iterators, proxies and four customization points — `set_find`, `sequence_find`, `block_access`, `bit_extent` —
+were the trait before there was one, and once the adaptors read through `bit_traits` alone there was nothing
+left for them to do.
+
+**They were derived classes first, and the reason was real but has expired.** This section used to say that
+deduction through an alias is class template argument deduction for alias templates (P1814), "which Clang 19
+and GCC 10 have and MSVC does not: `bit_set_view(x)` on MSVC is 'too few template arguments'". That
+observation was **correct**, and the matrix still reproduces it word for word — `C2976: 'xstd::bit_set_view':
+too few template arguments`, alongside `C2641: cannot deduce template arguments`, 151 times over both views
+on the VS 2022 rung.
+
+What changed is the generation, not the claim. **MSVC 18 (VS 2026) deduces through these aliases; MSVC 17 (VS
+2022) does not**, in both `msvc` and `msvc_analyze`, Debug and Release. So the aliases cost the 2022 rung, and
+that is the trade [msvc.yml](.github/workflows/msvc.yml) now takes.
+
+Two corrections worth keeping, because both were mine and both were wrong in the same direction — trusting a
+document over a compiler. Microsoft's conformance table lists `P1814R0 CTAD for alias templates` as **VS 2019
+16.7**, footnoted only with the flag gate this project clears at `/std:c++23`; from that I concluded the
+feature "was never what was missing" and that the note here was wrong. The table is describing the feature,
+not this shape of it — one pinned non-type argument plus a defaulted, constrained trait argument depending on
+the first — and on that shape MSVC 17 fails while claiming support. A four-day-old note quoting a specific
+diagnostic was the better evidence, and it deserved to be believed over a vendor's feature matrix.
+
+**The break is the MSVC compiler, not the VS 2022 platform.** `clang_cl` keeps all three rungs and passes on
+all of them, 2022 included, because clang-cl is Clang and Clang has had P1814 since 19. So VS 2022's runner,
+STL and platform stay covered; only the MSVC 17 front end is gone from the matrix.
+
+Being the adaptor rather than deriving from it is what removes the restatements, and they were the whole cost
+of the workaround: a derived class needed its own constructors, its own two deduction guides, and its own
+`enable_view`, `enable_borrowed_range`, `std::hash` and `is_range` specializations, because **a derived class
+is not its base to a partial specialization** — the base's opt-ins say nothing about the derived name. An
+alias *is* the base, so all four apply to it already. The constructors also had to be spelled out rather than
+inherited, since inheriting them inherits the primary's guides as well (P2582, which GCC implements) and those
+tie with the restated ones; with no restated guides there is nothing left to tie.
+
+One constraint moved rather than vanished. The guide for a plain storage is viable for an owner too, now that
+a bitset has a `bit_traits` of its own, and would tie with the owner guide — so it is constrained to
+non-owners, as [a-bitset-reads-as-its-storage](#a-bitset-reads-as-its-storage) describes. That constraint used
+to sit on each view's restated guide; it now sits on `set_adaptor`'s and `sequence_adaptor`'s own, which is
+where the aliases deduce through.
 
 The sequence view pays the `span` half of [views-follow-their-precedent](#views-follow-their-precedent) by
 becoming the adaptor: it no longer has `==` or `<=>`, and the harness checks the sequence reading through the

@@ -673,7 +673,11 @@ private:
 };
 
 // A view deduces the constness of what it views, the way span<T> and span<T const> do; over an owner, of the storage it wraps.
+// Constrained to non-owners: a bitset has a bit_traits of its own, so an unconstrained guide here is viable for an
+// owner too and ties with the owner guide below, making bit_set_view(bs) ambiguous. The constraint used to sit on
+// the view's restated guide; the view is an alias now and deduces through these. [design.md#a-bitset-reads-as-its-storage]
 template<class Bits>
+        requires (not requires { typename owned_storage<std::remove_const_t<Bits>>::bits_type; })
 set_adaptor(Bits&) -> set_adaptor<Bits, ownership::refers>;
 
 template<class Owner>
