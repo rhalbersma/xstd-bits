@@ -7,8 +7,8 @@
 #include <test/dynamic.hpp>                       // dynamic
 #include <xstd/bits/bit_traits.hpp>               // bit_storage, bit_traits, block_readable, static_bit_extent
 #include <xstd/bits/ext/boost/dynamic_bitset.hpp> // the trait that makes dynamic_bitset viewable
-#include <xstd/bits/bit_span.hpp>     // bit_span
-#include <xstd/bits/bit_set_view.hpp>          // bit_set_view
+#include <xstd/bits/bit_span.hpp>                 // bit_span
+#include <xstd/bits/bit_set_view.hpp>             // bit_set_view
 #include <algorithm>                              // lexicographical_compare
 #include <compare>                                // is_lt, strong_ordering
 #include <concepts>                               // regular, totally_ordered
