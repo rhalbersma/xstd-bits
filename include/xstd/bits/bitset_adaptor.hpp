@@ -81,7 +81,8 @@ class bitset_adaptor : public detail::bits::allocator_typedef<Bits>
 
         // The value through the trait: the blocks and the width. [design.md#the-hashing-invariant]
         template<class Provider, class Hash, class Flavor>
-        friend constexpr void tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, bitset_adaptor const* v) noexcept
+        friend constexpr auto tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, bitset_adaptor const* v) noexcept
+                -> void
         {
                 detail::bits::hash_append_bits<Traits>(h, f, v->m_bits);
         }
@@ -111,7 +112,8 @@ public:
                 constexpr reference(reference const& x) noexcept = default;
                 constexpr ~reference() = default;
 
-                constexpr auto operator=(bool x) noexcept -> reference&
+                constexpr auto operator=(bool x) noexcept
+                        -> reference&
                 {
                         std::as_const(*this) = x;
                         return *this;
@@ -136,14 +138,15 @@ public:
                         return Traits::at(m_ptr->m_bits, m_idx);
                 }
 
-                [[nodiscard]] constexpr auto operator~() const noexcept -> bool
+                [[nodiscard]] constexpr auto operator~() const noexcept
+                        -> bool
                 {
                         return not Traits::at(m_ptr->m_bits, m_idx);
                 }
 
-                friend constexpr void swap(reference x, reference y) noexcept { bool const t = x; x = y; y = t; }
-                friend constexpr void swap(reference x,     bool& y) noexcept { bool const t = x; x = y; y = t; }
-                friend constexpr void swap(    bool& x, reference y) noexcept { bool const t = x; x = y; y = t; }
+                friend constexpr auto swap(reference x, reference y) noexcept -> void { bool const t = x; x = y; y = t; }
+                friend constexpr auto swap(reference x,     bool& y) noexcept -> void { bool const t = x; x = y; y = t; }
+                friend constexpr auto swap(    bool& x, reference y) noexcept -> void { bool const t = x; x = y; y = t; }
 
                 constexpr auto flip() noexcept
                         -> reference&
@@ -215,7 +218,8 @@ public:
         }
 
         // Boost's, and so ours at both widths: the storage spells it alike, and an extension may add. [design.md#a-strict-extension]
-        constexpr void swap(bitset_adaptor& other) noexcept(std::is_nothrow_swappable_v<Bits>)
+        constexpr auto swap(bitset_adaptor& other) noexcept(std::is_nothrow_swappable_v<Bits>)
+                -> void
                 requires std::swappable<Bits>
         {
                 std::ranges::swap(m_bits, other.m_bits);
@@ -509,7 +513,8 @@ public:
 
         // boost's block interface: every block out, including the clear tail, and at most every block in, the tail kept clear. [design.md#a-strict-extension]
         template<std::output_iterator<block_type> O>
-        friend constexpr void to_block_range(bitset_adaptor const& b, O result)
+        friend constexpr auto to_block_range(bitset_adaptor const& b, O result)
+                -> void
         {
                 for (auto const i : std::views::iota(0UZ, b.num_blocks())) {
                         *result++ = Traits::block(b.m_bits, i);
@@ -518,7 +523,8 @@ public:
 
         template<std::input_iterator I, std::sentinel_for<I> S>
                 requires block_iterator<I>
-        friend constexpr void from_block_range(I first, S last, bitset_adaptor& result)
+        friend constexpr auto from_block_range(I first, S last, bitset_adaptor& result)
+                -> void
         {
                 for (auto i = 0UZ; first != last; ++first, ++i) {
                         assert(i < result.num_blocks());
@@ -534,45 +540,52 @@ public:
                 return size() == 0UZ;
         }
 
-        constexpr void resize(std::size_t num_bits, bool value = false)
+        constexpr auto resize(std::size_t num_bits, bool value = false)
+                -> void
                 requires requires (Bits& b) { b.resize(num_bits, value); }
         {
                 m_bits.resize(num_bits, value);
         }
 
-        constexpr void clear()
+        constexpr auto clear()
+                -> void
                 requires requires (Bits& b) { b.clear(); }
         {
                 m_bits.clear();
         }
 
-        constexpr void push_back(bool bit)
+        constexpr auto push_back(bool bit)
+                -> void
                 requires requires (Bits& b) { b.push_back(bit); }
         {
                 m_bits.push_back(bit);
         }
 
-        constexpr void pop_back()
+        constexpr auto pop_back()
+                -> void
                 requires requires (Bits& b) { b.pop_back(); }
         {
                 m_bits.pop_back();
         }
 
         template<class Block>
-        constexpr void append(Block value)
+        constexpr auto append(Block value)
+                -> void
                 requires requires (Bits& b) { b.append(value); }
         {
                 m_bits.append(value);
         }
 
         template<std::input_iterator I>
-        constexpr void append(I first, I last)
+        constexpr auto append(I first, I last)
+                -> void
                 requires requires (Bits& b) { b.append(first, last); }
         {
                 m_bits.append(first, last);
         }
 
-        constexpr void reserve(std::size_t num_bits)
+        constexpr auto reserve(std::size_t num_bits)
+                -> void
                 requires requires (Bits& b) { b.reserve(num_bits); }
         {
                 m_bits.reserve(num_bits);
@@ -585,7 +598,8 @@ public:
                 return m_bits.capacity();
         }
 
-        constexpr void shrink_to_fit()
+        constexpr auto shrink_to_fit()
+                -> void
                 requires requires (Bits& b) { b.shrink_to_fit(); }
         {
                 m_bits.shrink_to_fit();
@@ -593,7 +607,8 @@ public:
 
 private:
         // The one guard: out_of_range at a static width, std::bitset's, an assert at a run-time one, boost's. [design.md#the-one-guard]
-        constexpr void guard(std::size_t pos) const
+        constexpr auto guard(std::size_t pos) const
+                -> void
         {
                 if constexpr (has_static_width) {
                         if (pos >= size()) {
@@ -604,7 +619,8 @@ private:
                 }
         }
 
-        constexpr void guard_range(std::size_t pos, std::size_t len) const
+        constexpr auto guard_range(std::size_t pos, std::size_t len) const
+                -> void
         {
                 if constexpr (has_static_width) {
                         if (pos + len > size()) {
@@ -634,7 +650,8 @@ private:
                 return size() < rhs.size() ? std::strong_ordering::less : std::strong_ordering::greater;
         }
 
-        constexpr void from_ullong(unsigned long long val) noexcept
+        constexpr auto from_ullong(unsigned long long val) noexcept
+                -> void
         {
                 constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<unsigned long long>::digits);
                 auto const M = std::ranges::min(size(), digits);
@@ -701,7 +718,8 @@ private:
 
 // Boost has the free form beside the member; std::bitset has neither, and an extension may add. [design.md#a-strict-extension]
 template<class Bits, class Traits>
-constexpr void swap(bitset_adaptor<Bits, Traits>& x, bitset_adaptor<Bits, Traits>& y) noexcept(noexcept(x.swap(y)))
+constexpr auto swap(bitset_adaptor<Bits, Traits>& x, bitset_adaptor<Bits, Traits>& y) noexcept(noexcept(x.swap(y)))
+        -> void
         requires std::swappable<Bits>
 {
         x.swap(y);

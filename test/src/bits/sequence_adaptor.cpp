@@ -38,7 +38,8 @@ template<class S> constexpr bool can_write = requires (S s) { s[0] = true; };
 template<class S> constexpr bool can_swap  = requires (S s) { s.swap(s); };
 
 template<class Seq>
-[[nodiscard]] auto bools(Seq const& s) -> std::vector<bool>
+[[nodiscard]] auto bools(Seq const& s)
+        -> std::vector<bool>
 {
         return { s.begin(), s.end() };
 }
@@ -67,7 +68,8 @@ struct bit_traits<element_bits<N>>
         [[nodiscard]] static constexpr auto size(bits_type const&)                  noexcept -> std::size_t { return N; }
         [[nodiscard]] static constexpr auto at  (bits_type const& c, std::size_t n) noexcept -> bool        { return c.bits.test(n); }
 
-        static constexpr void unchecked_assign(bits_type& c, std::size_t n, bool value) noexcept
+        static constexpr auto unchecked_assign(bits_type& c, std::size_t n, bool value) noexcept
+                -> void
         {
                 if (value) {
                         c.bits.set(n);
@@ -261,7 +263,8 @@ using Graded = test::graded_extents<xstd::basic_bit_array>;
 
 // One bit of pattern p at position i, as bit_array's model cases have it. Empty and full are the two degenerate
 // widths the aggregates disagree about most: they are the fixed points of all and none.
-auto pattern_bit(std::size_t p, std::size_t i, std::size_t n) -> bool
+auto pattern_bit(std::size_t p, std::size_t i, std::size_t n)
+        -> bool
 {
         switch (p) {
         case 0UZ: return false;
@@ -275,7 +278,8 @@ auto pattern_bit(std::size_t p, std::size_t i, std::size_t n) -> bool
 
 // The model at the same extent, written through the sequence under test so the two are filled by one loop.
 template<class Seq>
-auto write_pattern(Seq& s, std::size_t p) -> std::vector<bool>
+auto write_pattern(Seq& s, std::size_t p)
+        -> std::vector<bool>
 {
         auto m = std::vector<bool>(s.size());
         for (auto i = 0UZ; i < s.size(); ++i) {
@@ -289,7 +293,8 @@ auto write_pattern(Seq& s, std::size_t p) -> std::vector<bool>
 // Counted rather than asserted per position, so a failure names the operation instead of drowning the log.
 // [design.md#counted-not-asserted]
 template<class Seq>
-auto aggregate_disagreements(Seq const& s, std::vector<bool> const& m) -> std::size_t
+auto aggregate_disagreements(Seq const& s, std::vector<bool> const& m)
+        -> std::size_t
 {
         auto disagreements = 0UZ;
         for (auto const value : { true, false }) {
@@ -314,7 +319,8 @@ auto aggregate_disagreements(Seq const& s, std::vector<bool> const& m) -> std::s
 
 // What for_each hands its functor, in the order it hands it: the range-for's own answer, which is the contract.
 template<class Seq>
-auto for_each_bools(Seq const& s) -> std::vector<bool>
+auto for_each_bools(Seq const& s)
+        -> std::vector<bool>
 {
         auto v = std::vector<bool>();
         s.for_each([&v](bool b) -> void { v.push_back(b); });
@@ -413,6 +419,31 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(MismatchAgreesWithTheModel, T, Graded)
 // Dependent, so a constrained-away member is a false rather than a hard error.
 template<class S> constexpr bool can_mismatch = requires (S const& a) { a.mismatch(a); };
 
+// What for_each accepts, likewise dependent.
+template<class S, class F> constexpr bool walks = requires (S const& s, F f) { s.for_each(f); };
+
+// Functors overloaded on the value category. The constraint above cannot tell the two overloads apart -- both
+// make the functor invocable with a bool -- so these, and only these, are what pin the prvalue at the call:
+// an lvalue at the call takes the && overload away and lands on the & one. One probe per arm, because
+// invoke_continues splits on the return type and each arm calls the functor for itself.
+struct void_probe
+{
+        bool& took_a_reference;
+
+        auto operator()(bool&&) const -> void {}
+        // Never called is exactly what is under test, so say so rather than let -Wunused-member-function say it.
+        [[maybe_unused]] auto operator()(bool&) const -> void { took_a_reference = true; }
+};
+
+struct bool_probe
+{
+        bool& took_a_reference;
+
+        auto operator()(bool&&) const -> bool { return true; }
+        // Never called is exactly what is under test, so say so rather than let -Wunused-member-function say it.
+        [[maybe_unused]] auto operator()(bool&) const -> bool { took_a_reference = true; return true; }
+};
+
 // A window's blocks are not its own, so it has no mismatch; nor has an owner over storage without the entry.
 BOOST_AUTO_TEST_CASE(MismatchIsTheOwnersOverStorageThatHasTheEntry)
 {
@@ -438,6 +469,49 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ForEachAgreesWithTheRangeFor, T, Graded)
                 disagreements += static_cast<std::size_t>(seen != std::ranges::min(a.size(), 3UZ));
         }
         BOOST_CHECK_EQUAL(disagreements, 0UZ);
+}
+
+// The functor is handed the bool by value, and the constraint says so. Without that a functor asking for bool&
+// binds to the walker's own local: the walk reads the storage through a const reference and never writes back, so
+// what looks like a mutating pass compiles into a silent no-op. Writing through the sequence is what the range-for
+// and its proxy are for. [design.md#the-functor-takes-a-value]
+BOOST_AUTO_TEST_CASE(ForEachHandsTheBoolByValue)
+{
+        // By value, generic or not, and by const reference: all four read what they are given.
+        static_assert(walks<Owner, decltype([](bool) -> void {})>);
+        static_assert(walks<Owner, decltype([](auto) -> void {})>);
+        static_assert(walks<Owner, decltype([](bool const&) -> void {})>);
+        static_assert(walks<Owner, decltype([](auto const&) -> void {})>);
+
+        // A plain function is a functor too, and stays one.
+        static_assert(walks<Owner, void (*)(bool)>);
+
+        // A functor returning bool to mean "keep going" is the other accepted shape.
+        static_assert(walks<Owner, decltype([](bool) -> bool { return true; })>);
+
+        // And the two that would have written to nothing. auto is no help here: it is the reference that is the
+        // fault, not the spelling of the type, and [](auto&) is exactly as silent as [](bool&) was.
+        static_assert(not walks<Owner, decltype([](bool&) -> void {})>);
+        static_assert(not walks<Owner, decltype([](auto&) -> void {})>);
+
+        // Every shape is constrained alike: a view, a window, and a storage that keeps its blocks to itself.
+        static_assert(not walks<View, decltype([](bool&) -> void {})>);
+        static_assert(not walks<View::subspan_type, decltype([](bool&) -> void {})>);
+        static_assert(not walks<xstd::sequence_adaptor<element_bits<100>, xstd::ownership::refers, false>, decltype([](bool&) -> void {})>);
+
+        // Writing through the sequence is the range-for's job, and it still is.
+        auto a = Owner();
+        // const, and it still writes: assigning through the proxy is what the proxy is for. [design.md#proxies-compare-themselves]
+        for (auto const r : a) { r = true; }
+        BOOST_CHECK_EQUAL(a.count(), a.size());
+
+        // And the overload resolution the constraint cannot reach: an lvalue at the call would take the reference.
+        // Both arms, the void one and the bool one, each of which calls the functor itself.
+        auto took_a_reference = false;
+        a.for_each(void_probe{ took_a_reference });
+        BOOST_CHECK(not took_a_reference);
+        a.for_each(bool_probe{ took_a_reference });
+        BOOST_CHECK(not took_a_reference);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

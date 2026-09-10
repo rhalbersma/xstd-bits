@@ -8,17 +8,18 @@
 #include <test/inplace_vector.hpp>     // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
 #include <test/uint128.hpp>            // IWYU pragma: keep; TEST_HAS_UINT128, uint128
 #include <xstd/bits/bit_traits.hpp>    // bit_storage, bit_traits, block_readable, static_bit_extent
-#include <xstd/bits/block_sequence.hpp> // block_array, block_inplace_vector, block_sequence, block_storage, block_vector
+#include <xstd/bits/block_sequence.hpp> // block_array, block_inplace_vector, block_sequence, block_vector, contiguous_block_container
 #include <algorithm>                   // count, lexicographical_compare_three_way, min
-#include <concepts>                    // same_as
+#include <concepts>                    // regular, same_as
 #include <array>                       // array
 #include <compare>                     // strong_ordering
 #include <cstddef>                     // size_t
 #include <cstdint>                     // uint8_t, uint64_t
-#include <memory>                      // allocator
+#include <memory>                      // addressof, allocator
 #include <initializer_list>            // initializer_list
+#include <iterator>                    // contiguous_iterator, iter_reference_t, random_access_iterator
 #include <new>                         // IWYU pragma: keep; bad_alloc, behind TEST_HAS_INPLACE_VECTOR
-#include <ranges>                      // iota
+#include <ranges>                      // begin, contiguous_range, iota, iterator_t, size, sized_range
 #include <tuple>                       // get, tuple
 #include <vector>                      // vector
 
@@ -30,7 +31,8 @@ namespace {
 using model = std::vector<bool>;
 
 template<class BB>
-auto reference(BB const& b) -> model
+auto reference(BB const& b)
+        -> model
 {
         auto m = model(b.size());
         for (auto i = 0UZ; i < b.size(); ++i) {
@@ -55,31 +57,36 @@ class checker
         BB& m_a;
         BB& m_b;
 
-        auto fresh_x() -> BB&
+        auto fresh_x()
+                -> BB&
         {
                 m_a = m_x;
                 return m_a;
         }
 
-        auto fresh_y() -> BB&
+        auto fresh_y()
+                -> BB&
         {
                 m_b = m_y;
                 return m_b;
         }
 
         // The two sites where a comparison becomes a count, so the cast is not thirty. [design.md#counted-not-asserted]
-        auto disagree(bool ours, bool theirs) -> void
+        auto disagree(bool ours, bool theirs)
+                -> void
         {
                 m_disagreements += static_cast<int>(ours != theirs);
         }
 
-        auto unequal(std::size_t ours, std::size_t theirs) -> void
+        auto unequal(std::size_t ours, std::size_t theirs)
+                -> void
         {
                 m_disagreements += static_cast<int>(ours != theirs);
         }
 
         // Position by position against a model of what the operation should have left.
-        auto same(model const& m, BB const& got) -> void
+        auto same(model const& m, BB const& got)
+                -> void
         {
                 for (auto i = 0UZ; i < m_n; ++i) {
                         disagree(got.test(i), m[i]);
@@ -96,7 +103,8 @@ public:
                 m_b(b)
         {}
 
-        auto width() -> void
+        auto width()
+                -> void
         {
                 unequal(m_x.count(), m_cardinality);
                 disagree(m_x.any(),  m_cardinality != 0);
@@ -106,7 +114,8 @@ public:
         }
 
         // find_front/find_back assert any(); find_first/find_last are total and answer size().
-        auto scans() -> void
+        auto scans()
+                -> void
         {
                 if (m_cardinality != 0) {
                         auto front = 0UZ;
@@ -147,7 +156,8 @@ public:
         }
 
         // Where the block-at-a-time shortcuts live.
-        auto relational() -> void
+        auto relational()
+                -> void
         {
                 auto subset = true;
                 auto differs = false;
@@ -163,7 +173,8 @@ public:
         }
 
         // On packed bits the set and pointwise sequence operations are one instruction, so one model answers both.
-        auto bitwise() -> void
+        auto bitwise()
+                -> void
         {
                 { auto& a = fresh_x(); a &= m_y; auto m = model(m_n); for (auto i = 0UZ; i < m_n; ++i) { m[i] = m_mx[i] and     m_my[i]; } same(m, a); }
                 { auto& a = fresh_x(); a |= m_y; auto m = model(m_n); for (auto i = 0UZ; i < m_n; ++i) { m[i] = m_mx[i] or      m_my[i]; } same(m, a); }
@@ -171,7 +182,8 @@ public:
                 { auto& a = fresh_x(); a -= m_y; auto m = model(m_n); for (auto i = 0UZ; i < m_n; ++i) { m[i] = m_mx[i] and not m_my[i]; } same(m, a); }
         }
 
-        auto shifts() -> void
+        auto shifts()
+                -> void
         {
                 for (auto s = 0UZ; s < m_n; ++s) {
                         { auto& a = fresh_x(); a <<= s; auto m = model(m_n); for (auto i = s;  i < m_n;     ++i) { m[i] = m_mx[i - s]; } same(m, a); }
@@ -180,7 +192,8 @@ public:
         }
 
         // One method apiece: combined, GCC 15 at -O3 reports a free-nonheap-object that is not there. [design.md#scratch-objects]
-        auto whole_set() -> void
+        auto whole_set()
+                -> void
         {
                 auto& a = fresh_x();
                 a.set();
@@ -188,7 +201,8 @@ public:
                 unequal(a.count(), m_n);
         }
 
-        auto whole_reset() -> void
+        auto whole_reset()
+                -> void
         {
                 auto& a = fresh_x();
                 a.reset();
@@ -196,7 +210,8 @@ public:
                 unequal(a.count(), 0UZ);
         }
 
-        auto whole_flip() -> void
+        auto whole_flip()
+                -> void
         {
                 auto& a = fresh_x();
                 a.flip();
@@ -206,7 +221,8 @@ public:
                 }
         }
 
-        auto whole_swap() -> void
+        auto whole_swap()
+                -> void
         {
                 auto& a = fresh_x();
                 auto& b = fresh_y();
@@ -216,7 +232,8 @@ public:
         }
 
         // Per bit, including the two that report whether the bit was already there.
-        auto positions() -> void
+        auto positions()
+                -> void
         {
                 for (auto i = 0UZ; i < m_n; ++i) {
                         { auto& a = fresh_x(); a.set(i);   disagree(a.test(i), true);  }
@@ -228,7 +245,8 @@ public:
         }
 
         // Writing blocks back is the identity, and all-ones must stop at size(): the unused-tail invariant.
-        auto blocks() -> void
+        auto blocks()
+                -> void
         {
                 disagree(m_x.num_blocks() * BB::bits_per_block >= m_n, true);
 
@@ -251,7 +269,8 @@ public:
 };
 
 template<class BB>
-auto check_ops(BB const& x, BB const& y, int& disagreements) -> void
+auto check_ops(BB const& x, BB const& y, int& disagreements)
+        -> void
 {
         auto a = x;
         auto b = y;
@@ -274,7 +293,8 @@ template<std::size_t N, class Block>
 using graded_block_array = xstd::block_array<Block, N>;
 
 template<class BB>
-auto sweep(BB const& empty) -> int
+auto sweep(BB const& empty)
+        -> int
 {
         auto const n = empty.size();
 
@@ -306,14 +326,16 @@ auto sweep(BB const& empty) -> int
 }
 
 // Named rather than immediately-invoked lambdas, so nothing leans on P1102 for no reason.
-constexpr auto a_static_width_is_constexpr() -> bool
+constexpr auto a_static_width_is_constexpr()
+        -> bool
 {
         auto b = xstd::block_array<std::uint8_t, 9>();
         b.set(8);
         return b.count() == 1 and b.find_first() == 8;
 }
 
-constexpr auto a_run_time_width_is_constexpr() -> bool
+constexpr auto a_run_time_width_is_constexpr()
+        -> bool
 {
         auto b = xstd::block_vector<std::uint8_t>(9);
         b.set(8);
@@ -322,14 +344,137 @@ constexpr auto a_run_time_width_is_constexpr() -> bool
 
 } // namespace
 
-// Both shipped vehicles satisfy block_storage: growth is detected where it exists, never required.
+// Both shipped vehicles satisfy contiguous_block_container: growth is detected where it exists, never required.
 BOOST_AUTO_TEST_CASE(ItsStorageIsAContiguousSizedRangeOfUnsignedIntegers)
 {
-        static_assert(xstd::block_storage<std::array<std::uint8_t, 4>>);
-        static_assert(xstd::block_storage<std::vector<std::uint64_t>>);
+        static_assert(xstd::contiguous_block_container<std::array<std::uint8_t, 4>>);
+        static_assert(xstd::contiguous_block_container<std::vector<std::uint64_t>>);
 
-        static_assert(not xstd::block_storage<std::vector<bool>>);      // not a contiguous range
-        static_assert(not xstd::block_storage<std::vector<int>>);       // nor unsigned integers
+        static_assert(not xstd::contiguous_block_container<std::vector<bool>>);      // not a contiguous range
+        static_assert(not xstd::contiguous_block_container<std::vector<int>>);       // nor unsigned integers
+}
+
+namespace {
+
+// Named so the requirement is checked on a template parameter: spelling it on a concrete iterator type puts a
+// pointer in the requires-expression's parameter list, which reads as a const-able parameter to clang-tidy.
+template<class I>
+concept iterator_subscripts = requires (I i, std::size_t n) { { i[n] } -> std::same_as<std::iter_reference_t<I>>; };
+
+}       // namespace
+
+// Subscript is the range's own, and contiguous_range does not promise it: it promises data() and a
+// contiguous_iterator, and it is the ITERATOR that random_access_iterator obliges to have i[n].
+BOOST_AUTO_TEST_CASE(ItsStorageSubscriptIsTheRangesOwnAndNotTheIterators)
+{
+        // A regular, contiguous, sized range of unsigned integers whose iterator subscripts and which does not.
+        struct bare_blocks
+        {
+                std::array<std::uint64_t, 4> m_data {};
+
+                // Every member here exists to be asked about, never called, so the compiler is told not to expect a use.
+                [[nodiscard, maybe_unused]] constexpr auto begin()       -> std::uint64_t*       { return m_data.data(); }
+                [[nodiscard, maybe_unused]] constexpr auto begin() const -> std::uint64_t const* { return m_data.data(); }
+                [[nodiscard, maybe_unused]] constexpr auto end()         -> std::uint64_t*       { return m_data.data() + m_data.size(); }
+                [[nodiscard, maybe_unused]] constexpr auto end()   const -> std::uint64_t const* { return m_data.data() + m_data.size(); }
+                [[nodiscard, maybe_unused]] constexpr auto size()  const -> std::size_t          { return m_data.size(); }
+
+                [[maybe_unused]] auto operator==(bare_blocks const&) const -> bool = default;
+        };
+        using It = std::ranges::iterator_t<bare_blocks>;
+
+        static_assert(std::ranges::contiguous_range<bare_blocks>);
+        static_assert(std::ranges::sized_range<bare_blocks> and std::regular<bare_blocks>);
+        static_assert(std::contiguous_iterator<It> and std::random_access_iterator<It>);
+        static_assert(iterator_subscripts<It>);
+
+        static_assert(not xstd::contiguous_block_container<bare_blocks>);            // the four are not enough
+}
+
+// The semantic half a concept cannot check: a[i] is *(begin(a) + i), the same object and not merely an equal one.
+template<class Blocks>
+constexpr auto subscript_agrees_with_iteration(Blocks blocks) noexcept
+        -> bool
+{
+        // The index is the range's own difference_type, so begin(blocks) + i needs no conversion; subscript takes
+        // a size_type, which is the one cast, and naming it here keeps -Wsign-conversion honest.
+        for (auto i = std::ranges::range_difference_t<Blocks>{}; i < std::ranges::ssize(blocks); ++i) {
+                if (std::addressof(blocks[static_cast<std::size_t>(i)]) != std::addressof(*(std::ranges::begin(blocks) + i))) {
+                        return false;
+                }
+        }
+        return true;
+}
+
+BOOST_AUTO_TEST_CASE(ItsStorageSubscriptIsIterationAtTheSameAddress)
+{
+        static_assert(subscript_agrees_with_iteration(std::array<std::uint8_t, 4>{ 1, 2, 3, 4 }));
+        static_assert(subscript_agrees_with_iteration(std::vector<std::uint64_t>{ 1, 2, 3, 4 }));
+        BOOST_CHECK(subscript_agrees_with_iteration(std::vector<std::uint64_t>{ 1, 2, 3, 4 }));
+}
+
+// ranges::swap finds a free swap by ADL and a member never, so block_sequence needs the free one its three
+// adaptors already have: without it every container moves a whole block_sequence three times instead of
+// swapping its blocks once, and a storage with an optimized swap never sees it. [design.md#swap-goes-through-adl]
+namespace {
+
+int g_storage_swaps = 0;
+int g_storage_moves = 0;
+
+// A storage satisfying contiguous_block_container whose swap and moves are distinguishable.
+struct counting_blocks
+{
+        std::array<std::uint64_t, 4> m_data {};
+
+        // The move operations are counted rather than used: once the free swap exists nothing calls them, which
+        // is the point of the test, so they and the members that only satisfy the concept say so.
+        counting_blocks() = default;
+        [[maybe_unused]] counting_blocks(counting_blocks const&) = default;
+        [[maybe_unused]] auto operator=(counting_blocks const&) -> counting_blocks& = default;
+        [[maybe_unused]] counting_blocks(counting_blocks&& other) noexcept : m_data(other.m_data) { ++g_storage_moves; }
+        [[maybe_unused]] auto operator=(counting_blocks&& other) noexcept -> counting_blocks& { m_data = other.m_data; ++g_storage_moves; return *this; }
+        [[maybe_unused]] ~counting_blocks() = default;
+
+        [[nodiscard, maybe_unused]] auto begin()       -> std::uint64_t*       { return m_data.data(); }
+        [[nodiscard, maybe_unused]] auto begin() const -> std::uint64_t const* { return m_data.data(); }
+        [[nodiscard, maybe_unused]] auto end()         -> std::uint64_t*       { return m_data.data() + m_data.size(); }
+        [[nodiscard, maybe_unused]] auto end()   const -> std::uint64_t const* { return m_data.data() + m_data.size(); }
+        [[nodiscard, maybe_unused]] auto size()  const -> std::size_t          { return m_data.size(); }
+
+        [[nodiscard, maybe_unused]] auto operator[](std::size_t i)       -> std::uint64_t&       { return m_data[i]; }
+        [[nodiscard, maybe_unused]] auto operator[](std::size_t i) const -> std::uint64_t const& { return m_data[i]; }
+
+        [[maybe_unused]] auto operator==(counting_blocks const&) const -> bool = default;
+
+        friend auto swap(counting_blocks& x, counting_blocks& y) noexcept
+                -> void
+        {
+                ++g_storage_swaps;
+                x.m_data.swap(y.m_data);
+        }
+};
+static_assert(xstd::contiguous_block_container<counting_blocks>);
+
+}       // namespace
+
+BOOST_AUTO_TEST_CASE(ItsSwapIsReachedThroughAdlAndNotTheMoveFallback)
+{
+        using bits = xstd::block_sequence<counting_blocks, 256>;
+
+        auto a = bits();
+        auto b = bits();
+
+        g_storage_swaps = 0;
+        g_storage_moves = 0;
+        a.swap(b);
+        BOOST_CHECK_EQUAL(g_storage_swaps, 1);          // the member reaches the storage's swap
+        BOOST_CHECK_EQUAL(g_storage_moves, 0);
+
+        g_storage_swaps = 0;
+        g_storage_moves = 0;
+        std::ranges::swap(a, b);                        // and so does what every adaptor actually calls
+        BOOST_CHECK_EQUAL(g_storage_swaps, 1);          // 0 swaps and 3 moves before the free swap existed
+        BOOST_CHECK_EQUAL(g_storage_moves, 0);
 }
 
 // A compile-time width costs nothing: the absent size member takes no storage.
@@ -424,7 +569,8 @@ namespace {
 
 // A run-time width built from the model, so equality against it doubles as the invariant check: a dirty tail compares unequal.
 template<class T>
-[[nodiscard]] auto from_model(model const& m) -> T
+[[nodiscard]] auto from_model(model const& m)
+        -> T
 {
         auto b = T(m.size());
         for (auto i = 0UZ; i < m.size(); ++i) {
@@ -434,7 +580,8 @@ template<class T>
 }
 
 // Two in three set, so both fill values and every block boundary change something.
-[[nodiscard]] auto patterned(std::size_t n) -> model
+[[nodiscard]] auto patterned(std::size_t n)
+        -> model
 {
         auto m = model(n);
         for (auto i = 0UZ; i < n; ++i) {
@@ -445,14 +592,16 @@ template<class T>
 
 // The same grading the static sweep uses: within one block, and across boundaries either side.
 template<class Block>
-[[nodiscard]] constexpr auto graded_widths() -> std::array<std::size_t, 10>
+[[nodiscard]] constexpr auto graded_widths()
+        -> std::array<std::size_t, 10>
 {
         constexpr auto D = test::digits_v<Block>;
         return { 0UZ, 1UZ, D - 1, D, D + 1, (2 * D) - 1, 2 * D, (2 * D) + 1, 3 * D, (3 * D) + 1 };
 }
 
 template<class Block>
-[[nodiscard]] constexpr auto blocks_for(std::size_t n) -> std::size_t
+[[nodiscard]] constexpr auto blocks_for(std::size_t n)
+        -> std::size_t
 {
         constexpr auto D = test::digits_v<Block>;
         return std::ranges::max((n + D - 1) / D, 1UZ);
@@ -460,7 +609,8 @@ template<class Block>
 
 // What append(block) should do to the model: the block's bits, least significant first.
 template<class Block>
-auto append_to(model& m, Block value) -> void
+auto append_to(model& m, Block value)
+        -> void
 {
         for (auto i = 0UZ; i < test::digits_v<Block>; ++i) {
                 // Cast back before the mask: a shifted narrow word is an int, which bugprone-signed-bitwise reads as a signed operand.
@@ -478,7 +628,8 @@ template<class X> constexpr bool can_reserve   = requires (X& x) { x.reserve(1UZ
 template<class X> constexpr bool has_capacity  = requires (X const& x) { x.capacity(); };
 
 template<class Block>
-[[nodiscard]] constexpr auto striped() -> Block
+[[nodiscard]] constexpr auto striped()
+        -> Block
 {
         auto value = Block{0};
         for (auto i = 0UZ; i < test::digits_v<Block>; i += 4) {
@@ -638,7 +789,7 @@ BOOST_AUTO_TEST_CASE(AnInplaceVectorIsARunTimeWidthUnderAStaticCapacity)
 {
         using T = xstd::block_inplace_vector<std::uint8_t, 24>;
         static_assert(not T::has_static_size);
-        static_assert(xstd::block_storage<std::inplace_vector<std::uint8_t, 3>>);
+        static_assert(xstd::contiguous_block_container<std::inplace_vector<std::uint8_t, 3>>);
 
         BOOST_CHECK_EQUAL(sweep(T(17)), 0);
 
@@ -715,7 +866,8 @@ namespace {
 
 // The set reading: the positions held, in increasing order. The sequence reading is reference() itself.
 template<class BB>
-auto set_reading(BB const& b) -> std::vector<std::size_t>
+auto set_reading(BB const& b)
+        -> std::vector<std::size_t>
 {
         auto v = std::vector<std::size_t>();
         for (auto i = 0UZ; i < b.size(); ++i) {
@@ -728,7 +880,8 @@ auto set_reading(BB const& b) -> std::vector<std::size_t>
 
 // The values worth pairing at a width: both extremes, the ends, and each block boundary either side of it.
 template<class BB>
-auto probes(BB const& empty) -> std::vector<BB>
+auto probes(BB const& empty)
+        -> std::vector<BB>
 {
         auto const n = empty.size();
         auto out = std::vector<BB>{ empty };
@@ -766,7 +919,8 @@ auto probes(BB const& empty) -> std::vector<BB>
 
 // The invariant on all three readings: the block-wise answer is the standard algorithm's, or it is wrong. [design.md#the-ordering-invariant]
 template<class BB>
-auto disagreements(BB const& empty) -> int
+auto disagreements(BB const& empty)
+        -> int
 {
         auto const values = probes(empty);
         auto n = 0;
@@ -909,7 +1063,8 @@ namespace {
 
 // Twenty bits with a fixed pattern, grown first where the width is a run-time one: the sample both word cases read.
 template<class T>
-auto word_sample() -> T
+auto word_sample()
+        -> T
 {
         auto b = T();
         if constexpr (requires { b.resize(20UZ); }) {
@@ -924,7 +1079,8 @@ auto word_sample() -> T
 // A whole number of blocks, so there is no unused tail. operator<<= masks one off at the end, and the case below is
 // about the splice rather than about that mask.
 template<class T>
-auto aligned_sample() -> T
+auto aligned_sample()
+        -> T
 {
         auto b = T();
         if constexpr (requires { b.resize(24UZ); }) {
@@ -939,7 +1095,8 @@ auto aligned_sample() -> T
 // One start and length through set, flip and reset, each against the model; a function rather than a loop body so the
 // case that sweeps it stays under readability-function-cognitive-complexity's threshold.
 template<class T>
-auto check_ranged_forms(std::size_t n, std::size_t len) -> void
+auto check_ranged_forms(std::size_t n, std::size_t len)
+        -> void
 {
         auto e = word_sample<T>();
         auto r = reference(e);

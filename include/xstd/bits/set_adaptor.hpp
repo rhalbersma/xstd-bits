@@ -16,7 +16,7 @@
 #include <algorithm>                         // any_of, equal, includes, lexicographical_compare_three_way
 #include <cassert>                           // assert
 #include <compare>                           // strong_ordering
-#include <concepts>                          // constructible_from, swappable
+#include <concepts>                          // constructible_from, invocable, swappable
 #include <cstddef>                           // ptrdiff_t, size_t
 #include <functional>                        // hash, less
 #include <initializer_list>                  // initializer_list
@@ -36,15 +36,32 @@ namespace detail::set {
 template<class R> inline constexpr bool is_consecutive = false;
 template<class W, class B> inline constexpr bool is_consecutive<std::ranges::iota_view<W, B>> = true;
 
+// [expr.type.conv]'s decay-copy, as a function rather than as auto(x): MSVC 2022 does not implement P0849R8, and
+// T{x} reads to clang-tidy as a cast to the type it already has. Returning by value is the whole of it -- that is
+// what makes the argument at the call below a prvalue. [design.md#the-functor-takes-a-value]
+template<class T>
+[[nodiscard]] constexpr auto decay_copy(T value) noexcept
+        -> T
+{
+        return value;
+}
+
 // Continue unless the functor says otherwise: a void functor always continues, a bool one says.
 // [design.md#the-set-for-each]
+//
+// The position is handed over as a prvalue -- [expr.type.conv]'s decay-copy -- rather than as this parameter's name. A named lvalue binds to a
+// functor taking std::size_t&, which then writes to a local that goes nowhere -- a walk reports positions and
+// changes none, so the write is not merely lost but meaningless. A prvalue makes that a compile error, and it
+// is what is_invocable_r_v just above already asks about, so the call and the detection stop disagreeing about
+// the value category. [design.md#the-functor-takes-a-value]
 template<class F>
-[[nodiscard]] constexpr auto invoke_continues(F& f, std::size_t pos) -> bool
+[[nodiscard]] constexpr auto invoke_continues(F& f, std::size_t pos)
+        -> bool
 {
         if constexpr (std::is_invocable_r_v<bool, F&, std::size_t>) {
-                return f(pos);
+                return f(decay_copy(pos));
         } else {
-                f(pos);
+                f(decay_copy(pos));
                 return true;
         }
 }
@@ -54,7 +71,8 @@ template<class F>
 
 // Blocks, lowest position first: load once per block, then tzcnt for the position and blsr to drop it.
 template<class Traits, class Bits, class F>
-constexpr void walk_blocks_ascending(Bits const& c, F& f)
+constexpr auto walk_blocks_ascending(Bits const& c, F& f)
+        -> void
 {
         using block_type = std::remove_cvref_t<decltype(Traits::block(c, 0UZ))>;
         constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<block_type>::digits);
@@ -73,7 +91,8 @@ constexpr void walk_blocks_ascending(Bits const& c, F& f)
 
 // The mirror. w & (w - 1) has no descending twin, so this clears the bit it just reported.
 template<class Traits, class Bits, class F>
-constexpr void walk_blocks_descending(Bits const& c, F& f)
+constexpr auto walk_blocks_descending(Bits const& c, F& f)
+        -> void
 {
         using block_type = std::remove_cvref_t<decltype(Traits::block(c, 0UZ))>;
         constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<block_type>::digits);
@@ -94,7 +113,8 @@ constexpr void walk_blocks_descending(Bits const& c, F& f)
 // The other tier: a storage with no block access -- boost::dynamic_bitset is the one -- walks positions, which
 // is what the iterator does and is still the same answer. [design.md#windows]
 template<class Range, class F>
-constexpr void walk_positions_ascending(Range const& r, F& f)
+constexpr auto walk_positions_ascending(Range const& r, F& f)
+        -> void
 {
         for (auto const pos : r) {
                 if (not invoke_continues(f, pos)) {
@@ -104,7 +124,8 @@ constexpr void walk_positions_ascending(Range const& r, F& f)
 }
 
 template<class Range, class F>
-constexpr void walk_positions_descending(Range const& r, F& f)
+constexpr auto walk_positions_descending(Range const& r, F& f)
+        -> void
 {
         for (auto it = r.rbegin(), last = r.rend(); it != last; ++it) {
                 if (not invoke_continues(f, *it)) {
@@ -143,7 +164,8 @@ class set_adaptor
 
         // The value under the set reading, owned or viewed as == is: the bits at a static width, the positions at a run-time one, where two equal sets need not share a width. [design.md#the-hashing-invariant]
         template<class Provider, class Hash, class Flavor>
-        friend constexpr void tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, set_adaptor const* v) noexcept
+        friend constexpr auto tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, set_adaptor const* v) noexcept
+                -> void
         {
                 if constexpr (has_static_width) {
                         detail::bits::hash_append_bits<Traits>(h, f, v->storage());
@@ -262,10 +284,16 @@ public:
         // The functor may return void, or bool to mean "keep going", which is what a move generator wants when it
         // has found its answer. Nothing else is offered: a functor that returns something else is a caller error
         // rather than a value to discard silently.
+        //
+        // It takes the position by value, and the constraint says so, so a functor asking for size_t& reads
+        // "constraint not satisfied" here rather than compiling into a write that goes nowhere.
+        // [design.md#the-functor-takes-a-value]
         template<class F>
-        constexpr void for_each(this auto&& self, F f)
+                requires std::invocable<F&, std::size_t>
+        constexpr auto for_each(this auto&& self, F f)
+                -> void
         {
-                if constexpr (requires { Traits::block(self.storage(), 0UZ); Traits::num_blocks(self.storage()); }) {
+                if constexpr (requires (std::size_t i) { Traits::block(self.storage(), i); Traits::num_blocks(self.storage()); }) {
                         detail::set::walk_blocks_ascending<Traits>(self.storage(), f);
                 } else {
                         detail::set::walk_positions_ascending(self, f);
@@ -275,9 +303,11 @@ public:
         // The mirror, highest position first. w & (w - 1) has no descending twin, so this one clears the top bit
         // it just reported instead. The set reading iterates both ways, and so does this. [design.md#the-set-for-each]
         template<class F>
-        constexpr void for_each_reverse(this auto&& self, F f)
+                requires std::invocable<F&, std::size_t>
+        constexpr auto for_each_reverse(this auto&& self, F f)
+                -> void
         {
-                if constexpr (requires { Traits::block(self.storage(), 0UZ); Traits::num_blocks(self.storage()); }) {
+                if constexpr (requires (std::size_t i) { Traits::block(self.storage(), i); Traits::num_blocks(self.storage()); }) {
                         detail::set::walk_blocks_descending<Traits>(self.storage(), f);
                 } else {
                         detail::set::walk_positions_descending(self, f);
@@ -313,7 +343,7 @@ public:
         template<class... Args>
         constexpr auto emplace(this auto&& self, Args&&... args)
                 -> std::pair<iterator, bool>
-                requires (sizeof...(args) == 1) and requires { Traits::insert(self.storage(), 0UZ); }
+                requires (sizeof...(args) == 1) and requires { Traits::insert(self.storage(), value_type(std::forward<Args>(args)...)); }
         {
                 return self.do_insert(value_type(std::forward<Args>(args)...));
         }
@@ -321,7 +351,7 @@ public:
         template<class... Args>
         constexpr auto emplace_hint(this auto&& self, const_iterator position, Args&&... args)
                 -> iterator
-                requires (sizeof...(args) == 1) and requires { Traits::insert(self.storage(), 0UZ); }
+                requires (sizeof...(args) == 1) and requires { Traits::insert(self.storage(), value_type(std::forward<Args>(args)...)); }
         {
                 return self.do_insert(position, value_type(std::forward<Args>(args)...));
         }
@@ -331,8 +361,9 @@ public:
         constexpr auto insert(this auto&& self, const_iterator position, value_type x) -> iterator requires requires { Traits::insert(self.storage(), x); } { return self.do_insert(position, x); }
 
         template<std::input_iterator I, std::sentinel_for<I> S>
-        constexpr void insert(this auto&& self, I first, S last)
-                requires std::constructible_from<value_type, std::iter_reference_t<I>> and requires { Traits::insert(self.storage(), 0UZ); }
+        constexpr auto insert(this auto&& self, I first, S last)
+                -> void
+                requires std::constructible_from<value_type, std::iter_reference_t<I>> and requires { Traits::insert(self.storage(), static_cast<value_type>(*first)); }
         {
                 for (; first != last; ++first) {
                         Traits::insert(self.storage(), static_cast<value_type>(*first));
@@ -341,14 +372,15 @@ public:
 
         // Ranged insertion has tiers, as the sequence reading's append_range does. [design.md#the-range-members]
         template<std::ranges::input_range R>
-        constexpr void insert_range(this auto&& self, R&& rg)
-                requires std::constructible_from<value_type, std::ranges::range_reference_t<R>> and requires { Traits::insert(self.storage(), 0UZ); }
+        constexpr auto insert_range(this auto&& self, R&& rg)
+                -> void
+                requires std::constructible_from<value_type, std::ranges::range_reference_t<R>> and requires { Traits::insert(self.storage(), static_cast<value_type>(*std::ranges::begin(rg))); }
         {
                 if constexpr (requires { self |= rg; }) {
                         // Tier one: another set over the same storage, which is a union and already knows how to do
                         // one block-wise, mismatched widths included.
                         self |= rg;
-                } else if constexpr (detail::set::is_consecutive<std::remove_cvref_t<R>> and requires { self.storage().set(0UZ, 0UZ, true); }) {
+                } else if constexpr (detail::set::is_consecutive<std::remove_cvref_t<R>> and requires (std::size_t pos, std::size_t len) { self.storage().set(pos, len, true); }) {
                         // Tier two: consecutive positions, so the first and last blocks are masked and everything
                         // between them is written whole, which is what the ranged set does.
                         if (not std::ranges::empty(rg)) {
@@ -364,13 +396,15 @@ public:
                 }
         }
 
-        constexpr void insert(this auto&& self, std::initializer_list<value_type> ilist)
-                requires requires { Traits::insert(self.storage(), 0UZ); }
+        constexpr auto insert(this auto&& self, std::initializer_list<value_type> ilist)
+                -> void
+                requires requires { Traits::insert(self.storage(), *ilist.begin()); }
         {
                 self.insert(ilist.begin(), ilist.end());
         }
 
-        constexpr void fill(this auto&& self) noexcept
+        constexpr auto fill(this auto&& self) noexcept
+                -> void
                 requires requires { Traits::fill(self.storage(), true); }
         {
                 Traits::fill(self.storage(), true);
@@ -379,7 +413,7 @@ public:
         // The successor first: exclusive_find_next never reads the position it steps from, but the order costs nothing and says so.
         constexpr auto erase(this auto&& self, const_iterator position) noexcept
                 -> iterator
-                requires requires { Traits::unchecked_assign(self.storage(), 0UZ, false); }
+                requires requires { Traits::unchecked_assign(self.storage(), *position, false); }
         {
                 assert(position != self.end());
                 auto nrv = position;
@@ -391,7 +425,7 @@ public:
         // Total over key_type, as std::set's is: an absent key is the no-op returning zero. [design.md#total-lookups-on-the-container]
         constexpr auto erase(this auto&& self, key_type const& x) noexcept
                 -> size_type
-                requires requires { Traits::unchecked_assign(self.storage(), 0UZ, false); }
+                requires requires { Traits::unchecked_assign(self.storage(), x, false); }
         {
                 if (not self.contains(x)) {
                         return 0UZ;
@@ -402,7 +436,7 @@ public:
 
         constexpr auto erase(this auto&& self, const_iterator first, const_iterator last) noexcept
                 -> iterator
-                requires requires { Traits::unchecked_assign(self.storage(), 0UZ, false); }
+                requires requires { Traits::unchecked_assign(self.storage(), *first, false); }
         {
                 while (first != last) {
                         Traits::unchecked_assign(self.storage(), *first++, false);
@@ -411,7 +445,8 @@ public:
         }
 
         // The storage's own swap through the customization point, std::bitset having no member to call.
-        constexpr void swap(set_adaptor& other) noexcept(std::is_nothrow_swappable_v<Bits>)
+        constexpr auto swap(set_adaptor& other) noexcept(std::is_nothrow_swappable_v<Bits>)
+                -> void
                 requires is_owner and std::swappable<Bits>
         {
                 std::ranges::swap(this->m_bits, other.m_bits);
@@ -424,20 +459,22 @@ public:
                 return m_bits.get_allocator();
         }
 
-        constexpr void clear(this auto&& self) noexcept
+        constexpr auto clear(this auto&& self) noexcept
+                -> void
                 requires requires { Traits::fill(self.storage(), false); }
         {
                 Traits::fill(self.storage(), false);
         }
 
-        constexpr void complement(this auto&& self, value_type x) noexcept
+        constexpr auto complement(this auto&& self, value_type x) noexcept
+                -> void
                 requires requires { Traits::unchecked_assign(self.storage(), x, true); }
         {
                 assert(x < Traits::size(self.storage()));
                 Traits::unchecked_assign(self.storage(), x, not Traits::at(self.storage(), x));
         }
 
-        constexpr void complement(this auto&& self) noexcept requires requires { self.storage().flip(); } { self.storage().flip(); }
+        constexpr auto complement(this auto&& self) noexcept -> void requires requires { self.storage().flip(); } { self.storage().flip(); }
 
         // Bulk, on the storage's own spelling: what every storage agrees on is required of it, not reconciled. [design.md#what-the-trait-reconciles]
         // Two run-time widths that differ go element-wise instead, the storages' own being equal-width operations; the two that insert may then allocate. [design.md#width-is-capacity]
@@ -653,7 +690,8 @@ struct owned_storage<set_adaptor<Bits, ownership::owns, Traits>>
 
 // NOLINTBEGIN(readability-redundant-parentheses): a call is no primary expression, so the requires-clause needs the parentheses the check reports as redundant.
 template<class Bits, ownership Own, class Traits>
-constexpr void swap(set_adaptor<Bits, Own, Traits>& x, set_adaptor<Bits, Own, Traits>& y) noexcept(noexcept(x.swap(y)))
+constexpr auto swap(set_adaptor<Bits, Own, Traits>& x, set_adaptor<Bits, Own, Traits>& y) noexcept(noexcept(x.swap(y)))
+        -> void
         requires (owns(Own))
 {
         x.swap(y);

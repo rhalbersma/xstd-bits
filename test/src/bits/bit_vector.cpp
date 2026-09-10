@@ -158,20 +158,23 @@ namespace {
 
 // A std::vector<bool> holding what a sequence holds, the model every check below compares against.
 template<class R>
-auto model_of(R const& r) -> std::vector<bool>
+auto model_of(R const& r)
+        -> std::vector<bool>
 {
         return std::vector<bool>(r.begin(), r.end());
 }
 
 // std::vector<bool>'s append_range and insert_range, spelled through insert for the standard libraries that lack them.
 template<class R>
-void append_to(std::vector<bool>& m, R const& r)
+auto append_to(std::vector<bool>& m, R const& r)
+        -> void
 {
         m.insert(m.end(), r.begin(), r.end());
 }
 
 // A pattern over n positions with a period that never aligns with a block.
-auto pattern(std::size_t n) -> std::vector<bool>
+auto pattern(std::size_t n)
+        -> std::vector<bool>
 {
         auto v = std::vector<bool>(n);
         for (auto i = 0UZ; i < n; ++i) {

@@ -16,7 +16,7 @@
 #include <xstd/bits/ownership.hpp>                // owned_bits_t, owned_storage, owned_traits_t, owner_of, ownership, owns
 #include <cassert>                                // assert
 #include <compare>                                // strong_ordering
-#include <concepts>                               // constructible_from, convertible_to, same_as, swap, swappable
+#include <concepts>                               // constructible_from, convertible_to, invocable, same_as, swap, swappable
 #include <cstddef>                                // ptrdiff_t, size_t
 #include <format>                                 // format
 #include <functional>                             // hash
@@ -47,15 +47,32 @@ template<class Block>
         return count == digits ? static_cast<Block>(~Block{}) : static_cast<Block>(static_cast<Block>(Block{1} << count) - Block{1});
 }
 
+// [expr.type.conv]'s decay-copy, as a function rather than as auto(x): MSVC 2022 does not implement P0849R8, and
+// T{x} reads to clang-tidy as a cast to the type it already has. Returning by value is the whole of it -- that is
+// what makes the argument at the call below a prvalue. [design.md#the-functor-takes-a-value]
+template<class T>
+[[nodiscard]] constexpr auto decay_copy(T value) noexcept
+        -> T
+{
+        return value;
+}
+
 // Continue unless the functor says otherwise: a void functor always continues, a bool one says. What the set
 // reading's for_each does, over what this reading's iterator dereferences to. [design.md#the-sequence-for-each]
+//
+// The bool is handed over as a prvalue -- [expr.type.conv]'s decay-copy -- rather than as this parameter's name. A named lvalue binds to a functor
+// taking bool&, which then writes to a local that goes nowhere: the walk reads the storage through a const
+// reference and never writes back, so what looks like a mutating pass is a silent no-op. A prvalue makes that a
+// compile error, and it is what is_invocable_r_v just above already asks about, so the call and the detection
+// stop disagreeing about the value category. [design.md#the-functor-takes-a-value]
 template<class F>
-[[nodiscard]] constexpr auto invoke_continues(F& f, bool value) -> bool
+[[nodiscard]] constexpr auto invoke_continues(F& f, bool value)
+        -> bool
 {
         if constexpr (std::is_invocable_r_v<bool, F&, bool>) {
-                return f(value);
+                return f(decay_copy(value));
         } else {
-                f(value);
+                f(decay_copy(value));
                 return true;
         }
 }
@@ -67,7 +84,8 @@ template<class F>
 // inner loop's exit test, which a flat operator++ can never express. That structure is the whole speedup, the
 // iterator's layout already being the fastest there is. [design.md#the-sequence-for-each]
 template<class Traits, class Bits, class F>
-constexpr void walk_words(Bits const& c, std::size_t offset, std::size_t size, F& f)
+constexpr auto walk_words(Bits const& c, std::size_t offset, std::size_t size, F& f)
+        -> void
 {
         using block_type = std::remove_cvref_t<decltype(Traits::block(c, 0UZ))>;
         constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<block_type>::digits);
@@ -86,7 +104,8 @@ constexpr void walk_words(Bits const& c, std::size_t offset, std::size_t size, F
 // The other tier: a storage with no block access -- libc++'s std::bitset and boost's are the ones -- walks
 // positions, which is what the iterator does and is still the same answer. [design.md#windows]
 template<class Traits, class Bits, class F>
-constexpr void walk_positions(Bits const& c, std::size_t offset, std::size_t size, F& f)
+constexpr auto walk_positions(Bits const& c, std::size_t offset, std::size_t size, F& f)
+        -> void
 {
         for (auto n = 0UZ; n < size; ++n) {
                 if (not invoke_continues(f, Traits::at(c, offset + n))) {
@@ -175,8 +194,8 @@ template<class Traits, class Bits>
 template<class S, class Block>
 concept blit_source =
         requires { typename S::subspan_type; typename S::traits_type; typename S::traits_type::bits_type; } and
-        requires (S::traits_type::bits_type const& c) {
-                { S::traits_type::block(c, 0UZ) } -> std::same_as<Block>;
+        requires (S::traits_type::bits_type const& c, std::size_t i) {
+                { S::traits_type::block(c, i) } -> std::same_as<Block>;
                 { S::traits_type::num_blocks(c) } -> std::convertible_to<std::size_t>;
         };
 
@@ -191,7 +210,7 @@ class sequence_adaptor : public std::conditional_t<owns(Own), detail::bits::allo
         using bits_type = std::remove_const_t<Bits>;
 
         // Growth is the owner's over storage that grows: a view must never resize what it does not own. [design.md#growth]
-        static constexpr bool can_grow = is_owner and not static_bit_extent<Traits, bits_type> and requires (bits_type& b) { b.resize(0UZ, true); b.push_back(true); b.pop_back(); b.clear(); };
+        static constexpr bool can_grow = is_owner and not static_bit_extent<Traits, bits_type> and requires (bits_type& b, std::size_t n, bool value) { b.resize(n, value); b.push_back(value); b.pop_back(); b.clear(); };
 
         // A window is what std::span stores, the pointer's role split over a pointer and a position because bits are not addressable: the iterator's two fields and a size. [design.md#windows]
         struct window
@@ -246,7 +265,7 @@ class sequence_adaptor : public std::conditional_t<owns(Own), detail::bits::allo
         static constexpr bool blittable = blit_source<S, typename bits_type::block_type>;
 
         // A storage that takes a masked word at any position: ours, which is what a window's bulk operators write through.
-        static constexpr bool word_writable = requires (bits_type& b, bits_type::block_type w) { b.set_word(0UZ, w, w); };
+        static constexpr bool word_writable = requires (bits_type& b, std::size_t pos, bits_type::block_type w) { b.set_word(pos, w, w); };
 
         // Either reading's view refers into this owner's storage, and nothing else outside does. [design.md#views-over-owners]
         template<class B, ownership O, bit_storage<B> T>         friend class set_adaptor;
@@ -254,7 +273,8 @@ class sequence_adaptor : public std::conditional_t<owns(Own), detail::bits::allo
 
         // The value under the sequence reading, the owner's alone as == is: a view follows span and hashes no more than it compares. [design.md#the-hashing-invariant]
         template<class Provider, class Hash, class Flavor>
-        friend constexpr void tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, sequence_adaptor const* v) noexcept
+        friend constexpr auto tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, sequence_adaptor const* v) noexcept
+                -> void
                 requires is_owner
         {
                 detail::bits::hash_append_bits<Traits>(h, f, v->storage());
@@ -406,7 +426,8 @@ public:
         }
 
         // [sequence.reqmts]: assign in its three shapes, each a clear and a refill.
-        constexpr void assign(size_type n, value_type const& value)
+        constexpr auto assign(size_type n, value_type const& value)
+                -> void
                 requires can_grow
         {
                 m_bits.clear();
@@ -415,7 +436,8 @@ public:
 
         template<std::input_iterator I, std::sentinel_for<I> S>
                 requires can_grow and std::constructible_from<value_type, std::iter_reference_t<I>>
-        constexpr void assign(I first, S last)
+        constexpr auto assign(I first, S last)
+                -> void
         {
                 m_bits.clear();
                 for (; first != last; ++first) {
@@ -423,7 +445,8 @@ public:
                 }
         }
 
-        constexpr void assign(std::initializer_list<value_type> il)
+        constexpr auto assign(std::initializer_list<value_type> il)
+                -> void
                 requires can_grow
         {
                 assign(il.begin(), il.end());
@@ -432,7 +455,8 @@ public:
         // [sequence.reqmts]'s range members, and [vector]'s insert and erase, over a storage that grows. [design.md#the-range-members]
         template<std::ranges::input_range R>
                 requires can_grow and std::constructible_from<value_type, std::ranges::range_reference_t<R>>
-        constexpr void append_range(R&& rg)
+        constexpr auto append_range(R&& rg)
+                -> void
         {
                 if constexpr (blittable<std::remove_cvref_t<R>>) {
                         blit<typename std::remove_cvref_t<R>::traits_type>(rg.storage(), rg.offset(), rg.size());
@@ -443,7 +467,8 @@ public:
 
         template<std::ranges::input_range R>
                 requires can_grow and std::constructible_from<value_type, std::ranges::range_reference_t<R>>
-        constexpr void assign_range(R&& rg)
+        constexpr auto assign_range(R&& rg)
+                -> void
         {
                 m_bits.clear();
                 append_range(std::forward<R>(rg));
@@ -552,12 +577,13 @@ public:
         }
 
         // fill: the trait's entry over the whole, a masked word at a time over a window of ours, one position at a time over a window of anything else. [design.md#windows]
-        constexpr void fill(this auto&& self, value_type const& u) noexcept
-                requires (is_window and requires { Traits::unchecked_assign(self.storage(), 0UZ, u); }) or (not is_window and requires { Traits::fill(self.storage(), u); })
+        constexpr auto fill(this auto&& self, value_type const& u) noexcept
+                -> void
+                requires (is_window and requires (std::size_t i) { Traits::unchecked_assign(self.storage(), i, u); }) or (not is_window and requires { Traits::fill(self.storage(), u); })
         {
                 if constexpr (not is_window) {
                         Traits::fill(self.storage(), u);
-                } else if constexpr (requires { self.storage().set(0UZ, 0UZ, u); }) {
+                } else if constexpr (requires { self.storage().set(self.offset(), self.size(), u); }) {
                         self.storage().set(self.offset(), self.size(), u);
                 } else {
                         for (auto i = self.offset(), last = self.offset() + self.size(); i < last; ++i) {
@@ -567,7 +593,8 @@ public:
         }
 
         // The storage's own swap through the customization point, std::bitset having no member to call.
-        constexpr void swap(sequence_adaptor& other) noexcept(std::is_nothrow_swappable_v<Bits>)
+        constexpr auto swap(sequence_adaptor& other) noexcept(std::is_nothrow_swappable_v<Bits>)
+                -> void
                 requires is_owner and std::swappable<Bits>
         {
                 std::ranges::swap(this->m_bits, other.m_bits);
@@ -599,8 +626,13 @@ public:
         // The functor takes what this reading's iterator dereferences to, a bool, where the set reading's takes a
         // position; it may return void, or bool to mean "keep going". Nothing else is offered: a functor that returns
         // something else is a caller error rather than a value to discard silently. [design.md#the-set-for-each]
+        //
+        // It takes that bool by value, and the constraint says so, so a functor asking for bool& reads "constraint not
+        // satisfied" here rather than compiling into a write that goes nowhere. [design.md#the-functor-takes-a-value]
         template<class F>
-        constexpr void for_each(this auto&& self, F f)
+                requires std::invocable<F&, bool>
+        constexpr auto for_each(this auto&& self, F f)
+                -> void
         {
                 if constexpr (block_readable<Traits, bits_type>) {
                         detail::sequence::walk_words<Traits>(self.storage(), self.offset(), self.size(), f);
@@ -681,11 +713,11 @@ public:
         }
 
         // Growth, [vector]'s members over storage that spells them alike, so detected on the storage rather than reconciled by the trait. [design.md#growth]
-        constexpr void resize(size_type n)                          requires can_grow { m_bits.resize(n); }
-        constexpr void resize(size_type n, value_type const& value) requires can_grow { m_bits.resize(n, value); }
-        constexpr void clear() noexcept                             requires can_grow { m_bits.clear(); }
-        constexpr void push_back(value_type const& value)           requires can_grow { m_bits.push_back(value); }
-        constexpr void pop_back() noexcept                          requires can_grow { m_bits.pop_back(); }
+        constexpr auto resize(size_type n)                          -> void requires can_grow { m_bits.resize(n); }
+        constexpr auto resize(size_type n, value_type const& value) -> void requires can_grow { m_bits.resize(n, value); }
+        constexpr auto clear() noexcept                             -> void requires can_grow { m_bits.clear(); }
+        constexpr auto push_back(value_type const& value)           -> void requires can_grow { m_bits.push_back(value); }
+        constexpr auto pop_back() noexcept                          -> void requires can_grow { m_bits.pop_back(); }
 
         constexpr auto emplace_back(value_type const& value)
                 -> reference
@@ -695,7 +727,8 @@ public:
                 return back();
         }
 
-        constexpr void reserve(size_type n)
+        constexpr auto reserve(size_type n)
+                -> void
                 requires can_grow and requires (bits_type& b) { b.reserve(n); }
         {
                 m_bits.reserve(n);
@@ -708,7 +741,8 @@ public:
                 return m_bits.capacity();
         }
 
-        constexpr void shrink_to_fit()
+        constexpr auto shrink_to_fit()
+                -> void
                 requires can_grow and requires (bits_type& b) { b.shrink_to_fit(); }
         {
                 m_bits.shrink_to_fit();
@@ -761,9 +795,9 @@ public:
         template<class Other> constexpr auto operator-=(this auto&& self, Other const& other) noexcept -> auto& requires is_window and word_writable and blittable<Other> { self.combine(other, [](auto a, auto b) { return static_cast<decltype(a)>(a & static_cast<decltype(b)>(~b)); }); return self; }
 
         // [vector.bool]'s two: flip every bit, a bulk operation like the ones above, and swap two proxies, which the proxies' own swap already does.
-        constexpr void flip(this auto&& self) noexcept requires (not is_window) and requires { self.storage().flip(); } { self.storage().flip(); }
+        constexpr auto flip(this auto&& self) noexcept -> void requires (not is_window) and requires { self.storage().flip(); } { self.storage().flip(); }
 
-        static constexpr void swap(reference x, reference y) noexcept { bool const t = x; x = y; y = t; }
+        static constexpr auto swap(reference x, reference y) noexcept -> void { bool const t = x; x = y; y = t; }
 
 private:
         // One tier each for the three aggregates above, chosen once: the trait's door over the whole, a masked word at
@@ -822,7 +856,8 @@ private:
 
         // The words of this window against the words of another at its own alignment, each masked to what the window holds.
         template<class Other, class F>
-        constexpr void combine(this auto&& self, Other const& other, F f) noexcept
+        constexpr auto combine(this auto&& self, Other const& other, F f) noexcept
+                -> void
         {
                 using block_type = bits_type::block_type;
                 constexpr auto digits = bits_type::bits_per_block;
@@ -837,11 +872,12 @@ private:
 
         // Tier one: the source's bits as words at its own alignment, appended a word at a time and trimmed to the count; a source in this very storage reads only below the old width, which no append touches. [design.md#the-blit]
         template<class STraits, class SBits>
-        constexpr void blit(SBits const& src, size_type first, size_type count)
+        constexpr auto blit(SBits const& src, size_type first, size_type count)
+                -> void
         {
                 constexpr auto digits = bits_type::bits_per_block;
                 auto const old = size();
-                if constexpr (requires (bits_type& b) { b.reserve(0UZ); }) {
+                if constexpr (requires (bits_type& b, std::size_t n) { b.reserve(n); }) {
                         m_bits.reserve(old + count);
                 }
                 for (auto pos = first; pos < first + count; pos += digits) {
@@ -852,11 +888,12 @@ private:
 
         // Tier two: the bools packed into words, boost's bit_appender, and the last word trimmed to what it holds.
         template<std::ranges::input_range R>
-        constexpr void pack(R&& rg)
+        constexpr auto pack(R&& rg)
+                -> void
         {
                 using block_type = bits_type::block_type;
                 constexpr auto digits = bits_type::bits_per_block;
-                if constexpr (std::ranges::sized_range<R> and requires (bits_type& b) { b.reserve(0UZ); }) {
+                if constexpr (std::ranges::sized_range<R> and requires (bits_type& b, std::size_t n) { b.reserve(n); }) {
                         m_bits.reserve(size() + std::ranges::size(rg));
                 }
                 auto word = block_type{};
@@ -927,7 +964,8 @@ struct owned_storage<sequence_adaptor<Bits, ownership::owns, false, Traits>>
 
 // NOLINTBEGIN(readability-redundant-parentheses): a call is no primary expression, so the requires-clause needs the parentheses the check reports as redundant.
 template<class Bits, ownership Own, bool Windowed, class Traits>
-constexpr void swap(sequence_adaptor<Bits, Own, Windowed, Traits>& x, sequence_adaptor<Bits, Own, Windowed, Traits>& y) noexcept(noexcept(x.swap(y)))
+constexpr auto swap(sequence_adaptor<Bits, Own, Windowed, Traits>& x, sequence_adaptor<Bits, Own, Windowed, Traits>& y) noexcept(noexcept(x.swap(y)))
+        -> void
         requires (owns(Own))
 {
         x.swap(y);

@@ -36,16 +36,18 @@ struct bit_traits<std::bitset<N>>
         [[nodiscard]] static constexpr auto any  (bits_type const& c)                noexcept -> bool        { return c.any();   }
         [[nodiscard]] static constexpr auto none (bits_type const& c)                noexcept -> bool        { return c.none();  }
 
-        static constexpr void unchecked_assign(bits_type& c, std::size_t n, bool value) noexcept { c[n] = value; }
+        static constexpr auto unchecked_assign(bits_type& c, std::size_t n, bool value) noexcept -> void { c[n] = value; }
 
         // A static width cannot grow, so inserting is assigning with the position as a precondition. [design.md#what-the-trait-reconciles]
-        static constexpr void insert(bits_type& c, std::size_t n) noexcept
+        static constexpr auto insert(bits_type& c, std::size_t n) noexcept
+                -> void
         {
                 assert(n < N);
                 c[n] = true;
         }
 
-        static constexpr void fill(bits_type& c, bool value) noexcept
+        static constexpr auto fill(bits_type& c, bool value) noexcept
+                -> void
         {
                 if (value) {
                         c.set();
@@ -76,14 +78,14 @@ struct bit_traits<std::bitset<N>>
         // Above that, the reserved word read, constrained and not guarded on the platform: without _Getword block_readable goes unsatisfied and the walks stay element-wise. [design.md#detection-by-absence]
         [[nodiscard]] static constexpr auto num_blocks(bits_type const& c) noexcept
                 -> std::size_t
-                requires (N > ullong_digits) and requires { { c._Getword(0UZ) } -> xstd::unsigned_integer; }
+                requires (N > ullong_digits) and requires (std::size_t i) { { c._Getword(i) } -> xstd::unsigned_integer; }
         {
                 constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<decltype(c._Getword(0UZ))>::digits);
                 return (N + digits - 1UZ) / digits;
         }
 
         [[nodiscard]] static constexpr auto block(bits_type const& c, std::size_t i) noexcept
-                requires (N > ullong_digits) and requires { { c._Getword(0UZ) } -> xstd::unsigned_integer; }
+                requires (N > ullong_digits) and requires { { c._Getword(i) } -> xstd::unsigned_integer; }
         {
                 return c._Getword(i);
         }

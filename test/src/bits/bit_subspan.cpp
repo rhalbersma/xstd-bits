@@ -136,7 +136,8 @@ namespace {
 
 // The bools a range holds, for the checks below.
 template<class R>
-auto bools(R const& r) -> std::vector<bool>
+auto bools(R const& r)
+        -> std::vector<bool>
 {
         return std::vector<bool>(r.begin(), r.end());
 }
@@ -171,7 +172,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AWindowFillsItsPositionsAlone, T, ViewedTypes)
 namespace {
 
 // A pattern over n positions from a seed, with a period that never aligns with a block.
-auto pattern(std::size_t n, std::size_t seed) -> std::vector<bool>
+auto pattern(std::size_t n, std::size_t seed)
+        -> std::vector<bool>
 {
         auto v = std::vector<bool>(n);
         for (auto i = 0UZ; i < n; ++i) {
@@ -181,7 +183,8 @@ auto pattern(std::size_t n, std::size_t seed) -> std::vector<bool>
 }
 
 // The four operators by number: on two bools for the model, on a window and a source for the sequence.
-auto model_op(int op, bool a, bool b) -> bool
+auto model_op(int op, bool a, bool b)
+        -> bool
 {
         switch (op) {
         case 0:  return a and b;
@@ -191,7 +194,8 @@ auto model_op(int op, bool a, bool b) -> bool
         }
 }
 
-void window_op(int op, auto const& w, auto const& o)
+auto window_op(int op, auto const& w, auto const& o)
+        -> void
 {
         switch (op) {
         case 0:  w &= o; break;
@@ -202,7 +206,8 @@ void window_op(int op, auto const& w, auto const& o)
 }
 
 // One combination: a window of the destination at off against a window of the source at other, count wide, against the bool model.
-void check_combination(int op, std::size_t off, std::size_t other, std::size_t count)
+auto check_combination(int op, std::size_t off, std::size_t other, std::size_t count)
+        -> void
 {
         auto source = xstd::basic_bit_vector<std::uint8_t>(std::from_range, pattern(40, 2));
         auto dest = xstd::basic_bit_vector<std::uint8_t>(std::from_range, pattern(40, 3));

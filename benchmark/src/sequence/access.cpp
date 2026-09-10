@@ -24,21 +24,24 @@ namespace {
 
 inline constexpr auto bits_per_word = 64UZ;
 
-auto bits(benchmark::State const& state) -> std::size_t
+auto bits(benchmark::State const& state)
+        -> std::size_t
 {
         return static_cast<std::size_t>(state.range(0)) * bits_per_word;
 }
 
 // One step of an LCG per lookup: a couple of nanoseconds against a DRAM miss, and unpredictable enough that the
 // prefetcher cannot turn the random walk back into a sequential one, which is the whole point of measuring it.
-constexpr auto next_index(std::uint64_t& lcg, std::size_t n) -> std::size_t
+constexpr auto next_index(std::uint64_t& lcg, std::size_t n)
+        -> std::size_t
 {
         lcg = lcg * 6364136223846793005ULL + 1442695040888963407ULL;
         return static_cast<std::size_t>(lcg >> 33) % n;
 }
 
 template<class T>
-auto filled(std::size_t n) -> T
+auto filled(std::size_t n)
+        -> T
 {
         auto v = T(n);
         auto lcg = std::uint64_t{1};
@@ -53,7 +56,8 @@ auto filled(std::size_t n) -> T
 // The endgame-database lookup: one random read, and what it costs is a miss. Reported per item, because bytes per
 // second is meaningless when a lookup touches one bit and pays for a whole line.
 template<class T>
-void bm_random_read(benchmark::State& state)
+auto bm_random_read(benchmark::State& state)
+        -> void
 {
         auto const n = bits(state);
         auto const v = filled<T>(n);
@@ -68,7 +72,8 @@ void bm_random_read(benchmark::State& state)
 // The other half of a database pass: not a lookup but a sweep, where a container owning its blocks should have
 // the advantage over one that does not -- and does not, which is the finding. [design.md#the-sequence-ladder]
 template<class T>
-void bm_sequential_count(benchmark::State& state)
+auto bm_sequential_count(benchmark::State& state)
+        -> void
 {
         auto const n = bits(state);
         auto const v = filled<T>(n);
@@ -81,7 +86,8 @@ void bm_sequential_count(benchmark::State& state)
 
 // Building a slice: the allocation and the fill, which is what a database build pays once per slice.
 template<class T>
-void bm_construct(benchmark::State& state)
+auto bm_construct(benchmark::State& state)
+        -> void
 {
         auto const n = bits(state);
         for (auto _ : state) {

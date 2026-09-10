@@ -8,16 +8,48 @@ file holds what has landed.
 
 ## Storage and containers
 
-### block-storage
+### contiguous-block-container
 
-`block_storage` asks whether a range **is** blocks: a regular, contiguous, sized range of unsigned integers.
-Regular is what lets `block_sequence` default its `==` over the width and the blocks, in that member order, so
-two run-time widths part on the width before a block is read.
+`contiguous_block_container` asks whether a range **is** blocks: a regular, contiguous, sized, subscriptable
+range of unsigned integers. Regular is what lets `block_sequence` default its `==` over the width and the
+blocks, in that member order, so two run-time widths part on the width before a block is read.
 `std::array` and `std::vector` both qualify, and so does `std::inplace_vector` — a runtime width over
 static capacity, for free.
 
-`xstd::block_range` is the other side of the same word, and asks whether a bit container will
+Subscript is spelled out rather than left to `std::ranges::contiguous_range`, which does not imply it.
+`contiguous_range` gives `data()` and a `contiguous_iterator`, and a `contiguous_iterator` is a
+`random_access_iterator`, so `i[n]` **is** required — of the *iterator*. The range itself is under no such
+obligation, and a plain buffer wrapper proves the gap: it satisfies the other four requirements, its
+iterator subscripts happily, and `r[n]` does not compile. `block_sequence` reaches for the range's
+subscript in 140 places, `block_mask` among them, so without this the concept admits storages the class
+cannot be instantiated over — the shortfall surfacing as a hard error inside the template rather than as an
+unsatisfied constraint, which is the failure mode
+[a-requires-clause-names-its-arguments](#a-requires-clause-names-its-arguments) exists to prevent.
+
+The requirement is written against the iterator's own reference type, `range_reference_t<R>`, rather than
+against `range_value_t<R>&`, because the point is not that subscript yields *a* reference but that it yields
+*the same* one iteration does. The rest of that is semantic and no concept can check it, so it is stated
+here as the standard states it for `random_access_iterator`'s `i[n]`:
+
+> `r[i]` is `*(std::ranges::begin(r) + i)`
+
+and asserted in the tests, by address rather than by value, for every storage shipped. An unchecked
+semantic requirement that no test pins is a comment.
+
+Naming it `container` follows from the same fact. A contiguous container generalizes the C array, and `a[i]`
+is the C array's defining operation; a concept claiming a range *is* blocks while unable to index one would
+be describing something else. The word is deliberately close to the standard's *contiguous container*
+([container.reqmts]/68) without claiming it: that term drags in the whole *Container* table — `empty()`,
+`max_size()`, `cbegin`/`cend`, member `swap`, seven nested typedefs — and `block_sequence` needs almost none
+of it. At a static width it needs none; at a run-time width it needs `max_size`, `resize`, `push_back` and
+`clear`, which are *sequence* container operations, not `Container` ones. Neither path draws the line where
+[container.reqmts]/68 draws it, so the concept states its own five requirements and borrows nothing.
+
+`block_readable` is the other side of the same word, and asks whether a bit container will
 **hand its blocks over**. Nothing models both, and no scope sees both unqualified.
+The name says *container*, not *storage*, because that is the whole of what it asks: `bit_storage` and the
+`Storage` template parameters are about what an adaptor sits on, which is a different question and now a
+different word.
 
 ### the-one-vehicle
 
@@ -83,8 +115,8 @@ member, so the landmine #80 recorded -- probing `clear()` on boost and emptying 
 
 `block_inplace_vector<Block, N>` is the third storage: a run-time width under a compile-time capacity of `N`
 bits, behind `__cpp_lib_inplace_vector` until every library in the matrix has it. It needs nothing of its
-own, `std::inplace_vector` satisfying `block_storage` as it is; `resize`, `reserve` and `push_back` past the
-capacity throw `std::bad_alloc`, as that library specifies.
+own, `std::inplace_vector` satisfying `contiguous_block_container` as it is; `resize`, `reserve` and
+`push_back` past the capacity throw `std::bad_alloc`, as that library specifies.
 
 The adaptors take growth by detection on the storage, never through the trait: growth is a container's
 business and no view's, so it exists on an owner and on nothing else. `sequence_adaptor` is
@@ -1019,10 +1051,23 @@ conditional typedef. One boost constructor is left out on purpose: `dynamic_bits
 alloc)` puts a width where `std::bitset`'s `(str, pos, n, zero, one)` puts a character, and one signature
 cannot extend both; `std::bitset`'s wins, the width being the characters read.
 
-What ours does not add is a range: becoming one would change what generic code does with it, from `fmt` to
-`std::ranges::to`, which is the one addition a strict extension cannot make. `bit_set_view` and `bit_span`
-refer into its storage ([views-over-owners](#views-over-owners)) and carry the readings, and
-`ext/xstd/bitset.hpp` is the opt-in that makes iteration reachable by name. Nor a `const_reference` proxy
+What ours does not add is a range, and there is no opt-in that adds one either. Becoming a range would change
+what generic code does with it, from `fmt` to `std::ranges::to`, which is the one addition a strict extension
+cannot make -- and `std::bitset` is already schizophrenic enough about its interface without our making it
+worse. `bit_set_view` and `bit_span` refer into its storage ([views-over-owners](#views-over-owners)) and
+carry the readings: bidirectional over positions, random access over bools, each said out loud at the call
+site. That is the whole iteration story.
+
+`ext/xstd/bitset.hpp` used to be a third answer -- twelve ADL `begin`/`end`/`rbegin`/`rend` overloads routing
+to the set reading -- justified in its own comment as keeping iteration "reachable by name and only by name,
+which is what a free function found by ADL is and what a member could never be". That reasoning was wrong:
+`std::ranges::begin` is *defined* to find ADL `begin`, so a free function is not a weaker form of a member but
+the primary one. Measured, including the header took `std::ranges::range<xstd::bitset<100>>` from `false` to
+`true` and let `std::ranges::to<std::vector<size_t>>` swallow a bitset -- the named prohibition, by the named
+mechanism. It is deleted. The asymmetry was the tell: `begin` is one name and there are two readings, so the
+set reading held it by fiat and the sequence reading could never have had it, which is not a design.
+
+Nor a `const_reference` proxy
 from the const subscript, libc++'s way: `auto x = cb[i]` would change type and could dangle, and a strict
 extension re-types nothing.
 
@@ -1134,6 +1179,142 @@ the walk's 4.00x to 5.27x -- so it is both slower than the member and the only o
 contract: an iterator that caches a block stops observing an erase that lands ahead of it, where a closed loop
 caching the same block is unobservable. The member is the faster half and the safer half at once, which is
 rare enough to record.
+
+### void-is-a-return-type
+
+Every function names its return type after the parameter list, `void` included: `auto f() -> void`, with the
+`-> void` on its own line above the body wherever the body has lines of its own. 118 functions were declared
+`void f()` before this and 68 were already `auto f() -> void`; the split ran roughly along the library/test
+line, which is not a reason, so they are all one shape now.
+
+Three things were weighed and are recorded because the obvious readings of each are wrong.
+
+**clang-tidy does not ask for this and will not keep it.** `modernize-use-trailing-return-type` fires on a
+named, non-`void`, *leading* return type and rewrites that one; measured on rungs 22 and 24, it says nothing
+about `void f()`, nothing about `auto f()` with a deduced return, and nothing about `auto f() -> void`. So
+this is a convention the tooling is indifferent to, and only review keeps it -- which is an argument for
+[#70](https://github.com/rhalbersma/xstd-bits/issues/70)'s deferred `.clang-format`, not against the
+convention.
+
+**A deduced `auto f()` would have been the shorter road and is closed.** It reads as the same idea with less
+typing, but a deduced return type has to instantiate the body to be known, so any
+`requires { x.f(); }` that would have been answered from the declaration instead instantiates and can hard
+error where it should have said "no". That is not a stylistic loss; it is the mechanism
+[detection-by-absence](#detection-by-absence) is built on -- `can_grow`, `word_writable`, `blittable` and
+every trait tier ask exactly that question. Declared return types, trailing or leading, answer it from the
+declaration.
+
+**Lambdas keep their trailing return inline.** A lambda is an expression inside a statement, so there is no
+"above the body" to put anything on, and `modernize-use-trailing-return-type` requires the `-> void` there
+anyway. The convention is about named functions.
+
+### swap-goes-through-adl
+
+`std::ranges::swap` reaches a type's own `swap` by **ADL on a free function**, and a member `swap` is not
+found that way. When it finds none it falls back to a move-construct and two move-assignments, which is
+correct and, for a storage whose moves are cheap, not obviously worse -- which is how this went unnoticed.
+
+`set_adaptor`, `sequence_adaptor` and `bitset_adaptor` each ship a free `swap` beside the member.
+`block_sequence` had only the member, and every one of the nine containers swaps by
+`std::ranges::swap(m_bits, other.m_bits)` where `m_bits` **is** a `block_sequence`. So the member was
+unreachable from the containers, and a storage with an optimized `swap` never saw it. Measured over a
+storage whose swap and moves are counted, once per reading:
+
+| | before | after |
+| --- | --- | --- |
+| `sequence_adaptor` | 0 storage swaps, 3 moves | 1 swap, 0 moves |
+| `set_adaptor` | 0 storage swaps, 3 moves | 1 swap, 0 moves |
+| `bitset_adaptor` | 0 storage swaps, 3 moves | 1 swap, 0 moves |
+
+`block_sequence` now has the free `swap` too, as a hidden friend delegating to the member. Nothing else
+about swapping changed, and the storage is not asked for one: `std::regular` implies `copyable`, which
+implies `movable`, which **includes** `std::swappable`, so the concept already requires as much swapping as
+`ranges::swap` can need, and any better one arrives by ADL without being asked for.
+
+The `noexcept` moved with it. It read `noexcept(std::is_nothrow_swappable_v<Blocks>)` -- a trait of the
+`std::swap` family -- above a body calling `std::ranges::swap`, which is a different family with different
+rules (it suppresses the generic `std::swap` template when looking for an ADL candidate). They agree for
+every storage shipped here, so this is a latent mismatch and not a bug, but it is the same shape as the
+`is_invocable_r_v`-tests-a-prvalue-and-the-call-passes-an-lvalue disagreement in
+[the-functor-takes-a-value](#the-functor-takes-a-value), and the same fix applies: the specification names
+the calls the body makes, with the body's own arguments.
+
+### a-requires-clause-names-its-arguments
+
+A `requires` clause tests the call the body makes, with the body's own arguments. Twenty-odd of them tested
+something else: a literal, almost always `0UZ`, stood in for the argument and the body then passed a
+different type.
+
+```cpp
+requires requires { Traits::insert(self.storage(), 0UZ); }   // is a size_t insertable?
+{ self.insert(ilist.begin(), ilist.end()); }                 // ... a value_type is inserted
+```
+
+For every storage shipped here the two coincide, so nothing was ever caught. That is the danger, not the
+defence: a `value_type` not constructible from `std::size_t` would be *admitted by a satisfied constraint*
+and then fail inside the body, which is the hard error the constraint exists to prevent. A constraint that
+cannot say no about the call actually made is decoration.
+
+Where the function has the argument, the clause names it -- `*position`, `x`, `*first`, `*ilist.begin()`,
+`value_type(std::forward<Args>(args)...)`, `static_cast<value_type>(*std::ranges::begin(rg))`,
+`b.reserve(blocks_for(n))`. Where there is no call site to borrow from -- `can_grow`, `word_writable`,
+`blit_source`, the `for_each` block guards, `std::bitset`'s `num_blocks` -- the requires-expression declares
+its own parameters, which is what `std::declval` is for at namespace scope and what C++20 gave
+requires-expressions of their own:
+
+```cpp
+requires (bits_type& b, std::size_t n, bool value) {
+        b.resize(n, value); b.push_back(value); b.pop_back(); b.clear();
+}
+```
+
+Declaring one where the enclosing function already has that name is the same mistake one level up, and the
+compilers disagree about noticing: clang's `-Wshadow` rejected two such parameters that GCC accepted
+silently. If the function has an `n` or an `i`, the constraint uses it.
+
+The same rule reaches concepts, where the argument is the type: see
+[contiguous-block-container](#contiguous-block-container), whose subscript requirement exists because the
+class subscripts and `std::ranges::contiguous_range` does not promise that.
+
+### the-functor-takes-a-value
+
+Both `for_each`es hand their functor a **prvalue** -- through a three-line `decay_copy`, not `auto(x)`: MSVC
+2022 does not implement P0849R8, and `T{x}` reads to clang-tidy as a cast to the type it already has -- and
+both members say so with `requires std::invocable<F&, bool>` and `requires std::invocable<F&, size_t>`. That is one fix for one defect, spelled in two places because
+it is worth catching at the interface and worth being right in the body.
+
+The defect was that `invoke_continues` named its parameter and passed that name along. A named parameter is an
+lvalue, so a functor asking for `bool&` or `size_t&` bound to it, compiled, and wrote to a local that the walk
+throws away. The walk reads its storage through a `const&` and never writes back, so what looked like a
+mutating pass was a silent no-op -- and on the set reading it was worse than lost, since a walk *reports*
+positions and changes none, so there is nothing a written-back position could have meant.
+
+`auto` does not save this. `[](auto& b) { b = true; }` is an `auto` parameter and was exactly as silent as
+`[](bool&)`; the axis is the value category, not the spelling of the type. Nor is "make them write `auto`"
+enforceable: a generic lambda is distinguishable from a non-generic one -- `requires { &F::operator(); }` is
+false for the generic one, its `operator()` being a template -- but that test also rejects a function pointer, a
+hand-written functor and `std::function`, all of them legitimate callers, and it asks about the functor's shape
+rather than about what it does with its argument.
+
+What the prvalue fixes is a **disagreement the code already contained**: `is_invocable_r_v<bool, F&, bool>`, one
+line above the call, tests with a prvalue, and the call used an lvalue. So the arm chosen and the call made
+could differ, and for the reference-taking functor they did.
+
+The two halves earn their place separately:
+
+- **The constraint** puts the rejection at the interface, where it reads "constraint not satisfied" and names
+  the member, instead of erupting somewhere inside `walk_words`. It is also what makes the rejection *testable*:
+  a hard error in a template body is not something `static_assert(not ...)` can see, which is why the first
+  attempt to probe this reported everything as fine.
+- **The prvalue** is what the constraint cannot reach. `std::invocable<F&, bool>` is satisfied by a functor
+  overloaded on the value category, so the constraint cannot say which overload runs; only the call can. The
+  tests pin it with exactly that: a functor with `operator()(bool&&)` and `operator()(bool&)` that records which
+  one it got, one per arm of the `if constexpr`, on both readings. Reverting either arm of either reading to an
+  lvalue fails the suite.
+
+Accepted, and unchanged: by value, by `auto`, by `const&`, by `auto const&`, a function pointer, and a functor
+returning `bool` to mean "keep going". Writing *through* the sequence is the range-for's job and remains so --
+`for (auto r : v) r = true;` writes, because the proxy is what an iterator dereferences to.
 
 ### the-sequence-aggregates
 

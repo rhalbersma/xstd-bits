@@ -20,14 +20,16 @@ namespace {
 
 inline constexpr auto bits_per_word = 64UZ;
 
-auto words(benchmark::State const& state) -> std::size_t
+auto words(benchmark::State const& state)
+        -> std::size_t
 {
         return static_cast<std::size_t>(state.range(0));
 }
 
 // A board-game density rather than a uniform one, and deterministic, so the rungs compare with each other.
 template<class T>
-auto filled(std::size_t n, std::uint64_t seed) -> T
+auto filled(std::size_t n, std::uint64_t seed)
+        -> T
 {
         auto bits = T(n);
         auto lcg = seed | 1ULL;
@@ -40,7 +42,8 @@ auto filled(std::size_t n, std::uint64_t seed) -> T
         return bits;
 }
 
-void per_byte(benchmark::State& state)
+auto per_byte(benchmark::State& state)
+        -> void
 {
         state.SetBytesProcessed(state.iterations() * static_cast<std::int64_t>(words(state) * sizeof(std::uint64_t)));
 }
@@ -49,7 +52,8 @@ void per_byte(benchmark::State& state)
 
 #define BM_BINARY(name, op)                                                     \
         template<class T>                                                       \
-        void name(benchmark::State& state)                                      \
+        auto name(benchmark::State& state)                                      \
+                -> void                                                         \
         {                                                                       \
                 auto a = filled<T>(words(state) * bits_per_word, 1);            \
                 auto b = filled<T>(words(state) * bits_per_word, 2);            \
@@ -67,7 +71,8 @@ BM_BINARY(bm_or,  |=)
 BM_BINARY(bm_xor, ^=)
 
 template<class T>
-void bm_shift_left(benchmark::State& state)
+auto bm_shift_left(benchmark::State& state)
+        -> void
 {
         auto a = filled<T>(words(state) * bits_per_word, 1);
         for (auto _ : state) {
@@ -79,7 +84,8 @@ void bm_shift_left(benchmark::State& state)
 }
 
 template<class T>
-void bm_count(benchmark::State& state)
+auto bm_count(benchmark::State& state)
+        -> void
 {
         auto a = filled<T>(words(state) * bits_per_word, 1);
         for (auto _ : state) {
@@ -91,7 +97,8 @@ void bm_count(benchmark::State& state)
 }
 
 template<class T>
-void bm_flip(benchmark::State& state)
+auto bm_flip(benchmark::State& state)
+        -> void
 {
         auto a = filled<T>(words(state) * bits_per_word, 1);
         for (auto _ : state) {
@@ -105,7 +112,8 @@ void bm_flip(benchmark::State& state)
 // Boost answers find_first/find_next natively and ours answers its own scan; bit_set_view is what puts the two
 // behind one expression. [design.md#the-blit]
 template<class T>
-void bm_scan(benchmark::State& state)
+auto bm_scan(benchmark::State& state)
+        -> void
 {
         auto a = filled<T>(words(state) * bits_per_word, 1);
         for (auto _ : state) {

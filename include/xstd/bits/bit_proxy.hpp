@@ -233,7 +233,8 @@ public:
                 return *it;
         }
 
-        friend constexpr void iter_swap(bit_sequence_iterator x, bit_sequence_iterator y) noexcept
+        friend constexpr auto iter_swap(bit_sequence_iterator x, bit_sequence_iterator y) noexcept
+                -> void
                 requires (not std::is_const_v<Bits>)
         {
                 bool const t = *x;
@@ -305,9 +306,9 @@ public:
         }
 
         // The pre-ranges spelling of iter_swap, for std::swap and the algorithms still built on it. [design.md#the-one-adl-exception]
-        friend constexpr void swap(bit_sequence_reference x, bit_sequence_reference y) noexcept requires is_writable { bool const t = x; x = y; y = t; }
-        friend constexpr void swap(bit_sequence_reference x, bool& y)                 noexcept requires is_writable { bool const t = x; x = y; y = t; }
-        friend constexpr void swap(bool& x, bit_sequence_reference y)                 noexcept requires is_writable { bool const t = x; x = y; y = t; }
+        friend constexpr auto swap(bit_sequence_reference x, bit_sequence_reference y) noexcept -> void requires is_writable { bool const t = x; x = y; y = t; }
+        friend constexpr auto swap(bit_sequence_reference x, bool& y)                 noexcept -> void requires is_writable { bool const t = x; x = y; y = t; }
+        friend constexpr auto swap(bool& x, bit_sequence_reference y)                 noexcept -> void requires is_writable { bool const t = x; x = y; y = t; }
 
         [[nodiscard]] friend constexpr auto format_as(bit_sequence_reference ref) noexcept
                 -> value_type

@@ -24,7 +24,8 @@ inline constexpr auto bits_per_word = 64UZ;
 // A board-game density rather than a uniform one: an occupancy bitboard is neither empty nor full, and find_next
 // on a 1%-set bitset is a different benchmark from one on a 90%-set bitset. Deterministic, so the rungs compare.
 template<class T>
-auto filled(std::size_t n, std::uint64_t seed) -> T
+auto filled(std::size_t n, std::uint64_t seed)
+        -> T
 {
         auto bits = T();
         auto state = seed | 1ULL;
@@ -44,7 +45,8 @@ auto filled(std::size_t n, std::uint64_t seed) -> T
 // failure that still looks like a result.
 #define BM_BINARY(name, op)                                                     \
         template<class T, std::size_t N>                                        \
-        void name(benchmark::State& state)                                      \
+        auto name(benchmark::State& state)                                      \
+                -> void                                                         \
         {                                                                       \
                 auto a = filled<T>(N, 1);                                       \
                 auto b = filled<T>(N, 2);                                       \
@@ -62,7 +64,8 @@ BM_BINARY(bm_or,  |=)
 BM_BINARY(bm_xor, ^=)
 
 template<class T, std::size_t N>
-void bm_shift_left(benchmark::State& state)
+auto bm_shift_left(benchmark::State& state)
+        -> void
 {
         auto a = filled<T>(N, 1);
         for (auto _ : state) {
@@ -74,7 +77,8 @@ void bm_shift_left(benchmark::State& state)
 }
 
 template<class T, std::size_t N>
-void bm_count(benchmark::State& state)
+auto bm_count(benchmark::State& state)
+        -> void
 {
         auto a = filled<T>(N, 1);
         for (auto _ : state) {
@@ -88,7 +92,8 @@ void bm_count(benchmark::State& state)
 // all() is where the unused tail shows: an unaligned width compares the last block against a mask, an aligned one
 // against all-ones. [design.md#padding]
 template<class T, std::size_t N>
-void bm_all(benchmark::State& state)
+auto bm_all(benchmark::State& state)
+        -> void
 {
         auto a = filled<T>(N, 1);
         for (auto _ : state) {
@@ -100,7 +105,8 @@ void bm_all(benchmark::State& state)
 }
 
 template<class T, std::size_t N>
-void bm_flip(benchmark::State& state)
+auto bm_flip(benchmark::State& state)
+        -> void
 {
         auto a = filled<T>(N, 1);
         for (auto _ : state) {
@@ -117,7 +123,8 @@ void bm_flip(benchmark::State& state)
 // those on its own. Both sides scan through bit_set_view, which reads std::bitset's _Find_first/_Find_next and
 // our own iterators alike. [design.md#the-blit]
 template<class T, std::size_t N>
-void bm_scan(benchmark::State& state)
+auto bm_scan(benchmark::State& state)
+        -> void
 {
         auto a = filled<T>(N, 1);
         for (auto _ : state) {

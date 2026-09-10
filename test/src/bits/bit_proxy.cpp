@@ -53,7 +53,8 @@ struct flag
 };
 
 template<class T>
-[[nodiscard]] auto make(T const& empty, std::set<std::size_t> const& model) -> T
+[[nodiscard]] auto make(T const& empty, std::set<std::size_t> const& model)
+        -> T
 {
         auto c = empty;
         for (auto const p : model) {
@@ -64,7 +65,8 @@ template<class T>
 
 // The two steps, asked directly at every position an iterator never reaches; only for a trait whose entries are total.
 template<class Traits, class T>
-auto check_steps_are_total(T const& c, std::set<std::size_t> const& model) -> void
+auto check_steps_are_total(T const& c, std::set<std::size_t> const& model)
+        -> void
 {
         auto const size = Traits::size(c);
         for (auto n = 0UZ; n <= size + 1UZ; ++n) {
@@ -81,7 +83,8 @@ auto check_set_steps(Iterator first, Iterator last, std::set<std::size_t> const&
 
 // A zero width has nothing to step over, so nothing below the two positions is instantiated for it. [design.md#per-instantiation-slots]
 template<class Traits, bool Total, class T>
-auto check_set_walk(T const& empty, std::set<std::size_t> const& model) -> void
+auto check_set_walk(T const& empty, std::set<std::size_t> const& model)
+        -> void
 {
         using iterator = xstd::bit_set_iterator<T, Traits>;
         auto const c = make(empty, model);
@@ -101,7 +104,8 @@ auto check_set_walk(T const& empty, std::set<std::size_t> const& model) -> void
 }
 
 template<class Traits, class Iterator>
-auto check_set_steps(Iterator first, Iterator last, std::set<std::size_t> const& model) -> void
+auto check_set_steps(Iterator first, Iterator last, std::set<std::size_t> const& model)
+        -> void
 {
         auto forward = std::set<std::size_t>();
         for (auto it = first; it != last; ++it) {
@@ -134,7 +138,8 @@ auto check_set_steps(Iterator first, Iterator last, std::set<std::size_t> const&
 
 // Patterns rather than every subset: adjacent pairs put a set bit on both sides of every block boundary.
 template<class Traits, bool Total, class T>
-auto check_every_set_pattern(T const& empty) -> void
+auto check_every_set_pattern(T const& empty)
+        -> void
 {
         check_set_walk<Traits, Total>(empty, {});
 
@@ -158,7 +163,8 @@ auto check_every_set_pattern(T const& empty) -> void
 
 // One position: written, read back two ways, negated back through itself, and reached again through the subscript.
 template<class Iterator>
-auto check_position(Iterator first, std::size_t i, std::vector<bool>& model) -> void
+auto check_position(Iterator first, std::size_t i, std::vector<bool>& model)
+        -> void
 {
         auto const it = first + static_cast<std::ptrdiff_t>(i);
         BOOST_CHECK(&*it == it);
@@ -175,7 +181,8 @@ auto check_position(Iterator first, std::size_t i, std::vector<bool>& model) -> 
 }
 
 template<class T>
-[[nodiscard]] auto as_vector(T const& c) -> std::vector<bool>
+[[nodiscard]] auto as_vector(T const& c)
+        -> std::vector<bool>
 {
         using Traits = xstd::bit_traits<T>;
         auto v = std::vector<bool>(Traits::size(c));

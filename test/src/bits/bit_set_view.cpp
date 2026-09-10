@@ -33,7 +33,8 @@ using ViewedTypes = std::tuple<std::bitset<8>, xstd::bitset<8>, boost::dynamic_b
 
 // dynamic_bitset alone needs its width at construction; the others carry theirs in the type.
 template<class T>
-auto eight_bits_with_three_set() -> T
+auto eight_bits_with_three_set()
+        -> T
 {
         auto bits = T();
         if constexpr (std::same_as<T, boost::dynamic_bitset<>>) {

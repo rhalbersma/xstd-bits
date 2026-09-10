@@ -28,7 +28,8 @@ namespace test::set {
 // elements waiting above it. So the callers pass a block type small enough for the universe to span two and
 // three of them. [design.md#the-ordering-primitive]
 template<class Bits>
-auto ordering_agrees_with_std_set(std::size_t universe = 4) -> void
+auto ordering_agrees_with_std_set(std::size_t universe = 4)
+        -> void
 {
         auto const bound = 1UZ << universe;
         auto equality_disagreements = 0UZ;
@@ -71,7 +72,8 @@ auto ordering_agrees_with_std_set(std::size_t universe = 4) -> void
 // pairs instead, from a fixed seed so a failure is reproducible, which is what the original verification of this
 // algorithm did once it ran out of exhaustive room. [design.md#the-ordering-primitive]
 template<class Bits>
-auto ordering_agrees_with_std_set_sampled(std::size_t universe, std::size_t trials) -> void
+auto ordering_agrees_with_std_set_sampled(std::size_t universe, std::size_t trials)
+        -> void
 {
         auto equality_disagreements = 0UZ;
         auto less_disagreements     = 0UZ;
