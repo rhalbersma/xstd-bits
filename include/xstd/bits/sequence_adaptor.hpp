@@ -947,7 +947,10 @@ private:
 };
 
 // A view deduces the constness of what it views, the way span<T> and span<T const> do; over an owner, of the storage it wraps.
+// Constrained to non-owners for the reason set_adaptor's guide states: an owner has a bit_traits of its own now,
+// so an unconstrained guide ties with the owner guide below. [design.md#a-bitset-reads-as-its-storage]
 template<class Bits>
+        requires (not requires { typename owned_storage<std::remove_const_t<Bits>>::bits_type; })
 sequence_adaptor(Bits&) -> sequence_adaptor<Bits, ownership::refers, false>;
 
 template<class Owner>
