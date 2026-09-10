@@ -782,6 +782,35 @@ alias *is* the base, so all four apply to it already. The constructors also had 
 inherited, since inheriting them inherits the primary's guides as well (P2582, which GCC implements) and those
 tie with the restated ones; with no restated guides there is nothing left to tie.
 
+**The diagnostics belong on that same list.** An alias is transparent, so a storage that fails `bit_storage`
+is diagnosed where the alias is *written*: `void f(my_set<int>)` is an error at that declaration, quoting the
+unsatisfied `requires` and naming `bit_traits<int>` as the undefined template. A derived class that leaves the
+constraint to its base is not: naming one in a declaration does not require a complete type, so the same line
+**compiles**, the base is never instantiated, and the diagnosis waits for whoever first completes the type.
+It then arrives twice, because a dependent base is named twice and cannot be named once -- in the
+base-specifier, and again in the using-declaration that inherits the constructors. Measured on `set_adaptor`
+over a storage with no trait: 13 lines and one error through the alias, 22 lines and two errors through such a
+derived class.
+
+Restating the constraint on the derived class's own parameter recovers all of that, and then some: it fails at
+the declaration, once, in **fewer** lines than the alias, having no indirection to explain. So this is not a
+second reason standing beside the restatements -- it is one more entry on the same list, and the failure mode
+is the derived class that skips it. A four-line reduction holding a constrained class template, an alias of
+it, and both derived forms reproduces the shape exactly, GCC and Clang agreeing to the line, so it is the
+language rather than a diagnostic quirk.
+
+Where it would bite is the views, and only the views. The nine owners choose their own storage, so a storage
+with no trait cannot arise through them at all; the one parameter a user supplies is the `Block`, constrained
+at every layer. A view takes the storage -- that is what a view is for ([owning-is-ours](#owning-is-ours)) --
+so a view is exactly the place where a constraint left to the base would go undiagnosed until use.
+
+The alias pays for this on the other side, and the trade is worth stating whole. Being transparent, it is not
+what a compiler prints: a diagnostic about `bit_array<100>` names `sequence_adaptor<block_sequence<array<
+unsigned long, 2>, 100>, ...>`, a spelling the user did not write and cannot write back. `std::string` makes
+the same trade and the world lives with `basic_string<char, char_traits<char>, allocator<char>>` -- though
+`std::string` aliases a *class*, where both layers here are aliases, which is why the printed name falls
+through to the adaptor rather than stopping at `basic_bit_array`.
+
 One constraint moved rather than vanished. The guide for a plain storage is viable for an owner too, now that
 a bitset has a `bit_traits` of its own, and would tie with the owner guide — so it is constrained to
 non-owners, as [a-bitset-reads-as-its-storage](#a-bitset-reads-as-its-storage) describes. That constraint used
