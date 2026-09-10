@@ -1208,6 +1208,159 @@ declaration.
 "above the body" to put anything on, and `modernize-use-trailing-return-type` requires the `-> void` there
 anyway. The convention is about named functions.
 
+### a-bitset-reads-as-its-storage
+
+A `bitset` has a `bit_traits` of its own, so a view can name it: `bit_set_view<xstd::bitset<N>>` and
+`bit_span<xstd::bitset<N>>` are spellings, not errors. **One** specialization does it, on `bitset_adaptor`,
+because `xstd::bitset<N>`, `xstd::inplace_bitset<N>` and `xstd::dynamic_bitset` are all aliases of that one
+template over a different `block_sequence` -- so all three, and every `basic_` form, arrive together.
+
+This supersedes the reasoning recorded when `ext/xstd` was deleted, which concluded that a bitset needs no
+trait because it already joins through `owned_storage`. That is still how a view *deduces*: over an owner,
+`bit_set_view(bs)` binds the storage the owner wraps, and the deduced type is
+`bit_set_view<block_array<std::size_t, N>>`. What was missing is that the deduced spelling is the only one a
+reader can write down, and it names an implementation detail -- `block_array` is not in the landscape tables
+and should not have to be. Naming the bitset is what a reader means.
+
+The two coexist rather than compete, and one line keeps them from tying. The guide for a plain storage was
+unconstrained, viable for anything; it stayed out of the way for an owner only because
+`bit_traits<Owner>` was incomplete, which is precisely what this change undoes. Completing it makes both
+guides viable and `bit_set_view(bs)` **ambiguous**, so the storage guide is now constrained to non-owners:
+
+```cpp
+template<class Bits>
+        requires (not requires { typename owned_storage<std::remove_const_t<Bits>>::bits_type; })
+bit_set_view(Bits&) -> bit_set_view<Bits>;
+```
+
+The forwarding relays all twenty of the storage trait's entries, each behind its own `requires`, because
+absence is the mechanism the tiers select on ([detection-by-absence](#detection-by-absence)). A forwarder
+that relayed only the three required entries would compile and be **slower**: without `num_blocks` and
+`block` every word-parallel walk falls back to one position at a time, and nothing would have said so. The
+test asserts `block_readable` through the trait, not merely `bit_storage`, so a dropped entry fails rather
+than degrades.
+
+Scope stops at `bitset_adaptor`. A generic trait over every owner was tried first and rejected: it would
+complete `bit_traits` for `set_adaptor` and `sequence_adaptor` too, which is where the tier probes and the
+view constraints do their work, and it buys nothing -- a set view of a set is not a spelling anyone wants.
+The narrow specialization is also the one that matches the convention `ownership.hpp` already states, that a
+trait sits beside the thing it adapts.
+
+`xstd::bitset` still has no iterators and is still not a range; this changes how a view is *named*, not what
+the bitset offers. [a-strict-extension](#a-strict-extension)
+
+### what-a-view-costs
+
+Measured on the same backend `block_sequence` in every row -- an owner, a view holding a pointer to that
+storage, and a view over the `bitset_adaptor` wrapping it -- so the two layers price separately. `benchmark/`
+builds at `-O3 -march=native`, which is what these numbers are; an earlier version of this section said `-O2`,
+which was never true of any build in the tree.
+
+| operation | bits | pointer costs | trait costs |
+| :--- | ---: | ---: | ---: |
+| set iterate | 256 | +7.1 … +9.6% | ±1% |
+| set iterate | 1024 | +8.5 … +11.4% | ±1% |
+| set iterate | 4096 | +11.1 … +12.8% | ±4% |
+| set iterate | 16384 | +10.3% | ±2% |
+| sequence count | 256 … 16384 | ±2% | ±3% |
+| sequence read | 256 … 16384 | ±1% | ±2% |
+
+Run-to-run noise was ±0.5 to ±3%, so a figure inside a couple of percent is a zero.
+
+**The trait layer is free, and not merely inside the noise.** Under callgrind, at 1024 bits, the view over a
+`bitset_adaptor` and the view over the raw `block_array` retire **6764 instructions per pass each**, equal to
+the digit, with the same 422 data reads, 1265 branches and 17 simulated mispredicts. So
+[a-bitset-reads-as-its-storage](#a-bitset-reads-as-its-storage) costs nothing at run time: the twenty
+forwarded entries inline away completely.
+
+**The pointer costs about eight percent on set iteration, and the cause is one `lea`.** Instruction counts,
+differenced between two fixed iteration counts so startup cancels, at 1024 bits under GCC 15:
+
+| variant | Ir/pass | data reads | branches | mispredicts |
+| :--- | ---: | ---: | ---: | ---: |
+| owner | 6273 | 420 | 1250 | 11 |
+| owner twin | 6273 | 420 | 1250 | 11 |
+| view of storage | 6764 | 422 | 1265 | 17 |
+| view of bitset | 6764 | 422 | 1265 | 17 |
+
++491 instructions is +7.8% against +7.0% of measured time, so the gap is **more work at essentially constant
+IPC** -- not a stall, not a misprediction. And 491 over the 410 set positions in the pass is one extra
+instruction per step, so it is in the per-step work, not in setup. The hot block confirms it: it executes
+492,000 times for 1200 passes, which is exactly 410 per pass, and the owner's copy of it is **eleven**
+instructions where the view's is **twelve**.
+
+The extra one is address arithmetic. GCC reaches the owner's blocks, which sit in the frame of the function
+running the loop, with the address folded into the load's own operand:
+
+```asm
+shrx  %rcx,0x10(%rsp,%rax,8),%rdx    ; owner: base+index*8+disp, one instruction
+```
+
+and reaches a view's blocks, which are behind a pointer, in two:
+
+```asm
+lea   (%r12,%r8,8),%r10              ; view under GCC 15
+shrx  %rcx,(%r10),%rdx
+```
+
+**That fold is legal and GCC just does not take it.** `shrx`'s memory operand is a full ModRM+SIB address, so
+`base+index*8` is encodable with a register base exactly as it is with `%rsp`; clang emits precisely that:
+
+```asm
+shrx  %rsi,(%r12,%rdx,8),%rdi        ; view under clang 22, same operands, one instruction
+```
+
+Which is why the whole gap is compiler-specific. clang 22 retires **5829 instructions per pass for all three
+variants**, equal to the digit, and measures owner 1573 ns, twin 1564, view of storage 1571, view of bitset
+1548 -- a spread of ±1.6%, no gap at all.
+
+**How much of the eight percent is a view, and how much is GCC.** The benchmark views a *local*, and clang
+propagates that known frame address through the view's pointer member into the addressing mode, erasing the
+indirection the row means to price. A view exists for bits that live somewhere else, so the honest variant
+holds its blocks on the heap behind an asm-laundered pointer the optimizer cannot trace:
+
+| | owner | view of a local | view of opaque blocks |
+| :--- | ---: | ---: | ---: |
+| GCC 15 | 1565 ns | 1691 ns (+8.0%) | 1698 ns (+8.5%) |
+| clang 22 | 1546 ns | 1549 ns (+0.2%) | 1592 ns (+2.9%) |
+
+So a view over bits the compiler cannot trace costs about **three percent**, which is what the indirection is
+actually worth, and GCC adds **five more points** by not folding the address. Under GCC the cost does not
+depend on traceability at all -- the missed fold is charged either way.
+
+The guidance narrows accordingly, and it is no longer a property of views in general: own the bits when you
+iterate them hot *under GCC*; the abstraction itself is worth about three percent, and a view is still the
+right answer when the bits are someone else's, where the alternative is not a container but no reading at
+all.
+
+**Two earlier conclusions in this section were wrong, both from measuring the wrong program.** It first
+asserted that "the indirect load per block is not hoisted out of the iterator's per-step work", from no
+disassembly at all. It then replaced that with the opposite -- that the pointer *is* hoisted and only the
+prologue differs -- from an asm diff of small isolated functions written to stand in for the benchmark. Those
+stand-ins are not the benchmark: GCC compiles them to **15,824,004 instructions for every variant**, identical
+to the digit, because a subject that is a local of a tiny function has its address propagated the way clang
+propagates it above. The stand-in had optimized away the thing under test, and "extra work in the loop" was
+struck off the list on its evidence. The benchmark's own objects say the opposite.
+
+The same defect sank two harnesses written while chasing this: both passed the subject to one shared timing
+function as a `Subject const&`, which routes the **owner** through a pointer as well, makes every variant
+indirect, and reports no gap. A subject has to be a local of the function that runs the loop, as the
+benchmark's variants are, or the harness measures nothing.
+
+What is left over is small and unexplained: 491 extra instructions where the per-step `lea` accounts for 410,
+so about 80 sit in the block-advance path and the prologue, and `sequence count` at 4096 bits is bimodal --
++24.3%, -3.2% and +21.8% across three runs, with the trait column swinging the opposite way each time to land
+the third variant back on the owner's time. Only the middle variant moves, and between two stable values.
+That was first attributed to code layout, before a byte-identical twin of the owner case measured layout at
+about a percent here, so it stays recorded rather than explained. One run would have made it a finding.
+
+Two things about the measurement itself, because both were wrong on the first attempt. **Every subject goes
+through `DoNotOptimize` before the loop, owners included.** Without that an owner is a local the compiler
+folds straight through: `count()` on one word measured 0.16 ns, half a cycle, which is not a faster reading
+but no reading at all, while a view's pointer blocks the same folding -- so the comparison measured the
+folding. And **the one-word rung was removed from the ladder**, which now runs four words to 256: a single `popcount`
+is one cycle, so a one-cycle difference between two variants reads as +100% and means nothing.
+
 ### swap-goes-through-adl
 
 `std::ranges::swap` reaches a type's own `swap` by **ADL on a free function**, and a member `swap` is not

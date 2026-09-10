@@ -76,6 +76,11 @@ class bitset_adaptor : public detail::bits::allocator_typedef<Bits>
         template<std::input_iterator I>
         static constexpr bool block_iterator = std::same_as<std::remove_cvref_t<std::iter_value_t<I>>, typename Bits::block_type>;
 
+        // The generic owner trait reaches the storage through owned_storage::bits. [design.md#an-owner-reads-as-its-storage]
+
+        template<class> friend struct owned_storage;
+
+
         template<class B, ownership O, bit_storage<B> T>         friend class set_adaptor;
         template<class B, ownership O, bool W, bit_storage<B> T> friend class sequence_adaptor;
 
@@ -731,6 +736,164 @@ struct owned_storage<bitset_adaptor<Bits, Traits>>
 {
         using bits_type   = Bits;
         using traits_type = Traits;
+
+        // The storage itself, so one generic bit_traits can adapt every owner. [design.md#an-owner-reads-as-its-storage]
+        [[nodiscard]] static constexpr auto bits(bitset_adaptor<Bits, Traits>& o) noexcept
+                -> bits_type&
+        {
+                return o.m_bits;
+        }
+
+        [[nodiscard]] static constexpr auto bits(bitset_adaptor<Bits, Traits> const& o) noexcept
+                -> bits_type const&
+        {
+                return o.m_bits;
+        }
+};
+
+// A bitset reads exactly as the storage it wraps, so one specialization on bitset_adaptor adapts all three bitsets at
+// once -- xstd::bitset<N>, xstd::inplace_bitset<N> and xstd::dynamic_bitset are aliases of it over a different
+// block_sequence -- and gives them the direct view spelling, bit_set_view<xstd::bitset<N>> and bit_span<xstd::bitset<N>>.
+// Every optional entry is relayed under its own guard, because absence is what the tiers select on: dropping num_blocks
+// and block here would silently turn every word-parallel walk element-wise. [design.md#a-bitset-reads-as-its-storage]
+template<class Bits, class Traits>
+struct bit_traits<bitset_adaptor<Bits, Traits>>
+{
+        using bits_type = bitset_adaptor<Bits, Traits>;
+        using inner     = owned_storage<bits_type>;
+
+        static constexpr std::size_t extent = Traits::extent;
+
+        // The three required entries.
+        [[nodiscard]] static constexpr auto size(bits_type const& c) noexcept
+                -> std::size_t
+        {
+                return Traits::size(inner::bits(c));
+        }
+
+        [[nodiscard]] static constexpr auto at(bits_type const& c, std::size_t n) noexcept
+                -> bool
+        {
+                return Traits::at(inner::bits(c), n);
+        }
+
+        // The optional ones, each relayed only where the storage's own trait has it.
+        static constexpr auto unchecked_assign(bits_type& c, std::size_t n, bool value) noexcept
+                -> void
+                requires requires (Bits& b) { Traits::unchecked_assign(b, n, value); }
+        {
+                Traits::unchecked_assign(inner::bits(c), n, value);
+        }
+
+        static constexpr auto insert(bits_type& c, std::size_t n) noexcept(noexcept(Traits::insert(inner::bits(c), n)))
+                -> void
+                requires requires (Bits& b) { Traits::insert(b, n); }
+        {
+                Traits::insert(inner::bits(c), n);
+        }
+
+        static constexpr auto fill(bits_type& c, bool value) noexcept(noexcept(Traits::fill(inner::bits(c), value)))
+                -> void
+                requires requires (Bits& b) { Traits::fill(b, value); }
+        {
+                Traits::fill(inner::bits(c), value);
+        }
+
+        [[nodiscard]] static constexpr auto count(bits_type const& c) noexcept
+                -> std::size_t
+                requires requires (Bits const& b) { Traits::count(b); }
+        {
+                return Traits::count(inner::bits(c));
+        }
+
+        [[nodiscard]] static constexpr auto all(bits_type const& c) noexcept
+                -> bool
+                requires requires (Bits const& b) { Traits::all(b); }
+        {
+                return Traits::all(inner::bits(c));
+        }
+
+        [[nodiscard]] static constexpr auto any(bits_type const& c) noexcept
+                -> bool
+                requires requires (Bits const& b) { Traits::any(b); }
+        {
+                return Traits::any(inner::bits(c));
+        }
+
+        [[nodiscard]] static constexpr auto none(bits_type const& c) noexcept
+                -> bool
+                requires requires (Bits const& b) { Traits::none(b); }
+        {
+                return Traits::none(inner::bits(c));
+        }
+
+        [[nodiscard]] static constexpr auto num_blocks(bits_type const& c) noexcept
+                -> std::size_t
+                requires requires (Bits const& b) { Traits::num_blocks(b); }
+        {
+                return Traits::num_blocks(inner::bits(c));
+        }
+
+        [[nodiscard]] static constexpr auto block(bits_type const& c, std::size_t i) noexcept
+                requires requires (Bits const& b) { Traits::block(b, i); }
+        {
+                return Traits::block(inner::bits(c), i);
+        }
+
+        [[nodiscard]] static constexpr auto find_first(bits_type const& c) noexcept
+                -> std::size_t
+                requires requires (Bits const& b) { Traits::find_first(b); }
+        {
+                return Traits::find_first(inner::bits(c));
+        }
+
+        [[nodiscard]] static constexpr auto find_last(bits_type const& c) noexcept
+                -> std::size_t
+                requires requires (Bits const& b) { Traits::find_last(b); }
+        {
+                return Traits::find_last(inner::bits(c));
+        }
+
+        [[nodiscard]] static constexpr auto find_next(bits_type const& c, std::size_t n) noexcept
+                -> std::size_t
+                requires requires (Bits const& b) { Traits::find_next(b, n); }
+        {
+                return Traits::find_next(inner::bits(c), n);
+        }
+
+        [[nodiscard]] static constexpr auto find_prev(bits_type const& c, std::size_t n) noexcept
+                -> std::size_t
+                requires requires (Bits const& b) { Traits::find_prev(b, n); }
+        {
+                return Traits::find_prev(inner::bits(c), n);
+        }
+
+        [[nodiscard]] static constexpr auto first_difference(bits_type const& x, bits_type const& y) noexcept
+                requires requires (Bits const& b) { Traits::first_difference(b, b); }
+        {
+                return Traits::first_difference(inner::bits(x), inner::bits(y));
+        }
+
+        [[nodiscard]] static constexpr auto set_three_way(bits_type const& x, bits_type const& y) noexcept
+                -> std::strong_ordering
+                requires requires (Bits const& b) { Traits::set_three_way(b, b); }
+        {
+                return Traits::set_three_way(inner::bits(x), inner::bits(y));
+        }
+
+        [[nodiscard]] static constexpr auto sequence_three_way(bits_type const& x, bits_type const& y) noexcept
+                -> std::strong_ordering
+                requires requires (Bits const& b) { Traits::sequence_three_way(b, b); }
+        {
+                return Traits::sequence_three_way(inner::bits(x), inner::bits(y));
+        }
+
+        [[nodiscard]] static constexpr auto bitset_three_way(bits_type const& x, bits_type const& y) noexcept
+                -> std::strong_ordering
+                requires requires (Bits const& b) { Traits::bitset_three_way(b, b); }
+        {
+                return Traits::bitset_three_way(inner::bits(x), inner::bits(y));
+        }
 };
 
 }       // namespace xstd

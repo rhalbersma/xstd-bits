@@ -415,4 +415,109 @@ BOOST_AUTO_TEST_CASE(TheTextConstructorsRejectWhatStdBitsetRejects)
         BOOST_CHECK_THROW(static_cast<void>(Ours(std::string("101"), 4)), std::out_of_range);
 }
 
+// One bit_traits specialization on bitset_adaptor gives all three bitsets the direct view spelling at once.
+// [design.md#a-bitset-reads-as-its-storage]
+BOOST_AUTO_TEST_CASE(ABitsetReadsAsItsStorage)
+{
+        using B = xstd::bitset<100>;
+        using D = xstd::basic_dynamic_bitset<std::size_t>;
+
+        // The three required entries, so a view may name the bitset itself.
+        static_assert(xstd::bit_storage<xstd::bit_traits<B>, B>);
+        static_assert(xstd::bit_storage<xstd::bit_traits<D>, D>);
+
+        // And the optional block entries, which is the point: a forwarder relaying only the required three would
+        // compile and be slower, every word-parallel walk falling back to one position at a time.
+        static_assert(xstd::block_readable<xstd::bit_traits<B>, B>);
+        static_assert(xstd::block_readable<xstd::bit_traits<D>, D>);
+
+        // Deduction is unchanged: over an owner a view still binds the storage it wraps, so the direct spelling and
+        // the deduced one coexist rather than tie.
+        static_assert(std::same_as<decltype(xstd::bit_set_view(std::declval<B&>())), xstd::bit_set_view<xstd::block_array<std::size_t, 100>>>);
+        static_assert(std::same_as<decltype(xstd::bit_span(std::declval<B&>())),     xstd::bit_span<xstd::block_array<std::size_t, 100>>>);
+
+        // Naming the bitset changes how a view is spelled, not what the bitset offers.
+        static_assert(not std::ranges::range<B>);
+
+        auto bs = B();
+        bs.set(3);
+        bs.set(41);
+
+        auto const sv = xstd::bit_set_view<B>(bs);
+        auto const sp = xstd::bit_span<B>(bs);
+        BOOST_CHECK_EQUAL(std::ranges::distance(sv), 2);
+        BOOST_CHECK_EQUAL(std::ranges::distance(sp), 100);
+        BOOST_CHECK(std::ranges::bidirectional_range<decltype(sv)>);
+        BOOST_CHECK(std::ranges::random_access_range<decltype(sp)>);
+
+        // The same positions the deduced view reports, through the other spelling.
+        BOOST_CHECK(std::ranges::equal(sv, xstd::bit_set_view(bs)));
+}
+
+// Every entry the forwarder relays, called through the trait rather than through a view, so each one is
+// exercised rather than merely present. The coverage gate is what asks for this: twenty entries were added
+// and seven were reached by the view tests above. [design.md#a-bitset-reads-as-its-storage]
+// Run over a static-width bitset and a dynamic one, because the trait is instantiated for both by the
+// static_asserts above and a body is only emitted where it is actually called.
+template<class B>
+auto relays_every_entry(B bs)
+        -> void
+{
+        using T = xstd::bit_traits<B>;
+
+        bs.set(3);
+        bs.set(41);
+        auto const& cs = bs;
+
+        // The three required entries.
+        BOOST_CHECK_EQUAL(T::size(cs), 100UZ);
+        BOOST_CHECK(T::at(cs, 3UZ));
+        BOOST_CHECK(not T::at(cs, 4UZ));
+
+        // The scans.
+        BOOST_CHECK_EQUAL(T::find_first(cs), 3UZ);
+        BOOST_CHECK_EQUAL(T::find_last(cs), T::size(cs));       // the reverse-iteration sentinel, not the highest bit
+        BOOST_CHECK_EQUAL(T::find_prev(cs, T::find_last(cs)), 41UZ);
+        BOOST_CHECK_EQUAL(T::find_next(cs, 3UZ), 41UZ);
+        BOOST_CHECK_EQUAL(T::find_prev(cs, 41UZ), 3UZ);
+
+        // The aggregates.
+        BOOST_CHECK_EQUAL(T::count(cs), 2UZ);
+        BOOST_CHECK(T::any(cs));
+        BOOST_CHECK(not T::all(cs));
+        BOOST_CHECK(not T::none(cs));
+
+        // The block reads, which are the entries a forwarder most risks losing.
+        BOOST_CHECK_GE(T::num_blocks(cs), 1UZ);
+        BOOST_CHECK_EQUAL(T::block(cs, 0UZ) & (1UZ << 3UZ), 1UZ << 3UZ);
+
+        // The orderings, each against a bitset differing in one bit.
+        auto other = bs;
+        other.set(7);
+        auto const [ index, diff ] = T::first_difference(cs, other);   // a block index and the xor of that block
+        BOOST_CHECK_EQUAL(index, 0UZ);
+        BOOST_CHECK_EQUAL(diff, 1UZ << 7UZ);
+        BOOST_CHECK(T::set_three_way(cs, other)      != std::strong_ordering::equal);
+        BOOST_CHECK(T::sequence_three_way(cs, other) != std::strong_ordering::equal);
+        BOOST_CHECK(T::bitset_three_way(cs, other)   != std::strong_ordering::equal);
+
+        // The writes.
+        T::insert(bs, 9UZ);
+        BOOST_CHECK(T::at(bs, 9UZ));
+        T::unchecked_assign(bs, 9UZ, false);
+        BOOST_CHECK(not T::at(bs, 9UZ));
+        T::fill(bs, true);
+        BOOST_CHECK(T::all(bs));
+        T::fill(bs, false);
+        BOOST_CHECK(T::none(bs));
+}
+
+BOOST_AUTO_TEST_CASE(ABitsetTraitRelaysEveryEntry)
+{
+        static_assert(xstd::bit_traits<xstd::bitset<100>>::extent == 100UZ);
+
+        relays_every_entry(xstd::bitset<100>());
+        relays_every_entry(xstd::basic_dynamic_bitset<std::size_t>(100));
+}
+
 BOOST_AUTO_TEST_SUITE_END()

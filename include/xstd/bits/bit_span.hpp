@@ -31,7 +31,10 @@ public:
 };
 
 // The primary's two guides, restated: a view deduces the constness of what it views, and over an owner views the storage it wraps.
+// Constrained to non-owners: now that a bitset has a bit_traits of its own, an unconstrained guide here would tie with
+// the owner guide below and make bit_span(bs) ambiguous. A view over an owner still deduces the storage it wraps.
 template<class Bits>
+        requires (not requires { typename owned_storage<std::remove_const_t<Bits>>::bits_type; })
 bit_span(Bits&) -> bit_span<Bits>;
 
 template<class Owner>
