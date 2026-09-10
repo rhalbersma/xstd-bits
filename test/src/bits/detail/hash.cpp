@@ -8,7 +8,6 @@
 #include <boost/test/unit_test.hpp>  // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <xstd/bits/bitset.hpp>      // bitset
 #include <xstd/bits/detail/hash.hpp> // std_hash
-#include <cstddef>                   // size_t
 #include <cstdint>                   // uint64_t
 #include <functional>                // hash
 
@@ -30,7 +29,7 @@ BOOST_AUTO_TEST_CASE(TheDefaultIsFnv1a64)
 BOOST_AUTO_TEST_CASE(ASeededInstanceSubstitutes)
 {
         auto const value = set_type(0b1010'0101);
-        constexpr auto seed = std::uint64_t(0x9E37'79B9'7F4A'7C15);
+        constexpr auto seed = std::uint64_t{0x9E37'79B9'7F4A'7C15};
 
         // By value, not by type alone: this is what a defaulted template parameter on its own could not express.
         BOOST_CHECK_EQUAL(
