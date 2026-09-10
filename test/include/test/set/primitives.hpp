@@ -40,12 +40,7 @@ struct ref_same_as_pred<xstd::set_adaptor<Bits, Own, Traits>>
 template<class X, class R, class T>
 inline constexpr auto ref_same_as = ref_same_as_pred<X>::template value<R, T>;
 
-// typename stays here, and only here, of the eight sites P0634R3 made it redundant. MSVC 2022 rejects the
-// default argument of a constrained type-parameter without it -- "error C2061: syntax error: identifier
-// 'integral'" -- while GCC, clang, clang-cl and Apple clang all take it. The seven in sequence/concepts.hpp are
-// requires(...) parameter lists, which MSVC does accept.
-// NOLINTNEXTLINE(readability-redundant-typename)
-template<class X, std::integral T = typename X::key_type>
+template<class X, std::integral T = X::key_type>
 struct nested_types
 {
         static_assert(std::same_as<typename X::value_type, T>);                         // [container.reqmts]/2

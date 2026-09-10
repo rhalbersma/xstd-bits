@@ -3,8 +3,9 @@
 Why the code is shaped the way it is. The headers carry one line each; the reasoning lives here, and a
 one-line comment ending in `[design.md#anchor]` points at the section that explains it.
 
-Decisions still in flight are recorded on [#80](https://github.com/rhalbersma/xstd-bits/issues/80); this
-file holds what has landed.
+Decisions still in flight live on the [open issues](https://github.com/rhalbersma/xstd-bits/issues), and
+[#80](https://github.com/rhalbersma/xstd-bits/issues/80) is the closed design plan the current shape came
+out of. This file holds what has landed.
 
 ## Storage and containers
 
@@ -751,6 +752,17 @@ diagnostic was the better evidence, and it deserved to be believed over a vendor
 **The break is the MSVC compiler, not the VS 2022 platform.** `clang_cl` keeps all three rungs and passes on
 all of them, 2022 included, because clang-cl is Clang and Clang has had P1814 since 19. So VS 2022's runner,
 STL and platform stay covered; only the MSVC 17 front end is gone from the matrix.
+
+**The rung has paid two dividends so far, and the ledger belongs here with the cost.** Both were workarounds
+that existed for MSVC 17 and nothing else. The first: `decay_copy` became `auto(x)`
+([the-functor-takes-a-value](#the-functor-takes-a-value)), twenty lines for two. The second: the one
+`typename` still written in `test/include/test/set/primitives.hpp`, on the default argument of a constrained
+type-parameter -- `std::integral T = typename X::key_type`, which MSVC 17 rejected without it as `C2061:
+syntax error: identifier 'integral'` while GCC, clang, clang-cl and Apple clang all took it. It was the last
+site in the tree where [P0634R3](https://wg21.link/P0634R3) permits the omission and the keyword was still
+spelled; the remaining `typename X::value_type` sites are template arguments and functional casts, which
+P0634R3 does not reach. The `NOLINTNEXTLINE(readability-redundant-typename)` that had to sit above it went
+with it -- a live suppression, not a dead one: the check exists in clang-tidy 22 and 24.
 
 Being the adaptor rather than deriving from it is what removes the restatements, and they were the whole cost
 of the workaround: a derived class needed its own constructors, its own two deduction guides, and its own
