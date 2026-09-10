@@ -3,13 +3,13 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/test/unit_test.hpp>      // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <test/block_types.hpp>          // graded_extents
-#include <xstd/bits/bit_traits.hpp>      // all, any, bit_storage, bit_traits, block_readable, count, none, scan_*, static_bit_extent, word_at
-#include <xstd/bits/block_sequence.hpp>  // block_array
-#include <cstddef>                       // size_t
-#include <cstdint>                       // uint8_t
-#include <set>                           // set
+#include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <test/block_types.hpp>         // graded_extents
+#include <xstd/bits/bit_traits.hpp>     // all, any, bit_storage, bit_traits, block_readable, count, none, scan_*, static_bit_extent, word_at
+#include <xstd/bits/block_sequence.hpp> // block_array
+#include <cstddef>                      // size_t
+#include <cstdint>                      // uint8_t
+#include <set>                          // set
 
 // Two adapters over identical storage, differing only in whether they hand their blocks over. [design.md#detection-by-absence]
 namespace {

@@ -6,14 +6,14 @@
 #ifndef XSTD_BITS_DETAIL_HASH_HPP
 #define XSTD_BITS_DETAIL_HASH_HPP
 
-#include <boost/hash2/fnv1a.hpp>              // fnv1a_64
+#include <boost/hash2/fnv1a.hpp>               // fnv1a_64
 #include <boost/hash2/get_integral_result.hpp> // get_integral_result
-#include <boost/hash2/hash_append.hpp>        // hash_append
-#include <xstd/bits/bit_traits.hpp>           // block_readable, count, find_first, find_next
-#include <cstddef>                            // size_t
-#include <cstdint>                            // uint64_t
-#include <limits>                             // numeric_limits
-#include <ranges>                             // iota
+#include <boost/hash2/hash_append.hpp>         // hash_append
+#include <xstd/bits/bit_traits.hpp>            // block_readable, count, find_first, find_next
+#include <cstddef>                             // size_t
+#include <cstdint>                             // uint64_t
+#include <limits>                              // numeric_limits
+#include <ranges>                              // iota
 
 namespace xstd::detail::bits {
 
@@ -59,12 +59,17 @@ constexpr auto hash_append_positions(Hash& h, Flavor const& f, Bits const& c)
         boost::hash2::hash_append(h, f, count<Traits>(c));
 }
 
-// The one place std::hash chooses an algorithm; a caller wanting another brings it through hash_append. [design.md#the-hashing-invariant]
-template<class T>
-[[nodiscard]] constexpr auto std_hash(T const& v) noexcept
+// The one place std::hash chooses an algorithm, and it chooses fnv1a_64 as a default rather than a fact: the
+// parameter is what lets the choice be overridden from outside instead of edited here. Defaulted on the template
+// parameter as well as the function parameter, since a default function argument is not a deduced context and
+// std_hash(v) would not deduce Hash from it. By value rather than by type alone, so a seeded instance substitutes
+// and not just a default-constructed one. std::hash's own operator() takes one argument and cannot forward a
+// second, so its three specializations always take the default; a caller wanting another algorithm reaches the
+// adaptors' hash_append hooks directly. [design.md#the-hashing-invariant]
+template<class T, class Hash = boost::hash2::fnv1a_64>
+[[nodiscard]] constexpr auto std_hash(T const& v, Hash h = {}) noexcept
         -> std::size_t
 {
-        boost::hash2::fnv1a_64 h;
         boost::hash2::hash_append(h, {}, v);
         return boost::hash2::get_integral_result<std::size_t>(h);
 }

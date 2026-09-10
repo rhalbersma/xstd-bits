@@ -6,19 +6,19 @@
 #ifndef TEST_SET_PRIMITIVES_HPP
 #define TEST_SET_PRIMITIVES_HPP
 
-#include <boost/test/unit_test.hpp>     // BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <boost/test/unit_test.hpp>  // BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <xstd/bits/set_adaptor.hpp> // set_adaptor
-#include <xstd/bits/ownership.hpp>     // ownership
-#include <algorithm>                    // equal_range, lexicographical_compare_three_way
-#include <compare>                      // is_gteq, is_gt, is_lteq, is_lt, strong_ordering
-#include <concepts>                     // convertible_to, default_initializable, equality_comparable, integral, same_as, unsigned_integral
-#include <cstddef>                      // ptrdiff_t
-#include <functional>                   // hash
-#include <initializer_list>             // initializer_list
-#include <iterator>                     // distance, empty, iter_difference_t, iter_value_t, next, prev, reverse_iterator, size, ssize
-#include <ranges>                       // count, equal, find, lexicographical_compare, lower_bound, , subrange, upper_bound
-#include <type_traits>                  // add_const_t, common_type_t, make_signed_t, remove_reference_t
-#include <utility>                      // declval, pair
+#include <xstd/bits/ownership.hpp>   // ownership
+#include <algorithm>                 // equal_range, lexicographical_compare_three_way
+#include <compare>                   // is_gteq, is_gt, is_lteq, is_lt, strong_ordering
+#include <concepts>                  // convertible_to, default_initializable, equality_comparable, integral, same_as, unsigned_integral
+#include <cstddef>                   // ptrdiff_t
+#include <functional>                // hash
+#include <initializer_list>          // initializer_list
+#include <iterator>                  // distance, empty, iter_difference_t, iter_value_t, next, prev, reverse_iterator, size, ssize
+#include <ranges>                    // count, equal, find, lexicographical_compare, lower_bound, , subrange, upper_bound
+#include <type_traits>               // add_const_t, common_type_t, make_signed_t, remove_reference_t
+#include <utility>                   // declval, pair
 
 namespace test::set {
 
@@ -40,12 +40,7 @@ struct ref_same_as_pred<xstd::set_adaptor<Bits, Own, Traits>>
 template<class X, class R, class T>
 inline constexpr auto ref_same_as = ref_same_as_pred<X>::template value<R, T>;
 
-// typename stays here, and only here, of the eight sites P0634R3 made it redundant. MSVC 2022 rejects the
-// default argument of a constrained type-parameter without it -- "error C2061: syntax error: identifier
-// 'integral'" -- while GCC, clang, clang-cl and Apple clang all take it. The seven in sequence/concepts.hpp are
-// requires(...) parameter lists, which MSVC does accept.
-// NOLINTNEXTLINE(readability-redundant-typename)
-template<class X, std::integral T = typename X::key_type>
+template<class X, std::integral T = X::key_type>
 struct nested_types
 {
         static_assert(std::same_as<typename X::value_type, T>);                         // [container.reqmts]/2
