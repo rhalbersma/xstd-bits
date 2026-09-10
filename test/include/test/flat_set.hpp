@@ -6,7 +6,7 @@
 #ifndef TEST_FLAT_SET_HPP
 #define TEST_FLAT_SET_HPP
 
-#include <version> // __cpp_lib_flat_set
+#include <version>  // __cpp_lib_flat_set
 #ifdef __cpp_lib_flat_set
 #define TEST_HAS_FLAT_SET
 #include <flat_set> // IWYU pragma: export; flat_set

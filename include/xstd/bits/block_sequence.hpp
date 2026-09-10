@@ -6,35 +6,35 @@
 #ifndef XSTD_BITS_BLOCK_SEQUENCE_HPP
 #define XSTD_BITS_BLOCK_SEQUENCE_HPP
 
-#include <boost/hash2/hash_append_fwd.hpp>                     // hash_append, hash_append_tag
-#include <xstd/bits/bit_traits.hpp>                            // bit_traits
-#include <xstd/bits/detail/allocator_typedef.hpp>              // allocator_typedef
-#include <xstd/bits/detail/intrin.hpp>                         // countl_zero, countr_zero, popcount
-#include <xstd/bits/detail/pred.hpp>                           // intersects, is_subset_of, not_equal_to
-#include <xstd/ints/concepts/unsigned_integer.hpp>             // unsigned_integer
-#include <xstd/ints/cstdlib/div.hpp>                           // div, div_result
-#include <xstd/ints/limits.hpp>                                // numeric_limits
-#include <xstd/ints/memory.hpp>                                // align_up
-#include <xstd/misc/type_traits/conditional_data_member.hpp>   // XSTD_NO_UNIQUE_ADDRESS, conditional_data_member_t
-#include <algorithm>                                           // all_of, any_of, fill, fill_n, fold_left, max, min, shift_left, shift_right
-#include <array>                                               // array
-#include <cassert>                                             // assert
-#include <compare>                                             // strong_ordering
-#include <concepts>                                            // regular, same_as, swap
-#include <cstddef>                                             // ptrdiff_t, size_t
-#include <functional>                                          // plus
-#include <iterator>                                            // distance, forward_iterator, input_iterator, prev
-#include <limits>                                              // numeric_limits
-#include <memory>                                              // allocator
-#include <ranges>                                              // begin, drop, iota, size, swap, transform, zip
-                                                               // (views::drop_last when P22014R2 is accepted)
-#include <span>                                                // dynamic_extent
-#include <type_traits>                                         // conditional_t, is_const_v, remove_reference_t
-#include <utility>                                             // exchange, move, pair
-#include <vector>                                              // vector
-#include <version>                                             // IWYU pragma: keep; __cpp_lib_inplace_vector
+#include <boost/hash2/hash_append_fwd.hpp>                   // hash_append, hash_append_tag
+#include <xstd/bits/bit_traits.hpp>                          // bit_traits
+#include <xstd/bits/detail/allocator_typedef.hpp>            // allocator_typedef
+#include <xstd/bits/detail/intrin.hpp>                       // countl_zero, countr_zero, popcount
+#include <xstd/bits/detail/pred.hpp>                         // intersects, is_subset_of, not_equal_to
+#include <xstd/ints/concepts/unsigned_integer.hpp>           // unsigned_integer
+#include <xstd/ints/cstdlib/div.hpp>                         // div, div_result
+#include <xstd/ints/limits.hpp>                              // numeric_limits
+#include <xstd/ints/memory.hpp>                              // align_up
+#include <xstd/misc/type_traits/conditional_data_member.hpp> // XSTD_NO_UNIQUE_ADDRESS, conditional_data_member_t
+#include <algorithm>                                         // all_of, any_of, fill, fill_n, fold_left, max, min, shift_left, shift_right
+#include <array>                                             // array
+#include <cassert>                                           // assert
+#include <compare>                                           // strong_ordering
+#include <concepts>                                          // regular, same_as, swap
+#include <cstddef>                                           // ptrdiff_t, size_t
+#include <functional>                                        // plus
+#include <iterator>                                          // distance, forward_iterator, input_iterator, prev
+#include <limits>                                            // numeric_limits
+#include <memory>                                            // allocator
+#include <ranges>                                            // begin, drop, iota, size, swap, transform, zip
+                                                             // (views::drop_last when P22014R2 is accepted)
+#include <span>                                              // dynamic_extent
+#include <type_traits>                                       // conditional_t, is_const_v, remove_reference_t
+#include <utility>                                           // exchange, move, pair
+#include <vector>                                            // vector
+#include <version>                                           // IWYU pragma: keep; __cpp_lib_inplace_vector
 #ifdef __cpp_lib_inplace_vector
-#include <inplace_vector>                                      // inplace_vector
+#include <inplace_vector>                                    // inplace_vector
 #endif
 
 namespace xstd {

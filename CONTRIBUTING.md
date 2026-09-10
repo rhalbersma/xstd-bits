@@ -4,9 +4,9 @@
 
 This repository enforces its quality bar through CI rather than through review discretion. A PR is mergeable once every required check below is green.
 
-- **Every compiler/platform leg passes.** See the table in [README.md](README.md) for the current matrix (GCC, Clang, Clang libc++, Clang-CL, MSVC, MinGW, Apple Clang). Every leg counts, including every `Development` leg (`17-SVN`, `24-SVN`, `2026-Preview`), the `libc++` legs, and the VS 2022 legs; none of them are advisory. Each ladder workflow ends in an `all` job that is red unless every one of its legs succeeded, and that gate is what branch protection requires: a leg name changes whenever a rung moves, the gate name does not.
+- **Every compiler/platform leg passes.** See the table in [README.md](README.md) for the current matrix (GCC, Clang, Clang libc++, Clang-CL, MSVC, MinGW, Apple Clang). Every leg counts, including every `Development` leg (`17-SVN`, `24-SVN`, `2026-Preview`), the `libc++` legs, and the `Clang-CL` VS 2022 legs; none of them are advisory. Each ladder workflow ends in an `all` job that is red unless every one of its legs succeeded, and that gate is what branch protection requires: a leg name changes whenever a rung moves, the gate name does not.
 - **`clang-tidy` is clean.** [`.clang-tidy`](.clang-tidy) sets `WarningsAsErrors: '*'`, so any finding over the public headers fails the job outright.
-- **MSVC's `/analyze` is clean.** The [MSVC-Analyze workflow](.github/workflows/msvc-analyze.yml) fills the same role on the MSVC side, on all three Visual Studio rungs.
+- **MSVC's `/analyze` is clean.** The [MSVC-Analyze workflow](.github/workflows/msvc-analyze.yml) fills the same role on the MSVC side, on the two Visual Studio 2026 rungs the `msvc` ladder covers.
 - **No sanitizer failures.** The [Sanitizers workflow](.github/workflows/sanitizers.yml) runs ASan+LSan, UBSan and the implicit-conversion sanitizer, against both libstdc++ and libc++. Leak detection is on.
 - **The public headers stay self-sufficient.** Each header is compiled as its own translation unit (see `test/CMakeLists.txt`); don't rely on include order from another header.
 - **Workflow files pass `actionlint`.** The [Actionlint workflow](.github/workflows/actionlint.yml) validates GitHub Actions syntax and expressions.
@@ -79,8 +79,8 @@ The names to tick under branch protection, exactly as GitHub reports them:
 | `coverage / gcovr` | 100% of lines and branches |
 | `gcc / all` | GCC 15, 16, 17-SVN |
 | `mingw / all` | MinGW 15 and 16 |
-| `msvc / all` | cl on VS 2022, 2026, 2026-Preview |
-| `msvc_analyze / all` | `/analyze` on all three rungs |
+| `msvc / all` | cl on VS 2026 and 2026-Preview |
+| `msvc_analyze / all` | `/analyze` on the same two rungs |
 | `sanitizers / all` | all fifteen sanitizer legs |
 
 Codecov posts two more, `codecov/project` and `codecov/patch`, which carry the same 100% bar for the whole tree and for the diff.

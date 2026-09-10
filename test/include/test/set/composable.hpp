@@ -10,7 +10,7 @@
 #include <range/v3/view/set_algorithm.hpp> // set_difference, set_intersection, set_symmetric_difference, set_union
 #include <algorithm>                       // includes
 #include <ranges>                          // to
-                                                // filter, transform
+                                           // filter, transform
 
 namespace test::set::composable {
 

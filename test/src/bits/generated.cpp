@@ -3,11 +3,11 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/test/unit_test.hpp>         // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
-#include <xstd/bits.hpp>                    // bit_array, bit_set, bit_static_set, bit_vector, bitset, dynamic_bitset, and the inplace column
-#include <compare>                          // three_way_comparable
-#include <concepts>                         // copyable, default_initializable, movable, swappable, totally_ordered
-#include <type_traits>                      // is_nothrow_move_assignable_v, is_nothrow_move_constructible_v
+#include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
+#include <xstd/bits.hpp>            // bit_array, bit_set, bit_static_set, bit_vector, bitset, dynamic_bitset, and the inplace column
+#include <compare>                  // three_way_comparable
+#include <concepts>                 // copyable, default_initializable, movable, swappable, totally_ordered
+#include <type_traits>              // is_nothrow_move_assignable_v, is_nothrow_move_constructible_v
 
 // What the compiler generates for each cell, held to the table rather than to whichever cell was read last. [design.md#the-generated-table]
 BOOST_AUTO_TEST_SUITE(Generated)

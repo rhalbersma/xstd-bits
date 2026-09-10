@@ -8,12 +8,12 @@
 
 #include <xstd/bits/bit_traits.hpp> // static_bit_extent
 #include <xstd/bits/ownership.hpp>  // owned_storage
-#include <algorithm>        // max
-#include <array>            // array
-#include <cassert>          // assert
-#include <cstddef>          // size_t
-#include <initializer_list> // initializer_list
-#include <ranges>           // iota, to
+#include <algorithm>                // max
+#include <array>                    // array
+#include <cassert>                  // assert
+#include <cstddef>                  // size_t
+#include <initializer_list>         // initializer_list
+#include <ranges>                   // iota, to
 
 #ifdef _MSC_VER
         // xstd::bit_static_set<0> gives bogus "unreachable code" warnings

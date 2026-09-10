@@ -6,9 +6,9 @@
 #ifndef XSTD_BITS_FORMAT_HPP
 #define XSTD_BITS_FORMAT_HPP
 
-#include <xstd/bits/bit_proxy.hpp>  // bit_sequence_reference, bit_set_reference
-#include <cstddef>                  // size_t
-#include <format>                   // formatter
+#include <xstd/bits/bit_proxy.hpp> // bit_sequence_reference, bit_set_reference
+#include <cstddef>                 // size_t
+#include <format>                  // formatter
 
 // std::format over the containers, which needs nothing said about the containers themselves. [design.md#formatting-the-proxies]
 //
