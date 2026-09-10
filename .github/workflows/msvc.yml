@@ -22,6 +22,11 @@ on:
   workflow_call:
 
 jobs:
-  # All three rungs; VS 2022's STL has no <flat_set>, which the tests probe for rather than assume.
+  # The 2026 generation only. The 2022 rung is gone because MSVC 17 cannot deduce through an alias template of
+  # the shape the two views need -- "C2976: 'xstd::bit_set_view': too few template arguments" -- while MSVC 18
+  # can. clang-cl.yml keeps its 2022 rung, which passes: clang-cl is clang, so what broke is the MSVC compiler
+  # at 2022 and not the VS 2022 platform. [design.md#the-views-are-the-adaptors]
   msvc:
     uses: rhalbersma/cpp-ci/.github/workflows/visual-studio.yml@e2886b13f6fcd1eceb231652f816b016de41be1d # v0.8.1
+    with:
+      tiers: qualification,development
