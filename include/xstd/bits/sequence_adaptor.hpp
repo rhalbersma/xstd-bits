@@ -47,16 +47,6 @@ template<class Block>
         return count == digits ? static_cast<Block>(~Block{}) : static_cast<Block>(static_cast<Block>(Block{1} << count) - Block{1});
 }
 
-// [expr.type.conv]'s decay-copy, as a function rather than as auto(x): MSVC 2022 does not implement P0849R8, and
-// T{x} reads to clang-tidy as a cast to the type it already has. Returning by value is the whole of it -- that is
-// what makes the argument at the call below a prvalue. [design.md#the-functor-takes-a-value]
-template<class T>
-[[nodiscard]] constexpr auto decay_copy(T value) noexcept
-        -> T
-{
-        return value;
-}
-
 // Continue unless the functor says otherwise: a void functor always continues, a bool one says. What the set
 // reading's for_each does, over what this reading's iterator dereferences to. [design.md#the-sequence-for-each]
 //
@@ -70,9 +60,9 @@ template<class F>
         -> bool
 {
         if constexpr (std::is_invocable_r_v<bool, F&, bool>) {
-                return f(decay_copy(value));
+                return f(auto(value));
         } else {
-                f(decay_copy(value));
+                f(auto(value));
                 return true;
         }
 }

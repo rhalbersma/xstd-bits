@@ -36,16 +36,6 @@ namespace detail::set {
 template<class R> inline constexpr bool is_consecutive = false;
 template<class W, class B> inline constexpr bool is_consecutive<std::ranges::iota_view<W, B>> = true;
 
-// [expr.type.conv]'s decay-copy, as a function rather than as auto(x): MSVC 2022 does not implement P0849R8, and
-// T{x} reads to clang-tidy as a cast to the type it already has. Returning by value is the whole of it -- that is
-// what makes the argument at the call below a prvalue. [design.md#the-functor-takes-a-value]
-template<class T>
-[[nodiscard]] constexpr auto decay_copy(T value) noexcept
-        -> T
-{
-        return value;
-}
-
 // Continue unless the functor says otherwise: a void functor always continues, a bool one says.
 // [design.md#the-set-for-each]
 //
@@ -59,9 +49,9 @@ template<class F>
         -> bool
 {
         if constexpr (std::is_invocable_r_v<bool, F&, std::size_t>) {
-                return f(decay_copy(pos));
+                return f(auto(pos));
         } else {
-                f(decay_copy(pos));
+                f(auto(pos));
                 return true;
         }
 }

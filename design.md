@@ -1463,10 +1463,16 @@ class subscripts and `std::ranges::contiguous_range` does not promise that.
 
 ### the-functor-takes-a-value
 
-Both `for_each`es hand their functor a **prvalue** -- through a three-line `decay_copy`, not `auto(x)`: MSVC
-2022 does not implement P0849R8, and `T{x}` reads to clang-tidy as a cast to the type it already has -- and
-both members say so with `requires std::invocable<F&, bool>` and `requires std::invocable<F&, size_t>`. That is one fix for one defect, spelled in two places because
-it is worth catching at the interface and worth being right in the body.
+Both `for_each`es hand their functor a **prvalue** -- as `auto(x)`, C++23's decay-copy in the language
+([P0849R8](https://wg21.link/P0849R8)) -- and both members say so with `requires std::invocable<F&, bool>` and
+`requires std::invocable<F&, size_t>`. That is one fix for one defect, spelled in two places because it is
+worth catching at the interface and worth being right in the body.
+
+It was a three-line `decay_copy` helper per adaptor until the MSVC 17 rung left the matrix
+([the-views-are-the-adaptors](#the-views-are-the-adaptors)): MSVC 2022 does not implement P0849R8, and the
+other way round it -- `T{x}` -- reads to clang-tidy as a cast to the type it already has. That second
+objection was only ever against the workaround; `auto(x)` is the paper's own spelling and clang-tidy has
+nothing to say about it. Twenty lines went with the two helpers.
 
 The defect was that `invoke_continues` named its parameter and passed that name along. A named parameter is an
 lvalue, so a functor asking for `bool&` or `size_t&` bound to it, compiled, and wrote to a local that the walk
