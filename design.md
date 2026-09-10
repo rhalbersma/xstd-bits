@@ -1249,6 +1249,53 @@ trait sits beside the thing it adapts.
 `xstd::bitset` still has no iterators and is still not a range; this changes how a view is *named*, not what
 the bitset offers. [a-strict-extension](#a-strict-extension)
 
+### what-a-view-costs
+
+Measured at `-O2` on the same backend `block_sequence` in every row -- an owner, a view holding a pointer to
+that storage, and a view over the `bitset_adaptor` wrapping it -- so the two layers price separately. Three
+independent runs, reported as a range rather than one run's medians, because one row is not stable and a
+single run would have hidden that:
+
+| operation | bits | pointer costs | trait costs |
+| :--- | ---: | ---: | ---: |
+| set iterate | 256 | +7.1 … +9.6% | ±1% |
+| set iterate | 1024 | +8.5 … +11.4% | ±1% |
+| set iterate | 4096 | +11.1 … +12.8% | ±4% |
+| set iterate | 16384 | +10.3% | ±2% |
+| sequence count | 256 … 16384 | ±2% | ±3% |
+| sequence read | 256 … 16384 | ±1% | ±2% |
+
+Run-to-run noise was ±0.5 to ±3%, so a figure inside a couple of percent is a zero.
+
+**The trait layer is free.** Every figure in that column sits inside the noise band with no consistent sign,
+so [a-bitset-reads-as-its-storage](#a-bitset-reads-as-its-storage) costs nothing at run time: a
+`bit_set_view<xstd::bitset<N>>` is as fast as one over the raw `block_array`, and the twenty forwarded
+entries inline away.
+
+**The pointer costs about ten percent, on set iteration only.** That is a real effect, not noise: it
+reproduced across two independent runs (+9.6/+11.4/+12.8% and +9.6/+8.5/+11.1%) against half a percent of
+variation. `count` does not show it because a straight-line word loop hoists the base address once and
+amortizes it over every block; a random read does not show it because the LCG dominates. Iteration is a long
+dependent chain of `find_next` calls, and there the indirect load per block is apparently not hoisted out of
+the iterator's per-step work.
+
+So the guidance is the obvious one, now with a number on it: own the bits when you iterate them hot, and
+reach for a view when the bits are someone else's -- where the alternative is not a container but no reading
+at all.
+
+**One instantiation is bimodal and is not evidence.** `sequence count` at 4096 bits measured the pointer at
++24.3%, -3.2% and +21.8% across the three runs, with the trait column swinging the opposite way each time to
+land the third variant back on the owner's time. Only the middle variant moves, and it moves between two
+stable values, which is what code layout does and not what an indirection does. Reporting the first run alone
+would have turned it into a finding; it is a reminder that one run of a microbenchmark is an anecdote.
+
+Two things about the measurement itself, because both were wrong on the first attempt. **Every subject goes
+through `DoNotOptimize` before the loop, owners included.** Without that an owner is a local the compiler
+folds straight through: `count()` on one word measured 0.16 ns, half a cycle, which is not a faster reading
+but no reading at all, while a view's pointer blocks the same folding -- so the comparison measured the
+folding. And **the one-word rung was removed from the ladder**, which now runs four words to 256: a single `popcount`
+is one cycle, so a one-cycle difference between two variants reads as +100% and means nothing.
+
 ### swap-goes-through-adl
 
 `std::ranges::swap` reaches a type's own `swap` by **ADL on a free function**, and a member `swap` is not
