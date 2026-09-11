@@ -3,13 +3,18 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/block_types.hpp>                      // graded_extents
-#include <xstd/bits/bit_traits.hpp>                  // all, any, bit_storage, bit_traits, block_readable, count, none, scan_*, static_bit_extent, word_at
-#include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
-#include <boost/test/unit_test.hpp>                  // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <cstddef>                                   // size_t
-#include <cstdint>                                   // uint8_t
-#include <set>                                       // set
+#include <test/block_types.hpp>                       // graded_extents
+#include <xstd/bits/bit_traits.hpp>                   // all, any, bit_storage, bit_traits, block_readable, contiguous_bit_sequence, count, none, scan_*, static_bit_extent, word_at
+#include <xstd/bits/detail/contiguous_bit_array.hpp>  // contiguous_bit_array
+#include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
+#include <xstd/bits/ext/boost/dynamic_bitset.hpp>     // IWYU pragma: keep; bit_traits<boost::dynamic_bitset>
+#include <xstd/bits/ext/std/bitset.hpp>               // IWYU pragma: keep; bit_traits<std::bitset>
+#include <boost/dynamic_bitset/dynamic_bitset.hpp>    // dynamic_bitset
+#include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <bitset>                                     // bitset
+#include <cstddef>                                    // size_t
+#include <cstdint>                                    // uint8_t, uint64_t
+#include <set>                                        // set
 
 // Two adapters over identical storage, differing only in whether they hand their blocks over. [design.md#detection-by-absence]
 namespace {
@@ -210,5 +215,62 @@ BOOST_AUTO_TEST_CASE(TheWordAtAPositionReadsAcrossBlocks)
         BOOST_CHECK_EQUAL(xstd::detail::bits::word_at<traits>(c, 16UZ), 0b0000'1000);
         BOOST_CHECK_EQUAL(xstd::detail::bits::word_at<traits>(c, 17UZ), 0b0000'0100);
 }
+
+BOOST_AUTO_TEST_SUITE_END()
+
+// The common vocabulary the three bit containers answer in their own names. [design.md#the-common-vocabulary]
+namespace {
+
+using ours_static  = xstd::detail::bits::contiguous_bit_array<std::uint64_t, 64>;
+using ours_dynamic = xstd::detail::bits::contiguous_bit_vector<std::uint64_t>;
+using theirs       = std::bitset<64>;
+using boosts       = boost::dynamic_bitset<>;
+
+// Each probe is a template: a requires-expression over a concrete type is evaluated eagerly and hard-errors
+// rather than answering false, so "does not have" can only be asked through a parameter.
+template<class C> concept has_subscript = requires (C const& c, std::size_t n) { c[n];                };
+template<class C> concept has_complement= requires (C const& c)                { ~c;                 };
+template<class C> concept has_set_value = requires (C& b, std::size_t n, bool v) { b.set(n, v);       };
+template<class C> concept has_difference= requires (C& b, C const& c)          { b -= c;             };
+template<class C> concept has_subset_of = requires (C const& c)                { c.is_subset_of(c);  };
+template<class C> concept has_to_string = requires (C const& c)                { c.to_string();      };
+
+// A storage carrying no vocabulary of its own, reached through its trait alone.
+struct word { std::uint64_t bits = 0; };
+
+}       // namespace
+
+template<>
+struct xstd::bit_traits<word>
+{
+        using bits_type = word;
+        static constexpr std::size_t extent = 64;
+        [[nodiscard]] static constexpr auto size(bits_type const&)                  noexcept -> std::size_t { return extent;                        }
+        [[nodiscard]] static constexpr auto at  (bits_type const& c, std::size_t n) noexcept -> bool        { return ((c.bits >> n) & 1ULL) != 0ULL; }
+};
+
+BOOST_AUTO_TEST_SUITE(TheCommonVocabulary)
+
+// All three model it, at both widths of ours.
+static_assert(xstd::contiguous_bit_sequence<ours_static>);
+static_assert(xstd::contiguous_bit_sequence<ours_dynamic>);
+static_assert(xstd::contiguous_bit_sequence<theirs>);
+static_assert(xstd::contiguous_bit_sequence<boosts>);
+
+// It is the intersection and not the union: every one of these is absent from at least one of the three, so
+// asking for it would drop a model. This is what pins the concept to the three rather than to whichever was
+// read last.
+static_assert(not has_subscript<ours_static>);   // ours reads through test, never a subscript [design.md#test-not-subscript]
+static_assert(not has_complement<ours_static>);  // nor does it complement in place
+static_assert(not has_set_value<ours_static>);   // nor take the two-argument set
+static_assert(not has_difference<theirs>);       // std::bitset has no difference
+static_assert(not has_subset_of<theirs>);        // nor boost's set vocabulary
+static_assert(not has_to_string<boosts>);        // to_string is std::bitset's alone
+
+// The member door and the trait door are different doors: a storage with no vocabulary of its own is adapted
+// and is not one of these, which is why nothing is constrained on this concept. [design.md#the-common-vocabulary]
+static_assert(    xstd::bit_storage<xstd::bit_traits<word>, word>);
+static_assert(not xstd::contiguous_bit_sequence<word>);
+
 
 BOOST_AUTO_TEST_SUITE_END()

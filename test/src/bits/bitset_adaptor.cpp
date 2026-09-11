@@ -5,7 +5,7 @@
 
 #include <xstd/bits/bit_set_view.hpp>                 // bit_set_view
 #include <xstd/bits/bit_span.hpp>                     // bit_span
-#include <xstd/bits/bit_traits.hpp>                   // bit_traits, block_readable
+#include <xstd/bits/bit_traits.hpp>                   // bit_traits, block_readable, contiguous_bit_sequence
 #include <xstd/bits/bitset.hpp>                       // basic_bitset, bitset
 #include <xstd/bits/bitset_adaptor.hpp>               // bitset_adaptor, has_bitops
 #include <xstd/bits/detail/contiguous_bit_array.hpp>  // contiguous_bit_array
@@ -520,5 +520,24 @@ BOOST_AUTO_TEST_CASE(ABitsetTraitRelaysEveryEntry)
         relays_every_entry(xstd::bitset<100>());
         relays_every_entry(xstd::basic_dynamic_bitset<std::size_t>(100));
 }
+
+BOOST_AUTO_TEST_SUITE_END()
+
+// has_bitops and contiguous_bit_sequence are different questions, and neither answers the other.
+// [design.md#the-common-vocabulary]
+BOOST_AUTO_TEST_SUITE(TwoConceptsNeitherSubsuming)
+
+// has_bitops asks boost's set vocabulary -- is_subset_of, is_proper_subset_of, intersects, and difference --
+// which std::bitset does not have, which is why bitset_adaptor wraps our vehicles and not std::bitset.
+static_assert(    xstd::has_bitops<xstd::detail::bits::contiguous_bit_array<std::uint64_t, 64>>);
+static_assert(    xstd::has_bitops<xstd::detail::bits::contiguous_bit_vector<std::uint64_t>>);
+static_assert(    xstd::has_bitops<boost::dynamic_bitset<>>);
+static_assert(not xstd::has_bitops<std::bitset<64>>);
+
+// contiguous_bit_sequence asks the positional members -- test(n), set(n), reset(n), flip(n) -- which
+// has_bitops never names, and all three answer.
+static_assert(xstd::contiguous_bit_sequence<xstd::detail::bits::contiguous_bit_array<std::uint64_t, 64>>);
+static_assert(xstd::contiguous_bit_sequence<boost::dynamic_bitset<>>);
+static_assert(xstd::contiguous_bit_sequence<std::bitset<64>>);
 
 BOOST_AUTO_TEST_SUITE_END()

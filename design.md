@@ -91,7 +91,9 @@ That is also what earns it a `bit_traits` specialization, and puts it on exactly
 bitsets. The trait is specialized for **bit containers** ([the-trait](#the-trait)): `ext/std/bitset.hpp` and
 `ext/boost/dynamic_bitset.hpp` do it for someone else's, `detail/contiguous_bit_container.hpp` does it for the
 one we ship. Three bit containers, three specializations, one door — and all that distinguishes ours is that
-it lives under `detail/` because nobody outside spells it ([the-interface-line](#the-interface-line)). The
+it lives under `detail/` because nobody outside spells it ([the-interface-line](#the-interface-line)). What the
+three have in common as *members*, rather than through the trait, is
+[the-common-vocabulary](#the-common-vocabulary). The
 former name, `block_sequence`, hid that: a *sequence of blocks* reads as storage that happens to have been
 adapted, where a *bit container* reads as the thing the trait is for.
 
@@ -107,6 +109,88 @@ also make `std::ranges` see a sequence of blocks rather than of bits.
 The hand-unrolled one- and two-block cases are where the static performance lives, so they stay
 compile-time branches. The general path they fall through to is written over `m_blocks` as a range, and
 therefore serves the dynamic width unchanged.
+
+### the-common-vocabulary
+
+`contiguous_bit_sequence` is what the three bit containers answer **in their own names**, with no trait in
+between: the intersection of `std::bitset`'s vocabulary, `boost::dynamic_bitset`'s and
+`contiguous_bit_container`'s. Measured against all three rather than guessed, and larger than it first looks —
+nineteen requirements:
+
+| | |
+|---|---|
+| `std::regular` | copy, move, `==` |
+| observers | `size`, `count`, `test(n)`, `all`, `any`, `none` |
+| mutators | `set()`, `set(n)`, `reset()`, `reset(n)`, `flip()`, `flip(n)` |
+| bitwise | `&=`, `\|=`, `^=`, `<<=`, `>>=` |
+
+What falls outside is what makes it an intersection. Each of these is absent from at least one of the three, so
+asking for it would drop a model:
+
+| absent from | |
+|---|---|
+| `contiguous_bit_container` | `operator[]` ([test-not-subscript](#test-not-subscript)), unary `~`, `set(n, value)` |
+| `std::bitset` | `-=`, `is_subset_of`, `find_first`, member `swap` |
+| `boost::dynamic_bitset` | `to_string` |
+
+The asymmetry is the point, and it runs in two directions at once. `contiguous_bit_container` provides the
+**union** of what the three readings ask of it — a set reading needs `find_first` and `find_next`, a sequence
+reading needs positional writes, a bitset reading needs [template.bitset] and boost's set vocabulary both
+([a-strict-extension](#a-strict-extension)) — while the concept asks only what the three *containers* have in
+common. Union below, intersection across.
+
+**Nothing is constrained on it, and that is deliberate.** The adaptors are constrained on `bit_storage<Bits>
+Traits` and the primary `bit_traits` on nothing at all ([opt-in](#opt-in)), because the member door and the
+trait door admit different sets. A storage can be fully adapted and carry no vocabulary of its own:
+`test/consumer/main.cpp` adapts a bare `std::uint64_t` wrapper with no members whatsoever and reads it back
+through all three views. It models `bit_storage` and it does not model `contiguous_bit_sequence`. So requiring
+the concept on `set_adaptor` would reject the very case [the-trait](#the-trait) exists to serve, and requiring
+it on `bit_traits` would turn *you have not adapted this type* into *your type lacks `count()`* — the wrong
+diagnosis, and it would foreclose adapting a type that has no bit vocabulary to begin with.
+
+The concept is therefore a **description, pinned by the tests, not a gate**. It says what the three have in
+common and fails loudly if one of them drifts. `has_bitops` stays the gate on `bitset_adaptor`, and neither
+subsumes the other: `has_bitops` asks boost's set vocabulary, which `std::bitset` lacks, and
+`contiguous_bit_sequence` asks the positional members, which `has_bitops` never names.
+
+### the-primitive-basis
+
+Three layers, and the middle one is the whole design. `contiguous_bit_container` provides the **primitives** —
+the operations a reading needs to be efficient rather than merely correct. The adapted containers and views
+never touch it. They read through `bit_traits`, which **assembles** those primitives into the standard-like API
+each reading presents.
+
+That indirection would be ceremony if every storage offered the same primitives. It does not, and the gap is
+measurable. What each provides natively, on libstdc++:
+
+| primitive | `contiguous_bit_container` | `std::bitset<N>` | `boost::dynamic_bitset` |
+|---|---|---|---|
+| block read | yes | only `N <= 64`, through `to_ullong` | **no** |
+| `find_first` | yes | `_Find_first`, where the library has it | yes |
+| `find_next` | yes | `_Find_next`, where the library has it | yes |
+| `find_prev` | yes | **no** | **no** |
+| `count`, `all`, `any`, `none` | yes | yes | yes |
+
+`std::bitset` and `boost::dynamic_bitset` are an **incomplete basis**: enough to implement the full views API
+correctly, never enough to implement it efficiently. Neither walks backwards, and boost hands over no blocks at
+all, so a `bit_set_view<boost::dynamic_bitset<>>` iterating in reverse falls to `scan_prev_by_element` — one
+position tested per step, quadratic over a full traversal, where ours reads a block at a time
+([one-function-per-tier](#one-function-per-tier)). The two reserved names are not portable either: `_Find_first`
+and `_Find_next` are libstdc++ and MSVC extensions, so both entries sit behind a `requires requires` and simply
+are not there on libc++ ([the-two-reserved-names](#the-two-reserved-names)).
+
+So the trait specializations are where the shortfall is worked around, and the two in `ext/` are exactly as long
+as the gap is wide. Both hand-write `find_first` and `find_next` over whatever the storage does offer;
+`ext/std/bitset.hpp` adds `num_blocks` and `block` behind a `requires (N <= ullong_digits)` guard, which is the
+whole of the portable block read; neither writes `find_prev`, because neither storage has one to forward to.
+What a specialization does not declare, the generic scans in `bit_traits.hpp` synthesize — taking the block tier
+where `block_readable` holds and the element tier where it does not
+([detection-by-absence](#detection-by-absence)).
+
+That is what the trait is *for*. Not a portability shim over three spellings of one thing, but the layer that
+reconciles three different bases into one API and pays the difference where a basis falls short. It is also why
+nothing above is constrained on what a storage's own members look like
+([the-common-vocabulary](#the-common-vocabulary)): the members are not the basis, the trait entries are.
 
 ### padding
 

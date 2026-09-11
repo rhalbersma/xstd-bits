@@ -9,7 +9,7 @@
 #include <xstd/bits/detail/intrin.hpp>             // countl_zero, countr_zero, popcount
 #include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
 #include <cassert>                                 // assert
-#include <concepts>                                // convertible_to
+#include <concepts>                                // convertible_to, regular, same_as
 #include <cstddef>                                 // size_t
 #include <limits>                                  // digits
 #include <span>                                    // dynamic_extent
@@ -369,6 +369,43 @@ concept bit_storage =
 // A static width reaching the readings as a constant expression; replaces the bit_extent variable template.
 template<class Traits, class Bits>
 concept static_bit_extent = bit_storage<Traits, Bits> and Traits::extent != std::dynamic_extent;
+
+// What the three bit containers answer in their own names, with no trait in between: the INTERSECTION of
+// std::bitset's, boost::dynamic_bitset's and contiguous_bit_container's vocabularies, where
+// contiguous_bit_container provides the UNION of what the three readings ask of it.
+// [design.md#the-common-vocabulary]
+// Three requires-expressions, each naming only what its own requirements use, as contiguous_block_container is
+// split. [design.md#contiguous-block-container]
+template<class C>
+concept contiguous_bit_sequence =
+        std::regular<C> and
+        requires (C const& c, std::size_t n)
+        {
+                { c.size()  } -> std::convertible_to<std::size_t>;
+                { c.count() } -> std::convertible_to<std::size_t>;
+                { c.test(n) } -> std::convertible_to<bool>;
+                { c.all()   } -> std::convertible_to<bool>;
+                { c.any()   } -> std::convertible_to<bool>;
+                { c.none()  } -> std::convertible_to<bool>;
+        } and
+        requires (C& b, std::size_t n)
+        {
+                { b.set()    } -> std::same_as<C&>;
+                { b.set(n)   } -> std::same_as<C&>;
+                { b.reset()  } -> std::same_as<C&>;
+                { b.reset(n) } -> std::same_as<C&>;
+                { b.flip()   } -> std::same_as<C&>;
+                { b.flip(n)  } -> std::same_as<C&>;
+        } and
+        requires (C& b, C const& c, std::size_t n)
+        {
+                { b &= c  } -> std::same_as<C&>;
+                { b |= c  } -> std::same_as<C&>;
+                { b ^= c  } -> std::same_as<C&>;
+                { b <<= n } -> std::same_as<C&>;
+                { b >>= n } -> std::same_as<C&>;
+        }
+;
 
 } // namespace xstd
 
