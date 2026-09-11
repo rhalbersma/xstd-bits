@@ -6,9 +6,9 @@
 #ifndef XSTD_BITS_BIT_SUBSPAN_HPP
 #define XSTD_BITS_BIT_SUBSPAN_HPP
 
-#include <xstd/bits/sequence_adaptor.hpp> // sequence_adaptor
 #include <xstd/bits/bit_traits.hpp>       // bit_storage, bit_traits
 #include <xstd/bits/ownership.hpp>        // ownership
+#include <xstd/bits/sequence_adaptor.hpp> // sequence_adaptor
 #include <type_traits>                    // remove_const_t
 
 namespace xstd {

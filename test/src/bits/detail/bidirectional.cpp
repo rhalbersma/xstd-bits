@@ -8,12 +8,12 @@
 #include <test/value_reference.hpp>               // value_reference
 #include <xstd/bits/bit_set_view.hpp>             // bit_set_view
 #include <xstd/bits/bit_traits.hpp>               // bit_traits, find_next, find_prev
-#include <xstd/bits/detail/block_array.hpp>       // block_array
 #include <xstd/bits/detail/bidirectional.hpp>     // bidirectional_bit_iterator, bidirectional_bit_reference
+#include <xstd/bits/detail/block_array.hpp>       // block_array
 #include <xstd/bits/ext/boost/dynamic_bitset.hpp> // bit_traits over boost::dynamic_bitset
 #include <xstd/bits/ext/std/bitset.hpp>           // bit_traits over std::bitset
-#include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <boost/dynamic_bitset.hpp>               // dynamic_bitset
+#include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <bitset>                                 // bitset
 #include <concepts>                               // bidirectional_iterator, same_as
 #include <cstddef>                                // size_t
@@ -24,9 +24,6 @@
 #include <utility>                                // declval
 
 namespace {
-
-template<std::size_t N, class Block>
-using array_of = xstd::detail::bits::block_array<Block, N>;
 
 // Strong types to receive what the proxy converts to: one that takes a size_t implicitly, one only explicitly.
 // Copy-initialized, never cast: a cast is a direct-initialization with two routes in, and MSVC calls that no route at all.
@@ -155,7 +152,7 @@ auto check_every_set_pattern(T const& empty)
 
 BOOST_AUTO_TEST_SUITE(Bidirectional)
 
-using ArrayTypes = test::graded_extents<array_of>;
+using ArrayTypes = test::graded_extents<xstd::detail::bits::block_array>;
 
 using Bits = xstd::detail::bits::block_array<std::uint64_t, 200>;
 

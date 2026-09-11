@@ -4,15 +4,15 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/sequence/ordering.hpp>             // ordering_agrees_with_vector_bool
-#include <xstd/bits/sequence_adaptor.hpp>         // sequence_adaptor
 #include <xstd/bits/bit_array.hpp>                // bit_array
+#include <xstd/bits/bit_span.hpp>                 // bit_span
 #include <xstd/bits/bit_static_set.hpp>           // bit_static_set
 #include <xstd/bits/bitset.hpp>                   // bitset
 #include <xstd/bits/detail/block_array.hpp>       // block_array
 #include <xstd/bits/ext/boost/dynamic_bitset.hpp> // bit_traits over boost::dynamic_bitset
 #include <xstd/bits/ext/std/bitset.hpp>           // bit_traits over std::bitset
 #include <xstd/bits/ownership.hpp>                // ownership
-#include <xstd/bits/bit_span.hpp>                 // bit_span
+#include <xstd/bits/sequence_adaptor.hpp>         // sequence_adaptor
 #include <boost/test/unit_test.hpp>               // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <algorithm>                              // equal
 #include <array>                                  // array

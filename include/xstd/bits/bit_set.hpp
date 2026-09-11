@@ -6,9 +6,9 @@
 #ifndef XSTD_BITS_BIT_SET_HPP
 #define XSTD_BITS_BIT_SET_HPP
 
-#include <xstd/bits/set_adaptor.hpp>               // set_adaptor
 #include <xstd/bits/detail/block_vector.hpp>       // block_vector
 #include <xstd/bits/ownership.hpp>                 // ownership
+#include <xstd/bits/set_adaptor.hpp>               // set_adaptor
 #include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
 #include <cstddef>                                 // size_t
 #include <memory>                                  // allocator

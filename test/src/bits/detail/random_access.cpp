@@ -12,8 +12,8 @@
 #include <xstd/bits/detail/random_access.hpp>     // random_access_bit_iterator, random_access_bit_reference
 #include <xstd/bits/ext/boost/dynamic_bitset.hpp> // bit_traits over boost::dynamic_bitset
 #include <xstd/bits/ext/std/bitset.hpp>           // bit_traits over std::bitset
-#include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <boost/dynamic_bitset.hpp>               // dynamic_bitset
+#include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                              // equal, ranges::reverse, ranges::sort, reverse, sort
 #include <bitset>                                 // bitset
 #include <concepts>                               // convertible_to, random_access_iterator, same_as, sortable
@@ -26,9 +26,6 @@
 #include <vector>                                 // vector
 
 namespace {
-
-template<std::size_t N, class Block>
-using array_of = xstd::detail::bits::block_array<Block, N>;
 
 // A strong type to receive what the proxy converts to, copy-initialized and never cast: a cast is a
 // direct-initialization with two routes in, and MSVC calls that no route at all.
@@ -73,7 +70,7 @@ template<class T>
 
 BOOST_AUTO_TEST_SUITE(RandomAccess)
 
-using ArrayTypes = test::graded_extents<array_of>;
+using ArrayTypes = test::graded_extents<xstd::detail::bits::block_array>;
 
 using Bits = xstd::detail::bits::block_array<std::uint64_t, 200>;
 

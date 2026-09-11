@@ -13,14 +13,14 @@
 #include <xstd/bits/detail/block_vector.hpp>         // block_vector
 #include <boost/test/unit_test.hpp>                  // BOOST_CHECK_EQUAL, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <algorithm>                                 // count, lexicographical_compare_three_way, min
-#include <concepts>                                  // regular, same_as
 #include <array>                                     // array
 #include <compare>                                   // strong_ordering
+#include <concepts>                                  // regular, same_as
 #include <cstddef>                                   // size_t
 #include <cstdint>                                   // uint8_t, uint64_t
-#include <memory>                                    // addressof, allocator
 #include <initializer_list>                          // initializer_list
 #include <iterator>                                  // contiguous_iterator, iter_reference_t, random_access_iterator
+#include <memory>                                    // addressof, allocator
 #include <new>                                       // IWYU pragma: keep; bad_alloc, behind TEST_HAS_INPLACE_VECTOR
 #include <ranges>                                    // begin, contiguous_range, iota, iterator_t, size, sized_range
 #include <tuple>                                     // get, tuple
@@ -292,8 +292,6 @@ auto check_ops(BB const& x, BB const& y, int& disagreements)
 }
 
 // Seven patterns, every pair landing on both sides of each branch. [design.md#seven-patterns]
-template<std::size_t N, class Block>
-using graded_block_array = xstd::detail::bits::block_array<Block, N>;
 
 template<class BB>
 auto sweep(BB const& empty)
@@ -499,7 +497,7 @@ BOOST_AUTO_TEST_CASE(BothWidthsAreUsableAtCompileTime)
 }
 
 // The static width at every extent instantiated; the three owners hold this same storage.
-BOOST_AUTO_TEST_CASE_TEMPLATE(AStaticWidthAgreesWithTheModel, T, test::graded_extents<graded_block_array>)
+BOOST_AUTO_TEST_CASE_TEMPLATE(AStaticWidthAgreesWithTheModel, T, test::graded_extents<xstd::detail::bits::block_array>)
 {
         BOOST_CHECK_EQUAL(sweep(T()), 0);
 }
@@ -810,7 +808,7 @@ BOOST_AUTO_TEST_CASE(AnInplaceVectorIsARunTimeWidthUnderAStaticCapacity)
 #endif
 
 // Each entry reaches the member it names, and every call stays inside the kept contracts. [design.md#the-cheapest-contract]
-BOOST_AUTO_TEST_CASE_TEMPLATE(TheTraitsForwardToTheStorage, T, test::graded_extents<graded_block_array>)
+BOOST_AUTO_TEST_CASE_TEMPLATE(TheTraitsForwardToTheStorage, T, test::graded_extents<xstd::detail::bits::block_array>)
 {
         using traits = xstd::bit_traits<T>;
         constexpr auto N = traits::extent;
@@ -848,7 +846,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheTraitsForwardToTheStorage, T, test::graded_exte
 }
 
 // The two entries the readings cannot synthesize, in their own case: insert can grow where the storage allows, and fill is bulk. [design.md#what-the-trait-reconciles]
-BOOST_AUTO_TEST_CASE_TEMPLATE(TheTraitsInsertAndFill, T, test::graded_extents<graded_block_array>)
+BOOST_AUTO_TEST_CASE_TEMPLATE(TheTraitsInsertAndFill, T, test::graded_extents<xstd::detail::bits::block_array>)
 {
         using traits = xstd::bit_traits<T>;
         constexpr auto N = traits::extent;
@@ -952,7 +950,7 @@ auto disagreements(BB const& empty)
 }       // namespace
 
 // All three orderings, at every static extent, against the algorithms that define them. [design.md#the-ordering-invariant]
-BOOST_AUTO_TEST_CASE_TEMPLATE(AllThreeOrderingsAgreeWithTheirReading, T, test::graded_extents<graded_block_array>)
+BOOST_AUTO_TEST_CASE_TEMPLATE(AllThreeOrderingsAgreeWithTheirReading, T, test::graded_extents<xstd::detail::bits::block_array>)
 {
         BOOST_CHECK_EQUAL(disagreements(T()), 0);
 }
@@ -1016,7 +1014,7 @@ BOOST_AUTO_TEST_CASE(TheSetOrderingPutsAPrefixFirst)
 }
 
 // Three named entries, so a caller says which reading it means rather than being handed one. [design.md#two-readings-disagree]
-BOOST_AUTO_TEST_CASE_TEMPLATE(TheTraitsNameAllThreeOrderings, T, test::graded_extents<graded_block_array>)
+BOOST_AUTO_TEST_CASE_TEMPLATE(TheTraitsNameAllThreeOrderings, T, test::graded_extents<xstd::detail::bits::block_array>)
 {
         using traits = xstd::bit_traits<T>;
 

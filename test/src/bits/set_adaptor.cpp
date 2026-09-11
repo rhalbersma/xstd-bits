@@ -4,7 +4,6 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/minimal_traits.hpp>                // minimal_traits
-#include <xstd/bits/set_adaptor.hpp>              // set_adaptor
 #include <xstd/bits/bit_set.hpp>                  // bit_set
 #include <xstd/bits/bit_set_view.hpp>             // bit_set_view
 #include <xstd/bits/bit_static_set.hpp>           // bit_static_set
@@ -13,8 +12,9 @@
 #include <xstd/bits/ext/boost/dynamic_bitset.hpp> // bit_traits over boost::dynamic_bitset
 #include <xstd/bits/ext/std/bitset.hpp>           // bit_traits over std::bitset
 #include <xstd/bits/ownership.hpp>                // ownership
-#include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <xstd/bits/set_adaptor.hpp>              // set_adaptor
 #include <boost/dynamic_bitset.hpp>               // dynamic_bitset
+#include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                              // lexicographical_compare_three_way, ranges::equal
 #include <bitset>                                 // bitset
 #include <compare>                                // strong_ordering

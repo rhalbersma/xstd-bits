@@ -14,8 +14,8 @@
 // L3 and into DRAM, and reports latency per random read rather than bytes per second.
 
 #include <xstd/bits/bit_vector.hpp> // bit_vector
-#include <benchmark/benchmark.h>    // ClobberMemory, DoNotOptimize, BENCHMARK_TEMPLATE1, BENCHMARK_MAIN, State
 #include <algorithm>                // count
+#include <benchmark/benchmark.h>    // ClobberMemory, DoNotOptimize, BENCHMARK_TEMPLATE1, BENCHMARK_MAIN, State
 #include <cstddef>                  // size_t
 #include <cstdint>                  // int64_t, uint64_t
 #include <vector>                   // vector

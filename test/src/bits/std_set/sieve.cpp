@@ -7,10 +7,10 @@
 #include <xstd/bits/bit_set.hpp>        // bit_set
 #include <xstd/bits/bit_static_set.hpp> // bit_static_set
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_AUTO_TEST_CASE_TEMPLATE
+#include <cstddef>                      // size_t
 #include <fmt/format.h>                 // format
 #include <fmt/ranges.h>                 // IWYU pragma: keep; the range formatters
 #include <opt/set/sieve.hpp>            // filter_twins, generate_candidates, incremental_sieve, sift_primes0, sift_primes1, sift_primes_incremental, sift_primes_segmented
-#include <cstddef>                      // size_t
 #include <set>                          // set
 #include <tuple>                        // tuple
 #include <vector>                       // vector

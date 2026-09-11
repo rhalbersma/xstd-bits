@@ -10,6 +10,7 @@
 
 // The column comes and goes with its storage, and an alias withholds a name rather than a capability. [design.md#the-inplace-column]
 #ifdef __cpp_lib_inplace_vector
+
 #include <xstd/bits/bitset_adaptor.hpp>              // bitset_adaptor
 #include <xstd/bits/detail/block_inplace_vector.hpp> // block_inplace_vector
 #include <xstd/ints/concepts/unsigned_integer.hpp>   // unsigned_integer

@@ -7,10 +7,10 @@
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #ifdef TEST_HAS_INPLACE_VECTOR
 #include <test/set/concepts.hpp>                     // bit_set
-#include <xstd/bits/set_adaptor.hpp>                 // set_adaptor
 #include <xstd/bits/bit_inplace_set.hpp>             // basic_bit_inplace_set, bit_inplace_set
 #include <xstd/bits/detail/block_inplace_vector.hpp> // block_inplace_vector
 #include <xstd/bits/ownership.hpp>                   // ownership
+#include <xstd/bits/set_adaptor.hpp>                 // set_adaptor
 #include <algorithm>                                 // equal
 #include <concepts>                                  // same_as
 #include <cstddef>                                   // size_t

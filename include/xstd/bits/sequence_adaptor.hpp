@@ -14,6 +14,7 @@
 #include <xstd/bits/ownership.hpp>                // owned_bits_t, owned_storage, owned_traits_t, owner_of, ownership, owns
 #include <boost/container_hash/is_range.hpp>      // is_range
 #include <boost/hash2/hash_append.hpp>            // hash_append_tag
+#include <algorithm>                              // copy, min, remove_if
 #include <cassert>                                // assert
 #include <compare>                                // strong_ordering
 #include <concepts>                               // constructible_from, convertible_to, invocable, same_as, swap, swappable
@@ -23,7 +24,6 @@
 #include <initializer_list>                       // initializer_list
 #include <iterator>                               // input_iterator, make_reverse_iterator, reverse_iterator, sentinel_for
 #include <limits>                                 // numeric_limits
-#include <algorithm>                              // copy, min, remove_if
 #include <ranges>                                 // begin, enable_borrowed_range, enable_view, end, from_range_t, input_range, range_reference_t, size, sized_range, subrange
 #include <source_location>                        // source_location
 #include <span>                                   // dynamic_extent

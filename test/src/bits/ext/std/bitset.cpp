@@ -3,11 +3,11 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <xstd/bits/bit_set_view.hpp>   // bit_set_view
+#include <xstd/bits/bit_span.hpp>       // bit_span
 #include <xstd/bits/bit_traits.hpp>     // bit_storage, bit_traits, block_readable, static_bit_extent
 #include <xstd/bits/bitset.hpp>         // bitset
 #include <xstd/bits/ext/std/bitset.hpp> // bit_traits over std::bitset
-#include <xstd/bits/bit_span.hpp>       // bit_span
-#include <xstd/bits/bit_set_view.hpp>   // bit_set_view
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <bitset>                       // bitset
 #include <concepts>                     // regular, totally_ordered

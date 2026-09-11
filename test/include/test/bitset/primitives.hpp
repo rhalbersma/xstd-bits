@@ -7,8 +7,8 @@
 #define TEST_BITSET_PRIMITIVES_HPP
 
 #include <test/dynamic.hpp>           // dynamic
-#include <xstd/bits/ownership.hpp>    // owned_storage
 #include <xstd/bits/bit_set_view.hpp> // view
+#include <xstd/bits/ownership.hpp>    // owned_storage
 #include <boost/test/unit_test.hpp>   // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_NE, BOOST_CHECK_THROW
 #include <cstddef>                    // size_t
 #include <functional>                 // hash
