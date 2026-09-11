@@ -920,6 +920,48 @@ befriends the two referring adaptors — the one friendship in the tree that run
 the views over it, and it grants access to a member and to nothing that member's type does not already expose.
 Storage stays private; nothing on an owner's surface says `block_array`.
 
+### the-interface-line
+
+**If a user never spells it, it lives in `detail/`.** The name or the header, either counts. That is the whole
+rule, and it is a test rather than a judgement: `bit_static_set` is spelled, `block_array` is not; `bit_traits`
+is spelled by anyone adapting their own storage, `bidirectional_bit_reference` is reached only through the
+`iterator` and `reference` typedefs and is spelled by nobody.
+
+What the rule keeps on the interface side, each with the reason it is not obvious:
+
+- **The nine containers and the three views.** Uncontested, and the reason the rest is worth stating.
+- **`bit_traits`, with `ext/` as its worked example.** [the-trait](#the-trait) makes specializing
+  `bit_traits<MyStorage>` *the* extension point. A header a user is invited to imitate is not a detail.
+- **The three adaptors.** Interface by necessity rather than by intent: the containers and the views *are*
+  these types ([the-views-are-the-adaptors](#the-views-are-the-adaptors)), so someone who adapts a storage of
+  their own has no other spelling than `sequence_adaptor<MyBits, ownership::refers, false>`.
+- **`ownership`.** Dragged in by that: no adaptor can be named without writing `ownership::refers`. Said out
+  loud because this is the kind of enum that gets called a detail right up until someone has to type it.
+
+On the other side, the two that had to be argued. The four proxy types are reached only through container
+typedefs, so no user spells them. `block_sequence` and its three aliases are the device that turns three
+readings times three storages into three plus three ([the-one-vehicle](#the-one-vehicle)), and the `basic_`
+layer already exposes the block parameter — `basic_bit_static_set<std::uint8_t, 24>` reaches the capability
+without the storage being named. Recorded against: `block_sequence` *is* instantiated by name throughout
+`test/`, which is a real signal, and demoting it makes the test tree reach into `detail/`. The counter is that
+a test is not a user; a test tree that mirrors the library, `detail/` included, is what testing an
+implementation looks like.
+
+**Enforced, not asserted.** `test/consumer/main.cpp` includes `<xstd/bits.hpp>` and no other header of ours,
+and names every type above: the nine containers, the three views, the three adaptors, `ownership` and
+`bit_traits` — adapting a storage of its own through the trait and reading it back through all three views.
+The three `consumption` configurations build it against the installed headers, so a name that stops being
+reachable from the umbrella, or an interface header that starts needing one from `detail/`, fails there rather
+than in a user's build. Writing it found the one leak: `bit_traits.hpp` was ruled interface here and left out of
+`bits.hpp`, so it reached consumers only transitively, through the three adaptors and the three views that all
+include it. It is in the umbrella now. That is the same reasoning as the include
+order, which puts our headers before Boost's and the standard's so that a transitive include is found rather
+than leaned on.
+
+`ext/` is the one interface piece the umbrella leaves out. It costs nothing here — a consumer that wants
+`std::bitset` or `boost::dynamic_bitset` adapted includes the one header for it — and it keeps Boost off the
+path of every consumer who does not.
+
 ### the-public-names
 
 Three layers of names. The primaries carry the reading and take the storage: `set_adaptor<Bits, Own, Traits>`,

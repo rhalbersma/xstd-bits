@@ -15,6 +15,7 @@
 #include <xstd/bits/bit_span.hpp>           // IWYU pragma: export; bit_span
 #include <xstd/bits/bit_static_set.hpp>     // IWYU pragma: export; bit_static_set
 #include <xstd/bits/bit_subspan.hpp>        // IWYU pragma: export; bit_subspan
+#include <xstd/bits/bit_traits.hpp>         // IWYU pragma: export; bit_traits, bit_storage, block_readable, static_bit_extent
 #include <xstd/bits/bit_vector.hpp>         // IWYU pragma: export; bit_vector
 #include <xstd/bits/bitset.hpp>             // IWYU pragma: export; bitset
 #include <xstd/bits/bitset_adaptor.hpp>     // IWYU pragma: export; bitset_adaptor, has_bitops
