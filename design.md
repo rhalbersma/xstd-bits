@@ -1421,6 +1421,20 @@ The `bit_` infix then says what is iterated, as `bit_` says what is stored in th
 ([the-public-names](#the-public-names)) -- and it is what keeps `bidirectional_bit_iterator` clear of
 `std::bidirectional_iterator`, whose spelling the category alone would have taken.
 
+**`operator&` on the proxy answers an iterator**, which is what a proxy can offer in place of an address, and it
+is what keeps a container's subscript tied to its iteration: `&a[n]` is `a.begin() + n`, so `&a[n] == &a[0] + n`
+holds for `bit_array` and `bit_vector` in iterator arithmetic, exactly where a contiguous range spells it in
+pointer arithmetic. `std::vector<bool>` cannot say it at all — libstdc++'s `_Bit_reference` has no `operator&`,
+so `&v[n]` is ill-formed there.
+
+Random access is nevertheless where the ladder stops, and it stops because of the proxy.
+`std::contiguous_iterator` requires `iter_reference_t<I>` to be a real `iter_value_t<I>&`, which no proxy is, so
+no reading here is a `contiguous_range` and no iterator here is a `contiguous_iterator`. That is asserted as a
+negative, because it is the one place the bits and the blocks part company: the **blocks** are contiguous and
+`contiguous_block_container` requires precisely that
+([contiguous-block-container](#contiguous-block-container)), while the **bits** are not addressable at all. The
+asymmetry is the reason the vehicle keeps its blocks to itself and hands out proxies above it.
+
 The walks stay qualified as `detail::bits::find_next<Traits>(...)` inside `xstd::detail::bits` itself. Dropping
 the qualification would read more naturally and reintroduce exactly the hazard the nesting exists to close: an
 unqualified call with an explicit template argument performs ADL, and the associated namespace of the storage
