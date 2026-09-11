@@ -17,13 +17,18 @@
 #include <iterator>                   // contiguous_iterator, random_access_iterator
 #include <ranges>                     // begin, contiguous_range, drop, random_access_range, take
 #include <stdexcept>                  // out_of_range
+#include <tuple>                      // tuple_cat
 #include <utility>                    // declval
 #include <vector>                     // vector
 
 BOOST_AUTO_TEST_SUITE(BitArray)
 
-// Every Block model within one block and the narrow ones across boundaries; the grading is in test/block_types.hpp.
-using Types = test::graded_extents<xstd::basic_bit_array>;
+// Every Block model within one block, the narrow ones across boundaries, and the widest Block across one too;
+// the grading is in test/block_types.hpp. Every case below is a static_assert or one pass over the positions,
+// so the three-block instantiations cost what the one-block ones do.
+using Types = decltype(std::tuple_cat(
+        std::declval<test::graded_extents<xstd::basic_bit_array>>(),
+        std::declval<test::wide_extents<xstd::basic_bit_array>>()));
 
 // The clauses one at a time, so a failure names which one; the umbrella asserts the composite.
 BOOST_AUTO_TEST_CASE_TEMPLATE(IsRegular, T, Types)

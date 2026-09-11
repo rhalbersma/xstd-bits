@@ -35,6 +35,20 @@ using narrow_word_types = std::tuple
 <       std::uint8_t
 >;
 
+// The widest Block, which crosses a boundary for a reason the narrow ones cannot cover. uint8_t and uint16_t
+// PROMOTE: every block operation on them has an int intermediate, and the code masks back from it. uint32_t
+// upward do not promote at all, so the block's own width is the whole modulus and there is nothing to mask
+// back from. Straddling at narrow words alone therefore exercises only the promoting path, and "the arithmetic
+// follows digits, not the carrier" holds within a block but is untested across one. xstd::uint128 is the
+// extreme of the non-promoting half and the only Block whose carrier is not a standard unsigned integer type,
+// so it is the one worth the extents. [design.md#uint128-support]
+using wide_word_types = std::tuple
+<
+#ifdef TEST_HAS_UINT128
+        xstd::uint128
+#endif
+>;
+
 // One block's worth of extents: empty, a single bit, and exactly one full block -- the same cost at any width.
 template<template<class, std::size_t> class C, class Block>
 using in_block_extents = std::tuple
@@ -67,6 +81,12 @@ using graded_extents = decltype(std::tuple_cat(
         std::declval<decltype(detail::expand<C, in_block_extents>(std::declval<word_types>()))>(),
         std::declval<decltype(detail::expand<C, straddling_extents>(std::declval<narrow_word_types>()))>()
 ));
+
+// The widest Block across block boundaries, for the suites that can afford it: every case they run per type is
+// a static_assert or a single pass over the positions, so three blocks of 128 costs what one block costs.
+// Deliberately NOT folded into graded_extents, which feeds suites whose per-type work is superlinear.
+template<template<class, std::size_t> class C>
+using wide_extents = decltype(detail::expand<C, straddling_extents>(std::declval<wide_word_types>()));
 
 } // namespace test
 
