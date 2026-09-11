@@ -15,14 +15,14 @@
 namespace {
 
 // The required entries and nothing more: a width and an indexed read.
-template<std::size_t N, class Block>
+template<class Block, std::size_t N>
 struct element_bits
 {
         xstd::detail::bits::block_array<Block, N> bits{};
 };
 
 // The same bits, with block access as well.
-template<std::size_t N, class Block>
+template<class Block, std::size_t N>
 struct block_bits
 {
         xstd::detail::bits::block_array<Block, N> bits{};
@@ -32,25 +32,25 @@ struct block_bits
 
 namespace xstd {
 
-template<std::size_t N, class Block>
-struct bit_traits<element_bits<N, Block>>
+template<class Block, std::size_t N>
+struct bit_traits<element_bits<Block, N>>
 {
         static constexpr std::size_t extent = N;
 
-        [[nodiscard]] static constexpr auto size(element_bits<N, Block> const&) noexcept -> std::size_t { return N; }
-        [[nodiscard]] static constexpr auto at(element_bits<N, Block> const& c, std::size_t n) noexcept -> bool { return c.bits.test(n); }
+        [[nodiscard]] static constexpr auto size(element_bits<Block, N> const&) noexcept -> std::size_t { return N; }
+        [[nodiscard]] static constexpr auto at(element_bits<Block, N> const& c, std::size_t n) noexcept -> bool { return c.bits.test(n); }
 };
 
-template<std::size_t N, class Block>
-struct bit_traits<block_bits<N, Block>>
+template<class Block, std::size_t N>
+struct bit_traits<block_bits<Block, N>>
 {
         static constexpr std::size_t extent = N;
 
-        [[nodiscard]] static constexpr auto size(block_bits<N, Block> const&) noexcept -> std::size_t { return N; }
-        [[nodiscard]] static constexpr auto at(block_bits<N, Block> const& c, std::size_t n) noexcept -> bool { return c.bits.test(n); }
+        [[nodiscard]] static constexpr auto size(block_bits<Block, N> const&) noexcept -> std::size_t { return N; }
+        [[nodiscard]] static constexpr auto at(block_bits<Block, N> const& c, std::size_t n) noexcept -> bool { return c.bits.test(n); }
 
-        [[nodiscard]] static constexpr auto num_blocks(block_bits<N, Block> const& c) noexcept -> std::size_t { return c.bits.num_blocks(); }
-        [[nodiscard]] static constexpr auto block(block_bits<N, Block> const& c, std::size_t i) noexcept -> Block { return c.bits.block(i); }
+        [[nodiscard]] static constexpr auto num_blocks(block_bits<Block, N> const& c) noexcept -> std::size_t { return c.bits.num_blocks(); }
+        [[nodiscard]] static constexpr auto block(block_bits<Block, N> const& c, std::size_t i) noexcept -> Block { return c.bits.block(i); }
 };
 
 }       // namespace xstd
