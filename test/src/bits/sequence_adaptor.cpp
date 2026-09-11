@@ -28,7 +28,7 @@
 
 namespace {
 
-using Storage = xstd::block_array<std::uint64_t, 100>;
+using Storage = xstd::detail::bits::block_array<std::uint64_t, 100>;
 using Owner   = xstd::basic_bit_array<100, std::uint64_t>;
 using View    = xstd::sequence_adaptor<Storage, xstd::ownership::refers, false>;
 using Reader  = xstd::sequence_adaptor<Storage const, xstd::ownership::refers, false>;
@@ -52,7 +52,7 @@ template<class Seq>
 template<std::size_t N>
 struct element_bits
 {
-        xstd::block_array<std::uint8_t, N> bits{};
+        xstd::detail::bits::block_array<std::uint8_t, N> bits{};
 };
 
 }       // namespace
@@ -229,8 +229,8 @@ constexpr bool can_grow = requires (X& x) { x.push_back(true); x.pop_back(); x.r
 // Growth is the owner's over storage that grows; a static width and a view have none of it. [design.md#growth]
 BOOST_AUTO_TEST_CASE(GrowthIsTheOwnersOverStorageThatGrows)
 {
-        using Dynamic = xstd::sequence_adaptor<xstd::block_vector<std::uint64_t>, xstd::ownership::owns, false>;
-        using Span    = xstd::sequence_adaptor<xstd::block_vector<std::uint64_t>, xstd::ownership::refers, false>;
+        using Dynamic = xstd::sequence_adaptor<xstd::detail::bits::block_vector<std::uint64_t>, xstd::ownership::owns, false>;
+        using Span    = xstd::sequence_adaptor<xstd::detail::bits::block_vector<std::uint64_t>, xstd::ownership::refers, false>;
 
         static_assert(    can_grow<Dynamic>);
         static_assert(not can_grow<Owner>);
@@ -240,7 +240,7 @@ BOOST_AUTO_TEST_CASE(GrowthIsTheOwnersOverStorageThatGrows)
         d.push_back(false);
         BOOST_CHECK_EQUAL(d.size(), 4UZ);
         BOOST_CHECK(std::ranges::equal(d, std::vector<bool>{ true, true, true, false }));
-        BOOST_CHECK_EQUAL(d.max_size(), xstd::block_vector<std::uint64_t>().max_size());
+        BOOST_CHECK_EQUAL(d.max_size(), xstd::detail::bits::block_vector<std::uint64_t>().max_size());
         BOOST_CHECK_LT(d.max_size(), std::numeric_limits<std::size_t>::max());
         BOOST_CHECK_EQUAL(Owner().max_size(), 100UZ);
 }
@@ -249,8 +249,8 @@ BOOST_AUTO_TEST_CASE(AZeroWidthSequenceIsEmpty)
 {
         auto const a = xstd::basic_bit_array<0, std::uint8_t>();
         BOOST_CHECK(a.empty() and a.begin() == a.end());
-        auto c = xstd::block_array<std::uint8_t, 0>();
-        auto const v = xstd::sequence_adaptor<xstd::block_array<std::uint8_t, 0>, xstd::ownership::refers, false>(c);
+        auto c = xstd::detail::bits::block_array<std::uint8_t, 0>();
+        auto const v = xstd::sequence_adaptor<xstd::detail::bits::block_array<std::uint8_t, 0>, xstd::ownership::refers, false>(c);
         BOOST_CHECK(v.empty() and v.begin() == v.end());
 }
 
@@ -345,7 +345,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheAggregatesAgreeWithTheModel, T, Graded)
 // length, so the mask is exercised at both ends of a word rather than only at the top. [design.md#windows]
 BOOST_AUTO_TEST_CASE(TheAggregatesAgreeWithTheModelOnAWindowOfOurs)
 {
-        using Storage24 = xstd::block_array<std::uint8_t, 24>;
+        using Storage24 = xstd::detail::bits::block_array<std::uint8_t, 24>;
         auto disagreements = 0UZ;
         for (auto p = 0UZ; p < 6UZ; ++p) {
                 auto c = Storage24();

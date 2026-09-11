@@ -18,7 +18,7 @@ namespace xstd {
 
 // The static set: the qualifier marks the special case, the unmarked name going to the flagship. The basic name leaves the block open, the restricted one is the machine word. [design.md#the-public-names]
 template<std::size_t N, xstd::unsigned_integer Block>
-using basic_bit_static_set = set_adaptor<block_array<Block, N>, ownership::owns>;
+using basic_bit_static_set = set_adaptor<detail::bits::block_array<Block, N>, ownership::owns>;
 
 template<std::size_t N>
 using bit_static_set = basic_bit_static_set<N, std::size_t>;

@@ -34,7 +34,7 @@ constexpr bool has_capacity = requires (X const& x) { x.capacity(); };
 // The set reading over a run-time width under a compile-time capacity, an alias and nothing more. [design.md#the-public-names]
 BOOST_AUTO_TEST_CASE(TheInplaceSetIsTheSetAdaptorOverAnInplaceVectorOfBlocks)
 {
-        static_assert(std::same_as<T, xstd::set_adaptor<xstd::block_inplace_vector<std::uint8_t, 24>, xstd::ownership::owns>>);
+        static_assert(std::same_as<T, xstd::set_adaptor<xstd::detail::bits::block_inplace_vector<std::uint8_t, 24>, xstd::ownership::owns>>);
         static_assert(std::same_as<xstd::bit_inplace_set<24>, xstd::basic_bit_inplace_set<24, std::size_t>>);
         static_assert(test::set::bit_set<T>);
 }

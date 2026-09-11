@@ -30,7 +30,7 @@
 #include <type_traits> // conditional_t, is_const_v, remove_reference_t
 #include <utility>     // exchange, move, pair
 
-namespace xstd {
+namespace xstd::detail::bits {
 
 // Whether a range IS blocks; block_readable asks if a trait hands a container's blocks over. [design.md#contiguous-block-container]
 // Subscript is spelled out because contiguous_range promises data() and the ITERATOR's operator[], never the range's,
@@ -1073,11 +1073,16 @@ private:
         }
 };
 
+}       // namespace xstd::detail::bits
+
+// The trait is specialized in xstd, where it is declared; the storage it reads is a detail. [design.md#the-cheapest-contract]
+namespace xstd {
+
 // Forwards and nothing more, reaching none of the generic scans. [design.md#the-cheapest-contract]
 template<class Blocks, std::size_t N>
-struct bit_traits<block_sequence<Blocks, N>>
+struct bit_traits<detail::bits::block_sequence<Blocks, N>>
 {
-        using bits_type = block_sequence<Blocks, N>;
+        using bits_type = detail::bits::block_sequence<Blocks, N>;
 
         static constexpr std::size_t extent = N;
 

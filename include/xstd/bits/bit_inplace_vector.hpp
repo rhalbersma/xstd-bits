@@ -20,7 +20,7 @@ namespace xstd {
 
 // The packed std::inplace_vector<bool, N> that P0843 declined to write, named after the container it packs. [design.md#the-public-names]
 template<std::size_t N, xstd::unsigned_integer Block>
-using basic_bit_inplace_vector = sequence_adaptor<block_inplace_vector<Block, N>, ownership::owns, false>;
+using basic_bit_inplace_vector = sequence_adaptor<detail::bits::block_inplace_vector<Block, N>, ownership::owns, false>;
 
 template<std::size_t N>
 using bit_inplace_vector = basic_bit_inplace_vector<N, std::size_t>;

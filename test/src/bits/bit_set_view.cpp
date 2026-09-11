@@ -57,9 +57,9 @@ BOOST_AUTO_TEST_CASE(TheViewIsTheReferringAdaptor)
         static_assert(std::same_as<view_of<std::bitset<8> const>,    xstd::bit_set_view<std::bitset<8> const>>);
         static_assert(std::same_as<view_of<boost::dynamic_bitset<>>, xstd::bit_set_view<boost::dynamic_bitset<>>>);
 
-        static_assert(std::same_as<view_of<xstd::bitset<8>>,         xstd::bit_set_view<xstd::block_array<std::size_t, 8>>>);
-        static_assert(std::same_as<view_of<xstd::bitset<8> const>,   xstd::bit_set_view<xstd::block_array<std::size_t, 8> const>>);
-        static_assert(std::same_as<view_of<xstd::bit_static_set<8>>, xstd::bit_set_view<xstd::block_array<std::size_t, 8>>>);
+        static_assert(std::same_as<view_of<xstd::bitset<8>>,         xstd::bit_set_view<xstd::detail::bits::block_array<std::size_t, 8>>>);
+        static_assert(std::same_as<view_of<xstd::bitset<8> const>,   xstd::bit_set_view<xstd::detail::bits::block_array<std::size_t, 8> const>>);
+        static_assert(std::same_as<view_of<xstd::bit_static_set<8>>, xstd::bit_set_view<xstd::detail::bits::block_array<std::size_t, 8>>>);
 }
 
 // The types a bit_set_view exists for: those holding a set of positions without offering it, which bit_static_set already does.

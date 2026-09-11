@@ -56,7 +56,11 @@ different word.
 
 `block_sequence` and its three aliases live under `detail/`, one header each: `detail/block_sequence.hpp` holds
 the concept, `num_blocks_v`, the class and its `bit_traits`, and `detail/block_array.hpp`,
-`detail/block_vector.hpp` and `detail/block_inplace_vector.hpp` hold one vehicle apiece. It is the device that
+`detail/block_vector.hpp` and `detail/block_inplace_vector.hpp` hold one vehicle apiece. The names are in
+`xstd::detail::bits` with the rest of `detail/`, so a container spells `detail::bits::block_array<Block, N>`
+and nothing outside the library can name the vehicle at all. The one exception is the `bit_traits`
+specialization, which has to be in `xstd` because that is where the primary is declared: the header closes
+`xstd::detail::bits` and reopens `xstd` for it. It is the device that
 turns three readings over three storages into three plus three, and a factoring device is machinery rather
 than vocabulary: a user reaches every width through `bit_static_set<N>` or `basic_bit_array<N, Block>` and
 never spells the pair themselves. The split is what lets each of the nine containers include only the vehicle

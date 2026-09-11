@@ -18,14 +18,14 @@ namespace {
 template<std::size_t N, class Block>
 struct element_bits
 {
-        xstd::block_array<Block, N> bits{};
+        xstd::detail::bits::block_array<Block, N> bits{};
 };
 
 // The same bits, with block access as well.
 template<std::size_t N, class Block>
 struct block_bits
 {
-        xstd::block_array<Block, N> bits{};
+        xstd::detail::bits::block_array<Block, N> bits{};
 };
 
 }       // namespace
@@ -195,7 +195,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(BlockWiseScansAgreeWithStdSet, T, BlockTypes)
 // The word at any position: aligned, straddling two blocks, and in the last block with nothing above it. [design.md#the-blit]
 BOOST_AUTO_TEST_CASE(TheWordAtAPositionReadsAcrossBlocks)
 {
-        using T = xstd::block_array<std::uint8_t, 20>;
+        using T = xstd::detail::bits::block_array<std::uint8_t, 20>;
         using traits = xstd::bit_traits<T>;
         auto c = T();
         for (auto const i : { 0UZ, 3UZ, 7UZ, 8UZ, 12UZ, 15UZ, 19UZ }) {

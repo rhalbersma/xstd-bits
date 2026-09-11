@@ -29,7 +29,7 @@
 
 namespace {
 
-using Storage = xstd::block_array<std::uint64_t, 100>;
+using Storage = xstd::detail::bits::block_array<std::uint64_t, 100>;
 using Owner   = xstd::basic_bit_static_set<100, std::uint64_t>;
 using View    = xstd::set_adaptor<Storage, xstd::ownership::refers>;
 using Reader  = xstd::set_adaptor<Storage const, xstd::ownership::refers>;
@@ -207,7 +207,7 @@ BOOST_AUTO_TEST_CASE(TheViewsAnswerEveryReadOverEveryStorage)
 {
         for (auto const& model : { std::set<std::size_t>{}, { 0UZ }, { 3UZ, 63UZ, 64UZ, 99UZ }, { 99UZ } }) {
                 auto a = Storage();
-                auto v = xstd::block_vector<std::uint64_t>(100UZ);
+                auto v = xstd::detail::bits::block_vector<std::uint64_t>(100UZ);
                 auto s = std::bitset<100>();
                 auto d = boost::dynamic_bitset<>(100UZ);
                 for (auto const p : model) {
@@ -218,7 +218,7 @@ BOOST_AUTO_TEST_CASE(TheViewsAnswerEveryReadOverEveryStorage)
                 }
                 check_reads(View(a), model, 100UZ);
                 check_reads(Minimal(a), model, 100UZ);
-                check_reads(xstd::set_adaptor<xstd::block_vector<std::uint64_t>, xstd::ownership::refers>(v), model, 100UZ);
+                check_reads(xstd::set_adaptor<xstd::detail::bits::block_vector<std::uint64_t>, xstd::ownership::refers>(v), model, 100UZ);
                 check_reads(xstd::set_adaptor<std::bitset<100>, xstd::ownership::refers>(s), model, 100UZ);
                 check_reads(xstd::set_adaptor<boost::dynamic_bitset<>, xstd::ownership::refers>(d), model, 100UZ);
         }
@@ -233,13 +233,13 @@ BOOST_AUTO_TEST_CASE(MaxSizeIsThePositionsThereAreToHold)
         BOOST_CHECK_EQUAL(View(storage).max_size(), 100UZ);
 
         // An owner grows to what its storage can address, which is whole blocks of it and never the address space.
-        using Heap = xstd::set_adaptor<xstd::block_vector<std::uint64_t>, xstd::ownership::owns>;
-        BOOST_CHECK_EQUAL(Heap().max_size(), xstd::block_vector<std::uint64_t>().max_size());
+        using Heap = xstd::set_adaptor<xstd::detail::bits::block_vector<std::uint64_t>, xstd::ownership::owns>;
+        BOOST_CHECK_EQUAL(Heap().max_size(), xstd::detail::bits::block_vector<std::uint64_t>().max_size());
         BOOST_CHECK_LT(Heap().max_size(), std::numeric_limits<std::size_t>::max());
 
         // A view cannot grow what it views, so its max_size is that width -- and filling it is what full() means.
-        auto v = xstd::block_vector<std::uint64_t>(10UZ);
-        auto const view = xstd::set_adaptor<xstd::block_vector<std::uint64_t>, xstd::ownership::refers>(v);
+        auto v = xstd::detail::bits::block_vector<std::uint64_t>(10UZ);
+        auto const view = xstd::set_adaptor<xstd::detail::bits::block_vector<std::uint64_t>, xstd::ownership::refers>(v);
         BOOST_CHECK_EQUAL(view.max_size(), 10UZ);
         BOOST_CHECK(not view.full());
         view.fill();

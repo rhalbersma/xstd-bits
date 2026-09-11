@@ -17,7 +17,7 @@ namespace xstd {
 
 // [template.bitset] over a packed array of Block: what std::bitset<N> is, with the word type in the open. [design.md#the-public-names]
 template<std::size_t N, xstd::unsigned_integer Block>
-using basic_bitset = bitset_adaptor<block_array<Block, N>>;
+using basic_bitset = bitset_adaptor<detail::bits::block_array<Block, N>>;
 
 template<std::size_t N>
 using bitset = basic_bitset<N, std::size_t>;

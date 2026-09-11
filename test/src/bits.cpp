@@ -44,8 +44,8 @@ BOOST_AUTO_TEST_CASE(EveryContainerArrivesThroughTheUmbrella)
         static_assert(not std::ranges::range<xstd::basic_dynamic_bitset<std::size_t>>);
 
         // Three layers: the primaries take the storage, the basic_ layer chooses it and leaves the block open, the restricted layer fixes size_t and std::allocator. [design.md#the-public-names]
-        static_assert(std::same_as<xstd::basic_bit_static_set<8, std::uint8_t>, xstd::set_adaptor<xstd::block_array<std::uint8_t, 8>, xstd::ownership::owns>>);
-        static_assert(std::same_as<xstd::basic_bit_set<std::uint8_t>,          xstd::set_adaptor<xstd::block_vector<std::uint8_t>, xstd::ownership::owns>>);
+        static_assert(std::same_as<xstd::basic_bit_static_set<8, std::uint8_t>, xstd::set_adaptor<xstd::detail::bits::block_array<std::uint8_t, 8>, xstd::ownership::owns>>);
+        static_assert(std::same_as<xstd::basic_bit_set<std::uint8_t>,          xstd::set_adaptor<xstd::detail::bits::block_vector<std::uint8_t>, xstd::ownership::owns>>);
         static_assert(std::same_as<xstd::bit_static_set<8>, xstd::basic_bit_static_set<8, std::size_t>>);
         static_assert(std::same_as<xstd::bit_array<8>,      xstd::basic_bit_array<8, std::size_t>>);
         static_assert(std::same_as<xstd::bitset<8>,         xstd::basic_bitset<8, std::size_t>>);

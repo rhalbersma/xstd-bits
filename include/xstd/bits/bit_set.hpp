@@ -17,7 +17,7 @@ namespace xstd {
 
 // The set reading over a heap of blocks: the flagship, benchmarked against std::set, and the one name without a qualifier. [design.md#the-public-names]
 template<xstd::unsigned_integer Block, class Allocator = std::allocator<Block>>
-using basic_bit_set = set_adaptor<block_vector<Block, Allocator>, ownership::owns>;
+using basic_bit_set = set_adaptor<detail::bits::block_vector<Block, Allocator>, ownership::owns>;
 
 using bit_set = basic_bit_set<std::size_t>;
 

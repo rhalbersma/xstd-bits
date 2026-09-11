@@ -30,7 +30,7 @@ BOOST_AUTO_TEST_SUITE(DynamicBitset)
 // boost::dynamic_bitset's counterpart over a heap of blocks: the same wrapper, at a run-time width. [design.md#a-strict-extension]
 BOOST_AUTO_TEST_CASE(TheDynamicBitsetIsTheWrapperOverAHeapOfBlocks)
 {
-        static_assert(std::same_as<xstd::basic_dynamic_bitset<std::uint8_t>, xstd::bitset_adaptor<xstd::block_vector<std::uint8_t>>>);
+        static_assert(std::same_as<xstd::basic_dynamic_bitset<std::uint8_t>, xstd::bitset_adaptor<xstd::detail::bits::block_vector<std::uint8_t>>>);
         static_assert(std::same_as<xstd::basic_dynamic_bitset<std::uint8_t, std::allocator<std::uint8_t>>, xstd::basic_dynamic_bitset<std::uint8_t>>);
         static_assert(std::regular<xstd::basic_dynamic_bitset<std::uint8_t>>);
 }

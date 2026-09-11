@@ -18,12 +18,12 @@
 #include <cstddef>                                         // size_t
 #include <inplace_vector>                                  // inplace_vector
 
-namespace xstd {
+namespace xstd::detail::bits {
 
 template<xstd::unsigned_integer Block, std::size_t N>
 using block_inplace_vector = block_sequence<std::inplace_vector<Block, num_blocks_v<Block, N>>>;
 
-}       // namespace xstd
+}       // namespace xstd::detail::bits
 
 #endif // __cpp_lib_inplace_vector
 

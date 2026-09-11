@@ -37,8 +37,8 @@ BOOST_AUTO_TEST_CASE(TheViewIsTheReferringAdaptor)
         static_assert(std::derived_from<xstd::bit_span<std::bitset<8>>, xstd::sequence_adaptor<std::bitset<8>, xstd::ownership::refers, false>>);
         static_assert(std::same_as<view_of<std::bitset<8>>,          xstd::bit_span<std::bitset<8>>>);
         static_assert(std::same_as<view_of<std::bitset<8> const>,    xstd::bit_span<std::bitset<8> const>>);
-        static_assert(std::same_as<view_of<xstd::bitset<8>>,         xstd::bit_span<xstd::block_array<std::size_t, 8>>>);
-        static_assert(std::same_as<view_of<xstd::bit_static_set<8>>, xstd::bit_span<xstd::block_array<std::size_t, 8>>>);
+        static_assert(std::same_as<view_of<xstd::bitset<8>>,         xstd::bit_span<xstd::detail::bits::block_array<std::size_t, 8>>>);
+        static_assert(std::same_as<view_of<xstd::bit_static_set<8>>, xstd::bit_span<xstd::detail::bits::block_array<std::size_t, 8>>>);
 }
 
 BOOST_AUTO_TEST_CASE(TheViewedTypesAreTheOnesHoldingBoolsWithoutOfferingThem)

@@ -28,7 +28,7 @@
 namespace {
 
 template<std::size_t N, class Block>
-using array_of = xstd::block_array<Block, N>;
+using array_of = xstd::detail::bits::block_array<Block, N>;
 
 // A strong type to receive what the proxy converts to, copy-initialized and never cast: a cast is a
 // direct-initialization with two routes in, and MSVC calls that no route at all.
@@ -75,7 +75,7 @@ BOOST_AUTO_TEST_SUITE(RandomAccess)
 
 using ArrayTypes = test::graded_extents<array_of>;
 
-using Bits = xstd::block_array<std::uint64_t, 200>;
+using Bits = xstd::detail::bits::block_array<std::uint64_t, 200>;
 
 BOOST_AUTO_TEST_CASE(AnIteratorIsAPointerAndAPosition)
 {

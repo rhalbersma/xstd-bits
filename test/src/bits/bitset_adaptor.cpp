@@ -49,11 +49,11 @@ constexpr bool has_allocator = requires (X const& x) { sizeof(allocator_of<X>); 
 // The vocabulary is our storages': std::bitset's members and boost's set vocabulary, read by block. The counterparts themselves are not wrapped. [design.md#owning-is-ours]
 BOOST_AUTO_TEST_CASE(TheVocabularyIsWhatOurStoragesSpeakAndTheCounterpartsDoNot)
 {
-        static_assert(xstd::has_bitops<xstd::block_array<std::uint8_t, 0>>);
-        static_assert(xstd::has_bitops<xstd::block_array<std::uint64_t, 100>>);
-        static_assert(xstd::has_bitops<xstd::block_vector<std::size_t>>);
-        static_assert(wrappable<xstd::block_array<std::uint8_t, 0>>);
-        static_assert(wrappable<xstd::block_vector<std::size_t>>);
+        static_assert(xstd::has_bitops<xstd::detail::bits::block_array<std::uint8_t, 0>>);
+        static_assert(xstd::has_bitops<xstd::detail::bits::block_array<std::uint64_t, 100>>);
+        static_assert(xstd::has_bitops<xstd::detail::bits::block_vector<std::size_t>>);
+        static_assert(wrappable<xstd::detail::bits::block_array<std::uint8_t, 0>>);
+        static_assert(wrappable<xstd::detail::bits::block_vector<std::size_t>>);
 
         // std::bitset lacks the set vocabulary; boost has it but keeps its blocks to itself.
         static_assert(not xstd::has_bitops<std::bitset<0>>);
@@ -70,9 +70,9 @@ BOOST_AUTO_TEST_CASE(TheVocabularyIsWhatOurStoragesSpeakAndTheCounterpartsDoNot)
 // The public name is the wrapper over a packed array, with the word type in the open.
 BOOST_AUTO_TEST_CASE(TheBitsetIsTheWrapperOverAPackedArray)
 {
-        static_assert(std::same_as<xstd::basic_bitset<9, std::uint8_t>, xstd::bitset_adaptor<xstd::block_array<std::uint8_t, 9>>>);
-        static_assert(std::same_as<xstd::bitset<64>, xstd::bitset_adaptor<xstd::block_array<std::size_t, 64>>>);
-        static_assert(std::same_as<xstd::bitset<64>, xstd::bitset_adaptor<xstd::block_array<std::size_t, 64>, xstd::bit_traits<xstd::block_array<std::size_t, 64>>>>);
+        static_assert(std::same_as<xstd::basic_bitset<9, std::uint8_t>, xstd::bitset_adaptor<xstd::detail::bits::block_array<std::uint8_t, 9>>>);
+        static_assert(std::same_as<xstd::bitset<64>, xstd::bitset_adaptor<xstd::detail::bits::block_array<std::size_t, 64>>>);
+        static_assert(std::same_as<xstd::bitset<64>, xstd::bitset_adaptor<xstd::detail::bits::block_array<std::size_t, 64>, xstd::bit_traits<xstd::detail::bits::block_array<std::size_t, 64>>>>);
 }
 
 using Static = std::tuple
@@ -347,8 +347,8 @@ BOOST_AUTO_TEST_CASE(TheViewsReachABitset)
         BOOST_CHECK(va.is_subset_of(va));
         BOOST_CHECK_EQUAL(qa[69], true);
 
-        static_assert(std::same_as<decltype(va), xstd::bit_set_view<xstd::block_array<std::uint8_t, 70>> const>);
-        static_assert(std::same_as<decltype(xstd::bit_set_view(std::as_const(a))), xstd::bit_set_view<xstd::block_array<std::uint8_t, 70> const>>);
+        static_assert(std::same_as<decltype(va), xstd::bit_set_view<xstd::detail::bits::block_array<std::uint8_t, 70>> const>);
+        static_assert(std::same_as<decltype(xstd::bit_set_view(std::as_const(a))), xstd::bit_set_view<xstd::detail::bits::block_array<std::uint8_t, 70> const>>);
 }
 
 // Built from text, streamed back to text, and hashed: the derived members.
@@ -434,8 +434,8 @@ BOOST_AUTO_TEST_CASE(ABitsetReadsAsItsStorage)
 
         // Deduction is unchanged: over an owner a view still binds the storage it wraps, so the direct spelling and
         // the deduced one coexist rather than tie.
-        static_assert(std::same_as<decltype(xstd::bit_set_view(std::declval<B&>())), xstd::bit_set_view<xstd::block_array<std::size_t, 100>>>);
-        static_assert(std::same_as<decltype(xstd::bit_span(std::declval<B&>())),     xstd::bit_span<xstd::block_array<std::size_t, 100>>>);
+        static_assert(std::same_as<decltype(xstd::bit_set_view(std::declval<B&>())), xstd::bit_set_view<xstd::detail::bits::block_array<std::size_t, 100>>>);
+        static_assert(std::same_as<decltype(xstd::bit_span(std::declval<B&>())),     xstd::bit_span<xstd::detail::bits::block_array<std::size_t, 100>>>);
 
         // Naming the bitset changes how a view is spelled, not what the bitset offers.
         static_assert(not std::ranges::range<B>);

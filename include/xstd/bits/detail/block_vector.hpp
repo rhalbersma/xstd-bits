@@ -11,12 +11,12 @@
 #include <memory>                                  // allocator
 #include <vector>                                  // vector
 
-namespace xstd {
+namespace xstd::detail::bits {
 
 // The second vehicle: a width on the heap, growing as a set of positions does. [design.md#the-one-vehicle]
 template<xstd::unsigned_integer Block, class Allocator = std::allocator<Block>>
 using block_vector = block_sequence<std::vector<Block, Allocator>>;
 
-}       // namespace xstd
+}       // namespace xstd::detail::bits
 
 #endif  // XSTD_BITS_DETAIL_BLOCK_VECTOR_HPP

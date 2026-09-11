@@ -33,7 +33,7 @@ BOOST_AUTO_TEST_SUITE(BitSubspan)
 
 namespace {
 
-using Blocks = xstd::block_array<std::uint8_t, 20>;
+using Blocks = xstd::detail::bits::block_array<std::uint8_t, 20>;
 using Owner  = xstd::basic_bit_array<20, std::uint8_t>;
 using Span   = xstd::bit_span<Blocks>;
 using Sub    = xstd::bit_subspan<Blocks>;

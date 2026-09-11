@@ -101,7 +101,7 @@ template<std::size_t N>
 auto set_iterate_view_of_storage(benchmark::State& state)
         -> void
 {
-        auto blocks = filled<N, xstd::block_array<std::size_t, N>>();
+        auto blocks = filled<N, xstd::detail::bits::block_array<std::size_t, N>>();
         benchmark::DoNotOptimize(&blocks);
         auto const s = xstd::bit_set_view(blocks);
         for (auto _ : state) {
@@ -149,7 +149,7 @@ template<std::size_t N>
 auto sequence_count_view_of_storage(benchmark::State& state)
         -> void
 {
-        auto blocks = filled<N, xstd::block_array<std::size_t, N>>();
+        auto blocks = filled<N, xstd::detail::bits::block_array<std::size_t, N>>();
         benchmark::DoNotOptimize(&blocks);
         auto const v = xstd::bit_span(blocks);
         for (auto _ : state) {
@@ -197,7 +197,7 @@ template<std::size_t N>
 auto sequence_read_view_of_storage(benchmark::State& state)
         -> void
 {
-        auto blocks = filled<N, xstd::block_array<std::size_t, N>>();
+        auto blocks = filled<N, xstd::detail::bits::block_array<std::size_t, N>>();
         benchmark::DoNotOptimize(&blocks);
         auto const v = xstd::bit_span(blocks);
         auto lcg = std::uint64_t{1};
