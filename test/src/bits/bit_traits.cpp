@@ -3,18 +3,19 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/block_types.hpp>                       // graded_extents
-#include <xstd/bits/bit_traits.hpp>                   // all, any, bit_storage, bit_traits, block_readable, contiguous_bit_sequence, count, none, scan_*, static_bit_extent, word_at
-#include <xstd/bits/detail/contiguous_bit_array.hpp>  // contiguous_bit_array
-#include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
-#include <xstd/bits/ext/boost/dynamic_bitset.hpp>     // IWYU pragma: keep; bit_traits<boost::dynamic_bitset>
-#include <xstd/bits/ext/std/bitset.hpp>               // IWYU pragma: keep; bit_traits<std::bitset>
-#include <boost/dynamic_bitset/dynamic_bitset.hpp>    // dynamic_bitset
-#include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <bitset>                                     // bitset
-#include <cstddef>                                    // size_t
-#include <cstdint>                                    // uint8_t, uint64_t
-#include <set>                                        // set
+#include <test/block_types.hpp>                          // graded_extents
+#include <xstd/bits/bit_traits.hpp>                      // all, any, bit_storage, bit_traits, block_readable, contiguous_bit_sequence, count, none, scan_*, static_bit_extent, word_at
+#include <xstd/bits/detail/contiguous_bit_array.hpp>     // contiguous_bit_array
+#include <xstd/bits/detail/contiguous_bit_container.hpp> // bit_traits<contiguous_bit_container>
+#include <xstd/bits/detail/contiguous_bit_vector.hpp>    // contiguous_bit_vector
+#include <xstd/bits/ext/boost/dynamic_bitset.hpp>        // IWYU pragma: keep; bit_traits<boost::dynamic_bitset>
+#include <xstd/bits/ext/std/bitset.hpp>                  // IWYU pragma: keep; bit_traits<std::bitset>
+#include <boost/dynamic_bitset/dynamic_bitset.hpp>       // dynamic_bitset
+#include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <bitset>                                        // bitset
+#include <cstddef>                                       // size_t
+#include <cstdint>                                       // uint8_t, uint64_t
+#include <set>                                           // set
 
 // Two adapters over identical storage, differing only in whether they hand their blocks over. [design.md#detection-by-absence]
 namespace {
@@ -278,7 +279,7 @@ static_assert(not xstd::contiguous_bit_sequence<word>);
 BOOST_AUTO_TEST_CASE(ATraitOnlyStorageAnswersEveryScan)
 {
         using traits = xstd::bit_traits<word>;
-        auto const c = word{(1ULL << 3) | (1ULL << 40)};
+        auto const c = word{(1ULL << 3U) | (1ULL << 40U)};
 
         BOOST_CHECK_EQUAL(traits::size(c), 64UZ);
         BOOST_CHECK(traits::at(c, 3UZ));

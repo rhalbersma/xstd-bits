@@ -3,23 +3,29 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/block_types.hpp>       // graded_extents
-#include <test/flat_set.hpp>          // IWYU pragma: keep; TEST_HAS_FLAT_SET
-#include <test/inplace_vector.hpp>    // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
-#include <test/sequence/concepts.hpp> // bit_sequence
-#include <test/set/concepts.hpp>      // bit_set
-#include <xstd/bits.hpp>              // the whole bits surface
-#include <boost/test/unit_test.hpp>   // BOOST_AUTO_TEST_CASE
-#include <array>                      // array
-#include <concepts>                   // same_as
-#include <cstddef>                    // size_t
-#include <cstdint>                    // uint8_t
-#include <limits>                     // numeric_limits
-#include <memory>                     // allocator
-#include <ranges>                     // bidirectional_range, random_access_range
-#include <set>                        // set
-#include <tuple>                      // tuple_element_t, tuple_size_v
-#include <utility>                    // index_sequence, make_index_sequence
+// The two vehicle headers are named directly because the assertions below pin the three naming layers to their
+// storage, and the umbrella stopped exporting those names when the vehicles moved under detail/. A test may
+// reach into detail/ where a user may not, and an include list is where that is said out loud.
+// [design.md#the-interface-line]
+#include <test/block_types.hpp>                       // graded_extents
+#include <test/flat_set.hpp>                          // IWYU pragma: keep; TEST_HAS_FLAT_SET
+#include <test/inplace_vector.hpp>                    // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
+#include <test/sequence/concepts.hpp>                 // bit_sequence
+#include <test/set/concepts.hpp>                      // bit_set
+#include <xstd/bits.hpp>                              // the whole bits surface
+#include <xstd/bits/detail/contiguous_bit_array.hpp>  // contiguous_bit_array
+#include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
+#include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE
+#include <array>                                      // array
+#include <concepts>                                   // same_as
+#include <cstddef>                                    // size_t
+#include <cstdint>                                    // uint8_t
+#include <limits>                                     // numeric_limits
+#include <memory>                                     // allocator
+#include <ranges>                                     // bidirectional_range, random_access_range
+#include <set>                                        // set
+#include <tuple>                                      // tuple_element_t, tuple_size_v
+#include <utility>                                    // index_sequence, make_index_sequence
 
 
 // Every entity the umbrella promises, reached through it alone: no leaf test sees the umbrella at all.
