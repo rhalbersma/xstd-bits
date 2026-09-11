@@ -12,7 +12,7 @@
 #include <ranges>    // to
                      // begin, end, iota, range_value_t, take_while
 
-namespace xstd {
+namespace opt {
 
 template<class X>
 auto sift(X& primes, std::size_t m)
@@ -216,6 +216,6 @@ auto sift_primes_segmented(std::size_t n)
         return primes;
 }
 
-}       // namespace xstd
+}       // namespace opt
 
 #endif  // include guard

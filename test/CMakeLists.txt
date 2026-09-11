@@ -175,6 +175,10 @@ if(unmirrored_headers)
 endif()
 
 set(current_include_dir ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+# The workloads the containers are exercised against, shared with benchmark/ and deliberately outside include/:
+# they are subjects, not library code, and include/ is what a consumer gets. [design.md#the-interface-line]
+set(workload_include_dir ${PROJECT_SOURCE_DIR}/examples/include)
 set(current_src_dir ${CMAKE_CURRENT_SOURCE_DIR}/src)
 # Anchored to current_src_dir: an unanchored *.cpp resolves against test/ and swept up consumer/main.cpp.
 file(GLOB_RECURSE targets RELATIVE ${current_src_dir} ${current_src_dir}/*.cpp)
@@ -202,6 +206,7 @@ foreach(t ${targets})
     target_include_directories(
         ${target_id} PRIVATE
         ${current_include_dir}
+        ${workload_include_dir}
     )
 
     target_compile_definitions(

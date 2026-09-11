@@ -1080,6 +1080,13 @@ one container header and asked nothing of the umbrella. The file set is now chec
 at configure time, the way `test/` checks that every public header is mirrored — a hand-written list that
 nothing verifies is a list that drifts.
 
+The rule reaches `include/` as a whole, not only `include/xstd/`. `include/opt/set/sieve.hpp` — the sieve the
+containers are benchmarked with — sat beside the library for as long as the library existed, never installed and
+therefore invisible to a `find_package` consumer, yet on the build-interface include path of every
+`add_subdirectory` and `FetchContent` consumer, to whom `xstd::sift_primes0` was a perfectly reachable name. It
+lives in `examples/` now, in namespace `opt`, and the file-set check globs all of `include/` so a stray
+directory is a configure error rather than a silent extra ([the-sieve](#the-sieve)).
+
 `ext/` is the one interface piece the umbrella leaves out. It costs nothing here — a consumer that wants
 `std::bitset` or `boost::dynamic_bitset` adapted includes the one header for it — and it keeps Boost off the
 path of every consumer who does not.
@@ -1976,7 +1983,14 @@ on the jobs that build without sanitizers.
 
 ### the-sieve
 
-The sieve under `include/opt/set/` is the library's worked example and its bench, and it speaks **one**
+The sieve lives in `examples/include/opt/set/`, and the path is the point: it is the library's worked example
+and its bench, which makes it a *subject* rather than library code. It sat under `include/` until it was noticed
+that `include/` is the file set's `BASE_DIRS`, so CMake puts the whole directory on the build interface —
+`#include <opt/set/sieve.hpp>` therefore compiled for an `add_subdirectory` or `FetchContent` consumer and
+failed for a `find_package` one, the header never having been installed, and for the first kind
+`xstd::sift_primes0` was a reachable `xstd::` name. Moving it out settles both: the names are in `opt::` now,
+and the configure-time file-set check widened from `include/xstd/` to all of `include/` so the next stray
+directory is caught rather than shipped ([the-interface-line](#the-interface-line)). It speaks **one**
 vocabulary: an ordered set of integers. It runs over `std::set`, `std::flat_set`, `bit_static_set` or
 `bit_set`; the candidates are `iota(2, n)` converted to the set, and a sift is `erase`. Nothing
 bitset-shaped takes part.

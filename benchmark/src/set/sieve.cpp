@@ -49,7 +49,7 @@ auto bm_sift_primes0(benchmark::State& state)
 {
         auto const n = bound(state);
         for (auto _ : state) {
-                benchmark::DoNotOptimize(xstd::sift_primes0<X>(n));
+                benchmark::DoNotOptimize(opt::sift_primes0<X>(n));
         }
         per_candidate(state);
 }
@@ -60,7 +60,7 @@ auto bm_sift_primes1(benchmark::State& state)
 {
         auto const n = bound(state);
         for (auto _ : state) {
-                benchmark::DoNotOptimize(xstd::sift_primes1<X>(n));
+                benchmark::DoNotOptimize(opt::sift_primes1<X>(n));
         }
         per_candidate(state);
 }
@@ -74,7 +74,7 @@ auto bm_sift_primes_segmented(benchmark::State& state)
 {
         auto const n = bound(state);
         for (auto _ : state) {
-                benchmark::DoNotOptimize(xstd::sift_primes_segmented<X, xstd::bit_static_set<1UZ << 15>>(n));
+                benchmark::DoNotOptimize(opt::sift_primes_segmented<X, xstd::bit_static_set<1UZ << 15>>(n));
         }
         per_candidate(state);
 }
@@ -88,7 +88,7 @@ auto bm_sift_primes_incremental(benchmark::State& state)
 {
         auto const n = bound(state);
         for (auto _ : state) {
-                benchmark::DoNotOptimize(xstd::sift_primes_incremental<X>(n));
+                benchmark::DoNotOptimize(opt::sift_primes_incremental<X>(n));
         }
         per_candidate(state);
 }
@@ -100,9 +100,9 @@ auto bm_filter_twins(benchmark::State& state)
         -> void
 {
         auto const n = bound(state);
-        auto const primes = xstd::sift_primes1<X>(n);
+        auto const primes = opt::sift_primes1<X>(n);
         for (auto _ : state) {
-                benchmark::DoNotOptimize(xstd::filter_twins(primes));
+                benchmark::DoNotOptimize(opt::filter_twins(primes));
         }
         per_candidate(state);
 }

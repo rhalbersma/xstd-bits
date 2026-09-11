@@ -108,6 +108,12 @@ foreach(t ${targets})
         fmt::fmt
     )
 
+    # The workloads, shared with test/ and deliberately outside include/. [design.md#the-interface-line]
+    target_include_directories(
+        ${target_id} PRIVATE
+        ${PROJECT_SOURCE_DIR}/examples/include
+    )
+
     target_compile_definitions(
         ${target_id} PRIVATE
         ${cxx_compile_definitions}
