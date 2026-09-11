@@ -3,8 +3,8 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_DETAIL_BLOCK_SEQUENCE_HPP
-#define XSTD_BITS_DETAIL_BLOCK_SEQUENCE_HPP
+#ifndef XSTD_BITS_DETAIL_CONTIGUOUS_BIT_CONTAINER_HPP
+#define XSTD_BITS_DETAIL_CONTIGUOUS_BIT_CONTAINER_HPP
 
 #include <xstd/bits/bit_traits.hpp>                          // bit_traits
 #include <xstd/bits/detail/allocator_typedef.hpp>            // allocator_typedef
@@ -58,7 +58,7 @@ inline constexpr auto num_blocks_v = std::ranges::max(
 
 // The one vehicle: it owns the unused-tail invariant, and has no iterators. [design.md#the-one-vehicle]
 template<contiguous_block_container Blocks, std::size_t N = std::dynamic_extent>
-class block_sequence : public detail::bits::allocator_typedef<Blocks>
+class contiguous_bit_container : public detail::bits::allocator_typedef<Blocks>
 {
 public:
         using block_type = std::ranges::range_value_t<Blocks>;
@@ -115,10 +115,10 @@ private:
         Blocks m_blocks = make_blocks(0UZ);
 
 public:
-        block_sequence() = default;
+        contiguous_bit_container() = default;
 
         // The width is a constructor argument exactly when it is not a template argument.
-        [[nodiscard]] constexpr explicit block_sequence(std::size_t n)
+        [[nodiscard]] constexpr explicit contiguous_bit_container(std::size_t n)
                 requires (not has_static_size)
         :
                 m_size(n),
@@ -128,14 +128,14 @@ public:
         // boost's allocator arguments, where the blocks take one: deduced and matched, so a storage without an allocator has no such constructor. [design.md#a-strict-extension]
         template<class Alloc>
                 requires (not has_static_size) and std::same_as<Alloc, typename Blocks::allocator_type>
-        [[nodiscard]] constexpr explicit block_sequence(Alloc const& alloc)
+        [[nodiscard]] constexpr explicit contiguous_bit_container(Alloc const& alloc)
         :
                 m_blocks(blocks_for(0UZ), alloc)
         {}
 
         template<class Alloc>
                 requires (not has_static_size) and std::same_as<Alloc, typename Blocks::allocator_type>
-        [[nodiscard]] constexpr block_sequence(std::size_t n, Alloc const& alloc)
+        [[nodiscard]] constexpr contiguous_bit_container(std::size_t n, Alloc const& alloc)
         :
                 m_size(n),
                 m_blocks(blocks_for(n), alloc)
@@ -144,7 +144,7 @@ public:
         // [container.alloc.reqmts]'s allocator-extended copy and move; the moved-from is left empty whichever way the blocks went.
         template<class Alloc>
                 requires (not has_static_size) and std::same_as<Alloc, typename Blocks::allocator_type>
-        [[nodiscard]] constexpr block_sequence(block_sequence const& other, Alloc const& alloc)
+        [[nodiscard]] constexpr contiguous_bit_container(contiguous_bit_container const& other, Alloc const& alloc)
         :
                 m_size(other.m_size),
                 m_blocks(other.m_blocks, alloc)
@@ -152,7 +152,7 @@ public:
 
         template<class Alloc>
                 requires (not has_static_size) and std::same_as<Alloc, typename Blocks::allocator_type>
-        [[nodiscard]] constexpr block_sequence(block_sequence&& other, Alloc const& alloc)
+        [[nodiscard]] constexpr contiguous_bit_container(contiguous_bit_container&& other, Alloc const& alloc)
         :
                 m_size(std::exchange(other.m_size, 0UZ)),
                 m_blocks(std::move(other.m_blocks), alloc)
@@ -167,12 +167,12 @@ public:
         }
 
         // Memberwise, width first: the unused bits are kept clear, so the blocks compare as the bits do, and a zero width through the one block it still holds. [design.md#contiguous-block-container]
-        [[nodiscard]] friend constexpr auto operator==(block_sequence const&, block_sequence const&) noexcept -> bool = default;
+        [[nodiscard]] friend constexpr auto operator==(contiguous_bit_container const&, contiguous_bit_container const&) noexcept -> bool = default;
 
-        // No operator<=>: block_sequence is pure storage with no opinion on which reading orders it, so it names all three and picks none. [design.md#two-readings-disagree]
+        // No operator<=>: contiguous_bit_container is pure storage with no opinion on which reading orders it, so it names all three and picks none. [design.md#two-readings-disagree]
 
         // The set reading a word at a time: whoever HOLDS the lowest differing position is greater, unless the other holds nothing above it. [design.md#the-ordering-primitive]
-        [[nodiscard]] constexpr auto set_three_way(block_sequence const& other [[maybe_unused]]) const noexcept
+        [[nodiscard]] constexpr auto set_three_way(contiguous_bit_container const& other [[maybe_unused]]) const noexcept
                 -> std::strong_ordering
         {
                 assert(this->size() == other.size());
@@ -195,7 +195,7 @@ public:
         }
 
         // The sequence reading a word at a time: whoever HOLDS the lowest differing position is greater, with no prefix clause, the widths being equal. [design.md#the-ordering-primitive]
-        [[nodiscard]] constexpr auto sequence_three_way(block_sequence const& other [[maybe_unused]]) const noexcept
+        [[nodiscard]] constexpr auto sequence_three_way(contiguous_bit_container const& other [[maybe_unused]]) const noexcept
                 -> std::strong_ordering
         {
                 assert(this->size() == other.size());
@@ -215,7 +215,7 @@ public:
         }
 
         // The bitset reading a word at a time: the bit string, most significant position first, is the blocks from the top block down, the unused tail being clear. [design.md#the-ordering-primitive]
-        [[nodiscard]] constexpr auto bitset_three_way(block_sequence const& other [[maybe_unused]]) const noexcept
+        [[nodiscard]] constexpr auto bitset_three_way(contiguous_bit_container const& other [[maybe_unused]]) const noexcept
                 -> std::strong_ordering
         {
                 assert(this->size() == other.size());
@@ -234,7 +234,7 @@ public:
         }
 
         template<class Provider, class Hash, class Flavor>
-        friend constexpr auto tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, block_sequence const* v) noexcept
+        friend constexpr auto tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, contiguous_bit_container const* v) noexcept
                 -> void
         {
                 boost::hash2::hash_append(h, f, v->m_blocks);
@@ -321,7 +321,7 @@ public:
 
         // boost's ranged forms, a word at a time through set_word: [n, n + len) set, cleared or flipped, the rest untouched. [design.md#the-blit]
         constexpr auto set(std::size_t n, std::size_t len, bool value) noexcept
-                -> block_sequence&
+                -> contiguous_bit_container&
         {
                 assert(n + len <= size());
                 for_each_word(n, len, [&](std::size_t pos, block_type mask) -> void { set_word(pos, value ? ones : zero, mask); });
@@ -329,7 +329,7 @@ public:
         }
 
         constexpr auto flip(std::size_t n, std::size_t len) noexcept
-                -> block_sequence&
+                -> contiguous_bit_container&
         {
                 assert(n + len <= size());
                 for_each_word(n, len, [&](std::size_t pos, block_type mask) -> void { set_word(pos, static_cast<block_type>(~word_at(pos)), mask); });
@@ -472,8 +472,8 @@ public:
                 }
         }
 
-        constexpr auto operator&=(block_sequence const& other [[maybe_unused]]) noexcept
-                -> block_sequence&
+        constexpr auto operator&=(contiguous_bit_container const& other [[maybe_unused]]) noexcept
+                -> contiguous_bit_container&
         {
                 assert(this->size() == other.size());
                 if constexpr (has_static_size and N > 0 and static_num_blocks == 1) {
@@ -489,8 +489,8 @@ public:
                 return *this;
         }
 
-        constexpr auto operator|=(block_sequence const& other [[maybe_unused]]) noexcept
-                -> block_sequence&
+        constexpr auto operator|=(contiguous_bit_container const& other [[maybe_unused]]) noexcept
+                -> contiguous_bit_container&
         {
                 assert(this->size() == other.size());
                 if constexpr (has_static_size and N > 0 and static_num_blocks == 1) {
@@ -506,8 +506,8 @@ public:
                 return *this;
         }
 
-        constexpr auto operator^=(block_sequence const& other [[maybe_unused]]) noexcept
-                -> block_sequence&
+        constexpr auto operator^=(contiguous_bit_container const& other [[maybe_unused]]) noexcept
+                -> contiguous_bit_container&
         {
                 assert(this->size() == other.size());
                 if constexpr (has_static_size and N > 0 and static_num_blocks == 1) {
@@ -523,8 +523,8 @@ public:
                 return *this;
         }
 
-        constexpr auto operator-=(block_sequence const& other [[maybe_unused]]) noexcept
-                -> block_sequence&
+        constexpr auto operator-=(contiguous_bit_container const& other [[maybe_unused]]) noexcept
+                -> contiguous_bit_container&
         {
                 assert(this->size() == other.size());
                 if constexpr (has_static_size and N > 0 and static_num_blocks == 1) {
@@ -541,7 +541,7 @@ public:
         }
 
         constexpr auto operator<<=(std::size_t n [[maybe_unused]]) noexcept
-                -> block_sequence&
+                -> contiguous_bit_container&
         {
                 assert(is_valid(n));
                 if constexpr (has_static_size and static_num_blocks == 1) {
@@ -568,7 +568,7 @@ public:
         }
 
         constexpr auto operator>>=(std::size_t n [[maybe_unused]]) noexcept
-                -> block_sequence&
+                -> contiguous_bit_container&
         {
                 assert(is_valid(n));
                 if constexpr (has_static_size and static_num_blocks == 1) {
@@ -594,7 +594,7 @@ public:
         }
 
         constexpr auto set() noexcept
-                -> block_sequence&
+                -> contiguous_bit_container&
         {
                 if constexpr (has_static_size and static_has_unused_bits) {
                         std::ranges::fill_n(std::ranges::begin(m_blocks), static_cast<std::ptrdiff_t>(static_last_block), ones);
@@ -611,7 +611,7 @@ public:
         }
 
         constexpr auto reset() noexcept
-                -> block_sequence&
+                -> contiguous_bit_container&
         {
                 std::ranges::fill(m_blocks, zero);
                 assert(none());
@@ -619,7 +619,7 @@ public:
         }
 
         constexpr auto flip() noexcept
-                -> block_sequence&
+                -> contiguous_bit_container&
         {
                 if constexpr (has_static_size and N > 0 and static_num_blocks == 1) {
                         m_blocks[0] = static_cast<block_type>(~m_blocks[0]);
@@ -635,7 +635,7 @@ public:
                 return *this;
         }
 
-        constexpr auto swap(block_sequence& other)
+        constexpr auto swap(contiguous_bit_container& other)
                 noexcept(noexcept(std::ranges::swap(m_size, other.m_size)) and noexcept(std::ranges::swap(m_blocks, other.m_blocks)))
                 -> void
         {
@@ -645,9 +645,9 @@ public:
         }
 
         // ranges::swap finds a free swap by ADL and a member never, so without this every adaptor's
-        // ranges::swap(m_bits, other.m_bits) moves a whole block_sequence three times instead of swapping its
+        // ranges::swap(m_bits, other.m_bits) moves a whole contiguous_bit_container three times instead of swapping its
         // blocks once, and the storage's own swap is never reached. [design.md#swap-goes-through-adl]
-        friend constexpr auto swap(block_sequence& x, block_sequence& y) noexcept(noexcept(x.swap(y)))
+        friend constexpr auto swap(contiguous_bit_container& x, contiguous_bit_container& y) noexcept(noexcept(x.swap(y)))
                 -> void
         {
                 x.swap(y);
@@ -745,7 +745,7 @@ public:
         }
 
         constexpr auto set(std::size_t n) noexcept
-                -> block_sequence&
+                -> contiguous_bit_container&
         {
                 assert(is_valid(n));
                 auto&& [ block, mask ] = block_mask(n);
@@ -766,7 +766,7 @@ public:
         }
 
         constexpr auto reset(std::size_t n) noexcept
-                -> block_sequence&
+                -> contiguous_bit_container&
         {
                 assert(is_valid(n));
                 auto&& [ block, mask ] = block_mask(n);
@@ -787,7 +787,7 @@ public:
         }
 
         constexpr auto flip(std::size_t n) noexcept
-                -> block_sequence&
+                -> contiguous_bit_container&
         {
                 assert(is_valid(n));
                 auto&& [ block, mask ] = block_mask(n);
@@ -868,7 +868,7 @@ public:
                 }
         }
 
-        [[nodiscard]] constexpr auto is_subset_of(block_sequence const& other [[maybe_unused]]) const noexcept
+        [[nodiscard]] constexpr auto is_subset_of(contiguous_bit_container const& other [[maybe_unused]]) const noexcept
                 -> bool
         {
                 assert(this->size() == other.size());
@@ -892,14 +892,14 @@ public:
         // A proper subset is a subset that differs, and both halves are already here: the unrolled arms are
         // is_subset_of's, and != is the defaulted memberwise comparison. Nothing is left to walk by hand.
         // [design.md#the-cheapest-contract]
-        [[nodiscard]] constexpr auto is_proper_subset_of(block_sequence const& other) const noexcept
+        [[nodiscard]] constexpr auto is_proper_subset_of(contiguous_bit_container const& other) const noexcept
                 -> bool
         {
                 assert(this->size() == other.size());
                 return is_subset_of(other) and *this != other;
         }
 
-        [[nodiscard]] constexpr auto intersects(block_sequence const& other [[maybe_unused]]) const noexcept
+        [[nodiscard]] constexpr auto intersects(contiguous_bit_container const& other [[maybe_unused]]) const noexcept
                 -> bool
         {
                 assert(this->size() == other.size());
@@ -925,7 +925,7 @@ public:
         // Public, because the sequence reading's mismatch is one countr_zero from it. The name stays: it scans
         // low block to high, which is the ascending orderings' answer and not bitset_three_way's, so calling it
         // mismatch here would repeat the mistake lexicographical_three_way made. [design.md#two-readings-disagree]
-        [[nodiscard]] constexpr auto first_difference(block_sequence const& other) const noexcept
+        [[nodiscard]] constexpr auto first_difference(contiguous_bit_container const& other) const noexcept
                 -> std::pair<std::size_t, block_type>
         {
                 if constexpr (has_static_size and static_num_blocks == 1) {
@@ -1032,7 +1032,7 @@ private:
                 -> bool
         {
                 if constexpr (has_static_size and N == 0) {
-                        // Unreachable: only an assert calls is_valid, and a zero-width block_sequence has no member that reaches one. Not removable either - MSVC's /W4 rejects a bare n < N as always false (C4296).
+                        // Unreachable: only an assert calls is_valid, and a zero-width contiguous_bit_container has no member that reaches one. Not removable either - MSVC's /W4 rejects a bare n < N as always false (C4296).
                         return false;                   // GCOVR_EXCL_LINE
                 } else {
                         return n < size();
@@ -1080,9 +1080,9 @@ namespace xstd {
 
 // Forwards and nothing more, reaching none of the generic scans. [design.md#the-cheapest-contract]
 template<class Blocks, std::size_t N>
-struct bit_traits<detail::bits::block_sequence<Blocks, N>>
+struct bit_traits<detail::bits::contiguous_bit_container<Blocks, N>>
 {
-        using bits_type = detail::bits::block_sequence<Blocks, N>;
+        using bits_type = detail::bits::contiguous_bit_container<Blocks, N>;
 
         static constexpr std::size_t extent = N;
 
@@ -1151,4 +1151,4 @@ struct bit_traits<detail::bits::block_sequence<Blocks, N>>
 
 }       // namespace xstd
 
-#endif  // XSTD_BITS_DETAIL_BLOCK_SEQUENCE_HPP
+#endif  // XSTD_BITS_DETAIL_CONTIGUOUS_BIT_CONTAINER_HPP

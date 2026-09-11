@@ -6,7 +6,7 @@
 // The static-width ladder: what a block of bits costs at 1, 2, 4, ... 1024 words, ours against std::bitset.
 // Words rather than bits, because the word count is what every implementation branches on -- it is the loop trip
 // count and the specialization key. The rung that matters is two: libstdc++ specializes _Base_bitset<1> and stops
-// there, so std::bitset<128> runs the general loop, while block_sequence has a hand-unrolled two-block arm.
+// there, so std::bitset<128> runs the general loop, while contiguous_bit_container has a hand-unrolled two-block arm.
 // [design.md#two-block-case]
 
 #include <xstd/bits/bit_set_view.hpp>   // bit_set_view

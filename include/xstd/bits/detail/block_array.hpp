@@ -6,16 +6,16 @@
 #ifndef XSTD_BITS_DETAIL_BLOCK_ARRAY_HPP
 #define XSTD_BITS_DETAIL_BLOCK_ARRAY_HPP
 
-#include <xstd/bits/detail/block_sequence.hpp>     // block_sequence, num_blocks_v
-#include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
-#include <array>                                   // array
-#include <cstddef>                                 // size_t
+#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container, num_blocks_v
+#include <xstd/ints/concepts/unsigned_integer.hpp>       // unsigned_integer
+#include <array>                                         // array
+#include <cstddef>                                       // size_t
 
 namespace xstd::detail::bits {
 
 // The first vehicle: a width in the type, over storage that goes wherever the object does. [design.md#the-one-vehicle]
 template<xstd::unsigned_integer Block, std::size_t N>
-using block_array = block_sequence<std::array<Block, num_blocks_v<Block, N>>, N>;
+using block_array = contiguous_bit_container<std::array<Block, num_blocks_v<Block, N>>, N>;
 
 }       // namespace xstd::detail::bits
 

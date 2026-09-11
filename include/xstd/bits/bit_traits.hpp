@@ -177,7 +177,7 @@ template<class Traits, class Bits>
         return Traits::size(c);
 }
 
-// Strictly above n, and total where block_sequence's twin is not. [design.md#total-versus-precondition]
+// Strictly above n, and total where contiguous_bit_container's twin is not. [design.md#total-versus-precondition]
 template<class Traits, class Bits>
 [[nodiscard]] constexpr auto scan_next(Bits const& c, std::size_t n) noexcept
         -> std::size_t

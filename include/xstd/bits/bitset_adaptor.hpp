@@ -753,7 +753,7 @@ struct owned_storage<bitset_adaptor<Bits, Traits>>
 
 // A bitset reads exactly as the storage it wraps, so one specialization on bitset_adaptor adapts all three bitsets at
 // once -- xstd::bitset<N>, xstd::inplace_bitset<N> and xstd::dynamic_bitset are aliases of it over a different
-// block_sequence -- and gives them the direct view spelling, bit_set_view<xstd::bitset<N>> and bit_span<xstd::bitset<N>>.
+// contiguous_bit_container -- and gives them the direct view spelling, bit_set_view<xstd::bitset<N>> and bit_span<xstd::bitset<N>>.
 // Every optional entry is relayed under its own guard, because absence is what the tiers select on: dropping num_blocks
 // and block here would silently turn every word-parallel walk element-wise. [design.md#a-bitset-reads-as-its-storage]
 template<class Bits, class Traits>

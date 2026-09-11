@@ -3,28 +3,28 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/block_types.hpp>                      // digits_v, graded_extents, word_types
-#include <test/inplace_vector.hpp>                   // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
-#include <test/uint128.hpp>                          // IWYU pragma: keep; TEST_HAS_UINT128, uint128
-#include <xstd/bits/bit_traits.hpp>                  // bit_storage, bit_traits, block_readable, static_bit_extent
-#include <xstd/bits/detail/block_array.hpp>          // block_array
-#include <xstd/bits/detail/block_inplace_vector.hpp> // block_inplace_vector
-#include <xstd/bits/detail/block_sequence.hpp>       // block_sequence, contiguous_block_container
-#include <xstd/bits/detail/block_vector.hpp>         // block_vector
-#include <boost/test/unit_test.hpp>                  // BOOST_CHECK_EQUAL, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
-#include <algorithm>                                 // count, lexicographical_compare_three_way, min
-#include <array>                                     // array
-#include <compare>                                   // strong_ordering
-#include <concepts>                                  // regular, same_as
-#include <cstddef>                                   // size_t
-#include <cstdint>                                   // uint8_t, uint64_t
-#include <initializer_list>                          // initializer_list
-#include <iterator>                                  // contiguous_iterator, iter_reference_t, random_access_iterator
-#include <memory>                                    // addressof, allocator
-#include <new>                                       // IWYU pragma: keep; bad_alloc, behind TEST_HAS_INPLACE_VECTOR
-#include <ranges>                                    // begin, contiguous_range, iota, iterator_t, size, sized_range
-#include <tuple>                                     // get, tuple
-#include <vector>                                    // vector
+#include <test/block_types.hpp>                          // digits_v, graded_extents, word_types
+#include <test/inplace_vector.hpp>                       // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
+#include <test/uint128.hpp>                              // IWYU pragma: keep; TEST_HAS_UINT128, uint128
+#include <xstd/bits/bit_traits.hpp>                      // bit_storage, bit_traits, block_readable, static_bit_extent
+#include <xstd/bits/detail/block_array.hpp>              // block_array
+#include <xstd/bits/detail/block_inplace_vector.hpp>     // block_inplace_vector
+#include <xstd/bits/detail/block_vector.hpp>             // block_vector
+#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container, contiguous_block_container
+#include <boost/test/unit_test.hpp>                      // BOOST_CHECK_EQUAL, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <algorithm>                                     // count, lexicographical_compare_three_way, min
+#include <array>                                         // array
+#include <compare>                                       // strong_ordering
+#include <concepts>                                      // regular, same_as
+#include <cstddef>                                       // size_t
+#include <cstdint>                                       // uint8_t, uint64_t
+#include <initializer_list>                              // initializer_list
+#include <iterator>                                      // contiguous_iterator, iter_reference_t, random_access_iterator
+#include <memory>                                        // addressof, allocator
+#include <new>                                           // IWYU pragma: keep; bad_alloc, behind TEST_HAS_INPLACE_VECTOR
+#include <ranges>                                        // begin, contiguous_range, iota, iterator_t, size, sized_range
+#include <tuple>                                         // get, tuple
+#include <vector>                                        // vector
 
 BOOST_AUTO_TEST_SUITE(BitBlocks)
 
@@ -414,8 +414,8 @@ BOOST_AUTO_TEST_CASE(ItsStorageSubscriptIsIterationAtTheSameAddress)
         BOOST_CHECK(subscript_agrees_with_iteration(std::vector<std::uint64_t>{ 1, 2, 3, 4 }));
 }
 
-// ranges::swap finds a free swap by ADL and a member never, so block_sequence needs the free one its three
-// adaptors already have: without it every container moves a whole block_sequence three times instead of
+// ranges::swap finds a free swap by ADL and a member never, so contiguous_bit_container needs the free one its three
+// adaptors already have: without it every container moves a whole contiguous_bit_container three times instead of
 // swapping its blocks once, and a storage with an optimized swap never sees it. [design.md#swap-goes-through-adl]
 namespace {
 
@@ -460,7 +460,7 @@ static_assert(xstd::detail::bits::contiguous_block_container<counting_blocks>);
 
 BOOST_AUTO_TEST_CASE(ItsSwapIsReachedThroughAdlAndNotTheMoveFallback)
 {
-        using bits = xstd::detail::bits::block_sequence<counting_blocks, 256>;
+        using bits = xstd::detail::bits::contiguous_bit_container<counting_blocks, 256>;
 
         auto a = bits();
         auto b = bits();

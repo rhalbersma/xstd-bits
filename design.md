@@ -12,16 +12,16 @@ out of. This file holds what has landed.
 ### contiguous-block-container
 
 `contiguous_block_container` asks whether a range **is** blocks: a regular, contiguous, sized, subscriptable
-range of unsigned integers. Regular is what lets `block_sequence` default its `==` over the width and the
-blocks, in that member order, so two run-time widths part on the width before a block is read.
-`std::array` and `std::vector` both qualify, and so does `std::inplace_vector` — a runtime width over
-static capacity, for free.
+range of unsigned integers. Regular is what lets `contiguous_bit_container` default its `==` over the width and
+the blocks, in that member order, so two run-time widths part on the width before a block is read. `std::array`
+and `std::vector` both qualify, and so does `std::inplace_vector` — a runtime width over static capacity, for
+free.
 
 Subscript is spelled out rather than left to `std::ranges::contiguous_range`, which does not imply it.
 `contiguous_range` gives `data()` and a `contiguous_iterator`, and a `contiguous_iterator` is a
 `random_access_iterator`, so `i[n]` **is** required — of the *iterator*. The range itself is under no such
 obligation, and a plain buffer wrapper proves the gap: it satisfies the other four requirements, its
-iterator subscripts happily, and `r[n]` does not compile. `block_sequence` reaches for the range's
+iterator subscripts happily, and `r[n]` does not compile. `contiguous_bit_container` reaches for the range's
 subscript in 140 places, `block_mask` among them, so without this the concept admits storages the class
 cannot be instantiated over — the shortfall surfacing as a hard error inside the template rather than as an
 unsatisfied constraint, which is the failure mode
@@ -37,14 +37,14 @@ here as the standard states it for `random_access_iterator`'s `i[n]`:
 and asserted in the tests, by address rather than by value, for every storage shipped. An unchecked
 semantic requirement that no test pins is a comment.
 
-Naming it `container` follows from the same fact. A contiguous container generalizes the C array, and `a[i]`
-is the C array's defining operation; a concept claiming a range *is* blocks while unable to index one would
-be describing something else. The word is deliberately close to the standard's *contiguous container*
+Naming it `container` follows from the same fact. A contiguous container generalizes the C array, and `a[i]` is
+the C array's defining operation; a concept claiming a range *is* blocks while unable to index one would be
+describing something else. The word is deliberately close to the standard's *contiguous container*
 ([container.reqmts]/68) without claiming it: that term drags in the whole *Container* table — `empty()`,
-`max_size()`, `cbegin`/`cend`, member `swap`, seven nested typedefs — and `block_sequence` needs almost none
-of it. At a static width it needs none; at a run-time width it needs `max_size`, `resize`, `push_back` and
-`clear`, which are *sequence* container operations, not `Container` ones. Neither path draws the line where
-[container.reqmts]/68 draws it, so the concept states its own five requirements and borrows nothing.
+`max_size()`, `cbegin`/`cend`, member `swap`, seven nested typedefs — and `contiguous_bit_container` needs
+almost none of it. At a static width it needs none; at a run-time width it needs `max_size`, `resize`,
+`push_back` and `clear`, which are *sequence* container operations, not `Container` ones. Neither path draws the
+line where [container.reqmts]/68 draws it, so the concept states its own five requirements and borrows nothing.
 
 `block_readable` is the other side of the same word, and asks whether a bit container will
 **hand its blocks over**. Nothing models both, and no scope sees both unqualified.
@@ -54,21 +54,34 @@ different word.
 
 ### the-one-vehicle
 
-`block_sequence` and its three aliases live under `detail/`, one header each: `detail/block_sequence.hpp` holds
-the concept, `num_blocks_v`, the class and its `bit_traits`, and `detail/block_array.hpp`,
-`detail/block_vector.hpp` and `detail/block_inplace_vector.hpp` hold one vehicle apiece. The names are in
-`xstd::detail::bits` with the rest of `detail/`, so a container spells `detail::bits::block_array<Block, N>`
-and nothing outside the library can name the vehicle at all. The one exception is the `bit_traits`
-specialization, which has to be in `xstd` because that is where the primary is declared: the header closes
-`xstd::detail::bits` and reopens `xstd` for it. It is the device that
-turns three readings over three storages into three plus three, and a factoring device is machinery rather
-than vocabulary: a user reaches every width through `bit_static_set<N>` or `basic_bit_array<Block, N>` and
-never spells the pair themselves. The split is what lets each of the nine containers include only the vehicle
-it uses -- `bit_array` names `block_array` and no longer sees `std::vector`, and the
-`#ifdef __cpp_lib_inplace_vector` guard sits in the one header that concerns it rather than in the common one.
+`contiguous_bit_container` and its three aliases live under `detail/`, one header each:
+`detail/contiguous_bit_container.hpp` holds the concept, `num_blocks_v`, the class and its `bit_traits`, and
+`detail/block_array.hpp`, `detail/block_vector.hpp` and `detail/block_inplace_vector.hpp` hold one vehicle
+apiece. The names are in `xstd::detail::bits` with the rest of `detail/`, so a container spells
+`detail::bits::block_array<Block, N>` and nothing outside the library can name the vehicle at all. The one
+exception is the `bit_traits` specialization, which has to be in `xstd` because that is where the primary is
+declared: the header closes `xstd::detail::bits` and reopens `xstd` for it. It is the device that turns three
+readings over three storages into three plus three, and a factoring device is machinery rather than vocabulary:
+a user reaches every width through `bit_static_set<N>` or `basic_bit_array<Block, N>` and never spells the pair
+themselves. The split is what lets each of the nine containers include only the vehicle it uses -- `bit_array`
+names `block_array` and no longer sees `std::vector`, and the `#ifdef __cpp_lib_inplace_vector` guard sits in
+the one header that concerns it rather than in the common one.
 
-`block_sequence<Blocks, N>` is the single storage vehicle. `N` is the width when that is a constant and
-`std::dynamic_extent` when the width is carried at run time.
+**The name says what it does to its argument.** It takes a `contiguous_block_container` — a range that *is*
+blocks ([contiguous-block-container](#contiguous-block-container)) — and adds the bit interface. In goes
+storage that answers about blocks, out comes something that answers about bits. Concept and class differ by
+one word, and it is the word that changes.
+
+That is also what earns it a `bit_traits` specialization, and puts it on exactly the footing of the legacy
+bitsets. The trait is specialized for **bit containers** ([the-trait](#the-trait)): `ext/std/bitset.hpp` and
+`ext/boost/dynamic_bitset.hpp` do it for someone else's, `detail/contiguous_bit_container.hpp` does it for the
+one we ship. Three bit containers, three specializations, one door — and all that distinguishes ours is that
+it lives under `detail/` because nobody outside spells it ([the-interface-line](#the-interface-line)). The
+former name, `block_sequence`, hid that: a *sequence of blocks* reads as storage that happens to have been
+adapted, where a *bit container* reads as the thing the trait is for.
+
+`contiguous_bit_container<Blocks, N>` is the single storage vehicle. `N` is the width when that is a constant
+and `std::dynamic_extent` when the width is carried at run time.
 
 It owns the **unused-tail invariant** — every bit at or above `size()` reads zero — which is what makes
 whole-block comparison, popcount and the block-at-a-time scans mean anything at all.
@@ -99,13 +112,13 @@ using width_type = std::conditional_t<(alignof(std::size_t) >= alignof(Blocks)),
 ```
 
 Only a storage holding its blocks inline out-aligns a `size_t`, and it does so by the blocks' own alignment, so
-`block_type` is both wide enough to hold any width and exactly the size of the gap it fills -- `block_sequence`
-is then its two members and nothing else, at the same size the padding cost. `std::array` reaches none of this,
-a static width carrying no member at all, and neither does `std::vector`, whose alignment is a pointer's whatever
-it holds; `block_inplace_vector<xstd::uint128, N>` is the one cell that does. The `static_assert` beside the
-alias holds the two facts that make `block_type` the right carrier, so a storage over-aligned for some other
-reason fails loudly rather than truncating a width. Every reader goes through `size()`, which converts once, so
-the arithmetic stays a `size_t`'s.
+`block_type` is both wide enough to hold any width and exactly the size of the gap it fills --
+`contiguous_bit_container` is then its two members and nothing else, at the same size the padding cost.
+`std::array` reaches none of this, a static width carrying no member at all, and neither does `std::vector`,
+whose alignment is a pointer's whatever it holds; `block_inplace_vector<xstd::uint128, N>` is the one cell that
+does. The `static_assert` beside the alias holds the two facts that make `block_type` the right carrier, so a
+storage over-aligned for some other reason fails loudly rather than truncating a width. Every reader goes
+through `size()`, which converts once, so the arithmetic stays a `size_t`'s.
 
 ### default-construction
 
@@ -214,17 +227,17 @@ operations on a window ([windows](#windows)), and the bitset reading's order at 
 ([the-ordering-invariant](#the-ordering-invariant)), where each operand's top window is read as words at its
 own alignment and both windows end at their own width, so the tail needs no mask.
 
-`block_sequence::set_word(pos, value, mask)` is its write side, on our storage alone as `set_block` is: the
-bits of `value` under `mask` land at `[pos, pos + digits)`, split over two blocks where `pos` is not aligned,
-the tail kept clear. Every masked write goes through it: boost's ranged `set`, `reset` and `flip`, a window's
-`fill`, and a window's bulk operators, each walking the words a range spans with the mask of what each holds,
-whole words and a partial one at the end.
+`contiguous_bit_container::set_word(pos, value, mask)` is its write side, on our storage alone as `set_block`
+is: the bits of `value` under `mask` land at `[pos, pos + digits)`, split over two blocks where `pos` is not
+aligned, the tail kept clear. Every masked write goes through it: boost's ranged `set`, `reset` and `flip`, a
+window's `fill`, and a window's bulk operators, each walking the words a range spans with the mask of what each
+holds, whole words and a partial one at the end.
 
 ### the-funnel-shift
 
-Under `word_at` and both shift operators is one operation: two adjacent blocks spliced into a double-width
-word and shifted down. `block_sequence::straddled_block(index, L_shift, R_shift)` is that splice, and the three
-sites now read as three uses of it rather than three spellings.
+Under `word_at` and both shift operators is one operation: two adjacent blocks spliced into a double-width word
+and shifted down. `contiguous_bit_container::straddled_block(index, L_shift, R_shift)` is that splice, and the
+three sites now read as three uses of it rather than three spellings.
 
 It takes the shift **and** its complement, named as both operators already name them, because both already hold
 the pair as loop invariants: passing only one would have the other derived back inside from what it was derived
@@ -252,9 +265,9 @@ once instead of three times.
 
 ### total-versus-precondition
 
-`block_sequence::exclusive_find_prev` is deliberately **not** total. Where `inclusive_find_next` answers
-`size()` for "nothing at or above", this one has a precondition instead, and that is the whole of why it is
-three instructions cheaper at every width: it never materializes a not-found value.
+`contiguous_bit_container::exclusive_find_prev` is deliberately **not** total. Where `inclusive_find_next`
+answers `size()` for "nothing at or above", this one has a precondition instead, and that is the whole of why it
+is three instructions cheaper at every width: it never materializes a not-found value.
 
 It is safe because **reverse iteration supplies the guard the function does not**. `rend()` is
 `make_reverse_iterator(begin())`, and `std::reverse_iterator` stops there, so `operator--` is never applied
@@ -275,8 +288,9 @@ would be wrong: `size()` is a legitimate argument, meaning "from the end".
 
 ### the-cheapest-contract
 
-The trait's contract is the most efficient form, so `bit_traits<block_sequence<...>>` keeps the contracts
-`block_sequence` gives it rather than widening to the total ones the synthesised walks happen to provide.
+The trait's contract is the most efficient form, so `bit_traits<contiguous_bit_container<...>>` keeps the
+contracts `contiguous_bit_container` gives it rather than widening to the total ones the synthesised walks
+happen to provide.
 
 **A fallback synthesised for a foreign type may be more generous than the contract; it may not be less.**
 
@@ -347,9 +361,9 @@ another name:
 
 Two entries are left over, and they are the two the readings cannot synthesize:
 
-- **`insert`** is the only operation that can *grow*, and it is exactly what the adapted types disagree
-  about: `boost::dynamic_bitset` resizes, `std::bitset` cannot, `block_sequence` asserts. Reconciling that
-  is what the trait is for. It is not `unchecked_assign(c, n, true)`, which has no answer for a position past the
+- **`insert`** is the only operation that can *grow*, and it is exactly what the adapted types disagree about:
+  `boost::dynamic_bitset` resizes, `std::bitset` cannot, `contiguous_bit_container` asserts. Reconciling that is
+  what the trait is for. It is not `unchecked_assign(c, n, true)`, which has no answer for a position past the
   width.
 - **`fill`** is bulk, and `clear` is `fill(false)`.
 
@@ -386,7 +400,7 @@ already said.
 ### block-writes
 
 `set_block` is the write side of `block()`, and deliberately not a trait entry: block writes are only ever
-needed on storage we control, and the unused tail is `block_sequence`'s to keep.
+needed on storage we control, and the unused tail is `contiguous_bit_container`'s to keep.
 
 ## Orderings
 
@@ -490,8 +504,8 @@ Every ordering in the library satisfies
 std::lexicographical_compare_three_way(a.begin(), a.end(), b.begin(), b.end()) == (a <=> b)
 ```
 
-which is stated on the **reading**, never on the storage: `block_sequence` has no `begin()`/`end()`, and
-`boost::dynamic_bitset` has no public iterators, so it cannot be written against a backend at all.
+which is stated on the **reading**, never on the storage: `contiguous_bit_container` has no `begin()`/`end()`,
+and `boost::dynamic_bitset` has no public iterators, so it cannot be written against a backend at all.
 
 `bitset_adaptor` does not iterate, so its left-hand side is the sequence reading's traversal **reversed**:
 `std::views::reverse` over the bools, the order `to_string()` writes them in. That is `boost::dynamic_bitset::operator<`
@@ -559,8 +573,8 @@ gcovr counts branch slots **per template instantiation and never merges them**. 
 instantiation can never enter is a branch never taken, whatever every other instantiation does.
 
 So a degenerate width does not get an unreachable loop; it gets **different code**, via `if constexpr` on
-`static_num_blocks == 1` and `== 2` in `block_sequence`, and on `static_block_count` and `extent == 0` in
-the walks. `static_block_count` is derived from `extent` rather than declared for exactly this reason:
+`static_num_blocks == 1` and `== 2` in `contiguous_bit_container`, and on `static_block_count` and `extent == 0`
+in the walks. `static_block_count` is derived from `extent` rather than declared for exactly this reason:
 nothing new has to be supplied to know it, since `block_readable`'s contract already fixes the layout.
 
 The same gate is why a cursor lives inside the walk it belongs to rather than beside the block index: at one
@@ -615,9 +629,9 @@ compile on libc++ where it happens to compile on libstdc++. `BOOST_CHECK` compar
 
 ### test-not-subscript
 
-`block_sequence::test` rather than `operator[]`: this reads and cannot be written through. `std::bitset`'s
-`operator[]` returns an assignable proxy and this returns `bool`, so the subscript spelling would promise an
-assignment that does not compile.
+`contiguous_bit_container::test` rather than `operator[]`: this reads and cannot be written through.
+`std::bitset`'s `operator[]` returns an assignable proxy and this returns `bool`, so the subscript spelling
+would promise an assignment that does not compile.
 
 The writable proxy belongs to the containers above, which is also where the checked reading lives —
 `std::bitset::test` throws where this asserts, a difference the containers state as a guard rather than
@@ -818,11 +832,11 @@ at every layer. A view takes the storage -- that is what a view is for ([owning-
 so a view is exactly the place where a constraint left to the base would go undiagnosed until use.
 
 The alias pays for this on the other side, and the trade is worth stating whole. Being transparent, it is not
-what a compiler prints: a diagnostic about `bit_array<100>` names `sequence_adaptor<block_sequence<array<
-unsigned long, 2>, 100>, ...>`, a spelling the user did not write and cannot write back. `std::string` makes
-the same trade and the world lives with `basic_string<char, char_traits<char>, allocator<char>>` -- though
-`std::string` aliases a *class*, where both layers here are aliases, which is why the printed name falls
-through to the adaptor rather than stopping at `basic_bit_array`.
+what a compiler prints: a diagnostic about `bit_array<100>` names
+`sequence_adaptor<contiguous_bit_container<array< unsigned long, 2>, 100>, ...>`, a spelling the user did not
+write and cannot write back. `std::string` makes the same trade and the world lives with `basic_string<char,
+char_traits<char>, allocator<char>>` -- though `std::string` aliases a *class*, where both layers here are
+aliases, which is why the printed name falls through to the adaptor rather than stopping at `basic_bit_array`.
 
 One constraint moved rather than vanished. The guide for a plain storage is viable for an owner too, now that
 a bitset has a `bit_traits` of its own, and would tie with the owner guide — so it is constrained to
@@ -849,24 +863,24 @@ have no subviews either; they assert their preconditions rather than throw, and 
 to-the-end sentinel. A window is a view in `std::ranges`' sense and borrowed like `span`, and like `span` it
 neither compares nor hashes ([views-follow-their-precedent](#views-follow-their-precedent)).
 
-A window's end blocks are shared with what lies outside it, so its bulk operations are masked words: `fill`
-over a window of ours is `block_sequence::set(pos, len, value)`, a word at a time through `set_word`, and one
-position at a time over a window of anything else; `&=`, `|=`, `^=` and `-=` on a window of ours take a source
-of any shape that reads blocks of the same block type, a window at any other alignment included, reading both
-sides through `word_at` and writing through `set_word` masked to the window ([the-blit](#the-blit)). The two
-must be of one size, and must not overlap short of coinciding, `w ^= w` being fine. A window has no shifts:
+A window's end blocks are shared with what lies outside it, so its bulk operations are masked words: `fill` over
+a window of ours is `contiguous_bit_container::set(pos, len, value)`, a word at a time through `set_word`, and
+one position at a time over a window of anything else; `&=`, `|=`, `^=` and `-=` on a window of ours take a
+source of any shape that reads blocks of the same block type, a window at any other alignment included, reading
+both sides through `word_at` and writing through `set_word` masked to the window ([the-blit](#the-blit)). The
+two must be of one size, and must not overlap short of coinciding, `w ^= w` being fine. A window has no shifts:
 shifting within a window is nobody's counterpart.
 
 ### the-range-members
 
-`append_range` has two tiers. Where the source is a sequence adaptor of any shape, owner, view or window,
-whose trait reads blocks of the destination's block type, the source's bits are read as words at the source's
-own alignment through `word_at` and appended a word at a time through `block_sequence::append(block)`, which
-splits each word over the destination's own alignment; then the width is trimmed to the count, `resize`
+`append_range` has two tiers. Where the source is a sequence adaptor of any shape, owner, view or window, whose
+trait reads blocks of the destination's block type, the source's bits are read as words at the source's own
+alignment through `word_at` and appended a word at a time through `contiguous_bit_container::append(block)`,
+which splits each word over the destination's own alignment; then the width is trimmed to the count, `resize`
 clearing whatever the last word carried past it. Everything else, a `std::vector<bool>`, an `iota` under a
 `transform`, a sequence over another block type, is packed a word at a time, which is boost's private
-`bit_appender`, and trimmed the same way. A source inside the very storage being appended to is safe: the
-blit reads positions below the old width alone, and no append writes one.
+`bit_appender`, and trimmed the same way. A source inside the very storage being appended to is safe: the blit
+reads positions below the old width alone, and no append writes one.
 
 `insert_range`, `insert` in its four shapes, `emplace` and both `erase`s rebuild rather than shift: the head
 through `first(pos)`, the middle, the tail through `subspan(pos)`, into a fresh sequence that is then swapped
@@ -888,14 +902,14 @@ are asserted against it first. A line the model itself fails is a wrong line, so
 be honest before ours is held to it; the C++23 range members are a second concept, `vector_bool_ranges`, so
 the model is held to them only where its standard library has them.
 
-The sweep found what the range members had not needed. The allocator: `allocator_type` through the same
-empty base `bitset_adaptor` has, `get_allocator`, and the allocator-extended constructors,
-`[container.alloc.reqmts]`'s copy and move included, which `block_sequence` gains beneath them, deduced and
-matched to the storage's own so a static owner has none. `[vector.erasure]`'s `erase` and `erase_if` as
-non-members over the owner's `erase(first, last)`, `std::ranges::remove_if` running unchanged over the
-proxies, which move and swap. And `std::array`'s aggregate initialization as an `initializer_list`
-constructor on the static owner, the listed values leading and the rest false, a longer list being the
-error it is on `std::array`.
+The sweep found what the range members had not needed. The allocator: `allocator_type` through the same empty
+base `bitset_adaptor` has, `get_allocator`, and the allocator-extended constructors,
+`[container.alloc.reqmts]`'s copy and move included, which `contiguous_bit_container` gains beneath them,
+deduced and matched to the storage's own so a static owner has none. `[vector.erasure]`'s `erase` and `erase_if`
+as non-members over the owner's `erase(first, last)`, `std::ranges::remove_if` running unchanged over the
+proxies, which move and swap. And `std::array`'s aggregate initialization as an `initializer_list` constructor
+on the static owner, the listed values leading and the rest false, a longer list being the error it is on
+`std::array`.
 
 Three things are not offered, each because packed bits have no address. `data()`, and the `pointer` and
 `const_pointer` typedefs, name what a proxy cannot give; the checklist leaves them out of
@@ -939,13 +953,13 @@ What the rule keeps on the interface side, each with the reason it is not obviou
   loud because this is the kind of enum that gets called a detail right up until someone has to type it.
 
 On the other side, the two that had to be argued. The four proxy types are reached only through container
-typedefs, so no user spells them. `block_sequence` and its three aliases are the device that turns three
-readings times three storages into three plus three ([the-one-vehicle](#the-one-vehicle)), and the `basic_`
-layer already exposes the block parameter — `basic_bit_static_set<std::uint8_t, 24>` reaches the capability
-without the storage being named. Recorded against: `block_sequence` *is* instantiated by name throughout
-`test/`, which is a real signal, and demoting it makes the test tree reach into `detail/`. The counter is that
-a test is not a user; a test tree that mirrors the library, `detail/` included, is what testing an
-implementation looks like.
+typedefs, so no user spells them. `contiguous_bit_container` and its three aliases are the device that turns
+three readings times three storages into three plus three ([the-one-vehicle](#the-one-vehicle)), and the
+`basic_` layer already exposes the block parameter — `basic_bit_static_set<std::uint8_t, 24>` reaches the
+capability without the storage being named. Recorded against: `contiguous_bit_container` *is* instantiated by
+name throughout `test/`, which is a real signal, and demoting it makes the test tree reach into `detail/`. The
+counter is that a test is not a user; a test tree that mirrors the library, `detail/` included, is what testing
+an implementation looks like.
 
 **Enforced, not asserted.** `test/consumer/main.cpp` includes `<xstd/bits.hpp>` and no other header of ours,
 and names every type above: the nine containers, the three views, the three adaptors, `ownership` and
@@ -1125,8 +1139,9 @@ So all three ask the same question of the same place, and only the answer's sour
 | an owner over growing storage | the storage's `max_size()`, in bits |
 | a view, a window, a static owner | its own width, which it cannot grow |
 
-`block_sequence::max_size()` is where the real limit lives, and it is not `SIZE_MAX`: a width rounds up to whole
-blocks, so the largest addressable one is `min(blocks.max_size(), SIZE_MAX / bits_per_block) * bits_per_block`
+`contiguous_bit_container::max_size()` is where the real limit lives, and it is not `SIZE_MAX`: a width rounds
+up to whole blocks, so the largest addressable one is `min(blocks.max_size(), SIZE_MAX / bits_per_block) *
+bits_per_block`
 -- `SIZE_MAX - 63` at a `size_t` block, and `N` rounded up at an inplace one. Nothing above it needs to restate
 that arithmetic, and nothing above it should: a constant at the adaptor drifts from the storage the moment the
 storage learns something, which is how `set_adaptor` came to answer `SIZE_MAX - 1` while `dynamic_bitset`
@@ -1138,18 +1153,18 @@ of which a static member can reach. `std::set::max_size()` is not static either.
 ### width-is-capacity
 
 `std::set` has no width, so `bit_set` treats its run-time width as capacity, never as value: two sets holding
-the same positions are equal whatever their storages' widths, and the width neither orders, nor hashes, nor
-is a precondition of the set operations. The storage cannot say that -- `block_sequence`'s `==` is width
+the same positions are equal whatever their storages' widths, and the width neither orders, nor hashes, nor is a
+precondition of the set operations. The storage cannot say that -- `contiguous_bit_container`'s `==` is width
 first, which is what the sequence reading and `dynamic_bitset` mean, and its bulk operators and predicates
 assert equal widths -- so the set adaptor says it. Every comparison, predicate and compound operator asks
-`same_width` first and takes the storage's own answer at equal widths, which is every answer at a static
-width, where `same_width` is constantly true and the arm folds away. At two run-time widths that differ,
-`==` is `std::ranges::equal` over the elements, `<=>` is the invariant's own algorithm, `is_subset_of` is
-`std::ranges::includes`, `intersects` walks one set asking the other, and `|=` `&=` `^=` `-=` insert and
-erase element by element, `insert` growing the narrower left operand as it grows for any key. The shifts
-translate the set, so `<<=` grows the width to hold the result and `>>=` empties past it. Hashing appends
-the positions and the count at a run-time width and the bits at a static one, where equal sets share a
-width ([the-hashing-invariant](#the-hashing-invariant)).
+`same_width` first and takes the storage's own answer at equal widths, which is every answer at a static width,
+where `same_width` is constantly true and the arm folds away. At two run-time widths that differ, `==` is
+`std::ranges::equal` over the elements, `<=>` is the invariant's own algorithm, `is_subset_of` is
+`std::ranges::includes`, `intersects` walks one set asking the other, and `|=` `&=` `^=` `-=` insert and erase
+element by element, `insert` growing the narrower left operand as it grows for any key. The shifts translate the
+set, so `<<=` grows the width to hold the result and `>>=` empties past it. Hashing appends the positions and
+the count at a run-time width and the bits at a static one, where equal sets share a width
+([the-hashing-invariant](#the-hashing-invariant)).
 
 The element walks are a fallback and priced as one: an operation at mismatched widths costs the elements
 rather than the blocks. A block-wise answer over the common prefix is an optimization the storage could
@@ -1233,10 +1248,10 @@ character that is neither `0` nor `1`.
 Two members share a spelling with different contracts between the storage and the counterparts, and the
 wrapper carries the one guard between them.
 
-**Shift.** `block_sequence`'s `<<=` is unchecked, with `n < size()` as its precondition; `std::bitset`'s and
-`boost::dynamic_bitset`'s are total and saturate to none. The wrapper guards the storage's shift, `n < size()`
-else `reset()`, which is the guard `xstd::bitset` used to write by hand. At width zero even `<<= 0` trips the
-storage's assert, so the guard is what makes that instantiation well-formed.
+**Shift.** `contiguous_bit_container`'s `<<=` is unchecked, with `n < size()` as its precondition;
+`std::bitset`'s and `boost::dynamic_bitset`'s are total and saturate to none. The wrapper guards the storage's
+shift, `n < size()` else `reset()`, which is the guard `xstd::bitset` used to write by hand. At width zero even
+`<<= 0` trips the storage's assert, so the guard is what makes that instantiation well-formed.
 
 **Element access.** `set(pos)`, `reset(pos)`, `flip(pos)` and `test(pos)` are the trait's `unchecked_assign`
 and `at` behind a guard, with `flip` synthesised as `unchecked_assign(not at)` the way
@@ -1384,7 +1399,7 @@ anyway. The convention is about named functions.
 A `bitset` has a `bit_traits` of its own, so a view can name it: `bit_set_view<xstd::bitset<N>>` and
 `bit_span<xstd::bitset<N>>` are spellings, not errors. **One** specialization does it, on `bitset_adaptor`,
 because `xstd::bitset<N>`, `xstd::inplace_bitset<N>` and `xstd::dynamic_bitset` are all aliases of that one
-template over a different `block_sequence` -- so all three, and every `basic_` form, arrive together.
+template over a different `contiguous_bit_container` -- so all three, and every `basic_` form, arrive together.
 
 This supersedes the reasoning recorded when `ext/xstd` was deleted, which concluded that a bitset needs no
 trait because it already joins through `owned_storage`. That is still how a view *deduces*: over an owner,
@@ -1422,10 +1437,10 @@ the bitset offers. [a-strict-extension](#a-strict-extension)
 
 ### what-a-view-costs
 
-Measured on the same backend `block_sequence` in every row -- an owner, a view holding a pointer to that
-storage, and a view over the `bitset_adaptor` wrapping it -- so the two layers price separately. `benchmark/`
-builds at `-O3 -march=native`, which is what these numbers are; an earlier version of this section said `-O2`,
-which was never true of any build in the tree.
+Measured on the same backend `contiguous_bit_container` in every row -- an owner, a view holding a pointer to
+that storage, and a view over the `bitset_adaptor` wrapping it -- so the two layers price separately.
+`benchmark/` builds at `-O3 -march=native`, which is what these numbers are; an earlier version of this section
+said `-O2`, which was never true of any build in the tree.
 
 | operation | bits | pointer costs | trait costs |
 | :--- | ---: | ---: | ---: |
@@ -1539,8 +1554,8 @@ found that way. When it finds none it falls back to a move-construct and two mov
 correct and, for a storage whose moves are cheap, not obviously worse -- which is how this went unnoticed.
 
 `set_adaptor`, `sequence_adaptor` and `bitset_adaptor` each ship a free `swap` beside the member.
-`block_sequence` had only the member, and every one of the nine containers swaps by
-`std::ranges::swap(m_bits, other.m_bits)` where `m_bits` **is** a `block_sequence`. So the member was
+`contiguous_bit_container` had only the member, and every one of the nine containers swaps by
+`std::ranges::swap(m_bits, other.m_bits)` where `m_bits` **is** a `contiguous_bit_container`. So the member was
 unreachable from the containers, and a storage with an optimized `swap` never saw it. Measured over a
 storage whose swap and moves are counted, once per reading:
 
@@ -1550,8 +1565,8 @@ storage whose swap and moves are counted, once per reading:
 | `set_adaptor` | 0 storage swaps, 3 moves | 1 swap, 0 moves |
 | `bitset_adaptor` | 0 storage swaps, 3 moves | 1 swap, 0 moves |
 
-`block_sequence` now has the free `swap` too, as a hidden friend delegating to the member. Nothing else
-about swapping changed, and the storage is not asked for one: `std::regular` implies `copyable`, which
+`contiguous_bit_container` now has the free `swap` too, as a hidden friend delegating to the member. Nothing
+else about swapping changed, and the storage is not asked for one: `std::regular` implies `copyable`, which
 implies `movable`, which **includes** `std::swappable`, so the concept already requires as much swapping as
 `ranges::swap` can need, and any better one arrives by ADL without being asked for.
 
@@ -1674,17 +1689,17 @@ the same three tiers `fill` uses ([windows](#windows)). `none_true` is a helper 
 any_true`, so a storage that spells `none()` itself is asked in its own words; all three adapted here do.
 
 `bit_traits` grows `all`, `any` and `none` doors beside `count`, taken from an entry where the storage has one
--- `block_sequence`, `std::bitset` and `boost::dynamic_bitset` all spell all three themselves -- and
+-- `contiguous_bit_container`, `std::bitset` and `boost::dynamic_bitset` all spell all three themselves -- and
 synthesized where it does not. Neither synthesis walks a bit at a time that it could avoid: `any` is
 `find_first` compared against the width, and `all` is `count` compared against it, which is the block tier
 through `count`'s own door.
 
-`mismatch` is `block_sequence::first_difference` plus one `countr_zero`. That helper existed already, private
-and used only by `sequence_three_way`; it is now public, and **keeps its name**: it scans low block to high,
-which is the *ascending* orderings' answer, where `bitset_three_way` deliberately walks the other way and does
-not use it. Calling it `mismatch` on the storage would repeat the mistake `lexicographical_three_way` made
-([two-readings-disagree](#two-readings-disagree)). The counterpart name goes on the public member, which is
-the owner's alone: a window's blocks are not its own.
+`mismatch` is `contiguous_bit_container::first_difference` plus one `countr_zero`. That helper existed already,
+private and used only by `sequence_three_way`; it is now public, and **keeps its name**: it scans low block to
+high, which is the *ascending* orderings' answer, where `bitset_three_way` deliberately walks the other way and
+does not use it. Calling it `mismatch` on the storage would repeat the mistake `lexicographical_three_way` made
+([two-readings-disagree](#two-readings-disagree)). The counterpart name goes on the public member, which is the
+owner's alone: a window's blocks are not its own.
 
 Measured on GCC 15.2, `-O3 -march=native`, 20% density, best of fifteen:
 
@@ -1827,10 +1842,10 @@ either hook, because the template arguments will not deduce through
 
 ### total-lookups-on-the-container
 
-Every `bit_static_set` lookup is total over `key_type`, because `std::set`'s is: a key outside `[0, N)` names
-no element, so it answers *absent* rather than reaching the bit. `block_sequence` asserts `is_valid` on every
-position it accepts and offers no total spelling of any of these — that is the layering working, not a gap in
-it. **The precondition is the sequence's; the guard is the container's.**
+Every `bit_static_set` lookup is total over `key_type`, because `std::set`'s is: a key outside `[0, N)` names no
+element, so it answers *absent* rather than reaching the bit. `contiguous_bit_container` asserts `is_valid` on
+every position it accepts and offers no total spelling of any of these — that is the layering working, not a gap
+in it. **The precondition is the sequence's; the guard is the container's.**
 
 One of those guards stops a *write* rather than a read: without it an out-of-range key clears a bit in
 whatever follows the blocks.

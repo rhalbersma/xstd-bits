@@ -199,7 +199,7 @@ BOOST_AUTO_TEST_CASE(TheReadOnlyProxiesAreValues)
         BOOST_CHECK(true);
 }
 
-// The native trait keeps block_sequence's preconditions and is stepped within them; the minimal trait is total and asked everything.
+// The native trait keeps contiguous_bit_container's preconditions and is stepped within them; the minimal trait is total and asked everything.
 // The minimal trait from width 2, where an iterator first reaches the element-wise forward walk rather than its width guard.
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheSetIteratorWalksThePositionsInBothDirections, T, ArrayTypes)
 {

@@ -3,13 +3,13 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-// What a reading costs when it is a view rather than a container, on the SAME backend block sequence.
+// What a reading costs when it is a view rather than a container, on the SAME backend bit container.
 //
 // Three variants per reading, so the answer decomposes instead of arriving as one number:
 //
-//   owner            set_adaptor / sequence_adaptor owning the block_sequence      -- the baseline
-//   view_of_storage  a view holding a POINTER to that same block_sequence          -- adds indirection
-//   view_of_bitset   a view over the bitset_adaptor wrapping it                    -- adds trait forwarding
+//   owner            set_adaptor / sequence_adaptor owning the contiguous_bit_container -- the baseline
+//   view_of_storage  a view holding a POINTER to that same contiguous_bit_container     -- adds indirection
+//   view_of_bitset   a view over the bitset_adaptor wrapping it                         -- adds trait forwarding
 //
 // So (view_of_storage - owner) is what the pointer costs, and (view_of_bitset - view_of_storage) is what
 // bit_traits<bitset_adaptor> costs, which is the layer that forwards each entry to the storage's own trait.
@@ -40,7 +40,7 @@ constexpr auto is_set(std::size_t i)
 }
 
 // One filler for all four subjects, because each reading spells "put a bit in" its own way: a bitset and a
-// block_sequence take set(n), an ordered set takes insert(n), and a sequence of bool assigns through v[i].
+// contiguous_bit_container take set(n), an ordered set takes insert(n), and a sequence of bool assigns through v[i].
 template<std::size_t N, class T>
 auto filled()
         -> T
