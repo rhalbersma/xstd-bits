@@ -179,6 +179,20 @@ position tested per step, quadratic over a full traversal, where ours reads a bl
 and `_Find_next` are libstdc++ and MSVC extensions, so both entries sit behind a `requires requires` and simply
 are not there on libc++ ([the-two-reserved-names](#the-two-reserved-names)).
 
+**The shortfall is not an oversight.** `std::bitset` was designed to extend the **bitwise operators** to an
+arbitrary fixed width: it is a wide unsigned integer with per-bit accessors, not a container.
+[template.bitset]'s synopsis is that and nothing besides — `&=`, `|=`, `^=`, `<<=`, `>>=`, `~`, `set`, `reset`,
+`flip`, `test`, `count`, `size`, `all`, `any`, `none`, `operator[]`, and the conversions to and from strings and
+integers. No `begin`, no `end`, no search. So `find_first`, `find_next` and `find_prev` were never *missing*
+from `std::bitset`; they were never in scope. That also explains why `_Find_first` and `_Find_next` are
+libstdc++ and MSVC extensions rather than standard ([the-two-reserved-names](#the-two-reserved-names)): the
+implementations added what the standard had no reason to ask for.
+
+Which is what `has_bitops` gates, and why it gates the **bitset reading alone**
+([a-strict-extension](#a-strict-extension)). Of the three readings, only that one shares `std::bitset`'s own
+purpose — the bitwise operators over a fixed width. The set and sequence readings ask a wide integer questions
+it was never meant to answer, and reconciling that is exactly the work the trait exists to do.
+
 So the trait specializations are where the shortfall is worked around, and the two in `ext/` are exactly as long
 as the gap is wide. Both hand-write `find_first` and `find_next` over whatever the storage does offer;
 `ext/std/bitset.hpp` adds `num_blocks` and `block` behind a `requires (N <= ullong_digits)` guard, which is the
