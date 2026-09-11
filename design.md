@@ -1424,8 +1424,11 @@ The `bit_` infix then says what is iterated, as `bit_` says what is stored in th
 **`operator&` on the proxy answers an iterator**, which is what a proxy can offer in place of an address, and it
 is what keeps a container's subscript tied to its iteration: `&a[n]` is `a.begin() + n`, so `&a[n] == &a[0] + n`
 holds for `bit_array` and `bit_vector` in iterator arithmetic, exactly where a contiguous range spells it in
-pointer arithmetic. `std::vector<bool>` cannot say it at all — libstdc++'s `_Bit_reference` has no `operator&`,
-so `&v[n]` is ill-formed there.
+pointer arithmetic. `std::vector<bool>` answers this differently per implementation, and no implementation
+answers it fully. libstdc++'s `_Bit_reference` has no `operator&` at all, so `&v[n]` is ill-formed there on a
+mutable *and* on a const vector. libc++ does have one, but only on `__bit_const_reference`, where it returns
+`__bit_iterator<_Cp, true>`; its mutable `__bit_reference` has none on current main, so `&v[n]` is ill-formed
+there too and only `&cv[n]` on a const vector answers. Ours answers on both, measured rather than assumed.
 
 Random access is nevertheless where the ladder stops, and it stops because of the proxy.
 `std::contiguous_iterator` requires `iter_reference_t<I>` to be a real `iter_value_t<I>&`, which no proxy is, so

@@ -4,6 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/sequence/concepts.hpp>                 // bit_sequence
+#include <test/sequence/dense.hpp>                    // yields_every_position
 #include <xstd/bits/bit_array.hpp>                    // basic_bit_array
 #include <xstd/bits/bit_span.hpp>                     // bit_span
 #include <xstd/bits/bit_vector.hpp>                   // bit_vector
@@ -368,6 +369,19 @@ BOOST_AUTO_TEST_CASE(AViewOverItCannotGrowIt)
         static_assert(    can_grow<T>);
         static_assert(not has_range_members<decltype(s)>);
         static_assert(    has_range_members<T>);
+}
+
+// Every position, densely, agreeing with the subscript -- and not a contiguous range, which no proxy sequence
+// can be. [design.md#the-iterator-is-the-primitive]
+BOOST_AUTO_TEST_CASE(ItYieldsEveryPosition)
+{
+        auto c = T(70);
+        test::sequence::yields_every_position(c);
+
+        for (auto n = 0UZ; n < c.size(); ++n) {
+                c[n] = (n % 3UZ == 0UZ);
+        }
+        test::sequence::yields_every_position(c);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

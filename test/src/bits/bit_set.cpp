@@ -3,6 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/set/ascending.hpp>                     // yields_ascending_keys
 #include <test/set/concepts.hpp>                      // bit_set
 #include <xstd/bits/bit_set.hpp>                      // bit_set
 #include <xstd/bits/bit_set_view.hpp>                 // bit_set_view
@@ -120,6 +121,21 @@ BOOST_AUTO_TEST_CASE(TheShiftsTranslateWhateverTheWidth)
         BOOST_CHECK((b >> 4) == T({ 1 }));
         BOOST_CHECK((b >> 300).empty());
         BOOST_CHECK((T() << 3).empty());
+}
+
+// Ascending keys, whatever the insertion order: what makes this a set rather than a bag of positions.
+// [design.md#two-readings-disagree]
+BOOST_AUTO_TEST_CASE(ItYieldsAscendingKeys)
+{
+        auto c = T();
+        test::set::yields_ascending_keys(c);            // empty is trivially ascending
+
+        // Inserted high to low and across block boundaries, so the ascending answer is the container's doing
+        // and not the insertion order's.
+        for (auto const key : { 70UZ, 64UZ, 63UZ, 9UZ, 1UZ, 0UZ }) {
+                c.insert(key);
+        }
+        test::set::yields_ascending_keys(c);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
