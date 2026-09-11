@@ -952,11 +952,20 @@ and names every type above: the nine containers, the three views, the three adap
 `bit_traits` — adapting a storage of its own through the trait and reading it back through all three views.
 The three `consumption` configurations build it against the installed headers, so a name that stops being
 reachable from the umbrella, or an interface header that starts needing one from `detail/`, fails there rather
-than in a user's build. Writing it found the one leak: `bit_traits.hpp` was ruled interface here and left out of
+than in a user's build.
+
+It found two on the way in. The first was a name: `bit_traits.hpp` is interface under this rule and was not in
 `bits.hpp`, so it reached consumers only transitively, through the three adaptors and the three views that all
-include it. It is in the umbrella now. That is the same reasoning as the include
-order, which puts our headers before Boost's and the standard's so that a transitive include is found rather
-than leaned on.
+include it — the same thing the include order guards against, our headers before Boost's and the standard's so
+that a transitive include is found rather than leaned on. The second was worse, and no compiler leg could have
+caught it: `CMakeLists.txt`'s `FILE_SET HEADERS` is hand-written, and the three inplace headers had reached
+`include/` and `bits.hpp` without ever reaching it. `<xstd/bits.hpp>` therefore named three headers that were
+never installed, so **every** installed consumer's umbrella include was broken, on every compiler, for as long
+as the inplace column has existed. Every compiler leg builds from the source tree, where the files are present;
+only the consumer translation unit builds against the install tree, and until it was made this gate it included
+one container header and asked nothing of the umbrella. The file set is now checked against `include/xstd/`
+at configure time, the way `test/` checks that every public header is mirrored — a hand-written list that
+nothing verifies is a list that drifts.
 
 `ext/` is the one interface piece the umbrella leaves out. It costs nothing here — a consumer that wants
 `std::bitset` or `boost::dynamic_bitset` adapted includes the one header for it — and it keeps Boost off the

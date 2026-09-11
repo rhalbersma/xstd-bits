@@ -79,6 +79,9 @@ target_sources(
         include/xstd/bits/set_adaptor.hpp
         include/xstd/bits/bitset_adaptor.hpp
         include/xstd/bits/bit_array.hpp
+        include/xstd/bits/bit_inplace_set.hpp
+        include/xstd/bits/bit_inplace_vector.hpp
+        include/xstd/bits/inplace_bitset.hpp
         include/xstd/bits/bit_set.hpp
         include/xstd/bits/bit_set_view.hpp
         include/xstd/bits/bit_span.hpp
@@ -104,6 +107,36 @@ target_sources(
         include/xstd/bits/ext/std/bitset.hpp
         include/xstd/bits/ownership.hpp
 )
+
+# The list above is hand-written, and it drifted: the three inplace headers reached include/ and bits.hpp but
+# never this file set, so every installed consumer's <xstd/bits.hpp> named three headers that were not installed.
+# No compiler leg could see it -- they all build from the source tree -- and the consumer translation unit that
+# does build against the install tree had included one container header until it was made the interface gate.
+# Checked here from now on, the way test/ checks that every public header is mirrored. [design.md#the-interface-line]
+# HEADER_SET answers in absolute paths, so the glob asks for them that way and the message relativizes back.
+get_target_property(declared_headers ${PROJECT_NAME} HEADER_SET)
+file(
+    GLOB_RECURSE headers_on_disk
+    CONFIGURE_DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/xstd/*.hpp
+)
+
+set(undeclared_headers)
+foreach(h ${headers_on_disk})
+    if(NOT h IN_LIST declared_headers)
+        file(RELATIVE_PATH undeclared ${CMAKE_CURRENT_SOURCE_DIR} ${h})
+        list(APPEND undeclared_headers ${undeclared})
+    endif()
+endforeach()
+
+if(undeclared_headers)
+    list(SORT undeclared_headers)
+    string(REPLACE ";" "\n  " undeclared_header_lines "${undeclared_headers}")
+    message(FATAL_ERROR
+        "These headers exist under include/xstd/ but are not in the HEADERS file set above, so they would not "
+        "be installed:\n  ${undeclared_header_lines}\nAdd them there, or delete them."
+    )
+endif()
 
 target_link_libraries(
     ${PROJECT_NAME} INTERFACE
