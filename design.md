@@ -1717,8 +1717,8 @@ the bitset reading, whose `reference` is its own class.
 
 `std::format` over the containers needs nothing said about the containers. Every owner and view here is a
 range, so `[format.range.formatter]` would format each one already, except that it requires
-`formattable<ranges::range_reference_t<R>>` and a reference of ours is a proxy. So `xstd/bits/format.hpp`
-specializes `std::formatter` for the two proxies and stops there: `bit_set`, `bit_static_set`, `bit_vector`,
+`formattable<ranges::range_reference_t<R>>` and a reference of ours is a proxy. So each proxy specializes
+`std::formatter` for itself, in its own header, and stops there: `bit_set`, `bit_static_set`, `bit_vector`,
 `bit_array`, the views, the windows and the inplace column all follow from that, none of them mentioned.
 
 This is the same shape the proxies already had for fmt, in fmt's spelling. `format_as` is fmt's generic
@@ -1726,6 +1726,19 @@ per-type hook: define it for one type and every range over that type formats, wh
 it and no container does. `std::formatter` is the standard's hook for the same job. So each library gets one
 hook per proxy -- a hidden friend for fmt, a specialization for the standard -- and in both the containers
 follow for free. Nothing here is a special case for formatting; it is the general mechanism used twice.
+
+**The two hooks share one definition.** The `std::formatter` calls `format_as`, unqualified so ADL finds the
+proxy's own hidden friend, rather than reaching the value a second way of its own. That direction is the one
+[#20](https://github.com/rhalbersma/xstd-bits/issues/20) argued for to WG21 on
+[P3070R0](https://github.com/cplusplus/papers/issues/1731): one `format_as` in the type's own namespace serves
+fmt and the standard both, where a `formatter` specialization serves one library and has to be written again
+for the other. The standard has not taken that hook for general use -- neither libc++ nor the MSVC STL defines
+one today -- so the specialization is still needed; what it no longer does is restate the value. They used to: the formatter
+cast to `size_t` or `bool` through the conversion operator while `format_as` read the member. Both landed on
+the same value, and nothing made them: a change to one would have left `fmt::format` and `std::format`
+disagreeing about the same object, with no compile error and no test to catch it, since the proxy tests check
+`format_as` and the format test checks `std::format` but nothing checked that they agree. `format_as` is now
+the one place that says what a proxy prints as.
 
 The readings then separate themselves. `[format.range.fmtkind]` picks `range_format::set` for a range with a
 `key_type` and `range_format::sequence` otherwise, so the set reading prints `{1, 3, 5}` and the sequence
@@ -1738,10 +1751,28 @@ Each specialization derives from `std::formatter<size_t>` or `std::formatter<boo
 formatter forwards, so `{::#x}` over the set reading and `{::d}` over the sequence reading reach the
 underlying formatter intact.
 
-The header is not in `xstd/bits.hpp`. The umbrella keeps `<format>` off every consumer path for the reason it
-keeps the `ext/` adaptors and Boost off it; a consumer who formats says so by including the header. Issue #20
-had this waiting on P3070R0, which is not what blocked it: the proxy's formattability was, and that is ours to
-fix.
+**Why this lives with the proxy and not in a header of its own.** It used to be `xstd/bits/format.hpp`, kept
+outside the umbrella so that `<format>` stayed off the path of a consumer who does not format. That reason had
+quietly expired: `sequence_adaptor` and `bitset_adaptor` both include `<format>` already, to build the
+`file:line:column:` messages their exceptions carry, so two of the three readings were paying for it whatever
+the umbrella did. Measured, the separate header saved the sequence reading 181 preprocessed lines and the
+bitset reading 379 -- and cost a user the knowledge that the header exists. Only the set reading paid
+anything real, about 11.8k lines, `set_adaptor` being the one adaptor that does not format its own errors.
+
+Against that: hashing and formatting are both the customization points a user-defined type owes the standard
+library, and `std::hash` has always been specialized inside the adaptor headers. Putting `std::formatter`
+beside `format_as` in the proxy's own header makes the two protocols for one type live in one file, and makes
+the two customization points consistent with each other. The standard library itself cannot do this -- its
+`formatter<pair>` lives in `<format>`, because `<format>` is allowed to know about `<utility>` and `<utility>`
+must not depend on `<format>` -- but the arrow only points that way for types the standard owns. For ours it
+cannot: `<format>` will never know about a proxy of ours, so the proxy is the only place the specialization
+can go without a separate header to remember. Issue #20 had this waiting on P3070R0, which is not what blocked
+it: the proxy's formattability was, and that is ours to fix. The same issue records the other half of the
+argument, which this library is the worked example of: a proxy nested inside its container cannot be named by
+either hook, because the template arguments will not deduce through
+`container<T, A>::proxy_reference`. Factoring the reference out into a class of its own is what makes both the
+`format_as` overload and the `formatter` specialization writable at all -- which is what
+`detail/bidirectional.hpp` and `detail/random_access.hpp` are.
 
 ### total-lookups-on-the-container
 

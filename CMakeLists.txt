@@ -96,7 +96,6 @@ target_sources(
         include/xstd/bits/detail/hash.hpp
         include/xstd/bits/detail/intrin.hpp
         include/xstd/bits/dynamic_bitset.hpp
-        include/xstd/bits/format.hpp
         include/xstd/bits/detail/pred.hpp
         include/xstd/bits/detail/random_access.hpp
         include/xstd/bits/ext/boost.hpp

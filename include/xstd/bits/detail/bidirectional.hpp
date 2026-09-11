@@ -9,6 +9,7 @@
 #include <xstd/bits/bit_traits.hpp> // bit_storage, bit_traits, find_next, find_prev, zero_width
 #include <cassert>                  // assert
 #include <cstddef>                  // ptrdiff_t, size_t
+#include <format>                   // formatter
 #include <iterator>                 // bidirectional_iterator_tag
 #include <type_traits>              // is_class_v, is_convertible_v, is_nothrow_constructible_v, remove_const_t
 
@@ -143,5 +144,35 @@ public:
 };
 
 }       // namespace xstd::detail::bits
+
+
+// std::format over the containers, which needs nothing said about the containers themselves.
+// [design.md#formatting-the-proxies]
+//
+// Every owner and view here is already a range, so [format.range.formatter] would format it -- except that the
+// range formatter requires formattable<range_reference_t<R>>, and a reference of ours is a proxy. So the proxy
+// is what gets a formatter, and every container over it follows.
+//
+// It defers to format_as, the hook fmt already calls, so the value this proxy prints as is defined once and both
+// libraries read it from there. Deriving from the underlying formatter rather than writing parse() is what keeps
+// the whole format spec: a width, a fill, {:#x} on a position and {:d} on a bool, and the nested spec a range
+// formatter forwards ({::#x}) reaching them.
+//
+// [namespace.std]/2 allows a specialization of a standard library template for a program-defined type, which is
+// what this is and all it is. clang-tidy 22 and 23 read the qualified definition as modifying namespace std
+// anyway; 24 no longer does. [design.md#clang-tidy-false-positives]
+template<class Bits, class Traits, class CharT>
+// NOLINTNEXTLINE(bugprone-std-namespace-modification)
+struct std::formatter<xstd::detail::bits::bidirectional_bit_reference<Bits, Traits>, CharT>
+:
+        std::formatter<std::size_t, CharT>
+{
+        template<class Context>
+        [[nodiscard]] constexpr auto format(xstd::detail::bits::bidirectional_bit_reference<Bits, Traits> ref, Context& ctx) const
+        {
+                // Unqualified, so ADL finds the proxy's own hidden friend. [design.md#the-one-adl-exception]
+                return std::formatter<std::size_t, CharT>::format(format_as(ref), ctx);
+        }
+};
 
 #endif  // XSTD_BITS_DETAIL_BIDIRECTIONAL_HPP

@@ -224,17 +224,15 @@ This is why ownership is not a fourth column of the table above: a view is not a
 
 ### Printing
 
-The snippets above use `fmt::format`, which finds the proxies through fmt's own `format_as`. `std::format` and `std::print` work too, by including one header:
+The snippets above use `fmt::format`, which finds the proxies through fmt's own `format_as`. `std::format` and `std::print` work too, with nothing to include and nothing to switch on:
 
 ```cpp
-#include <xstd/bits/format.hpp>
-
 std::print("{}\n", primes);   // {2, 3, 5, 7, 11, ...}   the set reading, in braces
 std::print("{}\n", flags);    // [false, true, ...]      the sequence reading, in brackets
 std::print("{::#x}\n", primes);
 ```
 
-It specializes `std::formatter` for the two proxy references and nothing else: every container over them is already a range, so [`[format.range.formatter]`](https://eel.is/c++draft/format.range.formatter) formats it once its reference is formattable. The braces-versus-brackets split is the standard's, not ours — `[format.range.fmtkind]` picks `range_format::set` for a range with a `key_type` — so each reading prints in its own vocabulary without being told to. The header is deliberately outside `<xstd/bits.hpp>`, which keeps `<format>` off the include path of consumers who do not format.
+Each proxy reference carries its own `std::formatter`, so a container that hands the proxy out brings the formatter with it. Nothing is specialized for a container: every one of them is already a range, so [`[format.range.formatter]`](https://eel.is/c++draft/format.range.formatter) formats it once its reference is formattable. The braces-versus-brackets split is the standard's, not ours — `[format.range.fmtkind]` picks `range_format::set` for a range with a `key_type` — so each reading prints in its own vocabulary without being told to. Both hooks read the same value: the `std::formatter` defers to the `format_as` that fmt calls, so the two libraries cannot drift.
 
 ## Data-parallelism
 
