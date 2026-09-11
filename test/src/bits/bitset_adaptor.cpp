@@ -3,35 +3,36 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/bit_set_view.hpp>                 // bit_set_view
-#include <xstd/bits/bit_span.hpp>                     // bit_span
-#include <xstd/bits/bit_traits.hpp>                   // bit_traits, block_readable, contiguous_bit_sequence
-#include <xstd/bits/bitset.hpp>                       // basic_bitset, bitset
-#include <xstd/bits/bitset_adaptor.hpp>               // bitset_adaptor, has_bitops
-#include <xstd/bits/detail/contiguous_bit_array.hpp>  // contiguous_bit_array
-#include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
-#include <xstd/bits/dynamic_bitset.hpp>               // basic_dynamic_bitset
-#include <xstd/bits/ext/boost/dynamic_bitset.hpp>     // IWYU pragma: keep; bit_traits<boost::dynamic_bitset>
-#include <xstd/bits/ext/std/bitset.hpp>               // IWYU pragma: keep; bit_traits<std::bitset>
-#include <boost/dynamic_bitset.hpp>                   // dynamic_bitset
-#include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <algorithm>                                  // equal
-#include <array>                                      // array
-#include <bitset>                                     // bitset
-#include <compare>                                    // is_lt, strong_ordering
-#include <concepts>                                   // regular, same_as, totally_ordered
-#include <cstddef>                                    // size_t
-#include <cstdint>                                    // uint8_t, uint64_t
-#include <functional>                                 // hash
-#include <iterator>                                   // back_inserter
-#include <ranges>                                     // equal, iota, range, reverse
-#include <sstream>                                    // istringstream
-#include <stdexcept>                                  // out_of_range, overflow_error
-#include <string>                                     // string
-#include <tuple>                                      // tuple
-#include <type_traits>                                // is_nothrow_*, is_trivially_*
-#include <utility>                                    // as_const, declval
-#include <vector>                                     // vector
+#include <xstd/bits/bit_set_view.hpp>                    // bit_set_view
+#include <xstd/bits/bit_span.hpp>                        // bit_span
+#include <xstd/bits/bit_traits.hpp>                      // bit_traits, block_readable, contiguous_bit_sequence
+#include <xstd/bits/bitset.hpp>                          // basic_bitset, bitset
+#include <xstd/bits/bitset_adaptor.hpp>                  // bitset_adaptor, has_bitops
+#include <xstd/bits/detail/contiguous_bit_array.hpp>     // contiguous_bit_array
+#include <xstd/bits/detail/contiguous_bit_container.hpp> // bit_traits<contiguous_bit_container>
+#include <xstd/bits/detail/contiguous_bit_vector.hpp>    // contiguous_bit_vector
+#include <xstd/bits/dynamic_bitset.hpp>                  // basic_dynamic_bitset
+#include <xstd/bits/ext/boost/dynamic_bitset.hpp>        // IWYU pragma: keep; bit_traits<boost::dynamic_bitset>
+#include <xstd/bits/ext/std/bitset.hpp>                  // IWYU pragma: keep; bit_traits<std::bitset>
+#include <boost/dynamic_bitset.hpp>                      // dynamic_bitset
+#include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
+#include <algorithm>                                     // equal
+#include <array>                                         // array
+#include <bitset>                                        // bitset
+#include <compare>                                       // is_lt, strong_ordering
+#include <concepts>                                      // regular, same_as, totally_ordered
+#include <cstddef>                                       // size_t
+#include <cstdint>                                       // uint8_t, uint64_t
+#include <functional>                                    // hash
+#include <iterator>                                      // back_inserter
+#include <ranges>                                        // equal, iota, range, reverse
+#include <sstream>                                       // istringstream
+#include <stdexcept>                                     // out_of_range, overflow_error
+#include <string>                                        // string
+#include <tuple>                                         // tuple
+#include <type_traits>                                   // is_nothrow_*, is_trivially_*
+#include <utility>                                       // as_const, declval
+#include <vector>                                        // vector
 
 BOOST_AUTO_TEST_SUITE(BitsetAdaptor)
 
