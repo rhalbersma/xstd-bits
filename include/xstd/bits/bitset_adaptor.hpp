@@ -8,11 +8,11 @@
 
 // Bitsets [bitset], Header <bitset> synopsis [bitset.syn]
 
-#include <boost/hash2/hash_append.hpp>            // hash_append_tag
 #include <xstd/bits/bit_traits.hpp>               // bit_storage, bit_traits, block_readable, scan_prev, static_bit_extent, word_at, zero_width
 #include <xstd/bits/detail/allocator_typedef.hpp> // allocator_typedef
 #include <xstd/bits/detail/hash.hpp>              // hash_append_bits, std_hash
 #include <xstd/bits/ownership.hpp>                // owned_storage, ownership
+#include <boost/hash2/hash_append.hpp>            // hash_append_tag
 #include <algorithm>                              // min
 #include <cassert>                                // assert
 #include <compare>                                // strong_ordering

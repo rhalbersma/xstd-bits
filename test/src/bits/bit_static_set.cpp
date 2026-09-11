@@ -3,11 +3,11 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <test/block_types.hpp>         // graded_extents
 #include <test/set/concepts.hpp>        // bit_set
 #include <test/value_reference.hpp>     // value_reference
 #include <xstd/bits/bit_static_set.hpp> // bit_static_set
+#include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <concepts>                     // regular, totally_ordered
 #include <cstddef>                      // size_t
 #include <iterator>                     // bidirectional_iterator

@@ -6,13 +6,13 @@
 #ifndef XSTD_BITS_SET_ADAPTOR_HPP
 #define XSTD_BITS_SET_ADAPTOR_HPP
 
-#include <boost/container_hash/is_range.hpp>  // is_range
-#include <boost/hash2/hash_append.hpp>        // hash_append_tag
 #include <xstd/bits/bit_traits.hpp>           // bit_storage, bit_traits, count, find_first, find_next, find_prev, static_bit_extent
 #include <xstd/bits/detail/bidirectional.hpp> // bidirectional_bit_iterator, bidirectional_bit_reference
 #include <xstd/bits/detail/hash.hpp>          // hash_append_bits, hash_append_positions, std_hash
 #include <xstd/bits/detail/intrin.hpp>        // countl_zero, countr_zero
 #include <xstd/bits/ownership.hpp>            // owned_bits_t, owned_storage, owned_traits_t, owner_of, ownership, owns
+#include <boost/container_hash/is_range.hpp>  // is_range
+#include <boost/hash2/hash_append.hpp>        // hash_append_tag
 #include <algorithm>                          // any_of, equal, includes, lexicographical_compare_three_way
 #include <cassert>                            // assert
 #include <compare>                            // strong_ordering

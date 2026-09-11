@@ -3,7 +3,6 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/test/unit_test.hpp>                  // BOOST_CHECK_EQUAL, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <test/block_types.hpp>                      // digits_v, graded_extents, word_types
 #include <test/inplace_vector.hpp>                   // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
 #include <test/uint128.hpp>                          // IWYU pragma: keep; TEST_HAS_UINT128, uint128
@@ -12,6 +11,7 @@
 #include <xstd/bits/detail/block_inplace_vector.hpp> // block_inplace_vector
 #include <xstd/bits/detail/block_sequence.hpp>       // block_sequence, contiguous_block_container
 #include <xstd/bits/detail/block_vector.hpp>         // block_vector
+#include <boost/test/unit_test.hpp>                  // BOOST_CHECK_EQUAL, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <algorithm>                                 // count, lexicographical_compare_three_way, min
 #include <concepts>                                  // regular, same_as
 #include <array>                                     // array

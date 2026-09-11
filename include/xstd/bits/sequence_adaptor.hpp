@@ -6,14 +6,14 @@
 #ifndef XSTD_BITS_SEQUENCE_ADAPTOR_HPP
 #define XSTD_BITS_SEQUENCE_ADAPTOR_HPP
 
-#include <boost/container_hash/is_range.hpp>      // is_range
-#include <boost/hash2/hash_append.hpp>            // hash_append_tag
 #include <xstd/bits/bit_traits.hpp>               // all, any, bit_storage, bit_traits, count, none, static_bit_extent, word_at
 #include <xstd/bits/detail/allocator_typedef.hpp> // allocator_typedef, no_typedef
 #include <xstd/bits/detail/hash.hpp>              // hash_append_bits, std_hash
 #include <xstd/bits/detail/intrin.hpp>            // countr_zero, popcount
 #include <xstd/bits/detail/random_access.hpp>     // random_access_bit_iterator, random_access_bit_reference
 #include <xstd/bits/ownership.hpp>                // owned_bits_t, owned_storage, owned_traits_t, owner_of, ownership, owns
+#include <boost/container_hash/is_range.hpp>      // is_range
+#include <boost/hash2/hash_append.hpp>            // hash_append_tag
 #include <cassert>                                // assert
 #include <compare>                                // strong_ordering
 #include <concepts>                               // constructible_from, convertible_to, invocable, same_as, swap, swappable

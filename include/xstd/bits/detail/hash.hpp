@@ -6,10 +6,10 @@
 #ifndef XSTD_BITS_DETAIL_HASH_HPP
 #define XSTD_BITS_DETAIL_HASH_HPP
 
+#include <xstd/bits/bit_traits.hpp>            // block_readable, count, find_first, find_next
 #include <boost/hash2/fnv1a.hpp>               // fnv1a_64
 #include <boost/hash2/get_integral_result.hpp> // get_integral_result
 #include <boost/hash2/hash_append.hpp>         // hash_append
-#include <xstd/bits/bit_traits.hpp>            // block_readable, count, find_first, find_next
 #include <cstddef>                             // size_t
 #include <cstdint>                             // uint64_t
 #include <limits>                              // numeric_limits

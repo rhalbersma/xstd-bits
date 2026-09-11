@@ -3,7 +3,6 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <test/block_types.hpp>                   // graded_extents
 #include <test/minimal_traits.hpp>                // minimal_traits
 #include <test/value_reference.hpp>               // value_reference
@@ -13,6 +12,7 @@
 #include <xstd/bits/detail/bidirectional.hpp>     // bidirectional_bit_iterator, bidirectional_bit_reference
 #include <xstd/bits/ext/boost/dynamic_bitset.hpp> // bit_traits over boost::dynamic_bitset
 #include <xstd/bits/ext/std/bitset.hpp>           // bit_traits over std::bitset
+#include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <boost/dynamic_bitset.hpp>               // dynamic_bitset
 #include <bitset>                                 // bitset
 #include <concepts>                               // bidirectional_iterator, same_as

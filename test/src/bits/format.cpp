@@ -3,7 +3,6 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <xstd/bits/bit_array.hpp>      // bit_array
 #include <xstd/bits/bit_set.hpp>        // bit_set
 #include <xstd/bits/bit_set_view.hpp>   // bit_set_view
@@ -11,6 +10,7 @@
 #include <xstd/bits/bit_static_set.hpp> // bit_static_set
 #include <xstd/bits/bit_vector.hpp>     // bit_vector
 #include <xstd/bits/format.hpp>         // IWYU pragma: keep; the formatter over the two proxies, which is what every case below reaches
+#include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <format>                       // format
 
 BOOST_AUTO_TEST_SUITE(Format)

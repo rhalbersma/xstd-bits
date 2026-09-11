@@ -6,8 +6,8 @@
 #ifndef TEST_BITSET_FACTORY_HPP
 #define TEST_BITSET_FACTORY_HPP
 
-#include <boost/dynamic_bitset_fwd.hpp> // dynamic_bitset
 #include <test/dynamic.hpp>             // dynamic
+#include <boost/dynamic_bitset_fwd.hpp> // dynamic_bitset
 #include <concepts>                     // unsigned_integral
 #include <cstddef>                      // size_t
 

@@ -3,7 +3,6 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/test/unit_test.hpp>          // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <test/block_types.hpp>              // graded_extents
 #include <xstd/bits/sequence_adaptor.hpp>    // sequence_adaptor
 #include <xstd/bits/bit_array.hpp>           // bit_array
@@ -13,6 +12,7 @@
 #include <xstd/bits/detail/block_vector.hpp> // block_vector
 #include <xstd/bits/ext/std/bitset.hpp>      // bit_traits over std::bitset
 #include <xstd/bits/ownership.hpp>           // ownership
+#include <boost/test/unit_test.hpp>          // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <algorithm>                         // all_of, any_of, count, equal, lexicographical_compare_three_way, mismatch, none_of
 #include <bitset>                            // bitset
 #include <compare>                           // strong_ordering

@@ -3,14 +3,14 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/set/exhaustive.hpp>      // all_cardinality_sets, all_singleton_arrays, all_singleton_ilists, all_singleton_sets,
+#include <test/set/exhaustive.hpp> // all_cardinality_sets, all_singleton_arrays, all_singleton_ilists, all_singleton_sets,
                                         // all_valid, empty_set, full_set
-#include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_AUTO_TEST_CASE_TEMPLATE
 #include <test/flat_set.hpp>            // TEST_HAS_FLAT_SET, is_flat_set
 #include <test/set/primitives.hpp>      // constructor, mem_const_reference, mem_const_iterator, mem_front, mem_back,
 #include <test/uint128.hpp>             // TEST_HAS_UINT128, uint128
 #include <xstd/bits/bit_set.hpp>        // bit_set
 #include <xstd/bits/bit_static_set.hpp> // bit_static_set
+#include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_AUTO_TEST_CASE_TEMPLATE
 #include <cstddef>                      // size_t
 #include <cstdint>                      // uint8_t, uint16_t, uint32_t, uint64_t
 #include <ranges>                       // from_range

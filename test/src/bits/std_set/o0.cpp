@@ -3,15 +3,15 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/flat_set.hpp>            // IWYU pragma: keep; TEST_HAS_FLAT_SET
-#include <test/set/composable.hpp>      // includes, set_difference, set_intersection, set_symmetric_difference, set_union
-#include <test/set/exhaustive.hpp>      // empty_set_pair
-#include <test/set/primitives.hpp>      // constructor mem_swap,fn_swap, op_equal, op_not_equal_to,
+#include <test/flat_set.hpp>       // IWYU pragma: keep; TEST_HAS_FLAT_SET
+#include <test/set/composable.hpp> // includes, set_difference, set_intersection, set_symmetric_difference, set_union
+#include <test/set/exhaustive.hpp> // empty_set_pair
+#include <test/set/primitives.hpp> // constructor mem_swap,fn_swap, op_equal, op_not_equal_to,
                                         // op_compare_three_way op_less, op_greater, op_less_equal, op_greater_equal,
 #include <test/uint128.hpp>             // TEST_HAS_UINT128, uint128
-#include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_AUTO_TEST_CASE_TEMPLATE
 #include <xstd/bits/bit_set.hpp>        // bit_set
 #include <xstd/bits/bit_static_set.hpp> // bit_static_set
+#include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_AUTO_TEST_CASE_TEMPLATE
 #include <cstddef>                      // size_t
 #include <cstdint>                      // uint8_t, uint16_t, uint32_t, uint64_t
 #include <set>                          // set

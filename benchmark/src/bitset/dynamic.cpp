@@ -8,11 +8,11 @@
 // width buys over std::bitset, this asks what our storage buys over the one everybody reaches for.
 // [design.md#a-strict-extension]
 
-#include <benchmark/benchmark.h>                  // ClobberMemory, DoNotOptimize, BENCHMARK_TEMPLATE1, BENCHMARK_MAIN, State
-#include <boost/dynamic_bitset.hpp>               // dynamic_bitset
 #include <xstd/bits/bit_set_view.hpp>             // bit_set_view
 #include <xstd/bits/dynamic_bitset.hpp>           // dynamic_bitset
 #include <xstd/bits/ext/boost/dynamic_bitset.hpp> // bit_traits over boost::dynamic_bitset
+#include <boost/dynamic_bitset.hpp>               // dynamic_bitset
+#include <benchmark/benchmark.h>                  // ClobberMemory, DoNotOptimize, BENCHMARK_TEMPLATE1, BENCHMARK_MAIN, State
 #include <cstddef>                                // size_t
 #include <cstdint>                                // int64_t, uint64_t
 

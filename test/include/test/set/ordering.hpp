@@ -6,9 +6,9 @@
 #ifndef TEST_SET_ORDERING_HPP
 #define TEST_SET_ORDERING_HPP
 
-#include <boost/test/unit_test.hpp>   // BOOST_CHECK_EQUAL
 #include <test/bitset/factory.hpp>    // make_bitset
 #include <xstd/bits/bit_set_view.hpp> // bit_set_view
+#include <boost/test/unit_test.hpp>   // BOOST_CHECK_EQUAL
 #include <algorithm>                  // lexicographical_compare
 #include <compare>                    // is_gt, is_lt, strong_ordering
 #include <cstddef>                    // size_t

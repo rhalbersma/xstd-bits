@@ -3,11 +3,11 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/test/unit_test.hpp>   // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <test/block_types.hpp>       // graded_extents
 #include <test/sequence/concepts.hpp> // bit_sequence
 #include <test/value_reference.hpp>   // value_reference
 #include <xstd/bits/bit_array.hpp>    // bit_array
+#include <boost/test/unit_test.hpp>   // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <algorithm>                  // equal, none_of
 #include <array>                      // array
 #include <concepts>                   // regular, totally_ordered

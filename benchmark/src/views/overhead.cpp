@@ -18,13 +18,13 @@
 // half a cycle, which is not a faster reading but no reading at all -- while a view's pointer blocks the same
 // folding. Comparing those two measures the folding, not the indirection. [design.md#a-bitset-reads-as-its-storage]
 
-#include <benchmark/benchmark.h>            // ClobberMemory, DoNotOptimize, BENCHMARK_TEMPLATE, BENCHMARK_MAIN, State
 #include <xstd/bits/bit_array.hpp>          // bit_array
 #include <xstd/bits/bit_set_view.hpp>       // bit_set_view
 #include <xstd/bits/bit_span.hpp>           // bit_span
 #include <xstd/bits/bit_static_set.hpp>     // bit_static_set
 #include <xstd/bits/bitset.hpp>             // bitset
 #include <xstd/bits/detail/block_array.hpp> // block_array
+#include <benchmark/benchmark.h>            // ClobberMemory, DoNotOptimize, BENCHMARK_TEMPLATE, BENCHMARK_MAIN, State
 #include <cstddef>                          // size_t
 #include <cstdint>                          // uint64_t
 

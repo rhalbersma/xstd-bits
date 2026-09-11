@@ -13,8 +13,8 @@
 // position, where a lookup costs a cache miss and nothing else. So this one runs 8 KiB to 32 MiB, through L1, L2,
 // L3 and into DRAM, and reports latency per random read rather than bytes per second.
 
-#include <benchmark/benchmark.h>    // ClobberMemory, DoNotOptimize, BENCHMARK_TEMPLATE1, BENCHMARK_MAIN, State
 #include <xstd/bits/bit_vector.hpp> // bit_vector
+#include <benchmark/benchmark.h>    // ClobberMemory, DoNotOptimize, BENCHMARK_TEMPLATE1, BENCHMARK_MAIN, State
 #include <algorithm>                // count
 #include <cstddef>                  // size_t
 #include <cstdint>                  // int64_t, uint64_t

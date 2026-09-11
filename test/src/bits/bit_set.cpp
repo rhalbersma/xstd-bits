@@ -3,13 +3,13 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/test/unit_test.hpp>          // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <test/set/concepts.hpp>             // bit_set
 #include <xstd/bits/set_adaptor.hpp>         // set_adaptor
 #include <xstd/bits/bit_set.hpp>             // bit_set
 #include <xstd/bits/detail/block_vector.hpp> // block_vector
 #include <xstd/bits/ownership.hpp>           // ownership
 #include <xstd/bits/bit_set_view.hpp>        // bit_set_view
+#include <boost/test/unit_test.hpp>          // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                         // equal
 #include <compare>                           // is_eq
 #include <concepts>                          // same_as

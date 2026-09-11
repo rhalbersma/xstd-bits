@@ -3,11 +3,11 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/dynamic_bitset.hpp>          // dynamic_bitset, to_string
-#include <boost/test/unit_test.hpp>          // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <xstd/bits/bitset_adaptor.hpp>      // bitset_adaptor
 #include <xstd/bits/detail/block_vector.hpp> // block_vector
 #include <xstd/bits/dynamic_bitset.hpp>      // dynamic_bitset
+#include <boost/dynamic_bitset.hpp>          // dynamic_bitset, to_string
+#include <boost/test/unit_test.hpp>          // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <algorithm>                         // equal
 #include <array>                             // array
 #include <compare>                           // is_eq, is_gt, is_lt

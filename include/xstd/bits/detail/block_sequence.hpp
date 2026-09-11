@@ -6,7 +6,6 @@
 #ifndef XSTD_BITS_DETAIL_BLOCK_SEQUENCE_HPP
 #define XSTD_BITS_DETAIL_BLOCK_SEQUENCE_HPP
 
-#include <boost/hash2/hash_append_fwd.hpp>                   // hash_append, hash_append_tag
 #include <xstd/bits/bit_traits.hpp>                          // bit_traits
 #include <xstd/bits/detail/allocator_typedef.hpp>            // allocator_typedef
 #include <xstd/bits/detail/intrin.hpp>                       // countl_zero, countr_zero, popcount
@@ -16,6 +15,7 @@
 #include <xstd/ints/limits.hpp>                              // numeric_limits
 #include <xstd/ints/memory.hpp>                              // align_up
 #include <xstd/misc/type_traits/conditional_data_member.hpp> // XSTD_NO_UNIQUE_ADDRESS, conditional_data_member_t
+#include <boost/hash2/hash_append_fwd.hpp>                   // hash_append, hash_append_tag
 #include <algorithm>                                         // all_of, any_of, fill, fill_n, fold_left, max, min, shift_left, shift_right
 #include <cassert>                                           // assert
 #include <compare>                                           // strong_ordering
@@ -26,9 +26,9 @@
 #include <limits>                                            // numeric_limits
 #include <ranges>                                            // begin, drop, iota, size, swap, transform, zip
                                                              // (views::drop_last when P22014R2 is accepted)
-#include <span>                                              // dynamic_extent
-#include <type_traits>                                       // conditional_t, is_const_v, remove_reference_t
-#include <utility>                                           // exchange, move, pair
+#include <span>        // dynamic_extent
+#include <type_traits> // conditional_t, is_const_v, remove_reference_t
+#include <utility>     // exchange, move, pair
 
 namespace xstd {
 
@@ -166,6 +166,80 @@ public:
                 return m_blocks.get_allocator();
         }
 
+        // Memberwise, width first: the unused bits are kept clear, so the blocks compare as the bits do, and a zero width through the one block it still holds. [design.md#contiguous-block-container]
+        [[nodiscard]] friend constexpr auto operator==(block_sequence const&, block_sequence const&) noexcept -> bool = default;
+
+        // No operator<=>: block_sequence is pure storage with no opinion on which reading orders it, so it names all three and picks none. [design.md#two-readings-disagree]
+
+        // The set reading a word at a time: whoever HOLDS the lowest differing position is greater, unless the other holds nothing above it. [design.md#the-ordering-primitive]
+        [[nodiscard]] constexpr auto set_three_way(block_sequence const& other [[maybe_unused]]) const noexcept
+                -> std::strong_ordering
+        {
+                assert(this->size() == other.size());
+                if constexpr (has_static_size and N == 0) {
+                        return std::strong_ordering::equal;
+                } else if constexpr (has_static_size and N == 1) {
+                        // One position, so the loser is empty and any_above is constantly false. [design.md#degenerate-widths]
+                        return this->test(0UZ) <=> other.test(0UZ);
+                } else {
+                        auto const [ index, diff ] = first_difference(other);
+                        if (diff == zero) {
+                                return std::strong_ordering::equal;
+                        }
+                        auto const offset = detail::bits::countr_zero(diff);
+                        if (detail::bits::intersects(this->m_blocks[index], static_cast<block_type>(unit << offset))) {
+                                return other.any_above(index, offset) ? std::strong_ordering::less : std::strong_ordering::greater;
+                        }
+                        return this->any_above(index, offset) ? std::strong_ordering::greater : std::strong_ordering::less;
+                }
+        }
+
+        // The sequence reading a word at a time: whoever HOLDS the lowest differing position is greater, with no prefix clause, the widths being equal. [design.md#the-ordering-primitive]
+        [[nodiscard]] constexpr auto sequence_three_way(block_sequence const& other [[maybe_unused]]) const noexcept
+                -> std::strong_ordering
+        {
+                assert(this->size() == other.size());
+                if constexpr (has_static_size and N == 0) {
+                        return std::strong_ordering::equal;
+                } else {
+                        auto const [ index, diff ] = first_difference(other);
+                        if (diff == zero) {
+                                return std::strong_ordering::equal;
+                        }
+                        auto const offset = detail::bits::countr_zero(diff);
+                        return detail::bits::intersects(this->m_blocks[index], static_cast<block_type>(unit << offset))
+                                ? std::strong_ordering::greater
+                                : std::strong_ordering::less
+                        ;
+                }
+        }
+
+        // The bitset reading a word at a time: the bit string, most significant position first, is the blocks from the top block down, the unused tail being clear. [design.md#the-ordering-primitive]
+        [[nodiscard]] constexpr auto bitset_three_way(block_sequence const& other [[maybe_unused]]) const noexcept
+                -> std::strong_ordering
+        {
+                assert(this->size() == other.size());
+                if constexpr (has_static_size and N == 0) {
+                        return std::strong_ordering::equal;
+                } else if constexpr (has_static_size and static_num_blocks == 1) {
+                        return this->m_blocks[0] <=> other.m_blocks[0];
+                } else {
+                        for (auto i = num_blocks(); i-- != 0UZ;) {
+                                if (auto const cmp = this->m_blocks[i] <=> other.m_blocks[i]; cmp != std::strong_ordering::equal) {
+                                        return cmp;
+                                }
+                        }
+                        return std::strong_ordering::equal;
+                }
+        }
+
+        template<class Provider, class Hash, class Flavor>
+        friend constexpr auto tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, block_sequence const* v) noexcept
+                -> void
+        {
+                boost::hash2::hash_append(h, f, v->m_blocks);
+        }
+
         // In bits: the width, or the widest whole number of blocks the blocks can hold and the address space can count. [design.md#a-strict-extension]
         [[nodiscard]] constexpr auto max_size() const noexcept
                 -> std::size_t
@@ -260,80 +334,6 @@ public:
                 assert(n + len <= size());
                 for_each_word(n, len, [&](std::size_t pos, block_type mask) -> void { set_word(pos, static_cast<block_type>(~word_at(pos)), mask); });
                 return *this;
-        }
-
-        // Memberwise, width first: the unused bits are kept clear, so the blocks compare as the bits do, and a zero width through the one block it still holds. [design.md#contiguous-block-container]
-        [[nodiscard]] friend constexpr auto operator==(block_sequence const&, block_sequence const&) noexcept -> bool = default;
-
-        // No operator<=>: block_sequence is pure storage with no opinion on which reading orders it, so it names all three and picks none. [design.md#two-readings-disagree]
-
-        // The set reading a word at a time: whoever HOLDS the lowest differing position is greater, unless the other holds nothing above it. [design.md#the-ordering-primitive]
-        [[nodiscard]] constexpr auto set_three_way(block_sequence const& other [[maybe_unused]]) const noexcept
-                -> std::strong_ordering
-        {
-                assert(this->size() == other.size());
-                if constexpr (has_static_size and N == 0) {
-                        return std::strong_ordering::equal;
-                } else if constexpr (has_static_size and N == 1) {
-                        // One position, so the loser is empty and any_above is constantly false. [design.md#degenerate-widths]
-                        return this->test(0UZ) <=> other.test(0UZ);
-                } else {
-                        auto const [ index, diff ] = first_difference(other);
-                        if (diff == zero) {
-                                return std::strong_ordering::equal;
-                        }
-                        auto const offset = detail::bits::countr_zero(diff);
-                        if (detail::bits::intersects(this->m_blocks[index], static_cast<block_type>(unit << offset))) {
-                                return other.any_above(index, offset) ? std::strong_ordering::less : std::strong_ordering::greater;
-                        }
-                        return this->any_above(index, offset) ? std::strong_ordering::greater : std::strong_ordering::less;
-                }
-        }
-
-        // The sequence reading a word at a time: whoever HOLDS the lowest differing position is greater, with no prefix clause, the widths being equal. [design.md#the-ordering-primitive]
-        [[nodiscard]] constexpr auto sequence_three_way(block_sequence const& other [[maybe_unused]]) const noexcept
-                -> std::strong_ordering
-        {
-                assert(this->size() == other.size());
-                if constexpr (has_static_size and N == 0) {
-                        return std::strong_ordering::equal;
-                } else {
-                        auto const [ index, diff ] = first_difference(other);
-                        if (diff == zero) {
-                                return std::strong_ordering::equal;
-                        }
-                        auto const offset = detail::bits::countr_zero(diff);
-                        return detail::bits::intersects(this->m_blocks[index], static_cast<block_type>(unit << offset))
-                                ? std::strong_ordering::greater
-                                : std::strong_ordering::less
-                        ;
-                }
-        }
-
-        // The bitset reading a word at a time: the bit string, most significant position first, is the blocks from the top block down, the unused tail being clear. [design.md#the-ordering-primitive]
-        [[nodiscard]] constexpr auto bitset_three_way(block_sequence const& other [[maybe_unused]]) const noexcept
-                -> std::strong_ordering
-        {
-                assert(this->size() == other.size());
-                if constexpr (has_static_size and N == 0) {
-                        return std::strong_ordering::equal;
-                } else if constexpr (has_static_size and static_num_blocks == 1) {
-                        return this->m_blocks[0] <=> other.m_blocks[0];
-                } else {
-                        for (auto i = num_blocks(); i-- != 0UZ;) {
-                                if (auto const cmp = this->m_blocks[i] <=> other.m_blocks[i]; cmp != std::strong_ordering::equal) {
-                                        return cmp;
-                                }
-                        }
-                        return std::strong_ordering::equal;
-                }
-        }
-
-        template<class Provider, class Hash, class Flavor>
-        friend constexpr auto tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, block_sequence const* v) noexcept
-                -> void
-        {
-                boost::hash2::hash_append(h, f, v->m_blocks);
         }
 
         [[nodiscard]] constexpr auto find_front() const noexcept

@@ -8,9 +8,9 @@
 
 // IWYU pragma: always_keep
 
-#include <boost/dynamic_bitset.hpp>                // IWYU pragma: export; dynamic_bitset
 #include <xstd/bits/bit_traits.hpp>                // bit_traits
 #include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
+#include <boost/dynamic_bitset.hpp>                // IWYU pragma: export; dynamic_bitset
 #include <cassert>                                 // assert
 #include <cstddef>                                 // size_t
 #include <span>                                    // dynamic_extent

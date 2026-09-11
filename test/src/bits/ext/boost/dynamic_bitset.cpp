@@ -3,12 +3,12 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <test/dynamic.hpp>                       // dynamic
 #include <xstd/bits/bit_traits.hpp>               // bit_storage, bit_traits, block_readable, static_bit_extent
 #include <xstd/bits/ext/boost/dynamic_bitset.hpp> // the trait that makes dynamic_bitset viewable
 #include <xstd/bits/bit_span.hpp>                 // bit_span
 #include <xstd/bits/bit_set_view.hpp>             // bit_set_view
+#include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <algorithm>                              // lexicographical_compare
 #include <compare>                                // is_lt, strong_ordering
 #include <concepts>                               // regular, totally_ordered

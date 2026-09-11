@@ -3,8 +3,6 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/dynamic_bitset.hpp>               // dynamic_bitset
-#include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <xstd/bits/bit_set_view.hpp>             // bit_set_view
 #include <xstd/bits/bit_span.hpp>                 // bit_span
 #include <xstd/bits/bit_traits.hpp>               // bit_traits, block_readable
@@ -15,6 +13,8 @@
 #include <xstd/bits/dynamic_bitset.hpp>           // basic_dynamic_bitset
 #include <xstd/bits/ext/boost/dynamic_bitset.hpp> // IWYU pragma: keep; bit_traits<boost::dynamic_bitset>
 #include <xstd/bits/ext/std/bitset.hpp>           // IWYU pragma: keep; bit_traits<std::bitset>
+#include <boost/dynamic_bitset.hpp>               // dynamic_bitset
+#include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <algorithm>                              // equal
 #include <array>                                  // array
 #include <bitset>                                 // bitset
