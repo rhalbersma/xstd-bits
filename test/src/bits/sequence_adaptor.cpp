@@ -3,27 +3,28 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/test/unit_test.hpp>       // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <test/block_types.hpp>           // graded_extents
-#include <xstd/bits/sequence_adaptor.hpp> // sequence_adaptor
-#include <xstd/bits/bit_array.hpp>        // bit_array
-#include <xstd/bits/bit_traits.hpp>       // bit_traits, block_readable
-#include <xstd/bits/bit_span.hpp>         // bit_span
-#include <xstd/bits/block_sequence.hpp>   // block_array, block_vector
-#include <xstd/bits/ext/std/bitset.hpp>   // bit_traits over std::bitset
-#include <xstd/bits/ownership.hpp>        // ownership
-#include <algorithm>                      // all_of, any_of, count, equal, lexicographical_compare_three_way, mismatch, none_of
-#include <bitset>                         // bitset
-#include <compare>                        // strong_ordering
-#include <concepts>                       // copyable, equality_comparable, regular, same_as, totally_ordered
-#include <cstddef>                        // size_t
-#include <cstdint>                        // uint64_t
-#include <iterator>                       // reverse_iterator
-#include <limits>                         // numeric_limits
-#include <ranges>                         // random_access_range
-#include <stdexcept>                      // out_of_range
-#include <type_traits>                    // is_const_v
-#include <vector>                         // vector
+#include <boost/test/unit_test.hpp>          // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
+#include <test/block_types.hpp>              // graded_extents
+#include <xstd/bits/sequence_adaptor.hpp>    // sequence_adaptor
+#include <xstd/bits/bit_array.hpp>           // bit_array
+#include <xstd/bits/bit_traits.hpp>          // bit_traits, block_readable
+#include <xstd/bits/bit_span.hpp>            // bit_span
+#include <xstd/bits/detail/block_array.hpp>  // block_array
+#include <xstd/bits/detail/block_vector.hpp> // block_vector
+#include <xstd/bits/ext/std/bitset.hpp>      // bit_traits over std::bitset
+#include <xstd/bits/ownership.hpp>           // ownership
+#include <algorithm>                         // all_of, any_of, count, equal, lexicographical_compare_three_way, mismatch, none_of
+#include <bitset>                            // bitset
+#include <compare>                           // strong_ordering
+#include <concepts>                          // copyable, equality_comparable, regular, same_as, totally_ordered
+#include <cstddef>                           // size_t
+#include <cstdint>                           // uint64_t
+#include <iterator>                          // reverse_iterator
+#include <limits>                            // numeric_limits
+#include <ranges>                            // random_access_range
+#include <stdexcept>                         // out_of_range
+#include <type_traits>                       // is_const_v
+#include <vector>                            // vector
 
 namespace {
 

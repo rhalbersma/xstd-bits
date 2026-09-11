@@ -3,27 +3,27 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/dynamic_bitset.hpp>     // dynamic_bitset, to_string
-#include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <xstd/bits/bitset_adaptor.hpp> // bitset_adaptor
-#include <xstd/bits/block_sequence.hpp> // block_vector
-#include <xstd/bits/dynamic_bitset.hpp> // dynamic_bitset
-#include <algorithm>                    // equal
-#include <array>                        // array
-#include <compare>                      // is_eq, is_gt, is_lt
-#include <concepts>                     // regular, same_as, totally_ordered
-#include <cstddef>                      // size_t
-#include <cstdint>                      // uint8_t, uint64_t
-#include <functional>                   // hash
-#include <iterator>                     // back_inserter
-#include <memory>                       // allocator
-#include <ranges>                       // equal, iota
-#include <sstream>                      // istringstream, ostringstream
-#include <stdexcept>                    // invalid_argument, out_of_range, overflow_error
-#include <string>                       // string
-#include <tuple>                        // tuple
-#include <utility>                      // as_const, pair
-#include <vector>                       // vector
+#include <boost/dynamic_bitset.hpp>          // dynamic_bitset, to_string
+#include <boost/test/unit_test.hpp>          // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
+#include <xstd/bits/bitset_adaptor.hpp>      // bitset_adaptor
+#include <xstd/bits/detail/block_vector.hpp> // block_vector
+#include <xstd/bits/dynamic_bitset.hpp>      // dynamic_bitset
+#include <algorithm>                         // equal
+#include <array>                             // array
+#include <compare>                           // is_eq, is_gt, is_lt
+#include <concepts>                          // regular, same_as, totally_ordered
+#include <cstddef>                           // size_t
+#include <cstdint>                           // uint8_t, uint64_t
+#include <functional>                        // hash
+#include <iterator>                          // back_inserter
+#include <memory>                            // allocator
+#include <ranges>                            // equal, iota
+#include <sstream>                           // istringstream, ostringstream
+#include <stdexcept>                         // invalid_argument, out_of_range, overflow_error
+#include <string>                            // string
+#include <tuple>                             // tuple
+#include <utility>                           // as_const, pair
+#include <vector>                            // vector
 
 BOOST_AUTO_TEST_SUITE(DynamicBitset)
 

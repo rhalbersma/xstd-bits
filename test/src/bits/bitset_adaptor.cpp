@@ -10,7 +10,8 @@
 #include <xstd/bits/bit_traits.hpp>               // bit_traits, block_readable
 #include <xstd/bits/bitset.hpp>                   // basic_bitset, bitset
 #include <xstd/bits/bitset_adaptor.hpp>           // bitset_adaptor, has_bitops
-#include <xstd/bits/block_sequence.hpp>           // block_array, block_vector
+#include <xstd/bits/detail/block_array.hpp>       // block_array
+#include <xstd/bits/detail/block_vector.hpp>      // block_vector
 #include <xstd/bits/dynamic_bitset.hpp>           // basic_dynamic_bitset
 #include <xstd/bits/ext/boost/dynamic_bitset.hpp> // IWYU pragma: keep; bit_traits<boost::dynamic_bitset>
 #include <xstd/bits/ext/std/bitset.hpp>           // IWYU pragma: keep; bit_traits<std::bitset>

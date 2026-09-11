@@ -3,8 +3,8 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_BLOCK_SEQUENCE_HPP
-#define XSTD_BITS_BLOCK_SEQUENCE_HPP
+#ifndef XSTD_BITS_DETAIL_BLOCK_SEQUENCE_HPP
+#define XSTD_BITS_DETAIL_BLOCK_SEQUENCE_HPP
 
 #include <boost/hash2/hash_append_fwd.hpp>                   // hash_append, hash_append_tag
 #include <xstd/bits/bit_traits.hpp>                          // bit_traits
@@ -17,7 +17,6 @@
 #include <xstd/ints/memory.hpp>                              // align_up
 #include <xstd/misc/type_traits/conditional_data_member.hpp> // XSTD_NO_UNIQUE_ADDRESS, conditional_data_member_t
 #include <algorithm>                                         // all_of, any_of, fill, fill_n, fold_left, max, min, shift_left, shift_right
-#include <array>                                             // array
 #include <cassert>                                           // assert
 #include <compare>                                           // strong_ordering
 #include <concepts>                                          // regular, same_as, swap
@@ -25,17 +24,11 @@
 #include <functional>                                        // plus
 #include <iterator>                                          // distance, forward_iterator, input_iterator, prev
 #include <limits>                                            // numeric_limits
-#include <memory>                                            // allocator
 #include <ranges>                                            // begin, drop, iota, size, swap, transform, zip
                                                              // (views::drop_last when P22014R2 is accepted)
 #include <span>                                              // dynamic_extent
 #include <type_traits>                                       // conditional_t, is_const_v, remove_reference_t
 #include <utility>                                           // exchange, move, pair
-#include <vector>                                            // vector
-#include <version>                                           // IWYU pragma: keep; __cpp_lib_inplace_vector
-#ifdef __cpp_lib_inplace_vector
-#include <inplace_vector>                                    // inplace_vector
-#endif
 
 namespace xstd {
 
@@ -1080,19 +1073,6 @@ private:
         }
 };
 
-// The three vehicles: a width in the type, a width on the heap, and a run-time width under a compile-time capacity of N bits.
-template<xstd::unsigned_integer Block, std::size_t N>
-using block_array = block_sequence<std::array<Block, num_blocks_v<Block, N>>, N>;
-
-template<xstd::unsigned_integer Block, class Allocator = std::allocator<Block>>
-using block_vector = block_sequence<std::vector<Block, Allocator>>;
-
-// Behind the feature macro until every library in the matrix has it; the storage needs nothing else, already satisfying contiguous_block_container.
-#ifdef __cpp_lib_inplace_vector
-template<xstd::unsigned_integer Block, std::size_t N>
-using block_inplace_vector = block_sequence<std::inplace_vector<Block, num_blocks_v<Block, N>>>;
-#endif
-
 // Forwards and nothing more, reaching none of the generic scans. [design.md#the-cheapest-contract]
 template<class Blocks, std::size_t N>
 struct bit_traits<block_sequence<Blocks, N>>
@@ -1166,4 +1146,4 @@ struct bit_traits<block_sequence<Blocks, N>>
 
 }       // namespace xstd
 
-#endif  // XSTD_BITS_BLOCK_SEQUENCE_HPP
+#endif  // XSTD_BITS_DETAIL_BLOCK_SEQUENCE_HPP

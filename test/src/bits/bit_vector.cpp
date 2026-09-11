@@ -3,26 +3,26 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/test/unit_test.hpp>       // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <test/sequence/concepts.hpp>     // bit_sequence
-#include <xstd/bits/sequence_adaptor.hpp> // sequence_adaptor
-#include <xstd/bits/bit_vector.hpp>       // bit_vector
-#include <xstd/bits/block_sequence.hpp>   // block_vector
-#include <xstd/bits/ownership.hpp>        // ownership
-#include <xstd/bits/bit_array.hpp>        // basic_bit_array
-#include <xstd/bits/bit_span.hpp>         // bit_span
-#include <algorithm>                      // copy, equal
-#include <concepts>                       // same_as
-#include <cstddef>                        // size_t
-#include <cstdint>                        // uint8_t
-#include <functional>                     // hash
-#include <iterator>                       // next
-#include <memory>                         // allocator
-#include <ranges>                         // equal, from_range, iota, next, transform
-#include <type_traits>                    // is_default_constructible_v
-#include <utility>                        // move
-#include <vector>                         // vector
-#include <version>                        // IWYU pragma: keep; __cpp_lib_containers_ranges
+#include <boost/test/unit_test.hpp>          // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <test/sequence/concepts.hpp>        // bit_sequence
+#include <xstd/bits/sequence_adaptor.hpp>    // sequence_adaptor
+#include <xstd/bits/bit_vector.hpp>          // bit_vector
+#include <xstd/bits/detail/block_vector.hpp> // block_vector
+#include <xstd/bits/ownership.hpp>           // ownership
+#include <xstd/bits/bit_array.hpp>           // basic_bit_array
+#include <xstd/bits/bit_span.hpp>            // bit_span
+#include <algorithm>                         // copy, equal
+#include <concepts>                          // same_as
+#include <cstddef>                           // size_t
+#include <cstdint>                           // uint8_t
+#include <functional>                        // hash
+#include <iterator>                          // next
+#include <memory>                            // allocator
+#include <ranges>                            // equal, from_range, iota, next, transform
+#include <type_traits>                       // is_default_constructible_v
+#include <utility>                           // move
+#include <vector>                            // vector
+#include <version>                           // IWYU pragma: keep; __cpp_lib_containers_ranges
 
 BOOST_AUTO_TEST_SUITE(BitVector)
 

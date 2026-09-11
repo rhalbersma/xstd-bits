@@ -20,7 +20,6 @@
 #include <xstd/bits/bit_subspan.hpp>        // IWYU pragma: export; bit_subspan
 #include <xstd/bits/bit_vector.hpp>         // IWYU pragma: export; bit_vector
 #include <xstd/bits/bitset.hpp>             // IWYU pragma: export; bitset
-#include <xstd/bits/block_sequence.hpp>     // IWYU pragma: export; block_sequence, block_array, block_inplace_vector, block_vector
 #include <xstd/bits/dynamic_bitset.hpp>     // IWYU pragma: export; dynamic_bitset
 #include <xstd/bits/inplace_bitset.hpp>     // IWYU pragma: export; inplace_bitset
 #include <xstd/bits/ownership.hpp>          // IWYU pragma: export; ownership

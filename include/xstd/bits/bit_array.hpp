@@ -7,7 +7,7 @@
 #define XSTD_BITS_BIT_ARRAY_HPP
 
 #include <xstd/bits/sequence_adaptor.hpp>          // sequence_adaptor
-#include <xstd/bits/block_sequence.hpp>            // block_array
+#include <xstd/bits/detail/block_array.hpp>        // block_array
 #include <xstd/bits/ownership.hpp>                 // ownership
 #include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
 #include <xstd/ints/memory.hpp>                    // align_up

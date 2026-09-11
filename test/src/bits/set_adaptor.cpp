@@ -9,7 +9,8 @@
 #include <xstd/bits/bit_set.hpp>                  // bit_set
 #include <xstd/bits/bit_set_view.hpp>             // bit_set_view
 #include <xstd/bits/bit_static_set.hpp>           // bit_static_set
-#include <xstd/bits/block_sequence.hpp>           // block_array, block_vector
+#include <xstd/bits/detail/block_array.hpp>       // block_array
+#include <xstd/bits/detail/block_vector.hpp>      // block_vector
 #include <xstd/bits/ext/boost/dynamic_bitset.hpp> // bit_traits over boost::dynamic_bitset
 #include <xstd/bits/ext/std/bitset.hpp>           // bit_traits over std::bitset
 #include <xstd/bits/ownership.hpp>                // ownership

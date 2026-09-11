@@ -54,6 +54,15 @@ different word.
 
 ### the-one-vehicle
 
+`block_sequence` and its three aliases live under `detail/`, one header each: `detail/block_sequence.hpp` holds
+the concept, `num_blocks_v`, the class and its `bit_traits`, and `detail/block_array.hpp`,
+`detail/block_vector.hpp` and `detail/block_inplace_vector.hpp` hold one vehicle apiece. It is the device that
+turns three readings over three storages into three plus three, and a factoring device is machinery rather
+than vocabulary: a user reaches every width through `bit_static_set<N>` or `basic_bit_array<N, Block>` and
+never spells the pair themselves. The split is what lets each of the nine containers include only the vehicle
+it uses -- `bit_array` names `block_array` and no longer sees `std::vector`, and the
+`#ifdef __cpp_lib_inplace_vector` guard sits in the one header that concerns it rather than in the common one.
+
 `block_sequence<Blocks, N>` is the single storage vehicle. `N` is the width when that is a constant and
 `std::dynamic_extent` when the width is carried at run time.
 

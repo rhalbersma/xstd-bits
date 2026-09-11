@@ -7,7 +7,7 @@
 #define XSTD_BITS_BIT_VECTOR_HPP
 
 #include <xstd/bits/sequence_adaptor.hpp>          // sequence_adaptor
-#include <xstd/bits/block_sequence.hpp>            // block_vector
+#include <xstd/bits/detail/block_vector.hpp>       // block_vector
 #include <xstd/bits/ownership.hpp>                 // ownership
 #include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
 #include <cstddef>                                 // size_t

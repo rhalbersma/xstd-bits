@@ -7,7 +7,7 @@
 #define XSTD_BITS_DYNAMIC_BITSET_HPP
 
 #include <xstd/bits/bitset_adaptor.hpp>            // bitset_adaptor
-#include <xstd/bits/block_sequence.hpp>            // block_vector
+#include <xstd/bits/detail/block_vector.hpp>       // block_vector
 #include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
 #include <cstddef>                                 // size_t
 #include <memory>                                  // allocator

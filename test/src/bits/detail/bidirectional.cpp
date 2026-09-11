@@ -9,7 +9,7 @@
 #include <test/value_reference.hpp>               // value_reference
 #include <xstd/bits/bit_set_view.hpp>             // bit_set_view
 #include <xstd/bits/bit_traits.hpp>               // bit_traits, find_next, find_prev
-#include <xstd/bits/block_sequence.hpp>           // block_array
+#include <xstd/bits/detail/block_array.hpp>       // block_array
 #include <xstd/bits/detail/bidirectional.hpp>     // bidirectional_bit_iterator, bidirectional_bit_reference
 #include <xstd/bits/ext/boost/dynamic_bitset.hpp> // bit_traits over boost::dynamic_bitset
 #include <xstd/bits/ext/std/bitset.hpp>           // bit_traits over std::bitset

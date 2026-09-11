@@ -422,7 +422,7 @@ auto b = a
 ### Bit-layout
 
 **Q**: How is `xstd::bit_static_set` implemented?  
-**A**: `bit_static_set` uses a `std::array` of unsigned integers, so its storage goes wherever the object does. That is true of the static-width column only: the inplace column holds a `std::inplace_vector` inline, and the dynamic column a `std::vector`. All three are the same `xstd::block_sequence` over a different storage.
+**A**: `bit_static_set` uses a `std::array` of unsigned integers, so its storage goes wherever the object does. That is true of the static-width column only: the inplace column holds a `std::inplace_vector` inline, and the dynamic column a `std::vector`. All three are the same storage vehicle over a different container, which is an implementation detail rather than a name you reach for.
 
 **Q**: How is the set ordering mapped to the array's bit layout?  
 **A**: The most significant bit of the first array word maps onto set value `0`.

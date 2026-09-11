@@ -3,25 +3,28 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/test/unit_test.hpp>     // BOOST_CHECK_EQUAL, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
-#include <test/block_types.hpp>         // digits_v, graded_extents, word_types
-#include <test/inplace_vector.hpp>      // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
-#include <test/uint128.hpp>             // IWYU pragma: keep; TEST_HAS_UINT128, uint128
-#include <xstd/bits/bit_traits.hpp>     // bit_storage, bit_traits, block_readable, static_bit_extent
-#include <xstd/bits/block_sequence.hpp> // block_array, block_inplace_vector, block_sequence, block_vector, contiguous_block_container
-#include <algorithm>                    // count, lexicographical_compare_three_way, min
-#include <concepts>                     // regular, same_as
-#include <array>                        // array
-#include <compare>                      // strong_ordering
-#include <cstddef>                      // size_t
-#include <cstdint>                      // uint8_t, uint64_t
-#include <memory>                       // addressof, allocator
-#include <initializer_list>             // initializer_list
-#include <iterator>                     // contiguous_iterator, iter_reference_t, random_access_iterator
-#include <new>                          // IWYU pragma: keep; bad_alloc, behind TEST_HAS_INPLACE_VECTOR
-#include <ranges>                       // begin, contiguous_range, iota, iterator_t, size, sized_range
-#include <tuple>                        // get, tuple
-#include <vector>                       // vector
+#include <boost/test/unit_test.hpp>                  // BOOST_CHECK_EQUAL, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <test/block_types.hpp>                      // digits_v, graded_extents, word_types
+#include <test/inplace_vector.hpp>                   // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
+#include <test/uint128.hpp>                          // IWYU pragma: keep; TEST_HAS_UINT128, uint128
+#include <xstd/bits/bit_traits.hpp>                  // bit_storage, bit_traits, block_readable, static_bit_extent
+#include <xstd/bits/detail/block_array.hpp>          // block_array
+#include <xstd/bits/detail/block_inplace_vector.hpp> // block_inplace_vector
+#include <xstd/bits/detail/block_sequence.hpp>       // block_sequence, contiguous_block_container
+#include <xstd/bits/detail/block_vector.hpp>         // block_vector
+#include <algorithm>                                 // count, lexicographical_compare_three_way, min
+#include <concepts>                                  // regular, same_as
+#include <array>                                     // array
+#include <compare>                                   // strong_ordering
+#include <cstddef>                                   // size_t
+#include <cstdint>                                   // uint8_t, uint64_t
+#include <memory>                                    // addressof, allocator
+#include <initializer_list>                          // initializer_list
+#include <iterator>                                  // contiguous_iterator, iter_reference_t, random_access_iterator
+#include <new>                                       // IWYU pragma: keep; bad_alloc, behind TEST_HAS_INPLACE_VECTOR
+#include <ranges>                                    // begin, contiguous_range, iota, iterator_t, size, sized_range
+#include <tuple>                                     // get, tuple
+#include <vector>                                    // vector
 
 BOOST_AUTO_TEST_SUITE(BitBlocks)
 
