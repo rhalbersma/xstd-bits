@@ -153,6 +153,43 @@ common and fails loudly if one of them drifts. `has_bitops` stays the gate on `b
 subsumes the other: `has_bitops` asks boost's set vocabulary, which `std::bitset` lacks, and
 `contiguous_bit_sequence` asks the positional members, which `has_bitops` never names.
 
+### the-degenerate-bit-container
+
+A built-in unsigned integer is the degenerate bit container, and the split in
+[the-common-vocabulary](#the-common-vocabulary) falls exactly across it. `std::bitset` generalized the
+**bitwise operators** to an arbitrary fixed width ([the-primitive-basis](#the-primitive-basis)); a word is
+what it generalized them *from*. So a word has that half — `&=`, `|=`, `^=`, `<<=`, `>>=`, regularity — and
+none of the half `std::bitset` added: no `size`, `count`, `test`, `all`, `any`, `none`, `set`, `reset`,
+`flip`. It therefore does not model `contiguous_bit_sequence`, and it does model `bit_storage` the moment a
+trait is written for it, because the trait door asks for members from nobody
+([the-common-vocabulary](#the-common-vocabulary)).
+
+`ext/unsigned_integer.hpp` writes that trait, as a partial specialization constrained on
+`xstd::unsigned_integer` — more constrained than the primary, which is what makes it a specialization at all
+and what leaves every other type unadapted. It lives in `ext/` and not in `bit_traits.hpp` so that adaptation
+stays opt-in ([opt-in](#opt-in)): include it and every built-in width is adapted at once; don't, and none is.
+`extent` is the word's own `digits`, there is one block and it is the word, so every scan takes the block tier.
+
+**What it is for is the referring case.** `bit_set_view<std::uint64_t>` and `bit_span<std::uint64_t>` read and
+write a word **in place** — a bitboard, a flags word from a C API, a field in a packed struct — as a set of
+positions or a sequence of bools, without a copy.
+
+Two spellings that look like they would do the same thing do not.
+
+`bitset_adaptor<Block>` is rejected, and the refusal is load-bearing. `has_bitops` asks for the *members*, and
+a word has none, so the constraint fails at the class. Were the concept to ask only for the bitwise
+*operators* — the framing a word does fit — a word would satisfy it and the bitset reading would compile with
+one operator meaning something else entirely: `b -= c` on an unsigned integer is arithmetic subtraction, not
+set difference. Measured: `0b0100 -= 0b1100` is 18446744073709551608, where a set difference is 0. The member
+requirements are what keep that expression out of reach.
+
+`bitset_adaptor<contiguous_bit_container<Block>>` does not compile either, for a plainer reason: a word is not
+a *range* of blocks, so it fails `contiguous_block_container`
+([contiguous-block-container](#contiguous-block-container)). The spelling that does work is the array of one,
+`contiguous_bit_array<Block, digits>`, and `bitset_adaptor` over that is exactly `basic_bitset<Block, digits>`
+— a name the library already has. But it **owns** its word, `sizeof` 8 for a `std::uint64_t`. Owning is not
+what a raw word wants adapting for; referring is, and nothing else spells it.
+
 ### the-primitive-basis
 
 Three layers, and the middle one is the whole design. `contiguous_bit_container` provides the **primitives** —
