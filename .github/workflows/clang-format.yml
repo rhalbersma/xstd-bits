@@ -22,4 +22,4 @@ jobs:
     uses: rhalbersma/cpp-ci/.github/workflows/clang-format.yml@e2886b13f6fcd1eceb231652f816b016de41be1d # v0.8.1
     with:
       # benchmark/ too, this repository carrying a benchmark tree of hand-written sources.
-      paths: include test benchmark
+      paths: examples include test benchmark

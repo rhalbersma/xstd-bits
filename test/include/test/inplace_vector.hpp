@@ -10,6 +10,7 @@
 
 // The third storage comes and goes with the library, the way xstd::uint128 comes and goes with the compiler. [design.md#growth]
 #ifdef __cpp_lib_inplace_vector
+
 #define TEST_HAS_INPLACE_VECTOR
 #endif
 

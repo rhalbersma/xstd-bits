@@ -3,24 +3,24 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/test/unit_test.hpp>               // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
-#include <test/sequence/ordering.hpp>             // ordering_agrees_with_vector_bool
-#include <xstd/bits/sequence_adaptor.hpp>         // sequence_adaptor
-#include <xstd/bits/bit_array.hpp>                // bit_array
-#include <xstd/bits/bit_static_set.hpp>           // bit_static_set
-#include <xstd/bits/bitset.hpp>                   // bitset
-#include <xstd/bits/block_sequence.hpp>           // block_array
-#include <xstd/bits/ext/boost/dynamic_bitset.hpp> // bit_traits over boost::dynamic_bitset
-#include <xstd/bits/ext/std/bitset.hpp>           // bit_traits over std::bitset
-#include <xstd/bits/ownership.hpp>                // ownership
-#include <xstd/bits/bit_span.hpp>                 // bit_span
-#include <algorithm>                              // equal
-#include <array>                                  // array
-#include <bitset>                                 // bitset
-#include <concepts>                               // derived_from, equality_comparable, same_as, totally_ordered
-#include <cstddef>                                // size_t
-#include <ranges>                                 // borrowed_range, random_access_range, view
-#include <utility>                                // declval
+#include <test/sequence/ordering.hpp>                // ordering_agrees_with_vector_bool
+#include <xstd/bits/bit_array.hpp>                   // bit_array
+#include <xstd/bits/bit_span.hpp>                    // bit_span
+#include <xstd/bits/bit_static_set.hpp>              // bit_static_set
+#include <xstd/bits/bitset.hpp>                      // bitset
+#include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
+#include <xstd/bits/ext/boost/dynamic_bitset.hpp>    // bit_traits over boost::dynamic_bitset
+#include <xstd/bits/ext/std/bitset.hpp>              // bit_traits over std::bitset
+#include <xstd/bits/ownership.hpp>                   // ownership
+#include <xstd/bits/sequence_adaptor.hpp>            // sequence_adaptor
+#include <boost/test/unit_test.hpp>                  // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <algorithm>                                 // equal
+#include <array>                                     // array
+#include <bitset>                                    // bitset
+#include <concepts>                                  // derived_from, equality_comparable, same_as, totally_ordered
+#include <cstddef>                                   // size_t
+#include <ranges>                                    // borrowed_range, random_access_range, view
+#include <utility>                                   // declval
 
 BOOST_AUTO_TEST_SUITE(BitSpan)
 
@@ -37,8 +37,8 @@ BOOST_AUTO_TEST_CASE(TheViewIsTheReferringAdaptor)
         static_assert(std::derived_from<xstd::bit_span<std::bitset<8>>, xstd::sequence_adaptor<std::bitset<8>, xstd::ownership::refers, false>>);
         static_assert(std::same_as<view_of<std::bitset<8>>,          xstd::bit_span<std::bitset<8>>>);
         static_assert(std::same_as<view_of<std::bitset<8> const>,    xstd::bit_span<std::bitset<8> const>>);
-        static_assert(std::same_as<view_of<xstd::bitset<8>>,         xstd::bit_span<xstd::block_array<std::size_t, 8>>>);
-        static_assert(std::same_as<view_of<xstd::bit_static_set<8>>, xstd::bit_span<xstd::block_array<std::size_t, 8>>>);
+        static_assert(std::same_as<view_of<xstd::bitset<8>>,         xstd::bit_span<xstd::detail::bits::contiguous_bit_array<std::size_t, 8>>>);
+        static_assert(std::same_as<view_of<xstd::bit_static_set<8>>, xstd::bit_span<xstd::detail::bits::contiguous_bit_array<std::size_t, 8>>>);
 }
 
 BOOST_AUTO_TEST_CASE(TheViewedTypesAreTheOnesHoldingBoolsWithoutOfferingThem)
@@ -89,7 +89,7 @@ BOOST_AUTO_TEST_CASE(WritingThroughTheViewWritesTheBits)
 // The same reading over the type this library packs, so bit_array's own operator[] and the view agree position by position.
 BOOST_AUTO_TEST_CASE(APackedArrayAgreesWithItsOwnView)
 {
-        auto packed = xstd::basic_bit_array<8, unsigned char>{};
+        auto packed = xstd::basic_bit_array<unsigned char, 8>{};
         packed[1] = true;
         packed[6] = true;
 

@@ -3,13 +3,13 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-// What a reading costs when it is a view rather than a container, on the SAME backend block sequence.
+// What a reading costs when it is a view rather than a container, on the SAME backend bit container.
 //
 // Three variants per reading, so the answer decomposes instead of arriving as one number:
 //
-//   owner            set_adaptor / sequence_adaptor owning the block_sequence      -- the baseline
-//   view_of_storage  a view holding a POINTER to that same block_sequence          -- adds indirection
-//   view_of_bitset   a view over the bitset_adaptor wrapping it                    -- adds trait forwarding
+//   owner            set_adaptor / sequence_adaptor owning the contiguous_bit_container -- the baseline
+//   view_of_storage  a view holding a POINTER to that same contiguous_bit_container     -- adds indirection
+//   view_of_bitset   a view over the bitset_adaptor wrapping it                         -- adds trait forwarding
 //
 // So (view_of_storage - owner) is what the pointer costs, and (view_of_bitset - view_of_storage) is what
 // bit_traits<bitset_adaptor> costs, which is the layer that forwards each entry to the storage's own trait.
@@ -18,15 +18,15 @@
 // half a cycle, which is not a faster reading but no reading at all -- while a view's pointer blocks the same
 // folding. Comparing those two measures the folding, not the indirection. [design.md#a-bitset-reads-as-its-storage]
 
-#include <benchmark/benchmark.h>        // ClobberMemory, DoNotOptimize, BENCHMARK_TEMPLATE, BENCHMARK_MAIN, State
-#include <xstd/bits/bit_array.hpp>      // bit_array
-#include <xstd/bits/bit_set_view.hpp>   // bit_set_view
-#include <xstd/bits/bit_span.hpp>       // bit_span
-#include <xstd/bits/bit_static_set.hpp> // bit_static_set
-#include <xstd/bits/bitset.hpp>         // bitset
-#include <xstd/bits/block_sequence.hpp> // block_array
-#include <cstddef>                      // size_t
-#include <cstdint>                      // uint64_t
+#include <xstd/bits/bit_array.hpp>                   // bit_array
+#include <xstd/bits/bit_set_view.hpp>                // bit_set_view
+#include <xstd/bits/bit_span.hpp>                    // bit_span
+#include <xstd/bits/bit_static_set.hpp>              // bit_static_set
+#include <xstd/bits/bitset.hpp>                      // bitset
+#include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
+#include <benchmark/benchmark.h>                     // ClobberMemory, DoNotOptimize, BENCHMARK_TEMPLATE, BENCHMARK_MAIN, State
+#include <cstddef>                                   // size_t
+#include <cstdint>                                   // uint64_t
 
 namespace {
 
@@ -40,7 +40,7 @@ constexpr auto is_set(std::size_t i)
 }
 
 // One filler for all four subjects, because each reading spells "put a bit in" its own way: a bitset and a
-// block_sequence take set(n), an ordered set takes insert(n), and a sequence of bool assigns through v[i].
+// contiguous_bit_container take set(n), an ordered set takes insert(n), and a sequence of bool assigns through v[i].
 template<std::size_t N, class T>
 auto filled()
         -> T
@@ -101,7 +101,7 @@ template<std::size_t N>
 auto set_iterate_view_of_storage(benchmark::State& state)
         -> void
 {
-        auto blocks = filled<N, xstd::block_array<std::size_t, N>>();
+        auto blocks = filled<N, xstd::detail::bits::contiguous_bit_array<std::size_t, N>>();
         benchmark::DoNotOptimize(&blocks);
         auto const s = xstd::bit_set_view(blocks);
         for (auto _ : state) {
@@ -149,7 +149,7 @@ template<std::size_t N>
 auto sequence_count_view_of_storage(benchmark::State& state)
         -> void
 {
-        auto blocks = filled<N, xstd::block_array<std::size_t, N>>();
+        auto blocks = filled<N, xstd::detail::bits::contiguous_bit_array<std::size_t, N>>();
         benchmark::DoNotOptimize(&blocks);
         auto const v = xstd::bit_span(blocks);
         for (auto _ : state) {
@@ -197,7 +197,7 @@ template<std::size_t N>
 auto sequence_read_view_of_storage(benchmark::State& state)
         -> void
 {
-        auto blocks = filled<N, xstd::block_array<std::size_t, N>>();
+        auto blocks = filled<N, xstd::detail::bits::contiguous_bit_array<std::size_t, N>>();
         benchmark::DoNotOptimize(&blocks);
         auto const v = xstd::bit_span(blocks);
         auto lcg = std::uint64_t{1};

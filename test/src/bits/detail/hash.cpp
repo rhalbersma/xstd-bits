@@ -3,11 +3,11 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <xstd/bits/bitset.hpp>      // bitset
+#include <xstd/bits/detail/hash.hpp> // std_hash
 #include <boost/hash2/fnv1a.hpp>     // fnv1a_32, fnv1a_64
 #include <boost/hash2/xxhash.hpp>    // xxhash_64
 #include <boost/test/unit_test.hpp>  // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <xstd/bits/bitset.hpp>      // bitset
-#include <xstd/bits/detail/hash.hpp> // std_hash
 #include <cstdint>                   // uint64_t
 #include <functional>                // hash
 

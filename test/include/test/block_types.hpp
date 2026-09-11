@@ -13,7 +13,7 @@
 #include <tuple>                // tuple, tuple_cat
 #include <utility>              // declval
 
-// The Block models and the extents worth instantiating, assembled once: all three containers take <size_t N, class Block>.
+// The Block models and the extents worth instantiating, assembled once: all three containers take <class Block, size_t N>.
 namespace test {
 
 template<class Block>
@@ -36,33 +36,33 @@ using narrow_word_types = std::tuple
 >;
 
 // One block's worth of extents: empty, a single bit, and exactly one full block -- the same cost at any width.
-template<template<std::size_t, class> class C, class Block>
+template<template<class, std::size_t> class C, class Block>
 using in_block_extents = std::tuple
-<       C<0, Block>
-,       C<1, Block>
-,       C<digits_v<Block>, Block>
+<       C<Block, 0>
+,       C<Block, 1>
+,       C<Block, digits_v<Block>>
 >;
 
 // The extents that straddle a block boundary, at the narrowest word only: the arithmetic follows digits, not the carrier.
-template<template<std::size_t, class> class C, class Block>
+template<template<class, std::size_t> class C, class Block>
 using straddling_extents = std::tuple
-<       C<    digits_v<Block> - 1, Block>
-,       C<    digits_v<Block> + 1, Block>
-,       C<(2 * digits_v<Block>) - 1, Block>
-,       C<2 * digits_v<Block>,     Block>
-,       C<(2 * digits_v<Block>) + 1, Block>
-,       C<3 * digits_v<Block>,     Block>
+<       C<Block,     digits_v<Block> - 1>
+,       C<Block,     digits_v<Block> + 1>
+,       C<Block, (2 * digits_v<Block>) - 1>
+,       C<Block, 2 * digits_v<Block>      >
+,       C<Block, (2 * digits_v<Block>) + 1>
+,       C<Block, 3 * digits_v<Block>      >
 >;
 
 namespace detail {
 
-template<template<std::size_t, class> class C, template<template<std::size_t, class> class, class> class Extents, class... Blocks>
+template<template<class, std::size_t> class C, template<template<class, std::size_t> class, class> class Extents, class... Blocks>
 auto expand(std::tuple<Blocks...>) -> decltype(std::tuple_cat(std::declval<Extents<C, Blocks>>()...));
 
 } // namespace detail
 
 // Every word type at the extents it can afford: all within one block, and the narrow ones across boundaries too.
-template<template<std::size_t, class> class C>
+template<template<class, std::size_t> class C>
 using graded_extents = decltype(std::tuple_cat(
         std::declval<decltype(detail::expand<C, in_block_extents>(std::declval<word_types>()))>(),
         std::declval<decltype(detail::expand<C, straddling_extents>(std::declval<narrow_word_types>()))>()

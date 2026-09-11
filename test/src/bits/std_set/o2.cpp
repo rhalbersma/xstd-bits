@@ -3,16 +3,16 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/set/composable.hpp>      // includes, set_difference, set_intersection, set_symmetric_difference, set_union,
+#include <test/set/composable.hpp> // includes, set_difference, set_intersection, set_symmetric_difference, set_union,
                                         // decrement, increment
-#include <test/set/exhaustive.hpp>      // all_doubleton_arrays, all_doubleton_ilists, all_doubleton_sets,
+#include <test/set/exhaustive.hpp> // all_doubleton_arrays, all_doubleton_ilists, all_doubleton_sets,
                                         // all_singleton_sets, all_singleton_set_pairs, all_valid
-#include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_AUTO_TEST_CASE_TEMPLATE
 #include <test/flat_set.hpp>            // TEST_HAS_FLAT_SET, is_flat_set
 #include <test/set/primitives.hpp>      // constructor, op_assign, mem_insert, mem_erase, mem_swap, mem_find, mem_count,
 #include <test/uint128.hpp>             // TEST_HAS_UINT128, uint128
 #include <xstd/bits/bit_set.hpp>        // bit_set
 #include <xstd/bits/bit_static_set.hpp> // bit_static_set
+#include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_AUTO_TEST_CASE_TEMPLATE
 #include <cstddef>                      // size_t
 #include <cstdint>                      // uint8_t, uint16_t, uint32_t, uint64_t
 #include <ranges>                       // from_range
@@ -30,18 +30,18 @@ using Types = std::tuple
 #ifdef TEST_HAS_FLAT_SET
 ,       std::flat_set<std::size_t>
 #endif
-,       xstd::basic_bit_static_set< 0, uint8_t>
-,       xstd::basic_bit_static_set< 1, uint8_t>
-,       xstd::basic_bit_static_set< 8, uint8_t>
-,       xstd::basic_bit_static_set< 9, uint8_t>
-,       xstd::basic_bit_static_set<16, uint8_t>
-,       xstd::basic_bit_static_set<17, uint8_t>
-,       xstd::basic_bit_static_set<24, uint8_t>
-,       xstd::basic_bit_static_set<24, uint16_t>
-,       xstd::basic_bit_static_set<24, uint32_t>
-,       xstd::basic_bit_static_set<24, uint64_t>
+,       xstd::basic_bit_static_set<uint8_t, 0>
+,       xstd::basic_bit_static_set<uint8_t, 1>
+,       xstd::basic_bit_static_set<uint8_t, 8>
+,       xstd::basic_bit_static_set<uint8_t, 9>
+,       xstd::basic_bit_static_set<uint8_t, 16>
+,       xstd::basic_bit_static_set<uint8_t, 17>
+,       xstd::basic_bit_static_set<uint8_t, 24>
+,       xstd::basic_bit_static_set<uint16_t, 24>
+,       xstd::basic_bit_static_set<uint32_t, 24>
+,       xstd::basic_bit_static_set<uint64_t, 24>
 #ifdef TEST_HAS_UINT128
-,       xstd::basic_bit_static_set<24, xstd::uint128>
+,       xstd::basic_bit_static_set<xstd::uint128, 24>
 #endif
 ,       xstd::basic_bit_set<uint8_t>
 ,       xstd::basic_bit_set<uint64_t>

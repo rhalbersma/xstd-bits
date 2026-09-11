@@ -3,7 +3,6 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_AUTO_TEST_CASE_TEMPLATE
 #include <test/bitset/exhaustive.hpp>             // empty_set_pair
 #include <test/bitset/primitives.hpp>             // constructor,
 #include <test/uint128.hpp>                       // TEST_HAS_UINT128, uint128
@@ -11,6 +10,7 @@
 #include <xstd/bits/dynamic_bitset.hpp>           // dynamic_bitset
 #include <xstd/bits/ext/boost/dynamic_bitset.hpp> // dynamic_bitset
 #include <xstd/bits/ext/std/bitset.hpp>           // bitset
+#include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_AUTO_TEST_CASE_TEMPLATE
 #include <bitset>                                 // bitset
 #include <cstdint>                                // uint8_t, uint16_t, uint32_t, uint64_t
 #include <tuple>                                  // tuple
@@ -28,43 +28,43 @@ using Types = std::tuple
 ,         std::bitset< 63>
 ,         std::bitset< 64>
 ,         std::bitset< 65>
-,        xstd::basic_bitset<  0, uint8_t>
-,        xstd::basic_bitset<  1, uint8_t>
-,        xstd::basic_bitset<  7, uint8_t>
-,        xstd::basic_bitset<  8, uint8_t>
-,        xstd::basic_bitset<  9, uint8_t>
-,        xstd::basic_bitset< 15, uint8_t>
-,        xstd::basic_bitset< 16, uint8_t>
-,        xstd::basic_bitset< 17, uint8_t>
-,        xstd::basic_bitset< 24, uint8_t>
-,        xstd::basic_bitset<  0, uint16_t>
-,        xstd::basic_bitset<  1, uint16_t>
-,        xstd::basic_bitset< 15, uint16_t>
-,        xstd::basic_bitset< 16, uint16_t>
-,        xstd::basic_bitset< 17, uint16_t>
-,        xstd::basic_bitset< 31, uint16_t>
-,        xstd::basic_bitset< 32, uint16_t>
-,        xstd::basic_bitset< 33, uint16_t>
-,        xstd::basic_bitset< 48, uint16_t>
-,        xstd::basic_bitset<  0, uint32_t>
-,        xstd::basic_bitset<  1, uint32_t>
-,        xstd::basic_bitset< 31, uint32_t>
-,        xstd::basic_bitset< 32, uint32_t>
-,        xstd::basic_bitset< 33, uint32_t>
-,        xstd::basic_bitset< 63, uint32_t>
-,        xstd::basic_bitset< 64, uint32_t>
-,        xstd::basic_bitset< 65, uint32_t>
-,        xstd::basic_bitset<  0, uint64_t>
-,        xstd::basic_bitset<  1, uint64_t>
-,        xstd::basic_bitset< 63, uint64_t>
-,        xstd::basic_bitset< 64, uint64_t>
-,        xstd::basic_bitset< 65, uint64_t>
+,        xstd::basic_bitset<uint8_t, 0>
+,        xstd::basic_bitset<uint8_t, 1>
+,        xstd::basic_bitset<uint8_t, 7>
+,        xstd::basic_bitset<uint8_t, 8>
+,        xstd::basic_bitset<uint8_t, 9>
+,        xstd::basic_bitset<uint8_t, 15>
+,        xstd::basic_bitset<uint8_t, 16>
+,        xstd::basic_bitset<uint8_t, 17>
+,        xstd::basic_bitset<uint8_t, 24>
+,        xstd::basic_bitset<uint16_t, 0>
+,        xstd::basic_bitset<uint16_t, 1>
+,        xstd::basic_bitset<uint16_t, 15>
+,        xstd::basic_bitset<uint16_t, 16>
+,        xstd::basic_bitset<uint16_t, 17>
+,        xstd::basic_bitset<uint16_t, 31>
+,        xstd::basic_bitset<uint16_t, 32>
+,        xstd::basic_bitset<uint16_t, 33>
+,        xstd::basic_bitset<uint16_t, 48>
+,        xstd::basic_bitset<uint32_t, 0>
+,        xstd::basic_bitset<uint32_t, 1>
+,        xstd::basic_bitset<uint32_t, 31>
+,        xstd::basic_bitset<uint32_t, 32>
+,        xstd::basic_bitset<uint32_t, 33>
+,        xstd::basic_bitset<uint32_t, 63>
+,        xstd::basic_bitset<uint32_t, 64>
+,        xstd::basic_bitset<uint32_t, 65>
+,        xstd::basic_bitset<uint64_t, 0>
+,        xstd::basic_bitset<uint64_t, 1>
+,        xstd::basic_bitset<uint64_t, 63>
+,        xstd::basic_bitset<uint64_t, 64>
+,        xstd::basic_bitset<uint64_t, 65>
 #ifdef TEST_HAS_UINT128
-,        xstd::basic_bitset<  0, xstd::uint128>
-,        xstd::basic_bitset<  1, xstd::uint128>
-,        xstd::basic_bitset<127, xstd::uint128>
-,        xstd::basic_bitset<128, xstd::uint128>
-,        xstd::basic_bitset<129, xstd::uint128>
+,        xstd::basic_bitset<xstd::uint128, 0>
+,        xstd::basic_bitset<xstd::uint128, 1>
+,        xstd::basic_bitset<xstd::uint128, 127>
+,        xstd::basic_bitset<xstd::uint128, 128>
+,        xstd::basic_bitset<xstd::uint128, 129>
 #endif
 ,        xstd::basic_dynamic_bitset<uint8_t>
 ,        xstd::basic_dynamic_bitset<uint64_t>

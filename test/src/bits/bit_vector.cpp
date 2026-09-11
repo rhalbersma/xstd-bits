@@ -3,26 +3,27 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/test/unit_test.hpp>       // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <test/sequence/concepts.hpp>     // bit_sequence
-#include <xstd/bits/sequence_adaptor.hpp> // sequence_adaptor
-#include <xstd/bits/bit_vector.hpp>       // bit_vector
-#include <xstd/bits/block_sequence.hpp>   // block_vector
-#include <xstd/bits/ownership.hpp>        // ownership
-#include <xstd/bits/bit_array.hpp>        // basic_bit_array
-#include <xstd/bits/bit_span.hpp>         // bit_span
-#include <algorithm>                      // copy, equal
-#include <concepts>                       // same_as
-#include <cstddef>                        // size_t
-#include <cstdint>                        // uint8_t
-#include <functional>                     // hash
-#include <iterator>                       // next
-#include <memory>                         // allocator
-#include <ranges>                         // equal, from_range, iota, next, transform
-#include <type_traits>                    // is_default_constructible_v
-#include <utility>                        // move
-#include <vector>                         // vector
-#include <version>                        // IWYU pragma: keep; __cpp_lib_containers_ranges
+#include <test/sequence/concepts.hpp>                 // bit_sequence
+#include <test/sequence/dense.hpp>                    // yields_every_position
+#include <xstd/bits/bit_array.hpp>                    // basic_bit_array
+#include <xstd/bits/bit_span.hpp>                     // bit_span
+#include <xstd/bits/bit_vector.hpp>                   // bit_vector
+#include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
+#include <xstd/bits/ownership.hpp>                    // ownership
+#include <xstd/bits/sequence_adaptor.hpp>             // sequence_adaptor
+#include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <algorithm>                                  // copy, equal
+#include <concepts>                                   // same_as
+#include <cstddef>                                    // size_t
+#include <cstdint>                                    // uint8_t
+#include <functional>                                 // hash
+#include <iterator>                                   // next
+#include <memory>                                     // allocator
+#include <ranges>                                     // equal, from_range, iota, next, transform
+#include <type_traits>                                // is_default_constructible_v
+#include <utility>                                    // move
+#include <vector>                                     // vector
+#include <version>                                    // IWYU pragma: keep; __cpp_lib_containers_ranges
 
 BOOST_AUTO_TEST_SUITE(BitVector)
 
@@ -41,7 +42,7 @@ constexpr bool has_range_members = requires (X x, std::vector<bool> const& r) { 
 // std::vector<bool> under its own name: the sequence adaptor over a heap of blocks. [design.md#the-public-names]
 BOOST_AUTO_TEST_CASE(TheDynamicSequenceIsTheSequenceAdaptorOverAHeapOfBlocks)
 {
-        static_assert(std::same_as<T, xstd::sequence_adaptor<xstd::block_vector<std::uint8_t>, xstd::ownership::owns, false>>);
+        static_assert(std::same_as<T, xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint8_t>, xstd::ownership::owns, false>>);
         static_assert(std::same_as<xstd::basic_bit_vector<std::uint8_t, std::allocator<std::uint8_t>>, T>);
         static_assert(test::sequence::bit_sequence<T>);
 }
@@ -147,7 +148,7 @@ BOOST_AUTO_TEST_CASE(ItGrowsLikeAStdVector)
         v.shrink_to_fit();
         BOOST_CHECK_GE(v.capacity(), v.size());
 
-        BOOST_CHECK_EQUAL(v.max_size(), xstd::block_vector<std::uint8_t>().max_size());
+        BOOST_CHECK_EQUAL(v.max_size(), xstd::detail::bits::contiguous_bit_vector<std::uint8_t>().max_size());
 
         v.clear();
         BOOST_CHECK(v.empty());
@@ -209,7 +210,7 @@ BOOST_AUTO_TEST_CASE(AppendRangeBlitsFromASequenceAtAnyAlignment)
         }
 
         // An owner, a whole view and a static array all blit alike; a source of another block type packs instead.
-        auto fixed = xstd::basic_bit_array<9, std::uint8_t>();
+        auto fixed = xstd::basic_bit_array<std::uint8_t, 9>();
         std::ranges::copy(pattern(9), fixed.begin());
         auto v = T();
         v.append_range(source);
@@ -353,10 +354,10 @@ BOOST_AUTO_TEST_CASE(TheOwnerHashesAndTheViewDoesNot)
         BOOST_CHECK_EQUAL(h(T({ true, false, true })), h(T({ true, false, true })));
         BOOST_CHECK(h(T({ true, false, true })) != h(T({ true, false, true, false })));
         BOOST_CHECK(h(T()) != h(T(1)));
-        static_assert(not std::is_default_constructible_v<std::hash<xstd::bit_span<xstd::block_vector<std::uint8_t>>>>);
+        static_assert(not std::is_default_constructible_v<std::hash<xstd::bit_span<xstd::detail::bits::contiguous_bit_vector<std::uint8_t>>>>);
 }
 
-// The view over it refers into the block_vector and cannot grow it. [design.md#views-over-owners]
+// The view over it refers into the contiguous_bit_vector and cannot grow it. [design.md#views-over-owners]
 BOOST_AUTO_TEST_CASE(AViewOverItCannotGrowIt)
 {
         auto v = T(5);
@@ -368,6 +369,19 @@ BOOST_AUTO_TEST_CASE(AViewOverItCannotGrowIt)
         static_assert(    can_grow<T>);
         static_assert(not has_range_members<decltype(s)>);
         static_assert(    has_range_members<T>);
+}
+
+// Every position, densely, agreeing with the subscript -- and not a contiguous range, which no proxy sequence
+// can be. [design.md#the-iterator-is-the-primitive]
+BOOST_AUTO_TEST_CASE(ItYieldsEveryPosition)
+{
+        auto c = T(70);
+        test::sequence::yields_every_position(c);
+
+        for (auto n = 0UZ; n < c.size(); ++n) {
+                c[n] = (n % 3UZ == 0UZ);
+        }
+        test::sequence::yields_every_position(c);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -75,10 +75,10 @@ Notes:
 
 1. Each data structure is clear about the interface it provides: sequences are random access containers and ordered sets are bidirectional containers.
 2. The `bitset` column entries are the point the old two-by-two could not express. `std::bitset` and `boost::dynamic_bitset` are faulted above for being unclear about which interface they offer; the answer here is not to abolish the hybrid but to make choosing between its two readings **explicit at the call site**. `xstd::bitset<N>` is a strict extension of `std::bitset<N>` and `xstd::dynamic_bitset` is one of `boost::dynamic_bitset<>` — every expression valid on the counterpart is valid here, with the same result — and neither has iterators of its own, because `begin` is one name and there are two readings. `bit_set_view` and `bit_span` are how you say which you meant, and they appear in both rows for exactly that reason.
-3. A view names the bitset directly because a bitset has a `bit_traits` of its own, and **one** specialization — on `bitset_adaptor`, which all three bitsets are aliases of — gives all three of them that at once. The foreign bitsets get theirs from [`include/xstd/bits/ext/`](include/xstd/bits/ext/), which is the same mechanism from the outside. It relays each of the storage trait's twenty entries under its own guard, so the word-parallel paths are not quietly lost in the forwarding: `block_readable` still holds through it. Deduction is unaffected and still binds the storage a container wraps, so `xstd::bit_set_view(bs)` remains `xstd::bit_set_view<xstd::block_array<std::size_t, N>>` — the two spellings coexist, and the deduction guide for a plain storage is constrained to non-owners so that the two do not tie.
+3. A view names the bitset directly because a bitset has a `bit_traits` of its own, and **one** specialization — on `bitset_adaptor`, which all three bitsets are aliases of — gives all three of them that at once. The foreign bitsets get theirs from [`include/xstd/bits/ext/`](include/xstd/bits/ext/), which is the same mechanism from the outside. It relays each of the storage trait's twenty entries under its own guard, so the word-parallel paths are not quietly lost in the forwarding: `block_readable` still holds through it. Deduction is unaffected and still binds the storage a container wraps, so `xstd::bit_set_view(bs)` remains `xstd::bit_set_view<xstd::contiguous_bit_array<std::size_t, N>>` — the two spellings coexist, and the deduction guide for a plain storage is constrained to non-owners so that the two do not tie.
 4. The variable-size sequence of `bool` is named `xstd::bit_vector` and decoupled from the general `std::vector` class template.
 5. All containers use a dense (single bit per element) representation. Variable-size sparse sets can be provided by `flat_set`, either in [Boost](https://www.boost.org/doc/libs/1_80_0/doc/html/boost/container/flat_set.html) or in [C++ 23](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p1222r4.pdf).
-6. The names above are the short ones, which fix `Block` to `std::size_t` and so take only the width, or nothing at all in the dynamic column where there is no width to give. Each has a `basic_` form that leaves the block open: `xstd::basic_bit_static_set<N, Block>`, `xstd::basic_bit_array<N, Block>`, `xstd::basic_bitset<N, Block>` and their inplace siblings, and `xstd::basic_bit_set<Block, Allocator>`, `xstd::basic_bit_vector<Block, Allocator>`, `xstd::basic_dynamic_bitset<Block, Allocator>` down the dynamic column. So `xstd::bit_set` is an alias, not a template, and `xstd::basic_bit_set<std::uint8_t>` is how a block is chosen.
+6. The names above are the short ones, which fix `Block` to `std::size_t` and so take only the width, or nothing at all in the dynamic column where there is no width to give. Each has a `basic_` form that leaves the block open: `xstd::basic_bit_static_set<Block, N>`, `xstd::basic_bit_array<Block, N>`, `xstd::basic_bitset<Block, N>` and their inplace siblings, and `xstd::basic_bit_set<Block, Allocator>`, `xstd::basic_bit_vector<Block, Allocator>`, `xstd::basic_dynamic_bitset<Block, Allocator>` down the dynamic column. So `xstd::bit_set` is an alias, not a template, and `xstd::basic_bit_set<std::uint8_t>` is how a block is chosen.
 7. Each static-width name has an `aligned` form in a nested namespace, its width rounded up to whole blocks so that no block carries an unused tail: `xstd::aligned::bitset<120>` is `xstd::bitset<128>`. That costs nothing in storage at a width already spanning whole blocks, and removes the tail-restoring mask from `fill`, `flip` and the left shift.
 
 The **middle column** is what allocates nothing and yet carries a run-time width. It depends on `std::inplace_vector`, so those three names exist only where the standard library provides it (`__cpp_lib_inplace_vector`); an alias withholds a name rather than a capability.
@@ -87,7 +87,7 @@ Ownership is deliberately **not** a fourth column. A view is not a fourth storag
 
 ### Hello World: generating (twin) primes
 
-The code below demonstrates how a standards conforming `set` implementation can be used to implement the [Sieve of Eratosthenes](https://en.wikipedia.org/wiki/Sieve_of_Eratosthenes). This algorithm generates all [prime numbers](https://en.wikipedia.org/wiki/Prime_number) below a number `n`. It is the library's worked example and its benchmark, and it lives in [`include/opt/set/sieve.hpp`](include/opt/set/sieve.hpp); the listing below is that header, not a paraphrase of it.
+The code below demonstrates how a standards conforming `set` implementation can be used to implement the [Sieve of Eratosthenes](https://en.wikipedia.org/wiki/Sieve_of_Eratosthenes). This algorithm generates all [prime numbers](https://en.wikipedia.org/wiki/Prime_number) below a number `n`. It is the library's worked example and its benchmark, and it lives in [`examples/include/opt/set/sieve.hpp`](examples/include/opt/set/sieve.hpp) — outside `include/`, because a workload is a subject rather than library code. The listing below is that header's body, not a paraphrase of it; the names are in namespace `opt`.
 
 ```cpp
 template<class X>
@@ -165,10 +165,10 @@ int main()
     constexpr auto N = 100UZ;
     using X = xstd::bit_static_set<N>; /* or xstd::bit_set, std::set<std::size_t>, std::flat_set<std::size_t> */
 
-    auto const primes = xstd::sift_primes0<X>(N);
+    auto const primes = opt::sift_primes0<X>(N);
     assert(fmt::format("{}", primes) == "{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97}");
 
-    auto const twins = xstd::filter_twins(primes);
+    auto const twins = opt::filter_twins(primes);
     assert(fmt::format("{}", twins)  == "{3, 5, 7, 11, 13, 17, 19, 29, 31, 41, 43, 59, 61, 71, 73}");
 }
 ```
@@ -180,10 +180,10 @@ Those two assertions are the ones [`test/src/bits/std_set/sieve.cpp`](test/src/b
 `generate_candidates` materializes every candidate below `n` before sifting one, which is what makes the sieve above `O(n)` in space and why it cannot answer "what is the next prime". The same header carries two variants that drop the bound, and they drop it in opposite directions:
 
 ```cpp
-auto sieve = xstd::incremental_sieve();
+auto sieve = opt::incremental_sieve();
 sieve.next();  // 2, then 3, 5, 7, ... forever, with no n anywhere
 
-auto primes = xstd::sift_primes_segmented<xstd::bit_set, xstd::bit_static_set<1 << 15>>(n);
+auto primes = opt::sift_primes_segmented<xstd::bit_set, xstd::bit_static_set<1 << 15>>(n);
 ```
 
 The **incremental** sieve ([O'Neill 2009](https://www.cs.hmc.edu/~oneill/papers/Sieve-JFP.pdf)) keeps one entry per prime found — the next composite that prime will strike — so its space is `O(π(n))` and it generates without end. It is also about **29× slower**, which is the honest price of unboundedness and the reason it is measured rather than recommended.
@@ -224,17 +224,15 @@ This is why ownership is not a fourth column of the table above: a view is not a
 
 ### Printing
 
-The snippets above use `fmt::format`, which finds the proxies through fmt's own `format_as`. `std::format` and `std::print` work too, by including one header:
+The snippets above use `fmt::format`, which finds the proxies through fmt's own `format_as`. `std::format` and `std::print` work too, with nothing to include and nothing to switch on:
 
 ```cpp
-#include <xstd/bits/format.hpp>
-
 std::print("{}\n", primes);   // {2, 3, 5, 7, 11, ...}   the set reading, in braces
 std::print("{}\n", flags);    // [false, true, ...]      the sequence reading, in brackets
 std::print("{::#x}\n", primes);
 ```
 
-It specializes `std::formatter` for the two proxy references and nothing else: every container over them is already a range, so [`[format.range.formatter]`](https://eel.is/c++draft/format.range.formatter) formats it once its reference is formattable. The braces-versus-brackets split is the standard's, not ours — `[format.range.fmtkind]` picks `range_format::set` for a range with a `key_type` — so each reading prints in its own vocabulary without being told to. The header is deliberately outside `<xstd/bits.hpp>`, which keeps `<format>` off the include path of consumers who do not format.
+Each proxy reference carries its own `std::formatter`, so a container that hands the proxy out brings the formatter with it. Nothing is specialized for a container: every one of them is already a range, so [`[format.range.formatter]`](https://eel.is/c++draft/format.range.formatter) formats it once its reference is formattable. The braces-versus-brackets split is the standard's, not ours — `[format.range.fmtkind]` picks `range_format::set` for a range with a `key_type` — so each reading prints in its own vocabulary without being told to. Both hooks read the same value: the `std::formatter` defers to the `format_as` that fmt calls, so the two libraries cannot drift.
 
 ## Data-parallelism
 
@@ -248,7 +246,7 @@ auto filter_twins_parallel(X const& primes)
 }
 ```
 
-That is the same set the loop produces, and on a `bit_static_set<128>` it is four shifts, two ors and an and over two words — no iterator, no branch per element, no comparison. The elementwise form remains the one in `opt/set/sieve.hpp`, because it is the form `std::set` and `std::flat_set` can also run and the benchmark needs all three on the same algorithm.
+That is the same set the loop produces, and on a `bit_static_set<128>` it is four shifts, two ors and an and over two words — no iterator, no branch per element, no comparison. The elementwise form remains the one in `examples/include/opt/set/sieve.hpp`, because it is the form `std::set` and `std::flat_set` can also run and the benchmark needs all three on the same algorithm.
 
 The shifts are why the bit layout is what it is: element `0` is the most significant bit of the first word, so `<<` moves toward larger elements and the set order matches the bitstring order. The FAQ below draws it.
 
@@ -422,14 +420,14 @@ auto b = a
 ### Bit-layout
 
 **Q**: How is `xstd::bit_static_set` implemented?  
-**A**: `bit_static_set` uses a `std::array` of unsigned integers, so its storage goes wherever the object does. That is true of the static-width column only: the inplace column holds a `std::inplace_vector` inline, and the dynamic column a `std::vector`. All three are the same `xstd::block_sequence` over a different storage.
+**A**: `bit_static_set` uses a `std::array` of unsigned integers, so its storage goes wherever the object does. That is true of the static-width column only: the inplace column holds a `std::inplace_vector` inline, and the dynamic column a `std::vector`. All three are the same storage vehicle over a different container, which is an implementation detail rather than a name you reach for.
 
 **Q**: How is the set ordering mapped to the array's bit layout?  
 **A**: The most significant bit of the first array word maps onto set value `0`.
 **A**: The least significant bit of the last array word maps onto set value `N - 1`.
 
 **Q**: I'm visually oriented, can you draw a diagram?  
-**A**: Sure, it looks like this for `basic_bit_static_set<16, std::uint8_t>`:
+**A**: Sure, it looks like this for `basic_bit_static_set<std::uint8_t, 16>`:
 
 |value |01234567|89ABCDEF|
 |:---- |-------:|-------:|
@@ -440,7 +438,7 @@ auto b = a
 **A**: To be able to use **data-parallelism** for `(a < b) == std::ranges::lexicographical_compare(a, b)`.
 
 **Q**: How is efficient set comparison connected to the bit-ordering within words?  
-**A**: Take `basic_bit_static_set<8, std::uint8_t>` and consider when `sL < sR` for ordered sets of integers `sL` and `sR`.
+**A**: Take `basic_bit_static_set<std::uint8_t, 8>` and consider when `sL < sR` for ordered sets of integers `sL` and `sR`.
 
 **Q**: Ah, lexicographical set comparison corresponds to bit comparison from most to least significant?  
 **A**: Indeed, and this is equivalent to doing the integer comparison `wL > wR` on the underlying words `wL` and `wR`.
@@ -460,7 +458,7 @@ auto b = a
 **A**: By default, `xstd::bit_static_set` uses an array of `std::size_t` integers.
 
 **Q**: Can I customize the storage type?  
-**A**: Yes. The alias carrying the default is `template<std::size_t N> using bit_static_set = basic_bit_static_set<N, std::size_t>`; the underlying `template<std::size_t N, xstd::unsigned_integer Block> basic_bit_static_set` requires the block explicitly. Every cell of the table follows that pattern: a short name that defaults `Block` to `std::size_t`, and a `basic_` name that does not.
+**A**: Yes. The alias carrying the default is `template<std::size_t N> using bit_static_set = basic_bit_static_set<std::size_t, N>`; the underlying `template<xstd::unsigned_integer Block, std::size_t N> basic_bit_static_set` requires the block explicitly. Every cell of the table follows that pattern: a short name that defaults `Block` to `std::size_t`, and a `basic_` name that does not.
 
 **Q**: What other storage types can be used as template argument for `Block`?  
 **A**: Any type modelling the Standard Library `unsigned_integral` concept, which includes (for GCC and Clang) `xstd::uint128`.

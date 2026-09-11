@@ -39,7 +39,7 @@ set(cxx_compile_options_warnings
     $<$<CXX_COMPILER_ID:Clang>:
         -Weverything
         -Wno-unknown-warning-option         # forward compatibility for new Clang warnings
-        -Wno-lifetime-safety-intra-tu-suggestions             # Clang trunk (23-SVN); suggests [[clang::lifetimebound]] across xstd::proxy::bidirectional and xstd::bitset - not yet acted on
+        -Wno-lifetime-safety-intra-tu-suggestions             # Clang trunk (23-SVN); suggests [[clang::lifetimebound]] across xstd::detail::bits::bidirectional_bit_iterator and xstd::bitset - not yet acted on
         -Wno-lifetime-safety-intra-tu-constructor-suggestions # ditto, for constructors
         -Wno-lifetime-safety-invalidation                     # ditto; false positive on a.clear() in test/include/test/set/primitives.hpp treating the container itself as invalidated
         -Wno-c++98-compat
@@ -70,7 +70,7 @@ set(cxx_compile_options_warnings
         -Wno-array-bounds                   # triggered by Boost.DynamicBitset for gcc >= 12 in Release mode
         -Wno-stringop-overflow              # triggered by Boost.DynamicBitset for gcc >= 12 in Release mode
         -Wno-maybe-uninitialized            # false positive on detail::array's std::array member (WinLibs gcc 15.3.0, Release mode)
-        -Wno-restrict                       # false positive on std::vector's copy inside block_sequence's, inlined into bitset_adaptor's non-member operators (gcc 17-SVN, Release mode)
+        -Wno-restrict                       # false positive on std::vector's copy inside contiguous_bit_container's, inlined into bitset_adaptor's non-member operators (gcc 17-SVN, Release mode)
         -Wno-stringop-overread              # the same copy inlined into set_adaptor's non-member operators, under the name gcc 17-SVN gives it there (Release mode)
     >
     $<$<AND:$<BOOL:${${project_option_prefix}_WARNINGS_AS_ERRORS}>,$<CXX_COMPILER_ID:MSVC>>:/WX>
@@ -142,6 +142,10 @@ foreach(h ${public_headers})
 endforeach()
 
 # Every public header is answered by one test source at the same path, detail/ excepted; enforced here so it cannot drift.
+# detail/ is excepted because a detail header has no contract to mirror. Where such a test exists all the same -- and the
+# two proxy headers have one each -- it is white-box: it names what nobody outside the library names, and may be rewritten
+# whenever the internals are. The contract those types do carry is asserted through the containers that hand them out,
+# in test/include/test/set/concepts.hpp and test/include/test/sequence/concepts.hpp.
 file(
     GLOB_RECURSE mirrored_headers
     CONFIGURE_DEPENDS
@@ -171,6 +175,10 @@ if(unmirrored_headers)
 endif()
 
 set(current_include_dir ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+# The workloads the containers are exercised against, shared with benchmark/ and deliberately outside include/:
+# they are subjects, not library code, and include/ is what a consumer gets. [design.md#the-interface-line]
+set(workload_include_dir ${PROJECT_SOURCE_DIR}/examples/include)
 set(current_src_dir ${CMAKE_CURRENT_SOURCE_DIR}/src)
 # Anchored to current_src_dir: an unanchored *.cpp resolves against test/ and swept up consumer/main.cpp.
 file(GLOB_RECURSE targets RELATIVE ${current_src_dir} ${current_src_dir}/*.cpp)
@@ -198,6 +206,7 @@ foreach(t ${targets})
     target_include_directories(
         ${target_id} PRIVATE
         ${current_include_dir}
+        ${workload_include_dir}
     )
 
     target_compile_definitions(

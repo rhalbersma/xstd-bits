@@ -3,21 +3,21 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <xstd/bits/bit_array.hpp>      // bit_array
 #include <xstd/bits/bit_set.hpp>        // bit_set
 #include <xstd/bits/bit_set_view.hpp>   // bit_set_view
 #include <xstd/bits/bit_span.hpp>       // bit_span
 #include <xstd/bits/bit_static_set.hpp> // bit_static_set
 #include <xstd/bits/bit_vector.hpp>     // bit_vector
-#include <xstd/bits/format.hpp>         // IWYU pragma: keep; the formatter over the two proxies, which is what every case below reaches
+#include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <format>                       // format
 
 BOOST_AUTO_TEST_SUITE(Format)
 
 // Nothing here says anything about a container: the two proxies carry a formatter and [format.range.formatter]
 // does the rest. So the point of each case below is which container reaches it, not that it was taught to.
-// [design.md#formatting-the-proxies]
+// Nothing includes a formatting header either -- each proxy carries its own formatter, so a container that hands
+// the proxy out brings it along. [design.md#formatting-the-proxies]
 
 // [format.range.fmtkind] chooses range_format::set for a range with a key_type, so the set reading arrives at
 // braces without being told, the way fmt's format_as does. [design.md#two-readings-disagree]

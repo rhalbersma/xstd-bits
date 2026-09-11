@@ -3,21 +3,22 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/test/unit_test.hpp>      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <test/inplace_vector.hpp>       // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR, has_inplace_vector
+#include <test/inplace_vector.hpp>  // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR, has_inplace_vector
+#include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #ifdef TEST_HAS_INPLACE_VECTOR
-#include <test/set/concepts.hpp>         // bit_set
-#include <xstd/bits/set_adaptor.hpp>     // set_adaptor
-#include <xstd/bits/bit_inplace_set.hpp> // basic_bit_inplace_set, bit_inplace_set
-#include <xstd/bits/block_sequence.hpp>  // block_inplace_vector
-#include <xstd/bits/ownership.hpp>       // ownership
-#include <algorithm>                     // equal
-#include <concepts>                      // same_as
-#include <cstddef>                       // size_t
-#include <cstdint>                       // uint8_t
-#include <new>                           // bad_alloc
-#include <ranges>                        // iota, to
-#include <set>                           // set
+#include <test/set/ascending.hpp>                             // yields_ascending_keys
+#include <test/set/concepts.hpp>                              // bit_set
+#include <xstd/bits/bit_inplace_set.hpp>                      // basic_bit_inplace_set, bit_inplace_set
+#include <xstd/bits/detail/contiguous_bit_inplace_vector.hpp> // contiguous_bit_inplace_vector
+#include <xstd/bits/ownership.hpp>                            // ownership
+#include <xstd/bits/set_adaptor.hpp>                          // set_adaptor
+#include <algorithm>                                          // equal
+#include <concepts>                                           // same_as
+#include <cstddef>                                            // size_t
+#include <cstdint>                                            // uint8_t
+#include <new>                                                // bad_alloc
+#include <ranges>                                             // iota, to
+#include <set>                                                // set
 #endif
 
 BOOST_AUTO_TEST_SUITE(BitInplaceSet)
@@ -25,7 +26,7 @@ BOOST_AUTO_TEST_SUITE(BitInplaceSet)
 #ifdef TEST_HAS_INPLACE_VECTOR
 
 // A capacity of three whole blocks, so a key can sit past the width and still inside the capacity.
-using T = xstd::basic_bit_inplace_set<24, std::uint8_t>;
+using T = xstd::basic_bit_inplace_set<std::uint8_t, 24>;
 
 // Dependent, so an absent member is a false rather than a hard error.
 template<class X>
@@ -34,8 +35,8 @@ constexpr bool has_capacity = requires (X const& x) { x.capacity(); };
 // The set reading over a run-time width under a compile-time capacity, an alias and nothing more. [design.md#the-public-names]
 BOOST_AUTO_TEST_CASE(TheInplaceSetIsTheSetAdaptorOverAnInplaceVectorOfBlocks)
 {
-        static_assert(std::same_as<T, xstd::set_adaptor<xstd::block_inplace_vector<std::uint8_t, 24>, xstd::ownership::owns>>);
-        static_assert(std::same_as<xstd::bit_inplace_set<24>, xstd::basic_bit_inplace_set<24, std::size_t>>);
+        static_assert(std::same_as<T, xstd::set_adaptor<xstd::detail::bits::contiguous_bit_inplace_vector<std::uint8_t, 24>, xstd::ownership::owns>>);
+        static_assert(std::same_as<xstd::bit_inplace_set<24>, xstd::basic_bit_inplace_set<std::size_t, 24>>);
         static_assert(test::set::bit_set<T>);
 }
 
@@ -95,6 +96,23 @@ BOOST_AUTO_TEST_CASE(EqualSetsCompareEqualAtUnequalWidths)
 
         BOOST_CHECK(narrow == wide);
         BOOST_CHECK(not (narrow < wide) and not (wide < narrow));
+}
+
+// Ascending keys, whatever the insertion order: what makes this a set rather than a bag of positions.
+// [design.md#two-readings-disagree]
+BOOST_AUTO_TEST_CASE(ItYieldsAscendingKeys)
+{
+        auto c = T();
+        test::set::yields_ascending_keys(c);            // empty is trivially ascending
+
+        // Inserted high to low and across block boundaries, so the ascending answer is the container's doing
+        // and not the insertion order's.
+        for (auto const key : { 70UZ, 64UZ, 63UZ, 9UZ, 1UZ, 0UZ }) {
+                if (key < c.max_size()) {
+                        c.insert(key);
+                }
+        }
+        test::set::yields_ascending_keys(c);
 }
 
 #else

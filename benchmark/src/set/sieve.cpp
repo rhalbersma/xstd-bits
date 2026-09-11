@@ -3,16 +3,16 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <benchmark/benchmark.h>        // DoNotOptimize, BENCHMARK_TEMPLATE1, BENCHMARK_MAIN, State
-#include <opt/set/sieve.hpp>            // filter_twins, sift_primes0, sift_primes1, sift_primes_incremental, sift_primes_segmented
 #include <xstd/bits/bit_set.hpp>        // basic_bit_set, bit_set
 #include <xstd/bits/bit_static_set.hpp> // bit_static_set
+#include <benchmark/benchmark.h>        // DoNotOptimize, BENCHMARK_TEMPLATE1, BENCHMARK_MAIN, State
 #include <cstddef>                      // size_t
 #include <cstdint>                      // int64_t, uint8_t, uint16_t, uint32_t
+#include <opt/set/sieve.hpp>            // filter_twins, sift_primes0, sift_primes1, sift_primes_incremental, sift_primes_segmented
 #include <set>                          // set
 #include <version>                      // __cpp_lib_flat_set
 #if defined(__cpp_lib_flat_set)
-#include <flat_set>                     // flat_set
+#include <flat_set> // flat_set
 #endif
 
 // A built-in wide enough to name, a library mode that will own it, and a <bit> that will take it. [design.md#uint128-support]
@@ -49,7 +49,7 @@ auto bm_sift_primes0(benchmark::State& state)
 {
         auto const n = bound(state);
         for (auto _ : state) {
-                benchmark::DoNotOptimize(xstd::sift_primes0<X>(n));
+                benchmark::DoNotOptimize(opt::sift_primes0<X>(n));
         }
         per_candidate(state);
 }
@@ -60,7 +60,7 @@ auto bm_sift_primes1(benchmark::State& state)
 {
         auto const n = bound(state);
         for (auto _ : state) {
-                benchmark::DoNotOptimize(xstd::sift_primes1<X>(n));
+                benchmark::DoNotOptimize(opt::sift_primes1<X>(n));
         }
         per_candidate(state);
 }
@@ -74,7 +74,7 @@ auto bm_sift_primes_segmented(benchmark::State& state)
 {
         auto const n = bound(state);
         for (auto _ : state) {
-                benchmark::DoNotOptimize(xstd::sift_primes_segmented<X, xstd::bit_static_set<1UZ << 15>>(n));
+                benchmark::DoNotOptimize(opt::sift_primes_segmented<X, xstd::bit_static_set<1UZ << 15>>(n));
         }
         per_candidate(state);
 }
@@ -88,7 +88,7 @@ auto bm_sift_primes_incremental(benchmark::State& state)
 {
         auto const n = bound(state);
         for (auto _ : state) {
-                benchmark::DoNotOptimize(xstd::sift_primes_incremental<X>(n));
+                benchmark::DoNotOptimize(opt::sift_primes_incremental<X>(n));
         }
         per_candidate(state);
 }
@@ -100,9 +100,9 @@ auto bm_filter_twins(benchmark::State& state)
         -> void
 {
         auto const n = bound(state);
-        auto const primes = xstd::sift_primes1<X>(n);
+        auto const primes = opt::sift_primes1<X>(n);
         for (auto _ : state) {
-                benchmark::DoNotOptimize(xstd::filter_twins(primes));
+                benchmark::DoNotOptimize(opt::filter_twins(primes));
         }
         per_candidate(state);
 }

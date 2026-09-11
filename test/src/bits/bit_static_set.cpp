@@ -3,11 +3,12 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <test/block_types.hpp>         // graded_extents
+#include <test/set/ascending.hpp>       // yields_ascending_keys
 #include <test/set/concepts.hpp>        // bit_set
 #include <test/value_reference.hpp>     // value_reference
 #include <xstd/bits/bit_static_set.hpp> // bit_static_set
+#include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <concepts>                     // regular, totally_ordered
 #include <cstddef>                      // size_t
 #include <iterator>                     // bidirectional_iterator
@@ -82,6 +83,23 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(LookupIsTotalOverKeyType, T, Types)
                 check_key_outside_the_domain(T(), x);
                 check_key_outside_the_domain(full, x);
         }
+}
+
+// Ascending keys, at every width and whatever the insertion order: what makes this a set rather than a bag of
+// positions. [design.md#two-readings-disagree]
+BOOST_AUTO_TEST_CASE_TEMPLATE(ItYieldsAscendingKeys, T, Types)
+{
+        auto c = T();
+        test::set::yields_ascending_keys(c);            // empty is trivially ascending
+
+        // Inserted high to low, and across block boundaries where the width allows, so the ascending answer is
+        // the container's doing and not the insertion order's.
+        for (auto const key : { 70UZ, 64UZ, 63UZ, 9UZ, 1UZ, 0UZ }) {
+                if (key < c.max_size()) {
+                        c.insert(key);
+                }
+        }
+        test::set::yields_ascending_keys(c);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

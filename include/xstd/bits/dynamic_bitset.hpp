@@ -6,17 +6,17 @@
 #ifndef XSTD_BITS_DYNAMIC_BITSET_HPP
 #define XSTD_BITS_DYNAMIC_BITSET_HPP
 
-#include <xstd/bits/bitset_adaptor.hpp>            // bitset_adaptor
-#include <xstd/bits/block_sequence.hpp>            // block_vector
-#include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
-#include <cstddef>                                 // size_t
-#include <memory>                                  // allocator
+#include <xstd/bits/bitset_adaptor.hpp>               // bitset_adaptor
+#include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
+#include <xstd/ints/concepts/unsigned_integer.hpp>    // unsigned_integer
+#include <cstddef>                                    // size_t
+#include <memory>                                     // allocator
 
 namespace xstd {
 
 // The bitset reading over a heap of blocks, boost::dynamic_bitset being its counterpart. [design.md#a-strict-extension]
 template<xstd::unsigned_integer Block, class Allocator = std::allocator<Block>>
-using basic_dynamic_bitset = bitset_adaptor<block_vector<Block, Allocator>>;
+using basic_dynamic_bitset = bitset_adaptor<detail::bits::contiguous_bit_vector<Block, Allocator>>;
 
 using dynamic_bitset = basic_dynamic_bitset<std::size_t>;
 

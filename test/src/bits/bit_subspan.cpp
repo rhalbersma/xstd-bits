@@ -3,38 +3,38 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/dynamic_bitset.hpp>               // dynamic_bitset
-#include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <xstd/bits/sequence_adaptor.hpp>         // sequence_adaptor
-#include <xstd/bits/bit_array.hpp>                // bit_array
-#include <xstd/bits/bit_span.hpp>                 // bit_span
-#include <xstd/bits/bit_subspan.hpp>              // bit_subspan
-#include <xstd/bits/bit_vector.hpp>               // bit_vector
-#include <xstd/bits/block_sequence.hpp>           // block_array
-#include <xstd/bits/ext/boost/dynamic_bitset.hpp> // bit_traits over boost::dynamic_bitset
-#include <xstd/bits/ext/std/bitset.hpp>           // bit_traits over std::bitset
-#include <xstd/bits/ownership.hpp>                // ownership
-#include <algorithm>                              // equal, fill
-#include <bitset>                                 // bitset
-#include <concepts>                               // equality_comparable, same_as
-#include <cstddef>                                // size_t
-#include <cstdint>                                // uint8_t
-#include <functional>                             // hash
-#include <iterator>                               // distance
-#include <ranges>                                 // borrowed_range, random_access_range, reverse, view
-#include <span>                                   // dynamic_extent
-#include <stdexcept>                              // out_of_range
-#include <tuple>                                  // tuple
-#include <type_traits>                            // is_default_constructible_v
-#include <utility>                                // declval
-#include <vector>                                 // vector
+#include <xstd/bits/bit_array.hpp>                   // bit_array
+#include <xstd/bits/bit_span.hpp>                    // bit_span
+#include <xstd/bits/bit_subspan.hpp>                 // bit_subspan
+#include <xstd/bits/bit_vector.hpp>                  // bit_vector
+#include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
+#include <xstd/bits/ext/boost/dynamic_bitset.hpp>    // bit_traits over boost::dynamic_bitset
+#include <xstd/bits/ext/std/bitset.hpp>              // bit_traits over std::bitset
+#include <xstd/bits/ownership.hpp>                   // ownership
+#include <xstd/bits/sequence_adaptor.hpp>            // sequence_adaptor
+#include <boost/dynamic_bitset.hpp>                  // dynamic_bitset
+#include <boost/test/unit_test.hpp>                  // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
+#include <algorithm>                                 // equal, fill
+#include <bitset>                                    // bitset
+#include <concepts>                                  // equality_comparable, same_as
+#include <cstddef>                                   // size_t
+#include <cstdint>                                   // uint8_t
+#include <functional>                                // hash
+#include <iterator>                                  // distance
+#include <ranges>                                    // borrowed_range, random_access_range, reverse, view
+#include <span>                                      // dynamic_extent
+#include <stdexcept>                                 // out_of_range
+#include <tuple>                                     // tuple
+#include <type_traits>                               // is_default_constructible_v
+#include <utility>                                   // declval
+#include <vector>                                    // vector
 
 BOOST_AUTO_TEST_SUITE(BitSubspan)
 
 namespace {
 
-using Blocks = xstd::block_array<std::uint8_t, 20>;
-using Owner  = xstd::basic_bit_array<20, std::uint8_t>;
+using Blocks = xstd::detail::bits::contiguous_bit_array<std::uint8_t, 20>;
+using Owner  = xstd::basic_bit_array<std::uint8_t, 20>;
 using Span   = xstd::bit_span<Blocks>;
 using Sub    = xstd::bit_subspan<Blocks>;
 
@@ -268,7 +268,7 @@ BOOST_AUTO_TEST_CASE(WindowsCompose)
         BOOST_CHECK(v.first(0).empty());
         BOOST_CHECK(v.last(0).empty());
         BOOST_CHECK(v.subspan(20).begin() == v.subspan(20).end());
-        auto z = xstd::basic_bit_array<0, std::uint8_t>();
+        auto z = xstd::basic_bit_array<std::uint8_t, 0>();
         BOOST_CHECK(xstd::bit_span(z).subspan(0).empty());
 }
 

@@ -6,25 +6,25 @@
 #ifndef XSTD_BITS_SET_ADAPTOR_HPP
 #define XSTD_BITS_SET_ADAPTOR_HPP
 
-#include <boost/container_hash/is_range.hpp> // is_range
-#include <boost/hash2/hash_append.hpp>       // hash_append_tag
-#include <xstd/bits/bit_proxy.hpp>           // bit_set_iterator, bit_set_reference
-#include <xstd/bits/bit_traits.hpp>          // bit_storage, bit_traits, count, find_first, find_next, find_prev, static_bit_extent
-#include <xstd/bits/detail/hash.hpp>         // hash_append_bits, hash_append_positions, std_hash
-#include <xstd/bits/detail/intrin.hpp>       // countl_zero, countr_zero
-#include <xstd/bits/ownership.hpp>           // owned_bits_t, owned_storage, owned_traits_t, owner_of, ownership, owns
-#include <algorithm>                         // any_of, equal, includes, lexicographical_compare_three_way
-#include <cassert>                           // assert
-#include <compare>                           // strong_ordering
-#include <concepts>                          // constructible_from, invocable, swappable
-#include <cstddef>                           // ptrdiff_t, size_t
-#include <functional>                        // hash, less
-#include <initializer_list>                  // initializer_list
-#include <limits>                            // numeric_limits
-#include <iterator>                          // input_iterator, iter_reference_t, make_reverse_iterator, reverse_iterator, sentinel_for
-#include <ranges>                            // begin, enable_borrowed_range, enable_view, end, input_range, range_reference_t, from_range_t, swap
-#include <type_traits>                       // conditional_t, false_type, is_invocable_r_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
-#include <utility>                           // forward, move, pair
+#include <xstd/bits/bit_traits.hpp>           // bit_storage, bit_traits, count, find_first, find_next, find_prev, static_bit_extent
+#include <xstd/bits/detail/bidirectional.hpp> // bidirectional_bit_iterator, bidirectional_bit_reference
+#include <xstd/bits/detail/hash.hpp>          // hash_append_bits, hash_append_positions, std_hash
+#include <xstd/bits/detail/intrin.hpp>        // countl_zero, countr_zero
+#include <xstd/bits/ownership.hpp>            // owned_bits_t, owned_storage, owned_traits_t, owner_of, ownership, owns
+#include <boost/container_hash/is_range.hpp>  // is_range
+#include <boost/hash2/hash_append.hpp>        // hash_append_tag
+#include <algorithm>                          // any_of, equal, includes, lexicographical_compare_three_way
+#include <cassert>                            // assert
+#include <compare>                            // strong_ordering
+#include <concepts>                           // constructible_from, invocable, swappable
+#include <cstddef>                            // ptrdiff_t, size_t
+#include <functional>                         // hash, less
+#include <initializer_list>                   // initializer_list
+#include <iterator>                           // input_iterator, iter_reference_t, make_reverse_iterator, reverse_iterator, sentinel_for
+#include <limits>                             // numeric_limits
+#include <ranges>                             // begin, enable_borrowed_range, enable_view, end, input_range, range_reference_t, from_range_t, swap
+#include <type_traits>                        // conditional_t, false_type, is_invocable_r_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
+#include <utility>                            // forward, move, pair
 
 // The set reading, [set] over any Bits with a bit_traits specialization, owning it or referring to it. [design.md#the-three-adaptors]
 namespace xstd {
@@ -174,11 +174,11 @@ public:
         static constexpr bool has_static_width = static_bit_extent<Traits, Bits>;
         using pointer                = void;
         using const_pointer          = pointer;
-        using reference              = bit_set_reference<Bits, Traits>;
+        using reference              = detail::bits::bidirectional_bit_reference<Bits, Traits>;
         using const_reference        = reference;
         using size_type              = std::size_t;
         using difference_type        = std::ptrdiff_t;
-        using iterator               = bit_set_iterator<Bits, Traits>;
+        using iterator               = detail::bits::bidirectional_bit_iterator<Bits, Traits>;
         using const_iterator         = iterator;
         using reverse_iterator       = std::reverse_iterator<iterator>;
         using const_reverse_iterator = std::reverse_iterator<const_iterator>;

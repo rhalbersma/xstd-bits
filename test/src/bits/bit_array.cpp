@@ -3,19 +3,21 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/test/unit_test.hpp>   // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <test/block_types.hpp>       // graded_extents
 #include <test/sequence/concepts.hpp> // bit_sequence
+#include <test/sequence/dense.hpp>    // yields_every_position
 #include <test/value_reference.hpp>   // value_reference
 #include <xstd/bits/bit_array.hpp>    // bit_array
+#include <boost/test/unit_test.hpp>   // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <algorithm>                  // equal, none_of
 #include <array>                      // array
-#include <concepts>                   // regular, totally_ordered
-#include <cstddef>                    // size_t
+#include <concepts>                   // regular, same_as, totally_ordered
+#include <cstddef>                    // ptrdiff_t, size_t
 #include <functional>                 // hash, identity
-#include <iterator>                   // random_access_iterator
-#include <ranges>                     // drop, random_access_range, take
+#include <iterator>                   // contiguous_iterator, random_access_iterator
+#include <ranges>                     // begin, contiguous_range, drop, random_access_range, take
 #include <stdexcept>                  // out_of_range
+#include <utility>                    // declval
 #include <vector>                     // vector
 
 BOOST_AUTO_TEST_SUITE(BitArray)
@@ -43,6 +45,33 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItsIteratorIsRandomAccess, T, Types)
 {
         using I = T::iterator;
         static_assert(std::random_access_iterator<I>);
+}
+
+// Random access is where it stops: the blocks underneath are contiguous, the bits are not addressable, and a
+// proxy reference is what forbids the last rung. std::contiguous_iterator requires iter_reference_t<I> to be a
+// real iter_value_t<I>&, which no proxy can be. [design.md#contiguous-block-container]
+BOOST_AUTO_TEST_CASE_TEMPLATE(ItIsNotAContiguousRange, T, Types)
+{
+        static_assert(not std::ranges::contiguous_range<T>);
+        static_assert(not std::contiguous_iterator<typename T::iterator>);
+}
+
+// What survives the loss of contiguity: operator& on the proxy answers an ITERATOR rather than a pointer, so the
+// identity a contiguous range spells in pointer arithmetic holds here in iterator arithmetic. std::vector<bool>
+// manages it nowhere on libstdc++, whose _Bit_reference has no operator& at all, and only on a CONST vector on
+// libc++, whose operator& sits on __bit_const_reference alone. Ours answers on both.
+// [design.md#the-iterator-is-the-primitive]
+BOOST_AUTO_TEST_CASE_TEMPLATE(AddressOfASubscriptIsTheIteratorToIt, T, Types)
+{
+        static_assert(std::same_as<decltype(&std::declval<T&>()[0UZ]), typename T::iterator>);
+
+        auto a = T();
+        for (auto n = 0UZ; n < a.size(); ++n) {
+                auto const step = static_cast<std::ptrdiff_t>(n);
+                BOOST_CHECK(&a[n] == &a[0UZ] + step);
+                BOOST_CHECK(&a[n] == std::ranges::begin(a) + step);
+                BOOST_CHECK(static_cast<bool>(*(&a[n])) == static_cast<bool>(a[n]));
+        }
 }
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(ItsConstReferenceIsAValue, T, Types)
@@ -265,6 +294,19 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheComparisonsAgreeWithTheModel, T, Types)
         }
 
         BOOST_CHECK_EQUAL(disagreements, 0UZ);
+}
+
+// Every position, densely, agreeing with the subscript -- and not a contiguous range, which no proxy sequence
+// can be. [design.md#the-iterator-is-the-primitive]
+BOOST_AUTO_TEST_CASE_TEMPLATE(ItYieldsEveryPosition, T, Types)
+{
+        auto c = T();
+        test::sequence::yields_every_position(c);
+
+        for (auto n = 0UZ; n < c.size(); ++n) {
+                c[n] = (n % 3UZ == 0UZ);
+        }
+        test::sequence::yields_every_position(c);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

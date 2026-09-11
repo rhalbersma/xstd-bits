@@ -3,8 +3,8 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <xstd/bits.hpp>            // bit_array, bit_set, bit_static_set, bit_vector, bitset, dynamic_bitset, and the inplace column
+#include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <compare>                  // three_way_comparable
 #include <concepts>                 // copyable, default_initializable, movable, swappable, totally_ordered
 #include <type_traits>              // is_nothrow_move_assignable_v, is_nothrow_move_constructible_v
@@ -57,6 +57,7 @@ BOOST_AUTO_TEST_CASE(EveryCellIsARegularContainer)
         static_assert(is_regular_container<xstd::bitset<N>            >());
         static_assert(is_regular_container<xstd::dynamic_bitset       >());
 #ifdef __cpp_lib_inplace_vector
+
         static_assert(is_regular_container<xstd::bit_inplace_set<N>   >());
         static_assert(is_regular_container<xstd::bit_inplace_vector<N>>());
         static_assert(is_regular_container<xstd::inplace_bitset<N>    >());
@@ -78,6 +79,7 @@ BOOST_AUTO_TEST_CASE(TheAllocatorFollowsTheColumnAndNotTheRow)
 
         // The inplace column holds its blocks inline, so it has none either.
 #ifdef __cpp_lib_inplace_vector
+
         static_assert(not_allocator_aware<xstd::bit_inplace_set<N>   >());
         static_assert(not_allocator_aware<xstd::bit_inplace_vector<N>>());
         static_assert(not_allocator_aware<xstd::inplace_bitset<N>    >());

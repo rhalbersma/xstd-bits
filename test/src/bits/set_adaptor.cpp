@@ -3,33 +3,34 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <test/minimal_traits.hpp>                // minimal_traits
-#include <xstd/bits/set_adaptor.hpp>              // set_adaptor
-#include <xstd/bits/bit_set.hpp>                  // bit_set
-#include <xstd/bits/bit_set_view.hpp>             // bit_set_view
-#include <xstd/bits/bit_static_set.hpp>           // bit_static_set
-#include <xstd/bits/block_sequence.hpp>           // block_array, block_vector
-#include <xstd/bits/ext/boost/dynamic_bitset.hpp> // bit_traits over boost::dynamic_bitset
-#include <xstd/bits/ext/std/bitset.hpp>           // bit_traits over std::bitset
-#include <xstd/bits/ownership.hpp>                // ownership
-#include <boost/dynamic_bitset.hpp>               // dynamic_bitset
-#include <algorithm>                              // lexicographical_compare_three_way, ranges::equal
-#include <bitset>                                 // bitset
-#include <compare>                                // strong_ordering
-#include <concepts>                               // copyable, equality_comparable, regular, totally_ordered
-#include <cstddef>                                // size_t
-#include <cstdint>                                // uint8_t, uint64_t
-#include <initializer_list>                       // initializer_list
-#include <limits>                                 // numeric_limits
-#include <ranges>                                 // bidirectional_range, iota
-#include <set>                                    // set
-#include <vector>                                 // vector
+#include <test/minimal_traits.hpp>                    // minimal_traits
+#include <xstd/bits/bit_set.hpp>                      // bit_set
+#include <xstd/bits/bit_set_view.hpp>                 // bit_set_view
+#include <xstd/bits/bit_static_set.hpp>               // bit_static_set
+#include <xstd/bits/detail/contiguous_bit_array.hpp>  // contiguous_bit_array
+#include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
+#include <xstd/bits/ext/boost/dynamic_bitset.hpp>     // bit_traits over boost::dynamic_bitset
+#include <xstd/bits/ext/std/bitset.hpp>               // bit_traits over std::bitset
+#include <xstd/bits/ownership.hpp>                    // ownership
+#include <xstd/bits/set_adaptor.hpp>                  // set_adaptor
+#include <boost/dynamic_bitset.hpp>                   // dynamic_bitset
+#include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <algorithm>                                  // lexicographical_compare_three_way, ranges::equal
+#include <bitset>                                     // bitset
+#include <compare>                                    // strong_ordering
+#include <concepts>                                   // copyable, equality_comparable, regular, totally_ordered
+#include <cstddef>                                    // size_t
+#include <cstdint>                                    // uint8_t, uint64_t
+#include <initializer_list>                           // initializer_list
+#include <limits>                                     // numeric_limits
+#include <ranges>                                     // bidirectional_range, iota
+#include <set>                                        // set
+#include <vector>                                     // vector
 
 namespace {
 
-using Storage = xstd::block_array<std::uint64_t, 100>;
-using Owner   = xstd::basic_bit_static_set<100, std::uint64_t>;
+using Storage = xstd::detail::bits::contiguous_bit_array<std::uint64_t, 100>;
+using Owner   = xstd::basic_bit_static_set<std::uint64_t, 100>;
 using View    = xstd::set_adaptor<Storage, xstd::ownership::refers>;
 using Reader  = xstd::set_adaptor<Storage const, xstd::ownership::refers>;
 using Minimal = xstd::set_adaptor<Storage, xstd::ownership::refers, test::minimal_traits<Storage>>;
@@ -206,7 +207,7 @@ BOOST_AUTO_TEST_CASE(TheViewsAnswerEveryReadOverEveryStorage)
 {
         for (auto const& model : { std::set<std::size_t>{}, { 0UZ }, { 3UZ, 63UZ, 64UZ, 99UZ }, { 99UZ } }) {
                 auto a = Storage();
-                auto v = xstd::block_vector<std::uint64_t>(100UZ);
+                auto v = xstd::detail::bits::contiguous_bit_vector<std::uint64_t>(100UZ);
                 auto s = std::bitset<100>();
                 auto d = boost::dynamic_bitset<>(100UZ);
                 for (auto const p : model) {
@@ -217,7 +218,7 @@ BOOST_AUTO_TEST_CASE(TheViewsAnswerEveryReadOverEveryStorage)
                 }
                 check_reads(View(a), model, 100UZ);
                 check_reads(Minimal(a), model, 100UZ);
-                check_reads(xstd::set_adaptor<xstd::block_vector<std::uint64_t>, xstd::ownership::refers>(v), model, 100UZ);
+                check_reads(xstd::set_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint64_t>, xstd::ownership::refers>(v), model, 100UZ);
                 check_reads(xstd::set_adaptor<std::bitset<100>, xstd::ownership::refers>(s), model, 100UZ);
                 check_reads(xstd::set_adaptor<boost::dynamic_bitset<>, xstd::ownership::refers>(d), model, 100UZ);
         }
@@ -232,13 +233,13 @@ BOOST_AUTO_TEST_CASE(MaxSizeIsThePositionsThereAreToHold)
         BOOST_CHECK_EQUAL(View(storage).max_size(), 100UZ);
 
         // An owner grows to what its storage can address, which is whole blocks of it and never the address space.
-        using Heap = xstd::set_adaptor<xstd::block_vector<std::uint64_t>, xstd::ownership::owns>;
-        BOOST_CHECK_EQUAL(Heap().max_size(), xstd::block_vector<std::uint64_t>().max_size());
+        using Heap = xstd::set_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint64_t>, xstd::ownership::owns>;
+        BOOST_CHECK_EQUAL(Heap().max_size(), xstd::detail::bits::contiguous_bit_vector<std::uint64_t>().max_size());
         BOOST_CHECK_LT(Heap().max_size(), std::numeric_limits<std::size_t>::max());
 
         // A view cannot grow what it views, so its max_size is that width -- and filling it is what full() means.
-        auto v = xstd::block_vector<std::uint64_t>(10UZ);
-        auto const view = xstd::set_adaptor<xstd::block_vector<std::uint64_t>, xstd::ownership::refers>(v);
+        auto v = xstd::detail::bits::contiguous_bit_vector<std::uint64_t>(10UZ);
+        auto const view = xstd::set_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint64_t>, xstd::ownership::refers>(v);
         BOOST_CHECK_EQUAL(view.max_size(), 10UZ);
         BOOST_CHECK(not view.full());
         view.fill();

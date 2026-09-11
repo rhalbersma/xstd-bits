@@ -8,11 +8,11 @@
 
 // Bitsets [bitset], Header <bitset> synopsis [bitset.syn]
 
-#include <boost/hash2/hash_append.hpp>            // hash_append_tag
 #include <xstd/bits/bit_traits.hpp>               // bit_storage, bit_traits, block_readable, scan_prev, static_bit_extent, word_at, zero_width
 #include <xstd/bits/detail/allocator_typedef.hpp> // allocator_typedef
 #include <xstd/bits/detail/hash.hpp>              // hash_append_bits, std_hash
 #include <xstd/bits/ownership.hpp>                // owned_storage, ownership
+#include <boost/hash2/hash_append.hpp>            // hash_append_tag
 #include <algorithm>                              // min
 #include <cassert>                                // assert
 #include <compare>                                // strong_ordering
@@ -753,7 +753,7 @@ struct owned_storage<bitset_adaptor<Bits, Traits>>
 
 // A bitset reads exactly as the storage it wraps, so one specialization on bitset_adaptor adapts all three bitsets at
 // once -- xstd::bitset<N>, xstd::inplace_bitset<N> and xstd::dynamic_bitset are aliases of it over a different
-// block_sequence -- and gives them the direct view spelling, bit_set_view<xstd::bitset<N>> and bit_span<xstd::bitset<N>>.
+// contiguous_bit_container -- and gives them the direct view spelling, bit_set_view<xstd::bitset<N>> and bit_span<xstd::bitset<N>>.
 // Every optional entry is relayed under its own guard, because absence is what the tiers select on: dropping num_blocks
 // and block here would silently turn every word-parallel walk element-wise. [design.md#a-bitset-reads-as-its-storage]
 template<class Bits, class Traits>

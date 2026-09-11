@@ -39,7 +39,7 @@ if(NOT xstd-ints_FOUND)
 endif()
 
 # xstd-misc supplies conditional_data_member_t and XSTD_NO_UNIQUE_ADDRESS, which
-# block_sequence uses to carry a run-time width without paying for it under a compile-time one.
+# contiguous_bit_container uses to carry a run-time width without paying for it under a compile-time one.
 find_package(xstd-misc 0.1.0 CONFIG QUIET)
 if(NOT xstd-misc_FOUND)
     include(FetchContent)
@@ -79,7 +79,9 @@ target_sources(
         include/xstd/bits/set_adaptor.hpp
         include/xstd/bits/bitset_adaptor.hpp
         include/xstd/bits/bit_array.hpp
-        include/xstd/bits/bit_proxy.hpp
+        include/xstd/bits/bit_inplace_set.hpp
+        include/xstd/bits/bit_inplace_vector.hpp
+        include/xstd/bits/inplace_bitset.hpp
         include/xstd/bits/bit_set.hpp
         include/xstd/bits/bit_set_view.hpp
         include/xstd/bits/bit_span.hpp
@@ -88,19 +90,57 @@ target_sources(
         include/xstd/bits/bit_subspan.hpp
         include/xstd/bits/bit_vector.hpp
         include/xstd/bits/bit_traits.hpp
-        include/xstd/bits/block_sequence.hpp
         include/xstd/bits/detail/allocator_typedef.hpp
+        include/xstd/bits/detail/bidirectional.hpp
+        include/xstd/bits/detail/contiguous_bit_array.hpp
+        include/xstd/bits/detail/contiguous_bit_container.hpp
+        include/xstd/bits/detail/contiguous_bit_inplace_vector.hpp
+        include/xstd/bits/detail/contiguous_bit_vector.hpp
         include/xstd/bits/detail/hash.hpp
         include/xstd/bits/detail/intrin.hpp
         include/xstd/bits/dynamic_bitset.hpp
-        include/xstd/bits/format.hpp
         include/xstd/bits/detail/pred.hpp
+        include/xstd/bits/detail/random_access.hpp
         include/xstd/bits/ext/boost.hpp
         include/xstd/bits/ext/boost/dynamic_bitset.hpp
         include/xstd/bits/ext/std.hpp
         include/xstd/bits/ext/std/bitset.hpp
         include/xstd/bits/ownership.hpp
 )
+
+# The list above is hand-written, and it drifted: the three inplace headers reached include/ and bits.hpp but
+# never this file set, so every installed consumer's <xstd/bits.hpp> named three headers that were not installed.
+# No compiler leg could see it -- they all build from the source tree -- and the consumer translation unit that
+# does build against the install tree had included one container header until it was made the interface gate.
+# Checked here from now on, the way test/ checks that every public header is mirrored. [design.md#the-interface-line]
+# Every header under include/, not just include/xstd/: include/ is exactly what a consumer gets, and the workloads
+# that used to sit beside it now live in examples/. A stray directory here would otherwise ride the file set's
+# BASE_DIRS onto every add_subdirectory consumer's include path while never being installed.
+# [design.md#the-interface-line]
+# HEADER_SET answers in absolute paths, so the glob asks for them that way and the message relativizes back.
+get_target_property(declared_headers ${PROJECT_NAME} HEADER_SET)
+file(
+    GLOB_RECURSE headers_on_disk
+    CONFIGURE_DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp
+)
+
+set(undeclared_headers)
+foreach(h ${headers_on_disk})
+    if(NOT h IN_LIST declared_headers)
+        file(RELATIVE_PATH undeclared ${CMAKE_CURRENT_SOURCE_DIR} ${h})
+        list(APPEND undeclared_headers ${undeclared})
+    endif()
+endforeach()
+
+if(undeclared_headers)
+    list(SORT undeclared_headers)
+    string(REPLACE ";" "\n  " undeclared_header_lines "${undeclared_headers}")
+    message(FATAL_ERROR
+        "These headers exist under include/ but are not in the HEADERS file set above, so they would not "
+        "be installed:\n  ${undeclared_header_lines}\nAdd them there, or delete them."
+    )
+endif()
 
 target_link_libraries(
     ${PROJECT_NAME} INTERFACE

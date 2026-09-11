@@ -3,21 +3,22 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <boost/test/unit_test.hpp>         // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <test/inplace_vector.hpp>          // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR, has_inplace_vector
+#include <test/inplace_vector.hpp>  // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR, has_inplace_vector
+#include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #ifdef TEST_HAS_INPLACE_VECTOR
-#include <test/sequence/concepts.hpp>       // bit_sequence, inplace_vector_bool, inplace_vector_bool_ranges
-#include <xstd/bits/sequence_adaptor.hpp>   // sequence_adaptor
-#include <xstd/bits/bit_inplace_vector.hpp> // basic_bit_inplace_vector, bit_inplace_vector
-#include <xstd/bits/block_sequence.hpp>     // block_inplace_vector
-#include <xstd/bits/ownership.hpp>          // ownership
-#include <algorithm>                        // equal
-#include <concepts>                         // same_as
-#include <cstddef>                          // size_t
-#include <cstdint>                          // uint8_t
-#include <new>                              // bad_alloc
-#include <ranges>                           // count, iota, to, transform
-#include <vector>                           // vector
+#include <test/sequence/concepts.hpp>                         // bit_sequence, inplace_vector_bool, inplace_vector_bool_ranges
+#include <test/sequence/dense.hpp>                            // yields_every_position
+#include <xstd/bits/bit_inplace_vector.hpp>                   // basic_bit_inplace_vector, bit_inplace_vector
+#include <xstd/bits/detail/contiguous_bit_inplace_vector.hpp> // contiguous_bit_inplace_vector
+#include <xstd/bits/ownership.hpp>                            // ownership
+#include <xstd/bits/sequence_adaptor.hpp>                     // sequence_adaptor
+#include <algorithm>                                          // equal
+#include <concepts>                                           // same_as
+#include <cstddef>                                            // size_t
+#include <cstdint>                                            // uint8_t
+#include <new>                                                // bad_alloc
+#include <ranges>                                             // count, iota, to, transform
+#include <vector>                                             // vector
 #endif
 
 BOOST_AUTO_TEST_SUITE(BitInplaceVector)
@@ -25,7 +26,7 @@ BOOST_AUTO_TEST_SUITE(BitInplaceVector)
 #ifdef TEST_HAS_INPLACE_VECTOR
 
 // A capacity of three whole blocks, so the width can straddle a boundary and still stop short of the capacity.
-using T = xstd::basic_bit_inplace_vector<24, std::uint8_t>;
+using T = xstd::basic_bit_inplace_vector<std::uint8_t, 24>;
 
 // Dependent, so an absent typedef is a false rather than a hard error.
 template<class X>
@@ -34,8 +35,8 @@ constexpr bool has_allocator = requires { typename X::allocator_type; };
 // The sequence reading over a run-time width under a compile-time capacity, an alias and nothing more. [design.md#the-public-names]
 BOOST_AUTO_TEST_CASE(TheInplaceSequenceIsTheSequenceAdaptorOverAnInplaceVectorOfBlocks)
 {
-        static_assert(std::same_as<T, xstd::sequence_adaptor<xstd::block_inplace_vector<std::uint8_t, 24>, xstd::ownership::owns, false>>);
-        static_assert(std::same_as<xstd::bit_inplace_vector<24>, xstd::basic_bit_inplace_vector<24, std::size_t>>);
+        static_assert(std::same_as<T, xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_inplace_vector<std::uint8_t, 24>, xstd::ownership::owns, false>>);
+        static_assert(std::same_as<xstd::bit_inplace_vector<24>, xstd::basic_bit_inplace_vector<std::size_t, 24>>);
         static_assert(test::sequence::bit_sequence<T>);
 }
 
@@ -55,7 +56,7 @@ BOOST_AUTO_TEST_CASE(ItAnswersEveryLineOfStdVectorBoolButTheAllocator)
 // The blocks are whole, so the capacity is the requested one rounded up, and the width moves under it. [design.md#the-inplace-column]
 BOOST_AUTO_TEST_CASE(TheCapacityIsTheRequestedOneRoundedUpToWholeBlocks)
 {
-        static_assert(xstd::basic_bit_inplace_vector<9, std::uint8_t>().capacity() == 16UZ);
+        static_assert(xstd::basic_bit_inplace_vector<std::uint8_t, 9>().capacity() == 16UZ);
 
         auto v = T();
         BOOST_CHECK_EQUAL(v.capacity(), 24UZ);
@@ -93,6 +94,19 @@ BOOST_AUTO_TEST_CASE(GrowingPastTheCapacityThrowsBadAlloc)
         v.push_back(true);
         BOOST_CHECK_EQUAL(v.size(), 24UZ);
         BOOST_CHECK(static_cast<bool>(v.back()));
+}
+
+// Every position, densely, agreeing with the subscript -- and not a contiguous range, which no proxy sequence
+// can be. [design.md#the-iterator-is-the-primitive]
+BOOST_AUTO_TEST_CASE(ItYieldsEveryPosition)
+{
+        auto c = T();
+        test::sequence::yields_every_position(c);
+
+        for (auto n = 0UZ; n < c.size(); ++n) {
+                c[n] = (n % 3UZ == 0UZ);
+        }
+        test::sequence::yields_every_position(c);
 }
 
 #else

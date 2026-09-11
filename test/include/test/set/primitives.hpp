@@ -6,9 +6,9 @@
 #ifndef TEST_SET_PRIMITIVES_HPP
 #define TEST_SET_PRIMITIVES_HPP
 
-#include <boost/test/unit_test.hpp>  // BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <xstd/bits/set_adaptor.hpp> // set_adaptor
 #include <xstd/bits/ownership.hpp>   // ownership
+#include <xstd/bits/set_adaptor.hpp> // set_adaptor
+#include <boost/test/unit_test.hpp>  // BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                 // equal_range, lexicographical_compare_three_way
 #include <compare>                   // is_gteq, is_gt, is_lteq, is_lt, strong_ordering
 #include <concepts>                  // convertible_to, default_initializable, equality_comparable, integral, same_as, unsigned_integral
