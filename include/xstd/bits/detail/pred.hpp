@@ -10,15 +10,17 @@
 
 namespace xstd::detail::bits {
 
-// The cast is load-bearing for an integer-class Block. Returning lhs & rhs copy-initializes the bool, which
-// takes an IMPLICIT conversion, and a 128-bit integer class offers only an explicit operator bool. The two
-// predicates below never needed it: not and != both reach bool by a contextual conversion, which an explicit
-// operator satisfies. [design.md#uint128-support]
+// Compared against a zero Block rather than converted to a bool, which is the question the name asks: a
+// conversion leaves the reader to translate "true" back into "has a bit in common". Zero is spelled as
+// contiguous_bit_container spells it. The one spelling that does not work is returning lhs & rhs bare, which
+// copy-initializes the bool and so takes an IMPLICIT conversion, where a 128-bit integer class offers only an
+// explicit operator bool; the two predicates below reach bool contextually, which an explicit operator
+// satisfies. [design.md#uint128-support]
 template<xstd::unsigned_integer Block>
 [[nodiscard]] constexpr auto intersects(Block lhs, Block rhs) noexcept
         -> bool
 {
-        return static_cast<bool>(lhs & rhs);
+        return (lhs & rhs) != static_cast<Block>(0);
 }   
 
 template<xstd::unsigned_integer Block>
