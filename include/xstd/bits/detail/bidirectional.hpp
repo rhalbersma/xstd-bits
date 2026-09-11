@@ -6,12 +6,13 @@
 #ifndef XSTD_BITS_DETAIL_BIDIRECTIONAL_HPP
 #define XSTD_BITS_DETAIL_BIDIRECTIONAL_HPP
 
-#include <xstd/bits/bit_traits.hpp> // bit_storage, bit_traits, find_next, find_prev, zero_width
-#include <cassert>                  // assert
-#include <cstddef>                  // ptrdiff_t, size_t
-#include <format>                   // formatter
-#include <iterator>                 // bidirectional_iterator_tag
-#include <type_traits>              // is_class_v, is_convertible_v, is_nothrow_constructible_v, remove_const_t
+#include <xstd/bits/bit_traits.hpp>       // bit_storage, bit_traits, find_next, find_prev, zero_width
+#include <xstd/ints/concepts/integer.hpp> // integer
+#include <cassert>                        // assert
+#include <cstddef>                        // ptrdiff_t, size_t
+#include <format>                         // formatter
+#include <iterator>                       // bidirectional_iterator_tag
+#include <type_traits>                    // is_class_v, is_convertible_v, is_nothrow_constructible_v, remove_const_t
 
 // The iterator is the primitive: a pointer and a position, reaching the bits through Traits alone. [design.md#the-iterator-is-the-primitive]
 // The set reading's pair, named after the category its iterator models; the sequence reading's is random_access.hpp.
@@ -128,11 +129,31 @@ public:
         }
 
         // A strong index type initializes from *it in one step; one with an explicit constructor takes the size_t route. [design.md#read-only-set-proxy]
+        //
+        // Not an integer, though: a Block that is an integer CLASS is constructible from size_t and brings a
+        // full set of operators, which would give every operator on this proxy two equally good readings. A
+        // strong index type is not an xstd::integer -- it has no signed/unsigned pair -- so the exclusion costs
+        // this conversion nothing it was meant to serve. The same pairing as random_access.hpp, kept in step
+        // with it. [design.md#uint128-support]
         template<class T>
         [[nodiscard]] constexpr explicit(false) operator T() const noexcept(std::is_nothrow_constructible_v<T, value_type>)  // NOLINT(misc-explicit-constructor)
-                requires std::is_class_v<T> and std::is_convertible_v<value_type, T>
+                requires std::is_class_v<T> and std::is_convertible_v<value_type, T> and (not xstd::integer<T>)
         {
                 return m_idx;
+        }
+
+        // Exact in both operands, so a comparison never reaches for a conversion, and never loses to a templated
+        // one the Block's own namespace contributes by ADL. [design.md#uint128-support]
+        [[nodiscard]] friend constexpr auto operator==(bidirectional_bit_reference lhs, bidirectional_bit_reference rhs) noexcept
+                -> bool
+        {
+                return lhs.m_idx == rhs.m_idx;
+        }
+
+        [[nodiscard]] friend constexpr auto operator==(bidirectional_bit_reference lhs, value_type rhs) noexcept
+                -> bool
+        {
+                return lhs.m_idx == rhs;
         }
 
         // fmt's protocol, found by ADL on the proxy: the same value the conversion yields.

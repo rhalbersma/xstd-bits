@@ -2129,18 +2129,53 @@ not).
 
 ### uint128-support
 
-`xstd::uint128` names a type on every compiler the matrix runs, but the library can only carry it where
-`<bit>` will: `detail::bits::intrin` forwards `countl_zero`, `countr_zero` and `popcount` straight through,
-and those take `std::unsigned_integral` alone. That is three separate facts.
+A Block is any `xstd::unsigned_integer`, and three families of them are 128 bits wide: the compiler's own
+`unsigned __int128` on GCC and Clang; the Microsoft STL's `std::_Unsigned128`, which is what `xstd::uint128`
+names on every MSVC-ABI target, clang-cl included; and the two third-party classes xstd adapts,
+`absl::uint128` and `boost::int128::uint128`. Only the first is a scalar. The other three are **classes**, and
+that difference is the whole of this section.
 
-GCC and Clang have the built-in. libstdc++ and libc++ hand it the `numeric_limits` specialization that carries
-it into the concept **only outside `__STRICT_ANSI__`**, which is why the matrix compiles as `gnu++23`. And the
-Microsoft STL's `std::_Unsigned128` is a class type, so `<bit>` declines it whatever the mode — that block
-waits on an `xstd::countl_zero`, not on anything here.
+`detail::bits::intrin` used to forward `countl_zero`, `countr_zero` and `popcount` straight to `<bit>`, whose
+domain is `std::unsigned_integral` — a **closed** concept no class can join. So the seam was constrained on an
+open concept and implemented against a closed one: every 128-bit integer class satisfied the interface and
+then failed inside the body. It now forwards to `xstd::countl_zero` and friends, which are that same domain
+plus one overload per integer class, reading the words each type already holds. This is the change of body the
+seam was left open for, and it is what makes the other three families usable.
 
-The condition worth testing is the concept, which no `#if` can spell, so the assert holds the macro to it in
-both directions. The day that seam grows its own implementation, or a new pairing lands on the matrix, the
-build says so there rather than at fifteen instantiation lists or, worse, nowhere.
+Three consequences follow, none of them obvious from the forwarding change alone.
+
+**The calls are qualified, so they bind where they are written.** `xstd::popcount(block)` is a dependent call
+by a qualified name, and ADL does not apply to qualified names, so its candidates are the overloads visible at
+`intrin.hpp` — not at the instantiation. An adapter included afterwards declares its overload too late to be
+one. A translation unit reaching for an integer-class Block therefore includes that adapter first; the test
+tree does it in `test/block_types.hpp`, above every container header. The same rule decides where
+`test::block_basis` can be spelled, which is why it sits in that header rather than in one of its own: a
+separate header could not be relied on to sort below the adapters.
+
+**A Block being a class breaks two assumptions that a scalar hid.** `detail::bits::pred`'s `intersects`
+returned `lhs & rhs` into a `bool`, which copy-initializes and so needs an **implicit** conversion; an integer
+class offers only an explicit `operator bool`. Its two neighbours never needed the cast, `not` and `!=` both
+reaching `bool` by a **contextual** conversion, which an explicit operator satisfies. And both bit proxies
+carried a templated implicit conversion to any class type constructible from their `value_type`. An integer
+class is such a class, so every operator on a proxy acquired a second, equally good reading — convert both
+sides to `bool`, or convert both sides to the Block — which cost the proxy `equality_comparable` and with it
+`std::ranges::equal`. The conversion now excludes `xstd::integer`: a proxy stands for one bit, and a bit is
+not an integer. That alone is not enough, because a proxy names its Block among its template arguments, so the
+Block's namespace is an **associated** one and ADL contributes whatever templated comparisons it declares —
+Boost.Int128 declares exactly such a set. Each proxy therefore also declares comparisons that are exact in
+both operands, which win outright.
+
+**The macro is held to the basis, not to `std`.** `TEST_HAS_UINT128` is on wherever `xstd::uint128` is a
+usable Block: on an MSVC-ABI target always, and elsewhere where `__SIZEOF_INT128__` is defined outside
+`__STRICT_ANSI__` — which is why the matrix compiles as `gnu++23`. The assert beside it is an **implication**,
+that where the macro is on the basis is really there. The equality it replaces asked `std::unsigned_integral`,
+which is the wrong question in both directions: false for every integer class that works as a Block, so it
+denied the MSVC half outright, and true in dialects where `<bit>` still declines the type. The converse is not
+worth asserting either — a basis the macro declines to use costs coverage, not correctness.
+
+The two third-party classes are optional: `test/ext_int128.hpp` detects each by `__has_include`, so a build
+without them drops it from the Block lists rather than failing. They earn their place by being the types that
+catch a container assuming a Block is a scalar — both defects above were invisible to every builtin.
 
 ### exception-escape-nolints
 
