@@ -3,32 +3,32 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/block_types.hpp>              // graded_extents
-#include <xstd/bits/bit_array.hpp>           // bit_array
-#include <xstd/bits/bit_span.hpp>            // bit_span
-#include <xstd/bits/bit_traits.hpp>          // bit_traits, block_readable
-#include <xstd/bits/detail/block_array.hpp>  // block_array
-#include <xstd/bits/detail/block_vector.hpp> // block_vector
-#include <xstd/bits/ext/std/bitset.hpp>      // bit_traits over std::bitset
-#include <xstd/bits/ownership.hpp>           // ownership
-#include <xstd/bits/sequence_adaptor.hpp>    // sequence_adaptor
-#include <boost/test/unit_test.hpp>          // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <algorithm>                         // all_of, any_of, count, equal, lexicographical_compare_three_way, mismatch, none_of
-#include <bitset>                            // bitset
-#include <compare>                           // strong_ordering
-#include <concepts>                          // copyable, equality_comparable, regular, same_as, totally_ordered
-#include <cstddef>                           // size_t
-#include <cstdint>                           // uint64_t
-#include <iterator>                          // reverse_iterator
-#include <limits>                            // numeric_limits
-#include <ranges>                            // random_access_range
-#include <stdexcept>                         // out_of_range
-#include <type_traits>                       // is_const_v
-#include <vector>                            // vector
+#include <test/block_types.hpp>                       // graded_extents
+#include <xstd/bits/bit_array.hpp>                    // bit_array
+#include <xstd/bits/bit_span.hpp>                     // bit_span
+#include <xstd/bits/bit_traits.hpp>                   // bit_traits, block_readable
+#include <xstd/bits/detail/contiguous_bit_array.hpp>  // contiguous_bit_array
+#include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
+#include <xstd/bits/ext/std/bitset.hpp>               // bit_traits over std::bitset
+#include <xstd/bits/ownership.hpp>                    // ownership
+#include <xstd/bits/sequence_adaptor.hpp>             // sequence_adaptor
+#include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
+#include <algorithm>                                  // all_of, any_of, count, equal, lexicographical_compare_three_way, mismatch, none_of
+#include <bitset>                                     // bitset
+#include <compare>                                    // strong_ordering
+#include <concepts>                                   // copyable, equality_comparable, regular, same_as, totally_ordered
+#include <cstddef>                                    // size_t
+#include <cstdint>                                    // uint64_t
+#include <iterator>                                   // reverse_iterator
+#include <limits>                                     // numeric_limits
+#include <ranges>                                     // random_access_range
+#include <stdexcept>                                  // out_of_range
+#include <type_traits>                                // is_const_v
+#include <vector>                                     // vector
 
 namespace {
 
-using Storage = xstd::detail::bits::block_array<std::uint64_t, 100>;
+using Storage = xstd::detail::bits::contiguous_bit_array<std::uint64_t, 100>;
 using Owner   = xstd::basic_bit_array<std::uint64_t, 100>;
 using View    = xstd::sequence_adaptor<Storage, xstd::ownership::refers, false>;
 using Reader  = xstd::sequence_adaptor<Storage const, xstd::ownership::refers, false>;
@@ -52,7 +52,7 @@ template<class Seq>
 template<std::size_t N>
 struct element_bits
 {
-        xstd::detail::bits::block_array<std::uint8_t, N> bits{};
+        xstd::detail::bits::contiguous_bit_array<std::uint8_t, N> bits{};
 };
 
 }       // namespace
@@ -229,8 +229,8 @@ constexpr bool can_grow = requires (X& x) { x.push_back(true); x.pop_back(); x.r
 // Growth is the owner's over storage that grows; a static width and a view have none of it. [design.md#growth]
 BOOST_AUTO_TEST_CASE(GrowthIsTheOwnersOverStorageThatGrows)
 {
-        using Dynamic = xstd::sequence_adaptor<xstd::detail::bits::block_vector<std::uint64_t>, xstd::ownership::owns, false>;
-        using Span    = xstd::sequence_adaptor<xstd::detail::bits::block_vector<std::uint64_t>, xstd::ownership::refers, false>;
+        using Dynamic = xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint64_t>, xstd::ownership::owns, false>;
+        using Span    = xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint64_t>, xstd::ownership::refers, false>;
 
         static_assert(    can_grow<Dynamic>);
         static_assert(not can_grow<Owner>);
@@ -240,7 +240,7 @@ BOOST_AUTO_TEST_CASE(GrowthIsTheOwnersOverStorageThatGrows)
         d.push_back(false);
         BOOST_CHECK_EQUAL(d.size(), 4UZ);
         BOOST_CHECK(std::ranges::equal(d, std::vector<bool>{ true, true, true, false }));
-        BOOST_CHECK_EQUAL(d.max_size(), xstd::detail::bits::block_vector<std::uint64_t>().max_size());
+        BOOST_CHECK_EQUAL(d.max_size(), xstd::detail::bits::contiguous_bit_vector<std::uint64_t>().max_size());
         BOOST_CHECK_LT(d.max_size(), std::numeric_limits<std::size_t>::max());
         BOOST_CHECK_EQUAL(Owner().max_size(), 100UZ);
 }
@@ -249,8 +249,8 @@ BOOST_AUTO_TEST_CASE(AZeroWidthSequenceIsEmpty)
 {
         auto const a = xstd::basic_bit_array<std::uint8_t, 0>();
         BOOST_CHECK(a.empty() and a.begin() == a.end());
-        auto c = xstd::detail::bits::block_array<std::uint8_t, 0>();
-        auto const v = xstd::sequence_adaptor<xstd::detail::bits::block_array<std::uint8_t, 0>, xstd::ownership::refers, false>(c);
+        auto c = xstd::detail::bits::contiguous_bit_array<std::uint8_t, 0>();
+        auto const v = xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_array<std::uint8_t, 0>, xstd::ownership::refers, false>(c);
         BOOST_CHECK(v.empty() and v.begin() == v.end());
 }
 
@@ -345,7 +345,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheAggregatesAgreeWithTheModel, T, Graded)
 // length, so the mask is exercised at both ends of a word rather than only at the top. [design.md#windows]
 BOOST_AUTO_TEST_CASE(TheAggregatesAgreeWithTheModelOnAWindowOfOurs)
 {
-        using Storage24 = xstd::detail::bits::block_array<std::uint8_t, 24>;
+        using Storage24 = xstd::detail::bits::contiguous_bit_array<std::uint8_t, 24>;
         auto disagreements = 0UZ;
         for (auto p = 0UZ; p < 6UZ; ++p) {
                 auto c = Storage24();

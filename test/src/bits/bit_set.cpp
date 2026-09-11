@@ -3,22 +3,22 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/set/concepts.hpp>             // bit_set
-#include <xstd/bits/bit_set.hpp>             // bit_set
-#include <xstd/bits/bit_set_view.hpp>        // bit_set_view
-#include <xstd/bits/detail/block_vector.hpp> // block_vector
-#include <xstd/bits/ownership.hpp>           // ownership
-#include <xstd/bits/set_adaptor.hpp>         // set_adaptor
-#include <boost/test/unit_test.hpp>          // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <algorithm>                         // equal
-#include <compare>                           // is_eq
-#include <concepts>                          // same_as
-#include <cstddef>                           // size_t
-#include <cstdint>                           // uint8_t
-#include <functional>                        // hash
-#include <memory>                            // allocator
-#include <ranges>                            // iota, to
-#include <set>                               // set
+#include <test/set/concepts.hpp>                      // bit_set
+#include <xstd/bits/bit_set.hpp>                      // bit_set
+#include <xstd/bits/bit_set_view.hpp>                 // bit_set_view
+#include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
+#include <xstd/bits/ownership.hpp>                    // ownership
+#include <xstd/bits/set_adaptor.hpp>                  // set_adaptor
+#include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <algorithm>                                  // equal
+#include <compare>                                    // is_eq
+#include <concepts>                                   // same_as
+#include <cstddef>                                    // size_t
+#include <cstdint>                                    // uint8_t
+#include <functional>                                 // hash
+#include <memory>                                     // allocator
+#include <ranges>                                     // iota, to
+#include <set>                                        // set
 
 BOOST_AUTO_TEST_SUITE(BitSet)
 
@@ -27,7 +27,7 @@ using T = xstd::basic_bit_set<std::uint8_t>;
 // The flagship: the set reading over a heap of blocks, an alias and nothing more. [design.md#the-public-names]
 BOOST_AUTO_TEST_CASE(TheDynamicSetIsTheSetAdaptorOverAHeapOfBlocks)
 {
-        static_assert(std::same_as<T, xstd::set_adaptor<xstd::detail::bits::block_vector<std::uint8_t>, xstd::ownership::owns>>);
+        static_assert(std::same_as<T, xstd::set_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint8_t>, xstd::ownership::owns>>);
         static_assert(std::same_as<xstd::basic_bit_set<std::uint8_t, std::allocator<std::uint8_t>>, T>);
         static_assert(test::set::bit_set<T>);
 }
@@ -37,7 +37,7 @@ BOOST_AUTO_TEST_CASE(InsertingPastTheWidthGrowsIt)
 {
         auto s = T();
         BOOST_CHECK(s.empty());
-        BOOST_CHECK_EQUAL(s.max_size(), xstd::detail::bits::block_vector<std::uint8_t>().max_size());
+        BOOST_CHECK_EQUAL(s.max_size(), xstd::detail::bits::contiguous_bit_vector<std::uint8_t>().max_size());
 
         auto const [ where, inserted ] = s.insert(100);
         BOOST_CHECK(inserted);
@@ -65,7 +65,7 @@ BOOST_AUTO_TEST_CASE(ItIsBuiltAndOrderedLikeAStdSet)
         BOOST_CHECK(s.is_subset_of(t));
         BOOST_CHECK(t.intersects(s));
 
-        // The view over it refers into the block_vector, as over every owner. [design.md#views-over-owners]
+        // The view over it refers into the contiguous_bit_vector, as over every owner. [design.md#views-over-owners]
         auto const v = xstd::bit_set_view(t);
         BOOST_CHECK(*v.begin() == 0UZ);
         BOOST_CHECK_EQUAL(v.size(), t.size());

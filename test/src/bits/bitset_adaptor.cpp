@@ -3,35 +3,35 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/bit_set_view.hpp>             // bit_set_view
-#include <xstd/bits/bit_span.hpp>                 // bit_span
-#include <xstd/bits/bit_traits.hpp>               // bit_traits, block_readable
-#include <xstd/bits/bitset.hpp>                   // basic_bitset, bitset
-#include <xstd/bits/bitset_adaptor.hpp>           // bitset_adaptor, has_bitops
-#include <xstd/bits/detail/block_array.hpp>       // block_array
-#include <xstd/bits/detail/block_vector.hpp>      // block_vector
-#include <xstd/bits/dynamic_bitset.hpp>           // basic_dynamic_bitset
-#include <xstd/bits/ext/boost/dynamic_bitset.hpp> // IWYU pragma: keep; bit_traits<boost::dynamic_bitset>
-#include <xstd/bits/ext/std/bitset.hpp>           // IWYU pragma: keep; bit_traits<std::bitset>
-#include <boost/dynamic_bitset.hpp>               // dynamic_bitset
-#include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <algorithm>                              // equal
-#include <array>                                  // array
-#include <bitset>                                 // bitset
-#include <compare>                                // is_lt, strong_ordering
-#include <concepts>                               // regular, same_as, totally_ordered
-#include <cstddef>                                // size_t
-#include <cstdint>                                // uint8_t, uint64_t
-#include <functional>                             // hash
-#include <iterator>                               // back_inserter
-#include <ranges>                                 // equal, iota, range, reverse
-#include <sstream>                                // istringstream
-#include <stdexcept>                              // out_of_range, overflow_error
-#include <string>                                 // string
-#include <tuple>                                  // tuple
-#include <type_traits>                            // is_nothrow_*, is_trivially_*
-#include <utility>                                // as_const, declval
-#include <vector>                                 // vector
+#include <xstd/bits/bit_set_view.hpp>                 // bit_set_view
+#include <xstd/bits/bit_span.hpp>                     // bit_span
+#include <xstd/bits/bit_traits.hpp>                   // bit_traits, block_readable
+#include <xstd/bits/bitset.hpp>                       // basic_bitset, bitset
+#include <xstd/bits/bitset_adaptor.hpp>               // bitset_adaptor, has_bitops
+#include <xstd/bits/detail/contiguous_bit_array.hpp>  // contiguous_bit_array
+#include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
+#include <xstd/bits/dynamic_bitset.hpp>               // basic_dynamic_bitset
+#include <xstd/bits/ext/boost/dynamic_bitset.hpp>     // IWYU pragma: keep; bit_traits<boost::dynamic_bitset>
+#include <xstd/bits/ext/std/bitset.hpp>               // IWYU pragma: keep; bit_traits<std::bitset>
+#include <boost/dynamic_bitset.hpp>                   // dynamic_bitset
+#include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
+#include <algorithm>                                  // equal
+#include <array>                                      // array
+#include <bitset>                                     // bitset
+#include <compare>                                    // is_lt, strong_ordering
+#include <concepts>                                   // regular, same_as, totally_ordered
+#include <cstddef>                                    // size_t
+#include <cstdint>                                    // uint8_t, uint64_t
+#include <functional>                                 // hash
+#include <iterator>                                   // back_inserter
+#include <ranges>                                     // equal, iota, range, reverse
+#include <sstream>                                    // istringstream
+#include <stdexcept>                                  // out_of_range, overflow_error
+#include <string>                                     // string
+#include <tuple>                                      // tuple
+#include <type_traits>                                // is_nothrow_*, is_trivially_*
+#include <utility>                                    // as_const, declval
+#include <vector>                                     // vector
 
 BOOST_AUTO_TEST_SUITE(BitsetAdaptor)
 
@@ -49,11 +49,11 @@ constexpr bool has_allocator = requires (X const& x) { sizeof(allocator_of<X>); 
 // The vocabulary is our storages': std::bitset's members and boost's set vocabulary, read by block. The counterparts themselves are not wrapped. [design.md#owning-is-ours]
 BOOST_AUTO_TEST_CASE(TheVocabularyIsWhatOurStoragesSpeakAndTheCounterpartsDoNot)
 {
-        static_assert(xstd::has_bitops<xstd::detail::bits::block_array<std::uint8_t, 0>>);
-        static_assert(xstd::has_bitops<xstd::detail::bits::block_array<std::uint64_t, 100>>);
-        static_assert(xstd::has_bitops<xstd::detail::bits::block_vector<std::size_t>>);
-        static_assert(wrappable<xstd::detail::bits::block_array<std::uint8_t, 0>>);
-        static_assert(wrappable<xstd::detail::bits::block_vector<std::size_t>>);
+        static_assert(xstd::has_bitops<xstd::detail::bits::contiguous_bit_array<std::uint8_t, 0>>);
+        static_assert(xstd::has_bitops<xstd::detail::bits::contiguous_bit_array<std::uint64_t, 100>>);
+        static_assert(xstd::has_bitops<xstd::detail::bits::contiguous_bit_vector<std::size_t>>);
+        static_assert(wrappable<xstd::detail::bits::contiguous_bit_array<std::uint8_t, 0>>);
+        static_assert(wrappable<xstd::detail::bits::contiguous_bit_vector<std::size_t>>);
 
         // std::bitset lacks the set vocabulary; boost has it but keeps its blocks to itself.
         static_assert(not xstd::has_bitops<std::bitset<0>>);
@@ -70,9 +70,9 @@ BOOST_AUTO_TEST_CASE(TheVocabularyIsWhatOurStoragesSpeakAndTheCounterpartsDoNot)
 // The public name is the wrapper over a packed array, with the word type in the open.
 BOOST_AUTO_TEST_CASE(TheBitsetIsTheWrapperOverAPackedArray)
 {
-        static_assert(std::same_as<xstd::basic_bitset<std::uint8_t, 9>, xstd::bitset_adaptor<xstd::detail::bits::block_array<std::uint8_t, 9>>>);
-        static_assert(std::same_as<xstd::bitset<64>, xstd::bitset_adaptor<xstd::detail::bits::block_array<std::size_t, 64>>>);
-        static_assert(std::same_as<xstd::bitset<64>, xstd::bitset_adaptor<xstd::detail::bits::block_array<std::size_t, 64>, xstd::bit_traits<xstd::detail::bits::block_array<std::size_t, 64>>>>);
+        static_assert(std::same_as<xstd::basic_bitset<std::uint8_t, 9>, xstd::bitset_adaptor<xstd::detail::bits::contiguous_bit_array<std::uint8_t, 9>>>);
+        static_assert(std::same_as<xstd::bitset<64>, xstd::bitset_adaptor<xstd::detail::bits::contiguous_bit_array<std::size_t, 64>>>);
+        static_assert(std::same_as<xstd::bitset<64>, xstd::bitset_adaptor<xstd::detail::bits::contiguous_bit_array<std::size_t, 64>, xstd::bit_traits<xstd::detail::bits::contiguous_bit_array<std::size_t, 64>>>>);
 }
 
 using Static = std::tuple
@@ -347,8 +347,8 @@ BOOST_AUTO_TEST_CASE(TheViewsReachABitset)
         BOOST_CHECK(va.is_subset_of(va));
         BOOST_CHECK_EQUAL(qa[69], true);
 
-        static_assert(std::same_as<decltype(va), xstd::bit_set_view<xstd::detail::bits::block_array<std::uint8_t, 70>> const>);
-        static_assert(std::same_as<decltype(xstd::bit_set_view(std::as_const(a))), xstd::bit_set_view<xstd::detail::bits::block_array<std::uint8_t, 70> const>>);
+        static_assert(std::same_as<decltype(va), xstd::bit_set_view<xstd::detail::bits::contiguous_bit_array<std::uint8_t, 70>> const>);
+        static_assert(std::same_as<decltype(xstd::bit_set_view(std::as_const(a))), xstd::bit_set_view<xstd::detail::bits::contiguous_bit_array<std::uint8_t, 70> const>>);
 }
 
 // Built from text, streamed back to text, and hashed: the derived members.
@@ -434,8 +434,8 @@ BOOST_AUTO_TEST_CASE(ABitsetReadsAsItsStorage)
 
         // Deduction is unchanged: over an owner a view still binds the storage it wraps, so the direct spelling and
         // the deduced one coexist rather than tie.
-        static_assert(std::same_as<decltype(xstd::bit_set_view(std::declval<B&>())), xstd::bit_set_view<xstd::detail::bits::block_array<std::size_t, 100>>>);
-        static_assert(std::same_as<decltype(xstd::bit_span(std::declval<B&>())),     xstd::bit_span<xstd::detail::bits::block_array<std::size_t, 100>>>);
+        static_assert(std::same_as<decltype(xstd::bit_set_view(std::declval<B&>())), xstd::bit_set_view<xstd::detail::bits::contiguous_bit_array<std::size_t, 100>>>);
+        static_assert(std::same_as<decltype(xstd::bit_span(std::declval<B&>())),     xstd::bit_span<xstd::detail::bits::contiguous_bit_array<std::size_t, 100>>>);
 
         // Naming the bitset changes how a view is spelled, not what the bitset offers.
         static_assert(not std::ranges::range<B>);

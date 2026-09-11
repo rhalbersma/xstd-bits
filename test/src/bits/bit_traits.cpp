@@ -3,13 +3,13 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/block_types.hpp>             // graded_extents
-#include <xstd/bits/bit_traits.hpp>         // all, any, bit_storage, bit_traits, block_readable, count, none, scan_*, static_bit_extent, word_at
-#include <xstd/bits/detail/block_array.hpp> // block_array
-#include <boost/test/unit_test.hpp>         // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <cstddef>                          // size_t
-#include <cstdint>                          // uint8_t
-#include <set>                              // set
+#include <test/block_types.hpp>                      // graded_extents
+#include <xstd/bits/bit_traits.hpp>                  // all, any, bit_storage, bit_traits, block_readable, count, none, scan_*, static_bit_extent, word_at
+#include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
+#include <boost/test/unit_test.hpp>                  // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <cstddef>                                   // size_t
+#include <cstdint>                                   // uint8_t
+#include <set>                                       // set
 
 // Two adapters over identical storage, differing only in whether they hand their blocks over. [design.md#detection-by-absence]
 namespace {
@@ -18,14 +18,14 @@ namespace {
 template<class Block, std::size_t N>
 struct element_bits
 {
-        xstd::detail::bits::block_array<Block, N> bits{};
+        xstd::detail::bits::contiguous_bit_array<Block, N> bits{};
 };
 
 // The same bits, with block access as well.
 template<class Block, std::size_t N>
 struct block_bits
 {
-        xstd::detail::bits::block_array<Block, N> bits{};
+        xstd::detail::bits::contiguous_bit_array<Block, N> bits{};
 };
 
 }       // namespace
@@ -195,7 +195,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(BlockWiseScansAgreeWithStdSet, T, BlockTypes)
 // The word at any position: aligned, straddling two blocks, and in the last block with nothing above it. [design.md#the-blit]
 BOOST_AUTO_TEST_CASE(TheWordAtAPositionReadsAcrossBlocks)
 {
-        using T = xstd::detail::bits::block_array<std::uint8_t, 20>;
+        using T = xstd::detail::bits::contiguous_bit_array<std::uint8_t, 20>;
         using traits = xstd::bit_traits<T>;
         auto c = T();
         for (auto const i : { 0UZ, 3UZ, 7UZ, 8UZ, 12UZ, 15UZ, 19UZ }) {

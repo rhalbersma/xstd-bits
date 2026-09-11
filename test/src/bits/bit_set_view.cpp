@@ -3,26 +3,26 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/set/ordering.hpp>                  // ordering_agrees_with_std_set
-#include <xstd/bits/bit_set_view.hpp>             // bit_set_view
-#include <xstd/bits/bit_static_set.hpp>           // bit_static_set
-#include <xstd/bits/bitset.hpp>                   // bitset
-#include <xstd/bits/detail/block_array.hpp>       // block_array
-#include <xstd/bits/ext/boost/dynamic_bitset.hpp> // bit_traits over boost::dynamic_bitset
-#include <xstd/bits/ext/std/bitset.hpp>           // bit_traits over std::bitset
-#include <xstd/bits/ownership.hpp>                // ownership
-#include <xstd/bits/set_adaptor.hpp>              // set_adaptor
-#include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
-#include <bitset>                                 // bitset
-#include <concepts>                               // derived_from, same_as
-#include <cstddef>                                // size_t
-#include <cstdint>                                // uint8_t
-#include <functional>                             // hash
-#include <range/v3/view/set_algorithm.hpp>        // set_union
-#include <ranges>                                 // bidirectional_range, borrowed_range, range, view
-#include <set>                                    // set
-#include <tuple>                                  // tuple
-#include <utility>                                // declval
+#include <test/set/ordering.hpp>                     // ordering_agrees_with_std_set
+#include <xstd/bits/bit_set_view.hpp>                // bit_set_view
+#include <xstd/bits/bit_static_set.hpp>              // bit_static_set
+#include <xstd/bits/bitset.hpp>                      // bitset
+#include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
+#include <xstd/bits/ext/boost/dynamic_bitset.hpp>    // bit_traits over boost::dynamic_bitset
+#include <xstd/bits/ext/std/bitset.hpp>              // bit_traits over std::bitset
+#include <xstd/bits/ownership.hpp>                   // ownership
+#include <xstd/bits/set_adaptor.hpp>                 // set_adaptor
+#include <boost/test/unit_test.hpp>                  // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <bitset>                                    // bitset
+#include <concepts>                                  // derived_from, same_as
+#include <cstddef>                                   // size_t
+#include <cstdint>                                   // uint8_t
+#include <functional>                                // hash
+#include <range/v3/view/set_algorithm.hpp>           // set_union
+#include <ranges>                                    // bidirectional_range, borrowed_range, range, view
+#include <set>                                       // set
+#include <tuple>                                     // tuple
+#include <utility>                                   // declval
 
 BOOST_AUTO_TEST_SUITE(BitSetView)
 
@@ -57,9 +57,9 @@ BOOST_AUTO_TEST_CASE(TheViewIsTheReferringAdaptor)
         static_assert(std::same_as<view_of<std::bitset<8> const>,    xstd::bit_set_view<std::bitset<8> const>>);
         static_assert(std::same_as<view_of<boost::dynamic_bitset<>>, xstd::bit_set_view<boost::dynamic_bitset<>>>);
 
-        static_assert(std::same_as<view_of<xstd::bitset<8>>,         xstd::bit_set_view<xstd::detail::bits::block_array<std::size_t, 8>>>);
-        static_assert(std::same_as<view_of<xstd::bitset<8> const>,   xstd::bit_set_view<xstd::detail::bits::block_array<std::size_t, 8> const>>);
-        static_assert(std::same_as<view_of<xstd::bit_static_set<8>>, xstd::bit_set_view<xstd::detail::bits::block_array<std::size_t, 8>>>);
+        static_assert(std::same_as<view_of<xstd::bitset<8>>,         xstd::bit_set_view<xstd::detail::bits::contiguous_bit_array<std::size_t, 8>>>);
+        static_assert(std::same_as<view_of<xstd::bitset<8> const>,   xstd::bit_set_view<xstd::detail::bits::contiguous_bit_array<std::size_t, 8> const>>);
+        static_assert(std::same_as<view_of<xstd::bit_static_set<8>>, xstd::bit_set_view<xstd::detail::bits::contiguous_bit_array<std::size_t, 8>>>);
 }
 
 // The types a bit_set_view exists for: those holding a set of positions without offering it, which bit_static_set already does.

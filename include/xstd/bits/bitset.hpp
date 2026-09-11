@@ -6,18 +6,18 @@
 #ifndef XSTD_BITS_BITSET_HPP
 #define XSTD_BITS_BITSET_HPP
 
-#include <xstd/bits/bitset_adaptor.hpp>            // bitset_adaptor
-#include <xstd/bits/detail/block_array.hpp>        // block_array
-#include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
-#include <xstd/ints/memory.hpp>                    // align_up
-#include <cstddef>                                 // size_t
-#include <limits>                                  // digits
+#include <xstd/bits/bitset_adaptor.hpp>              // bitset_adaptor
+#include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
+#include <xstd/ints/concepts/unsigned_integer.hpp>   // unsigned_integer
+#include <xstd/ints/memory.hpp>                      // align_up
+#include <cstddef>                                   // size_t
+#include <limits>                                    // digits
 
 namespace xstd {
 
 // [template.bitset] over a packed array of Block: what std::bitset<N> is, with the word type in the open. [design.md#the-public-names]
 template<xstd::unsigned_integer Block, std::size_t N>
-using basic_bitset = bitset_adaptor<detail::bits::block_array<Block, N>>;
+using basic_bitset = bitset_adaptor<detail::bits::contiguous_bit_array<Block, N>>;
 
 template<std::size_t N>
 using bitset = basic_bitset<std::size_t, N>;

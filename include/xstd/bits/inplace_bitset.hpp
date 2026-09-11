@@ -6,21 +6,21 @@
 #ifndef XSTD_BITS_INPLACE_BITSET_HPP
 #define XSTD_BITS_INPLACE_BITSET_HPP
 
-#include <version>                                   // IWYU pragma: keep; __cpp_lib_inplace_vector
+#include <version> // IWYU pragma: keep; __cpp_lib_inplace_vector
 
 // The column comes and goes with its storage, and an alias withholds a name rather than a capability. [design.md#the-inplace-column]
 #ifdef __cpp_lib_inplace_vector
 
-#include <xstd/bits/bitset_adaptor.hpp>              // bitset_adaptor
-#include <xstd/bits/detail/block_inplace_vector.hpp> // block_inplace_vector
-#include <xstd/ints/concepts/unsigned_integer.hpp>   // unsigned_integer
-#include <cstddef>                                   // size_t
+#include <xstd/bits/bitset_adaptor.hpp>                       // bitset_adaptor
+#include <xstd/bits/detail/contiguous_bit_inplace_vector.hpp> // contiguous_bit_inplace_vector
+#include <xstd/ints/concepts/unsigned_integer.hpp>            // unsigned_integer
+#include <cstddef>                                            // size_t
 
 namespace xstd {
 
 // A resizable bitset that never allocates, which is what embedded code asks for; no bit_ prefix, bitset already carrying the word. [design.md#the-public-names]
 template<xstd::unsigned_integer Block, std::size_t N>
-using basic_inplace_bitset = bitset_adaptor<detail::bits::block_inplace_vector<Block, N>>;
+using basic_inplace_bitset = bitset_adaptor<detail::bits::contiguous_bit_inplace_vector<Block, N>>;
 
 template<std::size_t N>
 using inplace_bitset = basic_inplace_bitset<std::size_t, N>;

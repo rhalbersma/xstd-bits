@@ -35,16 +35,20 @@ namespace xstd::detail::bits {
 // Whether a range IS blocks; block_readable asks if a trait hands a container's blocks over. [design.md#contiguous-block-container]
 // Subscript is spelled out because contiguous_range promises data() and the ITERATOR's operator[], never the range's,
 // and a contiguous container generalizes a C array, whose defining operation is a[i]. [design.md#contiguous-block-container]
-// Semantic requirement, as random_access_iterator states for its own i[n]: r[i] is *(std::ranges::begin(r) + i).
-template<class R>
+// Semantic requirement, as random_access_iterator states for its own i[n]: c[i] is *(std::ranges::begin(c) + i).
+// Two requires-expressions rather than one over three parameters: the mutable and the const subscript are separate
+// requirements, and each parameter list then names only what its own expression uses. [design.md#contiguous-block-container]
+template<class C>
 concept contiguous_block_container =
-        std::regular<R> and
-        std::ranges::contiguous_range<R> and
-        std::ranges::sized_range<R> and
-        xstd::unsigned_integer<std::ranges::range_value_t<R>> and
-        requires (R& r, R const& c, std::size_t i) {
-                { r[i] } -> std::same_as<std::ranges::range_reference_t<R>>;
-                { c[i] } -> std::same_as<std::ranges::range_reference_t<R const>>;
+        std::regular<C> and
+        std::ranges::sized_range<C> and
+        std::ranges::contiguous_range<C> and
+        xstd::unsigned_integer<std::ranges::range_value_t<C>> and
+        requires (C& c, std::size_t i) {
+                { c[i] } -> std::same_as<std::ranges::range_reference_t<C>>;
+        } and
+        requires (C const& c, std::size_t i) {
+                { c[i] } -> std::same_as<std::ranges::range_reference_t<C const>>;
         }
 ;
 

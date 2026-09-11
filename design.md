@@ -11,7 +11,7 @@ out of. This file holds what has landed.
 
 ### contiguous-block-container
 
-`contiguous_block_container` asks whether a range **is** blocks: a regular, contiguous, sized, subscriptable
+`contiguous_block_container` asks whether a range **is** blocks: a regular, sized, contiguous, subscriptable
 range of unsigned integers. Regular is what lets `contiguous_bit_container` default its `==` over the width and
 the blocks, in that member order, so two run-time widths part on the width before a block is read. `std::array`
 and `std::vector` both qualify, and so does `std::inplace_vector` — a runtime width over static capacity, for
@@ -20,19 +20,30 @@ free.
 Subscript is spelled out rather than left to `std::ranges::contiguous_range`, which does not imply it.
 `contiguous_range` gives `data()` and a `contiguous_iterator`, and a `contiguous_iterator` is a
 `random_access_iterator`, so `i[n]` **is** required — of the *iterator*. The range itself is under no such
-obligation, and a plain buffer wrapper proves the gap: it satisfies the other four requirements, its
-iterator subscripts happily, and `r[n]` does not compile. `contiguous_bit_container` reaches for the range's
-subscript in 140 places, `block_mask` among them, so without this the concept admits storages the class
-cannot be instantiated over — the shortfall surfacing as a hard error inside the template rather than as an
-unsatisfied constraint, which is the failure mode
+obligation, and a plain buffer wrapper proves the gap: it satisfies the other four requirements, its iterator
+subscripts happily, and `c[n]` does not compile. `contiguous_bit_container` reaches for the range's subscript in
+140 places, `block_mask` among them, so without this the concept admits storages the class cannot be
+instantiated over — the shortfall surfacing as a hard error inside the template rather than as an unsatisfied
+constraint, which is the failure mode
 [a-requires-clause-names-its-arguments](#a-requires-clause-names-its-arguments) exists to prevent.
 
-The requirement is written against the iterator's own reference type, `range_reference_t<R>`, rather than
-against `range_value_t<R>&`, because the point is not that subscript yields *a* reference but that it yields
+The mutable and the const subscript are two requires-expressions with a parameter list each, not one expression
+over `C&`, `C const&` and an index together. They are separate requirements — a storage can offer one and not
+the other — and each list then names exactly what its own requirement uses, `c` and `i`, rather than a shared
+`r`/`c` pair in which half the names are dead in half the expressions.
+
+Diagnostics were measured, not assumed, and they are *almost* the same either way: given a storage with the
+mutable subscript alone, both forms point at the failing requirement, and Clang's note is identical. GCC's
+differs only in the parameter list it echoes — `in requirements with 'C& r', 'const C& c', 'std::size_t i'`
+joined, against `in requirements with 'const C& c', 'std::size_t i'` split. A narrower echo, not a better error.
+The split is for the reader.
+
+The requirement is written against the iterator's own reference type, `range_reference_t<C>`, rather than
+against `range_value_t<C>&`, because the point is not that subscript yields *a* reference but that it yields
 *the same* one iteration does. The rest of that is semantic and no concept can check it, so it is stated
 here as the standard states it for `random_access_iterator`'s `i[n]`:
 
-> `r[i]` is `*(std::ranges::begin(r) + i)`
+> `c[i]` is `*(std::ranges::begin(c) + i)`
 
 and asserted in the tests, by address rather than by value, for every storage shipped. An unchecked
 semantic requirement that no test pins is a comment.
@@ -56,21 +67,25 @@ different word.
 
 `contiguous_bit_container` and its three aliases live under `detail/`, one header each:
 `detail/contiguous_bit_container.hpp` holds the concept, `num_blocks_v`, the class and its `bit_traits`, and
-`detail/block_array.hpp`, `detail/block_vector.hpp` and `detail/block_inplace_vector.hpp` hold one vehicle
-apiece. The names are in `xstd::detail::bits` with the rest of `detail/`, so a container spells
-`detail::bits::block_array<Block, N>` and nothing outside the library can name the vehicle at all. The one
-exception is the `bit_traits` specialization, which has to be in `xstd` because that is where the primary is
-declared: the header closes `xstd::detail::bits` and reopens `xstd` for it. It is the device that turns three
-readings over three storages into three plus three, and a factoring device is machinery rather than vocabulary:
-a user reaches every width through `bit_static_set<N>` or `basic_bit_array<Block, N>` and never spells the pair
-themselves. The split is what lets each of the nine containers include only the vehicle it uses -- `bit_array`
-names `block_array` and no longer sees `std::vector`, and the `#ifdef __cpp_lib_inplace_vector` guard sits in
-the one header that concerns it rather than in the common one.
+`detail/contiguous_bit_array.hpp`, `detail/contiguous_bit_vector.hpp` and
+`detail/contiguous_bit_inplace_vector.hpp` hold one vehicle apiece. The names are in `xstd::detail::bits` with
+the rest of `detail/`, so a container spells `detail::bits::contiguous_bit_array<Block, N>` and nothing outside
+the library can name the vehicle at all. The one exception is the `bit_traits` specialization, which has to be
+in `xstd` because that is where the primary is declared: the header closes `xstd::detail::bits` and reopens
+`xstd` for it. It is the device that turns three readings over three storages into three plus three, and a
+factoring device is machinery rather than vocabulary: a user reaches every width through `bit_static_set<N>` or
+`basic_bit_array<Block, N>` and never spells the pair themselves. The split is what lets each of the nine
+containers include only the vehicle it uses -- `bit_array` names `contiguous_bit_array` and no longer sees
+`std::vector`, and the `#ifdef __cpp_lib_inplace_vector` guard sits in the one header that concerns it rather
+than in the common one.
 
 **The name says what it does to its argument.** It takes a `contiguous_block_container` — a range that *is*
 blocks ([contiguous-block-container](#contiguous-block-container)) — and adds the bit interface. In goes
-storage that answers about blocks, out comes something that answers about bits. Concept and class differ by
-one word, and it is the word that changes.
+storage that answers about blocks, out comes something that answers about bits. Concept and class differ by one
+word, and it is the word that changes. The three aliases follow the same rule: `contiguous_bit_array`,
+`contiguous_bit_vector` and `contiguous_bit_inplace_vector` each name the bit container over one block
+container. Their former names pointed at the argument instead of the result — `block_array` read as *an array of
+blocks*, which is what it is instantiated over, `std::array<Block, n>`, and not what the alias is.
 
 That is also what earns it a `bit_traits` specialization, and puts it on exactly the footing of the legacy
 bitsets. The trait is specialized for **bit containers** ([the-trait](#the-trait)): `ext/std/bitset.hpp` and
@@ -115,10 +130,10 @@ Only a storage holding its blocks inline out-aligns a `size_t`, and it does so b
 `block_type` is both wide enough to hold any width and exactly the size of the gap it fills --
 `contiguous_bit_container` is then its two members and nothing else, at the same size the padding cost.
 `std::array` reaches none of this, a static width carrying no member at all, and neither does `std::vector`,
-whose alignment is a pointer's whatever it holds; `block_inplace_vector<xstd::uint128, N>` is the one cell that
-does. The `static_assert` beside the alias holds the two facts that make `block_type` the right carrier, so a
-storage over-aligned for some other reason fails loudly rather than truncating a width. Every reader goes
-through `size()`, which converts once, so the arithmetic stays a `size_t`'s.
+whose alignment is a pointer's whatever it holds; `contiguous_bit_inplace_vector<xstd::uint128, N>` is the one
+cell that does. The `static_assert` beside the alias holds the two facts that make `block_type` the right
+carrier, so a storage over-aligned for some other reason fails loudly rather than truncating a width. Every
+reader goes through `size()`, which converts once, so the arithmetic stays a `size_t`'s.
 
 ### default-construction
 
@@ -140,10 +155,10 @@ at width zero. `reserve`, `capacity` and `shrink_to_fit` are in bits and exist w
 `boost::dynamic_bitset` mean by it; the set reading's `clear()` is `fill(false)` and never reaches this
 member, so the landmine #80 recorded -- probing `clear()` on boost and emptying the width -- cannot recur.
 
-`block_inplace_vector<Block, N>` is the third storage: a run-time width under a compile-time capacity of `N`
-bits, behind `__cpp_lib_inplace_vector` until every library in the matrix has it. It needs nothing of its
-own, `std::inplace_vector` satisfying `contiguous_block_container` as it is; `resize`, `reserve` and
-`push_back` past the capacity throw `std::bad_alloc`, as that library specifies.
+`contiguous_bit_inplace_vector<Block, N>` is the third storage: a run-time width under a compile-time capacity
+of `N` bits, behind `__cpp_lib_inplace_vector` until every library in the matrix has it. It needs nothing of its
+own, `std::inplace_vector` satisfying `contiguous_block_container` as it is; `resize`, `reserve` and `push_back`
+past the capacity throw `std::bad_alloc`, as that library specifies.
 
 The adaptors take growth by detection on the storage, never through the trait: growth is a container's
 business and no view's, so it exists on an owner and on nothing else. `sequence_adaptor` is
@@ -342,7 +357,7 @@ than by remembering a prefix at every call site — which is what a class was pr
 already did, so that a type-constraint can name the trait: `bit_storage<Bits> Traits` expands to
 `bit_storage<Traits, Bits>`, a type-constraint binding its own parameter first. That is what lets every
 consumer of the trait carry `Traits = bit_traits<Bits>` as an explicit parameter, `basic_string`-style, and
-what turns the tier into a knob over identical storage — one `block_array`, two traits, one variable.
+what turns the tier into a knob over identical storage — one `contiguous_bit_array`, two traits, one variable.
 
 ### what-the-trait-reconciles
 
@@ -692,23 +707,23 @@ what `-Wunused-lambda-capture` reports.
 
 ### the-three-adaptors
 
-Three class templates carry the three readings: `set_adaptor`, `sequence_adaptor`, `bitset_adaptor`. Each
-is written against the trait and never against a storage, so one adaptor serves `block_array` and
-`block_vector` alike as an owner, and `std::bitset` and `boost::dynamic_bitset` as a view
-([owning-is-ours](#owning-is-ours)), and no owning type ever needs a `bit_traits` of its own. The
-public names are aliases in two layers over them: `basic_bit_static_set<B, N>` is
-`set_adaptor<block_array<B, N>, owns>`, `basic_bit_array<B, N>` is `sequence_adaptor<block_array<B, N>, owns, false>`,
-and `basic_bitset<B, N>` is `bitset_adaptor<block_array<B, N>>`; `bit_static_set<N>`, `bit_array<N>` and
+Three class templates carry the three readings: `set_adaptor`, `sequence_adaptor`, `bitset_adaptor`. Each is
+written against the trait and never against a storage, so one adaptor serves `contiguous_bit_array` and
+`contiguous_bit_vector` alike as an owner, and `std::bitset` and `boost::dynamic_bitset` as a view
+([owning-is-ours](#owning-is-ours)), and no owning type ever needs a `bit_traits` of its own. The public names
+are aliases in two layers over them: `basic_bit_static_set<B, N>` is `set_adaptor<contiguous_bit_array<B, N>,
+owns>`, `basic_bit_array<B, N>` is `sequence_adaptor<contiguous_bit_array<B, N>, owns, false>`, and
+`basic_bitset<B, N>` is `bitset_adaptor<contiguous_bit_array<B, N>>`; `bit_static_set<N>`, `bit_array<N>` and
 `bitset<N>` are those at `std::size_t`.
 
 ### owning-is-ours
 
-Owning is ours and viewing is interop. An owning adaptor sits over a storage of this library, `block_array` or
-`block_vector`, and nothing else is supported or tested: `bitset_adaptor` requires the vocabulary
-([a-strict-extension](#a-strict-extension)) and block access, which neither counterpart satisfies, and the
-owning `set_adaptor` and `sequence_adaptor` take their ordering from the trait's entries alone, with no
-synthesized fallback for a storage without them. A view sits over any type with a trait, which is what the
-two `ext/` specializations are for.
+Owning is ours and viewing is interop. An owning adaptor sits over a storage of this library,
+`contiguous_bit_array` or `contiguous_bit_vector`, and nothing else is supported or tested: `bitset_adaptor`
+requires the vocabulary ([a-strict-extension](#a-strict-extension)) and block access, which neither counterpart
+satisfies, and the owning `set_adaptor` and `sequence_adaptor` take their ordering from the trait's entries
+alone, with no synthesized fallback for a storage without them. A view sits over any type with a trait, which is
+what the two `ext/` specializations are for.
 
 The split is what a foreign owner cost against what it bought. Every owner-only member -- construction
 through the storage's constructors, growth, the saturating shifts, the checked element access, the ordering
@@ -735,11 +750,11 @@ view — `*self.m_bits` does not — for free.
 
 Every mutator is then gated on the trait and nothing else: `requires requires { Traits::op(self.storage(), …) }`
 reads "the trait lets *this handle* write". A const owner's accessor hands the trait a `Bits const&`, which no
-`unchecked_assign` accepts; a const view's hands it `Bits&`, which is what a view is for; a view over
-`Bits const` hands it `Bits const&` again. Const, ownership and a floor-only trait are all the same question, asked once.
-The exceptions are the constructors and, once storage grows, the growth members, which need an explicit
-`requires (owns(Own))`: the requires-expression tests what the storage can do, not what this handle may do
-to it, and a view over a `block_vector` must not be able to resize what it does not own.
+`unchecked_assign` accepts; a const view's hands it `Bits&`, which is what a view is for; a view over `Bits
+const` hands it `Bits const&` again. Const, ownership and a floor-only trait are all the same question, asked
+once. The exceptions are the constructors and, once storage grows, the growth members, which need an explicit
+`requires (owns(Own))`: the requires-expression tests what the storage can do, not what this handle may do to
+it, and a view over a `contiguous_bit_vector` must not be able to resize what it does not own.
 
 ### views-follow-their-precedent
 
@@ -922,24 +937,24 @@ product of `N` objects, and a packed sequence is one object. `std::hash` is aske
 ### views-over-owners
 
 An owner has no trait of its own — `bit_static_set`, `bit_array` and `bitset` are thin wrappers over a
-`block_array` that already has one — so a view over an owner is a view over the storage it wraps:
-`bit_set_view(xstd::bitset<64>&)` is `set_adaptor<block_array<size_t, 64>, refers>`, and the pointer in the
-iterator is to the `block_array`, never to the `bitset`. The owner hands its storage over through
+`contiguous_bit_array` that already has one — so a view over an owner is a view over the storage it wraps:
+`bit_set_view(xstd::bitset<64>&)` is `set_adaptor<contiguous_bit_array<size_t, 64>, refers>`, and the pointer in
+the iterator is to the `contiguous_bit_array`, never to the `bitset`. The owner hands its storage over through
 `owned_storage<Owner>`, declared beside it as `bit_traits` is beside a storage and never defined for anything
-else, so `owner_of<Owner, Bits, Traits>` reads "this owner wraps exactly the storage and trait this view
-refers through". Const flows one way: a const owner gives a view over `Bits const`, a mutable owner either.
+else, so `owner_of<Owner, Bits, Traits>` reads "this owner wraps exactly the storage and trait this view refers
+through". Const flows one way: a const owner gives a view over `Bits const`, a mutable owner either.
 
 The view's converting constructor takes the owner's private member directly, which is why each owner
 befriends the two referring adaptors — the one friendship in the tree that runs upward, from a container to
 the views over it, and it grants access to a member and to nothing that member's type does not already expose.
-Storage stays private; nothing on an owner's surface says `block_array`.
+Storage stays private; nothing on an owner's surface says `contiguous_bit_array`.
 
 ### the-interface-line
 
 **If a user never spells it, it lives in `detail/`.** The name or the header, either counts. That is the whole
-rule, and it is a test rather than a judgement: `bit_static_set` is spelled, `block_array` is not; `bit_traits`
-is spelled by anyone adapting their own storage, `bidirectional_bit_reference` is reached only through the
-`iterator` and `reference` typedefs and is spelled by nobody.
+rule, and it is a test rather than a judgement: `bit_static_set` is spelled, `contiguous_bit_array` is not;
+`bit_traits` is spelled by anyone adapting their own storage, `bidirectional_bit_reference` is reached only
+through the `iterator` and `reference` typedefs and is spelled by nobody.
 
 What the rule keeps on the interface side, each with the reason it is not obvious:
 
@@ -988,17 +1003,17 @@ path of every consumer who does not.
 ### the-public-names
 
 Three layers of names. The primaries carry the reading and take the storage: `set_adaptor<Bits, Own, Traits>`,
-`sequence_adaptor<Bits, Own, Windowed, Traits>`, `bitset_adaptor<Bits, Traits>`, the parameters the trait's consumers
-need and no more. The `basic_` layer chooses the storage and leaves the block open, `basic_string`-style:
-`basic_bit_static_set<Block, N>`, `basic_bit_set<Block, Allocator>` and their four siblings. The block leads in
-every column, so a `basic_` name hands its vehicle the arguments in the order it was given them --
-`basic_bit_static_set<Block, N>` is `set_adaptor<block_array<Block, N>, owns>`, straight through. The static and
-inplace columns used to take `<N, Block>` and transpose at the call, which nothing gained: `Block` carries no
-default in those columns, so it is free to lead, and leading is what `std::array<T, N>`, `std::inplace_vector<T, N>`
-and `std::span<T, Extent>` all do with the pair. The restricted layer
-fixes `std::size_t` and `std::allocator`: `bit_static_set<N>`, `bit_array<N>` and `bitset<N>` keep one parameter,
-and `bit_set`, `bit_vector` and `dynamic_bitset` keep none, so the flagship is `xstd::bit_set` and the counterpart
-of `boost::dynamic_bitset<>` is `xstd::dynamic_bitset`, without the `<>`.
+`sequence_adaptor<Bits, Own, Windowed, Traits>`, `bitset_adaptor<Bits, Traits>`, the parameters the trait's
+consumers need and no more. The `basic_` layer chooses the storage and leaves the block open,
+`basic_string`-style: `basic_bit_static_set<Block, N>`, `basic_bit_set<Block, Allocator>` and their four
+siblings. The block leads in every column, so a `basic_` name hands its vehicle the arguments in the order it
+was given them -- `basic_bit_static_set<Block, N>` is `set_adaptor<contiguous_bit_array<Block, N>, owns>`,
+straight through. The static and inplace columns used to take `<N, Block>` and transpose at the call, which
+nothing gained: `Block` carries no default in those columns, so it is free to lead, and leading is what
+`std::array<T, N>`, `std::inplace_vector<T, N>` and `std::span<T, Extent>` all do with the pair. The restricted
+layer fixes `std::size_t` and `std::allocator`: `bit_static_set<N>`, `bit_array<N>` and `bitset<N>` keep one
+parameter, and `bit_set`, `bit_vector` and `dynamic_bitset` keep none, so the flagship is `xstd::bit_set` and
+the counterpart of `boost::dynamic_bitset<>` is `xstd::dynamic_bitset`, without the `<>`.
 
 The unmarked name goes to the flagship — `bit_set` is the dynamic set
 benchmarked against `std::set` and `std::flat_set` — and the qualifier marks the special case, `bit_static_set`.
@@ -1026,14 +1041,14 @@ that name for exactly the case P0843 was naming ([the-inplace-column](#the-inpla
 counterparts reproduced under their own names ([a-strict-extension](#a-strict-extension)).
 
 One header per restricted name, holding its `basic_` form beside it, each over one storage: `bit_set`,
-`bit_vector` and `dynamic_bitset` over `block_vector<Block, Allocator>`, beside `bit_static_set`, `bit_array` and
-`bitset` over `block_array<Block, N>`, and `bit_inplace_set`, `bit_inplace_vector` and `inplace_bitset` over
-`block_inplace_vector<Block, N>` ([the-inplace-column](#the-inplace-column)). The header is the name's home and
-the only place it is spelled; `bits.hpp` includes them all. Each static name has an `aligned` form in the
-namespace of that name, in both layers, its width rounded up to whole blocks so that no block carries an unused
-tail: `aligned::bitset<9>` is `bitset<64>` and `aligned::basic_bitset<std::uint8_t, 9>` is
-`basic_bitset<std::uint8_t, 16>`. The inplace column has no `aligned` form, its `N` being a capacity the storage
-already rounds up rather than a width to round.
+`bit_vector` and `dynamic_bitset` over `contiguous_bit_vector<Block, Allocator>`, beside `bit_static_set`,
+`bit_array` and `bitset` over `contiguous_bit_array<Block, N>`, and `bit_inplace_set`, `bit_inplace_vector` and
+`inplace_bitset` over `contiguous_bit_inplace_vector<Block, N>` ([the-inplace-column](#the-inplace-column)). The
+header is the name's home and the only place it is spelled; `bits.hpp` includes them all. Each static name has
+an `aligned` form in the namespace of that name, in both layers, its width rounded up to whole blocks so that no
+block carries an unused tail: `aligned::bitset<9>` is `bitset<64>` and `aligned::basic_bitset<std::uint8_t, 9>`
+is `basic_bitset<std::uint8_t, 16>`. The inplace column has no `aligned` form, its `N` being a capacity the
+storage already rounds up rather than a width to round.
 
 ### the-generated-table
 
@@ -1045,10 +1060,10 @@ Every cell answers the same to all but one column: default-constructible, copyab
 `swap` as both a member and a free function, and **nothing-throwing** in both move directions -- a move that
 could throw would cost every growing container its strong guarantee.
 
-The allocator is the exception, and it follows the **column, not the row**: the dynamic column allocates and
-all three of its readings answer `get_allocator`; the static column is a `std::array` and has none to show;
-the inplace column holds its blocks inline and has none either. So `bit_set`, `bit_vector` and `dynamic_bitset`
-have it and the other six do not, which is a fact about `block_vector` rather than about sets, sequences or
+The allocator is the exception, and it follows the **column, not the row**: the dynamic column allocates and all
+three of its readings answer `get_allocator`; the static column is a `std::array` and has none to show; the
+inplace column holds its blocks inline and has none either. So `bit_set`, `bit_vector` and `dynamic_bitset` have
+it and the other six do not, which is a fact about `contiguous_bit_vector` rather than about sets, sequences or
 bitsets.
 
 Two of those answers were the same fact arriving late. `set_adaptor` was the one owning adaptor without
@@ -1066,16 +1081,16 @@ the expression compiles.
 
 The third storage point gets public names, one per reading and each an alias like every other name below the
 adaptors: `basic_bit_inplace_set<Block, N>`, `basic_bit_inplace_vector<Block, N>` and
-`basic_inplace_bitset<Block, N>` over `block_inplace_vector<Block, N>`, with `bit_inplace_set<N>`,
+`basic_inplace_bitset<Block, N>` over `contiguous_bit_inplace_vector<Block, N>`, with `bit_inplace_set<N>`,
 `bit_inplace_vector<N>` and `inplace_bitset<N>` at the machine word. `inplace_bitset` takes no `bit_` prefix
 because `bitset` already carries the word, and `inplace` is one storage word down each column rather than a
 second vocabulary for the same thing.
 
 `N` is a **capacity** in bits here, where the static column's `N` is a width. The names carry that and the
-parameter lists do not, which is the same hazard `basic_bit_static_set<Block, N>` and `basic_bit_inplace_set<Block, N>`
-share by shape. The capacity is rounded up to whole blocks by `block_inplace_vector` itself, so
-`basic_bit_inplace_vector<std::uint8_t, 9>` holds sixteen bits; the width under it is a run-time one and carries
-an unused tail like any other.
+parameter lists do not, which is the same hazard `basic_bit_static_set<Block, N>` and
+`basic_bit_inplace_set<Block, N>` share by shape. The capacity is rounded up to whole blocks by
+`contiguous_bit_inplace_vector` itself, so `basic_bit_inplace_vector<std::uint8_t, 9>` holds sixteen bits; the
+width under it is a run-time one and carries an unused tail like any other.
 
 The whole column sits behind `__cpp_lib_inplace_vector`, in practice libstdc++ >= 16, which the matrix carries on
 gcc 16 and 17-SVN. An alias adds no capability, so the guard withholds a name rather than a feature, and each
@@ -1306,7 +1321,7 @@ friend: the dependency runs one way, from the container to the iterator, and the
 declarations the earlier views needed (*"Clang requires it, GCC does not"*) have nothing left to declare.
 
 The pointer is to the **storage** an owner wraps, never to the owner: `bit_static_set` hands out
-`detail::bits::bidirectional_bit_iterator<block_array<B, N>>`, which is why no owning type ever needs a
+`detail::bits::bidirectional_bit_iterator<contiguous_bit_array<B, N>>`, which is why no owning type ever needs a
 `bit_traits` of its own.
 
 **Where they live, and what they are called.** Both pairs are in `detail/`, one header each --
@@ -1401,12 +1416,12 @@ A `bitset` has a `bit_traits` of its own, so a view can name it: `bit_set_view<x
 because `xstd::bitset<N>`, `xstd::inplace_bitset<N>` and `xstd::dynamic_bitset` are all aliases of that one
 template over a different `contiguous_bit_container` -- so all three, and every `basic_` form, arrive together.
 
-This supersedes the reasoning recorded when `ext/xstd` was deleted, which concluded that a bitset needs no
-trait because it already joins through `owned_storage`. That is still how a view *deduces*: over an owner,
+This supersedes the reasoning recorded when `ext/xstd` was deleted, which concluded that a bitset needs no trait
+because it already joins through `owned_storage`. That is still how a view *deduces*: over an owner,
 `bit_set_view(bs)` binds the storage the owner wraps, and the deduced type is
-`bit_set_view<block_array<std::size_t, N>>`. What was missing is that the deduced spelling is the only one a
-reader can write down, and it names an implementation detail -- `block_array` is not in the landscape tables
-and should not have to be. Naming the bitset is what a reader means.
+`bit_set_view<contiguous_bit_array<std::size_t, N>>`. What was missing is that the deduced spelling is the only
+one a reader can write down, and it names an implementation detail -- `contiguous_bit_array` is not in the
+landscape tables and should not have to be. Naming the bitset is what a reader means.
 
 The two coexist rather than compete, and one line keeps them from tying. The guide for a plain storage was
 unconstrained, viable for anything; it stayed out of the way for an owner only because
@@ -1454,10 +1469,10 @@ said `-O2`, which was never true of any build in the tree.
 Run-to-run noise was ±0.5 to ±3%, so a figure inside a couple of percent is a zero.
 
 **The trait layer is free, and not merely inside the noise.** Under callgrind, at 1024 bits, the view over a
-`bitset_adaptor` and the view over the raw `block_array` retire **6764 instructions per pass each**, equal to
-the digit, with the same 422 data reads, 1265 branches and 17 simulated mispredicts. So
-[a-bitset-reads-as-its-storage](#a-bitset-reads-as-its-storage) costs nothing at run time: the twenty
-forwarded entries inline away completely.
+`bitset_adaptor` and the view over the raw `contiguous_bit_array` retire **6764 instructions per pass each**,
+equal to the digit, with the same 422 data reads, 1265 branches and 17 simulated mispredicts. So
+[a-bitset-reads-as-its-storage](#a-bitset-reads-as-its-storage) costs nothing at run time: the twenty forwarded
+entries inline away completely.
 
 **The pointer costs about eight percent on set iteration, and the cause is one `lea`.** Instruction counts,
 differenced between two fixed iteration counts so startup cancels, at 1024 bits under GCC 15:

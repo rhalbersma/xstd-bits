@@ -3,27 +3,27 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/block_types.hpp>                   // graded_extents
-#include <test/minimal_traits.hpp>                // minimal_traits
-#include <test/value_reference.hpp>               // value_reference
-#include <xstd/bits/bit_span.hpp>                 // bit_span
-#include <xstd/bits/bit_traits.hpp>               // bit_traits
-#include <xstd/bits/detail/block_array.hpp>       // block_array
-#include <xstd/bits/detail/random_access.hpp>     // random_access_bit_iterator, random_access_bit_reference
-#include <xstd/bits/ext/boost/dynamic_bitset.hpp> // bit_traits over boost::dynamic_bitset
-#include <xstd/bits/ext/std/bitset.hpp>           // bit_traits over std::bitset
-#include <boost/dynamic_bitset.hpp>               // dynamic_bitset
-#include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <algorithm>                              // equal, ranges::reverse, ranges::sort, reverse, sort
-#include <bitset>                                 // bitset
-#include <concepts>                               // convertible_to, random_access_iterator, same_as, sortable
-#include <cstddef>                                // ptrdiff_t, size_t
-#include <cstdint>                                // uint64_t
-#include <iterator>                               // iter_move, next, prev, reverse_iterator
-#include <ranges>                                 // subrange
-#include <type_traits>                            // is_assignable_v, is_convertible_v, is_trivially_copy_constructible_v, is_trivially_destructible_v
-#include <utility>                                // declval
-#include <vector>                                 // vector
+#include <test/block_types.hpp>                      // graded_extents
+#include <test/minimal_traits.hpp>                   // minimal_traits
+#include <test/value_reference.hpp>                  // value_reference
+#include <xstd/bits/bit_span.hpp>                    // bit_span
+#include <xstd/bits/bit_traits.hpp>                  // bit_traits
+#include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
+#include <xstd/bits/detail/random_access.hpp>        // random_access_bit_iterator, random_access_bit_reference
+#include <xstd/bits/ext/boost/dynamic_bitset.hpp>    // bit_traits over boost::dynamic_bitset
+#include <xstd/bits/ext/std/bitset.hpp>              // bit_traits over std::bitset
+#include <boost/dynamic_bitset.hpp>                  // dynamic_bitset
+#include <boost/test/unit_test.hpp>                  // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <algorithm>                                 // equal, ranges::reverse, ranges::sort, reverse, sort
+#include <bitset>                                    // bitset
+#include <concepts>                                  // convertible_to, random_access_iterator, same_as, sortable
+#include <cstddef>                                   // ptrdiff_t, size_t
+#include <cstdint>                                   // uint64_t
+#include <iterator>                                  // iter_move, next, prev, reverse_iterator
+#include <ranges>                                    // subrange
+#include <type_traits>                               // is_assignable_v, is_convertible_v, is_trivially_copy_constructible_v, is_trivially_destructible_v
+#include <utility>                                   // declval
+#include <vector>                                    // vector
 
 namespace {
 
@@ -70,9 +70,9 @@ template<class T>
 
 BOOST_AUTO_TEST_SUITE(RandomAccess)
 
-using ArrayTypes = test::graded_extents<xstd::detail::bits::block_array>;
+using ArrayTypes = test::graded_extents<xstd::detail::bits::contiguous_bit_array>;
 
-using Bits = xstd::detail::bits::block_array<std::uint64_t, 200>;
+using Bits = xstd::detail::bits::contiguous_bit_array<std::uint64_t, 200>;
 
 BOOST_AUTO_TEST_CASE(AnIteratorIsAPointerAndAPosition)
 {

@@ -6,18 +6,18 @@
 #ifndef XSTD_BITS_BIT_VECTOR_HPP
 #define XSTD_BITS_BIT_VECTOR_HPP
 
-#include <xstd/bits/detail/block_vector.hpp>       // block_vector
-#include <xstd/bits/ownership.hpp>                 // ownership
-#include <xstd/bits/sequence_adaptor.hpp>          // sequence_adaptor
-#include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
-#include <cstddef>                                 // size_t
-#include <memory>                                  // allocator
+#include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
+#include <xstd/bits/ownership.hpp>                    // ownership
+#include <xstd/bits/sequence_adaptor.hpp>             // sequence_adaptor
+#include <xstd/ints/concepts/unsigned_integer.hpp>    // unsigned_integer
+#include <cstddef>                                    // size_t
+#include <memory>                                     // allocator
 
 namespace xstd {
 
 // The sequence reading over a heap of blocks: std::vector<bool> under the name Hinnant proposed for it. [design.md#the-public-names]
 template<xstd::unsigned_integer Block, class Allocator = std::allocator<Block>>
-using basic_bit_vector = sequence_adaptor<detail::bits::block_vector<Block, Allocator>, ownership::owns, false>;
+using basic_bit_vector = sequence_adaptor<detail::bits::contiguous_bit_vector<Block, Allocator>, ownership::owns, false>;
 
 using bit_vector = basic_bit_vector<std::size_t>;
 

@@ -3,39 +3,39 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/bitset_adaptor.hpp>      // bitset_adaptor
-#include <xstd/bits/detail/block_vector.hpp> // block_vector
-#include <xstd/bits/dynamic_bitset.hpp>      // dynamic_bitset
-#include <boost/dynamic_bitset.hpp>          // dynamic_bitset, to_string
-#include <boost/test/unit_test.hpp>          // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <algorithm>                         // equal
-#include <array>                             // array
-#include <compare>                           // is_eq, is_gt, is_lt
-#include <concepts>                          // regular, same_as, totally_ordered
-#include <cstddef>                           // size_t
-#include <cstdint>                           // uint8_t, uint64_t
-#include <functional>                        // hash
-#include <iterator>                          // back_inserter
-#include <memory>                            // allocator
-#include <ranges>                            // equal, iota
-#include <sstream>                           // istringstream, ostringstream
-#include <stdexcept>                         // invalid_argument, out_of_range, overflow_error
-#include <string>                            // string
-#include <tuple>                             // tuple
-#include <utility>                           // as_const, pair
-#include <vector>                            // vector
+#include <xstd/bits/bitset_adaptor.hpp>               // bitset_adaptor
+#include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
+#include <xstd/bits/dynamic_bitset.hpp>               // dynamic_bitset
+#include <boost/dynamic_bitset.hpp>                   // dynamic_bitset, to_string
+#include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
+#include <algorithm>                                  // equal
+#include <array>                                      // array
+#include <compare>                                    // is_eq, is_gt, is_lt
+#include <concepts>                                   // regular, same_as, totally_ordered
+#include <cstddef>                                    // size_t
+#include <cstdint>                                    // uint8_t, uint64_t
+#include <functional>                                 // hash
+#include <iterator>                                   // back_inserter
+#include <memory>                                     // allocator
+#include <ranges>                                     // equal, iota
+#include <sstream>                                    // istringstream, ostringstream
+#include <stdexcept>                                  // invalid_argument, out_of_range, overflow_error
+#include <string>                                     // string
+#include <tuple>                                      // tuple
+#include <utility>                                    // as_const, pair
+#include <vector>                                     // vector
 
 BOOST_AUTO_TEST_SUITE(DynamicBitset)
 
 // boost::dynamic_bitset's counterpart over a heap of blocks: the same wrapper, at a run-time width. [design.md#a-strict-extension]
 BOOST_AUTO_TEST_CASE(TheDynamicBitsetIsTheWrapperOverAHeapOfBlocks)
 {
-        static_assert(std::same_as<xstd::basic_dynamic_bitset<std::uint8_t>, xstd::bitset_adaptor<xstd::detail::bits::block_vector<std::uint8_t>>>);
+        static_assert(std::same_as<xstd::basic_dynamic_bitset<std::uint8_t>, xstd::bitset_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint8_t>>>);
         static_assert(std::same_as<xstd::basic_dynamic_bitset<std::uint8_t, std::allocator<std::uint8_t>>, xstd::basic_dynamic_bitset<std::uint8_t>>);
         static_assert(std::regular<xstd::basic_dynamic_bitset<std::uint8_t>>);
 }
 
-// Ours over a block_vector at two block widths: the counterpart's contract on both.
+// Ours over a contiguous_bit_vector at two block widths: the counterpart's contract on both.
 using Dynamic = std::tuple
 <       xstd::basic_dynamic_bitset<std::uint8_t>
 ,       xstd::basic_dynamic_bitset<std::uint64_t>

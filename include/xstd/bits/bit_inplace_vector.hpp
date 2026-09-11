@@ -11,17 +11,17 @@
 // The column comes and goes with its storage, and an alias withholds a name rather than a capability. [design.md#the-inplace-column]
 #ifdef __cpp_lib_inplace_vector
 
-#include <xstd/bits/detail/block_inplace_vector.hpp> // block_inplace_vector
-#include <xstd/bits/ownership.hpp>                   // ownership
-#include <xstd/bits/sequence_adaptor.hpp>            // sequence_adaptor
-#include <xstd/ints/concepts/unsigned_integer.hpp>   // unsigned_integer
-#include <cstddef>                                   // size_t
+#include <xstd/bits/detail/contiguous_bit_inplace_vector.hpp> // contiguous_bit_inplace_vector
+#include <xstd/bits/ownership.hpp>                            // ownership
+#include <xstd/bits/sequence_adaptor.hpp>                     // sequence_adaptor
+#include <xstd/ints/concepts/unsigned_integer.hpp>            // unsigned_integer
+#include <cstddef>                                            // size_t
 
 namespace xstd {
 
 // The packed std::inplace_vector<bool, N> that P0843 declined to write, named after the container it packs. [design.md#the-public-names]
 template<xstd::unsigned_integer Block, std::size_t N>
-using basic_bit_inplace_vector = sequence_adaptor<detail::bits::block_inplace_vector<Block, N>, ownership::owns, false>;
+using basic_bit_inplace_vector = sequence_adaptor<detail::bits::contiguous_bit_inplace_vector<Block, N>, ownership::owns, false>;
 
 template<std::size_t N>
 using bit_inplace_vector = basic_bit_inplace_vector<std::size_t, N>;

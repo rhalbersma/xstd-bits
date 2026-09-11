@@ -92,10 +92,10 @@ target_sources(
         include/xstd/bits/bit_traits.hpp
         include/xstd/bits/detail/allocator_typedef.hpp
         include/xstd/bits/detail/bidirectional.hpp
-        include/xstd/bits/detail/block_array.hpp
-        include/xstd/bits/detail/block_inplace_vector.hpp
-        include/xstd/bits/detail/block_vector.hpp
+        include/xstd/bits/detail/contiguous_bit_array.hpp
         include/xstd/bits/detail/contiguous_bit_container.hpp
+        include/xstd/bits/detail/contiguous_bit_inplace_vector.hpp
+        include/xstd/bits/detail/contiguous_bit_vector.hpp
         include/xstd/bits/detail/hash.hpp
         include/xstd/bits/detail/intrin.hpp
         include/xstd/bits/dynamic_bitset.hpp

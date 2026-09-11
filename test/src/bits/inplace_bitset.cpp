@@ -6,16 +6,16 @@
 #include <test/inplace_vector.hpp>  // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR, has_inplace_vector
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #ifdef TEST_HAS_INPLACE_VECTOR
-#include <xstd/bits/bit_set_view.hpp>                // bit_set_view
-#include <xstd/bits/bitset_adaptor.hpp>              // bitset_adaptor
-#include <xstd/bits/detail/block_inplace_vector.hpp> // block_inplace_vector
-#include <xstd/bits/inplace_bitset.hpp>              // basic_inplace_bitset, inplace_bitset
-#include <concepts>                                  // regular, same_as, totally_ordered
-#include <cstddef>                                   // size_t
-#include <cstdint>                                   // uint8_t
-#include <new>                                       // bad_alloc
-#include <string>                                    // string
-#include <utility>                                   // declval
+#include <xstd/bits/bit_set_view.hpp>                         // bit_set_view
+#include <xstd/bits/bitset_adaptor.hpp>                       // bitset_adaptor
+#include <xstd/bits/detail/contiguous_bit_inplace_vector.hpp> // contiguous_bit_inplace_vector
+#include <xstd/bits/inplace_bitset.hpp>                       // basic_inplace_bitset, inplace_bitset
+#include <concepts>                                           // regular, same_as, totally_ordered
+#include <cstddef>                                            // size_t
+#include <cstdint>                                            // uint8_t
+#include <new>                                                // bad_alloc
+#include <string>                                             // string
+#include <utility>                                            // declval
 #endif
 
 BOOST_AUTO_TEST_SUITE(InplaceBitset)
@@ -28,7 +28,7 @@ using T = xstd::basic_inplace_bitset<std::uint8_t, 24>;
 // The bitset reading over a run-time width under a compile-time capacity, an alias and nothing more. [design.md#the-public-names]
 BOOST_AUTO_TEST_CASE(TheInplaceBitsetIsTheBitsetAdaptorOverAnInplaceVectorOfBlocks)
 {
-        static_assert(std::same_as<T, xstd::bitset_adaptor<xstd::detail::bits::block_inplace_vector<std::uint8_t, 24>>>);
+        static_assert(std::same_as<T, xstd::bitset_adaptor<xstd::detail::bits::contiguous_bit_inplace_vector<std::uint8_t, 24>>>);
         static_assert(std::same_as<xstd::inplace_bitset<24>, xstd::basic_inplace_bitset<std::size_t, 24>>);
         static_assert(std::regular<T>);
 }

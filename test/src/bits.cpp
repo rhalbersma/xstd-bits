@@ -38,14 +38,14 @@ BOOST_AUTO_TEST_CASE(EveryContainerArrivesThroughTheUmbrella)
         auto const packed = xstd::bit_array<8>();
         static_assert(std::ranges::random_access_range<decltype(xstd::bit_span(packed))>);
 
-        // The dynamic column, one name per reading, all three over a block_vector.
+        // The dynamic column, one name per reading, all three over a contiguous_bit_vector.
         static_assert(std::ranges::bidirectional_range<xstd::basic_bit_set<std::size_t>>);
         static_assert(std::ranges::random_access_range<xstd::basic_bit_vector<std::size_t>>);
         static_assert(not std::ranges::range<xstd::basic_dynamic_bitset<std::size_t>>);
 
         // Three layers: the primaries take the storage, the basic_ layer chooses it and leaves the block open, the restricted layer fixes size_t and std::allocator. [design.md#the-public-names]
-        static_assert(std::same_as<xstd::basic_bit_static_set<std::uint8_t, 8>, xstd::set_adaptor<xstd::detail::bits::block_array<std::uint8_t, 8>, xstd::ownership::owns>>);
-        static_assert(std::same_as<xstd::basic_bit_set<std::uint8_t>,          xstd::set_adaptor<xstd::detail::bits::block_vector<std::uint8_t>, xstd::ownership::owns>>);
+        static_assert(std::same_as<xstd::basic_bit_static_set<std::uint8_t, 8>, xstd::set_adaptor<xstd::detail::bits::contiguous_bit_array<std::uint8_t, 8>, xstd::ownership::owns>>);
+        static_assert(std::same_as<xstd::basic_bit_set<std::uint8_t>,          xstd::set_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint8_t>, xstd::ownership::owns>>);
         static_assert(std::same_as<xstd::bit_static_set<8>, xstd::basic_bit_static_set<std::size_t, 8>>);
         static_assert(std::same_as<xstd::bit_array<8>,      xstd::basic_bit_array<std::size_t, 8>>);
         static_assert(std::same_as<xstd::bitset<8>,         xstd::basic_bitset<std::size_t, 8>>);
