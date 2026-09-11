@@ -180,7 +180,13 @@ public:
         // names its Block among its template arguments, so the Block's namespace is an associated one and ADL
         // brings in whatever templated comparisons it declares -- Boost.Int128 declares exactly such a set.
         // These two are exact in both operands and win outright, which is what keeps the proxy
-        // equality_comparable and std::ranges::equal working over it. [design.md#uint128-support]
+        // equality_comparable and std::ranges::equal working over it.
+        //
+        // Only here, and not on bidirectional.hpp's set proxy, which needs none of this: its value_type is a
+        // position rather than a bit, a set over an integer-class Block already worked, and giving it the same
+        // pair broke comparing two DIFFERENT instantiations of it -- which is how a view named on the adaptor
+        // is compared against one deduced from the storage, at a Block as ordinary as uint64_t.
+        // [design.md#uint128-support]
         [[nodiscard]] friend constexpr auto operator==(random_access_bit_reference lhs, random_access_bit_reference rhs) noexcept
                 -> bool
         {

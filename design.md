@@ -2155,15 +2155,23 @@ separate header could not be relied on to sort below the adapters.
 **A Block being a class breaks two assumptions that a scalar hid.** `detail::bits::pred`'s `intersects`
 returned `lhs & rhs` into a `bool`, which copy-initializes and so needs an **implicit** conversion; an integer
 class offers only an explicit `operator bool`. Its two neighbours never needed the cast, `not` and `!=` both
-reaching `bool` by a **contextual** conversion, which an explicit operator satisfies. And both bit proxies
-carried a templated implicit conversion to any class type constructible from their `value_type`. An integer
-class is such a class, so every operator on a proxy acquired a second, equally good reading — convert both
-sides to `bool`, or convert both sides to the Block — which cost the proxy `equality_comparable` and with it
-`std::ranges::equal`. The conversion now excludes `xstd::integer`: a proxy stands for one bit, and a bit is
-not an integer. That alone is not enough, because a proxy names its Block among its template arguments, so the
-Block's namespace is an **associated** one and ADL contributes whatever templated comparisons it declares —
-Boost.Int128 declares exactly such a set. Each proxy therefore also declares comparisons that are exact in
-both operands, which win outright.
+reaching `bool` by a **contextual** conversion, which an explicit operator satisfies. And the sequence proxy in
+`random_access.hpp` carried a templated implicit conversion to any class type constructible from its
+`value_type`. An integer class is such a class, so every operator on that proxy acquired a second, equally good
+reading — convert both sides to `bool`, or convert both sides to the Block — which cost it
+`equality_comparable` and with it `std::ranges::equal`. The conversion now excludes `xstd::integer`: a proxy
+stands for one bit, and a bit is not an integer. That alone is not enough, because a proxy names its Block
+among its template arguments, so the Block's namespace is an **associated** one and ADL contributes whatever
+templated comparisons it declares — Boost.Int128 declares exactly such a set. It therefore also declares
+comparisons that are exact in both operands, which win outright.
+
+The set proxy in `bidirectional.hpp` is deliberately **untouched**, and the attempt to keep it in step was a
+mistake worth recording. Nothing had failed there: a set over an integer-class Block already worked, because
+that proxy stands for a position rather than a bit and its `value_type` is `size_t`. Giving it the same exact
+comparisons broke a case no integer class is involved in at all — `std::ranges::equal` over **two different**
+instantiations of it, which is how `bit_set_view<B>` is compared against the view deduced from `B`'s own
+storage, and which those homogeneous overloads no longer serve. A fix that no failure asked for cost a working
+path, at a Block as ordinary as `uint64_t`.
 
 **Two facts, two flags, because one flag conflated them.** `TEST_HAS_UINT128` names the compiler's 128-bit
 **builtin**: a scalar, and a `std::unsigned_integral`. It feeds `word_types`, which every suite grades over, and
