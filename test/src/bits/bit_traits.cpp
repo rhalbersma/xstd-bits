@@ -272,5 +272,27 @@ static_assert(not has_to_string<boosts>);        // to_string is std::bitset's a
 static_assert(    xstd::bit_storage<xstd::bit_traits<word>, word>);
 static_assert(not xstd::contiguous_bit_sequence<word>);
 
+// Exercised and not only asserted: the trait declares the three required entries and nothing else, so every
+// question below is answered by a synthesized scan over at(). That is the whole of what an incomplete basis
+// costs, and what the trait pays. [design.md#the-primitive-basis]
+BOOST_AUTO_TEST_CASE(ATraitOnlyStorageAnswersEveryScan)
+{
+        using traits = xstd::bit_traits<word>;
+        auto const c = word{(1ULL << 3) | (1ULL << 40)};
+
+        BOOST_CHECK_EQUAL(traits::size(c), 64UZ);
+        BOOST_CHECK(traits::at(c, 3UZ));
+        BOOST_CHECK(not traits::at(c, 4UZ));
+
+        // None of these is an entry on the trait, so each is the generic walk. [design.md#detection-by-absence]
+        BOOST_CHECK_EQUAL(xstd::detail::bits::find_first<traits>(c),        3UZ);
+        BOOST_CHECK_EQUAL(xstd::detail::bits::find_next<traits>(c,  3UZ),  40UZ);
+        BOOST_CHECK_EQUAL(xstd::detail::bits::find_prev<traits>(c, 40UZ),   3UZ);
+        BOOST_CHECK_EQUAL(xstd::detail::bits::count<traits>(c),             2UZ);
+        BOOST_CHECK(xstd::detail::bits::any<traits>(c));
+        BOOST_CHECK(not xstd::detail::bits::all<traits>(c));
+        BOOST_CHECK(not xstd::detail::bits::none<traits>(c));
+}
+
 
 BOOST_AUTO_TEST_SUITE_END()
