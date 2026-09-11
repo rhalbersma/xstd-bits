@@ -25,7 +25,7 @@ BOOST_AUTO_TEST_SUITE(BitInplaceSet)
 #ifdef TEST_HAS_INPLACE_VECTOR
 
 // A capacity of three whole blocks, so a key can sit past the width and still inside the capacity.
-using T = xstd::basic_bit_inplace_set<24, std::uint8_t>;
+using T = xstd::basic_bit_inplace_set<std::uint8_t, 24>;
 
 // Dependent, so an absent member is a false rather than a hard error.
 template<class X>
@@ -35,7 +35,7 @@ constexpr bool has_capacity = requires (X const& x) { x.capacity(); };
 BOOST_AUTO_TEST_CASE(TheInplaceSetIsTheSetAdaptorOverAnInplaceVectorOfBlocks)
 {
         static_assert(std::same_as<T, xstd::set_adaptor<xstd::detail::bits::block_inplace_vector<std::uint8_t, 24>, xstd::ownership::owns>>);
-        static_assert(std::same_as<xstd::bit_inplace_set<24>, xstd::basic_bit_inplace_set<24, std::size_t>>);
+        static_assert(std::same_as<xstd::bit_inplace_set<24>, xstd::basic_bit_inplace_set<std::size_t, 24>>);
         static_assert(test::set::bit_set<T>);
 }
 

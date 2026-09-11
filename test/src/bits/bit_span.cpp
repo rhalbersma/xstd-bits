@@ -89,7 +89,7 @@ BOOST_AUTO_TEST_CASE(WritingThroughTheViewWritesTheBits)
 // The same reading over the type this library packs, so bit_array's own operator[] and the view agree position by position.
 BOOST_AUTO_TEST_CASE(APackedArrayAgreesWithItsOwnView)
 {
-        auto packed = xstd::basic_bit_array<8, unsigned char>{};
+        auto packed = xstd::basic_bit_array<unsigned char, 8>{};
         packed[1] = true;
         packed[6] = true;
 

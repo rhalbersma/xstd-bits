@@ -44,31 +44,31 @@ BOOST_AUTO_TEST_CASE(EveryContainerArrivesThroughTheUmbrella)
         static_assert(not std::ranges::range<xstd::basic_dynamic_bitset<std::size_t>>);
 
         // Three layers: the primaries take the storage, the basic_ layer chooses it and leaves the block open, the restricted layer fixes size_t and std::allocator. [design.md#the-public-names]
-        static_assert(std::same_as<xstd::basic_bit_static_set<8, std::uint8_t>, xstd::set_adaptor<xstd::detail::bits::block_array<std::uint8_t, 8>, xstd::ownership::owns>>);
+        static_assert(std::same_as<xstd::basic_bit_static_set<std::uint8_t, 8>, xstd::set_adaptor<xstd::detail::bits::block_array<std::uint8_t, 8>, xstd::ownership::owns>>);
         static_assert(std::same_as<xstd::basic_bit_set<std::uint8_t>,          xstd::set_adaptor<xstd::detail::bits::block_vector<std::uint8_t>, xstd::ownership::owns>>);
-        static_assert(std::same_as<xstd::bit_static_set<8>, xstd::basic_bit_static_set<8, std::size_t>>);
-        static_assert(std::same_as<xstd::bit_array<8>,      xstd::basic_bit_array<8, std::size_t>>);
-        static_assert(std::same_as<xstd::bitset<8>,         xstd::basic_bitset<8, std::size_t>>);
+        static_assert(std::same_as<xstd::bit_static_set<8>, xstd::basic_bit_static_set<std::size_t, 8>>);
+        static_assert(std::same_as<xstd::bit_array<8>,      xstd::basic_bit_array<std::size_t, 8>>);
+        static_assert(std::same_as<xstd::bitset<8>,         xstd::basic_bitset<std::size_t, 8>>);
         static_assert(std::same_as<xstd::bit_set,        xstd::basic_bit_set<std::size_t, std::allocator<std::size_t>>>);
         static_assert(std::same_as<xstd::bit_vector,     xstd::basic_bit_vector<std::size_t, std::allocator<std::size_t>>>);
         static_assert(std::same_as<xstd::dynamic_bitset, xstd::basic_dynamic_bitset<std::size_t, std::allocator<std::size_t>>>);
 
 #ifdef TEST_HAS_INPLACE_VECTOR
         // The inplace column, the third storage point, one name per reading and every one of them an alias like the rest. [design.md#the-inplace-column]
-        static_assert(std::ranges::bidirectional_range<xstd::basic_bit_inplace_set<8, std::uint8_t>>);
-        static_assert(std::ranges::random_access_range<xstd::basic_bit_inplace_vector<8, std::uint8_t>>);
-        static_assert(not std::ranges::range<xstd::basic_inplace_bitset<8, std::uint8_t>>);
-        static_assert(std::same_as<xstd::bit_inplace_set<8>,    xstd::basic_bit_inplace_set<8, std::size_t>>);
-        static_assert(std::same_as<xstd::bit_inplace_vector<8>, xstd::basic_bit_inplace_vector<8, std::size_t>>);
-        static_assert(std::same_as<xstd::inplace_bitset<8>,     xstd::basic_inplace_bitset<8, std::size_t>>);
+        static_assert(std::ranges::bidirectional_range<xstd::basic_bit_inplace_set<std::uint8_t, 8>>);
+        static_assert(std::ranges::random_access_range<xstd::basic_bit_inplace_vector<std::uint8_t, 8>>);
+        static_assert(not std::ranges::range<xstd::basic_inplace_bitset<std::uint8_t, 8>>);
+        static_assert(std::same_as<xstd::bit_inplace_set<8>,    xstd::basic_bit_inplace_set<std::size_t, 8>>);
+        static_assert(std::same_as<xstd::bit_inplace_vector<8>, xstd::basic_bit_inplace_vector<std::size_t, 8>>);
+        static_assert(std::same_as<xstd::inplace_bitset<8>,     xstd::basic_inplace_bitset<std::size_t, 8>>);
 #endif
 
         // Every static name has an aligned form in both layers, its width rounded up to whole blocks; the inplace column has none, its capacity already being whole blocks. [design.md#the-public-names]
         static_assert(std::same_as<xstd::aligned::bit_static_set<9>, xstd::bit_static_set<std::numeric_limits<std::size_t>::digits>>);
         static_assert(std::same_as<xstd::aligned::bit_array<9>,      xstd::bit_array<std::numeric_limits<std::size_t>::digits>>);
         static_assert(std::same_as<xstd::aligned::bitset<9>,         xstd::bitset<std::numeric_limits<std::size_t>::digits>>);
-        static_assert(std::same_as<xstd::aligned::basic_bitset<9, std::uint8_t>, xstd::basic_bitset<16, std::uint8_t>>);
-        static_assert(std::same_as<xstd::aligned::basic_bitset<0, std::uint8_t>, xstd::basic_bitset< 0, std::uint8_t>>);
+        static_assert(std::same_as<xstd::aligned::basic_bitset<std::uint8_t, 9>, xstd::basic_bitset<std::uint8_t, 16>>);
+        static_assert(std::same_as<xstd::aligned::basic_bitset<std::uint8_t, 0>, xstd::basic_bitset<std::uint8_t, 0>>);
 }
 
 // A packed container satisfies the same interface as the one it packs, which means something only because std::array answers to it too.

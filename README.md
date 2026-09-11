@@ -78,7 +78,7 @@ Notes:
 3. A view names the bitset directly because a bitset has a `bit_traits` of its own, and **one** specialization — on `bitset_adaptor`, which all three bitsets are aliases of — gives all three of them that at once. The foreign bitsets get theirs from [`include/xstd/bits/ext/`](include/xstd/bits/ext/), which is the same mechanism from the outside. It relays each of the storage trait's twenty entries under its own guard, so the word-parallel paths are not quietly lost in the forwarding: `block_readable` still holds through it. Deduction is unaffected and still binds the storage a container wraps, so `xstd::bit_set_view(bs)` remains `xstd::bit_set_view<xstd::block_array<std::size_t, N>>` — the two spellings coexist, and the deduction guide for a plain storage is constrained to non-owners so that the two do not tie.
 4. The variable-size sequence of `bool` is named `xstd::bit_vector` and decoupled from the general `std::vector` class template.
 5. All containers use a dense (single bit per element) representation. Variable-size sparse sets can be provided by `flat_set`, either in [Boost](https://www.boost.org/doc/libs/1_80_0/doc/html/boost/container/flat_set.html) or in [C++ 23](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p1222r4.pdf).
-6. The names above are the short ones, which fix `Block` to `std::size_t` and so take only the width, or nothing at all in the dynamic column where there is no width to give. Each has a `basic_` form that leaves the block open: `xstd::basic_bit_static_set<N, Block>`, `xstd::basic_bit_array<N, Block>`, `xstd::basic_bitset<N, Block>` and their inplace siblings, and `xstd::basic_bit_set<Block, Allocator>`, `xstd::basic_bit_vector<Block, Allocator>`, `xstd::basic_dynamic_bitset<Block, Allocator>` down the dynamic column. So `xstd::bit_set` is an alias, not a template, and `xstd::basic_bit_set<std::uint8_t>` is how a block is chosen.
+6. The names above are the short ones, which fix `Block` to `std::size_t` and so take only the width, or nothing at all in the dynamic column where there is no width to give. Each has a `basic_` form that leaves the block open: `xstd::basic_bit_static_set<Block, N>`, `xstd::basic_bit_array<Block, N>`, `xstd::basic_bitset<Block, N>` and their inplace siblings, and `xstd::basic_bit_set<Block, Allocator>`, `xstd::basic_bit_vector<Block, Allocator>`, `xstd::basic_dynamic_bitset<Block, Allocator>` down the dynamic column. So `xstd::bit_set` is an alias, not a template, and `xstd::basic_bit_set<std::uint8_t>` is how a block is chosen.
 7. Each static-width name has an `aligned` form in a nested namespace, its width rounded up to whole blocks so that no block carries an unused tail: `xstd::aligned::bitset<120>` is `xstd::bitset<128>`. That costs nothing in storage at a width already spanning whole blocks, and removes the tail-restoring mask from `fill`, `flip` and the left shift.
 
 The **middle column** is what allocates nothing and yet carries a run-time width. It depends on `std::inplace_vector`, so those three names exist only where the standard library provides it (`__cpp_lib_inplace_vector`); an alias withholds a name rather than a capability.
@@ -429,7 +429,7 @@ auto b = a
 **A**: The least significant bit of the last array word maps onto set value `N - 1`.
 
 **Q**: I'm visually oriented, can you draw a diagram?  
-**A**: Sure, it looks like this for `basic_bit_static_set<16, std::uint8_t>`:
+**A**: Sure, it looks like this for `basic_bit_static_set<std::uint8_t, 16>`:
 
 |value |01234567|89ABCDEF|
 |:---- |-------:|-------:|
@@ -440,7 +440,7 @@ auto b = a
 **A**: To be able to use **data-parallelism** for `(a < b) == std::ranges::lexicographical_compare(a, b)`.
 
 **Q**: How is efficient set comparison connected to the bit-ordering within words?  
-**A**: Take `basic_bit_static_set<8, std::uint8_t>` and consider when `sL < sR` for ordered sets of integers `sL` and `sR`.
+**A**: Take `basic_bit_static_set<std::uint8_t, 8>` and consider when `sL < sR` for ordered sets of integers `sL` and `sR`.
 
 **Q**: Ah, lexicographical set comparison corresponds to bit comparison from most to least significant?  
 **A**: Indeed, and this is equivalent to doing the integer comparison `wL > wR` on the underlying words `wL` and `wR`.
@@ -460,7 +460,7 @@ auto b = a
 **A**: By default, `xstd::bit_static_set` uses an array of `std::size_t` integers.
 
 **Q**: Can I customize the storage type?  
-**A**: Yes. The alias carrying the default is `template<std::size_t N> using bit_static_set = basic_bit_static_set<N, std::size_t>`; the underlying `template<std::size_t N, xstd::unsigned_integer Block> basic_bit_static_set` requires the block explicitly. Every cell of the table follows that pattern: a short name that defaults `Block` to `std::size_t`, and a `basic_` name that does not.
+**A**: Yes. The alias carrying the default is `template<std::size_t N> using bit_static_set = basic_bit_static_set<std::size_t, N>`; the underlying `template<xstd::unsigned_integer Block, std::size_t N> basic_bit_static_set` requires the block explicitly. Every cell of the table follows that pattern: a short name that defaults `Block` to `std::size_t`, and a `basic_` name that does not.
 
 **Q**: What other storage types can be used as template argument for `Block`?  
 **A**: Any type modelling the Standard Library `unsigned_integral` concept, which includes (for GCC and Clang) `xstd::uint128`.

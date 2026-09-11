@@ -16,20 +16,20 @@
 namespace xstd {
 
 // [template.bitset] over a packed array of Block: what std::bitset<N> is, with the word type in the open. [design.md#the-public-names]
-template<std::size_t N, xstd::unsigned_integer Block>
+template<xstd::unsigned_integer Block, std::size_t N>
 using basic_bitset = bitset_adaptor<detail::bits::block_array<Block, N>>;
 
 template<std::size_t N>
-using bitset = basic_bitset<N, std::size_t>;
+using bitset = basic_bitset<std::size_t, N>;
 
 // The width rounded up to whole blocks, as the other two static names offer: no unused tail, so every block is the value. [design.md#the-public-names]
 namespace aligned {
 
-template<std::size_t N, xstd::unsigned_integer Block>
-using basic_bitset = xstd::basic_bitset<xstd::align_up(N, static_cast<std::size_t>(std::numeric_limits<Block>::digits)), Block>;
+template<xstd::unsigned_integer Block, std::size_t N>
+using basic_bitset = xstd::basic_bitset<Block, xstd::align_up(N, static_cast<std::size_t>(std::numeric_limits<Block>::digits))>;
 
 template<std::size_t N>
-using bitset = basic_bitset<N, std::size_t>;
+using bitset = basic_bitset<std::size_t, N>;
 
 }       // namespace aligned
 }       // namespace xstd

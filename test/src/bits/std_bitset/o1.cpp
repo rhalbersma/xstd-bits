@@ -23,18 +23,18 @@ using Types = std::tuple
 ,         std::bitset<  0>
 ,         std::bitset<  1>
 ,         std::bitset< 64>
-,        xstd::basic_bitset< 0, uint8_t>
-,        xstd::basic_bitset< 1, uint8_t>
-,        xstd::basic_bitset< 8, uint8_t>
-,        xstd::basic_bitset< 9, uint8_t>
-,        xstd::basic_bitset<16, uint8_t>
-,        xstd::basic_bitset<17, uint8_t>
-,        xstd::basic_bitset<24, uint8_t>
-,        xstd::basic_bitset<24, uint16_t>
-,        xstd::basic_bitset<24, uint32_t>
-,        xstd::basic_bitset<24, uint64_t>
+,        xstd::basic_bitset<uint8_t, 0>
+,        xstd::basic_bitset<uint8_t, 1>
+,        xstd::basic_bitset<uint8_t, 8>
+,        xstd::basic_bitset<uint8_t, 9>
+,        xstd::basic_bitset<uint8_t, 16>
+,        xstd::basic_bitset<uint8_t, 17>
+,        xstd::basic_bitset<uint8_t, 24>
+,        xstd::basic_bitset<uint16_t, 24>
+,        xstd::basic_bitset<uint32_t, 24>
+,        xstd::basic_bitset<uint64_t, 24>
 #ifdef TEST_HAS_UINT128
-,        xstd::basic_bitset<24, xstd::uint128>
+,        xstd::basic_bitset<xstd::uint128, 24>
 #endif
 ,        xstd::basic_dynamic_bitset<uint8_t>
 ,        xstd::basic_dynamic_bitset<uint64_t>

@@ -209,7 +209,7 @@ BOOST_AUTO_TEST_CASE(AppendRangeBlitsFromASequenceAtAnyAlignment)
         }
 
         // An owner, a whole view and a static array all blit alike; a source of another block type packs instead.
-        auto fixed = xstd::basic_bit_array<9, std::uint8_t>();
+        auto fixed = xstd::basic_bit_array<std::uint8_t, 9>();
         std::ranges::copy(pattern(9), fixed.begin());
         auto v = T();
         v.append_range(source);

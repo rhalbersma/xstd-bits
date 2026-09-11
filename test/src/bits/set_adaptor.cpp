@@ -30,7 +30,7 @@
 namespace {
 
 using Storage = xstd::detail::bits::block_array<std::uint64_t, 100>;
-using Owner   = xstd::basic_bit_static_set<100, std::uint64_t>;
+using Owner   = xstd::basic_bit_static_set<std::uint64_t, 100>;
 using View    = xstd::set_adaptor<Storage, xstd::ownership::refers>;
 using Reader  = xstd::set_adaptor<Storage const, xstd::ownership::refers>;
 using Minimal = xstd::set_adaptor<Storage, xstd::ownership::refers, test::minimal_traits<Storage>>;

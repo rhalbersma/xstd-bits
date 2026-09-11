@@ -29,7 +29,7 @@
 namespace {
 
 using Storage = xstd::detail::bits::block_array<std::uint64_t, 100>;
-using Owner   = xstd::basic_bit_array<100, std::uint64_t>;
+using Owner   = xstd::basic_bit_array<std::uint64_t, 100>;
 using View    = xstd::sequence_adaptor<Storage, xstd::ownership::refers, false>;
 using Reader  = xstd::sequence_adaptor<Storage const, xstd::ownership::refers, false>;
 
@@ -201,7 +201,7 @@ BOOST_AUTO_TEST_CASE(TheBulkOperatorsAreTheStoragesOwn)
 // The ordering invariant on the trait's entry, the only ordering an owner has. [design.md#the-ordering-invariant]
 BOOST_AUTO_TEST_CASE(TheOrderingIsTheLexicographicOrderOfTheBools)
 {
-        using Packed = xstd::basic_bit_array<9, std::uint8_t>;
+        using Packed = xstd::basic_bit_array<std::uint8_t, 9>;
         static_assert(std::regular<Packed> and std::totally_ordered<Packed>);
 
         // An owner over storage without the entry has no ordering rather than a synthesized one. [design.md#owning-is-ours]
@@ -247,7 +247,7 @@ BOOST_AUTO_TEST_CASE(GrowthIsTheOwnersOverStorageThatGrows)
 
 BOOST_AUTO_TEST_CASE(AZeroWidthSequenceIsEmpty)
 {
-        auto const a = xstd::basic_bit_array<0, std::uint8_t>();
+        auto const a = xstd::basic_bit_array<std::uint8_t, 0>();
         BOOST_CHECK(a.empty() and a.begin() == a.end());
         auto c = xstd::detail::bits::block_array<std::uint8_t, 0>();
         auto const v = xstd::sequence_adaptor<xstd::detail::bits::block_array<std::uint8_t, 0>, xstd::ownership::refers, false>(c);

@@ -23,13 +23,13 @@ BOOST_AUTO_TEST_SUITE(InplaceBitset)
 #ifdef TEST_HAS_INPLACE_VECTOR
 
 // A capacity of three whole blocks, so a resize can straddle a boundary and still stop short of the capacity.
-using T = xstd::basic_inplace_bitset<24, std::uint8_t>;
+using T = xstd::basic_inplace_bitset<std::uint8_t, 24>;
 
 // The bitset reading over a run-time width under a compile-time capacity, an alias and nothing more. [design.md#the-public-names]
 BOOST_AUTO_TEST_CASE(TheInplaceBitsetIsTheBitsetAdaptorOverAnInplaceVectorOfBlocks)
 {
         static_assert(std::same_as<T, xstd::bitset_adaptor<xstd::detail::bits::block_inplace_vector<std::uint8_t, 24>>>);
-        static_assert(std::same_as<xstd::inplace_bitset<24>, xstd::basic_inplace_bitset<24, std::size_t>>);
+        static_assert(std::same_as<xstd::inplace_bitset<24>, xstd::basic_inplace_bitset<std::size_t, 24>>);
         static_assert(std::regular<T>);
 }
 

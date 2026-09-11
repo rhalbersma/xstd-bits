@@ -15,43 +15,43 @@ BOOST_AUTO_TEST_SUITE(Constexpr)
 
 
 using Types = std::tuple
-<       xstd::basic_bit_static_set<  0, uint8_t>
-,       xstd::basic_bit_static_set<  1, uint8_t>
-,       xstd::basic_bit_static_set<  7, uint8_t>
-,       xstd::basic_bit_static_set<  8, uint8_t>
-,       xstd::basic_bit_static_set<  9, uint8_t>
-,       xstd::basic_bit_static_set< 15, uint8_t>
-,       xstd::basic_bit_static_set< 16, uint8_t>
-,       xstd::basic_bit_static_set< 17, uint8_t>
-,       xstd::basic_bit_static_set< 24, uint8_t>
-,       xstd::basic_bit_static_set<  0, uint16_t>
-,       xstd::basic_bit_static_set<  1, uint16_t>
-,       xstd::basic_bit_static_set< 15, uint16_t>
-,       xstd::basic_bit_static_set< 16, uint16_t>
-,       xstd::basic_bit_static_set< 17, uint16_t>
-,       xstd::basic_bit_static_set< 31, uint16_t>
-,       xstd::basic_bit_static_set< 32, uint16_t>
-,       xstd::basic_bit_static_set< 33, uint16_t>
-,       xstd::basic_bit_static_set< 48, uint16_t>
-,       xstd::basic_bit_static_set<  0, uint32_t>
-,       xstd::basic_bit_static_set<  1, uint32_t>
-,       xstd::basic_bit_static_set< 31, uint32_t>
-,       xstd::basic_bit_static_set< 32, uint32_t>
-,       xstd::basic_bit_static_set< 33, uint32_t>
-,       xstd::basic_bit_static_set< 63, uint32_t>
-,       xstd::basic_bit_static_set< 64, uint32_t>
-,       xstd::basic_bit_static_set< 65, uint32_t>
-,       xstd::basic_bit_static_set<  0, uint64_t>
-,       xstd::basic_bit_static_set<  1, uint64_t>
-,       xstd::basic_bit_static_set< 63, uint64_t>
-,       xstd::basic_bit_static_set< 64, uint64_t>
-,       xstd::basic_bit_static_set< 65, uint64_t>
+<       xstd::basic_bit_static_set<uint8_t, 0>
+,       xstd::basic_bit_static_set<uint8_t, 1>
+,       xstd::basic_bit_static_set<uint8_t, 7>
+,       xstd::basic_bit_static_set<uint8_t, 8>
+,       xstd::basic_bit_static_set<uint8_t, 9>
+,       xstd::basic_bit_static_set<uint8_t, 15>
+,       xstd::basic_bit_static_set<uint8_t, 16>
+,       xstd::basic_bit_static_set<uint8_t, 17>
+,       xstd::basic_bit_static_set<uint8_t, 24>
+,       xstd::basic_bit_static_set<uint16_t, 0>
+,       xstd::basic_bit_static_set<uint16_t, 1>
+,       xstd::basic_bit_static_set<uint16_t, 15>
+,       xstd::basic_bit_static_set<uint16_t, 16>
+,       xstd::basic_bit_static_set<uint16_t, 17>
+,       xstd::basic_bit_static_set<uint16_t, 31>
+,       xstd::basic_bit_static_set<uint16_t, 32>
+,       xstd::basic_bit_static_set<uint16_t, 33>
+,       xstd::basic_bit_static_set<uint16_t, 48>
+,       xstd::basic_bit_static_set<uint32_t, 0>
+,       xstd::basic_bit_static_set<uint32_t, 1>
+,       xstd::basic_bit_static_set<uint32_t, 31>
+,       xstd::basic_bit_static_set<uint32_t, 32>
+,       xstd::basic_bit_static_set<uint32_t, 33>
+,       xstd::basic_bit_static_set<uint32_t, 63>
+,       xstd::basic_bit_static_set<uint32_t, 64>
+,       xstd::basic_bit_static_set<uint32_t, 65>
+,       xstd::basic_bit_static_set<uint64_t, 0>
+,       xstd::basic_bit_static_set<uint64_t, 1>
+,       xstd::basic_bit_static_set<uint64_t, 63>
+,       xstd::basic_bit_static_set<uint64_t, 64>
+,       xstd::basic_bit_static_set<uint64_t, 65>
 #ifdef TEST_HAS_UINT128
-,       xstd::basic_bit_static_set<  0, xstd::uint128>
-,       xstd::basic_bit_static_set<  1, xstd::uint128>
-,       xstd::basic_bit_static_set<127, xstd::uint128>
-,       xstd::basic_bit_static_set<128, xstd::uint128>
-,       xstd::basic_bit_static_set<129, xstd::uint128>
+,       xstd::basic_bit_static_set<xstd::uint128, 0>
+,       xstd::basic_bit_static_set<xstd::uint128, 1>
+,       xstd::basic_bit_static_set<xstd::uint128, 127>
+,       xstd::basic_bit_static_set<xstd::uint128, 128>
+,       xstd::basic_bit_static_set<xstd::uint128, 129>
 #endif
 >;
 

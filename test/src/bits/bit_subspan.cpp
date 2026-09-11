@@ -34,7 +34,7 @@ BOOST_AUTO_TEST_SUITE(BitSubspan)
 namespace {
 
 using Blocks = xstd::detail::bits::block_array<std::uint8_t, 20>;
-using Owner  = xstd::basic_bit_array<20, std::uint8_t>;
+using Owner  = xstd::basic_bit_array<std::uint8_t, 20>;
 using Span   = xstd::bit_span<Blocks>;
 using Sub    = xstd::bit_subspan<Blocks>;
 
@@ -268,7 +268,7 @@ BOOST_AUTO_TEST_CASE(WindowsCompose)
         BOOST_CHECK(v.first(0).empty());
         BOOST_CHECK(v.last(0).empty());
         BOOST_CHECK(v.subspan(20).begin() == v.subspan(20).end());
-        auto z = xstd::basic_bit_array<0, std::uint8_t>();
+        auto z = xstd::basic_bit_array<std::uint8_t, 0>();
         BOOST_CHECK(xstd::bit_span(z).subspan(0).empty());
 }
 

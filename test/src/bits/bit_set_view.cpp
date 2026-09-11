@@ -161,11 +161,11 @@ BOOST_AUTO_TEST_CASE(EveryViewedTypeOrdersLikeAStdSet)
 // [design.md#the-ordering-primitive]
 BOOST_AUTO_TEST_CASE(TheOrderingSpansBlocksAndNotJustPositions)
 {
-        test::set::ordering_agrees_with_std_set<xstd::basic_bitset<9, std::uint8_t>>(9);
+        test::set::ordering_agrees_with_std_set<xstd::basic_bitset<std::uint8_t, 9>>(9);
 
         // Three blocks, where "anything above" has to look past the next block as well as into it. 2^18 squared
         // is not a sweep, so this one samples. [design.md#counted-not-asserted]
-        test::set::ordering_agrees_with_std_set_sampled<xstd::basic_bitset<18, std::uint8_t>>(18UZ, 20000UZ);
+        test::set::ordering_agrees_with_std_set_sampled<xstd::basic_bitset<std::uint8_t, 18>>(18UZ, 20000UZ);
         test::set::ordering_agrees_with_std_set_sampled<boost::dynamic_bitset<std::uint8_t>>(18UZ, 20000UZ);
 }
 

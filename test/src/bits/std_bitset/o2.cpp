@@ -22,15 +22,15 @@ using Types = std::tuple
 <       boost::dynamic_bitset<>
 ,         std::bitset<0>
 ,         std::bitset<8>
-,        xstd::basic_bitset< 0, uint8_t>
-,        xstd::basic_bitset< 8, uint8_t>
-,        xstd::basic_bitset< 9, uint8_t>
-,        xstd::basic_bitset<17, uint8_t>
-,        xstd::basic_bitset< 8, uint16_t>
-,        xstd::basic_bitset< 8, uint32_t>
-,        xstd::basic_bitset< 8, uint64_t>
+,        xstd::basic_bitset<uint8_t, 0>
+,        xstd::basic_bitset<uint8_t, 8>
+,        xstd::basic_bitset<uint8_t, 9>
+,        xstd::basic_bitset<uint8_t, 17>
+,        xstd::basic_bitset<uint16_t, 8>
+,        xstd::basic_bitset<uint32_t, 8>
+,        xstd::basic_bitset<uint64_t, 8>
 #ifdef TEST_HAS_UINT128
-,        xstd::basic_bitset< 8, xstd::uint128>
+,        xstd::basic_bitset<xstd::uint128, 8>
 #endif
 ,        xstd::basic_dynamic_bitset<uint8_t>
 ,        xstd::basic_dynamic_bitset<uint64_t>

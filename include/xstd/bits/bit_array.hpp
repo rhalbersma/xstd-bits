@@ -17,19 +17,19 @@
 namespace xstd {
 
 // The packed std::array<bool, N>, named after the container it packs. [design.md#the-public-names]
-template<std::size_t N, xstd::unsigned_integer Block>
+template<xstd::unsigned_integer Block, std::size_t N>
 using basic_bit_array = sequence_adaptor<detail::bits::block_array<Block, N>, ownership::owns, false>;
 
 template<std::size_t N>
-using bit_array = basic_bit_array<N, std::size_t>;
+using bit_array = basic_bit_array<std::size_t, N>;
 
 namespace aligned {
 
-template<std::size_t N, xstd::unsigned_integer Block>
-using basic_bit_array = xstd::basic_bit_array<xstd::align_up(N, static_cast<std::size_t>(std::numeric_limits<Block>::digits)), Block>;
+template<xstd::unsigned_integer Block, std::size_t N>
+using basic_bit_array = xstd::basic_bit_array<Block, xstd::align_up(N, static_cast<std::size_t>(std::numeric_limits<Block>::digits))>;
 
 template<std::size_t N>
-using bit_array = basic_bit_array<N, std::size_t>;
+using bit_array = basic_bit_array<std::size_t, N>;
 
 }       // namespace aligned
 }       // namespace xstd

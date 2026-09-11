@@ -62,7 +62,7 @@ and nothing outside the library can name the vehicle at all. The one exception i
 specialization, which has to be in `xstd` because that is where the primary is declared: the header closes
 `xstd::detail::bits` and reopens `xstd` for it. It is the device that
 turns three readings over three storages into three plus three, and a factoring device is machinery rather
-than vocabulary: a user reaches every width through `bit_static_set<N>` or `basic_bit_array<N, Block>` and
+than vocabulary: a user reaches every width through `bit_static_set<N>` or `basic_bit_array<Block, N>` and
 never spells the pair themselves. The split is what lets each of the nine containers include only the vehicle
 it uses -- `bit_array` names `block_array` and no longer sees `std::vector`, and the
 `#ifdef __cpp_lib_inplace_vector` guard sits in the one header that concerns it rather than in the common one.
@@ -682,9 +682,9 @@ Three class templates carry the three readings: `set_adaptor`, `sequence_adaptor
 is written against the trait and never against a storage, so one adaptor serves `block_array` and
 `block_vector` alike as an owner, and `std::bitset` and `boost::dynamic_bitset` as a view
 ([owning-is-ours](#owning-is-ours)), and no owning type ever needs a `bit_traits` of its own. The
-public names are aliases in two layers over them: `basic_bit_static_set<N, B>` is
-`set_adaptor<block_array<B, N>, owns>`, `basic_bit_array<N, B>` is `sequence_adaptor<block_array<B, N>, owns, false>`,
-and `basic_bitset<N, B>` is `bitset_adaptor<block_array<B, N>>`; `bit_static_set<N>`, `bit_array<N>` and
+public names are aliases in two layers over them: `basic_bit_static_set<B, N>` is
+`set_adaptor<block_array<B, N>, owns>`, `basic_bit_array<B, N>` is `sequence_adaptor<block_array<B, N>, owns, false>`,
+and `basic_bitset<B, N>` is `bitset_adaptor<block_array<B, N>>`; `bit_static_set<N>`, `bit_array<N>` and
 `bitset<N>` are those at `std::size_t`.
 
 ### owning-is-ours
@@ -925,7 +925,12 @@ Storage stays private; nothing on an owner's surface says `block_array`.
 Three layers of names. The primaries carry the reading and take the storage: `set_adaptor<Bits, Own, Traits>`,
 `sequence_adaptor<Bits, Own, Windowed, Traits>`, `bitset_adaptor<Bits, Traits>`, the parameters the trait's consumers
 need and no more. The `basic_` layer chooses the storage and leaves the block open, `basic_string`-style:
-`basic_bit_static_set<N, Block>`, `basic_bit_set<Block, Allocator>` and their four siblings. The restricted layer
+`basic_bit_static_set<Block, N>`, `basic_bit_set<Block, Allocator>` and their four siblings. The block leads in
+every column, so a `basic_` name hands its vehicle the arguments in the order it was given them --
+`basic_bit_static_set<Block, N>` is `set_adaptor<block_array<Block, N>, owns>`, straight through. The static and
+inplace columns used to take `<N, Block>` and transpose at the call, which nothing gained: `Block` carries no
+default in those columns, so it is free to lead, and leading is what `std::array<T, N>`, `std::inplace_vector<T, N>`
+and `std::span<T, Extent>` all do with the pair. The restricted layer
 fixes `std::size_t` and `std::allocator`: `bit_static_set<N>`, `bit_array<N>` and `bitset<N>` keep one parameter,
 and `bit_set`, `bit_vector` and `dynamic_bitset` keep none, so the flagship is `xstd::bit_set` and the counterpart
 of `boost::dynamic_bitset<>` is `xstd::dynamic_bitset`, without the `<>`.
@@ -961,8 +966,8 @@ One header per restricted name, holding its `basic_` form beside it, each over o
 `block_inplace_vector<Block, N>` ([the-inplace-column](#the-inplace-column)). The header is the name's home and
 the only place it is spelled; `bits.hpp` includes them all. Each static name has an `aligned` form in the
 namespace of that name, in both layers, its width rounded up to whole blocks so that no block carries an unused
-tail: `aligned::bitset<9>` is `bitset<64>` and `aligned::basic_bitset<9, std::uint8_t>` is
-`basic_bitset<16, std::uint8_t>`. The inplace column has no `aligned` form, its `N` being a capacity the storage
+tail: `aligned::bitset<9>` is `bitset<64>` and `aligned::basic_bitset<std::uint8_t, 9>` is
+`basic_bitset<std::uint8_t, 16>`. The inplace column has no `aligned` form, its `N` being a capacity the storage
 already rounds up rather than a width to round.
 
 ### the-generated-table
@@ -995,16 +1000,16 @@ the expression compiles.
 ### the-inplace-column
 
 The third storage point gets public names, one per reading and each an alias like every other name below the
-adaptors: `basic_bit_inplace_set<N, Block>`, `basic_bit_inplace_vector<N, Block>` and
-`basic_inplace_bitset<N, Block>` over `block_inplace_vector<Block, N>`, with `bit_inplace_set<N>`,
+adaptors: `basic_bit_inplace_set<Block, N>`, `basic_bit_inplace_vector<Block, N>` and
+`basic_inplace_bitset<Block, N>` over `block_inplace_vector<Block, N>`, with `bit_inplace_set<N>`,
 `bit_inplace_vector<N>` and `inplace_bitset<N>` at the machine word. `inplace_bitset` takes no `bit_` prefix
 because `bitset` already carries the word, and `inplace` is one storage word down each column rather than a
 second vocabulary for the same thing.
 
 `N` is a **capacity** in bits here, where the static column's `N` is a width. The names carry that and the
-parameter lists do not, which is the same hazard `basic_bit_static_set<N, Block>` and `basic_bit_inplace_set<N, Block>`
+parameter lists do not, which is the same hazard `basic_bit_static_set<Block, N>` and `basic_bit_inplace_set<Block, N>`
 share by shape. The capacity is rounded up to whole blocks by `block_inplace_vector` itself, so
-`basic_bit_inplace_vector<9, std::uint8_t>` holds sixteen bits; the width under it is a run-time one and carries
+`basic_bit_inplace_vector<std::uint8_t, 9>` holds sixteen bits; the width under it is a run-time one and carries
 an unused tail like any other.
 
 The whole column sits behind `__cpp_lib_inplace_vector`, in practice libstdc++ >= 16, which the matrix carries on

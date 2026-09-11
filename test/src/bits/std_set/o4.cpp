@@ -27,15 +27,15 @@ using Types = std::tuple
 #ifdef TEST_HAS_FLAT_SET
 ,       std::flat_set<std::size_t>
 #endif
-,       xstd::basic_bit_static_set< 0, uint8_t>
-,       xstd::basic_bit_static_set< 8, uint8_t>
-,       xstd::basic_bit_static_set< 9, uint8_t>
-,       xstd::basic_bit_static_set<17, uint8_t>
-,       xstd::basic_bit_static_set<17, uint16_t>
-,       xstd::basic_bit_static_set<17, uint32_t>
-,       xstd::basic_bit_static_set<17, uint64_t>
+,       xstd::basic_bit_static_set<uint8_t, 0>
+,       xstd::basic_bit_static_set<uint8_t, 8>
+,       xstd::basic_bit_static_set<uint8_t, 9>
+,       xstd::basic_bit_static_set<uint8_t, 17>
+,       xstd::basic_bit_static_set<uint16_t, 17>
+,       xstd::basic_bit_static_set<uint32_t, 17>
+,       xstd::basic_bit_static_set<uint64_t, 17>
 #ifdef TEST_HAS_UINT128
-,       xstd::basic_bit_static_set<17, xstd::uint128>
+,       xstd::basic_bit_static_set<xstd::uint128, 17>
 #endif
 ,       xstd::basic_bit_set<uint8_t>
 ,       xstd::basic_bit_set<uint64_t>

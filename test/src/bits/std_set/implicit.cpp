@@ -24,25 +24,25 @@ using Types = std::tuple
 #ifdef TEST_HAS_FLAT_SET
 ,       std::flat_set<std::size_t>
 #endif
-,       xstd::basic_bit_static_set< 32, uint16_t>
-,       xstd::basic_bit_static_set< 33, uint16_t>
-,       xstd::basic_bit_static_set< 48, uint16_t>
-,       xstd::basic_bit_static_set< 32, uint32_t>
-,       xstd::basic_bit_static_set< 33, uint32_t>
-,       xstd::basic_bit_static_set< 64, uint32_t>
-,       xstd::basic_bit_static_set< 65, uint32_t>
-,       xstd::basic_bit_static_set< 96, uint32_t>
-,       xstd::basic_bit_static_set< 64, uint64_t>
-,       xstd::basic_bit_static_set< 65, uint64_t>
-,       xstd::basic_bit_static_set<128, uint64_t>
-,       xstd::basic_bit_static_set<129, uint64_t>
-,       xstd::basic_bit_static_set<192, uint64_t>
+,       xstd::basic_bit_static_set<uint16_t, 32>
+,       xstd::basic_bit_static_set<uint16_t, 33>
+,       xstd::basic_bit_static_set<uint16_t, 48>
+,       xstd::basic_bit_static_set<uint32_t, 32>
+,       xstd::basic_bit_static_set<uint32_t, 33>
+,       xstd::basic_bit_static_set<uint32_t, 64>
+,       xstd::basic_bit_static_set<uint32_t, 65>
+,       xstd::basic_bit_static_set<uint32_t, 96>
+,       xstd::basic_bit_static_set<uint64_t, 64>
+,       xstd::basic_bit_static_set<uint64_t, 65>
+,       xstd::basic_bit_static_set<uint64_t, 128>
+,       xstd::basic_bit_static_set<uint64_t, 129>
+,       xstd::basic_bit_static_set<uint64_t, 192>
 #ifdef TEST_HAS_UINT128
-,       xstd::basic_bit_static_set<128, xstd::uint128>
-,       xstd::basic_bit_static_set<129, xstd::uint128>
-,       xstd::basic_bit_static_set<256, xstd::uint128>
-,       xstd::basic_bit_static_set<257, xstd::uint128>
-,       xstd::basic_bit_static_set<384, xstd::uint128>
+,       xstd::basic_bit_static_set<xstd::uint128, 128>
+,       xstd::basic_bit_static_set<xstd::uint128, 129>
+,       xstd::basic_bit_static_set<xstd::uint128, 256>
+,       xstd::basic_bit_static_set<xstd::uint128, 257>
+,       xstd::basic_bit_static_set<xstd::uint128, 384>
 #endif
 >;
 
