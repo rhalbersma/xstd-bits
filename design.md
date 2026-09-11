@@ -2211,8 +2211,14 @@ ever wrong.
 
 ### clang-tidy-false-positives
 
-Five findings are suppressed because the checker cannot see what makes them right:
+Six findings are suppressed because the checker cannot see what makes them right:
 
+- `bugprone-signed-bitwise` on `detail/bits::shl` and `::shr`, whose count is cast to `int`. The two checks
+  that govern this leave no third option, and both were measured: `absl::uint128` declares a single shift,
+  `operator<<(uint128, int)`, so an **unsigned** count reaches it by a signedness-changing conversion and
+  `-Wsign-conversion` rejects it, while an **int** count is a signed operand of a bitwise operator and
+  `bugprone-signed-bitwise` rejects that. The type's own operator decides which is right, and the count is a
+  bit position within one block, so the signedness the check objects to cannot be reached.
 - `bugprone-unhandled-self-assignment` on the bitset proxy's `operator=`, which owns no storage: `b[i] = b[i]`
   reads the bit and writes it back.
 - `bugprone-string-constructor` on `to_string`, which sees the `N == 0` instantiation where the string is
@@ -2226,7 +2232,7 @@ Five findings are suppressed because the checker cannot see what makes them righ
   program-defined type. clang-tidy 22 and 23 read the qualified definition as modifying the namespace; 24 no
   longer does, and the suppression stays until the whole ladder is past 23.
 
-A sixth had a fix rather than a suppression. `modernize-use-nullptr` reads the `0` in `(a <=> b) < 0` as a
+A seventh had a fix rather than a suppression. `modernize-use-nullptr` reads the `0` in `(a <=> b) < 0` as a
 null pointer constant, which is the same false positive `-Wno-zero-as-null-pointer-constant` already covers on
 the compiler side. Every site in the test sources says `std::is_lt`, `std::is_gt` or `std::is_eq` instead --
 the standard's own names for those three questions, which are clearer than the comparison against a literal
