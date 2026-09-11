@@ -42,6 +42,9 @@ concept block_basis =
 // MSVC half outright, and true in dialects where <bit> still declines the type. The converse is not worth
 // asserting either: a basis a flag declines to use costs coverage, not correctness. [design.md#uint128-support]
 static_assert(not has_uint128 or block_basis<xstd::uint128>);
+#ifdef TEST_HAS_MSVC_INT128
+static_assert(block_basis<xstd::uint128>);
+#endif
 #ifdef TEST_HAS_ABSL_INT128
 static_assert(block_basis<absl::uint128>);
 #endif
@@ -77,18 +80,23 @@ using narrow_word_types = std::tuple
 // untested across one.
 //
 // Second, and only since the blocks reach xstd's bit basis rather than <bit> directly: a Block need not be a
-// scalar at all. All three below are 128 bits wide and none of them promotes, but xstd::uint128 is the
-// compiler's own extension on every target except an MSVC-ABI one, where it is std::_Unsigned128 -- and these
-// two are CLASSES outright, whose operators are ordinary functions returning class type. That is what catches
-// a container quietly assuming a Block is a scalar, as detail/pred.hpp's intersects did: it returned lhs & rhs
-// into a bool, which a builtin converts to implicitly and an integer class, whose operator bool is explicit,
-// does not. [design.md#uint128-support]
+// scalar at all. Each entry below is 128 bits wide and none of them promotes, but only the first is a scalar,
+// and only where xstd::uint128 is the compiler's builtin -- on an MSVC-ABI target that same spelling is
+// std::_Unsigned128, and it joins absl's and boost's as a CLASS, whose operators are ordinary functions
+// returning class type. That is what catches a container quietly assuming a Block is a scalar, as
+// detail/pred.hpp's intersects did: it returned lhs & rhs into a bool, which a builtin converts to implicitly
+// and an integer class, whose operator bool is explicit, does not.
+//
+// The classes are here and NOT in word_types on purpose. word_types feeds graded_extents, which every suite
+// grades over, including the std_bitset and std_set comparisons whose per-type cost is superlinear -- and whose
+// helpers assume a Block is a std integral. These two suites pay a static_assert or one linear pass per type,
+// which is what a class-typed Block can be afforded in today. [design.md#uint128-support]
 //
 // One optional tuple per candidate, concatenated: a type that is not there contributes an empty tuple, so the
 // list composes without any comma bookkeeping between the #ifs.
 using wide_word_types = decltype(std::tuple_cat(
         std::declval<std::tuple<
-#ifdef TEST_HAS_UINT128
+#if defined(TEST_HAS_UINT128) || defined(TEST_HAS_MSVC_INT128)
                 xstd::uint128
 #endif
         >>(),

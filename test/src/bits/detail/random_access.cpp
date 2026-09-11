@@ -382,9 +382,25 @@ BOOST_AUTO_TEST_CASE(TheValueArrivesByImplicitConversion)
 // equality_comparable that ranges::equal needs. A bit is not an integer, and this pins that both ways: the
 // conversion is gone and the comparison still works. Nothing here is reachable with a builtin Block, which is
 // the whole reason the integer classes are worth a Block. [design.md#uint128-support]
-#if defined(TEST_HAS_ABSL_INT128) || defined(TEST_HAS_BOOST_INT128)
+#if defined(TEST_HAS_MSVC_INT128) || defined(TEST_HAS_ABSL_INT128) || defined(TEST_HAS_BOOST_INT128)
 BOOST_AUTO_TEST_CASE(AProxyNeverBecomesAnIntegerBlock)
 {
+#ifdef TEST_HAS_MSVC_INT128
+        {
+                using B = xstd::basic_bit_array<xstd::uint128, 257>;
+                static_assert(    std::convertible_to<B::reference, bool>);
+                static_assert(not std::convertible_to<B::reference, xstd::uint128>);
+                static_assert(std::equality_comparable<B::reference>);
+                static_assert(std::equality_comparable<B::const_reference>);
+
+                auto a = B();
+                a[0] = true;
+                a[256] = true;
+                BOOST_CHECK(a[0] == a[256]);
+                BOOST_CHECK(a[0] != a[1]);
+                BOOST_CHECK(a[0] == true);
+        }
+#endif
 #ifdef TEST_HAS_ABSL_INT128
         {
                 using B = xstd::basic_bit_array<absl::uint128, 257>;

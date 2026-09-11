@@ -2165,17 +2165,29 @@ Block's namespace is an **associated** one and ADL contributes whatever template
 Boost.Int128 declares exactly such a set. Each proxy therefore also declares comparisons that are exact in
 both operands, which win outright.
 
-**The macro is held to the basis, not to `std`.** `TEST_HAS_UINT128` is on wherever `xstd::uint128` is a
-usable Block: on an MSVC-ABI target always, and elsewhere where `__SIZEOF_INT128__` is defined outside
-`__STRICT_ANSI__` — which is why the matrix compiles as `gnu++23`. The assert beside it is an **implication**,
-that where the macro is on the basis is really there. The equality it replaces asked `std::unsigned_integral`,
-which is the wrong question in both directions: false for every integer class that works as a Block, so it
-denied the MSVC half outright, and true in dialects where `<bit>` still declines the type. The converse is not
-worth asserting either — a basis the macro declines to use costs coverage, not correctness.
+**Two facts, two flags, because one flag conflated them.** `TEST_HAS_UINT128` names the compiler's 128-bit
+**builtin**: a scalar, and a `std::unsigned_integral`. It feeds `word_types`, which every suite grades over, and
+`test/src/bits/block/type_traits.cpp`, which asserts exactly those `std` traits of each word — both right to
+assume a builtin. `TEST_HAS_MSVC_INT128` names what an MSVC-ABI target has instead, `std::_Unsigned128` under
+the same `xstd::uint128` spelling: a usable Block, but a class, so not `is_integral`, not `is_unsigned`, and not
+something `<bit>` will take.
 
-The two third-party classes are optional: `test/ext_int128.hpp` detects each by `__has_include`, so a build
-without them drops it from the Block lists rather than failing. They earn their place by being the types that
-catch a container assuming a Block is a scalar — both defects above were invisible to every builtin.
+Widening the one flag to cover both put a class-typed Block into `word_types`, and so into every suite at once,
+which broke sixteen MSVC targets — the `std_bitset` and `std_set` comparisons among them, whose helpers assume a
+Block is a `std` integral and whose per-type cost is superlinear. So the three integer classes sit together in
+`wide_word_types`, feeding only the two suites that pay a `static_assert` or one linear pass per type. MSVC's is
+named beside Abseil's and Boost's, which is what it behaves like, rather than beside the builtin whose spelling
+it shares.
+
+The assert beside each flag is an **implication**, that where the flag is on the basis is really there. The
+equality it replaces asked `std::unsigned_integral`, which is the wrong question in both directions: false for
+every integer class that works as a Block, and true in dialects where `<bit>` still declines the type. The
+converse is not worth asserting either — a basis a flag declines to use costs coverage, not correctness.
+
+Abseil's and Boost's are optional: `test/ext_int128.hpp` detects each by `__has_include`, so a build without
+them drops it from the Block lists rather than failing. MSVC's needs no dependency at all. All three earn their
+place by being the types that catch a container assuming a Block is a scalar — every defect above was invisible
+to every builtin.
 
 ### exception-escape-nolints
 
