@@ -6,6 +6,7 @@
 #ifndef XSTD_BITS_DETAIL_HASH_HPP
 #define XSTD_BITS_DETAIL_HASH_HPP
 
+#include <xstd/bits/detail/shift.hpp> // shl, shr
 #include <xstd/bits/bit_traits.hpp>            // block_readable, count, find_first, find_next
 #include <boost/hash2/fnv1a.hpp>               // fnv1a_64
 #include <boost/hash2/get_integral_result.hpp> // get_integral_result
@@ -25,7 +26,7 @@ constexpr auto hash_append_block(Hash& h, Flavor const& f, Block b)
         constexpr auto half = static_cast<unsigned>(std::numeric_limits<std::uint64_t>::digits);
         if constexpr (std::numeric_limits<Block>::digits > std::numeric_limits<std::uint64_t>::digits) {
                 boost::hash2::hash_append(h, f, static_cast<std::uint64_t>(b));
-                boost::hash2::hash_append(h, f, static_cast<std::uint64_t>(b >> half));
+                boost::hash2::hash_append(h, f, static_cast<std::uint64_t>(shr(b, half)));
         } else {
                 boost::hash2::hash_append(h, f, b);
         }

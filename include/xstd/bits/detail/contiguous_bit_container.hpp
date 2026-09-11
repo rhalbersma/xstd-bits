@@ -10,6 +10,7 @@
 #include <xstd/bits/detail/allocator_typedef.hpp>            // allocator_typedef
 #include <xstd/bits/detail/intrin.hpp>                       // countl_zero, countr_zero, popcount
 #include <xstd/bits/detail/pred.hpp>                         // intersects, is_subset_of, not_equal_to
+#include <xstd/bits/detail/shift.hpp>                        // shl, shr
 #include <xstd/ints/concepts/unsigned_integer.hpp>           // unsigned_integer
 #include <xstd/ints/cstdlib/div.hpp>                         // div, div_result
 #include <xstd/ints/limits.hpp>                              // numeric_limits
@@ -89,7 +90,7 @@ private:
 
         // Width zero named, not computed: MSVC folds both ?: arms and answers C4293. [design.md#padding]
         static constexpr auto static_num_unused_bits = has_static_size ? static_num_bits - N : 0UZ;
-        static constexpr auto static_used_bits       = has_static_size and N == 0 ? zero : static_cast<block_type>(ones >> static_num_unused_bits);
+        static constexpr auto static_used_bits       = has_static_size and N == 0 ? zero : shr(ones, static_num_unused_bits);
         static constexpr auto static_unused_bits     = static_cast<block_type>(~static_used_bits);
         static constexpr auto static_has_unused_bits = has_static_size and static_used_bits != ones;
 
@@ -191,7 +192,7 @@ public:
                                 return std::strong_ordering::equal;
                         }
                         auto const offset = detail::bits::countr_zero(diff);
-                        if (detail::bits::intersects(this->m_blocks[index], static_cast<block_type>(unit << offset))) {
+                        if (detail::bits::intersects(this->m_blocks[index], shl(unit, offset))) {
                                 return other.any_above(index, offset) ? std::strong_ordering::less : std::strong_ordering::greater;
                         }
                         return this->any_above(index, offset) ? std::strong_ordering::greater : std::strong_ordering::less;
@@ -211,7 +212,7 @@ public:
                                 return std::strong_ordering::equal;
                         }
                         auto const offset = detail::bits::countr_zero(diff);
-                        return detail::bits::intersects(this->m_blocks[index], static_cast<block_type>(unit << offset))
+                        return detail::bits::intersects(this->m_blocks[index], shl(unit, offset))
                                 ? std::strong_ordering::greater
                                 : std::strong_ordering::less
                         ;
@@ -299,7 +300,7 @@ public:
                 auto const [ index, offset ] = index_offset(n);
                 assert(index < num_blocks());
                 if (offset == 0UZ or index == last_block()) {
-                        return static_cast<block_type>(m_blocks[index] >> offset);
+                        return shr(m_blocks[index], offset);
                 }
                 return straddled_block(index, bits_per_block - offset, offset);
         }
@@ -313,12 +314,12 @@ public:
                 auto const bits = static_cast<block_type>(value & mask);
 
                 // Each step lands back in block_type: a promoted operand feeding the next bitwise operator is what bugprone-signed-bitwise reads. [design.md#block-writes]
-                auto const low_kept = static_cast<block_type>(m_blocks[index] & static_cast<block_type>(~static_cast<block_type>(mask << offset)));
-                m_blocks[index] = static_cast<block_type>(low_kept | static_cast<block_type>(bits << offset));
+                auto const low_kept = static_cast<block_type>(m_blocks[index] & static_cast<block_type>(~shl(mask, offset)));
+                m_blocks[index] = static_cast<block_type>(low_kept | shl(bits, offset));
                 if (offset != 0UZ and index != last_block()) {
                         auto const shift = bits_per_block - offset;
-                        auto const high_kept = static_cast<block_type>(m_blocks[index + 1UZ] & static_cast<block_type>(~static_cast<block_type>(mask >> shift)));
-                        m_blocks[index + 1UZ] = static_cast<block_type>(high_kept | static_cast<block_type>(bits >> shift));
+                        auto const high_kept = static_cast<block_type>(m_blocks[index + 1UZ] & static_cast<block_type>(~shr(mask, shift)));
+                        m_blocks[index + 1UZ] = static_cast<block_type>(high_kept | shr(bits, shift));
                 }
                 erase_unused();
         }
@@ -400,13 +401,13 @@ public:
                         return size();
                 }
                 if constexpr (has_static_size and static_num_blocks == 1) {
-                        if (auto const block = static_cast<block_type>(m_blocks[0] >> n); block != zero) {
+                        if (auto const block = shr(m_blocks[0], n); block != zero) {
                                 return n + detail::bits::countr_zero(block);
                         }
                 } else if constexpr (has_static_size and static_num_blocks == 2) {
                         // Indexed, not branched: an if cost 10 instructions at -O3. [design.md#two-block-case]
                         auto const [ index, offset ] = index_offset(n);
-                        if (auto const block = static_cast<block_type>(m_blocks[index] >> offset); block != zero) {
+                        if (auto const block = shr(m_blocks[index], offset); block != zero) {
                                 return n + detail::bits::countr_zero(block);
                         }
                         if (index == 0 and m_blocks[1] != zero) {
@@ -415,7 +416,7 @@ public:
                 } else {
                         // No offset != 0 guard: >> 0 is the identity. [design.md#offset-guards]
                         auto [ index, offset ] = index_offset(n);
-                        if (auto const block = static_cast<block_type>(m_blocks[index] >> offset); block != zero) {
+                        if (auto const block = shr(m_blocks[index], offset); block != zero) {
                                 return n + detail::bits::countr_zero(block);
                         }
                         ++index;
@@ -446,11 +447,11 @@ public:
                 assert(any());
                 --n;
                 if constexpr (has_static_size and static_num_blocks == 1) {
-                        return n - detail::bits::countl_zero(static_cast<block_type>(m_blocks[0] << (left_bit - n)));
+                        return n - detail::bits::countl_zero(shl(m_blocks[0], left_bit - n));
                 } else if constexpr (has_static_size and static_num_blocks == 2) {
                         // Naming the fallback block removes the general path's start-index guard. [design.md#offset-guards]
                         auto const [ index, offset ] = index_offset(n);
-                        if (auto const block = static_cast<block_type>(m_blocks[index] << (left_bit - offset)); block != zero) {
+                        if (auto const block = shl(m_blocks[index], left_bit - offset); block != zero) {
                                 return n - detail::bits::countl_zero(block);
                         }
                         // Reaching here at index 0 would break the precondition the general path asserts instead.
@@ -460,7 +461,7 @@ public:
                 } else {
                         auto [ index, offset ] = index_offset(n);
                         if (auto const reverse_offset = left_bit - offset; reverse_offset != 0) {
-                                if (auto const block = static_cast<block_type>(m_blocks[index] << reverse_offset); block != zero) {
+                                if (auto const block = shl(m_blocks[index], reverse_offset); block != zero) {
                                         return n - detail::bits::countl_zero(block);
                                 }
                                 --index;
@@ -550,7 +551,7 @@ public:
                 assert(is_valid(n));
                 if constexpr (has_static_size and static_num_blocks == 1) {
                         // m_blocks[0] <<= n narrows the promoted int back to a block_type implicitly, which -fsanitize=implicit-conversion aborts on once a bit shifts out.
-                        m_blocks[0] = static_cast<block_type>(m_blocks[0] << n);
+                        m_blocks[0] = shl(m_blocks[0], n);
                 } else {
                         auto const [ n_blocks, L_shift ] = xstd::div(n, bits_per_block);
                         // Restated because GCC drops the range through xstd::div. [design.md#gcc-array-bounds]
@@ -563,7 +564,7 @@ public:
                                         // Read one block lower than the destination: the splice of [i - n_blocks - 1, i - n_blocks]. [design.md#the-funnel-shift]
                                         m_blocks[i] = straddled_block(i - n_blocks - 1UZ, L_shift, R_shift);
                                 }
-                                m_blocks[n_blocks] = static_cast<block_type>(m_blocks[0] << L_shift);
+                                m_blocks[n_blocks] = shl(m_blocks[0], L_shift);
                         }
                         std::ranges::fill_n(std::ranges::begin(m_blocks), static_cast<std::ptrdiff_t>(n_blocks), zero);
                 }
@@ -577,7 +578,7 @@ public:
                 assert(is_valid(n));
                 if constexpr (has_static_size and static_num_blocks == 1) {
                         // m_blocks[0] >>= n narrows the promoted int back to a block_type implicitly, which -fsanitize=implicit-conversion instruments.
-                        m_blocks[0] = static_cast<block_type>(m_blocks[0] >> n);
+                        m_blocks[0] = shr(m_blocks[0], n);
                 } else {
                         auto const [ n_blocks, R_shift ] = xstd::div(n, bits_per_block);
                         // See operator<<=: the same bound, for the same reason.
@@ -590,7 +591,7 @@ public:
                                         // Which is word_at(i * bits_per_block + n), reached without recomputing the division. [design.md#the-funnel-shift]
                                         m_blocks[i] = straddled_block(i + n_blocks, L_shift, R_shift);
                                 }
-                                m_blocks[last_block() - n_blocks] = static_cast<block_type>(m_blocks[last_block()] >> R_shift);
+                                m_blocks[last_block() - n_blocks] = shr(m_blocks[last_block()], R_shift);
                         }
                         std::ranges::fill_n(std::ranges::prev(std::ranges::end(m_blocks), static_cast<std::ptrdiff_t>(n_blocks)), static_cast<std::ptrdiff_t>(n_blocks), zero);
                 }
@@ -701,8 +702,8 @@ public:
         {
                 auto const offset = size() % bits_per_block;
                 if (offset != 0UZ) {
-                        m_blocks[last_block()] |= static_cast<block_type>(value << offset);
-                        m_blocks.push_back(static_cast<block_type>(value >> (bits_per_block - offset)));
+                        m_blocks[last_block()] |= shl(value, offset);
+                        m_blocks.push_back(shr(value, bits_per_block - offset));
                 } else if (size() != 0UZ) {
                         m_blocks.push_back(value);
                 } else {
@@ -956,7 +957,7 @@ private:
                 -> bool
         {
                 assert(not test((index * bits_per_block) + offset));
-                if (static_cast<block_type>(m_blocks[index] >> offset) != zero) {
+                if (shr(m_blocks[index], offset) != zero) {
                         return true;
                 }
                 if constexpr (has_static_size and static_num_blocks == 1) {
@@ -988,8 +989,8 @@ private:
                 assert(0UZ < R_shift and R_shift < bits_per_block);
                 assert(index + 1UZ < num_blocks());
                 return static_cast<block_type>(
-                        static_cast<block_type>(m_blocks[index + 1UZ] << L_shift) |
-                        static_cast<block_type>(m_blocks[index] >> R_shift)
+                        shl(m_blocks[index + 1UZ], L_shift) |
+                        shr(m_blocks[index], R_shift)
                 );
         }
 
@@ -1006,7 +1007,7 @@ private:
         {
                 for (auto pos = n; pos < n + len; pos += bits_per_block) {
                         auto const count = std::ranges::min(bits_per_block, n + len - pos);
-                        f(pos, count == bits_per_block ? ones : static_cast<block_type>(static_cast<block_type>(unit << count) - unit));
+                        f(pos, count == bits_per_block ? ones : static_cast<block_type>(shl(unit, count) - unit));
                 }
         }
 
@@ -1029,7 +1030,7 @@ private:
         [[nodiscard]] constexpr auto used_bits() const noexcept
                 -> block_type
         {
-                return size() == 0 ? zero : static_cast<block_type>(ones >> ((num_blocks() * bits_per_block) - size()));
+                return size() == 0 ? zero : shr(ones, (num_blocks() * bits_per_block) - size());
         }
 
         [[nodiscard]] constexpr auto is_valid(std::size_t n [[maybe_unused]]) const noexcept
@@ -1062,7 +1063,7 @@ private:
                 -> std::pair<block_reference_t<decltype(self)>, block_type>
         {
                 auto const [ index, offset ] = index_offset(n);
-                return { std::forward<decltype(self)>(self).m_blocks[index], static_cast<block_type>(unit << offset) };
+                return { std::forward<decltype(self)>(self).m_blocks[index], shl(unit, offset) };
         }
 
         constexpr auto erase_unused() noexcept

@@ -7,6 +7,7 @@
 #define XSTD_BITS_BIT_TRAITS_HPP
 
 #include <xstd/bits/detail/intrin.hpp>             // countl_zero, countr_zero, popcount
+#include <xstd/bits/detail/shift.hpp>              // shl, shr
 #include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
 #include <cassert>                                 // assert
 #include <concepts>                                // convertible_to, regular, same_as
@@ -113,7 +114,7 @@ template<class Traits, class Bits>
         auto const offset = n % digits;
 
         // No offset != 0 guard: >> 0 is the identity, and #88 measured it as pure cost. [design.md#offset-guards]
-        if (auto const block = static_cast<block_type>(Traits::block(c, start) >> offset); block != block_type{}) {
+        if (auto const block = shr(Traits::block(c, start), offset); block != block_type{}) {
                 return n + detail::bits::countr_zero(block);
         }
         // The mirror of scan_prev_by_block's guard, cursor included, for the same two reasons.

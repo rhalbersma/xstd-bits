@@ -10,6 +10,7 @@
 #include <xstd/bits/detail/bidirectional.hpp> // bidirectional_bit_iterator, bidirectional_bit_reference
 #include <xstd/bits/detail/hash.hpp>          // hash_append_bits, hash_append_positions, std_hash
 #include <xstd/bits/detail/intrin.hpp>        // countl_zero, countr_zero
+#include <xstd/bits/detail/shift.hpp>         // shl, shr
 #include <xstd/bits/ownership.hpp>            // owned_bits_t, owned_storage, owned_traits_t, owner_of, ownership, owns
 #include <boost/container_hash/is_range.hpp>  // is_range
 #include <boost/hash2/hash_append.hpp>        // hash_append_tag
@@ -95,7 +96,7 @@ constexpr auto walk_blocks_descending(Bits const& c, F& f)
                         if (not invoke_continues(f, (digits * index) + offset)) {
                                 return;
                         }
-                        block = static_cast<block_type>(block ^ static_cast<block_type>(block_type{1} << offset));
+                        block = static_cast<block_type>(block ^ detail::bits::shl(block_type{1}, offset));
                 }
         }
 }
