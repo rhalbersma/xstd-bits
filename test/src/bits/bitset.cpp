@@ -9,12 +9,18 @@
 #include <xstd/bits/bitset_adaptor.hpp> // swap
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <concepts>                     // regular, totally_ordered
+#include <tuple>                        // tuple_cat
 #include <type_traits>                  // is_nothrow_*, is_trivially_*
 #include <utility>                      // declval
 
 BOOST_AUTO_TEST_SUITE(Bitset)
 
-using Types = test::graded_extents<xstd::basic_bitset>;
+// Every Block model within one block, the narrow ones across boundaries, and the widest Block across one too;
+// the grading is in test/block_types.hpp. Every case below is a static_assert or one pass over the positions,
+// so the three-block instantiations cost what the one-block ones do.
+using Types = decltype(std::tuple_cat(
+        std::declval<test::graded_extents<xstd::basic_bitset>>(),
+        std::declval<test::wide_extents<xstd::basic_bitset>>()));
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(IsRegular, T, Types)
 {
