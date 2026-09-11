@@ -28,5 +28,5 @@ jobs:
       vcpkg: true
       # The revisions CMakeLists.txt pins; install(EXPORT) cannot export a FetchContent build tree, so installed dependencies are required.
       dependency_repos: |
-        https://github.com/rhalbersma/xstd-ints.git 4f53008bec1c56535c839ba2ef8bec2b4985de63
+        https://github.com/rhalbersma/xstd-ints.git a053f05062a12657eeaef47637b8c0be4483fc35
         https://github.com/rhalbersma/xstd-misc.git 4ef4886c093afdb41f1979eda2a5cff51acf076b
