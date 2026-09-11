@@ -41,6 +41,12 @@ concept block_basis =
 // question in both directions -- false for every integer class that works as a Block, so it would deny the
 // MSVC half outright, and true in dialects where <bit> still declines the type. The converse is not worth
 // asserting either: a basis a flag declines to use costs coverage, not correctness. [design.md#uint128-support]
+// The two flags name the SAME spelling, xstd::uint128, and mean different types by it: the builtin on one kind
+// of target, std::_Unsigned128 on the other. Exactly one can hold, and asking only what the compiler supports
+// is what breaks that -- clang-cl has __int128 and still gets the class. Both on would put a class into
+// word_types, which every suite grades over, and name the type twice in the wide list below.
+static_assert(not (has_uint128 and has_msvc_int128));
+
 static_assert(not has_uint128 or block_basis<xstd::uint128>);
 #ifdef TEST_HAS_MSVC_INT128
 static_assert(block_basis<xstd::uint128>);
