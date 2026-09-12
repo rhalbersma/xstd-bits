@@ -23,9 +23,7 @@
 
 BOOST_AUTO_TEST_SUITE(BitArray)
 
-// Every Block model within one block, the narrow ones across boundaries, and the widest Block across one too;
-// the grading is in test/block_types.hpp. Every case below is a static_assert or one pass over the positions,
-// so the three-block instantiations cost what the one-block ones do.
+// Every Block model within one block, the narrow ones across boundaries, and the widest Block across one too; the grading is in test/block_types.hpp.
 using Types = decltype(std::tuple_cat(
         std::declval<test::graded_extents<xstd::basic_bit_array>>(),
         std::declval<test::wide_extents<xstd::basic_bit_array>>()));
@@ -52,20 +50,14 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItsIteratorIsRandomAccess, T, Types)
         static_assert(std::random_access_iterator<I>);
 }
 
-// Random access is where it stops: the blocks underneath are contiguous, the bits are not addressable, and a
-// proxy reference is what forbids the last rung. std::contiguous_iterator requires iter_reference_t<I> to be a
-// real iter_value_t<I>&, which no proxy can be. [design.md#contiguous-block-container]
+// Random access is where it stops: the blocks underneath are contiguous, the bits are not addressable, and a proxy reference is what forbids the last rung. [design.md#contiguous-block-container]
 BOOST_AUTO_TEST_CASE_TEMPLATE(ItIsNotAContiguousRange, T, Types)
 {
         static_assert(not std::ranges::contiguous_range<T>);
         static_assert(not std::contiguous_iterator<typename T::iterator>);
 }
 
-// What survives the loss of contiguity: operator& on the proxy answers an ITERATOR rather than a pointer, so the
-// identity a contiguous range spells in pointer arithmetic holds here in iterator arithmetic. std::vector<bool>
-// manages it nowhere on libstdc++, whose _Bit_reference has no operator& at all, and only on a CONST vector on
-// libc++, whose operator& sits on __bit_const_reference alone. Ours answers on both.
-// [design.md#the-iterator-is-the-primitive]
+// What survives the loss of contiguity: operator& on the proxy answers an ITERATOR rather than a pointer, so the identity a contiguous range spells in pointer arithmetic holds here in iterator arithmetic. [design.md#the-iterator-is-the-primitive]
 BOOST_AUTO_TEST_CASE_TEMPLATE(AddressOfASubscriptIsTheIteratorToIt, T, Types)
 {
         static_assert(std::same_as<decltype(&std::declval<T&>()[0UZ]), typename T::iterator>);
@@ -121,9 +113,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItIsListInitializedLikeAStdArray, T, Types)
         BOOST_CHECK(T{} == T());
 }
 
-// The behavioural half, which this suite was missing while the bitset and set suites had theirs: every operation
-// run on a bit_array and on the std::array<bool, N> it is held against, and the two compared. A synopsis
-// checklist says the line exists; only this says it answers the same thing. [design.md#the-sequence-contract]
+// The behavioural half, which this suite was missing while the bitset and set suites had theirs: every operation run on a bit_array and on the std::array<bool, N> it is held against, and the two compared. [design.md#the-sequence-contract]
 namespace {
 
 // The model at the same extent, filled the same way, so any disagreement is the packing's.
@@ -138,11 +128,7 @@ auto model_of(T const& a)
         return m;
 }
 
-// Every read path at every position, counted rather than asserted one at a time: a failure then names the
-// operation instead of drowning the log in one line per position. [design.md#counted-not-asserted]
-//
-// Taken by non-const reference and aliased to a const one inside, because these take an explicit object
-// parameter and the const and non-const paths are two different functions, both of them under test.
+// Every read path at every position, counted rather than asserted one at a time: a failure then names the operation instead of drowning the log in one line per position. [design.md#counted-not-asserted]
 template<class T>
 auto access_disagreements(T& a, std::vector<bool> const& m)
         -> std::size_t
@@ -173,8 +159,7 @@ auto ends_disagreements(T& a, std::vector<bool> const& m)
              + static_cast<std::size_t>(static_cast<bool>(ca.back())  != m.back());
 }
 
-// One bit of pattern p at position i. A lookup rather than a conditional chain: six patterns written as a
-// chain nest six deep, and the nesting is not what the test is about.
+// One bit of pattern p at position i.
 auto pattern_bit(std::size_t p, std::size_t i, std::size_t n)
         -> bool
 {
@@ -188,8 +173,7 @@ auto pattern_bit(std::size_t p, std::size_t i, std::size_t n)
         }
 }
 
-// Uniform both ways, single-ended both ways, and two strides: enough that every comparison lands on both
-// sides of itself, and cheaper than every pair of values.
+// Uniform both ways, single-ended both ways, and two strides: enough that every comparison lands on both sides of itself, and cheaper than every pair of values.
 template<class T>
 auto comparison_patterns()
         -> std::vector<T>
@@ -278,8 +262,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(FillAndSwapAgreeWithTheModel, T, Types)
         BOOST_CHECK(std::ranges::equal(y, my));
 }
 
-// std::array<bool, N> orders lexicographically over its elements, and so must this. Every pair of a graded set
-// of patterns, which is cheaper than every pair of values and lands on both sides of each comparison.
+// std::array<bool, N> orders lexicographically over its elements, and so must this.
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheComparisonsAgreeWithTheModel, T, Types)
 {
         auto const patterns = comparison_patterns<T>();
@@ -301,8 +284,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheComparisonsAgreeWithTheModel, T, Types)
         BOOST_CHECK_EQUAL(disagreements, 0UZ);
 }
 
-// Every position, densely, agreeing with the subscript -- and not a contiguous range, which no proxy sequence
-// can be. [design.md#the-iterator-is-the-primitive]
+// Every position, densely, agreeing with the subscript -- and not a contiguous range, which no proxy sequence can be. [design.md#the-iterator-is-the-primitive]
 BOOST_AUTO_TEST_CASE_TEMPLATE(ItYieldsEveryPosition, T, Types)
 {
         auto c = T();

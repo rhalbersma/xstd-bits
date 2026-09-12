@@ -47,10 +47,7 @@ template<class S> constexpr bool has_complement = requires (S s) { ~s; s & s; };
 template<class S, class F> constexpr bool walks         = requires (S const& s, F f) { s.for_each(f); };
 template<class S, class F> constexpr bool walks_reverse = requires (S const& s, F f) { s.for_each_reverse(f); };
 
-// Functors overloaded on the value category. The constraint above cannot tell the two overloads apart -- both
-// make the functor invocable with a size_t -- so these, and only these, are what pin the prvalue at the call:
-// an lvalue at the call takes the && overload away and lands on the & one. One probe per arm, because
-// invoke_continues splits on the return type and each arm calls the functor for itself.
+// Functors overloaded on the value category.
 struct void_probe
 {
         bool& took_a_reference;
@@ -224,8 +221,7 @@ BOOST_AUTO_TEST_CASE(TheViewsAnswerEveryReadOverEveryStorage)
         }
 }
 
-// max_size is the positions there are to hold: the width in the type, what an owner's storage can address, or what a
-// view is looking at, none of which is the address space. [design.md#max-size-is-the-bits]
+// max_size is the positions there are to hold: the width in the type, what an owner's storage can address, or what a view is looking at, none of which is the address space. [design.md#max-size-is-the-bits]
 BOOST_AUTO_TEST_CASE(MaxSizeIsThePositionsThereAreToHold)
 {
         auto storage = Storage();
@@ -318,10 +314,7 @@ BOOST_AUTO_TEST_CASE(TheNonMemberFormsAreTheOwners)
         BOOST_CHECK(keys(z) == std::set<std::size_t>({ 6 }));
 }
 
-// insert_range takes a tier above the element-wise loop where it can, and the point of every case here is that
-// the answer is the element-wise one. A block-wise fill has to mask its first and last block, so the boundaries
-// are where it would go wrong: a range inside one block, a range spanning several, and one of each degenerate
-// shape. [design.md#the-range-members]
+// insert_range takes a tier above the element-wise loop where it can, and the point of every case here is that the answer is the element-wise one. [design.md#the-range-members]
 BOOST_AUTO_TEST_CASE(RangedInsertionAgreesWithTheElementwiseLoop)
 {
         constexpr auto N = 100UZ;
@@ -385,9 +378,7 @@ BOOST_AUTO_TEST_CASE(RangedInsertionGrowsADynamicWidth)
         BOOST_CHECK(ranged == elementwise);
 }
 
-// for_each is the block-at-a-time walk an iterator cannot be, so what has to be shown is that it answers exactly
-// what iteration answers -- over a storage with block access and over one without, which takes the other arm.
-// [design.md#the-set-for-each]
+// for_each is the block-at-a-time walk an iterator cannot be, so what has to be shown is that it answers exactly what iteration answers -- over a storage with block access and over one without, which takes the other arm. [design.md#the-set-for-each]
 BOOST_AUTO_TEST_CASE(ForEachVisitsWhatIterationVisits)
 {
         auto const positions = { 0UZ, 1UZ, 63UZ, 64UZ, 65UZ, 99UZ };
@@ -426,8 +417,7 @@ BOOST_AUTO_TEST_CASE(ForEachVisitsWhatIterationVisits)
         BOOST_CHECK_EQUAL(calls, 0UZ);
 }
 
-// A functor returning bool means "keep going", which is what a move generator wants once it has its answer. A
-// void one always continues. Both arms honour it.
+// A functor returning bool means "keep going", which is what a move generator wants once it has its answer.
 BOOST_AUTO_TEST_CASE(ForEachStopsWhenTheFunctorSaysSo)
 {
         auto const positions = { 0UZ, 1UZ, 63UZ, 64UZ, 65UZ, 99UZ };
@@ -463,9 +453,7 @@ BOOST_AUTO_TEST_CASE(ForEachStopsWhenTheFunctorSaysSo)
         BOOST_CHECK_EQUAL(first_only, 1UZ);
 }
 
-// The functor is handed the position by value, and the constraint says so. Without that a functor asking for
-// size_t& binds to the walker's own local, and its write goes nowhere -- a walk reports positions and changes
-// none, so it is not a lost write but a meaningless one. [design.md#the-functor-takes-a-value]
+// The functor is handed the position by value, and the constraint says so. [design.md#the-functor-takes-a-value]
 BOOST_AUTO_TEST_CASE(ForEachHandsThePositionByValue)
 {
         // By value, generic or not, and by const reference: all four read what they are given.
@@ -490,7 +478,6 @@ BOOST_AUTO_TEST_CASE(ForEachHandsThePositionByValue)
         static_assert(not walks<View, decltype([](std::size_t&) -> void {})>);
 
         // And the overload resolution the constraint cannot reach: an lvalue at the call would take the reference.
-        // Both arms and both directions, each of which calls the functor for itself.
         auto owner = Owner();
         owner.insert(3UZ);
         auto took_a_reference = false;

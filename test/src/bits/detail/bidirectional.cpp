@@ -26,7 +26,6 @@
 namespace {
 
 // Strong types to receive what the proxy converts to: one that takes a size_t implicitly, one only explicitly.
-// Copy-initialized, never cast: a cast is a direct-initialization with two routes in, and MSVC calls that no route at all.
 struct key
 {
         std::size_t value;
@@ -200,7 +199,6 @@ BOOST_AUTO_TEST_CASE(TheReadOnlyProxiesAreValues)
 }
 
 // The native trait keeps contiguous_bit_container's preconditions and is stepped within them; the minimal trait is total and asked everything.
-// The minimal trait from width 2, where an iterator first reaches the element-wise forward walk rather than its width guard.
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheSetIteratorWalksThePositionsInBothDirections, T, ArrayTypes)
 {
         check_every_set_pattern<xstd::bit_traits<T>, false>(T());

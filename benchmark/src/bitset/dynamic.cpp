@@ -3,10 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-// The run-time width against boost's, on the same word ladder the static width runs in ops.cpp. Boost has no
-// static column at all -- a std::vector behind every operation -- so where ops.cpp asks what a compile-time
-// width buys over std::bitset, this asks what our storage buys over the one everybody reaches for.
-// [design.md#a-strict-extension]
+// The run-time width against boost's, on the same word ladder the static width runs in ops.cpp. [design.md#a-strict-extension]
 
 #include <xstd/bits/bit_set_view.hpp>             // bit_set_view
 #include <xstd/bits/dynamic_bitset.hpp>           // dynamic_bitset
@@ -109,8 +106,7 @@ auto bm_flip(benchmark::State& state)
         per_byte(state);
 }
 
-// Boost answers find_first/find_next natively and ours answers its own scan; bit_set_view is what puts the two
-// behind one expression. [design.md#the-blit]
+// Boost answers find_first/find_next natively and ours answers its own scan; bit_set_view is what puts the two behind one expression. [design.md#the-blit]
 template<class T>
 auto bm_scan(benchmark::State& state)
         -> void
@@ -127,8 +123,7 @@ auto bm_scan(benchmark::State& state)
         per_byte(state);
 }
 
-// A run-time width takes the ladder as a Range where the static one needs a template list; the rungs are the same
-// 1, 2, 4 ... 512 words, so the two files' rows can be read against each other.
+// A run-time width takes the ladder as a Range where the static one needs a template list; the rungs are the same 1, 2, 4 ... 512 words, so the two files' rows can be read against each other.
 #define BM_LADDER(fn)                                                                   \
         BENCHMARK_TEMPLATE1(fn, boost::dynamic_bitset<std::uint64_t>)                   \
                 ->RangeMultiplier(2)->Range(1, 512);                                    \

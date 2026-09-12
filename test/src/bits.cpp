@@ -3,10 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-// The two vehicle headers are named directly because the assertions below pin the three naming layers to their
-// storage, and the umbrella stopped exporting those names when the vehicles moved under detail/. A test may
-// reach into detail/ where a user may not, and an include list is where that is said out loud.
-// [design.md#the-interface-line]
+// The two vehicle headers are named directly because the assertions below pin the three naming layers to their storage, and the umbrella stopped exporting those names when the vehicles moved under detail/. A test may reach into detail/ where a user may not, and an include list is where that is said out loud. [design.md#the-interface-line]
 #include <test/block_types.hpp>                       // graded_extents
 #include <test/flat_set.hpp>                          // IWYU pragma: keep; TEST_HAS_FLAT_SET
 #include <test/inplace_vector.hpp>                    // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR

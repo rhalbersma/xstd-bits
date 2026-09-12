@@ -4,16 +4,9 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 // The gate on the interface line. [design.md#the-interface-line]
-//
-// One xstd include, and every name below is reached through it: the nine containers, the three views, the three
-// adaptors, ownership and bit_traits. No <xstd/bits/...> header for any of them, and above all nothing under
-// detail/ -- a name that cannot be spelled from here is not interface, and this is where that is enforced rather
-// than asserted. ext/ is absent on purpose: it is interface, but the umbrella leaves it out so Boost stays off
-// every consumer's path.
 
 #include <xstd/bits.hpp> // bit_array, bit_inplace_set, bit_inplace_vector, bit_set, bit_set_view, bit_span,
-                         // bit_static_set, bit_subspan, bit_traits, bit_vector, bitset, bitset_adaptor,
-                         // dynamic_bitset, has_bitops, inplace_bitset, ownership, sequence_adaptor, set_adaptor
+                         // bit_static_set, bit_subspan, bit_traits, bit_vector, bitset, bitset_adaptor, dynamic_bitset, has_bitops, inplace_bitset, ownership, sequence_adaptor, set_adaptor
 #include <concepts>      // same_as
 #include <cstddef>       // size_t
 #include <cstdint>       // uint8_t, uint64_t
@@ -62,8 +55,7 @@ struct bit_traits<consumer::word>
 
 namespace consumer {
 
-// The adaptors named without naming the storage they are instantiated over: a pattern match, which is also the
-// claim #131 rests on -- the containers and the views are not built on the adaptors, they are the adaptors.
+// The adaptors named without naming the storage they are instantiated over: a pattern match, which is also the claim #131 rests on -- the containers and the views are not built on the adaptors, they are the adaptors.
 template<class>                                            constexpr bool is_set_adaptor = false;
 template<class B, xstd::ownership O, class T>              constexpr bool is_set_adaptor<xstd::set_adaptor<B, O, T>> = true;
 
@@ -86,8 +78,7 @@ static_assert(is_sequence_adaptor<xstd::bit_vector>);
 static_assert(is_sequence_adaptor<xstd::bit_span<word>>);
 static_assert(is_sequence_adaptor<xstd::bit_subspan<word>>);
 
-// The bitset reading, which owns by construction: its storage must speak the whole bitset vocabulary, and only
-// the library's own vehicles do -- so our word is here as the negative case rather than as an instantiation.
+// The bitset reading, which owns by construction: its storage must speak the whole bitset vocabulary, and only the library's own vehicles do -- so our word is here as the negative case rather than as an instantiation.
 static_assert(is_bitset_adaptor<xstd::bitset<64>>);
 static_assert(is_bitset_adaptor<xstd::basic_bitset<std::uint8_t, 24>>);
 static_assert(is_bitset_adaptor<xstd::dynamic_bitset>);

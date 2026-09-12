@@ -45,10 +45,7 @@ template<class Seq>
         return { s.begin(), s.end() };
 }
 
-// A storage that keeps its blocks to itself on every standard library, which a std::bitset is not: libc++ has no
-// block entry at all, libstdc++ none above the portable to_ullong() read, and MSVC one at every width through
-// _Getword. So the position tier gets a fixture of its own, the required entries and a write and nothing more,
-// as test/src/bits/bit_traits.cpp's element_bits is. [design.md#detection-by-absence]
+// A storage that keeps its blocks to itself on every standard library, which a std::bitset is not: libc++ has no block entry at all, libstdc++ none above the portable to_ullong() read, and MSVC one at every width through _Getword. [design.md#detection-by-absence]
 template<std::size_t N>
 struct element_bits
 {
@@ -82,6 +79,19 @@ struct bit_traits<element_bits<N>>
 
 }       // namespace xstd
 
+namespace {
+
+// Named so each requirement is checked on a TEMPLATE PARAMETER. Selecting a deleted overload is a hard error where the requires-expression names a concrete type -- measured on GCC and Clang alike -- and a soft false only through a parameter, which is what makes a deleted operator assertable at all.
+template<class T> concept eq_comparable        = requires (T a, T b) { a ==  b; };
+template<class T> concept ne_comparable        = requires (T a, T b) { a !=  b; };
+template<class T> concept spaceship_comparable = requires (T a, T b) { a <=> b; };
+template<class T> concept lt_comparable        = requires (T a, T b) { a <   b; };
+template<class T> concept gt_comparable        = requires (T a, T b) { a >   b; };
+template<class T> concept le_comparable        = requires (T a, T b) { a <=  b; };
+template<class T> concept ge_comparable        = requires (T a, T b) { a >=  b; };
+
+}       // namespace
+
 BOOST_AUTO_TEST_SUITE(SequenceAdaptor)
 
 BOOST_AUTO_TEST_CASE(AnOwnerIsRegularAndAViewIsCopyable)
@@ -97,6 +107,19 @@ BOOST_AUTO_TEST_CASE(AnOwnerIsRegularAndAViewIsCopyable)
         // A view follows span: no equality and no ordering. [design.md#views-follow-their-precedent]
         static_assert(not std::equality_comparable<View>);
         static_assert(not std::three_way_comparable<View>);
+
+        // Spelled out beside the two concepts, because the empty base a view carries has a defaulted <=> that ADL finds for a derived argument, and a PARTIAL deletion leaves a working subset rather than nothing: <=> rewrites the four relationals and never ==, != rewrites from == and never from <=>, and a defaulted <=> implicitly declares a defaulted == beside it. [design.md#views-follow-their-precedent]
+        static_assert(not eq_comparable<View>);
+        static_assert(not ne_comparable<View>);
+        static_assert(not spaceship_comparable<View>);
+        static_assert(not lt_comparable<View>);
+        static_assert(not gt_comparable<View>);
+        static_assert(not le_comparable<View>);
+        static_assert(not ge_comparable<View>);
+
+        // The owner answers all seven, so the assertions above are the view's shape and not a dead concept.
+        static_assert(eq_comparable<Owner> and ne_comparable<Owner> and spaceship_comparable<Owner>);
+        static_assert(lt_comparable<Owner> and gt_comparable<Owner> and le_comparable<Owner> and ge_comparable<Owner>);
 }
 
 // Deep const for the owner, shallow for the view: what each hands out says which.
@@ -254,16 +277,12 @@ BOOST_AUTO_TEST_CASE(AZeroWidthSequenceIsEmpty)
         BOOST_CHECK(v.empty() and v.begin() == v.end());
 }
 
-// The sequence reading's own aggregates, against the reading they belong to rather than the set reading that
-// happens to answer the same integer for one of the eight. Every operation on the packing and on the
-// std::vector<bool> it is held against, at every graded extent and block type so a block boundary lands
-// mid-pattern, and at both values of the bool. [design.md#the-sequence-aggregates]
+// The sequence reading's own aggregates, against the reading they belong to rather than the set reading that happens to answer the same integer for one of the eight. [design.md#the-sequence-aggregates]
 namespace {
 
 using Graded = test::graded_extents<xstd::basic_bit_array>;
 
-// One bit of pattern p at position i, as bit_array's model cases have it. Empty and full are the two degenerate
-// widths the aggregates disagree about most: they are the fixed points of all and none.
+// One bit of pattern p at position i, as bit_array's model cases have it.
 auto pattern_bit(std::size_t p, std::size_t i, std::size_t n)
         -> bool
 {
@@ -291,8 +310,7 @@ auto write_pattern(Seq& s, std::size_t p)
         return m;
 }
 
-// Counted rather than asserted per position, so a failure names the operation instead of drowning the log.
-// [design.md#counted-not-asserted]
+// Counted rather than asserted per position, so a failure names the operation instead of drowning the log. [design.md#counted-not-asserted]
 template<class Seq>
 auto aggregate_disagreements(Seq const& s, std::vector<bool> const& m)
         -> std::size_t
@@ -341,8 +359,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheAggregatesAgreeWithTheModel, T, Graded)
         BOOST_CHECK_EQUAL(disagreements, 0UZ);
 }
 
-// The same over a window, whose blocks are not its own: a masked word at a time, at every offset and every
-// length, so the mask is exercised at both ends of a word rather than only at the top. [design.md#windows]
+// The same over a window, whose blocks are not its own: a masked word at a time, at every offset and every length, so the mask is exercised at both ends of a word rather than only at the top. [design.md#windows]
 BOOST_AUTO_TEST_CASE(TheAggregatesAgreeWithTheModelOnAWindowOfOurs)
 {
         using Storage24 = xstd::detail::bits::contiguous_bit_array<std::uint8_t, 24>;
@@ -363,8 +380,7 @@ BOOST_AUTO_TEST_CASE(TheAggregatesAgreeWithTheModelOnAWindowOfOurs)
         BOOST_CHECK_EQUAL(disagreements, 0UZ);
 }
 
-// And over a window of a storage that keeps its blocks to itself, which is the one position-at-a-time tier.
-// [design.md#detection-by-absence]
+// And over a window of a storage that keeps its blocks to itself, which is the one position-at-a-time tier. [design.md#detection-by-absence]
 BOOST_AUTO_TEST_CASE(TheAggregatesAgreeWithTheModelOnAWindowOfAnythingElse)
 {
         using Wide = element_bits<100>;
@@ -395,8 +411,7 @@ BOOST_AUTO_TEST_CASE(TheAggregatesAgreeWithTheModelOnAWindowOfAnythingElse)
         BOOST_CHECK_EQUAL(disagreements, 0UZ);
 }
 
-// std::mismatch's answer, over the machinery operator== is already made of: the position, or size() where the two
-// agree. Every pair of patterns, so the answer lands inside a block, on a boundary and past the end.
+// std::mismatch's answer, over the machinery operator== is already made of: the position, or size() where the two agree.
 BOOST_AUTO_TEST_CASE_TEMPLATE(MismatchAgreesWithTheModel, T, Graded)
 {
         auto disagreements = 0UZ;
@@ -423,10 +438,7 @@ template<class S> constexpr bool can_mismatch = requires (S const& a) { a.mismat
 // What for_each accepts, likewise dependent.
 template<class S, class F> constexpr bool walks = requires (S const& s, F f) { s.for_each(f); };
 
-// Functors overloaded on the value category. The constraint above cannot tell the two overloads apart -- both
-// make the functor invocable with a bool -- so these, and only these, are what pin the prvalue at the call:
-// an lvalue at the call takes the && overload away and lands on the & one. One probe per arm, because
-// invoke_continues splits on the return type and each arm calls the functor for itself.
+// Functors overloaded on the value category.
 struct void_probe
 {
         bool& took_a_reference;
@@ -454,8 +466,7 @@ BOOST_AUTO_TEST_CASE(MismatchIsTheOwnersOverStorageThatHasTheEntry)
         static_assert(not can_mismatch<xstd::sequence_adaptor<std::bitset<9>, xstd::ownership::owns, false>>);
 }
 
-// for_each hands the functor what the iterator dereferences to, in the same order, and stops where a bool functor
-// says to: the range-for's answer by a loop structure no iterator can express. [design.md#the-sequence-for-each]
+// for_each hands the functor what the iterator dereferences to, in the same order, and stops where a bool functor says to: the range-for's answer by a loop structure no iterator can express. [design.md#the-sequence-for-each]
 BOOST_AUTO_TEST_CASE_TEMPLATE(ForEachAgreesWithTheRangeFor, T, Graded)
 {
         auto disagreements = 0UZ;
@@ -472,10 +483,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ForEachAgreesWithTheRangeFor, T, Graded)
         BOOST_CHECK_EQUAL(disagreements, 0UZ);
 }
 
-// The functor is handed the bool by value, and the constraint says so. Without that a functor asking for bool&
-// binds to the walker's own local: the walk reads the storage through a const reference and never writes back, so
-// what looks like a mutating pass compiles into a silent no-op. Writing through the sequence is what the range-for
-// and its proxy are for. [design.md#the-functor-takes-a-value]
+// The functor is handed the bool by value, and the constraint says so. [design.md#the-functor-takes-a-value]
 BOOST_AUTO_TEST_CASE(ForEachHandsTheBoolByValue)
 {
         // By value, generic or not, and by const reference: all four read what they are given.
@@ -490,8 +498,7 @@ BOOST_AUTO_TEST_CASE(ForEachHandsTheBoolByValue)
         // A functor returning bool to mean "keep going" is the other accepted shape.
         static_assert(walks<Owner, decltype([](bool) -> bool { return true; })>);
 
-        // And the two that would have written to nothing. auto is no help here: it is the reference that is the
-        // fault, not the spelling of the type, and [](auto&) is exactly as silent as [](bool&) was.
+        // And the two that would have written to nothing.
         static_assert(not walks<Owner, decltype([](bool&) -> void {})>);
         static_assert(not walks<Owner, decltype([](auto&) -> void {})>);
 
@@ -507,7 +514,6 @@ BOOST_AUTO_TEST_CASE(ForEachHandsTheBoolByValue)
         BOOST_CHECK_EQUAL(a.count(), a.size());
 
         // And the overload resolution the constraint cannot reach: an lvalue at the call would take the reference.
-        // Both arms, the void one and the bool one, each of which calls the functor itself.
         auto took_a_reference = false;
         a.for_each(void_probe{ took_a_reference });
         BOOST_CHECK(not took_a_reference);

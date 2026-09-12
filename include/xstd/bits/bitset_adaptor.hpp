@@ -9,7 +9,7 @@
 // Bitsets [bitset], Header <bitset> synopsis [bitset.syn]
 
 #include <xstd/bits/bit_traits.hpp>               // bit_storage, bit_traits, block_readable, scan_prev, static_bit_extent, word_at, zero_width
-#include <xstd/bits/detail/allocator_typedef.hpp> // allocator_typedef
+#include <xstd/bits/detail/allocator_base_type.hpp> // allocator_base_type
 #include <xstd/bits/detail/hash.hpp>              // hash_append_bits, std_hash
 #include <xstd/bits/ownership.hpp>                // owned_storage, ownership
 #include <boost/hash2/hash_append.hpp>            // hash_append_tag
@@ -65,7 +65,7 @@ concept has_bitops =
 // [template.bitset] over a storage of ours, which speaks the vocabulary and reads by block: what the storage has is forwarded, what it lacks is added through Traits. [design.md#owning-is-ours]
 template<has_bitops Bits, bit_storage<Bits> Traits = bit_traits<Bits>>
         requires block_readable<Traits, Bits>
-class bitset_adaptor : public detail::bits::allocator_typedef<Bits>
+class bitset_adaptor : public detail::bits::allocator_base_type<Bits>
 {
         // One wrapper, two counterparts it strictly extends: std::bitset at a static width, boost::dynamic_bitset at a run-time one. [design.md#a-strict-extension]
         static constexpr bool has_static_width = static_bit_extent<Traits, Bits>;
@@ -497,8 +497,7 @@ public:
                 }
         }
 
-        // The reverse pair, ours: find_prev(pos) is the highest set position below pos, a pos past the width meaning from the end, so find_prev(npos) is find_last().
-        // Total, so the generic walk rather than the trait's entry, whose contract is the iterator's cheaper one. [design.md#total-versus-precondition]
+        // The reverse pair, ours: find_prev(pos) is the highest set position below pos, a pos past the width meaning from the end, so find_prev(npos) is find_last(). [design.md#total-versus-precondition]
         [[nodiscard]] constexpr auto find_last() const noexcept
                 -> std::size_t
         {
@@ -637,7 +636,6 @@ private:
         }
 
         // boost's unequal-width order, a word at a time: the top min(size()) positions of each paired from the top, read as words at either one's own alignment, then the shorter is less. [design.md#the-blit]
-        // The top word of each window ends at its own width, so what it reads above the common length is the clear tail on both sides and needs no mask.
         [[nodiscard]] constexpr auto top_aligned_three_way(bitset_adaptor const& rhs) const noexcept
                 -> std::strong_ordering
         {
@@ -751,11 +749,7 @@ struct owned_storage<bitset_adaptor<Bits, Traits>>
         }
 };
 
-// A bitset reads exactly as the storage it wraps, so one specialization on bitset_adaptor adapts all three bitsets at
-// once -- xstd::bitset<N>, xstd::inplace_bitset<N> and xstd::dynamic_bitset are aliases of it over a different
-// contiguous_bit_container -- and gives them the direct view spelling, bit_set_view<xstd::bitset<N>> and bit_span<xstd::bitset<N>>.
-// Every optional entry is relayed under its own guard, because absence is what the tiers select on: dropping num_blocks
-// and block here would silently turn every word-parallel walk element-wise. [design.md#a-bitset-reads-as-its-storage]
+// A bitset reads exactly as the storage it wraps, so one specialization on bitset_adaptor adapts all three bitsets at once -- xstd::bitset<N>, xstd::inplace_bitset<N> and xstd::dynamic_bitset are aliases of it over a different contiguous_bit_container -- and gives them the direct view spelling, bit_set_view<xstd::bitset<N>> and bit_span<xstd::bitset<N>>. Every optional entry is relayed under its own guard, because absence is what the tiers select on: dropping num_blocks and block here would silently turn every word-parallel walk element-wise. [design.md#a-bitset-reads-as-its-storage]
 template<class Bits, class Traits>
 struct bit_traits<bitset_adaptor<Bits, Traits>>
 {
@@ -925,8 +919,7 @@ template<class Bits, class Traits> [[nodiscard]] constexpr auto operator|(bitset
 template<class Bits, class Traits> [[nodiscard]] constexpr auto operator^(bitset_adaptor<Bits, Traits> const& lhs, bitset_adaptor<Bits, Traits> const& rhs) noexcept(static_bit_extent<Traits, Bits>) -> bitset_adaptor<Bits, Traits> { auto nrv = lhs; nrv ^= rhs; return nrv; }
 template<class Bits, class Traits> [[nodiscard]] constexpr auto operator-(bitset_adaptor<Bits, Traits> const& lhs, bitset_adaptor<Bits, Traits> const& rhs) noexcept(static_bit_extent<Traits, Bits>) -> bitset_adaptor<Bits, Traits> { auto nrv = lhs; nrv -= rhs; return nrv; }
 
-// [bitset.operators]/6: up to N characters into a temporary string, then x = bitset(str), so a short read lands in the low bits as it does there;
-// a run-time width reads every 0 or 1 on offer and is as wide as the characters read, as boost's is.
+// [bitset.operators]/6: up to N characters into a temporary string, then x = bitset(str), so a short read lands in the low bits as it does there; a run-time width reads every 0 or 1 on offer and is as wide as the characters read, as boost's is.
 template<class charT, class traits, class Bits, class Traits>
 auto operator>>(std::basic_istream<charT, traits>& is, bitset_adaptor<Bits, Traits>& x)
         -> std::basic_istream<charT, traits>&

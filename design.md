@@ -17,26 +17,67 @@ the blocks, in that member order, so two run-time widths part on the width befor
 and `std::vector` both qualify, and so does `std::inplace_vector` — a runtime width over static capacity, for
 free.
 
+The element clause is `unsigned_integer` and **not** the wider `bitwise_operators`, which would be the concept
+if the operators were all a block is asked for. They are not. Beyond them the body wants the `<bit>` intrinsics
+— `popcount`, `countr_zero` and `countl_zero`, each constrained on `xstd::unsigned_integer` in
+`detail/intrin.hpp` and reached at some thirty sites — a `numeric_limits<block_type>::digits` for
+`bits_per_block`, and block arithmetic: `shl(unit, count) - unit`, and the `block & (block - 1)` step the set
+reading's block walk takes, where `bitwise_operators` omits `-` deliberately, subtraction and set difference
+being indistinguishable to a concept.
+
+The two agree on every block the library ships, and both refuse `bool`, the character types and every signed
+type, so `std::vector<int>` stays out either way. They part on the class types that are fields of bits without
+being numbers, `std::bitset` among them: `bitwise_operators` admits those and this concept does not, which is
+the point. `std::array<std::bitset<64>, 4>` is asserted refused, a ready-made negative case
+([concepts-are-tested-on-ready-made-types](#concepts-are-tested-on-ready-made-types)) for exactly the gap
+between the two spellings. Widening the clause would move that refusal from an unsatisfied constraint to a hard
+error inside the template — the failure mode the subscript clause below exists to prevent, and there is no
+reason to accept it on the element clause when the narrower concept states the truth.
+
+The asymmetry it records is the layering, not an accident. `unsigned_integer` goes **in** and the container
+gives `contiguous_bit_sequence` — and, once the non-assigning operators land, `bitwise_operators` — **out**: it
+asks more of a block than it offers its own user, consuming numbers and yielding a field of bits, shedding the
+arithmetic on the way up. That is also why nesting cannot work: a `contiguous_bit_container` will have every
+operator and still no `popcount`, no `digits` and no `- 1`.
+
+The concept has a header of its own at `detail/contiguous_block_container.hpp`: the concept says what a `Blocks` **is**,
+the container is the vehicle built over it, and a reader asking the first question need not open the 1100 lines
+answering the second. Its includes are `<concepts>`, `<ranges>`, `<cstddef>` and the one xstd-ints concept —
+a leaf. `num_blocks_v` stays behind, being a block-count computation rather than a statement about what a
+`Blocks` is, and both alias headers that use it already take the container whole.
+
 Subscript is spelled out rather than left to `std::ranges::contiguous_range`, which does not imply it.
 `contiguous_range` gives `data()` and a `contiguous_iterator`, and a `contiguous_iterator` is a
 `random_access_iterator`, so `i[n]` **is** required — of the *iterator*. The range itself is under no such
-obligation, and a plain buffer wrapper proves the gap: it satisfies the other four requirements, its iterator
-subscripts happily, and `c[n]` does not compile. `contiguous_bit_container` reaches for the range's subscript in
-140 places, `block_mask` among them, so without this the concept admits storages the class cannot be
-instantiated over — the shortfall surfacing as a hard error inside the template rather than as an unsatisfied
-constraint, which is the failure mode
+obligation: a plain buffer wrapper can satisfy the other four requirements and have an iterator that subscripts
+happily while `c[n]` does not compile. No *ready-made* type isolates that gap — every std candidate that fails
+this concept fails for some other clause first (`span` and `subrange` are not `regular`, `string_view`'s and
+`vector<int>`'s elements are not unsigned integers, `vector<bool>` is not contiguous) — and the gap is not worth
+a class written only to be
+asked about ([concepts-are-tested-on-ready-made-types](#concepts-are-tested-on-ready-made-types)), so it is
+stated here from [range.refinements] rather than pinned by a test. `contiguous_bit_container` reaches for the
+range's subscript in 140 places, `block_mask` among them, so without this the concept admits storages the class
+cannot be instantiated over — the shortfall surfacing as a hard error inside the template rather than as an
+unsatisfied constraint, which is the failure mode
 [a-requires-clause-names-its-arguments](#a-requires-clause-names-its-arguments) exists to prevent.
 
 The mutable and the const subscript are two requires-expressions with a parameter list each, not one expression
 over `C&`, `C const&` and an index together. They are separate requirements — a storage can offer one and not
-the other — and each list then names exactly what its own requirement uses, `c` and `i`, rather than a shared
-`r`/`c` pair in which half the names are dead in half the expressions.
+the other — and each list then names exactly what its own requirement uses, `c` and `n`, rather than a shared
+`r`/`c` pair in which half the names are dead in half the expressions. The index is `n` like every position in
+this library, and its type is `C::size_type` rather than a bare `std::size_t`: a contiguous block *container*
+is a container, `a[n]` is how [sequence.reqmts] spells the operation, and `size_type` is the name a container
+gives the index. `std::array`, `std::vector` and `std::inplace_vector` each name it, so the clause costs the
+three storages nothing and asks anything else for the typedef a container has. It is written without a
+`typename`, P0634 making one implicit in a requirement-parameter-list and `readability-redundant-typename`
+reporting it where it is written — which is how the first CI run of #143 failed. The quoted GCC diagnostic
+below echoes a `typename` all the same: that is GCC's printing of the parameter, not what the header says.
 
 Diagnostics were measured, not assumed, and they are *almost* the same either way: given a storage with the
 mutable subscript alone, both forms point at the failing requirement, and Clang's note is identical. GCC's
-differs only in the parameter list it echoes — `in requirements with 'C& r', 'const C& c', 'std::size_t i'`
-joined, against `in requirements with 'const C& c', 'std::size_t i'` split. A narrower echo, not a better error.
-The split is for the reader.
+differs only in the parameter list it echoes, remeasured at the current spelling: `in requirements with 'C& r',
+'const C& c', 'typename C::size_type n'` joined, against `in requirements with 'const C& c', 'typename
+C::size_type n'` split. A narrower echo, not a better error. The split is for the reader.
 
 The requirement is written against the iterator's own reference type, `range_reference_t<C>`, rather than
 against `range_value_t<C>&`, because the point is not that subscript yields *a* reference but that it yields
@@ -109,6 +150,24 @@ also make `std::ranges` see a sequence of blocks rather than of bits.
 The hand-unrolled one- and two-block cases are where the static performance lives, so they stay
 compile-time branches. The general path they fall through to is written over `m_blocks` as a range, and
 therefore serves the dynamic width unchanged.
+
+### concepts-are-tested-on-ready-made-types
+
+Concept tests name `std::array`, `std::vector` and `std::inplace_vector` and nothing else. A class written only
+to be asked about proves what its author put in it: it is the concept restated in class syntax, it passes by
+construction, and it goes stale silently when the concept moves. The three std containers are the storages this
+library is actually instantiated over, so an assertion about them is an assertion about the library.
+
+What that gives up is the negative cases a shim isolates one clause at a time, and here three of the four
+survive on ready-made types alone: `std::vector<bool>` is not contiguous, `std::vector<int>` is signed, and
+`std::array<std::bitset<64>, 4>` is the field of bits that is not a number — the one that separates
+`unsigned_integer` from `bitwise_operators` ([contiguous-block-container](#contiguous-block-container)). Only the
+range-subscript clause has no ready-made counterexample, and it is argued in prose there instead.
+
+`counting_blocks` in `test/src/bits/detail/contiguous_bit_container.cpp` is not an exception to this. It is a
+swap-and-move fixture with instrumented operations ([swap-goes-through-adl](#swap-goes-through-adl)), which no
+std container can be, and it carries no concept assertion of its own: it is instantiated as a
+`contiguous_bit_container`'s `Blocks`, and that instantiation is the only check it needs to satisfy.
 
 ### the-common-vocabulary
 
@@ -862,6 +921,33 @@ because "same referent" and "same contents" are both defensible readings of a ha
 compares and hashes whatever it owns or views, and `sequence_adaptor` compares and hashes only as an owner. The non-member copies
 — `~`, `&`, `|`, `^`, `-`, `<<`, `>>` — are the owner's alone in both readings: a copied view would write
 through to what it views.
+
+A view's empty base is `xstd::empty_base_type<>`, which carries **nothing** — no `==`, no `<=>` — so
+`bit_span`'s incomparability is simply absent, with nothing to delete. That is the whole reason xstd-misc has
+two empty types rather than one. `empty_member_type` keeps a defaulted `<=>` so an enclosing class can default
+its comparisons over the member, and that is safe there: a member's associated classes are not the enclosing
+class's, so the hidden friend is invisible to it. A base's ARE the derived class's, so the same defaulted
+comparison would be found by ADL for every `bit_span` and would answer *equal* for any two of them, having only
+the empty base to compare.
+
+This branch had it the other way first, and the history shows the detour: an `incomparable_base` deriving from
+the one empty type and deleting the two comparisons it brought. That worked — the deleted pair took
+`sequence_adaptor` exactly where the base's took the empty type by a derived-to-base conversion, so it won
+overload resolution by [over.ics.rank]/4.4 and the answer was ill-formed rather than wrong — but it needed
+BOTH deletions, and neither implied the other: `<=>` rewrites the four relationals and never `==`; `!=`
+rewrites from `==` and never from `<=>`; and a defaulted `<=>` implicitly declares a defaulted `==` beside it
+([class.compare.default]). Deleting `==` alone left `<`, `>`, `<=` and `>=`; deleting `<=>` alone left `==` and
+`!=`. It also could not be written where it belonged: MSVC rejects a trailing requires clause on a *deleted*
+friend (C7599) where it accepts one on a defaulted friend, so the pair could not be constrained on
+`not is_owner` in the adaptor and had to move into a base of its own. Splitting the empty type upstream
+deletes all of that.
+
+What stays is the assertion. `not equality_comparable` and `not three_way_comparable` in the harness are
+joined by the seven spellings, and the owner is asserted to answer all seven beside the view answering none, so
+they are the view's shape rather than a concept nobody satisfies. Those seven go through named concepts rather
+than bare `requires (View a, View b) { a == b; }`, because an absent or deleted overload is not assertable the
+direct way: it is a **hard error** where the requires-expression names a concrete type — measured identically
+on GCC and Clang — and a soft `false` only when the check reaches the type through a template parameter.
 
 Both referring adaptors opt into `std::ranges::enable_view` and `enable_borrowed_range`, the two
 specializations [range.view] and [range.range] invite for a program-defined type. The first makes

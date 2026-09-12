@@ -7,7 +7,8 @@
 #define XSTD_BITS_DETAIL_CONTIGUOUS_BIT_CONTAINER_HPP
 
 #include <xstd/bits/bit_traits.hpp>                          // bit_traits
-#include <xstd/bits/detail/allocator_typedef.hpp>            // allocator_typedef
+#include <xstd/bits/detail/allocator_base_type.hpp>            // allocator_base_type
+#include <xstd/bits/detail/contiguous_block_container.hpp>   // contiguous_block_container
 #include <xstd/bits/detail/intrin.hpp>                       // countl_zero, countr_zero, popcount
 #include <xstd/bits/detail/pred.hpp>                         // intersects, is_subset_of, not_equal_to
 #include <xstd/bits/detail/shift.hpp>                        // shl, shr
@@ -20,7 +21,7 @@
 #include <algorithm>                                         // all_of, any_of, fill, fill_n, fold_left, max, min, shift_left, shift_right
 #include <cassert>                                           // assert
 #include <compare>                                           // strong_ordering
-#include <concepts>                                          // regular, same_as, swap
+#include <concepts>                                          // same_as
 #include <cstddef>                                           // ptrdiff_t, size_t
 #include <functional>                                        // plus
 #include <iterator>                                          // distance, forward_iterator, input_iterator, prev
@@ -33,26 +34,6 @@
 
 namespace xstd::detail::bits {
 
-// Whether a range IS blocks; block_readable asks if a trait hands a container's blocks over. [design.md#contiguous-block-container]
-// Subscript is spelled out because contiguous_range promises data() and the ITERATOR's operator[], never the range's,
-// and a contiguous container generalizes a C array, whose defining operation is a[i]. [design.md#contiguous-block-container]
-// Semantic requirement, as random_access_iterator states for its own i[n]: c[i] is *(std::ranges::begin(c) + i).
-// Two requires-expressions rather than one over three parameters: the mutable and the const subscript are separate
-// requirements, and each parameter list then names only what its own expression uses. [design.md#contiguous-block-container]
-template<class C>
-concept contiguous_block_container =
-        std::regular<C> and
-        std::ranges::sized_range<C> and
-        std::ranges::contiguous_range<C> and
-        xstd::unsigned_integer<std::ranges::range_value_t<C>> and
-        requires (C& c, std::size_t i) {
-                { c[i] } -> std::same_as<std::ranges::range_reference_t<C>>;
-        } and
-        requires (C const& c, std::size_t i) {
-                { c[i] } -> std::same_as<std::ranges::range_reference_t<C const>>;
-        }
-;
-
 // Floored at one so a zero width still names a block. [design.md#the-one-vehicle]
 template<xstd::unsigned_integer Block, std::size_t N>
 inline constexpr auto num_blocks_v = std::ranges::max(
@@ -63,7 +44,7 @@ inline constexpr auto num_blocks_v = std::ranges::max(
 
 // The one vehicle: it owns the unused-tail invariant, and has no iterators. [design.md#the-one-vehicle]
 template<contiguous_block_container Blocks, std::size_t N = std::dynamic_extent>
-class contiguous_bit_container : public detail::bits::allocator_typedef<Blocks>
+class contiguous_bit_container : public detail::bits::allocator_base_type<Blocks>
 {
 public:
         using block_type = std::ranges::range_value_t<Blocks>;
@@ -81,10 +62,7 @@ private:
         static constexpr auto zero     = static_cast<block_type>( 0);
         static constexpr auto ones     = static_cast<block_type>(-1);
 
-        // The width is a size_t, unless the blocks out-align one: then it is a block, which fills what would
-        // otherwise be padding in front of them. Only a storage holding its blocks inline out-aligns a size_t,
-        // and it does so by their alignment, so a block is both wide enough to hold any width and exactly the
-        // size the gap is. [design.md#padding]
+        // The width is a size_t, unless the blocks out-align one: then it is a block, which fills what would otherwise be padding in front of them. [design.md#padding]
         using width_type = std::conditional_t<(alignof(std::size_t) >= alignof(Blocks)), std::size_t, block_type>;
         static_assert(sizeof(width_type) >= sizeof(std::size_t) and alignof(width_type) >= alignof(Blocks));
 
@@ -112,8 +90,7 @@ private:
                 }
         }
 
-        // Dynamic widths only; the tag keeps the absent member distinct from any other in an enclosing layout.
-        // Declared first, so the defaulted == rejects on the width before it reads a block. [design.md#contiguous-block-container]
+        // Dynamic widths only; the tag keeps the absent member distinct from any other in an enclosing layout. [design.md#contiguous-block-container]
         [[XSTD_NO_UNIQUE_ADDRESS]]
         conditional_data_member_t<not has_static_size, width_type, struct size_tag> m_size{};
 
@@ -649,9 +626,7 @@ public:
                 std::ranges::swap(this->m_blocks, other.m_blocks);
         }
 
-        // ranges::swap finds a free swap by ADL and a member never, so without this every adaptor's
-        // ranges::swap(m_bits, other.m_bits) moves a whole contiguous_bit_container three times instead of swapping its
-        // blocks once, and the storage's own swap is never reached. [design.md#swap-goes-through-adl]
+        // ranges::swap finds a free swap by ADL and a member never, so without this every adaptor's ranges::swap(m_bits, other.m_bits) moves a whole contiguous_bit_container three times instead of swapping its blocks once, and the storage's own swap is never reached. [design.md#swap-goes-through-adl]
         friend constexpr auto swap(contiguous_bit_container& x, contiguous_bit_container& y) noexcept(noexcept(x.swap(y)))
                 -> void
         {
@@ -894,9 +869,7 @@ public:
                 }
         }
 
-        // A proper subset is a subset that differs, and both halves are already here: the unrolled arms are
-        // is_subset_of's, and != is the defaulted memberwise comparison. Nothing is left to walk by hand.
-        // [design.md#the-cheapest-contract]
+        // A proper subset is a subset that differs, and both halves are already here: the unrolled arms are is_subset_of's, and != is the defaulted memberwise comparison. [design.md#the-cheapest-contract]
         [[nodiscard]] constexpr auto is_proper_subset_of(contiguous_bit_container const& other) const noexcept
                 -> bool
         {
@@ -925,11 +898,7 @@ public:
                 }
         }
 
-        // The first block at which two values differ, with that block's xor; equal values answer the last block and a zero xor, every arm alike. [design.md#the-ordering-primitive]
-        //
-        // Public, because the sequence reading's mismatch is one countr_zero from it. The name stays: it scans
-        // low block to high, which is the ascending orderings' answer and not bitset_three_way's, so calling it
-        // mismatch here would repeat the mistake lexicographical_three_way made. [design.md#two-readings-disagree]
+        // The first block at which two values differ, with that block's xor; equal values answer the last block and a zero xor, every arm alike. [design.md#the-ordering-primitive] [design.md#two-readings-disagree]
         [[nodiscard]] constexpr auto first_difference(contiguous_bit_container const& other) const noexcept
                 -> std::pair<std::size_t, block_type>
         {
@@ -974,14 +943,7 @@ private:
                 }
         }
 
-        // The block straddling index and index + 1: the high one shifted up by L_shift and the low one down by
-        // R_shift, spliced into one. The funnel shift word_at and both shift operators are each made of.
-        // [design.md#the-funnel-shift]
-        //
-        // Named as both shift operators name them, and taken as a pair: they already hold both halves as loop
-        // invariants, so neither has one derived back from what the other was derived from. word_at, holding only
-        // the one, spells the complement at its single call site. That the two add to the block width is the whole
-        // contract, and the assert says so.
+        // The block straddling index and index + 1: the high one shifted up by L_shift and the low one down by R_shift, spliced into one. [design.md#the-funnel-shift]
         [[nodiscard]] constexpr auto straddled_block(std::size_t index, std::size_t L_shift, std::size_t R_shift) const noexcept
                 -> block_type
         {
@@ -1116,7 +1078,6 @@ struct bit_traits<detail::bits::contiguous_bit_container<Blocks, N>>
         [[nodiscard]] static constexpr auto first_difference(bits_type const& x, bits_type const& y) noexcept { return x.first_difference(y); }
 
         // The two entries the readings cannot synthesize: insert is the one operation that can grow, and fill is bulk. [design.md#what-the-trait-reconciles]
-        // A run-time width grows to hold the position, as boost's does; n + 1 must be addressable, the ruled-out position being the one whose successor wraps.
         static constexpr auto insert(bits_type& c, std::size_t n) noexcept(bits_type::has_static_size)
                 -> void
         {

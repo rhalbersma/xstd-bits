@@ -3,24 +3,9 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-// The Block ladder: what the SAME 256 bits cost carried in 32, 16, 8, 4 or 2 blocks. bitset/ops.cpp is the
-// transpose of this, varying the width at a fixed 64-bit Block; here the width is pinned and the Block varies,
-// which is the axis a caller actually chooses when they write basic_bit_static_set<Block, N>.
-//
-// The question it answers is that the choice is a trade rather than a ranking. Iterating pays per ELEMENT: the
-// scan's step is shr(block, offset) then countr_zero, and a wider block makes that pair more expensive without
-// making it less frequent. Shifting pays per BLOCK: half as many blocks is half the loop. So the two halves of
-// this file pull in opposite directions, and neither width wins both. [design.md#uint128-support]
-//
-// At 128 there are three carriers and they are not the same kind of thing: xstd::uint128 is an intrinsic the
-// backend lowers to a register pair, while absl::uint128 and boost::int128::uint128 are classes whose operators
-// are ordinary functions. Both classes are optional -- detected below as xstd-ints detects them -- so a build
-// without either simply drops those rows.
+// The Block ladder: what the SAME 256 bits cost carried in 32, 16, 8, 4 or 2 blocks. [design.md#uint128-support]
 
-// NOT alphabetical, and load-bearing: detail/bits/intrin calls xstd::countr_zero by a QUALIFIED name, whose
-// candidates bind where that call is written rather than where it is instantiated. An adapter declaring the
-// overload for an integer class must therefore be seen first; included after xstd/bits/*, such a Block
-// satisfies the concept and then fails inside the body. [design.md#uint128-support]
+// NOT alphabetical, and load-bearing: detail/bits/intrin calls xstd::countr_zero by a QUALIFIED name, whose candidates bind where that call is written rather than where it is instantiated. [design.md#uint128-support]
 #include <xstd/ints/cstdint/int128.hpp>                 // uint128
 #if __has_include(<absl/numeric/int128.h>)
 #include <xstd/ints/ext/absl/int128.hpp>                // absl::uint128
@@ -44,8 +29,7 @@ inline constexpr auto width = 256UZ;
 template<class Block>
 using set_of = xstd::basic_bit_static_set<Block, width>;
 
-// A function of the POSITION alone and never of the Block: every row has to hold the same elements, or the
-// ladder is one timing per Block of a different computation. Deterministic, so the rungs compare.
+// A function of the POSITION alone and never of the Block: every row has to hold the same elements, or the ladder is one timing per Block of a different computation.
 template<class T>
 auto filled(std::size_t per_mille, std::size_t limit = width)
         -> T
@@ -61,15 +45,10 @@ auto filled(std::size_t per_mille, std::size_t limit = width)
         return s;
 }
 
-// Everything inside the first 64 positions, so every Block wider than that carries an EMPTY high block. The
-// three densities above never produce one: at 256 bits they all put something in every block, so the scan's
-// cross-block step is only ever taken with a non-empty block to cross into. A clustered set is the other side
-// of that step -- and a real shape besides, an occupancy board being dense at one end and empty at the other.
+// Everything inside the first 64 positions, so every Block wider than that carries an EMPTY high block.
 inline constexpr auto cluster = 64UZ;
 
-// Forward: ++ is countr_zero within a block and a skip across the empty ones, so the Block is the unit the scan
-// steps in. Three densities because the skip is the whole of what a wide block buys, and it buys most where
-// most blocks are empty.
+// Forward: ++ is countr_zero within a block and a skip across the empty ones, so the Block is the unit the scan steps in.
 template<class T, std::size_t PerMille>
 auto bm_forward(benchmark::State& state)
         -> void
@@ -85,9 +64,7 @@ auto bm_forward(benchmark::State& state)
         }
 }
 
-// Backward, the half of a bidirectional iterator that nothing else here measures: -- and countl_zero rather
-// than ++ and countr_zero. It runs through std::reverse_iterator, so an element costs a decrement to look at
-// plus the loop's own increment -- the adaptor's shape, not this benchmark's.
+// Backward, the half of a bidirectional iterator that nothing else here measures: -- and countl_zero rather than ++ and countr_zero.
 template<class T, std::size_t PerMille>
 auto bm_reverse(benchmark::State& state)
         -> void
@@ -103,8 +80,7 @@ auto bm_reverse(benchmark::State& state)
         }
 }
 
-// Forward and backward over that clustered set: the scan reaches the high block, finds it empty, and stops --
-// which is the arm's second branch answered the other way.
+// Forward and backward over that clustered set: the scan reaches the high block, finds it empty, and stops -- which is the arm's second branch answered the other way.
 template<class T>
 auto bm_forward_clustered(benchmark::State& state)
         -> void
@@ -135,11 +111,7 @@ auto bm_reverse_clustered(benchmark::State& state)
         }
 }
 
-// Independent operands from an array rather than one restated in place. Two spellings were tried first: a
-// single operand shifted in place walks itself empty within ~86 iterations, and one copied fresh each
-// iteration charges the shift for a copy that a copy-only control does not price the same way. operator<<=
-// branches on the COUNT and never on the content -- an all-zero array measures the same as this one, which is
-// how the in-place spelling was cleared -- so an array of operands times the shift and nothing else.
+// Independent operands from an array rather than one restated in place.
 template<class T>
 auto operands()
         -> std::vector<T>
@@ -179,9 +151,7 @@ auto bm_shift_right(benchmark::State& state)
         state.SetItemsProcessed(state.iterations() * static_cast<std::int64_t>(v.size()));
 }
 
-// A count the compiler cannot fold, which is what a caller shifting by a variable gets. The constant rows above
-// let the whole sequence be specialized; this one keeps the general path, where a variable-count shift of a
-// 128-bit block is a multi-instruction sequence rather than one shrx.
+// A count the compiler cannot fold, which is what a caller shifting by a variable gets.
 template<class T>
 auto bm_shift_left_runtime(benchmark::State& state)
         -> void
@@ -241,8 +211,7 @@ auto bm_shift_left_runtime(benchmark::State& state)
         BM_ABSL_RUNG_D(fn, d);          \
         BM_BOOST_RUNG_D(fn, d)
 
-// Sparse, the density bitset/ops.cpp uses, and dense: the first is where skipping empty blocks pays and the
-// last is where nothing is skipped and every step is the per-element primitive.
+// Sparse, the density bitset/ops.cpp uses, and dense: the first is where skipping empty blocks pays and the last is where nothing is skipped and every step is the per-element primitive.
 BM_LADDER_D(bm_forward,  50);
 BM_LADDER_D(bm_forward, 400);
 BM_LADDER_D(bm_forward, 900);

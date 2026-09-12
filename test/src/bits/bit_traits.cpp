@@ -86,9 +86,7 @@ template<class T>
         return c;
 }
 
-// The four the sequence reading asks, synthesized here: neither adapter declares an entry, so this is the
-// fallback arm on both tiers, and at N == 0 the arm before either. Its own function, four BOOST_CHECK_EQUALs
-// being enough to put check_scans over the cognitive-complexity threshold. [design.md#one-function-per-tier]
+// The four the sequence reading asks, synthesized here: neither adapter declares an entry, so this is the fallback arm on both tiers, and at N == 0 the arm before either. [design.md#one-function-per-tier]
 template<class T>
 auto check_aggregates(std::set<std::size_t> const& model)
         -> void
@@ -227,8 +225,7 @@ using ours_dynamic = xstd::detail::bits::contiguous_bit_vector<std::uint64_t>;
 using theirs       = std::bitset<64>;
 using boosts       = boost::dynamic_bitset<>;
 
-// Each probe is a template: a requires-expression over a concrete type is evaluated eagerly and hard-errors
-// rather than answering false, so "does not have" can only be asked through a parameter.
+// Each probe is a template: a requires-expression over a concrete type is evaluated eagerly and hard-errors rather than answering false, so "does not have" can only be asked through a parameter.
 template<class C> concept has_subscript = requires (C const& c, std::size_t n) { c[n];                };
 template<class C> concept has_complement= requires (C const& c)                { ~c;                 };
 template<class C> concept has_set_value = requires (C& b, std::size_t n, bool v) { b.set(n, v);       };
@@ -258,9 +255,7 @@ static_assert(xstd::contiguous_bit_sequence<ours_dynamic>);
 static_assert(xstd::contiguous_bit_sequence<theirs>);
 static_assert(xstd::contiguous_bit_sequence<boosts>);
 
-// It is the intersection and not the union: every one of these is absent from at least one of the three, so
-// asking for it would drop a model. This is what pins the concept to the three rather than to whichever was
-// read last.
+// It is the intersection and not the union: every one of these is absent from at least one of the three, so asking for it would drop a model.
 static_assert(not has_subscript<ours_static>);   // ours reads through test, never a subscript [design.md#test-not-subscript]
 static_assert(not has_complement<ours_static>);  // nor does it complement in place
 static_assert(not has_set_value<ours_static>);   // nor take the two-argument set
@@ -268,14 +263,11 @@ static_assert(not has_difference<theirs>);       // std::bitset has no differenc
 static_assert(not has_subset_of<theirs>);        // nor boost's set vocabulary
 static_assert(not has_to_string<boosts>);        // to_string is std::bitset's alone
 
-// The member door and the trait door are different doors: a storage with no vocabulary of its own is adapted
-// and is not one of these, which is why nothing is constrained on this concept. [design.md#the-common-vocabulary]
+// The member door and the trait door are different doors: a storage with no vocabulary of its own is adapted and is not one of these, which is why nothing is constrained on this concept. [design.md#the-common-vocabulary]
 static_assert(    xstd::bit_storage<xstd::bit_traits<word>, word>);
 static_assert(not xstd::contiguous_bit_sequence<word>);
 
-// Exercised and not only asserted: the trait declares the three required entries and nothing else, so every
-// question below is answered by a synthesized scan over at(). That is the whole of what an incomplete basis
-// costs, and what the trait pays. [design.md#the-primitive-basis]
+// Exercised and not only asserted: the trait declares the three required entries and nothing else, so every question below is answered by a synthesized scan over at(). [design.md#the-primitive-basis]
 BOOST_AUTO_TEST_CASE(ATraitOnlyStorageAnswersEveryScan)
 {
         using traits = xstd::bit_traits<word>;

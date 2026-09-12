@@ -133,8 +133,7 @@ concept vector_bool = container_members<C> and requires (C c, C o, C const cc, C
         { std::hash<C>()(cc) } -> std::same_as<std::size_t>;
 };
 
-// [vector.bool] minus the allocator, which is every line a fixed-capacity sequence can answer. P0843 declined a bool
-// specialization, so this checklist has no inplace model of its own and std::vector<bool> stands in for the lines it shares.
+// [vector.bool] minus the allocator, which is every line a fixed-capacity sequence can answer.
 template<class C>
 concept inplace_vector_bool = container_members<C> and requires (C c, C o, C const cc, C::size_type n, bool b, std::initializer_list<bool> il, bool const* first, bool const* last, C::const_iterator p) {
         C();

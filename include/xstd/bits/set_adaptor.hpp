@@ -32,19 +32,11 @@ namespace xstd {
 
 namespace detail::set {
 
-// A range of consecutive ascending positions, which is what a block-wise fill needs and what a general input
-// range cannot be asked. std::views::iota is the one that says so in its type. [design.md#the-range-members]
+// A range of consecutive ascending positions, which is what a block-wise fill needs and what a general input range cannot be asked. [design.md#the-range-members]
 template<class R> inline constexpr bool is_consecutive = false;
 template<class W, class B> inline constexpr bool is_consecutive<std::ranges::iota_view<W, B>> = true;
 
-// Continue unless the functor says otherwise: a void functor always continues, a bool one says.
-// [design.md#the-set-for-each]
-//
-// The position is handed over as a prvalue -- [expr.type.conv]'s decay-copy -- rather than as this parameter's name. A named lvalue binds to a
-// functor taking std::size_t&, which then writes to a local that goes nowhere -- a walk reports positions and
-// changes none, so the write is not merely lost but meaningless. A prvalue makes that a compile error, and it
-// is what is_invocable_r_v just above already asks about, so the call and the detection stop disagreeing about
-// the value category. [design.md#the-functor-takes-a-value]
+// Continue unless the functor says otherwise: a void functor always continues, a bool one says. [design.md#the-set-for-each] [design.md#the-functor-takes-a-value]
 template<class F>
 [[nodiscard]] constexpr auto invoke_continues(F& f, std::size_t pos)
         -> bool
@@ -57,8 +49,7 @@ template<class F>
         }
 }
 
-// One tier each, because the tier is the seam and sharing a body puts the whole over
-// readability-function-cognitive-complexity's threshold. [design.md#one-function-per-tier]
+// One tier each, because the tier is the seam and sharing a body puts the whole over readability-function-cognitive-complexity's threshold. [design.md#one-function-per-tier]
 
 // Blocks, lowest position first: load once per block, then tzcnt for the position and blsr to drop it.
 template<class Traits, class Bits, class F>
@@ -101,8 +92,7 @@ constexpr auto walk_blocks_descending(Bits const& c, F& f)
         }
 }
 
-// The other tier: a storage with no block access -- boost::dynamic_bitset is the one -- walks positions, which
-// is what the iterator does and is still the same answer. [design.md#windows]
+// The other tier: a storage with no block access -- boost::dynamic_bitset is the one -- walks positions, which is what the iterator does and is still the same answer. [design.md#windows]
 template<class Range, class F>
 constexpr auto walk_positions_ascending(Range const& r, F& f)
         -> void
@@ -230,8 +220,7 @@ public:
                 return *this;
         }
 
-        // The storage's own equality, which every storage in the tree has; ordering is the trait's entry, or the invariant it must satisfy. [design.md#the-ordering-invariant]
-        // Both over the elements when two run-time widths differ: the storages then cannot agree, the sets still can. [design.md#width-is-capacity]
+        // The storage's own equality, which every storage in the tree has; ordering is the trait's entry, or the invariant it must satisfy. [design.md#the-ordering-invariant] [design.md#width-is-capacity]
         [[nodiscard]] friend constexpr auto operator==(set_adaptor const& x, set_adaptor const& y) noexcept
                 -> bool
                 requires requires { { x.storage() == y.storage() } -> std::convertible_to<bool>; }
@@ -265,20 +254,7 @@ public:
         [[nodiscard]] constexpr auto crbegin() const noexcept -> const_reverse_iterator { return rbegin(); }
         [[nodiscard]] constexpr auto crend()   const noexcept -> const_reverse_iterator { return rend();   }
 
-        // The set reading a block at a time, which is what an iterator cannot be. operator++ is flat: it must
-        // re-derive the word from (pointer, position) on every step, because an iterator stays copyable and
-        // restartable. A loop has somewhere to keep the block between positions, so it loads once per block and
-        // spends two instructions per position -- tzcnt for the position, blsr to drop it. Measured 4.0x to 5.3x
-        // over the range-for on every compiler tried, and the same on a two-word bitboard as at 2^22.
-        // [design.md#the-set-for-each]
-        //
-        // The functor may return void, or bool to mean "keep going", which is what a move generator wants when it
-        // has found its answer. Nothing else is offered: a functor that returns something else is a caller error
-        // rather than a value to discard silently.
-        //
-        // It takes the position by value, and the constraint says so, so a functor asking for size_t& reads
-        // "constraint not satisfied" here rather than compiling into a write that goes nowhere.
-        // [design.md#the-functor-takes-a-value]
+        // The set reading a block at a time, which is what an iterator cannot be. [design.md#the-set-for-each] [design.md#the-functor-takes-a-value]
         template<class F>
                 requires std::invocable<F&, std::size_t>
         constexpr auto for_each(this auto&& self, F f)
@@ -291,8 +267,7 @@ public:
                 }
         }
 
-        // The mirror, highest position first. w & (w - 1) has no descending twin, so this one clears the top bit
-        // it just reported instead. The set reading iterates both ways, and so does this. [design.md#the-set-for-each]
+        // The mirror, highest position first. [design.md#the-set-for-each]
         template<class F>
                 requires std::invocable<F&, std::size_t>
         constexpr auto for_each_reverse(this auto&& self, F f)
@@ -311,9 +286,7 @@ public:
 
         [[nodiscard]] constexpr auto size() const noexcept -> size_type { return detail::bits::count<Traits>(storage()); }
 
-        // [container.reqmts]/56, distance(begin(), end()) for the largest possible container: every position set, so the
-        // width. A width in the type is that width, an owner grows to what its storage can address, and a view cannot
-        // grow what it views, so it is that storage's width now. [design.md#max-size-is-the-bits]
+        // [container.reqmts]/56, distance(begin(), end()) for the largest possible container: every position set, so the width. [design.md#max-size-is-the-bits]
         [[nodiscard]] constexpr auto max_size() const noexcept
                 -> size_type
         {
@@ -368,17 +341,14 @@ public:
                 requires std::constructible_from<value_type, std::ranges::range_reference_t<R>> and requires { Traits::insert(self.storage(), static_cast<value_type>(*std::ranges::begin(rg))); }
         {
                 if constexpr (requires { self |= rg; }) {
-                        // Tier one: another set over the same storage, which is a union and already knows how to do
-                        // one block-wise, mismatched widths included.
+                        // Tier one: another set over the same storage, which is a union and already knows how to do one block-wise, mismatched widths included.
                         self |= rg;
                 } else if constexpr (detail::set::is_consecutive<std::remove_cvref_t<R>> and requires (std::size_t pos, std::size_t len) { self.storage().set(pos, len, true); }) {
-                        // Tier two: consecutive positions, so the first and last blocks are masked and everything
-                        // between them is written whole, which is what the ranged set does.
+                        // Tier two: consecutive positions, so the first and last blocks are masked and everything between them is written whole, which is what the ranged set does.
                         if (not std::ranges::empty(rg)) {
                                 auto const lo  = static_cast<value_type>(*std::ranges::begin(rg));
                                 auto const len = static_cast<std::size_t>(std::ranges::distance(rg));
-                                // The last position first, so a growable storage is already wide enough for the fill
-                                // and a fixed one asserts exactly where an element-wise insert would have.
+                                // The last position first, so a growable storage is already wide enough for the fill and a fixed one asserts exactly where an element-wise insert would have.
                                 Traits::insert(self.storage(), lo + len - 1UZ);
                                 self.storage().set(lo, len, true);
                         }
@@ -467,8 +437,7 @@ public:
 
         constexpr auto complement(this auto&& self) noexcept -> void requires requires { self.storage().flip(); } { self.storage().flip(); }
 
-        // Bulk, on the storage's own spelling: what every storage agrees on is required of it, not reconciled. [design.md#what-the-trait-reconciles]
-        // Two run-time widths that differ go element-wise instead, the storages' own being equal-width operations; the two that insert may then allocate. [design.md#width-is-capacity]
+        // Bulk, on the storage's own spelling: what every storage agrees on is required of it, not reconciled. [design.md#what-the-trait-reconciles] [design.md#width-is-capacity]
         constexpr auto operator&=(this auto&& self, set_adaptor const& other) noexcept
                 -> auto&
                 requires requires { self.storage() &= other.storage(); }
@@ -593,8 +562,7 @@ public:
                 return { lower_bound(x), upper_bound(x) };
         }
 
-        // The storage's own member where it has one, its bulk operators otherwise: both block-wise, and every storage in the tree has one of the two.
-        // Two run-time widths that differ are asked element-wise, as the comparisons are. [design.md#width-is-capacity]
+        // The storage's own member where it has one, its bulk operators otherwise: both block-wise, and every storage in the tree has one of the two. [design.md#width-is-capacity]
         [[nodiscard]] constexpr auto is_subset_of(set_adaptor const& other) const noexcept
                 -> bool
         {
@@ -663,10 +631,7 @@ private:
         }
 };
 
-// A view deduces the constness of what it views, the way span<T> and span<T const> do; over an owner, of the storage it wraps.
-// Constrained to non-owners: a bitset has a bit_traits of its own, so an unconstrained guide here is viable for an
-// owner too and ties with the owner guide below, making bit_set_view(bs) ambiguous. The constraint used to sit on
-// the view's restated guide; the view is an alias now and deduces through these. [design.md#a-bitset-reads-as-its-storage]
+// A view deduces the constness of what it views, the way span<T> and span<T const> do; over an owner, of the storage it wraps. [design.md#a-bitset-reads-as-its-storage]
 template<class Bits>
         requires (not requires { typename owned_storage<std::remove_const_t<Bits>>::bits_type; })
 set_adaptor(Bits&) -> set_adaptor<Bits, ownership::refers>;

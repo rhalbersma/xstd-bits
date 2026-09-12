@@ -96,8 +96,7 @@ BOOST_AUTO_TEST_CASE(GrowingPastTheCapacityThrowsBadAlloc)
         BOOST_CHECK(static_cast<bool>(v.back()));
 }
 
-// Every position, densely, agreeing with the subscript -- and not a contiguous range, which no proxy sequence
-// can be. [design.md#the-iterator-is-the-primitive]
+// Every position, densely, agreeing with the subscript -- and not a contiguous range, which no proxy sequence can be. [design.md#the-iterator-is-the-primitive]
 BOOST_AUTO_TEST_CASE(ItYieldsEveryPosition)
 {
         auto c = T();

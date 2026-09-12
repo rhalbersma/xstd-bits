@@ -349,9 +349,7 @@ struct mem_emplace
                 );
 
                 static_assert(std::constructible_from<typename X::value_type, Args...>);                // [associative.reqmts.general]/48
-                // Built once and then used three times. Forwarding three times reads args twice after moving
-                // from it: harmless where value_type is a size_t, wrong the moment this harness meets a type
-                // where a move is not a copy, and bugprone-use-after-move is right to say so.
+                // Built once and then used three times.
                 auto const value = typename X::value_type(std::forward<Args>(args)...);
                 auto const emplaced = not a.contains(value);
                 auto const r = a.emplace(value);                                                              // [associative.reqmts.general]/49
