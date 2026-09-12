@@ -8,21 +8,22 @@
 #include <test/uint128.hpp>                                   // IWYU pragma: keep; TEST_HAS_UINT128, uint128
 #include <xstd/bits/bit_traits.hpp>                           // bit_storage, bit_traits, block_readable, static_bit_extent
 #include <xstd/bits/detail/contiguous_bit_array.hpp>          // contiguous_bit_array
-#include <xstd/bits/detail/contiguous_bit_container.hpp>      // contiguous_bit_container, contiguous_block_container
+#include <xstd/bits/detail/contiguous_bit_container.hpp>      // contiguous_bit_container
+#include <xstd/bits/detail/contiguous_block_container.hpp>    // contiguous_block_container
 #include <xstd/bits/detail/contiguous_bit_inplace_vector.hpp> // IWYU pragma: keep; contiguous_bit_inplace_vector, named only under TEST_HAS_INPLACE_VECTOR
 #include <xstd/bits/detail/contiguous_bit_vector.hpp>         // contiguous_bit_vector
 #include <boost/test/unit_test.hpp>                           // BOOST_CHECK_EQUAL, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <algorithm>                                          // count, lexicographical_compare_three_way, min
 #include <array>                                              // array
+#include <bitset>                                             // bitset
 #include <compare>                                            // strong_ordering
-#include <concepts>                                           // regular, same_as
+#include <concepts>                                           // same_as
 #include <cstddef>                                            // size_t
 #include <cstdint>                                            // uint8_t, uint64_t
 #include <initializer_list>                                   // initializer_list
-#include <iterator>                                           // contiguous_iterator, iter_reference_t, random_access_iterator
 #include <memory>                                             // addressof, allocator
 #include <new>                                                // IWYU pragma: keep; bad_alloc, behind TEST_HAS_INPLACE_VECTOR
-#include <ranges>                                             // begin, contiguous_range, iota, iterator_t, size, sized_range
+#include <ranges>                                             // begin, iota, size
 #include <tuple>                                              // get, tuple
 #include <vector>                                             // vector
 
@@ -346,50 +347,19 @@ constexpr auto a_run_time_width_is_constexpr()
 } // namespace
 
 // Both shipped vehicles satisfy contiguous_block_container: growth is detected where it exists, never required.
-BOOST_AUTO_TEST_CASE(ItsStorageIsAContiguousSizedRangeOfUnsignedIntegers)
+BOOST_AUTO_TEST_CASE(ItsStorageIsAContiguousSizedRangeOfBitwiseOperators)
 {
         static_assert(xstd::detail::bits::contiguous_block_container<std::array<std::uint8_t, 4>>);
         static_assert(xstd::detail::bits::contiguous_block_container<std::vector<std::uint64_t>>);
 
         static_assert(not xstd::detail::bits::contiguous_block_container<std::vector<bool>>);      // not a contiguous range
-        static_assert(not xstd::detail::bits::contiguous_block_container<std::vector<int>>);       // nor unsigned integers
-}
+        static_assert(not xstd::detail::bits::contiguous_block_container<std::vector<int>>);       // nor bitwise_operators: signed
 
-namespace {
-
-// Named so the requirement is checked on a template parameter: spelling it on a concrete iterator type puts a
-// pointer in the requires-expression's parameter list, which reads as a const-able parameter to clang-tidy.
-template<class I>
-concept iterator_subscripts = requires (I i, std::size_t n) { { i[n] } -> std::same_as<std::iter_reference_t<I>>; };
-
-}       // namespace
-
-// Subscript is the range's own, and contiguous_range does not promise it: it promises data() and a
-// contiguous_iterator, and it is the ITERATOR that random_access_iterator obliges to have i[n].
-BOOST_AUTO_TEST_CASE(ItsStorageSubscriptIsTheRangesOwnAndNotTheIterators)
-{
-        // A regular, contiguous, sized range of unsigned integers whose iterator subscripts and which does not.
-        struct bare_blocks
-        {
-                std::array<std::uint64_t, 4> m_data {};
-
-                // Every member here exists to be asked about, never called, so the compiler is told not to expect a use.
-                [[nodiscard, maybe_unused]] constexpr auto begin()       -> std::uint64_t*       { return m_data.data(); }
-                [[nodiscard, maybe_unused]] constexpr auto begin() const -> std::uint64_t const* { return m_data.data(); }
-                [[nodiscard, maybe_unused]] constexpr auto end()         -> std::uint64_t*       { return m_data.data() + m_data.size(); }
-                [[nodiscard, maybe_unused]] constexpr auto end()   const -> std::uint64_t const* { return m_data.data() + m_data.size(); }
-                [[nodiscard, maybe_unused]] constexpr auto size()  const -> std::size_t          { return m_data.size(); }
-
-                [[maybe_unused]] auto operator==(bare_blocks const&) const -> bool = default;
-        };
-        using It = std::ranges::iterator_t<bare_blocks>;
-
-        static_assert(std::ranges::contiguous_range<bare_blocks>);
-        static_assert(std::ranges::sized_range<bare_blocks> and std::regular<bare_blocks>);
-        static_assert(std::contiguous_iterator<It> and std::random_access_iterator<It>);
-        static_assert(iterator_subscripts<It>);
-
-        static_assert(not xstd::detail::bits::contiguous_block_container<bare_blocks>);            // the four are not enough
+        // What the element clause admits beyond the unsigned integers: a class that is a field of bits without
+        // being a number. The concept accepts it; the class is instantiable only over a block the intrinsics
+        // and the block arithmetic also accept, which is a narrower set the body states rather than the concept.
+        // [design.md#contiguous-block-container]
+        static_assert(xstd::detail::bits::contiguous_block_container<std::array<std::bitset<64>, 4>>);
 }
 
 // The semantic half a concept cannot check: a[i] is *(begin(a) + i), the same object and not merely an equal one.
@@ -398,9 +368,10 @@ constexpr auto subscript_agrees_with_iteration(Blocks blocks) noexcept
         -> bool
 {
         // The index is the range's own difference_type, so begin(blocks) + i needs no conversion; subscript takes
-        // a size_type, which is the one cast, and naming it here keeps -Wsign-conversion honest.
+        // the container's size_type, which the concept names and which is the one cast, keeping
+        // -Wsign-conversion honest.
         for (auto i = std::ranges::range_difference_t<Blocks>{}; i < std::ranges::ssize(blocks); ++i) {
-                if (std::addressof(blocks[static_cast<std::size_t>(i)]) != std::addressof(*(std::ranges::begin(blocks) + i))) {
+                if (std::addressof(blocks[static_cast<typename Blocks::size_type>(i)]) != std::addressof(*(std::ranges::begin(blocks) + i))) {
                         return false;
                 }
         }
@@ -425,6 +396,8 @@ int g_storage_moves = 0;
 // A storage satisfying contiguous_block_container whose swap and moves are distinguishable.
 struct counting_blocks
 {
+        using size_type = std::size_t;
+
         std::array<std::uint64_t, 4> m_data {};
 
         // The move operations are counted rather than used: once the free swap exists nothing calls them, which
@@ -442,8 +415,8 @@ struct counting_blocks
         [[nodiscard, maybe_unused]] auto end()   const -> std::uint64_t const* { return m_data.data() + m_data.size(); }
         [[nodiscard, maybe_unused]] auto size()  const -> std::size_t          { return m_data.size(); }
 
-        [[nodiscard, maybe_unused]] auto operator[](std::size_t i)       -> std::uint64_t&       { return m_data[i]; }
-        [[nodiscard, maybe_unused]] auto operator[](std::size_t i) const -> std::uint64_t const& { return m_data[i]; }
+        [[nodiscard, maybe_unused]] auto operator[](size_type n)       -> std::uint64_t&       { return m_data[n]; }
+        [[nodiscard, maybe_unused]] auto operator[](size_type n) const -> std::uint64_t const& { return m_data[n]; }
 
         [[maybe_unused]] auto operator==(counting_blocks const&) const -> bool = default;
 
@@ -454,7 +427,6 @@ struct counting_blocks
                 x.m_data.swap(y.m_data);
         }
 };
-static_assert(xstd::detail::bits::contiguous_block_container<counting_blocks>);
 
 }       // namespace
 

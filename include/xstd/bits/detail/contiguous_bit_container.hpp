@@ -8,6 +8,7 @@
 
 #include <xstd/bits/bit_traits.hpp>                          // bit_traits
 #include <xstd/bits/detail/allocator_typedef.hpp>            // allocator_typedef
+#include <xstd/bits/detail/contiguous_block_container.hpp>   // contiguous_block_container
 #include <xstd/bits/detail/intrin.hpp>                       // countl_zero, countr_zero, popcount
 #include <xstd/bits/detail/pred.hpp>                         // intersects, is_subset_of, not_equal_to
 #include <xstd/bits/detail/shift.hpp>                        // shl, shr
@@ -20,7 +21,7 @@
 #include <algorithm>                                         // all_of, any_of, fill, fill_n, fold_left, max, min, shift_left, shift_right
 #include <cassert>                                           // assert
 #include <compare>                                           // strong_ordering
-#include <concepts>                                          // regular, same_as, swap
+#include <concepts>                                          // same_as
 #include <cstddef>                                           // ptrdiff_t, size_t
 #include <functional>                                        // plus
 #include <iterator>                                          // distance, forward_iterator, input_iterator, prev
@@ -32,26 +33,6 @@
 #include <utility>     // exchange, move, pair
 
 namespace xstd::detail::bits {
-
-// Whether a range IS blocks; block_readable asks if a trait hands a container's blocks over. [design.md#contiguous-block-container]
-// Subscript is spelled out because contiguous_range promises data() and the ITERATOR's operator[], never the range's,
-// and a contiguous container generalizes a C array, whose defining operation is a[i]. [design.md#contiguous-block-container]
-// Semantic requirement, as random_access_iterator states for its own i[n]: c[i] is *(std::ranges::begin(c) + i).
-// Two requires-expressions rather than one over three parameters: the mutable and the const subscript are separate
-// requirements, and each parameter list then names only what its own expression uses. [design.md#contiguous-block-container]
-template<class C>
-concept contiguous_block_container =
-        std::regular<C> and
-        std::ranges::sized_range<C> and
-        std::ranges::contiguous_range<C> and
-        xstd::unsigned_integer<std::ranges::range_value_t<C>> and
-        requires (C& c, std::size_t i) {
-                { c[i] } -> std::same_as<std::ranges::range_reference_t<C>>;
-        } and
-        requires (C const& c, std::size_t i) {
-                { c[i] } -> std::same_as<std::ranges::range_reference_t<C const>>;
-        }
-;
 
 // Floored at one so a zero width still names a block. [design.md#the-one-vehicle]
 template<xstd::unsigned_integer Block, std::size_t N>

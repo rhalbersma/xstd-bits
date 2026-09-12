@@ -12,31 +12,60 @@ out of. This file holds what has landed.
 ### contiguous-block-container
 
 `contiguous_block_container` asks whether a range **is** blocks: a regular, sized, contiguous, subscriptable
-range of unsigned integers. Regular is what lets `contiguous_bit_container` default its `==` over the width and
-the blocks, in that member order, so two run-time widths part on the width before a block is read. `std::array`
-and `std::vector` both qualify, and so does `std::inplace_vector` — a runtime width over static capacity, for
-free.
+range whose elements model `bitwise_operators`. Regular is what lets `contiguous_bit_container` default its `==`
+over the width and the blocks, in that member order, so two run-time widths part on the width before a block is
+read. `std::array` and `std::vector` both qualify, and so does `std::inplace_vector` — a runtime width over
+static capacity, for free.
+
+The element clause names `bitwise_operators` rather than `unsigned_integer` because that is what a block is
+asked for **as a block**: the operator set `std::bitset` generalized from the built-in integers, which is the
+same set this container extends to `N` bits. The two agree on every block the library ships — `unsigned_integer`
+implies `bitwise_operators`, and both refuse `bool`, the character types and every signed type, so
+`std::vector<int>` stays out either way.
+
+They part on the class types that are fields of bits without being numbers, `std::bitset` among them, which the
+concept now admits and the class still cannot be instantiated over. What the body asks beyond the operators is
+`popcount`, `countr_zero` and `countl_zero` — each constrained on `xstd::unsigned_integer` in `detail/intrin.hpp`
+— a `numeric_limits<block_type>::digits` for `bits_per_block`, and block arithmetic: `shl(unit, count) - unit`
+and the `block & (block - 1)` step, where `bitwise_operators` omits `-` deliberately, subtraction and set
+difference being indistinguishable to a concept. So for those elements the shortfall surfaces inside the
+template rather than as an unsatisfied constraint — the failure mode this concept's subscript clause exists to
+prevent, accepted here on the element clause because the operator set is the one the layering is stated in.
+
+The concept has a header of its own at `detail/contiguous_block_container.hpp`: the concept says what a `Blocks` **is**,
+the container is the vehicle built over it, and a reader asking the first question need not open the 1100 lines
+answering the second. Its includes are `<concepts>`, `<ranges>`, `<cstddef>` and the one xstd-ints concept —
+a leaf. `num_blocks_v` stays behind, being a block-count computation rather than a statement about what a
+`Blocks` is, and both alias headers that use it already take the container whole.
 
 Subscript is spelled out rather than left to `std::ranges::contiguous_range`, which does not imply it.
 `contiguous_range` gives `data()` and a `contiguous_iterator`, and a `contiguous_iterator` is a
 `random_access_iterator`, so `i[n]` **is** required — of the *iterator*. The range itself is under no such
-obligation, and a plain buffer wrapper proves the gap: it satisfies the other four requirements, its iterator
-subscripts happily, and `c[n]` does not compile. `contiguous_bit_container` reaches for the range's subscript in
-140 places, `block_mask` among them, so without this the concept admits storages the class cannot be
-instantiated over — the shortfall surfacing as a hard error inside the template rather than as an unsatisfied
-constraint, which is the failure mode
+obligation: a plain buffer wrapper can satisfy the other four requirements and have an iterator that subscripts
+happily while `c[n]` does not compile. No *ready-made* type isolates that gap — every std candidate that fails
+this concept fails for some other clause first (`span` and `subrange` are not `regular`, `string_view`'s element
+is not a field of bits, `vector<bool>` is not contiguous) — and the gap is not worth a class written only to be
+asked about ([concepts-are-tested-on-ready-made-types](#concepts-are-tested-on-ready-made-types)), so it is
+stated here from [range.refinements] rather than pinned by a test. `contiguous_bit_container` reaches for the
+range's subscript in 140 places, `block_mask` among them, so without this the concept admits storages the class
+cannot be instantiated over — the shortfall surfacing as a hard error inside the template rather than as an
+unsatisfied constraint, which is the failure mode
 [a-requires-clause-names-its-arguments](#a-requires-clause-names-its-arguments) exists to prevent.
 
 The mutable and the const subscript are two requires-expressions with a parameter list each, not one expression
 over `C&`, `C const&` and an index together. They are separate requirements — a storage can offer one and not
-the other — and each list then names exactly what its own requirement uses, `c` and `i`, rather than a shared
-`r`/`c` pair in which half the names are dead in half the expressions.
+the other — and each list then names exactly what its own requirement uses, `c` and `n`, rather than a shared
+`r`/`c` pair in which half the names are dead in half the expressions. The index is `n` like every position in
+this library, and its type is `C::size_type` rather than a bare `std::size_t`: a contiguous block *container*
+is a container, `a[n]` is how [sequence.reqmts] spells the operation, and `size_type` is the name a container
+gives the index. `std::array`, `std::vector` and `std::inplace_vector` each name it, so the clause costs the
+three storages nothing and asks anything else for the typedef a container has.
 
 Diagnostics were measured, not assumed, and they are *almost* the same either way: given a storage with the
 mutable subscript alone, both forms point at the failing requirement, and Clang's note is identical. GCC's
-differs only in the parameter list it echoes — `in requirements with 'C& r', 'const C& c', 'std::size_t i'`
-joined, against `in requirements with 'const C& c', 'std::size_t i'` split. A narrower echo, not a better error.
-The split is for the reader.
+differs only in the parameter list it echoes, remeasured at the current spelling: `in requirements with 'C& r',
+'const C& c', 'typename C::size_type n'` joined, against `in requirements with 'const C& c', 'typename
+C::size_type n'` split. A narrower echo, not a better error. The split is for the reader.
 
 The requirement is written against the iterator's own reference type, `range_reference_t<C>`, rather than
 against `range_value_t<C>&`, because the point is not that subscript yields *a* reference but that it yields
@@ -109,6 +138,22 @@ also make `std::ranges` see a sequence of blocks rather than of bits.
 The hand-unrolled one- and two-block cases are where the static performance lives, so they stay
 compile-time branches. The general path they fall through to is written over `m_blocks` as a range, and
 therefore serves the dynamic width unchanged.
+
+### concepts-are-tested-on-ready-made-types
+
+Concept tests name `std::array`, `std::vector` and `std::inplace_vector` and nothing else. A class written only
+to be asked about proves what its author put in it: it is the concept restated in class syntax, it passes by
+construction, and it goes stale silently when the concept moves. The three std containers are the storages this
+library is actually instantiated over, so an assertion about them is an assertion about the library.
+
+What that gives up is the negative cases a shim isolates one clause at a time. `std::vector<bool>` and
+`std::vector<int>` still cover two of them — not contiguous, and not a field of bits — because they happen to
+exist; the range-subscript clause has no ready-made counterexample and is argued in prose above instead.
+
+`counting_blocks` in `test/src/bits/detail/contiguous_bit_container.cpp` is not an exception to this. It is a
+swap-and-move fixture with instrumented operations ([swap-goes-through-adl](#swap-goes-through-adl)), which no
+std container can be, and it carries no concept assertion of its own: it is instantiated as a
+`contiguous_bit_container`'s `Blocks`, and that instantiation is the only check it needs to satisfy.
 
 ### the-common-vocabulary
 
