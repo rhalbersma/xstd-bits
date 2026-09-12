@@ -7,12 +7,13 @@
 #define XSTD_BITS_SEQUENCE_ADAPTOR_HPP
 
 #include <xstd/bits/bit_traits.hpp>               // all, any, bit_storage, bit_traits, count, none, static_bit_extent, word_at
-#include <xstd/bits/detail/allocator_typedef.hpp> // allocator_typedef, incomparable_base
+#include <xstd/bits/detail/allocator_typedef.hpp> // allocator_typedef
 #include <xstd/bits/detail/hash.hpp>              // hash_append_bits, std_hash
 #include <xstd/bits/detail/intrin.hpp>            // countr_zero, popcount
 #include <xstd/bits/detail/shift.hpp>             // shl, shr
 #include <xstd/bits/detail/random_access.hpp>     // random_access_bit_iterator, random_access_bit_reference
 #include <xstd/bits/ownership.hpp>                // owned_bits_t, owned_storage, owned_traits_t, owner_of, ownership, owns
+#include <xstd/misc/type_traits/empty_base_type.hpp>          // empty_base_type
 #include <boost/container_hash/is_range.hpp>      // is_range
 #include <boost/hash2/hash_append.hpp>            // hash_append_tag
 #include <algorithm>                              // copy, min, remove_if
@@ -192,7 +193,7 @@ concept blit_source =
 
 // An owner names its storage's allocator, as std::vector<bool> names its own; a view names none, owning nothing. [design.md#the-sequence-contract]
 template<class Bits, ownership Own, bool Windowed, bit_storage<Bits> Traits = bit_traits<std::remove_const_t<Bits>>>
-class sequence_adaptor : public std::conditional_t<owns(Own), detail::bits::allocator_typedef<std::remove_const_t<Bits>>, detail::bits::incomparable_base>
+class sequence_adaptor : public std::conditional_t<owns(Own), detail::bits::allocator_typedef<std::remove_const_t<Bits>>, xstd::empty_base_type<>>
 {
         static constexpr bool is_owner  = owns(Own);
         static constexpr bool is_window = Windowed;

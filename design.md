@@ -922,25 +922,32 @@ compares and hashes whatever it owns or views, and `sequence_adaptor` compares a
 — `~`, `&`, `|`, `^`, `-`, `<<`, `>>` — are the owner's alone in both readings: a copied view would write
 through to what it views.
 
-A view's empty base is `xstd::empty_type<>`, which carries a defaulted `<=>`, so `bit_span`'s incomparability
-is **deleted rather than absent**: ADL finds a base's hidden friend for a derived argument, and that one would
-answer *equal* for any two views, having only the empty base to compare. The deleted pair takes
-`sequence_adaptor` exactly where the base's takes `empty_type` by a derived-to-base conversion, so it wins
-overload resolution and the answer is ill-formed.
+A view's empty base is `xstd::empty_base_type<>`, which carries **nothing** — no `==`, no `<=>` — so
+`bit_span`'s incomparability is simply absent, with nothing to delete. That is the whole reason xstd-misc has
+two empty types rather than one. `empty_member_type` keeps a defaulted `<=>` so an enclosing class can default
+its comparisons over the member, and that is safe there: a member's associated classes are not the enclosing
+class's, so the hidden friend is invisible to it. A base's ARE the derived class's, so the same defaulted
+comparison would be found by ADL for every `bit_span` and would answer *equal* for any two of them, having only
+the empty base to compare.
 
-Both deletions are needed and neither implies the other, measured on GCC and Clang alike: `<=>` rewrites the
-four relationals and never `==`; `!=` rewrites from `==` and never from `<=>`; and a defaulted `<=>` implicitly
-declares a defaulted `==` beside it ([class.compare.default]), which is the one `empty_type` has. Deleting `==`
-alone leaves `<`, `>`, `<=` and `>=`; deleting `<=>` alone leaves `==` and `!=`. `not equality_comparable` and
-`not three_way_comparable` in the harness already catch either partial case, and the seven spellings are
-asserted beside them: a concept failure reports *not equality_comparable* where the defect is *`==` came from
-the empty base and answers equal for every pair of views*.
+This branch had it the other way first, and the history shows the detour: an `incomparable_base` deriving from
+the one empty type and deleting the two comparisons it brought. That worked — the deleted pair took
+`sequence_adaptor` exactly where the base's took the empty type by a derived-to-base conversion, so it won
+overload resolution by [over.ics.rank]/4.4 and the answer was ill-formed rather than wrong — but it needed
+BOTH deletions, and neither implied the other: `<=>` rewrites the four relationals and never `==`; `!=`
+rewrites from `==` and never from `<=>`; and a defaulted `<=>` implicitly declares a defaulted `==` beside it
+([class.compare.default]). Deleting `==` alone left `<`, `>`, `<=` and `>=`; deleting `<=>` alone left `==` and
+`!=`. It also could not be written where it belonged: MSVC rejects a trailing requires clause on a *deleted*
+friend (C7599) where it accepts one on a defaulted friend, so the pair could not be constrained on
+`not is_owner` in the adaptor and had to move into a base of its own. Splitting the empty type upstream
+deletes all of that.
 
-Those seven go through named concepts rather than bare `requires (View a, View b) { a == b; }`, because a
-deleted overload is not assertable the direct way. Selecting one is a **hard error** where the
-requires-expression names a concrete type — measured identically on GCC and Clang — and a soft `false` only
-when the check reaches the type through a template parameter. The harness asserts the owner answers all seven
-beside the view answering none, so the seven are the view's shape rather than a concept nobody satisfies.
+What stays is the assertion. `not equality_comparable` and `not three_way_comparable` in the harness are
+joined by the seven spellings, and the owner is asserted to answer all seven beside the view answering none, so
+they are the view's shape rather than a concept nobody satisfies. Those seven go through named concepts rather
+than bare `requires (View a, View b) { a == b; }`, because an absent or deleted overload is not assertable the
+direct way: it is a **hard error** where the requires-expression names a concrete type — measured identically
+on GCC and Clang — and a soft `false` only when the check reaches the type through a template parameter.
 
 Both referring adaptors opt into `std::ranges::enable_view` and `enable_borrowed_range`, the two
 specializations [range.view] and [range.range] invite for a program-defined type. The first makes
