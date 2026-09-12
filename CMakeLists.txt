@@ -188,6 +188,10 @@ if(PROJECT_IS_TOP_LEVEL)
         # [design.md#uint128-support]
         set(CMAKE_CXX_EXTENSIONS ON)
 
+        # Above both, and not inside test/: benchmark/ is configured first, so a target declared in test/ does
+        # not exist yet when the benchmarks ask for it. Both trees grade over the same two integer classes.
+        include(${CMAKE_CURRENT_LIST_DIR}/cmake/int128.cmake)
+
         add_subdirectory(benchmark)
         add_subdirectory(test)
     endif()
