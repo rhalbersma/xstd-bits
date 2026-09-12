@@ -2129,18 +2129,73 @@ not).
 
 ### uint128-support
 
-`xstd::uint128` names a type on every compiler the matrix runs, but the library can only carry it where
-`<bit>` will: `detail::bits::intrin` forwards `countl_zero`, `countr_zero` and `popcount` straight through,
-and those take `std::unsigned_integral` alone. That is three separate facts.
+A Block is any `xstd::unsigned_integer`, and three families of them are 128 bits wide: the compiler's own
+`unsigned __int128` on GCC and Clang; the Microsoft STL's `std::_Unsigned128`, which is what `xstd::uint128`
+names on every MSVC-ABI target, clang-cl included; and the two third-party classes xstd adapts,
+`absl::uint128` and `boost::int128::uint128`. Only the first is a scalar. The other three are **classes**, and
+that difference is the whole of this section.
 
-GCC and Clang have the built-in. libstdc++ and libc++ hand it the `numeric_limits` specialization that carries
-it into the concept **only outside `__STRICT_ANSI__`**, which is why the matrix compiles as `gnu++23`. And the
-Microsoft STL's `std::_Unsigned128` is a class type, so `<bit>` declines it whatever the mode — that block
-waits on an `xstd::countl_zero`, not on anything here.
+`detail::bits::intrin` used to forward `countl_zero`, `countr_zero` and `popcount` straight to `<bit>`, whose
+domain is `std::unsigned_integral` — a **closed** concept no class can join. So the seam was constrained on an
+open concept and implemented against a closed one: every 128-bit integer class satisfied the interface and
+then failed inside the body. It now forwards to `xstd::countl_zero` and friends, which are that same domain
+plus one overload per integer class, reading the words each type already holds. This is the change of body the
+seam was left open for, and it is what makes the other three families usable.
 
-The condition worth testing is the concept, which no `#if` can spell, so the assert holds the macro to it in
-both directions. The day that seam grows its own implementation, or a new pairing lands on the matrix, the
-build says so there rather than at fifteen instantiation lists or, worse, nowhere.
+Three consequences follow, none of them obvious from the forwarding change alone.
+
+**The calls are qualified, so they bind where they are written.** `xstd::popcount(block)` is a dependent call
+by a qualified name, and ADL does not apply to qualified names, so its candidates are the overloads visible at
+`intrin.hpp` — not at the instantiation. An adapter included afterwards declares its overload too late to be
+one. A translation unit reaching for an integer-class Block therefore includes that adapter first; the test
+tree does it in `test/block_types.hpp`, above every container header. The same rule decides where
+`test::block_basis` can be spelled, which is why it sits in that header rather than in one of its own: a
+separate header could not be relied on to sort below the adapters.
+
+**A Block being a class breaks two assumptions that a scalar hid.** `detail::bits::pred`'s `intersects`
+returned `lhs & rhs` into a `bool`, which copy-initializes and so needs an **implicit** conversion; an integer
+class offers only an explicit `operator bool`. Its two neighbours never needed the cast, `not` and `!=` both
+reaching `bool` by a **contextual** conversion, which an explicit operator satisfies. And the sequence proxy in
+`random_access.hpp` carried a templated implicit conversion to any class type constructible from its
+`value_type`. An integer class is such a class, so every operator on that proxy acquired a second, equally good
+reading — convert both sides to `bool`, or convert both sides to the Block — which cost it
+`equality_comparable` and with it `std::ranges::equal`. The conversion now excludes `xstd::integer`: a proxy
+stands for one bit, and a bit is not an integer. That alone is not enough, because a proxy names its Block
+among its template arguments, so the Block's namespace is an **associated** one and ADL contributes whatever
+templated comparisons it declares — Boost.Int128 declares exactly such a set. It therefore also declares
+comparisons that are exact in both operands, which win outright.
+
+The set proxy in `bidirectional.hpp` is deliberately **untouched**, and the attempt to keep it in step was a
+mistake worth recording. Nothing had failed there: a set over an integer-class Block already worked, because
+that proxy stands for a position rather than a bit and its `value_type` is `size_t`. Giving it the same exact
+comparisons broke a case no integer class is involved in at all — `std::ranges::equal` over **two different**
+instantiations of it, which is how `bit_set_view<B>` is compared against the view deduced from `B`'s own
+storage, and which those homogeneous overloads no longer serve. A fix that no failure asked for cost a working
+path, at a Block as ordinary as `uint64_t`.
+
+**Two facts, two flags, because one flag conflated them.** `TEST_HAS_UINT128` names the compiler's 128-bit
+**builtin**: a scalar, and a `std::unsigned_integral`. It feeds `word_types`, which every suite grades over, and
+`test/src/bits/block/type_traits.cpp`, which asserts exactly those `std` traits of each word — both right to
+assume a builtin. `TEST_HAS_MSVC_INT128` names what an MSVC-ABI target has instead, `std::_Unsigned128` under
+the same `xstd::uint128` spelling: a usable Block, but a class, so not `is_integral`, not `is_unsigned`, and not
+something `<bit>` will take.
+
+Widening the one flag to cover both put a class-typed Block into `word_types`, and so into every suite at once,
+which broke sixteen MSVC targets — the `std_bitset` and `std_set` comparisons among them, whose helpers assume a
+Block is a `std` integral and whose per-type cost is superlinear. So the three integer classes sit together in
+`wide_word_types`, feeding only the two suites that pay a `static_assert` or one linear pass per type. MSVC's is
+named beside Abseil's and Boost's, which is what it behaves like, rather than beside the builtin whose spelling
+it shares.
+
+The assert beside each flag is an **implication**, that where the flag is on the basis is really there. The
+equality it replaces asked `std::unsigned_integral`, which is the wrong question in both directions: false for
+every integer class that works as a Block, and true in dialects where `<bit>` still declines the type. The
+converse is not worth asserting either — a basis a flag declines to use costs coverage, not correctness.
+
+Abseil's and Boost's are optional: `test/ext_int128.hpp` detects each by `__has_include`, so a build without
+them drops it from the Block lists rather than failing. MSVC's needs no dependency at all. All three earn their
+place by being the types that catch a container assuming a Block is a scalar — every defect above was invisible
+to every builtin.
 
 ### exception-escape-nolints
 
@@ -2156,8 +2211,14 @@ ever wrong.
 
 ### clang-tidy-false-positives
 
-Five findings are suppressed because the checker cannot see what makes them right:
+Six findings are suppressed because the checker cannot see what makes them right:
 
+- `bugprone-signed-bitwise` on `detail/bits::shl` and `::shr`, whose count is cast to `int`. The two checks
+  that govern this leave no third option, and both were measured: `absl::uint128` declares a single shift,
+  `operator<<(uint128, int)`, so an **unsigned** count reaches it by a signedness-changing conversion and
+  `-Wsign-conversion` rejects it, while an **int** count is a signed operand of a bitwise operator and
+  `bugprone-signed-bitwise` rejects that. The type's own operator decides which is right, and the count is a
+  bit position within one block, so the signedness the check objects to cannot be reached.
 - `bugprone-unhandled-self-assignment` on the bitset proxy's `operator=`, which owns no storage: `b[i] = b[i]`
   reads the bit and writes it back.
 - `bugprone-string-constructor` on `to_string`, which sees the `N == 0` instantiation where the string is
@@ -2171,7 +2232,7 @@ Five findings are suppressed because the checker cannot see what makes them righ
   program-defined type. clang-tidy 22 and 23 read the qualified definition as modifying the namespace; 24 no
   longer does, and the suppression stays until the whole ladder is past 23.
 
-A sixth had a fix rather than a suppression. `modernize-use-nullptr` reads the `0` in `(a <=> b) < 0` as a
+A seventh had a fix rather than a suppression. `modernize-use-nullptr` reads the `0` in `(a <=> b) < 0` as a
 null pointer constant, which is the same false positive `-Wno-zero-as-null-pointer-constant` already covers on
 the compiler side. Every site in the test sources says `std::is_lt`, `std::is_gt` or `std::is_eq` instead --
 the standard's own names for those three questions, which are clearer than the comparison against a literal

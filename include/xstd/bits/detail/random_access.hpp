@@ -6,14 +6,15 @@
 #ifndef XSTD_BITS_DETAIL_RANDOM_ACCESS_HPP
 #define XSTD_BITS_DETAIL_RANDOM_ACCESS_HPP
 
-#include <xstd/bits/bit_traits.hpp> // bit_storage, bit_traits
-#include <cassert>                  // assert
-#include <compare>                  // strong_ordering
-#include <concepts>                 // same_as
-#include <cstddef>                  // ptrdiff_t, size_t
-#include <format>                   // formatter
-#include <iterator>                 // random_access_iterator_tag
-#include <type_traits>              // is_class_v, is_const_v, is_convertible_v, is_nothrow_constructible_v, remove_const_t
+#include <xstd/bits/bit_traits.hpp>       // bit_storage, bit_traits
+#include <xstd/ints/concepts/integer.hpp> // integer
+#include <cassert>                        // assert
+#include <compare>                        // strong_ordering
+#include <concepts>                       // same_as
+#include <cstddef>                        // ptrdiff_t, size_t
+#include <format>                         // formatter
+#include <iterator>                       // random_access_iterator_tag
+#include <type_traits>                    // is_class_v, is_const_v, is_convertible_v, is_nothrow_constructible_v, remove_const_t
 
 // The iterator is the primitive: a pointer and a position, reaching the bits through Traits alone. [design.md#the-iterator-is-the-primitive]
 // The sequence reading's pair, named after the category its iterator models; the set reading's is bidirectional.hpp.
@@ -160,11 +161,42 @@ public:
                 return Traits::at(*m_ptr, m_idx);
         }
 
+        // Not to an integer, though, however class-shaped it is. A Block that is an integer CLASS -- MSVC's
+        // std::_Unsigned128, absl::uint128, boost::int128::uint128 -- is constructible from bool and brings a
+        // full set of operators, so without this exclusion every operator on a proxy has two equally good
+        // readings: convert both sides to bool, or convert both sides to the Block. That ambiguity is not
+        // confined to ==; it takes ! and every other operator the integer class declares with it, which is why
+        // the exclusion belongs here on the conversion rather than on each operator in turn. The proxy stands
+        // for one bit, and a bit is not an integer. [design.md#uint128-support]
         template<class T>
         [[nodiscard]] constexpr explicit(false) operator T() const noexcept(std::is_nothrow_constructible_v<T, value_type>)  // NOLINT(misc-explicit-constructor)
-                requires std::is_class_v<T> and std::is_convertible_v<value_type, T>
+                requires std::is_class_v<T> and std::is_convertible_v<value_type, T> and (not xstd::integer<T>)
         {
                 return Traits::at(*m_ptr, m_idx);
+        }
+
+        // Exact matches, so a comparison never reaches for a conversion. The exclusion above stops the proxy
+        // becoming the Block, but it cannot stop the Block's own operators from being CANDIDATES: the proxy
+        // names its Block among its template arguments, so the Block's namespace is an associated one and ADL
+        // brings in whatever templated comparisons it declares -- Boost.Int128 declares exactly such a set.
+        // These two are exact in both operands and win outright, which is what keeps the proxy
+        // equality_comparable and std::ranges::equal working over it.
+        //
+        // Only here, and not on bidirectional.hpp's set proxy, which needs none of this: its value_type is a
+        // position rather than a bit, a set over an integer-class Block already worked, and giving it the same
+        // pair broke comparing two DIFFERENT instantiations of it -- which is how a view named on the adaptor
+        // is compared against one deduced from the storage, at a Block as ordinary as uint64_t.
+        // [design.md#uint128-support]
+        [[nodiscard]] friend constexpr auto operator==(random_access_bit_reference lhs, random_access_bit_reference rhs) noexcept
+                -> bool
+        {
+                return static_cast<value_type>(lhs) == static_cast<value_type>(rhs);
+        }
+
+        [[nodiscard]] friend constexpr auto operator==(random_access_bit_reference lhs, value_type rhs) noexcept
+                -> bool
+        {
+                return static_cast<value_type>(lhs) == rhs;
         }
 
         // const-qualified and returning a const reference, the proxy shape P2321R2 gave std::vector<bool>::reference.

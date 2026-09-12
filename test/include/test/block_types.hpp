@@ -6,15 +6,57 @@
 #ifndef TEST_BLOCK_TYPES_HPP
 #define TEST_BLOCK_TYPES_HPP
 
-#include <test/uint128.hpp>     // TEST_HAS_UINT128, uint128
-#include <xstd/ints/limits.hpp> // numeric_limits
-#include <cstddef>              // size_t
-#include <cstdint>              // uint8_t, uint16_t, uint32_t, uint64_t
-#include <tuple>                // tuple, tuple_cat
-#include <utility>              // declval
+#include <test/ext_int128.hpp>                     // TEST_HAS_ABSL_INT128, TEST_HAS_BOOST_INT128, uint128
+#include <test/uint128.hpp>                        // TEST_HAS_UINT128, uint128
+#include <xstd/ints/bit.hpp>                       // countl_zero, countr_zero, popcount
+#include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
+#include <xstd/ints/limits.hpp>                    // numeric_limits
+#include <cstddef>                                 // size_t
+#include <cstdint>                                 // uint8_t, uint16_t, uint32_t, uint64_t
+#include <tuple>                                   // tuple, tuple_cat
+#include <utility>                                 // declval
 
 // The Block models and the extents worth instantiating, assembled once: all three containers take <class Block, size_t N>.
 namespace test {
+
+// What the containers actually require of a Block: the concept they constrain on, and the three functions
+// detail/intrin.hpp calls. std::unsigned_integral is NOT this question and must not stand in for it -- it is
+// closed, so every 128-bit integer CLASS fails it while serving as a Block perfectly well.
+//
+// This must be spelled HERE, below every adapter include above, and not in a header of its own. The calls are
+// qualified, so their candidates are the overloads visible at THIS point; an adapter included afterwards
+// declares its overload too late to be one, and the concept would then answer false for a type that works. A
+// separate header could not be relied on to land below them, the include lists here being sorted by name.
+template<class Block>
+concept block_basis =
+        xstd::unsigned_integer<Block> and
+        requires (Block x) {
+                xstd::countl_zero(x);
+                xstd::countr_zero(x);
+                xstd::popcount(x);
+        };
+
+// Each flag held to the basis it claims. An implication, NOT an equality: where a flag is on, the basis is
+// really there. The equality this replaces asked std::unsigned_integral of xstd::uint128, which is the wrong
+// question in both directions -- false for every integer class that works as a Block, so it would deny the
+// MSVC half outright, and true in dialects where <bit> still declines the type. The converse is not worth
+// asserting either: a basis a flag declines to use costs coverage, not correctness. [design.md#uint128-support]
+// The two flags name the SAME spelling, xstd::uint128, and mean different types by it: the builtin on one kind
+// of target, std::_Unsigned128 on the other. Exactly one can hold, and asking only what the compiler supports
+// is what breaks that -- clang-cl has __int128 and still gets the class. Both on would put a class into
+// word_types, which every suite grades over, and name the type twice in the wide list below.
+static_assert(not (has_uint128 and has_msvc_int128));
+
+static_assert(not has_uint128 or block_basis<xstd::uint128>);
+#ifdef TEST_HAS_MSVC_INT128
+static_assert(block_basis<xstd::uint128>);
+#endif
+#ifdef TEST_HAS_ABSL_INT128
+static_assert(block_basis<absl::uint128>);
+#endif
+#ifdef TEST_HAS_BOOST_INT128
+static_assert(block_basis<boost::int128::uint128>);
+#endif
 
 template<class Block>
 inline constexpr auto digits_v = static_cast<std::size_t>(xstd::numeric_limits<Block>::digits);
@@ -35,19 +77,46 @@ using narrow_word_types = std::tuple
 <       std::uint8_t
 >;
 
-// The widest Block, which crosses a boundary for a reason the narrow ones cannot cover. uint8_t and uint16_t
-// PROMOTE: every block operation on them has an int intermediate, and the code masks back from it. uint32_t
-// upward do not promote at all, so the block's own width is the whole modulus and there is nothing to mask
-// back from. Straddling at narrow words alone therefore exercises only the promoting path, and "the arithmetic
-// follows digits, not the carrier" holds within a block but is untested across one. xstd::uint128 is the
-// extreme of the non-promoting half and the only Block whose carrier is not a standard unsigned integer type,
-// so it is the one worth the extents. [design.md#uint128-support]
-using wide_word_types = std::tuple
-<
-#ifdef TEST_HAS_UINT128
-        xstd::uint128
+// The widest Blocks, which cross a boundary for two reasons the narrow ones cannot cover.
+//
+// First, promotion. uint8_t and uint16_t PROMOTE: every block operation on them has an int intermediate, and
+// the code masks back from it. uint32_t upward do not promote at all, so the block's own width is the whole
+// modulus and there is nothing to mask back from. Straddling at narrow words alone therefore exercises only
+// the promoting path, and "the arithmetic follows digits, not the carrier" holds within a block but is
+// untested across one.
+//
+// Second, and only since the blocks reach xstd's bit basis rather than <bit> directly: a Block need not be a
+// scalar at all. Each entry below is 128 bits wide and none of them promotes, but only the first is a scalar,
+// and only where xstd::uint128 is the compiler's builtin -- on an MSVC-ABI target that same spelling is
+// std::_Unsigned128, and it joins absl's and boost's as a CLASS, whose operators are ordinary functions
+// returning class type. That is what catches a container quietly assuming a Block is a scalar, as
+// detail/pred.hpp's intersects did: it returned lhs & rhs into a bool, which a builtin converts to implicitly
+// and an integer class, whose operator bool is explicit, does not.
+//
+// The classes are here and NOT in word_types on purpose. word_types feeds graded_extents, which every suite
+// grades over, including the std_bitset and std_set comparisons whose per-type cost is superlinear -- and whose
+// helpers assume a Block is a std integral. These two suites pay a static_assert or one linear pass per type,
+// which is what a class-typed Block can be afforded in today. [design.md#uint128-support]
+//
+// One optional tuple per candidate, concatenated: a type that is not there contributes an empty tuple, so the
+// list composes without any comma bookkeeping between the #ifs.
+using wide_word_types = decltype(std::tuple_cat(
+        std::declval<std::tuple<
+#if defined(TEST_HAS_UINT128) || defined(TEST_HAS_MSVC_INT128)
+                xstd::uint128
 #endif
->;
+        >>(),
+        std::declval<std::tuple<
+#ifdef TEST_HAS_ABSL_INT128
+                absl::uint128
+#endif
+        >>(),
+        std::declval<std::tuple<
+#ifdef TEST_HAS_BOOST_INT128
+                boost::int128::uint128
+#endif
+        >>()
+));
 
 // One block's worth of extents: empty, a single bit, and exactly one full block -- the same cost at any width.
 template<template<class, std::size_t> class C, class Block>

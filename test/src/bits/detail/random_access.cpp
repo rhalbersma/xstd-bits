@@ -4,8 +4,10 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/block_types.hpp>                      // graded_extents
+#include <test/ext_int128.hpp>                       // TEST_HAS_ABSL_INT128, TEST_HAS_BOOST_INT128, uint128
 #include <test/minimal_traits.hpp>                   // minimal_traits
 #include <test/value_reference.hpp>                  // value_reference
+#include <xstd/bits/bit_array.hpp>                   // basic_bit_array
 #include <xstd/bits/bit_span.hpp>                    // bit_span
 #include <xstd/bits/bit_traits.hpp>                  // bit_traits
 #include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
@@ -16,7 +18,7 @@
 #include <boost/test/unit_test.hpp>                  // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                                 // equal, ranges::reverse, ranges::sort, reverse, sort
 #include <bitset>                                    // bitset
-#include <concepts>                                  // convertible_to, random_access_iterator, same_as, sortable
+#include <concepts>                                  // convertible_to, equality_comparable, random_access_iterator, same_as, sortable
 #include <cstddef>                                   // ptrdiff_t, size_t
 #include <cstdint>                                   // uint64_t
 #include <iterator>                                  // iter_move, next, prev, reverse_iterator
@@ -373,6 +375,66 @@ BOOST_AUTO_TEST_CASE(TheValueArrivesByImplicitConversion)
         BOOST_CHECK(a[5] == true);
         BOOST_CHECK(a[4] == false);
 }
+
+// ... but not to an integer, however class-shaped it is. The conversion above takes any class constructible
+// from bool, and a 128-bit integer class is one -- which would give every operator on a proxy two equally good
+// readings, convert both sides to bool or convert both sides to the Block, and cost the proxy the
+// equality_comparable that ranges::equal needs. A bit is not an integer, and this pins that both ways: the
+// conversion is gone and the comparison still works. Nothing here is reachable with a builtin Block, which is
+// the whole reason the integer classes are worth a Block. [design.md#uint128-support]
+#if defined(TEST_HAS_MSVC_INT128) || defined(TEST_HAS_ABSL_INT128) || defined(TEST_HAS_BOOST_INT128)
+BOOST_AUTO_TEST_CASE(AProxyNeverBecomesAnIntegerBlock)
+{
+#ifdef TEST_HAS_MSVC_INT128
+        {
+                using B = xstd::basic_bit_array<xstd::uint128, 257>;
+                static_assert(    std::convertible_to<B::reference, bool>);
+                static_assert(not std::convertible_to<B::reference, xstd::uint128>);
+                static_assert(std::equality_comparable<B::reference>);
+                static_assert(std::equality_comparable<B::const_reference>);
+
+                auto a = B();
+                a[0] = true;
+                a[256] = true;
+                BOOST_CHECK(a[0] == a[256]);
+                BOOST_CHECK(a[0] != a[1]);
+                BOOST_CHECK(a[0] == true);
+        }
+#endif
+#ifdef TEST_HAS_ABSL_INT128
+        {
+                using B = xstd::basic_bit_array<absl::uint128, 257>;
+                static_assert(    std::convertible_to<B::reference, bool>);
+                static_assert(not std::convertible_to<B::reference, absl::uint128>);
+                static_assert(std::equality_comparable<B::reference>);
+                static_assert(std::equality_comparable<B::const_reference>);
+
+                auto a = B();
+                a[0] = true;
+                a[256] = true;
+                BOOST_CHECK(a[0] == a[256]);
+                BOOST_CHECK(a[0] != a[1]);
+                BOOST_CHECK(a[0] == true);
+        }
+#endif
+#ifdef TEST_HAS_BOOST_INT128
+        {
+                using B = xstd::basic_bit_array<boost::int128::uint128, 257>;
+                static_assert(    std::convertible_to<B::reference, bool>);
+                static_assert(not std::convertible_to<B::reference, boost::int128::uint128>);
+                static_assert(std::equality_comparable<B::reference>);
+                static_assert(std::equality_comparable<B::const_reference>);
+
+                auto a = B();
+                a[0] = true;
+                a[256] = true;
+                BOOST_CHECK(a[0] == a[256]);
+                BOOST_CHECK(a[0] != a[1]);
+                BOOST_CHECK(a[0] == true);
+        }
+#endif
+}
+#endif
 
 // & . * and * . & are both the identity, which makes the pair a round trip rather than two one-way conversions.
 BOOST_AUTO_TEST_CASE(TheProxyPairRoundTrips)

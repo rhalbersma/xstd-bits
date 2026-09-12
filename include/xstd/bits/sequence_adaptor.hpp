@@ -10,6 +10,7 @@
 #include <xstd/bits/detail/allocator_typedef.hpp> // allocator_typedef, no_typedef
 #include <xstd/bits/detail/hash.hpp>              // hash_append_bits, std_hash
 #include <xstd/bits/detail/intrin.hpp>            // countr_zero, popcount
+#include <xstd/bits/detail/shift.hpp>             // shl, shr
 #include <xstd/bits/detail/random_access.hpp>     // random_access_bit_iterator, random_access_bit_reference
 #include <xstd/bits/ownership.hpp>                // owned_bits_t, owned_storage, owned_traits_t, owner_of, ownership, owns
 #include <boost/container_hash/is_range.hpp>      // is_range
@@ -44,7 +45,7 @@ template<class Block>
 {
         constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<Block>::digits);
         // No shift by digits, which is undefined: a full word is every bit, spelled without one.
-        return count == digits ? static_cast<Block>(~Block{}) : static_cast<Block>(static_cast<Block>(Block{1} << count) - Block{1});
+        return count == digits ? static_cast<Block>(~Block{}) : static_cast<Block>(detail::bits::shl(Block{1}, count) - Block{1});
 }
 
 // Continue unless the functor says otherwise: a void functor always continues, a bool one says. What the set
@@ -84,7 +85,7 @@ constexpr auto walk_words(Bits const& c, std::size_t offset, std::size_t size, F
                 auto const count = std::ranges::min(digits, size - k);
                 auto const word = detail::bits::word_at<Traits>(c, offset + k);
                 for (auto n = 0UZ; n < count; ++n) {
-                        if (not invoke_continues(f, (static_cast<block_type>(word >> n) & block_type{1}) != block_type{})) {
+                        if (not invoke_continues(f, (detail::bits::shr(word, n) & block_type{1}) != block_type{})) {
                                 return;
                         }
                 }
@@ -890,7 +891,7 @@ private:
                 auto n = 0UZ;
                 for (auto&& e : rg) {
                         if (static_cast<value_type>(e)) {
-                                word |= static_cast<block_type>(block_type{1} << n);
+                                word |= detail::bits::shl(block_type{1}, n);
                         }
                         if (++n == digits) {
                                 m_bits.append(word);

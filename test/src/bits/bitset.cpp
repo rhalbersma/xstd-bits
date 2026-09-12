@@ -7,7 +7,7 @@
 #include <xstd/bits/bit_set_view.hpp>   // bit_set_view
 #include <xstd/bits/bitset.hpp>         // bitset
 #include <xstd/bits/bitset_adaptor.hpp> // swap
-#include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <concepts>                     // regular, totally_ordered
 #include <tuple>                        // tuple_cat
 #include <type_traits>                  // is_nothrow_*, is_trivially_*
@@ -54,6 +54,38 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(IsTrivial, T, Types)
         static_assert(    std::is_trivially_copy_assignable_v<T>);
         static_assert(    std::is_trivially_move_constructible_v<T>);
         static_assert(    std::is_trivially_move_assignable_v<T>);
+}
+
+// all() and none() read the blocks pairwise -- the whole ones against the last block's mask -- and their two
+// arms short-circuit, so each needs a value that stops at the first block and one that runs past it. At the
+// wide extents the only callers were set()'s and reset()'s own asserts, which by construction can see the true
+// answer alone. One bit short of full and one bit above empty, at every position in turn, asks both arms both
+// ways; the pass is linear in the width, which is what this suite spends per type.
+BOOST_AUTO_TEST_CASE_TEMPLATE(AllAnyAndNoneReadEveryBlock, T, Types)
+{
+        auto b = T();
+        BOOST_CHECK(     b.none());
+        BOOST_CHECK(not  b.any() );
+        BOOST_CHECK_EQUAL(b.all(), b.size() == 0);
+
+        b.set();
+        BOOST_CHECK(     b.all() );
+        BOOST_CHECK_EQUAL(b.any(),  b.size() != 0);
+        BOOST_CHECK_EQUAL(b.none(), b.size() == 0);
+
+        for (auto i = 0UZ; i < b.size(); ++i) {
+                b.set();
+                b.reset(i);
+                BOOST_CHECK(not b.all() );
+                BOOST_CHECK_EQUAL(b.any(),  b.size() != 1);
+                BOOST_CHECK_EQUAL(b.none(), b.size() == 1);
+
+                b.reset();
+                b.set(i);
+                BOOST_CHECK(    b.any() );
+                BOOST_CHECK(not b.none());
+                BOOST_CHECK_EQUAL(b.all(), b.size() == 1);
+        }
 }
 
 // The proxy from bit_span: b[i] = b[j] must move the bit, not the proxy, or swap breaks.
