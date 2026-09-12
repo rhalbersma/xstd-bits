@@ -47,12 +47,12 @@ using set_of = xstd::basic_bit_static_set<Block, width>;
 // A function of the POSITION alone and never of the Block: every row has to hold the same elements, or the
 // ladder is one timing per Block of a different computation. Deterministic, so the rungs compare.
 template<class T>
-auto filled(std::size_t per_mille)
+auto filled(std::size_t per_mille, std::size_t limit = width)
         -> T
 {
         auto s = T();
         auto state = 1ULL;
-        for (auto i = 0UZ; i < width; ++i) {
+        for (auto i = 0UZ; i < limit; ++i) {
                 state = state * 6364136223846793005ULL + 1442695040888963407ULL;
                 if ((state >> 33) % 1000UZ < per_mille) {
                         s.insert(i);
@@ -60,6 +60,12 @@ auto filled(std::size_t per_mille)
         }
         return s;
 }
+
+// Everything inside the first 64 positions, so every Block wider than that carries an EMPTY high block. The
+// three densities above never produce one: at 256 bits they all put something in every block, so the scan's
+// cross-block step is only ever taken with a non-empty block to cross into. A clustered set is the other side
+// of that step -- and a real shape besides, an occupancy board being dense at one end and empty at the other.
+inline constexpr auto cluster = 64UZ;
 
 // Forward: ++ is countr_zero within a block and a skip across the empty ones, so the Block is the unit the scan
 // steps in. Three densities because the skip is the whole of what a wide block buys, and it buys most where
@@ -87,6 +93,38 @@ auto bm_reverse(benchmark::State& state)
         -> void
 {
         auto s = filled<T>(PerMille);
+        for (auto _ : state) {
+                benchmark::DoNotOptimize(s);
+                auto sum = 0UZ;
+                for (auto it = s.rbegin(), last = s.rend(); it != last; ++it) {
+                        sum += *it;
+                }
+                benchmark::DoNotOptimize(sum);
+        }
+}
+
+// Forward and backward over that clustered set: the scan reaches the high block, finds it empty, and stops --
+// which is the arm's second branch answered the other way.
+template<class T>
+auto bm_forward_clustered(benchmark::State& state)
+        -> void
+{
+        auto s = filled<T>(400, cluster);
+        for (auto _ : state) {
+                benchmark::DoNotOptimize(s);
+                auto sum = 0UZ;
+                for (auto const x : s) {
+                        sum += x;
+                }
+                benchmark::DoNotOptimize(sum);
+        }
+}
+
+template<class T>
+auto bm_reverse_clustered(benchmark::State& state)
+        -> void
+{
+        auto s = filled<T>(400, cluster);
         for (auto _ : state) {
                 benchmark::DoNotOptimize(s);
                 auto sum = 0UZ;
@@ -211,6 +249,9 @@ BM_LADDER_D(bm_forward, 900);
 BM_LADDER_D(bm_reverse,  50);
 BM_LADDER_D(bm_reverse, 400);
 BM_LADDER_D(bm_reverse, 900);
+
+BM_LADDER(bm_forward_clustered);
+BM_LADDER(bm_reverse_clustered);
 
 BM_LADDER(bm_shift_left);
 BM_LADDER(bm_shift_right);
