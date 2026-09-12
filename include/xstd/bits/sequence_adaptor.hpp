@@ -7,12 +7,13 @@
 #define XSTD_BITS_SEQUENCE_ADAPTOR_HPP
 
 #include <xstd/bits/bit_traits.hpp>               // all, any, bit_storage, bit_traits, count, none, static_bit_extent, word_at
-#include <xstd/bits/detail/allocator_typedef.hpp> // allocator_typedef, no_typedef
+#include <xstd/bits/detail/allocator_typedef.hpp> // allocator_typedef
 #include <xstd/bits/detail/hash.hpp>              // hash_append_bits, std_hash
 #include <xstd/bits/detail/intrin.hpp>            // countr_zero, popcount
 #include <xstd/bits/detail/shift.hpp>             // shl, shr
 #include <xstd/bits/detail/random_access.hpp>     // random_access_bit_iterator, random_access_bit_reference
 #include <xstd/bits/ownership.hpp>                // owned_bits_t, owned_storage, owned_traits_t, owner_of, ownership, owns
+#include <xstd/misc/type_traits/empty_type.hpp>              // empty_type
 #include <boost/container_hash/is_range.hpp>      // is_range
 #include <boost/hash2/hash_append.hpp>            // hash_append_tag
 #include <algorithm>                              // copy, min, remove_if
@@ -192,7 +193,7 @@ concept blit_source =
 
 // An owner names its storage's allocator, as std::vector<bool> names its own; a view names none, owning nothing. [design.md#the-sequence-contract]
 template<class Bits, ownership Own, bool Windowed, bit_storage<Bits> Traits = bit_traits<std::remove_const_t<Bits>>>
-class sequence_adaptor : public std::conditional_t<owns(Own), detail::bits::allocator_typedef<std::remove_const_t<Bits>>, detail::bits::no_typedef>
+class sequence_adaptor : public std::conditional_t<owns(Own), detail::bits::allocator_typedef<std::remove_const_t<Bits>>, xstd::empty_type<>>
 {
         static constexpr bool is_owner  = owns(Own);
         static constexpr bool is_window = Windowed;
@@ -761,6 +762,19 @@ public:
 
         // The owner's alone, following span: a handle declines to say whether it compares its referent or its contents. Defaulted, the storage being the one member. [design.md#views-follow-their-precedent]
         [[nodiscard]] friend constexpr auto operator==(sequence_adaptor const& x, sequence_adaptor const& y) noexcept -> bool requires is_owner = default;
+
+        // A view is as incomparable as std::span, which P1085 stripped of both, and DELETED rather than merely
+        // absent: the empty base a view carries has a defaulted <=>, which ADL finds for a derived argument and
+        // which would answer "equal" for any two views, having only the empty base to compare. These take
+        // sequence_adaptor exactly where the base's take empty_type by a derived-to-base conversion, so they win
+        // overload resolution and the answer is ill-formed rather than wrong.
+        //
+        // BOTH are needed, and neither implies the other -- measured on GCC and Clang alike. <=> rewrites the
+        // four relationals and never ==; != rewrites from == and never from <=>; and a defaulted <=> implicitly
+        // declares a defaulted == beside it, which is the one the base has. So deleting == alone leaves < > <= >=,
+        // and deleting <=> alone leaves == and !=. [design.md#views-follow-their-precedent]
+        [[nodiscard]] friend auto operator==(sequence_adaptor const&, sequence_adaptor const&) -> bool requires (not is_owner) = delete;
+        [[nodiscard]] friend auto operator<=>(sequence_adaptor const&, sequence_adaptor const&) -> std::strong_ordering requires (not is_owner) = delete;
 
         // The trait's entry and nothing else: an owner is over storage of ours, which has one. [design.md#owning-is-ours]
         [[nodiscard]] friend constexpr auto operator<=>(sequence_adaptor const& x, sequence_adaptor const& y) noexcept

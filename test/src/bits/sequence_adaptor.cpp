@@ -82,6 +82,21 @@ struct bit_traits<element_bits<N>>
 
 }       // namespace xstd
 
+namespace {
+
+// Named so each requirement is checked on a TEMPLATE PARAMETER. Selecting a deleted overload is a hard error
+// where the requires-expression names a concrete type -- measured on GCC and Clang alike -- and a soft false
+// only through a parameter, which is what makes a deleted operator assertable at all.
+template<class T> concept eq_comparable        = requires (T a, T b) { a ==  b; };
+template<class T> concept ne_comparable        = requires (T a, T b) { a !=  b; };
+template<class T> concept spaceship_comparable = requires (T a, T b) { a <=> b; };
+template<class T> concept lt_comparable        = requires (T a, T b) { a <   b; };
+template<class T> concept gt_comparable        = requires (T a, T b) { a >   b; };
+template<class T> concept le_comparable        = requires (T a, T b) { a <=  b; };
+template<class T> concept ge_comparable        = requires (T a, T b) { a >=  b; };
+
+}       // namespace
+
 BOOST_AUTO_TEST_SUITE(SequenceAdaptor)
 
 BOOST_AUTO_TEST_CASE(AnOwnerIsRegularAndAViewIsCopyable)
@@ -97,6 +112,24 @@ BOOST_AUTO_TEST_CASE(AnOwnerIsRegularAndAViewIsCopyable)
         // A view follows span: no equality and no ordering. [design.md#views-follow-their-precedent]
         static_assert(not std::equality_comparable<View>);
         static_assert(not std::three_way_comparable<View>);
+
+        // Spelled out beside the two concepts, because the empty base a view carries has a defaulted <=> that ADL
+        // finds for a derived argument, and a PARTIAL deletion leaves a working subset rather than nothing: <=>
+        // rewrites the four relationals and never ==, != rewrites from == and never from <=>, and a defaulted <=>
+        // implicitly declares a defaulted == beside it. Either concept above catches either partial case, but it
+        // reports "not equality_comparable" where the defect is "== came from the empty base and answers equal for
+        // every pair of views". These name the seven spellings. [design.md#views-follow-their-precedent]
+        static_assert(not eq_comparable<View>);
+        static_assert(not ne_comparable<View>);
+        static_assert(not spaceship_comparable<View>);
+        static_assert(not lt_comparable<View>);
+        static_assert(not gt_comparable<View>);
+        static_assert(not le_comparable<View>);
+        static_assert(not ge_comparable<View>);
+
+        // The owner answers all seven, so the assertions above are the view's shape and not a dead concept.
+        static_assert(eq_comparable<Owner> and ne_comparable<Owner> and spaceship_comparable<Owner>);
+        static_assert(lt_comparable<Owner> and gt_comparable<Owner> and le_comparable<Owner> and ge_comparable<Owner>);
 }
 
 // Deep const for the owner, shallow for the view: what each hands out says which.

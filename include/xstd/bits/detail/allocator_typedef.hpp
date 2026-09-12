@@ -10,10 +10,12 @@ namespace xstd::detail::bits {
 
 // The allocator's name where the storage below has one and nothing where it does not: an empty base, a class having no conditional typedef.
 // Equality is defaulted so a derived class's defaulted == still compares, this base having nothing to compare. [design.md#a-strict-extension]
+// Neither constexpr nor noexcept is written: a defaulted comparison deduces both, and xstd::empty_type's own
+// defaulted <=> writes neither either. [design.md#a-strict-extension]
 template<class Storage>
 struct allocator_typedef
 {
-        [[nodiscard]] friend constexpr auto operator==(allocator_typedef const&, allocator_typedef const&) noexcept -> bool = default;
+        [[nodiscard]] friend auto operator==(allocator_typedef const&, allocator_typedef const&) -> bool = default;
 };
 
 template<class Storage>
@@ -22,11 +24,8 @@ struct allocator_typedef<Storage>
 {
         using allocator_type = Storage::allocator_type;
 
-        [[nodiscard]] friend constexpr auto operator==(allocator_typedef const&, allocator_typedef const&) noexcept -> bool = default;
+        [[nodiscard]] friend auto operator==(allocator_typedef const&, allocator_typedef const&) -> bool = default;
 };
-
-// A view's base in the same position: no typedef, owning nothing, and no comparison, a view being as incomparable as std::span. [design.md#views-follow-their-precedent]
-struct no_typedef {};
 
 }       // namespace xstd::detail::bits
 

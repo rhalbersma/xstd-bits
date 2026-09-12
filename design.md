@@ -922,6 +922,26 @@ compares and hashes whatever it owns or views, and `sequence_adaptor` compares a
 — `~`, `&`, `|`, `^`, `-`, `<<`, `>>` — are the owner's alone in both readings: a copied view would write
 through to what it views.
 
+A view's empty base is `xstd::empty_type<>`, which carries a defaulted `<=>`, so `bit_span`'s incomparability
+is **deleted rather than absent**: ADL finds a base's hidden friend for a derived argument, and that one would
+answer *equal* for any two views, having only the empty base to compare. The deleted pair takes
+`sequence_adaptor` exactly where the base's takes `empty_type` by a derived-to-base conversion, so it wins
+overload resolution and the answer is ill-formed.
+
+Both deletions are needed and neither implies the other, measured on GCC and Clang alike: `<=>` rewrites the
+four relationals and never `==`; `!=` rewrites from `==` and never from `<=>`; and a defaulted `<=>` implicitly
+declares a defaulted `==` beside it ([class.compare.default]), which is the one `empty_type` has. Deleting `==`
+alone leaves `<`, `>`, `<=` and `>=`; deleting `<=>` alone leaves `==` and `!=`. `not equality_comparable` and
+`not three_way_comparable` in the harness already catch either partial case, and the seven spellings are
+asserted beside them: a concept failure reports *not equality_comparable* where the defect is *`==` came from
+the empty base and answers equal for every pair of views*.
+
+Those seven go through named concepts rather than bare `requires (View a, View b) { a == b; }`, because a
+deleted overload is not assertable the direct way. Selecting one is a **hard error** where the
+requires-expression names a concrete type — measured identically on GCC and Clang — and a soft `false` only
+when the check reaches the type through a template parameter. The harness asserts the owner answers all seven
+beside the view answering none, so the seven are the view's shape rather than a concept nobody satisfies.
+
 Both referring adaptors opt into `std::ranges::enable_view` and `enable_borrowed_range`, the two
 specializations [range.view] and [range.range] invite for a program-defined type. The first makes
 `bit_set_view(x) | views::take_while(…)` take the view as it is rather than wrapping it in an `owning_view`;
