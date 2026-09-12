@@ -6,15 +6,16 @@
 #ifndef XSTD_BITS_DETAIL_CONTIGUOUS_BLOCK_CONTAINER_HPP
 #define XSTD_BITS_DETAIL_CONTIGUOUS_BLOCK_CONTAINER_HPP
 
-#include <xstd/ints/concepts/bitwise_operators.hpp> // bitwise_operators
+#include <xstd/ints/concepts/unsigned_integer.hpp>  // unsigned_integer
 #include <concepts>                                 // regular, same_as
 #include <ranges>                                   // contiguous_range, range_reference_t, range_value_t, sized_range
 
 namespace xstd::detail::bits {
 
 // Whether a range IS blocks; block_readable asks if a trait hands a container's blocks over. [design.md#contiguous-block-container]
-// The element clause is bitwise_operators rather than unsigned_integer: what a block is asked for AS a block is
-// the operator set std::bitset generalized from the built-in integers, and that is the concept naming it.
+// The element clause is unsigned_integer and not the wider bitwise_operators: a block is asked for the <bit>
+// intrinsics as well as the operators -- popcount, countr_zero and countl_zero, each constrained on
+// unsigned_integer in detail/intrin.hpp -- so the concept asks for what the body uses.
 // [design.md#contiguous-block-container]
 // Subscript is spelled out because contiguous_range promises data() and the ITERATOR's operator[], never the range's,
 // and a contiguous container generalizes a C array, whose defining operation is a[n]. [design.md#contiguous-block-container]
@@ -31,7 +32,7 @@ concept contiguous_block_container =
         std::regular<C> and
         std::ranges::sized_range<C> and
         std::ranges::contiguous_range<C> and
-        xstd::bitwise_operators<std::ranges::range_value_t<C>> and
+        xstd::unsigned_integer<std::ranges::range_value_t<C>> and
         requires (C& c, C::size_type n) {
                 { c[n] } -> std::same_as<std::ranges::range_reference_t<C>>;
         } and

@@ -347,19 +347,19 @@ constexpr auto a_run_time_width_is_constexpr()
 } // namespace
 
 // Both shipped vehicles satisfy contiguous_block_container: growth is detected where it exists, never required.
-BOOST_AUTO_TEST_CASE(ItsStorageIsAContiguousSizedRangeOfBitwiseOperators)
+BOOST_AUTO_TEST_CASE(ItsStorageIsAContiguousSizedRangeOfUnsignedIntegers)
 {
         static_assert(xstd::detail::bits::contiguous_block_container<std::array<std::uint8_t, 4>>);
         static_assert(xstd::detail::bits::contiguous_block_container<std::vector<std::uint64_t>>);
 
         static_assert(not xstd::detail::bits::contiguous_block_container<std::vector<bool>>);      // not a contiguous range
-        static_assert(not xstd::detail::bits::contiguous_block_container<std::vector<int>>);       // nor bitwise_operators: signed
+        static_assert(not xstd::detail::bits::contiguous_block_container<std::vector<int>>);       // nor unsigned integers
 
-        // What the element clause admits beyond the unsigned integers: a class that is a field of bits without
-        // being a number. The concept accepts it; the class is instantiable only over a block the intrinsics
-        // and the block arithmetic also accept, which is a narrower set the body states rather than the concept.
+        // The element clause is unsigned_integer and not the wider bitwise_operators, which std::bitset would
+        // satisfy: a block is asked for the <bit> intrinsics too, and they are constrained on unsigned_integer.
+        // A field of bits that is not a number is refused here rather than inside the body.
         // [design.md#contiguous-block-container]
-        static_assert(xstd::detail::bits::contiguous_block_container<std::array<std::bitset<64>, 4>>);
+        static_assert(not xstd::detail::bits::contiguous_block_container<std::array<std::bitset<64>, 4>>);
 }
 
 // The semantic half a concept cannot check: a[i] is *(begin(a) + i), the same object and not merely an equal one.

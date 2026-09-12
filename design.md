@@ -12,25 +12,33 @@ out of. This file holds what has landed.
 ### contiguous-block-container
 
 `contiguous_block_container` asks whether a range **is** blocks: a regular, sized, contiguous, subscriptable
-range whose elements model `bitwise_operators`. Regular is what lets `contiguous_bit_container` default its `==`
-over the width and the blocks, in that member order, so two run-time widths part on the width before a block is
-read. `std::array` and `std::vector` both qualify, and so does `std::inplace_vector` — a runtime width over
-static capacity, for free.
+range of unsigned integers. Regular is what lets `contiguous_bit_container` default its `==` over the width and
+the blocks, in that member order, so two run-time widths part on the width before a block is read. `std::array`
+and `std::vector` both qualify, and so does `std::inplace_vector` — a runtime width over static capacity, for
+free.
 
-The element clause names `bitwise_operators` rather than `unsigned_integer` because that is what a block is
-asked for **as a block**: the operator set `std::bitset` generalized from the built-in integers, which is the
-same set this container extends to `N` bits. The two agree on every block the library ships — `unsigned_integer`
-implies `bitwise_operators`, and both refuse `bool`, the character types and every signed type, so
-`std::vector<int>` stays out either way.
+The element clause is `unsigned_integer` and **not** the wider `bitwise_operators`, which would be the concept
+if the operators were all a block is asked for. They are not. Beyond them the body wants the `<bit>` intrinsics
+— `popcount`, `countr_zero` and `countl_zero`, each constrained on `xstd::unsigned_integer` in
+`detail/intrin.hpp` and reached at some thirty sites — a `numeric_limits<block_type>::digits` for
+`bits_per_block`, and block arithmetic: `shl(unit, count) - unit`, and the `block & (block - 1)` step the set
+reading's block walk takes, where `bitwise_operators` omits `-` deliberately, subtraction and set difference
+being indistinguishable to a concept.
 
-They part on the class types that are fields of bits without being numbers, `std::bitset` among them, which the
-concept now admits and the class still cannot be instantiated over. What the body asks beyond the operators is
-`popcount`, `countr_zero` and `countl_zero` — each constrained on `xstd::unsigned_integer` in `detail/intrin.hpp`
-— a `numeric_limits<block_type>::digits` for `bits_per_block`, and block arithmetic: `shl(unit, count) - unit`
-and the `block & (block - 1)` step, where `bitwise_operators` omits `-` deliberately, subtraction and set
-difference being indistinguishable to a concept. So for those elements the shortfall surfaces inside the
-template rather than as an unsatisfied constraint — the failure mode this concept's subscript clause exists to
-prevent, accepted here on the element clause because the operator set is the one the layering is stated in.
+The two agree on every block the library ships, and both refuse `bool`, the character types and every signed
+type, so `std::vector<int>` stays out either way. They part on the class types that are fields of bits without
+being numbers, `std::bitset` among them: `bitwise_operators` admits those and this concept does not, which is
+the point. `std::array<std::bitset<64>, 4>` is asserted refused, a ready-made negative case
+([concepts-are-tested-on-ready-made-types](#concepts-are-tested-on-ready-made-types)) for exactly the gap
+between the two spellings. Widening the clause would move that refusal from an unsatisfied constraint to a hard
+error inside the template — the failure mode the subscript clause below exists to prevent, and there is no
+reason to accept it on the element clause when the narrower concept states the truth.
+
+The asymmetry it records is the layering, not an accident. `unsigned_integer` goes **in** and the container
+gives `contiguous_bit_sequence` — and, once the non-assigning operators land, `bitwise_operators` — **out**: it
+asks more of a block than it offers its own user, consuming numbers and yielding a field of bits, shedding the
+arithmetic on the way up. That is also why nesting cannot work: a `contiguous_bit_container` will have every
+operator and still no `popcount`, no `digits` and no `- 1`.
 
 The concept has a header of its own at `detail/contiguous_block_container.hpp`: the concept says what a `Blocks` **is**,
 the container is the vehicle built over it, and a reader asking the first question need not open the 1100 lines
@@ -43,8 +51,9 @@ Subscript is spelled out rather than left to `std::ranges::contiguous_range`, wh
 `random_access_iterator`, so `i[n]` **is** required — of the *iterator*. The range itself is under no such
 obligation: a plain buffer wrapper can satisfy the other four requirements and have an iterator that subscripts
 happily while `c[n]` does not compile. No *ready-made* type isolates that gap — every std candidate that fails
-this concept fails for some other clause first (`span` and `subrange` are not `regular`, `string_view`'s element
-is not a field of bits, `vector<bool>` is not contiguous) — and the gap is not worth a class written only to be
+this concept fails for some other clause first (`span` and `subrange` are not `regular`, `string_view`'s and
+`vector<int>`'s elements are not unsigned integers, `vector<bool>` is not contiguous) — and the gap is not worth
+a class written only to be
 asked about ([concepts-are-tested-on-ready-made-types](#concepts-are-tested-on-ready-made-types)), so it is
 stated here from [range.refinements] rather than pinned by a test. `contiguous_bit_container` reaches for the
 range's subscript in 140 places, `block_mask` among them, so without this the concept admits storages the class
@@ -149,9 +158,11 @@ to be asked about proves what its author put in it: it is the concept restated i
 construction, and it goes stale silently when the concept moves. The three std containers are the storages this
 library is actually instantiated over, so an assertion about them is an assertion about the library.
 
-What that gives up is the negative cases a shim isolates one clause at a time. `std::vector<bool>` and
-`std::vector<int>` still cover two of them — not contiguous, and not a field of bits — because they happen to
-exist; the range-subscript clause has no ready-made counterexample and is argued in prose above instead.
+What that gives up is the negative cases a shim isolates one clause at a time, and here three of the four
+survive on ready-made types alone: `std::vector<bool>` is not contiguous, `std::vector<int>` is signed, and
+`std::array<std::bitset<64>, 4>` is the field of bits that is not a number — the one that separates
+`unsigned_integer` from `bitwise_operators` ([contiguous-block-container](#contiguous-block-container)). Only the
+range-subscript clause has no ready-made counterexample, and it is argued in prose there instead.
 
 `counting_blocks` in `test/src/bits/detail/contiguous_bit_container.cpp` is not an exception to this. It is a
 swap-and-move fixture with instrumented operations ([swap-goes-through-adl](#swap-goes-through-adl)), which no
