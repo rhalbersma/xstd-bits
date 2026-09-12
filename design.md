@@ -59,7 +59,10 @@ the other — and each list then names exactly what its own requirement uses, `c
 this library, and its type is `C::size_type` rather than a bare `std::size_t`: a contiguous block *container*
 is a container, `a[n]` is how [sequence.reqmts] spells the operation, and `size_type` is the name a container
 gives the index. `std::array`, `std::vector` and `std::inplace_vector` each name it, so the clause costs the
-three storages nothing and asks anything else for the typedef a container has.
+three storages nothing and asks anything else for the typedef a container has. It is written without a
+`typename`, P0634 making one implicit in a requirement-parameter-list and `readability-redundant-typename`
+reporting it where it is written — which is how the first CI run of #143 failed. The quoted GCC diagnostic
+below echoes a `typename` all the same: that is GCC's printing of the parameter, not what the header says.
 
 Diagnostics were measured, not assumed, and they are *almost* the same either way: given a storage with the
 mutable subscript alone, both forms point at the failing requirement, and Clang's note is identical. GCC's

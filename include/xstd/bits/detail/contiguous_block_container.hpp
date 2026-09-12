@@ -21,7 +21,9 @@ namespace xstd::detail::bits {
 // Semantic requirement, as random_access_iterator states for its own i[n]: c[n] is *(std::ranges::begin(c) + n).
 // The index is the container's own size_type, as [sequence.reqmts] spells a[n], and not a bare std::size_t: a
 // contiguous BLOCK CONTAINER is a container, and every storage this is instantiated over is one of the three
-// std containers, each of which names it. [design.md#contiguous-block-container]
+// std containers, each of which names it. No typename before it: P0634 makes one implicit in a requirement-
+// parameter-list, and readability-redundant-typename reports it where it is written. GCC's diagnostics echo
+// one back anyway, which is its printing and not this source. [design.md#contiguous-block-container]
 // Two requires-expressions rather than one over three parameters: the mutable and the const subscript are separate
 // requirements, and each parameter list then names only what its own expression uses. [design.md#contiguous-block-container]
 template<class C>
@@ -30,10 +32,10 @@ concept contiguous_block_container =
         std::ranges::sized_range<C> and
         std::ranges::contiguous_range<C> and
         xstd::bitwise_operators<std::ranges::range_value_t<C>> and
-        requires (C& c, typename C::size_type n) {
+        requires (C& c, C::size_type n) {
                 { c[n] } -> std::same_as<std::ranges::range_reference_t<C>>;
         } and
-        requires (C const& c, typename C::size_type n) {
+        requires (C const& c, C::size_type n) {
                 { c[n] } -> std::same_as<std::ranges::range_reference_t<C const>>;
         }
 ;
