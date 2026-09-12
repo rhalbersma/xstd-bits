@@ -7,7 +7,7 @@
 #define XSTD_BITS_DETAIL_CONTIGUOUS_BIT_CONTAINER_HPP
 
 #include <xstd/bits/bit_traits.hpp>                          // bit_traits
-#include <xstd/bits/detail/allocator_base_type.hpp>            // allocator_base_type
+#include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_base_type
 #include <xstd/bits/detail/contiguous_block_container.hpp>   // contiguous_block_container
 #include <xstd/bits/detail/intrin.hpp>                       // countl_zero, countr_zero, popcount
 #include <xstd/bits/detail/pred.hpp>                         // intersects, is_subset_of, not_equal_to
@@ -28,9 +28,9 @@
 #include <limits>                                            // numeric_limits
 #include <ranges>                                            // begin, drop, iota, size, swap, transform, zip
                                                              // (views::drop_last when P22014R2 is accepted)
-#include <span>        // dynamic_extent
-#include <type_traits> // conditional_t, is_const_v, remove_reference_t
-#include <utility>     // exchange, move, pair
+#include <span>                                              // dynamic_extent
+#include <type_traits>                                       // conditional_t, is_const_v, remove_reference_t
+#include <utility>                                           // exchange, move, pair
 
 namespace xstd::detail::bits {
 
@@ -62,10 +62,6 @@ private:
         static constexpr auto zero     = static_cast<block_type>( 0);
         static constexpr auto ones     = static_cast<block_type>(-1);
 
-        // The width is a size_t, unless the blocks out-align one: then it is a block, which fills what would otherwise be padding in front of them. [design.md#padding]
-        using width_type = std::conditional_t<(alignof(std::size_t) >= alignof(Blocks)), std::size_t, block_type>;
-        static_assert(sizeof(width_type) >= sizeof(std::size_t) and alignof(width_type) >= alignof(Blocks));
-
         // Width zero named, not computed: MSVC folds both ?: arms and answers C4293. [design.md#padding]
         static constexpr auto static_num_unused_bits = has_static_size ? static_num_bits - N : 0UZ;
         static constexpr auto static_used_bits       = has_static_size and N == 0 ? zero : shr(ones, static_num_unused_bits);
@@ -80,7 +76,7 @@ private:
         }
 
         // An NSDMI, not extent-constrained constructors: vector starts empty. [design.md#default-construction]
-        [[nodiscard]] static constexpr auto make_blocks(std::size_t n)
+        [[nodiscard]] static constexpr auto make_blocks(std::size_t n [[maybe_unused]])
                 -> Blocks
         {
                 if constexpr (has_static_size) {
@@ -89,6 +85,10 @@ private:
                         return Blocks(blocks_for(n));
                 }
         }
+
+        // The width is a size_t, unless the blocks out-align one: then it is a block, which fills what would otherwise be padding in front of them. [design.md#padding]
+        using width_type = std::conditional_t<(alignof(std::size_t) >= alignof(Blocks)), std::size_t, block_type>;
+        static_assert(sizeof(width_type) >= sizeof(std::size_t) and alignof(width_type) >= alignof(Blocks));
 
         // Dynamic widths only; the tag keeps the absent member distinct from any other in an enclosing layout. [design.md#contiguous-block-container]
         [[XSTD_NO_UNIQUE_ADDRESS]]
