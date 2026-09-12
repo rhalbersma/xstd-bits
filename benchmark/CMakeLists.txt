@@ -106,6 +106,10 @@ foreach(t ${targets})
         Boost::headers
         benchmark::benchmark
         fmt::fmt
+        # Optional, and empty when absent: set/blocks.cpp detects each by __has_include and drops the rung.
+        # Declared above both trees in cmake/int128.cmake, benchmark/ being configured before test/.
+        ${${project_id}_test_boost_int128}
+        ${${project_id}_test_absl_int128}
     )
 
     # The workloads, shared with test/ and deliberately outside include/. [design.md#the-interface-line]
