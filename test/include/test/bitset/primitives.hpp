@@ -294,22 +294,6 @@ struct mem_at
                 BOOST_CHECK_EQUAL(self[pos], self.test(pos));                           // [bitset.members]/31
                 BOOST_CHECK_NO_THROW(static_cast<void>(self[pos]));                     // [bitset.members]/32
         }
-
-        // auto operator()(auto& self, std::size_t pos) const
-        // {
-        //         BOOST_CHECK(pos < bs.size());                                       // [bitset.members]/47
-        //         BOOST_CHECK_EQUAL(at(bs, pos), test(bs, pos));                  // [bitset.members]/48
-        //         //BOOST_CHECK_NO_THROW(at(bs, pos));                              // [bitset.members]/49
-        // }
-
-        // auto operator()(auto& self, std::size_t pos, bool val) const
-        // {
-        //         BOOST_CHECK(pos < fn_size(bs));                                 // [bitset.members]/47
-        //         auto src = bs; set(src, pos, val);
-        //         at(bs, pos, val);
-        //         BOOST_CHECK_EQUAL(bs, src);                                     // [bitset.members]/48
-        //         //BOOST_CHECK_NO_THROW(at(bs, pos, val));                         // [bitset.members]/49
-        // }
 };
 
 

@@ -88,27 +88,9 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AtHoldsOverEveryValidPosition, T, Types)
                 on0::empty_set<T>([&](auto const& bs0) {
                         mem_at()(bs0, pos);
                 });
-                // empty_set<T>([&](auto& bs0) {
-                //         mem_at()(bs0, pos);
-                // });
-                // empty_set<T>([&](auto& bs0) {
-                //         mem_at()(bs0, pos, false);
-                // });
-                // empty_set<T>([&](auto& bs0) {
-                //         mem_at()(bs0, pos, true);
-                // });
                 on0::full_set<T>([&](auto const& bsN) {
                         mem_at()(bsN, pos);
                 });
-                // full_set<T>([&](auto& bsN) {
-                //         mem_at()(bsN, pos);
-                // });
-                // full_set<T>([&](auto& bsN) {
-                //         mem_at()(bsN, pos, false);
-                // });
-                // full_set<T>([&](auto& bsN) {
-                //         mem_at()(bsN, pos, true);
-                // });
         });
 }
 
