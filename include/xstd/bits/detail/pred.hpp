@@ -10,12 +10,19 @@
 
 namespace xstd::detail::bits {
 
-// Compared against a zero Block rather than converted to a bool, which is the question the name asks: a
-// conversion leaves the reader to translate "true" back into "has a bit in common". Zero is spelled as
-// contiguous_bit_container spells it. The one spelling that does not work is returning lhs & rhs bare, which
-// copy-initializes the bool and so takes an IMPLICIT conversion, where a 128-bit integer class offers only an
-// explicit operator bool; the two predicates below reach bool contextually, which an explicit operator
-// satisfies. [design.md#uint128-support]
+// Both masks are compared against a zero Block rather than converted to a bool, which is the question each name
+// asks: a conversion leaves the reader to translate "true" back into "shares a bit" or "has none outside".
+// std::bitset answers the same question the same way -- libstdc++'s _M_is_any and _Unchecked_test both read
+// != static_cast<_WordT>(0) -- and so does contiguous_bit_container, at twenty-three sites and no other
+// spelling, which is where the zero here is spelled from.
+//
+// The spelling that does not work is returning the mask bare: that copy-initializes the bool and so takes an
+// IMPLICIT conversion, where unsigned_integer promises only a CONTEXTUAL one -- [iterator.concept.winc]/8,
+// spelled constructible_from<bool, T>. absl::uint128 provides exactly that and no more, its operator bool
+// being explicit, so it is CONFORMING and the bare return was asking for more than the concept guarantees.
+// The builtins grant the stronger conversion, and boost::int128::uint128 grants it too by a different route
+// -- a non-explicit operator UnsignedInteger whose bool case returns low || high -- which is why absl alone
+// surfaced the assumption. [design.md#uint128-support]
 template<xstd::unsigned_integer Block>
 [[nodiscard]] constexpr auto intersects(Block lhs, Block rhs) noexcept
         -> bool
@@ -27,7 +34,7 @@ template<xstd::unsigned_integer Block>
 [[nodiscard]] constexpr auto is_subset_of(Block lhs, Block rhs) noexcept
         -> bool
 {
-        return not (lhs & static_cast<Block>(~rhs));
+        return (lhs & static_cast<Block>(~rhs)) == static_cast<Block>(0);
 }  
 
 template<xstd::unsigned_integer Block>

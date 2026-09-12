@@ -188,7 +188,23 @@ if(PROJECT_IS_TOP_LEVEL)
         # [design.md#uint128-support]
         set(CMAKE_CXX_EXTENSIONS ON)
 
-        add_subdirectory(benchmark)
+        # Above both, and not inside test/: benchmark/ is configured first, so a target declared in test/ does
+        # not exist yet when the benchmarks ask for it. Both trees grade over the same two integer classes.
+        include(${CMAKE_CURRENT_LIST_DIR}/cmake/int128.cmake)
+
+        # Off in the coverage job, and the reason is the gcovr report rather than build time. gcovr excludes
+        # benchmark/ as a source path, but a benchmark is not a source there: it is a translation unit that
+        # INSTANTIATES the library's templates, and those instantiations live in include/ where they are counted.
+        # The coverage job configures Debug, and benchmark/CMakeLists.txt registers a benchmark as a test only
+        # when the build type is not Debug -- so under coverage they compile and never run, and every branch of
+        # an instantiation no test TU also makes is uncovered by construction. Adding one Block-width benchmark
+        # put nine such branches in the denominator and covered none of them. A benchmark measures the library
+        # rather than being part of it, so it does not belong in the measurement at all. [design.md#the-coverage-gate]
+        option(${project_option_prefix}_BUILD_BENCHMARKS "Build the benchmark tree alongside the tests" ON)
+
+        if(${project_option_prefix}_BUILD_BENCHMARKS)
+            add_subdirectory(benchmark)
+        endif()
         add_subdirectory(test)
     endif()
 endif()
