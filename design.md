@@ -2247,3 +2247,29 @@ did so before the windowed operators existed, so the trigger is the whole view's
 either way, since bulk on a window takes a source of the destination's own block type and the whole view's
 takes its own type, so nothing in the library or the tests spells it; the crash is recorded here so nobody
 adds the assertion that would.
+
+### the-coverage-gate
+
+The Coverage job enforces 100% of lines and branches rather than reporting them, and the benchmark tree is not
+built there. The second half is not about build time: `gcovr` is told to exclude `benchmark/.*`, and that
+exclusion does less than it looks like it does. It drops a benchmark as a SOURCE, but a benchmark is not where
+the counted code lives -- it is a translation unit that INSTANTIATES the library's templates, and those
+instantiations belong to the headers under `include/`, which is exactly what the report keeps.
+
+What makes that fatal rather than untidy is that the job configures `Debug`, and `benchmark/CMakeLists.txt`
+registers a benchmark as a test only when the build type is not `Debug`. So under coverage the benchmarks
+compile and never run. Every branch of an instantiation that no test translation unit also makes is therefore
+uncovered by construction, and no amount of work on the benchmark can cover it, because the benchmark does not
+execute.
+
+It was a Block-width benchmark that surfaced this. `benchmark/src/set/blocks.cpp` instantiates the two-block
+arm of the scan for three 128-bit carriers in one translation unit, a combination no single test unit makes;
+the per-line branch totals at `contiguous_bit_container.hpp:410`, `:413` and `:454` went from 2, 6 and 2 to 4,
+11 and 4, and the nine new branches were covered by nothing. The first attempt at a fix added a benchmark shape
+that reaches the missing arm, and it changed the numbers by exactly zero -- which is the proof that the
+benchmark never ran, and the reason the gate is now answered at the CMake level instead.
+
+So `XSTD_BITS_BUILD_BENCHMARKS` gates the tree, the Coverage workflow passes it `OFF` through cpp-ci's
+`cmake_args`, and the `benchmark/.*` exclusion stays as a second line that costs nothing. A benchmark measures
+the library rather than being part of it, which was always the stated reason for excluding it; not compiling it
+into the measurement is that reason carried through.
