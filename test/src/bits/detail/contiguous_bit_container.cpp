@@ -371,7 +371,7 @@ constexpr auto subscript_agrees_with_iteration(Blocks blocks) noexcept
         // the container's size_type, which the concept names and which is the one cast, keeping
         // -Wsign-conversion honest.
         for (auto i = std::ranges::range_difference_t<Blocks>{}; i < std::ranges::ssize(blocks); ++i) {
-                if (std::addressof(blocks[static_cast<typename Blocks::size_type>(i)]) != std::addressof(*(std::ranges::begin(blocks) + i))) {
+                if (std::addressof(blocks[static_cast<Blocks::size_type>(i)]) != std::addressof(*(std::ranges::begin(blocks) + i))) {
                         return false;
                 }
         }
