@@ -355,10 +355,7 @@ BOOST_AUTO_TEST_CASE(ItsStorageIsAContiguousSizedRangeOfUnsignedIntegers)
         static_assert(not xstd::detail::bits::contiguous_block_container<std::vector<bool>>);      // not a contiguous range
         static_assert(not xstd::detail::bits::contiguous_block_container<std::vector<int>>);       // nor unsigned integers
 
-        // The element clause is unsigned_integer and not the wider bitwise_operators, which std::bitset would
-        // satisfy: a block is asked for the <bit> intrinsics too, and they are constrained on unsigned_integer.
-        // A field of bits that is not a number is refused here rather than inside the body.
-        // [design.md#contiguous-block-container]
+        // The element clause is unsigned_integer and not the wider bitwise_operators, which std::bitset would satisfy: a block is asked for the <bit> intrinsics too, and they are constrained on unsigned_integer. [design.md#contiguous-block-container]
         static_assert(not xstd::detail::bits::contiguous_block_container<std::array<std::bitset<64>, 4>>);
 }
 
@@ -367,9 +364,7 @@ template<class Blocks>
 constexpr auto subscript_agrees_with_iteration(Blocks blocks) noexcept
         -> bool
 {
-        // The index is the range's own difference_type, so begin(blocks) + i needs no conversion; subscript takes
-        // the container's size_type, which the concept names and which is the one cast, keeping
-        // -Wsign-conversion honest.
+        // The index is the range's own difference_type, so begin(blocks) + i needs no conversion; subscript takes the container's size_type, which the concept names and which is the one cast, keeping -Wsign-conversion honest.
         for (auto i = std::ranges::range_difference_t<Blocks>{}; i < std::ranges::ssize(blocks); ++i) {
                 if (std::addressof(blocks[static_cast<Blocks::size_type>(i)]) != std::addressof(*(std::ranges::begin(blocks) + i))) {
                         return false;
@@ -385,9 +380,7 @@ BOOST_AUTO_TEST_CASE(ItsStorageSubscriptIsIterationAtTheSameAddress)
         BOOST_CHECK(subscript_agrees_with_iteration(std::vector<std::uint64_t>{ 1, 2, 3, 4 }));
 }
 
-// ranges::swap finds a free swap by ADL and a member never, so contiguous_bit_container needs the free one its three
-// adaptors already have: without it every container moves a whole contiguous_bit_container three times instead of
-// swapping its blocks once, and a storage with an optimized swap never sees it. [design.md#swap-goes-through-adl]
+// ranges::swap finds a free swap by ADL and a member never, so contiguous_bit_container needs the free one its three adaptors already have: without it every container moves a whole contiguous_bit_container three times instead of swapping its blocks once, and a storage with an optimized swap never sees it. [design.md#swap-goes-through-adl]
 namespace {
 
 int g_storage_swaps = 0;
@@ -400,8 +393,7 @@ struct counting_blocks
 
         std::array<std::uint64_t, 4> m_data {};
 
-        // The move operations are counted rather than used: once the free swap exists nothing calls them, which
-        // is the point of the test, so they and the members that only satisfy the concept say so.
+        // The move operations are counted rather than used: once the free swap exists nothing calls them, which is the point of the test, so they and the members that only satisfy the concept say so.
         counting_blocks() = default;
         [[maybe_unused]] counting_blocks(counting_blocks const&) = default;
         [[maybe_unused]] auto operator=(counting_blocks const&) -> counting_blocks& = default;
@@ -592,7 +584,6 @@ auto append_to(model& m, Block value)
 }
 
 // Alternating pairs of bits, so a split at any offset lands ones on both sides.
-// Dependent, so a constrained-away member is a false rather than a hard error.
 template<class X> constexpr bool can_resize    = requires (X& x) { x.resize(1UZ); x.resize(1UZ, true); };
 template<class X> constexpr bool can_push_pop  = requires (X& x) { x.push_back(true); x.pop_back(); };
 template<class X> constexpr bool can_append    = requires (X& x) { x.append(x.block(0UZ)); };
@@ -732,8 +723,7 @@ BOOST_AUTO_TEST_CASE(AStaticWidthDoesNotGrow)
 }
 
 #ifdef TEST_HAS_INPLACE_VECTOR
-// No hole in front of the blocks at any alignment: the width takes theirs where they out-align a size_t, so the
-// class is its two members and nothing else, which is what -Wpadded asks of it. [design.md#padding]
+// No hole in front of the blocks at any alignment: the width takes theirs where they out-align a size_t, so the class is its two members and nothing else, which is what -Wpadded asks of it. [design.md#padding]
 BOOST_AUTO_TEST_CASE(TheWidthFillsWhatWouldOtherwisePadTheBlocks)
 {
         // The width slot is a size_t, or the blocks' alignment where that is wider.
@@ -1049,8 +1039,7 @@ auto word_sample()
         return b;
 }
 
-// A whole number of blocks, so there is no unused tail. operator<<= masks one off at the end, and the case below is
-// about the splice rather than about that mask.
+// A whole number of blocks, so there is no unused tail.
 template<class T>
 auto aligned_sample()
         -> T
@@ -1065,8 +1054,7 @@ auto aligned_sample()
         return b;
 }
 
-// One start and length through set, flip and reset, each against the model; a function rather than a loop body so the
-// case that sweeps it stays under readability-function-cognitive-complexity's threshold.
+// One start and length through set, flip and reset, each against the model; a function rather than a loop body so the case that sweeps it stays under readability-function-cognitive-complexity's threshold.
 template<class T>
 auto check_ranged_forms(std::size_t n, std::size_t len)
         -> void
@@ -1131,10 +1119,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheRangedFormsGoAWordAtATime, T, WordTypes)
 // Three blocks with no tail, so a shift's destination block is exactly the splice and nothing masks it afterwards.
 using AlignedWordTypes = std::tuple<xstd::detail::bits::contiguous_bit_array<std::uint8_t, 24>, xstd::detail::bits::contiguous_bit_vector<std::uint8_t>>;
 
-// The identity that lets one primitive serve all three sites: a right shift's destination block is word_at at that
-// position of the operand, and a left shift's is the same read one block lower. Each holds only where the block
-// above it exists -- past that there is nothing left to splice, which is the edge both operators hoist out of their
-// loop rather than test per block. [design.md#the-funnel-shift]
+// The identity that lets one primitive serve all three sites: a right shift's destination block is word_at at that position of the operand, and a left shift's is the same read one block lower. [design.md#the-funnel-shift]
 BOOST_AUTO_TEST_CASE_TEMPLATE(BothShiftsAreWordAtOnTheOperand, T, AlignedWordTypes)
 {
         constexpr auto D = 8UZ;

@@ -47,8 +47,7 @@ BOOST_AUTO_TEST_CASE(TheDynamicSequenceIsTheSequenceAdaptorOverAHeapOfBlocks)
         static_assert(test::sequence::bit_sequence<T>);
 }
 
-// [vector]'s constructors, every shape, against std::vector<bool> built the same way.
-// [vector.bool]'s synopsis line by line, the model first so the checklist is known to be honest. [design.md#the-sequence-contract]
+// [vector]'s constructors, every shape, against std::vector<bool> built the same way. [design.md#the-sequence-contract]
 BOOST_AUTO_TEST_CASE(ItAnswersEveryLineOfStdVectorBool)
 {
         static_assert(test::sequence::vector_bool<std::vector<bool>>);
@@ -331,8 +330,7 @@ BOOST_AUTO_TEST_CASE(FlipAndSwapAreStdVectorBools)
         m.flip();
         BOOST_CHECK(std::ranges::equal(v, m));
 
-        // Ours is [vector.bool]'s static swap, which the clause still has; the model's own is deprecated by C++26
-        // (LWG-3638, P3612R1) and MSVC 2026 says so under /WX, so the model's two bits are exchanged directly.
+        // Ours is [vector.bool]'s static swap, which the clause still has; the model's own is deprecated by C++26 (LWG-3638, P3612R1) and MSVC 2026 says so under /WX, so the model's two bits are exchanged directly.
         T::swap(v[0], v[1]);
         auto const m0 = static_cast<bool>(m[0]);
         m[0] = static_cast<bool>(m[1]);
@@ -371,8 +369,7 @@ BOOST_AUTO_TEST_CASE(AViewOverItCannotGrowIt)
         static_assert(    has_range_members<T>);
 }
 
-// Every position, densely, agreeing with the subscript -- and not a contiguous range, which no proxy sequence
-// can be. [design.md#the-iterator-is-the-primitive]
+// Every position, densely, agreeing with the subscript -- and not a contiguous range, which no proxy sequence can be. [design.md#the-iterator-is-the-primitive]
 BOOST_AUTO_TEST_CASE(ItYieldsEveryPosition)
 {
         auto c = T(70);

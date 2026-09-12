@@ -17,16 +17,7 @@
 
 namespace test::set {
 
-// What the set reading must order like, against std::set: set_compare's default trusts the viewed type's <=>, and dynamic_bitset's is wrong.
-//
-// Disagreements are counted rather than asserted per pair, so a universe wide enough to span blocks stays
-// affordable and a failure does not drown the log. [design.md#counted-not-asserted]
-//
-// The width matters as much as the pairs do. A universe inside one block never reaches the word-parallel
-// comparison's cross-block arm, which is where its predecessor was wrong: {0} against {8} compared greater,
-// because a comparator that only looked at the first differing block cannot see that the other side still has
-// elements waiting above it. So the callers pass a block type small enough for the universe to span two and
-// three of them. [design.md#the-ordering-primitive]
+// What the set reading must order like, against std::set: set_compare's default trusts the viewed type's <=>, and dynamic_bitset's is wrong. [design.md#counted-not-asserted] [design.md#the-ordering-primitive]
 template<class Bits>
 auto ordering_agrees_with_std_set(std::size_t universe = 4)
         -> void
@@ -43,8 +34,7 @@ auto ordering_agrees_with_std_set(std::size_t universe = 4)
                         auto kx = std::set<std::size_t>();
                         auto ky = std::set<std::size_t>();
 
-                        // Written through the view, in the set vocabulary, which is the interface under test rather than the bitset's own;
-                        // named, because clang 23's lifetime analysis crashes on a deducing-this member called on a prvalue.
+                        // Written through the view, in the set vocabulary, which is the interface under test rather than the bitset's own; named, because clang 23's lifetime analysis crashes on a deducing-this member called on a prvalue.
                         auto const xw = xstd::bit_set_view(x);
                         auto const yw = xstd::bit_set_view(y);
                         for (auto k = 0UZ; k < universe; ++k) {
@@ -68,9 +58,7 @@ auto ordering_agrees_with_std_set(std::size_t universe = 4)
         BOOST_CHECK_EQUAL(greater_disagreements,  0UZ);
 }
 
-// Three blocks and up, where an exhaustive sweep is no longer affordable: 2^18 squared is not a test. Random
-// pairs instead, from a fixed seed so a failure is reproducible, which is what the original verification of this
-// algorithm did once it ran out of exhaustive room. [design.md#the-ordering-primitive]
+// Three blocks and up, where an exhaustive sweep is no longer affordable: 2^18 squared is not a test. [design.md#the-ordering-primitive]
 template<class Bits>
 auto ordering_agrees_with_std_set_sampled(std::size_t universe, std::size_t trials)
         -> void
@@ -78,8 +66,7 @@ auto ordering_agrees_with_std_set_sampled(std::size_t universe, std::size_t tria
         auto equality_disagreements = 0UZ;
         auto less_disagreements     = 0UZ;
         auto greater_disagreements  = 0UZ;
-        // Fixed width, not ULL: the sequence a fixed seed reproduces should not depend on how wide the
-        // platform makes unsigned long long.
+        // Fixed width, not ULL: the sequence a fixed seed reproduces should not depend on how wide the platform makes unsigned long long.
         auto lcg = std::uint64_t{0x9E3779B97F4A7C15};
         auto const next = [&lcg] -> std::uint64_t { lcg = (lcg * 6364136223846793005ULL) + 1442695040888963407ULL; return lcg >> 11U; };
 

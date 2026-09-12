@@ -62,8 +62,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(SievesTooSmallForTheSquareBreakStillSiftCorrectly,
         BOOST_CHECK(opt::filter_twins(one).empty());
 }
 
-// The README offers a word-at-a-time twins as the dense container's answer to the elementwise one; the two agreeing
-// is the whole claim, so it is asserted rather than described. [design.md#the-sieve]
+// The README offers a word-at-a-time twins as the dense container's answer to the elementwise one; the two agreeing is the whole claim, so it is asserted rather than described. [design.md#the-sieve]
 BOOST_AUTO_TEST_CASE(TheDataParallelTwinsAgreeWithTheElementwiseOnes)
 {
         auto const primes = opt::sift_primes1<xstd::bit_static_set<N>>(N);
@@ -72,11 +71,7 @@ BOOST_AUTO_TEST_CASE(TheDataParallelTwinsAgreeWithTheElementwiseOnes)
         BOOST_CHECK(elementwise == parallel);
 }
 
-// The three sieves are one function of n, and the two unbounded ones earn their place by agreeing with the bounded
-// one rather than by being described as equivalent. Every bound below, degenerate ones included, and two window
-// widths, so a window shorter than the tail is exercised beside one that swallows it. [design.md#the-unbounded-sieves]
-// The bounds stop at N because one of the containers under test is N bits wide: a fixed width is a capacity, and
-// asking it for the candidates below N + 1 is asking it to hold N. [design.md#width-is-capacity]
+// The three sieves are one function of n, and the two unbounded ones earn their place by agreeing with the bounded one rather than by being described as equivalent. [design.md#the-unbounded-sieves] [design.md#width-is-capacity]
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheUnboundedSievesAgreeWithTheBoundedOne, T, Types)
 {
         for (auto const n : {0UZ, 1UZ, 2UZ, 3UZ, 4UZ, 5UZ, 9UZ, 10UZ, N / 2UZ, N}) {
@@ -95,9 +90,7 @@ BOOST_AUTO_TEST_CASE(TheIncrementalSieveGeneratesWithoutABound)
         for (auto i = 0UZ; i < 25UZ; ++i) {
                 first.push_back(sieve.next());
         }
-        // Compared as a range rather than through fmt::format, which the cases above use: a std::vector formatter is
-        // a different arm of fmt/ranges.h than the set formatters, and MSVC finds unreachable code inside it that
-        // /WX turns into an error. Comparing the values is also the more direct assertion.
+        // Compared as a range rather than through fmt::format, which the cases above use: a std::vector formatter is a different arm of fmt/ranges.h than the set formatters, and MSVC finds unreachable code inside it that /WX turns into an error.
         auto const expected = std::vector<std::size_t>{
                 2UZ, 3UZ, 5UZ, 7UZ, 11UZ, 13UZ, 17UZ, 19UZ, 23UZ, 29UZ, 31UZ, 37UZ, 41UZ,
                 43UZ, 47UZ, 53UZ, 59UZ, 61UZ, 67UZ, 71UZ, 73UZ, 79UZ, 83UZ, 89UZ, 97UZ,
@@ -108,9 +101,7 @@ BOOST_AUTO_TEST_CASE(TheIncrementalSieveGeneratesWithoutABound)
         BOOST_CHECK_EQUAL(sieve.next(), 101UZ);
 }
 
-// The segmented sieve sizes its base pass with isqrt, which carries no n < 2 guard because the Newton loop is
-// already total there. That is asserted rather than argued: both degenerate inputs, both sides of every perfect
-// square up to a point, and the widths where a rounding error would show. [design.md#the-unbounded-sieves]
+// The segmented sieve sizes its base pass with isqrt, which carries no n < 2 guard because the Newton loop is already total there. [design.md#the-unbounded-sieves]
 BOOST_AUTO_TEST_CASE(TheIntegerSquareRootIsExactAndTotal)
 {
         BOOST_CHECK_EQUAL(opt::detail::sieve::isqrt(0UZ), 0UZ);
@@ -129,8 +120,7 @@ BOOST_AUTO_TEST_CASE(TheIntegerSquareRootIsExactAndTotal)
         BOOST_CHECK_EQUAL(opt::detail::sieve::isqrt(1UZ << 52UZ), 1UZ << 26UZ);
 }
 
-// generate_candidates is total in n: below two there is nothing to sift, which is an answer rather than a broken
-// precondition on iota. [design.md#the-unbounded-sieves]
+// generate_candidates is total in n: below two there is nothing to sift, which is an answer rather than a broken precondition on iota. [design.md#the-unbounded-sieves]
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheSieveIsTotalBelowTwo, T, Types)
 {
         BOOST_CHECK(opt::sift_primes0<T>(0UZ).empty());

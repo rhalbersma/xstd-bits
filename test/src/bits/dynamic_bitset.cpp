@@ -114,8 +114,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheOrderingIsBoosts, T, Dynamic)
 
 namespace {
 
-// One pair of narrow bitsets against boost's own, at two widths and two patterns; a function rather than a loop body
-// so the case that sweeps it stays under readability-function-cognitive-complexity's threshold.
+// One pair of narrow bitsets against boost's own, at two widths and two patterns; a function rather than a loop body so the case that sweeps it stays under readability-function-cognitive-complexity's threshold.
 auto disagreements_against_boost(std::size_t w, std::size_t u, unsigned long long p, unsigned long long q)
         -> int
 {

@@ -7,7 +7,7 @@
 #define XSTD_BITS_SEQUENCE_ADAPTOR_HPP
 
 #include <xstd/bits/bit_traits.hpp>               // all, any, bit_storage, bit_traits, count, none, static_bit_extent, word_at
-#include <xstd/bits/detail/allocator_typedef.hpp> // allocator_typedef
+#include <xstd/bits/detail/allocator_base_type.hpp> // allocator_base_type
 #include <xstd/bits/detail/hash.hpp>              // hash_append_bits, std_hash
 #include <xstd/bits/detail/intrin.hpp>            // countr_zero, popcount
 #include <xstd/bits/detail/shift.hpp>             // shl, shr
@@ -38,8 +38,7 @@ namespace xstd {
 
 namespace detail::sequence {
 
-// The bits a window's word holds: every one but for the last word, which holds what is left over. The one
-// spelling of it, so the bulk operators and the aggregates below cannot disagree about the tail. [design.md#windows]
+// The bits a window's word holds: every one but for the last word, which holds what is left over. [design.md#windows]
 template<class Block>
 [[nodiscard]] constexpr auto word_mask(std::size_t count) noexcept
         -> Block
@@ -49,14 +48,7 @@ template<class Block>
         return count == digits ? static_cast<Block>(~Block{}) : static_cast<Block>(detail::bits::shl(Block{1}, count) - Block{1});
 }
 
-// Continue unless the functor says otherwise: a void functor always continues, a bool one says. What the set
-// reading's for_each does, over what this reading's iterator dereferences to. [design.md#the-sequence-for-each]
-//
-// The bool is handed over as a prvalue -- [expr.type.conv]'s decay-copy -- rather than as this parameter's name. A named lvalue binds to a functor
-// taking bool&, which then writes to a local that goes nowhere: the walk reads the storage through a const
-// reference and never writes back, so what looks like a mutating pass is a silent no-op. A prvalue makes that a
-// compile error, and it is what is_invocable_r_v just above already asks about, so the call and the detection
-// stop disagreeing about the value category. [design.md#the-functor-takes-a-value]
+// Continue unless the functor says otherwise: a void functor always continues, a bool one says. [design.md#the-sequence-for-each] [design.md#the-functor-takes-a-value]
 template<class F>
 [[nodiscard]] constexpr auto invoke_continues(F& f, bool value)
         -> bool
@@ -69,12 +61,9 @@ template<class F>
         }
 }
 
-// One tier each, because the tier is the seam and sharing a body puts the whole over
-// readability-function-cognitive-complexity's threshold. [design.md#one-function-per-tier]
+// One tier each, because the tier is the seam and sharing a body puts the whole over readability-function-cognitive-complexity's threshold. [design.md#one-function-per-tier]
 
-// Every position, lowest first, a word at a time: the outer loop loads once per word and the reload becomes the
-// inner loop's exit test, which a flat operator++ can never express. That structure is the whole speedup, the
-// iterator's layout already being the fastest there is. [design.md#the-sequence-for-each]
+// Every position, lowest first, a word at a time: the outer loop loads once per word and the reload becomes the inner loop's exit test, which a flat operator++ can never express. [design.md#the-sequence-for-each]
 template<class Traits, class Bits, class F>
 constexpr auto walk_words(Bits const& c, std::size_t offset, std::size_t size, F& f)
         -> void
@@ -93,8 +82,7 @@ constexpr auto walk_words(Bits const& c, std::size_t offset, std::size_t size, F
         }
 }
 
-// The other tier: a storage with no block access -- libc++'s std::bitset and boost's are the ones -- walks
-// positions, which is what the iterator does and is still the same answer. [design.md#windows]
+// The other tier: a storage with no block access -- libc++'s std::bitset and boost's are the ones -- walks positions, which is what the iterator does and is still the same answer. [design.md#windows]
 template<class Traits, class Bits, class F>
 constexpr auto walk_positions(Bits const& c, std::size_t offset, std::size_t size, F& f)
         -> void
@@ -106,9 +94,7 @@ constexpr auto walk_positions(Bits const& c, std::size_t offset, std::size_t siz
         }
 }
 
-// The three aggregates over a window, each masked to what the window holds: a word at a time, so a window pays
-// what the whole pays and not a test per bit. A window of ours only -- the tail is clear where the mask does not
-// reach, and above the last word there is nothing. [design.md#windows]
+// The three aggregates over a window, each masked to what the window holds: a word at a time, so a window pays what the whole pays and not a test per bit. [design.md#windows]
 template<class Traits, class Bits>
 [[nodiscard]] constexpr auto count_words(Bits const& c, std::size_t offset, std::size_t size) noexcept
         -> std::size_t
@@ -193,7 +179,7 @@ concept blit_source =
 
 // An owner names its storage's allocator, as std::vector<bool> names its own; a view names none, owning nothing. [design.md#the-sequence-contract]
 template<class Bits, ownership Own, bool Windowed, bit_storage<Bits> Traits = bit_traits<std::remove_const_t<Bits>>>
-class sequence_adaptor : public std::conditional_t<owns(Own), detail::bits::allocator_typedef<std::remove_const_t<Bits>>, xstd::empty_base_type<>>
+class sequence_adaptor : public std::conditional_t<owns(Own), detail::bits::allocator_base_type<std::remove_const_t<Bits>>, xstd::empty_base_type<>>
 {
         static constexpr bool is_owner  = owns(Own);
         static constexpr bool is_window = Windowed;
@@ -603,24 +589,7 @@ public:
         [[nodiscard]] constexpr auto crbegin() const noexcept -> const_reverse_iterator { return std::make_reverse_iterator(cend());   }
         [[nodiscard]] constexpr auto crend()   const noexcept -> const_reverse_iterator { return std::make_reverse_iterator(cbegin()); }
 
-        // The sequence reading a word at a time, which the range-for cannot be. operator++ is flat: it must re-derive
-        // the word from (pointer, position) on every step, because an iterator stays copyable and restartable. A loop
-        // has somewhere to keep the word between positions, so the reload becomes an inner loop's exit test.
-        //
-        // What that buys is the vectorizer's and not the loop's, and it is narrower than it first looked: on GCC 15 at
-        // 2^24 bits a counting body runs 8.2x ahead of the range-for and a body with a loop-carried dependence runs at
-        // parity, and under clang 22 the range-for already vectorizes, leaving 1.06x. Never slower, 8x where the
-        // range-for leaves the most on the table. It is loop structure and not layout: the iterator's (container
-        // pointer, index) is the fastest of the four shapes tried and the only one clang vectorizes, precisely because
-        // the dereference is a pure function of the index -- which is also why this has to be a member, no iterator
-        // being able to express the outer loop. [design.md#the-sequence-for-each]
-        //
-        // The functor takes what this reading's iterator dereferences to, a bool, where the set reading's takes a
-        // position; it may return void, or bool to mean "keep going". Nothing else is offered: a functor that returns
-        // something else is a caller error rather than a value to discard silently. [design.md#the-set-for-each]
-        //
-        // It takes that bool by value, and the constraint says so, so a functor asking for bool& reads "constraint not
-        // satisfied" here rather than compiling into a write that goes nowhere. [design.md#the-functor-takes-a-value]
+        // The sequence reading a word at a time, which the range-for cannot be. [design.md#the-sequence-for-each] [design.md#the-set-for-each] [design.md#the-functor-takes-a-value]
         template<class F>
                 requires std::invocable<F&, bool>
         constexpr auto for_each(this auto&& self, F f)
@@ -633,8 +602,7 @@ public:
                 }
         }
 
-        // capacity; max_size() is the positions there are to hold: a growing one what its storage can address, and a
-        // static width, a view or a window their own, none of them able to grow. [design.md#max-size-is-the-bits]
+        // capacity; max_size() is the positions there are to hold: a growing one what its storage can address, and a static width, a view or a window their own, none of them able to grow. [design.md#max-size-is-the-bits]
         [[nodiscard]] constexpr auto empty() const noexcept -> bool { return size() == 0UZ; }
 
         [[nodiscard]] constexpr auto size() const noexcept
@@ -657,19 +625,7 @@ public:
                 }
         }
 
-        // The sequence reading's aggregates, in its own vocabulary and with the bool that [alg.count] and [alg.all.of]
-        // give them, where the bitset reading's four take none. That is the shape this row already has: fill takes a
-        // bool where the bitset reading splits set() and reset().
-        //
-        // Not redundant with bit_set_view(*this).size(). That asks a different question -- reinterpret these bools as a
-        // set of positions and give me its cardinality -- which happens to answer the same integer for value == true,
-        // and has no spelling at all for count(false), all(false) and none(false). Making a caller change reading to
-        // count their bools is the exact fault this library levels at the two it replaces.
-        // [design.md#two-readings-disagree]
-        //
-        // The false arms are identities rather than second implementations, and they hold on a window too. Short
-        // circuiting survives them: all(false) really does stop at the first set bit, because it is none(true).
-        // [design.md#the-sequence-aggregates]
+        // The sequence reading's aggregates, in its own vocabulary and with the bool that [alg.count] and [alg.all.of] give them, where the bitset reading's four take none. [design.md#two-readings-disagree] [design.md#the-sequence-aggregates]
         [[nodiscard]] constexpr auto count(value_type value = true) const noexcept
                 -> size_type
         {
@@ -681,11 +637,7 @@ public:
         [[nodiscard]] constexpr auto any (value_type value = true) const noexcept -> bool { return value ? any_true()  : not all_true(); }
         [[nodiscard]] constexpr auto none(value_type value = true) const noexcept -> bool { return value ? none_true() : all_true(); }
 
-        // std::mismatch's answer over the machinery the orderings are already made of: the first differing block and
-        // its xor, one countr_zero from the position, and size() where the two agree, as [alg.mismatch] answers last.
-        // 208x over std::mismatch on the same bit_vector at 2^22, GCC 15.
-        // An owner's alone, and only over storage that has the entry: a window's blocks are not its own.
-        // [design.md#the-sequence-aggregates]
+        // std::mismatch's answer over the machinery the orderings are already made of: the first differing block and its xor, one countr_zero from the position, and size() where the two agree, as [alg.mismatch] answers last. [design.md#the-sequence-aggregates]
         [[nodiscard]] constexpr auto mismatch(sequence_adaptor const& other) const noexcept
                 -> size_type
                 requires (not is_window) and requires { Traits::first_difference(std::declval<bits_type const&>(), std::declval<bits_type const&>()); }
@@ -792,8 +744,7 @@ public:
         static constexpr auto swap(reference x, reference y) noexcept -> void { bool const t = x; x = y; y = t; }
 
 private:
-        // One tier each for the three aggregates above, chosen once: the trait's door over the whole, a masked word at
-        // a time over a window of ours, one position at a time over a window of anything else. [design.md#windows]
+        // One tier each for the three aggregates above, chosen once: the trait's door over the whole, a masked word at a time over a window of ours, one position at a time over a window of anything else. [design.md#windows]
         [[nodiscard]] constexpr auto count_true() const noexcept
                 -> size_type
         {
@@ -818,8 +769,7 @@ private:
                 }
         }
 
-        // Its own helper rather than not any_true(), so a storage that spells none() itself is asked in its own
-        // words; every storage adapted here does.
+        // Its own helper rather than not any_true(), so a storage that spells none() itself is asked in its own words; every storage adapted here does.
         [[nodiscard]] constexpr auto none_true() const noexcept
                 -> bool
         {
@@ -832,8 +782,7 @@ private:
                 }
         }
 
-        // Not count() == size(): a clear position ends it, which is what the position tier looks for and what a word
-        // that is not all ones is.
+        // Not count() == size(): a clear position ends it, which is what the position tier looks for and what a word that is not all ones is.
         [[nodiscard]] constexpr auto all_true() const noexcept
                 -> bool
         {
@@ -938,9 +887,7 @@ private:
         }
 };
 
-// A view deduces the constness of what it views, the way span<T> and span<T const> do; over an owner, of the storage it wraps.
-// Constrained to non-owners for the reason set_adaptor's guide states: an owner has a bit_traits of its own now,
-// so an unconstrained guide ties with the owner guide below. [design.md#a-bitset-reads-as-its-storage]
+// A view deduces the constness of what it views, the way span<T> and span<T const> do; over an owner, of the storage it wraps. [design.md#a-bitset-reads-as-its-storage]
 template<class Bits>
         requires (not requires { typename owned_storage<std::remove_const_t<Bits>>::bits_type; })
 sequence_adaptor(Bits&) -> sequence_adaptor<Bits, ownership::refers, false>;

@@ -16,8 +16,7 @@
 #include <cstddef>                                 // size_t
 #include <limits>                                  // numeric_limits
 
-// The one adaptation of std::bitset, and the view's contract alone: what bit_set_view and bit_span ask, nothing an owner would. [design.md#owning-is-ours]
-// [namespace.std] forbids ADL hooks here, and a specialization needs none. [design.md#the-trait]
+// The one adaptation of std::bitset, and the view's contract alone: what bit_set_view and bit_span ask, nothing an owner would. [design.md#owning-is-ours] [design.md#the-trait]
 namespace xstd {
 
 template<std::size_t N>

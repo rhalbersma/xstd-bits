@@ -13,10 +13,7 @@
 #include <iterator>                 // bidirectional_iterator_tag
 #include <type_traits>              // is_class_v, is_convertible_v, is_nothrow_constructible_v, remove_const_t
 
-// The iterator is the primitive: a pointer and a position, reaching the bits through Traits alone. [design.md#the-iterator-is-the-primitive]
-// The set reading's pair, named after the category its iterator models; the sequence reading's is random_access.hpp.
-// The walks below stay qualified inside their own namespace: unqualified, the explicit template argument would drag
-// ADL in with it, and the associated namespace of a std::bitset is std. [design.md#why-nested]
+// The iterator is the primitive: a pointer and a position, reaching the bits through Traits alone. [design.md#the-iterator-is-the-primitive] [design.md#why-nested]
 namespace xstd::detail::bits {
 
 template<class Bits, bit_storage<Bits> Traits = bit_traits<std::remove_const_t<Bits>>> class bidirectional_bit_iterator;
@@ -49,8 +46,7 @@ public:
                 assert(m_ptr != nullptr);
         }
 
-        // A zero width has one position, so every iterator over it is the same one; said outright, every loop an optimizer
-        // sees into stops before its first step, which no spelling of the step itself achieved. [design.md#degenerate-widths]
+        // A zero width has one position, so every iterator over it is the same one; said outright, every loop an optimizer sees into stops before its first step, which no spelling of the step itself achieved. [design.md#degenerate-widths]
         [[nodiscard]] friend constexpr auto operator==(bidirectional_bit_iterator lhs, bidirectional_bit_iterator rhs) noexcept
                 -> bool
         {
@@ -111,8 +107,7 @@ public:
                 assert(m_ptr != nullptr);
         }
 
-        // A value, not a handle to rebind: trivially copyable, never assignable, as a reference to a key is.
-        // [design.md#the-proxy-copies-the-handle]
+        // A value, not a handle to rebind: trivially copyable, never assignable, as a reference to a key is. [design.md#the-proxy-copies-the-handle]
         constexpr bidirectional_bit_reference(bidirectional_bit_reference const&) noexcept = default;
         constexpr auto operator=(bidirectional_bit_reference const&) -> bidirectional_bit_reference& = delete;
 
@@ -146,21 +141,7 @@ public:
 }       // namespace xstd::detail::bits
 
 
-// std::format over the containers, which needs nothing said about the containers themselves.
-// [design.md#formatting-the-proxies]
-//
-// Every owner and view here is already a range, so [format.range.formatter] would format it -- except that the
-// range formatter requires formattable<range_reference_t<R>>, and a reference of ours is a proxy. So the proxy
-// is what gets a formatter, and every container over it follows.
-//
-// It defers to format_as, the hook fmt already calls, so the value this proxy prints as is defined once and both
-// libraries read it from there. Deriving from the underlying formatter rather than writing parse() is what keeps
-// the whole format spec: a width, a fill, {:#x} on a position and {:d} on a bool, and the nested spec a range
-// formatter forwards ({::#x}) reaching them.
-//
-// [namespace.std]/2 allows a specialization of a standard library template for a program-defined type, which is
-// what this is and all it is. clang-tidy 22 and 23 read the qualified definition as modifying namespace std
-// anyway; 24 no longer does. [design.md#clang-tidy-false-positives]
+// std::format over the containers, which needs nothing said about the containers themselves. [design.md#formatting-the-proxies] [design.md#clang-tidy-false-positives]
 template<class Bits, class Traits, class CharT>
 // NOLINTNEXTLINE(bugprone-std-namespace-modification)
 struct std::formatter<xstd::detail::bits::bidirectional_bit_reference<Bits, Traits>, CharT>

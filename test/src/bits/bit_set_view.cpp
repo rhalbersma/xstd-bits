@@ -155,16 +155,12 @@ BOOST_AUTO_TEST_CASE(EveryViewedTypeOrdersLikeAStdSet)
         test::set::ordering_agrees_with_std_set<boost::dynamic_bitset<>>();
 }
 
-// One block cannot reach the arm the word-parallel comparison exists for. An eight-bit block makes position 8
-// the second block's first, so a universe of nine spans two blocks and one of eighteen spans three, and the
-// pair {0} against {8} -- the one an earlier comparator got backwards -- is inside the first sweep.
-// [design.md#the-ordering-primitive]
+// One block cannot reach the arm the word-parallel comparison exists for. [design.md#the-ordering-primitive]
 BOOST_AUTO_TEST_CASE(TheOrderingSpansBlocksAndNotJustPositions)
 {
         test::set::ordering_agrees_with_std_set<xstd::basic_bitset<std::uint8_t, 9>>(9);
 
-        // Three blocks, where "anything above" has to look past the next block as well as into it. 2^18 squared
-        // is not a sweep, so this one samples. [design.md#counted-not-asserted]
+        // Three blocks, where "anything above" has to look past the next block as well as into it. [design.md#counted-not-asserted]
         test::set::ordering_agrees_with_std_set_sampled<xstd::basic_bitset<std::uint8_t, 18>>(18UZ, 20000UZ);
         test::set::ordering_agrees_with_std_set_sampled<boost::dynamic_bitset<std::uint8_t>>(18UZ, 20000UZ);
 }

@@ -9,24 +9,7 @@
 #include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
 #include <cstddef>                                 // size_t
 
-// A shift count reaches a Block as int, not as the size_t the containers count positions in. A builtin Block
-// takes it either way, but an integer CLASS declares its shift with a fixed parameter -- absl::uint128's is
-// int -- so a size_t narrows there and -Wconversion rejects it. Every count in this library is a bit position
-// within one block, so it is always far inside int's range.
-//
-// Said once here rather than at each of the two dozen shift sites: a cast repeated that many times is a cast
-// that will be forgotten at the next one, and forgetting it breaks only the integer-class Blocks, on only the
-// builds that have them -- which is how the first count of these sites came out too low. The narrowing cast
-// back to Block is the other half of every one of those sites, so it belongs here too. Named shl/shr because
-// this header's callers already use std::shift_left and std::shift_right for the range algorithms.
-// [design.md#uint128-support]
-//
-// int and not unsigned, and the two checks that govern this leave no third option, both measured:
-// absl::uint128 declares one shift, operator<<(uint128, int), so an unsigned count reaches it by a
-// signedness-changing conversion and -Wsign-conversion rejects that, while an int count is a signed operand of
-// a bitwise operator and bugprone-signed-bitwise rejects THAT. The type's own operator decides which one is
-// right, and the count is a bit position within one block, so the signedness the check objects to cannot be
-// reached. [design.md#clang-tidy-false-positives]
+// A shift count reaches a Block as int, not as the size_t the containers count positions in. [design.md#uint128-support] [design.md#clang-tidy-false-positives]
 namespace xstd::detail::bits {
 
 template<xstd::unsigned_integer Block>

@@ -15,9 +15,7 @@
 
 BOOST_AUTO_TEST_SUITE(Bitset)
 
-// Every Block model within one block, the narrow ones across boundaries, and the widest Block across one too;
-// the grading is in test/block_types.hpp. Every case below is a static_assert or one pass over the positions,
-// so the three-block instantiations cost what the one-block ones do.
+// Every Block model within one block, the narrow ones across boundaries, and the widest Block across one too; the grading is in test/block_types.hpp.
 using Types = decltype(std::tuple_cat(
         std::declval<test::graded_extents<xstd::basic_bitset>>(),
         std::declval<test::wide_extents<xstd::basic_bitset>>()));
@@ -56,11 +54,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(IsTrivial, T, Types)
         static_assert(    std::is_trivially_move_assignable_v<T>);
 }
 
-// all() and none() read the blocks pairwise -- the whole ones against the last block's mask -- and their two
-// arms short-circuit, so each needs a value that stops at the first block and one that runs past it. At the
-// wide extents the only callers were set()'s and reset()'s own asserts, which by construction can see the true
-// answer alone. One bit short of full and one bit above empty, at every position in turn, asks both arms both
-// ways; the pass is linear in the width, which is what this suite spends per type.
+// all() and none() read the blocks pairwise -- the whole ones against the last block's mask -- and their two arms short-circuit, so each needs a value that stops at the first block and one that runs past it.
 BOOST_AUTO_TEST_CASE_TEMPLATE(AllAnyAndNoneReadEveryBlock, T, Types)
 {
         auto b = T();

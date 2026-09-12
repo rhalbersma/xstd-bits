@@ -3,15 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-// The sequence row: xstd::bit_vector against std::vector<bool>, which is the whole comparison. One reading, one
-// storage, one variable -- the Standard's variable-size sequence of bool against ours. boost::dynamic_bitset is
-// not on this row: it is a bitset, and it is compared against xstd::dynamic_bitset in bitset/dynamic.cpp where
-// that is apples to apples. [design.md#the-sequence-ladder]
-//
-// The ladder differs from the bitset row's on purpose. A bitset is a bitboard question -- ALU-bound, a handful of
-// words, 1 to 512. A sequence of bool is an endgame-database question: a dense flat array indexed by a ranked
-// position, where a lookup costs a cache miss and nothing else. So this one runs 8 KiB to 32 MiB, through L1, L2,
-// L3 and into DRAM, and reports latency per random read rather than bytes per second.
+// The sequence row: xstd::bit_vector against std::vector<bool>, which is the whole comparison. [design.md#the-sequence-ladder]
 
 #include <xstd/bits/bit_vector.hpp> // bit_vector
 #include <algorithm>                // count
@@ -30,8 +22,7 @@ auto bits(benchmark::State const& state)
         return static_cast<std::size_t>(state.range(0)) * bits_per_word;
 }
 
-// One step of an LCG per lookup: a couple of nanoseconds against a DRAM miss, and unpredictable enough that the
-// prefetcher cannot turn the random walk back into a sequential one, which is the whole point of measuring it.
+// One step of an LCG per lookup: a couple of nanoseconds against a DRAM miss, and unpredictable enough that the prefetcher cannot turn the random walk back into a sequential one, which is the whole point of measuring it.
 constexpr auto next_index(std::uint64_t& lcg, std::size_t n)
         -> std::size_t
 {
@@ -53,8 +44,7 @@ auto filled(std::size_t n)
 
 }       // namespace
 
-// The endgame-database lookup: one random read, and what it costs is a miss. Reported per item, because bytes per
-// second is meaningless when a lookup touches one bit and pays for a whole line.
+// The endgame-database lookup: one random read, and what it costs is a miss.
 template<class T>
 auto bm_random_read(benchmark::State& state)
         -> void
@@ -69,8 +59,7 @@ auto bm_random_read(benchmark::State& state)
         state.SetItemsProcessed(state.iterations());
 }
 
-// The other half of a database pass: not a lookup but a sweep, where a container owning its blocks should have
-// the advantage over one that does not -- and does not, which is the finding. [design.md#the-sequence-ladder]
+// The other half of a database pass: not a lookup but a sweep, where a container owning its blocks should have the advantage over one that does not -- and does not, which is the finding. [design.md#the-sequence-ladder]
 template<class T>
 auto bm_sequential_count(benchmark::State& state)
         -> void
@@ -107,8 +96,7 @@ auto bm_construct(benchmark::State& state)
 BM_LADDER(bm_random_read);
 BM_LADDER(bm_sequential_count);
 
-// Construction allocates and zeroes the whole slice, so it stops four rungs short of the others rather than spend
-// the run on the allocator.
+// Construction allocates and zeroes the whole slice, so it stops four rungs short of the others rather than spend the run on the allocator.
 #define BM_BUILD_LADDER(fn)                                             \
         BENCHMARK_TEMPLATE1(fn, std::vector<bool>)                      \
                 ->RangeMultiplier(4)->Range(1L << 10, 1L << 18);        \

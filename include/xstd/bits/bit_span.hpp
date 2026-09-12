@@ -14,8 +14,7 @@
 // The sequence reading over bits it does not own: the referring adaptor, which like std::span neither compares nor orders. [design.md#the-views-are-the-adaptors]
 namespace xstd {
 
-// An alias, as bit_subspan always was, and differing from it in one non-type argument: this is the whole
-// sequence, that one a window on it. [design.md#the-views-are-the-adaptors]
+// An alias, as bit_subspan always was, and differing from it in one non-type argument: this is the whole sequence, that one a window on it. [design.md#the-views-are-the-adaptors]
 template<class Bits, bit_storage<std::remove_const_t<Bits>> Traits = bit_traits<std::remove_const_t<Bits>>>
 using bit_span = sequence_adaptor<Bits, ownership::refers, false, Traits>;
 

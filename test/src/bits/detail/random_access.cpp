@@ -29,8 +29,7 @@
 
 namespace {
 
-// A strong type to receive what the proxy converts to, copy-initialized and never cast: a cast is a
-// direct-initialization with two routes in, and MSVC calls that no route at all.
+// A strong type to receive what the proxy converts to, copy-initialized and never cast: a cast is a direct-initialization with two routes in, and MSVC calls that no route at all.
 struct flag
 {
         bool value;
@@ -376,12 +375,7 @@ BOOST_AUTO_TEST_CASE(TheValueArrivesByImplicitConversion)
         BOOST_CHECK(a[4] == false);
 }
 
-// ... but not to an integer, however class-shaped it is. The conversion above takes any class constructible
-// from bool, and a 128-bit integer class is one -- which would give every operator on a proxy two equally good
-// readings, convert both sides to bool or convert both sides to the Block, and cost the proxy the
-// equality_comparable that ranges::equal needs. A bit is not an integer, and this pins that both ways: the
-// conversion is gone and the comparison still works. Nothing here is reachable with a builtin Block, which is
-// the whole reason the integer classes are worth a Block. [design.md#uint128-support]
+// ... but not to an integer, however class-shaped it is. [design.md#uint128-support]
 #if defined(TEST_HAS_MSVC_INT128) || defined(TEST_HAS_ABSL_INT128) || defined(TEST_HAS_BOOST_INT128)
 BOOST_AUTO_TEST_CASE(AProxyNeverBecomesAnIntegerBlock)
 {

@@ -15,8 +15,7 @@
 #include <cstddef>                                 // size_t
 #include <span>                                    // dynamic_extent
 
-// The one adaptation of boost::dynamic_bitset, and the view's contract alone: what bit_set_view and bit_span ask, nothing an owner would. [design.md#owning-is-ours]
-// A specialization cannot be shadowed by a future upstream member, as an ADL hook could. [design.md#the-trait]
+// The one adaptation of boost::dynamic_bitset, and the view's contract alone: what bit_set_view and bit_span ask, nothing an owner would. [design.md#owning-is-ours] [design.md#the-trait]
 namespace xstd {
 
 template<xstd::unsigned_integer Block, class Allocator>

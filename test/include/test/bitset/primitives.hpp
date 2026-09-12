@@ -31,9 +31,7 @@ concept fixed_string_view_constructible = requires { X(std::string_view()); } an
 template<class X>
 concept dynamic_string_view_constructible = requires { X(std::string_view()); typename xstd::owned_storage<X>::bits_type; } and dynamic<X>;
 
-// One function per tier, because the tiers are what this checks and a BOOST_CHECK_THROW is three branches to
-// the complexity check: inline, the three of them nested under two if constexprs came to 64 against a threshold
-// of 25, and none of that 64 was the logic. [design.md#one-function-per-tier]
+// One function per tier, because the tiers are what this checks and a BOOST_CHECK_THROW is three branches to the complexity check: inline, the three of them nested under two if constexprs came to 64 against a threshold of 25, and none of that 64 was the logic. [design.md#one-function-per-tier]
 
 // A width the text must fit: too long throws, whatever the text says.
 template<class X>

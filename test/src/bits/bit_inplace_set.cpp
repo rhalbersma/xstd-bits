@@ -71,8 +71,7 @@ BOOST_AUTO_TEST_CASE(InsertingPastTheCapacityThrowsBadAlloc)
 {
         auto s = T();
 
-        // max_size() is the positions there are to hold, which under a static capacity is that capacity, the same
-        // answer the other two readings give over this storage. [design.md#max-size-is-the-bits]
+        // max_size() is the positions there are to hold, which under a static capacity is that capacity, the same answer the other two readings give over this storage. [design.md#max-size-is-the-bits]
         BOOST_CHECK_EQUAL(s.max_size(), 24UZ);
         static_assert(not has_capacity<T>);
         BOOST_CHECK_THROW(s.insert(24), std::bad_alloc);
@@ -98,15 +97,13 @@ BOOST_AUTO_TEST_CASE(EqualSetsCompareEqualAtUnequalWidths)
         BOOST_CHECK(not (narrow < wide) and not (wide < narrow));
 }
 
-// Ascending keys, whatever the insertion order: what makes this a set rather than a bag of positions.
-// [design.md#two-readings-disagree]
+// Ascending keys, whatever the insertion order: what makes this a set rather than a bag of positions. [design.md#two-readings-disagree]
 BOOST_AUTO_TEST_CASE(ItYieldsAscendingKeys)
 {
         auto c = T();
         test::set::yields_ascending_keys(c);            // empty is trivially ascending
 
-        // Inserted high to low and across block boundaries, so the ascending answer is the container's doing
-        // and not the insertion order's.
+        // Inserted high to low and across block boundaries, so the ascending answer is the container's doing and not the insertion order's.
         for (auto const key : { 70UZ, 64UZ, 63UZ, 9UZ, 1UZ, 0UZ }) {
                 if (key < c.max_size()) {
                         c.insert(key);

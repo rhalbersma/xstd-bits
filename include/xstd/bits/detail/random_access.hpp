@@ -17,7 +17,6 @@
 #include <type_traits>                    // is_class_v, is_const_v, is_convertible_v, is_nothrow_constructible_v, remove_const_t
 
 // The iterator is the primitive: a pointer and a position, reaching the bits through Traits alone. [design.md#the-iterator-is-the-primitive]
-// The sequence reading's pair, named after the category its iterator models; the set reading's is bidirectional.hpp.
 namespace xstd::detail::bits {
 
 template<class Bits, bit_storage<Bits> Traits = bit_traits<std::remove_const_t<Bits>>> class random_access_bit_iterator;
@@ -145,9 +144,7 @@ public:
                 assert(m_ptr != nullptr);
         }
 
-        // Said out loud, because the assignments below are user-provided and that deprecates the implicit copy
-        // constructor: a copy duplicates the handle, where an assignment writes through it. The two do different
-        // things here, which is exactly why the compiler stops guessing. [design.md#the-proxy-copies-the-handle]
+        // Said out loud, because the assignments below are user-provided and that deprecates the implicit copy constructor: a copy duplicates the handle, where an assignment writes through it. [design.md#the-proxy-copies-the-handle]
         constexpr random_access_bit_reference(random_access_bit_reference const&) noexcept = default;
 
         [[nodiscard]] constexpr auto operator&() const noexcept
@@ -161,13 +158,7 @@ public:
                 return Traits::at(*m_ptr, m_idx);
         }
 
-        // Not to an integer, though, however class-shaped it is. A Block that is an integer CLASS -- MSVC's
-        // std::_Unsigned128, absl::uint128, boost::int128::uint128 -- is constructible from bool and brings a
-        // full set of operators, so without this exclusion every operator on a proxy has two equally good
-        // readings: convert both sides to bool, or convert both sides to the Block. That ambiguity is not
-        // confined to ==; it takes ! and every other operator the integer class declares with it, which is why
-        // the exclusion belongs here on the conversion rather than on each operator in turn. The proxy stands
-        // for one bit, and a bit is not an integer. [design.md#uint128-support]
+        // Not to an integer, though, however class-shaped it is. [design.md#uint128-support]
         template<class T>
         [[nodiscard]] constexpr explicit(false) operator T() const noexcept(std::is_nothrow_constructible_v<T, value_type>)  // NOLINT(misc-explicit-constructor)
                 requires std::is_class_v<T> and std::is_convertible_v<value_type, T> and (not xstd::integer<T>)
@@ -175,18 +166,7 @@ public:
                 return Traits::at(*m_ptr, m_idx);
         }
 
-        // Exact matches, so a comparison never reaches for a conversion. The exclusion above stops the proxy
-        // becoming the Block, but it cannot stop the Block's own operators from being CANDIDATES: the proxy
-        // names its Block among its template arguments, so the Block's namespace is an associated one and ADL
-        // brings in whatever templated comparisons it declares -- Boost.Int128 declares exactly such a set.
-        // These two are exact in both operands and win outright, which is what keeps the proxy
-        // equality_comparable and std::ranges::equal working over it.
-        //
-        // Only here, and not on bidirectional.hpp's set proxy, which needs none of this: its value_type is a
-        // position rather than a bit, a set over an integer-class Block already worked, and giving it the same
-        // pair broke comparing two DIFFERENT instantiations of it -- which is how a view named on the adaptor
-        // is compared against one deduced from the storage, at a Block as ordinary as uint64_t.
-        // [design.md#uint128-support]
+        // Exact matches, so a comparison never reaches for a conversion. [design.md#uint128-support]
         [[nodiscard]] friend constexpr auto operator==(random_access_bit_reference lhs, random_access_bit_reference rhs) noexcept
                 -> bool
         {
@@ -231,21 +211,7 @@ public:
 }       // namespace xstd::detail::bits
 
 
-// std::format over the containers, which needs nothing said about the containers themselves.
-// [design.md#formatting-the-proxies]
-//
-// Every owner and view here is already a range, so [format.range.formatter] would format it -- except that the
-// range formatter requires formattable<range_reference_t<R>>, and a reference of ours is a proxy. So the proxy
-// is what gets a formatter, and every container over it follows.
-//
-// It defers to format_as, the hook fmt already calls, so the value this proxy prints as is defined once and both
-// libraries read it from there. Deriving from the underlying formatter rather than writing parse() is what keeps
-// the whole format spec: a width, a fill, {:#x} on a position and {:d} on a bool, and the nested spec a range
-// formatter forwards ({::#x}) reaching them.
-//
-// [namespace.std]/2 allows a specialization of a standard library template for a program-defined type, which is
-// what this is and all it is. clang-tidy 22 and 23 read the qualified definition as modifying namespace std
-// anyway; 24 no longer does. [design.md#clang-tidy-false-positives]
+// std::format over the containers, which needs nothing said about the containers themselves. [design.md#formatting-the-proxies] [design.md#clang-tidy-false-positives]
 template<class Bits, class Traits, class CharT>
 // NOLINTNEXTLINE(bugprone-std-namespace-modification)
 struct std::formatter<xstd::detail::bits::random_access_bit_reference<Bits, Traits>, CharT>

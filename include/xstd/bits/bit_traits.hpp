@@ -233,7 +233,6 @@ template<class Traits, class Bits>
 }
 
 // The block-wide word at any position, aligned or not: the bits [pos, pos + digits) of c, read through the trait, so a source's alignment is the reader's problem and never the writer's. [design.md#the-blit]
-// pos must lie within the blocks; what the word reaches beyond the width is the clear tail, and beyond the last block nothing at all.
 template<class Traits, class Bits>
 [[nodiscard]] constexpr auto word_at(Bits const& c, std::size_t pos) noexcept
 {
@@ -281,10 +280,7 @@ template<class Traits, class Bits>
         }
 }
 
-// The three the sequence reading asks in its own vocabulary, each behind an entry where the storage has one and
-// synthesized where it does not. Neither synthesis walks a bit at a time that it could avoid: any is a scan that
-// stops at the first set position, and all counts, which is the block tier through count's own door.
-// [design.md#the-sequence-aggregates]
+// The three the sequence reading asks in its own vocabulary, each behind an entry where the storage has one and synthesized where it does not. [design.md#the-sequence-aggregates]
 template<class Traits, class Bits>
 [[nodiscard]] constexpr auto any(Bits const& c [[maybe_unused]]) noexcept
         -> bool
@@ -354,8 +350,7 @@ template<class Traits, class Bits>
 
 namespace xstd {
 
-// The three required entries, gated as a concept so an unadapted type reads "constraint not satisfied". [design.md#opt-in]
-// Two parameters like block_readable, so a type-constraint can name the trait: bit_storage<Bits> Traits. [design.md#the-trait-is-a-parameter]
+// The three required entries, gated as a concept so an unadapted type reads "constraint not satisfied". [design.md#opt-in] [design.md#the-trait-is-a-parameter]
 template<class Traits, class Bits>
 concept bit_storage =
         requires (Bits const& c, std::size_t n)
@@ -371,12 +366,7 @@ concept bit_storage =
 template<class Traits, class Bits>
 concept static_bit_extent = bit_storage<Traits, Bits> and Traits::extent != std::dynamic_extent;
 
-// What the three bit containers answer in their own names, with no trait in between: the INTERSECTION of
-// std::bitset's, boost::dynamic_bitset's and contiguous_bit_container's vocabularies, where
-// contiguous_bit_container provides the UNION of what the three readings ask of it.
-// [design.md#the-common-vocabulary]
-// Three requires-expressions, each naming only what its own requirements use, as contiguous_block_container is
-// split. [design.md#contiguous-block-container]
+// What the three bit containers answer in their own names, with no trait in between: the INTERSECTION of std::bitset's, boost::dynamic_bitset's and contiguous_bit_container's vocabularies, where contiguous_bit_container provides the UNION of what the three readings ask of it. [design.md#the-common-vocabulary] [design.md#contiguous-block-container]
 template<class C>
 concept contiguous_bit_sequence =
         std::regular<C> and

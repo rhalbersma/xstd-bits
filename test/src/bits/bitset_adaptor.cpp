@@ -417,8 +417,7 @@ BOOST_AUTO_TEST_CASE(TheTextConstructorsRejectWhatStdBitsetRejects)
         BOOST_CHECK_THROW(static_cast<void>(Ours(std::string("101"), 4)), std::out_of_range);
 }
 
-// One bit_traits specialization on bitset_adaptor gives all three bitsets the direct view spelling at once.
-// [design.md#a-bitset-reads-as-its-storage]
+// One bit_traits specialization on bitset_adaptor gives all three bitsets the direct view spelling at once. [design.md#a-bitset-reads-as-its-storage]
 BOOST_AUTO_TEST_CASE(ABitsetReadsAsItsStorage)
 {
         using B = xstd::bitset<100>;
@@ -428,13 +427,11 @@ BOOST_AUTO_TEST_CASE(ABitsetReadsAsItsStorage)
         static_assert(xstd::bit_storage<xstd::bit_traits<B>, B>);
         static_assert(xstd::bit_storage<xstd::bit_traits<D>, D>);
 
-        // And the optional block entries, which is the point: a forwarder relaying only the required three would
-        // compile and be slower, every word-parallel walk falling back to one position at a time.
+        // And the optional block entries, which is the point: a forwarder relaying only the required three would compile and be slower, every word-parallel walk falling back to one position at a time.
         static_assert(xstd::block_readable<xstd::bit_traits<B>, B>);
         static_assert(xstd::block_readable<xstd::bit_traits<D>, D>);
 
-        // Deduction is unchanged: over an owner a view still binds the storage it wraps, so the direct spelling and
-        // the deduced one coexist rather than tie.
+        // Deduction is unchanged: over an owner a view still binds the storage it wraps, so the direct spelling and the deduced one coexist rather than tie.
         static_assert(std::same_as<decltype(xstd::bit_set_view(std::declval<B&>())), xstd::bit_set_view<xstd::detail::bits::contiguous_bit_array<std::size_t, 100>>>);
         static_assert(std::same_as<decltype(xstd::bit_span(std::declval<B&>())),     xstd::bit_span<xstd::detail::bits::contiguous_bit_array<std::size_t, 100>>>);
 
@@ -456,11 +453,7 @@ BOOST_AUTO_TEST_CASE(ABitsetReadsAsItsStorage)
         BOOST_CHECK(std::ranges::equal(sv, xstd::bit_set_view(bs)));
 }
 
-// Every entry the forwarder relays, called through the trait rather than through a view, so each one is
-// exercised rather than merely present. The coverage gate is what asks for this: twenty entries were added
-// and seven were reached by the view tests above. [design.md#a-bitset-reads-as-its-storage]
-// Run over a static-width bitset and a dynamic one, because the trait is instantiated for both by the
-// static_asserts above and a body is only emitted where it is actually called.
+// Every entry the forwarder relays, called through the trait rather than through a view, so each one is exercised rather than merely present. [design.md#a-bitset-reads-as-its-storage]
 template<class B>
 auto relays_every_entry(B bs)
         -> void
@@ -524,19 +517,16 @@ BOOST_AUTO_TEST_CASE(ABitsetTraitRelaysEveryEntry)
 
 BOOST_AUTO_TEST_SUITE_END()
 
-// has_bitops and contiguous_bit_sequence are different questions, and neither answers the other.
-// [design.md#the-common-vocabulary]
+// has_bitops and contiguous_bit_sequence are different questions, and neither answers the other. [design.md#the-common-vocabulary]
 BOOST_AUTO_TEST_SUITE(TwoConceptsNeitherSubsuming)
 
-// has_bitops asks boost's set vocabulary -- is_subset_of, is_proper_subset_of, intersects, and difference --
-// which std::bitset does not have, which is why bitset_adaptor wraps our vehicles and not std::bitset.
+// has_bitops asks boost's set vocabulary -- is_subset_of, is_proper_subset_of, intersects, and difference -- which std::bitset does not have, which is why bitset_adaptor wraps our vehicles and not std::bitset.
 static_assert(    xstd::has_bitops<xstd::detail::bits::contiguous_bit_array<std::uint64_t, 64>>);
 static_assert(    xstd::has_bitops<xstd::detail::bits::contiguous_bit_vector<std::uint64_t>>);
 static_assert(    xstd::has_bitops<boost::dynamic_bitset<>>);
 static_assert(not xstd::has_bitops<std::bitset<64>>);
 
-// contiguous_bit_sequence asks the positional members -- test(n), set(n), reset(n), flip(n) -- which
-// has_bitops never names, and all three answer.
+// contiguous_bit_sequence asks the positional members -- test(n), set(n), reset(n), flip(n) -- which has_bitops never names, and all three answer.
 static_assert(xstd::contiguous_bit_sequence<xstd::detail::bits::contiguous_bit_array<std::uint64_t, 64>>);
 static_assert(xstd::contiguous_bit_sequence<boost::dynamic_bitset<>>);
 static_assert(xstd::contiguous_bit_sequence<std::bitset<64>>);

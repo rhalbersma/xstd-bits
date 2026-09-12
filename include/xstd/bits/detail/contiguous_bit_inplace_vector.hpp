@@ -8,9 +8,7 @@
 
 #include <version>                                       // IWYU pragma: keep; __cpp_lib_inplace_vector
 
-// The third vehicle: a run-time width under a compile-time capacity of N bits. Behind the feature macro until
-// every library in the matrix has it, which is why the guard lives here and not beside the other two --
-// a consumer of contiguous_bit_array pays nothing for a conditional that concerns only this one. [design.md#the-inplace-column]
+// The third vehicle: a run-time width under a compile-time capacity of N bits. [design.md#the-inplace-column]
 #ifdef __cpp_lib_inplace_vector
 
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container, num_blocks_v

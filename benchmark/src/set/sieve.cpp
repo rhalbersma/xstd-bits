@@ -21,8 +21,7 @@
 #include <xstd/ints/cstdint/int128.hpp> // uint128
 #endif
 
-// The ladder doubles rather than stepping decades: bit_set changes block count on these boundaries, so a
-// doubling walks whole blocks, and a cache knee reads as a knee. [design.md#the-sieve]
+// The ladder doubles rather than stepping decades: bit_set changes block count on these boundaries, so a doubling walks whole blocks, and a cache knee reads as a knee. [design.md#the-sieve]
 inline constexpr auto lo = 1L << 10;
 inline constexpr auto hi = 1L << 20;
 
@@ -65,9 +64,7 @@ auto bm_sift_primes1(benchmark::State& state)
         per_candidate(state);
 }
 
-// The segmented sieve holds O(sqrt(n) + W) whatever n is, against the bounded sieve's O(n), and the window is a
-// compile-time width chosen to sit in L1. What the ladder is asked here is what that costs in time.
-// [design.md#the-unbounded-sieves]
+// The segmented sieve holds O(sqrt(n) + W) whatever n is, against the bounded sieve's O(n), and the window is a compile-time width chosen to sit in L1. [design.md#the-unbounded-sieves]
 template<class X>
 auto bm_sift_primes_segmented(benchmark::State& state)
         -> void
@@ -79,9 +76,7 @@ auto bm_sift_primes_segmented(benchmark::State& state)
         per_candidate(state);
 }
 
-// The incremental sieve is the price of needing no bound at all: one map entry per prime found, and a map lookup
-// per candidate where the array sieve has a strided write. O'Neill's own point is that it is slower; this is the
-// measurement of how much. [design.md#the-unbounded-sieves]
+// The incremental sieve is the price of needing no bound at all: one map entry per prime found, and a map lookup per candidate where the array sieve has a strided write. [design.md#the-unbounded-sieves]
 template<class X>
 auto bm_sift_primes_incremental(benchmark::State& state)
         -> void
@@ -93,8 +88,7 @@ auto bm_sift_primes_incremental(benchmark::State& state)
         per_candidate(state);
 }
 
-// The sieve is the setup, not the measurement, so it stays outside the loop; at the top rung it costs more than
-// the twins pass it feeds.
+// The sieve is the setup, not the measurement, so it stays outside the loop; at the top rung it costs more than the twins pass it feeds.
 template<class X>
 auto bm_filter_twins(benchmark::State& state)
         -> void
@@ -110,17 +104,10 @@ auto bm_filter_twins(benchmark::State& state)
 #define BENCH_LADDER(fn, type) \
         BENCHMARK_TEMPLATE1(fn, type)->RangeMultiplier(2)->Range(lo, hi)->Unit(benchmark::kMillisecond)
 
-// The three representations: node-based, sorted-vector, and dense bitmap, one of each. Dynamic containers only,
-// so the bench compares like with like: a set sized for its universe is not measuring what a growing one is.
-// [design.md#the-sieve]
+// The three representations: node-based, sorted-vector, and dense bitmap, one of each. [design.md#the-sieve]
 #if defined(__cpp_lib_flat_set)
 
-// std::flat_set stops at 2^16, and the ceiling is a measurement decision before it is a budget one. Its sift is
-// quadratic -- erase on a sorted vector is linear and the sieve does about n log log n of them -- so each rung
-// past that costs five times the last and establishes nothing the curve has not already shown. Carrying it to
-// 2^20 would spend six minutes of every Release ctest run to re-derive a slope visible four rungs earlier.
-// Defined inside the guard rather than beside BENCH_LADDER: where there is no <flat_set> there is no user, and
-// -Weverything answers -Wunused-macros.
+// std::flat_set stops at 2^16, and the ceiling is a measurement decision before it is a budget one.
 #define BENCH_QUADRATIC(fn, type) \
         BENCHMARK_TEMPLATE1(fn, type)->RangeMultiplier(2)->Range(lo, 1L << 16)->Unit(benchmark::kMillisecond)
 
@@ -134,9 +121,7 @@ auto bm_filter_twins(benchmark::State& state)
         BENCH_LADDER(fn, xstd::bit_set)
 #endif
 
-// The second axis, ours alone: std::set and std::flat_set have no block to choose. The footprint at a given n is
-// the same count of bits whatever the block, so what this varies is the block count against the cost per block --
-// the sift is a strided write and near width-indifferent, the scans are not. bit_set is the size_t rung already.
+// The second axis, ours alone: std::set and std::flat_set have no block to choose.
 #if defined(BENCH_HAS_UINT128)
 #define BENCH_BLOCKS(fn)                                   \
         BENCH_LADDER(fn, xstd::basic_bit_set<std::uint8_t >); \
@@ -154,11 +139,7 @@ BENCH_REPRESENTATIONS(bm_sift_primes0);
 BENCH_REPRESENTATIONS(bm_sift_primes1);
 BENCH_REPRESENTATIONS(bm_filter_twins);
 
-// The two unbounded sieves, on the dense container alone: what is being priced is the algorithm against
-// sift_primes1 on the same row, not one container against another. The segmented one runs the full ladder, being
-// linearithmic and cheap; the incremental one stops at 2^16 for the same reason std::flat_set does -- a map lookup
-// per candidate is a large constant, and the curve is decided long before the top rung.
-// [design.md#the-unbounded-sieves]
+// The two unbounded sieves, on the dense container alone: what is being priced is the algorithm against sift_primes1 on the same row, not one container against another. [design.md#the-unbounded-sieves]
 BENCH_LADDER(bm_sift_primes_segmented, xstd::bit_set);
 BENCHMARK_TEMPLATE1(bm_sift_primes_incremental, xstd::bit_set)
         ->RangeMultiplier(2)->Range(lo, 1L << 16)->Unit(benchmark::kMillisecond);
