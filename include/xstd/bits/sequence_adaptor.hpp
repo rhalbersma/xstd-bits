@@ -255,7 +255,7 @@ class sequence_adaptor : public std::conditional_t<owns(Own), detail::bits::allo
                 -> void
                 requires is_owner
         {
-                detail::bits::hash_append_bits<Traits>(h, f, v->storage());
+                detail::bits::hash_append_bits(h, f, v->storage());
         }
 
 public:

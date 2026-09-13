@@ -64,7 +64,7 @@ class bitset_adaptor : public detail::bits::allocator_base_type<Bits>
         friend constexpr auto tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, bitset_adaptor const* v) noexcept
                 -> void
         {
-                detail::bits::hash_append_bits<Traits>(h, f, v->m_bits);
+                detail::bits::hash_append_bits(h, f, v->m_bits);
         }
 
 public:

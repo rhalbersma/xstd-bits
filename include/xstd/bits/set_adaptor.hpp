@@ -149,9 +149,9 @@ class set_adaptor
                 -> void
         {
                 if constexpr (has_static_width) {
-                        detail::bits::hash_append_bits<Traits>(h, f, v->storage());
+                        detail::bits::hash_append_bits(h, f, v->storage());
                 } else {
-                        detail::bits::hash_append_positions<Traits>(h, f, v->storage());
+                        detail::bits::hash_append_positions(h, f, v->storage());
                 }
         }
 
