@@ -128,11 +128,11 @@ word, and it is the word that changes. The three aliases follow the same rule: `
 container. Their former names pointed at the argument instead of the result — `block_array` read as *an array of
 blocks*, which is what it is instantiated over, `std::array<Block, n>`, and not what the alias is.
 
-That is also what earns it a `bit_traits` specialization, and puts it on exactly the footing of the legacy
-bitsets. The trait is specialized for **bit containers** ([the-trait](#the-trait)): `ext/std/bitset.hpp` and
-`ext/boost/dynamic_bitset.hpp` do it for someone else's, `detail/contiguous_bit_container.hpp` does it for the
-one we ship. Three bit containers, three specializations, one door — and all that distinguishes ours is that
-it lives under `detail/` because nobody outside spells it ([the-interface-line](#the-interface-line)). What the
+That is also what earns it a `bit_traits` specialization. The trait is specialized for **bit containers**
+([the-trait](#the-trait)), and `detail/contiguous_bit_container.hpp` does it for the one we ship, which is the
+only one there is: the `ext/` specializations for `std::bitset` and `boost::dynamic_bitset` are gone, and those
+two are comparison targets rather than adapted storages ([owning-is-ours](#owning-is-ours)). It lives under
+`detail/` because nobody outside spells it ([the-interface-line](#the-interface-line)). What the
 three have in common as *members*, rather than through the trait, is
 [the-common-vocabulary](#the-common-vocabulary). The
 former name, `block_sequence`, hid that: a *sequence of blocks* reads as storage that happens to have been
@@ -252,10 +252,10 @@ Which is what `has_bitops` gates, and why it gates the **bitset reading alone**
 purpose — the bitwise operators over a fixed width. The set and sequence readings ask a wide integer questions
 it was never meant to answer, and reconciling that is exactly the work the trait exists to do.
 
-So the trait specializations are where the shortfall is worked around, and the two in `ext/` are exactly as long
-as the gap is wide. Both hand-write `find_first` and `find_next` over whatever the storage does offer;
-`ext/std/bitset.hpp` adds `num_blocks` and `block` behind a `requires (N <= ullong_digits)` guard, which is the
-whole of the portable block read; neither writes `find_prev`, because neither storage has one to forward to.
+The `ext/` specializations that once worked around this shortfall are gone: they hand-wrote `find_first` and
+`find_next` over whatever the storage offered, added `num_blocks` and `block` behind a
+`requires (N <= ullong_digits)` guard, and wrote no `find_prev` at all, because neither storage had one to
+forward to. The counterparts are comparison targets now ([owning-is-ours](#owning-is-ours)).
 What a specialization does not declare, the generic scans in `bit_traits.hpp` synthesize — taking the block tier
 where `block_readable` holds and the element tier where it does not
 ([detection-by-absence](#detection-by-absence)).

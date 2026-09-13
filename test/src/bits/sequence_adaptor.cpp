@@ -9,12 +9,10 @@
 #include <xstd/bits/bit_traits.hpp>                   // bit_traits, block_readable
 #include <xstd/bits/detail/contiguous_bit_array.hpp>  // contiguous_bit_array
 #include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
-#include <xstd/bits/ext/std/bitset.hpp>               // bit_traits over std::bitset
 #include <xstd/bits/ownership.hpp>                    // ownership
 #include <xstd/bits/sequence_adaptor.hpp>             // sequence_adaptor
 #include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <algorithm>                                  // all_of, any_of, count, equal, lexicographical_compare_three_way, mismatch, none_of
-#include <bitset>                                     // bitset
 #include <compare>                                    // strong_ordering
 #include <concepts>                                   // copyable, equality_comparable, regular, same_as, totally_ordered
 #include <cstddef>                                    // size_t
@@ -45,7 +43,7 @@ template<class Seq>
         return { s.begin(), s.end() };
 }
 
-// A storage that keeps its blocks to itself on every standard library, which a std::bitset is not: libc++ has no block entry at all, libstdc++ none above the portable to_ullong() read, and MSVC one at every width through _Getword. [design.md#detection-by-absence]
+// A storage that keeps its blocks to itself, so the walks over it take the element-wise arm. [design.md#detection-by-absence]
 template<std::size_t N>
 struct element_bits
 {
@@ -226,9 +224,6 @@ BOOST_AUTO_TEST_CASE(TheOrderingIsTheLexicographicOrderOfTheBools)
 {
         using Packed = xstd::basic_bit_array<std::uint8_t, 9>;
         static_assert(std::regular<Packed> and std::totally_ordered<Packed>);
-
-        // An owner over storage without the entry has no ordering rather than a synthesized one. [design.md#owning-is-ours]
-        static_assert(not std::totally_ordered<xstd::sequence_adaptor<std::bitset<9>, xstd::ownership::owns, false>>);
 
         auto const patterns = std::vector<std::vector<std::size_t>>{ {}, { 0 }, { 1 }, { 0, 1 }, { 8 }, { 0, 8 } };
         for (auto const& p : patterns) {
@@ -463,7 +458,6 @@ BOOST_AUTO_TEST_CASE(MismatchIsTheOwnersOverStorageThatHasTheEntry)
         static_assert(can_mismatch<Owner>);
         static_assert(can_mismatch<View>);
         static_assert(not can_mismatch<View::subspan_type>);
-        static_assert(not can_mismatch<xstd::sequence_adaptor<std::bitset<9>, xstd::ownership::owns, false>>);
 }
 
 // for_each hands the functor what the iterator dereferences to, in the same order, and stops where a bool functor says to: the range-for's answer by a loop structure no iterator can express. [design.md#the-sequence-for-each]

@@ -75,7 +75,7 @@ Notes:
 
 1. Each data structure is clear about the interface it provides: sequences are random access containers and ordered sets are bidirectional containers.
 2. The `bitset` column entries are the point the old two-by-two could not express. `std::bitset` and `boost::dynamic_bitset` are faulted above for being unclear about which interface they offer; the answer here is not to abolish the hybrid but to make choosing between its two readings **explicit at the call site**. `xstd::bitset<N>` is a strict extension of `std::bitset<N>` and `xstd::dynamic_bitset` is one of `boost::dynamic_bitset<>` — every expression valid on the counterpart is valid here, with the same result — and neither has iterators of its own, because `begin` is one name and there are two readings. `bit_set_view` and `bit_span` are how you say which you meant, and they appear in both rows for exactly that reason.
-3. A view names the bitset directly because a bitset has a `bit_traits` of its own, and **one** specialization — on `bitset_adaptor`, which all three bitsets are aliases of — gives all three of them that at once. The foreign bitsets get theirs from [`include/xstd/bits/ext/`](include/xstd/bits/ext/), which is the same mechanism from the outside. It relays each of the storage trait's twenty entries under its own guard, so the word-parallel paths are not quietly lost in the forwarding: `block_readable` still holds through it. Deduction is unaffected and still binds the storage a container wraps, so `xstd::bit_set_view(bs)` remains `xstd::bit_set_view<xstd::contiguous_bit_array<std::size_t, N>>` — the two spellings coexist, and the deduction guide for a plain storage is constrained to non-owners so that the two do not tie.
+3. A view names the bitset directly because a bitset has a `bit_traits` of its own, and **one** specialization — on `bitset_adaptor`, which all three bitsets are aliases of — gives all three of them that at once. It relays each of the storage trait's twenty entries under its own guard, so the word-parallel paths are not quietly lost in the forwarding: `block_readable` still holds through it. Deduction is unaffected and still binds the storage a container wraps, so `xstd::bit_set_view(bs)` remains `xstd::bit_set_view<xstd::contiguous_bit_array<std::size_t, N>>` — the two spellings coexist, and the deduction guide for a plain storage is constrained to non-owners so that the two do not tie.
 4. The variable-size sequence of `bool` is named `xstd::bit_vector` and decoupled from the general `std::vector` class template.
 5. All containers use a dense (single bit per element) representation. Variable-size sparse sets can be provided by `flat_set`, either in [Boost](https://www.boost.org/doc/libs/1_80_0/doc/html/boost/container/flat_set.html) or in [C++ 23](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p1222r4.pdf).
 6. The names above are the short ones, which fix `Block` to `std::size_t` and so take only the width, or nothing at all in the dynamic column where there is no width to give. Each has a `basic_` form that leaves the block open: `xstd::basic_bit_static_set<Block, N>`, `xstd::basic_bit_array<Block, N>`, `xstd::basic_bitset<Block, N>` and their inplace siblings, and `xstd::basic_bit_set<Block, Allocator>`, `xstd::basic_bit_vector<Block, Allocator>`, `xstd::basic_dynamic_bitset<Block, Allocator>` down the dynamic column. So `xstd::bit_set` is an alias, not a template, and `xstd::basic_bit_set<std::uint8_t>` is how a block is chosen.
@@ -203,24 +203,28 @@ Looking at the above code, the following four ingredients are necessary to imple
 
 `xstd::bit_static_set<N>` implements all four of the above requirements. Note that Visual C++ support is finicky at the moment because its `<ranges>` implementation cannot (yet) handle the `xstd::bit_static_set<N>` proxy iterators and proxy references correctly.
 
-## Retrofitting `set`-like behaviour onto `std::bitset<N>` and `boost::dynamic_bitset<>`
+## Choosing a reading over a bitset
 
-The four ingredients above are exactly what `std::bitset<N>` and `boost::dynamic_bitset<>` lack. Without access to their implementations it is impossible to add nested types and member functions to them — you cannot give `std::bitset` a `key_type`, or an `erase`, or iterators in its own namespace.
-
-You can, however, add all four from the **outside**. `xstd::bit_set_view` is an adaptor that wraps any bit storage and presents the set reading of it: bidirectional iterators, `key_type`, `insert`/`erase`/`contains`, and the set predicates — reconciled onto whatever the underlying container spells them as, `set(pos)`/`reset(pos)` for `std::bitset` and `boost::dynamic_bitset` alike. `xstd::bit_span` does the same for the sequence reading, and `xstd::bit_subspan` for a window into one.
+`xstd::bitset<N>` is a strict extension of `std::bitset<N>`, which means it inherits the ambiguity too: it is
+neither a set nor a sequence, and it has no `begin` of its own, because `begin` is one name and there are two
+readings. `xstd::bit_set_view` and `xstd::bit_span` are how you say which you meant.
 
 ```cpp
-auto bs = std::bitset<100>();
-auto const s = xstd::bit_set_view(bs);   // a set view onto someone else's bits
+auto bs = xstd::bitset<100>();
+auto const s = xstd::bit_set_view(bs);   // the set reading of those bits
 
 s.insert(42);                            // bs.set(42)
 assert(s.contains(42));                  // bs.test(42)
-assert(fmt::format("{}", s) == "{42}");  // formats as a set, which std::bitset cannot
+assert(fmt::format("{}", s) == "{42}");  // formats as a set, which a bitset cannot
 ```
 
-What makes this work for a foreign container is `xstd::bit_traits`, a trait the adaptors read the storage through. The library ships specializations for `std::bitset` and `boost::dynamic_bitset` in [`include/xstd/bits/ext/`](include/xstd/bits/ext/), kept out of the umbrella header so that including `<xstd/bits.hpp>` never puts Boost on your include path. A third-party bit container can join by specializing that trait, without changing this library or that one.
+The view supplies what the bitset lacks: bidirectional iterators, a nested `key_type`,
+`insert`/`erase`/`contains`, and the set predicates. `xstd::bit_span` does the same for the sequence reading,
+and `xstd::bit_subspan` for a window into one. A view binds the storage the bitset wraps, so it reaches the
+word-parallel paths rather than reading a position at a time.
 
-This is why ownership is not a fourth column of the table above: a view is not a fourth kind of container, it is the same three readings pointed at storage someone else owns.
+This is why ownership is not a fourth column of the table above: a view is not a fourth kind of container, it is
+the same three readings pointed at storage someone else owns.
 
 ### Printing
 
@@ -258,9 +262,7 @@ which has as output:
 
 ### Sequence of bits
 
-What does a foreign bitset have to offer for the set reading to be built on top of it? The essential difference (apart from differently named member functions) is the lack of iterators. The GCC Standard Library `libstdc++` provides member functions `_Find_first` and `_Find_next` for `std::bitset<N>` as **non-standard extensions**. For `boost::dynamic_bitset<>`, similarly named member functions `find_first` and `find_next` exist.
-
-Those are what the `bit_traits` specializations in [`include/xstd/bits/ext/`](include/xstd/bits/ext/) read, and `xstd::bit_set_view` turns them into bidirectional iterators `begin`/`end` (and `cbegin`/`cend`/`rbegin`/`rend`/`crbegin`/`crend`) plus a nested `key_type`, so a `std::bitset` formats like a set out of the box — as the snippet under [retrofitting](#retrofitting-set-like-behaviour-onto-stdbitsetn-and-boostdynamic_bitset) shows. Where a storage offers no such scan, the trait falls back to reading it block by block, which is why `bit_set_view` works over containers that never anticipated it.
+What a bitset lacks for the set reading to be built on top of it, apart from differently named member functions, is iterators. `xstd::bit_set_view` supplies them: bidirectional `begin`/`end` (and `cbegin`/`cend`/`rbegin`/`rend`/`crbegin`/`crend`) plus a nested `key_type`, so a bitset formats like a set out of the box — as the snippet under [choosing a reading](#choosing-a-reading-over-a-bitset) shows. It reads the storage a block at a time rather than a position at a time, which is what makes the scan word-parallel.
 
 ## Documentation
 

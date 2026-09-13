@@ -8,8 +8,6 @@
 #include <xstd/bits/detail/contiguous_bit_array.hpp>     // contiguous_bit_array
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // bit_traits<contiguous_bit_container>
 #include <xstd/bits/detail/contiguous_bit_vector.hpp>    // contiguous_bit_vector
-#include <xstd/bits/ext/boost/dynamic_bitset.hpp>        // IWYU pragma: keep; bit_traits<boost::dynamic_bitset>
-#include <xstd/bits/ext/std/bitset.hpp>                  // IWYU pragma: keep; bit_traits<std::bitset>
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>       // dynamic_bitset
 #include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <bitset>                                        // bitset

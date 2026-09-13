@@ -12,12 +12,8 @@
 #include <xstd/bits/bit_traits.hpp>                  // bit_traits
 #include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
 #include <xstd/bits/detail/random_access.hpp>        // random_access_bit_iterator, random_access_bit_reference
-#include <xstd/bits/ext/boost/dynamic_bitset.hpp>    // bit_traits over boost::dynamic_bitset
-#include <xstd/bits/ext/std/bitset.hpp>              // bit_traits over std::bitset
-#include <boost/dynamic_bitset.hpp>                  // dynamic_bitset
 #include <boost/test/unit_test.hpp>                  // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                                 // equal, ranges::reverse, ranges::sort, reverse, sort
-#include <bitset>                                    // bitset
 #include <concepts>                                  // convertible_to, equality_comparable, random_access_iterator, same_as, sortable
 #include <cstddef>                                   // ptrdiff_t, size_t
 #include <cstdint>                                   // uint64_t
@@ -93,18 +89,6 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheSequenceIteratorIsRandomAccess, T, ArrayTypes)
 
         static_assert(    std::sortable<xstd::detail::bits::random_access_bit_iterator<T>>);
         static_assert(not std::sortable<xstd::detail::bits::random_access_bit_iterator<T const>>);
-}
-
-// The same over the two foreign types, which is what bit_traits is for.
-BOOST_AUTO_TEST_CASE(TheForeignTypesIterateThroughTheirTraits)
-{
-        static_assert(std::random_access_iterator<xstd::detail::bits::random_access_bit_iterator<std::bitset<9>>>);
-        static_assert(std::random_access_iterator<xstd::detail::bits::random_access_bit_iterator<boost::dynamic_bitset<>>>);
-
-        static_assert(std::sortable<xstd::detail::bits::random_access_bit_iterator<std::bitset<9>>>);
-        static_assert(std::sortable<xstd::detail::bits::random_access_bit_iterator<boost::dynamic_bitset<>>>);
-
-        BOOST_CHECK(true);
 }
 
 // Const is in the Bits, not in a flag, and a trait with only the required entries has no way to write either.
@@ -267,29 +251,6 @@ BOOST_AUTO_TEST_CASE(RangesAlgorithmsReachTheBitsThroughIterMoveAndIterSwap)
         BOOST_CHECK_EQUAL(static_cast<bool>(*rfirst), model.back());
 }
 
-// The foreign sequence proxies write through their own unchecked subscript.
-BOOST_AUTO_TEST_CASE(TheForeignSequenceProxiesWriteThroughTheTraits)
-{
-        auto s = std::bitset<9>();
-        auto const sit = xstd::detail::bits::random_access_bit_iterator<std::bitset<9>>(&s, 4UZ);
-        *sit = true;
-        BOOST_CHECK(s.test(4));
-        *sit = false;
-        BOOST_CHECK(not s.test(4));
-
-        auto d = boost::dynamic_bitset<>(9);
-        auto const dit = xstd::detail::bits::random_access_bit_iterator<boost::dynamic_bitset<>>(&d, 8UZ);
-        *dit = true;
-        BOOST_CHECK(d.test(8));
-        BOOST_CHECK(dit - 8 < dit and dit > dit - 8 and dit <= dit);
-        *(dit - 1) = *dit;
-        BOOST_CHECK(d.test(7));
-        swap(*(dit - 2), *(dit - 1));
-        BOOST_CHECK(d.test(6) and not d.test(7));
-        std::ranges::sort(dit - 8, dit + 1);
-        BOOST_CHECK(d.test(8) and d.test(7) and d.count() == 2UZ);
-}
-
 // format_as is what fmt calls, unqualified, so calling it the same way is the test.
 BOOST_AUTO_TEST_CASE(TheProxyFormatsAsItsValue)
 {
@@ -307,7 +268,7 @@ BOOST_AUTO_TEST_SUITE(RandomAccessThroughTheView)
 
 namespace {
 
-using Viewed = std::bitset<64>;
+using Viewed = xstd::detail::bits::contiguous_bit_array<std::uint64_t, 64>;
 
 using ArrIt  = xstd::detail::bits::random_access_bit_iterator<Viewed>;
 using ArrRef = xstd::detail::bits::random_access_bit_reference<Viewed>;

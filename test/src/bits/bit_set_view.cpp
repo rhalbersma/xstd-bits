@@ -8,12 +8,10 @@
 #include <xstd/bits/bit_static_set.hpp>              // bit_static_set
 #include <xstd/bits/bitset.hpp>                      // bitset
 #include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
-#include <xstd/bits/ext/boost/dynamic_bitset.hpp>    // bit_traits over boost::dynamic_bitset
-#include <xstd/bits/ext/std/bitset.hpp>              // bit_traits over std::bitset
+#include <xstd/bits/dynamic_bitset.hpp>              // basic_dynamic_bitset, dynamic_bitset
 #include <xstd/bits/ownership.hpp>                   // ownership
 #include <xstd/bits/set_adaptor.hpp>                 // set_adaptor
 #include <boost/test/unit_test.hpp>                  // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
-#include <bitset>                                    // bitset
 #include <concepts>                                  // derived_from, same_as
 #include <cstddef>                                   // size_t
 #include <cstdint>                                   // uint8_t
@@ -28,21 +26,23 @@ BOOST_AUTO_TEST_SUITE(BitSetView)
 
 namespace {
 
-// One static extent of each library, and the dynamic one.
-using ViewedTypes = std::tuple<std::bitset<8>, xstd::bitset<8>, boost::dynamic_bitset<>>;
+// A static extent and a run-time one.
+using ViewedTypes = std::tuple<xstd::bitset<8>, xstd::dynamic_bitset>;
 
-// dynamic_bitset alone needs its width at construction; the others carry theirs in the type.
+// The run-time width alone needs its width at construction; the static one carries it in the type.
 template<class T>
 auto eight_bits_with_three_set()
         -> T
 {
         auto bits = T();
-        if constexpr (std::same_as<T, boost::dynamic_bitset<>>) {
+        if constexpr (std::same_as<T, xstd::dynamic_bitset>) {
                 bits.resize(8);
         }
         bits.set(3);
         return bits;
 }
+
+using Blocks = xstd::detail::bits::contiguous_bit_array<std::size_t, 8>;
 
 template<class T>
 using view_of = decltype(xstd::bit_set_view(std::declval<T&>()));
@@ -52,10 +52,9 @@ using view_of = decltype(xstd::bit_set_view(std::declval<T&>()));
 // The view is the referring adaptor under another name, and over an owner it refers into the storage the owner wraps. [design.md#the-views-are-the-adaptors]
 BOOST_AUTO_TEST_CASE(TheViewIsTheReferringAdaptor)
 {
-        static_assert(std::derived_from<xstd::bit_set_view<std::bitset<8>>, xstd::set_adaptor<std::bitset<8>, xstd::ownership::refers>>);
-        static_assert(std::same_as<view_of<std::bitset<8>>,          xstd::bit_set_view<std::bitset<8>>>);
-        static_assert(std::same_as<view_of<std::bitset<8> const>,    xstd::bit_set_view<std::bitset<8> const>>);
-        static_assert(std::same_as<view_of<boost::dynamic_bitset<>>, xstd::bit_set_view<boost::dynamic_bitset<>>>);
+        static_assert(std::derived_from<xstd::bit_set_view<Blocks>, xstd::set_adaptor<Blocks, xstd::ownership::refers>>);
+        static_assert(std::same_as<view_of<Blocks>,                  xstd::bit_set_view<Blocks>>);
+        static_assert(std::same_as<view_of<Blocks const>,            xstd::bit_set_view<Blocks const>>);
 
         static_assert(std::same_as<view_of<xstd::bitset<8>>,         xstd::bit_set_view<xstd::detail::bits::contiguous_bit_array<std::size_t, 8>>>);
         static_assert(std::same_as<view_of<xstd::bitset<8> const>,   xstd::bit_set_view<xstd::detail::bits::contiguous_bit_array<std::size_t, 8> const>>);
@@ -66,15 +65,15 @@ BOOST_AUTO_TEST_CASE(TheViewIsTheReferringAdaptor)
 BOOST_AUTO_TEST_CASE(TheViewedTypesAreTheOnesHoldingASetWithoutOfferingIt)
 {
         // None of them is a range on its own; that is what the view supplies, and it is a view in std::ranges' sense, borrowed like span. [design.md#views-follow-their-precedent]
-        static_assert(not std::ranges::range<std::bitset<8>>);
+        static_assert(not std::ranges::range<xstd::dynamic_bitset>);
         static_assert(not std::ranges::range<xstd::bitset<8>>);
 
-        static_assert(std::ranges::bidirectional_range<view_of<std::bitset<8>>>);
+        static_assert(std::ranges::bidirectional_range<view_of<Blocks>>);
         static_assert(std::ranges::bidirectional_range<view_of<xstd::bitset<8>>>);
-        static_assert(std::ranges::bidirectional_range<view_of<boost::dynamic_bitset<>>>);
+        static_assert(std::ranges::bidirectional_range<view_of<xstd::dynamic_bitset>>);
 
-        static_assert(std::ranges::view<view_of<std::bitset<8>>>);
-        static_assert(std::ranges::borrowed_range<view_of<std::bitset<8>>>);
+        static_assert(std::ranges::view<view_of<Blocks>>);
+        static_assert(std::ranges::borrowed_range<view_of<Blocks>>);
         static_assert(not std::ranges::view<xstd::bit_static_set<8>>);
 }
 
@@ -85,13 +84,13 @@ BOOST_AUTO_TEST_CASE(TheViewHashesAsAValue)
         auto const owned = xstd::bit_static_set<8>({ 1, 3, 5 });
         BOOST_CHECK_EQUAL(std::hash<view_of<xstd::bitset<8>>>()(xstd::bit_set_view(bits)), std::hash<xstd::bit_static_set<8>>()(owned));
 
-        auto narrow = boost::dynamic_bitset<>(8);
-        auto wide   = boost::dynamic_bitset<>(64);
+        auto narrow = xstd::dynamic_bitset(8);
+        auto wide   = xstd::dynamic_bitset(64);
         for (auto const i : { 1UZ, 3UZ, 5UZ }) {
                 narrow.set(i);
                 wide.set(i);
         }
-        BOOST_CHECK_EQUAL(std::hash<view_of<boost::dynamic_bitset<>>>()(xstd::bit_set_view(narrow)), std::hash<view_of<boost::dynamic_bitset<>>>()(xstd::bit_set_view(wide)));
+        BOOST_CHECK_EQUAL(std::hash<view_of<xstd::dynamic_bitset>>()(xstd::bit_set_view(narrow)), std::hash<view_of<xstd::dynamic_bitset>>()(xstd::bit_set_view(wide)));
 }
 
 // Asking is total whatever the extent, exactly as [set] has it. [design.md#asking-is-total]
@@ -125,7 +124,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(EveryExtentAnswersForPositionsPastItsWidth, T, Vie
 // [set] gives insert no way to fail, so a dynamic extent grows rather than asserting. [design.md#asking-is-total]
 BOOST_AUTO_TEST_CASE(ADynamicExtentGrowsToHoldAPositionPastItsCurrentSize)
 {
-        auto bits = boost::dynamic_bitset<>(8);
+        auto bits = xstd::dynamic_bitset(8);
         bits.set(3);
         auto const v = xstd::bit_set_view(bits);
 
@@ -150,9 +149,8 @@ BOOST_AUTO_TEST_CASE(ADynamicExtentGrowsToHoldAPositionPastItsCurrentSize)
 // The set ordering against std::set rather than a restatement of it, for every viewed type including the one whose own <=> disagrees.
 BOOST_AUTO_TEST_CASE(EveryViewedTypeOrdersLikeAStdSet)
 {
-        test::set::ordering_agrees_with_std_set<std::bitset<8>>();
         test::set::ordering_agrees_with_std_set<xstd::bitset<8>>();
-        test::set::ordering_agrees_with_std_set<boost::dynamic_bitset<>>();
+        test::set::ordering_agrees_with_std_set<xstd::dynamic_bitset>();
 }
 
 // One block cannot reach the arm the word-parallel comparison exists for. [design.md#the-ordering-primitive]
@@ -162,7 +160,7 @@ BOOST_AUTO_TEST_CASE(TheOrderingSpansBlocksAndNotJustPositions)
 
         // Three blocks, where "anything above" has to look past the next block as well as into it. [design.md#counted-not-asserted]
         test::set::ordering_agrees_with_std_set_sampled<xstd::basic_bitset<std::uint8_t, 18>>(18UZ, 20000UZ);
-        test::set::ordering_agrees_with_std_set_sampled<boost::dynamic_bitset<std::uint8_t>>(18UZ, 20000UZ);
+        test::set::ordering_agrees_with_std_set_sampled<xstd::basic_dynamic_bitset<std::uint8_t>>(18UZ, 20000UZ);
 }
 
 // A view of keys composes with the lazy set algebra the way an owner does; the block-wise operators are the owner's shortcut around it.

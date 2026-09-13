@@ -9,22 +9,23 @@
 #include <xstd/bits/bit_static_set.hpp>              // bit_static_set
 #include <xstd/bits/bitset.hpp>                      // bitset
 #include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
-#include <xstd/bits/ext/boost/dynamic_bitset.hpp>    // bit_traits over boost::dynamic_bitset
-#include <xstd/bits/ext/std/bitset.hpp>              // bit_traits over std::bitset
+#include <xstd/bits/dynamic_bitset.hpp>              // dynamic_bitset
 #include <xstd/bits/ownership.hpp>                   // ownership
 #include <xstd/bits/sequence_adaptor.hpp>            // sequence_adaptor
 #include <boost/test/unit_test.hpp>                  // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <algorithm>                                 // equal
 #include <array>                                     // array
-#include <bitset>                                    // bitset
 #include <concepts>                                  // derived_from, equality_comparable, same_as, totally_ordered
 #include <cstddef>                                   // size_t
+#include <cstdint>                                   // uint8_t
 #include <ranges>                                    // borrowed_range, random_access_range, view
 #include <utility>                                   // declval
 
 BOOST_AUTO_TEST_SUITE(BitSpan)
 
 namespace {
+
+using Blocks = xstd::detail::bits::contiguous_bit_array<std::size_t, 8>;
 
 template<class T>
 using view_of = decltype(xstd::bit_span(std::declval<T&>()));
@@ -34,24 +35,24 @@ using view_of = decltype(xstd::bit_span(std::declval<T&>()));
 // The view is the referring adaptor under another name, and over an owner of either reading it refers into the storage the owner wraps. [design.md#the-views-are-the-adaptors]
 BOOST_AUTO_TEST_CASE(TheViewIsTheReferringAdaptor)
 {
-        static_assert(std::derived_from<xstd::bit_span<std::bitset<8>>, xstd::sequence_adaptor<std::bitset<8>, xstd::ownership::refers, false>>);
-        static_assert(std::same_as<view_of<std::bitset<8>>,          xstd::bit_span<std::bitset<8>>>);
-        static_assert(std::same_as<view_of<std::bitset<8> const>,    xstd::bit_span<std::bitset<8> const>>);
+        static_assert(std::derived_from<xstd::bit_span<Blocks>, xstd::sequence_adaptor<Blocks, xstd::ownership::refers, false>>);
+        static_assert(std::same_as<view_of<Blocks>,                  xstd::bit_span<Blocks>>);
+        static_assert(std::same_as<view_of<Blocks const>,            xstd::bit_span<Blocks const>>);
         static_assert(std::same_as<view_of<xstd::bitset<8>>,         xstd::bit_span<xstd::detail::bits::contiguous_bit_array<std::size_t, 8>>>);
         static_assert(std::same_as<view_of<xstd::bit_static_set<8>>, xstd::bit_span<xstd::detail::bits::contiguous_bit_array<std::size_t, 8>>>);
 }
 
 BOOST_AUTO_TEST_CASE(TheViewedTypesAreTheOnesHoldingBoolsWithoutOfferingThem)
 {
-        static_assert(std::ranges::random_access_range<view_of<std::bitset<8>>>);
+        static_assert(std::ranges::random_access_range<view_of<Blocks>>);
         static_assert(std::ranges::random_access_range<view_of<xstd::bitset<8>>>);
-        static_assert(std::ranges::random_access_range<view_of<boost::dynamic_bitset<>>>);
+        static_assert(std::ranges::random_access_range<view_of<xstd::bit_array<8>>>);
 
         // A view in std::ranges' sense and borrowed, like span; and like span it neither compares nor orders. [design.md#views-follow-their-precedent]
-        static_assert(std::ranges::view<view_of<std::bitset<8>>>);
-        static_assert(std::ranges::borrowed_range<view_of<std::bitset<8>>>);
-        static_assert(not std::equality_comparable<view_of<std::bitset<8>>>);
-        static_assert(not std::totally_ordered<view_of<std::bitset<8>>>);
+        static_assert(std::ranges::view<view_of<Blocks>>);
+        static_assert(std::ranges::borrowed_range<view_of<Blocks>>);
+        static_assert(not std::equality_comparable<view_of<Blocks>>);
+        static_assert(not std::totally_ordered<view_of<Blocks>>);
 }
 
 // The sequence reading is the bools at every position, checked against the std::array<bool, N> holding the same bits.
@@ -114,8 +115,8 @@ BOOST_AUTO_TEST_CASE(APackedArrayAgreesWithItsOwnView)
 BOOST_AUTO_TEST_CASE(EveryViewedTypeReadsLikeAVectorBool)
 {
         test::sequence::ordering_agrees_with_vector_bool<xstd::bitset<8>>();
-        test::sequence::ordering_agrees_with_vector_bool<std::bitset<8>>();
-        test::sequence::ordering_agrees_with_vector_bool<boost::dynamic_bitset<>>();
+        test::sequence::ordering_agrees_with_vector_bool<xstd::basic_bitset<std::uint8_t, 8>>();
+        test::sequence::ordering_agrees_with_vector_bool<xstd::dynamic_bitset>();
 }
 
 BOOST_AUTO_TEST_SUITE_END()

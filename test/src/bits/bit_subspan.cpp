@@ -8,14 +8,10 @@
 #include <xstd/bits/bit_subspan.hpp>                 // bit_subspan
 #include <xstd/bits/bit_vector.hpp>                  // bit_vector
 #include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
-#include <xstd/bits/ext/boost/dynamic_bitset.hpp>    // bit_traits over boost::dynamic_bitset
-#include <xstd/bits/ext/std/bitset.hpp>              // bit_traits over std::bitset
 #include <xstd/bits/ownership.hpp>                   // ownership
 #include <xstd/bits/sequence_adaptor.hpp>            // sequence_adaptor
-#include <boost/dynamic_bitset.hpp>                  // dynamic_bitset
 #include <boost/test/unit_test.hpp>                  // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <algorithm>                                 // equal, fill
-#include <bitset>                                    // bitset
 #include <concepts>                                  // equality_comparable, same_as
 #include <cstddef>                                   // size_t
 #include <cstdint>                                   // uint8_t
@@ -56,7 +52,7 @@ auto twenty()
         return x;
 }
 
-using ViewedTypes = std::tuple<Owner, xstd::basic_bit_vector<std::uint8_t>, std::bitset<20>, boost::dynamic_bitset<>>;
+using ViewedTypes = std::tuple<Owner, xstd::basic_bit_vector<std::uint8_t>>;
 
 }  // namespace
 
@@ -223,7 +219,7 @@ auto check_combination(int op, std::size_t off, std::size_t other, std::size_t c
 
 }       // namespace
 
-// The four bulk operators on a window of ours against a window at any other alignment: word by word, masked to the window; a source of another block type, a std::bitset's say, is not a source. [design.md#windows]
+// The four bulk operators on a window of ours against a window at any other alignment: word by word, masked to the window; a source of another block type is not a source. [design.md#windows]
 BOOST_AUTO_TEST_CASE(AWindowCombinesWithAnotherAtAnyAlignment)
 {
         for (auto const op : { 0, 1, 2, 3 }) {
@@ -236,7 +232,7 @@ BOOST_AUTO_TEST_CASE(AWindowCombinesWithAnotherAtAnyAlignment)
                 }
         }
 
-        // A window against itself, word by word in place. A source of another block type, a std::bitset's say, is not a source; asking clang whether it is crashes the compiler, so no assertion says so here. [design.md#clang-crashes-on-a-foreign-bulk-source]
+        // A window against itself, word by word in place. A source of another block type is not a source; asking clang whether it is crashes the compiler, so no assertion says so here. [design.md#clang-crashes-on-a-foreign-bulk-source]
         auto self = xstd::basic_bit_vector<std::uint8_t>(std::from_range, pattern(20, 1));
         auto const outside = bools(xstd::bit_span(self).first(3));
         auto const w = xstd::bit_span(self).subspan(3, 12);
