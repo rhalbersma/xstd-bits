@@ -43,39 +43,40 @@ template<class Seq>
         return { s.begin(), s.end() };
 }
 
-// A storage that keeps its blocks to itself, so the walks over it take the element-wise arm. [design.md#detection-by-absence]
+// Our own storage, read through a trait that keeps its blocks to itself, so the walks over it take the element-wise
+// arm. The trait is the parameter that selects the tier, not the storage, so withholding the block entries is all it
+// takes. [design.md#detection-by-absence]
 template<std::size_t N>
-struct element_bits
-{
-        xstd::detail::bits::contiguous_bit_array<std::uint8_t, N> bits{};
-};
+using element_bits = xstd::detail::bits::contiguous_bit_array<std::uint8_t, N>;
 
 }       // namespace
 
-namespace xstd {
+namespace {
 
+// The three required entries and unchecked_assign, and none of the optional block ones: absence is what the tiers
+// select on. [design.md#detection-by-absence]
 template<std::size_t N>
-struct bit_traits<element_bits<N>>
+struct element_wise_traits
 {
         using bits_type = element_bits<N>;
 
         static constexpr std::size_t extent = N;
 
         [[nodiscard]] static constexpr auto size(bits_type const&)                  noexcept -> std::size_t { return N; }
-        [[nodiscard]] static constexpr auto at  (bits_type const& c, std::size_t n) noexcept -> bool        { return c.bits.test(n); }
+        [[nodiscard]] static constexpr auto at  (bits_type const& c, std::size_t n) noexcept -> bool        { return c.test(n); }
 
         static constexpr auto unchecked_assign(bits_type& c, std::size_t n, bool value) noexcept
                 -> void
         {
                 if (value) {
-                        c.bits.set(n);
+                        c.set(n);
                 } else {
-                        c.bits.reset(n);
+                        c.reset(n);
                 }
         }
 };
 
-}       // namespace xstd
+}       // namespace
 
 namespace {
 
@@ -375,16 +376,19 @@ BOOST_AUTO_TEST_CASE(TheAggregatesAgreeWithTheModelOnAWindowOfOurs)
         BOOST_CHECK_EQUAL(disagreements, 0UZ);
 }
 
-// And over a window of a storage that keeps its blocks to itself, which is the one position-at-a-time tier. [design.md#detection-by-absence]
+// And over a window read through a trait that keeps its blocks to itself, which is the one position-at-a-time tier. The
+// storage is ours either way; it is the trait that selects the arm. [design.md#detection-by-absence]
 BOOST_AUTO_TEST_CASE(TheAggregatesAgreeWithTheModelOnAWindowOfAnythingElse)
 {
-        using Wide = element_bits<100>;
-        static_assert(not xstd::block_readable<xstd::bit_traits<Wide>, Wide>);
+        using Wide  = element_bits<100>;
+        using Trait = element_wise_traits<100>;
+        static_assert(    xstd::block_readable<xstd::bit_traits<Wide>, Wide>);
+        static_assert(not xstd::block_readable<Trait, Wide>);
 
         auto disagreements = 0UZ;
         for (auto p = 0UZ; p < 6UZ; ++p) {
                 auto c = Wide();
-                auto v = xstd::bit_span(c);
+                auto v = xstd::bit_span<Wide, Trait>(c);
                 auto const m = write_pattern(v, p);
                 for (auto const off : { 0UZ, 1UZ, 7UZ, 63UZ, 100UZ }) {
                         for (auto const count : { 0UZ, 1UZ, 9UZ, 37UZ }) {
@@ -499,7 +503,7 @@ BOOST_AUTO_TEST_CASE(ForEachHandsTheBoolByValue)
         // Every shape is constrained alike: a view, a window, and a storage that keeps its blocks to itself.
         static_assert(not walks<View, decltype([](bool&) -> void {})>);
         static_assert(not walks<View::subspan_type, decltype([](bool&) -> void {})>);
-        static_assert(not walks<xstd::sequence_adaptor<element_bits<100>, xstd::ownership::refers, false>, decltype([](bool&) -> void {})>);
+        static_assert(not walks<xstd::sequence_adaptor<element_bits<100>, xstd::ownership::refers, false, element_wise_traits<100>>, decltype([](bool&) -> void {})>);
 
         // Writing through the sequence is the range-for's job, and it still is.
         auto a = Owner();

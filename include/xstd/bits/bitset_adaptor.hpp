@@ -10,6 +10,7 @@
 
 #include <xstd/bits/bit_traits.hpp>               // bit_storage, bit_traits, block_readable, scan_prev, static_bit_extent, word_at, zero_width
 #include <xstd/bits/detail/allocator_base_type.hpp> // allocator_base_type
+#include <xstd/bits/detail/contiguous_bit_container.hpp> // specialization_of_contiguous_bit_container
 #include <xstd/bits/detail/hash.hpp>              // hash_append_bits, std_hash
 #include <xstd/bits/ownership.hpp>                // owned_storage, ownership, reading
 #include <boost/hash2/hash_append.hpp>            // hash_append_tag
@@ -81,8 +82,8 @@ class bitset_adaptor : public detail::bits::allocator_base_type<Bits>
         template<class> friend struct owned_storage;
 
         // Either reading's view refers into this owner's storage, and nothing else outside does: a bitset is committed to neither reading, which is what its two views are for. [design.md#the-readings-do-not-mix]
-        template<class B, ownership O, bit_storage<B> T>         friend class set_adaptor;
-        template<class B, ownership O, bool W, bit_storage<B> T> friend class sequence_adaptor;
+        template<detail::bits::specialization_of_contiguous_bit_container B, ownership O, bit_storage<B> T>         friend class set_adaptor;
+        template<detail::bits::specialization_of_contiguous_bit_container B, ownership O, bool W, bit_storage<B> T> friend class sequence_adaptor;
 
         // The value through the trait: the blocks and the width. [design.md#the-hashing-invariant]
         template<class Provider, class Hash, class Flavor>

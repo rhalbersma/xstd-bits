@@ -8,6 +8,7 @@
 
 #include <xstd/bits/bit_traits.hpp>               // all, any, bit_storage, bit_traits, count, none, static_bit_extent, word_at
 #include <xstd/bits/detail/allocator_base_type.hpp> // allocator_base_type
+#include <xstd/bits/detail/contiguous_bit_container.hpp> // specialization_of_contiguous_bit_container
 #include <xstd/bits/detail/hash.hpp>              // hash_append_bits, std_hash
 #include <xstd/bits/detail/intrin.hpp>            // countr_zero, popcount
 #include <xstd/bits/detail/shift.hpp>             // shl, shr
@@ -178,7 +179,7 @@ concept blit_source =
         };
 
 // An owner names its storage's allocator, as std::vector<bool> names its own; a view names none, owning nothing. [design.md#the-sequence-contract]
-template<class Bits, ownership Own, bool Windowed, bit_storage<Bits> Traits = bit_traits<std::remove_const_t<Bits>>>
+template<detail::bits::specialization_of_contiguous_bit_container Bits, ownership Own, bool Windowed, bit_storage<Bits> Traits = bit_traits<std::remove_const_t<Bits>>>
 class sequence_adaptor : public std::conditional_t<owns(Own), detail::bits::allocator_base_type<std::remove_const_t<Bits>>, xstd::empty_base_type<>>
 {
         static constexpr bool is_owner  = owns(Own);
@@ -246,7 +247,7 @@ class sequence_adaptor : public std::conditional_t<owns(Own), detail::bits::allo
         static constexpr bool word_writable = requires (bits_type& b, std::size_t pos, bits_type::block_type w) { b.set_word(pos, w, w); };
 
         // A sequence view refers into this owner's storage, and nothing else outside does; a set view does not, the readings not mixing. [design.md#the-readings-do-not-mix]
-        template<class B, ownership O, bool W, bit_storage<B> T> friend class sequence_adaptor;
+        template<detail::bits::specialization_of_contiguous_bit_container B, ownership O, bool W, bit_storage<B> T> friend class sequence_adaptor;
 
         // The value under the sequence reading, the owner's alone as == is: a view follows span and hashes no more than it compares. [design.md#the-hashing-invariant]
         template<class Provider, class Hash, class Flavor>

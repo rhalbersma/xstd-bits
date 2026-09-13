@@ -428,9 +428,11 @@ BOOST_AUTO_TEST_CASE(ABitsetReadsAsItsStorage)
         static_assert(xstd::block_readable<xstd::bit_traits<B>, B>);
         static_assert(xstd::block_readable<xstd::bit_traits<D>, D>);
 
-        // Deduction is unchanged: over an owner a view still binds the storage it wraps, so the direct spelling and the deduced one coexist rather than tie.
-        static_assert(std::same_as<decltype(xstd::bit_set_view(std::declval<B&>())), xstd::bit_set_view<xstd::detail::bits::contiguous_bit_array<std::size_t, 100>>>);
-        static_assert(std::same_as<decltype(xstd::bit_span(std::declval<B&>())),     xstd::bit_span<xstd::detail::bits::contiguous_bit_array<std::size_t, 100>>>);
+        // A view over a bitset binds the storage it wraps, which is now the only spelling: naming the bitset itself as a
+        // view's Bits is what the constraint refuses, the storage being the thing a view refers into. [design.md#one-storage]
+        using Blocks = xstd::detail::bits::contiguous_bit_array<std::size_t, 100>;
+        static_assert(std::same_as<decltype(xstd::bit_set_view(std::declval<B&>())), xstd::bit_set_view<Blocks>>);
+        static_assert(std::same_as<decltype(xstd::bit_span(std::declval<B&>())),     xstd::bit_span<Blocks>>);
 
         // Naming the bitset changes how a view is spelled, not what the bitset offers.
         static_assert(not std::ranges::range<B>);
@@ -439,15 +441,12 @@ BOOST_AUTO_TEST_CASE(ABitsetReadsAsItsStorage)
         bs.set(3);
         bs.set(41);
 
-        auto const sv = xstd::bit_set_view<B>(bs);
-        auto const sp = xstd::bit_span<B>(bs);
+        auto const sv = xstd::bit_set_view(bs);
+        auto const sp = xstd::bit_span(bs);
         BOOST_CHECK_EQUAL(std::ranges::distance(sv), 2);
         BOOST_CHECK_EQUAL(std::ranges::distance(sp), 100);
         BOOST_CHECK(std::ranges::bidirectional_range<decltype(sv)>);
         BOOST_CHECK(std::ranges::random_access_range<decltype(sp)>);
-
-        // The same positions the deduced view reports, through the other spelling.
-        BOOST_CHECK(std::ranges::equal(sv, xstd::bit_set_view(bs)));
 }
 
 // Every entry the forwarder relays, called through the trait rather than through a view, so each one is exercised rather than merely present. [design.md#a-bitset-reads-as-its-storage]

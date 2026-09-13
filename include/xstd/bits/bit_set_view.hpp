@@ -15,7 +15,7 @@
 namespace xstd {
 
 // An alias, as bit_subspan always was: the referring adaptor is the view, so there is nothing for a class of its own to add. [design.md#the-views-are-the-adaptors]
-template<class Bits, bit_storage<std::remove_const_t<Bits>> Traits = bit_traits<std::remove_const_t<Bits>>>
+template<detail::bits::specialization_of_contiguous_bit_container Bits, bit_storage<std::remove_const_t<Bits>> Traits = bit_traits<std::remove_const_t<Bits>>>
 using bit_set_view = set_adaptor<Bits, ownership::refers, Traits>;
 
 }       // namespace xstd
