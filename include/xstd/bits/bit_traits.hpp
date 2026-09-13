@@ -366,7 +366,7 @@ concept bit_storage =
 template<class Traits, class Bits>
 concept static_bit_extent = bit_storage<Traits, Bits> and Traits::extent != std::dynamic_extent;
 
-// What the three bit containers answer in their own names, with no trait in between: the INTERSECTION of std::bitset's, boost::dynamic_bitset's and contiguous_bit_container's vocabularies, where contiguous_bit_container provides the UNION of what the three readings ask of it. [design.md#the-common-vocabulary] [design.md#contiguous-block-container]
+// What the three bit containers answer in their own names, with no trait in between: the INTERSECTION of std::bitset's, boost::dynamic_bitset's and contiguous_bit_container's vocabularies, where contiguous_bit_container provides the UNION of what the three readings ask of it. [design.md#the-common-vocabulary] [design.md#contiguous-block-range]
 template<class C>
 concept contiguous_bit_sequence =
         std::regular<C> and

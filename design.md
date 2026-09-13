@@ -9,9 +9,9 @@ out of. This file holds what has landed.
 
 ## Storage and containers
 
-### contiguous-block-container
+### contiguous-block-range
 
-`contiguous_block_container` asks whether a range **is** blocks: a regular, sized, contiguous, subscriptable
+`contiguous_block_range` asks whether a range **is** blocks: a regular, sized, contiguous, subscriptable
 range of unsigned integers. Regular is what lets `contiguous_bit_container` default its `==` over the width and
 the blocks, in that member order, so two run-time widths part on the width before a block is read. `std::array`
 and `std::vector` both qualify, and so does `std::inplace_vector` — a runtime width over static capacity, for
@@ -40,7 +40,7 @@ asks more of a block than it offers its own user, consuming numbers and yielding
 arithmetic on the way up. That is also why nesting cannot work: a `contiguous_bit_container` will have every
 operator and still no `popcount`, no `digits` and no `- 1`.
 
-The concept has a header of its own at `detail/contiguous_block_container.hpp`: the concept says what a `Blocks` **is**,
+The concept has a header of its own at `detail/contiguous_block_range.hpp`: the concept says what a `Blocks` **is**,
 the container is the vehicle built over it, and a reader asking the first question need not open the 1100 lines
 answering the second. Its includes are `<concepts>`, `<ranges>`, `<cstddef>` and the one xstd-ints concept —
 a leaf. `num_blocks_v` stays behind, being a block-count computation rather than a statement about what a
@@ -120,8 +120,8 @@ containers include only the vehicle it uses -- `bit_array` names `contiguous_bit
 `std::vector`, and the `#ifdef __cpp_lib_inplace_vector` guard sits in the one header that concerns it rather
 than in the common one.
 
-**The name says what it does to its argument.** It takes a `contiguous_block_container` — a range that *is*
-blocks ([contiguous-block-container](#contiguous-block-container)) — and adds the bit interface. In goes
+**The name says what it does to its argument.** It takes a `contiguous_block_range` — a range that *is*
+blocks ([contiguous-block-range](#contiguous-block-range)) — and adds the bit interface. In goes
 storage that answers about blocks, out comes something that answers about bits. Concept and class differ by one
 word, and it is the word that changes. The three aliases follow the same rule: `contiguous_bit_array`,
 `contiguous_bit_vector` and `contiguous_bit_inplace_vector` each name the bit container over one block
@@ -161,7 +161,7 @@ library is actually instantiated over, so an assertion about them is an assertio
 What that gives up is the negative cases a shim isolates one clause at a time, and here three of the four
 survive on ready-made types alone: `std::vector<bool>` is not contiguous, `std::vector<int>` is signed, and
 `std::array<std::bitset<64>, 4>` is the field of bits that is not a number — the one that separates
-`unsigned_integer` from `bitwise_operators` ([contiguous-block-container](#contiguous-block-container)). Only the
+`unsigned_integer` from `bitwise_operators` ([contiguous-block-range](#contiguous-block-range)). Only the
 range-subscript clause has no ready-made counterexample, and it is argued in prose there instead.
 
 `counting_blocks` in `test/src/bits/detail/contiguous_bit_container.cpp` is not an exception to this. It is a
@@ -314,7 +314,7 @@ member, so the landmine #80 recorded -- probing `clear()` on boost and emptying 
 
 `contiguous_bit_inplace_vector<Block, N>` is the third storage: a run-time width under a compile-time capacity
 of `N` bits, behind `__cpp_lib_inplace_vector` until every library in the matrix has it. It needs nothing of its
-own, `std::inplace_vector` satisfying `contiguous_block_container` as it is; `resize`, `reserve` and `push_back`
+own, `std::inplace_vector` satisfying `contiguous_block_range` as it is; `resize`, `reserve` and `push_back`
 past the capacity throw `std::bad_alloc`, as that library specifies.
 
 The adaptors take growth by detection on the storage, never through the trait: growth is a container's
@@ -1541,8 +1541,8 @@ Random access is nevertheless where the ladder stops, and it stops because of th
 `std::contiguous_iterator` requires `iter_reference_t<I>` to be a real `iter_value_t<I>&`, which no proxy is, so
 no reading here is a `contiguous_range` and no iterator here is a `contiguous_iterator`. That is asserted as a
 negative, because it is the one place the bits and the blocks part company: the **blocks** are contiguous and
-`contiguous_block_container` requires precisely that
-([contiguous-block-container](#contiguous-block-container)), while the **bits** are not addressable at all. The
+`contiguous_block_range` requires precisely that
+([contiguous-block-range](#contiguous-block-range)), while the **bits** are not addressable at all. The
 asymmetry is the reason the vehicle keeps its blocks to itself and hands out proxies above it.
 
 The walks stay qualified as `detail::bits::find_next<Traits>(...)` inside `xstd::detail::bits` itself. Dropping
@@ -1835,7 +1835,7 @@ compilers disagree about noticing: clang's `-Wshadow` rejected two such paramete
 silently. If the function has an `n` or an `i`, the constraint uses it.
 
 The same rule reaches concepts, where the argument is the type: see
-[contiguous-block-container](#contiguous-block-container), whose subscript requirement exists because the
+[contiguous-block-range](#contiguous-block-range), whose subscript requirement exists because the
 class subscripts and `std::ranges::contiguous_range` does not promise that.
 
 ### the-functor-takes-a-value
