@@ -16,8 +16,8 @@
 namespace xstd {
 
 // An alias, as bit_subspan always was, and differing from it in one non-type argument: this is the whole sequence, that one a window on it. [design.md#the-views-are-the-adaptors]
-template<detail::bits::specialization_of_contiguous_bit_container Bits, bit_storage<std::remove_const_t<Bits>> Traits = bit_traits<std::remove_const_t<Bits>>>
-using bit_span = sequence_adaptor<Bits, ownership::refers, false, Traits>;
+template<detail::bits::specialization_of_contiguous_bit_container Bits>
+using bit_span = sequence_adaptor<Bits, ownership::refers, false>;
 
 }       // namespace xstd
 

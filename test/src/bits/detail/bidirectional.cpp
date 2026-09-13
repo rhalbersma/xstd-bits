@@ -4,10 +4,8 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/block_types.hpp>                      // graded_extents
-#include <test/minimal_traits.hpp>                   // minimal_traits
 #include <test/value_reference.hpp>                  // value_reference
 #include <xstd/bits/bit_set_view.hpp>                // bit_set_view
-#include <xstd/bits/bit_traits.hpp>                  // bit_traits, find_next, find_prev
 #include <xstd/bits/detail/bidirectional.hpp>        // bidirectional_bit_iterator, bidirectional_bit_reference
 #include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
 #include <boost/test/unit_test.hpp>                  // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
@@ -45,47 +43,29 @@ template<class T>
         return c;
 }
 
-// The two steps, asked directly at every position an iterator never reaches; only for a trait whose entries are total.
-template<class Traits, class T>
-auto check_steps_are_total(T const& c, std::set<std::size_t> const& model)
-        -> void
-{
-        auto const size = Traits::size(c);
-        for (auto n = 0UZ; n <= size + 1UZ; ++n) {
-                auto const above = model.upper_bound(n);
-                BOOST_CHECK_EQUAL(xstd::detail::bits::find_next<Traits>(c, n), above == model.end() ? size : *above);
-
-                auto const below = model.lower_bound(n < size ? n : size);
-                BOOST_CHECK_EQUAL(xstd::detail::bits::find_prev<Traits>(c, n), below == model.begin() ? size : *std::prev(below));
-        }
-}
-
-template<class Traits, class Iterator>
+template<class Iterator>
 auto check_set_steps(Iterator first, Iterator last, std::set<std::size_t> const& model) -> void;
 
 // A zero width has nothing to step over, so nothing below the two positions is instantiated for it. [design.md#per-instantiation-slots]
-template<class Traits, bool Total, class T>
+template<class T>
 auto check_set_walk(T const& empty, std::set<std::size_t> const& model)
         -> void
 {
-        using iterator = xstd::detail::bits::bidirectional_bit_iterator<T, Traits>;
+        using iterator = xstd::detail::bits::bidirectional_bit_iterator<T>;
         auto const c = make(empty, model);
-        auto const size = Traits::size(c);
+        auto const size = c.size();
 
         auto const first = iterator(&c, model.empty() ? size : *model.begin());
         auto const last  = iterator(&c, size);
         BOOST_CHECK((first == last) == model.empty());
 
-        if constexpr (Total) {
-                check_steps_are_total<Traits>(c, model);
-        }
         // Behind if constexpr rather than after an early return, or MSVC reports the rest unreachable at a zero width, which it is.
-        if constexpr (Traits::extent != 0UZ) {
-                check_set_steps<Traits>(first, last, model);
+        if constexpr (T::extent != 0UZ) {
+                check_set_steps(first, last, model);
         }
 }
 
-template<class Traits, class Iterator>
+template<class Iterator>
 auto check_set_steps(Iterator first, Iterator last, std::set<std::size_t> const& model)
         -> void
 {
@@ -119,25 +99,25 @@ auto check_set_steps(Iterator first, Iterator last, std::set<std::size_t> const&
 }
 
 // Patterns rather than every subset: adjacent pairs put a set bit on both sides of every block boundary.
-template<class Traits, bool Total, class T>
+template<class T>
 auto check_every_set_pattern(T const& empty)
         -> void
 {
-        check_set_walk<Traits, Total>(empty, {});
+        check_set_walk(empty, {});
 
         // Behind if constexpr, or MSVC's analyzer reports loops whose body never runs at a zero width, which is so.
-        if constexpr (Traits::extent != 0UZ) {
-                auto const size = Traits::size(empty);
+        if constexpr (T::extent != 0UZ) {
+                auto const size = empty.size();
                 auto full = std::set<std::size_t>();
                 for (auto i = 0UZ; i < size; ++i) {
                         full.insert(i);
                 }
-                check_set_walk<Traits, Total>(empty, full);
+                check_set_walk(empty, full);
 
                 for (auto i = 0UZ; i < size; ++i) {
-                        check_set_walk<Traits, Total>(empty, { i });
+                        check_set_walk(empty, { i });
                         if (i + 1UZ < size) {
-                                check_set_walk<Traits, Total>(empty, { i, i + 1UZ });
+                                check_set_walk(empty, { i, i + 1UZ });
                         }
                 }
         }
@@ -162,7 +142,6 @@ BOOST_AUTO_TEST_CASE(AnIteratorIsAPointerAndAPosition)
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheSetIteratorIsBidirectional, T, ArrayTypes)
 {
         static_assert(std::bidirectional_iterator<xstd::detail::bits::bidirectional_bit_iterator<T>>);
-        static_assert(std::bidirectional_iterator<xstd::detail::bits::bidirectional_bit_iterator<T, test::minimal_traits<T>>>);
 }
 
 // The set proxy never writes, so nothing distinguishes its const spelling. [design.md#read-only-set-proxy]
@@ -185,14 +164,10 @@ BOOST_AUTO_TEST_CASE(TheReadOnlyProxiesAreValues)
         BOOST_CHECK(true);
 }
 
-// The native trait keeps contiguous_bit_container's preconditions and is stepped within them; the minimal trait is total and asked everything.
+// The storage keeps its own preconditions and the iterator is stepped within them.
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheSetIteratorWalksThePositionsInBothDirections, T, ArrayTypes)
 {
-        check_every_set_pattern<xstd::bit_traits<T>, false>(T());
-        // The floor-only trait is the total one, and a zero width is where the scans answer without looking. [design.md#degenerate-widths]
-        if constexpr (xstd::bit_traits<T>::extent == 0UZ or xstd::bit_traits<T>::extent >= 2UZ) {
-                check_every_set_pattern<test::minimal_traits<T>, true>(T());
-        }
+        check_every_set_pattern(T());
 }
 
 // format_as is what fmt calls, unqualified, so calling it the same way is the test.

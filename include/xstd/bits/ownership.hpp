@@ -31,9 +31,6 @@ struct owned_storage;
 template<class Owner>
 using owned_bits_t = std::conditional_t<std::is_const_v<Owner>, typename owned_storage<std::remove_const_t<Owner>>::bits_type const, typename owned_storage<std::remove_const_t<Owner>>::bits_type>;
 
-template<class Owner>
-using owned_traits_t = owned_storage<std::remove_const_t<Owner>>::traits_type;
-
 // Whether Owner is an owner that a view of reading R may refer into. A set owner is already committed to the set reading, so a sequence view over it would choose for the caller; a bitset is committed to neither, which is why either view may refer into one. [design.md#the-readings-do-not-mix]
 template<class Owner, reading R>
 concept owner_reading =
@@ -41,12 +38,11 @@ concept owner_reading =
         (owned_storage<std::remove_const_t<Owner>>::reads == R or owned_storage<std::remove_const_t<Owner>>::reads == reading::bitset)
 ;
 
-// Whether a view of reading R over Bits through Traits can refer into Owner: a reading that does not mix with the owner's, the same storage, the same trait, and const flowing only from the owner into the view.
-template<class Owner, class Bits, class Traits, reading R>
+// Whether a view of reading R over Bits can refer into Owner: a reading that does not mix with the owner's, the same storage, and const flowing only from the owner into the view.
+template<class Owner, class Bits, reading R>
 concept owner_of =
         owner_reading<Owner, R> and
         std::same_as<typename owned_storage<std::remove_const_t<Owner>>::bits_type, std::remove_const_t<Bits>> and
-        std::same_as<owned_traits_t<Owner>, Traits> and
         (std::is_const_v<Bits> or not std::is_const_v<Owner>)
 ;
 

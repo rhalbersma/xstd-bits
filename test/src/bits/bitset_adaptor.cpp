@@ -65,7 +65,6 @@ BOOST_AUTO_TEST_CASE(TheBitsetIsTheWrapperOverAPackedArray)
 {
         static_assert(std::same_as<xstd::basic_bitset<std::uint8_t, 9>, xstd::bitset_adaptor<xstd::detail::bits::contiguous_bit_array<std::uint8_t, 9>>>);
         static_assert(std::same_as<xstd::bitset<64>, xstd::bitset_adaptor<xstd::detail::bits::contiguous_bit_array<std::size_t, 64>>>);
-        static_assert(std::same_as<xstd::bitset<64>, xstd::bitset_adaptor<xstd::detail::bits::contiguous_bit_array<std::size_t, 64>, xstd::bit_traits<xstd::detail::bits::contiguous_bit_array<std::size_t, 64>>>>);
 }
 
 using Static = std::tuple

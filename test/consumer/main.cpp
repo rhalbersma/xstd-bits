@@ -16,13 +16,13 @@ namespace consumer {
 
 // The adaptors named without naming the storage they are instantiated over: a pattern match, which is also the claim #131 rests on -- the containers and the views are not built on the adaptors, they are the adaptors.
 template<class>                                            constexpr bool is_set_adaptor = false;
-template<class B, xstd::ownership O, class T>              constexpr bool is_set_adaptor<xstd::set_adaptor<B, O, T>> = true;
+template<class B, xstd::ownership O>                       constexpr bool is_set_adaptor<xstd::set_adaptor<B, O>> = true;
 
 template<class>                                            constexpr bool is_sequence_adaptor = false;
-template<class B, xstd::ownership O, bool W, class T>      constexpr bool is_sequence_adaptor<xstd::sequence_adaptor<B, O, W, T>> = true;
+template<class B, xstd::ownership O, bool W>               constexpr bool is_sequence_adaptor<xstd::sequence_adaptor<B, O, W>> = true;
 
 template<class>                                            constexpr bool is_bitset_adaptor = false;
-template<class B, class T>                                 constexpr bool is_bitset_adaptor<xstd::bitset_adaptor<B, T>> = true;
+template<class B>                                          constexpr bool is_bitset_adaptor<xstd::bitset_adaptor<B>> = true;
 
 // A view's Bits is the storage a container wraps, which lives in detail/, so a consumer reaches the view names by
 // deduction rather than by spelling them. These aliases are how that looks from outside the library.
