@@ -5,7 +5,6 @@
 
 #include <test/block_types.hpp>                      // graded_extents
 #include <test/ext_int128.hpp>                       // TEST_HAS_ABSL_INT128, TEST_HAS_BOOST_INT128, uint128
-#include <test/minimal_traits.hpp>                   // minimal_traits
 #include <test/value_reference.hpp>                  // value_reference
 #include <xstd/bits/bit_array.hpp>                   // basic_bit_array
 #include <xstd/bits/bit_span.hpp>                    // bit_span
@@ -85,26 +84,24 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheSequenceIteratorIsRandomAccess, T, ArrayTypes)
 {
         static_assert(std::random_access_iterator<xstd::detail::bits::random_access_bit_iterator<T>>);
         static_assert(std::random_access_iterator<xstd::detail::bits::random_access_bit_iterator<T const>>);
-        static_assert(std::random_access_iterator<xstd::detail::bits::random_access_bit_iterator<T, test::minimal_traits<T>>>);
 
         static_assert(    std::sortable<xstd::detail::bits::random_access_bit_iterator<T>>);
         static_assert(not std::sortable<xstd::detail::bits::random_access_bit_iterator<T const>>);
 }
 
-// Const is in the Bits, not in a flag, and a trait with only the required entries has no way to write either.
-BOOST_AUTO_TEST_CASE(ConstnessLivesInTheBitsAndWritabilityInTheTraits)
+// Const is in the Bits and nowhere else. Writability used to be a second question, asked of the trait -- a trait with
+// only the required entries had no unchecked_assign and so no way to write -- but the proxy asks the storage now, and a
+// const storage has no assign to reach. One question, answered by the type. [design.md#one-storage]
+BOOST_AUTO_TEST_CASE(ConstnessLivesInTheBits)
 {
-        using Ref        = xstd::detail::bits::random_access_bit_reference<Bits>;
-        using ConstRef   = xstd::detail::bits::random_access_bit_reference<Bits const>;
-        using MinimalRef = xstd::detail::bits::random_access_bit_reference<Bits, test::minimal_traits<Bits>>;
+        using Ref      = xstd::detail::bits::random_access_bit_reference<Bits>;
+        using ConstRef = xstd::detail::bits::random_access_bit_reference<Bits const>;
 
         static_assert(    std::is_assignable_v<Ref const&, bool>);
         static_assert(not std::is_assignable_v<ConstRef const&, bool>);
-        static_assert(not std::is_assignable_v<MinimalRef const&, bool>);
 
         static_assert(std::is_convertible_v<Ref, bool>);
         static_assert(std::is_convertible_v<ConstRef, bool>);
-        static_assert(std::is_convertible_v<MinimalRef, bool>);
 
         BOOST_CHECK(true);
 }
@@ -113,7 +110,6 @@ BOOST_AUTO_TEST_CASE(ConstnessLivesInTheBitsAndWritabilityInTheTraits)
 BOOST_AUTO_TEST_CASE(TheReadOnlyProxiesAreValues)
 {
         static_assert(test::value_reference<xstd::detail::bits::random_access_bit_reference<Bits const>>);
-        static_assert(test::value_reference<xstd::detail::bits::random_access_bit_reference<Bits, test::minimal_traits<Bits>>>);
 
         // The writable proxy is the one exception, by design: its assignment writes the bit. Trivial to copy and destroy all the same.
         static_assert(not test::value_reference<xstd::detail::bits::random_access_bit_reference<Bits>>);

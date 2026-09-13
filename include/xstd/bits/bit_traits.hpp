@@ -8,6 +8,7 @@
 
 #include <xstd/bits/detail/intrin.hpp>             // countl_zero, countr_zero, popcount
 #include <xstd/bits/detail/shift.hpp>              // shl, shr
+#include <xstd/bits/detail/zero_width.hpp>         // zero_width
 #include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
 #include <cassert>                                 // assert
 #include <concepts>                                // convertible_to, regular, same_as
@@ -248,10 +249,6 @@ template<class Traits, class Bits>
         }
         return static_cast<block_type>(low | static_cast<block_type>(Traits::block(c, index + 1UZ) << (digits - offset)));
 }
-
-// A zero width answers zero to every question, and says so here, before an entry or a walk is instantiated for it. [design.md#degenerate-widths]
-template<class Traits>
-constexpr bool zero_width = Traits::extent == 0UZ;
 
 // The trait's entry where the specialization declares one, the generic scan above where it does not. [design.md#detection-by-absence]
 template<class Traits, class Bits>

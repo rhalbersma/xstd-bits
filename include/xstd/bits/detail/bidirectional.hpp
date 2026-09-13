@@ -6,12 +6,13 @@
 #ifndef XSTD_BITS_DETAIL_BIDIRECTIONAL_HPP
 #define XSTD_BITS_DETAIL_BIDIRECTIONAL_HPP
 
-#include <xstd/bits/bit_traits.hpp> // bit_storage, bit_traits, find_next, find_prev, zero_width
-#include <cassert>                  // assert
-#include <cstddef>                  // ptrdiff_t, size_t
-#include <format>                   // formatter
-#include <iterator>                 // bidirectional_iterator_tag
-#include <type_traits>              // is_class_v, is_convertible_v, is_nothrow_constructible_v, remove_const_t
+#include <xstd/bits/bit_traits.hpp>        // bit_storage, bit_traits
+#include <xstd/bits/detail/zero_width.hpp> // zero_width
+#include <cassert>                         // assert
+#include <cstddef>                         // ptrdiff_t, size_t
+#include <format>                          // formatter
+#include <iterator>                        // bidirectional_iterator_tag
+#include <type_traits>                     // is_class_v, is_convertible_v, is_nothrow_constructible_v, remove_const_t
 
 // The iterator is the primitive: a pointer and a position, reaching the bits through Traits alone. [design.md#the-iterator-is-the-primitive] [design.md#why-nested]
 namespace xstd::detail::bits {
@@ -51,7 +52,7 @@ public:
                 -> bool
         {
                 assert(lhs.m_ptr == rhs.m_ptr);
-                if constexpr (detail::bits::zero_width<Traits>) {
+                if constexpr (zero_width<Bits>) {
                         return true;
                 } else {
                         return lhs.m_idx == rhs.m_idx;
@@ -65,12 +66,16 @@ public:
                 return { m_ptr, m_idx };
         }
 
-        // Both steps through the trait, native where its specialization declares the entry and synthesized where it does not. [design.md#detection-by-absence]
+        // Both steps on the storage, guarded at a zero width rather than asking it: the exclusive scans take a position
+        // as a precondition and a zero width has none to give, so they assert there. The trait's scans tested this first
+        // and never reached the storage; the guard is what that test was, and it is load-bearing. [design.md#degenerate-widths]
         constexpr auto operator++() noexcept
                 -> bidirectional_bit_iterator&
         {
                 assert(m_ptr != nullptr);
-                m_idx = detail::bits::find_next<Traits>(*m_ptr, m_idx);
+                if constexpr (not zero_width<Bits>) {
+                        m_idx = m_ptr->exclusive_find_next(m_idx);
+                }
                 return *this;
         }
 
@@ -78,7 +83,9 @@ public:
                 -> bidirectional_bit_iterator&
         {
                 assert(m_ptr != nullptr);
-                m_idx = detail::bits::find_prev<Traits>(*m_ptr, m_idx);
+                if constexpr (not zero_width<Bits>) {
+                        m_idx = m_ptr->exclusive_find_prev(m_idx);
+                }
                 return *this;
         }
 

@@ -129,8 +129,8 @@ class random_access_bit_reference
         Bits* m_ptr;
         std::size_t m_idx;
 
-        // Writable where Bits is not const and the trait declares unchecked_assign; a trait with only the required entries reads only.
-        static constexpr bool is_writable = not std::is_const_v<Bits> and requires (Bits& c, std::size_t n, bool value) { Traits::unchecked_assign(c, n, value); };
+        // Writable where Bits is not const: a const storage has no assign to reach, which is the whole of the test now that the storage answers directly.
+        static constexpr bool is_writable = not std::is_const_v<Bits> and requires (Bits& c, std::size_t n, bool value) { c.assign(n, value); };
 
 public:
         using value_type = bool;
@@ -155,7 +155,7 @@ public:
 
         [[nodiscard]] constexpr explicit(false) operator value_type() const noexcept  // NOLINT(misc-explicit-constructor)
         {
-                return Traits::at(*m_ptr, m_idx);
+                return m_ptr->test(m_idx);
         }
 
         // Not to an integer, though, however class-shaped it is. [design.md#uint128-support]
@@ -163,7 +163,7 @@ public:
         [[nodiscard]] constexpr explicit(false) operator T() const noexcept(std::is_nothrow_constructible_v<T, value_type>)  // NOLINT(misc-explicit-constructor)
                 requires std::is_class_v<T> and std::is_convertible_v<value_type, T> and (not xstd::integer<T>)
         {
-                return Traits::at(*m_ptr, m_idx);
+                return m_ptr->test(m_idx);
         }
 
         // Exact matches, so a comparison never reaches for a conversion. [design.md#uint128-support]
@@ -184,7 +184,7 @@ public:
                 -> random_access_bit_reference const&
                 requires is_writable
         {
-                Traits::unchecked_assign(*m_ptr, m_idx, value);
+                m_ptr->assign(m_idx, value);
                 return *this;
         }
 
