@@ -680,7 +680,7 @@ public:
                 return x.storage().sequence_three_way(y.storage());
         }
 
-        // Bulk, on the storage's own spelling: on packed bits the pointwise operation and the set operation are one instruction; not on a window, whose blocks are not its own. [design.md#what-the-trait-reconciles]
+        // Bulk, on the storage's own spelling: on packed bits the pointwise operation and the set operation are one instruction; not on a window, whose blocks are not its own. [design.md#what-the-readings-share]
         constexpr auto operator&=(this auto&& self, sequence_adaptor const& other) noexcept -> auto& requires (not is_window) and requires { self.storage() &= other.storage(); } { self.storage() &= other.storage(); return self; }
         constexpr auto operator|=(this auto&& self, sequence_adaptor const& other) noexcept -> auto& requires (not is_window) and requires { self.storage() |= other.storage(); } { self.storage() |= other.storage(); return self; }
         constexpr auto operator^=(this auto&& self, sequence_adaptor const& other) noexcept -> auto& requires (not is_window) and requires { self.storage() ^= other.storage(); } { self.storage() ^= other.storage(); return self; }
@@ -836,7 +836,7 @@ private:
         }
 };
 
-// A view deduces the constness of what it views, the way span<T> and span<T const> do; over an owner, of the storage it wraps. [design.md#a-bitset-reads-as-its-storage]
+// A view deduces the constness of what it views, the way span<T> and span<T const> do; over an owner, of the storage it wraps. [design.md#an-owner-reads-as-its-storage]
 template<class Bits>
         requires (not requires { typename owned_storage<std::remove_const_t<Bits>>::bits_type; })
 sequence_adaptor(Bits&) -> sequence_adaptor<Bits, ownership::refers, false>;

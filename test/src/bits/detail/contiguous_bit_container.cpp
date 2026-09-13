@@ -388,7 +388,7 @@ BOOST_AUTO_TEST_CASE(TheConstReferenceIsP2278s)
 
 // The three members the readings will call once the trait is gone, and the one distinction that matters between them:
 // insert(n) is partial, n being a precondition, while growing_insert(n) is total and a run-time width grows to admit a
-// position past its end. [design.md#what-the-trait-reconciles]
+// position past its end. [design.md#what-the-readings-share]
 BOOST_AUTO_TEST_CASE(TheTotalInsertGrowsWhereThePartialOneAsserts)
 {
         using A = xstd::detail::bits::contiguous_bit_array<std::uint8_t, 10>;
@@ -871,7 +871,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheStorageAnswersEveryReadingsQuestion, T, test::g
         }
 }
 
-// The two the readings cannot synthesize from a position at a time: insert answers whether the position was new, and fill is bulk. [design.md#what-the-trait-reconciles]
+// The two the readings cannot synthesize from a position at a time: insert answers whether the position was new, and fill is bulk. [design.md#what-the-readings-share]
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheInsertAndTheFill, T, test::graded_extents<xstd::detail::bits::contiguous_bit_array>)
 {
         constexpr auto N = T::extent;

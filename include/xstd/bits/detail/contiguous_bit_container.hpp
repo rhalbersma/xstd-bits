@@ -749,7 +749,7 @@ public:
 
         // insert(n) above is partial, n being a precondition; this one is total, a position past the end growing a
         // run-time width to admit it and a static one having nowhere to grow. The set reading's insert is the one
-        // operation that can grow, which is the whole of the difference. [design.md#what-the-trait-reconciles]
+        // operation that can grow, which is the whole of the difference. [design.md#what-the-readings-share]
         constexpr auto growing_insert(std::size_t n) noexcept(has_static_size)
                 -> bool
         {
@@ -1077,7 +1077,7 @@ private:
         }
 };
 
-// Nominal, never structural: a storage is ours because this says so, not because its members answer. [design.md#the-trait]
+// Nominal, never structural: a storage is ours because this says so, not because its members answer. [design.md#one-storage]
 template<class T> inline constexpr bool is_specialization_of_contiguous_bit_container_v = false;
 template<contiguous_block_range Blocks, std::size_t N> inline constexpr bool is_specialization_of_contiguous_bit_container_v<contiguous_bit_container<Blocks, N>> = true;
 

@@ -50,8 +50,7 @@ class bitset_adaptor : public detail::bits::allocator_base_type<Bits>
         template<std::input_iterator I>
         static constexpr bool block_iterator = std::same_as<std::remove_cvref_t<std::iter_value_t<I>>, typename Bits::block_type>;
 
-        // The generic owner trait reaches the storage through owned_storage::bits. [design.md#an-owner-reads-as-its-storage]
-
+        // owned_storage names this owner's storage, so a view over a bitset is a view over what the bitset wraps. [design.md#an-owner-reads-as-its-storage]
         template<class> friend struct owned_storage;
 
         // Either reading's view refers into this owner's storage, and nothing else outside does: a bitset is committed to neither reading, which is what its two views are for. [design.md#the-readings-do-not-mix]

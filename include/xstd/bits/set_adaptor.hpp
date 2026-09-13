@@ -417,7 +417,7 @@ public:
 
         constexpr auto complement(this auto&& self) noexcept -> void requires requires { self.storage().flip(); } { self.storage().flip(); }
 
-        // Bulk, on the storage's own spelling: what every storage agrees on is required of it, not reconciled. [design.md#what-the-trait-reconciles] [design.md#width-is-capacity]
+        // Bulk, on the storage's own spelling: what every storage agrees on is required of it, not reconciled. [design.md#what-the-readings-share] [design.md#width-is-capacity]
         constexpr auto operator&=(this auto&& self, set_adaptor const& other) noexcept
                 -> auto&
                 requires requires { self.storage() &= other.storage(); }
@@ -611,7 +611,7 @@ private:
         }
 };
 
-// A view deduces the constness of what it views, the way span<T> and span<T const> do; over an owner, of the storage it wraps. [design.md#a-bitset-reads-as-its-storage]
+// A view deduces the constness of what it views, the way span<T> and span<T const> do; over an owner, of the storage it wraps. [design.md#an-owner-reads-as-its-storage]
 template<class Bits>
         requires (not requires { typename owned_storage<std::remove_const_t<Bits>>::bits_type; })
 set_adaptor(Bits&) -> set_adaptor<Bits, ownership::refers>;

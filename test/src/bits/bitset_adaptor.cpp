@@ -53,7 +53,7 @@ BOOST_AUTO_TEST_CASE(TheWrappedStoragesAreOursAndTheCounterpartsAreNot)
         static_assert(wrappable<xstd::detail::bits::contiguous_bit_vector<std::size_t>>);
 
         // Not for want of the vocabulary: boost::dynamic_bitset speaks all of it and is still refused, because being
-        // ours is the question and not what a candidate's members answer. [design.md#the-trait]
+        // ours is the question and not what a candidate's members answer. [design.md#one-storage]
         static_assert(not wrappable<std::bitset<64>>);
         static_assert(not wrappable<boost::dynamic_bitset<>>);
         static_assert(not wrappable<std::vector<bool>>);
