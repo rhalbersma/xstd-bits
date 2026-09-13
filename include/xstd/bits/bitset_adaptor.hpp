@@ -302,7 +302,7 @@ public:
                 -> bitset_adaptor&
         {
                 guard(pos);
-                m_bits.assign(pos, val);
+                write(pos, val);
                 return *this;
         }
 
@@ -310,7 +310,7 @@ public:
                 -> bitset_adaptor&
         {
                 guard(pos);
-                m_bits.assign(pos, false);
+                write(pos, false);
                 return *this;
         }
 
@@ -318,7 +318,7 @@ public:
                 -> bitset_adaptor&
         {
                 guard(pos);
-                m_bits.assign(pos, not m_bits.test(pos));
+                write(pos, not m_bits.test(pos));
                 return *this;
         }
 
@@ -351,7 +351,7 @@ public:
         {
                 guard(pos);
                 auto const old = m_bits.test(pos);
-                m_bits.assign(pos, val);
+                write(pos, val);
                 return old;
         }
 
@@ -586,6 +586,18 @@ public:
 
 private:
         // The one guard: out_of_range at a static width, std::bitset's, an assert at a run-time one, boost's. [design.md#the-one-guard]
+        // The write the four guarded members share. A zero width holds no position, so guard(pos) has already
+        // thrown for every pos there and this never runs; instantiating the storage's write for such a width is
+        // what leaves MSVC reporting C4702 inside it under /O2, so that width gets no write at all rather than an
+        // unreachable one. [design.md#degenerate-widths] [design.md#per-instantiation-slots]
+        constexpr auto write(std::size_t pos [[maybe_unused]], bool val [[maybe_unused]]) noexcept
+                -> void
+        {
+                if constexpr (not detail::bits::zero_width<Bits>) {
+                        m_bits.assign(pos, val);
+                }
+        }
+
         constexpr auto guard(std::size_t pos) const
                 -> void
         {
