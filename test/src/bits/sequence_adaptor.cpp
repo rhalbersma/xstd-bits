@@ -6,9 +6,8 @@
 #include <test/block_types.hpp>                          // graded_extents
 #include <xstd/bits/bit_array.hpp>                       // bit_array
 #include <xstd/bits/bit_span.hpp>                        // bit_span
-#include <xstd/bits/bit_traits.hpp>                      // bit_traits, block_readable
 #include <xstd/bits/detail/contiguous_bit_array.hpp>     // contiguous_bit_array
-#include <xstd/bits/detail/contiguous_bit_container.hpp> // bit_traits<contiguous_bit_container>
+#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/detail/contiguous_bit_vector.hpp>    // contiguous_bit_vector
 #include <xstd/bits/ownership.hpp>                       // ownership
 #include <xstd/bits/sequence_adaptor.hpp>                // sequence_adaptor

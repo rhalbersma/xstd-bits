@@ -6,7 +6,6 @@
 #ifndef XSTD_BITS_DETAIL_CONTIGUOUS_BIT_CONTAINER_HPP
 #define XSTD_BITS_DETAIL_CONTIGUOUS_BIT_CONTAINER_HPP
 
-#include <xstd/bits/bit_traits.hpp>                          // bit_traits
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_base_type
 #include <xstd/bits/detail/contiguous_block_range.hpp>   // contiguous_block_range
 #include <xstd/bits/detail/intrin.hpp>                       // countl_zero, countr_zero, popcount
@@ -1086,80 +1085,5 @@ template<contiguous_block_range Blocks, std::size_t N> inline constexpr bool is_
 template<class T> concept specialization_of_contiguous_bit_container = is_specialization_of_contiguous_bit_container_v<std::remove_const_t<T>>;
 
 }       // namespace xstd::detail::bits
-
-// The trait is specialized in xstd, where it is declared; the storage it reads is a detail. [design.md#the-cheapest-contract]
-namespace xstd {
-
-// Forwards and nothing more, reaching none of the generic scans. Blocks is spelled as the class and the detector beside it spell it, the pattern stating what a Blocks is rather than taking any type that happens to land here. [design.md#the-cheapest-contract]
-template<detail::bits::contiguous_block_range Blocks, std::size_t N>
-struct bit_traits<detail::bits::contiguous_bit_container<Blocks, N>>
-{
-        using bits_type = detail::bits::contiguous_bit_container<Blocks, N>;
-
-        static constexpr std::size_t extent = N;
-
-        [[nodiscard]] static constexpr auto size(bits_type const& c) noexcept -> std::size_t { return c.size(); }
-        [[nodiscard]] static constexpr auto at(bits_type const& c, std::size_t n) noexcept -> bool { return c.test(n); }
-
-        // set(n)/reset(n), there being no set(n, value) here; both assert, so the position is a precondition.
-        static constexpr auto unchecked_assign(bits_type& c, std::size_t n, bool value) noexcept
-                -> void
-        {
-                if (value) {
-                        c.set(n);
-                } else {
-                        c.reset(n);
-                }
-        }
-
-        [[nodiscard]] static constexpr auto count(bits_type const& c) noexcept -> std::size_t { return c.count(); }
-
-        // The three the sequence reading asks and the bitset reading already had: entries, so neither is synthesized here. [design.md#the-sequence-aggregates]
-        [[nodiscard]] static constexpr auto all (bits_type const& c) noexcept -> bool { return c.all();  }
-        [[nodiscard]] static constexpr auto any (bits_type const& c) noexcept -> bool { return c.any();  }
-        [[nodiscard]] static constexpr auto none(bits_type const& c) noexcept -> bool { return c.none(); }
-
-        // What mismatch is made of: the first differing block and its xor. [design.md#the-sequence-aggregates]
-        [[nodiscard]] static constexpr auto first_difference(bits_type const& x, bits_type const& y) noexcept { return x.first_difference(y); }
-
-        // The two entries the readings cannot synthesize: insert is the one operation that can grow, and fill is bulk. [design.md#what-the-trait-reconciles]
-        static constexpr auto insert(bits_type& c, std::size_t n) noexcept(bits_type::has_static_size)
-                -> void
-        {
-                if constexpr (not bits_type::has_static_size) {
-                        if (n >= c.size()) {
-                                assert(n < std::numeric_limits<std::size_t>::max());
-                                c.resize(n + 1UZ);
-                        }
-                }
-                c.set(n);
-        }
-        static constexpr auto fill(bits_type& c, bool value) noexcept
-                -> void
-        {
-                if (value) {
-                        c.set();
-                } else {
-                        c.reset();
-                }
-        }
-
-        [[nodiscard]] static constexpr auto num_blocks(bits_type const& c) noexcept -> std::size_t { return c.num_blocks(); }
-        [[nodiscard]] static constexpr auto block(bits_type const& c, std::size_t i) noexcept { return c.block(i); }
-
-        [[nodiscard]] static constexpr auto find_first(bits_type const& c) noexcept -> std::size_t { return c.find_first(); }
-        [[nodiscard]] static constexpr auto find_last (bits_type const& c) noexcept -> std::size_t { return c.find_last();  }
-
-        // The trait keeps the cheaper contracts. [design.md#the-cheapest-contract]
-        [[nodiscard]] static constexpr auto find_next(bits_type const& c, std::size_t n) noexcept -> std::size_t { return c.exclusive_find_next(n); }
-        [[nodiscard]] static constexpr auto find_prev(bits_type const& c, std::size_t n) noexcept -> std::size_t { return c.exclusive_find_prev(n); }
-
-        // Three named entries, never one "lexicographical_three_way": the readings disagree, so the caller names the one it means. [design.md#two-readings-disagree]
-        [[nodiscard]] static constexpr auto set_three_way     (bits_type const& x, bits_type const& y) noexcept -> std::strong_ordering { return x.set_three_way(y);      }
-        [[nodiscard]] static constexpr auto sequence_three_way(bits_type const& x, bits_type const& y) noexcept -> std::strong_ordering { return x.sequence_three_way(y); }
-        [[nodiscard]] static constexpr auto bitset_three_way  (bits_type const& x, bits_type const& y) noexcept -> std::strong_ordering { return x.bitset_three_way(y);   }
-};
-
-}       // namespace xstd
 
 #endif  // XSTD_BITS_DETAIL_CONTIGUOUS_BIT_CONTAINER_HPP

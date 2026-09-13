@@ -8,7 +8,6 @@
 #include <test/value_reference.hpp>                  // value_reference
 #include <xstd/bits/bit_array.hpp>                   // basic_bit_array
 #include <xstd/bits/bit_span.hpp>                    // bit_span
-#include <xstd/bits/bit_traits.hpp>                  // bit_traits
 #include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
 #include <xstd/bits/detail/random_access.hpp>        // random_access_bit_iterator, random_access_bit_reference
 #include <boost/test/unit_test.hpp>                  // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
@@ -54,10 +53,9 @@ template<class T>
 [[nodiscard]] auto as_vector(T const& c)
         -> std::vector<bool>
 {
-        using Traits = xstd::bit_traits<T>;
-        auto v = std::vector<bool>(Traits::size(c));
+        auto v = std::vector<bool>(c.size());
         for (auto i = 0UZ; i < v.size(); ++i) {
-                v[i] = Traits::at(c, i);
+                v[i] = c.test(i);
         }
         return v;
 }
@@ -135,9 +133,9 @@ BOOST_AUTO_TEST_CASE(AMutableSequenceIteratorConvertsToItsConstTwin)
         BOOST_CHECK(*cit == false);
 }
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(TheSequenceIteratorReadsAndWritesThroughTheTraits, T, ArrayTypes)
+BOOST_AUTO_TEST_CASE_TEMPLATE(TheSequenceIteratorReadsAndWritesThroughTheStorage, T, ArrayTypes)
 {
-        constexpr auto N = xstd::bit_traits<T>::extent;
+        constexpr auto N = T::extent;
 
         auto c = T();
         // Written through check_position below, which the check cannot see past a dependent call. [design.md#clang-tidy-false-positives]

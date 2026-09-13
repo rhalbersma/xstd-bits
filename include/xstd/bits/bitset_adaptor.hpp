@@ -8,10 +8,10 @@
 
 // Bitsets [bitset], Header <bitset> synopsis [bitset.syn]
 
-#include <xstd/bits/bit_traits.hpp>               // bit_storage, bit_traits, block_readable, scan_prev, static_bit_extent, word_at, zero_width
 #include <xstd/bits/detail/allocator_base_type.hpp> // allocator_base_type
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // specialization_of_contiguous_bit_container
 #include <xstd/bits/detail/hash.hpp>              // hash_append_bits, std_hash
+#include <xstd/bits/detail/zero_width.hpp>        // zero_width
 #include <xstd/bits/ownership.hpp>                // owned_storage, ownership, reading
 #include <boost/hash2/hash_append.hpp>            // hash_append_tag
 #include <algorithm>                              // min

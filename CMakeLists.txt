@@ -89,7 +89,7 @@ target_sources(
         include/xstd/bits/bit_static_set.hpp
         include/xstd/bits/bit_subspan.hpp
         include/xstd/bits/bit_vector.hpp
-        include/xstd/bits/bit_traits.hpp
+        include/xstd/bits/contiguous_bit_sequence.hpp
         include/xstd/bits/detail/allocator_base_type.hpp
         include/xstd/bits/detail/bidirectional.hpp
         include/xstd/bits/detail/contiguous_bit_array.hpp

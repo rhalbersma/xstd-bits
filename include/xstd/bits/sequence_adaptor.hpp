@@ -6,7 +6,6 @@
 #ifndef XSTD_BITS_SEQUENCE_ADAPTOR_HPP
 #define XSTD_BITS_SEQUENCE_ADAPTOR_HPP
 
-#include <xstd/bits/bit_traits.hpp>               // all, any, bit_storage, bit_traits, count, none, static_bit_extent, word_at
 #include <xstd/bits/detail/allocator_base_type.hpp> // allocator_base_type
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // specialization_of_contiguous_bit_container
 #include <xstd/bits/detail/hash.hpp>              // hash_append_bits, std_hash
@@ -34,7 +33,7 @@
 #include <type_traits>                            // conditional_t, false_type, is_invocable_r_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
 #include <utility>                                // as_const, declval, forward, move, pair
 
-// The sequence reading, [array] over any Bits with a bit_traits specialization, owning it or referring to it. [design.md#the-three-adaptors]
+// The sequence reading, [array] over a contiguous_bit_container, owning it or referring to it. [design.md#the-three-adaptors]
 namespace xstd {
 
 namespace detail::sequence {

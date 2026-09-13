@@ -23,7 +23,7 @@ enum class ownership : bool { refers, owns };
 // Which reading an owner is committed to; a bitset is committed to neither, which is what its two views are for. [design.md#the-readings-do-not-mix]
 enum class reading : unsigned char { set, sequence, bitset };
 
-// What an owner wraps, specialized beside each owner as bit_traits is beside each storage: declared, never defined, so a view over a type that owns nothing is a constraint not satisfied. [design.md#views-over-owners]
+// What an owner wraps, specialized beside each owner: declared, never defined, so a view over a type that owns nothing is a constraint not satisfied. [design.md#views-over-owners]
 template<class Owner>
 struct owned_storage;
 

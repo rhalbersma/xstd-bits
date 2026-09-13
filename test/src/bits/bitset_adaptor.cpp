@@ -5,11 +5,11 @@
 
 #include <xstd/bits/bit_set_view.hpp>                    // bit_set_view
 #include <xstd/bits/bit_span.hpp>                        // bit_span
-#include <xstd/bits/bit_traits.hpp>                      // bit_traits, block_readable, contiguous_bit_sequence
+#include <xstd/bits/contiguous_bit_sequence.hpp>          // contiguous_bit_sequence
 #include <xstd/bits/bitset.hpp>                          // basic_bitset, bitset
 #include <xstd/bits/bitset_adaptor.hpp>                  // bitset_adaptor
 #include <xstd/bits/detail/contiguous_bit_array.hpp>     // contiguous_bit_array
-#include <xstd/bits/detail/contiguous_bit_container.hpp> // bit_traits<contiguous_bit_container>
+#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/detail/contiguous_bit_vector.hpp>    // contiguous_bit_vector
 #include <xstd/bits/dynamic_bitset.hpp>                  // basic_dynamic_bitset
 #include <boost/dynamic_bitset.hpp>                      // dynamic_bitset
@@ -433,8 +433,6 @@ BOOST_AUTO_TEST_CASE(ABitsetReadsAsItsStorage)
         BOOST_CHECK(std::ranges::bidirectional_range<decltype(sv)>);
         BOOST_CHECK(std::ranges::random_access_range<decltype(sp)>);
 }
-
-// Every entry the forwarder relays, called through the trait rather than through a view, so each one is exercised rather than merely present. [design.md#a-bitset-reads-as-its-storage]
 
 BOOST_AUTO_TEST_SUITE_END()
 

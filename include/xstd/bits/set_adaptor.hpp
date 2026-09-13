@@ -6,7 +6,6 @@
 #ifndef XSTD_BITS_SET_ADAPTOR_HPP
 #define XSTD_BITS_SET_ADAPTOR_HPP
 
-#include <xstd/bits/bit_traits.hpp>                      // bit_storage, bit_traits
 #include <xstd/bits/detail/bidirectional.hpp>            // bidirectional_bit_iterator, bidirectional_bit_reference
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // specialization_of_contiguous_bit_container
 #include <xstd/bits/detail/hash.hpp>                     // hash_append_bits, hash_append_positions, std_hash
@@ -30,7 +29,7 @@
 #include <type_traits>                                   // conditional_t, false_type, is_invocable_r_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
 #include <utility>                                       // forward, move, pair
 
-// The set reading, [set] over any Bits with a bit_traits specialization, owning it or referring to it. [design.md#the-three-adaptors]
+// The set reading, [set] over a contiguous_bit_container, owning it or referring to it. [design.md#the-three-adaptors]
 namespace xstd {
 
 namespace detail::set {

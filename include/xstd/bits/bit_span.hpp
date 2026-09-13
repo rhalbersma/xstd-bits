@@ -6,7 +6,6 @@
 #ifndef XSTD_BITS_BIT_SPAN_HPP
 #define XSTD_BITS_BIT_SPAN_HPP
 
-#include <xstd/bits/bit_traits.hpp>                      // bit_storage, bit_traits
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // specialization_of_contiguous_bit_container
 #include <xstd/bits/ownership.hpp>                       // ownership
 #include <xstd/bits/sequence_adaptor.hpp>                // sequence_adaptor
