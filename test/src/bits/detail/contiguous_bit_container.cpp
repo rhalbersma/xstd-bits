@@ -23,10 +23,10 @@
 #include <cstdint>                                            // uint8_t, uint64_t
 #include <initializer_list>                                   // initializer_list
 #include <memory>                                             // addressof, allocator
+#include <version>                                            // IWYU pragma: keep; __cpp_lib_ranges_as_const
 #include <new>                                                // IWYU pragma: keep; bad_alloc, behind TEST_HAS_INPLACE_VECTOR
-#include <ranges>                                             // begin, iota, size
+#include <ranges>                                             // begin, iota, range_const_reference_t, size
 #include <tuple>                                              // get, tuple
-#include <type_traits>                                        // is_const_v, remove_reference_t
 #include <vector>                                             // vector
 
 BOOST_AUTO_TEST_SUITE(BitBlocks)
@@ -361,22 +361,28 @@ BOOST_AUTO_TEST_CASE(ItsStorageIsAContiguousSizedRangeOfUnsignedIntegers)
         static_assert(not xstd::detail::bits::contiguous_block_range<std::array<std::bitset<64>, 4>>);
 }
 
-// The shim stands in for P2278's alias on the libraries that lack it, and the two are not the same question: P2278 asks
-// what C's own iterator yields once const-ified, the fallback what a const C iterates. They part on a shallow-const,
-// span-like storage, which the fallback admits and P2278 rejects, so what keeps the concept one contract across
-// toolchains is that every storage here is deep-const. That is what this pins, and it fails on the day it stops
-// holding rather than silently on one rung of the matrix. [design.md#the-const-reference-shim]
-BOOST_AUTO_TEST_CASE(TheConstReferenceShimAgreesWithP2278)
+// The const subscript is checked against P2278R4's range_const_reference_t, which libc++ has on no branch, so the
+// alias is transcribed from [const.iterators.alias] and [ranges.syn] rather than conditional on the library. Being a
+// definition and not a shim, it is the same alias everywhere, and where the library does have the paper it must agree
+// with ours: that is the conformance the gcc, msvc and clang-libstdc++ rungs check below and libc++ cannot.
+// [design.md#the-const-reference]
+BOOST_AUTO_TEST_CASE(TheConstReferenceIsP2278s)
 {
-        // For a contiguous range P2278's alias collapses to the value type's const lvalue reference, which is spellable
-        // without the paper: so this is what the shim must name, on every library, whichever arm it took.
+#ifdef __cpp_lib_ranges_as_const
+        static_assert(std::same_as<xstd::detail::bits::range_const_reference_t<std::array<std::uint8_t, 4>>, std::ranges::range_const_reference_t<std::array<std::uint8_t, 4>>>);
+        static_assert(std::same_as<xstd::detail::bits::range_const_reference_t<std::vector<std::uint64_t>>, std::ranges::range_const_reference_t<std::vector<std::uint64_t>>>);
+        static_assert(std::same_as<xstd::detail::bits::iter_const_reference_t<std::vector<bool>::iterator>, std::ranges::range_const_reference_t<std::vector<bool>>>);
+#endif
+
+        // What the clause buys: the reference is const, so no blocks are writable through a const contiguous_bit_container.
+        // A shallow-const, span-like storage hands back a writable one from a const subscript and is refused by this, where
+        // range_reference_t<C const> would have admitted it.
         static_assert(std::same_as<xstd::detail::bits::range_const_reference_t<std::array<std::uint8_t, 4>>, std::uint8_t const&>);
         static_assert(std::same_as<xstd::detail::bits::range_const_reference_t<std::vector<std::uint64_t>>, std::uint64_t const&>);
 
-        // Deep const is what makes the two arms agree, and a storage this library accepts has it: reading a const one
-        // hands back a reference that is const too, so no blocks are writable through a const contiguous_bit_container.
-        static_assert(std::is_const_v<std::remove_reference_t<xstd::detail::bits::range_const_reference_t<std::array<std::uint8_t, 4>>>>);
-        static_assert(std::is_const_v<std::remove_reference_t<xstd::detail::bits::range_const_reference_t<std::vector<std::uint64_t>>>>);
+        // Transcribed and not approximated: an add_const dance over range_reference_t would say bool const& here, and the
+        // paper's common_reference_t says bool, which is why the definition is the standard's and not a lookalike.
+        static_assert(std::same_as<xstd::detail::bits::range_const_reference_t<std::vector<bool>>, bool>);
 }
 
 // The semantic half a concept cannot check: a[i] is *(begin(a) + i), the same object and not merely an equal one.

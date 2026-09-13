@@ -6,21 +6,18 @@
 #ifndef XSTD_BITS_DETAIL_RANGE_CONST_REFERENCE_HPP
 #define XSTD_BITS_DETAIL_RANGE_CONST_REFERENCE_HPP
 
-#include <version> // IWYU pragma: keep; __cpp_lib_ranges_as_const
-#include <ranges>  // range, range_const_reference_t, range_reference_t
+#include <iterator>    // indirectly_readable, iter_reference_t, iter_value_t
+#include <ranges>      // iterator_t, range
+#include <type_traits> // common_reference_t
 
 namespace xstd::detail::bits {
 
-// P2278's alias where the library has it, the reference a const R iterates where it does not, so the concept below names one thing and this header is the only place the two spellings meet. libc++ has implemented the paper on no branch, trunk included: __cpp_lib_ranges_as_const is still commented out in its <version>, so the fallback carries every libc++ rung rather than being a legacy arm. [design.md#the-const-reference-shim]
-//
-// The two are not the same question, and the difference is a real one rather than a spelling: P2278 asks what R's own iterator yields once const-ified, the fallback what a const R iterates. They agree wherever const reaches the elements and part where it does not, so a shallow-const, span-like blocks type is admitted by the fallback and rejected by P2278. Every storage this library ships is deep-const, and TheConstReferenceShimAgreesWithP2278 pins that, so the divergence is real but unreachable from here. [design.md#the-const-reference-shim]
-#ifdef __cpp_lib_ranges_as_const
+// P2278R4's two aliases, transcribed from [const.iterators.alias] and [ranges.syn] rather than shimmed around: libc++ has implemented the paper on no branch, trunk included, so std::ranges::range_const_reference_t is unavailable on a third of the matrix and would have to be conditional. A definition is not. [design.md#the-const-reference]
+template<std::indirectly_readable It>
+using iter_const_reference_t = std::common_reference_t<std::iter_value_t<It> const&&, std::iter_reference_t<It>>;
+
 template<std::ranges::range R>
-using range_const_reference_t = std::ranges::range_const_reference_t<R>;
-#else
-template<std::ranges::range R>
-using range_const_reference_t = std::ranges::range_reference_t<R const>;
-#endif
+using range_const_reference_t = iter_const_reference_t<std::ranges::iterator_t<R>>;
 
 }       // namespace xstd::detail::bits
 

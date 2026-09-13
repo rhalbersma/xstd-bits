@@ -23,7 +23,7 @@ concept contiguous_block_range =
         requires (C& c, C::size_type n) {
                 { c[n] } -> std::same_as<std::ranges::range_reference_t<C>>;
         } and
-        // Ours, not std::ranges': libc++ has P2278 on no branch, so the shim names the paper's alias where it exists and the reference a const C iterates where it does not. [design.md#the-const-reference-shim]
+        // Ours, not std::ranges': P2278R4's alias transcribed, libc++ having implemented the paper on no branch. It names the reference C's own iterator yields once const-ified, so a storage whose const subscript hands back a writable one is refused here rather than deep inside the container. [design.md#the-const-reference]
         requires (C const& c, C::size_type n) {
                 { c[n] } -> std::same_as<range_const_reference_t<C>>;
         }
