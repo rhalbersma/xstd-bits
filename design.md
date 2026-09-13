@@ -120,12 +120,13 @@ using range_const_reference_t = iter_const_reference_t<std::ranges::iterator_t<R
 That is [const.iterators.alias] and [ranges.syn] verbatim, down to the constraints, and it is ten lines because
 the paper defines the alias by a formula rather than by magic.
 
-**Two headers, and the split is what makes the conditional safe.**
-`detail/range_const_reference_fallback.hpp` holds the transcription above, unconditionally, in a
-`fallback` namespace of its own; `detail/range_const_reference.hpp` beside it selects
-`std::ranges::range_const_reference_t` where `__cpp_lib_ranges_as_const` says the library has the paper and the
-fallback where it does not. Nothing shadows anything: on a library that ships P2278 both spellings exist and
-are separately reachable, which is exactly what lets the tests below check one against the other.
+**One header, and the `fallback` namespace is what makes the conditional safe.** The transcription above sits
+there unconditionally, and below it `detail/range_const_reference.hpp` selects
+`std::ranges::range_const_reference_t` where `__cpp_lib_ranges_as_const` says the library has the paper and
+`fallback::range_const_reference_t` where it does not. Nothing shadows anything: on a library that ships P2278
+both spellings exist and are separately reachable, which is exactly what lets the tests below check one against
+the other. What the check needs is that the fallback be separately *nameable*, which is the namespace; a second
+file bought nothing and is not there.
 
 The reason not to use `std::ranges::range_const_reference_t` is that a third of the matrix does not have it.
 **libc++ has implemented P2278R4 on no branch, trunk included**: `__cpp_lib_ranges_as_const` is still a
@@ -164,9 +165,9 @@ Both are lookalikes; the formula is the thing.
 What pins it is `TheConstReferenceIsP2278s`. Where the library *does* have the paper — the gcc, msvc and
 clang-with-libstdc++ rungs — the fallback must equal `std::ranges::range_const_reference_t`, asserted on both
 storages and on `vector<bool>`, so the transcription is checked against three vendors rather than against my
-reading of the wording. That check is the reason the fallback is namespaced apart instead of hidden behind the
-`#else`: were it only the unselected arm, the rungs that could verify it would never name it, and the rung that
-names it could not verify it. The rest holds everywhere, whichever arm was taken: the reference is `const` for
+reading of the wording. That check is the reason the fallback is namespaced apart instead of written inline in
+the `#else`: were it only the unselected arm, the rungs that could verify it would never name it, and the rung
+that names it could not verify it. The rest holds everywhere, whichever arm was taken: the reference is `const` for
 each storage shipped, and the fallback gives `bool` for `vector<bool>`, which is the assertion that fails first
 if anyone ever "simplifies" the definition into the dance.
 

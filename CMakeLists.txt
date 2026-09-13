@@ -103,7 +103,6 @@ target_sources(
         include/xstd/bits/detail/pred.hpp
         include/xstd/bits/detail/random_access.hpp
         include/xstd/bits/detail/range_const_reference.hpp
-        include/xstd/bits/detail/range_const_reference_fallback.hpp
         include/xstd/bits/detail/shift.hpp
         include/xstd/bits/ownership.hpp
 )
