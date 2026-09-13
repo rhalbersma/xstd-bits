@@ -6,9 +6,10 @@
 #ifndef XSTD_BITS_DETAIL_CONTIGUOUS_BLOCK_RANGE_HPP
 #define XSTD_BITS_DETAIL_CONTIGUOUS_BLOCK_RANGE_HPP
 
-#include <xstd/ints/concepts/unsigned_integer.hpp>  // unsigned_integer
-#include <concepts>                                 // regular, same_as
-#include <ranges>                                   // contiguous_range, range_reference_t, range_value_t, sized_range
+#include <xstd/bits/detail/range_const_reference.hpp> // range_const_reference_t
+#include <xstd/ints/concepts/unsigned_integer.hpp>    // unsigned_integer
+#include <concepts>                                   // regular, same_as
+#include <ranges>                                     // contiguous_range, range_reference_t, range_value_t, sized_range
 
 namespace xstd::detail::bits {
 
@@ -22,9 +23,9 @@ concept contiguous_block_range =
         requires (C& c, C::size_type n) {
                 { c[n] } -> std::same_as<std::ranges::range_reference_t<C>>;
         } and
-        // range_reference_t<C const>, not P2278's range_const_reference_t: libc++ has no such alias, and the two name the same type for every backend this admits. [design.md#contiguous-block-range]
+        // Ours, not std::ranges': libc++ has P2278 on no branch, so the shim names the paper's alias where it exists and the reference a const C iterates where it does not. [design.md#the-const-reference-shim]
         requires (C const& c, C::size_type n) {
-                { c[n] } -> std::same_as<std::ranges::range_reference_t<C const>>;
+                { c[n] } -> std::same_as<range_const_reference_t<C>>;
         }
 ;
 

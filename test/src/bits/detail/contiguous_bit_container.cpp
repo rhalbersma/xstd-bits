@@ -9,9 +9,10 @@
 #include <xstd/bits/bit_traits.hpp>                           // bit_storage, bit_traits, block_readable, static_bit_extent
 #include <xstd/bits/detail/contiguous_bit_array.hpp>          // contiguous_bit_array
 #include <xstd/bits/detail/contiguous_bit_container.hpp>      // contiguous_bit_container
-#include <xstd/bits/detail/contiguous_block_range.hpp>    // contiguous_block_range
+#include <xstd/bits/detail/contiguous_block_range.hpp>        // contiguous_block_range
 #include <xstd/bits/detail/contiguous_bit_inplace_vector.hpp> // IWYU pragma: keep; contiguous_bit_inplace_vector, named only under TEST_HAS_INPLACE_VECTOR
 #include <xstd/bits/detail/contiguous_bit_vector.hpp>         // contiguous_bit_vector
+#include <xstd/bits/detail/range_const_reference.hpp>         // range_const_reference_t
 #include <boost/test/unit_test.hpp>                           // BOOST_CHECK_EQUAL, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <algorithm>                                          // count, lexicographical_compare_three_way, min
 #include <array>                                              // array
@@ -25,6 +26,7 @@
 #include <new>                                                // IWYU pragma: keep; bad_alloc, behind TEST_HAS_INPLACE_VECTOR
 #include <ranges>                                             // begin, iota, size
 #include <tuple>                                              // get, tuple
+#include <type_traits>                                        // is_const_v, remove_reference_t
 #include <vector>                                             // vector
 
 BOOST_AUTO_TEST_SUITE(BitBlocks)
@@ -357,6 +359,24 @@ BOOST_AUTO_TEST_CASE(ItsStorageIsAContiguousSizedRangeOfUnsignedIntegers)
 
         // The element clause is unsigned_integer and not the wider bitwise_operators, which std::bitset would satisfy: a block is asked for the <bit> intrinsics too, and they are constrained on unsigned_integer. [design.md#contiguous-block-range]
         static_assert(not xstd::detail::bits::contiguous_block_range<std::array<std::bitset<64>, 4>>);
+}
+
+// The shim stands in for P2278's alias on the libraries that lack it, and the two are not the same question: P2278 asks
+// what C's own iterator yields once const-ified, the fallback what a const C iterates. They part on a shallow-const,
+// span-like storage, which the fallback admits and P2278 rejects, so what keeps the concept one contract across
+// toolchains is that every storage here is deep-const. That is what this pins, and it fails on the day it stops
+// holding rather than silently on one rung of the matrix. [design.md#the-const-reference-shim]
+BOOST_AUTO_TEST_CASE(TheConstReferenceShimAgreesWithP2278)
+{
+        // For a contiguous range P2278's alias collapses to the value type's const lvalue reference, which is spellable
+        // without the paper: so this is what the shim must name, on every library, whichever arm it took.
+        static_assert(std::same_as<xstd::detail::bits::range_const_reference_t<std::array<std::uint8_t, 4>>, std::uint8_t const&>);
+        static_assert(std::same_as<xstd::detail::bits::range_const_reference_t<std::vector<std::uint64_t>>, std::uint64_t const&>);
+
+        // Deep const is what makes the two arms agree, and a storage this library accepts has it: reading a const one
+        // hands back a reference that is const too, so no blocks are writable through a const contiguous_bit_container.
+        static_assert(std::is_const_v<std::remove_reference_t<xstd::detail::bits::range_const_reference_t<std::array<std::uint8_t, 4>>>>);
+        static_assert(std::is_const_v<std::remove_reference_t<xstd::detail::bits::range_const_reference_t<std::vector<std::uint64_t>>>>);
 }
 
 // The semantic half a concept cannot check: a[i] is *(begin(a) + i), the same object and not merely an equal one.
@@ -753,6 +773,7 @@ BOOST_AUTO_TEST_CASE(AnInplaceVectorIsARunTimeWidthUnderAStaticCapacity)
         using T = xstd::detail::bits::contiguous_bit_inplace_vector<std::uint8_t, 24>;
         static_assert(not T::has_static_size);
         static_assert(xstd::detail::bits::contiguous_block_range<std::inplace_vector<std::uint8_t, 3>>);
+        static_assert(std::same_as<xstd::detail::bits::range_const_reference_t<std::inplace_vector<std::uint8_t, 3>>, std::uint8_t const&>);
 
         BOOST_CHECK_EQUAL(sweep(T(17)), 0);
 

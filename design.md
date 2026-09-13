@@ -42,8 +42,8 @@ operator and still no `popcount`, no `digits` and no `- 1`.
 
 The concept has a header of its own at `detail/contiguous_block_range.hpp`: the concept says what a `Blocks` **is**,
 the container is the vehicle built over it, and a reader asking the first question need not open the 1100 lines
-answering the second. Its includes are `<concepts>`, `<ranges>`, `<cstddef>` and the one xstd-ints concept —
-a leaf. `num_blocks_v` stays behind, being a block-count computation rather than a statement about what a
+answering the second. Its includes are `<concepts>`, `<ranges>`, the one xstd-ints concept and the shim of
+[the-const-reference-shim](#the-const-reference-shim) — a leaf. `num_blocks_v` stays behind, being a block-count computation rather than a statement about what a
 `Blocks` is, and both alias headers that use it already take the container whole.
 
 Subscript is spelled out rather than left to `std::ranges::contiguous_range`, which does not imply it.
@@ -103,6 +103,49 @@ line where [container.reqmts]/68 draws it, so the concept states its own five re
 The name says *container*, not *storage*, because that is the whole of what it asks: `bit_storage` and the
 `Storage` template parameters are about what an adaptor sits on, which is a different question and now a
 different word.
+
+### the-const-reference-shim
+
+The const subscript is checked against `xstd::detail::bits::range_const_reference_t`, ours, in a header of its
+own. P2278R4 gave the standard `std::ranges::range_const_reference_t`, which is the alias this clause wants, and
+**libc++ has implemented the paper on no branch, trunk included** — `__cpp_lib_ranges_as_const` is still a
+commented-out line in its `<version>`, alongside `__cpp_lib_ranges_chunk` and unlike the `chunk_by` beside it,
+so the commenting tracks implementation rather than being a stale block. The headers are simply absent:
+`range_const_reference_t` occurs nowhere in `__ranges/concepts.h`, and `__ranges/as_const_view.h` and
+`__ranges/const_access.h` do not exist. Apple's toolchain is downstream of that, so no Xcode will have it before
+libc++ does, and this is not a wait-for-the-next-rung situation: an earlier attempt to use the standard alias
+directly failed on Xcode 16.4 and had to be reverted.
+
+So the shim names the paper's alias where the library has it and `range_reference_t<C const>` where it does not,
+and the concept names one thing. **The two are not the same question**, which is the reason this is a header and
+a section rather than a one-line `#ifdef` in the concept. P2278 asks what `C`'s own iterator yields once
+const-ified; the fallback asks what a `C const` iterates. Measured on the two:
+
+| storage | `range_const_reference_t<C>` | `range_reference_t<C const>` |
+| --- | --- | --- |
+| `vector<Block>`, `array<Block, N>`, `inplace_vector<Block, N>` | `Block const&` | `Block const&` |
+| a regular, span-like handle | `Block const&` | `Block&` |
+
+They agree wherever const reaches the elements and part where it does not. Within `contiguous_range` that makes
+P2278 the strictly tighter arm, and the single thing it catches is a **shallow-const** blocks type: one whose
+`c[n]` hands back a writable `Block&` through a `C const&`, which would let a `contiguous_bit_container const`
+be written through. The tighter arm is the one worth having, and the library that lacks it is the one we cannot
+fix.
+
+That leaves a divergence that is real rather than cosmetic: a shallow-const storage would be admitted on libc++
+and refused on libstdc++ and MSVC. It is unreachable from here because every storage this library ships is
+deep-const, and `TheConstReferenceShimAgreesWithP2278` pins exactly that — for each of the three, the shim names
+`Block const&`, whichever arm it took, and the reference it names is `const`. The day a storage arrives for
+which that stops holding, the assertion fails on every rung rather than the concept quietly meaning two things
+on two of them.
+
+One spelling was considered and not taken. For a contiguous range P2278's alias always collapses to
+`range_value_t<C> const&`, which needs no macro at all and was measured equal to it on all four types above —
+so the tight arm *is* portable. Writing it that way would end the divergence outright. It was not taken because
+it states a coincidence rather than the requirement: what this clause means is "the reference a const `C` hands
+back", and `range_const_reference_t` is the standard's name for that. The shim keeps the meaning on the page and
+confines the coincidence to one test, which is the trade this file generally makes. If the divergence ever costs
+something real, the one-line change is here and the test above already says it is safe.
 
 ### the-one-vehicle
 
