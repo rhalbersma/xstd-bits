@@ -9,6 +9,7 @@
 #include <xstd/bits/bit_span.hpp>       // bit_span
 #include <xstd/bits/bit_static_set.hpp> // bit_static_set
 #include <xstd/bits/bit_vector.hpp>     // bit_vector
+#include <xstd/bits/dynamic_bitset.hpp> // dynamic_bitset
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <format>                       // format
 
@@ -44,15 +45,16 @@ BOOST_AUTO_TEST_CASE(TheSequenceReadingFormatsInBrackets)
         BOOST_CHECK_EQUAL(std::format("{}", xstd::bit_vector()), "[]");
 }
 
-// A view is a range over the same proxies, so it formats as its reading does and never as the owner's.
+// A view is a range over the same proxies, so it formats as its reading does and never as the owner's. The owner is a
+// bitset here, committed to neither reading and so the one owner both views may refer into. [design.md#the-readings-do-not-mix]
 BOOST_AUTO_TEST_CASE(TheViewsFormatAsTheirReading)
 {
-        auto v = xstd::bit_vector(4UZ);
-        v[1] = true;
-        v[3] = true;
+        auto b = xstd::dynamic_bitset(4UZ);
+        b.set(1UZ);
+        b.set(3UZ);
 
-        BOOST_CHECK_EQUAL(std::format("{}", xstd::bit_set_view(v)), "{1, 3}");
-        BOOST_CHECK_EQUAL(std::format("{}", xstd::bit_span(v)),     "[false, true, false, true]");
+        BOOST_CHECK_EQUAL(std::format("{}", xstd::bit_set_view(b)), "{1, 3}");
+        BOOST_CHECK_EQUAL(std::format("{}", xstd::bit_span(b)),     "[false, true, false, true]");
 }
 
 // Deriving from formatter<size_t> and formatter<bool> rather than writing parse() is what keeps the spec, so the nested spec a range formatter forwards reaches the underlying one intact.

@@ -4,7 +4,9 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/set/ordering.hpp>                     // ordering_agrees_with_std_set
+#include <xstd/bits/bit_array.hpp>                   // bit_array
 #include <xstd/bits/bit_set_view.hpp>                // bit_set_view
+#include <xstd/bits/bit_span.hpp>                    // bit_span
 #include <xstd/bits/bit_static_set.hpp>              // bit_static_set
 #include <xstd/bits/bitset.hpp>                      // bitset
 #include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
@@ -12,7 +14,7 @@
 #include <xstd/bits/ownership.hpp>                   // ownership
 #include <xstd/bits/set_adaptor.hpp>                 // set_adaptor
 #include <boost/test/unit_test.hpp>                  // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
-#include <concepts>                                  // derived_from, same_as
+#include <concepts>                                  // constructible_from, derived_from, same_as
 #include <cstddef>                                   // size_t
 #include <cstdint>                                   // uint8_t
 #include <functional>                                // hash
@@ -47,6 +49,12 @@ using Blocks = xstd::detail::bits::contiguous_bit_array<std::size_t, 8>;
 template<class T>
 using view_of = decltype(xstd::bit_set_view(std::declval<T&>()));
 
+// Named rather than a lambda, so the conversion happens at a call boundary the way a caller would meet it.
+constexpr auto takes_a_set_view(xstd::bit_set_view<Blocks> v) noexcept -> bool
+{
+        return v.contains(3UZ);
+}
+
 }  // namespace
 
 // The view is the referring adaptor under another name, and over an owner it refers into the storage the owner wraps. [design.md#the-views-are-the-adaptors]
@@ -59,6 +67,36 @@ BOOST_AUTO_TEST_CASE(TheViewIsTheReferringAdaptor)
         static_assert(std::same_as<view_of<xstd::bitset<8>>,         xstd::bit_set_view<xstd::detail::bits::contiguous_bit_array<std::size_t, 8>>>);
         static_assert(std::same_as<view_of<xstd::bitset<8> const>,   xstd::bit_set_view<xstd::detail::bits::contiguous_bit_array<std::size_t, 8> const>>);
         static_assert(std::same_as<view_of<xstd::bit_static_set<8>>, xstd::bit_set_view<xstd::detail::bits::contiguous_bit_array<std::size_t, 8>>>);
+}
+
+// A bitset is committed to neither reading, a sequence owner to the sequence one; over the very same storage, only the first admits a set view. [design.md#the-readings-do-not-mix]
+BOOST_AUTO_TEST_CASE(TheReadingsDoNotMix)
+{
+        static_assert(std::same_as<decltype(xstd::bit_span(std::declval<xstd::bit_array<8>&>())), xstd::bit_span<Blocks>>);
+        static_assert(    std::constructible_from<xstd::bit_set_view<Blocks>, xstd::bitset<8>&>);
+        static_assert(not std::constructible_from<xstd::bit_set_view<Blocks>, xstd::bit_array<8>&>);
+}
+
+// Viewing an owner is implicit, viewing raw storage is not: the first asserts nothing the owner does not already
+// carry, which is where span draws the line -- its array and C-array constructors are implicit even at a static
+// extent, while the ones claiming a size their source cannot prove are explicit. An rvalue owner still does not
+// convert, the parameter being Owner&. [design.md#viewing-an-owner-is-implicit]
+BOOST_AUTO_TEST_CASE(ViewingAnOwnerIsImplicit)
+{
+        static_assert(std::convertible_to<xstd::bitset<8>&,           xstd::bit_set_view<Blocks>>);
+        static_assert(std::convertible_to<xstd::bit_static_set<8>&,   xstd::bit_set_view<Blocks>>);
+        static_assert(std::convertible_to<xstd::bitset<8> const&,     xstd::bit_set_view<Blocks const>>);
+        static_assert(not std::convertible_to<xstd::bitset<8> const&, xstd::bit_set_view<Blocks>>);
+
+        static_assert(not std::convertible_to<xstd::bitset<8>,           xstd::bit_set_view<Blocks>>);
+        static_assert(not std::convertible_to<xstd::bit_static_set<8>&&, xstd::bit_set_view<Blocks>>);
+
+        static_assert(    std::constructible_from<xstd::bit_set_view<Blocks>, Blocks&>);
+        static_assert(not std::convertible_to<Blocks&, xstd::bit_set_view<Blocks>>);
+
+        auto s = xstd::bit_static_set<8>();
+        s.insert(3UZ);
+        BOOST_CHECK(takes_a_set_view(s));
 }
 
 // The types a bit_set_view exists for: those holding a set of positions without offering it, which bit_static_set already does.

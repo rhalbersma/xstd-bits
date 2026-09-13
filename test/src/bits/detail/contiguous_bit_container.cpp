@@ -9,9 +9,10 @@
 #include <xstd/bits/bit_traits.hpp>                           // bit_storage, bit_traits, block_readable, static_bit_extent
 #include <xstd/bits/detail/contiguous_bit_array.hpp>          // contiguous_bit_array
 #include <xstd/bits/detail/contiguous_bit_container.hpp>      // contiguous_bit_container
-#include <xstd/bits/detail/contiguous_block_range.hpp>    // contiguous_block_range
+#include <xstd/bits/detail/contiguous_block_range.hpp>        // contiguous_block_range
 #include <xstd/bits/detail/contiguous_bit_inplace_vector.hpp> // IWYU pragma: keep; contiguous_bit_inplace_vector, named only under TEST_HAS_INPLACE_VECTOR
 #include <xstd/bits/detail/contiguous_bit_vector.hpp>         // contiguous_bit_vector
+#include <xstd/bits/detail/range_const_reference.hpp>         // fallback::range_const_reference_t, range_const_reference_t
 #include <boost/test/unit_test.hpp>                           // BOOST_CHECK_EQUAL, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <algorithm>                                          // count, lexicographical_compare_three_way, min
 #include <array>                                              // array
@@ -22,8 +23,9 @@
 #include <cstdint>                                            // uint8_t, uint64_t
 #include <initializer_list>                                   // initializer_list
 #include <memory>                                             // addressof, allocator
+#include <version>                                            // IWYU pragma: keep; __cpp_lib_ranges_as_const
 #include <new>                                                // IWYU pragma: keep; bad_alloc, behind TEST_HAS_INPLACE_VECTOR
-#include <ranges>                                             // begin, iota, size
+#include <ranges>                                             // begin, iota, range_const_reference_t, size
 #include <tuple>                                              // get, tuple
 #include <vector>                                             // vector
 
@@ -359,8 +361,33 @@ BOOST_AUTO_TEST_CASE(ItsStorageIsAContiguousSizedRangeOfUnsignedIntegers)
         static_assert(not xstd::detail::bits::contiguous_block_range<std::array<std::bitset<64>, 4>>);
 }
 
+// The const subscript is checked against P2278R4's range_const_reference_t: the standard's where the library has it,
+// and where it does not -- libc++, on every branch including trunk -- the fallback beside it, transcribed from
+// [const.iterators.alias] and [ranges.syn]. The arms are one type rather than two contracts, and this is what says so:
+// wherever both exist the fallback must equal the vendor's, which the gcc, msvc and clang-with-libstdc++ rungs check
+// against three implementations and libc++ cannot check at all. [design.md#the-const-reference]
+BOOST_AUTO_TEST_CASE(TheConstReferenceIsP2278s)
+{
+#ifdef __cpp_lib_ranges_as_const
+        static_assert(std::same_as<xstd::detail::bits::fallback::range_const_reference_t<std::array<std::uint8_t, 4>>, std::ranges::range_const_reference_t<std::array<std::uint8_t, 4>>>);
+        static_assert(std::same_as<xstd::detail::bits::fallback::range_const_reference_t<std::vector<std::uint64_t>>, std::ranges::range_const_reference_t<std::vector<std::uint64_t>>>);
+        static_assert(std::same_as<xstd::detail::bits::fallback::range_const_reference_t<std::vector<bool>>,          std::ranges::range_const_reference_t<std::vector<bool>>>);
+#endif
+
+        // What the clause buys, whichever arm was taken: the reference is const, so no blocks are writable through a
+        // const contiguous_bit_container. A shallow-const, span-like storage hands back a writable one from a const
+        // subscript and is refused by this, where range_reference_t<C const> would have admitted it.
+        static_assert(std::same_as<xstd::detail::bits::range_const_reference_t<std::array<std::uint8_t, 4>>, std::uint8_t const&>);
+        static_assert(std::same_as<xstd::detail::bits::range_const_reference_t<std::vector<std::uint64_t>>, std::uint64_t const&>);
+
+        // Transcribed and not approximated: a conditional_t over is_const and add_const would say bool const& here, and
+        // the paper's common_reference_t says bool, which is the assertion that fails first if the fallback is ever
+        // simplified into that dance.
+        static_assert(std::same_as<xstd::detail::bits::fallback::range_const_reference_t<std::vector<bool>>, bool>);
+}
+
 // The semantic half a concept cannot check: a[i] is *(begin(a) + i), the same object and not merely an equal one.
-template<class Blocks>
+template<xstd::detail::bits::contiguous_block_range Blocks>
 constexpr auto subscript_agrees_with_iteration(Blocks blocks) noexcept
         -> bool
 {
@@ -753,6 +780,7 @@ BOOST_AUTO_TEST_CASE(AnInplaceVectorIsARunTimeWidthUnderAStaticCapacity)
         using T = xstd::detail::bits::contiguous_bit_inplace_vector<std::uint8_t, 24>;
         static_assert(not T::has_static_size);
         static_assert(xstd::detail::bits::contiguous_block_range<std::inplace_vector<std::uint8_t, 3>>);
+        static_assert(std::same_as<xstd::detail::bits::range_const_reference_t<std::inplace_vector<std::uint8_t, 3>>, std::uint8_t const&>);
 
         BOOST_CHECK_EQUAL(sweep(T(17)), 0);
 

@@ -5,6 +5,7 @@
 
 #include <test/sequence/ordering.hpp>                // ordering_agrees_with_vector_bool
 #include <xstd/bits/bit_array.hpp>                   // bit_array
+#include <xstd/bits/bit_set_view.hpp>                // bit_set_view
 #include <xstd/bits/bit_span.hpp>                    // bit_span
 #include <xstd/bits/bit_static_set.hpp>              // bit_static_set
 #include <xstd/bits/bitset.hpp>                      // bitset
@@ -15,7 +16,7 @@
 #include <boost/test/unit_test.hpp>                  // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <algorithm>                                 // equal
 #include <array>                                     // array
-#include <concepts>                                  // derived_from, equality_comparable, same_as, totally_ordered
+#include <concepts>                                  // constructible_from, derived_from, equality_comparable, same_as, totally_ordered
 #include <cstddef>                                   // size_t
 #include <cstdint>                                   // uint8_t
 #include <ranges>                                    // borrowed_range, random_access_range, view
@@ -30,16 +31,52 @@ using Blocks = xstd::detail::bits::contiguous_bit_array<std::size_t, 8>;
 template<class T>
 using view_of = decltype(xstd::bit_span(std::declval<T&>()));
 
+// Named rather than a lambda, so the conversion happens at a call boundary the way a caller would meet it.
+constexpr auto takes_a_span(xstd::bit_span<Blocks> v) noexcept -> bool
+{
+        return v[3];
+}
+
 }  // namespace
 
-// The view is the referring adaptor under another name, and over an owner of either reading it refers into the storage the owner wraps. [design.md#the-views-are-the-adaptors]
+// The view is the referring adaptor under another name, and over an owner it refers into the storage the owner wraps. [design.md#the-views-are-the-adaptors]
 BOOST_AUTO_TEST_CASE(TheViewIsTheReferringAdaptor)
 {
         static_assert(std::derived_from<xstd::bit_span<Blocks>, xstd::sequence_adaptor<Blocks, xstd::ownership::refers, false>>);
-        static_assert(std::same_as<view_of<Blocks>,                  xstd::bit_span<Blocks>>);
-        static_assert(std::same_as<view_of<Blocks const>,            xstd::bit_span<Blocks const>>);
-        static_assert(std::same_as<view_of<xstd::bitset<8>>,         xstd::bit_span<xstd::detail::bits::contiguous_bit_array<std::size_t, 8>>>);
-        static_assert(std::same_as<view_of<xstd::bit_static_set<8>>, xstd::bit_span<xstd::detail::bits::contiguous_bit_array<std::size_t, 8>>>);
+        static_assert(std::same_as<view_of<Blocks>,               xstd::bit_span<Blocks>>);
+        static_assert(std::same_as<view_of<Blocks const>,         xstd::bit_span<Blocks const>>);
+        static_assert(std::same_as<view_of<xstd::bitset<8>>,      xstd::bit_span<xstd::detail::bits::contiguous_bit_array<std::size_t, 8>>>);
+        static_assert(std::same_as<view_of<xstd::bit_array<8>>,   xstd::bit_span<xstd::detail::bits::contiguous_bit_array<std::size_t, 8>>>);
+}
+
+// A bitset is committed to neither reading, a set owner to the set one; over the very same storage, only the first admits a span. [design.md#the-readings-do-not-mix]
+BOOST_AUTO_TEST_CASE(TheReadingsDoNotMix)
+{
+        static_assert(std::same_as<decltype(xstd::bit_set_view(std::declval<xstd::bit_static_set<8>&>())), xstd::bit_set_view<Blocks>>);
+        static_assert(    std::constructible_from<xstd::bit_span<Blocks>, xstd::bitset<8>&>);
+        static_assert(not std::constructible_from<xstd::bit_span<Blocks>, xstd::bit_static_set<8>&>);
+}
+
+// Viewing an owner is implicit, viewing raw storage is not: the first asserts nothing the owner does not already
+// carry, which is where span draws the line -- its array and C-array constructors are implicit even at a static
+// extent, while the ones claiming a size their source cannot prove are explicit. An rvalue owner still does not
+// convert, the parameter being Owner&. [design.md#viewing-an-owner-is-implicit]
+BOOST_AUTO_TEST_CASE(ViewingAnOwnerIsImplicit)
+{
+        static_assert(std::convertible_to<xstd::bitset<8>&,        xstd::bit_span<Blocks>>);
+        static_assert(std::convertible_to<xstd::bit_array<8>&,     xstd::bit_span<Blocks>>);
+        static_assert(std::convertible_to<xstd::bitset<8> const&,  xstd::bit_span<Blocks const>>);
+        static_assert(not std::convertible_to<xstd::bitset<8> const&, xstd::bit_span<Blocks>>);
+
+        static_assert(not std::convertible_to<xstd::bitset<8>,     xstd::bit_span<Blocks>>);
+        static_assert(not std::convertible_to<xstd::bit_array<8>&&, xstd::bit_span<Blocks>>);
+
+        static_assert(    std::constructible_from<xstd::bit_span<Blocks>, Blocks&>);
+        static_assert(not std::convertible_to<Blocks&, xstd::bit_span<Blocks>>);
+
+        auto a = xstd::bit_array<8>();
+        a[3] = true;
+        BOOST_CHECK(takes_a_span(a));
 }
 
 BOOST_AUTO_TEST_CASE(TheViewedTypesAreTheOnesHoldingBoolsWithoutOfferingThem)

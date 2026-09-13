@@ -1052,8 +1052,8 @@ template<class T> concept specialization_of_contiguous_bit_container = is_specia
 // The trait is specialized in xstd, where it is declared; the storage it reads is a detail. [design.md#the-cheapest-contract]
 namespace xstd {
 
-// Forwards and nothing more, reaching none of the generic scans. [design.md#the-cheapest-contract]
-template<class Blocks, std::size_t N>
+// Forwards and nothing more, reaching none of the generic scans. Blocks is spelled as the class and the detector beside it spell it, the pattern stating what a Blocks is rather than taking any type that happens to land here. [design.md#the-cheapest-contract]
+template<detail::bits::contiguous_block_range Blocks, std::size_t N>
 struct bit_traits<detail::bits::contiguous_bit_container<Blocks, N>>
 {
         using bits_type = detail::bits::contiguous_bit_container<Blocks, N>;

@@ -42,8 +42,8 @@ operator and still no `popcount`, no `digits` and no `- 1`.
 
 The concept has a header of its own at `detail/contiguous_block_range.hpp`: the concept says what a `Blocks` **is**,
 the container is the vehicle built over it, and a reader asking the first question need not open the 1100 lines
-answering the second. Its includes are `<concepts>`, `<ranges>`, `<cstddef>` and the one xstd-ints concept —
-a leaf. `num_blocks_v` stays behind, being a block-count computation rather than a statement about what a
+answering the second. Its includes are `<concepts>`, `<ranges>`, the one xstd-ints concept and the alias of
+[the-const-reference](#the-const-reference) — a leaf. `num_blocks_v` stays behind, being a block-count computation rather than a statement about what a
 `Blocks` is, and both alias headers that use it already take the container whole.
 
 Subscript is spelled out rather than left to `std::ranges::contiguous_range`, which does not imply it.
@@ -103,6 +103,73 @@ line where [container.reqmts]/68 draws it, so the concept states its own five re
 The name says *container*, not *storage*, because that is the whole of what it asks: `bit_storage` and the
 `Storage` template parameters are about what an adaptor sits on, which is a different question and now a
 different word.
+
+### the-const-reference
+
+The const subscript is checked against `range_const_reference_t`: the standard's where the library has it, and
+where it does not, ours — P2278R4's two aliases transcribed from the standard, in a header of their own:
+
+```c++
+template<std::indirectly_readable It>
+using iter_const_reference_t = std::common_reference_t<std::iter_value_t<It> const&&, std::iter_reference_t<It>>;
+
+template<std::ranges::range R>
+using range_const_reference_t = iter_const_reference_t<std::ranges::iterator_t<R>>;
+```
+
+That is [const.iterators.alias] and [ranges.syn] verbatim, down to the constraints, and it is ten lines because
+the paper defines the alias by a formula rather than by magic.
+
+**One header, and the `fallback` namespace is what makes the conditional safe.** The transcription above sits
+there unconditionally, and below it `detail/range_const_reference.hpp` selects
+`std::ranges::range_const_reference_t` where `__cpp_lib_ranges_as_const` says the library has the paper and
+`fallback::range_const_reference_t` where it does not. Nothing shadows anything: on a library that ships P2278
+both spellings exist and are separately reachable, which is exactly what lets the tests below check one against
+the other. What the check needs is that the fallback be separately *nameable*, which is the namespace; a second
+file bought nothing and is not there.
+
+The reason not to use `std::ranges::range_const_reference_t` is that a third of the matrix does not have it.
+**libc++ has implemented P2278R4 on no branch, trunk included**: `__cpp_lib_ranges_as_const` is still a
+commented-out line in its `<version>`, beside `__cpp_lib_ranges_chunk` and unlike the `chunk_by` defined next to
+it, so the commenting tracks implementation rather than being a stale block. The headers are simply absent —
+`range_const_reference_t` occurs nowhere in `__ranges/concepts.h`, and `__ranges/as_const_view.h` and
+`__ranges/const_access.h` do not exist. Apple's toolchain is downstream of libc++, so no Xcode will have it
+first, and this is not a wait-for-the-next-rung situation: an earlier attempt to name the standard alias
+directly was reverted off Xcode 16.4.
+
+**A conditional is only as good as its other arm, and that is the whole argument for the transcription.** The
+first attempt made the arms `std::ranges::range_const_reference_t` and `range_reference_t<C const>`, and those
+two are not the same question: P2278 asks what `C`'s own iterator yields once const-ified, the second what a
+`C const` iterates. Measured, they part on exactly one thing:
+
+| storage | `range_const_reference_t<C>` | `range_reference_t<C const>` |
+| --- | --- | --- |
+| `vector<Block>`, `array<Block, N>`, `inplace_vector<Block, N>` | `Block const&` | `Block const&` |
+| a regular, span-like handle | `Block const&` | `Block&` |
+
+Within `contiguous_range` that makes P2278 strictly the tighter arm, and the one thing it catches is a
+**shallow-const** blocks type: one whose `c[n]` hands back a writable `Block&` through a `C const&`, which would
+let a `contiguous_bit_container const` be written through. That conditional would therefore have admitted such a
+storage on libc++ and refused it everywhere else — a concept meaning two things on two thirds of the matrix.
+Transcribing does not remove the conditional; it makes the other arm *the same type* rather than a second
+contract, which is the only reason a conditional is the right shape here at all.
+
+Two spellings were considered and not taken. `range_value_t<C> const&` is what the alias collapses to *for a
+contiguous range*, needs nothing, and was measured equal on every storage here — but it states a coincidence of
+this concept's other clauses rather than the requirement, and would be wrong the moment the alias were reused
+anywhere that is not contiguous. A `conditional_t` over `is_const`/`add_const` reconstructs "const-ify the
+reference" by hand, and gets proxies wrong: measured on `std::vector<bool>`, the dance says `bool const&` where
+the paper says `bool`, because `common_reference_t` consults `basic_common_reference` and `add_const_t` cannot.
+Both are lookalikes; the formula is the thing.
+
+What pins it is `TheConstReferenceIsP2278s`. Where the library *does* have the paper — the gcc, msvc and
+clang-with-libstdc++ rungs — the fallback must equal `std::ranges::range_const_reference_t`, asserted on both
+storages and on `vector<bool>`, so the transcription is checked against three vendors rather than against my
+reading of the wording. That check is the reason the fallback is namespaced apart instead of written inline in
+the `#else`: were it only the unselected arm, the rungs that could verify it would never name it, and the rung
+that names it could not verify it. The rest holds everywhere, whichever arm was taken: the reference is `const` for
+each storage shipped, and the fallback gives `bool` for `vector<bool>`, which is the assertion that fails first
+if anyone ever "simplifies" the definition into the dance.
 
 ### the-one-vehicle
 
@@ -1125,13 +1192,86 @@ An owner has no trait of its own — `bit_static_set`, `bit_array` and `bitset` 
 `bit_set_view(xstd::bitset<64>&)` is `set_adaptor<contiguous_bit_array<size_t, 64>, refers>`, and the pointer in
 the iterator is to the `contiguous_bit_array`, never to the `bitset`. The owner hands its storage over through
 `owned_storage<Owner>`, declared beside it as `bit_traits` is beside a storage and never defined for anything
-else, so `owner_of<Owner, Bits, Traits>` reads "this owner wraps exactly the storage and trait this view refers
-through". Const flows one way: a const owner gives a view over `Bits const`, a mutable owner either.
+else, so `owner_of<Owner, Bits, Traits, R>` reads "this owner wraps exactly the storage and trait this view
+refers through, and is not already committed to another reading". Const flows one way: a const owner gives a
+view over `Bits const`, a mutable owner either.
 
-The view's converting constructor takes the owner's private member directly, which is why each owner
-befriends the two referring adaptors — the one friendship in the tree that runs upward, from a container to
-the views over it, and it grants access to a member and to nothing that member's type does not already expose.
-Storage stays private; nothing on an owner's surface says `contiguous_bit_array`.
+The view's converting constructor takes the owner's private member directly, which is why an owner befriends
+a referring adaptor — the one friendship in the tree that runs upward, from a container to the views over it,
+and it grants access to a member and to nothing that member's type does not already expose. Which adaptors it
+befriends is [the-readings-do-not-mix](#the-readings-do-not-mix). Storage stays private; nothing on an owner's
+surface says `contiguous_bit_array`.
+
+### viewing-an-owner-is-implicit
+
+`bit_set_view(my_set)` is a converting constructor on the **view**, not a conversion operator on the owner, and
+the choice is forced rather than stylistic. `bit_set_view` and `bit_span` are alias templates, so every
+deduction runs through constructors and guides on the adaptor; a conversion function contributes nothing to
+class template argument deduction. Measured on a model of both shapes: with only the operator, `view(owner)` is
+`no matching function for call to 'adaptor(...)'`. The constructor has to exist anyway, and once it does the
+operator is a second mechanism for a conversion already spelled. Three lesser reasons agree. The constructor is
+where `owner_of<Bits, Traits, R>` already hangs, so the readings-do-not-mix rule is stated once. Const falls out
+of deducing `Owner&` rather than needing an `operator view<Bits>() &` and an `operator view<Bits const>() const&`
+kept in step by hand. And `Owner&` is an lvalue reference, so a temporary owner never binds — the `string_view`
+foot-gun closed by the signature instead of by a `&`-qualifier someone has to remember.
+
+The standard's own split is about layering, not taste: `string` → `string_view` is an operator because
+`<string_view>` must not depend on `<string>`, while `vector`/`array` → `span` is a constructor because `span`
+is generic over its sources and names none of them. Owner and view here are the same class template, so there is
+no layer to respect, and the second shape is the one that fits.
+
+**Implicit from an owner, explicit from raw storage**, and `span` supplies the criterion. Its conditional
+`explicit` is usually read as "static extent", which is not what it says — the span-to-span constructor spells
+it `extent != dynamic_extent && OtherExtent == dynamic_extent`, so static-to-static stays *implicit* and only
+dynamic-to-static is explicit. The rule is therefore: **explicit exactly where the conversion asserts a size the
+source cannot prove**, which is why those constructors carry a hardened precondition
+(`ranges::size(r) == extent`) and why `span(array<T, N>&)` and the C-array overload are implicit even at a
+static extent — an `array` carries its `N` in the type.
+
+Viewing an owner is the `array` row. The width comes from the owner's own `Bits`, `owner_of` requires the
+storage and the trait to match exactly, and the lvalue parameter closes the lifetime hole: nothing is asserted
+that is not already proven, and there is no precondition to violate. So that constructor is implicit — spelled
+`explicit(false)` with a `NOLINT(misc-explicit-constructor)`, as the five other deliberate implicit conversions
+in the tree are, because `misc-explicit-constructor` holds that every one-argument constructor must be explicit
+and cannot know that this is the conversion the type exists for. Saying `explicit(false)` rather than omitting
+the keyword is what makes the intent readable at the declaration instead of inferable from its absence.
+`set_adaptor(Bits&)` stays explicit — not for any size claim, but because reaching past a container to the
+storage underneath it is an act worth spelling, and it is the constructor a user adapting their own storage
+reaches for deliberately.
+
+### the-readings-do-not-mix
+
+A view over an owner is a second reading of bits that already have one, and two of the three pairings are a
+view choosing for the caller. `bit_set` is a set of positions; spanning it as bools would present the
+container's capacity as its contents. `bit_vector` is a sequence of bools; viewing it as a set would present
+the indices of the true ones as the elements. Neither is wrong in the way a bug is wrong — the bits do support
+the reading — but neither is what the owner's own name says it holds, and the owner is the thing the caller
+named. So a set owner admits only `bit_set_view`, a sequence owner only `bit_span`.
+
+`bitset` is the exception and the reason both views exist. `[template.bitset]` is the bitwise surface, a width
+of bits and the operators over it, committed to neither reading; its whole documented use is that you go on to
+ask it something it does not answer itself — which positions are set, or what the bools are at each index.
+That is what a view is for, so a `bitset` admits either.
+
+The rule is one enumerator on the owner's side of the protocol, `owned_storage<Owner>::reads`, and one clause
+in `owner_of`: the owner's reading is the view's, or it is `reading::bitset`. It has to live in the constraint
+and not in the friendship alone. Dropping only the friendship leaves the constructor declared and viable, and
+its `m_bits(&c.m_bits)` is a mem-initializer — not the immediate context — so the access check happens at
+instantiation and nowhere earlier. Measured: `std::is_constructible_v<bit_set_view<Blocks>, bit_array<8>&>`
+still answers **true**, and the actual construction fails with `'m_bits' is private within this context`
+pointing into `set_adaptor.hpp`. A trait that lies and an error inside a constructor the caller never meant to
+reach are both worse than the constructor simply not being there, which is what the clause gives: no viable
+deduction guide for `bit_span(bit_set{})`, and `is_constructible_v` false.
+
+It is the constraint that does the work, so the friendships follow it rather than the other way round:
+`set_adaptor` befriends `set_adaptor`, `sequence_adaptor` befriends `sequence_adaptor`, and `bitset_adaptor`
+befriends both.
+
+What this gives up is real and small: `bit_span(some_bit_set)` used to compile, and now does not. Nothing in
+the library or the tests wanted it — the one assertion that exercised it was asserting the mechanism, not a
+use — and a caller who genuinely wants the other reading of an owner's bits is asking for a conversion between
+owners, which is an owner's to offer explicitly and not a view's to perform silently. None exists today; if
+one ever should, it belongs beside the containers, where it can be named and its cost seen.
 
 ### the-interface-line
 
