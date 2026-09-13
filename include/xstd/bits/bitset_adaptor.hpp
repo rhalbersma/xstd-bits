@@ -29,6 +29,7 @@
 #include <memory>                                 // allocator
 #include <ranges>                                 // iota, swap
 #include <source_location>                        // source_location
+#include <span>                                   // dynamic_extent
 #include <stdexcept>                              // invalid_argument, out_of_range, overflow_error
 #include <string>                                 // basic_string, char_traits
 #include <string_view>                            // basic_string_view
