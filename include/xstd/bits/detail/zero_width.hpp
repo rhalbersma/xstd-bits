@@ -6,7 +6,6 @@
 #ifndef XSTD_BITS_DETAIL_ZERO_WIDTH_HPP
 #define XSTD_BITS_DETAIL_ZERO_WIDTH_HPP
 
-#include <cstddef>     // size_t
 #include <type_traits> // remove_const_t
 
 namespace xstd::detail::bits {
