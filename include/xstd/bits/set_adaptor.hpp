@@ -6,28 +6,29 @@
 #ifndef XSTD_BITS_SET_ADAPTOR_HPP
 #define XSTD_BITS_SET_ADAPTOR_HPP
 
-#include <xstd/bits/bit_traits.hpp>           // bit_storage, bit_traits
-#include <xstd/bits/detail/zero_width.hpp>    // zero_width
-#include <xstd/bits/detail/bidirectional.hpp> // bidirectional_bit_iterator, bidirectional_bit_reference
+#include <xstd/bits/bit_traits.hpp>                      // bit_storage, bit_traits
+#include <xstd/bits/detail/bidirectional.hpp>            // bidirectional_bit_iterator, bidirectional_bit_reference
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // specialization_of_contiguous_bit_container
-#include <xstd/bits/detail/hash.hpp>          // hash_append_bits, hash_append_positions, std_hash
-#include <xstd/bits/detail/intrin.hpp>        // countl_zero, countr_zero
-#include <xstd/bits/detail/shift.hpp>         // shl, shr
-#include <xstd/bits/ownership.hpp>            // owned_bits_t, owned_storage, owned_traits_t, owner_of, owner_reading, ownership, owns, reading
-#include <boost/container_hash/is_range.hpp>  // is_range
-#include <boost/hash2/hash_append.hpp>        // hash_append_tag
-#include <algorithm>                          // any_of, equal, includes, lexicographical_compare_three_way
-#include <cassert>                            // assert
-#include <compare>                            // strong_ordering
-#include <concepts>                           // constructible_from, invocable, swappable
-#include <cstddef>                            // ptrdiff_t, size_t
-#include <functional>                         // hash, less
-#include <initializer_list>                   // initializer_list
-#include <iterator>                           // input_iterator, iter_reference_t, make_reverse_iterator, reverse_iterator, sentinel_for
-#include <limits>                             // numeric_limits
-#include <ranges>                             // begin, enable_borrowed_range, enable_view, end, input_range, range_reference_t, from_range_t, swap
-#include <type_traits>                        // conditional_t, false_type, is_invocable_r_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
-#include <utility>                            // forward, move, pair
+#include <xstd/bits/detail/hash.hpp>                     // hash_append_bits, hash_append_positions, std_hash
+#include <xstd/bits/detail/intrin.hpp>                   // countl_zero, countr_zero
+#include <xstd/bits/detail/shift.hpp>                    // shl, shr
+#include <xstd/bits/detail/zero_width.hpp>               // zero_width
+#include <xstd/bits/ownership.hpp>                       // owned_bits_t, owned_storage, owned_traits_t, owner_of, owner_reading, ownership, owns, reading
+#include <boost/container_hash/is_range.hpp>             // is_range
+#include <boost/hash2/hash_append.hpp>                   // hash_append_tag
+#include <algorithm>                                     // any_of, equal, includes, lexicographical_compare_three_way
+#include <cassert>                                       // assert
+#include <compare>                                       // strong_ordering
+#include <concepts>                                      // constructible_from, invocable, swappable
+#include <cstddef>                                       // ptrdiff_t, size_t
+#include <functional>                                    // hash, less
+#include <initializer_list>                              // initializer_list
+#include <iterator>                                      // input_iterator, iter_reference_t, make_reverse_iterator, reverse_iterator, sentinel_for
+#include <limits>                                        // numeric_limits
+#include <ranges>                                        // begin, enable_borrowed_range, enable_view, end, input_range, range_reference_t, from_range_t, swap
+#include <span>                                          // dynamic_extent
+#include <type_traits>                                   // conditional_t, false_type, is_invocable_r_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
+#include <utility>                                       // forward, move, pair
 
 // The set reading, [set] over any Bits with a bit_traits specialization, owning it or referring to it. [design.md#the-three-adaptors]
 namespace xstd {
