@@ -1230,7 +1230,11 @@ static extent — an `array` carries its `N` in the type.
 
 Viewing an owner is the `array` row. The width comes from the owner's own `Bits`, `owner_of` requires the
 storage and the trait to match exactly, and the lvalue parameter closes the lifetime hole: nothing is asserted
-that is not already proven, and there is no precondition to violate. So that constructor is implicit.
+that is not already proven, and there is no precondition to violate. So that constructor is implicit — spelled
+`explicit(false)` with a `NOLINT(misc-explicit-constructor)`, as the five other deliberate implicit conversions
+in the tree are, because `misc-explicit-constructor` holds that every one-argument constructor must be explicit
+and cannot know that this is the conversion the type exists for. Saying `explicit(false)` rather than omitting
+the keyword is what makes the intent readable at the declaration instead of inferable from its absence.
 `set_adaptor(Bits&)` stays explicit — not for any size claim, but because reaching past a container to the
 storage underneath it is an act worth spelling, and it is the constructor a user adapting their own storage
 reaches for deliberately.

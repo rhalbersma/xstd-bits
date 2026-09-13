@@ -519,7 +519,7 @@ public:
 
         // A view over an owner is a view over the storage it wraps, the owner having befriended this template. Implicit, unlike the one above: it asserts nothing the owner does not already carry, which is the line span draws. [design.md#viewing-an-owner-is-implicit]
         template<owner_of<Bits, Traits, reading::sequence> Owner>
-        [[nodiscard]] constexpr sequence_adaptor(Owner& c) noexcept
+        [[nodiscard]] constexpr explicit(false) sequence_adaptor(Owner& c) noexcept  // NOLINT(misc-explicit-constructor)
                 requires (not is_owner) and (not is_window)
         :
                 m_bits(&c.m_bits)
