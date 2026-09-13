@@ -191,7 +191,8 @@ BOOST_AUTO_TEST_CASE(TheReadOnlyProxiesAreValues)
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheSetIteratorWalksThePositionsInBothDirections, T, ArrayTypes)
 {
         check_every_set_pattern<xstd::bit_traits<T>, false>(T());
-        if constexpr (xstd::bit_traits<T>::extent >= 2UZ) {
+        // The floor-only trait is the total one, and a zero width is where the scans answer without looking. [design.md#degenerate-widths]
+        if constexpr (xstd::bit_traits<T>::extent == 0UZ or xstd::bit_traits<T>::extent >= 2UZ) {
                 check_every_set_pattern<test::minimal_traits<T>, true>(T());
         }
 }
