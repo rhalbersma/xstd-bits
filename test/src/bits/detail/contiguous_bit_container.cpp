@@ -13,6 +13,7 @@
 #include <xstd/bits/detail/contiguous_bit_inplace_vector.hpp> // IWYU pragma: keep; contiguous_bit_inplace_vector, named only under TEST_HAS_INPLACE_VECTOR
 #include <xstd/bits/detail/contiguous_bit_vector.hpp>         // contiguous_bit_vector
 #include <xstd/bits/detail/range_const_reference.hpp>         // range_const_reference_t
+#include <xstd/bits/detail/range_const_reference_fallback.hpp> // fallback::range_const_reference_t
 #include <boost/test/unit_test.hpp>                           // BOOST_CHECK_EQUAL, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <algorithm>                                          // count, lexicographical_compare_three_way, min
 #include <array>                                              // array
@@ -361,28 +362,29 @@ BOOST_AUTO_TEST_CASE(ItsStorageIsAContiguousSizedRangeOfUnsignedIntegers)
         static_assert(not xstd::detail::bits::contiguous_block_range<std::array<std::bitset<64>, 4>>);
 }
 
-// The const subscript is checked against P2278R4's range_const_reference_t, which libc++ has on no branch, so the
-// alias is transcribed from [const.iterators.alias] and [ranges.syn] rather than conditional on the library. Being a
-// definition and not a shim, it is the same alias everywhere, and where the library does have the paper it must agree
-// with ours: that is the conformance the gcc, msvc and clang-libstdc++ rungs check below and libc++ cannot.
-// [design.md#the-const-reference]
+// The const subscript is checked against P2278R4's range_const_reference_t: the standard's where the library has it,
+// and where it does not -- libc++, on every branch including trunk -- the fallback beside it, transcribed from
+// [const.iterators.alias] and [ranges.syn]. The arms are one type rather than two contracts, and this is what says so:
+// wherever both exist the fallback must equal the vendor's, which the gcc, msvc and clang-with-libstdc++ rungs check
+// against three implementations and libc++ cannot check at all. [design.md#the-const-reference]
 BOOST_AUTO_TEST_CASE(TheConstReferenceIsP2278s)
 {
 #ifdef __cpp_lib_ranges_as_const
-        static_assert(std::same_as<xstd::detail::bits::range_const_reference_t<std::array<std::uint8_t, 4>>, std::ranges::range_const_reference_t<std::array<std::uint8_t, 4>>>);
-        static_assert(std::same_as<xstd::detail::bits::range_const_reference_t<std::vector<std::uint64_t>>, std::ranges::range_const_reference_t<std::vector<std::uint64_t>>>);
-        static_assert(std::same_as<xstd::detail::bits::iter_const_reference_t<std::vector<bool>::iterator>, std::ranges::range_const_reference_t<std::vector<bool>>>);
+        static_assert(std::same_as<xstd::detail::bits::fallback::range_const_reference_t<std::array<std::uint8_t, 4>>, std::ranges::range_const_reference_t<std::array<std::uint8_t, 4>>>);
+        static_assert(std::same_as<xstd::detail::bits::fallback::range_const_reference_t<std::vector<std::uint64_t>>, std::ranges::range_const_reference_t<std::vector<std::uint64_t>>>);
+        static_assert(std::same_as<xstd::detail::bits::fallback::range_const_reference_t<std::vector<bool>>,          std::ranges::range_const_reference_t<std::vector<bool>>>);
 #endif
 
-        // What the clause buys: the reference is const, so no blocks are writable through a const contiguous_bit_container.
-        // A shallow-const, span-like storage hands back a writable one from a const subscript and is refused by this, where
-        // range_reference_t<C const> would have admitted it.
+        // What the clause buys, whichever arm was taken: the reference is const, so no blocks are writable through a
+        // const contiguous_bit_container. A shallow-const, span-like storage hands back a writable one from a const
+        // subscript and is refused by this, where range_reference_t<C const> would have admitted it.
         static_assert(std::same_as<xstd::detail::bits::range_const_reference_t<std::array<std::uint8_t, 4>>, std::uint8_t const&>);
         static_assert(std::same_as<xstd::detail::bits::range_const_reference_t<std::vector<std::uint64_t>>, std::uint64_t const&>);
 
-        // Transcribed and not approximated: an add_const dance over range_reference_t would say bool const& here, and the
-        // paper's common_reference_t says bool, which is why the definition is the standard's and not a lookalike.
-        static_assert(std::same_as<xstd::detail::bits::range_const_reference_t<std::vector<bool>>, bool>);
+        // Transcribed and not approximated: a conditional_t over is_const and add_const would say bool const& here, and
+        // the paper's common_reference_t says bool, which is the assertion that fails first if the fallback is ever
+        // simplified into that dance.
+        static_assert(std::same_as<xstd::detail::bits::fallback::range_const_reference_t<std::vector<bool>>, bool>);
 }
 
 // The semantic half a concept cannot check: a[i] is *(begin(a) + i), the same object and not merely an equal one.

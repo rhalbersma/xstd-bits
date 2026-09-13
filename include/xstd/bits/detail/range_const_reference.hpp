@@ -6,18 +6,20 @@
 #ifndef XSTD_BITS_DETAIL_RANGE_CONST_REFERENCE_HPP
 #define XSTD_BITS_DETAIL_RANGE_CONST_REFERENCE_HPP
 
-#include <iterator>    // indirectly_readable, iter_reference_t, iter_value_t
-#include <ranges>      // iterator_t, range
-#include <type_traits> // common_reference_t
+#include <version>                                               // IWYU pragma: keep; __cpp_lib_ranges_as_const
+#include <xstd/bits/detail/range_const_reference_fallback.hpp>   // fallback::range_const_reference_t
+#include <ranges>                                                // range, range_const_reference_t
 
 namespace xstd::detail::bits {
 
-// P2278R4's two aliases, transcribed from [const.iterators.alias] and [ranges.syn] rather than shimmed around: libc++ has implemented the paper on no branch, trunk included, so std::ranges::range_const_reference_t is unavailable on a third of the matrix and would have to be conditional. A definition is not. [design.md#the-const-reference]
-template<std::indirectly_readable It>
-using iter_const_reference_t = std::common_reference_t<std::iter_value_t<It> const&&, std::iter_reference_t<It>>;
-
+// The standard's where the library has it, ours where it does not. libc++ has implemented P2278R4 on no branch, trunk included: __cpp_lib_ranges_as_const is still a commented-out line in its <version>, and neither as_const_view.h nor const_access.h exists, so a third of the matrix needs the fallback beside this. The two arms are the same type rather than two contracts, the fallback being the paper's own formula and TheConstReferenceIsP2278s asserting the agreement wherever both exist. [design.md#the-const-reference]
+#ifdef __cpp_lib_ranges_as_const
 template<std::ranges::range R>
-using range_const_reference_t = iter_const_reference_t<std::ranges::iterator_t<R>>;
+using range_const_reference_t = std::ranges::range_const_reference_t<R>;
+#else
+template<std::ranges::range R>
+using range_const_reference_t = fallback::range_const_reference_t<R>;
+#endif
 
 }       // namespace xstd::detail::bits
 

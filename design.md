@@ -106,8 +106,8 @@ different word.
 
 ### the-const-reference
 
-The const subscript is checked against `range_const_reference_t`, **ours**, in a header of its own — P2278R4's two
-aliases transcribed from the standard rather than shimmed around:
+The const subscript is checked against `range_const_reference_t`: the standard's where the library has it, and
+where it does not, ours — P2278R4's two aliases transcribed from the standard, in a header of their own:
 
 ```c++
 template<std::indirectly_readable It>
@@ -120,6 +120,13 @@ using range_const_reference_t = iter_const_reference_t<std::ranges::iterator_t<R
 That is [const.iterators.alias] and [ranges.syn] verbatim, down to the constraints, and it is ten lines because
 the paper defines the alias by a formula rather than by magic.
 
+**Two headers, and the split is what makes the conditional safe.**
+`detail/range_const_reference_fallback.hpp` holds the transcription above, unconditionally, in a
+`fallback` namespace of its own; `detail/range_const_reference.hpp` beside it selects
+`std::ranges::range_const_reference_t` where `__cpp_lib_ranges_as_const` says the library has the paper and the
+fallback where it does not. Nothing shadows anything: on a library that ships P2278 both spellings exist and
+are separately reachable, which is exactly what lets the tests below check one against the other.
+
 The reason not to use `std::ranges::range_const_reference_t` is that a third of the matrix does not have it.
 **libc++ has implemented P2278R4 on no branch, trunk included**: `__cpp_lib_ranges_as_const` is still a
 commented-out line in its `<version>`, beside `__cpp_lib_ranges_chunk` and unlike the `chunk_by` defined next to
@@ -129,10 +136,10 @@ it, so the commenting tracks implementation rather than being a stale block. The
 first, and this is not a wait-for-the-next-rung situation: an earlier attempt to name the standard alias
 directly was reverted off Xcode 16.4.
 
-**A definition beats a conditional, and that is the whole argument for this header.** The alternative was
-`#ifdef __cpp_lib_ranges_as_const`, the paper's alias on one arm and `range_reference_t<C const>` on the other,
-and those two are not the same question: P2278 asks what `C`'s own iterator yields once const-ified, the
-fallback what a `C const` iterates. Measured, they part on exactly one thing:
+**A conditional is only as good as its other arm, and that is the whole argument for the transcription.** The
+first attempt made the arms `std::ranges::range_const_reference_t` and `range_reference_t<C const>`, and those
+two are not the same question: P2278 asks what `C`'s own iterator yields once const-ified, the second what a
+`C const` iterates. Measured, they part on exactly one thing:
 
 | storage | `range_const_reference_t<C>` | `range_reference_t<C const>` |
 | --- | --- | --- |
@@ -141,9 +148,10 @@ fallback what a `C const` iterates. Measured, they part on exactly one thing:
 
 Within `contiguous_range` that makes P2278 strictly the tighter arm, and the one thing it catches is a
 **shallow-const** blocks type: one whose `c[n]` hands back a writable `Block&` through a `C const&`, which would
-let a `contiguous_bit_container const` be written through. A conditional would therefore have admitted such a
+let a `contiguous_bit_container const` be written through. That conditional would therefore have admitted such a
 storage on libc++ and refused it everywhere else — a concept meaning two things on two thirds of the matrix.
-Transcribing removes the arm rather than documenting it.
+Transcribing does not remove the conditional; it makes the other arm *the same type* rather than a second
+contract, which is the only reason a conditional is the right shape here at all.
 
 Two spellings were considered and not taken. `range_value_t<C> const&` is what the alias collapses to *for a
 contiguous range*, needs nothing, and was measured equal on every storage here — but it states a coincidence of
@@ -154,11 +162,13 @@ the paper says `bool`, because `common_reference_t` consults `basic_common_refer
 Both are lookalikes; the formula is the thing.
 
 What pins it is `TheConstReferenceIsP2278s`. Where the library *does* have the paper — the gcc, msvc and
-clang-with-libstdc++ rungs — ours must equal `std::ranges::range_const_reference_t`, asserted on both storages
-and on `vector<bool>`'s proxy iterator, so the transcription is checked against three vendors rather than
-against my reading of the wording. The rest holds everywhere: the reference is `const` for each storage shipped,
-and `vector<bool>` gives `bool`, which is the assertion that fails first if anyone ever "simplifies" the
-definition into the dance.
+clang-with-libstdc++ rungs — the fallback must equal `std::ranges::range_const_reference_t`, asserted on both
+storages and on `vector<bool>`, so the transcription is checked against three vendors rather than against my
+reading of the wording. That check is the reason the fallback is namespaced apart instead of hidden behind the
+`#else`: were it only the unselected arm, the rungs that could verify it would never name it, and the rung that
+names it could not verify it. The rest holds everywhere, whichever arm was taken: the reference is `const` for
+each storage shipped, and the fallback gives `bool` for `vector<bool>`, which is the assertion that fails first
+if anyone ever "simplifies" the definition into the dance.
 
 ### the-one-vehicle
 
