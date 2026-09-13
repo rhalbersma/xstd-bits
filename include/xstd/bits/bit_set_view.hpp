@@ -9,7 +9,6 @@
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // specialization_of_contiguous_bit_container
 #include <xstd/bits/ownership.hpp>                       // ownership
 #include <xstd/bits/set_adaptor.hpp>                     // set_adaptor
-#include <type_traits>                                   // remove_const_t
 
 // The set reading over bits it does not own: the referring adaptor under the name the sieve calls it by. [design.md#the-views-are-the-adaptors]
 namespace xstd {
