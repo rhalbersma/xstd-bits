@@ -3,26 +3,27 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/block_types.hpp>                       // graded_extents
-#include <xstd/bits/bit_array.hpp>                    // bit_array
-#include <xstd/bits/bit_span.hpp>                     // bit_span
-#include <xstd/bits/bit_traits.hpp>                   // bit_traits, block_readable
-#include <xstd/bits/detail/contiguous_bit_array.hpp>  // contiguous_bit_array
-#include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
-#include <xstd/bits/ownership.hpp>                    // ownership
-#include <xstd/bits/sequence_adaptor.hpp>             // sequence_adaptor
-#include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <algorithm>                                  // all_of, any_of, count, equal, lexicographical_compare_three_way, mismatch, none_of
-#include <compare>                                    // strong_ordering
-#include <concepts>                                   // copyable, equality_comparable, regular, same_as, totally_ordered
-#include <cstddef>                                    // size_t
-#include <cstdint>                                    // uint64_t
-#include <iterator>                                   // reverse_iterator
-#include <limits>                                     // numeric_limits
-#include <ranges>                                     // random_access_range
-#include <stdexcept>                                  // out_of_range
-#include <type_traits>                                // is_const_v
-#include <vector>                                     // vector
+#include <test/block_types.hpp>                          // graded_extents
+#include <xstd/bits/bit_array.hpp>                       // bit_array
+#include <xstd/bits/bit_span.hpp>                        // bit_span
+#include <xstd/bits/bit_traits.hpp>                      // bit_traits, block_readable
+#include <xstd/bits/detail/contiguous_bit_array.hpp>     // contiguous_bit_array
+#include <xstd/bits/detail/contiguous_bit_container.hpp> // bit_traits<contiguous_bit_container>
+#include <xstd/bits/detail/contiguous_bit_vector.hpp>    // contiguous_bit_vector
+#include <xstd/bits/ownership.hpp>                       // ownership
+#include <xstd/bits/sequence_adaptor.hpp>                // sequence_adaptor
+#include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
+#include <algorithm>                                     // all_of, any_of, count, equal, lexicographical_compare_three_way, mismatch, none_of
+#include <compare>                                       // strong_ordering
+#include <concepts>                                      // copyable, equality_comparable, regular, same_as, totally_ordered
+#include <cstddef>                                       // size_t
+#include <cstdint>                                       // uint64_t
+#include <iterator>                                      // reverse_iterator
+#include <limits>                                        // numeric_limits
+#include <ranges>                                        // random_access_range
+#include <stdexcept>                                     // out_of_range
+#include <type_traits>                                   // is_const_v
+#include <vector>                                        // vector
 
 namespace {
 
