@@ -9,7 +9,6 @@
 #include <xstd/bits/bitset.hpp>                          // basic_bitset, bitset
 #include <xstd/bits/bitset_adaptor.hpp>                  // bitset_adaptor
 #include <xstd/bits/detail/contiguous_bit_array.hpp>     // contiguous_bit_array
-#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/detail/contiguous_bit_vector.hpp>    // contiguous_bit_vector
 #include <xstd/bits/dynamic_bitset.hpp>                  // basic_dynamic_bitset
 #include <boost/dynamic_bitset.hpp>                      // dynamic_bitset

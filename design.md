@@ -839,6 +839,36 @@ substitution failure.
 `views::drop`, `views::reverse`, `views::transform` and `views::zip` are all clear. Only `take` carries it,
 and only until Xcode 16.4 leaves the matrix.
 
+### msvc-completes-the-accessor
+
+`sequence_adaptor::operator<=>` is a **non-template friend**, so its constraint is checked where it is
+declared: inside the class, while the class is still incomplete. Written over the accessor —
+
+```c++
+requires is_owner and requires { x.storage().sequence_three_way(y.storage()); }
+```
+
+— the member access on `x.storage()` makes MSVC deduce `storage()`'s return type there, which means
+instantiating a body that reads `self.m_bits`, which needs the enclosing class complete. MSVC 18 answers
+**C2027, *use of undefined type `sequence_adaptor<...>`*** at each of `storage()`'s three returns, then
+C7683 and C3313 as the cascade, and C2102 wherever `&self.storage()` appears. GCC and Clang defer all of it.
+
+The constraint is about the **storage**, not about the accessor, so it says so:
+
+```c++
+requires is_owner and requires (bits_type const& b) { b.sequence_three_way(b); }
+```
+
+`bits_type` is complete and already in hand, and for an owner it is exactly what `storage()` returns, so
+satisfaction is unchanged on every compiler.
+
+Two neighbours look like the same shape and are not. The bulk operators take `this auto&& self`, so they are
+templates and their constraints wait for a call, by which time the class is complete. And
+`set_adaptor::operator==`, also a non-template friend, constrains on `x.storage() == y.storage()` — an
+operator expression, which MSVC does not resolve eagerly the way it does a member access. The rule to carry
+forward is narrow: **a non-template friend's constraint may not name a member of whatever the accessor
+returns.**
+
 ### gcc-array-bounds
 
 The shift operators assert `n_blocks <= last_block()`, which is implied by the `is_valid(n)` above it. It is

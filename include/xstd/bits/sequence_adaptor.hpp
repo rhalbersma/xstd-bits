@@ -19,7 +19,7 @@
 #include <algorithm>                              // copy, min, remove_if
 #include <cassert>                                // assert
 #include <compare>                                // strong_ordering
-#include <concepts>                               // constructible_from, convertible_to, invocable, same_as, swap, swappable
+#include <concepts>                               // constructible_from, invocable, same_as, swap, swappable
 #include <cstddef>                                // ptrdiff_t, size_t
 #include <format>                                 // format
 #include <functional>                             // hash
@@ -672,10 +672,10 @@ public:
         // The owner's alone, following span: a handle declines to say whether it compares its referent or its contents. Defaulted, the storage being the one member. [design.md#views-follow-their-precedent]
         [[nodiscard]] friend constexpr auto operator==(sequence_adaptor const& x, sequence_adaptor const& y) noexcept -> bool requires is_owner = default;
 
-        // The trait's entry and nothing else: an owner is over storage of ours, which has one. [design.md#owning-is-ours]
+        // The storage's entry and nothing else: an owner is over storage of ours, which has one. Spelled over bits_type rather than over x.storage(), which MSVC completes eagerly here and so cannot. [design.md#owning-is-ours] [design.md#msvc-completes-the-accessor]
         [[nodiscard]] friend constexpr auto operator<=>(sequence_adaptor const& x, sequence_adaptor const& y) noexcept
                 -> std::strong_ordering
-                requires is_owner and requires { x.storage().sequence_three_way(y.storage()); }
+                requires is_owner and requires (bits_type const& b) { b.sequence_three_way(b); }
         {
                 return x.storage().sequence_three_way(y.storage());
         }

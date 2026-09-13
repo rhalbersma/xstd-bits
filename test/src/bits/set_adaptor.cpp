@@ -468,4 +468,17 @@ BOOST_AUTO_TEST_CASE(ForEachHandsThePositionByValue)
         owner.for_each_reverse(bool_probe{ took_a_reference }); BOOST_CHECK(not took_a_reference);
 }
 
+// back() has a non-empty set as its precondition, and a zero width has no non-empty state to ask it in. The arm
+// is still there and still reachable, because a width of zero is a width the containers have: it answers the
+// only position such a set could name rather than scanning back from one that does not exist. The scan it
+// stands in for asserts here. [design.md#degenerate-widths]
+BOOST_AUTO_TEST_CASE(AZeroWidthAnswersBackWithoutScanning)
+{
+        auto const z = xstd::bit_static_set<0>();
+
+        BOOST_CHECK(z.empty());
+        BOOST_CHECK_EQUAL(z.size(), 0UZ);
+        BOOST_CHECK_EQUAL(static_cast<std::size_t>(z.back()), 0UZ);
+}
+
 BOOST_AUTO_TEST_SUITE_END()

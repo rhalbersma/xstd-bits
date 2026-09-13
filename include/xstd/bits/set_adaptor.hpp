@@ -18,7 +18,7 @@
 #include <algorithm>                                     // any_of, equal, includes, lexicographical_compare_three_way
 #include <cassert>                                       // assert
 #include <compare>                                       // strong_ordering
-#include <concepts>                                      // constructible_from, invocable, swappable
+#include <concepts>                                      // constructible_from, convertible_to, invocable, swappable
 #include <cstddef>                                       // ptrdiff_t, size_t
 #include <functional>                                    // hash, less
 #include <initializer_list>                              // initializer_list

@@ -17,7 +17,7 @@
 #include <algorithm>                              // min
 #include <cassert>                                // assert
 #include <compare>                                // strong_ordering
-#include <concepts>                               // convertible_to, regular, same_as, swappable
+#include <concepts>                               // same_as, swappable
 #include <cstddef>                                // size_t
 #include <format>                                 // format
 #include <functional>                             // hash
