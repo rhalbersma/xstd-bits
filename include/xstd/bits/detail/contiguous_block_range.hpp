@@ -8,7 +8,7 @@
 
 #include <xstd/ints/concepts/unsigned_integer.hpp>  // unsigned_integer
 #include <concepts>                                 // regular, same_as
-#include <ranges>                                   // contiguous_range, range_const_reference_t, range_reference_t, range_value_t, sized_range
+#include <ranges>                                   // contiguous_range, range_reference_t, range_value_t, sized_range
 
 namespace xstd::detail::bits {
 
@@ -22,9 +22,9 @@ concept contiguous_block_range =
         requires (C& c, C::size_type n) {
                 { c[n] } -> std::same_as<std::ranges::range_reference_t<C>>;
         } and
-        // range_const_reference_t<C>, not range_reference_t<C const>: the latter quietly also asks C const to be a range. [design.md#contiguous-block-range]
+        // range_reference_t<C const>, not P2278's range_const_reference_t: libc++ has no such alias, and the two name the same type for every backend this admits. [design.md#contiguous-block-range]
         requires (C const& c, C::size_type n) {
-                { c[n] } -> std::same_as<std::ranges::range_const_reference_t<C>>;
+                { c[n] } -> std::same_as<std::ranges::range_reference_t<C const>>;
         }
 ;
 
