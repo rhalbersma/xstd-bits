@@ -26,6 +26,7 @@
 #include <version>                                            // IWYU pragma: keep; __cpp_lib_ranges_as_const
 #include <new>                                                // IWYU pragma: keep; bad_alloc, behind TEST_HAS_INPLACE_VECTOR
 #include <ranges>                                             // begin, iota, range_const_reference_t, size
+#include <span>                                               // dynamic_extent
 #include <tuple>                                              // get, tuple
 #include <vector>                                             // vector
 
