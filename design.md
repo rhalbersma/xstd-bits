@@ -839,6 +839,41 @@ substitution failure.
 `views::drop`, `views::reverse`, `views::transform` and `views::zip` are all clear. Only `take` carries it,
 and only until Xcode 16.4 leaves the matrix.
 
+### msvc-reports-the-unreachable-tail
+
+A zero width holds no position, so `bitset_adaptor`'s guard throws for **every** `pos`:
+
+```c++
+if constexpr (has_static_width) {
+        if (pos >= size()) { throw out_of_range(pos); }   // size() is 0, so always
+}
+```
+
+Which makes everything after `guard(pos)` in the five guarded element accessors unreachable at that width, and
+MSVC 2026 Release says so — **C4702**, fatal under `/WX`. The trait had been hiding it: `Traits::size(c)` and
+`Traits::unchecked_assign(c, pos, val)` were calls MSVC's `/O2` flow analysis did not see through, so it never
+folded `size()` to zero and never proved the guard unconditional. Reading the storage directly is what let it.
+That is the same trade the rest of this refactor makes — one fewer layer, and the compiler sees what the layer
+was covering — and here what it sees is true.
+
+Guarding only the *write* moves the warning rather than removing it: the tail is then `return *this;`, which is
+no more reachable. So the zero width gets its own arm, and at that width the whole body is the throw:
+
+```c++
+if constexpr (detail::bits::zero_width<Bits>) {
+        throw out_of_range(pos);
+} else {
+        guard(pos);
+        m_bits.assign(pos, val);
+        return *this;
+}
+```
+
+Nothing changes for a caller — the guard threw the same exception for the same positions — and the
+instantiation now carries no statement that no control flow reaches. It is the same remedy
+[degenerate-widths](#degenerate-widths) reaches for elsewhere: a degenerate width gets **different code**, not
+unreachable code.
+
 ### msvc-completes-the-accessor
 
 `sequence_adaptor::operator<=>` is a **non-template friend**, so its constraint is checked where it is

@@ -298,28 +298,45 @@ public:
         constexpr auto flip () noexcept -> bitset_adaptor& { m_bits.flip (); return *this; }
 
         // Element access: the one guard, then the unchecked write. It throws out_of_range at a static width as std::bitset does and asserts at a run-time one as boost does: the inconsistency is the counterparts' own. [design.md#the-one-guard]
-        constexpr auto set(std::size_t pos, bool val = true)
+        //
+        // A zero width holds no position, so the guard throws for every pos and each of the five members below is,
+        // at that width, nothing but the throw. Said as its own arm rather than left after the guard, or the
+        // instantiation carries a tail no control flow reaches, which MSVC reports under /O2.
+        // [design.md#degenerate-widths]
+        constexpr auto set(std::size_t pos, [[maybe_unused]] bool val = true)
                 -> bitset_adaptor&
         {
-                guard(pos);
-                write(pos, val);
-                return *this;
+                if constexpr (detail::bits::zero_width<Bits>) {
+                        throw out_of_range(pos);
+                } else {
+                        guard(pos);
+                        m_bits.assign(pos, val);
+                        return *this;
+                }
         }
 
         constexpr auto reset(std::size_t pos)
                 -> bitset_adaptor&
         {
-                guard(pos);
-                write(pos, false);
-                return *this;
+                if constexpr (detail::bits::zero_width<Bits>) {
+                        throw out_of_range(pos);
+                } else {
+                        guard(pos);
+                        m_bits.assign(pos, false);
+                        return *this;
+                }
         }
 
         constexpr auto flip(std::size_t pos)
                 -> bitset_adaptor&
         {
-                guard(pos);
-                write(pos, not m_bits.test(pos));
-                return *this;
+                if constexpr (detail::bits::zero_width<Bits>) {
+                        throw out_of_range(pos);
+                } else {
+                        guard(pos);
+                        m_bits.assign(pos, not m_bits.test(pos));
+                        return *this;
+                }
         }
 
         // boost's ranged forms, the one guard on the whole range, then the storage's own a word at a time. [design.md#the-one-guard]
@@ -346,13 +363,17 @@ public:
         }
 
         // boost's test_set: the old value out, the new one in, behind the one guard.
-        constexpr auto test_set(std::size_t pos, bool val = true)
+        constexpr auto test_set(std::size_t pos, [[maybe_unused]] bool val = true)
                 -> bool
         {
-                guard(pos);
-                auto const old = m_bits.test(pos);
-                write(pos, val);
-                return old;
+                if constexpr (detail::bits::zero_width<Bits>) {
+                        throw out_of_range(pos);
+                } else {
+                        guard(pos);
+                        auto const old = m_bits.test(pos);
+                        m_bits.assign(pos, val);
+                        return old;
+                }
         }
 
         // The const subscript is unchecked on every counterpart, so it is test() unconditionally.
@@ -433,8 +454,12 @@ public:
         [[nodiscard]] constexpr auto test(std::size_t pos) const
                 -> bool
         {
-                guard(pos);
-                return m_bits.test(pos);
+                if constexpr (detail::bits::zero_width<Bits>) {
+                        throw out_of_range(pos);
+                } else {
+                        guard(pos);
+                        return m_bits.test(pos);
+                }
         }
 
         [[nodiscard]] constexpr auto all()  const noexcept -> bool { return m_bits.all();  }
@@ -586,18 +611,6 @@ public:
 
 private:
         // The one guard: out_of_range at a static width, std::bitset's, an assert at a run-time one, boost's. [design.md#the-one-guard]
-        // The write the four guarded members share. A zero width holds no position, so guard(pos) has already
-        // thrown for every pos there and this never runs; instantiating the storage's write for such a width is
-        // what leaves MSVC reporting C4702 inside it under /O2, so that width gets no write at all rather than an
-        // unreachable one. [design.md#degenerate-widths] [design.md#per-instantiation-slots]
-        constexpr auto write(std::size_t pos [[maybe_unused]], bool val [[maybe_unused]]) noexcept
-                -> void
-        {
-                if constexpr (not detail::bits::zero_width<Bits>) {
-                        m_bits.assign(pos, val);
-                }
-        }
-
         constexpr auto guard(std::size_t pos) const
                 -> void
         {
