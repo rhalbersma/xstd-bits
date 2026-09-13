@@ -13,7 +13,6 @@
 #include <xstd/bits/sequence_adaptor.hpp>             // sequence_adaptor
 #include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <algorithm>                                  // all_of, any_of, count, equal, lexicographical_compare_three_way, mismatch, none_of
-#include <bitset>                                     // bitset
 #include <compare>                                    // strong_ordering
 #include <concepts>                                   // copyable, equality_comparable, regular, same_as, totally_ordered
 #include <cstddef>                                    // size_t
@@ -44,7 +43,7 @@ template<class Seq>
         return { s.begin(), s.end() };
 }
 
-// A storage that keeps its blocks to itself on every standard library, which a std::bitset is not: libc++ has no block entry at all, libstdc++ none above the portable to_ullong() read, and MSVC one at every width through _Getword. [design.md#detection-by-absence]
+// A storage that keeps its blocks to itself, so the walks over it take the element-wise arm. [design.md#detection-by-absence]
 template<std::size_t N>
 struct element_bits
 {

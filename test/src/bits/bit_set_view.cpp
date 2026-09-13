@@ -7,12 +7,11 @@
 #include <xstd/bits/bit_set_view.hpp>                // bit_set_view
 #include <xstd/bits/bit_static_set.hpp>              // bit_static_set
 #include <xstd/bits/bitset.hpp>                      // bitset
-#include <xstd/bits/dynamic_bitset.hpp>              // basic_dynamic_bitset, dynamic_bitset
 #include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
+#include <xstd/bits/dynamic_bitset.hpp>              // basic_dynamic_bitset, dynamic_bitset
 #include <xstd/bits/ownership.hpp>                   // ownership
 #include <xstd/bits/set_adaptor.hpp>                 // set_adaptor
 #include <boost/test/unit_test.hpp>                  // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
-#include <bitset>                                    // bitset
 #include <concepts>                                  // derived_from, same_as
 #include <cstddef>                                   // size_t
 #include <cstdint>                                   // uint8_t

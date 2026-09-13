@@ -10,9 +10,7 @@
 #include <xstd/bits/bit_traits.hpp>                  // bit_traits, find_next, find_prev
 #include <xstd/bits/detail/bidirectional.hpp>        // bidirectional_bit_iterator, bidirectional_bit_reference
 #include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
-#include <boost/dynamic_bitset.hpp>                  // dynamic_bitset
 #include <boost/test/unit_test.hpp>                  // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <bitset>                                    // bitset
 #include <concepts>                                  // bidirectional_iterator, same_as
 #include <cstddef>                                   // size_t
 #include <cstdint>                                   // uint64_t
