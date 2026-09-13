@@ -9,7 +9,7 @@
 #include <xstd/bits/bit_traits.hpp>                           // bit_storage, bit_traits, block_readable, static_bit_extent
 #include <xstd/bits/detail/contiguous_bit_array.hpp>          // contiguous_bit_array
 #include <xstd/bits/detail/contiguous_bit_container.hpp>      // contiguous_bit_container
-#include <xstd/bits/detail/contiguous_block_container.hpp>    // contiguous_block_container
+#include <xstd/bits/detail/contiguous_block_range.hpp>    // contiguous_block_range
 #include <xstd/bits/detail/contiguous_bit_inplace_vector.hpp> // IWYU pragma: keep; contiguous_bit_inplace_vector, named only under TEST_HAS_INPLACE_VECTOR
 #include <xstd/bits/detail/contiguous_bit_vector.hpp>         // contiguous_bit_vector
 #include <boost/test/unit_test.hpp>                           // BOOST_CHECK_EQUAL, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
@@ -346,17 +346,17 @@ constexpr auto a_run_time_width_is_constexpr()
 
 } // namespace
 
-// Both shipped vehicles satisfy contiguous_block_container: growth is detected where it exists, never required.
+// Both shipped vehicles satisfy contiguous_block_range: growth is detected where it exists, never required.
 BOOST_AUTO_TEST_CASE(ItsStorageIsAContiguousSizedRangeOfUnsignedIntegers)
 {
-        static_assert(xstd::detail::bits::contiguous_block_container<std::array<std::uint8_t, 4>>);
-        static_assert(xstd::detail::bits::contiguous_block_container<std::vector<std::uint64_t>>);
+        static_assert(xstd::detail::bits::contiguous_block_range<std::array<std::uint8_t, 4>>);
+        static_assert(xstd::detail::bits::contiguous_block_range<std::vector<std::uint64_t>>);
 
-        static_assert(not xstd::detail::bits::contiguous_block_container<std::vector<bool>>);      // not a contiguous range
-        static_assert(not xstd::detail::bits::contiguous_block_container<std::vector<int>>);       // nor unsigned integers
+        static_assert(not xstd::detail::bits::contiguous_block_range<std::vector<bool>>);      // not a contiguous range
+        static_assert(not xstd::detail::bits::contiguous_block_range<std::vector<int>>);       // nor unsigned integers
 
-        // The element clause is unsigned_integer and not the wider bitwise_operators, which std::bitset would satisfy: a block is asked for the <bit> intrinsics too, and they are constrained on unsigned_integer. [design.md#contiguous-block-container]
-        static_assert(not xstd::detail::bits::contiguous_block_container<std::array<std::bitset<64>, 4>>);
+        // The element clause is unsigned_integer and not the wider bitwise_operators, which std::bitset would satisfy: a block is asked for the <bit> intrinsics too, and they are constrained on unsigned_integer. [design.md#contiguous-block-range]
+        static_assert(not xstd::detail::bits::contiguous_block_range<std::array<std::bitset<64>, 4>>);
 }
 
 // The semantic half a concept cannot check: a[i] is *(begin(a) + i), the same object and not merely an equal one.
@@ -386,7 +386,7 @@ namespace {
 int g_storage_swaps = 0;
 int g_storage_moves = 0;
 
-// A storage satisfying contiguous_block_container whose swap and moves are distinguishable.
+// A storage satisfying contiguous_block_range whose swap and moves are distinguishable.
 struct counting_blocks
 {
         using size_type = std::size_t;
@@ -752,7 +752,7 @@ BOOST_AUTO_TEST_CASE(AnInplaceVectorIsARunTimeWidthUnderAStaticCapacity)
 {
         using T = xstd::detail::bits::contiguous_bit_inplace_vector<std::uint8_t, 24>;
         static_assert(not T::has_static_size);
-        static_assert(xstd::detail::bits::contiguous_block_container<std::inplace_vector<std::uint8_t, 3>>);
+        static_assert(xstd::detail::bits::contiguous_block_range<std::inplace_vector<std::uint8_t, 3>>);
 
         BOOST_CHECK_EQUAL(sweep(T(17)), 0);
 

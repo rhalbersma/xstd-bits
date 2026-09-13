@@ -3,8 +3,8 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_DETAIL_CONTIGUOUS_BLOCK_CONTAINER_HPP
-#define XSTD_BITS_DETAIL_CONTIGUOUS_BLOCK_CONTAINER_HPP
+#ifndef XSTD_BITS_DETAIL_CONTIGUOUS_BLOCK_RANGE_HPP
+#define XSTD_BITS_DETAIL_CONTIGUOUS_BLOCK_RANGE_HPP
 
 #include <xstd/ints/concepts/unsigned_integer.hpp>  // unsigned_integer
 #include <concepts>                                 // regular, same_as
@@ -12,9 +12,9 @@
 
 namespace xstd::detail::bits {
 
-// Whether a range IS blocks; block_readable asks if a trait hands a container's blocks over. [design.md#contiguous-block-container]
+// Whether a range IS blocks; block_readable asks if a trait hands a container's blocks over. [design.md#contiguous-block-range]
 template<class C>
-concept contiguous_block_container =
+concept contiguous_block_range =
         std::regular<C> and
         std::ranges::sized_range<C> and
         std::ranges::contiguous_range<C> and
@@ -22,6 +22,7 @@ concept contiguous_block_container =
         requires (C& c, C::size_type n) {
                 { c[n] } -> std::same_as<std::ranges::range_reference_t<C>>;
         } and
+        // range_reference_t<C const>, not P2278's range_const_reference_t: libc++ has no such alias, and the two name the same type for every backend this admits. [design.md#contiguous-block-range]
         requires (C const& c, C::size_type n) {
                 { c[n] } -> std::same_as<std::ranges::range_reference_t<C const>>;
         }
@@ -29,4 +30,4 @@ concept contiguous_block_container =
 
 }       // namespace xstd::detail::bits
 
-#endif  // XSTD_BITS_DETAIL_CONTIGUOUS_BLOCK_CONTAINER_HPP
+#endif  // XSTD_BITS_DETAIL_CONTIGUOUS_BLOCK_RANGE_HPP

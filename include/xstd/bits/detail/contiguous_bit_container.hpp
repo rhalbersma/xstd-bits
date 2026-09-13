@@ -8,7 +8,7 @@
 
 #include <xstd/bits/bit_traits.hpp>                          // bit_traits
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_base_type
-#include <xstd/bits/detail/contiguous_block_container.hpp>   // contiguous_block_container
+#include <xstd/bits/detail/contiguous_block_range.hpp>   // contiguous_block_range
 #include <xstd/bits/detail/intrin.hpp>                       // countl_zero, countr_zero, popcount
 #include <xstd/bits/detail/pred.hpp>                         // intersects, is_subset_of, not_equal_to
 #include <xstd/bits/detail/shift.hpp>                        // shl, shr
@@ -43,7 +43,7 @@ inline constexpr auto num_blocks_v = std::ranges::max(
 );
 
 // The one vehicle: it owns the unused-tail invariant, and has no iterators. [design.md#the-one-vehicle]
-template<contiguous_block_container Blocks, std::size_t N = std::dynamic_extent>
+template<contiguous_block_range Blocks, std::size_t N = std::dynamic_extent>
 class contiguous_bit_container : public detail::bits::allocator_base_type<Blocks>
 {
 public:
@@ -90,7 +90,7 @@ private:
         using width_type = std::conditional_t<(alignof(std::size_t) >= alignof(Blocks)), std::size_t, block_type>;
         static_assert(sizeof(width_type) >= sizeof(std::size_t) and alignof(width_type) >= alignof(Blocks));
 
-        // Dynamic widths only; the tag keeps the absent member distinct from any other in an enclosing layout. [design.md#contiguous-block-container]
+        // Dynamic widths only; the tag keeps the absent member distinct from any other in an enclosing layout. [design.md#contiguous-block-range]
         [[XSTD_NO_UNIQUE_ADDRESS]]
         conditional_data_member_t<not has_static_size, width_type, struct size_tag> m_size{};
 
@@ -148,7 +148,7 @@ public:
                 return m_blocks.get_allocator();
         }
 
-        // Memberwise, width first: the unused bits are kept clear, so the blocks compare as the bits do, and a zero width through the one block it still holds. [design.md#contiguous-block-container]
+        // Memberwise, width first: the unused bits are kept clear, so the blocks compare as the bits do, and a zero width through the one block it still holds. [design.md#contiguous-block-range]
         [[nodiscard]] friend constexpr auto operator==(contiguous_bit_container const&, contiguous_bit_container const&) noexcept -> bool = default;
 
         // No operator<=>: contiguous_bit_container is pure storage with no opinion on which reading orders it, so it names all three and picks none. [design.md#two-readings-disagree]
@@ -1042,7 +1042,7 @@ private:
 
 // Nominal, never structural: a storage is ours because this says so, not because its members answer. [design.md#the-trait]
 template<class T> inline constexpr bool is_specialization_of_contiguous_bit_container_v = false;
-template<contiguous_block_container Blocks, std::size_t N> inline constexpr bool is_specialization_of_contiguous_bit_container_v<contiguous_bit_container<Blocks, N>> = true;
+template<contiguous_block_range Blocks, std::size_t N> inline constexpr bool is_specialization_of_contiguous_bit_container_v<contiguous_bit_container<Blocks, N>> = true;
 
 // A view over a const owner names Bits const, which no specialization pattern matches, so the const comes off here and nowhere else. [design.md#ownership-is-not-an-axis]
 template<class T> concept specialization_of_contiguous_bit_container = is_specialization_of_contiguous_bit_container_v<std::remove_const_t<T>>;

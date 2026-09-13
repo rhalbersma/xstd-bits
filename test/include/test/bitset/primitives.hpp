@@ -10,9 +10,11 @@
 #include <xstd/bits/bit_set_view.hpp> // view
 #include <xstd/bits/ownership.hpp>    // owned_storage
 #include <boost/test/unit_test.hpp>   // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_NE, BOOST_CHECK_THROW
+#include <algorithm>                  // all_of, any_of, equal, fold_left
 #include <cstddef>                    // size_t
 #include <functional>                 // hash
 #include <memory>                     // addressof
+#include <ranges>                     // iota, transform
 #include <set>                        // set
 #include <sstream>                    // istringstream, stringstream
 #include <stdexcept>                  // invalid_argument, out_of_range
@@ -338,20 +340,23 @@ struct mem_equal_to
                                 return self[i] == rhs[i];
                         })
                 );                                                              // [bitset.members]/45
-                auto const lhs_view = xstd::bit_set_view(self);
-                auto const rhs_view = xstd::bit_set_view(rhs);
+                // The set reading cross-check is ours to make: a foreign bitset has no view. [design.md#owning-is-ours]
+                if constexpr (requires { xstd::bit_set_view(self); }) {
+                        auto const lhs_view = xstd::bit_set_view(self);
+                        auto const rhs_view = xstd::bit_set_view(rhs);
 #ifdef _MSC_VER
-                BOOST_CHECK_EQUAL(
-                        self == rhs,
-                        std::ranges::equal(
-                                lhs_view.begin(), lhs_view.end(),
-                                rhs_view.begin(), rhs_view.end()
-                        )
-                );
+                        BOOST_CHECK_EQUAL(
+                                self == rhs,
+                                std::ranges::equal(
+                                        lhs_view.begin(), lhs_view.end(),
+                                        rhs_view.begin(), rhs_view.end()
+                                )
+                        );
 #else
-                // range version not working with Visual C++
-                BOOST_CHECK_EQUAL(self == rhs, std::ranges::equal(lhs_view, rhs_view));
+                        // range version not working with Visual C++
+                        BOOST_CHECK_EQUAL(self == rhs, std::ranges::equal(lhs_view, rhs_view));
 #endif
+                }
         }
 };
 
@@ -374,15 +379,18 @@ struct mem_compare_three_way
         template<class X>
         auto operator()(const X& self, const X& rhs) const noexcept
         {
-                auto const lhs_view = xstd::bit_set_view(self);
-                auto const rhs_view = xstd::bit_set_view(rhs);
-                BOOST_CHECK(
-                        (lhs_view <=> rhs_view) ==
-                        std::lexicographical_compare_three_way(
-                                lhs_view.begin(), lhs_view.end(),
-                                rhs_view.begin(), rhs_view.end()
-                        )
-                );
+                // The set ordering is ours to check: a foreign bitset has no view. [design.md#owning-is-ours]
+                if constexpr (requires { xstd::bit_set_view(self); }) {
+                        auto const lhs_view = xstd::bit_set_view(self);
+                        auto const rhs_view = xstd::bit_set_view(rhs);
+                        BOOST_CHECK(
+                                (lhs_view <=> rhs_view) ==
+                                std::lexicographical_compare_three_way(
+                                        lhs_view.begin(), lhs_view.end(),
+                                        rhs_view.begin(), rhs_view.end()
+                                )
+                        );
+                }
                 if constexpr (requires { self <=> rhs; }) {
                         BOOST_CHECK((self <=> rhs) == (bit_string(self) <=> bit_string(rhs)));
                 } else if constexpr (requires { self < rhs; }) {
@@ -435,7 +443,7 @@ struct mem_is_subset_of
                 if constexpr (requires { lhs.is_subset_of(rhs); }) {
                         return lhs.is_subset_of(rhs);
                 } else {
-                        return xstd::bit_set_view(lhs).is_subset_of(xstd::bit_set_view(rhs));
+                        return std::ranges::all_of(std::views::iota(0UZ, lhs.size()), [&](auto i) { return not lhs[i] or rhs[i]; });
                 }
         }
 
@@ -454,7 +462,7 @@ struct mem_is_proper_subset_of
                 if constexpr (requires { lhs.is_proper_subset_of(rhs); }) {
                         return lhs.is_proper_subset_of(rhs);
                 } else {
-                        return xstd::bit_set_view(lhs).is_proper_subset_of(xstd::bit_set_view(rhs));
+                        return std::ranges::all_of(std::views::iota(0UZ, lhs.size()), [&](auto i) { return not lhs[i] or rhs[i]; }) and lhs != rhs;
                 }
         }
 
@@ -496,7 +504,7 @@ struct mem_intersects
                 if constexpr (requires { lhs.intersects(rhs); }) {
                         return lhs.intersects(rhs);
                 } else {
-                        return xstd::bit_set_view(lhs).intersects(xstd::bit_set_view(rhs));
+                        return std::ranges::any_of(std::views::iota(0UZ, lhs.size()), [&](auto i) { return lhs[i] and rhs[i]; });
                 }
         }
 

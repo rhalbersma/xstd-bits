@@ -50,7 +50,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItsIteratorIsRandomAccess, T, Types)
         static_assert(std::random_access_iterator<I>);
 }
 
-// Random access is where it stops: the blocks underneath are contiguous, the bits are not addressable, and a proxy reference is what forbids the last rung. [design.md#contiguous-block-container]
+// Random access is where it stops: the blocks underneath are contiguous, the bits are not addressable, and a proxy reference is what forbids the last rung. [design.md#contiguous-block-range]
 BOOST_AUTO_TEST_CASE_TEMPLATE(ItIsNotAContiguousRange, T, Types)
 {
         static_assert(not std::ranges::contiguous_range<T>);
