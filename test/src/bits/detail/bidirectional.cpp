@@ -10,11 +10,7 @@
 #include <xstd/bits/bit_traits.hpp>                  // bit_traits, find_next, find_prev
 #include <xstd/bits/detail/bidirectional.hpp>        // bidirectional_bit_iterator, bidirectional_bit_reference
 #include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
-#include <xstd/bits/ext/boost/dynamic_bitset.hpp>    // bit_traits over boost::dynamic_bitset
-#include <xstd/bits/ext/std/bitset.hpp>              // bit_traits over std::bitset
-#include <boost/dynamic_bitset.hpp>                  // dynamic_bitset
 #include <boost/test/unit_test.hpp>                  // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <bitset>                                    // bitset
 #include <concepts>                                  // bidirectional_iterator, same_as
 #include <cstddef>                                   // size_t
 #include <cstdint>                                   // uint64_t
@@ -169,15 +165,6 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheSetIteratorIsBidirectional, T, ArrayTypes)
         static_assert(std::bidirectional_iterator<xstd::detail::bits::bidirectional_bit_iterator<T, test::minimal_traits<T>>>);
 }
 
-// The same over the two foreign types, which is what bit_traits is for.
-BOOST_AUTO_TEST_CASE(TheForeignTypesIterateThroughTheirTraits)
-{
-        static_assert(std::bidirectional_iterator<xstd::detail::bits::bidirectional_bit_iterator<std::bitset<9>>>);
-        static_assert(std::bidirectional_iterator<xstd::detail::bits::bidirectional_bit_iterator<boost::dynamic_bitset<>>>);
-
-        BOOST_CHECK(true);
-}
-
 // The set proxy never writes, so nothing distinguishes its const spelling. [design.md#read-only-set-proxy]
 BOOST_AUTO_TEST_CASE(TheSetProxyNeverWrites)
 {
@@ -202,18 +189,10 @@ BOOST_AUTO_TEST_CASE(TheReadOnlyProxiesAreValues)
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheSetIteratorWalksThePositionsInBothDirections, T, ArrayTypes)
 {
         check_every_set_pattern<xstd::bit_traits<T>, false>(T());
-        if constexpr (xstd::bit_traits<T>::extent >= 2UZ) {
+        // The floor-only trait is the total one, and a zero width is where the scans answer without looking. [design.md#degenerate-widths]
+        if constexpr (xstd::bit_traits<T>::extent == 0UZ or xstd::bit_traits<T>::extent >= 2UZ) {
                 check_every_set_pattern<test::minimal_traits<T>, true>(T());
         }
-}
-
-// std::bitset scans forward natively and backward synthesized on libstdc++, boost the same, and both traits are total.
-BOOST_AUTO_TEST_CASE(TheForeignSetIteratorsWalkThePositionsInBothDirections)
-{
-        check_every_set_pattern<xstd::bit_traits<std::bitset<0>>, true>(std::bitset<0>());
-        check_every_set_pattern<xstd::bit_traits<std::bitset<1>>, true>(std::bitset<1>());
-        check_every_set_pattern<xstd::bit_traits<std::bitset<65>>, true>(std::bitset<65>());
-        check_every_set_pattern<xstd::bit_traits<boost::dynamic_bitset<>>, true>(boost::dynamic_bitset<>(66));
 }
 
 // format_as is what fmt calls, unqualified, so calling it the same way is the test.
@@ -232,7 +211,7 @@ BOOST_AUTO_TEST_SUITE(BidirectionalThroughTheView)
 
 namespace {
 
-using Viewed = std::bitset<64>;
+using Viewed = xstd::detail::bits::contiguous_bit_array<std::uint64_t, 64>;
 
 using SetIt  = xstd::detail::bits::bidirectional_bit_iterator<Viewed>;
 using SetRef = xstd::detail::bits::bidirectional_bit_reference<Viewed>;

@@ -12,8 +12,6 @@
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // bit_traits<contiguous_bit_container>
 #include <xstd/bits/detail/contiguous_bit_vector.hpp>    // contiguous_bit_vector
 #include <xstd/bits/dynamic_bitset.hpp>                  // basic_dynamic_bitset
-#include <xstd/bits/ext/boost/dynamic_bitset.hpp>        // IWYU pragma: keep; bit_traits<boost::dynamic_bitset>
-#include <xstd/bits/ext/std/bitset.hpp>                  // IWYU pragma: keep; bit_traits<std::bitset>
 #include <boost/dynamic_bitset.hpp>                      // dynamic_bitset
 #include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <algorithm>                                     // equal
@@ -60,7 +58,6 @@ BOOST_AUTO_TEST_CASE(TheVocabularyIsWhatOurStoragesSpeakAndTheCounterpartsDoNot)
         static_assert(not xstd::has_bitops<std::bitset<0>>);
         static_assert(not xstd::has_bitops<std::bitset<100>>);
         static_assert(    xstd::has_bitops<boost::dynamic_bitset<>>);
-        static_assert(not xstd::block_readable<xstd::bit_traits<boost::dynamic_bitset<>>, boost::dynamic_bitset<>>);
         static_assert(not wrappable<std::bitset<64>>);
         static_assert(not wrappable<boost::dynamic_bitset<>>);
 
