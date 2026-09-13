@@ -8,6 +8,7 @@
 #include <test/uint128.hpp>                       // TEST_HAS_UINT128, uint128
 #include <xstd/bits/bitset.hpp>                   // bitset
 #include <xstd/bits/dynamic_bitset.hpp>           // dynamic_bitset
+#include <boost/dynamic_bitset.hpp>              // dynamic_bitset
 #include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_AUTO_TEST_CASE_TEMPLATE
 #include <bitset>                                 // bitset
 #include <cstdint>                                // uint8_t, uint16_t, uint32_t, uint64_t
