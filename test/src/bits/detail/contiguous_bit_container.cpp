@@ -387,7 +387,7 @@ BOOST_AUTO_TEST_CASE(TheConstReferenceIsP2278s)
 }
 
 // The semantic half a concept cannot check: a[i] is *(begin(a) + i), the same object and not merely an equal one.
-template<class Blocks>
+template<xstd::detail::bits::contiguous_block_range Blocks>
 constexpr auto subscript_agrees_with_iteration(Blocks blocks) noexcept
         -> bool
 {
