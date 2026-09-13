@@ -6,11 +6,12 @@
 #include <test/set/ordering.hpp>                     // ordering_agrees_with_std_set
 #include <xstd/bits/bit_array.hpp>                   // bit_array
 #include <xstd/bits/bit_set_view.hpp>                // bit_set_view
+#include <xstd/bits/bit_span.hpp>                    // bit_span
 #include <xstd/bits/bit_static_set.hpp>              // bit_static_set
 #include <xstd/bits/bitset.hpp>                      // bitset
 #include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
 #include <xstd/bits/dynamic_bitset.hpp>              // basic_dynamic_bitset, dynamic_bitset
-#include <xstd/bits/ownership.hpp>                   // owned_storage, ownership
+#include <xstd/bits/ownership.hpp>                   // ownership
 #include <xstd/bits/set_adaptor.hpp>                 // set_adaptor
 #include <boost/test/unit_test.hpp>                  // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <concepts>                                  // constructible_from, derived_from, same_as
@@ -65,7 +66,7 @@ BOOST_AUTO_TEST_CASE(TheViewIsTheReferringAdaptor)
 // A bitset is committed to neither reading, a sequence owner to the sequence one; over the very same storage, only the first admits a set view. [design.md#the-readings-do-not-mix]
 BOOST_AUTO_TEST_CASE(TheReadingsDoNotMix)
 {
-        static_assert(std::same_as<xstd::owned_storage<xstd::bitset<8>>::bits_type, xstd::owned_storage<xstd::bit_array<8>>::bits_type>);
+        static_assert(std::same_as<decltype(xstd::bit_span(std::declval<xstd::bit_array<8>&>())), xstd::bit_span<Blocks>>);
         static_assert(    std::constructible_from<xstd::bit_set_view<Blocks>, xstd::bitset<8>&>);
         static_assert(not std::constructible_from<xstd::bit_set_view<Blocks>, xstd::bit_array<8>&>);
 }
