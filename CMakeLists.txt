@@ -103,10 +103,6 @@ target_sources(
         include/xstd/bits/detail/pred.hpp
         include/xstd/bits/detail/random_access.hpp
         include/xstd/bits/detail/shift.hpp
-        include/xstd/bits/ext/boost.hpp
-        include/xstd/bits/ext/boost/dynamic_bitset.hpp
-        include/xstd/bits/ext/std.hpp
-        include/xstd/bits/ext/std/bitset.hpp
         include/xstd/bits/ownership.hpp
 )
 

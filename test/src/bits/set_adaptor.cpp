@@ -9,8 +9,6 @@
 #include <xstd/bits/bit_static_set.hpp>               // bit_static_set
 #include <xstd/bits/detail/contiguous_bit_array.hpp>  // contiguous_bit_array
 #include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
-#include <xstd/bits/ext/boost/dynamic_bitset.hpp>     // bit_traits over boost::dynamic_bitset
-#include <xstd/bits/ext/std/bitset.hpp>               // bit_traits over std::bitset
 #include <xstd/bits/ownership.hpp>                    // ownership
 #include <xstd/bits/set_adaptor.hpp>                  // set_adaptor
 #include <boost/dynamic_bitset.hpp>                   // dynamic_bitset
@@ -205,19 +203,13 @@ BOOST_AUTO_TEST_CASE(TheViewsAnswerEveryReadOverEveryStorage)
         for (auto const& model : { std::set<std::size_t>{}, { 0UZ }, { 3UZ, 63UZ, 64UZ, 99UZ }, { 99UZ } }) {
                 auto a = Storage();
                 auto v = xstd::detail::bits::contiguous_bit_vector<std::uint64_t>(100UZ);
-                auto s = std::bitset<100>();
-                auto d = boost::dynamic_bitset<>(100UZ);
                 for (auto const p : model) {
                         a.set(p);
                         v.set(p);
-                        s.set(p);
-                        d.set(p);
                 }
                 check_reads(View(a), model, 100UZ);
                 check_reads(Minimal(a), model, 100UZ);
                 check_reads(xstd::set_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint64_t>, xstd::ownership::refers>(v), model, 100UZ);
-                check_reads(xstd::set_adaptor<std::bitset<100>, xstd::ownership::refers>(s), model, 100UZ);
-                check_reads(xstd::set_adaptor<boost::dynamic_bitset<>, xstd::ownership::refers>(d), model, 100UZ);
         }
 }
 
@@ -242,22 +234,23 @@ BOOST_AUTO_TEST_CASE(MaxSizeIsThePositionsThereAreToHold)
         BOOST_CHECK(view.full());
         BOOST_CHECK_EQUAL(view.size(), 10UZ);
 
-        // Boost's own width, read through the view over it.
-        using Boost = xstd::set_adaptor<boost::dynamic_bitset<>, xstd::ownership::refers>;
-        auto b = boost::dynamic_bitset<>(9UZ);
-        BOOST_CHECK_EQUAL(Boost(b).max_size(), 9UZ);
+        // A run-time width, read through the view over it.
+        using Dynamic = xstd::set_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint64_t>, xstd::ownership::refers>;
+        auto b = xstd::detail::bits::contiguous_bit_vector<std::uint64_t>(9UZ);
+        BOOST_CHECK_EQUAL(Dynamic(b).max_size(), 9UZ);
 }
 
 // The set operations use the storage's members where it has them, and its bulk operators where it has not.
 BOOST_AUTO_TEST_CASE(TheSetPredicatesAgreeAcrossStorages)
 {
-        auto a = std::bitset<9>();
-        auto b = std::bitset<9>();
-        auto e = std::bitset<9>();
+        using Small = xstd::detail::bits::contiguous_bit_array<std::uint64_t, 9>;
+        auto a = Small();
+        auto b = Small();
+        auto e = Small();
         a.set(1);
         b.set(1);
         b.set(3);
-        using S = xstd::set_adaptor<std::bitset<9>, xstd::ownership::refers>;
+        using S = xstd::set_adaptor<Small, xstd::ownership::refers>;
         auto const x = S(a);
         auto const y = S(b);
 
@@ -282,13 +275,12 @@ BOOST_AUTO_TEST_CASE(TheOrderingIsTheLexicographicOrderOfTheKeys)
                         BOOST_CHECK((x <=> y) == std::lexicographical_compare_three_way(x.begin(), x.end(), y.begin(), y.end()));
                         BOOST_CHECK((x <=> y) == (p <=> q));
 
-                        auto s = std::bitset<100>();
-                        auto t = std::bitset<100>();
+                        auto s = Storage();
+                        auto t = Storage();
                         for (auto const i : p) { s.set(i); }
                         for (auto const i : q) { t.set(i); }
-                        using S = xstd::set_adaptor<std::bitset<100>, xstd::ownership::refers>;
-                        BOOST_CHECK((S(s) <=> S(t)) == (p <=> q));
-                        BOOST_CHECK((S(s) == S(t)) == (p == q));
+                        BOOST_CHECK((Minimal(s) <=> Minimal(t)) == (p <=> q));
+                        BOOST_CHECK((Minimal(s) == Minimal(t)) == (p == q));
                 }
         }
 }
@@ -386,11 +378,11 @@ BOOST_AUTO_TEST_CASE(ForEachVisitsWhatIterationVisits)
         auto owner = Owner();
         for (auto const p : positions) { owner.insert(p); }
 
-        auto foreign = std::bitset<100>();                      // block access through the trait
-        auto boosted = boost::dynamic_bitset<>(100);            // no block access: the position-at-a-time arm
-        for (auto const p : positions) { foreign.set(p); boosted.set(p); }
-        auto const fv = xstd::bit_set_view(foreign);
-        auto const bv = xstd::bit_set_view(boosted);
+        auto blocked = Storage();                               // block access through the trait
+        auto element = Storage();                               // floor-only trait: the position-at-a-time arm
+        for (auto const p : positions) { blocked.set(p); element.set(p); }
+        auto const fv = View(blocked);
+        auto const bv = Minimal(element);
 
         auto const collect         = [](auto const& s) -> std::vector<std::size_t> { auto v = std::vector<std::size_t>(); s.for_each        ([&](std::size_t p) -> void { v.push_back(p); }); return v; };
         auto const collect_reverse = [](auto const& s) -> std::vector<std::size_t> { auto v = std::vector<std::size_t>(); s.for_each_reverse([&](std::size_t p) -> void { v.push_back(p); }); return v; };
@@ -407,8 +399,8 @@ BOOST_AUTO_TEST_CASE(ForEachVisitsWhatIterationVisits)
 
         // An empty set calls nothing, in either direction, on either arm.
         auto const empty  = Owner();
-        auto const bnone  = boost::dynamic_bitset<>(100);
-        auto const bnonev = xstd::bit_set_view(bnone);
+        auto bnone        = Storage();
+        auto const bnonev = Minimal(bnone);
         auto calls = 0UZ;
         empty .for_each        ([&](std::size_t) -> void { ++calls; });
         empty .for_each_reverse([&](std::size_t) -> void { ++calls; });
@@ -424,9 +416,9 @@ BOOST_AUTO_TEST_CASE(ForEachStopsWhenTheFunctorSaysSo)
 
         auto owner = Owner();
         for (auto const p : positions) { owner.insert(p); }
-        auto boosted = boost::dynamic_bitset<>(100);
-        for (auto const p : positions) { boosted.set(p); }
-        auto const bv = xstd::bit_set_view(boosted);
+        auto element = Storage();
+        for (auto const p : positions) { element.set(p); }
+        auto const bv = Minimal(element);
 
         // Stop after the first position at or above 64, so the cut lands on a block boundary.
         auto const upto = [](auto const& s) -> std::vector<std::size_t> {
