@@ -18,7 +18,7 @@
 #include <xstd/bits/bit_traits.hpp>         // IWYU pragma: export; bit_traits, bit_storage, block_readable, contiguous_bit_sequence, static_bit_extent
 #include <xstd/bits/bit_vector.hpp>         // IWYU pragma: export; bit_vector
 #include <xstd/bits/bitset.hpp>             // IWYU pragma: export; bitset
-#include <xstd/bits/bitset_adaptor.hpp>     // IWYU pragma: export; bitset_adaptor, has_bitops
+#include <xstd/bits/bitset_adaptor.hpp>     // IWYU pragma: export; bitset_adaptor
 #include <xstd/bits/dynamic_bitset.hpp>     // IWYU pragma: export; dynamic_bitset
 #include <xstd/bits/inplace_bitset.hpp>     // IWYU pragma: export; inplace_bitset
 #include <xstd/bits/ownership.hpp>          // IWYU pragma: export; ownership

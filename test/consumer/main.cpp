@@ -6,7 +6,7 @@
 // The gate on the interface line. [design.md#the-interface-line]
 
 #include <xstd/bits.hpp> // bit_array, bit_inplace_set, bit_inplace_vector, bit_set, bit_set_view, bit_span,
-                         // bit_static_set, bit_subspan, bit_vector, bitset, bitset_adaptor, dynamic_bitset, has_bitops, inplace_bitset, ownership, sequence_adaptor, set_adaptor
+                         // bit_static_set, bit_subspan, bit_vector, bitset, bitset_adaptor, dynamic_bitset, inplace_bitset, ownership, sequence_adaptor, set_adaptor
 #include <cstddef>       // size_t
 #include <cstdint>       // uint8_t
 #include <utility>       // declval
@@ -47,7 +47,6 @@ static_assert(is_sequence_adaptor<subspan_of_bitset>);
 static_assert(is_bitset_adaptor<xstd::bitset<64>>);
 static_assert(is_bitset_adaptor<xstd::basic_bitset<std::uint8_t, 24>>);
 static_assert(is_bitset_adaptor<xstd::dynamic_bitset>);
-static_assert(xstd::has_bitops<xstd::bitset<64>>);
 
 // ownership is interface because you cannot name an adaptor without it.
 static_assert(xstd::owns(xstd::ownership::owns));
