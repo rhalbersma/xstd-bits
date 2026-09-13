@@ -1125,13 +1125,49 @@ An owner has no trait of its own — `bit_static_set`, `bit_array` and `bitset` 
 `bit_set_view(xstd::bitset<64>&)` is `set_adaptor<contiguous_bit_array<size_t, 64>, refers>`, and the pointer in
 the iterator is to the `contiguous_bit_array`, never to the `bitset`. The owner hands its storage over through
 `owned_storage<Owner>`, declared beside it as `bit_traits` is beside a storage and never defined for anything
-else, so `owner_of<Owner, Bits, Traits>` reads "this owner wraps exactly the storage and trait this view refers
-through". Const flows one way: a const owner gives a view over `Bits const`, a mutable owner either.
+else, so `owner_of<Owner, Bits, Traits, R>` reads "this owner wraps exactly the storage and trait this view
+refers through, and is not already committed to another reading". Const flows one way: a const owner gives a
+view over `Bits const`, a mutable owner either.
 
-The view's converting constructor takes the owner's private member directly, which is why each owner
-befriends the two referring adaptors — the one friendship in the tree that runs upward, from a container to
-the views over it, and it grants access to a member and to nothing that member's type does not already expose.
-Storage stays private; nothing on an owner's surface says `contiguous_bit_array`.
+The view's converting constructor takes the owner's private member directly, which is why an owner befriends
+a referring adaptor — the one friendship in the tree that runs upward, from a container to the views over it,
+and it grants access to a member and to nothing that member's type does not already expose. Which adaptors it
+befriends is [the-readings-do-not-mix](#the-readings-do-not-mix). Storage stays private; nothing on an owner's
+surface says `contiguous_bit_array`.
+
+### the-readings-do-not-mix
+
+A view over an owner is a second reading of bits that already have one, and two of the three pairings are a
+view choosing for the caller. `bit_set` is a set of positions; spanning it as bools would present the
+container's capacity as its contents. `bit_vector` is a sequence of bools; viewing it as a set would present
+the indices of the true ones as the elements. Neither is wrong in the way a bug is wrong — the bits do support
+the reading — but neither is what the owner's own name says it holds, and the owner is the thing the caller
+named. So a set owner admits only `bit_set_view`, a sequence owner only `bit_span`.
+
+`bitset` is the exception and the reason both views exist. `[template.bitset]` is the bitwise surface, a width
+of bits and the operators over it, committed to neither reading; its whole documented use is that you go on to
+ask it something it does not answer itself — which positions are set, or what the bools are at each index.
+That is what a view is for, so a `bitset` admits either.
+
+The rule is one enumerator on the owner's side of the protocol, `owned_storage<Owner>::reads`, and one clause
+in `owner_of`: the owner's reading is the view's, or it is `reading::bitset`. It has to live in the constraint
+and not in the friendship alone. Dropping only the friendship leaves the constructor declared and viable, and
+its `m_bits(&c.m_bits)` is a mem-initializer — not the immediate context — so the access check happens at
+instantiation and nowhere earlier. Measured: `std::is_constructible_v<bit_set_view<Blocks>, bit_array<8>&>`
+still answers **true**, and the actual construction fails with `'m_bits' is private within this context`
+pointing into `set_adaptor.hpp`. A trait that lies and an error inside a constructor the caller never meant to
+reach are both worse than the constructor simply not being there, which is what the clause gives: no viable
+deduction guide for `bit_span(bit_set{})`, and `is_constructible_v` false.
+
+It is the constraint that does the work, so the friendships follow it rather than the other way round:
+`set_adaptor` befriends `set_adaptor`, `sequence_adaptor` befriends `sequence_adaptor`, and `bitset_adaptor`
+befriends both.
+
+What this gives up is real and small: `bit_span(some_bit_set)` used to compile, and now does not. Nothing in
+the library or the tests wanted it — the one assertion that exercised it was asserting the mechanism, not a
+use — and a caller who genuinely wants the other reading of an owner's bits is asking for a conversion between
+owners, which is an owner's to offer explicitly and not a view's to perform silently. None exists today; if
+one ever should, it belongs beside the containers, where it can be named and its cost seen.
 
 ### the-interface-line
 

@@ -12,7 +12,7 @@
 #include <xstd/bits/detail/intrin.hpp>            // countr_zero, popcount
 #include <xstd/bits/detail/shift.hpp>             // shl, shr
 #include <xstd/bits/detail/random_access.hpp>     // random_access_bit_iterator, random_access_bit_reference
-#include <xstd/bits/ownership.hpp>                // owned_bits_t, owned_storage, owned_traits_t, owner_of, ownership, owns
+#include <xstd/bits/ownership.hpp>                // owned_bits_t, owned_storage, owned_traits_t, owner_of, owner_reading, ownership, owns, reading
 #include <xstd/misc/type_traits/empty_base_type.hpp>          // empty_base_type
 #include <boost/container_hash/is_range.hpp>      // is_range
 #include <boost/hash2/hash_append.hpp>            // hash_append_tag
@@ -245,8 +245,7 @@ class sequence_adaptor : public std::conditional_t<owns(Own), detail::bits::allo
         // A storage that takes a masked word at any position: ours, which is what a window's bulk operators write through.
         static constexpr bool word_writable = requires (bits_type& b, std::size_t pos, bits_type::block_type w) { b.set_word(pos, w, w); };
 
-        // Either reading's view refers into this owner's storage, and nothing else outside does. [design.md#views-over-owners]
-        template<class B, ownership O, bit_storage<B> T>         friend class set_adaptor;
+        // A sequence view refers into this owner's storage, and nothing else outside does; a set view does not, the readings not mixing. [design.md#the-readings-do-not-mix]
         template<class B, ownership O, bool W, bit_storage<B> T> friend class sequence_adaptor;
 
         // The value under the sequence reading, the owner's alone as == is: a view follows span and hashes no more than it compares. [design.md#the-hashing-invariant]
@@ -519,7 +518,7 @@ public:
         {}
 
         // A view over an owner is a view over the storage it wraps, the owner having befriended this template. [design.md#views-over-owners]
-        template<owner_of<Bits, Traits> Owner>
+        template<owner_of<Bits, Traits, reading::sequence> Owner>
         [[nodiscard]] constexpr explicit sequence_adaptor(Owner& c) noexcept
                 requires (not is_owner) and (not is_window)
         :
@@ -892,8 +891,7 @@ template<class Bits>
         requires (not requires { typename owned_storage<std::remove_const_t<Bits>>::bits_type; })
 sequence_adaptor(Bits&) -> sequence_adaptor<Bits, ownership::refers, false>;
 
-template<class Owner>
-        requires requires { typename owned_storage<std::remove_const_t<Owner>>::bits_type; }
+template<owner_reading<reading::sequence> Owner>
 sequence_adaptor(Owner&) -> sequence_adaptor<owned_bits_t<Owner>, ownership::refers, false, owned_traits_t<Owner>>;
 
 // The owner's side of the protocol above.
@@ -902,6 +900,9 @@ struct owned_storage<sequence_adaptor<Bits, ownership::owns, false, Traits>>
 {
         using bits_type   = Bits;
         using traits_type = Traits;
+
+        // Committed to the sequence reading, so only a sequence view refers into one. [design.md#the-readings-do-not-mix]
+        static constexpr auto reads = reading::sequence;
 };
 
 // NOLINTBEGIN(readability-redundant-parentheses): a call is no primary expression, so the requires-clause needs the parentheses the check reports as redundant.

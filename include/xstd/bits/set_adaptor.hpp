@@ -11,7 +11,7 @@
 #include <xstd/bits/detail/hash.hpp>          // hash_append_bits, hash_append_positions, std_hash
 #include <xstd/bits/detail/intrin.hpp>        // countl_zero, countr_zero
 #include <xstd/bits/detail/shift.hpp>         // shl, shr
-#include <xstd/bits/ownership.hpp>            // owned_bits_t, owned_storage, owned_traits_t, owner_of, ownership, owns
+#include <xstd/bits/ownership.hpp>            // owned_bits_t, owned_storage, owned_traits_t, owner_of, owner_reading, ownership, owns, reading
 #include <boost/container_hash/is_range.hpp>  // is_range
 #include <boost/hash2/hash_append.hpp>        // hash_append_tag
 #include <algorithm>                          // any_of, equal, includes, lexicographical_compare_three_way
@@ -139,9 +139,8 @@ class set_adaptor
                 }
         }
 
-        // Either reading's view refers into this owner's storage, and nothing else outside does. [design.md#views-over-owners]
-        template<class B, ownership O, bit_storage<B> T>         friend class set_adaptor;
-        template<class B, ownership O, bool W, bit_storage<B> T> friend class sequence_adaptor;
+        // A set view refers into this owner's storage, and nothing else outside does; a sequence view does not, the readings not mixing. [design.md#the-readings-do-not-mix]
+        template<class B, ownership O, bit_storage<B> T> friend class set_adaptor;
 
         // The value under the set reading, owned or viewed as == is: the bits at a static width, the positions at a run-time one, where two equal sets need not share a width. [design.md#the-hashing-invariant]
         template<class Provider, class Hash, class Flavor>
@@ -204,7 +203,7 @@ public:
         {}
 
         // A view over an owner is a view over the storage it wraps, the owner having befriended this template. [design.md#views-over-owners]
-        template<owner_of<Bits, Traits> Owner>
+        template<owner_of<Bits, Traits, reading::set> Owner>
         [[nodiscard]] constexpr explicit set_adaptor(Owner& c) noexcept
                 requires (not is_owner)
         :
@@ -636,8 +635,7 @@ template<class Bits>
         requires (not requires { typename owned_storage<std::remove_const_t<Bits>>::bits_type; })
 set_adaptor(Bits&) -> set_adaptor<Bits, ownership::refers>;
 
-template<class Owner>
-        requires requires { typename owned_storage<std::remove_const_t<Owner>>::bits_type; }
+template<owner_reading<reading::set> Owner>
 set_adaptor(Owner&) -> set_adaptor<owned_bits_t<Owner>, ownership::refers, owned_traits_t<Owner>>;
 
 // The owner's side of the protocol above.
@@ -646,6 +644,9 @@ struct owned_storage<set_adaptor<Bits, ownership::owns, Traits>>
 {
         using bits_type   = Bits;
         using traits_type = Traits;
+
+        // Committed to the set reading, so only a set view refers into one. [design.md#the-readings-do-not-mix]
+        static constexpr auto reads = reading::set;
 };
 
 // NOLINTBEGIN(readability-redundant-parentheses): a call is no primary expression, so the requires-clause needs the parentheses the check reports as redundant.

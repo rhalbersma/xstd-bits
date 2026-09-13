@@ -10,12 +10,12 @@
 #include <xstd/bits/bitset.hpp>                      // bitset
 #include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
 #include <xstd/bits/dynamic_bitset.hpp>              // dynamic_bitset
-#include <xstd/bits/ownership.hpp>                   // ownership
+#include <xstd/bits/ownership.hpp>                   // owned_storage, ownership
 #include <xstd/bits/sequence_adaptor.hpp>            // sequence_adaptor
 #include <boost/test/unit_test.hpp>                  // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <algorithm>                                 // equal
 #include <array>                                     // array
-#include <concepts>                                  // derived_from, equality_comparable, same_as, totally_ordered
+#include <concepts>                                  // constructible_from, derived_from, equality_comparable, same_as, totally_ordered
 #include <cstddef>                                   // size_t
 #include <cstdint>                                   // uint8_t
 #include <ranges>                                    // borrowed_range, random_access_range, view
@@ -32,14 +32,22 @@ using view_of = decltype(xstd::bit_span(std::declval<T&>()));
 
 }  // namespace
 
-// The view is the referring adaptor under another name, and over an owner of either reading it refers into the storage the owner wraps. [design.md#the-views-are-the-adaptors]
+// The view is the referring adaptor under another name, and over an owner it refers into the storage the owner wraps. [design.md#the-views-are-the-adaptors]
 BOOST_AUTO_TEST_CASE(TheViewIsTheReferringAdaptor)
 {
         static_assert(std::derived_from<xstd::bit_span<Blocks>, xstd::sequence_adaptor<Blocks, xstd::ownership::refers, false>>);
-        static_assert(std::same_as<view_of<Blocks>,                  xstd::bit_span<Blocks>>);
-        static_assert(std::same_as<view_of<Blocks const>,            xstd::bit_span<Blocks const>>);
-        static_assert(std::same_as<view_of<xstd::bitset<8>>,         xstd::bit_span<xstd::detail::bits::contiguous_bit_array<std::size_t, 8>>>);
-        static_assert(std::same_as<view_of<xstd::bit_static_set<8>>, xstd::bit_span<xstd::detail::bits::contiguous_bit_array<std::size_t, 8>>>);
+        static_assert(std::same_as<view_of<Blocks>,               xstd::bit_span<Blocks>>);
+        static_assert(std::same_as<view_of<Blocks const>,         xstd::bit_span<Blocks const>>);
+        static_assert(std::same_as<view_of<xstd::bitset<8>>,      xstd::bit_span<xstd::detail::bits::contiguous_bit_array<std::size_t, 8>>>);
+        static_assert(std::same_as<view_of<xstd::bit_array<8>>,   xstd::bit_span<xstd::detail::bits::contiguous_bit_array<std::size_t, 8>>>);
+}
+
+// A bitset is committed to neither reading, a set owner to the set one; over the very same storage, only the first admits a span. [design.md#the-readings-do-not-mix]
+BOOST_AUTO_TEST_CASE(TheReadingsDoNotMix)
+{
+        static_assert(std::same_as<xstd::owned_storage<xstd::bitset<8>>::bits_type, xstd::owned_storage<xstd::bit_static_set<8>>::bits_type>);
+        static_assert(    std::constructible_from<xstd::bit_span<Blocks>, xstd::bitset<8>&>);
+        static_assert(not std::constructible_from<xstd::bit_span<Blocks>, xstd::bit_static_set<8>&>);
 }
 
 BOOST_AUTO_TEST_CASE(TheViewedTypesAreTheOnesHoldingBoolsWithoutOfferingThem)
