@@ -52,6 +52,9 @@ public:
         static constexpr auto bits_per_block  = static_cast<std::size_t>(xstd::numeric_limits<block_type>::digits);
         static constexpr auto has_static_size = N != std::dynamic_extent;
 
+        // The width as a type, dynamic_extent where there is none: what a reading asks when it needs the width before an object exists.
+        static constexpr std::size_t extent = N;
+
 private:
         static constexpr auto static_num_bits   = has_static_size ? align_up(N, bits_per_block) : 0UZ;
         static constexpr auto static_num_blocks = has_static_size ? std::ranges::max(static_num_bits / bits_per_block, 1UZ) : 0UZ;
@@ -743,6 +746,41 @@ public:
                 block |= mask;
                 assert(test(n));
                 return inserted;
+        }
+
+        // insert(n) above is partial, n being a precondition; this one is total, a position past the end growing a
+        // run-time width to admit it and a static one having nowhere to grow. The set reading's insert is the one
+        // operation that can grow, which is the whole of the difference. [design.md#what-the-trait-reconciles]
+        constexpr auto growing_insert(std::size_t n) noexcept(has_static_size)
+                -> bool
+        {
+                if constexpr (not has_static_size) {
+                        if (n >= size()) {
+                                assert(n < std::numeric_limits<std::size_t>::max());
+                                resize(n + 1UZ);
+                                set(n);
+                                return true;
+                        }
+                }
+                return insert(n);
+        }
+
+        // set(n) and reset(n) under one name, for a reading that has the value in hand rather than the verb. Deliberately
+        // not spelled set(n, value): that is std::bitset's two-argument set, and this container's not having it is one of
+        // the five absences that make contiguous_bit_sequence the intersection of the three vocabularies rather than
+        // their union. TheCommonVocabulary asserts it. [design.md#the-common-vocabulary]
+        constexpr auto assign(std::size_t n, bool value) noexcept
+                -> contiguous_bit_container&
+        {
+                return value ? set(n) : reset(n);
+        }
+
+        // The bulk counterpart, and not an overload of set either: set(bool) would be ambiguous with set(std::size_t)
+        // for a literal 0, both conversions being standard.
+        constexpr auto fill(bool value) noexcept
+                -> contiguous_bit_container&
+        {
+                return value ? set() : reset();
         }
 
         constexpr auto reset(std::size_t n) noexcept

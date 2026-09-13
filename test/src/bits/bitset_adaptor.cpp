@@ -7,7 +7,7 @@
 #include <xstd/bits/bit_span.hpp>                        // bit_span
 #include <xstd/bits/bit_traits.hpp>                      // bit_traits, block_readable, contiguous_bit_sequence
 #include <xstd/bits/bitset.hpp>                          // basic_bitset, bitset
-#include <xstd/bits/bitset_adaptor.hpp>                  // bitset_adaptor, has_bitops
+#include <xstd/bits/bitset_adaptor.hpp>                  // bitset_adaptor
 #include <xstd/bits/detail/contiguous_bit_array.hpp>     // contiguous_bit_array
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // bit_traits<contiguous_bit_container>
 #include <xstd/bits/detail/contiguous_bit_vector.hpp>    // contiguous_bit_vector
@@ -45,24 +45,19 @@ using allocator_of = X::allocator_type;
 template<class X>
 constexpr bool has_allocator = requires (X const& x) { sizeof(allocator_of<X>); x.get_allocator(); };
 
-// The vocabulary is our storages': std::bitset's members and boost's set vocabulary, read by block. The counterparts themselves are not wrapped. [design.md#owning-is-ours]
-BOOST_AUTO_TEST_CASE(TheVocabularyIsWhatOurStoragesSpeakAndTheCounterpartsDoNot)
+// Only our storages can be wrapped, and the refusal is nominal now rather than a vocabulary the candidate fails to speak. [design.md#one-storage]
+BOOST_AUTO_TEST_CASE(TheWrappedStoragesAreOursAndTheCounterpartsAreNot)
 {
-        static_assert(xstd::has_bitops<xstd::detail::bits::contiguous_bit_array<std::uint8_t, 0>>);
-        static_assert(xstd::has_bitops<xstd::detail::bits::contiguous_bit_array<std::uint64_t, 100>>);
-        static_assert(xstd::has_bitops<xstd::detail::bits::contiguous_bit_vector<std::size_t>>);
         static_assert(wrappable<xstd::detail::bits::contiguous_bit_array<std::uint8_t, 0>>);
+        static_assert(wrappable<xstd::detail::bits::contiguous_bit_array<std::uint64_t, 100>>);
         static_assert(wrappable<xstd::detail::bits::contiguous_bit_vector<std::size_t>>);
 
-        // std::bitset lacks the set vocabulary; boost has it but keeps its blocks to itself.
-        static_assert(not xstd::has_bitops<std::bitset<0>>);
-        static_assert(not xstd::has_bitops<std::bitset<100>>);
-        static_assert(    xstd::has_bitops<boost::dynamic_bitset<>>);
+        // Not for want of the vocabulary: boost::dynamic_bitset speaks all of it and is still refused, because being
+        // ours is the question and not what a candidate's members answer. [design.md#the-trait]
         static_assert(not wrappable<std::bitset<64>>);
         static_assert(not wrappable<boost::dynamic_bitset<>>);
-
-        static_assert(not xstd::has_bitops<std::vector<bool>>);
-        static_assert(not xstd::has_bitops<std::vector<std::uint8_t>>);
+        static_assert(not wrappable<std::vector<bool>>);
+        static_assert(not wrappable<std::vector<std::uint8_t>>);
 }
 
 // The public name is the wrapper over a packed array, with the word type in the open.
@@ -428,9 +423,11 @@ BOOST_AUTO_TEST_CASE(ABitsetReadsAsItsStorage)
         static_assert(xstd::block_readable<xstd::bit_traits<B>, B>);
         static_assert(xstd::block_readable<xstd::bit_traits<D>, D>);
 
-        // Deduction is unchanged: over an owner a view still binds the storage it wraps, so the direct spelling and the deduced one coexist rather than tie.
-        static_assert(std::same_as<decltype(xstd::bit_set_view(std::declval<B&>())), xstd::bit_set_view<xstd::detail::bits::contiguous_bit_array<std::size_t, 100>>>);
-        static_assert(std::same_as<decltype(xstd::bit_span(std::declval<B&>())),     xstd::bit_span<xstd::detail::bits::contiguous_bit_array<std::size_t, 100>>>);
+        // A view over a bitset binds the storage it wraps, which is now the only spelling: naming the bitset itself as a
+        // view's Bits is what the constraint refuses, the storage being the thing a view refers into. [design.md#one-storage]
+        using Blocks = xstd::detail::bits::contiguous_bit_array<std::size_t, 100>;
+        static_assert(std::same_as<decltype(xstd::bit_set_view(std::declval<B&>())), xstd::bit_set_view<Blocks>>);
+        static_assert(std::same_as<decltype(xstd::bit_span(std::declval<B&>())),     xstd::bit_span<Blocks>>);
 
         // Naming the bitset changes how a view is spelled, not what the bitset offers.
         static_assert(not std::ranges::range<B>);
@@ -439,15 +436,12 @@ BOOST_AUTO_TEST_CASE(ABitsetReadsAsItsStorage)
         bs.set(3);
         bs.set(41);
 
-        auto const sv = xstd::bit_set_view<B>(bs);
-        auto const sp = xstd::bit_span<B>(bs);
+        auto const sv = xstd::bit_set_view(bs);
+        auto const sp = xstd::bit_span(bs);
         BOOST_CHECK_EQUAL(std::ranges::distance(sv), 2);
         BOOST_CHECK_EQUAL(std::ranges::distance(sp), 100);
         BOOST_CHECK(std::ranges::bidirectional_range<decltype(sv)>);
         BOOST_CHECK(std::ranges::random_access_range<decltype(sp)>);
-
-        // The same positions the deduced view reports, through the other spelling.
-        BOOST_CHECK(std::ranges::equal(sv, xstd::bit_set_view(bs)));
 }
 
 // Every entry the forwarder relays, called through the trait rather than through a view, so each one is exercised rather than merely present. [design.md#a-bitset-reads-as-its-storage]
@@ -514,16 +508,12 @@ BOOST_AUTO_TEST_CASE(ABitsetTraitRelaysEveryEntry)
 
 BOOST_AUTO_TEST_SUITE_END()
 
-// has_bitops and contiguous_bit_sequence are different questions, and neither answers the other. [design.md#the-common-vocabulary]
-BOOST_AUTO_TEST_SUITE(TwoConceptsNeitherSubsuming)
+// contiguous_bit_sequence is structural and says so: it asks the positional members -- test(n), set(n), reset(n),
+// flip(n) -- and every field of bits that has them answers, ours and the counterparts alike. That is a different
+// question from which storages this library wraps, which is nominal and asked by the constraint above.
+// [design.md#the-common-vocabulary]
+BOOST_AUTO_TEST_SUITE(TheStructuralQuestionIsNotTheNominalOne)
 
-// has_bitops asks boost's set vocabulary -- is_subset_of, is_proper_subset_of, intersects, and difference -- which std::bitset does not have, which is why bitset_adaptor wraps our vehicles and not std::bitset.
-static_assert(    xstd::has_bitops<xstd::detail::bits::contiguous_bit_array<std::uint64_t, 64>>);
-static_assert(    xstd::has_bitops<xstd::detail::bits::contiguous_bit_vector<std::uint64_t>>);
-static_assert(    xstd::has_bitops<boost::dynamic_bitset<>>);
-static_assert(not xstd::has_bitops<std::bitset<64>>);
-
-// contiguous_bit_sequence asks the positional members -- test(n), set(n), reset(n), flip(n) -- which has_bitops never names, and all three answer.
 static_assert(xstd::contiguous_bit_sequence<xstd::detail::bits::contiguous_bit_array<std::uint64_t, 64>>);
 static_assert(xstd::contiguous_bit_sequence<boost::dynamic_bitset<>>);
 static_assert(xstd::contiguous_bit_sequence<std::bitset<64>>);

@@ -6,52 +6,11 @@
 // The gate on the interface line. [design.md#the-interface-line]
 
 #include <xstd/bits.hpp> // bit_array, bit_inplace_set, bit_inplace_vector, bit_set, bit_set_view, bit_span,
-                         // bit_static_set, bit_subspan, bit_traits, bit_vector, bitset, bitset_adaptor, dynamic_bitset, has_bitops, inplace_bitset, ownership, sequence_adaptor, set_adaptor
-#include <concepts>      // same_as
+                         // bit_static_set, bit_subspan, bit_vector, bitset, bitset_adaptor, dynamic_bitset, inplace_bitset, ownership, sequence_adaptor, set_adaptor
 #include <cstddef>       // size_t
-#include <cstdint>       // uint8_t, uint64_t
+#include <cstdint>       // uint8_t
+#include <utility>       // declval
 #include <version>       // IWYU pragma: keep; __cpp_lib_inplace_vector
-
-namespace consumer {
-
-// A storage of our own, to be adapted through the one extension point the library documents. [design.md#the-trait]
-struct word
-{
-        std::uint64_t bits = 0;
-};
-
-}       // namespace consumer
-
-namespace xstd {
-
-// The trait door, taken the way a user takes it: a specialization, no ADL hook, nothing from detail/.
-template<>
-struct bit_traits<consumer::word>
-{
-        using bits_type = consumer::word;
-
-        static constexpr std::size_t extent = 64;
-
-        [[nodiscard]] static constexpr auto size(bits_type const&)                  noexcept -> std::size_t { return extent;                          }
-        [[nodiscard]] static constexpr auto at  (bits_type const& c, std::size_t n) noexcept -> bool        { return ((c.bits >> n) & 1ULL) != 0ULL;   }
-
-        // The block tier, so the scans read a word at a time rather than a bit. [design.md#detection-by-absence]
-        [[nodiscard]] static constexpr auto num_blocks(bits_type const&)                                   noexcept -> std::size_t   { return 1UZ;    }
-        [[nodiscard]] static constexpr auto block     (bits_type const& c, std::size_t i [[maybe_unused]]) noexcept -> std::uint64_t { return c.bits; }
-
-        static constexpr auto unchecked_assign(bits_type& c, std::size_t n, bool value) noexcept
-                -> void
-        {
-                auto const mask = static_cast<std::uint64_t>(1ULL << n);
-                c.bits = value ? static_cast<std::uint64_t>(c.bits | mask) : static_cast<std::uint64_t>(c.bits & ~mask);
-        }
-
-        // A static width cannot grow, so inserting is assigning. [design.md#what-the-trait-reconciles]
-        static constexpr auto insert(bits_type& c, std::size_t n)    noexcept -> void { unchecked_assign(c, n, true); }
-        static constexpr auto fill  (bits_type& c, bool value)       noexcept -> void { c.bits = value ? ~std::uint64_t{} : std::uint64_t{}; }
-};
-
-}       // namespace xstd
 
 namespace consumer {
 
@@ -65,35 +24,34 @@ template<class B, xstd::ownership O, bool W, class T>      constexpr bool is_seq
 template<class>                                            constexpr bool is_bitset_adaptor = false;
 template<class B, class T>                                 constexpr bool is_bitset_adaptor<xstd::bitset_adaptor<B, T>> = true;
 
+// A view's Bits is the storage a container wraps, which lives in detail/, so a consumer reaches the view names by
+// deduction rather than by spelling them. These aliases are how that looks from outside the library.
+using set_view_of_bitset  = decltype(xstd::bit_set_view(std::declval<xstd::bitset<64>&>()));
+using span_of_bitset      = decltype(xstd::bit_span(std::declval<xstd::bitset<64>&>()));
+using subspan_of_bitset   = decltype(std::declval<span_of_bitset&>().subspan(8, 8));
+
 // The set reading: three widths, one adaptor.
 static_assert(is_set_adaptor<xstd::bit_static_set<100>>);
 static_assert(is_set_adaptor<xstd::basic_bit_static_set<std::uint8_t, 24>>);
 static_assert(is_set_adaptor<xstd::bit_set>);
-static_assert(is_set_adaptor<xstd::bit_set_view<word>>);
+static_assert(is_set_adaptor<set_view_of_bitset>);
 
 // The sequence reading, the window included.
 static_assert(is_sequence_adaptor<xstd::bit_array<64>>);
 static_assert(is_sequence_adaptor<xstd::basic_bit_array<std::uint8_t, 24>>);
 static_assert(is_sequence_adaptor<xstd::bit_vector>);
-static_assert(is_sequence_adaptor<xstd::bit_span<word>>);
-static_assert(is_sequence_adaptor<xstd::bit_subspan<word>>);
+static_assert(is_sequence_adaptor<span_of_bitset>);
+static_assert(is_sequence_adaptor<subspan_of_bitset>);
 
-// The bitset reading, which owns by construction: its storage must speak the whole bitset vocabulary, and only the library's own vehicles do -- so our word is here as the negative case rather than as an instantiation.
+// The bitset reading, which owns by construction.
 static_assert(is_bitset_adaptor<xstd::bitset<64>>);
 static_assert(is_bitset_adaptor<xstd::basic_bitset<std::uint8_t, 24>>);
 static_assert(is_bitset_adaptor<xstd::dynamic_bitset>);
-static_assert(xstd::has_bitops<xstd::bitset<64>>);
-static_assert(not xstd::has_bitops<word>);
 
 // ownership is interface because you cannot name an adaptor without it.
 static_assert(xstd::owns(xstd::ownership::owns));
 static_assert(not xstd::owns(xstd::ownership::refers));
-static_assert(std::same_as<xstd::bit_set_view<word>, xstd::set_adaptor<word, xstd::ownership::refers>>);
-
-// The trait door answers about our storage, through the concepts the library publishes.
-static_assert(xstd::bit_storage<xstd::bit_traits<word>, word>);
-static_assert(xstd::static_bit_extent<xstd::bit_traits<word>, word>);
-static_assert(xstd::block_readable<xstd::bit_traits<word>, word>);
+static_assert(is_set_adaptor<set_view_of_bitset>);
 
 #ifdef __cpp_lib_inplace_vector
 
@@ -149,24 +107,24 @@ int main()
 
 #endif
 
-        // The views over our own storage: the trait door and the three view names, end to end.
-        auto storage = consumer::word{};
-        auto view = xstd::bit_set_view(storage);
+        // The three view names end to end, over the one owner committed to neither reading. [design.md#the-readings-do-not-mix]
+        auto owner = xstd::bitset<64>();
+        auto view = xstd::bit_set_view(owner);
         view.insert(9);
         view.insert(40);
-        check(storage.bits == ((1ULL << 9) | (1ULL << 40)));
+        check(owner.test(9) and owner.test(40));
         check(view.size() == 2);
 
-        auto span = xstd::bit_span(storage);
+        auto span = xstd::bit_span(owner);
         check(span.count() == 2);
         check(span[9] and not span[10]);
 
-        xstd::bit_subspan<consumer::word> const window = span.subspan(8, 8);
+        auto const window = span.subspan(8, 8);
         check(window.size() == 8);
         check(window.count() == 1);
 
-        // Const storage reaches a read-only view, and the const is part of the type. [design.md#read-only-set-proxy]
-        auto const& frozen = storage;
+        // A const owner reaches a read-only view, and the const is part of the type. [design.md#read-only-set-proxy]
+        auto const& frozen = owner;
         auto const reader = xstd::bit_set_view(frozen);
         check(reader.size() == 2);
 

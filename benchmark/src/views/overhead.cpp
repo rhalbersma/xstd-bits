@@ -3,13 +3,17 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-// What a reading costs when it is a view rather than a container, on the SAME backend bit container. [design.md#a-bitset-reads-as-its-storage]
+// What a reading costs when it is a view rather than a container, on the SAME backend bit container. [design.md#what-a-view-costs]
+//
+// The third variant here used to be a view spelled over the bitset itself, measuring what the trait forwarder cost on
+// top of the storage. A view's Bits is now the storage a container wraps and nothing else, so a view deduced off a
+// bitset IS the view over its blocks, byte for byte: there is no forwarder left to charge for, and a benchmark for it
+// would be the control under another name. [design.md#one-storage]
 
 #include <xstd/bits/bit_array.hpp>                   // bit_array
 #include <xstd/bits/bit_set_view.hpp>                // bit_set_view
 #include <xstd/bits/bit_span.hpp>                    // bit_span
 #include <xstd/bits/bit_static_set.hpp>              // bit_static_set
-#include <xstd/bits/bitset.hpp>                      // bitset
 #include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
 #include <benchmark/benchmark.h>                     // ClobberMemory, DoNotOptimize, BENCHMARK_TEMPLATE, BENCHMARK_MAIN, State
 #include <cstddef>                                   // size_t
@@ -26,7 +30,7 @@ constexpr auto is_set(std::size_t i)
         return (i % 5UZ) < 2UZ;         // ~40% set, deterministic
 }
 
-// One filler for all four subjects, because each reading spells "put a bit in" its own way: a bitset and a contiguous_bit_container take set(n), an ordered set takes insert(n), and a sequence of bool assigns through v[i].
+// One filler for all subjects, because each reading spells "put a bit in" its own way: a contiguous_bit_container takes set(n), an ordered set takes insert(n), and a sequence of bool assigns through v[i].
 template<std::size_t N, class T>
 auto filled()
         -> T
@@ -96,22 +100,6 @@ auto set_iterate_view_of_storage(benchmark::State& state)
         }
 }
 
-template<std::size_t N>
-auto set_iterate_view_of_bitset(benchmark::State& state)
-        -> void
-{
-        auto bits = filled<N, xstd::bitset<N>>();
-        benchmark::DoNotOptimize(&bits);
-        auto const s = xstd::bit_set_view<xstd::bitset<N>>(bits);
-        for (auto _ : state) {
-                auto sum = 0UZ;
-                for (auto const pos : s) {
-                        sum += pos;
-                }
-                benchmark::DoNotOptimize(sum);
-        }
-}
-
 // --------------------------------------------------------------------------------------------------------- The sequence reading: count, which goes through num_blocks and block, the entries a forwarder most risks losing -- lose them and this walk silently becomes one bool at a time.
 
 template<std::size_t N>
@@ -132,18 +120,6 @@ auto sequence_count_view_of_storage(benchmark::State& state)
         auto blocks = filled<N, xstd::detail::bits::contiguous_bit_array<std::size_t, N>>();
         benchmark::DoNotOptimize(&blocks);
         auto const v = xstd::bit_span(blocks);
-        for (auto _ : state) {
-                benchmark::DoNotOptimize(v.count());
-        }
-}
-
-template<std::size_t N>
-auto sequence_count_view_of_bitset(benchmark::State& state)
-        -> void
-{
-        auto bits = filled<N, xstd::bitset<N>>();
-        benchmark::DoNotOptimize(&bits);
-        auto const v = xstd::bit_span<xstd::bitset<N>>(bits);
         for (auto _ : state) {
                 benchmark::DoNotOptimize(v.count());
         }
@@ -183,19 +159,6 @@ auto sequence_read_view_of_storage(benchmark::State& state)
         }
 }
 
-template<std::size_t N>
-auto sequence_read_view_of_bitset(benchmark::State& state)
-        -> void
-{
-        auto bits = filled<N, xstd::bitset<N>>();
-        benchmark::DoNotOptimize(&bits);
-        auto const v = xstd::bit_span<xstd::bitset<N>>(bits);
-        auto lcg = std::uint64_t{1};
-        for (auto _ : state) {
-                benchmark::DoNotOptimize(static_cast<bool>(v[next_index(lcg, N)]));
-        }
-}
-
 }       // namespace
 
 // From four words up. [design.md#what-a-view-costs]
@@ -208,14 +171,11 @@ auto sequence_read_view_of_bitset(benchmark::State& state)
 LADDER(set_iterate_owner);
 LADDER(set_iterate_owner_twin);
 LADDER(set_iterate_view_of_storage);
-LADDER(set_iterate_view_of_bitset);
 
 LADDER(sequence_count_owner);
 LADDER(sequence_count_view_of_storage);
-LADDER(sequence_count_view_of_bitset);
 
 LADDER(sequence_read_owner);
 LADDER(sequence_read_view_of_storage);
-LADDER(sequence_read_view_of_bitset);
 
 BENCHMARK_MAIN();

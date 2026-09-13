@@ -26,6 +26,7 @@
 #include <version>                                            // IWYU pragma: keep; __cpp_lib_ranges_as_const
 #include <new>                                                // IWYU pragma: keep; bad_alloc, behind TEST_HAS_INPLACE_VECTOR
 #include <ranges>                                             // begin, iota, range_const_reference_t, size
+#include <span>                                               // dynamic_extent
 #include <tuple>                                              // get, tuple
 #include <vector>                                             // vector
 
@@ -384,6 +385,53 @@ BOOST_AUTO_TEST_CASE(TheConstReferenceIsP2278s)
         // the paper's common_reference_t says bool, which is the assertion that fails first if the fallback is ever
         // simplified into that dance.
         static_assert(std::same_as<xstd::detail::bits::fallback::range_const_reference_t<std::vector<bool>>, bool>);
+}
+
+// The three members the readings will call once the trait is gone, and the one distinction that matters between them:
+// insert(n) is partial, n being a precondition, while growing_insert(n) is total and a run-time width grows to admit a
+// position past its end. [design.md#what-the-trait-reconciles]
+BOOST_AUTO_TEST_CASE(TheTotalInsertGrowsWhereThePartialOneAsserts)
+{
+        using A = xstd::detail::bits::contiguous_bit_array<std::uint8_t, 10>;
+        using V = xstd::detail::bits::contiguous_bit_vector<std::uint8_t>;
+
+        // The width as a type, dynamic_extent where there is none.
+        static_assert(A::extent == 10UZ);
+        static_assert(V::extent == std::dynamic_extent);
+
+        auto a = A();
+        BOOST_CHECK(not a.test(3));
+        a.assign(3, true);
+        BOOST_CHECK(a.test(3));
+        a.assign(3, false);
+        BOOST_CHECK(not a.test(3));
+        a.fill(true);
+        BOOST_CHECK(a.all());
+        a.fill(false);
+        BOOST_CHECK(a.none());
+
+        // In range, a static width has nowhere to grow and the total form answers as the partial one does.
+        BOOST_CHECK(    a.growing_insert(4));
+        BOOST_CHECK(not a.growing_insert(4));
+        BOOST_CHECK_EQUAL(a.size(), 10UZ);
+
+        // Past the end, a run-time width grows to admit the position, and the bit is new by construction.
+        auto v = V();
+        BOOST_CHECK_EQUAL(v.size(), 0UZ);
+        BOOST_CHECK(v.growing_insert(7));
+        BOOST_CHECK_EQUAL(v.size(), 8UZ);
+        BOOST_CHECK(v.test(7));
+        BOOST_CHECK_EQUAL(v.count(), 1UZ);
+
+        // Already there, so no growth and no newness.
+        BOOST_CHECK(not v.growing_insert(7));
+        BOOST_CHECK_EQUAL(v.size(), 8UZ);
+
+        // And growing leaves the bits below it alone.
+        BOOST_CHECK(v.growing_insert(20));
+        BOOST_CHECK_EQUAL(v.size(), 21UZ);
+        BOOST_CHECK(v.test(7) and v.test(20));
+        BOOST_CHECK_EQUAL(v.count(), 2UZ);
 }
 
 // The semantic half a concept cannot check: a[i] is *(begin(a) + i), the same object and not merely an equal one.

@@ -8,6 +8,7 @@
 
 #include <xstd/bits/bit_traits.hpp>           // bit_storage, bit_traits, count, find_first, find_next, find_prev, static_bit_extent
 #include <xstd/bits/detail/bidirectional.hpp> // bidirectional_bit_iterator, bidirectional_bit_reference
+#include <xstd/bits/detail/contiguous_bit_container.hpp> // specialization_of_contiguous_bit_container
 #include <xstd/bits/detail/hash.hpp>          // hash_append_bits, hash_append_positions, std_hash
 #include <xstd/bits/detail/intrin.hpp>        // countl_zero, countr_zero
 #include <xstd/bits/detail/shift.hpp>         // shl, shr
@@ -118,7 +119,7 @@ constexpr auto walk_positions_descending(Range const& r, F& f)
 }       // namespace detail::set
 
 
-template<class Bits, ownership Own, bit_storage<Bits> Traits = bit_traits<std::remove_const_t<Bits>>>
+template<detail::bits::specialization_of_contiguous_bit_container Bits, ownership Own, bit_storage<Bits> Traits = bit_traits<std::remove_const_t<Bits>>>
 class set_adaptor
 {
         static constexpr bool is_owner = owns(Own);
@@ -140,7 +141,7 @@ class set_adaptor
         }
 
         // A set view refers into this owner's storage, and nothing else outside does; a sequence view does not, the readings not mixing. [design.md#the-readings-do-not-mix]
-        template<class B, ownership O, bit_storage<B> T> friend class set_adaptor;
+        template<detail::bits::specialization_of_contiguous_bit_container B, ownership O, bit_storage<B> T> friend class set_adaptor;
 
         // The value under the set reading, owned or viewed as == is: the bits at a static width, the positions at a run-time one, where two equal sets need not share a width. [design.md#the-hashing-invariant]
         template<class Provider, class Hash, class Flavor>

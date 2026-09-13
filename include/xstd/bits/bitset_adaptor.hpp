@@ -10,6 +10,7 @@
 
 #include <xstd/bits/bit_traits.hpp>               // bit_storage, bit_traits, block_readable, scan_prev, static_bit_extent, word_at, zero_width
 #include <xstd/bits/detail/allocator_base_type.hpp> // allocator_base_type
+#include <xstd/bits/detail/contiguous_bit_container.hpp> // specialization_of_contiguous_bit_container
 #include <xstd/bits/detail/hash.hpp>              // hash_append_bits, std_hash
 #include <xstd/bits/ownership.hpp>                // owned_storage, ownership, reading
 #include <boost/hash2/hash_append.hpp>            // hash_append_tag
@@ -36,34 +37,8 @@
 
 namespace xstd {
 
-// The bitset vocabulary the storage speaks natively, one line each in the wrapper: std::bitset's members and boost's set vocabulary, so a storage missing one fails here, at the class. [design.md#a-strict-extension]
-template<class Bits>
-concept has_bitops =
-        std::regular<Bits> and
-        requires (Bits& b, Bits const& c, std::size_t n)
-        {
-                { b &= c    } -> std::same_as<Bits&>;
-                { b |= c    } -> std::same_as<Bits&>;
-                { b ^= c    } -> std::same_as<Bits&>;
-                { b -= c    } -> std::same_as<Bits&>;
-                { b <<= n   } -> std::same_as<Bits&>;
-                { b >>= n   } -> std::same_as<Bits&>;
-                { b.set()   } -> std::same_as<Bits&>;
-                { b.reset() } -> std::same_as<Bits&>;
-                { b.flip()  } -> std::same_as<Bits&>;
-                { c.all()   } -> std::same_as<bool>;
-                { c.any()   } -> std::same_as<bool>;
-                { c.none()  } -> std::same_as<bool>;
-                { c.count() } -> std::convertible_to<std::size_t>;
-                { c.size()  } -> std::convertible_to<std::size_t>;
-                { c.is_subset_of(c)        } -> std::same_as<bool>;
-                { c.is_proper_subset_of(c) } -> std::same_as<bool>;
-                { c.intersects(c)          } -> std::same_as<bool>;
-        }
-;
-
-// [template.bitset] over a storage of ours, which speaks the vocabulary and reads by block: what the storage has is forwarded, what it lacks is added through Traits. [design.md#owning-is-ours]
-template<has_bitops Bits, bit_storage<Bits> Traits = bit_traits<Bits>>
+// [template.bitset] over a storage of ours, nominally: has_bitops used to ask structurally whether a storage spoke the bitset vocabulary, because a foreign one might. Only ours can be here now, and ours speaks it by construction, so the question was answering itself. [design.md#one-storage]
+template<detail::bits::specialization_of_contiguous_bit_container Bits, bit_storage<Bits> Traits = bit_traits<Bits>>
         requires block_readable<Traits, Bits>
 class bitset_adaptor : public detail::bits::allocator_base_type<Bits>
 {
@@ -81,8 +56,8 @@ class bitset_adaptor : public detail::bits::allocator_base_type<Bits>
         template<class> friend struct owned_storage;
 
         // Either reading's view refers into this owner's storage, and nothing else outside does: a bitset is committed to neither reading, which is what its two views are for. [design.md#the-readings-do-not-mix]
-        template<class B, ownership O, bit_storage<B> T>         friend class set_adaptor;
-        template<class B, ownership O, bool W, bit_storage<B> T> friend class sequence_adaptor;
+        template<detail::bits::specialization_of_contiguous_bit_container B, ownership O, bit_storage<B> T>         friend class set_adaptor;
+        template<detail::bits::specialization_of_contiguous_bit_container B, ownership O, bool W, bit_storage<B> T> friend class sequence_adaptor;
 
         // The value through the trait: the blocks and the width. [design.md#the-hashing-invariant]
         template<class Provider, class Hash, class Flavor>
