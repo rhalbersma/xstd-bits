@@ -1202,6 +1202,39 @@ and it grants access to a member and to nothing that member's type does not alre
 befriends is [the-readings-do-not-mix](#the-readings-do-not-mix). Storage stays private; nothing on an owner's
 surface says `contiguous_bit_array`.
 
+### viewing-an-owner-is-implicit
+
+`bit_set_view(my_set)` is a converting constructor on the **view**, not a conversion operator on the owner, and
+the choice is forced rather than stylistic. `bit_set_view` and `bit_span` are alias templates, so every
+deduction runs through constructors and guides on the adaptor; a conversion function contributes nothing to
+class template argument deduction. Measured on a model of both shapes: with only the operator, `view(owner)` is
+`no matching function for call to 'adaptor(...)'`. The constructor has to exist anyway, and once it does the
+operator is a second mechanism for a conversion already spelled. Three lesser reasons agree. The constructor is
+where `owner_of<Bits, Traits, R>` already hangs, so the readings-do-not-mix rule is stated once. Const falls out
+of deducing `Owner&` rather than needing an `operator view<Bits>() &` and an `operator view<Bits const>() const&`
+kept in step by hand. And `Owner&` is an lvalue reference, so a temporary owner never binds — the `string_view`
+foot-gun closed by the signature instead of by a `&`-qualifier someone has to remember.
+
+The standard's own split is about layering, not taste: `string` → `string_view` is an operator because
+`<string_view>` must not depend on `<string>`, while `vector`/`array` → `span` is a constructor because `span`
+is generic over its sources and names none of them. Owner and view here are the same class template, so there is
+no layer to respect, and the second shape is the one that fits.
+
+**Implicit from an owner, explicit from raw storage**, and `span` supplies the criterion. Its conditional
+`explicit` is usually read as "static extent", which is not what it says — the span-to-span constructor spells
+it `extent != dynamic_extent && OtherExtent == dynamic_extent`, so static-to-static stays *implicit* and only
+dynamic-to-static is explicit. The rule is therefore: **explicit exactly where the conversion asserts a size the
+source cannot prove**, which is why those constructors carry a hardened precondition
+(`ranges::size(r) == extent`) and why `span(array<T, N>&)` and the C-array overload are implicit even at a
+static extent — an `array` carries its `N` in the type.
+
+Viewing an owner is the `array` row. The width comes from the owner's own `Bits`, `owner_of` requires the
+storage and the trait to match exactly, and the lvalue parameter closes the lifetime hole: nothing is asserted
+that is not already proven, and there is no precondition to violate. So that constructor is implicit.
+`set_adaptor(Bits&)` stays explicit — not for any size claim, but because reaching past a container to the
+storage underneath it is an act worth spelling, and it is the constructor a user adapting their own storage
+reaches for deliberately.
+
 ### the-readings-do-not-mix
 
 A view over an owner is a second reading of bits that already have one, and two of the three pairings are a

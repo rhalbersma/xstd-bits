@@ -31,6 +31,12 @@ using Blocks = xstd::detail::bits::contiguous_bit_array<std::size_t, 8>;
 template<class T>
 using view_of = decltype(xstd::bit_span(std::declval<T&>()));
 
+// Named rather than a lambda, so the conversion happens at a call boundary the way a caller would meet it.
+constexpr auto takes_a_span(xstd::bit_span<Blocks> v) noexcept -> bool
+{
+        return v[3];
+}
+
 }  // namespace
 
 // The view is the referring adaptor under another name, and over an owner it refers into the storage the owner wraps. [design.md#the-views-are-the-adaptors]
@@ -49,6 +55,28 @@ BOOST_AUTO_TEST_CASE(TheReadingsDoNotMix)
         static_assert(std::same_as<decltype(xstd::bit_set_view(std::declval<xstd::bit_static_set<8>&>())), xstd::bit_set_view<Blocks>>);
         static_assert(    std::constructible_from<xstd::bit_span<Blocks>, xstd::bitset<8>&>);
         static_assert(not std::constructible_from<xstd::bit_span<Blocks>, xstd::bit_static_set<8>&>);
+}
+
+// Viewing an owner is implicit, viewing raw storage is not: the first asserts nothing the owner does not already
+// carry, which is where span draws the line -- its array and C-array constructors are implicit even at a static
+// extent, while the ones claiming a size their source cannot prove are explicit. An rvalue owner still does not
+// convert, the parameter being Owner&. [design.md#viewing-an-owner-is-implicit]
+BOOST_AUTO_TEST_CASE(ViewingAnOwnerIsImplicit)
+{
+        static_assert(std::convertible_to<xstd::bitset<8>&,        xstd::bit_span<Blocks>>);
+        static_assert(std::convertible_to<xstd::bit_array<8>&,     xstd::bit_span<Blocks>>);
+        static_assert(std::convertible_to<xstd::bitset<8> const&,  xstd::bit_span<Blocks const>>);
+        static_assert(not std::convertible_to<xstd::bitset<8> const&, xstd::bit_span<Blocks>>);
+
+        static_assert(not std::convertible_to<xstd::bitset<8>,     xstd::bit_span<Blocks>>);
+        static_assert(not std::convertible_to<xstd::bit_array<8>&&, xstd::bit_span<Blocks>>);
+
+        static_assert(    std::constructible_from<xstd::bit_span<Blocks>, Blocks&>);
+        static_assert(not std::convertible_to<Blocks&, xstd::bit_span<Blocks>>);
+
+        auto a = xstd::bit_array<8>();
+        a[3] = true;
+        BOOST_CHECK(takes_a_span(a));
 }
 
 BOOST_AUTO_TEST_CASE(TheViewedTypesAreTheOnesHoldingBoolsWithoutOfferingThem)
