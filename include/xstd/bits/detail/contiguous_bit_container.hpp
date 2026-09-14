@@ -176,46 +176,47 @@ public:
                 }
         }
 
-        [[nodiscard]] constexpr auto set_three_way(contiguous_bit_container const& other [[maybe_unused]]) const noexcept
+        // A hidden friend, not a member: an ordering is a question about two values and neither is the subject, so x.set_three_way(y) spelled a symmetry the operation has and the call did not. [design.md#the-ordering-primitive]
+        [[nodiscard]] friend constexpr auto set_three_way(contiguous_bit_container const& x [[maybe_unused]], contiguous_bit_container const& y [[maybe_unused]]) noexcept
                 -> std::strong_ordering
         {
                 if constexpr (has_static_size and N == 0) {
                         return std::strong_ordering::equal;
                 } else if constexpr (has_static_size and N == 1) {
                         // One position, so the loser is empty and any_above is constantly false. [design.md#degenerate-widths]
-                        return this->test(0UZ) <=> other.test(0UZ);
+                        return x.test(0UZ) <=> y.test(0UZ);
                 } else {
                         if constexpr (not has_static_size) {
-                                if (this->size() != other.size()) {
-                                        return padded_set_three_way(other);
+                                if (x.size() != y.size()) {
+                                        return x.padded_set_three_way(y);
                                 }
                         }
-                        auto const [ index, diff ] = first_difference(other);
+                        auto const [ index, diff ] = x.first_difference(y);
                         if (diff == zero) {
                                 return std::strong_ordering::equal;
                         }
                         auto const offset = detail::bits::countr_zero(diff);
-                        if (detail::bits::intersects(this->m_blocks[index], shl(unit, offset))) {
-                                return other.any_above(index, offset) ? std::strong_ordering::less : std::strong_ordering::greater;
+                        if (detail::bits::intersects(x.m_blocks[index], shl(unit, offset))) {
+                                return y.any_above(index, offset) ? std::strong_ordering::less : std::strong_ordering::greater;
                         }
-                        return this->any_above(index, offset) ? std::strong_ordering::greater : std::strong_ordering::less;
+                        return x.any_above(index, offset) ? std::strong_ordering::greater : std::strong_ordering::less;
                 }
         }
 
         // The sequence reading a word at a time: whoever HOLDS the lowest differing position is greater, with no prefix clause, the widths being equal. [design.md#the-ordering-primitive]
-        [[nodiscard]] constexpr auto sequence_three_way(contiguous_bit_container const& other [[maybe_unused]]) const noexcept
+        [[nodiscard]] friend constexpr auto sequence_three_way(contiguous_bit_container const& x [[maybe_unused]], contiguous_bit_container const& y [[maybe_unused]]) noexcept
                 -> std::strong_ordering
         {
-                assert(this->size() == other.size());
+                assert(x.size() == y.size());
                 if constexpr (has_static_size and N == 0) {
                         return std::strong_ordering::equal;
                 } else {
-                        auto const [ index, diff ] = first_difference(other);
+                        auto const [ index, diff ] = x.first_difference(y);
                         if (diff == zero) {
                                 return std::strong_ordering::equal;
                         }
                         auto const offset = detail::bits::countr_zero(diff);
-                        return detail::bits::intersects(this->m_blocks[index], shl(unit, offset))
+                        return detail::bits::intersects(x.m_blocks[index], shl(unit, offset))
                                 ? std::strong_ordering::greater
                                 : std::strong_ordering::less
                         ;
@@ -227,13 +228,13 @@ public:
         // reversed and there is nothing here to hand-roll. The degenerate widths need no arm of their own: a zero
         // width still holds its one all-padding block, which is clear in both, and a one-block width is the
         // algorithm's first step. [design.md#the-ordering-primitive]
-        [[nodiscard]] constexpr auto string_three_way(contiguous_bit_container const& other) const noexcept
+        [[nodiscard]] friend constexpr auto string_three_way(contiguous_bit_container const& x, contiguous_bit_container const& y) noexcept
                 -> std::strong_ordering
         {
-                assert(this->size() == other.size());
+                assert(x.size() == y.size());
                 return std::lexicographical_compare_three_way(
-                        std::ranges::rbegin(this->m_blocks), std::ranges::rend(this->m_blocks),
-                        std::ranges::rbegin(other.m_blocks), std::ranges::rend(other.m_blocks)
+                        std::ranges::rbegin(x.m_blocks), std::ranges::rend(x.m_blocks),
+                        std::ranges::rbegin(y.m_blocks), std::ranges::rend(y.m_blocks)
                 );
         }
 

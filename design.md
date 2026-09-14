@@ -658,6 +658,12 @@ the same mistake `lexicographical_three_way` makes one step further along.
 
 ### the-ordering-primitive
 
+All three orderings are **hidden friends** of the storage rather than members: `set_three_way(x, y)` and not
+`x.set_three_way(y)`. An ordering is a question about two values with neither as its subject, and the member
+spelling put one of them in a place the operation does not have -- the same asymmetry a member `operator<=>`
+would carry. As friends they are reached by ADL, which is how the three adaptors call them, and the storage's
+`first_difference` and `any_above` stay members because those two ARE asked of one value.
+
 The first two orderings are answered a word at a time, from two pieces:
 
 - **`first_difference`** returns the lowest block at which two values differ, together with that block's
@@ -904,11 +910,16 @@ C7683 and C3313 as the cascade, and C2102 wherever `&self.storage()` appears. GC
 The constraint is about the **storage**, not about the accessor, so it says so:
 
 ```c++
-requires is_owner and requires (bits_type const& b) { b.sequence_three_way(b); }
+requires is_owner and requires (bits_type const& b) { sequence_three_way(b, b); }
 ```
 
 `bits_type` is complete and already in hand, and for an owner it is exactly what `storage()` returns, so
-satisfaction is unchanged on every compiler.
+satisfaction is unchanged on every compiler. The call is spelled as a free function because the three orderings
+are hidden friends of the storage rather than its members ([the-ordering-primitive](#the-ordering-primitive));
+when this was diagnosed it read `b.sequence_three_way(b)`, and the failing form above read
+`x.storage().sequence_three_way(y.storage())`. What made MSVC complete the class was naming a **member** of
+what the accessor returns, which is the shape the record below is about; whether the call spelling would have
+tripped it too was never measured, because the constraint had already moved off the accessor.
 
 Two neighbours look like the same shape and are not. The bulk operators take `this auto&& self`, so they are
 templates and their constraints wait for a call, by which time the class is complete. And
