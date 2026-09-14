@@ -191,15 +191,19 @@ if(PROJECT_IS_TOP_LEVEL)
         # not exist yet when the benchmarks ask for it. Both trees grade over the same two integer classes.
         include(${CMAKE_CURRENT_LIST_DIR}/cmake/int128.cmake)
 
-        # Off in the coverage job, and the reason is the gcovr report rather than build time. gcovr excludes
-        # benchmark/ as a source path, but a benchmark is not a source there: it is a translation unit that
-        # INSTANTIATES the library's templates, and those instantiations live in include/ where they are counted.
-        # The coverage job configures Debug, and benchmark/CMakeLists.txt registers a benchmark as a test only
-        # when the build type is not Debug -- so under coverage they compile and never run, and every branch of
-        # an instantiation no test TU also makes is uncovered by construction. Adding one Block-width benchmark
-        # put nine such branches in the denominator and covered none of them. A benchmark measures the library
-        # rather than being part of it, so it does not belong in the measurement at all. [design.md#the-coverage-gate]
-        option(${project_option_prefix}_BUILD_BENCHMARKS "Build the benchmark tree alongside the tests" ON)
+        # Off by default, and the GCC ladder alone turns it on. A benchmark measures the library rather than
+        # being part of it, so seven compiler ladders, fifteen sanitizer legs and both analysers building one
+        # bought nothing the one ladder does not: its Release legs run the smoke test benchmark/CMakeLists.txt
+        # registers, which is what keeps this tree compiling and running against the current API. A local
+        # build that wants the benchmarks asks for them.
+        #
+        # The coverage job needs it off for a second reason, which its own stub records: gcovr drops benchmark/
+        # as a source path, but a benchmark is not a source there -- it is a translation unit that INSTANTIATES
+        # the library's templates, and those instantiations live in include/ where they are counted. That job
+        # configures Debug, where no benchmark registers as a test, so they would compile and never run, and
+        # every branch of an instantiation no test TU also makes is uncovered by construction. One Block-width
+        # benchmark put nine such branches in the denominator and covered none. [design.md#the-coverage-gate]
+        option(${project_option_prefix}_BUILD_BENCHMARKS "Build the benchmark tree alongside the tests" OFF)
 
         if(${project_option_prefix}_BUILD_BENCHMARKS)
             add_subdirectory(benchmark)

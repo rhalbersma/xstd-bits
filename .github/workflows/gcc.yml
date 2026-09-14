@@ -22,6 +22,13 @@ on:
   workflow_call:
 
 jobs:
-  # No inputs: every rung, and the rungs move with cpp-ci rather than with a local matrix.
+  # Every rung, and the rungs move with cpp-ci rather than with a local matrix.
+  #
+  # The one ladder that builds the benchmark tree, now that XSTD_BITS_BUILD_BENCHMARKS is off by default.
+  # Its Release legs run the smoke test benchmark/CMakeLists.txt registers -- --benchmark_min_time=1x, that
+  # it runs rather than what it costs -- so the benchmarks keep compiling and executing against the current
+  # API without every other leg paying to build them.
   gcc:
     uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@8156138fa6336f5d870e72e62b72033632a1c56b # v0.9.0
+    with:
+      cmake_args: -DXSTD_BITS_BUILD_BENCHMARKS=ON
