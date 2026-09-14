@@ -33,7 +33,9 @@ using Types = std::tuple
 ,        xstd::basic_bitset<uint32_t, 24>
 ,        xstd::basic_bitset<uint64_t, 24>
 #ifdef TEST_HAS_UINT128
+
 ,        xstd::basic_bitset<xstd::uint128, 24>
+
 #endif
 ,        xstd::basic_dynamic_bitset<uint8_t>
 ,        xstd::basic_dynamic_bitset<uint64_t>

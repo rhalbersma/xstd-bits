@@ -22,7 +22,9 @@ using namespace test;
 using Types = std::tuple
 <       std::set<std::size_t>
 #ifdef TEST_HAS_FLAT_SET
+
 ,       std::flat_set<std::size_t>
+
 #endif
 ,       xstd::basic_bit_static_set<uint16_t, 32>
 ,       xstd::basic_bit_static_set<uint16_t, 33>
@@ -38,11 +40,13 @@ using Types = std::tuple
 ,       xstd::basic_bit_static_set<uint64_t, 129>
 ,       xstd::basic_bit_static_set<uint64_t, 192>
 #ifdef TEST_HAS_UINT128
+
 ,       xstd::basic_bit_static_set<xstd::uint128, 128>
 ,       xstd::basic_bit_static_set<xstd::uint128, 129>
 ,       xstd::basic_bit_static_set<xstd::uint128, 256>
 ,       xstd::basic_bit_static_set<xstd::uint128, 257>
 ,       xstd::basic_bit_static_set<xstd::uint128, 384>
+
 #endif
 >;
 

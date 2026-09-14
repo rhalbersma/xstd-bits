@@ -645,9 +645,16 @@ over different sequences, and **they disagree**, pairwise, as two pairs show:
 
 A storage serving three readings cannot hold one of their orderings under a neutral name without choosing for
 its callers, so it holds none under that name. It holds **all three, separately named**:
-`contiguous_bit_container` has a `set_three_way`, a `sequence_three_way` and a `bitset_three_way`, never one
+`contiguous_bit_container` has a `set_three_way`, a `sequence_three_way` and a `string_three_way`, never one
 `lexicographical_three_way`, so a caller says which reading it means rather than being handed whichever the
 storage happened to pick.
+
+**Each is named for what it orders over, not for who asks.** Positions, bools from index 0, and the bit
+string — which is why the third is `string_three_way` and not `bitset_three_way`. The storage does not know
+what a bitset is; it knows the order `to_string()` would put its bits in, most significant first, and that
+order is the one `xstd::bitset` and `boost::dynamic_bitset` both mean by `<`. Naming two of the three after
+readings and the third after a container would have put a caller's word on the storage's member, which is
+the same mistake `lexicographical_three_way` makes one step further along.
 
 ### the-ordering-primitive
 
@@ -680,10 +687,16 @@ makes the two comparable, both exiting at once.
 pair costs `n + 1` block reads. And when the values are equal `any_above` is never reached at all, since
 `first_difference` already settles it.
 
-**The bitset reading needs neither piece.** The bit string, most significant position first, is the blocks
-from the top block down, with the unused tail kept clear, so `bitset_three_way` is the plain `<=>` of the
-blocks from the top: one comparison at a static width within a word, a loop from the last block otherwise,
-equal only when every block is. It is the one reading whose order is plain lexicographic over words.
+**The bitset reading needs neither piece.** The bit string, most significant position first, **is** the blocks
+from the top block down, with the unused tail kept clear, so it is the one reading whose order is plain
+lexicographic over words — and plain lexicographic over words is `std::lexicographical_compare_three_way` over
+the blocks reversed. `string_three_way` is that call and nothing else: no loop of its own, and no arm for
+either degenerate width, since a zero width still holds its one all-padding block, clear in both, and a
+one-block width is the algorithm's first step.
+
+Handing it to the standard algorithm costs nothing at the widths the hand-rolled version had arms for. GCC 15
+at `-O2`: `xstd::bitset<64>` is one `cmpq`, and `xstd::bitset<128>` is the same two comparisons fully unrolled,
+top block first.
 
 **The prefix clause is not removable.** Set order is not plain lexicographic over words under *any*
 comparator. At `digits = 4`, `A = {1}` and `B = {5}` differ in word 0, where `A₀ = {1}` and `B₀ = {}`; a
@@ -747,7 +760,7 @@ the number 1, and boost orders them strictly, the shorter first. The harness pin
 boost's own `<` pair for pair over those widths, against `to_string()` compared as strings, and within a word
 against `to_ullong()`.
 
-`bitset_adaptor::operator<=>` is `bitset_three_way` at equal widths, and at unequal ones boost's own walk,
+`bitset_adaptor::operator<=>` is `string_three_way` at equal widths, and at unequal ones boost's own walk,
 the top `min(size())` positions paired from the top and then the shorter first, a word at a time through
 `word_at` ([the-blit](#the-blit)). `==` stays width-first, and `<=>` never answers equal at unequal widths,
 so the two agree ([the-hashing-invariant](#the-hashing-invariant)).
@@ -2116,7 +2129,7 @@ rather than `not any_true`, so the storage is asked in its own words; `contiguou
 
 `mismatch` is `contiguous_bit_container::first_difference` plus one `countr_zero`. That helper existed already,
 private and used only by `sequence_three_way`; it is now public, and **keeps its name**: it scans low block to
-high, which is the *ascending* orderings' answer, where `bitset_three_way` deliberately walks the other way and
+high, which is the *ascending* orderings' answer, where `string_three_way` deliberately walks the other way and
 does not use it. Calling it `mismatch` on the storage would repeat the mistake `lexicographical_three_way` made
 ([two-readings-disagree](#two-readings-disagree)). The counterpart name goes on the public member, which is the
 owner's alone: a window's blocks are not its own.

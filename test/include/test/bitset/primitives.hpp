@@ -345,6 +345,7 @@ struct mem_equal_to
                         auto const lhs_view = xstd::bit_set_view(self);
                         auto const rhs_view = xstd::bit_set_view(rhs);
 #ifdef _MSC_VER
+
                         BOOST_CHECK_EQUAL(
                                 self == rhs,
                                 std::ranges::equal(
@@ -352,9 +353,12 @@ struct mem_equal_to
                                         rhs_view.begin(), rhs_view.end()
                                 )
                         );
+
 #else
+
                         // range version not working with Visual C++
                         BOOST_CHECK_EQUAL(self == rhs, std::ranges::equal(lhs_view, rhs_view));
+
 #endif
                 }
         }

@@ -12,13 +12,17 @@
 #include <set>                          // set
 #include <version>                      // __cpp_lib_flat_set
 #if defined(__cpp_lib_flat_set)
+
 #include <flat_set> // flat_set
+
 #endif
 
 // A built-in wide enough to name, a library mode that will own it, and a <bit> that will take it. [design.md#uint128-support]
 #if defined(__SIZEOF_INT128__) && !defined(__STRICT_ANSI__) && !defined(_MSC_VER)
+
 #define BENCH_HAS_UINT128
 #include <xstd/ints/cstdint/int128.hpp> // uint128
+
 #endif
 
 // The ladder doubles rather than stepping decades: bit_set changes block count on these boundaries, so a doubling walks whole blocks, and a cache knee reads as a knee. [design.md#the-sieve]
@@ -115,24 +119,31 @@ auto bm_filter_twins(benchmark::State& state)
         BENCH_QUADRATIC(fn, std::flat_set<std::size_t>);   \
         BENCH_LADDER(fn, std::set<std::size_t>);           \
         BENCH_LADDER(fn, xstd::bit_set)
+
 #else
+
 #define BENCH_REPRESENTATIONS(fn)                          \
         BENCH_LADDER(fn, std::set<std::size_t>);           \
         BENCH_LADDER(fn, xstd::bit_set)
+
 #endif
 
 // The second axis, ours alone: std::set and std::flat_set have no block to choose.
 #if defined(BENCH_HAS_UINT128)
+
 #define BENCH_BLOCKS(fn)                                   \
         BENCH_LADDER(fn, xstd::basic_bit_set<std::uint8_t >); \
         BENCH_LADDER(fn, xstd::basic_bit_set<std::uint16_t>); \
         BENCH_LADDER(fn, xstd::basic_bit_set<std::uint32_t>); \
         BENCH_LADDER(fn, xstd::basic_bit_set<xstd::uint128>)
+
 #else
+
 #define BENCH_BLOCKS(fn)                                   \
         BENCH_LADDER(fn, xstd::basic_bit_set<std::uint8_t >); \
         BENCH_LADDER(fn, xstd::basic_bit_set<std::uint16_t>); \
         BENCH_LADDER(fn, xstd::basic_bit_set<std::uint32_t>)
+
 #endif
 
 BENCH_REPRESENTATIONS(bm_sift_primes0);

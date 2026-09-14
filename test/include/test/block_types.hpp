@@ -34,13 +34,19 @@ static_assert(not (has_uint128 and has_msvc_int128));
 
 static_assert(not has_uint128 or block_basis<xstd::uint128>);
 #ifdef TEST_HAS_MSVC_INT128
+
 static_assert(block_basis<xstd::uint128>);
+
 #endif
 #ifdef TEST_HAS_ABSL_INT128
+
 static_assert(block_basis<absl::uint128>);
+
 #endif
 #ifdef TEST_HAS_BOOST_INT128
+
 static_assert(block_basis<boost::int128::uint128>);
+
 #endif
 
 template<class Block>
@@ -53,7 +59,9 @@ using word_types = std::tuple
 ,       std::uint32_t
 ,       std::uint64_t
 #ifdef TEST_HAS_UINT128
+
 ,       xstd::uint128
+
 #endif
 >;
 
@@ -66,17 +74,23 @@ using narrow_word_types = std::tuple
 using wide_word_types = decltype(std::tuple_cat(
         std::declval<std::tuple<
 #if defined(TEST_HAS_UINT128) || defined(TEST_HAS_MSVC_INT128)
+
                 xstd::uint128
+
 #endif
         >>(),
         std::declval<std::tuple<
 #ifdef TEST_HAS_ABSL_INT128
+
                 absl::uint128
+
 #endif
         >>(),
         std::declval<std::tuple<
 #ifdef TEST_HAS_BOOST_INT128
+
                 boost::int128::uint128
+
 #endif
         >>()
 ));

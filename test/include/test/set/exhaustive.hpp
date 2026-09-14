@@ -16,8 +16,10 @@
 #include <span>                     // dynamic_extent
 
 #ifdef _MSC_VER
+
         // xstd::bit_static_set<0> gives bogus "unreachable code" warnings
         __pragma(warning(disable: 4702))
+
 #endif
 
 namespace test::set {

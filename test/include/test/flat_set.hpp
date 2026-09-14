@@ -8,8 +8,10 @@
 
 #include <version>  // __cpp_lib_flat_set
 #ifdef __cpp_lib_flat_set
+
 #define TEST_HAS_FLAT_SET
 #include <flat_set> // IWYU pragma: export; flat_set
+
 #endif
 
 // VS 2022's MSVC STL has no <flat_set>; the probe lives here because <version> has to precede it.

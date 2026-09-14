@@ -59,11 +59,13 @@ using Types = std::tuple
 ,        xstd::basic_bitset<uint64_t, 64>
 ,        xstd::basic_bitset<uint64_t, 65>
 #ifdef TEST_HAS_UINT128
+
 ,        xstd::basic_bitset<xstd::uint128, 0>
 ,        xstd::basic_bitset<xstd::uint128, 1>
 ,        xstd::basic_bitset<xstd::uint128, 127>
 ,        xstd::basic_bitset<xstd::uint128, 128>
 ,        xstd::basic_bitset<xstd::uint128, 129>
+
 #endif
 ,        xstd::basic_dynamic_bitset<uint8_t>
 ,        xstd::basic_dynamic_bitset<uint64_t>

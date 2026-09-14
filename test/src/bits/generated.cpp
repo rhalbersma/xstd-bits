@@ -61,6 +61,7 @@ BOOST_AUTO_TEST_CASE(EveryCellIsARegularContainer)
         static_assert(is_regular_container<xstd::bit_inplace_set<N>   >());
         static_assert(is_regular_container<xstd::bit_inplace_vector<N>>());
         static_assert(is_regular_container<xstd::inplace_bitset<N>    >());
+
 #endif
         BOOST_CHECK(true);
 }
@@ -83,6 +84,7 @@ BOOST_AUTO_TEST_CASE(TheAllocatorFollowsTheColumnAndNotTheRow)
         static_assert(not_allocator_aware<xstd::bit_inplace_set<N>   >());
         static_assert(not_allocator_aware<xstd::bit_inplace_vector<N>>());
         static_assert(not_allocator_aware<xstd::inplace_bitset<N>    >());
+
 #endif
         BOOST_CHECK(true);
 }
