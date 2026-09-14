@@ -24,4 +24,4 @@ on:
 jobs:
   # No inputs: every rung, and the rungs move with cpp-ci rather than with a local matrix.
   gcc:
-    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@e2886b13f6fcd1eceb231652f816b016de41be1d # v0.8.1
+    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@8156138fa6336f5d870e72e62b72033632a1c56b # v0.9.0

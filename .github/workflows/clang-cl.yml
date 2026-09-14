@@ -26,7 +26,7 @@ jobs:
   # rungs, 2022 included: clang-cl is clang, so it deduces through the views' alias templates where the
   # MSVC compiler at 2022 cannot, and this is what keeps the VS 2022 platform covered.
   clang_cl:
-    uses: rhalbersma/cpp-ci/.github/workflows/visual-studio.yml@e2886b13f6fcd1eceb231652f816b016de41be1d # v0.8.1
+    uses: rhalbersma/cpp-ci/.github/workflows/visual-studio.yml@8156138fa6336f5d870e72e62b72033632a1c56b # v0.9.0
     with:
       toolset: ClangCL,host=x64
       preview_toolset_prefix: "ClangCL,"
