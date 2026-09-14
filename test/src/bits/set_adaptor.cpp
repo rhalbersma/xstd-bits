@@ -556,4 +556,40 @@ BOOST_AUTO_TEST_CASE(SubsetAndIntersectionAcrossWidthsCompareBlocks)
         BOOST_CHECK(not elsewhere.intersects(narrow));
 }
 
+// The ordering across two run-time widths turns on ONE position: the lowest at which the two sets disagree.
+// Whoever lacks it is less, having the smaller element there -- unless it holds nothing above it, in which case
+// its positions are a proper prefix of the other's and it is less for that reason instead. Both readings of
+// "less" are exercised here, in both operand orders, because they are different branches reaching the same
+// answer. [design.md#the-ordering-primitive]
+BOOST_AUTO_TEST_CASE(OrderingAcrossWidthsComparesBlocks)
+{
+        auto const narrow = [](std::initializer_list<std::size_t> p) { return grown_to(60UZ,  p); };   // width 61, one block
+        auto const wide   = [](std::initializer_list<std::size_t> p) { return grown_to(300UZ, p); };   // width 301, five blocks
+
+        // Equal contents at different widths: no differing block at all.
+        BOOST_CHECK((narrow({ 1UZ, 5UZ }) <=> wide({ 1UZ, 5UZ })) == std::strong_ordering::equal);
+
+        // The lowest difference is held by the left, and the right has something above it to be smaller with.
+        BOOST_CHECK((narrow({ 1UZ, 5UZ }) <=> wide({ 1UZ, 7UZ })) == std::strong_ordering::less);
+        BOOST_CHECK((wide({ 1UZ, 7UZ }) <=> narrow({ 1UZ, 5UZ })) == std::strong_ordering::greater);
+
+        // The lowest difference is held by the left, and the right stops there: a proper prefix, so the right is less.
+        BOOST_CHECK((narrow({ 1UZ, 5UZ }) <=> wide({ 1UZ })) == std::strong_ordering::greater);
+        BOOST_CHECK((wide({ 1UZ }) <=> narrow({ 1UZ, 5UZ })) == std::strong_ordering::less);
+
+        // The position above lives in a later block, which is the other half of the look upward.
+        BOOST_CHECK((narrow({ 1UZ, 5UZ }) <=> wide({ 1UZ, 200UZ })) == std::strong_ordering::less);
+
+        // The difference itself lives past the narrower storage's last block, where its blocks read as zero.
+        BOOST_CHECK((narrow({ 1UZ, 5UZ }) <=> wide({ 1UZ, 5UZ, 280UZ })) == std::strong_ordering::less);
+        BOOST_CHECK((wide({ 1UZ, 5UZ, 280UZ }) <=> narrow({ 1UZ, 5UZ })) == std::strong_ordering::greater);
+
+        // Two widths sharing a block count still differ, so this is the width-crossing arm and not the storage's.
+        BOOST_CHECK((grown_to(60UZ, { 1UZ, 5UZ }) <=> grown_to(63UZ, { 1UZ, 7UZ })) == std::strong_ordering::less);
+
+        // And the ordering agrees with the sets' own, which is what it is defined to be.
+        BOOST_CHECK(narrow({ 1UZ, 5UZ }) < wide({ 1UZ, 7UZ }));
+        BOOST_CHECK(wide({ 1UZ }) < narrow({ 1UZ, 5UZ }));
+}
+
 BOOST_AUTO_TEST_SUITE_END()

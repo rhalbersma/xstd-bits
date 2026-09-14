@@ -15,7 +15,7 @@
 #include <xstd/bits/ownership.hpp>                       // owned_bits_t, owned_storage, owner_of, owner_reading, ownership, owns, reading
 #include <boost/container_hash/is_range.hpp>             // is_range
 #include <boost/hash2/hash_append.hpp>                   // hash_append_tag
-#include <algorithm>                                     // all_of, lexicographical_compare_three_way, min
+#include <algorithm>                                     // all_of, find_if, lexicographical_compare_three_way, max, min
 #include <cassert>                                       // assert
 #include <compare>                                       // strong_ordering
 #include <concepts>                                      // constructible_from, convertible_to, invocable, swappable
@@ -85,6 +85,46 @@ template<class Bits>
 {
         using block_type = block_type_of<Bits>;
         return std::ranges::all_of(block_range(c, first, last), [](block_type block) -> bool { return block == block_type{}; });
+}
+
+// A block of a storage that may not have it: the blocks above a narrower storage's last read as zero, which is what the invariant makes the positions they would hold. [design.md#width-is-capacity]
+template<class Bits>
+[[nodiscard]] constexpr auto block_at(Bits const& c, std::size_t index) noexcept
+        -> block_type_of<Bits>
+{
+        return index < c.num_blocks() ? c.block(index) : block_type_of<Bits>{};
+}
+
+// The lowest block at which two storages differ, or n when they hold the same positions. The ordering needs the lowest differing POSITION, and the lowest differing block is where it lives. [design.md#the-ordering-primitive]
+template<class Bits>
+[[nodiscard]] constexpr auto first_differing_block(Bits const& a, Bits const& b, std::size_t n) noexcept
+        -> std::size_t
+{
+        auto const blocks = std::views::iota(0UZ, n);
+        auto const found = std::ranges::find_if(blocks, [&](std::size_t index) -> bool { return block_at(a, index) != block_at(b, index); });
+        return found == std::ranges::end(blocks) ? n : *found;
+}
+
+// Whether the storage holds the position at that block and offset.
+template<class Bits>
+[[nodiscard]] constexpr auto holds(Bits const& c, std::size_t index, std::size_t offset) noexcept
+        -> bool
+{
+        using block_type = block_type_of<Bits>;
+        return static_cast<block_type>(detail::bits::shr(block_at(c, index), offset) & block_type{1}) != block_type{};
+}
+
+// Whether the storage holds any position strictly above that one. The position itself is clear here -- it is the one the other storage holds -- so a single shift down leaves exactly what is above it, and the blocks past it answer the rest. [design.md#the-ordering-primitive]
+template<class Bits>
+[[nodiscard]] constexpr auto any_above(Bits const& c, std::size_t index, std::size_t offset) noexcept
+        -> bool
+{
+        using block_type = block_type_of<Bits>;
+        auto const n = c.num_blocks();
+        if (index < n and detail::bits::shr(c.block(index), offset) != block_type{}) {
+                return true;
+        }
+        return not blocks_clear(c, std::ranges::min(index + 1UZ, n), n);
 }
 
 // Blocks, lowest position first: load once per block, then tzcnt for the position and blsr to drop it.
@@ -261,15 +301,39 @@ public:
                 return x.storage() == y.storage();
         }
 
+        // The set ordering is lexicographic over the ascending positions, and that is decided by ONE position: the lowest at which the two disagree. Whoever lacks it takes the smaller element there and is less -- unless it holds nothing above it at all, in which case its positions are a proper prefix of the other's and it is less for that reason instead. So the whole comparison is a search for one differing block and a look above it, never a walk over elements. Each arm is spelled under if constexpr so nothing is instantiated where it cannot run. [design.md#the-ordering-primitive] [design.md#width-is-capacity]
         [[nodiscard]] friend constexpr auto operator<=>(set_adaptor const& x, set_adaptor const& y) noexcept
                 -> std::strong_ordering
         {
-                if constexpr (requires { x.storage().set_three_way(y.storage()); }) {
+                if constexpr (not requires { x.storage().set_three_way(y.storage()); }) {
+                        return std::lexicographical_compare_three_way(x.begin(), x.end(), y.begin(), y.end());
+                } else if constexpr (has_static_width) {
+                        // One width, so the storage's own entry answers every pair.
+                        return x.storage().set_three_way(y.storage());
+                } else {
                         if (same_width(x, y)) {
                                 return x.storage().set_three_way(y.storage());
                         }
+
+                        auto const& a = x.storage();
+                        auto const& b = y.storage();
+
+                        using block_type = std::remove_cvref_t<decltype(a.block(0UZ))>;
+                        auto const n = std::ranges::max(a.num_blocks(), b.num_blocks());
+                        auto const index = detail::set::first_differing_block(a, b, n);
+                        if (index == n) {
+                                return std::strong_ordering::equal;
+                        }
+
+                        auto const diff = static_cast<block_type>(detail::set::block_at(a, index) ^ detail::set::block_at(b, index));
+                        auto const offset = static_cast<std::size_t>(detail::bits::countr_zero(diff));
+
+                        // Whoever holds that position: the other is less when it has something above to be smaller there, and greater when it stops, having run out of elements first.
+                        if (detail::set::holds(a, index, offset)) {
+                                return detail::set::any_above(b, index, offset) ? std::strong_ordering::less : std::strong_ordering::greater;
+                        }
+                        return detail::set::any_above(a, index, offset) ? std::strong_ordering::greater : std::strong_ordering::less;
                 }
-                return std::lexicographical_compare_three_way(x.begin(), x.end(), y.begin(), y.end());
         }
 
         // iterators; one type for both, this reading being read-only through its proxy. [design.md#read-only-set-proxy]

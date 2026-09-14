@@ -1649,9 +1649,22 @@ plain `if` that `same_width` would fold anyway. Folding is not enough: a static 
 arm, and `blocks_agree` carries a lambda no other call site shares, so those instantiations are reachable from
 no test and their branches are uncovered by construction -- the same hazard the coverage job's own
 `XSTD_BITS_BUILD_BENCHMARKS=OFF` exists to avoid. A translation unit naming only `bit_static_set` instantiated
-thirty such functions before the guard and none after. `<=>` is the
-invariant's own algorithm, and `|=` `&=` `^=` `-=` insert and erase
-element by element, `insert` growing the narrower left operand as it grows for any key. The shifts translate the
+thirty such functions before the guard and none after.
+
+`<=>` is blockwise for the same reason and by a different route. The set ordering is lexicographic over the
+ascending positions, and lexicographic order over two sets is decided by exactly **one** position: the lowest at
+which they disagree. Whoever lacks it is less -- but for two different reasons, and the second is the one worth
+naming. Usually it holds a larger element there. When it holds nothing above that position at all, its positions
+are a proper *prefix* of the other's, and it is less because it runs out rather than because it compares
+smaller. So the comparison is a search for the lowest differing block and a single look above it:
+`first_differing_block`, then `any_above` on whichever side lacks the position. That is the storage's own
+`set_three_way` generalised, the blocks one storage does not have reading as zero. Measured as above, at two
+different run-time widths: 10.62us to 0.09us over equal sets, and 11.03us to 0.06us where one set is a proper
+prefix of the other.
+
+Still element by element: `|=` `&=` `^=` `-=` insert and erase
+one position at a time, `insert` growing the narrower left operand as it grows for any key. These mutate and may
+have to grow, which is why they were left as they are rather than swept along with the four that only read. The shifts translate the
 set, so `<<=` grows the width to hold the result and `>>=` empties past it. Hashing appends the positions and
 the count at a run-time width and the bits at a static one, where equal sets share a width
 ([the-hashing-invariant](#the-hashing-invariant)).
