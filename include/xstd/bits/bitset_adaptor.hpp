@@ -448,7 +448,7 @@ public:
                                 return lhs.top_aligned_three_way(rhs);
                         }
                 }
-                return lhs.m_bits.bitset_three_way(rhs.m_bits);
+                return lhs.m_bits.string_three_way(rhs.m_bits);
         }
 
         [[nodiscard]] constexpr auto test(std::size_t pos) const

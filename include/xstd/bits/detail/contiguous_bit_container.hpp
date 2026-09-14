@@ -199,7 +199,7 @@ public:
         }
 
         // The bitset reading a word at a time: the bit string, most significant position first, is the blocks from the top block down, the unused tail being clear. [design.md#the-ordering-primitive]
-        [[nodiscard]] constexpr auto bitset_three_way(contiguous_bit_container const& other [[maybe_unused]]) const noexcept
+        [[nodiscard]] constexpr auto string_three_way(contiguous_bit_container const& other [[maybe_unused]]) const noexcept
                 -> std::strong_ordering
         {
                 assert(this->size() == other.size());

@@ -964,7 +964,7 @@ auto disagreements(BB const& empty)
                                 ++n;
                         }
                         // The bitset reading is the sequence reading traversed from the top, which is the bit string's order.
-                        if (std::lexicographical_compare_three_way(qx.rbegin(), qx.rend(), qy.rbegin(), qy.rend()) != x.bitset_three_way(y)) {
+                        if (std::lexicographical_compare_three_way(qx.rbegin(), qx.rend(), qy.rbegin(), qy.rend()) != x.string_three_way(y)) {
                                 ++n;
                         }
                 }
@@ -1004,7 +1004,7 @@ BOOST_AUTO_TEST_CASE(TheThreeOrderingsDisagree)
                 for (auto const i : p) { x.set(i); }
                 auto y = T();
                 for (auto const i : q) { y.set(i); }
-                return { x.set_three_way(y), x.sequence_three_way(y), x.bitset_three_way(y) };
+                return { x.set_three_way(y), x.sequence_three_way(y), x.string_three_way(y) };
         };
 
         // {0} against {1}: [0] < [1]; [1,0] > [0,1]; "01" < "10".
