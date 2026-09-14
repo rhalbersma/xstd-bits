@@ -661,8 +661,14 @@ the same mistake `lexicographical_three_way` makes one step further along.
 All three orderings are **hidden friends** of the storage rather than members: `set_three_way(x, y)` and not
 `x.set_three_way(y)`. An ordering is a question about two values with neither as its subject, and the member
 spelling put one of them in a place the operation does not have -- the same asymmetry a member `operator<=>`
-would carry. As friends they are reached by ADL, which is how the three adaptors call them, and the storage's
-`first_difference` and `any_above` stay members because those two ARE asked of one value.
+would carry. As friends they are reached by ADL, which is how the three adaptors call them.
+
+`any_above` stays a member because it IS asked of one value: whether *this* storage holds anything above a
+position. `first_difference` is symmetric -- its answer is an `xor`, which commutes -- and stays a member only
+because it is a private step of the orderings rather than a vocabulary anyone spells; the same is true of
+`padded_first_difference` and `padded_set_three_way`. Among the public entries, `set_equal` and `intersects`
+are symmetric and could take the same form; `is_subset_of` and `is_proper_subset_of` could not, since
+`a ⊆ b` is not `b ⊆ a` and the member spelling states that correctly.
 
 The first two orderings are answered a word at a time, from two pieces:
 
