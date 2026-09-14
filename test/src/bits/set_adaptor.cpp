@@ -481,4 +481,39 @@ BOOST_AUTO_TEST_CASE(AZeroWidthAnswersBackWithoutScanning)
         BOOST_CHECK_EQUAL(static_cast<std::size_t>(z.back()), 0UZ);
 }
 
+// Across two run-time widths, equality is asked of whole blocks rather than walked position by position: the
+// blocks both storages have must agree, and the wider one's remainder must be clear. Both orders are exercised,
+// the wider operand being the left one and then the right, because which one carries the remainder is a branch.
+// [design.md#width-is-capacity]
+BOOST_AUTO_TEST_CASE(EqualityAcrossWidthsComparesBlocks)
+{
+        auto const grown_to = [](std::size_t width, std::initializer_list<std::size_t> positions) {
+                auto s = xstd::bit_set();
+                s.insert(width);
+                s.erase(width);
+                for (auto const p : positions) {
+                        s.insert(p);
+                }
+                return s;
+        };
+
+        auto const narrow = grown_to(60UZ,  { 1UZ, 5UZ, 59UZ });
+        auto const wide   = grown_to(300UZ, { 1UZ, 5UZ, 59UZ });
+
+        BOOST_CHECK(narrow == wide);                    // the wider remainder is clear
+        BOOST_CHECK(wide == narrow);                    // and the other way round
+
+        // A position living only in the wider one's remainder is exactly what the remainder check is for.
+        auto const wide_plus = grown_to(300UZ, { 1UZ, 5UZ, 59UZ, 280UZ });
+
+        BOOST_CHECK(narrow != wide_plus);
+        BOOST_CHECK(wide_plus != narrow);
+
+        // A difference inside the shared blocks, above the narrower width but below its last block's end.
+        auto const wide_near = grown_to(300UZ, { 1UZ, 5UZ, 59UZ, 62UZ });
+
+        BOOST_CHECK(narrow != wide_near);
+        BOOST_CHECK(wide_near != narrow);
+}
+
 BOOST_AUTO_TEST_SUITE_END()

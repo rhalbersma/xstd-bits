@@ -15,7 +15,7 @@
 #include <xstd/bits/ownership.hpp>                       // owned_bits_t, owned_storage, owner_of, owner_reading, ownership, owns, reading
 #include <boost/container_hash/is_range.hpp>             // is_range
 #include <boost/hash2/hash_append.hpp>                   // hash_append_tag
-#include <algorithm>                                     // any_of, equal, includes, lexicographical_compare_three_way
+#include <algorithm>                                     // all_of, any_of, equal, includes, lexicographical_compare_three_way, min
 #include <cassert>                                       // assert
 #include <compare>                                       // strong_ordering
 #include <concepts>                                      // constructible_from, convertible_to, invocable, swappable
@@ -24,7 +24,7 @@
 #include <initializer_list>                              // initializer_list
 #include <iterator>                                      // input_iterator, iter_reference_t, make_reverse_iterator, reverse_iterator, sentinel_for
 #include <limits>                                        // numeric_limits
-#include <ranges>                                        // begin, enable_borrowed_range, enable_view, end, input_range, range_reference_t, from_range_t, swap
+#include <ranges>                                        // begin, enable_borrowed_range, enable_view, end, input_range, iota, range_reference_t, from_range_t, swap, transform
 #include <span>                                          // dynamic_extent
 #include <type_traits>                                   // conditional_t, false_type, is_invocable_r_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
 #include <utility>                                       // forward, move, pair
@@ -58,6 +58,13 @@ template<class F>
 }
 
 // One tier each, because the tier is the seam and sharing a body puts the whole over readability-function-cognitive-complexity's threshold. [design.md#one-function-per-tier]
+
+// A storage's blocks as a range, so a comparison across widths reads as an algorithm over blocks rather than a walk over positions. block() is the entry, and the padding above size() is zero by the invariant, which is what lets a whole block stand in for the positions it holds. [design.md#width-is-capacity]
+template<class Bits>
+[[nodiscard]] constexpr auto block_range(Bits const& c, std::size_t first, std::size_t last) noexcept
+{
+        return std::views::iota(first, last) | std::views::transform([&c](std::size_t index) { return c.block(index); });
+}
 
 // Blocks, lowest position first: load once per block, then tzcnt for the position and blsr to drop it.
 template<class Bits, class F>
@@ -213,10 +220,22 @@ public:
                 -> bool
                 requires detail::set::equality_comparable_storage<bits_type>
         {
-                if (not same_width(x, y)) {
-                        return std::ranges::equal(x, y);
+                if (same_width(x, y)) {
+                        return x.storage() == y.storage();
                 }
-                return x.storage() == y.storage();
+
+                // Across widths the same question is asked of whole blocks: the blocks both storages have must agree, and the wider one's remainder must be clear, capacity above a width holding no element. Blocks rather than elements -- ranges::equal over the two sets is a find_next per position, where this is one load per sixty-four. [design.md#width-is-capacity]
+                auto const& a = x.storage();
+                auto const& b = y.storage();
+
+                using block_type = std::remove_cvref_t<decltype(a.block(0UZ))>;
+                auto const shared = std::ranges::min(a.num_blocks(), b.num_blocks());
+                auto const& longer = a.num_blocks() < b.num_blocks() ? b : a;
+
+                return
+                        std::ranges::equal(detail::set::block_range(a, 0UZ, shared), detail::set::block_range(b, 0UZ, shared)) and
+                        std::ranges::all_of(detail::set::block_range(longer, shared, longer.num_blocks()), [](block_type block) { return block == block_type{}; })
+                ;
         }
 
         [[nodiscard]] friend constexpr auto operator<=>(set_adaptor const& x, set_adaptor const& y) noexcept

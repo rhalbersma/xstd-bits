@@ -1623,7 +1623,12 @@ first, which is what the sequence reading and `dynamic_bitset` mean, and its bul
 assert equal widths -- so the set adaptor says it. Every comparison, predicate and compound operator asks
 `same_width` first and takes the storage's own answer at equal widths, which is every answer at a static width,
 where `same_width` is constantly true and the arm folds away. At two run-time widths that differ, `==` is
-`std::ranges::equal` over the elements, `<=>` is the invariant's own algorithm, `is_subset_of` is
+`std::ranges::equal` over the *blocks* -- the blocks both storages have must agree, and the wider one's
+remainder must be clear, since capacity above a width holds no element. Positions were the obvious spelling and
+the wrong one: a walk over the elements is a `find_next` per position where this is one load per sixty-four, and
+it measured 12.8us against 0.1us comparing two thousand elements across differing widths. The padding above
+`size()` being zero is what lets a whole block stand in for the positions it holds, which is the same invariant
+the orderings already rest on. `<=>` is the invariant's own algorithm, `is_subset_of` is
 `std::ranges::includes`, `intersects` walks one set asking the other, and `|=` `&=` `^=` `-=` insert and erase
 element by element, `insert` growing the narrower left operand as it grows for any key. The shifts translate the
 set, so `<<=` grows the width to hold the result and `>>=` empties past it. Hashing appends the positions and
