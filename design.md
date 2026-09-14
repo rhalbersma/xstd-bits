@@ -1141,8 +1141,20 @@ first one did. That form would reject what `std::bitset` accepts, which is the o
 forward-declaration and `friend operator==<>` dance for private access: three declarations in dependency order
 for one operator.
 
-What the friend costs is `&bitset<N>::operator==`, well-formed against `std::bitset` because the standard puts
-the operator in the class. Nothing forms a pointer-to-member to a comparison, and the alternative was one
+The shifts went the same way, later and for the same reason. `std::bitset` spells `operator<<` and
+`operator>>` as members while spelling `&`, `|` and `^` as non-members -- its own inconsistency, not a rule --
+and the guidance it departs from is the ordinary one: `@=` belongs to the left operand and `@` does not.
+Nothing observable turns on it: a shift's other operand is a `size_t`, so it brings no class to ADL, and the
+left operand must already be a `bitset_adaptor` for any candidate to be found at all. So this is shape, as the
+comparison was, and it takes the same form the rest of the tree takes.
+
+Mirroring `std::bitset` is not itself an argument. It is the oldest type in the library and reads like it: a
+member `operator==` where every container has a non-member one, no `swap` at all, and the split above. C++20
+changed none of it.
+
+What the friend costs is `&bitset<N>::operator==`, and the namespace-scope shifts cost
+`&bitset<N>::operator<<`, both well-formed against `std::bitset` because the standard puts those operators in
+the class. Nothing forms a pointer-to-member to a comparison, and the alternative was one
 adaptor of three disagreeing with its siblings on every read of the file.
 
 ### the-views-are-the-adaptors
@@ -1705,6 +1717,51 @@ rather than the blocks. A block-wise answer over the common prefix is an optimiz
 offer later; nothing in the adaptor's contract would change.
 
 
+### an-opinionated-reimagining
+
+The README states the charter: *a modern and opinionated reimagining of `std::bitset<N>`, keeping what time has
+proven to be effective, and throwing out what is not.* [a-strict-extension](#a-strict-extension) is how the
+keeping is enforced -- every expression of the counterpart's, with the same answer. This is the other half, and
+the two are not in tension: the extension rule governs what the containers **do**, and it says nothing about
+where an operator is declared.
+
+`std::bitset` is the clearest case of what has not proven effective. It is the oldest type in the library and reads like it: a member
+`operator==` where every container has a non-member one, no `swap` at all, and `operator<<` and `operator>>` as
+members beside `&`, `|` and `^` as non-members. C++20 changed none of it. Mirroring that faithfully would
+import an accident and call it conformance, so on where operators sit the tree follows the ordinary guidance
+instead: the operand a mutator belongs to keeps its member -- `flip`, `<<=`, `&=` -- and the operators that
+make a new value do not. `==`, `<=>`, `swap`, the shifts and `~` are hidden friends.
+
+The rule is **hide where hiding is free, and never where it widens**, with `friend` doing two separable jobs.
+
+Only `==` and `<=>` need friendship for what it says: `<=>` reads `m_bits` and calls the private
+`top_aligned_three_way`, and a defaulted `==` may be a member or a friend and nothing else
+([class.compare.default]/1). `swap`, the shifts and `~` need no access at all -- their bodies are
+`x.swap(y)`, `nrv <<= pos`, `nrv.flip()`, every one of them public -- and the standard's own free `swap` is a
+namespace-scope template for exactly that reason. They are friends anyway, and the reason differs between them.
+
+For `swap` the hiding earns its keep. A qualified `swap` is a mistake people make *by accident*: the habit of
+writing `std::swap(a, b)` transfers, `xstd::swap(a, b)` looks equally reasonable, and it silently defeats the
+customization the two-step `using std::swap; swap(a, b)` exists to find. A hidden friend has no qualified name,
+so the accident cannot be spelled. That is a Murphy guard, which is the kind this tree undertakes.
+
+For the shifts and `~` it does not. Nobody calls an operator qualified -- `xstd::operator<<(bs, 3)` is not a
+thing anyone writes by accident or otherwise -- so hiding forecloses nothing that was going to happen. They are
+hidden for uniformity with the four above, and that is the whole of it; it would be a rationalisation to claim
+a hazard here. Guarding against Machiavelli is not this tree's business.
+
+`&`, `|`, `^` and `-` stay namespace-scope templates, because there hiding is **not** free. Both their operands
+are `bitset_adaptor`, so a hidden friend is reachable by ADL from either side and the other side could then
+take the implicit `unsigned long long` conversion: `42ULL & bs` would start compiling, where `std::bitset`
+rejects it and deduction on a namespace-scope template rejects it too. That is the Murphy case: a silent
+conversion nobody asked for, in an expression that looks like integer arithmetic. A shift cannot do it, its
+other operand being a `size_t` that brings no class to ADL. Widening what an operator accepts is a change to
+what the containers **do**, and that is the extension rule's business, not this section's.
+
+What this costs is named in [a-strict-extension](#a-strict-extension) and is not much: the address of an
+operator, which nothing takes and which is a use worth discouraging in any case -- an operator is meant to be
+found by the grammar, not by name. What it buys is one shape to learn instead of one per type.
+
 ### a-strict-extension
 
 `bitset_adaptor<Bits>` is `[template.bitset]` over a storage of ours ([owning-is-ours](#owning-is-ours)), and
@@ -1716,6 +1773,14 @@ and ours adds on top. Extension means nothing of the counterpart's is dropped, r
 means it goes one way, code written against `std::bitset` compiling unchanged on `xstd::bitset` and not the
 reverse. The harness's raw `std::bitset` and raw boost arms are the oracle for the inclusion, and the
 elementwise readings are the oracle for what is added.
+
+The rule governs **expressions**, and one thing it deliberately does not govern is **where an operator sits**.
+`operator==` and the shifts are hidden friends where `std::bitset` makes all three members
+([the-comparison-is-a-hidden-friend](#the-comparison-is-a-hidden-friend)). Every call is unchanged -- `a == b`,
+`a << n` -- and what is not carried over is `&bitset<N>::operator==` and `&bitset<N>::operator<<`. Taking the
+address of an operator is not a use to preserve; it names a function whose whole point is to be found by the
+grammar rather than by name, and no code that should exist forms one. This is where the tree stops
+transcribing and starts choosing ([an-opinionated-reimagining](#an-opinionated-reimagining)).
 
 The vocabulary used to be a concept, `has_bitops` -- the compound operators including `-=`, the shifts, `set`
 `reset` `flip` `all` `any` `none` `count` `size`, the three set predicates and regularity -- because a foreign

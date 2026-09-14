@@ -296,10 +296,11 @@ public:
                 return *this;
         }
 
-        [[nodiscard]] constexpr auto operator<<(std::size_t pos) const noexcept(has_static_width) -> bitset_adaptor { auto nrv = *this; nrv <<= pos; return nrv; }
-        [[nodiscard]] constexpr auto operator>>(std::size_t pos) const noexcept(has_static_width) -> bitset_adaptor { auto nrv = *this; nrv >>= pos; return nrv; }
+        // Hidden friends, where std::bitset has members: @= belongs to the left operand and @ does not, and the tree spells every other non-member operator this way. Nothing observable moves -- a shift's other operand is a size_t, so it brings no class to ADL and the left operand must already be one for any candidate to be found. [design.md#an-opinionated-reimagining]
+        [[nodiscard]] friend constexpr auto operator<<(bitset_adaptor const& lhs, std::size_t pos) noexcept(has_static_width) -> bitset_adaptor { auto nrv = lhs; nrv <<= pos; return nrv; }
+        [[nodiscard]] friend constexpr auto operator>>(bitset_adaptor const& lhs, std::size_t pos) noexcept(has_static_width) -> bitset_adaptor { auto nrv = lhs; nrv >>= pos; return nrv; }
 
-        [[nodiscard]] constexpr auto operator~() const noexcept(has_static_width) -> bitset_adaptor { auto nrv = *this; nrv.flip(); return nrv; }
+        [[nodiscard]] friend constexpr auto operator~(bitset_adaptor const& x) noexcept(has_static_width) -> bitset_adaptor { auto nrv = x; nrv.flip(); return nrv; }
 
         constexpr auto set  () noexcept -> bitset_adaptor& { m_bits.set  (); return *this; }
         constexpr auto reset() noexcept -> bitset_adaptor& { m_bits.reset(); return *this; }
