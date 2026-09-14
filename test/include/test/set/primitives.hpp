@@ -30,8 +30,8 @@ struct ref_same_as_pred
 };
 
 // Every set adaptor hands out a proxy converting to the key, whatever its storage or ownership.
-template<class Bits, xstd::ownership Own, class Traits>
-struct ref_same_as_pred<xstd::set_adaptor<Bits, Own, Traits>>
+template<class Bits, xstd::ownership Own>
+struct ref_same_as_pred<xstd::set_adaptor<Bits, Own>>
 {
         template<class R, class T>
         static constexpr auto value = std::convertible_to<R, std::add_const_t<std::remove_reference_t<T>>&>;

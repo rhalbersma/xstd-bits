@@ -3,7 +3,6 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/minimal_traits.hpp>                    // minimal_traits
 #include <xstd/bits/bit_set.hpp>                      // bit_set
 #include <xstd/bits/bit_static_set.hpp>               // bit_static_set
 #include <xstd/bits/detail/contiguous_bit_array.hpp>  // contiguous_bit_array
@@ -28,7 +27,6 @@ using Storage = xstd::detail::bits::contiguous_bit_array<std::uint64_t, 100>;
 using Owner   = xstd::basic_bit_static_set<std::uint64_t, 100>;
 using View    = xstd::set_adaptor<Storage, xstd::ownership::refers>;
 using Reader  = xstd::set_adaptor<Storage const, xstd::ownership::refers>;
-using Minimal = xstd::set_adaptor<Storage, xstd::ownership::refers, test::minimal_traits<Storage>>;
 
 // Dependent, so an absent member is a false rather than a hard error.
 template<class S> constexpr bool can_insert     = requires (S s) { s.insert(0UZ); };
@@ -133,7 +131,7 @@ BOOST_AUTO_TEST_CASE(AnOwnerIsRegularAndAViewIsCopyable)
 }
 
 // Where the trait does not let this handle write, the member is not there to call.
-BOOST_AUTO_TEST_CASE(WritingIsGatedByTheTraitsNotByThisConst)
+BOOST_AUTO_TEST_CASE(WritingIsGatedByTheStorageNotByThisConst)
 {
         static_assert(can_insert<View> and can_erase<View> and can_clear<View> and can_fill<View>);
         static_assert(can_insert<View const> and can_erase<View const> and can_clear<View const>);
@@ -141,7 +139,6 @@ BOOST_AUTO_TEST_CASE(WritingIsGatedByTheTraitsNotByThisConst)
 
         static_assert(not can_insert<Reader> and not can_erase<Reader> and not can_clear<Reader> and not can_fill<Reader>);
         static_assert(not can_insert<Owner const> and not can_erase<Owner const> and not can_clear<Owner const>);
-        static_assert(not can_insert<Minimal>);
         static_assert(not can_swap<View> and not has_complement<View>);
 }
 
@@ -205,7 +202,6 @@ BOOST_AUTO_TEST_CASE(TheViewsAnswerEveryReadOverEveryStorage)
                         v.set(p);
                 }
                 check_reads(View(a), model, 100UZ);
-                check_reads(Minimal(a), model, 100UZ);
                 check_reads(xstd::set_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint64_t>, xstd::ownership::refers>(v), model, 100UZ);
         }
 }
@@ -276,8 +272,8 @@ BOOST_AUTO_TEST_CASE(TheOrderingIsTheLexicographicOrderOfTheKeys)
                         auto t = Storage();
                         for (auto const i : p) { s.set(i); }
                         for (auto const i : q) { t.set(i); }
-                        BOOST_CHECK((Minimal(s) <=> Minimal(t)) == (p <=> q));
-                        BOOST_CHECK((Minimal(s) == Minimal(t)) == (p == q));
+                        BOOST_CHECK((View(s) <=> View(t)) == (p <=> q));
+                        BOOST_CHECK((View(s) == View(t)) == (p == q));
                 }
         }
 }
@@ -375,11 +371,9 @@ BOOST_AUTO_TEST_CASE(ForEachVisitsWhatIterationVisits)
         auto owner = Owner();
         for (auto const p : positions) { owner.insert(p); }
 
-        auto blocked = Storage();                               // block access through the trait
-        auto element = Storage();                               // floor-only trait: the position-at-a-time arm
-        for (auto const p : positions) { blocked.set(p); element.set(p); }
+        auto blocked = Storage();
+        for (auto const p : positions) { blocked.set(p); }
         auto const fv = View(blocked);
-        auto const bv = Minimal(element);
 
         auto const collect         = [](auto const& s) -> std::vector<std::size_t> { auto v = std::vector<std::size_t>(); s.for_each        ([&](std::size_t p) -> void { v.push_back(p); }); return v; };
         auto const collect_reverse = [](auto const& s) -> std::vector<std::size_t> { auto v = std::vector<std::size_t>(); s.for_each_reverse([&](std::size_t p) -> void { v.push_back(p); }); return v; };
@@ -388,16 +382,14 @@ BOOST_AUTO_TEST_CASE(ForEachVisitsWhatIterationVisits)
 
         BOOST_CHECK(collect(owner) == iterated(owner));
         BOOST_CHECK(collect(fv)    == iterated(fv));
-        BOOST_CHECK(collect(bv)    == iterated(bv));
 
         BOOST_CHECK(collect_reverse(owner) == reversed(owner));
         BOOST_CHECK(collect_reverse(fv)    == reversed(fv));
-        BOOST_CHECK(collect_reverse(bv)    == reversed(bv));
 
-        // An empty set calls nothing, in either direction, on either arm.
+        // An empty set calls nothing, in either direction, owned or viewed.
         auto const empty  = Owner();
         auto bnone        = Storage();
-        auto const bnonev = Minimal(bnone);
+        auto const bnonev = View(bnone);
         auto calls = 0UZ;
         empty .for_each        ([&](std::size_t) -> void { ++calls; });
         empty .for_each_reverse([&](std::size_t) -> void { ++calls; });
@@ -413,9 +405,9 @@ BOOST_AUTO_TEST_CASE(ForEachStopsWhenTheFunctorSaysSo)
 
         auto owner = Owner();
         for (auto const p : positions) { owner.insert(p); }
-        auto element = Storage();
-        for (auto const p : positions) { element.set(p); }
-        auto const bv = Minimal(element);
+        auto viewed = Storage();
+        for (auto const p : positions) { viewed.set(p); }
+        auto const bv = View(viewed);
 
         // Stop after the first position at or above 64, so the cut lands on a block boundary.
         auto const upto = [](auto const& s) -> std::vector<std::size_t> {
@@ -474,6 +466,19 @@ BOOST_AUTO_TEST_CASE(ForEachHandsThePositionByValue)
         owner.for_each        (bool_probe{ took_a_reference }); BOOST_CHECK(not took_a_reference);
         owner.for_each_reverse(void_probe{ took_a_reference }); BOOST_CHECK(not took_a_reference);
         owner.for_each_reverse(bool_probe{ took_a_reference }); BOOST_CHECK(not took_a_reference);
+}
+
+// back() has a non-empty set as its precondition, and a zero width has no non-empty state to ask it in. The arm
+// is still there and still reachable, because a width of zero is a width the containers have: it answers the
+// only position such a set could name rather than scanning back from one that does not exist. The scan it
+// stands in for asserts here. [design.md#degenerate-widths]
+BOOST_AUTO_TEST_CASE(AZeroWidthAnswersBackWithoutScanning)
+{
+        auto const z = xstd::bit_static_set<0>();
+
+        BOOST_CHECK(z.empty());
+        BOOST_CHECK_EQUAL(z.size(), 0UZ);
+        BOOST_CHECK_EQUAL(static_cast<std::size_t>(z.back()), 0UZ);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

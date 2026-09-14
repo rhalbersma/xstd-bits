@@ -6,7 +6,6 @@
 #ifndef TEST_SET_EXHAUSTIVE_HPP
 #define TEST_SET_EXHAUSTIVE_HPP
 
-#include <xstd/bits/bit_traits.hpp> // static_bit_extent
 #include <xstd/bits/ownership.hpp>  // owned_storage
 #include <algorithm>                // max
 #include <array>                    // array
@@ -14,6 +13,7 @@
 #include <cstddef>                  // size_t
 #include <initializer_list>         // initializer_list
 #include <ranges>                   // iota, to
+#include <span>                     // dynamic_extent
 
 #ifdef _MSC_VER
         // xstd::bit_static_set<0> gives bogus "unreachable code" warnings
@@ -29,7 +29,7 @@ inline constexpr auto L4 =  16UZ;
 
 // A static width is its own limit; a growing one, ours or the standard library's, takes the sweep's.
 template<class X>
-concept static_width = requires { typename xstd::owned_storage<X>::bits_type; } and xstd::static_bit_extent<typename X::traits_type, typename xstd::owned_storage<X>::bits_type>;
+concept static_width = requires { typename xstd::owned_storage<X>::bits_type; } and (xstd::owned_storage<X>::bits_type::extent != std::dynamic_extent);
 
 template<class X, std::size_t Limit>
 inline constexpr auto limit_v = [] -> std::size_t {

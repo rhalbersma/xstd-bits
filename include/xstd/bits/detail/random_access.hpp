@@ -6,7 +6,6 @@
 #ifndef XSTD_BITS_DETAIL_RANDOM_ACCESS_HPP
 #define XSTD_BITS_DETAIL_RANDOM_ACCESS_HPP
 
-#include <xstd/bits/bit_traits.hpp>       // bit_storage, bit_traits
 #include <xstd/ints/concepts/integer.hpp> // integer
 #include <cassert>                        // assert
 #include <compare>                        // strong_ordering
@@ -16,28 +15,28 @@
 #include <iterator>                       // random_access_iterator_tag
 #include <type_traits>                    // is_class_v, is_const_v, is_convertible_v, is_nothrow_constructible_v, remove_const_t
 
-// The iterator is the primitive: a pointer and a position, reaching the bits through Traits alone. [design.md#the-iterator-is-the-primitive]
+// The iterator is the primitive: a pointer and a position, reaching the bits through the storage alone. [design.md#the-iterator-is-the-primitive]
 namespace xstd::detail::bits {
 
-template<class Bits, bit_storage<Bits> Traits = bit_traits<std::remove_const_t<Bits>>> class random_access_bit_iterator;
-template<class Bits, bit_storage<Bits> Traits = bit_traits<std::remove_const_t<Bits>>> class random_access_bit_reference;
+template<class Bits> class random_access_bit_iterator;
+template<class Bits> class random_access_bit_reference;
 
 // A position in the sequence reading; const Bits is the const iterator, the old IsConst bool folded into the type.
-template<class Bits, bit_storage<Bits> Traits>
+template<class Bits>
 class random_access_bit_iterator
 {
         Bits* m_ptr{};
         std::size_t m_idx{};
 
         // The const twin, whose conversion below reads these members; naming itself where Bits is already const.
-        friend class random_access_bit_iterator<Bits const, Traits>;
+        friend class random_access_bit_iterator<Bits const>;
 
 public:
         using iterator_category = std::random_access_iterator_tag;
         using value_type        = bool;
         using difference_type   = std::ptrdiff_t;
         using pointer           = void;
-        using reference         = random_access_bit_reference<Bits, Traits>;
+        using reference         = random_access_bit_reference<Bits>;
 
         [[nodiscard]] constexpr random_access_bit_iterator() noexcept = default;
 
@@ -52,7 +51,7 @@ public:
         // A mutable iterator converts to its const twin, as a container's iterator converts to its const_iterator.
         template<class Mutable>
                 requires std::is_const_v<Bits> and std::same_as<Mutable const, Bits>
-        [[nodiscard]] constexpr explicit(false) random_access_bit_iterator(random_access_bit_iterator<Mutable, Traits> other) noexcept  // NOLINT(misc-explicit-constructor)
+        [[nodiscard]] constexpr explicit(false) random_access_bit_iterator(random_access_bit_iterator<Mutable> other) noexcept  // NOLINT(misc-explicit-constructor)
         :
                 m_ptr(other.m_ptr),
                 m_idx(other.m_idx)
@@ -123,18 +122,18 @@ public:
 };
 
 // A proxy bool assigning back through the trait; std::vector<bool>::reference is the precedent for the const-qualified assignment, and nothing more is borrowed: no flip, no ~.
-template<class Bits, bit_storage<Bits> Traits>
+template<class Bits>
 class random_access_bit_reference
 {
         Bits* m_ptr;
         std::size_t m_idx;
 
-        // Writable where Bits is not const and the trait declares unchecked_assign; a trait with only the required entries reads only.
-        static constexpr bool is_writable = not std::is_const_v<Bits> and requires (Bits& c, std::size_t n, bool value) { Traits::unchecked_assign(c, n, value); };
+        // Writable where Bits is not const: a const storage has no assign to reach, which is the whole of the test now that the storage answers directly.
+        static constexpr bool is_writable = not std::is_const_v<Bits> and requires (Bits& c, std::size_t n, bool value) { c.assign(n, value); };
 
 public:
         using value_type = bool;
-        using iterator   = random_access_bit_iterator<Bits, Traits>;
+        using iterator   = random_access_bit_iterator<Bits>;
 
         [[nodiscard]] constexpr random_access_bit_reference(Bits* ptr, std::size_t idx) noexcept
         :
@@ -155,7 +154,7 @@ public:
 
         [[nodiscard]] constexpr explicit(false) operator value_type() const noexcept  // NOLINT(misc-explicit-constructor)
         {
-                return Traits::at(*m_ptr, m_idx);
+                return m_ptr->test(m_idx);
         }
 
         // Not to an integer, though, however class-shaped it is. [design.md#uint128-support]
@@ -163,7 +162,7 @@ public:
         [[nodiscard]] constexpr explicit(false) operator T() const noexcept(std::is_nothrow_constructible_v<T, value_type>)  // NOLINT(misc-explicit-constructor)
                 requires std::is_class_v<T> and std::is_convertible_v<value_type, T> and (not xstd::integer<T>)
         {
-                return Traits::at(*m_ptr, m_idx);
+                return m_ptr->test(m_idx);
         }
 
         // Exact matches, so a comparison never reaches for a conversion. [design.md#uint128-support]
@@ -184,7 +183,7 @@ public:
                 -> random_access_bit_reference const&
                 requires is_writable
         {
-                Traits::unchecked_assign(*m_ptr, m_idx, value);
+                m_ptr->assign(m_idx, value);
                 return *this;
         }
 
@@ -212,14 +211,14 @@ public:
 
 
 // std::format over the containers, which needs nothing said about the containers themselves. [design.md#formatting-the-proxies] [design.md#clang-tidy-false-positives]
-template<class Bits, class Traits, class CharT>
+template<class Bits, class CharT>
 // NOLINTNEXTLINE(bugprone-std-namespace-modification)
-struct std::formatter<xstd::detail::bits::random_access_bit_reference<Bits, Traits>, CharT>
+struct std::formatter<xstd::detail::bits::random_access_bit_reference<Bits>, CharT>
 :
         std::formatter<bool, CharT>
 {
         template<class Context>
-        [[nodiscard]] constexpr auto format(xstd::detail::bits::random_access_bit_reference<Bits, Traits> ref, Context& ctx) const
+        [[nodiscard]] constexpr auto format(xstd::detail::bits::random_access_bit_reference<Bits> ref, Context& ctx) const
         {
                 // Unqualified, so ADL finds the proxy's own hidden friend. [design.md#the-one-adl-exception]
                 return std::formatter<bool, CharT>::format(format_as(ref), ctx);

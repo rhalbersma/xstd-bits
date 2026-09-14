@@ -6,7 +6,6 @@
 #include <test/block_types.hpp>                               // digits_v, graded_extents, word_types
 #include <test/inplace_vector.hpp>                            // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
 #include <test/uint128.hpp>                                   // IWYU pragma: keep; TEST_HAS_UINT128, uint128
-#include <xstd/bits/bit_traits.hpp>                           // bit_storage, bit_traits, block_readable, static_bit_extent
 #include <xstd/bits/detail/contiguous_bit_array.hpp>          // contiguous_bit_array
 #include <xstd/bits/detail/contiguous_bit_container.hpp>      // contiguous_bit_container
 #include <xstd/bits/detail/contiguous_block_range.hpp>        // contiguous_block_range
@@ -389,7 +388,7 @@ BOOST_AUTO_TEST_CASE(TheConstReferenceIsP2278s)
 
 // The three members the readings will call once the trait is gone, and the one distinction that matters between them:
 // insert(n) is partial, n being a precondition, while growing_insert(n) is total and a run-time width grows to admit a
-// position past its end. [design.md#what-the-trait-reconciles]
+// position past its end. [design.md#what-the-readings-share]
 BOOST_AUTO_TEST_CASE(TheTotalInsertGrowsWhereThePartialOneAsserts)
 {
         using A = xstd::detail::bits::contiguous_bit_array<std::uint8_t, 10>;
@@ -845,60 +844,48 @@ BOOST_AUTO_TEST_CASE(AnInplaceVectorIsARunTimeWidthUnderAStaticCapacity)
 }
 #endif
 
-// Each entry reaches the member it names, and every call stays inside the kept contracts. [design.md#the-cheapest-contract]
-BOOST_AUTO_TEST_CASE_TEMPLATE(TheTraitsForwardToTheStorage, T, test::graded_extents<xstd::detail::bits::contiguous_bit_array>)
+// Every question the three readings ask, asked of the storage in its own name and within the contracts it keeps. [design.md#the-cheapest-contract]
+BOOST_AUTO_TEST_CASE_TEMPLATE(TheStorageAnswersEveryReadingsQuestion, T, test::graded_extents<xstd::detail::bits::contiguous_bit_array>)
 {
-        using traits = xstd::bit_traits<T>;
-        constexpr auto N = traits::extent;
-
-        static_assert(xstd::bit_storage<xstd::bit_traits<T>, T>);
-        static_assert(xstd::static_bit_extent<xstd::bit_traits<T>, T>);
-        static_assert(xstd::block_readable<traits, T>);
+        constexpr auto N = T::extent;
 
         auto c = T();
 
-        BOOST_CHECK_EQUAL(traits::size(c), N);
-        BOOST_CHECK_EQUAL(traits::find_last(c), N);
-        BOOST_CHECK_EQUAL(traits::find_first(c), N);
-        BOOST_CHECK_EQUAL(traits::count(c), 0UZ);
-        BOOST_CHECK_EQUAL(traits::num_blocks(c), c.num_blocks());
-
-        // BOOST_CHECK, not BOOST_CHECK_EQUAL: uint128 has no operator<<. [design.md#uint128-printing]
-        for (auto k = 0UZ; k < c.num_blocks(); ++k) {
-                BOOST_CHECK(traits::block(c, k) == c.block(k));
-        }
+        BOOST_CHECK_EQUAL(c.size(), N);
+        BOOST_CHECK_EQUAL(c.find_last(), N);
+        BOOST_CHECK_EQUAL(c.find_first(), N);
+        BOOST_CHECK_EQUAL(c.count(), 0UZ);
 
         // One position at a time, set then cleared: assign's two arms are the point.
         for (auto i = 0UZ; i < N; ++i) {
-                traits::unchecked_assign(c, i, true);
-                BOOST_CHECK(traits::at(c, i));
-                BOOST_CHECK_EQUAL(traits::count(c), 1UZ);
-                BOOST_CHECK_EQUAL(traits::find_first(c), i);
-                BOOST_CHECK_EQUAL(traits::find_prev(c, i + 1UZ), i);
-                BOOST_CHECK_EQUAL(traits::find_next(c, i), N);
+                c.assign(i, true);
+                BOOST_CHECK(c.test(i));
+                BOOST_CHECK_EQUAL(c.count(), 1UZ);
+                BOOST_CHECK_EQUAL(c.find_first(), i);
+                BOOST_CHECK_EQUAL(c.exclusive_find_prev(i + 1UZ), i);
+                BOOST_CHECK_EQUAL(c.exclusive_find_next(i), N);
 
-                traits::unchecked_assign(c, i, false);
-                BOOST_CHECK(not traits::at(c, i));
-                BOOST_CHECK_EQUAL(traits::count(c), 0UZ);
+                c.assign(i, false);
+                BOOST_CHECK(not c.test(i));
+                BOOST_CHECK_EQUAL(c.count(), 0UZ);
         }
 }
 
-// The two entries the readings cannot synthesize, in their own case: insert can grow where the storage allows, and fill is bulk. [design.md#what-the-trait-reconciles]
-BOOST_AUTO_TEST_CASE_TEMPLATE(TheTraitsInsertAndFill, T, test::graded_extents<xstd::detail::bits::contiguous_bit_array>)
+// The two the readings cannot synthesize from a position at a time: insert answers whether the position was new, and fill is bulk. [design.md#what-the-readings-share]
+BOOST_AUTO_TEST_CASE_TEMPLATE(TheInsertAndTheFill, T, test::graded_extents<xstd::detail::bits::contiguous_bit_array>)
 {
-        using traits = xstd::bit_traits<T>;
-        constexpr auto N = traits::extent;
+        constexpr auto N = T::extent;
 
         auto c = T();
-        traits::fill(c, true);
-        BOOST_CHECK_EQUAL(traits::count(c), N);
-        traits::fill(c, false);
-        BOOST_CHECK_EQUAL(traits::count(c), 0UZ);
+        c.fill(true);
+        BOOST_CHECK_EQUAL(c.count(), N);
+        c.fill(false);
+        BOOST_CHECK_EQUAL(c.count(), 0UZ);
 
         for (auto i = 0UZ; i < N; ++i) {
-                traits::insert(c, i);
+                BOOST_CHECK(c.insert(i));
         }
-        BOOST_CHECK_EQUAL(traits::count(c), N);
+        BOOST_CHECK_EQUAL(c.count(), N);
 }
 
 namespace {
@@ -1049,22 +1036,6 @@ BOOST_AUTO_TEST_CASE(TheSetOrderingPutsAPrefixFirst)
         auto z = T();
         z.set(8);
         BOOST_CHECK(x.set_three_way(z) == std::strong_ordering::less);
-}
-
-// Three named entries, so a caller says which reading it means rather than being handed one. [design.md#two-readings-disagree]
-BOOST_AUTO_TEST_CASE_TEMPLATE(TheTraitsNameAllThreeOrderings, T, test::graded_extents<xstd::detail::bits::contiguous_bit_array>)
-{
-        using traits = xstd::bit_traits<T>;
-
-        // Over the same probes, so a width with nothing to differ at is covered by the same code as any other.
-        auto const values = probes(T());
-        for (auto const& x : values) {
-                for (auto const& y : values) {
-                        BOOST_CHECK(traits::set_three_way(x, y)      == x.set_three_way(y));
-                        BOOST_CHECK(traits::sequence_three_way(x, y) == x.sequence_three_way(y));
-                        BOOST_CHECK(traits::bitset_three_way(x, y)   == x.bitset_three_way(y));
-                }
-        }
 }
 
 // Dependent, so a storage without an allocator answers false; the alias spells the typedef without a typename, which clang-tidy 22 reads as redundant.

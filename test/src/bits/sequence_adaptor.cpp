@@ -6,9 +6,7 @@
 #include <test/block_types.hpp>                          // graded_extents
 #include <xstd/bits/bit_array.hpp>                       // bit_array
 #include <xstd/bits/bit_span.hpp>                        // bit_span
-#include <xstd/bits/bit_traits.hpp>                      // bit_traits, block_readable
 #include <xstd/bits/detail/contiguous_bit_array.hpp>     // contiguous_bit_array
-#include <xstd/bits/detail/contiguous_bit_container.hpp> // bit_traits<contiguous_bit_container>
 #include <xstd/bits/detail/contiguous_bit_vector.hpp>    // contiguous_bit_vector
 #include <xstd/bits/ownership.hpp>                       // ownership
 #include <xstd/bits/sequence_adaptor.hpp>                // sequence_adaptor
@@ -43,43 +41,6 @@ template<class Seq>
 {
         return { s.begin(), s.end() };
 }
-
-// Our own storage, read through a trait that keeps its blocks to itself, so the walks over it take the element-wise
-// arm. The trait is the parameter that selects the tier, not the storage, so withholding the block entries is all it
-// takes. [design.md#detection-by-absence]
-template<std::size_t N>
-using element_bits = xstd::detail::bits::contiguous_bit_array<std::uint8_t, N>;
-
-}       // namespace
-
-namespace {
-
-// The three required entries and unchecked_assign, and none of the optional block ones: absence is what the tiers
-// select on. [design.md#detection-by-absence]
-template<std::size_t N>
-struct element_wise_traits
-{
-        using bits_type = element_bits<N>;
-
-        static constexpr std::size_t extent = N;
-
-        [[nodiscard]] static constexpr auto size(bits_type const&)                  noexcept -> std::size_t { return N; }
-        [[nodiscard]] static constexpr auto at  (bits_type const& c, std::size_t n) noexcept -> bool        { return c.test(n); }
-
-        static constexpr auto unchecked_assign(bits_type& c, std::size_t n, bool value) noexcept
-                -> void
-        {
-                if (value) {
-                        c.set(n);
-                } else {
-                        c.reset(n);
-                }
-        }
-};
-
-}       // namespace
-
-namespace {
 
 // Named so each requirement is checked on a TEMPLATE PARAMETER. Selecting a deleted overload is a hard error where the requires-expression names a concrete type -- measured on GCC and Clang alike -- and a soft false only through a parameter, which is what makes a deleted operator assertable at all.
 template<class T> concept eq_comparable        = requires (T a, T b) { a ==  b; };
@@ -377,39 +338,6 @@ BOOST_AUTO_TEST_CASE(TheAggregatesAgreeWithTheModelOnAWindowOfOurs)
         BOOST_CHECK_EQUAL(disagreements, 0UZ);
 }
 
-// And over a window read through a trait that keeps its blocks to itself, which is the one position-at-a-time tier. The
-// storage is ours either way; it is the trait that selects the arm. [design.md#detection-by-absence]
-BOOST_AUTO_TEST_CASE(TheAggregatesAgreeWithTheModelOnAWindowOfAnythingElse)
-{
-        using Wide  = element_bits<100>;
-        using Trait = element_wise_traits<100>;
-        static_assert(    xstd::block_readable<xstd::bit_traits<Wide>, Wide>);
-        static_assert(not xstd::block_readable<Trait, Wide>);
-
-        auto disagreements = 0UZ;
-        for (auto p = 0UZ; p < 6UZ; ++p) {
-                auto c = Wide();
-                auto v = xstd::bit_span<Wide, Trait>(c);
-                auto const m = write_pattern(v, p);
-                for (auto const off : { 0UZ, 1UZ, 7UZ, 63UZ, 100UZ }) {
-                        for (auto const count : { 0UZ, 1UZ, 9UZ, 37UZ }) {
-                                if (off + count > v.size()) {
-                                        continue;
-                                }
-                                auto const w = v.subspan(off, count);
-                                auto const mw = std::vector<bool>(m.begin() + static_cast<std::ptrdiff_t>(off), m.begin() + static_cast<std::ptrdiff_t>(off + count));
-                                disagreements += aggregate_disagreements(w, mw);
-                                disagreements += static_cast<std::size_t>(not std::ranges::equal(for_each_bools(w), mw));
-
-                                // The position tier's own early exit, which the block tier's case below covers for it.
-                                auto seen = 0UZ;
-                                w.for_each([&seen](bool) -> bool { return ++seen < 3UZ; });
-                                disagreements += static_cast<std::size_t>(seen != std::ranges::min(w.size(), 3UZ));
-                        }
-                }
-        }
-        BOOST_CHECK_EQUAL(disagreements, 0UZ);
-}
 
 // std::mismatch's answer, over the machinery operator== is already made of: the position, or size() where the two agree.
 BOOST_AUTO_TEST_CASE_TEMPLATE(MismatchAgreesWithTheModel, T, Graded)
@@ -501,10 +429,9 @@ BOOST_AUTO_TEST_CASE(ForEachHandsTheBoolByValue)
         static_assert(not walks<Owner, decltype([](bool&) -> void {})>);
         static_assert(not walks<Owner, decltype([](auto&) -> void {})>);
 
-        // Every shape is constrained alike: a view, a window, and a storage that keeps its blocks to itself.
+        // Every shape is constrained alike: a view and a window.
         static_assert(not walks<View, decltype([](bool&) -> void {})>);
         static_assert(not walks<View::subspan_type, decltype([](bool&) -> void {})>);
-        static_assert(not walks<xstd::sequence_adaptor<element_bits<100>, xstd::ownership::refers, false, element_wise_traits<100>>, decltype([](bool&) -> void {})>);
 
         // Writing through the sequence is the range-for's job, and it still is.
         auto a = Owner();

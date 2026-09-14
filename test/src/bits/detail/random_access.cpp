@@ -5,11 +5,9 @@
 
 #include <test/block_types.hpp>                      // graded_extents
 #include <test/ext_int128.hpp>                       // TEST_HAS_ABSL_INT128, TEST_HAS_BOOST_INT128, uint128
-#include <test/minimal_traits.hpp>                   // minimal_traits
 #include <test/value_reference.hpp>                  // value_reference
 #include <xstd/bits/bit_array.hpp>                   // basic_bit_array
 #include <xstd/bits/bit_span.hpp>                    // bit_span
-#include <xstd/bits/bit_traits.hpp>                  // bit_traits
 #include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
 #include <xstd/bits/detail/random_access.hpp>        // random_access_bit_iterator, random_access_bit_reference
 #include <boost/test/unit_test.hpp>                  // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
@@ -55,10 +53,9 @@ template<class T>
 [[nodiscard]] auto as_vector(T const& c)
         -> std::vector<bool>
 {
-        using Traits = xstd::bit_traits<T>;
-        auto v = std::vector<bool>(Traits::size(c));
+        auto v = std::vector<bool>(c.size());
         for (auto i = 0UZ; i < v.size(); ++i) {
-                v[i] = Traits::at(c, i);
+                v[i] = c.test(i);
         }
         return v;
 }
@@ -85,26 +82,24 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheSequenceIteratorIsRandomAccess, T, ArrayTypes)
 {
         static_assert(std::random_access_iterator<xstd::detail::bits::random_access_bit_iterator<T>>);
         static_assert(std::random_access_iterator<xstd::detail::bits::random_access_bit_iterator<T const>>);
-        static_assert(std::random_access_iterator<xstd::detail::bits::random_access_bit_iterator<T, test::minimal_traits<T>>>);
 
         static_assert(    std::sortable<xstd::detail::bits::random_access_bit_iterator<T>>);
         static_assert(not std::sortable<xstd::detail::bits::random_access_bit_iterator<T const>>);
 }
 
-// Const is in the Bits, not in a flag, and a trait with only the required entries has no way to write either.
-BOOST_AUTO_TEST_CASE(ConstnessLivesInTheBitsAndWritabilityInTheTraits)
+// Const is in the Bits and nowhere else. Writability used to be a second question, asked of the trait -- a trait with
+// only the required entries had no unchecked_assign and so no way to write -- but the proxy asks the storage now, and a
+// const storage has no assign to reach. One question, answered by the type. [design.md#one-storage]
+BOOST_AUTO_TEST_CASE(ConstnessLivesInTheBits)
 {
-        using Ref        = xstd::detail::bits::random_access_bit_reference<Bits>;
-        using ConstRef   = xstd::detail::bits::random_access_bit_reference<Bits const>;
-        using MinimalRef = xstd::detail::bits::random_access_bit_reference<Bits, test::minimal_traits<Bits>>;
+        using Ref      = xstd::detail::bits::random_access_bit_reference<Bits>;
+        using ConstRef = xstd::detail::bits::random_access_bit_reference<Bits const>;
 
         static_assert(    std::is_assignable_v<Ref const&, bool>);
         static_assert(not std::is_assignable_v<ConstRef const&, bool>);
-        static_assert(not std::is_assignable_v<MinimalRef const&, bool>);
 
         static_assert(std::is_convertible_v<Ref, bool>);
         static_assert(std::is_convertible_v<ConstRef, bool>);
-        static_assert(std::is_convertible_v<MinimalRef, bool>);
 
         BOOST_CHECK(true);
 }
@@ -113,7 +108,6 @@ BOOST_AUTO_TEST_CASE(ConstnessLivesInTheBitsAndWritabilityInTheTraits)
 BOOST_AUTO_TEST_CASE(TheReadOnlyProxiesAreValues)
 {
         static_assert(test::value_reference<xstd::detail::bits::random_access_bit_reference<Bits const>>);
-        static_assert(test::value_reference<xstd::detail::bits::random_access_bit_reference<Bits, test::minimal_traits<Bits>>>);
 
         // The writable proxy is the one exception, by design: its assignment writes the bit. Trivial to copy and destroy all the same.
         static_assert(not test::value_reference<xstd::detail::bits::random_access_bit_reference<Bits>>);
@@ -139,9 +133,9 @@ BOOST_AUTO_TEST_CASE(AMutableSequenceIteratorConvertsToItsConstTwin)
         BOOST_CHECK(*cit == false);
 }
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(TheSequenceIteratorReadsAndWritesThroughTheTraits, T, ArrayTypes)
+BOOST_AUTO_TEST_CASE_TEMPLATE(TheSequenceIteratorReadsAndWritesThroughTheStorage, T, ArrayTypes)
 {
-        constexpr auto N = xstd::bit_traits<T>::extent;
+        constexpr auto N = T::extent;
 
         auto c = T();
         // Written through check_position below, which the check cannot see past a dependent call. [design.md#clang-tidy-false-positives]
