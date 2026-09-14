@@ -296,11 +296,6 @@ public:
                 return *this;
         }
 
-        // Hidden friends, where std::bitset has members: @= belongs to the left operand and @ does not, and the tree spells every other non-member operator this way. Nothing observable moves -- a shift's other operand is a size_t, so it brings no class to ADL and the left operand must already be one for any candidate to be found. [design.md#an-opinionated-reimagining]
-        [[nodiscard]] friend constexpr auto operator<<(bitset_adaptor const& lhs, std::size_t pos) noexcept(has_static_width) -> bitset_adaptor { auto nrv = lhs; nrv <<= pos; return nrv; }
-        [[nodiscard]] friend constexpr auto operator>>(bitset_adaptor const& lhs, std::size_t pos) noexcept(has_static_width) -> bitset_adaptor { auto nrv = lhs; nrv >>= pos; return nrv; }
-
-        [[nodiscard]] friend constexpr auto operator~(bitset_adaptor const& x) noexcept(has_static_width) -> bitset_adaptor { auto nrv = x; nrv.flip(); return nrv; }
 
         constexpr auto set  () noexcept -> bitset_adaptor& { m_bits.set  (); return *this; }
         constexpr auto reset() noexcept -> bitset_adaptor& { m_bits.reset(); return *this; }
@@ -767,6 +762,11 @@ template<class Bits> [[nodiscard]] constexpr auto operator&(bitset_adaptor<Bits>
 template<class Bits> [[nodiscard]] constexpr auto operator|(bitset_adaptor<Bits> const& lhs, bitset_adaptor<Bits> const& rhs) noexcept((Bits::extent != std::dynamic_extent)) -> bitset_adaptor<Bits> { auto nrv = lhs; nrv |= rhs; return nrv; }
 template<class Bits> [[nodiscard]] constexpr auto operator^(bitset_adaptor<Bits> const& lhs, bitset_adaptor<Bits> const& rhs) noexcept((Bits::extent != std::dynamic_extent)) -> bitset_adaptor<Bits> { auto nrv = lhs; nrv ^= rhs; return nrv; }
 template<class Bits> [[nodiscard]] constexpr auto operator-(bitset_adaptor<Bits> const& lhs, bitset_adaptor<Bits> const& rhs) noexcept((Bits::extent != std::dynamic_extent)) -> bitset_adaptor<Bits> { auto nrv = lhs; nrv -= rhs; return nrv; }
+
+// @= belongs to the left operand and @ does not, where std::bitset makes these three members. Templates rather than hidden friends: they reach nothing private, and nobody writes an operator qualified, so the hiding would buy nothing here -- unlike swap, whose qualified spelling is an accident people do make. [design.md#an-opinionated-reimagining]
+template<class Bits> [[nodiscard]] constexpr auto operator~(bitset_adaptor<Bits> const& lhs) noexcept((Bits::extent != std::dynamic_extent)) -> bitset_adaptor<Bits> { auto nrv = lhs; nrv.flip(); return nrv; }
+template<class Bits> [[nodiscard]] constexpr auto operator<<(bitset_adaptor<Bits> const& lhs, std::size_t pos) noexcept((Bits::extent != std::dynamic_extent)) -> bitset_adaptor<Bits> { auto nrv = lhs; nrv <<= pos; return nrv; }
+template<class Bits> [[nodiscard]] constexpr auto operator>>(bitset_adaptor<Bits> const& lhs, std::size_t pos) noexcept((Bits::extent != std::dynamic_extent)) -> bitset_adaptor<Bits> { auto nrv = lhs; nrv >>= pos; return nrv; }
 
 // [bitset.operators]/6: up to N characters into a temporary string, then x = bitset(str), so a short read lands in the low bits as it does there; a run-time width reads every 0 or 1 on offer and is as wide as the characters read, as boost's is.
 template<class charT, class traits, class Bits>

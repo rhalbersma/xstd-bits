@@ -1751,10 +1751,35 @@ scope is always reachable by ordinary lookup; C++ offers no "namespace scope, un
 friend is the sole mechanism for ADL-only lookup, and using it here overloads a keyword that says *access* to
 mean *placement*. Reading `friend` in this tree, check the body before assuming it needs one.
 
-For the shifts and `~` it does not. Nobody calls an operator qualified -- `xstd::operator<<(bs, 3)` is not a
-thing anyone writes by accident or otherwise -- so hiding forecloses nothing that was going to happen. They are
-hidden for uniformity with the four above, and that is the whole of it; it would be a rationalisation to claim
-a hazard here. Guarding against Machiavelli is not this tree's business.
+The shifts and `~` are **not** hidden, and that is the same rule reaching the other answer. Nobody calls an
+operator qualified -- `xstd::operator<<(bs, 3)` is not a thing anyone writes by accident or otherwise -- so
+hiding would foreclose nothing that was going to happen, and claiming a hazard there would be a
+rationalisation. Guarding against Machiavelli is not this tree's business. So they are namespace-scope
+templates beside `&`, `|`, `^` and `-`, which is also where `set_adaptor` has had its whole set all along.
+
+**Which leaves three that deviate from the standard containers**, and only one of them by choice.
+`std::vector` and `std::set` spell `==`, `<=>` and `swap` as namespace-scope templates; here all three are
+hidden friends.
+
+`==` is forced twice over, and the plainer reason comes first: **it is defaulted**, and
+[class.compare.default]/1 admits a defaulted comparison only as a non-static member or a friend. A
+namespace-scope template cannot be defaulted at all. The standard containers hand-write theirs, which is what
+leaves them free to put it at namespace scope; wanting `= default` is what takes that option away here, and it
+is a want worth having -- the storage is the one member, and a comparison nobody writes is a comparison nobody
+gets wrong.
+
+The second reason would force it even if the first did not. `std::bitset`'s converting constructor from
+`unsigned long long` is not `explicit`, so `bs == 42ULL` and `42ULL == bs` both compile against it. A
+namespace-scope template rejects both -- deduction does not consider user-defined conversions -- and rejecting
+what the counterpart accepts is the one thing [a-strict-extension](#a-strict-extension) forbids. The standard
+containers escape this too, none of them converting implicitly from anything. Measured: `std::bitset<8>` yes,
+hidden friend yes, namespace-scope template no.
+
+`<=>` needs the access. It reads `m_bits` and calls the private `top_aligned_three_way`, so a namespace-scope
+template would have to be granted friendship anyway, and then it is a friend that is not hidden -- the worst
+of both.
+
+`swap` is the one deviation that is a choice, and the Murphy guard above is the reason.
 
 `&`, `|`, `^` and `-` stay namespace-scope templates, because there hiding is **not** free. Both their operands
 are `bitset_adaptor`, so a hidden friend is reachable by ADL from either side and the other side could then
