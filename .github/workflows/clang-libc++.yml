@@ -24,4 +24,4 @@ on:
 jobs:
   # The full ladder; the C++23 range adaptors libc++ lacks are no longer used, so all six legs pass.
   clang_libcxx:
-    uses: rhalbersma/cpp-ci/.github/workflows/clang-libc++.yml@e2886b13f6fcd1eceb231652f816b016de41be1d # v0.8.1
+    uses: rhalbersma/cpp-ci/.github/workflows/clang-libc++.yml@8156138fa6336f5d870e72e62b72033632a1c56b # v0.9.0

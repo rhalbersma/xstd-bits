@@ -27,6 +27,6 @@ jobs:
   # can. clang-cl.yml keeps its 2022 rung, which passes: clang-cl is clang, so what broke is the MSVC compiler
   # at 2022 and not the VS 2022 platform. [design.md#the-views-are-the-adaptors]
   msvc:
-    uses: rhalbersma/cpp-ci/.github/workflows/visual-studio.yml@e2886b13f6fcd1eceb231652f816b016de41be1d # v0.8.1
+    uses: rhalbersma/cpp-ci/.github/workflows/visual-studio.yml@8156138fa6336f5d870e72e62b72033632a1c56b # v0.9.0
     with:
       tiers: qualification,development
