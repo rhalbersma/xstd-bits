@@ -1092,6 +1092,42 @@ specializations [range.view] and [range.range] invite for a program-defined type
 the second says what `span` says, that the iterators point at the storage and outlive the handle that made
 them, which is what lets `ext/xstd/bitset.hpp` return `set_adaptor(c).begin()` from a temporary.
 
+### the-comparison-is-a-hidden-friend
+
+All three adaptors spell `operator==` as a defaulted hidden friend. `bitset_adaptor` was the exception until
+measured, carrying the member that `std::bitset` specifies, on the reading that a defaulted comparison has to
+be one. It does not: [class.compare.default]/1 admits a non-static member **or a friend**, and
+`sequence_adaptor` had been defaulting a *constrained* friend all along.
+
+The choice used to be observable, and no longer is. `std::bitset`'s converting constructor from
+`unsigned long long` is not `explicit`, so a mixed comparison compiles; which spellings compile depends on
+which parameter can take that conversion. Measured over a class template with an implicit width-carrying
+constructor, per standard:
+
+| | C++17 `x == u` | C++17 `u == x` | C++20 `x == u` | C++20 `u == x` |
+| --- | --- | --- | --- | --- |
+| member, as `std::bitset` has it | yes | **no** | yes | yes |
+| hidden friend | yes | yes | yes | yes |
+| namespace-scope function template | **no** | **no** | **no** | **no** |
+
+The member's implicit object argument never converts, which is the C++17 asymmetry. P1185's **reversed
+candidates** ended it: `u == x` now also considers `x == u`, reaching the member with the integer as the
+argument that converts, so member and friend became indistinguishable. Defaulted `==` arrived in the same
+standard, so there is no era in which the friend could be defaulted but behaved differently.
+
+The third row is why "non-member" is not the useful distinction. A hidden friend of a class template is a
+**non-template function**, one per instantiation, so both parameters take conversions normally. A
+namespace-scope template deduces instead, and deduction never considers user-defined conversions -- it
+rejects `x == u` *and* `u == x`, in every standard, the reversed candidate failing to deduce just as the
+first one did. That form would reject what `std::bitset` accepts, which is the one way to break
+[a-strict-extension](#a-strict-extension); the hidden friend only ever accepts more. It would also need the
+forward-declaration and `friend operator==<>` dance for private access: three declarations in dependency order
+for one operator.
+
+What the friend costs is `&bitset<N>::operator==`, well-formed against `std::bitset` because the standard puts
+the operator in the class. Nothing forms a pointer-to-member to a comparison, and the alternative was one
+adaptor of three disagreeing with its siblings on every read of the file.
+
 ### the-views-are-the-adaptors
 
 `bit_set_view<Bits>` **is** `set_adaptor<Bits, ownership::refers>` and `bit_span<Bits>`

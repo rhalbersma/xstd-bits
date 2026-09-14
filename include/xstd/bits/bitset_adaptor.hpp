@@ -437,7 +437,8 @@ public:
         [[nodiscard]] constexpr auto num_blocks() const noexcept -> std::size_t { return m_bits.num_blocks(); }
         [[nodiscard]] constexpr auto max_size()   const noexcept -> std::size_t { return m_bits.max_size();   }
 
-        [[nodiscard]] constexpr auto operator==(bitset_adaptor const& rhs) const noexcept -> bool = default;
+        // A friend rather than the member std::bitset specifies: [class.compare.default]/1 admits either, and since P1185's reversed candidates the two accept the same mixed comparisons against the implicit unsigned long long. A namespace-scope template would not, deduction declining that conversion on both sides. Defaulted, the storage being the one member. [design.md#the-comparison-is-a-hidden-friend]
+        [[nodiscard]] friend constexpr auto operator==(bitset_adaptor const& lhs, bitset_adaptor const& rhs) noexcept -> bool = default;
 
         // The bit string's order, most significant position first, which is boost's: the storage's entry at equal widths, and boost's own walk over the top min(size()) positions with the shorter one first otherwise. [design.md#the-ordering-invariant]
         [[nodiscard]] friend constexpr auto operator<=>(bitset_adaptor const& lhs, bitset_adaptor const& rhs) noexcept
