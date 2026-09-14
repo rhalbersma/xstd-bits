@@ -616,7 +616,7 @@ public:
         }
 
         constexpr auto swap(contiguous_bit_container& other)
-                noexcept(noexcept(std::ranges::swap(m_size, other.m_size)) and noexcept(std::ranges::swap(m_blocks, other.m_blocks)))
+                noexcept(noexcept(std::ranges::swap(this->m_size, other.m_size)) and noexcept(std::ranges::swap(this->m_blocks, other.m_blocks)))
                 -> void
         {
                 // m_size is empty_type under a static width, and swapping that is a no-op.
