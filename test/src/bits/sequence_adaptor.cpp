@@ -42,6 +42,28 @@ template<class Seq>
         return { s.begin(), s.end() };
 }
 
+using DynamicOctet = xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint8_t>, xstd::ownership::owns, false>;
+
+// Every (size, pattern) pair as a sequence and the vector<bool> that models it, so the comparison below is one
+// loop over the cases rather than four nested over what makes them.
+[[nodiscard]] auto dynamic_probes()
+        -> std::vector<std::pair<DynamicOctet, std::vector<bool>>>
+{
+        auto const patterns = std::vector<std::vector<std::size_t>>{ {}, { 0 }, { 1 }, { 7 }, { 8 }, { 0, 8 }, { 7, 8 } };
+        auto out = std::vector<std::pair<DynamicOctet, std::vector<bool>>>();
+        for (auto const n : { 0UZ, 1UZ, 7UZ, 8UZ, 9UZ, 16UZ, 17UZ }) {
+                for (auto const& p : patterns) {
+                        auto x = DynamicOctet(n, false);
+                        auto v = std::vector<bool>(n, false);
+                        for (auto const i : p) {
+                                if (i < n) { x[i] = true; v[i] = true; }
+                        }
+                        out.emplace_back(std::move(x), std::move(v));
+                }
+        }
+        return out;
+}
+
 // Named so each requirement is checked on a TEMPLATE PARAMETER. Selecting a deleted overload is a hard error where the requires-expression names a concrete type -- measured on GCC and Clang alike -- and a soft false only through a parameter, which is what makes a deleted operator assertable at all.
 template<class T> concept eq_comparable        = requires (T a, T b) { a ==  b; };
 template<class T> concept ne_comparable        = requires (T a, T b) { a !=  b; };
@@ -209,26 +231,13 @@ BOOST_AUTO_TEST_CASE(TheOrderingIsTheLexicographicOrderOfTheBools)
 // a block only the longer has, and nowhere at all. [design.md#the-ordering-primitive]
 BOOST_AUTO_TEST_CASE(TheOrderingAcrossTwoSizesIsStillTheLexicographicOrder)
 {
-        using Dynamic = xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint8_t>, xstd::ownership::owns, false>;
-
-        auto const patterns = std::vector<std::vector<std::size_t>>{ {}, { 0 }, { 1 }, { 7 }, { 8 }, { 0, 8 }, { 7, 8 } };
-        for (auto const m : { 0UZ, 1UZ, 7UZ, 8UZ, 9UZ, 16UZ, 17UZ }) {
-                for (auto const n : { 0UZ, 1UZ, 7UZ, 8UZ, 9UZ, 16UZ, 17UZ }) {
-                        for (auto const& p : patterns) {
-                                for (auto const& q : patterns) {
-                                        auto x = Dynamic(m, false);
-                                        auto y = Dynamic(n, false);
-                                        auto vx = std::vector<bool>(m, false);
-                                        auto vy = std::vector<bool>(n, false);
-                                        for (auto const i : p) { if (i < m) { x[i] = true; vx[i] = true; } }
-                                        for (auto const i : q) { if (i < n) { y[i] = true; vy[i] = true; } }
-
-                                        auto const expected = std::lexicographical_compare_three_way(vx.begin(), vx.end(), vy.begin(), vy.end());
-                                        BOOST_CHECK((x <=> y) == expected);
-                                        BOOST_CHECK((y <=> x) == (0 <=> expected));
-                                        BOOST_CHECK((x == y) == (vx == vy));
-                                }
-                        }
+        auto const cases = dynamic_probes();
+        for (auto const& [ x, vx ] : cases) {
+                for (auto const& [ y, vy ] : cases) {
+                        auto const expected = std::lexicographical_compare_three_way(vx.begin(), vx.end(), vy.begin(), vy.end());
+                        BOOST_CHECK((x <=> y) == expected);
+                        BOOST_CHECK((y <=> x) == (0 <=> expected));
+                        BOOST_CHECK((x == y) == (vx == vy));
                 }
         }
 }
