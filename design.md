@@ -1730,7 +1730,8 @@ where an operator is declared.
 members beside `&`, `|` and `^` as non-members. C++20 changed none of it. Mirroring that faithfully would
 import an accident and call it conformance, so on where operators sit the tree follows the ordinary guidance
 instead: the operand a mutator belongs to keeps its member -- `flip`, `<<=`, `&=` -- and the operators that
-make a new value do not. `==`, `<=>`, `swap`, the shifts and `~` are hidden friends.
+make a new value do not. `==`, `<=>` and `swap` are hidden friends; the shifts and `~` joined `&`, `|`, `^` and
+`-` at namespace scope.
 
 The rule is **hide where hiding is free, and never where it widens**, with `friend` doing two separable jobs.
 
@@ -1772,8 +1773,21 @@ The second reason would force it even if the first did not. `std::bitset`'s conv
 `unsigned long long` is not `explicit`, so `bs == 42ULL` and `42ULL == bs` both compile against it. A
 namespace-scope template rejects both -- deduction does not consider user-defined conversions -- and rejecting
 what the counterpart accepts is the one thing [a-strict-extension](#a-strict-extension) forbids. The standard
-containers escape this too, none of them converting implicitly from anything. Measured: `std::bitset<8>` yes,
-hidden friend yes, namespace-scope template no.
+containers escape this too, none of them converting implicitly from anything. Measured on a stand-in with an
+implicit `unsigned long long` constructor, both orders:
+
+| | `x == 42ULL` | `42ULL == x` |
+| --- | --- | --- |
+| defaulted member | yes | yes |
+| defaulted hidden friend | yes | yes |
+| namespace-scope template | no | no |
+
+So the strict-extension argument separates the **template** from the other two and not member from friend. The
+member converts on the right directly and on the left through C++20's reversed candidate, exactly as the friend
+does -- which is why `std::bitset`'s own member `==` became symmetric in C++20 without anyone touching it
+([the-comparison-is-a-hidden-friend](#the-comparison-is-a-hidden-friend)). Between member and friend the choice
+rests on the first reason and on the two paragraphs below: `<=>` needs the access regardless, and the two sibling
+adaptors already spell both as friends.
 
 `<=>` needs the access. It reads `m_bits` and calls the private `top_aligned_three_way`, so a namespace-scope
 template would have to be granted friendship anyway, and then it is a friend that is not hidden -- the worst

@@ -196,8 +196,7 @@ public:
                 return m_bits.get_allocator();
         }
 
-        // Boost's, and so ours at both widths: the storage spells it alike, and an extension may add. [design.md#a-strict-extension]
-        // Boost has the free form beside the member; std::bitset has neither, and an extension may add. Hidden rather than at namespace scope, as every other non-member operator here is. [design.md#a-strict-extension] [design.md#swap-goes-through-adl]
+        // Boost has the free form beside the member; std::bitset has neither, and an extension may add. Hidden rather than at namespace scope, unlike the operators below: xstd::swap(a, b) is a spelling people reach for by habit and a qualified operator is not, so here the hiding buys something. [design.md#a-strict-extension] [design.md#swap-goes-through-adl]
         friend constexpr auto swap(bitset_adaptor& x, bitset_adaptor& y) noexcept(noexcept(x.swap(y)))
                 -> void
                 requires std::swappable<Bits>
@@ -205,6 +204,7 @@ public:
                 x.swap(y);
         }
 
+        // Boost's, and so ours at both widths: the storage spells it alike, and an extension may add. [design.md#a-strict-extension]
         constexpr auto swap(bitset_adaptor& other) noexcept(std::is_nothrow_swappable_v<Bits>)
                 -> void
                 requires std::swappable<Bits>
