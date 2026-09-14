@@ -34,6 +34,12 @@ namespace xstd {
 
 namespace detail::set {
 
+// The storage answering equality, named rather than spelled twice: two appearances of one requires-expression are distinct atomic constraints, so only a concept-id lets the constrained overload below subsume the general one. [design.md#width-is-capacity]
+template<class Bits>
+concept equality_comparable_storage = requires (Bits const& a, Bits const& b) {
+        { a == b } -> std::convertible_to<bool>;
+};
+
 // A range of consecutive ascending positions, which is what a block-wise fill needs and what a general input range cannot be asked. [design.md#the-range-members]
 template<class R> inline constexpr bool is_consecutive = false;
 template<class W, class B> inline constexpr bool is_consecutive<std::ranges::iota_view<W, B>> = true;
@@ -197,10 +203,15 @@ public:
                 return *this;
         }
 
-        // The storage's own equality, which every storage in the tree has; ordering is the trait's entry, or the invariant it must satisfy. [design.md#the-ordering-invariant] [design.md#width-is-capacity]
+        // A static owner's equality IS its one member's: every instance carries the same width, so the arms below have nothing to choose between. Said here rather than left to fold, the fact being about the type and not about the optimizer. The conjunction is what picks this one -- it subsumes the general overload's lone clause, so no negation is needed there. [design.md#width-is-capacity]
+        [[nodiscard]] friend constexpr auto operator==(set_adaptor const&, set_adaptor const&) noexcept
+                -> bool
+                requires detail::set::equality_comparable_storage<bits_type> and is_owner and has_static_width = default;
+
+        // Everything else: a run-time width makes the width capacity rather than value, so two sets with the same elements are equal across widths, and a view holds a pointer that a defaulted comparison would compare instead of the contents. [design.md#the-ordering-invariant] [design.md#width-is-capacity]
         [[nodiscard]] friend constexpr auto operator==(set_adaptor const& x, set_adaptor const& y) noexcept
                 -> bool
-                requires requires { { x.storage() == y.storage() } -> std::convertible_to<bool>; }
+                requires detail::set::equality_comparable_storage<bits_type>
         {
                 if (not same_width(x, y)) {
                         return std::ranges::equal(x, y);
