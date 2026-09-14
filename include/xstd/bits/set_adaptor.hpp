@@ -59,74 +59,6 @@ template<class F>
 
 // One tier each, because the tier is the seam and sharing a body puts the whole over readability-function-cognitive-complexity's threshold. [design.md#one-function-per-tier]
 
-// The storage's block type, named so the lambdas below can spell the trailing return type the house style asks of every function. [design.md#clang-tidy-false-positives]
-template<class Bits>
-using block_type_of = std::remove_cvref_t<decltype(std::declval<Bits const&>().block(0UZ))>;
-
-// A storage's blocks as a range, so a comparison across widths reads as an algorithm over blocks rather than a walk over positions. block() is the entry, and the padding above size() is zero by the invariant, which is what lets a whole block stand in for the positions it holds. [design.md#width-is-capacity]
-template<class Bits>
-[[nodiscard]] constexpr auto block_range(Bits const& c, std::size_t first, std::size_t last) noexcept
-{
-        return std::views::iota(first, last) | std::views::transform([&c](std::size_t index) -> block_type_of<Bits> { return c.block(index); });
-}
-
-// Every pair of corresponding blocks satisfying a predicate, walked by index rather than zipped: ranges::equal over two block ranges would open by comparing their lengths, which are equal by construction, leaving a branch nothing can take and a coverage gate that cannot be met. [design.md#width-is-capacity]
-template<class Bits, class P>
-[[nodiscard]] constexpr auto blocks_agree(Bits const& a, Bits const& b, std::size_t first, std::size_t last, P pred) noexcept
-        -> bool
-{
-        return std::ranges::all_of(std::views::iota(first, last), [&](std::size_t index) -> bool { return pred(a.block(index), b.block(index)); });
-}
-
-// Whether every block in the range is clear, which is how a storage says it holds no position there. [design.md#width-is-capacity]
-template<class Bits>
-[[nodiscard]] constexpr auto blocks_clear(Bits const& c, std::size_t first, std::size_t last) noexcept
-        -> bool
-{
-        using block_type = block_type_of<Bits>;
-        return std::ranges::all_of(block_range(c, first, last), [](block_type block) -> bool { return block == block_type{}; });
-}
-
-// A block of a storage that may not have it: the blocks above a narrower storage's last read as zero, which is what the invariant makes the positions they would hold. [design.md#width-is-capacity]
-template<class Bits>
-[[nodiscard]] constexpr auto block_at(Bits const& c, std::size_t index) noexcept
-        -> block_type_of<Bits>
-{
-        return index < c.num_blocks() ? c.block(index) : block_type_of<Bits>{};
-}
-
-// The lowest block at which two storages differ, or n when they hold the same positions. The ordering needs the lowest differing POSITION, and the lowest differing block is where it lives. [design.md#the-ordering-primitive]
-template<class Bits>
-[[nodiscard]] constexpr auto first_differing_block(Bits const& a, Bits const& b, std::size_t n) noexcept
-        -> std::size_t
-{
-        auto const blocks = std::views::iota(0UZ, n);
-        auto const found = std::ranges::find_if(blocks, [&](std::size_t index) -> bool { return block_at(a, index) != block_at(b, index); });
-        return found == std::ranges::end(blocks) ? n : *found;
-}
-
-// Whether the storage holds the position at that block and offset.
-template<class Bits>
-[[nodiscard]] constexpr auto holds(Bits const& c, std::size_t index, std::size_t offset) noexcept
-        -> bool
-{
-        using block_type = block_type_of<Bits>;
-        return static_cast<block_type>(detail::bits::shr(block_at(c, index), offset) & block_type{1}) != block_type{};
-}
-
-// Whether the storage holds any position strictly above that one. The position itself is clear here -- it is the one the other storage holds -- so a single shift down leaves exactly what is above it, and the blocks past it answer the rest. [design.md#the-ordering-primitive]
-template<class Bits>
-[[nodiscard]] constexpr auto any_above(Bits const& c, std::size_t index, std::size_t offset) noexcept
-        -> bool
-{
-        using block_type = block_type_of<Bits>;
-        auto const n = c.num_blocks();
-        if (index < n and detail::bits::shr(c.block(index), offset) != block_type{}) {
-                return true;
-        }
-        return not blocks_clear(c, std::ranges::min(index + 1UZ, n), n);
-}
-
 // Blocks, lowest position first: load once per block, then tzcnt for the position and blsr to drop it.
 template<class Bits, class F>
 constexpr auto walk_blocks_ascending(Bits const& c, F& f)
@@ -276,63 +208,22 @@ public:
                 -> bool
                 requires detail::set::equality_comparable_storage<bits_type> and is_owner and has_static_width = default;
 
-        // Everything else: a run-time width makes the width capacity rather than value, so two sets with the same elements are equal across widths, and a view holds a pointer that a defaulted comparison would compare instead of the contents. [design.md#the-ordering-invariant] [design.md#width-is-capacity]
+        // Everything else: the storage's set equality, which answers at any two widths. Width is capacity for this reading, so two storages holding the same positions are equal whatever their widths, and a view holds a pointer that a defaulted comparison would compare in place of the contents. [design.md#width-is-capacity]
         [[nodiscard]] friend constexpr auto operator==(set_adaptor const& x, set_adaptor const& y) noexcept
                 -> bool
                 requires detail::set::equality_comparable_storage<bits_type>
         {
-                // if constexpr, not if: at a static width every instance carries the same one, so the arm below is not merely unreachable but uninstantiated. Compiled, its blocks_agree holds a lambda no other call site shares, and the branches of an instantiation no test runs are uncovered by construction. [design.md#width-is-capacity]
-                if constexpr (not has_static_width) {
-                        if (not same_width(x, y)) {
-                                // Across widths the same question is asked of whole blocks: the blocks both storages have must agree, and the wider one's remainder must be clear, capacity above a width holding no element. Blocks rather than elements -- a walk over the two sets is a find_next per position, where this is one load per sixty-four. [design.md#width-is-capacity]
-                                auto const& a = x.storage();
-                                auto const& b = y.storage();
-
-                                using block_type = std::remove_cvref_t<decltype(a.block(0UZ))>;
-                                auto const shared = std::ranges::min(a.num_blocks(), b.num_blocks());
-                                auto const& longer = a.num_blocks() < b.num_blocks() ? b : a;
-
-                                return
-                                        detail::set::blocks_agree(a, b, 0UZ, shared, [](block_type p, block_type q) -> bool { return p == q; }) and
-                                        detail::set::blocks_clear(longer, shared, longer.num_blocks())
-                                ;
-                        }
-                }
-                return x.storage() == y.storage();
+                return x.storage().set_equal(y.storage());
         }
 
-        // The set ordering is lexicographic over the ascending positions, and that is decided by ONE position: the lowest at which the two disagree. Whoever lacks it takes the smaller element there and is less -- unless it holds nothing above it at all, in which case its positions are a proper prefix of the other's and it is less for that reason instead. So the whole comparison is a search for one differing block and a look above it, never a walk over elements. Each arm is spelled under if constexpr so nothing is instantiated where it cannot run. [design.md#the-ordering-primitive] [design.md#width-is-capacity]
+        // The storage's entry, which answers at any two widths: the set ordering turns on the lowest position at which the two disagree, and finding it is block work the storage is the place for. [design.md#the-ordering-primitive] [design.md#width-is-capacity]
         [[nodiscard]] friend constexpr auto operator<=>(set_adaptor const& x, set_adaptor const& y) noexcept
                 -> std::strong_ordering
         {
-                if constexpr (not requires { x.storage().set_three_way(y.storage()); }) {
-                        return std::lexicographical_compare_three_way(x.begin(), x.end(), y.begin(), y.end());
-                } else if constexpr (has_static_width) {
-                        // One width, so the storage's own entry answers every pair.
+                if constexpr (requires { x.storage().set_three_way(y.storage()); }) {
                         return x.storage().set_three_way(y.storage());
                 } else {
-                        if (same_width(x, y)) {
-                                return x.storage().set_three_way(y.storage());
-                        }
-
-                        auto const& a = x.storage();
-                        auto const& b = y.storage();
-
-                        using block_type = std::remove_cvref_t<decltype(a.block(0UZ))>;
-                        auto const n = std::ranges::max(a.num_blocks(), b.num_blocks());
-                        auto const index = detail::set::first_differing_block(a, b, n);
-                        if (index == n) {
-                                return std::strong_ordering::equal;
-                        }
-
-                        auto const diff = static_cast<block_type>(detail::set::block_at(a, index) ^ detail::set::block_at(b, index));
-                        auto const offset = static_cast<std::size_t>(detail::bits::countr_zero(diff));
-
-                        // Whoever holds that position: the other is less when it has something above to be smaller there, and greater when it stops, having run out of elements first.
-                        if (detail::set::holds(a, index, offset)) {
-                                return detail::set::any_above(b, index, offset) ? std::strong_ordering::less : std::strong_ordering::greater;
-                        }
-                        return detail::set::any_above(a, index, offset) ? std::strong_ordering::greater : std::strong_ordering::less;
+                        return std::lexicographical_compare_three_way(x.begin(), x.end(), y.begin(), y.end());
                 }
         }
 
@@ -667,26 +558,10 @@ public:
                 return { lower_bound(x), upper_bound(x) };
         }
 
-        // The storage's own member where it has one, its bulk operators otherwise: both block-wise, and every storage in the tree has one of the two. [design.md#width-is-capacity]
+        // The storage's own member where it has one, its bulk operators otherwise. Every entry the storage offers answers at any two widths, so these are calls and not decisions. [design.md#width-is-capacity]
         [[nodiscard]] constexpr auto is_subset_of(set_adaptor const& other) const noexcept
                 -> bool
         {
-                // if constexpr for the same reason == has it: at a static width this arm is dead, and a dead instantiation's branches are uncovered by construction. [design.md#width-is-capacity]
-                if constexpr (not has_static_width) {
-                        if (not same_width(*this, other)) {
-                                // Blockwise, as == is: each of our blocks must lie inside the matching one, and anything we hold above the other's last block cannot be in it. Their blocks above ours need no look -- they hold positions we do not. [design.md#width-is-capacity]
-                                auto const& a = storage();
-                                auto const& b = other.storage();
-
-                                using block_type = std::remove_cvref_t<decltype(a.block(0UZ))>;
-                                auto const shared = std::ranges::min(a.num_blocks(), b.num_blocks());
-
-                                return
-                                        detail::set::blocks_agree(a, b, 0UZ, shared, [](block_type p, block_type q) -> bool { return static_cast<block_type>(p & static_cast<block_type>(~q)) == block_type{}; }) and
-                                        detail::set::blocks_clear(a, shared, a.num_blocks())
-                                ;
-                        }
-                }
                 if constexpr (requires { storage().is_subset_of(other.storage()); }) {
                         return storage().is_subset_of(other.storage());
                 } else {
@@ -697,9 +572,6 @@ public:
         [[nodiscard]] constexpr auto is_proper_subset_of(set_adaptor const& other) const noexcept
                 -> bool
         {
-                if (not same_width(*this, other)) {
-                        return is_subset_of(other) and size() != other.size();
-                }
                 if constexpr (requires { storage().is_proper_subset_of(other.storage()); }) {
                         return storage().is_proper_subset_of(other.storage());
                 } else {
@@ -710,19 +582,6 @@ public:
         [[nodiscard]] constexpr auto intersects(set_adaptor const& other) const noexcept
                 -> bool
         {
-                // if constexpr for the same reason == has it. [design.md#width-is-capacity]
-                if constexpr (not has_static_width) {
-                        if (not same_width(*this, other)) {
-                                // Only the shared blocks can meet: above them one storage holds nothing. Every shared pair being disjoint is the negation, which is the pairwise question blocks_agree asks. [design.md#width-is-capacity]
-                                auto const& a = storage();
-                                auto const& b = other.storage();
-
-                                using block_type = std::remove_cvref_t<decltype(a.block(0UZ))>;
-                                auto const shared = std::ranges::min(a.num_blocks(), b.num_blocks());
-
-                                return not detail::set::blocks_agree(a, b, 0UZ, shared, [](block_type p, block_type q) -> bool { return static_cast<block_type>(p & q) == block_type{}; });
-                        }
-                }
                 if constexpr (requires { storage().intersects(other.storage()); }) {
                         return storage().intersects(other.storage());
                 } else {

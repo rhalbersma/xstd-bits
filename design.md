@@ -1618,11 +1618,22 @@ of which a static member can reach. `std::set::max_size()` is not static either.
 
 `std::set` has no width, so `bit_set` treats its run-time width as capacity, never as value: two sets holding
 the same positions are equal whatever their storages' widths, and the width neither orders, nor hashes, nor is a
-precondition of the set operations. The storage cannot say that -- `contiguous_bit_container`'s `==` is width
-first, which is what the sequence reading and `dynamic_bitset` mean, and its bulk operators and predicates
-assert equal widths -- so the set adaptor says it. Every comparison, predicate and compound operator asks
-`same_width` first and takes the storage's own answer at equal widths, which is every answer at a static width,
-where `same_width` is constantly true and the arm folds away. At two run-time widths that differ, `==`,
+precondition of the set operations.
+
+`contiguous_bit_container`'s `operator==` cannot say that: it is width first, which is what the sequence reading
+and `dynamic_bitset` mean, and those two need it. The width is part of the value for both of them -- a
+`vector<bool>` of two elements is not one of three, and a `dynamic_bitset` is equal only at equal size -- and it
+is not part of the value for a set. So the set reading gets an entry of its own, `set_equal`, beside the
+`operator==` the other two keep, for the same reason `set_three_way` sits beside `sequence_three_way` and
+`string_three_way`. At a static width the distinction is unobservable, every instance carrying the one width,
+which is why the set adaptor can default `==` there and nowhere else.
+
+The **storage** answers at any two widths, and the adaptor calls it. `set_equal`, `set_three_way`,
+`is_subset_of`, `is_proper_subset_of` and `intersects` each carry their own width-crossing arm, so the four
+read operations in `set_adaptor` are calls with no `same_width` test between them -- only the four compound
+operators still ask, because they mutate. The logic belongs where the blocks and the invariant are, and putting
+it there is also what keeps the three adaptors alike: `bitset_adaptor` had its own `top_aligned_three_way` and
+`sequence_adaptor` had nothing at all. At two run-time widths that differ, `==`,
 `is_subset_of` and `intersects` all ask whole **blocks** rather than walking positions. Only the blocks both
 storages have can disagree; above them the answer is the invariant, capacity holding no element. So `==` wants
 the shared blocks equal and the longer one's remainder clear, `is_subset_of` wants each of our shared blocks
@@ -1640,9 +1651,10 @@ timing loop:
 | `intersects`, disjoint | 10.35us | 0.05us |
 
 The padding above `size()` being zero is what lets a whole block stand in for the positions it holds, which is
-the same invariant the orderings already rest on. The pairwise question is `all_of` over the indices rather than
-`ranges::equal` over two block ranges: the ranges are the same length by construction, so `ranges::equal` would
-open by comparing lengths in a branch nothing can take, which a 100% branch gate cannot accept.
+the same invariant the orderings already rest on. The shared prefix needs no index arithmetic: `std::views::zip` stops at the
+shorter range, which is exactly the blocks both storages have, and the blocks past it are a separate question
+asked of one storage alone. Only the ordering needs a block one storage may not have, and `padded_block` reads
+those as zero -- not a convention but the same invariant one block further out.
 
 The same gate is why each of the three arms sits under `if constexpr (not has_static_width)` rather than the
 plain `if` that `same_width` would fold anyway. Folding is not enough: a static width still *instantiates* the
@@ -1657,8 +1669,10 @@ which they disagree. Whoever lacks it is less -- but for two different reasons, 
 naming. Usually it holds a larger element there. When it holds nothing above that position at all, its positions
 are a proper *prefix* of the other's, and it is less because it runs out rather than because it compares
 smaller. So the comparison is a search for the lowest differing block and a single look above it:
-`first_differing_block`, then `any_above` on whichever side lacks the position. That is the storage's own
-`set_three_way` generalised, the blocks one storage does not have reading as zero. Measured as above, at two
+`padded_first_difference`, then `padded_any_above` on whichever side lacks the position. Those are the
+storage's own `first_difference` and `any_above` with the index bound dropped, and `set_three_way` dispatches to
+them when the widths differ, so the generalisation lives beside the algorithm it generalises rather than in the
+adaptor calling it. Measured as above, at two
 different run-time widths: 10.62us to 0.09us over equal sets, and 11.03us to 0.06us where one set is a proper
 prefix of the other.
 

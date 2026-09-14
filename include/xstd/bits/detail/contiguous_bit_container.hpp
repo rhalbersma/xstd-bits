@@ -17,7 +17,7 @@
 #include <xstd/ints/memory.hpp>                              // align_up
 #include <xstd/misc/type_traits/conditional_data_member.hpp> // XSTD_NO_UNIQUE_ADDRESS, conditional_data_member_t
 #include <boost/hash2/hash_append_fwd.hpp>                   // hash_append, hash_append_tag
-#include <algorithm>                                         // all_of, any_of, fill, fill_n, fold_left, lexicographical_compare_three_way, max, min, shift_left, shift_right
+#include <algorithm>                                         // all_of, any_of, fill, fill_n, find_if, fold_left, lexicographical_compare_three_way, max, min, shift_left, shift_right
 #include <cassert>                                           // assert
 #include <compare>                                           // strong_ordering
 #include <concepts>                                          // same_as
@@ -156,16 +156,40 @@ public:
         // No operator<=>: contiguous_bit_container is pure storage with no opinion on which reading orders it, so it names all three and picks none. [design.md#two-readings-disagree]
 
         // The set reading a word at a time: whoever HOLDS the lowest differing position is greater, unless the other holds nothing above it. [design.md#the-ordering-primitive]
+        // The set reading's equality, which operator== is not: that one is width first, meaning the sequence reading and dynamic_bitset. Here width is capacity, so two storages holding the same positions are equal whatever their widths. [design.md#width-is-capacity]
+        [[nodiscard]] constexpr auto set_equal(contiguous_bit_container const& other) const noexcept
+                -> bool
+        {
+                if constexpr (has_static_size) {
+                        // One width, so holding the same positions and being equal are the same statement.
+                        return *this == other;
+                } else {
+                        return
+                                std::ranges::all_of(
+                                        std::views::zip(this->m_blocks, other.m_blocks), [](auto&& _) { auto&& [ lhs, rhs ] = _;
+                                        return lhs == rhs;
+                                }) and
+                                (this->num_blocks() < other.num_blocks()
+                                        ? not other.any_block_set(this->num_blocks(), other.num_blocks())
+                                        : not this->any_block_set(other.num_blocks(), this->num_blocks()))
+                        ;
+                }
+        }
+
         [[nodiscard]] constexpr auto set_three_way(contiguous_bit_container const& other [[maybe_unused]]) const noexcept
                 -> std::strong_ordering
         {
-                assert(this->size() == other.size());
                 if constexpr (has_static_size and N == 0) {
                         return std::strong_ordering::equal;
                 } else if constexpr (has_static_size and N == 1) {
                         // One position, so the loser is empty and any_above is constantly false. [design.md#degenerate-widths]
                         return this->test(0UZ) <=> other.test(0UZ);
                 } else {
+                        if constexpr (not has_static_size) {
+                                if (this->size() != other.size()) {
+                                        return padded_set_three_way(other);
+                                }
+                        }
                         auto const [ index, diff ] = first_difference(other);
                         if (diff == zero) {
                                 return std::strong_ordering::equal;
@@ -884,7 +908,6 @@ public:
         [[nodiscard]] constexpr auto is_subset_of(contiguous_bit_container const& other [[maybe_unused]]) const noexcept
                 -> bool
         {
-                assert(this->size() == other.size());
                 if constexpr (has_static_size and N == 0) {
                         return true;
                 } else if constexpr (has_static_size and static_num_blocks == 1) {
@@ -895,10 +918,18 @@ public:
                                 detail::bits::is_subset_of(this->m_blocks[1], other.m_blocks[1])
                         ;
                 } else {
-                        return std::ranges::all_of(
+                        // zip stops at the shorter, which is exactly the blocks both storages have.
+                        auto const shared = std::ranges::all_of(
                                 std::views::zip(this->m_blocks, other.m_blocks), [](auto&& _) { auto&& [ lhs, rhs] = _;
                                 return detail::bits::is_subset_of(lhs, rhs);
                         });
+                        if constexpr (has_static_size) {
+                                // One width, so the shared blocks are all the blocks and there is nothing past them to ask about.
+                                return shared;
+                        } else {
+                                // Above the shared blocks only ours can hold a position, and any position of ours the other cannot hold denies the subset. [design.md#width-is-capacity]
+                                return shared and not this->any_block_set(other.num_blocks(), this->num_blocks());
+                        }
                 }
         }
 
@@ -906,14 +937,13 @@ public:
         [[nodiscard]] constexpr auto is_proper_subset_of(contiguous_bit_container const& other) const noexcept
                 -> bool
         {
-                assert(this->size() == other.size());
-                return is_subset_of(other) and *this != other;
+                return is_subset_of(other) and not set_equal(other);
         }
 
         [[nodiscard]] constexpr auto intersects(contiguous_bit_container const& other [[maybe_unused]]) const noexcept
                 -> bool
         {
-                assert(this->size() == other.size());
+                // Only the blocks both storages have can meet: above them one of the two holds nothing, so zip stopping at the shorter is the whole question. [design.md#width-is-capacity]
                 if constexpr (has_static_size and N == 0) {
                         return false;
                 } else if constexpr (has_static_size and static_num_blocks == 1) {
@@ -974,6 +1004,57 @@ private:
                         }
                         return false;
                 }
+        }
+
+        // Comparing two widths needs blocks one storage does not have. They hold no position, and the invariant already keeps the padding above size() clear, so reading them as zero is not a convention but the same fact one block further out. [design.md#width-is-capacity]
+        [[nodiscard]] constexpr auto padded_block(std::size_t index) const noexcept
+                -> block_type
+        {
+                return index < num_blocks() ? m_blocks[index] : zero;
+        }
+
+        // Whether any block in the half-open range is set. An empty or inverted range answers no, which is what a storage with nothing past the other's last block says.
+        [[nodiscard]] constexpr auto any_block_set(std::size_t first, std::size_t last) const noexcept
+                -> bool
+        {
+                return std::ranges::any_of(std::views::iota(first, std::ranges::max(first, last)), [this](std::size_t index) -> bool { return m_blocks[index] != zero; });
+        }
+
+        // any_above with no precondition on the index: the position may lie past this storage's last block, where it holds neither the position nor anything above it.
+        [[nodiscard]] constexpr auto padded_any_above(std::size_t index, std::size_t offset) const noexcept
+                -> bool
+        {
+                auto const n = num_blocks();
+                if (index < n and shr(m_blocks[index], offset) != zero) {
+                        return true;
+                }
+                return any_block_set(std::ranges::min(index + 1UZ, n), n);
+        }
+
+        // The lowest block at which two storages differ, or n when they hold the same positions.
+        [[nodiscard]] constexpr auto padded_first_difference(contiguous_bit_container const& other, std::size_t n) const noexcept
+                -> std::size_t
+        {
+                auto const blocks = std::views::iota(0UZ, n);
+                auto const found = std::ranges::find_if(blocks, [&](std::size_t index) -> bool { return this->padded_block(index) != other.padded_block(index); });
+                return found == std::ranges::end(blocks) ? n : *found;
+        }
+
+        // The set ordering across two widths. Lexicographic order over the ascending positions turns on ONE position: the lowest at which the two disagree. Whoever lacks it is less -- holding a larger element there, or, when it holds nothing above it at all, because its positions are a proper prefix of the other's and it runs out first. [design.md#the-ordering-primitive]
+        [[nodiscard]] constexpr auto padded_set_three_way(contiguous_bit_container const& other) const noexcept
+                -> std::strong_ordering
+        {
+                auto const n = std::ranges::max(this->num_blocks(), other.num_blocks());
+                auto const index = padded_first_difference(other, n);
+                if (index == n) {
+                        return std::strong_ordering::equal;
+                }
+                auto const diff = static_cast<block_type>(this->padded_block(index) ^ other.padded_block(index));
+                auto const offset = static_cast<std::size_t>(detail::bits::countr_zero(diff));
+                if (detail::bits::intersects(this->padded_block(index), shl(unit, offset))) {
+                        return other.padded_any_above(index, offset) ? std::strong_ordering::less : std::strong_ordering::greater;
+                }
+                return this->padded_any_above(index, offset) ? std::strong_ordering::greater : std::strong_ordering::less;
         }
 
         // The block straddling index and index + 1: the high one shifted up by L_shift and the low one down by R_shift, spliced into one. [design.md#the-funnel-shift]
