@@ -2004,10 +2004,18 @@ storage whose swap and moves are counted, once per reading:
 | `set_adaptor` | 0 storage swaps, 3 moves | 1 swap, 0 moves |
 | `bitset_adaptor` | 0 storage swaps, 3 moves | 1 swap, 0 moves |
 
-`contiguous_bit_container` now has the free `swap` too, as a hidden friend delegating to the member. Nothing
-else about swapping changed, and the storage is not asked for one: `std::regular` implies `copyable`, which
-implies `movable`, which **includes** `std::swappable`, so the concept already requires as much swapping as
-`ranges::swap` can need, and any better one arrives by ADL without being asked for.
+`contiguous_bit_container` now has the free `swap`, as a hidden friend, and **only** that one: the member it
+would have delegated to had no caller but the friend itself, since nothing writes `m_bits.swap(other.m_bits)`
+and the entry every reading actually reaches is the ADL one. So the storage keeps one `swap` at the one entry
+point, which is also where `m_size` and `m_blocks` are reachable without an accessor. The adaptors keep both
+shapes -- their member is a container requirement -- and lose nothing by it: each still reads 1 storage swap
+and 0 moves through its member, through unqualified `swap`, and through `ranges::swap` alike. The `noexcept`
+survives the fold as well, `std::is_nothrow_swappable_v<Bits>` being a trait over *unqualified* `swap`, which
+is exactly what finds a hidden friend.
+
+Nothing else about swapping changed, and the storage is not asked for one: `std::regular` implies `copyable`,
+which implies `movable`, which **includes** `std::swappable`, so the concept already requires as much swapping
+as `ranges::swap` can need, and any better one arrives by ADL without being asked for.
 
 The `noexcept` moved with it. It read `noexcept(std::is_nothrow_swappable_v<Blocks>)` -- a trait of the
 `std::swap` family -- above a body calling `std::ranges::swap`, which is a different family with different
