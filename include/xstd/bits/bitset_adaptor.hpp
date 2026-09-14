@@ -197,6 +197,14 @@ public:
         }
 
         // Boost's, and so ours at both widths: the storage spells it alike, and an extension may add. [design.md#a-strict-extension]
+        // Boost has the free form beside the member; std::bitset has neither, and an extension may add. Hidden rather than at namespace scope, as every other non-member operator here is. [design.md#a-strict-extension] [design.md#swap-goes-through-adl]
+        friend constexpr auto swap(bitset_adaptor& x, bitset_adaptor& y) noexcept(noexcept(x.swap(y)))
+                -> void
+                requires std::swappable<Bits>
+        {
+                x.swap(y);
+        }
+
         constexpr auto swap(bitset_adaptor& other) noexcept(std::is_nothrow_swappable_v<Bits>)
                 -> void
                 requires std::swappable<Bits>
@@ -719,15 +727,6 @@ private:
                 );
         }
 };
-
-// Boost has the free form beside the member; std::bitset has neither, and an extension may add. [design.md#a-strict-extension]
-template<class Bits>
-constexpr auto swap(bitset_adaptor<Bits>& x, bitset_adaptor<Bits>& y) noexcept(noexcept(x.swap(y)))
-        -> void
-        requires std::swappable<Bits>
-{
-        x.swap(y);
-}
 
 // The owner's side of the view protocol: what a bit_set_view or bit_span over a bitset refers into. [design.md#views-over-owners]
 template<class Bits>

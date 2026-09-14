@@ -432,6 +432,14 @@ public:
                 return last;
         }
 
+        // The non-member beside it, hidden as every other non-member here is: ranges::swap finds this and never the member. [design.md#swap-goes-through-adl]
+        friend constexpr auto swap(set_adaptor& x, set_adaptor& y) noexcept(noexcept(x.swap(y)))
+                -> void
+                requires is_owner
+        {
+                x.swap(y);
+        }
+
         // The storage's own swap through the customization point, std::bitset having no member to call.
         constexpr auto swap(set_adaptor& other) noexcept(std::is_nothrow_swappable_v<Bits>)
                 -> void
@@ -694,13 +702,6 @@ struct owned_storage<set_adaptor<Bits, ownership::owns>>
 };
 
 // NOLINTBEGIN(readability-redundant-parentheses): a call is no primary expression, so the requires-clause needs the parentheses the check reports as redundant.
-template<class Bits, ownership Own>
-constexpr auto swap(set_adaptor<Bits, Own>& x, set_adaptor<Bits, Own>& y) noexcept(noexcept(x.swap(y)))
-        -> void
-        requires (owns(Own))
-{
-        x.swap(y);
-}
 
 // 23.4.6.3 Erasure                                                [set.erasure]
 template<class Bits, ownership Own, class Predicate>

@@ -2059,14 +2059,22 @@ storage whose swap and moves are counted, once per reading:
 | `set_adaptor` | 0 storage swaps, 3 moves | 1 swap, 0 moves |
 | `bitset_adaptor` | 0 storage swaps, 3 moves | 1 swap, 0 moves |
 
-`contiguous_bit_container` now has the free `swap`, as a hidden friend, and **only** that one: the member it
-would have delegated to had no caller but the friend itself, since nothing writes `m_bits.swap(other.m_bits)`
-and the entry every reading actually reaches is the ADL one. So the storage keeps one `swap` at the one entry
-point, which is also where `m_size` and `m_blocks` are reachable without an accessor. The adaptors keep both
-shapes -- their member is a container requirement -- and lose nothing by it: each still reads 1 storage swap
-and 0 moves through its member, through unqualified `swap`, and through `ranges::swap` alike. The `noexcept`
-survives the fold as well, `std::is_nothrow_swappable_v<Bits>` being a trait over *unqualified* `swap`, which
-is exactly what finds a hidden friend.
+Every type in the tree now carries the same pair: a **member** `swap` that does the exchange, and a **hidden
+friend** `swap(x, y)` that forwards to it. One rule, no exceptions -- the storage included, though it is not a
+container and no requirement asks it for either.
+
+The member was briefly folded away on the storage, on the ground that it had no caller but the friend. That
+measured something true and concluded the wrong thing: the friend calling the member *is* the design, so the
+member is the primitive rather than dead weight, and deleting it bought one fewer function at the price of the
+storage reading differently from the three adaptors. The adaptors keep the member because a container
+requirement asks for it; the storage keeps it so the tree has one shape.
+
+Hidden rather than at namespace scope, which is where the three adaptors' free `swap`s used to live, matching
+`==` and `<=>` -- `ranges::swap` finds a hidden friend by ADL exactly as it found the namespace-scope template,
+and `std::is_nothrow_swappable_v` is a trait over *unqualified* `swap`, so it finds one too. What it costs is
+`xstd::swap(a, b)` spelled with the qualification, which nothing writes. Measured across all three adaptors,
+each entry still reads 1 storage swap and 0 moves: through the member, through unqualified `swap`, and through
+`ranges::swap` alike.
 
 Nothing else about swapping changed, and the storage is not asked for one: `std::regular` implies `copyable`,
 which implies `movable`, which **includes** `std::swappable`, so the concept already requires as much swapping

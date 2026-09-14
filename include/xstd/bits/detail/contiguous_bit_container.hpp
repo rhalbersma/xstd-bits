@@ -615,14 +615,20 @@ public:
                 return *this;
         }
 
-        // ranges::swap finds a free swap by ADL and a member never, so this is the one every adaptor's ranges::swap(m_bits, other.m_bits) reaches; without it that call moves a whole contiguous_bit_container three times instead of swapping its blocks once. [design.md#swap-goes-through-adl]
-        friend constexpr auto swap(contiguous_bit_container& x, contiguous_bit_container& y)
-                noexcept(noexcept(std::ranges::swap(x.m_size, y.m_size)) and noexcept(std::ranges::swap(x.m_blocks, y.m_blocks)))
+        constexpr auto swap(contiguous_bit_container& other)
+                noexcept(noexcept(std::ranges::swap(this->m_size, other.m_size)) and noexcept(std::ranges::swap(this->m_blocks, other.m_blocks)))
                 -> void
         {
                 // m_size is empty_type under a static width, and swapping that is a no-op.
-                std::ranges::swap(x.m_size,   y.m_size);
-                std::ranges::swap(x.m_blocks, y.m_blocks);
+                std::ranges::swap(this->m_size,   other.m_size);
+                std::ranges::swap(this->m_blocks, other.m_blocks);
+        }
+
+        // ranges::swap finds a free swap by ADL and a member never, so the member above is reached through this one and not directly; without it every adaptor's ranges::swap(m_bits, other.m_bits) moves a whole contiguous_bit_container three times instead of swapping its blocks once. Hidden rather than at namespace scope, as the three adaptors' are: one shape for the whole tree. [design.md#swap-goes-through-adl]
+        friend constexpr auto swap(contiguous_bit_container& x, contiguous_bit_container& y) noexcept(noexcept(x.swap(y)))
+                -> void
+        {
+                x.swap(y);
         }
 
         // Growth, at a run-time width alone; every path leaves the unused tail clear, so the block walks read nothing above size(). [design.md#growth]
