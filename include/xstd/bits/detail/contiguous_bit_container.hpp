@@ -17,7 +17,7 @@
 #include <xstd/ints/memory.hpp>                              // align_up
 #include <xstd/misc/type_traits/conditional_data_member.hpp> // XSTD_NO_UNIQUE_ADDRESS, conditional_data_member_t
 #include <boost/hash2/hash_append_fwd.hpp>                   // hash_append, hash_append_tag
-#include <algorithm>                                         // all_of, any_of, fill, fill_n, fold_left, max, min, shift_left, shift_right
+#include <algorithm>                                         // all_of, any_of, fill, fill_n, fold_left, lexicographical_compare_three_way, max, min, shift_left, shift_right
 #include <cassert>                                           // assert
 #include <compare>                                           // strong_ordering
 #include <concepts>                                          // same_as
@@ -25,7 +25,7 @@
 #include <functional>                                        // plus
 #include <iterator>                                          // distance, forward_iterator, input_iterator, prev
 #include <limits>                                            // numeric_limits
-#include <ranges>                                            // begin, drop, iota, size, swap, transform, zip
+#include <ranges>                                            // begin, drop, iota, rbegin, rend, size, swap, transform, zip
                                                              // (views::drop_last when P22014R2 is accepted)
 #include <span>                                              // dynamic_extent
 #include <type_traits>                                       // conditional_t, is_const_v, remove_reference_t
@@ -198,23 +198,19 @@ public:
                 }
         }
 
-        // The bitset reading a word at a time: the bit string, most significant position first, is the blocks from the top block down, the unused tail being clear. [design.md#the-ordering-primitive]
-        [[nodiscard]] constexpr auto string_three_way(contiguous_bit_container const& other [[maybe_unused]]) const noexcept
+        // The bitset reading a word at a time: the bit string, most significant position first, IS the blocks from
+        // the top block down, the unused tail being clear, so the reading is the standard algorithm over the blocks
+        // reversed and there is nothing here to hand-roll. The degenerate widths need no arm of their own: a zero
+        // width still holds its one all-padding block, which is clear in both, and a one-block width is the
+        // algorithm's first step. [design.md#the-ordering-primitive]
+        [[nodiscard]] constexpr auto string_three_way(contiguous_bit_container const& other) const noexcept
                 -> std::strong_ordering
         {
                 assert(this->size() == other.size());
-                if constexpr (has_static_size and N == 0) {
-                        return std::strong_ordering::equal;
-                } else if constexpr (has_static_size and static_num_blocks == 1) {
-                        return this->m_blocks[0] <=> other.m_blocks[0];
-                } else {
-                        for (auto i = num_blocks(); i-- != 0UZ;) {
-                                if (auto const cmp = this->m_blocks[i] <=> other.m_blocks[i]; cmp != std::strong_ordering::equal) {
-                                        return cmp;
-                                }
-                        }
-                        return std::strong_ordering::equal;
-                }
+                return std::lexicographical_compare_three_way(
+                        std::ranges::rbegin(this->m_blocks), std::ranges::rend(this->m_blocks),
+                        std::ranges::rbegin(other.m_blocks), std::ranges::rend(other.m_blocks)
+                );
         }
 
         template<class Provider, class Hash, class Flavor>

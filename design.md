@@ -687,10 +687,16 @@ makes the two comparable, both exiting at once.
 pair costs `n + 1` block reads. And when the values are equal `any_above` is never reached at all, since
 `first_difference` already settles it.
 
-**The bitset reading needs neither piece.** The bit string, most significant position first, is the blocks
-from the top block down, with the unused tail kept clear, so `string_three_way` is the plain `<=>` of the
-blocks from the top: one comparison at a static width within a word, a loop from the last block otherwise,
-equal only when every block is. It is the one reading whose order is plain lexicographic over words.
+**The bitset reading needs neither piece.** The bit string, most significant position first, **is** the blocks
+from the top block down, with the unused tail kept clear, so it is the one reading whose order is plain
+lexicographic over words — and plain lexicographic over words is `std::lexicographical_compare_three_way` over
+the blocks reversed. `string_three_way` is that call and nothing else: no loop of its own, and no arm for
+either degenerate width, since a zero width still holds its one all-padding block, clear in both, and a
+one-block width is the algorithm's first step.
+
+Handing it to the standard algorithm costs nothing at the widths the hand-rolled version had arms for. GCC 15
+at `-O2`: `xstd::bitset<64>` is one `cmpq`, and `xstd::bitset<128>` is the same two comparisons fully unrolled,
+top block first.
 
 **The prefix clause is not removable.** Set order is not plain lexicographic over words under *any*
 comparator. At `digits = 4`, `A = {1}` and `B = {5}` differ in word 0, where `A₀ = {1}` and `B₀ = {}`; a
