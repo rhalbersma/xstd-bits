@@ -21,12 +21,14 @@ on:
 
 jobs:
   clang_tidy:
-    uses: rhalbersma/cpp-ci/.github/workflows/clang-tidy.yml@e2886b13f6fcd1eceb231652f816b016de41be1d # v0.8.1
+    uses: rhalbersma/cpp-ci/.github/workflows/clang-tidy.yml@8156138fa6336f5d870e72e62b72033632a1c56b # v0.9.0
     with:
-      # The generated per-header units and the test sources, as run-clang-tidy
-      # matches them against the compile database's absolute paths.
+      # The generated per-header units, as run-clang-tidy matches them against
+      # the compile database's absolute paths. They are the one tree that cannot
+      # be named as a directory: they live in the build tree, under a path only
+      # this project's CMake knows.
       self_sufficiency_regex: ${{ github.workspace }}/build/test/header_self_sufficiency/.*
-      sources_regex: ${{ github.workspace }}/test/src/.*
+      test_dir: test/src
       # The per-header pass compiles standalone, so xstd-ints and xstd-misc (FetchContent) and Boost (vcpkg) must be named.
       # FetchContent derives _deps/<name>-src from the declared name, so this path moves whenever that name does;
       # an absent candidate is skipped silently, which turns a stale path into a file-not-found in the header pass.

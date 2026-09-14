@@ -27,7 +27,7 @@ on:
 jobs:
   coverage:
     # Ahead of v0.8.1, for the unwind-resume exclusion on a bare closing brace, without which 100 can never be met.
-    uses: rhalbersma/cpp-ci/.github/workflows/coverage.yml@01ed3761196d7e019c6e0ed876d80974ee653ead # main
+    uses: rhalbersma/cpp-ci/.github/workflows/coverage.yml@8156138fa6336f5d870e72e62b72033632a1c56b # v0.9.0
     with:
       # Not built here at all, which the exclude alone could not achieve: gcovr drops benchmark/ as a SOURCE
       # path, but a benchmark TU instantiates the library's templates and those instantiations are counted in
