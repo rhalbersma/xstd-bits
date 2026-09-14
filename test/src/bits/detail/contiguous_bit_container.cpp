@@ -232,7 +232,7 @@ public:
         {
                 auto& a = fresh_x();
                 auto& b = fresh_y();
-                a.swap(b);
+                swap(a, b);
                 disagree(a == m_y, true);
                 disagree(b == m_x, true);
         }
@@ -508,12 +508,18 @@ BOOST_AUTO_TEST_CASE(ItsSwapIsReachedThroughAdlAndNotTheMoveFallback)
         g_storage_swaps = 0;
         g_storage_moves = 0;
         a.swap(b);
-        BOOST_CHECK_EQUAL(g_storage_swaps, 1);          // the member reaches the storage's swap
+        BOOST_CHECK_EQUAL(g_storage_swaps, 1);          // the member, which does the exchange
         BOOST_CHECK_EQUAL(g_storage_moves, 0);
 
         g_storage_swaps = 0;
         g_storage_moves = 0;
-        std::ranges::swap(a, b);                        // and so does what every adaptor actually calls
+        swap(a, b);
+        BOOST_CHECK_EQUAL(g_storage_swaps, 1);          // the hidden friend, which forwards to it
+        BOOST_CHECK_EQUAL(g_storage_moves, 0);
+
+        g_storage_swaps = 0;
+        g_storage_moves = 0;
+        std::ranges::swap(a, b);                        // and what every adaptor actually calls, reaching the friend by ADL
         BOOST_CHECK_EQUAL(g_storage_swaps, 1);          // 0 swaps and 3 moves before the free swap existed
         BOOST_CHECK_EQUAL(g_storage_moves, 0);
 }

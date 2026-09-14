@@ -1092,6 +1092,42 @@ specializations [range.view] and [range.range] invite for a program-defined type
 the second says what `span` says, that the iterators point at the storage and outlive the handle that made
 them, which is what lets `ext/xstd/bitset.hpp` return `set_adaptor(c).begin()` from a temporary.
 
+### the-comparison-is-a-hidden-friend
+
+All three adaptors spell `operator==` as a defaulted hidden friend. `bitset_adaptor` was the exception until
+measured, carrying the member that `std::bitset` specifies, on the reading that a defaulted comparison has to
+be one. It does not: [class.compare.default]/1 admits a non-static member **or a friend**, and
+`sequence_adaptor` had been defaulting a *constrained* friend all along.
+
+The choice used to be observable, and no longer is. `std::bitset`'s converting constructor from
+`unsigned long long` is not `explicit`, so a mixed comparison compiles; which spellings compile depends on
+which parameter can take that conversion. Measured over a class template with an implicit width-carrying
+constructor, per standard:
+
+| | C++17 `x == u` | C++17 `u == x` | C++20 `x == u` | C++20 `u == x` |
+| --- | --- | --- | --- | --- |
+| member, as `std::bitset` has it | yes | **no** | yes | yes |
+| hidden friend | yes | yes | yes | yes |
+| namespace-scope function template | **no** | **no** | **no** | **no** |
+
+The member's implicit object argument never converts, which is the C++17 asymmetry. P1185's **reversed
+candidates** ended it: `u == x` now also considers `x == u`, reaching the member with the integer as the
+argument that converts, so member and friend became indistinguishable. Defaulted `==` arrived in the same
+standard, so there is no era in which the friend could be defaulted but behaved differently.
+
+The third row is why "non-member" is not the useful distinction. A hidden friend of a class template is a
+**non-template function**, one per instantiation, so both parameters take conversions normally. A
+namespace-scope template deduces instead, and deduction never considers user-defined conversions -- it
+rejects `x == u` *and* `u == x`, in every standard, the reversed candidate failing to deduce just as the
+first one did. That form would reject what `std::bitset` accepts, which is the one way to break
+[a-strict-extension](#a-strict-extension); the hidden friend only ever accepts more. It would also need the
+forward-declaration and `friend operator==<>` dance for private access: three declarations in dependency order
+for one operator.
+
+What the friend costs is `&bitset<N>::operator==`, well-formed against `std::bitset` because the standard puts
+the operator in the class. Nothing forms a pointer-to-member to a comparison, and the alternative was one
+adaptor of three disagreeing with its siblings on every read of the file.
+
 ### the-views-are-the-adaptors
 
 `bit_set_view<Bits>` **is** `set_adaptor<Bits, ownership::refers>` and `bit_span<Bits>`
@@ -1582,14 +1618,67 @@ of which a static member can reach. `std::set::max_size()` is not static either.
 
 `std::set` has no width, so `bit_set` treats its run-time width as capacity, never as value: two sets holding
 the same positions are equal whatever their storages' widths, and the width neither orders, nor hashes, nor is a
-precondition of the set operations. The storage cannot say that -- `contiguous_bit_container`'s `==` is width
-first, which is what the sequence reading and `dynamic_bitset` mean, and its bulk operators and predicates
-assert equal widths -- so the set adaptor says it. Every comparison, predicate and compound operator asks
-`same_width` first and takes the storage's own answer at equal widths, which is every answer at a static width,
-where `same_width` is constantly true and the arm folds away. At two run-time widths that differ, `==` is
-`std::ranges::equal` over the elements, `<=>` is the invariant's own algorithm, `is_subset_of` is
-`std::ranges::includes`, `intersects` walks one set asking the other, and `|=` `&=` `^=` `-=` insert and erase
-element by element, `insert` growing the narrower left operand as it grows for any key. The shifts translate the
+precondition of the set operations.
+
+`contiguous_bit_container`'s `operator==` cannot say that: it is width first, which is what the sequence reading
+and `dynamic_bitset` mean, and those two need it. The width is part of the value for both of them -- a
+`vector<bool>` of two elements is not one of three, and a `dynamic_bitset` is equal only at equal size -- and it
+is not part of the value for a set. So the set reading gets an entry of its own, `set_equal`, beside the
+`operator==` the other two keep, for the same reason `set_three_way` sits beside `sequence_three_way` and
+`string_three_way`. At a static width the distinction is unobservable, every instance carrying the one width,
+which is why the set adaptor can default `==` there and nowhere else.
+
+The **storage** answers at any two widths, and the adaptor calls it. `set_equal`, `set_three_way`,
+`is_subset_of`, `is_proper_subset_of` and `intersects` each carry their own width-crossing arm, so the four
+read operations in `set_adaptor` are calls with no `same_width` test between them -- only the four compound
+operators still ask, because they mutate. The logic belongs where the blocks and the invariant are, and putting
+it there is also what keeps the three adaptors alike: `bitset_adaptor` had its own `top_aligned_three_way` and
+`sequence_adaptor` had nothing at all. At two run-time widths that differ, `==`,
+`is_subset_of` and `intersects` all ask whole **blocks** rather than walking positions. Only the blocks both
+storages have can disagree; above them the answer is the invariant, capacity holding no element. So `==` wants
+the shared blocks equal and the longer one's remainder clear, `is_subset_of` wants each of our shared blocks
+inside the matching one and nothing of ours above their last block, and `intersects` is the negation of every
+shared pair being disjoint -- their blocks above ours never need a look. Positions were the obvious spelling and
+the wrong one, a walk over the elements being a `find_next` per position where this is one load per sixty-four.
+Measured over two thousand elements held at two different run-time widths, each in the case that denies the
+element walk its early exit, with the inputs made opaque to the optimizer so the call is not hoisted out of the
+timing loop:
+
+| | positions | blocks |
+| --- | --- | --- |
+| `==`, equal | 11.04us | 0.07us |
+| `is_subset_of`, a subset | 9.39us | 0.05us |
+| `intersects`, disjoint | 10.35us | 0.05us |
+
+The padding above `size()` being zero is what lets a whole block stand in for the positions it holds, which is
+the same invariant the orderings already rest on. The shared prefix needs no index arithmetic: `std::views::zip` stops at the
+shorter range, which is exactly the blocks both storages have, and the blocks past it are a separate question
+asked of one storage alone. Only the ordering needs a block one storage may not have, and `padded_block` reads
+those as zero -- not a convention but the same invariant one block further out.
+
+The same gate is why each of the three arms sits under `if constexpr (not has_static_width)` rather than the
+plain `if` that `same_width` would fold anyway. Folding is not enough: a static width still *instantiates* the
+arm, and `blocks_agree` carries a lambda no other call site shares, so those instantiations are reachable from
+no test and their branches are uncovered by construction -- the same hazard the coverage job's own
+`XSTD_BITS_BUILD_BENCHMARKS=OFF` exists to avoid. A translation unit naming only `bit_static_set` instantiated
+thirty such functions before the guard and none after.
+
+`<=>` is blockwise for the same reason and by a different route. The set ordering is lexicographic over the
+ascending positions, and lexicographic order over two sets is decided by exactly **one** position: the lowest at
+which they disagree. Whoever lacks it is less -- but for two different reasons, and the second is the one worth
+naming. Usually it holds a larger element there. When it holds nothing above that position at all, its positions
+are a proper *prefix* of the other's, and it is less because it runs out rather than because it compares
+smaller. So the comparison is a search for the lowest differing block and a single look above it:
+`padded_first_difference`, then `padded_any_above` on whichever side lacks the position. Those are the
+storage's own `first_difference` and `any_above` with the index bound dropped, and `set_three_way` dispatches to
+them when the widths differ, so the generalisation lives beside the algorithm it generalises rather than in the
+adaptor calling it. Measured as above, at two
+different run-time widths: 10.62us to 0.09us over equal sets, and 11.03us to 0.06us where one set is a proper
+prefix of the other.
+
+Still element by element: `|=` `&=` `^=` `-=` insert and erase
+one position at a time, `insert` growing the narrower left operand as it grows for any key. These mutate and may
+have to grow, which is why they were left as they are rather than swept along with the four that only read. The shifts translate the
 set, so `<<=` grows the width to hold the result and `>>=` empties past it. Hashing appends the positions and
 the count at a run-time width and the bits at a static one, where equal sets share a width
 ([the-hashing-invariant](#the-hashing-invariant)).
@@ -2004,10 +2093,26 @@ storage whose swap and moves are counted, once per reading:
 | `set_adaptor` | 0 storage swaps, 3 moves | 1 swap, 0 moves |
 | `bitset_adaptor` | 0 storage swaps, 3 moves | 1 swap, 0 moves |
 
-`contiguous_bit_container` now has the free `swap` too, as a hidden friend delegating to the member. Nothing
-else about swapping changed, and the storage is not asked for one: `std::regular` implies `copyable`, which
-implies `movable`, which **includes** `std::swappable`, so the concept already requires as much swapping as
-`ranges::swap` can need, and any better one arrives by ADL without being asked for.
+Every type in the tree now carries the same pair: a **member** `swap` that does the exchange, and a **hidden
+friend** `swap(x, y)` that forwards to it. One rule, no exceptions -- the storage included, though it is not a
+container and no requirement asks it for either.
+
+The member was briefly folded away on the storage, on the ground that it had no caller but the friend. That
+measured something true and concluded the wrong thing: the friend calling the member *is* the design, so the
+member is the primitive rather than dead weight, and deleting it bought one fewer function at the price of the
+storage reading differently from the three adaptors. The adaptors keep the member because a container
+requirement asks for it; the storage keeps it so the tree has one shape.
+
+Hidden rather than at namespace scope, which is where the three adaptors' free `swap`s used to live, matching
+`==` and `<=>` -- `ranges::swap` finds a hidden friend by ADL exactly as it found the namespace-scope template,
+and `std::is_nothrow_swappable_v` is a trait over *unqualified* `swap`, so it finds one too. What it costs is
+`xstd::swap(a, b)` spelled with the qualification, which nothing writes. Measured across all three adaptors,
+each entry still reads 1 storage swap and 0 moves: through the member, through unqualified `swap`, and through
+`ranges::swap` alike.
+
+Nothing else about swapping changed, and the storage is not asked for one: `std::regular` implies `copyable`,
+which implies `movable`, which **includes** `std::swappable`, so the concept already requires as much swapping
+as `ranges::swap` can need, and any better one arrives by ADL without being asked for.
 
 The `noexcept` moved with it. It read `noexcept(std::is_nothrow_swappable_v<Blocks>)` -- a trait of the
 `std::swap` family -- above a body calling `std::ranges::swap`, which is a different family with different

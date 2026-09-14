@@ -481,4 +481,115 @@ BOOST_AUTO_TEST_CASE(AZeroWidthAnswersBackWithoutScanning)
         BOOST_CHECK_EQUAL(static_cast<std::size_t>(z.back()), 0UZ);
 }
 
+// Across two run-time widths the set operations ask whole blocks rather than walking positions: the blocks both
+// storages have are compared pairwise, and whatever lies above them is answered by the invariant that padding is
+// clear. Growth is resize(n + 1), so a width is not a whole number of blocks and two different widths can share a
+// block count -- which is the case that leaves the remainder empty, and it needs saying out loud because every
+// other case has something there to look at. [design.md#width-is-capacity]
+namespace {
+
+[[nodiscard]] auto grown_to(std::size_t width, std::initializer_list<std::size_t> positions)
+        -> xstd::bit_set
+{
+        auto s = xstd::bit_set();
+        s.insert(width);
+        s.erase(width);
+        for (auto const p : positions) {
+                s.insert(p);
+        }
+        return s;
+}
+
+}       // namespace
+
+BOOST_AUTO_TEST_CASE(EqualityAcrossWidthsComparesBlocks)
+{
+        auto const one_block   = grown_to(60UZ,  { 1UZ, 5UZ, 59UZ });   // width 61
+        auto const one_block_2 = grown_to(63UZ,  { 1UZ, 5UZ, 59UZ });   // width 64: same block count, other width
+        auto const five_blocks = grown_to(300UZ, { 1UZ, 5UZ, 59UZ });   // width 301
+
+        // Widths differ but the block counts agree, so there is no remainder to look at.
+        BOOST_CHECK(one_block == one_block_2);
+        BOOST_CHECK(one_block_2 == one_block);
+
+        // A remainder that is clear, both operand orders, the wider one carrying it either side.
+        BOOST_CHECK(one_block == five_blocks);
+        BOOST_CHECK(five_blocks == one_block);
+
+        // A position living only in the remainder is what the remainder check is for.
+        auto const with_high = grown_to(300UZ, { 1UZ, 5UZ, 59UZ, 280UZ });
+        BOOST_CHECK(one_block != with_high);
+        BOOST_CHECK(with_high != one_block);
+
+        // A difference inside the shared blocks, above the narrower width but below its last block's end.
+        auto const with_near = grown_to(300UZ, { 1UZ, 5UZ, 59UZ, 62UZ });
+        BOOST_CHECK(one_block != with_near);
+        BOOST_CHECK(with_near != one_block);
+}
+
+BOOST_AUTO_TEST_CASE(SubsetAndIntersectionAcrossWidthsCompareBlocks)
+{
+        auto const narrow = grown_to(60UZ,  { 1UZ, 5UZ });
+        auto const wide   = grown_to(300UZ, { 1UZ, 5UZ, 59UZ, 280UZ });
+
+        // Ours inside theirs: nothing of ours lies above their last block, so the remainder is empty.
+        BOOST_CHECK(narrow.is_subset_of(wide));
+
+        // Theirs is not inside ours: 280 lives above our last block, which the remainder check catches.
+        BOOST_CHECK(not wide.is_subset_of(narrow));
+
+        // A wider operand whose remainder IS clear still fails on the shared blocks when it holds more there.
+        auto const wide_low = grown_to(300UZ, { 1UZ, 5UZ, 59UZ });
+        BOOST_CHECK(not wide_low.is_subset_of(narrow));
+        BOOST_CHECK(narrow.is_subset_of(wide_low));
+
+        // And succeeds when the shared blocks agree and the remainder is clear.
+        auto const wide_same = grown_to(300UZ, { 1UZ, 5UZ });
+        BOOST_CHECK(wide_same.is_subset_of(narrow));
+
+        // Meeting in a shared block, and not meeting at all.
+        BOOST_CHECK(narrow.intersects(wide));
+        BOOST_CHECK(wide.intersects(narrow));
+
+        auto const elsewhere = grown_to(300UZ, { 7UZ, 280UZ });
+        BOOST_CHECK(not narrow.intersects(elsewhere));
+        BOOST_CHECK(not elsewhere.intersects(narrow));
+}
+
+// The ordering across two run-time widths turns on ONE position: the lowest at which the two sets disagree.
+// Whoever lacks it is less, having the smaller element there -- unless it holds nothing above it, in which case
+// its positions are a proper prefix of the other's and it is less for that reason instead. Both readings of
+// "less" are exercised here, in both operand orders, because they are different branches reaching the same
+// answer. [design.md#the-ordering-primitive]
+BOOST_AUTO_TEST_CASE(OrderingAcrossWidthsComparesBlocks)
+{
+        auto const narrow = [](std::initializer_list<std::size_t> p) -> xstd::bit_set { return grown_to(60UZ,  p); };   // width 61, one block
+        auto const wide   = [](std::initializer_list<std::size_t> p) -> xstd::bit_set { return grown_to(300UZ, p); };   // width 301, five blocks
+
+        // Equal contents at different widths: no differing block at all.
+        BOOST_CHECK((narrow({ 1UZ, 5UZ }) <=> wide({ 1UZ, 5UZ })) == std::strong_ordering::equal);
+
+        // The lowest difference is held by the left, and the right has something above it to be smaller with.
+        BOOST_CHECK((narrow({ 1UZ, 5UZ }) <=> wide({ 1UZ, 7UZ })) == std::strong_ordering::less);
+        BOOST_CHECK((wide({ 1UZ, 7UZ }) <=> narrow({ 1UZ, 5UZ })) == std::strong_ordering::greater);
+
+        // The lowest difference is held by the left, and the right stops there: a proper prefix, so the right is less.
+        BOOST_CHECK((narrow({ 1UZ, 5UZ }) <=> wide({ 1UZ })) == std::strong_ordering::greater);
+        BOOST_CHECK((wide({ 1UZ }) <=> narrow({ 1UZ, 5UZ })) == std::strong_ordering::less);
+
+        // The position above lives in a later block, which is the other half of the look upward.
+        BOOST_CHECK((narrow({ 1UZ, 5UZ }) <=> wide({ 1UZ, 200UZ })) == std::strong_ordering::less);
+
+        // The difference itself lives past the narrower storage's last block, where its blocks read as zero.
+        BOOST_CHECK((narrow({ 1UZ, 5UZ }) <=> wide({ 1UZ, 5UZ, 280UZ })) == std::strong_ordering::less);
+        BOOST_CHECK((wide({ 1UZ, 5UZ, 280UZ }) <=> narrow({ 1UZ, 5UZ })) == std::strong_ordering::greater);
+
+        // Two widths sharing a block count still differ, so this is the width-crossing arm and not the storage's.
+        BOOST_CHECK((grown_to(60UZ, { 1UZ, 5UZ }) <=> grown_to(63UZ, { 1UZ, 7UZ })) == std::strong_ordering::less);
+
+        // And the ordering agrees with the sets' own, which is what it is defined to be.
+        BOOST_CHECK(narrow({ 1UZ, 5UZ }) < wide({ 1UZ, 7UZ }));
+        BOOST_CHECK(wide({ 1UZ }) < narrow({ 1UZ, 5UZ }));
+}
+
 BOOST_AUTO_TEST_SUITE_END()

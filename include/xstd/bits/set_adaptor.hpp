@@ -15,7 +15,7 @@
 #include <xstd/bits/ownership.hpp>                       // owned_bits_t, owned_storage, owner_of, owner_reading, ownership, owns, reading
 #include <boost/container_hash/is_range.hpp>             // is_range
 #include <boost/hash2/hash_append.hpp>                   // hash_append_tag
-#include <algorithm>                                     // any_of, equal, includes, lexicographical_compare_three_way
+#include <algorithm>                                     // all_of, find_if, lexicographical_compare_three_way, max, min
 #include <cassert>                                       // assert
 #include <compare>                                       // strong_ordering
 #include <concepts>                                      // constructible_from, convertible_to, invocable, swappable
@@ -24,15 +24,21 @@
 #include <initializer_list>                              // initializer_list
 #include <iterator>                                      // input_iterator, iter_reference_t, make_reverse_iterator, reverse_iterator, sentinel_for
 #include <limits>                                        // numeric_limits
-#include <ranges>                                        // begin, enable_borrowed_range, enable_view, end, input_range, range_reference_t, from_range_t, swap
+#include <ranges>                                        // begin, enable_borrowed_range, enable_view, end, input_range, iota, range_reference_t, from_range_t, swap, transform
 #include <span>                                          // dynamic_extent
 #include <type_traits>                                   // conditional_t, false_type, is_invocable_r_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
-#include <utility>                                       // forward, move, pair
+#include <utility>                                       // declval, forward, move, pair
 
 // The set reading, [set] over a contiguous_bit_container, owning it or referring to it. [design.md#the-three-adaptors]
 namespace xstd {
 
 namespace detail::set {
+
+// The storage answering equality, named rather than spelled twice: two appearances of one requires-expression are distinct atomic constraints, so only a concept-id lets the constrained overload below subsume the general one. [design.md#width-is-capacity]
+template<class Bits>
+concept equality_comparable_storage = requires (Bits const& a, Bits const& b) {
+        { a == b } -> std::convertible_to<bool>;
+};
 
 // A range of consecutive ascending positions, which is what a block-wise fill needs and what a general input range cannot be asked. [design.md#the-range-members]
 template<class R> inline constexpr bool is_consecutive = false;
@@ -197,26 +203,28 @@ public:
                 return *this;
         }
 
-        // The storage's own equality, which every storage in the tree has; ordering is the trait's entry, or the invariant it must satisfy. [design.md#the-ordering-invariant] [design.md#width-is-capacity]
+        // A static owner's equality IS its one member's: every instance carries the same width, so the arms below have nothing to choose between. Said here rather than left to fold, the fact being about the type and not about the optimizer. The conjunction is what picks this one -- it subsumes the general overload's lone clause, so no negation is needed there. [design.md#width-is-capacity]
+        [[nodiscard]] friend constexpr auto operator==(set_adaptor const&, set_adaptor const&) noexcept
+                -> bool
+                requires detail::set::equality_comparable_storage<bits_type> and is_owner and has_static_width = default;
+
+        // Everything else: the storage's set equality, which answers at any two widths. Width is capacity for this reading, so two storages holding the same positions are equal whatever their widths, and a view holds a pointer that a defaulted comparison would compare in place of the contents. [design.md#width-is-capacity]
         [[nodiscard]] friend constexpr auto operator==(set_adaptor const& x, set_adaptor const& y) noexcept
                 -> bool
-                requires requires { { x.storage() == y.storage() } -> std::convertible_to<bool>; }
+                requires detail::set::equality_comparable_storage<bits_type>
         {
-                if (not same_width(x, y)) {
-                        return std::ranges::equal(x, y);
-                }
-                return x.storage() == y.storage();
+                return x.storage().set_equal(y.storage());
         }
 
+        // The storage's entry, which answers at any two widths: the set ordering turns on the lowest position at which the two disagree, and finding it is block work the storage is the place for. [design.md#the-ordering-primitive] [design.md#width-is-capacity]
         [[nodiscard]] friend constexpr auto operator<=>(set_adaptor const& x, set_adaptor const& y) noexcept
                 -> std::strong_ordering
         {
                 if constexpr (requires { x.storage().set_three_way(y.storage()); }) {
-                        if (same_width(x, y)) {
-                                return x.storage().set_three_way(y.storage());
-                        }
+                        return x.storage().set_three_way(y.storage());
+                } else {
+                        return std::lexicographical_compare_three_way(x.begin(), x.end(), y.begin(), y.end());
                 }
-                return std::lexicographical_compare_three_way(x.begin(), x.end(), y.begin(), y.end());
         }
 
         // iterators; one type for both, this reading being read-only through its proxy. [design.md#read-only-set-proxy]
@@ -385,6 +393,14 @@ public:
                 return last;
         }
 
+        // The non-member beside it, hidden as every other non-member here is: ranges::swap finds this and never the member. [design.md#swap-goes-through-adl]
+        friend constexpr auto swap(set_adaptor& x, set_adaptor& y) noexcept(noexcept(x.swap(y)))
+                -> void
+                requires is_owner
+        {
+                x.swap(y);
+        }
+
         // The storage's own swap through the customization point, std::bitset having no member to call.
         constexpr auto swap(set_adaptor& other) noexcept(std::is_nothrow_swappable_v<Bits>)
                 -> void
@@ -542,13 +558,10 @@ public:
                 return { lower_bound(x), upper_bound(x) };
         }
 
-        // The storage's own member where it has one, its bulk operators otherwise: both block-wise, and every storage in the tree has one of the two. [design.md#width-is-capacity]
+        // The storage's own member where it has one, its bulk operators otherwise. Every entry the storage offers answers at any two widths, so these are calls and not decisions. [design.md#width-is-capacity]
         [[nodiscard]] constexpr auto is_subset_of(set_adaptor const& other) const noexcept
                 -> bool
         {
-                if (not same_width(*this, other)) {
-                        return std::ranges::includes(other, *this);
-                }
                 if constexpr (requires { storage().is_subset_of(other.storage()); }) {
                         return storage().is_subset_of(other.storage());
                 } else {
@@ -559,9 +572,6 @@ public:
         [[nodiscard]] constexpr auto is_proper_subset_of(set_adaptor const& other) const noexcept
                 -> bool
         {
-                if (not same_width(*this, other)) {
-                        return is_subset_of(other) and size() != other.size();
-                }
                 if constexpr (requires { storage().is_proper_subset_of(other.storage()); }) {
                         return storage().is_proper_subset_of(other.storage());
                 } else {
@@ -572,9 +582,6 @@ public:
         [[nodiscard]] constexpr auto intersects(set_adaptor const& other) const noexcept
                 -> bool
         {
-                if (not same_width(*this, other)) {
-                        return std::ranges::any_of(*this, [&other](auto x) { return other.contains(x); });
-                }
                 if constexpr (requires { storage().intersects(other.storage()); }) {
                         return storage().intersects(other.storage());
                 } else {
@@ -630,13 +637,6 @@ struct owned_storage<set_adaptor<Bits, ownership::owns>>
 };
 
 // NOLINTBEGIN(readability-redundant-parentheses): a call is no primary expression, so the requires-clause needs the parentheses the check reports as redundant.
-template<class Bits, ownership Own>
-constexpr auto swap(set_adaptor<Bits, Own>& x, set_adaptor<Bits, Own>& y) noexcept(noexcept(x.swap(y)))
-        -> void
-        requires (owns(Own))
-{
-        x.swap(y);
-}
 
 // 23.4.6.3 Erasure                                                [set.erasure]
 template<class Bits, ownership Own, class Predicate>

@@ -537,6 +537,14 @@ public:
                 }
         }
 
+        // The non-member beside it, hidden as every other non-member here is: ranges::swap finds this and never the member. [design.md#swap-goes-through-adl]
+        friend constexpr auto swap(sequence_adaptor& x, sequence_adaptor& y) noexcept(noexcept(x.swap(y)))
+                -> void
+                requires is_owner
+        {
+                x.swap(y);
+        }
+
         // The storage's own swap through the customization point, std::bitset having no member to call.
         constexpr auto swap(sequence_adaptor& other) noexcept(std::is_nothrow_swappable_v<Bits>)
                 -> void
@@ -859,16 +867,6 @@ struct owned_storage<sequence_adaptor<Bits, ownership::owns, false>>
         // Committed to the sequence reading, so only a sequence view refers into one. [design.md#the-readings-do-not-mix]
         static constexpr auto reads = reading::sequence;
 };
-
-// NOLINTBEGIN(readability-redundant-parentheses): a call is no primary expression, so the requires-clause needs the parentheses the check reports as redundant.
-template<class Bits, ownership Own, bool Windowed>
-constexpr auto swap(sequence_adaptor<Bits, Own, Windowed>& x, sequence_adaptor<Bits, Own, Windowed>& y) noexcept(noexcept(x.swap(y)))
-        -> void
-        requires (owns(Own))
-{
-        x.swap(y);
-}
-// NOLINTEND(readability-redundant-parentheses)
 
 // [vector.erasure], over the owner's own erase: the proxies move and swap, so remove_if runs unchanged over the packed bits. [design.md#the-sequence-contract]
 template<class Bits, ownership Own, bool Windowed, class Pred>
