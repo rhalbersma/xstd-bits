@@ -1745,6 +1745,12 @@ writing `std::swap(a, b)` transfers, `xstd::swap(a, b)` looks equally reasonable
 customization the two-step `using std::swap; swap(a, b)` exists to find. A hidden friend has no qualified name,
 so the accident cannot be spelled. That is a Murphy guard, which is the kind this tree undertakes.
 
+The keyword is doing only that. `swap`'s body is `x.swap(y)` and reaches nothing private, so it is a `friend`
+that wants no friendship -- and there is no other spelling for what it wants. A function declared at namespace
+scope is always reachable by ordinary lookup; C++ offers no "namespace scope, unqualified only". So a hidden
+friend is the sole mechanism for ADL-only lookup, and using it here overloads a keyword that says *access* to
+mean *placement*. Reading `friend` in this tree, check the body before assuming it needs one.
+
 For the shifts and `~` it does not. Nobody calls an operator qualified -- `xstd::operator<<(bs, 3)` is not a
 thing anyone writes by accident or otherwise -- so hiding forecloses nothing that was going to happen. They are
 hidden for uniformity with the four above, and that is the whole of it; it would be a rationalisation to claim
