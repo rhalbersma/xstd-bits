@@ -237,22 +237,24 @@ public:
                 -> bool
                 requires detail::set::equality_comparable_storage<bits_type>
         {
-                if (same_width(x, y)) {
-                        return x.storage() == y.storage();
+                // if constexpr, not if: at a static width every instance carries the same one, so the arm below is not merely unreachable but uninstantiated. Compiled, its blocks_agree holds a lambda no other call site shares, and the branches of an instantiation no test runs are uncovered by construction. [design.md#width-is-capacity]
+                if constexpr (not has_static_width) {
+                        if (not same_width(x, y)) {
+                                // Across widths the same question is asked of whole blocks: the blocks both storages have must agree, and the wider one's remainder must be clear, capacity above a width holding no element. Blocks rather than elements -- a walk over the two sets is a find_next per position, where this is one load per sixty-four. [design.md#width-is-capacity]
+                                auto const& a = x.storage();
+                                auto const& b = y.storage();
+
+                                using block_type = std::remove_cvref_t<decltype(a.block(0UZ))>;
+                                auto const shared = std::ranges::min(a.num_blocks(), b.num_blocks());
+                                auto const& longer = a.num_blocks() < b.num_blocks() ? b : a;
+
+                                return
+                                        detail::set::blocks_agree(a, b, 0UZ, shared, [](block_type p, block_type q) { return p == q; }) and
+                                        detail::set::blocks_clear(longer, shared, longer.num_blocks())
+                                ;
+                        }
                 }
-
-                // Across widths the same question is asked of whole blocks: the blocks both storages have must agree, and the wider one's remainder must be clear, capacity above a width holding no element. Blocks rather than elements -- ranges::equal over the two sets is a find_next per position, where this is one load per sixty-four. [design.md#width-is-capacity]
-                auto const& a = x.storage();
-                auto const& b = y.storage();
-
-                using block_type = std::remove_cvref_t<decltype(a.block(0UZ))>;
-                auto const shared = std::ranges::min(a.num_blocks(), b.num_blocks());
-                auto const& longer = a.num_blocks() < b.num_blocks() ? b : a;
-
-                return
-                        detail::set::blocks_agree(a, b, 0UZ, shared, [](block_type p, block_type q) { return p == q; }) and
-                        detail::set::blocks_clear(longer, shared, longer.num_blocks())
-                ;
+                return x.storage() == y.storage();
         }
 
         [[nodiscard]] friend constexpr auto operator<=>(set_adaptor const& x, set_adaptor const& y) noexcept
@@ -601,18 +603,21 @@ public:
         [[nodiscard]] constexpr auto is_subset_of(set_adaptor const& other) const noexcept
                 -> bool
         {
-                if (not same_width(*this, other)) {
-                        // Blockwise, as == is: each of our blocks must lie inside the matching one, and anything we hold above the other's last block cannot be in it. Its blocks above ours need no look -- they hold positions we do not. [design.md#width-is-capacity]
-                        auto const& a = storage();
-                        auto const& b = other.storage();
+                // if constexpr for the same reason == has it: at a static width this arm is dead, and a dead instantiation's branches are uncovered by construction. [design.md#width-is-capacity]
+                if constexpr (not has_static_width) {
+                        if (not same_width(*this, other)) {
+                                // Blockwise, as == is: each of our blocks must lie inside the matching one, and anything we hold above the other's last block cannot be in it. Their blocks above ours need no look -- they hold positions we do not. [design.md#width-is-capacity]
+                                auto const& a = storage();
+                                auto const& b = other.storage();
 
-                        using block_type = std::remove_cvref_t<decltype(a.block(0UZ))>;
-                        auto const shared = std::ranges::min(a.num_blocks(), b.num_blocks());
+                                using block_type = std::remove_cvref_t<decltype(a.block(0UZ))>;
+                                auto const shared = std::ranges::min(a.num_blocks(), b.num_blocks());
 
-                        return
-                                detail::set::blocks_agree(a, b, 0UZ, shared, [](block_type p, block_type q) { return static_cast<block_type>(p & static_cast<block_type>(~q)) == block_type{}; }) and
-                                detail::set::blocks_clear(a, shared, a.num_blocks())
-                        ;
+                                return
+                                        detail::set::blocks_agree(a, b, 0UZ, shared, [](block_type p, block_type q) { return static_cast<block_type>(p & static_cast<block_type>(~q)) == block_type{}; }) and
+                                        detail::set::blocks_clear(a, shared, a.num_blocks())
+                                ;
+                        }
                 }
                 if constexpr (requires { storage().is_subset_of(other.storage()); }) {
                         return storage().is_subset_of(other.storage());
@@ -637,15 +642,18 @@ public:
         [[nodiscard]] constexpr auto intersects(set_adaptor const& other) const noexcept
                 -> bool
         {
-                if (not same_width(*this, other)) {
-                        // Only the shared blocks can meet: above them one storage holds nothing. Every shared pair being disjoint is the negation, which is the pairwise question blocks_agree asks. [design.md#width-is-capacity]
-                        auto const& a = storage();
-                        auto const& b = other.storage();
+                // if constexpr for the same reason == has it. [design.md#width-is-capacity]
+                if constexpr (not has_static_width) {
+                        if (not same_width(*this, other)) {
+                                // Only the shared blocks can meet: above them one storage holds nothing. Every shared pair being disjoint is the negation, which is the pairwise question blocks_agree asks. [design.md#width-is-capacity]
+                                auto const& a = storage();
+                                auto const& b = other.storage();
 
-                        using block_type = std::remove_cvref_t<decltype(a.block(0UZ))>;
-                        auto const shared = std::ranges::min(a.num_blocks(), b.num_blocks());
+                                using block_type = std::remove_cvref_t<decltype(a.block(0UZ))>;
+                                auto const shared = std::ranges::min(a.num_blocks(), b.num_blocks());
 
-                        return not detail::set::blocks_agree(a, b, 0UZ, shared, [](block_type p, block_type q) { return static_cast<block_type>(p & q) == block_type{}; });
+                                return not detail::set::blocks_agree(a, b, 0UZ, shared, [](block_type p, block_type q) { return static_cast<block_type>(p & q) == block_type{}; });
+                        }
                 }
                 if constexpr (requires { storage().intersects(other.storage()); }) {
                         return storage().intersects(other.storage());

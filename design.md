@@ -1642,7 +1642,14 @@ timing loop:
 The padding above `size()` being zero is what lets a whole block stand in for the positions it holds, which is
 the same invariant the orderings already rest on. The pairwise question is `all_of` over the indices rather than
 `ranges::equal` over two block ranges: the ranges are the same length by construction, so `ranges::equal` would
-open by comparing lengths in a branch nothing can take, which a 100% branch gate cannot accept. `<=>` is the
+open by comparing lengths in a branch nothing can take, which a 100% branch gate cannot accept.
+
+The same gate is why each of the three arms sits under `if constexpr (not has_static_width)` rather than the
+plain `if` that `same_width` would fold anyway. Folding is not enough: a static width still *instantiates* the
+arm, and `blocks_agree` carries a lambda no other call site shares, so those instantiations are reachable from
+no test and their branches are uncovered by construction -- the same hazard the coverage job's own
+`XSTD_BITS_BUILD_BENCHMARKS=OFF` exists to avoid. A translation unit naming only `bit_static_set` instantiated
+thirty such functions before the guard and none after. `<=>` is the
 invariant's own algorithm, and `|=` `&=` `^=` `-=` insert and erase
 element by element, `insert` growing the narrower left operand as it grows for any key. The shifts translate the
 set, so `<<=` grows the width to hold the result and `>>=` empties past it. Hashing appends the positions and
