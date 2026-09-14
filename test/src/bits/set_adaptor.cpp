@@ -563,8 +563,8 @@ BOOST_AUTO_TEST_CASE(SubsetAndIntersectionAcrossWidthsCompareBlocks)
 // answer. [design.md#the-ordering-primitive]
 BOOST_AUTO_TEST_CASE(OrderingAcrossWidthsComparesBlocks)
 {
-        auto const narrow = [](std::initializer_list<std::size_t> p) { return grown_to(60UZ,  p); };   // width 61, one block
-        auto const wide   = [](std::initializer_list<std::size_t> p) { return grown_to(300UZ, p); };   // width 301, five blocks
+        auto const narrow = [](std::initializer_list<std::size_t> p) -> xstd::bit_set { return grown_to(60UZ,  p); };   // width 61, one block
+        auto const wide   = [](std::initializer_list<std::size_t> p) -> xstd::bit_set { return grown_to(300UZ, p); };   // width 301, five blocks
 
         // Equal contents at different widths: no differing block at all.
         BOOST_CHECK((narrow({ 1UZ, 5UZ }) <=> wide({ 1UZ, 5UZ })) == std::strong_ordering::equal);
