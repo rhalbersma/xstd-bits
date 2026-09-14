@@ -23,7 +23,9 @@ inline constexpr auto N = 100UZ;
 using Types = std::tuple
 <       std::set<std::size_t>
 #ifdef TEST_HAS_FLAT_SET
+
 ,       std::flat_set<std::size_t>
+
 #endif
 ,       xstd::bit_static_set<N>
 ,       xstd::bit_set

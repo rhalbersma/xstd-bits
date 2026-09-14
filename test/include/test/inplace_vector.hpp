@@ -12,14 +12,19 @@
 #ifdef __cpp_lib_inplace_vector
 
 #define TEST_HAS_INPLACE_VECTOR
+
 #endif
 
 namespace test {
 
 #ifdef TEST_HAS_INPLACE_VECTOR
+
 inline constexpr bool has_inplace_vector = true;
+
 #else
+
 inline constexpr bool has_inplace_vector = false;
+
 #endif
 
 } // namespace test

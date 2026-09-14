@@ -8,12 +8,16 @@
 // NOT alphabetical, and load-bearing: detail/bits/intrin calls xstd::countr_zero by a QUALIFIED name, whose candidates bind where that call is written rather than where it is instantiated. [design.md#uint128-support]
 #include <xstd/ints/cstdint/int128.hpp>                 // uint128
 #if __has_include(<absl/numeric/int128.h>)
+
 #include <xstd/ints/ext/absl/int128.hpp>                // absl::uint128
 #define XSTD_BITS_BENCHMARK_HAS_ABSL_INT128
+
 #endif
 #if __has_include(<boost/int128.hpp>)
+
 #include <xstd/ints/ext/boost/int128.hpp>               // boost::int128::uint128
 #define XSTD_BITS_BENCHMARK_HAS_BOOST_INT128
+
 #endif
 
 #include <xstd/bits/bit_static_set.hpp>                 // basic_bit_static_set
@@ -186,19 +190,27 @@ auto bm_shift_left_runtime(benchmark::State& state)
         BENCHMARK_TEMPLATE(fn, set_of<xstd::uint128>, d)
 
 #ifdef XSTD_BITS_BENCHMARK_HAS_ABSL_INT128
+
 #define BM_ABSL_RUNG(fn)       BENCHMARK_TEMPLATE(fn, set_of<absl::uint128>)
 #define BM_ABSL_RUNG_D(fn, d)  BENCHMARK_TEMPLATE(fn, set_of<absl::uint128>, d)
+
 #else
+
 #define BM_ABSL_RUNG(fn)
 #define BM_ABSL_RUNG_D(fn, d)
+
 #endif
 
 #ifdef XSTD_BITS_BENCHMARK_HAS_BOOST_INT128
+
 #define BM_BOOST_RUNG(fn)      BENCHMARK_TEMPLATE(fn, set_of<boost::int128::uint128>)
 #define BM_BOOST_RUNG_D(fn, d) BENCHMARK_TEMPLATE(fn, set_of<boost::int128::uint128>, d)
+
 #else
+
 #define BM_BOOST_RUNG(fn)
 #define BM_BOOST_RUNG_D(fn, d)
+
 #endif
 
 #define BM_LADDER(fn)           \

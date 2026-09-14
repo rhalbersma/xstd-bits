@@ -332,9 +332,11 @@ BOOST_AUTO_TEST_CASE(TheValueArrivesByImplicitConversion)
 
 // ... but not to an integer, however class-shaped it is. [design.md#uint128-support]
 #if defined(TEST_HAS_MSVC_INT128) || defined(TEST_HAS_ABSL_INT128) || defined(TEST_HAS_BOOST_INT128)
+
 BOOST_AUTO_TEST_CASE(AProxyNeverBecomesAnIntegerBlock)
 {
 #ifdef TEST_HAS_MSVC_INT128
+
         {
                 using B = xstd::basic_bit_array<xstd::uint128, 257>;
                 static_assert(    std::convertible_to<B::reference, bool>);
@@ -349,8 +351,10 @@ BOOST_AUTO_TEST_CASE(AProxyNeverBecomesAnIntegerBlock)
                 BOOST_CHECK(a[0] != a[1]);
                 BOOST_CHECK(a[0] == true);
         }
+
 #endif
 #ifdef TEST_HAS_ABSL_INT128
+
         {
                 using B = xstd::basic_bit_array<absl::uint128, 257>;
                 static_assert(    std::convertible_to<B::reference, bool>);
@@ -365,8 +369,10 @@ BOOST_AUTO_TEST_CASE(AProxyNeverBecomesAnIntegerBlock)
                 BOOST_CHECK(a[0] != a[1]);
                 BOOST_CHECK(a[0] == true);
         }
+
 #endif
 #ifdef TEST_HAS_BOOST_INT128
+
         {
                 using B = xstd::basic_bit_array<boost::int128::uint128, 257>;
                 static_assert(    std::convertible_to<B::reference, bool>);
@@ -381,8 +387,10 @@ BOOST_AUTO_TEST_CASE(AProxyNeverBecomesAnIntegerBlock)
                 BOOST_CHECK(a[0] != a[1]);
                 BOOST_CHECK(a[0] == true);
         }
+
 #endif
 }
+
 #endif
 
 // & . * and * . & are both the identity, which makes the pair a round trip rather than two one-way conversions.

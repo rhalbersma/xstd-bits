@@ -6,6 +6,7 @@
 #include <test/inplace_vector.hpp>  // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR, has_inplace_vector
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #ifdef TEST_HAS_INPLACE_VECTOR
+
 #include <test/sequence/concepts.hpp>                         // bit_sequence, inplace_vector_bool, inplace_vector_bool_ranges
 #include <test/sequence/dense.hpp>                            // yields_every_position
 #include <xstd/bits/bit_inplace_vector.hpp>                   // basic_bit_inplace_vector, bit_inplace_vector
@@ -19,6 +20,7 @@
 #include <new>                                                // bad_alloc
 #include <ranges>                                             // count, iota, to, transform
 #include <vector>                                             // vector
+
 #endif
 
 BOOST_AUTO_TEST_SUITE(BitInplaceVector)

@@ -20,7 +20,9 @@ using Types = std::tuple
 ,       uint32_t
 ,       uint64_t
 #ifdef TEST_HAS_UINT128
+
 ,       xstd::uint128
+
 #endif
 >;
 

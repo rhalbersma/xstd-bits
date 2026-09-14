@@ -369,9 +369,11 @@ BOOST_AUTO_TEST_CASE(ItsStorageIsAContiguousSizedRangeOfUnsignedIntegers)
 BOOST_AUTO_TEST_CASE(TheConstReferenceIsP2278s)
 {
 #ifdef __cpp_lib_ranges_as_const
+
         static_assert(std::same_as<xstd::detail::bits::fallback::range_const_reference_t<std::array<std::uint8_t, 4>>, std::ranges::range_const_reference_t<std::array<std::uint8_t, 4>>>);
         static_assert(std::same_as<xstd::detail::bits::fallback::range_const_reference_t<std::vector<std::uint64_t>>, std::ranges::range_const_reference_t<std::vector<std::uint64_t>>>);
         static_assert(std::same_as<xstd::detail::bits::fallback::range_const_reference_t<std::vector<bool>>,          std::ranges::range_const_reference_t<std::vector<bool>>>);
+
 #endif
 
         // What the clause buys, whichever arm was taken: the reference is const, so no blocks are writable through a
@@ -797,6 +799,7 @@ BOOST_AUTO_TEST_CASE(AStaticWidthDoesNotGrow)
 }
 
 #ifdef TEST_HAS_INPLACE_VECTOR
+
 // No hole in front of the blocks at any alignment: the width takes theirs where they out-align a size_t, so the class is its two members and nothing else, which is what -Wpadded asks of it. [design.md#padding]
 BOOST_AUTO_TEST_CASE(TheWidthFillsWhatWouldOtherwisePadTheBlocks)
 {
@@ -812,12 +815,14 @@ BOOST_AUTO_TEST_CASE(TheWidthFillsWhatWouldOtherwisePadTheBlocks)
         static_assert(sizeof(xstd::detail::bits::contiguous_bit_array<std::uint8_t, 24>) == sizeof(std::array<std::uint8_t, 3>));
 
 #ifdef TEST_HAS_UINT128
+
         // The one cell that reaches an over-aligned storage: the width is a block there, and pays nothing for it.
         static_assert(tiles(sizeof(xstd::detail::bits::contiguous_bit_inplace_vector<xstd::uint128, 384>), sizeof(std::inplace_vector<xstd::uint128, 3>), alignof(std::inplace_vector<xstd::uint128, 3>)));
         static_assert(alignof(std::inplace_vector<xstd::uint128, 3>) > alignof(std::size_t));
 
         // The heap column never reaches it: a vector is a pointer's alignment whatever it holds.
         static_assert(sizeof(xstd::detail::bits::contiguous_bit_vector<xstd::uint128>) == sizeof(xstd::detail::bits::contiguous_bit_vector<std::uint64_t>));
+
 #endif
 }
 
@@ -842,6 +847,7 @@ BOOST_AUTO_TEST_CASE(AnInplaceVectorIsARunTimeWidthUnderAStaticCapacity)
         b.shrink_to_fit();
         BOOST_CHECK_EQUAL(b.size(), 24UZ);
 }
+
 #endif
 
 // Every question the three readings ask, asked of the storage in its own name and within the contracts it keeps. [design.md#the-cheapest-contract]

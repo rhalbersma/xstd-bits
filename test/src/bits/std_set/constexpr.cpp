@@ -47,11 +47,13 @@ using Types = std::tuple
 ,       xstd::basic_bit_static_set<uint64_t, 64>
 ,       xstd::basic_bit_static_set<uint64_t, 65>
 #ifdef TEST_HAS_UINT128
+
 ,       xstd::basic_bit_static_set<xstd::uint128, 0>
 ,       xstd::basic_bit_static_set<xstd::uint128, 1>
 ,       xstd::basic_bit_static_set<xstd::uint128, 127>
 ,       xstd::basic_bit_static_set<xstd::uint128, 128>
 ,       xstd::basic_bit_static_set<xstd::uint128, 129>
+
 #endif
 >;
 

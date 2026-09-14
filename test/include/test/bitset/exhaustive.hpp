@@ -13,8 +13,10 @@
 #include <ranges>                  // iota
 
 #ifdef _MSC_VER
+
         // std::bitset<0> and xstd::bit_static_set<0> give bogus "unreachable code" warnings
         __pragma(warning(disable: 4702))
+
 #endif
 
 namespace test::bitset {
