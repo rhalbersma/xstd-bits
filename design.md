@@ -2515,7 +2515,17 @@ Six findings are suppressed because the checker cannot see what makes them right
   program-defined type. clang-tidy 22 and 23 read the qualified definition as modifying the namespace; 24 no
   longer does, and the suppression stays until the whole ladder is past 23.
 
-A seventh had a fix rather than a suppression. `modernize-use-nullptr` reads the `0` in `(a <=> b) < 0` as a
+An eighth is the reverse case, and the one to be careful with: **the check is right about the language and
+wrong about the compilers.** `readability-redundant-typename` on clang-tidy 22 asks for the `typename` to go
+from `std::same_as<typename std::remove_const_t<Bits>::block_type, Block>` in `blit_source`'s partial
+specialization. P0634 made `typename` optional only in listed contexts, and a **template argument is not one of
+them** — GCC 14 rejects the elision outright, *type/value mismatch at argument 1*. An alias-declaration **is**
+on the list, so the block type is named through one and the template argument is a simple-template-id that
+needs no `typename` and trips no check. The same pattern already names `allocator_of` in
+`contiguous_bit_container`'s test. Measured before pushing, because "clang-tidy suggested it" is not evidence
+that it compiles.
+
+A ninth had a fix rather than a suppression. `modernize-use-nullptr` reads the `0` in `(a <=> b) < 0` as a
 null pointer constant, which is the same false positive `-Wno-zero-as-null-pointer-constant` already covers on
 the compiler side. Every site in the test sources says `std::is_lt`, `std::is_gt` or `std::is_eq` instead --
 the standard's own names for those three questions, which are clearer than the comparison against a literal

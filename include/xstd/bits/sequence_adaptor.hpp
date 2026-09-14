@@ -128,6 +128,12 @@ template<class Bits>
         return true;
 }
 
+// The storage's block type, spelled where no typename is needed: P0634 made an alias-declaration a context in
+// which only a type can appear, and a template argument is not one -- GCC rejects the same elision there, so the
+// alias is what lets the specialization below read as it does. [design.md#clang-tidy-false-positives]
+template<class Bits>
+using block_type_of = std::remove_const_t<Bits>::block_type;
+
 }       // namespace detail::sequence
 
 // An owner names its storage's allocator, as std::vector<bool> names its own; a view names none, owning nothing. [design.md#the-sequence-contract]
@@ -139,7 +145,7 @@ template<class S, class Block>
 inline constexpr bool blit_source = false;
 
 template<class Bits, ownership Own, bool Windowed, class Block>
-inline constexpr bool blit_source<sequence_adaptor<Bits, Own, Windowed>, Block> = std::same_as<typename std::remove_const_t<Bits>::block_type, Block>;
+inline constexpr bool blit_source<sequence_adaptor<Bits, Own, Windowed>, Block> = std::same_as<detail::sequence::block_type_of<Bits>, Block>;
 
 template<detail::bits::specialization_of_contiguous_bit_container Bits, ownership Own, bool Windowed>
 class sequence_adaptor : public std::conditional_t<owns(Own), detail::bits::allocator_base_type<std::remove_const_t<Bits>>, xstd::empty_base_type<>>
