@@ -27,7 +27,7 @@
 #include <ranges>                                        // begin, enable_borrowed_range, enable_view, end, input_range, iota, range_reference_t, from_range_t, swap, transform
 #include <span>                                          // dynamic_extent
 #include <type_traits>                                   // conditional_t, false_type, is_invocable_r_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
-#include <utility>                                       // forward, move, pair
+#include <utility>                                       // declval, forward, move, pair
 
 // The set reading, [set] over a contiguous_bit_container, owning it or referring to it. [design.md#the-three-adaptors]
 namespace xstd {
@@ -59,11 +59,15 @@ template<class F>
 
 // One tier each, because the tier is the seam and sharing a body puts the whole over readability-function-cognitive-complexity's threshold. [design.md#one-function-per-tier]
 
+// The storage's block type, named so the lambdas below can spell the trailing return type the house style asks of every function. [design.md#clang-tidy-false-positives]
+template<class Bits>
+using block_type_of = std::remove_cvref_t<decltype(std::declval<Bits const&>().block(0UZ))>;
+
 // A storage's blocks as a range, so a comparison across widths reads as an algorithm over blocks rather than a walk over positions. block() is the entry, and the padding above size() is zero by the invariant, which is what lets a whole block stand in for the positions it holds. [design.md#width-is-capacity]
 template<class Bits>
 [[nodiscard]] constexpr auto block_range(Bits const& c, std::size_t first, std::size_t last) noexcept
 {
-        return std::views::iota(first, last) | std::views::transform([&c](std::size_t index) { return c.block(index); });
+        return std::views::iota(first, last) | std::views::transform([&c](std::size_t index) -> block_type_of<Bits> { return c.block(index); });
 }
 
 // Every pair of corresponding blocks satisfying a predicate, walked by index rather than zipped: ranges::equal over two block ranges would open by comparing their lengths, which are equal by construction, leaving a branch nothing can take and a coverage gate that cannot be met. [design.md#width-is-capacity]
@@ -71,7 +75,7 @@ template<class Bits, class P>
 [[nodiscard]] constexpr auto blocks_agree(Bits const& a, Bits const& b, std::size_t first, std::size_t last, P pred) noexcept
         -> bool
 {
-        return std::ranges::all_of(std::views::iota(first, last), [&](std::size_t index) { return pred(a.block(index), b.block(index)); });
+        return std::ranges::all_of(std::views::iota(first, last), [&](std::size_t index) -> bool { return pred(a.block(index), b.block(index)); });
 }
 
 // Whether every block in the range is clear, which is how a storage says it holds no position there. [design.md#width-is-capacity]
@@ -79,8 +83,8 @@ template<class Bits>
 [[nodiscard]] constexpr auto blocks_clear(Bits const& c, std::size_t first, std::size_t last) noexcept
         -> bool
 {
-        using block_type = std::remove_cvref_t<decltype(c.block(0UZ))>;
-        return std::ranges::all_of(block_range(c, first, last), [](block_type block) { return block == block_type{}; });
+        using block_type = block_type_of<Bits>;
+        return std::ranges::all_of(block_range(c, first, last), [](block_type block) -> bool { return block == block_type{}; });
 }
 
 // Blocks, lowest position first: load once per block, then tzcnt for the position and blsr to drop it.
@@ -249,7 +253,7 @@ public:
                                 auto const& longer = a.num_blocks() < b.num_blocks() ? b : a;
 
                                 return
-                                        detail::set::blocks_agree(a, b, 0UZ, shared, [](block_type p, block_type q) { return p == q; }) and
+                                        detail::set::blocks_agree(a, b, 0UZ, shared, [](block_type p, block_type q) -> bool { return p == q; }) and
                                         detail::set::blocks_clear(longer, shared, longer.num_blocks())
                                 ;
                         }
@@ -614,7 +618,7 @@ public:
                                 auto const shared = std::ranges::min(a.num_blocks(), b.num_blocks());
 
                                 return
-                                        detail::set::blocks_agree(a, b, 0UZ, shared, [](block_type p, block_type q) { return static_cast<block_type>(p & static_cast<block_type>(~q)) == block_type{}; }) and
+                                        detail::set::blocks_agree(a, b, 0UZ, shared, [](block_type p, block_type q) -> bool { return static_cast<block_type>(p & static_cast<block_type>(~q)) == block_type{}; }) and
                                         detail::set::blocks_clear(a, shared, a.num_blocks())
                                 ;
                         }
@@ -652,7 +656,7 @@ public:
                                 using block_type = std::remove_cvref_t<decltype(a.block(0UZ))>;
                                 auto const shared = std::ranges::min(a.num_blocks(), b.num_blocks());
 
-                                return not detail::set::blocks_agree(a, b, 0UZ, shared, [](block_type p, block_type q) { return static_cast<block_type>(p & q) == block_type{}; });
+                                return not detail::set::blocks_agree(a, b, 0UZ, shared, [](block_type p, block_type q) -> bool { return static_cast<block_type>(p & q) == block_type{}; });
                         }
                 }
                 if constexpr (requires { storage().intersects(other.storage()); }) {
