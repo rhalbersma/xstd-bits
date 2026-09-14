@@ -15,7 +15,7 @@
 #include <xstd/bits/ownership.hpp>                       // owned_bits_t, owned_storage, owner_of, owner_reading, ownership, owns, reading
 #include <boost/container_hash/is_range.hpp>             // is_range
 #include <boost/hash2/hash_append.hpp>                   // hash_append_tag
-#include <algorithm>                                     // all_of, any_of, equal, includes, lexicographical_compare_three_way, min
+#include <algorithm>                                     // all_of, lexicographical_compare_three_way, min
 #include <cassert>                                       // assert
 #include <compare>                                       // strong_ordering
 #include <concepts>                                      // constructible_from, convertible_to, invocable, swappable
@@ -64,6 +64,23 @@ template<class Bits>
 [[nodiscard]] constexpr auto block_range(Bits const& c, std::size_t first, std::size_t last) noexcept
 {
         return std::views::iota(first, last) | std::views::transform([&c](std::size_t index) { return c.block(index); });
+}
+
+// Every pair of corresponding blocks satisfying a predicate, walked by index rather than zipped: ranges::equal over two block ranges would open by comparing their lengths, which are equal by construction, leaving a branch nothing can take and a coverage gate that cannot be met. [design.md#width-is-capacity]
+template<class Bits, class P>
+[[nodiscard]] constexpr auto blocks_agree(Bits const& a, Bits const& b, std::size_t first, std::size_t last, P pred) noexcept
+        -> bool
+{
+        return std::ranges::all_of(std::views::iota(first, last), [&](std::size_t index) { return pred(a.block(index), b.block(index)); });
+}
+
+// Whether every block in the range is clear, which is how a storage says it holds no position there. [design.md#width-is-capacity]
+template<class Bits>
+[[nodiscard]] constexpr auto blocks_clear(Bits const& c, std::size_t first, std::size_t last) noexcept
+        -> bool
+{
+        using block_type = std::remove_cvref_t<decltype(c.block(0UZ))>;
+        return std::ranges::all_of(block_range(c, first, last), [](block_type block) { return block == block_type{}; });
 }
 
 // Blocks, lowest position first: load once per block, then tzcnt for the position and blsr to drop it.
@@ -233,8 +250,8 @@ public:
                 auto const& longer = a.num_blocks() < b.num_blocks() ? b : a;
 
                 return
-                        std::ranges::equal(detail::set::block_range(a, 0UZ, shared), detail::set::block_range(b, 0UZ, shared)) and
-                        std::ranges::all_of(detail::set::block_range(longer, shared, longer.num_blocks()), [](block_type block) { return block == block_type{}; })
+                        detail::set::blocks_agree(a, b, 0UZ, shared, [](block_type p, block_type q) { return p == q; }) and
+                        detail::set::blocks_clear(longer, shared, longer.num_blocks())
                 ;
         }
 
@@ -577,7 +594,17 @@ public:
                 -> bool
         {
                 if (not same_width(*this, other)) {
-                        return std::ranges::includes(other, *this);
+                        // Blockwise, as == is: each of our blocks must lie inside the matching one, and anything we hold above the other's last block cannot be in it. Its blocks above ours need no look -- they hold positions we do not. [design.md#width-is-capacity]
+                        auto const& a = storage();
+                        auto const& b = other.storage();
+
+                        using block_type = std::remove_cvref_t<decltype(a.block(0UZ))>;
+                        auto const shared = std::ranges::min(a.num_blocks(), b.num_blocks());
+
+                        return
+                                detail::set::blocks_agree(a, b, 0UZ, shared, [](block_type p, block_type q) { return static_cast<block_type>(p & static_cast<block_type>(~q)) == block_type{}; }) and
+                                detail::set::blocks_clear(a, shared, a.num_blocks())
+                        ;
                 }
                 if constexpr (requires { storage().is_subset_of(other.storage()); }) {
                         return storage().is_subset_of(other.storage());
@@ -603,7 +630,14 @@ public:
                 -> bool
         {
                 if (not same_width(*this, other)) {
-                        return std::ranges::any_of(*this, [&other](auto x) { return other.contains(x); });
+                        // Only the shared blocks can meet: above them one storage holds nothing. Every shared pair being disjoint is the negation, which is the pairwise question blocks_agree asks. [design.md#width-is-capacity]
+                        auto const& a = storage();
+                        auto const& b = other.storage();
+
+                        using block_type = std::remove_cvref_t<decltype(a.block(0UZ))>;
+                        auto const shared = std::ranges::min(a.num_blocks(), b.num_blocks());
+
+                        return not detail::set::blocks_agree(a, b, 0UZ, shared, [](block_type p, block_type q) { return static_cast<block_type>(p & q) == block_type{}; });
                 }
                 if constexpr (requires { storage().intersects(other.storage()); }) {
                         return storage().intersects(other.storage());

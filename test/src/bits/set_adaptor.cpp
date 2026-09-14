@@ -481,39 +481,79 @@ BOOST_AUTO_TEST_CASE(AZeroWidthAnswersBackWithoutScanning)
         BOOST_CHECK_EQUAL(static_cast<std::size_t>(z.back()), 0UZ);
 }
 
-// Across two run-time widths, equality is asked of whole blocks rather than walked position by position: the
-// blocks both storages have must agree, and the wider one's remainder must be clear. Both orders are exercised,
-// the wider operand being the left one and then the right, because which one carries the remainder is a branch.
-// [design.md#width-is-capacity]
+// Across two run-time widths the set operations ask whole blocks rather than walking positions: the blocks both
+// storages have are compared pairwise, and whatever lies above them is answered by the invariant that padding is
+// clear. Growth is resize(n + 1), so a width is not a whole number of blocks and two different widths can share a
+// block count -- which is the case that leaves the remainder empty, and it needs saying out loud because every
+// other case has something there to look at. [design.md#width-is-capacity]
+namespace {
+
+[[nodiscard]] auto grown_to(std::size_t width, std::initializer_list<std::size_t> positions)
+        -> xstd::bit_set
+{
+        auto s = xstd::bit_set();
+        s.insert(width);
+        s.erase(width);
+        for (auto const p : positions) {
+                s.insert(p);
+        }
+        return s;
+}
+
+}       // namespace
+
 BOOST_AUTO_TEST_CASE(EqualityAcrossWidthsComparesBlocks)
 {
-        auto const grown_to = [](std::size_t width, std::initializer_list<std::size_t> positions) {
-                auto s = xstd::bit_set();
-                s.insert(width);
-                s.erase(width);
-                for (auto const p : positions) {
-                        s.insert(p);
-                }
-                return s;
-        };
+        auto const one_block   = grown_to(60UZ,  { 1UZ, 5UZ, 59UZ });   // width 61
+        auto const one_block_2 = grown_to(63UZ,  { 1UZ, 5UZ, 59UZ });   // width 64: same block count, other width
+        auto const five_blocks = grown_to(300UZ, { 1UZ, 5UZ, 59UZ });   // width 301
 
-        auto const narrow = grown_to(60UZ,  { 1UZ, 5UZ, 59UZ });
-        auto const wide   = grown_to(300UZ, { 1UZ, 5UZ, 59UZ });
+        // Widths differ but the block counts agree, so there is no remainder to look at.
+        BOOST_CHECK(one_block == one_block_2);
+        BOOST_CHECK(one_block_2 == one_block);
 
-        BOOST_CHECK(narrow == wide);                    // the wider remainder is clear
-        BOOST_CHECK(wide == narrow);                    // and the other way round
+        // A remainder that is clear, both operand orders, the wider one carrying it either side.
+        BOOST_CHECK(one_block == five_blocks);
+        BOOST_CHECK(five_blocks == one_block);
 
-        // A position living only in the wider one's remainder is exactly what the remainder check is for.
-        auto const wide_plus = grown_to(300UZ, { 1UZ, 5UZ, 59UZ, 280UZ });
-
-        BOOST_CHECK(narrow != wide_plus);
-        BOOST_CHECK(wide_plus != narrow);
+        // A position living only in the remainder is what the remainder check is for.
+        auto const with_high = grown_to(300UZ, { 1UZ, 5UZ, 59UZ, 280UZ });
+        BOOST_CHECK(one_block != with_high);
+        BOOST_CHECK(with_high != one_block);
 
         // A difference inside the shared blocks, above the narrower width but below its last block's end.
-        auto const wide_near = grown_to(300UZ, { 1UZ, 5UZ, 59UZ, 62UZ });
+        auto const with_near = grown_to(300UZ, { 1UZ, 5UZ, 59UZ, 62UZ });
+        BOOST_CHECK(one_block != with_near);
+        BOOST_CHECK(with_near != one_block);
+}
 
-        BOOST_CHECK(narrow != wide_near);
-        BOOST_CHECK(wide_near != narrow);
+BOOST_AUTO_TEST_CASE(SubsetAndIntersectionAcrossWidthsCompareBlocks)
+{
+        auto const narrow = grown_to(60UZ,  { 1UZ, 5UZ });
+        auto const wide   = grown_to(300UZ, { 1UZ, 5UZ, 59UZ, 280UZ });
+
+        // Ours inside theirs: nothing of ours lies above their last block, so the remainder is empty.
+        BOOST_CHECK(narrow.is_subset_of(wide));
+
+        // Theirs is not inside ours: 280 lives above our last block, which the remainder check catches.
+        BOOST_CHECK(not wide.is_subset_of(narrow));
+
+        // A wider operand whose remainder IS clear still fails on the shared blocks when it holds more there.
+        auto const wide_low = grown_to(300UZ, { 1UZ, 5UZ, 59UZ });
+        BOOST_CHECK(not wide_low.is_subset_of(narrow));
+        BOOST_CHECK(narrow.is_subset_of(wide_low));
+
+        // And succeeds when the shared blocks agree and the remainder is clear.
+        auto const wide_same = grown_to(300UZ, { 1UZ, 5UZ });
+        BOOST_CHECK(wide_same.is_subset_of(narrow));
+
+        // Meeting in a shared block, and not meeting at all.
+        BOOST_CHECK(narrow.intersects(wide));
+        BOOST_CHECK(wide.intersects(narrow));
+
+        auto const elsewhere = grown_to(300UZ, { 7UZ, 280UZ });
+        BOOST_CHECK(not narrow.intersects(elsewhere));
+        BOOST_CHECK(not elsewhere.intersects(narrow));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

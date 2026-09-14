@@ -1622,14 +1622,28 @@ precondition of the set operations. The storage cannot say that -- `contiguous_b
 first, which is what the sequence reading and `dynamic_bitset` mean, and its bulk operators and predicates
 assert equal widths -- so the set adaptor says it. Every comparison, predicate and compound operator asks
 `same_width` first and takes the storage's own answer at equal widths, which is every answer at a static width,
-where `same_width` is constantly true and the arm folds away. At two run-time widths that differ, `==` is
-`std::ranges::equal` over the *blocks* -- the blocks both storages have must agree, and the wider one's
-remainder must be clear, since capacity above a width holds no element. Positions were the obvious spelling and
-the wrong one: a walk over the elements is a `find_next` per position where this is one load per sixty-four, and
-it measured 12.8us against 0.1us comparing two thousand elements across differing widths. The padding above
-`size()` being zero is what lets a whole block stand in for the positions it holds, which is the same invariant
-the orderings already rest on. `<=>` is the invariant's own algorithm, `is_subset_of` is
-`std::ranges::includes`, `intersects` walks one set asking the other, and `|=` `&=` `^=` `-=` insert and erase
+where `same_width` is constantly true and the arm folds away. At two run-time widths that differ, `==`,
+`is_subset_of` and `intersects` all ask whole **blocks** rather than walking positions. Only the blocks both
+storages have can disagree; above them the answer is the invariant, capacity holding no element. So `==` wants
+the shared blocks equal and the longer one's remainder clear, `is_subset_of` wants each of our shared blocks
+inside the matching one and nothing of ours above their last block, and `intersects` is the negation of every
+shared pair being disjoint -- their blocks above ours never need a look. Positions were the obvious spelling and
+the wrong one, a walk over the elements being a `find_next` per position where this is one load per sixty-four.
+Measured over two thousand elements held at two different run-time widths, each in the case that denies the
+element walk its early exit, with the inputs made opaque to the optimizer so the call is not hoisted out of the
+timing loop:
+
+| | positions | blocks |
+| --- | --- | --- |
+| `==`, equal | 11.04us | 0.07us |
+| `is_subset_of`, a subset | 9.39us | 0.05us |
+| `intersects`, disjoint | 10.35us | 0.05us |
+
+The padding above `size()` being zero is what lets a whole block stand in for the positions it holds, which is
+the same invariant the orderings already rest on. The pairwise question is `all_of` over the indices rather than
+`ranges::equal` over two block ranges: the ranges are the same length by construction, so `ranges::equal` would
+open by comparing lengths in a branch nothing can take, which a 100% branch gate cannot accept. `<=>` is the
+invariant's own algorithm, and `|=` `&=` `^=` `-=` insert and erase
 element by element, `insert` growing the narrower left operand as it grows for any key. The shifts translate the
 set, so `<<=` grows the width to hold the result and `>>=` empties past it. Hashing appends the positions and
 the count at a run-time width and the bits at a static one, where equal sets share a width
