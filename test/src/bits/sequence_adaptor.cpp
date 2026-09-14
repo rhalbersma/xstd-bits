@@ -21,6 +21,7 @@
 #include <ranges>                                        // random_access_range
 #include <stdexcept>                                     // out_of_range
 #include <type_traits>                                   // is_const_v
+#include <utility>                                       // move, pair
 #include <vector>                                        // vector
 
 namespace {
