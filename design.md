@@ -686,7 +686,28 @@ From there the two readings differ by one clause and nothing else:
 | reading | at the lowest differing position |
 |---|---|
 | set | whoever HOLDS it is greater, **unless** the other holds nothing above it |
-| sequence | whoever HOLDS it is greater, full stop -- the widths are equal, so there is no prefix case |
+| sequence | whoever HOLDS it is greater, full stop -- position 0 is the first element, so nothing above it is consulted |
+
+**Both are total across two widths, and the sequence reading was not.** `sequence_three_way` opened with
+`assert(x.size() == y.size())` while `sequence_adaptor::operator<=>` called it unconditionally, so every
+`bit_vector` comparison of two lengths aborted in a debug build -- and, with the assert compiled out, answered
+*wrongly* rather than not at all. Measured against `lexicographical_compare_three_way` over `std::vector<bool>`
+across 148,225 pairs (every length 0 to 70 plus the block boundaries 127/128/129/191/192/193, five patterns
+each): **27,312 wrong answers** before, zero after.
+
+The repair is the set reading's, one clause lighter. `padded_sequence_three_way` pads the shorter operand's
+missing blocks with zero exactly as `padded_set_three_way` does -- the invariant keeps everything above
+`size()` clear, so a block that is not there reads the same as a block that is
+([width-is-capacity](#width-is-capacity)) -- and where the set version asks `padded_any_above` at the deciding
+position, the sequence version asks nothing: position 0 is the sequence's *first* element, so holding the
+lowest differing position settles it outright. What the sequence reading needs instead is the case the set
+reading cannot have: agreeing at every position the two share leaves only length, and the shorter is then a
+proper prefix of the longer and so less, which is `size() <=> size()`.
+
+That an assert stood where an answer belonged is the pattern in [the cheapest
+contract](#the-cheapest-contract) read the wrong way round. A precondition is free to be narrower than the
+naive form only where the caller can honour it; this caller could not, having two lengths whenever its user
+did.
 
 **Why this beats iterating.** The `lexicographical_compare_three_way` form walks *set bits*; this walks
 *words*, and a word step is an `xor` and a test rather than a load, a shift, a `countr_zero` and a branch.

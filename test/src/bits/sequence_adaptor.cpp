@@ -203,6 +203,36 @@ BOOST_AUTO_TEST_CASE(TheOrderingIsTheLexicographicOrderOfTheBools)
         }
 }
 
+// Two sizes compare as the bools do, which is what sequence_three_way asserted instead of answering: the shared
+// positions decide, and when they all agree the shorter is a proper prefix of the longer and so less. The widths
+// here cross a block boundary in both directions, so the deciding position lands inside the shared blocks, inside
+// a block only the longer has, and nowhere at all. [design.md#the-ordering-primitive]
+BOOST_AUTO_TEST_CASE(TheOrderingAcrossTwoSizesIsStillTheLexicographicOrder)
+{
+        using Dynamic = xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint8_t>, xstd::ownership::owns, false>;
+
+        auto const patterns = std::vector<std::vector<std::size_t>>{ {}, { 0 }, { 1 }, { 7 }, { 8 }, { 0, 8 }, { 7, 8 } };
+        for (auto const m : { 0UZ, 1UZ, 7UZ, 8UZ, 9UZ, 16UZ, 17UZ }) {
+                for (auto const n : { 0UZ, 1UZ, 7UZ, 8UZ, 9UZ, 16UZ, 17UZ }) {
+                        for (auto const& p : patterns) {
+                                for (auto const& q : patterns) {
+                                        auto x = Dynamic(m, false);
+                                        auto y = Dynamic(n, false);
+                                        auto vx = std::vector<bool>(m, false);
+                                        auto vy = std::vector<bool>(n, false);
+                                        for (auto const i : p) { if (i < m) { x[i] = true; vx[i] = true; } }
+                                        for (auto const i : q) { if (i < n) { y[i] = true; vy[i] = true; } }
+
+                                        auto const expected = std::lexicographical_compare_three_way(vx.begin(), vx.end(), vy.begin(), vy.end());
+                                        BOOST_CHECK((x <=> y) == expected);
+                                        BOOST_CHECK((y <=> x) == (0 <=> expected));
+                                        BOOST_CHECK((x == y) == (vx == vy));
+                                }
+                        }
+                }
+        }
+}
+
 // Dependent, so a constrained-away member is a false rather than a hard error.
 template<class X>
 constexpr bool can_grow = requires (X& x) { x.push_back(true); x.pop_back(); x.resize(1UZ); x.resize(1UZ, true); x.clear(); x.reserve(1UZ); x.shrink_to_fit(); };

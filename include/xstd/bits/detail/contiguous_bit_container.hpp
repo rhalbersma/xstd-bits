@@ -203,14 +203,18 @@ public:
                 }
         }
 
-        // The sequence reading a word at a time: whoever HOLDS the lowest differing position is greater, with no prefix clause, the widths being equal. [design.md#the-ordering-primitive]
+        // The sequence reading a word at a time: whoever HOLDS the lowest differing position is greater, position 0 being the sequence's first element. Total across widths as the set reading is, the prefix clause living in the arm that needs it. [design.md#the-ordering-primitive]
         [[nodiscard]] friend constexpr auto sequence_three_way(contiguous_bit_container const& x [[maybe_unused]], contiguous_bit_container const& y [[maybe_unused]]) noexcept
                 -> std::strong_ordering
         {
-                assert(x.size() == y.size());
                 if constexpr (has_static_size and N == 0) {
                         return std::strong_ordering::equal;
                 } else {
+                        if constexpr (not has_static_size) {
+                                if (x.size() != y.size()) {
+                                        return x.padded_sequence_three_way(y);
+                                }
+                        }
                         auto const [ index, diff ] = x.first_difference(y);
                         if (diff == zero) {
                                 return std::strong_ordering::equal;
@@ -1056,6 +1060,24 @@ private:
                         return other.padded_any_above(index, offset) ? std::strong_ordering::less : std::strong_ordering::greater;
                 }
                 return this->padded_any_above(index, offset) ? std::strong_ordering::greater : std::strong_ordering::less;
+        }
+
+        // The sequence ordering across two widths. The same one position decides -- the lowest at which the two disagree -- but here it decides alone: position 0 is the sequence's FIRST element, so whoever holds that position is greater and nothing above it is consulted, where the set reading has to ask. Agreeing at every position the two share leaves only length, and the shorter is then a proper prefix of the longer and so less. [design.md#the-ordering-primitive]
+        [[nodiscard]] constexpr auto padded_sequence_three_way(contiguous_bit_container const& other) const noexcept
+                -> std::strong_ordering
+        {
+                auto const n = std::ranges::max(this->num_blocks(), other.num_blocks());
+                auto const index = padded_first_difference(other, n);
+                if (index == n) {
+                        // The two answers this can give, rather than size() <=> size(), whose equal case is unreachable: the caller arrives here only with the sizes differing.
+                        return this->size() < other.size() ? std::strong_ordering::less : std::strong_ordering::greater;
+                }
+                auto const diff = static_cast<block_type>(this->padded_block(index) ^ other.padded_block(index));
+                auto const offset = static_cast<std::size_t>(detail::bits::countr_zero(diff));
+                return detail::bits::intersects(this->padded_block(index), shl(unit, offset))
+                        ? std::strong_ordering::greater
+                        : std::strong_ordering::less
+                ;
         }
 
         // The block straddling index and index + 1: the high one shifted up by L_shift and the low one down by R_shift, spliced into one. [design.md#the-funnel-shift]
