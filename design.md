@@ -645,21 +645,26 @@ over different sequences, and **they disagree**, pairwise, as two pairs show:
 
 A storage serving three readings cannot hold one of their orderings under a neutral name without choosing for
 its callers, so it holds none under that name. It holds **all three, separately named**:
-`contiguous_bit_container` has a `set_three_way`, a `sequence_three_way` and a `string_three_way`, never one
-`lexicographical_three_way`, so a caller says which reading it means rather than being handed whichever the
-storage happened to pick.
+`contiguous_bit_container` has a `set_lexicographical_compare_three_way`, a
+`sequence_lexicographical_compare_three_way` and a `string_lexicographical_compare_three_way`, never one
+`lexicographical_compare_three_way`, so a caller says which reading it means rather than being handed whichever
+the storage happened to pick. Each is the reading's own blockwise answer to the standard algorithm it is named
+for, which is also what pins it: whatever it answers has to agree with `std::lexicographical_compare_three_way`
+over that reading's own iterators.
 
 **Each is named for what it orders over, not for who asks.** Positions, bools from index 0, and the bit
-string — which is why the third is `string_three_way` and not `bitset_three_way`. The storage does not know
-what a bitset is; it knows the order `to_string()` would put its bits in, most significant first, and that
-order is the one `xstd::bitset` and `boost::dynamic_bitset` both mean by `<`. Naming two of the three after
-readings and the third after a container would have put a caller's word on the storage's member, which is
-the same mistake `lexicographical_three_way` makes one step further along.
+string — which is why the third is `string_lexicographical_compare_three_way` and not
+`bitset_lexicographical_compare_three_way`. The storage does not know what a bitset is; it knows the order
+`to_string()` would put its bits in, most significant first, and that order is the one `xstd::bitset` and
+`boost::dynamic_bitset` both mean by `<`. Naming two of the three after readings and the third after a
+container would have put a caller's word on the storage's member, which is the same mistake an unqualified
+`lexicographical_compare_three_way` makes one step further along.
 
 ### the-ordering-primitive
 
-All three orderings are **hidden friends** of the storage rather than members: `set_three_way(x, y)` and not
-`x.set_three_way(y)`. An ordering is a question about two values with neither as its subject, and the member
+All three orderings are **hidden friends** of the storage rather than members:
+`set_lexicographical_compare_three_way(x, y)` and not `x.set_lexicographical_compare_three_way(y)`. An ordering
+is a question about two values with neither as its subject, and the member
 spelling put one of them in a place the operation does not have -- the same asymmetry a member `operator<=>`
 would carry. As friends they are reached by ADL, which is how the three adaptors call them.
 
@@ -688,7 +693,7 @@ From there the two readings differ by one clause and nothing else:
 | set | whoever HOLDS it is greater, **unless** the other holds nothing above it |
 | sequence | whoever HOLDS it is greater, full stop -- position 0 is the first element, so nothing above it is consulted |
 
-**Both are total across two widths, and the sequence reading was not.** `sequence_three_way` opened with
+**Both are total across two widths, and the sequence reading was not.** `sequence_lexicographical_compare_three_way` opened with
 `assert(x.size() == y.size())` while `sequence_adaptor::operator<=>` called it unconditionally, so every
 `bit_vector` comparison of two lengths aborted in a debug build -- and, with the assert compiled out, answered
 *wrongly* rather than not at all. Measured against `lexicographical_compare_three_way` over `std::vector<bool>`
@@ -720,12 +725,12 @@ makes the two comparable, both exiting at once.
 pair costs `n + 1` block reads. And when the values are equal `any_above` is never reached at all, since
 `first_difference` already settles it.
 
-**The bitset reading needs neither piece, and its width-crossing arm is a third shape again.** The bit string, most significant position first, **is** the blocks
-from the top block down, with the unused tail kept clear, so it is the one reading whose order is plain
-lexicographic over words — and plain lexicographic over words is `std::lexicographical_compare_three_way` over
-the blocks reversed. `string_three_way` is that call and nothing else: no loop of its own, and no arm for
-either degenerate width, since a zero width still holds its one all-padding block, clear in both, and a
-one-block width is the algorithm's first step.
+**The bitset reading needs neither piece, and its width-crossing arm is a third shape again.** The bit string,
+most significant position first, **is** the blocks from the top block down, with the unused tail kept clear, so
+it is the one reading whose order is plain lexicographic over words — and plain lexicographic over words is
+`std::lexicographical_compare_three_way` over the blocks reversed. `string_lexicographical_compare_three_way`
+is that call and nothing else: no loop of its own, and no arm for either degenerate width, since a zero width
+still holds its one all-padding block, clear in both, and a one-block width is the algorithm's first step.
 
 Handing it to the standard algorithm costs nothing at the widths the hand-rolled version had arms for. GCC 15
 at `-O2`: `xstd::bitset<64>` is one `cmpq`, and `xstd::bitset<128>` is the same two comparisons fully unrolled,
@@ -738,7 +743,7 @@ wider one holds outside the shared window sits *below* the comparison rather tha
 consulted at all: the top `min(size())` positions of each are paired from the top, read as words at either
 one's own alignment through `word_at`, and only if that window ties does the shorter one lose for being
 shorter. That walk lived in `bitset_adaptor`, which meant the one reading whose adaptor could not simply call
-its storage; it now sits beside `string_three_way` and is reached from it, so all three orderings are total and
+its storage; it now sits beside `string_lexicographical_compare_three_way` and is reached from it, so all three orderings are total and
 none of the three adaptors branches on width. A pure relocation, and measured as one: identical answers over
 20,172 unequal-width comparisons.
 
@@ -804,7 +809,7 @@ the number 1, and boost orders them strictly, the shorter first. The harness pin
 boost's own `<` pair for pair over those widths, against `to_string()` compared as strings, and within a word
 against `to_ullong()`.
 
-`bitset_adaptor::operator<=>` is `string_three_way` at equal widths, and at unequal ones boost's own walk,
+`bitset_adaptor::operator<=>` is `string_lexicographical_compare_three_way` at equal widths, and at unequal ones boost's own walk,
 the top `min(size())` positions paired from the top and then the shorter first, a word at a time through
 `word_at` ([the-blit](#the-blit)). `==` stays width-first, and `<=>` never answers equal at unequal widths,
 so the two agree ([the-hashing-invariant](#the-hashing-invariant)).
@@ -937,7 +942,7 @@ unreachable code.
 declared: inside the class, while the class is still incomplete. Written over the accessor —
 
 ```c++
-requires is_owner and requires { x.storage().sequence_three_way(y.storage()); }
+requires is_owner and requires { x.storage().sequence_lexicographical_compare_three_way(y.storage()); }
 ```
 
 — the member access on `x.storage()` makes MSVC deduce `storage()`'s return type there, which means
@@ -948,14 +953,14 @@ C7683 and C3313 as the cascade, and C2102 wherever `&self.storage()` appears. GC
 The constraint is about the **storage**, not about the accessor, so it says so:
 
 ```c++
-requires is_owner and requires (bits_type const& b) { sequence_three_way(b, b); }
+requires is_owner and requires (bits_type const& b) { sequence_lexicographical_compare_three_way(b, b); }
 ```
 
 `bits_type` is complete and already in hand, and for an owner it is exactly what `storage()` returns, so
 satisfaction is unchanged on every compiler. The call is spelled as a free function because the three orderings
 are hidden friends of the storage rather than its members ([the-ordering-primitive](#the-ordering-primitive));
-when this was diagnosed it read `b.sequence_three_way(b)`, and the failing form above read
-`x.storage().sequence_three_way(y.storage())`. What made MSVC complete the class was naming a **member** of
+when this was diagnosed it read `b.sequence_lexicographical_compare_three_way(b)`, and the failing form above read
+`x.storage().sequence_lexicographical_compare_three_way(y.storage())`. What made MSVC complete the class was naming a **member** of
 what the accessor returns, which is the shape the record below is about; whether the call spelling would have
 tripped it too was never measured, because the constraint had already moved off the accessor.
 
@@ -1685,11 +1690,11 @@ precondition of the set operations.
 and `dynamic_bitset` mean, and those two need it. The width is part of the value for both of them -- a
 `vector<bool>` of two elements is not one of three, and a `dynamic_bitset` is equal only at equal size -- and it
 is not part of the value for a set. So the set reading gets an entry of its own, `set_equal`, beside the
-`operator==` the other two keep, for the same reason `set_three_way` sits beside `sequence_three_way` and
-`string_three_way`. At a static width the distinction is unobservable, every instance carrying the one width,
+`operator==` the other two keep, for the same reason `set_lexicographical_compare_three_way` sits beside `sequence_lexicographical_compare_three_way` and
+`string_lexicographical_compare_three_way`. At a static width the distinction is unobservable, every instance carrying the one width,
 which is why the set adaptor can default `==` there and nowhere else.
 
-The **storage** answers at any two widths, and the adaptor calls it. `set_equal`, `set_three_way`,
+The **storage** answers at any two widths, and the adaptor calls it. `set_equal`, `set_lexicographical_compare_three_way`,
 `is_subset_of`, `is_proper_subset_of` and `intersects` each carry their own width-crossing arm, so the four
 read operations in `set_adaptor` are calls with no `same_width` test between them -- only the four compound
 operators still ask, because they mutate. The logic belongs where the blocks and the invariant are, and putting
@@ -1731,7 +1736,7 @@ naming. Usually it holds a larger element there. When it holds nothing above tha
 are a proper *prefix* of the other's, and it is less because it runs out rather than because it compares
 smaller. So the comparison is a search for the lowest differing block and a single look above it:
 `padded_first_difference`, then `padded_any_above` on whichever side lacks the position. Those are the
-storage's own `first_difference` and `any_above` with the index bound dropped, and `set_three_way` dispatches to
+storage's own `first_difference` and `any_above` with the index bound dropped, and `set_lexicographical_compare_three_way` dispatches to
 them when the widths differ, so the generalisation lives beside the algorithm it generalises rather than in the
 adaptor calling it. Measured as above, at two
 different run-time widths: 10.62us to 0.09us over equal sets, and 11.03us to 0.06us where one set is a proper
@@ -1758,7 +1763,7 @@ Measured at two run-time widths, 4096 against 4000, dense:
 | `-=` | 10.27us | 0.22us |
 
 **They keep the operator spelling**, and that is the point worth stating, because `set_equal` and
-`set_three_way` do not. A name is owed where the readings genuinely *disagree*: three orderings over one
+`set_lexicographical_compare_three_way` do not. A name is owed where the readings genuinely *disagree*: three orderings over one
 storage, and two equalities ([two-readings-disagree](#two-readings-disagree)). `&=` `|=` `^=` `-=` are not
 that. All three readings mean the same bitwise thing by them, and the only difference was that the storage's
 operators stated a precondition of equal widths where the set reading wanted an answer. A precondition is not
@@ -2443,9 +2448,10 @@ rather than `not any_true`, so the storage is asked in its own words; `contiguou
 `count`, `all`, `any` and `none` itself, each at the block tier.
 
 `mismatch` is `contiguous_bit_container::first_difference` plus one `countr_zero`. That helper existed already,
-private and used only by `sequence_three_way`; it is now public, and **keeps its name**: it scans low block to
-high, which is the *ascending* orderings' answer, where `string_three_way` deliberately walks the other way and
-does not use it. Calling it `mismatch` on the storage would repeat the mistake `lexicographical_three_way` made
+private and used only by `sequence_lexicographical_compare_three_way`; it is now public, and **keeps its
+name**: it scans low block to high, which is the *ascending* orderings' answer, where
+`string_lexicographical_compare_three_way` deliberately walks the other way and does not use it. Calling it
+`mismatch` on the storage would repeat the mistake an unqualified `lexicographical_compare_three_way` made
 ([two-readings-disagree](#two-readings-disagree)). The counterpart name goes on the public member, which is the
 owner's alone: a window's blocks are not its own.
 

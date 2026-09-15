@@ -176,8 +176,8 @@ public:
                 }
         }
 
-        // A hidden friend, not a member: an ordering is a question about two values and neither is the subject, so x.set_three_way(y) spelled a symmetry the operation has and the call did not. [design.md#the-ordering-primitive]
-        [[nodiscard]] friend constexpr auto set_three_way(contiguous_bit_container const& x [[maybe_unused]], contiguous_bit_container const& y [[maybe_unused]]) noexcept
+        // A hidden friend, not a member: an ordering is a question about two values and neither is the subject, so x.set_lexicographical_compare_three_way(y) spelled a symmetry the operation has and the call did not. [design.md#the-ordering-primitive]
+        [[nodiscard]] friend constexpr auto set_lexicographical_compare_three_way(contiguous_bit_container const& x [[maybe_unused]], contiguous_bit_container const& y [[maybe_unused]]) noexcept
                 -> std::strong_ordering
         {
                 if constexpr (has_static_size and N == 0) {
@@ -204,7 +204,7 @@ public:
         }
 
         // The sequence reading a word at a time: whoever HOLDS the lowest differing position is greater, position 0 being the sequence's first element. Total across widths as the set reading is, the prefix clause living in the arm that needs it. [design.md#the-ordering-primitive]
-        [[nodiscard]] friend constexpr auto sequence_three_way(contiguous_bit_container const& x [[maybe_unused]], contiguous_bit_container const& y [[maybe_unused]]) noexcept
+        [[nodiscard]] friend constexpr auto sequence_lexicographical_compare_three_way(contiguous_bit_container const& x [[maybe_unused]], contiguous_bit_container const& y [[maybe_unused]]) noexcept
                 -> std::strong_ordering
         {
                 if constexpr (has_static_size and N == 0) {
@@ -232,7 +232,7 @@ public:
         // reversed and there is nothing here to hand-roll. The degenerate widths need no arm of their own: a zero
         // width still holds its one all-padding block, which is clear in both, and a one-block width is the
         // algorithm's first step. [design.md#the-ordering-primitive]
-        [[nodiscard]] friend constexpr auto string_three_way(contiguous_bit_container const& x, contiguous_bit_container const& y) noexcept
+        [[nodiscard]] friend constexpr auto string_lexicographical_compare_three_way(contiguous_bit_container const& x, contiguous_bit_container const& y) noexcept
                 -> std::strong_ordering
         {
                 if constexpr (not has_static_size) {

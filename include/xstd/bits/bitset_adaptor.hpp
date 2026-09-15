@@ -448,7 +448,7 @@ public:
         [[nodiscard]] friend constexpr auto operator<=>(bitset_adaptor const& lhs, bitset_adaptor const& rhs) noexcept
                 -> std::strong_ordering
         {
-                return string_three_way(lhs.m_bits, rhs.m_bits);
+                return string_lexicographical_compare_three_way(lhs.m_bits, rhs.m_bits);
         }
 
         [[nodiscard]] constexpr auto test(std::size_t pos) const

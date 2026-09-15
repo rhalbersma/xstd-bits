@@ -220,8 +220,8 @@ public:
         [[nodiscard]] friend constexpr auto operator<=>(set_adaptor const& x, set_adaptor const& y) noexcept
                 -> std::strong_ordering
         {
-                if constexpr (requires { set_three_way(x.storage(), y.storage()); }) {
-                        return set_three_way(x.storage(), y.storage());
+                if constexpr (requires { set_lexicographical_compare_three_way(x.storage(), y.storage()); }) {
+                        return set_lexicographical_compare_three_way(x.storage(), y.storage());
                 } else {
                         return std::lexicographical_compare_three_way(x.begin(), x.end(), y.begin(), y.end());
                 }
