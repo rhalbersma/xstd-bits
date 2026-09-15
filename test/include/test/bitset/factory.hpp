@@ -13,11 +13,11 @@
 
 namespace test::bitset {
 
-// A static width ignores the count; a growing one, ours or boost's, is resized to it.
+// A static width ignores the count; a growing one, ours or boost's, is resized to it. Not noexcept: resizing a growing one allocates, and past max_size() it is length_error besides.
 template<class T>
 struct factory
 {
-        constexpr auto operator()(std::size_t num_bits, bool value = false) const noexcept
+        constexpr auto operator()(std::size_t num_bits, bool value = false) const
         {
                 T b;
                 if constexpr (dynamic<T>) {
@@ -34,7 +34,7 @@ struct factory
 template<std::unsigned_integral Block, class Allocator>
 struct factory<boost::dynamic_bitset<Block, Allocator>>
 {
-        constexpr auto operator()(std::size_t num_bits, bool value = false) const noexcept
+        constexpr auto operator()(std::size_t num_bits, bool value = false) const
         {
                 boost::dynamic_bitset<Block, Allocator> b;
                 b.resize(num_bits, value);

@@ -1800,6 +1800,102 @@ answered `SIZE_MAX - 63` over the same blocks.
 That the set's is not `static` follows: an owner must ask its storage and a view must ask what it views, neither
 of which a static member can reach. `std::set::max_size()` is not static either.
 
+### the-sum-that-wraps
+
+A ceiling only holds if the number reaching it is the number that was meant. Every growth here computes the
+width it asks for by **addition** over a `size_t` the caller names, and every one of those additions wraps:
+
+| where | the sum |
+|---|---|
+| `contiguous_bit_container::growing_insert` | `n + 1`, to admit the position |
+| `set_adaptor::operator<<=` at a run-time width | `width + n`, the translation being total over `size_t` |
+| `set_adaptor::insert_range`, consecutive tier | `lo + len - 1`, the range's last position |
+| `sequence_adaptor::insert(position, n, value)` | `size() + n` |
+| `bitset_adaptor::guard_range` | `pos + len`, against `size()` |
+
+A wrapped sum is **small**. It passes the ceiling it was meant to fail, and the operation then proceeds against
+a width far below where it writes. `blocks_for` made that concrete: `align_up(n, bits_per_block)` rounds a width
+near the top of `size_t` to **zero**, the floor turns that into one block, and the container answers `size()`
+with `SIZE_MAX` over sixty-four bits. `bit_set().insert(SIZE_MAX - 1)` reached exactly that, and not only in
+release -- the `assert(n < SIZE_MAX)` that stood in `growing_insert` refuses one position of the two that get
+there, `n + 1` being a width nothing can hold for every `n` above `max_size()`. Under `-fsanitize=address` the
+write that followed was a segfault at a high address; the ranged `set(pos, len, val)` was quieter, `pos + len`
+wrapping below `size()` and the walk then running zero times, so an out-of-range request was answered by doing
+nothing and saying nothing.
+
+Two rules, and the second is what keeps the first from being written six times:
+
+**The ceiling is `check_width`**, at the four doors a width the caller named comes in by: the two width
+constructors, `resize` and `reserve` -- `growing_insert` and `push_back` arriving through `resize`. A width
+above `max_width` -- the widest a `size_t` counts in whole blocks -- is `std::length_error` there, which is what
+a container throws for a size it cannot represent.
+
+It sits beside `blocks_for` rather than inside it, though `blocks_for` is the one place a width becomes a block
+count and every growth does reach it. Three growths name no width of their own: `clear()` resizes to zero,
+`pop_back()` to one less, and `grow_to_admit` to another storage's own width. None can fail the ceiling -- but
+each is reached from something that promises not to throw (the sequence reading declares `clear()` and
+`pop_back()` `noexcept`; `grow_to_admit` is how every set operation across widths widens, and the test tree's
+composable checks are `noexcept` over `|`, `&`, `-` and `^`), and a throw they cannot reach is still one
+`bugprone-exception-escape` traces into them. It traced into `bitset_adaptor`'s and `sequence_adaptor`'s
+`noexcept` default constructors too, by way of the NSDMI that asks `blocks_for(0)`. So the conversion stays
+total, with `n <= max_width` as an assert, the ceiling is asked once at each of the four doors, and the three
+that name no width go to `resize_to` behind it.
+
+The mirror of that rule is that a growth which **does** name a width keeps the ceiling, and whatever promises not
+to throw above it is what has to give. `growing_insert` is the case: a key past `max_size()` is `length_error`,
+which is the one way `insert` on a dynamic extent can refuse ([asking-is-total](#asking-is-total)). The four
+composable checks in the test tree were `noexcept` over `|`, `&`, `-` and `^`, and each builds its expected value
+with `ranges::to`, which inserts -- so the `noexcept` was a promise about a reachable exception, and it went, as
+`test/bitset/factory.hpp`'s did over `resize`. `includes()` beside them constructs nothing and keeps its. The narrower ceiling stays the blocks' own: `m_blocks.resize` and
+`m_blocks.reserve` are handed a count and answer for it, which is why `resize(max_width)` is `bad_alloc` and
+`resize(max_width + 1)` is `length_error`. `resize` takes that count **before** it writes the last block, so a
+refused growth leaves the width and the bits exactly as they were.
+
+**The addition is `width_sum`.** `base + count` where that is a width, and the top of `size_t` where it is not.
+Saturating rather than throwing keeps the rule at one throw site: a saturated width is one `blocks_for` already
+refuses, so the readings above hand it their sum and inherit the diagnostic without naming a ceiling of their
+own -- which is the same reason `max_size()` is not restated above the storage.
+
+Not every sum here was worth a check. `append(block_type)` raises the width by `bits_per_block` and `capacity()`
+multiplies the blocks' by it; both overflow only once the blocks already hold some `2^64` bits, which the
+allocation fails long before, so a branch there is one no test can reach and the coverage gate would be right to
+say so. The reserve inside `append(first, last)` is left alone for a different reason: it is an optimization, and
+a wrapped count there under-reserves, where the appends that follow still raise the width one checked step at a
+time.
+
+**Where the counterparts stand**, measured rather than assumed -- Boost 1.83, libstdc++ 14, `-O2 -DNDEBUG
+-fsanitize=address,undefined`:
+
+| | growth at `SIZE_MAX` | a ranged write past the width |
+|---|---|---|
+| `boost::dynamic_bitset` | `bad_alloc` | assert in debug, **heap-buffer-overflow** under `NDEBUG` |
+| `std::vector<bool>` | `length_error` from `resize`, `reserve` and `insert`; the **fill constructor corrupts the heap** | no ranged form |
+| `std::bitset` | no growth | no ranged form; the single-position members throw `out_of_range` |
+
+The split is exact, and it says which of the two rules above was ours to get wrong.
+
+The **ceiling** was. `boost::dynamic_bitset::calc_num_blocks` is `n / bits_per_block + (n % bits_per_block != 0)`
+-- a division that cannot overflow -- which is why `dynamic_bitset(SIZE_MAX)` reaches the allocator and answers
+`bad_alloc`. `blocks_for` rounded first, and `align_up(n, bits_per_block) / bits_per_block` is exactly
+libstdc++'s `_S_nword(n) = (n + word_bit - 1) / word_bit`, which its `vector<bool>` fill constructor calls with
+no `max_size()` check: `std::vector<bool> v(SIZE_MAX)` there constructs, answers `size()` with `SIZE_MAX` over a
+`capacity()` of **zero**, and aborts on the first write. `resize`, `reserve` and `insert` all check and throw
+`length_error`; only the constructor does not. So the shape of our bug was `vector<bool>`'s, not boost's, and
+the constructor was the unchecked way in on both sides.
+
+The **guard** was not. `range_operation` carries two asserts, `pos + len <= m_num_bits` and, with a comment
+naming the case, `pos + len >= len` for the overflow the first one cannot see. Ours carried only the first, so
+boost caught in debug what we passed. Under `NDEBUG` neither library checks at all and both write out of bounds
+for a plain `set(1000, 2, true)` at a width of 64. That is the contract, and it stays the contract
+([the-one-guard](#the-one-guard)) -- but the subtraction now says both of boost's asserts in one expression,
+where the addition said neither.
+
+What the guards do **not** change is which contract each reading carries. `guard_range` still throws at a static
+width and asserts at a run-time one, for the reason the single-position guard does
+([the-one-guard](#the-one-guard)): the inconsistency is `std::bitset`'s and boost's, not ours. It is the
+arithmetic inside the guard that was wrong, not the choice of guard -- said as a subtraction now, `pos <= size()`
+and `len <= size() - pos`, which also gives the empty range at `pos == size()` the answer it should have.
+
 ### the-invariant-stays-in-the-storage
 
 The padding invariant could live one level up, each adaptor restoring it after the operations that dirty it,
@@ -2181,6 +2277,9 @@ at a run-time one, matching `boost::dynamic_bitset` -- a deliberate inconsistenc
 unchecked on every counterpart, so it is `test` unconditionally, and the proxy from the mutable one writes
 through `assign` alone.
 
+The ranged forms `set(pos, len, val)`, `reset(pos, len)` and `flip(pos, len)` carry the same guard over a range,
+and it is said as a subtraction rather than as `pos + len` ([the-sum-that-wraps](#the-sum-that-wraps)).
+
 The `checked_*` family the traits once carried, so that a wrapper over `std::bitset` could forward its native
 throw, went with the foreign owners ([owning-is-ours](#owning-is-ours)): the branch is the wrapper's, and
 there is one of it.
@@ -2197,7 +2296,9 @@ out of bounds.
 allocates. It is the one operation a set can be unable to satisfy, and only a **static** extent ever is — a
 fixed capacity cannot come to hold a position outside it, so that is the precondition violation. A dynamic
 extent grows to hold it, `[set]` giving `insert` no way to fail. Growing has a limit of its own, and it is the
-storage's rather than the address space's: `max_size()` ([max-size-is-the-bits](#max-size-is-the-bits)).
+storage's rather than the address space's: `max_size()` ([max-size-is-the-bits](#max-size-is-the-bits)). Past it
+the answer is `std::length_error`, which is the one way `insert` on a dynamic extent can refuse a key
+([the-sum-that-wraps](#the-sum-that-wraps)).
 
 Erasing stays total like `contains`: removing what is not there is the no-op returning zero that
 `std::set::erase` is.

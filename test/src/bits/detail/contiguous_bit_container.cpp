@@ -21,11 +21,13 @@
 #include <cstddef>                                            // size_t
 #include <cstdint>                                            // uint8_t, uint64_t
 #include <initializer_list>                                   // initializer_list
+#include <limits>                                             // numeric_limits
 #include <memory>                                             // addressof, allocator
 #include <version>                                            // IWYU pragma: keep; __cpp_lib_ranges_as_const
 #include <new>                                                // IWYU pragma: keep; bad_alloc, behind TEST_HAS_INPLACE_VECTOR
 #include <ranges>                                             // begin, iota, range_const_reference_t, size
 #include <span>                                               // dynamic_extent
+#include <stdexcept>                                          // length_error
 #include <tuple>                                              // get, tuple
 #include <vector>                                             // vector
 
@@ -1073,6 +1075,49 @@ BOOST_AUTO_TEST_CASE(TheAllocatorAndTheMaximumWidth)
         using A = xstd::detail::bits::contiguous_bit_array<std::uint8_t, 9>;
         static_assert(not has_allocator<A>);
         static_assert(A().max_size() == 9UZ);
+}
+
+// The ceiling the growth is measured against, and the saturating sum that reaches it. Every growth here asks for a width by adding to one, and every one of those additions wraps: a wrapped width is small, so it passes the ceiling it was meant to fail and then sizes the blocks for far fewer positions than the caller goes on to write. Saturated instead, it fails that ceiling, which is where blocks_for answers std::length_error.
+BOOST_AUTO_TEST_CASE(AWidthAboveTheCeilingIsLengthErrorAndNotAWrappedOne)
+{
+        using V = xstd::detail::bits::contiguous_bit_vector<std::uint8_t>;
+        constexpr auto top = std::numeric_limits<std::size_t>::max();
+
+        // Whole blocks, and no wider than what the blocks themselves can hold.
+        static_assert(V::max_width % V::bits_per_block == 0UZ);
+        static_assert(V::max_width == V::max_num_blocks * V::bits_per_block);
+        BOOST_CHECK_LE(V().max_size(), V::max_width);
+
+        // base + count where that is a width, and the top of size_t where it is not.
+        static_assert(V::width_sum(3UZ, 4UZ) == 7UZ);
+        static_assert(V::width_sum(top - 1UZ, 1UZ) == top);
+        static_assert(V::width_sum(top, 0UZ) == top);
+        static_assert(V::width_sum(top, 1UZ) == top);
+        static_assert(V::width_sum(1UZ, top) == top);
+
+        auto v = V(8UZ);
+        v.set(3UZ);
+
+        // Every way in: the constructor, the two growths, and the total insert, which asks for n + 1 and so has no width for the position at the top. The cast because BOOST_CHECK_THROW takes a statement, where V(top) alone would declare one.
+        BOOST_CHECK_THROW((void)V(top), std::length_error);
+        BOOST_CHECK_THROW(v.resize(top), std::length_error);
+        BOOST_CHECK_THROW(v.reserve(top), std::length_error);
+        BOOST_CHECK_THROW((void)v.growing_insert(top), std::length_error);
+
+        // And one below it, which is the position the assert that used to stand here let through: n < SIZE_MAX held, n + 1 was SIZE_MAX, and that width wrapped to a single block. A ceiling on n is not the check; a ceiling on the width it asks for is.
+        BOOST_CHECK_THROW((void)v.growing_insert(top - 1UZ), std::length_error);
+
+        // None of which moved anything: the block count is taken before the last block is written, so a refused growth leaves the width and the bits as they were.
+        BOOST_CHECK_EQUAL(v.size(), 8UZ);
+        BOOST_CHECK_EQUAL(v.count(), 1UZ);
+        BOOST_CHECK(v.test(3UZ));
+
+        // A width the ceiling admits is not refused here; whether the blocks can hold it is their own answer.
+        v.resize(24UZ);
+        BOOST_CHECK_EQUAL(v.size(), 24UZ);
+        BOOST_CHECK(v.test(3UZ));
+        BOOST_CHECK(v.growing_insert(31UZ));
+        BOOST_CHECK_EQUAL(v.size(), 32UZ);
 }
 
 // A word read and written at any position, and the ranged forms over it: both at a static width and at a run-time one.
