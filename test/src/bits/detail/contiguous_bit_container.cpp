@@ -1104,6 +1104,9 @@ BOOST_AUTO_TEST_CASE(AWidthAboveTheCeilingIsLengthErrorAndNotAWrappedOne)
         BOOST_CHECK_THROW(v.reserve(top), std::length_error);
         BOOST_CHECK_THROW((void)v.growing_insert(top), std::length_error);
 
+        // And one below it, which is the position the assert that used to stand here let through: n < SIZE_MAX held, n + 1 was SIZE_MAX, and that width wrapped to a single block. A ceiling on n is not the check; a ceiling on the width it asks for is.
+        BOOST_CHECK_THROW((void)v.growing_insert(top - 1UZ), std::length_error);
+
         // None of which moved anything: the block count is taken before the last block is written, so a refused growth leaves the width and the bits as they were.
         BOOST_CHECK_EQUAL(v.size(), 8UZ);
         BOOST_CHECK_EQUAL(v.count(), 1UZ);

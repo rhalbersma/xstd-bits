@@ -16,10 +16,11 @@
 #include <cstdint>                                    // uint8_t, uint64_t
 #include <functional>                                 // hash
 #include <iterator>                                   // back_inserter
+#include <limits>                                     // numeric_limits
 #include <memory>                                     // allocator
 #include <ranges>                                     // equal, iota
 #include <sstream>                                    // istringstream, ostringstream
-#include <stdexcept>                                  // invalid_argument, out_of_range, overflow_error
+#include <stdexcept>                                  // invalid_argument, length_error, out_of_range, overflow_error
 #include <string>                                     // string
 #include <tuple>                                      // tuple
 #include <utility>                                    // as_const, pair
@@ -265,6 +266,21 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItGrowsAsBoostDoes, T, Dynamic)
         d.clear();
         BOOST_CHECK(d.empty());
         BOOST_CHECK_EQUAL(d.size(), 0UZ);
+}
+
+// boost answers bad_alloc here, its block count being a division; ours rounded first, and the rounding of a width near the top of size_t is zero blocks under a size() of SIZE_MAX. std::length_error at the reading, because the storage refuses the width before it asks for the blocks.
+BOOST_AUTO_TEST_CASE_TEMPLATE(AWidthItCannotCountIsLengthError, T, Dynamic)
+{
+        constexpr auto top = std::numeric_limits<std::size_t>::max();
+
+        auto d = T(9, 0b101ULL);
+        BOOST_CHECK_THROW(d.resize(top), std::length_error);
+        BOOST_CHECK_THROW(d.resize(top, true), std::length_error);
+        BOOST_CHECK_THROW(d.reserve(top), std::length_error);
+
+        // A refused growth is not a partial one: the width and the bits are what they were.
+        BOOST_CHECK_EQUAL(d.size(), 9UZ);
+        BOOST_CHECK_EQUAL(d.to_ullong(), 0b101ULL);
 }
 
 // A run-time width is as wide as the text: the constructors and the extractor read every character, as boost's do.

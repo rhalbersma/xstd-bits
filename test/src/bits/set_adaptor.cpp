@@ -369,6 +369,14 @@ BOOST_AUTO_TEST_CASE(TheGrowthsThatComputeAWidthSaturateRatherThanWrap)
 {
         constexpr auto top = std::numeric_limits<std::size_t>::max();
 
+        // The public way in first: a key past the top is one no width admits, whether or not n + 1 is itself a number. The second is the position the assert that used to guard this let through.
+        auto keyed = xstd::bit_set();
+        keyed.insert(7UZ);
+        BOOST_CHECK_THROW((void)keyed.insert(top), std::length_error);
+        BOOST_CHECK_THROW((void)keyed.insert(top - 1UZ), std::length_error);
+        BOOST_CHECK_EQUAL(keyed.size(), 1UZ);
+        BOOST_CHECK(keyed.contains(7UZ));
+
         // The consecutive tier grows to admit the range's last position, which for an iota_view at the top of size_t is a position there is no width for.
         auto ranged = xstd::bit_set();
         BOOST_CHECK_THROW(ranged.insert_range(std::views::iota(top - 2UZ, top)), std::length_error);
