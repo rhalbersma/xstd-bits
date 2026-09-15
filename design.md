@@ -1839,7 +1839,14 @@ composable checks are `noexcept` over `|`, `&`, `-` and `^`), and a throw they c
 `bugprone-exception-escape` traces into them. It traced into `bitset_adaptor`'s and `sequence_adaptor`'s
 `noexcept` default constructors too, by way of the NSDMI that asks `blocks_for(0)`. So the conversion stays
 total, with `n <= max_width` as an assert, the ceiling is asked once at each of the four doors, and the three
-that name no width go to `resize_to` behind it. The narrower ceiling stays the blocks' own: `m_blocks.resize` and
+that name no width go to `resize_to` behind it.
+
+The mirror of that rule is that a growth which **does** name a width keeps the ceiling, and whatever promises not
+to throw above it is what has to give. `growing_insert` is the case: a key past `max_size()` is `length_error`,
+which is the one way `insert` on a dynamic extent can refuse ([asking-is-total](#asking-is-total)). The four
+composable checks in the test tree were `noexcept` over `|`, `&`, `-` and `^`, and each builds its expected value
+with `ranges::to`, which inserts -- so the `noexcept` was a promise about a reachable exception, and it went, as
+`test/bitset/factory.hpp`'s did over `resize`. `includes()` beside them constructs nothing and keeps its. The narrower ceiling stays the blocks' own: `m_blocks.resize` and
 `m_blocks.reserve` are handed a count and answer for it, which is why `resize(max_width)` is `bad_alloc` and
 `resize(max_width + 1)` is `length_error`. `resize` takes that count **before** it writes the last block, so a
 refused growth leaves the width and the bits exactly as they were.

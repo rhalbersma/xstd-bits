@@ -14,6 +14,8 @@
 
 namespace test::set::composable {
 
+// The four below build an X through ranges::to, which inserts, and a set's insert is the one operation that can be unable to satisfy a key: past max_size() it is std::length_error. So none of them is noexcept, where includes() -- which constructs nothing -- is.
+
 struct includes
 {
         template<class X>
@@ -28,7 +30,7 @@ struct includes
 struct set_union
 {
         template<class X>
-        auto operator()(const X& a, const X& b) const noexcept
+        auto operator()(const X& a, const X& b) const
         {
                 if constexpr (requires { a | b; }) {
                         BOOST_CHECK((a | b) == (::ranges::views::set_union(a, b) | std::ranges::to<X>()));
@@ -39,7 +41,7 @@ struct set_union
 struct set_intersection
 {
         template<class X>
-        auto operator()(const X& a, const X& b) const noexcept
+        auto operator()(const X& a, const X& b) const
         {
                 if constexpr (requires { a & b; }) {
                         BOOST_CHECK((a & b) == (::ranges::views::set_intersection(a, b) | std::ranges::to<X>()));
@@ -50,7 +52,7 @@ struct set_intersection
 struct set_difference
 {
         template<class X>
-        auto operator()(const X& a, const X& b) const noexcept
+        auto operator()(const X& a, const X& b) const
         {
                 if constexpr (requires { a - b; }) {
                         BOOST_CHECK((a - b) == (::ranges::views::set_difference(a, b) | std::ranges::to<X>()));
@@ -61,7 +63,7 @@ struct set_difference
 struct set_symmetric_difference
 {
         template<class X>
-        auto operator()(const X& a, const X& b) const noexcept
+        auto operator()(const X& a, const X& b) const
         {
                 if constexpr (requires { a ^ b; }) {
                         BOOST_CHECK((a ^ b) == (::ranges::views::set_symmetric_difference(a, b) | std::ranges::to<X>()));
