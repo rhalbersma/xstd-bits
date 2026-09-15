@@ -161,13 +161,15 @@ public:
                         // One width, so holding the same positions and being equal are the same statement.
                         return x == y;
                 } else {
-                        // ranges::equal over the shared prefix, NOT over the two block ranges: on two sized ranges it compares size() first and answers false without looking at an element, which is the one case this asks about. Taking the prefix explicitly keeps the answer and gets the algorithm, which lowers to a memcmp on trivially comparable contiguous blocks where all_of over a zip stays an element loop -- 2.15us to 1.29us over 4700 blocks. The other two block walks cannot follow: is_subset_of and intersects do bitwise work per block and have no such algorithm.
-                        auto const shared = std::ranges::min(x.num_blocks(), y.num_blocks());
+                        // ranges::equal over the shared prefix, NOT over the two block ranges: on two sized ranges it compares size() first and answers false without looking at an element, which is the one case this asks about. Taking the prefix as an ITERATOR PAIR keeps the answer and gets the algorithm, which lowers to a memcmp on trivially comparable contiguous blocks where all_of over a zip stays an element loop -- 2.15us to 1.29us over 4700 blocks. Not views::take, which libc++ 18 cannot form over these blocks, as all_but_last_are_ones already records. The other two block walks cannot follow: is_subset_of and intersects do bitwise work per block and have no such algorithm.
+                        auto const shared = static_cast<std::ptrdiff_t>(std::ranges::min(x.num_blocks(), y.num_blocks()));
+                        auto const xf = std::ranges::begin(x.m_blocks);
+                        auto const yf = std::ranges::begin(y.m_blocks);
                         return
-                                std::ranges::equal(x.m_blocks | std::views::take(shared), y.m_blocks | std::views::take(shared)) and
+                                std::ranges::equal(xf, xf + shared, yf, yf + shared) and
                                 (x.num_blocks() < y.num_blocks()
-                                        ? not y.any_block_set(shared, y.num_blocks())
-                                        : not x.any_block_set(shared, x.num_blocks()))
+                                        ? not y.any_block_set(x.num_blocks(), y.num_blocks())
+                                        : not x.any_block_set(y.num_blocks(), x.num_blocks()))
                         ;
                 }
         }
@@ -306,11 +308,13 @@ public:
         }
 
         // The write side of word_at, masked: the bits of value under mask land at [n, n + bits_per_block), split over two blocks where n is not aligned, and the tail stays clear.
+        // The word-level primitive, which writes what the mask selects and restores nothing: libstdc++ splits the same way, _Base_bitset knowing only its word count and bitset<_Nb> calling _M_do_sanitize once after. Here one type knows both, so the mask is required to stay inside size() and the ranged forms below erase once per call rather than once per word.
         constexpr auto set_word(std::size_t n, block_type value, block_type mask) noexcept
                 -> void
         {
                 auto const [ index, offset ] = index_offset(n);
                 assert(index < num_blocks());
+                assert(n + bits_per_block <= size() or shr(mask, size() - n) == zero);
                 auto const bits = static_cast<block_type>(value & mask);
 
                 // Each step lands back in block_type: a promoted operand feeding the next bitwise operator is what bugprone-signed-bitwise reads.
@@ -322,10 +326,6 @@ public:
                         m_blocks[index + 1UZ] = static_cast<block_type>(high_kept | shr(bits, shift));
                 }
 
-                // Only the last block holds padding, so only a write that reached it can have dirtied any: the general word is left alone where it used to pay for a load, an and and a store on a block it never touched. 39.8us to 23.9us setting a million bits.
-                if (index + (offset != 0UZ ? 1UZ : 0UZ) >= last_block()) {
-                        erase_unused();
-                }
         }
 
         // boost's ranged forms, a word at a time through set_word: [n, n + len) set, cleared or flipped, the rest untouched.
@@ -334,6 +334,7 @@ public:
         {
                 assert(n + len <= size());
                 for_each_word(n, len, [&](std::size_t pos, block_type mask) -> void { set_word(pos, value ? ones : zero, mask); });
+                erase_unused();
                 return *this;
         }
 
@@ -342,6 +343,7 @@ public:
         {
                 assert(n + len <= size());
                 for_each_word(n, len, [&](std::size_t pos, block_type mask) -> void { set_word(pos, static_cast<block_type>(~word_at(pos)), mask); });
+                erase_unused();
                 return *this;
         }
 

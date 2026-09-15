@@ -1141,7 +1141,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(WordsAreReadAndWrittenAtAnyPosition, T, WordTypes)
         BOOST_CHECK_EQUAL(c.word_at(16UZ), 0b0000'1000);
         BOOST_CHECK_EQUAL(c.word_at(17UZ), 0b0000'0100);
 
-        // set_word lands the masked bits and nothing else, across two blocks and into the tail, which stays clear.
+        // set_word lands the masked bits and nothing else, across two blocks and up to the last position, the mask never selecting past size() -- a word at the top is masked to what the width holds, which is what leaves the padding untouched and the erase to the ranged forms.
         auto d = word_sample<T>();
         d.set_word(3UZ, 0b1111'1111, 0b0001'1110);
         auto m = reference(c);
@@ -1150,7 +1150,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(WordsAreReadAndWrittenAtAnyPosition, T, WordTypes)
         d.set_word(5UZ, 0b0000'0000, 0b0111'1000);
         for (auto const i : { 8UZ, 9UZ, 10UZ, 11UZ }) { m[i] = false; }
         BOOST_CHECK(reference(d) == m);
-        d.set_word(16UZ, 0b1111'1111, 0b1111'1111);
+        d.set_word(16UZ, 0b1111'1111, 0b0000'1111);
         for (auto const i : { 16UZ, 17UZ, 18UZ, 19UZ }) { m[i] = true; }
         BOOST_CHECK(reference(d) == m);
         BOOST_CHECK_EQUAL(d.block(2), 0b0000'1111);
