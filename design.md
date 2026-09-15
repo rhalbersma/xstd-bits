@@ -720,7 +720,7 @@ makes the two comparable, both exiting at once.
 pair costs `n + 1` block reads. And when the values are equal `any_above` is never reached at all, since
 `first_difference` already settles it.
 
-**The bitset reading needs neither piece.** The bit string, most significant position first, **is** the blocks
+**The bitset reading needs neither piece, and its width-crossing arm is a third shape again.** The bit string, most significant position first, **is** the blocks
 from the top block down, with the unused tail kept clear, so it is the one reading whose order is plain
 lexicographic over words — and plain lexicographic over words is `std::lexicographical_compare_three_way` over
 the blocks reversed. `string_three_way` is that call and nothing else: no loop of its own, and no arm for
@@ -730,6 +730,17 @@ one-block width is the algorithm's first step.
 Handing it to the standard algorithm costs nothing at the widths the hand-rolled version had arms for. GCC 15
 at `-O2`: `xstd::bitset<64>` is one `cmpq`, and `xstd::bitset<128>` is the same two comparisons fully unrolled,
 top block first.
+
+Two widths it answers by `top_aligned_three_way`, which is boost's order and **cannot pad**. The other two
+readings run from position 0 upward, so a block the narrower storage does not have sits *above* its positions
+and reads as the zero the invariant already keeps there. The bit string runs from the top down, so what the
+wider one holds outside the shared window sits *below* the comparison rather than above it, and is never
+consulted at all: the top `min(size())` positions of each are paired from the top, read as words at either
+one's own alignment through `word_at`, and only if that window ties does the shorter one lose for being
+shorter. That walk lived in `bitset_adaptor`, which meant the one reading whose adaptor could not simply call
+its storage; it now sits beside `string_three_way` and is reached from it, so all three orderings are total and
+none of the three adaptors branches on width. A pure relocation, and measured as one: identical answers over
+20,172 unequal-width comparisons.
 
 **The prefix clause is not removable.** Set order is not plain lexicographic over words under *any*
 comparator. At `digits = 4`, `A = {1}` and `B = {5}` differ in word 0, where `A₀ = {1}` and `B₀ = {}`; a
