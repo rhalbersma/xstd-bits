@@ -1831,11 +1831,14 @@ above `max_width` -- the widest a `size_t` counts in whole blocks -- is `std::le
 a container throws for a size it cannot represent.
 
 It sits beside `blocks_for` rather than inside it, though `blocks_for` is the one place a width becomes a block
-count and every growth does reach it. `clear()` is a resize to zero and `pop_back()` a resize by one less, so
-neither names a width and neither can fail the ceiling -- but the sequence reading declares both `noexcept`, and
-a throw they cannot reach is still one `bugprone-exception-escape` traces into them. It traced into
-`bitset_adaptor`'s `noexcept` default constructor too, by way of the NSDMI that asks `blocks_for(0)`. So the
-conversion stays total, with `n <= max_width` as an assert, the ceiling is asked once at each door, and the two
+count and every growth does reach it. Three growths name no width of their own: `clear()` resizes to zero,
+`pop_back()` to one less, and `grow_to_admit` to another storage's own width. None can fail the ceiling -- but
+each is reached from something that promises not to throw (the sequence reading declares `clear()` and
+`pop_back()` `noexcept`; `grow_to_admit` is how every set operation across widths widens, and the test tree's
+composable checks are `noexcept` over `|`, `&`, `-` and `^`), and a throw they cannot reach is still one
+`bugprone-exception-escape` traces into them. It traced into `bitset_adaptor`'s and `sequence_adaptor`'s
+`noexcept` default constructors too, by way of the NSDMI that asks `blocks_for(0)`. So the conversion stays
+total, with `n <= max_width` as an assert, the ceiling is asked once at each of the four doors, and the three
 that name no width go to `resize_to` behind it. The narrower ceiling stays the blocks' own: `m_blocks.resize` and
 `m_blocks.reserve` are handed a count and answer for it, which is why `resize(max_width)` is `bad_alloc` and
 `resize(max_width + 1)` is `length_error`. `resize` takes that count **before** it writes the last block, so a

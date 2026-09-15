@@ -87,7 +87,7 @@ private:
 
         // The ceiling, at the four doors a width the caller named comes in by: the two width constructors, resize and reserve. std::length_error is what a container throws for a size it cannot represent; what the blocks can actually hold is narrower, and theirs to answer -- they are handed a block count and throw length_error for one they cannot reach.
         //
-        // Here rather than inside blocks_for, which every growth reaches: clear() is resize to zero and pop_back() is resize by one less, so neither names a width and neither can fail this, and the sequence reading declares both noexcept. A throw they cannot reach is still one bugprone-exception-escape traces into them.
+        // Here rather than inside blocks_for, which every growth reaches: clear() resizes to zero, pop_back() to one less, and grow_to_admit to another storage's own width -- none of the three names a width of its own, so none can fail this, and each is reached from something declared noexcept. A throw they cannot reach is still one bugprone-exception-escape traces into them, so all three go to resize_to, the growth behind this.
         [[nodiscard]] static constexpr auto check_width(std::size_t n)
                 -> std::size_t
         {
@@ -736,7 +736,7 @@ public:
                 resize_to(check_width(n), value);
         }
 
-        // Widen just enough to hold every element the other has, and not at all when it has none above this width. Its largest element, not its size(), is what the growing insert of each in turn would have reached. A static width has nothing to widen and no other width to meet, so there the whole thing is nothing.
+        // Widen just enough to hold every element the other has, and not at all when it has none above this width. Its largest element, not its size(), is what the growing insert of each in turn would have reached. A static width has nothing to widen and no other width to meet, so there the whole thing is nothing. Through resize_to, as clear() and pop_back() are: the width comes from the other storage's own, so it is one this one can count already, and asking the ceiling here would put its throw on every set operation across widths.
         constexpr auto grow_to_admit(contiguous_bit_container const& other [[maybe_unused]]) noexcept(has_static_size)
                 -> void
         {
@@ -745,7 +745,7 @@ public:
                                 return;
                         }
                         if (auto const n = other.exclusive_find_prev(other.size()) + 1UZ; n > this->size()) {
-                                resize(n);
+                                resize_to(n, false);
                         }
                 }
         }
