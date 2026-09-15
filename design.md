@@ -1835,6 +1835,33 @@ say so. The reserve inside `append(first, last)` is left alone for a different r
 a wrapped count there under-reserves, where the appends that follow still raise the width one checked step at a
 time.
 
+**Where the counterparts stand**, measured rather than assumed -- Boost 1.83, libstdc++ 14, `-O2 -DNDEBUG
+-fsanitize=address,undefined`:
+
+| | growth at `SIZE_MAX` | a ranged write past the width |
+|---|---|---|
+| `boost::dynamic_bitset` | `bad_alloc` | assert in debug, **heap-buffer-overflow** under `NDEBUG` |
+| `std::vector<bool>` | `length_error` from `resize`, `reserve` and `insert`; the **fill constructor corrupts the heap** | no ranged form |
+| `std::bitset` | no growth | no ranged form; the single-position members throw `out_of_range` |
+
+The split is exact, and it says which of the two rules above was ours to get wrong.
+
+The **ceiling** was. `boost::dynamic_bitset::calc_num_blocks` is `n / bits_per_block + (n % bits_per_block != 0)`
+-- a division that cannot overflow -- which is why `dynamic_bitset(SIZE_MAX)` reaches the allocator and answers
+`bad_alloc`. `blocks_for` rounded first, and `align_up(n, bits_per_block) / bits_per_block` is exactly
+libstdc++'s `_S_nword(n) = (n + word_bit - 1) / word_bit`, which its `vector<bool>` fill constructor calls with
+no `max_size()` check: `std::vector<bool> v(SIZE_MAX)` there constructs, answers `size()` with `SIZE_MAX` over a
+`capacity()` of **zero**, and aborts on the first write. `resize`, `reserve` and `insert` all check and throw
+`length_error`; only the constructor does not. So the shape of our bug was `vector<bool>`'s, not boost's, and
+the constructor was the unchecked way in on both sides.
+
+The **guard** was not. `range_operation` carries two asserts, `pos + len <= m_num_bits` and, with a comment
+naming the case, `pos + len >= len` for the overflow the first one cannot see. Ours carried only the first, so
+boost caught in debug what we passed. Under `NDEBUG` neither library checks at all and both write out of bounds
+for a plain `set(1000, 2, true)` at a width of 64. That is the contract, and it stays the contract
+([the-one-guard](#the-one-guard)) -- but the subtraction now says both of boost's asserts in one expression,
+where the addition said neither.
+
 What the guards do **not** change is which contract each reading carries. `guard_range` still throws at a static
 width and asserts at a run-time one, for the reason the single-position guard does
 ([the-one-guard](#the-one-guard)): the inconsistency is `std::bitset`'s and boost's, not ours. It is the
