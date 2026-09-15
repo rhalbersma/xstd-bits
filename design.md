@@ -1757,28 +1757,40 @@ Measured at two run-time widths, 4096 against 4000, dense:
 | `^=` | 9.58us | 0.22us |
 | `-=` | 10.27us | 0.22us |
 
-`set_and_assign`, `set_or_assign`, `set_xor_assign` and `set_minus_assign` stand to the storage's `&=` `|=` `^=`
-`-=` exactly as `set_equal` stands to its `==`: the operators are the bitset and sequence spelling and state a
-precondition of equal widths, and the named ones do not, because for the set reading two widths is not a misuse
-but the ordinary case. So the adaptor's four operators are now one unguarded call each, and `same_width` --
-which existed only to choose between the storage's operator and an element walk -- is gone.
+**They keep the operator spelling**, and that is the point worth stating, because `set_equal` and
+`set_three_way` do not. A name is owed where the readings genuinely *disagree*: three orderings over one
+storage, and two equalities ([two-readings-disagree](#two-readings-disagree)). `&=` `|=` `^=` `-=` are not
+that. All three readings mean the same bitwise thing by them, and the only difference was that the storage's
+operators stated a precondition of equal widths where the set reading wanted an answer. A precondition is not
+a second meaning: widening the operator to answer where it used to assert takes nothing away from the readings
+that never asked, since what they passed was always equal-width. So the operators themselves became total,
+no new names, and `same_width` -- which existed only to choose between the storage's operator and an element
+walk -- is gone.
+
+What the storage's operator deliberately does *not* do is grow. Growth is the set reading's rule about
+capacity, so it lives with the reading that has it: `set_adaptor`'s `|=` and `^=` call `grow_to_admit` and then
+the operator, and its `&=` and `-=` are the operator alone. That is the adaptor adding a guard, which is all an
+adaptor should be doing; the operator stays reading-neutral, padding with the zero the invariant already keeps
+and never widening what it was handed.
 
 **Intersection and difference never widen.** A position the other lacks is a position it does not hold, so the
 missing blocks read as the zero they already are and the result fits where it already sat. Both only ever
 *clear* bits, so the invariant that padding above `size()` is clear survives with no `erase_unused` to restore
 it.
 
-**Union and symmetric difference do widen, and the target is not the obvious one.** Growing to the other
-operand's `size()` would be wrong. `growing_insert(n)` resizes to `n + 1`, so inserting the other's elements one
+**Union and symmetric difference do widen, and the target is not the obvious one.** This is the part that is
+the set reading's alone, and the reason `grow_to_admit` sits at the call rather than inside the operator.
+Growing to the other operand's `size()` would be wrong. `growing_insert(n)` resizes to `n + 1`, so inserting the other's elements one
 at a time arrives at one past its **largest element** -- and a storage far wider than anything it holds must not
 drag this one up with it. A 301-wide operand holding nothing above 7 widens a 61-wide set not at all; the same
 operand holding 280 widens it to 281, never to 301. `grow_to_admit` is that rule and nothing else, and it
 returns early on an empty operand, where there is no largest element to ask for and `exclusive_find_prev` would
 assert.
 
-Each of the four keeps an equal-width fast path to the storage's own operator. At a static width that is the
-whole function; at a run-time width it skips a per-block bound check, and for the two that grow it skips asking
-for a largest element that cannot matter. Measured at 4096 against 4096, the equal-width case is unchanged.
+Each operator keeps an equal-width fast path: at a static width that is the whole function, the unrolled one-
+and two-block arms included, and at a run-time width it skips a per-block bound check. `grow_to_admit` returns
+at once on an empty operand and does nothing at all at a static width, where there is neither anything to widen
+nor another width to meet. Measured at 4096 against 4096, the equal-width case is unchanged.
 
 **The width is the part that needed a way to see it.** An owning set reports `max_size()` as everything it could
 grow to rather than what it currently spans ([max-size-is-the-bits](#max-size-is-the-bits)), so the growth rule

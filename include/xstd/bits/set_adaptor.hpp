@@ -433,37 +433,41 @@ public:
 
         constexpr auto complement(this auto&& self) noexcept -> void requires requires { self.storage().flip(); } { self.storage().flip(); }
 
-        // Bulk, on the storage's own set spelling: two widths is the ordinary case for a set, so the storage answers it
-        // rather than the adaptor unpacking it into elements. [design.md#what-the-readings-share] [design.md#width-is-capacity]
+        // Bulk, on the storage's own spelling, which is total across two widths. The set reading adds one thing the
+        // storage's operator deliberately does not: union and symmetric difference GROW, because for a set the width is
+        // capacity and an element the other holds above this width is still an element. Intersection and difference
+        // never widen, so they are the operator alone. [design.md#what-the-readings-share] [design.md#width-is-capacity]
         constexpr auto operator&=(this auto&& self, set_adaptor const& other) noexcept
                 -> auto&
-                requires requires { self.storage().set_and_assign(other.storage()); }
+                requires requires { self.storage() &= other.storage(); }
         {
-                self.storage().set_and_assign(other.storage());
+                self.storage() &= other.storage();
                 return self;
         }
 
         constexpr auto operator|=(this auto&& self, set_adaptor const& other) noexcept(has_static_width)
                 -> auto&
-                requires requires { self.storage().set_or_assign(other.storage()); }
+                requires requires { self.storage().grow_to_admit(other.storage()); self.storage() |= other.storage(); }
         {
-                self.storage().set_or_assign(other.storage());
+                self.storage().grow_to_admit(other.storage());
+                self.storage() |= other.storage();
                 return self;
         }
 
         constexpr auto operator^=(this auto&& self, set_adaptor const& other) noexcept(has_static_width)
                 -> auto&
-                requires requires { self.storage().set_xor_assign(other.storage()); }
+                requires requires { self.storage().grow_to_admit(other.storage()); self.storage() ^= other.storage(); }
         {
-                self.storage().set_xor_assign(other.storage());
+                self.storage().grow_to_admit(other.storage());
+                self.storage() ^= other.storage();
                 return self;
         }
 
         constexpr auto operator-=(this auto&& self, set_adaptor const& other) noexcept
                 -> auto&
-                requires requires { self.storage().set_minus_assign(other.storage()); }
+                requires requires { self.storage() -= other.storage(); }
         {
-                self.storage().set_minus_assign(other.storage());
+                self.storage() -= other.storage();
                 return self;
         }
 
