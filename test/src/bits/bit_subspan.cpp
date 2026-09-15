@@ -33,6 +33,8 @@ using Blocks = xstd::detail::bits::contiguous_bit_array<std::uint8_t, 20>;
 using Owner  = xstd::basic_bit_array<std::uint8_t, 20>;
 using Span   = xstd::bit_span<Blocks>;
 using Sub    = xstd::bit_subspan<Blocks>;
+using CSpan  = xstd::bit_span<Blocks const>;
+using CSub   = xstd::bit_subspan<Blocks const>;
 
 // Dependent, so an absent member is a substitution failure rather than a hard error.
 template<class X> constexpr bool has_subspan  = requires (X x) { x.subspan(0UZ); x.first(0UZ); x.last(0UZ); };
@@ -85,6 +87,15 @@ BOOST_AUTO_TEST_CASE(TheWindowIsTheAdaptorWindowed)
         static_assert(    can_fill<Span>);
         static_assert(    has_bulk_ops<Span>);
         static_assert(not has_shifts<Span>);
+
+        // Over a const storage nothing writes, window or whole: the window's bulk operators ask Bits and not the
+        // const-stripped bits_type, so this answers false where it used to answer true and hard-error in combine.
+        static_assert(not can_fill<CSub>);
+        static_assert(not has_bulk_ops<CSub>);
+        static_assert(not can_fill<CSpan>);
+        static_assert(not has_bulk_ops<CSpan>);
+        static_assert(    std::ranges::random_access_range<CSub>);   // reading is untouched
+        static_assert(    has_subspan<CSub>);
 }
 
 // A window sees its positions and nothing beyond them, reading them from zero.
