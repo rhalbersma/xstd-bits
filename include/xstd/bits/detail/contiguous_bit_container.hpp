@@ -155,23 +155,23 @@ public:
 
         // No operator<=>: contiguous_bit_container is pure storage with no opinion on which reading orders it, so it names all three and picks none. [design.md#two-readings-disagree]
 
-        // The set reading a word at a time: whoever HOLDS the lowest differing position is greater, unless the other holds nothing above it. [design.md#the-ordering-primitive]
         // The set reading's equality, which operator== is not: that one is width first, meaning the sequence reading and dynamic_bitset. Here width is capacity, so two storages holding the same positions are equal whatever their widths. [design.md#width-is-capacity]
-        [[nodiscard]] constexpr auto set_equal(contiguous_bit_container const& other) const noexcept
+        // A hidden friend beside the defaulted operator==, and for the reason the three orderings are: equality is a question about two values and neither is the subject, so x.set_equal(y) spelled a symmetry the operation has and the call did not. [design.md#the-ordering-primitive]
+        [[nodiscard]] friend constexpr auto set_equal(contiguous_bit_container const& x, contiguous_bit_container const& y) noexcept
                 -> bool
         {
                 if constexpr (has_static_size) {
                         // One width, so holding the same positions and being equal are the same statement.
-                        return *this == other;
+                        return x == y;
                 } else {
                         return
                                 std::ranges::all_of(
-                                        std::views::zip(this->m_blocks, other.m_blocks), [](auto&& _) { auto&& [ lhs, rhs ] = _;
+                                        std::views::zip(x.m_blocks, y.m_blocks), [](auto&& _) { auto&& [ lhs, rhs ] = _;
                                         return lhs == rhs;
                                 }) and
-                                (this->num_blocks() < other.num_blocks()
-                                        ? not other.any_block_set(this->num_blocks(), other.num_blocks())
-                                        : not this->any_block_set(other.num_blocks(), this->num_blocks()))
+                                (x.num_blocks() < y.num_blocks()
+                                        ? not y.any_block_set(x.num_blocks(), y.num_blocks())
+                                        : not x.any_block_set(y.num_blocks(), x.num_blocks()))
                         ;
                 }
         }
@@ -1006,7 +1006,7 @@ public:
         [[nodiscard]] constexpr auto is_proper_subset_of(contiguous_bit_container const& other) const noexcept
                 -> bool
         {
-                return is_subset_of(other) and not set_equal(other);
+                return is_subset_of(other) and not set_equal(*this, other);
         }
 
         [[nodiscard]] constexpr auto intersects(contiguous_bit_container const& other [[maybe_unused]]) const noexcept

@@ -213,7 +213,7 @@ public:
                 -> bool
                 requires detail::set::equality_comparable_storage<bits_type>
         {
-                return x.storage().set_equal(y.storage());
+                return set_equal(x.storage(), y.storage());
         }
 
         // The storage's entry, which answers at any two widths: the set ordering turns on the lowest position at which the two disagree, and finding it is block work the storage is the place for. [design.md#the-ordering-primitive] [design.md#width-is-capacity]

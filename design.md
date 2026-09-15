@@ -671,9 +671,12 @@ would carry. As friends they are reached by ADL, which is how the three adaptors
 `any_above` stays a member because it IS asked of one value: whether *this* storage holds anything above a
 position. `first_difference` is symmetric -- its answer is an `xor`, which commutes -- and stays a member only
 because it is a private step of the orderings rather than a vocabulary anyone spells; the same is true of
-`padded_first_difference` and `padded_set_three_way`. Among the public entries, `set_equal` and `intersects`
-are symmetric and could take the same form; `is_subset_of` and `is_proper_subset_of` could not, since
-`a ⊆ b` is not `b ⊆ a` and the member spelling states that correctly.
+`padded_first_difference` and `padded_set_three_way`. `set_equal` **has** taken the same form, and for the same
+reason: equality is as much a question about two values with neither as its subject as an ordering is, and
+`x.set_equal(y)` spelled a symmetry the operation has and the call did not. It now sits as a hidden friend
+beside the defaulted `operator==`, which was already a non-member. `intersects` is symmetric too and could
+follow; `is_subset_of` and `is_proper_subset_of` could not, since `a ⊆ b` is not `b ⊆ a` and the member
+spelling states that correctly.
 
 The first two orderings are answered a word at a time, from two pieces:
 
@@ -1690,9 +1693,25 @@ precondition of the set operations.
 and `dynamic_bitset` mean, and those two need it. The width is part of the value for both of them -- a
 `vector<bool>` of two elements is not one of three, and a `dynamic_bitset` is equal only at equal size -- and it
 is not part of the value for a set. So the set reading gets an entry of its own, `set_equal`, beside the
-`operator==` the other two keep, for the same reason `set_lexicographical_compare_three_way` sits beside `sequence_lexicographical_compare_three_way` and
-`string_lexicographical_compare_three_way`. At a static width the distinction is unobservable, every instance carrying the one width,
-which is why the set adaptor can default `==` there and nowhere else.
+`operator==` the other two keep, for the same reason `set_lexicographical_compare_three_way` sits beside
+`sequence_lexicographical_compare_three_way` and `string_lexicographical_compare_three_way`.
+
+**Two spellings for two meanings, and it does not come out as evenly as the orderings.** Ordering has three
+meanings and no structural answer at all -- a defaulted `<=>` would order by `m_size` first, which no reading
+means -- so the storage declares none and names all three, and nothing is left over. Equality has two meanings
+and one of them *is* the structural answer: memberwise, width then blocks, exactly what `= default` produces
+and exactly what `std::regular` asks of a storage. `contiguous_bit_sequence` requires that
+([the-common-vocabulary](#the-common-vocabulary)), and it is not an accident of the concept: `std::bitset` and
+`boost::dynamic_bitset` both have `==` and both mean width first by it. So the count is one operator and one
+name rather than three names, and giving the structural meaning a second name would be three spellings for two
+meanings.
+
+Both are non-members, and since the orderings became hidden friends `set_equal` is one too: a defaulted
+`operator==` already was one, and equality asks about two values with neither as its subject exactly as an
+ordering does. What remains asymmetric is only that one of the two meanings gets to keep the operator.
+
+At a static width the distinction is unobservable, every instance carrying the one width, which is why the set
+adaptor can default `==` there and nowhere else.
 
 The **storage** answers at any two widths, and the adaptor calls it. `set_equal`, `set_lexicographical_compare_three_way`,
 `is_subset_of`, `is_proper_subset_of` and `intersects` each carry their own width-crossing arm, so the four
