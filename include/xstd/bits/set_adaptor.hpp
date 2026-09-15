@@ -7,12 +7,13 @@
 #define XSTD_BITS_SET_ADAPTOR_HPP
 
 #include <xstd/bits/detail/bidirectional.hpp>            // bidirectional_bit_iterator, bidirectional_bit_reference
-#include <xstd/bits/detail/contiguous_bit_container.hpp> // specialization_of_contiguous_bit_container
+#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/detail/hash.hpp>                     // hash_append_bits, hash_append_positions, std_hash
 #include <xstd/bits/detail/intrin.hpp>                   // countl_zero, countr_zero
 #include <xstd/bits/detail/shift.hpp>                    // shl, shr
 #include <xstd/bits/detail/zero_width.hpp>               // zero_width
 #include <xstd/bits/ownership.hpp>                       // owned_bits_t, owned_storage, owner_of, owner_reading, ownership, owns, reading
+#include <xstd/misc/concepts/specialization_of.hpp>      // specialization_of_TN
 #include <boost/container_hash/is_range.hpp>             // is_range
 #include <boost/hash2/hash_append.hpp>                   // hash_append_tag
 #include <algorithm>                                     // all_of, find_if, lexicographical_compare_three_way, max, min
@@ -103,7 +104,7 @@ constexpr auto walk_blocks_descending(Bits const& c, F& f)
 }       // namespace detail::set
 
 
-template<detail::bits::specialization_of_contiguous_bit_container Bits, ownership Own>
+template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits, ownership Own>
 class set_adaptor
 {
         static constexpr bool is_owner = owns(Own);
@@ -125,7 +126,7 @@ class set_adaptor
         }
 
         // A set view refers into this owner's storage, and nothing else outside does; a sequence view does not, the readings not mixing.
-        template<detail::bits::specialization_of_contiguous_bit_container B, ownership O> friend class set_adaptor;
+        template<specialization_of_TN<detail::bits::contiguous_bit_container> B, ownership O> friend class set_adaptor;
 
         // The value under the set reading, owned or viewed as == is: the bits at a static width, the positions at a run-time one, where two equal sets need not share a width.
         template<class Provider, class Hash, class Flavor>

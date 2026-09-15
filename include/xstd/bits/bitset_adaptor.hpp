@@ -9,10 +9,11 @@
 // Bitsets [bitset], Header <bitset> synopsis [bitset.syn]
 
 #include <xstd/bits/detail/allocator_base_type.hpp> // allocator_base_type
-#include <xstd/bits/detail/contiguous_bit_container.hpp> // specialization_of_contiguous_bit_container
+#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/detail/hash.hpp>              // hash_append_bits, std_hash
 #include <xstd/bits/detail/zero_width.hpp>        // zero_width
 #include <xstd/bits/ownership.hpp>                // owned_storage, ownership, reading
+#include <xstd/misc/concepts/specialization_of.hpp> // specialization_of_TN
 #include <boost/hash2/hash_append.hpp>            // hash_append_tag
 #include <algorithm>                              // min
 #include <cassert>                                // assert
@@ -39,7 +40,7 @@
 namespace xstd {
 
 // [template.bitset] over a storage of ours, nominally: has_bitops used to ask structurally whether a storage spoke the bitset vocabulary, because a foreign one might. Only ours can be here now, and ours speaks it by construction, so the question was answering itself.
-template<detail::bits::specialization_of_contiguous_bit_container Bits>
+template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits>
 class bitset_adaptor : public detail::bits::allocator_base_type<Bits>
 {
         // One wrapper, two counterparts it strictly extends: std::bitset at a static width, boost::dynamic_bitset at a run-time one.
@@ -55,8 +56,8 @@ class bitset_adaptor : public detail::bits::allocator_base_type<Bits>
         template<class> friend struct owned_storage;
 
         // Either reading's view refers into this owner's storage, and nothing else outside does: a bitset is committed to neither reading, which is what its two views are for.
-        template<detail::bits::specialization_of_contiguous_bit_container B, ownership O>         friend class set_adaptor;
-        template<detail::bits::specialization_of_contiguous_bit_container B, ownership O, bool W> friend class sequence_adaptor;
+        template<specialization_of_TN<detail::bits::contiguous_bit_container> B, ownership O>         friend class set_adaptor;
+        template<specialization_of_TN<detail::bits::contiguous_bit_container> B, ownership O, bool W> friend class sequence_adaptor;
 
         // The value through the trait: the blocks and the width.
         template<class Provider, class Hash, class Flavor>

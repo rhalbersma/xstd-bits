@@ -35,7 +35,7 @@ if(NOT xstd-ints_FOUND)
     FetchContent_MakeAvailable(xstd-ints)
 endif()
 
-# xstd-misc supplies conditional_data_member_t and XSTD_NO_UNIQUE_ADDRESS, which contiguous_bit_container uses to carry a run-time width without paying for it under a compile-time one.
+# xstd-misc supplies conditional_data_member_t and XSTD_NO_UNIQUE_ADDRESS, which contiguous_bit_container uses to carry a run-time width without paying for it under a compile-time one, and specialization_of_TN, the concept the adaptors name their storage by.
 find_package(xstd-misc 0.1.0 CONFIG QUIET)
 if(NOT xstd-misc_FOUND)
     include(FetchContent)
@@ -43,7 +43,7 @@ if(NOT xstd-misc_FOUND)
         xstd-misc
         GIT_REPOSITORY https://github.com/rhalbersma/xstd-misc.git
         # Pinned to a commit on xstd-misc's main, not a branch head; move consumption.yml's dependency_repos with it.
-        GIT_TAG 64c9735cce92be35a174cb56d9df253da5275ff0
+        GIT_TAG 3290869eadbfb268fa270dd28b11d7c14a1c5191
     )
     FetchContent_MakeAvailable(xstd-misc)
 endif()

@@ -6,14 +6,15 @@
 #ifndef XSTD_BITS_BIT_SUBSPAN_HPP
 #define XSTD_BITS_BIT_SUBSPAN_HPP
 
-#include <xstd/bits/detail/contiguous_bit_container.hpp> // specialization_of_contiguous_bit_container
+#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/ownership.hpp>                       // ownership
 #include <xstd/bits/sequence_adaptor.hpp>                // sequence_adaptor
+#include <xstd/misc/concepts/specialization_of.hpp>      // specialization_of_TN
 
 namespace xstd {
 
 // A window on the sequence reading: what first, last and subspan return on a bit_span or on another window, and never deduced, so an alias suffices.
-template<detail::bits::specialization_of_contiguous_bit_container Bits>
+template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits>
 using bit_subspan = sequence_adaptor<Bits, ownership::refers, true>;
 
 }       // namespace xstd

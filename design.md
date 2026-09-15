@@ -556,6 +556,24 @@ joined, and nothing replaces it: a storage joins by being a `contiguous_bit_cont
 `detail/` and is spelled by the library alone. That is a real narrowing and it is deliberate — the trait was
 paying for a generality with no second instance ([the-interface-line](#the-interface-line)).
 
+**There is no local detector.** `specialization_of_contiguous_bit_container` was a variable template
+specialized on `contiguous_bit_container<Blocks, N>` plus a concept stripping the const, because the obvious
+`is_specialization_of` names a template through a `template<class...>` parameter and this storage is a type
+then a value. xstd-misc now carries one concept per parameter shape, so the adaptors spell the constraint
+where they take the parameter:
+
+```cpp
+template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits, ownership Own>
+class set_adaptor;
+```
+
+Not an alias for it. A local name for a library concept applied to a local template is a second thing to
+learn that says nothing the spelling does not, and it hid which part was general: `TN` is the shape, the
+storage is the argument. `TN` is spelt `<class U, U...>` rather than `<class, auto...>`, which would also
+take a value typed by the type, and it strips the const a view over a const owner names -- the reason the
+local concept existed beside the local trait at all. A constrained parameter is no obstacle:
+`contiguous_block_range Blocks` binds it as a bare `class` would.
+
 ### what-the-readings-share
 
 Almost everything the three readings ask of a storage is the same operation under another name, which is why
