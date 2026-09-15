@@ -1330,8 +1330,8 @@ a window of ours is `contiguous_bit_container::set(pos, len, value)`, a word at 
 one position at a time over a window of anything else; `&=`, `|=`, `^=` and `-=` on a window of ours take a
 source of any shape that reads blocks of the same block type, a window at any other alignment included, reading
 both sides through `word_at` and writing through `set_word` masked to the window ([the-blit](#the-blit)). The
-two must be of one size, and must not overlap short of coinciding, `w ^= w` being fine. A window has no shifts:
-shifting within a window is nobody's counterpart.
+two must be of one size, and must not overlap short of coinciding, `w ^= w` being fine. No sequence has shifts,
+window or whole ([no-shifts-on-a-sequence](#no-shifts-on-a-sequence)).
 
 ### the-range-members
 
@@ -1351,9 +1351,22 @@ the strong exception guarantee comes free, which is what `std::vector::insert_ra
 `subspan` pays for itself here, the head and the tail being exactly windows. In-place block-wise shifting of
 the suffix stays available as a later optimization behind profiling.
 
-`flip()` is `[vector.bool]`'s, a bulk operation like the six operators beside it, so an owner and a whole
+`flip()` is `[vector.bool]`'s, a bulk operation like the four operators beside it, so an owner and a whole
 view have it and a window does not; the static `swap(reference, reference)` is the proxies' own swap under
 the name the standard gives it.
+
+### no-shifts-on-a-sequence
+
+`std::vector<bool>` has no shifts, and neither has any sequence here. The storage keeps `<<=` and `>>=`
+because two of the three readings ask for them and mean different things by them: the bitset reading's is
+`[bitset.members]`'s truncating bit string, and the set reading's translates, `<<=` growing a run-time width
+to hold the result and `>>=` emptying past it. The sequence reading is the one with nothing to add. Worse,
+it already spells moving elements, and spells it the other way round: `operator<<=` is implemented with
+`std::shift_right` and `operator>>=` with `std::shift_left`, because a sequence's low index is its front
+where a bit string's low bit is its right. Exposing the operators would have `v <<= 1` mean the opposite of
+the algorithm whose name the sequence reading already owns. So the four compound operators and `flip()`
+cross to the sequence adaptor and the shifts do not, and `bit_vector` is `[vector.bool]`'s synopsis plus
+five bulk operations rather than seven.
 
 ### the-sequence-contract
 

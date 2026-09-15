@@ -188,11 +188,6 @@ BOOST_AUTO_TEST_CASE(TheBulkOperatorsAreTheStoragesOwn)
         z = x;
         z -= y;
         BOOST_CHECK(z[1] and not z[2]);
-        z = x;
-        z <<= 1;
-        BOOST_CHECK(z[2] and z[3] and not z[1]);
-        z >>= 2;
-        BOOST_CHECK(z[0] and z[1] and not z[2]);
 
         auto c = Storage();
         auto d = Storage();

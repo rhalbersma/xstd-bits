@@ -698,8 +698,7 @@ public:
         constexpr auto operator^=(this auto&& self, sequence_adaptor const& other) noexcept -> auto& requires (not is_window) and requires { self.storage() ^= other.storage(); } { self.storage() ^= other.storage(); return self; }
         constexpr auto operator-=(this auto&& self, sequence_adaptor const& other) noexcept -> auto& requires (not is_window) and requires { self.storage() -= other.storage(); } { self.storage() -= other.storage(); return self; }
 
-        constexpr auto operator<<=(this auto&& self, std::size_t n) noexcept -> auto& requires (not is_window) and requires { self.storage() <<= n; } { self.storage() <<= n; return self; }
-        constexpr auto operator>>=(this auto&& self, std::size_t n) noexcept -> auto& requires (not is_window) and requires { self.storage() >>= n; } { self.storage() >>= n; return self; }
+        // No shifts, at any shape: a shift is the bitset reading's truncating bit string and the set reading's translation, and the sequence reading already spells moving elements std::shift_left and std::shift_right -- in the opposite direction from the operators.
 
         // Bulk on a window of ours, against a source of any shape read by block: a word at a time at either alignment, through block_at and block_at; equal sizes, and no overlap short of coincidence.
         template<class Other> constexpr auto operator&=(this auto&& self, Other const& other) noexcept -> auto& requires is_window and block_writable and blittable<Other> { self.combine(other, [](auto a, auto b) { return static_cast<decltype(a)>(a & b);  }); return self; }

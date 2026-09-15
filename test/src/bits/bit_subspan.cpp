@@ -73,7 +73,7 @@ BOOST_AUTO_TEST_CASE(TheWindowIsTheAdaptorWindowed)
         static_assert(    has_subspan<Sub>);
         static_assert(not has_subspan<Owner>);
 
-        // A view in std::ranges' sense and borrowed like span; like span it neither compares nor hashes. It fills and takes the four bulk operators a word at a time, and has no shifts.
+        // A view in std::ranges' sense and borrowed like span; like span it neither compares nor hashes. It fills and takes the four bulk operators a word at a time; no sequence has shifts, window or whole.
         static_assert(std::ranges::view<Sub>);
         static_assert(std::ranges::borrowed_range<Sub>);
         static_assert(std::ranges::random_access_range<Sub>);
@@ -84,7 +84,7 @@ BOOST_AUTO_TEST_CASE(TheWindowIsTheAdaptorWindowed)
         static_assert(not has_shifts<Sub>);
         static_assert(    can_fill<Span>);
         static_assert(    has_bulk_ops<Span>);
-        static_assert(    has_shifts<Span>);
+        static_assert(not has_shifts<Span>);
 }
 
 // A window sees its positions and nothing beyond them, reading them from zero.
