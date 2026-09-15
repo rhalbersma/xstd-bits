@@ -535,8 +535,10 @@ public:
         {
                 for (auto i = 0UZ; first != last; ++first, ++i) {
                         assert(i < result.num_blocks());
-                        result.m_bits.set_block(i, *first);
+                        result.m_bits.block(i) = *first;
                 }
+                // Once, where a setter would have erased after every block.
+                result.m_bits.erase_unused();
         }
 
         // Growth, boost's members, on storage that spells them alike: detected on the storage rather than reconciled by the trait.

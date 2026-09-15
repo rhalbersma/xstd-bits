@@ -123,12 +123,6 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(EveryModelAnswersTheBitwiseOperators, C, Models)
         BOOST_CHECK(b == a);
         b ^= a;
         BOOST_CHECK(b.none());
-
-        b = a;
-        b <<= 1;
-        BOOST_CHECK(b.test(4));
-        b >>= 1;
-        BOOST_CHECK(b == a);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

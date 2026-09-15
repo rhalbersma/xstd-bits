@@ -263,15 +263,18 @@ public:
                 {
                         auto& a = fresh_x();
                         for (auto i = 0UZ; i < m_x.num_blocks(); ++i) {
-                                a.set_block(i, m_x.block(i));
+                                a.block(i) = m_x.block(i);
                         }
+                        a.erase_unused();
                         disagree(a == m_x, true);
                 }
                 {
                         auto& a = fresh_x();
                         for (auto i = 0UZ; i < m_x.num_blocks(); ++i) {
-                                a.set_block(i, static_cast<BB::block_type>(-1));
+                                a.block(i) = static_cast<BB::block_type>(-1);
                         }
+                        // The writer restores the invariant, which is what the reference hands it rather than doing after every block.
+                        a.erase_unused();
                         disagree(a.all(), true);
                         unequal(a.count(), m_n);
                 }

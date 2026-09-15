@@ -185,14 +185,19 @@ BOOST_AUTO_TEST_CASE(TheBulkOperatorsAreTheStoragesOwn)
         z = x;
         z ^= y;
         BOOST_CHECK(z[1] and not z[2] and z[3]);
-        z = x;
-        z -= y;
-        BOOST_CHECK(z[1] and not z[2]);
-        z = x;
-        z <<= 1;
-        BOOST_CHECK(z[2] and z[3] and not z[1]);
-        z >>= 2;
-        BOOST_CHECK(z[0] and z[1] and not z[2]);
+
+        // The binary forms, each its compound over a copy, and the complement as flip()'s value.
+        auto t = x; t &= y;
+        BOOST_CHECK((x & y) == t);
+        t = x; t |= y;
+        BOOST_CHECK((x | y) == t);
+        t = x; t ^= y;
+        BOOST_CHECK((x ^ y) == t);
+        t = x; t.flip();
+        BOOST_CHECK((~x) == t);
+        BOOST_CHECK(x[1] and x[2]);                                     // and none of them wrote through
+        BOOST_CHECK((~~x) == x);
+        BOOST_CHECK(((x & y) | (x ^ y)) == (x | y));                    // one identity, over packed bits
 
         auto c = Storage();
         auto d = Storage();

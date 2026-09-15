@@ -37,7 +37,7 @@ using Sub    = xstd::bit_subspan<Blocks>;
 // Dependent, so an absent member is a substitution failure rather than a hard error.
 template<class X> constexpr bool has_subspan  = requires (X x) { x.subspan(0UZ); x.first(0UZ); x.last(0UZ); };
 template<class X> constexpr bool can_fill     = requires (X x) { x.fill(true); };
-template<class X> constexpr bool has_bulk_ops = requires (X x) { x &= x; x |= x; x ^= x; x -= x; };
+template<class X> constexpr bool has_bulk_ops = requires (X x) { x &= x; x |= x; x ^= x; };
 template<class X> constexpr bool has_shifts   = requires (X x) { x <<= 1UZ; x >>= 1UZ; };
 template<class W, class O> constexpr bool combinable = requires (W w, O const& o) { w &= o; };
 
@@ -73,7 +73,7 @@ BOOST_AUTO_TEST_CASE(TheWindowIsTheAdaptorWindowed)
         static_assert(    has_subspan<Sub>);
         static_assert(not has_subspan<Owner>);
 
-        // A view in std::ranges' sense and borrowed like span; like span it neither compares nor hashes. It fills and takes the four bulk operators a word at a time, and has no shifts.
+        // A view in std::ranges' sense and borrowed like span; like span it neither compares nor hashes. It fills and takes the four bulk operators a word at a time; no sequence has shifts, window or whole.
         static_assert(std::ranges::view<Sub>);
         static_assert(std::ranges::borrowed_range<Sub>);
         static_assert(std::ranges::random_access_range<Sub>);
@@ -84,7 +84,7 @@ BOOST_AUTO_TEST_CASE(TheWindowIsTheAdaptorWindowed)
         static_assert(not has_shifts<Sub>);
         static_assert(    can_fill<Span>);
         static_assert(    has_bulk_ops<Span>);
-        static_assert(    has_shifts<Span>);
+        static_assert(not has_shifts<Span>);
 }
 
 // A window sees its positions and nothing beyond them, reading them from zero.
@@ -185,8 +185,7 @@ auto model_op(int op, bool a, bool b)
         switch (op) {
         case 0:  return a and b;
         case 1:  return a or b;
-        case 2:  return a != b;
-        default: return a and not b;
+        default: return a != b;
         }
 }
 
@@ -196,8 +195,7 @@ auto window_op(int op, auto const& w, auto const& o)
         switch (op) {
         case 0:  w &= o; break;
         case 1:  w |= o; break;
-        case 2:  w ^= o; break;
-        default: w -= o; break;
+        default: w ^= o; break;
         }
 }
 
@@ -219,10 +217,10 @@ auto check_combination(int op, std::size_t off, std::size_t other, std::size_t c
 
 }       // namespace
 
-// The four bulk operators on a window of ours against a window at any other alignment: word by word, masked to the window; a source of another block type is not a source.
+// The three bulk operators on a window of ours against a window at any other alignment: word by word, masked to the window; a source of another block type is not a source.
 BOOST_AUTO_TEST_CASE(AWindowCombinesWithAnotherAtAnyAlignment)
 {
-        for (auto const op : { 0, 1, 2, 3 }) {
+        for (auto const op : { 0, 1, 2 }) {
                 for (auto const off : { 0UZ, 3UZ, 8UZ, 13UZ }) {
                         for (auto const other : { 0UZ, 1UZ, 5UZ, 8UZ, 17UZ }) {
                                 for (auto const count : { 0UZ, 1UZ, 7UZ, 8UZ, 9UZ, 20UZ }) {
