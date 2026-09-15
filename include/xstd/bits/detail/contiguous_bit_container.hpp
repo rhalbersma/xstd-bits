@@ -308,7 +308,7 @@ public:
         }
 
         // The write side of word_at, masked: the bits of value under mask land at [n, n + bits_per_block), split over two blocks where n is not aligned, and the tail stays clear.
-        // The word-level primitive, which writes what the mask selects and restores nothing: libstdc++ splits the same way, _Base_bitset knowing only its word count and bitset<_Nb> calling _M_do_sanitize once after. Here one type knows both, so the mask is required to stay inside size() and the ranged forms below erase once per call rather than once per word.
+        // The word-level primitive, which writes what the mask selects and restores nothing: the mask is required to stay inside size(), so the padding above it is untouched and the ranged forms below need no erase at all. libstdc++ splits the same way, _Base_bitset knowing only its word count and bitset<_Nb> calling _M_do_sanitize once after; here one type knows both, and the erase is left to the four operations that can actually dirty the padding -- set_block, operator<<=, flip() and resize.
         constexpr auto set_word(std::size_t n, block_type value, block_type mask) noexcept
                 -> void
         {
@@ -334,7 +334,6 @@ public:
         {
                 assert(n + len <= size());
                 for_each_word(n, len, [&](std::size_t pos, block_type mask) -> void { set_word(pos, value ? ones : zero, mask); });
-                erase_unused();
                 return *this;
         }
 
@@ -343,7 +342,6 @@ public:
         {
                 assert(n + len <= size());
                 for_each_word(n, len, [&](std::size_t pos, block_type mask) -> void { set_word(pos, static_cast<block_type>(~word_at(pos)), mask); });
-                erase_unused();
                 return *this;
         }
 
