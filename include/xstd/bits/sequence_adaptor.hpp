@@ -863,6 +863,7 @@ struct owned_storage<sequence_adaptor<Bits, ownership::owns, false>>
         static constexpr auto reads = reading::sequence;
 };
 
+// NOLINTBEGIN(readability-redundant-parentheses): a call is no primary expression, so the requires-clause needs the parentheses the check reports
 // Bulk logical not, the value-returning counterpart of flip(): a sequence's width is its own size(), so unlike the set reading's complement this reads no width as value.
 template<class Bits, ownership Own, bool Windowed> [[nodiscard]] constexpr auto operator~(sequence_adaptor<Bits, Own, Windowed> const& lhs) noexcept -> sequence_adaptor<Bits, Own, Windowed> requires (owns(Own)) and requires (sequence_adaptor<Bits, Own, Windowed> c) { c.flip(); } { auto nrv = lhs; nrv.flip(); return nrv; }
 
@@ -870,6 +871,8 @@ template<class Bits, ownership Own, bool Windowed> [[nodiscard]] constexpr auto 
 template<class Bits, ownership Own, bool Windowed> [[nodiscard]] constexpr auto operator&(sequence_adaptor<Bits, Own, Windowed> const& lhs, sequence_adaptor<Bits, Own, Windowed> const& rhs) noexcept(noexcept(std::declval<sequence_adaptor<Bits, Own, Windowed>&>() &= rhs)) -> sequence_adaptor<Bits, Own, Windowed> requires (owns(Own)) and requires (sequence_adaptor<Bits, Own, Windowed> c) { c &= c; } { auto nrv = lhs; nrv &= rhs; return nrv; }
 template<class Bits, ownership Own, bool Windowed> [[nodiscard]] constexpr auto operator|(sequence_adaptor<Bits, Own, Windowed> const& lhs, sequence_adaptor<Bits, Own, Windowed> const& rhs) noexcept(noexcept(std::declval<sequence_adaptor<Bits, Own, Windowed>&>() |= rhs)) -> sequence_adaptor<Bits, Own, Windowed> requires (owns(Own)) and requires (sequence_adaptor<Bits, Own, Windowed> c) { c |= c; } { auto nrv = lhs; nrv |= rhs; return nrv; }
 template<class Bits, ownership Own, bool Windowed> [[nodiscard]] constexpr auto operator^(sequence_adaptor<Bits, Own, Windowed> const& lhs, sequence_adaptor<Bits, Own, Windowed> const& rhs) noexcept(noexcept(std::declval<sequence_adaptor<Bits, Own, Windowed>&>() ^= rhs)) -> sequence_adaptor<Bits, Own, Windowed> requires (owns(Own)) and requires (sequence_adaptor<Bits, Own, Windowed> c) { c ^= c; } { auto nrv = lhs; nrv ^= rhs; return nrv; }
+
+// NOLINTEND(readability-redundant-parentheses)
 
 // [vector.erasure], over the owner's own erase: the proxies move and swap, so remove_if runs unchanged over the packed bits.
 template<class Bits, ownership Own, bool Windowed, class Pred>
