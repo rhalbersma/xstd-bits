@@ -274,7 +274,7 @@ public:
                 }
         }
 
-        // The block, behind the trait's block entry; padding above size() stays zero, which is what makes whole-block comparison mean anything.
+        // The block, and NOT operator[]: a subscript on a bit container means a bit, which is what std::bitset and vector<bool> both spell that way and what test() answers here. Naming the block access block() keeps c[n] unclaimed rather than making it mean something no other bit container means by it.
         [[nodiscard]] constexpr auto block(std::size_t i) const noexcept
                 -> block_type
         {
@@ -282,13 +282,24 @@ public:
                 return m_blocks[i];
         }
 
-        // The write side of block(), and no trait entry.
-        constexpr auto set_block(std::size_t i, block_type value) noexcept
-                -> void
+        // The write side, a reference rather than a setter: a caller writing blocks writes them, and restores the invariant itself with erase_unused when it is done. A setter could only erase after every block, which is once per block where once per loop will do.
+        [[nodiscard]] constexpr auto block(std::size_t i) noexcept
+                -> block_type&
         {
                 assert(i < num_blocks());
-                m_blocks[i] = value;
-                erase_unused();
+                return m_blocks[i];
+        }
+
+        // Public, because restoring the invariant belongs to whoever wrote the blocks that broke it.
+        constexpr auto erase_unused() noexcept
+                -> void
+        {
+                if constexpr (has_static_size and static_has_unused_bits) {
+                        m_blocks[static_last_block] &= static_used_bits;
+                        assert(not detail::bits::intersects(m_blocks[static_last_block], static_unused_bits));
+                } else if constexpr (not has_static_size) {
+                        m_blocks[last_block()] &= used_bits();
+                }
         }
 
         // A word at any position, aligned or not: the bits [n, n + bits_per_block), the clear tail and nothing beyond the last block.
@@ -1208,16 +1219,6 @@ private:
                 return { std::forward<decltype(self)>(self).m_blocks[index], shl(unit, offset) };
         }
 
-        constexpr auto erase_unused() noexcept
-                -> void
-        {
-                if constexpr (has_static_size and static_has_unused_bits) {
-                        m_blocks[static_last_block] &= static_used_bits;
-                        assert(not detail::bits::intersects(m_blocks[static_last_block], static_unused_bits));
-                } else if constexpr (not has_static_size) {
-                        m_blocks[last_block()] &= used_bits();
-                }
-        }
 };
 
 // Nominal, never structural: a storage is ours because this says so, not because its members answer.
