@@ -500,6 +500,16 @@ namespace {
         return s;
 }
 
+
+// The width is capacity, and an OWNING set reports max_size() as everything it could grow to rather than what it
+// currently spans ([design.md#max-size-is-the-bits]). A view over the same storage reports the storage's own size,
+// which is the width -- the only way to see it from outside, and the growth rule below is worth seeing.
+[[nodiscard]] auto width_of(xstd::bit_set& s)
+        -> std::size_t
+{
+        return xstd::set_adaptor<xstd::detail::bits::contiguous_bit_vector<std::size_t>, xstd::ownership::refers>(s).max_size();
+}
+
 }       // namespace
 
 BOOST_AUTO_TEST_CASE(EqualityAcrossWidthsComparesBlocks)
@@ -590,6 +600,66 @@ BOOST_AUTO_TEST_CASE(OrderingAcrossWidthsComparesBlocks)
         // And the ordering agrees with the sets' own, which is what it is defined to be.
         BOOST_CHECK(narrow({ 1UZ, 5UZ }) < wide({ 1UZ, 7UZ }));
         BOOST_CHECK(wide({ 1UZ }) < narrow({ 1UZ, 5UZ }));
+}
+
+// The four compound operators across two widths, which the storage answers blockwise rather than the adaptor
+// unpacking into elements. Intersection and difference never widen, because a position the other lacks is a
+// position it does not hold. Union and symmetric difference widen exactly as far as the elements require -- one
+// past the other's LARGEST, where inserting them one at a time arrives, and not to the other's width, which may
+// be far above anything it holds. [design.md#the-set-operations-across-widths]
+BOOST_AUTO_TEST_CASE(TheCompoundOperatorsAcrossWidthsWorkOnBlocks)
+{
+        auto const narrow = grown_to(60UZ,  { 1UZ, 5UZ, 59UZ });        // width 61
+        auto const wide   = grown_to(300UZ, { 5UZ, 59UZ, 280UZ });      // width 301
+
+        // Intersection keeps the shared positions and stays at its own width, the wider operand's 280 having
+        // nowhere to land and no claim to widen anything.
+        auto a = narrow;
+        a &= wide;
+        BOOST_CHECK(a == grown_to(60UZ, { 5UZ, 59UZ }));
+        BOOST_CHECK_EQUAL(width_of(a), 61UZ);
+
+        // The same the other way round: the narrow operand's blocks read as zero above its width, so 280 goes.
+        auto b = wide;
+        b &= narrow;
+        BOOST_CHECK(b == grown_to(60UZ, { 5UZ, 59UZ }));
+        BOOST_CHECK_EQUAL(width_of(b), 301UZ);
+
+        // Difference never widens either, and a position above this width is one it cannot hold to begin with.
+        auto c = narrow;
+        c -= wide;
+        BOOST_CHECK(c == grown_to(60UZ, { 1UZ }));
+        BOOST_CHECK_EQUAL(width_of(c), 61UZ);
+
+        // Union widens to one past 280 -- not to 301, the wider operand's own width.
+        auto d = narrow;
+        d |= wide;
+        BOOST_CHECK(d == grown_to(280UZ, { 1UZ, 5UZ, 59UZ, 280UZ }));
+        BOOST_CHECK_EQUAL(width_of(d), 281UZ);
+
+        // Symmetric difference widens by the same rule, and cancels what the two share.
+        auto e = narrow;
+        e ^= wide;
+        BOOST_CHECK(e == grown_to(280UZ, { 1UZ, 280UZ }));
+        BOOST_CHECK_EQUAL(width_of(e), 281UZ);
+
+        // A wider operand holding nothing above this width widens nothing, however wide it is.
+        auto f = narrow;
+        f |= grown_to(300UZ, { 7UZ });
+        BOOST_CHECK(f == grown_to(60UZ, { 1UZ, 5UZ, 7UZ, 59UZ }));
+        BOOST_CHECK_EQUAL(width_of(f), 61UZ);
+
+        // An empty operand is the same statement with nothing to look at, and must not widen either.
+        auto g = narrow;
+        g |= grown_to(300UZ, {});
+        BOOST_CHECK(g == narrow);
+        BOOST_CHECK_EQUAL(width_of(g), 61UZ);
+
+        // Two widths sharing a block count still differ, so this is the width-crossing arm and not the storage's.
+        auto h = grown_to(60UZ, { 1UZ, 5UZ });
+        h |= grown_to(63UZ, { 7UZ });
+        BOOST_CHECK(h == grown_to(60UZ, { 1UZ, 5UZ, 7UZ }));
+        BOOST_CHECK_EQUAL(width_of(h), 61UZ);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

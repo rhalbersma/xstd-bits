@@ -720,7 +720,7 @@ makes the two comparable, both exiting at once.
 pair costs `n + 1` block reads. And when the values are equal `any_above` is never reached at all, since
 `first_difference` already settles it.
 
-**The bitset reading needs neither piece.** The bit string, most significant position first, **is** the blocks
+**The bitset reading needs neither piece, and its width-crossing arm is a third shape again.** The bit string, most significant position first, **is** the blocks
 from the top block down, with the unused tail kept clear, so it is the one reading whose order is plain
 lexicographic over words — and plain lexicographic over words is `std::lexicographical_compare_three_way` over
 the blocks reversed. `string_three_way` is that call and nothing else: no loop of its own, and no arm for
@@ -730,6 +730,17 @@ one-block width is the algorithm's first step.
 Handing it to the standard algorithm costs nothing at the widths the hand-rolled version had arms for. GCC 15
 at `-O2`: `xstd::bitset<64>` is one `cmpq`, and `xstd::bitset<128>` is the same two comparisons fully unrolled,
 top block first.
+
+Two widths it answers by `top_aligned_three_way`, which is boost's order and **cannot pad**. The other two
+readings run from position 0 upward, so a block the narrower storage does not have sits *above* its positions
+and reads as the zero the invariant already keeps there. The bit string runs from the top down, so what the
+wider one holds outside the shared window sits *below* the comparison rather than above it, and is never
+consulted at all: the top `min(size())` positions of each are paired from the top, read as words at either
+one's own alignment through `word_at`, and only if that window ties does the shorter one lose for being
+shorter. That walk lived in `bitset_adaptor`, which meant the one reading whose adaptor could not simply call
+its storage; it now sits beside `string_three_way` and is reached from it, so all three orderings are total and
+none of the three adaptors branches on width. A pure relocation, and measured as one: identical answers over
+20,172 unequal-width comparisons.
 
 **The prefix clause is not removable.** Set order is not plain lexicographic over words under *any*
 comparator. At `digits = 4`, `A = {1}` and `B = {5}` differ in word 0, where `A₀ = {1}` and `B₀ = {}`; a
@@ -1726,16 +1737,67 @@ adaptor calling it. Measured as above, at two
 different run-time widths: 10.62us to 0.09us over equal sets, and 11.03us to 0.06us where one set is a proper
 prefix of the other.
 
-Still element by element: `|=` `&=` `^=` `-=` insert and erase
-one position at a time, `insert` growing the narrower left operand as it grows for any key. These mutate and may
-have to grow, which is why they were left as they are rather than swept along with the four that only read. The shifts translate the
-set, so `<<=` grows the width to hold the result and `>>=` empties past it. Hashing appends the positions and
-the count at a run-time width and the bits at a static one, where equal sets share a width
-([the-hashing-invariant](#the-hashing-invariant)).
+`|=` `&=` `^=` `-=` are blockwise too, and
+[the-set-operations-across-widths](#the-set-operations-across-widths) is what it took to mutate rather than
+merely read. The shifts translate the set, so `<<=` grows the width to hold the result and `>>=` empties past
+it. Hashing appends the positions and the count at a run-time width and the bits at a static one, where equal
+sets share a width ([the-hashing-invariant](#the-hashing-invariant)).
 
-The element walks are a fallback and priced as one: an operation at mismatched widths costs the elements
-rather than the blocks. A block-wise answer over the common prefix is an optimization the storage could
-offer later; nothing in the adaptor's contract would change.
+### the-set-operations-across-widths
+
+The four compound operators were the last element walks, and they were left for last because they mutate and
+two of them may have to **grow** -- which is a question the four read-only operations never had to answer.
+
+Measured at two run-time widths, 4096 against 4000, dense:
+
+| | before | after |
+| --- | --- | --- |
+| `&=` | 12.12us | 0.22us |
+| `\|=` | 9.41us | 0.22us |
+| `^=` | 9.58us | 0.22us |
+| `-=` | 10.27us | 0.22us |
+
+**They keep the operator spelling**, and that is the point worth stating, because `set_equal` and
+`set_three_way` do not. A name is owed where the readings genuinely *disagree*: three orderings over one
+storage, and two equalities ([two-readings-disagree](#two-readings-disagree)). `&=` `|=` `^=` `-=` are not
+that. All three readings mean the same bitwise thing by them, and the only difference was that the storage's
+operators stated a precondition of equal widths where the set reading wanted an answer. A precondition is not
+a second meaning: widening the operator to answer where it used to assert takes nothing away from the readings
+that never asked, since what they passed was always equal-width. So the operators themselves became total,
+no new names, and `same_width` -- which existed only to choose between the storage's operator and an element
+walk -- is gone.
+
+What the storage's operator deliberately does *not* do is grow. Growth is the set reading's rule about
+capacity, so it lives with the reading that has it: `set_adaptor`'s `|=` and `^=` call `grow_to_admit` and then
+the operator, and its `&=` and `-=` are the operator alone. That is the adaptor adding a guard, which is all an
+adaptor should be doing; the operator stays reading-neutral, padding with the zero the invariant already keeps
+and never widening what it was handed.
+
+**Intersection and difference never widen.** A position the other lacks is a position it does not hold, so the
+missing blocks read as the zero they already are and the result fits where it already sat. Both only ever
+*clear* bits, so the invariant that padding above `size()` is clear survives with no `erase_unused` to restore
+it.
+
+**Union and symmetric difference do widen, and the target is not the obvious one.** This is the part that is
+the set reading's alone, and the reason `grow_to_admit` sits at the call rather than inside the operator.
+Growing to the other operand's `size()` would be wrong. `growing_insert(n)` resizes to `n + 1`, so inserting the other's elements one
+at a time arrives at one past its **largest element** -- and a storage far wider than anything it holds must not
+drag this one up with it. A 301-wide operand holding nothing above 7 widens a 61-wide set not at all; the same
+operand holding 280 widens it to 281, never to 301. `grow_to_admit` is that rule and nothing else, and it
+returns early on an empty operand, where there is no largest element to ask for and `exclusive_find_prev` would
+assert.
+
+Each operator keeps an equal-width fast path: at a static width that is the whole function, the unrolled one-
+and two-block arms included, and at a run-time width it skips a per-block bound check. `grow_to_admit` returns
+at once on an empty operand and does nothing at all at a static width, where there is neither anything to widen
+nor another width to meet. Measured at 4096 against 4096, the equal-width case is unchanged.
+
+**The width is the part that needed a way to see it.** An owning set reports `max_size()` as everything it could
+grow to rather than what it currently spans ([max-size-is-the-bits](#max-size-is-the-bits)), so the growth rule
+above is invisible from the owner. A *view* over the same storage reports the storage's own `size()`, which is
+the width, and that is what the test asserts through. The first differential run over 577,600 width pairs
+compared `max_size()` against `max_size()` and so proved only the elements; the width claims it appeared to
+check were vacuous on both sides.
 
 
 ### an-opinionated-reimagining

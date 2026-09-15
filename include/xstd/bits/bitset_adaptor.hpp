@@ -444,15 +444,10 @@ public:
         // A friend rather than the member std::bitset specifies: [class.compare.default]/1 admits either, and since P1185's reversed candidates the two accept the same mixed comparisons against the implicit unsigned long long. A namespace-scope template would not, deduction declining that conversion on both sides. Defaulted, the storage being the one member. [design.md#the-comparison-is-a-hidden-friend]
         [[nodiscard]] friend constexpr auto operator==(bitset_adaptor const& lhs, bitset_adaptor const& rhs) noexcept -> bool = default;
 
-        // The bit string's order, most significant position first, which is boost's: the storage's entry at equal widths, and boost's own walk over the top min(size()) positions with the shorter one first otherwise. [design.md#the-ordering-invariant]
+        // The bit string's order, most significant position first, which is boost's: the storage's entry, total across widths as the other two readings' are, so there is no width for the adaptor to branch on. [design.md#the-ordering-invariant]
         [[nodiscard]] friend constexpr auto operator<=>(bitset_adaptor const& lhs, bitset_adaptor const& rhs) noexcept
                 -> std::strong_ordering
         {
-                if constexpr (not has_static_width) {
-                        if (lhs.size() != rhs.size()) {
-                                return lhs.top_aligned_three_way(rhs);
-                        }
-                }
                 return string_three_way(lhs.m_bits, rhs.m_bits);
         }
 
@@ -638,24 +633,6 @@ private:
                 } else {
                         assert(pos + len <= size());
                 }
-        }
-
-        // boost's unequal-width order, a word at a time: the top min(size()) positions of each paired from the top, read as words at either one's own alignment, then the shorter is less. [design.md#the-blit]
-        [[nodiscard]] constexpr auto top_aligned_three_way(bitset_adaptor const& rhs) const noexcept
-                -> std::strong_ordering
-        {
-                auto const m = std::ranges::min(size(), rhs.size());
-                auto const lhs_start = size() - m;
-                auto const rhs_start = rhs.size() - m;
-                for (auto k = (m + bits_per_block - 1UZ) / bits_per_block; k-- != 0UZ;) {
-                        auto const lhs_word = m_bits.word_at(lhs_start + (k * bits_per_block));
-                        auto const rhs_word = rhs.m_bits.word_at(rhs_start + (k * bits_per_block));
-                        if (auto const cmp = lhs_word <=> rhs_word; cmp != std::strong_ordering::equal) {
-                                return cmp;
-                        }
-                }
-                // The widths differ, which is how this walk was reached, so equal is not an answer here.
-                return size() < rhs.size() ? std::strong_ordering::less : std::strong_ordering::greater;
         }
 
         constexpr auto from_ullong(unsigned long long val) noexcept

@@ -433,50 +433,33 @@ public:
 
         constexpr auto complement(this auto&& self) noexcept -> void requires requires { self.storage().flip(); } { self.storage().flip(); }
 
-        // Bulk, on the storage's own spelling: what every storage agrees on is required of it, not reconciled. [design.md#what-the-readings-share] [design.md#width-is-capacity]
+        // Bulk, on the storage's own spelling, which is total across two widths. The set reading adds one thing the
+        // storage's operator deliberately does not: union and symmetric difference GROW, because for a set the width is
+        // capacity and an element the other holds above this width is still an element. Intersection and difference
+        // never widen, so they are the operator alone. [design.md#what-the-readings-share] [design.md#width-is-capacity]
         constexpr auto operator&=(this auto&& self, set_adaptor const& other) noexcept
                 -> auto&
                 requires requires { self.storage() &= other.storage(); }
         {
-                if (same_width(self, other)) {
-                        self.storage() &= other.storage();
-                } else {
-                        for (auto const x : self) {
-                                if (not other.contains(x)) {
-                                        self.erase(x);
-                                }
-                        }
-                }
+                self.storage() &= other.storage();
                 return self;
         }
 
         constexpr auto operator|=(this auto&& self, set_adaptor const& other) noexcept(has_static_width)
                 -> auto&
-                requires requires { self.storage() |= other.storage(); }
+                requires requires { self.storage().grow_to_admit(other.storage()); self.storage() |= other.storage(); }
         {
-                if (same_width(self, other)) {
-                        self.storage() |= other.storage();
-                } else {
-                        for (auto const x : other) {
-                                self.insert(x);
-                        }
-                }
+                self.storage().grow_to_admit(other.storage());
+                self.storage() |= other.storage();
                 return self;
         }
 
         constexpr auto operator^=(this auto&& self, set_adaptor const& other) noexcept(has_static_width)
                 -> auto&
-                requires requires { self.storage() ^= other.storage(); }
+                requires requires { self.storage().grow_to_admit(other.storage()); self.storage() ^= other.storage(); }
         {
-                if (same_width(self, other)) {
-                        self.storage() ^= other.storage();
-                } else {
-                        for (auto const x : other) {
-                                if (self.erase(x) == 0UZ) {
-                                        self.insert(x);
-                                }
-                        }
-                }
+                self.storage().grow_to_admit(other.storage());
+                self.storage() ^= other.storage();
                 return self;
         }
 
@@ -484,13 +467,7 @@ public:
                 -> auto&
                 requires requires { self.storage() -= other.storage(); }
         {
-                if (same_width(self, other)) {
-                        self.storage() -= other.storage();
-                } else {
-                        for (auto const x : other) {
-                                self.erase(x);
-                        }
-                }
+                self.storage() -= other.storage();
                 return self;
         }
 
@@ -590,17 +567,6 @@ public:
         }
 
 private:
-        // Constantly true at a static width, so every arm above folds to the storage's own. [design.md#width-is-capacity]
-        [[nodiscard]] static constexpr auto same_width(set_adaptor const& x [[maybe_unused]], set_adaptor const& y [[maybe_unused]]) noexcept
-                -> bool
-        {
-                if constexpr (has_static_width) {
-                        return true;
-                } else {
-                        return x.storage().size() == y.storage().size();
-                }
-        }
-
         // growing_insert reports whether the bit was new, so the contains() pass that asked it first is gone: one walk
         // where there were two, and the same answer, an out-of-range key growing the storage to admit it. [design.md#total-lookups-on-the-container]
         constexpr auto do_insert(this auto&& self, value_type x)

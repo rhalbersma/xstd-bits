@@ -235,7 +235,11 @@ public:
         [[nodiscard]] friend constexpr auto string_three_way(contiguous_bit_container const& x, contiguous_bit_container const& y) noexcept
                 -> std::strong_ordering
         {
-                assert(x.size() == y.size());
+                if constexpr (not has_static_size) {
+                        if (x.size() != y.size()) {
+                                return x.top_aligned_three_way(y);
+                        }
+                }
                 return std::lexicographical_compare_three_way(
                         std::ranges::rbegin(x.m_blocks), std::ranges::rend(x.m_blocks),
                         std::ranges::rbegin(y.m_blocks), std::ranges::rend(y.m_blocks)
@@ -481,16 +485,27 @@ public:
                 }
         }
 
+        // Total across two widths, and reading-neutral: the blocks the other storage does not have read as the zero the
+        // invariant already keeps above its size(), so the result is this storage's own width restricted or left alone.
+        // Growing is NOT here -- that is the set reading's rule about capacity, and belongs to the reading that has it.
+        // [design.md#width-is-capacity] [design.md#the-set-operations-across-widths]
         constexpr auto operator&=(contiguous_bit_container const& other [[maybe_unused]]) noexcept
                 -> contiguous_bit_container&
         {
-                assert(this->size() == other.size());
                 if constexpr (has_static_size and N > 0 and static_num_blocks == 1) {
                         this->m_blocks[0] &= other.m_blocks[0];
                 } else if constexpr (has_static_size and static_num_blocks == 2) {
                         this->m_blocks[0] &= other.m_blocks[0];
                         this->m_blocks[1] &= other.m_blocks[1];
                 } else if constexpr (not (has_static_size and N == 0)) {
+                        if constexpr (not has_static_size) {
+                                if (this->size() != other.size()) {
+                                        for (auto const i : std::views::iota(0UZ, num_blocks())) {
+                                                this->m_blocks[i] &= other.padded_block(i);
+                                        }
+                                        return *this;
+                                }
+                        }
                         for (auto const i : std::views::iota(0UZ, num_blocks())) {
                                 this->m_blocks[i] &= other.m_blocks[i];
                         }
@@ -498,16 +513,27 @@ public:
                 return *this;
         }
 
+        // Total across two widths, and reading-neutral: the blocks the other storage does not have read as the zero the
+        // invariant already keeps above its size(), so the result is this storage's own width restricted or left alone.
+        // Growing is NOT here -- that is the set reading's rule about capacity, and belongs to the reading that has it.
+        // [design.md#width-is-capacity] [design.md#the-set-operations-across-widths]
         constexpr auto operator|=(contiguous_bit_container const& other [[maybe_unused]]) noexcept
                 -> contiguous_bit_container&
         {
-                assert(this->size() == other.size());
                 if constexpr (has_static_size and N > 0 and static_num_blocks == 1) {
                         this->m_blocks[0] |= other.m_blocks[0];
                 } else if constexpr (has_static_size and static_num_blocks == 2) {
                         this->m_blocks[0] |= other.m_blocks[0];
                         this->m_blocks[1] |= other.m_blocks[1];
                 } else if constexpr (not (has_static_size and N == 0)) {
+                        if constexpr (not has_static_size) {
+                                if (this->size() != other.size()) {
+                                        for (auto const i : std::views::iota(0UZ, num_blocks())) {
+                                                this->m_blocks[i] |= other.padded_block(i);
+                                        }
+                                        return *this;
+                                }
+                        }
                         for (auto const i : std::views::iota(0UZ, num_blocks())) {
                                 this->m_blocks[i] |= other.m_blocks[i];
                         }
@@ -515,16 +541,27 @@ public:
                 return *this;
         }
 
+        // Total across two widths, and reading-neutral: the blocks the other storage does not have read as the zero the
+        // invariant already keeps above its size(), so the result is this storage's own width restricted or left alone.
+        // Growing is NOT here -- that is the set reading's rule about capacity, and belongs to the reading that has it.
+        // [design.md#width-is-capacity] [design.md#the-set-operations-across-widths]
         constexpr auto operator^=(contiguous_bit_container const& other [[maybe_unused]]) noexcept
                 -> contiguous_bit_container&
         {
-                assert(this->size() == other.size());
                 if constexpr (has_static_size and N > 0 and static_num_blocks == 1) {
                         this->m_blocks[0] ^= other.m_blocks[0];
                 } else if constexpr (has_static_size and static_num_blocks == 2) {
                         this->m_blocks[0] ^= other.m_blocks[0];
                         this->m_blocks[1] ^= other.m_blocks[1];
                 } else if constexpr (not (has_static_size and N == 0)) {
+                        if constexpr (not has_static_size) {
+                                if (this->size() != other.size()) {
+                                        for (auto const i : std::views::iota(0UZ, num_blocks())) {
+                                                this->m_blocks[i] ^= other.padded_block(i);
+                                        }
+                                        return *this;
+                                }
+                        }
                         for (auto const i : std::views::iota(0UZ, num_blocks())) {
                                 this->m_blocks[i] ^= other.m_blocks[i];
                         }
@@ -532,16 +569,27 @@ public:
                 return *this;
         }
 
+        // Total across two widths, and reading-neutral: the blocks the other storage does not have read as the zero the
+        // invariant already keeps above its size(), so the result is this storage's own width restricted or left alone.
+        // Growing is NOT here -- that is the set reading's rule about capacity, and belongs to the reading that has it.
+        // [design.md#width-is-capacity] [design.md#the-set-operations-across-widths]
         constexpr auto operator-=(contiguous_bit_container const& other [[maybe_unused]]) noexcept
                 -> contiguous_bit_container&
         {
-                assert(this->size() == other.size());
                 if constexpr (has_static_size and N > 0 and static_num_blocks == 1) {
                         this->m_blocks[0] &= static_cast<block_type>(~other.m_blocks[0]);
                 } else if constexpr (has_static_size and static_num_blocks == 2) {
                         this->m_blocks[0] &= static_cast<block_type>(~other.m_blocks[0]);
                         this->m_blocks[1] &= static_cast<block_type>(~other.m_blocks[1]);
                 } else if constexpr (not (has_static_size and N == 0)) {
+                        if constexpr (not has_static_size) {
+                                if (this->size() != other.size()) {
+                                        for (auto const i : std::views::iota(0UZ, num_blocks())) {
+                                                this->m_blocks[i] &= static_cast<block_type>(~other.padded_block(i));
+                                        }
+                                        return *this;
+                                }
+                        }
                         for (auto const i : std::views::iota(0UZ, num_blocks())) {
                                 this->m_blocks[i] &= static_cast<block_type>(~other.m_blocks[i]);
                         }
@@ -672,6 +720,22 @@ public:
                 m_blocks.resize(blocks_for(n), value ? ones : zero);
                 m_size = n;
                 erase_unused();
+        }
+
+        // Widen just enough to hold every element the other has, and not at all when it has none above this width. Its
+        // largest element, not its size(), is what the growing insert of each in turn would have reached. A static width
+        // has nothing to widen and no other width to meet, so there the whole thing is nothing. [design.md#width-is-capacity]
+        constexpr auto grow_to_admit(contiguous_bit_container const& other [[maybe_unused]]) noexcept(has_static_size)
+                -> void
+        {
+                if constexpr (not has_static_size) {
+                        if (not other.any()) {
+                                return;
+                        }
+                        if (auto const n = other.exclusive_find_prev(other.size()) + 1UZ; n > this->size()) {
+                                resize(n);
+                        }
+                }
         }
 
         // Width zero, one block, all of it padding: the same object a default constructor makes. [design.md#default-construction]
@@ -1078,6 +1142,28 @@ private:
                         ? std::strong_ordering::greater
                         : std::strong_ordering::less
                 ;
+        }
+
+        // boost's unequal-width order, a word at a time: the top min(size()) positions of each paired from the top, read
+        // as words at either one's own alignment, then the shorter is less. Unlike the other two readings' width-crossing
+        // arms this cannot pad, the bit string being read from the TOP down: what the wider one holds below the shared
+        // window is not above the narrower one's positions but below them, and is reached only when the window ties.
+        // [design.md#the-blit] [design.md#the-ordering-primitive]
+        [[nodiscard]] constexpr auto top_aligned_three_way(contiguous_bit_container const& other) const noexcept
+                -> std::strong_ordering
+        {
+                auto const m = std::ranges::min(this->size(), other.size());
+                auto const lhs_start = this->size() - m;
+                auto const rhs_start = other.size() - m;
+                for (auto k = (m + bits_per_block - 1UZ) / bits_per_block; k-- != 0UZ;) {
+                        auto const lhs_word = this->word_at(lhs_start + (k * bits_per_block));
+                        auto const rhs_word = other.word_at(rhs_start + (k * bits_per_block));
+                        if (auto const cmp = lhs_word <=> rhs_word; cmp != std::strong_ordering::equal) {
+                                return cmp;
+                        }
+                }
+                // The widths differ, which is how this walk was reached, so equal is not an answer here.
+                return this->size() < other.size() ? std::strong_ordering::less : std::strong_ordering::greater;
         }
 
         // The block straddling index and index + 1: the high one shifted up by L_shift and the low one down by R_shift, spliced into one. [design.md#the-funnel-shift]
