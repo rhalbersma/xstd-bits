@@ -155,29 +155,29 @@ public:
 
         // No operator<=>: contiguous_bit_container is pure storage with no opinion on which reading orders it, so it names all three and picks none. [design.md#two-readings-disagree]
 
-        // The set reading a word at a time: whoever HOLDS the lowest differing position is greater, unless the other holds nothing above it. [design.md#the-ordering-primitive]
         // The set reading's equality, which operator== is not: that one is width first, meaning the sequence reading and dynamic_bitset. Here width is capacity, so two storages holding the same positions are equal whatever their widths. [design.md#width-is-capacity]
-        [[nodiscard]] constexpr auto set_equal(contiguous_bit_container const& other) const noexcept
+        // A hidden friend beside the defaulted operator==, and for the reason the three orderings are: equality is a question about two values and neither is the subject, so x.set_equal(y) spelled a symmetry the operation has and the call did not. [design.md#the-ordering-primitive]
+        [[nodiscard]] friend constexpr auto set_equal(contiguous_bit_container const& x, contiguous_bit_container const& y) noexcept
                 -> bool
         {
                 if constexpr (has_static_size) {
                         // One width, so holding the same positions and being equal are the same statement.
-                        return *this == other;
+                        return x == y;
                 } else {
                         return
                                 std::ranges::all_of(
-                                        std::views::zip(this->m_blocks, other.m_blocks), [](auto&& _) { auto&& [ lhs, rhs ] = _;
+                                        std::views::zip(x.m_blocks, y.m_blocks), [](auto&& _) { auto&& [ lhs, rhs ] = _;
                                         return lhs == rhs;
                                 }) and
-                                (this->num_blocks() < other.num_blocks()
-                                        ? not other.any_block_set(this->num_blocks(), other.num_blocks())
-                                        : not this->any_block_set(other.num_blocks(), this->num_blocks()))
+                                (x.num_blocks() < y.num_blocks()
+                                        ? not y.any_block_set(x.num_blocks(), y.num_blocks())
+                                        : not x.any_block_set(y.num_blocks(), x.num_blocks()))
                         ;
                 }
         }
 
-        // A hidden friend, not a member: an ordering is a question about two values and neither is the subject, so x.set_three_way(y) spelled a symmetry the operation has and the call did not. [design.md#the-ordering-primitive]
-        [[nodiscard]] friend constexpr auto set_three_way(contiguous_bit_container const& x [[maybe_unused]], contiguous_bit_container const& y [[maybe_unused]]) noexcept
+        // A hidden friend, not a member: an ordering is a question about two values and neither is the subject, so x.set_lexicographical_compare_three_way(y) spelled a symmetry the operation has and the call did not. [design.md#the-ordering-primitive]
+        [[nodiscard]] friend constexpr auto set_lexicographical_compare_three_way(contiguous_bit_container const& x [[maybe_unused]], contiguous_bit_container const& y [[maybe_unused]]) noexcept
                 -> std::strong_ordering
         {
                 if constexpr (has_static_size and N == 0) {
@@ -204,7 +204,7 @@ public:
         }
 
         // The sequence reading a word at a time: whoever HOLDS the lowest differing position is greater, position 0 being the sequence's first element. Total across widths as the set reading is, the prefix clause living in the arm that needs it. [design.md#the-ordering-primitive]
-        [[nodiscard]] friend constexpr auto sequence_three_way(contiguous_bit_container const& x [[maybe_unused]], contiguous_bit_container const& y [[maybe_unused]]) noexcept
+        [[nodiscard]] friend constexpr auto sequence_lexicographical_compare_three_way(contiguous_bit_container const& x [[maybe_unused]], contiguous_bit_container const& y [[maybe_unused]]) noexcept
                 -> std::strong_ordering
         {
                 if constexpr (has_static_size and N == 0) {
@@ -232,7 +232,7 @@ public:
         // reversed and there is nothing here to hand-roll. The degenerate widths need no arm of their own: a zero
         // width still holds its one all-padding block, which is clear in both, and a one-block width is the
         // algorithm's first step. [design.md#the-ordering-primitive]
-        [[nodiscard]] friend constexpr auto string_three_way(contiguous_bit_container const& x, contiguous_bit_container const& y) noexcept
+        [[nodiscard]] friend constexpr auto string_lexicographical_compare_three_way(contiguous_bit_container const& x, contiguous_bit_container const& y) noexcept
                 -> std::strong_ordering
         {
                 if constexpr (not has_static_size) {
@@ -1006,7 +1006,7 @@ public:
         [[nodiscard]] constexpr auto is_proper_subset_of(contiguous_bit_container const& other) const noexcept
                 -> bool
         {
-                return is_subset_of(other) and not set_equal(other);
+                return is_subset_of(other) and not set_equal(*this, other);
         }
 
         [[nodiscard]] constexpr auto intersects(contiguous_bit_container const& other [[maybe_unused]]) const noexcept
@@ -1028,6 +1028,21 @@ public:
                                 return detail::bits::intersects(lhs, rhs);
                         });
                 }
+        }
+
+        // A hidden friend beside the member, the pair swap already carries: a meets b exactly when b meets a, so the
+        // symmetric spelling is the honest one, and intersects is to set_intersection what contains is to find -- a
+        // predicate over the free two-range algorithm, not a lookup asked of one value.
+        //
+        // The member stays and does the work, which set_equal's did not have to. Both adaptors carry a MEMBER named
+        // intersects -- boost's spelling, which the bitset reading keeps by the extension rule -- and a member of that
+        // name stops ADL at the call site ([basic.lookup.argdep]/1: ordinary lookup finding a class member ends the
+        // search), so from inside those members the friend is unreachable by any spelling. Measured, not assumed.
+        // [design.md#the-ordering-primitive]
+        [[nodiscard]] friend constexpr auto intersects(contiguous_bit_container const& x, contiguous_bit_container const& y) noexcept
+                -> bool
+        {
+                return x.intersects(y);
         }
 
         // The first block at which two values differ, with that block's xor; equal values answer the last block and a zero xor, every arm alike. [design.md#the-ordering-primitive] [design.md#two-readings-disagree]

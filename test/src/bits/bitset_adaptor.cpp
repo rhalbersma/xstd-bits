@@ -182,6 +182,10 @@ BOOST_AUTO_TEST_CASE(TheExtensionIsThereAtAStaticWidth)
         BOOST_CHECK(not e.is_proper_subset_of(e));
         BOOST_CHECK(not Ours().intersects(d));
 
+        // The symmetric spelling beside boost's member, both orders alike. [design.md#the-ordering-primitive]
+        BOOST_CHECK(intersects(d, e) and intersects(e, d));
+        BOOST_CHECK(not intersects(Ours(), d) and not intersects(d, Ours()));
+
         BOOST_CHECK_EQUAL(d.find_first(), 0UZ);
         BOOST_CHECK_EQUAL(d.find_next(0), 2UZ);
         BOOST_CHECK_EQUAL(d.find_next(2), Ours::npos);

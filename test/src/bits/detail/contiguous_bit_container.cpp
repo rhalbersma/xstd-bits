@@ -176,6 +176,11 @@ public:
                 disagree(m_x.is_subset_of(m_y),        subset);
                 disagree(m_x.is_proper_subset_of(m_y), subset and differs);
                 disagree(m_x.intersects(m_y),          meets);
+
+                // The hidden friend answers the member, and both operand orders answer alike: a meets b exactly when
+                // b meets a, which is why the symmetric spelling exists at all. [design.md#the-ordering-primitive]
+                disagree(intersects(m_x, m_y),         meets);
+                disagree(intersects(m_y, m_x),         meets);
         }
 
         // On packed bits the set and pointwise sequence operations are one instruction, so one model answers both.
@@ -966,17 +971,17 @@ auto disagreements(BB const& empty)
                 for (auto const& y : values) {
                         auto const sx = set_reading(x);
                         auto const sy = set_reading(y);
-                        if (std::lexicographical_compare_three_way(sx.begin(), sx.end(), sy.begin(), sy.end()) != set_three_way(x, y)) {
+                        if (std::lexicographical_compare_three_way(sx.begin(), sx.end(), sy.begin(), sy.end()) != set_lexicographical_compare_three_way(x, y)) {
                                 ++n;
                         }
                         // No comparator: vector<bool>'s proxy converts to bool, which is what makes it three_way_comparable.
                         auto const qx = reference(x);
                         auto const qy = reference(y);
-                        if (std::lexicographical_compare_three_way(qx.begin(), qx.end(), qy.begin(), qy.end()) != sequence_three_way(x, y)) {
+                        if (std::lexicographical_compare_three_way(qx.begin(), qx.end(), qy.begin(), qy.end()) != sequence_lexicographical_compare_three_way(x, y)) {
                                 ++n;
                         }
                         // The bitset reading is the sequence reading traversed from the top, which is the bit string's order.
-                        if (std::lexicographical_compare_three_way(qx.rbegin(), qx.rend(), qy.rbegin(), qy.rend()) != string_three_way(x, y)) {
+                        if (std::lexicographical_compare_three_way(qx.rbegin(), qx.rend(), qy.rbegin(), qy.rend()) != string_lexicographical_compare_three_way(x, y)) {
                                 ++n;
                         }
                 }
@@ -1016,7 +1021,7 @@ BOOST_AUTO_TEST_CASE(TheThreeOrderingsDisagree)
                 for (auto const i : p) { x.set(i); }
                 auto y = T();
                 for (auto const i : q) { y.set(i); }
-                return { set_three_way(x, y), sequence_three_way(x, y), string_three_way(x, y) };
+                return { set_lexicographical_compare_three_way(x, y), sequence_lexicographical_compare_three_way(x, y), string_lexicographical_compare_three_way(x, y) };
         };
 
         // {0} against {1}: [0] < [1]; [1,0] > [0,1]; "01" < "10".
@@ -1042,12 +1047,12 @@ BOOST_AUTO_TEST_CASE(TheSetOrderingPutsAPrefixFirst)
         auto const y = T();
 
         // {} is a prefix of {1}, so it sorts below -- the opposite of what holding the lower position would say.
-        BOOST_CHECK(set_three_way(x, y) == std::strong_ordering::greater);
+        BOOST_CHECK(set_lexicographical_compare_three_way(x, y) == std::strong_ordering::greater);
 
         // And with something above that position, the clause no longer applies.
         auto z = T();
         z.set(8);
-        BOOST_CHECK(set_three_way(x, z) == std::strong_ordering::less);
+        BOOST_CHECK(set_lexicographical_compare_three_way(x, z) == std::strong_ordering::less);
 }
 
 // Dependent, so a storage without an allocator answers false; the alias spells the typedef without a typename, which clang-tidy 22 reads as redundant.

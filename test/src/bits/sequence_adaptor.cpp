@@ -226,7 +226,7 @@ BOOST_AUTO_TEST_CASE(TheOrderingIsTheLexicographicOrderOfTheBools)
         }
 }
 
-// Two sizes compare as the bools do, which is what sequence_three_way asserted instead of answering: the shared
+// Two sizes compare as the bools do, which is what sequence_lexicographical_compare_three_way asserted instead of answering: the shared
 // positions decide, and when they all agree the shorter is a proper prefix of the longer and so less. The widths
 // here cross a block boundary in both directions, so the deciding position lands inside the shared blocks, inside
 // a block only the longer has, and nowhere at all. [design.md#the-ordering-primitive]
