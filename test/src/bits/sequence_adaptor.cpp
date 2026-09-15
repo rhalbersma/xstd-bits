@@ -18,8 +18,8 @@
 #include <cstdint>                                       // uint64_t
 #include <iterator>                                      // reverse_iterator
 #include <limits>                                        // numeric_limits
-#include <ranges>                                        // random_access_range
-#include <stdexcept>                                     // out_of_range
+#include <ranges>                                        // equal, random_access_range
+#include <stdexcept>                                     // length_error, out_of_range
 #include <type_traits>                                   // is_const_v
 #include <utility>                                       // move, pair
 #include <vector>                                        // vector
@@ -265,6 +265,15 @@ BOOST_AUTO_TEST_CASE(GrowthIsTheOwnersOverStorageThatGrows)
         BOOST_CHECK_EQUAL(d.max_size(), xstd::detail::bits::contiguous_bit_vector<std::uint64_t>().max_size());
         BOOST_CHECK_LT(d.max_size(), std::numeric_limits<std::size_t>::max());
         BOOST_CHECK_EQUAL(Owner().max_size(), 100UZ);
+
+        // The fill insert asks for size() + n, an addition over a count the caller names: wrapped it would answer an insertion with a shorter sequence than it started from, so it saturates and the resize refuses it.
+        BOOST_CHECK_THROW(d.insert(d.begin(), std::numeric_limits<std::size_t>::max(), true), std::length_error);
+        BOOST_CHECK_EQUAL(d.size(), 4UZ);
+        BOOST_CHECK(std::ranges::equal(d, std::vector<bool>{ true, true, true, false }));
+
+        // The one a width can hold is unaffected, and lands where it was asked for.
+        d.insert(d.begin(), 2UZ, false);
+        BOOST_CHECK(std::ranges::equal(d, std::vector<bool>{ false, false, true, true, true, false }));
 }
 
 BOOST_AUTO_TEST_CASE(AZeroWidthSequenceIsEmpty)

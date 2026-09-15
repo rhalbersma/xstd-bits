@@ -629,15 +629,16 @@ private:
                 }
         }
 
+        // The same guard over a range, said as a subtraction: pos + len wraps for a pos near the top of size_t, and a wrapped sum is below every width, so the check the range was meant to fail is the one it passes. It is also pos that the diagnostic should name, the sum being the thing that is not a position.
         constexpr auto guard_range(std::size_t pos, std::size_t len) const
                 -> void
         {
                 if constexpr (has_static_width) {
-                        if (pos + len > size()) {
-                                throw out_of_range(pos + len);
+                        if (pos > size() or len > size() - pos) {
+                                throw out_of_range(pos, len);
                         }
                 } else {
-                        assert(pos + len <= size());
+                        assert(pos <= size() and len <= size() - pos);
                 }
         }
 
@@ -723,6 +724,17 @@ private:
                         std::format(
                                 "{}:{}:{}: exception: ‘{}‘: argument ‘pos‘ is out of range [{} >= {}]",
                                 loc.file_name(), loc.line(), loc.column(), loc.function_name(), pos, size()
+                        )
+                );
+        }
+
+        // The ranged form's own, because the single-position message names pos against size() and a range can fail with a pos below it. The sum is prose here, not arithmetic: it is exactly the addition the guard refuses to make.
+        [[nodiscard]] constexpr auto out_of_range(std::size_t pos, std::size_t len, std::source_location const& loc = std::source_location::current()) const
+        {
+                return std::out_of_range(
+                        std::format(
+                                "{}:{}:{}: exception: ‘{}‘: arguments ‘pos‘ and ‘len‘ are out of range [{} + {} > {}]",
+                                loc.file_name(), loc.line(), loc.column(), loc.function_name(), pos, len, size()
                         )
                 );
         }

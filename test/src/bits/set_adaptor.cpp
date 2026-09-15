@@ -19,6 +19,7 @@
 #include <limits>                                     // numeric_limits
 #include <ranges>                                     // bidirectional_range, iota
 #include <set>                                        // set
+#include <stdexcept>                                  // length_error
 #include <vector>                                     // vector
 
 namespace {
@@ -361,6 +362,29 @@ BOOST_AUTO_TEST_CASE(RangedInsertionGrowsADynamicWidth)
                 elementwise.insert(i);
         }
         BOOST_CHECK(ranged == elementwise);
+}
+
+// The two growths the set reading computes by addition, both of them over a size_t the caller names and neither of them bounded by a width. lo + len - 1 and width + n are the sums, and a wrapped one is a width below where the operation then writes.
+BOOST_AUTO_TEST_CASE(TheGrowthsThatComputeAWidthSaturateRatherThanWrap)
+{
+        constexpr auto top = std::numeric_limits<std::size_t>::max();
+
+        // The consecutive tier grows to admit the range's last position, which for an iota_view at the top of size_t is a position there is no width for.
+        auto ranged = xstd::bit_set();
+        BOOST_CHECK_THROW(ranged.insert_range(std::views::iota(top - 2UZ, top)), std::length_error);
+        BOOST_CHECK(ranged.empty());
+
+        // The translation is total over size_t, so the width it asks for is width + n, and past max_size() that is length_error and not a shorter set.
+        auto shifted = xstd::bit_set();
+        shifted.insert(0UZ);
+        BOOST_CHECK_THROW(shifted <<= top, std::length_error);
+        BOOST_CHECK_EQUAL(shifted.size(), 1UZ);
+        BOOST_CHECK(shifted.contains(0UZ));
+
+        // And the translation a width can hold is unaffected.
+        shifted <<= 64UZ;
+        BOOST_CHECK_EQUAL(shifted.size(), 1UZ);
+        BOOST_CHECK(shifted.contains(64UZ));
 }
 
 // for_each is the block-at-a-time walk an iterator cannot be, so what has to be shown is that it answers exactly what iteration answers -- over a storage with block access and over one without, which takes the other arm.

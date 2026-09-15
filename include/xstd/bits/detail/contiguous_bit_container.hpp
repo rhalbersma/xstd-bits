@@ -22,12 +22,15 @@
 #include <compare>                                           // strong_ordering
 #include <concepts>                                          // same_as
 #include <cstddef>                                           // ptrdiff_t, size_t
+#include <format>                                            // format
 #include <functional>                                        // plus
 #include <iterator>                                          // distance, forward_iterator, input_iterator, prev
 #include <limits>                                            // numeric_limits
 #include <ranges>                                            // begin, drop, iota, rbegin, rend, size, swap, take, transform, zip
                                                              // (views::drop_last when P22014R2 is accepted)
+#include <source_location>                                   // source_location
 #include <span>                                              // dynamic_extent
+#include <stdexcept>                                         // length_error
 #include <type_traits>                                       // conditional_t, is_const_v, remove_reference_t
 #include <utility>                                           // exchange, move, pair
 
@@ -54,6 +57,10 @@ public:
         // The width as a type, dynamic_extent where there is none: what a reading asks when it needs the width before an object exists.
         static constexpr std::size_t extent = N;
 
+        // The widest width a size_t can count in whole blocks: the ceiling every growth below is measured against, and the one the readings inherit, having none of their own. What the blocks can actually hold is narrower still, and that ceiling is max_size().
+        static constexpr auto max_num_blocks = std::numeric_limits<std::size_t>::max() / bits_per_block;
+        static constexpr auto max_width      = max_num_blocks * bits_per_block;
+
 private:
         static constexpr auto static_num_bits   = has_static_size ? align_up(N, bits_per_block) : 0UZ;
         static constexpr auto static_num_blocks = has_static_size ? std::ranges::max(static_num_bits / bits_per_block, 1UZ) : 0UZ;
@@ -70,10 +77,13 @@ private:
         static constexpr auto static_unused_bits     = static_cast<block_type>(~static_used_bits);
         static constexpr auto static_has_unused_bits = has_static_size and static_used_bits != ones;
 
-        // How many blocks a run-time width needs, floored at one like num_blocks_v.
-        [[nodiscard]] static constexpr auto blocks_for(std::size_t n) noexcept
+        // How many blocks a run-time width needs, floored at one like num_blocks_v. A width above max_width is std::length_error and not an align_up that wraps: rounding one near the top of size_t gives zero blocks, and a storage answering size() with that width over the one block the floor leaves is out of bounds everywhere above the first. The narrower ceiling is the blocks' own, and theirs to enforce: the resize and the reserve below are handed a block count, and throw length_error for one they cannot reach.
+        [[nodiscard]] static constexpr auto blocks_for(std::size_t n)
                 -> std::size_t
         {
+                if (n > max_width) {
+                        throw length_error(n);
+                }
                 return std::ranges::max(align_up(n, bits_per_block) / bits_per_block, 1UZ);
         }
 
@@ -243,6 +253,14 @@ public:
                 boost::hash2::hash_append(h, f, v->m_blocks);
         }
 
+        // base positions and count more, saturated at the top of size_t rather than wrapped: the one addition every growth is spelled through, here and in the three readings. A wrapped sum is small, so it passes the ceiling it was meant to fail and then sizes the blocks for far fewer positions than the operation goes on to write; a saturated one fails that ceiling, which is what an unrepresentable width should do. blocks_for is where it fails, with std::length_error.
+        [[nodiscard]] static constexpr auto width_sum(std::size_t base, std::size_t count) noexcept
+                -> std::size_t
+        {
+                constexpr auto top = std::numeric_limits<std::size_t>::max();
+                return count > top - base ? top : base + count;
+        }
+
         // In bits: the width, or the widest whole number of blocks the blocks can hold and the address space can count.
         [[nodiscard]] constexpr auto max_size() const noexcept
                 -> std::size_t
@@ -250,7 +268,7 @@ public:
                 if constexpr (has_static_size) {
                         return N;
                 } else {
-                        return std::ranges::min(m_blocks.max_size(), std::numeric_limits<std::size_t>::max() / bits_per_block) * bits_per_block;
+                        return std::ranges::min(m_blocks.max_size(), max_num_blocks) * bits_per_block;
                 }
         }
 
@@ -335,11 +353,11 @@ public:
 
         }
 
-        // boost's ranged forms, a word at a time through block_at: [n, n + len) set, cleared or flipped, the rest untouched.
+        // boost's ranged forms, a word at a time through block_at: [n, n + len) set, cleared or flipped, the rest untouched. The precondition is said as a subtraction throughout, n + len being the sum that wraps for an n near the top of size_t -- and a wrapped sum is below any width, so the assertion it was meant to fail is the one it passes.
         constexpr auto set(std::size_t n, std::size_t len, bool value) noexcept
                 -> contiguous_bit_container&
         {
-                assert(n + len <= size());
+                assert(n <= size() and len <= size() - n);
                 for_each_block(n, len, [&](std::size_t pos, block_type mask) -> void { block_at(pos, value ? ones : zero, mask); });
                 return *this;
         }
@@ -347,7 +365,7 @@ public:
         constexpr auto flip(std::size_t n, std::size_t len) noexcept
                 -> contiguous_bit_container&
         {
-                assert(n + len <= size());
+                assert(n <= size() and len <= size() - n);
                 for_each_block(n, len, [&](std::size_t pos, block_type mask) -> void { block_at(pos, static_cast<block_type>(~block_at(pos)), mask); });
                 return *this;
         }
@@ -704,11 +722,13 @@ public:
                 -> void
                 requires (not has_static_size)
         {
+                // The block count first, so a width this storage cannot count throws before the last block below is written.
+                auto const count = blocks_for(n);
                 // Growing with ones: the tail above size() in the last block is clear by the invariant, and becomes the first new bits.
                 if (value and n > size()) {
                         m_blocks[last_block()] |= static_cast<block_type>(~used_bits());
                 }
-                m_blocks.resize(blocks_for(n), value ? ones : zero);
+                m_blocks.resize(count, value ? ones : zero);
                 m_size = n;
                 erase_unused();
         }
@@ -831,8 +851,8 @@ public:
         {
                 if constexpr (not has_static_size) {
                         if (n >= size()) {
-                                assert(n < std::numeric_limits<std::size_t>::max());
-                                resize(n + 1UZ);
+                                // width_sum, not n + 1: the position past the top of size_t is one the set reading accepts as a key, and n + 1 there is a width of zero.
+                                resize(width_sum(n, 1UZ));
                                 set(n);
                                 return true;
                         }
@@ -1219,6 +1239,16 @@ private:
                 return { std::forward<decltype(self)>(self).m_blocks[index], shl(unit, offset) };
         }
 
+        // std::length_error, which is what a container throws for a size it cannot represent; the three readings inherit it through every growth, having no ceiling of their own to name.
+        [[nodiscard]] static constexpr auto length_error(std::size_t n, std::source_location const& loc = std::source_location::current())
+        {
+                return std::length_error(
+                        std::format(
+                                "{}:{}:{}: exception: ‘{}‘: argument ‘n‘ is no width this storage can count [{} > {}]",
+                                loc.file_name(), loc.line(), loc.column(), loc.function_name(), n, max_width
+                        )
+                );
+        }
 };
 
 }       // namespace xstd::detail::bits

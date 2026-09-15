@@ -439,7 +439,8 @@ public:
                 requires can_grow
         {
                 auto const pos = index_of(position);
-                return rebuild(pos, pos, [&](sequence_adaptor& tmp) -> void { tmp.m_bits.resize(tmp.size() + n, value); });
+                // Through the storage's saturating sum: n is a count the caller names, so tmp.size() + n wraps, and a wrapped total would resize the copy down and answer an insertion with a shorter sequence than it started from.
+                return rebuild(pos, pos, [&](sequence_adaptor& tmp) -> void { tmp.m_bits.resize(bits_type::width_sum(tmp.size(), n), value); });
         }
 
         template<std::input_iterator I, std::sentinel_for<I> S>
