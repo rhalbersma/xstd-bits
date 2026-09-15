@@ -315,7 +315,7 @@ public:
         }
 
         // The write side of block_at, masked: the bits of value under mask land at [n, n + bits_per_block), split over two blocks where n is not aligned, and the tail stays clear.
-        // The word-level primitive, which writes what the mask selects and restores nothing: the mask is required to stay inside size(), so the padding above it is untouched and the ranged forms below need no erase at all. libstdc++ splits the same way, _Base_bitset knowing only its word count and bitset<_Nb> calling _M_do_sanitize once after; here one type knows both, and the erase is left to the four operations that can actually dirty the padding -- set_block, operator<<=, flip() and resize.
+        // The word-level primitive, which writes what the mask selects and restores nothing: the mask is required to stay inside size(), so the padding above it is untouched and the ranged forms below need no erase at all. libstdc++ splits the same way, _Base_bitset knowing only its word count and bitset<_Nb> calling _M_do_sanitize once after; here one type knows both, and the erase is left to the four operations that can actually dirty the padding -- a write through block(i), operator<<=, flip() and resize.
         constexpr auto block_at(std::size_t n, block_type value, block_type mask) noexcept
                 -> void
         {
