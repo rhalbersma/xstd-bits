@@ -292,7 +292,7 @@ public:
         }
 
         // A word at any position, aligned or not: the bits [n, n + bits_per_block), the clear tail and nothing beyond the last block.
-        [[nodiscard]] constexpr auto word_at(std::size_t n) const noexcept
+        [[nodiscard]] constexpr auto block_at(std::size_t n) const noexcept
                 -> block_type
         {
                 auto const [ index, offset ] = index_offset(n);
@@ -303,9 +303,9 @@ public:
                 return straddled_block(index, bits_per_block - offset, offset);
         }
 
-        // The write side of word_at, masked: the bits of value under mask land at [n, n + bits_per_block), split over two blocks where n is not aligned, and the tail stays clear.
+        // The write side of block_at, masked: the bits of value under mask land at [n, n + bits_per_block), split over two blocks where n is not aligned, and the tail stays clear.
         // The word-level primitive, which writes what the mask selects and restores nothing: the mask is required to stay inside size(), so the padding above it is untouched and the ranged forms below need no erase at all. libstdc++ splits the same way, _Base_bitset knowing only its word count and bitset<_Nb> calling _M_do_sanitize once after; here one type knows both, and the erase is left to the four operations that can actually dirty the padding -- set_block, operator<<=, flip() and resize.
-        constexpr auto set_word(std::size_t n, block_type value, block_type mask) noexcept
+        constexpr auto block_at(std::size_t n, block_type value, block_type mask) noexcept
                 -> void
         {
                 auto const [ index, offset ] = index_offset(n);
@@ -324,12 +324,12 @@ public:
 
         }
 
-        // boost's ranged forms, a word at a time through set_word: [n, n + len) set, cleared or flipped, the rest untouched.
+        // boost's ranged forms, a word at a time through block_at: [n, n + len) set, cleared or flipped, the rest untouched.
         constexpr auto set(std::size_t n, std::size_t len, bool value) noexcept
                 -> contiguous_bit_container&
         {
                 assert(n + len <= size());
-                for_each_word(n, len, [&](std::size_t pos, block_type mask) -> void { set_word(pos, value ? ones : zero, mask); });
+                for_each_block(n, len, [&](std::size_t pos, block_type mask) -> void { block_at(pos, value ? ones : zero, mask); });
                 return *this;
         }
 
@@ -337,7 +337,7 @@ public:
                 -> contiguous_bit_container&
         {
                 assert(n + len <= size());
-                for_each_word(n, len, [&](std::size_t pos, block_type mask) -> void { set_word(pos, static_cast<block_type>(~word_at(pos)), mask); });
+                for_each_block(n, len, [&](std::size_t pos, block_type mask) -> void { block_at(pos, static_cast<block_type>(~block_at(pos)), mask); });
                 return *this;
         }
 
@@ -620,7 +620,7 @@ public:
                         } else {
                                 auto const L_shift = bits_per_block - R_shift;
                                 for (auto i = 0UZ; i + n_blocks < last_block(); ++i) {
-                                        // Which is word_at(i * bits_per_block + n), reached without recomputing the division.
+                                        // Which is block_at(i * bits_per_block + n), reached without recomputing the division.
                                         m_blocks[i] = straddled_block(i + n_blocks, L_shift, R_shift);
                                 }
                                 m_blocks[last_block() - n_blocks] = shr(m_blocks[last_block()], R_shift);
@@ -1144,7 +1144,7 @@ private:
 
         // The words a range of positions spans, each with the mask of what it holds: whole words, and a partial one at the end.
         template<class F>
-        constexpr auto for_each_word(std::size_t n, std::size_t len, F f) const noexcept
+        constexpr auto for_each_block(std::size_t n, std::size_t len, F f) const noexcept
                 -> void
         {
                 for (auto pos = n; pos < n + len; pos += bits_per_block) {

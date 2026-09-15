@@ -40,7 +40,7 @@ namespace detail::sequence {
 
 // The bits a window's word holds: every one but for the last word, which holds what is left over.
 template<class Block>
-[[nodiscard]] constexpr auto word_mask(std::size_t count) noexcept
+[[nodiscard]] constexpr auto partial_block_mask(std::size_t count) noexcept
         -> Block
 {
         constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<Block>::digits);
@@ -63,7 +63,7 @@ template<class F>
 
 // Every position, lowest first, a word at a time: the outer loop loads once per word and the reload becomes the inner loop's exit test, which a flat operator++ can never express. There is no second tier below any more -- these walked words where the storage read by block and positions where it did not, and only the first kind of storage can be here.
 template<class Bits, class F>
-constexpr auto walk_words(Bits const& c, std::size_t offset, std::size_t size, F& f)
+constexpr auto walk_blocks(Bits const& c, std::size_t offset, std::size_t size, F& f)
         -> void
 {
         using block_type = std::remove_cvref_t<decltype(c.block(0UZ))>;
@@ -71,9 +71,9 @@ constexpr auto walk_words(Bits const& c, std::size_t offset, std::size_t size, F
 
         for (auto k = 0UZ; k < size; k += digits) {
                 auto const count = std::ranges::min(digits, size - k);
-                auto const word = c.word_at(offset + k);
+                auto const block = c.block_at(offset + k);
                 for (auto n = 0UZ; n < count; ++n) {
-                        if (not invoke_continues(f, (detail::bits::shr(word, n) & block_type{1}) != block_type{})) {
+                        if (not invoke_continues(f, (detail::bits::shr(block, n) & block_type{1}) != block_type{})) {
                                 return;
                         }
                 }
@@ -82,7 +82,7 @@ constexpr auto walk_words(Bits const& c, std::size_t offset, std::size_t size, F
 
 // The three aggregates over a window, each masked to what the window holds: a word at a time, so a window pays what the whole pays and not a test per bit.
 template<class Bits>
-[[nodiscard]] constexpr auto count_words(Bits const& c, std::size_t offset, std::size_t size) noexcept
+[[nodiscard]] constexpr auto count_blocks(Bits const& c, std::size_t offset, std::size_t size) noexcept
         -> std::size_t
 {
         using block_type = std::remove_cvref_t<decltype(c.block(0UZ))>;
@@ -90,22 +90,22 @@ template<class Bits>
 
         auto n = 0UZ;
         for (auto k = 0UZ; k < size; k += digits) {
-                auto const mask = word_mask<block_type>(std::ranges::min(digits, size - k));
-                n += detail::bits::popcount(static_cast<block_type>(c.word_at(offset + k) & mask));
+                auto const mask = partial_block_mask<block_type>(std::ranges::min(digits, size - k));
+                n += detail::bits::popcount(static_cast<block_type>(c.block_at(offset + k) & mask));
         }
         return n;
 }
 
 template<class Bits>
-[[nodiscard]] constexpr auto any_words(Bits const& c, std::size_t offset, std::size_t size) noexcept
+[[nodiscard]] constexpr auto any_blocks(Bits const& c, std::size_t offset, std::size_t size) noexcept
         -> bool
 {
         using block_type = std::remove_cvref_t<decltype(c.block(0UZ))>;
         constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<block_type>::digits);
 
         for (auto k = 0UZ; k < size; k += digits) {
-                auto const mask = word_mask<block_type>(std::ranges::min(digits, size - k));
-                if (static_cast<block_type>(c.word_at(offset + k) & mask) != block_type{}) {
+                auto const mask = partial_block_mask<block_type>(std::ranges::min(digits, size - k));
+                if (static_cast<block_type>(c.block_at(offset + k) & mask) != block_type{}) {
                         return true;
                 }
         }
@@ -113,15 +113,15 @@ template<class Bits>
 }
 
 template<class Bits>
-[[nodiscard]] constexpr auto all_words(Bits const& c, std::size_t offset, std::size_t size) noexcept
+[[nodiscard]] constexpr auto all_blocks(Bits const& c, std::size_t offset, std::size_t size) noexcept
         -> bool
 {
         using block_type = std::remove_cvref_t<decltype(c.block(0UZ))>;
         constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<block_type>::digits);
 
         for (auto k = 0UZ; k < size; k += digits) {
-                auto const mask = word_mask<block_type>(std::ranges::min(digits, size - k));
-                if (static_cast<block_type>(c.word_at(offset + k) & mask) != mask) {
+                auto const mask = partial_block_mask<block_type>(std::ranges::min(digits, size - k));
+                if (static_cast<block_type>(c.block_at(offset + k) & mask) != mask) {
                         return false;
                 }
         }
@@ -210,7 +210,7 @@ class sequence_adaptor : public std::conditional_t<owns(Own), detail::bits::allo
         static constexpr bool blittable = blit_source<S, typename bits_type::block_type>;
 
         // A storage that takes a masked word at any position: ours, which is what a window's bulk operators write through.
-        static constexpr bool word_writable = requires (bits_type& b, std::size_t pos, bits_type::block_type w) { b.set_word(pos, w, w); };
+        static constexpr bool block_writable = requires (bits_type& b, std::size_t pos, bits_type::block_type w) { b.block_at(pos, w, w); };
 
         // A sequence view refers into this owner's storage, and nothing else outside does; a set view does not, the readings not mixing.
         template<detail::bits::specialization_of_contiguous_bit_container B, ownership O, bool W> friend class sequence_adaptor;
@@ -568,7 +568,7 @@ public:
         constexpr auto for_each(this auto&& self, F f)
                 -> void
         {
-                detail::sequence::walk_words(self.storage(), self.offset(), self.size(), f);
+                detail::sequence::walk_blocks(self.storage(), self.offset(), self.size(), f);
         }
 
         // capacity; max_size() is the positions there are to hold: a growing one what its storage can address, and a static width, a view or a window their own, none of them able to grow.
@@ -701,11 +701,11 @@ public:
         constexpr auto operator<<=(this auto&& self, std::size_t n) noexcept -> auto& requires (not is_window) and requires { self.storage() <<= n; } { self.storage() <<= n; return self; }
         constexpr auto operator>>=(this auto&& self, std::size_t n) noexcept -> auto& requires (not is_window) and requires { self.storage() >>= n; } { self.storage() >>= n; return self; }
 
-        // Bulk on a window of ours, against a source of any shape read by block: a word at a time at either alignment, through word_at and set_word; equal sizes, and no overlap short of coincidence.
-        template<class Other> constexpr auto operator&=(this auto&& self, Other const& other) noexcept -> auto& requires is_window and word_writable and blittable<Other> { self.combine(other, [](auto a, auto b) { return static_cast<decltype(a)>(a & b);  }); return self; }
-        template<class Other> constexpr auto operator|=(this auto&& self, Other const& other) noexcept -> auto& requires is_window and word_writable and blittable<Other> { self.combine(other, [](auto a, auto b) { return static_cast<decltype(a)>(a | b);  }); return self; }
-        template<class Other> constexpr auto operator^=(this auto&& self, Other const& other) noexcept -> auto& requires is_window and word_writable and blittable<Other> { self.combine(other, [](auto a, auto b) { return static_cast<decltype(a)>(a ^ b);  }); return self; }
-        template<class Other> constexpr auto operator-=(this auto&& self, Other const& other) noexcept -> auto& requires is_window and word_writable and blittable<Other> { self.combine(other, [](auto a, auto b) { return static_cast<decltype(a)>(a & static_cast<decltype(b)>(~b)); }); return self; }
+        // Bulk on a window of ours, against a source of any shape read by block: a word at a time at either alignment, through block_at and block_at; equal sizes, and no overlap short of coincidence.
+        template<class Other> constexpr auto operator&=(this auto&& self, Other const& other) noexcept -> auto& requires is_window and block_writable and blittable<Other> { self.combine(other, [](auto a, auto b) { return static_cast<decltype(a)>(a & b);  }); return self; }
+        template<class Other> constexpr auto operator|=(this auto&& self, Other const& other) noexcept -> auto& requires is_window and block_writable and blittable<Other> { self.combine(other, [](auto a, auto b) { return static_cast<decltype(a)>(a | b);  }); return self; }
+        template<class Other> constexpr auto operator^=(this auto&& self, Other const& other) noexcept -> auto& requires is_window and block_writable and blittable<Other> { self.combine(other, [](auto a, auto b) { return static_cast<decltype(a)>(a ^ b);  }); return self; }
+        template<class Other> constexpr auto operator-=(this auto&& self, Other const& other) noexcept -> auto& requires is_window and block_writable and blittable<Other> { self.combine(other, [](auto a, auto b) { return static_cast<decltype(a)>(a & static_cast<decltype(b)>(~b)); }); return self; }
 
         // [vector.bool]'s two: flip every bit, a bulk operation like the ones above, and swap two proxies, which the proxies' own swap already does.
         constexpr auto flip(this auto&& self) noexcept -> void requires (not is_window) and requires { self.storage().flip(); } { self.storage().flip(); }
@@ -720,7 +720,7 @@ private:
                 if constexpr (not is_window) {
                         return storage().count();
                 } else {
-                        return detail::sequence::count_words(storage(), offset(), size());
+                        return detail::sequence::count_blocks(storage(), offset(), size());
                 }
         }
 
@@ -730,7 +730,7 @@ private:
                 if constexpr (not is_window) {
                         return storage().any();
                 } else {
-                        return detail::sequence::any_words(storage(), offset(), size());
+                        return detail::sequence::any_blocks(storage(), offset(), size());
                 }
         }
 
@@ -741,7 +741,7 @@ private:
                 if constexpr (not is_window) {
                         return storage().none();
                 } else {
-                        return not detail::sequence::any_words(storage(), offset(), size());
+                        return not detail::sequence::any_blocks(storage(), offset(), size());
                 }
         }
 
@@ -752,7 +752,7 @@ private:
                 if constexpr (not is_window) {
                         return storage().all();
                 } else {
-                        return detail::sequence::all_words(storage(), offset(), size());
+                        return detail::sequence::all_blocks(storage(), offset(), size());
                 }
         }
 
@@ -765,10 +765,10 @@ private:
                 constexpr auto digits = bits_type::bits_per_block;
                 assert(self.size() == other.size());
                 for (auto k = 0UZ; k < self.size(); k += digits) {
-                        auto const mask = detail::sequence::word_mask<block_type>(std::ranges::min(digits, self.size() - k));
-                        auto const mine   = self.storage().word_at(self.offset() + k);
-                        auto const theirs = other.storage().word_at(other.offset() + k);
-                        self.storage().set_word(self.offset() + k, f(mine, theirs), mask);
+                        auto const mask = detail::sequence::partial_block_mask<block_type>(std::ranges::min(digits, self.size() - k));
+                        auto const mine   = self.storage().block_at(self.offset() + k);
+                        auto const theirs = other.storage().block_at(other.offset() + k);
+                        self.storage().block_at(self.offset() + k, f(mine, theirs), mask);
                 }
         }
 
@@ -783,7 +783,7 @@ private:
                         m_bits.reserve(old + count);
                 }
                 for (auto pos = first; pos < first + count; pos += digits) {
-                        m_bits.append(src.word_at(pos));
+                        m_bits.append(src.block_at(pos));
                 }
                 m_bits.resize(old + count);
         }
@@ -798,21 +798,21 @@ private:
                 if constexpr (std::ranges::sized_range<R> and requires (bits_type& b, std::size_t n) { b.reserve(n); }) {
                         m_bits.reserve(size() + std::ranges::size(rg));
                 }
-                auto word = block_type{};
+                auto block = block_type{};
                 auto n = 0UZ;
                 for (auto&& e : rg) {
                         if (static_cast<value_type>(e)) {
-                                word |= detail::bits::shl(block_type{1}, n);
+                                block |= detail::bits::shl(block_type{1}, n);
                         }
                         if (++n == digits) {
-                                m_bits.append(word);
-                                word = block_type{};
+                                m_bits.append(block);
+                                block = block_type{};
                                 n = 0UZ;
                         }
                 }
                 if (n != 0UZ) {
                         auto const total = size() + n;
-                        m_bits.append(word);
+                        m_bits.append(block);
                         m_bits.resize(total);
                 }
         }

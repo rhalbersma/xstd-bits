@@ -408,8 +408,8 @@ public:
         }
 
         // [bitset.members]/34-37: the value the bits spell, or overflow_error where a set position lies beyond the word; boost's to_ulong is the same contract.
-        [[nodiscard]] constexpr auto to_ulong()  const -> unsigned long      { return to_word<unsigned long>();      }
-        [[nodiscard]] constexpr auto to_ullong() const -> unsigned long long { return to_word<unsigned long long>(); }
+        [[nodiscard]] constexpr auto to_ulong()  const -> unsigned long      { return to_unsigned<unsigned long>();      }
+        [[nodiscard]] constexpr auto to_ullong() const -> unsigned long long { return to_unsigned<unsigned long long>(); }
 
         template<
                 class charT = char,
@@ -658,9 +658,9 @@ private:
                 } else {
                         // Misaligned by a partial block, where one side's block straddles two of the other's: a funnel shift per step is the operation, not a shortfall of the walk.
                         for (auto k = nb; k-- != 0UZ;) {
-                                auto const lhs_word = m_bits.word_at(lhs_start + (k * bits_per_block));
-                                auto const rhs_word = rhs.m_bits.word_at(rhs_start + (k * bits_per_block));
-                                if (auto const cmp = lhs_word <=> rhs_word; cmp != std::strong_ordering::equal) {
+                                auto const lhs_block = m_bits.block_at(lhs_start + (k * bits_per_block));
+                                auto const rhs_block = rhs.m_bits.block_at(rhs_start + (k * bits_per_block));
+                                if (auto const cmp = lhs_block <=> rhs_block; cmp != std::strong_ordering::equal) {
                                         return cmp;
                                 }
                         }
@@ -682,22 +682,22 @@ private:
         }
 
         // One position at a time over at most a word's worth, the overflow asked of the trait's search above the word.
-        template<class Word>
-        [[nodiscard]] constexpr auto to_word() const
-                -> Word
+        template<class Unsigned>
+        [[nodiscard]] constexpr auto to_unsigned() const
+                -> Unsigned
         {
-                constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<Word>::digits);
+                constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<Unsigned>::digits);
                 if (size() > digits and m_bits.exclusive_find_next(digits - 1UZ) != size()) {
                         throw overflow_error();
                 }
                 auto const M = std::ranges::min(size(), digits);
-                auto word = Word{0};
+                auto nrv = Unsigned{0};
                 for (auto const i : std::views::iota(0UZ, M)) {
                         if (m_bits.test(i)) {
-                                word |= static_cast<Word>(Word{1} << i);
+                                nrv |= static_cast<Unsigned>(Unsigned{1} << i);
                         }
                 }
-                return word;
+                return nrv;
         }
 
         template<class charT>

@@ -1134,23 +1134,23 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(WordsAreReadAndWrittenAtAnyPosition, T, WordTypes)
 {
         auto const c = word_sample<T>();
         // Blocks: 0b1000'1001, 0b1001'0001, 0b0000'1000.
-        BOOST_CHECK_EQUAL(c.word_at(0UZ),  0b1000'1001);
-        BOOST_CHECK_EQUAL(c.word_at(8UZ),  0b1001'0001);
-        BOOST_CHECK_EQUAL(c.word_at(3UZ),  0b0011'0001);
-        BOOST_CHECK_EQUAL(c.word_at(12UZ), 0b1000'1001);
-        BOOST_CHECK_EQUAL(c.word_at(16UZ), 0b0000'1000);
-        BOOST_CHECK_EQUAL(c.word_at(17UZ), 0b0000'0100);
+        BOOST_CHECK_EQUAL(c.block_at(0UZ),  0b1000'1001);
+        BOOST_CHECK_EQUAL(c.block_at(8UZ),  0b1001'0001);
+        BOOST_CHECK_EQUAL(c.block_at(3UZ),  0b0011'0001);
+        BOOST_CHECK_EQUAL(c.block_at(12UZ), 0b1000'1001);
+        BOOST_CHECK_EQUAL(c.block_at(16UZ), 0b0000'1000);
+        BOOST_CHECK_EQUAL(c.block_at(17UZ), 0b0000'0100);
 
-        // set_word lands the masked bits and nothing else, across two blocks and up to the last position, the mask never selecting past size() -- a word at the top is masked to what the width holds, which is what leaves the padding untouched and the erase to the ranged forms.
+        // block_at lands the masked bits and nothing else, across two blocks and up to the last position, the mask never selecting past size() -- a word at the top is masked to what the width holds, which is what leaves the padding untouched and the erase to the ranged forms.
         auto d = word_sample<T>();
-        d.set_word(3UZ, 0b1111'1111, 0b0001'1110);
+        d.block_at(3UZ, 0b1111'1111, 0b0001'1110);
         auto m = reference(c);
         for (auto const i : { 4UZ, 5UZ, 6UZ, 7UZ }) { m[i] = true; }
         BOOST_CHECK(reference(d) == m);
-        d.set_word(5UZ, 0b0000'0000, 0b0111'1000);
+        d.block_at(5UZ, 0b0000'0000, 0b0111'1000);
         for (auto const i : { 8UZ, 9UZ, 10UZ, 11UZ }) { m[i] = false; }
         BOOST_CHECK(reference(d) == m);
-        d.set_word(16UZ, 0b1111'1111, 0b0000'1111);
+        d.block_at(16UZ, 0b1111'1111, 0b0000'1111);
         for (auto const i : { 16UZ, 17UZ, 18UZ, 19UZ }) { m[i] = true; }
         BOOST_CHECK(reference(d) == m);
         BOOST_CHECK_EQUAL(d.block(2), 0b0000'1111);
@@ -1172,7 +1172,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheRangedFormsGoAWordAtATime, T, WordTypes)
 // Three blocks with no tail, so a shift's destination block is exactly the splice and nothing masks it afterwards.
 using AlignedWordTypes = std::tuple<xstd::detail::bits::contiguous_bit_array<std::uint8_t, 24>, xstd::detail::bits::contiguous_bit_vector<std::uint8_t>>;
 
-// The identity that lets one primitive serve all three sites: a right shift's destination block is word_at at that position of the operand, and a left shift's is the same read one block lower.
+// The identity that lets one primitive serve all three sites: a right shift's destination block is block_at at that position of the operand, and a left shift's is the same read one block lower.
 BOOST_AUTO_TEST_CASE_TEMPLATE(BothShiftsAreWordAtOnTheOperand, T, AlignedWordTypes)
 {
         constexpr auto D = 8UZ;
@@ -1185,13 +1185,13 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(BothShiftsAreWordAtOnTheOperand, T, AlignedWordTyp
                 auto r = c;
                 r >>= n;
                 for (auto i = 0UZ; i + n_blocks <= last; ++i) {
-                        BOOST_CHECK_EQUAL(r.block(i), c.word_at((i * D) + n));
+                        BOOST_CHECK_EQUAL(r.block(i), c.block_at((i * D) + n));
                 }
 
                 auto l = c;
                 l <<= n;
                 for (auto i = n_blocks + 1UZ; i <= last; ++i) {
-                        BOOST_CHECK_EQUAL(l.block(i), c.word_at((i * D) - n));
+                        BOOST_CHECK_EQUAL(l.block(i), c.block_at((i * D) - n));
                 }
         }
 }
