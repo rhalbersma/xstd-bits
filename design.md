@@ -1351,6 +1351,16 @@ both sides through `word_at` and writing through `set_word` masked to the window
 two must be of one size, and must not overlap short of coinciding, `w ^= w` being fine. No sequence has shifts,
 window or whole ([no-shifts-on-a-sequence](#no-shifts-on-a-sequence)).
 
+**A window over a const storage writes nothing, and the predicate has to be asked of the right type to say so.**
+`bits_type` is `Bits` with the const stripped, because a view over a const owner names `Bits const` and the
+typedef wants the storage's own name. Asking `block_writable` of *that* asks whether a non-const storage takes
+a masked write, which is always yes, so a const window advertised the three bulk operators it could not
+perform -- and the mismatch surfaced inside `combine` as a hard error on a discarded qualifier rather than as
+a constraint that simply failed, so even asking whether the operator existed would not compile. It is asked of
+`Bits` instead, which carries the const, and the operators drop out of overload resolution the way `fill`'s
+already did by constraining through `self.storage()`. `set_adaptor`'s const view was never affected: every one
+of its mutators constrains through the storage expression.
+
 ### the-range-members
 
 `append_range` has two tiers. Where the source is a sequence adaptor of any shape, owner, view or window, over

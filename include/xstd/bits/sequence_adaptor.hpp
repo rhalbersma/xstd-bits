@@ -211,7 +211,8 @@ class sequence_adaptor : public std::conditional_t<owns(Own), detail::bits::allo
         static constexpr bool blittable = blit_source<S, typename bits_type::block_type>;
 
         // A storage that takes a masked word at any position: ours, which is what a window's bulk operators write through.
-        static constexpr bool block_writable = requires (bits_type& b, std::size_t pos, bits_type::block_type w) { b.block_at(pos, w, w); };
+        // Asked of Bits and not bits_type, which has the const stripped off it: a window over a const storage holds it by a pointer to const, so the masked write is what it cannot do and what this must answer no to.
+        static constexpr bool block_writable = requires (Bits& b, std::size_t pos, bits_type::block_type w) { b.block_at(pos, w, w); };
 
         // A sequence view refers into this owner's storage, and nothing else outside does; a set view does not, the readings not mixing.
         template<specialization_of_TN<detail::bits::contiguous_bit_container> B, ownership O, bool W> friend class sequence_adaptor;
