@@ -229,11 +229,7 @@ public:
         [[nodiscard]] friend constexpr auto string_lexicographical_compare_three_way(contiguous_bit_container const& x, contiguous_bit_container const& y) noexcept
                 -> std::strong_ordering
         {
-                if constexpr (not has_static_size) {
-                        if (x.size() != y.size()) {
-                                return x.top_aligned_three_way(y);
-                        }
-                }
+                assert(x.size() == y.size());
                 return std::lexicographical_compare_three_way(
                         std::ranges::rbegin(x.m_blocks), std::ranges::rend(x.m_blocks),
                         std::ranges::rbegin(y.m_blocks), std::ranges::rend(y.m_blocks)
@@ -1125,38 +1121,6 @@ private:
                         ? std::strong_ordering::greater
                         : std::strong_ordering::less
                 ;
-        }
-
-        // boost's unequal-width order, a word at a time: the top min(size()) positions of each paired from the top, read as words at either one's own alignment, then the shorter is less. Unlike the other two readings' width-crossing arms this cannot pad, the bit string being read from the TOP down: what the wider one holds below the shared window is not above the narrower one's positions but below them, and is reached only when the window ties.
-        [[nodiscard]] constexpr auto top_aligned_three_way(contiguous_bit_container const& other) const noexcept
-                -> std::strong_ordering
-        {
-                auto const m = std::ranges::min(this->size(), other.size());
-                auto const lhs_start = this->size() - m;
-                auto const rhs_start = other.size() - m;
-                auto const nb = (m + bits_per_block - 1UZ) / bits_per_block;
-                if ((lhs_start | rhs_start) % bits_per_block == 0) {
-                        // Both windows begin on a block boundary, which is to say the widths differ by a whole number of blocks: the shared window IS a block range on each side, and the comparison is the equal-width one over those ranges. 25.1us to 9.96us over a million bits, which is what comparing equal widths costs.
-                        auto const lf = std::ranges::begin(this->m_blocks) + static_cast<std::ptrdiff_t>(lhs_start / bits_per_block);
-                        auto const rf = std::ranges::begin(other.m_blocks) + static_cast<std::ptrdiff_t>(rhs_start / bits_per_block);
-                        auto const n  = static_cast<std::ptrdiff_t>(nb);
-                        if (auto const cmp = std::lexicographical_compare_three_way(
-                                std::make_reverse_iterator(lf + n), std::make_reverse_iterator(lf),
-                                std::make_reverse_iterator(rf + n), std::make_reverse_iterator(rf)); cmp != std::strong_ordering::equal) {
-                                return cmp;
-                        }
-                } else {
-                        // Misaligned by a partial block, where one side's block straddles two of the other's: a funnel shift per step is inherent, not a shortfall of the walk.
-                        for (auto k = nb; k-- != 0UZ;) {
-                                auto const lhs_word = this->word_at(lhs_start + (k * bits_per_block));
-                                auto const rhs_word = other.word_at(rhs_start + (k * bits_per_block));
-                                if (auto const cmp = lhs_word <=> rhs_word; cmp != std::strong_ordering::equal) {
-                                        return cmp;
-                                }
-                        }
-                }
-                // The widths differ, which is how this walk was reached, so equal is not an answer here.
-                return this->size() < other.size() ? std::strong_ordering::less : std::strong_ordering::greater;
         }
 
         // The block straddling index and index + 1: the high one shifted up by L_shift and the low one down by R_shift, spliced into one.
