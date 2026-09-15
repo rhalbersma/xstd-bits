@@ -549,6 +549,84 @@ public:
                 return *this;
         }
 
+        // The four set operations across two widths, as set_equal is to operator== : the operators above are the bitset
+        // and sequence spelling and state a precondition these do not, because for the set reading two widths is not a
+        // misuse but the ordinary case -- a set is its elements, and how wide the storage holding them happens to be is
+        // capacity. [design.md#width-is-capacity] [design.md#the-set-operations-across-widths]
+        //
+        // Intersection and difference never widen: a position the other lacks is a position it does not hold, so the
+        // padding reads as the zero it already is and the result fits where it already sat. Both only ever CLEAR bits,
+        // so the invariant above size() survives without an erase_unused.
+        constexpr auto set_and_assign(contiguous_bit_container const& other) noexcept
+                -> void
+        {
+                // Only a run-time width can meet another, and only then is there anything for the padded path to do;
+                // an `if constexpr` keeps a static width from instantiating an arm no test of it could reach.
+                if constexpr (not has_static_size) {
+                        if (this->size() != other.size()) {
+                                for (auto const i : std::views::iota(0UZ, num_blocks())) {
+                                        this->m_blocks[i] &= other.padded_block(i);
+                                }
+                                return;
+                        }
+                }
+                *this &= other;
+        }
+
+        constexpr auto set_minus_assign(contiguous_bit_container const& other) noexcept
+                -> void
+        {
+                // Only a run-time width can meet another, and only then is there anything for the padded path to do;
+                // an `if constexpr` keeps a static width from instantiating an arm no test of it could reach.
+                if constexpr (not has_static_size) {
+                        if (this->size() != other.size()) {
+                                for (auto const i : std::views::iota(0UZ, num_blocks())) {
+                                        this->m_blocks[i] &= static_cast<block_type>(~other.padded_block(i));
+                                }
+                                return;
+                        }
+                }
+                *this -= other;
+        }
+
+        // Union and symmetric difference DO widen, and only as far as the elements require: to one past the other's
+        // largest, which is where inserting them one at a time arrives, and no further. Growing to the other's size()
+        // instead would be a different answer -- a storage far wider than its largest element would widen this one for
+        // positions nobody holds.
+        constexpr auto set_or_assign(contiguous_bit_container const& other) noexcept(has_static_size)
+                -> void
+        {
+                // Only a run-time width can meet another, and only then is there anything for the padded path to do;
+                // an `if constexpr` keeps a static width from instantiating an arm no test of it could reach.
+                if constexpr (not has_static_size) {
+                        if (this->size() != other.size()) {
+                                grow_to_admit(other);
+                                for (auto const i : std::views::iota(0UZ, num_blocks())) {
+                                        this->m_blocks[i] |= other.padded_block(i);
+                                }
+                                return;
+                        }
+                }
+                *this |= other;
+        }
+
+        constexpr auto set_xor_assign(contiguous_bit_container const& other) noexcept(has_static_size)
+                -> void
+        {
+                // Only a run-time width can meet another, and only then is there anything for the padded path to do;
+                // an `if constexpr` keeps a static width from instantiating an arm no test of it could reach.
+                if constexpr (not has_static_size) {
+                        if (this->size() != other.size()) {
+                                grow_to_admit(other);
+                                for (auto const i : std::views::iota(0UZ, num_blocks())) {
+                                        this->m_blocks[i] ^= other.padded_block(i);
+                                }
+                                return;
+                        }
+                }
+                *this ^= other;
+        }
+
         constexpr auto operator<<=(std::size_t n [[maybe_unused]]) noexcept
                 -> contiguous_bit_container&
         {
@@ -1078,6 +1156,20 @@ private:
                         ? std::strong_ordering::greater
                         : std::strong_ordering::less
                 ;
+        }
+
+        // Widen just enough to hold every element the other has, and not at all when it has none above this width. Its
+        // largest element, not its size(), is what the growing insert of each in turn would have reached.
+        constexpr auto grow_to_admit(contiguous_bit_container const& other)
+                -> void
+                requires (not has_static_size)
+        {
+                if (not other.any()) {
+                        return;
+                }
+                if (auto const n = other.exclusive_find_prev(other.size()) + 1UZ; n > this->size()) {
+                        resize(n);
+                }
         }
 
         // The block straddling index and index + 1: the high one shifted up by L_shift and the low one down by R_shift, spliced into one. [design.md#the-funnel-shift]

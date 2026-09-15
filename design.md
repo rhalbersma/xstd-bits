@@ -1726,16 +1726,55 @@ adaptor calling it. Measured as above, at two
 different run-time widths: 10.62us to 0.09us over equal sets, and 11.03us to 0.06us where one set is a proper
 prefix of the other.
 
-Still element by element: `|=` `&=` `^=` `-=` insert and erase
-one position at a time, `insert` growing the narrower left operand as it grows for any key. These mutate and may
-have to grow, which is why they were left as they are rather than swept along with the four that only read. The shifts translate the
-set, so `<<=` grows the width to hold the result and `>>=` empties past it. Hashing appends the positions and
-the count at a run-time width and the bits at a static one, where equal sets share a width
-([the-hashing-invariant](#the-hashing-invariant)).
+`|=` `&=` `^=` `-=` are blockwise too, and
+[the-set-operations-across-widths](#the-set-operations-across-widths) is what it took to mutate rather than
+merely read. The shifts translate the set, so `<<=` grows the width to hold the result and `>>=` empties past
+it. Hashing appends the positions and the count at a run-time width and the bits at a static one, where equal
+sets share a width ([the-hashing-invariant](#the-hashing-invariant)).
 
-The element walks are a fallback and priced as one: an operation at mismatched widths costs the elements
-rather than the blocks. A block-wise answer over the common prefix is an optimization the storage could
-offer later; nothing in the adaptor's contract would change.
+### the-set-operations-across-widths
+
+The four compound operators were the last element walks, and they were left for last because they mutate and
+two of them may have to **grow** -- which is a question the four read-only operations never had to answer.
+
+Measured at two run-time widths, 4096 against 4000, dense:
+
+| | before | after |
+| --- | --- | --- |
+| `&=` | 12.12us | 0.22us |
+| `\|=` | 9.41us | 0.22us |
+| `^=` | 9.58us | 0.22us |
+| `-=` | 10.27us | 0.22us |
+
+`set_and_assign`, `set_or_assign`, `set_xor_assign` and `set_minus_assign` stand to the storage's `&=` `|=` `^=`
+`-=` exactly as `set_equal` stands to its `==`: the operators are the bitset and sequence spelling and state a
+precondition of equal widths, and the named ones do not, because for the set reading two widths is not a misuse
+but the ordinary case. So the adaptor's four operators are now one unguarded call each, and `same_width` --
+which existed only to choose between the storage's operator and an element walk -- is gone.
+
+**Intersection and difference never widen.** A position the other lacks is a position it does not hold, so the
+missing blocks read as the zero they already are and the result fits where it already sat. Both only ever
+*clear* bits, so the invariant that padding above `size()` is clear survives with no `erase_unused` to restore
+it.
+
+**Union and symmetric difference do widen, and the target is not the obvious one.** Growing to the other
+operand's `size()` would be wrong. `growing_insert(n)` resizes to `n + 1`, so inserting the other's elements one
+at a time arrives at one past its **largest element** -- and a storage far wider than anything it holds must not
+drag this one up with it. A 301-wide operand holding nothing above 7 widens a 61-wide set not at all; the same
+operand holding 280 widens it to 281, never to 301. `grow_to_admit` is that rule and nothing else, and it
+returns early on an empty operand, where there is no largest element to ask for and `exclusive_find_prev` would
+assert.
+
+Each of the four keeps an equal-width fast path to the storage's own operator. At a static width that is the
+whole function; at a run-time width it skips a per-block bound check, and for the two that grow it skips asking
+for a largest element that cannot matter. Measured at 4096 against 4096, the equal-width case is unchanged.
+
+**The width is the part that needed a way to see it.** An owning set reports `max_size()` as everything it could
+grow to rather than what it currently spans ([max-size-is-the-bits](#max-size-is-the-bits)), so the growth rule
+above is invisible from the owner. A *view* over the same storage reports the storage's own `size()`, which is
+the width, and that is what the test asserts through. The first differential run over 577,600 width pairs
+compared `max_size()` against `max_size()` and so proved only the elements; the width claims it appeared to
+check were vacuous on both sides.
 
 
 ### an-opinionated-reimagining
