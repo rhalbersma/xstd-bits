@@ -429,7 +429,8 @@ public:
                 self.storage().assign( x, not self.storage().test(x));
         }
 
-        constexpr auto complement(this auto&& self) noexcept -> void requires requires { self.storage().flip(); } { self.storage().flip(); }
+        // The whole-set complement, at a static width alone: complementing needs a universe, and a run-time width is capacity rather than one ([width-is-capacity]). At a static width N is the universe and part of the type, so equal sets complement alike; at a run-time width two equal sets of different capacity would not, which is the width read as value that this reading does not do.
+        constexpr auto complement(this auto&& self) noexcept -> void requires has_static_width and requires { self.storage().flip(); } { self.storage().flip(); }
 
         // Bulk, on the storage's own spelling, which is total across two widths. The set reading adds one thing the storage's operator deliberately does not: union and symmetric difference GROW, because for a set the width is capacity and an element the other holds above this width is still an element. Intersection and difference never widen, so they are the operator alone.
         constexpr auto operator&=(this auto&& self, set_adaptor const& other) noexcept

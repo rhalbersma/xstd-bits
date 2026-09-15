@@ -1772,11 +1772,63 @@ answered `SIZE_MAX - 63` over the same blocks.
 That the set's is not `static` follows: an owner must ask its storage and a view must ask what it views, neither
 of which a static member can reach. `std::set::max_size()` is not static either.
 
+### the-invariant-stays-in-the-storage
+
+The padding invariant could live one level up, each adaptor restoring it after the operations that dirty it,
+and it does not. Two reasons, one measured and one structural.
+
+**Measured**, the prize is one masked store. `operator<<=` at a run-time width erases where the set reading
+has already grown past anything the shift can reach ([the-set-operations-across-widths](#the-set-operations-across-widths)),
+so the call is dead in that path. Removing it, GCC 14, `-O3 -march=native`, best of twenty-five:
+
+| width | with | without |
+|---:|---:|---:|
+| 64 | 4.18 ns | 3.44 ns |
+| 256 | 7.75 ns | 7.67 ns |
+| 4096 | 22.50 ns | 22.45 ns |
+| 65536 | 311.08 ns | 311.72 ns |
+
+0.74 ns at one block and nothing beyond it, because the erase touches one block where the shift touches all
+of them.
+
+**Structural**, and the reason that decides it: the invariant is not a reading's operation, so the ceiling of
+[what-a-sequence-may-add](#what-a-sequence-may-add) does not reach it. It exists to serve the storage's own
+blockwise reads -- `operator==`, `count`, `all`, `any`, `none`, `is_subset_of`, `intersects`,
+`first_difference` and the three orderings are every one of them storage members that read a whole block and
+would have to mask without it. Moving the restoration up would put the obligation in three adaptors and the
+dependency in one storage, and a missed call would be silent. Three dirtying operations across three adaptors
+is nine places to be right instead of four, to save a masked store on a one-block set.
+
+That is also what the three standard libraries disagree about, and the disagreement is a real choice rather
+than an oversight: a tail invariant is needed only where blockwise reads are **unmasked**. libstdc++'s
+`vector<bool>` reads element-wise and keeps no invariant, so `flip()` dirties the whole allocation and nothing
+notices. libc++'s reads blocks and masks at every read site. This tree reads blocks unmasked and masks at the
+four writes that can dirty them.
+
 ### width-is-capacity
 
 `std::set` has no width, so `bit_set` treats its run-time width as capacity, never as value: two sets holding
 the same positions are equal whatever their storages' widths, and the width neither orders, nor hashes, nor is a
 precondition of the set operations.
+
+**`operator~` is the one operation that cannot honour this, so it is not offered at a run-time width.**
+Complementing needs a universe, and capacity is not one. Two `bit_set`s holding `{1, 3}` are equal whatever
+their storages grew to, but complementing reads the width, so the results are not:
+
+```
+a == b       : true          a, b both { 1 3 }
+~a size      : 2             a's storage never grew
+~b size      : 199           b's had admitted 200 once
+~a == ~b     : false
+```
+
+`~` is then not a function of the set's value, which is a stronger objection than an inconvenience: equal
+inputs, unequal outputs. At a **static** width there is no such gap, because `N` is part of the type and
+equal sets share it, so `complement()` and `operator~` are constrained on `has_static_width` and
+`bit_static_set<N>` keeps both. `bit_set` keeps `complement(x)`, which toggles one position and needs no
+universe, along with `fill()` and the four set operators. The alternative -- letting `~` read the width --
+would make the width value for exactly one operation, which is the thing this section says the set reading
+does not do.
 
 `contiguous_bit_container`'s `operator==` cannot say that: it is width first, which is what the sequence reading
 and `dynamic_bitset` mean, and those two need it. The width is part of the value for both of them -- a
