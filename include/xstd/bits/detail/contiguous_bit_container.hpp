@@ -1144,6 +1144,28 @@ private:
                 ;
         }
 
+        // boost's unequal-width order, a word at a time: the top min(size()) positions of each paired from the top, read
+        // as words at either one's own alignment, then the shorter is less. Unlike the other two readings' width-crossing
+        // arms this cannot pad, the bit string being read from the TOP down: what the wider one holds below the shared
+        // window is not above the narrower one's positions but below them, and is reached only when the window ties.
+        // [design.md#the-blit] [design.md#the-ordering-primitive]
+        [[nodiscard]] constexpr auto top_aligned_three_way(contiguous_bit_container const& other) const noexcept
+                -> std::strong_ordering
+        {
+                auto const m = std::ranges::min(this->size(), other.size());
+                auto const lhs_start = this->size() - m;
+                auto const rhs_start = other.size() - m;
+                for (auto k = (m + bits_per_block - 1UZ) / bits_per_block; k-- != 0UZ;) {
+                        auto const lhs_word = this->word_at(lhs_start + (k * bits_per_block));
+                        auto const rhs_word = other.word_at(rhs_start + (k * bits_per_block));
+                        if (auto const cmp = lhs_word <=> rhs_word; cmp != std::strong_ordering::equal) {
+                                return cmp;
+                        }
+                }
+                // The widths differ, which is how this walk was reached, so equal is not an answer here.
+                return this->size() < other.size() ? std::strong_ordering::less : std::strong_ordering::greater;
+        }
+
         // The block straddling index and index + 1: the high one shifted up by L_shift and the low one down by R_shift, spliced into one. [design.md#the-funnel-shift]
         [[nodiscard]] constexpr auto straddled_block(std::size_t index, std::size_t L_shift, std::size_t R_shift) const noexcept
                 -> block_type
