@@ -1355,6 +1355,43 @@ the suffix stays available as a later optimization behind profiling.
 view have it and a window does not; the static `swap(reference, reference)` is the proxies' own swap under
 the name the standard gives it.
 
+### what-a-sequence-may-add
+
+`[a-strict-extension](#a-strict-extension)` binds the bitset adaptor in one sentence, and the sequence
+adaptor had only `[the-sequence-contract](#the-sequence-contract)`: *`bit_vector` answers every line of
+`[vector.bool]`'s synopsis*. That is a floor with nothing above it, and a floor is how the shifts arrived --
+declared, never argued for, and spelled backwards
+([no-shifts-on-a-sequence](#no-shifts-on-a-sequence)).
+
+The ceiling: **the sequence adaptor adds an operation only where the sequence reading is what asks for it,
+and the spelling is the one that reading already uses.** Two questions, and a candidate answers both or it
+does not cross:
+
+- *Does a sequence of `bool` want this?* `flip()` is `[vector.bool]`'s own. The elementwise operators are
+  `std::valarray<bool>`'s, the standard's one model for a bulk logical operation over bools
+  ([the-elementwise-reading](#the-elementwise-reading)). A **difference** answers no: no standard sequence
+  of bools spells `a and not b`, and `valarray<bool>`'s `operator-=` is arithmetic. A **shift** answers no
+  twice over.
+- *Is this the name that reading gives it?* `<<=` fails here even where the operation is wanted, because a
+  sequence already spells moving elements `std::shift_left` and `std::shift_right`, in the opposite
+  direction.
+
+Being free is not an argument. Every operation the storage already has is free to forward, which is what
+makes the forwarding tempting and the ceiling necessary: `-=` and the shifts were each one line over a
+storage member that exists regardless, and the cost of a wrong one is not compile time but a caller who
+reads `v <<= 1` as `std::shift_left`. What the storage provides is the **union** of the three readings'
+demands ([the-three-adaptors](#the-three-adaptors)); each adaptor exposes its own reading's share, and the
+shares are not the same set.
+
+The four ways a reading answers an operation are all visible in the current surface:
+
+| | |
+|---|---|
+| one name, a different thing per reading | `size()` -- the sequence's element count, the set's **cardinality**, the bitset's width |
+| one reading alone | `complement()`, the set's; `count()` the sequence's and bitset's, where the set answers cardinality with `size()` |
+| one reading spelling it otherwise | `flip()` on the sequence and bitset is `complement()` on the set |
+| one reading declining it | `-=` on the set and bitset, not the sequence; the shifts on the bitset and set, not the sequence |
+
 ### no-shifts-on-a-sequence
 
 `std::vector<bool>` has no shifts, and neither has any sequence here. The storage keeps `<<=` and `>>=`
@@ -1735,11 +1772,63 @@ answered `SIZE_MAX - 63` over the same blocks.
 That the set's is not `static` follows: an owner must ask its storage and a view must ask what it views, neither
 of which a static member can reach. `std::set::max_size()` is not static either.
 
+### the-invariant-stays-in-the-storage
+
+The padding invariant could live one level up, each adaptor restoring it after the operations that dirty it,
+and it does not. Two reasons, one measured and one structural.
+
+**Measured**, the prize is one masked store. `operator<<=` at a run-time width erases where the set reading
+has already grown past anything the shift can reach ([the-set-operations-across-widths](#the-set-operations-across-widths)),
+so the call is dead in that path. Removing it, GCC 14, `-O3 -march=native`, best of twenty-five:
+
+| width | with | without |
+|---:|---:|---:|
+| 64 | 4.18 ns | 3.44 ns |
+| 256 | 7.75 ns | 7.67 ns |
+| 4096 | 22.50 ns | 22.45 ns |
+| 65536 | 311.08 ns | 311.72 ns |
+
+0.74 ns at one block and nothing beyond it, because the erase touches one block where the shift touches all
+of them.
+
+**Structural**, and the reason that decides it: the invariant is not a reading's operation, so the ceiling of
+[what-a-sequence-may-add](#what-a-sequence-may-add) does not reach it. It exists to serve the storage's own
+blockwise reads -- `operator==`, `count`, `all`, `any`, `none`, `is_subset_of`, `intersects`,
+`first_difference` and the three orderings are every one of them storage members that read a whole block and
+would have to mask without it. Moving the restoration up would put the obligation in three adaptors and the
+dependency in one storage, and a missed call would be silent. Three dirtying operations across three adaptors
+is nine places to be right instead of four, to save a masked store on a one-block set.
+
+That is also what the three standard libraries disagree about, and the disagreement is a real choice rather
+than an oversight: a tail invariant is needed only where blockwise reads are **unmasked**. libstdc++'s
+`vector<bool>` reads element-wise and keeps no invariant, so `flip()` dirties the whole allocation and nothing
+notices. libc++'s reads blocks and masks at every read site. This tree reads blocks unmasked and masks at the
+four writes that can dirty them.
+
 ### width-is-capacity
 
 `std::set` has no width, so `bit_set` treats its run-time width as capacity, never as value: two sets holding
 the same positions are equal whatever their storages' widths, and the width neither orders, nor hashes, nor is a
 precondition of the set operations.
+
+**`operator~` is the one operation that cannot honour this, so it is not offered at a run-time width.**
+Complementing needs a universe, and capacity is not one. Two `bit_set`s holding `{1, 3}` are equal whatever
+their storages grew to, but complementing reads the width, so the results are not:
+
+```
+a == b       : true          a, b both { 1 3 }
+~a size      : 2             a's storage never grew
+~b size      : 199           b's had admitted 200 once
+~a == ~b     : false
+```
+
+`~` is then not a function of the set's value, which is a stronger objection than an inconvenience: equal
+inputs, unequal outputs. At a **static** width there is no such gap, because `N` is part of the type and
+equal sets share it, so `complement()` and `operator~` are constrained on `has_static_width` and
+`bit_static_set<N>` keeps both. `bit_set` keeps `complement(x)`, which toggles one position and needs no
+universe, along with `fill()` and the four set operators. The alternative -- letting `~` read the width --
+would make the width value for exactly one operation, which is the thing this section says the set reading
+does not do.
 
 `contiguous_bit_container`'s `operator==` cannot say that: it is width first, which is what the sequence reading
 and `dynamic_bitset` mean, and those two need it. The width is part of the value for both of them -- a
@@ -2539,7 +2628,32 @@ and this measurement contradicts: **libstdc++ does not specialize `std::count` f
 specialization would show as two orders of magnitude, not as twenty percent. Under clang 22 the ordering
 inverts -- `std::count` over `bit_vector` runs 2074 µs at 2^24 against `std::vector<bool>`'s 15419 -- because
 our iterator's dereference is a pure function of its index and clang vectorizes it, where `_Bit_iterator`'s
-loop-carried state blocks vectorization everywhere. `count()` is still 47x ahead of the faster of the two.
+loop-carried state blocks vectorization everywhere.
+
+**Against libc++ the advantage is gone, and the row above says so only because both its columns are
+libstdc++'s.** libc++ does specialize: `std::__count_bool` walks whole words through `popcount` and masks the
+partial word at each end, and `std::find`, `std::equal`, `std::fill` and `vector<bool>`'s own `__hash_code`
+are written the same way. Measured on clang 18 with the library as the only variable, a second machine, same
+density and best of fifteen:
+
+| clang 18, µs | 2^16 | 2^20 | 2^24 |
+|---|---|---|---|
+| `std::count` over `std::vector<bool>`, **libc++** | 0.2 | 6.1 | 68.4 |
+| `bit_vector::count()` | 0.3 | 3.7 | 72.6 |
+| `std::count` over `std::vector<bool>`, libstdc++ | 72.3 | 1181 | 19316 |
+| `std::count` over `bit_vector` | 129 | 2122 | 33489 |
+
+282x between the two `vector<bool>` rows on identical source, and a **tie** at the top: 2^24 bits is 2 MiB and
+both run it at about 29 GiB/s, which is the memory and not the loop. So the honest claim is narrower than the
+one the first table invites -- `count()` beats `std::count` over a `vector<bool>` **whose library does not
+specialize it**, and ties one whose library does. What the member buys against libc++ is not speed but that
+the word-parallel count is the spelling a caller reaches for rather than a library optimization they must hope
+is present, over a storage that also answers the other two readings.
+
+It also narrows the rule elsewhere in this file. A tail invariant is needed only where blockwise reads are
+**unmasked**, which is weaker than needing one wherever reads are blockwise: libstdc++ escapes it by reading
+element-wise, libc++ by masking at every read site, and this tree by masking at the four writes that can dirty
+the padding ([padding](#padding)).
 
 ### the-sequence-for-each
 
