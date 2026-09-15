@@ -692,11 +692,10 @@ public:
                 return sequence_lexicographical_compare_three_way(x.storage(), y.storage());
         }
 
-        // Bulk, on the storage's own spelling: on packed bits the pointwise operation and the set operation are one instruction; not on a window, whose blocks are not its own.
+        // Elementwise logical, which is what a bitwise operator on a sequence of bools means and what std::valarray<bool> is the standard's one model for; on packed bits it is the set operation's instruction, so the reading costs nothing to serve. Three, not four: a difference is set vocabulary and has no elementwise reading, valarray's own operator-= being arithmetic.
         constexpr auto operator&=(this auto&& self, sequence_adaptor const& other) noexcept -> auto& requires (not is_window) and requires { self.storage() &= other.storage(); } { self.storage() &= other.storage(); return self; }
         constexpr auto operator|=(this auto&& self, sequence_adaptor const& other) noexcept -> auto& requires (not is_window) and requires { self.storage() |= other.storage(); } { self.storage() |= other.storage(); return self; }
         constexpr auto operator^=(this auto&& self, sequence_adaptor const& other) noexcept -> auto& requires (not is_window) and requires { self.storage() ^= other.storage(); } { self.storage() ^= other.storage(); return self; }
-        constexpr auto operator-=(this auto&& self, sequence_adaptor const& other) noexcept -> auto& requires (not is_window) and requires { self.storage() -= other.storage(); } { self.storage() -= other.storage(); return self; }
 
         // No shifts, at any shape: a shift is the bitset reading's truncating bit string and the set reading's translation, and the sequence reading already spells moving elements std::shift_left and std::shift_right -- in the opposite direction from the operators.
 
@@ -704,7 +703,6 @@ public:
         template<class Other> constexpr auto operator&=(this auto&& self, Other const& other) noexcept -> auto& requires is_window and block_writable and blittable<Other> { self.combine(other, [](auto a, auto b) { return static_cast<decltype(a)>(a & b);  }); return self; }
         template<class Other> constexpr auto operator|=(this auto&& self, Other const& other) noexcept -> auto& requires is_window and block_writable and blittable<Other> { self.combine(other, [](auto a, auto b) { return static_cast<decltype(a)>(a | b);  }); return self; }
         template<class Other> constexpr auto operator^=(this auto&& self, Other const& other) noexcept -> auto& requires is_window and block_writable and blittable<Other> { self.combine(other, [](auto a, auto b) { return static_cast<decltype(a)>(a ^ b);  }); return self; }
-        template<class Other> constexpr auto operator-=(this auto&& self, Other const& other) noexcept -> auto& requires is_window and block_writable and blittable<Other> { self.combine(other, [](auto a, auto b) { return static_cast<decltype(a)>(a & static_cast<decltype(b)>(~b)); }); return self; }
 
         // [vector.bool]'s two: flip every bit, a bulk operation like the ones above, and swap two proxies, which the proxies' own swap already does.
         constexpr auto flip(this auto&& self) noexcept -> void requires (not is_window) and requires { self.storage().flip(); } { self.storage().flip(); }
@@ -864,6 +862,14 @@ struct owned_storage<sequence_adaptor<Bits, ownership::owns, false>>
         // Committed to the sequence reading, so only a sequence view refers into one.
         static constexpr auto reads = reading::sequence;
 };
+
+// Bulk logical not, the value-returning counterpart of flip(): a sequence's width is its own size(), so unlike the set reading's complement this reads no width as value.
+template<class Bits, ownership Own, bool Windowed> [[nodiscard]] constexpr auto operator~(sequence_adaptor<Bits, Own, Windowed> const& lhs) noexcept -> sequence_adaptor<Bits, Own, Windowed> requires (owns(Own)) and requires (sequence_adaptor<Bits, Own, Windowed> c) { c.flip(); } { auto nrv = lhs; nrv.flip(); return nrv; }
+
+// The binary forms of the three above, on an owner alone: a view's copy refers to the very storage it views, so a value returned by one would write through to it.
+template<class Bits, ownership Own, bool Windowed> [[nodiscard]] constexpr auto operator&(sequence_adaptor<Bits, Own, Windowed> const& lhs, sequence_adaptor<Bits, Own, Windowed> const& rhs) noexcept(noexcept(std::declval<sequence_adaptor<Bits, Own, Windowed>&>() &= rhs)) -> sequence_adaptor<Bits, Own, Windowed> requires (owns(Own)) and requires (sequence_adaptor<Bits, Own, Windowed> c) { c &= c; } { auto nrv = lhs; nrv &= rhs; return nrv; }
+template<class Bits, ownership Own, bool Windowed> [[nodiscard]] constexpr auto operator|(sequence_adaptor<Bits, Own, Windowed> const& lhs, sequence_adaptor<Bits, Own, Windowed> const& rhs) noexcept(noexcept(std::declval<sequence_adaptor<Bits, Own, Windowed>&>() |= rhs)) -> sequence_adaptor<Bits, Own, Windowed> requires (owns(Own)) and requires (sequence_adaptor<Bits, Own, Windowed> c) { c |= c; } { auto nrv = lhs; nrv |= rhs; return nrv; }
+template<class Bits, ownership Own, bool Windowed> [[nodiscard]] constexpr auto operator^(sequence_adaptor<Bits, Own, Windowed> const& lhs, sequence_adaptor<Bits, Own, Windowed> const& rhs) noexcept(noexcept(std::declval<sequence_adaptor<Bits, Own, Windowed>&>() ^= rhs)) -> sequence_adaptor<Bits, Own, Windowed> requires (owns(Own)) and requires (sequence_adaptor<Bits, Own, Windowed> c) { c ^= c; } { auto nrv = lhs; nrv ^= rhs; return nrv; }
 
 // [vector.erasure], over the owner's own erase: the proxies move and swap, so remove_if runs unchanged over the packed bits.
 template<class Bits, ownership Own, bool Windowed, class Pred>
