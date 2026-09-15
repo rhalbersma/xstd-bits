@@ -1221,17 +1221,6 @@ private:
 
 };
 
-// Nominal, never structural: a storage is ours because this says so, not because its members answer.
-template<class T>
-inline constexpr bool is_specialization_of_contiguous_bit_container_v = false;
-
-template<contiguous_block_range Blocks, std::size_t N>
-inline constexpr bool is_specialization_of_contiguous_bit_container_v<contiguous_bit_container<Blocks, N>> = true;
-
-// A view over a const owner names Bits const, which no specialization pattern matches, so the const comes off here and nowhere else.
-template<class T>
-concept specialization_of_contiguous_bit_container = is_specialization_of_contiguous_bit_container_v<std::remove_const_t<T>>;
-
 }       // namespace xstd::detail::bits
 
 #endif  // XSTD_BITS_DETAIL_CONTIGUOUS_BIT_CONTAINER_HPP

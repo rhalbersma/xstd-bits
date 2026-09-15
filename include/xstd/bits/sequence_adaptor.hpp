@@ -7,12 +7,13 @@
 #define XSTD_BITS_SEQUENCE_ADAPTOR_HPP
 
 #include <xstd/bits/detail/allocator_base_type.hpp> // allocator_base_type
-#include <xstd/bits/detail/contiguous_bit_container.hpp> // specialization_of_contiguous_bit_container
+#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/detail/hash.hpp>              // hash_append_bits, std_hash
 #include <xstd/bits/detail/intrin.hpp>            // countr_zero, popcount
 #include <xstd/bits/detail/shift.hpp>             // shl, shr
 #include <xstd/bits/detail/random_access.hpp>     // random_access_bit_iterator, random_access_bit_reference
 #include <xstd/bits/ownership.hpp>                // owned_bits_t, owned_storage, owner_of, owner_reading, ownership, owns, reading
+#include <xstd/misc/concepts/specialization_of.hpp> // specialization_of_TN
 #include <xstd/misc/type_traits/empty_base_type.hpp>          // empty_base_type
 #include <boost/container_hash/is_range.hpp>      // is_range
 #include <boost/hash2/hash_append.hpp>            // hash_append_tag
@@ -135,7 +136,7 @@ using block_type_of = std::remove_const_t<Bits>::block_type;
 }       // namespace detail::sequence
 
 // An owner names its storage's allocator, as std::vector<bool> names its own; a view names none, owning nothing.
-template<detail::bits::specialization_of_contiguous_bit_container Bits, ownership Own, bool Windowed>
+template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits, ownership Own, bool Windowed>
 class sequence_adaptor;
 
 // A sequence adaptor of any shape whose storage holds blocks of the given type: what a blit reads, and nothing else, since only an adaptor hands its storage to another.
@@ -145,7 +146,7 @@ inline constexpr bool blit_source = false;
 template<class Bits, ownership Own, bool Windowed, class Block>
 inline constexpr bool blit_source<sequence_adaptor<Bits, Own, Windowed>, Block> = std::same_as<detail::sequence::block_type_of<Bits>, Block>;
 
-template<detail::bits::specialization_of_contiguous_bit_container Bits, ownership Own, bool Windowed>
+template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits, ownership Own, bool Windowed>
 class sequence_adaptor : public std::conditional_t<owns(Own), detail::bits::allocator_base_type<std::remove_const_t<Bits>>, xstd::empty_base_type<>>
 {
         static constexpr bool is_owner  = owns(Own);
@@ -213,7 +214,7 @@ class sequence_adaptor : public std::conditional_t<owns(Own), detail::bits::allo
         static constexpr bool block_writable = requires (bits_type& b, std::size_t pos, bits_type::block_type w) { b.block_at(pos, w, w); };
 
         // A sequence view refers into this owner's storage, and nothing else outside does; a set view does not, the readings not mixing.
-        template<detail::bits::specialization_of_contiguous_bit_container B, ownership O, bool W> friend class sequence_adaptor;
+        template<specialization_of_TN<detail::bits::contiguous_bit_container> B, ownership O, bool W> friend class sequence_adaptor;
 
         // The value under the sequence reading, the owner's alone as == is: a view follows span and hashes no more than it compares.
         template<class Provider, class Hash, class Flavor>
