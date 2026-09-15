@@ -3,9 +3,9 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-// The Block ladder: what the SAME 256 bits cost carried in 32, 16, 8, 4 or 2 blocks. [design.md#uint128-support]
+// The Block ladder: what the SAME 256 bits cost carried in 32, 16, 8, 4 or 2 blocks.
 
-// NOT alphabetical, and load-bearing: detail/bits/intrin calls xstd::countr_zero by a QUALIFIED name, whose candidates bind where that call is written rather than where it is instantiated. [design.md#uint128-support]
+// NOT alphabetical, and load-bearing: detail/bits/intrin calls xstd::countr_zero by a QUALIFIED name, whose candidates bind where that call is written rather than where it is instantiated.
 #include <xstd/ints/cstdint/int128.hpp>                 // uint128
 #if __has_include(<absl/numeric/int128.h>)
 

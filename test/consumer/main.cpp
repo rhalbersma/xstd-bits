@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-// The gate on the interface line. [design.md#the-interface-line]
+// The gate on the interface line.
 
 #include <xstd/bits.hpp> // bit_array, bit_inplace_set, bit_inplace_vector, bit_set, bit_set_view, bit_span,
                          // bit_static_set, bit_subspan, bit_vector, bitset, bitset_adaptor, dynamic_bitset, inplace_bitset, ownership, sequence_adaptor, set_adaptor
@@ -24,8 +24,7 @@ template<class B, xstd::ownership O, bool W>               constexpr bool is_seq
 template<class>                                            constexpr bool is_bitset_adaptor = false;
 template<class B>                                          constexpr bool is_bitset_adaptor<xstd::bitset_adaptor<B>> = true;
 
-// A view's Bits is the storage a container wraps, which lives in detail/, so a consumer reaches the view names by
-// deduction rather than by spelling them. These aliases are how that looks from outside the library.
+// A view's Bits is the storage a container wraps, which lives in detail/, so a consumer reaches the view names by deduction rather than by spelling them. These aliases are how that looks from outside the library.
 using set_view_of_bitset  = decltype(xstd::bit_set_view(std::declval<xstd::bitset<64>&>()));
 using span_of_bitset      = decltype(xstd::bit_span(std::declval<xstd::bitset<64>&>()));
 using subspan_of_bitset   = decltype(std::declval<span_of_bitset&>().subspan(8, 8));
@@ -55,7 +54,7 @@ static_assert(is_set_adaptor<set_view_of_bitset>);
 
 #ifdef __cpp_lib_inplace_vector
 
-// The inplace column, present only where its storage is. [design.md#the-inplace-column]
+// The inplace column, present only where its storage is.
 static_assert(is_set_adaptor<xstd::bit_inplace_set<100>>);
 static_assert(is_sequence_adaptor<xstd::bit_inplace_vector<100>>);
 static_assert(is_bitset_adaptor<xstd::inplace_bitset<100>>);
@@ -107,7 +106,7 @@ int main()
 
 #endif
 
-        // The three view names end to end, over the one owner committed to neither reading. [design.md#the-readings-do-not-mix]
+        // The three view names end to end, over the one owner committed to neither reading.
         auto owner = xstd::bitset<64>();
         auto view = xstd::bit_set_view(owner);
         view.insert(9);
@@ -123,7 +122,7 @@ int main()
         check(window.size() == 8);
         check(window.count() == 1);
 
-        // A const owner reaches a read-only view, and the const is part of the type. [design.md#read-only-set-proxy]
+        // A const owner reaches a read-only view, and the const is part of the type.
         auto const& frozen = owner;
         auto const reader = xstd::bit_set_view(frozen);
         check(reader.size() == 2);

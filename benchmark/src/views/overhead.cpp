@@ -3,12 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-// What a reading costs when it is a view rather than a container, on the SAME backend bit container. [design.md#what-a-view-costs]
-//
-// The third variant here used to be a view spelled over the bitset itself, measuring what the trait forwarder cost on
-// top of the storage. A view's Bits is now the storage a container wraps and nothing else, so a view deduced off a
-// bitset IS the view over its blocks, byte for byte: there is no forwarder left to charge for, and a benchmark for it
-// would be the control under another name. [design.md#one-storage]
+// What a reading costs when it is a view rather than a container, on the SAME backend bit container. The third variant here used to be a view spelled over the bitset itself, measuring what the trait forwarder cost on top of the storage. A view's Bits is now the storage a container wraps and nothing else, so a view deduced off a bitset IS the view over its blocks, byte for byte: there is no forwarder left to charge for, and a benchmark for it would be the control under another name.
 
 #include <xstd/bits/bit_array.hpp>                   // bit_array
 #include <xstd/bits/bit_set_view.hpp>                // bit_set_view
@@ -68,7 +63,7 @@ auto set_iterate_owner(benchmark::State& state)
         }
 }
 
-// The control: byte-identical to set_iterate_owner above. [design.md#what-a-view-costs]
+// The control: byte-identical to set_iterate_owner above.
 template<std::size_t N>
 auto set_iterate_owner_twin(benchmark::State& state)
         -> void
@@ -161,7 +156,7 @@ auto sequence_read_view_of_storage(benchmark::State& state)
 
 }       // namespace
 
-// From four words up. [design.md#what-a-view-costs]
+// From four words up.
 #define LADDER(fn)                                              \
         BENCHMARK_TEMPLATE(fn, 4UZ   * bits_per_word);          \
         BENCHMARK_TEMPLATE(fn, 16UZ  * bits_per_word);          \

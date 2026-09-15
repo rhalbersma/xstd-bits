@@ -34,7 +34,7 @@ using T = xstd::basic_bit_inplace_set<std::uint8_t, 24>;
 template<class X>
 constexpr bool has_capacity = requires (X const& x) { x.capacity(); };
 
-// The set reading over a run-time width under a compile-time capacity, an alias and nothing more. [design.md#the-public-names]
+// The set reading over a run-time width under a compile-time capacity, an alias and nothing more.
 BOOST_AUTO_TEST_CASE(TheInplaceSetIsTheSetAdaptorOverAnInplaceVectorOfBlocks)
 {
         static_assert(std::same_as<T, xstd::set_adaptor<xstd::detail::bits::contiguous_bit_inplace_vector<std::uint8_t, 24>, xstd::ownership::owns>>);
@@ -51,7 +51,7 @@ BOOST_AUTO_TEST_CASE(ItIsBuiltAndOrderedLikeAStdSet)
         BOOST_CHECK_EQUAL(s.size(), k.size());
 }
 
-// A key past the width grows the width, exactly as the heap-backed set does, until the capacity stops it. [design.md#asking-is-total]
+// A key past the width grows the width, exactly as the heap-backed set does, until the capacity stops it.
 BOOST_AUTO_TEST_CASE(InsertingPastTheWidthGrowsItUpToTheCapacity)
 {
         auto s = T();
@@ -68,12 +68,12 @@ BOOST_AUTO_TEST_CASE(InsertingPastTheWidthGrowsItUpToTheCapacity)
         BOOST_CHECK_EQUAL(s.erase(23), 0UZ);
 }
 
-// Past the capacity there is nowhere to grow, and the storage's bad_alloc reaches the caller. [design.md#growth]
+// Past the capacity there is nowhere to grow, and the storage's bad_alloc reaches the caller.
 BOOST_AUTO_TEST_CASE(InsertingPastTheCapacityThrowsBadAlloc)
 {
         auto s = T();
 
-        // max_size() is the positions there are to hold, which under a static capacity is that capacity, the same answer the other two readings give over this storage. [design.md#max-size-is-the-bits]
+        // max_size() is the positions there are to hold, which under a static capacity is that capacity, the same answer the other two readings give over this storage.
         BOOST_CHECK_EQUAL(s.max_size(), 24UZ);
         static_assert(not has_capacity<T>);
         BOOST_CHECK_THROW(s.insert(24), std::bad_alloc);
@@ -84,7 +84,7 @@ BOOST_AUTO_TEST_CASE(InsertingPastTheCapacityThrowsBadAlloc)
         BOOST_CHECK(s.find(24) == s.end());  // NOLINT(readability-container-contains)
 }
 
-// Width is capacity here as it is on the heap: two sets holding the same keys are equal whatever their widths. [design.md#width-is-capacity]
+// Width is capacity here as it is on the heap: two sets holding the same keys are equal whatever their widths.
 BOOST_AUTO_TEST_CASE(EqualSetsCompareEqualAtUnequalWidths)
 {
         auto narrow = T();
@@ -99,7 +99,7 @@ BOOST_AUTO_TEST_CASE(EqualSetsCompareEqualAtUnequalWidths)
         BOOST_CHECK(not (narrow < wide) and not (wide < narrow));
 }
 
-// Ascending keys, whatever the insertion order: what makes this a set rather than a bag of positions. [design.md#two-readings-disagree]
+// Ascending keys, whatever the insertion order: what makes this a set rather than a bag of positions.
 BOOST_AUTO_TEST_CASE(ItYieldsAscendingKeys)
 {
         auto c = T();
@@ -116,7 +116,7 @@ BOOST_AUTO_TEST_CASE(ItYieldsAscendingKeys)
 
 #else
 
-// The column is its storage's: without std::inplace_vector there is no name to test, and saying so keeps the source from being empty. [design.md#the-inplace-column]
+// The column is its storage's: without std::inplace_vector there is no name to test, and saying so keeps the source from being empty.
 BOOST_AUTO_TEST_CASE(TheColumnIsAbsentWithItsStorage)
 {
         static_assert(not test::has_inplace_vector);

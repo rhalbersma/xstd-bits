@@ -50,14 +50,14 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItsIteratorIsRandomAccess, T, Types)
         static_assert(std::random_access_iterator<I>);
 }
 
-// Random access is where it stops: the blocks underneath are contiguous, the bits are not addressable, and a proxy reference is what forbids the last rung. [design.md#contiguous-block-range]
+// Random access is where it stops: the blocks underneath are contiguous, the bits are not addressable, and a proxy reference is what forbids the last rung.
 BOOST_AUTO_TEST_CASE_TEMPLATE(ItIsNotAContiguousRange, T, Types)
 {
         static_assert(not std::ranges::contiguous_range<T>);
         static_assert(not std::contiguous_iterator<typename T::iterator>);
 }
 
-// What survives the loss of contiguity: operator& on the proxy answers an ITERATOR rather than a pointer, so the identity a contiguous range spells in pointer arithmetic holds here in iterator arithmetic. [design.md#the-iterator-is-the-primitive]
+// What survives the loss of contiguity: operator& on the proxy answers an ITERATOR rather than a pointer, so the identity a contiguous range spells in pointer arithmetic holds here in iterator arithmetic.
 BOOST_AUTO_TEST_CASE_TEMPLATE(AddressOfASubscriptIsTheIteratorToIt, T, Types)
 {
         static_assert(std::same_as<decltype(&std::declval<T&>()[0UZ]), typename T::iterator>);
@@ -76,7 +76,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItsConstReferenceIsAValue, T, Types)
         static_assert(test::value_reference<typename T::const_reference>);
 }
 
-// Every owner hashes, this one although std::array<bool, N> does not: equal values equal, at every extent. [design.md#the-hashing-invariant]
+// Every owner hashes, this one although std::array<bool, N> does not: equal values equal, at every extent.
 BOOST_AUTO_TEST_CASE_TEMPLATE(ItHashesAsAnOwner, T, Types)
 {
         auto const h = std::hash<T>();
@@ -93,7 +93,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(IsABitSequence, T, Types)
         static_assert(test::sequence::bit_sequence<T>);
 }
 
-// [array]'s synopsis line by line, the model first so the checklist is known to be honest. [design.md#the-sequence-contract]
+// [array]'s synopsis line by line, the model first so the checklist is known to be honest.
 static_assert(test::sequence::array_bool<std::array<bool, 5>>);
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(ItAnswersEveryLineOfStdArrayBool, T, Types)
@@ -113,7 +113,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItIsListInitializedLikeAStdArray, T, Types)
         BOOST_CHECK(T{} == T());
 }
 
-// The behavioural half, which this suite was missing while the bitset and set suites had theirs: every operation run on a bit_array and on the std::array<bool, N> it is held against, and the two compared. [design.md#the-sequence-contract]
+// The behavioural half, which this suite was missing while the bitset and set suites had theirs: every operation run on a bit_array and on the std::array<bool, N> it is held against, and the two compared.
 namespace {
 
 // The model at the same extent, filled the same way, so any disagreement is the packing's.
@@ -128,7 +128,7 @@ auto model_of(T const& a)
         return m;
 }
 
-// Every read path at every position, counted rather than asserted one at a time: a failure then names the operation instead of drowning the log in one line per position. [design.md#counted-not-asserted]
+// Every read path at every position, counted rather than asserted one at a time: a failure then names the operation instead of drowning the log in one line per position.
 template<class T>
 auto access_disagreements(T& a, std::vector<bool> const& m)
         -> std::size_t
@@ -233,7 +233,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheIteratorsAgreeWithTheModel, T, Types)
 
         BOOST_CHECK_EQUAL(a.empty(), m.empty());
         BOOST_CHECK_EQUAL(a.size(),  m.size());
-        BOOST_CHECK_EQUAL(a.max_size(), a.size());   // a fixed extent is its own capacity [design.md#width-is-capacity]
+        BOOST_CHECK_EQUAL(a.max_size(), a.size());   // a fixed extent is its own capacity
 }
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(FillAndSwapAgreeWithTheModel, T, Types)
@@ -284,7 +284,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheComparisonsAgreeWithTheModel, T, Types)
         BOOST_CHECK_EQUAL(disagreements, 0UZ);
 }
 
-// Every position, densely, agreeing with the subscript -- and not a contiguous range, which no proxy sequence can be. [design.md#the-iterator-is-the-primitive]
+// Every position, densely, agreeing with the subscript -- and not a contiguous range, which no proxy sequence can be.
 BOOST_AUTO_TEST_CASE_TEMPLATE(ItYieldsEveryPosition, T, Types)
 {
         auto c = T();

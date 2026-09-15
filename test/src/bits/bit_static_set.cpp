@@ -51,7 +51,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(IsABitSet, T, Types)
         static_assert(test::set::bit_set<T>);
 }
 
-// Total lookups, swept over every width because no single one exposed all six operations. [design.md#total-lookups-on-the-container]
+// Total lookups, swept over every width because no single one exposed all six operations.
 template<class X>
 auto check_key_outside_the_domain(X a, std::size_t x)
         -> void
@@ -85,7 +85,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(LookupIsTotalOverKeyType, T, Types)
         }
 }
 
-// Ascending keys, at every width and whatever the insertion order: what makes this a set rather than a bag of positions. [design.md#two-readings-disagree]
+// Ascending keys, at every width and whatever the insertion order: what makes this a set rather than a bag of positions.
 BOOST_AUTO_TEST_CASE_TEMPLATE(ItYieldsAscendingKeys, T, Types)
 {
         auto c = T();

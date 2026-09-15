@@ -27,7 +27,7 @@
 
 BOOST_AUTO_TEST_SUITE(DynamicBitset)
 
-// boost::dynamic_bitset's counterpart over a heap of blocks: the same wrapper, at a run-time width. [design.md#a-strict-extension]
+// boost::dynamic_bitset's counterpart over a heap of blocks: the same wrapper, at a run-time width.
 BOOST_AUTO_TEST_CASE(TheDynamicBitsetIsTheWrapperOverAHeapOfBlocks)
 {
         static_assert(std::same_as<xstd::basic_dynamic_bitset<std::uint8_t>, xstd::bitset_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint8_t>>>);
@@ -56,7 +56,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItAnswersAsBoostDoes, T, Dynamic)
         BOOST_CHECK_EQUAL(d.find_next(2), T::npos);
         BOOST_CHECK_EQUAL(T(9).find_first(), T::npos);
 
-        // Hashed as boost's counterpart is not, equal values equal. [design.md#the-hashing-invariant]
+        // Hashed as boost's counterpart is not, equal values equal.
         BOOST_CHECK_EQUAL(std::hash<T>()(d), std::hash<T>()(T(std::string("000000101"))));
         BOOST_CHECK(std::hash<T>()(d) != std::hash<T>()(T(9)));
 
@@ -88,7 +88,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheReverseSearchesMirrorTheForwardOnes, T, Dynamic
         BOOST_CHECK_EQUAL(T().find_prev(0), T::npos);
 }
 
-// The ordering is boost's, pair for pair: every value at every width up to nine against every other, unequal widths included. [design.md#the-ordering-invariant]
+// The ordering is boost's, pair for pair: every value at every width up to nine against every other, unequal widths included.
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheOrderingIsBoosts, T, Dynamic)
 {
         static_assert(std::totally_ordered<T>);
@@ -136,7 +136,7 @@ auto disagreements_against_boost(std::size_t w, std::size_t u, unsigned long lon
 
 }       // namespace
 
-// And across blocks at unequal widths, where the top windows are read a word at a time at either alignment. [design.md#the-blit]
+// And across blocks at unequal widths, where the top windows are read a word at a time at either alignment.
 BOOST_AUTO_TEST_CASE(TheOrderingIsBoostsAcrossBlocksAtUnequalWidths)
 {
         constexpr auto widths   = std::array{ 0UZ, 3UZ, 8UZ, 9UZ, 16UZ, 17UZ, 25UZ, 70UZ };
@@ -184,7 +184,7 @@ BOOST_AUTO_TEST_CASE(TheBlockInterfaceIsBoosts)
         BOOST_CHECK_EQUAL(T(3, 7).to_ullong(), 7ULL);
 }
 
-// The rest of boost's surface, first the allocator and max_size. [design.md#a-strict-extension]
+// The rest of boost's surface, first the allocator and max_size.
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheAllocatorAndMaxSizeAreBoosts, T, Dynamic)
 {
         using Block = T::block_type;
@@ -207,7 +207,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheAllocatorAndMaxSizeAreBoosts, T, Dynamic)
         BOOST_CHECK_LE(b.max_size(), Boost(9).max_size());
 }
 
-// Then the throwing at and test_set. [design.md#a-strict-extension]
+// Then the throwing at and test_set.
 BOOST_AUTO_TEST_CASE_TEMPLATE(AtAndTestSetAreBoosts, T, Dynamic)
 {
         auto d = T(9, 0b101ULL);

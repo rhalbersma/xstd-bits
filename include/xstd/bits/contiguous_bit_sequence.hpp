@@ -11,7 +11,7 @@
 
 namespace xstd {
 
-// What the three bit containers answer in their own names: the INTERSECTION of std::bitset's, boost::dynamic_bitset's and contiguous_bit_container's vocabularies, where contiguous_bit_container provides the UNION of what the three readings ask of it. Nothing is constrained on it; it is the shape the library documents rather than a door anything comes in through. [design.md#the-common-vocabulary] [design.md#contiguous-block-range]
+// What the three bit containers answer in their own names: the INTERSECTION of std::bitset's, boost::dynamic_bitset's and contiguous_bit_container's vocabularies, where contiguous_bit_container provides the UNION of what the three readings ask of it. Nothing is constrained on it; it is the shape the library documents rather than a door anything comes in through.
 template<class C>
 concept contiguous_bit_sequence =
         std::regular<C> and

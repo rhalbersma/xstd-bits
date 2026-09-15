@@ -64,7 +64,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(SievesTooSmallForTheSquareBreakStillSiftCorrectly,
         BOOST_CHECK(opt::filter_twins(one).empty());
 }
 
-// The README offers a word-at-a-time twins as the dense container's answer to the elementwise one; the two agreeing is the whole claim, so it is asserted rather than described. [design.md#the-sieve]
+// The README offers a word-at-a-time twins as the dense container's answer to the elementwise one; the two agreeing is the whole claim, so it is asserted rather than described.
 BOOST_AUTO_TEST_CASE(TheDataParallelTwinsAgreeWithTheElementwiseOnes)
 {
         auto const primes = opt::sift_primes1<xstd::bit_static_set<N>>(N);
@@ -73,7 +73,7 @@ BOOST_AUTO_TEST_CASE(TheDataParallelTwinsAgreeWithTheElementwiseOnes)
         BOOST_CHECK(elementwise == parallel);
 }
 
-// The three sieves are one function of n, and the two unbounded ones earn their place by agreeing with the bounded one rather than by being described as equivalent. [design.md#the-unbounded-sieves] [design.md#width-is-capacity]
+// The three sieves are one function of n, and the two unbounded ones earn their place by agreeing with the bounded one rather than by being described as equivalent.
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheUnboundedSievesAgreeWithTheBoundedOne, T, Types)
 {
         for (auto const n : {0UZ, 1UZ, 2UZ, 3UZ, 4UZ, 5UZ, 9UZ, 10UZ, N / 2UZ, N}) {
@@ -103,7 +103,7 @@ BOOST_AUTO_TEST_CASE(TheIncrementalSieveGeneratesWithoutABound)
         BOOST_CHECK_EQUAL(sieve.next(), 101UZ);
 }
 
-// The segmented sieve sizes its base pass with isqrt, which carries no n < 2 guard because the Newton loop is already total there. [design.md#the-unbounded-sieves]
+// The segmented sieve sizes its base pass with isqrt, which carries no n < 2 guard because the Newton loop is already total there.
 BOOST_AUTO_TEST_CASE(TheIntegerSquareRootIsExactAndTotal)
 {
         BOOST_CHECK_EQUAL(opt::detail::sieve::isqrt(0UZ), 0UZ);
@@ -122,7 +122,7 @@ BOOST_AUTO_TEST_CASE(TheIntegerSquareRootIsExactAndTotal)
         BOOST_CHECK_EQUAL(opt::detail::sieve::isqrt(1UZ << 52UZ), 1UZ << 26UZ);
 }
 
-// generate_candidates is total in n: below two there is nothing to sift, which is an answer rather than a broken precondition on iota. [design.md#the-unbounded-sieves]
+// generate_candidates is total in n: below two there is nothing to sift, which is an answer rather than a broken precondition on iota.
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheSieveIsTotalBelowTwo, T, Types)
 {
         BOOST_CHECK(opt::sift_primes0<T>(0UZ).empty());

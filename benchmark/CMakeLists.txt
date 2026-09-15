@@ -106,13 +106,12 @@ foreach(t ${targets})
         Boost::headers
         benchmark::benchmark
         fmt::fmt
-        # Optional, and empty when absent: set/blocks.cpp detects each by __has_include and drops the rung.
-        # Declared above both trees in cmake/int128.cmake, benchmark/ being configured before test/.
+        # Optional, and empty when absent: set/blocks.cpp detects each by __has_include and drops the rung. Declared above both trees in cmake/int128.cmake, benchmark/ being configured before test/.
         ${${project_id}_test_boost_int128}
         ${${project_id}_test_absl_int128}
     )
 
-    # The workloads, shared with test/ and deliberately outside include/. [design.md#the-interface-line]
+    # The workloads, shared with test/ and deliberately outside include/.
     target_include_directories(
         ${target_id} PRIVATE
         ${PROJECT_SOURCE_DIR}/examples/include
@@ -130,9 +129,7 @@ foreach(t ${targets})
         ${cxx_compile_options_mbig_obj}
     )
 
-    # Under ctest a benchmark is a smoke test: that it runs, not what it costs. Timing the full ladder here would
-    # put minutes of std::set at 2^20 into every CI run, and the number would be worthless on a shared runner
-    # anyway. A manual run takes the defaults and measures for real.
+    # Under ctest a benchmark is a smoke test: that it runs, not what it costs. Timing the full ladder here would put minutes of std::set at 2^20 into every CI run, and the number would be worthless on a shared runner anyway. A manual run takes the defaults and measures for real.
     set(bench_smoke_args --benchmark_min_time=1x)
 
     # Release only, and by CONFIGURATIONS rather than if(): neither spelling alone works on both generator kinds (#32).

@@ -9,7 +9,7 @@
 #include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
 #include <cstddef>                                 // size_t
 
-// A shift count reaches a Block as int, not as the size_t the containers count positions in. [design.md#uint128-support] [design.md#clang-tidy-false-positives]
+// A shift count reaches a Block as int, not as the size_t the containers count positions in.
 namespace xstd::detail::bits {
 
 template<xstd::unsigned_integer Block>

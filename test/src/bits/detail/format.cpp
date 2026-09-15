@@ -15,9 +15,9 @@
 
 BOOST_AUTO_TEST_SUITE(Format)
 
-// Nothing here says anything about a container: the two proxies carry a formatter and [format.range.formatter] does the rest. [design.md#formatting-the-proxies]
+// Nothing here says anything about a container: the two proxies carry a formatter and [format.range.formatter] does the rest.
 
-// [format.range.fmtkind] chooses range_format::set for a range with a key_type, so the set reading arrives at braces without being told, the way fmt's format_as does. [design.md#two-readings-disagree]
+// [format.range.fmtkind] chooses range_format::set for a range with a key_type, so the set reading arrives at braces without being told, the way fmt's format_as does.
 BOOST_AUTO_TEST_CASE(TheSetReadingFormatsInBraces)
 {
         auto d = xstd::bit_set();
@@ -45,8 +45,7 @@ BOOST_AUTO_TEST_CASE(TheSequenceReadingFormatsInBrackets)
         BOOST_CHECK_EQUAL(std::format("{}", xstd::bit_vector()), "[]");
 }
 
-// A view is a range over the same proxies, so it formats as its reading does and never as the owner's. The owner is a
-// bitset here, committed to neither reading and so the one owner both views may refer into. [design.md#the-readings-do-not-mix]
+// A view is a range over the same proxies, so it formats as its reading does and never as the owner's. The owner is a bitset here, committed to neither reading and so the one owner both views may refer into.
 BOOST_AUTO_TEST_CASE(TheViewsFormatAsTheirReading)
 {
         auto b = xstd::dynamic_bitset(4UZ);

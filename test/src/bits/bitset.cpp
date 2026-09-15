@@ -25,7 +25,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(IsRegular, T, Types)
         static_assert(std::regular<T>);
 }
 
-// Two orderings at every width: its own is the bit string's, boost's, and the set reading's is reached through the view. [design.md#the-ordering-invariant]
+// Two orderings at every width: its own is the bit string's, boost's, and the set reading's is reached through the view.
 BOOST_AUTO_TEST_CASE_TEMPLATE(OrderedInfixAndThroughTheView, T, Types)
 {
         static_assert(std::totally_ordered<T>);

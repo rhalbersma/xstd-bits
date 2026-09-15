@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-// The static-width ladder: what a block of bits costs at 1, 2, 4, ... 1024 words, ours against std::bitset. [design.md#two-block-case]
+// The static-width ladder: what a block of bits costs at 1, 2, 4, ... 1024 words, ours against std::bitset.
 
 #include <xstd/bits/bit_set_view.hpp>   // bit_set_view
 #include <xstd/bits/bitset.hpp>         // aligned::bitset, bitset
@@ -81,7 +81,7 @@ auto bm_count(benchmark::State& state)
         state.SetBytesProcessed(state.iterations() * static_cast<std::int64_t>(N / 8UZ));
 }
 
-// all() is where the unused tail shows: an unaligned width compares the last block against a mask, an aligned one against all-ones. [design.md#padding]
+// all() is where the unused tail shows: an unaligned width compares the last block against a mask, an aligned one against all-ones.
 template<class T, std::size_t N>
 auto bm_all(benchmark::State& state)
         -> void
@@ -108,7 +108,7 @@ auto bm_flip(benchmark::State& state)
         state.SetBytesProcessed(state.iterations() * static_cast<std::int64_t>(N / 8UZ));
 }
 
-// The scan is what the two-block arm is actually about: design.md#two-block-case argues the general walk costs more than the whole scan is worth at this width, so the tail is a named block rather than a range. [design.md#the-blit]
+// The scan is what the two-block arm is actually about: the two-block case argues the general walk costs more than the whole scan is worth at this width, so the tail is a named block rather than a range.
 template<class T, std::size_t N>
 auto bm_scan(benchmark::State& state)
         -> void
@@ -117,7 +117,7 @@ auto bm_scan(benchmark::State& state)
         for (auto _ : state) {
                 benchmark::DoNotOptimize(a);
                 auto sum = 0UZ;
-                // Ours iterates through the view; a counterpart takes the loop its own users write. [design.md#owning-is-ours]
+                // Ours iterates through the view; a counterpart takes the loop its own users write.
                 if constexpr (requires { xstd::bit_set_view(a); }) {
                         for (auto const pos : xstd::bit_set_view(a)) {
                                 sum += pos;
@@ -139,7 +139,7 @@ auto bm_scan(benchmark::State& state)
         BENCHMARK_TEMPLATE(fn, std::bitset <words * bits_per_word>, words * bits_per_word);     \
         BENCHMARK_TEMPLATE(fn, xstd::bitset<words * bits_per_word>, words * bits_per_word)
 
-// Three words breaks the doubling on purpose: it is the first width nobody has an unrolled arm for, and so the control that says a two-word result is the specialization rather than noise. [design.md#two-block-case]
+// Three words breaks the doubling on purpose: it is the first width nobody has an unrolled arm for, and so the control that says a two-word result is the specialization rather than noise.
 #define BM_LADDER(fn)    \
         BM_RUNG(fn,   1); \
         BM_RUNG(fn,   2); \
@@ -162,7 +162,7 @@ BM_LADDER(bm_all);
 BM_LADDER(bm_flip);
 BM_LADDER(bm_scan);
 
-// The alignment A/B, at the width a padded board actually lands on. [design.md#padding]
+// The alignment A/B, at the width a padded board actually lands on.
 #define BM_ALIGNMENT(fn)                                                        \
         BENCHMARK_TEMPLATE(fn, std::bitset<120>,           120);                \
         BENCHMARK_TEMPLATE(fn, xstd::bitset<120>,          120);                \

@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-// The sequence row: xstd::bit_vector against std::vector<bool>, which is the whole comparison. [design.md#the-sequence-ladder]
+// The sequence row: xstd::bit_vector against std::vector<bool>, which is the whole comparison.
 
 #include <xstd/bits/bit_vector.hpp> // bit_vector
 #include <algorithm>                // count
@@ -59,7 +59,7 @@ auto bm_random_read(benchmark::State& state)
         state.SetItemsProcessed(state.iterations());
 }
 
-// The other half of a database pass: not a lookup but a sweep, where a container owning its blocks should have the advantage over one that does not -- and does not, which is the finding. [design.md#the-sequence-ladder]
+// The other half of a database pass: not a lookup but a sweep, where a container owning its blocks should have the advantage over one that does not -- and does not, which is the finding.
 template<class T>
 auto bm_sequential_count(benchmark::State& state)
         -> void

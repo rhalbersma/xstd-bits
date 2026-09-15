@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-// The two vehicle headers are named directly because the assertions below pin the three naming layers to their storage, and the umbrella stopped exporting those names when the vehicles moved under detail/. A test may reach into detail/ where a user may not, and an include list is where that is said out loud. [design.md#the-interface-line]
+// The two vehicle headers are named directly because the assertions below pin the three naming layers to their storage, and the umbrella stopped exporting those names when the vehicles moved under detail/. A test may reach into detail/ where a user may not, and an include list is where that is said out loud.
 #include <test/block_types.hpp>                       // graded_extents
 #include <test/flat_set.hpp>                          // IWYU pragma: keep; TEST_HAS_FLAT_SET
 #include <test/inplace_vector.hpp>                    // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
@@ -46,7 +46,7 @@ BOOST_AUTO_TEST_CASE(EveryContainerArrivesThroughTheUmbrella)
         static_assert(std::ranges::random_access_range<xstd::basic_bit_vector<std::size_t>>);
         static_assert(not std::ranges::range<xstd::basic_dynamic_bitset<std::size_t>>);
 
-        // Three layers: the primaries take the storage, the basic_ layer chooses it and leaves the block open, the restricted layer fixes size_t and std::allocator. [design.md#the-public-names]
+        // Three layers: the primaries take the storage, the basic_ layer chooses it and leaves the block open, the restricted layer fixes size_t and std::allocator.
         static_assert(std::same_as<xstd::basic_bit_static_set<std::uint8_t, 8>, xstd::set_adaptor<xstd::detail::bits::contiguous_bit_array<std::uint8_t, 8>, xstd::ownership::owns>>);
         static_assert(std::same_as<xstd::basic_bit_set<std::uint8_t>,          xstd::set_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint8_t>, xstd::ownership::owns>>);
         static_assert(std::same_as<xstd::bit_static_set<8>, xstd::basic_bit_static_set<std::size_t, 8>>);
@@ -58,7 +58,7 @@ BOOST_AUTO_TEST_CASE(EveryContainerArrivesThroughTheUmbrella)
 
 #ifdef TEST_HAS_INPLACE_VECTOR
 
-        // The inplace column, the third storage point, one name per reading and every one of them an alias like the rest. [design.md#the-inplace-column]
+        // The inplace column, the third storage point, one name per reading and every one of them an alias like the rest.
         static_assert(std::ranges::bidirectional_range<xstd::basic_bit_inplace_set<std::uint8_t, 8>>);
         static_assert(std::ranges::random_access_range<xstd::basic_bit_inplace_vector<std::uint8_t, 8>>);
         static_assert(not std::ranges::range<xstd::basic_inplace_bitset<std::uint8_t, 8>>);
@@ -68,7 +68,7 @@ BOOST_AUTO_TEST_CASE(EveryContainerArrivesThroughTheUmbrella)
 
 #endif
 
-        // Every static name has an aligned form in both layers, its width rounded up to whole blocks; the inplace column has none, its capacity already being whole blocks. [design.md#the-public-names]
+        // Every static name has an aligned form in both layers, its width rounded up to whole blocks; the inplace column has none, its capacity already being whole blocks.
         static_assert(std::same_as<xstd::aligned::bit_static_set<9>, xstd::bit_static_set<std::numeric_limits<std::size_t>::digits>>);
         static_assert(std::same_as<xstd::aligned::bit_array<9>,      xstd::bit_array<std::numeric_limits<std::size_t>::digits>>);
         static_assert(std::same_as<xstd::aligned::bitset<9>,         xstd::bitset<std::numeric_limits<std::size_t>::digits>>);
@@ -95,7 +95,7 @@ BOOST_AUTO_TEST_CASE(APackedArrayIsTheArrayItPacks)
 
 #ifdef TEST_HAS_INPLACE_VECTOR
 
-        // Storage is the second dimension of the grading: the same claim over the same extents, read as capacities. [design.md#the-inplace-column]
+        // Storage is the second dimension of the grading: the same claim over the same extents, read as capacities.
         using inplace = test::graded_extents<xstd::basic_bit_inplace_vector>;
         [] <std::size_t... I> (std::index_sequence<I...>) {
                 static_assert((bit_sequence<std::tuple_element_t<I, inplace>> and ...));
@@ -124,7 +124,7 @@ BOOST_AUTO_TEST_CASE(APackedSetIsTheSetItPacks)
 
 #ifdef TEST_HAS_INPLACE_VECTOR
 
-        // And the same second dimension on this reading. [design.md#the-inplace-column]
+        // And the same second dimension on this reading.
         using inplace = test::graded_extents<xstd::basic_bit_inplace_set>;
         [] <std::size_t... I> (std::index_sequence<I...>) {
                 static_assert((bit_set<std::tuple_element_t<I, inplace>> and ...));

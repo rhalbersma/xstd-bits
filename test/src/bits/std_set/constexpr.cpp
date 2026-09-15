@@ -63,7 +63,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AnEmptySetIsUsableInAConstantExpression, T, Types)
         static_assert(b.empty());
         static_assert(b.size() == 0);
         static_assert(b.begin() == b.end());
-        // Reflexivity cannot be written without naming the object twice. [design.md#clang-tidy-false-positives]
+        // Reflexivity cannot be written without naming the object twice.
         static_assert(b == b);                                   // NOLINT(misc-redundant-expression)
         static_assert((b <=> b) == std::strong_ordering::equal); // NOLINT(misc-redundant-expression)
 }
@@ -75,7 +75,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AFullSetIsUsableInAConstantExpression, T, Types)
         static_assert(b.size() == b.max_size());
         static_assert(b.empty() or b.front() == *b.cbegin());
         static_assert(b.empty() or b.back()  == *b.crbegin());
-        // Reflexivity cannot be written without naming the object twice. [design.md#clang-tidy-false-positives]
+        // Reflexivity cannot be written without naming the object twice.
         static_assert(b == b);                                   // NOLINT(misc-redundant-expression)
         static_assert((b <=> b) == std::strong_ordering::equal); // NOLINT(misc-redundant-expression)
 }

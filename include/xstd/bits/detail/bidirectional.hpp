@@ -13,13 +13,13 @@
 #include <iterator>                        // bidirectional_iterator_tag
 #include <type_traits>                     // is_class_v, is_convertible_v, is_nothrow_constructible_v, remove_const_t
 
-// The iterator is the primitive: a pointer and a position, reaching the bits through the storage alone. [design.md#the-iterator-is-the-primitive] [design.md#why-nested]
+// The iterator is the primitive: a pointer and a position, reaching the bits through the storage alone.
 namespace xstd::detail::bits {
 
 template<class Bits> class bidirectional_bit_iterator;
 template<class Bits> class bidirectional_bit_reference;
 
-// A position in the set reading, read-only whatever Bits' qualification: a key is nothing to write through. [design.md#read-only-set-proxy]
+// A position in the set reading, read-only whatever Bits' qualification: a key is nothing to write through.
 template<class Bits>
 class bidirectional_bit_iterator
 {
@@ -37,7 +37,7 @@ public:
 
         [[nodiscard]] constexpr bidirectional_bit_iterator() noexcept = default;
 
-        // Public, so an owner or a view constructs one without befriending it: the dependency runs one way. [design.md#the-iterator-is-the-primitive]
+        // Public, so an owner or a view constructs one without befriending it: the dependency runs one way.
         [[nodiscard]] constexpr bidirectional_bit_iterator(bits_type const* ptr, std::size_t idx) noexcept
         :
                 m_ptr(ptr),
@@ -46,7 +46,7 @@ public:
                 assert(m_ptr != nullptr);
         }
 
-        // A zero width has one position, so every iterator over it is the same one; said outright, every loop an optimizer sees into stops before its first step, which no spelling of the step itself achieved. [design.md#degenerate-widths]
+        // A zero width has one position, so every iterator over it is the same one; said outright, every loop an optimizer sees into stops before its first step, which no spelling of the step itself achieved.
         [[nodiscard]] friend constexpr auto operator==(bidirectional_bit_iterator lhs, bidirectional_bit_iterator rhs) noexcept
                 -> bool
         {
@@ -65,9 +65,7 @@ public:
                 return { m_ptr, m_idx };
         }
 
-        // Both steps on the storage, guarded at a zero width rather than asking it: the exclusive scans take a position
-        // as a precondition and a zero width has none to give, so they assert there. The trait's scans tested this first
-        // and never reached the storage; the guard is what that test was, and it is load-bearing. [design.md#degenerate-widths]
+        // Both steps on the storage, guarded at a zero width rather than asking it: the exclusive scans take a position as a precondition and a zero width has none to give, so they assert there. The trait's scans tested this first and never reached the storage; the guard is what that test was, and it is load-bearing.
         constexpr auto operator++() noexcept
                 -> bidirectional_bit_iterator&
         {
@@ -92,7 +90,7 @@ public:
         constexpr auto operator--(int) noexcept -> bidirectional_bit_iterator { auto nrv = *this; --*this; return nrv; }
 };
 
-// The key at a position, arriving by conversion; & hands the iterator back, so the pair round-trips. [design.md#read-only-set-proxy]
+// The key at a position, arriving by conversion; & hands the iterator back, so the pair round-trips.
 template<class Bits>
 class bidirectional_bit_reference
 {
@@ -113,7 +111,7 @@ public:
                 assert(m_ptr != nullptr);
         }
 
-        // A value, not a handle to rebind: trivially copyable, never assignable, as a reference to a key is. [design.md#the-proxy-copies-the-handle]
+        // A value, not a handle to rebind: trivially copyable, never assignable, as a reference to a key is.
         constexpr bidirectional_bit_reference(bidirectional_bit_reference const&) noexcept = default;
         constexpr auto operator=(bidirectional_bit_reference const&) -> bidirectional_bit_reference& = delete;
 
@@ -128,7 +126,7 @@ public:
                 return m_idx;
         }
 
-        // A strong index type initializes from *it in one step; one with an explicit constructor takes the size_t route. [design.md#read-only-set-proxy]
+        // A strong index type initializes from *it in one step; one with an explicit constructor takes the size_t route.
         template<class T>
         [[nodiscard]] constexpr explicit(false) operator T() const noexcept(std::is_nothrow_constructible_v<T, value_type>)  // NOLINT(misc-explicit-constructor)
                 requires std::is_class_v<T> and std::is_convertible_v<value_type, T>
@@ -147,7 +145,7 @@ public:
 }       // namespace xstd::detail::bits
 
 
-// std::format over the containers, which needs nothing said about the containers themselves. [design.md#formatting-the-proxies] [design.md#clang-tidy-false-positives]
+// std::format over the containers, which needs nothing said about the containers themselves.
 template<class Bits, class CharT>
 // NOLINTNEXTLINE(bugprone-std-namespace-modification)
 struct std::formatter<xstd::detail::bits::bidirectional_bit_reference<Bits>, CharT>
@@ -157,7 +155,7 @@ struct std::formatter<xstd::detail::bits::bidirectional_bit_reference<Bits>, Cha
         template<class Context>
         [[nodiscard]] constexpr auto format(xstd::detail::bits::bidirectional_bit_reference<Bits> ref, Context& ctx) const
         {
-                // Unqualified, so ADL finds the proxy's own hidden friend. [design.md#the-one-adl-exception]
+                // Unqualified, so ADL finds the proxy's own hidden friend.
                 return std::formatter<std::size_t, CharT>::format(format_as(ref), ctx);
         }
 };

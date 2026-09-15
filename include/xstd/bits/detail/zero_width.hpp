@@ -10,7 +10,7 @@
 
 namespace xstd::detail::bits {
 
-// A zero width answers zero to every question, and says so here, before a walk is instantiated for it. It is asked of the storage now rather than of a trait, and it is not decoration: the exclusive scans take a position as a precondition, a zero width has none to give, and they assert there. Every caller that steps must test this first, which is what the trait's scans were doing before the storage was ever reached. [design.md#degenerate-widths]
+// A zero width answers zero to every question, and says so here, before a walk is instantiated for it. It is asked of the storage now rather than of a trait, and it is not decoration: the exclusive scans take a position as a precondition, a zero width has none to give, and they assert there. Every caller that steps must test this first, which is what the trait's scans were doing before the storage was ever reached.
 template<class Bits>
 constexpr bool zero_width = std::remove_const_t<Bits>::extent == 0UZ;
 

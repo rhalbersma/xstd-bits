@@ -230,7 +230,7 @@ struct op_equal_to
         }
 };
 
-// Equal values hash equal wherever a std::hash exists: the set adaptor has one as std::string_view does, std::set none. [design.md#the-hashing-invariant]
+// Equal values hash equal wherever a std::hash exists: the set adaptor has one as std::string_view does, std::set none.
 struct op_hash
 {
         template<class X>

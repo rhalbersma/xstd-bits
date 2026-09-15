@@ -13,7 +13,7 @@
 
 namespace xstd::detail::bits {
 
-// The second vehicle: a width on the heap, growing as a set of positions does. [design.md#the-one-vehicle]
+// The second vehicle: a width on the heap, growing as a set of positions does.
 template<xstd::unsigned_integer Block, class Allocator = std::allocator<Block>>
 using contiguous_bit_vector = contiguous_bit_container<std::vector<Block, Allocator>>;
 

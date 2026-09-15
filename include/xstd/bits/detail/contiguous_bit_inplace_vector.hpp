@@ -8,7 +8,7 @@
 
 #include <version>                                       // IWYU pragma: keep; __cpp_lib_inplace_vector
 
-// The third vehicle: a run-time width under a compile-time capacity of N bits. [design.md#the-inplace-column]
+// The third vehicle: a run-time width under a compile-time capacity of N bits.
 #ifdef __cpp_lib_inplace_vector
 
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container, num_blocks_v

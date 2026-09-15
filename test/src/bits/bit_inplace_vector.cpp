@@ -34,7 +34,7 @@ using T = xstd::basic_bit_inplace_vector<std::uint8_t, 24>;
 template<class X>
 constexpr bool has_allocator = requires { typename X::allocator_type; };
 
-// The sequence reading over a run-time width under a compile-time capacity, an alias and nothing more. [design.md#the-public-names]
+// The sequence reading over a run-time width under a compile-time capacity, an alias and nothing more.
 BOOST_AUTO_TEST_CASE(TheInplaceSequenceIsTheSequenceAdaptorOverAnInplaceVectorOfBlocks)
 {
         static_assert(std::same_as<T, xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_inplace_vector<std::uint8_t, 24>, xstd::ownership::owns, false>>);
@@ -42,7 +42,7 @@ BOOST_AUTO_TEST_CASE(TheInplaceSequenceIsTheSequenceAdaptorOverAnInplaceVectorOf
         static_assert(test::sequence::bit_sequence<T>);
 }
 
-// Every line of [vector.bool] the allocator does not reach, the model first so the checklist is known to be honest. [design.md#the-inplace-column]
+// Every line of [vector.bool] the allocator does not reach, the model first so the checklist is known to be honest.
 BOOST_AUTO_TEST_CASE(ItAnswersEveryLineOfStdVectorBoolButTheAllocator)
 {
         static_assert(test::sequence::inplace_vector_bool<std::vector<bool>>);
@@ -55,7 +55,7 @@ BOOST_AUTO_TEST_CASE(ItAnswersEveryLineOfStdVectorBoolButTheAllocator)
         static_assert(not has_allocator<T>);
 }
 
-// The blocks are whole, so the capacity is the requested one rounded up, and the width moves under it. [design.md#the-inplace-column]
+// The blocks are whole, so the capacity is the requested one rounded up, and the width moves under it.
 BOOST_AUTO_TEST_CASE(TheCapacityIsTheRequestedOneRoundedUpToWholeBlocks)
 {
         static_assert(xstd::basic_bit_inplace_vector<std::uint8_t, 9>().capacity() == 16UZ);
@@ -64,7 +64,7 @@ BOOST_AUTO_TEST_CASE(TheCapacityIsTheRequestedOneRoundedUpToWholeBlocks)
         BOOST_CHECK_EQUAL(v.capacity(), 24UZ);
         BOOST_CHECK(v.empty());
 
-        // max_size() is the positions there are to hold, which under a static capacity is that capacity. [design.md#max-size-is-the-bits]
+        // max_size() is the positions there are to hold, which under a static capacity is that capacity.
         BOOST_CHECK_EQUAL(v.max_size(), 24UZ);
 
         v.resize(17, true);
@@ -77,7 +77,7 @@ BOOST_AUTO_TEST_CASE(TheCapacityIsTheRequestedOneRoundedUpToWholeBlocks)
         BOOST_CHECK_EQUAL(v.size(), 17UZ);
 }
 
-// Past the capacity the storage throws, as [inplace.vector] specifies, and the sequence forwards that unchanged. [design.md#growth]
+// Past the capacity the storage throws, as [inplace.vector] specifies, and the sequence forwards that unchanged.
 BOOST_AUTO_TEST_CASE(GrowingPastTheCapacityThrowsBadAlloc)
 {
         auto v = std::views::iota(0UZ, 24UZ) | std::views::transform([](auto i) { return i % 2 == 0; }) | std::ranges::to<T>();
@@ -98,7 +98,7 @@ BOOST_AUTO_TEST_CASE(GrowingPastTheCapacityThrowsBadAlloc)
         BOOST_CHECK(static_cast<bool>(v.back()));
 }
 
-// Every position, densely, agreeing with the subscript -- and not a contiguous range, which no proxy sequence can be. [design.md#the-iterator-is-the-primitive]
+// Every position, densely, agreeing with the subscript -- and not a contiguous range, which no proxy sequence can be.
 BOOST_AUTO_TEST_CASE(ItYieldsEveryPosition)
 {
         auto c = T();
@@ -112,7 +112,7 @@ BOOST_AUTO_TEST_CASE(ItYieldsEveryPosition)
 
 #else
 
-// The column is its storage's: without std::inplace_vector there is no name to test, and saying so keeps the source from being empty. [design.md#the-inplace-column]
+// The column is its storage's: without std::inplace_vector there is no name to test, and saying so keeps the source from being empty.
 BOOST_AUTO_TEST_CASE(TheColumnIsAbsentWithItsStorage)
 {
         static_assert(not test::has_inplace_vector);

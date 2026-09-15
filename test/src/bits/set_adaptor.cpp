@@ -206,7 +206,7 @@ BOOST_AUTO_TEST_CASE(TheViewsAnswerEveryReadOverEveryStorage)
         }
 }
 
-// max_size is the positions there are to hold: the width in the type, what an owner's storage can address, or what a view is looking at, none of which is the address space. [design.md#max-size-is-the-bits]
+// max_size is the positions there are to hold: the width in the type, what an owner's storage can address, or what a view is looking at, none of which is the address space.
 BOOST_AUTO_TEST_CASE(MaxSizeIsThePositionsThereAreToHold)
 {
         auto storage = Storage();
@@ -257,7 +257,7 @@ BOOST_AUTO_TEST_CASE(TheSetPredicatesAgreeAcrossStorages)
         BOOST_CHECK(x == y and not x.is_proper_subset_of(y));
 }
 
-// The ordering invariant: the block-wise entry and the iterators agree, and the fallback is the invariant itself. [design.md#the-ordering-invariant]
+// The ordering invariant: the block-wise entry and the iterators agree, and the fallback is the invariant itself.
 BOOST_AUTO_TEST_CASE(TheOrderingIsTheLexicographicOrderOfTheKeys)
 {
         auto const patterns = std::vector<std::set<std::size_t>>{ {}, { 0 }, { 1 }, { 0, 1 }, { 0, 1, 99 }, { 63, 64 }, { 64 }, { 99 } };
@@ -299,7 +299,7 @@ BOOST_AUTO_TEST_CASE(TheNonMemberFormsAreTheOwners)
         BOOST_CHECK(keys(z) == std::set<std::size_t>({ 6 }));
 }
 
-// insert_range takes a tier above the element-wise loop where it can, and the point of every case here is that the answer is the element-wise one. [design.md#the-range-members]
+// insert_range takes a tier above the element-wise loop where it can, and the point of every case here is that the answer is the element-wise one.
 BOOST_AUTO_TEST_CASE(RangedInsertionAgreesWithTheElementwiseLoop)
 {
         constexpr auto N = 100UZ;
@@ -363,7 +363,7 @@ BOOST_AUTO_TEST_CASE(RangedInsertionGrowsADynamicWidth)
         BOOST_CHECK(ranged == elementwise);
 }
 
-// for_each is the block-at-a-time walk an iterator cannot be, so what has to be shown is that it answers exactly what iteration answers -- over a storage with block access and over one without, which takes the other arm. [design.md#the-set-for-each]
+// for_each is the block-at-a-time walk an iterator cannot be, so what has to be shown is that it answers exactly what iteration answers -- over a storage with block access and over one without, which takes the other arm.
 BOOST_AUTO_TEST_CASE(ForEachVisitsWhatIterationVisits)
 {
         auto const positions = { 0UZ, 1UZ, 63UZ, 64UZ, 65UZ, 99UZ };
@@ -434,7 +434,7 @@ BOOST_AUTO_TEST_CASE(ForEachStopsWhenTheFunctorSaysSo)
         BOOST_CHECK_EQUAL(first_only, 1UZ);
 }
 
-// The functor is handed the position by value, and the constraint says so. [design.md#the-functor-takes-a-value]
+// The functor is handed the position by value, and the constraint says so.
 BOOST_AUTO_TEST_CASE(ForEachHandsThePositionByValue)
 {
         // By value, generic or not, and by const reference: all four read what they are given.
@@ -468,10 +468,7 @@ BOOST_AUTO_TEST_CASE(ForEachHandsThePositionByValue)
         owner.for_each_reverse(bool_probe{ took_a_reference }); BOOST_CHECK(not took_a_reference);
 }
 
-// back() has a non-empty set as its precondition, and a zero width has no non-empty state to ask it in. The arm
-// is still there and still reachable, because a width of zero is a width the containers have: it answers the
-// only position such a set could name rather than scanning back from one that does not exist. The scan it
-// stands in for asserts here. [design.md#degenerate-widths]
+// back() has a non-empty set as its precondition, and a zero width has no non-empty state to ask it in. The arm is still there and still reachable, because a width of zero is a width the containers have: it answers the only position such a set could name rather than scanning back from one that does not exist. The scan it stands in for asserts here.
 BOOST_AUTO_TEST_CASE(AZeroWidthAnswersBackWithoutScanning)
 {
         auto const z = xstd::bit_static_set<0>();
@@ -481,11 +478,7 @@ BOOST_AUTO_TEST_CASE(AZeroWidthAnswersBackWithoutScanning)
         BOOST_CHECK_EQUAL(static_cast<std::size_t>(z.back()), 0UZ);
 }
 
-// Across two run-time widths the set operations ask whole blocks rather than walking positions: the blocks both
-// storages have are compared pairwise, and whatever lies above them is answered by the invariant that padding is
-// clear. Growth is resize(n + 1), so a width is not a whole number of blocks and two different widths can share a
-// block count -- which is the case that leaves the remainder empty, and it needs saying out loud because every
-// other case has something there to look at. [design.md#width-is-capacity]
+// Across two run-time widths the set operations ask whole blocks rather than walking positions: the blocks both storages have are compared pairwise, and whatever lies above them is answered by the invariant that padding is clear. Growth is resize(n + 1), so a width is not a whole number of blocks and two different widths can share a block count -- which is the case that leaves the remainder empty, and it needs saying out loud because every other case has something there to look at.
 namespace {
 
 [[nodiscard]] auto grown_to(std::size_t width, std::initializer_list<std::size_t> positions)
@@ -501,9 +494,7 @@ namespace {
 }
 
 
-// The width is capacity, and an OWNING set reports max_size() as everything it could grow to rather than what it
-// currently spans ([design.md#max-size-is-the-bits]). A view over the same storage reports the storage's own size,
-// which is the width -- the only way to see it from outside, and the growth rule below is worth seeing.
+// The width is capacity, and an OWNING set reports max_size() as everything it could grow to rather than what it currently spans (). A view over the same storage reports the storage's own size, which is the width -- the only way to see it from outside, and the growth rule below is worth seeing.
 [[nodiscard]] auto width_of(xstd::bit_set& s)
         -> std::size_t
 {
@@ -566,11 +557,7 @@ BOOST_AUTO_TEST_CASE(SubsetAndIntersectionAcrossWidthsCompareBlocks)
         BOOST_CHECK(not intersects(elsewhere, narrow));
 }
 
-// The ordering across two run-time widths turns on ONE position: the lowest at which the two sets disagree.
-// Whoever lacks it is less, having the smaller element there -- unless it holds nothing above it, in which case
-// its positions are a proper prefix of the other's and it is less for that reason instead. Both readings of
-// "less" are exercised here, in both operand orders, because they are different branches reaching the same
-// answer. [design.md#the-ordering-primitive]
+// The ordering across two run-time widths turns on ONE position: the lowest at which the two sets disagree. Whoever lacks it is less, having the smaller element there -- unless it holds nothing above it, in which case its positions are a proper prefix of the other's and it is less for that reason instead. Both readings of "less" are exercised here, in both operand orders, because they are different branches reaching the same answer.
 BOOST_AUTO_TEST_CASE(OrderingAcrossWidthsComparesBlocks)
 {
         auto const narrow = [](std::initializer_list<std::size_t> p) -> xstd::bit_set { return grown_to(60UZ,  p); };   // width 61, one block
@@ -602,18 +589,13 @@ BOOST_AUTO_TEST_CASE(OrderingAcrossWidthsComparesBlocks)
         BOOST_CHECK(wide({ 1UZ }) < narrow({ 1UZ, 5UZ }));
 }
 
-// The four compound operators across two widths, which the storage answers blockwise rather than the adaptor
-// unpacking into elements. Intersection and difference never widen, because a position the other lacks is a
-// position it does not hold. Union and symmetric difference widen exactly as far as the elements require -- one
-// past the other's LARGEST, where inserting them one at a time arrives, and not to the other's width, which may
-// be far above anything it holds. [design.md#the-set-operations-across-widths]
+// The four compound operators across two widths, which the storage answers blockwise rather than the adaptor unpacking into elements. Intersection and difference never widen, because a position the other lacks is a position it does not hold. Union and symmetric difference widen exactly as far as the elements require -- one past the other's LARGEST, where inserting them one at a time arrives, and not to the other's width, which may be far above anything it holds.
 BOOST_AUTO_TEST_CASE(TheCompoundOperatorsAcrossWidthsWorkOnBlocks)
 {
         auto const narrow = grown_to(60UZ,  { 1UZ, 5UZ, 59UZ });        // width 61
         auto const wide   = grown_to(300UZ, { 5UZ, 59UZ, 280UZ });      // width 301
 
-        // Intersection keeps the shared positions and stays at its own width, the wider operand's 280 having
-        // nowhere to land and no claim to widen anything.
+        // Intersection keeps the shared positions and stays at its own width, the wider operand's 280 having nowhere to land and no claim to widen anything.
         auto a = narrow;
         a &= wide;
         BOOST_CHECK(a == grown_to(60UZ, { 5UZ, 59UZ }));

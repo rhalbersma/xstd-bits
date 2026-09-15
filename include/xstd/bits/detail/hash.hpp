@@ -31,7 +31,7 @@ constexpr auto hash_append_block(Hash& h, Flavor const& f, Block b)
         }
 }
 
-// The value: the blocks and the width. Every storage here reads by block, so there is no second arm and no tier to pick -- that branch existed for a storage that answered position by position, which none can be now. Equal values hash equal whatever holds them, so no storage's own hook is asked. [design.md#the-hashing-invariant]
+// The value: the blocks and the width. Every storage here reads by block, so there is no second arm and no tier to pick -- that branch existed for a storage that answered position by position, which none can be now. Equal values hash equal whatever holds them, so no storage's own hook is asked.
 template<class Hash, class Flavor, class Bits>
 constexpr auto hash_append_bits(Hash& h, Flavor const& f, Bits const& c)
         -> void
@@ -42,7 +42,7 @@ constexpr auto hash_append_bits(Hash& h, Flavor const& f, Bits const& c)
         boost::hash2::hash_append(h, f, c.size());
 }
 
-// The set reading at a run-time width: the positions held and their count, since equal sets need not share a width. [design.md#width-is-capacity]
+// The set reading at a run-time width: the positions held and their count, since equal sets need not share a width.
 template<class Hash, class Flavor, class Bits>
 constexpr auto hash_append_positions(Hash& h, Flavor const& f, Bits const& c)
         -> void
@@ -53,7 +53,7 @@ constexpr auto hash_append_positions(Hash& h, Flavor const& f, Bits const& c)
         boost::hash2::hash_append(h, f, c.count());
 }
 
-// The one place std::hash chooses an algorithm, and it chooses fnv1a_64 as a default rather than a fact: the parameter is what lets the choice be overridden from outside instead of edited here. [design.md#the-hashing-invariant]
+// The one place std::hash chooses an algorithm, and it chooses fnv1a_64 as a default rather than a fact: the parameter is what lets the choice be overridden from outside instead of edited here.
 template<class T, class Hash = boost::hash2::fnv1a_64>
 [[nodiscard]] constexpr auto std_hash(T const& v, Hash h = {}) noexcept
         -> std::size_t

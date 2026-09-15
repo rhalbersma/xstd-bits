@@ -13,7 +13,7 @@
 // Its own header rather than a corner of sequence/ordering.hpp, which reaches for bit_span and make_bitset that this needs none of.
 namespace test::sequence {
 
-// The sequence reading yields EVERY position, densely, 0 through size() - 1, each agreeing with the subscript. [design.md#the-iterator-is-the-primitive]
+// The sequence reading yields EVERY position, densely, 0 through size() - 1, each agreeing with the subscript.
 template<class C>
 auto yields_every_position(C const& c)
         -> void

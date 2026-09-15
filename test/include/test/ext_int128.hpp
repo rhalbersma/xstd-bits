@@ -6,7 +6,7 @@
 #ifndef TEST_EXT_INT128_HPP
 #define TEST_EXT_INT128_HPP
 
-// The 128-bit integer CLASSES, as Blocks. [design.md#uint128-support]
+// The 128-bit integer CLASSES, as Blocks.
 #ifdef _MSC_VER
 
 #include <xstd/ints/cstdint/int128.hpp> // IWYU pragma: export; uint128

@@ -15,14 +15,11 @@ project(
 
 include(GNUInstallDirs)
 
-# The project's own name, spelled once. TOUPPER alone leaves XSTD-BITS, which no cache option can be called;
-# MAKE_C_IDENTIFIER alone leaves the lowercase form. Both, in this order, and test/ and benchmark/ inherit them.
+# The project's own name, spelled once. TOUPPER alone leaves XSTD-BITS, which no cache option can be called; MAKE_C_IDENTIFIER alone leaves the lowercase form. Both, in this order, and test/ and benchmark/ inherit them.
 string(MAKE_C_IDENTIFIER ${PROJECT_NAME} project_id)            # xstd_bits
 string(TOUPPER ${project_id} project_option_prefix)             # XSTD_BITS
 
-# Warnings are errors while this library is being developed, which is what the presets ask for.
-# Declared here rather than under test/, as xstd and tabula do, because benchmark/ carries its
-# own warning set and has to be gated by the same switch.
+# Warnings are errors while this library is being developed, which is what the presets ask for. Declared here rather than under test/, as xstd and tabula do, because benchmark/ carries its own warning set and has to be gated by the same switch.
 option(${project_option_prefix}_WARNINGS_AS_ERRORS "Treat warnings as errors in ${PROJECT_NAME} tests and benchmarks" ${PROJECT_IS_TOP_LEVEL})
 
 # Prefer an installed xstd-ints so install(EXPORT) can record it as a dependency; a FetchContent build tree cannot be exported.
@@ -38,8 +35,7 @@ if(NOT xstd-ints_FOUND)
     FetchContent_MakeAvailable(xstd-ints)
 endif()
 
-# xstd-misc supplies conditional_data_member_t and XSTD_NO_UNIQUE_ADDRESS, which
-# contiguous_bit_container uses to carry a run-time width without paying for it under a compile-time one.
+# xstd-misc supplies conditional_data_member_t and XSTD_NO_UNIQUE_ADDRESS, which contiguous_bit_container uses to carry a run-time width without paying for it under a compile-time one.
 find_package(xstd-misc 0.1.0 CONFIG QUIET)
 if(NOT xstd-misc_FOUND)
     include(FetchContent)
@@ -59,12 +55,7 @@ add_library(
     ${PROJECT_NAME} INTERFACE
 )
 
-# Consumed as xstd::bits, following Boost: the package keeps the repository's name
-# (find_package(xstd-bits)) while the target is a component of one umbrella namespace,
-# so xstd::bits sits beside xstd::ints the way Boost::hash2 sits beside Boost::mp11.
-# EXPORT_NAME is what lets the exported name differ from the target name; the alias
-# below must spell the same thing, or an add_subdirectory consumer and a find_package
-# consumer would end up with two different names for one library.
+# Consumed as xstd::bits, following Boost: the package keeps the repository's name (find_package(xstd-bits)) while the target is a component of one umbrella namespace, so xstd::bits sits beside xstd::ints the way Boost::hash2 sits beside Boost::mp11. EXPORT_NAME is what lets the exported name differ from the target name; the alias below must spell the same thing, or an add_subdirectory consumer and a find_package consumer would end up with two different names for one library.
 set_target_properties(${PROJECT_NAME} PROPERTIES EXPORT_NAME bits)
 add_library(xstd::bits ALIAS ${PROJECT_NAME})
 
@@ -108,16 +99,7 @@ target_sources(
         include/xstd/bits/ownership.hpp
 )
 
-# The list above is hand-written, and it drifted: the three inplace headers reached include/ and bits.hpp but
-# never this file set, so every installed consumer's <xstd/bits.hpp> named three headers that were not installed.
-# No compiler leg could see it -- they all build from the source tree -- and the consumer translation unit that
-# does build against the install tree had included one container header until it was made the interface gate.
-# Checked here from now on, the way test/ checks that every public header is mirrored. [design.md#the-interface-line]
-# Every header under include/, not just include/xstd/: include/ is exactly what a consumer gets, and the workloads
-# that used to sit beside it now live in examples/. A stray directory here would otherwise ride the file set's
-# BASE_DIRS onto every add_subdirectory consumer's include path while never being installed.
-# [design.md#the-interface-line]
-# HEADER_SET answers in absolute paths, so the glob asks for them that way and the message relativizes back.
+# The list above is hand-written, and it drifted: the three inplace headers reached include/ and bits.hpp but never this file set, so every installed consumer's <xstd/bits.hpp> named three headers that were not installed. No compiler leg could see it -- they all build from the source tree -- and the consumer translation unit that does build against the install tree had included one container header until it was made the interface gate. Checked here from now on, the way test/ checks that every public header is mirrored. Every header under include/, not just include/xstd/: include/ is exactly what a consumer gets, and the workloads that used to sit beside it now live in examples/. A stray directory here would otherwise ride the file set's BASE_DIRS onto every add_subdirectory consumer's include path while never being installed. HEADER_SET answers in absolute paths, so the glob asks for them that way and the message relativizes back.
 get_target_property(declared_headers ${PROJECT_NAME} HEADER_SET)
 file(
     GLOB_RECURSE headers_on_disk
@@ -158,16 +140,11 @@ target_compile_features(
 if(PROJECT_IS_TOP_LEVEL)
     include(CTest)
     if(BUILD_TESTING)
-        # The library requires C++23 and says so above, in the INTERFACE a consumer inherits. The inplace column
-        # needs more: it is behind __cpp_lib_inplace_vector, which is C++26, so at the minimum those three of the
-        # nine cells compile to nothing and are never tested. Raising the standard here rather than in the
-        # INTERFACE keeps the requirement a consumer sees at 23 while letting a leg of the matrix build the whole
-        # matrix. [design.md#the-inplace-column]
+        # The library requires C++23 and says so above, in the INTERFACE a consumer inherits. The inplace column needs more: it is behind __cpp_lib_inplace_vector, which is C++26, so at the minimum those three of the nine cells compile to nothing and are never tested. Raising the standard here rather than in the INTERFACE keeps the requirement a consumer sees at 23 while letting a leg of the matrix build the whole matrix.
         set(${project_option_prefix}_CXX_STANDARD 23 CACHE STRING "C++ standard for the tests and benchmarks: 23, or 26 to reach the inplace column")
         set_property(CACHE ${project_option_prefix}_CXX_STANDARD PROPERTY STRINGS 23 26)
 
-        # Asking for a standard CMake cannot spell for this compiler fails deep inside a try_compile, with a
-        # message blaming the compiler. CMAKE_CXX_COMPILE_FEATURES is what CMake actually knows, so ask it.
+        # Asking for a standard CMake cannot spell for this compiler fails deep inside a try_compile, with a message blaming the compiler. CMAKE_CXX_COMPILE_FEATURES is what CMake actually knows, so ask it.
         if(NOT "cxx_std_${${project_option_prefix}_CXX_STANDARD}" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
             message(FATAL_ERROR
                 "${project_option_prefix}_CXX_STANDARD=${${project_option_prefix}_CXX_STANDARD} is not something CMake ${CMAKE_VERSION} can ask "
@@ -179,30 +156,13 @@ if(PROJECT_IS_TOP_LEVEL)
         set(CMAKE_CXX_STANDARD ${${project_option_prefix}_CXX_STANDARD})
         set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-        # Left ON, which is CMake's default, so the matrix compiles as gnu++23 where xstd and tabula compile as
-        # c++23. Stated rather than omitted, because the reason is specific and the difference is deliberate:
-        # <bit>'s functions take std::unsigned_integral alone, and libstdc++ and libc++ carry xstd::uint128 into
-        # that concept only outside __STRICT_ANSI__. Turning extensions off would drop the widest Block from
-        # every instantiation list rather than fail, which is the worse of the two outcomes.
-        # [design.md#uint128-support]
+        # Left ON, which is CMake's default, so the matrix compiles as gnu++23 where xstd and tabula compile as c++23. Stated rather than omitted, because the reason is specific and the difference is deliberate: <bit>'s functions take std::unsigned_integral alone, and libstdc++ and libc++ carry xstd::uint128 into that concept only outside __STRICT_ANSI__. Turning extensions off would drop the widest Block from every instantiation list rather than fail, which is the worse of the two outcomes.
         set(CMAKE_CXX_EXTENSIONS ON)
 
-        # Above both, and not inside test/: benchmark/ is configured first, so a target declared in test/ does
-        # not exist yet when the benchmarks ask for it. Both trees grade over the same two integer classes.
+        # Above both, and not inside test/: benchmark/ is configured first, so a target declared in test/ does not exist yet when the benchmarks ask for it. Both trees grade over the same two integer classes.
         include(${CMAKE_CURRENT_LIST_DIR}/cmake/int128.cmake)
 
-        # Off by default, and the GCC ladder alone turns it on. A benchmark measures the library rather than
-        # being part of it, so seven compiler ladders, fifteen sanitizer legs and both analysers building one
-        # bought nothing the one ladder does not: its Release legs run the smoke test benchmark/CMakeLists.txt
-        # registers, which is what keeps this tree compiling and running against the current API. A local
-        # build that wants the benchmarks asks for them.
-        #
-        # The coverage job needs it off for a second reason, which its own stub records: gcovr drops benchmark/
-        # as a source path, but a benchmark is not a source there -- it is a translation unit that INSTANTIATES
-        # the library's templates, and those instantiations live in include/ where they are counted. That job
-        # configures Debug, where no benchmark registers as a test, so they would compile and never run, and
-        # every branch of an instantiation no test TU also makes is uncovered by construction. One Block-width
-        # benchmark put nine such branches in the denominator and covered none. [design.md#the-coverage-gate]
+        # Off by default, and the GCC ladder alone turns it on. A benchmark measures the library rather than being part of it, so seven compiler ladders, fifteen sanitizer legs and both analysers building one bought nothing the one ladder does not: its Release legs run the smoke test benchmark/CMakeLists.txt registers, which is what keeps this tree compiling and running against the current API. A local build that wants the benchmarks asks for them. The coverage job needs it off for a second reason, which its own stub records: gcovr drops benchmark/ as a source path, but a benchmark is not a source there -- it is a translation unit that INSTANTIATES the library's templates, and those instantiations live in include/ where they are counted. That job configures Debug, where no benchmark registers as a test, so they would compile and never run, and every branch of an instantiation no test TU also makes is uncovered by construction. One Block-width benchmark put nine such branches in the denominator and covered none.
         option(${project_option_prefix}_BUILD_BENCHMARKS "Build the benchmark tree alongside the tests" OFF)
 
         if(${project_option_prefix}_BUILD_BENCHMARKS)

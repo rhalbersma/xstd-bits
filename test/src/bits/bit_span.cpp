@@ -39,7 +39,7 @@ constexpr auto takes_a_span(xstd::bit_span<Blocks> v) noexcept -> bool
 
 }  // namespace
 
-// The view is the referring adaptor under another name, and over an owner it refers into the storage the owner wraps. [design.md#the-views-are-the-adaptors]
+// The view is the referring adaptor under another name, and over an owner it refers into the storage the owner wraps.
 BOOST_AUTO_TEST_CASE(TheViewIsTheReferringAdaptor)
 {
         static_assert(std::derived_from<xstd::bit_span<Blocks>, xstd::sequence_adaptor<Blocks, xstd::ownership::refers, false>>);
@@ -49,7 +49,7 @@ BOOST_AUTO_TEST_CASE(TheViewIsTheReferringAdaptor)
         static_assert(std::same_as<view_of<xstd::bit_array<8>>,   xstd::bit_span<xstd::detail::bits::contiguous_bit_array<std::size_t, 8>>>);
 }
 
-// A bitset is committed to neither reading, a set owner to the set one; over the very same storage, only the first admits a span. [design.md#the-readings-do-not-mix]
+// A bitset is committed to neither reading, a set owner to the set one; over the very same storage, only the first admits a span.
 BOOST_AUTO_TEST_CASE(TheReadingsDoNotMix)
 {
         static_assert(std::same_as<decltype(xstd::bit_set_view(std::declval<xstd::bit_static_set<8>&>())), xstd::bit_set_view<Blocks>>);
@@ -57,10 +57,7 @@ BOOST_AUTO_TEST_CASE(TheReadingsDoNotMix)
         static_assert(not std::constructible_from<xstd::bit_span<Blocks>, xstd::bit_static_set<8>&>);
 }
 
-// Viewing an owner is implicit, viewing raw storage is not: the first asserts nothing the owner does not already
-// carry, which is where span draws the line -- its array and C-array constructors are implicit even at a static
-// extent, while the ones claiming a size their source cannot prove are explicit. An rvalue owner still does not
-// convert, the parameter being Owner&. [design.md#viewing-an-owner-is-implicit]
+// Viewing an owner is implicit, viewing raw storage is not: the first asserts nothing the owner does not already carry, which is where span draws the line -- its array and C-array constructors are implicit even at a static extent, while the ones claiming a size their source cannot prove are explicit. An rvalue owner still does not convert, the parameter being Owner&.
 BOOST_AUTO_TEST_CASE(ViewingAnOwnerIsImplicit)
 {
         static_assert(std::convertible_to<xstd::bitset<8>&,        xstd::bit_span<Blocks>>);
@@ -85,7 +82,7 @@ BOOST_AUTO_TEST_CASE(TheViewedTypesAreTheOnesHoldingBoolsWithoutOfferingThem)
         static_assert(std::ranges::random_access_range<view_of<xstd::bitset<8>>>);
         static_assert(std::ranges::random_access_range<view_of<xstd::bit_array<8>>>);
 
-        // A view in std::ranges' sense and borrowed, like span; and like span it neither compares nor orders. [design.md#views-follow-their-precedent]
+        // A view in std::ranges' sense and borrowed, like span; and like span it neither compares nor orders.
         static_assert(std::ranges::view<view_of<Blocks>>);
         static_assert(std::ranges::borrowed_range<view_of<Blocks>>);
         static_assert(not std::equality_comparable<view_of<Blocks>>);
