@@ -220,8 +220,8 @@ public:
         [[nodiscard]] friend constexpr auto operator<=>(set_adaptor const& x, set_adaptor const& y) noexcept
                 -> std::strong_ordering
         {
-                if constexpr (requires { x.storage().set_three_way(y.storage()); }) {
-                        return x.storage().set_three_way(y.storage());
+                if constexpr (requires { set_three_way(x.storage(), y.storage()); }) {
+                        return set_three_way(x.storage(), y.storage());
                 } else {
                         return std::lexicographical_compare_three_way(x.begin(), x.end(), y.begin(), y.end());
                 }
@@ -393,7 +393,7 @@ public:
                 return last;
         }
 
-        // The non-member beside it, hidden as every other non-member here is: ranges::swap finds this and never the member. [design.md#swap-goes-through-adl]
+        // The non-member beside it, hidden though the operators here are namespace-scope templates: ranges::swap finds this and never the member, and xstd::swap(a, b) is a spelling people reach for by habit where a qualified operator is not. [design.md#swap-goes-through-adl]
         friend constexpr auto swap(set_adaptor& x, set_adaptor& y) noexcept(noexcept(x.swap(y)))
                 -> void
                 requires is_owner

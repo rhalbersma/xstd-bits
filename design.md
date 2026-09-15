@@ -658,6 +658,18 @@ the same mistake `lexicographical_three_way` makes one step further along.
 
 ### the-ordering-primitive
 
+All three orderings are **hidden friends** of the storage rather than members: `set_three_way(x, y)` and not
+`x.set_three_way(y)`. An ordering is a question about two values with neither as its subject, and the member
+spelling put one of them in a place the operation does not have -- the same asymmetry a member `operator<=>`
+would carry. As friends they are reached by ADL, which is how the three adaptors call them.
+
+`any_above` stays a member because it IS asked of one value: whether *this* storage holds anything above a
+position. `first_difference` is symmetric -- its answer is an `xor`, which commutes -- and stays a member only
+because it is a private step of the orderings rather than a vocabulary anyone spells; the same is true of
+`padded_first_difference` and `padded_set_three_way`. Among the public entries, `set_equal` and `intersects`
+are symmetric and could take the same form; `is_subset_of` and `is_proper_subset_of` could not, since
+`a ⊆ b` is not `b ⊆ a` and the member spelling states that correctly.
+
 The first two orderings are answered a word at a time, from two pieces:
 
 - **`first_difference`** returns the lowest block at which two values differ, together with that block's
@@ -674,7 +686,28 @@ From there the two readings differ by one clause and nothing else:
 | reading | at the lowest differing position |
 |---|---|
 | set | whoever HOLDS it is greater, **unless** the other holds nothing above it |
-| sequence | whoever HOLDS it is greater, full stop -- the widths are equal, so there is no prefix case |
+| sequence | whoever HOLDS it is greater, full stop -- position 0 is the first element, so nothing above it is consulted |
+
+**Both are total across two widths, and the sequence reading was not.** `sequence_three_way` opened with
+`assert(x.size() == y.size())` while `sequence_adaptor::operator<=>` called it unconditionally, so every
+`bit_vector` comparison of two lengths aborted in a debug build -- and, with the assert compiled out, answered
+*wrongly* rather than not at all. Measured against `lexicographical_compare_three_way` over `std::vector<bool>`
+across 148,225 pairs (every length 0 to 70 plus the block boundaries 127/128/129/191/192/193, five patterns
+each): **27,312 wrong answers** before, zero after.
+
+The repair is the set reading's, one clause lighter. `padded_sequence_three_way` pads the shorter operand's
+missing blocks with zero exactly as `padded_set_three_way` does -- the invariant keeps everything above
+`size()` clear, so a block that is not there reads the same as a block that is
+([width-is-capacity](#width-is-capacity)) -- and where the set version asks `padded_any_above` at the deciding
+position, the sequence version asks nothing: position 0 is the sequence's *first* element, so holding the
+lowest differing position settles it outright. What the sequence reading needs instead is the case the set
+reading cannot have: agreeing at every position the two share leaves only length, and the shorter is then a
+proper prefix of the longer and so less, which is `size() <=> size()`.
+
+That an assert stood where an answer belonged is the pattern in [the cheapest
+contract](#the-cheapest-contract) read the wrong way round. A precondition is free to be narrower than the
+naive form only where the caller can honour it; this caller could not, having two lengths whenever its user
+did.
 
 **Why this beats iterating.** The `lexicographical_compare_three_way` form walks *set bits*; this walks
 *words*, and a word step is an `xor` and a test rather than a load, a shift, a `countr_zero` and a branch.
@@ -904,11 +937,16 @@ C7683 and C3313 as the cascade, and C2102 wherever `&self.storage()` appears. GC
 The constraint is about the **storage**, not about the accessor, so it says so:
 
 ```c++
-requires is_owner and requires (bits_type const& b) { b.sequence_three_way(b); }
+requires is_owner and requires (bits_type const& b) { sequence_three_way(b, b); }
 ```
 
 `bits_type` is complete and already in hand, and for an owner it is exactly what `storage()` returns, so
-satisfaction is unchanged on every compiler.
+satisfaction is unchanged on every compiler. The call is spelled as a free function because the three orderings
+are hidden friends of the storage rather than its members ([the-ordering-primitive](#the-ordering-primitive));
+when this was diagnosed it read `b.sequence_three_way(b)`, and the failing form above read
+`x.storage().sequence_three_way(y.storage())`. What made MSVC complete the class was naming a **member** of
+what the accessor returns, which is the shape the record below is about; whether the call spelling would have
+tripped it too was never measured, because the constraint had already moved off the accessor.
 
 Two neighbours look like the same shape and are not. The bulk operators take `this auto&& self`, so they are
 templates and their constraints wait for a call, by which time the class is complete. And
@@ -1124,8 +1162,20 @@ first one did. That form would reject what `std::bitset` accepts, which is the o
 forward-declaration and `friend operator==<>` dance for private access: three declarations in dependency order
 for one operator.
 
-What the friend costs is `&bitset<N>::operator==`, well-formed against `std::bitset` because the standard puts
-the operator in the class. Nothing forms a pointer-to-member to a comparison, and the alternative was one
+The shifts went the same way, later and for the same reason. `std::bitset` spells `operator<<` and
+`operator>>` as members while spelling `&`, `|` and `^` as non-members -- its own inconsistency, not a rule --
+and the guidance it departs from is the ordinary one: `@=` belongs to the left operand and `@` does not.
+Nothing observable turns on it: a shift's other operand is a `size_t`, so it brings no class to ADL, and the
+left operand must already be a `bitset_adaptor` for any candidate to be found at all. So this is shape, as the
+comparison was, and it takes the same form the rest of the tree takes.
+
+Mirroring `std::bitset` is not itself an argument. It is the oldest type in the library and reads like it: a
+member `operator==` where every container has a non-member one, no `swap` at all, and the split above. C++20
+changed none of it.
+
+What the friend costs is `&bitset<N>::operator==`, and the namespace-scope shifts cost
+`&bitset<N>::operator<<`, both well-formed against `std::bitset` because the standard puts those operators in
+the class. Nothing forms a pointer-to-member to a comparison, and the alternative was one
 adaptor of three disagreeing with its siblings on every read of the file.
 
 ### the-views-are-the-adaptors
@@ -1688,6 +1738,96 @@ rather than the blocks. A block-wise answer over the common prefix is an optimiz
 offer later; nothing in the adaptor's contract would change.
 
 
+### an-opinionated-reimagining
+
+The README states the charter: *a modern and opinionated reimagining of `std::bitset<N>`, keeping what time has
+proven to be effective, and throwing out what is not.* [a-strict-extension](#a-strict-extension) is how the
+keeping is enforced -- every expression of the counterpart's, with the same answer. This is the other half, and
+the two are not in tension: the extension rule governs what the containers **do**, and it says nothing about
+where an operator is declared.
+
+`std::bitset` is the clearest case of what has not proven effective. It is the oldest type in the library and reads like it: a member
+`operator==` where every container has a non-member one, no `swap` at all, and `operator<<` and `operator>>` as
+members beside `&`, `|` and `^` as non-members. C++20 changed none of it. Mirroring that faithfully would
+import an accident and call it conformance, so on where operators sit the tree follows the ordinary guidance
+instead: the operand a mutator belongs to keeps its member -- `flip`, `<<=`, `&=` -- and the operators that
+make a new value do not. `==`, `<=>` and `swap` are hidden friends; the shifts and `~` joined `&`, `|`, `^` and
+`-` at namespace scope.
+
+The rule is **hide where hiding is free, and never where it widens**, with `friend` doing two separable jobs.
+
+Only `==` and `<=>` need friendship for what it says: `<=>` reads `m_bits` and calls the private
+`top_aligned_three_way`, and a defaulted `==` may be a member or a friend and nothing else
+([class.compare.default]/1). `swap`, the shifts and `~` need no access at all -- their bodies are
+`x.swap(y)`, `nrv <<= pos`, `nrv.flip()`, every one of them public -- and the standard's own free `swap` is a
+namespace-scope template for exactly that reason. They are friends anyway, and the reason differs between them.
+
+For `swap` the hiding earns its keep. A qualified `swap` is a mistake people make *by accident*: the habit of
+writing `std::swap(a, b)` transfers, `xstd::swap(a, b)` looks equally reasonable, and it silently defeats the
+customization the two-step `using std::swap; swap(a, b)` exists to find. A hidden friend has no qualified name,
+so the accident cannot be spelled. That is a Murphy guard, which is the kind this tree undertakes.
+
+The keyword is doing only that. `swap`'s body is `x.swap(y)` and reaches nothing private, so it is a `friend`
+that wants no friendship -- and there is no other spelling for what it wants. A function declared at namespace
+scope is always reachable by ordinary lookup; C++ offers no "namespace scope, unqualified only". So a hidden
+friend is the sole mechanism for ADL-only lookup, and using it here overloads a keyword that says *access* to
+mean *placement*. Reading `friend` in this tree, check the body before assuming it needs one.
+
+The shifts and `~` are **not** hidden, and that is the same rule reaching the other answer. Nobody calls an
+operator qualified -- `xstd::operator<<(bs, 3)` is not a thing anyone writes by accident or otherwise -- so
+hiding would foreclose nothing that was going to happen, and claiming a hazard there would be a
+rationalisation. Guarding against Machiavelli is not this tree's business. So they are namespace-scope
+templates beside `&`, `|`, `^` and `-`, which is also where `set_adaptor` has had its whole set all along.
+
+**Which leaves three that deviate from the standard containers**, and only one of them by choice.
+`std::vector` and `std::set` spell `==`, `<=>` and `swap` as namespace-scope templates; here all three are
+hidden friends.
+
+`==` is forced twice over, and the plainer reason comes first: **it is defaulted**, and
+[class.compare.default]/1 admits a defaulted comparison only as a non-static member or a friend. A
+namespace-scope template cannot be defaulted at all. The standard containers hand-write theirs, which is what
+leaves them free to put it at namespace scope; wanting `= default` is what takes that option away here, and it
+is a want worth having -- the storage is the one member, and a comparison nobody writes is a comparison nobody
+gets wrong.
+
+The second reason would force it even if the first did not. `std::bitset`'s converting constructor from
+`unsigned long long` is not `explicit`, so `bs == 42ULL` and `42ULL == bs` both compile against it. A
+namespace-scope template rejects both -- deduction does not consider user-defined conversions -- and rejecting
+what the counterpart accepts is the one thing [a-strict-extension](#a-strict-extension) forbids. The standard
+containers escape this too, none of them converting implicitly from anything. Measured on a stand-in with an
+implicit `unsigned long long` constructor, both orders:
+
+| | `x == 42ULL` | `42ULL == x` |
+| --- | --- | --- |
+| defaulted member | yes | yes |
+| defaulted hidden friend | yes | yes |
+| namespace-scope template | no | no |
+
+So the strict-extension argument separates the **template** from the other two and not member from friend. The
+member converts on the right directly and on the left through C++20's reversed candidate, exactly as the friend
+does -- which is why `std::bitset`'s own member `==` became symmetric in C++20 without anyone touching it
+([the-comparison-is-a-hidden-friend](#the-comparison-is-a-hidden-friend)). Between member and friend the choice
+rests on the first reason and on the two paragraphs below: `<=>` needs the access regardless, and the two sibling
+adaptors already spell both as friends.
+
+`<=>` needs the access. It reads `m_bits` and calls the private `top_aligned_three_way`, so a namespace-scope
+template would have to be granted friendship anyway, and then it is a friend that is not hidden -- the worst
+of both.
+
+`swap` is the one deviation that is a choice, and the Murphy guard above is the reason.
+
+`&`, `|`, `^` and `-` stay namespace-scope templates, because there hiding is **not** free. Both their operands
+are `bitset_adaptor`, so a hidden friend is reachable by ADL from either side and the other side could then
+take the implicit `unsigned long long` conversion: `42ULL & bs` would start compiling, where `std::bitset`
+rejects it and deduction on a namespace-scope template rejects it too. That is the Murphy case: a silent
+conversion nobody asked for, in an expression that looks like integer arithmetic. A shift cannot do it, its
+other operand being a `size_t` that brings no class to ADL. Widening what an operator accepts is a change to
+what the containers **do**, and that is the extension rule's business, not this section's.
+
+What this costs is named in [a-strict-extension](#a-strict-extension) and is not much: the address of an
+operator, which nothing takes and which is a use worth discouraging in any case -- an operator is meant to be
+found by the grammar, not by name. What it buys is one shape to learn instead of one per type.
+
 ### a-strict-extension
 
 `bitset_adaptor<Bits>` is `[template.bitset]` over a storage of ours ([owning-is-ours](#owning-is-ours)), and
@@ -1699,6 +1839,14 @@ and ours adds on top. Extension means nothing of the counterpart's is dropped, r
 means it goes one way, code written against `std::bitset` compiling unchanged on `xstd::bitset` and not the
 reverse. The harness's raw `std::bitset` and raw boost arms are the oracle for the inclusion, and the
 elementwise readings are the oracle for what is added.
+
+The rule governs **expressions**, and one thing it deliberately does not govern is **where an operator sits**.
+`operator==` and the shifts are hidden friends where `std::bitset` makes all three members
+([the-comparison-is-a-hidden-friend](#the-comparison-is-a-hidden-friend)). Every call is unchanged -- `a == b`,
+`a << n` -- and what is not carried over is `&bitset<N>::operator==` and `&bitset<N>::operator<<`. Taking the
+address of an operator is not a use to preserve; it names a function whose whole point is to be found by the
+grammar rather than by name, and no code that should exist forms one. This is where the tree stops
+transcribing and starts choosing ([an-opinionated-reimagining](#an-opinionated-reimagining)).
 
 The vocabulary used to be a concept, `has_bitops` -- the compound operators including `-=`, the shifts, `set`
 `reset` `flip` `all` `any` `none` `count` `size`, the three set predicates and regularity -- because a foreign

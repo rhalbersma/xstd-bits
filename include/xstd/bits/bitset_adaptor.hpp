@@ -196,8 +196,7 @@ public:
                 return m_bits.get_allocator();
         }
 
-        // Boost's, and so ours at both widths: the storage spells it alike, and an extension may add. [design.md#a-strict-extension]
-        // Boost has the free form beside the member; std::bitset has neither, and an extension may add. Hidden rather than at namespace scope, as every other non-member operator here is. [design.md#a-strict-extension] [design.md#swap-goes-through-adl]
+        // Boost has the free form beside the member; std::bitset has neither, and an extension may add. Hidden rather than at namespace scope, unlike the operators below: xstd::swap(a, b) is a spelling people reach for by habit and a qualified operator is not, so here the hiding buys something. [design.md#a-strict-extension] [design.md#swap-goes-through-adl]
         friend constexpr auto swap(bitset_adaptor& x, bitset_adaptor& y) noexcept(noexcept(x.swap(y)))
                 -> void
                 requires std::swappable<Bits>
@@ -205,6 +204,7 @@ public:
                 x.swap(y);
         }
 
+        // Boost's, and so ours at both widths: the storage spells it alike, and an extension may add. [design.md#a-strict-extension]
         constexpr auto swap(bitset_adaptor& other) noexcept(std::is_nothrow_swappable_v<Bits>)
                 -> void
                 requires std::swappable<Bits>
@@ -296,10 +296,6 @@ public:
                 return *this;
         }
 
-        [[nodiscard]] constexpr auto operator<<(std::size_t pos) const noexcept(has_static_width) -> bitset_adaptor { auto nrv = *this; nrv <<= pos; return nrv; }
-        [[nodiscard]] constexpr auto operator>>(std::size_t pos) const noexcept(has_static_width) -> bitset_adaptor { auto nrv = *this; nrv >>= pos; return nrv; }
-
-        [[nodiscard]] constexpr auto operator~() const noexcept(has_static_width) -> bitset_adaptor { auto nrv = *this; nrv.flip(); return nrv; }
 
         constexpr auto set  () noexcept -> bitset_adaptor& { m_bits.set  (); return *this; }
         constexpr auto reset() noexcept -> bitset_adaptor& { m_bits.reset(); return *this; }
@@ -457,7 +453,7 @@ public:
                                 return lhs.top_aligned_three_way(rhs);
                         }
                 }
-                return lhs.m_bits.string_three_way(rhs.m_bits);
+                return string_three_way(lhs.m_bits, rhs.m_bits);
         }
 
         [[nodiscard]] constexpr auto test(std::size_t pos) const
@@ -766,6 +762,11 @@ template<class Bits> [[nodiscard]] constexpr auto operator&(bitset_adaptor<Bits>
 template<class Bits> [[nodiscard]] constexpr auto operator|(bitset_adaptor<Bits> const& lhs, bitset_adaptor<Bits> const& rhs) noexcept((Bits::extent != std::dynamic_extent)) -> bitset_adaptor<Bits> { auto nrv = lhs; nrv |= rhs; return nrv; }
 template<class Bits> [[nodiscard]] constexpr auto operator^(bitset_adaptor<Bits> const& lhs, bitset_adaptor<Bits> const& rhs) noexcept((Bits::extent != std::dynamic_extent)) -> bitset_adaptor<Bits> { auto nrv = lhs; nrv ^= rhs; return nrv; }
 template<class Bits> [[nodiscard]] constexpr auto operator-(bitset_adaptor<Bits> const& lhs, bitset_adaptor<Bits> const& rhs) noexcept((Bits::extent != std::dynamic_extent)) -> bitset_adaptor<Bits> { auto nrv = lhs; nrv -= rhs; return nrv; }
+
+// @= belongs to the left operand and @ does not, where std::bitset makes these three members. Templates rather than hidden friends: they reach nothing private, and nobody writes an operator qualified, so the hiding would buy nothing here -- unlike swap, whose qualified spelling is an accident people do make. [design.md#an-opinionated-reimagining]
+template<class Bits> [[nodiscard]] constexpr auto operator~(bitset_adaptor<Bits> const& lhs) noexcept((Bits::extent != std::dynamic_extent)) -> bitset_adaptor<Bits> { auto nrv = lhs; nrv.flip(); return nrv; }
+template<class Bits> [[nodiscard]] constexpr auto operator<<(bitset_adaptor<Bits> const& lhs, std::size_t pos) noexcept((Bits::extent != std::dynamic_extent)) -> bitset_adaptor<Bits> { auto nrv = lhs; nrv <<= pos; return nrv; }
+template<class Bits> [[nodiscard]] constexpr auto operator>>(bitset_adaptor<Bits> const& lhs, std::size_t pos) noexcept((Bits::extent != std::dynamic_extent)) -> bitset_adaptor<Bits> { auto nrv = lhs; nrv >>= pos; return nrv; }
 
 // [bitset.operators]/6: up to N characters into a temporary string, then x = bitset(str), so a short read lands in the low bits as it does there; a run-time width reads every 0 or 1 on offer and is as wide as the characters read, as boost's is.
 template<class charT, class traits, class Bits>

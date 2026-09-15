@@ -537,7 +537,7 @@ public:
                 }
         }
 
-        // The non-member beside it, hidden as every other non-member here is: ranges::swap finds this and never the member. [design.md#swap-goes-through-adl]
+        // The non-member beside it, hidden though the operators here are namespace-scope templates: ranges::swap finds this and never the member, and xstd::swap(a, b) is a spelling people reach for by habit where a qualified operator is not. [design.md#swap-goes-through-adl]
         friend constexpr auto swap(sequence_adaptor& x, sequence_adaptor& y) noexcept(noexcept(x.swap(y)))
                 -> void
                 requires is_owner
@@ -689,9 +689,9 @@ public:
         // The storage's entry and nothing else: an owner is over storage of ours, which has one. Spelled over bits_type rather than over x.storage(), which MSVC completes eagerly here and so cannot. [design.md#owning-is-ours] [design.md#msvc-completes-the-accessor]
         [[nodiscard]] friend constexpr auto operator<=>(sequence_adaptor const& x, sequence_adaptor const& y) noexcept
                 -> std::strong_ordering
-                requires is_owner and requires (bits_type const& b) { b.sequence_three_way(b); }
+                requires is_owner and requires (bits_type const& b) { sequence_three_way(b, b); }
         {
-                return x.storage().sequence_three_way(y.storage());
+                return sequence_three_way(x.storage(), y.storage());
         }
 
         // Bulk, on the storage's own spelling: on packed bits the pointwise operation and the set operation are one instruction; not on a window, whose blocks are not its own. [design.md#what-the-readings-share]
