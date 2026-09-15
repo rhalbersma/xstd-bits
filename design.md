@@ -1815,10 +1815,18 @@ nothing and saying nothing.
 
 Two rules, and the second is what keeps the first from being written six times:
 
-**The ceiling is `blocks_for`.** It is the one place a width becomes a block count, and every growth reaches it:
-the width constructor, `resize`, `reserve`, and `growing_insert` through `resize`. A width above `max_width` --
-the widest a `size_t` counts in whole blocks -- is `std::length_error` there, which is what a container throws
-for a size it cannot represent. The narrower ceiling stays the blocks' own: `m_blocks.resize` and
+**The ceiling is `check_width`**, at the four doors a width the caller named comes in by: the two width
+constructors, `resize` and `reserve` -- `growing_insert` and `push_back` arriving through `resize`. A width
+above `max_width` -- the widest a `size_t` counts in whole blocks -- is `std::length_error` there, which is what
+a container throws for a size it cannot represent.
+
+It sits beside `blocks_for` rather than inside it, though `blocks_for` is the one place a width becomes a block
+count and every growth does reach it. `clear()` is a resize to zero and `pop_back()` a resize by one less, so
+neither names a width and neither can fail the ceiling -- but the sequence reading declares both `noexcept`, and
+a throw they cannot reach is still one `bugprone-exception-escape` traces into them. It traced into
+`bitset_adaptor`'s `noexcept` default constructor too, by way of the NSDMI that asks `blocks_for(0)`. So the
+conversion stays total, with `n <= max_width` as an assert, the ceiling is asked once at each door, and the two
+that name no width go to `resize_to` behind it. The narrower ceiling stays the blocks' own: `m_blocks.resize` and
 `m_blocks.reserve` are handed a count and answer for it, which is why `resize(max_width)` is `bad_alloc` and
 `resize(max_width + 1)` is `length_error`. `resize` takes that count **before** it writes the last block, so a
 refused growth leaves the width and the bits exactly as they were.

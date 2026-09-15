@@ -77,14 +77,24 @@ private:
         static constexpr auto static_unused_bits     = static_cast<block_type>(~static_used_bits);
         static constexpr auto static_has_unused_bits = has_static_size and static_used_bits != ones;
 
-        // How many blocks a run-time width needs, floored at one like num_blocks_v. A width above max_width is std::length_error and not an align_up that wraps: rounding one near the top of size_t gives zero blocks, and a storage answering size() with that width over the one block the floor leaves is out of bounds everywhere above the first. The narrower ceiling is the blocks' own, and theirs to enforce: the resize and the reserve below are handed a block count, and throw length_error for one they cannot reach.
-        [[nodiscard]] static constexpr auto blocks_for(std::size_t n)
+        // How many blocks a run-time width needs, floored at one like num_blocks_v. The width is a precondition, not a question: align_up wraps above max_width, and the rounding of a width near the top of size_t is zero blocks, which the floor then turns into one. check_width is what establishes it.
+        [[nodiscard]] static constexpr auto blocks_for(std::size_t n) noexcept
+                -> std::size_t
+        {
+                assert(n <= max_width);
+                return std::ranges::max(align_up(n, bits_per_block) / bits_per_block, 1UZ);
+        }
+
+        // The ceiling, at the four doors a width the caller named comes in by: the two width constructors, resize and reserve. std::length_error is what a container throws for a size it cannot represent; what the blocks can actually hold is narrower, and theirs to answer -- they are handed a block count and throw length_error for one they cannot reach.
+        //
+        // Here rather than inside blocks_for, which every growth reaches: clear() is resize to zero and pop_back() is resize by one less, so neither names a width and neither can fail this, and the sequence reading declares both noexcept. A throw they cannot reach is still one bugprone-exception-escape traces into them.
+        [[nodiscard]] static constexpr auto check_width(std::size_t n)
                 -> std::size_t
         {
                 if (n > max_width) {
                         throw length_error(n);
                 }
-                return std::ranges::max(align_up(n, bits_per_block) / bits_per_block, 1UZ);
+                return n;
         }
 
         // An NSDMI, not extent-constrained constructors: vector starts empty.
@@ -115,7 +125,7 @@ public:
         [[nodiscard]] constexpr explicit contiguous_bit_container(std::size_t n)
                 requires (not has_static_size)
         :
-                m_size(n),
+                m_size(check_width(n)),
                 m_blocks(make_blocks(n))
         {}
 
@@ -131,7 +141,7 @@ public:
                 requires (not has_static_size) and std::same_as<Alloc, typename Blocks::allocator_type>
         [[nodiscard]] constexpr contiguous_bit_container(std::size_t n, Alloc const& alloc)
         :
-                m_size(n),
+                m_size(check_width(n)),
                 m_blocks(blocks_for(n), alloc)
         {}
 
@@ -722,15 +732,8 @@ public:
                 -> void
                 requires (not has_static_size)
         {
-                // The block count first, so a width this storage cannot count throws before the last block below is written.
-                auto const count = blocks_for(n);
-                // Growing with ones: the tail above size() in the last block is clear by the invariant, and becomes the first new bits.
-                if (value and n > size()) {
-                        m_blocks[last_block()] |= static_cast<block_type>(~used_bits());
-                }
-                m_blocks.resize(count, value ? ones : zero);
-                m_size = n;
-                erase_unused();
+                // The ceiling first, so a width this storage cannot count throws before anything below is written.
+                resize_to(check_width(n), value);
         }
 
         // Widen just enough to hold every element the other has, and not at all when it has none above this width. Its largest element, not its size(), is what the growing insert of each in turn would have reached. A static width has nothing to widen and no other width to meet, so there the whole thing is nothing.
@@ -752,7 +755,7 @@ public:
                 -> void
                 requires (not has_static_size)
         {
-                resize(0UZ);
+                resize_to(0UZ, false);
         }
 
         constexpr auto push_back(bool value)
@@ -767,7 +770,7 @@ public:
                 requires (not has_static_size)
         {
                 assert(size() != 0UZ);
-                resize(size() - 1UZ);
+                resize_to(size() - 1UZ, false);
         }
 
         // Boost's append: the block's bits become the positions [size(), size() + bits_per_block), split over two blocks where size() is not aligned.
@@ -807,7 +810,7 @@ public:
                 -> void
                 requires (not has_static_size) and requires (Blocks& b) { b.reserve(blocks_for(n)); }
         {
-                m_blocks.reserve(blocks_for(n));
+                m_blocks.reserve(blocks_for(check_width(n)));
         }
 
         [[nodiscard]] constexpr auto capacity() const noexcept
@@ -1237,6 +1240,21 @@ private:
         {
                 auto const [ index, offset ] = index_offset(n);
                 return { std::forward<decltype(self)>(self).m_blocks[index], shl(unit, offset) };
+        }
+
+        // The growth itself, over a width already known to be one this storage can count: clear() and pop_back() reach it directly, naming no width of their own.
+        constexpr auto resize_to(std::size_t n, bool value)
+                -> void
+                requires (not has_static_size)
+        {
+                auto const count = blocks_for(n);
+                // Growing with ones: the tail above size() in the last block is clear by the invariant, and becomes the first new bits.
+                if (value and n > size()) {
+                        m_blocks[last_block()] |= static_cast<block_type>(~used_bits());
+                }
+                m_blocks.resize(count, value ? ones : zero);
+                m_size = n;
+                erase_unused();
         }
 
         // std::length_error, which is what a container throws for a size it cannot represent; the three readings inherit it through every growth, having no ceiling of their own to name.
