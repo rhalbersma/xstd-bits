@@ -29,7 +29,7 @@ concept block_basis =
                 xstd::popcount(x);
         };
 
-// Each flag held to the basis it claims. [design.md#uint128-support]
+// Each flag held to the basis it claims.
 static_assert(not (has_uint128 and has_msvc_int128));
 
 static_assert(not has_uint128 or block_basis<xstd::uint128>);
@@ -70,7 +70,7 @@ using narrow_word_types = std::tuple
 <       std::uint8_t
 >;
 
-// The widest Blocks, which cross a boundary for two reasons the narrow ones cannot cover. [design.md#uint128-support]
+// The widest Blocks, which cross a boundary for two reasons the narrow ones cannot cover.
 using wide_word_types = decltype(std::tuple_cat(
         std::declval<std::tuple<
 #if defined(TEST_HAS_UINT128) || defined(TEST_HAS_MSVC_INT128)

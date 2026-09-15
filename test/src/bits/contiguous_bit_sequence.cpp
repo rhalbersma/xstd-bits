@@ -13,7 +13,7 @@
 #include <cstdint>                                    // uint64_t
 #include <tuple>                                      // tuple
 
-// The common vocabulary the three bit containers answer in their own names. [design.md#the-common-vocabulary]
+// The common vocabulary the three bit containers answer in their own names.
 namespace {
 
 using ours_static  = xstd::detail::bits::contiguous_bit_array<std::uint64_t, 64>;
@@ -34,9 +34,7 @@ struct word { std::uint64_t bits = 0; };
 
 inline constexpr auto width = 64UZ;
 
-// Two of the four carry their width in the type and two take it at construction. Named rather than detected:
-// std::bitset<N> is constructible from a std::size_t and reads it as a VALUE, so a detector spelled that way
-// hands back std::bitset<64>(64), which is bit 6 set rather than a width.
+// Two of the four carry their width in the type and two take it at construction. Named rather than detected: std::bitset<N> is constructible from a std::size_t and reads it as a VALUE, so a detector spelled that way hands back std::bitset<64>(64), which is bit 6 set rather than a width.
 template<class C>
 [[nodiscard]] auto make()
         -> C
@@ -60,19 +58,17 @@ static_assert(xstd::contiguous_bit_sequence<theirs>);
 static_assert(xstd::contiguous_bit_sequence<boosts>);
 
 // It is the intersection and not the union: every one of these is absent from at least one of the three, so asking for it would drop a model.
-static_assert(not has_subscript<ours_static>);   // ours reads through test, never a subscript [design.md#test-not-subscript]
+static_assert(not has_subscript<ours_static>);   // ours reads through test, never a subscript
 static_assert(not has_complement<ours_static>);  // nor does it complement in place
 static_assert(not has_set_value<ours_static>);   // nor take the two-argument set, assign being spelled apart from it
 static_assert(not has_difference<theirs>);       // std::bitset has no difference
 static_assert(not has_subset_of<theirs>);        // nor boost's set vocabulary
 static_assert(not has_to_string<boosts>);        // to_string is std::bitset's alone
 
-// Structural and nothing more: it describes a shape the three containers share, and the adaptors admit their storage by name instead. [design.md#the-common-vocabulary]
+// Structural and nothing more: it describes a shape the three containers share, and the adaptors admit their storage by name instead.
 static_assert(not xstd::contiguous_bit_sequence<word>);
 
-// Asserted only, the concept would say the names exist; asked of each model in turn, it says they mean the same
-// thing. Three cases rather than one, because one walk of the whole vocabulary is past the cognitive-complexity
-// threshold and the three groups are the reading's own: the whole, a position, and the bitwise operators.
+// Asserted only, the concept would say the names exist; asked of each model in turn, it says they mean the same thing. Three cases rather than one, because one walk of the whole vocabulary is past the cognitive-complexity threshold and the three groups are the reading's own: the whole, a position, and the bitwise operators.
 BOOST_AUTO_TEST_CASE_TEMPLATE(EveryModelAnswersTheWhole, C, Models)
 {
         auto a = make<C>();

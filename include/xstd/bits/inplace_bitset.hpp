@@ -8,7 +8,7 @@
 
 #include <version> // IWYU pragma: keep; __cpp_lib_inplace_vector
 
-// The column comes and goes with its storage, and an alias withholds a name rather than a capability. [design.md#the-inplace-column]
+// The column comes and goes with its storage, and an alias withholds a name rather than a capability.
 #ifdef __cpp_lib_inplace_vector
 
 #include <xstd/bits/bitset_adaptor.hpp>                       // bitset_adaptor
@@ -18,7 +18,7 @@
 
 namespace xstd {
 
-// A resizable bitset that never allocates, which is what embedded code asks for; no bit_ prefix, bitset already carrying the word. [design.md#the-public-names]
+// A resizable bitset that never allocates, which is what embedded code asks for; no bit_ prefix, bitset already carrying the word.
 template<xstd::unsigned_integer Block, std::size_t N>
 using basic_inplace_bitset = bitset_adaptor<detail::bits::contiguous_bit_inplace_vector<Block, N>>;
 

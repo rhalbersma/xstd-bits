@@ -12,7 +12,7 @@
 
 namespace xstd {
 
-// A window on the sequence reading: what first, last and subspan return on a bit_span or on another window, and never deduced, so an alias suffices. [design.md#windows]
+// A window on the sequence reading: what first, last and subspan return on a bit_span or on another window, and never deduced, so an alias suffices.
 template<detail::bits::specialization_of_contiguous_bit_container Bits>
 using bit_subspan = sequence_adaptor<Bits, ownership::refers, true>;
 

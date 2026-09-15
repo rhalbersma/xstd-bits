@@ -27,7 +27,7 @@ BOOST_AUTO_TEST_SUITE(InplaceBitset)
 // A capacity of three whole blocks, so a resize can straddle a boundary and still stop short of the capacity.
 using T = xstd::basic_inplace_bitset<std::uint8_t, 24>;
 
-// The bitset reading over a run-time width under a compile-time capacity, an alias and nothing more. [design.md#the-public-names]
+// The bitset reading over a run-time width under a compile-time capacity, an alias and nothing more.
 BOOST_AUTO_TEST_CASE(TheInplaceBitsetIsTheBitsetAdaptorOverAnInplaceVectorOfBlocks)
 {
         static_assert(std::same_as<T, xstd::bitset_adaptor<xstd::detail::bits::contiguous_bit_inplace_vector<std::uint8_t, 24>>>);
@@ -35,14 +35,14 @@ BOOST_AUTO_TEST_CASE(TheInplaceBitsetIsTheBitsetAdaptorOverAnInplaceVectorOfBloc
         static_assert(std::regular<T>);
 }
 
-// Two orderings at every width: its own is the bit string's, boost's, and the set reading's is reached through the view. [design.md#the-ordering-invariant]
+// Two orderings at every width: its own is the bit string's, boost's, and the set reading's is reached through the view.
 BOOST_AUTO_TEST_CASE(OrderedInfixAndThroughTheView)
 {
         static_assert(std::totally_ordered<T>);
         static_assert(std::totally_ordered<decltype(xstd::bit_set_view(std::declval<T&>()))>);
 }
 
-// boost::dynamic_bitset's growth, over storage that never allocates: the width moves, the capacity does not. [design.md#a-strict-extension]
+// boost::dynamic_bitset's growth, over storage that never allocates: the width moves, the capacity does not.
 BOOST_AUTO_TEST_CASE(ItIsBoostsBitsetAtARunTimeWidthUnderAStaticCapacity)
 {
         auto b = T();
@@ -70,7 +70,7 @@ BOOST_AUTO_TEST_CASE(ItIsBoostsBitsetAtARunTimeWidthUnderAStaticCapacity)
         BOOST_CHECK(b.test(9));
 }
 
-// Past the capacity the storage throws, as [inplace.vector] specifies, and the bitset forwards that unchanged. [design.md#growth]
+// Past the capacity the storage throws, as [inplace.vector] specifies, and the bitset forwards that unchanged.
 BOOST_AUTO_TEST_CASE(GrowingPastTheCapacityThrowsBadAlloc)
 {
         auto b = T();
@@ -87,7 +87,7 @@ BOOST_AUTO_TEST_CASE(GrowingPastTheCapacityThrowsBadAlloc)
 
 #else
 
-// The column is its storage's: without std::inplace_vector there is no name to test, and saying so keeps the source from being empty. [design.md#the-inplace-column]
+// The column is its storage's: without std::inplace_vector there is no name to test, and saying so keeps the source from being empty.
 BOOST_AUTO_TEST_CASE(TheColumnIsAbsentWithItsStorage)
 {
         static_assert(not test::has_inplace_vector);

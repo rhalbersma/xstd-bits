@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-// The run-time width against boost's, on the same word ladder the static width runs in ops.cpp. [design.md#a-strict-extension]
+// The run-time width against boost's, on the same word ladder the static width runs in ops.cpp.
 
 #include <xstd/bits/bit_set_view.hpp>             // bit_set_view
 #include <xstd/bits/dynamic_bitset.hpp>           // dynamic_bitset
@@ -105,7 +105,7 @@ auto bm_flip(benchmark::State& state)
         per_byte(state);
 }
 
-// Boost answers find_first/find_next natively and ours answers its own scan; bit_set_view is what puts the two behind one expression. [design.md#the-blit]
+// Boost answers find_first/find_next natively and ours answers its own scan; bit_set_view is what puts the two behind one expression.
 template<class T>
 auto bm_scan(benchmark::State& state)
         -> void
@@ -114,7 +114,7 @@ auto bm_scan(benchmark::State& state)
         for (auto _ : state) {
                 benchmark::DoNotOptimize(a);
                 auto sum = 0UZ;
-                // Ours iterates through the view; a counterpart takes the loop its own users write. [design.md#owning-is-ours]
+                // Ours iterates through the view; a counterpart takes the loop its own users write.
                 if constexpr (requires { xstd::bit_set_view(a); }) {
                         for (auto const pos : xstd::bit_set_view(a)) {
                                 sum += pos;

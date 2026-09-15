@@ -10,10 +10,10 @@
 #include <xstd/bits/ownership.hpp>                       // ownership
 #include <xstd/bits/set_adaptor.hpp>                     // set_adaptor
 
-// The set reading over bits it does not own: the referring adaptor under the name the sieve calls it by. [design.md#the-views-are-the-adaptors]
+// The set reading over bits it does not own: the referring adaptor under the name the sieve calls it by.
 namespace xstd {
 
-// An alias, as bit_subspan always was: the referring adaptor is the view, so there is nothing for a class of its own to add. [design.md#the-views-are-the-adaptors]
+// An alias, as bit_subspan always was: the referring adaptor is the view, so there is nothing for a class of its own to add.
 template<detail::bits::specialization_of_contiguous_bit_container Bits>
 using bit_set_view = set_adaptor<Bits, ownership::refers>;
 

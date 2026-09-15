@@ -56,7 +56,7 @@ using ViewedTypes = std::tuple<Owner, xstd::basic_bit_vector<std::uint8_t>>;
 
 }  // namespace
 
-// A window is the referring adaptor windowed, an alias since nothing deduces it; it stores what std::span stores, three words beside the whole view's one. [design.md#windows]
+// A window is the referring adaptor windowed, an alias since nothing deduces it; it stores what std::span stores, three words beside the whole view's one.
 BOOST_AUTO_TEST_CASE(TheWindowIsTheAdaptorWindowed)
 {
         static_assert(std::same_as<Sub, xstd::sequence_adaptor<Blocks, xstd::ownership::refers, true>>);
@@ -68,12 +68,12 @@ BOOST_AUTO_TEST_CASE(TheWindowIsTheAdaptorWindowed)
         static_assert(std::same_as<decltype(std::declval<Span const&>().last(1UZ)),    Sub>);
         static_assert(std::same_as<decltype(std::declval<Sub  const&>().subspan(1UZ)), Sub>);
 
-        // Windows are the view's alone, as std::array and std::vector have no subviews. [design.md#windows]
+        // Windows are the view's alone, as std::array and std::vector have no subviews.
         static_assert(    has_subspan<Span>);
         static_assert(    has_subspan<Sub>);
         static_assert(not has_subspan<Owner>);
 
-        // A view in std::ranges' sense and borrowed like span; like span it neither compares nor hashes. It fills and takes the four bulk operators a word at a time, and has no shifts. [design.md#windows]
+        // A view in std::ranges' sense and borrowed like span; like span it neither compares nor hashes. It fills and takes the four bulk operators a word at a time, and has no shifts.
         static_assert(std::ranges::view<Sub>);
         static_assert(std::ranges::borrowed_range<Sub>);
         static_assert(std::ranges::random_access_range<Sub>);
@@ -87,7 +87,7 @@ BOOST_AUTO_TEST_CASE(TheWindowIsTheAdaptorWindowed)
         static_assert(    has_shifts<Span>);
 }
 
-// A window sees its positions and nothing beyond them, reading them from zero. [design.md#windows]
+// A window sees its positions and nothing beyond them, reading them from zero.
 BOOST_AUTO_TEST_CASE(AWindowSeesItsPositionsAlone)
 {
         auto a = Owner();
@@ -111,7 +111,7 @@ BOOST_AUTO_TEST_CASE(AWindowSeesItsPositionsAlone)
         BOOST_CHECK_EQUAL(std::distance(w.cbegin(), w.cend()), 6);
 }
 
-// Writing through a window writes the storage, one position at a time or through the iterators an algorithm walks. [design.md#windows]
+// Writing through a window writes the storage, one position at a time or through the iterators an algorithm walks.
 BOOST_AUTO_TEST_CASE(AWindowWritesThrough)
 {
         auto a = Owner();
@@ -140,7 +140,7 @@ auto bools(R const& r)
 
 }       // namespace
 
-// fill on a window: a masked word at a time over our storage, one position at a time over a foreign one, and never a position outside. [design.md#windows]
+// fill on a window: a masked word at a time over our storage, one position at a time over a foreign one, and never a position outside.
 BOOST_AUTO_TEST_CASE_TEMPLATE(AWindowFillsItsPositionsAlone, T, ViewedTypes)
 {
         for (auto const off : { 0UZ, 1UZ, 7UZ, 8UZ, 9UZ, 15UZ }) {
@@ -219,7 +219,7 @@ auto check_combination(int op, std::size_t off, std::size_t other, std::size_t c
 
 }       // namespace
 
-// The four bulk operators on a window of ours against a window at any other alignment: word by word, masked to the window; a source of another block type is not a source. [design.md#windows]
+// The four bulk operators on a window of ours against a window at any other alignment: word by word, masked to the window; a source of another block type is not a source.
 BOOST_AUTO_TEST_CASE(AWindowCombinesWithAnotherAtAnyAlignment)
 {
         for (auto const op : { 0, 1, 2, 3 }) {
@@ -232,7 +232,7 @@ BOOST_AUTO_TEST_CASE(AWindowCombinesWithAnotherAtAnyAlignment)
                 }
         }
 
-        // A window against itself, word by word in place. A source of another block type is not a source; asking clang whether it is crashes the compiler, so no assertion says so here. [design.md#clang-crashes-on-a-foreign-bulk-source]
+        // A window against itself, word by word in place. A source of another block type is not a source; asking clang whether it is crashes the compiler, so no assertion says so here.
         auto self = xstd::basic_bit_vector<std::uint8_t>(std::from_range, pattern(20, 1));
         auto const outside = bools(xstd::bit_span(self).first(3));
         auto const w = xstd::bit_span(self).subspan(3, 12);
@@ -243,7 +243,7 @@ BOOST_AUTO_TEST_CASE(AWindowCombinesWithAnotherAtAnyAlignment)
         static_assert(combinable<decltype(w), decltype(xstd::bit_span(self))>);
 }
 
-// Windows compose: a window of a window offsets once more, first and last are the two ends, and dynamic_extent reaches the end. [design.md#windows]
+// Windows compose: a window of a window offsets once more, first and last are the two ends, and dynamic_extent reaches the end.
 BOOST_AUTO_TEST_CASE(WindowsCompose)
 {
         auto a = Owner();
@@ -268,7 +268,7 @@ BOOST_AUTO_TEST_CASE(WindowsCompose)
         BOOST_CHECK(xstd::bit_span(z).subspan(0).empty());
 }
 
-// Every viewed storage windows the same way, ours and the two foreign ones alike, through the trait. [design.md#windows]
+// Every viewed storage windows the same way, ours and the two foreign ones alike, through the trait.
 BOOST_AUTO_TEST_CASE_TEMPLATE(EveryViewedStorageWindows, T, ViewedTypes)
 {
         auto bits = twenty<T>();

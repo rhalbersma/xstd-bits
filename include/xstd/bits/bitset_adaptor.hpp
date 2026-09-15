@@ -38,27 +38,27 @@
 
 namespace xstd {
 
-// [template.bitset] over a storage of ours, nominally: has_bitops used to ask structurally whether a storage spoke the bitset vocabulary, because a foreign one might. Only ours can be here now, and ours speaks it by construction, so the question was answering itself. [design.md#one-storage]
+// [template.bitset] over a storage of ours, nominally: has_bitops used to ask structurally whether a storage spoke the bitset vocabulary, because a foreign one might. Only ours can be here now, and ours speaks it by construction, so the question was answering itself.
 template<detail::bits::specialization_of_contiguous_bit_container Bits>
 class bitset_adaptor : public detail::bits::allocator_base_type<Bits>
 {
-        // One wrapper, two counterparts it strictly extends: std::bitset at a static width, boost::dynamic_bitset at a run-time one. [design.md#a-strict-extension]
+        // One wrapper, two counterparts it strictly extends: std::bitset at a static width, boost::dynamic_bitset at a run-time one.
         static constexpr bool has_static_width = (Bits::extent != std::dynamic_extent);
 
-        // No iteration here by design, because neither counterpart has it: the two views refer into the storage instead. [design.md#views-over-owners]
+        // No iteration here by design, because neither counterpart has it: the two views refer into the storage instead.
         Bits m_bits{};
 
         template<std::input_iterator I>
         static constexpr bool block_iterator = std::same_as<std::remove_cvref_t<std::iter_value_t<I>>, typename Bits::block_type>;
 
-        // owned_storage names this owner's storage, so a view over a bitset is a view over what the bitset wraps. [design.md#an-owner-reads-as-its-storage]
+        // owned_storage names this owner's storage, so a view over a bitset is a view over what the bitset wraps.
         template<class> friend struct owned_storage;
 
-        // Either reading's view refers into this owner's storage, and nothing else outside does: a bitset is committed to neither reading, which is what its two views are for. [design.md#the-readings-do-not-mix]
+        // Either reading's view refers into this owner's storage, and nothing else outside does: a bitset is committed to neither reading, which is what its two views are for.
         template<detail::bits::specialization_of_contiguous_bit_container B, ownership O>         friend class set_adaptor;
         template<detail::bits::specialization_of_contiguous_bit_container B, ownership O, bool W> friend class sequence_adaptor;
 
-        // The value through the trait: the blocks and the width. [design.md#the-hashing-invariant]
+        // The value through the trait: the blocks and the width.
         template<class Provider, class Hash, class Flavor>
         friend constexpr auto tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, bitset_adaptor const* v) noexcept
                 -> void
@@ -67,12 +67,12 @@ class bitset_adaptor : public detail::bits::allocator_base_type<Bits>
         }
 
 public:
-        // boost's typedefs; std::bitset has none, and a typedef changes no answer. The block is in the open again, boost's block interface being part of the extension. [design.md#a-strict-extension]
+        // boost's typedefs; std::bitset has none, and a typedef changes no answer. The block is in the open again, boost's block interface being part of the extension.
         using size_type  = std::size_t;
         using block_type = Bits::block_type;
         static constexpr std::size_t bits_per_block = Bits::bits_per_block;
 
-        // [bitset.refs], reaching the bits only through the unchecked way in; its own class, with the flip and ~ the sequence proxy lacks. [design.md#unchecked-writes-in-views]
+        // [bitset.refs], reaching the bits only through the unchecked way in; its own class, with the flip and ~ the sequence proxy lacks.
         class reference
         {
                 // A pointer, not a reference, so the copy constructor stays defaulted as [bitset.refs] declares it.
@@ -98,7 +98,7 @@ public:
                         return *this;
                 }
 
-                // Assigns the bit, not the proxy: rebinding would break the swap below. [design.md#clang-tidy-false-positives]
+                // Assigns the bit, not the proxy: rebinding would break the swap below.
                 constexpr auto operator=(reference const& x) noexcept -> reference&  // NOLINT(bugprone-unhandled-self-assignment)
                 {
                         std::as_const(*this) = static_cast<bool>(x);
@@ -164,7 +164,7 @@ public:
                 m_bits.append(first, last);
         }
 
-        // boost's allocator arguments, where the storage takes one. [design.md#a-strict-extension]
+        // boost's allocator arguments, where the storage takes one.
         template<class Alloc>
                 requires (not has_static_width) and std::same_as<Alloc, typename Bits::allocator_type>
         [[nodiscard]] constexpr explicit bitset_adaptor(Alloc const& alloc)
@@ -196,7 +196,7 @@ public:
                 return m_bits.get_allocator();
         }
 
-        // Boost has the free form beside the member; std::bitset has neither, and an extension may add. Hidden rather than at namespace scope, unlike the operators below: xstd::swap(a, b) is a spelling people reach for by habit and a qualified operator is not, so here the hiding buys something. [design.md#a-strict-extension] [design.md#swap-goes-through-adl]
+        // Boost has the free form beside the member; std::bitset has neither, and an extension may add. Hidden rather than at namespace scope, unlike the operators below: xstd::swap(a, b) is a spelling people reach for by habit and a qualified operator is not, so here the hiding buys something.
         friend constexpr auto swap(bitset_adaptor& x, bitset_adaptor& y) noexcept(noexcept(x.swap(y)))
                 -> void
                 requires std::swappable<Bits>
@@ -204,7 +204,7 @@ public:
                 x.swap(y);
         }
 
-        // Boost's, and so ours at both widths: the storage spells it alike, and an extension may add. [design.md#a-strict-extension]
+        // Boost's, and so ours at both widths: the storage spells it alike, and an extension may add.
         constexpr auto swap(bitset_adaptor& other) noexcept(std::is_nothrow_swappable_v<Bits>)
                 -> void
                 requires std::swappable<Bits>
@@ -255,7 +255,7 @@ public:
                 }
         }
 
-        // Constrained to the character types, so a pointer to a block reaches the block-range constructor above and never instantiates a string_view over the block. [design.md#a-strict-extension]
+        // Constrained to the character types, so a pointer to a block reaches the block-range constructor above and never instantiates a string_view over the block.
         template<class charT>
                 requires (std::same_as<charT, char> or std::same_as<charT, wchar_t> or std::same_as<charT, char8_t> or std::same_as<charT, char16_t> or std::same_as<charT, char32_t>)
         [[nodiscard]] constexpr explicit bitset_adaptor(
@@ -273,7 +273,7 @@ public:
         constexpr auto operator|=(bitset_adaptor const& rhs) noexcept -> bitset_adaptor& { m_bits |= rhs.m_bits; return *this; }
         constexpr auto operator^=(bitset_adaptor const& rhs) noexcept -> bitset_adaptor& { m_bits ^= rhs.m_bits; return *this; }
 
-        // The counterparts' shifts are total and saturate to none; the storage's are unchecked, with pos < size() as their precondition, so the guard lives here. [design.md#the-one-guard]
+        // The counterparts' shifts are total and saturate to none; the storage's are unchecked, with pos < size() as their precondition, so the guard lives here.
         constexpr auto operator<<=(std::size_t pos) noexcept
                 -> bitset_adaptor&
         {
@@ -301,12 +301,7 @@ public:
         constexpr auto reset() noexcept -> bitset_adaptor& { m_bits.reset(); return *this; }
         constexpr auto flip () noexcept -> bitset_adaptor& { m_bits.flip (); return *this; }
 
-        // Element access: the one guard, then the unchecked write. It throws out_of_range at a static width as std::bitset does and asserts at a run-time one as boost does: the inconsistency is the counterparts' own. [design.md#the-one-guard]
-        //
-        // A zero width holds no position, so the guard throws for every pos and each of the five members below is,
-        // at that width, nothing but the throw. Said as its own arm rather than left after the guard, or the
-        // instantiation carries a tail no control flow reaches, which MSVC reports under /O2.
-        // [design.md#degenerate-widths]
+        // Element access: the one guard, then the unchecked write. It throws out_of_range at a static width as std::bitset does and asserts at a run-time one as boost does: the inconsistency is the counterparts' own. A zero width holds no position, so the guard throws for every pos and each of the five members below is, at that width, nothing but the throw. Said as its own arm rather than left after the guard, or the instantiation carries a tail no control flow reaches, which MSVC reports under /O2.
         constexpr auto set(std::size_t pos, [[maybe_unused]] bool val = true)
                 -> bitset_adaptor&
         {
@@ -343,7 +338,7 @@ public:
                 }
         }
 
-        // boost's ranged forms, the one guard on the whole range, then the storage's own a word at a time. [design.md#the-one-guard]
+        // boost's ranged forms, the one guard on the whole range, then the storage's own a word at a time.
         constexpr auto set(std::size_t pos, std::size_t len, bool val)
                 -> bitset_adaptor&
         {
@@ -425,7 +420,7 @@ public:
                 -> std::basic_string<charT, traits, Allocator>
         {
                 auto const N = size();
-                // The finding is the zero-width instantiation, where empty is the answer. [design.md#clang-tidy-false-positives]
+                // The finding is the zero-width instantiation, where empty is the answer.
                 auto str = std::basic_string<charT, traits, Allocator>(N, zero);  // NOLINT(bugprone-string-constructor)
                 for (auto const i : std::views::iota(0UZ, N)) {
                         if (m_bits.test(N - 1 - i)) {
@@ -441,10 +436,10 @@ public:
         [[nodiscard]] constexpr auto num_blocks() const noexcept -> std::size_t { return m_bits.num_blocks(); }
         [[nodiscard]] constexpr auto max_size()   const noexcept -> std::size_t { return m_bits.max_size();   }
 
-        // A friend rather than the member std::bitset specifies: [class.compare.default]/1 admits either, and since P1185's reversed candidates the two accept the same mixed comparisons against the implicit unsigned long long. A namespace-scope template would not, deduction declining that conversion on both sides. Defaulted, the storage being the one member. [design.md#the-comparison-is-a-hidden-friend]
+        // A friend rather than the member std::bitset specifies: [class.compare.default]/1 admits either, and since P1185's reversed candidates the two accept the same mixed comparisons against the implicit unsigned long long. A namespace-scope template would not, deduction declining that conversion on both sides. Defaulted, the storage being the one member.
         [[nodiscard]] friend constexpr auto operator==(bitset_adaptor const& lhs, bitset_adaptor const& rhs) noexcept -> bool = default;
 
-        // The bit string's order, most significant position first, which is boost's: the storage's entry, total across widths as the other two readings' are, so there is no width for the adaptor to branch on. [design.md#the-ordering-invariant]
+        // The bit string's order, most significant position first, which is boost's: the storage's entry, total across widths as the other two readings' are, so there is no width for the adaptor to branch on.
         [[nodiscard]] friend constexpr auto operator<=>(bitset_adaptor const& lhs, bitset_adaptor const& rhs) noexcept
                 -> std::strong_ordering
         {
@@ -466,17 +461,17 @@ public:
         [[nodiscard]] constexpr auto any()  const noexcept -> bool { return m_bits.any();  }
         [[nodiscard]] constexpr auto none() const noexcept -> bool { return m_bits.none(); }
 
-        // The set vocabulary boost has and std::bitset has not, at both widths: the storage spells it alike, and an extension may add. [design.md#a-strict-extension]
+        // The set vocabulary boost has and std::bitset has not, at both widths: the storage spells it alike, and an extension may add.
         constexpr auto operator-=(bitset_adaptor const& rhs) noexcept -> bitset_adaptor& { m_bits -= rhs.m_bits; return *this; }
 
         [[nodiscard]] constexpr auto is_subset_of       (bitset_adaptor const& rhs) const noexcept -> bool { return m_bits.is_subset_of       (rhs.m_bits); }
         [[nodiscard]] constexpr auto is_proper_subset_of(bitset_adaptor const& rhs) const noexcept -> bool { return m_bits.is_proper_subset_of(rhs.m_bits); }
         [[nodiscard]] constexpr auto intersects         (bitset_adaptor const& rhs) const noexcept -> bool { return m_bits.intersects         (rhs.m_bits); }
 
-        // The symmetric spelling beside boost's member, the pair swap and the storage both carry: a meets b exactly when b meets a. Forwarding this way and not the other, because a member of this name ends unqualified lookup before ADL begins, so the member can never reach the friend. [design.md#the-ordering-primitive]
+        // The symmetric spelling beside boost's member, the pair swap and the storage both carry: a meets b exactly when b meets a. Forwarding this way and not the other, because a member of this name ends unqualified lookup before ADL begins, so the member can never reach the friend.
         [[nodiscard]] friend constexpr auto intersects(bitset_adaptor const& x, bitset_adaptor const& y) noexcept -> bool { return x.intersects(y); }
 
-        // boost's two searches and their mirror at both widths, npos where the total answer is the width; a zero width answers npos outright, its only answer. [design.md#degenerate-widths]
+        // boost's two searches and their mirror at both widths, npos where the total answer is the width; a zero width answers npos outright, its only answer.
         [[nodiscard]] constexpr auto find_first() const noexcept
                 -> std::size_t
         {
@@ -499,7 +494,7 @@ public:
                 }
         }
 
-        // The reverse pair, ours: find_prev(pos) is the highest set position below pos, a pos past the width meaning from the end, so find_prev(npos) is find_last(). [design.md#total-versus-precondition]
+        // The reverse pair, ours: find_prev(pos) is the highest set position below pos, a pos past the width meaning from the end, so find_prev(npos) is find_last().
         [[nodiscard]] constexpr auto find_last() const noexcept
                 -> std::size_t
         {
@@ -512,13 +507,13 @@ public:
                 if constexpr (detail::bits::zero_width<Bits>) {
                         return npos;
                 } else {
-                        // The storage's reverse step is a precondition rather than a total answer, and reverse iteration is what guards it there; here the guard is this: nothing is set below the first set position, which is the width where nothing is set at all. [design.md#total-versus-precondition]
+                        // The storage's reverse step is a precondition rather than a total answer, and reverse iteration is what guards it there; here the guard is this: nothing is set below the first set position, which is the width where nothing is set at all.
                         auto const i = pos < size() ? pos : size();
                         return m_bits.find_first() >= i ? npos : m_bits.exclusive_find_prev(i);
                 }
         }
 
-        // boost's block interface: every block out, including the clear tail, and at most every block in, the tail kept clear. [design.md#a-strict-extension]
+        // boost's block interface: every block out, including the clear tail, and at most every block in, the tail kept clear.
         template<std::output_iterator<block_type> O>
         friend constexpr auto to_block_range(bitset_adaptor const& b, O result)
                 -> void
@@ -539,7 +534,7 @@ public:
                 }
         }
 
-        // Growth, boost's members, on storage that spells them alike: detected on the storage rather than reconciled by the trait. [design.md#growth]
+        // Growth, boost's members, on storage that spells them alike: detected on the storage rather than reconciled by the trait.
         [[nodiscard]] constexpr auto empty() const noexcept
                 -> bool
                 requires (not has_static_width)
@@ -613,7 +608,7 @@ public:
         }
 
 private:
-        // The one guard: out_of_range at a static width, std::bitset's, an assert at a run-time one, boost's. [design.md#the-one-guard]
+        // The one guard: out_of_range at a static width, std::bitset's, an assert at a run-time one, boost's.
         constexpr auto guard(std::size_t pos) const
                 -> void
         {
@@ -704,13 +699,13 @@ private:
         }
 };
 
-// The owner's side of the view protocol: what a bit_set_view or bit_span over a bitset refers into. [design.md#views-over-owners]
+// The owner's side of the view protocol: what a bit_set_view or bit_span over a bitset refers into.
 template<class Bits>
 struct owned_storage<bitset_adaptor<Bits>>
 {
         using bits_type   = Bits;
 
-        // Committed to neither reading, which is what its two views are for. [design.md#the-readings-do-not-mix]
+        // Committed to neither reading, which is what its two views are for.
         static constexpr auto reads = reading::bitset;
 };
 
@@ -743,7 +738,7 @@ template<class Bits> [[nodiscard]] constexpr auto operator|(bitset_adaptor<Bits>
 template<class Bits> [[nodiscard]] constexpr auto operator^(bitset_adaptor<Bits> const& lhs, bitset_adaptor<Bits> const& rhs) noexcept((Bits::extent != std::dynamic_extent)) -> bitset_adaptor<Bits> { auto nrv = lhs; nrv ^= rhs; return nrv; }
 template<class Bits> [[nodiscard]] constexpr auto operator-(bitset_adaptor<Bits> const& lhs, bitset_adaptor<Bits> const& rhs) noexcept((Bits::extent != std::dynamic_extent)) -> bitset_adaptor<Bits> { auto nrv = lhs; nrv -= rhs; return nrv; }
 
-// @= belongs to the left operand and @ does not, where std::bitset makes these three members. Templates rather than hidden friends: they reach nothing private, and nobody writes an operator qualified, so the hiding would buy nothing here -- unlike swap, whose qualified spelling is an accident people do make. [design.md#an-opinionated-reimagining]
+// @= belongs to the left operand and @ does not, where std::bitset makes these three members. Templates rather than hidden friends: they reach nothing private, and nobody writes an operator qualified, so the hiding would buy nothing here -- unlike swap, whose qualified spelling is an accident people do make.
 template<class Bits> [[nodiscard]] constexpr auto operator~(bitset_adaptor<Bits> const& lhs) noexcept((Bits::extent != std::dynamic_extent)) -> bitset_adaptor<Bits> { auto nrv = lhs; nrv.flip(); return nrv; }
 template<class Bits> [[nodiscard]] constexpr auto operator<<(bitset_adaptor<Bits> const& lhs, std::size_t pos) noexcept((Bits::extent != std::dynamic_extent)) -> bitset_adaptor<Bits> { auto nrv = lhs; nrv <<= pos; return nrv; }
 template<class Bits> [[nodiscard]] constexpr auto operator>>(bitset_adaptor<Bits> const& lhs, std::size_t pos) noexcept((Bits::extent != std::dynamic_extent)) -> bitset_adaptor<Bits> { auto nrv = lhs; nrv >>= pos; return nrv; }
@@ -761,7 +756,7 @@ auto operator>>(std::basic_istream<charT, traits>& is, bitset_adaptor<Bits>& x)
                 }
         }();
         auto str = std::basic_string<charT, traits>();
-        // Assigned inside an if constexpr the zero-width instantiation discards. [design.md#clang-tidy-false-positives]
+        // Assigned inside an if constexpr the zero-width instantiation discards.
         auto state = std::ios_base::goodbit;  // NOLINT(misc-const-correctness)
         charT ch;
         // One peek per character: peeking twice sets eofbit then failbit, failing a short but valid extraction ([bitset.operators]/6).

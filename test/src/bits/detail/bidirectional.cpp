@@ -46,7 +46,7 @@ template<class T>
 template<class Iterator>
 auto check_set_steps(Iterator first, Iterator last, std::set<std::size_t> const& model) -> void;
 
-// A zero width has nothing to step over, so nothing below the two positions is instantiated for it. [design.md#per-instantiation-slots]
+// A zero width has nothing to step over, so nothing below the two positions is instantiated for it.
 template<class T>
 auto check_set_walk(T const& empty, std::set<std::size_t> const& model)
         -> void
@@ -144,7 +144,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheSetIteratorIsBidirectional, T, ArrayTypes)
         static_assert(std::bidirectional_iterator<xstd::detail::bits::bidirectional_bit_iterator<T>>);
 }
 
-// The set proxy never writes, so nothing distinguishes its const spelling. [design.md#read-only-set-proxy]
+// The set proxy never writes, so nothing distinguishes its const spelling.
 BOOST_AUTO_TEST_CASE(TheSetProxyNeverWrites)
 {
         static_assert(not std::is_assignable_v<xstd::detail::bits::bidirectional_bit_reference<Bits> const&, std::size_t>);
@@ -181,7 +181,7 @@ BOOST_AUTO_TEST_CASE(TheProxyFormatsAsItsValue)
 
 BOOST_AUTO_TEST_SUITE_END()
 
-// The set view hands out this proxy and nothing of its own; what ranges.hpp once answered, now answered here. [design.md#the-iterator-is-the-primitive]
+// The set view hands out this proxy and nothing of its own; what ranges.hpp once answered, now answered here.
 BOOST_AUTO_TEST_SUITE(BidirectionalThroughTheView)
 
 namespace {

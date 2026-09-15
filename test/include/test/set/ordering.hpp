@@ -17,7 +17,7 @@
 
 namespace test::set {
 
-// What the set reading must order like, against std::set: set_compare's default trusts the viewed type's <=>, and dynamic_bitset's is wrong. [design.md#counted-not-asserted] [design.md#the-ordering-primitive]
+// What the set reading must order like, against std::set: set_compare's default trusts the viewed type's <=>, and dynamic_bitset's is wrong.
 template<class Bits>
 auto ordering_agrees_with_std_set(std::size_t universe = 4)
         -> void
@@ -58,7 +58,7 @@ auto ordering_agrees_with_std_set(std::size_t universe = 4)
         BOOST_CHECK_EQUAL(greater_disagreements,  0UZ);
 }
 
-// Three blocks and up, where an exhaustive sweep is no longer affordable: 2^18 squared is not a test. [design.md#the-ordering-primitive]
+// Three blocks and up, where an exhaustive sweep is no longer affordable: 2^18 squared is not a test.
 template<class Bits>
 auto ordering_agrees_with_std_set_sampled(std::size_t universe, std::size_t trials)
         -> void

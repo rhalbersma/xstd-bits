@@ -57,7 +57,7 @@ constexpr auto takes_a_set_view(xstd::bit_set_view<Blocks> v) noexcept -> bool
 
 }  // namespace
 
-// The view is the referring adaptor under another name, and over an owner it refers into the storage the owner wraps. [design.md#the-views-are-the-adaptors]
+// The view is the referring adaptor under another name, and over an owner it refers into the storage the owner wraps.
 BOOST_AUTO_TEST_CASE(TheViewIsTheReferringAdaptor)
 {
         static_assert(std::derived_from<xstd::bit_set_view<Blocks>, xstd::set_adaptor<Blocks, xstd::ownership::refers>>);
@@ -69,7 +69,7 @@ BOOST_AUTO_TEST_CASE(TheViewIsTheReferringAdaptor)
         static_assert(std::same_as<view_of<xstd::bit_static_set<8>>, xstd::bit_set_view<xstd::detail::bits::contiguous_bit_array<std::size_t, 8>>>);
 }
 
-// A bitset is committed to neither reading, a sequence owner to the sequence one; over the very same storage, only the first admits a set view. [design.md#the-readings-do-not-mix]
+// A bitset is committed to neither reading, a sequence owner to the sequence one; over the very same storage, only the first admits a set view.
 BOOST_AUTO_TEST_CASE(TheReadingsDoNotMix)
 {
         static_assert(std::same_as<decltype(xstd::bit_span(std::declval<xstd::bit_array<8>&>())), xstd::bit_span<Blocks>>);
@@ -77,10 +77,7 @@ BOOST_AUTO_TEST_CASE(TheReadingsDoNotMix)
         static_assert(not std::constructible_from<xstd::bit_set_view<Blocks>, xstd::bit_array<8>&>);
 }
 
-// Viewing an owner is implicit, viewing raw storage is not: the first asserts nothing the owner does not already
-// carry, which is where span draws the line -- its array and C-array constructors are implicit even at a static
-// extent, while the ones claiming a size their source cannot prove are explicit. An rvalue owner still does not
-// convert, the parameter being Owner&. [design.md#viewing-an-owner-is-implicit]
+// Viewing an owner is implicit, viewing raw storage is not: the first asserts nothing the owner does not already carry, which is where span draws the line -- its array and C-array constructors are implicit even at a static extent, while the ones claiming a size their source cannot prove are explicit. An rvalue owner still does not convert, the parameter being Owner&.
 BOOST_AUTO_TEST_CASE(ViewingAnOwnerIsImplicit)
 {
         static_assert(std::convertible_to<xstd::bitset<8>&,           xstd::bit_set_view<Blocks>>);
@@ -102,7 +99,7 @@ BOOST_AUTO_TEST_CASE(ViewingAnOwnerIsImplicit)
 // The types a bit_set_view exists for: those holding a set of positions without offering it, which bit_static_set already does.
 BOOST_AUTO_TEST_CASE(TheViewedTypesAreTheOnesHoldingASetWithoutOfferingIt)
 {
-        // None of them is a range on its own; that is what the view supplies, and it is a view in std::ranges' sense, borrowed like span. [design.md#views-follow-their-precedent]
+        // None of them is a range on its own; that is what the view supplies, and it is a view in std::ranges' sense, borrowed like span.
         static_assert(not std::ranges::range<xstd::dynamic_bitset>);
         static_assert(not std::ranges::range<xstd::bitset<8>>);
 
@@ -115,7 +112,7 @@ BOOST_AUTO_TEST_CASE(TheViewedTypesAreTheOnesHoldingASetWithoutOfferingIt)
         static_assert(not std::ranges::view<xstd::bit_static_set<8>>);
 }
 
-// The view hashes as std::string_view does: the set it presents, so the owner's set reading of the same bits hashes the same, and at a run-time width the width is capacity there too. [design.md#the-hashing-invariant]
+// The view hashes as std::string_view does: the set it presents, so the owner's set reading of the same bits hashes the same, and at a run-time width the width is capacity there too.
 BOOST_AUTO_TEST_CASE(TheViewHashesAsAValue)
 {
         auto bits = xstd::bitset<8>("00101010");
@@ -131,7 +128,7 @@ BOOST_AUTO_TEST_CASE(TheViewHashesAsAValue)
         BOOST_CHECK_EQUAL(std::hash<view_of<xstd::dynamic_bitset>>()(xstd::bit_set_view(narrow)), std::hash<view_of<xstd::dynamic_bitset>>()(xstd::bit_set_view(wide)));
 }
 
-// Asking is total whatever the extent, exactly as [set] has it. [design.md#asking-is-total]
+// Asking is total whatever the extent, exactly as [set] has it.
 BOOST_AUTO_TEST_CASE_TEMPLATE(EveryExtentAnswersForPositionsPastItsWidth, T, ViewedTypes)
 {
         auto bits = eight_bits_with_three_set<T>();
@@ -153,13 +150,13 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(EveryExtentAnswersForPositionsPastItsWidth, T, Vie
         BOOST_CHECK(v.upper_bound(3) == v.end());
         BOOST_CHECK(v.upper_bound(99) == v.end());
 
-        // Erasing what is not there is std::set::erase's no-op returning zero. [design.md#asking-is-total]
+        // Erasing what is not there is std::set::erase's no-op returning zero.
         BOOST_CHECK_EQUAL(v.erase(99), 0);
         BOOST_CHECK(v.contains(3));
         BOOST_CHECK_EQUAL(v.size(), 1);
 }
 
-// [set] gives insert no way to fail, so a dynamic extent grows rather than asserting. [design.md#asking-is-total]
+// [set] gives insert no way to fail, so a dynamic extent grows rather than asserting.
 BOOST_AUTO_TEST_CASE(ADynamicExtentGrowsToHoldAPositionPastItsCurrentSize)
 {
         auto bits = xstd::dynamic_bitset(8);
@@ -191,12 +188,12 @@ BOOST_AUTO_TEST_CASE(EveryViewedTypeOrdersLikeAStdSet)
         test::set::ordering_agrees_with_std_set<xstd::dynamic_bitset>();
 }
 
-// One block cannot reach the arm the word-parallel comparison exists for. [design.md#the-ordering-primitive]
+// One block cannot reach the arm the word-parallel comparison exists for.
 BOOST_AUTO_TEST_CASE(TheOrderingSpansBlocksAndNotJustPositions)
 {
         test::set::ordering_agrees_with_std_set<xstd::basic_bitset<std::uint8_t, 9>>(9);
 
-        // Three blocks, where "anything above" has to look past the next block as well as into it. [design.md#counted-not-asserted]
+        // Three blocks, where "anything above" has to look past the next block as well as into it.
         test::set::ordering_agrees_with_std_set_sampled<xstd::basic_bitset<std::uint8_t, 18>>(18UZ, 20000UZ);
         test::set::ordering_agrees_with_std_set_sampled<xstd::basic_dynamic_bitset<std::uint8_t>>(18UZ, 20000UZ);
 }

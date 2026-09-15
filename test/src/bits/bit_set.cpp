@@ -25,7 +25,7 @@ BOOST_AUTO_TEST_SUITE(BitSet)
 
 using T = xstd::basic_bit_set<std::uint8_t>;
 
-// The flagship: the set reading over a heap of blocks, an alias and nothing more. [design.md#the-public-names]
+// The flagship: the set reading over a heap of blocks, an alias and nothing more.
 BOOST_AUTO_TEST_CASE(TheDynamicSetIsTheSetAdaptorOverAHeapOfBlocks)
 {
         static_assert(std::same_as<T, xstd::set_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint8_t>, xstd::ownership::owns>>);
@@ -33,7 +33,7 @@ BOOST_AUTO_TEST_CASE(TheDynamicSetIsTheSetAdaptorOverAHeapOfBlocks)
         static_assert(test::set::bit_set<T>);
 }
 
-// A key past the width grows the width: insert is the one operation a dynamic set cannot refuse. [design.md#asking-is-total]
+// A key past the width grows the width: insert is the one operation a dynamic set cannot refuse.
 BOOST_AUTO_TEST_CASE(InsertingPastTheWidthGrowsIt)
 {
         auto s = T();
@@ -66,13 +66,13 @@ BOOST_AUTO_TEST_CASE(ItIsBuiltAndOrderedLikeAStdSet)
         BOOST_CHECK(s.is_subset_of(t));
         BOOST_CHECK(intersects(t, s));
 
-        // The view over it refers into the contiguous_bit_vector, as over every owner. [design.md#views-over-owners]
+        // The view over it refers into the contiguous_bit_vector, as over every owner.
         auto const v = xstd::bit_set_view(t);
         BOOST_CHECK(*v.begin() == 0UZ);
         BOOST_CHECK_EQUAL(v.size(), t.size());
 }
 
-// The width is capacity, never value: two sets holding the same positions agree on everything std::set answers, whatever their storages' widths. [design.md#width-is-capacity]
+// The width is capacity, never value: two sets holding the same positions agree on everything std::set answers, whatever their storages' widths.
 BOOST_AUTO_TEST_CASE(TheWidthIsCapacityNotValue)
 {
         auto const narrow = T({ 1, 3 });
@@ -89,7 +89,7 @@ BOOST_AUTO_TEST_CASE(TheWidthIsCapacityNotValue)
         BOOST_CHECK(intersects(narrow, wide));
 }
 
-// The compound operators and predicates at two widths that differ, either way round, against the answers over the elements. [design.md#width-is-capacity]
+// The compound operators and predicates at two widths that differ, either way round, against the answers over the elements.
 BOOST_AUTO_TEST_CASE(TheSetOperationsIgnoreTheWidth)
 {
         auto const a = T({ 1, 3, 200 });
@@ -113,7 +113,7 @@ BOOST_AUTO_TEST_CASE(TheSetOperationsIgnoreTheWidth)
         BOOST_CHECK(not intersects(a, T({ 5 })));
 }
 
-// The shifts translate: left grows the width to hold the result, right empties past it, and neither has the width as a precondition. [design.md#width-is-capacity]
+// The shifts translate: left grows the width to hold the result, right empties past it, and neither has the width as a precondition.
 BOOST_AUTO_TEST_CASE(TheShiftsTranslateWhateverTheWidth)
 {
         auto const b = T({ 3, 5 });
@@ -123,7 +123,7 @@ BOOST_AUTO_TEST_CASE(TheShiftsTranslateWhateverTheWidth)
         BOOST_CHECK((T() << 3).empty());
 }
 
-// Ascending keys, whatever the insertion order: what makes this a set rather than a bag of positions. [design.md#two-readings-disagree]
+// Ascending keys, whatever the insertion order: what makes this a set rather than a bag of positions.
 BOOST_AUTO_TEST_CASE(ItYieldsAscendingKeys)
 {
         auto c = T();

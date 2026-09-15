@@ -17,7 +17,7 @@
 
 #endif
 
-// A built-in wide enough to name, a library mode that will own it, and a <bit> that will take it. [design.md#uint128-support]
+// A built-in wide enough to name, a library mode that will own it, and a <bit> that will take it.
 #if defined(__SIZEOF_INT128__) && !defined(__STRICT_ANSI__) && !defined(_MSC_VER)
 
 #define BENCH_HAS_UINT128
@@ -25,7 +25,7 @@
 
 #endif
 
-// The ladder doubles rather than stepping decades: bit_set changes block count on these boundaries, so a doubling walks whole blocks, and a cache knee reads as a knee. [design.md#the-sieve]
+// The ladder doubles rather than stepping decades: bit_set changes block count on these boundaries, so a doubling walks whole blocks, and a cache knee reads as a knee.
 inline constexpr auto lo = 1L << 10;
 inline constexpr auto hi = 1L << 20;
 
@@ -68,7 +68,7 @@ auto bm_sift_primes1(benchmark::State& state)
         per_candidate(state);
 }
 
-// The segmented sieve holds O(sqrt(n) + W) whatever n is, against the bounded sieve's O(n), and the window is a compile-time width chosen to sit in L1. [design.md#the-unbounded-sieves]
+// The segmented sieve holds O(sqrt(n) + W) whatever n is, against the bounded sieve's O(n), and the window is a compile-time width chosen to sit in L1.
 template<class X>
 auto bm_sift_primes_segmented(benchmark::State& state)
         -> void
@@ -80,7 +80,7 @@ auto bm_sift_primes_segmented(benchmark::State& state)
         per_candidate(state);
 }
 
-// The incremental sieve is the price of needing no bound at all: one map entry per prime found, and a map lookup per candidate where the array sieve has a strided write. [design.md#the-unbounded-sieves]
+// The incremental sieve is the price of needing no bound at all: one map entry per prime found, and a map lookup per candidate where the array sieve has a strided write.
 template<class X>
 auto bm_sift_primes_incremental(benchmark::State& state)
         -> void
@@ -108,7 +108,7 @@ auto bm_filter_twins(benchmark::State& state)
 #define BENCH_LADDER(fn, type) \
         BENCHMARK_TEMPLATE1(fn, type)->RangeMultiplier(2)->Range(lo, hi)->Unit(benchmark::kMillisecond)
 
-// The three representations: node-based, sorted-vector, and dense bitmap, one of each. [design.md#the-sieve]
+// The three representations: node-based, sorted-vector, and dense bitmap, one of each.
 #if defined(__cpp_lib_flat_set)
 
 // std::flat_set stops at 2^16, and the ceiling is a measurement decision before it is a budget one.
@@ -150,7 +150,7 @@ BENCH_REPRESENTATIONS(bm_sift_primes0);
 BENCH_REPRESENTATIONS(bm_sift_primes1);
 BENCH_REPRESENTATIONS(bm_filter_twins);
 
-// The two unbounded sieves, on the dense container alone: what is being priced is the algorithm against sift_primes1 on the same row, not one container against another. [design.md#the-unbounded-sieves]
+// The two unbounded sieves, on the dense container alone: what is being priced is the algorithm against sift_primes1 on the same row, not one container against another.
 BENCH_LADDER(bm_sift_primes_segmented, xstd::bit_set);
 BENCHMARK_TEMPLATE1(bm_sift_primes_incremental, xstd::bit_set)
         ->RangeMultiplier(2)->Range(lo, 1L << 16)->Unit(benchmark::kMillisecond);

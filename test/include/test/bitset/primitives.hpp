@@ -23,7 +23,7 @@
 
 namespace test::bitset {
 
-// Nine primitives below NOLINT bugprone-exception-escape: the check reads the callee, not the guard. [design.md#exception-escape-nolints]
+// Nine primitives below NOLINT bugprone-exception-escape: the check reads the callee, not the guard.
 
 // These checks are on xstd::bitset's basic_string_view overload: std::bitset has none, and dynamic_bitset answers to its own contract.
 template<class X>
@@ -33,7 +33,7 @@ concept fixed_string_view_constructible = requires { X(std::string_view()); } an
 template<class X>
 concept dynamic_string_view_constructible = requires { X(std::string_view()); typename xstd::owned_storage<X>::bits_type; } and dynamic<X>;
 
-// One function per tier, because the tiers are what this checks and a BOOST_CHECK_THROW is three branches to the complexity check: inline, the three of them nested under two if constexprs came to 64 against a threshold of 25, and none of that 64 was the logic. [design.md#one-function-per-tier]
+// One function per tier, because the tiers are what this checks and a BOOST_CHECK_THROW is three branches to the complexity check: inline, the three of them nested under two if constexprs came to 64 against a threshold of 25, and none of that 64 was the logic.
 
 // A width the text must fit: too long throws, whatever the text says.
 template<class X>
@@ -340,7 +340,7 @@ struct mem_equal_to
                                 return self[i] == rhs[i];
                         })
                 );                                                              // [bitset.members]/45
-                // The set reading cross-check is ours to make: a foreign bitset has no view. [design.md#owning-is-ours]
+                // The set reading cross-check is ours to make: a foreign bitset has no view.
                 if constexpr (requires { xstd::bit_set_view(self); }) {
                         auto const lhs_view = xstd::bit_set_view(self);
                         auto const rhs_view = xstd::bit_set_view(rhs);
@@ -377,13 +377,13 @@ template<class X>
         }
 }
 
-// Two orderings. The set view's is std::set's over ascending positions, re-derived from each type's own iteration; the type's own, where it has one, is the bit string's, which is boost's operator<. [design.md#the-ordering-invariant]
+// Two orderings. The set view's is std::set's over ascending positions, re-derived from each type's own iteration; the type's own, where it has one, is the bit string's, which is boost's operator<.
 struct mem_compare_three_way
 {
         template<class X>
         auto operator()(const X& self, const X& rhs) const noexcept
         {
-                // The set ordering is ours to check: a foreign bitset has no view. [design.md#owning-is-ours]
+                // The set ordering is ours to check: a foreign bitset has no view.
                 if constexpr (requires { xstd::bit_set_view(self); }) {
                         auto const lhs_view = xstd::bit_set_view(self);
                         auto const rhs_view = xstd::bit_set_view(rhs);
@@ -519,7 +519,7 @@ struct mem_intersects
         }
 };
 
-// [bitset.hash]/1 stipulates a std::hash<std::bitset<N>> specialization; equal values hash equal wherever one exists, and boost has none. [design.md#the-hashing-invariant]
+// [bitset.hash]/1 stipulates a std::hash<std::bitset<N>> specialization; equal values hash equal wherever one exists, and boost has none.
 struct op_hash
 {
         template<class X>

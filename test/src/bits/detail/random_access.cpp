@@ -87,9 +87,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheSequenceIteratorIsRandomAccess, T, ArrayTypes)
         static_assert(not std::sortable<xstd::detail::bits::random_access_bit_iterator<T const>>);
 }
 
-// Const is in the Bits and nowhere else. Writability used to be a second question, asked of the trait -- a trait with
-// only the required entries had no unchecked_assign and so no way to write -- but the proxy asks the storage now, and a
-// const storage has no assign to reach. One question, answered by the type. [design.md#one-storage]
+// Const is in the Bits and nowhere else. Writability used to be a second question, asked of the trait -- a trait with only the required entries had no unchecked_assign and so no way to write -- but the proxy asks the storage now, and a const storage has no assign to reach. One question, answered by the type.
 BOOST_AUTO_TEST_CASE(ConstnessLivesInTheBits)
 {
         using Ref      = xstd::detail::bits::random_access_bit_reference<Bits>;
@@ -138,12 +136,12 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheSequenceIteratorReadsAndWritesThroughTheStorage
         constexpr auto N = T::extent;
 
         auto c = T();
-        // Written through check_position below, which the check cannot see past a dependent call. [design.md#clang-tidy-false-positives]
+        // Written through check_position below, which the check cannot see past a dependent call.
         auto model = std::vector<bool>(N);  // NOLINT(misc-const-correctness)
         auto const first = xstd::detail::bits::random_access_bit_iterator<T>(&c, 0UZ);
         BOOST_CHECK(first == xstd::detail::bits::random_access_bit_iterator<T const>(&c, 0UZ));
 
-        // Nothing to step over at a zero width, so nothing is instantiated for it. [design.md#per-instantiation-slots]
+        // Nothing to step over at a zero width, so nothing is instantiated for it.
         if constexpr (N != 0UZ) {
                 for (auto i = 0UZ; i < N; ++i) {
                         check_position(first, i, model);
@@ -257,7 +255,7 @@ BOOST_AUTO_TEST_CASE(TheProxyFormatsAsItsValue)
 
 BOOST_AUTO_TEST_SUITE_END()
 
-// The sequence view hands out this proxy and nothing of its own; what ranges.hpp once answered, now answered here. [design.md#the-iterator-is-the-primitive]
+// The sequence view hands out this proxy and nothing of its own; what ranges.hpp once answered, now answered here.
 BOOST_AUTO_TEST_SUITE(RandomAccessThroughTheView)
 
 namespace {
@@ -330,7 +328,7 @@ BOOST_AUTO_TEST_CASE(TheValueArrivesByImplicitConversion)
         BOOST_CHECK(a[4] == false);
 }
 
-// ... but not to an integer, however class-shaped it is. [design.md#uint128-support]
+// ... but not to an integer, however class-shaped it is.
 #if defined(TEST_HAS_MSVC_INT128) || defined(TEST_HAS_ABSL_INT128) || defined(TEST_HAS_BOOST_INT128)
 
 BOOST_AUTO_TEST_CASE(AProxyNeverBecomesAnIntegerBlock)

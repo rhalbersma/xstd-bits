@@ -9,7 +9,7 @@
 #include <concepts>                 // copyable, default_initializable, movable, swappable, totally_ordered
 #include <type_traits>              // is_nothrow_move_assignable_v, is_nothrow_move_constructible_v
 
-// What the compiler generates for each cell, held to the table rather than to whichever cell was read last. [design.md#the-generated-table]
+// What the compiler generates for each cell, held to the table rather than to whichever cell was read last.
 BOOST_AUTO_TEST_SUITE(Generated)
 
 namespace {
@@ -20,7 +20,7 @@ template<class T> concept has_swap_member    = requires (T& a, T& b) { a.swap(b)
 template<class T> concept has_swap_free      = requires (T& a, T& b) { swap(a, b); };
 template<class T> concept has_get_allocator  = requires (T const& a) { a.get_allocator(); };
 
-// Every cell answers the same to all of these; only the allocator differs, and by column. [design.md#the-generated-table]
+// Every cell answers the same to all of these; only the allocator differs, and by column.
 template<class T>
 constexpr auto is_regular_container()
         -> bool
@@ -31,7 +31,7 @@ constexpr auto is_regular_container()
         static_assert(std::totally_ordered<T>);
         static_assert(std::three_way_comparable<T>);
 
-        // Not merely swappable through the implicit moves: the storage's own exchange, member and free. [design.md#the-generated-table]
+        // Not merely swappable through the implicit moves: the storage's own exchange, member and free.
         static_assert(has_swap_member<T>);
         static_assert(has_swap_free<T>);
         static_assert(std::swappable<T>);
@@ -42,7 +42,7 @@ constexpr auto is_regular_container()
         return true;
 }
 
-// The allocator is the one answer that varies, and it varies by column, not by row: a storage that allocates has one to show, and a static width has none. [design.md#the-generated-table]
+// The allocator is the one answer that varies, and it varies by column, not by row: a storage that allocates has one to show, and a static width has none.
 template<class T> constexpr auto allocator_aware()     -> bool { static_assert(    has_get_allocator<T>); return true; }
 template<class T> constexpr auto not_allocator_aware() -> bool { static_assert(not has_get_allocator<T>); return true; }
 

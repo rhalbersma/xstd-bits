@@ -13,7 +13,7 @@
 
 namespace xstd::detail::bits {
 
-// Whether a range IS blocks; block_readable asks if a trait hands a container's blocks over. [design.md#contiguous-block-range]
+// Whether a range IS blocks; block_readable asks if a trait hands a container's blocks over.
 template<class C>
 concept contiguous_block_range =
         std::regular<C> and
@@ -23,7 +23,7 @@ concept contiguous_block_range =
         requires (C& c, C::size_type n) {
                 { c[n] } -> std::same_as<std::ranges::range_reference_t<C>>;
         } and
-        // Ours, not std::ranges': P2278R4's alias transcribed, libc++ having implemented the paper on no branch. It names the reference C's own iterator yields once const-ified, so a storage whose const subscript hands back a writable one is refused here rather than deep inside the container. [design.md#the-const-reference]
+        // Ours, not std::ranges': P2278R4's alias transcribed, libc++ having implemented the paper on no branch. It names the reference C's own iterator yields once const-ified, so a storage whose const subscript hands back a writable one is refused here rather than deep inside the container.
         requires (C const& c, C::size_type n) {
                 { c[n] } -> std::same_as<range_const_reference_t<C>>;
         }

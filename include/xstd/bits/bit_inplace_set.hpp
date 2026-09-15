@@ -8,7 +8,7 @@
 
 #include <version> // IWYU pragma: keep; __cpp_lib_inplace_vector
 
-// The column comes and goes with its storage, and an alias withholds a name rather than a capability. [design.md#the-inplace-column]
+// The column comes and goes with its storage, and an alias withholds a name rather than a capability.
 #ifdef __cpp_lib_inplace_vector
 
 #include <xstd/bits/detail/contiguous_bit_inplace_vector.hpp> // contiguous_bit_inplace_vector
@@ -19,7 +19,7 @@
 
 namespace xstd {
 
-// The set reading over a run-time width under a compile-time capacity: inplace names where the storage lives. [design.md#the-public-names]
+// The set reading over a run-time width under a compile-time capacity: inplace names where the storage lives.
 template<xstd::unsigned_integer Block, std::size_t N>
 using basic_bit_inplace_set = set_adaptor<detail::bits::contiguous_bit_inplace_vector<Block, N>, ownership::owns>;
 

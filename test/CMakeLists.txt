@@ -108,10 +108,7 @@ foreach(h ${public_headers})
     string(REPLACE "/" "." header_test_id ${h})
     string(REGEX REPLACE "[.]hpp$" "" header_test_id ${header_test_id})
     set(header_test_source ${CMAKE_CURRENT_BINARY_DIR}/header_self_sufficiency/${header_test_id}.cpp)
-    # An IWYU pragma because clang-tidy runs misc-include-cleaner over these
-    # generated sources too, and the one include is by construction unused; a
-    # trailing return type because modernize-use-trailing-return-type flags
-    # "int main()".
+    # An IWYU pragma because clang-tidy runs misc-include-cleaner over these generated sources too, and the one include is by construction unused; a trailing return type because modernize-use-trailing-return-type flags "int main()".
     file(
         WRITE ${header_test_source}
         "#include <${h}> // IWYU pragma: keep\nauto main() -> int {}\n"
@@ -141,11 +138,7 @@ foreach(h ${public_headers})
     add_test(NAME header.${header_test_id} COMMAND header.${header_test_id})
 endforeach()
 
-# Every public header is answered by one test source at the same path, detail/ excepted; enforced here so it cannot drift.
-# detail/ is excepted because a detail header has no contract to mirror. Where such a test exists all the same -- and the
-# two proxy headers have one each -- it is white-box: it names what nobody outside the library names, and may be rewritten
-# whenever the internals are. The contract those types do carry is asserted through the containers that hand them out,
-# in test/include/test/set/concepts.hpp and test/include/test/sequence/concepts.hpp.
+# Every public header is answered by one test source at the same path, detail/ excepted; enforced here so it cannot drift. detail/ is excepted because a detail header has no contract to mirror. Where such a test exists all the same -- and the two proxy headers have one each -- it is white-box: it names what nobody outside the library names, and may be rewritten whenever the internals are. The contract those types do carry is asserted through the containers that hand them out, in test/include/test/set/concepts.hpp and test/include/test/sequence/concepts.hpp.
 file(
     GLOB_RECURSE mirrored_headers
     CONFIGURE_DEPENDS
@@ -176,8 +169,7 @@ endif()
 
 set(current_include_dir ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-# The workloads the containers are exercised against, shared with benchmark/ and deliberately outside include/:
-# they are subjects, not library code, and include/ is what a consumer gets. [design.md#the-interface-line]
+# The workloads the containers are exercised against, shared with benchmark/ and deliberately outside include/: they are subjects, not library code, and include/ is what a consumer gets.
 set(workload_include_dir ${PROJECT_SOURCE_DIR}/examples/include)
 set(current_src_dir ${CMAKE_CURRENT_SOURCE_DIR}/src)
 # Anchored to current_src_dir: an unanchored *.cpp resolves against test/ and swept up consumer/main.cpp.

@@ -39,7 +39,7 @@ constexpr bool can_flip = requires (X x) { x.flip(); };
 template<class X>
 constexpr bool has_range_members = requires (X x, std::vector<bool> const& r) { x.append_range(r); x.insert_range(x.cbegin(), r); x.erase(x.cbegin()); };
 
-// std::vector<bool> under its own name: the sequence adaptor over a heap of blocks. [design.md#the-public-names]
+// std::vector<bool> under its own name: the sequence adaptor over a heap of blocks.
 BOOST_AUTO_TEST_CASE(TheDynamicSequenceIsTheSequenceAdaptorOverAHeapOfBlocks)
 {
         static_assert(std::same_as<T, xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint8_t>, xstd::ownership::owns, false>>);
@@ -47,7 +47,7 @@ BOOST_AUTO_TEST_CASE(TheDynamicSequenceIsTheSequenceAdaptorOverAHeapOfBlocks)
         static_assert(test::sequence::bit_sequence<T>);
 }
 
-// [vector]'s constructors, every shape, against std::vector<bool> built the same way. [design.md#the-sequence-contract]
+// [vector]'s constructors, every shape, against std::vector<bool> built the same way.
 BOOST_AUTO_TEST_CASE(ItAnswersEveryLineOfStdVectorBool)
 {
         static_assert(test::sequence::vector_bool<std::vector<bool>>);
@@ -187,7 +187,7 @@ auto pattern(std::size_t n)
 
 }       // namespace
 
-// append_range's first tier: another sequence read by block, at every alignment the source and the destination can have. [design.md#the-blit]
+// append_range's first tier: another sequence read by block, at every alignment the source and the destination can have.
 BOOST_AUTO_TEST_CASE(AppendRangeBlitsFromASequenceAtAnyAlignment)
 {
         auto const source = T(std::from_range, pattern(50));
@@ -233,7 +233,7 @@ BOOST_AUTO_TEST_CASE(AppendRangeBlitsFromASequenceAtAnyAlignment)
         BOOST_CHECK(std::ranges::equal(w, n));
 }
 
-// append_range's second tier: any range of bools, packed a word at a time, the last word trimmed. [design.md#the-blit]
+// append_range's second tier: any range of bools, packed a word at a time, the last word trimmed.
 BOOST_AUTO_TEST_CASE(AppendRangePacksAnyRangeOfBools)
 {
         for (auto const prefix : { 0UZ, 3UZ, 8UZ }) {
@@ -277,7 +277,7 @@ auto same_offset_and_contents(V const& v, typename V::iterator vit, M const& m, 
 
 }       // namespace
 
-// insert's single-value shapes and emplace, rebuilt around the position, against the model. [design.md#the-range-members]
+// insert's single-value shapes and emplace, rebuilt around the position, against the model.
 BOOST_AUTO_TEST_CASE(InsertingValuesRebuildsAsAStdVectorDoes)
 {
         for (auto const pos : { 0UZ, 1UZ, 8UZ, 13UZ, 20UZ }) {
@@ -339,7 +339,7 @@ BOOST_AUTO_TEST_CASE(FlipAndSwapAreStdVectorBools)
         m[1] = m0;
         BOOST_CHECK(std::ranges::equal(v, m));
 
-        // A view flips what it views, a window does not. [design.md#windows]
+        // A view flips what it views, a window does not.
         xstd::bit_span(v).flip();
         m.flip();
         BOOST_CHECK(std::ranges::equal(v, m));
@@ -347,7 +347,7 @@ BOOST_AUTO_TEST_CASE(FlipAndSwapAreStdVectorBools)
         static_assert(    can_flip<decltype(xstd::bit_span(v))>);
 }
 
-// The owner hashes as std::vector<bool> does, equal values equal; the view over it no more than std::span does. [design.md#the-hashing-invariant]
+// The owner hashes as std::vector<bool> does, equal values equal; the view over it no more than std::span does.
 BOOST_AUTO_TEST_CASE(TheOwnerHashesAndTheViewDoesNot)
 {
         auto const h = std::hash<T>();
@@ -357,7 +357,7 @@ BOOST_AUTO_TEST_CASE(TheOwnerHashesAndTheViewDoesNot)
         static_assert(not std::is_default_constructible_v<std::hash<xstd::bit_span<xstd::detail::bits::contiguous_bit_vector<std::uint8_t>>>>);
 }
 
-// The view over it refers into the contiguous_bit_vector and cannot grow it. [design.md#views-over-owners]
+// The view over it refers into the contiguous_bit_vector and cannot grow it.
 BOOST_AUTO_TEST_CASE(AViewOverItCannotGrowIt)
 {
         auto v = T(5);
@@ -371,7 +371,7 @@ BOOST_AUTO_TEST_CASE(AViewOverItCannotGrowIt)
         static_assert(    has_range_members<T>);
 }
 
-// Every position, densely, agreeing with the subscript -- and not a contiguous range, which no proxy sequence can be. [design.md#the-iterator-is-the-primitive]
+// Every position, densely, agreeing with the subscript -- and not a contiguous range, which no proxy sequence can be.
 BOOST_AUTO_TEST_CASE(ItYieldsEveryPosition)
 {
         auto c = T(70);

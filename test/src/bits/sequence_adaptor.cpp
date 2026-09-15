@@ -45,8 +45,7 @@ template<class Seq>
 
 using DynamicOctet = xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint8_t>, xstd::ownership::owns, false>;
 
-// Every (size, pattern) pair as a sequence and the vector<bool> that models it, so the comparison below is one
-// loop over the cases rather than four nested over what makes them.
+// Every (size, pattern) pair as a sequence and the vector<bool> that models it, so the comparison below is one loop over the cases rather than four nested over what makes them.
 [[nodiscard]] auto dynamic_probes()
         -> std::vector<std::pair<DynamicOctet, std::vector<bool>>>
 {
@@ -88,11 +87,11 @@ BOOST_AUTO_TEST_CASE(AnOwnerIsRegularAndAViewIsCopyable)
         static_assert(std::ranges::random_access_range<View> and std::ranges::random_access_range<Reader>);
         static_assert(not std::default_initializable<View>);
 
-        // A view follows span: no equality and no ordering. [design.md#views-follow-their-precedent]
+        // A view follows span: no equality and no ordering.
         static_assert(not std::equality_comparable<View>);
         static_assert(not std::three_way_comparable<View>);
 
-        // Spelled out beside the two concepts, because the empty base a view carries has a defaulted <=> that ADL finds for a derived argument, and a PARTIAL deletion leaves a working subset rather than nothing: <=> rewrites the four relationals and never ==, != rewrites from == and never from <=>, and a defaulted <=> implicitly declares a defaulted == beside it. [design.md#views-follow-their-precedent]
+        // Spelled out beside the two concepts, because the empty base a view carries has a defaulted <=> that ADL finds for a derived argument, and a PARTIAL deletion leaves a working subset rather than nothing: <=> rewrites the four relationals and never ==, != rewrites from == and never from <=>, and a defaulted <=> implicitly declares a defaulted == beside it.
         static_assert(not eq_comparable<View>);
         static_assert(not ne_comparable<View>);
         static_assert(not spaceship_comparable<View>);
@@ -205,7 +204,7 @@ BOOST_AUTO_TEST_CASE(TheBulkOperatorsAreTheStoragesOwn)
         BOOST_CHECK(x[3] and y[1]);
 }
 
-// The ordering invariant on the trait's entry, the only ordering an owner has. [design.md#the-ordering-invariant]
+// The ordering invariant on the trait's entry, the only ordering an owner has.
 BOOST_AUTO_TEST_CASE(TheOrderingIsTheLexicographicOrderOfTheBools)
 {
         using Packed = xstd::basic_bit_array<std::uint8_t, 9>;
@@ -226,10 +225,7 @@ BOOST_AUTO_TEST_CASE(TheOrderingIsTheLexicographicOrderOfTheBools)
         }
 }
 
-// Two sizes compare as the bools do, which is what sequence_lexicographical_compare_three_way asserted instead of answering: the shared
-// positions decide, and when they all agree the shorter is a proper prefix of the longer and so less. The widths
-// here cross a block boundary in both directions, so the deciding position lands inside the shared blocks, inside
-// a block only the longer has, and nowhere at all. [design.md#the-ordering-primitive]
+// Two sizes compare as the bools do, which is what sequence_lexicographical_compare_three_way asserted instead of answering: the shared positions decide, and when they all agree the shorter is a proper prefix of the longer and so less. The widths here cross a block boundary in both directions, so the deciding position lands inside the shared blocks, inside a block only the longer has, and nowhere at all.
 BOOST_AUTO_TEST_CASE(TheOrderingAcrossTwoSizesIsStillTheLexicographicOrder)
 {
         auto const cases = dynamic_probes();
@@ -247,7 +243,7 @@ BOOST_AUTO_TEST_CASE(TheOrderingAcrossTwoSizesIsStillTheLexicographicOrder)
 template<class X>
 constexpr bool can_grow = requires (X& x) { x.push_back(true); x.pop_back(); x.resize(1UZ); x.resize(1UZ, true); x.clear(); x.reserve(1UZ); x.shrink_to_fit(); };
 
-// Growth is the owner's over storage that grows; a static width and a view have none of it. [design.md#growth]
+// Growth is the owner's over storage that grows; a static width and a view have none of it.
 BOOST_AUTO_TEST_CASE(GrowthIsTheOwnersOverStorageThatGrows)
 {
         using Dynamic = xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint64_t>, xstd::ownership::owns, false>;
@@ -275,7 +271,7 @@ BOOST_AUTO_TEST_CASE(AZeroWidthSequenceIsEmpty)
         BOOST_CHECK(v.empty() and v.begin() == v.end());
 }
 
-// The sequence reading's own aggregates, against the reading they belong to rather than the set reading that happens to answer the same integer for one of the eight. [design.md#the-sequence-aggregates]
+// The sequence reading's own aggregates, against the reading they belong to rather than the set reading that happens to answer the same integer for one of the eight.
 namespace {
 
 using Graded = test::graded_extents<xstd::basic_bit_array>;
@@ -308,7 +304,7 @@ auto write_pattern(Seq& s, std::size_t p)
         return m;
 }
 
-// Counted rather than asserted per position, so a failure names the operation instead of drowning the log. [design.md#counted-not-asserted]
+// Counted rather than asserted per position, so a failure names the operation instead of drowning the log.
 template<class Seq>
 auto aggregate_disagreements(Seq const& s, std::vector<bool> const& m)
         -> std::size_t
@@ -357,7 +353,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheAggregatesAgreeWithTheModel, T, Graded)
         BOOST_CHECK_EQUAL(disagreements, 0UZ);
 }
 
-// The same over a window, whose blocks are not its own: a masked word at a time, at every offset and every length, so the mask is exercised at both ends of a word rather than only at the top. [design.md#windows]
+// The same over a window, whose blocks are not its own: a masked word at a time, at every offset and every length, so the mask is exercised at both ends of a word rather than only at the top.
 BOOST_AUTO_TEST_CASE(TheAggregatesAgreeWithTheModelOnAWindowOfOurs)
 {
         using Storage24 = xstd::detail::bits::contiguous_bit_array<std::uint8_t, 24>;
@@ -433,7 +429,7 @@ BOOST_AUTO_TEST_CASE(MismatchIsTheOwnersOverStorageThatHasTheEntry)
         static_assert(not can_mismatch<View::subspan_type>);
 }
 
-// for_each hands the functor what the iterator dereferences to, in the same order, and stops where a bool functor says to: the range-for's answer by a loop structure no iterator can express. [design.md#the-sequence-for-each]
+// for_each hands the functor what the iterator dereferences to, in the same order, and stops where a bool functor says to: the range-for's answer by a loop structure no iterator can express.
 BOOST_AUTO_TEST_CASE_TEMPLATE(ForEachAgreesWithTheRangeFor, T, Graded)
 {
         auto disagreements = 0UZ;
@@ -450,7 +446,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ForEachAgreesWithTheRangeFor, T, Graded)
         BOOST_CHECK_EQUAL(disagreements, 0UZ);
 }
 
-// The functor is handed the bool by value, and the constraint says so. [design.md#the-functor-takes-a-value]
+// The functor is handed the bool by value, and the constraint says so.
 BOOST_AUTO_TEST_CASE(ForEachHandsTheBoolByValue)
 {
         // By value, generic or not, and by const reference: all four read what they are given.
@@ -475,7 +471,7 @@ BOOST_AUTO_TEST_CASE(ForEachHandsTheBoolByValue)
 
         // Writing through the sequence is the range-for's job, and it still is.
         auto a = Owner();
-        // const, and it still writes: assigning through the proxy is what the proxy is for. [design.md#proxies-compare-themselves]
+        // const, and it still writes: assigning through the proxy is what the proxy is for.
         for (auto const r : a) { r = true; }
         BOOST_CHECK_EQUAL(a.count(), a.size());
 

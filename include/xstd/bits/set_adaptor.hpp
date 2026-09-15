@@ -29,22 +29,22 @@
 #include <type_traits>                                   // conditional_t, false_type, is_invocable_r_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
 #include <utility>                                       // declval, forward, move, pair
 
-// The set reading, [set] over a contiguous_bit_container, owning it or referring to it. [design.md#the-three-adaptors]
+// The set reading, [set] over a contiguous_bit_container, owning it or referring to it.
 namespace xstd {
 
 namespace detail::set {
 
-// The storage answering equality, named rather than spelled twice: two appearances of one requires-expression are distinct atomic constraints, so only a concept-id lets the constrained overload below subsume the general one. [design.md#width-is-capacity]
+// The storage answering equality, named rather than spelled twice: two appearances of one requires-expression are distinct atomic constraints, so only a concept-id lets the constrained overload below subsume the general one.
 template<class Bits>
 concept equality_comparable_storage = requires (Bits const& a, Bits const& b) {
         { a == b } -> std::convertible_to<bool>;
 };
 
-// A range of consecutive ascending positions, which is what a block-wise fill needs and what a general input range cannot be asked. [design.md#the-range-members]
+// A range of consecutive ascending positions, which is what a block-wise fill needs and what a general input range cannot be asked.
 template<class R> inline constexpr bool is_consecutive = false;
 template<class W, class B> inline constexpr bool is_consecutive<std::ranges::iota_view<W, B>> = true;
 
-// Continue unless the functor says otherwise: a void functor always continues, a bool one says. [design.md#the-set-for-each] [design.md#the-functor-takes-a-value]
+// Continue unless the functor says otherwise: a void functor always continues, a bool one says.
 template<class F>
 [[nodiscard]] constexpr auto invoke_continues(F& f, std::size_t pos)
         -> bool
@@ -57,7 +57,7 @@ template<class F>
         }
 }
 
-// One tier each, because the tier is the seam and sharing a body puts the whole over readability-function-cognitive-complexity's threshold. [design.md#one-function-per-tier]
+// One tier each, because the tier is the seam and sharing a body puts the whole over readability-function-cognitive-complexity's threshold.
 
 // Blocks, lowest position first: load once per block, then tzcnt for the position and blsr to drop it.
 template<class Bits, class F>
@@ -110,10 +110,10 @@ class set_adaptor
 
         using bits_type = std::remove_const_t<Bits>;
 
-        // Always present and only its type changes, so plain conditional_t. [design.md#ownership-is-not-an-axis]
+        // Always present and only its type changes, so plain conditional_t.
         std::conditional_t<is_owner, Bits, Bits*> m_bits;
 
-        // One accessor: self.m_bits propagates the owner's const, *self.m_bits keeps the view shallow. [design.md#ownership-is-not-an-axis]
+        // One accessor: self.m_bits propagates the owner's const, *self.m_bits keeps the view shallow.
         [[nodiscard]] constexpr auto storage(this auto&& self) noexcept
                 -> auto&&
         {
@@ -124,10 +124,10 @@ class set_adaptor
                 }
         }
 
-        // A set view refers into this owner's storage, and nothing else outside does; a sequence view does not, the readings not mixing. [design.md#the-readings-do-not-mix]
+        // A set view refers into this owner's storage, and nothing else outside does; a sequence view does not, the readings not mixing.
         template<detail::bits::specialization_of_contiguous_bit_container B, ownership O> friend class set_adaptor;
 
-        // The value under the set reading, owned or viewed as == is: the bits at a static width, the positions at a run-time one, where two equal sets need not share a width. [design.md#the-hashing-invariant]
+        // The value under the set reading, owned or viewed as == is: the bits at a static width, the positions at a run-time one, where two equal sets need not share a width.
         template<class Provider, class Hash, class Flavor>
         friend constexpr auto tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, set_adaptor const* v) noexcept
                 -> void
@@ -186,7 +186,7 @@ public:
                 m_bits(&c)
         {}
 
-        // A view over an owner is a view over the storage it wraps, the owner having befriended this template. Implicit, unlike the one above: it asserts nothing the owner does not already carry, which is the line span draws. [design.md#viewing-an-owner-is-implicit]
+        // A view over an owner is a view over the storage it wraps, the owner having befriended this template. Implicit, unlike the one above: it asserts nothing the owner does not already carry, which is the line span draws.
         template<owner_of<Bits, reading::set> Owner>
         [[nodiscard]] constexpr explicit(false) set_adaptor(Owner& c) noexcept  // NOLINT(misc-explicit-constructor)
                 requires (not is_owner)
@@ -203,12 +203,12 @@ public:
                 return *this;
         }
 
-        // A static owner's equality IS its one member's: every instance carries the same width, so the arms below have nothing to choose between. Said here rather than left to fold, the fact being about the type and not about the optimizer. The conjunction is what picks this one -- it subsumes the general overload's lone clause, so no negation is needed there. [design.md#width-is-capacity]
+        // A static owner's equality IS its one member's: every instance carries the same width, so the arms below have nothing to choose between. Said here rather than left to fold, the fact being about the type and not about the optimizer. The conjunction is what picks this one -- it subsumes the general overload's lone clause, so no negation is needed there.
         [[nodiscard]] friend constexpr auto operator==(set_adaptor const&, set_adaptor const&) noexcept
                 -> bool
                 requires detail::set::equality_comparable_storage<bits_type> and is_owner and has_static_width = default;
 
-        // Everything else: the storage's set equality, which answers at any two widths. Width is capacity for this reading, so two storages holding the same positions are equal whatever their widths, and a view holds a pointer that a defaulted comparison would compare in place of the contents. [design.md#width-is-capacity]
+        // Everything else: the storage's set equality, which answers at any two widths. Width is capacity for this reading, so two storages holding the same positions are equal whatever their widths, and a view holds a pointer that a defaulted comparison would compare in place of the contents.
         [[nodiscard]] friend constexpr auto operator==(set_adaptor const& x, set_adaptor const& y) noexcept
                 -> bool
                 requires detail::set::equality_comparable_storage<bits_type>
@@ -216,7 +216,7 @@ public:
                 return set_equal(x.storage(), y.storage());
         }
 
-        // The storage's entry, which answers at any two widths: the set ordering turns on the lowest position at which the two disagree, and finding it is block work the storage is the place for. [design.md#the-ordering-primitive] [design.md#width-is-capacity]
+        // The storage's entry, which answers at any two widths: the set ordering turns on the lowest position at which the two disagree, and finding it is block work the storage is the place for.
         [[nodiscard]] friend constexpr auto operator<=>(set_adaptor const& x, set_adaptor const& y) noexcept
                 -> std::strong_ordering
         {
@@ -227,7 +227,7 @@ public:
                 }
         }
 
-        // iterators; one type for both, this reading being read-only through its proxy. [design.md#read-only-set-proxy]
+        // iterators; one type for both, this reading being read-only through its proxy.
         [[nodiscard]] constexpr auto begin() const noexcept -> const_iterator { return { &storage(), storage().find_first() }; }
         [[nodiscard]] constexpr auto end()   const noexcept -> const_iterator { return { &storage(), storage().size() }; }
 
@@ -239,7 +239,7 @@ public:
         [[nodiscard]] constexpr auto crbegin() const noexcept -> const_reverse_iterator { return rbegin(); }
         [[nodiscard]] constexpr auto crend()   const noexcept -> const_reverse_iterator { return rend();   }
 
-        // The set reading a block at a time, which is what an iterator cannot be. [design.md#the-set-for-each] [design.md#the-functor-takes-a-value]
+        // The set reading a block at a time, which is what an iterator cannot be.
         template<class F>
                 requires std::invocable<F&, std::size_t>
         constexpr auto for_each(this auto&& self, F f)
@@ -248,7 +248,7 @@ public:
                 detail::set::walk_blocks_ascending(self.storage(), f);
         }
 
-        // The mirror, highest position first. [design.md#the-set-for-each]
+        // The mirror, highest position first.
         template<class F>
                 requires std::invocable<F&, std::size_t>
         constexpr auto for_each_reverse(this auto&& self, F f)
@@ -257,13 +257,13 @@ public:
                 detail::set::walk_blocks_descending(self.storage(), f);
         }
 
-        // capacity; a bitset's count() is a set's size(), and max_size() is the positions there are to hold. [design.md#max-size-is-the-bits]
+        // capacity; a bitset's count() is a set's size(), and max_size() is the positions there are to hold.
         [[nodiscard]] constexpr auto empty() const noexcept -> bool { return begin() == end(); }
         [[nodiscard]] constexpr auto full()  const noexcept -> bool { return size() == max_size(); }
 
         [[nodiscard]] constexpr auto size() const noexcept -> size_type { return storage().count(); }
 
-        // [container.reqmts]/56, distance(begin(), end()) for the largest possible container: every position set, so the width. [design.md#max-size-is-the-bits]
+        // [container.reqmts]/56, distance(begin(), end()) for the largest possible container: every position set, so the width.
         [[nodiscard]] constexpr auto max_size() const noexcept
                 -> size_type
         {
@@ -278,9 +278,7 @@ public:
 
         // element access, both with a non-empty set as their precondition.
         [[nodiscard]] constexpr auto front() const noexcept -> const_reference { return *begin(); }
-        // A zero width has no position to scan back from and exclusive_find_prev asserts there, where the trait's scan
-        // answered 0 without reaching the storage. back() on an empty set is a precondition violation either way, but
-        // the answer at a zero width stays what it was. [design.md#degenerate-widths]
+        // A zero width has no position to scan back from and exclusive_find_prev asserts there, where the trait's scan answered 0 without reaching the storage. back() on an empty set is a precondition violation either way, but the answer at a zero width stays what it was.
         [[nodiscard]] constexpr auto back() const noexcept
                 -> const_reference
         {
@@ -291,7 +289,7 @@ public:
                 }
         }
 
-        // modifiers; each writes through the storage, so each exists exactly where the storage lets this handle write. [design.md#ownership-is-not-an-axis]
+        // modifiers; each writes through the storage, so each exists exactly where the storage lets this handle write.
         template<class... Args>
         constexpr auto emplace(this auto&& self, Args&&... args)
                 -> std::pair<iterator, bool>
@@ -322,7 +320,7 @@ public:
                 }
         }
 
-        // Ranged insertion has tiers, as the sequence reading's append_range does. [design.md#the-range-members]
+        // Ranged insertion has tiers, as the sequence reading's append_range does.
         template<std::ranges::input_range R>
         constexpr auto insert_range(this auto&& self, R&& rg)
                 -> void
@@ -371,7 +369,7 @@ public:
                 return nrv;
         }
 
-        // Total over key_type, as std::set's is: an absent key is the no-op returning zero. [design.md#total-lookups-on-the-container]
+        // Total over key_type, as std::set's is: an absent key is the no-op returning zero.
         constexpr auto erase(this auto&& self, key_type const& x) noexcept
                 -> size_type
                 requires requires { self.storage().assign( x, false); }
@@ -393,7 +391,7 @@ public:
                 return last;
         }
 
-        // The non-member beside it, hidden though the operators here are namespace-scope templates: ranges::swap finds this and never the member, and xstd::swap(a, b) is a spelling people reach for by habit where a qualified operator is not. [design.md#swap-goes-through-adl]
+        // The non-member beside it, hidden though the operators here are namespace-scope templates: ranges::swap finds this and never the member, and xstd::swap(a, b) is a spelling people reach for by habit where a qualified operator is not.
         friend constexpr auto swap(set_adaptor& x, set_adaptor& y) noexcept(noexcept(x.swap(y)))
                 -> void
                 requires is_owner
@@ -409,7 +407,7 @@ public:
                 std::ranges::swap(this->m_bits, other.m_bits);
         }
 
-        // Asking the storage, as the other two adaptors do: a set over an allocating storage has one to show. [design.md#the-generated-table]
+        // Asking the storage, as the other two adaptors do: a set over an allocating storage has one to show.
         [[nodiscard]] constexpr auto get_allocator() const noexcept
                 requires is_owner and requires (Bits const& b) { b.get_allocator(); }
         {
@@ -433,10 +431,7 @@ public:
 
         constexpr auto complement(this auto&& self) noexcept -> void requires requires { self.storage().flip(); } { self.storage().flip(); }
 
-        // Bulk, on the storage's own spelling, which is total across two widths. The set reading adds one thing the
-        // storage's operator deliberately does not: union and symmetric difference GROW, because for a set the width is
-        // capacity and an element the other holds above this width is still an element. Intersection and difference
-        // never widen, so they are the operator alone. [design.md#what-the-readings-share] [design.md#width-is-capacity]
+        // Bulk, on the storage's own spelling, which is total across two widths. The set reading adds one thing the storage's operator deliberately does not: union and symmetric difference GROW, because for a set the width is capacity and an element the other holds above this width is still an element. Intersection and difference never widen, so they are the operator alone.
         constexpr auto operator&=(this auto&& self, set_adaptor const& other) noexcept
                 -> auto&
                 requires requires { self.storage() &= other.storage(); }
@@ -471,7 +466,7 @@ public:
                 return self;
         }
 
-        // The shifts translate the set. A run-time width grows to hold a left shift and empties past a right one, the width being no precondition. [design.md#width-is-capacity]
+        // The shifts translate the set. A run-time width grows to hold a left shift and empties past a right one, the width being no precondition.
         constexpr auto operator<<=(this auto&& self, std::size_t n) noexcept(has_static_width)
                 -> auto&
                 requires requires { self.storage() <<= n; } and (has_static_width or requires { self.storage().resize(n); })
@@ -503,7 +498,7 @@ public:
         [[nodiscard]] constexpr auto   key_comp() const noexcept -> key_compare   { return {}; }
         [[nodiscard]] constexpr auto value_comp() const noexcept -> value_compare { return {}; }
 
-        // set operations, every one total over key_type as std::set's are; the width is the guard, test() the read behind it. [design.md#total-lookups-on-the-container]
+        // set operations, every one total over key_type as std::set's are; the width is the guard, test() the read behind it.
         [[nodiscard]] constexpr auto contains(key_type const& x) const noexcept -> bool      { return x < storage().size() and storage().test(x); }
         [[nodiscard]] constexpr auto count   (key_type const& x) const noexcept -> size_type { return contains(x); }
 
@@ -535,7 +530,7 @@ public:
                 return { lower_bound(x), upper_bound(x) };
         }
 
-        // The storage's own member where it has one, its bulk operators otherwise. Every entry the storage offers answers at any two widths, so these are calls and not decisions. [design.md#width-is-capacity]
+        // The storage's own member where it has one, its bulk operators otherwise. Every entry the storage offers answers at any two widths, so these are calls and not decisions.
         [[nodiscard]] constexpr auto is_subset_of(set_adaptor const& other) const noexcept
                 -> bool
         {
@@ -556,11 +551,7 @@ public:
                 }
         }
 
-        // A hidden friend where the bitset reading keeps a member: intersects is to set_intersection what contains is
-        // to find, and set_intersection is a free algorithm over two ranges where find is a member over one set and a
-        // key. std::set has no counterpart to mimic here, so nothing asks for the member the way boost asks it of
-        // bitset_adaptor -- and having none is also what lets this reach the storage's own friend, which a member of
-        // the same name would hide. [design.md#the-ordering-primitive]
+        // A hidden friend where the bitset reading keeps a member: intersects is to set_intersection what contains is to find, and set_intersection is a free algorithm over two ranges where find is a member over one set and a key. std::set has no counterpart to mimic here, so nothing asks for the member the way boost asks it of bitset_adaptor -- and having none is also what lets this reach the storage's own friend, which a member of the same name would hide.
         [[nodiscard]] friend constexpr auto intersects(set_adaptor const& x, set_adaptor const& y) noexcept
                 -> bool
         {
@@ -572,8 +563,7 @@ public:
         }
 
 private:
-        // growing_insert reports whether the bit was new, so the contains() pass that asked it first is gone: one walk
-        // where there were two, and the same answer, an out-of-range key growing the storage to admit it. [design.md#total-lookups-on-the-container]
+        // growing_insert reports whether the bit was new, so the contains() pass that asked it first is gone: one walk where there were two, and the same answer, an out-of-range key growing the storage to admit it.
         constexpr auto do_insert(this auto&& self, value_type x)
                 -> std::pair<iterator, bool>
         {
@@ -589,7 +579,7 @@ private:
         }
 };
 
-// A view deduces the constness of what it views, the way span<T> and span<T const> do; over an owner, of the storage it wraps. [design.md#an-owner-reads-as-its-storage]
+// A view deduces the constness of what it views, the way span<T> and span<T const> do; over an owner, of the storage it wraps.
 template<class Bits>
         requires (not requires { typename owned_storage<std::remove_const_t<Bits>>::bits_type; })
 set_adaptor(Bits&) -> set_adaptor<Bits, ownership::refers>;
@@ -603,7 +593,7 @@ struct owned_storage<set_adaptor<Bits, ownership::owns>>
 {
         using bits_type   = Bits;
 
-        // Committed to the set reading, so only a set view refers into one. [design.md#the-readings-do-not-mix]
+        // Committed to the set reading, so only a set view refers into one.
         static constexpr auto reads = reading::set;
 };
 
@@ -642,7 +632,7 @@ template<class Bits, ownership Own> [[nodiscard]] constexpr auto operator>>(set_
 // NOLINTBEGIN(bugprone-std-namespace-modification): the two opt-ins [range.view] and [range.range] invite for a program-defined type.
 namespace std::ranges {
 
-// A view is a std::ranges::view outright, so a pipeline takes it as it is; and borrowed, its iterators pointing at the storage and not at it. [design.md#views-follow-their-precedent]
+// A view is a std::ranges::view outright, so a pipeline takes it as it is; and borrowed, its iterators pointing at the storage and not at it.
 template<class Bits>
 inline constexpr bool enable_view<xstd::set_adaptor<Bits, xstd::ownership::refers>> = true;
 
@@ -655,7 +645,7 @@ inline constexpr bool enable_borrowed_range<xstd::set_adaptor<Bits, xstd::owners
 // NOLINTBEGIN(bugprone-std-namespace-modification)
 namespace std {
 
-// Owned or viewed, as std::string_view hashes and std::set does not. [design.md#the-hashing-invariant]
+// Owned or viewed, as std::string_view hashes and std::set does not.
 template<class Bits, xstd::ownership Own>
 struct hash<xstd::set_adaptor<Bits, Own>>
 {
@@ -669,7 +659,7 @@ struct hash<xstd::set_adaptor<Bits, Own>>
 }       // namespace std
 // NOLINTEND(bugprone-std-namespace-modification)
 
-// Not a range to ContainerHash, so Hash2 takes the hook and not its range overload, which cannot hash the proxy the set iterator returns. [design.md#the-hashing-invariant]
+// Not a range to ContainerHash, so Hash2 takes the hook and not its range overload, which cannot hash the proxy the set iterator returns.
 namespace boost::container_hash {
 
 template<class Bits, xstd::ownership Own>

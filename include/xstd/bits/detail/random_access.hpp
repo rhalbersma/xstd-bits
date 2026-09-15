@@ -15,7 +15,7 @@
 #include <iterator>                       // random_access_iterator_tag
 #include <type_traits>                    // is_class_v, is_const_v, is_convertible_v, is_nothrow_constructible_v, remove_const_t
 
-// The iterator is the primitive: a pointer and a position, reaching the bits through the storage alone. [design.md#the-iterator-is-the-primitive]
+// The iterator is the primitive: a pointer and a position, reaching the bits through the storage alone.
 namespace xstd::detail::bits {
 
 template<class Bits> class random_access_bit_iterator;
@@ -104,7 +104,7 @@ public:
                 return *(*this + n);
         }
 
-        // The one ADL exception: std::ranges' own protocol, which is how sort and swap_ranges reach a proxy. [design.md#the-one-adl-exception]
+        // The one ADL exception: std::ranges' own protocol, which is how sort and swap_ranges reach a proxy.
         [[nodiscard]] friend constexpr auto iter_move(random_access_bit_iterator it) noexcept
                 -> value_type
         {
@@ -143,7 +143,7 @@ public:
                 assert(m_ptr != nullptr);
         }
 
-        // Said out loud, because the assignments below are user-provided and that deprecates the implicit copy constructor: a copy duplicates the handle, where an assignment writes through it. [design.md#the-proxy-copies-the-handle]
+        // Said out loud, because the assignments below are user-provided and that deprecates the implicit copy constructor: a copy duplicates the handle, where an assignment writes through it.
         constexpr random_access_bit_reference(random_access_bit_reference const&) noexcept = default;
 
         [[nodiscard]] constexpr auto operator&() const noexcept
@@ -157,7 +157,7 @@ public:
                 return m_ptr->test(m_idx);
         }
 
-        // Not to an integer, though, however class-shaped it is. [design.md#uint128-support]
+        // Not to an integer, though, however class-shaped it is.
         template<class T>
         [[nodiscard]] constexpr explicit(false) operator T() const noexcept(std::is_nothrow_constructible_v<T, value_type>)  // NOLINT(misc-explicit-constructor)
                 requires std::is_class_v<T> and std::is_convertible_v<value_type, T> and (not xstd::integer<T>)
@@ -165,7 +165,7 @@ public:
                 return m_ptr->test(m_idx);
         }
 
-        // Exact matches, so a comparison never reaches for a conversion. [design.md#uint128-support]
+        // Exact matches, so a comparison never reaches for a conversion.
         [[nodiscard]] friend constexpr auto operator==(random_access_bit_reference lhs, random_access_bit_reference rhs) noexcept
                 -> bool
         {
@@ -187,7 +187,7 @@ public:
                 return *this;
         }
 
-        // Assigns the bit, not the proxy: rebinding would break the swaps below. [design.md#clang-tidy-false-positives]
+        // Assigns the bit, not the proxy: rebinding would break the swaps below.
         constexpr auto operator=(random_access_bit_reference const& other) const noexcept  // NOLINT(misc-unconventional-assign-operator,bugprone-unhandled-self-assignment)
                 -> random_access_bit_reference const&
                 requires is_writable
@@ -195,7 +195,7 @@ public:
                 return *this = static_cast<bool>(other);
         }
 
-        // The pre-ranges spelling of iter_swap, for std::swap and the algorithms still built on it. [design.md#the-one-adl-exception]
+        // The pre-ranges spelling of iter_swap, for std::swap and the algorithms still built on it.
         friend constexpr auto swap(random_access_bit_reference x, random_access_bit_reference y) noexcept -> void requires is_writable { bool const t = x; x = y; y = t; }
         friend constexpr auto swap(random_access_bit_reference x, bool& y)                 noexcept -> void requires is_writable { bool const t = x; x = y; y = t; }
         friend constexpr auto swap(bool& x, random_access_bit_reference y)                 noexcept -> void requires is_writable { bool const t = x; x = y; y = t; }
@@ -210,7 +210,7 @@ public:
 }       // namespace xstd::detail::bits
 
 
-// std::format over the containers, which needs nothing said about the containers themselves. [design.md#formatting-the-proxies] [design.md#clang-tidy-false-positives]
+// std::format over the containers, which needs nothing said about the containers themselves.
 template<class Bits, class CharT>
 // NOLINTNEXTLINE(bugprone-std-namespace-modification)
 struct std::formatter<xstd::detail::bits::random_access_bit_reference<Bits>, CharT>
@@ -220,7 +220,7 @@ struct std::formatter<xstd::detail::bits::random_access_bit_reference<Bits>, Cha
         template<class Context>
         [[nodiscard]] constexpr auto format(xstd::detail::bits::random_access_bit_reference<Bits> ref, Context& ctx) const
         {
-                // Unqualified, so ADL finds the proxy's own hidden friend. [design.md#the-one-adl-exception]
+                // Unqualified, so ADL finds the proxy's own hidden friend.
                 return std::formatter<bool, CharT>::format(format_as(ref), ctx);
         }
 };

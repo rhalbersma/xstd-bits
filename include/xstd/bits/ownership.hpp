@@ -11,7 +11,7 @@
 
 namespace xstd {
 
-// The one template parameter owning-versus-viewing collapses to: an enum rather than a bool, so a diagnostic reads it. [design.md#ownership-is-not-an-axis]
+// The one template parameter owning-versus-viewing collapses to: an enum rather than a bool, so a diagnostic reads it.
 enum class ownership : bool { refers, owns };
 
 [[nodiscard]] constexpr auto owns(ownership o) noexcept
@@ -20,10 +20,10 @@ enum class ownership : bool { refers, owns };
         return o == ownership::owns;
 }
 
-// Which reading an owner is committed to; a bitset is committed to neither, which is what its two views are for. [design.md#the-readings-do-not-mix]
+// Which reading an owner is committed to; a bitset is committed to neither, which is what its two views are for.
 enum class reading : unsigned char { set, sequence, bitset };
 
-// What an owner wraps, specialized beside each owner: declared, never defined, so a view over a type that owns nothing is a constraint not satisfied. [design.md#views-over-owners]
+// What an owner wraps, specialized beside each owner: declared, never defined, so a view over a type that owns nothing is a constraint not satisfied.
 template<class Owner>
 struct owned_storage;
 
@@ -31,7 +31,7 @@ struct owned_storage;
 template<class Owner>
 using owned_bits_t = std::conditional_t<std::is_const_v<Owner>, typename owned_storage<std::remove_const_t<Owner>>::bits_type const, typename owned_storage<std::remove_const_t<Owner>>::bits_type>;
 
-// Whether Owner is an owner that a view of reading R may refer into. A set owner is already committed to the set reading, so a sequence view over it would choose for the caller; a bitset is committed to neither, which is why either view may refer into one. [design.md#the-readings-do-not-mix]
+// Whether Owner is an owner that a view of reading R may refer into. A set owner is already committed to the set reading, so a sequence view over it would choose for the caller; a bitset is committed to neither, which is why either view may refer into one.
 template<class Owner, reading R>
 concept owner_reading =
         requires { typename owned_storage<std::remove_const_t<Owner>>::bits_type; } and

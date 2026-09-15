@@ -1,7 +1,4 @@
-#          Copyright Rein Halbersma 2014-2026.
-# Distributed under the Boost Software License, Version 1.0.
-#    (See accompanying file LICENSE_1_0.txt or copy at
-#          http://www.boost.org/LICENSE_1_0.txt)
+# Copyright Rein Halbersma 2014-2026. Distributed under the Boost Software License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
 version: 2
 updates:
@@ -9,9 +6,7 @@ updates:
     directory: /
     schedule:
       interval: monthly
-    # One PR per cycle. Not just for quiet: github/codeql-action's init and
-    # analyze are separate dependencies that must move together, and a PR
-    # bumping either alone fails with a configuration-version mismatch.
+    # One PR per cycle. Not just for quiet: github/codeql-action's init and analyze are separate dependencies that must move together, and a PR bumping either alone fails with a configuration-version mismatch.
     groups:
       actions:
         patterns:

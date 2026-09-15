@@ -27,7 +27,7 @@ concept bit_sequence =
     and std::random_access_iterator<typename C::iterator>
     and value_reference<typename C::const_reference>;
 
-// The typedefs [container.reqmts] gives every container, pointer and const_pointer aside: packed bits have no address. [design.md#the-sequence-contract]
+// The typedefs [container.reqmts] gives every container, pointer and const_pointer aside: packed bits have no address.
 template<class C>
 concept container_typedefs = requires {
         typename C::value_type;
@@ -77,7 +77,7 @@ concept container_members = reversible_container_typedefs<C> and requires (C c, 
         swap(c, c);
 };
 
-// [array]'s synopsis, data() and the tuple interface aside, as one requires-expression: std::array<bool, N> and the packing both accept every line. [design.md#the-sequence-contract]
+// [array]'s synopsis, data() and the tuple interface aside, as one requires-expression: std::array<bool, N> and the packing both accept every line.
 template<class C>
 concept array_bool = container_members<C> and requires (C c, bool b) {
         C();

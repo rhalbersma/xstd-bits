@@ -47,7 +47,7 @@ auto reference(BB const& b)
         return m;
 }
 
-// One family of checks per member, disagreements counted rather than asserted. [design.md#counted-not-asserted]
+// One family of checks per member, disagreements counted rather than asserted.
 template<class BB>
 class checker
 {
@@ -59,7 +59,7 @@ class checker
         std::size_t m_cardinality = static_cast<std::size_t>(std::ranges::count(m_mx, true));
         int& m_disagreements;
 
-        // Two scratch objects by reference: copies per check trip three GCC diagnostics. [design.md#scratch-objects]
+        // Two scratch objects by reference: copies per check trip three GCC diagnostics.
         BB& m_a;
         BB& m_b;
 
@@ -77,7 +77,7 @@ class checker
                 return m_b;
         }
 
-        // The two sites where a comparison becomes a count, so the cast is not thirty. [design.md#counted-not-asserted]
+        // The two sites where a comparison becomes a count, so the cast is not thirty.
         auto disagree(bool ours, bool theirs)
                 -> void
         {
@@ -144,7 +144,7 @@ public:
                         unequal(m_x.exclusive_find_next(i), next);
                 }
 
-                // The primitive, checked over its whole domain, n == size() included. [design.md#inclusive-is-the-primitive]
+                // The primitive, checked over its whole domain, n == size() included.
                 for (auto i = 0UZ; i <= m_n; ++i) {
                         auto bound = i;
                         while (bound < m_n and not m_mx[bound]) { ++bound; }
@@ -177,8 +177,7 @@ public:
                 disagree(m_x.is_proper_subset_of(m_y), subset and differs);
                 disagree(m_x.intersects(m_y),          meets);
 
-                // The hidden friend answers the member, and both operand orders answer alike: a meets b exactly when
-                // b meets a, which is why the symmetric spelling exists at all. [design.md#the-ordering-primitive]
+                // The hidden friend answers the member, and both operand orders answer alike: a meets b exactly when b meets a, which is why the symmetric spelling exists at all.
                 disagree(intersects(m_x, m_y),         meets);
                 disagree(intersects(m_y, m_x),         meets);
         }
@@ -202,7 +201,7 @@ public:
                 }
         }
 
-        // One method apiece: combined, GCC 15 at -O3 reports a free-nonheap-object that is not there. [design.md#scratch-objects]
+        // One method apiece: combined, GCC 15 at -O3 reports a free-nonheap-object that is not there.
         auto whole_set()
                 -> void
         {
@@ -299,7 +298,7 @@ auto check_ops(BB const& x, BB const& y, int& disagreements)
         c.blocks();
 }
 
-// Seven patterns, every pair landing on both sides of each branch. [design.md#seven-patterns]
+// Seven patterns, every pair landing on both sides of each branch.
 
 template<class BB>
 auto sweep(BB const& empty)
@@ -308,7 +307,7 @@ auto sweep(BB const& empty)
         auto const n = empty.size();
 
         auto values = std::vector<BB>();
-        // views::iota, not i < n: at width zero that folds to a comparison against zero. [design.md#width-zero-comparisons]
+        // views::iota, not i < n: at width zero that folds to a comparison against zero.
         auto const push = [&](auto fill) -> void {
                 auto b = empty;
                 for (auto const i : std::views::iota(0UZ, n)) {
@@ -316,7 +315,7 @@ auto sweep(BB const& empty)
                 }
                 values.push_back(b);
         };
-        // Captured by reference: a static width folds these to constants. [design.md#width-zero-comparisons]
+        // Captured by reference: a static width folds these to constants.
         push([&](std::size_t  ) -> bool { return false;                });
         push([&](std::size_t  ) -> bool { return true;                 });
         push([&](std::size_t i) -> bool { return i % 2 == 0;           });
@@ -362,15 +361,11 @@ BOOST_AUTO_TEST_CASE(ItsStorageIsAContiguousSizedRangeOfUnsignedIntegers)
         static_assert(not xstd::detail::bits::contiguous_block_range<std::vector<bool>>);      // not a contiguous range
         static_assert(not xstd::detail::bits::contiguous_block_range<std::vector<int>>);       // nor unsigned integers
 
-        // The element clause is unsigned_integer and not the wider bitwise_operators, which std::bitset would satisfy: a block is asked for the <bit> intrinsics too, and they are constrained on unsigned_integer. [design.md#contiguous-block-range]
+        // The element clause is unsigned_integer and not the wider bitwise_operators, which std::bitset would satisfy: a block is asked for the <bit> intrinsics too, and they are constrained on unsigned_integer.
         static_assert(not xstd::detail::bits::contiguous_block_range<std::array<std::bitset<64>, 4>>);
 }
 
-// The const subscript is checked against P2278R4's range_const_reference_t: the standard's where the library has it,
-// and where it does not -- libc++, on every branch including trunk -- the fallback beside it, transcribed from
-// [const.iterators.alias] and [ranges.syn]. The arms are one type rather than two contracts, and this is what says so:
-// wherever both exist the fallback must equal the vendor's, which the gcc, msvc and clang-with-libstdc++ rungs check
-// against three implementations and libc++ cannot check at all. [design.md#the-const-reference]
+// The const subscript is checked against P2278R4's range_const_reference_t: the standard's where the library has it, and where it does not -- libc++, on every branch including trunk -- the fallback beside it, transcribed from [const.iterators.alias] and [ranges.syn]. The arms are one type rather than two contracts, and this is what says so: wherever both exist the fallback must equal the vendor's, which the gcc, msvc and clang-with-libstdc++ rungs check against three implementations and libc++ cannot check at all.
 BOOST_AUTO_TEST_CASE(TheConstReferenceIsP2278s)
 {
 #ifdef __cpp_lib_ranges_as_const
@@ -381,21 +376,15 @@ BOOST_AUTO_TEST_CASE(TheConstReferenceIsP2278s)
 
 #endif
 
-        // What the clause buys, whichever arm was taken: the reference is const, so no blocks are writable through a
-        // const contiguous_bit_container. A shallow-const, span-like storage hands back a writable one from a const
-        // subscript and is refused by this, where range_reference_t<C const> would have admitted it.
+        // What the clause buys, whichever arm was taken: the reference is const, so no blocks are writable through a const contiguous_bit_container. A shallow-const, span-like storage hands back a writable one from a const subscript and is refused by this, where range_reference_t<C const> would have admitted it.
         static_assert(std::same_as<xstd::detail::bits::range_const_reference_t<std::array<std::uint8_t, 4>>, std::uint8_t const&>);
         static_assert(std::same_as<xstd::detail::bits::range_const_reference_t<std::vector<std::uint64_t>>, std::uint64_t const&>);
 
-        // Transcribed and not approximated: a conditional_t over is_const and add_const would say bool const& here, and
-        // the paper's common_reference_t says bool, which is the assertion that fails first if the fallback is ever
-        // simplified into that dance.
+        // Transcribed and not approximated: a conditional_t over is_const and add_const would say bool const& here, and the paper's common_reference_t says bool, which is the assertion that fails first if the fallback is ever simplified into that dance.
         static_assert(std::same_as<xstd::detail::bits::fallback::range_const_reference_t<std::vector<bool>>, bool>);
 }
 
-// The three members the readings will call once the trait is gone, and the one distinction that matters between them:
-// insert(n) is partial, n being a precondition, while growing_insert(n) is total and a run-time width grows to admit a
-// position past its end. [design.md#what-the-readings-share]
+// The three members the readings will call once the trait is gone, and the one distinction that matters between them: insert(n) is partial, n being a precondition, while growing_insert(n) is total and a run-time width grows to admit a position past its end.
 BOOST_AUTO_TEST_CASE(TheTotalInsertGrowsWhereThePartialOneAsserts)
 {
         using A = xstd::detail::bits::contiguous_bit_array<std::uint8_t, 10>;
@@ -461,7 +450,7 @@ BOOST_AUTO_TEST_CASE(ItsStorageSubscriptIsIterationAtTheSameAddress)
         BOOST_CHECK(subscript_agrees_with_iteration(std::vector<std::uint64_t>{ 1, 2, 3, 4 }));
 }
 
-// ranges::swap finds a free swap by ADL and a member never, so contiguous_bit_container needs the free one its three adaptors already have: without it every container moves a whole contiguous_bit_container three times instead of swapping its blocks once, and a storage with an optimized swap never sees it. [design.md#swap-goes-through-adl]
+// ranges::swap finds a free swap by ADL and a member never, so contiguous_bit_container needs the free one its three adaptors already have: without it every container moves a whole contiguous_bit_container three times instead of swapping its blocks once, and a storage with an optimized swap never sees it.
 namespace {
 
 int g_storage_swaps = 0;
@@ -595,7 +584,7 @@ BOOST_AUTO_TEST_CASE(AZeroWidthOwnsOneBlockAndReadsEmpty)
         BOOST_CHECK(not b.any());
 }
 
-// That sole block is entirely padding, which is what the last-block mask exists to say. [design.md#padding]
+// That sole block is entirely padding, which is what the last-block mask exists to say.
 BOOST_AUTO_TEST_CASE(AZeroWidthsOneBlockIsAllPaddingAndStaysZero)
 {
         auto b = xstd::detail::bits::contiguous_bit_vector<std::uint8_t>(0);
@@ -607,7 +596,7 @@ BOOST_AUTO_TEST_CASE(AZeroWidthsOneBlockIsAllPaddingAndStaysZero)
         BOOST_CHECK_EQUAL(b.block(0), 0U);
 }
 
-// Default-constructed is zero-width, not block-less. [design.md#default-construction]
+// Default-constructed is zero-width, not block-less.
 BOOST_AUTO_TEST_CASE(ADefaultConstructedRunTimeWidthIsZeroWidthWithOneBlock)
 {
         auto const b = xstd::detail::bits::contiguous_bit_vector<std::uint8_t>();
@@ -691,7 +680,7 @@ template<class Block>
 
 }       // namespace
 
-// Every resize path: each graded width to each other, with both fill values, against the model and against a fresh build from it. [design.md#growth]
+// Every resize path: each graded width to each other, with both fill values, against the model and against a fresh build from it.
 BOOST_AUTO_TEST_CASE_TEMPLATE(ResizingKeepsTheModelAndTheUnusedTailClear, Block, test::word_types)
 {
         using T = xstd::detail::bits::contiguous_bit_vector<Block>;
@@ -783,7 +772,7 @@ BOOST_AUTO_TEST_CASE(ReservingAndShrinkingChangeCapacityNotTheBits)
         BOOST_CHECK(b == from_model<T>(m));
 }
 
-// Width zero, one block, all padding: the object a default constructor makes. [design.md#default-construction]
+// Width zero, one block, all padding: the object a default constructor makes.
 BOOST_AUTO_TEST_CASE(ClearingIsResizeToZero)
 {
         using T = xstd::detail::bits::contiguous_bit_vector<std::uint8_t>;
@@ -811,7 +800,7 @@ BOOST_AUTO_TEST_CASE(AStaticWidthDoesNotGrow)
 
 #ifdef TEST_HAS_INPLACE_VECTOR
 
-// No hole in front of the blocks at any alignment: the width takes theirs where they out-align a size_t, so the class is its two members and nothing else, which is what -Wpadded asks of it. [design.md#padding]
+// No hole in front of the blocks at any alignment: the width takes theirs where they out-align a size_t, so the class is its two members and nothing else, which is what -Wpadded asks of it.
 BOOST_AUTO_TEST_CASE(TheWidthFillsWhatWouldOtherwisePadTheBlocks)
 {
         // The width slot is a size_t, or the blocks' alignment where that is wider.
@@ -837,7 +826,7 @@ BOOST_AUTO_TEST_CASE(TheWidthFillsWhatWouldOtherwisePadTheBlocks)
 #endif
 }
 
-// The third storage: a run-time width under a compile-time capacity, the sweep unchanged over it, and growth past the capacity a bad_alloc. [design.md#growth]
+// The third storage: a run-time width under a compile-time capacity, the sweep unchanged over it, and growth past the capacity a bad_alloc.
 BOOST_AUTO_TEST_CASE(AnInplaceVectorIsARunTimeWidthUnderAStaticCapacity)
 {
         using T = xstd::detail::bits::contiguous_bit_inplace_vector<std::uint8_t, 24>;
@@ -861,7 +850,7 @@ BOOST_AUTO_TEST_CASE(AnInplaceVectorIsARunTimeWidthUnderAStaticCapacity)
 
 #endif
 
-// Every question the three readings ask, asked of the storage in its own name and within the contracts it keeps. [design.md#the-cheapest-contract]
+// Every question the three readings ask, asked of the storage in its own name and within the contracts it keeps.
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheStorageAnswersEveryReadingsQuestion, T, test::graded_extents<xstd::detail::bits::contiguous_bit_array>)
 {
         constexpr auto N = T::extent;
@@ -888,7 +877,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheStorageAnswersEveryReadingsQuestion, T, test::g
         }
 }
 
-// The two the readings cannot synthesize from a position at a time: insert answers whether the position was new, and fill is bulk. [design.md#what-the-readings-share]
+// The two the readings cannot synthesize from a position at a time: insert answers whether the position was new, and fill is bulk.
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheInsertAndTheFill, T, test::graded_extents<xstd::detail::bits::contiguous_bit_array>)
 {
         constexpr auto N = T::extent;
@@ -960,7 +949,7 @@ auto probes(BB const& empty)
         return out;
 }
 
-// The invariant on all three readings: the block-wise answer is the standard algorithm's, or it is wrong. [design.md#the-ordering-invariant]
+// The invariant on all three readings: the block-wise answer is the standard algorithm's, or it is wrong.
 template<class BB>
 auto disagreements(BB const& empty)
         -> int
@@ -991,13 +980,13 @@ auto disagreements(BB const& empty)
 
 }       // namespace
 
-// All three orderings, at every static extent, against the algorithms that define them. [design.md#the-ordering-invariant]
+// All three orderings, at every static extent, against the algorithms that define them.
 BOOST_AUTO_TEST_CASE_TEMPLATE(AllThreeOrderingsAgreeWithTheirReading, T, test::graded_extents<xstd::detail::bits::contiguous_bit_array>)
 {
         BOOST_CHECK_EQUAL(disagreements(T()), 0);
 }
 
-// The same at a run-time width, which shares no instantiation with the static one. [design.md#per-instantiation-slots]
+// The same at a run-time width, which shares no instantiation with the static one.
 BOOST_AUTO_TEST_CASE_TEMPLATE(AllThreeOrderingsAgreeAtARunTimeWidth, Block, test::word_types)
 {
         using T = xstd::detail::bits::contiguous_bit_vector<Block>;
@@ -1010,7 +999,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AllThreeOrderingsAgreeAtARunTimeWidth, Block, test
         BOOST_CHECK_EQUAL(disagreed, 0);
 }
 
-// Two pairs that separate the three readings pairwise: {0} against {1}, and {0,1} against {1}. [design.md#two-readings-disagree]
+// Two pairs that separate the three readings pairwise: {0} against {1}, and {0,1} against {1}.
 BOOST_AUTO_TEST_CASE(TheThreeOrderingsDisagree)
 {
         using T = xstd::detail::bits::contiguous_bit_array<std::uint8_t, 9>;
@@ -1062,7 +1051,7 @@ using allocator_of = X::allocator_type;
 template<class X>
 constexpr bool has_allocator = requires (X const& x) { sizeof(allocator_of<X>); x.get_allocator(); };
 
-// The allocator where the blocks have one, and max_size in bits at both widths. [design.md#a-strict-extension]
+// The allocator where the blocks have one, and max_size in bits at both widths.
 BOOST_AUTO_TEST_CASE(TheAllocatorAndTheMaximumWidth)
 {
         using V = xstd::detail::bits::contiguous_bit_vector<std::uint8_t>;
@@ -1083,7 +1072,7 @@ BOOST_AUTO_TEST_CASE(TheAllocatorAndTheMaximumWidth)
         static_assert(A().max_size() == 9UZ);
 }
 
-// A word read and written at any position, and the ranged forms over it: both at a static width and at a run-time one. [design.md#the-blit]
+// A word read and written at any position, and the ranged forms over it: both at a static width and at a run-time one.
 using WordTypes = std::tuple<xstd::detail::bits::contiguous_bit_array<std::uint8_t, 20>, xstd::detail::bits::contiguous_bit_vector<std::uint8_t>>;
 
 namespace {
@@ -1183,7 +1172,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheRangedFormsGoAWordAtATime, T, WordTypes)
 // Three blocks with no tail, so a shift's destination block is exactly the splice and nothing masks it afterwards.
 using AlignedWordTypes = std::tuple<xstd::detail::bits::contiguous_bit_array<std::uint8_t, 24>, xstd::detail::bits::contiguous_bit_vector<std::uint8_t>>;
 
-// The identity that lets one primitive serve all three sites: a right shift's destination block is word_at at that position of the operand, and a left shift's is the same read one block lower. [design.md#the-funnel-shift]
+// The identity that lets one primitive serve all three sites: a right shift's destination block is word_at at that position of the operand, and a left shift's is the same read one block lower.
 BOOST_AUTO_TEST_CASE_TEMPLATE(BothShiftsAreWordAtOnTheOperand, T, AlignedWordTypes)
 {
         constexpr auto D = 8UZ;

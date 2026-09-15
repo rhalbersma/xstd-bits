@@ -44,15 +44,14 @@ using allocator_of = X::allocator_type;
 template<class X>
 constexpr bool has_allocator = requires (X const& x) { sizeof(allocator_of<X>); x.get_allocator(); };
 
-// Only our storages can be wrapped, and the refusal is nominal now rather than a vocabulary the candidate fails to speak. [design.md#one-storage]
+// Only our storages can be wrapped, and the refusal is nominal now rather than a vocabulary the candidate fails to speak.
 BOOST_AUTO_TEST_CASE(TheWrappedStoragesAreOursAndTheCounterpartsAreNot)
 {
         static_assert(wrappable<xstd::detail::bits::contiguous_bit_array<std::uint8_t, 0>>);
         static_assert(wrappable<xstd::detail::bits::contiguous_bit_array<std::uint64_t, 100>>);
         static_assert(wrappable<xstd::detail::bits::contiguous_bit_vector<std::size_t>>);
 
-        // Not for want of the vocabulary: boost::dynamic_bitset speaks all of it and is still refused, because being
-        // ours is the question and not what a candidate's members answer. [design.md#one-storage]
+        // Not for want of the vocabulary: boost::dynamic_bitset speaks all of it and is still refused, because being ours is the question and not what a candidate's members answer.
         static_assert(not wrappable<std::bitset<64>>);
         static_assert(not wrappable<boost::dynamic_bitset<>>);
         static_assert(not wrappable<std::vector<bool>>);
@@ -77,7 +76,7 @@ using Static = std::tuple
 ,       xstd::bitset< 65>
 >;
 
-// A regular, nothrow, trivially copyable type that is not a range: what std::bitset is, and what a strict extension keeps. [design.md#a-strict-extension]
+// A regular, nothrow, trivially copyable type that is not a range: what std::bitset is, and what a strict extension keeps.
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheBitsetHasStdBitsetsShape, T, Static)
 {
         static_assert(std::regular<T>);
@@ -93,7 +92,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheBitsetHasStdBitsetsShape, T, Static)
 
 using Ours = xstd::basic_bitset<std::uint8_t, 9>;
 
-// Member by member, ours answers exactly as std::bitset does, throw for throw. [design.md#a-strict-extension]
+// Member by member, ours answers exactly as std::bitset does, throw for throw.
 BOOST_AUTO_TEST_CASE(OursAnswersAsStdBitsetDoes)
 {
         auto w = Ours();
@@ -113,7 +112,7 @@ BOOST_AUTO_TEST_CASE(OursAnswersAsStdBitsetDoes)
         BOOST_CHECK(w.none() and s.none());
 }
 
-// The checked family throws where std::bitset throws: one guard, at a static width. [design.md#the-one-guard]
+// The checked family throws where std::bitset throws: one guard, at a static width.
 BOOST_AUTO_TEST_CASE(TheCheckedFamilyThrowsAsStdBitsetDoes)
 {
         auto w = Ours();
@@ -123,7 +122,7 @@ BOOST_AUTO_TEST_CASE(TheCheckedFamilyThrowsAsStdBitsetDoes)
         BOOST_CHECK_THROW(static_cast<void>(w.test(9)), std::out_of_range);
 }
 
-// The shifts are total on both counterparts, saturating to none, and the derived operators compose on a copy. [design.md#the-one-guard]
+// The shifts are total on both counterparts, saturating to none, and the derived operators compose on a copy.
 BOOST_AUTO_TEST_CASE(TheShiftsSaturateAsStdBitsetDoes)
 {
         auto w = Ours();
@@ -169,7 +168,7 @@ BOOST_AUTO_TEST_CASE(TheProxyWritesThrough)
         BOOST_CHECK(z and not w[3]);
 }
 
-// The set vocabulary boost has and std::bitset has not is there at a static width too, and so are the two searches. [design.md#a-strict-extension]
+// The set vocabulary boost has and std::bitset has not is there at a static width too, and so are the two searches.
 BOOST_AUTO_TEST_CASE(TheExtensionIsThereAtAStaticWidth)
 {
         auto d = Ours(0b101ULL);
@@ -182,7 +181,7 @@ BOOST_AUTO_TEST_CASE(TheExtensionIsThereAtAStaticWidth)
         BOOST_CHECK(not e.is_proper_subset_of(e));
         BOOST_CHECK(not Ours().intersects(d));
 
-        // The symmetric spelling beside boost's member, both orders alike. [design.md#the-ordering-primitive]
+        // The symmetric spelling beside boost's member, both orders alike.
         BOOST_CHECK(intersects(d, e) and intersects(e, d));
         BOOST_CHECK(not intersects(Ours(), d) and not intersects(d, Ours()));
 
@@ -233,7 +232,7 @@ BOOST_AUTO_TEST_CASE(TheReverseSearchesMirrorTheForwardOnes)
         BOOST_CHECK(std::ranges::equal(forward, std::views::reverse(backward)));
 }
 
-// The ordering is the bit string's, to_string() compared, which within a word is the number's. [design.md#the-ordering-invariant]
+// The ordering is the bit string's, to_string() compared, which within a word is the number's.
 BOOST_AUTO_TEST_CASE(TheOrderingIsTheBitStrings)
 {
         static_assert(std::totally_ordered<Ours>);
@@ -258,7 +257,7 @@ BOOST_AUTO_TEST_CASE(TheOrderingIsTheBitStrings)
         BOOST_CHECK(Wide() < top);
 }
 
-// boost's block interface: the block type and its width, the block count, every block out and at most every block in, the tail kept clear. [design.md#a-strict-extension]
+// boost's block interface: the block type and its width, the block count, every block out and at most every block in, the tail kept clear.
 BOOST_AUTO_TEST_CASE(TheBlockInterfaceIsBoosts)
 {
         static_assert(std::same_as<Ours::block_type, std::uint8_t>);
@@ -285,7 +284,7 @@ BOOST_AUTO_TEST_CASE(TheBlockInterfaceIsBoosts)
         BOOST_CHECK(c.test(7) and c.test(8));
 }
 
-// boost's remaining members at a static width, where every guard throws: at, test_set, the ranged forms, max_size; no allocator, the storage having none. [design.md#a-strict-extension]
+// boost's remaining members at a static width, where every guard throws: at, test_set, the ranged forms, max_size; no allocator, the storage having none.
 BOOST_AUTO_TEST_CASE(TheRestOfBoostsSurfaceIsThereAtAStaticWidth)
 {
         static_assert(not has_allocator<Ours>);
@@ -317,7 +316,7 @@ BOOST_AUTO_TEST_CASE(TheRestOfBoostsSurfaceIsThereAtAStaticWidth)
         BOOST_CHECK_THROW(d.flip(5, 5), std::out_of_range);
 }
 
-// The views reach a bitset by referring into its storage: the ordering, the keys, the blocks. [design.md#views-over-owners]
+// The views reach a bitset by referring into its storage: the ordering, the keys, the blocks.
 BOOST_AUTO_TEST_CASE(TheViewsReachABitset)
 {
         using Wide = xstd::basic_bitset<std::uint8_t, 70>;
@@ -411,13 +410,12 @@ BOOST_AUTO_TEST_CASE(TheTextConstructorsRejectWhatStdBitsetRejects)
         BOOST_CHECK_THROW(static_cast<void>(Ours(std::string("101"), 4)), std::out_of_range);
 }
 
-// A view over a bitset binds the storage it wraps, and that is the only spelling there is. [design.md#one-storage]
+// A view over a bitset binds the storage it wraps, and that is the only spelling there is.
 BOOST_AUTO_TEST_CASE(ABitsetReadsAsItsStorage)
 {
         using B = xstd::bitset<100>;
 
-        // A view over a bitset binds the storage it wraps, which is now the only spelling: naming the bitset itself as a
-        // view's Bits is what the constraint refuses, the storage being the thing a view refers into. [design.md#one-storage]
+        // A view over a bitset binds the storage it wraps, which is now the only spelling: naming the bitset itself as a view's Bits is what the constraint refuses, the storage being the thing a view refers into.
         using Blocks = xstd::detail::bits::contiguous_bit_array<std::size_t, 100>;
         static_assert(std::same_as<decltype(xstd::bit_set_view(std::declval<B&>())), xstd::bit_set_view<Blocks>>);
         static_assert(std::same_as<decltype(xstd::bit_span(std::declval<B&>())),     xstd::bit_span<Blocks>>);
@@ -439,10 +437,7 @@ BOOST_AUTO_TEST_CASE(ABitsetReadsAsItsStorage)
 
 BOOST_AUTO_TEST_SUITE_END()
 
-// contiguous_bit_sequence is structural and says so: it asks the positional members -- test(n), set(n), reset(n),
-// flip(n) -- and every field of bits that has them answers, ours and the counterparts alike. That is a different
-// question from which storages this library wraps, which is nominal and asked by the constraint above.
-// [design.md#the-common-vocabulary]
+// contiguous_bit_sequence is structural and says so: it asks the positional members -- test(n), set(n), reset(n), flip(n) -- and every field of bits that has them answers, ours and the counterparts alike. That is a different question from which storages this library wraps, which is nominal and asked by the constraint above.
 BOOST_AUTO_TEST_SUITE(TheStructuralQuestionIsNotTheNominalOne)
 
 static_assert(xstd::contiguous_bit_sequence<xstd::detail::bits::contiguous_bit_array<std::uint64_t, 64>>);

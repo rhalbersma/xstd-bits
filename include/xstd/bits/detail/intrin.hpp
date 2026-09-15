@@ -10,7 +10,7 @@
 #include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
 #include <cstddef>                                 // size_t
 
-// The seam, now closed on the xstd side. [design.md#uint128-support]
+// The seam, now closed on the xstd side.
 namespace xstd::detail::bits {
 
 [[nodiscard]] constexpr auto countl_zero(xstd::unsigned_integer auto block) noexcept
