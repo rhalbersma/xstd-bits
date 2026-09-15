@@ -64,7 +64,7 @@ BOOST_AUTO_TEST_CASE(ItIsBuiltAndOrderedLikeAStdSet)
         t.insert(1);
         BOOST_CHECK(t < s);
         BOOST_CHECK(s.is_subset_of(t));
-        BOOST_CHECK(t.intersects(s));
+        BOOST_CHECK(intersects(t, s));
 
         // The view over it refers into the contiguous_bit_vector, as over every owner. [design.md#views-over-owners]
         auto const v = xstd::bit_set_view(t);
@@ -86,7 +86,7 @@ BOOST_AUTO_TEST_CASE(TheWidthIsCapacityNotValue)
         BOOST_CHECK(digest(narrow) != digest(T({ 1 })));
         BOOST_CHECK(narrow.is_subset_of(wide) and wide.is_subset_of(narrow));
         BOOST_CHECK(not narrow.is_proper_subset_of(wide));
-        BOOST_CHECK(narrow.intersects(wide));
+        BOOST_CHECK(intersects(narrow, wide));
 }
 
 // The compound operators and predicates at two widths that differ, either way round, against the answers over the elements. [design.md#width-is-capacity]
@@ -104,13 +104,13 @@ BOOST_AUTO_TEST_CASE(TheSetOperationsIgnoreTheWidth)
         BOOST_CHECK((b - a) == T({ 5 }));
         BOOST_CHECK(a < b);
         BOOST_CHECK(b.is_proper_subset_of(a | b));
-        BOOST_CHECK((a | b).intersects(b));
+        BOOST_CHECK(intersects(a | b, b));
         BOOST_CHECK(not b.is_subset_of(a));
         BOOST_CHECK(not a.is_subset_of(b));
         BOOST_CHECK(not a.is_proper_subset_of(b));
         BOOST_CHECK(not b.is_proper_subset_of(a));
-        BOOST_CHECK(not T({ 5 }).intersects(a));
-        BOOST_CHECK(not a.intersects(T({ 5 })));
+        BOOST_CHECK(not intersects(T({ 5 }), a));
+        BOOST_CHECK(not intersects(a, T({ 5 })));
 }
 
 // The shifts translate: left grows the width to hold the result, right empties past it, and neither has the width as a precondition. [design.md#width-is-capacity]

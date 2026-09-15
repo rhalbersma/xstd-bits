@@ -473,6 +473,9 @@ public:
         [[nodiscard]] constexpr auto is_proper_subset_of(bitset_adaptor const& rhs) const noexcept -> bool { return m_bits.is_proper_subset_of(rhs.m_bits); }
         [[nodiscard]] constexpr auto intersects         (bitset_adaptor const& rhs) const noexcept -> bool { return m_bits.intersects         (rhs.m_bits); }
 
+        // The symmetric spelling beside boost's member, the pair swap and the storage both carry: a meets b exactly when b meets a. Forwarding this way and not the other, because a member of this name ends unqualified lookup before ADL begins, so the member can never reach the friend. [design.md#the-ordering-primitive]
+        [[nodiscard]] friend constexpr auto intersects(bitset_adaptor const& x, bitset_adaptor const& y) noexcept -> bool { return x.intersects(y); }
+
         // boost's two searches and their mirror at both widths, npos where the total answer is the width; a zero width answers npos outright, its only answer. [design.md#degenerate-widths]
         [[nodiscard]] constexpr auto find_first() const noexcept
                 -> std::size_t

@@ -674,8 +674,29 @@ because it is a private step of the orderings rather than a vocabulary anyone sp
 `padded_first_difference` and `padded_set_three_way`. `set_equal` **has** taken the same form, and for the same
 reason: equality is as much a question about two values with neither as its subject as an ordering is, and
 `x.set_equal(y)` spelled a symmetry the operation has and the call did not. It now sits as a hidden friend
-beside the defaulted `operator==`, which was already a non-member. `intersects` is symmetric too and could
-follow; `is_subset_of` and `is_proper_subset_of` could not, since `a ⊆ b` is not `b ⊆ a` and the member
+beside the defaulted `operator==`, which was already a non-member.
+
+`intersects` followed, and the standard library says why: **`intersects` is to `set_intersection` what
+`contains` is to `find`** — the predicate form of an algorithm. `find` is a member of `std::set`, asked of one
+set with a key, and so `contains` is a member too. `set_intersection` is a free algorithm over *two* ranges,
+so `intersects` is free.
+
+**Which reading keeps a member is then decided by the counterpart, not by taste.** `boost::dynamic_bitset` has
+`a.intersects(b)`, so `bitset_adaptor` keeps that member by [a-strict-extension](#a-strict-extension). `std::set`
+has nothing of the kind, so `set_adaptor` keeps no member and offers the friend alone — which is also the
+spelling the analogy above asks for.
+
+Where a member and a friend both exist, **the friend forwards to the member and never the other way**, and that
+is a language rule rather than a preference. A member of the name ends unqualified lookup before ADL begins
+([basic.lookup.argdep]/1), so from inside `bitset_adaptor::intersects` the call `intersects(m_bits, rhs.m_bits)`
+finds the enclosing class's own member, fails to match it, and never reaches the storage's friend. No spelling
+recovers it, a hidden friend having no qualified name either, and the same wall stands between a member and its
+*own* class's friend. Both measured, not assumed. So the storage carries the pair `swap` already carries — a
+member that does the work and a hidden friend that forwards — and `bitset_adaptor` carries it too, its member
+reaching the storage's member and its friend reaching its own member. `set_adaptor`, having no member in the
+way, reaches the storage's friend directly.
+
+`is_subset_of` and `is_proper_subset_of` take neither form, since `a ⊆ b` is not `b ⊆ a` and the member
 spelling states that correctly.
 
 The first two orderings are answered a word at a time, from two pieces:

@@ -556,13 +556,18 @@ public:
                 }
         }
 
-        [[nodiscard]] constexpr auto intersects(set_adaptor const& other) const noexcept
+        // A hidden friend where the bitset reading keeps a member: intersects is to set_intersection what contains is
+        // to find, and set_intersection is a free algorithm over two ranges where find is a member over one set and a
+        // key. std::set has no counterpart to mimic here, so nothing asks for the member the way boost asks it of
+        // bitset_adaptor -- and having none is also what lets this reach the storage's own friend, which a member of
+        // the same name would hide. [design.md#the-ordering-primitive]
+        [[nodiscard]] friend constexpr auto intersects(set_adaptor const& x, set_adaptor const& y) noexcept
                 -> bool
         {
-                if constexpr (requires { storage().intersects(other.storage()); }) {
-                        return storage().intersects(other.storage());
+                if constexpr (requires { intersects(x.storage(), y.storage()); }) {
+                        return intersects(x.storage(), y.storage());
                 } else {
-                        return (storage() & other.storage()).any();
+                        return (x.storage() & y.storage()).any();
                 }
         }
 

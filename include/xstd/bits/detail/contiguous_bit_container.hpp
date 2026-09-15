@@ -1030,6 +1030,21 @@ public:
                 }
         }
 
+        // A hidden friend beside the member, the pair swap already carries: a meets b exactly when b meets a, so the
+        // symmetric spelling is the honest one, and intersects is to set_intersection what contains is to find -- a
+        // predicate over the free two-range algorithm, not a lookup asked of one value.
+        //
+        // The member stays and does the work, which set_equal's did not have to. Both adaptors carry a MEMBER named
+        // intersects -- boost's spelling, which the bitset reading keeps by the extension rule -- and a member of that
+        // name stops ADL at the call site ([basic.lookup.argdep]/1: ordinary lookup finding a class member ends the
+        // search), so from inside those members the friend is unreachable by any spelling. Measured, not assumed.
+        // [design.md#the-ordering-primitive]
+        [[nodiscard]] friend constexpr auto intersects(contiguous_bit_container const& x, contiguous_bit_container const& y) noexcept
+                -> bool
+        {
+                return x.intersects(y);
+        }
+
         // The first block at which two values differ, with that block's xor; equal values answer the last block and a zero xor, every arm alike. [design.md#the-ordering-primitive] [design.md#two-readings-disagree]
         [[nodiscard]] constexpr auto first_difference(contiguous_bit_container const& other) const noexcept
                 -> std::pair<std::size_t, block_type>

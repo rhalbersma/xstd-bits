@@ -189,7 +189,7 @@ BOOST_AUTO_TEST_CASE(AViewIsShallow)
 
         Reader const r(c);
         BOOST_CHECK(r.contains(42UZ) and keys(r) == keys(v));
-        BOOST_CHECK(r.is_subset_of(r) and not r.is_proper_subset_of(r) and r.intersects(r));
+        BOOST_CHECK(r.is_subset_of(r) and not r.is_proper_subset_of(r) and intersects(r, r));
 }
 
 BOOST_AUTO_TEST_CASE(TheViewsAnswerEveryReadOverEveryStorage)
@@ -249,7 +249,7 @@ BOOST_AUTO_TEST_CASE(TheSetPredicatesAgreeAcrossStorages)
 
         BOOST_CHECK(x.is_subset_of(y) and not y.is_subset_of(x));
         BOOST_CHECK(x.is_proper_subset_of(y) and not x.is_proper_subset_of(x) and not y.is_proper_subset_of(x));
-        BOOST_CHECK(x.intersects(y) and not x.intersects(S(e)));
+        BOOST_CHECK(intersects(x, y) and not intersects(x, S(e)));
         BOOST_CHECK(x != y and x < y);
         BOOST_CHECK((x <=> y) == std::strong_ordering::less);
 
@@ -558,12 +558,12 @@ BOOST_AUTO_TEST_CASE(SubsetAndIntersectionAcrossWidthsCompareBlocks)
         BOOST_CHECK(wide_same.is_subset_of(narrow));
 
         // Meeting in a shared block, and not meeting at all.
-        BOOST_CHECK(narrow.intersects(wide));
-        BOOST_CHECK(wide.intersects(narrow));
+        BOOST_CHECK(intersects(narrow, wide));
+        BOOST_CHECK(intersects(wide, narrow));
 
         auto const elsewhere = grown_to(300UZ, { 7UZ, 280UZ });
-        BOOST_CHECK(not narrow.intersects(elsewhere));
-        BOOST_CHECK(not elsewhere.intersects(narrow));
+        BOOST_CHECK(not intersects(narrow, elsewhere));
+        BOOST_CHECK(not intersects(elsewhere, narrow));
 }
 
 // The ordering across two run-time widths turns on ONE position: the lowest at which the two sets disagree.

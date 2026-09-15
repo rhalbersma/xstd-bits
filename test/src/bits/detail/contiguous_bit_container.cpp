@@ -176,6 +176,11 @@ public:
                 disagree(m_x.is_subset_of(m_y),        subset);
                 disagree(m_x.is_proper_subset_of(m_y), subset and differs);
                 disagree(m_x.intersects(m_y),          meets);
+
+                // The hidden friend answers the member, and both operand orders answer alike: a meets b exactly when
+                // b meets a, which is why the symmetric spelling exists at all. [design.md#the-ordering-primitive]
+                disagree(intersects(m_x, m_y),         meets);
+                disagree(intersects(m_y, m_x),         meets);
         }
 
         // On packed bits the set and pointwise sequence operations are one instruction, so one model answers both.
