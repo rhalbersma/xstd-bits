@@ -99,7 +99,7 @@ private:
         Blocks m_blocks = make_blocks(0UZ);
 
 public:
-        contiguous_bit_container() = default;
+        [[nodiscard]] contiguous_bit_container() = default;
 
         // The width is a constructor argument exactly when it is not a template argument.
         [[nodiscard]] constexpr explicit contiguous_bit_container(std::size_t n)
@@ -153,8 +153,6 @@ public:
         // Memberwise, width first: the unused bits are kept clear, so the blocks compare as the bits do, and a zero width through the one block it still holds. [design.md#contiguous-block-range]
         [[nodiscard]] friend constexpr auto operator==(contiguous_bit_container const&, contiguous_bit_container const&) noexcept -> bool = default;
 
-        // No operator<=>: contiguous_bit_container is pure storage with no opinion on which reading orders it, so it names all three and picks none. [design.md#two-readings-disagree]
-
         // The set reading's equality, which operator== is not: that one is width first, meaning the sequence reading and dynamic_bitset. Here width is capacity, so two storages holding the same positions are equal whatever their widths. [design.md#width-is-capacity]
         // A hidden friend beside the defaulted operator==, and for the reason the three orderings are: equality is a question about two values and neither is the subject, so x.set_equal(y) spelled a symmetry the operation has and the call did not. [design.md#the-ordering-primitive]
         [[nodiscard]] friend constexpr auto set_equal(contiguous_bit_container const& x, contiguous_bit_container const& y) noexcept
@@ -180,6 +178,7 @@ public:
                 }
         }
 
+        // No operator<=>: contiguous_bit_container is pure storage with no opinion on which reading orders it, so it names all three and picks none. [design.md#two-readings-disagree]
         // A hidden friend, not a member: an ordering is a question about two values and neither is the subject, so x.set_lexicographical_compare_three_way(y) spelled a symmetry the operation has and the call did not. [design.md#the-ordering-primitive]
         [[nodiscard]] friend constexpr auto set_lexicographical_compare_three_way(contiguous_bit_container const& x [[maybe_unused]], contiguous_bit_container const& y [[maybe_unused]]) noexcept
                 -> std::strong_ordering
