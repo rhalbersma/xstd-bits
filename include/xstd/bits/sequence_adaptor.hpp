@@ -685,9 +685,20 @@ public:
                 throw out_of_range(n, self.size());
         }
 
-        // Both are preconditions in [sequence.reqmts], and back()'s is the one that subtracts: on an empty sequence offset() + size() - 1UZ wraps, and the reference handed back names a position no storage has. Said at the member the caller named rather than left to the storage's own assert a call down, for the reason operator[] says n < size() where test(n) would say it again.
-        [[nodiscard]] constexpr auto front(this auto&& self) noexcept -> reference_t<decltype(self)> { assert(not self.empty()); return { &self.storage(), self.offset() }; }
-        [[nodiscard]] constexpr auto back (this auto&& self) noexcept -> reference_t<decltype(self)> { assert(not self.empty()); return { &self.storage(), self.offset() + self.size() - 1UZ }; }
+        // Both are preconditions in [sequence.reqmts], and back()'s is the one that subtracts: on an empty sequence offset() + size() - 1UZ wraps, and the reference handed back names a position no storage has. Said at the member the caller named rather than left to the storage's own assert a call down, for the reason operator[] says n < size() where test(n) would say it again. Spelled over four lines apiece, rather than the one each was, because the coverage gate excludes an assert by a pattern anchored at the start of a line.
+        [[nodiscard]] constexpr auto front(this auto&& self) noexcept
+                -> reference_t<decltype(self)>
+        {
+                assert(not self.empty());
+                return { &self.storage(), self.offset() };
+        }
+
+        [[nodiscard]] constexpr auto back(this auto&& self) noexcept
+                -> reference_t<decltype(self)>
+        {
+                assert(not self.empty());
+                return { &self.storage(), self.offset() + self.size() - 1UZ };
+        }
 
         // The owner's alone, following span: a handle declines to say whether it compares its referent or its contents. Defaulted, the storage being the one member.
         [[nodiscard]] friend constexpr auto operator==(sequence_adaptor const& x, sequence_adaptor const& y) noexcept -> bool requires is_owner = default;

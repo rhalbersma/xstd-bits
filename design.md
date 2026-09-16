@@ -914,6 +914,19 @@ The same gate is why a cursor lives inside the walk it belongs to rather than be
 block the walk is discarded, and a cursor declared outside would never be written — which
 `misc-const-correctness` reads, correctly, as a variable that should have been `const`.
 
+### an-assert-begins-its-line
+
+The gate excludes an assert from both counts, by `--exclude-lines-by-pattern` and
+`--exclude-branches-by-pattern` over `^\s*assert\(` -- anchored at the start of a line. An assert written
+anywhere else on its line is not excluded, and `assert(cond)` expands to a conditional whose false arm no test
+takes, so it is an uncovered branch per instantiation ([per-instantiation-slots](#per-instantiation-slots)).
+
+`front()` and `back()` on the sequence reading were one-liners and are four lines apiece for this, and no other
+reason. Adding the two preconditions to them cost seven branches across the deducing-this instantiations and
+took the gate from 100% to 99.2%, where the same asserts in `erase` and `index_of` -- each on a line of its own
+-- cost nothing at all. The rule is worth stating because the failure is silent at the point of writing: the
+code is right, the assert fires as intended, and only the gate says otherwise.
+
 ### while-not-for
 
 Two descending walks are shaped as a `while` rather than a `for` with a fall-through, deliberately. The
