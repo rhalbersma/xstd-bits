@@ -2409,6 +2409,36 @@ range's last position before it writes anything, so that one is all or nothing.
 Erasing stays total like `contains`: removing what is not there is the no-op returning zero that
 `std::set::erase` is.
 
+**The single position**, member by member, measured at `-O1 -DNDEBUG -fsanitize=address` against libstdc++ 14:
+
+| a key past the width, or a step past an end | `std::set<size_t>` | here |
+|---|---|---|
+| `contains`, `count`, `find`, `lower_bound`, `upper_bound`, `equal_range`, `erase(key)` | answers | answers |
+| `insert`, `emplace`, `emplace_hint`, `insert(hint, x)`, `complement` | grows | `out_of_range` at a static width, grows at a dynamic one |
+| `erase(end())` | undefined | `assert(position != end())`, which it already said |
+| `erase(first, last)` reversed | aborts: a free of a pointer never allocated | `assert(*first <= *last)` |
+| `++end()` | undefined | `assert(m_idx < size())` |
+| `--begin()` | answers the same key again | `assert(find_first() < m_idx)` |
+
+The first two rows are the policy above, and the four below it are preconditions, on both sides. What they were
+here is worth keeping: `--begin()` at a two-block extent fell into the arm meant for the lower block and
+answered the key it started from, so a reverse walk over it never ends; at four blocks and at a run-time width
+it read past the blocks, a stack- and a heap-buffer-overflow under ASan. The reversed erase range did not end
+either, where `std::set` corrupts the heap and aborts.
+
+The backward step is the one worth asserting at the iterator, because it is **stronger** than anything the
+storage checks. `exclusive_find_prev` asserts `any()` and `is_valid(n - 1)`, and `--begin()` satisfies both
+while there is nothing below to find — the reverse scan's real precondition is that a set position exists below
+this one, which is `find_first() < m_idx`. It is the same guard the bitset reading keeps over the same
+primitive in `find_prev`, where the answer is `npos` rather than an assert, that reading's scans being total
+([the-one-guard](#the-one-guard)).
+
+The forward step's assert is the storage's own `is_valid` said one level up, and the difference is which
+function a failure names. That is the rule the sequence reading keeps too
+([indexing-is-a-precondition](#indexing-is-a-precondition)) — and the set reading's iterator needs nothing
+beyond it: dereferencing `end()` here is the width rather than a read, so `*end()` is harmless where the
+sequence reading's is a load.
+
 ### indexing-is-a-precondition
 
 The third reading answers the same question a third way, and the answer is `[sequence.reqmts]`'s rather than

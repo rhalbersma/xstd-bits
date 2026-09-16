@@ -393,6 +393,8 @@ public:
                 -> iterator
                 requires requires { self.storage().assign( *first, false); }
         {
+                // A range, not two positions: reversed, the walk below steps past last, off the end, and on into a scan no position answers. The keys are the order, so this is the whole of [first, last) being a range -- and end() answers size() for it, the position being the value here rather than a read.
+                assert(static_cast<key_type>(*first) <= static_cast<key_type>(*last));
                 while (first != last) {
                         self.storage().assign( *first++, false);
                 }
