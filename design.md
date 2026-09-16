@@ -2458,6 +2458,29 @@ dereferenceable and so not `cend()`. What holds them honest is the sweep that wa
 and over empty ranges -- each against the `std::vector<bool>` that models it. Every one of those positions is a
 valid one, and the asserts are now on underneath them.
 
+**The single position**, member by member, measured at `-O1 -DNDEBUG -fsanitize=address` against libstdc++ 14:
+
+| past the width | the counterpart | here |
+|---|---|---|
+| `at(n)` | `out_of_range` | `out_of_range`, at every extent and through every handle |
+| `operator[](n)` | heap-buffer-overflow | `assert(n < size())` |
+| `front()`, `back()` on an empty one | segfault | `assert(not empty())` |
+| `*end()` | reads the padding and answers with it | `assert(m_idx < size())` |
+| `it[n]` past the end | heap-buffer-overflow | the same assert, `it[n]` being `*(it + n)` |
+| `subspan(20, 3)` of eight | a `std::span` of **size 3**, past the end | `assert(off <= size())` |
+
+Every row is a precondition on both sides, and in every one of them this reading says so where the counterpart
+does not. `at(n)` is the only checked door, and it is the only row where the counterpart answers too.
+
+The reading hands out two types that name a position, and the rule above -- state it at the member the caller
+named -- reaches both. `random_access_bit_iterator::operator*` says `m_idx < size()`, because this reading's
+proxy reads and writes **through the storage**, so a position it hands out has to be one the storage has. The
+set reading's iterator needs no such guard and has none: its proxy converts to `m_idx` itself, so there the
+position *is* the value and `*end()` is the width rather than a read. Before, `*v.end()` and `v.begin()[100]`
+both reported `contiguous_bit_container::test`'s `is_valid` — a private predicate of a detail type, two levels
+below the expression that was wrong — where `std::vector<bool>` reported the first as `true` and the second as
+a heap-buffer-overflow.
+
 ### unchecked-writes-in-views
 
 Reads and writes inside a view go through the **subscript**, not through `test()`, `set(n)` or `reset(n)`.
