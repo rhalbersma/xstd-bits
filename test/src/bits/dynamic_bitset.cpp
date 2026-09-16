@@ -42,6 +42,17 @@ using Dynamic = std::tuple
 ,       xstd::basic_dynamic_bitset<std::uint64_t>
 >;
 
+// The same totality at a run-time width, where the block a step past the width reads is one the storage never allocated: under NDEBUG that was a clean heap-buffer-overflow, which is what boost's own assert leaves behind and what boost's find_next is written to avoid.
+BOOST_AUTO_TEST_CASE_TEMPLATE(TheForwardScanIsTotalPastTheWidth, T, Dynamic)
+{
+        auto const d = T(9, 0b101ULL);
+        BOOST_CHECK_EQUAL(d.find_next(1), 2UZ);
+        BOOST_CHECK_EQUAL(d.find_next(8), T::npos);             // the last position this width has
+        BOOST_CHECK_EQUAL(d.find_next(9), T::npos);             // the first it has not
+        BOOST_CHECK_EQUAL(d.find_next(T::npos), T::npos);
+        BOOST_CHECK_EQUAL(T(0).find_next(0), T::npos);          // a run-time width of zero, which no static extent spells
+}
+
 // The width-and-value constructor, the searches with boost's sentinel, and the set vocabulary boost has.
 BOOST_AUTO_TEST_CASE_TEMPLATE(ItAnswersAsBoostDoes, T, Dynamic)
 {

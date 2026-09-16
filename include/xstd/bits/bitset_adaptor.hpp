@@ -489,12 +489,16 @@ public:
                 }
         }
 
+        // Total, which is boost's own contract: a position at or past the width is one nothing can be set after, and npos is that answer rather than a precondition violation. The storage's step is not total -- it asserts is_valid(n) and steps to n + 1 -- so the guard is here, and it is the same guard the set reading's upper_bound already keeps over the same primitive. Without it find_next(npos) was the worst shape this can take: n + 1 wraps to zero, the scan starts from the beginning, and the answer is the FIRST set position.
         [[nodiscard]] constexpr auto find_next(std::size_t pos) const noexcept
                 -> std::size_t
         {
                 if constexpr (detail::bits::zero_width<Bits>) {
                         return npos;
                 } else {
+                        if (pos >= size()) {
+                                return npos;
+                        }
                         auto const n = m_bits.exclusive_find_next(pos);
                         return n == size() ? npos : n;
                 }

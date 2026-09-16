@@ -1837,6 +1837,11 @@ width it asks for by **addition** over a `size_t` the caller names, and every on
 | `sequence_adaptor::pack` | `size() + ranges::size(rg)`, reserved ahead of the packing loop |
 | `bitset_adaptor::guard_range` | `pos + len`, against `size()` |
 
+Not every wrapping sum is a growth. `exclusive_find_next(n)` steps to `n + 1` to scan from the position after
+`n`, and at the top of `size_t` that step is zero, so `find_next(npos)` scanned from the beginning and answered
+the first set position. What refuses that sum is the guard that makes the scan total
+([the-one-guard](#the-one-guard)), as the ranged forms' guard refuses `pos + len`.
+
 A wrapped sum is **small**. It passes the ceiling it was meant to fail, and the operation then proceeds against
 a width far below where it writes. `blocks_for` made that concrete: `align_up(n, bits_per_block)` rounds a width
 near the top of `size_t` to **zero**, the floor turns that into one block, and the container answers `size()`
@@ -2296,7 +2301,7 @@ character that is neither `0` nor `1`.
 
 ### the-one-guard
 
-Two members share a spelling with different contracts between the storage and the counterparts, and the
+Several members share a spelling with different contracts between the storage and the counterparts, and the
 wrapper carries the one guard between them.
 
 **Shift.** `contiguous_bit_container`'s `<<=` is unchecked, with `n < size()` as its precondition;
@@ -2310,6 +2315,33 @@ at a run-time one, matching `boost::dynamic_bitset` -- a deliberate inconsistenc
 `xstd::dynamic_bitset`, because it is exactly the one between their counterparts. The const subscript is
 unchecked on every counterpart, so it is `test` unconditionally, and the proxy from the mutable one writes
 through `assign` alone.
+
+**The checked door at a run-time width is `at(pos)`**, and it is what makes that split a whole policy rather
+than half of one. boost carries both halves: `set(pos)`, `reset(pos)`, `flip(pos)`, `test(pos)` and
+`test_set(pos)` assert, and `at(pos)` throws `std::out_of_range`, in a mutable and a const overload. Ours has
+both, and `at` throws at both widths — an extension over `std::bitset`, which has no `at` at all. Measured at
+`-O1 -DNDEBUG -fsanitize=address`, Boost 1.83 and libstdc++ 14:
+
+| `pos` past the width | `std::bitset<64>` | `boost::dynamic_bitset(64)` | `xstd::bitset<64>` | `xstd::dynamic_bitset(64)` |
+|---|---|---|---|---|
+| `set`, `reset`, `flip`, `test` | `out_of_range` | heap-buffer-overflow | `out_of_range` | heap-buffer-overflow |
+| `test_set` | no such member | heap-buffer-overflow | `out_of_range` | heap-buffer-overflow |
+| `at` | no such member | `out_of_range` | `out_of_range` | `out_of_range` |
+| `operator[]` | undefined | undefined | undefined | undefined |
+
+Every column answers as its own counterpart does, and where one counterpart has no such member the extension
+answers as the other's does. That is the difference from the ranged family below: there the split left one
+width unanswered and no counterpart supplied the missing half, where here both halves are boost's own.
+
+**The scans are total**, a third answer again and boost's too. `find_next(pos)` returns `npos` for every `pos`
+at or past the width — boost's own body opens `if (pos >= (sz-1) || sz == 0) return npos`. Ours did not, and
+that was a defect rather than a policy. `exclusive_find_next` asserts `is_valid(n)` and steps to `n + 1`, so
+`xstd::dynamic_bitset(64).find_next(1000)` was a clean heap-buffer-overflow under ASan, and `find_next(npos)`
+was the worse half: `n + 1` wraps to zero, the scan restarts at the beginning, and the answer is the **first**
+set position rather than none ([the-sum-that-wraps](#the-sum-that-wraps)). The guard belongs to the reading,
+which is where the set reading's `upper_bound` already keeps the same one over the same primitive.
+`find_prev(pos)` was total from the start, clamping a `pos` past the width to the width — and its tests had
+asked for exactly the positions the forward pair's had never been asked for.
 
 **The ranged forms** `set(pos, len, val)`, `reset(pos, len)` and `flip(pos, len)` carry the same guard over a
 range, said as a subtraction rather than as `pos + len` ([the-sum-that-wraps](#the-sum-that-wraps)) -- and they
