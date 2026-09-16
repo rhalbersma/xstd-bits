@@ -3,6 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/sanitizer.hpp>                         // IWYU pragma: keep; TEST_HAS_ADDRESS_SANITIZER
 #include <xstd/bits/bitset_adaptor.hpp>               // bitset_adaptor
 #include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
 #include <xstd/bits/dynamic_bitset.hpp>               // dynamic_bitset
@@ -18,6 +19,7 @@
 #include <iterator>                                   // back_inserter
 #include <limits>                                     // numeric_limits
 #include <memory>                                     // allocator
+#include <new>                                        // IWYU pragma: keep; bad_alloc, named only without TEST_HAS_ADDRESS_SANITIZER
 #include <ranges>                                     // equal, iota
 #include <sstream>                                    // istringstream, ostringstream
 #include <stdexcept>                                  // invalid_argument, out_of_range, overflow_error
@@ -216,6 +218,52 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheAllocatorAndMaxSizeAreBoosts, T, Dynamic)
         // Boost's own bound over the same blocks, to the value: the blocks' limit times the bits in one, saturating at SIZE_MAX where that product is not representable -- which over both block types here it is not, so both answer SIZE_MAX and neither is a whole number of blocks.
         BOOST_CHECK_EQUAL(b.max_size(), Boost(9).max_size());
         BOOST_CHECK_GE(b.max_size(), b.size());
+}
+
+// The ceiling row for row against the counterpart, asked of both rather than claimed of one. boost is a single
+// implementation, so unlike the sequence reading's counterpart every row here has one answer and it can simply
+// be compared -- which is why this case can say what the other cannot.
+BOOST_AUTO_TEST_CASE_TEMPLATE(TheCeilingIsBoostsRowForRow, T, Dynamic)
+{
+        using Block = T::block_type;
+        using Boost = boost::dynamic_bitset<Block>;
+        constexpr auto top  = std::numeric_limits<std::size_t>::max();
+        constexpr auto pmax = static_cast<std::size_t>(std::numeric_limits<std::ptrdiff_t>::max());
+
+        auto d = T();
+        auto b = Boost();
+
+        // The value, which is where this reading used to differ: boost multiplies the blocks' limit by the bits in
+        // one and saturates where that product does not fit, landing sixty-three positions above the storage's own
+        // clamped answer. Over std::allocator the product always overflows, so both are the top of size_t.
+        BOOST_CHECK_EQUAL(d.max_size(), b.max_size());
+        BOOST_CHECK_EQUAL(d.max_size(), top);
+
+        // One past it is one past the top of size_t, so it wraps to zero and both RESIZE TO EMPTY rather than
+        // refusing -- this reading keeps no ceiling that would turn it into std::length_error, and neither does boost.
+        d.resize(d.max_size() + 1UZ);
+        b.resize(b.max_size() + 1UZ);
+        BOOST_CHECK_EQUAL(d.size(), b.size());
+        BOOST_CHECK_EQUAL(d.size(), 0UZ);
+
+#ifndef TEST_HAS_ADDRESS_SANITIZER
+
+        // The two rows that ask for the memory rather than refusing, so it is the allocator that answers on both
+        // sides. Guarded because under a sanitizer that answer is an abort rather than an exception, and on no
+        // other leg of this ladder is it (test/sanitizer.hpp).
+        BOOST_CHECK_THROW(d.resize(d.max_size()), std::bad_alloc);
+        BOOST_CHECK_THROW(b.resize(b.max_size()), std::bad_alloc);
+
+        // Including the width a distance cannot name, which the sequence reading beside this one refuses with
+        // std::length_error and this one does not, because boost does not.
+        BOOST_CHECK_THROW(d.resize(pmax + 1UZ), std::bad_alloc);
+        BOOST_CHECK_THROW(b.resize(pmax + 1UZ), std::bad_alloc);
+
+        // And a refused growth is not a partial one, in either.
+        BOOST_CHECK_EQUAL(d.size(), b.size());
+        BOOST_CHECK_EQUAL(d.size(), 0UZ);
+
+#endif
 }
 
 // Then the throwing at and test_set.

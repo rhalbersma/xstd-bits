@@ -1846,8 +1846,29 @@ Nothing diverges. And libc++'s number is one libc++ cannot honour: it reports `P
 **create** the divergence that is not there now -- measured with the ceiling removed, which is what the bitset
 reading over the same storage is, `resize(PTRDIFF_MAX)` is `bad_alloc` where libc++ answers `length_error`.
 
-So the test asserts the shape -- whole blocks, no wider than `PTRDIFF_MAX`, `length_error` above it -- and not
-another library's number.
+So the test asserts the table row for row, asking **both** containers rather than claiming a value of one, and
+asserting of the counterpart only what every implementation of it promises:
+
+| row | asserted of `bit_vector` | asserted of `std::vector<bool>` |
+|---|---|---|
+| `max_size() <= PTRDIFF_MAX`, and ours `<=` theirs | yes | yes |
+| `max_size() % 64 == 0` | yes | no -- libc++'s is not |
+| `resize(max_size() + 1)` -> `length_error` | yes | yes, against its own |
+| `resize(PTRDIFF_MAX + 1)` -> `length_error` | yes | yes |
+| `resize(max_size())` -> `bad_alloc` | yes, off the sanitizer legs | no -- the two libraries disagree |
+
+The "ours `<=` theirs" row is the one that orders them, and it holds of any word width rather than of a measured
+pair: a bound rounded down to whole 64-bit words is the **smallest** such bound any word width can produce, and
+`bit_vector` is the name whose word is a `size_t`, so ours is never the larger claim.
+
+The last row asks for the memory instead of refusing, so the allocator answers -- and under AddressSanitizer that
+answer is an **abort**, not an exception. Measured: `allocation-size-too-big`, and `allocator_may_return_null=1`
+only renames it to `out-of-memory`, because the throwing `operator new` calls `ReportOutOfMemory` on a null
+return rather than throwing. So that row is guarded on the sanitizer and on nothing else, which is as narrow as
+the evidence allows: of the nine CI failures that led here, every one was a sanitized build or a discarded
+temporary whose `new`/`delete` pair clang elided at `-O2`, and the msvc and mingw legs -- neither of those --
+never failed on it at all. The rows use a live object for the same reason: an elidable temporary is what broke
+clang, not the allocation.
 
 The bitset reading's is written as a **sum** rather than as boost's choice: `bits_per_block` is a power of two, so
 `SIZE_MAX` is `max_width` plus one block's bits less one, and the clamped answer needs exactly that much back
@@ -2350,6 +2371,13 @@ bits in one and answers `SIZE_MAX` where that product does not fit; this reading
 number, sixty-three positions lower, for an expression boost **defines** and a program may well compare against.
 It closed by having the storage compute boost's answer too, and this reading return that one
 ([max-size-is-the-bits](#max-size-is-the-bits)).
+
+Both rows are asserted against boost itself, row for row, rather than measured and written down -- boost being a
+single implementation, every row has one answer and the test simply compares the two. The `max_size()` values,
+and `resize(max_size() + 1)`, which is one past the top of a `size_t` and so wraps to zero and resizes both to
+empty rather than refusing. The two rows that reach the allocator -- `resize(max_size())` and
+`resize(PTRDIFF_MAX + 1)`, the latter being where the sequence reading beside this one answers `length_error` and
+this one must not -- carry the same sanitizer guard as the sequence reading's, for the same measured reason.
 
 The static column needed nothing. Measured the same way against `std::bitset<N>` -- the four position members,
 the string constructor's three outcomes, both word conversions' `overflow_error`, the zero-width edge cases and
