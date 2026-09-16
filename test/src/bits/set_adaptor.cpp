@@ -384,12 +384,12 @@ BOOST_AUTO_TEST_CASE(AKeyAStaticWidthCannotHoldIsOutOfRange)
         auto s = S();
         s.insert(3UZ);
 
-        check_refuses([&]() -> void { static_cast<void>(s.insert(100UZ));               });
-        check_refuses([&]() -> void { static_cast<void>(s.insert(500UZ));               });
-        check_refuses([&]() -> void { static_cast<void>(s.emplace(500UZ));              });
-        check_refuses([&]() -> void { s.emplace_hint(s.begin(), 500UZ);                 });
-        check_refuses([&]() -> void { s.insert(s.begin(), 500UZ);                       });
-        check_refuses([&]() -> void { s.complement(500UZ);                              });
+        check_refuses([&] -> void { static_cast<void>(s.insert(100UZ));                 });
+        check_refuses([&] -> void { static_cast<void>(s.insert(500UZ));                 });
+        check_refuses([&] -> void { static_cast<void>(s.emplace(500UZ));                });
+        check_refuses([&] -> void { s.emplace_hint(s.begin(), 500UZ);                   });
+        check_refuses([&] -> void { s.insert(s.begin(), 500UZ);                         });
+        check_refuses([&] -> void { s.complement(500UZ);                                });
 
         // A refused key writes nothing, and the last one it can hold is 99, which both writes take.
         BOOST_CHECK_EQUAL(s.size(), 1UZ);
