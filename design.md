@@ -1825,10 +1825,29 @@ Both differences are observable, and neither is small:
 | `bit_vector::max_size()` | `(PTRDIFF_MAX / 64) * 64` | libstdc++'s `std::vector<bool>`: the same |
 | `bit_set::max_size()` | `SIZE_MAX - 63` | -- |
 
-The middle row is the one the standard leaves open: `[container.reqmts]` only requires `max_size()` to bound what
-`resize` will accept, and libc++ answers `PTRDIFF_MAX` without rounding down to whole words. Ours rounds, because
-the ceiling it reports is a width the blocks could actually hold; the test asserts that shape and the
-`length_error` above it, not another library's number.
+The middle row is the one the standard leaves open, and it is the one place a counterpart is a **specification**
+rather than an implementation. `[container.reqmts]` only requires `max_size()` to bound what `resize` accepts, and
+the two major implementations already disagree by sixty-three over a 64-bit word: libstdc++ answers
+`(PTRDIFF_MAX / 64) * 64`, libc++ answers a bare `PTRDIFF_MAX`. There is no single number to match. Ours is the
+rounded one on both, so `bit_vector` answers the same wherever it is built, which `std::vector<bool>` does not.
+
+That is a **number** and not a behaviour, which is what makes it unlike the boost row above. Measured at every
+boundary of the sixty-three-size window, on both libraries -- `n0 = (PTRDIFF_MAX / 64) * 64`, then `n0 + 1`,
+`n0 + 32`, `PTRDIFF_MAX`:
+
+| `resize(n)` | libstdc++ `vector<bool>` | libc++ `vector<bool>` | `bit_vector`, either |
+|---|---|---|---|
+| `n0` | `bad_alloc` | `bad_alloc` | `bad_alloc` |
+| `n0 + 1`, `n0 + 32`, `PTRDIFF_MAX` | `length_error` | `length_error` | `length_error` |
+
+Nothing diverges. And libc++'s number is one libc++ cannot honour: it reports `PTRDIFF_MAX` and then throws
+`length_error` on `resize(PTRDIFF_MAX)`, its own `max_size()`, where `[container.reqmts]` makes that the bound
+`resize` accepts. Ours is the bound: `resize(max_size())` reaches the allocator. Matching libc++'s number would
+**create** the divergence that is not there now -- measured with the ceiling removed, which is what the bitset
+reading over the same storage is, `resize(PTRDIFF_MAX)` is `bad_alloc` where libc++ answers `length_error`.
+
+So the test asserts the shape -- whole blocks, no wider than `PTRDIFF_MAX`, `length_error` above it -- and not
+another library's number.
 
 The bitset reading's is written as a **sum** rather than as boost's choice: `bits_per_block` is a power of two, so
 `SIZE_MAX` is `max_width` plus one block's bits less one, and the clamped answer needs exactly that much back
