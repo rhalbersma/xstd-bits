@@ -246,13 +246,13 @@ public:
         [[nodiscard]] constexpr explicit sequence_adaptor(size_type n)
                 requires can_grow
         :
-                m_bits(n)
+                m_bits(bits_type::check_addressable_width(n))
         {}
 
         [[nodiscard]] constexpr sequence_adaptor(size_type n, value_type const& value)
                 requires can_grow
         :
-                m_bits(n)
+                m_bits(bits_type::check_addressable_width(n))
         {
                 if (value) {
                         m_bits.fill(true);
@@ -303,14 +303,14 @@ public:
                 requires can_grow and std::same_as<Alloc, typename bits_type::allocator_type>
         [[nodiscard]] constexpr sequence_adaptor(size_type n, Alloc const& alloc)
         :
-                m_bits(n, alloc)
+                m_bits(bits_type::check_addressable_width(n), alloc)
         {}
 
         template<class Alloc>
                 requires can_grow and std::same_as<Alloc, typename bits_type::allocator_type>
         [[nodiscard]] constexpr sequence_adaptor(size_type n, value_type const& value, Alloc const& alloc)
         :
-                m_bits(n, alloc)
+                m_bits(bits_type::check_addressable_width(n), alloc)
         {
                 if (value) {
                         m_bits.fill(true);
@@ -376,7 +376,7 @@ public:
                 requires can_grow
         {
                 m_bits.clear();
-                m_bits.resize(n, value);
+                m_bits.resize(bits_type::check_addressable_width(n), value);
         }
 
         template<std::input_iterator I, std::sentinel_for<I> S>
@@ -441,7 +441,7 @@ public:
         {
                 auto const pos = index_of(position);
                 // Through the storage's saturating sum: n is a count the caller names, so tmp.size() + n wraps, and a wrapped total would resize the copy down and answer an insertion with a shorter sequence than it started from.
-                return rebuild(pos, pos, [&](sequence_adaptor& tmp) -> void { tmp.m_bits.resize(bits_type::width_sum(tmp.size(), n), value); });
+                return rebuild(pos, pos, [&](sequence_adaptor& tmp) -> void { tmp.m_bits.resize(bits_type::check_addressable_width(bits_type::width_sum(tmp.size(), n)), value); });
         }
 
         template<std::input_iterator I, std::sentinel_for<I> S>
@@ -470,6 +470,8 @@ public:
                 -> iterator
                 requires can_grow
         {
+                // Dereferenceable, which cend() is not: [sequence.reqmts] asks that of the single-position erase, and position + 1 past it is a range index_of would have to answer for.
+                assert(position != cend());
                 return erase(position, position + 1);
         }
 
@@ -477,6 +479,8 @@ public:
                 -> iterator
                 requires can_grow
         {
+                // A range, not two positions: index_of establishes that each is one of ours, and this that they are in that order, which the rebuild's tail subtraction needs and neither of them says.
+                assert(first <= last);
                 return rebuild(index_of(first), index_of(last), [](sequence_adaptor&) -> void {});
         }
 
@@ -587,11 +591,12 @@ public:
                 }
         }
 
+        // std::vector<bool>'s answer where this reading can grow, and the width itself where it cannot: the storage computes both ceilings and this reading picks the one its counterpart names, a random access range's positions being counted by a difference_type. A view is its own ceiling, growing nothing.
         [[nodiscard]] constexpr auto max_size() const noexcept
                 -> size_type
         {
                 if constexpr (can_grow) {
-                        return m_bits.max_size();
+                        return m_bits.addressable_max_size();
                 } else {
                         return size();
                 }
@@ -628,9 +633,9 @@ public:
                 return (index * digits) + detail::bits::countr_zero(diff);
         }
 
-        // Growth, [vector]'s members over storage that spells them alike, so detected on the storage rather than reconciled by the trait.
-        constexpr auto resize(size_type n)                          -> void requires can_grow { m_bits.resize(n); }
-        constexpr auto resize(size_type n, value_type const& value) -> void requires can_grow { m_bits.resize(n, value); }
+        // Growth, [vector]'s members over storage that spells them alike, so detected on the storage rather than reconciled by the trait. The storage computes the ceiling and this reading is what asks it, because the choice of ceiling is this reading's: std::vector<bool> throws length_error for a size it cannot represent, and the bitset reading beside it asks none and answers bad_alloc as boost does.
+        constexpr auto resize(size_type n)                          -> void requires can_grow { m_bits.resize(bits_type::check_addressable_width(n)); }
+        constexpr auto resize(size_type n, value_type const& value) -> void requires can_grow { m_bits.resize(bits_type::check_addressable_width(n), value); }
         constexpr auto clear() noexcept                             -> void requires can_grow { m_bits.clear(); }
         constexpr auto push_back(value_type const& value)           -> void requires can_grow { m_bits.push_back(value); }
         constexpr auto pop_back() noexcept                          -> void requires can_grow { m_bits.pop_back(); }
@@ -647,7 +652,7 @@ public:
                 -> void
                 requires can_grow and requires (bits_type& b) { b.reserve(n); }
         {
-                m_bits.reserve(n);
+                m_bits.reserve(bits_type::check_addressable_width(n));
         }
 
         [[nodiscard]] constexpr auto capacity() const noexcept
@@ -681,8 +686,20 @@ public:
                 throw out_of_range(n, self.size());
         }
 
-        [[nodiscard]] constexpr auto front(this auto&& self) noexcept -> reference_t<decltype(self)> { return { &self.storage(), self.offset() }; }
-        [[nodiscard]] constexpr auto back (this auto&& self) noexcept -> reference_t<decltype(self)> { return { &self.storage(), self.offset() + self.size() - 1UZ }; }
+        // Both are preconditions in [sequence.reqmts], and back()'s is the one that subtracts: on an empty sequence offset() + size() - 1UZ wraps, and the reference handed back names a position no storage has. Said at the member the caller named rather than left to the storage's own assert a call down, for the reason operator[] says n < size() where test(n) would say it again. Spelled over four lines apiece, rather than the one each was, because the coverage gate excludes an assert by a pattern anchored at the start of a line.
+        [[nodiscard]] constexpr auto front(this auto&& self) noexcept
+                -> reference_t<decltype(self)>
+        {
+                assert(not self.empty());
+                return { &self.storage(), self.offset() };
+        }
+
+        [[nodiscard]] constexpr auto back(this auto&& self) noexcept
+                -> reference_t<decltype(self)>
+        {
+                assert(not self.empty());
+                return { &self.storage(), self.offset() + self.size() - 1UZ };
+        }
 
         // The owner's alone, following span: a handle declines to say whether it compares its referent or its contents. Defaulted, the storage being the one member.
         [[nodiscard]] friend constexpr auto operator==(sequence_adaptor const& x, sequence_adaptor const& y) noexcept -> bool requires is_owner = default;
@@ -779,13 +796,15 @@ private:
         {
                 constexpr auto digits = bits_type::bits_per_block;
                 auto const old = size();
+                // Through the storage's saturating sum, as every width this reading computes is: count is the source's own, so a wrapped total would resize this sequence DOWN and answer an append with something shorter than it started from.
+                auto const total = bits_type::check_addressable_width(bits_type::width_sum(old, count));
                 if constexpr (requires (bits_type& b, std::size_t n) { b.reserve(n); }) {
-                        m_bits.reserve(old + count);
+                        m_bits.reserve(total);
                 }
                 for (auto pos = first; pos < first + count; pos += digits) {
                         m_bits.append(src.block_at(pos));
                 }
-                m_bits.resize(old + count);
+                m_bits.resize(total);
         }
 
         // Tier two: the bools packed into words, boost's bit_appender, and the last word trimmed to what it holds.
@@ -795,8 +814,9 @@ private:
         {
                 using block_type = bits_type::block_type;
                 constexpr auto digits = bits_type::bits_per_block;
+                // Saturating for the reason blit's total is, and here the width is the caller's own to name: a sized range says how many it has without holding them, so size() + that is the one sum in this reading a caller can wrap on purpose. Wrapped it under-reserves to nothing and the appends below then run out the range one word at a time; saturated it is the length_error reserve already throws.
                 if constexpr (std::ranges::sized_range<R> and requires (bits_type& b, std::size_t n) { b.reserve(n); }) {
-                        m_bits.reserve(size() + std::ranges::size(rg));
+                        m_bits.reserve(bits_type::check_addressable_width(bits_type::width_sum(size(), static_cast<std::size_t>(std::ranges::size(rg)))));
                 }
                 auto block = block_type{};
                 auto n = 0UZ;
@@ -831,9 +851,11 @@ private:
                 return begin() + static_cast<difference_type>(pos);
         }
 
+        // The one place a caller's iterator becomes an index, so [sequence.reqmts]'s precondition on it is said once here rather than at each of the five members that pass one. An iterator into another sequence is already the iterator's own assert, m_ptr against m_ptr; what is left is this one, and past either end the subtraction below is a size_type that wraps or an index the rebuild then writes through.
         [[nodiscard]] constexpr auto index_of(const_iterator position) const noexcept
                 -> size_type
         {
+                assert(cbegin() <= position and position <= cend());
                 return static_cast<size_type>(position - cbegin());
         }
 

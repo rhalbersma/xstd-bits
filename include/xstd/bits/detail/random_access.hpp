@@ -71,10 +71,12 @@ public:
                 return lhs.m_idx <=> rhs.m_idx;
         }
 
+        // The position has to exist, which end()'s does not: this proxy reads and writes through the storage, where the set reading's carries the position as its value and has nothing to reach for. Said here rather than left to the storage's own is_valid a call down, for the reason the reading's operator[] says n < size() where test(n) would say it again -- and *end() is the one this catches, which on std::vector<bool> reads the padding and answers with it.
         [[nodiscard]] constexpr auto operator*() const noexcept
                 -> reference
         {
                 assert(m_ptr != nullptr);
+                assert(m_idx < m_ptr->size());
                 return { m_ptr, m_idx };
         }
 

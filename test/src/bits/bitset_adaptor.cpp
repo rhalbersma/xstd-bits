@@ -201,6 +201,27 @@ BOOST_AUTO_TEST_CASE(TheExtensionIsThereAtAStaticWidth)
         BOOST_CHECK(d.test(0) and not d.test(2));
 }
 
+// The forward pair answers for the positions the reverse pair below was already asked about, and did not: boost's find_next is total -- `if (pos >= sz - 1 || sz == 0) return npos` -- where the storage's step asserts is_valid(n) and moves to n + 1. So a pos past the width read a block index the storage need not have, and find_next(npos) was the worst of it: n + 1 wraps to zero, the scan starts at the beginning, and the answer is the FIRST set position rather than none.
+BOOST_AUTO_TEST_CASE(TheForwardSearchesAreTotalPastTheWidth)
+{
+        auto const d = Ours(0b101ULL);
+        BOOST_CHECK_EQUAL(d.find_next(1), 2UZ);
+        BOOST_CHECK_EQUAL(d.find_next(8), Ours::npos);          // the last position this width has
+        BOOST_CHECK_EQUAL(d.find_next(9), Ours::npos);          // the first it has not
+        BOOST_CHECK_EQUAL(d.find_next(100), Ours::npos);
+        BOOST_CHECK_EQUAL(d.find_next(Ours::npos), Ours::npos);
+        BOOST_CHECK_EQUAL(Ours().find_next(0), Ours::npos);
+
+        // And at a width of more than one block, which is where the walk below steps through find_next: the last block is the one a step past the width would read beyond.
+        using Wide = xstd::basic_bitset<std::uint8_t, 70>;
+        auto w = Wide();
+        w.set(69);
+        BOOST_CHECK_EQUAL(w.find_next(68), 69UZ);
+        BOOST_CHECK_EQUAL(w.find_next(69), Wide::npos);
+        BOOST_CHECK_EQUAL(w.find_next(70), Wide::npos);
+        BOOST_CHECK_EQUAL(w.find_next(Wide::npos), Wide::npos);
+}
+
 // The reverse pair mirrors boost's forward pair: the highest set position below pos, npos where none, a pos past the width meaning from the end.
 BOOST_AUTO_TEST_CASE(TheReverseSearchesMirrorTheForwardOnes)
 {

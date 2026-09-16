@@ -71,6 +71,8 @@ BOOST_AUTO_TEST_CASE(ItIsBoostsBitsetAtARunTimeWidthUnderAStaticCapacity)
 }
 
 // Past the capacity the storage throws, as [inplace.vector] specifies, and the bitset forwards that unchanged.
+//
+// Which is also where this reading's ceiling can be looked at, there being none: std::inplace_vector is the one block container here that refuses a width without asking anyone for memory, so the refusal arrives at a size a test can name. What comes back is the blocks' own std::bad_alloc and not std::length_error, which is the whole of the difference from the two readings beside this one -- they ask a ceiling of the storage and refuse first, and this one asks none, because boost::dynamic_bitset asks none.
 BOOST_AUTO_TEST_CASE(GrowingPastTheCapacityThrowsBadAlloc)
 {
         auto b = T();
@@ -83,6 +85,17 @@ BOOST_AUTO_TEST_CASE(GrowingPastTheCapacityThrowsBadAlloc)
 
         BOOST_CHECK_EQUAL(b.size(), 24UZ);
         BOOST_CHECK(b.all());
+
+        // A refused growth is not a partial one, and the growth with ONES is the case for it: the bits above the width in the last block are the first new ones, so writing them before the blocks are asked for would leave a tail the width no longer matches. Measured before the two were put in that order -- refused at 25, a later resize came back with every bit above the width set.
+        auto c = T();
+        c.resize(9);
+        c.set(2);
+        BOOST_CHECK_THROW(c.resize(25, true), std::bad_alloc);
+        BOOST_CHECK_EQUAL(c.size(), 9UZ);
+        c.resize(20);
+        BOOST_CHECK_EQUAL(c.size(), 20UZ);
+        BOOST_CHECK_EQUAL(c.count(), 1UZ);
+        BOOST_CHECK(c.test(2));
 }
 
 #else

@@ -27,7 +27,7 @@
 
 xstd-bits is a modern and opinionated reimagining of `std::bitset<N>`, keeping what time has proven to be effective, and throwing out what is not. It is **nine containers**: three readings of a block of bits — an ordered set of `std::size_t`, a sequence of `bool`, and the `bitset` that deliberately offers both — over three storages, which differ in whether size and capacity are static or dynamic: both static, a dynamic size within a static capacity, and both dynamic.
 
-The **set reading** does less work than `std::bitset` (e.g. no bounds-checking and no throwing of `out_of_range` exceptions) yet offers more (e.g. full `constexpr`-ness and bidirectional iterators over individual 1-bits). This enables **bit-twiddling with set-like syntax** (identical to `std::set<int>`), typically leading to cleaner, more expressive code that seamlessly interacts with the rest of the Standard Library. The **bitset reading** is a strict extension of `std::bitset` instead, and so keeps its checked members and their `out_of_range`; a dynamic width that is asked to grow past `max_size()` throws `std::length_error`, as a container does for a size it cannot represent.
+The **set reading** does less work than `std::bitset` (e.g. no bounds-checking and no throwing of `out_of_range` exceptions) yet offers more (e.g. full `constexpr`-ness and bidirectional iterators over individual 1-bits). This enables **bit-twiddling with set-like syntax** (identical to `std::set<int>`), typically leading to cleaner, more expressive code that seamlessly interacts with the rest of the Standard Library. The **bitset reading** is a strict extension of `std::bitset` instead, and so keeps its checked members and their `out_of_range`; a dynamic width that is asked to grow past `max_size()` throws `std::length_error`, as a container does for a size it cannot represent. The **sequence reading** indexes, so out of range is out of bounds there: `at(n)` throws `out_of_range` at every width and through every handle, and everything else is the precondition `std::vector`, `std::array` and `std::span` already make it — stated with an `assert`, at the member you called.
 
 The flagship of the set reading is `xstd::bit_static_set<N>`, a fixed-size ordered set of integers that is compact and fast; most of this document is about it, because it is the cell where the design questions are sharpest. `xstd::bit_set` is its allocating counterpart.
 
@@ -304,15 +304,15 @@ Almost all existing `std::bitset<N>` code has **a direct translation** (i.e. ach
 | `std::bitset<N>`                | `xstd::bit_static_set<N>`              | Notes                                           |
 | :---------------                | :-----------------              | :----                                           |
 | `bs.set()`                      | `bs.fill()`                     | not a member of `std::set<int>`                 |
-| `bs.set(n)`                     | `bs.add(n)` <br> `bs.insert(n)` | no bounds-checking or `out_of_range` exceptions |
-| `bs.set(n, v)` <br> `bs[n] = v` | `v ? bs.add(n) : bs.pop(n)`     | no bounds-checking or `out_of_range` exceptions |
+| `bs.set(n)`                     | `bs.add(n)` <br> `bs.insert(n)` | `out_of_range` past `N`, where `std::bitset` throws it too |
+| `bs.set(n, v)` <br> `bs[n] = v` | `v ? bs.add(n) : bs.pop(n)`     | `out_of_range` past `N` on the insert; the erase is total |
 | `bs.reset()`                    | `bs.clear()`                    | returns `void` as `std::set<int>`, not `*this` as `std::bitset<N>`  |
-| `bs.reset(n)`                   | `bs.pop(n)` <br> `bs.erase(n)`  | no bounds-checking or `out_of_range` exceptions |
+| `bs.reset(n)`                   | `bs.pop(n)` <br> `bs.erase(n)`  | total over the key: erasing what is not there is the no-op returning zero |
 | `bs.flip()`                     | `bs.complement()`               | not a member of `std::set<int>`                 |
-| `bs.flip(n)`                    | `bs.complement(n)`              | no bounds-checking or `out_of_range` exceptions <br> not a member of `std::set<int>` |
+| `bs.flip(n)`                    | `bs.complement(n)`              | `out_of_range` past `N`, as the insert it is <br> not a member of `std::set<int>` |
 | `bs.count()`                    | `bs.size()`                     | |
 | `bs.size()`                     | `bs.max_size()`                 | `constexpr`; a constant expression at a static width |
-| `bs.test(n)` <br> `bs[n]`       | `bs.contains(n)`                | no bounds-checking or `out_of_range` exceptions |
+| `bs.test(n)` <br> `bs[n]`       | `bs.contains(n)`                | total over the key: a position past `N` is one the set does not hold |
 | `bs.all()`                      | `bs.full()`                     | not a member of `std::set<int>`                 |
 | `bs.any()`                      | `not bs.empty()`                | |
 | `bs.none()`                     | `bs.empty()`                    | |
@@ -320,7 +320,7 @@ Almost all existing `std::bitset<N>` code has **a direct translation** (i.e. ach
 The semantic differences between `xstd::bit_static_set<N>` and `std::bitset<N>` are:
 
 - `xstd::bit_static_set<N>` answers `max_size()` as a `constexpr` member, where `std::bitset<N>` answers the same question with `size()`;
-- `xstd::bit_static_set<N>` does not do bounds-checking for its members `insert`, `erase`, `replace` and `contains`. Instead of throwing an `out_of_range` exception for argument values outside the range `[0, N)`, this **behavior is undefined**. This gives `xstd::bit_static_set<N>` a small performance benefit over `std::bitset<N>`.
+- `xstd::bit_static_set<N>` splits its members by what `[set]` can promise. **Asking is total**: `contains`, `count`, `find`, `lower_bound`, `upper_bound`, `equal_range` and `erase(key)` all answer for a key outside `[0, N)` — it is a key the set does not hold, which is an answer and not a precondition violation, exactly as `std::set::find` returns `end()` for any key it does not hold. **Writing is not**: `insert` and `complement` have nowhere to put such a key, and throw `out_of_range` as `std::bitset<N>` does for a position past `N`. This used to be undefined instead, on the grounds of a performance benefit; measured on the sieve at `N = 2^16`, best of twenty-five, the guard costs nothing — 188.0µs against 188.1µs, and 75.1µs against 75.1µs over 65536 inserts — because the comparison is against a compile-time constant and never taken.
 
 Functionality from `std::bitset<N>` that is not in `xstd::bit_static_set<N>`:
 

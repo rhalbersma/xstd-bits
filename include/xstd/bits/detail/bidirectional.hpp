@@ -66,11 +66,13 @@ public:
         }
 
         // Both steps on the storage, guarded at a zero width rather than asking it: the exclusive scans take a position as a precondition and a zero width has none to give, so they assert there. The trait's scans tested this first and never reached the storage; the guard is what that test was, and it is load-bearing.
+        // Each step says its own precondition beside the storage's: forward, that this is not end(), which is what the scan's is_valid comes to. Backward is the one worth having, because it is STRONGER than anything below it -- exclusive_find_prev asserts any() and is_valid(n - 1), and --begin() passes both while there is nothing below to find. Measured under NDEBUG: at a two-block extent it fell into the arm meant for the lower block and answered the highest position there, which is the key it started from, so a reverse walk never ends; at four blocks and at a run-time width it read past the blocks.
         constexpr auto operator++() noexcept
                 -> bidirectional_bit_iterator&
         {
                 assert(m_ptr != nullptr);
                 if constexpr (not zero_width<Bits>) {
+                        assert(m_idx < m_ptr->size());
                         m_idx = m_ptr->exclusive_find_next(m_idx);
                 }
                 return *this;
@@ -81,6 +83,7 @@ public:
         {
                 assert(m_ptr != nullptr);
                 if constexpr (not zero_width<Bits>) {
+                        assert(m_ptr->find_first() < m_idx);
                         m_idx = m_ptr->exclusive_find_prev(m_idx);
                 }
                 return *this;

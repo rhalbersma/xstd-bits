@@ -21,12 +21,15 @@
 #include <compare>                                       // strong_ordering
 #include <concepts>                                      // constructible_from, convertible_to, invocable, swappable
 #include <cstddef>                                       // ptrdiff_t, size_t
+#include <format>                                        // format
 #include <functional>                                    // hash, less
 #include <initializer_list>                              // initializer_list
 #include <iterator>                                      // input_iterator, iter_reference_t, make_reverse_iterator, reverse_iterator, sentinel_for
 #include <limits>                                        // numeric_limits
 #include <ranges>                                        // begin, enable_borrowed_range, enable_view, end, input_range, iota, range_reference_t, from_range_t, swap, transform
+#include <source_location>                               // source_location
 #include <span>                                          // dynamic_extent
+#include <stdexcept>                                     // out_of_range
 #include <type_traits>                                   // conditional_t, false_type, is_invocable_r_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
 #include <utility>                                       // declval, forward, move, pair
 
@@ -317,7 +320,9 @@ public:
                 requires std::constructible_from<value_type, std::iter_reference_t<I>> and requires { self.storage().growing_insert(static_cast<value_type>(*first)); }
         {
                 for (; first != last; ++first) {
-                        self.storage().growing_insert(static_cast<value_type>(*first));
+                        auto const x = static_cast<value_type>(*first);
+                        self.guard_key(x);
+                        self.storage().growing_insert(x);
                 }
         }
 
@@ -336,7 +341,9 @@ public:
                                 auto const lo  = static_cast<value_type>(*std::ranges::begin(rg));
                                 auto const len = static_cast<std::size_t>(std::ranges::distance(rg));
                                 // The last position first, so a growable storage is already wide enough for the fill and a fixed one asserts exactly where an element-wise insert would have. Through the saturating sum, an iota_view near the top of size_t being a range whose last position lo + len - 1 does not compute.
-                                self.storage().growing_insert(bits_type::width_sum(lo, len - 1UZ));
+                                auto const hi = bits_type::width_sum(lo, len - 1UZ);
+                                self.guard_key(hi);
+                                self.storage().growing_insert(hi);
                                 self.storage().set(lo, len, true);
                         }
                 } else {
@@ -386,6 +393,8 @@ public:
                 -> iterator
                 requires requires { self.storage().assign( *first, false); }
         {
+                // A range, not two positions: reversed, the walk below steps past last, off the end, and on into a scan no position answers. The keys are the order, so this is the whole of [first, last) being a range -- and end() answers size() for it, the position being the value here rather than a read.
+                assert(static_cast<key_type>(*first) <= static_cast<key_type>(*last));
                 while (first != last) {
                         self.storage().assign( *first++, false);
                 }
@@ -422,10 +431,20 @@ public:
                 self.storage().fill( false);
         }
 
-        constexpr auto complement(this auto&& self, value_type x) noexcept
+        // Toggling one key, and it grows where insert grows: a key past the width is absent, so the toggle that admits it is the insert that admits it, and a run-time width that would grow for insert(x) has no reason to refuse complement(x). It used to assert instead, which under NDEBUG was a write through a block the blocks had not allocated -- on a dynamic extent too, where nothing was out of range at all.
+        //
+        // Not noexcept for the same reason insert is not: growing allocates, and the widths that cannot grow say out_of_range ([asking-is-total]).
+        constexpr auto complement(this auto&& self, value_type x)
                 -> void
                 requires requires { self.storage().assign( x, true); }
         {
+                self.guard_key(x);
+                if constexpr (not has_static_width and requires { self.storage().growing_insert(x); }) {
+                        if (x >= self.storage().size()) {
+                                static_cast<void>(self.storage().growing_insert(x));
+                                return;
+                        }
+                }
                 assert(x < self.storage().size());
                 self.storage().assign( x, not self.storage().test(x));
         }
@@ -476,8 +495,8 @@ public:
                 if constexpr (has_static_width) {
                         self.storage() <<= n;
                 } else if (auto const width = self.storage().size(); width > 0UZ) {
-                        // width + n through the storage's saturating sum: the width is no precondition here, so n is every size_t, and a wrapped width would resize this set down and then shift it by more than it holds. A translation past the positions there are is std::length_error, which is the resize's answer, not this one's.
-                        self.storage().resize(bits_type::width_sum(width, n));
+                        // width + n through the storage's saturating sum: the width is no precondition here, so n is every size_t, and a wrapped width would resize this set down and then shift it by more than it holds. A translation past the positions there are is std::length_error, which is this reading's ceiling rather than the storage's -- the storage has none now, so the check is asked here, beside the sum it checks.
+                        self.storage().resize(bits_type::check_width(bits_type::width_sum(width, n)));
                         self.storage() <<= n;
                 }
                 return self;
@@ -566,10 +585,41 @@ public:
         }
 
 private:
+        // The one key a set of this reading can be unable to hold. Every other member is total over key_type, which is what [set] gives them: contains, count, find, lower_bound, upper_bound, equal_range and erase(key) all answer for a key past the width rather than refuse the question ([asking-is-total]). The two that write cannot -- there is nowhere to put it -- and what the three storages said about that was three different things, one of them nothing:
+        //
+        //   a dynamic extent  grows to admit the key, and past max_size() says std::length_error
+        //   an inplace extent grows within its capacity, and past it the blocks say std::bad_alloc
+        //   a static extent   had nothing to say, and said it by writing through a block index the array does not have
+        //
+        // So the static one says out_of_range, which is what its own neighbour xstd::bitset<N> says for a position past N. The three differ because the reasons do -- a domain, a capacity, a representable size -- but none of them is silence now.
+        constexpr auto guard_key(std::size_t x) const
+                -> void
+        {
+                if constexpr (has_static_width) {
+                        if (x >= max_size()) {
+                                throw out_of_range(x);
+                        }
+                } else {
+                        // A dynamic width refuses only what it could never grow to, and says so as the storage would have: the ceiling is asked here now, the storage having none of its own, so that this reading keeps the length_error it always answered while the bitset reading beside it answers bad_alloc as boost does.
+                        static_cast<void>(bits_type::check_width(bits_type::width_sum(x, 1UZ)));
+                }
+        }
+
+        [[nodiscard]] constexpr auto out_of_range(std::size_t x, std::source_location const& loc = std::source_location::current()) const
+        {
+                return std::out_of_range(
+                        std::format(
+                                "{}:{}:{}: exception: ‘{}‘: argument ‘x‘ is no key this set can hold [{} >= {}]",
+                                loc.file_name(), loc.line(), loc.column(), loc.function_name(), x, max_size()
+                        )
+                );
+        }
+
         // growing_insert reports whether the bit was new, so the contains() pass that asked it first is gone: one walk where there were two, and the same answer, an out-of-range key growing the storage to admit it.
         constexpr auto do_insert(this auto&& self, value_type x)
                 -> std::pair<iterator, bool>
         {
+                self.guard_key(x);
                 auto const inserted = self.storage().growing_insert(x);
                 return { { &self.storage(), x }, inserted };
         }
@@ -577,6 +627,7 @@ private:
         constexpr auto do_insert(this auto&& self, const_iterator, value_type x)
                 -> iterator
         {
+                self.guard_key(x);
                 self.storage().growing_insert(x);
                 return { &self.storage(), x };
         }

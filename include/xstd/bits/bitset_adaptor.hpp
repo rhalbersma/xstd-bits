@@ -339,7 +339,7 @@ public:
                 }
         }
 
-        // boost's ranged forms, the one guard on the whole range, then the storage's own a word at a time.
+        // boost's ranged forms, the checked guard on the whole range at both widths, then the storage's own a word at a time.
         constexpr auto set(std::size_t pos, std::size_t len, bool val)
                 -> bitset_adaptor&
         {
@@ -435,7 +435,8 @@ public:
         [[nodiscard]] constexpr auto count()      const noexcept -> std::size_t { return m_bits.count();      }
         [[nodiscard]] constexpr auto size()       const noexcept -> std::size_t { return m_bits.size();       }
         [[nodiscard]] constexpr auto num_blocks() const noexcept -> std::size_t { return m_bits.num_blocks(); }
-        [[nodiscard]] constexpr auto max_size()   const noexcept -> std::size_t { return m_bits.max_size();   }
+        // boost's own answer and not the storage's own, the two differing by sixty-three positions at a run-time width: this reading is a strict extension of boost::dynamic_bitset, so an expression boost defines answers here what it answers there.
+        [[nodiscard]] constexpr auto max_size()   const noexcept -> std::size_t { return m_bits.saturating_max_size(); }
 
         // A friend rather than the member std::bitset specifies: [class.compare.default]/1 admits either, and since P1185's reversed candidates the two accept the same mixed comparisons against the implicit unsigned long long. A namespace-scope template would not, deduction declining that conversion on both sides. Defaulted, the storage being the one member.
         [[nodiscard]] friend constexpr auto operator==(bitset_adaptor const& lhs, bitset_adaptor const& rhs) noexcept -> bool = default;
@@ -489,12 +490,16 @@ public:
                 }
         }
 
+        // Total, which is boost's own contract: a position at or past the width is one nothing can be set after, and npos is that answer rather than a precondition violation. The storage's step is not total -- it asserts is_valid(n) and steps to n + 1 -- so the guard is here, and it is the same guard the set reading's upper_bound already keeps over the same primitive. Without it find_next(npos) was the worst shape this can take: n + 1 wraps to zero, the scan starts from the beginning, and the answer is the FIRST set position.
         [[nodiscard]] constexpr auto find_next(std::size_t pos) const noexcept
                 -> std::size_t
         {
                 if constexpr (detail::bits::zero_width<Bits>) {
                         return npos;
                 } else {
+                        if (pos >= size()) {
+                                return npos;
+                        }
                         auto const n = m_bits.exclusive_find_next(pos);
                         return n == size() ? npos : n;
                 }
@@ -629,16 +634,16 @@ private:
                 }
         }
 
-        // The same guard over a range, said as a subtraction: pos + len wraps for a pos near the top of size_t, and a wrapped sum is below every width, so the check the range was meant to fail is the one it passes. It is also pos that the diagnostic should name, the sum being the thing that is not a position.
+        // The same guard over a range, and unlike the one above it throws at both widths. That one's split is the counterparts' own: std::bitset::set(pos) throws and boost's asserts, so each of ours answers as its own counterpart does. These have no such pair to mirror -- std::bitset has no ranged form at all, the family being boost's alone -- so a static width had no counterpart to follow here and the throw was already ours to choose. Half a policy is not one, and this is the half to keep.
+        //
+        // Nor is it a narrowing of boost. The rule is that every expression *valid* on the counterpart is valid here with the same result ([a-strict-extension]), and a range past the width is not one: boost says so itself, in the BOOST_ASSERT that under NDEBUG leaves a masked write through a block index the blocks never allocated. Defining what boost leaves undefined is what an extension may add.
+        //
+        // Said as a subtraction rather than as pos + len, which wraps for a pos near the top of size_t: a wrapped sum is below every width, so the check the range was meant to fail is the one it would pass. It is pos and len the diagnostic names, the sum being the thing that is not a position.
         constexpr auto guard_range(std::size_t pos, std::size_t len) const
                 -> void
         {
-                if constexpr (has_static_width) {
-                        if (pos > size() or len > size() - pos) {
-                                throw out_of_range(pos, len);
-                        }
-                } else {
-                        assert(pos <= size() and len <= size() - pos);
+                if (pos > size() or len > size() - pos) {
+                        throw out_of_range(pos, len);
                 }
         }
 

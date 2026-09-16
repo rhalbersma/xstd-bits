@@ -12,14 +12,14 @@
 #include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                                  // lexicographical_compare_three_way, ranges::equal
 #include <compare>                                    // strong_ordering
-#include <concepts>                                   // copyable, equality_comparable, regular, totally_ordered
+#include <concepts>                                   // copyable, equality_comparable, invocable, regular, totally_ordered
 #include <cstddef>                                    // size_t
 #include <cstdint>                                    // uint8_t, uint64_t
 #include <initializer_list>                           // initializer_list
 #include <limits>                                     // numeric_limits
 #include <ranges>                                     // bidirectional_range, iota
 #include <set>                                        // set
-#include <stdexcept>                                  // length_error
+#include <stdexcept>                                  // length_error, out_of_range
 #include <vector>                                     // vector
 
 namespace {
@@ -362,6 +362,90 @@ BOOST_AUTO_TEST_CASE(RangedInsertionGrowsADynamicWidth)
                 elementwise.insert(i);
         }
         BOOST_CHECK(ranged == elementwise);
+}
+
+namespace {
+
+// One write that must refuse the key, as a function rather than a BOOST_CHECK_THROW per write in the case below: each of those expands to a try/catch, and six of them in one body are past readability-function-cognitive-complexity's threshold.
+auto check_refuses(std::invocable auto write)
+        -> void
+{
+        BOOST_CHECK_THROW(write(), std::out_of_range);
+}
+
+}       // namespace
+
+// The one key a set can be unable to hold. Every other member of this reading is total over key_type and answers for a key past the width; the two that write cannot, and a static extent -- which has nowhere to grow -- used to write through a block index the array does not have. Under ASan that is a heap-buffer-overflow when the set is on the heap, and nothing at all when it is on the stack, which is the worse half.
+BOOST_AUTO_TEST_CASE(AKeyAStaticWidthCannotHoldIsOutOfRange)
+{
+        using S = xstd::basic_bit_static_set<std::uint64_t, 100>;
+        static_assert(S().max_size() == 100UZ);
+
+        auto s = S();
+        s.insert(3UZ);
+
+        check_refuses([&] -> void { static_cast<void>(s.insert(100UZ));                 });
+        check_refuses([&] -> void { static_cast<void>(s.insert(500UZ));                 });
+        check_refuses([&] -> void { static_cast<void>(s.emplace(500UZ));                });
+        check_refuses([&] -> void { s.emplace_hint(s.begin(), 500UZ);                   });
+        check_refuses([&] -> void { s.insert(s.begin(), 500UZ);                         });
+        check_refuses([&] -> void { s.complement(500UZ);                                });
+
+        // A refused key writes nothing, and the last one it can hold is 99, which both writes take.
+        BOOST_CHECK_EQUAL(s.size(), 1UZ);
+        s.insert(99UZ);
+        s.complement(98UZ);
+        BOOST_CHECK(s.contains(3UZ) and s.contains(99UZ) and s.contains(98UZ));
+        BOOST_CHECK_EQUAL(s.size(), 3UZ);
+}
+
+// The bulk inserts refuse it too, and differ in what they leave behind: the consecutive tier guards the range's last position before it writes anything, where the element-wise forms keep what came before the refused key -- which is what std::set does when an allocation throws midway.
+BOOST_AUTO_TEST_CASE(TheBulkInsertsRefuseTheKeyAndSayWhatTheyWrote)
+{
+        using S = xstd::basic_bit_static_set<std::uint64_t, 100>;
+
+        auto consecutive = S();
+        BOOST_CHECK_THROW(consecutive.insert_range(std::views::iota(98UZ, 102UZ)), std::out_of_range);
+        BOOST_CHECK(consecutive.empty());
+
+        auto elementwise = S();
+        BOOST_CHECK_THROW(elementwise.insert({ 1UZ, 500UZ }), std::out_of_range);
+        BOOST_CHECK_EQUAL(elementwise.size(), 1UZ);
+        BOOST_CHECK(elementwise.contains(1UZ));
+}
+
+// Asking stays total, which is what [set] gives it: a key past the width is one the set does not hold, and that is an answer.
+BOOST_AUTO_TEST_CASE(AKeyPastTheWidthIsStillAskable)
+{
+        using S = xstd::basic_bit_static_set<std::uint64_t, 100>;
+
+        auto s = S();
+        s.insert(3UZ);
+
+        BOOST_CHECK(not s.contains(500UZ));
+        BOOST_CHECK_EQUAL(s.count(500UZ), 0UZ);
+        BOOST_CHECK(s.find(500UZ) == s.end());          // NOLINT(readability-container-contains): find's totality is the check, which contains cannot show
+        BOOST_CHECK(s.lower_bound(500UZ) == s.end());
+        BOOST_CHECK(s.upper_bound(500UZ) == s.end());
+        BOOST_CHECK_EQUAL(s.erase(500UZ), 0UZ);
+        BOOST_CHECK_EQUAL(s.size(), 1UZ);
+}
+
+// The same key on the other two storages, which already answered: a dynamic extent grows to admit it, and complement grows where insert grows -- it used to write past the blocks on a key insert would have taken.
+BOOST_AUTO_TEST_CASE(ADynamicWidthAdmitsTheKeyInstead)
+{
+        auto d = xstd::bit_set();
+        d.insert(500UZ);
+        BOOST_CHECK(d.contains(500UZ));
+
+        d.complement(1000UZ);
+        BOOST_CHECK(d.contains(1000UZ));
+        BOOST_CHECK_EQUAL(d.size(), 2UZ);
+
+        // And toggling it back is the erase, without shrinking.
+        d.complement(1000UZ);
+        BOOST_CHECK(not d.contains(1000UZ));
+        BOOST_CHECK_EQUAL(d.size(), 1UZ);
 }
 
 // The two growths the set reading computes by addition, both of them over a size_t the caller names and neither of them bounded by a width. lo + len - 1 and width + n are the sums, and a wrapped one is a width below where the operation then writes.

@@ -57,9 +57,20 @@ public:
         // The width as a type, dynamic_extent where there is none: what a reading asks when it needs the width before an object exists.
         static constexpr std::size_t extent = N;
 
-        // The widest width a size_t can count in whole blocks: the ceiling every growth below is measured against, and the one the readings inherit, having none of their own. What the blocks can actually hold is narrower still, and that ceiling is max_size().
+        // How many blocks a run-time width needs, floored at one like num_blocks_v. Total over every size_t, and said as boost's own calc_num_blocks says it -- divide, then round up by the remainder -- because that CANNOT overflow, where align_up(n, bits_per_block) adds first and wraps for the 63 widths above max_width, rounding them to zero blocks that the floor then turns into one. A guard against that wrap is a guard against a spelling; this spelling has nothing to guard. Public because that totality is the claim, and a static_assert is the only way to make it without asking an allocator for two exabytes.
+        [[nodiscard]] static constexpr auto blocks_for(std::size_t n) noexcept
+                -> std::size_t
+        {
+                return std::ranges::max((n / bits_per_block) + (n % bits_per_block != 0UZ ? 1UZ : 0UZ), 1UZ);
+        }
+
+        // The widest width a size_t can count in whole blocks, and the widest a ptrdiff_t can: the two ceilings the readings choose between, neither of them enforced here. What the blocks can actually hold is narrower still, and that is max_size() and the two answers beside it.
         static constexpr auto max_num_blocks = std::numeric_limits<std::size_t>::max() / bits_per_block;
         static constexpr auto max_width      = max_num_blocks * bits_per_block;
+
+        // A width whose positions a difference_type can all name: what a random access range over these blocks can address, and so what std::vector<bool> reports and refuses against. Whole blocks, like the one above.
+        static constexpr auto max_addressable_num_blocks = static_cast<std::size_t>(std::numeric_limits<std::ptrdiff_t>::max()) / bits_per_block;
+        static constexpr auto max_addressable_width      = max_addressable_num_blocks * bits_per_block;
 
 private:
         static constexpr auto static_num_bits   = has_static_size ? align_up(N, bits_per_block) : 0UZ;
@@ -76,26 +87,6 @@ private:
         static constexpr auto static_used_bits       = has_static_size and N == 0 ? zero : shr(ones, static_num_unused_bits);
         static constexpr auto static_unused_bits     = static_cast<block_type>(~static_used_bits);
         static constexpr auto static_has_unused_bits = has_static_size and static_used_bits != ones;
-
-        // How many blocks a run-time width needs, floored at one like num_blocks_v. The width is a precondition, not a question: align_up wraps above max_width, and the rounding of a width near the top of size_t is zero blocks, which the floor then turns into one. check_width is what establishes it.
-        [[nodiscard]] static constexpr auto blocks_for(std::size_t n) noexcept
-                -> std::size_t
-        {
-                assert(n <= max_width);
-                return std::ranges::max(align_up(n, bits_per_block) / bits_per_block, 1UZ);
-        }
-
-        // The ceiling, at the four doors a width the caller named comes in by: the two width constructors, resize and reserve. std::length_error is what a container throws for a size it cannot represent; what the blocks can actually hold is narrower, and theirs to answer -- they are handed a block count and throw length_error for one they cannot reach.
-        //
-        // Here rather than inside blocks_for, which every growth reaches: clear() resizes to zero, pop_back() to one less, and grow_to_admit to another storage's own width -- none of the three names a width of its own, so none can fail this, and each is reached from something declared noexcept. A throw they cannot reach is still one bugprone-exception-escape traces into them, so all three go to resize_to, the growth behind this.
-        [[nodiscard]] static constexpr auto check_width(std::size_t n)
-                -> std::size_t
-        {
-                if (n > max_width) {
-                        throw length_error(n);
-                }
-                return n;
-        }
 
         // An NSDMI, not extent-constrained constructors: vector starts empty.
         [[nodiscard]] static constexpr auto make_blocks(std::size_t n [[maybe_unused]])
@@ -125,7 +116,7 @@ public:
         [[nodiscard]] constexpr explicit contiguous_bit_container(std::size_t n)
                 requires (not has_static_size)
         :
-                m_size(check_width(n)),
+                m_size(n),
                 m_blocks(make_blocks(n))
         {}
 
@@ -141,7 +132,7 @@ public:
                 requires (not has_static_size) and std::same_as<Alloc, typename Blocks::allocator_type>
         [[nodiscard]] constexpr contiguous_bit_container(std::size_t n, Alloc const& alloc)
         :
-                m_size(check_width(n)),
+                m_size(n),
                 m_blocks(blocks_for(n), alloc)
         {}
 
@@ -264,6 +255,26 @@ public:
         }
 
         // base positions and count more, saturated at the top of size_t rather than wrapped: the one addition every growth is spelled through, here and in the three readings. A wrapped sum is small, so it passes the ceiling it was meant to fail and then sizes the blocks for far fewer positions than the operation goes on to write; a saturated one fails that ceiling, which is what an unrepresentable width should do. blocks_for is where it fails, with std::length_error.
+        // The ceiling, and no longer the storage's own: blocks_for divides and cannot wrap, so nothing here needs a bounded width to stay safe. What is left is a policy, and the policy belongs to the reading, because the counterparts disagree about it. std::vector throws length_error for a size it cannot represent and the sequence reading says so with this; the set reading refuses a key past the widest it could grow to, and says so with this; boost::dynamic_bitset has no ceiling at all -- its calc_num_blocks divides as blocks_for now does, and a width it cannot hold reaches the allocator and answers bad_alloc. The bitset reading is a strict extension of boost, so it calls none of this and answers as boost does.
+        [[nodiscard]] static constexpr auto check_width(std::size_t n)
+                -> std::size_t
+        {
+                if (n > max_width) {
+                        throw length_error(n);
+                }
+                return n;
+        }
+
+        // The same refusal against the other ceiling, for the reading whose counterpart keeps that one: [container.reqmts] puts a sequence's at max_size(), and a size past what a distance can name is std::length_error there as it is in std::vector<bool>.
+        [[nodiscard]] static constexpr auto check_addressable_width(std::size_t n)
+                -> std::size_t
+        {
+                if (n > max_addressable_width) {
+                        throw addressable_length_error(n);
+                }
+                return n;
+        }
+
         [[nodiscard]] static constexpr auto width_sum(std::size_t base, std::size_t count) noexcept
                 -> std::size_t
         {
@@ -271,7 +282,7 @@ public:
                 return count > top - base ? top : base + count;
         }
 
-        // In bits: the width, or the widest whole number of blocks the blocks can hold and the address space can count.
+        // In bits: the width, or the widest whole number of blocks the blocks can hold and the address space can count. The set reading's answer, having no counterpart that names another.
         [[nodiscard]] constexpr auto max_size() const noexcept
                 -> std::size_t
         {
@@ -280,6 +291,25 @@ public:
                 } else {
                         return std::ranges::min(m_blocks.max_size(), max_num_blocks) * bits_per_block;
                 }
+        }
+
+        // boost::dynamic_bitset's answer over the same blocks, which saturates where the one above clamps: boost multiplies the blocks' limit by the bits in one and gives SIZE_MAX where that product is not representable, sixty-three positions above max_width. Said as a sum and not as boost's choice: bits_per_block is a power of two, so SIZE_MAX is max_width plus one block's bits less one, and the clamped answer needs exactly that much back wherever the clamp bit. A choice would be a branch whose two arms belong to different allocators -- std::allocator's ceiling always saturates -- and no one instantiation could take both.
+        [[nodiscard]] constexpr auto saturating_max_size() const noexcept
+                -> std::size_t
+        {
+                if constexpr (has_static_size) {
+                        return N;
+                } else {
+                        auto const saturates = static_cast<std::size_t>(m_blocks.max_size() > max_num_blocks);
+                        return max_size() + (saturates * (bits_per_block - 1UZ));
+                }
+        }
+
+        // std::vector<bool>'s answer over the same blocks, which clamps further: a random access range's positions are counted by a difference_type, so a width above max_addressable_width has distances it cannot represent, whatever the blocks could hold.
+        [[nodiscard]] constexpr auto addressable_max_size() const noexcept
+                -> std::size_t
+        {
+                return std::ranges::min(max_size(), max_addressable_width);
         }
 
         [[nodiscard]] constexpr auto size() const noexcept
@@ -733,7 +763,7 @@ public:
                 requires (not has_static_size)
         {
                 // The ceiling first, so a width this storage cannot count throws before anything below is written.
-                resize_to(check_width(n), value);
+                resize_to(n, value);
         }
 
         // Widen just enough to hold every element the other has, and not at all when it has none above this width. Its largest element, not its size(), is what the growing insert of each in turn would have reached. A static width has nothing to widen and no other width to meet, so there the whole thing is nothing. Through resize_to, as clear() and pop_back() are: the width comes from the other storage's own, so it is one this one can count already, and asking the ceiling here would put its throw on every set operation across widths.
@@ -810,7 +840,7 @@ public:
                 -> void
                 requires (not has_static_size) and requires (Blocks& b) { b.reserve(blocks_for(n)); }
         {
-                m_blocks.reserve(blocks_for(check_width(n)));
+                m_blocks.reserve(blocks_for(n));
         }
 
         [[nodiscard]] constexpr auto capacity() const noexcept
@@ -1248,11 +1278,16 @@ private:
                 requires (not has_static_size)
         {
                 auto const count = blocks_for(n);
-                // Growing with ones: the tail above size() in the last block is clear by the invariant, and becomes the first new bits.
+                // Growing with ones: the tail above size() in the last block is clear by the invariant, and becomes the first new bits. Which block and which bits is read off the OLD width, so it is taken before the blocks grow; the write itself comes after, because m_blocks.resize is what refuses a count these blocks cannot hold, and a refused growth that had already dirtied the tail would leave this storage with a width it no longer matches. Measured on blocks that hold three: refused at a width of 25, the next resize(20) came back with every bit above 9 set and count() at 8 where 1 was set.
                 if (value and n > size()) {
-                        m_blocks[last_block()] |= static_cast<block_type>(~used_bits());
+                        auto const index = last_block();
+                        auto const tail  = static_cast<block_type>(~used_bits());
+                        m_blocks.resize(count, ones);
+                        m_blocks[index] |= tail;
+                } else {
+                        // No new block can be a one here: either the value is false, or the width is not growing, and a width that is not growing asks for no block it does not already have.
+                        m_blocks.resize(count, zero);
                 }
-                m_blocks.resize(count, value ? ones : zero);
                 m_size = n;
                 erase_unused();
         }
@@ -1264,6 +1299,17 @@ private:
                         std::format(
                                 "{}:{}:{}: exception: ‘{}‘: argument ‘n‘ is no width this storage can count [{} > {}]",
                                 loc.file_name(), loc.line(), loc.column(), loc.function_name(), n, max_width
+                        )
+                );
+        }
+
+        // The same, against the ceiling a difference_type sets rather than the one a size_t sets.
+        [[nodiscard]] static constexpr auto addressable_length_error(std::size_t n, std::source_location const& loc = std::source_location::current())
+        {
+                return std::length_error(
+                        std::format(
+                                "{}:{}:{}: exception: ‘{}‘: argument ‘n‘ is no width a distance can name [{} > {}]",
+                                loc.file_name(), loc.line(), loc.column(), loc.function_name(), n, max_addressable_width
                         )
                 );
         }

@@ -3,6 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/sanitizer.hpp>                         // IWYU pragma: keep; TEST_HAS_ADDRESS_SANITIZER
 #include <test/sequence/concepts.hpp>                 // bit_sequence
 #include <test/sequence/dense.hpp>                    // yields_every_position
 #include <xstd/bits/bit_array.hpp>                    // basic_bit_array
@@ -11,15 +12,18 @@
 #include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
 #include <xstd/bits/ownership.hpp>                    // ownership
 #include <xstd/bits/sequence_adaptor.hpp>             // sequence_adaptor
-#include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_LT, BOOST_CHECK_THROW
 #include <algorithm>                                  // copy, equal
 #include <concepts>                                   // same_as
-#include <cstddef>                                    // size_t
+#include <cstddef>                                    // ptrdiff_t, size_t
 #include <cstdint>                                    // uint8_t
 #include <functional>                                 // hash
 #include <iterator>                                   // next
+#include <limits>                                     // numeric_limits
 #include <memory>                                     // allocator
+#include <new>                                        // IWYU pragma: keep; bad_alloc, named only without TEST_HAS_ADDRESS_SANITIZER
 #include <ranges>                                     // equal, from_range, iota, next, transform
+#include <stdexcept>                                  // length_error
 #include <type_traits>                                // is_default_constructible_v
 #include <utility>                                    // move
 #include <vector>                                     // vector
@@ -149,7 +153,12 @@ BOOST_AUTO_TEST_CASE(ItGrowsLikeAStdVector)
         v.shrink_to_fit();
         BOOST_CHECK_GE(v.capacity(), v.size());
 
-        BOOST_CHECK_EQUAL(v.max_size(), xstd::detail::bits::contiguous_bit_vector<std::uint8_t>().max_size());
+        // A std::vector<bool>'s ceiling, which is what a distance can name and not what the blocks could hold: whole blocks no wider than PTRDIFF_MAX, where the storage's own bound is whole blocks no wider than SIZE_MAX.
+        BOOST_CHECK_EQUAL(v.max_size(), xstd::detail::bits::contiguous_bit_vector<std::uint8_t>::max_addressable_width);
+        BOOST_CHECK_LT(v.max_size(), xstd::detail::bits::contiguous_bit_vector<std::uint8_t>().max_size());
+        BOOST_CHECK_LE(v.max_size(), static_cast<std::size_t>(std::numeric_limits<std::ptrdiff_t>::max()));
+        BOOST_CHECK_EQUAL(v.max_size() % 8UZ, 0UZ);
+        BOOST_CHECK_THROW(v.resize(v.max_size() + 1UZ), std::length_error);
 
         v.clear();
         BOOST_CHECK(v.empty());
@@ -164,6 +173,55 @@ auto model_of(R const& r)
         -> std::vector<bool>
 {
         return std::vector<bool>(r.begin(), r.end());
+}
+
+// The ceiling row for row against the counterpart, asked of both rather than claimed of one. Over blocks of the
+// same width as a std::vector<bool>'s word, which is what xstd::bit_vector is, so the two are comparable at all.
+//
+// The counterpart here is a SPECIFICATION and not an implementation, and its implementations disagree: measured
+// on one machine, libstdc++ 14 answers (PTRDIFF_MAX / 64) * 64 and libc++ 20 answers a bare PTRDIFF_MAX, sixty-
+// three apart. So there is no number to assert. What holds of every one of them is asserted instead, and it is
+// what [container.reqmts] actually promises -- a bound no wider than a difference_type can name, and
+// std::length_error above it -- plus the one relation that orders the two: a whole number of 64-bit words is the
+// SMALLEST such bound any word width can produce, so ours is never the larger claim.
+BOOST_AUTO_TEST_CASE(TheCeilingIsStdVectorBoolsRowForRow)
+{
+        constexpr auto pmax = static_cast<std::size_t>(std::numeric_limits<std::ptrdiff_t>::max());
+        auto v = xstd::bit_vector();
+        auto m = std::vector<bool>();
+
+        // Both bound by what a distance can name, and ours never above theirs.
+        BOOST_CHECK_LE(v.max_size(), pmax);
+        BOOST_CHECK_LE(m.max_size(), pmax);
+        BOOST_CHECK_LE(v.max_size(), m.max_size());
+        BOOST_CHECK_EQUAL(v.max_size() % 64UZ, 0UZ);
+
+        // One past each one's own bound is std::length_error on both, and neither asks for memory first: this is
+        // the row [container.reqmts] fixes, and the reason it cannot wrap is that a bound at or below PTRDIFF_MAX
+        // leaves room to add one.
+        BOOST_CHECK_THROW(v.resize(v.max_size() + 1UZ), std::length_error);
+        BOOST_CHECK_THROW(m.resize(m.max_size() + 1UZ), std::length_error);
+
+        // And one past what any distance can name, which is the row this reading used to get wrong: it answered
+        // std::bad_alloc here, having taken the storage's wider ceiling, where a std::vector<bool> answers
+        // std::length_error. Roughly 2^63 sizes with the wrong exception, and this is the assertion that closes it.
+        BOOST_CHECK_THROW(v.resize(pmax + 1UZ), std::length_error);
+        BOOST_CHECK_THROW(m.resize(pmax + 1UZ), std::length_error);
+
+        // Nothing moved: a refused growth is not a partial one.
+        BOOST_CHECK(v.empty());
+        BOOST_CHECK(m.empty());
+
+#ifndef TEST_HAS_ADDRESS_SANITIZER
+
+        // The last row asks for the memory rather than refusing, so it is the allocator that answers, and under a
+        // sanitizer the answer is an abort rather than an exception (test/sanitizer.hpp). Ours only: at their own
+        // max_size() the two libraries measured do not agree with each other either -- libstdc++ reaches the
+        // allocator, libc++ throws std::length_error at a size it just reported -- so there is nothing to compare.
+        BOOST_CHECK_THROW(v.resize(v.max_size()), std::bad_alloc);
+        BOOST_CHECK(v.empty());
+
+#endif
 }
 
 // std::vector<bool>'s append_range and insert_range, spelled through insert for the standard libraries that lack them.
