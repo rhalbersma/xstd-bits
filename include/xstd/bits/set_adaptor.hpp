@@ -335,8 +335,8 @@ public:
                         if (not std::ranges::empty(rg)) {
                                 auto const lo  = static_cast<value_type>(*std::ranges::begin(rg));
                                 auto const len = static_cast<std::size_t>(std::ranges::distance(rg));
-                                // The last position first, so a growable storage is already wide enough for the fill and a fixed one asserts exactly where an element-wise insert would have.
-                                self.storage().growing_insert(lo + len - 1UZ);
+                                // The last position first, so a growable storage is already wide enough for the fill and a fixed one asserts exactly where an element-wise insert would have. Through the saturating sum, an iota_view near the top of size_t being a range whose last position lo + len - 1 does not compute.
+                                self.storage().growing_insert(bits_type::width_sum(lo, len - 1UZ));
                                 self.storage().set(lo, len, true);
                         }
                 } else {
@@ -476,7 +476,8 @@ public:
                 if constexpr (has_static_width) {
                         self.storage() <<= n;
                 } else if (auto const width = self.storage().size(); width > 0UZ) {
-                        self.storage().resize(width + n);
+                        // width + n through the storage's saturating sum: the width is no precondition here, so n is every size_t, and a wrapped width would resize this set down and then shift it by more than it holds. A translation past the positions there are is std::length_error, which is the resize's answer, not this one's.
+                        self.storage().resize(bits_type::width_sum(width, n));
                         self.storage() <<= n;
                 }
                 return self;
