@@ -15,6 +15,10 @@
 // Every other leg of this ladder answers those rows, which is measured too: the nine failures that led here
 // were all sanitized builds or a discarded temporary an optimizer elided; the msvc and mingw legs, which are
 // neither, never failed on them at all. So the rows are guarded on this and on nothing else.
+//
+// Declare anything a guarded block needs INSIDE it. The clang legs compile with -Weverything -Werror, so a
+// variable named outside a block that is the only thing using it is an unused-variable error on exactly the legs
+// the guard is for -- which is how this comment came to be here.
 #if defined(__SANITIZE_ADDRESS__)
 
 #define TEST_HAS_ADDRESS_SANITIZER

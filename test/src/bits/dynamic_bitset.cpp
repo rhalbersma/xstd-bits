@@ -227,8 +227,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheCeilingIsBoostsRowForRow, T, Dynamic)
 {
         using Block = T::block_type;
         using Boost = boost::dynamic_bitset<Block>;
-        constexpr auto top  = std::numeric_limits<std::size_t>::max();
-        constexpr auto pmax = static_cast<std::size_t>(std::numeric_limits<std::ptrdiff_t>::max());
+        constexpr auto top = std::numeric_limits<std::size_t>::max();
 
         auto d = T();
         auto b = Boost();
@@ -255,7 +254,9 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheCeilingIsBoostsRowForRow, T, Dynamic)
         BOOST_CHECK_THROW(b.resize(b.max_size()), std::bad_alloc);
 
         // Including the width a distance cannot name, which the sequence reading beside this one refuses with
-        // std::length_error and this one does not, because boost does not.
+        // std::length_error and this one does not, because boost does not. Named here rather than above, where a
+        // guarded-out block would leave it unused and -Weverything -Werror would say so.
+        constexpr auto pmax = static_cast<std::size_t>(std::numeric_limits<std::ptrdiff_t>::max());
         BOOST_CHECK_THROW(d.resize(pmax + 1UZ), std::bad_alloc);
         BOOST_CHECK_THROW(b.resize(pmax + 1UZ), std::bad_alloc);
 
