@@ -2230,6 +2230,30 @@ means it goes one way, code written against `std::bitset` compiling unchanged on
 reverse. The harness's raw `std::bitset` and raw boost arms are the oracle for the inclusion, and the
 elementwise readings are the oracle for what is added.
 
+The surface is **not** identical to boost's, and it is worth having the difference written down rather than
+implied. Measured one call per process, so that an assert's abort is observable, against Boost 1.83:
+
+| `xstd::dynamic_bitset` against `boost::dynamic_bitset<>` | boost | here |
+|---|---|---|
+| `set(pos, len, val)` past the width | assert | `out_of_range` |
+| `set(pos, val)`, `test(pos)` past the width | assert | assert |
+| `at(pos)` past the width | `out_of_range` | `out_of_range` |
+| `&=`, `\|=`, `is_subset_of` across unequal widths | assert | answers |
+| `a < b` across unequal widths | answers | answers |
+| the string constructor, `pos` past the string | assert | `out_of_range` |
+| the string constructor, a character that is neither | assert | `invalid_argument` |
+| `to_ulong()` with a position past the word | `overflow_error` | `overflow_error` |
+| a width above `max_width` | `bad_alloc` | `length_error` |
+
+Every row where the two differ is a row where **boost asserts**, which is to say the expression is not one boost
+defines -- and defining it, or throwing for it, is what an extension may do. Every row but the last. A width
+above `max_width` is valid on boost: it reaches the allocator and answers `bad_alloc`, where `check_width`
+answers `std::length_error` ([the-sum-that-wraps](#the-sum-that-wraps)). Both fail and construct nothing, and
+the divergence begins only where the allocation could never have succeeded, but a program catching `bad_alloc`
+alone would not catch this one. `length_error` is what a container throws for a size it cannot represent, which
+is `std::vector`'s convention rather than boost's, and it is the one place the sentence above should be read as
+"the same exceptions, and this".
+
 The rule governs **expressions**, and one thing it deliberately does not govern is **where an operator sits**.
 `operator==` and the shifts are hidden friends where `std::bitset` makes all three members
 ([the-comparison-is-a-hidden-friend](#the-comparison-is-a-hidden-friend)). Every call is unchanged -- `a == b`,
@@ -2255,8 +2279,13 @@ storage's own forward step from the last position the word holds, and the word c
 
 Three additions are ours, with no counterpart on either side. `find_last()` and `find_prev(pos)` mirror
 boost's forward pair: the highest set position below `pos`, `npos` where none, a `pos` past the width meaning
-from the end, so `find_prev(npos)` is `find_last()` the way boost's `find_next(npos)` wraps to `find_first()`,
-and the two loops are each other's reverse. They are total, and the storage's reverse step is not, so
+from the end, so `find_prev(npos)` is `find_last()`, and the two loops are each other's reverse. The forward
+pair asks the same question in the other direction and therefore answers `npos` for such a `pos`: nothing is
+set above a position past the width. An earlier draft of this paragraph had boost's `find_next(npos)` wrapping
+round to `find_first()` instead, and that is not what boost does -- its body opens
+`if (pos >= (sz-1) || sz == 0) return npos`, measured as well as read. Ours wrapped, which is what that
+sentence was describing rather than boost, until the guard in [the-one-guard](#the-one-guard) made the forward
+scan total. They are total, and the storage's reverse step is not, so
 `find_prev` restores totality itself, in the two comparisons the width already affords
 ([the-cheapest-contract](#the-cheapest-contract)).
 `operator<=>` is the bit string's order, boost's, at both widths ([the-ordering-invariant](#the-ordering-invariant)),
