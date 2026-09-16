@@ -1811,6 +1811,8 @@ width it asks for by **addition** over a `size_t` the caller names, and every on
 | `set_adaptor::operator<<=` at a run-time width | `width + n`, the translation being total over `size_t` |
 | `set_adaptor::insert_range`, consecutive tier | `lo + len - 1`, the range's last position |
 | `sequence_adaptor::insert(position, n, value)` | `size() + n` |
+| `sequence_adaptor::blit` | `size() + count`, the source's own width |
+| `sequence_adaptor::pack` | `size() + ranges::size(rg)`, reserved ahead of the packing loop |
 | `bitset_adaptor::guard_range` | `pos + len`, against `size()` |
 
 A wrapped sum is **small**. It passes the ceiling it was meant to fail, and the operation then proceeds against
@@ -1862,6 +1864,16 @@ allocation fails long before, so a branch there is one no test can reach and the
 say so. The reserve inside `append(first, last)` is left alone for a different reason: it is an optimization, and
 a wrapped count there under-reserves, where the appends that follow still raise the width one checked step at a
 time.
+
+`sequence_adaptor::pack` reserves the same way and is **not** left alone, and the difference is what the count
+is bounded by. `append(first, last)` is handed iterators over blocks that exist, so its distance is bounded by
+what the caller already allocated and cannot reach the top of `size_t`. `pack` is handed a range of `bool`, and
+a sized range answers `size()` for elements it never materializes: `d.append_range(views::iota(0UZ, SIZE_MAX))`
+is one call, and `size() + SIZE_MAX` wraps for every `d` that is not empty. Wrapped, the reserve asks for
+nothing and returns, and the packing loop then walks a range of `2^64` elements a word at a time -- so the
+`length_error` the same call answers **immediately** on an empty sequence becomes, one element in, a call that
+ends when the allocator gives out rather than when the range does. Saturated it is that `length_error` at
+both.
 
 **Where the counterparts stand**, measured rather than assumed -- Boost 1.83, libstdc++ 14, `-O2 -DNDEBUG
 -fsanitize=address,undefined`:
@@ -2342,6 +2354,55 @@ range's last position before it writes anything, so that one is all or nothing.
 
 Erasing stays total like `contains`: removing what is not there is the no-op returning zero that
 `std::set::erase` is.
+
+### indexing-is-a-precondition
+
+The third reading answers the same question a third way, and the answer is `[sequence.reqmts]`'s rather than
+ours. Asking a set is total ([asking-is-total](#asking-is-total)); a bitset's element access throws or asserts
+by extent ([the-one-guard](#the-one-guard)); a **sequence indexes**, and out of range is out of bounds.
+
+`at(n)` is the one member that answers: `std::out_of_range` at every extent and through every handle -- the
+static owner, the dynamic one, a view and a window alike, the window measuring `n` against its own size and
+not the storage's. Everything else is a precondition, exactly as `std::vector`, `std::array` and `std::span`
+have it, and `operator[]` beside `at()` is the pair the standard itself draws the line between.
+
+A precondition is not licence to say nothing when it is violated, and at five members this reading said
+nothing -- or said it a function away, which for a diagnostic is nearly the same thing. Measured under
+`-O1 -DNDEBUG -fsanitize=address`, libstdc++ 14 without `_GLIBCXX_ASSERTIONS`:
+
+| the precondition | `std::vector<bool>` | here, before | here, now |
+|---|---|---|---|
+| `front()` on an empty sequence | segfault | reads the block a floored count leaves and answers `false` | `assert(not empty())` |
+| `back()` on an empty sequence | segfault | `offset() + size() - 1UZ` wraps: segfault | `assert(not empty())` |
+| `erase(cend())` | erases the last element | erases the last element | `assert(position != cend())` |
+| `insert(cend() + 3, v)` | inserts anyway: size 2, iterator at 4 | the same, to the number | `assert` in `index_of` |
+| `erase(cbegin() + 3, cbegin() + 1)` | size **grows**, 4 to 6 | size grows, 4 to 6 | `assert(first <= last)` |
+
+The counterpart column is why none of this is a contract change. Every row is undefined on `std::vector<bool>`
+and undefined here, and an assert can only fire where the program was already undefined -- the one direction an
+extension may take ([a-strict-extension](#a-strict-extension)). What it buys is the diagnostic, and the rule is
+that the precondition is stated at the member the caller named. A debug build did catch four of these five, but
+one call down: `front()` and `back()` on an empty sequence were the storage's own `is_valid(n)`, reached only
+once the proxy they returned was read, and the two bad iterators were `first`'s and `subspan`'s
+`count <= size()` from inside `rebuild`. A failure that names `subspan` for a bad argument to `erase` points at
+the wrong function, which is worse than a blunt one; it is the same reason `operator[]` says `n < size()` where
+`test(n)` would have said it again. The fifth, the reversed erase range, was caught nowhere: both of its
+indices are inside the sequence, so nothing below it had anything to object to, and it grew a four-element
+sequence to six in a debug build as readily as in a release one.
+
+The iterator preconditions are said **once**, in `index_of`, which is the one place a caller's iterator becomes
+an index and is reached by all five members that take one. Half of that precondition was already the iterator's
+own: `operator-` and `operator<=>` assert `m_ptr == m_ptr`, so an iterator into another sequence never arrives
+here. What is left is the range, `cbegin() <= position` and `position <= cend()`, and past either end the
+subtraction below it is a `size_type` that wraps or an index the rebuild then writes through.
+
+`erase(first, last)` adds the one thing neither iterator says on its own -- that they are in that order -- and
+`erase(position)` the one `[sequence.reqmts]` asks of the single-position form, that the position is
+dereferenceable and so not `cend()`. What holds them honest is the sweep that was already there:
+`test/src/bits/bit_vector.cpp` runs `insert` in its value, fill, iterator-pair and initializer-list shapes,
+`insert_range`, `emplace`, and `erase` in both of its own -- at positions including `cbegin()` and `cend()`,
+and over empty ranges -- each against the `std::vector<bool>` that models it. Every one of those positions is a
+valid one, and the asserts are now on underneath them.
 
 ### unchecked-writes-in-views
 

@@ -470,6 +470,8 @@ public:
                 -> iterator
                 requires can_grow
         {
+                // Dereferenceable, which cend() is not: [sequence.reqmts] asks that of the single-position erase, and position + 1 past it is a range index_of would have to answer for.
+                assert(position != cend());
                 return erase(position, position + 1);
         }
 
@@ -477,6 +479,8 @@ public:
                 -> iterator
                 requires can_grow
         {
+                // A range, not two positions: index_of establishes that each is one of ours, and this that they are in that order, which the rebuild's tail subtraction needs and neither of them says.
+                assert(first <= last);
                 return rebuild(index_of(first), index_of(last), [](sequence_adaptor&) -> void {});
         }
 
@@ -681,8 +685,9 @@ public:
                 throw out_of_range(n, self.size());
         }
 
-        [[nodiscard]] constexpr auto front(this auto&& self) noexcept -> reference_t<decltype(self)> { return { &self.storage(), self.offset() }; }
-        [[nodiscard]] constexpr auto back (this auto&& self) noexcept -> reference_t<decltype(self)> { return { &self.storage(), self.offset() + self.size() - 1UZ }; }
+        // Both are preconditions in [sequence.reqmts], and back()'s is the one that subtracts: on an empty sequence offset() + size() - 1UZ wraps, and the reference handed back names a position no storage has. Said at the member the caller named rather than left to the storage's own assert a call down, for the reason operator[] says n < size() where test(n) would say it again.
+        [[nodiscard]] constexpr auto front(this auto&& self) noexcept -> reference_t<decltype(self)> { assert(not self.empty()); return { &self.storage(), self.offset() }; }
+        [[nodiscard]] constexpr auto back (this auto&& self) noexcept -> reference_t<decltype(self)> { assert(not self.empty()); return { &self.storage(), self.offset() + self.size() - 1UZ }; }
 
         // The owner's alone, following span: a handle declines to say whether it compares its referent or its contents. Defaulted, the storage being the one member.
         [[nodiscard]] friend constexpr auto operator==(sequence_adaptor const& x, sequence_adaptor const& y) noexcept -> bool requires is_owner = default;
@@ -779,13 +784,15 @@ private:
         {
                 constexpr auto digits = bits_type::bits_per_block;
                 auto const old = size();
+                // Through the storage's saturating sum, as every width this reading computes is: count is the source's own, so a wrapped total would resize this sequence DOWN and answer an append with something shorter than it started from.
+                auto const total = bits_type::width_sum(old, count);
                 if constexpr (requires (bits_type& b, std::size_t n) { b.reserve(n); }) {
-                        m_bits.reserve(old + count);
+                        m_bits.reserve(total);
                 }
                 for (auto pos = first; pos < first + count; pos += digits) {
                         m_bits.append(src.block_at(pos));
                 }
-                m_bits.resize(old + count);
+                m_bits.resize(total);
         }
 
         // Tier two: the bools packed into words, boost's bit_appender, and the last word trimmed to what it holds.
@@ -795,8 +802,9 @@ private:
         {
                 using block_type = bits_type::block_type;
                 constexpr auto digits = bits_type::bits_per_block;
+                // Saturating for the reason blit's total is, and here the width is the caller's own to name: a sized range says how many it has without holding them, so size() + that is the one sum in this reading a caller can wrap on purpose. Wrapped it under-reserves to nothing and the appends below then run out the range one word at a time; saturated it is the length_error reserve already throws.
                 if constexpr (std::ranges::sized_range<R> and requires (bits_type& b, std::size_t n) { b.reserve(n); }) {
-                        m_bits.reserve(size() + std::ranges::size(rg));
+                        m_bits.reserve(bits_type::width_sum(size(), static_cast<std::size_t>(std::ranges::size(rg))));
                 }
                 auto block = block_type{};
                 auto n = 0UZ;
@@ -831,9 +839,11 @@ private:
                 return begin() + static_cast<difference_type>(pos);
         }
 
+        // The one place a caller's iterator becomes an index, so [sequence.reqmts]'s precondition on it is said once here rather than at each of the five members that pass one. An iterator into another sequence is already the iterator's own assert, m_ptr against m_ptr; what is left is this one, and past either end the subtraction below is a size_type that wraps or an index the rebuild then writes through.
         [[nodiscard]] constexpr auto index_of(const_iterator position) const noexcept
                 -> size_type
         {
+                assert(cbegin() <= position and position <= cend());
                 return static_cast<size_type>(position - cbegin());
         }
 
