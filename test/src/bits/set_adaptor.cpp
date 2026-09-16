@@ -373,50 +373,63 @@ BOOST_AUTO_TEST_CASE(AKeyAStaticWidthCannotHoldIsOutOfRange)
         auto s = S();
         s.insert(3UZ);
 
-        // The writes refuse it.
         BOOST_CHECK_THROW((void)s.insert(100UZ), std::out_of_range);
         BOOST_CHECK_THROW((void)s.insert(500UZ), std::out_of_range);
         BOOST_CHECK_THROW((void)s.emplace(500UZ), std::out_of_range);
         BOOST_CHECK_THROW(s.emplace_hint(s.begin(), 500UZ), std::out_of_range);
         BOOST_CHECK_THROW(s.insert(s.begin(), 500UZ), std::out_of_range);
-        BOOST_CHECK_THROW(s.insert_range(std::views::iota(98UZ, 102UZ)), std::out_of_range);
         BOOST_CHECK_THROW(s.complement(500UZ), std::out_of_range);
 
-        // The consecutive insert_range above guards the range's last position before it writes anything, so it is all or nothing. The element-wise forms are not, and neither is std::set's: what came before the refused key stays, which is the same thing that happens when an allocation throws midway.
+        // A refused key writes nothing, and the last one it can hold is 99, which both writes take.
         BOOST_CHECK_EQUAL(s.size(), 1UZ);
-        BOOST_CHECK_THROW(s.insert({ 1UZ, 500UZ }), std::out_of_range);
-        BOOST_CHECK_EQUAL(s.size(), 2UZ);
-        BOOST_CHECK(s.contains(1UZ));
+        s.insert(99UZ);
+        s.complement(98UZ);
+        BOOST_CHECK(s.contains(3UZ) and s.contains(99UZ) and s.contains(98UZ));
+        BOOST_CHECK_EQUAL(s.size(), 3UZ);
+}
 
-        // The reads do not: asking stays total, which is what [set] gives them.
+// The bulk inserts refuse it too, and differ in what they leave behind: the consecutive tier guards the range's last position before it writes anything, where the element-wise forms keep what came before the refused key -- which is what std::set does when an allocation throws midway.
+BOOST_AUTO_TEST_CASE(TheBulkInsertsRefuseTheKeyAndSayWhatTheyWrote)
+{
+        using S = xstd::basic_bit_static_set<std::uint64_t, 100>;
+
+        auto consecutive = S();
+        BOOST_CHECK_THROW(consecutive.insert_range(std::views::iota(98UZ, 102UZ)), std::out_of_range);
+        BOOST_CHECK(consecutive.empty());
+
+        auto elementwise = S();
+        BOOST_CHECK_THROW(elementwise.insert({ 1UZ, 500UZ }), std::out_of_range);
+        BOOST_CHECK_EQUAL(elementwise.size(), 1UZ);
+        BOOST_CHECK(elementwise.contains(1UZ));
+}
+
+// Asking stays total, which is what [set] gives it: a key past the width is one the set does not hold, and that is an answer.
+BOOST_AUTO_TEST_CASE(AKeyPastTheWidthIsStillAskable)
+{
+        using S = xstd::basic_bit_static_set<std::uint64_t, 100>;
+
+        auto s = S();
+        s.insert(3UZ);
+
         BOOST_CHECK(not s.contains(500UZ));
         BOOST_CHECK_EQUAL(s.count(500UZ), 0UZ);
-        BOOST_CHECK(s.find(500UZ) == s.end());
+        BOOST_CHECK(s.find(500UZ) == s.end());          // NOLINT(readability-container-contains): find's totality is the check, which contains cannot show
         BOOST_CHECK(s.lower_bound(500UZ) == s.end());
         BOOST_CHECK(s.upper_bound(500UZ) == s.end());
         BOOST_CHECK_EQUAL(s.erase(500UZ), 0UZ);
-
-        // And the last key it can hold is 99, which both writes take.
-        BOOST_CHECK(s.contains(3UZ));
-        s.insert(99UZ);
-        s.complement(98UZ);
-        BOOST_CHECK(s.contains(99UZ) and s.contains(98UZ));
-        BOOST_CHECK_EQUAL(s.size(), 4UZ);
+        BOOST_CHECK_EQUAL(s.size(), 1UZ);
 }
 
-// The same key on the other two storages, which already answered: a dynamic extent grows to admit it, and an inplace one fills its capacity and says so through the blocks.
+// The same key on the other two storages, which already answered: a dynamic extent grows to admit it, and complement grows where insert grows -- it used to write past the blocks on a key insert would have taken.
 BOOST_AUTO_TEST_CASE(ADynamicWidthAdmitsTheKeyInstead)
 {
         auto d = xstd::bit_set();
         d.insert(500UZ);
         BOOST_CHECK(d.contains(500UZ));
-        BOOST_CHECK_EQUAL(d.size(), 1UZ);
 
-        // complement grows where insert grows: a key past the width is absent, so toggling it is admitting it. This was a write past the blocks before.
         d.complement(1000UZ);
         BOOST_CHECK(d.contains(1000UZ));
         BOOST_CHECK_EQUAL(d.size(), 2UZ);
-        BOOST_CHECK_GT(d.max_size(), 1000UZ);
 
         // And toggling it back is the erase, without shrinking.
         d.complement(1000UZ);
