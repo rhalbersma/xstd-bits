@@ -914,6 +914,15 @@ The same gate is why a cursor lives inside the walk it belongs to rather than be
 block the walk is discarded, and a cursor declared outside would never be written — which
 `misc-const-correctness` reads, correctly, as a variable that should have been `const`.
 
+**A test that only makes a call fail instantiates the path it never runs**, and the same rule scores it. Three
+cases here each handed `append_range` a `views::iota | views::transform` whose sum saturates, to check that the
+reserve refuses it. Each wrote its own lambda, so each was a distinct closure type and a distinct instantiation
+of the packing tier — three of them, and in all three the reserve threw before the loop was entered, so every
+branch in that tier was one no test took: five short of the gate, on the two lines that shape the loop. One
+functor at namespace scope makes the three views one type, and a length the sequence can hold runs that
+instantiation's loop for real. The general form: when a range or a storage enters a template only through the
+path that refuses it, it arrives with the whole body's branches and none of them taken.
+
 ### an-assert-begins-its-line
 
 The gate excludes an assert from both counts, by `--exclude-lines-by-pattern` and
