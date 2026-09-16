@@ -304,15 +304,15 @@ Almost all existing `std::bitset<N>` code has **a direct translation** (i.e. ach
 | `std::bitset<N>`                | `xstd::bit_static_set<N>`              | Notes                                           |
 | :---------------                | :-----------------              | :----                                           |
 | `bs.set()`                      | `bs.fill()`                     | not a member of `std::set<int>`                 |
-| `bs.set(n)`                     | `bs.add(n)` <br> `bs.insert(n)` | no bounds-checking or `out_of_range` exceptions |
-| `bs.set(n, v)` <br> `bs[n] = v` | `v ? bs.add(n) : bs.pop(n)`     | no bounds-checking or `out_of_range` exceptions |
+| `bs.set(n)`                     | `bs.add(n)` <br> `bs.insert(n)` | `out_of_range` past `N`, where `std::bitset` throws it too |
+| `bs.set(n, v)` <br> `bs[n] = v` | `v ? bs.add(n) : bs.pop(n)`     | `out_of_range` past `N` on the insert; the erase is total |
 | `bs.reset()`                    | `bs.clear()`                    | returns `void` as `std::set<int>`, not `*this` as `std::bitset<N>`  |
-| `bs.reset(n)`                   | `bs.pop(n)` <br> `bs.erase(n)`  | no bounds-checking or `out_of_range` exceptions |
+| `bs.reset(n)`                   | `bs.pop(n)` <br> `bs.erase(n)`  | total over the key: erasing what is not there is the no-op returning zero |
 | `bs.flip()`                     | `bs.complement()`               | not a member of `std::set<int>`                 |
-| `bs.flip(n)`                    | `bs.complement(n)`              | no bounds-checking or `out_of_range` exceptions <br> not a member of `std::set<int>` |
+| `bs.flip(n)`                    | `bs.complement(n)`              | `out_of_range` past `N`, as the insert it is <br> not a member of `std::set<int>` |
 | `bs.count()`                    | `bs.size()`                     | |
 | `bs.size()`                     | `bs.max_size()`                 | `constexpr`; a constant expression at a static width |
-| `bs.test(n)` <br> `bs[n]`       | `bs.contains(n)`                | no bounds-checking or `out_of_range` exceptions |
+| `bs.test(n)` <br> `bs[n]`       | `bs.contains(n)`                | total over the key: a position past `N` is one the set does not hold |
 | `bs.all()`                      | `bs.full()`                     | not a member of `std::set<int>`                 |
 | `bs.any()`                      | `not bs.empty()`                | |
 | `bs.none()`                     | `bs.empty()`                    | |
@@ -320,7 +320,7 @@ Almost all existing `std::bitset<N>` code has **a direct translation** (i.e. ach
 The semantic differences between `xstd::bit_static_set<N>` and `std::bitset<N>` are:
 
 - `xstd::bit_static_set<N>` answers `max_size()` as a `constexpr` member, where `std::bitset<N>` answers the same question with `size()`;
-- `xstd::bit_static_set<N>` does not do bounds-checking for its members `insert`, `erase`, `replace` and `contains`. Instead of throwing an `out_of_range` exception for argument values outside the range `[0, N)`, this **behavior is undefined**. This gives `xstd::bit_static_set<N>` a small performance benefit over `std::bitset<N>`.
+- `xstd::bit_static_set<N>` splits its members by what `[set]` can promise. **Asking is total**: `contains`, `count`, `find`, `lower_bound`, `upper_bound`, `equal_range` and `erase(key)` all answer for a key outside `[0, N)` — it is a key the set does not hold, which is an answer and not a precondition violation, exactly as `std::set::find` returns `end()` for any key it does not hold. **Writing is not**: `insert` and `complement` have nowhere to put such a key, and throw `out_of_range` as `std::bitset<N>` does for a position past `N`. This used to be undefined instead, on the grounds of a performance benefit; measured on the sieve at `N = 2^16`, best of twenty-five, the guard costs nothing — 188.0µs against 188.1µs, and 75.1µs against 75.1µs over 65536 inserts — because the comparison is against a compile-time constant and never taken.
 
 Functionality from `std::bitset<N>` that is not in `xstd::bit_static_set<N>`:
 

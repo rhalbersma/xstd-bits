@@ -2313,13 +2313,32 @@ returns `end()` for any `k` it does not hold, never refuses the question — and
 the set reading and the sequence reading, where `sequence_adaptor::operator[]` indexes and out of range is
 out of bounds.
 
-`insert` carries no `noexcept`, for the reason `std::set::insert` carries none: growing a dynamic extent
-allocates. It is the one operation a set can be unable to satisfy, and only a **static** extent ever is — a
-fixed capacity cannot come to hold a position outside it, so that is the precondition violation. A dynamic
-extent grows to hold it, `[set]` giving `insert` no way to fail. Growing has a limit of its own, and it is the
-storage's rather than the address space's: `max_size()` ([max-size-is-the-bits](#max-size-is-the-bits)). Past it
-the answer is `std::length_error`, which is the one way `insert` on a dynamic extent can refuse a key
-([the-sum-that-wraps](#the-sum-that-wraps)).
+**Writing is not total**, and that is the whole of the asymmetry. `insert` carries no `noexcept`, for the reason
+`std::set::insert` carries none: growing a dynamic extent allocates. It is the one operation a set can be unable
+to satisfy — there is nowhere to put the key — and what the three storages say about that used to be three
+different things, one of them nothing:
+
+| | `insert(k)` past the width |
+|---|---|
+| a dynamic extent | grows to admit it; past `max_size()`, `std::length_error` ([the-sum-that-wraps](#the-sum-that-wraps)) |
+| an inplace extent | grows within its capacity; past it the blocks say `std::bad_alloc` |
+| a static extent | **had nothing to say**, and said it by writing through a block index the array does not have |
+
+So the static one says `out_of_range` now, which is what its own neighbour `xstd::bitset<N>` says for a position
+past `N`. The three differ because the reasons do — a domain, a capacity, a representable size — but none of
+them is silence. It was undefined on the grounds of a performance benefit, and that grounds does not survive
+measurement: on the sieve at `N = 2^16`, GCC 14 `-O3 -march=native`, best of twenty-five, 188.0µs unchecked
+against 188.1µs checked, and 75.1µs against 75.1µs over 65536 inserts. The comparison is against a compile-time
+constant and is never taken; it costs nothing to keep.
+
+`complement(x)` is the same write and now answers the same way, having been the worse of the two: it asserted at
+*every* extent, so a dynamic set — which grows for `insert(x)` — wrote past its blocks for `complement(x)` on a
+key it would happily have admitted. A key past the width is absent, so the toggle that admits it **is** the
+insert that admits it, and it grows where insert grows.
+
+The element-wise `insert(first, last)` and `insert(ilist)` keep what they inserted before the refused key, which
+is `[set]`'s own behaviour when an allocation throws midway; the consecutive `insert_range` tier guards the
+range's last position before it writes anything, so that one is all or nothing.
 
 Erasing stays total like `contains`: removing what is not there is the no-op returning zero that
 `std::set::erase` is.

@@ -19,7 +19,7 @@
 #include <limits>                                     // numeric_limits
 #include <ranges>                                     // bidirectional_range, iota
 #include <set>                                        // set
-#include <stdexcept>                                  // length_error
+#include <stdexcept>                                  // length_error, out_of_range
 #include <vector>                                     // vector
 
 namespace {
@@ -362,6 +362,66 @@ BOOST_AUTO_TEST_CASE(RangedInsertionGrowsADynamicWidth)
                 elementwise.insert(i);
         }
         BOOST_CHECK(ranged == elementwise);
+}
+
+// The one key a set can be unable to hold. Every other member of this reading is total over key_type and answers for a key past the width; the two that write cannot, and a static extent -- which has nowhere to grow -- used to write through a block index the array does not have. Under ASan that is a heap-buffer-overflow when the set is on the heap, and nothing at all when it is on the stack, which is the worse half.
+BOOST_AUTO_TEST_CASE(AKeyAStaticWidthCannotHoldIsOutOfRange)
+{
+        using S = xstd::basic_bit_static_set<std::uint64_t, 100>;
+        static_assert(S().max_size() == 100UZ);
+
+        auto s = S();
+        s.insert(3UZ);
+
+        // The writes refuse it.
+        BOOST_CHECK_THROW((void)s.insert(100UZ), std::out_of_range);
+        BOOST_CHECK_THROW((void)s.insert(500UZ), std::out_of_range);
+        BOOST_CHECK_THROW((void)s.emplace(500UZ), std::out_of_range);
+        BOOST_CHECK_THROW(s.emplace_hint(s.begin(), 500UZ), std::out_of_range);
+        BOOST_CHECK_THROW(s.insert(s.begin(), 500UZ), std::out_of_range);
+        BOOST_CHECK_THROW(s.insert_range(std::views::iota(98UZ, 102UZ)), std::out_of_range);
+        BOOST_CHECK_THROW(s.complement(500UZ), std::out_of_range);
+
+        // The consecutive insert_range above guards the range's last position before it writes anything, so it is all or nothing. The element-wise forms are not, and neither is std::set's: what came before the refused key stays, which is the same thing that happens when an allocation throws midway.
+        BOOST_CHECK_EQUAL(s.size(), 1UZ);
+        BOOST_CHECK_THROW(s.insert({ 1UZ, 500UZ }), std::out_of_range);
+        BOOST_CHECK_EQUAL(s.size(), 2UZ);
+        BOOST_CHECK(s.contains(1UZ));
+
+        // The reads do not: asking stays total, which is what [set] gives them.
+        BOOST_CHECK(not s.contains(500UZ));
+        BOOST_CHECK_EQUAL(s.count(500UZ), 0UZ);
+        BOOST_CHECK(s.find(500UZ) == s.end());
+        BOOST_CHECK(s.lower_bound(500UZ) == s.end());
+        BOOST_CHECK(s.upper_bound(500UZ) == s.end());
+        BOOST_CHECK_EQUAL(s.erase(500UZ), 0UZ);
+
+        // And the last key it can hold is 99, which both writes take.
+        BOOST_CHECK(s.contains(3UZ));
+        s.insert(99UZ);
+        s.complement(98UZ);
+        BOOST_CHECK(s.contains(99UZ) and s.contains(98UZ));
+        BOOST_CHECK_EQUAL(s.size(), 4UZ);
+}
+
+// The same key on the other two storages, which already answered: a dynamic extent grows to admit it, and an inplace one fills its capacity and says so through the blocks.
+BOOST_AUTO_TEST_CASE(ADynamicWidthAdmitsTheKeyInstead)
+{
+        auto d = xstd::bit_set();
+        d.insert(500UZ);
+        BOOST_CHECK(d.contains(500UZ));
+        BOOST_CHECK_EQUAL(d.size(), 1UZ);
+
+        // complement grows where insert grows: a key past the width is absent, so toggling it is admitting it. This was a write past the blocks before.
+        d.complement(1000UZ);
+        BOOST_CHECK(d.contains(1000UZ));
+        BOOST_CHECK_EQUAL(d.size(), 2UZ);
+        BOOST_CHECK_GT(d.max_size(), 1000UZ);
+
+        // And toggling it back is the erase, without shrinking.
+        d.complement(1000UZ);
+        BOOST_CHECK(not d.contains(1000UZ));
+        BOOST_CHECK_EQUAL(d.size(), 1UZ);
 }
 
 // The two growths the set reading computes by addition, both of them over a size_t the caller names and neither of them bounded by a width. lo + len - 1 and width + n are the sums, and a wrapped one is a width below where the operation then writes.
