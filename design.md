@@ -1890,6 +1890,20 @@ the sixty-three widths above `max_width` that sum wraps to zero blocks which the
 container claiming `SIZE_MAX` positions in sixty-four bits. A ceiling was what stood between that spelling and
 its own arithmetic. This one has nothing to stand between.
 
+`blocks_for` is **public** for that reason, and the claim is a `static_assert`:
+`blocks_for(SIZE_MAX) == max_num_blocks + 1`, one block more than the widest whole number of them, where the old
+spelling answered one. Asserting it by *growing* to such a width instead asks `std::allocator` for 2^61 bytes,
+and two of this tree's CI legs will not answer that question -- a sanitized build **aborts** on a request that
+size (`allocation-size-too-big`) rather than reporting `bad_alloc`, and clang at `-O2` elides the `new`/`delete`
+pair of a discarded temporary, so `(void)V(SIZE_MAX)` never allocates and never throws. Both were measured on
+this tree, on exactly that assertion, across nine CI jobs. The compile-time form is the better one anyway: it
+names the count the old spelling got wrong rather than inferring it from an exception, and it holds on every leg.
+
+The **refusal** still wants looking at, and `std::inplace_vector` is where it can be: it is the one block
+container here that refuses a width without asking anyone for memory, so the refusal arrives at a size a test can
+name. `bad_alloc` and not `length_error` is what comes back, at the storage and at the bitset reading over it --
+which is the whole of the difference from the two readings beside that one.
+
 **The ceiling is therefore a policy, and it belongs to the reading**, because the counterparts disagree about it.
 Two ceilings are computed in the storage and two refusals are spelled there -- `check_width` above `max_width`,
 `check_addressable_width` above `max_addressable_width`, both `std::length_error` -- and the storage asks neither
@@ -1919,6 +1933,14 @@ with `ranges::to`, which inserts -- so the `noexcept` was a promise about a reac
 `m_blocks.reserve` are handed a count and answer for it, which is why `resize(max_width)` is `bad_alloc` and
 `resize(max_width + 1)` is `length_error`. `resize` takes that count **before** it writes the last block, so a
 refused growth leaves the width and the bits exactly as they were.
+
+That last sentence was not true of `resize(n, true)`, and the `inplace_vector` test above is what found it.
+Growing with ones sets the tail above `size()` in the current last block, those bits being the first new ones --
+and `resize_to` set them, and *then* asked the blocks to grow. A refused growth therefore returned with the width
+unchanged and the tail dirty, which is the class invariant broken rather than a partial growth: measured on a
+storage refused at 25, the next `resize(20)` came back with every bit above 9 set and `count()` at 8 instead of 1.
+Which block and which bits is read off the **old** width, so it is taken before the growth; the write itself now
+comes after, where nothing can throw between it and `m_size`.
 
 **The addition is `width_sum`.** `base + count` where that is a width, and the top of `size_t` where it is not.
 Saturating rather than throwing keeps the rule at one throw site: a saturated width is one `blocks_for` already
@@ -2287,6 +2309,11 @@ implied. Measured one call per process, so that an assert's abort is observable,
 | `to_ulong()` with a position past the word | `overflow_error` | `overflow_error` |
 | a width above `max_width` | `bad_alloc` | `bad_alloc` |
 | `max_size()` | `SIZE_MAX` | `SIZE_MAX` |
+
+The first of those two rows is measured rather than asserted in CI: at `std::allocator` the only way to reach it
+is a 2^61-byte request, which a sanitized build aborts on and an optimizer may elide
+([the-sum-that-wraps](#the-sum-that-wraps)). What CI asserts instead is the arithmetic it rests on, at compile
+time, and the refusal itself over `std::inplace_vector`, whose blocks answer without allocating.
 
 Every row where the two differ is a row where **boost asserts**, which is to say the expression is not one boost
 defines -- and defining it, or throwing for it, is what an extension may do. That is now true of every row.

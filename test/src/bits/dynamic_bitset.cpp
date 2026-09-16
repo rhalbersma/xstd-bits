@@ -20,7 +20,6 @@
 #include <memory>                                     // allocator
 #include <ranges>                                     // equal, iota
 #include <sstream>                                    // istringstream, ostringstream
-#include <new>                                        // bad_alloc
 #include <stdexcept>                                  // invalid_argument, out_of_range, overflow_error
 #include <string>                                     // string
 #include <tuple>                                      // tuple
@@ -305,21 +304,6 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItGrowsAsBoostDoes, T, Dynamic)
         d.clear();
         BOOST_CHECK(d.empty());
         BOOST_CHECK_EQUAL(d.size(), 0UZ);
-}
-
-// A width it cannot hold is boost's answer, bad_alloc, and for boost's reason: the block count is a division that cannot overflow, so the width reaches the allocator rather than a ceiling above it. This reading has no ceiling of its own -- the sequence and set readings do, and answer length_error -- because it is a strict extension of boost and that is the one row where the two used to differ on an expression boost defines.
-BOOST_AUTO_TEST_CASE_TEMPLATE(AWidthItCannotHoldIsBadAllocAsBoostHasIt, T, Dynamic)
-{
-        constexpr auto top = std::numeric_limits<std::size_t>::max();
-
-        auto d = T(9, 0b101ULL);
-        BOOST_CHECK_THROW(d.resize(top), std::bad_alloc);
-        BOOST_CHECK_THROW(d.resize(top, true), std::bad_alloc);
-        BOOST_CHECK_THROW(d.reserve(top), std::bad_alloc);
-
-        // A refused growth is not a partial one: the width and the bits are what they were.
-        BOOST_CHECK_EQUAL(d.size(), 9UZ);
-        BOOST_CHECK_EQUAL(d.to_ullong(), 0b101ULL);
 }
 
 // A run-time width is as wide as the text: the constructors and the extractor read every character, as boost's do.

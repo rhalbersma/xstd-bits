@@ -57,6 +57,13 @@ public:
         // The width as a type, dynamic_extent where there is none: what a reading asks when it needs the width before an object exists.
         static constexpr std::size_t extent = N;
 
+        // How many blocks a run-time width needs, floored at one like num_blocks_v. Total over every size_t, and said as boost's own calc_num_blocks says it -- divide, then round up by the remainder -- because that CANNOT overflow, where align_up(n, bits_per_block) adds first and wraps for the 63 widths above max_width, rounding them to zero blocks that the floor then turns into one. A guard against that wrap is a guard against a spelling; this spelling has nothing to guard. Public because that totality is the claim, and a static_assert is the only way to make it without asking an allocator for two exabytes.
+        [[nodiscard]] static constexpr auto blocks_for(std::size_t n) noexcept
+                -> std::size_t
+        {
+                return std::ranges::max((n / bits_per_block) + (n % bits_per_block != 0UZ ? 1UZ : 0UZ), 1UZ);
+        }
+
         // The widest width a size_t can count in whole blocks, and the widest a ptrdiff_t can: the two ceilings the readings choose between, neither of them enforced here. What the blocks can actually hold is narrower still, and that is max_size() and the two answers beside it.
         static constexpr auto max_num_blocks = std::numeric_limits<std::size_t>::max() / bits_per_block;
         static constexpr auto max_width      = max_num_blocks * bits_per_block;
@@ -80,13 +87,6 @@ private:
         static constexpr auto static_used_bits       = has_static_size and N == 0 ? zero : shr(ones, static_num_unused_bits);
         static constexpr auto static_unused_bits     = static_cast<block_type>(~static_used_bits);
         static constexpr auto static_has_unused_bits = has_static_size and static_used_bits != ones;
-
-        // How many blocks a run-time width needs, floored at one like num_blocks_v. Total over every size_t, and said as boost's own calc_num_blocks says it -- divide, then round up by the remainder -- because that CANNOT overflow, where align_up(n, bits_per_block) adds first and wraps for the 63 widths above max_width, rounding them to zero blocks that the floor then turns into one. A guard against that wrap is a guard against a spelling; this spelling has nothing to guard.
-        [[nodiscard]] static constexpr auto blocks_for(std::size_t n) noexcept
-                -> std::size_t
-        {
-                return std::ranges::max((n / bits_per_block) + (n % bits_per_block != 0UZ ? 1UZ : 0UZ), 1UZ);
-        }
 
         // An NSDMI, not extent-constrained constructors: vector starts empty.
         [[nodiscard]] static constexpr auto make_blocks(std::size_t n [[maybe_unused]])
@@ -1278,11 +1278,16 @@ private:
                 requires (not has_static_size)
         {
                 auto const count = blocks_for(n);
-                // Growing with ones: the tail above size() in the last block is clear by the invariant, and becomes the first new bits.
+                // Growing with ones: the tail above size() in the last block is clear by the invariant, and becomes the first new bits. Which block and which bits is read off the OLD width, so it is taken before the blocks grow; the write itself comes after, because m_blocks.resize is what refuses a count these blocks cannot hold, and a refused growth that had already dirtied the tail would leave this storage with a width it no longer matches. Measured on blocks that hold three: refused at a width of 25, the next resize(20) came back with every bit above 9 set and count() at 8 where 1 was set.
                 if (value and n > size()) {
-                        m_blocks[last_block()] |= static_cast<block_type>(~used_bits());
+                        auto const index = last_block();
+                        auto const tail  = static_cast<block_type>(~used_bits());
+                        m_blocks.resize(count, ones);
+                        m_blocks[index] |= tail;
+                } else {
+                        // No new block can be a one here: either the value is false, or the width is not growing, and a width that is not growing asks for no block it does not already have.
+                        m_blocks.resize(count, zero);
                 }
-                m_blocks.resize(count, value ? ones : zero);
                 m_size = n;
                 erase_unused();
         }

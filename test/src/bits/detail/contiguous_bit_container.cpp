@@ -24,7 +24,7 @@
 #include <limits>                                             // numeric_limits
 #include <memory>                                             // addressof, allocator
 #include <version>                                            // IWYU pragma: keep; __cpp_lib_ranges_as_const
-#include <new>                                                // bad_alloc
+#include <new>                                                // IWYU pragma: keep; bad_alloc, named only under TEST_HAS_INPLACE_VECTOR
 #include <ranges>                                             // begin, iota, range_const_reference_t, size
 #include <span>                                               // dynamic_extent
 #include <stdexcept>                                          // length_error
@@ -851,6 +851,19 @@ BOOST_AUTO_TEST_CASE(AnInplaceVectorIsARunTimeWidthUnderAStaticCapacity)
         BOOST_CHECK_THROW(b.reserve(25), std::bad_alloc);
         b.shrink_to_fit();
         BOOST_CHECK_EQUAL(b.size(), 24UZ);
+
+        // This is the one storage here whose blocks refuse a width WITHOUT asking anyone for memory, so it is where the refusal itself can be looked at. What refuses is the blocks, and what they answer is their own std::bad_alloc: no ceiling of this storage's stands above them any more, or a width past it would be std::length_error here.
+        auto c = T(9UZ);
+        c.set(2UZ);
+        BOOST_CHECK_THROW(c.resize(25UZ), std::bad_alloc);
+
+        // And a refused growth is not a partial one, which the growth with ONES is the case for: the bits above the width in the last block are the first new ones, so writing them before the blocks are asked for would leave this storage with a tail its width no longer matches -- measured, before the two were put in that order: refused at 25, the next resize to 20 came back with every bit above 9 set.
+        BOOST_CHECK_THROW(c.resize(25UZ, true), std::bad_alloc);
+        BOOST_CHECK_EQUAL(c.size(), 9UZ);
+        c.resize(20UZ);
+        BOOST_CHECK_EQUAL(c.size(), 20UZ);
+        BOOST_CHECK_EQUAL(c.count(), 1UZ);
+        BOOST_CHECK(c.test(2UZ));
 }
 
 #endif
@@ -1113,7 +1126,9 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheThreeCeilingsAreComputedHereAndKeptAbove, Block
 }
 
 // The saturating sum every growth here computes, and the block count it reaches. Every growth asks for a width by adding to one, and every one of those additions wraps: a wrapped width is small, so it sizes the blocks for far fewer positions than the caller goes on to write. Saturated instead it stays at the top of size_t, where the block count is one no allocator can serve -- this storage has no ceiling of its own to fail any more, the readings above holding the ones their own counterparts want.
-BOOST_AUTO_TEST_CASE(AWidthAboveTheCeilingReachesTheAllocatorAndDoesNotWrap)
+//
+// Said at COMPILE TIME, which is the whole of the claim and the only portable way to make it. The claim is that blocks_for is total: that the widths which used to wrap now ask for more blocks than the blocks will ever hold. Asserting it by growing to such a width instead asks std::allocator for 2^61 bytes, which is not a question two of this tree's CI legs will answer -- a sanitized build ABORTS on a request that size rather than reporting std::bad_alloc, and an optimizer may drop the new/delete pair of an unused temporary altogether, so the request is never made and nothing is thrown. Both were measured here, on exactly these assertions. A static_assert is stronger besides: it names the block count the old spelling got wrong rather than inferring it from an exception.
+BOOST_AUTO_TEST_CASE(TheBlockCountIsTotalAndTheSumThatReachesItSaturates)
 {
         using V = xstd::detail::bits::contiguous_bit_vector<std::uint8_t>;
         constexpr auto top = std::numeric_limits<std::size_t>::max();
@@ -1130,31 +1145,36 @@ BOOST_AUTO_TEST_CASE(AWidthAboveTheCeilingReachesTheAllocatorAndDoesNotWrap)
         static_assert(V::width_sum(top, 1UZ) == top);
         static_assert(V::width_sum(1UZ, top) == top);
 
+        // Both arms at run time as well, the growths that used to reach them from here having moved to a storage that refuses without allocating.
+        BOOST_CHECK_EQUAL(V::width_sum(3UZ, 4UZ), 7UZ);
+        BOOST_CHECK_EQUAL(V::width_sum(top, 1UZ), top);
+
+        // A division that rounds up by the remainder: floored at one, exact on a boundary, one more just past it.
+        static_assert(V::blocks_for(0UZ) == 1UZ);
+        static_assert(V::blocks_for(1UZ) == 1UZ);
+        static_assert(V::blocks_for(V::bits_per_block) == 1UZ);
+        static_assert(V::blocks_for(V::bits_per_block + 1UZ) == 2UZ);
+        static_assert(V::blocks_for(V::max_width) == V::max_num_blocks);
+
+        // And total above that, which is the fix: these are the sixty-three widths align_up wrapped on, where n + bits_per_block - 1 overflowed to a sum below bits_per_block, the division rounded it to ZERO blocks, and the floor turned that into ONE -- a container claiming SIZE_MAX positions in eight bits. Dividing first, each of them asks for one block more than the widest whole number of them, which is a count no allocator will ever serve.
+        static_assert(V::blocks_for(V::max_width + 1UZ) == V::max_num_blocks + 1UZ);
+        static_assert(V::blocks_for(top - 1UZ) == V::max_num_blocks + 1UZ);
+        static_assert(V::blocks_for(top) == V::max_num_blocks + 1UZ);
+
+        // Which is what every saturated sum arrives at, the two composing: a growth that wrapped would have asked for one block.
+        static_assert(V::blocks_for(V::width_sum(top, 1UZ)) == V::max_num_blocks + 1UZ);
+        static_assert(V::blocks_for(V::width_sum(V::max_width, V::bits_per_block)) == V::max_num_blocks + 1UZ);
+
+        // Widths the blocks do hold are not refused at all, and each lands where it was asked for.
         auto v = V(8UZ);
         v.set(3UZ);
-
-        // The block count is a division that rounds up by the remainder, so it is total: the widths that used to wrap now ask for more blocks than any allocator has, where the old spelling added first and rounded them to a single block under a size() of SIZE_MAX. Throwing rather than succeeding is what says so -- a wrap was quiet, and left a container claiming SIZE_MAX positions in sixty-four bits.
-        //
-        // So every way in reaches the allocator, and the allocator answers -- which is what boost::dynamic_bitset does, its calc_num_blocks being the same division. The ceiling that used to stand here is the readings' now: the sequence and set readings ask it and answer length_error, and the bitset reading does not, being a strict extension of boost. The cast because BOOST_CHECK_THROW takes a statement, where V(top) alone would declare one.
-        BOOST_CHECK_THROW((void)V(top), std::bad_alloc);
-        BOOST_CHECK_THROW(v.resize(top), std::bad_alloc);
-        BOOST_CHECK_THROW(v.reserve(top), std::bad_alloc);
-        BOOST_CHECK_THROW((void)v.growing_insert(top), std::bad_alloc);
-
-        // And one below it, the position the assert that once stood here let through: n < SIZE_MAX held, n + 1 was SIZE_MAX, and that width wrapped to a single block. Now it is a block count no allocator can serve.
-        BOOST_CHECK_THROW((void)v.growing_insert(top - 1UZ), std::bad_alloc);
-
-        // None of which moved anything: the blocks are asked for before the width changes, so a refused growth leaves the width and the bits as they were.
-        BOOST_CHECK_EQUAL(v.size(), 8UZ);
-        BOOST_CHECK_EQUAL(v.count(), 1UZ);
-        BOOST_CHECK(v.test(3UZ));
-
-        // A width the allocator can serve is not refused at all.
         v.resize(24UZ);
         BOOST_CHECK_EQUAL(v.size(), 24UZ);
+        BOOST_CHECK_EQUAL(v.num_blocks(), V::blocks_for(24UZ));
         BOOST_CHECK(v.test(3UZ));
         BOOST_CHECK(v.growing_insert(31UZ));
         BOOST_CHECK_EQUAL(v.size(), 32UZ);
+        BOOST_CHECK_EQUAL(v.count(), 2UZ);
 }
 
 // A word read and written at any position, and the ranged forms over it: both at a static width and at a run-time one.
