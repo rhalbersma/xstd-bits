@@ -12,7 +12,7 @@
 #include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                                  // lexicographical_compare_three_way, ranges::equal
 #include <compare>                                    // strong_ordering
-#include <concepts>                                   // copyable, equality_comparable, regular, totally_ordered
+#include <concepts>                                   // copyable, equality_comparable, invocable, regular, totally_ordered
 #include <cstddef>                                    // size_t
 #include <cstdint>                                    // uint8_t, uint64_t
 #include <initializer_list>                           // initializer_list
@@ -364,6 +364,17 @@ BOOST_AUTO_TEST_CASE(RangedInsertionGrowsADynamicWidth)
         BOOST_CHECK(ranged == elementwise);
 }
 
+namespace {
+
+// One write that must refuse the key, as a function rather than a BOOST_CHECK_THROW per write in the case below: each of those expands to a try/catch, and six of them in one body are past readability-function-cognitive-complexity's threshold.
+auto check_refuses(std::invocable auto write)
+        -> void
+{
+        BOOST_CHECK_THROW(write(), std::out_of_range);
+}
+
+}       // namespace
+
 // The one key a set can be unable to hold. Every other member of this reading is total over key_type and answers for a key past the width; the two that write cannot, and a static extent -- which has nowhere to grow -- used to write through a block index the array does not have. Under ASan that is a heap-buffer-overflow when the set is on the heap, and nothing at all when it is on the stack, which is the worse half.
 BOOST_AUTO_TEST_CASE(AKeyAStaticWidthCannotHoldIsOutOfRange)
 {
@@ -373,12 +384,12 @@ BOOST_AUTO_TEST_CASE(AKeyAStaticWidthCannotHoldIsOutOfRange)
         auto s = S();
         s.insert(3UZ);
 
-        BOOST_CHECK_THROW((void)s.insert(100UZ), std::out_of_range);
-        BOOST_CHECK_THROW((void)s.insert(500UZ), std::out_of_range);
-        BOOST_CHECK_THROW((void)s.emplace(500UZ), std::out_of_range);
-        BOOST_CHECK_THROW(s.emplace_hint(s.begin(), 500UZ), std::out_of_range);
-        BOOST_CHECK_THROW(s.insert(s.begin(), 500UZ), std::out_of_range);
-        BOOST_CHECK_THROW(s.complement(500UZ), std::out_of_range);
+        check_refuses([&]() -> void { static_cast<void>(s.insert(100UZ));               });
+        check_refuses([&]() -> void { static_cast<void>(s.insert(500UZ));               });
+        check_refuses([&]() -> void { static_cast<void>(s.emplace(500UZ));              });
+        check_refuses([&]() -> void { s.emplace_hint(s.begin(), 500UZ);                 });
+        check_refuses([&]() -> void { s.insert(s.begin(), 500UZ);                       });
+        check_refuses([&]() -> void { s.complement(500UZ);                              });
 
         // A refused key writes nothing, and the last one it can hold is 99, which both writes take.
         BOOST_CHECK_EQUAL(s.size(), 1UZ);
