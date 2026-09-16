@@ -22,6 +22,7 @@
 #include <cstdint>                                       // uint8_t, uint64_t
 #include <functional>                                    // hash
 #include <iterator>                                      // back_inserter
+#include <limits>                                        // numeric_limits
 #include <ranges>                                        // equal, iota, range, reverse
 #include <sstream>                                       // istringstream
 #include <stdexcept>                                     // out_of_range, overflow_error
@@ -314,6 +315,16 @@ BOOST_AUTO_TEST_CASE(TheRestOfBoostsSurfaceIsThereAtAStaticWidth)
         BOOST_CHECK_THROW(d.set(8, 2, true), std::out_of_range);
         BOOST_CHECK_THROW(d.reset(9, 1), std::out_of_range);
         BOOST_CHECK_THROW(d.flip(5, 5), std::out_of_range);
+
+        // pos + len is the sum the guard refuses to make: near the top of size_t it wraps to a value below every width, so the check the range was meant to fail is the one it would pass, and the ranged forms would then write nothing and report nothing.
+        constexpr auto top = std::numeric_limits<std::size_t>::max();
+        BOOST_CHECK_THROW(d.set(top, 1, true), std::out_of_range);
+        BOOST_CHECK_THROW(d.reset(top - 3, 8), std::out_of_range);
+        BOOST_CHECK_THROW(d.flip(top, top), std::out_of_range);
+
+        // A position past the width is out of range whatever the length, and a refused range writes nothing.
+        BOOST_CHECK_THROW(d.set(10, 0, true), std::out_of_range);
+        BOOST_CHECK_EQUAL(d.to_ullong(), 0b1'0000'0011ULL);
 }
 
 // The views reach a bitset by referring into its storage: the ordering, the keys, the blocks.
