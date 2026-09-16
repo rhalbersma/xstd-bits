@@ -496,6 +496,58 @@ Every leg above passes. The library no longer uses the C++23 range adaptors libc
 
 Note that the benchmarks and unit tests depend on [Boost](https://www.boost.io/), [fmtlib](https://github.com/fmtlib/fmt), [Google Benchmark](https://github.com/google/benchmark) and [range-v3](https://github.com/ericniebler/range-v3). 
 
+## Consuming this library
+
+The library is header-only and its CMake target carries everything a consumer needs: the include directories, the `xstd-ints`, `xstd-misc` and `Boost::hash2` dependencies, and `cxx_std_23`. Link `xstd::bits` and you are done — there is no `target_include_directories` or `CMAKE_CXX_STANDARD` to set on your side.
+
+All three methods below are built by the [Consumption workflow](.github/workflows/consumption.yml), on every pull request and on every push to `main`, so what is written here is what is tested.
+
+### `find_package`, against an installed copy
+
+```cmake
+find_package(xstd-bits 0.1.0 CONFIG REQUIRED)
+target_link_libraries(my_target PRIVATE xstd::bits)
+```
+
+Installing needs no test dependencies:
+
+```sh
+cmake --preset no-tests-vcpkg          # or --preset no-tests, if Boost.Hash2 is already findable
+cmake --build --preset no-tests-vcpkg
+cmake --install build/no-tests-vcpkg --prefix /where/you/want/it
+```
+
+The installed package config calls `find_dependency` for `xstd-ints`, `xstd-misc` and `boost_hash2`, so those three have to be findable from the consuming project too. The version file is written `SameMinorVersion`, so `find_package(xstd-bits 0.1.0)` accepts 0.1.x and rejects 0.2.0.
+
+### `add_subdirectory`, against a vendored copy
+
+```cmake
+add_subdirectory(external/xstd-bits)
+target_link_libraries(my_target PRIVATE xstd::bits)
+```
+
+`xstd::bits` is an alias of the real target, so it spells the same thing here as under `find_package`. The tests and benchmarks are guarded by `PROJECT_IS_TOP_LEVEL` and do not configure when the library is a subdirectory, whatever your `BUILD_TESTING` is set to.
+
+### `FetchContent`, against the repository
+
+```cmake
+include(FetchContent)
+FetchContent_Declare(
+    xstd-bits
+    GIT_REPOSITORY https://github.com/rhalbersma/xstd-bits.git
+    GIT_TAG        main          # pin a commit for a reproducible build
+)
+FetchContent_MakeAvailable(xstd-bits)
+target_link_libraries(my_target PRIVATE xstd::bits)
+```
+
+`xstd-ints` and `xstd-misc` are fetched in turn if they are not already installed, at the commits `CMakeLists.txt` pins. Boost.Hash2 is not fetched — it is a `find_package(... REQUIRED)`, so it has to be installed, whether through vcpkg, your distribution, or a Boost tree you already have.
+
+### The vcpkg manifest
+
+[`vcpkg.json`](vcpkg.json) is this repository's own manifest, not a published port: it is what `VCPKG_ROOT`-based presets install from when you build **this** library. Its `test` feature — Boost.Test, Boost.Dynamic Bitset, fmtlib, Google Benchmark and range-v3 — is a default feature because building the repository normally means building its tests. The `no-tests-vcpkg` preset turns that off with `VCPKG_MANIFEST_NO_DEFAULT_FEATURES`, so a packaging or install build pays for Boost.Hash2 and nothing else. Consuming the library by any of the three methods above does not read this manifest at all.
+
+
 ## License
 
 <pre>
