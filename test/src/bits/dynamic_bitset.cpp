@@ -20,7 +20,8 @@
 #include <memory>                                     // allocator
 #include <ranges>                                     // equal, iota
 #include <sstream>                                    // istringstream, ostringstream
-#include <stdexcept>                                  // invalid_argument, length_error, out_of_range, overflow_error
+#include <new>                                        // bad_alloc
+#include <stdexcept>                                  // invalid_argument, out_of_range, overflow_error
 #include <string>                                     // string
 #include <tuple>                                      // tuple
 #include <utility>                                    // as_const, pair
@@ -307,15 +308,15 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItGrowsAsBoostDoes, T, Dynamic)
         BOOST_CHECK_EQUAL(d.size(), 0UZ);
 }
 
-// boost answers bad_alloc here, its block count being a division; ours rounded first, and the rounding of a width near the top of size_t is zero blocks under a size() of SIZE_MAX. std::length_error at the reading, because the storage refuses the width before it asks for the blocks.
-BOOST_AUTO_TEST_CASE_TEMPLATE(AWidthItCannotCountIsLengthError, T, Dynamic)
+// A width it cannot hold is boost's answer, bad_alloc, and for boost's reason: the block count is a division that cannot overflow, so the width reaches the allocator rather than a ceiling above it. This reading has no ceiling of its own -- the sequence and set readings do, and answer length_error -- because it is a strict extension of boost and that is the one row where the two used to differ on an expression boost defines.
+BOOST_AUTO_TEST_CASE_TEMPLATE(AWidthItCannotHoldIsBadAllocAsBoostHasIt, T, Dynamic)
 {
         constexpr auto top = std::numeric_limits<std::size_t>::max();
 
         auto d = T(9, 0b101ULL);
-        BOOST_CHECK_THROW(d.resize(top), std::length_error);
-        BOOST_CHECK_THROW(d.resize(top, true), std::length_error);
-        BOOST_CHECK_THROW(d.reserve(top), std::length_error);
+        BOOST_CHECK_THROW(d.resize(top), std::bad_alloc);
+        BOOST_CHECK_THROW(d.resize(top, true), std::bad_alloc);
+        BOOST_CHECK_THROW(d.reserve(top), std::bad_alloc);
 
         // A refused growth is not a partial one: the width and the bits are what they were.
         BOOST_CHECK_EQUAL(d.size(), 9UZ);

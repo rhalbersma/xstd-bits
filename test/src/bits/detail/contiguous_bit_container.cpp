@@ -24,10 +24,9 @@
 #include <limits>                                             // numeric_limits
 #include <memory>                                             // addressof, allocator
 #include <version>                                            // IWYU pragma: keep; __cpp_lib_ranges_as_const
-#include <new>                                                // IWYU pragma: keep; bad_alloc, behind TEST_HAS_INPLACE_VECTOR
+#include <new>                                                // bad_alloc
 #include <ranges>                                             // begin, iota, range_const_reference_t, size
 #include <span>                                               // dynamic_extent
-#include <stdexcept>                                          // length_error
 #include <tuple>                                              // get, tuple
 #include <vector>                                             // vector
 
@@ -1077,8 +1076,8 @@ BOOST_AUTO_TEST_CASE(TheAllocatorAndTheMaximumWidth)
         static_assert(A().max_size() == 9UZ);
 }
 
-// The ceiling the growth is measured against, and the saturating sum that reaches it. Every growth here asks for a width by adding to one, and every one of those additions wraps: a wrapped width is small, so it passes the ceiling it was meant to fail and then sizes the blocks for far fewer positions than the caller goes on to write. Saturated instead, it fails that ceiling, which is where blocks_for answers std::length_error.
-BOOST_AUTO_TEST_CASE(AWidthAboveTheCeilingIsLengthErrorAndNotAWrappedOne)
+// The saturating sum every growth here computes, and the block count it reaches. Every growth asks for a width by adding to one, and every one of those additions wraps: a wrapped width is small, so it sizes the blocks for far fewer positions than the caller goes on to write. Saturated instead it stays at the top of size_t, where the block count is one no allocator can serve -- this storage has no ceiling of its own to fail any more, the readings above holding the ones their own counterparts want.
+BOOST_AUTO_TEST_CASE(AWidthAboveTheCeilingReachesTheAllocatorAndDoesNotWrap)
 {
         using V = xstd::detail::bits::contiguous_bit_vector<std::uint8_t>;
         constexpr auto top = std::numeric_limits<std::size_t>::max();
@@ -1098,21 +1097,23 @@ BOOST_AUTO_TEST_CASE(AWidthAboveTheCeilingIsLengthErrorAndNotAWrappedOne)
         auto v = V(8UZ);
         v.set(3UZ);
 
-        // Every way in: the constructor, the two growths, and the total insert, which asks for n + 1 and so has no width for the position at the top. The cast because BOOST_CHECK_THROW takes a statement, where V(top) alone would declare one.
-        BOOST_CHECK_THROW((void)V(top), std::length_error);
-        BOOST_CHECK_THROW(v.resize(top), std::length_error);
-        BOOST_CHECK_THROW(v.reserve(top), std::length_error);
-        BOOST_CHECK_THROW((void)v.growing_insert(top), std::length_error);
+        // The block count is a division that rounds up by the remainder, so it is total: the widths that used to wrap now ask for more blocks than any allocator has, where the old spelling added first and rounded them to a single block under a size() of SIZE_MAX. Throwing rather than succeeding is what says so -- a wrap was quiet, and left a container claiming SIZE_MAX positions in sixty-four bits.
+        //
+        // So every way in reaches the allocator, and the allocator answers -- which is what boost::dynamic_bitset does, its calc_num_blocks being the same division. The ceiling that used to stand here is the readings' now: the sequence and set readings ask it and answer length_error, and the bitset reading does not, being a strict extension of boost. The cast because BOOST_CHECK_THROW takes a statement, where V(top) alone would declare one.
+        BOOST_CHECK_THROW((void)V(top), std::bad_alloc);
+        BOOST_CHECK_THROW(v.resize(top), std::bad_alloc);
+        BOOST_CHECK_THROW(v.reserve(top), std::bad_alloc);
+        BOOST_CHECK_THROW((void)v.growing_insert(top), std::bad_alloc);
 
-        // And one below it, which is the position the assert that used to stand here let through: n < SIZE_MAX held, n + 1 was SIZE_MAX, and that width wrapped to a single block. A ceiling on n is not the check; a ceiling on the width it asks for is.
-        BOOST_CHECK_THROW((void)v.growing_insert(top - 1UZ), std::length_error);
+        // And one below it, the position the assert that once stood here let through: n < SIZE_MAX held, n + 1 was SIZE_MAX, and that width wrapped to a single block. Now it is a block count no allocator can serve.
+        BOOST_CHECK_THROW((void)v.growing_insert(top - 1UZ), std::bad_alloc);
 
-        // None of which moved anything: the block count is taken before the last block is written, so a refused growth leaves the width and the bits as they were.
+        // None of which moved anything: the blocks are asked for before the width changes, so a refused growth leaves the width and the bits as they were.
         BOOST_CHECK_EQUAL(v.size(), 8UZ);
         BOOST_CHECK_EQUAL(v.count(), 1UZ);
         BOOST_CHECK(v.test(3UZ));
 
-        // A width the ceiling admits is not refused here; whether the blocks can hold it is their own answer.
+        // A width the allocator can serve is not refused at all.
         v.resize(24UZ);
         BOOST_CHECK_EQUAL(v.size(), 24UZ);
         BOOST_CHECK(v.test(3UZ));

@@ -495,8 +495,8 @@ public:
                 if constexpr (has_static_width) {
                         self.storage() <<= n;
                 } else if (auto const width = self.storage().size(); width > 0UZ) {
-                        // width + n through the storage's saturating sum: the width is no precondition here, so n is every size_t, and a wrapped width would resize this set down and then shift it by more than it holds. A translation past the positions there are is std::length_error, which is the resize's answer, not this one's.
-                        self.storage().resize(bits_type::width_sum(width, n));
+                        // width + n through the storage's saturating sum: the width is no precondition here, so n is every size_t, and a wrapped width would resize this set down and then shift it by more than it holds. A translation past the positions there are is std::length_error, which is this reading's ceiling rather than the storage's -- the storage has none now, so the check is asked here, beside the sum it checks.
+                        self.storage().resize(bits_type::check_width(bits_type::width_sum(width, n)));
                         self.storage() <<= n;
                 }
                 return self;
@@ -599,6 +599,9 @@ private:
                         if (x >= max_size()) {
                                 throw out_of_range(x);
                         }
+                } else {
+                        // A dynamic width refuses only what it could never grow to, and says so as the storage would have: the ceiling is asked here now, the storage having none of its own, so that this reading keeps the length_error it always answered while the bitset reading beside it answers bad_alloc as boost does.
+                        static_cast<void>(bits_type::check_width(bits_type::width_sum(x, 1UZ)));
                 }
         }
 

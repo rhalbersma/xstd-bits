@@ -1854,21 +1854,31 @@ nothing and saying nothing.
 
 Two rules, and the second is what keeps the first from being written six times:
 
-**The ceiling is `check_width`**, at the four doors a width the caller named comes in by: the two width
-constructors, `resize` and `reserve` -- `growing_insert` and `push_back` arriving through `resize`. A width
-above `max_width` -- the widest a `size_t` counts in whole blocks -- is `std::length_error` there, which is what
-a container throws for a size it cannot represent.
+**The block count cannot wrap**, and that is a spelling rather than a guard. `blocks_for` says what
+`boost::dynamic_bitset::calc_num_blocks` says -- divide, then round up by the remainder -- which is total over
+every `size_t`. The spelling it replaced, `align_up(n, bits_per_block) / bits_per_block`, adds first, and for
+the sixty-three widths above `max_width` that sum wraps to zero blocks which the floor then turns into one: a
+container claiming `SIZE_MAX` positions in sixty-four bits. A ceiling was what stood between that spelling and
+its own arithmetic. This one has nothing to stand between.
 
-It sits beside `blocks_for` rather than inside it, though `blocks_for` is the one place a width becomes a block
-count and every growth does reach it. Three growths name no width of their own: `clear()` resizes to zero,
-`pop_back()` to one less, and `grow_to_admit` to another storage's own width. None can fail the ceiling -- but
-each is reached from something that promises not to throw (the sequence reading declares `clear()` and
-`pop_back()` `noexcept`; `grow_to_admit` is how every set operation across widths widens, and the test tree's
-composable checks are `noexcept` over `|`, `&`, `-` and `^`), and a throw they cannot reach is still one
-`bugprone-exception-escape` traces into them. It traced into `bitset_adaptor`'s and `sequence_adaptor`'s
-`noexcept` default constructors too, by way of the NSDMI that asks `blocks_for(0)`. So the conversion stays
-total, with `n <= max_width` as an assert, the ceiling is asked once at each of the four doors, and the three
-that name no width go to `resize_to` behind it.
+**The ceiling is therefore a policy, and it belongs to the reading**, because the counterparts disagree about
+it. `check_width` is still there, and still answers `std::length_error` for a width above `max_width`, but the
+storage no longer asks it at any door. The **sequence** reading asks it -- at its width constructors, `resize`,
+`reserve`, and each of the three sums it computes -- because `std::vector` throws `length_error` for a size it
+cannot represent. The **set** reading asks it in `guard_key` and in `operator<<=`, for the same reason and its
+own: a key past the widest it could ever grow to is the one thing `insert` on a dynamic extent can refuse. The
+**bitset** reading asks it nowhere, because `boost::dynamic_bitset` has no such ceiling: the width reaches the
+allocator and the allocator answers `bad_alloc`. That was the one row where `xstd::dynamic_bitset` differed
+from boost on an expression boost **defines** ([a-strict-extension](#a-strict-extension)), and moving the
+ceiling up is what closed it.
+
+Three growths name no width of their own -- `clear()` resizes to zero, `pop_back()` to one less, and
+`grow_to_admit` to another storage's own width -- and each is reached from something that promises not to throw
+(the sequence reading declares `clear()` and `pop_back()` `noexcept`; `grow_to_admit` is how every set
+operation across widths widens, and the test tree's composable checks are `noexcept` over `|`, `&`, `-` and
+`^`). They kept `resize_to`, the growth behind the door, from when the door itself could throw
+`length_error`; what they are safe from now is only `bad_alloc`, which no `noexcept` here promises against
+anyway.
 
 The mirror of that rule is that a growth which **does** name a width keeps the ceiling, and whatever promises not
 to throw above it is what has to give. `growing_insert` is the case: a key past `max_size()` is `length_error`,
@@ -1913,9 +1923,11 @@ both.
 
 The split is exact, and it says which of the two rules above was ours to get wrong.
 
-The **ceiling** was. `boost::dynamic_bitset::calc_num_blocks` is `n / bits_per_block + (n % bits_per_block != 0)`
--- a division that cannot overflow -- which is why `dynamic_bitset(SIZE_MAX)` reaches the allocator and answers
-`bad_alloc`. `blocks_for` rounded first, and `align_up(n, bits_per_block) / bits_per_block` is exactly
+The **ceiling** was, and the fix in the end was to stop needing one.
+`boost::dynamic_bitset::calc_num_blocks` is `n / bits_per_block + (n % bits_per_block != 0)` -- a division that
+cannot overflow -- which is why `dynamic_bitset(SIZE_MAX)` reaches the allocator and answers `bad_alloc`, and
+which `blocks_for` now says the same way. It rounded first, and `align_up(n, bits_per_block) / bits_per_block`
+is exactly
 libstdc++'s `_S_nword(n) = (n + word_bit - 1) / word_bit`, which its `vector<bool>` fill constructor calls with
 no `max_size()` check: `std::vector<bool> v(SIZE_MAX)` there constructs, answers `size()` with `SIZE_MAX` over a
 `capacity()` of **zero**, and aborts on the first write. `resize`, `reserve` and `insert` all check and throw
@@ -2243,16 +2255,22 @@ implied. Measured one call per process, so that an assert's abort is observable,
 | the string constructor, `pos` past the string | assert | `out_of_range` |
 | the string constructor, a character that is neither | assert | `invalid_argument` |
 | `to_ulong()` with a position past the word | `overflow_error` | `overflow_error` |
-| a width above `max_width` | `bad_alloc` | `length_error` |
+| a width above `max_width` | `bad_alloc` | `bad_alloc` |
 
 Every row where the two differ is a row where **boost asserts**, which is to say the expression is not one boost
-defines -- and defining it, or throwing for it, is what an extension may do. Every row but the last. A width
-above `max_width` is valid on boost: it reaches the allocator and answers `bad_alloc`, where `check_width`
-answers `std::length_error` ([the-sum-that-wraps](#the-sum-that-wraps)). Both fail and construct nothing, and
-the divergence begins only where the allocation could never have succeeded, but a program catching `bad_alloc`
-alone would not catch this one. `length_error` is what a container throws for a size it cannot represent, which
-is `std::vector`'s convention rather than boost's, and it is the one place the sentence above should be read as
-"the same exceptions, and this".
+defines -- and defining it, or throwing for it, is what an extension may do. That is now true of every row.
+
+The last one was not, and is the reason this table exists. A width above `max_width` is valid on boost: it
+reaches the allocator and answers `bad_alloc`, where this reading answered `std::length_error` -- a different
+exception for an expression boost defines, which a program catching `bad_alloc` alone would not catch. The
+window was sixty-three widths wide, exactly the ones `align_up` used to wrap on. It closed by taking the
+ceiling out of the storage and giving it to the readings whose counterparts want it
+([the-sum-that-wraps](#the-sum-that-wraps)): the sequence and set readings keep `length_error`, and this one
+has no ceiling, as boost has none.
+
+The static column needed nothing. Measured the same way against `std::bitset<N>` -- the four position members,
+the string constructor's three outcomes, both word conversions' `overflow_error`, the zero-width edge cases and
+the saturating shifts -- `xstd::bitset<N>` answers identically in every case.
 
 The rule governs **expressions**, and one thing it deliberately does not govern is **where an operator sits**.
 `operator==` and the shifts are hidden friends where `std::bitset` makes all three members

@@ -246,13 +246,13 @@ public:
         [[nodiscard]] constexpr explicit sequence_adaptor(size_type n)
                 requires can_grow
         :
-                m_bits(n)
+                m_bits(bits_type::check_width(n))
         {}
 
         [[nodiscard]] constexpr sequence_adaptor(size_type n, value_type const& value)
                 requires can_grow
         :
-                m_bits(n)
+                m_bits(bits_type::check_width(n))
         {
                 if (value) {
                         m_bits.fill(true);
@@ -303,14 +303,14 @@ public:
                 requires can_grow and std::same_as<Alloc, typename bits_type::allocator_type>
         [[nodiscard]] constexpr sequence_adaptor(size_type n, Alloc const& alloc)
         :
-                m_bits(n, alloc)
+                m_bits(bits_type::check_width(n), alloc)
         {}
 
         template<class Alloc>
                 requires can_grow and std::same_as<Alloc, typename bits_type::allocator_type>
         [[nodiscard]] constexpr sequence_adaptor(size_type n, value_type const& value, Alloc const& alloc)
         :
-                m_bits(n, alloc)
+                m_bits(bits_type::check_width(n), alloc)
         {
                 if (value) {
                         m_bits.fill(true);
@@ -376,7 +376,7 @@ public:
                 requires can_grow
         {
                 m_bits.clear();
-                m_bits.resize(n, value);
+                m_bits.resize(bits_type::check_width(n), value);
         }
 
         template<std::input_iterator I, std::sentinel_for<I> S>
@@ -441,7 +441,7 @@ public:
         {
                 auto const pos = index_of(position);
                 // Through the storage's saturating sum: n is a count the caller names, so tmp.size() + n wraps, and a wrapped total would resize the copy down and answer an insertion with a shorter sequence than it started from.
-                return rebuild(pos, pos, [&](sequence_adaptor& tmp) -> void { tmp.m_bits.resize(bits_type::width_sum(tmp.size(), n), value); });
+                return rebuild(pos, pos, [&](sequence_adaptor& tmp) -> void { tmp.m_bits.resize(bits_type::check_width(bits_type::width_sum(tmp.size(), n)), value); });
         }
 
         template<std::input_iterator I, std::sentinel_for<I> S>
@@ -632,9 +632,9 @@ public:
                 return (index * digits) + detail::bits::countr_zero(diff);
         }
 
-        // Growth, [vector]'s members over storage that spells them alike, so detected on the storage rather than reconciled by the trait.
-        constexpr auto resize(size_type n)                          -> void requires can_grow { m_bits.resize(n); }
-        constexpr auto resize(size_type n, value_type const& value) -> void requires can_grow { m_bits.resize(n, value); }
+        // Growth, [vector]'s members over storage that spells them alike, so detected on the storage rather than reconciled by the trait. The ceiling is asked here rather than inside the storage, because it is this reading's: std::vector throws length_error for a size it cannot represent, and the bitset reading beside it answers bad_alloc as boost does.
+        constexpr auto resize(size_type n)                          -> void requires can_grow { m_bits.resize(bits_type::check_width(n)); }
+        constexpr auto resize(size_type n, value_type const& value) -> void requires can_grow { m_bits.resize(bits_type::check_width(n), value); }
         constexpr auto clear() noexcept                             -> void requires can_grow { m_bits.clear(); }
         constexpr auto push_back(value_type const& value)           -> void requires can_grow { m_bits.push_back(value); }
         constexpr auto pop_back() noexcept                          -> void requires can_grow { m_bits.pop_back(); }
@@ -651,7 +651,7 @@ public:
                 -> void
                 requires can_grow and requires (bits_type& b) { b.reserve(n); }
         {
-                m_bits.reserve(n);
+                m_bits.reserve(bits_type::check_width(n));
         }
 
         [[nodiscard]] constexpr auto capacity() const noexcept
@@ -796,7 +796,7 @@ private:
                 constexpr auto digits = bits_type::bits_per_block;
                 auto const old = size();
                 // Through the storage's saturating sum, as every width this reading computes is: count is the source's own, so a wrapped total would resize this sequence DOWN and answer an append with something shorter than it started from.
-                auto const total = bits_type::width_sum(old, count);
+                auto const total = bits_type::check_width(bits_type::width_sum(old, count));
                 if constexpr (requires (bits_type& b, std::size_t n) { b.reserve(n); }) {
                         m_bits.reserve(total);
                 }
@@ -815,7 +815,7 @@ private:
                 constexpr auto digits = bits_type::bits_per_block;
                 // Saturating for the reason blit's total is, and here the width is the caller's own to name: a sized range says how many it has without holding them, so size() + that is the one sum in this reading a caller can wrap on purpose. Wrapped it under-reserves to nothing and the appends below then run out the range one word at a time; saturated it is the length_error reserve already throws.
                 if constexpr (std::ranges::sized_range<R> and requires (bits_type& b, std::size_t n) { b.reserve(n); }) {
-                        m_bits.reserve(bits_type::width_sum(size(), static_cast<std::size_t>(std::ranges::size(rg))));
+                        m_bits.reserve(bits_type::check_width(bits_type::width_sum(size(), static_cast<std::size_t>(std::ranges::size(rg)))));
                 }
                 auto block = block_type{};
                 auto n = 0UZ;

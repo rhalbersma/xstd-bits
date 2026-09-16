@@ -77,24 +77,11 @@ private:
         static constexpr auto static_unused_bits     = static_cast<block_type>(~static_used_bits);
         static constexpr auto static_has_unused_bits = has_static_size and static_used_bits != ones;
 
-        // How many blocks a run-time width needs, floored at one like num_blocks_v. The width is a precondition, not a question: align_up wraps above max_width, and the rounding of a width near the top of size_t is zero blocks, which the floor then turns into one. check_width is what establishes it.
+        // How many blocks a run-time width needs, floored at one like num_blocks_v. Total over every size_t, and said as boost's own calc_num_blocks says it -- divide, then round up by the remainder -- because that CANNOT overflow, where align_up(n, bits_per_block) adds first and wraps for the 63 widths above max_width, rounding them to zero blocks that the floor then turns into one. A guard against that wrap is a guard against a spelling; this spelling has nothing to guard.
         [[nodiscard]] static constexpr auto blocks_for(std::size_t n) noexcept
                 -> std::size_t
         {
-                assert(n <= max_width);
-                return std::ranges::max(align_up(n, bits_per_block) / bits_per_block, 1UZ);
-        }
-
-        // The ceiling, at the four doors a width the caller named comes in by: the two width constructors, resize and reserve. std::length_error is what a container throws for a size it cannot represent; what the blocks can actually hold is narrower, and theirs to answer -- they are handed a block count and throw length_error for one they cannot reach.
-        //
-        // Here rather than inside blocks_for, which every growth reaches: clear() resizes to zero, pop_back() to one less, and grow_to_admit to another storage's own width -- none of the three names a width of its own, so none can fail this, and each is reached from something declared noexcept. A throw they cannot reach is still one bugprone-exception-escape traces into them, so all three go to resize_to, the growth behind this.
-        [[nodiscard]] static constexpr auto check_width(std::size_t n)
-                -> std::size_t
-        {
-                if (n > max_width) {
-                        throw length_error(n);
-                }
-                return n;
+                return std::ranges::max((n / bits_per_block) + (n % bits_per_block != 0UZ ? 1UZ : 0UZ), 1UZ);
         }
 
         // An NSDMI, not extent-constrained constructors: vector starts empty.
@@ -125,7 +112,7 @@ public:
         [[nodiscard]] constexpr explicit contiguous_bit_container(std::size_t n)
                 requires (not has_static_size)
         :
-                m_size(check_width(n)),
+                m_size(n),
                 m_blocks(make_blocks(n))
         {}
 
@@ -141,7 +128,7 @@ public:
                 requires (not has_static_size) and std::same_as<Alloc, typename Blocks::allocator_type>
         [[nodiscard]] constexpr contiguous_bit_container(std::size_t n, Alloc const& alloc)
         :
-                m_size(check_width(n)),
+                m_size(n),
                 m_blocks(blocks_for(n), alloc)
         {}
 
@@ -264,6 +251,16 @@ public:
         }
 
         // base positions and count more, saturated at the top of size_t rather than wrapped: the one addition every growth is spelled through, here and in the three readings. A wrapped sum is small, so it passes the ceiling it was meant to fail and then sizes the blocks for far fewer positions than the operation goes on to write; a saturated one fails that ceiling, which is what an unrepresentable width should do. blocks_for is where it fails, with std::length_error.
+        // The ceiling, and no longer the storage's own: blocks_for divides and cannot wrap, so nothing here needs a bounded width to stay safe. What is left is a policy, and the policy belongs to the reading, because the counterparts disagree about it. std::vector throws length_error for a size it cannot represent and the sequence reading says so with this; the set reading refuses a key past the widest it could grow to, and says so with this; boost::dynamic_bitset has no ceiling at all -- its calc_num_blocks divides as blocks_for now does, and a width it cannot hold reaches the allocator and answers bad_alloc. The bitset reading is a strict extension of boost, so it calls none of this and answers as boost does.
+        [[nodiscard]] static constexpr auto check_width(std::size_t n)
+                -> std::size_t
+        {
+                if (n > max_width) {
+                        throw length_error(n);
+                }
+                return n;
+        }
+
         [[nodiscard]] static constexpr auto width_sum(std::size_t base, std::size_t count) noexcept
                 -> std::size_t
         {
@@ -733,7 +730,7 @@ public:
                 requires (not has_static_size)
         {
                 // The ceiling first, so a width this storage cannot count throws before anything below is written.
-                resize_to(check_width(n), value);
+                resize_to(n, value);
         }
 
         // Widen just enough to hold every element the other has, and not at all when it has none above this width. Its largest element, not its size(), is what the growing insert of each in turn would have reached. A static width has nothing to widen and no other width to meet, so there the whole thing is nothing. Through resize_to, as clear() and pop_back() are: the width comes from the other storage's own, so it is one this one can count already, and asking the ceiling here would put its throw on every set operation across widths.
@@ -810,7 +807,7 @@ public:
                 -> void
                 requires (not has_static_size) and requires (Blocks& b) { b.reserve(blocks_for(n)); }
         {
-                m_blocks.reserve(blocks_for(check_width(n)));
+                m_blocks.reserve(blocks_for(n));
         }
 
         [[nodiscard]] constexpr auto capacity() const noexcept
