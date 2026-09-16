@@ -279,41 +279,69 @@ BOOST_AUTO_TEST_CASE(GrowthIsTheOwnersOverStorageThatGrows)
 // at() is the reading's one checked door, and this is the extent it had not been asked at: bit_array's static owner, a view and a window are checked in bit_array.cpp, above, and bit_subspan.cpp. The width it measures against is the one that grows, so the position refused before the push_back is held after it.
 BOOST_AUTO_TEST_CASE(AtAnswersAtARunTimeWidthToo)
 {
-        using Dynamic = xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint64_t>, xstd::ownership::owns, false>;
-
-        auto d = Dynamic(3, true);
+        auto d = xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint64_t>, xstd::ownership::owns, false>(3, true);
         BOOST_CHECK_THROW(static_cast<void>(d.at(3UZ)), std::out_of_range);
         d.push_back(false);
         BOOST_CHECK(d.at(3UZ) == false);
         BOOST_CHECK(d.at(0UZ) == true);
 }
 
+namespace {
+
+using Dynamic = xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint64_t>, xstd::ownership::owns, false>;
+
+// One functor at namespace scope, so every view below is the SAME type and the packing tier is instantiated once for all three cases. Three lambdas would be three closure types and three instantiations, and the two that only ever refuse their range would leave that tier's loop unentered -- branches the coverage gate counts per instantiation and no test would take.
+constexpr auto every_third = [](std::size_t i) -> bool { return i % 3 == 0; };
+
+// The same functor over a bound the sequence can hold, and over one it cannot.
+[[nodiscard]] auto counting_to(std::size_t n)
+{
+        return std::views::iota(0UZ, n) | std::views::transform(every_third);
+}
+
+}       // namespace
+
+// The packing tier over a range that holds nothing of its own: the bools are computed, so the loop is the only thing that knows how many there were. Two lengths, because the last word is what the tier has to get right -- 128 ends on a word boundary and 70 does not.
+BOOST_AUTO_TEST_CASE(TheAppendsPackWhatTheRangeComputes)
+{
+        auto d = Dynamic();
+        d.append_range(counting_to(128UZ));
+        BOOST_CHECK_EQUAL(d.size(), 128UZ);
+
+        d.append_range(counting_to(70UZ));
+        BOOST_CHECK_EQUAL(d.size(), 198UZ);
+
+        auto expected = std::vector<bool>();
+        for (auto const n : { 128UZ, 70UZ }) {
+                for (auto i = 0UZ; i < n; ++i) {
+                        expected.push_back(every_third(i));
+                }
+        }
+        BOOST_CHECK(std::ranges::equal(d, expected));
+}
+
 // The other addition this reading computes, and the one a caller names without holding what it names: a sized range answers size() for elements it never materializes, so size() + that is an argument's own sum. Wrapped it under-reserved to nothing and the packing loop then walked 2^64 elements a word at a time, ending when the allocator gave out rather than when the range did; saturated it is the length_error the reserve already throws. Two calls, because only the second wraps -- onto an empty sequence the sum is the range's own size, which was refused all along.
 BOOST_AUTO_TEST_CASE(TheAppendsSumSaturatesRatherThanWrapping)
 {
-        using Dynamic = xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint64_t>, xstd::ownership::owns, false>;
         constexpr auto top = std::numeric_limits<std::size_t>::max();
-        auto const every = std::views::iota(0UZ, top) | std::views::transform([](auto) -> bool { return true; });
 
         auto d = Dynamic();
-        BOOST_CHECK_THROW(d.append_range(every), std::length_error);
+        BOOST_CHECK_THROW(d.append_range(counting_to(top)), std::length_error);
         BOOST_CHECK(d.empty());
 
         d.push_back(true);
-        BOOST_CHECK_THROW(d.append_range(every), std::length_error);
+        BOOST_CHECK_THROW(d.append_range(counting_to(top)), std::length_error);
         BOOST_CHECK_EQUAL(d.size(), 1UZ);
 }
 
 // The same sum through insert_range, which reaches it a rebuild away: the head is copied first, so the range is appended to a sequence that is not empty even where the insert is at the front. The copy is what the length_error unwinds, leaving the sequence itself untouched -- [vector]'s strong guarantee, which the rebuild gives for nothing.
 BOOST_AUTO_TEST_CASE(ARefusedInsertRangeLeavesTheSequenceAsItWas)
 {
-        using Dynamic = xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint64_t>, xstd::ownership::owns, false>;
         constexpr auto top = std::numeric_limits<std::size_t>::max();
-        auto const every = std::views::iota(0UZ, top) | std::views::transform([](auto) -> bool { return true; });
 
         auto d = Dynamic(3, true);
         d.push_back(false);
-        BOOST_CHECK_THROW(d.insert_range(d.cend(), every), std::length_error);
+        BOOST_CHECK_THROW(d.insert_range(d.cend(), counting_to(top)), std::length_error);
         BOOST_CHECK(std::ranges::equal(d, std::vector<bool>{ true, true, true, false }));
 }
 
