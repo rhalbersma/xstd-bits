@@ -241,6 +241,34 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheRangedFormsAreBoosts, T, Dynamic)
         }
 }
 
+// Where boost's ranged forms assert, ours throw, at a run-time width as at a static one: std::bitset has no ranged form to mirror, so the static width's throw was ours to choose and not std::bitset's to dictate, and one family answering two ways was the anomaly. It costs no compatibility -- boost's own BOOST_ASSERT says a range past the width is no valid expression, and under NDEBUG leaves a masked write through a block the blocks never allocated.
+BOOST_AUTO_TEST_CASE_TEMPLATE(TheRangedFormsAreCheckedAtARunTimeWidthToo, T, Dynamic)
+{
+        constexpr auto top = std::numeric_limits<std::size_t>::max();
+
+        auto d = T(20, 0b1010'1010'1010'1010'1010ULL);
+        auto const before = d.to_ullong();
+
+        // Plainly past the end, which is where boost writes out of bounds under NDEBUG.
+        BOOST_CHECK_THROW(d.set(1000, 2, true), std::out_of_range);
+        BOOST_CHECK_THROW(d.reset(21, 1), std::out_of_range);
+        BOOST_CHECK_THROW(d.flip(19, 2), std::out_of_range);
+
+        // And past the top of size_t, where pos + len would wrap below the width and pass.
+        BOOST_CHECK_THROW(d.set(top, 1, true), std::out_of_range);
+        BOOST_CHECK_THROW(d.reset(top - 3, 8), std::out_of_range);
+        BOOST_CHECK_THROW(d.flip(top, top), std::out_of_range);
+
+        // A refused range writes nothing.
+        BOOST_CHECK_EQUAL(d.to_ullong(), before);
+
+        // The empty range at pos == size() is in range, and every range the width holds still answers as boost's does.
+        d.set(20, 0, true);
+        BOOST_CHECK_EQUAL(d.to_ullong(), before);
+        d.flip(0, 20);
+        BOOST_CHECK_EQUAL(d.to_ullong(), before ^ 0b1111'1111'1111'1111'1111ULL);
+}
+
 // Growth, boost's members: resize with either fill, push and pop, append a block and a range, reserve, shrink, clear.
 BOOST_AUTO_TEST_CASE_TEMPLATE(ItGrowsAsBoostDoes, T, Dynamic)
 {
