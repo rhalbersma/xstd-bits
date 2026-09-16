@@ -1798,26 +1798,55 @@ because a Boost.Test module whose test tree is empty is a setup error rather tha
 ### max-size-is-the-bits
 
 `[container.reqmts]/56` asks for `distance(begin(), end())` for the largest possible container, and under every
-reading of bits that is one number: **the positions there are to hold**. The set reading iterates the positions
-it holds, so its largest is every position set; the sequence reading iterates one `bool` per position; the
-bitset reading owes boost the same answer. There is no per-reading meaning of `max_size()` and no separate key
-domain -- a set over `[0, W)` holds at most `W` elements because there are `W` positions, which is the same `W`.
+reading of bits that counts the same thing: **the positions there are to hold**. The set reading iterates the
+positions it holds, so its largest is every position set; the sequence reading iterates one `bool` per position;
+the bitset reading counts positions too. There is no separate key domain -- a set over `[0, W)` holds at most `W`
+elements because there are `W` positions, which is the same `W`.
 
-So all three ask the same question of the same place, and only the answer's source differs by what can grow:
+What the three do **not** share is where that count stops, because their counterparts stop in three different
+places and each reading owes its own:
+
+| reading | counterpart | where the count stops |
+|---|---|---|
+| set | `[set]`, which names no such bound | whole blocks the blocks hold and a `size_t` counts |
+| bitset | `boost::dynamic_bitset` | that, saturated to `SIZE_MAX` where the product overflows |
+| sequence | `std::vector<bool>` | that, clamped to whole blocks no wider than `PTRDIFF_MAX` |
+
+So `max_size()` is not one function with three callers. **The storage computes all three** -- `max_size()`,
+`saturating_max_size()`, `addressable_max_size()` -- because all three are made of `bits_per_block` and the block
+container, which is knowledge only the storage has, and each reading returns the one its counterpart names. That
+is what `contiguous_bit_container` is for: the primitives are its, the contracts are the readings'.
+
+Both differences are observable, and neither is small:
+
+| over a 64-bit block | ours | the counterpart |
+|---|---|---|
+| `dynamic_bitset::max_size()` | `SIZE_MAX` | `boost::dynamic_bitset`: `SIZE_MAX` |
+| `bit_vector::max_size()` | `(PTRDIFF_MAX / 64) * 64` | libstdc++'s `std::vector<bool>`: the same |
+| `bit_set::max_size()` | `SIZE_MAX - 63` | -- |
+
+The middle row is the one the standard leaves open: `[container.reqmts]` only requires `max_size()` to bound what
+`resize` will accept, and libc++ answers `PTRDIFF_MAX` without rounding down to whole words. Ours rounds, because
+the ceiling it reports is a width the blocks could actually hold; the test asserts that shape and the
+`length_error` above it, not another library's number.
+
+The bitset reading's is written as a **sum** rather than as boost's choice: `bits_per_block` is a power of two, so
+`SIZE_MAX` is `max_width` plus one block's bits less one, and the clamped answer needs exactly that much back
+wherever the clamp bit. Boost's `?:` would be a branch whose two arms belong to different allocators --
+`std::allocator`'s ceiling always saturates -- so no one instantiation could take both, and
+[per-instantiation-slots](#per-instantiation-slots) makes that an unwinnable branch rather than an untested one.
+
+The **source** of the answer still differs by what can grow:
 
 | | `max_size()` |
 |---|---|
 | a width in the type | the storage's `extent` |
-| an owner over growing storage | the storage's `max_size()`, in bits |
+| an owner over growing storage | the storage's answer for that reading, in bits |
 | a view, a window, a static owner | its own width, which it cannot grow |
 
-`contiguous_bit_container::max_size()` is where the real limit lives, and it is not `SIZE_MAX`: a width rounds
-up to whole blocks, so the largest addressable one is `min(blocks.max_size(), SIZE_MAX / bits_per_block) *
-bits_per_block`
--- `SIZE_MAX - 63` at a `size_t` block, and `N` rounded up at an inplace one. Nothing above it needs to restate
-that arithmetic, and nothing above it should: a constant at the adaptor drifts from the storage the moment the
-storage learns something, which is how `set_adaptor` came to answer `SIZE_MAX - 1` while `dynamic_bitset`
-answered `SIZE_MAX - 63` over the same blocks.
+Nothing above the storage restates the arithmetic, and nothing above it should: a constant at the adaptor drifts
+from the storage the moment the storage learns something, which is how `set_adaptor` came to answer `SIZE_MAX - 1`
+while `dynamic_bitset` answered `SIZE_MAX - 63` over the same blocks.
 
 That the set's is not `static` follows: an owner must ask its storage and a view must ask what it views, neither
 of which a static member can reach. `std::set::max_size()` is not static either.
@@ -1861,16 +1890,17 @@ the sixty-three widths above `max_width` that sum wraps to zero blocks which the
 container claiming `SIZE_MAX` positions in sixty-four bits. A ceiling was what stood between that spelling and
 its own arithmetic. This one has nothing to stand between.
 
-**The ceiling is therefore a policy, and it belongs to the reading**, because the counterparts disagree about
-it. `check_width` is still there, and still answers `std::length_error` for a width above `max_width`, but the
-storage no longer asks it at any door. The **sequence** reading asks it -- at its width constructors, `resize`,
-`reserve`, and each of the three sums it computes -- because `std::vector` throws `length_error` for a size it
-cannot represent. The **set** reading asks it in `guard_key` and in `operator<<=`, for the same reason and its
-own: a key past the widest it could ever grow to is the one thing `insert` on a dynamic extent can refuse. The
-**bitset** reading asks it nowhere, because `boost::dynamic_bitset` has no such ceiling: the width reaches the
-allocator and the allocator answers `bad_alloc`. That was the one row where `xstd::dynamic_bitset` differed
-from boost on an expression boost **defines** ([a-strict-extension](#a-strict-extension)), and moving the
-ceiling up is what closed it.
+**The ceiling is therefore a policy, and it belongs to the reading**, because the counterparts disagree about it.
+Two ceilings are computed in the storage and two refusals are spelled there -- `check_width` above `max_width`,
+`check_addressable_width` above `max_addressable_width`, both `std::length_error` -- and the storage asks neither
+at any door of its own. The **set** reading asks `check_width` in `guard_key` and in `operator<<=`: a key past the
+widest it could ever grow to is the one thing `insert` on a dynamic extent can refuse. The **sequence** reading
+asks `check_addressable_width` -- at its width constructors, `resize`, `reserve`, and each of the three sums it
+computes -- because `std::vector<bool>` throws `length_error` for a size it cannot represent, and what it cannot
+represent is a distance, not a `size_t`. The **bitset** reading asks neither, because `boost::dynamic_bitset` has
+no such ceiling: the width reaches the allocator and the allocator answers `bad_alloc`. That was the one row where
+`xstd::dynamic_bitset` differed from boost on an expression boost **defines**
+([a-strict-extension](#a-strict-extension)), and moving the ceiling up is what closed it.
 
 Three growths name no width of their own -- `clear()` resizes to zero, `pop_back()` to one less, and
 `grow_to_admit` to another storage's own width -- and each is reached from something that promises not to throw
@@ -2256,17 +2286,24 @@ implied. Measured one call per process, so that an assert's abort is observable,
 | the string constructor, a character that is neither | assert | `invalid_argument` |
 | `to_ulong()` with a position past the word | `overflow_error` | `overflow_error` |
 | a width above `max_width` | `bad_alloc` | `bad_alloc` |
+| `max_size()` | `SIZE_MAX` | `SIZE_MAX` |
 
 Every row where the two differ is a row where **boost asserts**, which is to say the expression is not one boost
 defines -- and defining it, or throwing for it, is what an extension may do. That is now true of every row.
 
-The last one was not, and is the reason this table exists. A width above `max_width` is valid on boost: it
+The last two were not, and are the reason this table exists. A width above `max_width` is valid on boost: it
 reaches the allocator and answers `bad_alloc`, where this reading answered `std::length_error` -- a different
 exception for an expression boost defines, which a program catching `bad_alloc` alone would not catch. The
 window was sixty-three widths wide, exactly the ones `align_up` used to wrap on. It closed by taking the
 ceiling out of the storage and giving it to the readings whose counterparts want it
 ([the-sum-that-wraps](#the-sum-that-wraps)): the sequence and set readings keep `length_error`, and this one
 has no ceiling, as boost has none.
+
+`max_size()` was the same gap said as a value rather than as a throw. Boost multiplies the blocks' limit by the
+bits in one and answers `SIZE_MAX` where that product does not fit; this reading answered the storage's clamped
+number, sixty-three positions lower, for an expression boost **defines** and a program may well compare against.
+It closed by having the storage compute boost's answer too, and this reading return that one
+([max-size-is-the-bits](#max-size-is-the-bits)).
 
 The static column needed nothing. Measured the same way against `std::bitset<N>` -- the four position members,
 the string constructor's three outcomes, both word conversions' `overflow_error`, the zero-width edge cases and

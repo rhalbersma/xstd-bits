@@ -14,7 +14,7 @@
 #include <algorithm>                                     // all_of, any_of, count, equal, lexicographical_compare_three_way, mismatch, none_of
 #include <compare>                                       // strong_ordering
 #include <concepts>                                      // copyable, equality_comparable, regular, same_as, totally_ordered
-#include <cstddef>                                       // size_t
+#include <cstddef>                                       // ptrdiff_t, size_t
 #include <cstdint>                                       // uint64_t
 #include <iterator>                                      // reverse_iterator
 #include <limits>                                        // numeric_limits
@@ -262,8 +262,10 @@ BOOST_AUTO_TEST_CASE(GrowthIsTheOwnersOverStorageThatGrows)
         d.push_back(false);
         BOOST_CHECK_EQUAL(d.size(), 4UZ);
         BOOST_CHECK(std::ranges::equal(d, std::vector<bool>{ true, true, true, false }));
-        BOOST_CHECK_EQUAL(d.max_size(), xstd::detail::bits::contiguous_bit_vector<std::uint64_t>().max_size());
-        BOOST_CHECK_LT(d.max_size(), std::numeric_limits<std::size_t>::max());
+        // What a distance can name, not what the storage could hold: this reading is a random access range, so end() - begin() is a difference_type and the ceiling is the storage's addressable one, where the set reading beside it takes the wider.
+        BOOST_CHECK_EQUAL(d.max_size(), xstd::detail::bits::contiguous_bit_vector<std::uint64_t>::max_addressable_width);
+        BOOST_CHECK_LT(d.max_size(), xstd::detail::bits::contiguous_bit_vector<std::uint64_t>().max_size());
+        BOOST_CHECK_THROW(d.resize(d.max_size() + 1UZ), std::length_error);
         BOOST_CHECK_EQUAL(Owner().max_size(), 100UZ);
 
         // The fill insert asks for size() + n, an addition over a count the caller names: wrapped it would answer an insertion with a shorter sequence than it started from, so it saturates and the resize refuses it.

@@ -435,7 +435,8 @@ public:
         [[nodiscard]] constexpr auto count()      const noexcept -> std::size_t { return m_bits.count();      }
         [[nodiscard]] constexpr auto size()       const noexcept -> std::size_t { return m_bits.size();       }
         [[nodiscard]] constexpr auto num_blocks() const noexcept -> std::size_t { return m_bits.num_blocks(); }
-        [[nodiscard]] constexpr auto max_size()   const noexcept -> std::size_t { return m_bits.max_size();   }
+        // boost's own answer and not the storage's own, the two differing by sixty-three positions at a run-time width: this reading is a strict extension of boost::dynamic_bitset, so an expression boost defines answers here what it answers there.
+        [[nodiscard]] constexpr auto max_size()   const noexcept -> std::size_t { return m_bits.saturating_max_size(); }
 
         // A friend rather than the member std::bitset specifies: [class.compare.default]/1 admits either, and since P1185's reversed candidates the two accept the same mixed comparisons against the implicit unsigned long long. A namespace-scope template would not, deduction declining that conversion on both sides. Defaulted, the storage being the one member.
         [[nodiscard]] friend constexpr auto operator==(bitset_adaptor const& lhs, bitset_adaptor const& rhs) noexcept -> bool = default;

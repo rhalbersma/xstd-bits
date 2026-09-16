@@ -11,15 +11,17 @@
 #include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
 #include <xstd/bits/ownership.hpp>                    // ownership
 #include <xstd/bits/sequence_adaptor.hpp>             // sequence_adaptor
-#include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_LT, BOOST_CHECK_THROW
 #include <algorithm>                                  // copy, equal
 #include <concepts>                                   // same_as
-#include <cstddef>                                    // size_t
+#include <cstddef>                                    // ptrdiff_t, size_t
 #include <cstdint>                                    // uint8_t
 #include <functional>                                 // hash
 #include <iterator>                                   // next
+#include <limits>                                     // numeric_limits
 #include <memory>                                     // allocator
 #include <ranges>                                     // equal, from_range, iota, next, transform
+#include <stdexcept>                                  // length_error
 #include <type_traits>                                // is_default_constructible_v
 #include <utility>                                    // move
 #include <vector>                                     // vector
@@ -149,7 +151,12 @@ BOOST_AUTO_TEST_CASE(ItGrowsLikeAStdVector)
         v.shrink_to_fit();
         BOOST_CHECK_GE(v.capacity(), v.size());
 
-        BOOST_CHECK_EQUAL(v.max_size(), xstd::detail::bits::contiguous_bit_vector<std::uint8_t>().max_size());
+        // A std::vector<bool>'s ceiling, which is what a distance can name and not what the blocks could hold: whole blocks no wider than PTRDIFF_MAX, where the storage's own bound is whole blocks no wider than SIZE_MAX. A size past it is std::length_error, as [container.reqmts] has it, and one at it is left to the allocator. The value is libstdc++'s own for std::vector<bool> over a block of this width -- the same arithmetic reached for the same reason -- but not every standard library rounds its answer down to whole words, so it is the shape that is checked here and not another library's number.
+        BOOST_CHECK_EQUAL(v.max_size(), xstd::detail::bits::contiguous_bit_vector<std::uint8_t>::max_addressable_width);
+        BOOST_CHECK_LT(v.max_size(), xstd::detail::bits::contiguous_bit_vector<std::uint8_t>().max_size());
+        BOOST_CHECK_LE(v.max_size(), static_cast<std::size_t>(std::numeric_limits<std::ptrdiff_t>::max()));
+        BOOST_CHECK_EQUAL(v.max_size() % 8UZ, 0UZ);
+        BOOST_CHECK_THROW(v.resize(v.max_size() + 1UZ), std::length_error);
 
         v.clear();
         BOOST_CHECK(v.empty());

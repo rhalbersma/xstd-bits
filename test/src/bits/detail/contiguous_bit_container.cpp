@@ -12,13 +12,13 @@
 #include <xstd/bits/detail/contiguous_bit_inplace_vector.hpp> // IWYU pragma: keep; contiguous_bit_inplace_vector, named only under TEST_HAS_INPLACE_VECTOR
 #include <xstd/bits/detail/contiguous_bit_vector.hpp>         // contiguous_bit_vector
 #include <xstd/bits/detail/range_const_reference.hpp>         // fallback::range_const_reference_t, range_const_reference_t
-#include <boost/test/unit_test.hpp>                           // BOOST_CHECK_EQUAL, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <boost/test/unit_test.hpp>                           // BOOST_CHECK_EQUAL, BOOST_CHECK_LE, BOOST_CHECK_LT, BOOST_CHECK_THROW, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <algorithm>                                          // count, lexicographical_compare_three_way, min
 #include <array>                                              // array
 #include <bitset>                                             // bitset
 #include <compare>                                            // strong_ordering
 #include <concepts>                                           // same_as
-#include <cstddef>                                            // size_t
+#include <cstddef>                                            // ptrdiff_t, size_t
 #include <cstdint>                                            // uint8_t, uint64_t
 #include <initializer_list>                                   // initializer_list
 #include <limits>                                             // numeric_limits
@@ -27,6 +27,7 @@
 #include <new>                                                // bad_alloc
 #include <ranges>                                             // begin, iota, range_const_reference_t, size
 #include <span>                                               // dynamic_extent
+#include <stdexcept>                                          // length_error
 #include <tuple>                                              // get, tuple
 #include <vector>                                             // vector
 
@@ -1074,6 +1075,41 @@ BOOST_AUTO_TEST_CASE(TheAllocatorAndTheMaximumWidth)
         using A = xstd::detail::bits::contiguous_bit_array<std::uint8_t, 9>;
         static_assert(not has_allocator<A>);
         static_assert(A().max_size() == 9UZ);
+}
+
+// The three ceilings a reading can ask this storage for, and the refusal that goes with the narrowest of them. All three are the storage's to compute -- bits_per_block and the block container are what they are made of, and no reading above has either -- and none of them is the storage's to keep: what a width past one of them means belongs to the reading's counterpart, and the three counterparts disagree about it.
+BOOST_AUTO_TEST_CASE_TEMPLATE(TheThreeCeilingsAreComputedHereAndKeptAbove, Block, test::word_types)
+{
+        using V = xstd::detail::bits::contiguous_bit_vector<Block>;
+        constexpr auto top  = std::numeric_limits<std::size_t>::max();
+        constexpr auto pmax = static_cast<std::size_t>(std::numeric_limits<std::ptrdiff_t>::max());
+
+        // Whole blocks, both widths, and the one a distance can name is the narrower by construction.
+        static_assert(V::max_addressable_width % V::bits_per_block == 0UZ);
+        static_assert(V::max_addressable_width == V::max_addressable_num_blocks * V::bits_per_block);
+        static_assert(V::max_addressable_width <= pmax);
+        static_assert(V::max_addressable_width > pmax - V::bits_per_block);
+        static_assert(V::max_addressable_width < V::max_width);
+
+        auto const v = V();
+
+        // What the blocks can hold and a size_t can count, which is the set reading's answer, having no counterpart that names another.
+        BOOST_CHECK_EQUAL(v.max_size() % V::bits_per_block, 0UZ);
+        BOOST_CHECK_LE(v.max_size(), V::max_width);
+
+        // boost::dynamic_bitset's answer, which saturates where that one clamps: over std::allocator the product always overflows, whatever the block, so it is the top of size_t and the one answer here that is not a whole number of blocks.
+        BOOST_CHECK_EQUAL(v.saturating_max_size(), top);
+        BOOST_CHECK_EQUAL(v.saturating_max_size() - v.max_size(), V::bits_per_block - 1UZ);
+
+        // std::vector<bool>'s answer, which clamps further, to what a difference_type can count.
+        BOOST_CHECK_EQUAL(v.addressable_max_size(), V::max_addressable_width);
+        BOOST_CHECK_LT(v.addressable_max_size(), v.max_size());
+
+        // And the refusal the sequence reading spells every growth through: past that width it is std::length_error, at it the storage is left to answer for itself.
+        BOOST_CHECK_EQUAL(V::check_addressable_width(0UZ), 0UZ);
+        BOOST_CHECK_EQUAL(V::check_addressable_width(V::max_addressable_width), V::max_addressable_width);
+        BOOST_CHECK_THROW((void)V::check_addressable_width(V::max_addressable_width + 1UZ), std::length_error);
+        BOOST_CHECK_THROW((void)V::check_addressable_width(top), std::length_error);
 }
 
 // The saturating sum every growth here computes, and the block count it reaches. Every growth asks for a width by adding to one, and every one of those additions wraps: a wrapped width is small, so it sizes the blocks for far fewer positions than the caller goes on to write. Saturated instead it stays at the top of size_t, where the block count is one no allocator can serve -- this storage has no ceiling of its own to fail any more, the readings above holding the ones their own counterparts want.

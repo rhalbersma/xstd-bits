@@ -57,9 +57,13 @@ public:
         // The width as a type, dynamic_extent where there is none: what a reading asks when it needs the width before an object exists.
         static constexpr std::size_t extent = N;
 
-        // The widest width a size_t can count in whole blocks: the ceiling every growth below is measured against, and the one the readings inherit, having none of their own. What the blocks can actually hold is narrower still, and that ceiling is max_size().
+        // The widest width a size_t can count in whole blocks, and the widest a ptrdiff_t can: the two ceilings the readings choose between, neither of them enforced here. What the blocks can actually hold is narrower still, and that is max_size() and the two answers beside it.
         static constexpr auto max_num_blocks = std::numeric_limits<std::size_t>::max() / bits_per_block;
         static constexpr auto max_width      = max_num_blocks * bits_per_block;
+
+        // A width whose positions a difference_type can all name: what a random access range over these blocks can address, and so what std::vector<bool> reports and refuses against. Whole blocks, like the one above.
+        static constexpr auto max_addressable_num_blocks = static_cast<std::size_t>(std::numeric_limits<std::ptrdiff_t>::max()) / bits_per_block;
+        static constexpr auto max_addressable_width      = max_addressable_num_blocks * bits_per_block;
 
 private:
         static constexpr auto static_num_bits   = has_static_size ? align_up(N, bits_per_block) : 0UZ;
@@ -261,6 +265,16 @@ public:
                 return n;
         }
 
+        // The same refusal against the other ceiling, for the reading whose counterpart keeps that one: [container.reqmts] puts a sequence's at max_size(), and a size past what a distance can name is std::length_error there as it is in std::vector<bool>.
+        [[nodiscard]] static constexpr auto check_addressable_width(std::size_t n)
+                -> std::size_t
+        {
+                if (n > max_addressable_width) {
+                        throw addressable_length_error(n);
+                }
+                return n;
+        }
+
         [[nodiscard]] static constexpr auto width_sum(std::size_t base, std::size_t count) noexcept
                 -> std::size_t
         {
@@ -268,7 +282,7 @@ public:
                 return count > top - base ? top : base + count;
         }
 
-        // In bits: the width, or the widest whole number of blocks the blocks can hold and the address space can count.
+        // In bits: the width, or the widest whole number of blocks the blocks can hold and the address space can count. The set reading's answer, having no counterpart that names another.
         [[nodiscard]] constexpr auto max_size() const noexcept
                 -> std::size_t
         {
@@ -277,6 +291,25 @@ public:
                 } else {
                         return std::ranges::min(m_blocks.max_size(), max_num_blocks) * bits_per_block;
                 }
+        }
+
+        // boost::dynamic_bitset's answer over the same blocks, which saturates where the one above clamps: boost multiplies the blocks' limit by the bits in one and gives SIZE_MAX where that product is not representable, sixty-three positions above max_width. Said as a sum and not as boost's choice: bits_per_block is a power of two, so SIZE_MAX is max_width plus one block's bits less one, and the clamped answer needs exactly that much back wherever the clamp bit. A choice would be a branch whose two arms belong to different allocators -- std::allocator's ceiling always saturates -- and no one instantiation could take both.
+        [[nodiscard]] constexpr auto saturating_max_size() const noexcept
+                -> std::size_t
+        {
+                if constexpr (has_static_size) {
+                        return N;
+                } else {
+                        auto const saturates = static_cast<std::size_t>(m_blocks.max_size() > max_num_blocks);
+                        return max_size() + (saturates * (bits_per_block - 1UZ));
+                }
+        }
+
+        // std::vector<bool>'s answer over the same blocks, which clamps further: a random access range's positions are counted by a difference_type, so a width above max_addressable_width has distances it cannot represent, whatever the blocks could hold.
+        [[nodiscard]] constexpr auto addressable_max_size() const noexcept
+                -> std::size_t
+        {
+                return std::ranges::min(max_size(), max_addressable_width);
         }
 
         [[nodiscard]] constexpr auto size() const noexcept
@@ -1261,6 +1294,17 @@ private:
                         std::format(
                                 "{}:{}:{}: exception: ‘{}‘: argument ‘n‘ is no width this storage can count [{} > {}]",
                                 loc.file_name(), loc.line(), loc.column(), loc.function_name(), n, max_width
+                        )
+                );
+        }
+
+        // The same, against the ceiling a difference_type sets rather than the one a size_t sets.
+        [[nodiscard]] static constexpr auto addressable_length_error(std::size_t n, std::source_location const& loc = std::source_location::current())
+        {
+                return std::length_error(
+                        std::format(
+                                "{}:{}:{}: exception: ‘{}‘: argument ‘n‘ is no width a distance can name [{} > {}]",
+                                loc.file_name(), loc.line(), loc.column(), loc.function_name(), n, max_addressable_width
                         )
                 );
         }

@@ -214,10 +214,9 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheAllocatorAndMaxSizeAreBoosts, T, Dynamic)
         auto const c = T(blocks.begin(), blocks.end(), alloc);
         BOOST_CHECK_EQUAL(c.num_blocks(), 2UZ);
 
-        // A whole number of blocks, no larger than boost's bound over the same blocks.
-        BOOST_CHECK_EQUAL(b.max_size() % T::bits_per_block, 0UZ);
+        // Boost's own bound over the same blocks, to the value: the blocks' limit times the bits in one, saturating at SIZE_MAX where that product is not representable -- which over both block types here it is not, so both answer SIZE_MAX and neither is a whole number of blocks.
+        BOOST_CHECK_EQUAL(b.max_size(), Boost(9).max_size());
         BOOST_CHECK_GE(b.max_size(), b.size());
-        BOOST_CHECK_LE(b.max_size(), Boost(9).max_size());
 }
 
 // Then the throwing at and test_set.
