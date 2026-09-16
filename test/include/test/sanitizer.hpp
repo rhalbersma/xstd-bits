@@ -19,11 +19,11 @@
 // Declare anything a guarded block needs INSIDE it. The clang legs compile with -Weverything -Werror, so a
 // variable named outside a block that is the only thing using it is an unused-variable error on exactly the legs
 // the guard is for -- which is how this comment came to be here.
-#if defined(__SANITIZE_ADDRESS__)
+#ifdef __SANITIZE_ADDRESS__
 
 #define TEST_HAS_ADDRESS_SANITIZER
 
-#elif defined(__has_feature)
+#elifdef __has_feature
 #if __has_feature(address_sanitizer)
 
 #define TEST_HAS_ADDRESS_SANITIZER
