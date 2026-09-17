@@ -137,7 +137,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItRoundTripsAtCompileTime, T, Types)
 {
         constexpr auto N = T().max_size();
         if constexpr (std::is_constructible_v<T, std::bitset<N>>) {
-                static_assert([]() -> bool {
+                static_assert([] -> bool {
                         // A PATTERN rather than a mutation, which is what makes this one expression at every graded
                         // extent. std::bitset's constructor from unsigned long long masks to the width, so ~0ULL is
                         // every position it has -- and at the zero width that is none, where set(0) would throw
