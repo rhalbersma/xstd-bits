@@ -18,8 +18,14 @@ namespace xstd::detail::bits {
 // A std::bitset's positions as BYTES and back, byte j holding the positions [8j, 8j + 8) least significant bit
 // first -- which is what every contiguous bit container lays them out as, whatever its block width, so this is the
 // one currency our blocks and theirs can be exchanged in without walking positions.
+// Spelled rather than written as an 8 and a 64: these are what the byte exchange below shifts and divides by, and
+// a literal at each of those sites is a magic number by every reading, this repository's clang-tidy configuration
+// among them.
+inline constexpr auto bits_per_byte = static_cast<std::size_t>(std::numeric_limits<unsigned char>::digits);
+inline constexpr auto bits_per_word = static_cast<std::size_t>(std::numeric_limits<unsigned long long>::digits);
+
 template<std::size_t N>
-inline constexpr auto bitset_byte_count = (N + 7UZ) / 8UZ;
+inline constexpr auto bitset_byte_count = (N + bits_per_byte - 1UZ) / bits_per_byte;
 
 // Two paths, and the narrow one is the STANDARD one: at a width an unsigned long long can hold, to_ullong and the
 // constructor taking one are the door the standard itself provides, so nothing about any implementation's layout
@@ -38,7 +44,7 @@ template<std::size_t N>
 }
 
 template<std::size_t N>
-inline constexpr auto fits_one_word = N <= static_cast<std::size_t>(std::numeric_limits<unsigned long long>::digits);
+inline constexpr auto fits_one_word = N <= bits_per_word;
 
 template<std::size_t N>
 [[nodiscard]] constexpr auto bitset_bytes(std::bitset<N> const& bs) noexcept
@@ -55,7 +61,7 @@ template<std::size_t N>
                 if constexpr (fits_one_word<N>) {
                         auto const value = bs.to_ullong();
                         for (auto j = 0UZ; j < bytes.size(); ++j) {
-                                bytes[j] = static_cast<std::byte>(static_cast<unsigned char>(value >> (8UZ * j)));
+                                bytes[j] = static_cast<std::byte>(static_cast<unsigned char>(value >> (bits_per_byte * j)));
                         }
                 } else {
                         auto const object = bitset_object_bytes(bs);
@@ -77,7 +83,7 @@ template<std::size_t N>
         } else if constexpr (fits_one_word<N>) {
                 auto value = 0ULL;
                 for (auto j = 0UZ; j < bytes.size(); ++j) {
-                        value |= static_cast<unsigned long long>(std::to_integer<unsigned char>(bytes[j])) << (8UZ * j);
+                        value |= static_cast<unsigned long long>(std::to_integer<unsigned char>(bytes[j])) << (bits_per_byte * j);
                 }
                 return std::bitset<N>(value);
         } else {
@@ -104,7 +110,7 @@ template<std::size_t M>
                 b.set(i);
                 auto const object = bitset_object_bytes(b);
                 for (auto j = 0UZ; j < object.size(); ++j) {
-                        if (object[j] != (j == i / 8UZ ? static_cast<std::byte>(1U << (i % 8UZ)) : std::byte{})) {
+                        if (object[j] != (j == i / bits_per_byte ? static_cast<std::byte>(1U << (i % bits_per_byte)) : std::byte{})) {
                                 return false;
                         }
                 }
@@ -137,8 +143,8 @@ template<std::size_t N>
 concept bytewise_bitset =
         fits_one_word<N> or (
                 std::has_unique_object_representations_v<std::bitset<N>> and
-                sizeof(std::bitset<N>) * 8UZ >= N and
-                sizeof(std::bitset<N>) * 8UZ <  N + 64UZ and
+                sizeof(std::bitset<N>) * bits_per_byte >= N and
+                sizeof(std::bitset<N>) * bits_per_byte <  N + bits_per_word and
                 bitset_layout_verified
         )
 ;

@@ -53,6 +53,10 @@ public:
         using block_type = std::ranges::range_value_t<Blocks>;
 
         static constexpr auto bits_per_block  = static_cast<std::size_t>(xstd::numeric_limits<block_type>::digits);
+
+        // Derived rather than written as an 8, and from what is already here: a block's digits over its bytes IS the
+        // bits in a byte. What the byte primitives below shift by, and a literal there is a magic number.
+        static constexpr auto bits_per_byte   = bits_per_block / sizeof(block_type);
         static constexpr auto has_static_size = N != std::dynamic_extent;
 
         // The width as a type, dynamic_extent where there is none: what a reading asks when it needs the width before an object exists.
@@ -369,7 +373,7 @@ public:
         // rather than a walk over positions. Static widths only, because that is what makes every bound below a
         // constant: a run-time width wants the same arithmetic and one std::ranges::min the compiler cannot fold.
         template<std::size_t E>
-                requires (has_static_size)
+                requires has_static_size
         constexpr auto assign_bytes(std::array<std::byte, E> const& bytes) noexcept
                 -> void
         {
@@ -383,7 +387,7 @@ public:
                         for (auto j = 0UZ; j < count; ++j) {
                                 auto const byte  = static_cast<block_type>(std::to_integer<unsigned char>(bytes[j]));
                                 auto&      block = m_blocks[j / sizeof(block_type)];
-                                block = static_cast<block_type>(block | shl(byte, 8UZ * (j % sizeof(block_type))));
+                                block = static_cast<block_type>(block | shl(byte, bits_per_byte * (j % sizeof(block_type))));
                         }
                 }
 
@@ -393,7 +397,7 @@ public:
         }
 
         template<std::size_t E>
-                requires (has_static_size)
+                requires has_static_size
         [[nodiscard]] constexpr auto to_bytes() const noexcept
                 -> std::array<std::byte, E>
         {
@@ -401,7 +405,7 @@ public:
                 auto bytes = std::array<std::byte, E>();
                 if constexpr (count > 0UZ) {
                         for (auto j = 0UZ; j < count; ++j) {
-                                auto const block = shr(m_blocks[j / sizeof(block_type)], 8UZ * (j % sizeof(block_type)));
+                                auto const block = shr(m_blocks[j / sizeof(block_type)], bits_per_byte * (j % sizeof(block_type)));
                                 bytes[j] = static_cast<std::byte>(static_cast<unsigned char>(block));
                         }
                 }
