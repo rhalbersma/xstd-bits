@@ -12,6 +12,7 @@
 #include <xstd/bits/set_adaptor.hpp>                  // set_adaptor
 #include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                                  // equal
+#include <bitset>                                     // bitset
 #include <compare>                                    // is_eq
 #include <concepts>                                   // same_as
 #include <cstddef>                                    // size_t
@@ -20,6 +21,7 @@
 #include <memory>                                     // allocator
 #include <ranges>                                     // iota, to
 #include <set>                                        // set
+#include <type_traits>                                // is_constructible_v
 
 BOOST_AUTO_TEST_SUITE(BitSet)
 
@@ -134,6 +136,15 @@ BOOST_AUTO_TEST_CASE(ItYieldsAscendingKeys)
                 c.insert(key);
         }
         test::set::yields_ascending_keys(c);
+}
+
+// A run-time width has neither std::bitset conversion, and that is the width policy and not an omission: a
+// std::bitset names one N at compile time and a growing set has no single one to mean, so the question a
+// static width answers exactly has no answer here at all. bit_static_set carries the pair; this does not.
+BOOST_AUTO_TEST_CASE(AStdBitsetIsNoConversionAtARunTimeWidth)
+{
+        static_assert(not std::is_constructible_v<xstd::bit_set, std::bitset<64>>);
+        static_assert(not std::is_constructible_v<std::bitset<64>, xstd::bit_set>);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

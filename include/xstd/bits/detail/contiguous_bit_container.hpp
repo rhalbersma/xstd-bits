@@ -18,10 +18,11 @@
 #include <xstd/misc/type_traits/conditional_data_member.hpp> // XSTD_NO_UNIQUE_ADDRESS, conditional_data_member_t
 #include <boost/hash2/hash_append_fwd.hpp>                   // hash_append, hash_append_tag
 #include <algorithm>                                         // all_of, any_of, equal, fill, fill_n, find_if, fold_left, lexicographical_compare_three_way, max, min, shift_left, shift_right
+#include <array>                                             // array
 #include <cassert>                                           // assert
 #include <compare>                                           // strong_ordering
 #include <concepts>                                          // same_as
-#include <cstddef>                                           // ptrdiff_t, size_t
+#include <cstddef>                                           // byte, ptrdiff_t, size_t, to_integer
 #include <format>                                            // format
 #include <functional>                                        // plus
 #include <iterator>                                          // distance, forward_iterator, input_iterator, prev
@@ -358,6 +359,53 @@ public:
                 } else if constexpr (not has_static_size) {
                         m_blocks[last_block()] &= used_bits();
                 }
+        }
+
+        // The bits as BYTES, and back: byte j holds the positions [8j, 8j + 8), least significant bit first, which is
+        // what every contiguous bit container lays them out as whatever its block width. Said in SHIFTS and not a
+        // memcpy, for three reasons at once: the answer does not depend on the order a block stores its own bytes in,
+        // both directions stay constexpr where a memcpy is not, and the arithmetic is the same one on every block
+        // width, so two widths over the same positions agree byte for byte and converting between them is a copy
+        // rather than a walk over positions. Static widths only, because that is what makes every bound below a
+        // constant: a run-time width wants the same arithmetic and one std::ranges::min the compiler cannot fold.
+        template<std::size_t E>
+                requires (has_static_size)
+        constexpr auto assign_bytes(std::array<std::byte, E> const& bytes) noexcept
+                -> void
+        {
+                constexpr auto count = std::ranges::min(E, static_num_blocks * sizeof(block_type));
+                std::ranges::fill(m_blocks, zero);
+
+                // if constexpr, and not a loop that would simply run zero times: a zero width instantiates this with
+                // no byte to carry, and the loop it could not enter is a line no test reaches and a branch slot
+                // nothing can take, both counted per instantiation.
+                if constexpr (count > 0UZ) {
+                        for (auto j = 0UZ; j < count; ++j) {
+                                auto const byte  = static_cast<block_type>(std::to_integer<unsigned char>(bytes[j]));
+                                auto&      block = m_blocks[j / sizeof(block_type)];
+                                block = static_cast<block_type>(block | shl(byte, 8UZ * (j % sizeof(block_type))));
+                        }
+                }
+
+                // The source keeps its own tail clear, so this restores nothing where the two widths agree -- and
+                // everything where they do not, a block wider than the bytes handed over leaving positions above them.
+                erase_unused();
+        }
+
+        template<std::size_t E>
+                requires (has_static_size)
+        [[nodiscard]] constexpr auto to_bytes() const noexcept
+                -> std::array<std::byte, E>
+        {
+                constexpr auto count = std::ranges::min(E, static_num_blocks * sizeof(block_type));
+                auto bytes = std::array<std::byte, E>();
+                if constexpr (count > 0UZ) {
+                        for (auto j = 0UZ; j < count; ++j) {
+                                auto const block = shr(m_blocks[j / sizeof(block_type)], 8UZ * (j % sizeof(block_type)));
+                                bytes[j] = static_cast<std::byte>(static_cast<unsigned char>(block));
+                        }
+                }
+                return bytes;
         }
 
         // A word at any position, aligned or not: the bits [n, n + bits_per_block), the clear tail and nothing beyond the last block.
