@@ -8,11 +8,12 @@
 #include <test/set/concepts.hpp>        // bit_set
 #include <test/value_reference.hpp>     // value_reference
 #include <xstd/bits/bit_static_set.hpp> // bit_static_set
-#include <xstd/bits/bitset.hpp>        // bitset
+#include <xstd/bits/bitset.hpp>         // bitset
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <bitset>                       // bitset
 #include <concepts>                     // regular, totally_ordered
 #include <cstddef>                      // size_t
+#include <cstdint>                      // uint64_t
 #include <iterator>                     // bidirectional_iterator
 #include <ranges>                       // bidirectional_range, iota, to
 #include <type_traits>                  // is_constructible_v, is_convertible_v
@@ -186,8 +187,11 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AnUnsignedIntegerIsAFieldOfBitsToo, T, Types)
 {
         constexpr auto N = T().max_size();
         if constexpr (std::is_constructible_v<T, std::uint64_t>) {
-                // Every position the width has, and none of them.
-                constexpr auto all = N == 0UZ ? 0ULL : (N == 64UZ ? ~0ULL : (1ULL << N) - 1ULL);
+                // Every position the width has, and none of them. Said WITHOUT a shift: a ternary guards the value
+                // it picks but not the expression it does not, so 1ULL << N is still compiled at a width of
+                // sixty-four, where the shift is undefined and MSVC says so (C4293) though GCC and clang fold it
+                // silently. std::bitset answers the same mask by flipping an empty one, and needs no shift at all.
+                constexpr auto all = std::bitset<N>().flip().to_ullong();
                 auto const full = T(all);
                 BOOST_CHECK_EQUAL(full.size(), N);
                 BOOST_CHECK(static_cast<std::uint64_t>(full) == all);
