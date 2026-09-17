@@ -77,8 +77,14 @@ concept probeable_bits =
 // reversed bit order, a tail the implementation does not keep clean, and -- bit_cast handing back the object
 // representation rather than the value -- a big-endian target, where bit n of a word lands at the far end of it.
 // The endianness guard IS this probe, and there is no second one to fall out of step with it.
+//
+// NOT noexcept, and deliberately so: a bitset reading's set(pos) throws out_of_range for a position it does not
+// have. The loop below never asks for one -- it skips i >= N, and the concept below settles the width before it
+// gets here -- but that is reasoning a call graph cannot follow, and a throw out of a noexcept function is a
+// terminate rather than a diagnostic. There is nothing to buy back either: every call to this is a constant
+// evaluation, and a throw there is already a hard error.
 template<class B, std::size_t N>
-[[nodiscard]] constexpr auto bit_layout_holds() noexcept
+[[nodiscard]] constexpr auto bit_layout_holds()
         -> bool
 {
         for (auto const byte : object_bytes(B())) {
