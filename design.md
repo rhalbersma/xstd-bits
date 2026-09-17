@@ -328,9 +328,29 @@ reader pick one rather than letting a conversion pick for them.
 The currency is **bytes**, not words. Byte `j` holds the positions `[8j, 8j + 8)` least significant bit first,
 which is what every contiguous bit container lays them out as whatever its block width, so two widths over the
 same positions agree byte for byte. That is what makes this a copy rather than a walk over positions, and the
-storage's own `assign_bytes` and `to_bytes` are the primitives, said in **shifts** rather than a `memcpy`: the
-answer then does not depend on the order a block stores its own bytes in, and both directions stay `constexpr`,
-which a `memcpy` is not.
+storage's own `assign_bytes` and `to_bytes` are the primitives.
+
+Both are said **twice**, and the reason is measured rather than tasteful. Said in **shifts**, they name where a
+position goes instead of assuming a byte order, so they are right on either endianness and they are a constant
+expression — neither of which a `memcpy` is. They are also a byte at a time, and over the eight kilobytes of
+2^16 positions that costs **9.70µs against 0.07µs**, a factor of about a hundred and forty-five. So the shifts
+keep the two cases a copy cannot take, a constant expression and a big-endian target, and the copy takes the
+case that is neither, which is every rung this ladder runs. `if consteval` picks the first,
+`if constexpr (endian::native == endian::little)` the second; neither is a branch a coverage slot can miss,
+because neither is a branch at run time.
+
+That factor is what decides a question this design keeps inviting: whether a foreign bitset should be **read**
+block-wise in place rather than converted. In place is not portably possible — `bit_cast` yields a copy, so
+reading someone else's words needs a pointer into them, which is `_M_p`, `__seg_` or `_Myptr` by turns. It also
+turns out not to be worth wanting. Iterating the set positions of a `std::bitset<2^16>` at 2.7% density costs
+**41.1µs** asking every position, against **libstdc++'s own in-place `_Find_first`/`_Find_next`** and
+**converting once and then iterating**, which come out level: five runs put their ratio at 1.06, 0.94, 0.95,
+1.06 and 1.01, so on par to within about six percent. The absolute microseconds are not quotable — this box is
+bimodal, and both of those two move between roughly 7.5µs and 18.5µs *together*, which is what makes the ratio
+the only honest figure and a single run of either a trap. So there is no `bit_readable` to add: converting
+costs what reading in place would, the conversion is the door, and the readings' own block-wise algorithms are
+what waits behind it.
+
 
 Reaching the bytes takes two paths, and the narrow one is the **standard** one. At a width an `unsigned long
 long` holds, `to_ullong` and the constructor taking one are the door the standard itself provides, so nothing
