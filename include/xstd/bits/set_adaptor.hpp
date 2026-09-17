@@ -10,7 +10,7 @@
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/detail/hash.hpp>                     // hash_append_bits, hash_append_positions, std_hash
 #include <xstd/bits/detail/intrin.hpp>                   // countl_zero, countr_zero
-#include <xstd/bits/detail/bytewise_bitset.hpp>          // bitset_byte_count, bitset_bytes, bytes_bitset, bytewise_bitset
+#include <xstd/bits/detail/bit_castable.hpp>              // bit_bytes, bit_castable, byte_count, bytes_bits
 #include <xstd/bits/detail/shift.hpp>                    // shl, shr
 #include <xstd/bits/detail/zero_width.hpp>               // zero_width
 #include <xstd/bits/ownership.hpp>                       // owned_bits_t, owned_storage, owner_of, owner_reading, ownership, owns, reading
@@ -18,7 +18,6 @@
 #include <boost/container_hash/is_range.hpp>             // is_range
 #include <boost/hash2/hash_append.hpp>                   // hash_append_tag
 #include <algorithm>                                     // all_of, find_if, lexicographical_compare_three_way, max, min
-#include <bitset>                                        // bitset
 #include <cassert>                                       // assert
 #include <compare>                                       // strong_ordering
 #include <concepts>                                      // constructible_from, convertible_to, invocable, swappable
@@ -153,9 +152,9 @@ public:
         using value_compare          = key_compare;
         static constexpr bool has_static_width = (Bits::extent != std::dynamic_extent);
 
-        // std::dynamic_extent is SIZE_MAX, and naming std::bitset<SIZE_MAX> in a member declaration instantiates it
-        // -- an array of two exabytes -- however unsatisfiable the constraint on that member is. So the two
-        // std::bitset members below spell their width through this, which is zero wherever they do not exist.
+        // std::dynamic_extent is SIZE_MAX, and a concept asked at that width would compute byte_count of it -- two
+        // exabytes of bytes -- however unsatisfiable the rest of the constraint is. So the two conversions below
+        // spell their width through this, which is zero wherever they do not exist.
         static constexpr auto static_bitset_extent = has_static_width ? Bits::extent : 0UZ;
         using pointer                = void;
         using const_pointer          = pointer;
@@ -191,31 +190,36 @@ public:
                 insert(il.begin(), il.end());
         }
 
-        // std::bitset in and std::bitset out, at the one extent where the question has a single answer: a static width
-        // is a CAPACITY under this reading and a std::bitset's own width both, so position n here is bit n there and
-        // there is no policy left to choose -- nothing truncates, nothing grows, nothing throws, and the round trip
-        // is the identity in both directions. EXPLICIT in both directions, and not because either could fail: a set
-        // of positions and a field of bits are two readings of the same bits, and this library makes a reader pick
-        // one rather than letting a conversion pick for them.
+        // A field of bits in, a field of bits out, at the one extent where the question has a single answer: a static
+        // width is a CAPACITY under this reading and the other side's own width both, so position n here is bit n
+        // there and there is no policy left to choose -- nothing truncates, nothing grows, nothing throws, and the
+        // round trip is the identity in both directions. EXPLICIT in both directions, and not because either could
+        // fail: a set of positions and a field of bits are two readings of the same bits, and this library makes a
+        // reader pick one rather than letting a conversion pick for them.
         //
-        // Constrained on bytewise_bitset rather than assumed. At a width one unsigned long long holds -- which is
-        // most of them -- that concept is satisfied outright and the exchange goes through to_ullong and the
-        // constructor taking one, which the standard provides and every implementation therefore has. Wider, it is
-        // the byte copy the storage's own primitive performs, over a layout proved rather than believed; and where
-        // an implementation ever laid its bits out otherwise the concept is unsatisfied and neither of these two
-        // exists, which is a call that fails to compile rather than one quietly costing two hundred times more.
-        template<std::size_t M>
-                requires is_owner and has_static_width and (M == bits_type::extent) and detail::bits::bytewise_bitset<M>
-        [[nodiscard]] constexpr explicit set_adaptor(std::bitset<M> const& bs) noexcept
+        // NAMED BY A CONCEPT rather than by a type. std::bitset appears nowhere here, which is the point: what these
+        // two admit is anything whose N bits this library can prove it reads correctly -- an unsigned integer, whose
+        // layout the language states, or a field of bits whose layout bit_castable probes and proves. So
+        // std::bitset<N> rides in on the same rule as unsigned long long, and an implementation that ever laid its
+        // bits out otherwise is simply not admitted: a call that fails to compile rather than one quietly wrong.
+        //
+        // The integer family is worth reading twice at THIS reading. bit_static_set<32>(5u) is a set of the positions
+        // that the VALUE five has, {0, 2}, and not the set {5} -- the same bits std::bitset<32>(5u) would hold. It is
+        // explicit, so it is asked for rather than arrived at, but it is the one spelling here that a reader coming
+        // from the set vocabulary can misread.
+        template<class B>
+                requires is_owner and has_static_width and detail::bits::bit_castable<B, static_bitset_extent>
+        [[nodiscard]] constexpr explicit set_adaptor(B const& b) noexcept
         {
-                m_bits.assign_bytes(detail::bits::bitset_bytes(bs));
+                m_bits.assign_bytes(detail::bits::bit_bytes<static_bitset_extent>(b));
         }
 
-        [[nodiscard]] constexpr explicit operator std::bitset<static_bitset_extent>() const noexcept
-                requires has_static_width and detail::bits::bytewise_bitset<static_bitset_extent>
+        template<class B>
+                requires has_static_width and detail::bits::bit_castable<B, static_bitset_extent>
+        [[nodiscard]] constexpr explicit operator B() const noexcept
         {
-                return detail::bits::bytes_bitset<static_bitset_extent>(
-                        m_bits.template to_bytes<detail::bits::bitset_byte_count<static_bitset_extent>>()
+                return detail::bits::bytes_bits<B, static_bitset_extent>(
+                        m_bits.template to_bytes<detail::bits::byte_count<static_bitset_extent>>()
                 );
         }
 

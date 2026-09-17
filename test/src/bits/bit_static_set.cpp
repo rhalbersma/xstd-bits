@@ -8,6 +8,7 @@
 #include <test/set/concepts.hpp>        // bit_set
 #include <test/value_reference.hpp>     // value_reference
 #include <xstd/bits/bit_static_set.hpp> // bit_static_set
+#include <xstd/bits/bitset.hpp>        // bitset
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <bitset>                       // bitset
 #include <concepts>                     // regular, totally_ordered
@@ -174,6 +175,49 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AnyOtherWidthIsNoConversionAtAll, T, Types)
                 if constexpr (N > 1UZ) {
                         static_assert(not std::is_constructible_v<T, std::bitset<N - 1UZ>>);
                 }
+        }
+}
+
+// The two conversions are named by a CONCEPT, not by std::bitset, so anything whose N bits this library can prove
+// it reads correctly comes in on the same rule. An unsigned integer is the family that proves nothing, because the
+// language already states it: bit n of the value is 2^n. The guard is the public question -- does the conversion
+// exist? -- which is false exactly where the integer is too narrow for the width.
+BOOST_AUTO_TEST_CASE_TEMPLATE(AnUnsignedIntegerIsAFieldOfBitsToo, T, Types)
+{
+        constexpr auto N = T().max_size();
+        if constexpr (std::is_constructible_v<T, std::uint64_t>) {
+                // Every position the width has, and none of them.
+                constexpr auto all = N == 0UZ ? 0ULL : (N == 64UZ ? ~0ULL : (1ULL << N) - 1ULL);
+                auto const full = T(all);
+                BOOST_CHECK_EQUAL(full.size(), N);
+                BOOST_CHECK(static_cast<std::uint64_t>(full) == all);
+
+                auto const none = T(std::uint64_t{});
+                BOOST_CHECK_EQUAL(none.size(), 0UZ);
+                BOOST_CHECK(static_cast<std::uint64_t>(none) == 0ULL);
+
+                static_assert(not std::is_convertible_v<std::uint64_t, T>);
+                static_assert(not std::is_convertible_v<T, std::uint64_t>);
+        }
+}
+
+// And our own bitset reading crosses to the set reading on that same rule, which is the generalisation paying for
+// itself: neither side is std::bitset, and neither is named in the constraint.
+BOOST_AUTO_TEST_CASE_TEMPLATE(OurOwnBitsetReadingCrossesOnTheSameRule, T, Types)
+{
+        constexpr auto N = T().max_size();
+        using Bitset = xstd::bitset<N>;
+        if constexpr (std::is_constructible_v<T, Bitset>) {
+                auto b = Bitset();
+                for (auto i = 0UZ; i < N; i += 5UZ) {
+                        b.set(i);
+                }
+                auto const c = T(b);
+                BOOST_CHECK_EQUAL(c.size(), b.count());
+                for (auto i = 0UZ; i < N; ++i) {
+                        BOOST_CHECK_EQUAL(c.contains(i), b.test(i));
+                }
+                BOOST_CHECK(static_cast<Bitset>(c) == b);
         }
 }
 
