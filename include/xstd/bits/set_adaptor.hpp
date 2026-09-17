@@ -18,12 +18,11 @@
 #include <boost/container_hash/is_range.hpp>             // is_range
 #include <boost/hash2/hash_append.hpp>                   // hash_append_tag
 #include <algorithm>                                     // all_of, find_if, lexicographical_compare_three_way, max, min
-#include <array>                                         // array
 #include <bitset>                                        // bitset
 #include <cassert>                                       // assert
 #include <compare>                                       // strong_ordering
 #include <concepts>                                      // constructible_from, convertible_to, invocable, swappable
-#include <cstddef>                                       // byte, ptrdiff_t, size_t
+#include <cstddef>                                       // ptrdiff_t, size_t
 #include <format>                                        // format
 #include <functional>                                    // hash, less
 #include <initializer_list>                              // initializer_list
