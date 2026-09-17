@@ -27,9 +27,8 @@
 #include <sstream>                                       // istringstream
 #include <stdexcept>                                     // out_of_range, overflow_error
 #include <string>                                        // string
-#include <type_traits>                            // is_constructible_v, is_convertible_v
 #include <tuple>                                         // tuple
-#include <type_traits>                                   // is_nothrow_*, is_trivially_*
+#include <type_traits>                                   // is_constructible_v, is_convertible_v, is_nothrow_*, is_trivially_*
 #include <utility>                                       // as_const, declval
 #include <vector>                                        // vector
 
@@ -495,11 +494,11 @@ BOOST_AUTO_TEST_CASE(ABitsetReadingExchangesBytesWithAnotherFieldOfBits)
 BOOST_AUTO_TEST_CASE(TheIntegerDoorIsUnchangedByTheByteExchange)
 {
         // [bitset.cons]/2's constructor is IMPLICIT, and an explicit template admitting unsigned int would be an
-        // exact match where that one takes a conversion -- so it would win for bitset<32>(5u) and, being explicit,
+        // exact match where that one takes a conversion -- so it would win for bitset<32>(5U) and, being explicit,
         // make this copy-initialization ill-formed.
         static_assert(std::is_convertible_v<unsigned long long, xstd::bitset<64>>);
         static_assert(std::is_convertible_v<unsigned,           xstd::bitset<32>>);
-        xstd::bitset<32> implicitly = 5u;
+        xstd::bitset<32> const implicitly = 5U;
         BOOST_CHECK_EQUAL(implicitly.to_ullong(), 5ULL);
 
         // And to_ullong keeps ITS contract, which the byte exchange does not share: a set position beyond the word

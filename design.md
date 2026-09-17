@@ -405,8 +405,12 @@ already checks.
 A run-time width has neither conversion, and that is the policy and not an omission: a field of `N` bits names
 one `N` at compile time and a growing set has no single one to mean.
 
-**All three readings carry the exchange**, over the same `contiguous_bit_array` and the same two primitives, and
-the differences between them are each forced by something the reading already is.
+**All three readings carry the exchange**, and it is said **once, in the container**. The width is
+`contiguous_bit_container`'s own property rather than any reading's, so that is where `bit_extent`, the two
+`exchanges_bits` predicates and the `assign_bits`/`to_bits` pair live; a reading forwards to them in one line and
+adds only what its own vocabulary requires. Said in each adaptor instead, the `dynamic_extent`-to-zero guard —
+needed because `dynamic_extent` is `SIZE_MAX` and `byte_count` of that is two exabytes — was three copies of one
+idea. The differences that remain between the readings are each forced by something the reading already is.
 
 The **sequence** reading takes it whole, on `bit_castable` exactly as the set reading does — with one constraint
 the set reading has no need of. A `bit_subspan` is a *window*: a bit offset and a size of its own into storage it

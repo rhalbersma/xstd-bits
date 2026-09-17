@@ -9,7 +9,6 @@
 // Bitsets [bitset], Header <bitset> synopsis [bitset.syn]
 
 #include <xstd/bits/detail/allocator_base_type.hpp> // allocator_base_type
-#include <xstd/bits/detail/bit_castable.hpp>  // bit_bytes, byte_count, bytes_bits, container_source
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/detail/hash.hpp>              // hash_append_bits, std_hash
 #include <xstd/bits/detail/zero_width.hpp>        // zero_width
@@ -46,11 +45,6 @@ class bitset_adaptor : public detail::bits::allocator_base_type<Bits>
 {
         // One wrapper, two counterparts it strictly extends: std::bitset at a static width, boost::dynamic_bitset at a run-time one.
         static constexpr bool has_static_width = (Bits::extent != std::dynamic_extent);
-
-        // std::dynamic_extent is SIZE_MAX, and a concept asked at that width would compute byte_count of it -- two
-        // exabytes of bytes -- however unsatisfiable the rest of the constraint is. So the two conversions below
-        // spell their width through this, which is zero wherever they do not exist.
-        static constexpr auto static_bitset_extent = has_static_width ? Bits::extent : 0UZ;
 
         // No iteration here by design, because neither counterpart has it: the two views refer into the storage instead.
         Bits m_bits{};
@@ -172,25 +166,23 @@ public:
         //     an exact match where that one needs a conversion, so it would win for bitset<32> b(5u) -- and being
         //     explicit, it would make bitset<32> b = 5u ill-formed, which compiles today.
         //   - to_ullong() THROWS overflow_error where a set position lies beyond the word ([bitset.members]/34-37),
-        //     where bytes_bits would silently keep the low bits. Two contracts for one conversion is a trap, and
+        //     where a byte copy would silently keep the low bits. Two contracts for one conversion is a trap, and
         //     the standard's is the one this reading owes.
         //
         // So integers keep their door and this opens the other one: std::bitset<N>, and any field of bits whose
         // layout bit_castable can prove.
         template<class B>
-                requires has_static_width and detail::bits::container_source<B, static_bitset_extent>
+                requires Bits::template exchanges_bits_as_field<B>
         [[nodiscard]] constexpr explicit bitset_adaptor(B const& b) noexcept
         {
-                m_bits.assign_bytes(detail::bits::bit_bytes<static_bitset_extent>(b));
+                m_bits.assign_bits(b);
         }
 
         template<class B>
-                requires has_static_width and detail::bits::container_source<B, static_bitset_extent>
+                requires Bits::template exchanges_bits_as_field<B>
         [[nodiscard]] constexpr explicit operator B() const noexcept
         {
-                return detail::bits::bytes_bits<B, static_bitset_extent>(
-                        m_bits.template to_bytes<detail::bits::byte_count<static_bitset_extent>>()
-                );
+                return m_bits.template to_bits<B>();
         }
 
         // boost's block-range constructor: the first block's low bit is position zero, and the width is a whole number of blocks.

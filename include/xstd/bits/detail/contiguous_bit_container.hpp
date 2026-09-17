@@ -32,6 +32,7 @@
 #include <ranges>                                            // begin, drop, iota, rbegin, rend, size, swap, take, transform, zip
                                                              // (views::drop_last when P22014R2 is accepted)
 #include <source_location>                                   // source_location
+#include <xstd/bits/detail/bit_castable.hpp>                  // bit_bytes, bit_castable, byte_count, bytes_bits, container_source
 #include <span>                                              // dynamic_extent
 #include <stdexcept>                                         // length_error
 #include <type_traits>                                       // conditional_t, is_const_v, remove_reference_t
@@ -63,6 +64,22 @@ public:
 
         // The width as a type, dynamic_extent where there is none: what a reading asks when it needs the width before an object exists.
         static constexpr std::size_t extent = N;
+
+        // THE WIDTH IS THIS CONTAINER'S PROPERTY, so the byte exchange is said here once rather than in each of the
+        // three readings over it. std::dynamic_extent is SIZE_MAX, and a concept asked at that width would compute
+        // byte_count of it -- two exabytes of bytes -- however unsatisfiable the rest of the constraint is, so a
+        // dynamic width answers zero here and never reaches the concept at all.
+        static constexpr auto bit_extent = has_static_size ? N : 0UZ;
+
+        // The two shapes a reading asks for: either family, or the field-of-bits family alone where a reading
+        // already has a door for integers and a second one would collide with it rather than widen it. What a
+        // reading adds on top is its OWN vocabulary -- an owner rather than a view, a view that is not a window --
+        // and that stays where it belongs, because it says nothing about the bits.
+        template<class B>
+        static constexpr auto exchanges_bits = has_static_size and bit_castable<B, bit_extent>;
+
+        template<class B>
+        static constexpr auto exchanges_bits_as_field = has_static_size and container_source<B, bit_extent>;
 
         // How many blocks a run-time width needs, floored at one like num_blocks_v. Total over every size_t, and said as boost's own calc_num_blocks says it -- divide, then round up by the remainder -- because that CANNOT overflow, where align_up(n, bits_per_block) adds first and wraps for the 63 widths above max_width, rounding them to zero blocks that the floor then turns into one. A guard against that wrap is a guard against a spelling; this spelling has nothing to guard. Public because that totality is the claim, and a static_assert is the only way to make it without asking an allocator for two exabytes.
         [[nodiscard]] static constexpr auto blocks_for(std::size_t n) noexcept
@@ -438,6 +455,24 @@ public:
                 // The source keeps its own tail clear, so this restores nothing where the two widths agree -- and
                 // everything where they do not, a block wider than the bytes handed over leaving positions above them.
                 erase_unused();
+        }
+
+        // A whole field of bits in and out, in terms of the two byte primitives: the width is already known here,
+        // so a reading forwards rather than restating byte_count and the concept at every call site.
+        template<class B>
+                requires exchanges_bits<B>
+        constexpr auto assign_bits(B const& b) noexcept
+                -> void
+        {
+                assign_bytes(bit_bytes<bit_extent>(b));
+        }
+
+        template<class B>
+                requires exchanges_bits<B>
+        [[nodiscard]] constexpr auto to_bits() const noexcept
+                -> B
+        {
+                return bytes_bits<B, bit_extent>(to_bytes<byte_count<bit_extent>>());
         }
 
         template<std::size_t E>
