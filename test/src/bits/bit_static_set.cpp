@@ -137,16 +137,14 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItRoundTripsAtCompileTime, T, Types)
 {
         constexpr auto N = T().max_size();
         if constexpr (std::is_constructible_v<T, std::bitset<N>>) {
-                static_assert([]{
-                        auto bs = std::bitset<N>();
-                        if constexpr (N > 0UZ) {
-                                // Guarded, because a zero width is one of the graded extents and std::bitset<0>::set(0)
-                                // throws out_of_range -- which is no constant expression, and would take this whole
-                                // assertion down over a position that does not exist rather than over the conversion.
-                                bs.set(0UZ);
-                                bs.set(N - 1UZ);
-                        }
-                        auto const c = T(bs);
+                static_assert([]() -> bool {
+                        // A PATTERN rather than a mutation, which is what makes this one expression at every graded
+                        // extent. std::bitset's constructor from unsigned long long masks to the width, so ~0ULL is
+                        // every position it has -- and at the zero width that is none, where set(0) would throw
+                        // out_of_range and take the whole assertion down over a position that does not exist. It also
+                        // leaves nothing here non-const, which a mutation the zero width discards does not.
+                        auto const bs = std::bitset<N>(~0ULL);
+                        auto const c  = T(bs);
                         return c.size() == bs.count() and static_cast<std::bitset<N>>(c) == bs;
                 }());
         }

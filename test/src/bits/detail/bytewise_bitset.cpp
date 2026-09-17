@@ -58,7 +58,7 @@ BOOST_AUTO_TEST_CASE(OnePositionLightsOneBitOfOneByte)
 // two hundred the proved layout, so this is one assertion over two implementations of it.
 BOOST_AUTO_TEST_CASE(TheTwoDirectionsAreEachOthersInverse)
 {
-        auto const round_trips = []<std::size_t N>(std::bitset<N> const& bs) {
+        auto const round_trips = []<std::size_t N>(std::bitset<N> const& bs) -> bool {
                 return xstd::detail::bits::bytes_bitset<N>(xstd::detail::bits::bitset_bytes(bs)) == bs;
         };
         auto narrow = std::bitset<64>();
