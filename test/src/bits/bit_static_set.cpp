@@ -8,11 +8,15 @@
 #include <test/set/concepts.hpp>        // bit_set
 #include <test/value_reference.hpp>     // value_reference
 #include <xstd/bits/bit_static_set.hpp> // bit_static_set
+#include <xstd/bits/bitset.hpp>         // bitset
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <bitset>                       // bitset
 #include <concepts>                     // regular, totally_ordered
 #include <cstddef>                      // size_t
+#include <cstdint>                      // uint64_t
 #include <iterator>                     // bidirectional_iterator
 #include <ranges>                       // bidirectional_range, iota, to
+#include <type_traits>                  // is_constructible_v, is_convertible_v
 
 BOOST_AUTO_TEST_SUITE(BitFiniteSet)
 
@@ -98,6 +102,127 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItYieldsAscendingKeys, T, Types)
                 }
         }
         test::set::yields_ascending_keys(c);
+}
+
+// A static width is a CAPACITY under this reading and a std::bitset's own width both, so position n here is bit n
+// there and the conversion has no policy to choose: nothing truncates, nothing grows, nothing throws. Asserted at
+// every graded extent and every Block, which is what makes it a claim about the bits and not about one block width
+// -- xstd::uint128 blocks are WIDER than the std::bitset object they come from, uint8_t ones narrower, and the byte
+// the two agree on is neither.
+BOOST_AUTO_TEST_CASE_TEMPLATE(ItRoundTripsThroughStdBitset, T, Types)
+{
+        constexpr auto N = T().max_size();
+        if constexpr (std::is_constructible_v<T, std::bitset<N>>) {
+                auto bs = std::bitset<N>();
+                for (auto i = 0UZ; i < N; i += 7UZ) {
+                        bs.set(i);
+                }
+
+                auto const c = T(bs);
+                BOOST_CHECK_EQUAL(c.size(), bs.count());
+                for (auto i = 0UZ; i < N; ++i) {
+                        BOOST_CHECK_EQUAL(c.contains(i), bs.test(i));
+                }
+
+                // Out again, and the identity: the two keep the same tail invariant, so nothing is left over either way.
+                BOOST_CHECK(static_cast<std::bitset<N>>(c) == bs);
+
+                // The empty and the full set, the two the loop above reaches neither of.
+                BOOST_CHECK(static_cast<std::bitset<N>>(T()) == std::bitset<N>());
+                BOOST_CHECK(static_cast<std::bitset<N>>(T(std::bitset<N>().flip())) == std::bitset<N>().flip());
+        }
+}
+
+// The same claim in a constant expression, which is what the storage's byte primitive being shifts rather than a
+// memcpy buys: neither direction reads memory it must be running to see.
+BOOST_AUTO_TEST_CASE_TEMPLATE(ItRoundTripsAtCompileTime, T, Types)
+{
+        constexpr auto N = T().max_size();
+        if constexpr (std::is_constructible_v<T, std::bitset<N>>) {
+                static_assert([] -> bool {
+                        // A PATTERN rather than a mutation, which is what makes this one expression at every graded
+                        // extent. std::bitset's constructor from unsigned long long masks to the width, so ~0ULL is
+                        // every position it has -- and at the zero width that is none, where set(0) would throw
+                        // out_of_range and take the whole assertion down over a position that does not exist. It also
+                        // leaves nothing here non-const, which a mutation the zero width discards does not.
+                        auto const bs = std::bitset<N>(~0ULL);
+                        auto const c  = T(bs);
+                        return c.size() == bs.count() and static_cast<std::bitset<N>>(c) == bs;
+                }());
+        }
+}
+
+// EXPLICIT in both directions, and not because either could fail: a set of positions and a field of bits are two
+// readings of the same bits, and this library makes a reader pick one rather than letting a conversion pick for them.
+BOOST_AUTO_TEST_CASE_TEMPLATE(TheConversionsAreExplicitBothWays, T, Types)
+{
+        constexpr auto N = T().max_size();
+        // Guarded on the constructor rather than on the concept behind it: a standard library laying its bits out
+        // some other way withholds BOTH of these, and this test asks the public question, not the detail one.
+        if constexpr (std::is_constructible_v<T, std::bitset<N>>) {
+                static_assert(not std::is_convertible_v  <std::bitset<N>, T>);
+                static_assert(    std::is_constructible_v<std::bitset<N>, T>);
+                static_assert(not std::is_convertible_v  <T, std::bitset<N>>);
+        }
+}
+
+// Any other width is not a narrower conversion, it is no conversion: the two widths mean the same positions or the
+// question has no answer, so a mismatch is a call that does not compile rather than one that silently drops keys.
+BOOST_AUTO_TEST_CASE_TEMPLATE(AnyOtherWidthIsNoConversionAtAll, T, Types)
+{
+        constexpr auto N = T().max_size();
+        if constexpr (std::is_constructible_v<T, std::bitset<N>>) {
+                static_assert(not std::is_constructible_v<T, std::bitset<N + 1UZ>>);
+                if constexpr (N > 1UZ) {
+                        static_assert(not std::is_constructible_v<T, std::bitset<N - 1UZ>>);
+                }
+        }
+}
+
+// The two conversions are named by a CONCEPT, not by std::bitset, so anything whose N bits this library can prove
+// it reads correctly comes in on the same rule. An unsigned integer is the family that proves nothing, because the
+// language already states it: bit n of the value is 2^n. The guard is the public question -- does the conversion
+// exist? -- which is false exactly where the integer is too narrow for the width.
+BOOST_AUTO_TEST_CASE_TEMPLATE(AnUnsignedIntegerIsAFieldOfBitsToo, T, Types)
+{
+        constexpr auto N = T().max_size();
+        if constexpr (std::is_constructible_v<T, std::uint64_t>) {
+                // Every position the width has, and none of them. Said WITHOUT a shift: a ternary guards the value
+                // it picks but not the expression it does not, so 1ULL << N is still compiled at a width of
+                // sixty-four, where the shift is undefined and MSVC says so (C4293) though GCC and clang fold it
+                // silently. std::bitset answers the same mask by flipping an empty one, and needs no shift at all.
+                constexpr auto all = std::bitset<N>().flip().to_ullong();
+                auto const full = T(all);
+                BOOST_CHECK_EQUAL(full.size(), N);
+                BOOST_CHECK(static_cast<std::uint64_t>(full) == all);
+
+                auto const none = T(std::uint64_t{});
+                BOOST_CHECK_EQUAL(none.size(), 0UZ);
+                BOOST_CHECK(static_cast<std::uint64_t>(none) == 0ULL);
+
+                static_assert(not std::is_convertible_v<std::uint64_t, T>);
+                static_assert(not std::is_convertible_v<T, std::uint64_t>);
+        }
+}
+
+// And our own bitset reading crosses to the set reading on that same rule, which is the generalisation paying for
+// itself: neither side is std::bitset, and neither is named in the constraint.
+BOOST_AUTO_TEST_CASE_TEMPLATE(OurOwnBitsetReadingCrossesOnTheSameRule, T, Types)
+{
+        constexpr auto N = T().max_size();
+        using Bitset = xstd::bitset<N>;
+        if constexpr (std::is_constructible_v<T, Bitset>) {
+                auto b = Bitset();
+                for (auto i = 0UZ; i < N; i += 5UZ) {
+                        b.set(i);
+                }
+                auto const c = T(b);
+                BOOST_CHECK_EQUAL(c.size(), b.count());
+                for (auto i = 0UZ; i < N; ++i) {
+                        BOOST_CHECK_EQUAL(c.contains(i), b.test(i));
+                }
+                BOOST_CHECK(static_cast<Bitset>(c) == b);
+        }
 }
 
 BOOST_AUTO_TEST_SUITE_END()

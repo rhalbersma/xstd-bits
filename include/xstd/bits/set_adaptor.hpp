@@ -10,6 +10,7 @@
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/detail/hash.hpp>                     // hash_append_bits, hash_append_positions, std_hash
 #include <xstd/bits/detail/intrin.hpp>                   // countl_zero, countr_zero
+#include <xstd/bits/detail/bit_castable.hpp>              // bit_bytes, bit_castable, byte_count, bytes_bits
 #include <xstd/bits/detail/shift.hpp>                    // shl, shr
 #include <xstd/bits/detail/zero_width.hpp>               // zero_width
 #include <xstd/bits/ownership.hpp>                       // owned_bits_t, owned_storage, owner_of, owner_reading, ownership, owns, reading
@@ -150,6 +151,11 @@ public:
         using value_type             = key_type;
         using value_compare          = key_compare;
         static constexpr bool has_static_width = (Bits::extent != std::dynamic_extent);
+
+        // std::dynamic_extent is SIZE_MAX, and a concept asked at that width would compute byte_count of it -- two
+        // exabytes of bytes -- however unsatisfiable the rest of the constraint is. So the two conversions below
+        // spell their width through this, which is zero wherever they do not exist.
+        static constexpr auto static_bitset_extent = has_static_width ? Bits::extent : 0UZ;
         using pointer                = void;
         using const_pointer          = pointer;
         using reference              = detail::bits::bidirectional_bit_reference<Bits>;
@@ -182,6 +188,39 @@ public:
                 requires is_owner
         {
                 insert(il.begin(), il.end());
+        }
+
+        // A field of bits in, a field of bits out, at the one extent where the question has a single answer: a static
+        // width is a CAPACITY under this reading and the other side's own width both, so position n here is bit n
+        // there and there is no policy left to choose -- nothing truncates, nothing grows, nothing throws, and the
+        // round trip is the identity in both directions. EXPLICIT in both directions, and not because either could
+        // fail: a set of positions and a field of bits are two readings of the same bits, and this library makes a
+        // reader pick one rather than letting a conversion pick for them.
+        //
+        // NAMED BY A CONCEPT rather than by a type. std::bitset appears nowhere here, which is the point: what these
+        // two admit is anything whose N bits this library can prove it reads correctly -- an unsigned integer, whose
+        // layout the language states, or a field of bits whose layout bit_castable probes and proves. So
+        // std::bitset<N> rides in on the same rule as unsigned long long, and an implementation that ever laid its
+        // bits out otherwise is simply not admitted: a call that fails to compile rather than one quietly wrong.
+        //
+        // The integer family is worth reading twice at THIS reading. bit_static_set<32>(5u) is a set of the positions
+        // that the VALUE five has, {0, 2}, and not the set {5} -- the same bits std::bitset<32>(5u) would hold. It is
+        // explicit, so it is asked for rather than arrived at, but it is the one spelling here that a reader coming
+        // from the set vocabulary can misread.
+        template<class B>
+                requires is_owner and has_static_width and detail::bits::bit_castable<B, static_bitset_extent>
+        [[nodiscard]] constexpr explicit set_adaptor(B const& b) noexcept
+        {
+                m_bits.assign_bytes(detail::bits::bit_bytes<static_bitset_extent>(b));
+        }
+
+        template<class B>
+                requires has_static_width and detail::bits::bit_castable<B, static_bitset_extent>
+        [[nodiscard]] constexpr explicit operator B() const noexcept
+        {
+                return detail::bits::bytes_bits<B, static_bitset_extent>(
+                        m_bits.template to_bytes<detail::bits::byte_count<static_bitset_extent>>()
+                );
         }
 
         [[nodiscard]] constexpr explicit set_adaptor(Bits& c) noexcept

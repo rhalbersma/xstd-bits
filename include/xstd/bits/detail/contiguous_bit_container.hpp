@@ -18,10 +18,13 @@
 #include <xstd/misc/type_traits/conditional_data_member.hpp> // XSTD_NO_UNIQUE_ADDRESS, conditional_data_member_t
 #include <boost/hash2/hash_append_fwd.hpp>                   // hash_append, hash_append_tag
 #include <algorithm>                                         // all_of, any_of, equal, fill, fill_n, find_if, fold_left, lexicographical_compare_three_way, max, min, shift_left, shift_right
+#include <array>                                             // array
+#include <bit>                                               // endian
 #include <cassert>                                           // assert
 #include <compare>                                           // strong_ordering
 #include <concepts>                                          // same_as
-#include <cstddef>                                           // ptrdiff_t, size_t
+#include <cstddef>                                           // byte, ptrdiff_t, size_t, to_integer
+#include <cstring>                                           // memcpy
 #include <format>                                            // format
 #include <functional>                                        // plus
 #include <iterator>                                          // distance, forward_iterator, input_iterator, prev
@@ -52,6 +55,10 @@ public:
         using block_type = std::ranges::range_value_t<Blocks>;
 
         static constexpr auto bits_per_block  = static_cast<std::size_t>(xstd::numeric_limits<block_type>::digits);
+
+        // Derived rather than written as an 8, and from what is already here: a block's digits over its bytes IS the
+        // bits in a byte. What the byte primitives below shift by, and a literal there is a magic number.
+        static constexpr auto bits_per_byte   = bits_per_block / sizeof(block_type);
         static constexpr auto has_static_size = N != std::dynamic_extent;
 
         // The width as a type, dynamic_extent where there is none: what a reading asks when it needs the width before an object exists.
@@ -358,6 +365,99 @@ public:
                 } else if constexpr (not has_static_size) {
                         m_blocks[last_block()] &= used_bits();
                 }
+        }
+
+        // The bits as BYTES, and back: byte j holds the positions [8j, 8j + 8), least significant bit first, which is
+        // what every contiguous bit container lays them out as whatever its block width. Said in SHIFTS and not a
+        // memcpy, for three reasons at once: the answer does not depend on the order a block stores its own bytes in,
+        // both directions stay constexpr where a memcpy is not, and the arithmetic is the same one on every block
+        // width, so two widths over the same positions agree byte for byte and converting between them is a copy
+        // rather than a walk over positions. Static widths only, because that is what makes every bound below a
+        // constant: a run-time width wants the same arithmetic and one std::ranges::min the compiler cannot fold.
+        // How many bytes the two sides actually share: this storage's own, or the array handed over, whichever is fewer.
+        template<std::size_t E>
+        static constexpr auto shared_bytes = std::ranges::min(E, static_num_blocks * sizeof(block_type));
+
+        // On a LITTLE-ENDIAN target the byte a position lands in does not depend on the block width -- byte j holds
+        // [8j, 8j + 8) at every width -- so there the shifts below and a straight copy of those bytes are the same
+        // answer, and only one of them is a byte at a time. Over the eight kilobytes of 2^16 positions, and measured
+        // in ONE process so the ratio is the machine's own rather than two visits to it: 9.70us by shifts against
+        // 0.07us by memcpy, a factor of about a hundred and forty-five. That is the whole of why this distinction is
+        // drawn here rather than left to taste.
+        static constexpr auto bytes_copy_as_blocks = std::endian::native == std::endian::little;
+
+        // The shifts, in one place because both directions need them twice. They SAY where a position goes rather
+        // than assuming a byte order, which is what makes them right on either endianness and a constant expression
+        // besides -- neither of which a memcpy is.
+        template<std::size_t E>
+        constexpr auto assign_bytes_by_shifts(std::array<std::byte, E> const& bytes) noexcept
+                -> void
+        {
+                for (auto j = 0UZ; j < shared_bytes<E>; ++j) {
+                        auto const byte  = static_cast<block_type>(std::to_integer<unsigned char>(bytes[j]));
+                        auto&      block = m_blocks[j / sizeof(block_type)];
+                        block = static_cast<block_type>(block | shl(byte, bits_per_byte * (j % sizeof(block_type))));
+                }
+        }
+
+        template<std::size_t E>
+        constexpr auto to_bytes_by_shifts(std::array<std::byte, E>& bytes) const noexcept
+                -> void
+        {
+                for (auto j = 0UZ; j < shared_bytes<E>; ++j) {
+                        auto const block = shr(m_blocks[j / sizeof(block_type)], bits_per_byte * (j % sizeof(block_type)));
+                        bytes[j] = static_cast<std::byte>(static_cast<unsigned char>(block));
+                }
+        }
+
+        template<std::size_t E>
+                requires has_static_size
+        constexpr auto assign_bytes(std::array<std::byte, E> const& bytes) noexcept
+                -> void
+        {
+                std::ranges::fill(m_blocks, zero);
+
+                // if constexpr, and not a loop that would simply run zero times: a zero width instantiates this with
+                // no byte to carry, and the loop it could not enter is a line no test reaches and a branch slot
+                // nothing can take, both counted per instantiation.
+                if constexpr (shared_bytes<E> > 0UZ) {
+                        // The shifts answer the two cases a copy cannot: a constant expression, where memcpy does not
+                        // exist, and a big-endian target, where those bytes are not these blocks. The copy takes the
+                        // case that is neither, which is every rung this ladder runs.
+                        if consteval {
+                                assign_bytes_by_shifts(bytes);
+                        } else {
+                                if constexpr (bytes_copy_as_blocks) {
+                                        std::memcpy(m_blocks.data(), bytes.data(), shared_bytes<E>);
+                                } else {
+                                        assign_bytes_by_shifts(bytes);
+                                }
+                        }
+                }
+
+                // The source keeps its own tail clear, so this restores nothing where the two widths agree -- and
+                // everything where they do not, a block wider than the bytes handed over leaving positions above them.
+                erase_unused();
+        }
+
+        template<std::size_t E>
+                requires has_static_size
+        [[nodiscard]] constexpr auto to_bytes() const noexcept
+                -> std::array<std::byte, E>
+        {
+                auto bytes = std::array<std::byte, E>();
+                if constexpr (shared_bytes<E> > 0UZ) {
+                        if consteval {
+                                to_bytes_by_shifts(bytes);
+                        } else {
+                                if constexpr (bytes_copy_as_blocks) {
+                                        std::memcpy(bytes.data(), m_blocks.data(), shared_bytes<E>);
+                                } else {
+                                        to_bytes_by_shifts(bytes);
+                                }
+                        }
+                }
+                return bytes;
         }
 
         // A word at any position, aligned or not: the bits [n, n + bits_per_block), the clear tail and nothing beyond the last block.

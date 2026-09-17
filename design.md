@@ -315,6 +315,96 @@ behind a `requires (N <= ullong_digits)` guard, and wrote no `find_prev` at all,
 had one to forward to. The counterparts are comparison targets now ([owning-is-ours](#owning-is-ours)), and
 with no second basis to reconcile, the layer that reconciled them went too ([one-storage](#one-storage)).
 
+### the-bytes-they-agree-on
+
+A comparison target can become a **value** the set reading converts to and from, and at a static width it is an
+exact one. A field of `N` bits has the same `N`, and under this reading that width is a capacity, so position
+`n` here is bit `n` there with nothing left to choose: nothing truncates, nothing grows, nothing throws, and the
+round trip is the identity both ways. `bit_static_set<N>` therefore carries an explicit constructor and an
+explicit conversion operator back. Explicit in both directions, and not because either could fail — a set of
+positions and a field of bits are two readings of the same bits, and this library makes a reader pick one rather
+than letting a conversion pick for them.
+
+Neither is spelled with a type. `std::bitset` appears nowhere in the set adaptor: the two are templates
+constrained on `bit_castable<B, N>`, which admits anything whose `N` bits this library can prove it reads
+correctly. That is two families, and only one of them has anything to prove.
+
+| family | admitted because | what it costs |
+|---|---|---|
+| unsigned integer | bit `n` of the value is 2^n, *by the language* | nothing: no probe, no assumption |
+| field of bits | a layout proved below | five fixed probes |
+
+`unsigned long long` is therefore not a special case in the header but an instance of the first family, which is
+what `to_ullong` and the constructor taking one reduce to. `std::bitset<N>` is an instance of the second, and so
+is this library's own bitset reading — `xstd::bitset<N>` crosses to `bit_static_set<N>` on the same rule, with
+neither side named in the constraint. An implementation that ever laid its bits out otherwise is simply not
+admitted: a call that fails to compile rather than one quietly wrong.
+
+One spelling in the integer family repays reading twice at *this* reading. `bit_static_set<32>(5u)` is the set of
+positions the **value** five has, `{0, 2}`, not the set `{5}` — the same bits `std::bitset<32>(5u)` would hold.
+It is explicit, so it is asked for rather than arrived at, but it is the one place here a reader coming from the
+set vocabulary can misread.
+
+The currency is **bytes**, not words. Byte `j` holds the positions `[8j, 8j + 8)` least significant bit first,
+which is what every contiguous bit container lays them out as whatever its block width, so two widths over the
+same positions agree byte for byte. That is what makes this a copy rather than a walk over positions, and the
+storage's own `assign_bytes` and `to_bytes` are the primitives.
+
+Both are said **twice**, and the reason is measured rather than tasteful. Said in **shifts**, they name where a
+position goes instead of assuming a byte order, so they are right on either endianness and they are a constant
+expression — neither of which a `memcpy` is. They are also a byte at a time, and over the eight kilobytes of
+2^16 positions that costs **9.70µs against 0.07µs**, a factor of about a hundred and forty-five. So the shifts
+keep the two cases a copy cannot take, a constant expression and a big-endian target, and the copy takes the
+case that is neither, which is every rung this ladder runs. `if consteval` picks the first,
+`if constexpr (endian::native == endian::little)` the second; neither is a branch a coverage slot can miss,
+because neither is a branch at run time.
+
+That factor is what decides a question this design keeps inviting: whether a foreign bitset should be **read**
+block-wise in place rather than converted. In place is not portably possible — `bit_cast` yields a copy, so
+reading someone else's words needs a pointer into them, which is `_M_p`, `__seg_` or `_Myptr` by turns. It also
+turns out not to be worth wanting. Iterating the set positions of a `std::bitset<2^16>` at 2.7% density costs
+**41.1µs** asking every position, against **libstdc++'s own in-place `_Find_first`/`_Find_next`** and
+**converting once and then iterating**, which come out level: five runs put their ratio at 1.06, 0.94, 0.95,
+1.06 and 1.01, so on par to within about six percent. The absolute microseconds are not quotable — this box is
+bimodal, and both of those two move between roughly 7.5µs and 18.5µs *together*, which is what makes the ratio
+the only honest figure and a single run of either a trap. So there is no `bit_readable` to add: converting
+costs what reading in place would, the conversion is the door, and the readings' own block-wise algorithms are
+what waits behind it.
+
+
+The second family's layout is **proved, not believed**. `bit_layout_holds<B, N>` checks that a default-built `B`
+is all clear, then lights one position at a time and checks that `count()` is one and that the expected byte
+holds exactly its bit. That last pair is what makes it a proof rather than a spot check: with one position set
+and one byte holding it, no *other* byte can hold anything, so it refuses a reordered word, a reversed bit order,
+a trailing word the implementation does not keep clean, and — `bit_cast` handing back the object representation
+rather than the value — a big-endian target, where bit `n` of a word lands at the far end of it. The endianness
+guard **is** this probe, with no second one to fall out of step with it. Four deliberately wrong layouts in the
+tests take each refusal, so what it rejects is exercised rather than asserted.
+
+**Five** positions, and the count is a budget rather than a taste. Each probe materialises the whole byte array
+through `bit_cast`, so it costs O(`sizeof(B)`) however few bytes it then reads; clang's default
+`-fconstexpr-steps` admits six at a width of 2^20 and refuses seven, where GCC's limit is higher. Five leaves
+margin and puts the ceiling at 2^20 — a 128 KiB object — past which a caller raises the flag.
+
+Two constraints before it are load-bearing, and atomic constraints being checked in order is what makes them
+work. `B().size() == N` pins the source's **own** width: without it the size window admits a neighbour, since a
+`std::bitset<9>` is eight bytes and clears every bound a width of eight sets, and eight of its nine positions
+would convert while the ninth vanished. It also keeps the probe from asking a narrower source for a position it
+does not have, where `std::bitset<8>::set(8)` throws and a throw is no constant expression — an unsatisfied
+concept where that would be a hard error. And `bit_cast_is_constant<B>` rules out the shapes `bit_cast` refuses
+to be `constexpr` for: a pointer member, a reference member, a union.
+
+What is **not** asked is `has_unique_object_representations_v`, and that is measured rather than preferred. GCC
+13 through 16 answer false for any class with an empty non-static data member, even one `[[no_unique_address]]`
+makes free, where clang answers true at identical layout — `sizeof` 8 and `offsetof` 0 on both. Every container
+this library defines has such a member, so that trait would make this concept false on every GCC rung and true
+on every clang rung. An empty *base* keeps the trait on GCC where an empty member does not, which is the remedy
+if it is ever wanted; the probe needs none of it, because interleaved padding breaks the byte alignment it
+already checks.
+
+A run-time width has neither conversion, and that is the policy and not an omission: a field of `N` bits names
+one `N` at compile time and a growing set has no single one to mean.
+
 ### padding
 
 `static_used_bits` is the mask of the last block that is not padding. `num_bits` is `align_up(N)`, so
