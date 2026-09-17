@@ -211,15 +211,19 @@ public:
                 requires is_owner and has_static_width and detail::bits::bit_castable<B, static_bitset_extent>
         [[nodiscard]] constexpr explicit set_adaptor(B const& b) noexcept
         {
-                m_bits.assign_bytes(detail::bits::bit_bytes<static_bitset_extent>(b));
+                storage().assign_bytes(detail::bits::bit_bytes<static_bitset_extent>(b));
         }
 
+        // Through storage() and NOT through m_bits, which is a Bits* wherever this reading refers rather than owns.
+        // The constraint admits a view -- a set view refers to a whole container, so its bytes ARE that container's
+        // and the conversion is as meaningful there as on an owner -- and reaching for m_bits directly made that a
+        // hard error inside the body instead: the concept answered yes and the call then failed to compile.
         template<class B>
                 requires has_static_width and detail::bits::bit_castable<B, static_bitset_extent>
         [[nodiscard]] constexpr explicit operator B() const noexcept
         {
                 return detail::bits::bytes_bits<B, static_bitset_extent>(
-                        m_bits.template to_bytes<detail::bits::byte_count<static_bitset_extent>>()
+                        storage().template to_bytes<detail::bits::byte_count<static_bitset_extent>>()
                 );
         }
 

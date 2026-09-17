@@ -4,12 +4,15 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <xstd/bits/bit_set.hpp>                      // bit_set
+#include <xstd/bits/bit_set_view.hpp>                 // bit_set_view
 #include <xstd/bits/bit_static_set.hpp>               // bit_static_set
 #include <xstd/bits/detail/contiguous_bit_array.hpp>  // contiguous_bit_array
 #include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
 #include <xstd/bits/ownership.hpp>                    // ownership
 #include <xstd/bits/set_adaptor.hpp>                  // set_adaptor
 #include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <bitset>                                     // bitset
+#include <type_traits>                               // is_constructible_v
 #include <algorithm>                                  // lexicographical_compare_three_way, ranges::equal
 #include <compare>                                    // strong_ordering
 #include <concepts>                                   // copyable, equality_comparable, invocable, regular, totally_ordered
@@ -758,6 +761,43 @@ BOOST_AUTO_TEST_CASE(TheCompoundOperatorsAcrossWidthsWorkOnBlocks)
         h |= grown_to(63UZ, { 7UZ });
         BOOST_CHECK(h == grown_to(60UZ, { 1UZ, 5UZ, 7UZ }));
         BOOST_CHECK_EQUAL(width_of(h), 61UZ);
+}
+
+// A SET VIEW converts too, and reaching the storage through the accessor rather than the member is what makes that
+// true. A view holds a Bits* where an owner holds a Bits, so a body naming m_bits directly compiled for the owner
+// and was a hard error for the view -- with the constraint answering YES either way, which is the worst shape a
+// concept can have: the question said the conversion existed and the call then failed to compile.
+//
+// A set view refers to a WHOLE container rather than a window into one, so its bytes are that container's bytes and
+// the conversion is as meaningful here as on an owner.
+BOOST_AUTO_TEST_CASE(ASetViewConvertsThroughTheBitsItRefersTo)
+{
+        constexpr auto N = 64UZ;
+        using Storage = xstd::detail::bits::contiguous_bit_array<std::uint64_t, N>;
+
+        static_assert(std::is_constructible_v<std::bitset<N>, xstd::bit_set_view<Storage> const&>);
+
+        auto storage = Storage();
+        auto view = xstd::bit_set_view<Storage>(storage);
+        view.insert(0UZ);
+        view.insert(31UZ);
+        view.insert(63UZ);
+
+        auto const out = static_cast<std::bitset<N>>(view);
+        BOOST_CHECK_EQUAL(out.count(), 3UZ);
+        BOOST_CHECK(out.test(0) and out.test(31) and out.test(63));
+
+        // A view is built from what it views and never from a field of bits: writing through it would write bits it
+        // does not own, so the CONSTRUCTOR stays the owner's alone.
+        static_assert(not std::is_constructible_v<xstd::bit_set_view<Storage>, std::bitset<N>>);
+
+        // And at compile time, which is where the hard error would have been loudest.
+        static_assert([] -> bool {
+                auto bits = Storage();
+                auto v = xstd::bit_set_view<Storage>(bits);
+                v.insert(7UZ);
+                return static_cast<std::bitset<N>>(v).count() == 1UZ;
+        }());
 }
 
 BOOST_AUTO_TEST_SUITE_END()

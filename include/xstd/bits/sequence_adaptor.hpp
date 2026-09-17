@@ -7,6 +7,7 @@
 #define XSTD_BITS_SEQUENCE_ADAPTOR_HPP
 
 #include <xstd/bits/detail/allocator_base_type.hpp> // allocator_base_type
+#include <xstd/bits/detail/bit_castable.hpp>  // bit_bytes, bit_castable, byte_count, bytes_bits
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/detail/hash.hpp>              // hash_append_bits, std_hash
 #include <xstd/bits/detail/intrin.hpp>            // countr_zero, popcount
@@ -155,8 +156,16 @@ class sequence_adaptor : public std::conditional_t<owns(Own), detail::bits::allo
 
         using bits_type = std::remove_const_t<Bits>;
 
+        // A width fixed at compile time, which is what the byte exchange below asks and what can_grow is the absence of.
+        static constexpr bool has_static_width = (bits_type::extent != std::dynamic_extent);
+
+        // std::dynamic_extent is SIZE_MAX, and a concept asked at that width would compute byte_count of it -- two
+        // exabytes of bytes -- however unsatisfiable the rest of the constraint is. So the two conversions below
+        // spell their width through this, which is zero wherever they do not exist.
+        static constexpr auto static_bitset_extent = has_static_width ? bits_type::extent : 0UZ;
+
         // Growth is the owner's over storage that grows: a view must never resize what it does not own.
-        static constexpr bool can_grow = is_owner and not (bits_type::extent != std::dynamic_extent) and requires (bits_type& b, std::size_t n, bool value) { b.resize(n, value); b.push_back(value); b.pop_back(); b.clear(); };
+        static constexpr bool can_grow = is_owner and not has_static_width and requires (bits_type& b, std::size_t n, bool value) { b.resize(n, value); b.push_back(value); b.pop_back(); b.clear(); };
 
         // A window is what std::span stores, the pointer's role split over a pointer and a position because bits are not addressable: the iterator's two fields and a size.
         struct window
@@ -289,6 +298,33 @@ public:
         {
                 assert(il.size() <= size());
                 std::ranges::copy(il, begin());
+        }
+
+        // A field of bits in, a field of bits out, in the currency the three readings share: byte j holds the
+        // positions [8j, 8j + 8) least significant bit first, so a fixed width over the same positions agrees byte
+        // for byte with any other and this is a copy rather than a walk. EXPLICIT in both directions, as it is under
+        // the set reading -- a packed array of bool and a field of bits are two readings of the same bits, and this
+        // library makes a reader pick one rather than letting a conversion pick for them.
+        //
+        // NOT ON A WINDOW, and that is the whole of why is_window is asked. A window is a bit offset and a size of
+        // its own into storage it does not span: its position zero is not the storage's, so its bytes are not the
+        // storage's bytes and to_bytes would hand back the wrong ones. has_static_width alone would not catch it,
+        // since a window over a static container reports the CONTAINER's extent rather than its own size. A view
+        // that is not a window spans the whole container, so its bytes are that container's and it converts.
+        template<class B>
+                requires is_owner and has_static_width and detail::bits::bit_castable<B, static_bitset_extent>
+        [[nodiscard]] constexpr explicit sequence_adaptor(B const& b) noexcept
+        {
+                storage().assign_bytes(detail::bits::bit_bytes<static_bitset_extent>(b));
+        }
+
+        template<class B>
+                requires (not is_window) and has_static_width and detail::bits::bit_castable<B, static_bitset_extent>
+        [[nodiscard]] constexpr explicit operator B() const noexcept
+        {
+                return detail::bits::bytes_bits<B, static_bitset_extent>(
+                        storage().template to_bytes<detail::bits::byte_count<static_bitset_extent>>()
+                );
         }
 
         // [vector.bool]'s allocator arguments, where the storage takes one: deduced and matched, so a storage without one has no such constructor.

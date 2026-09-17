@@ -27,6 +27,7 @@
 #include <sstream>                                       // istringstream
 #include <stdexcept>                                     // out_of_range, overflow_error
 #include <string>                                        // string
+#include <type_traits>                            // is_constructible_v, is_convertible_v
 #include <tuple>                                         // tuple
 #include <type_traits>                                   // is_nothrow_*, is_trivially_*
 #include <utility>                                       // as_const, declval
@@ -465,6 +466,76 @@ BOOST_AUTO_TEST_CASE(ABitsetReadsAsItsStorage)
         BOOST_CHECK_EQUAL(std::ranges::distance(sp), 100);
         BOOST_CHECK(std::ranges::bidirectional_range<decltype(sv)>);
         BOOST_CHECK(std::ranges::random_access_range<decltype(sp)>);
+}
+
+// The byte exchange, at the bitset reading -- the one reading that already had a door for integers and so opens
+// only the other one, on container_source rather than on bit_castable.
+BOOST_AUTO_TEST_CASE(ABitsetReadingExchangesBytesWithAnotherFieldOfBits)
+{
+        constexpr auto N = 100UZ;
+        auto src = std::bitset<N>();
+        for (auto i = 0UZ; i < N; i += 3UZ) { src.set(i); }
+
+        auto const b = xstd::bitset<N>(src);
+        BOOST_CHECK_EQUAL(b.count(), src.count());
+        for (auto i = 0UZ; i < N; ++i) {
+                BOOST_CHECK_EQUAL(b.test(i), src.test(i));
+        }
+        BOOST_CHECK(static_cast<std::bitset<N>>(b) == src);
+
+        static_assert([] -> bool {
+                auto const bs = std::bitset<64>(0x0F1E'2D3C'4B5A'6978ULL);
+                return static_cast<std::bitset<64>>(xstd::bitset<64>(bs)) == bs;
+        }());
+}
+
+// THE INTEGER DOOR IS UNTOUCHED, which is the whole reason this reading is constrained on container_source and not
+// on bit_castable. Admitting the integer family would not widen the interface but collide with it, in two ways that
+// this case pins down so a later widening cannot pass silently.
+BOOST_AUTO_TEST_CASE(TheIntegerDoorIsUnchangedByTheByteExchange)
+{
+        // [bitset.cons]/2's constructor is IMPLICIT, and an explicit template admitting unsigned int would be an
+        // exact match where that one takes a conversion -- so it would win for bitset<32>(5u) and, being explicit,
+        // make this copy-initialization ill-formed.
+        static_assert(std::is_convertible_v<unsigned long long, xstd::bitset<64>>);
+        static_assert(std::is_convertible_v<unsigned,           xstd::bitset<32>>);
+        xstd::bitset<32> implicitly = 5u;
+        BOOST_CHECK_EQUAL(implicitly.to_ullong(), 5ULL);
+
+        // And to_ullong keeps ITS contract, which the byte exchange does not share: a set position beyond the word
+        // throws where a byte copy would silently keep the low bits.
+        auto wide = xstd::bitset<100>();
+        wide.set(99);
+        BOOST_CHECK_THROW((void)wide.to_ullong(), std::overflow_error);
+        // The byte exchange over the same object does not throw, because it is not the same question.
+        BOOST_CHECK((static_cast<std::bitset<100>>(wide)).test(99));
+}
+
+// Two block widths over the same N are two spellings of one field of bits, so they cross on the same rule with
+// neither side named: the byte is the common ground where the word is not.
+BOOST_AUTO_TEST_CASE(TwoBlockWidthsCrossOnTheSameRule)
+{
+        static_assert([] -> bool {
+                auto const wide   = xstd::basic_bitset<std::uint64_t, 64>(std::bitset<64>(0xABCDULL));
+                auto const narrow = xstd::basic_bitset<std::uint8_t,  64>(wide);
+                return static_cast<std::bitset<64>>(narrow) == std::bitset<64>(0xABCDULL);
+        }());
+}
+
+// Explicit both ways, any other width no conversion at all, and a run-time width none of it.
+BOOST_AUTO_TEST_CASE(TheBitsetConversionsAreExplicitAndWidthExact)
+{
+        constexpr auto N = 64UZ;
+        using T = xstd::bitset<N>;
+        static_assert(not std::is_convertible_v  <std::bitset<N>, T>);
+        static_assert(    std::is_constructible_v<std::bitset<N>, T>);
+        static_assert(not std::is_convertible_v  <T, std::bitset<N>>);
+        static_assert(not std::is_constructible_v<T, std::bitset<N + 1UZ>>);
+        static_assert(not std::is_constructible_v<T, std::bitset<N - 1UZ>>);
+
+        using Dynamic = xstd::basic_dynamic_bitset<std::uint64_t>;
+        static_assert(not std::is_constructible_v<Dynamic, std::bitset<N>>);
+        static_assert(not std::is_constructible_v<std::bitset<N>, Dynamic const&>);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
