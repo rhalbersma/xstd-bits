@@ -627,12 +627,13 @@ BOOST_AUTO_TEST_CASE(AWindowIsNotAFieldOfBitsButAPlainViewIs)
 
         // A view reads the bits it spans, which are the whole container's.
         auto storage = Storage();
-        auto owner = View(storage);
-        owner[0] = true;
-        owner[99] = true;
-        auto const out = static_cast<std::bitset<100>>(owner);
+        // const, because a view's const is SHALLOW: the handle does not change, the bits it refers to do.
+        auto const view = View(storage);
+        view[0] = true;
+        view[Storage::extent - 1UZ] = true;
+        auto const out = static_cast<std::bitset<100>>(view);
         BOOST_CHECK_EQUAL(out.count(), 2UZ);
-        BOOST_CHECK(out.test(0) and out.test(99));
+        BOOST_CHECK(out.test(0) and out.test(Storage::extent - 1UZ));
 
         // A view never gains the CONSTRUCTOR, which would write through bits it does not own.
         static_assert(not std::is_constructible_v<View, std::bitset<100>>);

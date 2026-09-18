@@ -4,7 +4,6 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <xstd/bits/bit_set.hpp>                      // bit_set
-#include <xstd/bits/bit_set_view.hpp>                 // bit_set_view
 #include <xstd/bits/bit_static_set.hpp>               // bit_static_set
 #include <xstd/bits/detail/contiguous_bit_array.hpp>  // contiguous_bit_array
 #include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
@@ -780,7 +779,7 @@ BOOST_AUTO_TEST_CASE(ASetViewConvertsThroughTheBitsItRefersTo)
         static_assert(std::is_constructible_v<std::bitset<N>, Reader const&>);
 
         auto storage = Storage();
-        auto view = View(storage);
+        auto const view = View(storage);
         view.insert(0UZ);
         view.insert(31UZ);
         view.insert(N - 1UZ);
@@ -796,7 +795,7 @@ BOOST_AUTO_TEST_CASE(ASetViewConvertsThroughTheBitsItRefersTo)
         // And at compile time, which is where the hard error would have been loudest.
         static_assert([] -> bool {
                 auto bits = Storage();
-                auto v = View(bits);
+                auto const v = View(bits);
                 v.insert(7UZ);
                 return static_cast<std::bitset<N>>(v).count() == 1UZ;
         }());
