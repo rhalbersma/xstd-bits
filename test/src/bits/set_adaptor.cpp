@@ -3,6 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/bit_exchange.hpp>                      // exchanges_from_bits, exchanges_to_bits
 #include <xstd/bits/bit_set.hpp>                      // bit_set
 #include <xstd/bits/bit_static_set.hpp>               // bit_static_set
 #include <xstd/bits/detail/contiguous_bit_array.hpp>  // contiguous_bit_array
@@ -11,7 +12,6 @@
 #include <xstd/bits/set_adaptor.hpp>                  // set_adaptor
 #include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <bitset>                                     // bitset
-#include <type_traits>                               // is_constructible_v
 #include <algorithm>                                  // lexicographical_compare_three_way, ranges::equal
 #include <compare>                                    // strong_ordering
 #include <concepts>                                   // copyable, equality_comparable, invocable, regular, totally_ordered
@@ -768,15 +768,15 @@ BOOST_AUTO_TEST_CASE(TheCompoundOperatorsAcrossWidthsWorkOnBlocks)
 // concept can have: the question said the conversion existed and the call then failed to compile.
 //
 // A set view refers to a WHOLE container rather than a window into one, so its bytes are that container's bytes and
-// the conversion is as meaningful here as on an owner.
-BOOST_AUTO_TEST_CASE(ASetViewConvertsThroughTheBitsItRefersTo)
+// the exchange is as meaningful here as on an owner.
+BOOST_AUTO_TEST_CASE(ASetViewExchangesThroughTheBitsItRefersTo)
 {
         // The file's own Storage and its two views, rather than names of this case's making: bit_set_view<Storage>
         // IS set_adaptor<Storage, refers>, which View already spells.
         constexpr auto N = Storage::extent;
 
-        static_assert(std::is_constructible_v<std::bitset<N>, View const&>);
-        static_assert(std::is_constructible_v<std::bitset<N>, Reader const&>);
+        static_assert(test::exchanges_to_bits<View,   std::bitset<N>>);
+        static_assert(test::exchanges_to_bits<Reader, std::bitset<N>>);
 
         auto storage = Storage();
         auto const view = View(storage);
@@ -784,20 +784,20 @@ BOOST_AUTO_TEST_CASE(ASetViewConvertsThroughTheBitsItRefersTo)
         view.insert(31UZ);
         view.insert(N - 1UZ);
 
-        auto const out = static_cast<std::bitset<N>>(view);
+        auto const out = view.to_bits<std::bitset<N>>();
         BOOST_CHECK_EQUAL(out.count(), 3UZ);
         BOOST_CHECK(out.test(0) and out.test(31) and out.test(N - 1UZ));
 
         // A view is built from what it views and never from a field of bits: writing through it would write bits it
-        // does not own, so the CONSTRUCTOR stays the owner's alone.
-        static_assert(not std::is_constructible_v<View, std::bitset<N>>);
+        // does not own, so the INBOUND direction stays the owner's alone.
+        static_assert(not test::exchanges_from_bits<View, std::bitset<N>>);
 
         // And at compile time, which is where the hard error would have been loudest.
         static_assert([] -> bool {
                 auto bits = Storage();
                 auto const v = View(bits);
                 v.insert(7UZ);
-                return static_cast<std::bitset<N>>(v).count() == 1UZ;
+                return v.to_bits<std::bitset<N>>().count() == 1UZ;
         }());
 }
 

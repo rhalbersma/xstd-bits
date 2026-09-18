@@ -296,25 +296,35 @@ public:
 
         // A field of bits in, a field of bits out, in the currency the three readings share: byte j holds the
         // positions [8j, 8j + 8) least significant bit first, so a fixed width over the same positions agrees byte
-        // for byte with any other and this is a copy rather than a walk. EXPLICIT in both directions, as it is under
-        // the set reading -- a packed array of bool and a field of bits are two readings of the same bits, and this
-        // library makes a reader pick one rather than letting a conversion pick for them.
+        // for byte with any other and this is a copy rather than a walk.
+        //
+        // NAMED rather than spelled as a conversion, for the reason set_adaptor gives at length: a sequence of
+        // unsigned integers is one argument with two readings, and a name is what tells them apart at the call
+        // site. This reading cannot hit the from_range collision itself -- its from_range wants can_grow, and
+        // anything that can grow has a dynamic extent, which turns the exchange off -- but one door with two
+        // spellings across three readings would be worse than either spelling alone, so it is named here too.
+        //
+        // The vocabulary is the thing to read twice at THIS reading, and the name now carries it:
+        // bit_array<32>::from_bits(5u) is a packed array of bool -- true, false, true, then twenty-nine more
+        // false -- and not the set {0, 2} that the same bits spell one reading over.
         //
         // NOT ON A WINDOW, and that is the whole of why is_window is asked. A window is a bit offset and a size of
         // its own into storage it does not span: its position zero is not the storage's, so its bytes are not the
         // storage's bytes and to_bits would hand back the wrong ones. The width test inside exchanges_bits does not
-        // catch it, since a window over a static container reports the CONTAINER's extent rather than its own size. A view
-        // that is not a window spans the whole container, so its bytes are that container's and it converts.
+        // catch it, since a window over a static container reports the CONTAINER's extent rather than its own size.
+        // A view that is not a window spans the whole container, so its bytes are that container's and it exchanges.
         template<class B>
                 requires is_owner and bits_type::template exchanges_bits<B>
-        [[nodiscard]] constexpr explicit sequence_adaptor(B const& b) noexcept
+        [[nodiscard]] static constexpr auto from_bits(B const& b) noexcept -> sequence_adaptor
         {
-                storage().assign_bits(b);
+                auto result = sequence_adaptor();
+                result.storage().assign_bits(b);
+                return result;
         }
 
         template<class B>
                 requires (not is_window) and bits_type::template exchanges_bits<B>
-        [[nodiscard]] constexpr explicit operator B() const noexcept
+        [[nodiscard]] constexpr auto to_bits() const noexcept -> B
         {
                 return storage().template to_bits<B>();
         }

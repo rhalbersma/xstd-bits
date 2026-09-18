@@ -10,11 +10,13 @@
 #include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
 #include <xstd/ints/limits.hpp>                    // numeric_limits
 #include <array>                                   // array
-#include <bit>                                     // bit_cast
+#include <bit>                                     // bit_cast, endian
 #include <concepts>                                // convertible_to, default_initializable
 #include <cstddef>                                 // byte, size_t, to_integer
+#include <cstring>                                 // memcpy
 #include <limits>                                  // numeric_limits
-#include <ranges>                                  // contiguous_range, range_value_t
+#include <memory>                                  // addressof
+#include <ranges>                                  // contiguous_range, data, range_value_t
 #include <type_traits>                             // bool_constant, is_trivially_copyable_v
 
 namespace xstd::detail::bits {
@@ -83,6 +85,20 @@ concept block_range_source =
         block_size_is_constant<B> and
         B().size() * block_digits<B> >= N
 ;
+
+// WHEN A COPY ANSWERS WHAT THE SHIFTS DO. This is the question the container already asks one layer down of its
+// own blocks, asked here of the SOURCE instead, and the answer has the same two parts. On a little-endian target
+// byte j of a value sits at offset j, so the bytes of a value are the bytes of the field. And the object must
+// have no padding, because the shifts count by DIGITS where a copy counts by SIZEOF: those agree only when every
+// bit of the object is a value bit. No standard type has such padding, and the test is here so that one could not
+// quietly turn a copy into the wrong answer.
+template<class B>
+inline constexpr auto value_bits_fill_object =
+        static_cast<std::size_t>(xstd::numeric_limits<B>::digits) == bits_per_byte * sizeof(B);
+
+template<class B>
+inline constexpr auto blocks_copy_as_bytes =
+        std::endian::native == std::endian::little and value_bits_fill_object<std::ranges::range_value_t<B>>;
 
 template<class B>
 [[nodiscard]] constexpr auto object_bytes(B const& b) noexcept
@@ -210,6 +226,37 @@ concept container_source =
 template<class B, std::size_t N>
 concept bit_castable = integer_source<B, N> or block_range_source<B, N> or container_source<B, N>;
 
+// The shifts, in one place because each direction needs them and a copy cannot take their two cases: a constant
+// expression, where memcpy does not exist, and a big-endian target, where those bytes are not this value. They SAY
+// where a position goes rather than assuming a byte order, which is what makes them the portable answer and the
+// one the copy above has to agree with.
+// The scalar pair above, once per block: byte j of the field is byte j % sizeof(block) of block j / sizeof(block).
+template<std::size_t N, class B, std::size_t E>
+constexpr auto block_bytes_by_shifts(B const& b, std::array<std::byte, E>& bytes) noexcept
+        -> void
+{
+        constexpr auto bytes_per_block = block_digits<B> / bits_per_byte;
+        for (auto j = 0UZ; j < bytes.size(); ++j) {
+                auto const block = b[j / bytes_per_block];
+                auto const shift = bits_per_byte * (j % bytes_per_block);
+                bytes[j] = static_cast<std::byte>(static_cast<unsigned char>(block >> shift));
+        }
+}
+
+template<std::size_t N, class B, std::size_t E>
+constexpr auto bytes_blocks_by_shifts(std::array<std::byte, E> const& bytes, B& blocks) noexcept
+        -> void
+{
+        using block_type = std::ranges::range_value_t<B>;
+        constexpr auto bytes_per_block = block_digits<B> / bits_per_byte;
+        for (auto j = 0UZ; j < bytes.size(); ++j) {
+                auto const byte  = static_cast<block_type>(std::to_integer<unsigned char>(bytes[j]));
+                auto const shift = bits_per_byte * (j % bytes_per_block);
+                auto& block = blocks[j / bytes_per_block];
+                block = static_cast<block_type>(block | static_cast<block_type>(byte << shift));
+        }
+}
+
 template<std::size_t N, class B>
         requires bit_castable<B, N>
 [[nodiscard]] constexpr auto bit_bytes(B const& b) noexcept
@@ -218,23 +265,38 @@ template<std::size_t N, class B>
         auto bytes = std::array<std::byte, byte_count<N>>();
         if constexpr (byte_count<N> > 0UZ) {
                 if constexpr (integer_source<B, N>) {
+                        // NO COPY HERE, and that is measured rather than assumed: a value is at most a handful of
+                        // bytes, the loop unrolls, and memcpy timed identically at every width (0.31ns either way
+                        // on uint8, uint32 and uint64). A branch that buys nothing is worse than no branch.
                         for (auto j = 0UZ; j < bytes.size(); ++j) {
                                 bytes[j] = static_cast<std::byte>(static_cast<unsigned char>(b >> (bits_per_byte * j)));
                         }
                 } else if constexpr (block_range_source<B, N>) {
-                        // The scalar loop above, once per block: byte j of the field is byte j % sizeof(block) of
-                        // block j / sizeof(block). A shift on the VALUE, so the order that block keeps its own
-                        // bytes in never enters, and neither does the target's.
-                        constexpr auto bytes_per_block = block_digits<B> / bits_per_byte;
-                        for (auto j = 0UZ; j < bytes.size(); ++j) {
-                                auto const block = b[j / bytes_per_block];
-                                auto const shift = bits_per_byte * (j % bytes_per_block);
-                                bytes[j] = static_cast<std::byte>(static_cast<unsigned char>(block >> shift));
+                        // The container's own shape one layer down, and the shape matters as much as the branches:
+                        // said as `if !consteval` with a return, the shifts below become unreachable code in a
+                        // run-time instantiation, which MSVC reports as C4702 and this build treats as an error.
+                        // Two alternatives, so neither is dead.
+                        if consteval {
+                                block_bytes_by_shifts<N>(b, bytes);
+                        } else {
+                                if constexpr (blocks_copy_as_bytes<B>) {
+                                        std::memcpy(bytes.data(), std::ranges::data(b), bytes.size());
+                                } else {
+                                        block_bytes_by_shifts<N>(b, bytes);
+                                }
                         }
                 } else {
-                        auto const object = object_bytes(b);
-                        for (auto j = 0UZ; j < bytes.size(); ++j) {
-                                bytes[j] = object[j];
+                        // A field of bits is TRIVIALLY COPYABLE -- container_source says so -- so at run time its
+                        // object representation can be read straight into these bytes. The bit_cast is what a
+                        // constant expression needs, and it costs a whole second copy of the object, which is the
+                        // one this branch was paying twice over.
+                        if consteval {
+                                auto const object = object_bytes(b);
+                                for (auto j = 0UZ; j < bytes.size(); ++j) {
+                                        bytes[j] = object[j];
+                                }
+                        } else {
+                                std::memcpy(bytes.data(), std::addressof(b), bytes.size());
                         }
                 }
         }
@@ -249,6 +311,7 @@ template<class B, std::size_t N>
         if constexpr (byte_count<N> == 0UZ) {
                 return B();
         } else if constexpr (integer_source<B, N>) {
+                // The shifts alone, for the reason bit_bytes gives: a copy measured the same and said less.
                 auto value = B();
                 for (auto j = 0UZ; j < bytes.size(); ++j) {
                         auto const byte = static_cast<B>(std::to_integer<unsigned char>(bytes[j]));
@@ -257,21 +320,28 @@ template<class B, std::size_t N>
                 return value;
         } else if constexpr (block_range_source<B, N>) {
                 // Value-initialised first, so the blocks above N are CLEAR rather than whatever was there: that is
-                // what makes set -> blocks -> set the identity at a width the sequence is wider than.
-                using block_type = std::ranges::range_value_t<B>;
-                constexpr auto bytes_per_block = block_digits<B> / bits_per_byte;
+                // what makes set -> blocks -> set the identity at a width the sequence is wider than. The copy
+                // below writes only the bytes the field has, so the same value-initialisation is what clears the
+                // tail for it too.
                 auto blocks = B();
-                for (auto j = 0UZ; j < bytes.size(); ++j) {
-                        auto const byte  = static_cast<block_type>(std::to_integer<unsigned char>(bytes[j]));
-                        auto const shift = bits_per_byte * (j % bytes_per_block);
-                        auto& block = blocks[j / bytes_per_block];
-                        block = static_cast<block_type>(block | static_cast<block_type>(byte << shift));
+                if consteval {
+                        bytes_blocks_by_shifts<N>(bytes, blocks);
+                } else {
+                        if constexpr (blocks_copy_as_bytes<B>) {
+                                std::memcpy(std::ranges::data(blocks), bytes.data(), bytes.size());
+                        } else {
+                                bytes_blocks_by_shifts<N>(bytes, blocks);
+                        }
                 }
                 return blocks;
         } else {
                 auto object = std::array<std::byte, sizeof(B)>();
-                for (auto j = 0UZ; j < bytes.size(); ++j) {
-                        object[j] = bytes[j];
+                if consteval {
+                        for (auto j = 0UZ; j < bytes.size(); ++j) {
+                                object[j] = bytes[j];
+                        }
+                } else {
+                        std::memcpy(object.data(), bytes.data(), bytes.size());
                 }
                 return std::bit_cast<B>(object);
         }

@@ -171,21 +171,31 @@ public:
         //
         // So integers keep their door and this opens the other one: std::bitset<N>, and any field of bits whose
         // layout bit_castable can prove.
-        // NOT ITSELF, which the other two readings get for free and this one has to say. A templated constructor
-        // is a candidate for copy-construction too, and this reading is the one whose own type the probe accepts:
-        // it has set, count and size, so container_source runs the probe on it rather than declining early. The
-        // copy constructor still wins on overload resolution, but the constraint is CHECKED first, and checking it
-        // is what dragged a self-probe into every instantiation.
+        //
+        // NAMED rather than spelled as a conversion, uniformly with the other two readings -- see set_adaptor for
+        // the collision that forced it. Here the name also settles an older hazard by construction: the thing that
+        // made the IN direction delicate was that a templated CONSTRUCTOR is a candidate for copy-construction, so
+        // its constraint was checked on every copy, and this is the one reading whose own type the probe accepts
+        // (it has set, count and size, so container_source probes it rather than declining early). A static
+        // function is never a copy-construction candidate, so that check now happens only where from_bits is
+        // actually written.
+        //
+        // NOT ITSELF is kept all the same, and now says something about the interface rather than about overload
+        // resolution: copying a bitset_adaptor is a copy, not a byte exchange, and the copy constructor owns it.
+        // The other two readings decline their own type for free -- an adaptor is neither trivially copyable nor a
+        // contiguous range of blocks -- so saying it here is what keeps the three of them reading the same.
         template<class B>
                 requires (not std::same_as<std::remove_cvref_t<B>, bitset_adaptor>) and Bits::template exchanges_bits_as_field<B>
-        [[nodiscard]] constexpr explicit bitset_adaptor(B const& b) noexcept
+        [[nodiscard]] static constexpr auto from_bits(B const& b) noexcept -> bitset_adaptor
         {
-                m_bits.assign_bits(b);
+                auto result = bitset_adaptor();
+                result.m_bits.assign_bits(b);
+                return result;
         }
 
         template<class B>
                 requires Bits::template exchanges_bits_as_field<B>
-        [[nodiscard]] constexpr explicit operator B() const noexcept
+        [[nodiscard]] constexpr auto to_bits() const noexcept -> B
         {
                 return m_bits.template to_bits<B>();
         }

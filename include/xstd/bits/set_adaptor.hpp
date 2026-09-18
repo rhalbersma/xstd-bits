@@ -187,34 +187,47 @@ public:
         // A field of bits in, a field of bits out, at the one extent where the question has a single answer: a static
         // width is a CAPACITY under this reading and the other side's own width both, so position n here is bit n
         // there and there is no policy left to choose -- nothing truncates, nothing grows, nothing throws, and the
-        // round trip is the identity in both directions. EXPLICIT in both directions, and not because either could
-        // fail: a set of positions and a field of bits are two readings of the same bits, and this library makes a
-        // reader pick one rather than letting a conversion pick for them.
+        // round trip is the identity in both directions.
+        //
+        // NAMED rather than spelled as a conversion, which is the one thing explicit could not buy. A contiguous
+        // range of unsigned integers ALREADY means something at this reading: from_range reads it as a range of
+        // KEYS. So the same argument had two meanings a tag apart, and both of them compiled:
+        //
+        //      bit_static_set<256>(std::from_range, words)   // {0, 5} -- the values are keys
+        //      bit_static_set<256>(words)                    // {0, 2} -- the values are blocks
+        //
+        // explicit guards against a conversion nobody asked for. It does nothing about a reader misreading one that
+        // was asked for, and that is the failure available here. A name does: from_bits says which reading of the
+        // argument is meant, at the call site, where the reader is. std::bitset spells its own exit to_ullong for
+        // the same reason, Boost spells this pair from_block_range and to_block_range, and contiguous_bit_container
+        // has said assign_bits and to_bits one layer down all along -- so this is the library's own vocabulary,
+        // carried up to the reading where it can be misread.
         //
         // NAMED BY A CONCEPT rather than by a type. std::bitset appears nowhere here, which is the point: what these
-        // two admit is anything whose N bits this library can prove it reads correctly -- an unsigned integer, whose
-        // layout the language states, or a field of bits whose layout bit_castable probes and proves. So
-        // std::bitset<N> rides in on the same rule as unsigned long long, and an implementation that ever laid its
-        // bits out otherwise is simply not admitted: a call that fails to compile rather than one quietly wrong.
+        // two admit is anything whose N bits this library can prove it reads correctly -- an unsigned integer or a
+        // sequence of them, whose layout the language and the sequence state between them, or a field of bits whose
+        // layout bit_castable probes and proves. So std::bitset<N> rides in on the same rule as unsigned long long,
+        // and an implementation that ever laid its bits out otherwise is simply not admitted: a call that fails to
+        // compile rather than one quietly wrong.
         //
-        // The integer family is worth reading twice at THIS reading. bit_static_set<32>(5u) is a set of the positions
-        // that the VALUE five has, {0, 2}, and not the set {5} -- the same bits std::bitset<32>(5u) would hold. It is
-        // explicit, so it is asked for rather than arrived at, but it is the one spelling here that a reader coming
-        // from the set vocabulary can misread.
+        // The integer family is the one a set reader can still misread, and the name is now what answers it:
+        // bit_static_set<32>::from_bits(5u) is the set of positions the VALUE five has, {0, 2}, and not the set {5}.
         template<class B>
                 requires is_owner and Bits::template exchanges_bits<B>
-        [[nodiscard]] constexpr explicit set_adaptor(B const& b) noexcept
+        [[nodiscard]] static constexpr auto from_bits(B const& b) noexcept -> set_adaptor
         {
-                storage().assign_bits(b);
+                auto result = set_adaptor();
+                result.storage().assign_bits(b);
+                return result;
         }
 
         // Through storage() and NOT through m_bits, which is a Bits* wherever this reading refers rather than owns.
         // The constraint admits a view -- a set view refers to a whole container, so its bytes ARE that container's
-        // and the conversion is as meaningful there as on an owner -- and reaching for m_bits directly made that a
+        // and the exchange is as meaningful there as on an owner -- and reaching for m_bits directly made that a
         // hard error inside the body instead: the concept answered yes and the call then failed to compile.
         template<class B>
                 requires Bits::template exchanges_bits<B>
-        [[nodiscard]] constexpr explicit operator B() const noexcept
+        [[nodiscard]] constexpr auto to_bits() const noexcept -> B
         {
                 return storage().template to_bits<B>();
         }
