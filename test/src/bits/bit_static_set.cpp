@@ -10,10 +10,11 @@
 #include <xstd/bits/bit_static_set.hpp> // bit_static_set
 #include <xstd/bits/bitset.hpp>         // bitset
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <array>                        // array
 #include <bitset>                       // bitset
 #include <concepts>                     // regular, totally_ordered
 #include <cstddef>                      // size_t
-#include <cstdint>                      // uint64_t
+#include <cstdint>                      // uint32_t, uint64_t
 #include <iterator>                     // bidirectional_iterator
 #include <ranges>                       // bidirectional_range, iota, to
 #include <type_traits>                  // is_constructible_v, is_convertible_v

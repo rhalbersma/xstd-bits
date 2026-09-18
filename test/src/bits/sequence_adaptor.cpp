@@ -13,10 +13,9 @@
 #include <xstd/bits/ownership.hpp>                       // ownership
 #include <xstd/bits/sequence_adaptor.hpp>                // sequence_adaptor
 #include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <bitset>                                        // bitset
-#include <array>                                         // array
-#include <cstdint>                                       // uint32_t, uint64_t
 #include <algorithm>                                     // all_of, any_of, count, equal, lexicographical_compare_three_way, mismatch, none_of
+#include <array>                                         // array
+#include <bitset>                                        // bitset
 #include <compare>                                       // strong_ordering
 #include <concepts>                                      // copyable, equality_comparable, regular, same_as, totally_ordered
 #include <cstddef>                                       // ptrdiff_t, size_t
