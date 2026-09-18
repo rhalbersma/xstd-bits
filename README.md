@@ -442,7 +442,20 @@ auto b = a
 |value |76543210|FEDCBA98|
 
 **Q**: Why that layout, and not the mirrored one?  
-**A**: Because it is everybody else's. It is what makes the byte exchange with `std::bitset<N>`, with `xstd::bitset<N>` and with a raw range of blocks a **copy** rather than a permutation ([design.md#the-bytes-they-agree-on](design.md#the-bytes-they-agree-on)), and `<<` still moves toward larger elements, a left shift on a word doing exactly that.
+**A**: Because it is very nearly forced. It is not a convention this library follows for the sake of following one, and there are four reasons, of which the first is not really negotiable at all.
+
+**A one-word bitset must *be* its integer.** `std::bitset` mandates the round trip `bitset<N>(v).to_ullong() == v`, and the language fixes the value side of it: bit `n` of an unsigned integer is `2^n`. So `from_ullong` is `if ((val >> i) & 1) assign(i, true)` and `to_ullong` is its inverse, and at one word the stored block is the integer, bit for bit, with no work at all. Mirror the layout and the standard's own round trip becomes a bit reversal in each direction — which is why `design.md` admits the integer family with **nothing to prove**, where a foreign field of bits has to pass a probe ([design.md#the-bytes-they-agree-on](design.md#the-bytes-they-agree-on)).
+
+**The scan primitive is the layout.** A forward step is `bits_per_block * i + countr_zero(m_blocks[i])` — `ctz` and nothing else, because position `n` is bit `n`. A mask is `unit << offset`, one instruction. Mirror it and each grows a correction: `digits - 1 - clz` for the step, `highbit >> offset` for the mask, and a `<<` that lowers to `shr`. That cost is visible here rather than hypothetical — the **reverse** scan pays exactly that subtraction, `last_bit() - countl_zero(...)`, and mirroring would move it onto `find_first`/`find_next`, which is the set reading's common path.
+
+**Growth appends, so the numbering must append too.** The dynamic column is a `std::vector` of blocks and `push_back` is `resize(size() + 1, value)`, so a new position lands at bit `size() % digits` of the last block: the used region of that block grows upward from its low bits, the unused tail stays above it, and nothing already stored moves. That tail-above-the-used-bits invariant is what the bitset ordering then leans on, comparing blocks as unsigned integers from the top block down.
+
+**And the exchange is a copy only because everyone agrees.** `std::bitset`, `std::vector<bool>` and `boost::dynamic_bitset` are all LSB-first, so a field of the same width agrees byte for byte and converts by `memcpy` rather than by reversing the bits of every byte. The per-byte path is measured at 9.70µs against 0.07µs over 2^16 positions, about a hundred and forty-five times; a mirrored layout would pay at least that on every conversion, in both directions, forever.
+
+**Q**: Does that make little-endian mandatory too?  
+**A**: For this library's own containers, no. Positions are computed by shifts on block **values**, and `b[j] >> k` is the same number on either byte order, so a big-endian target is correct and merely takes the shift path where a little-endian one copies.
+
+For **interop**, yes, and both doors close at once. The block-range family names `std::endian::native == std::endian::little` in its own constraint, and a foreign bitset fails the layout probe, `std::bit_cast` handing back the object representation rather than the value — where bit `n` of a word lands at the far end of it. So a big-endian build keeps every container and loses every conversion from a field of bits it did not lay out itself.
 
 **Q**: Then how does set comparison stay word-parallel, if the set order is not the words' integer order?  
 **A**: It is three walks over the one layout, one per reading, each a word at a time rather than a position at a time:
