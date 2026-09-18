@@ -67,6 +67,34 @@ concept probeable_bits =
         }
 ;
 
+// One position lit and counted, asked only for whether it is a CONSTANT EXPRESSION. bit_cast_is_constant above
+// covers what bit_cast refuses; this covers what the probe itself does, and the two failures are unrelated. A
+// block type whose operator|= is not constexpr makes set() unusable in a constant expression while leaving it
+// perfectly well-formed -- absl::uint128 is exactly that -- so probeable_bits is satisfied, the probe then runs at
+// compile time, and the result is a hard error in the middle of a constraint rather than an unsatisfied concept.
+// That is the same shape B().size() == N prevents for a set() that throws, and it needs its own guard because a
+// non-constant set() is not an out-of-range one.
+//
+// ONE position and not five, because this is a gate and not the proof: the probe below is the proof, and paying
+// for it twice would halve the width its step budget reaches. count() rides along because it is the other call the
+// probe makes on a candidate, and it is as free here as set() is.
+//
+// NOT noexcept, for the same reason bit_layout_holds is not: a bitset reading's set(pos) throws out_of_range for a
+// position it does not have, and a throw out of a noexcept function is a terminate rather than a diagnostic.
+template<class B>
+[[nodiscard]] constexpr auto probe_once()
+        -> bool
+{
+        auto b = B();
+        b.set(0UZ);
+        return static_cast<std::size_t>(b.count()) == 1UZ;
+}
+
+template<class B>
+concept probe_is_constant = requires {
+        typename std::bool_constant<(probe_once<B>(), true)>;
+};
+
 // FIVE positions, and the count is the budget rather than the taste. Each probe materialises the whole byte array
 // through bit_cast, so it costs O(sizeof(B)) however few bytes it then reads, and clang's default
 // -fconstexpr-steps admits six of them at a width of 2^20 and refuses seven; GCC's limit is higher. Five leaves
@@ -130,7 +158,7 @@ concept container_source =
         // question is empty: std::bitset<0> occupies a byte that represents no position, so a bit_cast of it reads
         // an uninitialised one and is no constant expression. The guard is byte_count and not N, because they are
         // zero together and byte_count is what the two functions below actually range over.
-        (byte_count<N> == 0UZ or (bit_cast_is_constant<B> and bit_layout_holds<B, N>()))
+        (byte_count<N> == 0UZ or (bit_cast_is_constant<B> and probe_is_constant<B> and bit_layout_holds<B, N>()))
 ;
 
 template<class B, std::size_t N>

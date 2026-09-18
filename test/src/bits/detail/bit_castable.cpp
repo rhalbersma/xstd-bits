@@ -94,6 +94,20 @@ struct spare_word
         [[nodiscard]] static constexpr auto size() noexcept -> std::size_t { return 64UZ; }
 };
 
+
+// Its set() is well-formed but NOT usable in a constant expression, which is a different failure from every one
+// above: those are layouts the probe RUNS and refuses, this is one the probe cannot run at all. A block type whose
+// operator|= is not constexpr produces exactly this -- absl::uint128 is one, and a bitset over it reaches here
+// through its own reading. Without a guard the probe is a hard error in the middle of a constraint; with one it is
+// an ordinary unsatisfied concept, and the conversion simply does not exist for that type.
+struct non_constant_set
+{
+        std::uint64_t w = 0ULL;
+        auto set(std::size_t n) noexcept -> void { w |= 1ULL << n; }        // NOLINT(readability-make-member-function-const)
+        [[nodiscard]] static constexpr auto count() noexcept -> std::size_t { return 1UZ; }
+        [[nodiscard]] static constexpr auto size() noexcept -> std::size_t { return 64UZ; }
+};
+
 }       // namespace wrong
 
 BOOST_AUTO_TEST_CASE(TheProbeRefusesALayoutThatIsWrong)
@@ -105,6 +119,13 @@ BOOST_AUTO_TEST_CASE(TheProbeRefusesALayoutThatIsWrong)
         static_assert(not bits::bit_layout_holds<wrong::dirty_default, 64UZ>());
         static_assert(not bits::bit_layout_holds<wrong::miscounting,   64UZ>());
         static_assert(not bits::bit_layout_holds<wrong::reversed,      64UZ>());
+
+        // A set() that is not a CONSTANT EXPRESSION is refused without the probe running, which is the whole point:
+        // it is everything probeable_bits asks for, so the probe would otherwise be reached and hard-error.
+        static_assert(    bits::probeable_bits<wrong::non_constant_set>);
+        static_assert(not bits::probe_is_constant<wrong::non_constant_set>);
+        static_assert(not bits::container_source<wrong::non_constant_set, 64UZ>);
+        static_assert(not bits::bit_castable<wrong::non_constant_set, 64UZ>);
 
         // And the concept refuses all four, the last of them before the probe ever runs.
         static_assert(not bits::bit_castable<wrong::dirty_default, 64UZ>);

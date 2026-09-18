@@ -157,6 +157,39 @@ public:
                 from_ullong(val);
         }
 
+        // A field of bits in, a field of bits out, in the bytes the three readings share -- and constrained on
+        // container_source rather than on bit_castable, which is the one place this reading differs from the other
+        // two. It ALREADY HAS the integer door, twice over, and admitting the integer family here would not widen
+        // it but collide with it:
+        //
+        //   - the constructor above takes unsigned long long IMPLICITLY. A template admitting unsigned int would be
+        //     an exact match where that one needs a conversion, so it would win for bitset<32> b(5u) -- and being
+        //     explicit, it would make bitset<32> b = 5u ill-formed, which compiles today.
+        //   - to_ullong() THROWS overflow_error where a set position lies beyond the word ([bitset.members]/34-37),
+        //     where a byte copy would silently keep the low bits. Two contracts for one conversion is a trap, and
+        //     the standard's is the one this reading owes.
+        //
+        // So integers keep their door and this opens the other one: std::bitset<N>, and any field of bits whose
+        // layout bit_castable can prove.
+        // NOT ITSELF, which the other two readings get for free and this one has to say. A templated constructor
+        // is a candidate for copy-construction too, and this reading is the one whose own type the probe accepts:
+        // it has set, count and size, so container_source runs the probe on it rather than declining early. The
+        // copy constructor still wins on overload resolution, but the constraint is CHECKED first, and checking it
+        // is what dragged a self-probe into every instantiation.
+        template<class B>
+                requires (not std::same_as<std::remove_cvref_t<B>, bitset_adaptor>) and Bits::template exchanges_bits_as_field<B>
+        [[nodiscard]] constexpr explicit bitset_adaptor(B const& b) noexcept
+        {
+                m_bits.assign_bits(b);
+        }
+
+        template<class B>
+                requires Bits::template exchanges_bits_as_field<B>
+        [[nodiscard]] constexpr explicit operator B() const noexcept
+        {
+                return m_bits.template to_bits<B>();
+        }
+
         // boost's block-range constructor: the first block's low bit is position zero, and the width is a whole number of blocks.
         template<std::input_iterator I, std::sentinel_for<I> S>
         [[nodiscard]] constexpr bitset_adaptor(I first, S last)

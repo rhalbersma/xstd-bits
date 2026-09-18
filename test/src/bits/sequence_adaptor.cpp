@@ -6,11 +6,14 @@
 #include <test/block_types.hpp>                          // graded_extents
 #include <xstd/bits/bit_array.hpp>                       // bit_array
 #include <xstd/bits/bit_span.hpp>                        // bit_span
+#include <xstd/bits/bit_subspan.hpp>                     // bit_subspan
+#include <xstd/bits/bit_vector.hpp>                      // bit_vector
 #include <xstd/bits/detail/contiguous_bit_array.hpp>     // contiguous_bit_array
 #include <xstd/bits/detail/contiguous_bit_vector.hpp>    // contiguous_bit_vector
 #include <xstd/bits/ownership.hpp>                       // ownership
 #include <xstd/bits/sequence_adaptor.hpp>                // sequence_adaptor
 #include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
+#include <bitset>                                        // bitset
 #include <algorithm>                                     // all_of, any_of, count, equal, lexicographical_compare_three_way, mismatch, none_of
 #include <compare>                                       // strong_ordering
 #include <concepts>                                      // copyable, equality_comparable, regular, same_as, totally_ordered
@@ -20,7 +23,7 @@
 #include <limits>                                        // numeric_limits
 #include <ranges>                                        // equal, iota, random_access_range, transform
 #include <stdexcept>                                     // length_error, out_of_range
-#include <type_traits>                                   // is_const_v
+#include <type_traits>                                   // is_const_v, is_constructible_v, is_convertible_v
 #include <utility>                                       // move, pair
 #include <vector>                                        // vector
 
@@ -566,6 +569,83 @@ BOOST_AUTO_TEST_CASE(ForEachHandsTheBoolByValue)
         BOOST_CHECK(not took_a_reference);
         a.for_each(bool_probe{ took_a_reference });
         BOOST_CHECK(not took_a_reference);
+}
+
+// The byte exchange, at the sequence reading. Byte j holds the positions [8j, 8j + 8) least significant bit first
+// whatever the block width, so a fixed-width sequence agrees byte for byte with any other field of bits and this is
+// a copy rather than a walk over positions.
+BOOST_AUTO_TEST_CASE(APackedArrayExchangesBytesWithAFieldOfBits)
+{
+        constexpr auto N = 100UZ;
+        auto src = std::bitset<N>();
+        for (auto i = 0UZ; i < N; i += 7UZ) { src.set(i); }
+
+        auto const a = xstd::bit_array<N>(src);
+        BOOST_CHECK_EQUAL(a.count(), src.count());
+        for (auto i = 0UZ; i < N; ++i) {
+                BOOST_CHECK_EQUAL(a[i], src.test(i));
+        }
+        BOOST_CHECK(static_cast<std::bitset<N>>(a) == src);
+
+        // At compile time too, and at a width that is a whole number of bytes and one that is not.
+        static_assert([] -> bool {
+                auto const bs = std::bitset<64>(0xDEAD'BEEF'0123'4567ULL);
+                return static_cast<std::bitset<64>>(xstd::bit_array<64>(bs)) == bs;
+        }());
+        static_assert([] -> bool {
+                auto const bs = std::bitset<17>(0x1'5A5AULL);
+                return static_cast<std::bitset<17>>(xstd::bit_array<17>(bs)) == bs;
+        }());
+}
+
+// EXPLICIT in both directions: a packed array of bool and a field of bits are two readings of the same bits, and
+// this library makes a reader pick one rather than letting a conversion pick for them.
+BOOST_AUTO_TEST_CASE(TheSequenceConversionsAreExplicitBothWays)
+{
+        constexpr auto N = 64UZ;
+        using T = xstd::bit_array<N>;
+        if constexpr (std::is_constructible_v<T, std::bitset<N>>) {
+                static_assert(not std::is_convertible_v  <std::bitset<N>, T>);
+                static_assert(    std::is_constructible_v<std::bitset<N>, T>);
+                static_assert(not std::is_convertible_v  <T, std::bitset<N>>);
+
+                // Any other width is no conversion at all, rather than a narrowing one.
+                static_assert(not std::is_constructible_v<T, std::bitset<N + 1UZ>>);
+                static_assert(not std::is_constructible_v<T, std::bitset<N - 1UZ>>);
+        }
+}
+
+// A WINDOW is the one shape that must not convert, and it is why is_window is asked rather than left to
+// has_static_width. A window carries a bit offset and a size of its own into storage it does not span, so its
+// position zero is not the storage's and its bytes are not the storage's bytes. A window over a static container
+// still reports that CONTAINER's extent, so the width test alone would wave it through and hand back the wrong bits.
+BOOST_AUTO_TEST_CASE(AWindowIsNotAFieldOfBitsButAPlainViewIs)
+{
+        static_assert(not std::is_constructible_v<std::bitset<100>, xstd::bit_subspan<Storage> const&>);
+        static_assert(    std::is_constructible_v<std::bitset<100>, View const&>);
+        static_assert(    std::is_constructible_v<std::bitset<100>, Reader const&>);
+
+        // A view reads the bits it spans, which are the whole container's.
+        auto storage = Storage();
+        // const, because a view's const is SHALLOW: the handle does not change, the bits it refers to do.
+        auto const view = View(storage);
+        view[0] = true;
+        view[Storage::extent - 1UZ] = true;
+        auto const out = static_cast<std::bitset<100>>(view);
+        BOOST_CHECK_EQUAL(out.count(), 2UZ);
+        BOOST_CHECK(out.test(0) and out.test(Storage::extent - 1UZ));
+
+        // A view never gains the CONSTRUCTOR, which would write through bits it does not own.
+        static_assert(not std::is_constructible_v<View, std::bitset<100>>);
+}
+
+// A run-time width has neither, and that is the policy rather than an omission: a field of N bits names one N at
+// compile time and a growing sequence has no single one to mean.
+BOOST_AUTO_TEST_CASE(ARunTimeWidthHasNoByteExchange)
+{
+        static_assert(not std::is_constructible_v<xstd::bit_vector, std::bitset<64>>);
+        static_assert(not std::is_constructible_v<std::bitset<64>, xstd::bit_vector const&>);
+        static_assert(not std::is_constructible_v<DynamicOctet, std::bitset<64>>);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

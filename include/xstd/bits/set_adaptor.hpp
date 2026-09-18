@@ -10,7 +10,6 @@
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/detail/hash.hpp>                     // hash_append_bits, hash_append_positions, std_hash
 #include <xstd/bits/detail/intrin.hpp>                   // countl_zero, countr_zero
-#include <xstd/bits/detail/bit_castable.hpp>              // bit_bytes, bit_castable, byte_count, bytes_bits
 #include <xstd/bits/detail/shift.hpp>                    // shl, shr
 #include <xstd/bits/detail/zero_width.hpp>               // zero_width
 #include <xstd/bits/ownership.hpp>                       // owned_bits_t, owned_storage, owner_of, owner_reading, ownership, owns, reading
@@ -151,11 +150,6 @@ public:
         using value_type             = key_type;
         using value_compare          = key_compare;
         static constexpr bool has_static_width = (Bits::extent != std::dynamic_extent);
-
-        // std::dynamic_extent is SIZE_MAX, and a concept asked at that width would compute byte_count of it -- two
-        // exabytes of bytes -- however unsatisfiable the rest of the constraint is. So the two conversions below
-        // spell their width through this, which is zero wherever they do not exist.
-        static constexpr auto static_bitset_extent = has_static_width ? Bits::extent : 0UZ;
         using pointer                = void;
         using const_pointer          = pointer;
         using reference              = detail::bits::bidirectional_bit_reference<Bits>;
@@ -208,19 +202,21 @@ public:
         // explicit, so it is asked for rather than arrived at, but it is the one spelling here that a reader coming
         // from the set vocabulary can misread.
         template<class B>
-                requires is_owner and has_static_width and detail::bits::bit_castable<B, static_bitset_extent>
+                requires is_owner and Bits::template exchanges_bits<B>
         [[nodiscard]] constexpr explicit set_adaptor(B const& b) noexcept
         {
-                m_bits.assign_bytes(detail::bits::bit_bytes<static_bitset_extent>(b));
+                storage().assign_bits(b);
         }
 
+        // Through storage() and NOT through m_bits, which is a Bits* wherever this reading refers rather than owns.
+        // The constraint admits a view -- a set view refers to a whole container, so its bytes ARE that container's
+        // and the conversion is as meaningful there as on an owner -- and reaching for m_bits directly made that a
+        // hard error inside the body instead: the concept answered yes and the call then failed to compile.
         template<class B>
-                requires has_static_width and detail::bits::bit_castable<B, static_bitset_extent>
+                requires Bits::template exchanges_bits<B>
         [[nodiscard]] constexpr explicit operator B() const noexcept
         {
-                return detail::bits::bytes_bits<B, static_bitset_extent>(
-                        m_bits.template to_bytes<detail::bits::byte_count<static_bitset_extent>>()
-                );
+                return storage().template to_bits<B>();
         }
 
         [[nodiscard]] constexpr explicit set_adaptor(Bits& c) noexcept

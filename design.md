@@ -394,6 +394,20 @@ does not have, where `std::bitset<8>::set(8)` throws and a throw is no constant 
 concept where that would be a hard error. And `bit_cast_is_constant<B>` rules out the shapes `bit_cast` refuses
 to be `constexpr` for: a pointer member, a reference member, a union.
 
+`probe_is_constant<B>` is the third of them, and it guards a failure the other two do not reach. A `set()` can be
+perfectly **well-formed and yet unusable in a constant expression** — a block type whose `operator|=` is not
+`constexpr` gives exactly that, and `absl::uint128` is one, so a bitset over it satisfies `probeable_bits`,
+reaches the probe, and turns a constraint into a hard error rather than a false. That is not the throwing `set()`
+the width constraint catches and not a shape `bit_cast` refuses; a non-constant `set()` is its own failure and
+needs its own gate. It lights **one** position rather than five, because this is the gate and the probe is the
+proof: paying the full probe twice would halve the width the step budget reaches. `count()` rides along, being
+the only other call the probe makes.
+
+The cost of that gate is that such a type is not a **source**. It remains a perfectly good target — a
+`basic_bitset<absl::uint128, 384>` still converts to and from a `std::bitset<384>`, because the probe runs on the
+*other* side. What it cannot be is the thing whose layout is proved, which is the honest answer when the proof
+cannot be run at all.
+
 What is **not** asked is `has_unique_object_representations_v`, and that is measured rather than preferred. GCC
 13 through 16 answer false for any class with an empty non-static data member, even one `[[no_unique_address]]`
 makes free, where clang answers true at identical layout — `sizeof` 8 and `offsetof` 0 on both. Every container
@@ -404,6 +418,45 @@ already checks.
 
 A run-time width has neither conversion, and that is the policy and not an omission: a field of `N` bits names
 one `N` at compile time and a growing set has no single one to mean.
+
+**All three readings carry the exchange**, and it is said **once, in the container**. The width is
+`contiguous_bit_container`'s own property rather than any reading's, so that is where `bit_extent`, the two
+`exchanges_bits` predicates and the `assign_bits`/`to_bits` pair live; a reading forwards to them in one line and
+adds only what its own vocabulary requires. Said in each adaptor instead, the `dynamic_extent`-to-zero guard —
+needed because `dynamic_extent` is `SIZE_MAX` and `byte_count` of that is two exabytes — was three copies of one
+idea. The differences that remain between the readings are each forced by something the reading already is.
+
+The **sequence** reading takes it whole, on `bit_castable` exactly as the set reading does — with one constraint
+the set reading has no need of. A `bit_subspan` is a *window*: a bit offset and a size of its own into storage it
+does not span, so its position zero is not the storage's and its bytes are not the storage's bytes. Asking
+`has_static_width` alone would wave it through, because a window over a static container reports that
+*container's* extent rather than its own size, and `to_bytes` would then hand back the wrong bits. So the
+conversion asks `not is_window` as well. A `bit_span`, which is not a window, spans the whole container and
+converts like an owner.
+
+The **bitset** reading takes only half of it, on `container_source` rather than on `bit_castable`, because it
+already has a door for integers and a second one would collide with the first rather than widen it. Its
+`unsigned long long` constructor is *implicit*; an explicit template admitting `unsigned int` would be an exact
+match where that constructor takes a conversion, so it would win for `bitset<32>(5u)` and, being explicit, turn
+`bitset<32> b = 5u` from legal into ill-formed. And `to_ullong` **throws** `overflow_error` where a set position
+lies beyond the word, where a byte copy keeps the low bits and says nothing. Two contracts for one conversion is
+a trap, and between them the standard's is the one this reading owes. So integers keep their door and the byte
+exchange opens the other.
+
+Two block widths over the same `N` are two spellings of one field of bits, so they cross on this rule with
+neither side named: `basic_bitset<uint8_t, 64>` converts to and from `basic_bitset<uint64_t, 64>` because the
+byte is the common ground where the word is not.
+
+What does **not** cross directly is the set reading and the sequence reading, and that follows from the probe
+rather than from a decision. `container_source` asks for `set`, `count` and `size`, which is bitset vocabulary;
+a set has `insert` and a sequence has `operator[]`, so neither is a *source* even though both are targets. The
+bitset reading is the hub between them, and going through it is one explicit cast rather than a missing feature.
+
+The conversion operator reaches its storage through the `storage()` accessor and never through `m_bits`. The
+member is a `Bits*` wherever a reading refers rather than owns, so naming it directly compiled for an owner and
+was a hard error for a view — while the constraint answered *yes* either way. That is the worst shape a concept
+can have: the question says the conversion exists and the call then fails to compile. The constructor is the
+owner's alone, since writing through a view would write bits it does not own.
 
 ### padding
 
