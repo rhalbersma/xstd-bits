@@ -320,10 +320,33 @@ with no second basis to reconcile, the layer that reconciled them went too ([one
 A comparison target can become a **value** the set reading converts to and from, and at a static width it is an
 exact one. A field of `N` bits has the same `N`, and under this reading that width is a capacity, so position
 `n` here is bit `n` there with nothing left to choose: nothing truncates, nothing grows, nothing throws, and the
-round trip is the identity both ways. `bit_static_set<N>` therefore carries an explicit constructor and an
-explicit conversion operator back. Explicit in both directions, and not because either could fail — a set of
-positions and a field of bits are two readings of the same bits, and this library makes a reader pick one rather
-than letting a conversion pick for them.
+round trip is the identity both ways. `bit_static_set<N>` therefore carries a static **`from_bits`** and a
+member **`to_bits<B>()`** back. Named in both directions, and not because either could fail — a set of positions
+and a field of bits are two readings of the same bits, and this library makes a reader pick one rather than
+letting a conversion pick for them.
+
+The door was spelled as an explicit constructor and an explicit conversion operator first, and **explicit turned
+out to be the wrong tool**. It guards against a conversion nobody asked for; the failure available here is a
+reader misreading one that *was* asked for. Admitting a sequence of blocks made that concrete, because a
+contiguous range of unsigned integers already means something at this reading:
+
+```cpp
+auto const words = std::array<std::uint64_t, 4>{ 5, 0, 0, 0 };
+
+bit_static_set<256>(std::from_range, words)   // {0, 5} — the values are keys
+bit_static_set<256>(words)                    // {0, 2} — the values are blocks
+```
+
+Both compiled, both succeeded, and they disagreed; a tag was the whole of what separated them. A name is what
+tells them apart at the call site, where the reader is. `std::bitset` spells its own exit `to_ullong` for the
+same reason and offers no conversion operator at all, Boost.dynamic_bitset spells this pair `from_block_range`
+and `to_block_range`, and `contiguous_bit_container` had said `assign_bits` and `to_bits` one layer down all
+along — so the rename carries the library's own vocabulary up to the readings, rather than inventing one.
+
+It also settles an older hazard at the bitset reading by construction. A templated **constructor** is a candidate
+for copy-construction, so its constraint was checked on every copy, and that reading is the one whose own type the
+probe accepts — which is what once dragged a self-probe into every instantiation. A static function is never a
+copy-construction candidate, so the check now happens only where `from_bits` is written.
 
 Neither is spelled with a type. `std::bitset` appears nowhere in the set adaptor: the two are templates
 constrained on `bit_castable<B, N>`, which admits anything whose `N` bits this library can prove it reads
@@ -347,7 +370,7 @@ why these are one family and not two. Everything in it is read by **shifts on va
 object, so no probe runs, no padding is reachable, and endianness never enters: `b[j] >> k` is the same number on
 either byte order. Only a foreign field of bits, whose internals this library cannot name, has to be proved.
 
-So `std::array<uint64_t, 4>` converts, and so does `std::array<uint32_t, 8>` over the same two hundred and
+So `std::array<uint64_t, 4>` crosses, and so does `std::array<uint32_t, 8>` over the same two hundred and
 fifty-six positions, because the byte is the common ground where the word is not. The width must be a **constant
 expression** — `B().size()` answers `M` for an array and zero for a vector — because "nothing truncates" is a
 promise made at compile time, and a run-time size cannot keep it. It must cover `N` but need not equal it, which
@@ -359,10 +382,10 @@ is — a concept depending on itself. An adaptor's iterator is a proxy and so ne
 answers false for every reading here before the recursive one is put.
 
 One spelling repays reading twice, and it reads differently at each reading — which is the point, and the trap.
-`bit_static_set<32>(5u)` is the set of positions the **value** five has, `{0, 2}`, not the set `{5}`.
-`bit_array<32>(5u)` is a packed array of bool, so it is `true, false, true` and twenty-nine more `false`. Same
-bits, two vocabularies. Both are explicit, so each is asked for rather than arrived at, but they are the one place
-here where a reader carrying the wrong vocabulary can misread.
+`bit_static_set<32>::from_bits(5u)` is the set of positions the **value** five has, `{0, 2}`, not the set `{5}`.
+`bit_array<32>::from_bits(5u)` is a packed array of bool, so it is `true, false, true` and twenty-nine more
+`false`. Same bits, two vocabularies. The name is what now carries the distinction: each is asked for by a
+spelling that says which reading of the argument is meant, which is exactly what `explicit` could not do.
 
 The currency is **bytes**, not words. Byte `j` holds the positions `[8j, 8j + 8)` least significant bit first,
 which is what every contiguous bit container lays them out as whatever its block width, so two widths over the

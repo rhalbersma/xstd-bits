@@ -3,6 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/bit_exchange.hpp>                         // exchanges_bits, exchanges_from_bits, exchanges_to_bits
 #include <xstd/bits/bit_set_view.hpp>                    // bit_set_view
 #include <xstd/bits/bit_span.hpp>                        // bit_span
 #include <xstd/bits/contiguous_bit_sequence.hpp>          // contiguous_bit_sequence
@@ -475,16 +476,16 @@ BOOST_AUTO_TEST_CASE(ABitsetReadingExchangesBytesWithAnotherFieldOfBits)
         auto src = std::bitset<N>();
         for (auto i = 0UZ; i < N; i += 3UZ) { src.set(i); }
 
-        auto const b = xstd::bitset<N>(src);
+        auto const b = xstd::bitset<N>::from_bits(src);
         BOOST_CHECK_EQUAL(b.count(), src.count());
         for (auto i = 0UZ; i < N; ++i) {
                 BOOST_CHECK_EQUAL(b.test(i), src.test(i));
         }
-        BOOST_CHECK(static_cast<std::bitset<N>>(b) == src);
+        BOOST_CHECK(b.to_bits<std::bitset<N>>() == src);
 
         static_assert([] -> bool {
                 auto const bs = std::bitset<64>(0x0F1E'2D3C'4B5A'6978ULL);
-                return static_cast<std::bitset<64>>(xstd::bitset<64>(bs)) == bs;
+                return xstd::bitset<64>::from_bits(bs).to_bits<std::bitset<64>>() == bs;
         }());
 }
 
@@ -507,7 +508,7 @@ BOOST_AUTO_TEST_CASE(TheIntegerDoorIsUnchangedByTheByteExchange)
         wide.set(99);
         BOOST_CHECK_THROW((void)wide.to_ullong(), std::overflow_error);
         // The byte exchange over the same object does not throw, because it is not the same question.
-        BOOST_CHECK((static_cast<std::bitset<100>>(wide)).test(99));
+        BOOST_CHECK(wide.to_bits<std::bitset<100>>().test(99));
 }
 
 // Two block widths over the same N are two spellings of one field of bits, so they cross on the same rule with
@@ -515,26 +516,34 @@ BOOST_AUTO_TEST_CASE(TheIntegerDoorIsUnchangedByTheByteExchange)
 BOOST_AUTO_TEST_CASE(TwoBlockWidthsCrossOnTheSameRule)
 {
         static_assert([] -> bool {
-                auto const wide   = xstd::basic_bitset<std::uint64_t, 64>(std::bitset<64>(0xABCDULL));
-                auto const narrow = xstd::basic_bitset<std::uint8_t,  64>(wide);
-                return static_cast<std::bitset<64>>(narrow) == std::bitset<64>(0xABCDULL);
+                auto const wide   = xstd::basic_bitset<std::uint64_t, 64>::from_bits(std::bitset<64>(0xABCDULL));
+                auto const narrow = xstd::basic_bitset<std::uint8_t,  64>::from_bits(wide);
+                return narrow.to_bits<std::bitset<64>>() == std::bitset<64>(0xABCDULL);
         }());
 }
 
-// Explicit both ways, any other width no conversion at all, and a run-time width none of it.
-BOOST_AUTO_TEST_CASE(TheBitsetConversionsAreExplicitAndWidthExact)
+// Named both ways, any other width no exchange at all, and a run-time width none of it.
+BOOST_AUTO_TEST_CASE(TheBitsetExchangeIsNamedAndWidthExact)
 {
         constexpr auto N = 64UZ;
         using T = xstd::bitset<N>;
+        static_assert(test::exchanges_bits<T, std::bitset<N>>);
+
+        // The UNNAMED doors are closed, both of them, which is what the rename is for. Worth asserting rather than
+        // assuming: a conversion operator reintroduced later would be invisible to the concept above, since that
+        // one only asks whether the named spelling works.
+        static_assert(not std::is_constructible_v<T, std::bitset<N>>);
+        static_assert(not std::is_constructible_v<std::bitset<N>, T>);
         static_assert(not std::is_convertible_v  <std::bitset<N>, T>);
-        static_assert(    std::is_constructible_v<std::bitset<N>, T>);
         static_assert(not std::is_convertible_v  <T, std::bitset<N>>);
-        static_assert(not std::is_constructible_v<T, std::bitset<N + 1UZ>>);
-        static_assert(not std::is_constructible_v<T, std::bitset<N - 1UZ>>);
+
+        // ITS width, not merely one that fits, in the direction the width is checked.
+        static_assert(not test::exchanges_from_bits<T, std::bitset<N + 1UZ>>);
+        static_assert(not test::exchanges_from_bits<T, std::bitset<N - 1UZ>>);
 
         using Dynamic = xstd::basic_dynamic_bitset<std::uint64_t>;
-        static_assert(not std::is_constructible_v<Dynamic, std::bitset<N>>);
-        static_assert(not std::is_constructible_v<std::bitset<N>, Dynamic const&>);
+        static_assert(not test::exchanges_from_bits<Dynamic, std::bitset<N>>);
+        static_assert(not test::exchanges_to_bits  <Dynamic, std::bitset<N>>);
 }
 
 // A SEQUENCE OF BLOCKS is a field of bits, so this reading takes it -- unlike the bare scalar, which it declines
@@ -543,15 +552,20 @@ BOOST_AUTO_TEST_CASE(TheBitsetConversionsAreExplicitAndWidthExact)
 BOOST_AUTO_TEST_CASE(ASequenceOfBlocksIsAFieldOfBitsAndAScalarIsNot)
 {
         using Blocks = std::array<std::uint64_t, 2>;
-        static_assert(    std::is_constructible_v<xstd::bitset<128>, Blocks>);
-        static_assert(    std::is_constructible_v<Blocks, xstd::bitset<128> const&>);
+        static_assert(test::exchanges_bits<xstd::bitset<128>, Blocks>);
+
+        // AND A SCALAR IS NOT, which this reading can now say in one line about the exchange itself. Under the old
+        // spelling the same question could only be put to is_constructible_v, where the standard's own implicit
+        // integer constructor answers yes and says nothing about the byte exchange at all.
+        static_assert(not test::exchanges_from_bits<xstd::bitset<128>, unsigned long long>);
+        static_assert(not test::exchanges_to_bits  <xstd::bitset<128>, unsigned long long>);
 
         // The scalar door stays the standard's, implicit and throwing, rather than a byte copy.
         static_assert(std::is_convertible_v<unsigned long long, xstd::bitset<128>>);
 
         static_assert([] -> bool {
                 auto const b = Blocks{ 0x0123'4567'89AB'CDEFULL, 0xFEDC'BA98'7654'3210ULL };
-                return static_cast<Blocks>(xstd::bitset<128>(b)) == b;
+                return xstd::bitset<128>::from_bits(b).to_bits<Blocks>() == b;
         }());
 }
 
