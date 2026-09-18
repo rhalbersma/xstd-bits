@@ -284,7 +284,7 @@ auto walks_agree(T const& b)
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheScanWalksWhatIterationWalks, T, Static)
 {
-        auto none = T();
+        auto const none = T();
         BOOST_CHECK(walks_agree(none));
 
         auto all = T();
@@ -310,7 +310,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheScanWalksWhatIterationWalks, T, Static)
 BOOST_AUTO_TEST_CASE(TheScanWalksWhatIterationWalksAtARunTimeWidth)
 {
         for (auto const n : { 0UZ, 1UZ, 63UZ, 64UZ, 65UZ, 129UZ, 512UZ }) {
-                auto none = xstd::dynamic_bitset(n);
+                auto const none = xstd::dynamic_bitset(n);
                 BOOST_CHECK(walks_agree(none));
 
                 auto all = xstd::dynamic_bitset(n);
