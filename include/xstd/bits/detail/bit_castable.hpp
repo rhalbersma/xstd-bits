@@ -272,25 +272,31 @@ template<std::size_t N, class B>
                                 bytes[j] = static_cast<std::byte>(static_cast<unsigned char>(b >> (bits_per_byte * j)));
                         }
                 } else if constexpr (block_range_source<B, N>) {
-                        if !consteval {
+                        // The container's own shape one layer down, and the shape matters as much as the branches:
+                        // said as `if !consteval` with a return, the shifts below become unreachable code in a
+                        // run-time instantiation, which MSVC reports as C4702 and this build treats as an error.
+                        // Two alternatives, so neither is dead.
+                        if consteval {
+                                block_bytes_by_shifts<N>(b, bytes);
+                        } else {
                                 if constexpr (blocks_copy_as_bytes<B>) {
                                         std::memcpy(bytes.data(), std::ranges::data(b), bytes.size());
-                                        return bytes;
+                                } else {
+                                        block_bytes_by_shifts<N>(b, bytes);
                                 }
                         }
-                        block_bytes_by_shifts<N>(b, bytes);
                 } else {
                         // A field of bits is TRIVIALLY COPYABLE -- container_source says so -- so at run time its
                         // object representation can be read straight into these bytes. The bit_cast is what a
                         // constant expression needs, and it costs a whole second copy of the object, which is the
                         // one this branch was paying twice over.
-                        if !consteval {
+                        if consteval {
+                                auto const object = object_bytes(b);
+                                for (auto j = 0UZ; j < bytes.size(); ++j) {
+                                        bytes[j] = object[j];
+                                }
+                        } else {
                                 std::memcpy(bytes.data(), std::addressof(b), bytes.size());
-                                return bytes;
-                        }
-                        auto const object = object_bytes(b);
-                        for (auto j = 0UZ; j < bytes.size(); ++j) {
-                                bytes[j] = object[j];
                         }
                 }
         }
@@ -318,22 +324,24 @@ template<class B, std::size_t N>
                 // below writes only the bytes the field has, so the same value-initialisation is what clears the
                 // tail for it too.
                 auto blocks = B();
-                if !consteval {
+                if consteval {
+                        bytes_blocks_by_shifts<N>(bytes, blocks);
+                } else {
                         if constexpr (blocks_copy_as_bytes<B>) {
                                 std::memcpy(std::ranges::data(blocks), bytes.data(), bytes.size());
-                                return blocks;
+                        } else {
+                                bytes_blocks_by_shifts<N>(bytes, blocks);
                         }
                 }
-                bytes_blocks_by_shifts<N>(bytes, blocks);
                 return blocks;
         } else {
                 auto object = std::array<std::byte, sizeof(B)>();
-                if !consteval {
+                if consteval {
+                        for (auto j = 0UZ; j < bytes.size(); ++j) {
+                                object[j] = bytes[j];
+                        }
+                } else {
                         std::memcpy(object.data(), bytes.data(), bytes.size());
-                        return std::bit_cast<B>(object);
-                }
-                for (auto j = 0UZ; j < bytes.size(); ++j) {
-                        object[j] = bytes[j];
                 }
                 return std::bit_cast<B>(object);
         }
