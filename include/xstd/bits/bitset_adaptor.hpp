@@ -171,8 +171,13 @@ public:
         //
         // So integers keep their door and this opens the other one: std::bitset<N>, and any field of bits whose
         // layout bit_castable can prove.
+        // NOT ITSELF, which the other two readings get for free and this one has to say. A templated constructor
+        // is a candidate for copy-construction too, and this reading is the one whose own type the probe accepts:
+        // it has set, count and size, so container_source runs the probe on it rather than declining early. The
+        // copy constructor still wins on overload resolution, but the constraint is CHECKED first, and checking it
+        // is what dragged a self-probe into every instantiation.
         template<class B>
-                requires Bits::template exchanges_bits_as_field<B>
+                requires (not std::same_as<std::remove_cvref_t<B>, bitset_adaptor>) and Bits::template exchanges_bits_as_field<B>
         [[nodiscard]] constexpr explicit bitset_adaptor(B const& b) noexcept
         {
                 m_bits.assign_bits(b);

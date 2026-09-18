@@ -394,6 +394,20 @@ does not have, where `std::bitset<8>::set(8)` throws and a throw is no constant 
 concept where that would be a hard error. And `bit_cast_is_constant<B>` rules out the shapes `bit_cast` refuses
 to be `constexpr` for: a pointer member, a reference member, a union.
 
+`probe_is_constant<B>` is the third of them, and it guards a failure the other two do not reach. A `set()` can be
+perfectly **well-formed and yet unusable in a constant expression** — a block type whose `operator|=` is not
+`constexpr` gives exactly that, and `absl::uint128` is one, so a bitset over it satisfies `probeable_bits`,
+reaches the probe, and turns a constraint into a hard error rather than a false. That is not the throwing `set()`
+the width constraint catches and not a shape `bit_cast` refuses; a non-constant `set()` is its own failure and
+needs its own gate. It lights **one** position rather than five, because this is the gate and the probe is the
+proof: paying the full probe twice would halve the width the step budget reaches. `count()` rides along, being
+the only other call the probe makes.
+
+The cost of that gate is that such a type is not a **source**. It remains a perfectly good target — a
+`basic_bitset<absl::uint128, 384>` still converts to and from a `std::bitset<384>`, because the probe runs on the
+*other* side. What it cannot be is the thing whose layout is proved, which is the honest answer when the proof
+cannot be run at all.
+
 What is **not** asked is `has_unique_object_representations_v`, and that is measured rather than preferred. GCC
 13 through 16 answer false for any class with an empty non-static data member, even one `[[no_unique_address]]`
 makes free, where clang answers true at identical layout — `sizeof` 8 and `offsetof` 0 on both. Every container
