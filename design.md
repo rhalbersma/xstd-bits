@@ -863,6 +863,37 @@ string — which is why the third is `string_lexicographical_compare_three_way` 
 container would have put a caller's word on the storage's member, which is the same mistake an unqualified
 `lexicographical_compare_three_way` makes one step further along.
 
+**Recorded against a long-held hypothesis: that with the right bit order the set reading's `<=>` could be a
+plain `lexicographical_compare_three_way` over the blocks, the way the string reading's now is.** It cannot,
+in any bit order, and the README carried a bit-layout claim for years whose whole purpose was to make it true
+-- the set order "equivalent to doing the integer comparison `wL > wR` on the underlying words". Deleting that
+claim without its refutation would leave the layout free to be mirrored again on the same reasoning, so the
+refutation lives here.
+
+Take the two cases where **x holds the lowest differing position p**:
+
+| pair | p | does y hold anything above p? | set order |
+|---|---|---|---|
+| `{0}` against `{1}` | 0 | yes, `1` | x is **less** |
+| `{0,1}` against `{0}` | 1 | no | x is **greater** |
+
+Same local observation, opposite answers, and `set_lexicographical_compare_three_way` takes exactly those two
+branches: `any_above` answers true in the first and false in the second. A lexicographic scan cannot tell them
+apart, because it has already returned by the time it reaches `p`.
+
+The reason is structural rather than a shortfall of any particular walk. A blockwise lexicographic compare
+orders two vectors of the **same** length `N`, position by position, in some fixed order of positions. The set
+order orders two sorted element lists of **different** lengths, where a shorter list that is a prefix is less.
+Those lists are the *support* of the bit vectors and their lengths are popcounts, so the set order asks a
+question about what lies above `p` that no fixed positional scan answers. Relabelling positions moves both
+cases together, so the pair above can be built in whatever bit order is chosen; `any_above` is irreducible.
+
+Which is also why the **string** reading does get to be the standard algorithm over the blocks reversed: a bit
+string is a fixed-length vector, so it has no prefix case to answer. The string reading is colexicographic on
+the elements, comparing from the largest position down; the set reading is lexicographic, from the smallest up.
+Two different orders on sets, not two spellings of one -- which is what the table above shows and this is the
+proof of.
+
 ### the-ordering-primitive
 
 All three orderings are **hidden friends** of the storage rather than members:
