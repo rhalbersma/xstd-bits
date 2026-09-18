@@ -759,6 +759,40 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AppendingABlockSplitsItAtAnUnalignedWidth, Block, 
         BOOST_CHECK_EQUAL(disagreements, 0);
 }
 
+// THE WIDTH-ZERO RANGE APPEND, which the case above never reaches: it appends a single block first, so its range
+// always starts at a width of at least one block. Zero is the width every block-range CONSTRUCTION starts from,
+// and it is the one where the bulk path replaces the floor block that an empty container already has rather than
+// pushing past it. An empty range is the other edge, where the bulk path must decline and change nothing.
+BOOST_AUTO_TEST_CASE_TEMPLATE(AppendingARangeFromEmptyAgreesWithTheModel, Block, test::word_types)
+{
+        using T = xstd::detail::bits::contiguous_bit_vector<Block>;
+        auto const blocks = std::array{ striped<Block>(), static_cast<Block>(~striped<Block>()), Block{1} };
+
+        auto disagreements = 0;
+
+        {
+                auto m = patterned(0UZ);
+                auto b = from_model<T>(m);
+                b.append(blocks.begin(), blocks.end());
+                for (auto const value : blocks) {
+                        append_to(m, value);
+                }
+                disagreements += static_cast<int>(b != from_model<T>(m));
+                disagreements += static_cast<int>(b.size() != 3 * test::digits_v<Block>);
+        }
+
+        // Nothing appended is nothing changed, at every width including zero.
+        for (auto const n : graded_widths<Block>()) {
+                auto const m = patterned(n);
+                auto b = from_model<T>(m);
+                b.append(blocks.begin(), blocks.begin());
+                disagreements += static_cast<int>(b != from_model<T>(m));
+                disagreements += static_cast<int>(b.size() != n);
+        }
+
+        BOOST_CHECK_EQUAL(disagreements, 0);
+}
+
 // Capacity is in bits and follows the blocks; reserving and shrinking change it and nothing else.
 BOOST_AUTO_TEST_CASE(ReservingAndShrinkingChangeCapacityNotTheBits)
 {
