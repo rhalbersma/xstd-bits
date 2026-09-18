@@ -772,29 +772,31 @@ BOOST_AUTO_TEST_CASE(TheCompoundOperatorsAcrossWidthsWorkOnBlocks)
 // the conversion is as meaningful here as on an owner.
 BOOST_AUTO_TEST_CASE(ASetViewConvertsThroughTheBitsItRefersTo)
 {
-        constexpr auto N = 64UZ;
-        using Storage = xstd::detail::bits::contiguous_bit_array<std::uint64_t, N>;
+        // The file's own Storage and its two views, rather than names of this case's making: bit_set_view<Storage>
+        // IS set_adaptor<Storage, refers>, which View already spells.
+        constexpr auto N = Storage::extent;
 
-        static_assert(std::is_constructible_v<std::bitset<N>, xstd::bit_set_view<Storage> const&>);
+        static_assert(std::is_constructible_v<std::bitset<N>, View const&>);
+        static_assert(std::is_constructible_v<std::bitset<N>, Reader const&>);
 
         auto storage = Storage();
-        auto view = xstd::bit_set_view<Storage>(storage);
+        auto view = View(storage);
         view.insert(0UZ);
         view.insert(31UZ);
-        view.insert(63UZ);
+        view.insert(N - 1UZ);
 
         auto const out = static_cast<std::bitset<N>>(view);
         BOOST_CHECK_EQUAL(out.count(), 3UZ);
-        BOOST_CHECK(out.test(0) and out.test(31) and out.test(63));
+        BOOST_CHECK(out.test(0) and out.test(31) and out.test(N - 1UZ));
 
         // A view is built from what it views and never from a field of bits: writing through it would write bits it
         // does not own, so the CONSTRUCTOR stays the owner's alone.
-        static_assert(not std::is_constructible_v<xstd::bit_set_view<Storage>, std::bitset<N>>);
+        static_assert(not std::is_constructible_v<View, std::bitset<N>>);
 
         // And at compile time, which is where the hard error would have been loudest.
         static_assert([] -> bool {
                 auto bits = Storage();
-                auto v = xstd::bit_set_view<Storage>(bits);
+                auto v = View(bits);
                 v.insert(7UZ);
                 return static_cast<std::bitset<N>>(v).count() == 1UZ;
         }());
