@@ -106,7 +106,8 @@ auto bm_flip(benchmark::State& state)
 }
 
 // Like for like, which this row was not. Boost answers find_first/find_next natively and so does the bitset reading here, so both rungs now make the SAME two calls. What stood here walked ours through bit_set_view's iterator and gave boost a bit-by-bit test(pos) loop instead -- the loop a std::bitset user writes, std::bitset having no scan to call, and not the loop a boost user writes.
-// It did not flatter us, it flattered boost, which is the harder way to be wrong. At the top rung, 32768 bits and 40% set, a per-bit loop over boost costs 21.7us and boost's own find_next costs 62.8us: testing every position is a predictable branch per bit, where a scan re-enters the block it was given and carries a dependency from one position to the next. So the old row read ours 2.35x SLOWER than boost by comparing our scan against its per-bit loop; the same two calls on both sides put ours at 52.4us against 62.8us, which is 0.83x.
+// It did not flatter us, it flattered boost, which is the harder way to be wrong. At the top rung, 32768 bits and 40% set, a per-bit loop over boost costs 28.3us and boost's own find_next costs 61.9us: testing every position is a predictable branch per bit, where a scan re-enters the block it was given and carries a dependency from one position to the next. So the old row read ours 1.8x SLOWER than boost by comparing our scan against its per-bit loop; the same two calls on both sides put ours at 53.0us against 61.9us, which is 0.86x.
+// Those are medians of seven runs, and worth reading as such: the two re-entrant scans are latency-bound and move by a tenth between runs on a shared machine, where the block walk below lands within 3% every time.
 template<class T>
 auto bm_scan(benchmark::State& state)
         -> void
@@ -140,7 +141,7 @@ auto bm_scan_view(benchmark::State& state)
         per_byte(state);
 }
 
-// The walk an iterator cannot be, and the reason to have both: a scan restarts from the position it was given, so it re-reads that position's block on every step and cannot start the next step until this one answers, where this loads each block ONCE and then spends tzcnt for the position and blsr to drop it. Ours alone again, and it is the row worth reading -- 9.0us against the 52.4us scan at the top rung, some six times, and still 2.4x faster than the per-bit loop that beat the scan.
+// The walk an iterator cannot be, and the reason to have both: a scan restarts from the position it was given, so it re-reads that position's block on every step and cannot start the next step until this one answers, where this loads each block ONCE and then spends tzcnt for the position and blsr to drop it. Ours alone again, and it is the row worth reading -- 7.0us against the 53.0us scan at the top rung, some seven times, and four times the per-bit loop that beat the scan.
 template<class T>
 auto bm_scan_blocks(benchmark::State& state)
         -> void
