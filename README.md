@@ -49,38 +49,47 @@ A `bitset` should also optimize for both space (using contiguous storage) and ti
 
 ## The current `bit` landscape
 
-The C++ Standard Library and Boost provide the following optimized data structures in the landscape spanned by the aforementioned design decisions and optimization directives, as shown in the table below.
+The landscape is three readings crossed with three storages, so it is a three-by-three, and the C++ Standard Library and Boost between them fill six of its nine cells:
 
-|                                 | static size and capacity | dynamic size and capacity |
-| :------------------------------ | :----------------------- | :------------------------ |
-| **ordered set of `std::size_t`** | `std::bitset<N>`        | `std::flat_set<std::size_t>` (sparse) <br> `boost::dynamic_bitset<>` (dense) |
-| **sequence of `bool`**          | `std::bitset<N>`         | `std::vector<bool>` <br> `boost::dynamic_bitset<>` |
+|                                  | static size and capacity     | dynamic size, static capacity        | dynamic size and capacity |
+| :------------------------------- | :--------------------------- | :----------------------------------- | :------------------------ |
+| **ordered set of `std::size_t`** | —                            | —                                    | `std::set<std::size_t>` <br> `std::flat_set<std::size_t>` |
+| **sequence of `bool`**           | `std::array<bool, N>`        | `std::inplace_vector<bool, N>`       | `std::vector<bool>` |
+| **`bitset`**                     | `std::bitset<N>`             | —                                    | `boost::dynamic_bitset<>` |
+
+Three cells are empty and three more are filled by something of the **wrong representation**, which are two different complaints:
+
+- `std::set` and `std::flat_set` are **sparse**: a whole element per *actual* element, where a dense set spends a single bit per *potential* one.
+- `std::array<bool, N>` and `std::inplace_vector<bool, N>` are **unpacked**: a whole byte per `bool`, eight times what the bits need. `std::vector<bool>` is the one standard sequence that packs, and it is the one everybody regrets.
 
 Notes:
 
-1. Both `std::bitset` and `boost::dynamic_bitset` are not clear about the interface they provide. E.g. both offer a hybrid of sequence-like random element access (through `operator[]`) as well as primitives for set-like bidirectional iteration (using non-Standard GCC extensions `_Find_first` and `_Find_next` in the case of `std::bitset`).
+1. Both `std::bitset` and `boost::dynamic_bitset` are not clear about the interface they provide. E.g. both offer a hybrid of sequence-like random element access (through `operator[]`) as well as primitives for set-like bidirectional iteration (using non-Standard GCC extensions `_Find_first` and `_Find_next` in the case of `std::bitset`). That ambiguity is why they have a row of their own here rather than appearing in one of the two above it: a `bitset` is a width of bits that has not said how it is to be read.
 2. It [has been known](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n2130.html#96) for over two decades that providing a variable-size sequence of `bool` through specializing `std::vector<bool>` was an unfortunate design choice.
 3. For ordered sets, there is a further design choice whether to optimize for **dense** sets or for **sparse** sets. Dense sets require a single bit per **potential** element, whereas sparse sets require a whole element per **actual** element. The break-even is therefore the element's width: at a 64-bit `std::size_t`, if less (more) than 1 in 64 elements (1.5625%) are actually present, a dense representation will be less (more) compact than a sparse one — 1 in 32 (3.125%) if the sparse set stores 32-bit integers instead.
-4. Only `boost::dynamic_bitset` allows storage configuration through its `Block` template parameter (defaulted to `unsigned long`).
-5. The `Block`, `Allocator` and `Compare` parameters are omitted from both tables. They configure a storage; they do not place a container in the landscape, and spelling them out obscured the one axis the columns are measuring.
+4. `std::inplace_vector` is C++26 and its `bool` is not a specialization: [P0843](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p0843r7.html) declined to repeat `vector<bool>`, so that cell is occupied but unpacked.
+5. Only `boost::dynamic_bitset` allows storage configuration through its `Block` template parameter (defaulted to `unsigned long`).
+6. The `Block`, `Allocator` and `Compare` parameters are omitted from both tables. They configure a storage; they do not place a container in the landscape, and spelling them out obscured the one axis the columns are measuring.
 
 ## A reimagined `bit` landscape
 
-The aforementioned issues with the current `bit` landscape can be resolved by implementing a single-purpose container for each cell of the design space. Two single readings over three storages is six containers, and the `bitset` that offers **both** readings is the seventh, eighth and ninth — **and this library implements all nine**. But a `bitset` is not a third reading; it is a storage you have not yet said how to read. So it does not get a row of its own: it appears in both rows, under the view that picks a reading of it.
+The aforementioned issues can be resolved by implementing a single-purpose container for each cell of the design space. **This library fills all nine**, every one of them dense and packed, and adds a fourth row that the other table has no answer to at all. Every name below is in namespace `xstd`, so only the foreign ones carry a qualifier:
 
-|                                  | static size and capacity                                            | dynamic size, static capacity                                              | dynamic size and capacity                                     |
-| :------------------------------- | :------------------------------------------------------------------ | :------------------------------------------------------------------------- | :------------------------------------------------------------ |
-| **ordered set of `std::size_t`** | `xstd::bit_static_set<N>` <br> `xstd::bit_set_view<xstd::bitset<N>>` <br> `xstd::bit_set_view<std::bitset<N>>` | `xstd::bit_inplace_set<N>` <br> `xstd::bit_set_view<xstd::inplace_bitset<N>>` | `xstd::bit_set` <br> `xstd::bit_set_view<xstd::dynamic_bitset>` <br> `xstd::bit_set_view<boost::dynamic_bitset<>>` |
-| **sequence of `bool`**           | `xstd::bit_array<N>` <br> `xstd::bit_span<xstd::bitset<N>>` <br> `xstd::bit_span<std::bitset<N>>` | `xstd::bit_inplace_vector<N>` <br> `xstd::bit_span<xstd::inplace_bitset<N>>` | `xstd::bit_vector` <br> `xstd::bit_span<xstd::dynamic_bitset>` <br> `xstd::bit_span<boost::dynamic_bitset<>>` |
+|                                  | static size and capacity     | dynamic size, static capacity     | dynamic size and capacity |
+| :------------------------------- | :--------------------------- | :-------------------------------- | :------------------------ |
+| **ordered set of `std::size_t`** | `bit_static_set<N>`          | `bit_inplace_set<N>`              | `bit_set` |
+| **sequence of `bool`**           | `bit_array<N>`               | `bit_inplace_vector<N>`           | `bit_vector` |
+| **`bitset`**                     | `bitset<N>`                  | `inplace_bitset<N>`               | `dynamic_bitset` |
+| **a reading of a `bitset`**      | `bit_set_view` / `bit_span` over <br> `bitset<N>`, `std::bitset<N>` | over <br> `inplace_bitset<N>` | over <br> `dynamic_bitset`, `boost::dynamic_bitset<>` |
 
 The columns are the three storages the one underlying vehicle is parameterized on — `std::array` fixes size and capacity, `std::inplace_vector` varies size within a fixed capacity, `std::vector` varies both — so a cell is a reading crossed with a storage, and nothing else. The outer two columns are the ones the current landscape already has; the middle is the pairing it never named.
 
-Each cell offers the same reading three ways: as a container built for it, as a view onto that column's own `bitset`, and as a view onto the **standard or Boost** bitset of the same shape. That last one is the whole of what [retrofitting](#retrofitting-set-like-behaviour-onto-stdbitsetn-and-boostdynamic_bitset) means — you do not have to adopt a container to get a reading, you point a view at the bits you already have. The middle column offers only two, because a run-time size over static capacity is the pairing neither the standard nor Boost has anything in.
+The first three rows are **containers**, one per cell, and the fourth is not a container at all. A `bitset` is a width of bits that has not said how it is to be read, so the row above gives you the bits and this one is how you say which reading you meant — over one of ours, or over the **standard or Boost** bitset of the same shape, which is the whole of what [retrofitting](#choosing-a-reading-over-a-bitset) means. You do not have to adopt a container to get a reading; you point a view at the bits you already have. The middle column has one bitset to view rather than two, a run-time size over static capacity being the pairing neither the standard nor Boost has anything in.
 
 Notes:
 
-1. Each data structure is clear about the interface it provides: sequences are random access containers and ordered sets are bidirectional containers.
-2. The `bitset` column entries are the point the old two-by-two could not express. `std::bitset` and `boost::dynamic_bitset` are faulted above for being unclear about which interface they offer; the answer here is not to abolish the hybrid but to make choosing between its two readings **explicit at the call site**. `xstd::bitset<N>` is a strict extension of `std::bitset<N>` and `xstd::dynamic_bitset` is one of `boost::dynamic_bitset<>` — every expression valid on the counterpart is valid here, with the same result — and neither has iterators of its own, because `begin` is one name and there are two readings. `bit_set_view` and `bit_span` are how you say which you meant, and they appear in both rows for exactly that reason.
+1. Each container in the first two rows is clear about the interface it provides: sequences are random access containers and ordered sets are bidirectional containers. The third row is the deliberate exception, and the fourth is what resolves it.
+2. The `bitset` row is the point the old two-by-two could not express. `std::bitset` and `boost::dynamic_bitset` are faulted above for being unclear about which interface they offer; the answer here is not to abolish the hybrid but to make choosing between its two readings **explicit at the call site**. `xstd::bitset<N>` is a strict extension of `std::bitset<N>` and `xstd::dynamic_bitset` is one of `boost::dynamic_bitset<>` — every expression valid on the counterpart is valid here, with the same result — and neither has iterators of its own, because `begin` is one name and there are two readings. `bit_set_view` and `bit_span` are how you say which you meant, which is why they are a row and not a cell.
 3. A view over a bitset is a view over the storage that bitset wraps: `xstd::bit_set_view(bs)` deduces `xstd::bit_set_view<xstd::detail::bits::contiguous_bit_array<std::size_t, N>>`, and `decltype` is how you name the result. The deduction guide for a plain storage is constrained to non-owners, so an owner and the storage inside it do not tie.
 4. The variable-size sequence of `bool` is named `xstd::bit_vector` and decoupled from the general `std::vector` class template.
 5. All containers use a dense (single bit per element) representation. Variable-size sparse sets can be provided by `flat_set`, either in [Boost](https://www.boost.org/doc/libs/1_80_0/doc/html/boost/container/flat_set.html) or in [C++ 23](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p1222r4.pdf).
@@ -89,7 +98,7 @@ Notes:
 
 The **middle column** is what allocates nothing and yet carries a run-time width. It depends on `std::inplace_vector`, so those three names exist only where the standard library provides it (`__cpp_lib_inplace_vector`); an alias withholds a name rather than a capability.
 
-Ownership is deliberately **not** a fourth column. A view is not a fourth storage: it is one of the two readings pointed at storage someone else owns, which is why `bit_set_view` and `bit_span` sit inside the cells rather than beside them. `xstd::bit_subspan` is the one that stays out of the table, because it narrows a sequence to a window rather than choosing a reading. All of them are described under [retrofitting](#retrofitting-set-like-behaviour-onto-stdbitsetn-and-boostdynamic_bitset) below.
+Ownership is deliberately **not** a fourth **column**. A view is not a fourth storage: it takes the shape of whatever it views, which is why the fourth row spans the same three columns as the three above it rather than standing beside them. `xstd::bit_subspan` is the one that stays out of the table, because it narrows a sequence to a window rather than choosing a reading. All of them are described under [retrofitting](#choosing-a-reading-over-a-bitset) below.
 
 ### Hello World: generating (twin) primes
 
