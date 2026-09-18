@@ -14,6 +14,8 @@
 #include <xstd/bits/sequence_adaptor.hpp>                // sequence_adaptor
 #include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <bitset>                                        // bitset
+#include <array>                                         // array
+#include <cstdint>                                       // uint32_t, uint64_t
 #include <algorithm>                                     // all_of, any_of, count, equal, lexicographical_compare_three_way, mismatch, none_of
 #include <compare>                                       // strong_ordering
 #include <concepts>                                      // copyable, equality_comparable, regular, same_as, totally_ordered
@@ -646,6 +648,23 @@ BOOST_AUTO_TEST_CASE(ARunTimeWidthHasNoByteExchange)
         static_assert(not std::is_constructible_v<xstd::bit_vector, std::bitset<64>>);
         static_assert(not std::is_constructible_v<std::bitset<64>, xstd::bit_vector const&>);
         static_assert(not std::is_constructible_v<DynamicOctet, std::bitset<64>>);
+}
+
+// The sequence reading takes raw blocks on that same rule, and this is the spelling that reads differently here
+// than it does at the set reading: five is not the set {0, 2} but the elements true, false, true, and false for
+// the rest. Same bits, two vocabularies, which is the whole reason the conversions are explicit.
+BOOST_AUTO_TEST_CASE(RawBlocksAreElementsUnderThisReading)
+{
+        auto const a = xstd::bit_array<64>(std::array<std::uint64_t, 1>{ 5ULL });
+        BOOST_CHECK(a[0]);
+        BOOST_CHECK(not a[1]);
+        BOOST_CHECK(a[2]);
+        BOOST_CHECK_EQUAL(a.count(), 2UZ);
+
+        static_assert([] -> bool {
+                auto const b = std::array<std::uint64_t, 2>{ 0xF0F0ULL, 3ULL };
+                return static_cast<std::array<std::uint64_t, 2>>(xstd::bit_array<128>(b)) == b;
+        }());
 }
 
 BOOST_AUTO_TEST_SUITE_END()

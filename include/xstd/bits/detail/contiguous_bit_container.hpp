@@ -78,8 +78,11 @@ public:
         template<class B>
         static constexpr auto exchanges_bits = has_static_size and bit_castable<B, bit_extent>;
 
+        // A FIELD OF BITS is anything but the bare scalar: a sequence of blocks is one, and a foreign bitset is one.
+        // Only the scalar is left out, and only because the reading that asks this already has a door for it.
         template<class B>
-        static constexpr auto exchanges_bits_as_field = has_static_size and container_source<B, bit_extent>;
+        static constexpr auto exchanges_bits_as_field =
+                has_static_size and (block_range_source<B, bit_extent> or container_source<B, bit_extent>);
 
         // How many blocks a run-time width needs, floored at one like num_blocks_v. Total over every size_t, and said as boost's own calc_num_blocks says it -- divide, then round up by the remainder -- because that CANNOT overflow, where align_up(n, bits_per_block) adds first and wraps for the 63 widths above max_width, rounding them to zero blocks that the floor then turns into one. A guard against that wrap is a guard against a spelling; this spelling has nothing to guard. Public because that totality is the claim, and a static_assert is the only way to make it without asking an allocator for two exabytes.
         [[nodiscard]] static constexpr auto blocks_for(std::size_t n) noexcept

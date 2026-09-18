@@ -6,6 +6,7 @@
 #ifndef XSTD_BITS_DETAIL_BIT_CASTABLE_HPP
 #define XSTD_BITS_DETAIL_BIT_CASTABLE_HPP
 
+#include <xstd/bits/detail/contiguous_block_range.hpp> // contiguous_block_range
 #include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
 #include <xstd/ints/limits.hpp>                    // numeric_limits
 #include <array>                                   // array
@@ -28,14 +29,58 @@ inline constexpr auto byte_count = (N + bits_per_byte - 1UZ) / bits_per_byte;
 
 // A source of N bits comes in two families, and only one of them has anything to prove.
 //
-// An UNSIGNED INTEGER is its own layout: bit n of the value is 2^n, said by the language rather than by any
-// implementation, so there is nothing here to assume and nothing to probe. That is the family unsigned long long
-// belongs to, which is why to_ullong and the constructor taking one need no case of their own below -- they are
-// this case.
+// The STATED family is its own layout, and it has two spellings of one idea. An UNSIGNED INTEGER states it alone:
+// bit n of the value is 2^n, said by the language rather than by any implementation, so there is nothing here to
+// assume and nothing to probe. That is the family unsigned long long belongs to, which is why to_ullong and the
+// constructor taking one need no case of their own below -- they are this case. A CONTIGUOUS SEQUENCE OF BLOCKS
+// states the rest of it: block j holds the positions [j*digits, (j+1)*digits), said by the sequence. Put together
+// they give every position of the field without a byte of it being assumed, and a scalar is simply the sequence
+// of length one -- which is why the two are one family and not two.
+//
+// Everything in this family is read by SHIFTS on values and never by bit_cast on an object, so no probe runs, no
+// padding is reachable and endianness never enters: b[j] >> k is the same number on either byte order. Only the
+// second family below, a foreign field of bits whose internals this library cannot name, has to be proved.
 template<class B, std::size_t N>
 concept integer_source =
         xstd::unsigned_integer<B> and
         N <= static_cast<std::size_t>(xstd::numeric_limits<B>::digits)
+;
+
+// The same family said over a sequence. contiguous_block_range already carries what this needs -- contiguous,
+// sized, and a value type that is an unsigned integer -- so the only thing added here is the width.
+//
+// A STATIC width, and that is what keeps the promise the readings make. The size has to be a constant expression
+// for "this covers N positions" to be a constraint rather than a run-time check, and asking B().size() is how:
+// a std::array<Block, M> answers M, and a std::vector answers zero, which is the honest answer for a container
+// that has no bits until one is put in it. So an array converts and a vector does not, on a width and not on a
+// preference.
+//
+// AT LEAST N, not exactly N, which is the rule the scalar spelling already follows: a bit_static_set<32> reads
+// the low thirty-two bits of an unsigned long long and a wider block sequence is no different. The tail above N
+// is written clear on the way out, so set -> blocks -> set is the identity; blocks -> set -> blocks is not, and
+// is not meant to be, exactly as it already is for an integer too wide for the width.
+template<class B>
+inline constexpr auto block_digits = static_cast<std::size_t>(
+        xstd::numeric_limits<std::ranges::range_value_t<B>>::digits
+);
+
+template<class B>
+concept block_size_is_constant = requires {
+        typename std::bool_constant<(B().size(), true)>;
+};
+
+template<class B, std::size_t N>
+concept block_range_source =
+        // CONTIGUOUS FIRST, and the order is load-bearing rather than tidy. contiguous_block_range opens with
+        // std::regular, which asks constructible_from, which re-enters the very constructor whose constraint this
+        // is -- a concept that depends on itself, and GCC says exactly that. An adaptor's iterator is a proxy and
+        // so is never contiguous, so asking that first answers false for every reading here before the recursive
+        // question is ever put. A std::array reaches the rest of it unharmed.
+        std::ranges::contiguous_range<B> and
+        contiguous_block_range<B> and
+        std::default_initializable<B> and
+        block_size_is_constant<B> and
+        B().size() * block_digits<B> >= N
 ;
 
 template<class B>
@@ -162,7 +207,7 @@ concept container_source =
 ;
 
 template<class B, std::size_t N>
-concept bit_castable = integer_source<B, N> or container_source<B, N>;
+concept bit_castable = integer_source<B, N> or block_range_source<B, N> or container_source<B, N>;
 
 template<std::size_t N, class B>
         requires bit_castable<B, N>
@@ -174,6 +219,16 @@ template<std::size_t N, class B>
                 if constexpr (integer_source<B, N>) {
                         for (auto j = 0UZ; j < bytes.size(); ++j) {
                                 bytes[j] = static_cast<std::byte>(static_cast<unsigned char>(b >> (bits_per_byte * j)));
+                        }
+                } else if constexpr (block_range_source<B, N>) {
+                        // The scalar loop above, once per block: byte j of the field is byte j % sizeof(block) of
+                        // block j / sizeof(block). A shift on the VALUE, so the order that block keeps its own
+                        // bytes in never enters, and neither does the target's.
+                        constexpr auto bytes_per_block = block_digits<B> / bits_per_byte;
+                        for (auto j = 0UZ; j < bytes.size(); ++j) {
+                                auto const block = b[j / bytes_per_block];
+                                auto const shift = bits_per_byte * (j % bytes_per_block);
+                                bytes[j] = static_cast<std::byte>(static_cast<unsigned char>(block >> shift));
                         }
                 } else {
                         auto const object = object_bytes(b);
@@ -199,6 +254,19 @@ template<class B, std::size_t N>
                         value = static_cast<B>(value | static_cast<B>(byte << (bits_per_byte * j)));
                 }
                 return value;
+        } else if constexpr (block_range_source<B, N>) {
+                // Value-initialised first, so the blocks above N are CLEAR rather than whatever was there: that is
+                // what makes set -> blocks -> set the identity at a width the sequence is wider than.
+                using block_type = std::ranges::range_value_t<B>;
+                constexpr auto bytes_per_block = block_digits<B> / bits_per_byte;
+                auto blocks = B();
+                for (auto j = 0UZ; j < bytes.size(); ++j) {
+                        auto const byte  = static_cast<block_type>(std::to_integer<unsigned char>(bytes[j]));
+                        auto const shift = bits_per_byte * (j % bytes_per_block);
+                        auto& block = blocks[j / bytes_per_block];
+                        block = static_cast<block_type>(block | static_cast<block_type>(byte << shift));
+                }
+                return blocks;
         } else {
                 auto object = std::array<std::byte, sizeof(B)>();
                 for (auto j = 0UZ; j < bytes.size(); ++j) {
