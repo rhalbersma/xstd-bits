@@ -3,6 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/bit_exchange.hpp>                         // exchanges_bits, exchanges_from_bits, exchanges_to_bits
 #include <test/block_types.hpp>                          // graded_extents
 #include <xstd/bits/bit_array.hpp>                       // bit_array
 #include <xstd/bits/bit_span.hpp>                        // bit_span
@@ -581,39 +582,39 @@ BOOST_AUTO_TEST_CASE(APackedArrayExchangesBytesWithAFieldOfBits)
         auto src = std::bitset<N>();
         for (auto i = 0UZ; i < N; i += 7UZ) { src.set(i); }
 
-        auto const a = xstd::bit_array<N>(src);
+        auto const a = xstd::bit_array<N>::from_bits(src);
         BOOST_CHECK_EQUAL(a.count(), src.count());
         for (auto i = 0UZ; i < N; ++i) {
                 BOOST_CHECK_EQUAL(a[i], src.test(i));
         }
-        BOOST_CHECK(static_cast<std::bitset<N>>(a) == src);
+        BOOST_CHECK(a.to_bits<std::bitset<N>>() == src);
 
         // At compile time too, and at a width that is a whole number of bytes and one that is not.
         static_assert([] -> bool {
                 auto const bs = std::bitset<64>(0xDEAD'BEEF'0123'4567ULL);
-                return static_cast<std::bitset<64>>(xstd::bit_array<64>(bs)) == bs;
+                return xstd::bit_array<64>::from_bits(bs).to_bits<std::bitset<64>>() == bs;
         }());
         static_assert([] -> bool {
                 auto const bs = std::bitset<17>(0x1'5A5AULL);
-                return static_cast<std::bitset<17>>(xstd::bit_array<17>(bs)) == bs;
+                return xstd::bit_array<17>::from_bits(bs).to_bits<std::bitset<17>>() == bs;
         }());
 }
 
-// EXPLICIT in both directions: a packed array of bool and a field of bits are two readings of the same bits, and
+// NAMED in both directions: a packed array of bool and a field of bits are two readings of the same bits, and
 // this library makes a reader pick one rather than letting a conversion pick for them.
-BOOST_AUTO_TEST_CASE(TheSequenceConversionsAreExplicitBothWays)
+BOOST_AUTO_TEST_CASE(TheSequenceExchangeIsNamedBothWays)
 {
         constexpr auto N = 64UZ;
         using T = xstd::bit_array<N>;
-        if constexpr (std::is_constructible_v<T, std::bitset<N>>) {
-                static_assert(not std::is_convertible_v  <std::bitset<N>, T>);
-                static_assert(    std::is_constructible_v<std::bitset<N>, T>);
-                static_assert(not std::is_convertible_v  <T, std::bitset<N>>);
+        static_assert(test::exchanges_bits<T, std::bitset<N>>);
 
-                // Any other width is no conversion at all, rather than a narrowing one.
-                static_assert(not std::is_constructible_v<T, std::bitset<N + 1UZ>>);
-                static_assert(not std::is_constructible_v<T, std::bitset<N - 1UZ>>);
-        }
+        // The unnamed doors are closed, in both directions.
+        static_assert(not std::is_constructible_v<T, std::bitset<N>>);
+        static_assert(not std::is_constructible_v<std::bitset<N>, T>);
+
+        // Any other width is no exchange at all, rather than a narrowing one.
+        static_assert(not test::exchanges_from_bits<T, std::bitset<N + 1UZ>>);
+        static_assert(not test::exchanges_from_bits<T, std::bitset<N - 1UZ>>);
 }
 
 // A WINDOW is the one shape that must not convert, and it is why is_window is asked rather than left to
@@ -622,9 +623,9 @@ BOOST_AUTO_TEST_CASE(TheSequenceConversionsAreExplicitBothWays)
 // still reports that CONTAINER's extent, so the width test alone would wave it through and hand back the wrong bits.
 BOOST_AUTO_TEST_CASE(AWindowIsNotAFieldOfBitsButAPlainViewIs)
 {
-        static_assert(not std::is_constructible_v<std::bitset<100>, xstd::bit_subspan<Storage> const&>);
-        static_assert(    std::is_constructible_v<std::bitset<100>, View const&>);
-        static_assert(    std::is_constructible_v<std::bitset<100>, Reader const&>);
+        static_assert(not test::exchanges_to_bits<xstd::bit_subspan<Storage>, std::bitset<100>>);
+        static_assert(    test::exchanges_to_bits<View,   std::bitset<100>>);
+        static_assert(    test::exchanges_to_bits<Reader, std::bitset<100>>);
 
         // A view reads the bits it spans, which are the whole container's.
         auto storage = Storage();
@@ -632,29 +633,29 @@ BOOST_AUTO_TEST_CASE(AWindowIsNotAFieldOfBitsButAPlainViewIs)
         auto const view = View(storage);
         view[0] = true;
         view[Storage::extent - 1UZ] = true;
-        auto const out = static_cast<std::bitset<100>>(view);
+        auto const out = view.to_bits<std::bitset<100>>();
         BOOST_CHECK_EQUAL(out.count(), 2UZ);
         BOOST_CHECK(out.test(0) and out.test(Storage::extent - 1UZ));
 
-        // A view never gains the CONSTRUCTOR, which would write through bits it does not own.
-        static_assert(not std::is_constructible_v<View, std::bitset<100>>);
+        // A view never gains the INBOUND direction, which would write through bits it does not own.
+        static_assert(not test::exchanges_from_bits<View, std::bitset<100>>);
 }
 
 // A run-time width has neither, and that is the policy rather than an omission: a field of N bits names one N at
 // compile time and a growing sequence has no single one to mean.
 BOOST_AUTO_TEST_CASE(ARunTimeWidthHasNoByteExchange)
 {
-        static_assert(not std::is_constructible_v<xstd::bit_vector, std::bitset<64>>);
-        static_assert(not std::is_constructible_v<std::bitset<64>, xstd::bit_vector const&>);
-        static_assert(not std::is_constructible_v<DynamicOctet, std::bitset<64>>);
+        static_assert(not test::exchanges_from_bits<xstd::bit_vector, std::bitset<64>>);
+        static_assert(not test::exchanges_to_bits  <xstd::bit_vector, std::bitset<64>>);
+        static_assert(not test::exchanges_from_bits<DynamicOctet,     std::bitset<64>>);
 }
 
 // The sequence reading takes raw blocks on that same rule, and this is the spelling that reads differently here
 // than it does at the set reading: five is not the set {0, 2} but the elements true, false, true, and false for
-// the rest. Same bits, two vocabularies, which is the whole reason the conversions are explicit.
+// the rest. Same bits, two vocabularies, which is the whole reason the door is named rather than spelled as a cast.
 BOOST_AUTO_TEST_CASE(RawBlocksAreElementsUnderThisReading)
 {
-        auto const a = xstd::bit_array<64>(std::array<std::uint64_t, 1>{ 5ULL });
+        auto const a = xstd::bit_array<64>::from_bits(std::array<std::uint64_t, 1>{ 5ULL });
         // Combined with `and`, as this file does elsewhere: an element is a PROXY reference, and a bare one is an
         // ambiguous initializer for Boost.Test's assertion_result where the combination is a plain bool.
         BOOST_CHECK(a[0] and not a[1] and a[2]);
@@ -662,7 +663,7 @@ BOOST_AUTO_TEST_CASE(RawBlocksAreElementsUnderThisReading)
 
         static_assert([] -> bool {
                 auto const b = std::array<std::uint64_t, 2>{ 0xF0F0ULL, 3ULL };
-                return static_cast<std::array<std::uint64_t, 2>>(xstd::bit_array<128>(b)) == b;
+                return xstd::bit_array<128>::from_bits(b).to_bits<std::array<std::uint64_t, 2>>() == b;
         }());
 }
 

@@ -3,6 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/bit_exchange.hpp>        // exchanges_bits, exchanges_from_bits
 #include <test/block_types.hpp>         // graded_extents
 #include <test/set/ascending.hpp>       // yields_ascending_keys
 #include <test/set/concepts.hpp>        // bit_set
@@ -232,32 +233,42 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(OurOwnBitsetReadingCrossesOnTheSameRule, T, Types)
 BOOST_AUTO_TEST_CASE(RawBlocksCrossOnTheSameRule)
 {
         constexpr auto N = 256UZ;
+        using Set    = xstd::bit_static_set<N>;
         using Wide   = std::array<std::uint64_t, 4>;
         using Narrow = std::array<std::uint32_t, 8>;
 
         auto const blocks = Wide{ 0x0123'4567'89AB'CDEFULL, 1ULL, 0ULL, 0x8000'0000'0000'0000ULL };
-        auto const s = xstd::bit_static_set<N>(blocks);
+        auto const s = Set::from_bits(blocks);
 
         BOOST_CHECK(s.contains(0UZ));
         BOOST_CHECK(s.contains(64UZ));
         BOOST_CHECK(s.contains(N - 1UZ));
-        BOOST_CHECK(static_cast<Wide>(s) == blocks);
+        BOOST_CHECK(s.to_bits<Wide>() == blocks);
 
         // The same positions over a different block width.
-        auto const narrow = static_cast<Narrow>(s);
+        auto const narrow = s.to_bits<Narrow>();
         BOOST_CHECK_EQUAL(narrow[0], 0x89AB'CDEFU);
         BOOST_CHECK_EQUAL(narrow[1], 0x0123'4567U);
         BOOST_CHECK_EQUAL(narrow[7], 0x8000'0000U);
-        BOOST_CHECK(xstd::bit_static_set<N>(narrow) == s);
+        BOOST_CHECK(Set::from_bits(narrow) == s);
 
         static_assert([] -> bool {
                 auto const b = Wide{ 0xDEAD'BEEFULL, 0ULL, 0ULL, 0ULL };
-                return static_cast<Wide>(xstd::bit_static_set<N>(b)) == b;
+                return Set::from_bits(b).to_bits<Wide>() == b;
         }());
 
-        // Too narrow for the width is no conversion at all; wider is admitted, as it is for an integer.
-        static_assert(not std::is_constructible_v<xstd::bit_static_set<N>, std::array<std::uint64_t, 3>>);
-        static_assert(    std::is_constructible_v<xstd::bit_static_set<N>, std::array<std::uint64_t, 5>>);
+        // Too narrow for the width is no exchange at all; wider is admitted, as it is for an integer. Asked of the
+        // DOOR now rather than of is_constructible_v, because a named function is what there is to ask about --
+        // and this is the stronger question of the two: it names the operation instead of a proxy for it.
+        static_assert(not test::exchanges_from_bits<Set, std::array<std::uint64_t, 3>>);
+        static_assert(    test::exchanges_from_bits<Set, std::array<std::uint64_t, 5>>);
+        static_assert(    test::exchanges_bits     <Set, Wide>);
+        static_assert(    test::exchanges_bits     <Set, Narrow>);
+
+        // And the unnamed door is CLOSED, which is the whole point of the rename: a sequence of blocks no longer
+        // reaches a constructor, so it can no longer be read as the from_range spelling sitting beside it.
+        static_assert(not std::is_constructible_v<Set, Wide>);
+        static_assert(not std::is_constructible_v<Set, Narrow>);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
