@@ -258,7 +258,7 @@ auto filter_twins_parallel(X const& primes)
 
 That is the same set the loop produces, and on a `bit_static_set<128>` it is four shifts, two ors and an and over two words — no iterator, no branch per element, no comparison. The elementwise form remains the one in `examples/include/opt/set/sieve.hpp`, because it is the form `std::set` and `std::flat_set` can also run and the benchmark needs all three on the same algorithm.
 
-The shifts are why the bit layout is what it is: element `0` is the most significant bit of the first word, so `<<` moves toward larger elements and the set order matches the bitstring order. The FAQ below draws it.
+The shifts read the way they do because of the bit layout: element `0` is the least significant bit of the first word, so `<<` moves toward larger elements. What it does **not** do is make the set order the bitstring order — under this layout those are two different walks over the same blocks, and the FAQ below draws both.
 
 which has as output:
 <pre>
@@ -293,7 +293,7 @@ Minor **semantic differences** between common functionality in `xstd::bit_static
 
 - the `xstd::bit_static_set` member function `max_size` is `constexpr`, and at a static width its value is a constant expression usable wherever `N` is. It is a **member** rather than a `static` member function, because the same `max_size()` has to answer for the dynamic and inplace readings too, where it is the storage that knows ([design.md#max-size-is-the-bits](design.md#max-size-is-the-bits)). So `s.max_size()` is a constant expression and `decltype(s)::max_size()` does not compile.
 - the `xstd::bit_static_set` iterators are **proxy iterators**, and taking their address yields **proxy references**. The difference should be undetectable. See the FAQ at the end of this document.
-- the `xstd::bit_static_set` members `fill`, `complement`, `replace` and `full` do not exist for `std::set`.
+- the `xstd::bit_static_set` members `fill`, `complement` and `full` do not exist for `std::set`.
 - `xstd::bit_static_set<N>` converts to and from any field of `N` bits, both ways `explicit` — `std::bitset<N>`, `xstd::bitset<N>`, and an unsigned integer wide enough to hold the width. The widths are the same `N` and a static width is a capacity under this reading, so position `n` here is bit `n` there: nothing truncates, nothing grows, nothing throws, and the round trip is the identity. It is `constexpr` at every width, and a copy rather than a walk over positions. Explicit in both directions because a set of positions and a field of bits are two *readings* of the same bits and this library makes you pick one ([design.md#the-bytes-they-agree-on](design.md#the-bytes-they-agree-on)). The run-time-width `xstd::bit_set` has neither, a `std::bitset` naming one `N` that a growing set has no single value for.
 
 With these caveats in mind, all fixed-size, defaulted comparing, non-allocating, non-splicing `std::set<int>` code in the wild should continue to work out-of-the-box with `xstd::bit_static_set<N>`.
@@ -328,9 +328,8 @@ Functionality from `std::bitset<N>` that is not in `xstd::bit_static_set<N>`:
 - **No integer or string constructors**: `xstd::bit_static_set` cannot be constructed from `unsigned long long`, `std::string` or `const char*`.
 - **No integer or string conversion operators**: `xstd::bit_static_set` does not convert to `unsigned long`, `unsigned long long` or `std::string`.
 - **No I/O streaming operators**: `xstd::bit_static_set` does not provide overloaded I/O streaming `operator<<` and `operator>>`.
-- **No hashing**: `xstd::bit_static_set` does not provide a specialization for `std::hash<>`.
 
-I/O functionality can be obtained through third-party libraries such as [{fmt}](https://fmt.dev/latest/), which has generic support for ranges such as `xstd::bit_static_set`. Similarly, hashing functionality can be obtained through third-party libraries such as [N3980](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n3980.html) by streaming the `xstd::bit_static_set<N>` elements and size through an overloaded `hash_append` function.
+I/O functionality can be obtained through third-party libraries such as [{fmt}](https://fmt.dev/latest/), which has generic support for ranges such as `xstd::bit_static_set` — and `std::format` and `std::print` need nothing at all, as [printing](#printing) above shows. Hashing is **not** on that list: `std::hash<xstd::bit_static_set<N>>` is specialized, over [Boost.Hash2](https://github.com/boostorg/hash2), and every value this library compares it also hashes, so `a == b` implies `hash(a) == hash(b)` under every reading ([design.md#the-hashing-invariant](design.md#the-hashing-invariant)). The `hash_append` hook is there beside it, for a caller wanting an algorithm other than the defaulted `fnv1a_64`.
 
 ### 3 Set predicates from `boost::dynamic_bitset`
 
@@ -431,35 +430,42 @@ auto b = a
 **Q**: How is `xstd::bit_static_set` implemented?  
 **A**: `bit_static_set` uses a `std::array` of unsigned integers, so its storage goes wherever the object does. That is true of the static-width column only: the inplace column holds a `std::inplace_vector` inline, and the dynamic column a `std::vector`. All three are the same storage vehicle over a different container, which is an implementation detail rather than a name you reach for.
 
-**Q**: How is the set ordering mapped to the array's bit layout?  
-**A**: The most significant bit of the first array word maps onto set value `0`.
-**A**: The least significant bit of the last array word maps onto set value `N - 1`.
+**Q**: How is a set value mapped onto the array's bit layout?  
+**A**: Position `n` is bit `n % W` of word `n / W`, for a word of `W` bits. So the **least** significant bit of the first array word maps onto set value `0`, and the most significant bit of the last array word onto set value `N - 1`. That is the conventional layout: `boost::dynamic_bitset` and the mainstream `std::bitset` and `std::vector<bool>` implementations all lay their bits out the same way.
 
 **Q**: I'm visually oriented, can you draw a diagram?  
-**A**: Sure, it looks like this for `basic_bit_static_set<std::uint8_t, 16>`:
+**A**: Sure, it looks like this for `basic_bit_static_set<std::uint8_t, 16>`, each word drawn most significant bit first:
 
-|value |01234567|89ABCDEF|
-|:---- |-------:|-------:|
 |word  |       0|       1|
+|:---- |-------:|-------:|
 |offset|76543210|76543210|
+|value |76543210|FEDCBA98|
 
-**Q**: Why is the set order mapped this way onto the array's bit-layout?  
-**A**: To be able to use **data-parallelism** for `(a < b) == std::ranges::lexicographical_compare(a, b)`.
+**Q**: Why that layout, and not the mirrored one?  
+**A**: Because it is everybody else's. It is what makes the byte exchange with `std::bitset<N>`, with `xstd::bitset<N>` and with a raw range of blocks a **copy** rather than a permutation ([design.md#the-bytes-they-agree-on](design.md#the-bytes-they-agree-on)), and `<<` still moves toward larger elements, a left shift on a word doing exactly that.
 
-**Q**: How is efficient set comparison connected to the bit-ordering within words?  
-**A**: Take `basic_bit_static_set<std::uint8_t, 8>` and consider when `sL < sR` for ordered sets of integers `sL` and `sR`.
+**Q**: Then how does set comparison stay word-parallel, if the set order is not the words' integer order?  
+**A**: It is three walks over the one layout, one per reading, each a word at a time rather than a position at a time:
 
-**Q**: Ah, lexicographical set comparison corresponds to bit comparison from most to least significant?  
-**A**: Indeed, and this is equivalent to doing the integer comparison `wL > wR` on the underlying words `wL` and `wR`.
+| reading         | walk                                             | the rule it applies |
+| :-------------- | :----------------------------------------------- | :------------------ |
+| `bitset`        | the blocks **in reverse**                        | the bit string, most significant position first, *is* the blocks from the top down, so it is `std::lexicographical_compare_three_way` over the reversed blocks and nothing hand-rolled |
+| ordered set     | the blocks ascending, through `first_difference` | whoever holds the lowest differing position is **less** — unless the other holds nothing above it, in which case that other is a prefix, and a prefix is less |
+| sequence        | the same primitive, ascending                    | whoever holds the lowest differing position is **greater**, position `0` being the sequence's first element |
 
-**Q**: So the set ordering a `bit_static_set` is equivalent to its representation as a bitstring?  
-**A**: Yes, indeed, and this property has been known for several decades:
+**Q**: So a set's order is *not* its bitstring's order?  
+**A**: No, and that is why there are three functions rather than one ([design.md#two-readings-disagree](design.md#two-readings-disagree)). The two ascending readings share `first_difference`; the bitset reading deliberately does not use it and walks the other way, which is why that helper keeps its own name on the storage rather than being called `mismatch` there.
+
+**Q**: Didn't the first `bitset` proposal argue for the other layout?  
+**A**: It did, and this library does not follow it:
 
 > "bit-0 is the leftmost, just like char-0 is the leftmost in character strings. [...]
 > This makes converting from and to unsigned integers a little counter-intuitive,
 > but the string-ness (or "array-ness") is the foundation of this abstraction.
 >
 > Chuck Allison, [ISO/WG21/N0128](http://www.open-std.org/Jtc1/sc22/wg21/docs/papers/1992/WG21%201992/X3J16_92-0051%20WG21_N0128.pdf), May 26, 1992
+
+Bit-0 leftmost buys one thing: the bitstring order and the array order agree, which is worth having when a `bitset` is one container. Here it is three readings over one storage and they disagree about order whatever the layout, so that agreement was never on offer — where the copy the conventional layout buys is.
 
 ### Storage type
 
