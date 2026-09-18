@@ -14,6 +14,7 @@
 #include <concepts>                                // convertible_to, default_initializable
 #include <cstddef>                                 // byte, size_t, to_integer
 #include <limits>                                  // numeric_limits
+#include <ranges>                                  // contiguous_range, range_value_t
 #include <type_traits>                             // bool_constant, is_trivially_copyable_v
 
 namespace xstd::detail::bits {
