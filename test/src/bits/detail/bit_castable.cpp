@@ -265,4 +265,63 @@ BOOST_AUTO_TEST_CASE(BlocksAndBytesAreEachOthersInverse)
         }());
 }
 
+// THE COPY AND THE SHIFTS MUST AGREE, which is the whole risk the run-time fast path carries. Every other case in
+// this file is a static_assert, so every one of them takes the SHIFT branch and none of them takes the copy: the
+// branch is chosen by `if consteval`, a language rule rather than an optimisation, so a constant expression and a
+// run-time call genuinely run different code over the same bytes. Each family is put through both and compared.
+BOOST_AUTO_TEST_CASE(TheCopyAndTheShiftsAgree)
+{
+        // A sequence of blocks, at two block widths, so the bytes-per-block arithmetic is exercised either side.
+        {
+                constexpr auto N = 128UZ;
+                using Wide   = std::array<std::uint64_t, 2>;
+                using Narrow = std::array<std::uint8_t, 16>;
+
+                constexpr auto wide = Wide{ 0x0123'4567'89AB'CDEFULL, 0xFEDC'BA98'7654'3210ULL };
+                constexpr auto folded = bits::bit_bytes<N>(wide);
+                auto const     copied = bits::bit_bytes<N>(wide);
+                BOOST_CHECK(copied == folded);
+
+                constexpr auto back_folded = bits::bytes_bits<Wide, N>(folded);
+                auto const     back_copied = bits::bytes_bits<Wide, N>(folded);
+                BOOST_CHECK(back_copied == back_folded);
+                BOOST_CHECK(back_copied == wide);
+
+                constexpr auto narrow_folded = bits::bytes_bits<Narrow, N>(folded);
+                auto const     narrow_copied = bits::bytes_bits<Narrow, N>(folded);
+                BOOST_CHECK(narrow_copied == narrow_folded);
+        }
+
+        // A bare unsigned integer, at a width narrower than the value, so the copy takes fewer bytes than sizeof.
+        {
+                constexpr auto N = 32UZ;
+                constexpr auto value = 0xDEAD'BEEFULL;
+                constexpr auto folded = bits::bit_bytes<N>(value);
+                auto const     copied = bits::bit_bytes<N>(value);
+                BOOST_CHECK(copied == folded);
+
+                constexpr auto back_folded = bits::bytes_bits<unsigned long long, N>(folded);
+                auto const     back_copied = bits::bytes_bits<unsigned long long, N>(folded);
+                BOOST_CHECK_EQUAL(back_copied, back_folded);
+                BOOST_CHECK_EQUAL(back_copied, value);
+        }
+
+        // A foreign field of bits, where the copy replaces a bit_cast AND a byte loop, at a width that is not a
+        // whole number of bytes so the last byte is a partial one.
+        {
+                constexpr auto N = 100UZ;
+                using Field = std::bitset<N>;
+
+                constexpr auto field = Field(0x0F1E'2D3C'4B5A'6978ULL);
+                constexpr auto folded = bits::bit_bytes<N>(field);
+                auto const     copied = bits::bit_bytes<N>(field);
+                BOOST_CHECK(copied == folded);
+
+                constexpr auto back_folded = bits::bytes_bits<Field, N>(folded);
+                auto const     back_copied = bits::bytes_bits<Field, N>(folded);
+                BOOST_CHECK(back_copied == back_folded);
+                BOOST_CHECK(back_copied == field);
+        }
+}
+
 BOOST_AUTO_TEST_SUITE_END()
