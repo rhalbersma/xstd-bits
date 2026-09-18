@@ -656,9 +656,9 @@ BOOST_AUTO_TEST_CASE(ARunTimeWidthHasNoByteExchange)
 BOOST_AUTO_TEST_CASE(RawBlocksAreElementsUnderThisReading)
 {
         auto const a = xstd::bit_array<64>(std::array<std::uint64_t, 1>{ 5ULL });
-        BOOST_CHECK(a[0]);
-        BOOST_CHECK(not a[1]);
-        BOOST_CHECK(a[2]);
+        // Combined with `and`, as this file does elsewhere: an element is a PROXY reference, and a bare one is an
+        // ambiguous initializer for Boost.Test's assertion_result where the combination is a plain bool.
+        BOOST_CHECK(a[0] and not a[1] and a[2]);
         BOOST_CHECK_EQUAL(a.count(), 2UZ);
 
         static_assert([] -> bool {
