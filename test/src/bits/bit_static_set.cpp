@@ -10,10 +10,11 @@
 #include <xstd/bits/bit_static_set.hpp> // bit_static_set
 #include <xstd/bits/bitset.hpp>         // bitset
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <array>                        // array
 #include <bitset>                       // bitset
 #include <concepts>                     // regular, totally_ordered
 #include <cstddef>                      // size_t
-#include <cstdint>                      // uint64_t
+#include <cstdint>                      // uint32_t, uint64_t
 #include <iterator>                     // bidirectional_iterator
 #include <ranges>                       // bidirectional_range, iota, to
 #include <type_traits>                  // is_constructible_v, is_convertible_v
@@ -223,6 +224,40 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(OurOwnBitsetReadingCrossesOnTheSameRule, T, Types)
                 }
                 BOOST_CHECK(static_cast<Bitset>(c) == b);
         }
+}
+
+// RAW BLOCKS cross to the set reading on the same rule as anything else, and the block width is free: the byte is
+// the common ground, so eight uint32 blocks and four uint64 blocks spell the same two hundred and fifty-six
+// positions. Nothing is probed for either -- a sequence of unsigned integers states its layout.
+BOOST_AUTO_TEST_CASE(RawBlocksCrossOnTheSameRule)
+{
+        constexpr auto N = 256UZ;
+        using Wide   = std::array<std::uint64_t, 4>;
+        using Narrow = std::array<std::uint32_t, 8>;
+
+        auto const blocks = Wide{ 0x0123'4567'89AB'CDEFULL, 1ULL, 0ULL, 0x8000'0000'0000'0000ULL };
+        auto const s = xstd::bit_static_set<N>(blocks);
+
+        BOOST_CHECK(s.contains(0UZ));
+        BOOST_CHECK(s.contains(64UZ));
+        BOOST_CHECK(s.contains(N - 1UZ));
+        BOOST_CHECK(static_cast<Wide>(s) == blocks);
+
+        // The same positions over a different block width.
+        auto const narrow = static_cast<Narrow>(s);
+        BOOST_CHECK_EQUAL(narrow[0], 0x89AB'CDEFU);
+        BOOST_CHECK_EQUAL(narrow[1], 0x0123'4567U);
+        BOOST_CHECK_EQUAL(narrow[7], 0x8000'0000U);
+        BOOST_CHECK(xstd::bit_static_set<N>(narrow) == s);
+
+        static_assert([] -> bool {
+                auto const b = Wide{ 0xDEAD'BEEFULL, 0ULL, 0ULL, 0ULL };
+                return static_cast<Wide>(xstd::bit_static_set<N>(b)) == b;
+        }());
+
+        // Too narrow for the width is no conversion at all; wider is admitted, as it is for an integer.
+        static_assert(not std::is_constructible_v<xstd::bit_static_set<N>, std::array<std::uint64_t, 3>>);
+        static_assert(    std::is_constructible_v<xstd::bit_static_set<N>, std::array<std::uint64_t, 5>>);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

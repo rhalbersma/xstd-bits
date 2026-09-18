@@ -13,8 +13,9 @@
 #include <xstd/bits/ownership.hpp>                       // ownership
 #include <xstd/bits/sequence_adaptor.hpp>                // sequence_adaptor
 #include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <bitset>                                        // bitset
 #include <algorithm>                                     // all_of, any_of, count, equal, lexicographical_compare_three_way, mismatch, none_of
+#include <array>                                         // array
+#include <bitset>                                        // bitset
 #include <compare>                                       // strong_ordering
 #include <concepts>                                      // copyable, equality_comparable, regular, same_as, totally_ordered
 #include <cstddef>                                       // ptrdiff_t, size_t
@@ -646,6 +647,23 @@ BOOST_AUTO_TEST_CASE(ARunTimeWidthHasNoByteExchange)
         static_assert(not std::is_constructible_v<xstd::bit_vector, std::bitset<64>>);
         static_assert(not std::is_constructible_v<std::bitset<64>, xstd::bit_vector const&>);
         static_assert(not std::is_constructible_v<DynamicOctet, std::bitset<64>>);
+}
+
+// The sequence reading takes raw blocks on that same rule, and this is the spelling that reads differently here
+// than it does at the set reading: five is not the set {0, 2} but the elements true, false, true, and false for
+// the rest. Same bits, two vocabularies, which is the whole reason the conversions are explicit.
+BOOST_AUTO_TEST_CASE(RawBlocksAreElementsUnderThisReading)
+{
+        auto const a = xstd::bit_array<64>(std::array<std::uint64_t, 1>{ 5ULL });
+        // Combined with `and`, as this file does elsewhere: an element is a PROXY reference, and a bare one is an
+        // ambiguous initializer for Boost.Test's assertion_result where the combination is a plain bool.
+        BOOST_CHECK(a[0] and not a[1] and a[2]);
+        BOOST_CHECK_EQUAL(a.count(), 2UZ);
+
+        static_assert([] -> bool {
+                auto const b = std::array<std::uint64_t, 2>{ 0xF0F0ULL, 3ULL };
+                return static_cast<std::array<std::uint64_t, 2>>(xstd::bit_array<128>(b)) == b;
+        }());
 }
 
 BOOST_AUTO_TEST_SUITE_END()

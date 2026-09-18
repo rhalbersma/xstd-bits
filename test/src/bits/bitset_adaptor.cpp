@@ -537,6 +537,24 @@ BOOST_AUTO_TEST_CASE(TheBitsetConversionsAreExplicitAndWidthExact)
         static_assert(not std::is_constructible_v<std::bitset<N>, Dynamic const&>);
 }
 
+// A SEQUENCE OF BLOCKS is a field of bits, so this reading takes it -- unlike the bare scalar, which it declines
+// because [bitset.cons]/2 and to_ullong already own that door. Nothing about blocks collides with the standard's
+// interface, so nothing is left out.
+BOOST_AUTO_TEST_CASE(ASequenceOfBlocksIsAFieldOfBitsAndAScalarIsNot)
+{
+        using Blocks = std::array<std::uint64_t, 2>;
+        static_assert(    std::is_constructible_v<xstd::bitset<128>, Blocks>);
+        static_assert(    std::is_constructible_v<Blocks, xstd::bitset<128> const&>);
+
+        // The scalar door stays the standard's, implicit and throwing, rather than a byte copy.
+        static_assert(std::is_convertible_v<unsigned long long, xstd::bitset<128>>);
+
+        static_assert([] -> bool {
+                auto const b = Blocks{ 0x0123'4567'89AB'CDEFULL, 0xFEDC'BA98'7654'3210ULL };
+                return static_cast<Blocks>(xstd::bitset<128>(b)) == b;
+        }());
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 // contiguous_bit_sequence is structural and says so: it asks the positional members -- test(n), set(n), reset(n), flip(n) -- and every field of bits that has them answers, ours and the counterparts alike. That is a different question from which storages this library wraps, which is nominal and asked by the constraint above.

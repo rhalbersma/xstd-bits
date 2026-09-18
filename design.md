@@ -340,10 +340,29 @@ is this library's own bitset reading — `xstd::bitset<N>` crosses to `bit_stati
 neither side named in the constraint. An implementation that ever laid its bits out otherwise is simply not
 admitted: a call that fails to compile rather than one quietly wrong.
 
-One spelling in the integer family repays reading twice at *this* reading. `bit_static_set<32>(5u)` is the set of
-positions the **value** five has, `{0, 2}`, not the set `{5}` — the same bits `std::bitset<32>(5u)` would hold.
-It is explicit, so it is asked for rather than arrived at, but it is the one place here a reader coming from the
-set vocabulary can misread.
+The stated family has **two spellings of one idea**, and the second is what makes raw blocks convertible. An
+unsigned integer states its own layout; a **contiguous sequence of unsigned integer blocks** states the rest of
+it, block `j` holding the positions `[j·digits, (j+1)·digits)`. A scalar is the sequence of length one, which is
+why these are one family and not two. Everything in it is read by **shifts on values**, never by `bit_cast` on an
+object, so no probe runs, no padding is reachable, and endianness never enters: `b[j] >> k` is the same number on
+either byte order. Only a foreign field of bits, whose internals this library cannot name, has to be proved.
+
+So `std::array<uint64_t, 4>` converts, and so does `std::array<uint32_t, 8>` over the same two hundred and
+fifty-six positions, because the byte is the common ground where the word is not. The width must be a **constant
+expression** — `B().size()` answers `M` for an array and zero for a vector — because "nothing truncates" is a
+promise made at compile time, and a run-time size cannot keep it. It must cover `N` but need not equal it, which
+is the rule the scalar spelling already follows.
+
+Asking `contiguous_range` **before** `contiguous_block_range` is load-bearing rather than tidy. That concept opens
+with `std::regular`, which asks `constructible_from`, which re-enters the very constructor whose constraint this
+is — a concept depending on itself. An adaptor's iterator is a proxy and so never contiguous, so the cheap question
+answers false for every reading here before the recursive one is put.
+
+One spelling repays reading twice, and it reads differently at each reading — which is the point, and the trap.
+`bit_static_set<32>(5u)` is the set of positions the **value** five has, `{0, 2}`, not the set `{5}`.
+`bit_array<32>(5u)` is a packed array of bool, so it is `true, false, true` and twenty-nine more `false`. Same
+bits, two vocabularies. Both are explicit, so each is asked for rather than arrived at, but they are the one place
+here where a reader carrying the wrong vocabulary can misread.
 
 The currency is **bytes**, not words. Byte `j` holds the positions `[8j, 8j + 8)` least significant bit first,
 which is what every contiguous bit container lays them out as whatever its block width, so two widths over the

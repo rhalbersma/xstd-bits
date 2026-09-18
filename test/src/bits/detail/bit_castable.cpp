@@ -3,8 +3,9 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/detail/bit_castable.hpp>  // bit_bytes, bit_castable, bit_layout_holds, byte_count, bytes_bits, container_source, integer_source
+#include <xstd/bits/detail/bit_castable.hpp>  // bit_bytes, bit_castable, bit_layout_holds, block_range_source, byte_count, bytes_bits, container_source, integer_source
 #include <boost/test/unit_test.hpp>           // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
+#include <array>                              // array
 #include <bitset>                             // bitset
 #include <cstddef>                            // byte, size_t
 #include <cstdint>                            // uint8_t, uint16_t, uint32_t, uint64_t
@@ -192,6 +193,76 @@ BOOST_AUTO_TEST_CASE(OnePositionLightsOneBitOfOneByte)
                         BOOST_CHECK(bytes[j] == (j == i / 8UZ ? static_cast<std::byte>(1U << (i % 8UZ)) : std::byte{}));
                 }
         }
+}
+
+
+// A CONTIGUOUS SEQUENCE OF BLOCKS is the same stated family said over more than one word: block j holds the
+// positions [j*digits, (j+1)*digits), and a scalar is the sequence of length one. Nothing is probed here either.
+BOOST_AUTO_TEST_CASE(ASequenceOfBlocksStatesItsLayoutToo)
+{
+        static_assert(bits::block_range_source<std::array<std::uint64_t, 4>, 256UZ>);
+        static_assert(bits::block_range_source<std::array<std::uint32_t, 8>, 256UZ>);
+        static_assert(bits::block_range_source<std::array<std::uint8_t, 32>, 256UZ>);
+
+        // AT LEAST N, the rule the scalar spelling already follows: wider is admitted, narrower is no conversion.
+        static_assert(    bits::block_range_source<std::array<std::uint64_t, 5>, 256UZ>);
+        static_assert(not bits::block_range_source<std::array<std::uint64_t, 3>, 256UZ>);
+
+        // A width that is not a whole number of blocks still only needs enough blocks to cover it.
+        static_assert(    bits::block_range_source<std::array<std::uint64_t, 2>, 65UZ>);
+        static_assert(not bits::block_range_source<std::array<std::uint64_t, 1>, 65UZ>);
+
+        // A vector has no bits until one is put in it, so B().size() is zero and it states nothing. That is a
+        // width and not a preference: the readings promise at COMPILE time that nothing truncates, and a run-time
+        // size cannot keep that promise.
+        static_assert(not bits::block_range_source<std::vector<std::uint64_t>, 64UZ>);
+
+        // Signed blocks are not this family: contiguous_block_range asks for an unsigned value type, which is the
+        // same invariant Block itself rests on.
+        static_assert(not bits::block_range_source<std::array<int, 4>, 64UZ>);
+
+        // And a scalar is not a range, which is why the family keeps two spellings rather than one.
+        static_assert(not bits::block_range_source<std::uint64_t, 64UZ>);
+        static_assert(    bits::bit_castable<std::uint64_t, 64UZ>);
+}
+
+// The bytes a block sequence spells are the bytes of its values, which is what keeps this endian-independent:
+// b[j] >> k is the same number on either byte order, where a bit_cast of the object would not be.
+BOOST_AUTO_TEST_CASE(BlocksAndBytesAreEachOthersInverse)
+{
+        using Blocks = std::array<std::uint64_t, 2>;
+        constexpr auto N = 128UZ;
+
+        static_assert([] -> bool {
+                auto const blocks = Blocks{ 0x0123'4567'89AB'CDEFULL, 0xFEDC'BA98'7654'3210ULL };
+                return bits::bytes_bits<Blocks, N>(bits::bit_bytes<N>(blocks)) == blocks;
+        }());
+
+        // Byte j of the field is byte j % 8 of block j / 8, said as a shift on the value.
+        static_assert([] -> bool {
+                auto const blocks = Blocks{ 0x0000'0000'0000'FF01ULL, 0x0000'0000'0000'0002ULL };
+                auto const bytes  = bits::bit_bytes<N>(blocks);
+                return bytes[0] == std::byte{ 0x01 }
+                   and bytes[1] == std::byte{ 0xFF }
+                   and bytes[2] == std::byte{ 0x00 }
+                   and bytes[8] == std::byte{ 0x02 };
+        }());
+
+        // Two block widths over the same positions spell the same bytes, which is the whole claim.
+        static_assert([] -> bool {
+                auto const wide   = std::array<std::uint64_t, 1>{ 0x0123'4567'89AB'CDEFULL };
+                auto const narrow = std::array<std::uint8_t,  8>{ 0xEF, 0xCD, 0xAB, 0x89, 0x67, 0x45, 0x23, 0x01 };
+                return bits::bit_bytes<64UZ>(wide) == bits::bit_bytes<64UZ>(narrow);
+        }());
+
+        // Blocks above the width come back CLEAR, which is what makes the round trip an identity at a width the
+        // sequence is wider than.
+        static_assert([] -> bool {
+                auto const out = bits::bytes_bits<std::array<std::uint64_t, 4>, 64UZ>(
+                        bits::bit_bytes<64UZ>(std::array<std::uint64_t, 4>{ 7ULL, 1ULL, 1ULL, 1ULL })
+                );
+                return out[0] == 7ULL and out[1] == 0ULL and out[2] == 0ULL and out[3] == 0ULL;
+        }());
 }
 
 BOOST_AUTO_TEST_SUITE_END()
