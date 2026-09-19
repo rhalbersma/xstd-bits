@@ -11,6 +11,7 @@
 #include <benchmark/benchmark.h>                  // ClobberMemory, DoNotOptimize, BENCHMARK_TEMPLATE1, BENCHMARK_MAIN, State
 #include <cstddef>                                // size_t
 #include <cstdint>                                // int64_t, uint64_t
+#include <vector>                                 // vector
 
 namespace {
 
@@ -36,6 +37,16 @@ auto filled(std::size_t n, std::uint64_t seed)
                 }
         }
         return bits;
+}
+
+// The bits as their blocks, taken out once so both halves of the interface below run over the same words at the same density.
+template<class T>
+auto blocks_of(T const& a)
+        -> std::vector<typename T::block_type>
+{
+        auto blocks = std::vector<typename T::block_type>(a.num_blocks());
+        to_block_range(a, blocks.begin());
+        return blocks;
 }
 
 auto per_byte(benchmark::State& state)
@@ -156,6 +167,40 @@ auto bm_scan_blocks(benchmark::State& state)
         per_byte(state);
 }
 
+// The block interface, and the row where boost stands on exactly the same footing by having the same thing: from_block_range and to_block_range are boost's too, each of them a std::copy over its own vector, so this is a like-for-like pair rather than one of the ours-only walks above.
+// Both sides take the same words through the same contiguous iterators, and everything is allocated before the loop. That last part is the row rather than an aside about it: build the destination inside the timed region instead and the same call reads about twice what it reads here, which is the allocator measured in place of the copy.
+// At the top rung, 32768 bits and medians of seven with each side timed in both positions, the two land together: 35ns in against boost's 35ns, 36ns out against boost's 36ns, on a memcpy of the same words at 35ns. Both are one bulk copy by then and neither sits above the floor -- which is the thing this row exists to keep checking rather than assume, the loop that used to stand on our side of it having run some 3.4x the floor.
+// Ours also does one thing boost does not, and it is inside those numbers: erase_unused() masks the tail once the blocks have landed, where boost keeps whatever the caller's last block held. One word at every width, which is what the stronger guarantee costs.
+template<class T>
+auto bm_from_block_range(benchmark::State& state)
+        -> void
+{
+        auto const blocks = blocks_of(filled<T>(words(state) * bits_per_word, 1));
+        auto a = T(words(state) * bits_per_word);
+        for (auto _ : state) {
+                benchmark::DoNotOptimize(blocks);
+                from_block_range(blocks.begin(), blocks.end(), a);
+                benchmark::ClobberMemory();
+        }
+        per_byte(state);
+}
+
+// The way back out, into a contiguous output iterator, which is what a caller reaches for when the blocks are going into a buffer that already exists.
+// A back_inserter is the other shape and gets no rung of its own: it costs a push_back per block, 320ns against this row's 36ns at the top rung, and what that measures is a vector growing rather than the interface answering.
+template<class T>
+auto bm_to_block_range(benchmark::State& state)
+        -> void
+{
+        auto a = filled<T>(words(state) * bits_per_word, 1);
+        auto blocks = std::vector<typename T::block_type>(a.num_blocks());
+        for (auto _ : state) {
+                benchmark::DoNotOptimize(a);
+                to_block_range(a, blocks.begin());
+                benchmark::ClobberMemory();
+        }
+        per_byte(state);
+}
+
 // A run-time width takes the ladder as a Range where the static one needs a template list; the rungs are the same 1, 2, 4 ... 512 words, so the two files' rows can be read against each other.
 // Ours first and alone, because two of the rows below are walks only ours has a spelling for. Those take no counterpart rung of their own: what they are read against is boost's rung in BM_LADDER(bm_scan), which measures the same bits by the only walk boost offers.
 #define BM_LADDER_OURS(fn)                                                              \
@@ -176,5 +221,7 @@ BM_LADDER(bm_flip);
 BM_LADDER(bm_scan);
 BM_LADDER_OURS(bm_scan_view);
 BM_LADDER_OURS(bm_scan_blocks);
+BM_LADDER(bm_from_block_range);
+BM_LADDER(bm_to_block_range);
 
 BENCHMARK_MAIN();
