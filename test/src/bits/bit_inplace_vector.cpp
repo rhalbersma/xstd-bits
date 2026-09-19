@@ -51,7 +51,11 @@ BOOST_AUTO_TEST_CASE(ItAnswersEveryLineOfStdInplaceVectorBool)
         static_assert(test::sequence::inplace_vector_bool<std::inplace_vector<bool, 24>>);
         static_assert(test::sequence::inplace_vector_bool<T>);
         static_assert(test::sequence::inplace_vector_bool<xstd::bit_inplace_vector<24>>);
+#ifdef __cpp_lib_containers_ranges
+
         static_assert(test::sequence::inplace_vector_bool_ranges<std::inplace_vector<bool, 24>>);
+
+#endif
         static_assert(test::sequence::inplace_vector_bool_ranges<T>);
 
         // The allocator is the storage's, and this storage has none: the checklist that asks for one does not apply.

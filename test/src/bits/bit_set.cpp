@@ -48,9 +48,13 @@ BOOST_AUTO_TEST_CASE(ItAnswersEveryLineOfStdSetSizeT)
         static_assert(test::set::set_size_t_allocator<T>);
         static_assert(test::set::set_size_t_allocator<xstd::bit_set>);
 
+#ifdef __cpp_lib_containers_ranges
+
         static_assert(test::set::set_size_t_ranges<std::set<std::size_t>>);
-        static_assert(test::set::set_size_t_ranges<T>);
         static_assert(test::set::set_size_t_ranges_allocator<std::set<std::size_t>>);
+
+#endif
+        static_assert(test::set::set_size_t_ranges<T>);
         static_assert(test::set::set_size_t_ranges_allocator<T>);
 }
 

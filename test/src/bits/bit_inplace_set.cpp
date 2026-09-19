@@ -45,6 +45,11 @@ BOOST_AUTO_TEST_CASE(TheInplaceSetIsTheSetAdaptorOverAnInplaceVectorOfBlocks)
 // This column has no counterpart either, and answers the dynamic column's synopsis all the same.
 BOOST_AUTO_TEST_CASE(ItAnswersEveryLineOfStdSetSizeTAnyway)
 {
+#ifdef __cpp_lib_containers_ranges
+
+        static_assert(test::set::set_size_t_ranges<std::set<std::size_t>>);
+
+#endif
         static_assert(test::set::set_size_t<std::set<std::size_t>>);
         static_assert(test::set::set_size_t<T>);
         static_assert(test::set::set_size_t<xstd::bit_inplace_set<24>>);

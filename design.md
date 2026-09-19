@@ -494,6 +494,45 @@ rather than from a decision. `container_source` asks for `set`, `count` and `siz
 a set has `insert` and a sequence has `operator[]`, so neither is a *source* even though both are targets. The
 bitset reading is the hub between them, and going through it is one explicit cast rather than a missing feature.
 
+#### the same job `flat_set` gives `extract` and `replace`
+
+`std::flat_set` has a door of its own onto its representation: `extract() &&` hands the underlying
+`KeyContainer` out and leaves the set empty, and `replace(container_type&&)` takes a sorted-unique one back.
+Together they are how a `flat_set` is built cheaply from a vector you already have, and how you get the sorted
+vector back out afterwards. `from_bits` and `to_bits<B>()` are this library's answer to the same need, and the
+two pairs differ in four ways that all follow from what the representation *is*.
+
+| | `flat_set::extract`/`replace` | `from_bits`/`to_bits<B>()` |
+|---|---|---|
+| what crosses | one fixed type, `container_type` | any `B` a **concept** admits |
+| cost | a move of the container | a `bit_cast`-shaped copy of `N` bits |
+| what `extract` leaves behind | an empty set -- it is `&&`-qualified and destructive | nothing; `to_bits` is `const` and the set is untouched |
+| what `replace` promises | a **precondition**: sorted, unique, no duplicates. Violating it is UB | nothing to promise; every field of `N` bits is a valid set |
+
+The first row is the substantive one. `container_type` is a single type fixed by the class template, so
+`extract`/`replace` cross with `vector<Key>` and nothing else -- another `flat_set` over a `deque<Key>` is a
+different type with a different door. What `from_bits` and `to_bits` admit is named by
+`exchanges_bits`, so an `unsigned long long`, a `std::array` of blocks, a `std::bitset<N>`, an
+`xstd::bitset<N>` and a `boost::dynamic_bitset` of the right width all cross on one rule, and an implementation
+that laid its bits out otherwise **fails to compile** rather than converting quietly
+(the probe earlier in this section).
+
+The fourth row is why the naming could be lighter here than the standard's. `replace` is `void` and cannot check
+its precondition without doing the linear work the call exists to avoid, so the standard makes it UB and the name
+carries the warning. `from_bits` has no precondition at all: the domain of an `N`-bit field and the domain of a
+set over `[0, N)` are the same set of values, and the map between them is a bijection. So the name is not there
+to warn about validity -- it is there to say **which reading of the bits you meant**, which is
+`from_bits(5u) == {0, 2}` and not `{5}`, and that is a different job from `replace`'s.
+
+The third row is the one to watch when porting. `extract()` is destructive and `&&`-qualified because moving the
+container out is the whole point; `to_bits<B>()` is `const` and copies, because at `N` bits there is nothing to
+move that is cheaper than the copy. A loop that calls `extract` once and `to_bits` once is not the same loop, and
+the `flat_set` one is the one that has to be written carefully.
+
+There is no run-time-width form of either here, and for the reason the run-time widths have no `from_bits`:
+`std::bitset` names one `N`, and a growing set has no single value for it. `flat_set` has no such problem because
+its container carries its own size. That is the one place the standard's pair reaches further than this one.
+
 The conversion operator reaches its storage through the `storage()` accessor and never through `m_bits`. The
 member is a `Bits*` wherever a reading refers rather than owns, so naming it directly compiled for an owner and
 was a hard error for a view — while the constraint answered *yes* either way. That is the worst shape a concept
@@ -2450,11 +2489,11 @@ check were vacuous on both sides.
 
 ### an-opinionated-reimagining
 
-The README states the charter: *a modern and opinionated reimagining of `std::bitset<N>`, keeping what time has
-proven to be effective, and throwing out what is not.* [a-strict-extension](#a-strict-extension) is how the
-keeping is enforced -- every expression of the counterpart's, with the same answer. This is the other half, and
-the two are not in tension: the extension rule governs what the containers **do**, and it says nothing about
-where an operator is declared.
+The charter is that each container is the **packing** of a standard one and speaks that container's vocabulary,
+the way `std::flat_set` speaks `std::set`'s: keeping what time has proven effective, and throwing out what is
+not. [a-strict-extension](#a-strict-extension) is how the keeping is enforced -- every expression of the
+counterpart's, with the same answer. This is the other half, and the two are not in tension: the extension rule
+governs what the containers **do**, and it says nothing about where an operator is declared.
 
 `std::bitset` is the clearest case of what has not proven effective. It is the oldest type in the library and reads like it: a member
 `operator==` where every container has a non-member one, no `swap` at all, and `operator<<` and `operator>>` as
