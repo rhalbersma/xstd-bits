@@ -33,7 +33,7 @@
                                                              // (views::drop_last when P22014R2 is accepted)
 #include <source_location>                                   // source_location
 #include <xstd/bits/detail/bit_castable.hpp>                  // bit_bytes, bit_castable, byte_count, bytes_bits, container_source
-#include <span>                                              // dynamic_extent
+#include <span>                                              // dynamic_extent, span
 #include <stdexcept>                                         // length_error
 #include <type_traits>                                       // conditional_t, is_const_v, remove_reference_t
 #include <utility>                                           // exchange, move, pair
@@ -373,6 +373,15 @@ public:
         {
                 assert(i < num_blocks());
                 return m_blocks[i];
+        }
+
+        // block(i) as a range rather than one block at a time, which the storage can answer because Blocks is a contiguous_block_range and this class is named for it. block(i) is the spelling for a single block; this is the spelling for a bulk copy, so a caller writing every block writes them in one call instead of asking num_blocks() times for a reference the compiler will not assume is the next word along.
+        // It carries block(i)'s write-side contract, once for the range where that carries it once per block: whoever writes through this span restores the invariant with erase_unused when it is done.
+        // The write side only. A const twin would have no caller: to_block_range is the one place that would want it, and its loop is already at the memcpy floor because the compiler turns it into the copy by itself -- so it is not added until something needs it.
+        [[nodiscard]] constexpr auto blocks() noexcept
+                -> std::span<block_type>
+        {
+                return { m_blocks.data(), num_blocks() };
         }
 
         // Public, because restoring the invariant belongs to whoever wrote the blocks that broke it.
