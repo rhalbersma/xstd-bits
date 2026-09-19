@@ -824,9 +824,10 @@ private:
                                 std::format(
                                         "{}:{}:{}: exception: ‘{}‘: invalid argument ‘ch‘ [{} != {} or {}]",
                                         loc.file_name(), loc.line(), loc.column(), loc.function_name(),
-                                        static_cast<std::uint_least32_t>(ch),
-                                        static_cast<std::uint_least32_t>(zero),
-                                        static_cast<std::uint_least32_t>(one)
+                                        // On one line, as the narrow arm above spells its three: split over three, gcov hands
+                                        // the first two a counter of their own that the call on the third never reaches, and
+                                        // two lines of an arm every test of this message runs read as never executed.
+                                        static_cast<std::uint_least32_t>(ch), static_cast<std::uint_least32_t>(zero), static_cast<std::uint_least32_t>(one)
                                 )
                         );
                 } else {

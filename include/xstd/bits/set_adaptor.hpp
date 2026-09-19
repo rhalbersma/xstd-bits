@@ -305,9 +305,14 @@ public:
         }
 
         // A static owner's equality IS its one member's: every instance carries the same width, so the arms below have nothing to choose between. Said here rather than left to fold, the fact being about the type and not about the optimizer. The conjunction is what picks this one -- it subsumes the general overload's lone clause, so no negation is needed there.
-        [[nodiscard]] friend constexpr auto operator==(set_adaptor const&, set_adaptor const&) noexcept
+        //
+        // Written out rather than defaulted, which is what it was: a defaulted comparison compares the bases first, and the base here is allocator_base_type, an empty class whose own defaulted operator== can only answer true. That call is a branch no input can send the other way, and an unreachable branch is a hole in a coverage gate that admits no test. Saying the member outright is the same comparison with nothing dead in it -- and it is the line this comment already claims.
+        [[nodiscard]] friend constexpr auto operator==(set_adaptor const& x, set_adaptor const& y) noexcept
                 -> bool
-                requires detail::set::equality_comparable_storage<bits_type> and is_owner and has_static_width = default;
+                requires detail::set::equality_comparable_storage<bits_type> and is_owner and has_static_width
+        {
+                return x.storage() == y.storage();
+        }
 
         // Everything else: the storage's set equality, which answers at any two widths. Width is capacity for this reading, so two storages holding the same positions are equal whatever their widths, and a view holds a pointer that a defaulted comparison would compare in place of the contents.
         [[nodiscard]] friend constexpr auto operator==(set_adaptor const& x, set_adaptor const& y) noexcept
