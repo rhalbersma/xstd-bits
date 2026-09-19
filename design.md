@@ -2555,8 +2555,7 @@ implied. Measured one call per process, so that an assert's abort is observable,
 
 | `xstd::dynamic_bitset` against `boost::dynamic_bitset<>` | boost | here |
 |---|---|---|
-| `set(pos, len, val)` past the width | assert | `out_of_range` |
-| `set(pos, val)`, `test(pos)` past the width | assert | assert |
+| `set(pos, val)`, `set(pos, len, val)`, `test(pos)` past the width | assert | assert |
 | `at(pos)` past the width | `out_of_range` | `out_of_range` |
 | `&=`, `\|=`, `is_subset_of` across unequal widths | assert | answers |
 | `a < b` across unequal widths | answers | answers |
@@ -2719,21 +2718,28 @@ asked for exactly the positions the forward pair's had never been asked for.
 
 **The ranged forms** `set(pos, len, val)`, `reset(pos, len)` and `flip(pos, len)` carry the same guard over a
 range, said as a subtraction rather than as `pos + len` ([the-sum-that-wraps](#the-sum-that-wraps)) -- and they
-depart from the split above: they **throw at both widths**.
+follow **the same split**, because one rule covers both guards: *a width answers as its own counterpart does, and
+a width whose counterpart has nothing here answers as its own type answers elsewhere.*
 
-The split is right for element access because there are two counterparts to mirror, and each of ours answers as
-its own does. The ranged family has only one: `std::bitset` has no `set(pos, len, val)` at all. So a static
-width had nothing to follow here, and `xstd::bitset`'s throw was already ours to choose rather than
-`std::bitset`'s to dictate -- which left one family checked at one width and not the other for no reason either
-counterpart supplies. Half a policy is not one, and the half worth keeping is the one that answers.
+Element access has two counterparts to mirror and each of ours follows its own: `std::bitset::set(pos)` throws,
+boost's asserts. The ranged family has one, boost's, and boost asserts -- so a run-time width asserts, which is
+boost's contract reproduced rather than extended. A static width has no ranged counterpart at all, `std::bitset`
+having no `set(pos, len, val)`, so it follows the nearest thing its own type does have, its `set(pos)`, and
+throws.
 
-It costs no compatibility, because the rule governs expressions *valid* on the counterpart
-([a-strict-extension](#a-strict-extension)) and a range past the width is not one. Boost says so itself: its
-`range_operation` opens with `BOOST_ASSERT(pos + len <= m_num_bits)`, and a second assert beside it,
-`pos + len >= len`, for the overflow the first cannot see. Under `NDEBUG` both vanish and what is left is a
-masked write through a block index the blocks never allocated -- `dynamic_bitset<>(64).set(1000, 2, true)` is a
-clean heap-buffer-overflow under ASan on boost as it was here. Defining what a counterpart leaves undefined is
-what an extension may add; it is the one direction that cannot break a program that was already correct.
+This used to throw at **both** widths, and the argument for it was that defining what a counterpart leaves
+undefined is what an extension may add. That is true, and it was not a reason. The extension rule governs
+expressions *valid* on the counterpart ([a-strict-extension](#a-strict-extension)), and a range past the width is
+not one -- boost says so itself: its `range_operation` opens with `BOOST_ASSERT(pos + len <= m_num_bits)`, and a
+second assert beside it, `pos + len >= len`, for the overflow the first cannot see. So nothing required the
+throw, and no portable program could have relied on it. What the assert buys back is that one family no longer
+answers two ways at two widths for a reason neither counterpart supplies.
+
+What it costs is real and worth naming rather than implying. Under `NDEBUG` a run-time width now does what boost
+does: both asserts vanish and what is left is a masked write through a block index the blocks never allocated, so
+`dynamic_bitset<>(64).set(1000, 2, true)` is a clean heap-buffer-overflow under ASan on boost and now here too.
+The sanitizer legs are where that is caught; the static width still refuses it outright, and the run-time width
+still refuses it in every build that keeps its asserts.
 
 What stays unchecked is what is unchecked on every counterpart and inside this tree: `operator[]`, and the
 storage's own `set(n, len, value)` and `flip(n, len)`, whose precondition the assert states and whose one other
