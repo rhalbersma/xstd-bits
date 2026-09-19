@@ -1467,10 +1467,12 @@ them, which is what lets `ext/xstd/bitset.hpp` return `set_adaptor(c).begin()` f
 
 ### the-comparison-is-a-hidden-friend
 
-All three adaptors spell `operator==` as a defaulted hidden friend. `bitset_adaptor` was the exception until
-measured, carrying the member that `std::bitset` specifies, on the reading that a defaulted comparison has to
-be one. It does not: [class.compare.default]/1 admits a non-static member **or a friend**, and
-`sequence_adaptor` had been defaulting a *constrained* friend all along.
+All three adaptors spell `operator==` as a hidden friend, and two of the three default it. `bitset_adaptor`
+was the exception until measured, carrying the member that `std::bitset` specifies, on the reading that a
+defaulted comparison has to be one. It does not: [class.compare.default]/1 admits a non-static member **or a
+friend**, and `sequence_adaptor` had been defaulting a *constrained* friend all along. The set reading writes
+both of its overloads out instead, for a reason that is about coverage rather than about comparison and is the
+last subsection here.
 
 The choice used to be observable, and no longer is. `std::bitset`'s converting constructor from
 `unsigned long long` is not `explicit`, so a mixed comparison compiles; which spellings compile depends on
@@ -1512,6 +1514,35 @@ What the friend costs is `&bitset<N>::operator==`, and the namespace-scope shift
 `&bitset<N>::operator<<`, both well-formed against `std::bitset` because the standard puts those operators in
 the class. Nothing forms a pointer-to-member to a comparison, and the alternative was one
 adaptor of three disagreeing with its siblings on every read of the file.
+
+#### the set reading writes its equality out
+
+`set_adaptor` carries two `operator==` and neither is defaulted. The general one always answered through the
+storage's `set_equal`, because width is capacity for this reading and two sets holding the same positions are
+equal at any two widths ([width-is-capacity](#width-is-capacity)). The other, the static-width owner's, **was**
+`= default` and is now `return x.storage() == y.storage();`.
+
+The two spellings mean the same thing and do not cost the same. A defaulted comparison compares base classes
+before members, and an owner here derives from `detail::bits::allocator_base_type` -- an empty class carrying
+the storage's `allocator_type` where there is one and nothing at all where there is not. Its own defaulted
+`operator==` can only answer true, so the defaulted form emits a call and a branch that no input can send the
+other way. Probed with equal operands, with operands differing in the first block, with operands differing in
+the second, and with an object against itself: that edge stayed at zero every time.
+
+Which is a curiosity until a gate counts it. `gcovr` is told to drop branches on a line matching
+`= default;`, which is there to excuse exactly this synthesized branch -- and the pattern matches a LINE, not
+a declaration. `sequence_adaptor`'s comparison, `bitset_adaptor`'s and `contiguous_bit_container`'s each fit
+on the one line that carries `= default;`, so the exclusion finds them. `set_adaptor`'s static-width overload
+wrapped over three, its trailing *requires-clause* being longer than everything else about it, and gcov
+anchors a function's branches at the first line of its declaration -- where there is no `= default;` to match.
+One construct, four sites, and the only one the gate could see was the one whose constraint was too long to
+fit on a line.
+
+So the three siblings still carry the same unreachable branch, excused by their formatting rather than by
+being built differently. Writing the member comparison out removes it instead of excusing it and needs no
+exclusion to pass, and it is what the comment above it already claimed: a static owner's equality IS its one
+member's. Reformatting the other three onto the pattern would have worked as well and taught nothing;
+rewriting all four would have spent three defaulted comparisons to buy symmetry.
 
 ### the-views-are-the-adaptors
 
@@ -3777,7 +3808,7 @@ ever wrong.
 
 ### clang-tidy-false-positives
 
-Six findings are suppressed because the checker cannot see what makes them right:
+Seven findings are suppressed because the checker cannot see what makes them right:
 
 - `bugprone-signed-bitwise` on `detail/bits::shl` and `::shr`, whose count is cast to `int`. The two checks
   that govern this leave no third option, and both were measured: `absl::uint128` declares a single shift,
@@ -3797,6 +3828,15 @@ Six findings are suppressed because the checker cannot see what makes them right
   modification `[namespace.std]/2` allows: a specialization of a standard library template for a
   program-defined type. clang-tidy 22 and 23 read the qualified definition as modifying the namespace; 24 no
   longer does, and the suppression stays until the whole ladder is past 23.
+- `modernize-avoid-c-style-cast` on `sequence_adaptor`'s `is_static_width_owner`, where it points at the `Own`
+  in `owns(Own)` and offers to make it a `static_cast`. There is no cast on that line. `owns` is
+  `constexpr auto owns(ownership) -> bool` in `ownership.hpp` and `ownership::owns` is a **scoped**
+  enumerator, so the unqualified name can only be the function, and `Own` is a non-type template parameter
+  rather than a type. The same `owns(Own)` is written on seventeen other lines here and none of them is flagged;
+  what is particular is the namespace-scope variable template, whose initializer stays value-dependent until
+  instantiation. clang-tidy 23 alone emits it -- 22 and 24-SVN carry every other finding for the same
+  translation unit and not this one -- so it is a release's bug rather than a reading of the code, and the
+  suppression can go once the ladder is past 23.
 
 An eighth is the reverse case, and the one to be careful with: **the check is right about the language and
 wrong about the compilers.** `readability-redundant-typename` on clang-tidy 22 asks for the `typename` to go
@@ -3808,11 +3848,40 @@ needs no `typename` and trips no check. The same pattern already names `allocato
 `contiguous_bit_container`'s test. Measured before pushing, because "clang-tidy suggested it" is not evidence
 that it compiles.
 
+The same check came back later from the other side, and there it is simply right. On the set reading's
+checklist it asked for the `typename` to go from five **parameter-declarations** -- the
+`typename C::value_type const* first` and `... last` of `set_size_t` and `set_size_t_allocator`, and the
+`[](typename C::key_type)` that `erase_if` is handed -- and a parameter-declaration IS on P0634's list, which
+is why the parameters beside them already omitted it. It flagged those five and left
+`std::initializer_list<typename C::value_type>` and `std::same_as<typename C::size_type>` alone on the very
+same lines: the rule above, drawn by the checker itself. Template argument, the keyword stays; parameter
+declaration, the keyword goes. The ones it left are not an oversight and are not to be "finished".
+
 A ninth had a fix rather than a suppression. `modernize-use-nullptr` reads the `0` in `(a <=> b) < 0` as a
 null pointer constant, which is the same false positive `-Wno-zero-as-null-pointer-constant` already covers on
 the compiler side. Every site in the test sources says `std::is_lt`, `std::is_gt` or `std::is_eq` instead --
 the standard's own names for those three questions, which are clearer than the comparison against a literal
 and leave the check on to catch a real one. Do not spell them back.
+
+A tenth is the one to be most careful with, because the check is right about the spelling and wrong about what
+the code has to do. `modernize-type-traits` asks for `std::tuple_size_v<C>` in place of
+`std::tuple_size<C>::value`, in `array_tuple_element`'s guard and again in `array_bool`'s compound
+requirement. A checklist is asked of types that FAIL it -- that is the whole of what a checklist is for
+([concepts-are-tested-on-ready-made-types](#concepts-are-tested-on-ready-made-types)) -- and the two spellings
+fail differently. `tuple_size<C>::value` is a nested name, so for a `C` with no `tuple_size` at all the
+substitution fails in the immediate context and the constraint answers false. `tuple_size_v` is a variable
+template whose initializer instantiates OUTSIDE it, and the same `C` is a hard error no requires-expression
+can catch: `not array_tuple_element<C>` stops compiling and reads *incomplete type `std::tuple_size<C>` used
+in nested name specifier*. Measured on GCC 15 and 16 both, against a type with `tuple_size` and no
+`tuple_element` and a type with neither, before either spelling was kept.
+
+The `tuple_element` half of that same check IS taken, and the asymmetry is the point. `tuple_element_t` is an
+alias template and substituting into one is transparent, so its failure stays in the immediate context and the
+requirement still answers false. The concept therefore reads `typename std::tuple_element_t<0, C>;`, keeping
+the `typename` -- a type-requirement needs it, and an alias-template specialization is a *type-name* under
+[expr.prim.req.type], which is the half of the fix-it that would otherwise have left a bare type standing
+where only an expression may. Half of one check's advice was worth taking and half of it was not, and nothing
+short of running both tells you which half.
 
 ### clang-crashes-on-a-foreign-bulk-source
 
@@ -3849,3 +3918,26 @@ So `XSTD_BITS_BUILD_BENCHMARKS` gates the tree, the Coverage workflow passes it 
 `cmake_args`, and the `benchmark/.*` exclusion stays as a second line that costs nothing. A benchmark measures
 the library rather than being part of it, which was always the stated reason for excluding it; not compiling it
 into the measurement is that reason carried through.
+
+#### a hundred per cent measures the source's shape too
+
+The last two gaps the gate reported were not about tests at all, and neither could have been closed by writing
+one.
+
+`bitset_adaptor`'s `invalid_argument` spelled the three code units of its message as three `static_cast`s on
+three lines. gcov gave the first two a counter of their own and attached the `std::format` call to the third,
+so two lines that every test of that message runs read as never executed -- `#####` against a line whose
+neighbours both ran, in all four instantiations, every time. Writing the three casts on one line, as the
+narrow arm directly above already writes its three arguments, closed it: nothing excused, no test changed, and
+the same message still printed.
+
+The other was the defaulted comparison's unreachable base branch, which is
+[above](#the-comparison-is-a-hidden-friend).
+
+What the two have in common is that the number moved without the program changing. Below a hundred, coverage
+measures the tests. At exactly a hundred it also measures the source's shape -- where an argument list wraps,
+where a declaration wraps, and whether the line an exclusion pattern is looking for happens to be the line
+gcov anchored the counter to. That is a real cost of the gate and it is worth paying, because a gate that
+reports instead of enforcing gets read as noise. But it has to be read for what it is: here "uncovered" twice
+meant "gcov counted this differently than you would have", and going looking for the missing test would have
+been going looking for a test that cannot exist.
