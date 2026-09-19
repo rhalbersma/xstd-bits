@@ -29,7 +29,7 @@
 #include <list>                                          // list
 #include <ranges>                                        // equal, iota, range, reverse
 #include <sstream>                                       // istringstream
-#include <stdexcept>                                     // out_of_range, overflow_error
+#include <stdexcept>                                     // invalid_argument, out_of_range, overflow_error
 #include <string>                                        // char_traits, string
 #include <string_view>                                   // basic_string_view
 #include <tuple>                                         // tuple
@@ -453,6 +453,23 @@ BOOST_AUTO_TEST_CASE(TheStringConstructorTakesAnyCharLikeTypeButABlock)
         static_assert(std::is_constructible_v<Ours, char16_t const*>);
         static_assert(std::is_constructible_v<Ours, char32_t const*>);
 
+        // CALLED, and not merely asked about: is_constructible_v answers from the declaration and never instantiates
+        // the body, so the five above passed for years while the error path inside was ill-formed for four of them.
+        // std::format wants a formatter<charT, char> and the standard specializes formatter<charT, charT>; there is
+        // no formatter<wchar_t, char>. One construction per character type is what finds that, and one throw per
+        // character type is what reaches the message.
+        BOOST_CHECK(Ours( "101") == Ours("101"));
+        BOOST_CHECK(Ours(L"101") == Ours("101"));
+        BOOST_CHECK(Ours(u8"101") == Ours("101"));
+        BOOST_CHECK(Ours(u"101") == Ours("101"));
+        BOOST_CHECK(Ours(U"101") == Ours("101"));
+
+        BOOST_CHECK_THROW(Ours( "102"), std::invalid_argument);
+        BOOST_CHECK_THROW(Ours(L"102"), std::invalid_argument);
+        BOOST_CHECK_THROW(Ours(u8"102"), std::invalid_argument);
+        BOOST_CHECK_THROW(Ours(u"102"), std::invalid_argument);
+        BOOST_CHECK_THROW(Ours(U"102"), std::invalid_argument);
+
         // The widening: not one of the five, and constructible all the same.
         static_assert(std::is_constructible_v<Ours, digit_char const*>);
         static_assert(std::is_constructible_v<std::bitset<9>, digit_char const*>);
@@ -461,6 +478,11 @@ BOOST_AUTO_TEST_CASE(TheStringConstructorTakesAnyCharLikeTypeButABlock)
         constexpr auto one  = digit_char{ static_cast<unsigned char>('1') };
         auto const text = std::array<digit_char, 4>{ one, zero, one, digit_char{ 0 } };
         BOOST_CHECK(Ours(text.data(), std::basic_string_view<digit_char>::npos, zero, one) == Ours("101"));
+
+        // And its error path, which is the third arm: char-like, and neither a character nor a number to a narrow
+        // format string. A program-defined char-like type is exactly what LWG 4294's Constraints let in.
+        auto const bad = std::array<digit_char, 4>{ one, digit_char{ static_cast<unsigned char>('2') }, one, digit_char{ 0 } };
+        BOOST_CHECK_THROW(Ours(bad.data(), std::basic_string_view<digit_char>::npos, zero, one), std::invalid_argument);
 
         // The one subtraction, and the reason for it: the block-range constructor keeps its argument.
         static_assert(std::same_as<Ours::block_type, std::uint8_t>);

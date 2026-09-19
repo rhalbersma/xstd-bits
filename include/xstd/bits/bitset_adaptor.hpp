@@ -18,9 +18,10 @@
 #include <algorithm>                              // min, ranges::copy
 #include <cassert>                                // assert
 #include <compare>                                // strong_ordering
-#include <concepts>                               // same_as, swappable
+#include <concepts>                               // integral, same_as, swappable
 #include <cstddef>                                // size_t
-#include <format>                                 // format
+#include <cstdint>                                // uint_least32_t
+#include <format>                                 // format, formattable
 #include <functional>                             // hash
 #include <ios>                                    // ios_base
 #include <iosfwd>                                 // basic_istream, basic_ostream
@@ -785,18 +786,53 @@ private:
                 return nrv;
         }
 
+        // The three characters go into the message in whatever way they can be written down, and the arms are not a
+        // nicety: std::format needs a std::formatter<charT, char>, and the standard specializes formatter<charT, charT>
+        // and formatter<char, wchar_t> and nothing else. So there is no formatter<wchar_t, char>, nor for any of the
+        // three Unicode char types -- and formatting them unconditionally made this error path ill-formed for every
+        // charT but char, on a constructor that has taken all five since it was written. Nothing caught it because
+        // is_constructible_v asks the declaration and never instantiates the body; it took a call to find it.
+        //
+        // LWG 4294 widens the door further still, to any char-like type, and a program-defined one is not even
+        // integral. That is the same ill-formed-outside-the-immediate-context trap the issue exists to close, one
+        // layer down from where it closed it.
         template<class charT>
         static constexpr auto invalid_argument(
                 charT ch, charT zero = static_cast<charT>('0'), charT one = static_cast<charT>('1'),
                 std::source_location const& loc = std::source_location::current()
         )
         {
-                return std::invalid_argument(
-                        std::format(
-                                "{}:{}:{}: exception: ‘{}‘: invalid argument ‘ch‘ [{} != {} or {}]",
-                                loc.file_name(), loc.line(), loc.column(), loc.function_name(), ch, zero, one
-                        )
-                );
+                // The format string is spelled out per arm rather than built: std::format takes a format_string, which
+                // is consteval over the argument types, so a std::string assembled here would not be one.
+                if constexpr (std::formattable<charT, char>) {
+                        return std::invalid_argument(
+                                std::format(
+                                        "{}:{}:{}: exception: ‘{}‘: invalid argument ‘ch‘ [{} != {} or {}]",
+                                        loc.file_name(), loc.line(), loc.column(), loc.function_name(), ch, zero, one
+                                )
+                        );
+                } else if constexpr (std::integral<charT>) {
+                        // A code unit is a number where it is not a character, which is what every char type but char
+                        // is to a narrow format string. Said as numbers rather than dropped: the position of the
+                        // offending unit is the whole of what the message is for.
+                        return std::invalid_argument(
+                                std::format(
+                                        "{}:{}:{}: exception: ‘{}‘: invalid argument ‘ch‘ [{} != {} or {}]",
+                                        loc.file_name(), loc.line(), loc.column(), loc.function_name(),
+                                        static_cast<std::uint_least32_t>(ch),
+                                        static_cast<std::uint_least32_t>(zero),
+                                        static_cast<std::uint_least32_t>(one)
+                                )
+                        );
+                } else {
+                        // Char-like, and neither a character nor a number to anything that could write it down.
+                        return std::invalid_argument(
+                                std::format(
+                                        "{}:{}:{}: exception: ‘{}‘: invalid argument ‘ch‘",
+                                        loc.file_name(), loc.line(), loc.column(), loc.function_name()
+                                )
+                        );
+                }
         }
 
         [[nodiscard]] constexpr auto out_of_range(std::size_t pos, std::source_location const& loc = std::source_location::current()) const
