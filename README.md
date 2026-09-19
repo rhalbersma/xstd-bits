@@ -336,11 +336,9 @@ The semantic differences between `xstd::bit_static_set<N>` and `std::bitset<N>` 
 
 Functionality from `std::bitset<N>` that is not in `xstd::bit_static_set<N>`:
 
-- **No integer or string constructors**: `xstd::bit_static_set` cannot be constructed from `unsigned long long`, `std::string` or `const char*`.
-- **No integer or string conversion operators**: `xstd::bit_static_set` does not convert to `unsigned long`, `unsigned long long` or `std::string`.
-- **No I/O streaming operators**: `xstd::bit_static_set` does not provide overloaded I/O streaming `operator<<` and `operator>>`.
-
-The first two are about the **implicit** doors rather than the capability: the byte exchange is there under a name, `from_bits` and `to_bits<B>()`, as above.
+- **No string constructors and no `to_string`**: a bit string is the **`bitset` reading's** vocabulary, and it is there across that whole row — `xstd::bitset<N>`, `xstd::inplace_bitset<N>` and `xstd::dynamic_bitset` all take `std::bitset`'s string constructors and answer `to_string()`, at every width. The set reading declines it as it declines the rest of that vocabulary, and crossing costs one call either way: `s.to_bits<xstd::bitset<N>>().to_string()`, and `xstd::bit_static_set<N>::from_bits(xstd::bitset<N>(str))` back. What a set prints *as itself* is `{2, 3, 5}`, which is [printing](#printing) above.
+- **No integer constructor and no integer conversion operator**: here what is missing is the language's *unnamed* doors and not the capability. The byte exchange does both under a name, `xstd::bit_static_set<32>::from_bits(5u)` and `s.to_bits<unsigned>()` — and it is named for exactly the reason a constructor would be the wrong spelling: `from_bits(5u)` is the set of positions the **value** five has, `{0, 2}`, and not the set `{5}`. A constructor cannot say which of those it meant; a name can.
+- **No I/O streaming operators**: `operator<<` and `operator>>` are `[bitset.operators]`'s, so they sit on that row beside `to_string`, at every width. A set formats instead, in its own vocabulary.
 
 I/O functionality can be obtained through third-party libraries such as [{fmt}](https://fmt.dev/latest/), which has generic support for ranges such as `xstd::bit_static_set` — and `std::format` and `std::print` need nothing at all, as [printing](#printing) above shows. Hashing is **not** on that list: `std::hash<xstd::bit_static_set<N>>` is specialized, over [Boost.Hash2](https://github.com/boostorg/hash2), and every value this library compares it also hashes, so `a == b` implies `hash(a) == hash(b)` under every reading ([design.md#the-hashing-invariant](design.md#the-hashing-invariant)). The `hash_append` hook is there beside it, for a caller wanting an algorithm other than the defaulted `fnv1a_64`.
 
