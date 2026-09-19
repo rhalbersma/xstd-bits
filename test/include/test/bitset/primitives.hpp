@@ -585,7 +585,9 @@ struct op_iostream
         }
 };
 
-// A first character that is neither zero nor one stores nothing, exactly as an empty stream does: failbit unless N is zero.
+// A first character that is neither zero nor one stores nothing. An EXHAUSTED stream is a different case and not the
+// same one: operator>> is a formatted input function ([bitset.operators]/4), so its sentry fails before a character
+// is looked at, whatever N is. Only the non-empty-but-unreadable input turns on N, via [bitset.operators]/6.
 template<class X>
 struct op_istream_failure
 {
@@ -594,11 +596,12 @@ struct op_istream_failure
                 if constexpr (fixed_string_view_constructible<X>) {
                         constexpr auto N = X().size();
                         for (auto const* input : { "", "2" }) {
+                                auto const exhausted = *input == '\0';
                                 auto is = std::istringstream(input);
                                 auto x = X();
                                 is >> x;
                                 BOOST_CHECK(x.none());
-                                BOOST_CHECK_EQUAL(is.fail(), N > 0);            // [bitset.operators]/6
+                                BOOST_CHECK_EQUAL(is.fail(), exhausted or N > 0);  // [istream.formatted.reqmts], then [bitset.operators]/6
                         }
 
                         // Fewer digits than N: the loop stops on eof rather than on N, and x = X(str) puts what was read in the low bits.

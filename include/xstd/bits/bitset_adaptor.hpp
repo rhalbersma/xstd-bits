@@ -923,6 +923,17 @@ auto operator>>(std::basic_istream<charT, traits>& is, bitset_adaptor<Bits>& x)
                         return std::numeric_limits<std::size_t>::max();
                 }
         }();
+        // [bitset.operators]/4 makes this a FORMATTED input function, and the sentry is what that means: leading
+        // whitespace is skipped, and an exhausted stream fails before a character is ever looked at. Peeking
+        // straight at the stream skipped both -- std::bitset<3> reads "  101" and this one used to refuse it, which
+        // is a difference in the answer and not only in the bookkeeping. The sentry also decides the zero-width
+        // case that no other clause reaches: at N == 0 nothing below can set failbit, so an empty stream is failed
+        // here or nowhere, and std::bitset<0> fails it.
+        auto const guard = typename std::basic_istream<charT, traits>::sentry(is);
+        if (not guard) {
+                // A failed sentry extracts nothing, so x keeps the value it had ([istream.formatted.reqmts]).
+                return is;
+        }
         auto str = std::basic_string<charT, traits>();
         // Assigned inside an if constexpr the zero-width instantiation discards.
         auto state = std::ios_base::goodbit;  // NOLINT(misc-const-correctness)
