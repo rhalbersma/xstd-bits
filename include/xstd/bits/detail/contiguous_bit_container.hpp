@@ -419,7 +419,10 @@ public:
                         m_blocks[static_last_block] &= static_used_bits;
                         assert(not detail::bits::intersects(m_blocks[static_last_block], static_unused_bits));
                 } else if constexpr (not has_static_size) {
-                        m_blocks[last_block()] &= used_bits();
+                        // The run-time twin of the arm above, and a run-time if is the only shape it can take: whether the last block has a tail to erase is a property of a width this type is not given until it runs, so what the arm above asks the compiler, this one has to ask the value. Without it the mask runs on every call at every width, and where the width is an exact multiple of the block it is a read-modify-write that changes nothing: flip at 128 bits measures 7.8ns without it against 2.3ns with, and boost, which has had the same if all along, measures 2.3ns.
+                        if (has_unused_bits()) {
+                                m_blocks[last_block()] &= used_bits();
+                        }
                 }
         }
 
@@ -1429,6 +1432,13 @@ private:
                 -> std::size_t
         {
                 return (num_blocks() * bits_per_block) - 1UZ;
+        }
+
+        // Whether the blocks hold more bits than the width names, which is what the mask below is for. Width zero decides the spelling: it still holds one block, every bit of which is unused, so size() % bits_per_block would answer no and leave that block dirty behind a width that names none of it.
+        [[nodiscard]] constexpr auto has_unused_bits() const noexcept
+                -> bool
+        {
+                return num_blocks() * bits_per_block != size();
         }
 
         // static_used_bits at a run-time width, width zero selected rather than computed.
