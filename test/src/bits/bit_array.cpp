@@ -8,6 +8,7 @@
 #include <test/sequence/dense.hpp>    // yields_every_position
 #include <test/value_reference.hpp>   // value_reference
 #include <xstd/bits/bit_array.hpp>    // bit_array
+#include <xstd/bits/sequence_adaptor.hpp> // get, which bit_array.hpp reaches through an alias and does not itself declare
 #include <boost/test/unit_test.hpp>   // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <algorithm>                  // equal, none_of
 #include <array>                      // array
@@ -108,8 +109,8 @@ BOOST_AUTO_TEST_CASE(ItAnswersTheTupleInterfaceStdArrayCarries)
 {
         using A = xstd::bit_array<3>;
         static_assert(std::tuple_size_v<A> == 3UZ);
-        static_assert(std::same_as<std::tuple_element_t<0, A>, typename A::reference>);
-        static_assert(std::same_as<std::tuple_element_t<0, A const>, typename A::const_reference>);
+        static_assert(std::same_as<std::tuple_element_t<0, A>, A::reference>);
+        static_assert(std::same_as<std::tuple_element_t<0, A const>, A::const_reference>);
 
         auto a = A({ true, false, true });
         BOOST_CHECK(get<0>(a) == true);

@@ -54,7 +54,7 @@ concept set_typedefs = requires {
 //   - insert_range and the from_range constructors: [set.cons]'s C++23 lines, apart below the way the sequence
 //     reading keeps its own.
 template<class C>
-concept set_size_t = set_typedefs<C> and requires (C c, C o, C const cc, C::key_type k, std::initializer_list<typename C::value_type> il, typename C::value_type const* first, typename C::value_type const* last, C::const_iterator p) {
+concept set_size_t = set_typedefs<C> and requires (C c, C o, C const cc, C::key_type k, std::initializer_list<typename C::value_type> il, C::value_type const* first, C::value_type const* last, C::const_iterator p) {
         C();
         C(first, last);
         C(cc);
@@ -107,12 +107,12 @@ concept set_size_t = set_typedefs<C> and requires (C c, C o, C const cc, C::key_
         { cc.equal_range(k)   } -> std::same_as<std::pair<typename C::const_iterator, typename C::const_iterator>>;
         { cc == cc            } -> std::same_as<bool>;
         { cc <=> cc           } -> std::same_as<std::strong_ordering>;
-        { erase_if(c, [](typename C::key_type) { return true; }) } -> std::same_as<typename C::size_type>;
+        { erase_if(c, [](C::key_type) { return true; }) } -> std::same_as<typename C::size_type>;
 };
 
 // [set.cons]'s allocator arguments, which only the column whose storage has an allocator can answer.
 template<class C, class A = C::allocator_type>
-concept set_size_t_allocator = requires (C c, C o, C const cc, A a, std::initializer_list<typename C::value_type> il, typename C::value_type const* first, typename C::value_type const* last) {
+concept set_size_t_allocator = requires (C c, C o, C const cc, A a, std::initializer_list<typename C::value_type> il, C::value_type const* first, C::value_type const* last) {
         typename C::allocator_type;
         C(a);
         C(first, last, a);

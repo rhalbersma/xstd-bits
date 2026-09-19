@@ -23,7 +23,8 @@
 #include <cwchar>                                        // mbstate_t
 #include <cstdint>                                       // uint8_t, uint64_t
 #include <functional>                                    // hash
-#include <iosfwd>                                        // streamoff, streampos
+#include <ios>                                           // streamoff
+#include <iosfwd>                                        // streampos
 #include <iterator>                                      // back_inserter, contiguous_iterator
 #include <limits>                                        // numeric_limits
 #include <list>                                          // list
@@ -60,7 +61,7 @@ struct digit_char
         // [bitset.cons] spells them. On a bare aggregate that is parenthesized aggregate initialization, which clang
         // diagnoses as a C++20 extension and -Werror turns into an error; libstdc++'s own bitset does exactly the
         // same thing and is only spared because a system header does not warn. A real conversion instead.
-        constexpr digit_char(unsigned char c) noexcept  // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
+        constexpr digit_char(unsigned char c) noexcept  // NOLINT(misc-explicit-constructor,google-explicit-constructor,hicpp-explicit-conversions)
         :
                 v(c)
         {}

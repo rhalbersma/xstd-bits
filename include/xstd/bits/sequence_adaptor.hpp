@@ -1062,6 +1062,7 @@ constexpr auto erase(sequence_adaptor<Bits, Own, Windowed>& c, U const& value)
 // the interface costs nothing it does not already have. The static-width owner alone: std::array is the counterpart
 // that carries this, and a run-time width has no I to check at compile time.
 template<class Bits, ownership Own, bool Windowed>
+// NOLINTNEXTLINE(modernize-avoid-c-style-cast): there is no cast on this line. clang-tidy 23 points at the Own in owns(Own) and offers to rewrite it as a static_cast, having read the call as a C-style cast of a parenthesized type. owns is a function -- [[nodiscard]] constexpr auto owns(ownership) -> bool, in ownership.hpp -- and ownership::owns is a SCOPED enumerator, so the unqualified name can only be the function and Own is a non-type template parameter, not a type. The same owns(Own) is written at sixteen other sites in this library and none of them is flagged; what is particular here is the namespace-scope variable template, whose initializer is value-dependent until instantiation. Suppressed rather than respelled: writing Own == ownership::owns instead would inline the one function that exists so nobody has to.
 inline constexpr bool is_static_width_owner = owns(Own) and (not Windowed) and (Bits::extent != std::dynamic_extent);
 
 // Found by ADL, as a program-defined type's get must be: std::get is std's to specialize and this is not std's type.

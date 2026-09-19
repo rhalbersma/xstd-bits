@@ -15,7 +15,7 @@
 #include <iterator>                 // random_access_iterator
 #include <optional>                 // optional
 #include <ranges>                   // from_range, random_access_range
-#include <tuple>                    // tuple_element, tuple_size
+#include <tuple>                    // tuple_element_t, tuple_size
 #include <utility>                  // move
 
 namespace test::sequence {
@@ -81,10 +81,20 @@ concept container_members = reversible_container_typedefs<C> and requires (C c, 
 
 // [array.tuple]'s element half, which only a non-empty array has: tuple_element<I, array<T, N>> Mandates I < N, so
 // element zero is a question that cannot be put to a width of nought -- on the packing or on std::array itself.
+//
+// tuple_size<C>::value and NOT tuple_size_v<C>, which is what modernize-type-traits asks for and what this guard
+// cannot take. A checklist is asked of types that fail it -- that is the whole of what it is for -- and the two
+// spellings fail differently: ::value is a nested name, so for a C with no tuple_size at all the substitution
+// fails in the immediate context and the constraint answers false; tuple_size_v is a variable template whose
+// initializer instantiates OUTSIDE it, and the same C is a hard error no requires-expression can catch. Measured,
+// not assumed: the _v spelling turns "not array_tuple_element<C>" into "incomplete type std::tuple_size<C> used in
+// nested name specifier". The tuple_element rewrite below has no such problem and is taken -- an alias template
+// substitutes transparently, so its failure stays in the immediate context.
 template<class C>
+// NOLINTNEXTLINE(modernize-type-traits)
 concept array_tuple_element = (std::tuple_size<C>::value == 0) or requires (C c, C const cc) {
-        typename std::tuple_element<0, C>::type;
-        typename std::tuple_element<0, C const>::type;
+        typename std::tuple_element_t<0, C>;
+        typename std::tuple_element_t<0, C const>;
         get<0>(c);
         get<0>(cc);
         get<0>(std::move(c));
@@ -98,6 +108,8 @@ concept array_bool = container_members<C> and array_tuple_element<C> and require
         C();
         C{ b, b };
         c.fill(b);
+        // ::value here too, and for the reason array_tuple_element above gives at length.
+        // NOLINTNEXTLINE(modernize-type-traits)
         { std::tuple_size<C>::value } -> std::convertible_to<std::size_t>;
 };
 
