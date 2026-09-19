@@ -175,7 +175,8 @@ template<class T>
 auto bm_from_block_range(benchmark::State& state)
         -> void
 {
-        auto const blocks = blocks_of(filled<T>(words(state) * bits_per_word, 1));
+        // Not const, though nothing here writes it: DoNotOptimize's const-ref overload is deprecated upstream, and a deprecation is an error on every Release rung.
+        auto blocks = blocks_of(filled<T>(words(state) * bits_per_word, 1));
         auto a = T(words(state) * bits_per_word);
         for (auto _ : state) {
                 benchmark::DoNotOptimize(blocks);
