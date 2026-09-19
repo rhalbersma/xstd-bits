@@ -25,11 +25,27 @@
 [![CodeQL](https://github.com/rhalbersma/xstd-bits/actions/workflows/codeql.yml/badge.svg)](https://github.com/rhalbersma/xstd-bits/actions/workflows/codeql.yml)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/rhalbersma/xstd-bits/badge)](https://scorecard.dev/viewer/?uri=github.com/rhalbersma/xstd-bits)
 
-xstd-bits is a modern and opinionated reimagining of `std::bitset<N>`, keeping what time has proven to be effective, and throwing out what is not. It is **nine containers**: three readings of a block of bits — an ordered set of `std::size_t`, a sequence of `bool`, and the `bitset` that deliberately offers both — over three storages, which differ in whether size and capacity are static or dynamic: both static, a dynamic size within a static capacity, and both dynamic.
+xstd-bits is **nine containers**: three readings of a block of bits — an ordered set of `std::size_t`, a sequence of `bool`, and the `bitset` that deliberately offers both — over three storages, which differ in whether size and capacity are static or dynamic: both static, a dynamic size within a static capacity, and both dynamic.
 
-The **set reading** does less work than `std::bitset` (e.g. no bounds-checking and no throwing of `out_of_range` exceptions) yet offers more (e.g. full `constexpr`-ness and bidirectional iterators over individual 1-bits). This enables **bit-twiddling with set-like syntax** (identical to `std::set<int>`), typically leading to cleaner, more expressive code that seamlessly interacts with the rest of the Standard Library. The **bitset reading** is a strict extension of `std::bitset` instead, and so keeps its checked members and their `out_of_range`; a dynamic width that is asked to grow past `max_size()` throws `std::length_error`, as a container does for a size it cannot represent. The **sequence reading** indexes, so out of range is out of bounds there: `at(n)` throws `out_of_range` at every width and through every handle, and everything else is the precondition `std::vector`, `std::array` and `std::span` already make it — stated with an `assert`, at the member you called.
+### Each one is the packing of a standard container, and speaks that container's vocabulary
 
-The flagship of the set reading is `xstd::bit_static_set<N>`, a fixed-size ordered set of integers that is compact and fast; most of this document is about it, because it is the cell where the design questions are sharpest. `xstd::bit_set` is its allocating counterpart.
+The relationship is the one `std::flat_set` has to `std::set`: **a different representation under the same interface**, departing from it only where the representation forces a departure. `xstd::bit_vector` answers `std::vector<bool>`'s synopsis line for line; `xstd::bit_array<N>` answers `std::array<bool, N>`'s, `xstd::bit_inplace_vector<N>` answers `std::inplace_vector<bool, N>`'s, the three `bitset`s answer `std::bitset<N>`'s and `boost::dynamic_bitset<>`'s, and the three sets answer `std::set<std::size_t>`'s. Each is held to its counterpart by a checklist that spells that counterpart's synopsis out as a `requires`-expression and is asserted **on the counterpart first**, so a line the model itself cannot answer can never be asked of the packing.
+
+The yardstick is the [current working draft](https://eel.is/c++draft/), not the standard the library compiles as. Where C++23 and the draft disagree the draft wins, and [design.md](design.md) records which paper moved each line.
+
+Three things the packing genuinely forces, and nothing else:
+
+- **No nodes.** A position is a bit in a word, so there is nothing to unlink and hand over: `node_type`, `extract`, `insert(node_type&&)` and `merge` have no meaning here. `std::flat_set` drops the same four for the same reason.
+- **A proxy reference.** A bit has no address, so `operator[]` returns a proxy, `pointer` names nothing, and `data()` goes with it. `std::vector<bool>` makes exactly this trade. Everything the standard asks *of* the proxy is here — the const-qualified assignment of [P2321R2](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2021/p2321r2.html), `flip()`, and the three hidden-friend `swap`s of [P3612R1](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3612r1.html).
+- **Different invalidation — mostly the other way.** An iterator here is a container and an index, not a pointer into the blocks, so growth that reallocates the blocks leaves it valid. That is `std::set`'s guarantee over storage that is `std::flat_set`'s.
+
+Everything else is addition rather than subtraction: the bitwise operators, `find_first`/`find_next`, the subset and intersection tests, the byte exchange, and the views that give you a second reading of bits you already own.
+
+### Out of range means what each counterpart means by it
+
+The **set reading** takes a key, and a key outside the domain is a lookup that answers no rather than an error: `contains`, `find`, `count`, `lower_bound`, `upper_bound` and `equal_range` are total, as they are on `std::set`. The **bitset reading** keeps `std::bitset`'s checked members and their `out_of_range`; a dynamic width asked to grow past `max_size()` throws `std::length_error`, as a container does for a size it cannot represent. The **sequence reading** indexes, so out of range is out of bounds there: `at(n)` throws `out_of_range` at every width and through every handle, and everything else is the precondition `std::vector`, `std::array` and `std::span` already make it — stated with an `assert`, at the member you called.
+
+`constexpr` is not on that list of advantages, and has not been since [P3372R3](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3372r3.html) made the standard's own containers `constexpr` throughout. It is table stakes now; what the packing buys is density and the bit-parallel operations over it.
 
 ## Design choices for a `bitset` data structure
 
@@ -181,10 +197,10 @@ int main()
     using X = xstd::bit_static_set<N>; /* or xstd::bit_set, std::set<std::size_t>, std::flat_set<std::size_t> */
 
     auto const primes = opt::sift_primes0<X>(N);
-    assert(fmt::format("{}", primes) == "{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97}");
+    assert(std::format("{}", primes) == "{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97}");
 
     auto const twins = opt::filter_twins(primes);
-    assert(fmt::format("{}", twins)  == "{3, 5, 7, 11, 13, 17, 19, 29, 31, 41, 43, 59, 61, 71, 73}");
+    assert(std::format("{}", twins)  == "{3, 5, 7, 11, 13, 17, 19, 29, 31, 41, 43, 59, 61, 71, 73}");
 }
 ```
 
@@ -213,7 +229,7 @@ Looking at the above code, the following four ingredients are necessary to imple
 
 1. **Bidirectional iterators** `begin` and `end` in the `set`'s own namespace (to work with range-`for` and the `<ranges>` library);
 2. **Constructors** taking a pair of iterators or a range (in order for `std::ranges::to` to construct a `set`);
-3. A **nested type** `key_type` (in order for the `{fmt}` library to use `{}` delimiters);
+3. A **nested type** `key_type` (in order for `std::format` to use `{}` delimiters: [format.range.fmtkind] picks `range_format::set` for a range that has one);
 4. A **member function** `erase` to remove elements (for other applications: the rest of a `set`'s interface).
 
 `xstd::bit_static_set<N>` implements all four of the above requirements. Note that Visual C++ support is finicky at the moment because its `<ranges>` implementation cannot (yet) handle the `xstd::bit_static_set<N>` proxy iterators and proxy references correctly.
@@ -230,7 +246,7 @@ auto const s = xstd::bit_set_view(bs);   // the set reading of those bits
 
 s.insert(42);                            // bs.set(42)
 assert(s.contains(42));                  // bs.test(42)
-assert(fmt::format("{}", s) == "{42}");  // formats as a set, which a bitset cannot
+assert(std::format("{}", s) == "{42}"); // formats as a set, which a bitset cannot
 ```
 
 The view supplies what the bitset lacks: bidirectional iterators, a nested `key_type`,
@@ -243,7 +259,7 @@ the same three readings pointed at storage someone else owns.
 
 ### Printing
 
-The snippets above use `fmt::format`, which finds the proxies through fmt's own `format_as`. `std::format` and `std::print` work too, with nothing to include and nothing to switch on:
+The snippets above use `std::format`, and `std::print` works the same way, with nothing to include beyond `<format>` and nothing to switch on:
 
 ```cpp
 std::print("{}\n", primes);   // {2, 3, 5, 7, 11, ...}   the set reading, in braces
@@ -251,7 +267,7 @@ std::print("{}\n", flags);    // [false, true, ...]      the sequence reading, i
 std::print("{::#x}\n", primes);
 ```
 
-Each proxy reference carries its own `std::formatter`, so a container that hands the proxy out brings the formatter with it. Nothing is specialized for a container: every one of them is already a range, so [`[format.range.formatter]`](https://eel.is/c++draft/format.range.formatter) formats it once its reference is formattable. The braces-versus-brackets split is the standard's, not ours — `[format.range.fmtkind]` picks `range_format::set` for a range with a `key_type` — so each reading prints in its own vocabulary without being told to. Both hooks read the same value: the `std::formatter` defers to the `format_as` that fmt calls, so the two libraries cannot drift.
+Each proxy reference carries its own `std::formatter`, so a container that hands the proxy out brings the formatter with it. Nothing is specialized for a container: every one of them is already a range, so [`[format.range.formatter]`](https://eel.is/c++draft/format.range.formatter) formats it once its reference is formattable. The braces-versus-brackets split is the standard's, not ours — `[format.range.fmtkind]` picks `range_format::set` for a range with a `key_type` — so each reading prints in its own vocabulary without being told to. Each proxy also keeps a hidden-friend `format_as`, which is fmt's own per-type hook, so a consumer who formats with fmt gets the same output without this library depending on fmt to build or to test. The two hooks cannot drift: the `std::formatter` reads the value by calling `format_as`, rather than reaching for it a second way of its own.
 
 ## Data-parallelism
 
@@ -298,9 +314,11 @@ The **full** interface of `xstd::bit_static_set` is `constexpr`.
 - **No allocators**: `xstd::bit_static_set` is a fixed-size set of non-negative integers and does not dynamically allocate memory. In particular, `xstd::bit_static_set` does **not provide** a `get_allocator()` member function and its constructors do not take an allocator argument. Its allocating counterpart `xstd::bit_set` does provide both — the allocator follows the storage column, not the set reading.
 - **No splicing**: `xstd::bit_static_set` is **not a node-based container**, and does not provide the splicing operations as defined in [p0083r3](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2016/p0083r3.pdf). In particular, `xstd::bit_static_set` does **not provide** the nested types `node_type` and `insert_return_type`, the `extract()` or `merge()` member functions, or the `insert()` overloads taking a node handle.
 
+- **No container exchange**: `std::flat_set` hands its underlying container out with `extract() &&` and takes one back with `replace(container_type&&)`, which is how you build one cheaply and how you get the sorted vector back out. `xstd::bit_static_set` has neither name, and has the capability twice over — see the `from_bits`/`to_bits` bullet below, and [the comparison in design.md](design.md#the-bytes-they-agree-on).
+
 Minor **semantic differences** between common functionality in `xstd::bit_static_set<N>` and `std::set<int>` are:
 
-- the `xstd::bit_static_set` member function `max_size` is `constexpr`, and at a static width its value is a constant expression usable wherever `N` is. It is a **member** rather than a `static` member function, because the same `max_size()` has to answer for the dynamic and inplace readings too, where it is the storage that knows ([design.md#max-size-is-the-bits](design.md#max-size-is-the-bits)). So `s.max_size()` is a constant expression and `decltype(s)::max_size()` does not compile.
+- the `xstd::bit_static_set` member function `max_size` is `constexpr`, and at a static width its value is a constant expression usable wherever `N` is. It is a **member** rather than a `static` member function because `std::set`'s is a member: each reading takes the shape its own counterpart spells, which is why the sequence reading's middle column has a `static` one instead — `[inplace.vector.capacity]` spells all four of `capacity`, `max_size`, `reserve` and `shrink_to_fit` static there, and `xstd::bit_inplace_vector<N>::capacity()` answers without an object accordingly ([design.md#max-size-is-the-bits](design.md#max-size-is-the-bits)). So for the set reading `s.max_size()` is a constant expression and `decltype(s)::max_size()` does not compile.
 - the `xstd::bit_static_set` iterators are **proxy iterators**, and taking their address yields **proxy references**. The difference should be undetectable. See the FAQ at the end of this document.
 - the `xstd::bit_static_set` members `fill`, `complement` and `full` do not exist for `std::set`.
 - `xstd::bit_static_set<N>` exchanges bits with any field of `N` bits through a **named pair**, `from_bits` and `to_bits<B>()`, and not through a constructor or a conversion operator. What they admit is named by a concept rather than by a type: an unsigned integer or a sequence of them, whose layout the language and the sequence state between them, or a field of bits whose layout `bit_castable` probes and proves — so `std::bitset<N>` and `xstd::bitset<N>` ride in on the same rule as `unsigned long long`, and an implementation that laid its bits out otherwise fails to compile rather than converting quietly. The widths are the same `N` and a static width is a capacity under this reading, so position `n` here is bit `n` there: nothing truncates, nothing grows, nothing throws, and the round trip is the identity. It is `constexpr` at every width, and a copy rather than a walk over positions.
@@ -509,6 +527,8 @@ Bit-0 leftmost buys one thing: the bitstring order and the array order agree, wh
 
 This library depends on the C++ Standard Library, on [xstd-ints](https://github.com/rhalbersma/xstd-ints) and [xstd-misc](https://github.com/rhalbersma/xstd-misc) (both fetched automatically via CMake `FetchContent` when not already installed), and on [Boost.Hash2](https://github.com/boostorg/hash2) for the hashing support. It is continuously being tested with the following conforming [C++23](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/n4950.pdf) compilers, against all three mainstream standard libraries (libstdc++, the MSVC STL, and libc++). Following the model of [apt.llvm.org](https://apt.llvm.org/), we support the latest two stable releases of each compiler, plus its current development branch.
 
+Two standards are in play and they answer different questions. **C++23 is what the library compiles as** — that is the language it requires, and the tests build at C++26 as well, which is what reaches the inplace column. **The current [working draft](https://eel.is/c++draft/) is what the interfaces are measured against**, because a counterpart's synopsis is a moving target and the newest one is the one worth answering. So `std::bitset`'s `basic_string_view` constructor ([P2697R1](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p2697r1.pdf)) and its `charT` Constraints ([LWG 4294](https://cplusplus.github.io/LWG/issue4294)) are here even though C++23 has neither, and the proxy carries the hidden-friend `swap`s of [P3612R1](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3612r1.html) beside the static `swap(reference, reference)` that paper moved to `[depr.vector.bool.swap]`.
+
 | Platform | Compiler | Standard Library | Stable | Qualification | Development | Status |
 | :------- | :------- | :--------------- | :----- | :------------ | :---------- | :----- |
 | Linux | GCC | libstdc++ | 15 | 16 | 17-SVN | [![GCC](https://github.com/rhalbersma/xstd-bits/actions/workflows/gcc.yml/badge.svg)](https://github.com/rhalbersma/xstd-bits/actions/workflows/gcc.yml) |
@@ -525,7 +545,7 @@ This library depends on the C++ Standard Library, on [xstd-ints](https://github.
 
 Every leg above passes. The library no longer uses the C++23 range adaptors libc++ has not implemented (`views::cartesian_product`, `views::adjacent`, `views::pairwise_transform`, `views::stride`), and the tests probe for `<flat_set>` rather than assuming it, so the `Clang | libc++` and `Apple Clang` rows and the `Clang-CL` VS 2022 legs build and run like the rest.
 
-Note that the benchmarks and unit tests depend on [Boost](https://www.boost.io/), [fmtlib](https://github.com/fmtlib/fmt), [Google Benchmark](https://github.com/google/benchmark) and [range-v3](https://github.com/ericniebler/range-v3). 
+Note that the benchmarks and unit tests depend on [Boost](https://www.boost.io/), [Google Benchmark](https://github.com/google/benchmark) and [range-v3](https://github.com/ericniebler/range-v3). 
 
 ## Consuming this library
 
@@ -576,7 +596,7 @@ target_link_libraries(my_target PRIVATE xstd::bits)
 
 ### The vcpkg manifest
 
-[`vcpkg.json`](vcpkg.json) is this repository's own manifest, not a published port: it is what `VCPKG_ROOT`-based presets install from when you build **this** library. Its `test` feature — Boost.Test, Boost.Dynamic Bitset, fmtlib, Google Benchmark and range-v3 — is a default feature because building the repository normally means building its tests. The `no-tests-vcpkg` preset turns that off with `VCPKG_MANIFEST_NO_DEFAULT_FEATURES`, so a packaging or install build pays for Boost.Hash2 and nothing else. Consuming the library by any of the three methods above does not read this manifest at all.
+[`vcpkg.json`](vcpkg.json) is this repository's own manifest, not a published port: it is what `VCPKG_ROOT`-based presets install from when you build **this** library. Its `test` feature — Boost.Test, Boost.Dynamic Bitset, Google Benchmark and range-v3 — is a default feature because building the repository normally means building its tests. The `no-tests-vcpkg` preset turns that off with `VCPKG_MANIFEST_NO_DEFAULT_FEATURES`, so a packaging or install build pays for Boost.Hash2 and nothing else. Consuming the library by any of the three methods above does not read this manifest at all.
 
 
 ## License

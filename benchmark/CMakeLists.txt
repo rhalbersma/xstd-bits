@@ -6,7 +6,6 @@
 set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost CONFIG REQUIRED)
 find_package(benchmark REQUIRED)
-find_package(fmt REQUIRED)
 
 # clang-cl reports CXX_COMPILER_ID Clang but understands only MSVC-style driver flags.
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
@@ -105,7 +104,6 @@ foreach(t ${targets})
         xstd::bits
         Boost::headers
         benchmark::benchmark
-        fmt::fmt
         # Optional, and empty when absent: set/blocks.cpp detects each by __has_include and drops the rung. Declared above both trees in cmake/int128.cmake, benchmark/ being configured before test/.
         ${${project_id}_test_boost_int128}
         ${${project_id}_test_absl_int128}

@@ -137,7 +137,7 @@ public:
                 return m_idx;
         }
 
-        // fmt's protocol, found by ADL on the proxy: the same value the conversion yields.
+        // What this proxy prints as, said once: our own std::formatter below calls it unqualified, and it is also fmt's protocol, found by ADL on the proxy, for a consumer who formats with fmt. fmt is no longer a dependency of this repository; the hook is a hidden friend of a header-only proxy and costs nobody anything, so taking fmt interop away to delete a line the standard formatter calls regardless would be a trade in the wrong direction.
         [[nodiscard]] friend constexpr auto format_as(bidirectional_bit_reference ref) noexcept
                 -> value_type
         {

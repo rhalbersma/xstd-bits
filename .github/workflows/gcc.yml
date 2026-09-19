@@ -24,6 +24,23 @@ on:
 jobs:
   # Every rung, and the rungs move with cpp-ci rather than with a local matrix. The one ladder that builds the benchmark tree, now that XSTD_BITS_BUILD_BENCHMARKS is off by default. Its Release legs run the smoke test benchmark/CMakeLists.txt registers -- --benchmark_min_time=1x, that it runs rather than what it costs -- so the benchmarks keep compiling and executing against the current API without every other leg paying to build them.
   gcc:
-    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@18949f87a8a7fb439c60ae7988c573831523c18e # v0.10.1
+    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@29fdd6605bf237863ad39c3919c2cf389cfb6d38 # v0.10.2
     with:
       cmake_args: -DXSTD_BITS_BUILD_BENCHMARKS=ON
+
+  # The inplace column and nothing else: std::inplace_vector is behind __cpp_lib_inplace_vector, which is C++26, so
+  # at the standard every other leg compiles as, three of the nine cells compile to nothing and are never tested.
+  # CMakeLists.txt raises the standard for the test tree alone -- the INTERFACE a consumer inherits stays at 23 --
+  # and this is the leg that asks it to. No benchmarks: the ladder above builds those, and this one is here for the
+  # three cells it is the only leg to reach.
+  #
+  # Two rungs rather than one. The qualification rung is GCC 16, the oldest GCC carrying the header, and it is what
+  # the column has to keep working on. The development rung is where a column this new earns the snapshot: C++26 is
+  # a draft the library tracks rather than a standard it targets, and 17-SVN is the only leg that reports a change
+  # to std::inplace_vector, or to anything else this column leans on, while it is still a change. The stable rung
+  # stays out -- GCC 15 has no such header, so it would configure and then test the other six cells a second time.
+  gcc_cxx26:
+    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@29fdd6605bf237863ad39c3919c2cf389cfb6d38 # v0.10.2
+    with:
+      tiers: qualification,development
+      cmake_args: -DXSTD_BITS_CXX_STANDARD=26

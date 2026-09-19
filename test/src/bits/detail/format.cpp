@@ -11,13 +11,14 @@
 #include <xstd/bits/bit_vector.hpp>     // bit_vector
 #include <xstd/bits/dynamic_bitset.hpp> // dynamic_bitset
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <array>                        // array
 #include <format>                       // format
 
 BOOST_AUTO_TEST_SUITE(Format)
 
 // Nothing here says anything about a container: the two proxies carry a formatter and [format.range.formatter] does the rest.
 
-// [format.range.fmtkind] chooses range_format::set for a range with a key_type, so the set reading arrives at braces without being told, the way fmt's format_as does.
+// [format.range.fmtkind] chooses range_format::set for a range with a key_type, so the set reading arrives at braces without being told.
 BOOST_AUTO_TEST_CASE(TheSetReadingFormatsInBraces)
 {
         auto d = xstd::bit_set();
@@ -38,9 +39,16 @@ BOOST_AUTO_TEST_CASE(TheSequenceReadingFormatsInBrackets)
         v[1] = true;
         BOOST_CHECK_EQUAL(std::format("{}", v), "[false, true, false, false]");
 
+        // This line does double duty now that bit_array carries [array.tuple]: a std::tuple_size specialization is
+        // what makes a type tuple-like, and the question is whether that diverts std::format. It does not, and the
+        // brackets here are the assertion of it. [format.tuple]/1 provides the tuple formatter "for each of pair and
+        // tuple", naming the two class templates rather than admitting tuple-like types, and [format.range.fmtkind]
+        // never asks tuple_size_v<R> -- it asks R::key_type, and tuple_size_v of the REFERENCE type for the map case
+        // alone. std::array is the proof by example: tuple-like, a range, and it prints as a range.
         auto a = xstd::bit_array<4>();
         a[2] = true;
         BOOST_CHECK_EQUAL(std::format("{}", a), "[false, false, true, false]");
+        BOOST_CHECK_EQUAL(std::format("{}", std::array<bool, 2>{ false, true }), "[false, true]");
 
         BOOST_CHECK_EQUAL(std::format("{}", xstd::bit_vector()), "[]");
 }

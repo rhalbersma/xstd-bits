@@ -16,6 +16,7 @@
 #include <xstd/misc/concepts/specialization_of.hpp> // specialization_of_TN
 #include <xstd/misc/type_traits/empty_base_type.hpp>          // empty_base_type
 #include <boost/container_hash/is_range.hpp>      // is_range
+#include <boost/container_hash/is_tuple_like.hpp> // is_tuple_like
 #include <boost/hash2/hash_append.hpp>            // hash_append_tag
 #include <algorithm>                              // copy, min, remove_if
 #include <cassert>                                // assert
@@ -27,10 +28,13 @@
 #include <initializer_list>                       // initializer_list
 #include <iterator>                               // input_iterator, make_reverse_iterator, reverse_iterator, sentinel_for
 #include <limits>                                 // numeric_limits
+#include <new>                                    // bad_alloc
+#include <optional>                               // nullopt, optional
 #include <ranges>                                 // begin, enable_borrowed_range, enable_view, end, from_range_t, input_range, range_reference_t, size, sized_range, subrange
 #include <source_location>                        // source_location
 #include <span>                                   // dynamic_extent
 #include <stdexcept>                              // out_of_range
+#include <tuple>                                  // tuple_element, tuple_size
 #include <type_traits>                            // conditional_t, false_type, is_invocable_r_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
 #include <utility>                                // as_const, declval, forward, move, pair
 
@@ -160,6 +164,12 @@ class sequence_adaptor : public std::conditional_t<owns(Own), detail::bits::allo
 
         // Growth is the owner's over storage that grows: a view must never resize what it does not own.
         static constexpr bool can_grow = is_owner and not has_static_width and requires (bits_type& b, std::size_t n, bool value) { b.resize(n, value); b.push_back(value); b.pop_back(); b.clear(); };
+
+        // The middle column: growth inside a capacity the TYPE carries. [inplace.vector] spells four of its capacity
+        // members static and gives push_back a reference to return, where [vector.bool] spells the same four as
+        // ordinary members and returns nothing -- so the two counterparts disagree on the shape of the name, not only
+        // on its answer, and one adaptor serving both has to ask which column it is in before it declares them.
+        static constexpr bool has_static_capacity = can_grow and bits_type::has_static_capacity;
 
         // A window is what std::span stores, the pointer's role split over a pointer and a position because bits are not addressable: the iterator's two fields and a size.
         struct window
@@ -497,11 +507,12 @@ public:
                 return insert(position, il.begin(), il.end());
         }
 
-        constexpr auto emplace(const_iterator position, value_type const& value)
+        template<class... Args>
+                requires can_grow and std::constructible_from<value_type, Args...>
+        constexpr auto emplace(const_iterator position, Args&&... args)
                 -> iterator
-                requires can_grow
         {
-                return insert(position, value);
+                return insert(position, value_type(std::forward<Args>(args)...));
         }
 
         constexpr auto erase(const_iterator position)
@@ -629,9 +640,18 @@ public:
                 }
         }
 
+        // [inplace.vector.capacity] makes max_size() a static member, and it can be one: the capacity is the type's.
+        [[nodiscard]] static constexpr auto max_size() noexcept
+                -> size_type
+                requires has_static_capacity
+        {
+                return bits_type::static_capacity();
+        }
+
         // std::vector<bool>'s answer where this reading can grow, and the width itself where it cannot: the storage computes both ceilings and this reading picks the one its counterpart names, a random access range's positions being counted by a difference_type. A view is its own ceiling, growing nothing.
         [[nodiscard]] constexpr auto max_size() const noexcept
                 -> size_type
+                requires (not has_static_capacity)
         {
                 if constexpr (can_grow) {
                         return m_bits.addressable_max_size();
@@ -675,34 +695,114 @@ public:
         constexpr auto resize(size_type n)                          -> void requires can_grow { m_bits.resize(bits_type::check_addressable_width(n)); }
         constexpr auto resize(size_type n, value_type const& value) -> void requires can_grow { m_bits.resize(bits_type::check_addressable_width(n), value); }
         constexpr auto clear() noexcept                             -> void requires can_grow { m_bits.clear(); }
-        constexpr auto push_back(value_type const& value)           -> void requires can_grow { m_bits.push_back(value); }
         constexpr auto pop_back() noexcept                          -> void requires can_grow { m_bits.pop_back(); }
 
-        constexpr auto emplace_back(value_type const& value)
-                -> reference
+        // [inplace.vector.modifiers] returns the reference; [vector.bool] returns nothing. Deduced rather than
+        // declared, so each column's counterpart is answered in its own spelling out of the one definition.
+        constexpr auto push_back(value_type const& value)
                 requires can_grow
         {
                 m_bits.push_back(value);
+                if constexpr (has_static_capacity) {
+                        return back();
+                }
+        }
+
+        // Variadic, as both synopses spell it. A bool takes nought or one argument and no more, but the arity is the
+        // counterpart's and not ours to narrow: value-initialization IS an argument list, and std::vector<bool>()
+        // .emplace_back() is a false the packing has to be able to push too.
+        template<class... Args>
+                requires can_grow and std::constructible_from<value_type, Args...>
+        constexpr auto emplace_back(Args&&... args)
+                -> reference
+        {
+                m_bits.push_back(value_type(std::forward<Args>(args)...));
                 return back();
         }
 
+        // [inplace.vector.modifiers]'s non-throwing door, which is the whole reason the middle column is a container
+        // of its own: a full one answers nullopt where push_back would answer std::bad_alloc.
+        template<class... Args>
+                requires has_static_capacity and std::constructible_from<value_type, Args...>
+        constexpr auto try_emplace_back(Args&&... args)
+                -> std::optional<reference>
+        {
+                if (size() == capacity()) {
+                        return std::nullopt;
+                }
+                return emplace_back(std::forward<Args>(args)...);
+        }
+
+        constexpr auto try_push_back(value_type const& value)
+                -> std::optional<reference>
+                requires has_static_capacity
+        {
+                return try_emplace_back(value);
+        }
+
+        // The caller has already established the room, so this one only asserts it: [inplace.vector.modifiers] makes
+        // size() < capacity() a precondition here, which is the contract at() keeps and operator[] states.
+        template<class... Args>
+                requires has_static_capacity and std::constructible_from<value_type, Args...>
+        constexpr auto unchecked_emplace_back(Args&&... args)
+                -> reference
+        {
+                assert(size() < capacity());
+                return emplace_back(std::forward<Args>(args)...);
+        }
+
+        constexpr auto unchecked_push_back(value_type const& value)
+                -> reference
+                requires has_static_capacity
+        {
+                return unchecked_emplace_back(value);
+        }
+
+        // The middle column's three, static as [inplace.vector.capacity] spells them, so the qualified call its
+        // counterpart admits -- bit_inplace_vector<N>::capacity() -- is admitted here too. A static and an ordinary
+        // member may share a name where their trailing requires-clauses differ ([over.load]), which is what lets the
+        // one adaptor carry both shapes rather than pick the one that fits fewer of its columns.
+        [[nodiscard]] static constexpr auto capacity() noexcept
+                -> size_type
+                requires has_static_capacity
+        {
+                return bits_type::static_capacity();
+        }
+
+        // Static, and throwing rather than growing: there is nothing to reserve that the type does not already have,
+        // and a request past the capacity is the std::bad_alloc [inplace.vector.capacity] specifies.
+        static constexpr auto reserve(size_type n)
+                -> void
+                requires has_static_capacity
+        {
+                if (n > capacity()) {
+                        throw std::bad_alloc();
+                }
+        }
+
+        // Static, and a no-op: the capacity cannot shrink, the blocks being the object.
+        static constexpr auto shrink_to_fit() noexcept
+                -> void
+                requires has_static_capacity
+        {}
+
         constexpr auto reserve(size_type n)
                 -> void
-                requires can_grow and requires (bits_type& b) { b.reserve(n); }
+                requires can_grow and (not has_static_capacity) and requires (bits_type& b) { b.reserve(n); }
         {
                 m_bits.reserve(bits_type::check_addressable_width(n));
         }
 
         [[nodiscard]] constexpr auto capacity() const noexcept
                 -> size_type
-                requires can_grow and requires (bits_type const& b) { b.capacity(); }
+                requires can_grow and (not has_static_capacity) and requires (bits_type const& b) { b.capacity(); }
         {
                 return m_bits.capacity();
         }
 
         constexpr auto shrink_to_fit()
                 -> void
-                requires can_grow and requires (bits_type& b) { b.shrink_to_fit(); }
+                requires can_grow and (not has_static_capacity) and requires (bits_type& b) { b.shrink_to_fit(); }
         {
                 m_bits.shrink_to_fit();
         }
@@ -957,6 +1057,44 @@ constexpr auto erase(sequence_adaptor<Bits, Own, Windowed>& c, U const& value)
         return xstd::erase_if(c, [&](bool x) -> bool { return x == value; });
 }
 
+// [array]'s tuple interface, which is the one line of that synopsis a packed bool can still answer. data() cannot
+// be packed and pointer cannot name a bit, but get<I> hands back exactly the proxy operator[] already hands back, so
+// the interface costs nothing it does not already have. The static-width owner alone: std::array is the counterpart
+// that carries this, and a run-time width has no I to check at compile time.
+template<class Bits, ownership Own, bool Windowed>
+inline constexpr bool is_static_width_owner = owns(Own) and (not Windowed) and (Bits::extent != std::dynamic_extent);
+
+// Found by ADL, as a program-defined type's get must be: std::get is std's to specialize and this is not std's type.
+template<std::size_t I, class Bits, ownership Own, bool Windowed>
+        requires is_static_width_owner<Bits, Own, Windowed> and (I < Bits::extent)
+[[nodiscard]] constexpr auto get(sequence_adaptor<Bits, Own, Windowed>& c) noexcept
+{
+        return c[I];
+}
+
+template<std::size_t I, class Bits, ownership Own, bool Windowed>
+        requires is_static_width_owner<Bits, Own, Windowed> and (I < Bits::extent)
+[[nodiscard]] constexpr auto get(sequence_adaptor<Bits, Own, Windowed> const& c) noexcept
+{
+        return c[I];
+}
+
+// The proxy is returned BY VALUE, so the two rvalue overloads forward rather than move: what std::array returns as a
+// T&& into an expiring array, this returns as a handle into one, and either way the caller keeps the object alive.
+template<std::size_t I, class Bits, ownership Own, bool Windowed>
+        requires is_static_width_owner<Bits, Own, Windowed> and (I < Bits::extent)
+[[nodiscard]] constexpr auto get(sequence_adaptor<Bits, Own, Windowed>&& c) noexcept
+{
+        return get<I>(c);
+}
+
+template<std::size_t I, class Bits, ownership Own, bool Windowed>
+        requires is_static_width_owner<Bits, Own, Windowed> and (I < Bits::extent)
+[[nodiscard]] constexpr auto get(sequence_adaptor<Bits, Own, Windowed> const&& c) noexcept
+{
+        return get<I>(c);
+}
+
 }       // namespace xstd
 
 // NOLINTBEGIN(bugprone-std-namespace-modification): the two opt-ins [range.view] and [range.range] invite for a program-defined type.
@@ -975,6 +1113,32 @@ inline constexpr bool enable_borrowed_range<xstd::sequence_adaptor<Bits, xstd::o
 // NOLINTBEGIN(bugprone-std-namespace-modification)
 namespace std {
 
+// [array.tuple]'s three, over the static-width owner. tuple_element names the PROXY and not bool, because a
+// structured binding binds a reference to tuple_element_t and get returns the proxy by value: name bool there and
+// there is nothing for the binding to bind. The const specialization is written out for the same reason -- the
+// generic one adds const to the proxy, where a const container hands back a proxy over const storage instead, and
+// those are two types rather than one type twice.
+template<class Bits, xstd::ownership Own, bool Windowed>
+        requires xstd::is_static_width_owner<Bits, Own, Windowed>
+struct tuple_size<xstd::sequence_adaptor<Bits, Own, Windowed>>
+:
+        integral_constant<size_t, Bits::extent>
+{};
+
+template<size_t I, class Bits, xstd::ownership Own, bool Windowed>
+        requires xstd::is_static_width_owner<Bits, Own, Windowed> and (I < Bits::extent)
+struct tuple_element<I, xstd::sequence_adaptor<Bits, Own, Windowed>>
+{
+        using type = xstd::sequence_adaptor<Bits, Own, Windowed>::reference;
+};
+
+template<size_t I, class Bits, xstd::ownership Own, bool Windowed>
+        requires xstd::is_static_width_owner<Bits, Own, Windowed> and (I < Bits::extent)
+struct tuple_element<I, const xstd::sequence_adaptor<Bits, Own, Windowed>>
+{
+        using type = xstd::sequence_adaptor<Bits, Own, Windowed>::const_reference;
+};
+
 // The owner hashes as std::vector<bool> does; a view no more than std::span does.
 template<class Bits, bool Windowed>
 struct hash<xstd::sequence_adaptor<Bits, xstd::ownership::owns, Windowed>>
@@ -990,10 +1154,18 @@ struct hash<xstd::sequence_adaptor<Bits, xstd::ownership::owns, Windowed>>
 // NOLINTEND(bugprone-std-namespace-modification)
 
 // Not a range to ContainerHash, so Hash2 takes the hook and not its range overload, which cannot hash the proxy the iterator returns.
+//
+// And not tuple-like either, for the same reason and a newer cause: [array.tuple] gave the static-width owner a
+// std::tuple_size specialization, and that is exactly what is_tuple_like detects -- so Hash2 saw its tuple overload
+// beside the hook and called the pair ambiguous. The interface is std::array's to offer; which overload a hashing
+// library picks for it is this header's to say.
 namespace boost::container_hash {
 
 template<class Bits, xstd::ownership Own, bool Windowed>
 struct is_range<xstd::sequence_adaptor<Bits, Own, Windowed>> : std::false_type {};
+
+template<class Bits, xstd::ownership Own, bool Windowed>
+struct is_tuple_like<xstd::sequence_adaptor<Bits, Own, Windowed>> : std::false_type {};
 
 }       // namespace boost::container_hash
 

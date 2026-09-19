@@ -243,7 +243,7 @@ BOOST_AUTO_TEST_CASE(RangesAlgorithmsReachTheBitsThroughIterMoveAndIterSwap)
         BOOST_CHECK_EQUAL(static_cast<bool>(*rfirst), model.back());
 }
 
-// format_as is what fmt calls, unqualified, so calling it the same way is the test.
+// format_as is what the proxy's own std::formatter calls, unqualified, and what fmt would call in a consumer that uses it, so calling it the same way is the test.
 BOOST_AUTO_TEST_CASE(TheProxyFormatsAsItsValue)
 {
         auto c = Bits();

@@ -18,9 +18,10 @@
 #include <algorithm>                              // min, ranges::copy
 #include <cassert>                                // assert
 #include <compare>                                // strong_ordering
-#include <concepts>                               // same_as, swappable
+#include <concepts>                               // integral, same_as, swappable
 #include <cstddef>                                // size_t
-#include <format>                                 // format
+#include <cstdint>                                // uint_least32_t
+#include <format>                                 // format, formattable
 #include <functional>                             // hash
 #include <ios>                                    // ios_base
 #include <iosfwd>                                 // basic_istream, basic_ostream
@@ -34,7 +35,7 @@
 #include <stdexcept>                              // invalid_argument, out_of_range, overflow_error
 #include <string>                                 // basic_string, char_traits
 #include <string_view>                            // basic_string_view
-#include <type_traits>                            // is_nothrow_swappable_v, remove_cvref_t
+#include <type_traits>                            // is_array_v, is_nothrow_swappable_v, is_standard_layout_v, is_trivially_copyable_v, is_trivially_default_constructible_v, remove_cv_t, remove_cvref_t
 #include <utility>                                // as_const
 
 namespace xstd {
@@ -299,9 +300,20 @@ public:
                 }
         }
 
-        // Constrained to the character types, so a pointer to a block reaches the block-range constructor above and never instantiates a string_view over the block.
+        // LWG 4294's four traits, verbatim: the char-like requirements, so this constructor is not instantiated for a
+        // charT that would make the basic_string_view below ill-formed OUTSIDE the immediate context. They arrived with
+        // the string_view overload P2697R1 added above -- before it, the const charT* overload went through
+        // basic_string and needed no such guard.
+        //
+        // And ONE clause the standard does not have, because std::bitset has no overload to be told apart from: a
+        // pointer to a block is the block-range constructor's argument, not a string's. Nothing else is subtracted,
+        // so a program-defined char-like type reaches this exactly as it reaches std::bitset's.
         template<class charT>
-                requires (std::same_as<charT, char> or std::same_as<charT, wchar_t> or std::same_as<charT, char8_t> or std::same_as<charT, char16_t> or std::same_as<charT, char32_t>)
+                requires (not std::same_as<std::remove_cv_t<charT>, block_type>)
+                     and (not std::is_array_v<charT>)
+                     and std::is_trivially_copyable_v<charT>
+                     and std::is_standard_layout_v<charT>
+                     and std::is_trivially_default_constructible_v<charT>
         [[nodiscard]] constexpr explicit bitset_adaptor(
                 charT const* str,
                 std::size_t n = std::basic_string_view<charT>::npos,
@@ -779,18 +791,54 @@ private:
                 return nrv;
         }
 
+        // The three characters go into the message in whatever way they can be written down, and the arms are not a
+        // nicety: std::format needs a std::formatter<charT, char>, and the standard specializes formatter<charT, charT>
+        // and formatter<char, wchar_t> and nothing else. So there is no formatter<wchar_t, char>, nor for any of the
+        // three Unicode char types -- and formatting them unconditionally made this error path ill-formed for every
+        // charT but char, on a constructor that has taken all five since it was written. Nothing caught it because
+        // is_constructible_v asks the declaration and never instantiates the body; it took a call to find it.
+        //
+        // LWG 4294 widens the door further still, to any char-like type, and a program-defined one is not even
+        // integral. That is the same ill-formed-outside-the-immediate-context trap the issue exists to close, one
+        // layer down from where it closed it.
         template<class charT>
         static constexpr auto invalid_argument(
                 charT ch, charT zero = static_cast<charT>('0'), charT one = static_cast<charT>('1'),
                 std::source_location const& loc = std::source_location::current()
         )
         {
-                return std::invalid_argument(
-                        std::format(
-                                "{}:{}:{}: exception: ‘{}‘: invalid argument ‘ch‘ [{} != {} or {}]",
-                                loc.file_name(), loc.line(), loc.column(), loc.function_name(), ch, zero, one
-                        )
-                );
+                // The format string is spelled out per arm rather than built: std::format takes a format_string, which
+                // is consteval over the argument types, so a std::string assembled here would not be one.
+                if constexpr (std::formattable<charT, char>) {
+                        return std::invalid_argument(
+                                std::format(
+                                        "{}:{}:{}: exception: ‘{}‘: invalid argument ‘ch‘ [{} != {} or {}]",
+                                        loc.file_name(), loc.line(), loc.column(), loc.function_name(), ch, zero, one
+                                )
+                        );
+                } else if constexpr (std::integral<charT>) {
+                        // A code unit is a number where it is not a character, which is what every char type but char
+                        // is to a narrow format string. Said as numbers rather than dropped: the position of the
+                        // offending unit is the whole of what the message is for.
+                        return std::invalid_argument(
+                                std::format(
+                                        "{}:{}:{}: exception: ‘{}‘: invalid argument ‘ch‘ [{} != {} or {}]",
+                                        loc.file_name(), loc.line(), loc.column(), loc.function_name(),
+                                        // On one line, as the narrow arm above spells its three: split over three, gcov hands
+                                        // the first two a counter of their own that the call on the third never reaches, and
+                                        // two lines of an arm every test of this message runs read as never executed.
+                                        static_cast<std::uint_least32_t>(ch), static_cast<std::uint_least32_t>(zero), static_cast<std::uint_least32_t>(one)
+                                )
+                        );
+                } else {
+                        // Char-like, and neither a character nor a number to anything that could write it down.
+                        return std::invalid_argument(
+                                std::format(
+                                        "{}:{}:{}: exception: ‘{}‘: invalid argument ‘ch‘",
+                                        loc.file_name(), loc.line(), loc.column(), loc.function_name()
+                                )
+                        );
+                }
         }
 
         [[nodiscard]] constexpr auto out_of_range(std::size_t pos, std::source_location const& loc = std::source_location::current()) const
@@ -881,6 +929,17 @@ auto operator>>(std::basic_istream<charT, traits>& is, bitset_adaptor<Bits>& x)
                         return std::numeric_limits<std::size_t>::max();
                 }
         }();
+        // [bitset.operators]/4 makes this a FORMATTED input function, and the sentry is what that means: leading
+        // whitespace is skipped, and an exhausted stream fails before a character is ever looked at. Peeking
+        // straight at the stream skipped both -- std::bitset<3> reads "  101" and this one used to refuse it, which
+        // is a difference in the answer and not only in the bookkeeping. The sentry also decides the zero-width
+        // case that no other clause reaches: at N == 0 nothing below can set failbit, so an empty stream is failed
+        // here or nowhere, and std::bitset<0> fails it.
+        auto const guard = typename std::basic_istream<charT, traits>::sentry(is);
+        if (not guard) {
+                // A failed sentry extracts nothing, so x keeps the value it had ([istream.formatted.reqmts]).
+                return is;
+        }
         auto str = std::basic_string<charT, traits>();
         // Assigned inside an if constexpr the zero-width instantiation discards.
         auto state = std::ios_base::goodbit;  // NOLINT(misc-const-correctness)
