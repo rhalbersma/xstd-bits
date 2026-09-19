@@ -22,8 +22,9 @@
 #include <cstddef>                                       // size_t
 #include <cstdint>                                       // uint8_t, uint64_t
 #include <functional>                                    // hash
-#include <iterator>                                      // back_inserter
+#include <iterator>                                      // back_inserter, contiguous_iterator
 #include <limits>                                        // numeric_limits
+#include <list>                                          // list
 #include <ranges>                                        // equal, iota, range, reverse
 #include <sstream>                                       // istringstream
 #include <stdexcept>                                     // out_of_range, overflow_error
@@ -375,6 +376,39 @@ BOOST_AUTO_TEST_CASE(TheBlockInterfaceIsBoosts)
         from_block_range(dirty.begin(), dirty.begin() + 1, c);
         BOOST_CHECK_EQUAL(c.count(), 2UZ);
         BOOST_CHECK(c.test(7) and c.test(8));
+}
+
+// from_block_range copies the span where its source is contiguous and sized, and loops where it is not. Every caller above hands it a vector or an array, so the loop is the arm that would otherwise stop being exercised the day the copy was added -- and the two arms answering differently is the only way this change can be wrong.
+BOOST_AUTO_TEST_CASE(TheTwoArmsOfFromBlockRangeAgree)
+{
+        // A list is neither contiguous nor sized against its sentinel, so it takes the loop; the same blocks out of a vector take the copy.
+        static_assert(not std::contiguous_iterator<std::list<std::uint8_t>::const_iterator>);
+        static_assert(std::contiguous_iterator<std::vector<std::uint8_t>::const_iterator>);
+
+        auto const sources = std::vector<std::vector<std::uint8_t>>{
+                {},                                             // nothing named leaves the target alone
+                { 0b1010'0101 },                                // fewer blocks than there are
+                { 0b1010'0101, 0b1 },
+                { 0b0000'0000, 0b0 },
+                { 0b1111'1111, 0b1111'1111 },                   // a dirty tail, masked by both arms alike
+        };
+        for (auto const& blocks : sources) {
+                auto const as_list = std::list<std::uint8_t>(blocks.begin(), blocks.end());
+
+                // A non-empty starting value, so "leaves the rest alone" is something the check can see.
+                auto copied = Ours("101000001");
+                auto looped = Ours("101000001");
+                from_block_range(blocks.begin(), blocks.end(), copied);
+                from_block_range(as_list.begin(), as_list.end(), looped);
+
+                BOOST_CHECK(copied == looped);
+
+                auto out_copied = std::vector<std::uint8_t>();
+                auto out_looped = std::vector<std::uint8_t>();
+                to_block_range(copied, std::back_inserter(out_copied));
+                to_block_range(looped, std::back_inserter(out_looped));
+                BOOST_CHECK(out_copied == out_looped);
+        }
 }
 
 // boost's remaining members at a static width, where every guard throws: at, test_set, the ranged forms, max_size; no allocator, the storage having none.
