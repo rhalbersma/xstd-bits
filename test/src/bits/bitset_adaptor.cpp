@@ -48,6 +48,18 @@ struct digit_char
         // of LWG 4294's four traits and the one libstdc++ asserts by name inside basic_string and basic_string_view.
         unsigned char v;
 
+        // Defaulted on first declaration, so the default constructor below leaves it trivial and all four traits hold.
+        constexpr digit_char() noexcept = default;
+
+        // And a converting constructor, because the string constructors spell their defaults charT('0') -- as
+        // [bitset.cons] spells them. On a bare aggregate that is parenthesized aggregate initialization, which clang
+        // diagnoses as a C++20 extension and -Werror turns into an error; libstdc++'s own bitset does exactly the
+        // same thing and is only spared because a system header does not warn. A real conversion instead.
+        constexpr digit_char(unsigned char c) noexcept  // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
+        :
+                v(c)
+        {}
+
         [[nodiscard]] friend constexpr auto operator==(digit_char, digit_char) noexcept -> bool = default;
 };
 
