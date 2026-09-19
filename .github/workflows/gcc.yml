@@ -27,3 +27,15 @@ jobs:
     uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@18949f87a8a7fb439c60ae7988c573831523c18e # v0.10.1
     with:
       cmake_args: -DXSTD_BITS_BUILD_BENCHMARKS=ON
+
+  # The inplace column and nothing else: std::inplace_vector is behind __cpp_lib_inplace_vector, which is C++26, so
+  # at the standard every other leg compiles as, three of the nine cells compile to nothing and are never tested.
+  # CMakeLists.txt raises the standard for the test tree alone -- the INTERFACE a consumer inherits stays at 23 --
+  # and this is the leg that asks it to. The qualification rung is GCC 16, which is the oldest GCC that has the
+  # header; the stable rung would configure and then test six cells twice. No benchmarks: the ladder above builds
+  # those, and this one is here for the three cells it is the only leg to reach.
+  gcc_cxx26:
+    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@18949f87a8a7fb439c60ae7988c573831523c18e # v0.10.1
+    with:
+      tiers: qualification
+      cmake_args: -DXSTD_BITS_CXX_STANDARD=26

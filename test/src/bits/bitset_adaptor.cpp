@@ -44,7 +44,9 @@ namespace {
 
 struct digit_char
 {
-        unsigned char v = 0;
+        // NO default member initializer: one would make this non-trivially-default-constructible, which is the third
+        // of LWG 4294's four traits and the one libstdc++ asserts by name inside basic_string and basic_string_view.
+        unsigned char v;
 
         [[nodiscard]] friend constexpr auto operator==(digit_char, digit_char) noexcept -> bool = default;
 };

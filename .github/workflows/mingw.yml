@@ -25,3 +25,12 @@ jobs:
   # No inputs: every rung. The WinLibs release lookup lives in cpp-ci's install-winlibs action now.
   mingw:
     uses: rhalbersma/cpp-ci/.github/workflows/mingw.yml@18949f87a8a7fb439c60ae7988c573831523c18e # v0.10.1
+
+  # The same C++26 leg as gcc.yml's, over the other libstdc++ toolchain: the inplace column is three of the nine
+  # cells and no leg at C++23 compiles any of it. The qualification rung is MinGW 16, this ladder having no
+  # development rung -- WinLibs publishes no snapshot.
+  mingw_cxx26:
+    uses: rhalbersma/cpp-ci/.github/workflows/mingw.yml@18949f87a8a7fb439c60ae7988c573831523c18e # v0.10.1
+    with:
+      tiers: qualification
+      cmake_args: -DXSTD_BITS_CXX_STANDARD=26
