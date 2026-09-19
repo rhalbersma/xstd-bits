@@ -185,8 +185,9 @@ concept inplace_vector_bool = container_members<C> and requires (C c, C o, C con
         { c.push_back(b)     } -> std::same_as<typename C::reference>;
         c.pop_back();
         // The non-throwing door and the unchecked one, which are the whole reason this column is a container apart.
-        { c.try_emplace_back(b)       } -> std::same_as<std::optional<typename C::reference>>;
-        { c.try_push_back(b)          } -> std::same_as<std::optional<typename C::reference>>;
+        // The try_ pair is asked for by NAME here and not by return type: see below.
+        c.try_emplace_back(b);
+        c.try_push_back(b);
         { c.unchecked_emplace_back(b) } -> std::same_as<typename C::reference>;
         { c.unchecked_push_back(b)    } -> std::same_as<typename C::reference>;
         { c.emplace(p, b)             } -> std::same_as<typename C::iterator>;
@@ -200,6 +201,18 @@ concept inplace_vector_bool = container_members<C> and requires (C c, C o, C con
         c.clear();
         { erase(c, b)                          } -> std::same_as<typename C::size_type>;
         { erase_if(c, [](bool) { return true; }) } -> std::same_as<typename C::size_type>;
+};
+
+// P3981R0 changed try_emplace_back and try_push_back from returning a pointer to returning optional<reference>,
+// which P2988R12's optional<T&> is what made possible. The draft is this library's yardstick and optional<reference>
+// is what it says, so that is what the packing returns -- but libstdc++ 16 still returns the pointer P0843R14 gave
+// them, and a checklist asserted on the model first cannot ask the model for a signature the model has not caught up
+// to. So the name is asked of both above and the return type is pinned here, over the packing alone. When the
+// implementations land P3981R0 these two lines move back up into the checklist and this concept goes away.
+template<class C>
+concept inplace_vector_bool_try_returns = requires (C c, bool b) {
+        { c.try_emplace_back(b) } -> std::same_as<std::optional<typename C::reference>>;
+        { c.try_push_back(b)    } -> std::same_as<std::optional<typename C::reference>>;
 };
 
 // What the packing adds over [inplace.vector], which its unpacked counterpart has no reason to carry: the bitwise

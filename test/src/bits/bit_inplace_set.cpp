@@ -42,6 +42,11 @@ BOOST_AUTO_TEST_CASE(TheInplaceSetIsTheSetAdaptorOverAnInplaceVectorOfBlocks)
         static_assert(test::set::bit_set<T>);
 }
 
+// A requires-expression whose requirement fails for a concrete type is ill-formed rather than false
+// ([expr.prim.req]/5), so the question goes through a template parameter and not to the type directly.
+template<class X>
+constexpr bool has_allocator_type = requires { typename X::allocator_type; };
+
 // This column has no counterpart either, and answers the dynamic column's synopsis all the same.
 BOOST_AUTO_TEST_CASE(ItAnswersEveryLineOfStdSetSizeTAnyway)
 {
@@ -54,7 +59,7 @@ BOOST_AUTO_TEST_CASE(ItAnswersEveryLineOfStdSetSizeTAnyway)
         static_assert(test::set::set_size_t<T>);
         static_assert(test::set::set_size_t<xstd::bit_inplace_set<24>>);
         static_assert(test::set::set_size_t_ranges<T>);
-        static_assert(not requires { typename T::allocator_type; });
+        static_assert(not has_allocator_type<T>);
 }
 
 // Built from a range as std::set is, and ordered as std::set is.

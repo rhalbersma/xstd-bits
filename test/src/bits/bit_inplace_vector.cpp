@@ -7,7 +7,7 @@
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #ifdef TEST_HAS_INPLACE_VECTOR
 
-#include <test/sequence/concepts.hpp>                         // bit_sequence, inplace_vector_bool, inplace_vector_bool_ranges, packed_inplace_vector_bool
+#include <test/sequence/concepts.hpp>                         // bit_sequence, inplace_vector_bool, inplace_vector_bool_ranges, inplace_vector_bool_try_returns, packed_inplace_vector_bool
 #include <test/sequence/dense.hpp>                            // yields_every_position
 #include <xstd/bits/bit_inplace_vector.hpp>                   // basic_bit_inplace_vector, bit_inplace_vector
 #include <xstd/bits/detail/contiguous_bit_inplace_vector.hpp> // contiguous_bit_inplace_vector
@@ -61,6 +61,14 @@ BOOST_AUTO_TEST_CASE(ItAnswersEveryLineOfStdInplaceVectorBool)
         // The allocator is the storage's, and this storage has none: the checklist that asks for one does not apply.
         static_assert(has_allocator<std::vector<bool>>);
         static_assert(not has_allocator<T>);
+}
+
+// P3981R0's return type, over the packing alone: libstdc++ 16 still returns the pointer P0843R14 gave these two,
+// so the checklist above asks the model for the name and this asks the packing for the signature the draft spells.
+BOOST_AUTO_TEST_CASE(TheTryDoorsReturnTheOptionalReferenceTheDraftSpells)
+{
+        static_assert(test::sequence::inplace_vector_bool_try_returns<T>);
+        static_assert(test::sequence::inplace_vector_bool_try_returns<xstd::bit_inplace_vector<24>>);
 }
 
 // What the packing adds on top, which the unpacked counterpart has no reason to carry.
