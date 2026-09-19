@@ -403,6 +403,8 @@ auto aggregate_disagreements(Seq const& s, std::vector<bool> const& m)
         for (auto const value : { true, false }) {
                 auto const is = [value](bool b) -> bool { return b == value; };
                 disagreements += static_cast<std::size_t>(s.count(value) != static_cast<std::size_t>(std::ranges::count(m, value)));
+                // And against the generic algorithm over the SEQUENCE itself, not only over the model: the member counts a word at a time where the algorithm reaches through the proxy a bit at a time, and benchmark/src/sequence/access.cpp puts those two costs side by side. A ratio between them is a cost only while they answer the same number. Not a unique guard -- breaking the proxy's read fails this suite in seven other cases too -- but it is the benchmark's premise, stated where the benchmark can be read against it.
+                disagreements += static_cast<std::size_t>(s.count(value) != static_cast<std::size_t>(std::ranges::count(s, value)));
                 disagreements += static_cast<std::size_t>(s.all (value) != std::ranges::all_of (m, is));
                 disagreements += static_cast<std::size_t>(s.any (value) != std::ranges::any_of (m, is));
                 disagreements += static_cast<std::size_t>(s.none(value) != std::ranges::none_of(m, is));
