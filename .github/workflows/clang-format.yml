@@ -19,7 +19,7 @@ on:
 jobs:
   # Its own tier, left at stable: a formatter release reformats the code base.
   clang_format:
-    uses: rhalbersma/cpp-ci/.github/workflows/clang-format.yml@18949f87a8a7fb439c60ae7988c573831523c18e # v0.10.1
+    uses: rhalbersma/cpp-ci/.github/workflows/clang-format.yml@29fdd6605bf237863ad39c3919c2cf389cfb6d38 # v0.10.2
     with:
       # benchmark/ too, this repository carrying a benchmark tree of hand-written sources.
       paths: examples include test benchmark

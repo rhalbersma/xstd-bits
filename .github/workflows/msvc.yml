@@ -24,6 +24,6 @@ on:
 jobs:
   # The 2026 generation only. The 2022 rung is gone because MSVC 17 cannot deduce through an alias template of the shape the two views need -- "C2976: 'xstd::bit_set_view': too few template arguments" -- while MSVC 18 can. clang-cl.yml keeps its 2022 rung, which passes: clang-cl is clang, so what broke is the MSVC compiler at 2022 and not the VS 2022 platform.
   msvc:
-    uses: rhalbersma/cpp-ci/.github/workflows/visual-studio.yml@18949f87a8a7fb439c60ae7988c573831523c18e # v0.10.1
+    uses: rhalbersma/cpp-ci/.github/workflows/visual-studio.yml@29fdd6605bf237863ad39c3919c2cf389cfb6d38 # v0.10.2
     with:
       tiers: qualification,development

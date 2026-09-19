@@ -24,21 +24,13 @@ on:
 jobs:
   # No inputs: every rung. The WinLibs release lookup lives in cpp-ci's install-winlibs action now.
   mingw:
-    uses: rhalbersma/cpp-ci/.github/workflows/mingw.yml@18949f87a8a7fb439c60ae7988c573831523c18e # v0.10.1
+    uses: rhalbersma/cpp-ci/.github/workflows/mingw.yml@29fdd6605bf237863ad39c3919c2cf389cfb6d38 # v0.10.2
 
   # The same C++26 leg as gcc.yml's, over the other libstdc++ toolchain: the inplace column is three of the nine
   # cells and no leg at C++23 compiles any of it. The qualification rung is MinGW 16, this ladder having no
   # development rung -- WinLibs publishes no snapshot.
   mingw_cxx26:
-    uses: rhalbersma/cpp-ci/.github/workflows/mingw.yml@18949f87a8a7fb439c60ae7988c573831523c18e # v0.10.1
+    uses: rhalbersma/cpp-ci/.github/workflows/mingw.yml@29fdd6605bf237863ad39c3919c2cf389cfb6d38 # v0.10.2
     with:
       tiers: qualification
-      # TWO arguments where one would do, and the second is the default it already has. cpp-ci's mingw leg configures
-      # from pwsh and builds its extra arguments as `$env:EXTRA_CMAKE -split '\s+' | Where-Object { $_ }`. A pipeline
-      # yielding ONE object assigns a String rather than an Object[], and splatting a String enumerates it: the leg
-      # then ran cmake with '-', 'D', 'X', ... one character per argument, and cmake answered "Unknown argument -"
-      # and "Ignoring extra path 6". At two or more the split yields an array and the splat is what it looks like.
-      #
-      # The bash legs are unaffected, which is why gcc_cxx26 takes the single argument and this one cannot. Belongs
-      # upstream in cpp-ci -- every pwsh leg there has it -- and this is the caller-side shim until it lands.
-      cmake_args: -DXSTD_BITS_CXX_STANDARD=26 -DXSTD_BITS_BUILD_BENCHMARKS=OFF
+      cmake_args: -DXSTD_BITS_CXX_STANDARD=26
