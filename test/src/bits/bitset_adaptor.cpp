@@ -255,6 +255,76 @@ BOOST_AUTO_TEST_CASE(TheReverseSearchesMirrorTheForwardOnes)
         BOOST_CHECK(std::ranges::equal(forward, std::views::reverse(backward)));
 }
 
+// The three walks over one bitset answer the same positions in the same order. Iteration and for_each were already held to each other, in the set reading's own tests; what is new here is the SCAN beside them, because that is the walk a benchmark puts against boost's find_first/find_next, and a ratio between two scans is a cost only while both answer the same thing.
+// It is also the walk that can disagree. The other two carry their own state -- an index, a block with the reported bit cleared -- where every step of the scan is a fresh entry at a position, and find_next's npos guard is the whole of what keeps a step past the last set position from wrapping round to the first.
+template<class T>
+auto scanned(T const& b)
+        -> std::vector<std::size_t>
+{
+        auto v = std::vector<std::size_t>();
+        for (auto pos = b.find_first(); pos != T::npos; pos = b.find_next(pos)) {
+                v.push_back(pos);
+        }
+        return v;
+}
+
+template<class T>
+auto walks_agree(T const& b)
+        -> bool
+{
+        auto iterated = std::vector<std::size_t>();
+        for (auto const pos : xstd::bit_set_view(b)) {
+                iterated.push_back(pos);
+        }
+        auto blockwise = std::vector<std::size_t>();
+        xstd::bit_set_view(b).for_each([&blockwise](std::size_t pos) -> void { blockwise.push_back(pos); });
+        auto const scan = scanned(b);
+        return scan == iterated and scan == blockwise and scan.size() == b.count();
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(TheScanWalksWhatIterationWalks, T, Static)
+{
+        auto const none = T();
+        BOOST_CHECK(walks_agree(none));
+
+        auto all = T();
+        all.set();
+        BOOST_CHECK(walks_agree(all));
+
+        // One position at a time, the last one included: that is the step whose next entry is past the width, and the only one at a width of one.
+        for (auto const i : std::views::iota(0UZ, all.size())) {
+                auto one = T();
+                one.set(i);
+                BOOST_CHECK(walks_agree(one));
+        }
+
+        // A stride that leaves whole blocks empty between set positions, which is where the scan walks blocks rather than bits.
+        auto sparse = T();
+        for (auto i = 0UZ; i < sparse.size(); i += 17UZ) {
+                sparse.set(i);
+        }
+        BOOST_CHECK(walks_agree(sparse));
+}
+
+// The same at a run-time width, which is the width the ladder in benchmark/src/bitset/dynamic.cpp measures and the one whose scan takes the general arm rather than a one- or two-block unrolling.
+BOOST_AUTO_TEST_CASE(TheScanWalksWhatIterationWalksAtARunTimeWidth)
+{
+        for (auto const n : { 0UZ, 1UZ, 63UZ, 64UZ, 65UZ, 129UZ, 512UZ }) {
+                auto const none = xstd::dynamic_bitset(n);
+                BOOST_CHECK(walks_agree(none));
+
+                auto all = xstd::dynamic_bitset(n);
+                all.set();
+                BOOST_CHECK(walks_agree(all));
+
+                auto sparse = xstd::dynamic_bitset(n);
+                for (auto i = 0UZ; i < n; i += 17UZ) {
+                        sparse.set(i);
+                }
+                BOOST_CHECK(walks_agree(sparse));
+        }
+}
+
 // The ordering is the bit string's, to_string() compared, which within a word is the number's.
 BOOST_AUTO_TEST_CASE(TheOrderingIsTheBitStrings)
 {
