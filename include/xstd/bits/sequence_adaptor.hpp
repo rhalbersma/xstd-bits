@@ -644,7 +644,7 @@ public:
                 -> size_type
                 requires has_static_capacity
         {
-                return bits_type::static_capacity;
+                return bits_type::static_capacity();
         }
 
         // std::vector<bool>'s answer where this reading can grow, and the width itself where it cannot: the storage computes both ceilings and this reading picks the one its counterpart names, a random access range's positions being counted by a difference_type. A view is its own ceiling, growing nothing.
@@ -765,7 +765,7 @@ public:
                 -> size_type
                 requires has_static_capacity
         {
-                return bits_type::static_capacity;
+                return bits_type::static_capacity();
         }
 
         // Static, and throwing rather than growing: there is nothing to reserve that the type does not already have,

@@ -70,7 +70,18 @@ public:
 
         // The capacity in bits, where it is a property of the type: the blocks' own, which is what capacity() below
         // multiplies out for an object. align_up(N, bits_per_block) by construction, the blocks being num_blocks_v.
-        static constexpr auto static_capacity = has_static_capacity ? Blocks::capacity() * bits_per_block : 0UZ;
+        //
+        // A FUNCTION and not a variable, so the std::vector column never instantiates the body: both arms of a ?: are
+        // instantiated, and Blocks::capacity() is a hard error there rather than the false the trait above answers.
+        [[nodiscard]] static constexpr auto static_capacity() noexcept
+                -> std::size_t
+        {
+                if constexpr (has_static_capacity) {
+                        return Blocks::capacity() * bits_per_block;
+                } else {
+                        return 0UZ;
+                }
+        }
 
         // The width as a type, dynamic_extent where there is none: what a reading asks when it needs the width before an object exists.
         static constexpr std::size_t extent = N;
