@@ -79,20 +79,26 @@ concept container_members = reversible_container_typedefs<C> and requires (C c, 
         swap(c, c);
 };
 
-// [array]'s synopsis, data() aside, as one requires-expression: std::array<bool, N> and the packing both accept
-// every line. data() is the only one a packed bool cannot answer -- a bit has no address -- and [array.tuple] IS
-// answerable, so it is asked for here rather than excused along with it.
+// [array.tuple]'s element half, which only a non-empty array has: tuple_element<I, array<T, N>> Mandates I < N, so
+// element zero is a question that cannot be put to a width of nought -- on the packing or on std::array itself.
 template<class C>
-concept array_bool = container_members<C> and requires (C c, C const cc, bool b) {
-        C();
-        C{ b, b };
-        c.fill(b);
-        { std::tuple_size<C>::value } -> std::convertible_to<std::size_t>;
+concept array_tuple_element = (std::tuple_size<C>::value == 0) or requires (C c, C const cc) {
         typename std::tuple_element<0, C>::type;
         typename std::tuple_element<0, C const>::type;
         get<0>(c);
         get<0>(cc);
         get<0>(std::move(c));
+};
+
+// [array]'s synopsis, data() aside, as one requires-expression: std::array<bool, N> and the packing both accept
+// every line. data() is the only one a packed bool cannot answer -- a bit has no address -- and [array.tuple] IS
+// answerable, so it is asked for here rather than excused along with it.
+template<class C>
+concept array_bool = container_members<C> and array_tuple_element<C> and requires (C c, bool b) {
+        C();
+        C{ b, b };
+        c.fill(b);
+        { std::tuple_size<C>::value } -> std::convertible_to<std::size_t>;
 };
 
 // [vector.bool]'s synopsis, likewise, with [vector.erasure] and the allocator: std::vector<bool> is the model and the packing answers every line of it.

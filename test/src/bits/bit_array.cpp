@@ -112,20 +112,20 @@ BOOST_AUTO_TEST_CASE(ItAnswersTheTupleInterfaceStdArrayCarries)
         static_assert(std::same_as<std::tuple_element_t<0, A const>, typename A::const_reference>);
 
         auto a = A({ true, false, true });
-        BOOST_CHECK(get<0>(a));
-        BOOST_CHECK(not get<1>(a));
-        BOOST_CHECK(get<2>(a));
+        BOOST_CHECK(get<0>(a) == true);
+        BOOST_CHECK(get<1>(a) == false);
+        BOOST_CHECK(get<2>(a) == true);
 
         // A proxy, so a binding over the array itself writes through to it. By value it would bind to the copy the
         // binding makes, which is what std::array's T& does too -- the reference is to whatever e names.
         auto& [ x, y, z ] = a;
         y = true;
-        BOOST_CHECK(a[1]);
-        BOOST_CHECK(x);
-        BOOST_CHECK(z);
+        BOOST_CHECK(a[1] == true);
+        BOOST_CHECK(x == true);
+        BOOST_CHECK(z == true);
 
         auto const& ca = a;
-        BOOST_CHECK(get<0>(ca));
+        BOOST_CHECK(get<0>(ca) == true);
 }
 
 // std::array's aggregate initialization: what is listed leads and the rest stays false.

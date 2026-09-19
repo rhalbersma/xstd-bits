@@ -16,6 +16,7 @@
 #include <xstd/misc/concepts/specialization_of.hpp> // specialization_of_TN
 #include <xstd/misc/type_traits/empty_base_type.hpp>          // empty_base_type
 #include <boost/container_hash/is_range.hpp>      // is_range
+#include <boost/container_hash/is_tuple_like.hpp> // is_tuple_like
 #include <boost/hash2/hash_append.hpp>            // hash_append_tag
 #include <algorithm>                              // copy, min, remove_if
 #include <cassert>                                // assert
@@ -1153,10 +1154,18 @@ struct hash<xstd::sequence_adaptor<Bits, xstd::ownership::owns, Windowed>>
 // NOLINTEND(bugprone-std-namespace-modification)
 
 // Not a range to ContainerHash, so Hash2 takes the hook and not its range overload, which cannot hash the proxy the iterator returns.
+//
+// And not tuple-like either, for the same reason and a newer cause: [array.tuple] gave the static-width owner a
+// std::tuple_size specialization, and that is exactly what is_tuple_like detects -- so Hash2 saw its tuple overload
+// beside the hook and called the pair ambiguous. The interface is std::array's to offer; which overload a hashing
+// library picks for it is this header's to say.
 namespace boost::container_hash {
 
 template<class Bits, xstd::ownership Own, bool Windowed>
 struct is_range<xstd::sequence_adaptor<Bits, Own, Windowed>> : std::false_type {};
+
+template<class Bits, xstd::ownership Own, bool Windowed>
+struct is_tuple_like<xstd::sequence_adaptor<Bits, Own, Windowed>> : std::false_type {};
 
 }       // namespace boost::container_hash
 

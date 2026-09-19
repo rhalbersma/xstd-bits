@@ -6,6 +6,7 @@
 #ifndef XSTD_BITS_SET_ADAPTOR_HPP
 #define XSTD_BITS_SET_ADAPTOR_HPP
 
+#include <xstd/bits/detail/allocator_base_type.hpp>       // allocator_base_type
 #include <xstd/bits/detail/bidirectional.hpp>            // bidirectional_bit_iterator, bidirectional_bit_reference
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/detail/hash.hpp>                     // hash_append_bits, hash_append_positions, std_hash
@@ -14,6 +15,7 @@
 #include <xstd/bits/detail/zero_width.hpp>               // zero_width
 #include <xstd/bits/ownership.hpp>                       // owned_bits_t, owned_storage, owner_of, owner_reading, ownership, owns, reading
 #include <xstd/misc/concepts/specialization_of.hpp>      // specialization_of_TN
+#include <xstd/misc/type_traits/empty_base_type.hpp>     // empty_base_type
 #include <boost/container_hash/is_range.hpp>             // is_range
 #include <boost/hash2/hash_append.hpp>                   // hash_append_tag
 #include <algorithm>                                     // all_of, find_if, lexicographical_compare_three_way, max, min
@@ -108,7 +110,7 @@ constexpr auto walk_blocks_descending(Bits const& c, F& f)
 
 
 template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits, ownership Own>
-class set_adaptor
+class set_adaptor : public std::conditional_t<owns(Own), detail::bits::allocator_base_type<std::remove_const_t<Bits>>, xstd::empty_base_type<>>
 {
         static constexpr bool is_owner = owns(Own);
 

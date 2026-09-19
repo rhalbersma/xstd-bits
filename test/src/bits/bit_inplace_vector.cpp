@@ -91,19 +91,19 @@ BOOST_AUTO_TEST_CASE(TheFullContainerAnswersNulloptWherePushBackWouldThrow)
         while (c.size() < c.capacity()) {
                 auto const r = c.try_push_back(true);
                 BOOST_CHECK(r.has_value());
-                BOOST_CHECK(*r);
+                BOOST_CHECK(*r == true);
         }
         BOOST_CHECK(not c.try_push_back(true).has_value());
         BOOST_CHECK(not c.try_emplace_back(false).has_value());
         BOOST_CHECK_EQUAL(c.size(), c.capacity());
 
         c.pop_back();
-        BOOST_CHECK(not c.unchecked_push_back(false));
+        BOOST_CHECK(c.unchecked_push_back(false) == false);
         BOOST_CHECK_EQUAL(c.size(), c.capacity());
 
         // push_back returns the reference here, where the dynamic column's returns nothing.
         c.pop_back();
-        BOOST_CHECK(c.push_back(true));
+        BOOST_CHECK(c.push_back(true) == true);
 }
 
 // The blocks are whole, so the capacity is the requested one rounded up, and the width moves under it.

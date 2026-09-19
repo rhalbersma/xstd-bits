@@ -51,6 +51,7 @@ struct digit_char
 
 } // namespace
 
+// NOLINTBEGIN(bugprone-std-namespace-modification,cert-dcl58-cpp): an explicit specialization for a program-defined type is what the standard invites here.
 template<>
 struct std::char_traits<digit_char>
 {
@@ -117,6 +118,7 @@ struct std::char_traits<digit_char>
         static constexpr auto eq_int_type(int_type a, int_type b) noexcept -> bool { return a == b; }
         static constexpr auto eof() noexcept -> int_type { return -1; }
 };
+// NOLINTEND(bugprone-std-namespace-modification,cert-dcl58-cpp)
 
 BOOST_AUTO_TEST_SUITE(BitsetAdaptor)
 
