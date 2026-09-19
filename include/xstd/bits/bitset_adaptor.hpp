@@ -382,7 +382,7 @@ public:
                 }
         }
 
-        // boost's ranged forms, the checked guard on the whole range at both widths, then the storage's own a word at a time.
+        // boost's ranged forms, the guard on the whole range -- asserting at a run-time width as boost does, throwing at a static one -- then the storage's own a word at a time.
         constexpr auto set(std::size_t pos, std::size_t len, bool val)
                 -> bitset_adaptor&
         {
@@ -686,16 +686,29 @@ private:
                 }
         }
 
-        // The same guard over a range, and unlike the one above it throws at both widths. That one's split is the counterparts' own: std::bitset::set(pos) throws and boost's asserts, so each of ours answers as its own counterpart does. These have no such pair to mirror -- std::bitset has no ranged form at all, the family being boost's alone -- so a static width had no counterpart to follow here and the throw was already ours to choose. Half a policy is not one, and this is the half to keep.
+        // The same guard over a range, and it splits exactly as the one above does. One rule covers both: a width
+        // answers as ITS OWN counterpart does, and a width whose counterpart has nothing here answers as its own type
+        // answers elsewhere. Element access has two counterparts to mirror -- std::bitset::set(pos) throws, boost's
+        // asserts -- and the ranged family has one, boost's, which asserts. So a run-time width asserts, which is
+        // boost's contract exactly. A static width has no ranged counterpart at all, std::bitset having no
+        // set(pos, len, val), so it follows the nearest thing it does have, its own set(pos), and throws.
         //
-        // Nor is it a narrowing of boost. The rule is that every expression *valid* on the counterpart is valid here with the same result ([a-strict-extension]), and a range past the width is not one: boost says so itself, in the BOOST_ASSERT that under NDEBUG leaves a masked write through a block index the blocks never allocated. Defining what boost leaves undefined is what an extension may add.
+        // This used to throw at BOTH widths, on the grounds that defining what boost leaves undefined is what an
+        // extension may add. It is -- but a strict extension is about what a counterpart's valid expressions do
+        // ([a-strict-extension]), and reaching past the width is not one of those, so nothing required the throw
+        // and matching boost costs a caller nothing they could portably rely on. What the assert does buy is that
+        // one family no longer answers two ways for a reason neither counterpart supplies.
         //
         // Said as a subtraction rather than as pos + len, which wraps for a pos near the top of size_t: a wrapped sum is below every width, so the check the range was meant to fail is the one it would pass. It is pos and len the diagnostic names, the sum being the thing that is not a position.
         constexpr auto guard_range(std::size_t pos, std::size_t len) const
                 -> void
         {
-                if (pos > size() or len > size() - pos) {
-                        throw out_of_range(pos, len);
+                if constexpr (has_static_width) {
+                        if (pos > size() or len > size() - pos) {
+                                throw out_of_range(pos, len);
+                        }
+                } else {
+                        assert(pos <= size() and len <= size() - pos);
                 }
         }
 
