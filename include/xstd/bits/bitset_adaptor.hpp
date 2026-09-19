@@ -586,8 +586,8 @@ public:
                 // The other half does NOT get there by itself, and this is where the storage's blocks() earns its place: 80ns and 1.36x that floor as a loop, 58ns and 0.98x as one copy into the span. The loop cannot be turned into a copy because it reaches the storage a block at a time, through a reference the compiler will not assume is the next word along.
                 // A sized sentinel as well as a contiguous iterator, because the precondition the loop asserts per block -- that the source is no longer than the storage -- is one the bulk copy has to know BEFORE it writes, and last - first is the only way to be told.
                 if constexpr (std::contiguous_iterator<I> and std::sized_sentinel_for<S, I>) {
-                        auto const n = static_cast<std::size_t>(last - first);
-                        assert(n <= result.num_blocks());
+                        // Spelled inside the assert rather than named above it: named, it is a variable the Release build initializes and never reads, which is C4189 under MSVC and -Wunused-variable under clang.
+                        assert(static_cast<std::size_t>(last - first) <= result.num_blocks());
                         std::ranges::copy(first, last, result.m_bits.blocks().begin());
                 } else {
                         for (auto i = 0UZ; first != last; ++first, ++i) {
