@@ -4,7 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/set/ascending.hpp>                     // yields_ascending_keys
-#include <test/set/concepts.hpp>                      // bit_set
+#include <test/set/concepts.hpp>                      // bit_set, set_size_t, set_size_t_allocator, set_size_t_ranges, set_size_t_ranges_allocator
 #include <xstd/bits/bit_set.hpp>                      // bit_set
 #include <xstd/bits/bit_set_view.hpp>                 // bit_set_view
 #include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
@@ -33,6 +33,25 @@ BOOST_AUTO_TEST_CASE(TheDynamicSetIsTheSetAdaptorOverAHeapOfBlocks)
         static_assert(std::same_as<T, xstd::set_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint8_t>, xstd::ownership::owns>>);
         static_assert(std::same_as<xstd::basic_bit_set<std::uint8_t, std::allocator<std::uint8_t>>, T>);
         static_assert(test::set::bit_set<T>);
+}
+
+// Every line of [set], the model first so the checklist is known to be honest. std::set<std::size_t> is this
+// column's counterpart, and the whole of it is answered but the node-based family and the heterogeneous overloads
+// neither side has -- which is the same bargain std::flat_set strikes for the same reason.
+BOOST_AUTO_TEST_CASE(ItAnswersEveryLineOfStdSetSizeT)
+{
+        static_assert(test::set::set_size_t<std::set<std::size_t>>);
+        static_assert(test::set::set_size_t<T>);
+        static_assert(test::set::set_size_t<xstd::bit_set>);
+
+        static_assert(test::set::set_size_t_allocator<std::set<std::size_t>>);
+        static_assert(test::set::set_size_t_allocator<T>);
+        static_assert(test::set::set_size_t_allocator<xstd::bit_set>);
+
+        static_assert(test::set::set_size_t_ranges<std::set<std::size_t>>);
+        static_assert(test::set::set_size_t_ranges<T>);
+        static_assert(test::set::set_size_t_ranges_allocator<std::set<std::size_t>>);
+        static_assert(test::set::set_size_t_ranges_allocator<T>);
 }
 
 // A key past the width grows the width: insert is the one operation a dynamic set cannot refuse.

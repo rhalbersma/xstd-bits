@@ -184,6 +184,53 @@ public:
                 insert(il.begin(), il.end());
         }
 
+        // [set]'s allocator arguments, deduced and matched the way the sequence reading's are, so a storage without an
+        // allocator has no such constructor. Their absence was the one place this reading answered get_allocator()
+        // for an allocator it had no door to take: a dynamic set could report one and never be given one.
+        template<class Alloc>
+                requires is_owner and std::same_as<Alloc, typename bits_type::allocator_type>
+        [[nodiscard]] constexpr explicit set_adaptor(Alloc const& alloc)
+        :
+                m_bits(alloc)
+        {}
+
+        template<std::input_iterator I, std::sentinel_for<I> S, class Alloc>
+                requires is_owner and std::constructible_from<value_type, std::iter_reference_t<I>> and std::same_as<Alloc, typename bits_type::allocator_type>
+        [[nodiscard]] constexpr set_adaptor(I first, S last, Alloc const& alloc)
+        :
+                m_bits(alloc)
+        {
+                insert(first, last);
+        }
+
+        template<std::ranges::input_range R, class Alloc>
+                requires is_owner and std::constructible_from<value_type, std::ranges::range_reference_t<R>> and std::same_as<Alloc, typename bits_type::allocator_type>
+        [[nodiscard]] constexpr set_adaptor(std::from_range_t, R&& rg, Alloc const& alloc)
+        :
+                set_adaptor(std::ranges::begin(rg), std::ranges::end(rg), alloc)
+        {}
+
+        template<class Alloc>
+                requires is_owner and std::same_as<Alloc, typename bits_type::allocator_type>
+        [[nodiscard]] constexpr set_adaptor(std::initializer_list<value_type> il, Alloc const& alloc)
+        :
+                set_adaptor(il.begin(), il.end(), alloc)
+        {}
+
+        template<class Alloc>
+                requires is_owner and std::same_as<Alloc, typename bits_type::allocator_type>
+        [[nodiscard]] constexpr set_adaptor(set_adaptor const& other, Alloc const& alloc)
+        :
+                m_bits(other.m_bits, alloc)
+        {}
+
+        template<class Alloc>
+                requires is_owner and std::same_as<Alloc, typename bits_type::allocator_type>
+        [[nodiscard]] constexpr set_adaptor(set_adaptor&& other, Alloc const& alloc)
+        :
+                m_bits(std::move(other.m_bits), alloc)
+        {}
+
         // A field of bits in, a field of bits out, at the one extent where the question has a single answer: a static
         // width is a CAPACITY under this reading and the other side's own width both, so position n here is bit n
         // there and there is no policy left to choose -- nothing truncates, nothing grows, nothing throws, and the
@@ -345,7 +392,7 @@ public:
         template<class... Args>
         constexpr auto emplace(this auto&& self, Args&&... args)
                 -> std::pair<iterator, bool>
-                requires (sizeof...(args) == 1) and requires { self.storage().growing_insert(value_type(std::forward<Args>(args)...)); }
+                requires (sizeof...(args) <= 1) and requires { self.storage().growing_insert(value_type(std::forward<Args>(args)...)); }
         {
                 return self.do_insert(value_type(std::forward<Args>(args)...));
         }
@@ -353,7 +400,7 @@ public:
         template<class... Args>
         constexpr auto emplace_hint(this auto&& self, const_iterator position, Args&&... args)
                 -> iterator
-                requires (sizeof...(args) == 1) and requires { self.storage().growing_insert(value_type(std::forward<Args>(args)...)); }
+                requires (sizeof...(args) <= 1) and requires { self.storage().growing_insert(value_type(std::forward<Args>(args)...)); }
         {
                 return self.do_insert(position, value_type(std::forward<Args>(args)...));
         }

@@ -8,7 +8,7 @@
 #ifdef TEST_HAS_INPLACE_VECTOR
 
 #include <test/set/ascending.hpp>                             // yields_ascending_keys
-#include <test/set/concepts.hpp>                              // bit_set
+#include <test/set/concepts.hpp>                              // bit_set, set_size_t, set_size_t_ranges
 #include <xstd/bits/bit_inplace_set.hpp>                      // basic_bit_inplace_set, bit_inplace_set
 #include <xstd/bits/detail/contiguous_bit_inplace_vector.hpp> // contiguous_bit_inplace_vector
 #include <xstd/bits/ownership.hpp>                            // ownership
@@ -40,6 +40,16 @@ BOOST_AUTO_TEST_CASE(TheInplaceSetIsTheSetAdaptorOverAnInplaceVectorOfBlocks)
         static_assert(std::same_as<T, xstd::set_adaptor<xstd::detail::bits::contiguous_bit_inplace_vector<std::uint8_t, 24>, xstd::ownership::owns>>);
         static_assert(std::same_as<xstd::bit_inplace_set<24>, xstd::basic_bit_inplace_set<std::size_t, 24>>);
         static_assert(test::set::bit_set<T>);
+}
+
+// This column has no counterpart either, and answers the dynamic column's synopsis all the same.
+BOOST_AUTO_TEST_CASE(ItAnswersEveryLineOfStdSetSizeTAnyway)
+{
+        static_assert(test::set::set_size_t<std::set<std::size_t>>);
+        static_assert(test::set::set_size_t<T>);
+        static_assert(test::set::set_size_t<xstd::bit_inplace_set<24>>);
+        static_assert(test::set::set_size_t_ranges<T>);
+        static_assert(not requires { typename T::allocator_type; });
 }
 
 // Built from a range as std::set is, and ordered as std::set is.

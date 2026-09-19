@@ -17,7 +17,7 @@
 #include <iterator>                   // contiguous_iterator, random_access_iterator
 #include <ranges>                     // begin, contiguous_range, drop, random_access_range, take
 #include <stdexcept>                  // out_of_range
-#include <tuple>                      // tuple_cat
+#include <tuple>                      // tuple_cat, tuple_element_t, tuple_size_v
 #include <utility>                    // declval
 #include <vector>                     // vector
 
@@ -99,6 +99,33 @@ static_assert(test::sequence::array_bool<std::array<bool, 5>>);
 BOOST_AUTO_TEST_CASE_TEMPLATE(ItAnswersEveryLineOfStdArrayBool, T, Types)
 {
         static_assert(test::sequence::array_bool<T>);
+}
+
+// [array.tuple], over the packing: the one part of that synopsis data() does not take down with it. get<I> hands
+// back the same proxy operator[] does, and tuple_element names THAT rather than bool, because a structured binding
+// binds a reference to tuple_element_t and there would otherwise be nothing for it to bind to.
+BOOST_AUTO_TEST_CASE(ItAnswersTheTupleInterfaceStdArrayCarries)
+{
+        using A = xstd::bit_array<3>;
+        static_assert(std::tuple_size_v<A> == 3UZ);
+        static_assert(std::same_as<std::tuple_element_t<0, A>, typename A::reference>);
+        static_assert(std::same_as<std::tuple_element_t<0, A const>, typename A::const_reference>);
+
+        auto a = A({ true, false, true });
+        BOOST_CHECK(get<0>(a));
+        BOOST_CHECK(not get<1>(a));
+        BOOST_CHECK(get<2>(a));
+
+        // A proxy, so a binding over the array itself writes through to it. By value it would bind to the copy the
+        // binding makes, which is what std::array's T& does too -- the reference is to whatever e names.
+        auto& [ x, y, z ] = a;
+        y = true;
+        BOOST_CHECK(a[1]);
+        BOOST_CHECK(x);
+        BOOST_CHECK(z);
+
+        auto const& ca = a;
+        BOOST_CHECK(get<0>(ca));
 }
 
 // std::array's aggregate initialization: what is listed leads and the rest stays false.

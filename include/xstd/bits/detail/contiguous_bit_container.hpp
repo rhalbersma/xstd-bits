@@ -62,6 +62,16 @@ public:
         static constexpr auto bits_per_byte   = bits_per_block / sizeof(block_type);
         static constexpr auto has_static_size = N != std::dynamic_extent;
 
+        // A run-time width over a capacity that is a property of the TYPE, which is the middle column and nothing else.
+        // Asked of the blocks and not named after std::inplace_vector: [inplace.vector.capacity] makes capacity() a
+        // static member where [vector.capacity] makes it an ordinary one, so the qualified call is the discriminator
+        // the two synopses already disagree on. std::array answers neither, and has_static_size tells that column apart.
+        static constexpr auto has_static_capacity = requires { Blocks::capacity(); };
+
+        // The capacity in bits, where it is a property of the type: the blocks' own, which is what capacity() below
+        // multiplies out for an object. align_up(N, bits_per_block) by construction, the blocks being num_blocks_v.
+        static constexpr auto static_capacity = has_static_capacity ? Blocks::capacity() * bits_per_block : 0UZ;
+
         // The width as a type, dynamic_extent where there is none: what a reading asks when it needs the width before an object exists.
         static constexpr std::size_t extent = N;
 

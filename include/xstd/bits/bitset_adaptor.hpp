@@ -34,7 +34,7 @@
 #include <stdexcept>                              // invalid_argument, out_of_range, overflow_error
 #include <string>                                 // basic_string, char_traits
 #include <string_view>                            // basic_string_view
-#include <type_traits>                            // is_nothrow_swappable_v, remove_cvref_t
+#include <type_traits>                            // is_array_v, is_nothrow_swappable_v, is_standard_layout_v, is_trivially_copyable_v, is_trivially_default_constructible_v, remove_cv_t, remove_cvref_t
 #include <utility>                                // as_const
 
 namespace xstd {
@@ -299,9 +299,20 @@ public:
                 }
         }
 
-        // Constrained to the character types, so a pointer to a block reaches the block-range constructor above and never instantiates a string_view over the block.
+        // LWG 4294's four traits, verbatim: the char-like requirements, so this constructor is not instantiated for a
+        // charT that would make the basic_string_view below ill-formed OUTSIDE the immediate context. They arrived with
+        // the string_view overload P2697R1 added above -- before it, the const charT* overload went through
+        // basic_string and needed no such guard.
+        //
+        // And ONE clause the standard does not have, because std::bitset has no overload to be told apart from: a
+        // pointer to a block is the block-range constructor's argument, not a string's. Nothing else is subtracted,
+        // so a program-defined char-like type reaches this exactly as it reaches std::bitset's.
         template<class charT>
-                requires (std::same_as<charT, char> or std::same_as<charT, wchar_t> or std::same_as<charT, char8_t> or std::same_as<charT, char16_t> or std::same_as<charT, char32_t>)
+                requires (not std::same_as<std::remove_cv_t<charT>, block_type>)
+                     and (not std::is_array_v<charT>)
+                     and std::is_trivially_copyable_v<charT>
+                     and std::is_standard_layout_v<charT>
+                     and std::is_trivially_default_constructible_v<charT>
         [[nodiscard]] constexpr explicit bitset_adaptor(
                 charT const* str,
                 std::size_t n = std::basic_string_view<charT>::npos,

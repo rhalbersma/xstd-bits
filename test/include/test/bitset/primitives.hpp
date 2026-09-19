@@ -25,7 +25,8 @@ namespace test::bitset {
 
 // Nine primitives below NOLINT bugprone-exception-escape: the check reads the callee, not the guard.
 
-// These checks are on xstd::bitset's basic_string_view overload: std::bitset has none, and dynamic_bitset answers to its own contract.
+// These checks are on the basic_string_view overload, which std::bitset now has too: P2697R1 added it for C++26, so
+// the wrapper and its counterpart are one constructor apart no longer. dynamic_bitset answers to its own contract.
 template<class X>
 concept fixed_string_view_constructible = requires { X(std::string_view()); } and not dynamic<X>;
 
