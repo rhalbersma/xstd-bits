@@ -20,19 +20,127 @@
 #include <compare>                                       // is_lt, strong_ordering
 #include <concepts>                                      // regular, same_as, totally_ordered
 #include <cstddef>                                       // size_t
+#include <cwchar>                                        // mbstate_t
 #include <cstdint>                                       // uint8_t, uint64_t
 #include <functional>                                    // hash
+#include <ios>                                           // streamoff
+#include <iosfwd>                                        // streampos
 #include <iterator>                                      // back_inserter, contiguous_iterator
 #include <limits>                                        // numeric_limits
 #include <list>                                          // list
 #include <ranges>                                        // equal, iota, range, reverse
 #include <sstream>                                       // istringstream
-#include <stdexcept>                                     // out_of_range, overflow_error
-#include <string>                                        // string
+#include <stdexcept>                                     // invalid_argument, out_of_range, overflow_error
+#include <string>                                        // char_traits, string
+#include <string_view>                                   // basic_string_view
 #include <tuple>                                         // tuple
 #include <type_traits>                                   // is_constructible_v, is_convertible_v, is_nothrow_*, is_trivially_*
 #include <utility>                                       // as_const, declval
 #include <vector>                                        // vector
+
+// A program-defined char-like type, to hold the const charT* constructor to LWG 4294's four traits rather than to a
+// list of the five character types the standard happens to specialize char_traits for. std::bitset takes this; so,
+// now, does the wrapper. Outside the suite, because the specialization below has to be at namespace scope.
+//
+// A NAMED namespace, so the type and its traits have external linkage. In an anonymous one clang reports every
+// char_traits member this file never calls -- which is most of them, a char_traits existing to be called by
+// basic_string_view rather than by us -- under -Wunused-member-function and -Wunneeded-member-function, and this
+// tree compiles with -Werror. External linkage is the shape a type a std:: template is specialized on wants anyway.
+namespace test_chars {
+
+struct digit_char
+{
+        // NO default member initializer: one would make this non-trivially-default-constructible, which is the third
+        // of LWG 4294's four traits and the one libstdc++ asserts by name inside basic_string and basic_string_view.
+        unsigned char v;
+
+        // Defaulted on first declaration, so the default constructor below leaves it trivial and all four traits hold.
+        constexpr digit_char() noexcept = default;
+
+        // And a converting constructor, because the string constructors spell their defaults charT('0') -- as
+        // [bitset.cons] spells them. On a bare aggregate that is parenthesized aggregate initialization, which clang
+        // diagnoses as a C++20 extension and -Werror turns into an error; libstdc++'s own bitset does exactly the
+        // same thing and is only spared because a system header does not warn. A real conversion instead.
+        constexpr digit_char(unsigned char c) noexcept  // NOLINT(misc-explicit-constructor,google-explicit-constructor,hicpp-explicit-conversions)
+        :
+                v(c)
+        {}
+
+        [[nodiscard]] friend constexpr auto operator==(digit_char, digit_char) noexcept -> bool = default;
+};
+
+} // namespace test_chars
+
+using test_chars::digit_char;
+
+// NOLINTBEGIN(bugprone-std-namespace-modification,cert-dcl58-cpp): an explicit specialization for a program-defined type is what the standard invites here.
+template<>
+struct std::char_traits<digit_char>
+{
+        using char_type  = digit_char;
+        using int_type   = int;
+        using off_type   = std::streamoff;
+        using pos_type   = std::streampos;
+        using state_type = std::mbstate_t;
+        using comparison_category = std::strong_ordering;
+
+        static constexpr auto assign(char_type& a, char_type const& b) noexcept -> void { a = b; }
+        static constexpr auto eq(char_type a, char_type b) noexcept -> bool { return a.v == b.v; }
+        static constexpr auto lt(char_type a, char_type b) noexcept -> bool { return a.v <  b.v; }
+
+        static constexpr auto compare(char_type const* a, char_type const* b, std::size_t n) noexcept -> int
+        {
+                for (auto i = 0UZ; i < n; ++i) {
+                        if (lt(a[i], b[i])) { return -1; }
+                        if (lt(b[i], a[i])) { return  1; }
+                }
+                return 0;
+        }
+
+        static constexpr auto length(char_type const* p) noexcept -> std::size_t
+        {
+                auto n = 0UZ;
+                while (p[n].v != 0) { ++n; }
+                return n;
+        }
+
+        static constexpr auto find(char_type const* p, std::size_t n, char_type const& a) noexcept -> char_type const*
+        {
+                for (auto i = 0UZ; i < n; ++i) {
+                        if (eq(p[i], a)) { return p + i; }
+                }
+                return nullptr;
+        }
+
+        static constexpr auto move(char_type* d, char_type const* s, std::size_t n) noexcept -> char_type*
+        {
+                if (d < s) {
+                        for (auto i = 0UZ; i < n; ++i) { d[i] = s[i]; }
+                } else if (s < d) {
+                        for (auto i = n; i > 0UZ; --i) { d[i - 1] = s[i - 1]; }
+                }
+                return d;
+        }
+
+        static constexpr auto copy(char_type* d, char_type const* s, std::size_t n) noexcept -> char_type*
+        {
+                for (auto i = 0UZ; i < n; ++i) { d[i] = s[i]; }
+                return d;
+        }
+
+        static constexpr auto assign(char_type* p, std::size_t n, char_type a) noexcept -> char_type*
+        {
+                for (auto i = 0UZ; i < n; ++i) { p[i] = a; }
+                return p;
+        }
+
+        static constexpr auto not_eof(int_type c) noexcept -> int_type { return c == eof() ? 0 : c; }
+        static constexpr auto to_char_type(int_type c) noexcept -> char_type { return { static_cast<unsigned char>(c) }; }
+        static constexpr auto to_int_type(char_type c) noexcept -> int_type { return c.v; }
+        static constexpr auto eq_int_type(int_type a, int_type b) noexcept -> bool { return a == b; }
+        static constexpr auto eof() noexcept -> int_type { return -1; }
+};
+// NOLINTEND(bugprone-std-namespace-modification,cert-dcl58-cpp)
 
 BOOST_AUTO_TEST_SUITE(BitsetAdaptor)
 
@@ -349,6 +457,56 @@ BOOST_AUTO_TEST_CASE(TheOrderingIsTheBitStrings)
         BOOST_CHECK(rest < top);
         BOOST_CHECK((Wide() <=> Wide()) == std::strong_ordering::equal);
         BOOST_CHECK(Wide() < top);
+}
+
+// LWG 4294's Constraints, which is what the const charT* constructor is held to now: the four char-like traits, and
+// not a list of the five types the standard specializes char_traits for. A program-defined char-like type reaches
+// this constructor exactly as it reaches std::bitset's.
+//
+// One clause is ours and not the standard's, because std::bitset has no overload to be told apart from: a pointer to
+// a BLOCK is the block-range constructor's argument. Asserted here so the widening above cannot quietly swallow it.
+BOOST_AUTO_TEST_CASE(TheStringConstructorTakesAnyCharLikeTypeButABlock)
+{
+        static_assert(std::is_constructible_v<Ours, char const*>);
+        static_assert(std::is_constructible_v<Ours, wchar_t const*>);
+        static_assert(std::is_constructible_v<Ours, char8_t const*>);
+        static_assert(std::is_constructible_v<Ours, char16_t const*>);
+        static_assert(std::is_constructible_v<Ours, char32_t const*>);
+
+        // CALLED, and not merely asked about: is_constructible_v answers from the declaration and never instantiates
+        // the body, so the five above passed for years while the error path inside was ill-formed for four of them.
+        // std::format wants a formatter<charT, char> and the standard specializes formatter<charT, charT>; there is
+        // no formatter<wchar_t, char>. One construction per character type is what finds that, and one throw per
+        // character type is what reaches the message.
+        BOOST_CHECK(Ours( "101") == Ours("101"));
+        BOOST_CHECK(Ours(L"101") == Ours("101"));
+        BOOST_CHECK(Ours(u8"101") == Ours("101"));
+        BOOST_CHECK(Ours(u"101") == Ours("101"));
+        BOOST_CHECK(Ours(U"101") == Ours("101"));
+
+        BOOST_CHECK_THROW(static_cast<void>(Ours( "102")), std::invalid_argument);
+        BOOST_CHECK_THROW(static_cast<void>(Ours(L"102")), std::invalid_argument);
+        BOOST_CHECK_THROW(static_cast<void>(Ours(u8"102")), std::invalid_argument);
+        BOOST_CHECK_THROW(static_cast<void>(Ours(u"102")), std::invalid_argument);
+        BOOST_CHECK_THROW(static_cast<void>(Ours(U"102")), std::invalid_argument);
+
+        // The widening: not one of the five, and constructible all the same.
+        static_assert(std::is_constructible_v<Ours, digit_char const*>);
+        static_assert(std::is_constructible_v<std::bitset<9>, digit_char const*>);
+
+        constexpr auto zero = digit_char{ static_cast<unsigned char>('0') };
+        constexpr auto one  = digit_char{ static_cast<unsigned char>('1') };
+        auto const text = std::array<digit_char, 4>{ one, zero, one, digit_char{ 0 } };
+        BOOST_CHECK(Ours(text.data(), std::basic_string_view<digit_char>::npos, zero, one) == Ours("101"));
+
+        // And its error path, which is the third arm: char-like, and neither a character nor a number to a narrow
+        // format string. A program-defined char-like type is exactly what LWG 4294's Constraints let in.
+        auto const bad = std::array<digit_char, 4>{ one, digit_char{ static_cast<unsigned char>('2') }, one, digit_char{ 0 } };
+        BOOST_CHECK_THROW(static_cast<void>(Ours(bad.data(), std::basic_string_view<digit_char>::npos, zero, one)), std::invalid_argument);
+
+        // The one subtraction, and the reason for it: the block-range constructor keeps its argument.
+        static_assert(std::same_as<Ours::block_type, std::uint8_t>);
+        static_assert(not std::is_constructible_v<Ours, std::uint8_t const*>);
 }
 
 // boost's block interface: the block type and its width, the block count, every block out and at most every block in, the tail kept clear.

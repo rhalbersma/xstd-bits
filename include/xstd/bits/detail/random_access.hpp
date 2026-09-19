@@ -123,7 +123,7 @@ public:
         }
 };
 
-// A proxy bool assigning back through the trait; std::vector<bool>::reference is the precedent for the const-qualified assignment, and nothing more is borrowed: no flip, no ~.
+// A proxy bool assigning back through the trait, spelled as [vector.bool] spells std::vector<bool>::reference: the const-qualified assignment P2321R2 gave it, flip(), and the three swaps P3612R1 made hidden friends. operator~ is NOT among them -- that one belongs to std::bitset<N>::reference, and the bitset reading's proxy is where it is spelled.
 template<class Bits>
 class random_access_bit_reference
 {
@@ -197,11 +197,20 @@ public:
                 return *this = static_cast<bool>(other);
         }
 
+        // [vector.bool] requires it of the proxy and has since C++98, where the const-qualified assignment above only arrived with C++23: the two are separate borrowings and only one of them is recent.
+        constexpr auto flip() const noexcept
+                -> void
+                requires is_writable
+        {
+                m_ptr->assign(m_idx, not static_cast<value_type>(*this));
+        }
+
         // The pre-ranges spelling of iter_swap, for std::swap and the algorithms still built on it.
         friend constexpr auto swap(random_access_bit_reference x, random_access_bit_reference y) noexcept -> void requires is_writable { bool const t = x; x = y; y = t; }
         friend constexpr auto swap(random_access_bit_reference x, bool& y)                 noexcept -> void requires is_writable { bool const t = x; x = y; y = t; }
         friend constexpr auto swap(bool& x, random_access_bit_reference y)                 noexcept -> void requires is_writable { bool const t = x; x = y; y = t; }
 
+        // What this proxy prints as, said once: see bidirectional.hpp's format_as for why it outlives the fmt dependency.
         [[nodiscard]] friend constexpr auto format_as(random_access_bit_reference ref) noexcept
                 -> value_type
         {

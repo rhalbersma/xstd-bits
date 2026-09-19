@@ -67,6 +67,31 @@ BOOST_AUTO_TEST_CASE(ItAnswersEveryLineOfStdVectorBool)
         static_assert(std::same_as<T::allocator_type, std::allocator<std::uint8_t>>);
 }
 
+// What the checklist names and never runs. A requires-expression proves a member exists; only a call proves it works,
+// and these three are exactly the ones this branch added to [vector.bool]'s surface.
+BOOST_AUTO_TEST_CASE(TheProxyFlipsAndTheEmptyArgumentListPushesFalse)
+{
+        auto v = xstd::bit_vector(4UZ);
+        v[1] = true;
+
+        // [vector.bool]'s reference::flip, required of it since C++98.
+        v[0].flip();
+        v[1].flip();
+        BOOST_CHECK(v[0] == true);
+        BOOST_CHECK(v[1] == false);
+
+        // Variadic, so value-initialization is one of the argument lists it takes: std::vector<bool>().emplace_back()
+        // pushes a false and so must this.
+        auto const n = v.size();
+        BOOST_CHECK(v.emplace_back() == false);
+        BOOST_CHECK_EQUAL(v.size(), n + 1UZ);
+        BOOST_CHECK(v.emplace_back(true) == true);
+
+        auto const it = v.emplace(v.cbegin());
+        BOOST_CHECK(*it == false);
+        BOOST_CHECK_EQUAL(v.size(), n + 3UZ);
+}
+
 BOOST_AUTO_TEST_CASE(ItIsBuiltLikeAStdVector)
 {
         auto const pattern = std::views::iota(0UZ, 20UZ) | std::views::transform([](auto i) { return i % 3 == 0; });

@@ -8,6 +8,7 @@
 #include <test/sequence/dense.hpp>    // yields_every_position
 #include <test/value_reference.hpp>   // value_reference
 #include <xstd/bits/bit_array.hpp>    // bit_array
+#include <xstd/bits/sequence_adaptor.hpp> // get, which bit_array.hpp reaches through an alias and does not itself declare
 #include <boost/test/unit_test.hpp>   // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <algorithm>                  // equal, none_of
 #include <array>                      // array
@@ -17,8 +18,8 @@
 #include <iterator>                   // contiguous_iterator, random_access_iterator
 #include <ranges>                     // begin, contiguous_range, drop, random_access_range, take
 #include <stdexcept>                  // out_of_range
-#include <tuple>                      // tuple_cat
-#include <utility>                    // declval
+#include <tuple>                      // tuple_cat, tuple_element_t, tuple_size_v
+#include <utility>                    // as_const, declval
 #include <vector>                     // vector
 
 BOOST_AUTO_TEST_SUITE(BitArray)
@@ -99,6 +100,39 @@ static_assert(test::sequence::array_bool<std::array<bool, 5>>);
 BOOST_AUTO_TEST_CASE_TEMPLATE(ItAnswersEveryLineOfStdArrayBool, T, Types)
 {
         static_assert(test::sequence::array_bool<T>);
+}
+
+// [array.tuple], over the packing: the one part of that synopsis data() does not take down with it. get<I> hands
+// back the same proxy operator[] does, and tuple_element names THAT rather than bool, because a structured binding
+// binds a reference to tuple_element_t and there would otherwise be nothing for it to bind to.
+BOOST_AUTO_TEST_CASE(ItAnswersTheTupleInterfaceStdArrayCarries)
+{
+        using A = xstd::bit_array<3>;
+        static_assert(std::tuple_size_v<A> == 3UZ);
+        static_assert(std::same_as<std::tuple_element_t<0, A>, A::reference>);
+        static_assert(std::same_as<std::tuple_element_t<0, A const>, A::const_reference>);
+
+        auto a = A({ true, false, true });
+        BOOST_CHECK(get<0>(a) == true);
+        BOOST_CHECK(get<1>(a) == false);
+        BOOST_CHECK(get<2>(a) == true);
+
+        // A proxy, so a binding over the array itself writes through to it. By value it would bind to the copy the
+        // binding makes, which is what std::array's T& does too -- the reference is to whatever e names.
+        auto& [ x, y, z ] = a;
+        y = true;
+        BOOST_CHECK(a[1] == true);
+        BOOST_CHECK(x == true);
+        BOOST_CHECK(z == true);
+
+        auto const& ca = a;
+        BOOST_CHECK(get<0>(ca) == true);
+
+        // The two rvalue overloads, CALLED. The checklist names them inside a requires-expression, which proves they
+        // exist and never runs them; a proxy returned by value is a handle into whatever the caller still holds.
+        BOOST_CHECK(get<0>(A({ true, false, true })) == true);
+        BOOST_CHECK(get<1>(A({ true, false, true })) == false);
+        BOOST_CHECK(get<2>(std::as_const(a)) == true);
 }
 
 // std::array's aggregate initialization: what is listed leads and the rest stays false.

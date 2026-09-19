@@ -7,7 +7,7 @@
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #ifdef TEST_HAS_INPLACE_VECTOR
 
-#include <test/sequence/concepts.hpp>                         // bit_sequence, inplace_vector_bool, inplace_vector_bool_ranges
+#include <test/sequence/concepts.hpp>                         // bit_sequence, inplace_vector_bool, inplace_vector_bool_ranges, inplace_vector_bool_try_returns, packed_inplace_vector_bool
 #include <test/sequence/dense.hpp>                            // yields_every_position
 #include <xstd/bits/bit_inplace_vector.hpp>                   // basic_bit_inplace_vector, bit_inplace_vector
 #include <xstd/bits/detail/contiguous_bit_inplace_vector.hpp> // contiguous_bit_inplace_vector
@@ -17,6 +17,7 @@
 #include <concepts>                                           // same_as
 #include <cstddef>                                            // size_t
 #include <cstdint>                                            // uint8_t
+#include <inplace_vector>                                     // inplace_vector
 #include <new>                                                // bad_alloc
 #include <ranges>                                             // count, iota, to, transform
 #include <vector>                                             // vector
@@ -42,17 +43,75 @@ BOOST_AUTO_TEST_CASE(TheInplaceSequenceIsTheSequenceAdaptorOverAnInplaceVectorOf
         static_assert(test::sequence::bit_sequence<T>);
 }
 
-// Every line of [vector.bool] the allocator does not reach, the model first so the checklist is known to be honest.
-BOOST_AUTO_TEST_CASE(ItAnswersEveryLineOfStdVectorBoolButTheAllocator)
+// Every line of [inplace.vector], the model first so the checklist is known to be honest. std::inplace_vector<bool, N>
+// and not std::vector<bool>: this column's counterpart is the one that spells four capacity members static and hands
+// push_back a reference to return, and a checklist held up to the dynamic column asked for none of it.
+BOOST_AUTO_TEST_CASE(ItAnswersEveryLineOfStdInplaceVectorBool)
 {
-        static_assert(test::sequence::inplace_vector_bool<std::vector<bool>>);
+        static_assert(test::sequence::inplace_vector_bool<std::inplace_vector<bool, 24>>);
         static_assert(test::sequence::inplace_vector_bool<T>);
         static_assert(test::sequence::inplace_vector_bool<xstd::bit_inplace_vector<24>>);
+#ifdef __cpp_lib_containers_ranges
+
+        static_assert(test::sequence::inplace_vector_bool_ranges<std::inplace_vector<bool, 24>>);
+
+#endif
         static_assert(test::sequence::inplace_vector_bool_ranges<T>);
 
         // The allocator is the storage's, and this storage has none: the checklist that asks for one does not apply.
         static_assert(has_allocator<std::vector<bool>>);
         static_assert(not has_allocator<T>);
+}
+
+// P3981R0's return type, over the packing alone: libstdc++ 16 still returns the pointer P0843R14 gave these two,
+// so the checklist above asks the model for the name and this asks the packing for the signature the draft spells.
+BOOST_AUTO_TEST_CASE(TheTryDoorsReturnTheOptionalReferenceTheDraftSpells)
+{
+        static_assert(test::sequence::inplace_vector_bool_try_returns<T>);
+        static_assert(test::sequence::inplace_vector_bool_try_returns<xstd::bit_inplace_vector<24>>);
+}
+
+// What the packing adds on top, which the unpacked counterpart has no reason to carry.
+BOOST_AUTO_TEST_CASE(ItAddsTheBitVocabularyStdInplaceVectorBoolHasNoReasonToCarry)
+{
+        static_assert(not test::sequence::packed_inplace_vector_bool<std::inplace_vector<bool, 24>>);
+        static_assert(test::sequence::packed_inplace_vector_bool<T>);
+        static_assert(test::sequence::packed_inplace_vector_bool<xstd::bit_inplace_vector<24>>);
+}
+
+// [inplace.vector.capacity]'s four answer without an object, the capacity being the type's.
+BOOST_AUTO_TEST_CASE(TheCapacityIsAPropertyOfTheTypeAndNotOfAnObject)
+{
+        static_assert(T::capacity() == 24);
+        static_assert(T::max_size() == 24);
+        static_assert(T::capacity() == std::inplace_vector<bool, 24>::capacity());
+
+        // Within the capacity it does nothing, and past it there is nothing to do but refuse.
+        T::reserve(T::capacity());
+        T::shrink_to_fit();
+        BOOST_CHECK_THROW(T::reserve(T::capacity() + 1), std::bad_alloc);
+}
+
+// The non-throwing door and the unchecked one: what push_back answers with bad_alloc, these answer with nullopt.
+BOOST_AUTO_TEST_CASE(TheFullContainerAnswersNulloptWherePushBackWouldThrow)
+{
+        auto c = T();
+        while (c.size() < c.capacity()) {
+                auto const r = c.try_push_back(true);
+                BOOST_CHECK(r.has_value());
+                BOOST_CHECK(*r == true);
+        }
+        BOOST_CHECK(not c.try_push_back(true).has_value());
+        BOOST_CHECK(not c.try_emplace_back(false).has_value());
+        BOOST_CHECK_EQUAL(c.size(), c.capacity());
+
+        c.pop_back();
+        BOOST_CHECK(c.unchecked_push_back(false) == false);
+        BOOST_CHECK_EQUAL(c.size(), c.capacity());
+
+        // push_back returns the reference here, where the dynamic column's returns nothing.
+        c.pop_back();
+        BOOST_CHECK(c.push_back(true) == true);
 }
 
 // The blocks are whole, so the capacity is the requested one rounded up, and the width moves under it.

@@ -12,6 +12,7 @@
 #include <xstd/bits/detail/contiguous_bit_inplace_vector.hpp> // IWYU pragma: keep; contiguous_bit_inplace_vector, named only under TEST_HAS_INPLACE_VECTOR
 #include <xstd/bits/detail/contiguous_bit_vector.hpp>         // contiguous_bit_vector
 #include <xstd/bits/detail/range_const_reference.hpp>         // fallback::range_const_reference_t, range_const_reference_t
+#include <xstd/ints/memory.hpp>                               // IWYU pragma: keep; align_up, named only under TEST_HAS_INPLACE_VECTOR
 #include <boost/test/unit_test.hpp>                           // BOOST_CHECK_EQUAL, BOOST_CHECK_LE, BOOST_CHECK_LT, BOOST_CHECK_THROW, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <algorithm>                                          // count, lexicographical_compare_three_way, min
 #include <array>                                              // array
@@ -842,9 +843,15 @@ BOOST_AUTO_TEST_CASE(AStaticWidthDoesNotGrow)
 // No hole in front of the blocks at any alignment: the width takes theirs where they out-align a size_t, so the class is its two members and nothing else, which is what -Wpadded asks of it.
 BOOST_AUTO_TEST_CASE(TheWidthFillsWhatWouldOtherwisePadTheBlocks)
 {
-        // The width slot is a size_t, or the blocks' alignment where that is wider.
+        // The width slot is a size_t, or the blocks' alignment where that is wider -- and then the whole is rounded
+        // up to the class's own alignment, which is the width slot's. That last step is not slack in the test: a
+        // sizeof is always a multiple of an alignof, so the sum alone names sizes no class can have. Blocks of four
+        // bytes under a size_t width sum to twelve, and twelve is not a size a type aligned to eight can be; sixteen
+        // is, and sixteen is what the class already was. Written without the round-up, this asked the inplace column
+        // for the impossible and no leg ever compiled it to say so.
         constexpr auto tiles = [](std::size_t whole, std::size_t blocks, std::size_t block_align) {
-                return whole == blocks + std::ranges::max(sizeof(std::size_t), block_align);
+                auto const slot = std::ranges::max(sizeof(std::size_t), block_align);
+                return whole == xstd::align_up(blocks + slot, slot);
         };
 
         static_assert(tiles(sizeof(xstd::detail::bits::contiguous_bit_inplace_vector<std::uint8_t, 24>), sizeof(std::inplace_vector<std::uint8_t, 3>), alignof(std::inplace_vector<std::uint8_t, 3>)));

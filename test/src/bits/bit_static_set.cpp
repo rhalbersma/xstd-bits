@@ -6,7 +6,7 @@
 #include <test/bit_exchange.hpp>        // exchanges_bits, exchanges_from_bits
 #include <test/block_types.hpp>         // graded_extents
 #include <test/set/ascending.hpp>       // yields_ascending_keys
-#include <test/set/concepts.hpp>        // bit_set
+#include <test/set/concepts.hpp>        // bit_set, set_size_t, set_size_t_ranges
 #include <test/value_reference.hpp>     // value_reference
 #include <xstd/bits/bit_static_set.hpp> // bit_static_set
 #include <xstd/bits/bitset.hpp>         // bitset
@@ -55,6 +55,20 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItsConstReferenceIsAValue, T, Types)
 BOOST_AUTO_TEST_CASE_TEMPLATE(IsABitSet, T, Types)
 {
         static_assert(test::set::bit_set<T>);
+}
+
+// A requires-expression whose requirement fails for a concrete type is ill-formed rather than false
+// ([expr.prim.req]/5), so the question goes through a template parameter and not to the type directly.
+template<class X>
+constexpr bool has_allocator_type = requires { typename X::allocator_type; };
+
+// This column has no counterpart -- the standard has nothing at a static width for this reading -- and it answers
+// the dynamic column's synopsis all the same. The allocator lines are the only ones it cannot: there is no heap.
+BOOST_AUTO_TEST_CASE_TEMPLATE(ItAnswersEveryLineOfStdSetSizeTAnyway, T, Types)
+{
+        static_assert(test::set::set_size_t<T>);
+        static_assert(test::set::set_size_t_ranges<T>);
+        static_assert(not has_allocator_type<T>);
 }
 
 // Total lookups, swept over every width because no single one exposed all six operations.

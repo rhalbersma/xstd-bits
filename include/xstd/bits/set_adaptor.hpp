@@ -6,6 +6,7 @@
 #ifndef XSTD_BITS_SET_ADAPTOR_HPP
 #define XSTD_BITS_SET_ADAPTOR_HPP
 
+#include <xstd/bits/detail/allocator_base_type.hpp>       // allocator_base_type
 #include <xstd/bits/detail/bidirectional.hpp>            // bidirectional_bit_iterator, bidirectional_bit_reference
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/detail/hash.hpp>                     // hash_append_bits, hash_append_positions, std_hash
@@ -14,6 +15,7 @@
 #include <xstd/bits/detail/zero_width.hpp>               // zero_width
 #include <xstd/bits/ownership.hpp>                       // owned_bits_t, owned_storage, owner_of, owner_reading, ownership, owns, reading
 #include <xstd/misc/concepts/specialization_of.hpp>      // specialization_of_TN
+#include <xstd/misc/type_traits/empty_base_type.hpp>     // empty_base_type
 #include <boost/container_hash/is_range.hpp>             // is_range
 #include <boost/hash2/hash_append.hpp>                   // hash_append_tag
 #include <algorithm>                                     // all_of, find_if, lexicographical_compare_three_way, max, min
@@ -108,7 +110,7 @@ constexpr auto walk_blocks_descending(Bits const& c, F& f)
 
 
 template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits, ownership Own>
-class set_adaptor
+class set_adaptor : public std::conditional_t<owns(Own), detail::bits::allocator_base_type<std::remove_const_t<Bits>>, xstd::empty_base_type<>>
 {
         static constexpr bool is_owner = owns(Own);
 
@@ -184,6 +186,53 @@ public:
                 insert(il.begin(), il.end());
         }
 
+        // [set]'s allocator arguments, deduced and matched the way the sequence reading's are, so a storage without an
+        // allocator has no such constructor. Their absence was the one place this reading answered get_allocator()
+        // for an allocator it had no door to take: a dynamic set could report one and never be given one.
+        template<class Alloc>
+                requires is_owner and std::same_as<Alloc, typename bits_type::allocator_type>
+        [[nodiscard]] constexpr explicit set_adaptor(Alloc const& alloc)
+        :
+                m_bits(alloc)
+        {}
+
+        template<std::input_iterator I, std::sentinel_for<I> S, class Alloc>
+                requires is_owner and std::constructible_from<value_type, std::iter_reference_t<I>> and std::same_as<Alloc, typename bits_type::allocator_type>
+        [[nodiscard]] constexpr set_adaptor(I first, S last, Alloc const& alloc)
+        :
+                m_bits(alloc)
+        {
+                insert(first, last);
+        }
+
+        template<std::ranges::input_range R, class Alloc>
+                requires is_owner and std::constructible_from<value_type, std::ranges::range_reference_t<R>> and std::same_as<Alloc, typename bits_type::allocator_type>
+        [[nodiscard]] constexpr set_adaptor(std::from_range_t, R&& rg, Alloc const& alloc)
+        :
+                set_adaptor(std::ranges::begin(rg), std::ranges::end(rg), alloc)
+        {}
+
+        template<class Alloc>
+                requires is_owner and std::same_as<Alloc, typename bits_type::allocator_type>
+        [[nodiscard]] constexpr set_adaptor(std::initializer_list<value_type> il, Alloc const& alloc)
+        :
+                set_adaptor(il.begin(), il.end(), alloc)
+        {}
+
+        template<class Alloc>
+                requires is_owner and std::same_as<Alloc, typename bits_type::allocator_type>
+        [[nodiscard]] constexpr set_adaptor(set_adaptor const& other, Alloc const& alloc)
+        :
+                m_bits(other.m_bits, alloc)
+        {}
+
+        template<class Alloc>
+                requires is_owner and std::same_as<Alloc, typename bits_type::allocator_type>
+        [[nodiscard]] constexpr set_adaptor(set_adaptor&& other, Alloc const& alloc)
+        :
+                m_bits(std::move(other.m_bits), alloc)
+        {}
+
         // A field of bits in, a field of bits out, at the one extent where the question has a single answer: a static
         // width is a CAPACITY under this reading and the other side's own width both, so position n here is bit n
         // there and there is no policy left to choose -- nothing truncates, nothing grows, nothing throws, and the
@@ -256,9 +305,14 @@ public:
         }
 
         // A static owner's equality IS its one member's: every instance carries the same width, so the arms below have nothing to choose between. Said here rather than left to fold, the fact being about the type and not about the optimizer. The conjunction is what picks this one -- it subsumes the general overload's lone clause, so no negation is needed there.
-        [[nodiscard]] friend constexpr auto operator==(set_adaptor const&, set_adaptor const&) noexcept
+        //
+        // Written out rather than defaulted, which is what it was: a defaulted comparison compares the bases first, and the base here is allocator_base_type, an empty class whose own defaulted operator== can only answer true. That call is a branch no input can send the other way, and an unreachable branch is a hole in a coverage gate that admits no test. Saying the member outright is the same comparison with nothing dead in it -- and it is the line this comment already claims.
+        [[nodiscard]] friend constexpr auto operator==(set_adaptor const& x, set_adaptor const& y) noexcept
                 -> bool
-                requires detail::set::equality_comparable_storage<bits_type> and is_owner and has_static_width = default;
+                requires detail::set::equality_comparable_storage<bits_type> and is_owner and has_static_width
+        {
+                return x.storage() == y.storage();
+        }
 
         // Everything else: the storage's set equality, which answers at any two widths. Width is capacity for this reading, so two storages holding the same positions are equal whatever their widths, and a view holds a pointer that a defaulted comparison would compare in place of the contents.
         [[nodiscard]] friend constexpr auto operator==(set_adaptor const& x, set_adaptor const& y) noexcept
@@ -345,7 +399,7 @@ public:
         template<class... Args>
         constexpr auto emplace(this auto&& self, Args&&... args)
                 -> std::pair<iterator, bool>
-                requires (sizeof...(args) == 1) and requires { self.storage().growing_insert(value_type(std::forward<Args>(args)...)); }
+                requires (sizeof...(args) <= 1) and requires { self.storage().growing_insert(value_type(std::forward<Args>(args)...)); }
         {
                 return self.do_insert(value_type(std::forward<Args>(args)...));
         }
@@ -353,7 +407,7 @@ public:
         template<class... Args>
         constexpr auto emplace_hint(this auto&& self, const_iterator position, Args&&... args)
                 -> iterator
-                requires (sizeof...(args) == 1) and requires { self.storage().growing_insert(value_type(std::forward<Args>(args)...)); }
+                requires (sizeof...(args) <= 1) and requires { self.storage().growing_insert(value_type(std::forward<Args>(args)...)); }
         {
                 return self.do_insert(position, value_type(std::forward<Args>(args)...));
         }
