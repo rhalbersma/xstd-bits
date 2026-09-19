@@ -40,7 +40,12 @@
 // A program-defined char-like type, to hold the const charT* constructor to LWG 4294's four traits rather than to a
 // list of the five character types the standard happens to specialize char_traits for. std::bitset takes this; so,
 // now, does the wrapper. Outside the suite, because the specialization below has to be at namespace scope.
-namespace {
+//
+// A NAMED namespace, so the type and its traits have external linkage. In an anonymous one clang reports every
+// char_traits member this file never calls -- which is most of them, a char_traits existing to be called by
+// basic_string_view rather than by us -- under -Wunused-member-function and -Wunneeded-member-function, and this
+// tree compiles with -Werror. External linkage is the shape a type a std:: template is specialized on wants anyway.
+namespace test_chars {
 
 struct digit_char
 {
@@ -63,7 +68,9 @@ struct digit_char
         [[nodiscard]] friend constexpr auto operator==(digit_char, digit_char) noexcept -> bool = default;
 };
 
-} // namespace
+} // namespace test_chars
+
+using test_chars::digit_char;
 
 // NOLINTBEGIN(bugprone-std-namespace-modification,cert-dcl58-cpp): an explicit specialization for a program-defined type is what the standard invites here.
 template<>
