@@ -18,7 +18,7 @@
 #include <ranges>                     // begin, contiguous_range, drop, random_access_range, take
 #include <stdexcept>                  // out_of_range
 #include <tuple>                      // tuple_cat, tuple_element_t, tuple_size_v
-#include <utility>                    // declval
+#include <utility>                    // as_const, declval
 #include <vector>                     // vector
 
 BOOST_AUTO_TEST_SUITE(BitArray)
@@ -126,6 +126,12 @@ BOOST_AUTO_TEST_CASE(ItAnswersTheTupleInterfaceStdArrayCarries)
 
         auto const& ca = a;
         BOOST_CHECK(get<0>(ca) == true);
+
+        // The two rvalue overloads, CALLED. The checklist names them inside a requires-expression, which proves they
+        // exist and never runs them; a proxy returned by value is a handle into whatever the caller still holds.
+        BOOST_CHECK(get<0>(A({ true, false, true })) == true);
+        BOOST_CHECK(get<1>(A({ true, false, true })) == false);
+        BOOST_CHECK(get<2>(std::as_const(a)) == true);
 }
 
 // std::array's aggregate initialization: what is listed leads and the rest stays false.

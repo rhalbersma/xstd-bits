@@ -11,7 +11,8 @@
 #include <xstd/bits/ownership.hpp>                    // ownership
 #include <xstd/bits/set_adaptor.hpp>                  // set_adaptor
 #include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <algorithm>                                  // equal
+#include <algorithm>                                  // equal, ranges::equal
+#include <array>                                      // array
 #include <bitset>                                     // bitset
 #include <compare>                                    // is_eq
 #include <concepts>                                   // same_as
@@ -19,9 +20,10 @@
 #include <cstdint>                                    // uint8_t
 #include <functional>                                 // hash
 #include <memory>                                     // allocator
-#include <ranges>                                     // iota, to
+#include <ranges>                                     // equal, iota, to
 #include <set>                                        // set
 #include <type_traits>                                // is_constructible_v
+#include <utility>                                    // move
 
 BOOST_AUTO_TEST_SUITE(BitSet)
 
@@ -56,6 +58,47 @@ BOOST_AUTO_TEST_CASE(ItAnswersEveryLineOfStdSetSizeT)
 #endif
         static_assert(test::set::set_size_t_ranges<T>);
         static_assert(test::set::set_size_t_ranges_allocator<T>);
+}
+
+// [set.cons]'s allocator arguments, CONSTRUCTED rather than merely asked about: the checklist above names them in a
+// requires-expression, and this reading had none of them at all until it was asked.
+BOOST_AUTO_TEST_CASE(TheAllocatorConstructorsBuildWhatTheyName)
+{
+        using A = T::allocator_type;
+        auto const a = A();
+        auto const keys = std::array<std::size_t, 3>{ 1UZ, 3UZ, 5UZ };
+
+        auto const x0 = T(a);
+        BOOST_CHECK(x0.empty());
+
+        auto const x1 = T(keys.begin(), keys.end(), a);
+        BOOST_CHECK(std::ranges::equal(x1, keys));
+
+        auto const x2 = T({ 1UZ, 3UZ, 5UZ }, a);
+        BOOST_CHECK(x2 == x1);
+
+        auto const x3 = T(x1, a);
+        BOOST_CHECK(x3 == x1);
+
+        auto y = x1;
+        auto const x4 = T(std::move(y), a);
+        BOOST_CHECK(x4 == x1);
+
+        BOOST_CHECK(x1.get_allocator() == a);
+}
+
+// A key is default-constructible, so the empty argument list is one of the lists emplace has to take.
+BOOST_AUTO_TEST_CASE(TheEmptyArgumentListEmplacesTheZeroKey)
+{
+        auto s = T();
+        auto const [ it, inserted ] = s.emplace();
+        BOOST_CHECK(inserted);
+        BOOST_CHECK_EQUAL(*it, 0UZ);
+        BOOST_CHECK(s.contains(0UZ));
+
+        auto const hinted = s.emplace_hint(s.begin());
+        BOOST_CHECK_EQUAL(*hinted, 0UZ);
+        BOOST_CHECK_EQUAL(s.size(), 1UZ);
 }
 
 // A key past the width grows the width: insert is the one operation a dynamic set cannot refuse.
