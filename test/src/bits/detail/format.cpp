@@ -18,7 +18,7 @@ BOOST_AUTO_TEST_SUITE(Format)
 
 // Nothing here says anything about a container: the two proxies carry a formatter and [format.range.formatter] does the rest.
 
-// [format.range.fmtkind] chooses range_format::set for a range with a key_type, so the set reading arrives at braces without being told, the way fmt's format_as does.
+// [format.range.fmtkind] chooses range_format::set for a range with a key_type, so the set reading arrives at braces without being told.
 BOOST_AUTO_TEST_CASE(TheSetReadingFormatsInBraces)
 {
         auto d = xstd::bit_set();

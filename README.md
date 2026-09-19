@@ -197,10 +197,10 @@ int main()
     using X = xstd::bit_static_set<N>; /* or xstd::bit_set, std::set<std::size_t>, std::flat_set<std::size_t> */
 
     auto const primes = opt::sift_primes0<X>(N);
-    assert(fmt::format("{}", primes) == "{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97}");
+    assert(std::format("{}", primes) == "{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97}");
 
     auto const twins = opt::filter_twins(primes);
-    assert(fmt::format("{}", twins)  == "{3, 5, 7, 11, 13, 17, 19, 29, 31, 41, 43, 59, 61, 71, 73}");
+    assert(std::format("{}", twins)  == "{3, 5, 7, 11, 13, 17, 19, 29, 31, 41, 43, 59, 61, 71, 73}");
 }
 ```
 
@@ -229,7 +229,7 @@ Looking at the above code, the following four ingredients are necessary to imple
 
 1. **Bidirectional iterators** `begin` and `end` in the `set`'s own namespace (to work with range-`for` and the `<ranges>` library);
 2. **Constructors** taking a pair of iterators or a range (in order for `std::ranges::to` to construct a `set`);
-3. A **nested type** `key_type` (in order for the `{fmt}` library to use `{}` delimiters);
+3. A **nested type** `key_type` (in order for `std::format` to use `{}` delimiters: [format.range.fmtkind] picks `range_format::set` for a range that has one);
 4. A **member function** `erase` to remove elements (for other applications: the rest of a `set`'s interface).
 
 `xstd::bit_static_set<N>` implements all four of the above requirements. Note that Visual C++ support is finicky at the moment because its `<ranges>` implementation cannot (yet) handle the `xstd::bit_static_set<N>` proxy iterators and proxy references correctly.
@@ -246,7 +246,7 @@ auto const s = xstd::bit_set_view(bs);   // the set reading of those bits
 
 s.insert(42);                            // bs.set(42)
 assert(s.contains(42));                  // bs.test(42)
-assert(fmt::format("{}", s) == "{42}");  // formats as a set, which a bitset cannot
+assert(std::format("{}", s) == "{42}"); // formats as a set, which a bitset cannot
 ```
 
 The view supplies what the bitset lacks: bidirectional iterators, a nested `key_type`,
@@ -259,7 +259,7 @@ the same three readings pointed at storage someone else owns.
 
 ### Printing
 
-The snippets above use `fmt::format`, which finds the proxies through fmt's own `format_as`. `std::format` and `std::print` work too, with nothing to include and nothing to switch on:
+The snippets above use `std::format`, and `std::print` works the same way, with nothing to include beyond `<format>` and nothing to switch on:
 
 ```cpp
 std::print("{}\n", primes);   // {2, 3, 5, 7, 11, ...}   the set reading, in braces
@@ -267,7 +267,7 @@ std::print("{}\n", flags);    // [false, true, ...]      the sequence reading, i
 std::print("{::#x}\n", primes);
 ```
 
-Each proxy reference carries its own `std::formatter`, so a container that hands the proxy out brings the formatter with it. Nothing is specialized for a container: every one of them is already a range, so [`[format.range.formatter]`](https://eel.is/c++draft/format.range.formatter) formats it once its reference is formattable. The braces-versus-brackets split is the standard's, not ours — `[format.range.fmtkind]` picks `range_format::set` for a range with a `key_type` — so each reading prints in its own vocabulary without being told to. Both hooks read the same value: the `std::formatter` defers to the `format_as` that fmt calls, so the two libraries cannot drift.
+Each proxy reference carries its own `std::formatter`, so a container that hands the proxy out brings the formatter with it. Nothing is specialized for a container: every one of them is already a range, so [`[format.range.formatter]`](https://eel.is/c++draft/format.range.formatter) formats it once its reference is formattable. The braces-versus-brackets split is the standard's, not ours — `[format.range.fmtkind]` picks `range_format::set` for a range with a `key_type` — so each reading prints in its own vocabulary without being told to. Each proxy also keeps a hidden-friend `format_as`, which is fmt's own per-type hook, so a consumer who formats with fmt gets the same output without this library depending on fmt to build or to test. The two hooks cannot drift: the `std::formatter` reads the value by calling `format_as`, rather than reaching for it a second way of its own.
 
 ## Data-parallelism
 
@@ -545,7 +545,7 @@ Two standards are in play and they answer different questions. **C++23 is what t
 
 Every leg above passes. The library no longer uses the C++23 range adaptors libc++ has not implemented (`views::cartesian_product`, `views::adjacent`, `views::pairwise_transform`, `views::stride`), and the tests probe for `<flat_set>` rather than assuming it, so the `Clang | libc++` and `Apple Clang` rows and the `Clang-CL` VS 2022 legs build and run like the rest.
 
-Note that the benchmarks and unit tests depend on [Boost](https://www.boost.io/), [fmtlib](https://github.com/fmtlib/fmt), [Google Benchmark](https://github.com/google/benchmark) and [range-v3](https://github.com/ericniebler/range-v3). 
+Note that the benchmarks and unit tests depend on [Boost](https://www.boost.io/), [Google Benchmark](https://github.com/google/benchmark) and [range-v3](https://github.com/ericniebler/range-v3). 
 
 ## Consuming this library
 
@@ -596,7 +596,7 @@ target_link_libraries(my_target PRIVATE xstd::bits)
 
 ### The vcpkg manifest
 
-[`vcpkg.json`](vcpkg.json) is this repository's own manifest, not a published port: it is what `VCPKG_ROOT`-based presets install from when you build **this** library. Its `test` feature — Boost.Test, Boost.Dynamic Bitset, fmtlib, Google Benchmark and range-v3 — is a default feature because building the repository normally means building its tests. The `no-tests-vcpkg` preset turns that off with `VCPKG_MANIFEST_NO_DEFAULT_FEATURES`, so a packaging or install build pays for Boost.Hash2 and nothing else. Consuming the library by any of the three methods above does not read this manifest at all.
+[`vcpkg.json`](vcpkg.json) is this repository's own manifest, not a published port: it is what `VCPKG_ROOT`-based presets install from when you build **this** library. Its `test` feature — Boost.Test, Boost.Dynamic Bitset, Google Benchmark and range-v3 — is a default feature because building the repository normally means building its tests. The `no-tests-vcpkg` preset turns that off with `VCPKG_MANIFEST_NO_DEFAULT_FEATURES`, so a packaging or install build pays for Boost.Hash2 and nothing else. Consuming the library by any of the three methods above does not read this manifest at all.
 
 
 ## License

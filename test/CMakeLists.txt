@@ -8,7 +8,6 @@ find_package(
     Boost CONFIG REQUIRED COMPONENTS
     unit_test_framework
 )
-find_package(fmt REQUIRED)
 find_package(range-v3 CONFIG REQUIRED)
 
 # clang-cl reports CXX_COMPILER_ID Clang but understands only MSVC-style driver flags.
@@ -191,7 +190,6 @@ foreach(t ${targets})
         xstd::bits
         Boost::headers
         Boost::unit_test_framework
-        fmt::fmt
         range-v3::range-v3
         ${${project_id}_test_boost_int128}
         ${${project_id}_test_absl_int128}

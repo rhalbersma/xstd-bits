@@ -210,6 +210,7 @@ public:
         friend constexpr auto swap(random_access_bit_reference x, bool& y)                 noexcept -> void requires is_writable { bool const t = x; x = y; y = t; }
         friend constexpr auto swap(bool& x, random_access_bit_reference y)                 noexcept -> void requires is_writable { bool const t = x; x = y; y = t; }
 
+        // What this proxy prints as, said once: see bidirectional.hpp's format_as for why it outlives the fmt dependency.
         [[nodiscard]] friend constexpr auto format_as(random_access_bit_reference ref) noexcept
                 -> value_type
         {

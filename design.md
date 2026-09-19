@@ -2687,7 +2687,7 @@ alloc)` puts a width where `std::bitset`'s `(str, pos, n, zero, one)` puts a cha
 cannot extend both; `std::bitset`'s wins, the width being the characters read.
 
 What ours does not add is a range, and there is no opt-in that adds one either. Becoming a range would change
-what generic code does with it, from `fmt` to `std::ranges::to`, which is the one addition a strict extension
+what generic code does with it, from `std::format` to `std::ranges::to`, which is the one addition a strict extension
 cannot make -- and `std::bitset` is already schizophrenic enough about its interface without our making it
 worse. `bit_set_view` and `bit_span` refer into its storage ([views-over-owners](#views-over-owners)) and
 carry the readings: bidirectional over positions, random access over bools, each said out loud at the call
@@ -3500,6 +3500,14 @@ the same value, and nothing made them: a change to one would have left `fmt::for
 disagreeing about the same object, with no compile error and no test to catch it, since the proxy tests check
 `format_as` and the format test checks `std::format` but nothing checked that they agree. `format_as` is now
 the one place that says what a proxy prints as.
+
+**fmt is no longer a dependency of this repository, and `format_as` stays anyway.** The one test that reached
+for `fmt::format` was the sieve's, and `std::format` prints the same string there, so the library builds and
+tests with nothing but the standard now. The hook is not a build dependency and never was: it is a hidden
+friend of a header-only proxy, costing a consumer who never formats nothing at all, and it is what a consumer
+who *does* format with fmt reaches. Deleting it would take fmt interop away from them to remove a line that
+our own `std::formatter` calls regardless. So the two-hook shape above is still the shape; what changed is
+only that this repo no longer installs the second library to check the second hook.
 
 The readings then separate themselves. `[format.range.fmtkind]` picks `range_format::set` for a range with a
 `key_type` and `range_format::sequence` otherwise, so the set reading prints `{1, 3, 5}` and the sequence

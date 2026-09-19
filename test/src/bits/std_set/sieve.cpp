@@ -8,8 +8,7 @@
 #include <xstd/bits/bit_static_set.hpp> // bit_static_set
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_AUTO_TEST_CASE_TEMPLATE
 #include <cstddef>                      // size_t
-#include <fmt/format.h>                 // format
-#include <fmt/ranges.h>                 // IWYU pragma: keep; the range formatters
+#include <format>                       // format
 #include <opt/set/sieve.hpp>            // filter_twins, generate_candidates, incremental_sieve, sift_primes0, sift_primes1, sift_primes_incremental, sift_primes_segmented
 #include <set>                          // set
 #include <tuple>                        // tuple
@@ -35,19 +34,19 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheSiftedPrimesAndTwinsFormatAsExpected, T, Types)
 {
         auto const primes0 = opt::sift_primes0<T>(N);
         BOOST_CHECK_EQUAL(
-                fmt::format("{}", primes0),
+                std::format("{}", primes0),
                 "{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97}"
         );
 
         auto const primes1 = opt::sift_primes1<T>(N);
         BOOST_CHECK_EQUAL(
-                fmt::format("{}", primes1),
+                std::format("{}", primes1),
                 "{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97}"
         );
 
         auto const twins = opt::filter_twins(primes1);
         BOOST_CHECK_EQUAL(
-                fmt::format("{}", twins),
+                std::format("{}", twins),
                 "{3, 5, 7, 11, 13, 17, 19, 29, 31, 41, 43, 59, 61, 71, 73}"
         );
 }
@@ -60,7 +59,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(SievesTooSmallForTheSquareBreakStillSiftCorrectly,
         BOOST_CHECK(opt::filter_twins(none).empty());
 
         auto const one = opt::sift_primes1<T>(3);
-        BOOST_CHECK_EQUAL(fmt::format("{}", one), "{2}");
+        BOOST_CHECK_EQUAL(std::format("{}", one), "{2}");
         BOOST_CHECK(opt::filter_twins(one).empty());
 }
 
@@ -92,7 +91,7 @@ BOOST_AUTO_TEST_CASE(TheIncrementalSieveGeneratesWithoutABound)
         for (auto i = 0UZ; i < 25UZ; ++i) {
                 first.push_back(sieve.next());
         }
-        // Compared as a range rather than through fmt::format, which the cases above use: a std::vector formatter is a different arm of fmt/ranges.h than the set formatters, and MSVC finds unreachable code inside it that /WX turns into an error.
+        // Compared as a range rather than through std::format, which the cases above use: this one is a std::vector and would format in brackets, and a collection comparison names the first position that disagrees where a string comparison names only that the strings do.
         auto const expected = std::vector<std::size_t>{
                 2UZ, 3UZ, 5UZ, 7UZ, 11UZ, 13UZ, 17UZ, 19UZ, 23UZ, 29UZ, 31UZ, 37UZ, 41UZ,
                 43UZ, 47UZ, 53UZ, 59UZ, 61UZ, 67UZ, 71UZ, 73UZ, 79UZ, 83UZ, 89UZ, 97UZ,

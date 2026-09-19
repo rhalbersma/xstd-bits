@@ -170,7 +170,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheSetIteratorWalksThePositionsInBothDirections, T
         check_every_set_pattern(T());
 }
 
-// format_as is what fmt calls, unqualified, so calling it the same way is the test.
+// format_as is what the proxy's own std::formatter calls, unqualified, and what fmt would call in a consumer that uses it, so calling it the same way is the test.
 BOOST_AUTO_TEST_CASE(TheProxyFormatsAsItsValue)
 {
         auto c = Bits();
