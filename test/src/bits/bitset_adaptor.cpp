@@ -568,6 +568,39 @@ BOOST_AUTO_TEST_CASE(TheTwoArmsOfFromBlockRangeAgree)
         }
 }
 
+// The same question for the way out, which now has two arms of its own: a vector's iterator is contiguous and takes the copy, a back_inserter and a list's iterator are not and take the loop. Nine bits over eight-bit blocks, so the last block is seven-eighths unused, and the patterns are the ones that put something interesting there: all clear, all set, and a bit at each end. boost's contract is that every block comes out including that tail, and the two arms have to agree about it.
+BOOST_AUTO_TEST_CASE(TheTwoArmsOfToBlockRangeAgree)
+{
+        static_assert(std::contiguous_iterator<std::vector<std::uint8_t>::iterator>);
+        static_assert(not std::contiguous_iterator<std::back_insert_iterator<std::vector<std::uint8_t>>>);
+        static_assert(not std::contiguous_iterator<std::list<std::uint8_t>::iterator>);
+
+        auto const patterns = std::vector<std::string>{
+                "000000000", "111111111", "101000001", "100000000", "000000001",
+        };
+        for (auto const& pattern : patterns) {
+                auto const b = Ours(pattern);
+
+                // The contiguous arm, into a buffer the caller sized.
+                auto copied = std::vector<std::uint8_t>(b.num_blocks());
+                to_block_range(b, copied.begin());
+
+                // The loop, twice over, through two output iterators that are not contiguous for different reasons.
+                auto appended = std::vector<std::uint8_t>();
+                to_block_range(b, std::back_inserter(appended));
+                auto listed = std::list<std::uint8_t>(b.num_blocks());
+                to_block_range(b, listed.begin());
+
+                BOOST_CHECK(copied == appended);
+                BOOST_CHECK(std::ranges::equal(copied, listed));
+
+                // And the blocks that came out still name the bits that went in.
+                auto round_trip = Ours();
+                from_block_range(copied.begin(), copied.end(), round_trip);
+                BOOST_CHECK(round_trip == b);
+        }
+}
+
 // boost's remaining members at a static width, where every guard throws: at, test_set, the ranged forms, max_size; no allocator, the storage having none.
 BOOST_AUTO_TEST_CASE(TheRestOfBoostsSurfaceIsThereAtAStaticWidth)
 {

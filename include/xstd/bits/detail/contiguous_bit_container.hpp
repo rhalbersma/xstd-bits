@@ -397,10 +397,16 @@ public:
         }
 
         // block(i) as a range rather than one block at a time, which the storage can answer because Blocks is a contiguous_block_range and this class is named for it. block(i) is the spelling for a single block; this is the spelling for a bulk copy, so a caller writing every block writes them in one call instead of asking num_blocks() times for a reference the compiler will not assume is the next word along.
-        // It carries block(i)'s write-side contract, once for the range where that carries it once per block: whoever writes through this span restores the invariant with erase_unused when it is done.
-        // The write side only. A const twin would have no caller: to_block_range is the one place that would want it, and its loop is already at the memcpy floor because the compiler turns it into the copy by itself -- so it is not added until something needs it.
+        // The write side carries block(i)'s write-side contract, once for the range where that carries it once per block: whoever writes through this span restores the invariant with erase_unused when it is done.
+        // The read side carries nothing, and exists for the reason the write side does, one build short of it: block(i) asserts its index, and an assertion per block is a loop the vectoriser leaves alone. A Release build never sees that -- to_block_range's loop reaches the memcpy floor there by itself, which is why this twin was left out when the other went in -- but an assert-on build pays 3.4x for a bounds check on an index the caller just produced in order.
         [[nodiscard]] constexpr auto blocks() noexcept
                 -> std::span<block_type>
+        {
+                return { m_blocks.data(), num_blocks() };
+        }
+
+        [[nodiscard]] constexpr auto blocks() const noexcept
+                -> std::span<block_type const>
         {
                 return { m_blocks.data(), num_blocks() };
         }

@@ -580,13 +580,18 @@ public:
         }
 
         // boost's block interface: every block out, including the clear tail, and at most every block in, the tail kept clear.
-        // This half stays a loop, and that is a measurement rather than an oversight: at 65536 bits, medians of seven runs against a memcpy of the same words, it is 53ns to a contiguous output against a 59ns floor. The compiler turns the loop into the bulk copy by itself, so a contiguous_iterator arm here would be a branch that buys nothing. Into a back_inserter it is 313ns, and no arm can help that -- a push_back per block is what the caller asked for.
+        // Both halves take the same shape, for reasons that are not the same. Going in, the loop cannot become the copy at all: it writes through a reference the compiler will not assume is the next word along. Coming out it can, and in a Release build it does -- 36ns to a contiguous output against a 35ns memcpy of the same words, at 32768 bits, medians of seven. What it cannot survive is block(i)'s assertion: an assert-on build runs the same loop at 3.4x that floor, where the span goes straight through. So the arm here buys nothing where the benchmarks run and 3.4x where the tests do.
+        // Into a back_inserter it is 320ns and no arm can help that: a push_back per block is what the caller asked for, and the loop below is what serves it.
         template<std::output_iterator<block_type> O>
         friend constexpr auto to_block_range(bitset_adaptor const& b, O result)
                 -> void
         {
-                for (auto const i : std::views::iota(0UZ, b.num_blocks())) {
-                        *result++ = b.m_bits.block(i);
+                if constexpr (std::contiguous_iterator<O>) {
+                        std::ranges::copy(b.m_bits.blocks(), result);
+                } else {
+                        for (auto const i : std::views::iota(0UZ, b.num_blocks())) {
+                                *result++ = b.m_bits.block(i);
+                        }
                 }
         }
 
@@ -595,7 +600,7 @@ public:
         friend constexpr auto from_block_range(I first, S last, bitset_adaptor& result)
                 -> void
         {
-                // The other half does NOT get there by itself, and this is where the storage's blocks() earns its place: 80ns and 1.36x that floor as a loop, 58ns and 0.98x as one copy into the span. The loop cannot be turned into a copy because it reaches the storage a block at a time, through a reference the compiler will not assume is the next word along.
+                // This is the half that does not get there by itself in any build, and where the storage's blocks() earns its place: on the same footing as the numbers above, 121ns as a loop against the 35ns floor, 35ns as one copy into the span.
                 // A sized sentinel as well as a contiguous iterator, because the precondition the loop asserts per block -- that the source is no longer than the storage -- is one the bulk copy has to know BEFORE it writes, and last - first is the only way to be told.
                 if constexpr (std::contiguous_iterator<I> and std::sized_sentinel_for<S, I>) {
                         // Spelled inside the assert rather than named above it: named, it is a variable the Release build initializes and never reads, which is C4189 under MSVC and -Wunused-variable under clang.
