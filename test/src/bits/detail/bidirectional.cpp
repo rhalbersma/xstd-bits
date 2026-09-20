@@ -23,7 +23,8 @@ namespace {
 struct key
 {
         std::size_t value;
-        constexpr explicit(false) key(std::size_t v) noexcept : value(v) {} // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
+        // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
+        constexpr explicit(false) key(std::size_t v) noexcept : value(v) {}
 };
 
 struct index
