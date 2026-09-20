@@ -50,7 +50,7 @@ template<class Seq>
 
 using DynamicOctet = xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint8_t>, xstd::ownership::owns, false>;
 
-// Every (size, pattern) pair as a sequence and the vector<bool> that models it, so the comparison below is one loop over the cases rather than four nested over what makes them.
+// Every (size, pattern) pair as a sequence and the vector<bool> modelling it, so the comparison is one loop.
 [[nodiscard]] auto dynamic_probes()
         -> std::vector<std::pair<DynamicOctet, std::vector<bool>>>
 {
@@ -72,7 +72,7 @@ using DynamicOctet = xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_v
         return out;
 }
 
-// Named so each requirement is checked on a TEMPLATE PARAMETER. Selecting a deleted overload is a hard error where the requires-expression names a concrete type -- measured on GCC and Clang alike -- and a soft false only through a parameter, which is what makes a deleted operator assertable at all.
+// Named so each requirement is checked on a template parameter: a deleted overload is a hard error otherwise.
 template<class T>
 concept eq_comparable = requires (T a, T b) { a == b; };
 template<class T>
@@ -106,7 +106,7 @@ BOOST_AUTO_TEST_CASE(AnOwnerIsRegularAndAViewIsCopyable)
         static_assert(not std::equality_comparable<View>);
         static_assert(not std::three_way_comparable<View>);
 
-        // Spelled out beside the two concepts, because the empty base a view carries has a defaulted <=> that ADL finds for a derived argument, and a PARTIAL deletion leaves a working subset rather than nothing: <=> rewrites the four relationals and never ==, != rewrites from == and never from <=>, and a defaulted <=> implicitly declares a defaulted == beside it.
+        // Spelled out: a partial deletion leaves a working subset, <=> rewriting the relationals and never ==.
         static_assert(not eq_comparable<View>);
         static_assert(not ne_comparable<View>);
         static_assert(not spaceship_comparable<View>);
@@ -177,7 +177,7 @@ BOOST_AUTO_TEST_CASE(AViewIsARangeInBothDirectionsAndAtThrowsPastTheEnd)
         BOOST_CHECK_EQUAL(v.max_size(), 100UZ);
         BOOST_CHECK(not v.empty());
 
-        // Named rather than a temporary: clang 23's lifetime analysis crashes on a deducing-this call with an rvalue self.
+        // Named rather than a temporary: clang 23 crashes on a deducing-this call with an rvalue self.
         auto const r = Reader(c);
         BOOST_CHECK_THROW(static_cast<void>(v.at(100)), std::out_of_range);
         BOOST_CHECK_THROW(static_cast<void>(r.at(100)), std::out_of_range);
@@ -253,7 +253,7 @@ BOOST_AUTO_TEST_CASE(TheOrderingIsTheLexicographicOrderOfTheBools)
         }
 }
 
-// Two sizes compare as the bools do, which is what sequence_lexicographical_compare_three_way asserted instead of answering: the shared positions decide, and when they all agree the shorter is a proper prefix of the longer and so less. The widths here cross a block boundary in both directions, so the deciding position lands inside the shared blocks, inside a block only the longer has, and nowhere at all.
+// Two sizes compare as the bools do: the shared positions decide, and agreeing, the shorter is less.
 BOOST_AUTO_TEST_CASE(TheOrderingAcrossTwoSizesIsStillTheLexicographicOrder)
 {
         auto const cases = dynamic_probes();
@@ -285,13 +285,13 @@ BOOST_AUTO_TEST_CASE(GrowthIsTheOwnersOverStorageThatGrows)
         d.push_back(false);
         BOOST_CHECK_EQUAL(d.size(), 4UZ);
         BOOST_CHECK(std::ranges::equal(d, std::vector<bool>{true, true, true, false}));
-        // What a distance can name, not what the storage could hold: this reading is a random access range, so end() - begin() is a difference_type and the ceiling is the storage's addressable one, where the set reading beside it takes the wider.
+        // What a distance can name: a random access range counts its positions by a difference_type.
         BOOST_CHECK_EQUAL(d.max_size(), xstd::detail::bits::contiguous_bit_vector<std::uint64_t>::max_addressable_width);
         BOOST_CHECK_LT(d.max_size(), xstd::detail::bits::contiguous_bit_vector<std::uint64_t>().max_size());
         BOOST_CHECK_THROW(d.resize(d.max_size() + 1UZ), std::length_error);
         BOOST_CHECK_EQUAL(Owner().max_size(), 100UZ);
 
-        // The fill insert asks for size() + n, an addition over a count the caller names: wrapped it would answer an insertion with a shorter sequence than it started from, so it saturates and the resize refuses it.
+        // The fill insert asks for size() + n, which saturates rather than wrapping to a shorter sequence.
         BOOST_CHECK_THROW(d.insert(d.begin(), std::numeric_limits<std::size_t>::max(), true), std::length_error);
         BOOST_CHECK_EQUAL(d.size(), 4UZ);
         BOOST_CHECK(std::ranges::equal(d, std::vector<bool>{true, true, true, false}));
@@ -301,7 +301,7 @@ BOOST_AUTO_TEST_CASE(GrowthIsTheOwnersOverStorageThatGrows)
         BOOST_CHECK(std::ranges::equal(d, std::vector<bool>{false, false, true, true, true, false}));
 }
 
-// at() is the reading's one checked door, and this is the extent it had not been asked at: bit_array's static owner, a view and a window are checked in bit_array.cpp, above, and bit_subspan.cpp. The width it measures against is the one that grows, so the position refused before the push_back is held after it.
+// at() is the reading's one checked door, measured against the width that grows.
 BOOST_AUTO_TEST_CASE(AtAnswersAtARunTimeWidthToo)
 {
         auto d = xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint64_t>, xstd::ownership::owns, false>(3, true);
@@ -315,7 +315,7 @@ namespace {
 
 using Dynamic = xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint64_t>, xstd::ownership::owns, false>;
 
-// One functor at namespace scope, so every view below is the SAME type and the packing tier is instantiated once for all three cases. Three lambdas would be three closure types and three instantiations, and the two that only ever refuse their range would leave that tier's loop unentered -- branches the coverage gate counts per instantiation and no test would take.
+// One functor at namespace scope, so the packing tier is instantiated once rather than once per closure.
 constexpr auto every_third = [](std::size_t i) -> bool { return i % 3 == 0; };
 
 // The same functor over a bound the sequence can hold, and over one it cannot.
@@ -326,7 +326,7 @@ constexpr auto every_third = [](std::size_t i) -> bool { return i % 3 == 0; };
 
 } // namespace
 
-// The packing tier over a range that holds nothing of its own: the bools are computed, so the loop is the only thing that knows how many there were. Two lengths, because the last word is what the tier has to get right -- 128 ends on a word boundary and 70 does not.
+// The packing tier over a computed range; two lengths, 128 ending on a word boundary and 70 not.
 BOOST_AUTO_TEST_CASE(TheAppendsPackWhatTheRangeComputes)
 {
         auto d = Dynamic();
@@ -345,7 +345,7 @@ BOOST_AUTO_TEST_CASE(TheAppendsPackWhatTheRangeComputes)
         BOOST_CHECK(std::ranges::equal(d, expected));
 }
 
-// The other addition this reading computes, and the one a caller names without holding what it names: a sized range answers size() for elements it never materializes, so size() + that is an argument's own sum. Wrapped it under-reserved to nothing and the packing loop then walked 2^64 elements a word at a time, ending when the allocator gave out rather than when the range did; saturated it is the length_error the reserve already throws. Two calls, because only the second wraps -- onto an empty sequence the sum is the range's own size, which was refused all along.
+// The other addition a caller names without holding it: a sized range's size() over elements it never makes.
 BOOST_AUTO_TEST_CASE(TheAppendsSumSaturatesRatherThanWrapping)
 {
         constexpr auto top = std::numeric_limits<std::size_t>::max();
@@ -359,7 +359,7 @@ BOOST_AUTO_TEST_CASE(TheAppendsSumSaturatesRatherThanWrapping)
         BOOST_CHECK_EQUAL(d.size(), 1UZ);
 }
 
-// The same sum through insert_range, which reaches it a rebuild away: the head is copied first, so the range is appended to a sequence that is not empty even where the insert is at the front. The copy is what the length_error unwinds, leaving the sequence itself untouched -- [vector]'s strong guarantee, which the rebuild gives for nothing.
+// The same sum through insert_range: the copy is what the length_error unwinds, so the sequence is untouched.
 BOOST_AUTO_TEST_CASE(ARefusedInsertRangeLeavesTheSequenceAsItWas)
 {
         constexpr auto top = std::numeric_limits<std::size_t>::max();
@@ -379,7 +379,7 @@ BOOST_AUTO_TEST_CASE(AZeroWidthSequenceIsEmpty)
         BOOST_CHECK(v.empty() and v.begin() == v.end());
 }
 
-// The sequence reading's own aggregates, against the reading they belong to rather than the set reading that happens to answer the same integer for one of the eight.
+// The sequence reading's own aggregates, against the reading they belong to.
 namespace {
 
 using Graded = test::graded_extents<xstd::basic_bit_array>;
@@ -427,7 +427,7 @@ auto aggregate_disagreements(Seq const& s, std::vector<bool> const& m)
         for (auto const value : {true, false}) {
                 auto const is = [value](bool b) -> bool { return b == value; };
                 disagreements += static_cast<std::size_t>(s.count(value) != static_cast<std::size_t>(std::ranges::count(m, value)));
-                // And against the generic algorithm over the SEQUENCE itself, not only over the model: the member counts a word at a time where the algorithm reaches through the proxy a bit at a time, and benchmark/src/sequence/access.cpp puts those two costs side by side. A ratio between them is a cost only while they answer the same number. Not a unique guard -- breaking the proxy's read fails this suite in seven other cases too -- but it is the benchmark's premise, stated where the benchmark can be read against it.
+                // And against the generic algorithm over the sequence itself, which the benchmark's ratio assumes.
                 disagreements += static_cast<std::size_t>(s.count(value) != static_cast<std::size_t>(std::ranges::count(s, value)));
                 disagreements += static_cast<std::size_t>(s.all(value) != std::ranges::all_of(m, is));
                 disagreements += static_cast<std::size_t>(s.any(value) != std::ranges::any_of(m, is));
@@ -469,7 +469,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheAggregatesAgreeWithTheModel, T, Graded)
         BOOST_CHECK_EQUAL(disagreements, 0UZ);
 }
 
-// The same over a window, whose blocks are not its own: a masked word at a time, at every offset and every length, so the mask is exercised at both ends of a word rather than only at the top.
+// The same over a window: a masked word at a time, at every offset and length, so both ends are exercised.
 BOOST_AUTO_TEST_CASE(TheAggregatesAgreeWithTheModelOnAWindowOfOurs)
 {
         using Storage24 = xstd::detail::bits::contiguous_bit_array<std::uint8_t, 24>;
@@ -490,7 +490,7 @@ BOOST_AUTO_TEST_CASE(TheAggregatesAgreeWithTheModelOnAWindowOfOurs)
         BOOST_CHECK_EQUAL(disagreements, 0UZ);
 }
 
-// std::mismatch's answer, over the machinery operator== is already made of: the position, or size() where the two agree.
+// std::mismatch's answer over the machinery operator== is made of: the position, or size() where equal.
 BOOST_AUTO_TEST_CASE_TEMPLATE(MismatchAgreesWithTheModel, T, Graded)
 {
         auto disagreements = 0UZ;
@@ -554,7 +554,7 @@ BOOST_AUTO_TEST_CASE(MismatchIsTheOwnersOverStorageThatHasTheEntry)
         static_assert(not can_mismatch<View::subspan_type>);
 }
 
-// for_each hands the functor what the iterator dereferences to, in the same order, and stops where a bool functor says to: the range-for's answer by a loop structure no iterator can express.
+// for_each hands the functor what the iterator dereferences to, and stops where a bool functor says to.
 BOOST_AUTO_TEST_CASE_TEMPLATE(ForEachAgreesWithTheRangeFor, T, Graded)
 {
         auto disagreements = 0UZ;
@@ -563,7 +563,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ForEachAgreesWithTheRangeFor, T, Graded)
                 auto const m = write_pattern(a, p);
                 disagreements += static_cast<std::size_t>(not std::ranges::equal(for_each_bools(a), m));
 
-                // A void functor always continues; a bool one says, and three is inside every extent but the two smallest.
+                // A void functor always continues; a bool one says, and three is inside all but two extents.
                 auto seen = 0UZ;
                 a.for_each([&seen](bool) -> bool { return ++seen < 3UZ; });
                 disagreements += static_cast<std::size_t>(seen != std::ranges::min(a.size(), 3UZ));
@@ -610,9 +610,7 @@ BOOST_AUTO_TEST_CASE(ForEachHandsTheBoolByValue)
         BOOST_CHECK(not took_a_reference);
 }
 
-// The byte exchange, at the sequence reading. Byte j holds the positions [8j, 8j + 8) least significant bit first
-// whatever the block width, so a fixed-width sequence agrees byte for byte with any other field of bits and this is
-// a copy rather than a walk over positions.
+// The byte exchange at the sequence reading: byte j holds [8j, 8j + 8), least significant bit first.
 BOOST_AUTO_TEST_CASE(APackedArrayExchangesBytesWithAFieldOfBits)
 {
         constexpr auto N = 100UZ;
@@ -639,8 +637,7 @@ BOOST_AUTO_TEST_CASE(APackedArrayExchangesBytesWithAFieldOfBits)
         }());
 }
 
-// NAMED in both directions: a packed array of bool and a field of bits are two readings of the same bits, and
-// this library makes a reader pick one rather than letting a conversion pick for them.
+// Named in both directions: a reader picks the reading rather than letting a conversion pick for them.
 BOOST_AUTO_TEST_CASE(TheSequenceExchangeIsNamedBothWays)
 {
         constexpr auto N = 64UZ;
@@ -656,10 +653,7 @@ BOOST_AUTO_TEST_CASE(TheSequenceExchangeIsNamedBothWays)
         static_assert(not test::exchanges_from_bits<T, std::bitset<N - 1UZ>>);
 }
 
-// A WINDOW is the one shape that must not convert, and it is why is_window is asked rather than left to
-// has_static_width. A window carries a bit offset and a size of its own into storage it does not span, so its
-// position zero is not the storage's and its bytes are not the storage's bytes. A window over a static container
-// still reports that CONTAINER's extent, so the width test alone would wave it through and hand back the wrong bits.
+// A window is the one shape that must not convert: its position zero is not the storage's.
 BOOST_AUTO_TEST_CASE(AWindowIsNotAFieldOfBitsButAPlainViewIs)
 {
         static_assert(not test::exchanges_to_bits<xstd::bit_subspan<Storage>, std::bitset<100>>);
@@ -680,8 +674,7 @@ BOOST_AUTO_TEST_CASE(AWindowIsNotAFieldOfBitsButAPlainViewIs)
         static_assert(not test::exchanges_from_bits<View, std::bitset<100>>);
 }
 
-// A run-time width has neither, and that is the policy rather than an omission: a field of N bits names one N at
-// compile time and a growing sequence has no single one to mean.
+// A run-time width has neither: a field of N bits names one N, and a growing sequence has no single one.
 BOOST_AUTO_TEST_CASE(ARunTimeWidthHasNoByteExchange)
 {
         static_assert(not test::exchanges_from_bits<xstd::bit_vector, std::bitset<64>>);
@@ -689,14 +682,11 @@ BOOST_AUTO_TEST_CASE(ARunTimeWidthHasNoByteExchange)
         static_assert(not test::exchanges_from_bits<DynamicOctet, std::bitset<64>>);
 }
 
-// The sequence reading takes raw blocks on that same rule, and this is the spelling that reads differently here
-// than it does at the set reading: five is not the set {0, 2} but the elements true, false, true, and false for
-// the rest. Same bits, two vocabularies, which is the whole reason the door is named rather than spelled as a cast.
+// Raw blocks read differently here than at the set reading: five is true, false, true, then false.
 BOOST_AUTO_TEST_CASE(RawBlocksAreElementsUnderThisReading)
 {
         auto const a = xstd::bit_array<64>::from_bits(std::array<std::uint64_t, 1>{5ULL});
-        // Combined with `and`, as this file does elsewhere: an element is a PROXY reference, and a bare one is an
-        // ambiguous initializer for Boost.Test's assertion_result where the combination is a plain bool.
+        // Combined with `and`: a bare proxy is an ambiguous initializer for Boost.Test's assertion_result.
         BOOST_CHECK(a[0] and not a[1] and a[2]);
         BOOST_CHECK_EQUAL(a.count(), 2UZ);
 
