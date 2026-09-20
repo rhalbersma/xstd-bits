@@ -4286,3 +4286,52 @@ failbit only when N > 0, so at N == 0 an empty stream is failed at the sentry or
 
 There is one peek per character: peeking twice sets eofbit and then failbit, which fails a short but
 valid extraction.
+
+### The sequence reading's byte exchange, and why it declines a window
+
+Byte `j` holds the positions `[8j, 8j + 8)` least significant bit first, so a fixed width over the
+same positions agrees byte for byte with any other and the exchange is a copy rather than a walk.
+
+It is named rather than spelled as a conversion for the reason the set reading gives: a sequence of
+unsigned integers is one argument with two readings. This reading cannot hit the `from_range`
+collision itself — its `from_range` wants `can_grow`, and anything that can grow has a dynamic extent,
+which turns the exchange off — but one door with two spellings across three readings would be worse
+than either spelling alone.
+
+The vocabulary is the thing to read twice at this reading: `bit_array<32>::from_bits(5u)` is a packed
+array of bool — true, false, true, then twenty-nine more false — and not the set `{0, 2}` that the
+same bits spell one reading over.
+
+**Not on a window**, which is the whole of why `is_window` is asked. A window is a bit offset and a
+size of its own into storage it does not span: its position zero is not the storage's, so its bytes
+are not the storage's bytes and `to_bits` would hand back the wrong ones. The width test inside
+`exchanges_bits` does not catch it, since a window over a static container reports the *container's*
+extent rather than its own size. A view that is not a window spans the whole container, so its bytes
+are that container's and it exchanges.
+
+### Two places where the coverage gate decides the layout
+
+`front()` and `back()` are both preconditions in [sequence.reqmts], and `back()`'s is the one that
+subtracts: on an empty sequence `offset() + size() - 1UZ` wraps, and the reference handed back names a
+position no storage has. Each assert is spelled over four lines rather than one, because gcovr
+excludes an assert by a pattern anchored at the start of a line.
+
+The static owner's defaulted `operator==` is kept on a single line for the mirror-image reason:
+gcovr's `--exclude-unreachable-branches` matches the line carrying `= default;`, and gcov anchors a
+defaulted comparison's branches at the declaration's first line. Split across lines — which
+clang-format will do to any such declaration long enough to wrap — the exclusion stops matching and
+the dead base comparison fails the 100% branch gate.
+
+### `modernize-avoid-c-style-cast` on `owns(Own)`
+
+clang-tidy 23 points at the `Own` in `owns(Own)` and offers to rewrite it as a `static_cast`, having
+read the call as a C-style cast of a parenthesized type. There is no cast on that line.
+
+`owns` is a function — `[[nodiscard]] constexpr auto owns(ownership) -> bool`, in `ownership.hpp` —
+and `ownership::owns` is a *scoped* enumerator, so the unqualified name can only be the function and
+`Own` is a non-type template parameter, not a type. The same `owns(Own)` is written at sixteen other
+sites in this library and none of them is flagged; what is particular about this one is the
+namespace-scope variable template, whose initializer is value-dependent until instantiation.
+
+It is suppressed rather than respelled: writing `Own == ownership::owns` instead would inline the one
+function that exists so nobody has to.
