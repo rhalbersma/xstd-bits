@@ -29,7 +29,7 @@
 #include <functional>                                        // plus
 #include <iterator>                                          // distance, forward_iterator, input_iterator, prev
 #include <limits>                                            // numeric_limits
-#include <ranges>                                            // begin, drop, iota, rbegin, rend, size, swap, take, transform, zip
+#include <ranges>                                            // begin, drop, iota, rbegin, rend, size, swap, transform, zip
                                                              // (views::drop_last when P22014R2 is accepted)
 #include <source_location>                                   // source_location
 #include <xstd/bits/detail/bit_castable.hpp>                 // bit_bytes, bit_castable, byte_count, bytes_bits, container_source
@@ -214,7 +214,7 @@ public:
                         // One width, so holding the same positions and being equal are the same statement.
                         return x == y;
                 } else {
-                        // ranges::equal over the shared prefix, NOT over the two block ranges: on two sized ranges it compares size() first and answers false without looking at an element, which is the one case this asks about. Taking the prefix as an ITERATOR PAIR keeps the answer and gets the algorithm, which lowers to a memcmp on trivially comparable contiguous blocks where all_of over a zip stays an element loop -- 2.15us to 1.29us over 4700 blocks. Not views::take, which libc++ 18 cannot form over these blocks, as all_but_last_are_ones already records. The other two block walks cannot follow: is_subset_of and intersects do bitwise work per block and have no such algorithm.
+                        // ranges::equal over the shared prefix, NOT over the two block ranges: on two sized ranges it compares size() first and answers false without looking at an element, which is the one case this asks about. Taking the prefix as an ITERATOR PAIR keeps the answer and gets the algorithm, which lowers to a memcmp on trivially comparable contiguous blocks where all_of over a zip stays an element loop -- 2.15us to 1.29us over 4700 blocks. The other two block walks cannot follow: is_subset_of and intersects do bitwise work per block and have no such algorithm.
                         auto const shared = static_cast<std::ptrdiff_t>(std::ranges::min(x.num_blocks(), y.num_blocks()));
                         auto const xf = std::ranges::begin(x.m_blocks);
                         auto const yf = std::ranges::begin(y.m_blocks);
@@ -1402,7 +1402,6 @@ private:
                 }
         }
 
-        // An iterator pair, not views::take, which libc++ 18 cannot form here.
         [[nodiscard]] constexpr auto all_but_last_are_ones() const noexcept
                 -> bool
         {
