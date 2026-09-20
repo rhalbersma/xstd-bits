@@ -24,22 +24,28 @@ set -euo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
 
+# A cloud setup script runs as root; a developer's shell does not.
+SUDO=""
+if [ "$(id -u)" -ne 0 ]; then
+        SUDO="sudo"
+fi
+
 readonly CLANG_VERSION=22
 readonly GCC_VERSION=15
 readonly CLANG_FORMAT_VERSION=22.1.8
 
 # apt.llvm.org for clang, the toolchain PPA for a GCC newer than noble's. The PPA signs with RSA-1024, so apt
 # warns about a weak algorithm on every update; that is the archive's key, not a fault in this script.
-curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key | gpg --batch --yes --dearmor -o /usr/share/keyrings/llvm.gpg
+curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key | $SUDO gpg --batch --yes --dearmor -o /usr/share/keyrings/llvm.gpg
 echo "deb [signed-by=/usr/share/keyrings/llvm.gpg] https://apt.llvm.org/noble/ llvm-toolchain-noble-${CLANG_VERSION} main" \
-        > /etc/apt/sources.list.d/llvm.list
+        | $SUDO tee /etc/apt/sources.list.d/llvm.list > /dev/null
 
 curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x60c317803a41ba51845e371a1e9377a2ba9ef27f" \
-        | gpg --batch --yes --dearmor -o /usr/share/keyrings/ubuntu-toolchain.gpg
+        | $SUDO gpg --batch --yes --dearmor -o /usr/share/keyrings/ubuntu-toolchain.gpg
 echo "deb [signed-by=/usr/share/keyrings/ubuntu-toolchain.gpg] https://ppa.launchpadcontent.net/ubuntu-toolchain-r/test/ubuntu noble main" \
-        > /etc/apt/sources.list.d/ubuntu-toolchain.list
+        | $SUDO tee /etc/apt/sources.list.d/ubuntu-toolchain.list > /dev/null
 
-apt-get update -qq
+$SUDO apt-get update -qq
 
 packages=(
         "g++-${GCC_VERSION}"
@@ -55,12 +61,15 @@ if [[ "${XSTD_TOOLCHAIN_FULL:-0}" == "1" ]]; then
         packages+=("g++-16")
 fi
 
-apt-get install -y -qq "${packages[@]}"
+$SUDO apt-get install -y -qq "${packages[@]}"
 
 # The format gate pins 22, and before 22 clang-format reads `{ a * b }` in a requires-expression as a pointer
 # declaration. apt has no clang-format-22 for noble, so it comes from PyPI and lands in ~/.local/bin.
-pip install --quiet --user --break-system-packages "clang-format==${CLANG_FORMAT_VERSION}"
+pip install --quiet --user --break-system-packages "clang-format==${CLANG_FORMAT_VERSION}" \
+        || pip3 install --quiet --user "clang-format==${CLANG_FORMAT_VERSION}"
 
-"g++-${GCC_VERSION}" --version | head -1
-"clang++-${CLANG_VERSION}" --version | head -1
-"${HOME}/.local/bin/clang-format" --version
+# Report what landed, but never fail a setup over a version banner: everything above has already
+# installed by this point, and a caller that cannot print is not a caller that cannot build.
+"g++-${GCC_VERSION}" --version | head -1 || true
+"clang++-${CLANG_VERSION}" --version | head -1 || true
+"${HOME:-/root}/.local/bin/clang-format" --version || true

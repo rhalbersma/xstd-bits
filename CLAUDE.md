@@ -92,6 +92,19 @@ not implicitly `noexcept`: `static_assert(!noexcept(plain(1)))` holds for a lamb
 written on it. Write `noexcept` on a lambda where it is wanted, and keep it where it is already
 there.
 
+## Checking your work
+
+Compile with the **stable rung** of [README.md](README.md)'s matrix, never with whatever `g++` or `clang++`
+happen to resolve to. Ubuntu 24.04 ships GCC 13, which rejects `-std=c++2c` outright, so the default compiler
+cannot build this library at all, and a check that quietly falls back to a cut-down reproduction proves less than
+it appears to. [`tools/setup-toolchain.sh`](tools/setup-toolchain.sh) installs the rung;
+`XSTD_TOOLCHAIN_FULL=1` adds the qualification rung, which a leg carrying a newer standard library needs.
+
+A comment or formatting change is not exempt, because two gates read lines rather than syntax. `NOLINT` and
+`GCOVR_EXCL_LINE` suppress the line they sit on, so a formatter that splits that line leaves the marker behind on
+the wrong half, where it goes silent with nothing to say it has. Check that the code is byte-identical when a
+change is meant to be comment-only, and that every marker still sits on the line it names.
+
 ## `[[nodiscard]]`
 
 Every function that returns a value carries it. Two kinds do not.

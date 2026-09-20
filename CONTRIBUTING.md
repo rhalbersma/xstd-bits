@@ -32,15 +32,31 @@ installs the `stable` column of [README.md](README.md)'s matrix — GCC 15, clan
 Boost.Test — from apt.llvm.org and the Ubuntu toolchain PPA:
 
 ```sh
-sudo tools/setup-toolchain.sh
+tools/setup-toolchain.sh
 ```
 
 `XSTD_TOOLCHAIN_FULL=1` adds GCC 16, the qualification rung, whose libstdc++ is the oldest carrying
 `<inplace_vector>`. The script is idempotent, so re-running it on a warm container is safe.
 
-In a [Claude Code cloud](https://code.claude.com/docs/en/claude-code-on-the-web) environment, point the
-environment's setup script at it so every session starts with the rung already in place. That field is configured
-on the environment itself, not in this repository.
+In a [Claude Code cloud](https://code.claude.com/docs/en/claude-code-on-the-web) environment, the environment's
+setup script runs it, so every session starts with the rung already in place. That field holds a script rather than
+a command, and it runs from outside the checkout, so it needs a shebang and an absolute path:
+
+```sh
+#!/usr/bin/env bash
+set -euo pipefail
+for dir in /home/user/*/; do
+        script="${dir}tools/setup-toolchain.sh"
+        if [ -x "$script" ]; then
+                exec "$script"
+        fi
+done
+echo "setup-toolchain.sh not found in any checkout under /home/user" >&2
+exit 1
+```
+
+The field is configured on the environment, not in this repository, and one environment serves every repository it
+opens — so each of them needs this script at this path.
 
 ## Test layout and naming
 
