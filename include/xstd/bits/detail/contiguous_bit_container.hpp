@@ -189,7 +189,7 @@ public:
         }
 
         // Memberwise, width first: the unused bits are kept clear, so the blocks compare as the bits do.
-        [[nodiscard]] friend constexpr auto operator==(contiguous_bit_container const&, contiguous_bit_container const&) noexcept -> bool = default;
+        [[nodiscard]] friend auto operator==(contiguous_bit_container const&, contiguous_bit_container const&) -> bool = default;
 
         // The set reading's equality, where width is capacity: a hidden friend, neither value being the subject.
         [[nodiscard]] friend constexpr auto set_equal(contiguous_bit_container const& x, contiguous_bit_container const& y) noexcept

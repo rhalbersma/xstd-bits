@@ -46,3 +46,22 @@ auto operator=(T const&) -> T& = delete;
         return m_offset;
 }
 ```
+
+## What the language already says
+
+Do not write out what a declaration already has.
+
+A **defaulted or deleted** member is implicitly `constexpr` and carries the exception specification
+its members imply, so neither keyword is spelled on one. If an explicit `noexcept` compiled there, the
+implicit specification was `noexcept` too — an incompatible one would have defined the function as
+deleted — so removing it changes nothing.
+
+```cpp
+[[nodiscard]] friend auto operator==(T const&, T const&) -> bool = default;
+auto operator=(T const&) -> T& = delete;
+```
+
+A **lambda** is implicitly `constexpr` when it is eligible, so that is not written either. It is
+**not** implicitly `noexcept`: `static_assert(!noexcept(plain(1)))` holds for a lambda with nothing
+written on it, on both g++ and clang++. Write `noexcept` on a lambda where it is wanted, and keep it
+where it is already there.

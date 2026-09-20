@@ -47,14 +47,14 @@ struct digit_char
         unsigned char v;
 
         // Defaulted on first declaration, so the default constructor below leaves it trivial and all four traits hold.
-        constexpr digit_char() noexcept = default;
+        digit_char() = default;
 
         // A converting constructor: charT('0') on a bare aggregate is a C++20 extension clang diagnoses.
         constexpr digit_char(unsigned char c) noexcept // NOLINT(misc-explicit-constructor,google-explicit-constructor,hicpp-explicit-conversions)
             : v(c)
         {}
 
-        [[nodiscard]] friend constexpr auto operator==(digit_char, digit_char) noexcept -> bool = default;
+        [[nodiscard]] friend auto operator==(digit_char, digit_char) -> bool = default;
 };
 
 } // namespace test_chars
