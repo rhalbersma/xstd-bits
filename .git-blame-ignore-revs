@@ -1,0 +1,17 @@
+#          Copyright Rein Halbersma 2014-2026.
+# Distributed under the Boost Software License, Version 1.0.
+#    (See accompanying file LICENSE_1_0.txt or copy at
+#          http://www.boost.org/LICENSE_1_0.txt)
+
+# Revisions to skip when walking blame, one per line, newest last. Only
+# whitespace-preserving reformats belong here: a commit listed below must not
+# have changed a token, or blame will silently attribute real edits elsewhere.
+#
+# Configure a clone to honour this file once, with:
+#
+#     git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# GitHub's blame view reads it without being asked.
+
+# Run clang-format over the tree
+656951f50b54ecc3c9609934069bdf3a44c21464
