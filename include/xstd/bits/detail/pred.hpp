@@ -10,7 +10,7 @@
 
 namespace xstd::detail::bits {
 
-// Both masks are compared against a zero Block rather than converted to a bool, which is the question each name asks: a conversion leaves the reader to translate "true" back into "shares a bit" or "has none outside".
+// Both masks compare against a zero Block rather than convert to bool, which is the question each name asks.
 template<xstd::unsigned_integer Block>
 [[nodiscard]] constexpr auto intersects(Block lhs, Block rhs) noexcept
         -> bool

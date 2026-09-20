@@ -13,7 +13,7 @@
 
 namespace test::bitset {
 
-// A static width ignores the count; a growing one, ours or boost's, is resized to it. Not noexcept: resizing a growing one allocates, and past max_size() it is length_error besides.
+// A static width ignores the count; a growing one is resized to it. Not noexcept: resizing allocates.
 template<class T>
 struct factory
 {

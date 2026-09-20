@@ -18,7 +18,7 @@
 
 namespace xstd {
 
-// A resizable bitset that never allocates, which is what embedded code asks for; no bit_ prefix, bitset already carrying the word.
+// A resizable bitset that never allocates; no bit_ prefix, bitset already carrying the word.
 template<xstd::unsigned_integer Block, std::size_t N>
 using basic_inplace_bitset = bitset_adaptor<detail::bits::contiguous_bit_inplace_vector<Block, N>>;
 

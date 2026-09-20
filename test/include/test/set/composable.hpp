@@ -14,7 +14,7 @@
 
 namespace test::set::composable {
 
-// The four below build an X through ranges::to, which inserts, and a set's insert is the one operation that can be unable to satisfy a key: past max_size() it is std::length_error. So none of them is noexcept, where includes() -- which constructs nothing -- is.
+// The four below insert through ranges::to, which past max_size() is std::length_error, so none is noexcept.
 
 struct includes
 {

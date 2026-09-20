@@ -11,7 +11,7 @@
 
 namespace test {
 
-// What a const_reference must be for a[i] = a[j] to write through rather than rebind; a proxy and a const bool& both qualify.
+// What a const_reference must be for a[i] = a[j] to write through rather than rebind.
 template<class R>
 concept value_reference =
         std::is_trivially_destructible_v<R> and not std::is_default_constructible_v<R> and std::is_trivially_copy_constructible_v<R> and not std::is_copy_assignable_v<R> and std::is_trivially_move_constructible_v<R> and not std::is_move_assignable_v<R> and std::equality_comparable<R>;

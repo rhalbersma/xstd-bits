@@ -13,7 +13,7 @@
 
 namespace xstd::detail::bits {
 
-// P2278R4's two aliases, transcribed from [const.iterators.alias] and [ranges.syn], constraints included: the paper defines them by a formula, so this is a definition and not an approximation of one. The paper's It is spelled I, as every other iterator parameter here is. Unconditional, and in a namespace of its own so that a library shipping the paper does not shadow it but is checked against it.
+// P2278R4's two aliases, transcribed from [const.iterators.alias] and [ranges.syn], constraints included.
 namespace fallback {
 
 template<std::indirectly_readable I>
@@ -24,7 +24,7 @@ using range_const_reference_t = iter_const_reference_t<std::ranges::iterator_t<R
 
 } // namespace fallback
 
-// The standard's where the library has it, the transcription above where it does not. libc++ has implemented P2278R4 on no branch, trunk included: __cpp_lib_ranges_as_const is still a commented-out line in its <version>, and neither as_const_view.h nor const_access.h exists, so a third of the matrix takes the second arm. The arms are the same type rather than two contracts, which is what TheConstReferenceIsP2278s asserts wherever both spellings exist.
+// The standard's alias where the library ships P2278R4, the transcription where it does not; both name one type.
 #ifdef __cpp_lib_ranges_as_const
 
 template<std::ranges::range R>

@@ -11,7 +11,7 @@
 #include <cstddef>                  // size_t
 #include <optional>                 // optional
 
-// Its own header rather than a corner of set/ordering.hpp, which reaches for bit_set_view and make_bitset that this needs none of: a container's test should not pay for the view's machinery to ask one question.
+// Its own header rather than a corner of set/ordering.hpp, which reaches for bit_set_view and make_bitset.
 namespace test::set {
 
 // The set reading yields its keys in ASCENDING order, at every width and for every storage.

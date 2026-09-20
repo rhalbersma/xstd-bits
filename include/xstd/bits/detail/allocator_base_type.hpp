@@ -8,7 +8,7 @@
 
 namespace xstd::detail::bits {
 
-// The allocator's name where the storage below has one and nothing where it does not: an empty base, a class having no conditional typedef.
+// The allocator's name where the storage has one and nothing where it does not: an empty base.
 template<class Storage>
 struct allocator_base_type
 {

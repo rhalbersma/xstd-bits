@@ -11,7 +11,7 @@
 #include <cstdint>                   // uint64_t
 #include <functional>                // hash
 
-// std_hash's Hash parameter is the one thing std::hash cannot reach, so it is asserted here rather than through a specialization.
+// std_hash's Hash parameter is the one thing std::hash cannot reach, so it is asserted here.
 BOOST_AUTO_TEST_SUITE(DetailHash)
 
 using set_type = xstd::bitset<8>;

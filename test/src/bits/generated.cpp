@@ -45,7 +45,7 @@ constexpr auto is_regular_container()
         return true;
 }
 
-// The allocator is the one answer that varies, and it varies by column, not by row: a storage that allocates has one to show, and a static width has none.
+// The allocator varies by column, not by row: a storage that allocates has one, a static width has none.
 template<class T> constexpr auto allocator_aware() -> bool
 {
         static_assert(has_get_allocator<T>);
@@ -100,7 +100,7 @@ BOOST_AUTO_TEST_CASE(TheAllocatorFollowsTheColumnAndNotTheRow)
         BOOST_CHECK(true);
 }
 
-// A swap that fell back on the implicit moves would still compile every assertion above, so the exchange is checked to move the values.
+// A swap falling back on the implicit moves would still compile every assertion above, so moves are checked.
 BOOST_AUTO_TEST_CASE(SwapExchangesTheValues)
 {
         auto a = xstd::bit_static_set<N>();
