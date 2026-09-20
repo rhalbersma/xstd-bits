@@ -63,7 +63,8 @@ static_assert(is_bitset_adaptor<xstd::inplace_bitset<100>>);
 
 } // namespace consumer
 
-int main()
+auto main()
+        -> int
 {
         auto failures = 0;
         auto const check = [&failures](bool ok) noexcept { failures += ok ? 0 : 1; };
