@@ -4107,3 +4107,63 @@ transparently, so its failure stays in the immediate context. Both `::value` sit
 `[array.tuple]`'s element half also only exists for a non-empty array: `tuple_element<I, array<T, N>>`
 Mandates `I < N`, so element zero is a question that cannot be put to a width of nought — on the
 packing or on `std::array` itself.
+
+### Why the byte exchange is named rather than spelled as a conversion
+
+`from_bits` and `to_bits` take a field of bits in and hand one out, at the one extent where the
+question has a single answer: a static width is a capacity under the set reading and the other side's
+own width both, so position `n` here is bit `n` there. Nothing truncates, nothing grows, nothing
+throws, and the round trip is the identity in both directions.
+
+They are **named** rather than spelled as a conversion, which is the one thing `explicit` could not
+buy. A contiguous range of unsigned integers already means something at this reading: `from_range`
+reads it as a range of *keys*. So the same argument had two meanings a tag apart, and both compiled:
+
+```cpp
+bit_static_set<256>(std::from_range, words)   // {0, 5} -- the values are keys
+bit_static_set<256>(words)                    // {0, 2} -- the values are blocks
+```
+
+`explicit` guards against a conversion nobody asked for. It does nothing about a reader misreading
+one that *was* asked for, and that is the failure available here. A name does: `from_bits` says which
+reading of the argument is meant, at the call site, where the reader is. `std::bitset` spells its own
+exit `to_ullong` for the same reason, Boost spells this pair `from_block_range` and `to_block_range`,
+and `contiguous_bit_container` has said `assign_bits` and `to_bits` one layer down all along.
+
+They are named **by a concept** rather than by a type. `std::bitset` appears nowhere in them, which is
+the point: what these two admit is anything whose N bits this library can prove it reads correctly —
+an unsigned integer or a sequence of them, whose layout the language and the sequence state between
+them, or a field of bits whose layout `bit_castable` probes and proves. So `std::bitset<N>` rides in
+on the same rule as `unsigned long long`, and an implementation that ever laid its bits out otherwise
+is simply not admitted: a call that fails to compile rather than one quietly wrong.
+
+The integer family is the one a set reader can still misread, and the name is what answers it:
+`bit_static_set<32>::from_bits(5u)` is the set of positions the value five has, `{0, 2}`, and not the
+set `{5}`.
+
+### What each storage says for a key it cannot hold
+
+Every other member of the set reading is total over `key_type`: `contains`, `count`, `find`,
+`lower_bound`, `upper_bound`, `equal_range` and `erase(key)` all answer for a key past the width
+rather than refuse the question. The two that write cannot — there is nowhere to put it — and the
+three storages differ because the reasons differ:
+
+| storage | for a key past the width |
+| :--- | :--- |
+| dynamic extent | grows to admit it, and past `max_size()` says `std::length_error` |
+| inplace extent | grows within its capacity, and past it the blocks say `std::bad_alloc` |
+| static extent | says `std::out_of_range`, as `xstd::bitset<N>` does for a position past N |
+
+A domain, a capacity and a representable size — three different limits, and none of them silent. The
+dynamic width's ceiling is asked at this reading rather than at the storage, which has none of its
+own, so the set reading keeps `length_error` while the bitset reading beside it answers `bad_alloc`
+as boost does.
+
+### The static owner's equality is written out
+
+A static owner's equality is its one member's: every instance carries the same width, so the arms
+have nothing to choose between. It is written out rather than defaulted because a defaulted
+comparison compares the bases first, and the base is `allocator_base_type`, an empty class whose own
+defaulted `operator==` can only answer true. That call is a branch no input can send the other way,
+and an unreachable branch is a hole in a coverage gate that admits no test. Saying the member outright
+is the same comparison with nothing dead in it.
