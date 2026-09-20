@@ -59,7 +59,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(SievesTooSmallForTheSquareBreakStillSiftCorrectly,
         BOOST_CHECK(opt::filter_twins(one).empty());
 }
 
-// The README offers a word-at-a-time twins as the dense container's answer to the elementwise one; the two agreeing is the whole claim, so it is asserted rather than described.
+// The word-at-a-time twins against the elementwise one: the two agreeing is the claim, so it is asserted.
 BOOST_AUTO_TEST_CASE(TheDataParallelTwinsAgreeWithTheElementwiseOnes)
 {
         auto const primes = opt::sift_primes1<xstd::bit_static_set<N>>(N);
@@ -68,7 +68,7 @@ BOOST_AUTO_TEST_CASE(TheDataParallelTwinsAgreeWithTheElementwiseOnes)
         BOOST_CHECK(elementwise == parallel);
 }
 
-// The three sieves are one function of n, and the two unbounded ones earn their place by agreeing with the bounded one rather than by being described as equivalent.
+// The three sieves are one function of n, the unbounded two earning their place by agreeing with the bounded one.
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheUnboundedSievesAgreeWithTheBoundedOne, T, Types)
 {
         for (auto const n : {0UZ, 1UZ, 2UZ, 3UZ, 4UZ, 5UZ, 9UZ, 10UZ, N / 2UZ, N}) {
@@ -87,7 +87,7 @@ BOOST_AUTO_TEST_CASE(TheIncrementalSieveGeneratesWithoutABound)
         for (auto i = 0UZ; i < 25UZ; ++i) {
                 first.push_back(sieve.next());
         }
-        // Compared as a range rather than through std::format, which the cases above use: this one is a std::vector and would format in brackets, and a collection comparison names the first position that disagrees where a string comparison names only that the strings do.
+        // Compared as a range, not through std::format, so a disagreement names the first position.
         auto const expected = std::vector<std::size_t>{
                 2UZ,
                 3UZ,
@@ -121,7 +121,7 @@ BOOST_AUTO_TEST_CASE(TheIncrementalSieveGeneratesWithoutABound)
         BOOST_CHECK_EQUAL(sieve.next(), 101UZ);
 }
 
-// The segmented sieve sizes its base pass with isqrt, which carries no n < 2 guard because the Newton loop is already total there.
+// The segmented sieve sizes its base pass with isqrt, which needs no n < 2 guard, the Newton loop being total there.
 BOOST_AUTO_TEST_CASE(TheIntegerSquareRootIsExactAndTotal)
 {
         BOOST_CHECK_EQUAL(opt::detail::sieve::isqrt(0UZ), 0UZ);
@@ -140,7 +140,7 @@ BOOST_AUTO_TEST_CASE(TheIntegerSquareRootIsExactAndTotal)
         BOOST_CHECK_EQUAL(opt::detail::sieve::isqrt(1UZ << 52UZ), 1UZ << 26UZ);
 }
 
-// generate_candidates is total in n: below two there is nothing to sift, which is an answer rather than a broken precondition on iota.
+// generate_candidates is total in n: below two there is nothing to sift, which is an answer.
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheSieveIsTotalBelowTwo, T, Types)
 {
         BOOST_CHECK(opt::sift_primes0<T>(0UZ).empty());

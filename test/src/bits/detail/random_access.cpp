@@ -23,7 +23,7 @@
 
 namespace {
 
-// A strong type to receive what the proxy converts to, copy-initialized and never cast: a cast is a direct-initialization with two routes in, and MSVC calls that no route at all.
+// A strong type, copy-initialized and never cast: a cast is direct-initialization, which MSVC reads as no route at all.
 struct flag
 {
         bool value;
@@ -87,7 +87,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheSequenceIteratorIsRandomAccess, T, ArrayTypes)
         static_assert(not std::sortable<xstd::detail::bits::random_access_bit_iterator<T const>>);
 }
 
-// Const is in the Bits and nowhere else. Writability used to be a second question, asked of the trait -- a trait with only the required entries had no unchecked_assign and so no way to write -- but the proxy asks the storage now, and a const storage has no assign to reach. One question, answered by the type.
+// Const is in the Bits and nowhere else: the proxy asks the storage, and a const storage has no assign to reach.
 BOOST_AUTO_TEST_CASE(ConstnessLivesInTheBits)
 {
         using Ref = xstd::detail::bits::random_access_bit_reference<Bits>;
@@ -107,7 +107,7 @@ BOOST_AUTO_TEST_CASE(TheReadOnlyProxiesAreValues)
 {
         static_assert(test::value_reference<xstd::detail::bits::random_access_bit_reference<Bits const>>);
 
-        // The writable proxy is the one exception, by design: its assignment writes the bit. Trivial to copy and destroy all the same.
+        // The writable proxy is the one exception by design, and trivial to copy and destroy all the same.
         static_assert(not test::value_reference<xstd::detail::bits::random_access_bit_reference<Bits>>);
         static_assert(std::is_trivially_copy_constructible_v<xstd::detail::bits::random_access_bit_reference<Bits>>);
         static_assert(std::is_trivially_destructible_v<xstd::detail::bits::random_access_bit_reference<Bits>>);
@@ -223,7 +223,7 @@ BOOST_AUTO_TEST_CASE(RangesAlgorithmsReachTheBitsThroughIterMoveAndIterSwap)
         std::ranges::reverse(model);
         BOOST_CHECK(as_vector(c) == model);
 
-        // The pre-ranges algorithms on purpose: they reach the bits through std::iter_swap and the swap friends, not iter_swap.
+        // The pre-ranges algorithms on purpose: they reach the bits through std::iter_swap and the swap friends.
         std::sort(first, last); // NOLINT(modernize-use-ranges)
         std::ranges::sort(model);
         BOOST_CHECK(as_vector(c) == model);
@@ -243,7 +243,7 @@ BOOST_AUTO_TEST_CASE(RangesAlgorithmsReachTheBitsThroughIterMoveAndIterSwap)
         BOOST_CHECK_EQUAL(static_cast<bool>(*rfirst), model.back());
 }
 
-// format_as is what the proxy's own std::formatter calls, unqualified, and what fmt would call in a consumer that uses it, so calling it the same way is the test.
+// format_as is what the proxy's own std::formatter calls unqualified, and what fmt would call, so the test calls it so.
 BOOST_AUTO_TEST_CASE(TheProxyFormatsAsItsValue)
 {
         auto c = Bits();
@@ -279,7 +279,7 @@ BOOST_AUTO_TEST_CASE(TheViewIteratesWithTheSharedProxy)
         BOOST_CHECK(true);
 }
 
-// One shape asked twice: * gives a proxy, & gives an iterator back, and the value comes only by converting; the standard says nothing here, so only our own guarantees are asserted.
+// One shape asked twice: * gives a proxy, & an iterator back, and only our own guarantees are asserted.
 BOOST_AUTO_TEST_CASE(DereferencingYieldsAProxyRatherThanTheValue)
 {
         static_assert(std::same_as<decltype(*std::declval<ArrIt const&>()), ArrRef>);

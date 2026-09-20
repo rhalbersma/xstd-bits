@@ -16,9 +16,9 @@
 
 BOOST_AUTO_TEST_SUITE(Format)
 
-// Nothing here says anything about a container: the two proxies carry a formatter and [format.range.formatter] does the rest.
+// Nothing here says anything about a container: the proxies carry a formatter, [format.range.formatter] the rest.
 
-// [format.range.fmtkind] chooses range_format::set for a range with a key_type, so the set reading arrives at braces without being told.
+// [format.range.fmtkind] chooses range_format::set for a range with a key_type, so the set reading arrives at braces.
 BOOST_AUTO_TEST_CASE(TheSetReadingFormatsInBraces)
 {
         auto d = xstd::bit_set();
@@ -35,7 +35,7 @@ BOOST_AUTO_TEST_CASE(TheSetReadingFormatsInBraces)
         BOOST_CHECK_EQUAL(std::format("{}", xstd::bit_set()), "{}");
 }
 
-// And range_format::sequence otherwise, so the sequence reading arrives at brackets and prints every position, clear ones included, which is the whole difference between the two readings.
+// And range_format::sequence otherwise, so the sequence reading prints every position, clear ones included.
 BOOST_AUTO_TEST_CASE(TheSequenceReadingFormatsInBrackets)
 {
         auto v = xstd::bit_vector(4UZ);
@@ -51,7 +51,7 @@ BOOST_AUTO_TEST_CASE(TheSequenceReadingFormatsInBrackets)
         BOOST_CHECK_EQUAL(std::format("{}", xstd::bit_vector()), "[]");
 }
 
-// A view is a range over the same proxies, so it formats as its reading does and never as the owner's. The owner is a bitset here, committed to neither reading and so the one owner both views may refer into.
+// A view formats as its reading does and never as the owner's, the owner being a bitset committed to neither.
 BOOST_AUTO_TEST_CASE(TheViewsFormatAsTheirReading)
 {
         auto b = xstd::dynamic_bitset(4UZ);
@@ -62,7 +62,7 @@ BOOST_AUTO_TEST_CASE(TheViewsFormatAsTheirReading)
         BOOST_CHECK_EQUAL(std::format("{}", xstd::bit_span(b)), "[false, true, false, true]");
 }
 
-// Deriving from formatter<size_t> and formatter<bool> rather than writing parse() is what keeps the spec, so the nested spec a range formatter forwards reaches the underlying one intact.
+// Deriving from formatter<size_t> and formatter<bool> keeps the spec, so a forwarded nested spec arrives intact.
 BOOST_AUTO_TEST_CASE(TheNestedSpecReachesTheUnderlyingFormatter)
 {
         auto d = xstd::bit_set();

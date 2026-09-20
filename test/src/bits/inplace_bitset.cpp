@@ -35,7 +35,7 @@ BOOST_AUTO_TEST_CASE(TheInplaceBitsetIsTheBitsetAdaptorOverAnInplaceVectorOfBloc
         static_assert(std::regular<T>);
 }
 
-// Two orderings at every width: its own is the bit string's, boost's, and the set reading's is reached through the view.
+// Two orderings at every width: its own is the bit string's, and the set reading's is reached through the view.
 BOOST_AUTO_TEST_CASE(OrderedInfixAndThroughTheView)
 {
         static_assert(std::totally_ordered<T>);
@@ -71,8 +71,6 @@ BOOST_AUTO_TEST_CASE(ItIsBoostsBitsetAtARunTimeWidthUnderAStaticCapacity)
 }
 
 // Past the capacity the storage throws, as [inplace.vector] specifies, and the bitset forwards that unchanged.
-//
-// Which is also where this reading's ceiling can be looked at, there being none: std::inplace_vector is the one block container here that refuses a width without asking anyone for memory, so the refusal arrives at a size a test can name. What comes back is the blocks' own std::bad_alloc and not std::length_error, which is the whole of the difference from the two readings beside this one -- they ask a ceiling of the storage and refuse first, and this one asks none, because boost::dynamic_bitset asks none.
 BOOST_AUTO_TEST_CASE(GrowingPastTheCapacityThrowsBadAlloc)
 {
         auto b = T();
@@ -86,7 +84,7 @@ BOOST_AUTO_TEST_CASE(GrowingPastTheCapacityThrowsBadAlloc)
         BOOST_CHECK_EQUAL(b.size(), 24UZ);
         BOOST_CHECK(b.all());
 
-        // A refused growth is not a partial one, and the growth with ONES is the case for it: the bits above the width in the last block are the first new ones, so writing them before the blocks are asked for would leave a tail the width no longer matches. Measured before the two were put in that order -- refused at 25, a later resize came back with every bit above the width set.
+        // A refused growth is not a partial one: the blocks are asked for before the bits above the width are written.
         auto c = T();
         c.resize(9);
         c.set(2);
@@ -100,7 +98,7 @@ BOOST_AUTO_TEST_CASE(GrowingPastTheCapacityThrowsBadAlloc)
 
 #else
 
-// The column is its storage's: without std::inplace_vector there is no name to test, and saying so keeps the source from being empty.
+// The column is its storage's: without std::inplace_vector there is no name to test.
 BOOST_AUTO_TEST_CASE(TheColumnIsAbsentWithItsStorage)
 {
         static_assert(not test::has_inplace_vector);
