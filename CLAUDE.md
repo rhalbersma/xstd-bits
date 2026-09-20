@@ -65,3 +65,22 @@ A **lambda** is implicitly `constexpr` when it is eligible, so that is not writt
 **not** implicitly `noexcept`: `static_assert(!noexcept(plain(1)))` holds for a lambda with nothing
 written on it, on both g++ and clang++. Write `noexcept` on a lambda where it is wanted, and keep it
 where it is already there.
+
+## `[[nodiscard]]`
+
+Every function that returns a value carries it. Two kinds do not.
+
+**A reference handed back for chaining.** `operator@=` and anything else returning `*this` is meant to
+be used or dropped as the caller pleases.
+
+**A by-product the caller may reasonably ignore.** These return something worth having, and calling
+them for their effect alone is ordinary use:
+
+- `operator++(int)` and `operator--(int)`, whose old value `it++;` discards by design
+- `insert`, `insert_range`, `emplace`, `emplace_hint` and `erase`, whose iterator or
+  `pair<iterator, bool>` is a by-product of the modification
+- `emplace_back` and the `unchecked_` and `try_` doors, whose reference or `optional<reference>` most
+  callers never look at
+- `test_set`, whose previous bit is useful and routinely dropped
+
+A function returning `void` needs nothing: there is no result to discard.
