@@ -4445,3 +4445,31 @@ longer matches.
 
 Measured on blocks that hold three: refused at a width of 25, the next `resize(20)` came back with
 every bit above 9 set and `count()` at 8 where 1 was set.
+
+### Why `blocks_for`'s totality is asserted at compile time
+
+The claim is that `blocks_for` is total: the widths that would wrap now ask for more blocks than the
+blocks will ever hold. Asserting it by *growing* to such a width instead asks `std::allocator` for
+2^61 bytes, which is not a question two of this tree's CI legs will answer — a sanitized build
+**aborts** on a request that size rather than reporting `std::bad_alloc`, and an optimizer may drop
+the `new`/`delete` pair of an unused temporary altogether, so the request is never made and nothing
+is thrown. Both were measured on exactly these assertions.
+
+A `static_assert` is stronger besides: it names the block count rather than inferring it from an
+exception.
+
+The widths in question are the sixty-three above `max_width`, where `n + bits_per_block - 1` overflows
+to a sum below `bits_per_block`, the division rounds it to **zero** blocks, and the floor turns that
+into **one** — a container claiming `SIZE_MAX` positions in eight bits. Dividing first, each of them
+asks for one block more than the widest whole number of them, which is a count no allocator will
+serve. That is also where every saturated sum arrives, the two composing.
+
+### `sizeof` is always a multiple of `alignof`
+
+The width slot is a `size_t`, or the blocks' alignment where that is wider, and the whole is then
+rounded up to the class's own alignment. That last step is not slack in the layout test: a `sizeof`
+is always a multiple of an `alignof`, so the sum alone names sizes no class can have. Blocks of four
+bytes under a `size_t` width sum to twelve, and twelve is not a size a type aligned to eight can be;
+sixteen is, and sixteen is what the class already was. Written without the round-up, the assertion
+asks the inplace column for the impossible — and no leg compiled that column until the C++26 rung was
+added, so nothing ever said so.
