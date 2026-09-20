@@ -4335,3 +4335,113 @@ namespace-scope variable template, whose initializer is value-dependent until in
 
 It is suppressed rather than respelled: writing `Own == ownership::owns` instead would inline the one
 function that exists so nobody has to.
+
+## The storage's own measurements
+
+### `blocks_for` is total over every `size_t`
+
+How many blocks a run-time width needs, floored at one. It is said as boost's `calc_num_blocks` says
+it — divide, then round up by the remainder — because that *cannot* overflow, where
+`align_up(n, bits_per_block)` adds first and wraps for the 63 widths above `max_width`, rounding them
+to zero blocks that the floor then turns into one. A guard against that wrap is a guard against a
+spelling; this spelling has nothing to guard. It is public because that totality is the claim, and a
+`static_assert` is the only way to make it without asking an allocator for two exabytes.
+
+### Equality over the shared prefix
+
+`ranges::equal` over the shared prefix, not over the two block ranges: on two sized ranges it compares
+`size()` first and answers false without looking at an element, which is the one case this asks about.
+Taking the prefix as an **iterator pair** keeps the answer and gets the algorithm, which lowers to a
+`memcmp` on trivially comparable contiguous blocks where `all_of` over a zip stays an element loop —
+2.15us to 1.29us over 4700 blocks. The other two block walks cannot follow: `is_subset_of` and
+`intersects` do bitwise work per block and have no such algorithm.
+
+### The saturating sum, and whose ceiling it is
+
+Base positions and count more, saturated at the top of `size_t` rather than wrapped: the one addition
+every growth is spelled through. A wrapped sum is small, so it passes the ceiling it was meant to fail
+and then sizes the blocks for far fewer positions than the operation goes on to write; a saturated one
+fails that ceiling, which is what an unrepresentable width should do.
+
+The ceiling itself is not the storage's, because the counterparts disagree about it. `std::vector`
+throws `length_error` for a size it cannot represent, and the sequence reading says so. The set
+reading refuses a key past the widest it could grow to. `boost::dynamic_bitset` has no ceiling at all
+— a width it cannot hold reaches the allocator and answers `bad_alloc` — and the bitset reading is a
+strict extension of boost, so it calls none of this.
+
+Three `max_size` answers sit over the same blocks. Boost's saturates where the storage's clamps: it
+multiplies the blocks' limit by the bits in one and gives `SIZE_MAX` where that product is not
+representable, sixty-three positions above `max_width`. It is said as a sum and not as boost's choice,
+because `bits_per_block` is a power of two and a choice would be a branch whose two arms belong to
+different allocators — `std::allocator`'s ceiling always saturates — and no one instantiation could
+take both. `std::vector<bool>`'s clamps further still: a random access range's positions are counted
+by a `difference_type`.
+
+### The block span, and what an assertion per block costs
+
+`block(i)` as a range rather than one block at a time. The write side carries `block(i)`'s write-side
+contract once for the range; the read side carries nothing and exists one build short of the write
+side. `block(i)` asserts its index, and an assertion per block is a loop the vectoriser leaves alone.
+A Release build never sees it — `to_block_range`'s loop reaches the memcpy floor there by itself —
+but an assert-on build pays **3.4x** for a bounds check on an index the caller just produced in order.
+
+### `erase_unused` asks the value what the other arm asks the compiler
+
+At a static width the `if constexpr` settles it. At a run-time width, whether the last block has a
+tail to erase is a property of a width the type is not given until it runs, so the arm has to ask the
+value. Without the test the mask runs on every call at every width, and where the width is an exact
+multiple of the block it is a read-modify-write that changes nothing: flip at 128 bits measures
+**7.8ns without it against 2.3ns with**, and boost, which has had the same `if` all along, measures
+2.3ns.
+
+### Why the byte exchange is shifts, and where it is a copy
+
+Byte `j` holds the positions `[8j, 8j + 8)`, least significant bit first, which is what every
+contiguous bit container lays them out as whatever its block width. Said in **shifts** and not a
+`memcpy`, for three reasons at once: the answer does not depend on the order a block stores its own
+bytes in, both directions stay `constexpr` where a `memcpy` is not, and the arithmetic is the same on
+every block width, so two widths over the same positions agree byte for byte.
+
+On a **little-endian** target the byte a position lands in does not depend on the block width, so
+there the shifts and a straight copy of those bytes are the same answer and only one of them is a byte
+at a time. Over the eight kilobytes of 2^16 positions, measured in one process so the ratio is the
+machine's own: **9.70us by shifts against 0.07us by memcpy**, a factor of about a hundred and
+forty-five. The shifts answer the two cases a copy cannot — a constant expression, where `memcpy` does
+not exist, and a big-endian target, where those bytes are not these blocks.
+
+### Whole blocks land whole
+
+The scalar append splits a block across two whenever the width is not a multiple of
+`bits_per_block`, and that split is the only reason a block range has to go one block at a time. When
+the width *is* a multiple — which an empty container always is, and which is therefore every
+block-range construction — each block lands in a block and the sequence is a range insertion the
+storage can do in bulk. A run-time test and not `if constexpr`, the width being a run-time property.
+Measured at 65536 bits, block-range construction: **942ns by the loop against 77ns** to allocate and
+fill the same blocks.
+
+### A member named `intersects` stops ADL
+
+`intersects` is to `set_intersection` what `contains` is to `find` — a predicate over the free
+two-range algorithm, not a lookup asked of one value — so the symmetric spelling is a hidden friend
+beside the member. Both adaptors carry a **member** named `intersects`, boost's spelling, which the
+bitset reading keeps by the extension rule, and a member of that name stops ADL at the call site
+([basic.lookup.argdep]/1: ordinary lookup finding a class member ends the search). So from inside
+those members the friend is unreachable by any spelling. Measured, not assumed.
+
+### The one unreachable line
+
+`is_valid`'s empty case is called only from an `assert`, and a zero-width `contiguous_bit_container`
+has no member that reaches one. It is not removable either: MSVC's `/W4` rejects a bare `n < N` as
+always false (C4296). It carries a trailing `GCOVR_EXCL_LINE`, which drops that one line from the
+denominator rather than counting it as reached.
+
+### Growing with ones takes the tail before the blocks grow
+
+The tail above `size()` in the last block is clear by the invariant, and becomes the first new bits.
+Which block and which bits is read off the **old** width, so it is taken before the blocks grow; the
+write itself comes after, because `m_blocks.resize` is what refuses a count these blocks cannot hold,
+and a refused growth that had already dirtied the tail would leave the storage with a width it no
+longer matches.
+
+Measured on blocks that hold three: refused at a width of 25, the next `resize(20)` came back with
+every bit above 9 set and `count()` at 8 where 1 was set.

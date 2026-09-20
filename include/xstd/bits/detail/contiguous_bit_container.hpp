@@ -56,22 +56,14 @@ public:
 
         static constexpr auto bits_per_block = static_cast<std::size_t>(xstd::numeric_limits<block_type>::digits);
 
-        // Derived rather than written as an 8, and from what is already here: a block's digits over its bytes IS the
-        // bits in a byte. What the byte primitives below shift by, and a literal there is a magic number.
+        // Derived rather than written as an 8: a block's digits over its bytes is the bits in a byte.
         static constexpr auto bits_per_byte = bits_per_block / sizeof(block_type);
         static constexpr auto has_static_size = N != std::dynamic_extent;
 
-        // A run-time width over a capacity that is a property of the TYPE, which is the middle column and nothing else.
-        // Asked of the blocks and not named after std::inplace_vector: [inplace.vector.capacity] makes capacity() a
-        // static member where [vector.capacity] makes it an ordinary one, so the qualified call is the discriminator
-        // the two synopses already disagree on. std::array answers neither, and has_static_size tells that column apart.
+        // A run-time width over a capacity the type carries: the qualified capacity() call is the discriminator.
         static constexpr auto has_static_capacity = requires { Blocks::capacity(); };
 
-        // The capacity in bits, where it is a property of the type: the blocks' own, which is what capacity() below
-        // multiplies out for an object. align_up(N, bits_per_block) by construction, the blocks being num_blocks_v.
-        //
-        // A FUNCTION and not a variable, so the std::vector column never instantiates the body: both arms of a ?: are
-        // instantiated, and Blocks::capacity() is a hard error there rather than the false the trait above answers.
+        // The capacity in bits; a function and not a variable, so the std::vector column never instantiates it.
         [[nodiscard]] static constexpr auto static_capacity() noexcept
                 -> std::size_t
         {
@@ -82,40 +74,33 @@ public:
                 }
         }
 
-        // The width as a type, dynamic_extent where there is none: what a reading asks when it needs the width before an object exists.
+        // The width as a type, dynamic_extent where there is none: asked before an object exists.
         static constexpr std::size_t extent = N;
 
-        // THE WIDTH IS THIS CONTAINER'S PROPERTY, so the byte exchange is said here once rather than in each of the
-        // three readings over it. std::dynamic_extent is SIZE_MAX, and a concept asked at that width would compute
-        // byte_count of it -- two exabytes of bytes -- however unsatisfiable the rest of the constraint is, so a
-        // dynamic width answers zero here and never reaches the concept at all.
+        // The width is this container's, so a dynamic one answers zero here rather than compute byte_count of SIZE_MAX.
         static constexpr auto bit_extent = has_static_size ? N : 0UZ;
 
-        // The two shapes a reading asks for: either family, or the field-of-bits family alone where a reading
-        // already has a door for integers and a second one would collide with it rather than widen it. What a
-        // reading adds on top is its OWN vocabulary -- an owner rather than a view, a view that is not a window --
-        // and that stays where it belongs, because it says nothing about the bits.
+        // The two shapes a reading asks for: either family, or the field-of-bits family where integers have a door.
         template<class B>
         static constexpr auto exchanges_bits = has_static_size and bit_castable<B, bit_extent>;
 
-        // A FIELD OF BITS is anything but the bare scalar: a sequence of blocks is one, and a foreign bitset is one.
-        // Only the scalar is left out, and only because the reading that asks this already has a door for it.
+        // A field of bits is anything but the bare scalar, which is left out only because it has its own door.
         template<class B>
         static constexpr auto exchanges_bits_as_field =
                 has_static_size and (block_range_source<B, bit_extent> or container_source<B, bit_extent>);
 
-        // How many blocks a run-time width needs, floored at one like num_blocks_v. Total over every size_t, and said as boost's own calc_num_blocks says it -- divide, then round up by the remainder -- because that CANNOT overflow, where align_up(n, bits_per_block) adds first and wraps for the 63 widths above max_width, rounding them to zero blocks that the floor then turns into one. A guard against that wrap is a guard against a spelling; this spelling has nothing to guard. Public because that totality is the claim, and a static_assert is the only way to make it without asking an allocator for two exabytes.
+        // How many blocks a run-time width needs, floored at one; total over every size_t, as boost spells it.
         [[nodiscard]] static constexpr auto blocks_for(std::size_t n) noexcept
                 -> std::size_t
         {
                 return std::ranges::max((n / bits_per_block) + (n % bits_per_block != 0UZ ? 1UZ : 0UZ), 1UZ);
         }
 
-        // The widest width a size_t can count in whole blocks, and the widest a ptrdiff_t can: the two ceilings the readings choose between, neither of them enforced here. What the blocks can actually hold is narrower still, and that is max_size() and the two answers beside it.
+        // The two ceilings the readings choose between, neither enforced here; the blocks' own is narrower.
         static constexpr auto max_num_blocks = std::numeric_limits<std::size_t>::max() / bits_per_block;
         static constexpr auto max_width = max_num_blocks * bits_per_block;
 
-        // A width whose positions a difference_type can all name: what a random access range over these blocks can address, and so what std::vector<bool> reports and refuses against. Whole blocks, like the one above.
+        // A width whose positions a difference_type can all name, which is what std::vector<bool> refuses against.
         static constexpr auto max_addressable_num_blocks = static_cast<std::size_t>(std::numeric_limits<std::ptrdiff_t>::max()) / bits_per_block;
         static constexpr auto max_addressable_width = max_addressable_num_blocks * bits_per_block;
 
@@ -146,7 +131,7 @@ private:
                 }
         }
 
-        // The width is a size_t, unless the blocks out-align one: then it is a block, which fills what would otherwise be padding in front of them.
+        // The width is a size_t unless the blocks out-align one, when it fills what would be padding.
         using width_type = std::conditional_t<(alignof(std::size_t) >= alignof(Blocks)), std::size_t, block_type>;
         static_assert(sizeof(width_type) >= sizeof(std::size_t) and alignof(width_type) >= alignof(Blocks));
 
@@ -166,7 +151,7 @@ public:
               m_blocks(make_blocks(n))
         {}
 
-        // boost's allocator arguments, where the blocks take one: deduced and matched, so a storage without an allocator has no such constructor.
+        // boost's allocator arguments, deduced and matched, so a storage without one has no such constructor.
         template<class Alloc>
                 requires (not has_static_size) and std::same_as<Alloc, typename Blocks::allocator_type>
         [[nodiscard]] constexpr explicit contiguous_bit_container(Alloc const& alloc)
@@ -180,7 +165,7 @@ public:
               m_blocks(blocks_for(n), alloc)
         {}
 
-        // [container.alloc.reqmts]'s allocator-extended copy and move; the moved-from is left empty whichever way the blocks went.
+        // [container.alloc.reqmts]'s allocator-extended copy and move; the moved-from is left empty.
         template<class Alloc>
                 requires (not has_static_size) and std::same_as<Alloc, typename Blocks::allocator_type>
         [[nodiscard]] constexpr contiguous_bit_container(contiguous_bit_container const& other, Alloc const& alloc)
@@ -203,10 +188,10 @@ public:
                 return m_blocks.get_allocator();
         }
 
-        // Memberwise, width first: the unused bits are kept clear, so the blocks compare as the bits do, and a zero width through the one block it still holds.
+        // Memberwise, width first: the unused bits are kept clear, so the blocks compare as the bits do.
         [[nodiscard]] friend constexpr auto operator==(contiguous_bit_container const&, contiguous_bit_container const&) noexcept -> bool = default;
 
-        // The set reading's equality, which operator== is not: that one is width first, meaning the sequence reading and dynamic_bitset. Here width is capacity, so two storages holding the same positions are equal whatever their widths. A hidden friend beside the defaulted operator==, and for the reason the three orderings are: equality is a question about two values and neither is the subject, so x.set_equal(y) spelled a symmetry the operation has and the call did not.
+        // The set reading's equality, where width is capacity: a hidden friend, neither value being the subject.
         [[nodiscard]] friend constexpr auto set_equal(contiguous_bit_container const& x, contiguous_bit_container const& y) noexcept
                 -> bool
         {
@@ -214,7 +199,7 @@ public:
                         // One width, so holding the same positions and being equal are the same statement.
                         return x == y;
                 } else {
-                        // ranges::equal over the shared prefix, NOT over the two block ranges: on two sized ranges it compares size() first and answers false without looking at an element, which is the one case this asks about. Taking the prefix as an ITERATOR PAIR keeps the answer and gets the algorithm, which lowers to a memcmp on trivially comparable contiguous blocks where all_of over a zip stays an element loop -- 2.15us to 1.29us over 4700 blocks. The other two block walks cannot follow: is_subset_of and intersects do bitwise work per block and have no such algorithm.
+                        // ranges::equal over the shared prefix as an iterator pair, which lowers to a memcmp.
                         auto const shared = static_cast<std::ptrdiff_t>(std::ranges::min(x.num_blocks(), y.num_blocks()));
                         auto const xf = std::ranges::begin(x.m_blocks);
                         auto const yf = std::ranges::begin(y.m_blocks);
@@ -225,7 +210,7 @@ public:
                 }
         }
 
-        // No operator<=>: contiguous_bit_container is pure storage with no opinion on which reading orders it, so it names all three and picks none. A hidden friend, not a member: an ordering is a question about two values and neither is the subject, so x.set_lexicographical_compare_three_way(y) spelled a symmetry the operation has and the call did not.
+        // No operator<=>: pure storage names all three orderings and picks none, each a hidden friend.
         [[nodiscard]] friend constexpr auto set_lexicographical_compare_three_way(contiguous_bit_container const& x [[maybe_unused]], contiguous_bit_container const& y [[maybe_unused]]) noexcept
                 -> std::strong_ordering
         {
@@ -252,7 +237,7 @@ public:
                 }
         }
 
-        // The sequence reading a word at a time: whoever HOLDS the lowest differing position is greater, position 0 being the sequence's first element. Total across widths as the set reading is, the prefix clause living in the arm that needs it.
+        // The sequence reading a word at a time: whoever holds the lowest differing position is greater.
         [[nodiscard]] friend constexpr auto sequence_lexicographical_compare_three_way(contiguous_bit_container const& x [[maybe_unused]], contiguous_bit_container const& y [[maybe_unused]]) noexcept
                 -> std::strong_ordering
         {
@@ -275,7 +260,7 @@ public:
                 }
         }
 
-        // The bitset reading a word at a time: the bit string, most significant position first, IS the blocks from the top block down, the unused tail being clear, so the reading is the standard algorithm over the blocks reversed and there is nothing here to hand-roll. The degenerate widths need no arm of their own: a zero width still holds its one all-padding block, which is clear in both, and a one-block width is the algorithm's first step.
+        // The bitset reading a word at a time: the bit string is the blocks from the top down, tail clear.
         [[nodiscard]] friend constexpr auto string_lexicographical_compare_three_way(contiguous_bit_container const& x, contiguous_bit_container const& y) noexcept
                 -> std::strong_ordering
         {
@@ -292,8 +277,7 @@ public:
                 boost::hash2::hash_append(h, f, v->m_blocks);
         }
 
-        // base positions and count more, saturated at the top of size_t rather than wrapped: the one addition every growth is spelled through, here and in the three readings. A wrapped sum is small, so it passes the ceiling it was meant to fail and then sizes the blocks for far fewer positions than the operation goes on to write; a saturated one fails that ceiling, which is what an unrepresentable width should do. blocks_for is where it fails, with std::length_error.
-        // The ceiling, and no longer the storage's own: blocks_for divides and cannot wrap, so nothing here needs a bounded width to stay safe. What is left is a policy, and the policy belongs to the reading, because the counterparts disagree about it. std::vector throws length_error for a size it cannot represent and the sequence reading says so with this; the set reading refuses a key past the widest it could grow to, and says so with this; boost::dynamic_bitset has no ceiling at all -- its calc_num_blocks divides as blocks_for now does, and a width it cannot hold reaches the allocator and answers bad_alloc. The bitset reading is a strict extension of boost, so it calls none of this and answers as boost does.
+        // Saturated at the top of size_t rather than wrapped: a wrapped sum passes the ceiling it should fail.
         [[nodiscard]] static constexpr auto check_width(std::size_t n)
                 -> std::size_t
         {
@@ -303,7 +287,7 @@ public:
                 return n;
         }
 
-        // The same refusal against the other ceiling, for the reading whose counterpart keeps that one: [container.reqmts] puts a sequence's at max_size(), and a size past what a distance can name is std::length_error there as it is in std::vector<bool>.
+        // The same refusal against the other ceiling: [container.reqmts] puts a sequence's at max_size().
         [[nodiscard]] static constexpr auto check_addressable_width(std::size_t n)
                 -> std::size_t
         {
@@ -320,7 +304,7 @@ public:
                 return count > top - base ? top : base + count;
         }
 
-        // In bits: the width, or the widest whole number of blocks the blocks can hold and the address space can count. The set reading's answer, having no counterpart that names another.
+        // In bits: the width, or the widest whole number of blocks the blocks and the address space allow.
         [[nodiscard]] constexpr auto max_size() const noexcept
                 -> std::size_t
         {
@@ -331,7 +315,7 @@ public:
                 }
         }
 
-        // boost::dynamic_bitset's answer over the same blocks, which saturates where the one above clamps: boost multiplies the blocks' limit by the bits in one and gives SIZE_MAX where that product is not representable, sixty-three positions above max_width. Said as a sum and not as boost's choice: bits_per_block is a power of two, so SIZE_MAX is max_width plus one block's bits less one, and the clamped answer needs exactly that much back wherever the clamp bit. A choice would be a branch whose two arms belong to different allocators -- std::allocator's ceiling always saturates -- and no one instantiation could take both.
+        // boost::dynamic_bitset's answer, which saturates where the one above clamps; said as a sum, not a branch.
         [[nodiscard]] constexpr auto saturating_max_size() const noexcept
                 -> std::size_t
         {
@@ -343,7 +327,7 @@ public:
                 }
         }
 
-        // std::vector<bool>'s answer over the same blocks, which clamps further: a random access range's positions are counted by a difference_type, so a width above max_addressable_width has distances it cannot represent, whatever the blocks could hold.
+        // std::vector<bool>'s answer, which clamps further: a difference_type counts a random access range.
         [[nodiscard]] constexpr auto addressable_max_size() const noexcept
                 -> std::size_t
         {
@@ -370,7 +354,7 @@ public:
                 }
         }
 
-        // The block, and NOT operator[]: a subscript on a bit container means a bit, which is what std::bitset and vector<bool> both spell that way and what test() answers here. Naming the block access block() keeps c[n] unclaimed rather than making it mean something no other bit container means by it.
+        // The block, and not operator[]: a subscript on a bit container means a bit, which test() answers.
         [[nodiscard]] constexpr auto block(std::size_t i) const noexcept
                 -> block_type
         {
@@ -378,7 +362,7 @@ public:
                 return m_blocks[i];
         }
 
-        // The write side, a reference rather than a setter: a caller writing blocks writes them, and restores the invariant itself with erase_unused when it is done. A setter could only erase after every block, which is once per block where once per loop will do.
+        // The write side, a reference rather than a setter: the caller restores the invariant with erase_unused.
         [[nodiscard]] constexpr auto block(std::size_t i) noexcept
                 -> block_type&
         {
@@ -386,9 +370,7 @@ public:
                 return m_blocks[i];
         }
 
-        // block(i) as a range rather than one block at a time, which the storage can answer because Blocks is a contiguous_block_range and this class is named for it. block(i) is the spelling for a single block; this is the spelling for a bulk copy, so a caller writing every block writes them in one call instead of asking num_blocks() times for a reference the compiler will not assume is the next word along.
-        // The write side carries block(i)'s write-side contract, once for the range where that carries it once per block: whoever writes through this span restores the invariant with erase_unused when it is done.
-        // The read side carries nothing, and exists for the reason the write side does, one build short of it: block(i) asserts its index, and an assertion per block is a loop the vectoriser leaves alone. A Release build never sees that -- to_block_range's loop reaches the memcpy floor there by itself, which is why this twin was left out when the other went in -- but an assert-on build pays 3.4x for a bounds check on an index the caller just produced in order.
+        // block(i) as a range, so a caller writing every block writes them in one call.
         [[nodiscard]] constexpr auto blocks() noexcept
                 -> std::span<block_type>
         {
@@ -409,35 +391,21 @@ public:
                         m_blocks[static_last_block] &= static_used_bits;
                         assert(not detail::bits::intersects(m_blocks[static_last_block], static_unused_bits));
                 } else if constexpr (not has_static_size) {
-                        // The run-time twin of the arm above, and a run-time if is the only shape it can take: whether the last block has a tail to erase is a property of a width this type is not given until it runs, so what the arm above asks the compiler, this one has to ask the value. Without it the mask runs on every call at every width, and where the width is an exact multiple of the block it is a read-modify-write that changes nothing: flip at 128 bits measures 7.8ns without it against 2.3ns with, and boost, which has had the same if all along, measures 2.3ns.
+                        // The run-time twin of the arm above: what the other asks the compiler, this asks the value.
                         if (has_unused_bits()) {
                                 m_blocks[last_block()] &= used_bits();
                         }
                 }
         }
 
-        // The bits as BYTES, and back: byte j holds the positions [8j, 8j + 8), least significant bit first, which is
-        // what every contiguous bit container lays them out as whatever its block width. Said in SHIFTS and not a
-        // memcpy, for three reasons at once: the answer does not depend on the order a block stores its own bytes in,
-        // both directions stay constexpr where a memcpy is not, and the arithmetic is the same one on every block
-        // width, so two widths over the same positions agree byte for byte and converting between them is a copy
-        // rather than a walk over positions. Static widths only, because that is what makes every bound below a
-        // constant: a run-time width wants the same arithmetic and one std::ranges::min the compiler cannot fold.
-        // How many bytes the two sides actually share: this storage's own, or the array handed over, whichever is fewer.
+        // The bits as bytes and back, said in shifts: byte j holds [8j, 8j + 8), least significant bit first.
         template<std::size_t E>
         static constexpr auto shared_bytes = std::ranges::min(E, static_num_blocks * sizeof(block_type));
 
-        // On a LITTLE-ENDIAN target the byte a position lands in does not depend on the block width -- byte j holds
-        // [8j, 8j + 8) at every width -- so there the shifts below and a straight copy of those bytes are the same
-        // answer, and only one of them is a byte at a time. Over the eight kilobytes of 2^16 positions, and measured
-        // in ONE process so the ratio is the machine's own rather than two visits to it: 9.70us by shifts against
-        // 0.07us by memcpy, a factor of about a hundred and forty-five. That is the whole of why this distinction is
-        // drawn here rather than left to taste.
+        // On a little-endian target a straight copy of those bytes is the same answer, and not byte at a time.
         static constexpr auto bytes_copy_as_blocks = std::endian::native == std::endian::little;
 
-        // The shifts, in one place because both directions need them twice. They SAY where a position goes rather
-        // than assuming a byte order, which is what makes them right on either endianness and a constant expression
-        // besides -- neither of which a memcpy is.
+        // The shifts, in one place: they say where a position goes rather than assume a byte order.
         template<std::size_t E>
         constexpr auto assign_bytes_by_shifts(std::array<std::byte, E> const& bytes) noexcept
                 -> void
@@ -466,13 +434,9 @@ public:
         {
                 std::ranges::fill(m_blocks, zero);
 
-                // if constexpr, and not a loop that would simply run zero times: a zero width instantiates this with
-                // no byte to carry, and the loop it could not enter is a line no test reaches and a branch slot
-                // nothing can take, both counted per instantiation.
+                // if constexpr, not a loop running zero times: an unenterable loop is a line no test reaches.
                 if constexpr (shared_bytes<E> > 0UZ) {
-                        // The shifts answer the two cases a copy cannot: a constant expression, where memcpy does not
-                        // exist, and a big-endian target, where those bytes are not these blocks. The copy takes the
-                        // case that is neither, which is every rung this ladder runs.
+                        // The shifts answer the two cases a copy cannot: a constant expression, and big-endian.
                         if consteval {
                                 assign_bytes_by_shifts(bytes);
                         } else {
@@ -484,13 +448,11 @@ public:
                         }
                 }
 
-                // The source keeps its own tail clear, so this restores nothing where the two widths agree -- and
-                // everything where they do not, a block wider than the bytes handed over leaving positions above them.
+                // The source keeps its own tail clear, so this restores nothing where the two widths agree.
                 erase_unused();
         }
 
-        // A whole field of bits in and out, in terms of the two byte primitives: the width is already known here,
-        // so a reading forwards rather than restating byte_count and the concept at every call site.
+        // A whole field of bits in and out over the two byte primitives, the width being known here.
         template<class B>
                 requires exchanges_bits<B>
         constexpr auto assign_bits(B const& b) noexcept
@@ -527,7 +489,7 @@ public:
                 return bytes;
         }
 
-        // A word at any position, aligned or not: the bits [n, n + bits_per_block), the clear tail and nothing beyond the last block.
+        // A word at any position: the bits [n, n + bits_per_block), the clear tail and nothing beyond.
         [[nodiscard]] constexpr auto block_at(std::size_t n) const noexcept
                 -> block_type
         {
@@ -539,8 +501,7 @@ public:
                 return straddled_block(index, bits_per_block - offset, offset);
         }
 
-        // The write side of block_at, masked: the bits of value under mask land at [n, n + bits_per_block), split over two blocks where n is not aligned, and the tail stays clear.
-        // The word-level primitive, which writes what the mask selects and restores nothing: the mask is required to stay inside size(), so the padding above it is untouched and the ranged forms below need no erase at all. libstdc++ splits the same way, _Base_bitset knowing only its word count and bitset<_Nb> calling _M_do_sanitize once after; here one type knows both, and the erase is left to the four operations that can actually dirty the padding -- a write through block(i), operator<<=, flip() and resize.
+        // The write side of block_at, masked: the mask stays inside size(), so the padding above it is untouched.
         constexpr auto block_at(std::size_t n, block_type value, block_type mask) noexcept
                 -> void
         {
@@ -549,7 +510,7 @@ public:
                 assert(n + bits_per_block <= size() or shr(mask, size() - n) == zero);
                 auto const bits = static_cast<block_type>(value & mask);
 
-                // Each step lands back in block_type: a promoted operand feeding the next bitwise operator is what bugprone-signed-bitwise reads.
+                // Each step lands back in block_type: a promoted operand is what bugprone-signed-bitwise reads.
                 auto const low_kept = static_cast<block_type>(m_blocks[index] & static_cast<block_type>(~shl(mask, offset)));
                 m_blocks[index] = static_cast<block_type>(low_kept | shl(bits, offset));
                 if (offset != 0UZ and index != last_block()) {
@@ -559,7 +520,7 @@ public:
                 }
         }
 
-        // boost's ranged forms, a word at a time through block_at: [n, n + len) set, cleared or flipped, the rest untouched. The precondition is said as a subtraction throughout, n + len being the sum that wraps for an n near the top of size_t -- and a wrapped sum is below any width, so the assertion it was meant to fail is the one it passes.
+        // boost's ranged forms through block_at; the precondition is a subtraction, n + len being what wraps.
         constexpr auto set(std::size_t n, std::size_t len, bool value) noexcept
                 -> contiguous_bit_container&
         {
@@ -712,7 +673,7 @@ public:
                 }
         }
 
-        // Total across two widths, and reading-neutral: the blocks the other storage does not have read as the zero the invariant already keeps above its size(), so the result is this storage's own width restricted or left alone. Growing is NOT here -- that is the set reading's rule about capacity, and belongs to the reading that has it.
+        // Total across two widths and reading-neutral: the blocks the other lacks read as zero. Growing is not here.
         constexpr auto operator&=(contiguous_bit_container const& other [[maybe_unused]]) noexcept
                 -> contiguous_bit_container&
         {
@@ -737,7 +698,7 @@ public:
                 return *this;
         }
 
-        // Total across two widths, and reading-neutral: the blocks the other storage does not have read as the zero the invariant already keeps above its size(), so the result is this storage's own width restricted or left alone. Growing is NOT here -- that is the set reading's rule about capacity, and belongs to the reading that has it.
+        // Total across two widths and reading-neutral: the blocks the other lacks read as zero. Growing is not here.
         constexpr auto operator|=(contiguous_bit_container const& other [[maybe_unused]]) noexcept
                 -> contiguous_bit_container&
         {
@@ -762,7 +723,7 @@ public:
                 return *this;
         }
 
-        // Total across two widths, and reading-neutral: the blocks the other storage does not have read as the zero the invariant already keeps above its size(), so the result is this storage's own width restricted or left alone. Growing is NOT here -- that is the set reading's rule about capacity, and belongs to the reading that has it.
+        // Total across two widths and reading-neutral: the blocks the other lacks read as zero. Growing is not here.
         constexpr auto operator^=(contiguous_bit_container const& other [[maybe_unused]]) noexcept
                 -> contiguous_bit_container&
         {
@@ -787,7 +748,7 @@ public:
                 return *this;
         }
 
-        // Total across two widths, and reading-neutral: the blocks the other storage does not have read as the zero the invariant already keeps above its size(), so the result is this storage's own width restricted or left alone. Growing is NOT here -- that is the set reading's rule about capacity, and belongs to the reading that has it.
+        // Total across two widths and reading-neutral: the blocks the other lacks read as zero. Growing is not here.
         constexpr auto operator-=(contiguous_bit_container const& other [[maybe_unused]]) noexcept
                 -> contiguous_bit_container&
         {
@@ -817,7 +778,7 @@ public:
         {
                 assert(is_valid(n));
                 if constexpr (has_static_size and static_num_blocks == 1) {
-                        // m_blocks[0] <<= n narrows the promoted int back to a block_type implicitly, which -fsanitize=implicit-conversion aborts on once a bit shifts out.
+                        // m_blocks[0] <<= n narrows the promoted int, which -fsanitize=implicit-conversion aborts on.
                         m_blocks[0] = shl(m_blocks[0], n);
                 } else {
                         auto const [n_blocks, L_shift] = xstd::div(n, bits_per_block);
@@ -828,7 +789,7 @@ public:
                         } else {
                                 auto const R_shift = bits_per_block - L_shift;
                                 for (auto i = last_block(); i > n_blocks; --i) {
-                                        // Read one block lower than the destination: the splice of [i - n_blocks - 1, i - n_blocks].
+                                        // Read one block lower: the splice of [i - n_blocks - 1, i - n_blocks].
                                         m_blocks[i] = straddled_block(i - n_blocks - 1UZ, L_shift, R_shift);
                                 }
                                 m_blocks[n_blocks] = shl(m_blocks[0], L_shift);
@@ -844,7 +805,7 @@ public:
         {
                 assert(is_valid(n));
                 if constexpr (has_static_size and static_num_blocks == 1) {
-                        // m_blocks[0] >>= n narrows the promoted int back to a block_type implicitly, which -fsanitize=implicit-conversion instruments.
+                        // m_blocks[0] >>= n narrows the promoted int, which -fsanitize=implicit-conversion sees.
                         m_blocks[0] = shr(m_blocks[0], n);
                 } else {
                         auto const [n_blocks, R_shift] = xstd::div(n, bits_per_block);
@@ -855,7 +816,7 @@ public:
                         } else {
                                 auto const L_shift = bits_per_block - R_shift;
                                 for (auto i = 0UZ; i + n_blocks < last_block(); ++i) {
-                                        // Which is block_at(i * bits_per_block + n), reached without recomputing the division.
+                                        // block_at(i * bits_per_block + n), without recomputing the division.
                                         m_blocks[i] = straddled_block(i + n_blocks, L_shift, R_shift);
                                 }
                                 m_blocks[last_block() - n_blocks] = shr(m_blocks[last_block()], R_shift);
@@ -915,14 +876,14 @@ public:
                 std::ranges::swap(this->m_blocks, other.m_blocks);
         }
 
-        // ranges::swap finds a free swap by ADL and a member never, so the member above is reached through this one and not directly; without it every adaptor's ranges::swap(m_bits, other.m_bits) moves a whole contiguous_bit_container three times instead of swapping its blocks once. Hidden rather than at namespace scope, as the three adaptors' are: one shape for the whole tree.
+        // ranges::swap finds a free swap by ADL and a member never, so the member is reached through this.
         friend constexpr auto swap(contiguous_bit_container& x, contiguous_bit_container& y) noexcept(noexcept(x.swap(y)))
                 -> void
         {
                 x.swap(y);
         }
 
-        // Growth, at a run-time width alone; every path leaves the unused tail clear, so the block walks read nothing above size().
+        // Growth, at a run-time width alone; every path leaves the unused tail clear.
         constexpr auto resize(std::size_t n, bool value = false)
                 -> void
                 requires (not has_static_size)
@@ -931,7 +892,7 @@ public:
                 resize_to(n, value);
         }
 
-        // Widen just enough to hold every element the other has, and not at all when it has none above this width. Its largest element, not its size(), is what the growing insert of each in turn would have reached. A static width has nothing to widen and no other width to meet, so there the whole thing is nothing. Through resize_to, as clear() and pop_back() are: the width comes from the other storage's own, so it is one this one can count already, and asking the ceiling here would put its throw on every set operation across widths.
+        // Widen to the other's largest element, not its size(); a static width has nothing to widen.
         constexpr auto grow_to_admit(contiguous_bit_container const& other [[maybe_unused]]) noexcept(has_static_size)
                 -> void
         {
@@ -968,7 +929,7 @@ public:
                 resize_to(size() - 1UZ, false);
         }
 
-        // Boost's append: the block's bits become the positions [size(), size() + bits_per_block), split over two blocks where size() is not aligned.
+        // Boost's append: the block's bits become [size(), size() + bits_per_block), split where unaligned.
         constexpr auto append(block_type value)
                 -> void
                 requires (not has_static_size)
@@ -986,7 +947,7 @@ public:
                 m_size += bits_per_block;
         }
 
-        // Reserved first where the distance is known, so nothing below can reallocate: the strong guarantee boost documents.
+        // Reserved first where the distance is known, so nothing below reallocates: boost's strong guarantee.
         template<std::input_iterator I>
         constexpr auto append(I first, I last)
                 -> void
@@ -996,21 +957,12 @@ public:
                         reserve(size() + (static_cast<std::size_t>(std::ranges::distance(first, last)) * bits_per_block));
                 }
 
-                // WHOLE BLOCKS LAND WHOLE. The scalar append above splits a block across two whenever the width is
-                // not a multiple of bits_per_block, and that split is the only reason this has to go one block at a
-                // time. When the width IS a multiple -- which an empty container always is, and which is therefore
-                // every block-range construction -- each block lands in a block, and the sequence of them is a
-                // range insertion the storage can do in bulk.
-                //
-                // A RUN-TIME test and not if constexpr, because the width is a run-time property here: an unaligned
-                // container still takes the loop. Measured at 65536 bits, block-range construction: 942ns by the
-                // loop against 77ns to allocate and fill the same blocks, which is what the bulk path costs.
+                // Whole blocks land whole where the width is a multiple, which every block-range construction is.
                 if constexpr (std::forward_iterator<I>) {
                         if (first != last and size() % bits_per_block == 0UZ) {
                                 auto const n = static_cast<std::size_t>(std::ranges::distance(first, last));
                                 if (size() == 0UZ) {
-                                        // The floor block is the one block an empty container already has, and the
-                                        // first of these replaces it -- which is what the scalar append says too.
+                                        // The floor block is the one an empty container has, and the first replaces it.
                                         m_blocks.assign(first, last);
                                 } else {
                                         m_blocks.insert(m_blocks.end(), first, last);
@@ -1068,13 +1020,13 @@ public:
                 return inserted;
         }
 
-        // insert(n) above is partial, n being a precondition; this one is total, a position past the end growing a run-time width to admit it and a static one having nowhere to grow. The set reading's insert is the one operation that can grow, which is the whole of the difference.
+        // insert(n) above is partial, n being a precondition; this one is total, growing a run-time width.
         constexpr auto growing_insert(std::size_t n) noexcept(has_static_size)
                 -> bool
         {
                 if constexpr (not has_static_size) {
                         if (n >= size()) {
-                                // width_sum, not n + 1: the position past the top of size_t is one the set reading accepts as a key, and n + 1 there is a width of zero.
+                                // width_sum, not n + 1: at the top of size_t n + 1 is a width of zero.
                                 resize(width_sum(n, 1UZ));
                                 set(n);
                                 return true;
@@ -1083,14 +1035,14 @@ public:
                 return insert(n);
         }
 
-        // set(n) and reset(n) under one name, for a reading that has the value in hand rather than the verb. Deliberately not spelled set(n, value): that is std::bitset's two-argument set, and this container's not having it is one of the five absences that make contiguous_bit_sequence the intersection of the three vocabularies rather than their union. TheCommonVocabulary asserts it.
+        // set(n) and reset(n) under one name, for a reading holding the value rather than the verb.
         constexpr auto assign(std::size_t n, bool value) noexcept
                 -> contiguous_bit_container&
         {
                 return value ? set(n) : reset(n);
         }
 
-        // The bulk counterpart, and not an overload of set either: set(bool) would be ambiguous with set(std::size_t) for a literal 0, both conversions being standard.
+        // The bulk counterpart: set(bool) would be ambiguous with set(std::size_t) for a literal 0.
         constexpr auto fill(bool value) noexcept
                 -> contiguous_bit_container&
         {
@@ -1217,16 +1169,16 @@ public:
                                         return detail::bits::is_subset_of(lhs, rhs);
                                 });
                         if constexpr (has_static_size) {
-                                // One width, so the shared blocks are all the blocks and there is nothing past them to ask about.
+                                // One width, so the shared blocks are all the blocks.
                                 return shared;
                         } else {
-                                // Above the shared blocks only ours can hold a position, and any position of ours the other cannot hold denies the subset.
+                                // Above the shared blocks only ours can hold a position, which denies the subset.
                                 return shared and not this->any_block_set(other.num_blocks(), this->num_blocks());
                         }
                 }
         }
 
-        // A proper subset is a subset that differs, and both halves are already here: the unrolled arms are is_subset_of's, and != is the defaulted memberwise comparison.
+        // A proper subset is a subset that differs, and both halves are already here.
         [[nodiscard]] constexpr auto is_proper_subset_of(contiguous_bit_container const& other) const noexcept
                 -> bool
         {
@@ -1236,7 +1188,7 @@ public:
         [[nodiscard]] constexpr auto intersects(contiguous_bit_container const& other [[maybe_unused]]) const noexcept
                 -> bool
         {
-                // Only the blocks both storages have can meet: above them one of the two holds nothing, so zip stopping at the shorter is the whole question.
+                // Only the blocks both storages have can meet, so zip stopping at the shorter is the question.
                 if constexpr (has_static_size and N == 0) {
                         return false;
                 } else if constexpr (has_static_size and static_num_blocks == 1) {
@@ -1253,14 +1205,14 @@ public:
                 }
         }
 
-        // A hidden friend beside the member, the pair swap already carries: a meets b exactly when b meets a, so the symmetric spelling is the honest one, and intersects is to set_intersection what contains is to find -- a predicate over the free two-range algorithm, not a lookup asked of one value. The member stays and does the work, which set_equal's did not have to. Both adaptors carry a MEMBER named intersects -- boost's spelling, which the bitset reading keeps by the extension rule -- and a member of that name stops ADL at the call site ([basic.lookup.argdep]/1: ordinary lookup finding a class member ends the search), so from inside those members the friend is unreachable by any spelling. Measured, not assumed.
+        // A hidden friend beside the member: a member of this name stops ADL ([basic.lookup.argdep]/1).
         [[nodiscard]] friend constexpr auto intersects(contiguous_bit_container const& x, contiguous_bit_container const& y) noexcept
                 -> bool
         {
                 return x.intersects(y);
         }
 
-        // The first block at which two values differ, with that block's xor; equal values answer the last block and a zero xor, every arm alike.
+        // The first block at which two values differ, with that block's xor; equal values answer a zero xor.
         [[nodiscard]] constexpr auto first_difference(contiguous_bit_container const& other) const noexcept
                 -> std::pair<std::size_t, block_type>
         {
@@ -1283,7 +1235,7 @@ public:
         }
 
 private:
-        // Whether any position strictly above the given one is set; the bit there is clear, so one shift down leaves exactly what is above it.
+        // Whether any position strictly above the given one is set, which one shift down leaves.
         [[nodiscard]] constexpr auto any_above(std::size_t index, std::size_t offset) const noexcept
                 -> bool
         {
@@ -1305,21 +1257,21 @@ private:
                 }
         }
 
-        // Comparing two widths needs blocks one storage does not have. They hold no position, and the invariant already keeps the padding above size() clear, so reading them as zero is not a convention but the same fact one block further out.
+        // Comparing two widths needs blocks one storage lacks; reading them as zero is the invariant restated.
         [[nodiscard]] constexpr auto padded_block(std::size_t index) const noexcept
                 -> block_type
         {
                 return index < num_blocks() ? m_blocks[index] : zero;
         }
 
-        // Whether any block in the half-open range is set. An empty or inverted range answers no, which is what a storage with nothing past the other's last block says.
+        // Whether any block in the half-open range is set; an empty or inverted range answers no.
         [[nodiscard]] constexpr auto any_block_set(std::size_t first, std::size_t last) const noexcept
                 -> bool
         {
                 return std::ranges::any_of(std::views::iota(first, std::ranges::max(first, last)), [this](std::size_t index) -> bool { return m_blocks[index] != zero; });
         }
 
-        // any_above with no precondition on the index: the position may lie past this storage's last block, where it holds neither the position nor anything above it.
+        // any_above with no precondition: the position may lie past this storage's last block.
         [[nodiscard]] constexpr auto padded_any_above(std::size_t index, std::size_t offset) const noexcept
                 -> bool
         {
@@ -1339,7 +1291,7 @@ private:
                 return found == std::ranges::end(blocks) ? n : *found;
         }
 
-        // The set ordering across two widths. Lexicographic order over the ascending positions turns on ONE position: the lowest at which the two disagree. Whoever lacks it is less -- holding a larger element there, or, when it holds nothing above it at all, because its positions are a proper prefix of the other's and it runs out first.
+        // The set ordering across two widths, turning on the lowest position at which the two disagree.
         [[nodiscard]] constexpr auto padded_set_three_way(contiguous_bit_container const& other) const noexcept
                 -> std::strong_ordering
         {
@@ -1356,14 +1308,14 @@ private:
                 return this->padded_any_above(index, offset) ? std::strong_ordering::greater : std::strong_ordering::less;
         }
 
-        // The sequence ordering across two widths. The same one position decides -- the lowest at which the two disagree -- but here it decides alone: position 0 is the sequence's FIRST element, so whoever holds that position is greater and nothing above it is consulted, where the set reading has to ask. Agreeing at every position the two share leaves only length, and the shorter is then a proper prefix of the longer and so less.
+        // The sequence ordering: position 0 is the first element, so the lowest disagreement decides alone.
         [[nodiscard]] constexpr auto padded_sequence_three_way(contiguous_bit_container const& other) const noexcept
                 -> std::strong_ordering
         {
                 auto const n = std::ranges::max(this->num_blocks(), other.num_blocks());
                 auto const index = padded_first_difference(other, n);
                 if (index == n) {
-                        // The two answers this can give, rather than size() <=> size(), whose equal case is unreachable: the caller arrives here only with the sizes differing.
+                        // The two answers this can give: the caller arrives only with the sizes differing.
                         return this->size() < other.size() ? std::strong_ordering::less : std::strong_ordering::greater;
                 }
                 auto const diff = static_cast<block_type>(this->padded_block(index) ^ other.padded_block(index));
@@ -1373,7 +1325,7 @@ private:
                                : std::strong_ordering::less;
         }
 
-        // The block straddling index and index + 1: the high one shifted up by L_shift and the low one down by R_shift, spliced into one.
+        // The block straddling index and index + 1, spliced from a shift up and a shift down.
         [[nodiscard]] constexpr auto straddled_block(std::size_t index, std::size_t L_shift, std::size_t R_shift) const noexcept
                 -> block_type
         {
@@ -1391,7 +1343,7 @@ private:
                 return num_blocks() - 1UZ;
         }
 
-        // The words a range of positions spans, each with the mask of what it holds: whole words, and a partial one at the end.
+        // The words a range of positions spans, each with its mask: whole words, a partial one at the end.
         template<class F>
         constexpr auto for_each_block(std::size_t n, std::size_t len, F f) const noexcept
                 -> void
@@ -1416,7 +1368,7 @@ private:
                 return (num_blocks() * bits_per_block) - 1UZ;
         }
 
-        // Whether the blocks hold more bits than the width names, which is what the mask below is for. Width zero decides the spelling: it still holds one block, every bit of which is unused, so size() % bits_per_block would answer no and leave that block dirty behind a width that names none of it.
+        // Whether the blocks hold more bits than the width names; width zero is why it is not a modulo.
         [[nodiscard]] constexpr auto has_unused_bits() const noexcept
                 -> bool
         {
@@ -1434,7 +1386,7 @@ private:
                 -> bool
         {
                 if constexpr (has_static_size and N == 0) {
-                        // Unreachable: only an assert calls is_valid, and a zero-width contiguous_bit_container has no member that reaches one. Not removable either - MSVC's /W4 rejects a bare n < N as always false (C4296).
+                        // Unreachable: only an assert calls is_valid, and MSVC's /W4 rejects a bare n < N (C4296).
                         return false; // GCOVR_EXCL_LINE
                 } else {
                         return n < size();
@@ -1451,7 +1403,7 @@ private:
                 }
         }
 
-        // cl rejects a member of the explicit object parameter in a trailing return type (C2228); bit_array.hpp's result_t is the same idiom.
+        // cl rejects a member of the explicit object parameter in a trailing return type (C2228).
         template<class Self>
         using block_reference_t = std::conditional_t<
                 std::is_const_v<std::remove_reference_t<Self>>, block_type const&, block_type&>;
@@ -1463,27 +1415,27 @@ private:
                 return {std::forward<decltype(self)>(self).m_blocks[index], shl(unit, offset)};
         }
 
-        // The growth itself, over a width already known to be one this storage can count: clear() and pop_back() reach it directly, naming no width of their own.
+        // The growth itself, over a width already known to be one this storage can count.
         constexpr auto resize_to(std::size_t n, bool value)
                 -> void
                 requires (not has_static_size)
         {
                 auto const count = blocks_for(n);
-                // Growing with ones: the tail above size() in the last block is clear by the invariant, and becomes the first new bits. Which block and which bits is read off the OLD width, so it is taken before the blocks grow; the write itself comes after, because m_blocks.resize is what refuses a count these blocks cannot hold, and a refused growth that had already dirtied the tail would leave this storage with a width it no longer matches. Measured on blocks that hold three: refused at a width of 25, the next resize(20) came back with every bit above 9 set and count() at 8 where 1 was set.
+                // Growing with ones: which bits become new is read off the old width, before the blocks grow.
                 if (value and n > size()) {
                         auto const index = last_block();
                         auto const tail = static_cast<block_type>(~used_bits());
                         m_blocks.resize(count, ones);
                         m_blocks[index] |= tail;
                 } else {
-                        // No new block can be a one here: either the value is false, or the width is not growing, and a width that is not growing asks for no block it does not already have.
+                        // No new block can be a one here: either the value is false or the width is not growing.
                         m_blocks.resize(count, zero);
                 }
                 m_size = n;
                 erase_unused();
         }
 
-        // std::length_error, which is what a container throws for a size it cannot represent; the three readings inherit it through every growth, having no ceiling of their own to name.
+        // std::length_error, what a container throws for a size it cannot represent; the readings inherit it.
         [[nodiscard]] static constexpr auto length_error(std::size_t n, std::source_location const& loc = std::source_location::current())
         {
                 return std::length_error(
