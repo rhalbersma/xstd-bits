@@ -23,6 +23,25 @@ This repository enforces its quality bar through CI rather than through review d
 
   Write a conditional across lines rather than packing it onto one. gcov counts per line, so a single-line `if`/`else` can only read as wholly covered or wholly uncovered, and a half-tested one reads as covered.
 
+## Getting a toolchain
+
+Ubuntu 24.04 ships GCC 13 and clang 18, neither of which can build this library: GCC 13 rejects `-std=c++2c`, and
+clang-format before 22 reads `{ a * b }` in a requires-expression as a pointer declaration, so it calls files dirty
+that are clean against [`.clang-format`](.clang-format). [`tools/setup-toolchain.sh`](tools/setup-toolchain.sh)
+installs the `stable` column of [README.md](README.md)'s matrix — GCC 15, clang 22, libc++ 22, clang-format 22, and Boost with
+Boost.Test — from apt.llvm.org and the Ubuntu toolchain PPA:
+
+```sh
+sudo tools/setup-toolchain.sh
+```
+
+`XSTD_TOOLCHAIN_FULL=1` adds GCC 16, the qualification rung, whose libstdc++ is the oldest carrying
+`<inplace_vector>`. The script is idempotent, so re-running it on a warm container is safe.
+
+In a [Claude Code cloud](https://code.claude.com/docs/en/claude-code-on-the-web) environment, point the
+environment's setup script at it so every session starts with the rung already in place. That field is configured
+on the environment itself, not in this repository.
+
 ## Test layout and naming
 
 The test tree mirrors the header tree, and `test/CMakeLists.txt` fails configuration if it ever stops doing so: `include/xstd/bits/ranges/set_view.hpp` is answered by `test/src/bits/ranges/set_view.cpp`. The rule runs one way — every public header needs a source, `detail/` excepted, being machinery rather than interface. It does not forbid a source that answers no header, and some directories are exactly that.
