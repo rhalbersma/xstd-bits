@@ -14,7 +14,7 @@
 
 namespace test::set::composable {
 
-// The four below build an X through ranges::to, which inserts, and a set's insert is the one operation that can be unable to satisfy a key: past max_size() it is std::length_error. So none of them is noexcept, where includes() -- which constructs nothing -- is.
+// The four below insert through ranges::to, which past max_size() is std::length_error, so none is noexcept.
 
 struct includes
 {
@@ -71,7 +71,6 @@ struct set_symmetric_difference
         }
 };
 
-
 struct increment_modulo
 {
         template<class X>
@@ -80,12 +79,7 @@ struct increment_modulo
                 if constexpr (requires { a << n; }) {
                         auto const N = a.max_size();
                         BOOST_CHECK(
-                                (a << n) == (a
-                                        | std::views::transform([=](auto x) { return x + n; })
-                                        | std::views::filter   ([=](auto x) { return x < N; })
-                                        | std::ranges::to<X>()
-                                )
-                        );
+                                (a << n) == (a | std::views::transform([=](auto x) { return x + n; }) | std::views::filter([=](auto x) { return x < N; }) | std::ranges::to<X>()));
                 }
         }
 };
@@ -98,13 +92,7 @@ struct decrement_modulo
                 if constexpr (requires { a >> n; }) {
                         auto const N = a.max_size();
                         BOOST_CHECK(
-                                (a >> n) == (a
-                                        | std::views::filter   ([=](auto x) { return x >= n; })
-                                        | std::views::transform([=](auto x) { return x - n; })
-                                        | std::views::filter   ([=](auto x) { return x < N; })
-                                        | std::ranges::to<X>()
-                                )
-                        );
+                                (a >> n) == (a | std::views::filter([=](auto x) { return x >= n; }) | std::views::transform([=](auto x) { return x - n; }) | std::views::filter([=](auto x) { return x < N; }) | std::ranges::to<X>()));
                 }
         }
 };

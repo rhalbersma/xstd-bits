@@ -10,7 +10,7 @@ BOOST_AUTO_TEST_SUITE(Ownership)
 
 BOOST_AUTO_TEST_CASE(OwningIsOneOfTwoAnswers)
 {
-        static_assert(    owns(xstd::ownership::owns));
+        static_assert(owns(xstd::ownership::owns));
         static_assert(not owns(xstd::ownership::refers));
         BOOST_CHECK(xstd::ownership::owns != xstd::ownership::refers);
 }

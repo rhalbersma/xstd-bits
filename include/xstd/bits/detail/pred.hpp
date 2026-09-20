@@ -10,20 +10,20 @@
 
 namespace xstd::detail::bits {
 
-// Both masks are compared against a zero Block rather than converted to a bool, which is the question each name asks: a conversion leaves the reader to translate "true" back into "shares a bit" or "has none outside".
+// Both masks compare against a zero Block rather than convert to bool, which is the question each name asks.
 template<xstd::unsigned_integer Block>
 [[nodiscard]] constexpr auto intersects(Block lhs, Block rhs) noexcept
         -> bool
 {
         return (lhs & rhs) != static_cast<Block>(0);
-}   
+}
 
 template<xstd::unsigned_integer Block>
 [[nodiscard]] constexpr auto is_subset_of(Block lhs, Block rhs) noexcept
         -> bool
 {
         return (lhs & static_cast<Block>(~rhs)) == static_cast<Block>(0);
-}  
+}
 
 template<xstd::unsigned_integer Block>
 [[nodiscard]] constexpr auto not_equal_to(Block lhs, Block rhs) noexcept
@@ -32,6 +32,6 @@ template<xstd::unsigned_integer Block>
         return lhs != rhs;
 }
 
-}       // namespace xstd::detail::bits
+} // namespace xstd::detail::bits
 
 #endif // XSTD_BITS_DETAIL_PRED_HPP

@@ -10,7 +10,7 @@
 #include <cstddef>                  // size_t
 #include <ranges>                   // contiguous_range
 
-// Its own header rather than a corner of sequence/ordering.hpp, which reaches for bit_span and make_bitset that this needs none of.
+// Its own header: the sequence ordering sweeps reach for bit_span and make_bitset, and this needs neither.
 namespace test::sequence {
 
 // The sequence reading yields EVERY position, densely, 0 through size() - 1, each agreeing with the subscript.
@@ -28,6 +28,6 @@ auto yields_every_position(C const& c)
         BOOST_CHECK_EQUAL(counted, c.size());
 }
 
-}       // namespace test::sequence
+} // namespace test::sequence
 
-#endif  // TEST_SEQUENCE_DENSE_HPP
+#endif // TEST_SEQUENCE_DENSE_HPP

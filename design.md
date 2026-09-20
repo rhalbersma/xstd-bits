@@ -401,6 +401,29 @@ case that is neither, which is every rung this ladder runs. `if consteval` picks
 `if constexpr (endian::native == endian::little)` the second; neither is a branch a coverage slot can miss,
 because neither is a branch at run time.
 
+That pair of cases is worth taking one branch at a time, because three of them are not the same question.
+
+A **scalar** takes no copy at all, and that is measured rather than assumed: a value is at most a handful of
+bytes, the loop unrolls, and `memcpy` timed identically at every width — **0.31ns either way** on `uint8`,
+`uint32` and `uint64`. A branch that buys nothing is worse than no branch.
+
+A **sequence of blocks** takes the copy only where the bytes of a value are the bytes of the field, which is a
+little-endian target whose block type has no padding: the shifts count by `digits` where a copy counts by
+`sizeof`, and those agree only when every bit of the object is a value bit. No standard type has such padding,
+and the test is there so that one could not quietly turn a copy into the wrong answer. Its shape is load-bearing
+too: written as `if !consteval` with a return, the shifts below it become unreachable code in a run-time
+instantiation, which MSVC reports as C4702 and this build treats as an error. Two alternatives, so neither arm
+is dead.
+
+The blocks are **value-initialised first**, which is what clears the tail above `N` and so makes
+set → blocks → set the identity at a width the sequence is wider than. The other direction is not the identity
+and is not meant to be, exactly as it already is not for an integer too wide for the width.
+
+A **zero width** is the one case that has to be refused rather than proved. `std::bitset<0>` occupies a byte
+that represents no position, so a `bit_cast` of it reads an uninitialised one and is no constant expression. The
+guard is `byte_count<N>` rather than `N`, those being zero together and `byte_count` being what the two
+conversions actually range over.
+
 That factor is what decides a question this design keeps inviting: whether a foreign bitset should be **read**
 block-wise in place rather than converted. In place is not portably possible — `bit_cast` yields a copy, so
 reading someone else's words needs a pointer into them, which is `_M_p`, `__seg_` or `_Myptr` by turns. It also
@@ -444,6 +467,12 @@ the width constraint catches and not a shape `bit_cast` refuses; a non-constant 
 needs its own gate. It lights **one** position rather than five, because this is the gate and the probe is the
 proof: paying the full probe twice would halve the width the step budget reaches. `count()` rides along, being
 the only other call the probe makes.
+
+Neither `probe_once` nor `bit_layout_holds` is `noexcept`, and deliberately so. A bitset reading's `set(pos)`
+throws `out_of_range` for a position it does not have. Neither ever asks for one — the loop skips `i >= N` and
+the width constraint is settled before either runs — but that is reasoning a call graph cannot follow, and a
+throw out of a `noexcept` function is a terminate rather than a diagnostic. There is nothing to buy back
+either: every call to these is a constant evaluation, where a throw is already a hard error.
 
 The cost of that gate is that such a type is not a **source**. It remains a perfectly good target — a
 `basic_bitset<absl::uint128, 384>` still converts to and from a `std::bitset<384>`, because the probe runs on the
@@ -3941,3 +3970,535 @@ gcov anchored the counter to. That is a real cost of the gate and it is worth pa
 reports instead of enforcing gets read as noise. But it has to be read for what it is: here "uncovered" twice
 meant "gcov counted this differently than you would have", and going looking for the missing test would have
 been going looking for a test that cannot exist.
+
+## Measurements and citations behind the code
+
+Each of these was a multi-line comment in a source file. The comments are one line each now, and what
+they carried is here, where length costs nothing.
+
+### `std::count` over a bit container measures the standard library, not the container
+
+`benchmark/src/sequence/access.cpp`'s `bm_sequential_count` row is a sweep asked through a generic
+algorithm. At 65536 bits, 40% set, medians of seven runs, in nanoseconds:
+
+| compiler and library | `vector<bool>` | `bit_vector` | ratio |
+| :--- | ---: | ---: | ---: |
+| g++-14, libstdc++ | 43690 | 52930 | 1.21x |
+| clang++-20, libstdc++ | 83680 | 19232 | 0.23x |
+| clang++-20, libc++ | 73 | 19146 | 262.27x |
+
+Same two containers, same bits, and the answer runs from four times faster to two hundred and sixty
+times slower. libc++ **specializes** `std::count` for its `vector<bool>` iterator — `__count_bool` in
+`<__algorithm/count.h>`, one popcount per word — and sweeps the lot in 73ns. libstdc++ specializes
+`fill` for that iterator and not `count`, so there both sides walk bit by bit through a proxy and the
+remaining difference is codegen: clang turns our indexed read into something four times quicker than
+it manages for theirs, gcc does not.
+
+So the row is not a comparison of containers and not a gap to close. There is no portable way to make
+`std::count` count words for a container defined outside the standard library: libc++ reaches its own
+iterator by overloading inside its own namespace, and neither `std::count` nor `std::ranges::count`
+offers a customization point a user-defined bit container could hook. What the row says is how much a
+sweep costs when it is asked through a generic algorithm.
+
+`bm_sequential_count_member` asks the same question of the sequence reading instead: one popcount per
+word, 91ns, 73ns and 74ns in those same three configurations. It does not care which library or which
+compiler, because the loop is ours either way. Level with libc++'s specialized count at 1.01x, and
+some five hundred times quicker than what libstdc++ offers for the same question. `std::vector<bool>`
+has no member to put beside it, which is why that rung is ours alone.
+
+### Why the bidirectional steps guard on a zero width
+
+`detail/bidirectional.hpp` guards both steps on `zero_width<Bits>` rather than asking the storage. The
+exclusive scans take a position as a precondition and a zero width has none to give, so they assert
+there.
+
+Each step also states its own precondition beside the storage's. Forward, that this is not `end()`,
+which is what the scan's `is_valid` comes to. Backward is the one worth having, because it is
+**stronger** than anything below it: `exclusive_find_prev` asserts `any()` and `is_valid(n - 1)`, and
+`--begin()` passes both while there is nothing below to find. Measured under `NDEBUG`, without the
+guard: at a two-block extent it fell into the arm meant for the lower block and answered the highest
+position there, which is the key it started from, so a reverse walk never ends; at four blocks and at
+a run-time width it read past the blocks.
+
+### What `[set]`'s synopsis leaves out for a packed set
+
+`test/include/test/set/concepts.hpp` transcribes `[set]`'s synopsis as one requires-expression, with
+`std::set<std::size_t>` as the model. Three families are left out, each for a reason the packing
+gives:
+
+- `node_type`, `extract`, `insert(node_type&&)` and `merge`: there is no node. A position is a bit in
+  a word, so there is nothing to unlink and hand over, and nothing to relink.
+- the `template<class K>` heterogeneous overloads: they participate only where
+  `Compare::is_transparent` is valid, and `key_compare` is `std::less<key_type>` here as it is on
+  `std::set<std::size_t>`. Neither side has them, so asking would hold the model to a line the model
+  does not answer either.
+- `insert_range` and the from_range constructors: `[set.cons]`'s C++23 lines, kept apart so the model
+  can be held to them where its standard library has them (`__cpp_lib_containers_ranges`).
+
+`pointer` and `const_pointer` are dropped from the `[associative.reqmts]` typedefs for the same
+reason as the nodes: packed bits have no address.
+
+### AddressSanitizer aborts where the allocator throws
+
+`test/include/test/sanitizer.hpp` guards the rows that assert a width past what the blocks can hold
+reaches the allocator. AddressSanitizer answers an allocation it will not serve by **aborting**, where
+the C++ allocator answers with `std::bad_alloc`, so on a sanitized build the process is gone before
+the catch. Measured on this tree: the report is `allocation-size-too-big`, and
+`allocator_may_return_null=1` only renames it to `out-of-memory`, because the throwing `operator new`
+calls `ReportOutOfMemory` on a null return rather than throwing.
+
+Every other leg answers those rows, which is measured too: the nine failures that led to the guard
+were all sanitized builds or a discarded temporary an optimizer elided, and the msvc and mingw legs,
+which are neither, never failed on them at all.
+
+Declare anything a guarded block needs **inside** it. The clang legs compile with `-Weverything
+-Werror`, so a variable named outside a block that is the only thing using it is an unused-variable
+error on exactly the legs the guard is for.
+
+### Why the byte-exchange question is a template
+
+`test/include/test/bit_exchange.hpp` asks whether a type has a static `from_bits` accepting `B`. There
+is no trait for that, so it is a concept.
+
+Being a **template** is not incidental. A bare requires-expression over concrete types puts a
+non-dependent requirement in the immediate context, where GCC reports an unsatisfied constraint as a
+hard error rather than as false — which is precisely what an assertion of the form "this is NOT
+admitted" must not be.
+
+### `[array.tuple]` does not divert `std::format`
+
+A `std::tuple_size` specialization is what makes a type tuple-like, and it does not divert
+`std::format`. `[format.tuple]/1` provides the tuple formatter "for each of pair and tuple", naming
+the two class templates rather than admitting tuple-like types, and `[format.range.fmtkind]` never
+asks `tuple_size_v<R>` — it asks `R::key_type`, and `tuple_size_v` of the reference type for the map
+case alone. `std::array` is the proof by example: tuple-like, a range, and it prints as a range. The
+bracket assertions in `test/src/bits/detail/format.cpp` are what pins this.
+
+### The try-doors return what the draft spells
+
+P3981R0 changed `try_push_back` and `try_emplace_back` to return `optional<reference>` once P2988R12's
+`optional<T&>` was adopted; libstdc++ 16 still returns the pointer P0843R14 gave them. The checklist
+asks the model for the name, and `TheTryDoorsReturnTheOptionalReferenceTheDraftSpells` asks the
+packing for the signature the draft spells.
+
+### The dynamic-bitset benchmark rows
+
+`benchmark/src/bitset/dynamic.cpp` measures at 32768 bits and 40% set, medians of seven runs.
+
+**The scan row is like for like.** Boost answers `find_first`/`find_next` natively and so does the
+bitset reading, so both rungs make the same two calls. A per-bit `test(pos)` loop over boost costs
+28.3us where boost's own `find_next` costs 61.9us: testing every position is a predictable branch per
+bit, where a scan re-enters the block it was given and carries a dependency from one position to the
+next. Comparing a scan against a per-bit loop therefore reads ours 1.8x *slower* than boost; the same
+two calls on both sides put ours at 53.0us against 61.9us, which is 0.86x. The two re-entrant scans
+are latency-bound and move by a tenth between runs on a shared machine, where the block walk lands
+within 3% every time.
+
+**The block walk is the row worth reading.** A scan restarts from the position it was given, so it
+re-reads that position's block on every step and cannot start the next step until this one answers.
+The block walk loads each block once and then spends `tzcnt` for the position and `blsr` to drop it:
+7.0us against the scan's 53.0us, some seven times, and four times quicker than the per-bit loop that
+beats the scan. Ours alone — boost has no view over its bits.
+
+**The block interface stands on the same footing.** `from_block_range` and `to_block_range` are
+boost's too, each a `std::copy` over its own vector. Both sides take the same words through the same
+contiguous iterators, and everything is allocated before the loop — build the destination inside the
+timed region instead and the same call reads about twice what it reads here, which is the allocator
+measured in place of the copy. With each side timed in both positions the two land together: 35ns in
+against boost's 35ns, 36ns out against boost's 36ns, on a memcpy of the same words at 35ns. Neither
+sits above the floor, which is what this row exists to keep checking rather than assume.
+
+Ours also does one thing boost does not, and it is inside those numbers: `erase_unused()` masks the
+tail once the blocks have landed, where boost keeps whatever the caller's last block held. One word
+at every width, which is what the stronger guarantee costs.
+
+A `back_inserter` is the other output shape and gets no rung: it costs a `push_back` per block, 320ns
+against this row's 36ns, and what that measures is a vector growing rather than the interface
+answering.
+
+### Why the array checklists spell `tuple_size<C>::value`
+
+`modernize-type-traits` asks for `tuple_size_v<C>` and the checklists in
+`test/include/test/sequence/concepts.hpp` cannot take it. A checklist is asked of types that *fail*
+it — that is the whole of what it is for — and the two spellings fail differently.
+
+`tuple_size<C>::value` is a nested name, so for a `C` with no `tuple_size` at all the substitution
+fails in the immediate context and the constraint answers false. `tuple_size_v` is a variable
+template whose initializer instantiates *outside* the immediate context, and the same `C` is a hard
+error no requires-expression can catch. Measured rather than assumed: the `_v` spelling turns
+`not array_tuple_element<C>` into "incomplete type `std::tuple_size<C>` used in nested name
+specifier".
+
+The `tuple_element` half has no such problem and the rewrite is taken — an alias template substitutes
+transparently, so its failure stays in the immediate context. Both `::value` sites carry a
+`NOLINT(modernize-type-traits)`.
+
+`[array.tuple]`'s element half also only exists for a non-empty array: `tuple_element<I, array<T, N>>`
+Mandates `I < N`, so element zero is a question that cannot be put to a width of nought — on the
+packing or on `std::array` itself.
+
+### Why the byte exchange is named rather than spelled as a conversion
+
+`from_bits` and `to_bits` take a field of bits in and hand one out, at the one extent where the
+question has a single answer: a static width is a capacity under the set reading and the other side's
+own width both, so position `n` here is bit `n` there. Nothing truncates, nothing grows, nothing
+throws, and the round trip is the identity in both directions.
+
+They are **named** rather than spelled as a conversion, which is the one thing `explicit` could not
+buy. A contiguous range of unsigned integers already means something at this reading: `from_range`
+reads it as a range of *keys*. So the same argument had two meanings a tag apart, and both compiled:
+
+```cpp
+bit_static_set<256>(std::from_range, words)   // {0, 5} -- the values are keys
+bit_static_set<256>(words)                    // {0, 2} -- the values are blocks
+```
+
+`explicit` guards against a conversion nobody asked for. It does nothing about a reader misreading
+one that *was* asked for, and that is the failure available here. A name does: `from_bits` says which
+reading of the argument is meant, at the call site, where the reader is. `std::bitset` spells its own
+exit `to_ullong` for the same reason, Boost spells this pair `from_block_range` and `to_block_range`,
+and `contiguous_bit_container` has said `assign_bits` and `to_bits` one layer down all along.
+
+They are named **by a concept** rather than by a type. `std::bitset` appears nowhere in them, which is
+the point: what these two admit is anything whose N bits this library can prove it reads correctly —
+an unsigned integer or a sequence of them, whose layout the language and the sequence state between
+them, or a field of bits whose layout `bit_castable` probes and proves. So `std::bitset<N>` rides in
+on the same rule as `unsigned long long`, and an implementation that ever laid its bits out otherwise
+is simply not admitted: a call that fails to compile rather than one quietly wrong.
+
+The integer family is the one a set reader can still misread, and the name is what answers it:
+`bit_static_set<32>::from_bits(5u)` is the set of positions the value five has, `{0, 2}`, and not the
+set `{5}`.
+
+### What each storage says for a key it cannot hold
+
+Every other member of the set reading is total over `key_type`: `contains`, `count`, `find`,
+`lower_bound`, `upper_bound`, `equal_range` and `erase(key)` all answer for a key past the width
+rather than refuse the question. The two that write cannot — there is nowhere to put it — and the
+three storages differ because the reasons differ:
+
+| storage | for a key past the width |
+| :--- | :--- |
+| dynamic extent | grows to admit it, and past `max_size()` says `std::length_error` |
+| inplace extent | grows within its capacity, and past it the blocks say `std::bad_alloc` |
+| static extent | says `std::out_of_range`, as `xstd::bitset<N>` does for a position past N |
+
+A domain, a capacity and a representable size — three different limits, and none of them silent. The
+dynamic width's ceiling is asked at this reading rather than at the storage, which has none of its
+own, so the set reading keeps `length_error` while the bitset reading beside it answers `bad_alloc`
+as boost does.
+
+### The static owner's equality is written out
+
+A static owner's equality is its one member's: every instance carries the same width, so the arms
+have nothing to choose between. It is written out rather than defaulted because a defaulted
+comparison compares the bases first, and the base is `allocator_base_type`, an empty class whose own
+defaulted `operator==` can only answer true. That call is a branch no input can send the other way,
+and an unreachable branch is a hole in a coverage gate that admits no test. Saying the member outright
+is the same comparison with nothing dead in it.
+
+### Why the bitset reading's byte exchange is constrained on `container_source`
+
+`bitset_adaptor`'s `from_bits`/`to_bits` are constrained on `container_source` rather than on
+`bit_castable`, which is the one place this reading differs from the other two. It already has the
+integer door, twice over, and admitting the integer family here would collide with it rather than
+widen it:
+
+- the `unsigned long long` constructor is **implicit**. A template admitting `unsigned int` would be
+  an exact match where that one needs a conversion, so it would win for `bitset<32> b(5u)` — and
+  being explicit, it would make `bitset<32> b = 5u` ill-formed, which compiles today.
+- `to_ullong()` **throws** `overflow_error` where a set position lies beyond the word
+  ([bitset.members]/34-37), where a byte copy would silently keep the low bits. Two contracts for one
+  conversion is a trap, and the standard's is the one this reading owes.
+
+So integers keep their door and this opens the other one: `std::bitset<N>`, and any field of bits
+whose layout `bit_castable` can prove.
+
+The name also settles a hazard by construction. A templated *constructor* is a candidate for
+copy-construction, so its constraint is checked on every copy — and this is the one reading whose own
+type the probe accepts, having `set`, `count` and `size`, so `container_source` probes it rather than
+declining early. A static function is never a copy-construction candidate, so the check happens only
+where `from_bits` is written. The not-itself clause is kept all the same, and says something about the
+interface rather than about overload resolution: copying a `bitset_adaptor` is a copy, not a byte
+exchange. The other two readings decline their own type for free, an adaptor being neither trivially
+copyable nor a contiguous range of blocks.
+
+### LWG 4294's char-like traits on the string constructors
+
+The string constructors carry LWG 4294's four traits verbatim, so the constructor is not instantiated
+for a `charT` that would make the `basic_string_view` ill-formed *outside* the immediate context. They
+arrived with the `string_view` overload P2697R1 added; before it, the `const charT*` overload went
+through `basic_string` and needed no such guard.
+
+One clause the standard does not have is added, because `std::bitset` has no overload to be told apart
+from: a pointer to a block is the block-range constructor's argument, not a string's. Nothing else is
+subtracted, so a program-defined char-like type reaches this exactly as it reaches `std::bitset`'s.
+
+### The block interface's copy arm
+
+Every block out, including the clear tail; at most every block in, the tail kept clear. Both halves
+take the same shape for reasons that are not the same.
+
+Going **in**, the loop cannot become the copy at all: it writes through a reference the compiler will
+not assume is the next word along. Coming **out** it can, and in a Release build it does — 36ns to a
+contiguous output against a 35ns memcpy of the same words, at 32768 bits, medians of seven. What it
+cannot survive is `block(i)`'s assertion: an assert-on build runs the same loop at 3.4x that floor,
+where the span goes straight through. So the explicit arm buys nothing where the benchmarks run and
+3.4x where the tests do.
+
+The other half does not get there by itself in any build, and is where the storage's `blocks()` earns
+its place: 121ns as a loop against the 35ns floor, 35ns as one copy into the span. It takes a sized
+sentinel as well as a contiguous iterator, because the precondition the loop asserts per block — that
+the source is no longer than the storage — is one the bulk copy has to know *before* it writes, and
+`last - first` is the only way to be told.
+
+Into a `back_inserter` it is 320ns and no arm can help that: a `push_back` per block is what the
+caller asked for.
+
+### Which width throws and which asserts
+
+One rule covers element access and the ranged family both: a width answers as **its own** counterpart
+does, and a width whose counterpart has nothing here answers as its own type answers elsewhere.
+
+Element access has two counterparts to mirror — `std::bitset::set(pos)` throws, boost's asserts — so a
+static width throws `out_of_range` and a run-time one asserts. The inconsistency is the counterparts'
+own. The ranged family has one counterpart, boost's, which asserts; so a run-time width asserts,
+which is boost's contract exactly, and a static width, having no `std::bitset::set(pos, len, val)` to
+mirror, follows the nearest thing it does have — its own `set(pos)` — and throws.
+
+A strict extension is about what a *counterpart's valid expressions* do, and reaching past the width
+is not one of those, so nothing requires a throw where boost asserts.
+
+The range check is spelled as a subtraction rather than as `pos + len`, which wraps for a `pos` near
+the top of `size_t`: a wrapped sum is below every width, so the check the range was meant to fail is
+the one it would pass. The diagnostic names `pos` and `len`, the sum being the thing that is not a
+position.
+
+`find_next` is total, which is boost's contract: a position at or past the width is one nothing can be
+set after, and `npos` is that answer rather than a precondition violation. The storage's step is not
+total — it asserts `is_valid(n)` and steps to `n + 1` — so the guard is at this reading. Without it,
+`find_next(npos)` is the worst shape this can take: `n + 1` wraps to zero, the scan starts from the
+beginning, and the answer is the *first* set position.
+
+### Writing the offending character into the string constructor's message
+
+`std::format` needs a `std::formatter<charT, char>`, and the standard specializes
+`formatter<charT, charT>` and `formatter<char, wchar_t>` and nothing else. So there is no
+`formatter<wchar_t, char>`, nor one for any of the three Unicode char types — and formatting them
+unconditionally makes the error path ill-formed for every `charT` but `char`, on a constructor that
+has taken all five since it was written. Nothing catches that by inspection, because
+`is_constructible_v` asks the declaration and never instantiates the body; it takes a call to find it.
+
+So there are three arms, by what the character can be written down as: characters a narrow format
+string can print, which is `char` alone; the code unit as a number for every other integral char
+type, since that is what the message is for; and neither for a program-defined char-like type, which
+LWG 4294 admits and which is not even integral — the same ill-formed-outside-the-immediate-context
+trap the issue exists to close, one layer down.
+
+Each arm spells its format string out rather than building one: `std::format` takes a
+`format_string`, which is consteval over the argument types, so a `std::string` assembled at run time
+would not be one. The narrow arm puts its three arguments on one line: split over three, gcov hands
+the first two a counter of their own that the call on the third never reaches, and two lines every
+test of this message runs read as never executed.
+
+### `operator>>` is a formatted input function
+
+[bitset.operators]/4 says so, and the sentry is what that phrase means: leading whitespace is skipped,
+and an exhausted stream fails before a character is ever looked at. Peeking straight at the stream
+does neither — `std::bitset<3>` reads `"  101"` and answers 101, where a peeking extractor refuses the
+input, which is a difference in the *answer* and not only in the bookkeeping.
+
+The sentry also decides the zero-width case that no other clause reaches: [bitset.operators]/6 sets
+failbit only when N > 0, so at N == 0 an empty stream is failed at the sentry or nowhere, and
+`std::bitset<0>` fails it. A failed sentry extracts nothing, so the bitset keeps the value it had
+([istream.formatted.reqmts]) rather than being assigned an empty string.
+
+There is one peek per character: peeking twice sets eofbit and then failbit, which fails a short but
+valid extraction.
+
+### The sequence reading's byte exchange, and why it declines a window
+
+Byte `j` holds the positions `[8j, 8j + 8)` least significant bit first, so a fixed width over the
+same positions agrees byte for byte with any other and the exchange is a copy rather than a walk.
+
+It is named rather than spelled as a conversion for the reason the set reading gives: a sequence of
+unsigned integers is one argument with two readings. This reading cannot hit the `from_range`
+collision itself — its `from_range` wants `can_grow`, and anything that can grow has a dynamic extent,
+which turns the exchange off — but one door with two spellings across three readings would be worse
+than either spelling alone.
+
+The vocabulary is the thing to read twice at this reading: `bit_array<32>::from_bits(5u)` is a packed
+array of bool — true, false, true, then twenty-nine more false — and not the set `{0, 2}` that the
+same bits spell one reading over.
+
+**Not on a window**, which is the whole of why `is_window` is asked. A window is a bit offset and a
+size of its own into storage it does not span: its position zero is not the storage's, so its bytes
+are not the storage's bytes and `to_bits` would hand back the wrong ones. The width test inside
+`exchanges_bits` does not catch it, since a window over a static container reports the *container's*
+extent rather than its own size. A view that is not a window spans the whole container, so its bytes
+are that container's and it exchanges.
+
+### Two places where the coverage gate decides the layout
+
+`front()` and `back()` are both preconditions in [sequence.reqmts], and `back()`'s is the one that
+subtracts: on an empty sequence `offset() + size() - 1UZ` wraps, and the reference handed back names a
+position no storage has. Each assert is spelled over four lines rather than one, because gcovr
+excludes an assert by a pattern anchored at the start of a line.
+
+The static owner's defaulted `operator==` is kept on a single line for the mirror-image reason:
+gcovr's `--exclude-unreachable-branches` matches the line carrying `= default;`, and gcov anchors a
+defaulted comparison's branches at the declaration's first line. Split across lines — which
+clang-format will do to any such declaration long enough to wrap — the exclusion stops matching and
+the dead base comparison fails the 100% branch gate.
+
+### `modernize-avoid-c-style-cast` on `owns(Own)`
+
+clang-tidy 23 points at the `Own` in `owns(Own)` and offers to rewrite it as a `static_cast`, having
+read the call as a C-style cast of a parenthesized type. There is no cast on that line.
+
+`owns` is a function — `[[nodiscard]] constexpr auto owns(ownership) -> bool`, in `ownership.hpp` —
+and `ownership::owns` is a *scoped* enumerator, so the unqualified name can only be the function and
+`Own` is a non-type template parameter, not a type. The same `owns(Own)` is written at sixteen other
+sites in this library and none of them is flagged; what is particular about this one is the
+namespace-scope variable template, whose initializer is value-dependent until instantiation.
+
+It is suppressed rather than respelled: writing `Own == ownership::owns` instead would inline the one
+function that exists so nobody has to.
+
+## The storage's own measurements
+
+### `blocks_for` is total over every `size_t`
+
+How many blocks a run-time width needs, floored at one. It is said as boost's `calc_num_blocks` says
+it — divide, then round up by the remainder — because that *cannot* overflow, where
+`align_up(n, bits_per_block)` adds first and wraps for the 63 widths above `max_width`, rounding them
+to zero blocks that the floor then turns into one. A guard against that wrap is a guard against a
+spelling; this spelling has nothing to guard. It is public because that totality is the claim, and a
+`static_assert` is the only way to make it without asking an allocator for two exabytes.
+
+### Equality over the shared prefix
+
+`ranges::equal` over the shared prefix, not over the two block ranges: on two sized ranges it compares
+`size()` first and answers false without looking at an element, which is the one case this asks about.
+Taking the prefix as an **iterator pair** keeps the answer and gets the algorithm, which lowers to a
+`memcmp` on trivially comparable contiguous blocks where `all_of` over a zip stays an element loop —
+2.15us to 1.29us over 4700 blocks. The other two block walks cannot follow: `is_subset_of` and
+`intersects` do bitwise work per block and have no such algorithm.
+
+### The saturating sum, and whose ceiling it is
+
+Base positions and count more, saturated at the top of `size_t` rather than wrapped: the one addition
+every growth is spelled through. A wrapped sum is small, so it passes the ceiling it was meant to fail
+and then sizes the blocks for far fewer positions than the operation goes on to write; a saturated one
+fails that ceiling, which is what an unrepresentable width should do.
+
+The ceiling itself is not the storage's, because the counterparts disagree about it. `std::vector`
+throws `length_error` for a size it cannot represent, and the sequence reading says so. The set
+reading refuses a key past the widest it could grow to. `boost::dynamic_bitset` has no ceiling at all
+— a width it cannot hold reaches the allocator and answers `bad_alloc` — and the bitset reading is a
+strict extension of boost, so it calls none of this.
+
+Three `max_size` answers sit over the same blocks. Boost's saturates where the storage's clamps: it
+multiplies the blocks' limit by the bits in one and gives `SIZE_MAX` where that product is not
+representable, sixty-three positions above `max_width`. It is said as a sum and not as boost's choice,
+because `bits_per_block` is a power of two and a choice would be a branch whose two arms belong to
+different allocators — `std::allocator`'s ceiling always saturates — and no one instantiation could
+take both. `std::vector<bool>`'s clamps further still: a random access range's positions are counted
+by a `difference_type`.
+
+### The block span, and what an assertion per block costs
+
+`block(i)` as a range rather than one block at a time. The write side carries `block(i)`'s write-side
+contract once for the range; the read side carries nothing and exists one build short of the write
+side. `block(i)` asserts its index, and an assertion per block is a loop the vectoriser leaves alone.
+A Release build never sees it — `to_block_range`'s loop reaches the memcpy floor there by itself —
+but an assert-on build pays **3.4x** for a bounds check on an index the caller just produced in order.
+
+### `erase_unused` asks the value what the other arm asks the compiler
+
+At a static width the `if constexpr` settles it. At a run-time width, whether the last block has a
+tail to erase is a property of a width the type is not given until it runs, so the arm has to ask the
+value. Without the test the mask runs on every call at every width, and where the width is an exact
+multiple of the block it is a read-modify-write that changes nothing: flip at 128 bits measures
+**7.8ns without it against 2.3ns with**, and boost, which has had the same `if` all along, measures
+2.3ns.
+
+### Why the byte exchange is shifts, and where it is a copy
+
+Byte `j` holds the positions `[8j, 8j + 8)`, least significant bit first, which is what every
+contiguous bit container lays them out as whatever its block width. Said in **shifts** and not a
+`memcpy`, for three reasons at once: the answer does not depend on the order a block stores its own
+bytes in, both directions stay `constexpr` where a `memcpy` is not, and the arithmetic is the same on
+every block width, so two widths over the same positions agree byte for byte.
+
+On a **little-endian** target the byte a position lands in does not depend on the block width, so
+there the shifts and a straight copy of those bytes are the same answer and only one of them is a byte
+at a time. Over the eight kilobytes of 2^16 positions, measured in one process so the ratio is the
+machine's own: **9.70us by shifts against 0.07us by memcpy**, a factor of about a hundred and
+forty-five. The shifts answer the two cases a copy cannot — a constant expression, where `memcpy` does
+not exist, and a big-endian target, where those bytes are not these blocks.
+
+### Whole blocks land whole
+
+The scalar append splits a block across two whenever the width is not a multiple of
+`bits_per_block`, and that split is the only reason a block range has to go one block at a time. When
+the width *is* a multiple — which an empty container always is, and which is therefore every
+block-range construction — each block lands in a block and the sequence is a range insertion the
+storage can do in bulk. A run-time test and not `if constexpr`, the width being a run-time property.
+Measured at 65536 bits, block-range construction: **942ns by the loop against 77ns** to allocate and
+fill the same blocks.
+
+### A member named `intersects` stops ADL
+
+`intersects` is to `set_intersection` what `contains` is to `find` — a predicate over the free
+two-range algorithm, not a lookup asked of one value — so the symmetric spelling is a hidden friend
+beside the member. Both adaptors carry a **member** named `intersects`, boost's spelling, which the
+bitset reading keeps by the extension rule, and a member of that name stops ADL at the call site
+([basic.lookup.argdep]/1: ordinary lookup finding a class member ends the search). So from inside
+those members the friend is unreachable by any spelling. Measured, not assumed.
+
+### The one unreachable line
+
+`is_valid`'s empty case is called only from an `assert`, and a zero-width `contiguous_bit_container`
+has no member that reaches one. It is not removable either: MSVC's `/W4` rejects a bare `n < N` as
+always false (C4296). It carries a trailing `GCOVR_EXCL_LINE`, which drops that one line from the
+denominator rather than counting it as reached.
+
+### Growing with ones takes the tail before the blocks grow
+
+The tail above `size()` in the last block is clear by the invariant, and becomes the first new bits.
+Which block and which bits is read off the **old** width, so it is taken before the blocks grow; the
+write itself comes after, because `m_blocks.resize` is what refuses a count these blocks cannot hold,
+and a refused growth that had already dirtied the tail would leave the storage with a width it no
+longer matches.
+
+Measured on blocks that hold three: refused at a width of 25, the next `resize(20)` came back with
+every bit above 9 set and `count()` at 8 where 1 was set.
+
+### Why `blocks_for`'s totality is asserted at compile time
+
+The claim is that `blocks_for` is total: the widths that would wrap now ask for more blocks than the
+blocks will ever hold. Asserting it by *growing* to such a width instead asks `std::allocator` for
+2^61 bytes, which is not a question two of this tree's CI legs will answer — a sanitized build
+**aborts** on a request that size rather than reporting `std::bad_alloc`, and an optimizer may drop
+the `new`/`delete` pair of an unused temporary altogether, so the request is never made and nothing
+is thrown. Both were measured on exactly these assertions.
+
+A `static_assert` is stronger besides: it names the block count rather than inferring it from an
+exception.
+
+The widths in question are the sixty-three above `max_width`, where `n + bits_per_block - 1` overflows
+to a sum below `bits_per_block`, the division rounds it to **zero** blocks, and the floor turns that
+into **one** — a container claiming `SIZE_MAX` positions in eight bits. Dividing first, each of them
+asks for one block more than the widest whole number of them, which is a count no allocator will
+serve. That is also where every saturated sum arrives, the two composing.
+
+### `sizeof` is always a multiple of `alignof`
+
+The width slot is a `size_t`, or the blocks' alignment where that is wider, and the whole is then
+rounded up to the class's own alignment. That last step is not slack in the layout test: a `sizeof`
+is always a multiple of an `alignof`, so the sum alone names sizes no class can have. Blocks of four
+bytes under a `size_t` width sum to twelve, and twelve is not a size a type aligned to eight can be;
+sixteen is, and sixteen is what the class already was. Written without the round-up, the assertion
+asks the inplace column for the impossible — and no leg compiled that column until the C++26 rung was
+added, so nothing ever said so.

@@ -16,7 +16,7 @@
 
 namespace test::sequence {
 
-// What the sequence reading must order like, against the container defining the relation; the view itself neither compares nor orders, following span, so the question goes through its iterators.
+// What the sequence reading must order like; the view neither compares nor orders, so it goes by iterators.
 template<class Bits>
 auto ordering_agrees_with_vector_bool(std::size_t universe = 4)
         -> void
@@ -27,7 +27,7 @@ auto ordering_agrees_with_vector_bool(std::size_t universe = 4)
                         auto x = test::bitset::make_bitset<Bits>(universe);
                         auto y = test::bitset::make_bitset<Bits>(universe);
 
-                        // Written through the view; named rather than inlined, because CTAD followed by [k] parses as an array declaration.
+                        // Written through the view; named, CTAD followed by [k] parsing as an array declaration.
                         auto xw = xstd::bit_span(x);
                         auto yw = xstd::bit_span(y);
                         for (auto k = 0UZ; k < universe; ++k) {
@@ -38,11 +38,15 @@ auto ordering_agrees_with_vector_bool(std::size_t universe = 4)
                         auto const xv = xstd::bit_span(x);
                         auto const yv = xstd::bit_span(y);
 
-                        // The reference holds the same bools at the same positions, over the whole width the view reports.
+                        // The reference holds the same bools at the same positions, over the whole width.
                         auto vx = std::vector<bool>(xv.size());
                         auto vy = std::vector<bool>(yv.size());
-                        for (auto k = 0UZ; k < xv.size(); ++k) { vx[k] = static_cast<bool>(xv[k]); }
-                        for (auto k = 0UZ; k < yv.size(); ++k) { vy[k] = static_cast<bool>(yv[k]); }
+                        for (auto k = 0UZ; k < xv.size(); ++k) {
+                                vx[k] = static_cast<bool>(xv[k]);
+                        }
+                        for (auto k = 0UZ; k < yv.size(); ++k) {
+                                vy[k] = static_cast<bool>(yv[k]);
+                        }
 
                         BOOST_CHECK_EQUAL(std::ranges::equal(xv, yv), vx == vy);
                         auto const order = std::lexicographical_compare_three_way(xv.begin(), xv.end(), yv.begin(), yv.end());

@@ -31,6 +31,6 @@ namespace xstd::detail::bits {
         return static_cast<std::size_t>(xstd::popcount(block));
 }
 
-}       // namespace xstd::detail::bits
+} // namespace xstd::detail::bits
 
 #endif // XSTD_BITS_DETAIL_INTRIN_HPP

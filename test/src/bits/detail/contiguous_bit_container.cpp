@@ -104,21 +104,20 @@ class checker
 
 public:
         checker(BB const& x, BB const& y, BB& a, BB& b, int& disagreements)
-        :
-                m_x(x),
-                m_y(y),
-                m_disagreements(disagreements),
-                m_a(a),
-                m_b(b)
+            : m_x(x),
+              m_y(y),
+              m_disagreements(disagreements),
+              m_a(a),
+              m_b(b)
         {}
 
         auto width()
                 -> void
         {
                 unequal(m_x.count(), m_cardinality);
-                disagree(m_x.any(),  m_cardinality != 0);
+                disagree(m_x.any(), m_cardinality != 0);
                 disagree(m_x.none(), m_cardinality == 0);
-                disagree(m_x.all(),  m_cardinality == m_n);
+                disagree(m_x.all(), m_cardinality == m_n);
                 disagree(m_x == m_y, m_mx == m_my);
         }
 
@@ -128,29 +127,39 @@ public:
         {
                 if (m_cardinality != 0) {
                         auto front = 0UZ;
-                        while (not m_mx[front]) { ++front; }
+                        while (not m_mx[front]) {
+                                ++front;
+                        }
                         auto back = m_n - 1;
-                        while (not m_mx[back]) { --back; }
+                        while (not m_mx[back]) {
+                                --back;
+                        }
                         unequal(m_x.find_front(), front);
-                        unequal(m_x.find_back(),  back);
+                        unequal(m_x.find_back(), back);
                         unequal(m_x.exclusive_find_prev(m_n), back);
                 }
 
                 auto first = 0UZ;
-                while (first < m_n and not m_mx[first]) { ++first; }
+                while (first < m_n and not m_mx[first]) {
+                        ++first;
+                }
                 unequal(m_x.find_first(), first);
-                unequal(m_x.find_last(),  m_n);
+                unequal(m_x.find_last(), m_n);
 
                 for (auto i = 0UZ; i < m_n; ++i) {
                         auto next = i + 1;
-                        while (next < m_n and not m_mx[next]) { ++next; }
+                        while (next < m_n and not m_mx[next]) {
+                                ++next;
+                        }
                         unequal(m_x.exclusive_find_next(i), next);
                 }
 
                 // The primitive, checked over its whole domain, n == size() included.
                 for (auto i = 0UZ; i <= m_n; ++i) {
                         auto bound = i;
-                        while (bound < m_n and not m_mx[bound]) { ++bound; }
+                        while (bound < m_n and not m_mx[bound]) {
+                                ++bound;
+                        }
                         unequal(m_x.inclusive_find_next(i), bound);
                 }
                 for (auto i = 1UZ; i <= m_n and m_cardinality != 0; ++i) {
@@ -172,35 +181,83 @@ public:
                 auto differs = false;
                 auto meets = false;
                 for (auto i = 0UZ; i < m_n; ++i) {
-                        subset  = subset and (not m_mx[i] or m_my[i]);
-                        differs = differs or  (m_mx[i] != m_my[i]);
-                        meets   = meets   or  (m_mx[i] and m_my[i]);
+                        subset = subset and (not m_mx[i] or m_my[i]);
+                        differs = differs or (m_mx[i] != m_my[i]);
+                        meets = meets or (m_mx[i] and m_my[i]);
                 }
-                disagree(m_x.is_subset_of(m_y),        subset);
+                disagree(m_x.is_subset_of(m_y), subset);
                 disagree(m_x.is_proper_subset_of(m_y), subset and differs);
-                disagree(m_x.intersects(m_y),          meets);
+                disagree(m_x.intersects(m_y), meets);
 
-                // The hidden friend answers the member, and both operand orders answer alike: a meets b exactly when b meets a, which is why the symmetric spelling exists at all.
-                disagree(intersects(m_x, m_y),         meets);
-                disagree(intersects(m_y, m_x),         meets);
+                // The hidden friend answers the member, and both operand orders alike: a meets b when b meets a.
+                disagree(intersects(m_x, m_y), meets);
+                disagree(intersects(m_y, m_x), meets);
         }
 
         // On packed bits the set and pointwise sequence operations are one instruction, so one model answers both.
         auto bitwise()
                 -> void
         {
-                { auto& a = fresh_x(); a &= m_y; auto m = model(m_n); for (auto i = 0UZ; i < m_n; ++i) { m[i] = m_mx[i] and     m_my[i]; } same(m, a); }
-                { auto& a = fresh_x(); a |= m_y; auto m = model(m_n); for (auto i = 0UZ; i < m_n; ++i) { m[i] = m_mx[i] or      m_my[i]; } same(m, a); }
-                { auto& a = fresh_x(); a ^= m_y; auto m = model(m_n); for (auto i = 0UZ; i < m_n; ++i) { m[i] = m_mx[i] !=      m_my[i]; } same(m, a); }
-                { auto& a = fresh_x(); a -= m_y; auto m = model(m_n); for (auto i = 0UZ; i < m_n; ++i) { m[i] = m_mx[i] and not m_my[i]; } same(m, a); }
+                {
+                        auto& a = fresh_x();
+                        a &= m_y;
+                        auto m = model(m_n);
+                        for (auto i = 0UZ; i < m_n; ++i) {
+                                m[i] = m_mx[i] and m_my[i];
+                        }
+                        same(m, a);
+                }
+                {
+                        auto& a = fresh_x();
+                        a |= m_y;
+                        auto m = model(m_n);
+                        for (auto i = 0UZ; i < m_n; ++i) {
+                                m[i] = m_mx[i] or m_my[i];
+                        }
+                        same(m, a);
+                }
+                {
+                        auto& a = fresh_x();
+                        a ^= m_y;
+                        auto m = model(m_n);
+                        for (auto i = 0UZ; i < m_n; ++i) {
+                                m[i] = m_mx[i] != m_my[i];
+                        }
+                        same(m, a);
+                }
+                {
+                        auto& a = fresh_x();
+                        a -= m_y;
+                        auto m = model(m_n);
+                        for (auto i = 0UZ; i < m_n; ++i) {
+                                m[i] = m_mx[i] and not m_my[i];
+                        }
+                        same(m, a);
+                }
         }
 
         auto shifts()
                 -> void
         {
                 for (auto s = 0UZ; s < m_n; ++s) {
-                        { auto& a = fresh_x(); a <<= s; auto m = model(m_n); for (auto i = s;  i < m_n;     ++i) { m[i] = m_mx[i - s]; } same(m, a); }
-                        { auto& a = fresh_x(); a >>= s; auto m = model(m_n); for (auto i = 0UZ; i + s < m_n; ++i) { m[i] = m_mx[i + s]; } same(m, a); }
+                        {
+                                auto& a = fresh_x();
+                                a <<= s;
+                                auto m = model(m_n);
+                                for (auto i = s; i < m_n; ++i) {
+                                        m[i] = m_mx[i - s];
+                                }
+                                same(m, a);
+                        }
+                        {
+                                auto& a = fresh_x();
+                                a >>= s;
+                                auto m = model(m_n);
+                                for (auto i = 0UZ; i + s < m_n; ++i) {
+                                        m[i] = m_mx[i + s];
+                                }
+                                same(m, a);
+                        }
                 }
         }
 
@@ -249,11 +306,31 @@ public:
                 -> void
         {
                 for (auto i = 0UZ; i < m_n; ++i) {
-                        { auto& a = fresh_x(); a.set(i);   disagree(a.test(i), true);  }
-                        { auto& a = fresh_x(); a.reset(i); disagree(a.test(i), false); }
-                        { auto& a = fresh_x(); a.flip(i);  disagree(a.test(i), not m_mx[i]); }
-                        { auto& a = fresh_x(); disagree(a.insert(i), not m_mx[i]); disagree(a.test(i), true);  }
-                        { auto& a = fresh_x(); disagree(a.erase(i),      m_mx[i]); disagree(a.test(i), false); }
+                        {
+                                auto& a = fresh_x();
+                                a.set(i);
+                                disagree(a.test(i), true);
+                        }
+                        {
+                                auto& a = fresh_x();
+                                a.reset(i);
+                                disagree(a.test(i), false);
+                        }
+                        {
+                                auto& a = fresh_x();
+                                a.flip(i);
+                                disagree(a.test(i), not m_mx[i]);
+                        }
+                        {
+                                auto& a = fresh_x();
+                                disagree(a.insert(i), not m_mx[i]);
+                                disagree(a.test(i), true);
+                        }
+                        {
+                                auto& a = fresh_x();
+                                disagree(a.erase(i), m_mx[i]);
+                                disagree(a.test(i), false);
+                        }
                 }
         }
 
@@ -276,7 +353,7 @@ public:
                         for (auto i = 0UZ; i < m_x.num_blocks(); ++i) {
                                 a.block(i) = static_cast<BB::block_type>(-1);
                         }
-                        // The writer restores the invariant, which is what the reference hands it rather than doing after every block.
+                        // The writer restores the invariant, which the reference hands it rather than doing itself.
                         a.erase_unused();
                         disagree(a.all(), true);
                         unequal(a.count(), m_n);
@@ -317,17 +394,19 @@ auto sweep(BB const& empty)
         auto const push = [&](auto fill) -> void {
                 auto b = empty;
                 for (auto const i : std::views::iota(0UZ, n)) {
-                        if (fill(i)) { b.set(i); }
+                        if (fill(i)) {
+                                b.set(i);
+                        }
                 }
                 values.push_back(b);
         };
         // Captured by reference: a static width folds these to constants.
-        push([&](std::size_t  ) -> bool { return false;                });
-        push([&](std::size_t  ) -> bool { return true;                 });
-        push([&](std::size_t i) -> bool { return i % 2 == 0;           });
-        push([&](std::size_t i) -> bool { return i % 3 == 0;           });
+        push([&](std::size_t) -> bool { return false; });
+        push([&](std::size_t) -> bool { return true; });
+        push([&](std::size_t i) -> bool { return i % 2 == 0; });
+        push([&](std::size_t i) -> bool { return i % 3 == 0; });
         push([&](std::size_t i) -> bool { return i == 0 or i + 1 == n; });
-        push([&](std::size_t i) -> bool { return i + 1 == n;           });
+        push([&](std::size_t i) -> bool { return i + 1 == n; });
         push([&](std::size_t i) -> bool { return (i / BB::bits_per_block) + 1UZ < empty.num_blocks(); });
 
         auto disagreements = 0;
@@ -364,33 +443,33 @@ BOOST_AUTO_TEST_CASE(ItsStorageIsAContiguousSizedRangeOfUnsignedIntegers)
         static_assert(xstd::detail::bits::contiguous_block_range<std::array<std::uint8_t, 4>>);
         static_assert(xstd::detail::bits::contiguous_block_range<std::vector<std::uint64_t>>);
 
-        static_assert(not xstd::detail::bits::contiguous_block_range<std::vector<bool>>);      // not a contiguous range
-        static_assert(not xstd::detail::bits::contiguous_block_range<std::vector<int>>);       // nor unsigned integers
+        static_assert(not xstd::detail::bits::contiguous_block_range<std::vector<bool>>); // not a contiguous range
+        static_assert(not xstd::detail::bits::contiguous_block_range<std::vector<int>>);  // nor unsigned integers
 
-        // The element clause is unsigned_integer and not the wider bitwise_operators, which std::bitset would satisfy: a block is asked for the <bit> intrinsics too, and they are constrained on unsigned_integer.
+        // The element clause is unsigned_integer, not bitwise_operators: the <bit> intrinsics want the narrower.
         static_assert(not xstd::detail::bits::contiguous_block_range<std::array<std::bitset<64>, 4>>);
 }
 
-// The const subscript is checked against P2278R4's range_const_reference_t: the standard's where the library has it, and where it does not -- libc++, on every branch including trunk -- the fallback beside it, transcribed from [const.iterators.alias] and [ranges.syn]. The arms are one type rather than two contracts, and this is what says so: wherever both exist the fallback must equal the vendor's, which the gcc, msvc and clang-with-libstdc++ rungs check against three implementations and libc++ cannot check at all.
+// The const subscript against P2278R4's range_const_reference_t: wherever both arms exist they must agree.
 BOOST_AUTO_TEST_CASE(TheConstReferenceIsP2278s)
 {
 #ifdef __cpp_lib_ranges_as_const
 
         static_assert(std::same_as<xstd::detail::bits::fallback::range_const_reference_t<std::array<std::uint8_t, 4>>, std::ranges::range_const_reference_t<std::array<std::uint8_t, 4>>>);
         static_assert(std::same_as<xstd::detail::bits::fallback::range_const_reference_t<std::vector<std::uint64_t>>, std::ranges::range_const_reference_t<std::vector<std::uint64_t>>>);
-        static_assert(std::same_as<xstd::detail::bits::fallback::range_const_reference_t<std::vector<bool>>,          std::ranges::range_const_reference_t<std::vector<bool>>>);
+        static_assert(std::same_as<xstd::detail::bits::fallback::range_const_reference_t<std::vector<bool>>, std::ranges::range_const_reference_t<std::vector<bool>>>);
 
 #endif
 
-        // What the clause buys, whichever arm was taken: the reference is const, so no blocks are writable through a const contiguous_bit_container. A shallow-const, span-like storage hands back a writable one from a const subscript and is refused by this, where range_reference_t<C const> would have admitted it.
+        // What the clause buys: no blocks are writable through a const contiguous_bit_container.
         static_assert(std::same_as<xstd::detail::bits::range_const_reference_t<std::array<std::uint8_t, 4>>, std::uint8_t const&>);
         static_assert(std::same_as<xstd::detail::bits::range_const_reference_t<std::vector<std::uint64_t>>, std::uint64_t const&>);
 
-        // Transcribed and not approximated: a conditional_t over is_const and add_const would say bool const& here, and the paper's common_reference_t says bool, which is the assertion that fails first if the fallback is ever simplified into that dance.
+        // Transcribed, not approximated: a conditional_t over is_const says bool const& where the paper says bool.
         static_assert(std::same_as<xstd::detail::bits::fallback::range_const_reference_t<std::vector<bool>>, bool>);
 }
 
-// The three members the readings will call once the trait is gone, and the one distinction that matters between them: insert(n) is partial, n being a precondition, while growing_insert(n) is total and a run-time width grows to admit a position past its end.
+// The three members the readings call: insert(n) is partial where growing_insert(n) is total.
 BOOST_AUTO_TEST_CASE(TheTotalInsertGrowsWhereThePartialOneAsserts)
 {
         using A = xstd::detail::bits::contiguous_bit_array<std::uint8_t, 10>;
@@ -412,7 +491,7 @@ BOOST_AUTO_TEST_CASE(TheTotalInsertGrowsWhereThePartialOneAsserts)
         BOOST_CHECK(a.none());
 
         // In range, a static width has nowhere to grow and the total form answers as the partial one does.
-        BOOST_CHECK(    a.growing_insert(4));
+        BOOST_CHECK(a.growing_insert(4));
         BOOST_CHECK(not a.growing_insert(4));
         BOOST_CHECK_EQUAL(a.size(), 10UZ);
 
@@ -440,7 +519,7 @@ template<xstd::detail::bits::contiguous_block_range Blocks>
 constexpr auto subscript_agrees_with_iteration(Blocks blocks) noexcept
         -> bool
 {
-        // The index is the range's own difference_type, so begin(blocks) + i needs no conversion; subscript takes the container's size_type, which the concept names and which is the one cast, keeping -Wsign-conversion honest.
+        // The index is the range's difference_type; subscript takes size_type, which is the one cast.
         for (auto i = std::ranges::range_difference_t<Blocks>{}; i < std::ranges::ssize(blocks); ++i) {
                 if (std::addressof(blocks[static_cast<Blocks::size_type>(i)]) != std::addressof(*(std::ranges::begin(blocks) + i))) {
                         return false;
@@ -451,12 +530,12 @@ constexpr auto subscript_agrees_with_iteration(Blocks blocks) noexcept
 
 BOOST_AUTO_TEST_CASE(ItsStorageSubscriptIsIterationAtTheSameAddress)
 {
-        static_assert(subscript_agrees_with_iteration(std::array<std::uint8_t, 4>{ 1, 2, 3, 4 }));
-        static_assert(subscript_agrees_with_iteration(std::vector<std::uint64_t>{ 1, 2, 3, 4 }));
-        BOOST_CHECK(subscript_agrees_with_iteration(std::vector<std::uint64_t>{ 1, 2, 3, 4 }));
+        static_assert(subscript_agrees_with_iteration(std::array<std::uint8_t, 4>{1, 2, 3, 4}));
+        static_assert(subscript_agrees_with_iteration(std::vector<std::uint64_t>{1, 2, 3, 4}));
+        BOOST_CHECK(subscript_agrees_with_iteration(std::vector<std::uint64_t>{1, 2, 3, 4}));
 }
 
-// ranges::swap finds a free swap by ADL and a member never, so contiguous_bit_container needs the free one its three adaptors already have: without it every container moves a whole contiguous_bit_container three times instead of swapping its blocks once, and a storage with an optimized swap never sees it.
+// ranges::swap finds a free swap by ADL and a member never, so this storage needs the free one too.
 namespace {
 
 int g_storage_swaps = 0;
@@ -467,24 +546,61 @@ struct counting_blocks
 {
         using size_type = std::size_t;
 
-        std::array<std::uint64_t, 4> m_data {};
+        std::array<std::uint64_t, 4> m_data{};
 
-        // The move operations are counted rather than used: once the free swap exists nothing calls them, which is the point of the test, so they and the members that only satisfy the concept say so.
+        // The move operations are counted rather than used: the free swap is what should be called.
         counting_blocks() = default;
         [[maybe_unused]] counting_blocks(counting_blocks const&) = default;
         [[maybe_unused]] auto operator=(counting_blocks const&) -> counting_blocks& = default;
-        [[maybe_unused]] counting_blocks(counting_blocks&& other) noexcept : m_data(other.m_data) { ++g_storage_moves; }
-        [[maybe_unused]] auto operator=(counting_blocks&& other) noexcept -> counting_blocks& { m_data = other.m_data; ++g_storage_moves; return *this; }
+        [[maybe_unused]] counting_blocks(counting_blocks&& other) noexcept : m_data(other.m_data)
+        {
+                ++g_storage_moves;
+        }
+        [[maybe_unused]] auto operator=(counting_blocks&& other) noexcept
+                -> counting_blocks&
+        {
+                m_data = other.m_data;
+                ++g_storage_moves;
+                return *this;
+        }
         [[maybe_unused]] ~counting_blocks() = default;
 
-        [[nodiscard, maybe_unused]] auto begin()       -> std::uint64_t*       { return m_data.data(); }
-        [[nodiscard, maybe_unused]] auto begin() const -> std::uint64_t const* { return m_data.data(); }
-        [[nodiscard, maybe_unused]] auto end()         -> std::uint64_t*       { return m_data.data() + m_data.size(); }
-        [[nodiscard, maybe_unused]] auto end()   const -> std::uint64_t const* { return m_data.data() + m_data.size(); }
-        [[nodiscard, maybe_unused]] auto size()  const -> std::size_t          { return m_data.size(); }
+        [[nodiscard, maybe_unused]] auto begin()
+                -> std::uint64_t*
+        {
+                return m_data.data();
+        }
+        [[nodiscard, maybe_unused]] auto begin() const
+                -> std::uint64_t const*
+        {
+                return m_data.data();
+        }
+        [[nodiscard, maybe_unused]] auto end()
+                -> std::uint64_t*
+        {
+                return m_data.data() + m_data.size();
+        }
+        [[nodiscard, maybe_unused]] auto end() const
+                -> std::uint64_t const*
+        {
+                return m_data.data() + m_data.size();
+        }
+        [[nodiscard, maybe_unused]] auto size() const
+                -> std::size_t
+        {
+                return m_data.size();
+        }
 
-        [[nodiscard, maybe_unused]] auto operator[](size_type n)       -> std::uint64_t&       { return m_data[n]; }
-        [[nodiscard, maybe_unused]] auto operator[](size_type n) const -> std::uint64_t const& { return m_data[n]; }
+        [[nodiscard, maybe_unused]] auto operator[](size_type n)
+                -> std::uint64_t&
+        {
+                return m_data[n];
+        }
+        [[nodiscard, maybe_unused]] auto operator[](size_type n) const
+                -> std::uint64_t const&
+        {
+                return m_data[n];
+        }
 
         [[maybe_unused]] auto operator==(counting_blocks const&) const -> bool = default;
 
@@ -496,7 +612,7 @@ struct counting_blocks
         }
 };
 
-}       // namespace
+} // namespace
 
 BOOST_AUTO_TEST_CASE(ItsSwapIsReachedThroughAdlAndNotTheMoveFallback)
 {
@@ -508,30 +624,30 @@ BOOST_AUTO_TEST_CASE(ItsSwapIsReachedThroughAdlAndNotTheMoveFallback)
         g_storage_swaps = 0;
         g_storage_moves = 0;
         a.swap(b);
-        BOOST_CHECK_EQUAL(g_storage_swaps, 1);          // the member, which does the exchange
+        BOOST_CHECK_EQUAL(g_storage_swaps, 1); // the member, which does the exchange
         BOOST_CHECK_EQUAL(g_storage_moves, 0);
 
         g_storage_swaps = 0;
         g_storage_moves = 0;
         swap(a, b);
-        BOOST_CHECK_EQUAL(g_storage_swaps, 1);          // the hidden friend, which forwards to it
+        BOOST_CHECK_EQUAL(g_storage_swaps, 1); // the hidden friend, which forwards to it
         BOOST_CHECK_EQUAL(g_storage_moves, 0);
 
         g_storage_swaps = 0;
         g_storage_moves = 0;
-        std::ranges::swap(a, b);                        // and what every adaptor actually calls, reaching the friend by ADL
-        BOOST_CHECK_EQUAL(g_storage_swaps, 1);          // 0 swaps and 3 moves before the free swap existed
+        std::ranges::swap(a, b);               // and what every adaptor actually calls, reaching the friend by ADL
+        BOOST_CHECK_EQUAL(g_storage_swaps, 1); // 0 swaps and 3 moves before the free swap existed
         BOOST_CHECK_EQUAL(g_storage_moves, 0);
 }
 
 // A compile-time width costs nothing: the absent size member takes no storage.
 BOOST_AUTO_TEST_CASE(AStaticWidthAddsNothingToItsBlocks)
 {
-        static_assert(sizeof(xstd::detail::bits::contiguous_bit_array<std::uint64_t,  64>) == sizeof(std::array<std::uint64_t,  1>));
-        static_assert(sizeof(xstd::detail::bits::contiguous_bit_array<std::uint8_t,  129>) == sizeof(std::array<std::uint8_t,  17>));
-        static_assert(sizeof(xstd::detail::bits::contiguous_bit_array<std::uint8_t,    0>) == sizeof(std::array<std::uint8_t,   1>));
+        static_assert(sizeof(xstd::detail::bits::contiguous_bit_array<std::uint64_t, 64>) == sizeof(std::array<std::uint64_t, 1>));
+        static_assert(sizeof(xstd::detail::bits::contiguous_bit_array<std::uint8_t, 129>) == sizeof(std::array<std::uint8_t, 17>));
+        static_assert(sizeof(xstd::detail::bits::contiguous_bit_array<std::uint8_t, 0>) == sizeof(std::array<std::uint8_t, 1>));
 
-        static_assert(    xstd::detail::bits::contiguous_bit_array<std::size_t, 64>::has_static_size);
+        static_assert(xstd::detail::bits::contiguous_bit_array<std::size_t, 64>::has_static_size);
         static_assert(not xstd::detail::bits::contiguous_bit_vector<std::size_t>::has_static_size);
 }
 
@@ -555,7 +671,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ARunTimeWidthAgreesWithTheModel, Block, test::word
         constexpr auto D = test::digits_v<Block>;
 
         auto disagreements = 0;
-        for (auto const n : { 0UZ, 1UZ, D - 1, D, D + 1, (2 * D) - 1, 2 * D, (2 * D) + 1, 3 * D, (3 * D) + 1 }) {
+        for (auto const n : {0UZ, 1UZ, D - 1, D, D + 1, (2 * D) - 1, 2 * D, (2 * D) + 1, 3 * D, (3 * D) + 1}) {
                 disagreements += sweep(T(n));
         }
         BOOST_CHECK_EQUAL(disagreements, 0);
@@ -586,7 +702,7 @@ BOOST_AUTO_TEST_CASE(AZeroWidthOwnsOneBlockAndReadsEmpty)
         BOOST_CHECK_EQUAL(b.num_blocks(), 1UZ);
         BOOST_CHECK_EQUAL(b.count(), 0UZ);
         BOOST_CHECK(b.none());
-        BOOST_CHECK(b.all());           // vacuously, as std::bitset<0>::all() is
+        BOOST_CHECK(b.all()); // vacuously, as std::bitset<0>::all() is
         BOOST_CHECK(not b.any());
 }
 
@@ -614,14 +730,16 @@ BOOST_AUTO_TEST_CASE(ADefaultConstructedRunTimeWidthIsZeroWidthWithOneBlock)
 
 namespace {
 
-// A run-time width built from the model, so equality against it doubles as the invariant check: a dirty tail compares unequal.
+// A run-time width built from the model, so equality doubles as the invariant check: a dirty tail differs.
 template<class T>
 [[nodiscard]] auto from_model(model const& m)
         -> T
 {
         auto b = T(m.size());
         for (auto i = 0UZ; i < m.size(); ++i) {
-                if (m[i]) { b.set(i); }
+                if (m[i]) {
+                        b.set(i);
+                }
         }
         return b;
 }
@@ -643,7 +761,7 @@ template<class Block>
         -> std::array<std::size_t, 10>
 {
         constexpr auto D = test::digits_v<Block>;
-        return { 0UZ, 1UZ, D - 1, D, D + 1, (2 * D) - 1, 2 * D, (2 * D) + 1, 3 * D, (3 * D) + 1 };
+        return {0UZ, 1UZ, D - 1, D, D + 1, (2 * D) - 1, 2 * D, (2 * D) + 1, 3 * D, (3 * D) + 1};
 }
 
 template<class Block>
@@ -660,18 +778,18 @@ auto append_to(model& m, Block value)
         -> void
 {
         for (auto i = 0UZ; i < test::digits_v<Block>; ++i) {
-                // Cast back before the mask: a shifted narrow word is an int, which bugprone-signed-bitwise reads as a signed operand.
+                // Cast back before the mask: a shifted narrow word is an int to bugprone-signed-bitwise.
                 m.push_back((static_cast<Block>(value >> i) & Block{1}) != Block{0});
         }
 }
 
 // Alternating pairs of bits, so a split at any offset lands ones on both sides.
-template<class X> constexpr bool can_resize    = requires (X& x) { x.resize(1UZ); x.resize(1UZ, true); };
-template<class X> constexpr bool can_push_pop  = requires (X& x) { x.push_back(true); x.pop_back(); };
-template<class X> constexpr bool can_append    = requires (X& x) { x.append(x.block(0UZ)); };
-template<class X> constexpr bool can_clear     = requires (X& x) { x.clear(); };
-template<class X> constexpr bool can_reserve   = requires (X& x) { x.reserve(1UZ); x.shrink_to_fit(); };
-template<class X> constexpr bool has_capacity  = requires (X const& x) { x.capacity(); };
+template<class X> constexpr bool can_resize = requires (X& x) { x.resize(1UZ); x.resize(1UZ, true); };
+template<class X> constexpr bool can_push_pop = requires (X& x) { x.push_back(true); x.pop_back(); };
+template<class X> constexpr bool can_append = requires (X& x) { x.append(x.block(0UZ)); };
+template<class X> constexpr bool can_clear = requires (X& x) { x.clear(); };
+template<class X> constexpr bool can_reserve = requires (X& x) { x.reserve(1UZ); x.shrink_to_fit(); };
+template<class X> constexpr bool has_capacity = requires (X const& x) { x.capacity(); };
 
 template<class Block>
 [[nodiscard]] constexpr auto striped()
@@ -684,9 +802,9 @@ template<class Block>
         return value;
 }
 
-}       // namespace
+} // namespace
 
-// Every resize path: each graded width to each other, with both fill values, against the model and against a fresh build from it.
+// Every resize path: each graded width to each other, both fill values, against the model and a fresh build.
 BOOST_AUTO_TEST_CASE_TEMPLATE(ResizingKeepsTheModelAndTheUnusedTailClear, Block, test::word_types)
 {
         using T = xstd::detail::bits::contiguous_bit_vector<Block>;
@@ -694,7 +812,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ResizingKeepsTheModelAndTheUnusedTailClear, Block,
         auto disagreements = 0;
         for (auto const from : graded_widths<Block>()) {
                 for (auto const to : graded_widths<Block>()) {
-                        for (auto const value : { false, true }) {
+                        for (auto const value : {false, true}) {
                                 auto m = patterned(from);
                                 auto b = from_model<T>(m);
                                 b.resize(to, value);
@@ -734,7 +852,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(PushingAndPoppingAreResizeByOne, Block, test::word
         BOOST_CHECK_EQUAL(b.num_blocks(), 1UZ);
 }
 
-// Boost's append: a whole block at once, split across two where the width is not aligned; at width zero the floor block takes it.
+// Boost's append: a whole block at once, split across two where unaligned; at width zero the floor takes it.
 BOOST_AUTO_TEST_CASE_TEMPLATE(AppendingABlockSplitsItAtAnUnalignedWidth, Block, test::word_types)
 {
         using T = xstd::detail::bits::contiguous_bit_vector<Block>;
@@ -749,7 +867,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AppendingABlockSplitsItAtAnUnalignedWidth, Block, 
                 disagreements += static_cast<int>(b != from_model<T>(m));
 
                 // And a range of blocks, reserved for first, so the width grows by one block per element.
-                auto const blocks = std::array{ striped<Block>(), static_cast<Block>(~striped<Block>()), Block{1} };
+                auto const blocks = std::array{striped<Block>(), static_cast<Block>(~striped<Block>()), Block{1}};
                 b.append(blocks.begin(), blocks.end());
                 for (auto const value : blocks) {
                         append_to(m, value);
@@ -760,14 +878,11 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AppendingABlockSplitsItAtAnUnalignedWidth, Block, 
         BOOST_CHECK_EQUAL(disagreements, 0);
 }
 
-// THE WIDTH-ZERO RANGE APPEND, which the case above never reaches: it appends a single block first, so its range
-// always starts at a width of at least one block. Zero is the width every block-range CONSTRUCTION starts from,
-// and it is the one where the bulk path replaces the floor block that an empty container already has rather than
-// pushing past it. An empty range is the other edge, where the bulk path must decline and change nothing.
+// The width-zero range append, where the bulk path replaces the floor block rather than pushing past it.
 BOOST_AUTO_TEST_CASE_TEMPLATE(AppendingARangeFromEmptyAgreesWithTheModel, Block, test::word_types)
 {
         using T = xstd::detail::bits::contiguous_bit_vector<Block>;
-        auto const blocks = std::array{ striped<Block>(), static_cast<Block>(~striped<Block>()), Block{1} };
+        auto const blocks = std::array{striped<Block>(), static_cast<Block>(~striped<Block>()), Block{1}};
 
         auto disagreements = 0;
 
@@ -840,15 +955,10 @@ BOOST_AUTO_TEST_CASE(AStaticWidthDoesNotGrow)
 
 #ifdef TEST_HAS_INPLACE_VECTOR
 
-// No hole in front of the blocks at any alignment: the width takes theirs where they out-align a size_t, so the class is its two members and nothing else, which is what -Wpadded asks of it.
+// No hole in front of the blocks at any alignment, which is what -Wpadded asks of the class.
 BOOST_AUTO_TEST_CASE(TheWidthFillsWhatWouldOtherwisePadTheBlocks)
 {
-        // The width slot is a size_t, or the blocks' alignment where that is wider -- and then the whole is rounded
-        // up to the class's own alignment, which is the width slot's. That last step is not slack in the test: a
-        // sizeof is always a multiple of an alignof, so the sum alone names sizes no class can have. Blocks of four
-        // bytes under a size_t width sum to twelve, and twelve is not a size a type aligned to eight can be; sixteen
-        // is, and sixteen is what the class already was. Written without the round-up, this asked the inplace column
-        // for the impossible and no leg ever compiled it to say so.
+        // Rounded up to the class's own alignment: a sizeof is always a multiple of an alignof.
         constexpr auto tiles = [](std::size_t whole, std::size_t blocks, std::size_t block_align) {
                 auto const slot = std::ranges::max(sizeof(std::size_t), block_align);
                 return whole == xstd::align_up(blocks + slot, slot);
@@ -872,7 +982,7 @@ BOOST_AUTO_TEST_CASE(TheWidthFillsWhatWouldOtherwisePadTheBlocks)
 #endif
 }
 
-// The third storage: a run-time width under a compile-time capacity, the sweep unchanged over it, and growth past the capacity a bad_alloc.
+// The third storage: a run-time width under a compile-time capacity, growth past it a bad_alloc.
 BOOST_AUTO_TEST_CASE(AnInplaceVectorIsARunTimeWidthUnderAStaticCapacity)
 {
         using T = xstd::detail::bits::contiguous_bit_inplace_vector<std::uint8_t, 24>;
@@ -893,12 +1003,12 @@ BOOST_AUTO_TEST_CASE(AnInplaceVectorIsARunTimeWidthUnderAStaticCapacity)
         b.shrink_to_fit();
         BOOST_CHECK_EQUAL(b.size(), 24UZ);
 
-        // This is the one storage here whose blocks refuse a width WITHOUT asking anyone for memory, so it is where the refusal itself can be looked at. What refuses is the blocks, and what they answer is their own std::bad_alloc: no ceiling of this storage's stands above them any more, or a width past it would be std::length_error here.
+        // The one storage whose blocks refuse a width without asking for memory, so the refusal can be watched.
         auto c = T(9UZ);
         c.set(2UZ);
         BOOST_CHECK_THROW(c.resize(25UZ), std::bad_alloc);
 
-        // And a refused growth is not a partial one, which the growth with ONES is the case for: the bits above the width in the last block are the first new ones, so writing them before the blocks are asked for would leave this storage with a tail its width no longer matches -- measured, before the two were put in that order: refused at 25, the next resize to 20 came back with every bit above 9 set.
+        // And a refused growth is not a partial one, which the growth with ones is the case for.
         BOOST_CHECK_THROW(c.resize(25UZ, true), std::bad_alloc);
         BOOST_CHECK_EQUAL(c.size(), 9UZ);
         c.resize(20UZ);
@@ -936,7 +1046,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheStorageAnswersEveryReadingsQuestion, T, test::g
         }
 }
 
-// The two the readings cannot synthesize from a position at a time: insert answers whether the position was new, and fill is bulk.
+// The two the readings cannot synthesize a position at a time: insert reports newness, and fill is bulk.
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheInsertAndTheFill, T, test::graded_extents<xstd::detail::bits::contiguous_bit_array>)
 {
         constexpr auto N = T::extent;
@@ -975,7 +1085,7 @@ auto probes(BB const& empty)
         -> std::vector<BB>
 {
         auto const n = empty.size();
-        auto out = std::vector<BB>{ empty };
+        auto out = std::vector<BB>{empty};
 
         auto full = empty;
         full.set();
@@ -1022,13 +1132,13 @@ auto disagreements(BB const& empty)
                         if (std::lexicographical_compare_three_way(sx.begin(), sx.end(), sy.begin(), sy.end()) != set_lexicographical_compare_three_way(x, y)) {
                                 ++n;
                         }
-                        // No comparator: vector<bool>'s proxy converts to bool, which is what makes it three_way_comparable.
+                        // No comparator: vector<bool>'s proxy converts to bool, so it is three_way_comparable.
                         auto const qx = reference(x);
                         auto const qy = reference(y);
                         if (std::lexicographical_compare_three_way(qx.begin(), qx.end(), qy.begin(), qy.end()) != sequence_lexicographical_compare_three_way(x, y)) {
                                 ++n;
                         }
-                        // The bitset reading is the sequence reading traversed from the top, which is the bit string's order.
+                        // The bitset reading is the sequence reading from the top, the bit string's order.
                         if (std::lexicographical_compare_three_way(qx.rbegin(), qx.rend(), qy.rbegin(), qy.rend()) != string_lexicographical_compare_three_way(x, y)) {
                                 ++n;
                         }
@@ -1037,7 +1147,7 @@ auto disagreements(BB const& empty)
         return n;
 }
 
-}       // namespace
+} // namespace
 
 // All three orderings, at every static extent, against the algorithms that define them.
 BOOST_AUTO_TEST_CASE_TEMPLATE(AllThreeOrderingsAgreeWithTheirReading, T, test::graded_extents<xstd::detail::bits::contiguous_bit_array>)
@@ -1052,7 +1162,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AllThreeOrderingsAgreeAtARunTimeWidth, Block, test
         constexpr auto D = test::digits_v<Block>;
 
         auto disagreed = 0;
-        for (auto const n : { 0UZ, 1UZ, D - 1, D, D + 1, (2 * D) - 1, 2 * D, (2 * D) + 1, 3 * D }) {
+        for (auto const n : {0UZ, 1UZ, D - 1, D, D + 1, (2 * D) - 1, 2 * D, (2 * D) + 1, 3 * D}) {
                 disagreed += disagreements(T(n));
         }
         BOOST_CHECK_EQUAL(disagreed, 0);
@@ -1066,20 +1176,24 @@ BOOST_AUTO_TEST_CASE(TheThreeOrderingsDisagree)
         using orderings = std::tuple<std::strong_ordering, std::strong_ordering, std::strong_ordering>;
         constexpr auto compare = [](std::initializer_list<std::size_t> p, std::initializer_list<std::size_t> q) -> orderings {
                 auto x = T();
-                for (auto const i : p) { x.set(i); }
+                for (auto const i : p) {
+                        x.set(i);
+                }
                 auto y = T();
-                for (auto const i : q) { y.set(i); }
-                return { set_lexicographical_compare_three_way(x, y), sequence_lexicographical_compare_three_way(x, y), string_lexicographical_compare_three_way(x, y) };
+                for (auto const i : q) {
+                        y.set(i);
+                }
+                return {set_lexicographical_compare_three_way(x, y), sequence_lexicographical_compare_three_way(x, y), string_lexicographical_compare_three_way(x, y)};
         };
 
         // {0} against {1}: [0] < [1]; [1,0] > [0,1]; "01" < "10".
-        constexpr auto singletons = compare({ 0 }, { 1 });
+        constexpr auto singletons = compare({0}, {1});
         static_assert(std::get<0>(singletons) == std::strong_ordering::less);
         static_assert(std::get<1>(singletons) == std::strong_ordering::greater);
         static_assert(std::get<2>(singletons) == std::strong_ordering::less);
 
         // {0,1} against {1}: [0,1] < [1]; [1,1] > [0,1]; "11" > "10".
-        constexpr auto prefix = compare({ 0, 1 }, { 1 });
+        constexpr auto prefix = compare({0, 1}, {1});
         static_assert(std::get<0>(prefix) == std::strong_ordering::less);
         static_assert(std::get<1>(prefix) == std::strong_ordering::greater);
         static_assert(std::get<2>(prefix) == std::strong_ordering::greater);
@@ -1103,7 +1217,7 @@ BOOST_AUTO_TEST_CASE(TheSetOrderingPutsAPrefixFirst)
         BOOST_CHECK(set_lexicographical_compare_three_way(x, z) == std::strong_ordering::less);
 }
 
-// Dependent, so a storage without an allocator answers false; the alias spells the typedef without a typename, which clang-tidy 22 reads as redundant.
+// Dependent, so a storage without an allocator answers false rather than hard-errors.
 template<class X>
 using allocator_of = X::allocator_type;
 
@@ -1131,11 +1245,11 @@ BOOST_AUTO_TEST_CASE(TheAllocatorAndTheMaximumWidth)
         static_assert(A().max_size() == 9UZ);
 }
 
-// The three ceilings a reading can ask this storage for, and the refusal that goes with the narrowest of them. All three are the storage's to compute -- bits_per_block and the block container are what they are made of, and no reading above has either -- and none of them is the storage's to keep: what a width past one of them means belongs to the reading's counterpart, and the three counterparts disagree about it.
+// The three ceilings a reading can ask for: the storage computes all three and keeps none of them.
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheThreeCeilingsAreComputedHereAndKeptAbove, Block, test::word_types)
 {
         using V = xstd::detail::bits::contiguous_bit_vector<Block>;
-        constexpr auto top  = std::numeric_limits<std::size_t>::max();
+        constexpr auto top = std::numeric_limits<std::size_t>::max();
         constexpr auto pmax = static_cast<std::size_t>(std::numeric_limits<std::ptrdiff_t>::max());
 
         // Whole blocks, both widths, and the one a distance can name is the narrower by construction.
@@ -1147,11 +1261,11 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheThreeCeilingsAreComputedHereAndKeptAbove, Block
 
         auto const v = V();
 
-        // What the blocks can hold and a size_t can count, which is the set reading's answer, having no counterpart that names another.
+        // What the blocks can hold and a size_t can count, which is the set reading's answer.
         BOOST_CHECK_EQUAL(v.max_size() % V::bits_per_block, 0UZ);
         BOOST_CHECK_LE(v.max_size(), V::max_width);
 
-        // boost::dynamic_bitset's answer, which saturates where that one clamps: over std::allocator the product always overflows, whatever the block, so it is the top of size_t and the one answer here that is not a whole number of blocks.
+        // boost::dynamic_bitset's answer, which saturates where that one clamps: the top of size_t.
         BOOST_CHECK_EQUAL(v.saturating_max_size(), top);
         BOOST_CHECK_EQUAL(v.saturating_max_size() - v.max_size(), V::bits_per_block - 1UZ);
 
@@ -1159,16 +1273,14 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheThreeCeilingsAreComputedHereAndKeptAbove, Block
         BOOST_CHECK_EQUAL(v.addressable_max_size(), V::max_addressable_width);
         BOOST_CHECK_LT(v.addressable_max_size(), v.max_size());
 
-        // And the refusal the sequence reading spells every growth through: past that width it is std::length_error, at it the storage is left to answer for itself.
+        // And the refusal the sequence reading spells every growth through: past that width, length_error.
         BOOST_CHECK_EQUAL(V::check_addressable_width(0UZ), 0UZ);
         BOOST_CHECK_EQUAL(V::check_addressable_width(V::max_addressable_width), V::max_addressable_width);
         BOOST_CHECK_THROW((void)V::check_addressable_width(V::max_addressable_width + 1UZ), std::length_error);
         BOOST_CHECK_THROW((void)V::check_addressable_width(top), std::length_error);
 }
 
-// The saturating sum every growth here computes, and the block count it reaches. Every growth asks for a width by adding to one, and every one of those additions wraps: a wrapped width is small, so it sizes the blocks for far fewer positions than the caller goes on to write. Saturated instead it stays at the top of size_t, where the block count is one no allocator can serve -- this storage has no ceiling of its own to fail any more, the readings above holding the ones their own counterparts want.
-//
-// Said at COMPILE TIME, which is the whole of the claim and the only portable way to make it. The claim is that blocks_for is total: that the widths which used to wrap now ask for more blocks than the blocks will ever hold. Asserting it by growing to such a width instead asks std::allocator for 2^61 bytes, which is not a question two of this tree's CI legs will answer -- a sanitized build ABORTS on a request that size rather than reporting std::bad_alloc, and an optimizer may drop the new/delete pair of an unused temporary altogether, so the request is never made and nothing is thrown. Both were measured here, on exactly these assertions. A static_assert is stronger besides: it names the block count the old spelling got wrong rather than inferring it from an exception.
+// The saturating sum every growth computes, and the block count it reaches, said at compile time.
 BOOST_AUTO_TEST_CASE(TheBlockCountIsTotalAndTheSumThatReachesItSaturates)
 {
         using V = xstd::detail::bits::contiguous_bit_vector<std::uint8_t>;
@@ -1186,7 +1298,7 @@ BOOST_AUTO_TEST_CASE(TheBlockCountIsTotalAndTheSumThatReachesItSaturates)
         static_assert(V::width_sum(top, 1UZ) == top);
         static_assert(V::width_sum(1UZ, top) == top);
 
-        // Both arms at run time as well, the growths that used to reach them from here having moved to a storage that refuses without allocating.
+        // Both arms at run time as well.
         BOOST_CHECK_EQUAL(V::width_sum(3UZ, 4UZ), 7UZ);
         BOOST_CHECK_EQUAL(V::width_sum(top, 1UZ), top);
 
@@ -1197,12 +1309,12 @@ BOOST_AUTO_TEST_CASE(TheBlockCountIsTotalAndTheSumThatReachesItSaturates)
         static_assert(V::blocks_for(V::bits_per_block + 1UZ) == 2UZ);
         static_assert(V::blocks_for(V::max_width) == V::max_num_blocks);
 
-        // And total above that, which is the fix: these are the sixty-three widths align_up wrapped on, where n + bits_per_block - 1 overflowed to a sum below bits_per_block, the division rounded it to ZERO blocks, and the floor turned that into ONE -- a container claiming SIZE_MAX positions in eight bits. Dividing first, each of them asks for one block more than the widest whole number of them, which is a count no allocator will ever serve.
+        // And total above that: the sixty-three widths where adding first would wrap to zero blocks.
         static_assert(V::blocks_for(V::max_width + 1UZ) == V::max_num_blocks + 1UZ);
         static_assert(V::blocks_for(top - 1UZ) == V::max_num_blocks + 1UZ);
         static_assert(V::blocks_for(top) == V::max_num_blocks + 1UZ);
 
-        // Which is what every saturated sum arrives at, the two composing: a growth that wrapped would have asked for one block.
+        // Which is what every saturated sum arrives at, the two composing.
         static_assert(V::blocks_for(V::width_sum(top, 1UZ)) == V::max_num_blocks + 1UZ);
         static_assert(V::blocks_for(V::width_sum(V::max_width, V::bits_per_block)) == V::max_num_blocks + 1UZ);
 
@@ -1232,7 +1344,7 @@ auto word_sample()
         if constexpr (requires { b.resize(20UZ); }) {
                 b.resize(20UZ);
         }
-        for (auto const i : { 0UZ, 3UZ, 7UZ, 8UZ, 12UZ, 15UZ, 19UZ }) {
+        for (auto const i : {0UZ, 3UZ, 7UZ, 8UZ, 12UZ, 15UZ, 19UZ}) {
                 b.set(i);
         }
         return b;
@@ -1247,13 +1359,13 @@ auto aligned_sample()
         if constexpr (requires { b.resize(24UZ); }) {
                 b.resize(24UZ);
         }
-        for (auto const i : { 0UZ, 3UZ, 7UZ, 8UZ, 12UZ, 15UZ, 19UZ, 23UZ }) {
+        for (auto const i : {0UZ, 3UZ, 7UZ, 8UZ, 12UZ, 15UZ, 19UZ, 23UZ}) {
                 b.set(i);
         }
         return b;
 }
 
-// One start and length through set, flip and reset, each against the model; a function rather than a loop body so the case that sweeps it stays under readability-function-cognitive-complexity's threshold.
+// One start and length through set, flip and reset; a function so the sweeping case stays under the threshold.
 template<class T>
 auto check_ranged_forms(std::size_t n, std::size_t len)
         -> void
@@ -1262,42 +1374,54 @@ auto check_ranged_forms(std::size_t n, std::size_t len)
         auto r = reference(e);
 
         e.set(n, len, true);
-        for (auto i = n; i < n + len; ++i) { r[i] = true; }
+        for (auto i = n; i < n + len; ++i) {
+                r[i] = true;
+        }
         BOOST_CHECK(reference(e) == r);
 
         e.flip(n, len);
-        for (auto i = n; i < n + len; ++i) { r[i] = not r[i]; }
+        for (auto i = n; i < n + len; ++i) {
+                r[i] = not r[i];
+        }
         BOOST_CHECK(reference(e) == r);
 
         e.set(n, len, false);
-        for (auto i = n; i < n + len; ++i) { r[i] = false; }
+        for (auto i = n; i < n + len; ++i) {
+                r[i] = false;
+        }
         BOOST_CHECK(reference(e) == r);
 }
 
-}       // namespace
+} // namespace
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(WordsAreReadAndWrittenAtAnyPosition, T, WordTypes)
 {
         auto const c = word_sample<T>();
         // Blocks: 0b1000'1001, 0b1001'0001, 0b0000'1000.
-        BOOST_CHECK_EQUAL(c.block_at(0UZ),  0b1000'1001);
-        BOOST_CHECK_EQUAL(c.block_at(8UZ),  0b1001'0001);
-        BOOST_CHECK_EQUAL(c.block_at(3UZ),  0b0011'0001);
+        BOOST_CHECK_EQUAL(c.block_at(0UZ), 0b1000'1001);
+        BOOST_CHECK_EQUAL(c.block_at(8UZ), 0b1001'0001);
+        BOOST_CHECK_EQUAL(c.block_at(3UZ), 0b0011'0001);
         BOOST_CHECK_EQUAL(c.block_at(12UZ), 0b1000'1001);
         BOOST_CHECK_EQUAL(c.block_at(16UZ), 0b0000'1000);
         BOOST_CHECK_EQUAL(c.block_at(17UZ), 0b0000'0100);
 
-        // block_at lands the masked bits and nothing else, across two blocks and up to the last position, the mask never selecting past size() -- a word at the top is masked to what the width holds, which is what leaves the padding untouched and the erase to the ranged forms.
+        // block_at lands the masked bits and nothing else, the mask never selecting past size().
         auto d = word_sample<T>();
         d.block_at(3UZ, 0b1111'1111, 0b0001'1110);
         auto m = reference(c);
-        for (auto const i : { 4UZ, 5UZ, 6UZ, 7UZ }) { m[i] = true; }
+        for (auto const i : {4UZ, 5UZ, 6UZ, 7UZ}) {
+                m[i] = true;
+        }
         BOOST_CHECK(reference(d) == m);
         d.block_at(5UZ, 0b0000'0000, 0b0111'1000);
-        for (auto const i : { 8UZ, 9UZ, 10UZ, 11UZ }) { m[i] = false; }
+        for (auto const i : {8UZ, 9UZ, 10UZ, 11UZ}) {
+                m[i] = false;
+        }
         BOOST_CHECK(reference(d) == m);
         d.block_at(16UZ, 0b1111'1111, 0b0000'1111);
-        for (auto const i : { 16UZ, 17UZ, 18UZ, 19UZ }) { m[i] = true; }
+        for (auto const i : {16UZ, 17UZ, 18UZ, 19UZ}) {
+                m[i] = true;
+        }
         BOOST_CHECK(reference(d) == m);
         BOOST_CHECK_EQUAL(d.block(2), 0b0000'1111);
 }
@@ -1306,8 +1430,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(WordsAreReadAndWrittenAtAnyPosition, T, WordTypes)
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheRangedFormsGoAWordAtATime, T, WordTypes)
 {
         constexpr auto D = 8UZ;
-        for (auto const n : { 0UZ, 1UZ, 7UZ, 8UZ, 9UZ, 15UZ }) {
-                for (auto const len : { 0UZ, 1UZ, D - 1, D, D + 1, 20UZ - n }) {
+        for (auto const n : {0UZ, 1UZ, 7UZ, 8UZ, 9UZ, 15UZ}) {
+                for (auto const len : {0UZ, 1UZ, D - 1, D, D + 1, 20UZ - n}) {
                         if (n + len <= 20UZ) {
                                 check_ranged_forms<T>(n, len);
                         }
@@ -1318,7 +1442,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheRangedFormsGoAWordAtATime, T, WordTypes)
 // Three blocks with no tail, so a shift's destination block is exactly the splice and nothing masks it afterwards.
 using AlignedWordTypes = std::tuple<xstd::detail::bits::contiguous_bit_array<std::uint8_t, 24>, xstd::detail::bits::contiguous_bit_vector<std::uint8_t>>;
 
-// The identity that lets one primitive serve all three sites: a right shift's destination block is block_at at that position of the operand, and a left shift's is the same read one block lower.
+// The identity behind one primitive for all three sites: a left shift reads one block lower than a right.
 BOOST_AUTO_TEST_CASE_TEMPLATE(BothShiftsAreWordAtOnTheOperand, T, AlignedWordTypes)
 {
         constexpr auto D = 8UZ;

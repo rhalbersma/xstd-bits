@@ -11,13 +11,13 @@
 #include <xstd/bits/sequence_adaptor.hpp>                // sequence_adaptor
 #include <xstd/misc/concepts/specialization_of.hpp>      // specialization_of_TN
 
-// The sequence reading over bits it does not own: the referring adaptor, which like std::span neither compares nor orders.
+// The sequence reading over bits it does not own: like std::span it neither compares nor orders.
 namespace xstd {
 
-// An alias, as bit_subspan always was, and differing from it in one non-type argument: this is the whole sequence, that one a window on it.
+// An alias differing from bit_subspan in one non-type argument: this is the whole sequence, that one a window.
 template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits>
 using bit_span = sequence_adaptor<Bits, ownership::refers, false>;
 
-}       // namespace xstd
+} // namespace xstd
 
-#endif  // XSTD_BITS_BIT_SPAN_HPP
+#endif // XSTD_BITS_BIT_SPAN_HPP

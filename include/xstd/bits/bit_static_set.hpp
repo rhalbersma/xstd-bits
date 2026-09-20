@@ -16,7 +16,7 @@
 
 namespace xstd {
 
-// The static set: the qualifier marks the special case, the unmarked name going to the flagship. The basic name leaves the block open, the restricted one is the machine word.
+// The static set: the basic name leaves the block open, the restricted one is the machine word.
 template<xstd::unsigned_integer Block, std::size_t N>
 using basic_bit_static_set = set_adaptor<detail::bits::contiguous_bit_array<Block, N>, ownership::owns>;
 
@@ -31,7 +31,7 @@ using basic_bit_static_set = xstd::basic_bit_static_set<Block, xstd::align_up(N,
 template<std::size_t N>
 using bit_static_set = basic_bit_static_set<std::size_t, N>;
 
-}       // namespace aligned
-}       // namespace xstd
+} // namespace aligned
+} // namespace xstd
 
-#endif  // XSTD_BITS_BIT_STATIC_SET_HPP
+#endif // XSTD_BITS_BIT_STATIC_SET_HPP

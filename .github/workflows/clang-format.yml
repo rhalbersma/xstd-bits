@@ -1,4 +1,4 @@
-#          Copyright Rein Halbersma 2014-2025.
+#          Copyright Rein Halbersma 2014-2026.
 # Distributed under the Boost Software License, Version 1.0.
 #    (See accompanying file LICENSE_1_0.txt or copy at
 #          http://www.boost.org/LICENSE_1_0.txt)
@@ -12,12 +12,16 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# Dispatch-only: with no .clang-format the LLVM fallback would report almost every file, and reformatting is a source change.
 on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
-  # Its own tier, left at stable: a formatter release reformats the code base.
+  # Its own tier, deliberately left at stable: a formatter release reformats
+  # the code base, which is not something a compiler bump should decide.
   clang_format:
     uses: rhalbersma/cpp-ci/.github/workflows/clang-format.yml@29fdd6605bf237863ad39c3919c2cf389cfb6d38 # v0.10.2
     with:

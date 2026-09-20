@@ -30,23 +30,22 @@ class bidirectional_bit_iterator
 
 public:
         using iterator_category = std::bidirectional_iterator_tag;
-        using value_type        = std::size_t;
-        using difference_type   = std::ptrdiff_t;
-        using pointer           = void;
-        using reference         = bidirectional_bit_reference<Bits>;
+        using value_type = std::size_t;
+        using difference_type = std::ptrdiff_t;
+        using pointer = void;
+        using reference = bidirectional_bit_reference<Bits>;
 
-        [[nodiscard]] constexpr bidirectional_bit_iterator() noexcept = default;
+        [[nodiscard]] bidirectional_bit_iterator() noexcept = default;
 
         // Public, so an owner or a view constructs one without befriending it: the dependency runs one way.
         [[nodiscard]] constexpr bidirectional_bit_iterator(bits_type const* ptr, std::size_t idx) noexcept
-        :
-                m_ptr(ptr),
-                m_idx(idx)
+            : m_ptr(ptr),
+              m_idx(idx)
         {
                 assert(m_ptr != nullptr);
         }
 
-        // A zero width has one position, so every iterator over it is the same one; said outright, every loop an optimizer sees into stops before its first step, which no spelling of the step itself achieved.
+        // A zero width has one position, so every iterator over it is the same one and every loop stops early.
         [[nodiscard]] friend constexpr auto operator==(bidirectional_bit_iterator lhs, bidirectional_bit_iterator rhs) noexcept
                 -> bool
         {
@@ -62,11 +61,10 @@ public:
                 -> reference
         {
                 assert(m_ptr != nullptr);
-                return { m_ptr, m_idx };
+                return {m_ptr, m_idx};
         }
 
-        // Both steps on the storage, guarded at a zero width rather than asking it: the exclusive scans take a position as a precondition and a zero width has none to give, so they assert there. The trait's scans tested this first and never reached the storage; the guard is what that test was, and it is load-bearing.
-        // Each step says its own precondition beside the storage's: forward, that this is not end(), which is what the scan's is_valid comes to. Backward is the one worth having, because it is STRONGER than anything below it -- exclusive_find_prev asserts any() and is_valid(n - 1), and --begin() passes both while there is nothing below to find. Measured under NDEBUG: at a two-block extent it fell into the arm meant for the lower block and answered the highest position there, which is the key it started from, so a reverse walk never ends; at four blocks and at a run-time width it read past the blocks.
+        // Both steps guarded at a zero width: the exclusive scans take a position it has none to give.
         constexpr auto operator++() noexcept
                 -> bidirectional_bit_iterator&
         {
@@ -89,8 +87,20 @@ public:
                 return *this;
         }
 
-        constexpr auto operator++(int) noexcept -> bidirectional_bit_iterator { auto nrv = *this; ++*this; return nrv; }
-        constexpr auto operator--(int) noexcept -> bidirectional_bit_iterator { auto nrv = *this; --*this; return nrv; }
+        constexpr auto operator++(int) noexcept
+                -> bidirectional_bit_iterator
+        {
+                auto nrv = *this;
+                ++*this;
+                return nrv;
+        }
+        constexpr auto operator--(int) noexcept
+                -> bidirectional_bit_iterator
+        {
+                auto nrv = *this;
+                --*this;
+                return nrv;
+        }
 };
 
 // The key at a position, arriving by conversion; & hands the iterator back, so the pair round-trips.
@@ -104,40 +114,39 @@ class bidirectional_bit_reference
 
 public:
         using value_type = std::size_t;
-        using iterator   = bidirectional_bit_iterator<Bits>;
+        using iterator = bidirectional_bit_iterator<Bits>;
 
         [[nodiscard]] constexpr bidirectional_bit_reference(bits_type const* ptr, std::size_t idx) noexcept
-        :
-                m_ptr(ptr),
-                m_idx(idx)
+            : m_ptr(ptr),
+              m_idx(idx)
         {
                 assert(m_ptr != nullptr);
         }
 
         // A value, not a handle to rebind: trivially copyable, never assignable, as a reference to a key is.
-        constexpr bidirectional_bit_reference(bidirectional_bit_reference const&) noexcept = default;
-        constexpr auto operator=(bidirectional_bit_reference const&) -> bidirectional_bit_reference& = delete;
+        bidirectional_bit_reference(bidirectional_bit_reference const&) noexcept = default;
+        auto operator=(bidirectional_bit_reference const&) -> bidirectional_bit_reference& = delete;
 
         [[nodiscard]] constexpr auto operator&() const noexcept
                 -> iterator
         {
-                return { m_ptr, m_idx };
+                return {m_ptr, m_idx};
         }
 
-        [[nodiscard]] constexpr explicit(false) operator value_type() const noexcept  // NOLINT(misc-explicit-constructor)
+        [[nodiscard]] constexpr explicit(false) operator value_type() const noexcept // NOLINT(misc-explicit-constructor)
         {
                 return m_idx;
         }
 
-        // A strong index type initializes from *it in one step; one with an explicit constructor takes the size_t route.
+        // A strong index type initializes from *it in one step; an explicit one takes the size_t route.
         template<class T>
-        [[nodiscard]] constexpr explicit(false) operator T() const noexcept(std::is_nothrow_constructible_v<T, value_type>)  // NOLINT(misc-explicit-constructor)
+        [[nodiscard]] constexpr explicit(false) operator T() const noexcept(std::is_nothrow_constructible_v<T, value_type>) // NOLINT(misc-explicit-constructor)
                 requires std::is_class_v<T> and std::is_convertible_v<value_type, T>
         {
                 return m_idx;
         }
 
-        // What this proxy prints as, said once: our own std::formatter below calls it unqualified, and it is also fmt's protocol, found by ADL on the proxy, for a consumer who formats with fmt. fmt is no longer a dependency of this repository; the hook is a hidden friend of a header-only proxy and costs nobody anything, so taking fmt interop away to delete a line the standard formatter calls regardless would be a trade in the wrong direction.
+        // What this proxy prints as, said once: our std::formatter calls it unqualified, and fmt finds it by ADL.
         [[nodiscard]] friend constexpr auto format_as(bidirectional_bit_reference ref) noexcept
                 -> value_type
         {
@@ -145,15 +154,13 @@ public:
         }
 };
 
-}       // namespace xstd::detail::bits
-
+} // namespace xstd::detail::bits
 
 // std::format over the containers, which needs nothing said about the containers themselves.
 template<class Bits, class CharT>
 // NOLINTNEXTLINE(bugprone-std-namespace-modification)
 struct std::formatter<xstd::detail::bits::bidirectional_bit_reference<Bits>, CharT>
-:
-        std::formatter<std::size_t, CharT>
+    : std::formatter<std::size_t, CharT>
 {
         template<class Context>
         [[nodiscard]] constexpr auto format(xstd::detail::bits::bidirectional_bit_reference<Bits> ref, Context& ctx) const
@@ -163,4 +170,4 @@ struct std::formatter<xstd::detail::bits::bidirectional_bit_reference<Bits>, Cha
         }
 };
 
-#endif  // XSTD_BITS_DETAIL_BIDIRECTIONAL_HPP
+#endif // XSTD_BITS_DETAIL_BIDIRECTIONAL_HPP

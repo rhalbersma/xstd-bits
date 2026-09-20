@@ -23,7 +23,7 @@ namespace {
 struct key
 {
         std::size_t value;
-        constexpr explicit(false) key(std::size_t v) noexcept : value(v) {}  // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
+        constexpr explicit(false) key(std::size_t v) noexcept : value(v) {} // NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
 };
 
 struct index
@@ -56,10 +56,10 @@ auto check_set_walk(T const& empty, std::set<std::size_t> const& model)
         auto const size = c.size();
 
         auto const first = iterator(&c, model.empty() ? size : *model.begin());
-        auto const last  = iterator(&c, size);
+        auto const last = iterator(&c, size);
         BOOST_CHECK((first == last) == model.empty());
 
-        // Behind if constexpr rather than after an early return, or MSVC reports the rest unreachable at a zero width, which it is.
+        // Behind if constexpr rather than an early return, or MSVC reports the rest unreachable at a zero width.
         if constexpr (T::extent != 0UZ) {
                 check_set_steps(first, last, model);
         }
@@ -115,15 +115,15 @@ auto check_every_set_pattern(T const& empty)
                 check_set_walk(empty, full);
 
                 for (auto i = 0UZ; i < size; ++i) {
-                        check_set_walk(empty, { i });
+                        check_set_walk(empty, {i});
                         if (i + 1UZ < size) {
-                                check_set_walk(empty, { i, i + 1UZ });
+                                check_set_walk(empty, {i, i + 1UZ});
                         }
                 }
         }
 }
 
-}       // namespace
+} // namespace
 
 BOOST_AUTO_TEST_SUITE(Bidirectional)
 
@@ -135,7 +135,7 @@ BOOST_AUTO_TEST_CASE(AnIteratorIsAPointerAndAPosition)
 {
         constexpr auto two_words = 2UZ * sizeof(void*);
 
-        static_assert(sizeof(xstd::detail::bits::bidirectional_bit_iterator<Bits>)  == two_words);
+        static_assert(sizeof(xstd::detail::bits::bidirectional_bit_iterator<Bits>) == two_words);
         static_assert(sizeof(xstd::detail::bits::bidirectional_bit_reference<Bits>) == two_words);
 }
 
@@ -170,7 +170,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheSetIteratorWalksThePositionsInBothDirections, T
         check_every_set_pattern(T());
 }
 
-// format_as is what the proxy's own std::formatter calls, unqualified, and what fmt would call in a consumer that uses it, so calling it the same way is the test.
+// format_as is what the proxy's own std::formatter calls unqualified, and what fmt would call, so the test calls it so.
 BOOST_AUTO_TEST_CASE(TheProxyFormatsAsItsValue)
 {
         auto c = Bits();
@@ -181,31 +181,31 @@ BOOST_AUTO_TEST_CASE(TheProxyFormatsAsItsValue)
 
 BOOST_AUTO_TEST_SUITE_END()
 
-// The set view hands out this proxy and nothing of its own; what ranges.hpp once answered, now answered here.
+// The set view hands out this proxy and nothing of its own.
 BOOST_AUTO_TEST_SUITE(BidirectionalThroughTheView)
 
 namespace {
 
 using Viewed = xstd::detail::bits::contiguous_bit_array<std::uint64_t, 64>;
 
-using SetIt  = xstd::detail::bits::bidirectional_bit_iterator<Viewed>;
+using SetIt = xstd::detail::bits::bidirectional_bit_iterator<Viewed>;
 using SetRef = xstd::detail::bits::bidirectional_bit_reference<Viewed>;
 
 // Dependent, so a type without the member is a substitution failure rather than a hard error.
 template<class R>
-constexpr bool has_address_of = requires(R r) { r.operator&(); };
+constexpr bool has_address_of = requires (R r) { r.operator&(); };
 
-}       // namespace
+} // namespace
 
 BOOST_AUTO_TEST_CASE(TheViewIteratesWithTheSharedProxy)
 {
-        static_assert(std::same_as<xstd::bit_set_view<Viewed>::iterator,  SetIt>);
+        static_assert(std::same_as<xstd::bit_set_view<Viewed>::iterator, SetIt>);
         static_assert(std::same_as<xstd::bit_set_view<Viewed>::reference, SetRef>);
 
         BOOST_CHECK(true);
 }
 
-// One shape asked twice: * gives a proxy, & gives an iterator back, and the value comes only by converting; the standard says nothing here, so only our own guarantees are asserted.
+// One shape asked twice: * gives a proxy, & an iterator back, and only our own guarantees are asserted.
 BOOST_AUTO_TEST_CASE(DereferencingYieldsAProxyRatherThanTheValue)
 {
         static_assert(std::same_as<decltype(*std::declval<SetIt const&>()), SetRef>);

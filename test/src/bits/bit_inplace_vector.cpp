@@ -43,9 +43,7 @@ BOOST_AUTO_TEST_CASE(TheInplaceSequenceIsTheSequenceAdaptorOverAnInplaceVectorOf
         static_assert(test::sequence::bit_sequence<T>);
 }
 
-// Every line of [inplace.vector], the model first so the checklist is known to be honest. std::inplace_vector<bool, N>
-// and not std::vector<bool>: this column's counterpart is the one that spells four capacity members static and hands
-// push_back a reference to return, and a checklist held up to the dynamic column asked for none of it.
+// Every line of [inplace.vector], the model first so the checklist is known to be honest.
 BOOST_AUTO_TEST_CASE(ItAnswersEveryLineOfStdInplaceVectorBool)
 {
         static_assert(test::sequence::inplace_vector_bool<std::inplace_vector<bool, 24>>);
@@ -63,8 +61,7 @@ BOOST_AUTO_TEST_CASE(ItAnswersEveryLineOfStdInplaceVectorBool)
         static_assert(not has_allocator<T>);
 }
 
-// P3981R0's return type, over the packing alone: libstdc++ 16 still returns the pointer P0843R14 gave these two,
-// so the checklist above asks the model for the name and this asks the packing for the signature the draft spells.
+// P3981R0's return type, over the packing alone: the checklist asks the model only for the name.
 BOOST_AUTO_TEST_CASE(TheTryDoorsReturnTheOptionalReferenceTheDraftSpells)
 {
         static_assert(test::sequence::inplace_vector_bool_try_returns<T>);
@@ -144,8 +141,8 @@ BOOST_AUTO_TEST_CASE(GrowingPastTheCapacityThrowsBadAlloc)
         BOOST_CHECK_EQUAL(std::ranges::count(v, true), 12);
 
         BOOST_CHECK_THROW(v.push_back(true), std::bad_alloc);
-        BOOST_CHECK_THROW(v.resize(25),      std::bad_alloc);
-        BOOST_CHECK_THROW(v.reserve(25),     std::bad_alloc);
+        BOOST_CHECK_THROW(v.resize(25), std::bad_alloc);
+        BOOST_CHECK_THROW(v.reserve(25), std::bad_alloc);
 
         // The failed growth left the value alone, which is what the strong guarantee buys.
         BOOST_CHECK_EQUAL(v.size(), 24UZ);
@@ -171,7 +168,7 @@ BOOST_AUTO_TEST_CASE(ItYieldsEveryPosition)
 
 #else
 
-// The column is its storage's: without std::inplace_vector there is no name to test, and saying so keeps the source from being empty.
+// The column is its storage's: without std::inplace_vector there is no name to test.
 BOOST_AUTO_TEST_CASE(TheColumnIsAbsentWithItsStorage)
 {
         static_assert(not test::has_inplace_vector);

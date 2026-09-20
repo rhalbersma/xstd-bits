@@ -22,7 +22,7 @@
 
 BOOST_AUTO_TEST_SUITE(BitFiniteSet)
 
-// Every Block model within one block and the narrow ones across boundaries; the grading is in test/block_types.hpp.
+// Every Block model within one block, and the narrow ones across boundaries.
 using Types = test::graded_extents<xstd::basic_bit_static_set>;
 
 // The clauses one at a time, so a failure names which one; the umbrella asserts the composite.
@@ -57,13 +57,11 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(IsABitSet, T, Types)
         static_assert(test::set::bit_set<T>);
 }
 
-// A requires-expression whose requirement fails for a concrete type is ill-formed rather than false
-// ([expr.prim.req]/5), so the question goes through a template parameter and not to the type directly.
+// A requires-expression on a concrete type is ill-formed rather than false ([expr.prim.req]/5).
 template<class X>
 constexpr bool has_allocator_type = requires { typename X::allocator_type; };
 
-// This column has no counterpart -- the standard has nothing at a static width for this reading -- and it answers
-// the dynamic column's synopsis all the same. The allocator lines are the only ones it cannot: there is no heap.
+// No counterpart at a static width, and it answers the dynamic column's synopsis but for the allocator lines.
 BOOST_AUTO_TEST_CASE_TEMPLATE(ItAnswersEveryLineOfStdSetSizeTAnyway, T, Types)
 {
         static_assert(test::set::set_size_t<T>);
@@ -80,13 +78,13 @@ auto check_key_outside_the_domain(X a, std::size_t x)
 
         BOOST_CHECK(not a.contains(x));
         BOOST_CHECK_EQUAL(a.count(x), 0UZ);
-        BOOST_CHECK(a.find(x)        == a.end());
+        BOOST_CHECK(a.find(x) == a.end());
         BOOST_CHECK(a.lower_bound(x) == a.end());
         BOOST_CHECK(a.upper_bound(x) == a.end());
 
-        auto const [ first, last ] = a.equal_range(x);
+        auto const [first, last] = a.equal_range(x);
         BOOST_CHECK(first == a.end());
-        BOOST_CHECK(last  == a.end());
+        BOOST_CHECK(last == a.end());
 
         // A no-op that must stay one: this is the write.
         BOOST_CHECK_EQUAL(a.erase(x), 0UZ);
@@ -99,20 +97,20 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(LookupIsTotalOverKeyType, T, Types)
         auto const full = std::views::iota(0UZ, N) | std::ranges::to<T>();
 
         // Just past the end, past the last block, and the value that would wrap any n + 1.
-        for (auto const x : { N, N + 1, (2 * N) + 1, static_cast<std::size_t>(-1) }) {
+        for (auto const x : {N, N + 1, (2 * N) + 1, static_cast<std::size_t>(-1)}) {
                 check_key_outside_the_domain(T(), x);
                 check_key_outside_the_domain(full, x);
         }
 }
 
-// Ascending keys, at every width and whatever the insertion order: what makes this a set rather than a bag of positions.
+// Ascending keys at every width and whatever the insertion order: what makes this a set rather than a bag.
 BOOST_AUTO_TEST_CASE_TEMPLATE(ItYieldsAscendingKeys, T, Types)
 {
         auto c = T();
-        test::set::yields_ascending_keys(c);            // empty is trivially ascending
+        test::set::yields_ascending_keys(c); // empty is trivially ascending
 
-        // Inserted high to low, and across block boundaries where the width allows, so the ascending answer is the container's doing and not the insertion order's.
-        for (auto const key : { 70UZ, 64UZ, 63UZ, 9UZ, 1UZ, 0UZ }) {
+        // Inserted high to low and across block boundaries, so the ascending answer is the container's doing.
+        for (auto const key : {70UZ, 64UZ, 63UZ, 9UZ, 1UZ, 0UZ}) {
                 if (key < c.max_size()) {
                         c.insert(key);
                 }
@@ -120,11 +118,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItYieldsAscendingKeys, T, Types)
         test::set::yields_ascending_keys(c);
 }
 
-// A static width is a CAPACITY under this reading and a std::bitset's own width both, so position n here is bit n
-// there and the conversion has no policy to choose: nothing truncates, nothing grows, nothing throws. Asserted at
-// every graded extent and every Block, which is what makes it a claim about the bits and not about one block width
-// -- xstd::uint128 blocks are WIDER than the std::bitset object they come from, uint8_t ones narrower, and the byte
-// the two agree on is neither.
+// A static width is a capacity and a std::bitset's own width both, so position n here is bit n there.
 BOOST_AUTO_TEST_CASE_TEMPLATE(ItRoundTripsThroughStdBitset, T, Types)
 {
         constexpr auto N = T().max_size();
@@ -140,7 +134,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItRoundTripsThroughStdBitset, T, Types)
                         BOOST_CHECK_EQUAL(c.contains(i), bs.test(i));
                 }
 
-                // Out again, and the identity: the two keep the same tail invariant, so nothing is left over either way.
+                // Out again, and the identity: the two keep the same tail invariant.
                 BOOST_CHECK(static_cast<std::bitset<N>>(c) == bs);
 
                 // The empty and the full set, the two the loop above reaches neither of.
@@ -149,41 +143,33 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItRoundTripsThroughStdBitset, T, Types)
         }
 }
 
-// The same claim in a constant expression, which is what the storage's byte primitive being shifts rather than a
-// memcpy buys: neither direction reads memory it must be running to see.
+// The same claim in a constant expression, which is what shifts rather than a memcpy buy.
 BOOST_AUTO_TEST_CASE_TEMPLATE(ItRoundTripsAtCompileTime, T, Types)
 {
         constexpr auto N = T().max_size();
         if constexpr (std::is_constructible_v<T, std::bitset<N>>) {
                 static_assert([] -> bool {
-                        // A PATTERN rather than a mutation, which is what makes this one expression at every graded
-                        // extent. std::bitset's constructor from unsigned long long masks to the width, so ~0ULL is
-                        // every position it has -- and at the zero width that is none, where set(0) would throw
-                        // out_of_range and take the whole assertion down over a position that does not exist. It also
-                        // leaves nothing here non-const, which a mutation the zero width discards does not.
+                        // A pattern, not a mutation: ~0ULL masks to the width, which at the zero width is no position.
                         auto const bs = std::bitset<N>(~0ULL);
-                        auto const c  = T(bs);
+                        auto const c = T(bs);
                         return c.size() == bs.count() and static_cast<std::bitset<N>>(c) == bs;
                 }());
         }
 }
 
-// EXPLICIT in both directions, and not because either could fail: a set of positions and a field of bits are two
-// readings of the same bits, and this library makes a reader pick one rather than letting a conversion pick for them.
+// Explicit both ways, not because either could fail: a reader picks the reading rather than a conversion picking it.
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheConversionsAreExplicitBothWays, T, Types)
 {
         constexpr auto N = T().max_size();
-        // Guarded on the constructor rather than on the concept behind it: a standard library laying its bits out
-        // some other way withholds BOTH of these, and this test asks the public question, not the detail one.
+        // Guarded on the constructor rather than the concept, so this asks the public question and not the detail one.
         if constexpr (std::is_constructible_v<T, std::bitset<N>>) {
-                static_assert(not std::is_convertible_v  <std::bitset<N>, T>);
-                static_assert(    std::is_constructible_v<std::bitset<N>, T>);
-                static_assert(not std::is_convertible_v  <T, std::bitset<N>>);
+                static_assert(not std::is_convertible_v<std::bitset<N>, T>);
+                static_assert(std::is_constructible_v<std::bitset<N>, T>);
+                static_assert(not std::is_convertible_v<T, std::bitset<N>>);
         }
 }
 
-// Any other width is not a narrower conversion, it is no conversion: the two widths mean the same positions or the
-// question has no answer, so a mismatch is a call that does not compile rather than one that silently drops keys.
+// Any other width is no conversion rather than a narrower one, so a mismatch does not compile.
 BOOST_AUTO_TEST_CASE_TEMPLATE(AnyOtherWidthIsNoConversionAtAll, T, Types)
 {
         constexpr auto N = T().max_size();
@@ -195,18 +181,12 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AnyOtherWidthIsNoConversionAtAll, T, Types)
         }
 }
 
-// The two conversions are named by a CONCEPT, not by std::bitset, so anything whose N bits this library can prove
-// it reads correctly comes in on the same rule. An unsigned integer is the family that proves nothing, because the
-// language already states it: bit n of the value is 2^n. The guard is the public question -- does the conversion
-// exist? -- which is false exactly where the integer is too narrow for the width.
+// The two conversions are named by a concept and not by std::bitset, and an unsigned integer proves nothing.
 BOOST_AUTO_TEST_CASE_TEMPLATE(AnUnsignedIntegerIsAFieldOfBitsToo, T, Types)
 {
         constexpr auto N = T().max_size();
         if constexpr (std::is_constructible_v<T, std::uint64_t>) {
-                // Every position the width has, and none of them. Said WITHOUT a shift: a ternary guards the value
-                // it picks but not the expression it does not, so 1ULL << N is still compiled at a width of
-                // sixty-four, where the shift is undefined and MSVC says so (C4293) though GCC and clang fold it
-                // silently. std::bitset answers the same mask by flipping an empty one, and needs no shift at all.
+                // Every position and none, said without a shift: 1ULL << N still compiles at sixty-four (MSVC's C4293).
                 constexpr auto all = std::bitset<N>().flip().to_ullong();
                 auto const full = T(all);
                 BOOST_CHECK_EQUAL(full.size(), N);
@@ -221,8 +201,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AnUnsignedIntegerIsAFieldOfBitsToo, T, Types)
         }
 }
 
-// And our own bitset reading crosses to the set reading on that same rule, which is the generalisation paying for
-// itself: neither side is std::bitset, and neither is named in the constraint.
+// Our own bitset reading crosses on that same rule, with neither side named in the constraint.
 BOOST_AUTO_TEST_CASE_TEMPLATE(OurOwnBitsetReadingCrossesOnTheSameRule, T, Types)
 {
         constexpr auto N = T().max_size();
@@ -241,17 +220,15 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(OurOwnBitsetReadingCrossesOnTheSameRule, T, Types)
         }
 }
 
-// RAW BLOCKS cross to the set reading on the same rule as anything else, and the block width is free: the byte is
-// the common ground, so eight uint32 blocks and four uint64 blocks spell the same two hundred and fifty-six
-// positions. Nothing is probed for either -- a sequence of unsigned integers states its layout.
+// Raw blocks cross on the same rule and the block width is free, the byte being the common ground.
 BOOST_AUTO_TEST_CASE(RawBlocksCrossOnTheSameRule)
 {
         constexpr auto N = 256UZ;
-        using Set    = xstd::bit_static_set<N>;
-        using Wide   = std::array<std::uint64_t, 4>;
+        using Set = xstd::bit_static_set<N>;
+        using Wide = std::array<std::uint64_t, 4>;
         using Narrow = std::array<std::uint32_t, 8>;
 
-        auto const blocks = Wide{ 0x0123'4567'89AB'CDEFULL, 1ULL, 0ULL, 0x8000'0000'0000'0000ULL };
+        auto const blocks = Wide{0x0123'4567'89AB'CDEFULL, 1ULL, 0ULL, 0x8000'0000'0000'0000ULL};
         auto const s = Set::from_bits(blocks);
 
         BOOST_CHECK(s.contains(0UZ));
@@ -267,20 +244,17 @@ BOOST_AUTO_TEST_CASE(RawBlocksCrossOnTheSameRule)
         BOOST_CHECK(Set::from_bits(narrow) == s);
 
         static_assert([] -> bool {
-                auto const b = Wide{ 0xDEAD'BEEFULL, 0ULL, 0ULL, 0ULL };
+                auto const b = Wide{0xDEAD'BEEFULL, 0ULL, 0ULL, 0ULL};
                 return Set::from_bits(b).to_bits<Wide>() == b;
         }());
 
-        // Too narrow for the width is no exchange at all; wider is admitted, as it is for an integer. Asked of the
-        // DOOR now rather than of is_constructible_v, because a named function is what there is to ask about --
-        // and this is the stronger question of the two: it names the operation instead of a proxy for it.
+        // Too narrow is no exchange and wider is admitted; the door is the stronger question over is_constructible_v.
         static_assert(not test::exchanges_from_bits<Set, std::array<std::uint64_t, 3>>);
-        static_assert(    test::exchanges_from_bits<Set, std::array<std::uint64_t, 5>>);
-        static_assert(    test::exchanges_bits     <Set, Wide>);
-        static_assert(    test::exchanges_bits     <Set, Narrow>);
+        static_assert(test::exchanges_from_bits<Set, std::array<std::uint64_t, 5>>);
+        static_assert(test::exchanges_bits<Set, Wide>);
+        static_assert(test::exchanges_bits<Set, Narrow>);
 
-        // And the unnamed door is CLOSED, which is the whole point of the rename: a sequence of blocks no longer
-        // reaches a constructor, so it can no longer be read as the from_range spelling sitting beside it.
+        // And the unnamed door is closed, so a sequence of blocks does not read as the from_range spelling.
         static_assert(not std::is_constructible_v<Set, Wide>);
         static_assert(not std::is_constructible_v<Set, Narrow>);
 }

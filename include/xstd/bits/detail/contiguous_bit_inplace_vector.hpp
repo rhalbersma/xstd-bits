@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_DETAIL_CONTIGUOUS_BIT_INPLACE_VECTOR_HPP
 #define XSTD_BITS_DETAIL_CONTIGUOUS_BIT_INPLACE_VECTOR_HPP
 
-#include <version>                                       // IWYU pragma: keep; __cpp_lib_inplace_vector
+#include <version> // IWYU pragma: keep; __cpp_lib_inplace_vector
 
 // The third vehicle: a run-time width under a compile-time capacity of N bits.
 #ifdef __cpp_lib_inplace_vector
@@ -21,7 +21,7 @@ namespace xstd::detail::bits {
 template<xstd::unsigned_integer Block, std::size_t N>
 using contiguous_bit_inplace_vector = contiguous_bit_container<std::inplace_vector<Block, num_blocks_v<Block, N>>>;
 
-}       // namespace xstd::detail::bits
+} // namespace xstd::detail::bits
 
 #endif // __cpp_lib_inplace_vector
 

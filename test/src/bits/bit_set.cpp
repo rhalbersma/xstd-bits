@@ -37,9 +37,7 @@ BOOST_AUTO_TEST_CASE(TheDynamicSetIsTheSetAdaptorOverAHeapOfBlocks)
         static_assert(test::set::bit_set<T>);
 }
 
-// Every line of [set], the model first so the checklist is known to be honest. std::set<std::size_t> is this
-// column's counterpart, and the whole of it is answered but the node-based family and the heterogeneous overloads
-// neither side has -- which is the same bargain std::flat_set strikes for the same reason.
+// Every line of [set], the model first, bar the node family and heterogeneous overloads neither side has.
 BOOST_AUTO_TEST_CASE(ItAnswersEveryLineOfStdSetSizeT)
 {
         static_assert(test::set::set_size_t<std::set<std::size_t>>);
@@ -60,13 +58,12 @@ BOOST_AUTO_TEST_CASE(ItAnswersEveryLineOfStdSetSizeT)
         static_assert(test::set::set_size_t_ranges_allocator<T>);
 }
 
-// [set.cons]'s allocator arguments, CONSTRUCTED rather than merely asked about: the checklist above names them in a
-// requires-expression, and this reading had none of them at all until it was asked.
+// [set.cons]'s allocator arguments, constructed rather than merely asked about in a requires-expression.
 BOOST_AUTO_TEST_CASE(TheAllocatorConstructorsBuildWhatTheyName)
 {
         using A = T::allocator_type;
         auto const a = A();
-        auto const keys = std::array<std::size_t, 3>{ 1UZ, 3UZ, 5UZ };
+        auto const keys = std::array<std::size_t, 3>{1UZ, 3UZ, 5UZ};
 
         auto const x0 = T(a);
         BOOST_CHECK(x0.empty());
@@ -74,7 +71,7 @@ BOOST_AUTO_TEST_CASE(TheAllocatorConstructorsBuildWhatTheyName)
         auto const x1 = T(keys.begin(), keys.end(), a);
         BOOST_CHECK(std::ranges::equal(x1, keys));
 
-        auto const x2 = T({ 1UZ, 3UZ, 5UZ }, a);
+        auto const x2 = T({1UZ, 3UZ, 5UZ}, a);
         BOOST_CHECK(x2 == x1);
 
         auto const x3 = T(x1, a);
@@ -91,7 +88,7 @@ BOOST_AUTO_TEST_CASE(TheAllocatorConstructorsBuildWhatTheyName)
 BOOST_AUTO_TEST_CASE(TheEmptyArgumentListEmplacesTheZeroKey)
 {
         auto s = T();
-        auto const [ it, inserted ] = s.emplace();
+        auto const [it, inserted] = s.emplace();
         BOOST_CHECK(inserted);
         BOOST_CHECK_EQUAL(*it, 0UZ);
         BOOST_CHECK(s.contains(0UZ));
@@ -108,7 +105,7 @@ BOOST_AUTO_TEST_CASE(InsertingPastTheWidthGrowsIt)
         BOOST_CHECK(s.empty());
         BOOST_CHECK_EQUAL(s.max_size(), xstd::detail::bits::contiguous_bit_vector<std::uint8_t>().max_size());
 
-        auto const [ where, inserted ] = s.insert(100);
+        auto const [where, inserted] = s.insert(100);
         BOOST_CHECK(inserted);
         BOOST_CHECK(*where == 100UZ);
         BOOST_CHECK(s.contains(100));
@@ -118,7 +115,7 @@ BOOST_AUTO_TEST_CASE(InsertingPastTheWidthGrowsIt)
         BOOST_CHECK_EQUAL(s.erase(100), 1UZ);
         BOOST_CHECK(not s.contains(100));
         BOOST_CHECK(not s.contains(1000));
-        BOOST_CHECK(s.find(1000) == s.end());  // NOLINT(readability-container-contains)
+        BOOST_CHECK(s.find(1000) == s.end()); // NOLINT(readability-container-contains)
 }
 
 // Built from a range as std::set is, iterated as std::set is, and ordered as std::set is.
@@ -140,36 +137,36 @@ BOOST_AUTO_TEST_CASE(ItIsBuiltAndOrderedLikeAStdSet)
         BOOST_CHECK_EQUAL(v.size(), t.size());
 }
 
-// The width is capacity, never value: two sets holding the same positions agree on everything std::set answers, whatever their storages' widths.
+// The width is capacity, never value: two sets holding the same positions agree, whatever their widths.
 BOOST_AUTO_TEST_CASE(TheWidthIsCapacityNotValue)
 {
-        auto const narrow = T({ 1, 3 });
-        auto wide = T({ 1, 3 });
+        auto const narrow = T({1, 3});
+        auto wide = T({1, 3});
         wide.insert(100);
         wide.erase(100);
         auto const digest = std::hash<T>();
         BOOST_CHECK(narrow == wide);
         BOOST_CHECK(std::is_eq(narrow <=> wide));
         BOOST_CHECK_EQUAL(digest(narrow), digest(wide));
-        BOOST_CHECK(digest(narrow) != digest(T({ 1 })));
+        BOOST_CHECK(digest(narrow) != digest(T({1})));
         BOOST_CHECK(narrow.is_subset_of(wide) and wide.is_subset_of(narrow));
         BOOST_CHECK(not narrow.is_proper_subset_of(wide));
         BOOST_CHECK(intersects(narrow, wide));
 }
 
-// The compound operators and predicates at two widths that differ, either way round, against the answers over the elements.
+// The compound operators and predicates at two differing widths, against the answers over the elements.
 BOOST_AUTO_TEST_CASE(TheSetOperationsIgnoreTheWidth)
 {
-        auto const a = T({ 1, 3, 200 });
-        auto const b = T({ 3, 5 });
-        BOOST_CHECK((a | b) == T({ 1, 3, 5, 200 }));
-        BOOST_CHECK((b | a) == T({ 1, 3, 5, 200 }));
-        BOOST_CHECK((a & b) == T({ 3 }));
-        BOOST_CHECK((b & a) == T({ 3 }));
-        BOOST_CHECK((a ^ b) == T({ 1, 5, 200 }));
-        BOOST_CHECK((b ^ a) == T({ 1, 5, 200 }));
-        BOOST_CHECK((a - b) == T({ 1, 200 }));
-        BOOST_CHECK((b - a) == T({ 5 }));
+        auto const a = T({1, 3, 200});
+        auto const b = T({3, 5});
+        BOOST_CHECK((a | b) == T({1, 3, 5, 200}));
+        BOOST_CHECK((b | a) == T({1, 3, 5, 200}));
+        BOOST_CHECK((a & b) == T({3}));
+        BOOST_CHECK((b & a) == T({3}));
+        BOOST_CHECK((a ^ b) == T({1, 5, 200}));
+        BOOST_CHECK((b ^ a) == T({1, 5, 200}));
+        BOOST_CHECK((a - b) == T({1, 200}));
+        BOOST_CHECK((b - a) == T({5}));
         BOOST_CHECK(a < b);
         BOOST_CHECK(b.is_proper_subset_of(a | b));
         BOOST_CHECK(intersects(a | b, b));
@@ -177,16 +174,16 @@ BOOST_AUTO_TEST_CASE(TheSetOperationsIgnoreTheWidth)
         BOOST_CHECK(not a.is_subset_of(b));
         BOOST_CHECK(not a.is_proper_subset_of(b));
         BOOST_CHECK(not b.is_proper_subset_of(a));
-        BOOST_CHECK(not intersects(T({ 5 }), a));
-        BOOST_CHECK(not intersects(a, T({ 5 })));
+        BOOST_CHECK(not intersects(T({5}), a));
+        BOOST_CHECK(not intersects(a, T({5})));
 }
 
-// The shifts translate: left grows the width to hold the result, right empties past it, and neither has the width as a precondition.
+// The shifts translate: left grows the width to hold the result, right empties past it, neither preconditioned.
 BOOST_AUTO_TEST_CASE(TheShiftsTranslateWhateverTheWidth)
 {
-        auto const b = T({ 3, 5 });
-        BOOST_CHECK((b << 300) == T({ 303, 305 }));
-        BOOST_CHECK((b >> 4) == T({ 1 }));
+        auto const b = T({3, 5});
+        BOOST_CHECK((b << 300) == T({303, 305}));
+        BOOST_CHECK((b >> 4) == T({1}));
         BOOST_CHECK((b >> 300).empty());
         BOOST_CHECK((T() << 3).empty());
 }
@@ -195,18 +192,16 @@ BOOST_AUTO_TEST_CASE(TheShiftsTranslateWhateverTheWidth)
 BOOST_AUTO_TEST_CASE(ItYieldsAscendingKeys)
 {
         auto c = T();
-        test::set::yields_ascending_keys(c);            // empty is trivially ascending
+        test::set::yields_ascending_keys(c); // empty is trivially ascending
 
-        // Inserted high to low and across block boundaries, so the ascending answer is the container's doing and not the insertion order's.
-        for (auto const key : { 70UZ, 64UZ, 63UZ, 9UZ, 1UZ, 0UZ }) {
+        // Inserted high to low and across block boundaries, so the ascending answer is the container's doing.
+        for (auto const key : {70UZ, 64UZ, 63UZ, 9UZ, 1UZ, 0UZ}) {
                 c.insert(key);
         }
         test::set::yields_ascending_keys(c);
 }
 
-// A run-time width has neither std::bitset conversion, and that is the width policy and not an omission: a
-// std::bitset names one N at compile time and a growing set has no single one to mean, so the question a
-// static width answers exactly has no answer here at all. bit_static_set carries the pair; this does not.
+// A run-time width has neither std::bitset conversion: a growing set has no single N to mean.
 BOOST_AUTO_TEST_CASE(AStdBitsetIsNoConversionAtARunTimeWidth)
 {
         static_assert(not std::is_constructible_v<xstd::bit_set, std::bitset<64>>);

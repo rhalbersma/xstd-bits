@@ -19,36 +19,22 @@ BOOST_AUTO_TEST_SUITE(Implicit)
 
 using namespace test;
 
-using Types = std::tuple
-<       std::set<std::size_t>
+using Types = std::tuple<std::set<std::size_t>
 #ifdef TEST_HAS_FLAT_SET
 
-,       std::flat_set<std::size_t>
+                         ,
+                         std::flat_set<std::size_t>
 
 #endif
-,       xstd::basic_bit_static_set<uint16_t, 32>
-,       xstd::basic_bit_static_set<uint16_t, 33>
-,       xstd::basic_bit_static_set<uint16_t, 48>
-,       xstd::basic_bit_static_set<uint32_t, 32>
-,       xstd::basic_bit_static_set<uint32_t, 33>
-,       xstd::basic_bit_static_set<uint32_t, 64>
-,       xstd::basic_bit_static_set<uint32_t, 65>
-,       xstd::basic_bit_static_set<uint32_t, 96>
-,       xstd::basic_bit_static_set<uint64_t, 64>
-,       xstd::basic_bit_static_set<uint64_t, 65>
-,       xstd::basic_bit_static_set<uint64_t, 128>
-,       xstd::basic_bit_static_set<uint64_t, 129>
-,       xstd::basic_bit_static_set<uint64_t, 192>
+                         ,
+                         xstd::basic_bit_static_set<uint16_t, 32>, xstd::basic_bit_static_set<uint16_t, 33>, xstd::basic_bit_static_set<uint16_t, 48>, xstd::basic_bit_static_set<uint32_t, 32>, xstd::basic_bit_static_set<uint32_t, 33>, xstd::basic_bit_static_set<uint32_t, 64>, xstd::basic_bit_static_set<uint32_t, 65>, xstd::basic_bit_static_set<uint32_t, 96>, xstd::basic_bit_static_set<uint64_t, 64>, xstd::basic_bit_static_set<uint64_t, 65>, xstd::basic_bit_static_set<uint64_t, 128>, xstd::basic_bit_static_set<uint64_t, 129>, xstd::basic_bit_static_set<uint64_t, 192>
 #ifdef TEST_HAS_UINT128
 
-,       xstd::basic_bit_static_set<xstd::uint128, 128>
-,       xstd::basic_bit_static_set<xstd::uint128, 129>
-,       xstd::basic_bit_static_set<xstd::uint128, 256>
-,       xstd::basic_bit_static_set<xstd::uint128, 257>
-,       xstd::basic_bit_static_set<xstd::uint128, 384>
+                         ,
+                         xstd::basic_bit_static_set<xstd::uint128, 128>, xstd::basic_bit_static_set<xstd::uint128, 129>, xstd::basic_bit_static_set<xstd::uint128, 256>, xstd::basic_bit_static_set<xstd::uint128, 257>, xstd::basic_bit_static_set<xstd::uint128, 384>
 
 #endif
->;
+                         >;
 
 class Implicit
 {
@@ -57,12 +43,15 @@ class Implicit
 public:
         [[nodiscard]] constexpr explicit(false) Implicit(std::size_t v) noexcept : m_value(v) {}
         // Implicit is the point: this class exists to convert both ways without a cast.
-        [[nodiscard]] constexpr explicit(false) operator std::size_t() const noexcept { return m_value; }  // NOLINT(misc-explicit-constructor)
+        [[nodiscard]] constexpr explicit(false) operator std::size_t() const noexcept // NOLINT(misc-explicit-constructor)
+        {
+                return m_value;
+        }
 };
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheKeysCopyIntoASetOfAnImplicitlyConstructibleType, T, Types)
 {
-        auto const src = T({ 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31 });
+        auto const src = T({2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31});
         std::set<Implicit> dst;
         std::ranges::copy(src, std::inserter(dst, dst.end()));
         BOOST_CHECK_EQUAL_COLLECTIONS(src.begin(), src.end(), dst.begin(), dst.end());

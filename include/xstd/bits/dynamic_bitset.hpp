@@ -20,6 +20,6 @@ using basic_dynamic_bitset = bitset_adaptor<detail::bits::contiguous_bit_vector<
 
 using dynamic_bitset = basic_dynamic_bitset<std::size_t>;
 
-}       // namespace xstd
+} // namespace xstd
 
-#endif  // XSTD_BITS_DYNAMIC_BITSET_HPP
+#endif // XSTD_BITS_DYNAMIC_BITSET_HPP

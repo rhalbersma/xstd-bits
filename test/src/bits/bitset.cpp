@@ -15,7 +15,7 @@
 
 BOOST_AUTO_TEST_SUITE(Bitset)
 
-// Every Block model within one block, the narrow ones across boundaries, and the widest Block across one too; the grading is in test/block_types.hpp.
+// Every Block model within one block, the narrow ones across boundaries, and the widest Block across one too.
 using Types = decltype(std::tuple_cat(
         std::declval<test::graded_extents<xstd::basic_bitset>>(),
         std::declval<test::wide_extents<xstd::basic_bitset>>()));
@@ -25,7 +25,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(IsRegular, T, Types)
         static_assert(std::regular<T>);
 }
 
-// Two orderings at every width: its own is the bit string's, boost's, and the set reading's is reached through the view.
+// Two orderings at every width: its own is the bit string's, and the set reading's is reached through the view.
 BOOST_AUTO_TEST_CASE_TEMPLATE(OrderedInfixAndThroughTheView, T, Types)
 {
         static_assert(std::totally_ordered<T>);
@@ -46,37 +46,37 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(IsNoThrow, T, Types)
 // Trivial in every respect but default construction, which zeroes the bits.
 BOOST_AUTO_TEST_CASE_TEMPLATE(IsTrivial, T, Types)
 {
-        static_assert(    std::is_trivially_destructible_v<T>);
+        static_assert(std::is_trivially_destructible_v<T>);
         static_assert(not std::is_trivially_default_constructible_v<T>);
-        static_assert(    std::is_trivially_copy_constructible_v<T>);
-        static_assert(    std::is_trivially_copy_assignable_v<T>);
-        static_assert(    std::is_trivially_move_constructible_v<T>);
-        static_assert(    std::is_trivially_move_assignable_v<T>);
+        static_assert(std::is_trivially_copy_constructible_v<T>);
+        static_assert(std::is_trivially_copy_assignable_v<T>);
+        static_assert(std::is_trivially_move_constructible_v<T>);
+        static_assert(std::is_trivially_move_assignable_v<T>);
 }
 
-// all() and none() read the blocks pairwise -- the whole ones against the last block's mask -- and their two arms short-circuit, so each needs a value that stops at the first block and one that runs past it.
+// all() and none() read the blocks pairwise and short-circuit, so each needs a value stopping at the first block.
 BOOST_AUTO_TEST_CASE_TEMPLATE(AllAnyAndNoneReadEveryBlock, T, Types)
 {
         auto b = T();
-        BOOST_CHECK(     b.none());
-        BOOST_CHECK(not  b.any() );
+        BOOST_CHECK(b.none());
+        BOOST_CHECK(not b.any());
         BOOST_CHECK_EQUAL(b.all(), b.size() == 0);
 
         b.set();
-        BOOST_CHECK(     b.all() );
-        BOOST_CHECK_EQUAL(b.any(),  b.size() != 0);
+        BOOST_CHECK(b.all());
+        BOOST_CHECK_EQUAL(b.any(), b.size() != 0);
         BOOST_CHECK_EQUAL(b.none(), b.size() == 0);
 
         for (auto i = 0UZ; i < b.size(); ++i) {
                 b.set();
                 b.reset(i);
-                BOOST_CHECK(not b.all() );
-                BOOST_CHECK_EQUAL(b.any(),  b.size() != 1);
+                BOOST_CHECK(not b.all());
+                BOOST_CHECK_EQUAL(b.any(), b.size() != 1);
                 BOOST_CHECK_EQUAL(b.none(), b.size() == 1);
 
                 b.reset();
                 b.set(i);
-                BOOST_CHECK(    b.any() );
+                BOOST_CHECK(b.any());
                 BOOST_CHECK(not b.none());
                 BOOST_CHECK_EQUAL(b.all(), b.size() == 1);
         }

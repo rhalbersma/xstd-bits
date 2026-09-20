@@ -14,17 +14,14 @@
 BOOST_AUTO_TEST_SUITE(Block)
 BOOST_AUTO_TEST_SUITE(TypeTraits)
 
-using Types = std::tuple
-<       uint8_t
-,       uint16_t
-,       uint32_t
-,       uint64_t
+using Types = std::tuple<uint8_t, uint16_t, uint32_t, uint64_t
 #ifdef TEST_HAS_UINT128
 
-,       xstd::uint128
+                         ,
+                         xstd::uint128
 
 #endif
->;
+                         >;
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(IsUnsigned, T, Types)
 {

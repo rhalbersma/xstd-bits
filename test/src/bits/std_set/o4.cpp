@@ -22,28 +22,23 @@ BOOST_AUTO_TEST_SUITE(O4)
 using namespace test;
 using namespace test::set;
 
-using Types = std::tuple
-<       std::set<std::size_t>
+using Types = std::tuple<std::set<std::size_t>
 #ifdef TEST_HAS_FLAT_SET
 
-,       std::flat_set<std::size_t>
+                         ,
+                         std::flat_set<std::size_t>
 
 #endif
-,       xstd::basic_bit_static_set<uint8_t, 0>
-,       xstd::basic_bit_static_set<uint8_t, 8>
-,       xstd::basic_bit_static_set<uint8_t, 9>
-,       xstd::basic_bit_static_set<uint8_t, 17>
-,       xstd::basic_bit_static_set<uint16_t, 17>
-,       xstd::basic_bit_static_set<uint32_t, 17>
-,       xstd::basic_bit_static_set<uint64_t, 17>
+                         ,
+                         xstd::basic_bit_static_set<uint8_t, 0>, xstd::basic_bit_static_set<uint8_t, 8>, xstd::basic_bit_static_set<uint8_t, 9>, xstd::basic_bit_static_set<uint8_t, 17>, xstd::basic_bit_static_set<uint16_t, 17>, xstd::basic_bit_static_set<uint32_t, 17>, xstd::basic_bit_static_set<uint64_t, 17>
 #ifdef TEST_HAS_UINT128
 
-,       xstd::basic_bit_static_set<xstd::uint128, 17>
+                         ,
+                         xstd::basic_bit_static_set<xstd::uint128, 17>
 
 #endif
-,       xstd::basic_bit_set<uint8_t>
-,       xstd::basic_bit_set<uint64_t>
->;
+                         ,
+                         xstd::basic_bit_set<uint8_t>, xstd::basic_bit_set<uint64_t>>;
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(CompareThreeWayHoldsOverEveryDoubletonPair, T, Types)
 {

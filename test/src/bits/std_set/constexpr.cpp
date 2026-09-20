@@ -13,49 +13,14 @@
 BOOST_AUTO_TEST_SUITE(StdSet)
 BOOST_AUTO_TEST_SUITE(Constexpr)
 
-
-using Types = std::tuple
-<       xstd::basic_bit_static_set<uint8_t, 0>
-,       xstd::basic_bit_static_set<uint8_t, 1>
-,       xstd::basic_bit_static_set<uint8_t, 7>
-,       xstd::basic_bit_static_set<uint8_t, 8>
-,       xstd::basic_bit_static_set<uint8_t, 9>
-,       xstd::basic_bit_static_set<uint8_t, 15>
-,       xstd::basic_bit_static_set<uint8_t, 16>
-,       xstd::basic_bit_static_set<uint8_t, 17>
-,       xstd::basic_bit_static_set<uint8_t, 24>
-,       xstd::basic_bit_static_set<uint16_t, 0>
-,       xstd::basic_bit_static_set<uint16_t, 1>
-,       xstd::basic_bit_static_set<uint16_t, 15>
-,       xstd::basic_bit_static_set<uint16_t, 16>
-,       xstd::basic_bit_static_set<uint16_t, 17>
-,       xstd::basic_bit_static_set<uint16_t, 31>
-,       xstd::basic_bit_static_set<uint16_t, 32>
-,       xstd::basic_bit_static_set<uint16_t, 33>
-,       xstd::basic_bit_static_set<uint16_t, 48>
-,       xstd::basic_bit_static_set<uint32_t, 0>
-,       xstd::basic_bit_static_set<uint32_t, 1>
-,       xstd::basic_bit_static_set<uint32_t, 31>
-,       xstd::basic_bit_static_set<uint32_t, 32>
-,       xstd::basic_bit_static_set<uint32_t, 33>
-,       xstd::basic_bit_static_set<uint32_t, 63>
-,       xstd::basic_bit_static_set<uint32_t, 64>
-,       xstd::basic_bit_static_set<uint32_t, 65>
-,       xstd::basic_bit_static_set<uint64_t, 0>
-,       xstd::basic_bit_static_set<uint64_t, 1>
-,       xstd::basic_bit_static_set<uint64_t, 63>
-,       xstd::basic_bit_static_set<uint64_t, 64>
-,       xstd::basic_bit_static_set<uint64_t, 65>
+using Types = std::tuple<xstd::basic_bit_static_set<uint8_t, 0>, xstd::basic_bit_static_set<uint8_t, 1>, xstd::basic_bit_static_set<uint8_t, 7>, xstd::basic_bit_static_set<uint8_t, 8>, xstd::basic_bit_static_set<uint8_t, 9>, xstd::basic_bit_static_set<uint8_t, 15>, xstd::basic_bit_static_set<uint8_t, 16>, xstd::basic_bit_static_set<uint8_t, 17>, xstd::basic_bit_static_set<uint8_t, 24>, xstd::basic_bit_static_set<uint16_t, 0>, xstd::basic_bit_static_set<uint16_t, 1>, xstd::basic_bit_static_set<uint16_t, 15>, xstd::basic_bit_static_set<uint16_t, 16>, xstd::basic_bit_static_set<uint16_t, 17>, xstd::basic_bit_static_set<uint16_t, 31>, xstd::basic_bit_static_set<uint16_t, 32>, xstd::basic_bit_static_set<uint16_t, 33>, xstd::basic_bit_static_set<uint16_t, 48>, xstd::basic_bit_static_set<uint32_t, 0>, xstd::basic_bit_static_set<uint32_t, 1>, xstd::basic_bit_static_set<uint32_t, 31>, xstd::basic_bit_static_set<uint32_t, 32>, xstd::basic_bit_static_set<uint32_t, 33>, xstd::basic_bit_static_set<uint32_t, 63>, xstd::basic_bit_static_set<uint32_t, 64>, xstd::basic_bit_static_set<uint32_t, 65>, xstd::basic_bit_static_set<uint64_t, 0>, xstd::basic_bit_static_set<uint64_t, 1>, xstd::basic_bit_static_set<uint64_t, 63>, xstd::basic_bit_static_set<uint64_t, 64>, xstd::basic_bit_static_set<uint64_t, 65>
 #ifdef TEST_HAS_UINT128
 
-,       xstd::basic_bit_static_set<xstd::uint128, 0>
-,       xstd::basic_bit_static_set<xstd::uint128, 1>
-,       xstd::basic_bit_static_set<xstd::uint128, 127>
-,       xstd::basic_bit_static_set<xstd::uint128, 128>
-,       xstd::basic_bit_static_set<xstd::uint128, 129>
+                         ,
+                         xstd::basic_bit_static_set<xstd::uint128, 0>, xstd::basic_bit_static_set<xstd::uint128, 1>, xstd::basic_bit_static_set<xstd::uint128, 127>, xstd::basic_bit_static_set<xstd::uint128, 128>, xstd::basic_bit_static_set<xstd::uint128, 129>
 
 #endif
->;
+                         >;
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(AnEmptySetIsUsableInAConstantExpression, T, Types)
 {
@@ -74,7 +39,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AFullSetIsUsableInAConstantExpression, T, Types)
         static_assert(b.full());
         static_assert(b.size() == b.max_size());
         static_assert(b.empty() or b.front() == *b.cbegin());
-        static_assert(b.empty() or b.back()  == *b.crbegin());
+        static_assert(b.empty() or b.back() == *b.crbegin());
         // Reflexivity cannot be written without naming the object twice.
         static_assert(b == b);                                   // NOLINT(misc-redundant-expression)
         static_assert((b <=> b) == std::strong_ordering::equal); // NOLINT(misc-redundant-expression)

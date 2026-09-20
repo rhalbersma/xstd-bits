@@ -16,44 +16,42 @@
 
 BOOST_AUTO_TEST_SUITE(Format)
 
-// Nothing here says anything about a container: the two proxies carry a formatter and [format.range.formatter] does the rest.
+// Nothing here says anything about a container: the proxies carry a formatter, [format.range.formatter] the rest.
 
-// [format.range.fmtkind] chooses range_format::set for a range with a key_type, so the set reading arrives at braces without being told.
+// [format.range.fmtkind] chooses range_format::set for a range with a key_type, so the set reading arrives at braces.
 BOOST_AUTO_TEST_CASE(TheSetReadingFormatsInBraces)
 {
         auto d = xstd::bit_set();
-        d.insert(1UZ); d.insert(3UZ); d.insert(5UZ);
+        d.insert(1UZ);
+        d.insert(3UZ);
+        d.insert(5UZ);
         BOOST_CHECK_EQUAL(std::format("{}", d), "{1, 3, 5}");
 
         auto s = xstd::bit_static_set<8>();
-        s.insert(2UZ); s.insert(7UZ);
+        s.insert(2UZ);
+        s.insert(7UZ);
         BOOST_CHECK_EQUAL(std::format("{}", s), "{2, 7}");
 
         BOOST_CHECK_EQUAL(std::format("{}", xstd::bit_set()), "{}");
 }
 
-// And range_format::sequence otherwise, so the sequence reading arrives at brackets and prints every position, clear ones included, which is the whole difference between the two readings.
+// And range_format::sequence otherwise, so the sequence reading prints every position, clear ones included.
 BOOST_AUTO_TEST_CASE(TheSequenceReadingFormatsInBrackets)
 {
         auto v = xstd::bit_vector(4UZ);
         v[1] = true;
         BOOST_CHECK_EQUAL(std::format("{}", v), "[false, true, false, false]");
 
-        // This line does double duty now that bit_array carries [array.tuple]: a std::tuple_size specialization is
-        // what makes a type tuple-like, and the question is whether that diverts std::format. It does not, and the
-        // brackets here are the assertion of it. [format.tuple]/1 provides the tuple formatter "for each of pair and
-        // tuple", naming the two class templates rather than admitting tuple-like types, and [format.range.fmtkind]
-        // never asks tuple_size_v<R> -- it asks R::key_type, and tuple_size_v of the REFERENCE type for the map case
-        // alone. std::array is the proof by example: tuple-like, a range, and it prints as a range.
+        // A tuple_size specialization does not divert std::format: these brackets are the assertion of it.
         auto a = xstd::bit_array<4>();
         a[2] = true;
         BOOST_CHECK_EQUAL(std::format("{}", a), "[false, false, true, false]");
-        BOOST_CHECK_EQUAL(std::format("{}", std::array<bool, 2>{ false, true }), "[false, true]");
+        BOOST_CHECK_EQUAL(std::format("{}", std::array<bool, 2>{false, true}), "[false, true]");
 
         BOOST_CHECK_EQUAL(std::format("{}", xstd::bit_vector()), "[]");
 }
 
-// A view is a range over the same proxies, so it formats as its reading does and never as the owner's. The owner is a bitset here, committed to neither reading and so the one owner both views may refer into.
+// A view formats as its reading does and never as the owner's, the owner being a bitset committed to neither.
 BOOST_AUTO_TEST_CASE(TheViewsFormatAsTheirReading)
 {
         auto b = xstd::dynamic_bitset(4UZ);
@@ -61,14 +59,16 @@ BOOST_AUTO_TEST_CASE(TheViewsFormatAsTheirReading)
         b.set(3UZ);
 
         BOOST_CHECK_EQUAL(std::format("{}", xstd::bit_set_view(b)), "{1, 3}");
-        BOOST_CHECK_EQUAL(std::format("{}", xstd::bit_span(b)),     "[false, true, false, true]");
+        BOOST_CHECK_EQUAL(std::format("{}", xstd::bit_span(b)), "[false, true, false, true]");
 }
 
-// Deriving from formatter<size_t> and formatter<bool> rather than writing parse() is what keeps the spec, so the nested spec a range formatter forwards reaches the underlying one intact.
+// Deriving from formatter<size_t> and formatter<bool> keeps the spec, so a forwarded nested spec arrives intact.
 BOOST_AUTO_TEST_CASE(TheNestedSpecReachesTheUnderlyingFormatter)
 {
         auto d = xstd::bit_set();
-        d.insert(1UZ); d.insert(3UZ); d.insert(5UZ);
+        d.insert(1UZ);
+        d.insert(3UZ);
+        d.insert(5UZ);
         BOOST_CHECK_EQUAL(std::format("{::#x}", d), "{0x1, 0x3, 0x5}");
 
         auto v = xstd::bit_vector(4UZ);
@@ -81,14 +81,14 @@ BOOST_AUTO_TEST_CASE(AProxyFormatsAsItsValue)
 {
         auto d = xstd::bit_set();
         d.insert(42UZ);
-        BOOST_CHECK_EQUAL(std::format("{}",    *d.begin()), "42");
+        BOOST_CHECK_EQUAL(std::format("{}", *d.begin()), "42");
         BOOST_CHECK_EQUAL(std::format("{:>4}", *d.begin()), "  42");
 
         auto v = xstd::bit_vector(2UZ);
         v[1] = true;
-        BOOST_CHECK_EQUAL(std::format("{}",    v[1]), "true");
+        BOOST_CHECK_EQUAL(std::format("{}", v[1]), "true");
         BOOST_CHECK_EQUAL(std::format("{:>7}", v[0]), "  false");
-        BOOST_CHECK_EQUAL(std::format("{:d}",  v[1]), "1");
+        BOOST_CHECK_EQUAL(std::format("{:d}", v[1]), "1");
 }
 
 BOOST_AUTO_TEST_SUITE_END()

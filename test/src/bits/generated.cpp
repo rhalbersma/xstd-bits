@@ -16,9 +16,12 @@ namespace {
 
 inline constexpr auto N = 128UZ;
 
-template<class T> concept has_swap_member    = requires (T& a, T& b) { a.swap(b); };
-template<class T> concept has_swap_free      = requires (T& a, T& b) { swap(a, b); };
-template<class T> concept has_get_allocator  = requires (T const& a) { a.get_allocator(); };
+template<class T>
+concept has_swap_member = requires (T& a, T& b) { a.swap(b); };
+template<class T>
+concept has_swap_free = requires (T& a, T& b) { swap(a, b); };
+template<class T>
+concept has_get_allocator = requires (T const& a) { a.get_allocator(); };
 
 // Every cell answers the same to all of these; only the allocator differs, and by column.
 template<class T>
@@ -42,25 +45,35 @@ constexpr auto is_regular_container()
         return true;
 }
 
-// The allocator is the one answer that varies, and it varies by column, not by row: a storage that allocates has one to show, and a static width has none.
-template<class T> constexpr auto allocator_aware()     -> bool { static_assert(    has_get_allocator<T>); return true; }
-template<class T> constexpr auto not_allocator_aware() -> bool { static_assert(not has_get_allocator<T>); return true; }
+// The allocator varies by column, not by row: a storage that allocates has one, a static width has none.
+template<class T> constexpr auto allocator_aware()
+        -> bool
+{
+        static_assert(has_get_allocator<T>);
+        return true;
+}
+template<class T> constexpr auto not_allocator_aware()
+        -> bool
+{
+        static_assert(not has_get_allocator<T>);
+        return true;
+}
 
-}       // namespace
+} // namespace
 
 BOOST_AUTO_TEST_CASE(EveryCellIsARegularContainer)
 {
         static_assert(is_regular_container<xstd::bit_static_set<N>>());
-        static_assert(is_regular_container<xstd::bit_set              >());
-        static_assert(is_regular_container<xstd::bit_array<N>         >());
-        static_assert(is_regular_container<xstd::bit_vector           >());
-        static_assert(is_regular_container<xstd::bitset<N>            >());
-        static_assert(is_regular_container<xstd::dynamic_bitset       >());
+        static_assert(is_regular_container<xstd::bit_set>());
+        static_assert(is_regular_container<xstd::bit_array<N>>());
+        static_assert(is_regular_container<xstd::bit_vector>());
+        static_assert(is_regular_container<xstd::bitset<N>>());
+        static_assert(is_regular_container<xstd::dynamic_bitset>());
 #ifdef __cpp_lib_inplace_vector
 
-        static_assert(is_regular_container<xstd::bit_inplace_set<N>   >());
+        static_assert(is_regular_container<xstd::bit_inplace_set<N>>());
         static_assert(is_regular_container<xstd::bit_inplace_vector<N>>());
-        static_assert(is_regular_container<xstd::inplace_bitset<N>    >());
+        static_assert(is_regular_container<xstd::inplace_bitset<N>>());
 
 #endif
         BOOST_CHECK(true);
@@ -69,27 +82,27 @@ BOOST_AUTO_TEST_CASE(EveryCellIsARegularContainer)
 BOOST_AUTO_TEST_CASE(TheAllocatorFollowsTheColumnAndNotTheRow)
 {
         // The dynamic column allocates, so all three rows of it answer.
-        static_assert(allocator_aware<xstd::bit_set        >());
-        static_assert(allocator_aware<xstd::bit_vector     >());
-        static_assert(allocator_aware<xstd::dynamic_bitset >());
+        static_assert(allocator_aware<xstd::bit_set>());
+        static_assert(allocator_aware<xstd::bit_vector>());
+        static_assert(allocator_aware<xstd::dynamic_bitset>());
 
         // The static column is a std::array, which has no allocator for any row to show.
         static_assert(not_allocator_aware<xstd::bit_static_set<N>>());
-        static_assert(not_allocator_aware<xstd::bit_array<N>     >());
-        static_assert(not_allocator_aware<xstd::bitset<N>        >());
+        static_assert(not_allocator_aware<xstd::bit_array<N>>());
+        static_assert(not_allocator_aware<xstd::bitset<N>>());
 
         // The inplace column holds its blocks inline, so it has none either.
 #ifdef __cpp_lib_inplace_vector
 
-        static_assert(not_allocator_aware<xstd::bit_inplace_set<N>   >());
+        static_assert(not_allocator_aware<xstd::bit_inplace_set<N>>());
         static_assert(not_allocator_aware<xstd::bit_inplace_vector<N>>());
-        static_assert(not_allocator_aware<xstd::inplace_bitset<N>    >());
+        static_assert(not_allocator_aware<xstd::inplace_bitset<N>>());
 
 #endif
         BOOST_CHECK(true);
 }
 
-// A swap that fell back on the implicit moves would still compile every assertion above, so the exchange is checked to move the values.
+// A swap falling back on the implicit moves would still compile every assertion above, so moves are checked.
 BOOST_AUTO_TEST_CASE(SwapExchangesTheValues)
 {
         auto a = xstd::bit_static_set<N>();

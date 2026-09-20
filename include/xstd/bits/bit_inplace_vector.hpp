@@ -26,8 +26,8 @@ using basic_bit_inplace_vector = sequence_adaptor<detail::bits::contiguous_bit_i
 template<std::size_t N>
 using bit_inplace_vector = basic_bit_inplace_vector<std::size_t, N>;
 
-}       // namespace xstd
+} // namespace xstd
 
-#endif  // __cpp_lib_inplace_vector
+#endif // __cpp_lib_inplace_vector
 
-#endif  // XSTD_BITS_BIT_INPLACE_VECTOR_HPP
+#endif // XSTD_BITS_BIT_INPLACE_VECTOR_HPP

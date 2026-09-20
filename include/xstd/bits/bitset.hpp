@@ -22,7 +22,7 @@ using basic_bitset = bitset_adaptor<detail::bits::contiguous_bit_array<Block, N>
 template<std::size_t N>
 using bitset = basic_bitset<std::size_t, N>;
 
-// The width rounded up to whole blocks, as the other two static names offer: no unused tail, so every block is the value.
+// The width rounded up to whole blocks: no unused tail, so every block is the value.
 namespace aligned {
 
 template<xstd::unsigned_integer Block, std::size_t N>
@@ -31,7 +31,7 @@ using basic_bitset = xstd::basic_bitset<Block, xstd::align_up(N, static_cast<std
 template<std::size_t N>
 using bitset = basic_bitset<std::size_t, N>;
 
-}       // namespace aligned
-}       // namespace xstd
+} // namespace aligned
+} // namespace xstd
 
 #endif // XSTD_BITS_BITSET_HPP

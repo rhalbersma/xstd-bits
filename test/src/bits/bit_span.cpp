@@ -32,43 +32,44 @@ template<class T>
 using view_of = decltype(xstd::bit_span(std::declval<T&>()));
 
 // Named rather than a lambda, so the conversion happens at a call boundary the way a caller would meet it.
-constexpr auto takes_a_span(xstd::bit_span<Blocks> v) noexcept -> bool
+constexpr auto takes_a_span(xstd::bit_span<Blocks> v) noexcept
+        -> bool
 {
         return v[3];
 }
 
-}  // namespace
+} // namespace
 
 // The view is the referring adaptor under another name, and over an owner it refers into the storage the owner wraps.
 BOOST_AUTO_TEST_CASE(TheViewIsTheReferringAdaptor)
 {
         static_assert(std::derived_from<xstd::bit_span<Blocks>, xstd::sequence_adaptor<Blocks, xstd::ownership::refers, false>>);
-        static_assert(std::same_as<view_of<Blocks>,               xstd::bit_span<Blocks>>);
-        static_assert(std::same_as<view_of<Blocks const>,         xstd::bit_span<Blocks const>>);
-        static_assert(std::same_as<view_of<xstd::bitset<8>>,      xstd::bit_span<xstd::detail::bits::contiguous_bit_array<std::size_t, 8>>>);
-        static_assert(std::same_as<view_of<xstd::bit_array<8>>,   xstd::bit_span<xstd::detail::bits::contiguous_bit_array<std::size_t, 8>>>);
+        static_assert(std::same_as<view_of<Blocks>, xstd::bit_span<Blocks>>);
+        static_assert(std::same_as<view_of<Blocks const>, xstd::bit_span<Blocks const>>);
+        static_assert(std::same_as<view_of<xstd::bitset<8>>, xstd::bit_span<xstd::detail::bits::contiguous_bit_array<std::size_t, 8>>>);
+        static_assert(std::same_as<view_of<xstd::bit_array<8>>, xstd::bit_span<xstd::detail::bits::contiguous_bit_array<std::size_t, 8>>>);
 }
 
-// A bitset is committed to neither reading, a set owner to the set one; over the very same storage, only the first admits a span.
+// A bitset is committed to neither reading and a set owner to the set one, so only the first admits a span.
 BOOST_AUTO_TEST_CASE(TheReadingsDoNotMix)
 {
         static_assert(std::same_as<decltype(xstd::bit_set_view(std::declval<xstd::bit_static_set<8>&>())), xstd::bit_set_view<Blocks>>);
-        static_assert(    std::constructible_from<xstd::bit_span<Blocks>, xstd::bitset<8>&>);
+        static_assert(std::constructible_from<xstd::bit_span<Blocks>, xstd::bitset<8>&>);
         static_assert(not std::constructible_from<xstd::bit_span<Blocks>, xstd::bit_static_set<8>&>);
 }
 
-// Viewing an owner is implicit, viewing raw storage is not: the first asserts nothing the owner does not already carry, which is where span draws the line -- its array and C-array constructors are implicit even at a static extent, while the ones claiming a size their source cannot prove are explicit. An rvalue owner still does not convert, the parameter being Owner&.
+// Viewing an owner is implicit and viewing raw storage is not, which is where span draws the line.
 BOOST_AUTO_TEST_CASE(ViewingAnOwnerIsImplicit)
 {
-        static_assert(std::convertible_to<xstd::bitset<8>&,        xstd::bit_span<Blocks>>);
-        static_assert(std::convertible_to<xstd::bit_array<8>&,     xstd::bit_span<Blocks>>);
-        static_assert(std::convertible_to<xstd::bitset<8> const&,  xstd::bit_span<Blocks const>>);
+        static_assert(std::convertible_to<xstd::bitset<8>&, xstd::bit_span<Blocks>>);
+        static_assert(std::convertible_to<xstd::bit_array<8>&, xstd::bit_span<Blocks>>);
+        static_assert(std::convertible_to<xstd::bitset<8> const&, xstd::bit_span<Blocks const>>);
         static_assert(not std::convertible_to<xstd::bitset<8> const&, xstd::bit_span<Blocks>>);
 
-        static_assert(not std::convertible_to<xstd::bitset<8>,     xstd::bit_span<Blocks>>);
+        static_assert(not std::convertible_to<xstd::bitset<8>, xstd::bit_span<Blocks>>);
         static_assert(not std::convertible_to<xstd::bit_array<8>&&, xstd::bit_span<Blocks>>);
 
-        static_assert(    std::constructible_from<xstd::bit_span<Blocks>, Blocks&>);
+        static_assert(std::constructible_from<xstd::bit_span<Blocks>, Blocks&>);
         static_assert(not std::convertible_to<Blocks&, xstd::bit_span<Blocks>>);
 
         auto a = xstd::bit_array<8>();
@@ -95,9 +96,12 @@ BOOST_AUTO_TEST_CASE(TheSequenceReadingIsTheArrayOfBools)
         constexpr auto N = 8UZ;
         for (auto i = 0UZ; i < (1UZ << N); ++i) {
                 auto packed = xstd::bitset<N>();
-                auto plain  = std::array<bool, N>{};
+                auto plain = std::array<bool, N>{};
                 for (auto k = 0UZ; k < N; ++k) {
-                        if ((i >> k & 1UZ) != 0UZ) { packed.set(k); plain[k] = true; }
+                        if ((i >> k & 1UZ) != 0UZ) {
+                                packed.set(k);
+                                plain[k] = true;
+                        }
                 }
 
                 auto const view = xstd::bit_span(packed);
@@ -121,7 +125,7 @@ BOOST_AUTO_TEST_CASE(WritingThroughTheViewWritesTheBits)
         BOOST_CHECK(packed.none());
 }
 
-// The same reading over the type this library packs, so bit_array's own operator[] and the view agree position by position.
+// The same reading over the type this library packs, so bit_array's operator[] and the view agree position by position.
 BOOST_AUTO_TEST_CASE(APackedArrayAgreesWithItsOwnView)
 {
         auto packed = xstd::basic_bit_array<unsigned char, 8>{};

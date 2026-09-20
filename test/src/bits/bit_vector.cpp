@@ -67,8 +67,7 @@ BOOST_AUTO_TEST_CASE(ItAnswersEveryLineOfStdVectorBool)
         static_assert(std::same_as<T::allocator_type, std::allocator<std::uint8_t>>);
 }
 
-// What the checklist names and never runs. A requires-expression proves a member exists; only a call proves it works,
-// and these three are exactly the ones this branch added to [vector.bool]'s surface.
+// What the checklist names and never runs: a requires-expression proves a member exists, only a call proves it works.
 BOOST_AUTO_TEST_CASE(TheProxyFlipsAndTheEmptyArgumentListPushesFalse)
 {
         auto v = xstd::bit_vector(4UZ);
@@ -80,8 +79,7 @@ BOOST_AUTO_TEST_CASE(TheProxyFlipsAndTheEmptyArgumentListPushesFalse)
         BOOST_CHECK(v[0] == true);
         BOOST_CHECK(v[1] == false);
 
-        // Variadic, so value-initialization is one of the argument lists it takes: std::vector<bool>().emplace_back()
-        // pushes a false and so must this.
+        // Variadic, so value-initialization is one of the argument lists it takes, and it pushes a false.
         auto const n = v.size();
         BOOST_CHECK(v.emplace_back() == false);
         BOOST_CHECK_EQUAL(v.size(), n + 1UZ);
@@ -103,17 +101,17 @@ BOOST_AUTO_TEST_CASE(ItIsBuiltLikeAStdVector)
         BOOST_CHECK(std::ranges::equal(T(5, false), std::vector<bool>(5, false)));
         BOOST_CHECK(std::ranges::equal(T(pattern.begin(), pattern.end()), model));
         BOOST_CHECK(std::ranges::equal(T(std::from_range, pattern), model));
-        BOOST_CHECK(std::ranges::equal(T{ true, false, true }, std::vector<bool>{ true, false, true }));
+        BOOST_CHECK(std::ranges::equal(T{true, false, true}, std::vector<bool>{true, false, true}));
 
         auto v = T();
-        v = { false, true };
-        BOOST_CHECK(std::ranges::equal(v, std::vector<bool>{ false, true }));
+        v = {false, true};
+        BOOST_CHECK(std::ranges::equal(v, std::vector<bool>{false, true}));
         v.assign(3, true);
         BOOST_CHECK(std::ranges::equal(v, std::vector<bool>(3, true)));
         v.assign(pattern.begin(), pattern.end());
         BOOST_CHECK(std::ranges::equal(v, model));
-        v.assign({ true });
-        BOOST_CHECK(std::ranges::equal(v, std::vector<bool>{ true }));
+        v.assign({true});
+        BOOST_CHECK(std::ranges::equal(v, std::vector<bool>{true}));
 }
 
 // The allocator forms, each against the one without: the allocator is a construction argument, never part of the value.
@@ -131,19 +129,19 @@ BOOST_AUTO_TEST_CASE(ItIsBuiltWithAnAllocatorLikeAStdVector)
         BOOST_CHECK(T(pattern.begin(), pattern.end(), alloc) == model);
         BOOST_CHECK(T(std::from_range, pattern, alloc) == model);
         BOOST_CHECK(T(model, alloc) == model);
-        BOOST_CHECK(T({ true, false, true }, alloc) == T({ true, false, true }));
+        BOOST_CHECK(T({true, false, true}, alloc) == T({true, false, true}));
 
         auto source = model;
         auto const moved = T(std::move(source), alloc);
         BOOST_CHECK(moved == model);
-        BOOST_CHECK(source.empty());  // NOLINT(bugprone-use-after-move,hicpp-invalid-access-moved): the moved-from is empty by contract, which is the check.
+        BOOST_CHECK(source.empty()); // NOLINT(bugprone-use-after-move,hicpp-invalid-access-moved): the moved-from is empty by contract, which is the check.
 }
 
 // [vector.erasure] against the model, erasing a value and then a predicate.
 BOOST_AUTO_TEST_CASE(ErasureIsTheStdVectorsOwn)
 {
-        auto v = T{ true, false, true, true, false, false, true };
-        auto m = std::vector<bool>{ true, false, true, true, false, false, true };
+        auto v = T{true, false, true, true, false, false, true};
+        auto m = std::vector<bool>{true, false, true, true, false, false, true};
         BOOST_CHECK_EQUAL(erase(v, true), std::erase(m, true));
         BOOST_CHECK(std::ranges::equal(v, m));
         BOOST_CHECK_EQUAL(erase_if(v, [](bool x) -> bool { return not x; }), std::erase_if(m, [](bool x) -> bool { return not x; }));
@@ -178,7 +176,7 @@ BOOST_AUTO_TEST_CASE(ItGrowsLikeAStdVector)
         v.shrink_to_fit();
         BOOST_CHECK_GE(v.capacity(), v.size());
 
-        // A std::vector<bool>'s ceiling, which is what a distance can name and not what the blocks could hold: whole blocks no wider than PTRDIFF_MAX, where the storage's own bound is whole blocks no wider than SIZE_MAX.
+        // A std::vector<bool>'s ceiling is what a distance can name, where the storage's own bound is whole blocks.
         BOOST_CHECK_EQUAL(v.max_size(), xstd::detail::bits::contiguous_bit_vector<std::uint8_t>::max_addressable_width);
         BOOST_CHECK_LT(v.max_size(), xstd::detail::bits::contiguous_bit_vector<std::uint8_t>().max_size());
         BOOST_CHECK_LE(v.max_size(), static_cast<std::size_t>(std::numeric_limits<std::ptrdiff_t>::max()));
@@ -200,15 +198,7 @@ auto model_of(R const& r)
         return std::vector<bool>(r.begin(), r.end());
 }
 
-// The ceiling row for row against the counterpart, asked of both rather than claimed of one. Over blocks of the
-// same width as a std::vector<bool>'s word, which is what xstd::bit_vector is, so the two are comparable at all.
-//
-// The counterpart here is a SPECIFICATION and not an implementation, and its implementations disagree: measured
-// on one machine, libstdc++ 14 answers (PTRDIFF_MAX / 64) * 64 and libc++ 20 answers a bare PTRDIFF_MAX, sixty-
-// three apart. So there is no number to assert. What holds of every one of them is asserted instead, and it is
-// what [container.reqmts] actually promises -- a bound no wider than a difference_type can name, and
-// std::length_error above it -- plus the one relation that orders the two: a whole number of 64-bit words is the
-// SMALLEST such bound any word width can produce, so ours is never the larger claim.
+// The ceiling row for row, over blocks as wide as a std::vector<bool>'s word so the two are comparable at all.
 BOOST_AUTO_TEST_CASE(TheCeilingIsStdVectorBoolsRowForRow)
 {
         constexpr auto pmax = static_cast<std::size_t>(std::numeric_limits<std::ptrdiff_t>::max());
@@ -221,15 +211,11 @@ BOOST_AUTO_TEST_CASE(TheCeilingIsStdVectorBoolsRowForRow)
         BOOST_CHECK_LE(v.max_size(), m.max_size());
         BOOST_CHECK_EQUAL(v.max_size() % 64UZ, 0UZ);
 
-        // One past each one's own bound is std::length_error on both, and neither asks for memory first: this is
-        // the row [container.reqmts] fixes, and the reason it cannot wrap is that a bound at or below PTRDIFF_MAX
-        // leaves room to add one.
+        // One past each bound is std::length_error on both, and neither asks for memory first.
         BOOST_CHECK_THROW(v.resize(v.max_size() + 1UZ), std::length_error);
         BOOST_CHECK_THROW(m.resize(m.max_size() + 1UZ), std::length_error);
 
-        // And one past what any distance can name, which is the row this reading used to get wrong: it answered
-        // std::bad_alloc here, having taken the storage's wider ceiling, where a std::vector<bool> answers
-        // std::length_error. Roughly 2^63 sizes with the wrong exception, and this is the assertion that closes it.
+        // And one past what any distance can name, where a std::vector<bool> answers std::length_error.
         BOOST_CHECK_THROW(v.resize(pmax + 1UZ), std::length_error);
         BOOST_CHECK_THROW(m.resize(pmax + 1UZ), std::length_error);
 
@@ -239,10 +225,7 @@ BOOST_AUTO_TEST_CASE(TheCeilingIsStdVectorBoolsRowForRow)
 
 #ifndef TEST_HAS_ADDRESS_SANITIZER
 
-        // The last row asks for the memory rather than refusing, so it is the allocator that answers, and under a
-        // sanitizer the answer is an abort rather than an exception (test/sanitizer.hpp). Ours only: at their own
-        // max_size() the two libraries measured do not agree with each other either -- libstdc++ reaches the
-        // allocator, libc++ throws std::length_error at a size it just reported -- so there is nothing to compare.
+        // The last row asks for the memory, so the allocator answers; ours only, the two libraries not agreeing here.
         BOOST_CHECK_THROW(v.resize(v.max_size()), std::bad_alloc);
         BOOST_CHECK(v.empty());
 
@@ -268,20 +251,20 @@ auto pattern(std::size_t n)
         return v;
 }
 
-}       // namespace
+} // namespace
 
-// append_range's first tier: another sequence read by block, at every alignment the source and the destination can have.
+// append_range's first tier: another sequence read by block, at every alignment source and destination can have.
 BOOST_AUTO_TEST_CASE(AppendRangeBlitsFromASequenceAtAnyAlignment)
 {
         auto const source = T(std::from_range, pattern(50));
         auto const view = xstd::bit_span(source);
 
-        for (auto const start : { 0UZ, 1UZ, 7UZ, 8UZ, 9UZ, 16UZ, 40UZ, 43UZ }) {
-                for (auto const count : { 0UZ, 1UZ, 7UZ, 8UZ, 9UZ, 17UZ, 50UZ - start }) {
+        for (auto const start : {0UZ, 1UZ, 7UZ, 8UZ, 9UZ, 16UZ, 40UZ, 43UZ}) {
+                for (auto const count : {0UZ, 1UZ, 7UZ, 8UZ, 9UZ, 17UZ, 50UZ - start}) {
                         if (start + count > 50UZ) {
                                 continue;
                         }
-                        for (auto const prefix : { 0UZ, 1UZ, 8UZ, 11UZ }) {
+                        for (auto const prefix : {0UZ, 1UZ, 8UZ, 11UZ}) {
                                 auto v = T(std::from_range, pattern(prefix));
                                 auto m = model_of(v);
                                 auto const window = view.subspan(start, count);
@@ -319,8 +302,8 @@ BOOST_AUTO_TEST_CASE(AppendRangeBlitsFromASequenceAtAnyAlignment)
 // append_range's second tier: any range of bools, packed a word at a time, the last word trimmed.
 BOOST_AUTO_TEST_CASE(AppendRangePacksAnyRangeOfBools)
 {
-        for (auto const prefix : { 0UZ, 3UZ, 8UZ }) {
-                for (auto const count : { 0UZ, 1UZ, 8UZ, 9UZ, 16UZ, 23UZ }) {
+        for (auto const prefix : {0UZ, 3UZ, 8UZ}) {
+                for (auto const count : {0UZ, 1UZ, 8UZ, 9UZ, 16UZ, 23UZ}) {
                         auto v = T(std::from_range, pattern(prefix));
                         auto m = model_of(v);
                         auto const more = pattern(count);
@@ -336,7 +319,7 @@ BOOST_AUTO_TEST_CASE(AppendRangePacksAnyRangeOfBools)
                 }
         }
 
-        auto v = T{ true };
+        auto v = T{true};
         v.assign_range(pattern(20));
         BOOST_CHECK(std::ranges::equal(v, pattern(20)));
 }
@@ -358,12 +341,12 @@ auto same_offset_and_contents(V const& v, typename V::iterator vit, M const& m, 
         BOOST_CHECK(std::ranges::equal(v, m));
 }
 
-}       // namespace
+} // namespace
 
 // insert's single-value shapes and emplace, rebuilt around the position, against the model.
 BOOST_AUTO_TEST_CASE(InsertingValuesRebuildsAsAStdVectorDoes)
 {
-        for (auto const pos : { 0UZ, 1UZ, 8UZ, 13UZ, 20UZ }) {
+        for (auto const pos : {0UZ, 1UZ, 8UZ, 13UZ, 20UZ}) {
                 auto v = T(std::from_range, pattern(20));
                 auto m = pattern(20);
 
@@ -376,18 +359,18 @@ BOOST_AUTO_TEST_CASE(InsertingValuesRebuildsAsAStdVectorDoes)
 // insert's range shapes and insert_range, one of them a window into the sequence itself.
 BOOST_AUTO_TEST_CASE(InsertingRangesRebuildsAsAStdVectorDoes)
 {
-        for (auto const pos : { 0UZ, 1UZ, 8UZ, 13UZ, 20UZ }) {
+        for (auto const pos : {0UZ, 1UZ, 8UZ, 13UZ, 20UZ}) {
                 auto v = T(std::from_range, pattern(20));
                 auto m = pattern(20);
 
-                // A range shorter than a word, one of exactly a word, and one that spills into a second: the packing tier's three endings.
+                // Shorter than a word, exactly a word, and spilling into a second: the packing tier's three endings.
                 auto const more = pattern(11);
                 same_offset_and_contents(v, v.insert(at(v, pos), more.begin(), more.end()), m, m.insert(at(m, pos), more.begin(), more.end()));
                 auto const word = pattern(8);
                 same_offset_and_contents(v, v.insert(at(v, pos), word.begin(), word.end()), m, m.insert(at(m, pos), word.begin(), word.end()));
-                same_offset_and_contents(v, v.insert(at(v, pos), { true, true, false }), m, m.insert(at(m, pos), { true, true, false }));
-                same_offset_and_contents(v, v.insert(at(v, pos), { true, false, true, false, true, false, true, false }), m, m.insert(at(m, pos), { true, false, true, false, true, false, true, false }));
-                same_offset_and_contents(v, v.insert(at(v, pos), { true, false, true, false, true, false, true, false, true }), m, m.insert(at(m, pos), { true, false, true, false, true, false, true, false, true }));
+                same_offset_and_contents(v, v.insert(at(v, pos), {true, true, false}), m, m.insert(at(m, pos), {true, true, false}));
+                same_offset_and_contents(v, v.insert(at(v, pos), {true, false, true, false, true, false, true, false}), m, m.insert(at(m, pos), {true, false, true, false, true, false, true, false}));
+                same_offset_and_contents(v, v.insert(at(v, pos), {true, false, true, false, true, false, true, false, true}), m, m.insert(at(m, pos), {true, false, true, false, true, false, true, false, true}));
                 auto const middle = std::vector<bool>(m.begin() + 2, m.begin() + 11);
                 same_offset_and_contents(v, v.insert_range(at(v, pos), xstd::bit_span(v).subspan(2, 9)), m, m.insert(at(m, pos), middle.begin(), middle.end()));
         }
@@ -396,7 +379,7 @@ BOOST_AUTO_TEST_CASE(InsertingRangesRebuildsAsAStdVectorDoes)
 // erase in both shapes, an empty range included.
 BOOST_AUTO_TEST_CASE(ErasingRebuildsAsAStdVectorDoes)
 {
-        for (auto const pos : { 0UZ, 1UZ, 8UZ, 13UZ, 19UZ }) {
+        for (auto const pos : {0UZ, 1UZ, 8UZ, 13UZ, 19UZ}) {
                 auto v = T(std::from_range, pattern(40));
                 auto m = pattern(40);
 
@@ -415,7 +398,7 @@ BOOST_AUTO_TEST_CASE(FlipAndSwapAreStdVectorBools)
         m.flip();
         BOOST_CHECK(std::ranges::equal(v, m));
 
-        // Ours is [vector.bool]'s static swap, which the clause still has; the model's own is deprecated by C++26 (LWG-3638, P3612R1) and MSVC 2026 says so under /WX, so the model's two bits are exchanged directly.
+        // Ours is [vector.bool]'s static swap; the model's own is deprecated by C++26 (LWG-3638, P3612R1).
         T::swap(v[0], v[1]);
         auto const m0 = static_cast<bool>(m[0]);
         m[0] = static_cast<bool>(m[1]);
@@ -427,15 +410,15 @@ BOOST_AUTO_TEST_CASE(FlipAndSwapAreStdVectorBools)
         m.flip();
         BOOST_CHECK(std::ranges::equal(v, m));
         static_assert(not can_flip<decltype(xstd::bit_span(v).first(2))>);
-        static_assert(    can_flip<decltype(xstd::bit_span(v))>);
+        static_assert(can_flip<decltype(xstd::bit_span(v))>);
 }
 
 // The owner hashes as std::vector<bool> does, equal values equal; the view over it no more than std::span does.
 BOOST_AUTO_TEST_CASE(TheOwnerHashesAndTheViewDoesNot)
 {
         auto const h = std::hash<T>();
-        BOOST_CHECK_EQUAL(h(T({ true, false, true })), h(T({ true, false, true })));
-        BOOST_CHECK(h(T({ true, false, true })) != h(T({ true, false, true, false })));
+        BOOST_CHECK_EQUAL(h(T({true, false, true})), h(T({true, false, true})));
+        BOOST_CHECK(h(T({true, false, true})) != h(T({true, false, true, false})));
         BOOST_CHECK(h(T()) != h(T(1)));
         static_assert(not std::is_default_constructible_v<std::hash<xstd::bit_span<xstd::detail::bits::contiguous_bit_vector<std::uint8_t>>>>);
 }
@@ -449,9 +432,9 @@ BOOST_AUTO_TEST_CASE(AViewOverItCannotGrowIt)
         BOOST_CHECK(static_cast<bool>(v[2]));
 
         static_assert(not can_grow<decltype(s)>);
-        static_assert(    can_grow<T>);
+        static_assert(can_grow<T>);
         static_assert(not has_range_members<decltype(s)>);
-        static_assert(    has_range_members<T>);
+        static_assert(has_range_members<T>);
 }
 
 // Every position, densely, agreeing with the subscript -- and not a contiguous range, which no proxy sequence can be.

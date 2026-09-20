@@ -31,7 +31,7 @@ using basic_bit_array = xstd::basic_bit_array<Block, xstd::align_up(N, static_ca
 template<std::size_t N>
 using bit_array = basic_bit_array<std::size_t, N>;
 
-}       // namespace aligned
-}       // namespace xstd
+} // namespace aligned
+} // namespace xstd
 
-#endif  // XSTD_BITS_BIT_ARRAY_HPP
+#endif // XSTD_BITS_BIT_ARRAY_HPP
