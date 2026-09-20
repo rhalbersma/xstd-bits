@@ -4086,3 +4086,24 @@ at every width, which is what the stronger guarantee costs.
 A `back_inserter` is the other output shape and gets no rung: it costs a `push_back` per block, 320ns
 against this row's 36ns, and what that measures is a vector growing rather than the interface
 answering.
+
+### Why the array checklists spell `tuple_size<C>::value`
+
+`modernize-type-traits` asks for `tuple_size_v<C>` and the checklists in
+`test/include/test/sequence/concepts.hpp` cannot take it. A checklist is asked of types that *fail*
+it — that is the whole of what it is for — and the two spellings fail differently.
+
+`tuple_size<C>::value` is a nested name, so for a `C` with no `tuple_size` at all the substitution
+fails in the immediate context and the constraint answers false. `tuple_size_v` is a variable
+template whose initializer instantiates *outside* the immediate context, and the same `C` is a hard
+error no requires-expression can catch. Measured rather than assumed: the `_v` spelling turns
+`not array_tuple_element<C>` into "incomplete type `std::tuple_size<C>` used in nested name
+specifier".
+
+The `tuple_element` half has no such problem and the rewrite is taken — an alias template substitutes
+transparently, so its failure stays in the immediate context. Both `::value` sites carry a
+`NOLINT(modernize-type-traits)`.
+
+`[array.tuple]`'s element half also only exists for a non-empty array: `tuple_element<I, array<T, N>>`
+Mandates `I < N`, so element zero is a question that cannot be put to a width of nought — on the
+packing or on `std::array` itself.

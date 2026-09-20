@@ -17,7 +17,7 @@ auto sift(X& primes, std::size_t m)
         primes.erase(m);
 }
 
-// The sieve over any ordered set of integers, std::set's, std::flat_set's or ours. Total in n rather than asserting: iota(2, n) is a precondition violation below 2, and a sieve asked for the primes under nothing has an answer -- none -- rather than a contract to break.
+// The sieve over any ordered set of integers. Total in n: the primes under nothing are none, not a broken contract.
 template<class X>
 auto generate_candidates(std::size_t n)
 {
@@ -62,7 +62,7 @@ auto sift_primes1(std::size_t n)
         return primes;
 }
 
-// The twin primes themselves, both members of each pair -- {3, 5, 7, 11, 13, ...}, OEIS A001097 -- and not the lesser of each pair -- {3, 5, 11, 17, ...}, OEIS A001359. Both are called "the twin primes" in the wild, so the choice is named here rather than left to be read off the expected output of a test.
+// The twin primes themselves, both members of each pair (OEIS A001097), not the lesser of each (A001359).
 template<class X>
 auto filter_twins(X const& primes)
 {
@@ -89,11 +89,11 @@ auto filter_twins(X const& primes)
         return twins;
 }
 
-// The two sieves that need no bound up front, where the one above materializes every candidate before it sifts a single one.
+// The two sieves that need no bound up front, where the one above materializes every candidate first.
 
 namespace detail::sieve {
 
-// Newton on x * x - n, so the base bound is found in a few steps rather than a walk; the sieves below want it at run time. The step x <- (x + n / x) / 2 is exact in size_t: floor division keeps the sequence descending until it reaches floor(sqrt(n)), which is where y < x first fails. No n < 2 guard, because the loop is already total there and one would be a line no caller can reach: at n == 0 the seed y is 0 and the body never runs, so nothing divides by zero, and at n == 1 the seed equals x. For n >= 1 the iterate stays >= 1, so the division inside the loop is safe. Asserted at both ends in the tests rather than argued for here.
+// Newton on x * x - n, exact in size_t: floor division descends to floor(sqrt(n)), and n < 2 needs no guard.
 constexpr auto isqrt(std::size_t n) noexcept
         -> std::size_t
 {
@@ -108,7 +108,7 @@ constexpr auto isqrt(std::size_t n) noexcept
 
 } // namespace detail::sieve
 
-// The incremental sieve: no candidate array at all, and no n. It keeps one entry per prime found so far -- the next composite that prime will strike -- so the space is O(pi(n)) rather than O(n), and it generates forever. O'Neill, The Genuine Sieve of Eratosthenes, JFP 19(1), 2009. Slower per prime than the array sieve, which is the point of measuring it: what unboundedness costs.
+// The incremental sieve: one entry per prime found, O(pi(n)) space, generating forever (O'Neill, JFP 19(1), 2009).
 class incremental_sieve
 {
         // The composite each known prime will strike next, and which prime strikes it.
@@ -123,7 +123,7 @@ public:
                         ++m_candidate;
                         auto const it = m_strikes.find(m_candidate);
                         if (it == m_strikes.end()) {
-                                // Nothing strikes it, so it is prime, and it starts striking at its square: every smaller multiple carries a smaller factor that is already striking.
+                                // Nothing strikes it, so it is prime, and it starts striking at its square.
                                 m_strikes.emplace(m_candidate * m_candidate, m_candidate);
                                 return m_candidate;
                         }
@@ -150,7 +150,7 @@ auto sift_primes_incremental(std::size_t n)
         return primes;
 }
 
-// The segmented sieve: the base primes below sqrt(n) once, then one reusable window walked over the rest. Peak memory is O(sqrt(n) + W) whatever n is, and the window is a compile-time width that allocates nothing in the loop -- Window carries its own extent, so a bit_static_set<W> is the natural argument.
+// The segmented sieve: base primes below sqrt(n) once, then one reusable window of compile-time width.
 template<class X, class Window>
 auto sift_primes_segmented(std::size_t n)
 {
@@ -169,13 +169,13 @@ auto sift_primes_segmented(std::size_t n)
                 primes.insert(static_cast<std::ranges::range_value_t<X>>(p));
         }
 
-        // Named in full rather than lo and hi, which the Windows headers declare at namespace scope: MSVC's C4459 reports the shadowing, and the benchmark leg treats it as an error.
+        // Named in full rather than lo and hi, which the Windows headers declare at namespace scope (C4459).
         auto window = Window();
         for (auto segment_lo = base_bound; segment_lo < n; segment_lo += width) {
                 auto const segment_hi = std::ranges::min(segment_lo + width, n);
                 window.fill();
                 for (auto const p : base) {
-                        // The first multiple of p at or above segment_lo, never below p * p, which the base pass covered.
+                        // The first multiple of p at or above segment_lo, never below p * p.
                         auto const first = std::ranges::max(p * p, ((segment_lo + p - 1UZ) / p) * p);
                         for (auto m = first; m < segment_hi; m += p) {
                                 window.erase(m - segment_lo);

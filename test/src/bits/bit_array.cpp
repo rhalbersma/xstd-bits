@@ -24,7 +24,7 @@
 
 BOOST_AUTO_TEST_SUITE(BitArray)
 
-// Every Block model within one block, the narrow ones across boundaries, and the widest Block across one too; the grading is in test/block_types.hpp.
+// Every Block model within one block, the narrow ones across boundaries, and the widest across one too.
 using Types = decltype(std::tuple_cat(
         std::declval<test::graded_extents<xstd::basic_bit_array>>(),
         std::declval<test::wide_extents<xstd::basic_bit_array>>()));
@@ -51,14 +51,14 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItsIteratorIsRandomAccess, T, Types)
         static_assert(std::random_access_iterator<I>);
 }
 
-// Random access is where it stops: the blocks underneath are contiguous, the bits are not addressable, and a proxy reference is what forbids the last rung.
+// Random access is where it stops: the blocks are contiguous, the bits are not addressable.
 BOOST_AUTO_TEST_CASE_TEMPLATE(ItIsNotAContiguousRange, T, Types)
 {
         static_assert(not std::ranges::contiguous_range<T>);
         static_assert(not std::contiguous_iterator<typename T::iterator>);
 }
 
-// What survives the loss of contiguity: operator& on the proxy answers an ITERATOR rather than a pointer, so the identity a contiguous range spells in pointer arithmetic holds here in iterator arithmetic.
+// operator& on the proxy answers an iterator, not a pointer, so the identity holds in iterator arithmetic.
 BOOST_AUTO_TEST_CASE_TEMPLATE(AddressOfASubscriptIsTheIteratorToIt, T, Types)
 {
         static_assert(std::same_as<decltype(&std::declval<T&>()[0UZ]), typename T::iterator>);
@@ -102,9 +102,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItAnswersEveryLineOfStdArrayBool, T, Types)
         static_assert(test::sequence::array_bool<T>);
 }
 
-// [array.tuple], over the packing: the one part of that synopsis data() does not take down with it. get<I> hands
-// back the same proxy operator[] does, and tuple_element names THAT rather than bool, because a structured binding
-// binds a reference to tuple_element_t and there would otherwise be nothing for it to bind to.
+// [array.tuple] over the packing: get<I> hands back the proxy operator[] does, and tuple_element names that.
 BOOST_AUTO_TEST_CASE(ItAnswersTheTupleInterfaceStdArrayCarries)
 {
         using A = xstd::bit_array<3>;
@@ -117,8 +115,7 @@ BOOST_AUTO_TEST_CASE(ItAnswersTheTupleInterfaceStdArrayCarries)
         BOOST_CHECK(get<1>(a) == false);
         BOOST_CHECK(get<2>(a) == true);
 
-        // A proxy, so a binding over the array itself writes through to it. By value it would bind to the copy the
-        // binding makes, which is what std::array's T& does too -- the reference is to whatever e names.
+        // A proxy, so a binding over the array writes through to it; by value it would bind to the copy.
         auto& [x, y, z] = a;
         y = true;
         BOOST_CHECK(a[1] == true);
