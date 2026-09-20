@@ -35,26 +35,26 @@ namespace on0 {
 template<class X, auto N = limit_v<X, L0>>
 auto empty_set(auto fun)
 {
-        auto a = make_bitset<X>(N);
-        assert(a.none()); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
+        auto a = make_bitset<X>(N); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
+        assert(a.none());
         fun(a);
 }
 
 template<class X, auto N = limit_v<X, L0>>
 auto full_set(auto fun)
 {
-        auto a = make_bitset<X>(N, true);
-        assert(a.all()); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
+        auto a = make_bitset<X>(N, true); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
+        assert(a.all());
         fun(a);
 }
 
 template<class X, auto N = limit_v<X, L0>>
 auto empty_set_pair(auto fun)
 {
-        auto a = make_bitset<X>(N);
-        assert(a.none()); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
-        auto b = make_bitset<X>(N);
-        assert(b.none()); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
+        auto a = make_bitset<X>(N); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
+        assert(a.none());
+        auto b = make_bitset<X>(N); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
+        assert(b.none());
         fun(a, b);
 }
 

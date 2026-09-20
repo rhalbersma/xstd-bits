@@ -127,10 +127,10 @@ struct spare_word
 struct non_constant_set
 {
         std::uint64_t w = 0ULL;
-        auto set(std::size_t n) noexcept -> void
+        auto set(std::size_t n) noexcept -> void // NOLINT(readability-make-member-function-const)
         {
                 w |= 1ULL << n;
-        } // NOLINT(readability-make-member-function-const)
+        }
         [[nodiscard]] static constexpr auto count() noexcept -> std::size_t
         {
                 return 1UZ;

@@ -43,10 +43,10 @@ class Implicit
 public:
         [[nodiscard]] constexpr explicit(false) Implicit(std::size_t v) noexcept : m_value(v) {}
         // Implicit is the point: this class exists to convert both ways without a cast.
-        [[nodiscard]] constexpr explicit(false) operator std::size_t() const noexcept
+        [[nodiscard]] constexpr explicit(false) operator std::size_t() const noexcept // NOLINT(misc-explicit-constructor)
         {
                 return m_value;
-        } // NOLINT(misc-explicit-constructor)
+        }
 };
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheKeysCopyIntoASetOfAnImplicitlyConstructibleType, T, Types)
