@@ -878,9 +878,14 @@ public:
         }
 
         // The owner's alone, following span: a handle declines to say whether it compares its referent or its contents. Defaulted, the storage being the one member.
-        [[nodiscard]] friend constexpr auto operator==(sequence_adaptor const& x, sequence_adaptor const& y) noexcept -> bool
-                requires is_owner
-        = default;
+        // clang-format off
+        // One line deliberately: gcovr's --exclude-unreachable-branches matches the line carrying "= default;", and gcov anchors a
+        // defaulted comparison's branches at the declaration's first line. A defaulted operator== compares bases before members, and
+        // the base here is the empty allocator_base_type, whose own defaulted operator== can only answer true -- a branch no input
+        // sends the other way. Split across lines, the exclusion stops matching and that dead branch fails the 100% gate. The three
+        // sibling sites need no guard: none carries a requires-clause, so none is long enough for clang-format to break.
+        [[nodiscard]] friend constexpr auto operator==(sequence_adaptor const& x, sequence_adaptor const& y) noexcept -> bool requires is_owner = default;
+        // clang-format on
 
         // The storage's entry and nothing else: an owner is over storage of ours, which has one. Spelled over bits_type rather than over x.storage(), which MSVC completes eagerly here and so cannot.
         [[nodiscard]] friend constexpr auto operator<=>(sequence_adaptor const& x, sequence_adaptor const& y) noexcept

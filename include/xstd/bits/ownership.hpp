@@ -13,7 +13,8 @@ namespace xstd {
 
 // The one template parameter owning-versus-viewing collapses to: an enum rather than a bool, so a diagnostic reads it.
 enum class ownership : bool { refers,
-                              owns };
+                              owns,
+};
 
 [[nodiscard]] constexpr auto owns(ownership o) noexcept
         -> bool
@@ -24,7 +25,8 @@ enum class ownership : bool { refers,
 // Which reading an owner is committed to; a bitset is committed to neither, which is what its two views are for.
 enum class reading : unsigned char { set,
                                      sequence,
-                                     bitset };
+                                     bitset,
+};
 
 // What an owner wraps, specialized beside each owner: declared, never defined, so a view over a type that owns nothing is a constraint not satisfied.
 template<class Owner>
