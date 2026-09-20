@@ -69,7 +69,7 @@ public:
                 return lhs.m_idx <=> rhs.m_idx;
         }
 
-        // The position has to exist, which end()'s does not: this proxy reads and writes through the storage, where the set reading's carries the position as its value and has nothing to reach for. Said here rather than left to the storage's own is_valid a call down, for the reason the reading's operator[] says n < size() where test(n) would say it again -- and *end() is the one this catches, which on std::vector<bool> reads the padding and answers with it.
+        // The position has to exist, which end()'s does not: this proxy reads and writes through the storage.
         [[nodiscard]] constexpr auto operator*() const noexcept
                 -> reference
         {
@@ -162,14 +162,14 @@ public:
         }
 };
 
-// A proxy bool assigning back through the trait, spelled as [vector.bool] spells std::vector<bool>::reference: the const-qualified assignment P2321R2 gave it, flip(), and the three swaps P3612R1 made hidden friends. operator~ is NOT among them -- that one belongs to std::bitset<N>::reference, and the bitset reading's proxy is where it is spelled.
+// A proxy bool spelled as [vector.bool] spells std::vector<bool>::reference; operator~ is std::bitset's.
 template<class Bits>
 class random_access_bit_reference
 {
         Bits* m_ptr;
         std::size_t m_idx;
 
-        // Writable where Bits is not const: a const storage has no assign to reach, which is the whole of the test now that the storage answers directly.
+        // Writable where Bits is not const: a const storage has no assign to reach.
         static constexpr bool is_writable = not std::is_const_v<Bits> and requires (Bits& c, std::size_t n, bool value) { c.assign(n, value); };
 
 public:
@@ -183,7 +183,7 @@ public:
                 assert(m_ptr != nullptr);
         }
 
-        // Said out loud, because the assignments below are user-provided and that deprecates the implicit copy constructor: a copy duplicates the handle, where an assignment writes through it.
+        // Said out loud: the assignments below are user-provided, which deprecates the implicit copy constructor.
         constexpr random_access_bit_reference(random_access_bit_reference const&) noexcept = default;
 
         [[nodiscard]] constexpr auto operator&() const noexcept
@@ -235,7 +235,7 @@ public:
                 return *this = static_cast<bool>(other);
         }
 
-        // [vector.bool] requires it of the proxy and has since C++98, where the const-qualified assignment above only arrived with C++23: the two are separate borrowings and only one of them is recent.
+        // [vector.bool] has required it of the proxy since C++98, where the const-qualified assignment is C++23.
         constexpr auto flip() const noexcept
                 -> void
                 requires is_writable
@@ -266,7 +266,7 @@ public:
                 y = t;
         }
 
-        // What this proxy prints as, said once: see bidirectional.hpp's format_as for why it outlives the fmt dependency.
+        // What this proxy prints as, said once: our std::formatter calls it unqualified, and fmt finds it by ADL.
         [[nodiscard]] friend constexpr auto format_as(random_access_bit_reference ref) noexcept
                 -> value_type
         {

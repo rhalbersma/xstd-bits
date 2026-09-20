@@ -5,7 +5,7 @@
 
 // The Block ladder: what the SAME 256 bits cost carried in 32, 16, 8, 4 or 2 blocks.
 
-// NOT alphabetical, and load-bearing: detail/bits/intrin calls xstd::countr_zero by a QUALIFIED name, whose candidates bind where that call is written rather than where it is instantiated.
+// Not alphabetical, and load-bearing: intrin calls xstd::countr_zero by a qualified name, bound where written.
 #include <xstd/ints/cstdint/int128.hpp> // uint128
 #if __has_include(<absl/numeric/int128.h>)
 
@@ -33,7 +33,7 @@ inline constexpr auto width = 256UZ;
 template<class Block>
 using set_of = xstd::basic_bit_static_set<Block, width>;
 
-// A function of the POSITION alone and never of the Block: every row has to hold the same elements, or the ladder is one timing per Block of a different computation.
+// A function of the position alone and never of the Block, so every row holds the same elements.
 template<class T>
 auto filled(std::size_t per_mille, std::size_t limit = width)
         -> T
@@ -52,7 +52,7 @@ auto filled(std::size_t per_mille, std::size_t limit = width)
 // Everything inside the first 64 positions, so every Block wider than that carries an EMPTY high block.
 inline constexpr auto cluster = 64UZ;
 
-// Forward: ++ is countr_zero within a block and a skip across the empty ones, so the Block is the unit the scan steps in.
+// Forward: ++ is countr_zero within a block and a skip across the empty ones, the Block being the unit.
 template<class T, std::size_t PerMille>
 auto bm_forward(benchmark::State& state)
         -> void
@@ -68,7 +68,7 @@ auto bm_forward(benchmark::State& state)
         }
 }
 
-// Backward, the half of a bidirectional iterator that nothing else here measures: -- and countl_zero rather than ++ and countr_zero.
+// Backward, which nothing else here measures: -- and countl_zero rather than ++ and countr_zero.
 template<class T, std::size_t PerMille>
 auto bm_reverse(benchmark::State& state)
         -> void
@@ -84,7 +84,7 @@ auto bm_reverse(benchmark::State& state)
         }
 }
 
-// Forward and backward over that clustered set: the scan reaches the high block, finds it empty, and stops -- which is the arm's second branch answered the other way.
+// Forward and backward over that clustered set: the scan reaches the high block, finds it empty, and stops.
 template<class T>
 auto bm_forward_clustered(benchmark::State& state)
         -> void
@@ -223,7 +223,7 @@ auto bm_shift_left_runtime(benchmark::State& state)
         BM_ABSL_RUNG_D(fn, d); \
         BM_BOOST_RUNG_D(fn, d)
 
-// Sparse, the density bitset/ops.cpp uses, and dense: the first is where skipping empty blocks pays and the last is where nothing is skipped and every step is the per-element primitive.
+// Sparse and dense: the first is where skipping empty blocks pays, the last where every step is per-element.
 BM_LADDER_D(bm_forward, 50);
 BM_LADDER_D(bm_forward, 400);
 BM_LADDER_D(bm_forward, 900);

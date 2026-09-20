@@ -4051,3 +4051,38 @@ P3981R0 changed `try_push_back` and `try_emplace_back` to return `optional<refer
 `optional<T&>` was adopted; libstdc++ 16 still returns the pointer P0843R14 gave them. The checklist
 asks the model for the name, and `TheTryDoorsReturnTheOptionalReferenceTheDraftSpells` asks the
 packing for the signature the draft spells.
+
+### The dynamic-bitset benchmark rows
+
+`benchmark/src/bitset/dynamic.cpp` measures at 32768 bits and 40% set, medians of seven runs.
+
+**The scan row is like for like.** Boost answers `find_first`/`find_next` natively and so does the
+bitset reading, so both rungs make the same two calls. A per-bit `test(pos)` loop over boost costs
+28.3us where boost's own `find_next` costs 61.9us: testing every position is a predictable branch per
+bit, where a scan re-enters the block it was given and carries a dependency from one position to the
+next. Comparing a scan against a per-bit loop therefore reads ours 1.8x *slower* than boost; the same
+two calls on both sides put ours at 53.0us against 61.9us, which is 0.86x. The two re-entrant scans
+are latency-bound and move by a tenth between runs on a shared machine, where the block walk lands
+within 3% every time.
+
+**The block walk is the row worth reading.** A scan restarts from the position it was given, so it
+re-reads that position's block on every step and cannot start the next step until this one answers.
+The block walk loads each block once and then spends `tzcnt` for the position and `blsr` to drop it:
+7.0us against the scan's 53.0us, some seven times, and four times quicker than the per-bit loop that
+beats the scan. Ours alone — boost has no view over its bits.
+
+**The block interface stands on the same footing.** `from_block_range` and `to_block_range` are
+boost's too, each a `std::copy` over its own vector. Both sides take the same words through the same
+contiguous iterators, and everything is allocated before the loop — build the destination inside the
+timed region instead and the same call reads about twice what it reads here, which is the allocator
+measured in place of the copy. With each side timed in both positions the two land together: 35ns in
+against boost's 35ns, 36ns out against boost's 36ns, on a memcpy of the same words at 35ns. Neither
+sits above the floor, which is what this row exists to keep checking rather than assume.
+
+Ours also does one thing boost does not, and it is inside those numbers: `erase_unused()` masks the
+tail once the blocks have landed, where boost keeps whatever the caller's last block held. One word
+at every width, which is what the stronger guarantee costs.
+
+A `back_inserter` is the other output shape and gets no rung: it costs a `push_back` per block, 320ns
+against this row's 36ns, and what that measures is a vector growing rather than the interface
+answering.
