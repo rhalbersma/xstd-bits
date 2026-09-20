@@ -3941,3 +3941,113 @@ gcov anchored the counter to. That is a real cost of the gate and it is worth pa
 reports instead of enforcing gets read as noise. But it has to be read for what it is: here "uncovered" twice
 meant "gcov counted this differently than you would have", and going looking for the missing test would have
 been going looking for a test that cannot exist.
+
+## Measurements and citations behind the code
+
+Each of these was a multi-line comment in a source file. The comments are one line each now, and what
+they carried is here, where length costs nothing.
+
+### `std::count` over a bit container measures the standard library, not the container
+
+`benchmark/src/sequence/access.cpp`'s `bm_sequential_count` row is a sweep asked through a generic
+algorithm. At 65536 bits, 40% set, medians of seven runs, in nanoseconds:
+
+| compiler and library | `vector<bool>` | `bit_vector` | ratio |
+| :--- | ---: | ---: | ---: |
+| g++-14, libstdc++ | 43690 | 52930 | 1.21x |
+| clang++-20, libstdc++ | 83680 | 19232 | 0.23x |
+| clang++-20, libc++ | 73 | 19146 | 262.27x |
+
+Same two containers, same bits, and the answer runs from four times faster to two hundred and sixty
+times slower. libc++ **specializes** `std::count` for its `vector<bool>` iterator — `__count_bool` in
+`<__algorithm/count.h>`, one popcount per word — and sweeps the lot in 73ns. libstdc++ specializes
+`fill` for that iterator and not `count`, so there both sides walk bit by bit through a proxy and the
+remaining difference is codegen: clang turns our indexed read into something four times quicker than
+it manages for theirs, gcc does not.
+
+So the row is not a comparison of containers and not a gap to close. There is no portable way to make
+`std::count` count words for a container defined outside the standard library: libc++ reaches its own
+iterator by overloading inside its own namespace, and neither `std::count` nor `std::ranges::count`
+offers a customization point a user-defined bit container could hook. What the row says is how much a
+sweep costs when it is asked through a generic algorithm.
+
+`bm_sequential_count_member` asks the same question of the sequence reading instead: one popcount per
+word, 91ns, 73ns and 74ns in those same three configurations. It does not care which library or which
+compiler, because the loop is ours either way. Level with libc++'s specialized count at 1.01x, and
+some five hundred times quicker than what libstdc++ offers for the same question. `std::vector<bool>`
+has no member to put beside it, which is why that rung is ours alone.
+
+### Why the bidirectional steps guard on a zero width
+
+`detail/bidirectional.hpp` guards both steps on `zero_width<Bits>` rather than asking the storage. The
+exclusive scans take a position as a precondition and a zero width has none to give, so they assert
+there.
+
+Each step also states its own precondition beside the storage's. Forward, that this is not `end()`,
+which is what the scan's `is_valid` comes to. Backward is the one worth having, because it is
+**stronger** than anything below it: `exclusive_find_prev` asserts `any()` and `is_valid(n - 1)`, and
+`--begin()` passes both while there is nothing below to find. Measured under `NDEBUG`, without the
+guard: at a two-block extent it fell into the arm meant for the lower block and answered the highest
+position there, which is the key it started from, so a reverse walk never ends; at four blocks and at
+a run-time width it read past the blocks.
+
+### What `[set]`'s synopsis leaves out for a packed set
+
+`test/include/test/set/concepts.hpp` transcribes `[set]`'s synopsis as one requires-expression, with
+`std::set<std::size_t>` as the model. Three families are left out, each for a reason the packing
+gives:
+
+- `node_type`, `extract`, `insert(node_type&&)` and `merge`: there is no node. A position is a bit in
+  a word, so there is nothing to unlink and hand over, and nothing to relink.
+- the `template<class K>` heterogeneous overloads: they participate only where
+  `Compare::is_transparent` is valid, and `key_compare` is `std::less<key_type>` here as it is on
+  `std::set<std::size_t>`. Neither side has them, so asking would hold the model to a line the model
+  does not answer either.
+- `insert_range` and the from_range constructors: `[set.cons]`'s C++23 lines, kept apart so the model
+  can be held to them where its standard library has them (`__cpp_lib_containers_ranges`).
+
+`pointer` and `const_pointer` are dropped from the `[associative.reqmts]` typedefs for the same
+reason as the nodes: packed bits have no address.
+
+### AddressSanitizer aborts where the allocator throws
+
+`test/include/test/sanitizer.hpp` guards the rows that assert a width past what the blocks can hold
+reaches the allocator. AddressSanitizer answers an allocation it will not serve by **aborting**, where
+the C++ allocator answers with `std::bad_alloc`, so on a sanitized build the process is gone before
+the catch. Measured on this tree: the report is `allocation-size-too-big`, and
+`allocator_may_return_null=1` only renames it to `out-of-memory`, because the throwing `operator new`
+calls `ReportOutOfMemory` on a null return rather than throwing.
+
+Every other leg answers those rows, which is measured too: the nine failures that led to the guard
+were all sanitized builds or a discarded temporary an optimizer elided, and the msvc and mingw legs,
+which are neither, never failed on them at all.
+
+Declare anything a guarded block needs **inside** it. The clang legs compile with `-Weverything
+-Werror`, so a variable named outside a block that is the only thing using it is an unused-variable
+error on exactly the legs the guard is for.
+
+### Why the byte-exchange question is a template
+
+`test/include/test/bit_exchange.hpp` asks whether a type has a static `from_bits` accepting `B`. There
+is no trait for that, so it is a concept.
+
+Being a **template** is not incidental. A bare requires-expression over concrete types puts a
+non-dependent requirement in the immediate context, where GCC reports an unsatisfied constraint as a
+hard error rather than as false — which is precisely what an assertion of the form "this is NOT
+admitted" must not be.
+
+### `[array.tuple]` does not divert `std::format`
+
+A `std::tuple_size` specialization is what makes a type tuple-like, and it does not divert
+`std::format`. `[format.tuple]/1` provides the tuple formatter "for each of pair and tuple", naming
+the two class templates rather than admitting tuple-like types, and `[format.range.fmtkind]` never
+asks `tuple_size_v<R>` — it asks `R::key_type`, and `tuple_size_v` of the reference type for the map
+case alone. `std::array` is the proof by example: tuple-like, a range, and it prints as a range. The
+bracket assertions in `test/src/bits/detail/format.cpp` are what pins this.
+
+### The try-doors return what the draft spells
+
+P3981R0 changed `try_push_back` and `try_emplace_back` to return `optional<reference>` once P2988R12's
+`optional<T&>` was adopted; libstdc++ 16 still returns the pointer P0843R14 gave them. The checklist
+asks the model for the name, and `TheTryDoorsReturnTheOptionalReferenceTheDraftSpells` asks the
+packing for the signature the draft spells.

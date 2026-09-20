@@ -63,8 +63,7 @@ BOOST_AUTO_TEST_CASE(ItAnswersEveryLineOfStdInplaceVectorBool)
         static_assert(not has_allocator<T>);
 }
 
-// P3981R0's return type, over the packing alone: libstdc++ 16 still returns the pointer P0843R14 gave these two,
-// so the checklist above asks the model for the name and this asks the packing for the signature the draft spells.
+// P3981R0's return type, over the packing alone: the checklist asks the model only for the name.
 BOOST_AUTO_TEST_CASE(TheTryDoorsReturnTheOptionalReferenceTheDraftSpells)
 {
         static_assert(test::sequence::inplace_vector_bool_try_returns<T>);

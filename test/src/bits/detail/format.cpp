@@ -42,12 +42,7 @@ BOOST_AUTO_TEST_CASE(TheSequenceReadingFormatsInBrackets)
         v[1] = true;
         BOOST_CHECK_EQUAL(std::format("{}", v), "[false, true, false, false]");
 
-        // This line does double duty now that bit_array carries [array.tuple]: a std::tuple_size specialization is
-        // what makes a type tuple-like, and the question is whether that diverts std::format. It does not, and the
-        // brackets here are the assertion of it. [format.tuple]/1 provides the tuple formatter "for each of pair and
-        // tuple", naming the two class templates rather than admitting tuple-like types, and [format.range.fmtkind]
-        // never asks tuple_size_v<R> -- it asks R::key_type, and tuple_size_v of the REFERENCE type for the map case
-        // alone. std::array is the proof by example: tuple-like, a range, and it prints as a range.
+        // A tuple_size specialization does not divert std::format: these brackets are the assertion of it.
         auto a = xstd::bit_array<4>();
         a[2] = true;
         BOOST_CHECK_EQUAL(std::format("{}", a), "[false, false, true, false]");

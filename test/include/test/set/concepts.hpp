@@ -23,8 +23,7 @@ template<class C>
 concept bit_set =
         std::regular<C> and std::totally_ordered<C> and std::ranges::bidirectional_range<C> and std::bidirectional_iterator<typename C::iterator> and value_reference<typename C::const_reference>;
 
-// The typedefs [associative.reqmts] gives every associative container, pointer and const_pointer aside: packed bits
-// have no address. node_type and insert_return_type go with them -- a bitmap has no node to extract.
+// The [associative.reqmts] typedefs, pointer aside: packed bits have no address and a bitmap has no node.
 template<class C>
 concept set_typedefs = requires {
         typename C::key_type;
@@ -39,16 +38,7 @@ concept set_typedefs = requires {
         typename C::const_reverse_iterator;
 };
 
-// [set]'s synopsis, as one requires-expression: std::set<std::size_t> is the model and the packing answers every
-// line of it. Three families are left out and each for a reason the packing gives:
-//
-//   - node_type, extract, insert(node_type&&) and merge: there is no node. A position is a bit in a word, so there
-//     is nothing to unlink and hand over, and nothing to relink.
-//   - the template<class K> heterogeneous overloads: they participate only where Compare::is_transparent is valid,
-//     and key_compare is std::less<key_type> here as it is on std::set<std::size_t>. Neither side has them, so
-//     asking for them would hold the model to a line the model does not answer either.
-//   - insert_range and the from_range constructors: [set.cons]'s C++23 lines, apart below the way the sequence
-//     reading keeps its own.
+// [set]'s synopsis as one requires-expression, with std::set<std::size_t> as the model.
 template<class C>
 concept set_size_t = set_typedefs<C> and requires (C c, C o, C const cc, C::key_type k, std::initializer_list<typename C::value_type> il, C::value_type const* first, C::value_type const* last, C::const_iterator p) {
         C();
@@ -72,8 +62,7 @@ concept set_size_t = set_typedefs<C> and requires (C c, C o, C const cc, C::key_
         { cc.empty() } -> std::same_as<bool>;
         { cc.size() } -> std::same_as<typename C::size_type>;
         { cc.max_size() } -> std::same_as<typename C::size_type>;
-        // [set.modifiers]. emplace is variadic on both sides, and a key IS default-constructible, so the empty
-        // argument list is one of the lists it has to take.
+        // [set.modifiers]. emplace is variadic and a key is default-constructible, so the empty list is one it takes.
         { c.emplace(k) } -> std::same_as<std::pair<typename C::iterator, bool>>;
         { c.emplace() } -> std::same_as<std::pair<typename C::iterator, bool>>;
         { c.emplace_hint(p, k) } -> std::same_as<typename C::iterator>;
@@ -120,8 +109,7 @@ concept set_size_t_allocator = requires (C c, C o, C const cc, A a, std::initial
         { cc.get_allocator() } -> std::same_as<A>;
 };
 
-// [set.cons] and [set.modifiers]'s C++23 lines, apart so the model can be held to them where its standard library
-// has them (__cpp_lib_containers_ranges).
+// [set.cons] and [set.modifiers]'s C++23 lines, apart so the model is held to them where it has them.
 template<class C>
 concept set_size_t_ranges = requires (C c, std::initializer_list<typename C::value_type> il) {
         C(std::from_range, il);
