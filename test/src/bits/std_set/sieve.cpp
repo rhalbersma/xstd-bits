@@ -34,17 +34,20 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheSiftedPrimesAndTwinsFormatAsExpected, T, Types)
         auto const primes0 = opt::sift_primes0<T>(N);
         BOOST_CHECK_EQUAL(
                 std::format("{}", primes0),
-                "{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97}");
+                "{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97}"
+        );
 
         auto const primes1 = opt::sift_primes1<T>(N);
         BOOST_CHECK_EQUAL(
                 std::format("{}", primes1),
-                "{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97}");
+                "{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97}"
+        );
 
         auto const twins = opt::filter_twins(primes1);
         BOOST_CHECK_EQUAL(
                 std::format("{}", twins),
-                "{3, 5, 7, 11, 13, 17, 19, 29, 31, 41, 43, 59, 61, 71, 73}");
+                "{3, 5, 7, 11, 13, 17, 19, 29, 31, 41, 43, 59, 61, 71, 73}"
+        );
 }
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(SievesTooSmallForTheSquareBreakStillSiftCorrectly, T, Types)

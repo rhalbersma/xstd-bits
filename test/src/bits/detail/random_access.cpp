@@ -27,8 +27,11 @@ namespace {
 struct flag
 {
         bool value;
+
         // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
-        constexpr explicit(false) flag(bool v) noexcept : value(v) {}
+        constexpr explicit(false) flag(bool v) noexcept
+                : value(v)
+        {}
 };
 
 // One position: written, read back two ways, negated back through itself, and reached again through the subscript.

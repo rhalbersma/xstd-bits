@@ -41,7 +41,7 @@ BraceWrapping:
 Cpp11BracedListStyle: true
 AlignEscapedNewlines: DontAlign
 
-AlwaysBreakTemplateDeclarations: No
+BreakTemplateDeclarations: Yes
 SpaceAfterTemplateKeyword: false
 SpaceBeforeParens: Custom
 SpaceBeforeParensOptions:
@@ -67,3 +67,9 @@ AllowShortIfStatementsOnASingleLine: Never
 AllowShortLoopsOnASingleLine: false
 
 SortIncludes: Never
+AlignAfterOpenBracket: BlockIndent
+SeparateDefinitionBlocks: Always
+BreakInheritanceList: BeforeComma
+BreakConstructorInitializers: BeforeComma
+PackConstructorInitializers: Never
+ConstructorInitializerIndentWidth: 8

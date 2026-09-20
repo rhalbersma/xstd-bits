@@ -54,11 +54,14 @@ class bitset_adaptor : public detail::bits::allocator_base_type<Bits>
         static constexpr bool block_iterator = std::same_as<std::remove_cvref_t<std::iter_value_t<I>>, typename Bits::block_type>;
 
         // owned_storage names this owner's storage, so a view over a bitset is a view over what the bitset wraps.
-        template<class> friend struct owned_storage;
+        template<class>
+        friend struct owned_storage;
 
         // Either reading's view refers into this owner's storage: a bitset is committed to neither reading.
-        template<specialization_of_TN<detail::bits::contiguous_bit_container> B, ownership O> friend class set_adaptor;
-        template<specialization_of_TN<detail::bits::contiguous_bit_container> B, ownership O, bool W> friend class sequence_adaptor;
+        template<specialization_of_TN<detail::bits::contiguous_bit_container> B, ownership O>
+        friend class set_adaptor;
+        template<specialization_of_TN<detail::bits::contiguous_bit_container> B, ownership O, bool W>
+        friend class sequence_adaptor;
 
         // The value through the trait: the blocks and the width.
         template<class Provider, class Hash, class Flavor>
@@ -84,8 +87,8 @@ public:
                 friend bitset_adaptor;
 
                 [[nodiscard]] constexpr reference(bitset_adaptor& c, std::size_t idx) noexcept
-                    : m_ptr(&c),
-                      m_idx(idx)
+                        : m_ptr(&c)
+                        , m_idx(idx)
                 {}
 
         public:
@@ -131,6 +134,7 @@ public:
                         x = y;
                         y = t;
                 }
+
                 friend constexpr auto swap(reference x, bool& y) noexcept
                         -> void
                 {
@@ -138,6 +142,7 @@ public:
                         x = y;
                         y = t;
                 }
+
                 friend constexpr auto swap(bool& x, reference y) noexcept
                         -> void
                 {
@@ -169,7 +174,7 @@ public:
 
         [[nodiscard]] constexpr explicit bitset_adaptor(std::size_t num_bits, unsigned long long val = 0ULL)
                 requires (not has_static_width)
-            : m_bits(num_bits)
+                : m_bits(num_bits)
         {
                 from_ullong(val);
         }
@@ -205,13 +210,13 @@ public:
         template<class Alloc>
                 requires (not has_static_width) and std::same_as<Alloc, typename Bits::allocator_type>
         [[nodiscard]] constexpr explicit bitset_adaptor(Alloc const& alloc)
-            : m_bits(alloc)
+                : m_bits(alloc)
         {}
 
         template<class Alloc>
                 requires (not has_static_width) and std::same_as<Alloc, typename Bits::allocator_type>
         [[nodiscard]] constexpr bitset_adaptor(std::size_t num_bits, unsigned long long val, Alloc const& alloc)
-            : m_bits(num_bits, alloc)
+                : m_bits(num_bits, alloc)
         {
                 from_ullong(val);
         }
@@ -219,7 +224,7 @@ public:
         template<std::input_iterator I, std::sentinel_for<I> S, class Alloc>
                 requires (not has_static_width) and block_iterator<I> and std::same_as<Alloc, typename Bits::allocator_type>
         [[nodiscard]] constexpr bitset_adaptor(I first, S last, Alloc const& alloc)
-            : m_bits(alloc)
+                : m_bits(alloc)
         {
                 m_bits.append(first, last);
         }
@@ -252,8 +257,9 @@ public:
                 std::basic_string<charT, traits, Allocator>::size_type pos = 0,
                 std::basic_string<charT, traits, Allocator>::size_type n = std::basic_string<charT, traits, Allocator>::npos,
                 charT zero = static_cast<charT>('0'),
-                charT one = static_cast<charT>('1'))
-            : bitset_adaptor(std::basic_string_view<charT, traits>(str), pos, n, zero, one)
+                charT one = static_cast<charT>('1')
+        )
+                : bitset_adaptor(std::basic_string_view<charT, traits>(str), pos, n, zero, one)
         {}
 
         template<class charT, class traits>
@@ -262,7 +268,8 @@ public:
                 std::basic_string_view<charT, traits>::size_type pos = 0,
                 std::basic_string_view<charT, traits>::size_type n = std::basic_string_view<charT, traits>::npos,
                 charT zero = static_cast<charT>('0'),
-                charT one = static_cast<charT>('1'))
+                charT one = static_cast<charT>('1')
+        )
         {
                 if (pos > str.size()) {
                         throw out_of_range(pos);
@@ -293,8 +300,9 @@ public:
                 charT const* str,
                 std::size_t n = std::basic_string_view<charT>::npos,
                 charT zero = static_cast<charT>('0'),
-                charT one = static_cast<charT>('1'))
-            : bitset_adaptor(n == std::basic_string_view<charT>::npos ? std::basic_string_view<charT>(str) : std::basic_string_view<charT>(str, n), 0, n, zero, one)
+                charT one = static_cast<charT>('1')
+        )
+                : bitset_adaptor(n == std::basic_string_view<charT>::npos ? std::basic_string_view<charT>(str) : std::basic_string_view<charT>(str, n), 0, n, zero, one)
         {}
 
         // Members                                              [bitset.members]
@@ -304,12 +312,14 @@ public:
                 m_bits &= rhs.m_bits;
                 return *this;
         }
+
         constexpr auto operator|=(bitset_adaptor const& rhs) noexcept
                 -> bitset_adaptor&
         {
                 m_bits |= rhs.m_bits;
                 return *this;
         }
+
         constexpr auto operator^=(bitset_adaptor const& rhs) noexcept
                 -> bitset_adaptor&
         {
@@ -346,12 +356,14 @@ public:
                 m_bits.set();
                 return *this;
         }
+
         constexpr auto reset() noexcept
                 -> bitset_adaptor&
         {
                 m_bits.reset();
                 return *this;
         }
+
         constexpr auto flip() noexcept
                 -> bitset_adaptor&
         {
@@ -471,6 +483,7 @@ public:
         {
                 return to_unsigned<unsigned long>();
         }
+
         [[nodiscard]] constexpr auto to_ullong() const
                 -> unsigned long long
         {
@@ -501,16 +514,19 @@ public:
         {
                 return m_bits.count();
         }
+
         [[nodiscard]] constexpr auto size() const noexcept
                 -> std::size_t
         {
                 return m_bits.size();
         }
+
         [[nodiscard]] constexpr auto num_blocks() const noexcept
                 -> std::size_t
         {
                 return m_bits.num_blocks();
         }
+
         // boost's answer and not the storage's, the two differing by sixty-three positions at a run-time width.
         [[nodiscard]] constexpr auto max_size() const noexcept
                 -> std::size_t
@@ -549,11 +565,13 @@ public:
         {
                 return m_bits.all();
         }
+
         [[nodiscard]] constexpr auto any() const noexcept
                 -> bool
         {
                 return m_bits.any();
         }
+
         [[nodiscard]] constexpr auto none() const noexcept
                 -> bool
         {
@@ -573,11 +591,13 @@ public:
         {
                 return m_bits.is_subset_of(rhs.m_bits);
         }
+
         [[nodiscard]] constexpr auto is_proper_subset_of(bitset_adaptor const& rhs) const noexcept
                 -> bool
         {
                 return m_bits.is_proper_subset_of(rhs.m_bits);
         }
+
         [[nodiscard]] constexpr auto intersects(bitset_adaptor const& rhs) const noexcept
                 -> bool
         {
@@ -837,14 +857,17 @@ private:
         template<class charT>
         static constexpr auto invalid_argument(
                 charT ch, charT zero = static_cast<charT>('0'), charT one = static_cast<charT>('1'),
-                std::source_location const& loc = std::source_location::current())
+                std::source_location const& loc = std::source_location::current()
+        )
         {
                 // The format string is spelled per arm: std::format takes a format_string, which is consteval.
                 if constexpr (std::formattable<charT, char>) {
                         return std::invalid_argument(
                                 std::format(
                                         "{}:{}:{}: exception: ‘{}‘: invalid argument ‘ch‘ [{} != {} or {}]",
-                                        loc.file_name(), loc.line(), loc.column(), loc.function_name(), ch, zero, one));
+                                        loc.file_name(), loc.line(), loc.column(), loc.function_name(), ch, zero, one
+                                )
+                        );
                 } else if constexpr (std::integral<charT>) {
                         // A code unit is a number where it is not a character, which is every char type but char.
                         return std::invalid_argument(
@@ -852,13 +875,17 @@ private:
                                         "{}:{}:{}: exception: ‘{}‘: invalid argument ‘ch‘ [{} != {} or {}]",
                                         loc.file_name(), loc.line(), loc.column(), loc.function_name(),
                                         // On one line, or gcov counts two the call never reaches.
-                                        static_cast<std::uint_least32_t>(ch), static_cast<std::uint_least32_t>(zero), static_cast<std::uint_least32_t>(one)));
+                                        static_cast<std::uint_least32_t>(ch), static_cast<std::uint_least32_t>(zero), static_cast<std::uint_least32_t>(one)
+                                )
+                        );
                 } else {
                         // Char-like, and neither a character nor a number to anything that could write it down.
                         return std::invalid_argument(
                                 std::format(
                                         "{}:{}:{}: exception: ‘{}‘: invalid argument ‘ch‘",
-                                        loc.file_name(), loc.line(), loc.column(), loc.function_name()));
+                                        loc.file_name(), loc.line(), loc.column(), loc.function_name()
+                                )
+                        );
                 }
         }
 
@@ -867,7 +894,9 @@ private:
                 return std::out_of_range(
                         std::format(
                                 "{}:{}:{}: exception: ‘{}‘: argument ‘pos‘ is out of range [{} >= {}]",
-                                loc.file_name(), loc.line(), loc.column(), loc.function_name(), pos, size()));
+                                loc.file_name(), loc.line(), loc.column(), loc.function_name(), pos, size()
+                        )
+                );
         }
 
         // The ranged form's own: the single-position message names pos against size(), and a range can fail below it.
@@ -876,7 +905,9 @@ private:
                 return std::out_of_range(
                         std::format(
                                 "{}:{}:{}: exception: ‘{}‘: arguments ‘pos‘ and ‘len‘ are out of range [{} + {} > {}]",
-                                loc.file_name(), loc.line(), loc.column(), loc.function_name(), pos, len, size()));
+                                loc.file_name(), loc.line(), loc.column(), loc.function_name(), pos, len, size()
+                        )
+                );
         }
 
         [[nodiscard]] static constexpr auto overflow_error(std::source_location const& loc = std::source_location::current())
@@ -884,7 +915,9 @@ private:
                 return std::overflow_error(
                         std::format(
                                 "{}:{}:{}: exception: ‘{}‘: a set position lies beyond the word",
-                                loc.file_name(), loc.line(), loc.column(), loc.function_name()));
+                                loc.file_name(), loc.line(), loc.column(), loc.function_name()
+                        )
+                );
         }
 };
 
@@ -922,28 +955,35 @@ struct hash<xstd::bitset_adaptor<Bits>>
 namespace xstd {
 
 // bitset operators                                           [bitset.operators]
-template<class Bits> [[nodiscard]] constexpr auto operator&(bitset_adaptor<Bits> const& lhs, bitset_adaptor<Bits> const& rhs) noexcept((Bits::extent != std::dynamic_extent))
+template<class Bits>
+[[nodiscard]] constexpr auto operator&(bitset_adaptor<Bits> const& lhs, bitset_adaptor<Bits> const& rhs) noexcept((Bits::extent != std::dynamic_extent))
         -> bitset_adaptor<Bits>
 {
         auto nrv = lhs;
         nrv &= rhs;
         return nrv;
 }
-template<class Bits> [[nodiscard]] constexpr auto operator|(bitset_adaptor<Bits> const& lhs, bitset_adaptor<Bits> const& rhs) noexcept((Bits::extent != std::dynamic_extent))
+
+template<class Bits>
+[[nodiscard]] constexpr auto operator|(bitset_adaptor<Bits> const& lhs, bitset_adaptor<Bits> const& rhs) noexcept((Bits::extent != std::dynamic_extent))
         -> bitset_adaptor<Bits>
 {
         auto nrv = lhs;
         nrv |= rhs;
         return nrv;
 }
-template<class Bits> [[nodiscard]] constexpr auto operator^(bitset_adaptor<Bits> const& lhs, bitset_adaptor<Bits> const& rhs) noexcept((Bits::extent != std::dynamic_extent))
+
+template<class Bits>
+[[nodiscard]] constexpr auto operator^(bitset_adaptor<Bits> const& lhs, bitset_adaptor<Bits> const& rhs) noexcept((Bits::extent != std::dynamic_extent))
         -> bitset_adaptor<Bits>
 {
         auto nrv = lhs;
         nrv ^= rhs;
         return nrv;
 }
-template<class Bits> [[nodiscard]] constexpr auto operator-(bitset_adaptor<Bits> const& lhs, bitset_adaptor<Bits> const& rhs) noexcept((Bits::extent != std::dynamic_extent))
+
+template<class Bits>
+[[nodiscard]] constexpr auto operator-(bitset_adaptor<Bits> const& lhs, bitset_adaptor<Bits> const& rhs) noexcept((Bits::extent != std::dynamic_extent))
         -> bitset_adaptor<Bits>
 {
         auto nrv = lhs;
@@ -952,21 +992,26 @@ template<class Bits> [[nodiscard]] constexpr auto operator-(bitset_adaptor<Bits>
 }
 
 // @= belongs to the left operand and @ does not, where std::bitset makes these three members.
-template<class Bits> [[nodiscard]] constexpr auto operator~(bitset_adaptor<Bits> const& lhs) noexcept((Bits::extent != std::dynamic_extent))
+template<class Bits>
+[[nodiscard]] constexpr auto operator~(bitset_adaptor<Bits> const& lhs) noexcept((Bits::extent != std::dynamic_extent))
         -> bitset_adaptor<Bits>
 {
         auto nrv = lhs;
         nrv.flip();
         return nrv;
 }
-template<class Bits> [[nodiscard]] constexpr auto operator<<(bitset_adaptor<Bits> const& lhs, std::size_t pos) noexcept((Bits::extent != std::dynamic_extent))
+
+template<class Bits>
+[[nodiscard]] constexpr auto operator<<(bitset_adaptor<Bits> const& lhs, std::size_t pos) noexcept((Bits::extent != std::dynamic_extent))
         -> bitset_adaptor<Bits>
 {
         auto nrv = lhs;
         nrv <<= pos;
         return nrv;
 }
-template<class Bits> [[nodiscard]] constexpr auto operator>>(bitset_adaptor<Bits> const& lhs, std::size_t pos) noexcept((Bits::extent != std::dynamic_extent))
+
+template<class Bits>
+[[nodiscard]] constexpr auto operator>>(bitset_adaptor<Bits> const& lhs, std::size_t pos) noexcept((Bits::extent != std::dynamic_extent))
         -> bitset_adaptor<Bits>
 {
         auto nrv = lhs;
@@ -1021,7 +1066,8 @@ auto operator<<(std::basic_ostream<charT, traits>& os, bitset_adaptor<Bits> cons
 {
         return os << x.template to_string<charT, traits, std::allocator<charT>>(
                        std::use_facet<std::ctype<charT>>(os.getloc()).widen('0'),
-                       std::use_facet<std::ctype<charT>>(os.getloc()).widen('1'));
+                       std::use_facet<std::ctype<charT>>(os.getloc()).widen('1')
+               );
 }
 
 } // namespace xstd

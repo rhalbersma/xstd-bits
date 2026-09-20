@@ -54,16 +54,19 @@ namespace wrong {
 struct dirty_default
 {
         std::uint64_t w = 1ULL;
+
         constexpr auto set(std::size_t n) noexcept
                 -> void
         {
                 w |= 1ULL << n;
         }
+
         [[nodiscard]] static constexpr auto count() noexcept
                 -> std::size_t
         {
                 return 1UZ;
         }
+
         [[nodiscard]] static constexpr auto size() noexcept
                 -> std::size_t
         {
@@ -75,16 +78,19 @@ struct dirty_default
 struct miscounting
 {
         std::uint64_t w = 0ULL;
+
         constexpr auto set(std::size_t n) noexcept
                 -> void
         {
                 w |= 1ULL << n;
         }
+
         [[nodiscard]] static constexpr auto count() noexcept
                 -> std::size_t
         {
                 return 2UZ;
         }
+
         [[nodiscard]] static constexpr auto size() noexcept
                 -> std::size_t
         {
@@ -96,16 +102,19 @@ struct miscounting
 struct reversed
 {
         std::uint64_t w = 0ULL;
+
         constexpr auto set(std::size_t n) noexcept
                 -> void
         {
                 w |= 1ULL << (63UZ - n);
         }
+
         [[nodiscard]] static constexpr auto count() noexcept
                 -> std::size_t
         {
                 return 1UZ;
         }
+
         [[nodiscard]] static constexpr auto size() noexcept
                 -> std::size_t
         {
@@ -118,16 +127,19 @@ struct spare_word
 {
         std::uint64_t w = 0ULL;
         std::uint64_t unused = 0ULL;
+
         constexpr auto set(std::size_t n) noexcept
                 -> void
         {
                 w |= 1ULL << n;
         }
+
         [[nodiscard]] static constexpr auto count() noexcept
                 -> std::size_t
         {
                 return 1UZ;
         }
+
         [[nodiscard]] static constexpr auto size() noexcept
                 -> std::size_t
         {
@@ -139,15 +151,18 @@ struct spare_word
 struct non_constant_set
 {
         std::uint64_t w = 0ULL;
+
         auto set(std::size_t n) noexcept -> void // NOLINT(readability-make-member-function-const)
         {
                 w |= 1ULL << n;
         }
+
         [[nodiscard]] static constexpr auto count() noexcept
                 -> std::size_t
         {
                 return 1UZ;
         }
+
         [[nodiscard]] static constexpr auto size() noexcept
                 -> std::size_t
         {
@@ -180,22 +195,26 @@ BOOST_AUTO_TEST_CASE(TheProbeRefusesALayoutThatIsWrong)
         struct right
         {
                 std::uint64_t w = 0ULL;
+
                 constexpr auto set(std::size_t n) noexcept
                         -> void
                 {
                         w |= 1ULL << n;
                 }
+
                 [[nodiscard]] static constexpr auto count() noexcept
                         -> std::size_t
                 {
                         return 1UZ;
                 }
+
                 [[nodiscard]] static constexpr auto size() noexcept
                         -> std::size_t
                 {
                         return 64UZ;
                 }
         };
+
         static_assert(bits::bit_layout_holds<right, 64UZ>());
         static_assert(bits::bit_castable<right, 64UZ>);
 }
@@ -301,7 +320,8 @@ BOOST_AUTO_TEST_CASE(BlocksAndBytesAreEachOthersInverse)
         // Blocks above the width come back clear, which is what makes the round trip an identity at a wider sequence.
         static_assert([] -> bool {
                 auto const out = bits::bytes_bits<std::array<std::uint64_t, 4>, 64UZ>(
-                        bits::bit_bytes<64UZ>(std::array<std::uint64_t, 4>{7ULL, 1ULL, 1ULL, 1ULL}));
+                        bits::bit_bytes<64UZ>(std::array<std::uint64_t, 4>{7ULL, 1ULL, 1ULL, 1ULL})
+                );
                 return out[0] == 7ULL and out[1] == 0ULL and out[2] == 0ULL and out[3] == 0ULL;
         }());
 }

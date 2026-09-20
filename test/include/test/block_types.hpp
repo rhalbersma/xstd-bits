@@ -87,7 +87,8 @@ using wide_word_types = decltype(std::tuple_cat(
                 boost::int128::uint128
 
 #endif
-                >>()));
+                >>()
+));
 
 // One block's worth of extents: empty, a single bit, and exactly one full block -- the same cost at any width.
 template<template<class, std::size_t> class C, class Block>
@@ -108,7 +109,8 @@ auto expand(std::tuple<Blocks...>) -> decltype(std::tuple_cat(std::declval<Exten
 template<template<class, std::size_t> class C>
 using graded_extents = decltype(std::tuple_cat(
         std::declval<decltype(detail::expand<C, in_block_extents>(std::declval<word_types>()))>(),
-        std::declval<decltype(detail::expand<C, straddling_extents>(std::declval<narrow_word_types>()))>()));
+        std::declval<decltype(detail::expand<C, straddling_extents>(std::declval<narrow_word_types>()))>()
+));
 
 // The widest Block across block boundaries, for the suites that can afford it.
 template<template<class, std::size_t> class C>

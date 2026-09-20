@@ -51,12 +51,15 @@ template<class C>
         return C();
 }
 
-template<> [[nodiscard]] auto make<ours_dynamic>()
+template<>
+[[nodiscard]] auto make<ours_dynamic>()
         -> ours_dynamic
 {
         return ours_dynamic(width);
 }
-template<> [[nodiscard]] auto make<boosts>()
+
+template<>
+[[nodiscard]] auto make<boosts>()
         -> boosts
 {
         return boosts(width);

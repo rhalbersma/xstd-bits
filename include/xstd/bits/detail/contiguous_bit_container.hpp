@@ -45,7 +45,8 @@ template<xstd::unsigned_integer Block, std::size_t N>
 inline constexpr auto num_blocks_v = std::ranges::max(
         align_up(N, static_cast<std::size_t>(xstd::numeric_limits<Block>::digits)) /
                 static_cast<std::size_t>(xstd::numeric_limits<Block>::digits),
-        1UZ);
+        1UZ
+);
 
 // The one vehicle: it owns the unused-tail invariant, and has no iterators.
 template<contiguous_block_range Blocks, std::size_t N = std::dynamic_extent>
@@ -147,37 +148,37 @@ public:
         // The width is a constructor argument exactly when it is not a template argument.
         [[nodiscard]] constexpr explicit contiguous_bit_container(std::size_t n)
                 requires (not has_static_size)
-            : m_size(n),
-              m_blocks(make_blocks(n))
+                : m_size(n)
+                , m_blocks(make_blocks(n))
         {}
 
         // boost's allocator arguments, deduced and matched, so a storage without one has no such constructor.
         template<class Alloc>
                 requires (not has_static_size) and std::same_as<Alloc, typename Blocks::allocator_type>
         [[nodiscard]] constexpr explicit contiguous_bit_container(Alloc const& alloc)
-            : m_blocks(blocks_for(0UZ), alloc)
+                : m_blocks(blocks_for(0UZ), alloc)
         {}
 
         template<class Alloc>
                 requires (not has_static_size) and std::same_as<Alloc, typename Blocks::allocator_type>
         [[nodiscard]] constexpr contiguous_bit_container(std::size_t n, Alloc const& alloc)
-            : m_size(n),
-              m_blocks(blocks_for(n), alloc)
+                : m_size(n)
+                , m_blocks(blocks_for(n), alloc)
         {}
 
         // [container.alloc.reqmts]'s allocator-extended copy and move; the moved-from is left empty.
         template<class Alloc>
                 requires (not has_static_size) and std::same_as<Alloc, typename Blocks::allocator_type>
         [[nodiscard]] constexpr contiguous_bit_container(contiguous_bit_container const& other, Alloc const& alloc)
-            : m_size(other.m_size),
-              m_blocks(other.m_blocks, alloc)
+                : m_size(other.m_size)
+                , m_blocks(other.m_blocks, alloc)
         {}
 
         template<class Alloc>
                 requires (not has_static_size) and std::same_as<Alloc, typename Blocks::allocator_type>
         [[nodiscard]] constexpr contiguous_bit_container(contiguous_bit_container&& other, Alloc const& alloc)
-            : m_size(std::exchange(other.m_size, 0UZ)),
-              m_blocks(std::move(other.m_blocks), alloc)
+                : m_size(std::exchange(other.m_size, 0UZ))
+                , m_blocks(std::move(other.m_blocks), alloc)
         {
                 other.m_blocks.clear();
         }
@@ -267,7 +268,8 @@ public:
                 assert(x.size() == y.size());
                 return std::lexicographical_compare_three_way(
                         std::ranges::rbegin(x.m_blocks), std::ranges::rend(x.m_blocks),
-                        std::ranges::rbegin(y.m_blocks), std::ranges::rend(y.m_blocks));
+                        std::ranges::rbegin(y.m_blocks), std::ranges::rend(y.m_blocks)
+                );
         }
 
         template<class Provider, class Hash, class Flavor>
@@ -1100,7 +1102,8 @@ public:
                 } else {
                         return std::ranges::fold_left(
                                 m_blocks | std::views::transform([](auto block) { return detail::bits::popcount(block); }),
-                                0UZ, std::plus<>());
+                                0UZ, std::plus<>()
+                        );
                 }
         }
 
@@ -1167,7 +1170,8 @@ public:
                                 std::views::zip(this->m_blocks, other.m_blocks), [](auto&& _) {
                                         auto&& [lhs, rhs] = _;
                                         return detail::bits::is_subset_of(lhs, rhs);
-                                });
+                                }
+                        );
                         if constexpr (has_static_size) {
                                 // One width, so the shared blocks are all the blocks.
                                 return shared;
@@ -1201,7 +1205,8 @@ public:
                                 std::views::zip(this->m_blocks, other.m_blocks), [](auto&& _) {
                                         auto&& [lhs, rhs] = _;
                                         return detail::bits::intersects(lhs, rhs);
-                                });
+                                }
+                        );
                 }
         }
 
@@ -1334,7 +1339,8 @@ private:
                 assert(index + 1UZ < num_blocks());
                 return static_cast<block_type>(
                         shl(m_blocks[index + 1UZ], L_shift) |
-                        shr(m_blocks[index], R_shift));
+                        shr(m_blocks[index], R_shift)
+                );
         }
 
         [[nodiscard]] constexpr auto last_block() const noexcept
@@ -1441,7 +1447,9 @@ private:
                 return std::length_error(
                         std::format(
                                 "{}:{}:{}: exception: ‘{}‘: argument ‘n‘ is no width this storage can count [{} > {}]",
-                                loc.file_name(), loc.line(), loc.column(), loc.function_name(), n, max_width));
+                                loc.file_name(), loc.line(), loc.column(), loc.function_name(), n, max_width
+                        )
+                );
         }
 
         // The same, against the ceiling a difference_type sets rather than the one a size_t sets.
@@ -1450,7 +1458,9 @@ private:
                 return std::length_error(
                         std::format(
                                 "{}:{}:{}: exception: ‘{}‘: argument ‘n‘ is no width a distance can name [{} > {}]",
-                                loc.file_name(), loc.line(), loc.column(), loc.function_name(), n, max_addressable_width));
+                                loc.file_name(), loc.line(), loc.column(), loc.function_name(), n, max_addressable_width
+                        )
+                );
         }
 };
 

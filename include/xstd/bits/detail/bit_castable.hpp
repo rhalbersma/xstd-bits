@@ -37,7 +37,8 @@ concept integer_source =
 // The same family over a sequence: block j holds [j*digits, (j+1)*digits), and a scalar is the length-one case.
 template<class B>
 inline constexpr auto block_digits = static_cast<std::size_t>(
-        xstd::numeric_limits<std::ranges::range_value_t<B>>::digits);
+        xstd::numeric_limits<std::ranges::range_value_t<B>>::digits
+);
 
 template<class B>
 concept block_size_is_constant = requires {

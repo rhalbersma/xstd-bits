@@ -16,8 +16,10 @@
 // The iterator is the primitive: a pointer and a position, reaching the bits through the storage alone.
 namespace xstd::detail::bits {
 
-template<class Bits> class bidirectional_bit_iterator;
-template<class Bits> class bidirectional_bit_reference;
+template<class Bits>
+class bidirectional_bit_iterator;
+template<class Bits>
+class bidirectional_bit_reference;
 
 // A position in the set reading, read-only whatever Bits' qualification: a key is nothing to write through.
 template<class Bits>
@@ -39,8 +41,8 @@ public:
 
         // Public, so an owner or a view constructs one without befriending it: the dependency runs one way.
         [[nodiscard]] constexpr bidirectional_bit_iterator(bits_type const* ptr, std::size_t idx) noexcept
-            : m_ptr(ptr),
-              m_idx(idx)
+                : m_ptr(ptr)
+                , m_idx(idx)
         {
                 assert(m_ptr != nullptr);
         }
@@ -94,6 +96,7 @@ public:
                 ++*this;
                 return nrv;
         }
+
         constexpr auto operator--(int) noexcept
                 -> bidirectional_bit_iterator
         {
@@ -117,8 +120,8 @@ public:
         using iterator = bidirectional_bit_iterator<Bits>;
 
         [[nodiscard]] constexpr bidirectional_bit_reference(bits_type const* ptr, std::size_t idx) noexcept
-            : m_ptr(ptr),
-              m_idx(idx)
+                : m_ptr(ptr)
+                , m_idx(idx)
         {
                 assert(m_ptr != nullptr);
         }
@@ -160,7 +163,7 @@ public:
 template<class Bits, class CharT>
 // NOLINTNEXTLINE(bugprone-std-namespace-modification)
 struct std::formatter<xstd::detail::bits::bidirectional_bit_reference<Bits>, CharT>
-    : std::formatter<std::size_t, CharT>
+        : std::formatter<std::size_t, CharT>
 {
         template<class Context>
         [[nodiscard]] constexpr auto format(xstd::detail::bits::bidirectional_bit_reference<Bits> ref, Context& ctx) const

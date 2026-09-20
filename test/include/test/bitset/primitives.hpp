@@ -42,7 +42,8 @@ auto check_string_view_at_a_static_width() -> void // NOLINT(bugprone-exception-
         constexpr auto N = X().size();
         auto const zeros = std::string(N, '0');
         BOOST_CHECK_THROW( // [bitset.cons]/3
-                (static_cast<void>(X(std::string_view(zeros), N + 1))), std::out_of_range);
+                (static_cast<void>(X(std::string_view(zeros), N + 1))), std::out_of_range
+        );
 }
 
 // The two a zero width has no room to state: every position set, and a character that is neither 0 nor 1.
@@ -56,7 +57,8 @@ auto check_string_view_at_a_nonzero_width() -> void // NOLINT(bugprone-exception
         auto invalid = std::string(N, '0');
         invalid[N - 1] = '2';
         BOOST_CHECK_THROW( // [bitset.cons]/5
-                (static_cast<void>(X(std::string_view(invalid)))), std::invalid_argument);
+                (static_cast<void>(X(std::string_view(invalid)))), std::invalid_argument
+        );
 }
 
 // A run-time width is boost's contract: the text read is the width, and the two throws are as at a static width.
@@ -309,7 +311,9 @@ struct mem_count
                                 std::views::iota(0UZ, N) | std::views::transform([&](auto i) {
                                         return self[i];
                                 }),
-                                0UZ, std::plus<>())); // [bitset.members]/43
+                                0UZ, std::plus<>()
+                        )
+                ); // [bitset.members]/43
         }
 };
 
@@ -334,7 +338,8 @@ struct mem_equal_to
                         self == rhs,
                         std::ranges::all_of(std::views::iota(0UZ, N), [&](auto i) {
                                 return self[i] == rhs[i];
-                        })); // [bitset.members]/45
+                        })
+                ); // [bitset.members]/45
                 // The set reading cross-check is ours to make: a foreign bitset has no view.
                 if constexpr (requires { xstd::bit_set_view(self); }) {
                         auto const lhs_view = xstd::bit_set_view(self);
@@ -345,7 +350,9 @@ struct mem_equal_to
                                 self == rhs,
                                 std::ranges::equal(
                                         lhs_view.begin(), lhs_view.end(),
-                                        rhs_view.begin(), rhs_view.end()));
+                                        rhs_view.begin(), rhs_view.end()
+                                )
+                        );
 
 #else
 
@@ -384,7 +391,9 @@ struct mem_compare_three_way
                                 (lhs_view <=> rhs_view) ==
                                 std::lexicographical_compare_three_way(
                                         lhs_view.begin(), lhs_view.end(),
-                                        rhs_view.begin(), rhs_view.end()));
+                                        rhs_view.begin(), rhs_view.end()
+                                )
+                        );
                 }
                 if constexpr (requires { self <=> rhs; }) {
                         BOOST_CHECK((self <=> rhs) == (bit_string(self) <=> bit_string(rhs)));

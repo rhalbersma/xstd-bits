@@ -18,7 +18,8 @@ BOOST_AUTO_TEST_SUITE(Bitset)
 // Every Block model within one block, the narrow ones across boundaries, and the widest Block across one too.
 using Types = decltype(std::tuple_cat(
         std::declval<test::graded_extents<xstd::basic_bitset>>(),
-        std::declval<test::wide_extents<xstd::basic_bitset>>()));
+        std::declval<test::wide_extents<xstd::basic_bitset>>()
+));
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(IsRegular, T, Types)
 {
