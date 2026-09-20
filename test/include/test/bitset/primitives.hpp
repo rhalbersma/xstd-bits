@@ -25,16 +25,15 @@ namespace test::bitset {
 
 // Nine primitives below NOLINT bugprone-exception-escape: the check reads the callee, not the guard.
 
-// These checks are on the basic_string_view overload, which std::bitset now has too: P2697R1 added it for C++26, so
-// the wrapper and its counterpart are one constructor apart no longer. dynamic_bitset answers to its own contract.
+// The basic_string_view overload, which P2697R1 gave std::bitset for C++26; dynamic_bitset has its own contract.
 template<class X>
 concept fixed_string_view_constructible = requires { X(std::string_view()); } and not dynamic<X>;
 
-// The wrapper at a run-time width is one of ours and answers as boost does; boost itself, which has the overload from 1.87, asserts where the wrapper throws.
+// The wrapper at a run-time width answers as boost does; boost itself asserts where the wrapper throws.
 template<class X>
 concept dynamic_string_view_constructible = requires { X(std::string_view()); typename xstd::owned_storage<X>::bits_type; } and dynamic<X>;
 
-// One function per tier, because the tiers are what this checks and a BOOST_CHECK_THROW is three branches to the complexity check: inline, the three of them nested under two if constexprs came to 64 against a threshold of 25, and none of that 64 was the logic.
+// One function per tier: a BOOST_CHECK_THROW is three branches, and nesting three under two if constexprs hits 64.
 
 // A width the text must fit: too long throws, whatever the text says.
 template<class X>
@@ -132,7 +131,7 @@ struct mem_bit_xor_assign
         }
 };
 
-// Set vocabulary, so a bitset at a static width has none of it, as std::bitset has none: guarded, like the three predicates below.
+// Set vocabulary, which a bitset at a static width has none of, as std::bitset has none: guarded.
 struct mem_bit_minus_assign
 {
         template<class X>
@@ -371,7 +370,7 @@ template<class X>
         }
 }
 
-// Two orderings. The set view's is std::set's over ascending positions, re-derived from each type's own iteration; the type's own, where it has one, is the bit string's, which is boost's operator<.
+// Two orderings: the set view's is std::set's over ascending positions, the type's own is the bit string's.
 struct mem_compare_three_way
 {
         template<class X>
@@ -511,7 +510,7 @@ struct mem_intersects
         }
 };
 
-// [bitset.hash]/1 stipulates a std::hash<std::bitset<N>> specialization; equal values hash equal wherever one exists, and boost has none.
+// [bitset.hash]/1 stipulates a std::hash<std::bitset<N>>; equal values hash equal wherever one exists.
 struct op_hash
 {
         template<class X>
@@ -576,9 +575,7 @@ struct op_iostream
         }
 };
 
-// A first character that is neither zero nor one stores nothing. An EXHAUSTED stream is a different case and not the
-// same one: operator>> is a formatted input function ([bitset.operators]/4), so its sentry fails before a character
-// is looked at, whatever N is. Only the non-empty-but-unreadable input turns on N, via [bitset.operators]/6.
+// A first character that is neither zero nor one stores nothing; an exhausted stream fails the sentry instead.
 template<class X>
 struct op_istream_failure
 {
@@ -595,7 +592,7 @@ struct op_istream_failure
                                 BOOST_CHECK_EQUAL(is.fail(), exhausted or N > 0); // [istream.formatted.reqmts], then [bitset.operators]/6
                         }
 
-                        // Fewer digits than N: the loop stops on eof rather than on N, and x = X(str) puts what was read in the low bits.
+                        // Fewer digits than N: the loop stops on eof, and x = X(str) puts what was read low.
                         if constexpr (N > 1) {
                                 auto is = std::istringstream("1");
                                 auto x = X();
