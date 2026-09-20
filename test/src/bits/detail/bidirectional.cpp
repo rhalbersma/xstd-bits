@@ -59,7 +59,7 @@ auto check_set_walk(T const& empty, std::set<std::size_t> const& model)
         auto const last = iterator(&c, size);
         BOOST_CHECK((first == last) == model.empty());
 
-        // Behind if constexpr rather than after an early return, or MSVC reports the rest unreachable at a zero width, which it is.
+        // Behind if constexpr rather than an early return, or MSVC reports the rest unreachable at a zero width.
         if constexpr (T::extent != 0UZ) {
                 check_set_steps(first, last, model);
         }
@@ -170,7 +170,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheSetIteratorWalksThePositionsInBothDirections, T
         check_every_set_pattern(T());
 }
 
-// format_as is what the proxy's own std::formatter calls, unqualified, and what fmt would call in a consumer that uses it, so calling it the same way is the test.
+// format_as is what the proxy's own std::formatter calls unqualified, and what fmt would call, so the test calls it so.
 BOOST_AUTO_TEST_CASE(TheProxyFormatsAsItsValue)
 {
         auto c = Bits();
@@ -205,7 +205,7 @@ BOOST_AUTO_TEST_CASE(TheViewIteratesWithTheSharedProxy)
         BOOST_CHECK(true);
 }
 
-// One shape asked twice: * gives a proxy, & gives an iterator back, and the value comes only by converting; the standard says nothing here, so only our own guarantees are asserted.
+// One shape asked twice: * gives a proxy, & an iterator back, and only our own guarantees are asserted.
 BOOST_AUTO_TEST_CASE(DereferencingYieldsAProxyRatherThanTheValue)
 {
         static_assert(std::same_as<decltype(*std::declval<SetIt const&>()), SetRef>);

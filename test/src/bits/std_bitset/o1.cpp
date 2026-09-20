@@ -101,7 +101,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheObserversHoldOverEveryCardinalityAndSingleton, 
         on1::all_cardinality_sets<T>(mem_any());
         on1::all_cardinality_sets<T>(mem_none());
 
-        // empty/full set vs. every singleton at matching N, so a dynamic_bitset pair is same-length and only cardinality differs.
+        // empty/full set against every singleton at matching N, so a dynamic_bitset pair differs only in cardinality.
         on1::all_singleton_sets<T>([](auto const& bs1) {
                 on0::empty_set<T, limit_v<T, L1>>([&](auto const& bs0) {
                         mem_compare_three_way()(bs0, bs1);

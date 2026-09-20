@@ -18,7 +18,7 @@
 
 namespace test::set {
 
-// The interface a bit-packed set shares with the set it packs: bidirectional over keys, where the sequence reading is random-access over bool.
+// The interface a bit-packed set shares with the set it packs: bidirectional over keys, not random-access over bool.
 template<class C>
 concept bit_set =
         std::regular<C> and std::totally_ordered<C> and std::ranges::bidirectional_range<C> and std::bidirectional_iterator<typename C::iterator> and value_reference<typename C::const_reference>;

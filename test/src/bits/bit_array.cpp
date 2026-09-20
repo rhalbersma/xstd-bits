@@ -125,8 +125,7 @@ BOOST_AUTO_TEST_CASE(ItAnswersTheTupleInterfaceStdArrayCarries)
         auto const& ca = a;
         BOOST_CHECK(get<0>(ca) == true);
 
-        // The two rvalue overloads, CALLED. The checklist names them inside a requires-expression, which proves they
-        // exist and never runs them; a proxy returned by value is a handle into whatever the caller still holds.
+        // The two rvalue overloads, called: a requires-expression proves they exist and never runs them.
         BOOST_CHECK(get<0>(A({true, false, true})) == true);
         BOOST_CHECK(get<1>(A({true, false, true})) == false);
         BOOST_CHECK(get<2>(std::as_const(a)) == true);
@@ -144,7 +143,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItIsListInitializedLikeAStdArray, T, Types)
         BOOST_CHECK(T{} == T());
 }
 
-// The behavioural half, which this suite was missing while the bitset and set suites had theirs: every operation run on a bit_array and on the std::array<bool, N> it is held against, and the two compared.
+// The behavioural half: every operation run on a bit_array and on the std::array<bool, N> it is held against.
 namespace {
 
 // The model at the same extent, filled the same way, so any disagreement is the packing's.
@@ -159,7 +158,7 @@ auto model_of(T const& a)
         return m;
 }
 
-// Every read path at every position, counted rather than asserted one at a time: a failure then names the operation instead of drowning the log in one line per position.
+// Every read path at every position, counted rather than asserted, so a failure names the operation.
 template<class T>
 auto access_disagreements(T& a, std::vector<bool> const& m)
         -> std::size_t
@@ -207,7 +206,7 @@ auto pattern_bit(std::size_t p, std::size_t i, std::size_t n)
         }
 }
 
-// Uniform both ways, single-ended both ways, and two strides: enough that every comparison lands on both sides of itself, and cheaper than every pair of values.
+// Uniform both ways, single-ended both ways, and two strides, so every comparison lands on both sides of itself.
 template<class T>
 auto comparison_patterns()
         -> std::vector<T>

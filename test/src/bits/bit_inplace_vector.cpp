@@ -43,9 +43,7 @@ BOOST_AUTO_TEST_CASE(TheInplaceSequenceIsTheSequenceAdaptorOverAnInplaceVectorOf
         static_assert(test::sequence::bit_sequence<T>);
 }
 
-// Every line of [inplace.vector], the model first so the checklist is known to be honest. std::inplace_vector<bool, N>
-// and not std::vector<bool>: this column's counterpart is the one that spells four capacity members static and hands
-// push_back a reference to return, and a checklist held up to the dynamic column asked for none of it.
+// Every line of [inplace.vector], the model first so the checklist is known to be honest.
 BOOST_AUTO_TEST_CASE(ItAnswersEveryLineOfStdInplaceVectorBool)
 {
         static_assert(test::sequence::inplace_vector_bool<std::inplace_vector<bool, 24>>);
@@ -170,7 +168,7 @@ BOOST_AUTO_TEST_CASE(ItYieldsEveryPosition)
 
 #else
 
-// The column is its storage's: without std::inplace_vector there is no name to test, and saying so keeps the source from being empty.
+// The column is its storage's: without std::inplace_vector there is no name to test.
 BOOST_AUTO_TEST_CASE(TheColumnIsAbsentWithItsStorage)
 {
         static_assert(not test::has_inplace_vector);

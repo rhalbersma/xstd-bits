@@ -49,7 +49,7 @@ BOOST_AUTO_TEST_CASE(TheViewIsTheReferringAdaptor)
         static_assert(std::same_as<view_of<xstd::bit_array<8>>, xstd::bit_span<xstd::detail::bits::contiguous_bit_array<std::size_t, 8>>>);
 }
 
-// A bitset is committed to neither reading, a set owner to the set one; over the very same storage, only the first admits a span.
+// A bitset is committed to neither reading and a set owner to the set one, so only the first admits a span.
 BOOST_AUTO_TEST_CASE(TheReadingsDoNotMix)
 {
         static_assert(std::same_as<decltype(xstd::bit_set_view(std::declval<xstd::bit_static_set<8>&>())), xstd::bit_set_view<Blocks>>);
@@ -57,7 +57,7 @@ BOOST_AUTO_TEST_CASE(TheReadingsDoNotMix)
         static_assert(not std::constructible_from<xstd::bit_span<Blocks>, xstd::bit_static_set<8>&>);
 }
 
-// Viewing an owner is implicit, viewing raw storage is not: the first asserts nothing the owner does not already carry, which is where span draws the line -- its array and C-array constructors are implicit even at a static extent, while the ones claiming a size their source cannot prove are explicit. An rvalue owner still does not convert, the parameter being Owner&.
+// Viewing an owner is implicit and viewing raw storage is not, which is where span draws the line.
 BOOST_AUTO_TEST_CASE(ViewingAnOwnerIsImplicit)
 {
         static_assert(std::convertible_to<xstd::bitset<8>&, xstd::bit_span<Blocks>>);
@@ -124,7 +124,7 @@ BOOST_AUTO_TEST_CASE(WritingThroughTheViewWritesTheBits)
         BOOST_CHECK(packed.none());
 }
 
-// The same reading over the type this library packs, so bit_array's own operator[] and the view agree position by position.
+// The same reading over the type this library packs, so bit_array's operator[] and the view agree position by position.
 BOOST_AUTO_TEST_CASE(APackedArrayAgreesWithItsOwnView)
 {
         auto packed = xstd::basic_bit_array<unsigned char, 8>{};
