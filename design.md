@@ -4167,3 +4167,122 @@ comparison compares the bases first, and the base is `allocator_base_type`, an e
 defaulted `operator==` can only answer true. That call is a branch no input can send the other way,
 and an unreachable branch is a hole in a coverage gate that admits no test. Saying the member outright
 is the same comparison with nothing dead in it.
+
+### Why the bitset reading's byte exchange is constrained on `container_source`
+
+`bitset_adaptor`'s `from_bits`/`to_bits` are constrained on `container_source` rather than on
+`bit_castable`, which is the one place this reading differs from the other two. It already has the
+integer door, twice over, and admitting the integer family here would collide with it rather than
+widen it:
+
+- the `unsigned long long` constructor is **implicit**. A template admitting `unsigned int` would be
+  an exact match where that one needs a conversion, so it would win for `bitset<32> b(5u)` — and
+  being explicit, it would make `bitset<32> b = 5u` ill-formed, which compiles today.
+- `to_ullong()` **throws** `overflow_error` where a set position lies beyond the word
+  ([bitset.members]/34-37), where a byte copy would silently keep the low bits. Two contracts for one
+  conversion is a trap, and the standard's is the one this reading owes.
+
+So integers keep their door and this opens the other one: `std::bitset<N>`, and any field of bits
+whose layout `bit_castable` can prove.
+
+The name also settles a hazard by construction. A templated *constructor* is a candidate for
+copy-construction, so its constraint is checked on every copy — and this is the one reading whose own
+type the probe accepts, having `set`, `count` and `size`, so `container_source` probes it rather than
+declining early. A static function is never a copy-construction candidate, so the check happens only
+where `from_bits` is written. The not-itself clause is kept all the same, and says something about the
+interface rather than about overload resolution: copying a `bitset_adaptor` is a copy, not a byte
+exchange. The other two readings decline their own type for free, an adaptor being neither trivially
+copyable nor a contiguous range of blocks.
+
+### LWG 4294's char-like traits on the string constructors
+
+The string constructors carry LWG 4294's four traits verbatim, so the constructor is not instantiated
+for a `charT` that would make the `basic_string_view` ill-formed *outside* the immediate context. They
+arrived with the `string_view` overload P2697R1 added; before it, the `const charT*` overload went
+through `basic_string` and needed no such guard.
+
+One clause the standard does not have is added, because `std::bitset` has no overload to be told apart
+from: a pointer to a block is the block-range constructor's argument, not a string's. Nothing else is
+subtracted, so a program-defined char-like type reaches this exactly as it reaches `std::bitset`'s.
+
+### The block interface's copy arm
+
+Every block out, including the clear tail; at most every block in, the tail kept clear. Both halves
+take the same shape for reasons that are not the same.
+
+Going **in**, the loop cannot become the copy at all: it writes through a reference the compiler will
+not assume is the next word along. Coming **out** it can, and in a Release build it does — 36ns to a
+contiguous output against a 35ns memcpy of the same words, at 32768 bits, medians of seven. What it
+cannot survive is `block(i)`'s assertion: an assert-on build runs the same loop at 3.4x that floor,
+where the span goes straight through. So the explicit arm buys nothing where the benchmarks run and
+3.4x where the tests do.
+
+The other half does not get there by itself in any build, and is where the storage's `blocks()` earns
+its place: 121ns as a loop against the 35ns floor, 35ns as one copy into the span. It takes a sized
+sentinel as well as a contiguous iterator, because the precondition the loop asserts per block — that
+the source is no longer than the storage — is one the bulk copy has to know *before* it writes, and
+`last - first` is the only way to be told.
+
+Into a `back_inserter` it is 320ns and no arm can help that: a `push_back` per block is what the
+caller asked for.
+
+### Which width throws and which asserts
+
+One rule covers element access and the ranged family both: a width answers as **its own** counterpart
+does, and a width whose counterpart has nothing here answers as its own type answers elsewhere.
+
+Element access has two counterparts to mirror — `std::bitset::set(pos)` throws, boost's asserts — so a
+static width throws `out_of_range` and a run-time one asserts. The inconsistency is the counterparts'
+own. The ranged family has one counterpart, boost's, which asserts; so a run-time width asserts,
+which is boost's contract exactly, and a static width, having no `std::bitset::set(pos, len, val)` to
+mirror, follows the nearest thing it does have — its own `set(pos)` — and throws.
+
+A strict extension is about what a *counterpart's valid expressions* do, and reaching past the width
+is not one of those, so nothing requires a throw where boost asserts.
+
+The range check is spelled as a subtraction rather than as `pos + len`, which wraps for a `pos` near
+the top of `size_t`: a wrapped sum is below every width, so the check the range was meant to fail is
+the one it would pass. The diagnostic names `pos` and `len`, the sum being the thing that is not a
+position.
+
+`find_next` is total, which is boost's contract: a position at or past the width is one nothing can be
+set after, and `npos` is that answer rather than a precondition violation. The storage's step is not
+total — it asserts `is_valid(n)` and steps to `n + 1` — so the guard is at this reading. Without it,
+`find_next(npos)` is the worst shape this can take: `n + 1` wraps to zero, the scan starts from the
+beginning, and the answer is the *first* set position.
+
+### Writing the offending character into the string constructor's message
+
+`std::format` needs a `std::formatter<charT, char>`, and the standard specializes
+`formatter<charT, charT>` and `formatter<char, wchar_t>` and nothing else. So there is no
+`formatter<wchar_t, char>`, nor one for any of the three Unicode char types — and formatting them
+unconditionally makes the error path ill-formed for every `charT` but `char`, on a constructor that
+has taken all five since it was written. Nothing catches that by inspection, because
+`is_constructible_v` asks the declaration and never instantiates the body; it takes a call to find it.
+
+So there are three arms, by what the character can be written down as: characters a narrow format
+string can print, which is `char` alone; the code unit as a number for every other integral char
+type, since that is what the message is for; and neither for a program-defined char-like type, which
+LWG 4294 admits and which is not even integral — the same ill-formed-outside-the-immediate-context
+trap the issue exists to close, one layer down.
+
+Each arm spells its format string out rather than building one: `std::format` takes a
+`format_string`, which is consteval over the argument types, so a `std::string` assembled at run time
+would not be one. The narrow arm puts its three arguments on one line: split over three, gcov hands
+the first two a counter of their own that the call on the third never reaches, and two lines every
+test of this message runs read as never executed.
+
+### `operator>>` is a formatted input function
+
+[bitset.operators]/4 says so, and the sentry is what that phrase means: leading whitespace is skipped,
+and an exhausted stream fails before a character is ever looked at. Peeking straight at the stream
+does neither — `std::bitset<3>` reads `"  101"` and answers 101, where a peeking extractor refuses the
+input, which is a difference in the *answer* and not only in the bookkeeping.
+
+The sentry also decides the zero-width case that no other clause reaches: [bitset.operators]/6 sets
+failbit only when N > 0, so at N == 0 an empty stream is failed at the sentry or nowhere, and
+`std::bitset<0>` fails it. A failed sentry extracts nothing, so the bitset keeps the value it had
+([istream.formatted.reqmts]) rather than being assigned an empty string.
+
+There is one peek per character: peeking twice sets eofbit and then failbit, which fails a short but
+valid extraction.
