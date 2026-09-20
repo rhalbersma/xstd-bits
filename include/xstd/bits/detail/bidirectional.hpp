@@ -45,7 +45,7 @@ public:
                 assert(m_ptr != nullptr);
         }
 
-        // A zero width has one position, so every iterator over it is the same one; said outright, every loop an optimizer sees into stops before its first step, which no spelling of the step itself achieved.
+        // A zero width has one position, so every iterator over it is the same one and every loop stops early.
         [[nodiscard]] friend constexpr auto operator==(bidirectional_bit_iterator lhs, bidirectional_bit_iterator rhs) noexcept
                 -> bool
         {
@@ -137,7 +137,7 @@ public:
                 return m_idx;
         }
 
-        // A strong index type initializes from *it in one step; one with an explicit constructor takes the size_t route.
+        // A strong index type initializes from *it in one step; an explicit one takes the size_t route.
         template<class T>
         [[nodiscard]] constexpr explicit(false) operator T() const noexcept(std::is_nothrow_constructible_v<T, value_type>) // NOLINT(misc-explicit-constructor)
                 requires std::is_class_v<T> and std::is_convertible_v<value_type, T>
@@ -145,7 +145,7 @@ public:
                 return m_idx;
         }
 
-        // What this proxy prints as, said once: our own std::formatter below calls it unqualified, and it is also fmt's protocol, found by ADL on the proxy, for a consumer who formats with fmt. fmt is no longer a dependency of this repository; the hook is a hidden friend of a header-only proxy and costs nobody anything, so taking fmt interop away to delete a line the standard formatter calls regardless would be a trade in the wrong direction.
+        // What this proxy prints as, said once: our std::formatter calls it unqualified, and fmt finds it by ADL.
         [[nodiscard]] friend constexpr auto format_as(bidirectional_bit_reference ref) noexcept
                 -> value_type
         {

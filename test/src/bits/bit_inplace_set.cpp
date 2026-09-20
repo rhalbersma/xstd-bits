@@ -42,8 +42,7 @@ BOOST_AUTO_TEST_CASE(TheInplaceSetIsTheSetAdaptorOverAnInplaceVectorOfBlocks)
         static_assert(test::set::bit_set<T>);
 }
 
-// A requires-expression whose requirement fails for a concrete type is ill-formed rather than false
-// ([expr.prim.req]/5), so the question goes through a template parameter and not to the type directly.
+// A requires-expression failing for a concrete type is ill-formed rather than false ([expr.prim.req]/5).
 template<class X>
 constexpr bool has_allocator_type = requires { typename X::allocator_type; };
 
@@ -93,7 +92,7 @@ BOOST_AUTO_TEST_CASE(InsertingPastTheCapacityThrowsBadAlloc)
 {
         auto s = T();
 
-        // max_size() is the positions there are to hold, which under a static capacity is that capacity, the same answer the other two readings give over this storage.
+        // max_size() is the positions there are to hold, which under a static capacity is that capacity.
         BOOST_CHECK_EQUAL(s.max_size(), 24UZ);
         static_assert(not has_capacity<T>);
         BOOST_CHECK_THROW(s.insert(24), std::bad_alloc);
@@ -125,7 +124,7 @@ BOOST_AUTO_TEST_CASE(ItYieldsAscendingKeys)
         auto c = T();
         test::set::yields_ascending_keys(c); // empty is trivially ascending
 
-        // Inserted high to low and across block boundaries, so the ascending answer is the container's doing and not the insertion order's.
+        // Inserted high to low and across block boundaries, so the ascending answer is the container's doing.
         for (auto const key : {70UZ, 64UZ, 63UZ, 9UZ, 1UZ, 0UZ}) {
                 if (key < c.max_size()) {
                         c.insert(key);
@@ -136,7 +135,7 @@ BOOST_AUTO_TEST_CASE(ItYieldsAscendingKeys)
 
 #else
 
-// The column is its storage's: without std::inplace_vector there is no name to test, and saying so keeps the source from being empty.
+// The column is its storage's: without std::inplace_vector there is no name to test.
 BOOST_AUTO_TEST_CASE(TheColumnIsAbsentWithItsStorage)
 {
         static_assert(not test::has_inplace_vector);

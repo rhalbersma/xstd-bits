@@ -22,7 +22,7 @@ auto bits(benchmark::State const& state)
         return static_cast<std::size_t>(state.range(0)) * bits_per_word;
 }
 
-// One step of an LCG per lookup: a couple of nanoseconds against a DRAM miss, and unpredictable enough that the prefetcher cannot turn the random walk back into a sequential one, which is the whole point of measuring it.
+// One LCG step per lookup: cheap against a DRAM miss, and unpredictable enough to defeat the prefetcher.
 constexpr auto next_index(std::uint64_t& lcg, std::size_t n)
         -> std::size_t
 {
@@ -111,7 +111,7 @@ auto bm_construct(benchmark::State& state)
         state.SetBytesProcessed(state.iterations() * static_cast<std::int64_t>(n / 8UZ));
 }
 
-// Ours first and alone, because the count below is a walk only this reading has a spelling for. It takes no counterpart rung of its own: what it is read against is the counterpart's rung in BM_LADDER(bm_sequential_count), which is the only way std::vector<bool> can be asked the same question.
+// Ours alone: the count below is a walk only this reading spells, read against bm_sequential_count's rung.
 #define BM_LADDER_OURS(fn) \
         BENCHMARK_TEMPLATE1(fn, xstd::bit_vector) \
                 ->RangeMultiplier(4) \
@@ -127,7 +127,7 @@ BM_LADDER(bm_random_read);
 BM_LADDER(bm_sequential_count);
 BM_LADDER_OURS(bm_sequential_count_member);
 
-// Construction allocates and zeroes the whole slice, so it stops four rungs short of the others rather than spend the run on the allocator.
+// Construction allocates and zeroes the whole slice, so it stops four rungs short of the others.
 #define BM_BUILD_LADDER(fn) \
         BENCHMARK_TEMPLATE1(fn, std::vector<bool>) \
                 ->RangeMultiplier(4) \

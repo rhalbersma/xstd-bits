@@ -25,7 +25,7 @@
 
 #endif
 
-// The ladder doubles rather than stepping decades: bit_set changes block count on these boundaries, so a doubling walks whole blocks, and a cache knee reads as a knee.
+// The ladder doubles rather than stepping decades: bit_set changes block count on these boundaries.
 inline constexpr auto lo = 1L << 10;
 inline constexpr auto hi = 1L << 20;
 
@@ -68,7 +68,7 @@ auto bm_sift_primes1(benchmark::State& state)
         per_candidate(state);
 }
 
-// The segmented sieve holds O(sqrt(n) + W) whatever n is, against the bounded sieve's O(n), and the window is a compile-time width chosen to sit in L1.
+// The segmented sieve holds O(sqrt(n) + W), against the bounded sieve's O(n), the window sized for L1.
 template<class X>
 auto bm_sift_primes_segmented(benchmark::State& state)
         -> void
@@ -80,7 +80,7 @@ auto bm_sift_primes_segmented(benchmark::State& state)
         per_candidate(state);
 }
 
-// The incremental sieve is the price of needing no bound at all: one map entry per prime found, and a map lookup per candidate where the array sieve has a strided write.
+// The incremental sieve needs no bound: one map entry per prime, and a map lookup per candidate.
 template<class X>
 auto bm_sift_primes_incremental(benchmark::State& state)
         -> void
@@ -92,7 +92,7 @@ auto bm_sift_primes_incremental(benchmark::State& state)
         per_candidate(state);
 }
 
-// The sieve is the setup, not the measurement, so it stays outside the loop; at the top rung it costs more than the twins pass it feeds.
+// The sieve is the setup, not the measurement, so it stays outside the loop.
 template<class X>
 auto bm_filter_twins(benchmark::State& state)
         -> void
@@ -150,7 +150,7 @@ BENCH_REPRESENTATIONS(bm_sift_primes0);
 BENCH_REPRESENTATIONS(bm_sift_primes1);
 BENCH_REPRESENTATIONS(bm_filter_twins);
 
-// The two unbounded sieves, on the dense container alone: what is being priced is the algorithm against sift_primes1 on the same row, not one container against another.
+// The two unbounded sieves on the dense container alone: the algorithm is priced, not the container.
 BENCH_LADDER(bm_sift_primes_segmented, xstd::bit_set);
 BENCHMARK_TEMPLATE1(bm_sift_primes_incremental, xstd::bit_set)
         ->RangeMultiplier(2)

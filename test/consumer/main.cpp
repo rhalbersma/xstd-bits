@@ -14,7 +14,7 @@
 
 namespace consumer {
 
-// The adaptors named without naming the storage they are instantiated over: a pattern match, which is also the claim #131 rests on -- the containers and the views are not built on the adaptors, they are the adaptors.
+// The adaptors named without naming their storage: the containers and views are not built on them, they are them.
 template<class> constexpr bool is_set_adaptor = false;
 template<class B, xstd::ownership O> constexpr bool is_set_adaptor<xstd::set_adaptor<B, O>> = true;
 
@@ -24,7 +24,7 @@ template<class B, xstd::ownership O, bool W> constexpr bool is_sequence_adaptor<
 template<class> constexpr bool is_bitset_adaptor = false;
 template<class B> constexpr bool is_bitset_adaptor<xstd::bitset_adaptor<B>> = true;
 
-// A view's Bits is the storage a container wraps, which lives in detail/, so a consumer reaches the view names by deduction rather than by spelling them. These aliases are how that looks from outside the library.
+// A view's Bits is the storage a container wraps, so a consumer reaches the view names by deduction.
 using set_view_of_bitset = decltype(xstd::bit_set_view(std::declval<xstd::bitset<64>&>()));
 using span_of_bitset = decltype(xstd::bit_span(std::declval<xstd::bitset<64>&>()));
 using subspan_of_bitset = decltype(std::declval<span_of_bitset&>().subspan(8, 8));

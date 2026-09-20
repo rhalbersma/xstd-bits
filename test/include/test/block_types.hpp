@@ -16,10 +16,10 @@
 #include <tuple>                                   // tuple, tuple_cat
 #include <utility>                                 // declval
 
-// The Block models and the extents worth instantiating, assembled once: all three containers take <class Block, size_t N>.
+// The Block models and extents worth instantiating: all three containers take <class Block, size_t N>.
 namespace test {
 
-// What the containers actually require of a Block: the concept they constrain on, and the three functions detail/intrin.hpp calls.
+// What the containers require of a Block: the concept they constrain on and the three intrin functions.
 template<class Block>
 concept block_basis =
         xstd::unsigned_integer<Block> and
@@ -52,7 +52,7 @@ static_assert(block_basis<boost::int128::uint128>);
 template<class Block>
 inline constexpr auto digits_v = static_cast<std::size_t>(xstd::numeric_limits<Block>::digits);
 
-// Every Block the library is instantiated over; xstd::uint128 rides on <bit>, so it comes and goes with test/uint128.hpp.
+// Every Block the library is instantiated over; xstd::uint128 rides on <bit>.
 using word_types = std::tuple<std::uint8_t, std::uint16_t, std::uint32_t, std::uint64_t
 #ifdef TEST_HAS_UINT128
 
@@ -93,7 +93,7 @@ using wide_word_types = decltype(std::tuple_cat(
 template<template<class, std::size_t> class C, class Block>
 using in_block_extents = std::tuple<C<Block, 0>, C<Block, 1>, C<Block, digits_v<Block>>>;
 
-// The extents that straddle a block boundary, at the narrowest word only: the arithmetic follows digits, not the carrier.
+// The extents that straddle a block boundary, at the narrowest word: the arithmetic follows digits.
 template<template<class, std::size_t> class C, class Block>
 using straddling_extents = std::tuple<C<Block, digits_v<Block> - 1>, C<Block, digits_v<Block> + 1>, C<Block, (2 * digits_v<Block>)-1>, C<Block, 2 * digits_v<Block>>, C<Block, (2 * digits_v<Block>)+1>, C<Block, 3 * digits_v<Block>>>;
 
@@ -110,7 +110,7 @@ using graded_extents = decltype(std::tuple_cat(
         std::declval<decltype(detail::expand<C, in_block_extents>(std::declval<word_types>()))>(),
         std::declval<decltype(detail::expand<C, straddling_extents>(std::declval<narrow_word_types>()))>()));
 
-// The widest Block across block boundaries, for the suites that can afford it: every case they run per type is a static_assert or a single pass over the positions, so three blocks of 128 costs what one block costs.
+// The widest Block across block boundaries, for the suites that can afford it.
 template<template<class, std::size_t> class C>
 using wide_extents = decltype(detail::expand<C, straddling_extents>(std::declval<wide_word_types>()));
 

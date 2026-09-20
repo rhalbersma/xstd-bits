@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-// What a reading costs when it is a view rather than a container, on the SAME backend bit container. The third variant here used to be a view spelled over the bitset itself, measuring what the trait forwarder cost on top of the storage. A view's Bits is now the storage a container wraps and nothing else, so a view deduced off a bitset IS the view over its blocks, byte for byte: there is no forwarder left to charge for, and a benchmark for it would be the control under another name.
+// What a reading costs as a view rather than a container, over the same backend bit container.
 
 #include <xstd/bits/bit_array.hpp>                   // bit_array
 #include <xstd/bits/bit_set_view.hpp>                // bit_set_view
@@ -25,7 +25,7 @@ constexpr auto is_set(std::size_t i)
         return (i % 5UZ) < 2UZ; // ~40% set, deterministic
 }
 
-// One filler for all subjects, because each reading spells "put a bit in" its own way: a contiguous_bit_container takes set(n), an ordered set takes insert(n), and a sequence of bool assigns through v[i].
+// One filler for all subjects: a bit container takes set(n), an ordered set insert(n), a sequence v[i].
 template<std::size_t N, class T>
 auto filled()
         -> T
@@ -46,7 +46,7 @@ auto filled()
         return c;
 }
 
-// --------------------------------------------------------------------------------------------------------- The set reading: iteration, which is the trait-heaviest operation there is -- every step is a find_next.
+// The set reading: iteration, the trait-heaviest operation there is, every step a find_next.
 
 template<std::size_t N>
 auto set_iterate_owner(benchmark::State& state)
@@ -95,7 +95,7 @@ auto set_iterate_view_of_storage(benchmark::State& state)
         }
 }
 
-// --------------------------------------------------------------------------------------------------------- The sequence reading: count, which goes through num_blocks and block, the entries a forwarder most risks losing -- lose them and this walk silently becomes one bool at a time.
+// The sequence reading: count, which goes through num_blocks and block, the entries a forwarder risks losing.
 
 template<std::size_t N>
 auto sequence_count_owner(benchmark::State& state)
@@ -120,7 +120,7 @@ auto sequence_count_view_of_storage(benchmark::State& state)
         }
 }
 
-// --------------------------------------------------------------------------------------------------------- The sequence reading again, element-wise: a random read, where the trait's at() is on the hot path and there is no word-parallelism to hide behind.
+// The sequence reading element-wise: a random read, with at() on the hot path and no word-parallelism.
 
 constexpr auto next_index(std::uint64_t& lcg, std::size_t n)
         -> std::size_t

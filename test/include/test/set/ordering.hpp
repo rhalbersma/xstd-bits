@@ -17,7 +17,7 @@
 
 namespace test::set {
 
-// What the set reading must order like, against std::set: set_compare's default trusts the viewed type's <=>, and dynamic_bitset's is wrong.
+// What the set reading must order like, against std::set: set_compare trusts the viewed type's <=>.
 template<class Bits>
 auto ordering_agrees_with_std_set(std::size_t universe = 4)
         -> void
@@ -34,7 +34,7 @@ auto ordering_agrees_with_std_set(std::size_t universe = 4)
                         auto kx = std::set<std::size_t>();
                         auto ky = std::set<std::size_t>();
 
-                        // Written through the view, in the set vocabulary, which is the interface under test rather than the bitset's own; named, because clang 23's lifetime analysis crashes on a deducing-this member called on a prvalue.
+                        // Written through the view; named, clang 23 crashing on a deducing-this call on a prvalue.
                         auto const xw = xstd::bit_set_view(x);
                         auto const yw = xstd::bit_set_view(y);
                         for (auto k = 0UZ; k < universe; ++k) {
@@ -72,7 +72,7 @@ auto ordering_agrees_with_std_set_sampled(std::size_t universe, std::size_t tria
         auto equality_disagreements = 0UZ;
         auto less_disagreements = 0UZ;
         auto greater_disagreements = 0UZ;
-        // Fixed width, not ULL: the sequence a fixed seed reproduces should not depend on how wide the platform makes unsigned long long.
+        // Fixed width, not ULL: a fixed seed should reproduce the same sequence on every platform.
         auto lcg = std::uint64_t{0x9E3779B97F4A7C15};
         auto const next = [&lcg] -> std::uint64_t { lcg = (lcg * 6364136223846793005ULL) + 1442695040888963407ULL; return lcg >> 11U; };
 

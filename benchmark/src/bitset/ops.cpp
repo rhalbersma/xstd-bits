@@ -16,7 +16,7 @@ namespace {
 
 inline constexpr auto bits_per_word = 64UZ;
 
-// A board-game density rather than a uniform one: an occupancy bitboard is neither empty nor full, and find_next on a 1%-set bitset is a different benchmark from one on a 90%-set bitset.
+// A board-game density: an occupancy bitboard is neither empty nor full, and find_next scales with it.
 template<class T>
 auto filled(std::size_t n, std::uint64_t seed)
         -> T
@@ -34,7 +34,7 @@ auto filled(std::size_t n, std::uint64_t seed)
 
 } // namespace
 
-// The operand escapes and memory is clobbered on every iteration: an unrolled two-word AND over a stack operand is exactly the shape a compiler deletes, and measuring nothing at the rung the bench exists for would be the one failure that still looks like a result.
+// The operand escapes and memory is clobbered each iteration: an unrolled two-word AND is what a compiler deletes.
 #define BM_BINARY(name, op) \
         template<class T, std::size_t N> \
         auto name(benchmark::State& state) \
@@ -81,7 +81,7 @@ auto bm_count(benchmark::State& state)
         state.SetBytesProcessed(state.iterations() * static_cast<std::int64_t>(N / 8UZ));
 }
 
-// all() is where the unused tail shows: an unaligned width compares the last block against a mask, an aligned one against all-ones.
+// all() is where the unused tail shows: an unaligned width compares the last block against a mask.
 template<class T, std::size_t N>
 auto bm_all(benchmark::State& state)
         -> void
@@ -108,7 +108,7 @@ auto bm_flip(benchmark::State& state)
         state.SetBytesProcessed(state.iterations() * static_cast<std::int64_t>(N / 8UZ));
 }
 
-// The scan is what the two-block arm is actually about: the two-block case argues the general walk costs more than the whole scan is worth at this width, so the tail is a named block rather than a range.
+// The scan is what the two-block arm is about: the tail is a named block rather than a range.
 template<class T, std::size_t N>
 auto bm_scan(benchmark::State& state)
         -> void
@@ -139,7 +139,7 @@ auto bm_scan(benchmark::State& state)
         BENCHMARK_TEMPLATE(fn, std::bitset<words * bits_per_word>, words* bits_per_word); \
         BENCHMARK_TEMPLATE(fn, xstd::bitset<words * bits_per_word>, words* bits_per_word)
 
-// Three words breaks the doubling on purpose: it is the first width nobody has an unrolled arm for, and so the control that says a two-word result is the specialization rather than noise.
+// Three words breaks the doubling on purpose: the first width with no unrolled arm, so it is the control.
 #define BM_LADDER(fn) \
         BM_RUNG(fn, 1); \
         BM_RUNG(fn, 2); \
