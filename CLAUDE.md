@@ -51,20 +51,28 @@ auto operator=(T const&) -> T& = delete;
 
 Do not write out what a declaration already has.
 
-A **defaulted or deleted** member is implicitly `constexpr` and carries the exception specification
-its members imply, so neither keyword is spelled on one. If an explicit `noexcept` compiled there, the
-implicit specification was `noexcept` too — an incompatible one would have defined the function as
-deleted — so removing it changes nothing.
+`constexpr` is not written on a **defaulted or deleted** member. The standard admits it there only
+where the function would have been implicitly `constexpr` anyway, so it never carries information.
 
 ```cpp
-[[nodiscard]] friend auto operator==(T const&, T const&) -> bool = default;
+[[nodiscard]] friend auto operator==(T const&, T const&) noexcept -> bool = default;
 auto operator=(T const&) -> T& = delete;
 ```
 
-A **lambda** is implicitly `constexpr` when it is eligible, so that is not written either. It is
-**not** implicitly `noexcept`: `static_assert(!noexcept(plain(1)))` holds for a lambda with nothing
-written on it, on both g++ and clang++. Write `noexcept` on a lambda where it is wanted, and keep it
-where it is already there.
+`noexcept` on a defaulted member is a different matter, and **is** written: since P1286R2 the explicit
+specification is honoured rather than making the function deleted, so it can differ from the one the
+members imply — which means removing it can change the answer.
+
+```cpp
+struct Throwy { Throwy() {} };                     // not noexcept
+struct T { Throwy t; T() noexcept = default; };    // noexcept anyway, and not deleted
+static_assert(std::is_nothrow_default_constructible_v<T>);
+```
+
+A **lambda** is implicitly `constexpr` when it is eligible, so that is not written either. It is also
+not implicitly `noexcept`: `static_assert(!noexcept(plain(1)))` holds for a lambda with nothing
+written on it. Write `noexcept` on a lambda where it is wanted, and keep it where it is already
+there.
 
 ## `[[nodiscard]]`
 

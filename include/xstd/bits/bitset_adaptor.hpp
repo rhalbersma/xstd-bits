@@ -89,7 +89,7 @@ public:
                 {}
 
         public:
-                reference(reference const& x) = default;
+                reference(reference const& x) noexcept = default;
                 ~reference() = default;
 
                 constexpr auto operator=(bool x) noexcept
@@ -155,7 +155,7 @@ public:
         static constexpr std::size_t npos = static_cast<std::size_t>(-1);
 
         // Constructors                                            [bitset.cons]
-        [[nodiscard]] bitset_adaptor() = default;
+        [[nodiscard]] bitset_adaptor() noexcept = default;
 
         // [bitset.cons]/2: the low bits of val, as many as the width admits; boost orders its two the other way.
         [[nodiscard]] constexpr explicit(false) bitset_adaptor(unsigned long long val) noexcept // NOLINT(misc-explicit-constructor)
@@ -502,7 +502,7 @@ public:
         }
 
         // A friend rather than the member std::bitset specifies: [class.compare.default]/1 admits either.
-        [[nodiscard]] friend auto operator==(bitset_adaptor const& lhs, bitset_adaptor const& rhs) -> bool = default;
+        [[nodiscard]] friend auto operator==(bitset_adaptor const& lhs, bitset_adaptor const& rhs) noexcept -> bool = default;
 
         // The bit string's order, most significant position first: two lengths is a question about N, not blocks.
         [[nodiscard]] friend constexpr auto operator<=>(bitset_adaptor const& lhs, bitset_adaptor const& rhs) noexcept

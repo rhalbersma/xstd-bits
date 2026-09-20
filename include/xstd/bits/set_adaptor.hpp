@@ -163,7 +163,7 @@ public:
         using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
         // construct/copy/destroy; an owner is built the way std::set is, a view only from what it views.
-        [[nodiscard]] constexpr set_adaptor() noexcept
+        [[nodiscard]] set_adaptor() noexcept
                 requires is_owner
         = default;
 

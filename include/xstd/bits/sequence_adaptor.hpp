@@ -249,7 +249,7 @@ public:
         using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
         // construct/copy/destroy: an owner is built as std::array is, or std::vector where the storage grows.
-        [[nodiscard]] constexpr sequence_adaptor() noexcept
+        [[nodiscard]] sequence_adaptor() noexcept
                 requires is_owner
         = default;
 
@@ -849,7 +849,7 @@ public:
         // The owner's alone, following span: defaulted, the storage being the one member.
 
         // clang-format off: one line, so "= default;" stays where gcovr's branch exclusion looks for it.
-        [[nodiscard]] friend auto operator==(sequence_adaptor const& x, sequence_adaptor const& y) -> bool requires is_owner = default;
+        [[nodiscard]] friend auto operator==(sequence_adaptor const& x, sequence_adaptor const& y) noexcept -> bool requires is_owner = default;
         // clang-format on
 
         // The storage's entry and nothing else, spelled over bits_type, which MSVC completes eagerly here.

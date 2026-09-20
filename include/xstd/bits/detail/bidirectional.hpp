@@ -35,7 +35,7 @@ public:
         using pointer = void;
         using reference = bidirectional_bit_reference<Bits>;
 
-        [[nodiscard]] bidirectional_bit_iterator() = default;
+        [[nodiscard]] bidirectional_bit_iterator() noexcept = default;
 
         // Public, so an owner or a view constructs one without befriending it: the dependency runs one way.
         [[nodiscard]] constexpr bidirectional_bit_iterator(bits_type const* ptr, std::size_t idx) noexcept
@@ -122,7 +122,7 @@ public:
         }
 
         // A value, not a handle to rebind: trivially copyable, never assignable, as a reference to a key is.
-        bidirectional_bit_reference(bidirectional_bit_reference const&) = default;
+        bidirectional_bit_reference(bidirectional_bit_reference const&) noexcept = default;
         auto operator=(bidirectional_bit_reference const&) -> bidirectional_bit_reference& = delete;
 
         [[nodiscard]] constexpr auto operator&() const noexcept
