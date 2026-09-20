@@ -21,6 +21,6 @@ using basic_bit_vector = sequence_adaptor<detail::bits::contiguous_bit_vector<Bl
 
 using bit_vector = basic_bit_vector<std::size_t>;
 
-}       // namespace xstd
+} // namespace xstd
 
-#endif  // XSTD_BITS_BIT_VECTOR_HPP
+#endif // XSTD_BITS_BIT_VECTOR_HPP

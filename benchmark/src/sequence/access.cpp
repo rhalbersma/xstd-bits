@@ -37,12 +37,12 @@ auto filled(std::size_t n)
         auto v = T(n);
         auto lcg = std::uint64_t{1};
         for (auto i = 0UZ; i < n; ++i) {
-                v[i] = (next_index(lcg, 5UZ) < 2UZ);    // ~40% set, deterministic
+                v[i] = (next_index(lcg, 5UZ) < 2UZ); // ~40% set, deterministic
         }
         return v;
 }
 
-}       // namespace
+} // namespace
 
 // The endgame-database lookup: one random read, and what it costs is a miss.
 template<class T>
@@ -112,13 +112,15 @@ auto bm_construct(benchmark::State& state)
 }
 
 // Ours first and alone, because the count below is a walk only this reading has a spelling for. It takes no counterpart rung of its own: what it is read against is the counterpart's rung in BM_LADDER(bm_sequential_count), which is the only way std::vector<bool> can be asked the same question.
-#define BM_LADDER_OURS(fn)                                              \
-        BENCHMARK_TEMPLATE1(fn, xstd::bit_vector)                       \
-                ->RangeMultiplier(4)->Range(1L << 10, 1L << 22)
+#define BM_LADDER_OURS(fn) \
+        BENCHMARK_TEMPLATE1(fn, xstd::bit_vector) \
+                ->RangeMultiplier(4) \
+                ->Range(1L << 10, 1L << 22)
 
-#define BM_LADDER(fn)                                                   \
-        BENCHMARK_TEMPLATE1(fn, std::vector<bool>)                      \
-                ->RangeMultiplier(4)->Range(1L << 10, 1L << 22);        \
+#define BM_LADDER(fn) \
+        BENCHMARK_TEMPLATE1(fn, std::vector<bool>) \
+                ->RangeMultiplier(4) \
+                ->Range(1L << 10, 1L << 22); \
         BM_LADDER_OURS(fn)
 
 BM_LADDER(bm_random_read);
@@ -126,11 +128,13 @@ BM_LADDER(bm_sequential_count);
 BM_LADDER_OURS(bm_sequential_count_member);
 
 // Construction allocates and zeroes the whole slice, so it stops four rungs short of the others rather than spend the run on the allocator.
-#define BM_BUILD_LADDER(fn)                                             \
-        BENCHMARK_TEMPLATE1(fn, std::vector<bool>)                      \
-                ->RangeMultiplier(4)->Range(1L << 10, 1L << 18);        \
-        BENCHMARK_TEMPLATE1(fn, xstd::bit_vector)                       \
-                ->RangeMultiplier(4)->Range(1L << 10, 1L << 18)
+#define BM_BUILD_LADDER(fn) \
+        BENCHMARK_TEMPLATE1(fn, std::vector<bool>) \
+                ->RangeMultiplier(4) \
+                ->Range(1L << 10, 1L << 18); \
+        BENCHMARK_TEMPLATE1(fn, xstd::bit_vector) \
+                ->RangeMultiplier(4) \
+                ->Range(1L << 10, 1L << 18)
 
 BM_BUILD_LADDER(bm_construct);
 

@@ -5,12 +5,12 @@
 
 // The static-width ladder: what a block of bits costs at 1, 2, 4, ... 1024 words, ours against std::bitset.
 
-#include <xstd/bits/bit_set_view.hpp>   // bit_set_view
-#include <xstd/bits/bitset.hpp>         // aligned::bitset, bitset
-#include <benchmark/benchmark.h>        // ClobberMemory, DoNotOptimize, BENCHMARK_TEMPLATE1, BENCHMARK_MAIN, State
-#include <bitset>                       // bitset
-#include <cstddef>                      // size_t
-#include <cstdint>                      // uint64_t
+#include <xstd/bits/bit_set_view.hpp> // bit_set_view
+#include <xstd/bits/bitset.hpp>       // aligned::bitset, bitset
+#include <benchmark/benchmark.h>      // ClobberMemory, DoNotOptimize, BENCHMARK_TEMPLATE1, BENCHMARK_MAIN, State
+#include <bitset>                     // bitset
+#include <cstddef>                    // size_t
+#include <cstdint>                    // uint64_t
 
 namespace {
 
@@ -25,34 +25,34 @@ auto filled(std::size_t n, std::uint64_t seed)
         auto state = seed | 1ULL;
         for (auto i = 0UZ; i < n; ++i) {
                 state = state * 6364136223846793005ULL + 1442695040888963407ULL;
-                if ((state >> 33) % 5UZ < 2UZ) {        // ~40% set
+                if ((state >> 33) % 5UZ < 2UZ) { // ~40% set
                         bits.set(i);
                 }
         }
         return bits;
 }
 
-}       // namespace
+} // namespace
 
 // The operand escapes and memory is clobbered on every iteration: an unrolled two-word AND over a stack operand is exactly the shape a compiler deletes, and measuring nothing at the rung the bench exists for would be the one failure that still looks like a result.
-#define BM_BINARY(name, op)                                                     \
-        template<class T, std::size_t N>                                        \
-        auto name(benchmark::State& state)                                      \
-                -> void                                                         \
-        {                                                                       \
-                auto a = filled<T>(N, 1);                                       \
-                auto b = filled<T>(N, 2);                                       \
-                for (auto _ : state) {                                          \
-                        benchmark::DoNotOptimize(a);                            \
-                        benchmark::DoNotOptimize(b);                            \
-                        a op b;                                                 \
-                        benchmark::ClobberMemory();                             \
-                }                                                               \
+#define BM_BINARY(name, op) \
+        template<class T, std::size_t N> \
+        auto name(benchmark::State& state) \
+                -> void \
+        { \
+                auto a = filled<T>(N, 1); \
+                auto b = filled<T>(N, 2); \
+                for (auto _ : state) { \
+                        benchmark::DoNotOptimize(a); \
+                        benchmark::DoNotOptimize(b); \
+                        a op b; \
+                        benchmark::ClobberMemory(); \
+                } \
                 state.SetBytesProcessed(state.iterations() * static_cast<std::int64_t>(N / 8UZ)); \
         }
 
 BM_BINARY(bm_and, &=)
-BM_BINARY(bm_or,  |=)
+BM_BINARY(bm_or, |=)
 BM_BINARY(bm_xor, ^=)
 
 template<class T, std::size_t N>
@@ -135,20 +135,20 @@ auto bm_scan(benchmark::State& state)
 }
 
 // N is a template argument on both sides, so the ladder is a compile-time list rather than a Range.
-#define BM_RUNG(fn, words)                                                                      \
-        BENCHMARK_TEMPLATE(fn, std::bitset <words * bits_per_word>, words * bits_per_word);     \
-        BENCHMARK_TEMPLATE(fn, xstd::bitset<words * bits_per_word>, words * bits_per_word)
+#define BM_RUNG(fn, words) \
+        BENCHMARK_TEMPLATE(fn, std::bitset<words * bits_per_word>, words* bits_per_word); \
+        BENCHMARK_TEMPLATE(fn, xstd::bitset<words * bits_per_word>, words* bits_per_word)
 
 // Three words breaks the doubling on purpose: it is the first width nobody has an unrolled arm for, and so the control that says a two-word result is the specialization rather than noise.
-#define BM_LADDER(fn)    \
-        BM_RUNG(fn,   1); \
-        BM_RUNG(fn,   2); \
-        BM_RUNG(fn,   3); \
-        BM_RUNG(fn,   4); \
-        BM_RUNG(fn,   8); \
-        BM_RUNG(fn,  16); \
-        BM_RUNG(fn,  32); \
-        BM_RUNG(fn,  64); \
+#define BM_LADDER(fn) \
+        BM_RUNG(fn, 1); \
+        BM_RUNG(fn, 2); \
+        BM_RUNG(fn, 3); \
+        BM_RUNG(fn, 4); \
+        BM_RUNG(fn, 8); \
+        BM_RUNG(fn, 16); \
+        BM_RUNG(fn, 32); \
+        BM_RUNG(fn, 64); \
         BM_RUNG(fn, 128); \
         BM_RUNG(fn, 256); \
         BM_RUNG(fn, 512)
@@ -163,12 +163,12 @@ BM_LADDER(bm_flip);
 BM_LADDER(bm_scan);
 
 // The alignment A/B, at the width a padded board actually lands on.
-#define BM_ALIGNMENT(fn)                                                        \
-        BENCHMARK_TEMPLATE(fn, std::bitset<120>,           120);                \
-        BENCHMARK_TEMPLATE(fn, xstd::bitset<120>,          120);                \
-        BENCHMARK_TEMPLATE(fn, xstd::aligned::bitset<120>, 120);                \
-        BENCHMARK_TEMPLATE(fn, std::bitset<128>,           128);                \
-        BENCHMARK_TEMPLATE(fn, xstd::bitset<128>,          128)
+#define BM_ALIGNMENT(fn) \
+        BENCHMARK_TEMPLATE(fn, std::bitset<120>, 120); \
+        BENCHMARK_TEMPLATE(fn, xstd::bitset<120>, 120); \
+        BENCHMARK_TEMPLATE(fn, xstd::aligned::bitset<120>, 120); \
+        BENCHMARK_TEMPLATE(fn, std::bitset<128>, 128); \
+        BENCHMARK_TEMPLATE(fn, xstd::bitset<128>, 128)
 
 BM_ALIGNMENT(bm_flip);
 BM_ALIGNMENT(bm_shift_left);

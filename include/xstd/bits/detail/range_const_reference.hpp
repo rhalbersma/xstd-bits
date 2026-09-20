@@ -22,7 +22,7 @@ using iter_const_reference_t = std::common_reference_t<std::iter_value_t<I> cons
 template<std::ranges::range R>
 using range_const_reference_t = iter_const_reference_t<std::ranges::iterator_t<R>>;
 
-}       // namespace fallback
+} // namespace fallback
 
 // The standard's where the library has it, the transcription above where it does not. libc++ has implemented P2278R4 on no branch, trunk included: __cpp_lib_ranges_as_const is still a commented-out line in its <version>, and neither as_const_view.h nor const_access.h exists, so a third of the matrix takes the second arm. The arms are the same type rather than two contracts, which is what TheConstReferenceIsP2278s asserts wherever both spellings exist.
 #ifdef __cpp_lib_ranges_as_const
@@ -37,6 +37,6 @@ using range_const_reference_t = fallback::range_const_reference_t<R>;
 
 #endif
 
-}       // namespace xstd::detail::bits
+} // namespace xstd::detail::bits
 
-#endif  // XSTD_BITS_DETAIL_RANGE_CONST_REFERENCE_HPP
+#endif // XSTD_BITS_DETAIL_RANGE_CONST_REFERENCE_HPP

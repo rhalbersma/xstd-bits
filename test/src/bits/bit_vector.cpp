@@ -103,17 +103,17 @@ BOOST_AUTO_TEST_CASE(ItIsBuiltLikeAStdVector)
         BOOST_CHECK(std::ranges::equal(T(5, false), std::vector<bool>(5, false)));
         BOOST_CHECK(std::ranges::equal(T(pattern.begin(), pattern.end()), model));
         BOOST_CHECK(std::ranges::equal(T(std::from_range, pattern), model));
-        BOOST_CHECK(std::ranges::equal(T{ true, false, true }, std::vector<bool>{ true, false, true }));
+        BOOST_CHECK(std::ranges::equal(T{true, false, true}, std::vector<bool>{true, false, true}));
 
         auto v = T();
-        v = { false, true };
-        BOOST_CHECK(std::ranges::equal(v, std::vector<bool>{ false, true }));
+        v = {false, true};
+        BOOST_CHECK(std::ranges::equal(v, std::vector<bool>{false, true}));
         v.assign(3, true);
         BOOST_CHECK(std::ranges::equal(v, std::vector<bool>(3, true)));
         v.assign(pattern.begin(), pattern.end());
         BOOST_CHECK(std::ranges::equal(v, model));
-        v.assign({ true });
-        BOOST_CHECK(std::ranges::equal(v, std::vector<bool>{ true }));
+        v.assign({true});
+        BOOST_CHECK(std::ranges::equal(v, std::vector<bool>{true}));
 }
 
 // The allocator forms, each against the one without: the allocator is a construction argument, never part of the value.
@@ -131,19 +131,19 @@ BOOST_AUTO_TEST_CASE(ItIsBuiltWithAnAllocatorLikeAStdVector)
         BOOST_CHECK(T(pattern.begin(), pattern.end(), alloc) == model);
         BOOST_CHECK(T(std::from_range, pattern, alloc) == model);
         BOOST_CHECK(T(model, alloc) == model);
-        BOOST_CHECK(T({ true, false, true }, alloc) == T({ true, false, true }));
+        BOOST_CHECK(T({true, false, true}, alloc) == T({true, false, true}));
 
         auto source = model;
         auto const moved = T(std::move(source), alloc);
         BOOST_CHECK(moved == model);
-        BOOST_CHECK(source.empty());  // NOLINT(bugprone-use-after-move,hicpp-invalid-access-moved): the moved-from is empty by contract, which is the check.
+        BOOST_CHECK(source.empty()); // NOLINT(bugprone-use-after-move,hicpp-invalid-access-moved): the moved-from is empty by contract, which is the check.
 }
 
 // [vector.erasure] against the model, erasing a value and then a predicate.
 BOOST_AUTO_TEST_CASE(ErasureIsTheStdVectorsOwn)
 {
-        auto v = T{ true, false, true, true, false, false, true };
-        auto m = std::vector<bool>{ true, false, true, true, false, false, true };
+        auto v = T{true, false, true, true, false, false, true};
+        auto m = std::vector<bool>{true, false, true, true, false, false, true};
         BOOST_CHECK_EQUAL(erase(v, true), std::erase(m, true));
         BOOST_CHECK(std::ranges::equal(v, m));
         BOOST_CHECK_EQUAL(erase_if(v, [](bool x) -> bool { return not x; }), std::erase_if(m, [](bool x) -> bool { return not x; }));
@@ -268,7 +268,7 @@ auto pattern(std::size_t n)
         return v;
 }
 
-}       // namespace
+} // namespace
 
 // append_range's first tier: another sequence read by block, at every alignment the source and the destination can have.
 BOOST_AUTO_TEST_CASE(AppendRangeBlitsFromASequenceAtAnyAlignment)
@@ -276,12 +276,12 @@ BOOST_AUTO_TEST_CASE(AppendRangeBlitsFromASequenceAtAnyAlignment)
         auto const source = T(std::from_range, pattern(50));
         auto const view = xstd::bit_span(source);
 
-        for (auto const start : { 0UZ, 1UZ, 7UZ, 8UZ, 9UZ, 16UZ, 40UZ, 43UZ }) {
-                for (auto const count : { 0UZ, 1UZ, 7UZ, 8UZ, 9UZ, 17UZ, 50UZ - start }) {
+        for (auto const start : {0UZ, 1UZ, 7UZ, 8UZ, 9UZ, 16UZ, 40UZ, 43UZ}) {
+                for (auto const count : {0UZ, 1UZ, 7UZ, 8UZ, 9UZ, 17UZ, 50UZ - start}) {
                         if (start + count > 50UZ) {
                                 continue;
                         }
-                        for (auto const prefix : { 0UZ, 1UZ, 8UZ, 11UZ }) {
+                        for (auto const prefix : {0UZ, 1UZ, 8UZ, 11UZ}) {
                                 auto v = T(std::from_range, pattern(prefix));
                                 auto m = model_of(v);
                                 auto const window = view.subspan(start, count);
@@ -319,8 +319,8 @@ BOOST_AUTO_TEST_CASE(AppendRangeBlitsFromASequenceAtAnyAlignment)
 // append_range's second tier: any range of bools, packed a word at a time, the last word trimmed.
 BOOST_AUTO_TEST_CASE(AppendRangePacksAnyRangeOfBools)
 {
-        for (auto const prefix : { 0UZ, 3UZ, 8UZ }) {
-                for (auto const count : { 0UZ, 1UZ, 8UZ, 9UZ, 16UZ, 23UZ }) {
+        for (auto const prefix : {0UZ, 3UZ, 8UZ}) {
+                for (auto const count : {0UZ, 1UZ, 8UZ, 9UZ, 16UZ, 23UZ}) {
                         auto v = T(std::from_range, pattern(prefix));
                         auto m = model_of(v);
                         auto const more = pattern(count);
@@ -336,7 +336,7 @@ BOOST_AUTO_TEST_CASE(AppendRangePacksAnyRangeOfBools)
                 }
         }
 
-        auto v = T{ true };
+        auto v = T{true};
         v.assign_range(pattern(20));
         BOOST_CHECK(std::ranges::equal(v, pattern(20)));
 }
@@ -358,12 +358,12 @@ auto same_offset_and_contents(V const& v, typename V::iterator vit, M const& m, 
         BOOST_CHECK(std::ranges::equal(v, m));
 }
 
-}       // namespace
+} // namespace
 
 // insert's single-value shapes and emplace, rebuilt around the position, against the model.
 BOOST_AUTO_TEST_CASE(InsertingValuesRebuildsAsAStdVectorDoes)
 {
-        for (auto const pos : { 0UZ, 1UZ, 8UZ, 13UZ, 20UZ }) {
+        for (auto const pos : {0UZ, 1UZ, 8UZ, 13UZ, 20UZ}) {
                 auto v = T(std::from_range, pattern(20));
                 auto m = pattern(20);
 
@@ -376,7 +376,7 @@ BOOST_AUTO_TEST_CASE(InsertingValuesRebuildsAsAStdVectorDoes)
 // insert's range shapes and insert_range, one of them a window into the sequence itself.
 BOOST_AUTO_TEST_CASE(InsertingRangesRebuildsAsAStdVectorDoes)
 {
-        for (auto const pos : { 0UZ, 1UZ, 8UZ, 13UZ, 20UZ }) {
+        for (auto const pos : {0UZ, 1UZ, 8UZ, 13UZ, 20UZ}) {
                 auto v = T(std::from_range, pattern(20));
                 auto m = pattern(20);
 
@@ -385,9 +385,9 @@ BOOST_AUTO_TEST_CASE(InsertingRangesRebuildsAsAStdVectorDoes)
                 same_offset_and_contents(v, v.insert(at(v, pos), more.begin(), more.end()), m, m.insert(at(m, pos), more.begin(), more.end()));
                 auto const word = pattern(8);
                 same_offset_and_contents(v, v.insert(at(v, pos), word.begin(), word.end()), m, m.insert(at(m, pos), word.begin(), word.end()));
-                same_offset_and_contents(v, v.insert(at(v, pos), { true, true, false }), m, m.insert(at(m, pos), { true, true, false }));
-                same_offset_and_contents(v, v.insert(at(v, pos), { true, false, true, false, true, false, true, false }), m, m.insert(at(m, pos), { true, false, true, false, true, false, true, false }));
-                same_offset_and_contents(v, v.insert(at(v, pos), { true, false, true, false, true, false, true, false, true }), m, m.insert(at(m, pos), { true, false, true, false, true, false, true, false, true }));
+                same_offset_and_contents(v, v.insert(at(v, pos), {true, true, false}), m, m.insert(at(m, pos), {true, true, false}));
+                same_offset_and_contents(v, v.insert(at(v, pos), {true, false, true, false, true, false, true, false}), m, m.insert(at(m, pos), {true, false, true, false, true, false, true, false}));
+                same_offset_and_contents(v, v.insert(at(v, pos), {true, false, true, false, true, false, true, false, true}), m, m.insert(at(m, pos), {true, false, true, false, true, false, true, false, true}));
                 auto const middle = std::vector<bool>(m.begin() + 2, m.begin() + 11);
                 same_offset_and_contents(v, v.insert_range(at(v, pos), xstd::bit_span(v).subspan(2, 9)), m, m.insert(at(m, pos), middle.begin(), middle.end()));
         }
@@ -396,7 +396,7 @@ BOOST_AUTO_TEST_CASE(InsertingRangesRebuildsAsAStdVectorDoes)
 // erase in both shapes, an empty range included.
 BOOST_AUTO_TEST_CASE(ErasingRebuildsAsAStdVectorDoes)
 {
-        for (auto const pos : { 0UZ, 1UZ, 8UZ, 13UZ, 19UZ }) {
+        for (auto const pos : {0UZ, 1UZ, 8UZ, 13UZ, 19UZ}) {
                 auto v = T(std::from_range, pattern(40));
                 auto m = pattern(40);
 
@@ -427,15 +427,15 @@ BOOST_AUTO_TEST_CASE(FlipAndSwapAreStdVectorBools)
         m.flip();
         BOOST_CHECK(std::ranges::equal(v, m));
         static_assert(not can_flip<decltype(xstd::bit_span(v).first(2))>);
-        static_assert(    can_flip<decltype(xstd::bit_span(v))>);
+        static_assert(can_flip<decltype(xstd::bit_span(v))>);
 }
 
 // The owner hashes as std::vector<bool> does, equal values equal; the view over it no more than std::span does.
 BOOST_AUTO_TEST_CASE(TheOwnerHashesAndTheViewDoesNot)
 {
         auto const h = std::hash<T>();
-        BOOST_CHECK_EQUAL(h(T({ true, false, true })), h(T({ true, false, true })));
-        BOOST_CHECK(h(T({ true, false, true })) != h(T({ true, false, true, false })));
+        BOOST_CHECK_EQUAL(h(T({true, false, true})), h(T({true, false, true})));
+        BOOST_CHECK(h(T({true, false, true})) != h(T({true, false, true, false})));
         BOOST_CHECK(h(T()) != h(T(1)));
         static_assert(not std::is_default_constructible_v<std::hash<xstd::bit_span<xstd::detail::bits::contiguous_bit_vector<std::uint8_t>>>>);
 }
@@ -449,9 +449,9 @@ BOOST_AUTO_TEST_CASE(AViewOverItCannotGrowIt)
         BOOST_CHECK(static_cast<bool>(v[2]));
 
         static_assert(not can_grow<decltype(s)>);
-        static_assert(    can_grow<T>);
+        static_assert(can_grow<T>);
         static_assert(not has_range_members<decltype(s)>);
-        static_assert(    has_range_members<T>);
+        static_assert(has_range_members<T>);
 }
 
 // Every position, densely, agreeing with the subscript -- and not a contiguous range, which no proxy sequence can be.

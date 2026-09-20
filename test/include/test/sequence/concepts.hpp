@@ -23,11 +23,7 @@ namespace test::sequence {
 // The interface a bit-packed sequence shares with the sequence it packs, named once rather than restated per container.
 template<class C>
 concept bit_sequence =
-        std::regular<C>
-    and std::totally_ordered<C>
-    and std::ranges::random_access_range<C>
-    and std::random_access_iterator<typename C::iterator>
-    and value_reference<typename C::const_reference>;
+        std::regular<C> and std::totally_ordered<C> and std::ranges::random_access_range<C> and std::random_access_iterator<typename C::iterator> and value_reference<typename C::const_reference>;
 
 // The typedefs [container.reqmts] gives every container, pointer and const_pointer aside: packed bits have no address.
 template<class C>
@@ -50,31 +46,31 @@ concept reversible_container_typedefs = container_typedefs<C> and requires {
 // [container.reqmts] and [container.rev.reqmts]: what any container answers, on a const one and a mutable one.
 template<class C>
 concept container_members = reversible_container_typedefs<C> and requires (C c, C const cc, C::size_type n) {
-        { c.begin()    } -> std::same_as<typename C::iterator>;
-        { c.end()      } -> std::same_as<typename C::iterator>;
-        { cc.begin()   } -> std::same_as<typename C::const_iterator>;
-        { cc.end()     } -> std::same_as<typename C::const_iterator>;
-        { c.cbegin()   } -> std::same_as<typename C::const_iterator>;
-        { c.cend()     } -> std::same_as<typename C::const_iterator>;
-        { c.rbegin()   } -> std::same_as<typename C::reverse_iterator>;
-        { c.rend()     } -> std::same_as<typename C::reverse_iterator>;
-        { cc.rbegin()  } -> std::same_as<typename C::const_reverse_iterator>;
-        { cc.rend()    } -> std::same_as<typename C::const_reverse_iterator>;
-        { c.crbegin()  } -> std::same_as<typename C::const_reverse_iterator>;
-        { c.crend()    } -> std::same_as<typename C::const_reverse_iterator>;
-        { cc.empty()   } -> std::same_as<bool>;
-        { cc.size()    } -> std::same_as<typename C::size_type>;
-        { cc.max_size()} -> std::same_as<typename C::size_type>;
-        { c[n]         } -> std::same_as<typename C::reference>;
-        { cc[n]        } -> std::same_as<typename C::const_reference>;
-        { c.at(n)      } -> std::same_as<typename C::reference>;
-        { cc.at(n)     } -> std::same_as<typename C::const_reference>;
-        { c.front()    } -> std::same_as<typename C::reference>;
-        { cc.front()   } -> std::same_as<typename C::const_reference>;
-        { c.back()     } -> std::same_as<typename C::reference>;
-        { cc.back()    } -> std::same_as<typename C::const_reference>;
-        { cc == cc     } -> std::same_as<bool>;
-        { cc <=> cc    } -> std::same_as<std::strong_ordering>;
+        { c.begin() } -> std::same_as<typename C::iterator>;
+        { c.end() } -> std::same_as<typename C::iterator>;
+        { cc.begin() } -> std::same_as<typename C::const_iterator>;
+        { cc.end() } -> std::same_as<typename C::const_iterator>;
+        { c.cbegin() } -> std::same_as<typename C::const_iterator>;
+        { c.cend() } -> std::same_as<typename C::const_iterator>;
+        { c.rbegin() } -> std::same_as<typename C::reverse_iterator>;
+        { c.rend() } -> std::same_as<typename C::reverse_iterator>;
+        { cc.rbegin() } -> std::same_as<typename C::const_reverse_iterator>;
+        { cc.rend() } -> std::same_as<typename C::const_reverse_iterator>;
+        { c.crbegin() } -> std::same_as<typename C::const_reverse_iterator>;
+        { c.crend() } -> std::same_as<typename C::const_reverse_iterator>;
+        { cc.empty() } -> std::same_as<bool>;
+        { cc.size() } -> std::same_as<typename C::size_type>;
+        { cc.max_size() } -> std::same_as<typename C::size_type>;
+        { c[n] } -> std::same_as<typename C::reference>;
+        { cc[n] } -> std::same_as<typename C::const_reference>;
+        { c.at(n) } -> std::same_as<typename C::reference>;
+        { cc.at(n) } -> std::same_as<typename C::const_reference>;
+        { c.front() } -> std::same_as<typename C::reference>;
+        { cc.front() } -> std::same_as<typename C::const_reference>;
+        { c.back() } -> std::same_as<typename C::reference>;
+        { cc.back() } -> std::same_as<typename C::const_reference>;
+        { cc == cc } -> std::same_as<bool>;
+        { cc <=> cc } -> std::same_as<std::strong_ordering>;
         c.swap(c);
         swap(c, c);
 };
@@ -106,7 +102,7 @@ concept array_tuple_element = (std::tuple_size<C>::value == 0) or requires (C c,
 template<class C>
 concept array_bool = container_members<C> and array_tuple_element<C> and requires (C c, bool b) {
         C();
-        C{ b, b };
+        C{b, b};
         c.fill(b);
         // ::value here too, and for the reason array_tuple_element above gives at length.
         // NOLINTNEXTLINE(modernize-type-traits)
@@ -138,31 +134,33 @@ concept vector_bool = container_members<C> and requires (C c, C o, C const cc, C
         c.assign(n, b);
         c.assign(il);
         { cc.get_allocator() } -> std::same_as<A>;
-        { cc.capacity()      } -> std::same_as<typename C::size_type>;
+        { cc.capacity() } -> std::same_as<typename C::size_type>;
         c.resize(n);
         c.resize(n, b);
         c.reserve(n);
         c.shrink_to_fit();
-        { c.emplace_back(b)  } -> std::same_as<typename C::reference>;
-        { c.emplace_back()   } -> std::same_as<typename C::reference>;
+        { c.emplace_back(b) } -> std::same_as<typename C::reference>;
+        { c.emplace_back() } -> std::same_as<typename C::reference>;
         c.push_back(b);
         c.pop_back();
-        { c.emplace(p, b)             } -> std::same_as<typename C::iterator>;
-        { c.emplace(p)                } -> std::same_as<typename C::iterator>;
-        { c.insert(p, b)              } -> std::same_as<typename C::iterator>;
-        { c.insert(p, n, b)           } -> std::same_as<typename C::iterator>;
-        { c.insert(p, first, last)    } -> std::same_as<typename C::iterator>;
-        { c.insert(p, il)             } -> std::same_as<typename C::iterator>;
-        { c.erase(p)                  } -> std::same_as<typename C::iterator>;
-        { c.erase(p, p)               } -> std::same_as<typename C::iterator>;
+        { c.emplace(p, b) } -> std::same_as<typename C::iterator>;
+        { c.emplace(p) } -> std::same_as<typename C::iterator>;
+        { c.insert(p, b) } -> std::same_as<typename C::iterator>;
+        { c.insert(p, n, b) } -> std::same_as<typename C::iterator>;
+        { c.insert(p, first, last) } -> std::same_as<typename C::iterator>;
+        { c.insert(p, il) } -> std::same_as<typename C::iterator>;
+        { c.erase(p) } -> std::same_as<typename C::iterator>;
+        { c.erase(p, p) } -> std::same_as<typename C::iterator>;
         c.clear();
         c.flip();
         // The PROXY's flip, which is not the container's above: [vector.bool] has required it of
         // std::vector<bool>::reference since C++98, and asking only for the container's left the proxy's unasked.
         { c[n].flip() } -> std::same_as<void>;
         C::swap(c[n], c[n]);
-        { erase(c, b)                          } -> std::same_as<typename C::size_type>;
-        { erase_if(c, [](bool) { return true; }) } -> std::same_as<typename C::size_type>;
+        { erase(c, b) } -> std::same_as<typename C::size_type>;
+        {
+                erase_if(c, [](bool) { return true; })
+        } -> std::same_as<typename C::size_type>;
         { std::hash<C>()(cc) } -> std::same_as<std::size_t>;
 };
 
@@ -192,27 +190,29 @@ concept inplace_vector_bool = container_members<C> and requires (C c, C o, C con
         c.resize(n);
         c.resize(n, b);
         // [inplace.vector.modifiers]: push_back returns the reference here, where [vector.bool]'s returns nothing.
-        { c.emplace_back(b)  } -> std::same_as<typename C::reference>;
-        { c.emplace_back()   } -> std::same_as<typename C::reference>;
-        { c.push_back(b)     } -> std::same_as<typename C::reference>;
+        { c.emplace_back(b) } -> std::same_as<typename C::reference>;
+        { c.emplace_back() } -> std::same_as<typename C::reference>;
+        { c.push_back(b) } -> std::same_as<typename C::reference>;
         c.pop_back();
         // The non-throwing door and the unchecked one, which are the whole reason this column is a container apart.
         // The try_ pair is asked for by NAME here and not by return type: see below.
         c.try_emplace_back(b);
         c.try_push_back(b);
         { c.unchecked_emplace_back(b) } -> std::same_as<typename C::reference>;
-        { c.unchecked_push_back(b)    } -> std::same_as<typename C::reference>;
-        { c.emplace(p, b)             } -> std::same_as<typename C::iterator>;
-        { c.emplace(p)                } -> std::same_as<typename C::iterator>;
-        { c.insert(p, b)              } -> std::same_as<typename C::iterator>;
-        { c.insert(p, n, b)           } -> std::same_as<typename C::iterator>;
-        { c.insert(p, first, last)    } -> std::same_as<typename C::iterator>;
-        { c.insert(p, il)             } -> std::same_as<typename C::iterator>;
-        { c.erase(p)                  } -> std::same_as<typename C::iterator>;
-        { c.erase(p, p)               } -> std::same_as<typename C::iterator>;
+        { c.unchecked_push_back(b) } -> std::same_as<typename C::reference>;
+        { c.emplace(p, b) } -> std::same_as<typename C::iterator>;
+        { c.emplace(p) } -> std::same_as<typename C::iterator>;
+        { c.insert(p, b) } -> std::same_as<typename C::iterator>;
+        { c.insert(p, n, b) } -> std::same_as<typename C::iterator>;
+        { c.insert(p, first, last) } -> std::same_as<typename C::iterator>;
+        { c.insert(p, il) } -> std::same_as<typename C::iterator>;
+        { c.erase(p) } -> std::same_as<typename C::iterator>;
+        { c.erase(p, p) } -> std::same_as<typename C::iterator>;
         c.clear();
-        { erase(c, b)                          } -> std::same_as<typename C::size_type>;
-        { erase_if(c, [](bool) { return true; }) } -> std::same_as<typename C::size_type>;
+        { erase(c, b) } -> std::same_as<typename C::size_type>;
+        {
+                erase_if(c, [](bool) { return true; })
+        } -> std::same_as<typename C::size_type>;
 };
 
 // P3981R0 changed try_emplace_back and try_push_back from returning a pointer to returning optional<reference>,
@@ -224,7 +224,7 @@ concept inplace_vector_bool = container_members<C> and requires (C c, C o, C con
 template<class C>
 concept inplace_vector_bool_try_returns = requires (C c, bool b) {
         { c.try_emplace_back(b) } -> std::same_as<std::optional<typename C::reference>>;
-        { c.try_push_back(b)    } -> std::same_as<std::optional<typename C::reference>>;
+        { c.try_push_back(b) } -> std::same_as<std::optional<typename C::reference>>;
 };
 
 // What the packing adds over [inplace.vector], which its unpacked counterpart has no reason to carry: the bitwise

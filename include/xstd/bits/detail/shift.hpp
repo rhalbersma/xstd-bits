@@ -16,16 +16,16 @@ template<xstd::unsigned_integer Block>
 [[nodiscard]] constexpr auto shl(Block block, std::size_t n) noexcept
         -> Block
 {
-        return static_cast<Block>(block << static_cast<int>(n));  // NOLINT(bugprone-signed-bitwise)
+        return static_cast<Block>(block << static_cast<int>(n)); // NOLINT(bugprone-signed-bitwise)
 }
 
 template<xstd::unsigned_integer Block>
 [[nodiscard]] constexpr auto shr(Block block, std::size_t n) noexcept
         -> Block
 {
-        return static_cast<Block>(block >> static_cast<int>(n));  // NOLINT(bugprone-signed-bitwise)
+        return static_cast<Block>(block >> static_cast<int>(n)); // NOLINT(bugprone-signed-bitwise)
 }
 
-}       // namespace xstd::detail::bits
+} // namespace xstd::detail::bits
 
 #endif // XSTD_BITS_DETAIL_SHIFT_HPP

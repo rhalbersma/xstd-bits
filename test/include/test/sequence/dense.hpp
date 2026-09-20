@@ -28,6 +28,6 @@ auto yields_every_position(C const& c)
         BOOST_CHECK_EQUAL(counted, c.size());
 }
 
-}       // namespace test::sequence
+} // namespace test::sequence
 
-#endif  // TEST_SEQUENCE_DENSE_HPP
+#endif // TEST_SEQUENCE_DENSE_HPP

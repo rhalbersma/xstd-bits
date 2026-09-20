@@ -77,7 +77,7 @@ BOOST_AUTO_TEST_CASE(InsertingPastTheWidthGrowsItUpToTheCapacity)
         auto s = T();
         BOOST_CHECK(s.empty());
 
-        auto const [ where, inserted ] = s.insert(20);
+        auto const [where, inserted] = s.insert(20);
         BOOST_CHECK(inserted);
         BOOST_CHECK(*where == 20UZ);
         BOOST_CHECK(s.contains(20));
@@ -101,14 +101,14 @@ BOOST_AUTO_TEST_CASE(InsertingPastTheCapacityThrowsBadAlloc)
         // The failed insert left the set empty, and a key past the capacity is still answerable.
         BOOST_CHECK(s.empty());
         BOOST_CHECK(not s.contains(24));
-        BOOST_CHECK(s.find(24) == s.end());  // NOLINT(readability-container-contains)
+        BOOST_CHECK(s.find(24) == s.end()); // NOLINT(readability-container-contains)
 }
 
 // Width is capacity here as it is on the heap: two sets holding the same keys are equal whatever their widths.
 BOOST_AUTO_TEST_CASE(EqualSetsCompareEqualAtUnequalWidths)
 {
         auto narrow = T();
-        auto wide   = T();
+        auto wide = T();
 
         narrow.insert(3);
         wide.insert(20);
@@ -116,17 +116,17 @@ BOOST_AUTO_TEST_CASE(EqualSetsCompareEqualAtUnequalWidths)
         wide.insert(3);
 
         BOOST_CHECK(narrow == wide);
-        BOOST_CHECK(not (narrow < wide) and not (wide < narrow));
+        BOOST_CHECK(not(narrow < wide) and not(wide < narrow));
 }
 
 // Ascending keys, whatever the insertion order: what makes this a set rather than a bag of positions.
 BOOST_AUTO_TEST_CASE(ItYieldsAscendingKeys)
 {
         auto c = T();
-        test::set::yields_ascending_keys(c);            // empty is trivially ascending
+        test::set::yields_ascending_keys(c); // empty is trivially ascending
 
         // Inserted high to low and across block boundaries, so the ascending answer is the container's doing and not the insertion order's.
-        for (auto const key : { 70UZ, 64UZ, 63UZ, 9UZ, 1UZ, 0UZ }) {
+        for (auto const key : {70UZ, 64UZ, 63UZ, 9UZ, 1UZ, 0UZ}) {
                 if (key < c.max_size()) {
                         c.insert(key);
                 }

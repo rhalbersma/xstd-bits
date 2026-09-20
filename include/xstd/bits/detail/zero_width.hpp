@@ -14,6 +14,6 @@ namespace xstd::detail::bits {
 template<class Bits>
 constexpr bool zero_width = std::remove_const_t<Bits>::extent == 0UZ;
 
-}       // namespace xstd::detail::bits
+} // namespace xstd::detail::bits
 
-#endif  // XSTD_BITS_DETAIL_ZERO_WIDTH_HPP
+#endif // XSTD_BITS_DETAIL_ZERO_WIDTH_HPP

@@ -26,9 +26,8 @@ concept contiguous_block_range =
         // Ours, not std::ranges': P2278R4's alias transcribed, libc++ having implemented the paper on no branch. It names the reference C's own iterator yields once const-ified, so a storage whose const subscript hands back a writable one is refused here rather than deep inside the container.
         requires (C const& c, C::size_type n) {
                 { c[n] } -> std::same_as<range_const_reference_t<C>>;
-        }
-;
+        };
 
-}       // namespace xstd::detail::bits
+} // namespace xstd::detail::bits
 
-#endif  // XSTD_BITS_DETAIL_CONTIGUOUS_BLOCK_RANGE_HPP
+#endif // XSTD_BITS_DETAIL_CONTIGUOUS_BLOCK_RANGE_HPP

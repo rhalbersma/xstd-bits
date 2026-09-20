@@ -19,36 +19,32 @@ BOOST_AUTO_TEST_SUITE(Sieve)
 
 inline constexpr auto N = 100UZ;
 
-using Types = std::tuple
-<       std::set<std::size_t>
+using Types = std::tuple<std::set<std::size_t>
 #ifdef TEST_HAS_FLAT_SET
 
-,       std::flat_set<std::size_t>
+                         ,
+                         std::flat_set<std::size_t>
 
 #endif
-,       xstd::bit_static_set<N>
-,       xstd::bit_set
->;
+                         ,
+                         xstd::bit_static_set<N>, xstd::bit_set>;
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheSiftedPrimesAndTwinsFormatAsExpected, T, Types)
 {
         auto const primes0 = opt::sift_primes0<T>(N);
         BOOST_CHECK_EQUAL(
                 std::format("{}", primes0),
-                "{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97}"
-        );
+                "{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97}");
 
         auto const primes1 = opt::sift_primes1<T>(N);
         BOOST_CHECK_EQUAL(
                 std::format("{}", primes1),
-                "{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97}"
-        );
+                "{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97}");
 
         auto const twins = opt::filter_twins(primes1);
         BOOST_CHECK_EQUAL(
                 std::format("{}", twins),
-                "{3, 5, 7, 11, 13, 17, 19, 29, 31, 41, 43, 59, 61, 71, 73}"
-        );
+                "{3, 5, 7, 11, 13, 17, 19, 29, 31, 41, 43, 59, 61, 71, 73}");
 }
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(SievesTooSmallForTheSquareBreakStillSiftCorrectly, T, Types)
@@ -93,8 +89,31 @@ BOOST_AUTO_TEST_CASE(TheIncrementalSieveGeneratesWithoutABound)
         }
         // Compared as a range rather than through std::format, which the cases above use: this one is a std::vector and would format in brackets, and a collection comparison names the first position that disagrees where a string comparison names only that the strings do.
         auto const expected = std::vector<std::size_t>{
-                2UZ, 3UZ, 5UZ, 7UZ, 11UZ, 13UZ, 17UZ, 19UZ, 23UZ, 29UZ, 31UZ, 37UZ, 41UZ,
-                43UZ, 47UZ, 53UZ, 59UZ, 61UZ, 67UZ, 71UZ, 73UZ, 79UZ, 83UZ, 89UZ, 97UZ,
+                2UZ,
+                3UZ,
+                5UZ,
+                7UZ,
+                11UZ,
+                13UZ,
+                17UZ,
+                19UZ,
+                23UZ,
+                29UZ,
+                31UZ,
+                37UZ,
+                41UZ,
+                43UZ,
+                47UZ,
+                53UZ,
+                59UZ,
+                61UZ,
+                67UZ,
+                71UZ,
+                73UZ,
+                79UZ,
+                83UZ,
+                89UZ,
+                97UZ,
         };
         BOOST_CHECK_EQUAL_COLLECTIONS(first.begin(), first.end(), expected.begin(), expected.end());
 

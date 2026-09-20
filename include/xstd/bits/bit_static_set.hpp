@@ -31,7 +31,7 @@ using basic_bit_static_set = xstd::basic_bit_static_set<Block, xstd::align_up(N,
 template<std::size_t N>
 using bit_static_set = basic_bit_static_set<std::size_t, N>;
 
-}       // namespace aligned
-}       // namespace xstd
+} // namespace aligned
+} // namespace xstd
 
-#endif  // XSTD_BITS_BIT_STATIC_SET_HPP
+#endif // XSTD_BITS_BIT_STATIC_SET_HPP

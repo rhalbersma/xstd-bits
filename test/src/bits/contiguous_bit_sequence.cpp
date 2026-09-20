@@ -16,21 +16,30 @@
 // The common vocabulary the three bit containers answer in their own names.
 namespace {
 
-using ours_static  = xstd::detail::bits::contiguous_bit_array<std::uint64_t, 64>;
+using ours_static = xstd::detail::bits::contiguous_bit_array<std::uint64_t, 64>;
 using ours_dynamic = xstd::detail::bits::contiguous_bit_vector<std::uint64_t>;
-using theirs       = std::bitset<64>;
-using boosts       = boost::dynamic_bitset<>;
+using theirs = std::bitset<64>;
+using boosts = boost::dynamic_bitset<>;
 
 // Each probe is a template: a requires-expression over a concrete type is evaluated eagerly and hard-errors rather than answering false, so "does not have" can only be asked through a parameter.
-template<class C> concept has_subscript  = requires (C const& c, std::size_t n)  { c[n];               };
-template<class C> concept has_complement = requires (C const& c)                 { ~c;                 };
-template<class C> concept has_set_value  = requires (C& b, std::size_t n, bool v) { b.set(n, v);       };
-template<class C> concept has_difference = requires (C& b, C const& c)           { b -= c;             };
-template<class C> concept has_subset_of  = requires (C const& c)                 { c.is_subset_of(c);  };
-template<class C> concept has_to_string  = requires (C const& c)                 { c.to_string();      };
+template<class C>
+concept has_subscript = requires (C const& c, std::size_t n) { c[n]; };
+template<class C>
+concept has_complement = requires (C const& c) { ~c; };
+template<class C>
+concept has_set_value = requires (C& b, std::size_t n, bool v) { b.set(n, v); };
+template<class C>
+concept has_difference = requires (C& b, C const& c) { b -= c; };
+template<class C>
+concept has_subset_of = requires (C const& c) { c.is_subset_of(c); };
+template<class C>
+concept has_to_string = requires (C const& c) { c.to_string(); };
 
 // A storage carrying none of this vocabulary; nothing is constrained on the concept, so it is still a type the library never wraps rather than one it rejects.
-struct word { std::uint64_t bits = 0; };
+struct word
+{
+        std::uint64_t bits = 0;
+};
 
 inline constexpr auto width = 64UZ;
 
@@ -42,10 +51,16 @@ template<class C>
         return C();
 }
 
-template<> [[nodiscard]] auto make<ours_dynamic>() -> ours_dynamic { return ours_dynamic(width); }
-template<> [[nodiscard]] auto make<boosts>()       -> boosts       { return boosts(width);       }
+template<> [[nodiscard]] auto make<ours_dynamic>() -> ours_dynamic
+{
+        return ours_dynamic(width);
+}
+template<> [[nodiscard]] auto make<boosts>() -> boosts
+{
+        return boosts(width);
+}
 
-}       // namespace
+} // namespace
 
 using Models = std::tuple<ours_static, ours_dynamic, theirs, boosts>;
 
@@ -58,12 +73,12 @@ static_assert(xstd::contiguous_bit_sequence<theirs>);
 static_assert(xstd::contiguous_bit_sequence<boosts>);
 
 // It is the intersection and not the union: every one of these is absent from at least one of the three, so asking for it would drop a model.
-static_assert(not has_subscript<ours_static>);   // ours reads through test, never a subscript
-static_assert(not has_complement<ours_static>);  // nor does it complement in place
-static_assert(not has_set_value<ours_static>);   // nor take the two-argument set, assign being spelled apart from it
-static_assert(not has_difference<theirs>);       // std::bitset has no difference
-static_assert(not has_subset_of<theirs>);        // nor boost's set vocabulary
-static_assert(not has_to_string<boosts>);        // to_string is std::bitset's alone
+static_assert(not has_subscript<ours_static>);  // ours reads through test, never a subscript
+static_assert(not has_complement<ours_static>); // nor does it complement in place
+static_assert(not has_set_value<ours_static>);  // nor take the two-argument set, assign being spelled apart from it
+static_assert(not has_difference<theirs>);      // std::bitset has no difference
+static_assert(not has_subset_of<theirs>);       // nor boost's set vocabulary
+static_assert(not has_to_string<boosts>);       // to_string is std::bitset's alone
 
 // Structural and nothing more: it describes a shape the three containers share, and the adaptors admit their storage by name instead.
 static_assert(not xstd::contiguous_bit_sequence<word>);

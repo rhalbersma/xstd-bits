@@ -41,8 +41,12 @@ auto ordering_agrees_with_vector_bool(std::size_t universe = 4)
                         // The reference holds the same bools at the same positions, over the whole width the view reports.
                         auto vx = std::vector<bool>(xv.size());
                         auto vy = std::vector<bool>(yv.size());
-                        for (auto k = 0UZ; k < xv.size(); ++k) { vx[k] = static_cast<bool>(xv[k]); }
-                        for (auto k = 0UZ; k < yv.size(); ++k) { vy[k] = static_cast<bool>(yv[k]); }
+                        for (auto k = 0UZ; k < xv.size(); ++k) {
+                                vx[k] = static_cast<bool>(xv[k]);
+                        }
+                        for (auto k = 0UZ; k < yv.size(); ++k) {
+                                vy[k] = static_cast<bool>(yv[k]);
+                        }
 
                         BOOST_CHECK_EQUAL(std::ranges::equal(xv, yv), vx == vy);
                         auto const order = std::lexicographical_compare_three_way(xv.begin(), xv.end(), yv.begin(), yv.end());

@@ -44,7 +44,7 @@ auto per_candidate(benchmark::State& state)
         state.SetItemsProcessed(state.iterations() * static_cast<std::int64_t>(bound(state)));
 }
 
-}       // namespace
+} // namespace
 
 template<class X>
 auto bm_sift_primes0(benchmark::State& state)
@@ -115,15 +115,15 @@ auto bm_filter_twins(benchmark::State& state)
 #define BENCH_QUADRATIC(fn, type) \
         BENCHMARK_TEMPLATE1(fn, type)->RangeMultiplier(2)->Range(lo, 1L << 16)->Unit(benchmark::kMillisecond)
 
-#define BENCH_REPRESENTATIONS(fn)                          \
-        BENCH_QUADRATIC(fn, std::flat_set<std::size_t>);   \
-        BENCH_LADDER(fn, std::set<std::size_t>);           \
+#define BENCH_REPRESENTATIONS(fn) \
+        BENCH_QUADRATIC(fn, std::flat_set<std::size_t>); \
+        BENCH_LADDER(fn, std::set<std::size_t>); \
         BENCH_LADDER(fn, xstd::bit_set)
 
 #else
 
-#define BENCH_REPRESENTATIONS(fn)                          \
-        BENCH_LADDER(fn, std::set<std::size_t>);           \
+#define BENCH_REPRESENTATIONS(fn) \
+        BENCH_LADDER(fn, std::set<std::size_t>); \
         BENCH_LADDER(fn, xstd::bit_set)
 
 #endif
@@ -131,16 +131,16 @@ auto bm_filter_twins(benchmark::State& state)
 // The second axis, ours alone: std::set and std::flat_set have no block to choose.
 #if defined(BENCH_HAS_UINT128)
 
-#define BENCH_BLOCKS(fn)                                   \
-        BENCH_LADDER(fn, xstd::basic_bit_set<std::uint8_t >); \
+#define BENCH_BLOCKS(fn) \
+        BENCH_LADDER(fn, xstd::basic_bit_set<std::uint8_t>); \
         BENCH_LADDER(fn, xstd::basic_bit_set<std::uint16_t>); \
         BENCH_LADDER(fn, xstd::basic_bit_set<std::uint32_t>); \
         BENCH_LADDER(fn, xstd::basic_bit_set<xstd::uint128>)
 
 #else
 
-#define BENCH_BLOCKS(fn)                                   \
-        BENCH_LADDER(fn, xstd::basic_bit_set<std::uint8_t >); \
+#define BENCH_BLOCKS(fn) \
+        BENCH_LADDER(fn, xstd::basic_bit_set<std::uint8_t>); \
         BENCH_LADDER(fn, xstd::basic_bit_set<std::uint16_t>); \
         BENCH_LADDER(fn, xstd::basic_bit_set<std::uint32_t>)
 
@@ -153,7 +153,9 @@ BENCH_REPRESENTATIONS(bm_filter_twins);
 // The two unbounded sieves, on the dense container alone: what is being priced is the algorithm against sift_primes1 on the same row, not one container against another.
 BENCH_LADDER(bm_sift_primes_segmented, xstd::bit_set);
 BENCHMARK_TEMPLATE1(bm_sift_primes_incremental, xstd::bit_set)
-        ->RangeMultiplier(2)->Range(lo, 1L << 16)->Unit(benchmark::kMillisecond);
+        ->RangeMultiplier(2)
+        ->Range(lo, 1L << 16)
+        ->Unit(benchmark::kMillisecond);
 
 BENCH_BLOCKS(bm_sift_primes0);
 BENCH_BLOCKS(bm_sift_primes1);

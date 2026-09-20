@@ -7,17 +7,17 @@
 #define XSTD_BITS_DETAIL_BIT_CASTABLE_HPP
 
 #include <xstd/bits/detail/contiguous_block_range.hpp> // contiguous_block_range
-#include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
-#include <xstd/ints/limits.hpp>                    // numeric_limits
-#include <array>                                   // array
-#include <bit>                                     // bit_cast, endian
-#include <concepts>                                // convertible_to, default_initializable
-#include <cstddef>                                 // byte, size_t, to_integer
-#include <cstring>                                 // memcpy
-#include <limits>                                  // numeric_limits
-#include <memory>                                  // addressof
-#include <ranges>                                  // contiguous_range, data, range_value_t
-#include <type_traits>                             // bool_constant, is_trivially_copyable_v
+#include <xstd/ints/concepts/unsigned_integer.hpp>     // unsigned_integer
+#include <xstd/ints/limits.hpp>                        // numeric_limits
+#include <array>                                       // array
+#include <bit>                                         // bit_cast, endian
+#include <concepts>                                    // convertible_to, default_initializable
+#include <cstddef>                                     // byte, size_t, to_integer
+#include <cstring>                                     // memcpy
+#include <limits>                                      // numeric_limits
+#include <memory>                                      // addressof
+#include <ranges>                                      // contiguous_range, data, range_value_t
+#include <type_traits>                                 // bool_constant, is_trivially_copyable_v
 
 namespace xstd::detail::bits {
 
@@ -46,8 +46,7 @@ inline constexpr auto byte_count = (N + bits_per_byte - 1UZ) / bits_per_byte;
 template<class B, std::size_t N>
 concept integer_source =
         xstd::unsigned_integer<B> and
-        N <= static_cast<std::size_t>(xstd::numeric_limits<B>::digits)
-;
+        N <= static_cast<std::size_t>(xstd::numeric_limits<B>::digits);
 
 // The same family said over a sequence. contiguous_block_range already carries what this needs -- contiguous,
 // sized, and a value type that is an unsigned integer -- so the only thing added here is the width.
@@ -64,8 +63,7 @@ concept integer_source =
 // is not meant to be, exactly as it already is for an integer too wide for the width.
 template<class B>
 inline constexpr auto block_digits = static_cast<std::size_t>(
-        xstd::numeric_limits<std::ranges::range_value_t<B>>::digits
-);
+        xstd::numeric_limits<std::ranges::range_value_t<B>>::digits);
 
 template<class B>
 concept block_size_is_constant = requires {
@@ -83,8 +81,7 @@ concept block_range_source =
         contiguous_block_range<B> and
         std::default_initializable<B> and
         block_size_is_constant<B> and
-        B().size() * block_digits<B> >= N
-;
+        B().size() * block_digits<B> >= N;
 
 // WHEN A COPY ANSWERS WHAT THE SHIFTS DO. This is the question the container already asks one layer down of its
 // own blocks, asked here of the SOURCE instead, and the answer has the same two parts. On a little-endian target
@@ -125,9 +122,8 @@ concept probeable_bits =
         requires (B& b, B const& c, std::size_t n) {
                 b.set(n);
                 { c.count() } -> std::convertible_to<std::size_t>;
-                { c.size()  } -> std::convertible_to<std::size_t>;
-        }
-;
+                { c.size() } -> std::convertible_to<std::size_t>;
+        };
 
 // One position lit and counted, asked only for whether it is a CONSTANT EXPRESSION. bit_cast_is_constant above
 // covers what bit_cast refuses; this covers what the probe itself does, and the two failures are unrelated. A
@@ -182,7 +178,7 @@ template<class B, std::size_t N>
                         return false;
                 }
         }
-        for (auto const i : { 0UZ, 7UZ, bits_per_byte, bits_per_word, N - 1UZ }) {
+        for (auto const i : {0UZ, 7UZ, bits_per_byte, bits_per_word, N - 1UZ}) {
                 if (i >= N) {
                         continue;
                 }
@@ -215,13 +211,12 @@ concept container_source =
         // would be a hard error where this is an unsatisfied concept.
         B().size() == N and
         sizeof(B) * bits_per_byte >= N and
-        sizeof(B) * bits_per_byte <  N + bits_per_word and
+        sizeof(B) * bits_per_byte < N + bits_per_word and
         // With no byte to exchange there is nothing to prove, and asking anyway refuses the one width where the
         // question is empty: std::bitset<0> occupies a byte that represents no position, so a bit_cast of it reads
         // an uninitialised one and is no constant expression. The guard is byte_count and not N, because they are
         // zero together and byte_count is what the two functions below actually range over.
-        (byte_count<N> == 0UZ or (bit_cast_is_constant<B> and probe_is_constant<B> and bit_layout_holds<B, N>()))
-;
+        (byte_count<N> == 0UZ or (bit_cast_is_constant<B> and probe_is_constant<B> and bit_layout_holds<B, N>()));
 
 template<class B, std::size_t N>
 concept bit_castable = integer_source<B, N> or block_range_source<B, N> or container_source<B, N>;
@@ -250,7 +245,7 @@ constexpr auto bytes_blocks_by_shifts(std::array<std::byte, E> const& bytes, B& 
         using block_type = std::ranges::range_value_t<B>;
         constexpr auto bytes_per_block = block_digits<B> / bits_per_byte;
         for (auto j = 0UZ; j < bytes.size(); ++j) {
-                auto const byte  = static_cast<block_type>(std::to_integer<unsigned char>(bytes[j]));
+                auto const byte = static_cast<block_type>(std::to_integer<unsigned char>(bytes[j]));
                 auto const shift = bits_per_byte * (j % bytes_per_block);
                 auto& block = blocks[j / bytes_per_block];
                 block = static_cast<block_type>(block | static_cast<block_type>(byte << shift));
@@ -347,6 +342,6 @@ template<class B, std::size_t N>
         }
 }
 
-}       // namespace xstd::detail::bits
+} // namespace xstd::detail::bits
 
-#endif  // XSTD_BITS_DETAIL_BIT_CASTABLE_HPP
+#endif // XSTD_BITS_DETAIL_BIT_CASTABLE_HPP

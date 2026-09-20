@@ -71,7 +71,6 @@ struct set_symmetric_difference
         }
 };
 
-
 struct increment_modulo
 {
         template<class X>
@@ -80,12 +79,7 @@ struct increment_modulo
                 if constexpr (requires { a << n; }) {
                         auto const N = a.max_size();
                         BOOST_CHECK(
-                                (a << n) == (a
-                                        | std::views::transform([=](auto x) { return x + n; })
-                                        | std::views::filter   ([=](auto x) { return x < N; })
-                                        | std::ranges::to<X>()
-                                )
-                        );
+                                (a << n) == (a | std::views::transform([=](auto x) { return x + n; }) | std::views::filter([=](auto x) { return x < N; }) | std::ranges::to<X>()));
                 }
         }
 };
@@ -98,13 +92,7 @@ struct decrement_modulo
                 if constexpr (requires { a >> n; }) {
                         auto const N = a.max_size();
                         BOOST_CHECK(
-                                (a >> n) == (a
-                                        | std::views::filter   ([=](auto x) { return x >= n; })
-                                        | std::views::transform([=](auto x) { return x - n; })
-                                        | std::views::filter   ([=](auto x) { return x < N; })
-                                        | std::ranges::to<X>()
-                                )
-                        );
+                                (a >> n) == (a | std::views::filter([=](auto x) { return x >= n; }) | std::views::transform([=](auto x) { return x - n; }) | std::views::filter([=](auto x) { return x < N; }) | std::ranges::to<X>()));
                 }
         }
 };

@@ -33,8 +33,7 @@ BOOST_AUTO_TEST_CASE(ASeededInstanceSubstitutes)
         // By value, not by type alone: this is what a defaulted template parameter on its own could not express.
         BOOST_CHECK_EQUAL(
                 xstd::detail::bits::std_hash(value, boost::hash2::fnv1a_64(seed)),
-                xstd::detail::bits::std_hash(value, boost::hash2::fnv1a_64(seed))
-        );
+                xstd::detail::bits::std_hash(value, boost::hash2::fnv1a_64(seed)));
         BOOST_CHECK(xstd::detail::bits::std_hash(value, boost::hash2::fnv1a_64(seed)) != xstd::detail::bits::std_hash(value));
 }
 
@@ -54,12 +53,10 @@ BOOST_AUTO_TEST_CASE(EqualValuesHashEqualUnderASubstitutedHash)
 
         BOOST_CHECK_EQUAL(
                 xstd::detail::bits::std_hash(lhs, boost::hash2::xxhash_64()),
-                xstd::detail::bits::std_hash(rhs, boost::hash2::xxhash_64())
-        );
+                xstd::detail::bits::std_hash(rhs, boost::hash2::xxhash_64()));
         BOOST_CHECK(
                 xstd::detail::bits::std_hash(lhs, boost::hash2::xxhash_64()) !=
-                xstd::detail::bits::std_hash(other, boost::hash2::xxhash_64())
-        );
+                xstd::detail::bits::std_hash(other, boost::hash2::xxhash_64()));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

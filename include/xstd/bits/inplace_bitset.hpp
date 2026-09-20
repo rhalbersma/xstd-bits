@@ -25,8 +25,8 @@ using basic_inplace_bitset = bitset_adaptor<detail::bits::contiguous_bit_inplace
 template<std::size_t N>
 using inplace_bitset = basic_inplace_bitset<std::size_t, N>;
 
-}       // namespace xstd
+} // namespace xstd
 
-#endif  // __cpp_lib_inplace_vector
+#endif // __cpp_lib_inplace_vector
 
-#endif  // XSTD_BITS_INPLACE_BITSET_HPP
+#endif // XSTD_BITS_INPLACE_BITSET_HPP

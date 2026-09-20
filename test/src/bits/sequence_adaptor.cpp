@@ -3,49 +3,49 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/bit_exchange.hpp>                         // exchanges_bits, exchanges_from_bits, exchanges_to_bits
-#include <test/block_types.hpp>                          // graded_extents
-#include <xstd/bits/bit_array.hpp>                       // bit_array
-#include <xstd/bits/bit_span.hpp>                        // bit_span
-#include <xstd/bits/bit_subspan.hpp>                     // bit_subspan
-#include <xstd/bits/bit_vector.hpp>                      // bit_vector
-#include <xstd/bits/detail/contiguous_bit_array.hpp>     // contiguous_bit_array
-#include <xstd/bits/detail/contiguous_bit_vector.hpp>    // contiguous_bit_vector
-#include <xstd/bits/ownership.hpp>                       // ownership
-#include <xstd/bits/sequence_adaptor.hpp>                // sequence_adaptor
-#include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <algorithm>                                     // all_of, any_of, count, equal, lexicographical_compare_three_way, mismatch, none_of
-#include <array>                                         // array
-#include <bitset>                                        // bitset
-#include <compare>                                       // strong_ordering
-#include <concepts>                                      // copyable, equality_comparable, regular, same_as, totally_ordered
-#include <cstddef>                                       // ptrdiff_t, size_t
-#include <cstdint>                                       // uint64_t
-#include <iterator>                                      // reverse_iterator
-#include <limits>                                        // numeric_limits
-#include <ranges>                                        // equal, iota, random_access_range, transform
-#include <stdexcept>                                     // length_error, out_of_range
-#include <type_traits>                                   // is_const_v, is_constructible_v, is_convertible_v
-#include <utility>                                       // move, pair
-#include <vector>                                        // vector
+#include <test/bit_exchange.hpp>                      // exchanges_bits, exchanges_from_bits, exchanges_to_bits
+#include <test/block_types.hpp>                       // graded_extents
+#include <xstd/bits/bit_array.hpp>                    // bit_array
+#include <xstd/bits/bit_span.hpp>                     // bit_span
+#include <xstd/bits/bit_subspan.hpp>                  // bit_subspan
+#include <xstd/bits/bit_vector.hpp>                   // bit_vector
+#include <xstd/bits/detail/contiguous_bit_array.hpp>  // contiguous_bit_array
+#include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
+#include <xstd/bits/ownership.hpp>                    // ownership
+#include <xstd/bits/sequence_adaptor.hpp>             // sequence_adaptor
+#include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
+#include <algorithm>                                  // all_of, any_of, count, equal, lexicographical_compare_three_way, mismatch, none_of
+#include <array>                                      // array
+#include <bitset>                                     // bitset
+#include <compare>                                    // strong_ordering
+#include <concepts>                                   // copyable, equality_comparable, regular, same_as, totally_ordered
+#include <cstddef>                                    // ptrdiff_t, size_t
+#include <cstdint>                                    // uint64_t
+#include <iterator>                                   // reverse_iterator
+#include <limits>                                     // numeric_limits
+#include <ranges>                                     // equal, iota, random_access_range, transform
+#include <stdexcept>                                  // length_error, out_of_range
+#include <type_traits>                                // is_const_v, is_constructible_v, is_convertible_v
+#include <utility>                                    // move, pair
+#include <vector>                                     // vector
 
 namespace {
 
 using Storage = xstd::detail::bits::contiguous_bit_array<std::uint64_t, 100>;
-using Owner   = xstd::basic_bit_array<std::uint64_t, 100>;
-using View    = xstd::sequence_adaptor<Storage, xstd::ownership::refers, false>;
-using Reader  = xstd::sequence_adaptor<Storage const, xstd::ownership::refers, false>;
+using Owner = xstd::basic_bit_array<std::uint64_t, 100>;
+using View = xstd::sequence_adaptor<Storage, xstd::ownership::refers, false>;
+using Reader = xstd::sequence_adaptor<Storage const, xstd::ownership::refers, false>;
 
 // Dependent, so an absent member is a false rather than a hard error.
-template<class S> constexpr bool can_fill  = requires (S s) { s.fill(true); };
+template<class S> constexpr bool can_fill = requires (S s) { s.fill(true); };
 template<class S> constexpr bool can_write = requires (S s) { s[0] = true; };
-template<class S> constexpr bool can_swap  = requires (S s) { s.swap(s); };
+template<class S> constexpr bool can_swap = requires (S s) { s.swap(s); };
 
 template<class Seq>
 [[nodiscard]] auto bools(Seq const& s)
         -> std::vector<bool>
 {
-        return { s.begin(), s.end() };
+        return {s.begin(), s.end()};
 }
 
 using DynamicOctet = xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint8_t>, xstd::ownership::owns, false>;
@@ -54,14 +54,17 @@ using DynamicOctet = xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_v
 [[nodiscard]] auto dynamic_probes()
         -> std::vector<std::pair<DynamicOctet, std::vector<bool>>>
 {
-        auto const patterns = std::vector<std::vector<std::size_t>>{ {}, { 0 }, { 1 }, { 7 }, { 8 }, { 0, 8 }, { 7, 8 } };
+        auto const patterns = std::vector<std::vector<std::size_t>>{{}, {0}, {1}, {7}, {8}, {0, 8}, {7, 8}};
         auto out = std::vector<std::pair<DynamicOctet, std::vector<bool>>>();
-        for (auto const n : { 0UZ, 1UZ, 7UZ, 8UZ, 9UZ, 16UZ, 17UZ }) {
+        for (auto const n : {0UZ, 1UZ, 7UZ, 8UZ, 9UZ, 16UZ, 17UZ}) {
                 for (auto const& p : patterns) {
                         auto x = DynamicOctet(n, false);
                         auto v = std::vector<bool>(n, false);
                         for (auto const i : p) {
-                                if (i < n) { x[i] = true; v[i] = true; }
+                                if (i < n) {
+                                        x[i] = true;
+                                        v[i] = true;
+                                }
                         }
                         out.emplace_back(std::move(x), std::move(v));
                 }
@@ -70,15 +73,22 @@ using DynamicOctet = xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_v
 }
 
 // Named so each requirement is checked on a TEMPLATE PARAMETER. Selecting a deleted overload is a hard error where the requires-expression names a concrete type -- measured on GCC and Clang alike -- and a soft false only through a parameter, which is what makes a deleted operator assertable at all.
-template<class T> concept eq_comparable        = requires (T a, T b) { a ==  b; };
-template<class T> concept ne_comparable        = requires (T a, T b) { a !=  b; };
-template<class T> concept spaceship_comparable = requires (T a, T b) { a <=> b; };
-template<class T> concept lt_comparable        = requires (T a, T b) { a <   b; };
-template<class T> concept gt_comparable        = requires (T a, T b) { a >   b; };
-template<class T> concept le_comparable        = requires (T a, T b) { a <=  b; };
-template<class T> concept ge_comparable        = requires (T a, T b) { a >=  b; };
+template<class T>
+concept eq_comparable = requires (T a, T b) { a == b; };
+template<class T>
+concept ne_comparable = requires (T a, T b) { a != b; };
+template<class T>
+concept spaceship_comparable = requires (T a, T b) { a <=> b; };
+template<class T>
+concept lt_comparable = requires (T a, T b) { a < b; };
+template<class T>
+concept gt_comparable = requires (T a, T b) { a > b; };
+template<class T>
+concept le_comparable = requires (T a, T b) { a <= b; };
+template<class T>
+concept ge_comparable = requires (T a, T b) { a >= b; };
 
-}       // namespace
+} // namespace
 
 BOOST_AUTO_TEST_SUITE(SequenceAdaptor)
 
@@ -113,11 +123,11 @@ BOOST_AUTO_TEST_CASE(AnOwnerIsRegularAndAViewIsCopyable)
 // Deep const for the owner, shallow for the view: what each hands out says which.
 BOOST_AUTO_TEST_CASE(ConstIsDeepForTheOwnerAndShallowForTheView)
 {
-        auto a = Owner();  // NOLINT(misc-const-correctness): the non-const overloads are what the decltypes below ask about
+        auto a = Owner(); // NOLINT(misc-const-correctness): the non-const overloads are what the decltypes below ask about
         auto const& ca = a;
-        static_assert(std::same_as<decltype(a.begin()),  Owner::iterator>);
+        static_assert(std::same_as<decltype(a.begin()), Owner::iterator>);
         static_assert(std::same_as<decltype(ca.begin()), Owner::const_iterator>);
-        static_assert(std::same_as<decltype(a[0]),  Owner::reference>);
+        static_assert(std::same_as<decltype(a[0]), Owner::reference>);
         static_assert(std::same_as<decltype(ca[0]), Owner::const_reference>);
         static_assert(std::same_as<decltype(ca.cbegin()), Owner::const_iterator>);
 
@@ -192,17 +202,21 @@ BOOST_AUTO_TEST_CASE(TheBulkOperatorsAreTheStoragesOwn)
         BOOST_CHECK(z[1] and not z[2] and z[3]);
 
         // The binary forms, each its compound over a copy, and the complement as flip()'s value.
-        auto t = x; t &= y;
+        auto t = x;
+        t &= y;
         BOOST_CHECK((x & y) == t);
-        t = x; t |= y;
+        t = x;
+        t |= y;
         BOOST_CHECK((x | y) == t);
-        t = x; t ^= y;
+        t = x;
+        t ^= y;
         BOOST_CHECK((x ^ y) == t);
-        t = x; t.flip();
+        t = x;
+        t.flip();
         BOOST_CHECK((~x) == t);
-        BOOST_CHECK(x[1] and x[2]);                                     // and none of them wrote through
+        BOOST_CHECK(x[1] and x[2]); // and none of them wrote through
         BOOST_CHECK((~~x) == x);
-        BOOST_CHECK(((x & y) | (x ^ y)) == (x | y));                    // one identity, over packed bits
+        BOOST_CHECK(((x & y) | (x ^ y)) == (x | y)); // one identity, over packed bits
 
         auto c = Storage();
         auto d = Storage();
@@ -220,13 +234,17 @@ BOOST_AUTO_TEST_CASE(TheOrderingIsTheLexicographicOrderOfTheBools)
         using Packed = xstd::basic_bit_array<std::uint8_t, 9>;
         static_assert(std::regular<Packed> and std::totally_ordered<Packed>);
 
-        auto const patterns = std::vector<std::vector<std::size_t>>{ {}, { 0 }, { 1 }, { 0, 1 }, { 8 }, { 0, 8 } };
+        auto const patterns = std::vector<std::vector<std::size_t>>{{}, {0}, {1}, {0, 1}, {8}, {0, 8}};
         for (auto const& p : patterns) {
                 for (auto const& q : patterns) {
                         auto x = Packed();
                         auto y = Packed();
-                        for (auto const i : p) { x[i] = true; }
-                        for (auto const i : q) { y[i] = true; }
+                        for (auto const i : p) {
+                                x[i] = true;
+                        }
+                        for (auto const i : q) {
+                                y[i] = true;
+                        }
 
                         auto const expected = std::lexicographical_compare_three_way(x.begin(), x.end(), y.begin(), y.end());
                         BOOST_CHECK((x <=> y) == expected);
@@ -239,8 +257,8 @@ BOOST_AUTO_TEST_CASE(TheOrderingIsTheLexicographicOrderOfTheBools)
 BOOST_AUTO_TEST_CASE(TheOrderingAcrossTwoSizesIsStillTheLexicographicOrder)
 {
         auto const cases = dynamic_probes();
-        for (auto const& [ x, vx ] : cases) {
-                for (auto const& [ y, vy ] : cases) {
+        for (auto const& [x, vx] : cases) {
+                for (auto const& [y, vy] : cases) {
                         auto const expected = std::lexicographical_compare_three_way(vx.begin(), vx.end(), vy.begin(), vy.end());
                         BOOST_CHECK((x <=> y) == expected);
                         BOOST_CHECK((y <=> x) == (0 <=> expected));
@@ -257,16 +275,16 @@ constexpr bool can_grow = requires (X& x) { x.push_back(true); x.pop_back(); x.r
 BOOST_AUTO_TEST_CASE(GrowthIsTheOwnersOverStorageThatGrows)
 {
         using Dynamic = xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint64_t>, xstd::ownership::owns, false>;
-        using Span    = xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint64_t>, xstd::ownership::refers, false>;
+        using Span = xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint64_t>, xstd::ownership::refers, false>;
 
-        static_assert(    can_grow<Dynamic>);
+        static_assert(can_grow<Dynamic>);
         static_assert(not can_grow<Owner>);
         static_assert(not can_grow<Span>);
 
         auto d = Dynamic(3, true);
         d.push_back(false);
         BOOST_CHECK_EQUAL(d.size(), 4UZ);
-        BOOST_CHECK(std::ranges::equal(d, std::vector<bool>{ true, true, true, false }));
+        BOOST_CHECK(std::ranges::equal(d, std::vector<bool>{true, true, true, false}));
         // What a distance can name, not what the storage could hold: this reading is a random access range, so end() - begin() is a difference_type and the ceiling is the storage's addressable one, where the set reading beside it takes the wider.
         BOOST_CHECK_EQUAL(d.max_size(), xstd::detail::bits::contiguous_bit_vector<std::uint64_t>::max_addressable_width);
         BOOST_CHECK_LT(d.max_size(), xstd::detail::bits::contiguous_bit_vector<std::uint64_t>().max_size());
@@ -276,11 +294,11 @@ BOOST_AUTO_TEST_CASE(GrowthIsTheOwnersOverStorageThatGrows)
         // The fill insert asks for size() + n, an addition over a count the caller names: wrapped it would answer an insertion with a shorter sequence than it started from, so it saturates and the resize refuses it.
         BOOST_CHECK_THROW(d.insert(d.begin(), std::numeric_limits<std::size_t>::max(), true), std::length_error);
         BOOST_CHECK_EQUAL(d.size(), 4UZ);
-        BOOST_CHECK(std::ranges::equal(d, std::vector<bool>{ true, true, true, false }));
+        BOOST_CHECK(std::ranges::equal(d, std::vector<bool>{true, true, true, false}));
 
         // The one a width can hold is unaffected, and lands where it was asked for.
         d.insert(d.begin(), 2UZ, false);
-        BOOST_CHECK(std::ranges::equal(d, std::vector<bool>{ false, false, true, true, true, false }));
+        BOOST_CHECK(std::ranges::equal(d, std::vector<bool>{false, false, true, true, true, false}));
 }
 
 // at() is the reading's one checked door, and this is the extent it had not been asked at: bit_array's static owner, a view and a window are checked in bit_array.cpp, above, and bit_subspan.cpp. The width it measures against is the one that grows, so the position refused before the push_back is held after it.
@@ -306,7 +324,7 @@ constexpr auto every_third = [](std::size_t i) -> bool { return i % 3 == 0; };
         return std::views::iota(0UZ, n) | std::views::transform(every_third);
 }
 
-}       // namespace
+} // namespace
 
 // The packing tier over a range that holds nothing of its own: the bools are computed, so the loop is the only thing that knows how many there were. Two lengths, because the last word is what the tier has to get right -- 128 ends on a word boundary and 70 does not.
 BOOST_AUTO_TEST_CASE(TheAppendsPackWhatTheRangeComputes)
@@ -319,7 +337,7 @@ BOOST_AUTO_TEST_CASE(TheAppendsPackWhatTheRangeComputes)
         BOOST_CHECK_EQUAL(d.size(), 198UZ);
 
         auto expected = std::vector<bool>();
-        for (auto const n : { 128UZ, 70UZ }) {
+        for (auto const n : {128UZ, 70UZ}) {
                 for (auto i = 0UZ; i < n; ++i) {
                         expected.push_back(every_third(i));
                 }
@@ -349,7 +367,7 @@ BOOST_AUTO_TEST_CASE(ARefusedInsertRangeLeavesTheSequenceAsItWas)
         auto d = Dynamic(3, true);
         d.push_back(false);
         BOOST_CHECK_THROW(d.insert_range(d.cend(), counting_to(top)), std::length_error);
-        BOOST_CHECK(std::ranges::equal(d, std::vector<bool>{ true, true, true, false }));
+        BOOST_CHECK(std::ranges::equal(d, std::vector<bool>{true, true, true, false}));
 }
 
 BOOST_AUTO_TEST_CASE(AZeroWidthSequenceIsEmpty)
@@ -371,12 +389,18 @@ auto pattern_bit(std::size_t p, std::size_t i, std::size_t n)
         -> bool
 {
         switch (p) {
-        case 0UZ: return false;
-        case 1UZ: return true;
-        case 2UZ: return i == 0UZ;
-        case 3UZ: return i + 1UZ == n;
-        case 4UZ: return (i % 2UZ) == 0UZ;
-        default:  return (i % 3UZ) == 0UZ;
+                case 0UZ:
+                        return false;
+                case 1UZ:
+                        return true;
+                case 2UZ:
+                        return i == 0UZ;
+                case 3UZ:
+                        return i + 1UZ == n;
+                case 4UZ:
+                        return (i % 2UZ) == 0UZ;
+                default:
+                        return (i % 3UZ) == 0UZ;
         }
 }
 
@@ -400,25 +424,25 @@ auto aggregate_disagreements(Seq const& s, std::vector<bool> const& m)
         -> std::size_t
 {
         auto disagreements = 0UZ;
-        for (auto const value : { true, false }) {
+        for (auto const value : {true, false}) {
                 auto const is = [value](bool b) -> bool { return b == value; };
                 disagreements += static_cast<std::size_t>(s.count(value) != static_cast<std::size_t>(std::ranges::count(m, value)));
                 // And against the generic algorithm over the SEQUENCE itself, not only over the model: the member counts a word at a time where the algorithm reaches through the proxy a bit at a time, and benchmark/src/sequence/access.cpp puts those two costs side by side. A ratio between them is a cost only while they answer the same number. Not a unique guard -- breaking the proxy's read fails this suite in seven other cases too -- but it is the benchmark's premise, stated where the benchmark can be read against it.
                 disagreements += static_cast<std::size_t>(s.count(value) != static_cast<std::size_t>(std::ranges::count(s, value)));
-                disagreements += static_cast<std::size_t>(s.all (value) != std::ranges::all_of (m, is));
-                disagreements += static_cast<std::size_t>(s.any (value) != std::ranges::any_of (m, is));
+                disagreements += static_cast<std::size_t>(s.all(value) != std::ranges::all_of(m, is));
+                disagreements += static_cast<std::size_t>(s.any(value) != std::ranges::any_of(m, is));
                 disagreements += static_cast<std::size_t>(s.none(value) != std::ranges::none_of(m, is));
         }
         // The argument defaults to the true arm, which is where the bitset reading's four already are.
         disagreements += static_cast<std::size_t>(s.count() != s.count(true));
-        disagreements += static_cast<std::size_t>(s.all()   != s.all(true));
-        disagreements += static_cast<std::size_t>(s.any()   != s.any(true));
-        disagreements += static_cast<std::size_t>(s.none()  != s.none(true));
+        disagreements += static_cast<std::size_t>(s.all() != s.all(true));
+        disagreements += static_cast<std::size_t>(s.any() != s.any(true));
+        disagreements += static_cast<std::size_t>(s.none() != s.none(true));
         // The four identities the false arms are, spelled here because they are the implementation.
         disagreements += static_cast<std::size_t>(s.count(false) != s.size() - s.count(true));
-        disagreements += static_cast<std::size_t>(s.all(false)   != s.none(true));
-        disagreements += static_cast<std::size_t>(s.any(false)   != not s.all(true));
-        disagreements += static_cast<std::size_t>(s.none(false)  != s.all(true));
+        disagreements += static_cast<std::size_t>(s.all(false) != s.none(true));
+        disagreements += static_cast<std::size_t>(s.any(false) != not s.all(true));
+        disagreements += static_cast<std::size_t>(s.none(false) != s.all(true));
         return disagreements;
 }
 
@@ -432,7 +456,7 @@ auto for_each_bools(Seq const& s)
         return v;
 }
 
-}       // namespace
+} // namespace
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheAggregatesAgreeWithTheModel, T, Graded)
 {
@@ -465,7 +489,6 @@ BOOST_AUTO_TEST_CASE(TheAggregatesAgreeWithTheModelOnAWindowOfOurs)
         }
         BOOST_CHECK_EQUAL(disagreements, 0UZ);
 }
-
 
 // std::mismatch's answer, over the machinery operator== is already made of: the position, or size() where the two agree.
 BOOST_AUTO_TEST_CASE_TEMPLATE(MismatchAgreesWithTheModel, T, Graded)
@@ -501,16 +524,26 @@ struct void_probe
 
         auto operator()(bool&&) const -> void {}
         // Never called is exactly what is under test, so say so rather than let -Wunused-member-function say it.
-        [[maybe_unused]] auto operator()(bool&) const -> void { took_a_reference = true; }
+        [[maybe_unused]] auto operator()(bool&) const -> void
+        {
+                took_a_reference = true;
+        }
 };
 
 struct bool_probe
 {
         bool& took_a_reference;
 
-        auto operator()(bool&&) const -> bool { return true; }
+        auto operator()(bool&&) const -> bool
+        {
+                return true;
+        }
         // Never called is exactly what is under test, so say so rather than let -Wunused-member-function say it.
-        [[maybe_unused]] auto operator()(bool&) const -> bool { took_a_reference = true; return true; }
+        [[maybe_unused]] auto operator()(bool&) const -> bool
+        {
+                took_a_reference = true;
+                return true;
+        }
 };
 
 // A window's blocks are not its own, so it has no mismatch; nor has an owner over storage without the entry.
@@ -564,14 +597,16 @@ BOOST_AUTO_TEST_CASE(ForEachHandsTheBoolByValue)
         // Writing through the sequence is the range-for's job, and it still is.
         auto a = Owner();
         // const, and it still writes: assigning through the proxy is what the proxy is for.
-        for (auto const r : a) { r = true; }
+        for (auto const r : a) {
+                r = true;
+        }
         BOOST_CHECK_EQUAL(a.count(), a.size());
 
         // And the overload resolution the constraint cannot reach: an lvalue at the call would take the reference.
         auto took_a_reference = false;
-        a.for_each(void_probe{ took_a_reference });
+        a.for_each(void_probe{took_a_reference});
         BOOST_CHECK(not took_a_reference);
-        a.for_each(bool_probe{ took_a_reference });
+        a.for_each(bool_probe{took_a_reference});
         BOOST_CHECK(not took_a_reference);
 }
 
@@ -582,7 +617,9 @@ BOOST_AUTO_TEST_CASE(APackedArrayExchangesBytesWithAFieldOfBits)
 {
         constexpr auto N = 100UZ;
         auto src = std::bitset<N>();
-        for (auto i = 0UZ; i < N; i += 7UZ) { src.set(i); }
+        for (auto i = 0UZ; i < N; i += 7UZ) {
+                src.set(i);
+        }
 
         auto const a = xstd::bit_array<N>::from_bits(src);
         BOOST_CHECK_EQUAL(a.count(), src.count());
@@ -626,8 +663,8 @@ BOOST_AUTO_TEST_CASE(TheSequenceExchangeIsNamedBothWays)
 BOOST_AUTO_TEST_CASE(AWindowIsNotAFieldOfBitsButAPlainViewIs)
 {
         static_assert(not test::exchanges_to_bits<xstd::bit_subspan<Storage>, std::bitset<100>>);
-        static_assert(    test::exchanges_to_bits<View,   std::bitset<100>>);
-        static_assert(    test::exchanges_to_bits<Reader, std::bitset<100>>);
+        static_assert(test::exchanges_to_bits<View, std::bitset<100>>);
+        static_assert(test::exchanges_to_bits<Reader, std::bitset<100>>);
 
         // A view reads the bits it spans, which are the whole container's.
         auto storage = Storage();
@@ -648,8 +685,8 @@ BOOST_AUTO_TEST_CASE(AWindowIsNotAFieldOfBitsButAPlainViewIs)
 BOOST_AUTO_TEST_CASE(ARunTimeWidthHasNoByteExchange)
 {
         static_assert(not test::exchanges_from_bits<xstd::bit_vector, std::bitset<64>>);
-        static_assert(not test::exchanges_to_bits  <xstd::bit_vector, std::bitset<64>>);
-        static_assert(not test::exchanges_from_bits<DynamicOctet,     std::bitset<64>>);
+        static_assert(not test::exchanges_to_bits<xstd::bit_vector, std::bitset<64>>);
+        static_assert(not test::exchanges_from_bits<DynamicOctet, std::bitset<64>>);
 }
 
 // The sequence reading takes raw blocks on that same rule, and this is the spelling that reads differently here
@@ -657,14 +694,14 @@ BOOST_AUTO_TEST_CASE(ARunTimeWidthHasNoByteExchange)
 // the rest. Same bits, two vocabularies, which is the whole reason the door is named rather than spelled as a cast.
 BOOST_AUTO_TEST_CASE(RawBlocksAreElementsUnderThisReading)
 {
-        auto const a = xstd::bit_array<64>::from_bits(std::array<std::uint64_t, 1>{ 5ULL });
+        auto const a = xstd::bit_array<64>::from_bits(std::array<std::uint64_t, 1>{5ULL});
         // Combined with `and`, as this file does elsewhere: an element is a PROXY reference, and a bare one is an
         // ambiguous initializer for Boost.Test's assertion_result where the combination is a plain bool.
         BOOST_CHECK(a[0] and not a[1] and a[2]);
         BOOST_CHECK_EQUAL(a.count(), 2UZ);
 
         static_assert([] -> bool {
-                auto const b = std::array<std::uint64_t, 2>{ 0xF0F0ULL, 3ULL };
+                auto const b = std::array<std::uint64_t, 2>{0xF0F0ULL, 3ULL};
                 return xstd::bit_array<128>::from_bits(b).to_bits<std::array<std::uint64_t, 2>>() == b;
         }());
 }

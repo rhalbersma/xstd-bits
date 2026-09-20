@@ -144,8 +144,8 @@ BOOST_AUTO_TEST_CASE(GrowingPastTheCapacityThrowsBadAlloc)
         BOOST_CHECK_EQUAL(std::ranges::count(v, true), 12);
 
         BOOST_CHECK_THROW(v.push_back(true), std::bad_alloc);
-        BOOST_CHECK_THROW(v.resize(25),      std::bad_alloc);
-        BOOST_CHECK_THROW(v.reserve(25),     std::bad_alloc);
+        BOOST_CHECK_THROW(v.resize(25), std::bad_alloc);
+        BOOST_CHECK_THROW(v.reserve(25), std::bad_alloc);
 
         // The failed growth left the value alone, which is what the strong guarantee buys.
         BOOST_CHECK_EQUAL(v.size(), 24UZ);

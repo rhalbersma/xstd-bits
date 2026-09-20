@@ -18,6 +18,6 @@ namespace xstd {
 template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits>
 using bit_set_view = set_adaptor<Bits, ownership::refers>;
 
-}       // namespace xstd
+} // namespace xstd
 
-#endif  // XSTD_BITS_BIT_SET_VIEW_HPP
+#endif // XSTD_BITS_BIT_SET_VIEW_HPP

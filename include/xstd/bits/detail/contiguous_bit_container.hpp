@@ -7,7 +7,7 @@
 #define XSTD_BITS_DETAIL_CONTIGUOUS_BIT_CONTAINER_HPP
 
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_base_type
-#include <xstd/bits/detail/contiguous_block_range.hpp>   // contiguous_block_range
+#include <xstd/bits/detail/contiguous_block_range.hpp>       // contiguous_block_range
 #include <xstd/bits/detail/intrin.hpp>                       // countl_zero, countr_zero, popcount
 #include <xstd/bits/detail/pred.hpp>                         // intersects, is_subset_of, not_equal_to
 #include <xstd/bits/detail/shift.hpp>                        // shl, shr
@@ -32,7 +32,7 @@
 #include <ranges>                                            // begin, drop, iota, rbegin, rend, size, swap, take, transform, zip
                                                              // (views::drop_last when P22014R2 is accepted)
 #include <source_location>                                   // source_location
-#include <xstd/bits/detail/bit_castable.hpp>                  // bit_bytes, bit_castable, byte_count, bytes_bits, container_source
+#include <xstd/bits/detail/bit_castable.hpp>                 // bit_bytes, bit_castable, byte_count, bytes_bits, container_source
 #include <span>                                              // dynamic_extent, span
 #include <stdexcept>                                         // length_error
 #include <type_traits>                                       // conditional_t, is_const_v, remove_reference_t
@@ -44,9 +44,8 @@ namespace xstd::detail::bits {
 template<xstd::unsigned_integer Block, std::size_t N>
 inline constexpr auto num_blocks_v = std::ranges::max(
         align_up(N, static_cast<std::size_t>(xstd::numeric_limits<Block>::digits)) /
-                    static_cast<std::size_t>(xstd::numeric_limits<Block>::digits),
-        1UZ
-);
+                static_cast<std::size_t>(xstd::numeric_limits<Block>::digits),
+        1UZ);
 
 // The one vehicle: it owns the unused-tail invariant, and has no iterators.
 template<contiguous_block_range Blocks, std::size_t N = std::dynamic_extent>
@@ -55,11 +54,11 @@ class contiguous_bit_container : public detail::bits::allocator_base_type<Blocks
 public:
         using block_type = std::ranges::range_value_t<Blocks>;
 
-        static constexpr auto bits_per_block  = static_cast<std::size_t>(xstd::numeric_limits<block_type>::digits);
+        static constexpr auto bits_per_block = static_cast<std::size_t>(xstd::numeric_limits<block_type>::digits);
 
         // Derived rather than written as an 8, and from what is already here: a block's digits over its bytes IS the
         // bits in a byte. What the byte primitives below shift by, and a literal there is a magic number.
-        static constexpr auto bits_per_byte   = bits_per_block / sizeof(block_type);
+        static constexpr auto bits_per_byte = bits_per_block / sizeof(block_type);
         static constexpr auto has_static_size = N != std::dynamic_extent;
 
         // A run-time width over a capacity that is a property of the TYPE, which is the middle column and nothing else.
@@ -114,26 +113,26 @@ public:
 
         // The widest width a size_t can count in whole blocks, and the widest a ptrdiff_t can: the two ceilings the readings choose between, neither of them enforced here. What the blocks can actually hold is narrower still, and that is max_size() and the two answers beside it.
         static constexpr auto max_num_blocks = std::numeric_limits<std::size_t>::max() / bits_per_block;
-        static constexpr auto max_width      = max_num_blocks * bits_per_block;
+        static constexpr auto max_width = max_num_blocks * bits_per_block;
 
         // A width whose positions a difference_type can all name: what a random access range over these blocks can address, and so what std::vector<bool> reports and refuses against. Whole blocks, like the one above.
         static constexpr auto max_addressable_num_blocks = static_cast<std::size_t>(std::numeric_limits<std::ptrdiff_t>::max()) / bits_per_block;
-        static constexpr auto max_addressable_width      = max_addressable_num_blocks * bits_per_block;
+        static constexpr auto max_addressable_width = max_addressable_num_blocks * bits_per_block;
 
 private:
-        static constexpr auto static_num_bits   = has_static_size ? align_up(N, bits_per_block) : 0UZ;
+        static constexpr auto static_num_bits = has_static_size ? align_up(N, bits_per_block) : 0UZ;
         static constexpr auto static_num_blocks = has_static_size ? std::ranges::max(static_num_bits / bits_per_block, 1UZ) : 0UZ;
         static constexpr auto static_last_block = static_num_blocks - 1UZ;
 
         static constexpr auto left_bit = bits_per_block - 1UZ;
-        static constexpr auto unit     = static_cast<block_type>( 1);
-        static constexpr auto zero     = static_cast<block_type>( 0);
-        static constexpr auto ones     = static_cast<block_type>(-1);
+        static constexpr auto unit = static_cast<block_type>(1);
+        static constexpr auto zero = static_cast<block_type>(0);
+        static constexpr auto ones = static_cast<block_type>(-1);
 
         // Width zero named, not computed: MSVC folds both ?: arms and answers C4293.
         static constexpr auto static_num_unused_bits = has_static_size ? static_num_bits - N : 0UZ;
-        static constexpr auto static_used_bits       = has_static_size and N == 0 ? zero : shr(ones, static_num_unused_bits);
-        static constexpr auto static_unused_bits     = static_cast<block_type>(~static_used_bits);
+        static constexpr auto static_used_bits = has_static_size and N == 0 ? zero : shr(ones, static_num_unused_bits);
+        static constexpr auto static_unused_bits = static_cast<block_type>(~static_used_bits);
         static constexpr auto static_has_unused_bits = has_static_size and static_used_bits != ones;
 
         // An NSDMI, not extent-constrained constructors: vector starts empty.
@@ -163,42 +162,37 @@ public:
         // The width is a constructor argument exactly when it is not a template argument.
         [[nodiscard]] constexpr explicit contiguous_bit_container(std::size_t n)
                 requires (not has_static_size)
-        :
-                m_size(n),
-                m_blocks(make_blocks(n))
+            : m_size(n),
+              m_blocks(make_blocks(n))
         {}
 
         // boost's allocator arguments, where the blocks take one: deduced and matched, so a storage without an allocator has no such constructor.
         template<class Alloc>
                 requires (not has_static_size) and std::same_as<Alloc, typename Blocks::allocator_type>
         [[nodiscard]] constexpr explicit contiguous_bit_container(Alloc const& alloc)
-        :
-                m_blocks(blocks_for(0UZ), alloc)
+            : m_blocks(blocks_for(0UZ), alloc)
         {}
 
         template<class Alloc>
                 requires (not has_static_size) and std::same_as<Alloc, typename Blocks::allocator_type>
         [[nodiscard]] constexpr contiguous_bit_container(std::size_t n, Alloc const& alloc)
-        :
-                m_size(n),
-                m_blocks(blocks_for(n), alloc)
+            : m_size(n),
+              m_blocks(blocks_for(n), alloc)
         {}
 
         // [container.alloc.reqmts]'s allocator-extended copy and move; the moved-from is left empty whichever way the blocks went.
         template<class Alloc>
                 requires (not has_static_size) and std::same_as<Alloc, typename Blocks::allocator_type>
         [[nodiscard]] constexpr contiguous_bit_container(contiguous_bit_container const& other, Alloc const& alloc)
-        :
-                m_size(other.m_size),
-                m_blocks(other.m_blocks, alloc)
+            : m_size(other.m_size),
+              m_blocks(other.m_blocks, alloc)
         {}
 
         template<class Alloc>
                 requires (not has_static_size) and std::same_as<Alloc, typename Blocks::allocator_type>
         [[nodiscard]] constexpr contiguous_bit_container(contiguous_bit_container&& other, Alloc const& alloc)
-        :
-                m_size(std::exchange(other.m_size, 0UZ)),
-                m_blocks(std::move(other.m_blocks), alloc)
+            : m_size(std::exchange(other.m_size, 0UZ)),
+              m_blocks(std::move(other.m_blocks), alloc)
         {
                 other.m_blocks.clear();
         }
@@ -224,12 +218,10 @@ public:
                         auto const shared = static_cast<std::ptrdiff_t>(std::ranges::min(x.num_blocks(), y.num_blocks()));
                         auto const xf = std::ranges::begin(x.m_blocks);
                         auto const yf = std::ranges::begin(y.m_blocks);
-                        return
-                                std::ranges::equal(xf, xf + shared, yf, yf + shared) and
-                                (x.num_blocks() < y.num_blocks()
+                        return std::ranges::equal(xf, xf + shared, yf, yf + shared) and
+                               (x.num_blocks() < y.num_blocks()
                                         ? not y.any_block_set(x.num_blocks(), y.num_blocks())
-                                        : not x.any_block_set(y.num_blocks(), x.num_blocks()))
-                        ;
+                                        : not x.any_block_set(y.num_blocks(), x.num_blocks()));
                 }
         }
 
@@ -248,7 +240,7 @@ public:
                                         return x.padded_set_three_way(y);
                                 }
                         }
-                        auto const [ index, diff ] = x.first_difference(y);
+                        auto const [index, diff] = x.first_difference(y);
                         if (diff == zero) {
                                 return std::strong_ordering::equal;
                         }
@@ -272,15 +264,14 @@ public:
                                         return x.padded_sequence_three_way(y);
                                 }
                         }
-                        auto const [ index, diff ] = x.first_difference(y);
+                        auto const [index, diff] = x.first_difference(y);
                         if (diff == zero) {
                                 return std::strong_ordering::equal;
                         }
                         auto const offset = detail::bits::countr_zero(diff);
                         return detail::bits::intersects(x.m_blocks[index], shl(unit, offset))
-                                ? std::strong_ordering::greater
-                                : std::strong_ordering::less
-                        ;
+                                       ? std::strong_ordering::greater
+                                       : std::strong_ordering::less;
                 }
         }
 
@@ -291,8 +282,7 @@ public:
                 assert(x.size() == y.size());
                 return std::lexicographical_compare_three_way(
                         std::ranges::rbegin(x.m_blocks), std::ranges::rend(x.m_blocks),
-                        std::ranges::rbegin(y.m_blocks), std::ranges::rend(y.m_blocks)
-                );
+                        std::ranges::rbegin(y.m_blocks), std::ranges::rend(y.m_blocks));
         }
 
         template<class Provider, class Hash, class Flavor>
@@ -402,13 +392,13 @@ public:
         [[nodiscard]] constexpr auto blocks() noexcept
                 -> std::span<block_type>
         {
-                return { m_blocks.data(), num_blocks() };
+                return {m_blocks.data(), num_blocks()};
         }
 
         [[nodiscard]] constexpr auto blocks() const noexcept
                 -> std::span<block_type const>
         {
-                return { m_blocks.data(), num_blocks() };
+                return {m_blocks.data(), num_blocks()};
         }
 
         // Public, because restoring the invariant belongs to whoever wrote the blocks that broke it.
@@ -453,8 +443,8 @@ public:
                 -> void
         {
                 for (auto j = 0UZ; j < shared_bytes<E>; ++j) {
-                        auto const byte  = static_cast<block_type>(std::to_integer<unsigned char>(bytes[j]));
-                        auto&      block = m_blocks[j / sizeof(block_type)];
+                        auto const byte = static_cast<block_type>(std::to_integer<unsigned char>(bytes[j]));
+                        auto& block = m_blocks[j / sizeof(block_type)];
                         block = static_cast<block_type>(block | shl(byte, bits_per_byte * (j % sizeof(block_type))));
                 }
         }
@@ -541,7 +531,7 @@ public:
         [[nodiscard]] constexpr auto block_at(std::size_t n) const noexcept
                 -> block_type
         {
-                auto const [ index, offset ] = index_offset(n);
+                auto const [index, offset] = index_offset(n);
                 assert(index < num_blocks());
                 if (offset == 0UZ or index == last_block()) {
                         return shr(m_blocks[index], offset);
@@ -554,7 +544,7 @@ public:
         constexpr auto block_at(std::size_t n, block_type value, block_type mask) noexcept
                 -> void
         {
-                auto const [ index, offset ] = index_offset(n);
+                auto const [index, offset] = index_offset(n);
                 assert(index < num_blocks());
                 assert(n + bits_per_block <= size() or shr(mask, size() - n) == zero);
                 auto const bits = static_cast<block_type>(value & mask);
@@ -567,7 +557,6 @@ public:
                         auto const high_kept = static_cast<block_type>(m_blocks[index + 1UZ] & static_cast<block_type>(~shr(mask, shift)));
                         m_blocks[index + 1UZ] = static_cast<block_type>(high_kept | shr(bits, shift));
                 }
-
         }
 
         // boost's ranged forms, a word at a time through block_at: [n, n + len) set, cleared or flipped, the rest untouched. The precondition is said as a subtraction throughout, n + len being the sum that wraps for an n near the top of size_t -- and a wrapped sum is below any width, so the assertion it was meant to fail is the one it passes.
@@ -652,7 +641,7 @@ public:
                         }
                 } else if constexpr (has_static_size and static_num_blocks == 2) {
                         // Indexed, not branched: an if cost 10 instructions at -O3.
-                        auto const [ index, offset ] = index_offset(n);
+                        auto const [index, offset] = index_offset(n);
                         if (auto const block = shr(m_blocks[index], offset); block != zero) {
                                 return n + detail::bits::countr_zero(block);
                         }
@@ -661,7 +650,7 @@ public:
                         }
                 } else {
                         // No offset != 0 guard: >> 0 is the identity.
-                        auto [ index, offset ] = index_offset(n);
+                        auto [index, offset] = index_offset(n);
                         if (auto const block = shr(m_blocks[index], offset); block != zero) {
                                 return n + detail::bits::countr_zero(block);
                         }
@@ -696,7 +685,7 @@ public:
                         return n - detail::bits::countl_zero(shl(m_blocks[0], left_bit - n));
                 } else if constexpr (has_static_size and static_num_blocks == 2) {
                         // Naming the fallback block removes the general path's start-index guard.
-                        auto const [ index, offset ] = index_offset(n);
+                        auto const [index, offset] = index_offset(n);
                         if (auto const block = shl(m_blocks[index], left_bit - offset); block != zero) {
                                 return n - detail::bits::countl_zero(block);
                         }
@@ -705,7 +694,7 @@ public:
                         assert(m_blocks[0] != zero);
                         return left_bit - detail::bits::countl_zero(m_blocks[0]);
                 } else {
-                        auto [ index, offset ] = index_offset(n);
+                        auto [index, offset] = index_offset(n);
                         if (auto const reverse_offset = left_bit - offset; reverse_offset != 0) {
                                 if (auto const block = shl(m_blocks[index], reverse_offset); block != zero) {
                                         return n - detail::bits::countl_zero(block);
@@ -732,7 +721,7 @@ public:
                 } else if constexpr (has_static_size and static_num_blocks == 2) {
                         this->m_blocks[0] &= other.m_blocks[0];
                         this->m_blocks[1] &= other.m_blocks[1];
-                } else if constexpr (not (has_static_size and N == 0)) {
+                } else if constexpr (not(has_static_size and N == 0)) {
                         if constexpr (not has_static_size) {
                                 if (this->size() != other.size()) {
                                         for (auto const i : std::views::iota(0UZ, num_blocks())) {
@@ -757,7 +746,7 @@ public:
                 } else if constexpr (has_static_size and static_num_blocks == 2) {
                         this->m_blocks[0] |= other.m_blocks[0];
                         this->m_blocks[1] |= other.m_blocks[1];
-                } else if constexpr (not (has_static_size and N == 0)) {
+                } else if constexpr (not(has_static_size and N == 0)) {
                         if constexpr (not has_static_size) {
                                 if (this->size() != other.size()) {
                                         for (auto const i : std::views::iota(0UZ, num_blocks())) {
@@ -782,7 +771,7 @@ public:
                 } else if constexpr (has_static_size and static_num_blocks == 2) {
                         this->m_blocks[0] ^= other.m_blocks[0];
                         this->m_blocks[1] ^= other.m_blocks[1];
-                } else if constexpr (not (has_static_size and N == 0)) {
+                } else if constexpr (not(has_static_size and N == 0)) {
                         if constexpr (not has_static_size) {
                                 if (this->size() != other.size()) {
                                         for (auto const i : std::views::iota(0UZ, num_blocks())) {
@@ -807,7 +796,7 @@ public:
                 } else if constexpr (has_static_size and static_num_blocks == 2) {
                         this->m_blocks[0] &= static_cast<block_type>(~other.m_blocks[0]);
                         this->m_blocks[1] &= static_cast<block_type>(~other.m_blocks[1]);
-                } else if constexpr (not (has_static_size and N == 0)) {
+                } else if constexpr (not(has_static_size and N == 0)) {
                         if constexpr (not has_static_size) {
                                 if (this->size() != other.size()) {
                                         for (auto const i : std::views::iota(0UZ, num_blocks())) {
@@ -831,7 +820,7 @@ public:
                         // m_blocks[0] <<= n narrows the promoted int back to a block_type implicitly, which -fsanitize=implicit-conversion aborts on once a bit shifts out.
                         m_blocks[0] = shl(m_blocks[0], n);
                 } else {
-                        auto const [ n_blocks, L_shift ] = xstd::div(n, bits_per_block);
+                        auto const [n_blocks, L_shift] = xstd::div(n, bits_per_block);
                         // Restated because GCC drops the range through xstd::div.
                         assert(n_blocks <= last_block());
                         if (L_shift == 0) {
@@ -858,7 +847,7 @@ public:
                         // m_blocks[0] >>= n narrows the promoted int back to a block_type implicitly, which -fsanitize=implicit-conversion instruments.
                         m_blocks[0] = shr(m_blocks[0], n);
                 } else {
-                        auto const [ n_blocks, R_shift ] = xstd::div(n, bits_per_block);
+                        auto const [n_blocks, R_shift] = xstd::div(n, bits_per_block);
                         // See operator<<=: the same bound, for the same reason.
                         assert(n_blocks <= last_block());
                         if (R_shift == 0) {
@@ -909,7 +898,7 @@ public:
                 } else if constexpr (has_static_size and static_num_blocks == 2) {
                         m_blocks[0] = static_cast<block_type>(~m_blocks[0]);
                         m_blocks[1] = static_cast<block_type>(~m_blocks[1]);
-                } else if constexpr (not (has_static_size and N == 0)) {
+                } else if constexpr (not(has_static_size and N == 0)) {
                         for (auto const i : std::views::iota(0UZ, num_blocks())) {
                                 m_blocks[i] = static_cast<block_type>(~m_blocks[i]);
                         }
@@ -918,12 +907,11 @@ public:
                 return *this;
         }
 
-        constexpr auto swap(contiguous_bit_container& other)
-                noexcept(noexcept(std::ranges::swap(this->m_size, other.m_size)) and noexcept(std::ranges::swap(this->m_blocks, other.m_blocks)))
+        constexpr auto swap(contiguous_bit_container& other) noexcept(noexcept(std::ranges::swap(this->m_size, other.m_size)) and noexcept(std::ranges::swap(this->m_blocks, other.m_blocks)))
                 -> void
         {
                 // m_size is empty_type under a static width, and swapping that is a no-op.
-                std::ranges::swap(this->m_size,   other.m_size);
+                std::ranges::swap(this->m_size, other.m_size);
                 std::ranges::swap(this->m_blocks, other.m_blocks);
         }
 
@@ -1063,7 +1051,7 @@ public:
                 -> contiguous_bit_container&
         {
                 assert(is_valid(n));
-                auto&& [ block, mask ] = block_mask(n);
+                auto&& [block, mask] = block_mask(n);
                 block |= mask;
                 assert(test(n));
                 return *this;
@@ -1073,7 +1061,7 @@ public:
                 -> bool
         {
                 assert(is_valid(n));
-                auto&& [ block, mask ] = block_mask(n);
+                auto&& [block, mask] = block_mask(n);
                 auto const inserted = not detail::bits::intersects(block, mask);
                 block |= mask;
                 assert(test(n));
@@ -1113,7 +1101,7 @@ public:
                 -> contiguous_bit_container&
         {
                 assert(is_valid(n));
-                auto&& [ block, mask ] = block_mask(n);
+                auto&& [block, mask] = block_mask(n);
                 block &= static_cast<block_type>(~mask);
                 assert(not test(n));
                 return *this;
@@ -1123,7 +1111,7 @@ public:
                 -> bool
         {
                 assert(is_valid(n));
-                auto&& [ block, mask ] = block_mask(n);
+                auto&& [block, mask] = block_mask(n);
                 auto const erased = detail::bits::intersects(block, mask);
                 block &= static_cast<block_type>(~mask);
                 assert(not test(n));
@@ -1134,7 +1122,7 @@ public:
                 -> contiguous_bit_container&
         {
                 assert(is_valid(n));
-                auto&& [ block, mask ] = block_mask(n);
+                auto&& [block, mask] = block_mask(n);
                 block ^= mask;
                 return *this;
         }
@@ -1144,7 +1132,7 @@ public:
                 -> bool
         {
                 assert(is_valid(n));
-                auto&& [ block, mask ] = block_mask(n);
+                auto&& [block, mask] = block_mask(n);
                 return detail::bits::intersects(block, mask);
         }
 
@@ -1160,8 +1148,7 @@ public:
                 } else {
                         return std::ranges::fold_left(
                                 m_blocks | std::views::transform([](auto block) { return detail::bits::popcount(block); }),
-                                0UZ, std::plus<>()
-                        );
+                                0UZ, std::plus<>());
                 }
         }
 
@@ -1220,16 +1207,15 @@ public:
                 } else if constexpr (has_static_size and static_num_blocks == 1) {
                         return detail::bits::is_subset_of(this->m_blocks[0], other.m_blocks[0]);
                 } else if constexpr (has_static_size and static_num_blocks == 2) {
-                        return
-                                detail::bits::is_subset_of(this->m_blocks[0], other.m_blocks[0]) and
-                                detail::bits::is_subset_of(this->m_blocks[1], other.m_blocks[1])
-                        ;
+                        return detail::bits::is_subset_of(this->m_blocks[0], other.m_blocks[0]) and
+                               detail::bits::is_subset_of(this->m_blocks[1], other.m_blocks[1]);
                 } else {
                         // zip stops at the shorter, which is exactly the blocks both storages have.
                         auto const shared = std::ranges::all_of(
-                                std::views::zip(this->m_blocks, other.m_blocks), [](auto&& _) { auto&& [ lhs, rhs] = _;
-                                return detail::bits::is_subset_of(lhs, rhs);
-                        });
+                                std::views::zip(this->m_blocks, other.m_blocks), [](auto&& _) {
+                                        auto&& [lhs, rhs] = _;
+                                        return detail::bits::is_subset_of(lhs, rhs);
+                                });
                         if constexpr (has_static_size) {
                                 // One width, so the shared blocks are all the blocks and there is nothing past them to ask about.
                                 return shared;
@@ -1256,15 +1242,14 @@ public:
                 } else if constexpr (has_static_size and static_num_blocks == 1) {
                         return detail::bits::intersects(this->m_blocks[0], other.m_blocks[0]);
                 } else if constexpr (has_static_size and static_num_blocks == 2) {
-                        return
-                                detail::bits::intersects(this->m_blocks[0], other.m_blocks[0]) or
-                                detail::bits::intersects(this->m_blocks[1], other.m_blocks[1])
-                        ;
+                        return detail::bits::intersects(this->m_blocks[0], other.m_blocks[0]) or
+                               detail::bits::intersects(this->m_blocks[1], other.m_blocks[1]);
                 } else {
                         return std::ranges::any_of(
-                                std::views::zip(this->m_blocks, other.m_blocks), [](auto&& _) { auto&& [ lhs, rhs ] = _;
-                                return detail::bits::intersects(lhs, rhs);
-                        });
+                                std::views::zip(this->m_blocks, other.m_blocks), [](auto&& _) {
+                                        auto&& [lhs, rhs] = _;
+                                        return detail::bits::intersects(lhs, rhs);
+                                });
                 }
         }
 
@@ -1280,20 +1265,20 @@ public:
                 -> std::pair<std::size_t, block_type>
         {
                 if constexpr (has_static_size and static_num_blocks == 1) {
-                        return { 0UZ, static_cast<block_type>(this->m_blocks[0] ^ other.m_blocks[0]) };
+                        return {0UZ, static_cast<block_type>(this->m_blocks[0] ^ other.m_blocks[0])};
                 } else if constexpr (has_static_size and static_num_blocks == 2) {
                         if (auto const diff = static_cast<block_type>(this->m_blocks[0] ^ other.m_blocks[0]); diff != zero) {
-                                return { 0UZ, diff };
+                                return {0UZ, diff};
                         }
-                        return { 1UZ, static_cast<block_type>(this->m_blocks[1] ^ other.m_blocks[1]) };
+                        return {1UZ, static_cast<block_type>(this->m_blocks[1] ^ other.m_blocks[1])};
                 } else {
                         auto const last = num_blocks() - 1UZ;
                         for (auto i = 0UZ; i < last; ++i) {
                                 if (auto const diff = static_cast<block_type>(this->m_blocks[i] ^ other.m_blocks[i]); diff != zero) {
-                                        return { i, diff };
+                                        return {i, diff};
                                 }
                         }
-                        return { last, static_cast<block_type>(this->m_blocks[last] ^ other.m_blocks[last]) };
+                        return {last, static_cast<block_type>(this->m_blocks[last] ^ other.m_blocks[last])};
                 }
         }
 
@@ -1384,9 +1369,8 @@ private:
                 auto const diff = static_cast<block_type>(this->padded_block(index) ^ other.padded_block(index));
                 auto const offset = static_cast<std::size_t>(detail::bits::countr_zero(diff));
                 return detail::bits::intersects(this->padded_block(index), shl(unit, offset))
-                        ? std::strong_ordering::greater
-                        : std::strong_ordering::less
-                ;
+                               ? std::strong_ordering::greater
+                               : std::strong_ordering::less;
         }
 
         // The block straddling index and index + 1: the high one shifted up by L_shift and the low one down by R_shift, spliced into one.
@@ -1398,8 +1382,7 @@ private:
                 assert(index + 1UZ < num_blocks());
                 return static_cast<block_type>(
                         shl(m_blocks[index + 1UZ], L_shift) |
-                        shr(m_blocks[index], R_shift)
-                );
+                        shr(m_blocks[index], R_shift));
         }
 
         [[nodiscard]] constexpr auto last_block() const noexcept
@@ -1453,7 +1436,7 @@ private:
         {
                 if constexpr (has_static_size and N == 0) {
                         // Unreachable: only an assert calls is_valid, and a zero-width contiguous_bit_container has no member that reaches one. Not removable either - MSVC's /W4 rejects a bare n < N as always false (C4296).
-                        return false;                   // GCOVR_EXCL_LINE
+                        return false; // GCOVR_EXCL_LINE
                 } else {
                         return n < size();
                 }
@@ -1463,7 +1446,7 @@ private:
                 -> xstd::div_result<std::size_t>
         {
                 if constexpr (has_static_size and static_num_blocks == 1) {
-                        return { .quotient = 0UZ, .remainder = n };
+                        return {.quotient = 0UZ, .remainder = n};
                 } else {
                         return xstd::div(n, bits_per_block);
                 }
@@ -1477,8 +1460,8 @@ private:
         [[nodiscard]] constexpr auto block_mask(this auto&& self, std::size_t n) noexcept
                 -> std::pair<block_reference_t<decltype(self)>, block_type>
         {
-                auto const [ index, offset ] = index_offset(n);
-                return { std::forward<decltype(self)>(self).m_blocks[index], shl(unit, offset) };
+                auto const [index, offset] = index_offset(n);
+                return {std::forward<decltype(self)>(self).m_blocks[index], shl(unit, offset)};
         }
 
         // The growth itself, over a width already known to be one this storage can count: clear() and pop_back() reach it directly, naming no width of their own.
@@ -1490,7 +1473,7 @@ private:
                 // Growing with ones: the tail above size() in the last block is clear by the invariant, and becomes the first new bits. Which block and which bits is read off the OLD width, so it is taken before the blocks grow; the write itself comes after, because m_blocks.resize is what refuses a count these blocks cannot hold, and a refused growth that had already dirtied the tail would leave this storage with a width it no longer matches. Measured on blocks that hold three: refused at a width of 25, the next resize(20) came back with every bit above 9 set and count() at 8 where 1 was set.
                 if (value and n > size()) {
                         auto const index = last_block();
-                        auto const tail  = static_cast<block_type>(~used_bits());
+                        auto const tail = static_cast<block_type>(~used_bits());
                         m_blocks.resize(count, ones);
                         m_blocks[index] |= tail;
                 } else {
@@ -1507,9 +1490,7 @@ private:
                 return std::length_error(
                         std::format(
                                 "{}:{}:{}: exception: ‘{}‘: argument ‘n‘ is no width this storage can count [{} > {}]",
-                                loc.file_name(), loc.line(), loc.column(), loc.function_name(), n, max_width
-                        )
-                );
+                                loc.file_name(), loc.line(), loc.column(), loc.function_name(), n, max_width));
         }
 
         // The same, against the ceiling a difference_type sets rather than the one a size_t sets.
@@ -1518,12 +1499,10 @@ private:
                 return std::length_error(
                         std::format(
                                 "{}:{}:{}: exception: ‘{}‘: argument ‘n‘ is no width a distance can name [{} > {}]",
-                                loc.file_name(), loc.line(), loc.column(), loc.function_name(), n, max_addressable_width
-                        )
-                );
+                                loc.file_name(), loc.line(), loc.column(), loc.function_name(), n, max_addressable_width));
         }
 };
 
-}       // namespace xstd::detail::bits
+} // namespace xstd::detail::bits
 
-#endif  // XSTD_BITS_DETAIL_CONTIGUOUS_BIT_CONTAINER_HPP
+#endif // XSTD_BITS_DETAIL_CONTIGUOUS_BIT_CONTAINER_HPP

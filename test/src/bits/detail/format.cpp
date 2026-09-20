@@ -22,11 +22,14 @@ BOOST_AUTO_TEST_SUITE(Format)
 BOOST_AUTO_TEST_CASE(TheSetReadingFormatsInBraces)
 {
         auto d = xstd::bit_set();
-        d.insert(1UZ); d.insert(3UZ); d.insert(5UZ);
+        d.insert(1UZ);
+        d.insert(3UZ);
+        d.insert(5UZ);
         BOOST_CHECK_EQUAL(std::format("{}", d), "{1, 3, 5}");
 
         auto s = xstd::bit_static_set<8>();
-        s.insert(2UZ); s.insert(7UZ);
+        s.insert(2UZ);
+        s.insert(7UZ);
         BOOST_CHECK_EQUAL(std::format("{}", s), "{2, 7}");
 
         BOOST_CHECK_EQUAL(std::format("{}", xstd::bit_set()), "{}");
@@ -48,7 +51,7 @@ BOOST_AUTO_TEST_CASE(TheSequenceReadingFormatsInBrackets)
         auto a = xstd::bit_array<4>();
         a[2] = true;
         BOOST_CHECK_EQUAL(std::format("{}", a), "[false, false, true, false]");
-        BOOST_CHECK_EQUAL(std::format("{}", std::array<bool, 2>{ false, true }), "[false, true]");
+        BOOST_CHECK_EQUAL(std::format("{}", std::array<bool, 2>{false, true}), "[false, true]");
 
         BOOST_CHECK_EQUAL(std::format("{}", xstd::bit_vector()), "[]");
 }
@@ -61,14 +64,16 @@ BOOST_AUTO_TEST_CASE(TheViewsFormatAsTheirReading)
         b.set(3UZ);
 
         BOOST_CHECK_EQUAL(std::format("{}", xstd::bit_set_view(b)), "{1, 3}");
-        BOOST_CHECK_EQUAL(std::format("{}", xstd::bit_span(b)),     "[false, true, false, true]");
+        BOOST_CHECK_EQUAL(std::format("{}", xstd::bit_span(b)), "[false, true, false, true]");
 }
 
 // Deriving from formatter<size_t> and formatter<bool> rather than writing parse() is what keeps the spec, so the nested spec a range formatter forwards reaches the underlying one intact.
 BOOST_AUTO_TEST_CASE(TheNestedSpecReachesTheUnderlyingFormatter)
 {
         auto d = xstd::bit_set();
-        d.insert(1UZ); d.insert(3UZ); d.insert(5UZ);
+        d.insert(1UZ);
+        d.insert(3UZ);
+        d.insert(5UZ);
         BOOST_CHECK_EQUAL(std::format("{::#x}", d), "{0x1, 0x3, 0x5}");
 
         auto v = xstd::bit_vector(4UZ);
@@ -81,14 +86,14 @@ BOOST_AUTO_TEST_CASE(AProxyFormatsAsItsValue)
 {
         auto d = xstd::bit_set();
         d.insert(42UZ);
-        BOOST_CHECK_EQUAL(std::format("{}",    *d.begin()), "42");
+        BOOST_CHECK_EQUAL(std::format("{}", *d.begin()), "42");
         BOOST_CHECK_EQUAL(std::format("{:>4}", *d.begin()), "  42");
 
         auto v = xstd::bit_vector(2UZ);
         v[1] = true;
-        BOOST_CHECK_EQUAL(std::format("{}",    v[1]), "true");
+        BOOST_CHECK_EQUAL(std::format("{}", v[1]), "true");
         BOOST_CHECK_EQUAL(std::format("{:>7}", v[0]), "  false");
-        BOOST_CHECK_EQUAL(std::format("{:d}",  v[1]), "1");
+        BOOST_CHECK_EQUAL(std::format("{:d}", v[1]), "1");
 }
 
 BOOST_AUTO_TEST_SUITE_END()

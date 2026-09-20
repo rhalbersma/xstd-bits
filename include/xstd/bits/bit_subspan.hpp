@@ -17,6 +17,6 @@ namespace xstd {
 template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits>
 using bit_subspan = sequence_adaptor<Bits, ownership::refers, true>;
 
-}       // namespace xstd
+} // namespace xstd
 
-#endif  // XSTD_BITS_BIT_SUBSPAN_HPP
+#endif // XSTD_BITS_BIT_SUBSPAN_HPP

@@ -16,14 +16,14 @@ template<xstd::unsigned_integer Block>
         -> bool
 {
         return (lhs & rhs) != static_cast<Block>(0);
-}   
+}
 
 template<xstd::unsigned_integer Block>
 [[nodiscard]] constexpr auto is_subset_of(Block lhs, Block rhs) noexcept
         -> bool
 {
         return (lhs & static_cast<Block>(~rhs)) == static_cast<Block>(0);
-}  
+}
 
 template<xstd::unsigned_integer Block>
 [[nodiscard]] constexpr auto not_equal_to(Block lhs, Block rhs) noexcept
@@ -32,6 +32,6 @@ template<xstd::unsigned_integer Block>
         return lhs != rhs;
 }
 
-}       // namespace xstd::detail::bits
+} // namespace xstd::detail::bits
 
 #endif // XSTD_BITS_DETAIL_PRED_HPP

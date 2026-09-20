@@ -22,7 +22,7 @@ inline constexpr auto bits_per_word = 64UZ;
 constexpr auto is_set(std::size_t i)
         -> bool
 {
-        return (i % 5UZ) < 2UZ;         // ~40% set, deterministic
+        return (i % 5UZ) < 2UZ; // ~40% set, deterministic
 }
 
 // One filler for all subjects, because each reading spells "put a bit in" its own way: a contiguous_bit_container takes set(n), an ordered set takes insert(n), and a sequence of bool assigns through v[i].
@@ -154,13 +154,13 @@ auto sequence_read_view_of_storage(benchmark::State& state)
         }
 }
 
-}       // namespace
+} // namespace
 
 // From four words up.
-#define LADDER(fn)                                              \
-        BENCHMARK_TEMPLATE(fn, 4UZ   * bits_per_word);          \
-        BENCHMARK_TEMPLATE(fn, 16UZ  * bits_per_word);          \
-        BENCHMARK_TEMPLATE(fn, 64UZ  * bits_per_word);          \
+#define LADDER(fn) \
+        BENCHMARK_TEMPLATE(fn, 4UZ * bits_per_word); \
+        BENCHMARK_TEMPLATE(fn, 16UZ * bits_per_word); \
+        BENCHMARK_TEMPLATE(fn, 64UZ * bits_per_word); \
         BENCHMARK_TEMPLATE(fn, 256UZ * bits_per_word)
 
 LADDER(set_iterate_owner);

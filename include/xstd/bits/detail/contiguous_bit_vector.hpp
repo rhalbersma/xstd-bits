@@ -17,6 +17,6 @@ namespace xstd::detail::bits {
 template<xstd::unsigned_integer Block, class Allocator = std::allocator<Block>>
 using contiguous_bit_vector = contiguous_bit_container<std::vector<Block, Allocator>>;
 
-}       // namespace xstd::detail::bits
+} // namespace xstd::detail::bits
 
-#endif  // XSTD_BITS_DETAIL_CONTIGUOUS_BIT_VECTOR_HPP
+#endif // XSTD_BITS_DETAIL_CONTIGUOUS_BIT_VECTOR_HPP

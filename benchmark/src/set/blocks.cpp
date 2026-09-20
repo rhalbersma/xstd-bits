@@ -6,25 +6,25 @@
 // The Block ladder: what the SAME 256 bits cost carried in 32, 16, 8, 4 or 2 blocks.
 
 // NOT alphabetical, and load-bearing: detail/bits/intrin calls xstd::countr_zero by a QUALIFIED name, whose candidates bind where that call is written rather than where it is instantiated.
-#include <xstd/ints/cstdint/int128.hpp>                 // uint128
+#include <xstd/ints/cstdint/int128.hpp> // uint128
 #if __has_include(<absl/numeric/int128.h>)
 
-#include <xstd/ints/ext/absl/int128.hpp>                // absl::uint128
+#include <xstd/ints/ext/absl/int128.hpp> // absl::uint128
 #define XSTD_BITS_BENCHMARK_HAS_ABSL_INT128
 
 #endif
 #if __has_include(<boost/int128.hpp>)
 
-#include <xstd/ints/ext/boost/int128.hpp>               // boost::int128::uint128
+#include <xstd/ints/ext/boost/int128.hpp> // boost::int128::uint128
 #define XSTD_BITS_BENCHMARK_HAS_BOOST_INT128
 
 #endif
 
-#include <xstd/bits/bit_static_set.hpp>                 // basic_bit_static_set
-#include <benchmark/benchmark.h>                        // DoNotOptimize, BENCHMARK_TEMPLATE, BENCHMARK_MAIN, State
-#include <cstddef>                                      // size_t
-#include <cstdint>                                      // uint8_t, uint16_t, uint32_t, uint64_t
-#include <vector>                                       // vector
+#include <xstd/bits/bit_static_set.hpp> // basic_bit_static_set
+#include <benchmark/benchmark.h>        // DoNotOptimize, BENCHMARK_TEMPLATE, BENCHMARK_MAIN, State
+#include <cstddef>                      // size_t
+#include <cstdint>                      // uint8_t, uint16_t, uint32_t, uint64_t
+#include <vector>                       // vector
 
 namespace {
 
@@ -172,27 +172,27 @@ auto bm_shift_left_runtime(benchmark::State& state)
         state.SetItemsProcessed(state.iterations() * static_cast<std::int64_t>(v.size()));
 }
 
-}       // namespace
+} // namespace
 
 // The two classes are optional, so the ladder is built rung by rung rather than as one list.
-#define BM_BUILTIN_RUNGS(fn)                                    \
-        BENCHMARK_TEMPLATE(fn, set_of<std::uint8_t >);          \
-        BENCHMARK_TEMPLATE(fn, set_of<std::uint16_t>);          \
-        BENCHMARK_TEMPLATE(fn, set_of<std::uint32_t>);          \
-        BENCHMARK_TEMPLATE(fn, set_of<std::uint64_t>);          \
+#define BM_BUILTIN_RUNGS(fn) \
+        BENCHMARK_TEMPLATE(fn, set_of<std::uint8_t>); \
+        BENCHMARK_TEMPLATE(fn, set_of<std::uint16_t>); \
+        BENCHMARK_TEMPLATE(fn, set_of<std::uint32_t>); \
+        BENCHMARK_TEMPLATE(fn, set_of<std::uint64_t>); \
         BENCHMARK_TEMPLATE(fn, set_of<xstd::uint128>)
 
-#define BM_BUILTIN_RUNGS_D(fn, d)                               \
-        BENCHMARK_TEMPLATE(fn, set_of<std::uint8_t >, d);       \
-        BENCHMARK_TEMPLATE(fn, set_of<std::uint16_t>, d);       \
-        BENCHMARK_TEMPLATE(fn, set_of<std::uint32_t>, d);       \
-        BENCHMARK_TEMPLATE(fn, set_of<std::uint64_t>, d);       \
+#define BM_BUILTIN_RUNGS_D(fn, d) \
+        BENCHMARK_TEMPLATE(fn, set_of<std::uint8_t>, d); \
+        BENCHMARK_TEMPLATE(fn, set_of<std::uint16_t>, d); \
+        BENCHMARK_TEMPLATE(fn, set_of<std::uint32_t>, d); \
+        BENCHMARK_TEMPLATE(fn, set_of<std::uint64_t>, d); \
         BENCHMARK_TEMPLATE(fn, set_of<xstd::uint128>, d)
 
 #ifdef XSTD_BITS_BENCHMARK_HAS_ABSL_INT128
 
-#define BM_ABSL_RUNG(fn)       BENCHMARK_TEMPLATE(fn, set_of<absl::uint128>)
-#define BM_ABSL_RUNG_D(fn, d)  BENCHMARK_TEMPLATE(fn, set_of<absl::uint128>, d)
+#define BM_ABSL_RUNG(fn) BENCHMARK_TEMPLATE(fn, set_of<absl::uint128>)
+#define BM_ABSL_RUNG_D(fn, d) BENCHMARK_TEMPLATE(fn, set_of<absl::uint128>, d)
 
 #else
 
@@ -203,7 +203,7 @@ auto bm_shift_left_runtime(benchmark::State& state)
 
 #ifdef XSTD_BITS_BENCHMARK_HAS_BOOST_INT128
 
-#define BM_BOOST_RUNG(fn)      BENCHMARK_TEMPLATE(fn, set_of<boost::int128::uint128>)
+#define BM_BOOST_RUNG(fn) BENCHMARK_TEMPLATE(fn, set_of<boost::int128::uint128>)
 #define BM_BOOST_RUNG_D(fn, d) BENCHMARK_TEMPLATE(fn, set_of<boost::int128::uint128>, d)
 
 #else
@@ -213,21 +213,21 @@ auto bm_shift_left_runtime(benchmark::State& state)
 
 #endif
 
-#define BM_LADDER(fn)           \
-        BM_BUILTIN_RUNGS(fn);   \
-        BM_ABSL_RUNG(fn);       \
+#define BM_LADDER(fn) \
+        BM_BUILTIN_RUNGS(fn); \
+        BM_ABSL_RUNG(fn); \
         BM_BOOST_RUNG(fn)
 
-#define BM_LADDER_D(fn, d)              \
-        BM_BUILTIN_RUNGS_D(fn, d);      \
-        BM_ABSL_RUNG_D(fn, d);          \
+#define BM_LADDER_D(fn, d) \
+        BM_BUILTIN_RUNGS_D(fn, d); \
+        BM_ABSL_RUNG_D(fn, d); \
         BM_BOOST_RUNG_D(fn, d)
 
 // Sparse, the density bitset/ops.cpp uses, and dense: the first is where skipping empty blocks pays and the last is where nothing is skipped and every step is the per-element primitive.
-BM_LADDER_D(bm_forward,  50);
+BM_LADDER_D(bm_forward, 50);
 BM_LADDER_D(bm_forward, 400);
 BM_LADDER_D(bm_forward, 900);
-BM_LADDER_D(bm_reverse,  50);
+BM_LADDER_D(bm_reverse, 50);
 BM_LADDER_D(bm_reverse, 400);
 BM_LADDER_D(bm_reverse, 900);
 

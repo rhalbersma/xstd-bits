@@ -31,7 +31,7 @@ using basic_bitset = xstd::basic_bitset<Block, xstd::align_up(N, static_cast<std
 template<std::size_t N>
 using bitset = basic_bitset<std::size_t, N>;
 
-}       // namespace aligned
-}       // namespace xstd
+} // namespace aligned
+} // namespace xstd
 
 #endif // XSTD_BITS_BITSET_HPP

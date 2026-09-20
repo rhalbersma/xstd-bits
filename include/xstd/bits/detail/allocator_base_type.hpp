@@ -24,6 +24,6 @@ struct allocator_base_type<Storage>
         [[nodiscard]] friend auto operator==(allocator_base_type const&, allocator_base_type const&) -> bool = default;
 };
 
-}       // namespace xstd::detail::bits
+} // namespace xstd::detail::bits
 
-#endif  // XSTD_BITS_DETAIL_ALLOCATOR_BASE_TYPE_HPP
+#endif // XSTD_BITS_DETAIL_ALLOCATOR_BASE_TYPE_HPP

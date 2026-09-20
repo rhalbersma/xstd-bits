@@ -21,6 +21,6 @@ using basic_bit_set = set_adaptor<detail::bits::contiguous_bit_vector<Block, All
 
 using bit_set = basic_bit_set<std::size_t>;
 
-}       // namespace xstd
+} // namespace xstd
 
-#endif  // XSTD_BITS_BIT_SET_HPP
+#endif // XSTD_BITS_BIT_SET_HPP

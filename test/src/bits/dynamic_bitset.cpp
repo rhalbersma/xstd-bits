@@ -39,20 +39,17 @@ BOOST_AUTO_TEST_CASE(TheDynamicBitsetIsTheWrapperOverAHeapOfBlocks)
 }
 
 // Ours over a contiguous_bit_vector at two block widths: the counterpart's contract on both.
-using Dynamic = std::tuple
-<       xstd::basic_dynamic_bitset<std::uint8_t>
-,       xstd::basic_dynamic_bitset<std::uint64_t>
->;
+using Dynamic = std::tuple<xstd::basic_dynamic_bitset<std::uint8_t>, xstd::basic_dynamic_bitset<std::uint64_t>>;
 
 // The same totality at a run-time width, where the block a step past the width reads is one the storage never allocated: under NDEBUG that was a clean heap-buffer-overflow, which is what boost's own assert leaves behind and what boost's find_next is written to avoid.
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheForwardScanIsTotalPastTheWidth, T, Dynamic)
 {
         auto const d = T(9, 0b101ULL);
         BOOST_CHECK_EQUAL(d.find_next(1), 2UZ);
-        BOOST_CHECK_EQUAL(d.find_next(8), T::npos);             // the last position this width has
-        BOOST_CHECK_EQUAL(d.find_next(9), T::npos);             // the first it has not
+        BOOST_CHECK_EQUAL(d.find_next(8), T::npos); // the last position this width has
+        BOOST_CHECK_EQUAL(d.find_next(9), T::npos); // the first it has not
         BOOST_CHECK_EQUAL(d.find_next(T::npos), T::npos);
-        BOOST_CHECK_EQUAL(T(0).find_next(0), T::npos);          // a run-time width of zero, which no static extent spells
+        BOOST_CHECK_EQUAL(T(0).find_next(0), T::npos); // a run-time width of zero, which no static extent spells
 }
 
 // The width-and-value constructor, the searches with boost's sentinel, and the set vocabulary boost has.
@@ -114,11 +111,11 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheOrderingIsBoosts, T, Dynamic)
                 }
         }
         auto disagreements = 0;
-        for (auto const& [ x, bx ] : values) {
-                for (auto const& [ y, by ] : values) {
+        for (auto const& [x, bx] : values) {
+                for (auto const& [y, by] : values) {
                         auto const cmp = x <=> y;
-                        disagreements += static_cast<int>(std::is_lt(cmp) != (bx <  by));
-                        disagreements += static_cast<int>(std::is_gt(cmp) != (by <  bx));
+                        disagreements += static_cast<int>(std::is_lt(cmp) != (bx < by));
+                        disagreements += static_cast<int>(std::is_gt(cmp) != (by < bx));
                         disagreements += static_cast<int>(std::is_eq(cmp) != (bx == by));
                         disagreements += static_cast<int>(cmp != (x.to_string() <=> y.to_string()));
                 }
@@ -133,28 +130,32 @@ auto disagreements_against_boost(std::size_t w, std::size_t u, unsigned long lon
         -> int
 {
         using Narrow = xstd::basic_dynamic_bitset<std::uint8_t>;
-        auto x  = Narrow(w, p);
-        auto y  = Narrow(u, q);
+        auto x = Narrow(w, p);
+        auto y = Narrow(u, q);
         auto bx = boost::dynamic_bitset<std::uint8_t>(w, static_cast<unsigned long>(p));
         auto by = boost::dynamic_bitset<std::uint8_t>(u, static_cast<unsigned long>(q));
 
         // Past the sixty-four bits a constructor takes, so the comparison has blocks above them to walk.
-        if (w > 64) { x.set(69); bx.set(69); }
-        if (u > 64) { y.set(65); by.set(65); }
+        if (w > 64) {
+                x.set(69);
+                bx.set(69);
+        }
+        if (u > 64) {
+                y.set(65);
+                by.set(65);
+        }
 
         auto const cmp = x <=> y;
-        return static_cast<int>(std::is_lt(cmp) != (bx <  by))
-             + static_cast<int>(std::is_gt(cmp) != (by <  bx))
-             + static_cast<int>(std::is_eq(cmp) != (bx == by));
+        return static_cast<int>(std::is_lt(cmp) != (bx < by)) + static_cast<int>(std::is_gt(cmp) != (by < bx)) + static_cast<int>(std::is_eq(cmp) != (bx == by));
 }
 
-}       // namespace
+} // namespace
 
 // And across blocks at unequal widths, where the top windows are read a word at a time at either alignment.
 BOOST_AUTO_TEST_CASE(TheOrderingIsBoostsAcrossBlocksAtUnequalWidths)
 {
-        constexpr auto widths   = std::array{ 0UZ, 3UZ, 8UZ, 9UZ, 16UZ, 17UZ, 25UZ, 70UZ };
-        constexpr auto patterns = std::array{ 0ULL, 1ULL, 0b1010'1010ULL, 0b1'0000'0000ULL, 0xFFFFULL, 0x8001ULL, 0x1F'FFFFULL };
+        constexpr auto widths = std::array{0UZ, 3UZ, 8UZ, 9UZ, 16UZ, 17UZ, 25UZ, 70UZ};
+        constexpr auto patterns = std::array{0ULL, 1ULL, 0b1010'1010ULL, 0b1'0000'0000ULL, 0xFFFFULL, 0x8001ULL, 0x1F'FFFFULL};
 
         auto wide = 0;
         for (auto const w : widths) {
@@ -176,7 +177,7 @@ BOOST_AUTO_TEST_CASE(TheBlockInterfaceIsBoosts)
         static_assert(std::same_as<T::block_type, std::uint8_t>);
         static_assert(T::bits_per_block == 8UZ);
 
-        auto const blocks = std::array<std::uint8_t, 2>{ 0b1000'0001, 0b11 };
+        auto const blocks = std::array<std::uint8_t, 2>{0b1000'0001, 0b11};
         auto const d = T(blocks.begin(), blocks.end());
         auto const b = boost::dynamic_bitset<std::uint8_t>(blocks.begin(), blocks.end());
         BOOST_CHECK_EQUAL(d.size(), 16UZ);
@@ -211,7 +212,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheAllocatorAndMaxSizeAreBoosts, T, Dynamic)
         BOOST_CHECK(a.get_allocator() == alloc);
         auto const b = T(9, 0b101ULL, alloc);
         BOOST_CHECK_EQUAL(b.to_ullong(), 5ULL);
-        auto const blocks = std::array<Block, 2>{ 1, 2 };
+        auto const blocks = std::array<Block, 2>{1, 2};
         auto const c = T(blocks.begin(), blocks.end(), alloc);
         BOOST_CHECK_EQUAL(c.num_blocks(), 2UZ);
 
@@ -288,14 +289,17 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheRangedFormsAreBoosts, T, Dynamic)
 {
         using Boost = boost::dynamic_bitset<typename T::block_type>;
 
-        for (auto const& [ pos, len ] : { std::pair{ 0UZ, 0UZ }, std::pair{ 3UZ, 4UZ }, std::pair{ 6UZ, 14UZ }, std::pair{ 0UZ, 20UZ } }) {
+        for (auto const& [pos, len] : {std::pair{0UZ, 0UZ}, std::pair{3UZ, 4UZ}, std::pair{6UZ, 14UZ}, std::pair{0UZ, 20UZ}}) {
                 auto ours = T(20, 0b1010'1010'1010'1010'1010ULL);
                 auto theirs = Boost(20, 0b1010'1010'1010'1010'1010UL);
-                ours.set(pos, len, true); theirs.set(pos, len, true);
+                ours.set(pos, len, true);
+                theirs.set(pos, len, true);
                 BOOST_CHECK_EQUAL(ours.to_ullong(), theirs.to_ulong());
-                ours.flip(pos, len); theirs.flip(pos, len);
+                ours.flip(pos, len);
+                theirs.flip(pos, len);
                 BOOST_CHECK_EQUAL(ours.to_ullong(), theirs.to_ulong());
-                ours.reset(pos, len); theirs.reset(pos, len);
+                ours.reset(pos, len);
+                theirs.reset(pos, len);
                 BOOST_CHECK_EQUAL(ours.to_ullong(), theirs.to_ulong());
         }
 }
@@ -379,7 +383,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItIsAsWideAsItsText, T, Dynamic)
 
         // The text constructor's two throws, as [bitset.cons]/3-4 has them at a static width.
         BOOST_CHECK_THROW(static_cast<void>(T(std::string("0101"), 5)), std::out_of_range);
-        BOOST_CHECK_THROW(static_cast<void>(T(std::string("0x01"))),   std::invalid_argument);
+        BOOST_CHECK_THROW(static_cast<void>(T(std::string("0x01"))), std::invalid_argument);
 }
 
 // Appending blocks is the storage's own where it has it: ours has, boost has, and the widths agree.
@@ -392,7 +396,7 @@ BOOST_AUTO_TEST_CASE(AppendingBlocksWidensByAWord)
         BOOST_CHECK(d.test(3));
         BOOST_CHECK_EQUAL(d.count(), 4UZ);
 
-        auto const more = std::array<std::uint8_t, 2>{ 0b11, 0b100 };
+        auto const more = std::array<std::uint8_t, 2>{0b11, 0b100};
         d.append(more.begin(), more.end());
         BOOST_CHECK_EQUAL(d.size(), 27UZ);
         BOOST_CHECK_EQUAL(d.count(), 7UZ);

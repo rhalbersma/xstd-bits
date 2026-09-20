@@ -80,13 +80,13 @@ auto check_key_outside_the_domain(X a, std::size_t x)
 
         BOOST_CHECK(not a.contains(x));
         BOOST_CHECK_EQUAL(a.count(x), 0UZ);
-        BOOST_CHECK(a.find(x)        == a.end());
+        BOOST_CHECK(a.find(x) == a.end());
         BOOST_CHECK(a.lower_bound(x) == a.end());
         BOOST_CHECK(a.upper_bound(x) == a.end());
 
-        auto const [ first, last ] = a.equal_range(x);
+        auto const [first, last] = a.equal_range(x);
         BOOST_CHECK(first == a.end());
-        BOOST_CHECK(last  == a.end());
+        BOOST_CHECK(last == a.end());
 
         // A no-op that must stay one: this is the write.
         BOOST_CHECK_EQUAL(a.erase(x), 0UZ);
@@ -99,7 +99,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(LookupIsTotalOverKeyType, T, Types)
         auto const full = std::views::iota(0UZ, N) | std::ranges::to<T>();
 
         // Just past the end, past the last block, and the value that would wrap any n + 1.
-        for (auto const x : { N, N + 1, (2 * N) + 1, static_cast<std::size_t>(-1) }) {
+        for (auto const x : {N, N + 1, (2 * N) + 1, static_cast<std::size_t>(-1)}) {
                 check_key_outside_the_domain(T(), x);
                 check_key_outside_the_domain(full, x);
         }
@@ -109,10 +109,10 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(LookupIsTotalOverKeyType, T, Types)
 BOOST_AUTO_TEST_CASE_TEMPLATE(ItYieldsAscendingKeys, T, Types)
 {
         auto c = T();
-        test::set::yields_ascending_keys(c);            // empty is trivially ascending
+        test::set::yields_ascending_keys(c); // empty is trivially ascending
 
         // Inserted high to low, and across block boundaries where the width allows, so the ascending answer is the container's doing and not the insertion order's.
-        for (auto const key : { 70UZ, 64UZ, 63UZ, 9UZ, 1UZ, 0UZ }) {
+        for (auto const key : {70UZ, 64UZ, 63UZ, 9UZ, 1UZ, 0UZ}) {
                 if (key < c.max_size()) {
                         c.insert(key);
                 }
@@ -162,7 +162,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItRoundTripsAtCompileTime, T, Types)
                         // out_of_range and take the whole assertion down over a position that does not exist. It also
                         // leaves nothing here non-const, which a mutation the zero width discards does not.
                         auto const bs = std::bitset<N>(~0ULL);
-                        auto const c  = T(bs);
+                        auto const c = T(bs);
                         return c.size() == bs.count() and static_cast<std::bitset<N>>(c) == bs;
                 }());
         }
@@ -176,9 +176,9 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheConversionsAreExplicitBothWays, T, Types)
         // Guarded on the constructor rather than on the concept behind it: a standard library laying its bits out
         // some other way withholds BOTH of these, and this test asks the public question, not the detail one.
         if constexpr (std::is_constructible_v<T, std::bitset<N>>) {
-                static_assert(not std::is_convertible_v  <std::bitset<N>, T>);
-                static_assert(    std::is_constructible_v<std::bitset<N>, T>);
-                static_assert(not std::is_convertible_v  <T, std::bitset<N>>);
+                static_assert(not std::is_convertible_v<std::bitset<N>, T>);
+                static_assert(std::is_constructible_v<std::bitset<N>, T>);
+                static_assert(not std::is_convertible_v<T, std::bitset<N>>);
         }
 }
 
@@ -247,11 +247,11 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(OurOwnBitsetReadingCrossesOnTheSameRule, T, Types)
 BOOST_AUTO_TEST_CASE(RawBlocksCrossOnTheSameRule)
 {
         constexpr auto N = 256UZ;
-        using Set    = xstd::bit_static_set<N>;
-        using Wide   = std::array<std::uint64_t, 4>;
+        using Set = xstd::bit_static_set<N>;
+        using Wide = std::array<std::uint64_t, 4>;
         using Narrow = std::array<std::uint32_t, 8>;
 
-        auto const blocks = Wide{ 0x0123'4567'89AB'CDEFULL, 1ULL, 0ULL, 0x8000'0000'0000'0000ULL };
+        auto const blocks = Wide{0x0123'4567'89AB'CDEFULL, 1ULL, 0ULL, 0x8000'0000'0000'0000ULL};
         auto const s = Set::from_bits(blocks);
 
         BOOST_CHECK(s.contains(0UZ));
@@ -267,7 +267,7 @@ BOOST_AUTO_TEST_CASE(RawBlocksCrossOnTheSameRule)
         BOOST_CHECK(Set::from_bits(narrow) == s);
 
         static_assert([] -> bool {
-                auto const b = Wide{ 0xDEAD'BEEFULL, 0ULL, 0ULL, 0ULL };
+                auto const b = Wide{0xDEAD'BEEFULL, 0ULL, 0ULL, 0ULL};
                 return Set::from_bits(b).to_bits<Wide>() == b;
         }());
 
@@ -275,9 +275,9 @@ BOOST_AUTO_TEST_CASE(RawBlocksCrossOnTheSameRule)
         // DOOR now rather than of is_constructible_v, because a named function is what there is to ask about --
         // and this is the stronger question of the two: it names the operation instead of a proxy for it.
         static_assert(not test::exchanges_from_bits<Set, std::array<std::uint64_t, 3>>);
-        static_assert(    test::exchanges_from_bits<Set, std::array<std::uint64_t, 5>>);
-        static_assert(    test::exchanges_bits     <Set, Wide>);
-        static_assert(    test::exchanges_bits     <Set, Narrow>);
+        static_assert(test::exchanges_from_bits<Set, std::array<std::uint64_t, 5>>);
+        static_assert(test::exchanges_bits<Set, Wide>);
+        static_assert(test::exchanges_bits<Set, Narrow>);
 
         // And the unnamed door is CLOSED, which is the whole point of the rename: a sequence of blocks no longer
         // reaches a constructor, so it can no longer be read as the from_range spelling sitting beside it.

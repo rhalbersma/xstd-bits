@@ -43,6 +43,6 @@ inline constexpr bool has_address_sanitizer = false;
 
 #endif
 
-}       // namespace test
+} // namespace test
 
-#endif  // TEST_SANITIZER_HPP
+#endif // TEST_SANITIZER_HPP

@@ -34,6 +34,6 @@ auto yields_ascending_keys(C const& c)
         BOOST_CHECK_EQUAL(counted, c.size());
 }
 
-}       // namespace test::set
+} // namespace test::set
 
-#endif  // TEST_SET_ASCENDING_HPP
+#endif // TEST_SET_ASCENDING_HPP

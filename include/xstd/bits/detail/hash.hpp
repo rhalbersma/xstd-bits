@@ -62,6 +62,6 @@ template<class T, class Hash = boost::hash2::fnv1a_64>
         return boost::hash2::get_integral_result<std::size_t>(h);
 }
 
-}       // namespace xstd::detail::bits
+} // namespace xstd::detail::bits
 
-#endif  // XSTD_BITS_DETAIL_HASH_HPP
+#endif // XSTD_BITS_DETAIL_HASH_HPP

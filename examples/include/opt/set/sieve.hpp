@@ -30,10 +30,7 @@ auto sift_primes0(std::size_t n)
 {
         auto primes = generate_candidates<X>(n);
         auto const candidates = primes;
-        for (auto p
-                : candidates
-                | std::views::take_while([&](auto x) { return x * x < n; })
-        ) {
+        for (auto p : candidates | std::views::take_while([&](auto x) { return x * x < n; })) {
                 if (not primes.contains(p)) {
                         continue;
                 }
@@ -57,7 +54,7 @@ auto sift_primes1(std::size_t n)
                         do {
                                 sift(primes, m);
                                 m += p;
-                        } while(m < n);
+                        } while (m < n);
                 } else {
                         break;
                 }
@@ -109,7 +106,7 @@ constexpr auto isqrt(std::size_t n) noexcept
         return x;
 }
 
-}       // namespace detail::sieve
+} // namespace detail::sieve
 
 // The incremental sieve: no candidate array at all, and no n. It keeps one entry per prime found so far -- the next composite that prime will strike -- so the space is O(pi(n)) rather than O(n), and it generates forever. O'Neill, The Genuine Sieve of Eratosthenes, JFP 19(1), 2009. Slower per prime than the array sieve, which is the point of measuring it: what unboundedness costs.
 class incremental_sieve
@@ -186,7 +183,7 @@ auto sift_primes_segmented(std::size_t n)
                 }
                 for (auto const offset : window) {
                         if (segment_lo + offset >= segment_hi) {
-                                break;  // the last window is short, and the tail above segment_hi was never a candidate
+                                break; // the last window is short, and the tail above segment_hi was never a candidate
                         }
                         primes.insert(static_cast<std::ranges::range_value_t<X>>(segment_lo + offset));
                 }
@@ -194,6 +191,6 @@ auto sift_primes_segmented(std::size_t n)
         return primes;
 }
 
-}       // namespace opt
+} // namespace opt
 
-#endif  // include guard
+#endif // include guard

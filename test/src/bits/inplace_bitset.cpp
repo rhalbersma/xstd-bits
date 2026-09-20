@@ -80,7 +80,7 @@ BOOST_AUTO_TEST_CASE(GrowingPastTheCapacityThrowsBadAlloc)
         BOOST_CHECK(b.all());
         BOOST_CHECK_EQUAL(b.count(), 24UZ);
 
-        BOOST_CHECK_THROW(b.resize(25),    std::bad_alloc);
+        BOOST_CHECK_THROW(b.resize(25), std::bad_alloc);
         BOOST_CHECK_THROW(b.push_back(true), std::bad_alloc);
 
         BOOST_CHECK_EQUAL(b.size(), 24UZ);

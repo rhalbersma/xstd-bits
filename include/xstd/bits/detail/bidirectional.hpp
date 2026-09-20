@@ -30,18 +30,17 @@ class bidirectional_bit_iterator
 
 public:
         using iterator_category = std::bidirectional_iterator_tag;
-        using value_type        = std::size_t;
-        using difference_type   = std::ptrdiff_t;
-        using pointer           = void;
-        using reference         = bidirectional_bit_reference<Bits>;
+        using value_type = std::size_t;
+        using difference_type = std::ptrdiff_t;
+        using pointer = void;
+        using reference = bidirectional_bit_reference<Bits>;
 
         [[nodiscard]] constexpr bidirectional_bit_iterator() noexcept = default;
 
         // Public, so an owner or a view constructs one without befriending it: the dependency runs one way.
         [[nodiscard]] constexpr bidirectional_bit_iterator(bits_type const* ptr, std::size_t idx) noexcept
-        :
-                m_ptr(ptr),
-                m_idx(idx)
+            : m_ptr(ptr),
+              m_idx(idx)
         {
                 assert(m_ptr != nullptr);
         }
@@ -62,7 +61,7 @@ public:
                 -> reference
         {
                 assert(m_ptr != nullptr);
-                return { m_ptr, m_idx };
+                return {m_ptr, m_idx};
         }
 
         // Both steps on the storage, guarded at a zero width rather than asking it: the exclusive scans take a position as a precondition and a zero width has none to give, so they assert there. The trait's scans tested this first and never reached the storage; the guard is what that test was, and it is load-bearing.
@@ -89,8 +88,18 @@ public:
                 return *this;
         }
 
-        constexpr auto operator++(int) noexcept -> bidirectional_bit_iterator { auto nrv = *this; ++*this; return nrv; }
-        constexpr auto operator--(int) noexcept -> bidirectional_bit_iterator { auto nrv = *this; --*this; return nrv; }
+        constexpr auto operator++(int) noexcept -> bidirectional_bit_iterator
+        {
+                auto nrv = *this;
+                ++*this;
+                return nrv;
+        }
+        constexpr auto operator--(int) noexcept -> bidirectional_bit_iterator
+        {
+                auto nrv = *this;
+                --*this;
+                return nrv;
+        }
 };
 
 // The key at a position, arriving by conversion; & hands the iterator back, so the pair round-trips.
@@ -104,12 +113,11 @@ class bidirectional_bit_reference
 
 public:
         using value_type = std::size_t;
-        using iterator   = bidirectional_bit_iterator<Bits>;
+        using iterator = bidirectional_bit_iterator<Bits>;
 
         [[nodiscard]] constexpr bidirectional_bit_reference(bits_type const* ptr, std::size_t idx) noexcept
-        :
-                m_ptr(ptr),
-                m_idx(idx)
+            : m_ptr(ptr),
+              m_idx(idx)
         {
                 assert(m_ptr != nullptr);
         }
@@ -121,17 +129,17 @@ public:
         [[nodiscard]] constexpr auto operator&() const noexcept
                 -> iterator
         {
-                return { m_ptr, m_idx };
+                return {m_ptr, m_idx};
         }
 
-        [[nodiscard]] constexpr explicit(false) operator value_type() const noexcept  // NOLINT(misc-explicit-constructor)
+        [[nodiscard]] constexpr explicit(false) operator value_type() const noexcept // NOLINT(misc-explicit-constructor)
         {
                 return m_idx;
         }
 
         // A strong index type initializes from *it in one step; one with an explicit constructor takes the size_t route.
         template<class T>
-        [[nodiscard]] constexpr explicit(false) operator T() const noexcept(std::is_nothrow_constructible_v<T, value_type>)  // NOLINT(misc-explicit-constructor)
+        [[nodiscard]] constexpr explicit(false) operator T() const noexcept(std::is_nothrow_constructible_v<T, value_type>) // NOLINT(misc-explicit-constructor)
                 requires std::is_class_v<T> and std::is_convertible_v<value_type, T>
         {
                 return m_idx;
@@ -145,15 +153,13 @@ public:
         }
 };
 
-}       // namespace xstd::detail::bits
-
+} // namespace xstd::detail::bits
 
 // std::format over the containers, which needs nothing said about the containers themselves.
 template<class Bits, class CharT>
 // NOLINTNEXTLINE(bugprone-std-namespace-modification)
 struct std::formatter<xstd::detail::bits::bidirectional_bit_reference<Bits>, CharT>
-:
-        std::formatter<std::size_t, CharT>
+    : std::formatter<std::size_t, CharT>
 {
         template<class Context>
         [[nodiscard]] constexpr auto format(xstd::detail::bits::bidirectional_bit_reference<Bits> ref, Context& ctx) const
@@ -163,4 +169,4 @@ struct std::formatter<xstd::detail::bits::bidirectional_bit_reference<Bits>, Cha
         }
 };
 
-#endif  // XSTD_BITS_DETAIL_BIDIRECTIONAL_HPP
+#endif // XSTD_BITS_DETAIL_BIDIRECTIONAL_HPP
