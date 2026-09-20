@@ -13,5 +13,5 @@
 #
 # GitHub's blame view reads it without being asked.
 
-# Run clang-format over the tree
-656951f50b54ecc3c9609934069bdf3a44c21464
+# Adopt the shared xstd clang-format style
+d42a9cc533f8140cfb1f54491e5e792d7ae75347
