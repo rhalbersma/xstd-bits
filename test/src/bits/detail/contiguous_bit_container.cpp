@@ -556,7 +556,8 @@ struct counting_blocks
         {
                 ++g_storage_moves;
         }
-        [[maybe_unused]] auto operator=(counting_blocks&& other) noexcept -> counting_blocks&
+        [[maybe_unused]] auto operator=(counting_blocks&& other) noexcept
+                -> counting_blocks&
         {
                 m_data = other.m_data;
                 ++g_storage_moves;
@@ -564,32 +565,39 @@ struct counting_blocks
         }
         [[maybe_unused]] ~counting_blocks() = default;
 
-        [[nodiscard, maybe_unused]] auto begin() -> std::uint64_t*
+        [[nodiscard, maybe_unused]] auto begin()
+                -> std::uint64_t*
         {
                 return m_data.data();
         }
-        [[nodiscard, maybe_unused]] auto begin() const -> std::uint64_t const*
+        [[nodiscard, maybe_unused]] auto begin() const
+                -> std::uint64_t const*
         {
                 return m_data.data();
         }
-        [[nodiscard, maybe_unused]] auto end() -> std::uint64_t*
+        [[nodiscard, maybe_unused]] auto end()
+                -> std::uint64_t*
         {
                 return m_data.data() + m_data.size();
         }
-        [[nodiscard, maybe_unused]] auto end() const -> std::uint64_t const*
+        [[nodiscard, maybe_unused]] auto end() const
+                -> std::uint64_t const*
         {
                 return m_data.data() + m_data.size();
         }
-        [[nodiscard, maybe_unused]] auto size() const -> std::size_t
+        [[nodiscard, maybe_unused]] auto size() const
+                -> std::size_t
         {
                 return m_data.size();
         }
 
-        [[nodiscard, maybe_unused]] auto operator[](size_type n) -> std::uint64_t&
+        [[nodiscard, maybe_unused]] auto operator[](size_type n)
+                -> std::uint64_t&
         {
                 return m_data[n];
         }
-        [[nodiscard, maybe_unused]] auto operator[](size_type n) const -> std::uint64_t const&
+        [[nodiscard, maybe_unused]] auto operator[](size_type n) const
+                -> std::uint64_t const&
         {
                 return m_data[n];
         }

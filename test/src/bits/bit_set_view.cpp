@@ -50,7 +50,8 @@ template<class T>
 using view_of = decltype(xstd::bit_set_view(std::declval<T&>()));
 
 // Named rather than a lambda, so the conversion happens at a call boundary the way a caller would meet it.
-constexpr auto takes_a_set_view(xstd::bit_set_view<Blocks> v) noexcept -> bool
+constexpr auto takes_a_set_view(xstd::bit_set_view<Blocks> v) noexcept
+        -> bool
 {
         return v.contains(3UZ);
 }

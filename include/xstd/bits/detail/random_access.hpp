@@ -78,54 +78,63 @@ public:
                 return {m_ptr, m_idx};
         }
 
-        constexpr auto operator++() noexcept -> random_access_bit_iterator&
+        constexpr auto operator++() noexcept
+                -> random_access_bit_iterator&
         {
                 ++m_idx;
                 return *this;
         }
-        constexpr auto operator--() noexcept -> random_access_bit_iterator&
+        constexpr auto operator--() noexcept
+                -> random_access_bit_iterator&
         {
                 --m_idx;
                 return *this;
         }
 
-        constexpr auto operator++(int) noexcept -> random_access_bit_iterator
+        constexpr auto operator++(int) noexcept
+                -> random_access_bit_iterator
         {
                 auto nrv = *this;
                 ++*this;
                 return nrv;
         }
-        constexpr auto operator--(int) noexcept -> random_access_bit_iterator
+        constexpr auto operator--(int) noexcept
+                -> random_access_bit_iterator
         {
                 auto nrv = *this;
                 --*this;
                 return nrv;
         }
 
-        constexpr auto operator+=(difference_type n) noexcept -> random_access_bit_iterator&
+        constexpr auto operator+=(difference_type n) noexcept
+                -> random_access_bit_iterator&
         {
                 m_idx = static_cast<std::size_t>(static_cast<difference_type>(m_idx) + n);
                 return *this;
         }
-        constexpr auto operator-=(difference_type n) noexcept -> random_access_bit_iterator&
+        constexpr auto operator-=(difference_type n) noexcept
+                -> random_access_bit_iterator&
         {
                 m_idx = static_cast<std::size_t>(static_cast<difference_type>(m_idx) - n);
                 return *this;
         }
 
-        [[nodiscard]] friend constexpr auto operator+(random_access_bit_iterator lhs, difference_type n) noexcept -> random_access_bit_iterator
+        [[nodiscard]] friend constexpr auto operator+(random_access_bit_iterator lhs, difference_type n) noexcept
+                -> random_access_bit_iterator
         {
                 auto nrv = lhs;
                 nrv += n;
                 return nrv;
         }
-        [[nodiscard]] friend constexpr auto operator+(difference_type n, random_access_bit_iterator rhs) noexcept -> random_access_bit_iterator
+        [[nodiscard]] friend constexpr auto operator+(difference_type n, random_access_bit_iterator rhs) noexcept
+                -> random_access_bit_iterator
         {
                 auto nrv = rhs;
                 nrv += n;
                 return nrv;
         }
-        [[nodiscard]] friend constexpr auto operator-(random_access_bit_iterator lhs, difference_type n) noexcept -> random_access_bit_iterator
+        [[nodiscard]] friend constexpr auto operator-(random_access_bit_iterator lhs, difference_type n) noexcept
+                -> random_access_bit_iterator
         {
                 auto nrv = lhs;
                 nrv -= n;

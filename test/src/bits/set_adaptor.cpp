@@ -50,7 +50,8 @@ struct void_probe
 
         auto operator()(std::size_t&&) const -> void {}
         // Never called is exactly what is under test, so say so rather than let -Wunused-member-function say it.
-        [[maybe_unused]] auto operator()(std::size_t&) const -> void
+        [[maybe_unused]] auto operator()(std::size_t&) const
+                -> void
         {
                 took_a_reference = true;
         }
@@ -60,12 +61,14 @@ struct bool_probe
 {
         bool& took_a_reference;
 
-        auto operator()(std::size_t&&) const -> bool
+        auto operator()(std::size_t&&) const
+                -> bool
         {
                 return true;
         }
         // Never called is exactly what is under test, so say so rather than let -Wunused-member-function say it.
-        [[maybe_unused]] auto operator()(std::size_t&) const -> bool
+        [[maybe_unused]] auto operator()(std::size_t&) const
+                -> bool
         {
                 took_a_reference = true;
                 return true;

@@ -299,7 +299,8 @@ public:
         // A field of bits in and out, named rather than spelled as a conversion; never on a window.
         template<class B>
                 requires is_owner and bits_type::template
-        exchanges_bits<B> [[nodiscard]] static constexpr auto from_bits(B const& b) noexcept -> sequence_adaptor
+        exchanges_bits<B> [[nodiscard]] static constexpr auto from_bits(B const& b) noexcept
+                -> sequence_adaptor
         {
                 auto result = sequence_adaptor();
                 result.storage().assign_bits(b);
@@ -308,7 +309,8 @@ public:
 
         template<class B>
                 requires (not is_window) and bits_type::template
-        exchanges_bits<B> [[nodiscard]] constexpr auto to_bits() const noexcept -> B
+        exchanges_bits<B> [[nodiscard]] constexpr auto to_bits() const noexcept
+                -> B
         {
                 return storage().template to_bits<B>();
         }
@@ -572,11 +574,13 @@ public:
         }
 
         // iterators, spelled over what the accessor hands this self: deep const for an owner, shallow for a view.
-        [[nodiscard]] constexpr auto begin(this auto&& self) noexcept -> iterator_t<decltype(self)>
+        [[nodiscard]] constexpr auto begin(this auto&& self) noexcept
+                -> iterator_t<decltype(self)>
         {
                 return {&self.storage(), self.offset()};
         }
-        [[nodiscard]] constexpr auto end(this auto&& self) noexcept -> iterator_t<decltype(self)>
+        [[nodiscard]] constexpr auto end(this auto&& self) noexcept
+                -> iterator_t<decltype(self)>
         {
                 return {&self.storage(), self.offset() + self.size()};
         }
@@ -589,19 +593,23 @@ public:
                 return std::make_reverse_iterator(self.begin());
         }
 
-        [[nodiscard]] constexpr auto cbegin() const noexcept -> const_iterator
+        [[nodiscard]] constexpr auto cbegin() const noexcept
+                -> const_iterator
         {
                 return {&std::as_const(storage()), offset()};
         }
-        [[nodiscard]] constexpr auto cend() const noexcept -> const_iterator
+        [[nodiscard]] constexpr auto cend() const noexcept
+                -> const_iterator
         {
                 return {&std::as_const(storage()), offset() + size()};
         }
-        [[nodiscard]] constexpr auto crbegin() const noexcept -> const_reverse_iterator
+        [[nodiscard]] constexpr auto crbegin() const noexcept
+                -> const_reverse_iterator
         {
                 return std::make_reverse_iterator(cend());
         }
-        [[nodiscard]] constexpr auto crend() const noexcept -> const_reverse_iterator
+        [[nodiscard]] constexpr auto crend() const noexcept
+                -> const_reverse_iterator
         {
                 return std::make_reverse_iterator(cbegin());
         }
@@ -616,7 +624,8 @@ public:
         }
 
         // capacity; max_size() is the positions there are to hold, which only a growing one can extend.
-        [[nodiscard]] constexpr auto empty() const noexcept -> bool
+        [[nodiscard]] constexpr auto empty() const noexcept
+                -> bool
         {
                 return size() == 0UZ;
         }
@@ -659,15 +668,18 @@ public:
                 return value ? n : size() - n;
         }
 
-        [[nodiscard]] constexpr auto all(value_type value = true) const noexcept -> bool
+        [[nodiscard]] constexpr auto all(value_type value = true) const noexcept
+                -> bool
         {
                 return value ? all_true() : none_true();
         }
-        [[nodiscard]] constexpr auto any(value_type value = true) const noexcept -> bool
+        [[nodiscard]] constexpr auto any(value_type value = true) const noexcept
+                -> bool
         {
                 return value ? any_true() : not all_true();
         }
-        [[nodiscard]] constexpr auto none(value_type value = true) const noexcept -> bool
+        [[nodiscard]] constexpr auto none(value_type value = true) const noexcept
+                -> bool
         {
                 return value ? none_true() : all_true();
         }
@@ -909,7 +921,8 @@ public:
                 self.storage().flip();
         }
 
-        static constexpr auto swap(reference x, reference y) noexcept -> void
+        static constexpr auto swap(reference x, reference y) noexcept
+                -> void
         {
                 bool const t = x;
                 x = y;

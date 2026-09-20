@@ -72,20 +72,24 @@ struct std::char_traits<digit_char>
         using state_type = std::mbstate_t;
         using comparison_category = std::strong_ordering;
 
-        static constexpr auto assign(char_type& a, char_type const& b) noexcept -> void
+        static constexpr auto assign(char_type& a, char_type const& b) noexcept
+                -> void
         {
                 a = b;
         }
-        static constexpr auto eq(char_type a, char_type b) noexcept -> bool
+        static constexpr auto eq(char_type a, char_type b) noexcept
+                -> bool
         {
                 return a.v == b.v;
         }
-        static constexpr auto lt(char_type a, char_type b) noexcept -> bool
+        static constexpr auto lt(char_type a, char_type b) noexcept
+                -> bool
         {
                 return a.v < b.v;
         }
 
-        static constexpr auto compare(char_type const* a, char_type const* b, std::size_t n) noexcept -> int
+        static constexpr auto compare(char_type const* a, char_type const* b, std::size_t n) noexcept
+                -> int
         {
                 for (auto i = 0UZ; i < n; ++i) {
                         if (lt(a[i], b[i])) {
@@ -98,7 +102,8 @@ struct std::char_traits<digit_char>
                 return 0;
         }
 
-        static constexpr auto length(char_type const* p) noexcept -> std::size_t
+        static constexpr auto length(char_type const* p) noexcept
+                -> std::size_t
         {
                 auto n = 0UZ;
                 while (p[n].v != 0) {
@@ -107,7 +112,8 @@ struct std::char_traits<digit_char>
                 return n;
         }
 
-        static constexpr auto find(char_type const* p, std::size_t n, char_type const& a) noexcept -> char_type const*
+        static constexpr auto find(char_type const* p, std::size_t n, char_type const& a) noexcept
+                -> char_type const*
         {
                 for (auto i = 0UZ; i < n; ++i) {
                         if (eq(p[i], a)) {
@@ -117,7 +123,8 @@ struct std::char_traits<digit_char>
                 return nullptr;
         }
 
-        static constexpr auto move(char_type* d, char_type const* s, std::size_t n) noexcept -> char_type*
+        static constexpr auto move(char_type* d, char_type const* s, std::size_t n) noexcept
+                -> char_type*
         {
                 if (d < s) {
                         for (auto i = 0UZ; i < n; ++i) {
@@ -131,7 +138,8 @@ struct std::char_traits<digit_char>
                 return d;
         }
 
-        static constexpr auto copy(char_type* d, char_type const* s, std::size_t n) noexcept -> char_type*
+        static constexpr auto copy(char_type* d, char_type const* s, std::size_t n) noexcept
+                -> char_type*
         {
                 for (auto i = 0UZ; i < n; ++i) {
                         d[i] = s[i];
@@ -139,7 +147,8 @@ struct std::char_traits<digit_char>
                 return d;
         }
 
-        static constexpr auto assign(char_type* p, std::size_t n, char_type a) noexcept -> char_type*
+        static constexpr auto assign(char_type* p, std::size_t n, char_type a) noexcept
+                -> char_type*
         {
                 for (auto i = 0UZ; i < n; ++i) {
                         p[i] = a;
@@ -147,23 +156,28 @@ struct std::char_traits<digit_char>
                 return p;
         }
 
-        static constexpr auto not_eof(int_type c) noexcept -> int_type
+        static constexpr auto not_eof(int_type c) noexcept
+                -> int_type
         {
                 return c == eof() ? 0 : c;
         }
-        static constexpr auto to_char_type(int_type c) noexcept -> char_type
+        static constexpr auto to_char_type(int_type c) noexcept
+                -> char_type
         {
                 return {static_cast<unsigned char>(c)};
         }
-        static constexpr auto to_int_type(char_type c) noexcept -> int_type
+        static constexpr auto to_int_type(char_type c) noexcept
+                -> int_type
         {
                 return c.v;
         }
-        static constexpr auto eq_int_type(int_type a, int_type b) noexcept -> bool
+        static constexpr auto eq_int_type(int_type a, int_type b) noexcept
+                -> bool
         {
                 return a == b;
         }
-        static constexpr auto eof() noexcept -> int_type
+        static constexpr auto eof() noexcept
+                -> int_type
         {
                 return -1;
         }

@@ -229,7 +229,8 @@ public:
         // A field of bits in and out at a static width, named rather than spelled as a conversion.
         template<class B>
                 requires is_owner and Bits::template
-        exchanges_bits<B> [[nodiscard]] static constexpr auto from_bits(B const& b) noexcept -> set_adaptor
+        exchanges_bits<B> [[nodiscard]] static constexpr auto from_bits(B const& b) noexcept
+                -> set_adaptor
         {
                 auto result = set_adaptor();
                 result.storage().assign_bits(b);
@@ -239,7 +240,8 @@ public:
         // Through storage() and not m_bits, which is a Bits* wherever this reading refers rather than owns.
         template<class B>
                 requires Bits::template
-        exchanges_bits<B> [[nodiscard]] constexpr auto to_bits() const noexcept -> B
+        exchanges_bits<B> [[nodiscard]] constexpr auto to_bits() const noexcept
+                -> B
         {
                 return storage().template to_bits<B>();
         }
@@ -293,37 +295,45 @@ public:
         }
 
         // iterators; one type for both, this reading being read-only through its proxy.
-        [[nodiscard]] constexpr auto begin() const noexcept -> const_iterator
+        [[nodiscard]] constexpr auto begin() const noexcept
+                -> const_iterator
         {
                 return {&storage(), storage().find_first()};
         }
-        [[nodiscard]] constexpr auto end() const noexcept -> const_iterator
+        [[nodiscard]] constexpr auto end() const noexcept
+                -> const_iterator
         {
                 return {&storage(), storage().size()};
         }
 
-        [[nodiscard]] constexpr auto rbegin() const noexcept -> const_reverse_iterator
+        [[nodiscard]] constexpr auto rbegin() const noexcept
+                -> const_reverse_iterator
         {
                 return std::make_reverse_iterator(end());
         }
-        [[nodiscard]] constexpr auto rend() const noexcept -> const_reverse_iterator
+        [[nodiscard]] constexpr auto rend() const noexcept
+                -> const_reverse_iterator
         {
                 return std::make_reverse_iterator(begin());
         }
 
-        [[nodiscard]] constexpr auto cbegin() const noexcept -> const_iterator
+        [[nodiscard]] constexpr auto cbegin() const noexcept
+                -> const_iterator
         {
                 return begin();
         }
-        [[nodiscard]] constexpr auto cend() const noexcept -> const_iterator
+        [[nodiscard]] constexpr auto cend() const noexcept
+                -> const_iterator
         {
                 return end();
         }
-        [[nodiscard]] constexpr auto crbegin() const noexcept -> const_reverse_iterator
+        [[nodiscard]] constexpr auto crbegin() const noexcept
+                -> const_reverse_iterator
         {
                 return rbegin();
         }
-        [[nodiscard]] constexpr auto crend() const noexcept -> const_reverse_iterator
+        [[nodiscard]] constexpr auto crend() const noexcept
+                -> const_reverse_iterator
         {
                 return rend();
         }
@@ -347,16 +357,19 @@ public:
         }
 
         // capacity; a bitset's count() is a set's size(), and max_size() is the positions there are to hold.
-        [[nodiscard]] constexpr auto empty() const noexcept -> bool
+        [[nodiscard]] constexpr auto empty() const noexcept
+                -> bool
         {
                 return begin() == end();
         }
-        [[nodiscard]] constexpr auto full() const noexcept -> bool
+        [[nodiscard]] constexpr auto full() const noexcept
+                -> bool
         {
                 return size() == max_size();
         }
 
-        [[nodiscard]] constexpr auto size() const noexcept -> size_type
+        [[nodiscard]] constexpr auto size() const noexcept
+                -> size_type
         {
                 return storage().count();
         }
@@ -375,7 +388,8 @@ public:
         }
 
         // element access, both with a non-empty set as their precondition.
-        [[nodiscard]] constexpr auto front() const noexcept -> const_reference
+        [[nodiscard]] constexpr auto front() const noexcept
+                -> const_reference
         {
                 return *begin();
         }
@@ -624,21 +638,25 @@ public:
         }
 
         // observers
-        [[nodiscard]] constexpr auto key_comp() const noexcept -> key_compare
+        [[nodiscard]] constexpr auto key_comp() const noexcept
+                -> key_compare
         {
                 return {};
         }
-        [[nodiscard]] constexpr auto value_comp() const noexcept -> value_compare
+        [[nodiscard]] constexpr auto value_comp() const noexcept
+                -> value_compare
         {
                 return {};
         }
 
         // set operations, total over key_type as std::set's are; the width is the guard, test() the read.
-        [[nodiscard]] constexpr auto contains(key_type const& x) const noexcept -> bool
+        [[nodiscard]] constexpr auto contains(key_type const& x) const noexcept
+                -> bool
         {
                 return x < storage().size() and storage().test(x);
         }
-        [[nodiscard]] constexpr auto count(key_type const& x) const noexcept -> size_type
+        [[nodiscard]] constexpr auto count(key_type const& x) const noexcept
+                -> size_type
         {
                 return contains(x);
         }

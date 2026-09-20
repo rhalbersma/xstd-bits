@@ -124,19 +124,22 @@ public:
                         return not m_ptr->m_bits.test(m_idx);
                 }
 
-                friend constexpr auto swap(reference x, reference y) noexcept -> void
+                friend constexpr auto swap(reference x, reference y) noexcept
+                        -> void
                 {
                         bool const t = x;
                         x = y;
                         y = t;
                 }
-                friend constexpr auto swap(reference x, bool& y) noexcept -> void
+                friend constexpr auto swap(reference x, bool& y) noexcept
+                        -> void
                 {
                         bool const t = x;
                         x = y;
                         y = t;
                 }
-                friend constexpr auto swap(bool& x, reference y) noexcept -> void
+                friend constexpr auto swap(bool& x, reference y) noexcept
+                        -> void
                 {
                         bool const t = x;
                         x = y;
@@ -174,7 +177,8 @@ public:
         // A field of bits in and out, constrained on container_source: the integer door is already taken.
         template<class B>
                 requires (not std::same_as<std::remove_cvref_t<B>, bitset_adaptor>) and Bits::template
-        exchanges_bits_as_field<B> [[nodiscard]] static constexpr auto from_bits(B const& b) noexcept -> bitset_adaptor
+        exchanges_bits_as_field<B> [[nodiscard]] static constexpr auto from_bits(B const& b) noexcept
+                -> bitset_adaptor
         {
                 auto result = bitset_adaptor();
                 result.m_bits.assign_bits(b);
@@ -183,7 +187,8 @@ public:
 
         template<class B>
                 requires Bits::template
-        exchanges_bits_as_field<B> [[nodiscard]] constexpr auto to_bits() const noexcept -> B
+        exchanges_bits_as_field<B> [[nodiscard]] constexpr auto to_bits() const noexcept
+                -> B
         {
                 return m_bits.template to_bits<B>();
         }
@@ -293,17 +298,20 @@ public:
         {}
 
         // Members                                              [bitset.members]
-        constexpr auto operator&=(bitset_adaptor const& rhs) noexcept -> bitset_adaptor&
+        constexpr auto operator&=(bitset_adaptor const& rhs) noexcept
+                -> bitset_adaptor&
         {
                 m_bits &= rhs.m_bits;
                 return *this;
         }
-        constexpr auto operator|=(bitset_adaptor const& rhs) noexcept -> bitset_adaptor&
+        constexpr auto operator|=(bitset_adaptor const& rhs) noexcept
+                -> bitset_adaptor&
         {
                 m_bits |= rhs.m_bits;
                 return *this;
         }
-        constexpr auto operator^=(bitset_adaptor const& rhs) noexcept -> bitset_adaptor&
+        constexpr auto operator^=(bitset_adaptor const& rhs) noexcept
+                -> bitset_adaptor&
         {
                 m_bits ^= rhs.m_bits;
                 return *this;
@@ -332,17 +340,20 @@ public:
                 return *this;
         }
 
-        constexpr auto set() noexcept -> bitset_adaptor&
+        constexpr auto set() noexcept
+                -> bitset_adaptor&
         {
                 m_bits.set();
                 return *this;
         }
-        constexpr auto reset() noexcept -> bitset_adaptor&
+        constexpr auto reset() noexcept
+                -> bitset_adaptor&
         {
                 m_bits.reset();
                 return *this;
         }
-        constexpr auto flip() noexcept -> bitset_adaptor&
+        constexpr auto flip() noexcept
+                -> bitset_adaptor&
         {
                 m_bits.flip();
                 return *this;
@@ -455,11 +466,13 @@ public:
         }
 
         // [bitset.members]/34-37: the value the bits spell, or overflow_error for a position beyond the word.
-        [[nodiscard]] constexpr auto to_ulong() const -> unsigned long
+        [[nodiscard]] constexpr auto to_ulong() const
+                -> unsigned long
         {
                 return to_unsigned<unsigned long>();
         }
-        [[nodiscard]] constexpr auto to_ullong() const -> unsigned long long
+        [[nodiscard]] constexpr auto to_ullong() const
+                -> unsigned long long
         {
                 return to_unsigned<unsigned long long>();
         }
@@ -483,20 +496,24 @@ public:
         }
 
         // observers
-        [[nodiscard]] constexpr auto count() const noexcept -> std::size_t
+        [[nodiscard]] constexpr auto count() const noexcept
+                -> std::size_t
         {
                 return m_bits.count();
         }
-        [[nodiscard]] constexpr auto size() const noexcept -> std::size_t
+        [[nodiscard]] constexpr auto size() const noexcept
+                -> std::size_t
         {
                 return m_bits.size();
         }
-        [[nodiscard]] constexpr auto num_blocks() const noexcept -> std::size_t
+        [[nodiscard]] constexpr auto num_blocks() const noexcept
+                -> std::size_t
         {
                 return m_bits.num_blocks();
         }
         // boost's answer and not the storage's, the two differing by sixty-three positions at a run-time width.
-        [[nodiscard]] constexpr auto max_size() const noexcept -> std::size_t
+        [[nodiscard]] constexpr auto max_size() const noexcept
+                -> std::size_t
         {
                 return m_bits.saturating_max_size();
         }
@@ -527,41 +544,49 @@ public:
                 }
         }
 
-        [[nodiscard]] constexpr auto all() const noexcept -> bool
+        [[nodiscard]] constexpr auto all() const noexcept
+                -> bool
         {
                 return m_bits.all();
         }
-        [[nodiscard]] constexpr auto any() const noexcept -> bool
+        [[nodiscard]] constexpr auto any() const noexcept
+                -> bool
         {
                 return m_bits.any();
         }
-        [[nodiscard]] constexpr auto none() const noexcept -> bool
+        [[nodiscard]] constexpr auto none() const noexcept
+                -> bool
         {
                 return m_bits.none();
         }
 
         // The set vocabulary boost has and std::bitset has not, which the storage spells alike at both widths.
-        constexpr auto operator-=(bitset_adaptor const& rhs) noexcept -> bitset_adaptor&
+        constexpr auto operator-=(bitset_adaptor const& rhs) noexcept
+                -> bitset_adaptor&
         {
                 m_bits -= rhs.m_bits;
                 return *this;
         }
 
-        [[nodiscard]] constexpr auto is_subset_of(bitset_adaptor const& rhs) const noexcept -> bool
+        [[nodiscard]] constexpr auto is_subset_of(bitset_adaptor const& rhs) const noexcept
+                -> bool
         {
                 return m_bits.is_subset_of(rhs.m_bits);
         }
-        [[nodiscard]] constexpr auto is_proper_subset_of(bitset_adaptor const& rhs) const noexcept -> bool
+        [[nodiscard]] constexpr auto is_proper_subset_of(bitset_adaptor const& rhs) const noexcept
+                -> bool
         {
                 return m_bits.is_proper_subset_of(rhs.m_bits);
         }
-        [[nodiscard]] constexpr auto intersects(bitset_adaptor const& rhs) const noexcept -> bool
+        [[nodiscard]] constexpr auto intersects(bitset_adaptor const& rhs) const noexcept
+                -> bool
         {
                 return m_bits.intersects(rhs.m_bits);
         }
 
         // The symmetric spelling beside boost's member: a member of this name would end lookup before ADL.
-        [[nodiscard]] friend constexpr auto intersects(bitset_adaptor const& x, bitset_adaptor const& y) noexcept -> bool
+        [[nodiscard]] friend constexpr auto intersects(bitset_adaptor const& x, bitset_adaptor const& y) noexcept
+                -> bool
         {
                 return x.intersects(y);
         }
@@ -897,25 +922,29 @@ struct hash<xstd::bitset_adaptor<Bits>>
 namespace xstd {
 
 // bitset operators                                           [bitset.operators]
-template<class Bits> [[nodiscard]] constexpr auto operator&(bitset_adaptor<Bits> const& lhs, bitset_adaptor<Bits> const& rhs) noexcept((Bits::extent != std::dynamic_extent)) -> bitset_adaptor<Bits>
+template<class Bits> [[nodiscard]] constexpr auto operator&(bitset_adaptor<Bits> const& lhs, bitset_adaptor<Bits> const& rhs) noexcept((Bits::extent != std::dynamic_extent))
+        -> bitset_adaptor<Bits>
 {
         auto nrv = lhs;
         nrv &= rhs;
         return nrv;
 }
-template<class Bits> [[nodiscard]] constexpr auto operator|(bitset_adaptor<Bits> const& lhs, bitset_adaptor<Bits> const& rhs) noexcept((Bits::extent != std::dynamic_extent)) -> bitset_adaptor<Bits>
+template<class Bits> [[nodiscard]] constexpr auto operator|(bitset_adaptor<Bits> const& lhs, bitset_adaptor<Bits> const& rhs) noexcept((Bits::extent != std::dynamic_extent))
+        -> bitset_adaptor<Bits>
 {
         auto nrv = lhs;
         nrv |= rhs;
         return nrv;
 }
-template<class Bits> [[nodiscard]] constexpr auto operator^(bitset_adaptor<Bits> const& lhs, bitset_adaptor<Bits> const& rhs) noexcept((Bits::extent != std::dynamic_extent)) -> bitset_adaptor<Bits>
+template<class Bits> [[nodiscard]] constexpr auto operator^(bitset_adaptor<Bits> const& lhs, bitset_adaptor<Bits> const& rhs) noexcept((Bits::extent != std::dynamic_extent))
+        -> bitset_adaptor<Bits>
 {
         auto nrv = lhs;
         nrv ^= rhs;
         return nrv;
 }
-template<class Bits> [[nodiscard]] constexpr auto operator-(bitset_adaptor<Bits> const& lhs, bitset_adaptor<Bits> const& rhs) noexcept((Bits::extent != std::dynamic_extent)) -> bitset_adaptor<Bits>
+template<class Bits> [[nodiscard]] constexpr auto operator-(bitset_adaptor<Bits> const& lhs, bitset_adaptor<Bits> const& rhs) noexcept((Bits::extent != std::dynamic_extent))
+        -> bitset_adaptor<Bits>
 {
         auto nrv = lhs;
         nrv -= rhs;
@@ -923,19 +952,22 @@ template<class Bits> [[nodiscard]] constexpr auto operator-(bitset_adaptor<Bits>
 }
 
 // @= belongs to the left operand and @ does not, where std::bitset makes these three members.
-template<class Bits> [[nodiscard]] constexpr auto operator~(bitset_adaptor<Bits> const& lhs) noexcept((Bits::extent != std::dynamic_extent)) -> bitset_adaptor<Bits>
+template<class Bits> [[nodiscard]] constexpr auto operator~(bitset_adaptor<Bits> const& lhs) noexcept((Bits::extent != std::dynamic_extent))
+        -> bitset_adaptor<Bits>
 {
         auto nrv = lhs;
         nrv.flip();
         return nrv;
 }
-template<class Bits> [[nodiscard]] constexpr auto operator<<(bitset_adaptor<Bits> const& lhs, std::size_t pos) noexcept((Bits::extent != std::dynamic_extent)) -> bitset_adaptor<Bits>
+template<class Bits> [[nodiscard]] constexpr auto operator<<(bitset_adaptor<Bits> const& lhs, std::size_t pos) noexcept((Bits::extent != std::dynamic_extent))
+        -> bitset_adaptor<Bits>
 {
         auto nrv = lhs;
         nrv <<= pos;
         return nrv;
 }
-template<class Bits> [[nodiscard]] constexpr auto operator>>(bitset_adaptor<Bits> const& lhs, std::size_t pos) noexcept((Bits::extent != std::dynamic_extent)) -> bitset_adaptor<Bits>
+template<class Bits> [[nodiscard]] constexpr auto operator>>(bitset_adaptor<Bits> const& lhs, std::size_t pos) noexcept((Bits::extent != std::dynamic_extent))
+        -> bitset_adaptor<Bits>
 {
         auto nrv = lhs;
         nrv >>= pos;

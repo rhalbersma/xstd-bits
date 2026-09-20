@@ -54,15 +54,18 @@ namespace wrong {
 struct dirty_default
 {
         std::uint64_t w = 1ULL;
-        constexpr auto set(std::size_t n) noexcept -> void
+        constexpr auto set(std::size_t n) noexcept
+                -> void
         {
                 w |= 1ULL << n;
         }
-        [[nodiscard]] static constexpr auto count() noexcept -> std::size_t
+        [[nodiscard]] static constexpr auto count() noexcept
+                -> std::size_t
         {
                 return 1UZ;
         }
-        [[nodiscard]] static constexpr auto size() noexcept -> std::size_t
+        [[nodiscard]] static constexpr auto size() noexcept
+                -> std::size_t
         {
                 return 64UZ;
         }
@@ -72,15 +75,18 @@ struct dirty_default
 struct miscounting
 {
         std::uint64_t w = 0ULL;
-        constexpr auto set(std::size_t n) noexcept -> void
+        constexpr auto set(std::size_t n) noexcept
+                -> void
         {
                 w |= 1ULL << n;
         }
-        [[nodiscard]] static constexpr auto count() noexcept -> std::size_t
+        [[nodiscard]] static constexpr auto count() noexcept
+                -> std::size_t
         {
                 return 2UZ;
         }
-        [[nodiscard]] static constexpr auto size() noexcept -> std::size_t
+        [[nodiscard]] static constexpr auto size() noexcept
+                -> std::size_t
         {
                 return 64UZ;
         }
@@ -90,15 +96,18 @@ struct miscounting
 struct reversed
 {
         std::uint64_t w = 0ULL;
-        constexpr auto set(std::size_t n) noexcept -> void
+        constexpr auto set(std::size_t n) noexcept
+                -> void
         {
                 w |= 1ULL << (63UZ - n);
         }
-        [[nodiscard]] static constexpr auto count() noexcept -> std::size_t
+        [[nodiscard]] static constexpr auto count() noexcept
+                -> std::size_t
         {
                 return 1UZ;
         }
-        [[nodiscard]] static constexpr auto size() noexcept -> std::size_t
+        [[nodiscard]] static constexpr auto size() noexcept
+                -> std::size_t
         {
                 return 64UZ;
         }
@@ -109,15 +118,18 @@ struct spare_word
 {
         std::uint64_t w = 0ULL;
         std::uint64_t unused = 0ULL;
-        constexpr auto set(std::size_t n) noexcept -> void
+        constexpr auto set(std::size_t n) noexcept
+                -> void
         {
                 w |= 1ULL << n;
         }
-        [[nodiscard]] static constexpr auto count() noexcept -> std::size_t
+        [[nodiscard]] static constexpr auto count() noexcept
+                -> std::size_t
         {
                 return 1UZ;
         }
-        [[nodiscard]] static constexpr auto size() noexcept -> std::size_t
+        [[nodiscard]] static constexpr auto size() noexcept
+                -> std::size_t
         {
                 return 64UZ;
         }
@@ -131,11 +143,13 @@ struct non_constant_set
         {
                 w |= 1ULL << n;
         }
-        [[nodiscard]] static constexpr auto count() noexcept -> std::size_t
+        [[nodiscard]] static constexpr auto count() noexcept
+                -> std::size_t
         {
                 return 1UZ;
         }
-        [[nodiscard]] static constexpr auto size() noexcept -> std::size_t
+        [[nodiscard]] static constexpr auto size() noexcept
+                -> std::size_t
         {
                 return 64UZ;
         }
@@ -166,15 +180,18 @@ BOOST_AUTO_TEST_CASE(TheProbeRefusesALayoutThatIsWrong)
         struct right
         {
                 std::uint64_t w = 0ULL;
-                constexpr auto set(std::size_t n) noexcept -> void
+                constexpr auto set(std::size_t n) noexcept
+                        -> void
                 {
                         w |= 1ULL << n;
                 }
-                [[nodiscard]] static constexpr auto count() noexcept -> std::size_t
+                [[nodiscard]] static constexpr auto count() noexcept
+                        -> std::size_t
                 {
                         return 1UZ;
                 }
-                [[nodiscard]] static constexpr auto size() noexcept -> std::size_t
+                [[nodiscard]] static constexpr auto size() noexcept
+                        -> std::size_t
                 {
                         return 64UZ;
                 }

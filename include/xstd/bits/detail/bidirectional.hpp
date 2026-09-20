@@ -87,13 +87,15 @@ public:
                 return *this;
         }
 
-        constexpr auto operator++(int) noexcept -> bidirectional_bit_iterator
+        constexpr auto operator++(int) noexcept
+                -> bidirectional_bit_iterator
         {
                 auto nrv = *this;
                 ++*this;
                 return nrv;
         }
-        constexpr auto operator--(int) noexcept -> bidirectional_bit_iterator
+        constexpr auto operator--(int) noexcept
+                -> bidirectional_bit_iterator
         {
                 auto nrv = *this;
                 --*this;
