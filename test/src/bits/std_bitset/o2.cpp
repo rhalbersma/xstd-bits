@@ -68,7 +68,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheComparisonsHoldOverEverySingletonPair, T, Types
         on2::all_singleton_set_pairs<T>(mem_is_proper_subset_of());
         on2::all_singleton_set_pairs<T>(mem_intersects());
 
-        // empty/full set vs. every doubleton at matching N -- see o1.cpp for why N is pinned.
+        // empty/full set against every doubleton at matching N, so a dynamic_bitset pair differs only in cardinality.
         on2::all_doubleton_sets<T, limit_v<T, L4>>([](auto const& bs2) {
                 on0::empty_set<T, limit_v<T, L4>>([&](auto const& bs0) {
                         mem_compare_three_way()(bs0, bs2);

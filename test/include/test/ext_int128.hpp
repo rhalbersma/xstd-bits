@@ -28,7 +28,7 @@
 
 #endif
 
-// As with test/uint128.hpp, the check that these are really usable Blocks lives in test/block_types.hpp.
+// Declared here; whether they are really usable Blocks is asserted where the Block grading is.
 namespace test {
 
 #ifdef TEST_HAS_MSVC_INT128

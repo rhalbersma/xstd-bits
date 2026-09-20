@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-// The run-time width against boost's, on the same word ladder the static width runs in ops.cpp.
+// The run-time width against boost's, on the same word ladder the static width runs.
 
 #include <xstd/bits/bit_set_view.hpp>   // bit_set_view
 #include <xstd/bits/dynamic_bitset.hpp> // dynamic_bitset

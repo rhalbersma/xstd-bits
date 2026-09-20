@@ -22,7 +22,7 @@
 
 BOOST_AUTO_TEST_SUITE(BitFiniteSet)
 
-// Every Block model within one block and the narrow ones across boundaries; the grading is in test/block_types.hpp.
+// Every Block model within one block, and the narrow ones across boundaries.
 using Types = test::graded_extents<xstd::basic_bit_static_set>;
 
 // The clauses one at a time, so a failure names which one; the umbrella asserts the composite.
@@ -254,7 +254,7 @@ BOOST_AUTO_TEST_CASE(RawBlocksCrossOnTheSameRule)
         static_assert(test::exchanges_bits<Set, Wide>);
         static_assert(test::exchanges_bits<Set, Narrow>);
 
-        // And the unnamed door is closed, so a sequence of blocks no longer reads as the from_range spelling.
+        // And the unnamed door is closed, so a sequence of blocks does not read as the from_range spelling.
         static_assert(not std::is_constructible_v<Set, Wide>);
         static_assert(not std::is_constructible_v<Set, Narrow>);
 }

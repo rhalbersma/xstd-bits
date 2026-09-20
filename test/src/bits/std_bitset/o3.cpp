@@ -31,7 +31,7 @@ using Types = std::tuple<boost::dynamic_bitset<>, std::bitset<0>, std::bitset<17
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(CompareThreeWayHoldsOverEveryTripletAndDoubleton, T, Types)
 {
-        // empty/full set vs. every triplet at matching N -- see o1.cpp for why N is pinned.
+        // empty/full set against every triplet at matching N, so a dynamic_bitset pair differs only in cardinality.
         on3::all_triplet_sets<T>([](auto const& bs3) {
                 on0::empty_set<T, limit_v<T, L3>>([&](auto const& bs0) {
                         mem_compare_three_way()(bs0, bs3);

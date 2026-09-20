@@ -181,7 +181,7 @@ BOOST_AUTO_TEST_CASE(TheProxyFormatsAsItsValue)
 
 BOOST_AUTO_TEST_SUITE_END()
 
-// The set view hands out this proxy and nothing of its own; what ranges.hpp once answered, now answered here.
+// The set view hands out this proxy and nothing of its own.
 BOOST_AUTO_TEST_SUITE(BidirectionalThroughTheView)
 
 namespace {
