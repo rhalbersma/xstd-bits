@@ -6,6 +6,7 @@ This repository enforces its quality bar through CI rather than through review d
 
 - **Every compiler/platform leg passes.** See the table in [README.md](README.md) for the current matrix (GCC, Clang, Clang libc++, Clang-CL, MSVC, MinGW, Apple Clang). Every leg counts, including every `Development` leg (`17-SVN`, `24-SVN`, `2026-Preview`), the `libc++` legs, and the `Clang-CL` VS 2022 legs; none of them are advisory. Each ladder workflow ends in an `all` job that is red unless every one of its legs succeeded, and that gate is what branch protection requires: a leg name changes whenever a rung moves, the gate name does not.
 - **`clang-tidy` is clean.** [`.clang-tidy`](.clang-tidy) sets `WarningsAsErrors: '*'`, so any finding over the public headers fails the job outright.
+- **`clang-format` is clean.** The [Clang-Format workflow](.github/workflows/clang-format.yml) runs `clang-format --dry-run --Werror` over every header, test and benchmark source against [`.clang-format`](.clang-format), so any diff fails the job. Run `clang-format -i` on changed files before pushing, with **version 22 or newer**: before 22, clang-format reads `{ a * b }` in a requires-expression as a pointer declaration. The style file is [xstd-misc](https://github.com/rhalbersma/xstd-misc/blob/main/.clang-format)'s and [xstd-ints](https://github.com/rhalbersma/xstd-ints/blob/main/.clang-format)'s, the three repositories sharing one format; `AccessModifierOffset` is the only key those two do not exercise, neither having an access specifier anywhere. Match the surrounding code's style by eye where `.clang-format` doesn't have an opinion, including the Boost Software License header comment at the top of every source and workflow file.
 - **MSVC's `/analyze` is clean.** The [MSVC-Analyze workflow](.github/workflows/msvc-analyze.yml) fills the same role on the MSVC side, on the two Visual Studio 2026 rungs the `msvc` ladder covers.
 - **No sanitizer failures.** The [Sanitizers workflow](.github/workflows/sanitizers.yml) runs ASan+LSan, UBSan and the implicit-conversion sanitizer, against both libstdc++ and libc++. Leak detection is on.
 - **The public headers stay self-sufficient.** Each header is compiled as its own translation unit (see `test/CMakeLists.txt`); don't rely on include order from another header.
@@ -56,11 +57,7 @@ An umbrella source takes the stem like any other, so `test/src/bits/ranges.cpp` 
 
 This is [xstd](https://github.com/rhalbersma/xstd-ints)'s convention as well, including the subtraction: `Ints` goes the same way once xstd splits into xstd-ints and xstd-core and `ints/` stops distinguishing anything. The two libraries' test trees are meant to read the same way.
 
-One check runs without being required:
-
-- **`clang-format` does not run on a PR.** This repository has no `.clang-format`, so [its workflow](.github/workflows/clang-format.yml) is dispatch-only; enabling it means adopting a style and reformatting the tree.
-
-The [Scorecard workflow](.github/workflows/scorecard.yml) cannot be required either: it runs on pushes to `main` and on a schedule, never on a pull request.
+The [Scorecard workflow](.github/workflows/scorecard.yml) cannot be required: it runs on pushes to `main` and on a schedule, never on a pull request.
 
 ## Required status checks
 
@@ -72,6 +69,7 @@ The names to tick under branch protection, exactly as GitHub reports them:
 | `apple_clang / all` | Xcode 16.4 and 26.6, Debug and Release |
 | `clang / all` | Clang 22, 23, 24-SVN with libstdc++ |
 | `clang_cl / all` | clang-cl on VS 2022, 2026, 2026-Preview |
+| `clang_format / clang-format` | `clang-format --dry-run --Werror` against [`.clang-format`](.clang-format) |
 | `clang_libcxx / all` | Clang 22, 23, 24-SVN with libc++ |
 | `clang_tidy / all` | clang-tidy on all three rungs |
 | `codeql / Analyze` | `security-extended` |
