@@ -15,6 +15,9 @@ authority on how the code reads, which no gate checks.
   front of them must be able to act on it.
 - **Prefer a name.** Rename the variable, extract the function, or tighten the type before reaching
   for prose. The best comment is the one a good name made unnecessary.
+- **Declarative, and about the code as it stands.** Say what the code does, not what it used to do
+  or why it changed: no "used to", "no longer", "once answered", "now that X is gone". A reader
+  cannot see the version you are contrasting with. History is in the commit logs.
 
 Shorten to the claim the code cannot make for itself. A measurement, a standard citation or a
 rejected alternative earns its line when it says why this code is the way it is; the reasoning that
