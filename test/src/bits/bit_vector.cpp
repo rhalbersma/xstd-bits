@@ -67,8 +67,7 @@ BOOST_AUTO_TEST_CASE(ItAnswersEveryLineOfStdVectorBool)
         static_assert(std::same_as<T::allocator_type, std::allocator<std::uint8_t>>);
 }
 
-// What the checklist names and never runs. A requires-expression proves a member exists; only a call proves it works,
-// and these three are exactly the ones this branch added to [vector.bool]'s surface.
+// What the checklist names and never runs: a requires-expression proves a member exists, only a call proves it works.
 BOOST_AUTO_TEST_CASE(TheProxyFlipsAndTheEmptyArgumentListPushesFalse)
 {
         auto v = xstd::bit_vector(4UZ);
@@ -80,8 +79,7 @@ BOOST_AUTO_TEST_CASE(TheProxyFlipsAndTheEmptyArgumentListPushesFalse)
         BOOST_CHECK(v[0] == true);
         BOOST_CHECK(v[1] == false);
 
-        // Variadic, so value-initialization is one of the argument lists it takes: std::vector<bool>().emplace_back()
-        // pushes a false and so must this.
+        // Variadic, so value-initialization is one of the argument lists it takes, and it pushes a false.
         auto const n = v.size();
         BOOST_CHECK(v.emplace_back() == false);
         BOOST_CHECK_EQUAL(v.size(), n + 1UZ);
@@ -178,7 +176,7 @@ BOOST_AUTO_TEST_CASE(ItGrowsLikeAStdVector)
         v.shrink_to_fit();
         BOOST_CHECK_GE(v.capacity(), v.size());
 
-        // A std::vector<bool>'s ceiling, which is what a distance can name and not what the blocks could hold: whole blocks no wider than PTRDIFF_MAX, where the storage's own bound is whole blocks no wider than SIZE_MAX.
+        // A std::vector<bool>'s ceiling is what a distance can name, where the storage's own bound is whole blocks.
         BOOST_CHECK_EQUAL(v.max_size(), xstd::detail::bits::contiguous_bit_vector<std::uint8_t>::max_addressable_width);
         BOOST_CHECK_LT(v.max_size(), xstd::detail::bits::contiguous_bit_vector<std::uint8_t>().max_size());
         BOOST_CHECK_LE(v.max_size(), static_cast<std::size_t>(std::numeric_limits<std::ptrdiff_t>::max()));
@@ -200,15 +198,7 @@ auto model_of(R const& r)
         return std::vector<bool>(r.begin(), r.end());
 }
 
-// The ceiling row for row against the counterpart, asked of both rather than claimed of one. Over blocks of the
-// same width as a std::vector<bool>'s word, which is what xstd::bit_vector is, so the two are comparable at all.
-//
-// The counterpart here is a SPECIFICATION and not an implementation, and its implementations disagree: measured
-// on one machine, libstdc++ 14 answers (PTRDIFF_MAX / 64) * 64 and libc++ 20 answers a bare PTRDIFF_MAX, sixty-
-// three apart. So there is no number to assert. What holds of every one of them is asserted instead, and it is
-// what [container.reqmts] actually promises -- a bound no wider than a difference_type can name, and
-// std::length_error above it -- plus the one relation that orders the two: a whole number of 64-bit words is the
-// SMALLEST such bound any word width can produce, so ours is never the larger claim.
+// The ceiling row for row, over blocks as wide as a std::vector<bool>'s word so the two are comparable at all.
 BOOST_AUTO_TEST_CASE(TheCeilingIsStdVectorBoolsRowForRow)
 {
         constexpr auto pmax = static_cast<std::size_t>(std::numeric_limits<std::ptrdiff_t>::max());
@@ -221,15 +211,11 @@ BOOST_AUTO_TEST_CASE(TheCeilingIsStdVectorBoolsRowForRow)
         BOOST_CHECK_LE(v.max_size(), m.max_size());
         BOOST_CHECK_EQUAL(v.max_size() % 64UZ, 0UZ);
 
-        // One past each one's own bound is std::length_error on both, and neither asks for memory first: this is
-        // the row [container.reqmts] fixes, and the reason it cannot wrap is that a bound at or below PTRDIFF_MAX
-        // leaves room to add one.
+        // One past each bound is std::length_error on both, and neither asks for memory first.
         BOOST_CHECK_THROW(v.resize(v.max_size() + 1UZ), std::length_error);
         BOOST_CHECK_THROW(m.resize(m.max_size() + 1UZ), std::length_error);
 
-        // And one past what any distance can name, which is the row this reading used to get wrong: it answered
-        // std::bad_alloc here, having taken the storage's wider ceiling, where a std::vector<bool> answers
-        // std::length_error. Roughly 2^63 sizes with the wrong exception, and this is the assertion that closes it.
+        // And one past what any distance can name, where a std::vector<bool> answers std::length_error.
         BOOST_CHECK_THROW(v.resize(pmax + 1UZ), std::length_error);
         BOOST_CHECK_THROW(m.resize(pmax + 1UZ), std::length_error);
 
@@ -239,10 +225,7 @@ BOOST_AUTO_TEST_CASE(TheCeilingIsStdVectorBoolsRowForRow)
 
 #ifndef TEST_HAS_ADDRESS_SANITIZER
 
-        // The last row asks for the memory rather than refusing, so it is the allocator that answers, and under a
-        // sanitizer the answer is an abort rather than an exception (test/sanitizer.hpp). Ours only: at their own
-        // max_size() the two libraries measured do not agree with each other either -- libstdc++ reaches the
-        // allocator, libc++ throws std::length_error at a size it just reported -- so there is nothing to compare.
+        // The last row asks for the memory, so the allocator answers; ours only, the two libraries not agreeing here.
         BOOST_CHECK_THROW(v.resize(v.max_size()), std::bad_alloc);
         BOOST_CHECK(v.empty());
 
@@ -270,7 +253,7 @@ auto pattern(std::size_t n)
 
 } // namespace
 
-// append_range's first tier: another sequence read by block, at every alignment the source and the destination can have.
+// append_range's first tier: another sequence read by block, at every alignment source and destination can have.
 BOOST_AUTO_TEST_CASE(AppendRangeBlitsFromASequenceAtAnyAlignment)
 {
         auto const source = T(std::from_range, pattern(50));
@@ -380,7 +363,7 @@ BOOST_AUTO_TEST_CASE(InsertingRangesRebuildsAsAStdVectorDoes)
                 auto v = T(std::from_range, pattern(20));
                 auto m = pattern(20);
 
-                // A range shorter than a word, one of exactly a word, and one that spills into a second: the packing tier's three endings.
+                // Shorter than a word, exactly a word, and spilling into a second: the packing tier's three endings.
                 auto const more = pattern(11);
                 same_offset_and_contents(v, v.insert(at(v, pos), more.begin(), more.end()), m, m.insert(at(m, pos), more.begin(), more.end()));
                 auto const word = pattern(8);
@@ -415,7 +398,7 @@ BOOST_AUTO_TEST_CASE(FlipAndSwapAreStdVectorBools)
         m.flip();
         BOOST_CHECK(std::ranges::equal(v, m));
 
-        // Ours is [vector.bool]'s static swap, which the clause still has; the model's own is deprecated by C++26 (LWG-3638, P3612R1) and MSVC 2026 says so under /WX, so the model's two bits are exchanged directly.
+        // Ours is [vector.bool]'s static swap; the model's own is deprecated by C++26 (LWG-3638, P3612R1).
         T::swap(v[0], v[1]);
         auto const m0 = static_cast<bool>(m[0]);
         m[0] = static_cast<bool>(m[1]);
