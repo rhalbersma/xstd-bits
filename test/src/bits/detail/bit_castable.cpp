@@ -16,8 +16,7 @@ BOOST_AUTO_TEST_SUITE(BitCastable)
 
 namespace bits = xstd::detail::bits;
 
-// An unsigned integer is its own layout: bit n of the value is 2^n by the language, so this family is admitted
-// on arithmetic alone, with nothing probed and nothing assumed about any implementation.
+// An unsigned integer is its own layout: bit n of the value is 2^n by the language, so nothing is probed.
 BOOST_AUTO_TEST_CASE(AnUnsignedIntegerIsItsOwnLayout)
 {
         static_assert(bits::integer_source<unsigned char, 8UZ>);
@@ -33,10 +32,7 @@ BOOST_AUTO_TEST_CASE(AnUnsignedIntegerIsItsOwnLayout)
         static_assert(not bits::integer_source<bool, 1UZ>);
 }
 
-// The other family proves what the first states. Every standard library this ladder builds against lays a
-// std::bitset out as ascending words, least significant bit first, so byte n / 8 holds position n at bit n % 8 --
-// asserted here as a value rather than a static_assert, so a rung where it were ever false reports one failing
-// assertion instead of failing to compile the whole target.
+// The other family proves what the first states, asserted as a value so a rung where it failed reports one assertion.
 BOOST_AUTO_TEST_CASE(TheLayoutIsProvedOnThisStandardLibrary)
 {
         static_assert(bits::bit_layout_holds<std::bitset<200UZ>, 200UZ>());
@@ -47,15 +43,11 @@ BOOST_AUTO_TEST_CASE(TheLayoutIsProvedOnThisStandardLibrary)
         static_assert(bits::container_source<std::bitset<33UZ>, 33UZ>); // and its wide one
         static_assert(bits::container_source<std::bitset<200UZ>, 200UZ>);
 
-        // Five fixed positions cost the same whatever the width, so a large one is not a compile-time hazard --
-        // up to 2^20, past which clang's default -fconstexpr-steps wants raising.
+        // Five fixed positions cost the same at any width, so a large one is no hazard up to 2^20.
         static_assert(bits::container_source<std::bitset<1UZ << 16UZ>, 1UZ << 16UZ>);
 }
 
-// Four layouts that are WRONG, one per way of being wrong, so that what the probe refuses is tested rather than
-// assumed. Each is trivially copyable and answers set/count/size, so each clears every structural bound and is
-// refused by the probe alone -- which is the only evidence that the probe is doing the work the concept credits
-// it with. They are also what covers its four refusals: a conforming implementation takes none of them.
+// Four layouts that are wrong, one per way, each clearing every structural bound so only the probe refuses it.
 namespace wrong {
 
 // Its default is not all clear, so the first scan refuses it.
@@ -131,11 +123,7 @@ struct spare_word
         }
 };
 
-// Its set() is well-formed but NOT usable in a constant expression, which is a different failure from every one
-// above: those are layouts the probe RUNS and refuses, this is one the probe cannot run at all. A block type whose
-// operator|= is not constexpr produces exactly this -- absl::uint128 is one, and a bitset over it reaches here
-// through its own reading. Without a guard the probe is a hard error in the middle of a constraint; with one it is
-// an ordinary unsatisfied concept, and the conversion simply does not exist for that type.
+// Its set() is well-formed but not a constant expression, so the probe cannot run at all rather than refusing.
 struct non_constant_set
 {
         std::uint64_t w = 0ULL;
@@ -157,16 +145,12 @@ struct non_constant_set
 
 BOOST_AUTO_TEST_CASE(TheProbeRefusesALayoutThatIsWrong)
 {
-        // static_assert and never a run-time call: the probe is constexpr-ONLY by design, so it emits no code and
-        // has no coverage slots. Calling it once at run time emits one instantiation per type probed, and no single
-        // one of those can take every arm -- a correct layout takes none of the refusals, and an incorrect one
-        // returns at the first and never reaches the rest. Measured, before it reached CI.
+        // static_assert and never a run-time call: the probe emits no code and has no coverage slots.
         static_assert(not bits::bit_layout_holds<wrong::dirty_default, 64UZ>());
         static_assert(not bits::bit_layout_holds<wrong::miscounting, 64UZ>());
         static_assert(not bits::bit_layout_holds<wrong::reversed, 64UZ>());
 
-        // A set() that is not a CONSTANT EXPRESSION is refused without the probe running, which is the whole point:
-        // it is everything probeable_bits asks for, so the probe would otherwise be reached and hard-error.
+        // A set() that is no constant expression is refused before the probe runs, which is the point of the guard.
         static_assert(bits::probeable_bits<wrong::non_constant_set>);
         static_assert(not bits::probe_is_constant<wrong::non_constant_set>);
         static_assert(not bits::container_source<wrong::non_constant_set, 64UZ>);
@@ -199,8 +183,7 @@ BOOST_AUTO_TEST_CASE(TheProbeRefusesALayoutThatIsWrong)
         static_assert(bits::bit_castable<right, 64UZ>);
 }
 
-// Neither family, and for a different reason each: a heap container is not its own bits, and a width the object
-// cannot hold is not a conversion.
+// Neither family: a heap container is not its own bits, and a width the object cannot hold is not a conversion.
 BOOST_AUTO_TEST_CASE(WhatIsRefusedAndWhy)
 {
         static_assert(not bits::bit_castable<std::vector<bool>, 64UZ>);
@@ -233,8 +216,7 @@ BOOST_AUTO_TEST_CASE(TheTwoDirectionsAreEachOthersInverse)
         static_assert(bits::byte_count<0UZ> == 0UZ);
 }
 
-// The byte view is the whole of the object and nothing besides: one position lights one bit of one byte and
-// leaves every other byte clear. That second half is what refuses a reordered word and a big-endian target both.
+// The byte view is the whole object and nothing besides, refusing a reordered word and a big-endian target both.
 BOOST_AUTO_TEST_CASE(OnePositionLightsOneBitOfOneByte)
 {
         constexpr auto N = 200UZ;
@@ -248,8 +230,7 @@ BOOST_AUTO_TEST_CASE(OnePositionLightsOneBitOfOneByte)
         }
 }
 
-// A CONTIGUOUS SEQUENCE OF BLOCKS is the same stated family said over more than one word: block j holds the
-// positions [j*digits, (j+1)*digits), and a scalar is the sequence of length one. Nothing is probed here either.
+// A contiguous sequence of blocks is the same stated family over more than one word, and nothing is probed here.
 BOOST_AUTO_TEST_CASE(ASequenceOfBlocksStatesItsLayoutToo)
 {
         static_assert(bits::block_range_source<std::array<std::uint64_t, 4>, 256UZ>);
@@ -264,13 +245,10 @@ BOOST_AUTO_TEST_CASE(ASequenceOfBlocksStatesItsLayoutToo)
         static_assert(bits::block_range_source<std::array<std::uint64_t, 2>, 65UZ>);
         static_assert(not bits::block_range_source<std::array<std::uint64_t, 1>, 65UZ>);
 
-        // A vector has no bits until one is put in it, so B().size() is zero and it states nothing. That is a
-        // width and not a preference: the readings promise at COMPILE time that nothing truncates, and a run-time
-        // size cannot keep that promise.
+        // A vector has no bits until one is put in it, so B().size() is zero and it states nothing.
         static_assert(not bits::block_range_source<std::vector<std::uint64_t>, 64UZ>);
 
-        // Signed blocks are not this family: contiguous_block_range asks for an unsigned value type, which is the
-        // same invariant Block itself rests on.
+        // Signed blocks are not this family: contiguous_block_range asks for an unsigned value type.
         static_assert(not bits::block_range_source<std::array<int, 4>, 64UZ>);
 
         // And a scalar is not a range, which is why the family keeps two spellings rather than one.
@@ -278,8 +256,7 @@ BOOST_AUTO_TEST_CASE(ASequenceOfBlocksStatesItsLayoutToo)
         static_assert(bits::bit_castable<std::uint64_t, 64UZ>);
 }
 
-// The bytes a block sequence spells are the bytes of its values, which is what keeps this endian-independent:
-// b[j] >> k is the same number on either byte order, where a bit_cast of the object would not be.
+// The bytes a block sequence spells are the bytes of its values, so b[j] >> k is the same on either byte order.
 BOOST_AUTO_TEST_CASE(BlocksAndBytesAreEachOthersInverse)
 {
         using Blocks = std::array<std::uint64_t, 2>;
@@ -304,8 +281,7 @@ BOOST_AUTO_TEST_CASE(BlocksAndBytesAreEachOthersInverse)
                 return bits::bit_bytes<64UZ>(wide) == bits::bit_bytes<64UZ>(narrow);
         }());
 
-        // Blocks above the width come back CLEAR, which is what makes the round trip an identity at a width the
-        // sequence is wider than.
+        // Blocks above the width come back clear, which is what makes the round trip an identity at a wider sequence.
         static_assert([] -> bool {
                 auto const out = bits::bytes_bits<std::array<std::uint64_t, 4>, 64UZ>(
                         bits::bit_bytes<64UZ>(std::array<std::uint64_t, 4>{7ULL, 1ULL, 1ULL, 1ULL}));
@@ -313,10 +289,7 @@ BOOST_AUTO_TEST_CASE(BlocksAndBytesAreEachOthersInverse)
         }());
 }
 
-// THE COPY AND THE SHIFTS MUST AGREE, which is the whole risk the run-time fast path carries. Every other case in
-// this file is a static_assert, so every one of them takes the SHIFT branch and none of them takes the copy: the
-// branch is chosen by `if consteval`, a language rule rather than an optimisation, so a constant expression and a
-// run-time call genuinely run different code over the same bytes. Each family is put through both and compared.
+// The copy and the shifts must agree: if consteval is a language rule, so the two genuinely run different code.
 BOOST_AUTO_TEST_CASE(TheCopyAndTheShiftsAgree)
 {
         // A sequence of blocks, at two block widths, so the bytes-per-block arithmetic is exercised either side.
@@ -354,8 +327,7 @@ BOOST_AUTO_TEST_CASE(TheCopyAndTheShiftsAgree)
                 BOOST_CHECK_EQUAL(back_copied, value);
         }
 
-        // A foreign field of bits, where the copy replaces a bit_cast AND a byte loop, at a width that is not a
-        // whole number of bytes so the last byte is a partial one.
+        // A foreign field of bits at a width that is not a whole number of bytes, so the last byte is a partial one.
         {
                 constexpr auto N = 100UZ;
                 using Field = std::bitset<N>;
