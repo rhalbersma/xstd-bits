@@ -401,6 +401,29 @@ case that is neither, which is every rung this ladder runs. `if consteval` picks
 `if constexpr (endian::native == endian::little)` the second; neither is a branch a coverage slot can miss,
 because neither is a branch at run time.
 
+That pair of cases is worth taking one branch at a time, because three of them are not the same question.
+
+A **scalar** takes no copy at all, and that is measured rather than assumed: a value is at most a handful of
+bytes, the loop unrolls, and `memcpy` timed identically at every width — **0.31ns either way** on `uint8`,
+`uint32` and `uint64`. A branch that buys nothing is worse than no branch.
+
+A **sequence of blocks** takes the copy only where the bytes of a value are the bytes of the field, which is a
+little-endian target whose block type has no padding: the shifts count by `digits` where a copy counts by
+`sizeof`, and those agree only when every bit of the object is a value bit. No standard type has such padding,
+and the test is there so that one could not quietly turn a copy into the wrong answer. Its shape is load-bearing
+too: written as `if !consteval` with a return, the shifts below it become unreachable code in a run-time
+instantiation, which MSVC reports as C4702 and this build treats as an error. Two alternatives, so neither arm
+is dead.
+
+The blocks are **value-initialised first**, which is what clears the tail above `N` and so makes
+set → blocks → set the identity at a width the sequence is wider than. The other direction is not the identity
+and is not meant to be, exactly as it already is not for an integer too wide for the width.
+
+A **zero width** is the one case that has to be refused rather than proved. `std::bitset<0>` occupies a byte
+that represents no position, so a `bit_cast` of it reads an uninitialised one and is no constant expression. The
+guard is `byte_count<N>` rather than `N`, those being zero together and `byte_count` being what the two
+conversions actually range over.
+
 That factor is what decides a question this design keeps inviting: whether a foreign bitset should be **read**
 block-wise in place rather than converted. In place is not portably possible — `bit_cast` yields a copy, so
 reading someone else's words needs a pointer into them, which is `_M_p`, `__seg_` or `_Myptr` by turns. It also
@@ -444,6 +467,12 @@ the width constraint catches and not a shape `bit_cast` refuses; a non-constant 
 needs its own gate. It lights **one** position rather than five, because this is the gate and the probe is the
 proof: paying the full probe twice would halve the width the step budget reaches. `count()` rides along, being
 the only other call the probe makes.
+
+Neither `probe_once` nor `bit_layout_holds` is `noexcept`, and deliberately so. A bitset reading's `set(pos)`
+throws `out_of_range` for a position it does not have. Neither ever asks for one — the loop skips `i >= N` and
+the width constraint is settled before either runs — but that is reasoning a call graph cannot follow, and a
+throw out of a `noexcept` function is a terminate rather than a diagnostic. There is nothing to buy back
+either: every call to these is a constant evaluation, where a throw is already a hard error.
 
 The cost of that gate is that such a type is not a **source**. It remains a perfectly good target — a
 `basic_bitset<absl::uint128, 384>` still converts to and from a `std::bitset<384>`, because the probe runs on the

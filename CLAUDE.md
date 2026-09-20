@@ -15,9 +15,10 @@ bound by these rules. Other file types use their own comment syntax and are not 
 - **One line each.** A comment is a single `//` line. Never continue it onto a second. A note that
   will not fit is carrying something that belongs in a name, a type, or a document; put it there
   rather than wrapping it across lines.
-- **120 columns, indentation included.** This is a limit on comment lines. `.clang-format` sets
-  `ColumnLimit: 0` and will not wrap for you, so this is yours to hold; code lines have no such
-  limit and routinely run past it.
+- **120 columns, indentation included.** This is a limit on a line that *is* a comment.
+  `.clang-format` sets `ColumnLimit: 0` and will not wrap for you, so this is yours to hold. Code
+  lines have no such limit and routinely run past it, and a comment trailing one inherits the room
+  the code took: what is measured is the comment's own line, never the statement it annotates.
 - **Self-contained.** Name no file in this repository, no issue or pull request, and no other
   comment — not design.md, not "as above", not "which X already records". A reader who has only the
   lines in front of them must be able to act on it. A standard clause, a paper number or another
