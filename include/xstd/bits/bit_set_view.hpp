@@ -7,7 +7,7 @@
 #define XSTD_BITS_BIT_SET_VIEW_HPP
 
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
-#include <xstd/bits/ownership.hpp>                       // ownership
+#include <xstd/bits/ownership.hpp>                       // storage
 #include <xstd/bits/set_adaptor.hpp>                     // set_adaptor
 #include <xstd/misc/concepts/specialization_of.hpp>      // specialization_of_TN
 #include <boost/container_hash/is_range.hpp>             // is_range
@@ -20,9 +20,9 @@ namespace xstd {
 
 // A class rather than an alias to the referring adaptor, so deduction and diagnostics name the view itself.
 template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits>
-class bit_set_view : public set_adaptor<Bits, ownership::refers, bit_set_view<Bits>>
+class bit_set_view : public set_adaptor<Bits, storage::borrowed, bit_set_view<Bits>>
 {
-        using base_type = set_adaptor<Bits, ownership::refers, bit_set_view<Bits>>;
+        using base_type = set_adaptor<Bits, storage::borrowed, bit_set_view<Bits>>;
 
 public:
         using base_type::base_type;

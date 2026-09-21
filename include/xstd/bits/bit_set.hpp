@@ -7,7 +7,7 @@
 #define XSTD_BITS_BIT_SET_HPP
 
 #include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
-#include <xstd/bits/ownership.hpp>                    // ownership
+#include <xstd/bits/ownership.hpp>                    // storage
 #include <xstd/bits/set_adaptor.hpp>                  // set_adaptor
 #include <xstd/ints/concepts/unsigned_integer.hpp>    // unsigned_integer
 #include <boost/container_hash/is_range.hpp>          // is_range
@@ -20,9 +20,9 @@ namespace xstd {
 
 // The set reading over a heap of blocks: the flagship, and the one name without a qualifier.
 template<xstd::unsigned_integer Block, class Allocator = std::allocator<Block>>
-class basic_bit_set : public set_adaptor<detail::bits::contiguous_bit_vector<Block, Allocator>, ownership::owns, basic_bit_set<Block, Allocator>>
+class basic_bit_set : public set_adaptor<detail::bits::contiguous_bit_vector<Block, Allocator>, storage::owned, basic_bit_set<Block, Allocator>>
 {
-        using base_type = set_adaptor<detail::bits::contiguous_bit_vector<Block, Allocator>, ownership::owns, basic_bit_set<Block, Allocator>>;
+        using base_type = set_adaptor<detail::bits::contiguous_bit_vector<Block, Allocator>, storage::owned, basic_bit_set<Block, Allocator>>;
 
 public:
         using base_type::base_type;

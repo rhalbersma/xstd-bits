@@ -12,7 +12,7 @@
 #ifdef __cpp_lib_inplace_vector
 
 #include <xstd/bits/detail/contiguous_bit_inplace_vector.hpp> // contiguous_bit_inplace_vector
-#include <xstd/bits/ownership.hpp>                            // ownership
+#include <xstd/bits/ownership.hpp>                            // storage
 #include <xstd/bits/sequence_adaptor.hpp>                     // sequence_adaptor
 #include <xstd/ints/concepts/unsigned_integer.hpp>            // unsigned_integer
 #include <boost/container_hash/is_range.hpp>                  // is_range
@@ -25,9 +25,9 @@ namespace xstd {
 
 // The packed std::inplace_vector<bool, N> that P0843 declined to write, named after the container it packs.
 template<xstd::unsigned_integer Block, std::size_t N>
-class basic_bit_inplace_vector : public sequence_adaptor<detail::bits::contiguous_bit_inplace_vector<Block, N>, ownership::owns, false, basic_bit_inplace_vector<Block, N>>
+class basic_bit_inplace_vector : public sequence_adaptor<detail::bits::contiguous_bit_inplace_vector<Block, N>, storage::owned, false, basic_bit_inplace_vector<Block, N>>
 {
-        using base_type = sequence_adaptor<detail::bits::contiguous_bit_inplace_vector<Block, N>, ownership::owns, false, basic_bit_inplace_vector<Block, N>>;
+        using base_type = sequence_adaptor<detail::bits::contiguous_bit_inplace_vector<Block, N>, storage::owned, false, basic_bit_inplace_vector<Block, N>>;
 
 public:
         using base_type::base_type;

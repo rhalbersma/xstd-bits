@@ -11,7 +11,7 @@
 #include <xstd/bits/bitset.hpp>                      // bitset
 #include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
 #include <xstd/bits/dynamic_bitset.hpp>              // dynamic_bitset
-#include <xstd/bits/ownership.hpp>                   // ownership
+#include <xstd/bits/ownership.hpp>                   // storage
 #include <xstd/bits/sequence_adaptor.hpp>            // sequence_adaptor
 #include <boost/test/unit_test.hpp>                  // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <algorithm>                                 // equal
@@ -43,7 +43,7 @@ constexpr auto takes_a_span(xstd::bit_span<Blocks> v) noexcept
 // The view is the referring adaptor under another name, and over an owner it refers into the storage the owner wraps.
 BOOST_AUTO_TEST_CASE(TheViewIsTheReferringAdaptor)
 {
-        static_assert(std::derived_from<xstd::bit_span<Blocks>, xstd::sequence_adaptor<Blocks, xstd::ownership::refers, false, xstd::bit_span<Blocks>>>);
+        static_assert(std::derived_from<xstd::bit_span<Blocks>, xstd::sequence_adaptor<Blocks, xstd::storage::borrowed, false, xstd::bit_span<Blocks>>>);
         static_assert(std::same_as<view_of<Blocks>, xstd::bit_span<Blocks>>);
         static_assert(std::same_as<view_of<Blocks const>, xstd::bit_span<Blocks const>>);
         static_assert(std::same_as<view_of<xstd::bitset<8>>, xstd::bit_span<xstd::detail::bits::contiguous_bit_array<std::size_t, 8>>>);

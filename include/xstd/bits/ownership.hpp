@@ -12,14 +12,15 @@
 namespace xstd {
 
 // The one template parameter owning-versus-viewing collapses to: an enum rather than a bool, so a diagnostic reads it.
-enum class ownership : bool { refers,
-                              owns,
+// Named for what is owned rather than for the owner: borrowed is the word std::ranges::enable_borrowed_range uses.
+enum class storage : bool { owned,
+                            borrowed,
 };
 
-[[nodiscard]] constexpr auto owns(ownership o) noexcept
+[[nodiscard]] constexpr auto owns(storage s) noexcept
         -> bool
 {
-        return o == ownership::owns;
+        return s == storage::owned;
 }
 
 // Which reading an owner is committed to; a bitset is committed to neither, which is what its two views are for.

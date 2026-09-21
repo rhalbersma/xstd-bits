@@ -11,7 +11,7 @@
 #include <xstd/bits/bit_vector.hpp>                   // bit_vector
 #include <xstd/bits/detail/contiguous_bit_array.hpp>  // contiguous_bit_array
 #include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
-#include <xstd/bits/ownership.hpp>                    // ownership
+#include <xstd/bits/ownership.hpp>                    // storage
 #include <xstd/bits/sequence_adaptor.hpp>             // sequence_adaptor
 #include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <algorithm>                                  // all_of, any_of, count, equal, lexicographical_compare_three_way, mismatch, none_of
@@ -33,8 +33,8 @@ namespace {
 
 using Storage = xstd::detail::bits::contiguous_bit_array<std::uint64_t, 100>;
 using Owner = xstd::basic_bit_array<std::uint64_t, 100>;
-using View = xstd::sequence_adaptor<Storage, xstd::ownership::refers, false>;
-using Reader = xstd::sequence_adaptor<Storage const, xstd::ownership::refers, false>;
+using View = xstd::sequence_adaptor<Storage, xstd::storage::borrowed, false>;
+using Reader = xstd::sequence_adaptor<Storage const, xstd::storage::borrowed, false>;
 
 // Dependent, so an absent member is a false rather than a hard error.
 template<class S>
@@ -51,7 +51,7 @@ template<class Seq>
         return {s.begin(), s.end()};
 }
 
-using DynamicOctet = xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint8_t>, xstd::ownership::owns, false>;
+using DynamicOctet = xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint8_t>, xstd::storage::owned, false>;
 
 // Every (size, pattern) pair as a sequence and the vector<bool> modelling it, so the comparison is one loop.
 [[nodiscard]] auto dynamic_probes()
@@ -277,8 +277,8 @@ constexpr bool can_grow = requires (X& x) { x.push_back(true); x.pop_back(); x.r
 // Growth is the owner's over storage that grows; a static width and a view have none of it.
 BOOST_AUTO_TEST_CASE(GrowthIsTheOwnersOverStorageThatGrows)
 {
-        using Dynamic = xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint64_t>, xstd::ownership::owns, false>;
-        using Span = xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint64_t>, xstd::ownership::refers, false>;
+        using Dynamic = xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint64_t>, xstd::storage::owned, false>;
+        using Span = xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint64_t>, xstd::storage::borrowed, false>;
 
         static_assert(can_grow<Dynamic>);
         static_assert(not can_grow<Owner>);
@@ -307,7 +307,7 @@ BOOST_AUTO_TEST_CASE(GrowthIsTheOwnersOverStorageThatGrows)
 // at() is the reading's one checked door, measured against the width that grows.
 BOOST_AUTO_TEST_CASE(AtAnswersAtARunTimeWidthToo)
 {
-        auto d = xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint64_t>, xstd::ownership::owns, false>(3, true);
+        auto d = xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint64_t>, xstd::storage::owned, false>(3, true);
         BOOST_CHECK_THROW(static_cast<void>(d.at(3UZ)), std::out_of_range);
         d.push_back(false);
         BOOST_CHECK(d.at(3UZ) == false);
@@ -316,7 +316,7 @@ BOOST_AUTO_TEST_CASE(AtAnswersAtARunTimeWidthToo)
 
 namespace {
 
-using Dynamic = xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint64_t>, xstd::ownership::owns, false>;
+using Dynamic = xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint64_t>, xstd::storage::owned, false>;
 
 // One functor at namespace scope, so the packing tier is instantiated once rather than once per closure.
 constexpr auto every_third = [](std::size_t i) -> bool { return i % 3 == 0; };
@@ -378,7 +378,7 @@ BOOST_AUTO_TEST_CASE(AZeroWidthSequenceIsEmpty)
         auto const a = xstd::basic_bit_array<std::uint8_t, 0>();
         BOOST_CHECK(a.empty() and a.begin() == a.end());
         auto c = xstd::detail::bits::contiguous_bit_array<std::uint8_t, 0>();
-        auto const v = xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_array<std::uint8_t, 0>, xstd::ownership::refers, false>(c);
+        auto const v = xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_array<std::uint8_t, 0>, xstd::storage::borrowed, false>(c);
         BOOST_CHECK(v.empty() and v.begin() == v.end());
 }
 

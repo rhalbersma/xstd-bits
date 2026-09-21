@@ -46,8 +46,8 @@ BOOST_AUTO_TEST_CASE(EveryContainerArrivesThroughTheUmbrella)
         static_assert(not std::ranges::range<xstd::basic_dynamic_bitset<std::size_t>>);
 
         // Three layers: the primaries take the storage, basic_ chooses it, the restricted layer fixes size_t.
-        static_assert(std::derived_from<xstd::basic_bit_static_set<std::uint8_t, 8>, xstd::set_adaptor<xstd::detail::bits::contiguous_bit_array<std::uint8_t, 8>, xstd::ownership::owns, xstd::basic_bit_static_set<std::uint8_t, 8>>>);
-        static_assert(std::derived_from<xstd::basic_bit_set<std::uint8_t>, xstd::set_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint8_t>, xstd::ownership::owns, xstd::basic_bit_set<std::uint8_t>>>);
+        static_assert(std::derived_from<xstd::basic_bit_static_set<std::uint8_t, 8>, xstd::set_adaptor<xstd::detail::bits::contiguous_bit_array<std::uint8_t, 8>, xstd::storage::owned, xstd::basic_bit_static_set<std::uint8_t, 8>>>);
+        static_assert(std::derived_from<xstd::basic_bit_set<std::uint8_t>, xstd::set_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint8_t>, xstd::storage::owned, xstd::basic_bit_set<std::uint8_t>>>);
         static_assert(std::same_as<xstd::bit_static_set<8>, xstd::basic_bit_static_set<std::size_t, 8>>);
         static_assert(std::same_as<xstd::bit_array<8>, xstd::basic_bit_array<std::size_t, 8>>);
         static_assert(std::same_as<xstd::bitset<8>, xstd::basic_bitset<std::size_t, 8>>);

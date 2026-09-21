@@ -7,7 +7,7 @@
 #define XSTD_BITS_BIT_SUBSPAN_HPP
 
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
-#include <xstd/bits/ownership.hpp>                       // ownership
+#include <xstd/bits/ownership.hpp>                       // storage
 #include <xstd/bits/sequence_adaptor.hpp>                // sequence_adaptor
 #include <xstd/misc/concepts/specialization_of.hpp>      // specialization_of_TN
 #include <boost/container_hash/is_range.hpp>             // is_range
@@ -19,9 +19,9 @@ namespace xstd {
 
 // A window on the sequence reading: what first, last and subspan hand back.
 template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits>
-class bit_subspan : public sequence_adaptor<Bits, ownership::refers, true, bit_subspan<Bits>>
+class bit_subspan : public sequence_adaptor<Bits, storage::borrowed, true, bit_subspan<Bits>>
 {
-        using base_type = sequence_adaptor<Bits, ownership::refers, true, bit_subspan<Bits>>;
+        using base_type = sequence_adaptor<Bits, storage::borrowed, true, bit_subspan<Bits>>;
 
 public:
         using base_type::base_type;
