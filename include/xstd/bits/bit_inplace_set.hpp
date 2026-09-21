@@ -12,7 +12,7 @@
 #ifdef __cpp_lib_inplace_vector
 
 #include <xstd/bits/detail/contiguous_bit_inplace_vector.hpp> // contiguous_bit_inplace_vector
-#include <xstd/bits/ownership.hpp>                            // ownership
+#include <xstd/bits/ownership.hpp>                            // storage
 #include <xstd/bits/set_adaptor.hpp>                          // set_adaptor
 #include <xstd/ints/concepts/unsigned_integer.hpp>            // unsigned_integer
 #include <cstddef>                                            // size_t
@@ -21,7 +21,7 @@ namespace xstd {
 
 // The set reading over a run-time width under a compile-time capacity: inplace names where the storage lives.
 template<xstd::unsigned_integer Block, std::size_t N>
-using basic_bit_inplace_set = set_adaptor<detail::bits::contiguous_bit_inplace_vector<Block, N>, ownership::owns>;
+using basic_bit_inplace_set = set_adaptor<detail::bits::contiguous_bit_inplace_vector<Block, N>, storage::owned>;
 
 template<std::size_t N>
 using bit_inplace_set = basic_bit_inplace_set<std::size_t, N>;

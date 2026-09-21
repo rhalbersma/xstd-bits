@@ -21,7 +21,7 @@
 #include <xstd/bits/contiguous_bit_sequence.hpp> // IWYU pragma: export; contiguous_bit_sequence
 #include <xstd/bits/dynamic_bitset.hpp>          // IWYU pragma: export; dynamic_bitset
 #include <xstd/bits/inplace_bitset.hpp>          // IWYU pragma: export; inplace_bitset
-#include <xstd/bits/ownership.hpp>               // IWYU pragma: export; ownership
+#include <xstd/bits/ownership.hpp>               // IWYU pragma: export; storage
 #include <xstd/bits/sequence_adaptor.hpp>        // IWYU pragma: export; sequence_adaptor
 #include <xstd/bits/set_adaptor.hpp>             // IWYU pragma: export; set_adaptor
 

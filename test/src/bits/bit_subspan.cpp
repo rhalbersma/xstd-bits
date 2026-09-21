@@ -8,7 +8,7 @@
 #include <xstd/bits/bit_subspan.hpp>                 // bit_subspan
 #include <xstd/bits/bit_vector.hpp>                  // bit_vector
 #include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
-#include <xstd/bits/ownership.hpp>                   // ownership
+#include <xstd/bits/ownership.hpp>                   // storage
 #include <xstd/bits/sequence_adaptor.hpp>            // sequence_adaptor
 #include <boost/test/unit_test.hpp>                  // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <algorithm>                                 // equal, fill
@@ -66,7 +66,7 @@ using ViewedTypes = std::tuple<Owner, xstd::basic_bit_vector<std::uint8_t>>;
 // A window is the referring adaptor windowed, an alias since nothing deduces it, storing what std::span stores.
 BOOST_AUTO_TEST_CASE(TheWindowIsTheAdaptorWindowed)
 {
-        static_assert(std::same_as<Sub, xstd::sequence_adaptor<Blocks, xstd::ownership::refers, true>>);
+        static_assert(std::same_as<Sub, xstd::sequence_adaptor<Blocks, xstd::storage::borrowed, true>>);
         static_assert(sizeof(Span) == sizeof(void*));
         static_assert(sizeof(Sub) == 3 * sizeof(std::size_t));
 

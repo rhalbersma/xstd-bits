@@ -6,7 +6,7 @@
 // The gate on the interface line.
 
 #include <xstd/bits.hpp> // bit_array, bit_inplace_set, bit_inplace_vector, bit_set, bit_set_view, bit_span,
-                         // bit_static_set, bit_subspan, bit_vector, bitset, bitset_adaptor, dynamic_bitset, inplace_bitset, ownership, sequence_adaptor, set_adaptor
+                         // bit_static_set, bit_subspan, bit_vector, bitset, bitset_adaptor, dynamic_bitset, inplace_bitset, storage, sequence_adaptor, set_adaptor
 #include <cstddef>       // size_t
 #include <cstdint>       // uint8_t
 #include <utility>       // declval
@@ -17,12 +17,12 @@ namespace consumer {
 // The adaptors named without naming their storage: the containers and views are not built on them, they are them.
 template<class>
 constexpr bool is_set_adaptor = false;
-template<class B, xstd::ownership O>
+template<class B, xstd::storage O>
 constexpr bool is_set_adaptor<xstd::set_adaptor<B, O>> = true;
 
 template<class>
 constexpr bool is_sequence_adaptor = false;
-template<class B, xstd::ownership O, bool W>
+template<class B, xstd::storage O, bool W>
 constexpr bool is_sequence_adaptor<xstd::sequence_adaptor<B, O, W>> = true;
 
 template<class>
@@ -53,9 +53,9 @@ static_assert(is_bitset_adaptor<xstd::bitset<64>>);
 static_assert(is_bitset_adaptor<xstd::basic_bitset<std::uint8_t, 24>>);
 static_assert(is_bitset_adaptor<xstd::dynamic_bitset>);
 
-// ownership is interface because you cannot name an adaptor without it.
-static_assert(xstd::owns(xstd::ownership::owns));
-static_assert(not xstd::owns(xstd::ownership::refers));
+// storage is interface because you cannot name an adaptor without it.
+static_assert(xstd::owns(xstd::storage::owned));
+static_assert(not xstd::owns(xstd::storage::borrowed));
 static_assert(is_set_adaptor<set_view_of_bitset>);
 
 #ifdef __cpp_lib_inplace_vector

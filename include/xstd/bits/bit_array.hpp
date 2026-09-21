@@ -7,7 +7,7 @@
 #define XSTD_BITS_BIT_ARRAY_HPP
 
 #include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
-#include <xstd/bits/ownership.hpp>                   // ownership
+#include <xstd/bits/ownership.hpp>                   // storage
 #include <xstd/bits/sequence_adaptor.hpp>            // sequence_adaptor
 #include <xstd/ints/concepts/unsigned_integer.hpp>   // unsigned_integer
 #include <xstd/ints/memory.hpp>                      // align_up
@@ -18,7 +18,7 @@ namespace xstd {
 
 // The packed std::array<bool, N>, named after the container it packs.
 template<xstd::unsigned_integer Block, std::size_t N>
-using basic_bit_array = sequence_adaptor<detail::bits::contiguous_bit_array<Block, N>, ownership::owns, false>;
+using basic_bit_array = sequence_adaptor<detail::bits::contiguous_bit_array<Block, N>, storage::owned, false>;
 
 template<std::size_t N>
 using bit_array = basic_bit_array<std::size_t, N>;
