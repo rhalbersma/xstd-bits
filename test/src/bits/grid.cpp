@@ -72,7 +72,7 @@ BOOST_AUTO_TEST_CASE(TheReadingTagPicksTheAdaptorAndAnOwnerIsNeverWindowed)
 {
         using bits = xstd::detail::bits::contiguous_bit_array<block_type, width>;
         static_assert(std::same_as<xstd::adaptor_t<xstd::bitset_reading_tag, bits, void>, xstd::bitset_adaptor<bits, void>>);
-        static_assert(std::same_as<xstd::adaptor_t<xstd::sequence_reading_tag, bits, void>, xstd::sequence_adaptor<bits, xstd::storage::owned, false, void>>);
+        static_assert(std::same_as<xstd::adaptor_t<xstd::sequence_reading_tag, bits, void>, xstd::sequence_adaptor<bits, xstd::storage::owned, xstd::window::all, void>>);
         static_assert(std::same_as<xstd::adaptor_t<xstd::set_reading_tag, bits, void>, xstd::set_adaptor<bits, xstd::storage::owned, void>>);
         BOOST_CHECK(true);
 }

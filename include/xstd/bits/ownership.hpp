@@ -23,6 +23,11 @@ enum class storage : bool { owned,
         return s == storage::owned;
 }
 
+// Named for how much of the storage a view reaches: all of it, or the sub-range a subspan was cut down to.
+enum class window : bool { all,
+                           sub,
+};
+
 // What an owner wraps: declared, never defined, so a view over a type that owns nothing is unsatisfied.
 template<class Owner>
 struct owned_storage;

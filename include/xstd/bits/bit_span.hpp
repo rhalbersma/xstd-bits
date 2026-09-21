@@ -8,7 +8,7 @@
 
 #include <xstd/bits/bit_subspan.hpp>                     // IWYU pragma: keep; the inherited first, last and subspan return one
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
-#include <xstd/bits/ownership.hpp>                       // storage
+#include <xstd/bits/ownership.hpp>                       // storage, window
 #include <xstd/bits/tags.hpp>                            // sequence_reading_tag
 #include <xstd/bits/sequence_adaptor.hpp>                // sequence_adaptor
 #include <xstd/misc/concepts/specialization_of.hpp>      // specialization_of_TN
@@ -22,9 +22,9 @@ namespace xstd {
 
 // Differs from bit_subspan in one non-type argument: this is the whole sequence, that one a window.
 template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits>
-class bit_span : public sequence_adaptor<Bits, storage::borrowed, false, bit_span<Bits>>
+class bit_span : public sequence_adaptor<Bits, storage::borrowed, window::all, bit_span<Bits>>
 {
-        using base_type = sequence_adaptor<Bits, storage::borrowed, false, bit_span<Bits>>;
+        using base_type = sequence_adaptor<Bits, storage::borrowed, window::all, bit_span<Bits>>;
 
 public:
         using base_type::base_type;
