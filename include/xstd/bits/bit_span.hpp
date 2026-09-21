@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_BIT_SPAN_HPP
 #define XSTD_BITS_BIT_SPAN_HPP
 
-#include <xstd/bits/bit_subspan.hpp>                     // bit_subspan
+#include <xstd/bits/bit_subspan.hpp>                     // IWYU pragma: keep; the inherited first, last and subspan return one
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/ownership.hpp>                       // ownership
 #include <xstd/bits/sequence_adaptor.hpp>                // sequence_adaptor
