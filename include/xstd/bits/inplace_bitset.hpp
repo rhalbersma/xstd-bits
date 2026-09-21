@@ -32,7 +32,24 @@ public:
 template<std::size_t N>
 using inplace_bitset = basic_inplace_bitset<std::size_t, N>;
 
+// A container answers every trait as the vehicle it is built on, which is where each one is defined.
+template<xstd::unsigned_integer Block, std::size_t N>
+struct owned_storage<basic_inplace_bitset<Block, N>> : owned_storage<typename basic_inplace_bitset<Block, N>::adaptor_type>
+{};
+
 } // namespace xstd
+
+namespace std {
+
+// NOLINTBEGIN(bugprone-std-namespace-modification)
+
+template<xstd::unsigned_integer Block, std::size_t N>
+struct hash<xstd::basic_inplace_bitset<Block, N>> : hash<typename xstd::basic_inplace_bitset<Block, N>::adaptor_type>
+{};
+
+// NOLINTEND(bugprone-std-namespace-modification)
+
+} // namespace std
 
 #endif // __cpp_lib_inplace_vector
 

@@ -1126,11 +1126,10 @@ template<class T>
 concept sequence_adaptor_like = requires { typename T::adaptor_type; T::reads_as; } and (T::reads_as == reading::sequence) and std::derived_from<T, typename T::adaptor_type>;
 
 // The owner's side of the protocol above.
-template<sequence_adaptor_like Owner>
-        requires (Owner::owns_storage)
-struct owned_storage<Owner>
+template<class Bits, class Derived>
+struct owned_storage<sequence_adaptor<Bits, ownership::owns, false, Derived>>
 {
-        using bits_type = Owner::adapted_type;
+        using bits_type = Bits;
 
         // Committed to the sequence reading, so only a sequence view refers into one.
         static constexpr auto reads = reading::sequence;
@@ -1253,32 +1252,31 @@ inline constexpr bool enable_borrowed_range<xstd::sequence_adaptor<Bits, xstd::o
 namespace std {
 
 // [array.tuple]'s three over the static-width owner: tuple_element names the proxy, not bool.
-template<xstd::sequence_adaptor_like T>
-        requires xstd::is_static_width_owner<typename T::adapted_type, T::owns_storage ? xstd::ownership::owns : xstd::ownership::refers, T::adaptor_type::is_windowed>
-struct tuple_size<T>
-        : integral_constant<size_t, T::adapted_type::extent>
+template<class Bits, xstd::ownership Own, bool Windowed, class Derived>
+        requires xstd::is_static_width_owner<Bits, Own, Windowed>
+struct tuple_size<xstd::sequence_adaptor<Bits, Own, Windowed, Derived>>
+        : integral_constant<size_t, Bits::extent>
 {};
 
-template<size_t I, xstd::sequence_adaptor_like T>
-        requires (I < T::adapted_type::extent)
-struct tuple_element<I, T>
+template<size_t I, class Bits, xstd::ownership Own, bool Windowed, class Derived>
+        requires xstd::is_static_width_owner<Bits, Own, Windowed> and (I < Bits::extent)
+struct tuple_element<I, xstd::sequence_adaptor<Bits, Own, Windowed, Derived>>
 {
-        using type = T::reference;
+        using type = xstd::sequence_adaptor<Bits, Own, Windowed, Derived>::reference;
 };
 
-template<size_t I, xstd::sequence_adaptor_like T>
-        requires (I < T::adapted_type::extent)
-struct tuple_element<I, const T>
+template<size_t I, class Bits, xstd::ownership Own, bool Windowed, class Derived>
+        requires xstd::is_static_width_owner<Bits, Own, Windowed> and (I < Bits::extent)
+struct tuple_element<I, const xstd::sequence_adaptor<Bits, Own, Windowed, Derived>>
 {
-        using type = T::const_reference;
+        using type = xstd::sequence_adaptor<Bits, Own, Windowed, Derived>::const_reference;
 };
 
 // The owner hashes as std::vector<bool> does; a view no more than std::span does.
-template<xstd::sequence_adaptor_like T>
-        requires (T::owns_storage)
-struct hash<T>
+template<class Bits, bool Windowed, class Derived>
+struct hash<xstd::sequence_adaptor<Bits, xstd::ownership::owns, Windowed, Derived>>
 {
-        [[nodiscard]] constexpr auto operator()(T const& v) const noexcept
+        [[nodiscard]] constexpr auto operator()(xstd::sequence_adaptor<Bits, xstd::ownership::owns, Windowed, Derived> const& v) const noexcept
                 -> std::size_t
         {
                 return xstd::detail::bits::std_hash(v);
@@ -1292,12 +1290,12 @@ struct hash<T>
 // Not a range to ContainerHash and not tuple-like: Hash2 takes the hook, not its range or tuple overload.
 namespace boost::container_hash {
 
-template<xstd::sequence_adaptor_like T>
-struct is_range<T> : std::false_type
+template<class Bits, xstd::ownership Own, bool Windowed, class Derived>
+struct is_range<xstd::sequence_adaptor<Bits, Own, Windowed, Derived>> : std::false_type
 {};
 
-template<xstd::sequence_adaptor_like T>
-struct is_tuple_like<T> : std::false_type
+template<class Bits, xstd::ownership Own, bool Windowed, class Derived>
+struct is_tuple_like<xstd::sequence_adaptor<Bits, Own, Windowed, Derived>> : std::false_type
 {};
 
 } // namespace boost::container_hash

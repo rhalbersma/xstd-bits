@@ -83,6 +83,8 @@ class bitset_adaptor : public detail::bits::allocator_base_type<Bits>
         }
 
 public:
+        // What a trait asks of this vehicle, every container built on it answering alike.
+        using adaptor_type = bitset_adaptor;
         using bits_type = Bits;
 
         // boost's typedefs; std::bitset has none, and the block is in the open as boost's interface needs.
@@ -939,10 +941,10 @@ template<class T>
 concept owning_bitset_adaptor = requires { typename T::bits_type; } and std::derived_from<T, bitset_adaptor<typename T::bits_type, T>>;
 
 // The owner's side of the view protocol: what a bit_set_view or bit_span over a bitset refers into.
-template<owning_bitset_adaptor Owner>
-struct owned_storage<Owner>
+template<class Bits, class Derived>
+struct owned_storage<bitset_adaptor<Bits, Derived>>
 {
-        using bits_type = Owner::bits_type;
+        using bits_type = Bits;
 
         // Committed to neither reading, which is what its two views are for.
         static constexpr auto reads = reading::bitset;
@@ -955,10 +957,10 @@ namespace std {
 // NOLINTBEGIN(bugprone-std-namespace-modification)
 
 // bitset hash support [bitset.hash]; no redeclaration of std::hash's primary template, which [namespace.std] forbids.
-template<xstd::owning_bitset_adaptor Owner>
-struct hash<Owner>
+template<class Bits, class Derived>
+struct hash<xstd::bitset_adaptor<Bits, Derived>>
 {
-        [[nodiscard]] constexpr auto operator()(Owner const& v) const noexcept
+        [[nodiscard]] constexpr auto operator()(xstd::bitset_adaptor<Bits, Derived> const& v) const noexcept
                 -> std::size_t
         {
                 return xstd::detail::bits::std_hash(v);

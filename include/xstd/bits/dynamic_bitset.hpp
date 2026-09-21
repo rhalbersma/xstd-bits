@@ -27,6 +27,23 @@ public:
 
 using dynamic_bitset = basic_dynamic_bitset<std::size_t>;
 
+// A container answers every trait as the vehicle it is built on, which is where each one is defined.
+template<xstd::unsigned_integer Block, class Allocator>
+struct owned_storage<basic_dynamic_bitset<Block, Allocator>> : owned_storage<typename basic_dynamic_bitset<Block, Allocator>::adaptor_type>
+{};
+
 } // namespace xstd
+
+namespace std {
+
+// NOLINTBEGIN(bugprone-std-namespace-modification)
+
+template<xstd::unsigned_integer Block, class Allocator>
+struct hash<xstd::basic_dynamic_bitset<Block, Allocator>> : hash<typename xstd::basic_dynamic_bitset<Block, Allocator>::adaptor_type>
+{};
+
+// NOLINTEND(bugprone-std-namespace-modification)
+
+} // namespace std
 
 #endif // XSTD_BITS_DYNAMIC_BITSET_HPP

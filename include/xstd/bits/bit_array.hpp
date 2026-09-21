@@ -39,6 +39,48 @@ template<std::size_t N>
 using bit_array = basic_bit_array<std::size_t, N>;
 
 } // namespace aligned
+
+// A container answers every trait as the vehicle it is built on, which is where each one is defined.
+template<xstd::unsigned_integer Block, std::size_t N>
+struct owned_storage<basic_bit_array<Block, N>> : owned_storage<typename basic_bit_array<Block, N>::adaptor_type>
+{};
+
 } // namespace xstd
+
+namespace std {
+
+// NOLINTBEGIN(bugprone-std-namespace-modification)
+
+template<xstd::unsigned_integer Block, std::size_t N>
+struct hash<xstd::basic_bit_array<Block, N>> : hash<typename xstd::basic_bit_array<Block, N>::adaptor_type>
+{};
+
+template<std::size_t I, xstd::unsigned_integer Block, std::size_t N>
+struct tuple_element<I, xstd::basic_bit_array<Block, N>> : tuple_element<I, typename xstd::basic_bit_array<Block, N>::adaptor_type>
+{};
+
+template<std::size_t I, xstd::unsigned_integer Block, std::size_t N>
+struct tuple_element<I, const xstd::basic_bit_array<Block, N>> : tuple_element<I, const typename xstd::basic_bit_array<Block, N>::adaptor_type>
+{};
+
+template<xstd::unsigned_integer Block, std::size_t N>
+struct tuple_size<xstd::basic_bit_array<Block, N>> : tuple_size<typename xstd::basic_bit_array<Block, N>::adaptor_type>
+{};
+
+// NOLINTEND(bugprone-std-namespace-modification)
+
+} // namespace std
+
+namespace boost::container_hash {
+
+template<xstd::unsigned_integer Block, std::size_t N>
+struct is_range<xstd::basic_bit_array<Block, N>> : std::false_type
+{};
+
+template<xstd::unsigned_integer Block, std::size_t N>
+struct is_tuple_like<xstd::basic_bit_array<Block, N>> : std::false_type
+{};
+
+} // namespace boost::container_hash
 
 #endif // XSTD_BITS_BIT_ARRAY_HPP

@@ -28,6 +28,31 @@ public:
 
 using bit_set = basic_bit_set<std::size_t>;
 
+// A container answers every trait as the vehicle it is built on, which is where each one is defined.
+template<xstd::unsigned_integer Block, class Allocator>
+struct owned_storage<basic_bit_set<Block, Allocator>> : owned_storage<typename basic_bit_set<Block, Allocator>::adaptor_type>
+{};
+
 } // namespace xstd
+
+namespace std {
+
+// NOLINTBEGIN(bugprone-std-namespace-modification)
+
+template<xstd::unsigned_integer Block, class Allocator>
+struct hash<xstd::basic_bit_set<Block, Allocator>> : hash<typename xstd::basic_bit_set<Block, Allocator>::adaptor_type>
+{};
+
+// NOLINTEND(bugprone-std-namespace-modification)
+
+} // namespace std
+
+namespace boost::container_hash {
+
+template<xstd::unsigned_integer Block, class Allocator>
+struct is_range<xstd::basic_bit_set<Block, Allocator>> : std::false_type
+{};
+
+} // namespace boost::container_hash
 
 #endif // XSTD_BITS_BIT_SET_HPP

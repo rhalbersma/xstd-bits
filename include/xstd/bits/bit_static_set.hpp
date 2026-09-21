@@ -39,6 +39,32 @@ template<std::size_t N>
 using bit_static_set = basic_bit_static_set<std::size_t, N>;
 
 } // namespace aligned
+
+// A container answers every trait as the vehicle it is built on, which is where each one is defined.
+template<xstd::unsigned_integer Block, std::size_t N>
+struct owned_storage<basic_bit_static_set<Block, N>> : owned_storage<typename basic_bit_static_set<Block, N>::adaptor_type>
+{};
+
 } // namespace xstd
+
+namespace std {
+
+// NOLINTBEGIN(bugprone-std-namespace-modification)
+
+template<xstd::unsigned_integer Block, std::size_t N>
+struct hash<xstd::basic_bit_static_set<Block, N>> : hash<typename xstd::basic_bit_static_set<Block, N>::adaptor_type>
+{};
+
+// NOLINTEND(bugprone-std-namespace-modification)
+
+} // namespace std
+
+namespace boost::container_hash {
+
+template<xstd::unsigned_integer Block, std::size_t N>
+struct is_range<xstd::basic_bit_static_set<Block, N>> : std::false_type
+{};
+
+} // namespace boost::container_hash
 
 #endif // XSTD_BITS_BIT_STATIC_SET_HPP

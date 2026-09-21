@@ -811,11 +811,10 @@ template<class T>
 concept set_adaptor_like = requires { typename T::adaptor_type; T::reads_as; } and (T::reads_as == reading::set) and std::derived_from<T, typename T::adaptor_type>;
 
 // The owner's side of the protocol above.
-template<set_adaptor_like Owner>
-        requires (Owner::owns_storage)
-struct owned_storage<Owner>
+template<class Bits, class Derived>
+struct owned_storage<set_adaptor<Bits, ownership::owns, Derived>>
 {
-        using bits_type = Owner::adapted_type;
+        using bits_type = Bits;
 
         // Committed to the set reading, so only a set view refers into one.
         static constexpr auto reads = reading::set;
@@ -925,10 +924,10 @@ inline constexpr bool enable_borrowed_range<xstd::set_adaptor<Bits, xstd::owners
 namespace std {
 
 // Owned or viewed, as std::string_view hashes and std::set does not.
-template<xstd::set_adaptor_like T>
-struct hash<T>
+template<class Bits, xstd::ownership Own, class Derived>
+struct hash<xstd::set_adaptor<Bits, Own, Derived>>
 {
-        [[nodiscard]] constexpr auto operator()(T const& v) const noexcept
+        [[nodiscard]] constexpr auto operator()(xstd::set_adaptor<Bits, Own, Derived> const& v) const noexcept
                 -> std::size_t
         {
                 return xstd::detail::bits::std_hash(v);
@@ -942,8 +941,8 @@ struct hash<T>
 // Not a range to ContainerHash, so Hash2 takes the hook and not its range overload.
 namespace boost::container_hash {
 
-template<xstd::set_adaptor_like T>
-struct is_range<T> : std::false_type
+template<class Bits, xstd::ownership Own, class Derived>
+struct is_range<xstd::set_adaptor<Bits, Own, Derived>> : std::false_type
 {};
 
 } // namespace boost::container_hash

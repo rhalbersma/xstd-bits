@@ -33,7 +33,32 @@ public:
 template<std::size_t N>
 using bit_inplace_set = basic_bit_inplace_set<std::size_t, N>;
 
+// A container answers every trait as the vehicle it is built on, which is where each one is defined.
+template<xstd::unsigned_integer Block, std::size_t N>
+struct owned_storage<basic_bit_inplace_set<Block, N>> : owned_storage<typename basic_bit_inplace_set<Block, N>::adaptor_type>
+{};
+
 } // namespace xstd
+
+namespace std {
+
+// NOLINTBEGIN(bugprone-std-namespace-modification)
+
+template<xstd::unsigned_integer Block, std::size_t N>
+struct hash<xstd::basic_bit_inplace_set<Block, N>> : hash<typename xstd::basic_bit_inplace_set<Block, N>::adaptor_type>
+{};
+
+// NOLINTEND(bugprone-std-namespace-modification)
+
+} // namespace std
+
+namespace boost::container_hash {
+
+template<xstd::unsigned_integer Block, std::size_t N>
+struct is_range<xstd::basic_bit_inplace_set<Block, N>> : std::false_type
+{};
+
+} // namespace boost::container_hash
 
 #endif // __cpp_lib_inplace_vector
 
