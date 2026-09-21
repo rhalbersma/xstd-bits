@@ -3,7 +3,7 @@
 #    (See accompanying file LICENSE_1_0.txt or copy at
 #          http://www.boost.org/LICENSE_1_0.txt)
 
-cmake_minimum_required(VERSION 3.28)
+cmake_minimum_required(VERSION 3.30)
 project(
     xstd-bits
     VERSION 0.1.0
@@ -152,8 +152,9 @@ if(PROJECT_IS_TOP_LEVEL)
         if(NOT "cxx_std_${${project_option_prefix}_CXX_STANDARD}" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
             message(FATAL_ERROR
                 "${project_option_prefix}_CXX_STANDARD=${${project_option_prefix}_CXX_STANDARD} is not something CMake ${CMAKE_VERSION} can ask "
-                "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION} for. CMake 3.28 knows no C++26 for GCC or "
-                "Clang at all; a newer CMake does. The inplace column needs it, the other six cells do not."
+                "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION} for. CMake 3.30 is the first that knows C++26 "
+                "for GCC and Clang, and this project requires it; a front end CMake has not been taught still answers "
+                "no. The inplace column needs that answer, the other six cells do not."
             )
         endif()
 
