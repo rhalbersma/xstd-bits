@@ -66,7 +66,7 @@ using ViewedTypes = std::tuple<Owner, xstd::basic_bit_vector<std::uint8_t>>;
 // A window is the referring adaptor windowed, an alias since nothing deduces it, storing what std::span stores.
 BOOST_AUTO_TEST_CASE(TheWindowIsTheAdaptorWindowed)
 {
-        static_assert(std::same_as<Sub, xstd::sequence_adaptor<Blocks, xstd::ownership::refers, true>>);
+        static_assert(std::same_as<Sub, xstd::bit_subspan<Blocks>>);
         static_assert(sizeof(Span) == sizeof(void*));
         static_assert(sizeof(Sub) == 3 * sizeof(std::size_t));
 

@@ -22,8 +22,8 @@ on:
   workflow_call:
 
 jobs:
-  # The 2026 generation only. The 2022 rung is gone because MSVC 17 cannot deduce through an alias template of the shape the two views need -- "C2976: 'xstd::bit_set_view': too few template arguments" -- while MSVC 18 can. clang-cl.yml keeps its 2022 rung, which passes: clang-cl is clang, so what broke is the MSVC compiler at 2022 and not the VS 2022 platform.
+  # All three rungs. The 2022 one is back on trial: bit_span, bit_subspan and bit_set_view are class templates with their own deduction guides, so the alias-template shape MSVC 17 answered with "C2976: 'xstd::bit_set_view': too few template arguments" is gone. Whether that is the whole of what it could not do, only this rung reports.
   msvc:
     uses: rhalbersma/cpp-ci/.github/workflows/visual-studio.yml@29fdd6605bf237863ad39c3919c2cf389cfb6d38 # v0.10.2
     with:
-      tiers: qualification,development
+      tiers: stable,qualification,development

@@ -143,6 +143,10 @@ using block_type_of = std::remove_const_t<Bits>::block_type;
 template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits, ownership Own, bool Windowed, class Derived = void>
 class sequence_adaptor;
 
+// The windowed view a span hands back: declared here and defined in its own header, which this one must not include.
+template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits>
+class bit_subspan;
+
 // A sequence adaptor whose storage holds blocks of the given type: what a blit reads, and nothing else.
 template<class S, class Block>
 inline constexpr bool blit_source = false;
@@ -532,7 +536,7 @@ public:
         {}
 
         // [span.sub]'s three, on a view alone: std::array and std::vector have no subviews.
-        using subspan_type = sequence_adaptor<Bits, ownership::refers, true>;
+        using subspan_type = bit_subspan<Bits>;
 
         [[nodiscard]] constexpr auto first(size_type count) const noexcept
                 -> subspan_type
