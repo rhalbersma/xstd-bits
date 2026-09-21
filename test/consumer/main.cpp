@@ -15,7 +15,7 @@
 
 namespace consumer {
 
-// The adaptors named without their storage: a container derives from its vehicle, a view is one.
+// The adaptors named without their storage: every container and every view derives from the vehicle it reads by.
 template<class T>
 constexpr bool is_set_adaptor = xstd::set_adaptor_like<T>;
 

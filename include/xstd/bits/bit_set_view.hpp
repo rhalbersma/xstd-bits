@@ -18,7 +18,7 @@
 // The set reading over bits it does not own: the referring adaptor under the name the sieve calls it by.
 namespace xstd {
 
-// An alias: the referring adaptor is the view, so a class of its own would add nothing.
+// A class rather than an alias to the referring adaptor, so deduction and diagnostics name the view itself.
 template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits>
 class bit_set_view : public set_adaptor<Bits, ownership::refers, bit_set_view<Bits>>
 {

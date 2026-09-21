@@ -17,7 +17,7 @@
 
 namespace xstd {
 
-// A window on the sequence reading: what first, last and subspan return, never deduced, so an alias suffices.
+// A window on the sequence reading: what first, last and subspan hand back.
 template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits>
 class bit_subspan : public sequence_adaptor<Bits, ownership::refers, true, bit_subspan<Bits>>
 {

@@ -19,7 +19,7 @@
 // The sequence reading over bits it does not own: like std::span it neither compares nor orders.
 namespace xstd {
 
-// An alias differing from bit_subspan in one non-type argument: this is the whole sequence, that one a window.
+// Differs from bit_subspan in one non-type argument: this is the whole sequence, that one a window.
 template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits>
 class bit_span : public sequence_adaptor<Bits, ownership::refers, false, bit_span<Bits>>
 {
