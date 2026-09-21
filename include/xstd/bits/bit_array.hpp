@@ -6,9 +6,10 @@
 #ifndef XSTD_BITS_BIT_ARRAY_HPP
 #define XSTD_BITS_BIT_ARRAY_HPP
 
-#include <xstd/bits/basic_bits.hpp>                  // array_container_tag, basic_bits, sequence_reading_tag
-#include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
-#include <xstd/bits/sequence_adaptor.hpp>            // sequence_adaptor
+#include <xstd/bits/basic_bits.hpp>                  // basic_bits
+#include <xstd/bits/detail/contiguous_bit_array.hpp> // IWYU pragma: keep; the storage array_container_tag names
+#include <xstd/bits/sequence_adaptor.hpp>            // IWYU pragma: keep; the adaptor sequence_reading_tag names
+#include <xstd/bits/tags.hpp>                        // array_container_tag, sequence_reading_tag
 #include <xstd/ints/concepts/unsigned_integer.hpp>   // unsigned_integer
 #include <xstd/ints/memory.hpp>                      // align_up
 #include <cstddef>                                   // size_t
