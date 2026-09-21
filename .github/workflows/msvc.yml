@@ -22,8 +22,8 @@ on:
   workflow_call:
 
 jobs:
-  # The 2026 generation only. C2976 is settled -- the views are class templates with their own deduction guides and MSVC 17 no longer reports it -- but the rung stays out for what replaced it: the two workarounds dropped once it left, auto(x) for decay_copy and one typename in the set primitives, are exactly what it fails on now. doc/design.md records that ledger; clang-cl.yml keeps its 2022 rung and covers the platform.
+  # All three rungs. C2976 went when the views became class templates with their own deduction guides, and the two workarounds the rung had paid for -- decay_copy in place of auto(x), one typename on a constrained parameter -- are back, so MSVC 17 builds this again.
   msvc:
     uses: rhalbersma/cpp-ci/.github/workflows/visual-studio.yml@29fdd6605bf237863ad39c3919c2cf389cfb6d38 # v0.10.2
     with:
-      tiers: qualification,development
+      tiers: stable,qualification,development

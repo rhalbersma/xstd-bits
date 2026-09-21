@@ -1607,7 +1607,7 @@ never what was missing" and that the note here was wrong. The table describes th
 it, and on this shape MSVC 17 fails while claiming support. A four-day-old note quoting a specific diagnostic
 was the better evidence, and it deserved to be believed over a vendor's feature matrix.
 
-**The classes settle C2976 and do not buy the rung back.** Put on trial, the stable MSVC rung came back with
+**The classes settle C2976, and the rung is back.** Put on trial, the stable MSVC rung returned with
 838 diagnostics and **zero** `C2976`: the views deduce. What it fails on instead is the ledger that opened once
 the rung left, both entries workarounds that had existed for MSVC 17 and nothing else. The first: `decay_copy`
 became `auto(x)` ([the-functor-takes-a-value](#the-functor-takes-a-value)), twenty lines for two, and MSVC 17
@@ -1620,9 +1620,16 @@ spelled; the remaining `typename X::value_type` sites are template arguments and
 P0634R3 does not reach. The `NOLINTNEXTLINE(readability-redundant-typename)` that sat above it went with it —
 a live suppression, not a dead one: the check exists in clang-tidy 22 and 24.
 
-So the rung is now recoverable for about twenty lines and one keyword, which is a decision of its own rather
-than a consequence of this one. [msvc.yml](.github/workflows/msvc.yml) keeps `qualification,development` until
-it is taken.
+Both entries have since been paid back, and the rung is on the matrix again: the helper is three lines in each
+of two adaptors, and the keyword is one token under a `NOLINT`. [msvc.yml](.github/workflows/msvc.yml) and
+[msvc-analyze.yml](.github/workflows/msvc-analyze.yml) carry `stable,qualification,development`, and the
+README's matrix names `2022` where it named nothing.
+
+That is the shape of the trade rather than a verdict on it. A rung costs whatever the vendor's oldest
+front end cannot do, paid in workarounds that the other five toolchains carry without needing them; what it
+buys is that the front end keeps building this library. Twenty lines and a keyword was the price when it was
+asked, and dropping the rung is what let those twenty lines go in the first place -- so the ledger can be read
+in either direction, and has been, twice.
 
 **The break is the MSVC compiler, not the VS 2022 platform.** `clang_cl` keeps all three rungs and passes on
 all of them, 2022 included, because clang-cl is Clang and Clang has had P1814 since 19. So VS 2022's runner,
@@ -3379,11 +3386,11 @@ Both `for_each`es hand their functor a **prvalue** -- as `auto(x)`, C++23's deca
 `requires std::invocable<F&, size_t>`. That is one fix for one defect, spelled in two places because it is
 worth catching at the interface and worth being right in the body.
 
-It was a three-line `decay_copy` helper per adaptor until the MSVC 17 rung left the matrix
-([the-views-are-the-adaptors](#the-views-are-the-adaptors)): MSVC 2022 does not implement P0849R8, and the
-other way round it -- `T{x}` -- reads to clang-tidy as a cast to the type it already has. That second
-objection was only ever against the workaround; `auto(x)` is the paper's own spelling and clang-tidy has
-nothing to say about it. Twenty lines went with the two helpers.
+It is spelled through a three-line `decay_copy` helper per adaptor, because MSVC 2022 does not implement
+P0849R8 and the stable rung is on the matrix ([the-views-are-the-adaptors](#the-views-are-the-adaptors)). The
+helper went briefly, while the rung was off, and `auto(x)` stood in its place: the paper's own spelling, which
+clang-tidy has nothing to say about. The other way round it -- `T{x}` -- reads to clang-tidy as a cast to the
+type it already has, so that was never the alternative.
 
 The defect was that `invoke_continues` named its parameter and passed that name along. A named parameter is an
 lvalue, so a functor asking for `bool&` or `size_t&` bound to it, compiled, and wrote to a local that the walk
