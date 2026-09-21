@@ -225,6 +225,10 @@ class sequence_adaptor : public std::conditional_t<owns(Own), detail::bits::allo
         static constexpr bool block_writable = requires (Bits& b, std::size_t pos, bits_type::block_type w) { b.block_at(pos, w, w); };
 
         // A sequence view refers into this owner's storage and nothing else does; a set view does not.
+        // The container built on this vehicle reads its constraints, which name what only the vehicle can.
+        // A view passes void here, and [class.friend]/3 ignores a friend declaration naming a non-class type.
+        friend Derived;
+
         template<specialization_of_TN<detail::bits::contiguous_bit_container> B, ownership O, bool W, class D>
         friend class sequence_adaptor;
 
@@ -391,6 +395,7 @@ public:
                 return m_bits.get_allocator();
         }
 
+        // NOLINTNEXTLINE(misc-unconventional-assign-operator): the container is what [set] and [vector] return here.
         constexpr auto operator=(std::initializer_list<value_type> il)
                 -> derived_type&
                 requires can_grow
@@ -1125,7 +1130,7 @@ template<sequence_adaptor_like Owner>
         requires (Owner::owns_storage)
 struct owned_storage<Owner>
 {
-        using bits_type = typename Owner::adapted_type;
+        using bits_type = Owner::adapted_type;
 
         // Committed to the sequence reading, so only a sequence view refers into one.
         static constexpr auto reads = reading::sequence;
@@ -1135,38 +1140,38 @@ struct owned_storage<Owner>
 
 // Bulk logical not, the value-returning counterpart of flip(): a sequence's width is its own size().
 template<class Bits, ownership Own, bool Windowed, class Derived>
-[[nodiscard]] constexpr auto operator~(sequence_adaptor<Bits, Own, Windowed, Derived> const& lhs) noexcept -> typename sequence_adaptor<Bits, Own, Windowed, Derived>::derived_type
+[[nodiscard]] constexpr auto operator~(sequence_adaptor<Bits, Own, Windowed, Derived> const& lhs) noexcept -> sequence_adaptor<Bits, Own, Windowed, Derived>::derived_type
         requires (owns(Own)) and requires (sequence_adaptor<Bits, Own, Windowed, Derived> c) { c.flip(); }
 {
-        auto nrv = static_cast<typename sequence_adaptor<Bits, Own, Windowed, Derived>::derived_type const&>(lhs);
+        auto nrv = static_cast<sequence_adaptor<Bits, Own, Windowed, Derived>::derived_type const&>(lhs);
         nrv.flip();
         return nrv;
 }
 
 // The binary forms of the three above, on an owner alone: a view's copy refers to the storage it views.
 template<class Bits, ownership Own, bool Windowed, class Derived>
-[[nodiscard]] constexpr auto operator&(sequence_adaptor<Bits, Own, Windowed, Derived> const& lhs, sequence_adaptor<Bits, Own, Windowed, Derived> const& rhs) noexcept(noexcept(std::declval<sequence_adaptor<Bits, Own, Windowed, Derived>&>() &= rhs)) -> typename sequence_adaptor<Bits, Own, Windowed, Derived>::derived_type
+[[nodiscard]] constexpr auto operator&(sequence_adaptor<Bits, Own, Windowed, Derived> const& lhs, sequence_adaptor<Bits, Own, Windowed, Derived> const& rhs) noexcept(noexcept(std::declval<sequence_adaptor<Bits, Own, Windowed, Derived>&>() &= rhs)) -> sequence_adaptor<Bits, Own, Windowed, Derived>::derived_type
         requires (owns(Own)) and requires (sequence_adaptor<Bits, Own, Windowed, Derived> c) { c &= c; }
 {
-        auto nrv = static_cast<typename sequence_adaptor<Bits, Own, Windowed, Derived>::derived_type const&>(lhs);
+        auto nrv = static_cast<sequence_adaptor<Bits, Own, Windowed, Derived>::derived_type const&>(lhs);
         nrv &= rhs;
         return nrv;
 }
 
 template<class Bits, ownership Own, bool Windowed, class Derived>
-[[nodiscard]] constexpr auto operator|(sequence_adaptor<Bits, Own, Windowed, Derived> const& lhs, sequence_adaptor<Bits, Own, Windowed, Derived> const& rhs) noexcept(noexcept(std::declval<sequence_adaptor<Bits, Own, Windowed, Derived>&>() |= rhs)) -> typename sequence_adaptor<Bits, Own, Windowed, Derived>::derived_type
+[[nodiscard]] constexpr auto operator|(sequence_adaptor<Bits, Own, Windowed, Derived> const& lhs, sequence_adaptor<Bits, Own, Windowed, Derived> const& rhs) noexcept(noexcept(std::declval<sequence_adaptor<Bits, Own, Windowed, Derived>&>() |= rhs)) -> sequence_adaptor<Bits, Own, Windowed, Derived>::derived_type
         requires (owns(Own)) and requires (sequence_adaptor<Bits, Own, Windowed, Derived> c) { c |= c; }
 {
-        auto nrv = static_cast<typename sequence_adaptor<Bits, Own, Windowed, Derived>::derived_type const&>(lhs);
+        auto nrv = static_cast<sequence_adaptor<Bits, Own, Windowed, Derived>::derived_type const&>(lhs);
         nrv |= rhs;
         return nrv;
 }
 
 template<class Bits, ownership Own, bool Windowed, class Derived>
-[[nodiscard]] constexpr auto operator^(sequence_adaptor<Bits, Own, Windowed, Derived> const& lhs, sequence_adaptor<Bits, Own, Windowed, Derived> const& rhs) noexcept(noexcept(std::declval<sequence_adaptor<Bits, Own, Windowed, Derived>&>() ^= rhs)) -> typename sequence_adaptor<Bits, Own, Windowed, Derived>::derived_type
+[[nodiscard]] constexpr auto operator^(sequence_adaptor<Bits, Own, Windowed, Derived> const& lhs, sequence_adaptor<Bits, Own, Windowed, Derived> const& rhs) noexcept(noexcept(std::declval<sequence_adaptor<Bits, Own, Windowed, Derived>&>() ^= rhs)) -> sequence_adaptor<Bits, Own, Windowed, Derived>::derived_type
         requires (owns(Own)) and requires (sequence_adaptor<Bits, Own, Windowed, Derived> c) { c ^= c; }
 {
-        auto nrv = static_cast<typename sequence_adaptor<Bits, Own, Windowed, Derived>::derived_type const&>(lhs);
+        auto nrv = static_cast<sequence_adaptor<Bits, Own, Windowed, Derived>::derived_type const&>(lhs);
         nrv ^= rhs;
         return nrv;
 }
@@ -1258,14 +1263,14 @@ template<size_t I, xstd::sequence_adaptor_like T>
         requires (I < T::adapted_type::extent)
 struct tuple_element<I, T>
 {
-        using type = typename T::reference;
+        using type = T::reference;
 };
 
 template<size_t I, xstd::sequence_adaptor_like T>
         requires (I < T::adapted_type::extent)
 struct tuple_element<I, const T>
 {
-        using type = typename T::const_reference;
+        using type = T::const_reference;
 };
 
 // The owner hashes as std::vector<bool> does; a view no more than std::span does.

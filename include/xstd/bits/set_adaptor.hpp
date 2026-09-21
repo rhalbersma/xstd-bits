@@ -131,6 +131,10 @@ class set_adaptor : public std::conditional_t<owns(Own), detail::bits::allocator
                 }
         }
 
+        // The container built on this vehicle reads its constraints, which name what only the vehicle can.
+        // A view passes void here, and [class.friend]/3 ignores a friend declaration naming a non-class type.
+        friend Derived;
+
         // A set view refers into this owner's storage and nothing else does; a sequence view does not.
         template<specialization_of_TN<detail::bits::contiguous_bit_container> B, ownership O, class D>
         friend class set_adaptor;
@@ -270,6 +274,7 @@ public:
                 : m_bits(&c.m_bits)
         {}
 
+        // NOLINTNEXTLINE(misc-unconventional-assign-operator): the container is what [set] and [vector] return here.
         constexpr auto operator=(std::initializer_list<value_type> il)
                 -> derived_type&
                 requires is_owner
@@ -810,7 +815,7 @@ template<set_adaptor_like Owner>
         requires (Owner::owns_storage)
 struct owned_storage<Owner>
 {
-        using bits_type = typename Owner::adapted_type;
+        using bits_type = Owner::adapted_type;
 
         // Committed to the set reading, so only a set view refers into one.
         static constexpr auto reads = reading::set;
@@ -836,64 +841,64 @@ constexpr auto erase_if(set_adaptor<Bits, Own, Derived>& c, Predicate pred)
 
 // The non-member forms copy, so they are the owner's alone: a copied view would write through.
 template<class Bits, ownership Own, class Derived>
-[[nodiscard]] constexpr auto operator~(set_adaptor<Bits, Own, Derived> const& lhs) noexcept(set_adaptor<Bits, Own, Derived>::has_static_width) -> typename set_adaptor<Bits, Own, Derived>::derived_type
+[[nodiscard]] constexpr auto operator~(set_adaptor<Bits, Own, Derived> const& lhs) noexcept(set_adaptor<Bits, Own, Derived>::has_static_width) -> set_adaptor<Bits, Own, Derived>::derived_type
         requires (owns(Own)) and requires (set_adaptor<Bits, Own, Derived> c) { c.complement(); }
 {
-        auto nrv = static_cast<typename set_adaptor<Bits, Own, Derived>::derived_type const&>(lhs);
+        auto nrv = static_cast<set_adaptor<Bits, Own, Derived>::derived_type const&>(lhs);
         nrv.complement();
         return nrv;
 }
 
 template<class Bits, ownership Own, class Derived>
-[[nodiscard]] constexpr auto operator&(set_adaptor<Bits, Own, Derived> const& lhs, set_adaptor<Bits, Own, Derived> const& rhs) noexcept(set_adaptor<Bits, Own, Derived>::has_static_width) -> typename set_adaptor<Bits, Own, Derived>::derived_type
+[[nodiscard]] constexpr auto operator&(set_adaptor<Bits, Own, Derived> const& lhs, set_adaptor<Bits, Own, Derived> const& rhs) noexcept(set_adaptor<Bits, Own, Derived>::has_static_width) -> set_adaptor<Bits, Own, Derived>::derived_type
         requires (owns(Own)) and requires (set_adaptor<Bits, Own, Derived> c) { c &= c; }
 {
-        auto nrv = static_cast<typename set_adaptor<Bits, Own, Derived>::derived_type const&>(lhs);
+        auto nrv = static_cast<set_adaptor<Bits, Own, Derived>::derived_type const&>(lhs);
         nrv &= rhs;
         return nrv;
 }
 
 template<class Bits, ownership Own, class Derived>
-[[nodiscard]] constexpr auto operator|(set_adaptor<Bits, Own, Derived> const& lhs, set_adaptor<Bits, Own, Derived> const& rhs) noexcept(set_adaptor<Bits, Own, Derived>::has_static_width) -> typename set_adaptor<Bits, Own, Derived>::derived_type
+[[nodiscard]] constexpr auto operator|(set_adaptor<Bits, Own, Derived> const& lhs, set_adaptor<Bits, Own, Derived> const& rhs) noexcept(set_adaptor<Bits, Own, Derived>::has_static_width) -> set_adaptor<Bits, Own, Derived>::derived_type
         requires (owns(Own)) and requires (set_adaptor<Bits, Own, Derived> c) { c |= c; }
 {
-        auto nrv = static_cast<typename set_adaptor<Bits, Own, Derived>::derived_type const&>(lhs);
+        auto nrv = static_cast<set_adaptor<Bits, Own, Derived>::derived_type const&>(lhs);
         nrv |= rhs;
         return nrv;
 }
 
 template<class Bits, ownership Own, class Derived>
-[[nodiscard]] constexpr auto operator^(set_adaptor<Bits, Own, Derived> const& lhs, set_adaptor<Bits, Own, Derived> const& rhs) noexcept(set_adaptor<Bits, Own, Derived>::has_static_width) -> typename set_adaptor<Bits, Own, Derived>::derived_type
+[[nodiscard]] constexpr auto operator^(set_adaptor<Bits, Own, Derived> const& lhs, set_adaptor<Bits, Own, Derived> const& rhs) noexcept(set_adaptor<Bits, Own, Derived>::has_static_width) -> set_adaptor<Bits, Own, Derived>::derived_type
         requires (owns(Own)) and requires (set_adaptor<Bits, Own, Derived> c) { c ^= c; }
 {
-        auto nrv = static_cast<typename set_adaptor<Bits, Own, Derived>::derived_type const&>(lhs);
+        auto nrv = static_cast<set_adaptor<Bits, Own, Derived>::derived_type const&>(lhs);
         nrv ^= rhs;
         return nrv;
 }
 
 template<class Bits, ownership Own, class Derived>
-[[nodiscard]] constexpr auto operator-(set_adaptor<Bits, Own, Derived> const& lhs, set_adaptor<Bits, Own, Derived> const& rhs) noexcept(set_adaptor<Bits, Own, Derived>::has_static_width) -> typename set_adaptor<Bits, Own, Derived>::derived_type
+[[nodiscard]] constexpr auto operator-(set_adaptor<Bits, Own, Derived> const& lhs, set_adaptor<Bits, Own, Derived> const& rhs) noexcept(set_adaptor<Bits, Own, Derived>::has_static_width) -> set_adaptor<Bits, Own, Derived>::derived_type
         requires (owns(Own)) and requires (set_adaptor<Bits, Own, Derived> c) { c -= c; }
 {
-        auto nrv = static_cast<typename set_adaptor<Bits, Own, Derived>::derived_type const&>(lhs);
+        auto nrv = static_cast<set_adaptor<Bits, Own, Derived>::derived_type const&>(lhs);
         nrv -= rhs;
         return nrv;
 }
 
 template<class Bits, ownership Own, class Derived>
-[[nodiscard]] constexpr auto operator<<(set_adaptor<Bits, Own, Derived> const& lhs, std::size_t n) noexcept(set_adaptor<Bits, Own, Derived>::has_static_width) -> typename set_adaptor<Bits, Own, Derived>::derived_type
+[[nodiscard]] constexpr auto operator<<(set_adaptor<Bits, Own, Derived> const& lhs, std::size_t n) noexcept(set_adaptor<Bits, Own, Derived>::has_static_width) -> set_adaptor<Bits, Own, Derived>::derived_type
         requires (owns(Own)) and requires (set_adaptor<Bits, Own, Derived> c) { c <<= n; }
 {
-        auto nrv = static_cast<typename set_adaptor<Bits, Own, Derived>::derived_type const&>(lhs);
+        auto nrv = static_cast<set_adaptor<Bits, Own, Derived>::derived_type const&>(lhs);
         nrv <<= n;
         return nrv;
 }
 
 template<class Bits, ownership Own, class Derived>
-[[nodiscard]] constexpr auto operator>>(set_adaptor<Bits, Own, Derived> const& lhs, std::size_t n) noexcept(set_adaptor<Bits, Own, Derived>::has_static_width) -> typename set_adaptor<Bits, Own, Derived>::derived_type
+[[nodiscard]] constexpr auto operator>>(set_adaptor<Bits, Own, Derived> const& lhs, std::size_t n) noexcept(set_adaptor<Bits, Own, Derived>::has_static_width) -> set_adaptor<Bits, Own, Derived>::derived_type
         requires (owns(Own)) and requires (set_adaptor<Bits, Own, Derived> c) { c >>= n; }
 {
-        auto nrv = static_cast<typename set_adaptor<Bits, Own, Derived>::derived_type const&>(lhs);
+        auto nrv = static_cast<set_adaptor<Bits, Own, Derived>::derived_type const&>(lhs);
         nrv >>= n;
         return nrv;
 }

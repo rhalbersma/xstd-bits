@@ -57,6 +57,10 @@ class bitset_adaptor : public detail::bits::allocator_base_type<Bits>
         template<class>
         friend struct owned_storage;
 
+        // The container built on this vehicle reads its constraints, which name what only the vehicle can.
+        // A view passes void here, and [class.friend]/3 ignores a friend declaration naming a non-class type.
+        friend Derived;
+
         // Either reading's view refers into this owner's storage: a bitset is committed to neither reading.
         template<specialization_of_TN<detail::bits::contiguous_bit_container> B, ownership O, class D>
         friend class set_adaptor;
@@ -938,7 +942,7 @@ concept owning_bitset_adaptor = requires { typename T::bits_type; } and std::der
 template<owning_bitset_adaptor Owner>
 struct owned_storage<Owner>
 {
-        using bits_type = typename Owner::bits_type;
+        using bits_type = Owner::bits_type;
 
         // Committed to neither reading, which is what its two views are for.
         static constexpr auto reads = reading::bitset;
