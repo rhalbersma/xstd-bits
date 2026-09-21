@@ -58,9 +58,9 @@ class bitset_adaptor : public detail::bits::allocator_base_type<Bits>
         friend struct owned_storage;
 
         // Either reading's view refers into this owner's storage: a bitset is committed to neither reading.
-        template<specialization_of_TN<detail::bits::contiguous_bit_container> B, ownership O>
+        template<specialization_of_TN<detail::bits::contiguous_bit_container> B, ownership O, class D>
         friend class set_adaptor;
-        template<specialization_of_TN<detail::bits::contiguous_bit_container> B, ownership O, bool W>
+        template<specialization_of_TN<detail::bits::contiguous_bit_container> B, ownership O, bool W, class D>
         friend class sequence_adaptor;
 
         // The value through the trait: the blocks and the width.

@@ -21,7 +21,14 @@ namespace xstd {
 
 // The packed std::inplace_vector<bool, N> that P0843 declined to write, named after the container it packs.
 template<xstd::unsigned_integer Block, std::size_t N>
-using basic_bit_inplace_vector = sequence_adaptor<detail::bits::contiguous_bit_inplace_vector<Block, N>, ownership::owns, false>;
+class basic_bit_inplace_vector : public sequence_adaptor<detail::bits::contiguous_bit_inplace_vector<Block, N>, ownership::owns, false, basic_bit_inplace_vector<Block, N>>
+{
+        using base_type = sequence_adaptor<detail::bits::contiguous_bit_inplace_vector<Block, N>, ownership::owns, false, basic_bit_inplace_vector<Block, N>>;
+
+public:
+        using base_type::base_type;
+        using base_type::operator=;
+};
 
 template<std::size_t N>
 using bit_inplace_vector = basic_bit_inplace_vector<std::size_t, N>;

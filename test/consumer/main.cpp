@@ -15,16 +15,12 @@
 
 namespace consumer {
 
-// The adaptors named without their storage: set and sequence containers are them, bitset ones derive from them.
-template<class>
-constexpr bool is_set_adaptor = false;
-template<class B, xstd::ownership O>
-constexpr bool is_set_adaptor<xstd::set_adaptor<B, O>> = true;
+// The adaptors named without their storage: a container derives from its vehicle, a view is one.
+template<class T>
+constexpr bool is_set_adaptor = xstd::set_adaptor_like<T>;
 
-template<class>
-constexpr bool is_sequence_adaptor = false;
-template<class B, xstd::ownership O, bool W>
-constexpr bool is_sequence_adaptor<xstd::sequence_adaptor<B, O, W>> = true;
+template<class T>
+constexpr bool is_sequence_adaptor = xstd::sequence_adaptor_like<T>;
 
 template<class T>
 constexpr bool is_bitset_adaptor = requires { typename T::bits_type; } and std::derived_from<T, xstd::bitset_adaptor<typename T::bits_type, T>>;

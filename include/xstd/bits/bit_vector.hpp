@@ -17,7 +17,14 @@ namespace xstd {
 
 // The sequence reading over a heap of blocks: std::vector<bool> under the name Hinnant proposed for it.
 template<xstd::unsigned_integer Block, class Allocator = std::allocator<Block>>
-using basic_bit_vector = sequence_adaptor<detail::bits::contiguous_bit_vector<Block, Allocator>, ownership::owns, false>;
+class basic_bit_vector : public sequence_adaptor<detail::bits::contiguous_bit_vector<Block, Allocator>, ownership::owns, false, basic_bit_vector<Block, Allocator>>
+{
+        using base_type = sequence_adaptor<detail::bits::contiguous_bit_vector<Block, Allocator>, ownership::owns, false, basic_bit_vector<Block, Allocator>>;
+
+public:
+        using base_type::base_type;
+        using base_type::operator=;
+};
 
 using bit_vector = basic_bit_vector<std::size_t>;
 
