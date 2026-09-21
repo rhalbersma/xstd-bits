@@ -16,7 +16,14 @@ namespace xstd {
 
 // The bitset reading over a heap of blocks, boost::dynamic_bitset being its counterpart.
 template<xstd::unsigned_integer Block, class Allocator = std::allocator<Block>>
-using basic_dynamic_bitset = bitset_adaptor<detail::bits::contiguous_bit_vector<Block, Allocator>>;
+class basic_dynamic_bitset : public bitset_adaptor<detail::bits::contiguous_bit_vector<Block, Allocator>, basic_dynamic_bitset<Block, Allocator>>
+{
+        using base_type = bitset_adaptor<detail::bits::contiguous_bit_vector<Block, Allocator>, basic_dynamic_bitset<Block, Allocator>>;
+
+public:
+        using base_type::base_type;
+        using base_type::operator=;
+};
 
 using dynamic_bitset = basic_dynamic_bitset<std::size_t>;
 

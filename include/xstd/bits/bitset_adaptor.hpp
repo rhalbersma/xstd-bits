@@ -41,7 +41,7 @@
 namespace xstd {
 
 // [template.bitset] over a storage of ours, which speaks the bitset vocabulary by construction.
-template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits>
+template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits, class Derived>
 class bitset_adaptor : public detail::bits::allocator_base_type<Bits>
 {
         // One wrapper, two counterparts: std::bitset at a static width, boost::dynamic_bitset at a run-time one.
@@ -71,7 +71,16 @@ class bitset_adaptor : public detail::bits::allocator_base_type<Bits>
                 detail::bits::hash_append_bits(h, f, v->m_bits);
         }
 
+        // The most-derived type is what every operation hands back, so the containers keep their own names.
+        [[nodiscard]] constexpr auto self() noexcept
+                -> Derived&
+        {
+                return static_cast<Derived&>(*this);
+        }
+
 public:
+        using bits_type = Bits;
+
         // boost's typedefs; std::bitset has none, and the block is in the open as boost's interface needs.
         using size_type = std::size_t;
         using block_type = Bits::block_type;
@@ -183,9 +192,9 @@ public:
         template<class B>
                 requires (not std::same_as<std::remove_cvref_t<B>, bitset_adaptor>) and Bits::template
         exchanges_bits_as_field<B> [[nodiscard]] static constexpr auto from_bits(B const& b) noexcept
-                -> bitset_adaptor
+                -> Derived
         {
-                auto result = bitset_adaptor();
+                auto result = Derived();
                 result.m_bits.assign_bits(b);
                 return result;
         }
@@ -307,128 +316,128 @@ public:
 
         // Members                                              [bitset.members]
         constexpr auto operator&=(bitset_adaptor const& rhs) noexcept
-                -> bitset_adaptor&
+                -> Derived&
         {
                 m_bits &= rhs.m_bits;
-                return *this;
+                return self();
         }
 
         constexpr auto operator|=(bitset_adaptor const& rhs) noexcept
-                -> bitset_adaptor&
+                -> Derived&
         {
                 m_bits |= rhs.m_bits;
-                return *this;
+                return self();
         }
 
         constexpr auto operator^=(bitset_adaptor const& rhs) noexcept
-                -> bitset_adaptor&
+                -> Derived&
         {
                 m_bits ^= rhs.m_bits;
-                return *this;
+                return self();
         }
 
         // The counterparts' shifts saturate to none; the storage's are unchecked, so the guard lives here.
         constexpr auto operator<<=(std::size_t pos) noexcept
-                -> bitset_adaptor&
+                -> Derived&
         {
                 if (pos < size()) {
                         m_bits <<= pos;
                 } else {
                         m_bits.reset();
                 }
-                return *this;
+                return self();
         }
 
         constexpr auto operator>>=(std::size_t pos) noexcept
-                -> bitset_adaptor&
+                -> Derived&
         {
                 if (pos < size()) {
                         m_bits >>= pos;
                 } else {
                         m_bits.reset();
                 }
-                return *this;
+                return self();
         }
 
         constexpr auto set() noexcept
-                -> bitset_adaptor&
+                -> Derived&
         {
                 m_bits.set();
-                return *this;
+                return self();
         }
 
         constexpr auto reset() noexcept
-                -> bitset_adaptor&
+                -> Derived&
         {
                 m_bits.reset();
-                return *this;
+                return self();
         }
 
         constexpr auto flip() noexcept
-                -> bitset_adaptor&
+                -> Derived&
         {
                 m_bits.flip();
-                return *this;
+                return self();
         }
 
         // Element access: the one guard, then the unchecked write. A zero width is its own arm, or MSVC sees dead code.
         constexpr auto set(std::size_t pos, [[maybe_unused]] bool val = true)
-                -> bitset_adaptor&
+                -> Derived&
         {
                 if constexpr (detail::bits::zero_width<Bits>) {
                         throw out_of_range(pos);
                 } else {
                         guard(pos);
                         m_bits.assign(pos, val);
-                        return *this;
+                        return self();
                 }
         }
 
         constexpr auto reset(std::size_t pos)
-                -> bitset_adaptor&
+                -> Derived&
         {
                 if constexpr (detail::bits::zero_width<Bits>) {
                         throw out_of_range(pos);
                 } else {
                         guard(pos);
                         m_bits.assign(pos, false);
-                        return *this;
+                        return self();
                 }
         }
 
         constexpr auto flip(std::size_t pos)
-                -> bitset_adaptor&
+                -> Derived&
         {
                 if constexpr (detail::bits::zero_width<Bits>) {
                         throw out_of_range(pos);
                 } else {
                         guard(pos);
                         m_bits.assign(pos, not m_bits.test(pos));
-                        return *this;
+                        return self();
                 }
         }
 
         // boost's ranged forms: the guard on the whole range, then the storage's own a word at a time.
         constexpr auto set(std::size_t pos, std::size_t len, bool val)
-                -> bitset_adaptor&
+                -> Derived&
         {
                 guard_range(pos, len);
                 m_bits.set(pos, len, val);
-                return *this;
+                return self();
         }
 
         constexpr auto reset(std::size_t pos, std::size_t len)
-                -> bitset_adaptor&
+                -> Derived&
         {
                 return set(pos, len, false);
         }
 
         constexpr auto flip(std::size_t pos, std::size_t len)
-                -> bitset_adaptor&
+                -> Derived&
         {
                 guard_range(pos, len);
                 m_bits.flip(pos, len);
-                return *this;
+                return self();
         }
 
         // boost's test_set: the old value out, the new one in, behind the one guard.
@@ -580,10 +589,10 @@ public:
 
         // The set vocabulary boost has and std::bitset has not, which the storage spells alike at both widths.
         constexpr auto operator-=(bitset_adaptor const& rhs) noexcept
-                -> bitset_adaptor&
+                -> Derived&
         {
                 m_bits -= rhs.m_bits;
-                return *this;
+                return self();
         }
 
         [[nodiscard]] constexpr auto is_subset_of(bitset_adaptor const& rhs) const noexcept
@@ -921,11 +930,15 @@ private:
         }
 };
 
+// Every container built on the vehicle, the vehicle itself being nobody's owner.
+template<class T>
+concept owning_bitset_adaptor = requires { typename T::bits_type; } and std::derived_from<T, bitset_adaptor<typename T::bits_type, T>>;
+
 // The owner's side of the view protocol: what a bit_set_view or bit_span over a bitset refers into.
-template<class Bits>
-struct owned_storage<bitset_adaptor<Bits>>
+template<owning_bitset_adaptor Owner>
+struct owned_storage<Owner>
 {
-        using bits_type = Bits;
+        using bits_type = typename Owner::bits_type;
 
         // Committed to neither reading, which is what its two views are for.
         static constexpr auto reads = reading::bitset;
@@ -938,10 +951,10 @@ namespace std {
 // NOLINTBEGIN(bugprone-std-namespace-modification)
 
 // bitset hash support [bitset.hash]; no redeclaration of std::hash's primary template, which [namespace.std] forbids.
-template<class Bits>
-struct hash<xstd::bitset_adaptor<Bits>>
+template<xstd::owning_bitset_adaptor Owner>
+struct hash<Owner>
 {
-        [[nodiscard]] constexpr auto operator()(xstd::bitset_adaptor<Bits> const& v) const noexcept
+        [[nodiscard]] constexpr auto operator()(Owner const& v) const noexcept
                 -> std::size_t
         {
                 return xstd::detail::bits::std_hash(v);
@@ -955,73 +968,73 @@ struct hash<xstd::bitset_adaptor<Bits>>
 namespace xstd {
 
 // bitset operators                                           [bitset.operators]
-template<class Bits>
-[[nodiscard]] constexpr auto operator&(bitset_adaptor<Bits> const& lhs, bitset_adaptor<Bits> const& rhs) noexcept((Bits::extent != std::dynamic_extent))
-        -> bitset_adaptor<Bits>
+template<class Bits, class Derived>
+[[nodiscard]] constexpr auto operator&(bitset_adaptor<Bits, Derived> const& lhs, bitset_adaptor<Bits, Derived> const& rhs) noexcept((Bits::extent != std::dynamic_extent))
+        -> Derived
 {
-        auto nrv = lhs;
+        auto nrv = static_cast<Derived const&>(lhs);
         nrv &= rhs;
         return nrv;
 }
 
-template<class Bits>
-[[nodiscard]] constexpr auto operator|(bitset_adaptor<Bits> const& lhs, bitset_adaptor<Bits> const& rhs) noexcept((Bits::extent != std::dynamic_extent))
-        -> bitset_adaptor<Bits>
+template<class Bits, class Derived>
+[[nodiscard]] constexpr auto operator|(bitset_adaptor<Bits, Derived> const& lhs, bitset_adaptor<Bits, Derived> const& rhs) noexcept((Bits::extent != std::dynamic_extent))
+        -> Derived
 {
-        auto nrv = lhs;
+        auto nrv = static_cast<Derived const&>(lhs);
         nrv |= rhs;
         return nrv;
 }
 
-template<class Bits>
-[[nodiscard]] constexpr auto operator^(bitset_adaptor<Bits> const& lhs, bitset_adaptor<Bits> const& rhs) noexcept((Bits::extent != std::dynamic_extent))
-        -> bitset_adaptor<Bits>
+template<class Bits, class Derived>
+[[nodiscard]] constexpr auto operator^(bitset_adaptor<Bits, Derived> const& lhs, bitset_adaptor<Bits, Derived> const& rhs) noexcept((Bits::extent != std::dynamic_extent))
+        -> Derived
 {
-        auto nrv = lhs;
+        auto nrv = static_cast<Derived const&>(lhs);
         nrv ^= rhs;
         return nrv;
 }
 
-template<class Bits>
-[[nodiscard]] constexpr auto operator-(bitset_adaptor<Bits> const& lhs, bitset_adaptor<Bits> const& rhs) noexcept((Bits::extent != std::dynamic_extent))
-        -> bitset_adaptor<Bits>
+template<class Bits, class Derived>
+[[nodiscard]] constexpr auto operator-(bitset_adaptor<Bits, Derived> const& lhs, bitset_adaptor<Bits, Derived> const& rhs) noexcept((Bits::extent != std::dynamic_extent))
+        -> Derived
 {
-        auto nrv = lhs;
+        auto nrv = static_cast<Derived const&>(lhs);
         nrv -= rhs;
         return nrv;
 }
 
 // @= belongs to the left operand and @ does not, where std::bitset makes these three members.
-template<class Bits>
-[[nodiscard]] constexpr auto operator~(bitset_adaptor<Bits> const& lhs) noexcept((Bits::extent != std::dynamic_extent))
-        -> bitset_adaptor<Bits>
+template<class Bits, class Derived>
+[[nodiscard]] constexpr auto operator~(bitset_adaptor<Bits, Derived> const& lhs) noexcept((Bits::extent != std::dynamic_extent))
+        -> Derived
 {
-        auto nrv = lhs;
+        auto nrv = static_cast<Derived const&>(lhs);
         nrv.flip();
         return nrv;
 }
 
-template<class Bits>
-[[nodiscard]] constexpr auto operator<<(bitset_adaptor<Bits> const& lhs, std::size_t pos) noexcept((Bits::extent != std::dynamic_extent))
-        -> bitset_adaptor<Bits>
+template<class Bits, class Derived>
+[[nodiscard]] constexpr auto operator<<(bitset_adaptor<Bits, Derived> const& lhs, std::size_t pos) noexcept((Bits::extent != std::dynamic_extent))
+        -> Derived
 {
-        auto nrv = lhs;
+        auto nrv = static_cast<Derived const&>(lhs);
         nrv <<= pos;
         return nrv;
 }
 
-template<class Bits>
-[[nodiscard]] constexpr auto operator>>(bitset_adaptor<Bits> const& lhs, std::size_t pos) noexcept((Bits::extent != std::dynamic_extent))
-        -> bitset_adaptor<Bits>
+template<class Bits, class Derived>
+[[nodiscard]] constexpr auto operator>>(bitset_adaptor<Bits, Derived> const& lhs, std::size_t pos) noexcept((Bits::extent != std::dynamic_extent))
+        -> Derived
 {
-        auto nrv = lhs;
+        auto nrv = static_cast<Derived const&>(lhs);
         nrv >>= pos;
         return nrv;
 }
 
 // [bitset.operators]/6: up to N characters into a temporary string, then x = bitset(str), a short read landing low.
-template<class charT, class traits, class Bits>
-auto operator>>(std::basic_istream<charT, traits>& is, bitset_adaptor<Bits>& x)
+template<class charT, class traits, class Bits, class Derived>
+auto operator>>(std::basic_istream<charT, traits>& is, bitset_adaptor<Bits, Derived>& x)
         -> std::basic_istream<charT, traits>&
 {
         auto const limit = [&] -> std::size_t {
@@ -1050,7 +1063,7 @@ auto operator>>(std::basic_istream<charT, traits>& is, bitset_adaptor<Bits>& x)
                 is >> ch;
                 str.push_back(ch);
         }
-        x = bitset_adaptor<Bits>(str);
+        x = Derived(str);
         if constexpr (not detail::bits::zero_width<Bits>) {
                 if (str.empty()) {
                         state |= std::ios_base::failbit;
@@ -1060,8 +1073,8 @@ auto operator>>(std::basic_istream<charT, traits>& is, bitset_adaptor<Bits>& x)
         return is;
 }
 
-template<class charT, class traits, class Bits>
-auto operator<<(std::basic_ostream<charT, traits>& os, bitset_adaptor<Bits> const& x)
+template<class charT, class traits, class Bits, class Derived>
+auto operator<<(std::basic_ostream<charT, traits>& os, bitset_adaptor<Bits, Derived> const& x)
         -> std::basic_ostream<charT, traits>&
 {
         return os << x.template to_string<charT, traits, std::allocator<charT>>(
