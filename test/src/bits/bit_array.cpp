@@ -27,7 +27,8 @@ BOOST_AUTO_TEST_SUITE(BitArray)
 // Every Block model within one block, the narrow ones across boundaries, and the widest across one too.
 using Types = decltype(std::tuple_cat(
         std::declval<test::graded_extents<xstd::basic_bit_array>>(),
-        std::declval<test::wide_extents<xstd::basic_bit_array>>()));
+        std::declval<test::wide_extents<xstd::basic_bit_array>>()
+));
 
 // The clauses one at a time, so a failure names which one; the umbrella asserts the composite.
 BOOST_AUTO_TEST_CASE_TEMPLATE(IsRegular, T, Types)

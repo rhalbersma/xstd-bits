@@ -32,16 +32,24 @@ using View = xstd::set_adaptor<Storage, xstd::ownership::refers>;
 using Reader = xstd::set_adaptor<Storage const, xstd::ownership::refers>;
 
 // Dependent, so an absent member is a false rather than a hard error.
-template<class S> constexpr bool can_insert = requires (S s) { s.insert(0UZ); };
-template<class S> constexpr bool can_erase = requires (S s) { s.erase(0UZ); };
-template<class S> constexpr bool can_clear = requires (S s) { s.clear(); };
-template<class S> constexpr bool can_fill = requires (S s) { s.fill(); s.complement(); s.complement(0UZ); };
-template<class S> constexpr bool can_swap = requires (S s) { s.swap(s); };
-template<class S> constexpr bool has_complement = requires (S s) { ~s; s & s; };
+template<class S>
+constexpr bool can_insert = requires (S s) { s.insert(0UZ); };
+template<class S>
+constexpr bool can_erase = requires (S s) { s.erase(0UZ); };
+template<class S>
+constexpr bool can_clear = requires (S s) { s.clear(); };
+template<class S>
+constexpr bool can_fill = requires (S s) { s.fill(); s.complement(); s.complement(0UZ); };
+template<class S>
+constexpr bool can_swap = requires (S s) { s.swap(s); };
+template<class S>
+constexpr bool has_complement = requires (S s) { ~s; s & s; };
 
 // What for_each accepts, dependent so a rejected functor is a false rather than a hard error.
-template<class S, class F> constexpr bool walks = requires (S const& s, F f) { s.for_each(f); };
-template<class S, class F> constexpr bool walks_reverse = requires (S const& s, F f) { s.for_each_reverse(f); };
+template<class S, class F>
+constexpr bool walks = requires (S const& s, F f) { s.for_each(f); };
+template<class S, class F>
+constexpr bool walks_reverse = requires (S const& s, F f) { s.for_each_reverse(f); };
 
 // Functors overloaded on the value category.
 struct void_probe
@@ -49,6 +57,7 @@ struct void_probe
         bool& took_a_reference;
 
         auto operator()(std::size_t&&) const -> void {}
+
         // Never called is exactly what is under test, so say so rather than let -Wunused-member-function say it.
         [[maybe_unused]] auto operator()(std::size_t&) const
                 -> void
@@ -66,6 +75,7 @@ struct bool_probe
         {
                 return true;
         }
+
         // Never called is exactly what is under test, so say so rather than let -Wunused-member-function say it.
         [[maybe_unused]] auto operator()(std::size_t&) const
                 -> bool

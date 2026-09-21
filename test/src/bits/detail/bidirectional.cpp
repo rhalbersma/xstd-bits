@@ -23,14 +23,20 @@ namespace {
 struct key
 {
         std::size_t value;
+
         // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
-        constexpr explicit(false) key(std::size_t v) noexcept : value(v) {}
+        constexpr explicit(false) key(std::size_t v) noexcept
+                : value(v)
+        {}
 };
 
 struct index
 {
         std::size_t value;
-        constexpr explicit index(std::size_t v) noexcept : value(v) {}
+
+        constexpr explicit index(std::size_t v) noexcept
+                : value(v)
+        {}
 };
 
 template<class T>

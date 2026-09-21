@@ -18,8 +18,10 @@
 // The iterator is the primitive: a pointer and a position, reaching the bits through the storage alone.
 namespace xstd::detail::bits {
 
-template<class Bits> class random_access_bit_iterator;
-template<class Bits> class random_access_bit_reference;
+template<class Bits>
+class random_access_bit_iterator;
+template<class Bits>
+class random_access_bit_reference;
 
 // A position in the sequence reading; const Bits is the const iterator, the old IsConst bool folded into the type.
 template<class Bits>
@@ -41,8 +43,8 @@ public:
         [[nodiscard]] random_access_bit_iterator() noexcept = default;
 
         [[nodiscard]] constexpr random_access_bit_iterator(Bits* ptr, std::size_t idx) noexcept
-            : m_ptr(ptr),
-              m_idx(idx)
+                : m_ptr(ptr)
+                , m_idx(idx)
         {
                 assert(m_ptr != nullptr);
         }
@@ -51,8 +53,8 @@ public:
         template<class Mutable>
                 requires std::is_const_v<Bits> and std::same_as<Mutable const, Bits>
         [[nodiscard]] constexpr explicit(false) random_access_bit_iterator(random_access_bit_iterator<Mutable> other) noexcept // NOLINT(misc-explicit-constructor)
-            : m_ptr(other.m_ptr),
-              m_idx(other.m_idx)
+                : m_ptr(other.m_ptr)
+                , m_idx(other.m_idx)
         {}
 
         [[nodiscard]] friend constexpr auto operator==(random_access_bit_iterator lhs, random_access_bit_iterator rhs) noexcept
@@ -84,6 +86,7 @@ public:
                 ++m_idx;
                 return *this;
         }
+
         constexpr auto operator--() noexcept
                 -> random_access_bit_iterator&
         {
@@ -98,6 +101,7 @@ public:
                 ++*this;
                 return nrv;
         }
+
         constexpr auto operator--(int) noexcept
                 -> random_access_bit_iterator
         {
@@ -112,6 +116,7 @@ public:
                 m_idx = static_cast<std::size_t>(static_cast<difference_type>(m_idx) + n);
                 return *this;
         }
+
         constexpr auto operator-=(difference_type n) noexcept
                 -> random_access_bit_iterator&
         {
@@ -126,6 +131,7 @@ public:
                 nrv += n;
                 return nrv;
         }
+
         [[nodiscard]] friend constexpr auto operator+(difference_type n, random_access_bit_iterator rhs) noexcept
                 -> random_access_bit_iterator
         {
@@ -133,6 +139,7 @@ public:
                 nrv += n;
                 return nrv;
         }
+
         [[nodiscard]] friend constexpr auto operator-(random_access_bit_iterator lhs, difference_type n) noexcept
                 -> random_access_bit_iterator
         {
@@ -186,8 +193,8 @@ public:
         using iterator = random_access_bit_iterator<Bits>;
 
         [[nodiscard]] constexpr random_access_bit_reference(Bits* ptr, std::size_t idx) noexcept
-            : m_ptr(ptr),
-              m_idx(idx)
+                : m_ptr(ptr)
+                , m_idx(idx)
         {
                 assert(m_ptr != nullptr);
         }
@@ -260,6 +267,7 @@ public:
                 x = y;
                 y = t;
         }
+
         friend constexpr auto swap(random_access_bit_reference x, bool& y) noexcept -> void
                 requires is_writable
         {
@@ -267,6 +275,7 @@ public:
                 x = y;
                 y = t;
         }
+
         friend constexpr auto swap(bool& x, random_access_bit_reference y) noexcept -> void
                 requires is_writable
         {
@@ -289,7 +298,7 @@ public:
 template<class Bits, class CharT>
 // NOLINTNEXTLINE(bugprone-std-namespace-modification)
 struct std::formatter<xstd::detail::bits::random_access_bit_reference<Bits>, CharT>
-    : std::formatter<bool, CharT>
+        : std::formatter<bool, CharT>
 {
         template<class Context>
         [[nodiscard]] constexpr auto format(xstd::detail::bits::random_access_bit_reference<Bits> ref, Context& ctx) const

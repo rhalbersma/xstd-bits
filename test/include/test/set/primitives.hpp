@@ -344,7 +344,8 @@ struct mem_emplace
                 static_assert(
                         std::same_as<
                                 decltype(a.emplace(std::forward<Args>(args)...)),
-                                std::pair<typename X::iterator, bool>>);
+                                std::pair<typename X::iterator, bool>>
+                );
 
                 static_assert(std::constructible_from<typename X::value_type, Args...>); // [associative.reqmts.general]/48
                 // Built once and then used three times.
@@ -363,8 +364,8 @@ struct mem_emplace_hint
         {
                 static_assert(
                         std::same_as< // [associative.reqmts.general]/57
-                                decltype(a.emplace_hint(p, std::forward<Args>(args)...)),
-                                typename X::iterator>);
+                                decltype(a.emplace_hint(p, std::forward<Args>(args)...)), typename X::iterator>
+                );
                 // Built once, for the reason mem_emplace gives.
                 auto const value = typename X::value_type(std::forward<Args>(args)...);
                 auto const r = a.emplace_hint(p, value); // [associative.reqmts.general]/58

@@ -47,8 +47,10 @@ concept equality_comparable_storage = requires (Bits const& a, Bits const& b) {
 };
 
 // A range of consecutive ascending positions, which is what a block-wise fill needs.
-template<class R> inline constexpr bool is_consecutive = false;
-template<class W, class B> inline constexpr bool is_consecutive<std::ranges::iota_view<W, B>> = true;
+template<class R>
+inline constexpr bool is_consecutive = false;
+template<class W, class B>
+inline constexpr bool is_consecutive<std::ranges::iota_view<W, B>> = true;
 
 // Continue unless the functor says otherwise: a void functor always continues, a bool one says.
 template<class F>
@@ -130,7 +132,8 @@ class set_adaptor : public std::conditional_t<owns(Own), detail::bits::allocator
         }
 
         // A set view refers into this owner's storage and nothing else does; a sequence view does not.
-        template<specialization_of_TN<detail::bits::contiguous_bit_container> B, ownership O> friend class set_adaptor;
+        template<specialization_of_TN<detail::bits::contiguous_bit_container> B, ownership O>
+        friend class set_adaptor;
 
         // The value under the set reading: the bits at a static width, the positions at a run-time one.
         template<class Provider, class Hash, class Flavor>
@@ -191,13 +194,13 @@ public:
         template<class Alloc>
                 requires is_owner and std::same_as<Alloc, typename bits_type::allocator_type>
         [[nodiscard]] constexpr explicit set_adaptor(Alloc const& alloc)
-            : m_bits(alloc)
+                : m_bits(alloc)
         {}
 
         template<std::input_iterator I, std::sentinel_for<I> S, class Alloc>
                 requires is_owner and std::constructible_from<value_type, std::iter_reference_t<I>> and std::same_as<Alloc, typename bits_type::allocator_type>
         [[nodiscard]] constexpr set_adaptor(I first, S last, Alloc const& alloc)
-            : m_bits(alloc)
+                : m_bits(alloc)
         {
                 insert(first, last);
         }
@@ -205,25 +208,25 @@ public:
         template<std::ranges::input_range R, class Alloc>
                 requires is_owner and std::constructible_from<value_type, std::ranges::range_reference_t<R>> and std::same_as<Alloc, typename bits_type::allocator_type>
         [[nodiscard]] constexpr set_adaptor(std::from_range_t, R&& rg, Alloc const& alloc)
-            : set_adaptor(std::ranges::begin(rg), std::ranges::end(rg), alloc)
+                : set_adaptor(std::ranges::begin(rg), std::ranges::end(rg), alloc)
         {}
 
         template<class Alloc>
                 requires is_owner and std::same_as<Alloc, typename bits_type::allocator_type>
         [[nodiscard]] constexpr set_adaptor(std::initializer_list<value_type> il, Alloc const& alloc)
-            : set_adaptor(il.begin(), il.end(), alloc)
+                : set_adaptor(il.begin(), il.end(), alloc)
         {}
 
         template<class Alloc>
                 requires is_owner and std::same_as<Alloc, typename bits_type::allocator_type>
         [[nodiscard]] constexpr set_adaptor(set_adaptor const& other, Alloc const& alloc)
-            : m_bits(other.m_bits, alloc)
+                : m_bits(other.m_bits, alloc)
         {}
 
         template<class Alloc>
                 requires is_owner and std::same_as<Alloc, typename bits_type::allocator_type>
         [[nodiscard]] constexpr set_adaptor(set_adaptor&& other, Alloc const& alloc)
-            : m_bits(std::move(other.m_bits), alloc)
+                : m_bits(std::move(other.m_bits), alloc)
         {}
 
         // A field of bits in and out at a static width, named rather than spelled as a conversion.
@@ -248,14 +251,14 @@ public:
 
         [[nodiscard]] constexpr explicit set_adaptor(Bits& c) noexcept
                 requires (not is_owner)
-            : m_bits(&c)
+                : m_bits(&c)
         {}
 
         // A view over an owner is a view over the storage it wraps; implicit, claiming nothing the owner lacks.
         template<owner_of<Bits, reading::set> Owner>
         [[nodiscard]] constexpr explicit(false) set_adaptor(Owner& c) noexcept // NOLINT(misc-explicit-constructor)
                 requires (not is_owner)
-            : m_bits(&c.m_bits)
+                : m_bits(&c.m_bits)
         {}
 
         constexpr auto operator=(std::initializer_list<value_type> il)
@@ -300,6 +303,7 @@ public:
         {
                 return {&storage(), storage().find_first()};
         }
+
         [[nodiscard]] constexpr auto end() const noexcept
                 -> const_iterator
         {
@@ -311,6 +315,7 @@ public:
         {
                 return std::make_reverse_iterator(end());
         }
+
         [[nodiscard]] constexpr auto rend() const noexcept
                 -> const_reverse_iterator
         {
@@ -322,16 +327,19 @@ public:
         {
                 return begin();
         }
+
         [[nodiscard]] constexpr auto cend() const noexcept
                 -> const_iterator
         {
                 return end();
         }
+
         [[nodiscard]] constexpr auto crbegin() const noexcept
                 -> const_reverse_iterator
         {
                 return rbegin();
         }
+
         [[nodiscard]] constexpr auto crend() const noexcept
                 -> const_reverse_iterator
         {
@@ -362,6 +370,7 @@ public:
         {
                 return begin() == end();
         }
+
         [[nodiscard]] constexpr auto full() const noexcept
                 -> bool
         {
@@ -393,6 +402,7 @@ public:
         {
                 return *begin();
         }
+
         // A zero width has no position to scan back from, and exclusive_find_prev asserts there.
         [[nodiscard]] constexpr auto back() const noexcept
                 -> const_reference
@@ -427,6 +437,7 @@ public:
         {
                 return self.do_insert(x);
         }
+
         constexpr auto insert(this auto&& self, const_iterator position, value_type x) -> iterator
                 requires requires { self.storage().growing_insert(x); }
         {
@@ -643,6 +654,7 @@ public:
         {
                 return {};
         }
+
         [[nodiscard]] constexpr auto value_comp() const noexcept
                 -> value_compare
         {
@@ -655,6 +667,7 @@ public:
         {
                 return x < storage().size() and storage().test(x);
         }
+
         [[nodiscard]] constexpr auto count(key_type const& x) const noexcept
                 -> size_type
         {
@@ -741,7 +754,9 @@ private:
                 return std::out_of_range(
                         std::format(
                                 "{}:{}:{}: exception: ‘{}‘: argument ‘x‘ is no key this set can hold [{} >= {}]",
-                                loc.file_name(), loc.line(), loc.column(), loc.function_name(), x, max_size()));
+                                loc.file_name(), loc.line(), loc.column(), loc.function_name(), x, max_size()
+                        )
+                );
         }
 
         // growing_insert reports whether the bit was new, so one walk answers where two did.
@@ -799,7 +814,8 @@ constexpr auto erase_if(set_adaptor<Bits, Own>& c, Predicate pred)
 }
 
 // The non-member forms copy, so they are the owner's alone: a copied view would write through.
-template<class Bits, ownership Own> [[nodiscard]] constexpr auto operator~(set_adaptor<Bits, Own> const& lhs) noexcept(set_adaptor<Bits, Own>::has_static_width) -> set_adaptor<Bits, Own>
+template<class Bits, ownership Own>
+[[nodiscard]] constexpr auto operator~(set_adaptor<Bits, Own> const& lhs) noexcept(set_adaptor<Bits, Own>::has_static_width) -> set_adaptor<Bits, Own>
         requires (owns(Own)) and requires (set_adaptor<Bits, Own> c) { c.complement(); }
 {
         auto nrv = lhs;
@@ -807,28 +823,35 @@ template<class Bits, ownership Own> [[nodiscard]] constexpr auto operator~(set_a
         return nrv;
 }
 
-template<class Bits, ownership Own> [[nodiscard]] constexpr auto operator&(set_adaptor<Bits, Own> const& lhs, set_adaptor<Bits, Own> const& rhs) noexcept(set_adaptor<Bits, Own>::has_static_width) -> set_adaptor<Bits, Own>
+template<class Bits, ownership Own>
+[[nodiscard]] constexpr auto operator&(set_adaptor<Bits, Own> const& lhs, set_adaptor<Bits, Own> const& rhs) noexcept(set_adaptor<Bits, Own>::has_static_width) -> set_adaptor<Bits, Own>
         requires (owns(Own)) and requires (set_adaptor<Bits, Own> c) { c &= c; }
 {
         auto nrv = lhs;
         nrv &= rhs;
         return nrv;
 }
-template<class Bits, ownership Own> [[nodiscard]] constexpr auto operator|(set_adaptor<Bits, Own> const& lhs, set_adaptor<Bits, Own> const& rhs) noexcept(set_adaptor<Bits, Own>::has_static_width) -> set_adaptor<Bits, Own>
+
+template<class Bits, ownership Own>
+[[nodiscard]] constexpr auto operator|(set_adaptor<Bits, Own> const& lhs, set_adaptor<Bits, Own> const& rhs) noexcept(set_adaptor<Bits, Own>::has_static_width) -> set_adaptor<Bits, Own>
         requires (owns(Own)) and requires (set_adaptor<Bits, Own> c) { c |= c; }
 {
         auto nrv = lhs;
         nrv |= rhs;
         return nrv;
 }
-template<class Bits, ownership Own> [[nodiscard]] constexpr auto operator^(set_adaptor<Bits, Own> const& lhs, set_adaptor<Bits, Own> const& rhs) noexcept(set_adaptor<Bits, Own>::has_static_width) -> set_adaptor<Bits, Own>
+
+template<class Bits, ownership Own>
+[[nodiscard]] constexpr auto operator^(set_adaptor<Bits, Own> const& lhs, set_adaptor<Bits, Own> const& rhs) noexcept(set_adaptor<Bits, Own>::has_static_width) -> set_adaptor<Bits, Own>
         requires (owns(Own)) and requires (set_adaptor<Bits, Own> c) { c ^= c; }
 {
         auto nrv = lhs;
         nrv ^= rhs;
         return nrv;
 }
-template<class Bits, ownership Own> [[nodiscard]] constexpr auto operator-(set_adaptor<Bits, Own> const& lhs, set_adaptor<Bits, Own> const& rhs) noexcept(set_adaptor<Bits, Own>::has_static_width) -> set_adaptor<Bits, Own>
+
+template<class Bits, ownership Own>
+[[nodiscard]] constexpr auto operator-(set_adaptor<Bits, Own> const& lhs, set_adaptor<Bits, Own> const& rhs) noexcept(set_adaptor<Bits, Own>::has_static_width) -> set_adaptor<Bits, Own>
         requires (owns(Own)) and requires (set_adaptor<Bits, Own> c) { c -= c; }
 {
         auto nrv = lhs;
@@ -836,20 +859,24 @@ template<class Bits, ownership Own> [[nodiscard]] constexpr auto operator-(set_a
         return nrv;
 }
 
-template<class Bits, ownership Own> [[nodiscard]] constexpr auto operator<<(set_adaptor<Bits, Own> const& lhs, std::size_t n) noexcept(set_adaptor<Bits, Own>::has_static_width) -> set_adaptor<Bits, Own>
+template<class Bits, ownership Own>
+[[nodiscard]] constexpr auto operator<<(set_adaptor<Bits, Own> const& lhs, std::size_t n) noexcept(set_adaptor<Bits, Own>::has_static_width) -> set_adaptor<Bits, Own>
         requires (owns(Own)) and requires (set_adaptor<Bits, Own> c) { c <<= n; }
 {
         auto nrv = lhs;
         nrv <<= n;
         return nrv;
 }
-template<class Bits, ownership Own> [[nodiscard]] constexpr auto operator>>(set_adaptor<Bits, Own> const& lhs, std::size_t n) noexcept(set_adaptor<Bits, Own>::has_static_width) -> set_adaptor<Bits, Own>
+
+template<class Bits, ownership Own>
+[[nodiscard]] constexpr auto operator>>(set_adaptor<Bits, Own> const& lhs, std::size_t n) noexcept(set_adaptor<Bits, Own>::has_static_width) -> set_adaptor<Bits, Own>
         requires (owns(Own)) and requires (set_adaptor<Bits, Own> c) { c >>= n; }
 {
         auto nrv = lhs;
         nrv >>= n;
         return nrv;
 }
+
 // NOLINTEND(readability-redundant-parentheses)
 
 } // namespace xstd
@@ -865,6 +892,7 @@ template<class Bits>
 inline constexpr bool enable_borrowed_range<xstd::set_adaptor<Bits, xstd::ownership::refers>> = true;
 
 } // namespace std::ranges
+
 // NOLINTEND(bugprone-std-namespace-modification)
 
 // NOLINTBEGIN(bugprone-std-namespace-modification)
@@ -882,6 +910,7 @@ struct hash<xstd::set_adaptor<Bits, Own>>
 };
 
 } // namespace std
+
 // NOLINTEND(bugprone-std-namespace-modification)
 
 // Not a range to ContainerHash, so Hash2 takes the hook and not its range overload.

@@ -104,11 +104,11 @@ class checker
 
 public:
         checker(BB const& x, BB const& y, BB& a, BB& b, int& disagreements)
-            : m_x(x),
-              m_y(y),
-              m_disagreements(disagreements),
-              m_a(a),
-              m_b(b)
+                : m_x(x)
+                , m_y(y)
+                , m_disagreements(disagreements)
+                , m_a(a)
+                , m_b(b)
         {}
 
         auto width()
@@ -552,10 +552,13 @@ struct counting_blocks
         counting_blocks() = default;
         [[maybe_unused]] counting_blocks(counting_blocks const&) = default;
         [[maybe_unused]] auto operator=(counting_blocks const&) -> counting_blocks& = default;
-        [[maybe_unused]] counting_blocks(counting_blocks&& other) noexcept : m_data(other.m_data)
+
+        [[maybe_unused]] counting_blocks(counting_blocks&& other) noexcept
+                : m_data(other.m_data)
         {
                 ++g_storage_moves;
         }
+
         [[maybe_unused]] auto operator=(counting_blocks&& other) noexcept
                 -> counting_blocks&
         {
@@ -563,6 +566,7 @@ struct counting_blocks
                 ++g_storage_moves;
                 return *this;
         }
+
         [[maybe_unused]] ~counting_blocks() = default;
 
         [[nodiscard, maybe_unused]] auto begin()
@@ -570,21 +574,25 @@ struct counting_blocks
         {
                 return m_data.data();
         }
+
         [[nodiscard, maybe_unused]] auto begin() const
                 -> std::uint64_t const*
         {
                 return m_data.data();
         }
+
         [[nodiscard, maybe_unused]] auto end()
                 -> std::uint64_t*
         {
                 return m_data.data() + m_data.size();
         }
+
         [[nodiscard, maybe_unused]] auto end() const
                 -> std::uint64_t const*
         {
                 return m_data.data() + m_data.size();
         }
+
         [[nodiscard, maybe_unused]] auto size() const
                 -> std::size_t
         {
@@ -596,6 +604,7 @@ struct counting_blocks
         {
                 return m_data[n];
         }
+
         [[nodiscard, maybe_unused]] auto operator[](size_type n) const
                 -> std::uint64_t const&
         {
@@ -784,12 +793,18 @@ auto append_to(model& m, Block value)
 }
 
 // Alternating pairs of bits, so a split at any offset lands ones on both sides.
-template<class X> constexpr bool can_resize = requires (X& x) { x.resize(1UZ); x.resize(1UZ, true); };
-template<class X> constexpr bool can_push_pop = requires (X& x) { x.push_back(true); x.pop_back(); };
-template<class X> constexpr bool can_append = requires (X& x) { x.append(x.block(0UZ)); };
-template<class X> constexpr bool can_clear = requires (X& x) { x.clear(); };
-template<class X> constexpr bool can_reserve = requires (X& x) { x.reserve(1UZ); x.shrink_to_fit(); };
-template<class X> constexpr bool has_capacity = requires (X const& x) { x.capacity(); };
+template<class X>
+constexpr bool can_resize = requires (X& x) { x.resize(1UZ); x.resize(1UZ, true); };
+template<class X>
+constexpr bool can_push_pop = requires (X& x) { x.push_back(true); x.pop_back(); };
+template<class X>
+constexpr bool can_append = requires (X& x) { x.append(x.block(0UZ)); };
+template<class X>
+constexpr bool can_clear = requires (X& x) { x.clear(); };
+template<class X>
+constexpr bool can_reserve = requires (X& x) { x.reserve(1UZ); x.shrink_to_fit(); };
+template<class X>
+constexpr bool has_capacity = requires (X const& x) { x.capacity(); };
 
 template<class Block>
 [[nodiscard]] constexpr auto striped()

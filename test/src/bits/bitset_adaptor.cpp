@@ -51,7 +51,7 @@ struct digit_char
 
         // A converting constructor: charT('0') on a bare aggregate is a C++20 extension clang diagnoses.
         constexpr digit_char(unsigned char c) noexcept // NOLINT(misc-explicit-constructor,google-explicit-constructor,hicpp-explicit-conversions)
-            : v(c)
+                : v(c)
         {}
 
         [[nodiscard]] friend auto operator==(digit_char, digit_char) noexcept -> bool = default;
@@ -77,11 +77,13 @@ struct std::char_traits<digit_char>
         {
                 a = b;
         }
+
         static constexpr auto eq(char_type a, char_type b) noexcept
                 -> bool
         {
                 return a.v == b.v;
         }
+
         static constexpr auto lt(char_type a, char_type b) noexcept
                 -> bool
         {
@@ -161,21 +163,25 @@ struct std::char_traits<digit_char>
         {
                 return c == eof() ? 0 : c;
         }
+
         static constexpr auto to_char_type(int_type c) noexcept
                 -> char_type
         {
                 return {static_cast<unsigned char>(c)};
         }
+
         static constexpr auto to_int_type(char_type c) noexcept
                 -> int_type
         {
                 return c.v;
         }
+
         static constexpr auto eq_int_type(int_type a, int_type b) noexcept
                 -> bool
         {
                 return a == b;
         }
+
         static constexpr auto eof() noexcept
                 -> int_type
         {

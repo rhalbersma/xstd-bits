@@ -37,9 +37,12 @@ using View = xstd::sequence_adaptor<Storage, xstd::ownership::refers, false>;
 using Reader = xstd::sequence_adaptor<Storage const, xstd::ownership::refers, false>;
 
 // Dependent, so an absent member is a false rather than a hard error.
-template<class S> constexpr bool can_fill = requires (S s) { s.fill(true); };
-template<class S> constexpr bool can_write = requires (S s) { s[0] = true; };
-template<class S> constexpr bool can_swap = requires (S s) { s.swap(s); };
+template<class S>
+constexpr bool can_fill = requires (S s) { s.fill(true); };
+template<class S>
+constexpr bool can_write = requires (S s) { s[0] = true; };
+template<class S>
+constexpr bool can_swap = requires (S s) { s.swap(s); };
 
 template<class Seq>
 [[nodiscard]] auto bools(Seq const& s)
@@ -512,10 +515,12 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(MismatchAgreesWithTheModel, T, Graded)
 }
 
 // Dependent, so a constrained-away member is a false rather than a hard error.
-template<class S> constexpr bool can_mismatch = requires (S const& a) { a.mismatch(a); };
+template<class S>
+constexpr bool can_mismatch = requires (S const& a) { a.mismatch(a); };
 
 // What for_each accepts, likewise dependent.
-template<class S, class F> constexpr bool walks = requires (S const& s, F f) { s.for_each(f); };
+template<class S, class F>
+constexpr bool walks = requires (S const& s, F f) { s.for_each(f); };
 
 // Functors overloaded on the value category.
 struct void_probe
@@ -523,6 +528,7 @@ struct void_probe
         bool& took_a_reference;
 
         auto operator()(bool&&) const -> void {}
+
         // Never called is exactly what is under test, so say so rather than let -Wunused-member-function say it.
         [[maybe_unused]] auto operator()(bool&) const
                 -> void
@@ -540,6 +546,7 @@ struct bool_probe
         {
                 return true;
         }
+
         // Never called is exactly what is under test, so say so rather than let -Wunused-member-function say it.
         [[maybe_unused]] auto operator()(bool&) const
                 -> bool

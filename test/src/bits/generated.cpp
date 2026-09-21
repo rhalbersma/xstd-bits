@@ -46,13 +46,16 @@ constexpr auto is_regular_container()
 }
 
 // The allocator varies by column, not by row: a storage that allocates has one, a static width has none.
-template<class T> constexpr auto allocator_aware()
+template<class T>
+constexpr auto allocator_aware()
         -> bool
 {
         static_assert(has_get_allocator<T>);
         return true;
 }
-template<class T> constexpr auto not_allocator_aware()
+
+template<class T>
+constexpr auto not_allocator_aware()
         -> bool
 {
         static_assert(not has_get_allocator<T>);
