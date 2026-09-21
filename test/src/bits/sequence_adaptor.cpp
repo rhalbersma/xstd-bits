@@ -5,6 +5,7 @@
 
 #include <test/bit_exchange.hpp>                      // exchanges_bits, exchanges_from_bits, exchanges_to_bits
 #include <test/block_types.hpp>                       // graded_extents
+#include <xstd/bits/basic_bits.hpp>                   // swap
 #include <xstd/bits/bit_array.hpp>                    // bit_array
 #include <xstd/bits/bit_span.hpp>                     // bit_span
 #include <xstd/bits/bit_subspan.hpp>                  // bit_subspan

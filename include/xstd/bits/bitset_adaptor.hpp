@@ -12,7 +12,9 @@
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/detail/hash.hpp>                     // hash_append_bits, std_hash
 #include <xstd/bits/detail/zero_width.hpp>               // zero_width
-#include <xstd/bits/ownership.hpp>                       // owned_storage, storage, reading
+#include <xstd/bits/grid.hpp>                            // adaptor_of
+#include <xstd/bits/ownership.hpp>                       // owned_storage, storage
+#include <xstd/bits/tags.hpp>                            // bitset_reading_tag
 #include <xstd/misc/concepts/specialization_of.hpp>      // specialization_of_TN
 #include <boost/hash2/hash_append.hpp>                   // hash_append_tag
 #include <algorithm>                                     // min, ranges::copy
@@ -947,7 +949,14 @@ struct owned_storage<bitset_adaptor<Bits, Derived>>
         using bits_type = Bits;
 
         // Committed to neither reading, which is what its two views are for.
-        static constexpr auto reads = reading::bitset;
+        using reads = bitset_reading_tag;
+};
+
+// The bitset cell of the grid, answered where the adaptor it names is defined.
+template<class Bits, class Derived>
+struct adaptor_of<bitset_reading_tag, Bits, Derived>
+{
+        using type = bitset_adaptor<Bits, Derived>;
 };
 
 } // namespace xstd

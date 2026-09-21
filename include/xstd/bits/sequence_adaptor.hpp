@@ -12,7 +12,9 @@
 #include <xstd/bits/detail/intrin.hpp>                   // countr_zero, popcount
 #include <xstd/bits/detail/shift.hpp>                    // shl, shr
 #include <xstd/bits/detail/random_access.hpp>            // random_access_bit_iterator, random_access_bit_reference
-#include <xstd/bits/ownership.hpp>                       // owned_bits_t, owned_storage, owner_of, owner_reading, storage, owns, reading
+#include <xstd/bits/grid.hpp>                            // adaptor_of
+#include <xstd/bits/ownership.hpp>                       // owned_bits_t, owned_storage, owner_of, owner_reading, storage, owns
+#include <xstd/bits/tags.hpp>                            // sequence_reading_tag
 #include <xstd/misc/concepts/specialization_of.hpp>      // specialization_of_TN
 #include <xstd/misc/type_traits/empty_base_type.hpp>     // empty_base_type
 #include <boost/container_hash/is_range.hpp>             // is_range
@@ -258,7 +260,7 @@ public:
 
         // What a trait asks of this vehicle, every container built on it answering alike.
         using adaptor_type = sequence_adaptor;
-        static constexpr auto reads_as = reading::sequence;
+        using reads_as = sequence_reading_tag;
         static constexpr bool is_windowed = Windowed;
         using adapted_type = Bits;
         static constexpr bool owns_storage = is_owner;
@@ -536,7 +538,7 @@ public:
         {}
 
         // A view over an owner is a view over the storage it wraps; implicit, claiming nothing the owner lacks.
-        template<owner_of<Bits, reading::sequence> Owner>
+        template<owner_of<Bits, sequence_reading_tag> Owner>
         [[nodiscard]] constexpr explicit(false) sequence_adaptor(Owner& c) noexcept // NOLINT(misc-explicit-constructor)
                 requires (not is_owner) and (not is_window)
                 : m_bits(&c.m_bits)
@@ -1129,12 +1131,12 @@ template<class Bits>
         requires (not requires { typename owned_storage<std::remove_const_t<Bits>>::bits_type; })
 sequence_adaptor(Bits&) -> sequence_adaptor<Bits, storage::borrowed, false>;
 
-template<owner_reading<reading::sequence> Owner>
+template<owner_reading<sequence_reading_tag> Owner>
 sequence_adaptor(Owner&) -> sequence_adaptor<owned_bits_t<Owner>, storage::borrowed, false>;
 
 // Any container built on the sequence vehicle, the vehicle used directly included.
 template<class T>
-concept sequence_adaptor_like = requires { typename T::adaptor_type; T::reads_as; } and (T::reads_as == reading::sequence) and std::derived_from<T, typename T::adaptor_type>;
+concept sequence_adaptor_like = requires { typename T::adaptor_type; typename T::reads_as; } and std::same_as<typename T::reads_as, sequence_reading_tag> and std::derived_from<T, typename T::adaptor_type>;
 
 // The owner's side of the protocol above.
 template<class Bits, class Derived>
@@ -1143,7 +1145,14 @@ struct owned_storage<sequence_adaptor<Bits, storage::owned, false, Derived>>
         using bits_type = Bits;
 
         // Committed to the sequence reading, so only a sequence view refers into one.
-        static constexpr auto reads = reading::sequence;
+        using reads = sequence_reading_tag;
+};
+
+// The sequence cell of the grid, answered where the adaptor it names is defined.
+template<class Bits, class Derived>
+struct adaptor_of<sequence_reading_tag, Bits, Derived>
+{
+        using type = sequence_adaptor<Bits, storage::owned, false, Derived>;
 };
 
 // NOLINTBEGIN(readability-redundant-parentheses): a call is no primary expression, so the clause needs them.

@@ -176,8 +176,8 @@ if anyone ever "simplifies" the definition into the dance.
 it, and
 `detail/contiguous_bit_array.hpp`, `detail/contiguous_bit_vector.hpp` and
 `detail/contiguous_bit_inplace_vector.hpp` hold one vehicle apiece. The names are in `xstd::detail::bits` with
-the rest of `detail/`, so a container spells `detail::bits::contiguous_bit_array<Block, N>` and nothing outside
-the library can name the vehicle at all. It is the device that turns three readings over three storages into three plus three, and a
+the rest of `detail/`, so nothing outside the library can name a vehicle at all; a container reaches its own by
+tag, as `bits_t<array_container_tag, Block, N>`. It is the device that turns three readings over three storages into three plus three, and a
 factoring device is machinery rather than vocabulary: a user reaches every width through `bit_static_set<N>` or
 `basic_bit_array<Block, N>` and never spells the pair themselves. The split is what lets each of the nine
 containers include only the vehicle it uses -- `bit_array` names `contiguous_bit_array` and no longer sees
@@ -1405,15 +1405,57 @@ what `-Wunused-lambda-capture` reports.
 Three class templates carry the three readings: `set_adaptor`, `sequence_adaptor`, `bitset_adaptor`. Each is
 written against `contiguous_bit_container` and against nothing else, so one adaptor serves
 `contiguous_bit_array`, `contiguous_bit_vector` and `contiguous_bit_inplace_vector` alike, at both widths and
-in both ownerships ([one-storage](#one-storage)). The public names sit in two layers over
-them. The `basic_` layer derives, passing itself as the adaptor's last argument so that the adaptor names it
-back: `basic_bit_static_set<B, N>` is a `set_adaptor<contiguous_bit_array<B, N>, owns, basic_bit_static_set<B,
-N>>`, `basic_bit_array<B, N>` a `sequence_adaptor<contiguous_bit_array<B, N>, owns, false, basic_bit_array<B,
-N>>`, and `basic_bitset<B, N>` a `bitset_adaptor<contiguous_bit_array<B, N>, basic_bitset<B, N>>`. The short
-layer stays an alias fixing the block: `bit_static_set<N>`, `bit_array<N>` and `bitset<N>` are those at
+in both ownerships ([one-storage](#one-storage)). `basic_bits` sits over them and
+the public names sit over it ([the-grid](#the-grid)). It derives, passing itself as the adaptor's last argument
+so that the adaptor names it back, and the `basic_` layer is an alias naming one of its cells:
+`basic_bit_static_set<B, N>` is `basic_bits<set_reading_tag, array_container_tag, B, N>`, which is a
+`set_adaptor<contiguous_bit_array<B, N>, owns, basic_bits<set_reading_tag, array_container_tag, B, N>>`. The
+short layer stays an alias fixing the block: `bit_static_set<N>`, `bit_array<N>` and `bitset<N>` are those at
 `std::size_t`. Deriving is what keeps a value-returning operation -- `& | ^ -`, `operator~`, the shifts,
 `from_bits` -- handing back the container the caller named rather than the vehicle under it
 ([the-views-are-the-adaptors](#the-views-are-the-adaptors)).
+
+### the-grid
+
+**The nine containers are a full three-by-three, and nothing else.** Three readings over three storages, every
+cell occupied, every one an owner and none windowed. Before the grid each cell was a class of its own, and the
+nine class bodies were byte-identical -- `using base_type::base_type;` and `using base_type::operator=;`, no
+member added anywhere. They differed in their base clause and in nothing else, which is what makes the grid a
+fact about the library rather than a construction imposed on it.
+
+`basic_bits<R, C, Block, N, Alloc>` is that grid, and the nine public `basic_` names are aliases naming its
+cells. The axes are flat tags -- `bitset_reading_tag`, `sequence_reading_tag`, `set_reading_tag` and
+`array_container_tag`, `inplace_vector_container_tag`, `vector_container_tag` -- and **no tag nests inside
+another**. The temptation is to make `sequence` refine `bitset` on the iterator-tag analogy, and the member
+sets refuse it: `bitset` has 25 members `sequence` lacks and `sequence` has over 40 `bitset` lacks. That is
+overlap without containment, so the bitset reading is a hybrid of the other two and a refinement of neither,
+and the relation views need is a predicate on the owner rather than a base class.
+
+Each concept is opt-in through a variable template, the way `std::ranges::enable_view` is, so the set stays
+open to a reading or a container declared elsewhere.
+
+**Each axis is answered where the thing it names is defined.** `bits_of<array_container_tag, ...>` is
+specialized in the header holding `contiguous_bit_array`, `adaptor_of<set_reading_tag, ...>` in the header
+holding `set_adaptor`, and `grid.hpp` carries only the two primaries. A central switchboard would have been
+shorter to write and would have put all three storages and all three adaptors on every container's include
+path: measured, `bit_array.hpp` began pulling `<vector>`, which is exactly the property the vehicle split was
+for. Distributing the specializations keeps each container including only the vehicle it uses.
+
+`N` sits third and `Alloc` fourth, so the three allocating cells wear `std::dynamic_extent` as a filler. The
+alternative -- two traits, one per family, since `N` and `Alloc` occupy the same slot in the three storages --
+fails on `boost::container::small_vector<T, N, Alloc>`, which needs `Block`, `N` **and** `Alloc` and so belongs
+to neither family. A split would need a third name, and then the tag alone no longer selects, which is what the
+tag is for. Boost's own parameter order puts `N` before `Alloc`, which is the order the trait's tail takes. The
+vector specialization pins `std::dynamic_extent` in the third position, so a static extent asked of an
+allocating container is a hard non-match rather than an argument silently dropped.
+
+**What it cost.** A cell is what `Derived` now names, so a diagnostic says `basic_bits<sequence_reading_tag,
+array_container_tag, unsigned long, 100, std::allocator<unsigned long>>` where it used to say
+`basic_bit_array<unsigned long, 100>`. The rows stay distinct -- different `R` and `C` are different types --
+and only the spelling grew. **What it bought.** The trait specializations each row repeated collapse onto the
+grid: 33 blocks become 9, and the ones that are not uniform say so in the tag rather than by being written out
+per row, so `is_range` is disabled for the two readings that have iterators and the bitset reading is left to
+the primary template, which already answers false for a type with no `begin`.
 
 ### owning-is-ours
 
@@ -1909,8 +1951,8 @@ of bits and the operators over it, committed to neither reading; its whole docum
 ask it something it does not answer itself — which positions are set, or what the bools are at each index.
 That is what a view is for, so a `bitset` admits either.
 
-The rule is one enumerator on the owner's side of the protocol, `owned_storage<Owner>::reads`, and one clause
-in `owner_of`: the owner's reading is the view's, or it is `reading::bitset`. It has to live in the constraint
+The rule is one typedef on the owner's side of the protocol, `owned_storage<Owner>::reads`, and one clause
+in `owner_of`: the owner's reading is the view's, or it is `bitset_reading_tag`. It has to live in the constraint
 and not in the friendship alone. Dropping only the friendship leaves the constructor declared and viable, and
 its `m_bits(&c.m_bits)` is a mem-initializer — not the immediate context — so the access check happens at
 instantiation and nowhere earlier. Measured: `std::is_constructible_v<bit_set_view<Blocks>, bit_array<8>&>`
@@ -1944,8 +1986,9 @@ What the rule keeps on the interface side, each with the reason it is not obviou
   was handed asks about a base, which it cannot do without the base's name. It asks through the library's own
   `set_adaptor_like` and `sequence_adaptor_like` rather than by spelling `sequence_adaptor<B, O, W>` -- which
   is why those concepts are interface too, and why the spelling is no longer what a `decltype` prints.
-- **`ownership`.** Dragged in by that: no adaptor can be named without writing `ownership::refers`. Said out
-  loud because this is the kind of enum that gets called a detail right up until someone has to type it.
+- **`storage` and the tags.** Dragged in by that: no adaptor can be named without writing `storage::borrowed`,
+  and no cell of the grid without naming a reading and a container. Said out loud because this is the kind of
+  vocabulary that gets called a detail right up until someone has to type it.
 - **`contiguous_bit_sequence`.** The vocabulary the three bit containers share, which is a claim about
   `std::bitset` and `boost::dynamic_bitset` as much as about ours, so it is stated where a reader can check it
   ([the-common-vocabulary](#the-common-vocabulary)).
@@ -2007,9 +2050,9 @@ Three layers of names. The primaries carry the reading and take the storage: `se
 `sequence_adaptor<Bits, Own, Windowed>`, `bitset_adaptor<Bits>`, the parameters each reading needs and no
 more. The `basic_` layer chooses the storage and leaves the block open,
 `basic_string`-style: `basic_bit_static_set<Block, N>`, `basic_bit_set<Block, Allocator>` and their four
-siblings. The block leads in every column, so a `basic_` name hands its vehicle the arguments in the order it
-was given them -- `basic_bit_static_set<Block, N>` is `set_adaptor<contiguous_bit_array<Block, N>, owns>`,
-straight through. The static and inplace columns used to take `<N, Block>` and transpose at the call, which
+siblings. The block leads in every column, so a `basic_` name hands the grid the arguments in the order it
+was given them -- `basic_bit_static_set<Block, N>` is `basic_bits<set_reading_tag, array_container_tag, Block,
+N>`, straight through. The static and inplace columns used to take `<N, Block>` and transpose at the call, which
 nothing gained: `Block` carries no default in those columns, so it is free to lead, and leading is what
 `std::array<T, N>`, `std::inplace_vector<T, N>` and `std::span<T, Extent>` all do with the pair. The restricted
 layer fixes `std::size_t` and `std::allocator`: `bit_static_set<N>`, `bit_array<N>` and `bitset<N>` keep one

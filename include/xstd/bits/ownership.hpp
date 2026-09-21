@@ -6,8 +6,9 @@
 #ifndef XSTD_BITS_OWNERSHIP_HPP
 #define XSTD_BITS_OWNERSHIP_HPP
 
-#include <concepts>    // same_as
-#include <type_traits> // conditional_t, is_const_v, remove_const_t
+#include <xstd/bits/tags.hpp> // bitset_reading_tag, reading_tag
+#include <concepts>           // same_as
+#include <type_traits>        // conditional_t, is_const_v, remove_const_t
 
 namespace xstd {
 
@@ -22,12 +23,6 @@ enum class storage : bool { owned,
         return s == storage::owned;
 }
 
-// Which reading an owner is committed to, ordered by how much it reads into a position: bits, a bool, then a key.
-enum class reading : unsigned char { bitset,
-                                     sequence,
-                                     set,
-};
-
 // What an owner wraps: declared, never defined, so a view over a type that owns nothing is unsatisfied.
 template<class Owner>
 struct owned_storage;
@@ -37,13 +32,14 @@ template<class Owner>
 using owned_bits_t = std::conditional_t<std::is_const_v<Owner>, typename owned_storage<std::remove_const_t<Owner>>::bits_type const, typename owned_storage<std::remove_const_t<Owner>>::bits_type>;
 
 // Whether Owner is an owner a view of reading R may refer into; a bitset is committed to neither reading.
-template<class Owner, reading R>
+template<class Owner, class R>
 concept owner_reading =
+        reading_tag<R> and
         requires { typename owned_storage<std::remove_const_t<Owner>>::bits_type; } and
-        (owned_storage<std::remove_const_t<Owner>>::reads == R or owned_storage<std::remove_const_t<Owner>>::reads == reading::bitset);
+        (std::same_as<typename owned_storage<std::remove_const_t<Owner>>::reads, R> or std::same_as<typename owned_storage<std::remove_const_t<Owner>>::reads, bitset_reading_tag>);
 
 // Whether a view of reading R over Bits can refer into Owner: same storage, const flowing owner to view.
-template<class Owner, class Bits, reading R>
+template<class Owner, class Bits, class R>
 concept owner_of =
         owner_reading<Owner, R> and
         std::same_as<typename owned_storage<std::remove_const_t<Owner>>::bits_type, std::remove_const_t<Bits>> and
