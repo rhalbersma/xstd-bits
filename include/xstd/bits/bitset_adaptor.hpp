@@ -57,13 +57,13 @@ class bitset_adaptor : public detail::bits::allocator_base_type<Bits>
         template<class>
         friend struct owned_storage;
 
-        // The container built on this vehicle reads its constraints, which name what only the vehicle can.
-        // A view passes void here, and [class.friend]/3 ignores a friend declaration naming a non-class type.
+        // The container needs constraints only the vehicle can name; [class.friend]/3 ignores the void a view passes.
         friend Derived;
 
         // Either reading's view refers into this owner's storage: a bitset is committed to neither reading.
         template<specialization_of_TN<detail::bits::contiguous_bit_container> B, storage O, class D>
         friend class set_adaptor;
+
         template<specialization_of_TN<detail::bits::contiguous_bit_container> B, storage O, bool W, class D>
         friend class sequence_adaptor;
 
@@ -263,7 +263,7 @@ public:
                 -> void
                 requires std::swappable<Bits>
         {
-                std::ranges::swap(m_bits, other.m_bits);
+                std::ranges::swap(this->m_bits, other.m_bits);
         }
 
         template<class charT, class traits, class Allocator>

@@ -131,8 +131,7 @@ class set_adaptor : public std::conditional_t<owns(Store), detail::bits::allocat
                 }
         }
 
-        // The container built on this vehicle reads its constraints, which name what only the vehicle can.
-        // A view passes void here, and [class.friend]/3 ignores a friend declaration naming a non-class type.
+        // The container needs constraints only the vehicle can name; [class.friend]/3 ignores the void a view passes.
         friend Derived;
 
         // A set view refers into this owner's storage and nothing else does; a sequence view does not.
