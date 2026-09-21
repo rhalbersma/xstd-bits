@@ -9,6 +9,7 @@
 #include <xstd/bits/bit_subspan.hpp>                     // IWYU pragma: keep; the inherited first, last and subspan return one
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/ownership.hpp>                       // storage
+#include <xstd/bits/tags.hpp>                            // sequence_reading_tag
 #include <xstd/bits/sequence_adaptor.hpp>                // sequence_adaptor
 #include <xstd/misc/concepts/specialization_of.hpp>      // specialization_of_TN
 #include <boost/container_hash/is_range.hpp>             // is_range
@@ -35,7 +36,7 @@ template<class Bits>
         requires (not requires { typename owned_storage<std::remove_const_t<Bits>>::bits_type; })
 bit_span(Bits&) -> bit_span<Bits>;
 
-template<owner_reading<reading::sequence> Owner>
+template<owner_reading<sequence_reading_tag> Owner>
 bit_span(Owner&) -> bit_span<owned_bits_t<Owner>>;
 
 // A view answers every trait as the vehicle it is built on, which is where each one is defined.

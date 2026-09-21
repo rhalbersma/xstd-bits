@@ -7,6 +7,7 @@
 #define XSTD_BITS_HPP
 
 // The umbrella over every container; not the ext adaptors, which would put Boost on every consumer path.
+#include <xstd/bits/basic_bits.hpp>              // IWYU pragma: export; basic_bits
 #include <xstd/bits/bit_array.hpp>               // IWYU pragma: export; bit_array
 #include <xstd/bits/bit_inplace_set.hpp>         // IWYU pragma: export; bit_inplace_set
 #include <xstd/bits/bit_inplace_vector.hpp>      // IWYU pragma: export; bit_inplace_vector
@@ -24,5 +25,6 @@
 #include <xstd/bits/ownership.hpp>               // IWYU pragma: export; storage
 #include <xstd/bits/sequence_adaptor.hpp>        // IWYU pragma: export; sequence_adaptor
 #include <xstd/bits/set_adaptor.hpp>             // IWYU pragma: export; set_adaptor
+#include <xstd/bits/tags.hpp>                    // IWYU pragma: export; reading_tag, container_tag
 
 #endif // XSTD_BITS_HPP
