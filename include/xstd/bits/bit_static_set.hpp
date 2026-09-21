@@ -7,7 +7,7 @@
 #define XSTD_BITS_BIT_STATIC_SET_HPP
 
 #include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
-#include <xstd/bits/ownership.hpp>                   // ownership
+#include <xstd/bits/ownership.hpp>                   // storage
 #include <xstd/bits/set_adaptor.hpp>                 // set_adaptor
 #include <xstd/ints/concepts/unsigned_integer.hpp>   // unsigned_integer
 #include <xstd/ints/memory.hpp>                      // align_up
@@ -18,7 +18,7 @@ namespace xstd {
 
 // The static set: the basic name leaves the block open, the restricted one is the machine word.
 template<xstd::unsigned_integer Block, std::size_t N>
-using basic_bit_static_set = set_adaptor<detail::bits::contiguous_bit_array<Block, N>, ownership::owns>;
+using basic_bit_static_set = set_adaptor<detail::bits::contiguous_bit_array<Block, N>, storage::owned>;
 
 template<std::size_t N>
 using bit_static_set = basic_bit_static_set<std::size_t, N>;

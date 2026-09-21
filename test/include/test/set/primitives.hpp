@@ -6,7 +6,7 @@
 #ifndef TEST_SET_PRIMITIVES_HPP
 #define TEST_SET_PRIMITIVES_HPP
 
-#include <xstd/bits/ownership.hpp>   // ownership
+#include <xstd/bits/ownership.hpp>   // storage
 #include <xstd/bits/set_adaptor.hpp> // set_adaptor
 #include <boost/test/unit_test.hpp>  // BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                 // equal_range, lexicographical_compare_three_way
@@ -29,9 +29,9 @@ struct ref_same_as_pred
         static constexpr auto value = std::same_as<R, T>;
 };
 
-// Every set adaptor hands out a proxy converting to the key, whatever its storage or ownership.
-template<class Bits, xstd::ownership Own>
-struct ref_same_as_pred<xstd::set_adaptor<Bits, Own>>
+// Every set adaptor hands out a proxy converting to the key, whatever its storage or storage.
+template<class Bits, xstd::storage Store>
+struct ref_same_as_pred<xstd::set_adaptor<Bits, Store>>
 {
         template<class R, class T>
         static constexpr auto value = std::convertible_to<R, std::add_const_t<std::remove_reference_t<T>>&>;

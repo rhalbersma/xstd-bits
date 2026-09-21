@@ -12,7 +12,7 @@
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/detail/hash.hpp>                     // hash_append_bits, std_hash
 #include <xstd/bits/detail/zero_width.hpp>               // zero_width
-#include <xstd/bits/ownership.hpp>                       // owned_storage, ownership, reading
+#include <xstd/bits/ownership.hpp>                       // owned_storage, storage, reading
 #include <xstd/misc/concepts/specialization_of.hpp>      // specialization_of_TN
 #include <boost/hash2/hash_append.hpp>                   // hash_append_tag
 #include <algorithm>                                     // min, ranges::copy
@@ -58,9 +58,9 @@ class bitset_adaptor : public detail::bits::allocator_base_type<Bits>
         friend struct owned_storage;
 
         // Either reading's view refers into this owner's storage: a bitset is committed to neither reading.
-        template<specialization_of_TN<detail::bits::contiguous_bit_container> B, ownership O>
+        template<specialization_of_TN<detail::bits::contiguous_bit_container> B, storage O>
         friend class set_adaptor;
-        template<specialization_of_TN<detail::bits::contiguous_bit_container> B, ownership O, bool W>
+        template<specialization_of_TN<detail::bits::contiguous_bit_container> B, storage O, bool W>
         friend class sequence_adaptor;
 
         // The value through the trait: the blocks and the width.

@@ -7,7 +7,7 @@
 #define XSTD_BITS_BIT_SET_HPP
 
 #include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
-#include <xstd/bits/ownership.hpp>                    // ownership
+#include <xstd/bits/ownership.hpp>                    // storage
 #include <xstd/bits/set_adaptor.hpp>                  // set_adaptor
 #include <xstd/ints/concepts/unsigned_integer.hpp>    // unsigned_integer
 #include <cstddef>                                    // size_t
@@ -17,7 +17,7 @@ namespace xstd {
 
 // The set reading over a heap of blocks: the flagship, and the one name without a qualifier.
 template<xstd::unsigned_integer Block, class Allocator = std::allocator<Block>>
-using basic_bit_set = set_adaptor<detail::bits::contiguous_bit_vector<Block, Allocator>, ownership::owns>;
+using basic_bit_set = set_adaptor<detail::bits::contiguous_bit_vector<Block, Allocator>, storage::owned>;
 
 using bit_set = basic_bit_set<std::size_t>;
 
