@@ -6,7 +6,8 @@
 #ifndef XSTD_BITS_INPLACE_BITSET_HPP
 #define XSTD_BITS_INPLACE_BITSET_HPP
 
-#include <version> // IWYU pragma: keep; __cpp_lib_inplace_vector
+#include <functional> // hash
+#include <version>    // IWYU pragma: keep; __cpp_lib_inplace_vector
 
 // The column comes and goes with its storage, and an alias withholds a name rather than a capability.
 #ifdef __cpp_lib_inplace_vector

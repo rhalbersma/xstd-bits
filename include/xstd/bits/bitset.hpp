@@ -11,6 +11,7 @@
 #include <xstd/ints/concepts/unsigned_integer.hpp>   // unsigned_integer
 #include <xstd/ints/memory.hpp>                      // align_up
 #include <cstddef>                                   // size_t
+#include <functional>                                // hash
 #include <limits>                                    // digits
 
 namespace xstd {

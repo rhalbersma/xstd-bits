@@ -6,7 +6,11 @@
 #ifndef XSTD_BITS_BIT_INPLACE_VECTOR_HPP
 #define XSTD_BITS_BIT_INPLACE_VECTOR_HPP
 
-#include <version> // IWYU pragma: keep; __cpp_lib_inplace_vector
+#include <boost/container_hash/is_range.hpp>      // is_range
+#include <boost/container_hash/is_tuple_like.hpp> // is_tuple_like
+#include <functional>                             // hash
+#include <type_traits>                            // false_type
+#include <version>                                // IWYU pragma: keep; __cpp_lib_inplace_vector
 
 // The column comes and goes with its storage, and an alias withholds a name rather than a capability.
 #ifdef __cpp_lib_inplace_vector

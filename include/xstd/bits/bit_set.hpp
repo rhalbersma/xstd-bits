@@ -10,8 +10,11 @@
 #include <xstd/bits/ownership.hpp>                    // ownership
 #include <xstd/bits/set_adaptor.hpp>                  // set_adaptor
 #include <xstd/ints/concepts/unsigned_integer.hpp>    // unsigned_integer
+#include <boost/container_hash/is_range.hpp>          // is_range
 #include <cstddef>                                    // size_t
+#include <functional>                                 // hash
 #include <memory>                                     // allocator
+#include <type_traits>                                // false_type
 
 namespace xstd {
 

@@ -11,8 +11,13 @@
 #include <xstd/bits/sequence_adaptor.hpp>            // sequence_adaptor
 #include <xstd/ints/concepts/unsigned_integer.hpp>   // unsigned_integer
 #include <xstd/ints/memory.hpp>                      // align_up
+#include <boost/container_hash/is_range.hpp>         // is_range
+#include <boost/container_hash/is_tuple_like.hpp>    // is_tuple_like
 #include <cstddef>                                   // size_t
+#include <functional>                                // hash
 #include <limits>                                    // digits
+#include <tuple>                                     // tuple_element, tuple_size
+#include <type_traits>                               // false_type
 
 namespace xstd {
 
