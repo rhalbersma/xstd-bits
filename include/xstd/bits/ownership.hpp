@@ -23,9 +23,10 @@ enum class ownership : bool { refers,
 }
 
 // Which reading an owner is committed to; a bitset is committed to neither, which is what its two views are for.
-enum class reading : unsigned char { set,
+// Ordered by how much the reading reads into a position: bits alone, then a bool at each, then a key at each.
+enum class reading : unsigned char { bitset,
                                      sequence,
-                                     bitset,
+                                     set,
 };
 
 // What an owner wraps: declared, never defined, so a view over a type that owns nothing is unsatisfied.
