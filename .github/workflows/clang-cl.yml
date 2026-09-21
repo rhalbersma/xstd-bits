@@ -22,7 +22,7 @@ on:
   workflow_call:
 
 jobs:
-  # The msvc.yml ladder with clang-cl in front of the MSVC STL, on its own cache prefix. All three rungs: clang-cl is clang, so its 2022 rung covers the VS 2022 platform whatever the MSVC compiler at that rung turns out to manage.
+  # The msvc.yml ladder with clang-cl in front of the MSVC STL, on its own cache prefix. All three rungs: clang-cl is clang, so its 2022 rung keeps the VS 2022 platform covered where the MSVC compiler at that rung is out.
   clang_cl:
     uses: rhalbersma/cpp-ci/.github/workflows/visual-studio.yml@29fdd6605bf237863ad39c3919c2cf389cfb6d38 # v0.10.2
     with:
