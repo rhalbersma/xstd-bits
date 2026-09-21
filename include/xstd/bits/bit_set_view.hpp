@@ -59,9 +59,8 @@ struct is_range<xstd::bit_set_view<Bits>> : std::false_type
 
 } // namespace boost::container_hash
 
+// NOLINTBEGIN(bugprone-std-namespace-modification): [range.view] and [range.range] invite the opt-in.
 namespace std::ranges {
-
-// NOLINTBEGIN(bugprone-std-namespace-modification)
 
 template<class Bits>
 inline constexpr bool enable_view<xstd::bit_set_view<Bits>> = true;
@@ -69,8 +68,8 @@ inline constexpr bool enable_view<xstd::bit_set_view<Bits>> = true;
 template<class Bits>
 inline constexpr bool enable_borrowed_range<xstd::bit_set_view<Bits>> = true;
 
-// NOLINTEND(bugprone-std-namespace-modification)
-
 } // namespace std::ranges
+
+// NOLINTEND(bugprone-std-namespace-modification)
 
 #endif // XSTD_BITS_BIT_SET_VIEW_HPP

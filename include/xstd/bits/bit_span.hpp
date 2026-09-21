@@ -56,9 +56,8 @@ struct is_tuple_like<xstd::bit_span<Bits>> : std::false_type
 
 } // namespace boost::container_hash
 
+// NOLINTBEGIN(bugprone-std-namespace-modification): [range.view] and [range.range] invite the opt-in.
 namespace std::ranges {
-
-// NOLINTBEGIN(bugprone-std-namespace-modification)
 
 template<class Bits>
 inline constexpr bool enable_view<xstd::bit_span<Bits>> = true;
@@ -66,8 +65,8 @@ inline constexpr bool enable_view<xstd::bit_span<Bits>> = true;
 template<class Bits>
 inline constexpr bool enable_borrowed_range<xstd::bit_span<Bits>> = true;
 
-// NOLINTEND(bugprone-std-namespace-modification)
-
 } // namespace std::ranges
+
+// NOLINTEND(bugprone-std-namespace-modification)
 
 #endif // XSTD_BITS_BIT_SPAN_HPP
