@@ -8,6 +8,7 @@
 
 #include <xstd/bits/bitset_adaptor.hpp>               // bitset_adaptor
 #include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
+#include <xstd/bits/ownership.hpp>                    // owned_storage
 #include <xstd/ints/concepts/unsigned_integer.hpp>    // unsigned_integer
 #include <cstddef>                                    // size_t
 #include <functional>                                 // hash
