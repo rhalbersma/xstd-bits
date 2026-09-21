@@ -52,15 +52,23 @@ inline constexpr bool is_consecutive = false;
 template<class W, class B>
 inline constexpr bool is_consecutive<std::ranges::iota_view<W, B>> = true;
 
+// A prvalue from a named parameter: MSVC 17 has no auto(x), which is [P0849R8]'s spelling of this.
+template<class T>
+[[nodiscard]] constexpr auto decay_copy(T value) noexcept
+        -> T
+{
+        return value;
+}
+
 // Continue unless the functor says otherwise: a void functor always continues, a bool one says.
 template<class F>
 [[nodiscard]] constexpr auto invoke_continues(F& f, std::size_t pos)
         -> bool
 {
         if constexpr (std::is_invocable_r_v<bool, F&, std::size_t>) {
-                return f(auto(pos));
+                return f(decay_copy(pos));
         } else {
-                f(auto(pos));
+                f(decay_copy(pos));
                 return true;
         }
 }
@@ -131,8 +139,7 @@ class set_adaptor : public std::conditional_t<owns(Store), detail::bits::allocat
                 }
         }
 
-        // The container built on this vehicle reads its constraints, which name what only the vehicle can.
-        // A view passes void here, and [class.friend]/3 ignores a friend declaration naming a non-class type.
+        // The container needs constraints only the vehicle can name; [class.friend]/3 ignores the void a view passes.
         friend Derived;
 
         // A set view refers into this owner's storage and nothing else does; a sequence view does not.

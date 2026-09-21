@@ -53,15 +53,23 @@ template<class Block>
         return count == digits ? static_cast<Block>(~Block{}) : static_cast<Block>(detail::bits::shl(Block{1}, count) - Block{1});
 }
 
+// A prvalue from a named parameter: MSVC 17 has no auto(x), which is [P0849R8]'s spelling of this.
+template<class T>
+[[nodiscard]] constexpr auto decay_copy(T value) noexcept
+        -> T
+{
+        return value;
+}
+
 // Continue unless the functor says otherwise: a void functor always continues, a bool one says.
 template<class F>
 [[nodiscard]] constexpr auto invoke_continues(F& f, bool value)
         -> bool
 {
         if constexpr (std::is_invocable_r_v<bool, F&, bool>) {
-                return f(auto(value));
+                return f(decay_copy(value));
         } else {
-                f(auto(value));
+                f(decay_copy(value));
                 return true;
         }
 }
@@ -228,11 +236,10 @@ class sequence_adaptor : public std::conditional_t<owns(Store), detail::bits::al
         // A storage taking a masked word at any position, asked of Bits so a const window answers no.
         static constexpr bool block_writable = requires (Bits& b, std::size_t pos, bits_type::block_type w) { b.block_at(pos, w, w); };
 
-        // A sequence view refers into this owner's storage and nothing else does; a set view does not.
-        // The container built on this vehicle reads its constraints, which name what only the vehicle can.
-        // A view passes void here, and [class.friend]/3 ignores a friend declaration naming a non-class type.
+        // The container needs constraints only the vehicle can name; [class.friend]/3 ignores the void a view passes.
         friend Derived;
 
+        // A sequence view refers into this owner's storage and nothing else does; a set view does not.
         template<specialization_of_TN<detail::bits::contiguous_bit_container> B, storage O, bool W, class D>
         friend class sequence_adaptor;
 

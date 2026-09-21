@@ -38,8 +38,7 @@ bit_subspan(Owner&) -> bit_subspan<owned_bits_t<Owner>>;
 
 // A view answers every trait as the vehicle it is built on, which is where each one is defined.
 template<class Bits, class Block>
-// NOLINTNEXTLINE(readability-redundant-typename): a template argument is where P0634R3 stops; GCC and clang both reject dropping it.
-inline constexpr bool blit_source<bit_subspan<Bits>, Block> = blit_source<typename bit_subspan<Bits>::adaptor_type, Block>;
+inline constexpr bool blit_source<bit_subspan<Bits>, Block> = blit_source<typename bit_subspan<Bits>::adaptor_type, Block>; // NOLINT(readability-redundant-typename)
 
 } // namespace xstd
 
