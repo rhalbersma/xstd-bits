@@ -61,7 +61,7 @@ constexpr auto takes_a_set_view(xstd::bit_set_view<Blocks> v) noexcept
 // The view is the referring adaptor under another name, and over an owner it refers into the storage the owner wraps.
 BOOST_AUTO_TEST_CASE(TheViewIsTheReferringAdaptor)
 {
-        static_assert(std::derived_from<xstd::bit_set_view<Blocks>, xstd::set_adaptor<Blocks, xstd::storage::borrowed>>);
+        static_assert(std::derived_from<xstd::bit_set_view<Blocks>, xstd::set_adaptor<Blocks, xstd::storage::borrowed, xstd::bit_set_view<Blocks>>>);
         static_assert(std::same_as<view_of<Blocks>, xstd::bit_set_view<Blocks>>);
         static_assert(std::same_as<view_of<Blocks const>, xstd::bit_set_view<Blocks const>>);
 

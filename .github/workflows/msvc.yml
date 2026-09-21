@@ -22,7 +22,7 @@ on:
   workflow_call:
 
 jobs:
-  # The 2026 generation only. The 2022 rung is gone because MSVC 17 cannot deduce through an alias template of the shape the two views need -- "C2976: 'xstd::bit_set_view': too few template arguments" -- while MSVC 18 can. clang-cl.yml keeps its 2022 rung, which passes: clang-cl is clang, so what broke is the MSVC compiler at 2022 and not the VS 2022 platform.
+  # The 2026 generation only. C2976 is settled -- the views are class templates with their own deduction guides and MSVC 17 no longer reports it -- but the rung stays out for what replaced it: the two workarounds dropped once it left, auto(x) for decay_copy and one typename in the set primitives, are exactly what it fails on now. doc/design.md records that ledger; clang-cl.yml keeps its 2022 rung and covers the platform.
   msvc:
     uses: rhalbersma/cpp-ci/.github/workflows/visual-studio.yml@29fdd6605bf237863ad39c3919c2cf389cfb6d38 # v0.10.2
     with:

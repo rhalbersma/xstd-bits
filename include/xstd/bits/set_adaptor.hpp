@@ -110,7 +110,7 @@ constexpr auto walk_blocks_descending(Bits const& c, F& f)
 
 } // namespace detail::set
 
-template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits, storage Store>
+template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits, storage Store, class Derived = void>
 class set_adaptor : public std::conditional_t<owns(Store), detail::bits::allocator_base_type<std::remove_const_t<Bits>>, xstd::empty_base_type<>>
 {
         static constexpr bool is_owner = owns(Store);
@@ -131,8 +131,12 @@ class set_adaptor : public std::conditional_t<owns(Store), detail::bits::allocat
                 }
         }
 
+        // The container built on this vehicle reads its constraints, which name what only the vehicle can.
+        // A view passes void here, and [class.friend]/3 ignores a friend declaration naming a non-class type.
+        friend Derived;
+
         // A set view refers into this owner's storage and nothing else does; a sequence view does not.
-        template<specialization_of_TN<detail::bits::contiguous_bit_container> B, storage O>
+        template<specialization_of_TN<detail::bits::contiguous_bit_container> B, storage O, class D>
         friend class set_adaptor;
 
         // The value under the set reading: the bits at a static width, the positions at a run-time one.
@@ -148,6 +152,15 @@ class set_adaptor : public std::conditional_t<owns(Store), detail::bits::allocat
         }
 
 public:
+        // A vehicle used directly is its own container, which is what a view is.
+        using derived_type = std::conditional_t<std::is_void_v<Derived>, set_adaptor, Derived>;
+
+        // What a trait asks of this vehicle, every container built on it answering alike.
+        using adaptor_type = set_adaptor;
+        static constexpr auto reads_as = reading::set;
+        using adapted_type = Bits;
+        static constexpr bool owns_storage = is_owner;
+
         // types
         using key_type = std::size_t;
         using key_compare = std::less<key_type>;
@@ -233,9 +246,9 @@ public:
         template<class B>
                 requires is_owner and Bits::template
         exchanges_bits<B> [[nodiscard]] static constexpr auto from_bits(B const& b) noexcept
-                -> set_adaptor
+                -> derived_type
         {
-                auto result = set_adaptor();
+                auto result = derived_type();
                 result.bits().assign_bits(b);
                 return result;
         }
@@ -261,13 +274,14 @@ public:
                 : m_bits(&c.m_bits)
         {}
 
+        // NOLINTNEXTLINE(misc-unconventional-assign-operator): the container is what [set] and [vector] return here.
         constexpr auto operator=(std::initializer_list<value_type> il)
-                -> set_adaptor&
+                -> derived_type&
                 requires is_owner
         {
                 clear();
                 insert(il.begin(), il.end());
-                return *this;
+                return self();
         }
 
         // A static owner's equality is its one member's: every instance carries the same width.
@@ -735,6 +749,13 @@ public:
         }
 
 private:
+        // The container built on this vehicle, which is what its value-returning operators hand back.
+        [[nodiscard]] constexpr auto self() noexcept
+                -> derived_type&
+        {
+                return static_cast<derived_type&>(*this);
+        }
+
         // The one key a set of this reading can be unable to hold; every other member is total over key_type.
         constexpr auto guard_key(std::size_t x) const
                 -> void
@@ -785,9 +806,13 @@ set_adaptor(Bits&) -> set_adaptor<Bits, storage::borrowed>;
 template<owner_reading<reading::set> Owner>
 set_adaptor(Owner&) -> set_adaptor<owned_bits_t<Owner>, storage::borrowed>;
 
+// Any container built on the set vehicle, the vehicle used directly included.
+template<class T>
+concept set_adaptor_like = requires { typename T::adaptor_type; T::reads_as; } and (T::reads_as == reading::set) and std::derived_from<T, typename T::adaptor_type>;
+
 // The owner's side of the protocol above.
-template<class Bits>
-struct owned_storage<set_adaptor<Bits, storage::owned>>
+template<class Bits, class Derived>
+struct owned_storage<set_adaptor<Bits, storage::owned, Derived>>
 {
         using bits_type = Bits;
 
@@ -798,9 +823,9 @@ struct owned_storage<set_adaptor<Bits, storage::owned>>
 // NOLINTBEGIN(readability-redundant-parentheses): a call is no primary expression, so the clause needs them.
 
 // 23.4.6.3 Erasure                                                [set.erasure]
-template<class Bits, storage Store, class Predicate>
-constexpr auto erase_if(set_adaptor<Bits, Store>& c, Predicate pred)
-        -> set_adaptor<Bits, Store>::size_type
+template<class Bits, storage Store, class Derived, class Predicate>
+constexpr auto erase_if(set_adaptor<Bits, Store, Derived>& c, Predicate pred)
+        -> set_adaptor<Bits, Store, Derived>::size_type
 {
         auto const original_size = c.size();
         for (auto i = c.begin(), last = c.end(); i != last;) {
@@ -814,65 +839,65 @@ constexpr auto erase_if(set_adaptor<Bits, Store>& c, Predicate pred)
 }
 
 // The non-member forms copy, so they are the owner's alone: a copied view would write through.
-template<class Bits, storage Store>
-[[nodiscard]] constexpr auto operator~(set_adaptor<Bits, Store> const& lhs) noexcept(set_adaptor<Bits, Store>::has_static_width) -> set_adaptor<Bits, Store>
-        requires (owns(Store)) and requires (set_adaptor<Bits, Store> c) { c.complement(); }
+template<class Bits, storage Store, class Derived>
+[[nodiscard]] constexpr auto operator~(set_adaptor<Bits, Store, Derived> const& lhs) noexcept(set_adaptor<Bits, Store, Derived>::has_static_width) -> set_adaptor<Bits, Store, Derived>::derived_type
+        requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived> c) { c.complement(); }
 {
-        auto nrv = lhs;
+        auto nrv = static_cast<set_adaptor<Bits, Store, Derived>::derived_type const&>(lhs);
         nrv.complement();
         return nrv;
 }
 
-template<class Bits, storage Store>
-[[nodiscard]] constexpr auto operator&(set_adaptor<Bits, Store> const& lhs, set_adaptor<Bits, Store> const& rhs) noexcept(set_adaptor<Bits, Store>::has_static_width) -> set_adaptor<Bits, Store>
-        requires (owns(Store)) and requires (set_adaptor<Bits, Store> c) { c &= c; }
+template<class Bits, storage Store, class Derived>
+[[nodiscard]] constexpr auto operator&(set_adaptor<Bits, Store, Derived> const& lhs, set_adaptor<Bits, Store, Derived> const& rhs) noexcept(set_adaptor<Bits, Store, Derived>::has_static_width) -> set_adaptor<Bits, Store, Derived>::derived_type
+        requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived> c) { c &= c; }
 {
-        auto nrv = lhs;
+        auto nrv = static_cast<set_adaptor<Bits, Store, Derived>::derived_type const&>(lhs);
         nrv &= rhs;
         return nrv;
 }
 
-template<class Bits, storage Store>
-[[nodiscard]] constexpr auto operator|(set_adaptor<Bits, Store> const& lhs, set_adaptor<Bits, Store> const& rhs) noexcept(set_adaptor<Bits, Store>::has_static_width) -> set_adaptor<Bits, Store>
-        requires (owns(Store)) and requires (set_adaptor<Bits, Store> c) { c |= c; }
+template<class Bits, storage Store, class Derived>
+[[nodiscard]] constexpr auto operator|(set_adaptor<Bits, Store, Derived> const& lhs, set_adaptor<Bits, Store, Derived> const& rhs) noexcept(set_adaptor<Bits, Store, Derived>::has_static_width) -> set_adaptor<Bits, Store, Derived>::derived_type
+        requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived> c) { c |= c; }
 {
-        auto nrv = lhs;
+        auto nrv = static_cast<set_adaptor<Bits, Store, Derived>::derived_type const&>(lhs);
         nrv |= rhs;
         return nrv;
 }
 
-template<class Bits, storage Store>
-[[nodiscard]] constexpr auto operator^(set_adaptor<Bits, Store> const& lhs, set_adaptor<Bits, Store> const& rhs) noexcept(set_adaptor<Bits, Store>::has_static_width) -> set_adaptor<Bits, Store>
-        requires (owns(Store)) and requires (set_adaptor<Bits, Store> c) { c ^= c; }
+template<class Bits, storage Store, class Derived>
+[[nodiscard]] constexpr auto operator^(set_adaptor<Bits, Store, Derived> const& lhs, set_adaptor<Bits, Store, Derived> const& rhs) noexcept(set_adaptor<Bits, Store, Derived>::has_static_width) -> set_adaptor<Bits, Store, Derived>::derived_type
+        requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived> c) { c ^= c; }
 {
-        auto nrv = lhs;
+        auto nrv = static_cast<set_adaptor<Bits, Store, Derived>::derived_type const&>(lhs);
         nrv ^= rhs;
         return nrv;
 }
 
-template<class Bits, storage Store>
-[[nodiscard]] constexpr auto operator-(set_adaptor<Bits, Store> const& lhs, set_adaptor<Bits, Store> const& rhs) noexcept(set_adaptor<Bits, Store>::has_static_width) -> set_adaptor<Bits, Store>
-        requires (owns(Store)) and requires (set_adaptor<Bits, Store> c) { c -= c; }
+template<class Bits, storage Store, class Derived>
+[[nodiscard]] constexpr auto operator-(set_adaptor<Bits, Store, Derived> const& lhs, set_adaptor<Bits, Store, Derived> const& rhs) noexcept(set_adaptor<Bits, Store, Derived>::has_static_width) -> set_adaptor<Bits, Store, Derived>::derived_type
+        requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived> c) { c -= c; }
 {
-        auto nrv = lhs;
+        auto nrv = static_cast<set_adaptor<Bits, Store, Derived>::derived_type const&>(lhs);
         nrv -= rhs;
         return nrv;
 }
 
-template<class Bits, storage Store>
-[[nodiscard]] constexpr auto operator<<(set_adaptor<Bits, Store> const& lhs, std::size_t n) noexcept(set_adaptor<Bits, Store>::has_static_width) -> set_adaptor<Bits, Store>
-        requires (owns(Store)) and requires (set_adaptor<Bits, Store> c) { c <<= n; }
+template<class Bits, storage Store, class Derived>
+[[nodiscard]] constexpr auto operator<<(set_adaptor<Bits, Store, Derived> const& lhs, std::size_t n) noexcept(set_adaptor<Bits, Store, Derived>::has_static_width) -> set_adaptor<Bits, Store, Derived>::derived_type
+        requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived> c) { c <<= n; }
 {
-        auto nrv = lhs;
+        auto nrv = static_cast<set_adaptor<Bits, Store, Derived>::derived_type const&>(lhs);
         nrv <<= n;
         return nrv;
 }
 
-template<class Bits, storage Store>
-[[nodiscard]] constexpr auto operator>>(set_adaptor<Bits, Store> const& lhs, std::size_t n) noexcept(set_adaptor<Bits, Store>::has_static_width) -> set_adaptor<Bits, Store>
-        requires (owns(Store)) and requires (set_adaptor<Bits, Store> c) { c >>= n; }
+template<class Bits, storage Store, class Derived>
+[[nodiscard]] constexpr auto operator>>(set_adaptor<Bits, Store, Derived> const& lhs, std::size_t n) noexcept(set_adaptor<Bits, Store, Derived>::has_static_width) -> set_adaptor<Bits, Store, Derived>::derived_type
+        requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived> c) { c >>= n; }
 {
-        auto nrv = lhs;
+        auto nrv = static_cast<set_adaptor<Bits, Store, Derived>::derived_type const&>(lhs);
         nrv >>= n;
         return nrv;
 }
@@ -899,10 +924,10 @@ inline constexpr bool enable_borrowed_range<xstd::set_adaptor<Bits, xstd::storag
 namespace std {
 
 // Owned or viewed, as std::string_view hashes and std::set does not.
-template<class Bits, xstd::storage Store>
-struct hash<xstd::set_adaptor<Bits, Store>>
+template<class Bits, xstd::storage Store, class Derived>
+struct hash<xstd::set_adaptor<Bits, Store, Derived>>
 {
-        [[nodiscard]] constexpr auto operator()(xstd::set_adaptor<Bits, Store> const& v) const noexcept
+        [[nodiscard]] constexpr auto operator()(xstd::set_adaptor<Bits, Store, Derived> const& v) const noexcept
                 -> std::size_t
         {
                 return xstd::detail::bits::std_hash(v);
@@ -916,8 +941,8 @@ struct hash<xstd::set_adaptor<Bits, Store>>
 // Not a range to ContainerHash, so Hash2 takes the hook and not its range overload.
 namespace boost::container_hash {
 
-template<class Bits, xstd::storage Store>
-struct is_range<xstd::set_adaptor<Bits, Store>> : std::false_type
+template<class Bits, xstd::storage Store, class Derived>
+struct is_range<xstd::set_adaptor<Bits, Store, Derived>> : std::false_type
 {};
 
 } // namespace boost::container_hash

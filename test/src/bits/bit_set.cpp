@@ -32,7 +32,7 @@ using T = xstd::basic_bit_set<std::uint8_t>;
 // The flagship: the set reading over a heap of blocks, an alias and nothing more.
 BOOST_AUTO_TEST_CASE(TheDynamicSetIsTheSetAdaptorOverAHeapOfBlocks)
 {
-        static_assert(std::same_as<T, xstd::set_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint8_t>, xstd::storage::owned>>);
+        static_assert(std::derived_from<T, xstd::set_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint8_t>, xstd::storage::owned, T>>);
         static_assert(std::same_as<xstd::basic_bit_set<std::uint8_t, std::allocator<std::uint8_t>>, T>);
         static_assert(test::set::bit_set<T>);
 }

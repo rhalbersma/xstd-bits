@@ -18,6 +18,13 @@
 # one) is the signature std::bitset::to_string carries, and
 # lexicographical_three_way compares two bitsets because that is what
 # comparing two bitsets means. Neither pair can be reordered or retyped.
+# bugprone-crtp-constructor-accessibility is off because the three adaptors
+# are not pure CRTP bases. Their trailing parameter defaults to void, and a
+# view is then the adaptor itself rather than a class deriving from it, so
+# the constructors the check wants protected are the ones bit_span,
+# bit_subspan and bit_set_view are built out of. Protecting them deletes the
+# view layer; the check's other remedy, befriending the derived type, is
+# already done.
 #
 # Note for anyone adding to the list below: Checks is a folded scalar, so a
 # '#' inside it is literal text and not a comment. Explanations belong here,
@@ -35,7 +42,8 @@ Checks: >
   -readability-identifier-length,
   -readability-named-parameter,
   -readability-simplify-boolean-expr,
-  -bugprone-easily-swappable-parameters
+  -bugprone-easily-swappable-parameters,
+  -bugprone-crtp-constructor-accessibility
 WarningsAsErrors: '*'
 HeaderFilterRegex: '(include/xstd|test/include)/.*'
 FormatStyle: none

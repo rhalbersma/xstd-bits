@@ -29,9 +29,9 @@ struct ref_same_as_pred
         static constexpr auto value = std::same_as<R, T>;
 };
 
-// Every set adaptor hands out a proxy converting to the key, whatever its storage or storage.
-template<class Bits, xstd::storage Store>
-struct ref_same_as_pred<xstd::set_adaptor<Bits, Store>>
+// Every set adaptor hands out a proxy converting to the key, whatever its storage, storage or container.
+template<xstd::set_adaptor_like X>
+struct ref_same_as_pred<X>
 {
         template<class R, class T>
         static constexpr auto value = std::convertible_to<R, std::add_const_t<std::remove_reference_t<T>>&>;

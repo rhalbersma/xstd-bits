@@ -15,18 +15,53 @@
 #include <xstd/bits/ownership.hpp>                            // storage
 #include <xstd/bits/set_adaptor.hpp>                          // set_adaptor
 #include <xstd/ints/concepts/unsigned_integer.hpp>            // unsigned_integer
+#include <boost/container_hash/is_range.hpp>                  // is_range
 #include <cstddef>                                            // size_t
+#include <functional>                                         // hash
+#include <type_traits>                                        // false_type
 
 namespace xstd {
 
 // The set reading over a run-time width under a compile-time capacity: inplace names where the storage lives.
 template<xstd::unsigned_integer Block, std::size_t N>
-using basic_bit_inplace_set = set_adaptor<detail::bits::contiguous_bit_inplace_vector<Block, N>, storage::owned>;
+class basic_bit_inplace_set : public set_adaptor<detail::bits::contiguous_bit_inplace_vector<Block, N>, storage::owned, basic_bit_inplace_set<Block, N>>
+{
+        using base_type = set_adaptor<detail::bits::contiguous_bit_inplace_vector<Block, N>, storage::owned, basic_bit_inplace_set<Block, N>>;
+
+public:
+        using base_type::base_type;
+        using base_type::operator=;
+};
 
 template<std::size_t N>
 using bit_inplace_set = basic_bit_inplace_set<std::size_t, N>;
 
+// A container answers every trait as the vehicle it is built on, which is where each one is defined.
+template<xstd::unsigned_integer Block, std::size_t N>
+struct owned_storage<basic_bit_inplace_set<Block, N>> : owned_storage<typename basic_bit_inplace_set<Block, N>::adaptor_type>
+{};
+
 } // namespace xstd
+
+namespace std {
+
+// NOLINTBEGIN(bugprone-std-namespace-modification)
+
+template<xstd::unsigned_integer Block, std::size_t N>
+struct hash<xstd::basic_bit_inplace_set<Block, N>> : hash<typename xstd::basic_bit_inplace_set<Block, N>::adaptor_type>
+{};
+
+// NOLINTEND(bugprone-std-namespace-modification)
+
+} // namespace std
+
+namespace boost::container_hash {
+
+template<xstd::unsigned_integer Block, std::size_t N>
+struct is_range<xstd::basic_bit_inplace_set<Block, N>> : std::false_type
+{};
+
+} // namespace boost::container_hash
 
 #endif // __cpp_lib_inplace_vector
 

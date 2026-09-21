@@ -1405,11 +1405,15 @@ what `-Wunused-lambda-capture` reports.
 Three class templates carry the three readings: `set_adaptor`, `sequence_adaptor`, `bitset_adaptor`. Each is
 written against `contiguous_bit_container` and against nothing else, so one adaptor serves
 `contiguous_bit_array`, `contiguous_bit_vector` and `contiguous_bit_inplace_vector` alike, at both widths and
-in both ownerships ([one-storage](#one-storage)). The public names
-are aliases in two layers over them: `basic_bit_static_set<B, N>` is `set_adaptor<contiguous_bit_array<B, N>,
-owns>`, `basic_bit_array<B, N>` is `sequence_adaptor<contiguous_bit_array<B, N>, owns, false>`, and
-`basic_bitset<B, N>` is `bitset_adaptor<contiguous_bit_array<B, N>>`; `bit_static_set<N>`, `bit_array<N>` and
-`bitset<N>` are those at `std::size_t`.
+in both ownerships ([one-storage](#one-storage)). The public names sit in two layers over
+them. The `basic_` layer derives, passing itself as the adaptor's last argument so that the adaptor names it
+back: `basic_bit_static_set<B, N>` is a `set_adaptor<contiguous_bit_array<B, N>, owns, basic_bit_static_set<B,
+N>>`, `basic_bit_array<B, N>` a `sequence_adaptor<contiguous_bit_array<B, N>, owns, false, basic_bit_array<B,
+N>>`, and `basic_bitset<B, N>` a `bitset_adaptor<contiguous_bit_array<B, N>, basic_bitset<B, N>>`. The short
+layer stays an alias fixing the block: `bit_static_set<N>`, `bit_array<N>` and `bitset<N>` are those at
+`std::size_t`. Deriving is what keeps a value-returning operation -- `& | ^ -`, `operator~`, the shifts,
+`from_bits` -- handing back the container the caller named rather than the vehicle under it
+([the-views-are-the-adaptors](#the-views-are-the-adaptors)).
 
 ### owning-is-ours
 
@@ -1575,101 +1579,116 @@ rewriting all four would have spent three defaulted comparisons to buy symmetry.
 
 ### the-views-are-the-adaptors
 
-`bit_set_view<Bits>` **is** `set_adaptor<Bits, ownership::refers>` and `bit_span<Bits>`
-**is** `sequence_adaptor<Bits, ownership::refers, false>` — alias templates, the way `bit_subspan`
-always was, and not a second implementation of either reading. They carry the names of
-[the-public-names](#the-public-names), one header each beside the owners; the `set_view` and `sequence_view` of
-the rewire were the same classes before the viewing column was filled. The earlier views, with their own
-iterators, proxies and four customization points — `set_find`, `sequence_find`, `block_access`, `bit_extent` —
-were the trait before there was one, and once the adaptors read the storage alone there was nothing left for
-them to do.
+`bit_set_view<Bits>` derives from `set_adaptor<Bits, ownership::refers>` and `bit_span<Bits>` from
+`sequence_adaptor<Bits, ownership::refers, false>`, each passing itself as the adaptor's last argument so that
+the adaptor hands back the view; `bit_subspan` is the same shape with the window argument set. They are the
+referring adaptors under the names of [the-public-names](#the-public-names), one header each beside the owners,
+and not a second implementation of either reading — the `set_view` and `sequence_view` of the rewire were the
+same classes before the viewing column was filled. The earlier views, with their own iterators, proxies and
+four customization points — `set_find`, `sequence_find`, `block_access`, `bit_extent` — were the trait before
+there was one, and once the adaptors read the storage alone there was nothing left for them to do.
 
-**They were derived classes first, and the reason was real but has expired.** This section used to say that
-deduction through an alias is class template argument deduction for alias templates (P1814), "which Clang 19
-and GCC 10 have and MSVC does not: `bit_set_view(x)` on MSVC is 'too few template arguments'". That
-observation was **correct**, and the matrix still reproduces it word for word — `C2976: 'xstd::bit_set_view':
-too few template arguments`, alongside `C2641: cannot deduce template arguments`, 151 times over both views
-on the VS 2022 rung.
+**They were alias templates in between, and this section argued for it.** An alias *is* the adaptor, so every
+opt-in the adaptor carries applies to the name for free, and a storage the library does not wrap is diagnosed
+where the alias is written. Both claims were correct. Both are now paid for rather than collected, because the
+alias cost something neither could buy back: the name itself.
 
-What changed is the generation, not the claim. **MSVC 18 (VS 2026) deduces through these aliases; MSVC 17 (VS
-2022) does not**, in both `msvc` and `msvc_analyze`, Debug and Release. So the aliases cost the 2022 rung, and
-that is the trade [msvc.yml](.github/workflows/msvc.yml) now takes.
+**What the alias cost was deduction on MSVC 17.** Deduction through an alias is class template argument
+deduction for alias templates ([P1814](https://wg21.link/P1814)), which Clang has had since 19 and GCC since
+10. MSVC 17 (VS 2022) does not do it on this shape — one pinned non-type argument plus a defaulted,
+constrained argument depending on the first — and said so 151 times over both views, `C2976:
+'xstd::bit_set_view': too few template arguments` alongside `C2641: cannot deduce template arguments`, in both
+`msvc` and `msvc_analyze`, Debug and Release. MSVC 18 (VS 2026) deduces through the same aliases.
 
-Two corrections worth keeping, because both were mine and both were wrong in the same direction — trusting a
-document over a compiler. Microsoft's conformance table lists `P1814R0 CTAD for alias templates` as **VS 2019
-16.7**, footnoted only with the flag gate this project clears at `/std:c++23`; from that I concluded the
-feature "was never what was missing" and that the note here was wrong. The table is describing the feature,
-not this shape of it — one pinned non-type argument plus a defaulted, constrained argument depending on the
-first — and on that shape MSVC 17 fails while claiming support. A four-day-old note quoting a specific
-diagnostic was the better evidence, and it deserved to be believed over a vendor's feature matrix.
+A correction worth keeping, because it was mine and it went in a direction worth naming — trusting a document
+over a compiler. Microsoft's conformance table lists `P1814R0 CTAD for alias templates` as **VS 2019 16.7**,
+footnoted only with the flag gate this project clears at `/std:c++23`; from that I concluded the feature "was
+never what was missing" and that the note here was wrong. The table describes the feature, not this shape of
+it, and on this shape MSVC 17 fails while claiming support. A four-day-old note quoting a specific diagnostic
+was the better evidence, and it deserved to be believed over a vendor's feature matrix.
+
+**The classes settle C2976 and do not buy the rung back.** Put on trial, the stable MSVC rung came back with
+838 diagnostics and **zero** `C2976`: the views deduce. What it fails on instead is the ledger that opened once
+the rung left, both entries workarounds that had existed for MSVC 17 and nothing else. The first: `decay_copy`
+became `auto(x)` ([the-functor-takes-a-value](#the-functor-takes-a-value)), twenty lines for two, and MSVC 17
+does not implement [P0849R8](https://wg21.link/P0849R8) — `C3878` and `C2760` at `f(auto(pos))`. The second:
+the one `typename` still written in `test/include/test/set/primitives.hpp`, on the default argument of a
+constrained type-parameter — `std::integral T = typename X::key_type`, which MSVC 17 rejects without it as
+`C2061: syntax error: identifier 'integral'` while GCC, clang, clang-cl and Apple clang all take it. It was the
+last site in the tree where [P0634R3](https://wg21.link/P0634R3) permits the omission and the keyword was still
+spelled; the remaining `typename X::value_type` sites are template arguments and functional casts, which
+P0634R3 does not reach. The `NOLINTNEXTLINE(readability-redundant-typename)` that sat above it went with it —
+a live suppression, not a dead one: the check exists in clang-tidy 22 and 24.
+
+So the rung is now recoverable for about twenty lines and one keyword, which is a decision of its own rather
+than a consequence of this one. [msvc.yml](.github/workflows/msvc.yml) keeps `qualification,development` until
+it is taken.
 
 **The break is the MSVC compiler, not the VS 2022 platform.** `clang_cl` keeps all three rungs and passes on
 all of them, 2022 included, because clang-cl is Clang and Clang has had P1814 since 19. So VS 2022's runner,
 STL and platform stay covered; only the MSVC 17 front end is gone from the matrix.
 
-**The rung has paid two dividends so far, and the ledger belongs here with the cost.** Both were workarounds
-that existed for MSVC 17 and nothing else. The first: `decay_copy` became `auto(x)`
-([the-functor-takes-a-value](#the-functor-takes-a-value)), twenty lines for two. The second: the one
-`typename` still written in `test/include/test/set/primitives.hpp`, on the default argument of a constrained
-type-parameter -- `std::integral T = typename X::key_type`, which MSVC 17 rejected without it as `C2061:
-syntax error: identifier 'integral'` while GCC, clang, clang-cl and Apple clang all took it. It was the last
-site in the tree where [P0634R3](https://wg21.link/P0634R3) permits the omission and the keyword was still
-spelled; the remaining `typename X::value_type` sites are template arguments and functional casts, which
-P0634R3 does not reach. The `NOLINTNEXTLINE(readability-redundant-typename)` that had to sit above it went
-with it -- a live suppression, not a dead one: the check exists in clang-tidy 22 and 24.
+**What deriving costs is restatement, and every entry is paid.** A derived class needs its own constructors,
+its own two deduction guides, and its own `enable_view`, `enable_borrowed_range`, `std::hash` and `is_range`
+specializations, because **a derived class is not its base to a partial specialization** — the base's opt-ins
+say nothing about the derived name. Each view carries all of them, the trait specializations delegating to the
+adaptor's through `adaptor_type` rather than restating a body. The constructors are inherited, with
+`using base_type::base_type;` and `using base_type::operator=;`; the second matters, because a derived class's
+implicit copy-assignment hides every base `operator=`, the `initializer_list` overload included. Inheriting
+constructors inherits the primary's guides as well (P2582, which GCC implements), which would tie with restated
+guides — so each view's pair is spelled on its own name, where the primary's cannot be what a consumer deduces.
 
-Being the adaptor rather than deriving from it is what removes the restatements, and they were the whole cost
-of the workaround: a derived class needed its own constructors, its own two deduction guides, and its own
-`enable_view`, `enable_borrowed_range`, `std::hash` and `is_range` specializations, because **a derived class
-is not its base to a partial specialization** — the base's opt-ins say nothing about the derived name. An
-alias *is* the base, so all four apply to it already. The constructors also had to be spelled out rather than
-inherited, since inheriting them inherits the primary's guides as well (P2582, which GCC implements) and those
-tie with the restated ones; with no restated guides there is nothing left to tie.
-
-**The diagnostics belong on that same list.** An alias is transparent, so a storage the library does not wrap
-is diagnosed where the alias is *written*: `void f(my_set<int>)` is an error at that declaration, quoting the
-unsatisfied constraint. A derived class that leaves the
-constraint to its base is not: naming one in a declaration does not require a complete type, so the same line
-**compiles**, the base is never instantiated, and the diagnosis waits for whoever first completes the type.
-It then arrives twice, because a dependent base is named twice and cannot be named once -- in the
-base-specifier, and again in the using-declaration that inherits the constructors. Measured on `set_adaptor`
-over a storage the library does not wrap: 13 lines and one error through the alias, 22 lines and two errors
-through such a derived class.
+**The diagnostics were the other entry, and restating the constraint settles them.** An alias is transparent,
+so a storage the library does not wrap is diagnosed where the alias is *written*: `void f(my_set<int>)` is an
+error at that declaration, quoting the unsatisfied constraint. A derived class that leaves the constraint to
+its base is not: naming one in a declaration does not require a complete type, so the same line **compiles**,
+the base is never instantiated, and the diagnosis waits for whoever first completes the type. It then arrives
+twice, because a dependent base is named twice and cannot be named once -- in the base-specifier, and again in
+the using-declaration that inherits the constructors. Measured on `set_adaptor` over a storage the library does
+not wrap: 13 lines and one error through the alias, 22 lines and two errors through such a derived class.
 
 Restating the constraint on the derived class's own parameter recovers all of that, and then some: it fails at
-the declaration, once, in **fewer** lines than the alias, having no indirection to explain. So this is not a
-second reason standing beside the restatements -- it is one more entry on the same list, and the failure mode
-is the derived class that skips it. A four-line reduction holding a constrained class template, an alias of
-it, and both derived forms reproduces the shape exactly, GCC and Clang agreeing to the line, so it is the
-language rather than a diagnostic quirk.
+the declaration, once, in **fewer** lines than the alias, having no indirection to explain. Which is why all
+three views spell `specialization_of_TN<detail::bits::contiguous_bit_container> Bits` on their own template
+parameter instead of leaving it to the base. A four-line reduction holding a constrained class template, an
+alias of it, and both derived forms reproduces the shape exactly, GCC and Clang agreeing to the line, so it is
+the language rather than a diagnostic quirk. The failure mode is the derived class that skips the restatement,
+and it would bite the views and only the views: the nine owners choose their own storage, so a storage the
+library does not wrap cannot arise through them at all, the one parameter a user supplies being the `Block`,
+constrained at every layer. A view takes the storage -- that is what a view is for
+([owning-is-ours](#owning-is-ours)) -- so a view is exactly the place where a constraint left to the base would
+go undiagnosed until use.
 
-Where it would bite is the views, and only the views. The nine owners choose their own storage, so a storage
-the library does not wrap cannot arise through them at all; the one parameter a user supplies is the `Block`,
-constrained at every layer. A view takes the storage -- that is what a view is for ([owning-is-ours](#owning-is-ours)) --
-so a view is exactly the place where a constraint left to the base would go undiagnosed until use.
+**The printed name is what the classes collect.** An alias is not what a compiler prints, so a diagnostic about
+`bit_array<100>` named `sequence_adaptor<contiguous_bit_container<array<unsigned long, 2>, 100>, ...>`, a
+spelling the user did not write and cannot write back. `std::string` makes that trade and the world lives with
+`basic_string<char, char_traits<char>, allocator<char>>` -- but `std::string` aliases a *class*, where both
+layers here were aliases, which is why the printed name fell through to the adaptor rather than stopping at
+`basic_bit_array`. Both layers are classes now, so it stops.
 
-The alias pays for this on the other side, and the trade is worth stating whole. Being transparent, it is not
-what a compiler prints: a diagnostic about `bit_array<100>` names
-`sequence_adaptor<contiguous_bit_container<array< unsigned long, 2>, 100>, ...>`, a spelling the user did not
-write and cannot write back. `std::string` makes the same trade and the world lives with `basic_string<char,
-char_traits<char>, allocator<char>>` -- though `std::string` aliases a *class*, where both layers here are
-aliases, which is why the printed name falls through to the adaptor rather than stopping at `basic_bit_array`.
-
-One constraint moved rather than vanished. The guide for a plain storage is viable for an owner too, now that
-an owner is nothing but a storage under a wrapper, and would tie with the owner guide — so it is constrained to
-non-owners, as [an-owner-reads-as-its-storage](#an-owner-reads-as-its-storage) describes. That constraint used
-to sit on each view's restated guide; it now sits on `set_adaptor`'s and `sequence_adaptor`'s own, which is
-where the aliases deduce through.
+One constraint sits in two places rather than one. The guide for a plain storage is viable for an owner too,
+now that an owner is nothing but a storage under a wrapper, and would tie with the owner guide -- so it is
+constrained to non-owners, as [an-owner-reads-as-its-storage](#an-owner-reads-as-its-storage) describes. It is
+written on `set_adaptor`'s and `sequence_adaptor`'s own guides, and again on each view's restated pair, which
+is where a consumer's deduction lands.
 
 The sequence view pays the `span` half of [views-follow-their-precedent](#views-follow-their-precedent) by
-becoming the adaptor: it no longer has `==` or `<=>`, and the harness checks the sequence reading through the
-iterators instead.
+being the adaptor: it has no `==` or `<=>`, and the harness checks the sequence reading through the iterators
+instead.
+
+**One forward declaration breaks the cycle deriving opened.** `sequence_adaptor` names `subspan_type` and
+returns it from `first`, `last` and `subspan`, and that type is now `bit_subspan<Bits>` -- a name whose own
+header includes `sequence_adaptor.hpp`. So the adaptor declares `bit_subspan` and must not include it, while
+`bit_span.hpp` does include it, its members handing one back. While the views were aliases the question did not
+arise: the adaptor could spell `sequence_adaptor<Bits, ownership::refers, true>` for itself, which is the one
+thing a derived view cannot supply without a hook back into a header above it.
 
 ### windows
 
-`bit_subspan<Bits>` is `sequence_adaptor<Bits, refers, true>`: the referring adaptor
-windowed, an alias rather than a derived class because nothing deduces it -- it is what `first`, `last` and
-`subspan` return on a `bit_span` or on another window, and never spelled at a call site. It stores what
+`bit_subspan<Bits>` derives from `sequence_adaptor<Bits, refers, true>`: the referring adaptor
+windowed, and the name `first`, `last` and `subspan` hand back on a `bit_span` or on another window. It is a
+class for the reason the other two views are ([the-views-are-the-adaptors](#the-views-are-the-adaptors)), and
+being one is what lets the adaptor return it by name rather than by respelling its own parameters. It stores what
 `std::span` stores, a pointer and a size, with the pointer's role split over a pointer and a position
 because bits are not addressable: the sequence iterator's two fields and a count, 24 bytes beside the whole
 view's 8. The offset is applied once, in a private `offset()` that answers zero for every other shape, so
@@ -1834,15 +1853,16 @@ surface says `contiguous_bit_array`.
 ### viewing-an-owner-is-implicit
 
 `bit_set_view(my_set)` is a converting constructor on the **view**, not a conversion operator on the owner, and
-the choice is forced rather than stylistic. `bit_set_view` and `bit_span` are alias templates, so every
-deduction runs through constructors and guides on the adaptor; a conversion function contributes nothing to
-class template argument deduction. Measured on a model of both shapes: with only the operator, `view(owner)` is
-`no matching function for call to 'adaptor(...)'`. The constructor has to exist anyway, and once it does the
-operator is a second mechanism for a conversion already spelled. Three lesser reasons agree. The constructor is
-where `owner_of<Bits, R>` already hangs, so the readings-do-not-mix rule is stated once. Const falls out
-of deducing `Owner&` rather than needing an `operator view<Bits>() &` and an `operator view<Bits const>() const&`
-kept in step by hand. And `Owner&` is an lvalue reference, so a temporary owner never binds — the `string_view`
-foot-gun closed by the signature instead of by a `&`-qualifier someone has to remember.
+the choice is forced rather than stylistic. Deduction runs through constructors and guides, wherever they are
+written -- on the adaptor while the views were aliases, on each view since; a conversion function contributes
+nothing to class template argument deduction either way. Measured on a model of both shapes: with only the
+operator, `view(owner)` is `no matching function for call to 'adaptor(...)'`. The constructor has to exist
+anyway, and once it does the operator is a second mechanism for a conversion already spelled. Three lesser
+reasons agree. The constructor is where `owner_of<Bits, R>` already hangs, so the readings-do-not-mix rule is
+stated once. Const falls out of deducing `Owner&` rather than needing an `operator view<Bits>() &` and an
+`operator view<Bits const>() const&` kept in step by hand. And `Owner&` is an lvalue reference, so a temporary
+owner never binds — the `string_view` foot-gun closed by the signature instead of by a `&`-qualifier someone has
+to remember.
 
 The standard's own split is about layering, not taste: `string` → `string_view` is an operator because
 `<string_view>` must not depend on `<string>`, while `vector`/`array` → `span` is a constructor because `span`
@@ -1912,10 +1932,11 @@ rule, and it is a test rather than a judgement: `bit_static_set` is spelled, `co
 What the rule keeps on the interface side, each with the reason it is not obvious:
 
 - **The nine containers and the three views.** Uncontested, and the reason the rest is worth stating.
-- **The three adaptors.** Interface by necessity rather than by intent: the containers and the views *are*
-  these types ([the-views-are-the-adaptors](#the-views-are-the-adaptors)), so every diagnostic quotes one,
-  every `decltype` prints one, and a consumer pattern-matching on what it was handed writes
-  `sequence_adaptor<B, O, W>` to do it.
+- **The three adaptors.** Interface by necessity rather than by intent: every container and every view
+  derives from one ([the-views-are-the-adaptors](#the-views-are-the-adaptors)), so a consumer asking what it
+  was handed asks about a base, which it cannot do without the base's name. It asks through the library's own
+  `set_adaptor_like` and `sequence_adaptor_like` rather than by spelling `sequence_adaptor<B, O, W>` -- which
+  is why those concepts are interface too, and why the spelling is no longer what a `decltype` prints.
 - **`ownership`.** Dragged in by that: no adaptor can be named without writing `ownership::refers`. Said out
   loud because this is the kind of enum that gets called a detail right up until someone has to type it.
 - **`contiguous_bit_sequence`.** The vocabulary the three bit containers share, which is a claim about
@@ -1941,9 +1962,10 @@ an implementation looks like.
 
 **Enforced, not asserted.** `test/consumer/main.cpp` includes `<xstd/bits.hpp>` and no other header of ours,
 and names every type above: the nine containers, the three views, the three adaptors and `ownership`. It
-pattern-matches each container against the adaptor it is — `is_set_adaptor<bit_static_set<100>>` and so on for
-all nine — which is the claim [the-views-are-the-adaptors](#the-views-are-the-adaptors) rests on, asked from
-outside. The view names it reaches by deduction, since that is now the only way in. The three `consumption`
+pattern-matches each container against the adaptor it derives from — `is_set_adaptor<bit_static_set<100>>` and
+so on for all nine, and over the three views besides — which is the claim
+[the-views-are-the-adaptors](#the-views-are-the-adaptors) rests on, asked from outside. The view names it
+reaches by deduction, which is both the only way in and the thing the classes were for. The three `consumption`
 configurations build it against the installed headers, so a name that stops being reachable from the umbrella,
 or an interface header that starts needing one from `detail/`, fails there rather than in a user's build.
 

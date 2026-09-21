@@ -5,6 +5,7 @@
 
 // The gate on the interface line.
 
+#include <concepts>      // derived_from
 #include <xstd/bits.hpp> // bit_array, bit_inplace_set, bit_inplace_vector, bit_set, bit_set_view, bit_span,
                          // bit_static_set, bit_subspan, bit_vector, bitset, bitset_adaptor, dynamic_bitset, inplace_bitset, storage, sequence_adaptor, set_adaptor
 #include <cstddef>       // size_t
@@ -14,21 +15,15 @@
 
 namespace consumer {
 
-// The adaptors named without naming their storage: the containers and views are not built on them, they are them.
-template<class>
-constexpr bool is_set_adaptor = false;
-template<class B, xstd::storage O>
-constexpr bool is_set_adaptor<xstd::set_adaptor<B, O>> = true;
+// The adaptors named without their storage: every container and every view derives from the vehicle it reads by.
+template<class T>
+constexpr bool is_set_adaptor = xstd::set_adaptor_like<T>;
 
-template<class>
-constexpr bool is_sequence_adaptor = false;
-template<class B, xstd::storage O, bool W>
-constexpr bool is_sequence_adaptor<xstd::sequence_adaptor<B, O, W>> = true;
+template<class T>
+constexpr bool is_sequence_adaptor = xstd::sequence_adaptor_like<T>;
 
-template<class>
-constexpr bool is_bitset_adaptor = false;
-template<class B>
-constexpr bool is_bitset_adaptor<xstd::bitset_adaptor<B>> = true;
+template<class T>
+constexpr bool is_bitset_adaptor = requires { typename T::bits_type; } and std::derived_from<T, xstd::bitset_adaptor<typename T::bits_type, T>>;
 
 // A view's Bits is the storage a container wraps, so a consumer reaches the view names by deduction.
 using set_view_of_bitset = decltype(xstd::bit_set_view(std::declval<xstd::bitset<64>&>()));
