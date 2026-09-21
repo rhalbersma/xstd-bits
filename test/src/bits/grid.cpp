@@ -53,6 +53,9 @@ BOOST_AUTO_TEST_CASE(TheAllocatorIsTheFourthArgumentAndTheDefaultIsStdAllocator)
         static_assert(not std::same_as<other_allocator, allocator_type>);
         static_assert(std::same_as<xstd::bits_t<xstd::vector_container_tag, block_type, std::dynamic_extent, other_allocator>, xstd::detail::bits::contiguous_bit_vector<block_type, other_allocator>>);
         static_assert(std::same_as<xstd::bits_t<xstd::vector_container_tag, block_type>, xstd::bits_t<xstd::vector_container_tag, block_type, std::dynamic_extent, allocator_type>>);
+
+        // A void allocator is the container's own default, which is std::allocator here and need not be elsewhere.
+        static_assert(std::same_as<xstd::bits_t<xstd::vector_container_tag, block_type, std::dynamic_extent, void>, xstd::detail::bits::contiguous_bit_vector<block_type, allocator_type>>);
         BOOST_CHECK(true);
 }
 

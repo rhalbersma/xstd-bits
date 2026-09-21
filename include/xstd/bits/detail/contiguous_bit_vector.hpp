@@ -31,6 +31,13 @@ struct bits_of<vector_container_tag, Block, std::dynamic_extent, Alloc>
         using type = detail::bits::contiguous_bit_vector<Block, Alloc>;
 };
 
+// Named no allocator, so this tag supplies the one its own container defaults to rather than one the grid chose.
+template<xstd::unsigned_integer Block>
+struct bits_of<vector_container_tag, Block, std::dynamic_extent, void>
+{
+        using type = detail::bits::contiguous_bit_vector<Block>;
+};
+
 } // namespace xstd
 
 #endif // XSTD_BITS_DETAIL_CONTIGUOUS_BIT_VECTOR_HPP

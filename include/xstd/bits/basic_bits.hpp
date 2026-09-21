@@ -14,7 +14,6 @@
 #include <boost/container_hash/is_tuple_like.hpp>  // is_tuple_like
 #include <cstddef>                                 // size_t
 #include <functional>                              // hash
-#include <memory>                                  // allocator
 #include <span>                                    // dynamic_extent
 #include <tuple>                                   // tuple_element, tuple_size
 #include <type_traits>                             // false_type
@@ -22,7 +21,7 @@
 namespace xstd {
 
 // One owner per cell of the reading-by-container grid; the nine public names are the cells that have one.
-template<reading_tag R, container_tag C, xstd::unsigned_integer Block, std::size_t N = std::dynamic_extent, class Alloc = std::allocator<Block>>
+template<reading_tag R, container_tag C, xstd::unsigned_integer Block, std::size_t N = std::dynamic_extent, class Alloc = void>
 class basic_bits : public adaptor_t<R, bits_t<C, Block, N, Alloc>, basic_bits<R, C, Block, N, Alloc>>
 {
         using base_type = adaptor_t<R, bits_t<C, Block, N, Alloc>, basic_bits<R, C, Block, N, Alloc>>;
@@ -31,7 +30,7 @@ public:
         using base_type::base_type;
         using base_type::operator=;
 
-        // An allocator argument makes std an associated namespace, where std::swap would out-match the vehicle's own.
+        // An allocator names std among the associated namespaces, where std::swap would out-match the vehicle's own.
         friend constexpr auto swap(basic_bits& x, basic_bits& y) noexcept(noexcept(x.swap(y)))
                 -> void
         {

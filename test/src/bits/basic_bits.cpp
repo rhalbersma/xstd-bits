@@ -33,7 +33,7 @@ using allocator_type = std::allocator<block_type>;
 inline constexpr auto width = 100UZ;
 
 // A cell reproduces a public name when the container tag picks its storage and the reading tag the adaptor it derives from.
-template<class R, class C, class Row, std::size_t N = std::dynamic_extent, class Alloc = allocator_type>
+template<class R, class C, class Row, std::size_t N = std::dynamic_extent, class Alloc = void>
 concept reproduces =
         std::same_as<xstd::bits_t<C, block_type, N, Alloc>, xstd::owned_bits_t<Row>> and
         std::derived_from<Row, xstd::adaptor_t<R, xstd::owned_bits_t<Row>, Row>> and
@@ -46,7 +46,7 @@ BOOST_AUTO_TEST_SUITE(BasicBits)
 BOOST_AUTO_TEST_CASE(TheSequenceRowIsThreeCells)
 {
         static_assert(reproduces<xstd::sequence_reading_tag, xstd::array_container_tag, xstd::basic_bit_array<block_type, width>, width>);
-        static_assert(reproduces<xstd::sequence_reading_tag, xstd::vector_container_tag, xstd::basic_bit_vector<block_type, allocator_type>>);
+        static_assert(reproduces<xstd::sequence_reading_tag, xstd::vector_container_tag, xstd::basic_bit_vector<block_type, allocator_type>, std::dynamic_extent, allocator_type>);
 #ifdef TEST_HAS_INPLACE_VECTOR
         static_assert(reproduces<xstd::sequence_reading_tag, xstd::inplace_vector_container_tag, xstd::basic_bit_inplace_vector<block_type, width>, width>);
 #endif
@@ -56,7 +56,7 @@ BOOST_AUTO_TEST_CASE(TheSequenceRowIsThreeCells)
 BOOST_AUTO_TEST_CASE(TheSetRowIsThreeCells)
 {
         static_assert(reproduces<xstd::set_reading_tag, xstd::array_container_tag, xstd::basic_bit_static_set<block_type, width>, width>);
-        static_assert(reproduces<xstd::set_reading_tag, xstd::vector_container_tag, xstd::basic_bit_set<block_type, allocator_type>>);
+        static_assert(reproduces<xstd::set_reading_tag, xstd::vector_container_tag, xstd::basic_bit_set<block_type, allocator_type>, std::dynamic_extent, allocator_type>);
 #ifdef TEST_HAS_INPLACE_VECTOR
         static_assert(reproduces<xstd::set_reading_tag, xstd::inplace_vector_container_tag, xstd::basic_bit_inplace_set<block_type, width>, width>);
 #endif
@@ -66,7 +66,7 @@ BOOST_AUTO_TEST_CASE(TheSetRowIsThreeCells)
 BOOST_AUTO_TEST_CASE(TheBitsetRowIsThreeCells)
 {
         static_assert(reproduces<xstd::bitset_reading_tag, xstd::array_container_tag, xstd::basic_bitset<block_type, width>, width>);
-        static_assert(reproduces<xstd::bitset_reading_tag, xstd::vector_container_tag, xstd::basic_dynamic_bitset<block_type, allocator_type>>);
+        static_assert(reproduces<xstd::bitset_reading_tag, xstd::vector_container_tag, xstd::basic_dynamic_bitset<block_type, allocator_type>, std::dynamic_extent, allocator_type>);
 #ifdef TEST_HAS_INPLACE_VECTOR
         static_assert(reproduces<xstd::bitset_reading_tag, xstd::inplace_vector_container_tag, xstd::basic_inplace_bitset<block_type, width>, width>);
 #endif
