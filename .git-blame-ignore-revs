@@ -15,3 +15,10 @@
 
 # Adopt the shared xstd clang-format style
 d42a9cc533f8140cfb1f54491e5e792d7ae75347
+
+# Separate the definitions, break the templates, indent the lists at eight.
+# Every C++ file it touched is byte-identical once whitespace is stripped. It
+# also carries the .clang-format keys that produced the reformat, which cannot
+# land in a separate merge: the keys alone would fail the clang-format gate,
+# and the reformat alone would not match them.
+a763c4a3580cf545e7ce22248efcb7d5f9e230ec
