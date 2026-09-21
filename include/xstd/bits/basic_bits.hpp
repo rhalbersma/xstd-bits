@@ -30,6 +30,13 @@ class basic_bits : public adaptor_t<R, bits_t<C, Block, N, Alloc>, basic_bits<R,
 public:
         using base_type::base_type;
         using base_type::operator=;
+
+        // An allocator argument makes std an associated namespace, where std::swap would out-match the vehicle's own.
+        friend constexpr auto swap(basic_bits& x, basic_bits& y) noexcept(noexcept(x.swap(y)))
+                -> void
+        {
+                x.swap(y);
+        }
 };
 
 // A container answers every trait as the vehicle it is built on, which is where each one is defined.
