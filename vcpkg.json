@@ -1,7 +1,7 @@
 {
   "name": "xstd-bits",
   "version-string": "0.1.0",
-  "description": "Rebooting the bits franchise",
+  "description": "Bit-packed C++ containers, views and bitsets modelling their standard counterparts, with the bit-parallel operations packing makes possible",
   "homepage": "https://github.com/rhalbersma/xstd-bits",
   "license": "BSL-1.0",
   "dependencies": [
