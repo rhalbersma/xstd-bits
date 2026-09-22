@@ -34,6 +34,21 @@ Shorten to the claim the code cannot make for itself. A measurement, a standard 
 rejected alternative earns its line when it says why this code is the way it is; the reasoning that
 led there belongs in a document or in the commit that made the change.
 
+## Include order
+
+Three groups, in this order, with no blank line between them: this project's own `<xstd/...>`
+headers, then `<boost/...>`, then the standard library. Alphabetical by path within each group, so
+`<xstd/bits/detail/contiguous_bit_array.hpp>` precedes `<xstd/bits/detail/ownership.hpp>` and
+`<cstddef>` precedes `<functional>`.
+
+`.clang-format` sets `SortIncludes: Never`, so nothing enforces this and nothing will reorder for
+you. A file that already deviates is a file to fix, not the convention speaking.
+
+Every line carries a trailing `//` naming what the include is for, and that comment, an
+`IWYU pragma` and a `NOLINT` all belong to the line rather than to the position: move the whole
+line or none of it. Reordering changes which header is found first, so build and test afterwards
+rather than trusting that only whitespace moved.
+
 ## Trailing return types
 
 Every function starts with `auto`. No leading return types, `main` included, which is
