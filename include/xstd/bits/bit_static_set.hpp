@@ -6,11 +6,9 @@
 #ifndef XSTD_BITS_BIT_STATIC_SET_HPP
 #define XSTD_BITS_BIT_STATIC_SET_HPP
 
-#include <xstd/bits/detail/grid.hpp>                 // bits_t
 #include <xstd/bits/detail/ownership.hpp>            // owned_storage, storage
-#include <xstd/bits/detail/contiguous_bit_array.hpp> // IWYU pragma: keep; the storage array_container_tag names
+#include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
 #include <xstd/bits/detail/set_adaptor.hpp>          // set_adaptor
-#include <xstd/bits/detail/tags.hpp>                 // array_container_tag
 #include <xstd/ints/concepts/unsigned_integer.hpp>   // unsigned_integer
 #include <xstd/ints/memory.hpp>                      // align_up
 #include <cstddef>                                   // size_t
@@ -24,9 +22,9 @@ namespace xstd {
 
 // The static set: the basic name leaves the block open, the restricted one is the machine word.
 template<xstd::unsigned_integer Block, std::size_t N>
-class basic_bit_static_set : public set_adaptor<bits_t<array_container_tag, Block, N>, storage::owned, basic_bit_static_set<Block, N>>
+class basic_bit_static_set : public set_adaptor<detail::bits::contiguous_bit_array<Block, N>, storage::owned, basic_bit_static_set<Block, N>>
 {
-        using base_type = set_adaptor<bits_t<array_container_tag, Block, N>, storage::owned, basic_bit_static_set<Block, N>>;
+        using base_type = set_adaptor<detail::bits::contiguous_bit_array<Block, N>, storage::owned, basic_bit_static_set<Block, N>>;
 
 public:
         using base_type::base_type;

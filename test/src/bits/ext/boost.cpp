@@ -8,9 +8,7 @@
 #include <xstd/bits/detail/contiguous_block_range.hpp>   // contiguous_block_range
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // num_blocks_v
 #include <xstd/bits/ext/boost.hpp>                       // basic_bit_small_set, basic_bit_small_vector, basic_small_bitset,
-                                                         // bit_small_set, bit_small_vector, small_bitset, small_vector_container_tag
-#include <xstd/bits/detail/grid.hpp>                     // bits_t
-#include <xstd/bits/detail/tags.hpp>                     // container_tag
+                                                         // bit_small_set, bit_small_vector, contiguous_bit_small_vector, small_bitset
 #include <boost/container/new_allocator.hpp>             // new_allocator
 #include <boost/container/small_vector.hpp>              // small_vector
 #include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
@@ -69,19 +67,18 @@ using CountedSet = xstd::basic_bit_small_set<std::size_t, N, counting_allocator<
 
 } // namespace
 
-// A back end joins on the block concept alone, which is the whole of what the grid asks of a storage.
-BOOST_AUTO_TEST_CASE(TheSmallVectorIsBlocksTheGridCanHold)
+// A back end joins on the block concept alone, which is the whole of what a storage has to satisfy.
+BOOST_AUTO_TEST_CASE(TheSmallVectorIsBlocksAStorageCanHold)
 {
         static_assert(xstd::detail::bits::contiguous_block_range<boost::container::small_vector<std::size_t, 4>>);
-        static_assert(xstd::container_tag<xstd::small_vector_container_tag>);
         BOOST_CHECK(true);
 }
 
-// N counts bits and the storage counts blocks, so the tag divides by the block width the way the static column does.
+// N counts bits and the storage counts blocks, so the vehicle divides by the block width the way the static column does.
 BOOST_AUTO_TEST_CASE(TheCapacityIsBitsAndTheStorageIsBlocks)
 {
         using Blocks = boost::container::small_vector<std::size_t, xstd::detail::bits::num_blocks_v<std::size_t, N>, boost::container::new_allocator<std::size_t>>;
-        static_assert(std::same_as<xstd::bits_t<xstd::small_vector_container_tag, std::size_t, N, boost::container::new_allocator<std::size_t>>, xstd::detail::bits::contiguous_bit_container<Blocks>>);
+        static_assert(std::same_as<xstd::detail::bits::contiguous_bit_small_vector<std::size_t, N, boost::container::new_allocator<std::size_t>>, xstd::detail::bits::contiguous_bit_container<Blocks>>);
         static_assert(xstd::detail::bits::num_blocks_v<std::uint8_t, 24> == 3);
         BOOST_CHECK(true);
 }
@@ -95,7 +92,7 @@ BOOST_AUTO_TEST_CASE(TheShortNamesAreTheGeneralOnesAtTheirDefaults)
         BOOST_CHECK(true);
 }
 
-// One column, three readings: the tag says where the bits live and says nothing about how they are read.
+// One column, three readings: the storage says where the bits live and says nothing about how they are read.
 BOOST_AUTO_TEST_CASE(EveryReadingInstantiatesOverIt)
 {
         static_assert(test::set::bit_set<SmallSet>);

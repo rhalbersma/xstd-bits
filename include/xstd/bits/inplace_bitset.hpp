@@ -10,11 +10,9 @@
 
 #ifdef __cpp_lib_inplace_vector
 
-#include <xstd/bits/detail/grid.hpp>                          // bits_t
 #include <xstd/bits/detail/ownership.hpp>                     // owned_storage
 #include <xstd/bits/detail/bitset_adaptor.hpp>                // bitset_adaptor
-#include <xstd/bits/detail/contiguous_bit_inplace_vector.hpp> // IWYU pragma: keep; the storage inplace_vector_container_tag names
-#include <xstd/bits/detail/tags.hpp>                          // inplace_vector_container_tag
+#include <xstd/bits/detail/contiguous_bit_inplace_vector.hpp> // contiguous_bit_inplace_vector
 #include <xstd/ints/concepts/unsigned_integer.hpp>            // unsigned_integer
 #include <cstddef>                                            // size_t
 #include <functional>                                         // hash
@@ -23,9 +21,9 @@ namespace xstd {
 
 // A resizable bitset that never allocates; no bit_ prefix, bitset already carrying the word.
 template<xstd::unsigned_integer Block, std::size_t N>
-class basic_inplace_bitset : public bitset_adaptor<bits_t<inplace_vector_container_tag, Block, N>, basic_inplace_bitset<Block, N>>
+class basic_inplace_bitset : public bitset_adaptor<detail::bits::contiguous_bit_inplace_vector<Block, N>, basic_inplace_bitset<Block, N>>
 {
-        using base_type = bitset_adaptor<bits_t<inplace_vector_container_tag, Block, N>, basic_inplace_bitset<Block, N>>;
+        using base_type = bitset_adaptor<detail::bits::contiguous_bit_inplace_vector<Block, N>, basic_inplace_bitset<Block, N>>;
 
 public:
         using base_type::base_type;

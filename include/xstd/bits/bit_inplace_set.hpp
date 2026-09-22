@@ -10,11 +10,9 @@
 
 #ifdef __cpp_lib_inplace_vector
 
-#include <xstd/bits/detail/grid.hpp>                          // bits_t
 #include <xstd/bits/detail/ownership.hpp>                     // owned_storage, storage
-#include <xstd/bits/detail/contiguous_bit_inplace_vector.hpp> // IWYU pragma: keep; the storage inplace_vector_container_tag names
+#include <xstd/bits/detail/contiguous_bit_inplace_vector.hpp> // contiguous_bit_inplace_vector
 #include <xstd/bits/detail/set_adaptor.hpp>                   // set_adaptor
-#include <xstd/bits/detail/tags.hpp>                          // inplace_vector_container_tag
 #include <xstd/ints/concepts/unsigned_integer.hpp>            // unsigned_integer
 #include <cstddef>                                            // size_t
 #include <functional>                                         // hash
@@ -26,9 +24,9 @@ namespace xstd {
 
 // The set reading over a run-time width under a compile-time capacity: inplace names where the storage lives.
 template<xstd::unsigned_integer Block, std::size_t N>
-class basic_bit_inplace_set : public set_adaptor<bits_t<inplace_vector_container_tag, Block, N>, storage::owned, basic_bit_inplace_set<Block, N>>
+class basic_bit_inplace_set : public set_adaptor<detail::bits::contiguous_bit_inplace_vector<Block, N>, storage::owned, basic_bit_inplace_set<Block, N>>
 {
-        using base_type = set_adaptor<bits_t<inplace_vector_container_tag, Block, N>, storage::owned, basic_bit_inplace_set<Block, N>>;
+        using base_type = set_adaptor<detail::bits::contiguous_bit_inplace_vector<Block, N>, storage::owned, basic_bit_inplace_set<Block, N>>;
 
 public:
         using base_type::base_type;

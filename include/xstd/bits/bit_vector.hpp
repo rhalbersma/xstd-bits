@@ -6,15 +6,12 @@
 #ifndef XSTD_BITS_BIT_VECTOR_HPP
 #define XSTD_BITS_BIT_VECTOR_HPP
 
-#include <xstd/bits/detail/grid.hpp>                  // bits_t
 #include <xstd/bits/detail/ownership.hpp>             // owned_storage, storage, window
-#include <xstd/bits/detail/contiguous_bit_vector.hpp> // IWYU pragma: keep; the storage vector_container_tag names
+#include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
 #include <xstd/bits/detail/sequence_adaptor.hpp>      // sequence_adaptor
-#include <xstd/bits/detail/tags.hpp>                  // vector_container_tag
 #include <xstd/ints/concepts/unsigned_integer.hpp>    // unsigned_integer
 #include <cstddef>                                    // size_t
 #include <memory>                                     // allocator
-#include <span>                                       // dynamic_extent
 #include <functional>                                 // hash
 #include <type_traits>                                // false_type
 #include <boost/container_hash/is_range.hpp>          // is_range
@@ -24,9 +21,9 @@ namespace xstd {
 
 // The sequence reading over a heap of blocks: std::vector<bool> under the name Hinnant proposed for it.
 template<xstd::unsigned_integer Block, class Allocator = std::allocator<Block>>
-class basic_bit_vector : public sequence_adaptor<bits_t<vector_container_tag, Block, std::dynamic_extent, Allocator>, storage::owned, window::all, basic_bit_vector<Block, Allocator>>
+class basic_bit_vector : public sequence_adaptor<detail::bits::contiguous_bit_vector<Block, Allocator>, storage::owned, window::all, basic_bit_vector<Block, Allocator>>
 {
-        using base_type = sequence_adaptor<bits_t<vector_container_tag, Block, std::dynamic_extent, Allocator>, storage::owned, window::all, basic_bit_vector<Block, Allocator>>;
+        using base_type = sequence_adaptor<detail::bits::contiguous_bit_vector<Block, Allocator>, storage::owned, window::all, basic_bit_vector<Block, Allocator>>;
 
 public:
         using base_type::base_type;

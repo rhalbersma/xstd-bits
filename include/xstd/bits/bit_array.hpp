@@ -6,11 +6,9 @@
 #ifndef XSTD_BITS_BIT_ARRAY_HPP
 #define XSTD_BITS_BIT_ARRAY_HPP
 
-#include <xstd/bits/detail/grid.hpp>                 // bits_t
 #include <xstd/bits/detail/ownership.hpp>            // owned_storage, storage, window
-#include <xstd/bits/detail/contiguous_bit_array.hpp> // IWYU pragma: keep; the storage array_container_tag names
+#include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
 #include <xstd/bits/detail/sequence_adaptor.hpp>     // sequence_adaptor
-#include <xstd/bits/detail/tags.hpp>                 // array_container_tag
 #include <xstd/ints/concepts/unsigned_integer.hpp>   // unsigned_integer
 #include <xstd/ints/memory.hpp>                      // align_up
 #include <cstddef>                                   // size_t
@@ -24,9 +22,9 @@ namespace xstd {
 
 // The packed std::array<bool, N>, named after the container it packs.
 template<xstd::unsigned_integer Block, std::size_t N>
-class basic_bit_array : public sequence_adaptor<bits_t<array_container_tag, Block, N>, storage::owned, window::all, basic_bit_array<Block, N>>
+class basic_bit_array : public sequence_adaptor<detail::bits::contiguous_bit_array<Block, N>, storage::owned, window::all, basic_bit_array<Block, N>>
 {
-        using base_type = sequence_adaptor<bits_t<array_container_tag, Block, N>, storage::owned, window::all, basic_bit_array<Block, N>>;
+        using base_type = sequence_adaptor<detail::bits::contiguous_bit_array<Block, N>, storage::owned, window::all, basic_bit_array<Block, N>>;
 
 public:
         using base_type::base_type;
