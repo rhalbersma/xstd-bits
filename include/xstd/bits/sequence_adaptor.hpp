@@ -8,6 +8,7 @@
 
 #include <xstd/bits/detail/allocator_base_type.hpp>      // allocator_base_type
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
+#include <xstd/bits/detail/functor.hpp>                  // invoke_continues
 #include <xstd/bits/detail/hash.hpp>                     // hash_append_bits, std_hash
 #include <xstd/bits/detail/intrin.hpp>                   // countr_zero, popcount
 #include <xstd/bits/detail/shift.hpp>                    // shl, shr
@@ -37,7 +38,7 @@
 #include <span>                                          // dynamic_extent
 #include <stdexcept>                                     // out_of_range
 #include <tuple>                                         // tuple_element, tuple_size
-#include <type_traits>                                   // conditional_t, false_type, is_invocable_r_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
+#include <type_traits>                                   // conditional_t, false_type, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
 #include <utility>                                       // as_const, declval, forward, move, pair
 
 // The sequence reading, [array] over a contiguous_bit_container, owning it or referring to it.
@@ -55,40 +56,19 @@ template<class Block>
         return count == digits ? static_cast<Block>(~Block{}) : static_cast<Block>(detail::bits::shl(Block{1}, count) - Block{1});
 }
 
-// A prvalue from a named parameter: MSVC 17 has no auto(x), which is [P0849R8]'s spelling of this.
-template<class T>
-[[nodiscard]] constexpr auto decay_copy(T value) noexcept
-        -> T
-{
-        return value;
-}
-
-// Continue unless the functor says otherwise: a void functor always continues, a bool one says.
-template<class F>
-[[nodiscard]] constexpr auto invoke_continues(F& f, bool value)
-        -> bool
-{
-        if constexpr (std::is_invocable_r_v<bool, F&, bool>) {
-                return f(decay_copy(value));
-        } else {
-                f(decay_copy(value));
-                return true;
-        }
-}
-
 // Every position, lowest first, a word at a time: the reload is the inner loop's exit test.
 template<class Bits, class F>
 constexpr auto walk_blocks(Bits const& c, std::size_t offset, std::size_t size, F& f)
         -> void
 {
-        using block_type = std::remove_cvref_t<decltype(c.block(0UZ))>;
-        constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<block_type>::digits);
+        using block_type = Bits::block_type;
+        constexpr auto digits = Bits::bits_per_block;
 
         for (auto k = 0UZ; k < size; k += digits) {
                 auto const count = std::ranges::min(digits, size - k);
                 auto const block = c.block_at(offset + k);
                 for (auto n = 0UZ; n < count; ++n) {
-                        if (not invoke_continues(f, (detail::bits::shr(block, n) & block_type{1}) != block_type{})) {
+                        if (not detail::bits::invoke_continues(f, (detail::bits::shr(block, n) & block_type{1}) != block_type{})) {
                                 return;
                         }
                 }
@@ -100,8 +80,8 @@ template<class Bits>
 [[nodiscard]] constexpr auto count_blocks(Bits const& c, std::size_t offset, std::size_t size) noexcept
         -> std::size_t
 {
-        using block_type = std::remove_cvref_t<decltype(c.block(0UZ))>;
-        constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<block_type>::digits);
+        using block_type = Bits::block_type;
+        constexpr auto digits = Bits::bits_per_block;
 
         auto n = 0UZ;
         for (auto k = 0UZ; k < size; k += digits) {
@@ -115,8 +95,8 @@ template<class Bits>
 [[nodiscard]] constexpr auto any_blocks(Bits const& c, std::size_t offset, std::size_t size) noexcept
         -> bool
 {
-        using block_type = std::remove_cvref_t<decltype(c.block(0UZ))>;
-        constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<block_type>::digits);
+        using block_type = Bits::block_type;
+        constexpr auto digits = Bits::bits_per_block;
 
         for (auto k = 0UZ; k < size; k += digits) {
                 auto const mask = partial_block_mask<block_type>(std::ranges::min(digits, size - k));
@@ -131,8 +111,8 @@ template<class Bits>
 [[nodiscard]] constexpr auto all_blocks(Bits const& c, std::size_t offset, std::size_t size) noexcept
         -> bool
 {
-        using block_type = std::remove_cvref_t<decltype(c.block(0UZ))>;
-        constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<block_type>::digits);
+        using block_type = Bits::block_type;
+        constexpr auto digits = Bits::bits_per_block;
 
         for (auto k = 0UZ; k < size; k += digits) {
                 auto const mask = partial_block_mask<block_type>(std::ranges::min(digits, size - k));
@@ -734,8 +714,8 @@ public:
                         return 0UZ;
                 }
                 auto const [index, diff] = bits().first_difference(other.bits());
-                using block_type = std::remove_cvref_t<decltype(diff)>;
-                constexpr auto digits = static_cast<size_type>(std::numeric_limits<block_type>::digits);
+                using block_type = bits_type::block_type;
+                constexpr auto digits = bits_type::bits_per_block;
                 if (diff == block_type{}) {
                         return size();
                 }

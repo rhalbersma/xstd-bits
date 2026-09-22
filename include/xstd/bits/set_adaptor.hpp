@@ -9,6 +9,7 @@
 #include <xstd/bits/detail/allocator_base_type.hpp>      // allocator_base_type
 #include <xstd/bits/detail/bidirectional.hpp>            // bidirectional_bit_iterator, bidirectional_bit_reference
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
+#include <xstd/bits/detail/functor.hpp>                  // invoke_continues
 #include <xstd/bits/detail/hash.hpp>                     // hash_append_bits, hash_append_positions, std_hash
 #include <xstd/bits/detail/intrin.hpp>                   // countl_zero, countr_zero
 #include <xstd/bits/detail/shift.hpp>                    // shl, shr
@@ -29,12 +30,11 @@
 #include <functional>                                    // hash, less
 #include <initializer_list>                              // initializer_list
 #include <iterator>                                      // input_iterator, iter_reference_t, make_reverse_iterator, reverse_iterator, sentinel_for
-#include <limits>                                        // numeric_limits
 #include <ranges>                                        // begin, enable_borrowed_range, enable_view, end, input_range, iota, range_reference_t, from_range_t, swap, transform
 #include <source_location>                               // source_location
 #include <span>                                          // dynamic_extent
 #include <stdexcept>                                     // out_of_range
-#include <type_traits>                                   // conditional_t, false_type, is_invocable_r_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
+#include <type_traits>                                   // conditional_t, false_type, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
 #include <utility>                                       // declval, forward, move, pair
 
 // The set reading, [set] over a contiguous_bit_container, owning it or referring to it.
@@ -54,27 +54,6 @@ inline constexpr bool is_consecutive = false;
 template<class W, class B>
 inline constexpr bool is_consecutive<std::ranges::iota_view<W, B>> = true;
 
-// A prvalue from a named parameter: MSVC 17 has no auto(x), which is [P0849R8]'s spelling of this.
-template<class T>
-[[nodiscard]] constexpr auto decay_copy(T value) noexcept
-        -> T
-{
-        return value;
-}
-
-// Continue unless the functor says otherwise: a void functor always continues, a bool one says.
-template<class F>
-[[nodiscard]] constexpr auto invoke_continues(F& f, std::size_t pos)
-        -> bool
-{
-        if constexpr (std::is_invocable_r_v<bool, F&, std::size_t>) {
-                return f(decay_copy(pos));
-        } else {
-                f(decay_copy(pos));
-                return true;
-        }
-}
-
 // One tier each: sharing a body puts the whole over readability-function-cognitive-complexity.
 
 // Blocks, lowest position first: load once per block, then tzcnt for the position and blsr to drop it.
@@ -82,14 +61,14 @@ template<class Bits, class F>
 constexpr auto walk_blocks_ascending(Bits const& c, F& f)
         -> void
 {
-        using block_type = std::remove_cvref_t<decltype(c.block(0UZ))>;
-        constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<block_type>::digits);
+        using block_type = Bits::block_type;
+        constexpr auto digits = Bits::bits_per_block;
 
         for (auto index = 0UZ, blocks = c.num_blocks(); index < blocks; ++index) {
                 auto block = c.block(index);
                 while (block != block_type{}) {
                         auto const offset = static_cast<std::size_t>(detail::bits::countr_zero(block));
-                        if (not invoke_continues(f, (digits * index) + offset)) {
+                        if (not detail::bits::invoke_continues(f, (digits * index) + offset)) {
                                 return;
                         }
                         block = static_cast<block_type>(block & static_cast<block_type>(block - block_type{1}));
@@ -102,15 +81,15 @@ template<class Bits, class F>
 constexpr auto walk_blocks_descending(Bits const& c, F& f)
         -> void
 {
-        using block_type = std::remove_cvref_t<decltype(c.block(0UZ))>;
-        constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<block_type>::digits);
+        using block_type = Bits::block_type;
+        constexpr auto digits = Bits::bits_per_block;
 
         for (auto n = 0UZ, blocks = c.num_blocks(); n < blocks; ++n) {
                 auto const index = blocks - 1UZ - n;
                 auto block = c.block(index);
                 while (block != block_type{}) {
                         auto const offset = digits - 1UZ - static_cast<std::size_t>(detail::bits::countl_zero(block));
-                        if (not invoke_continues(f, (digits * index) + offset)) {
+                        if (not detail::bits::invoke_continues(f, (digits * index) + offset)) {
                                 return;
                         }
                         block = static_cast<block_type>(block ^ detail::bits::shl(block_type{1}, offset));
