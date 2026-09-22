@@ -11,8 +11,8 @@
 #include <xstd/bits/bitset.hpp>                      // bitset
 #include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
 #include <xstd/bits/dynamic_bitset.hpp>              // basic_dynamic_bitset, dynamic_bitset
-#include <xstd/bits/ownership.hpp>                   // storage
-#include <xstd/bits/set_adaptor.hpp>                 // set_adaptor
+#include <xstd/bits/detail/ownership.hpp>            // storage
+#include <xstd/bits/detail/set_adaptor.hpp>          // set_adaptor
 #include <boost/test/unit_test.hpp>                  // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <concepts>                                  // constructible_from, derived_from, same_as
 #include <cstddef>                                   // size_t
@@ -61,7 +61,7 @@ constexpr auto takes_a_set_view(xstd::bit_set_view<Blocks> v) noexcept
 // The view is the referring adaptor under another name, and over an owner it refers into the storage the owner wraps.
 BOOST_AUTO_TEST_CASE(TheViewIsTheReferringAdaptor)
 {
-        static_assert(std::derived_from<xstd::bit_set_view<Blocks>, xstd::set_adaptor<Blocks, xstd::storage::borrowed, xstd::bit_set_view<Blocks>>>);
+        static_assert(std::derived_from<xstd::bit_set_view<Blocks>, xstd::detail::bits::set_adaptor<Blocks, xstd::detail::bits::storage::borrowed, xstd::bit_set_view<Blocks>>>);
         static_assert(std::same_as<view_of<Blocks>, xstd::bit_set_view<Blocks>>);
         static_assert(std::same_as<view_of<Blocks const>, xstd::bit_set_view<Blocks const>>);
 

@@ -8,8 +8,8 @@
 #include <xstd/bits/bit_set.hpp>                      // bit_set
 #include <xstd/bits/bit_set_view.hpp>                 // bit_set_view
 #include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
-#include <xstd/bits/ownership.hpp>                    // storage
-#include <xstd/bits/set_adaptor.hpp>                  // set_adaptor
+#include <xstd/bits/detail/ownership.hpp>             // storage
+#include <xstd/bits/detail/set_adaptor.hpp>           // set_adaptor
 #include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                                  // equal, ranges::equal
 #include <array>                                      // array
@@ -32,7 +32,7 @@ using T = xstd::basic_bit_set<std::uint8_t>;
 // The flagship: the set reading over a heap of blocks, an alias and nothing more.
 BOOST_AUTO_TEST_CASE(TheDynamicSetIsTheSetAdaptorOverAHeapOfBlocks)
 {
-        static_assert(std::derived_from<T, xstd::set_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint8_t>, xstd::storage::owned, T>>);
+        static_assert(std::derived_from<T, xstd::detail::bits::set_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint8_t>, xstd::detail::bits::storage::owned, T>>);
         static_assert(std::same_as<xstd::basic_bit_set<std::uint8_t, std::allocator<std::uint8_t>>, T>);
         static_assert(test::set::bit_set<T>);
 }

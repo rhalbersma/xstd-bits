@@ -11,8 +11,8 @@
 #include <test/sequence/dense.hpp>                            // yields_every_position
 #include <xstd/bits/bit_inplace_vector.hpp>                   // basic_bit_inplace_vector, bit_inplace_vector
 #include <xstd/bits/detail/contiguous_bit_inplace_vector.hpp> // contiguous_bit_inplace_vector
-#include <xstd/bits/ownership.hpp>                            // storage
-#include <xstd/bits/sequence_adaptor.hpp>                     // sequence_adaptor
+#include <xstd/bits/detail/ownership.hpp>                     // storage
+#include <xstd/bits/detail/sequence_adaptor.hpp>              // sequence_adaptor
 #include <algorithm>                                          // equal
 #include <concepts>                                           // same_as
 #include <cstddef>                                            // size_t
@@ -38,7 +38,7 @@ constexpr bool has_allocator = requires { typename X::allocator_type; };
 // The sequence reading over a run-time width under a compile-time capacity, an alias and nothing more.
 BOOST_AUTO_TEST_CASE(TheInplaceSequenceIsTheSequenceAdaptorOverAnInplaceVectorOfBlocks)
 {
-        static_assert(std::derived_from<T, xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_inplace_vector<std::uint8_t, 24>, xstd::storage::owned, xstd::window::all, T>>);
+        static_assert(std::derived_from<T, xstd::detail::bits::sequence_adaptor<xstd::detail::bits::contiguous_bit_inplace_vector<std::uint8_t, 24>, xstd::detail::bits::storage::owned, xstd::detail::bits::window::all, T>>);
         static_assert(std::same_as<xstd::bit_inplace_vector<24>, xstd::basic_bit_inplace_vector<std::size_t, 24>>);
         static_assert(test::sequence::bit_sequence<T>);
 }

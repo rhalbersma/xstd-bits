@@ -176,10 +176,11 @@ if anyone ever "simplifies" the definition into the dance.
 it, and
 `detail/contiguous_bit_array.hpp`, `detail/contiguous_bit_vector.hpp` and
 `detail/contiguous_bit_inplace_vector.hpp` hold one vehicle apiece. The names are in `xstd::detail::bits` with
-the rest of `detail/`, so nothing outside the library can name a vehicle at all; a container reaches its own by
-tag, as `bits_t<array_container_tag, Block, N>`. It is the device that turns three readings over three storages into three plus three, and a
-factoring device is machinery rather than vocabulary: a user reaches every width through `bit_static_set<N>` or
-`basic_bit_array<Block, N>` and never spells the pair themselves. The split is what lets each of the nine
+the rest of `detail/`, so nothing outside the library can name a vehicle at all; a container names its own in
+its base clause, as `detail::bits::contiguous_bit_array<Block, N>`. It is the device that turns three readings
+over three storages into three plus three, and a factoring device is machinery rather than vocabulary: a user
+reaches every width through `bit_static_set<N>` or `basic_bit_array<Block, N>` and never spells the pair
+themselves. The split is what lets each of the nine
 containers include only the vehicle it uses -- `bit_array` names `contiguous_bit_array` and no longer sees
 `std::vector`, and the `#ifdef __cpp_lib_inplace_vector` guard sits in the one header that concerns it rather
 than in the common one.
@@ -1405,73 +1406,55 @@ what `-Wunused-lambda-capture` reports.
 Three class templates carry the three readings: `set_adaptor`, `sequence_adaptor`, `bitset_adaptor`. Each is
 written against `contiguous_bit_container` and against nothing else, so one adaptor serves
 `contiguous_bit_array`, `contiguous_bit_vector` and `contiguous_bit_inplace_vector` alike, at both widths and
-in both ownerships ([one-storage](#one-storage)). `basic_bits` sits over them and
-the public names sit over it ([the-grid](#the-grid)). It derives, passing itself as the adaptor's last argument
-so that the adaptor names it back, and the `basic_` layer is an alias naming one of its cells:
-`basic_bit_static_set<B, N>` is `basic_bits<set_reading_tag, array_container_tag, B, N>`, which is a
-`set_adaptor<contiguous_bit_array<B, N>, owns, basic_bits<set_reading_tag, array_container_tag, B, N>>`. The
-short layer stays an alias fixing the block: `bit_static_set<N>`, `bit_array<N>` and `bitset<N>` are those at
-`std::size_t`. Deriving is what keeps a value-returning operation -- `& | ^ -`, `operator~`, the shifts,
-`from_bits` -- handing back the container the caller named rather than the vehicle under it
+in both ownerships ([one-storage](#one-storage)). Each takes the parameters its own reading needs and no
+others: `set_adaptor<Bits, Store, Derived>`, `sequence_adaptor<Bits, Store, W, Derived>` and
+`bitset_adaptor<Bits, Derived>`, the bitset reading owning by construction and the set reading never windowed.
+
+Every public name is a class deriving from one of them, passing itself as the last argument so that the
+adaptor names it back: `basic_bit_static_set<B, N>` derives from
+`set_adaptor<contiguous_bit_array<B, N>, storage::owned, basic_bit_static_set<B, N>>`. The short layer stays
+an alias fixing the block: `bit_static_set<N>`, `bit_array<N>` and `bitset<N>` are those at `std::size_t`.
+Deriving is what keeps a value-returning operation -- `& | ^ -`, `operator~`, the shifts, `from_bits` --
+handing back the container the caller named rather than the vehicle under it
 ([the-views-are-the-adaptors](#the-views-are-the-adaptors)).
 
 ### the-grid
 
 **The nine containers are a full three-by-three, and nothing else.** Three readings over three storages, every
-cell occupied, every one an owner and none windowed. Before the grid each cell was a class of its own, and the
-nine class bodies were byte-identical -- `using base_type::base_type;` and `using base_type::operator=;`, no
-member added anywhere. They differed in their base clause and in nothing else, which is what makes the grid a
-fact about the library rather than a construction imposed on it.
+cell occupied, every one an owner and none windowed. The nine class bodies are nearly identical -- `using
+base_type::base_type;`, `using base_type::operator=;` and the hidden friend `swap` -- and differ in their base
+clause and in nothing else, which is what makes the grid a fact about the library rather than a construction
+imposed on it.
 
-`basic_bits<R, C, Block, N, Alloc>` is that grid, and the nine public `basic_` names are aliases naming its
-cells. The axes are flat tags -- `bitset_reading_tag`, `sequence_reading_tag`, `set_reading_tag` and
-`array_container_tag`, `inplace_vector_container_tag`, `vector_container_tag` -- and **no tag nests inside
-another**. The temptation is to make `sequence` refine `bitset` on the iterator-tag analogy, and the member
-sets refuse it: `bitset` has 25 members `sequence` lacks and `sequence` has over 40 `bitset` lacks. That is
-overlap without containment, so the bitset reading is a hybrid of the other two and a refinement of neither,
-and the relation views need is a predicate on the owner rather than a base class.
+**The readings are flat: no reading nests inside another.** The temptation is to make `sequence` refine
+`bitset` on the iterator-tag analogy, and the member sets refuse it: `bitset` has 25 members `sequence` lacks
+and `sequence` has over 40 `bitset` lacks. That is overlap without containment, so the bitset reading is a
+hybrid of the other two and a refinement of neither, and the relation views need is a predicate on the owner
+rather than a base class.
 
-Each concept is opt-in through a variable template, the way `std::ranges::enable_view` is, so the set stays
-open to a reading or a container declared elsewhere.
+**The grid was once written out as a template, and it is not one now.** `basic_bits<R, C, Block, N, Alloc>`
+took a reading tag and a container tag and named one cell, the nine `basic_` names being aliases over it and
+the three readings aliases over a general `adaptor<R, ...>` keyed on the same tags. Two things paid for that
+uniformity. An alias template cannot declare a deduction guide, so none of the nine owners could have one
+while the three views -- classes already -- did. And a partial specialization cannot be befriended: a friend
+declaration naming the template is a redeclaration, which cannot add a `requires`-clause to single one reading
+out, so the only form left made every reading a friend of every other. Both are gone with the tags. The
+friendships now follow the constraint -- `set_adaptor` befriends `set_adaptor`, `sequence_adaptor` befriends
+`sequence_adaptor`, and `bitset_adaptor`, the one owner either view may refer into, befriends both -- and a
+diagnostic says `basic_bit_array<unsigned long, 100>` rather than a five-argument cell name.
 
-**Each axis is answered where the thing it names is defined.** `bits_of<array_container_tag, ...>` is
-specialized in the header holding `contiguous_bit_array`, `adaptor<set_reading_tag, ...>` in the header
-holding the set reading's body, and `grid.hpp` carries only the two primaries. A central switchboard would
-have been shorter to write and would have put all three storages and all three adaptors on every container's
-include path: measured, `bit_array.hpp` began pulling `<vector>`, which is exactly the property the vehicle
-split was for. Distributing the specializations keeps each container including only the vehicle it uses.
+What the tags keyed on, each container now names outright. `bits_of` mapped `array_container_tag` to
+`contiguous_bit_array` so that one `basic_bits` body could serve three columns; with each container a class of
+its own it mapped a name to a name, and the base clause says `detail::bits::contiguous_bit_array<Block, N>`
+instead. **Each storage is still answered where it is defined**, one header apiece, so a container includes
+only the vehicle it uses: measured, a central switchboard had `bit_array.hpp` pulling `<vector>`, which is
+exactly the property the vehicle split was for.
 
-**The two axes are not built alike, because they are not alike.** A container tag's differences are absorbed
-into a type: `bits_of` maps the tag to a storage, and one `basic_bits` body then serves all three columns.
-A reading tag's differences are vocabulary -- 22 members only a bitset has, 23 only a sequence, 13 only a set
--- so no single body can serve them, and the axis collapses into a specialization key instead of a type
-parameter. `bits_of` stays a trait because a tag must yield a *type*; the reading axis needs no trait at all,
-because a tag yielding a *template specialization* is what partial specialization already does. `adaptor_of`
-was a hand-rolled stand-in for it and is gone.
-
-The three readings keep their names as alias templates over `adaptor`, exactly as the nine containers keep
-theirs over `basic_bits`. What this costs is friendship: a partial specialization cannot be befriended, and a
-friend declaration naming the template is a redeclaration of it, so it cannot add a `requires`-clause to
-single one reading out -- both GCC and Clang reject that as a redeclaration with different constraints. The
-only form left makes every reading a friend of every other. It guards two lines, the `&c.m_bits` each view
-constructor takes, and both are already constrained by `owner_of`, which is what actually decides that a set
-view may not refer into a sequence owner.
-
-`N` sits third and `Alloc` fourth, so the three allocating cells wear `std::dynamic_extent` as a filler. The
-alternative -- two traits, one per family, since `N` and `Alloc` occupy the same slot in the three storages --
-fails on `boost::container::small_vector<T, N, Alloc>`, which needs `Block`, `N` **and** `Alloc` and so belongs
-to neither family. A split would need a third name, and then the tag alone no longer selects, which is what the
-tag is for. Boost's own parameter order puts `N` before `Alloc`, which is the order the trait's tail takes. The
-vector specialization pins `std::dynamic_extent` in the third position, so a static extent asked of an
-allocating container is a hard non-match rather than an argument silently dropped.
-
-**What it cost.** A cell is what `Derived` now names, so a diagnostic says `basic_bits<sequence_reading_tag,
-array_container_tag, unsigned long, 100, std::allocator<unsigned long>>` where it used to say
-`basic_bit_array<unsigned long, 100>`. The rows stay distinct -- different `R` and `C` are different types --
-and only the spelling grew. **What it bought.** The trait specializations each row repeated collapse onto the
-grid: 33 blocks become 9, and the ones that are not uniform say so in the tag rather than by being written out
-per row, so `is_range` is disabled for the two readings that have iterators and the bitset reading is left to
-the primary template, which already answers false for a type with no `begin`.
+**The axis stays open, and it is the concept that keeps it open.** What a storage has to satisfy is
+`contiguous_block_range` ([contiguous-block-range](#contiguous-block-range)), which is a claim about blocks
+and says nothing about where they live. `ext/boost.hpp` joins on that and nothing else: one alias for
+`boost::container::small_vector` and three containers over it, written from outside the library without a line
+of it changing.
 
 ### owning-is-ours
 
@@ -1501,7 +1484,7 @@ them had nothing to abstract over either ([one-storage](#one-storage)).
 ### ownership-is-not-an-axis
 
 Owning versus viewing is storage lifetime, not a third axis of the model, and it collapses to one template
-parameter: `ownership::owns` stores `Bits`, `ownership::refers` stores `Bits*`. Always present and only its
+parameter: `storage::owned` stores `Bits`, `storage::borrowed` stores `Bits*`. Always present and only its
 type changes, so a plain `conditional_t` rather than `conditional_data_member_t`. One accessor, via deducing
 `this`, gives deep const to the owner — `self.m_bits` propagates `self`'s const — and shallow const to the
 view — `*self.m_bits` does not — for free.
@@ -1511,7 +1494,7 @@ reads "the storage lets *this handle* write". A const owner's accessor hands bac
 `assign` to reach; a const view's hands back `Bits&`, which is what a view is for; a view over `Bits const`
 hands back `Bits const&` again. Const and ownership are the same question, asked once, and answered by the type
 the accessor returns. The exceptions are the constructors and, once storage grows, the growth members, which need an explicit
-`requires (owns(Own))`: the requires-expression tests what the storage can do, not what this handle may do to
+`requires (owns(Store))`: the requires-expression tests what the storage can do, not what this handle may do to
 it, and a view over a `contiguous_bit_vector` must not be able to resize what it does not own.
 
 ### views-follow-their-precedent
@@ -1637,8 +1620,8 @@ rewriting all four would have spent three defaulted comparisons to buy symmetry.
 
 ### the-views-are-the-adaptors
 
-`bit_set_view<Bits>` derives from `set_adaptor<Bits, ownership::refers>` and `bit_span<Bits>` from
-`sequence_adaptor<Bits, ownership::refers, false>`, each passing itself as the adaptor's last argument so that
+`bit_set_view<Bits>` derives from `set_adaptor<Bits, storage::borrowed>` and `bit_span<Bits>` from
+`sequence_adaptor<Bits, storage::borrowed, window::all>`, each passing itself as the adaptor's last argument so that
 the adaptor hands back the view; `bit_subspan` is the same shape with the window argument set. They are the
 referring adaptors under the names of [the-public-names](#the-public-names), one header each beside the owners,
 and not a second implementation of either reading — the `set_view` and `sequence_view` of the rewire were the
@@ -1745,12 +1728,12 @@ instead.
 returns it from `first`, `last` and `subspan`, and that type is now `bit_subspan<Bits>` -- a name whose own
 header includes `sequence_adaptor.hpp`. So the adaptor declares `bit_subspan` and must not include it, while
 `bit_span.hpp` does include it, its members handing one back. While the views were aliases the question did not
-arise: the adaptor could spell `sequence_adaptor<Bits, ownership::refers, true>` for itself, which is the one
+arise: the adaptor could spell `sequence_adaptor<Bits, storage::borrowed, window::sub>` for itself, which is the one
 thing a derived view cannot supply without a hook back into a header above it.
 
 ### windows
 
-`bit_subspan<Bits>` derives from `sequence_adaptor<Bits, refers, true>`: the referring adaptor
+`bit_subspan<Bits>` derives from `sequence_adaptor<Bits, storage::borrowed, window::sub>`: the referring adaptor
 windowed, and the name `first`, `last` and `subspan` hand back on a `bit_span` or on another window. It is a
 class for the reason the other two views are ([the-views-are-the-adaptors](#the-views-are-the-adaptors)), and
 being one is what lets the adaptor return it by name rather than by respelling its own parameters. It stores what
@@ -1968,7 +1951,7 @@ ask it something it does not answer itself — which positions are set, or what 
 That is what a view is for, so a `bitset` admits either.
 
 The rule is one typedef on the owner's side of the protocol, `owned_storage<Owner>::reads`, and one clause
-in `owner_of`: the owner's reading is the view's, or it is `bitset_reading_tag`. It has to live in the constraint
+in `owner_of`: the owner's reading is the view's, or it is `reading::bitset`. It has to live in the constraint
 and not in the friendship alone. Dropping only the friendship leaves the constructor declared and viable, and
 its `m_bits(&c.m_bits)` is a mem-initializer — not the immediate context — so the access check happens at
 instantiation and nowhere earlier. Measured: `std::is_constructible_v<bit_set_view<Blocks>, bit_array<8>&>`
@@ -1991,31 +1974,26 @@ one ever should, it belongs beside the containers, where it can be named and its
 
 **If a user never spells it, it lives in `detail/`.** The name or the header, either counts. That is the whole
 rule, and it is a test rather than a judgement: `bit_static_set` is spelled, `contiguous_bit_array` is not;
-`ownership` is spelled by anyone naming an adaptor, `bidirectional_bit_reference` is reached only through the
-`iterator` and `reference` typedefs and is spelled by nobody.
+`bidirectional_bit_reference` is reached only through the `iterator` and `reference` typedefs and is spelled by
+nobody.
 
 What the rule keeps on the interface side, each with the reason it is not obvious:
 
 - **The nine containers and the three views.** Uncontested, and the reason the rest is worth stating.
-- **The three adaptors.** Interface by necessity rather than by intent: every container and every view
-  derives from one ([the-views-are-the-adaptors](#the-views-are-the-adaptors)), so a consumer asking what it
-  was handed asks about a base, which it cannot do without the base's name. It asks through the library's own
-  `set_adaptor_like` and `sequence_adaptor_like` rather than by spelling `sequence_adaptor<B, O, W>` -- which
-  is why those concepts are interface too, and why the spelling is no longer what a `decltype` prints.
-- **`storage` and the tags.** Dragged in by that: no adaptor can be named without writing `storage::borrowed`,
-  and no cell of the grid without naming a reading and a container. Said out loud because this is the kind of
-  vocabulary that gets called a detail right up until someone has to type it.
 - **`contiguous_bit_sequence`.** The vocabulary the three bit containers share, which is a claim about
   `std::bitset` and `boost::dynamic_bitset` as much as about ours, so it is stated where a reader can check it
   ([the-common-vocabulary](#the-common-vocabulary)).
 
-**One line moved from the first column to the second, and it is worth naming.** `bit_traits` used to be here,
-with `ext/` as its worked example, because specializing `bit_traits<MyStorage>` was *the* extension point.
-There is no such point now ([one-storage](#one-storage)): `Bits` must be a `contiguous_bit_container`, which
-lives under `detail/`. So a consumer reaches the three adaptors by **deduction** — `bit_span(bs)`, or the
-`decltype` of a container — and never by instantiating one over storage of their own. They are still interface,
-because a name you cannot avoid reading is interface whether or not you can write it; they are no longer an
-extension point.
+That is the whole of it, and it used to be longer. `bit_traits` was here, with `ext/` as its worked example,
+because specializing `bit_traits<MyStorage>` was *the* extension point; there is no such point now
+([one-storage](#one-storage)), `Bits` having to be a `contiguous_bit_container`. **The three adaptors were here
+next, and they were the harder call.** Every container and every view derives from one, so a name a consumer
+cannot avoid reading was called interface whether or not anyone could write it, and `storage`, `window` and the
+axis tags came along because no adaptor can be named without them. What settled it is that a consumer never has
+to ask. A container is what it is, and what it *does* -- bidirectional with a `key_type`, random-access over
+`bool`, or no range at all with a `to_string` -- is askable in the standard's own vocabulary, without naming a
+base at all. So the adaptors and their vocabulary went to `xstd::detail::bits`, and what remains in
+`namespace xstd` is twelve names, their short and aligned aliases, and one concept.
 
 On the other side, the two that had to be argued. The four proxy types are reached only through container
 typedefs, so no user spells them. `contiguous_bit_container` and its three aliases are the device that turns
@@ -2027,11 +2005,12 @@ counter is that a test is not a user; a test tree that mirrors the library, `det
 an implementation looks like.
 
 **Enforced, not asserted.** `test/consumer/main.cpp` includes `<xstd/bits.hpp>` and no other header of ours,
-and names every type above: the nine containers, the three views, the three adaptors and `ownership`. It
-pattern-matches each container against the adaptor it derives from — `is_set_adaptor<bit_static_set<100>>` and
-so on for all nine, and over the three views besides — which is the claim
-[the-views-are-the-adaptors](#the-views-are-the-adaptors) rests on, asked from outside. The view names it
-reaches by deduction, which is both the only way in and the thing the classes were for. The three `consumption`
+and names every type above: the nine containers and the three views, and nothing from `detail/`. It
+pattern-matches each container against its reading — bidirectional with a `key_type`, random-access over
+`bool`, or no range at all with a `to_string` — for all nine and over the three views besides, which is the
+claim [the-views-are-the-adaptors](#the-views-are-the-adaptors) rests on, asked from outside and in the
+standard's vocabulary rather than in ours. The view names it reaches by deduction, which is both the only way
+in and the thing the classes were for. The three `consumption`
 configurations build it against the installed headers, so a name that stops being reachable from the umbrella,
 or an interface header that starts needing one from `detail/`, fails there rather than in a user's build.
 
@@ -2062,13 +2041,14 @@ path of every consumer who does not.
 
 ### the-public-names
 
-Three layers of names. The primaries carry the reading and take the storage: `set_adaptor<Bits, Own>`,
-`sequence_adaptor<Bits, Own, Windowed>`, `bitset_adaptor<Bits>`, the parameters each reading needs and no
-more. The `basic_` layer chooses the storage and leaves the block open,
-`basic_string`-style: `basic_bit_static_set<Block, N>`, `basic_bit_set<Block, Allocator>` and their four
-siblings. The block leads in every column, so a `basic_` name hands the grid the arguments in the order it
-was given them -- `basic_bit_static_set<Block, N>` is `basic_bits<set_reading_tag, array_container_tag, Block,
-N>`, straight through. The static and inplace columns used to take `<N, Block>` and transpose at the call, which
+Two layers of names, over a third nobody spells. The adaptors under `detail/` carry the reading and take the
+storage, the parameters each reading needs and no more ([the-three-adaptors](#the-three-adaptors)). The
+`basic_` layer chooses the storage and leaves the block open, `basic_string`-style:
+`basic_bit_static_set<Block, N>`, `basic_bit_set<Block, Allocator>` and their four siblings. The block leads in
+every column, so a `basic_` name hands its base clause the arguments in the order it was given them --
+`basic_bit_static_set<Block, N>` derives from `set_adaptor<contiguous_bit_array<Block, N>, storage::owned,
+basic_bit_static_set<Block, N>>`, straight through. The static and inplace columns used to take `<N, Block>`
+and transpose at the call, which
 nothing gained: `Block` carries no default in those columns, so it is free to lead, and leading is what
 `std::array<T, N>`, `std::inplace_vector<T, N>` and `std::span<T, Extent>` all do with the pair. The restricted
 layer fixes `std::size_t` and `std::allocator`: `bit_static_set<N>`, `bit_array<N>` and `bitset<N>` keep one
@@ -3945,11 +3925,11 @@ Seven findings are suppressed because the checker cannot see what makes them rig
   modification `[namespace.std]/2` allows: a specialization of a standard library template for a
   program-defined type. clang-tidy 22 and 23 read the qualified definition as modifying the namespace; 24 no
   longer does, and the suppression stays until the whole ladder is past 23.
-- `modernize-avoid-c-style-cast` on `sequence_adaptor`'s `is_static_width_owner`, where it points at the `Own`
-  in `owns(Own)` and offers to make it a `static_cast`. There is no cast on that line. `owns` is
-  `constexpr auto owns(ownership) -> bool` in `ownership.hpp` and `ownership::owns` is a **scoped**
-  enumerator, so the unqualified name can only be the function, and `Own` is a non-type template parameter
-  rather than a type. The same `owns(Own)` is written on seventeen other lines here and none of them is flagged;
+- `modernize-avoid-c-style-cast` on `sequence_adaptor`'s `is_static_width_owner`, where it points at the
+  `Store` in `owns(Store)` and offers to make it a `static_cast`. There is no cast on that line. `owns` is
+  `constexpr auto owns(storage) -> bool` in `ownership.hpp`, the only entity that name denotes, and `Store` is
+  a non-type template parameter rather than a type. The same `owns(Store)` is written on sixteen other lines
+  here and none of them is flagged;
   what is particular is the namespace-scope variable template, whose initializer stays value-dependent until
   instantiation. clang-tidy 23 alone emits it -- 22 and 24-SVN carry every other finding for the same
   translation unit and not this one -- so it is a release's bug rather than a reading of the code, and the
@@ -4439,18 +4419,18 @@ defaulted comparison's branches at the declaration's first line. Split across li
 clang-format will do to any such declaration long enough to wrap — the exclusion stops matching and
 the dead base comparison fails the 100% branch gate.
 
-### `modernize-avoid-c-style-cast` on `owns(Own)`
+### `modernize-avoid-c-style-cast` on `owns(Store)`
 
-clang-tidy 23 points at the `Own` in `owns(Own)` and offers to rewrite it as a `static_cast`, having
+clang-tidy 23 points at the `Store` in `owns(Store)` and offers to rewrite it as a `static_cast`, having
 read the call as a C-style cast of a parenthesized type. There is no cast on that line.
 
-`owns` is a function — `[[nodiscard]] constexpr auto owns(ownership) -> bool`, in `ownership.hpp` —
-and `ownership::owns` is a *scoped* enumerator, so the unqualified name can only be the function and
-`Own` is a non-type template parameter, not a type. The same `owns(Own)` is written at sixteen other
+`owns` is a function — `[[nodiscard]] constexpr auto owns(storage) -> bool`, in `ownership.hpp` — and it is
+the only entity that name denotes, so `owns(Store)` can only be a call, `Store` being a non-type template
+parameter rather than a type. The same `owns(Store)` is written at sixteen other
 sites in this library and none of them is flagged; what is particular about this one is the
 namespace-scope variable template, whose initializer is value-dependent until instantiation.
 
-It is suppressed rather than respelled: writing `Own == ownership::owns` instead would inline the one
+It is suppressed rather than respelled: writing `Store == storage::owned` instead would inline the one
 function that exists so nobody has to.
 
 ## The storage's own measurements

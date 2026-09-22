@@ -176,9 +176,7 @@ are static or dynamic.
 | `<xstd/bits/ext/boost.hpp>` | `bit_small_set` <br> `bit_small_vector` <br> `small_bitset` <br> and their `basic_` forms | All three readings, dynamic size staying inline within a static capacity | [`boost::container::small_vector`](https://www.boost.org/doc/libs/release/doc/html/boost/container/small_vector.html) |
 | `<xstd/bits/bit_set_view.hpp>` | `bit_set_view` | Set reading of bits another container owns | none |
 | `<xstd/bits/bit_span.hpp>` <br> `<xstd/bits/bit_subspan.hpp>` | `bit_span` <br> `bit_subspan` | Sequence reading over borrowed bits, whole or sliced | [views.span] |
-| `<xstd/bits/set_adaptor.hpp>` <br> `<xstd/bits/sequence_adaptor.hpp>` <br> `<xstd/bits/bitset_adaptor.hpp>` | `set_adaptor` <br> `sequence_adaptor` <br> `bitset_adaptor` | The three readings themselves, each over any conforming storage | none |
 | `<xstd/bits/contiguous_bit_sequence.hpp>` | `contiguous_bit_sequence` | What a storage must model to be adapted | none |
-| `<xstd/bits/ownership.hpp>` | `owned_bits_t` <br> `owned_storage` | Whether a handle owns its bits or borrows them | none |
 
 `<xstd/bits.hpp>` exports the whole surface, so one include brings everything above.
 The headers under `<xstd/bits/detail/>` are implementation and carry no stability promise.

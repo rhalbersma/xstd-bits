@@ -5,30 +5,46 @@
 
 // The gate on the interface line.
 
-#include <concepts>      // derived_from
+#include <concepts>      // convertible_to, copyable, default_initializable, equality_comparable, regular, same_as, totally_ordered
 #include <xstd/bits.hpp> // bit_array, bit_inplace_set, bit_inplace_vector, bit_set, bit_set_view, bit_span,
-                         // bit_static_set, bit_subspan, bit_vector, bitset, bitset_adaptor, dynamic_bitset, inplace_bitset, storage, sequence_adaptor, set_adaptor
+                         // bit_static_set, bit_subspan, bit_vector, bitset, dynamic_bitset, inplace_bitset
 #include <cstddef>       // size_t
 #include <cstdint>       // uint8_t
+#include <ranges>        // bidirectional_range, random_access_range, range, range_value_t, view
+#include <string>        // string
 #include <utility>       // declval
 #include <version>       // IWYU pragma: keep; __cpp_lib_inplace_vector
 
 namespace consumer {
 
-// The adaptors named without their storage: every container and every view derives from the vehicle it reads by.
+// Each reading named by what it means to a caller, in the standard's own vocabulary rather than by what it derives from.
+// Copyable is the floor that owners and views share: a view constructs only from what it views, so it is not regular.
 template<class T>
-constexpr bool is_set_adaptor = xstd::set_adaptor_like<T>;
+concept is_set_adaptor =
+        std::copyable<T> and std::ranges::bidirectional_range<T> and not std::ranges::random_access_range<T> and
+        requires { typename T::key_type; };
 
 template<class T>
-constexpr bool is_sequence_adaptor = xstd::sequence_adaptor_like<T>;
+concept is_sequence_adaptor =
+        std::copyable<T> and std::ranges::random_access_range<T> and
+        std::same_as<std::ranges::range_value_t<T>, bool>;
 
+// A bit string is the one reading that is no range: it is read whole, the way std::bitset is.
 template<class T>
-constexpr bool is_bitset_adaptor = requires { typename T::bits_type; } and std::derived_from<T, xstd::bitset_adaptor<typename T::bits_type, T>>;
+concept is_bitset_adaptor =
+        std::copyable<T> and not std::ranges::range<T> and
+        requires (T const& t) { { t.to_string() } -> std::convertible_to<std::string>; };
 
 // A view's Bits is the storage a container wraps, so a consumer reaches the view names by deduction.
 using set_view_of_bitset = decltype(xstd::bit_set_view(std::declval<xstd::bitset<64>&>()));
 using span_of_bitset = decltype(xstd::bit_span(std::declval<xstd::bitset<64>&>()));
 using subspan_of_bitset = decltype(std::declval<span_of_bitset&>().subspan(8, 8));
+
+// What separates the two kinds: an owner is a value, a view is a handle, and std::span drops equality for the same reason.
+static_assert(std::regular<xstd::bit_set> and std::totally_ordered<xstd::bit_set>);
+static_assert(std::regular<xstd::bitset<64>> and std::totally_ordered<xstd::bitset<64>>);
+static_assert(std::ranges::view<set_view_of_bitset> and not std::default_initializable<set_view_of_bitset>);
+static_assert(std::ranges::view<span_of_bitset> and not std::equality_comparable<span_of_bitset>);
 
 // The set reading: three widths, one adaptor.
 static_assert(is_set_adaptor<xstd::bit_static_set<100>>);
@@ -48,9 +64,6 @@ static_assert(is_bitset_adaptor<xstd::bitset<64>>);
 static_assert(is_bitset_adaptor<xstd::basic_bitset<std::uint8_t, 24>>);
 static_assert(is_bitset_adaptor<xstd::dynamic_bitset>);
 
-// storage is interface because you cannot name an adaptor without it.
-static_assert(xstd::owns(xstd::storage::owned));
-static_assert(not xstd::owns(xstd::storage::borrowed));
 static_assert(is_set_adaptor<set_view_of_bitset>);
 
 #ifdef __cpp_lib_inplace_vector

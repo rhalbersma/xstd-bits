@@ -8,7 +8,7 @@
 #include <xstd/bits/bit_subspan.hpp>                 // bit_subspan
 #include <xstd/bits/bit_vector.hpp>                  // bit_vector
 #include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
-#include <xstd/bits/sequence_adaptor.hpp>            // sequence_adaptor
+#include <xstd/bits/detail/sequence_adaptor.hpp>     // sequence_adaptor
 #include <boost/test/unit_test.hpp>                  // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <algorithm>                                 // equal, fill
 #include <concepts>                                  // equality_comparable, same_as

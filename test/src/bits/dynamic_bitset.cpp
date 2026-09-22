@@ -4,7 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/sanitizer.hpp>                         // IWYU pragma: keep; TEST_HAS_ADDRESS_SANITIZER
-#include <xstd/bits/bitset_adaptor.hpp>               // bitset_adaptor
+#include <xstd/bits/detail/bitset_adaptor.hpp>        // bitset_adaptor
 #include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
 #include <xstd/bits/dynamic_bitset.hpp>               // dynamic_bitset
 #include <boost/dynamic_bitset.hpp>                   // dynamic_bitset, to_string
@@ -33,7 +33,7 @@ BOOST_AUTO_TEST_SUITE(DynamicBitset)
 // boost::dynamic_bitset's counterpart over a heap of blocks: the same wrapper, at a run-time width.
 BOOST_AUTO_TEST_CASE(TheDynamicBitsetIsTheWrapperOverAHeapOfBlocks)
 {
-        static_assert(std::derived_from<xstd::basic_dynamic_bitset<std::uint8_t>, xstd::bitset_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint8_t>, xstd::basic_dynamic_bitset<std::uint8_t>>>);
+        static_assert(std::derived_from<xstd::basic_dynamic_bitset<std::uint8_t>, xstd::detail::bits::bitset_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint8_t>, xstd::basic_dynamic_bitset<std::uint8_t>>>);
         static_assert(std::same_as<xstd::basic_dynamic_bitset<std::uint8_t, std::allocator<std::uint8_t>>, xstd::basic_dynamic_bitset<std::uint8_t>>);
         static_assert(std::regular<xstd::basic_dynamic_bitset<std::uint8_t>>);
 }

@@ -3,8 +3,8 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_SET_ADAPTOR_HPP
-#define XSTD_BITS_SET_ADAPTOR_HPP
+#ifndef XSTD_BITS_DETAIL_SET_ADAPTOR_HPP
+#define XSTD_BITS_DETAIL_SET_ADAPTOR_HPP
 
 #include <xstd/bits/detail/allocator_base_type.hpp>      // allocator_base_type
 #include <xstd/bits/detail/bidirectional.hpp>            // bidirectional_bit_iterator, bidirectional_bit_reference
@@ -14,9 +14,7 @@
 #include <xstd/bits/detail/intrin.hpp>                   // countl_zero, countr_zero
 #include <xstd/bits/detail/shift.hpp>                    // shl, shr
 #include <xstd/bits/detail/zero_width.hpp>               // zero_width
-#include <xstd/bits/grid.hpp>                            // adaptor
-#include <xstd/bits/ownership.hpp>                       // owned_bits_t, owned_storage, owner_of, owner_reading, storage, owns
-#include <xstd/bits/tags.hpp>                            // set_reading_tag
+#include <xstd/bits/detail/ownership.hpp>                // owned_bits_t, owned_storage, owner_of, owner_reading, storage, owns
 #include <xstd/misc/concepts/specialization_of.hpp>      // specialization_of_TN
 #include <xstd/misc/type_traits/empty_base_type.hpp>     // empty_base_type
 #include <boost/container_hash/is_range.hpp>             // is_range
@@ -38,9 +36,9 @@
 #include <utility>                                       // declval, forward, move, pair
 
 // The set reading, [set] over a contiguous_bit_container, owning it or referring to it.
-namespace xstd {
+namespace xstd::detail::bits {
 
-namespace detail::set {
+namespace set {
 
 // The storage answering equality, named so the constrained overload below subsumes the general one.
 template<class Bits>
@@ -67,8 +65,8 @@ constexpr auto walk_blocks_ascending(Bits const& c, F& f)
         for (auto index = 0UZ, blocks = c.num_blocks(); index < blocks; ++index) {
                 auto block = c.block(index);
                 while (block != block_type{}) {
-                        auto const offset = static_cast<std::size_t>(detail::bits::countr_zero(block));
-                        if (not detail::bits::invoke_continues(f, (digits * index) + offset)) {
+                        auto const offset = static_cast<std::size_t>(countr_zero(block));
+                        if (not invoke_continues(f, (digits * index) + offset)) {
                                 return;
                         }
                         block = static_cast<block_type>(block & static_cast<block_type>(block - block_type{1}));
@@ -88,19 +86,19 @@ constexpr auto walk_blocks_descending(Bits const& c, F& f)
                 auto const index = blocks - 1UZ - n;
                 auto block = c.block(index);
                 while (block != block_type{}) {
-                        auto const offset = digits - 1UZ - static_cast<std::size_t>(detail::bits::countl_zero(block));
-                        if (not detail::bits::invoke_continues(f, (digits * index) + offset)) {
+                        auto const offset = digits - 1UZ - static_cast<std::size_t>(countl_zero(block));
+                        if (not invoke_continues(f, (digits * index) + offset)) {
                                 return;
                         }
-                        block = static_cast<block_type>(block ^ detail::bits::shl(block_type{1}, offset));
+                        block = static_cast<block_type>(block ^ shl(block_type{1}, offset));
                 }
         }
 }
 
-} // namespace detail::set
+} // namespace set
 
-template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits, storage Store, class Derived>
-class adaptor<set_reading_tag, Bits, Store, window::all, Derived> : public std::conditional_t<owns(Store), detail::bits::allocator_base_type<std::remove_const_t<Bits>>, xstd::empty_base_type<>>
+template<specialization_of_TN<contiguous_bit_container> Bits, storage Store = storage::owned, class Derived = void>
+class set_adaptor : public std::conditional_t<owns(Store), allocator_base_type<std::remove_const_t<Bits>>, xstd::empty_base_type<>>
 {
         static constexpr bool is_owner = owns(Store);
 
@@ -123,29 +121,29 @@ class adaptor<set_reading_tag, Bits, Store, window::all, Derived> : public std::
         // The container needs constraints only the vehicle can name; [class.friend]/3 ignores the void a view passes.
         friend Derived;
 
-        // A view refers into this owner's storage; one friend template, no reading being nameable on its own.
-        template<reading_tag, class, storage, window, class>
-        friend class adaptor;
+        // A view refers into this owner's storage, and only a reading that can view it is named.
+        template<specialization_of_TN<contiguous_bit_container>, storage, class>
+        friend class set_adaptor;
 
         // The value under the set reading: the bits at a static width, the positions at a run-time one.
         template<class Provider, class Hash, class Flavor>
-        friend constexpr auto tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, adaptor const* v) noexcept
+        friend constexpr auto tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, set_adaptor const* v) noexcept
                 -> void
         {
                 if constexpr (has_static_width) {
-                        detail::bits::hash_append_bits(h, f, v->bits());
+                        hash_append_bits(h, f, v->bits());
                 } else {
-                        detail::bits::hash_append_positions(h, f, v->bits());
+                        hash_append_positions(h, f, v->bits());
                 }
         }
 
 public:
         // A vehicle used directly is its own container, which is what a view is.
-        using derived_type = std::conditional_t<std::is_void_v<Derived>, adaptor, Derived>;
+        using derived_type = std::conditional_t<std::is_void_v<Derived>, set_adaptor, Derived>;
 
         // What a trait asks of this vehicle, every container built on it answering alike.
-        using adaptor_type = adaptor;
-        using reads_as = set_reading_tag;
+        using adaptor_type = set_adaptor;
+        static constexpr auto reads_as = reading::set;
         using adapted_type = Bits;
         static constexpr bool owns_storage = is_owner;
 
@@ -157,35 +155,35 @@ public:
         static constexpr bool has_static_width = (Bits::extent != std::dynamic_extent);
         using pointer = void;
         using const_pointer = pointer;
-        using reference = detail::bits::bidirectional_bit_reference<Bits>;
+        using reference = bidirectional_bit_reference<Bits>;
         using const_reference = reference;
         using size_type = std::size_t;
         using difference_type = std::ptrdiff_t;
-        using iterator = detail::bits::bidirectional_bit_iterator<Bits>;
+        using iterator = bidirectional_bit_iterator<Bits>;
         using const_iterator = iterator;
         using reverse_iterator = std::reverse_iterator<iterator>;
         using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
         // construct/copy/destroy; an owner is built the way std::set is, a view only from what it views.
-        [[nodiscard]] adaptor() noexcept
+        [[nodiscard]] set_adaptor() noexcept
                 requires is_owner
         = default;
 
         template<std::input_iterator I, std::sentinel_for<I> S>
                 requires is_owner and std::constructible_from<value_type, std::iter_reference_t<I>>
-        [[nodiscard]] constexpr adaptor(I first, S last)
+        [[nodiscard]] constexpr set_adaptor(I first, S last)
         {
                 insert(first, last);
         }
 
         template<std::ranges::input_range R>
                 requires is_owner and std::constructible_from<value_type, std::ranges::range_reference_t<R>>
-        [[nodiscard]] constexpr adaptor(std::from_range_t, R&& rg)
+        [[nodiscard]] constexpr set_adaptor(std::from_range_t, R&& rg)
         {
                 insert(std::ranges::begin(rg), std::ranges::end(rg));
         }
 
-        [[nodiscard]] constexpr adaptor(std::initializer_list<value_type> il)
+        [[nodiscard]] constexpr set_adaptor(std::initializer_list<value_type> il)
                 requires is_owner
         {
                 insert(il.begin(), il.end());
@@ -194,13 +192,13 @@ public:
         // [set]'s allocator arguments, deduced and matched, so a storage without one has no such constructor.
         template<class Alloc>
                 requires is_owner and std::same_as<Alloc, typename bits_type::allocator_type>
-        [[nodiscard]] constexpr explicit adaptor(Alloc const& alloc)
+        [[nodiscard]] constexpr explicit set_adaptor(Alloc const& alloc)
                 : m_bits(alloc)
         {}
 
         template<std::input_iterator I, std::sentinel_for<I> S, class Alloc>
                 requires is_owner and std::constructible_from<value_type, std::iter_reference_t<I>> and std::same_as<Alloc, typename bits_type::allocator_type>
-        [[nodiscard]] constexpr adaptor(I first, S last, Alloc const& alloc)
+        [[nodiscard]] constexpr set_adaptor(I first, S last, Alloc const& alloc)
                 : m_bits(alloc)
         {
                 insert(first, last);
@@ -208,25 +206,25 @@ public:
 
         template<std::ranges::input_range R, class Alloc>
                 requires is_owner and std::constructible_from<value_type, std::ranges::range_reference_t<R>> and std::same_as<Alloc, typename bits_type::allocator_type>
-        [[nodiscard]] constexpr adaptor(std::from_range_t, R&& rg, Alloc const& alloc)
-                : adaptor(std::ranges::begin(rg), std::ranges::end(rg), alloc)
+        [[nodiscard]] constexpr set_adaptor(std::from_range_t, R&& rg, Alloc const& alloc)
+                : set_adaptor(std::ranges::begin(rg), std::ranges::end(rg), alloc)
         {}
 
         template<class Alloc>
                 requires is_owner and std::same_as<Alloc, typename bits_type::allocator_type>
-        [[nodiscard]] constexpr adaptor(std::initializer_list<value_type> il, Alloc const& alloc)
-                : adaptor(il.begin(), il.end(), alloc)
+        [[nodiscard]] constexpr set_adaptor(std::initializer_list<value_type> il, Alloc const& alloc)
+                : set_adaptor(il.begin(), il.end(), alloc)
         {}
 
         template<class Alloc>
                 requires is_owner and std::same_as<Alloc, typename bits_type::allocator_type>
-        [[nodiscard]] constexpr adaptor(adaptor const& other, Alloc const& alloc)
+        [[nodiscard]] constexpr set_adaptor(set_adaptor const& other, Alloc const& alloc)
                 : m_bits(other.m_bits, alloc)
         {}
 
         template<class Alloc>
                 requires is_owner and std::same_as<Alloc, typename bits_type::allocator_type>
-        [[nodiscard]] constexpr adaptor(adaptor&& other, Alloc const& alloc)
+        [[nodiscard]] constexpr set_adaptor(set_adaptor&& other, Alloc const& alloc)
                 : m_bits(std::move(other.m_bits), alloc)
         {}
 
@@ -250,14 +248,14 @@ public:
                 return bits().template to_bits<B>();
         }
 
-        [[nodiscard]] constexpr explicit adaptor(Bits& c) noexcept
+        [[nodiscard]] constexpr explicit set_adaptor(Bits& c) noexcept
                 requires (not is_owner)
                 : m_bits(&c)
         {}
 
         // A view over an owner is a view over the storage it wraps; implicit, claiming nothing the owner lacks.
-        template<owner_of<Bits, set_reading_tag> Owner>
-        [[nodiscard]] constexpr explicit(false) adaptor(Owner& c) noexcept // NOLINT(misc-explicit-constructor)
+        template<owner_of<Bits, reading::set> Owner>
+        [[nodiscard]] constexpr explicit(false) set_adaptor(Owner& c) noexcept // NOLINT(misc-explicit-constructor)
                 requires (not is_owner)
                 : m_bits(&c.m_bits)
         {}
@@ -273,23 +271,23 @@ public:
         }
 
         // A static owner's equality is its one member's: every instance carries the same width.
-        [[nodiscard]] friend constexpr auto operator==(adaptor const& x, adaptor const& y) noexcept
+        [[nodiscard]] friend constexpr auto operator==(set_adaptor const& x, set_adaptor const& y) noexcept
                 -> bool
-                requires detail::set::equality_comparable_storage<bits_type> and is_owner and has_static_width
+                requires set::equality_comparable_storage<bits_type> and is_owner and has_static_width
         {
                 return x.bits() == y.bits();
         }
 
         // Everything else: the storage's set equality, which answers at any two widths.
-        [[nodiscard]] friend constexpr auto operator==(adaptor const& x, adaptor const& y) noexcept
+        [[nodiscard]] friend constexpr auto operator==(set_adaptor const& x, set_adaptor const& y) noexcept
                 -> bool
-                requires detail::set::equality_comparable_storage<bits_type>
+                requires set::equality_comparable_storage<bits_type>
         {
                 return set_equal(x.bits(), y.bits());
         }
 
         // The storage's entry: the set ordering turns on the lowest position at which the two disagree.
-        [[nodiscard]] friend constexpr auto operator<=>(adaptor const& x, adaptor const& y) noexcept
+        [[nodiscard]] friend constexpr auto operator<=>(set_adaptor const& x, set_adaptor const& y) noexcept
                 -> std::strong_ordering
         {
                 if constexpr (requires { set_lexicographical_compare_three_way(x.bits(), y.bits()); }) {
@@ -354,7 +352,7 @@ public:
         constexpr auto for_each(this auto&& self, F f)
                 -> void
         {
-                detail::set::walk_blocks_ascending(self.bits(), f);
+                set::walk_blocks_ascending(self.bits(), f);
         }
 
         // The mirror, highest position first.
@@ -363,7 +361,7 @@ public:
         constexpr auto for_each_reverse(this auto&& self, F f)
                 -> void
         {
-                detail::set::walk_blocks_descending(self.bits(), f);
+                set::walk_blocks_descending(self.bits(), f);
         }
 
         // capacity; a bitset's count() is a set's size(), and max_size() is the positions there are to hold.
@@ -409,7 +407,7 @@ public:
         [[nodiscard]] constexpr auto back() const noexcept
                 -> const_reference
         {
-                if constexpr (detail::bits::zero_width<bits_type>) {
+                if constexpr (zero_width<bits_type>) {
                         return {&bits(), 0UZ};
                 } else {
                         return {&bits(), bits().exclusive_find_prev(bits().size())};
@@ -467,7 +465,7 @@ public:
                 if constexpr (requires { self |= rg; }) {
                         // Tier one: another set over the same storage, which is a union done block-wise.
                         self |= rg;
-                } else if constexpr (detail::set::is_consecutive<std::remove_cvref_t<R>> and requires (std::size_t pos, std::size_t len) { self.bits().set(pos, len, true); }) {
+                } else if constexpr (set::is_consecutive<std::remove_cvref_t<R>> and requires (std::size_t pos, std::size_t len) { self.bits().set(pos, len, true); }) {
                         // Tier two: consecutive positions, the first and last blocks masked, the rest whole.
                         if (not std::ranges::empty(rg)) {
                                 auto const lo = static_cast<value_type>(*std::ranges::begin(rg));
@@ -534,7 +532,7 @@ public:
         }
 
         // The non-member beside it: ranges::swap finds this and never the member.
-        friend constexpr auto swap(adaptor& x, adaptor& y) noexcept(noexcept(x.swap(y)))
+        friend constexpr auto swap(set_adaptor& x, set_adaptor& y) noexcept(noexcept(x.swap(y)))
                 -> void
                 requires is_owner
         {
@@ -542,7 +540,7 @@ public:
         }
 
         // The storage's own swap through the customization point, std::bitset having no member to call.
-        constexpr auto swap(adaptor& other) noexcept(std::is_nothrow_swappable_v<Bits>)
+        constexpr auto swap(set_adaptor& other) noexcept(std::is_nothrow_swappable_v<Bits>)
                 -> void
                 requires is_owner and std::swappable<Bits>
         {
@@ -587,7 +585,7 @@ public:
         }
 
         // Bulk on the storage's spelling; union and symmetric difference grow, the other two do not.
-        constexpr auto operator&=(this auto&& self, adaptor const& other) noexcept
+        constexpr auto operator&=(this auto&& self, set_adaptor const& other) noexcept
                 -> auto&
                 requires requires { self.bits() &= other.bits(); }
         {
@@ -595,7 +593,7 @@ public:
                 return self;
         }
 
-        constexpr auto operator|=(this auto&& self, adaptor const& other) noexcept(has_static_width)
+        constexpr auto operator|=(this auto&& self, set_adaptor const& other) noexcept(has_static_width)
                 -> auto&
                 requires requires { self.bits().grow_to_admit(other.bits()); self.bits() |= other.bits(); }
         {
@@ -604,7 +602,7 @@ public:
                 return self;
         }
 
-        constexpr auto operator^=(this auto&& self, adaptor const& other) noexcept(has_static_width)
+        constexpr auto operator^=(this auto&& self, set_adaptor const& other) noexcept(has_static_width)
                 -> auto&
                 requires requires { self.bits().grow_to_admit(other.bits()); self.bits() ^= other.bits(); }
         {
@@ -613,7 +611,7 @@ public:
                 return self;
         }
 
-        constexpr auto operator-=(this auto&& self, adaptor const& other) noexcept
+        constexpr auto operator-=(this auto&& self, set_adaptor const& other) noexcept
                 -> auto&
                 requires requires { self.bits() -= other.bits(); }
         {
@@ -705,7 +703,7 @@ public:
         }
 
         // The storage's own member where it has one, its bulk operators otherwise.
-        [[nodiscard]] constexpr auto is_subset_of(adaptor const& other) const noexcept
+        [[nodiscard]] constexpr auto is_subset_of(set_adaptor const& other) const noexcept
                 -> bool
         {
                 if constexpr (requires { bits().is_subset_of(other.bits()); }) {
@@ -715,7 +713,7 @@ public:
                 }
         }
 
-        [[nodiscard]] constexpr auto is_proper_subset_of(adaptor const& other) const noexcept
+        [[nodiscard]] constexpr auto is_proper_subset_of(set_adaptor const& other) const noexcept
                 -> bool
         {
                 if constexpr (requires { bits().is_proper_subset_of(other.bits()); }) {
@@ -726,7 +724,7 @@ public:
         }
 
         // A hidden friend: intersects is to set_intersection what contains is to find.
-        [[nodiscard]] friend constexpr auto intersects(adaptor const& x, adaptor const& y) noexcept
+        [[nodiscard]] friend constexpr auto intersects(set_adaptor const& x, set_adaptor const& y) noexcept
                 -> bool
         {
                 if constexpr (requires { intersects(x.bits(), y.bits()); }) {
@@ -786,13 +784,9 @@ private:
         }
 };
 
-// The reading keeps its name over the general template, as the nine containers keep theirs over basic_bits.
-template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits, storage Store, class Derived = void>
-using set_adaptor = adaptor<set_reading_tag, Bits, Store, window::all, Derived>;
-
 // Any container built on the set vehicle, the vehicle used directly included.
 template<class T>
-concept set_adaptor_like = requires { typename T::adaptor_type; typename T::reads_as; } and std::same_as<typename T::reads_as, set_reading_tag> and std::derived_from<T, typename T::adaptor_type>;
+concept set_adaptor_like = requires { typename T::adaptor_type; T::reads_as; } and T::reads_as == reading::set and std::derived_from<T, typename T::adaptor_type>;
 
 // The owner's side of the protocol above.
 template<class Bits, class Derived>
@@ -801,7 +795,7 @@ struct owned_storage<set_adaptor<Bits, storage::owned, Derived>>
         using bits_type = Bits;
 
         // Committed to the set reading, so only a set view refers into one.
-        using reads = set_reading_tag;
+        static constexpr auto reads = reading::set;
 };
 
 // NOLINTBEGIN(readability-redundant-parentheses): a call is no primary expression, so the clause needs them.
@@ -888,17 +882,17 @@ template<class Bits, storage Store, class Derived>
 
 // NOLINTEND(readability-redundant-parentheses)
 
-} // namespace xstd
+} // namespace xstd::detail::bits
 
 // NOLINTBEGIN(bugprone-std-namespace-modification): [range.view] and [range.range] invite the opt-in.
 namespace std::ranges {
 
 // A view is a std::ranges::view outright and borrowed, its iterators pointing at the storage.
 template<class Bits>
-inline constexpr bool enable_view<xstd::set_adaptor<Bits, xstd::storage::borrowed>> = true;
+inline constexpr bool enable_view<xstd::detail::bits::set_adaptor<Bits, xstd::detail::bits::storage::borrowed>> = true;
 
 template<class Bits>
-inline constexpr bool enable_borrowed_range<xstd::set_adaptor<Bits, xstd::storage::borrowed>> = true;
+inline constexpr bool enable_borrowed_range<xstd::detail::bits::set_adaptor<Bits, xstd::detail::bits::storage::borrowed>> = true;
 
 } // namespace std::ranges
 
@@ -908,10 +902,10 @@ inline constexpr bool enable_borrowed_range<xstd::set_adaptor<Bits, xstd::storag
 namespace std {
 
 // Owned or viewed, as std::string_view hashes and std::set does not.
-template<class Bits, xstd::storage Store, class Derived>
-struct hash<xstd::set_adaptor<Bits, Store, Derived>>
+template<class Bits, xstd::detail::bits::storage Store, class Derived>
+struct hash<xstd::detail::bits::set_adaptor<Bits, Store, Derived>>
 {
-        [[nodiscard]] constexpr auto operator()(xstd::set_adaptor<Bits, Store, Derived> const& v) const noexcept
+        [[nodiscard]] constexpr auto operator()(xstd::detail::bits::set_adaptor<Bits, Store, Derived> const& v) const noexcept
                 -> std::size_t
         {
                 return xstd::detail::bits::std_hash(v);
@@ -925,10 +919,10 @@ struct hash<xstd::set_adaptor<Bits, Store, Derived>>
 // Not a range to ContainerHash, so Hash2 takes the hook and not its range overload.
 namespace boost::container_hash {
 
-template<class Bits, xstd::storage Store, class Derived>
-struct is_range<xstd::set_adaptor<Bits, Store, Derived>> : std::false_type
+template<class Bits, xstd::detail::bits::storage Store, class Derived>
+struct is_range<xstd::detail::bits::set_adaptor<Bits, Store, Derived>> : std::false_type
 {};
 
 } // namespace boost::container_hash
 
-#endif // XSTD_BITS_SET_ADAPTOR_HPP
+#endif // XSTD_BITS_DETAIL_SET_ADAPTOR_HPP
