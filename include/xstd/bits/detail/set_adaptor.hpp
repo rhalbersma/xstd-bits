@@ -36,9 +36,9 @@
 #include <utility>                                       // declval, forward, move, pair
 
 // The set reading, [set] over a contiguous_bit_container, owning it or referring to it.
-namespace xstd {
+namespace xstd::detail::bits {
 
-namespace detail::set {
+namespace set {
 
 // The storage answering equality, named so the constrained overload below subsumes the general one.
 template<class Bits>
@@ -65,8 +65,8 @@ constexpr auto walk_blocks_ascending(Bits const& c, F& f)
         for (auto index = 0UZ, blocks = c.num_blocks(); index < blocks; ++index) {
                 auto block = c.block(index);
                 while (block != block_type{}) {
-                        auto const offset = static_cast<std::size_t>(detail::bits::countr_zero(block));
-                        if (not detail::bits::invoke_continues(f, (digits * index) + offset)) {
+                        auto const offset = static_cast<std::size_t>(countr_zero(block));
+                        if (not invoke_continues(f, (digits * index) + offset)) {
                                 return;
                         }
                         block = static_cast<block_type>(block & static_cast<block_type>(block - block_type{1}));
@@ -86,19 +86,19 @@ constexpr auto walk_blocks_descending(Bits const& c, F& f)
                 auto const index = blocks - 1UZ - n;
                 auto block = c.block(index);
                 while (block != block_type{}) {
-                        auto const offset = digits - 1UZ - static_cast<std::size_t>(detail::bits::countl_zero(block));
-                        if (not detail::bits::invoke_continues(f, (digits * index) + offset)) {
+                        auto const offset = digits - 1UZ - static_cast<std::size_t>(countl_zero(block));
+                        if (not invoke_continues(f, (digits * index) + offset)) {
                                 return;
                         }
-                        block = static_cast<block_type>(block ^ detail::bits::shl(block_type{1}, offset));
+                        block = static_cast<block_type>(block ^ shl(block_type{1}, offset));
                 }
         }
 }
 
-} // namespace detail::set
+} // namespace set
 
-template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits, storage Store = storage::owned, class Derived = void>
-class set_adaptor : public std::conditional_t<owns(Store), detail::bits::allocator_base_type<std::remove_const_t<Bits>>, xstd::empty_base_type<>>
+template<specialization_of_TN<contiguous_bit_container> Bits, storage Store = storage::owned, class Derived = void>
+class set_adaptor : public std::conditional_t<owns(Store), allocator_base_type<std::remove_const_t<Bits>>, xstd::empty_base_type<>>
 {
         static constexpr bool is_owner = owns(Store);
 
@@ -122,7 +122,7 @@ class set_adaptor : public std::conditional_t<owns(Store), detail::bits::allocat
         friend Derived;
 
         // A view refers into this owner's storage, and only a reading that can view it is named.
-        template<specialization_of_TN<detail::bits::contiguous_bit_container>, storage, class>
+        template<specialization_of_TN<contiguous_bit_container>, storage, class>
         friend class set_adaptor;
 
         // The value under the set reading: the bits at a static width, the positions at a run-time one.
@@ -131,9 +131,9 @@ class set_adaptor : public std::conditional_t<owns(Store), detail::bits::allocat
                 -> void
         {
                 if constexpr (has_static_width) {
-                        detail::bits::hash_append_bits(h, f, v->bits());
+                        hash_append_bits(h, f, v->bits());
                 } else {
-                        detail::bits::hash_append_positions(h, f, v->bits());
+                        hash_append_positions(h, f, v->bits());
                 }
         }
 
@@ -155,11 +155,11 @@ public:
         static constexpr bool has_static_width = (Bits::extent != std::dynamic_extent);
         using pointer = void;
         using const_pointer = pointer;
-        using reference = detail::bits::bidirectional_bit_reference<Bits>;
+        using reference = bidirectional_bit_reference<Bits>;
         using const_reference = reference;
         using size_type = std::size_t;
         using difference_type = std::ptrdiff_t;
-        using iterator = detail::bits::bidirectional_bit_iterator<Bits>;
+        using iterator = bidirectional_bit_iterator<Bits>;
         using const_iterator = iterator;
         using reverse_iterator = std::reverse_iterator<iterator>;
         using const_reverse_iterator = std::reverse_iterator<const_iterator>;
@@ -273,7 +273,7 @@ public:
         // A static owner's equality is its one member's: every instance carries the same width.
         [[nodiscard]] friend constexpr auto operator==(set_adaptor const& x, set_adaptor const& y) noexcept
                 -> bool
-                requires detail::set::equality_comparable_storage<bits_type> and is_owner and has_static_width
+                requires set::equality_comparable_storage<bits_type> and is_owner and has_static_width
         {
                 return x.bits() == y.bits();
         }
@@ -281,7 +281,7 @@ public:
         // Everything else: the storage's set equality, which answers at any two widths.
         [[nodiscard]] friend constexpr auto operator==(set_adaptor const& x, set_adaptor const& y) noexcept
                 -> bool
-                requires detail::set::equality_comparable_storage<bits_type>
+                requires set::equality_comparable_storage<bits_type>
         {
                 return set_equal(x.bits(), y.bits());
         }
@@ -352,7 +352,7 @@ public:
         constexpr auto for_each(this auto&& self, F f)
                 -> void
         {
-                detail::set::walk_blocks_ascending(self.bits(), f);
+                set::walk_blocks_ascending(self.bits(), f);
         }
 
         // The mirror, highest position first.
@@ -361,7 +361,7 @@ public:
         constexpr auto for_each_reverse(this auto&& self, F f)
                 -> void
         {
-                detail::set::walk_blocks_descending(self.bits(), f);
+                set::walk_blocks_descending(self.bits(), f);
         }
 
         // capacity; a bitset's count() is a set's size(), and max_size() is the positions there are to hold.
@@ -407,7 +407,7 @@ public:
         [[nodiscard]] constexpr auto back() const noexcept
                 -> const_reference
         {
-                if constexpr (detail::bits::zero_width<bits_type>) {
+                if constexpr (zero_width<bits_type>) {
                         return {&bits(), 0UZ};
                 } else {
                         return {&bits(), bits().exclusive_find_prev(bits().size())};
@@ -465,7 +465,7 @@ public:
                 if constexpr (requires { self |= rg; }) {
                         // Tier one: another set over the same storage, which is a union done block-wise.
                         self |= rg;
-                } else if constexpr (detail::set::is_consecutive<std::remove_cvref_t<R>> and requires (std::size_t pos, std::size_t len) { self.bits().set(pos, len, true); }) {
+                } else if constexpr (set::is_consecutive<std::remove_cvref_t<R>> and requires (std::size_t pos, std::size_t len) { self.bits().set(pos, len, true); }) {
                         // Tier two: consecutive positions, the first and last blocks masked, the rest whole.
                         if (not std::ranges::empty(rg)) {
                                 auto const lo = static_cast<value_type>(*std::ranges::begin(rg));
@@ -882,17 +882,17 @@ template<class Bits, storage Store, class Derived>
 
 // NOLINTEND(readability-redundant-parentheses)
 
-} // namespace xstd
+} // namespace xstd::detail::bits
 
 // NOLINTBEGIN(bugprone-std-namespace-modification): [range.view] and [range.range] invite the opt-in.
 namespace std::ranges {
 
 // A view is a std::ranges::view outright and borrowed, its iterators pointing at the storage.
 template<class Bits>
-inline constexpr bool enable_view<xstd::set_adaptor<Bits, xstd::storage::borrowed>> = true;
+inline constexpr bool enable_view<xstd::detail::bits::set_adaptor<Bits, xstd::detail::bits::storage::borrowed>> = true;
 
 template<class Bits>
-inline constexpr bool enable_borrowed_range<xstd::set_adaptor<Bits, xstd::storage::borrowed>> = true;
+inline constexpr bool enable_borrowed_range<xstd::detail::bits::set_adaptor<Bits, xstd::detail::bits::storage::borrowed>> = true;
 
 } // namespace std::ranges
 
@@ -902,10 +902,10 @@ inline constexpr bool enable_borrowed_range<xstd::set_adaptor<Bits, xstd::storag
 namespace std {
 
 // Owned or viewed, as std::string_view hashes and std::set does not.
-template<class Bits, xstd::storage Store, class Derived>
-struct hash<xstd::set_adaptor<Bits, Store, Derived>>
+template<class Bits, xstd::detail::bits::storage Store, class Derived>
+struct hash<xstd::detail::bits::set_adaptor<Bits, Store, Derived>>
 {
-        [[nodiscard]] constexpr auto operator()(xstd::set_adaptor<Bits, Store, Derived> const& v) const noexcept
+        [[nodiscard]] constexpr auto operator()(xstd::detail::bits::set_adaptor<Bits, Store, Derived> const& v) const noexcept
                 -> std::size_t
         {
                 return xstd::detail::bits::std_hash(v);
@@ -919,8 +919,8 @@ struct hash<xstd::set_adaptor<Bits, Store, Derived>>
 // Not a range to ContainerHash, so Hash2 takes the hook and not its range overload.
 namespace boost::container_hash {
 
-template<class Bits, xstd::storage Store, class Derived>
-struct is_range<xstd::set_adaptor<Bits, Store, Derived>> : std::false_type
+template<class Bits, xstd::detail::bits::storage Store, class Derived>
+struct is_range<xstd::detail::bits::set_adaptor<Bits, Store, Derived>> : std::false_type
 {};
 
 } // namespace boost::container_hash

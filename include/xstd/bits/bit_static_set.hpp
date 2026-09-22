@@ -22,9 +22,9 @@ namespace xstd {
 
 // The static set: the basic name leaves the block open, the restricted one is the machine word.
 template<xstd::unsigned_integer Block, std::size_t N>
-class basic_bit_static_set : public set_adaptor<detail::bits::contiguous_bit_array<Block, N>, storage::owned, basic_bit_static_set<Block, N>>
+class basic_bit_static_set : public detail::bits::set_adaptor<detail::bits::contiguous_bit_array<Block, N>, detail::bits::storage::owned, basic_bit_static_set<Block, N>>
 {
-        using base_type = set_adaptor<detail::bits::contiguous_bit_array<Block, N>, storage::owned, basic_bit_static_set<Block, N>>;
+        using base_type = detail::bits::set_adaptor<detail::bits::contiguous_bit_array<Block, N>, detail::bits::storage::owned, basic_bit_static_set<Block, N>>;
 
 public:
         using base_type::base_type;
@@ -51,12 +51,16 @@ using bit_static_set = basic_bit_static_set<std::size_t, N>;
 
 } // namespace aligned
 
+} // namespace xstd
+
+namespace xstd::detail::bits {
+
 // A container answers every trait as the vehicle it is built on, which is where each one is defined.
 template<xstd::unsigned_integer Block, std::size_t N>
 struct owned_storage<basic_bit_static_set<Block, N>> : owned_storage<typename basic_bit_static_set<Block, N>::adaptor_type>
 {};
 
-} // namespace xstd
+} // namespace xstd::detail::bits
 
 namespace std {
 

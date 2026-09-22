@@ -18,9 +18,9 @@ namespace xstd {
 
 // The bitset reading over a heap of blocks, boost::dynamic_bitset being its counterpart.
 template<xstd::unsigned_integer Block, class Allocator = std::allocator<Block>>
-class basic_dynamic_bitset : public bitset_adaptor<detail::bits::contiguous_bit_vector<Block, Allocator>, basic_dynamic_bitset<Block, Allocator>>
+class basic_dynamic_bitset : public detail::bits::bitset_adaptor<detail::bits::contiguous_bit_vector<Block, Allocator>, basic_dynamic_bitset<Block, Allocator>>
 {
-        using base_type = bitset_adaptor<detail::bits::contiguous_bit_vector<Block, Allocator>, basic_dynamic_bitset<Block, Allocator>>;
+        using base_type = detail::bits::bitset_adaptor<detail::bits::contiguous_bit_vector<Block, Allocator>, basic_dynamic_bitset<Block, Allocator>>;
 
 public:
         using base_type::base_type;
@@ -36,12 +36,16 @@ public:
 
 using dynamic_bitset = basic_dynamic_bitset<std::size_t>;
 
+} // namespace xstd
+
+namespace xstd::detail::bits {
+
 // A container answers every trait as the vehicle it is built on, which is where each one is defined.
 template<xstd::unsigned_integer Block, class Allocator>
 struct owned_storage<basic_dynamic_bitset<Block, Allocator>> : owned_storage<typename basic_dynamic_bitset<Block, Allocator>::adaptor_type>
 {};
 
-} // namespace xstd
+} // namespace xstd::detail::bits
 
 namespace std {
 

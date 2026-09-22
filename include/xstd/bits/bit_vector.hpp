@@ -21,9 +21,9 @@ namespace xstd {
 
 // The sequence reading over a heap of blocks: std::vector<bool> under the name Hinnant proposed for it.
 template<xstd::unsigned_integer Block, class Allocator = std::allocator<Block>>
-class basic_bit_vector : public sequence_adaptor<detail::bits::contiguous_bit_vector<Block, Allocator>, storage::owned, window::all, basic_bit_vector<Block, Allocator>>
+class basic_bit_vector : public detail::bits::sequence_adaptor<detail::bits::contiguous_bit_vector<Block, Allocator>, detail::bits::storage::owned, detail::bits::window::all, basic_bit_vector<Block, Allocator>>
 {
-        using base_type = sequence_adaptor<detail::bits::contiguous_bit_vector<Block, Allocator>, storage::owned, window::all, basic_bit_vector<Block, Allocator>>;
+        using base_type = detail::bits::sequence_adaptor<detail::bits::contiguous_bit_vector<Block, Allocator>, detail::bits::storage::owned, detail::bits::window::all, basic_bit_vector<Block, Allocator>>;
 
 public:
         using base_type::base_type;
@@ -39,12 +39,16 @@ public:
 
 using bit_vector = basic_bit_vector<std::size_t>;
 
+} // namespace xstd
+
+namespace xstd::detail::bits {
+
 // A container answers every trait as the vehicle it is built on, which is where each one is defined.
 template<xstd::unsigned_integer Block, class Allocator>
 struct owned_storage<basic_bit_vector<Block, Allocator>> : owned_storage<typename basic_bit_vector<Block, Allocator>::adaptor_type>
 {};
 
-} // namespace xstd
+} // namespace xstd::detail::bits
 
 namespace std {
 

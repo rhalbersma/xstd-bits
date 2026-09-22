@@ -19,9 +19,9 @@ namespace xstd {
 
 // A window on the sequence reading: what first, last and subspan hand back.
 template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits>
-class bit_subspan : public sequence_adaptor<Bits, storage::borrowed, window::sub, bit_subspan<Bits>>
+class bit_subspan : public detail::bits::sequence_adaptor<Bits, detail::bits::storage::borrowed, detail::bits::window::sub, bit_subspan<Bits>>
 {
-        using base_type = sequence_adaptor<Bits, storage::borrowed, window::sub, bit_subspan<Bits>>;
+        using base_type = detail::bits::sequence_adaptor<Bits, detail::bits::storage::borrowed, detail::bits::window::sub, bit_subspan<Bits>>;
 
 public:
         using base_type::base_type;
@@ -30,17 +30,21 @@ public:
 
 // The vehicle's two guides, restated on the view so a consumer deduces the name rather than what it is built on.
 template<class Bits>
-        requires (not requires { typename owned_storage<std::remove_const_t<Bits>>::bits_type; })
+        requires (not requires { typename detail::bits::owned_storage<std::remove_const_t<Bits>>::bits_type; })
 bit_subspan(Bits&) -> bit_subspan<Bits>;
 
-template<owner_reading<reading::sequence> Owner>
-bit_subspan(Owner&) -> bit_subspan<owned_bits_t<Owner>>;
+template<detail::bits::owner_reading<detail::bits::reading::sequence> Owner>
+bit_subspan(Owner&) -> bit_subspan<detail::bits::owned_bits_t<Owner>>;
+
+} // namespace xstd
+
+namespace xstd::detail::bits {
 
 // A view answers every trait as the vehicle it is built on, which is where each one is defined.
 template<class Bits, class Block>
 inline constexpr bool blit_source<bit_subspan<Bits>, Block> = blit_source<typename bit_subspan<Bits>::adaptor_type, Block>; // NOLINT(readability-redundant-typename)
 
-} // namespace xstd
+} // namespace xstd::detail::bits
 
 namespace boost::container_hash {
 

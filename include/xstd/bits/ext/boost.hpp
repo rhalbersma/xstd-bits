@@ -33,9 +33,9 @@ namespace xstd {
 
 // The allocator is Boost's own, since the container this column is built on defaults to that one rather than std's.
 template<xstd::unsigned_integer Block, std::size_t N, class Alloc = boost::container::new_allocator<Block>>
-class basic_bit_small_set : public set_adaptor<detail::bits::contiguous_bit_small_vector<Block, N, Alloc>, storage::owned, basic_bit_small_set<Block, N, Alloc>>
+class basic_bit_small_set : public detail::bits::set_adaptor<detail::bits::contiguous_bit_small_vector<Block, N, Alloc>, detail::bits::storage::owned, basic_bit_small_set<Block, N, Alloc>>
 {
-        using base_type = set_adaptor<detail::bits::contiguous_bit_small_vector<Block, N, Alloc>, storage::owned, basic_bit_small_set<Block, N, Alloc>>;
+        using base_type = detail::bits::set_adaptor<detail::bits::contiguous_bit_small_vector<Block, N, Alloc>, detail::bits::storage::owned, basic_bit_small_set<Block, N, Alloc>>;
 
 public:
         using base_type::base_type;
@@ -50,9 +50,9 @@ public:
 };
 
 template<xstd::unsigned_integer Block, std::size_t N, class Alloc = boost::container::new_allocator<Block>>
-class basic_bit_small_vector : public sequence_adaptor<detail::bits::contiguous_bit_small_vector<Block, N, Alloc>, storage::owned, window::all, basic_bit_small_vector<Block, N, Alloc>>
+class basic_bit_small_vector : public detail::bits::sequence_adaptor<detail::bits::contiguous_bit_small_vector<Block, N, Alloc>, detail::bits::storage::owned, detail::bits::window::all, basic_bit_small_vector<Block, N, Alloc>>
 {
-        using base_type = sequence_adaptor<detail::bits::contiguous_bit_small_vector<Block, N, Alloc>, storage::owned, window::all, basic_bit_small_vector<Block, N, Alloc>>;
+        using base_type = detail::bits::sequence_adaptor<detail::bits::contiguous_bit_small_vector<Block, N, Alloc>, detail::bits::storage::owned, detail::bits::window::all, basic_bit_small_vector<Block, N, Alloc>>;
 
 public:
         using base_type::base_type;
@@ -67,9 +67,9 @@ public:
 };
 
 template<xstd::unsigned_integer Block, std::size_t N, class Alloc = boost::container::new_allocator<Block>>
-class basic_small_bitset : public bitset_adaptor<detail::bits::contiguous_bit_small_vector<Block, N, Alloc>, basic_small_bitset<Block, N, Alloc>>
+class basic_small_bitset : public detail::bits::bitset_adaptor<detail::bits::contiguous_bit_small_vector<Block, N, Alloc>, basic_small_bitset<Block, N, Alloc>>
 {
-        using base_type = bitset_adaptor<detail::bits::contiguous_bit_small_vector<Block, N, Alloc>, basic_small_bitset<Block, N, Alloc>>;
+        using base_type = detail::bits::bitset_adaptor<detail::bits::contiguous_bit_small_vector<Block, N, Alloc>, basic_small_bitset<Block, N, Alloc>>;
 
 public:
         using base_type::base_type;
@@ -92,6 +92,10 @@ using bit_small_vector = basic_bit_small_vector<std::size_t, N>;
 template<std::size_t N>
 using small_bitset = basic_small_bitset<std::size_t, N>;
 
+} // namespace xstd
+
+namespace xstd::detail::bits {
+
 // A container answers every trait as the vehicle it is built on, which is where each one is defined.
 template<xstd::unsigned_integer Block, std::size_t N, class Alloc>
 struct owned_storage<basic_bit_small_set<Block, N, Alloc>> : owned_storage<typename basic_bit_small_set<Block, N, Alloc>::adaptor_type>
@@ -105,7 +109,7 @@ template<xstd::unsigned_integer Block, std::size_t N, class Alloc>
 struct owned_storage<basic_small_bitset<Block, N, Alloc>> : owned_storage<typename basic_small_bitset<Block, N, Alloc>::adaptor_type>
 {};
 
-} // namespace xstd
+} // namespace xstd::detail::bits
 
 namespace std {
 

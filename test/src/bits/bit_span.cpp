@@ -43,7 +43,7 @@ constexpr auto takes_a_span(xstd::bit_span<Blocks> v) noexcept
 // The view is the referring adaptor under another name, and over an owner it refers into the storage the owner wraps.
 BOOST_AUTO_TEST_CASE(TheViewIsTheReferringAdaptor)
 {
-        static_assert(std::derived_from<xstd::bit_span<Blocks>, xstd::sequence_adaptor<Blocks, xstd::storage::borrowed, xstd::window::all, xstd::bit_span<Blocks>>>);
+        static_assert(std::derived_from<xstd::bit_span<Blocks>, xstd::detail::bits::sequence_adaptor<Blocks, xstd::detail::bits::storage::borrowed, xstd::detail::bits::window::all, xstd::bit_span<Blocks>>>);
         static_assert(std::same_as<view_of<Blocks>, xstd::bit_span<Blocks>>);
         static_assert(std::same_as<view_of<Blocks const>, xstd::bit_span<Blocks const>>);
         static_assert(std::same_as<view_of<xstd::bitset<8>>, xstd::bit_span<xstd::detail::bits::contiguous_bit_array<std::size_t, 8>>>);

@@ -24,9 +24,9 @@ namespace xstd {
 
 // The packed std::inplace_vector<bool, N> that P0843 declined to write, named after the container it packs.
 template<xstd::unsigned_integer Block, std::size_t N>
-class basic_bit_inplace_vector : public sequence_adaptor<detail::bits::contiguous_bit_inplace_vector<Block, N>, storage::owned, window::all, basic_bit_inplace_vector<Block, N>>
+class basic_bit_inplace_vector : public detail::bits::sequence_adaptor<detail::bits::contiguous_bit_inplace_vector<Block, N>, detail::bits::storage::owned, detail::bits::window::all, basic_bit_inplace_vector<Block, N>>
 {
-        using base_type = sequence_adaptor<detail::bits::contiguous_bit_inplace_vector<Block, N>, storage::owned, window::all, basic_bit_inplace_vector<Block, N>>;
+        using base_type = detail::bits::sequence_adaptor<detail::bits::contiguous_bit_inplace_vector<Block, N>, detail::bits::storage::owned, detail::bits::window::all, basic_bit_inplace_vector<Block, N>>;
 
 public:
         using base_type::base_type;
@@ -43,12 +43,16 @@ public:
 template<std::size_t N>
 using bit_inplace_vector = basic_bit_inplace_vector<std::size_t, N>;
 
+} // namespace xstd
+
+namespace xstd::detail::bits {
+
 // A container answers every trait as the vehicle it is built on, which is where each one is defined.
 template<xstd::unsigned_integer Block, std::size_t N>
 struct owned_storage<basic_bit_inplace_vector<Block, N>> : owned_storage<typename basic_bit_inplace_vector<Block, N>::adaptor_type>
 {};
 
-} // namespace xstd
+} // namespace xstd::detail::bits
 
 namespace std {
 

@@ -42,7 +42,15 @@
 // The sequence reading, [array] over a contiguous_bit_container, owning it or referring to it.
 namespace xstd {
 
-namespace detail::sequence {
+// The windowed view a span hands back: declared here and defined in its own header, which this one must not include.
+template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits>
+class bit_subspan;
+
+} // namespace xstd
+
+namespace xstd::detail::bits {
+
+namespace sequence {
 
 // The bits a window's word holds: every one but for the last word, which holds what is left over.
 template<class Block>
@@ -51,7 +59,7 @@ template<class Block>
 {
         constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<Block>::digits);
         // No shift by digits, which is undefined: a full word is every bit, spelled without one.
-        return count == digits ? static_cast<Block>(~Block{}) : static_cast<Block>(detail::bits::shl(Block{1}, count) - Block{1});
+        return count == digits ? static_cast<Block>(~Block{}) : static_cast<Block>(shl(Block{1}, count) - Block{1});
 }
 
 // Every position, lowest first, a word at a time: the reload is the inner loop's exit test.
@@ -66,7 +74,7 @@ constexpr auto walk_blocks(Bits const& c, std::size_t offset, std::size_t size, 
                 auto const count = std::ranges::min(digits, size - k);
                 auto const block = c.block_at(offset + k);
                 for (auto n = 0UZ; n < count; ++n) {
-                        if (not detail::bits::invoke_continues(f, (detail::bits::shr(block, n) & block_type{1}) != block_type{})) {
+                        if (not invoke_continues(f, (shr(block, n) & block_type{1}) != block_type{})) {
                                 return;
                         }
                 }
@@ -84,7 +92,7 @@ template<class Bits>
         auto n = 0UZ;
         for (auto k = 0UZ; k < size; k += digits) {
                 auto const mask = partial_block_mask<block_type>(std::ranges::min(digits, size - k));
-                n += detail::bits::popcount(static_cast<block_type>(c.block_at(offset + k) & mask));
+                n += popcount(static_cast<block_type>(c.block_at(offset + k) & mask));
         }
         return n;
 }
@@ -125,13 +133,9 @@ template<class Bits>
 template<class Bits>
 using block_type_of = std::remove_const_t<Bits>::block_type;
 
-} // namespace detail::sequence
+} // namespace sequence
 
-// The windowed view a span hands back: declared here and defined in its own header, which this one must not include.
-template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits>
-class bit_subspan;
-
-template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits, storage Store = storage::owned, window W = window::all, class Derived = void>
+template<specialization_of_TN<contiguous_bit_container> Bits, storage Store = storage::owned, window W = window::all, class Derived = void>
 class sequence_adaptor;
 
 // A sequence adaptor whose storage holds blocks of the given type: what a blit reads, and nothing else.
@@ -139,10 +143,10 @@ template<class S, class Block>
 inline constexpr bool blit_source = false;
 
 template<class Bits, storage Store, window W, class Derived, class Block>
-inline constexpr bool blit_source<sequence_adaptor<Bits, Store, W, Derived>, Block> = std::same_as<detail::sequence::block_type_of<Bits>, Block>;
+inline constexpr bool blit_source<sequence_adaptor<Bits, Store, W, Derived>, Block> = std::same_as<sequence::block_type_of<Bits>, Block>;
 
-template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits, storage Store, window W, class Derived>
-class sequence_adaptor : public std::conditional_t<owns(Store), detail::bits::allocator_base_type<std::remove_const_t<Bits>>, xstd::empty_base_type<>>
+template<specialization_of_TN<contiguous_bit_container> Bits, storage Store, window W, class Derived>
+class sequence_adaptor : public std::conditional_t<owns(Store), allocator_base_type<std::remove_const_t<Bits>>, xstd::empty_base_type<>>
 {
         static constexpr bool is_owner = owns(Store);
         static constexpr bool is_window = (W == window::sub);
@@ -204,9 +208,9 @@ class sequence_adaptor : public std::conditional_t<owns(Store), detail::bits::al
         using storage_t = std::remove_reference_t<decltype(std::declval<Self>().bits())>;
 
         template<class Self>
-        using iterator_t = detail::bits::random_access_bit_iterator<storage_t<Self>>;
+        using iterator_t = random_access_bit_iterator<storage_t<Self>>;
         template<class Self>
-        using reference_t = detail::bits::random_access_bit_reference<storage_t<Self>>;
+        using reference_t = random_access_bit_reference<storage_t<Self>>;
 
         // A source the blit can read by block, of this storage's own block type.
         template<class S>
@@ -219,7 +223,7 @@ class sequence_adaptor : public std::conditional_t<owns(Store), detail::bits::al
         friend Derived;
 
         // A view refers into this owner's storage, and only a reading that can view it is named.
-        template<specialization_of_TN<detail::bits::contiguous_bit_container>, storage, window, class>
+        template<specialization_of_TN<contiguous_bit_container>, storage, window, class>
         friend class sequence_adaptor;
 
         // The value under the sequence reading, the owner's alone: a view follows span and hashes no more.
@@ -228,7 +232,7 @@ class sequence_adaptor : public std::conditional_t<owns(Store), detail::bits::al
                 -> void
                 requires is_owner
         {
-                detail::bits::hash_append_bits(h, f, v->bits());
+                hash_append_bits(h, f, v->bits());
         }
 
 public:
@@ -246,12 +250,12 @@ public:
         using value_type = bool;
         using pointer = void;
         using const_pointer = pointer;
-        using reference = detail::bits::random_access_bit_reference<Bits>;
-        using const_reference = detail::bits::random_access_bit_reference<Bits const>;
+        using reference = random_access_bit_reference<Bits>;
+        using const_reference = random_access_bit_reference<Bits const>;
         using size_type = std::size_t;
         using difference_type = std::ptrdiff_t;
-        using iterator = detail::bits::random_access_bit_iterator<Bits>;
-        using const_iterator = detail::bits::random_access_bit_iterator<Bits const>;
+        using iterator = random_access_bit_iterator<Bits>;
+        using const_iterator = random_access_bit_iterator<Bits const>;
         using reverse_iterator = std::reverse_iterator<iterator>;
         using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
@@ -522,7 +526,7 @@ public:
         {}
 
         // [span.sub]'s three, on a view alone: std::array and std::vector have no subviews.
-        using subspan_type = bit_subspan<Bits>;
+        using subspan_type = xstd::bit_subspan<Bits>;
 
         [[nodiscard]] constexpr auto first(size_type count) const noexcept
                 -> subspan_type
@@ -634,7 +638,7 @@ public:
         constexpr auto for_each(this auto&& self, F f)
                 -> void
         {
-                detail::sequence::walk_blocks(self.bits(), self.offset(), self.size(), f);
+                sequence::walk_blocks(self.bits(), self.offset(), self.size(), f);
         }
 
         // capacity; max_size() is the positions there are to hold, which only a growing one can extend.
@@ -716,7 +720,7 @@ public:
                 if (diff == block_type{}) {
                         return size();
                 }
-                return (index * digits) + detail::bits::countr_zero(diff);
+                return (index * digits) + countr_zero(diff);
         }
 
         // Growth, [vector]'s members: the storage computes the ceiling and this reading picks length_error.
@@ -970,7 +974,7 @@ private:
                 if constexpr (not is_window) {
                         return bits().count();
                 } else {
-                        return detail::sequence::count_blocks(bits(), offset(), size());
+                        return sequence::count_blocks(bits(), offset(), size());
                 }
         }
 
@@ -980,7 +984,7 @@ private:
                 if constexpr (not is_window) {
                         return bits().any();
                 } else {
-                        return detail::sequence::any_blocks(bits(), offset(), size());
+                        return sequence::any_blocks(bits(), offset(), size());
                 }
         }
 
@@ -991,7 +995,7 @@ private:
                 if constexpr (not is_window) {
                         return bits().none();
                 } else {
-                        return not detail::sequence::any_blocks(bits(), offset(), size());
+                        return not sequence::any_blocks(bits(), offset(), size());
                 }
         }
 
@@ -1002,7 +1006,7 @@ private:
                 if constexpr (not is_window) {
                         return bits().all();
                 } else {
-                        return detail::sequence::all_blocks(bits(), offset(), size());
+                        return sequence::all_blocks(bits(), offset(), size());
                 }
         }
 
@@ -1015,7 +1019,7 @@ private:
                 constexpr auto digits = bits_type::bits_per_block;
                 assert(self.size() == other.size());
                 for (auto k = 0UZ; k < self.size(); k += digits) {
-                        auto const mask = detail::sequence::partial_block_mask<block_type>(std::ranges::min(digits, self.size() - k));
+                        auto const mask = sequence::partial_block_mask<block_type>(std::ranges::min(digits, self.size() - k));
                         auto const mine = self.bits().block_at(self.offset() + k);
                         auto const theirs = other.bits().block_at(other.offset() + k);
                         self.bits().block_at(self.offset() + k, f(mine, theirs), mask);
@@ -1055,7 +1059,7 @@ private:
                 auto n = 0UZ;
                 for (auto&& e : rg) {
                         if (static_cast<value_type>(e)) {
-                                block |= detail::bits::shl(block_type{1}, n);
+                                block |= shl(block_type{1}, n);
                         }
                         if (++n == digits) {
                                 m_bits.append(block);
@@ -1176,7 +1180,7 @@ constexpr auto erase(sequence_adaptor<Bits, Store, W, Derived>& c, U const& valu
         -> sequence_adaptor<Bits, Store, W, Derived>::size_type
         requires requires { c.erase(c.cbegin(), c.cend()); }
 {
-        return xstd::erase_if(c, [&](bool x) -> bool { return x == value; });
+        return xstd::detail::bits::erase_if(c, [&](bool x) -> bool { return x == value; });
 }
 
 // [array]'s tuple interface, the one line of that synopsis a packed bool can answer; static width alone.
@@ -1214,17 +1218,17 @@ template<std::size_t I, class Bits, storage Store, window W, class Derived>
         return get<I>(c);
 }
 
-} // namespace xstd
+} // namespace xstd::detail::bits
 
 // NOLINTBEGIN(bugprone-std-namespace-modification): [range.view] and [range.range] invite the opt-in.
 namespace std::ranges {
 
 // A view is a std::ranges::view outright and borrowed, as set_adaptor's is.
-template<class Bits, xstd::window W>
-inline constexpr bool enable_view<xstd::sequence_adaptor<Bits, xstd::storage::borrowed, W>> = true;
+template<class Bits, xstd::detail::bits::window W>
+inline constexpr bool enable_view<xstd::detail::bits::sequence_adaptor<Bits, xstd::detail::bits::storage::borrowed, W>> = true;
 
-template<class Bits, xstd::window W>
-inline constexpr bool enable_borrowed_range<xstd::sequence_adaptor<Bits, xstd::storage::borrowed, W>> = true;
+template<class Bits, xstd::detail::bits::window W>
+inline constexpr bool enable_borrowed_range<xstd::detail::bits::sequence_adaptor<Bits, xstd::detail::bits::storage::borrowed, W>> = true;
 
 } // namespace std::ranges
 
@@ -1234,31 +1238,31 @@ inline constexpr bool enable_borrowed_range<xstd::sequence_adaptor<Bits, xstd::s
 namespace std {
 
 // [array.tuple]'s three over the static-width owner: tuple_element names the proxy, not bool.
-template<class Bits, xstd::storage Store, xstd::window W, class Derived>
-        requires xstd::is_static_width_owner<Bits, Store, W>
-struct tuple_size<xstd::sequence_adaptor<Bits, Store, W, Derived>>
+template<class Bits, xstd::detail::bits::storage Store, xstd::detail::bits::window W, class Derived>
+        requires xstd::detail::bits::is_static_width_owner<Bits, Store, W>
+struct tuple_size<xstd::detail::bits::sequence_adaptor<Bits, Store, W, Derived>>
         : integral_constant<size_t, Bits::extent>
 {};
 
-template<size_t I, class Bits, xstd::storage Store, xstd::window W, class Derived>
-        requires xstd::is_static_width_owner<Bits, Store, W> and (I < Bits::extent)
-struct tuple_element<I, xstd::sequence_adaptor<Bits, Store, W, Derived>>
+template<size_t I, class Bits, xstd::detail::bits::storage Store, xstd::detail::bits::window W, class Derived>
+        requires xstd::detail::bits::is_static_width_owner<Bits, Store, W> and (I < Bits::extent)
+struct tuple_element<I, xstd::detail::bits::sequence_adaptor<Bits, Store, W, Derived>>
 {
-        using type = xstd::sequence_adaptor<Bits, Store, W, Derived>::reference;
+        using type = xstd::detail::bits::sequence_adaptor<Bits, Store, W, Derived>::reference;
 };
 
-template<size_t I, class Bits, xstd::storage Store, xstd::window W, class Derived>
-        requires xstd::is_static_width_owner<Bits, Store, W> and (I < Bits::extent)
-struct tuple_element<I, const xstd::sequence_adaptor<Bits, Store, W, Derived>>
+template<size_t I, class Bits, xstd::detail::bits::storage Store, xstd::detail::bits::window W, class Derived>
+        requires xstd::detail::bits::is_static_width_owner<Bits, Store, W> and (I < Bits::extent)
+struct tuple_element<I, const xstd::detail::bits::sequence_adaptor<Bits, Store, W, Derived>>
 {
-        using type = xstd::sequence_adaptor<Bits, Store, W, Derived>::const_reference;
+        using type = xstd::detail::bits::sequence_adaptor<Bits, Store, W, Derived>::const_reference;
 };
 
 // The owner hashes as std::vector<bool> does; a view no more than std::span does.
-template<class Bits, xstd::window W, class Derived>
-struct hash<xstd::sequence_adaptor<Bits, xstd::storage::owned, W, Derived>>
+template<class Bits, xstd::detail::bits::window W, class Derived>
+struct hash<xstd::detail::bits::sequence_adaptor<Bits, xstd::detail::bits::storage::owned, W, Derived>>
 {
-        [[nodiscard]] constexpr auto operator()(xstd::sequence_adaptor<Bits, xstd::storage::owned, W, Derived> const& v) const noexcept
+        [[nodiscard]] constexpr auto operator()(xstd::detail::bits::sequence_adaptor<Bits, xstd::detail::bits::storage::owned, W, Derived> const& v) const noexcept
                 -> std::size_t
         {
                 return xstd::detail::bits::std_hash(v);
@@ -1272,12 +1276,12 @@ struct hash<xstd::sequence_adaptor<Bits, xstd::storage::owned, W, Derived>>
 // Not a range to ContainerHash and not tuple-like: Hash2 takes the hook, not its range or tuple overload.
 namespace boost::container_hash {
 
-template<class Bits, xstd::storage Store, xstd::window W, class Derived>
-struct is_range<xstd::sequence_adaptor<Bits, Store, W, Derived>> : std::false_type
+template<class Bits, xstd::detail::bits::storage Store, xstd::detail::bits::window W, class Derived>
+struct is_range<xstd::detail::bits::sequence_adaptor<Bits, Store, W, Derived>> : std::false_type
 {};
 
-template<class Bits, xstd::storage Store, xstd::window W, class Derived>
-struct is_tuple_like<xstd::sequence_adaptor<Bits, Store, W, Derived>> : std::false_type
+template<class Bits, xstd::detail::bits::storage Store, xstd::detail::bits::window W, class Derived>
+struct is_tuple_like<xstd::detail::bits::sequence_adaptor<Bits, Store, W, Derived>> : std::false_type
 {};
 
 } // namespace boost::container_hash

@@ -19,9 +19,9 @@ namespace xstd {
 
 // [template.bitset] over a packed array of Block: what std::bitset<N> is, with the word type in the open.
 template<xstd::unsigned_integer Block, std::size_t N>
-class basic_bitset : public bitset_adaptor<detail::bits::contiguous_bit_array<Block, N>, basic_bitset<Block, N>>
+class basic_bitset : public detail::bits::bitset_adaptor<detail::bits::contiguous_bit_array<Block, N>, basic_bitset<Block, N>>
 {
-        using base_type = bitset_adaptor<detail::bits::contiguous_bit_array<Block, N>, basic_bitset<Block, N>>;
+        using base_type = detail::bits::bitset_adaptor<detail::bits::contiguous_bit_array<Block, N>, basic_bitset<Block, N>>;
 
 public:
         using base_type::base_type;
@@ -49,12 +49,16 @@ using bitset = basic_bitset<std::size_t, N>;
 
 } // namespace aligned
 
+} // namespace xstd
+
+namespace xstd::detail::bits {
+
 // A container answers every trait as the vehicle it is built on, which is where each one is defined.
 template<xstd::unsigned_integer Block, std::size_t N>
 struct owned_storage<basic_bitset<Block, N>> : owned_storage<typename basic_bitset<Block, N>::adaptor_type>
 {};
 
-} // namespace xstd
+} // namespace xstd::detail::bits
 
 namespace std {
 

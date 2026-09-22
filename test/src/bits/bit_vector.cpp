@@ -46,7 +46,7 @@ constexpr bool has_range_members = requires (X x, std::vector<bool> const& r) { 
 // std::vector<bool> under its own name: the sequence adaptor over a heap of blocks.
 BOOST_AUTO_TEST_CASE(TheDynamicSequenceIsTheSequenceAdaptorOverAHeapOfBlocks)
 {
-        static_assert(std::derived_from<T, xstd::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint8_t>, xstd::storage::owned, xstd::window::all, T>>);
+        static_assert(std::derived_from<T, xstd::detail::bits::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint8_t>, xstd::detail::bits::storage::owned, xstd::detail::bits::window::all, T>>);
         static_assert(std::same_as<xstd::basic_bit_vector<std::uint8_t, std::allocator<std::uint8_t>>, T>);
         static_assert(test::sequence::bit_sequence<T>);
 }

@@ -197,7 +197,7 @@ struct derived_probe;
 
 // Dependent, so an unsatisfied class constraint is a false rather than a hard error.
 template<class B>
-constexpr bool wrappable = requires { sizeof(xstd::bitset_adaptor<B, derived_probe>); };
+constexpr bool wrappable = requires { sizeof(xstd::detail::bits::bitset_adaptor<B, derived_probe>); };
 
 // Dependent likewise, so a storage without an allocator answers false rather than hard-errors.
 template<class X>
@@ -223,8 +223,8 @@ BOOST_AUTO_TEST_CASE(TheWrappedStoragesAreOursAndTheCounterpartsAreNot)
 // The public name is built on the wrapper over a packed array, with the word type in the open.
 BOOST_AUTO_TEST_CASE(TheBitsetIsTheWrapperOverAPackedArray)
 {
-        static_assert(std::derived_from<xstd::basic_bitset<std::uint8_t, 9>, xstd::bitset_adaptor<xstd::detail::bits::contiguous_bit_array<std::uint8_t, 9>, xstd::basic_bitset<std::uint8_t, 9>>>);
-        static_assert(std::derived_from<xstd::bitset<64>, xstd::bitset_adaptor<xstd::detail::bits::contiguous_bit_array<std::size_t, 64>, xstd::bitset<64>>>);
+        static_assert(std::derived_from<xstd::basic_bitset<std::uint8_t, 9>, xstd::detail::bits::bitset_adaptor<xstd::detail::bits::contiguous_bit_array<std::uint8_t, 9>, xstd::basic_bitset<std::uint8_t, 9>>>);
+        static_assert(std::derived_from<xstd::bitset<64>, xstd::detail::bits::bitset_adaptor<xstd::detail::bits::contiguous_bit_array<std::size_t, 64>, xstd::bitset<64>>>);
 }
 
 using Static = std::tuple<xstd::basic_bitset<std::uint8_t, 0>, xstd::basic_bitset<std::uint8_t, 1>, xstd::basic_bitset<std::uint8_t, 64>, xstd::basic_bitset<std::uint8_t, 65>, xstd::basic_bitset<std::uint8_t, 128>, xstd::bitset<0>, xstd::bitset<64>, xstd::bitset<65>>;

@@ -31,7 +31,7 @@ concept fixed_string_view_constructible = requires { X(std::string_view()); } an
 
 // The wrapper at a run-time width answers as boost does; boost itself asserts where the wrapper throws.
 template<class X>
-concept dynamic_string_view_constructible = requires { X(std::string_view()); typename xstd::owned_storage<X>::bits_type; } and dynamic<X>;
+concept dynamic_string_view_constructible = requires { X(std::string_view()); typename xstd::detail::bits::owned_storage<X>::bits_type; } and dynamic<X>;
 
 // One function per tier: a BOOST_CHECK_THROW is three branches, and nesting three under two if constexprs hits 64.
 

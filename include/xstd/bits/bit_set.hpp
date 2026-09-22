@@ -21,9 +21,9 @@ namespace xstd {
 
 // The set reading over a heap of blocks: the flagship, and the one name without a qualifier.
 template<xstd::unsigned_integer Block, class Allocator = std::allocator<Block>>
-class basic_bit_set : public set_adaptor<detail::bits::contiguous_bit_vector<Block, Allocator>, storage::owned, basic_bit_set<Block, Allocator>>
+class basic_bit_set : public detail::bits::set_adaptor<detail::bits::contiguous_bit_vector<Block, Allocator>, detail::bits::storage::owned, basic_bit_set<Block, Allocator>>
 {
-        using base_type = set_adaptor<detail::bits::contiguous_bit_vector<Block, Allocator>, storage::owned, basic_bit_set<Block, Allocator>>;
+        using base_type = detail::bits::set_adaptor<detail::bits::contiguous_bit_vector<Block, Allocator>, detail::bits::storage::owned, basic_bit_set<Block, Allocator>>;
 
 public:
         using base_type::base_type;
@@ -39,12 +39,16 @@ public:
 
 using bit_set = basic_bit_set<std::size_t>;
 
+} // namespace xstd
+
+namespace xstd::detail::bits {
+
 // A container answers every trait as the vehicle it is built on, which is where each one is defined.
 template<xstd::unsigned_integer Block, class Allocator>
 struct owned_storage<basic_bit_set<Block, Allocator>> : owned_storage<typename basic_bit_set<Block, Allocator>::adaptor_type>
 {};
 
-} // namespace xstd
+} // namespace xstd::detail::bits
 
 namespace std {
 

@@ -38,11 +38,11 @@
 #include <type_traits>                                   // is_array_v, is_nothrow_swappable_v, is_standard_layout_v, is_trivially_copyable_v, is_trivially_default_constructible_v, remove_cv_t, remove_cvref_t
 #include <utility>                                       // as_const
 
-namespace xstd {
+namespace xstd::detail::bits {
 
 // [template.bitset] over a storage of ours, which speaks the bitset vocabulary by construction.
-template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits, class Derived = void>
-class bitset_adaptor : public detail::bits::allocator_base_type<Bits>
+template<specialization_of_TN<contiguous_bit_container> Bits, class Derived = void>
+class bitset_adaptor : public allocator_base_type<Bits>
 {
         // One wrapper, two counterparts: std::bitset at a static width, boost::dynamic_bitset at a run-time one.
         static constexpr bool has_static_width = (Bits::extent != std::dynamic_extent);
@@ -61,9 +61,9 @@ class bitset_adaptor : public detail::bits::allocator_base_type<Bits>
         friend Derived;
 
         // A view refers into this owner's storage, and only a reading that can view it is named.
-        template<specialization_of_TN<detail::bits::contiguous_bit_container>, storage, class>
+        template<specialization_of_TN<contiguous_bit_container>, storage, class>
         friend class set_adaptor;
-        template<specialization_of_TN<detail::bits::contiguous_bit_container>, storage, window, class>
+        template<specialization_of_TN<contiguous_bit_container>, storage, window, class>
         friend class sequence_adaptor;
 
         // The value through the trait: the blocks and the width.
@@ -71,7 +71,7 @@ class bitset_adaptor : public detail::bits::allocator_base_type<Bits>
         friend constexpr auto tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, bitset_adaptor const* v) noexcept
                 -> void
         {
-                detail::bits::hash_append_bits(h, f, v->m_bits);
+                hash_append_bits(h, f, v->m_bits);
         }
 
         // The most-derived type is what every operation hands back, so the containers keep their own names.
@@ -389,7 +389,7 @@ public:
         constexpr auto set(std::size_t pos, [[maybe_unused]] bool val = true)
                 -> Derived&
         {
-                if constexpr (detail::bits::zero_width<Bits>) {
+                if constexpr (zero_width<Bits>) {
                         throw out_of_range(pos);
                 } else {
                         guard(pos);
@@ -401,7 +401,7 @@ public:
         constexpr auto reset(std::size_t pos)
                 -> Derived&
         {
-                if constexpr (detail::bits::zero_width<Bits>) {
+                if constexpr (zero_width<Bits>) {
                         throw out_of_range(pos);
                 } else {
                         guard(pos);
@@ -413,7 +413,7 @@ public:
         constexpr auto flip(std::size_t pos)
                 -> Derived&
         {
-                if constexpr (detail::bits::zero_width<Bits>) {
+                if constexpr (zero_width<Bits>) {
                         throw out_of_range(pos);
                 } else {
                         guard(pos);
@@ -449,7 +449,7 @@ public:
         constexpr auto test_set(std::size_t pos, [[maybe_unused]] bool val = true)
                 -> bool
         {
-                if constexpr (detail::bits::zero_width<Bits>) {
+                if constexpr (zero_width<Bits>) {
                         throw out_of_range(pos);
                 } else {
                         guard(pos);
@@ -566,7 +566,7 @@ public:
         [[nodiscard]] constexpr auto test(std::size_t pos) const
                 -> bool
         {
-                if constexpr (detail::bits::zero_width<Bits>) {
+                if constexpr (zero_width<Bits>) {
                         throw out_of_range(pos);
                 } else {
                         guard(pos);
@@ -629,7 +629,7 @@ public:
         [[nodiscard]] constexpr auto find_first() const noexcept
                 -> std::size_t
         {
-                if constexpr (detail::bits::zero_width<Bits>) {
+                if constexpr (zero_width<Bits>) {
                         return npos;
                 } else {
                         auto const n = m_bits.find_first();
@@ -641,7 +641,7 @@ public:
         [[nodiscard]] constexpr auto find_next(std::size_t pos) const noexcept
                 -> std::size_t
         {
-                if constexpr (detail::bits::zero_width<Bits>) {
+                if constexpr (zero_width<Bits>) {
                         return npos;
                 } else {
                         if (pos >= size()) {
@@ -662,7 +662,7 @@ public:
         [[nodiscard]] constexpr auto find_prev(std::size_t pos) const noexcept
                 -> std::size_t
         {
-                if constexpr (detail::bits::zero_width<Bits>) {
+                if constexpr (zero_width<Bits>) {
                         return npos;
                 } else {
                         // Nothing is set below the first set position, which is the width where nothing is set.
@@ -949,7 +949,7 @@ struct owned_storage<bitset_adaptor<Bits, Derived>>
         static constexpr auto reads = reading::bitset;
 };
 
-} // namespace xstd
+} // namespace xstd::detail::bits
 
 namespace std {
 
@@ -957,9 +957,9 @@ namespace std {
 
 // bitset hash support [bitset.hash]; no redeclaration of std::hash's primary template, which [namespace.std] forbids.
 template<class Bits, class Derived>
-struct hash<xstd::bitset_adaptor<Bits, Derived>>
+struct hash<xstd::detail::bits::bitset_adaptor<Bits, Derived>>
 {
-        [[nodiscard]] constexpr auto operator()(xstd::bitset_adaptor<Bits, Derived> const& v) const noexcept
+        [[nodiscard]] constexpr auto operator()(xstd::detail::bits::bitset_adaptor<Bits, Derived> const& v) const noexcept
                 -> std::size_t
         {
                 return xstd::detail::bits::std_hash(v);
@@ -970,7 +970,7 @@ struct hash<xstd::bitset_adaptor<Bits, Derived>>
 
 } // namespace std
 
-namespace xstd {
+namespace xstd::detail::bits {
 
 // bitset operators                                           [bitset.operators]
 template<class Bits, class Derived>
@@ -1088,6 +1088,6 @@ auto operator<<(std::basic_ostream<charT, traits>& os, bitset_adaptor<Bits, Deri
                );
 }
 
-} // namespace xstd
+} // namespace xstd::detail::bits
 
 #endif // XSTD_BITS_DETAIL_BITSET_ADAPTOR_HPP

@@ -21,9 +21,9 @@ namespace xstd {
 
 // A resizable bitset that never allocates; no bit_ prefix, bitset already carrying the word.
 template<xstd::unsigned_integer Block, std::size_t N>
-class basic_inplace_bitset : public bitset_adaptor<detail::bits::contiguous_bit_inplace_vector<Block, N>, basic_inplace_bitset<Block, N>>
+class basic_inplace_bitset : public detail::bits::bitset_adaptor<detail::bits::contiguous_bit_inplace_vector<Block, N>, basic_inplace_bitset<Block, N>>
 {
-        using base_type = bitset_adaptor<detail::bits::contiguous_bit_inplace_vector<Block, N>, basic_inplace_bitset<Block, N>>;
+        using base_type = detail::bits::bitset_adaptor<detail::bits::contiguous_bit_inplace_vector<Block, N>, basic_inplace_bitset<Block, N>>;
 
 public:
         using base_type::base_type;
@@ -40,12 +40,16 @@ public:
 template<std::size_t N>
 using inplace_bitset = basic_inplace_bitset<std::size_t, N>;
 
+} // namespace xstd
+
+namespace xstd::detail::bits {
+
 // A container answers every trait as the vehicle it is built on, which is where each one is defined.
 template<xstd::unsigned_integer Block, std::size_t N>
 struct owned_storage<basic_inplace_bitset<Block, N>> : owned_storage<typename basic_inplace_bitset<Block, N>::adaptor_type>
 {};
 
-} // namespace xstd
+} // namespace xstd::detail::bits
 
 namespace std {
 

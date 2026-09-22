@@ -30,7 +30,7 @@ struct ref_same_as_pred
 };
 
 // Every set adaptor hands out a proxy converting to the key, whatever its storage, storage or container.
-template<xstd::set_adaptor_like X>
+template<xstd::detail::bits::set_adaptor_like X>
 struct ref_same_as_pred<X>
 {
         template<class R, class T>

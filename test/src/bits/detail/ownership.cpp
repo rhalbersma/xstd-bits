@@ -10,17 +10,17 @@ BOOST_AUTO_TEST_SUITE(Ownership)
 
 BOOST_AUTO_TEST_CASE(OwningIsOneOfTwoAnswers)
 {
-        static_assert(owns(xstd::storage::owned));
-        static_assert(not owns(xstd::storage::borrowed));
-        BOOST_CHECK(xstd::storage::owned != xstd::storage::borrowed);
+        static_assert(owns(xstd::detail::bits::storage::owned));
+        static_assert(not owns(xstd::detail::bits::storage::borrowed));
+        BOOST_CHECK(xstd::detail::bits::storage::owned != xstd::detail::bits::storage::borrowed);
 }
 
 // A bitset is a hybrid of the other two rather than a refinement, so the three stand apart with none nested inside another.
 BOOST_AUTO_TEST_CASE(TheReadingsAreThreeAndDistinct)
 {
-        static_assert(xstd::reading::set != xstd::reading::sequence);
-        static_assert(xstd::reading::sequence != xstd::reading::bitset);
-        static_assert(xstd::reading::bitset != xstd::reading::set);
+        static_assert(xstd::detail::bits::reading::set != xstd::detail::bits::reading::sequence);
+        static_assert(xstd::detail::bits::reading::sequence != xstd::detail::bits::reading::bitset);
+        static_assert(xstd::detail::bits::reading::bitset != xstd::detail::bits::reading::set);
         BOOST_CHECK(true);
 }
 

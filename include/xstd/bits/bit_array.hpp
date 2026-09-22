@@ -22,9 +22,9 @@ namespace xstd {
 
 // The packed std::array<bool, N>, named after the container it packs.
 template<xstd::unsigned_integer Block, std::size_t N>
-class basic_bit_array : public sequence_adaptor<detail::bits::contiguous_bit_array<Block, N>, storage::owned, window::all, basic_bit_array<Block, N>>
+class basic_bit_array : public detail::bits::sequence_adaptor<detail::bits::contiguous_bit_array<Block, N>, detail::bits::storage::owned, detail::bits::window::all, basic_bit_array<Block, N>>
 {
-        using base_type = sequence_adaptor<detail::bits::contiguous_bit_array<Block, N>, storage::owned, window::all, basic_bit_array<Block, N>>;
+        using base_type = detail::bits::sequence_adaptor<detail::bits::contiguous_bit_array<Block, N>, detail::bits::storage::owned, detail::bits::window::all, basic_bit_array<Block, N>>;
 
 public:
         using base_type::base_type;
@@ -51,12 +51,16 @@ using bit_array = basic_bit_array<std::size_t, N>;
 
 } // namespace aligned
 
+} // namespace xstd
+
+namespace xstd::detail::bits {
+
 // A container answers every trait as the vehicle it is built on, which is where each one is defined.
 template<xstd::unsigned_integer Block, std::size_t N>
 struct owned_storage<basic_bit_array<Block, N>> : owned_storage<typename basic_bit_array<Block, N>::adaptor_type>
 {};
 
-} // namespace xstd
+} // namespace xstd::detail::bits
 
 namespace std {
 

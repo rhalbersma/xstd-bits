@@ -31,7 +31,7 @@ inline constexpr auto L4 = 16UZ;
 
 // A static width is its own limit; a growing one, ours or the standard library's, takes the sweep's.
 template<class X>
-concept static_width = requires { typename xstd::owned_storage<X>::bits_type; } and (xstd::owned_storage<X>::bits_type::extent != std::dynamic_extent);
+concept static_width = requires { typename xstd::detail::bits::owned_storage<X>::bits_type; } and (xstd::detail::bits::owned_storage<X>::bits_type::extent != std::dynamic_extent);
 
 template<class X, std::size_t Limit>
 inline constexpr auto limit_v = [] -> std::size_t {
