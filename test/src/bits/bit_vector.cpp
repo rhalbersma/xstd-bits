@@ -13,11 +13,11 @@
 #include <xstd/bits/detail/ownership.hpp>             // storage
 #include <xstd/bits/detail/sequence_adaptor.hpp>      // sequence_adaptor
 #include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_LT, BOOST_CHECK_THROW
-#include <algorithm>                                  // copy, equal
+#include <algorithm>                                  // copy, equal, is_sorted, ranges::count, ranges::is_sorted, ranges::sort, sort
 #include <concepts>                                   // same_as
 #include <cstddef>                                    // ptrdiff_t, size_t
-#include <cstdint>                                    // uint8_t
-#include <functional>                                 // hash
+#include <cstdint>                                    // uint64_t, uint8_t
+#include <functional>                                 // hash, ranges::greater
 #include <iterator>                                   // next
 #include <limits>                                     // numeric_limits
 #include <memory>                                     // allocator
@@ -447,6 +447,43 @@ BOOST_AUTO_TEST_CASE(ItYieldsEveryPosition)
                 c[n] = (n % 3UZ == 0UZ);
         }
         test::sequence::yields_every_position(c);
+}
+
+// std::sort over the proxies orders random bits as it orders std::vector<bool>'s, both ways, across block boundaries.
+BOOST_AUTO_TEST_CASE(SortingRandomBitsLeavesThemSorted)
+{
+        // Fixed width, not ULL: a fixed seed should reproduce the same sequence on every platform.
+        auto lcg = std::uint64_t{0x9E3779B97F4A7C15};
+        auto const next_bit = [&lcg] -> bool { lcg = (lcg * 6364136223846793005ULL) + 1442695040888963407ULL; return (lcg >> 33U & 1U) != 0U; };
+        auto const fill = [&next_bit](T& v, std::vector<bool>& m) -> void {
+                for (auto i = 0UZ; i < v.size(); ++i) {
+                        auto const b = next_bit();
+                        v[i] = b;
+                        m[i] = b;
+                }
+        };
+
+        for (auto const n : {0UZ, 1UZ, 7UZ, 8UZ, 9UZ, 64UZ, 65UZ, 199UZ, 1000UZ}) {
+                auto v = T(n);
+                auto m = std::vector<bool>(n);
+
+                // The pre-ranges algorithms on purpose: they reach the bits through iter_swap and the swap friends.
+                fill(v, m);
+                auto const ones = static_cast<std::size_t>(std::ranges::count(m, true));
+                BOOST_CHECK_EQUAL(std::is_sorted(v.begin(), v.end()), std::ranges::is_sorted(m)); // NOLINT(modernize-use-ranges)
+                std::sort(v.begin(), v.end());                                                    // NOLINT(modernize-use-ranges)
+                std::ranges::sort(m);
+                BOOST_CHECK(std::is_sorted(v.begin(), v.end())); // NOLINT(modernize-use-ranges)
+                BOOST_CHECK(std::ranges::equal(v, m));
+                BOOST_CHECK_EQUAL(v.count(), ones);
+
+                // Descending under std::ranges::greater: every true before every false.
+                fill(v, m);
+                std::ranges::sort(v, std::ranges::greater());
+                std::ranges::sort(m, std::ranges::greater());
+                BOOST_CHECK(std::ranges::is_sorted(v, std::ranges::greater()));
+                BOOST_CHECK(std::ranges::equal(v, m));
+        }
 }
 
 BOOST_AUTO_TEST_SUITE_END()
