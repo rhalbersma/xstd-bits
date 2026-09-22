@@ -8,6 +8,7 @@
 include(CMakeFindDependencyMacro)
 find_dependency(xstd-ints 0.1.0 CONFIG)
 find_dependency(xstd-misc 0.1.0 CONFIG)
+find_dependency(boost_container CONFIG)
 find_dependency(boost_hash2 CONFIG)
 
 include("${CMAKE_CURRENT_LIST_DIR}/xstd-bitsTargets.cmake")

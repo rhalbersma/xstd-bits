@@ -5,6 +5,7 @@
   "homepage": "https://github.com/rhalbersma/xstd-bits",
   "license": "BSL-1.0",
   "dependencies": [
+    "boost-container",
     "boost-hash2"
   ],
   "default-features": [

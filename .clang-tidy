@@ -18,6 +18,16 @@
 # one) is the signature std::bitset::to_string carries, and
 # lexicographical_three_way compares two bitsets because that is what
 # comparing two bitsets means. Neither pair can be reordered or retyped.
+# bugprone-exception-escape is off because the small-vector column makes it
+# fire on a constructor that cannot throw. The adaptor's defaulted default
+# constructor is noexcept, and std::is_nothrow_default_constructible_v holds
+# for boost::container::small_vector, so the specification is honoured rather
+# than deleted and no allocation happens. The check reaches a throw anyway by
+# walking Boost's vector base into allocation_command, a path that default
+# construction never takes. It reports nothing for the std-backed columns, so
+# what is lost is a regression guard rather than a live finding, and there is
+# no narrower switch: the diagnostic lands on a header every column shares,
+# and IgnoredExceptions does not match a throw found through an indirect call.
 # bugprone-crtp-constructor-accessibility is off because the three adaptors
 # are not pure CRTP bases. Their trailing parameter defaults to void, and a
 # view is then the adaptor itself rather than a class deriving from it, so
@@ -43,7 +53,8 @@ Checks: >
   -readability-named-parameter,
   -readability-simplify-boolean-expr,
   -bugprone-easily-swappable-parameters,
-  -bugprone-crtp-constructor-accessibility
+  -bugprone-crtp-constructor-accessibility,
+  -bugprone-exception-escape
 WarningsAsErrors: '*'
 HeaderFilterRegex: '(include/xstd|test/include)/.*'
 FormatStyle: none

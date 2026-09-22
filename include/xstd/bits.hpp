@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_HPP
 #define XSTD_BITS_HPP
 
-// The umbrella over every container; not the ext adaptors, which would put Boost on every consumer path.
+// The umbrella over every container the standard library can store; the ext column stays out, so Boost is opt-in.
 #include <xstd/bits/basic_bits.hpp>              // IWYU pragma: export; basic_bits
 #include <xstd/bits/bit_array.hpp>               // IWYU pragma: export; bit_array
 #include <xstd/bits/bit_inplace_set.hpp>         // IWYU pragma: export; bit_inplace_set

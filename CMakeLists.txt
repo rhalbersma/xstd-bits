@@ -51,6 +51,9 @@ endif()
 # Boost.Hash2 is a public dependency of this library's headers, not just of the tests, so it is declared explicitly.
 find_package(boost_hash2 CONFIG REQUIRED)
 
+# Boost.Container likewise, for the one storage column the standard library does not supply; ext/ keeps it opt-in to include.
+find_package(boost_container CONFIG REQUIRED)
+
 add_library(
     ${PROJECT_NAME} INTERFACE
 )
@@ -94,6 +97,7 @@ target_sources(
         include/xstd/bits/detail/hash.hpp
         include/xstd/bits/detail/intrin.hpp
         include/xstd/bits/dynamic_bitset.hpp
+        include/xstd/bits/ext/boost.hpp
         include/xstd/bits/detail/pred.hpp
         include/xstd/bits/detail/bit_castable.hpp
         include/xstd/bits/detail/random_access.hpp
@@ -133,6 +137,7 @@ target_link_libraries(
     ${PROJECT_NAME} INTERFACE
     xstd::ints
     xstd::misc
+    Boost::container
     Boost::hash2
 )
 

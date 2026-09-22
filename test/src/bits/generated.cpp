@@ -6,7 +6,7 @@
 #include <xstd/bits.hpp>            // bit_array, bit_set, bit_static_set, bit_vector, bitset, dynamic_bitset, and the inplace column
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <compare>                  // three_way_comparable
-#include <concepts>                 // copyable, default_initializable, movable, swappable, totally_ordered
+#include <concepts>                 // copyable, default_initializable, movable, ranges::swap, swappable, totally_ordered
 #include <cstddef>                  // size_t
 #include <memory_resource>          // polymorphic_allocator
 #include <scoped_allocator>         // scoped_allocator_adaptor
@@ -72,6 +72,8 @@ template<class T>
 concept member_swap_is_nothrow = requires (T& a, T& b) { requires noexcept(a.swap(b)); };
 template<class T>
 concept std_swap_is_nothrow = requires (T& a, T& b) { requires noexcept(std::swap(a, b)); };
+template<class T>
+concept cpo_swap_is_nothrow = requires (T& a, T& b) { requires noexcept(std::ranges::swap(a, b)); };
 
 // Values come out exchanged whichever swap ran, so the two are told apart by noexcept instead. The
 // allocator has to make std itself an associated namespace, which is why it is the adaptor and not the
@@ -86,6 +88,11 @@ constexpr auto free_swap_is_not_std_swap()
         static_assert(member_swap_is_nothrow<T>);
         static_assert(not std_swap_is_nothrow<T>);
         static_assert(free_swap_is_nothrow<T>);
+
+        // The customization point reaches it too. Its own ADL step declares a deleted swap template to keep
+        // std::swap out, and that template is an exact match: a swap the library declared one class further
+        // up would lose to it on the conversion and take the whole ADL step down with it, leaving the moves.
+        static_assert(cpo_swap_is_nothrow<T>);
         return true;
 }
 
