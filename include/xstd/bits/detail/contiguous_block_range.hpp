@@ -9,7 +9,10 @@
 #include <xstd/bits/detail/range_const_reference.hpp> // range_const_reference_t
 #include <xstd/ints/concepts/unsigned_integer.hpp>    // unsigned_integer
 #include <concepts>                                   // regular, same_as
+#include <cstddef>                                    // size_t
 #include <ranges>                                     // contiguous_range, range_reference_t, range_value_t, sized_range
+#include <span>                                       // span
+#include <type_traits>                                // is_const_v
 
 namespace xstd::detail::bits {
 
@@ -27,6 +30,17 @@ concept contiguous_block_range =
         requires (C const& c, C::size_type n) {
                 { c[n] } -> std::same_as<range_const_reference_t<C>>;
         };
+
+template<class C>
+inline constexpr bool is_block_span = false;
+
+template<class B, std::size_t E>
+        requires xstd::unsigned_integer<B> and (not std::is_const_v<B>)
+inline constexpr bool is_block_span<std::span<B, E>> = true;
+
+// Blocks someone else owns, written through a span: a handle, so neither regular nor deep-const.
+template<class C>
+concept borrowed_block_span = is_block_span<C>;
 
 } // namespace xstd::detail::bits
 

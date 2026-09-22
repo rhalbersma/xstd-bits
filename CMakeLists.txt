@@ -80,6 +80,7 @@ target_sources(
         include/xstd/bits/bit_set_view.hpp
         include/xstd/bits/bit_span.hpp
         include/xstd/bits/bitset.hpp
+        include/xstd/bits/borrowed_bits.hpp
         include/xstd/bits/bit_static_set.hpp
         include/xstd/bits/bit_subspan.hpp
         include/xstd/bits/bit_vector.hpp

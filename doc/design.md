@@ -1900,6 +1900,40 @@ product of `N` objects, and a packed sequence is one object. `std::hash` is aske
 `std::array` having none, while `bit_array` hashes as every owner does
 ([the-hashing-invariant](#the-hashing-invariant)).
 
+### borrowed-words
+
+A view refers through a `Bits*`, so viewing words that belong to no container of ours takes a storage object for
+the pointer to reach: `xstd::borrowed_bits<Block, Extent>`, which is `contiguous_bit_container` over a
+`std::span<Block, Extent>`. `xstd::borrow_bits` makes one from a single word or a contiguous range of words, and
+`bit_set_view` and `bit_span` take it through the guides they already have for a plain storage. The handle is the
+span and nothing else -- 8 bytes over one word or an array, 16 over a vector -- and a view over it is the usual
+pointer, so reading the set bits of an existing `std::uint64_t` in place costs two objects and no copy.
+
+Every bit of the words is a position: bit `n` of word `i` is position `i * digits + n`, which is the order
+`from_bits` already reads an integer in. So the width is the words', and there is no tail for the storage to keep
+clear -- the invariant a width of our own needs is vacuous here, which is what lets the words be anyone's. The
+width takes one of two forms, both named by the span's own type through `default_extent_v`:
+
+- A span of static extent `K` is a static width of `K * digits`, and runs the same arms as a `std::array`,
+  the one- and two-block paths included. One word is `std::span<Block, 1>`.
+- A span of dynamic extent is `blocks_extent`, a third value of `N` beside a bit count and `std::dynamic_extent`:
+  a run-time width that is not a member, `size()` being the span's length times `digits`.
+
+So `has_static_size` asks whether the width is a template argument and `has_stored_size` whether it is a member,
+and the members that grow, the written-out moves and the allocator constructors are the second question's: a
+borrowed run-time width neither grows nor moves anything but a span. `extent` still answers
+`std::dynamic_extent` for `blocks_extent`, which is what every reading already asks to mean "not static".
+
+The class admits the span beside `contiguous_block_range`, and only at the span's own default width: a narrower
+`N` over someone else's words would have a tail the storage could not keep clear. The span is refused as a
+`contiguous_block_range` on purpose and stays refused -- it is not `regular`, and its const subscript writes --
+so `borrowed_block_span` is its own concept, with a mutable unsigned element. Constness belongs to the view:
+`bit_set_view(std::as_const(bits))` reads and cannot write, as a view over a const owner cannot.
+
+A temporary cannot be viewed, which is the point of taking the storage by lvalue reference: the handle has to
+outlive the view, and `bit_set_view(borrow_bits(w))` does not compile. What this gives up is the one-expression
+form; what it keeps is the adaptors as they are, with no fourth kind of storage beside owned and borrowed.
+
 ### views-over-owners
 
 An owner is not itself a storage — `bit_static_set`, `bit_array` and `bitset` are thin wrappers over a
