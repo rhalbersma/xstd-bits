@@ -3,8 +3,8 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_SET_ADAPTOR_HPP
-#define XSTD_BITS_SET_ADAPTOR_HPP
+#ifndef XSTD_BITS_DETAIL_SET_ADAPTOR_HPP
+#define XSTD_BITS_DETAIL_SET_ADAPTOR_HPP
 
 #include <xstd/bits/detail/allocator_base_type.hpp>      // allocator_base_type
 #include <xstd/bits/detail/bidirectional.hpp>            // bidirectional_bit_iterator, bidirectional_bit_reference
@@ -14,9 +14,9 @@
 #include <xstd/bits/detail/intrin.hpp>                   // countl_zero, countr_zero
 #include <xstd/bits/detail/shift.hpp>                    // shl, shr
 #include <xstd/bits/detail/zero_width.hpp>               // zero_width
-#include <xstd/bits/grid.hpp>                            // adaptor
-#include <xstd/bits/ownership.hpp>                       // owned_bits_t, owned_storage, owner_of, owner_reading, storage, owns
-#include <xstd/bits/tags.hpp>                            // set_reading_tag
+#include <xstd/bits/detail/grid.hpp>                     // adaptor
+#include <xstd/bits/detail/ownership.hpp>                // owned_bits_t, owned_storage, owner_of, owner_reading, storage, owns
+#include <xstd/bits/detail/tags.hpp>                     // set_reading_tag
 #include <xstd/misc/concepts/specialization_of.hpp>      // specialization_of_TN
 #include <xstd/misc/type_traits/empty_base_type.hpp>     // empty_base_type
 #include <boost/container_hash/is_range.hpp>             // is_range
@@ -931,4 +931,4 @@ struct is_range<xstd::set_adaptor<Bits, Store, Derived>> : std::false_type
 
 } // namespace boost::container_hash
 
-#endif // XSTD_BITS_SET_ADAPTOR_HPP
+#endif // XSTD_BITS_DETAIL_SET_ADAPTOR_HPP

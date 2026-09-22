@@ -6,10 +6,10 @@
 #ifndef XSTD_BITS_BITSET_HPP
 #define XSTD_BITS_BITSET_HPP
 
-#include <xstd/bits/basic_bits.hpp>                  // basic_bits
-#include <xstd/bits/bitset_adaptor.hpp>              // IWYU pragma: keep; the adaptor bitset_reading_tag names
+#include <xstd/bits/detail/basic_bits.hpp>           // basic_bits
+#include <xstd/bits/detail/bitset_adaptor.hpp>       // IWYU pragma: keep; the adaptor bitset_reading_tag names
 #include <xstd/bits/detail/contiguous_bit_array.hpp> // IWYU pragma: keep; the storage array_container_tag names
-#include <xstd/bits/tags.hpp>                        // array_container_tag, bitset_reading_tag
+#include <xstd/bits/detail/tags.hpp>                 // array_container_tag, bitset_reading_tag
 #include <xstd/ints/concepts/unsigned_integer.hpp>   // unsigned_integer
 #include <xstd/ints/memory.hpp>                      // align_up
 #include <cstddef>                                   // size_t

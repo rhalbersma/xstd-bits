@@ -7,8 +7,8 @@
 #define XSTD_BITS_DETAIL_CONTIGUOUS_BIT_VECTOR_HPP
 
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
-#include <xstd/bits/grid.hpp>                            // bits_of
-#include <xstd/bits/tags.hpp>                            // vector_container_tag
+#include <xstd/bits/detail/grid.hpp>                     // bits_of
+#include <xstd/bits/detail/tags.hpp>                     // vector_container_tag
 #include <xstd/ints/concepts/unsigned_integer.hpp>       // unsigned_integer
 #include <span>                                          // dynamic_extent
 #include <memory>                                        // allocator

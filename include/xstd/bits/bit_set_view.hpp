@@ -7,9 +7,9 @@
 #define XSTD_BITS_BIT_SET_VIEW_HPP
 
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
-#include <xstd/bits/ownership.hpp>                       // storage
-#include <xstd/bits/tags.hpp>                            // set_reading_tag
-#include <xstd/bits/set_adaptor.hpp>                     // set_adaptor
+#include <xstd/bits/detail/ownership.hpp>                // storage
+#include <xstd/bits/detail/tags.hpp>                     // set_reading_tag
+#include <xstd/bits/detail/set_adaptor.hpp>              // set_adaptor
 #include <xstd/misc/concepts/specialization_of.hpp>      // specialization_of_TN
 #include <boost/container_hash/is_range.hpp>             // is_range
 #include <functional>                                    // hash

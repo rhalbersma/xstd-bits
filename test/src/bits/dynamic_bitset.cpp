@@ -4,7 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/sanitizer.hpp>                         // IWYU pragma: keep; TEST_HAS_ADDRESS_SANITIZER
-#include <xstd/bits/bitset_adaptor.hpp>               // bitset_adaptor
+#include <xstd/bits/detail/bitset_adaptor.hpp>        // bitset_adaptor
 #include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
 #include <xstd/bits/dynamic_bitset.hpp>               // dynamic_bitset
 #include <boost/dynamic_bitset.hpp>                   // dynamic_bitset, to_string

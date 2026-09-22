@@ -5,12 +5,12 @@
 
 #include <test/bit_exchange.hpp>                      // exchanges_from_bits, exchanges_to_bits
 #include <xstd/bits/bit_set.hpp>                      // bit_set
-#include <xstd/bits/basic_bits.hpp>                   // swap
+#include <xstd/bits/detail/basic_bits.hpp>            // swap
 #include <xstd/bits/bit_static_set.hpp>               // bit_static_set
 #include <xstd/bits/detail/contiguous_bit_array.hpp>  // contiguous_bit_array
 #include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
-#include <xstd/bits/ownership.hpp>                    // storage
-#include <xstd/bits/set_adaptor.hpp>                  // set_adaptor
+#include <xstd/bits/detail/ownership.hpp>             // storage
+#include <xstd/bits/detail/set_adaptor.hpp>           // set_adaptor
 #include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <bitset>                                     // bitset
 #include <algorithm>                                  // lexicographical_compare_three_way, ranges::equal

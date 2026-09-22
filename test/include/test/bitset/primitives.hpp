@@ -6,20 +6,20 @@
 #ifndef TEST_BITSET_PRIMITIVES_HPP
 #define TEST_BITSET_PRIMITIVES_HPP
 
-#include <test/dynamic.hpp>           // dynamic
-#include <xstd/bits/bit_set_view.hpp> // view
-#include <xstd/bits/ownership.hpp>    // owned_storage
-#include <boost/test/unit_test.hpp>   // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_NE, BOOST_CHECK_THROW
-#include <algorithm>                  // all_of, any_of, equal, fold_left
-#include <cstddef>                    // size_t
-#include <functional>                 // hash
-#include <memory>                     // addressof
-#include <ranges>                     // iota, transform
-#include <set>                        // set
-#include <sstream>                    // istringstream, stringstream
-#include <stdexcept>                  // invalid_argument, out_of_range
-#include <string>                     // string
-#include <string_view>                // string_view
+#include <test/dynamic.hpp>               // dynamic
+#include <xstd/bits/bit_set_view.hpp>     // view
+#include <xstd/bits/detail/ownership.hpp> // owned_storage
+#include <boost/test/unit_test.hpp>       // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_NE, BOOST_CHECK_THROW
+#include <algorithm>                      // all_of, any_of, equal, fold_left
+#include <cstddef>                        // size_t
+#include <functional>                     // hash
+#include <memory>                         // addressof
+#include <ranges>                         // iota, transform
+#include <set>                            // set
+#include <sstream>                        // istringstream, stringstream
+#include <stdexcept>                      // invalid_argument, out_of_range
+#include <string>                         // string
+#include <string_view>                    // string_view
 
 namespace test::bitset {
 

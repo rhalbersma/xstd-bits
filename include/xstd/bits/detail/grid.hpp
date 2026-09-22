@@ -3,11 +3,11 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_GRID_HPP
-#define XSTD_BITS_GRID_HPP
+#ifndef XSTD_BITS_DETAIL_GRID_HPP
+#define XSTD_BITS_DETAIL_GRID_HPP
 
-#include <xstd/bits/ownership.hpp>                 // storage, window
-#include <xstd/bits/tags.hpp>                      // container_tag, reading_tag
+#include <xstd/bits/detail/ownership.hpp>          // storage, window
+#include <xstd/bits/detail/tags.hpp>               // container_tag, reading_tag
 #include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
 #include <cstddef>                                 // size_t
 #include <span>                                    // dynamic_extent
@@ -27,4 +27,4 @@ class adaptor;
 
 } // namespace xstd
 
-#endif // XSTD_BITS_GRID_HPP
+#endif // XSTD_BITS_DETAIL_GRID_HPP

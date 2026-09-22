@@ -3,22 +3,22 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/inplace_vector.hpp>      // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
-#include <xstd/bits/basic_bits.hpp>     // basic_bits
-#include <xstd/bits/bit_array.hpp>      // basic_bit_array
-#include <xstd/bits/bit_set.hpp>        // basic_bit_set
-#include <xstd/bits/bit_static_set.hpp> // basic_bit_static_set
-#include <xstd/bits/bit_vector.hpp>     // basic_bit_vector
-#include <xstd/bits/bitset.hpp>         // basic_bitset
-#include <xstd/bits/dynamic_bitset.hpp> // basic_dynamic_bitset
-#include <xstd/bits/grid.hpp>           // adaptor, bits_t
-#include <xstd/bits/ownership.hpp>      // owned_bits_t, storage, window
-#include <xstd/bits/tags.hpp>           // array_container_tag, bitset_reading_tag, inplace_vector_container_tag, sequence_reading_tag, set_reading_tag, vector_container_tag
-#include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
-#include <concepts>                     // derived_from, same_as
-#include <cstddef>                      // size_t
-#include <memory>                       // allocator
-#include <span>                         // dynamic_extent
+#include <test/inplace_vector.hpp>         // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
+#include <xstd/bits/detail/basic_bits.hpp> // basic_bits
+#include <xstd/bits/bit_array.hpp>         // basic_bit_array
+#include <xstd/bits/bit_set.hpp>           // basic_bit_set
+#include <xstd/bits/bit_static_set.hpp>    // basic_bit_static_set
+#include <xstd/bits/bit_vector.hpp>        // basic_bit_vector
+#include <xstd/bits/bitset.hpp>            // basic_bitset
+#include <xstd/bits/dynamic_bitset.hpp>    // basic_dynamic_bitset
+#include <xstd/bits/detail/grid.hpp>       // adaptor, bits_t
+#include <xstd/bits/detail/ownership.hpp>  // owned_bits_t, storage, window
+#include <xstd/bits/detail/tags.hpp>       // array_container_tag, bitset_reading_tag, inplace_vector_container_tag, sequence_reading_tag, set_reading_tag, vector_container_tag
+#include <boost/test/unit_test.hpp>        // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
+#include <concepts>                        // derived_from, same_as
+#include <cstddef>                         // size_t
+#include <memory>                          // allocator
+#include <span>                            // dynamic_extent
 
 #ifdef TEST_HAS_INPLACE_VECTOR
 #include <xstd/bits/bit_inplace_set.hpp>    // basic_bit_inplace_set

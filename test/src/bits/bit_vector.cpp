@@ -10,8 +10,8 @@
 #include <xstd/bits/bit_span.hpp>                     // bit_span
 #include <xstd/bits/bit_vector.hpp>                   // bit_vector
 #include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
-#include <xstd/bits/ownership.hpp>                    // storage
-#include <xstd/bits/sequence_adaptor.hpp>             // sequence_adaptor
+#include <xstd/bits/detail/ownership.hpp>             // storage
+#include <xstd/bits/detail/sequence_adaptor.hpp>      // sequence_adaptor
 #include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_LT, BOOST_CHECK_THROW
 #include <algorithm>                                  // copy, equal
 #include <concepts>                                   // same_as

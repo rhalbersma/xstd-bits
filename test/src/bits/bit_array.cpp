@@ -3,24 +3,24 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/block_types.hpp>           // graded_extents
-#include <test/sequence/concepts.hpp>     // bit_sequence
-#include <test/sequence/dense.hpp>        // yields_every_position
-#include <test/value_reference.hpp>       // value_reference
-#include <xstd/bits/bit_array.hpp>        // bit_array
-#include <xstd/bits/sequence_adaptor.hpp> // get, which bit_array.hpp reaches through an alias and does not itself declare
-#include <boost/test/unit_test.hpp>       // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
-#include <algorithm>                      // equal, none_of
-#include <array>                          // array
-#include <concepts>                       // regular, same_as, totally_ordered
-#include <cstddef>                        // ptrdiff_t, size_t
-#include <functional>                     // hash, identity
-#include <iterator>                       // contiguous_iterator, random_access_iterator
-#include <ranges>                         // begin, contiguous_range, drop, random_access_range, take
-#include <stdexcept>                      // out_of_range
-#include <tuple>                          // tuple_cat, tuple_element_t, tuple_size_v
-#include <utility>                        // as_const, declval
-#include <vector>                         // vector
+#include <test/block_types.hpp>                  // graded_extents
+#include <test/sequence/concepts.hpp>            // bit_sequence
+#include <test/sequence/dense.hpp>               // yields_every_position
+#include <test/value_reference.hpp>              // value_reference
+#include <xstd/bits/bit_array.hpp>               // bit_array
+#include <xstd/bits/detail/sequence_adaptor.hpp> // get, which bit_array.hpp reaches through an alias and does not itself declare
+#include <boost/test/unit_test.hpp>              // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
+#include <algorithm>                             // equal, none_of
+#include <array>                                 // array
+#include <concepts>                              // regular, same_as, totally_ordered
+#include <cstddef>                               // ptrdiff_t, size_t
+#include <functional>                            // hash, identity
+#include <iterator>                              // contiguous_iterator, random_access_iterator
+#include <ranges>                                // begin, contiguous_range, drop, random_access_range, take
+#include <stdexcept>                             // out_of_range
+#include <tuple>                                 // tuple_cat, tuple_element_t, tuple_size_v
+#include <utility>                               // as_const, declval
+#include <vector>                                // vector
 
 BOOST_AUTO_TEST_SUITE(BitArray)
 

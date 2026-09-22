@@ -8,9 +8,9 @@
 
 #include <xstd/bits/bit_subspan.hpp>                     // IWYU pragma: keep; the inherited first, last and subspan return one
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
-#include <xstd/bits/ownership.hpp>                       // storage, window
-#include <xstd/bits/tags.hpp>                            // sequence_reading_tag
-#include <xstd/bits/sequence_adaptor.hpp>                // sequence_adaptor
+#include <xstd/bits/detail/ownership.hpp>                // storage, window
+#include <xstd/bits/detail/tags.hpp>                     // sequence_reading_tag
+#include <xstd/bits/detail/sequence_adaptor.hpp>         // sequence_adaptor
 #include <xstd/misc/concepts/specialization_of.hpp>      // specialization_of_TN
 #include <boost/container_hash/is_range.hpp>             // is_range
 #include <boost/container_hash/is_tuple_like.hpp>        // is_tuple_like

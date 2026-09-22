@@ -3,26 +3,23 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-// The two vehicle headers are named directly: a test may reach into detail/ where a user may not.
-#include <test/block_types.hpp>                       // graded_extents
-#include <test/flat_set.hpp>                          // IWYU pragma: keep; TEST_HAS_FLAT_SET
-#include <test/inplace_vector.hpp>                    // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
-#include <test/sequence/concepts.hpp>                 // bit_sequence
-#include <test/set/concepts.hpp>                      // bit_set
-#include <xstd/bits.hpp>                              // the whole bits surface
-#include <xstd/bits/detail/contiguous_bit_array.hpp>  // contiguous_bit_array
-#include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
-#include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE
-#include <array>                                      // array
-#include <concepts>                                   // same_as
-#include <cstddef>                                    // size_t
-#include <cstdint>                                    // uint8_t
-#include <limits>                                     // numeric_limits
-#include <memory>                                     // allocator
-#include <ranges>                                     // bidirectional_range, random_access_range
-#include <set>                                        // set
-#include <tuple>                                      // tuple_element_t, tuple_size_v
-#include <utility>                                    // index_sequence, make_index_sequence
+#include <test/block_types.hpp>       // graded_extents
+#include <test/flat_set.hpp>          // IWYU pragma: keep; TEST_HAS_FLAT_SET
+#include <test/inplace_vector.hpp>    // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
+#include <test/sequence/concepts.hpp> // bit_sequence
+#include <test/set/concepts.hpp>      // bit_set
+#include <xstd/bits.hpp>              // the whole bits surface
+#include <boost/test/unit_test.hpp>   // BOOST_AUTO_TEST_CASE
+#include <array>                      // array
+#include <concepts>                   // same_as
+#include <cstddef>                    // size_t
+#include <cstdint>                    // uint8_t
+#include <limits>                     // numeric_limits
+#include <memory>                     // allocator
+#include <ranges>                     // bidirectional_range, random_access_range
+#include <set>                        // set
+#include <tuple>                      // tuple_element_t, tuple_size_v
+#include <utility>                    // index_sequence, make_index_sequence
 
 // Every entity the umbrella promises, reached through it alone: no leaf test sees the umbrella at all.
 BOOST_AUTO_TEST_CASE(EveryContainerArrivesThroughTheUmbrella)
@@ -45,9 +42,7 @@ BOOST_AUTO_TEST_CASE(EveryContainerArrivesThroughTheUmbrella)
         static_assert(std::ranges::random_access_range<xstd::basic_bit_vector<std::size_t>>);
         static_assert(not std::ranges::range<xstd::basic_dynamic_bitset<std::size_t>>);
 
-        // Three layers: the primaries take the storage, basic_ chooses it, the restricted layer fixes size_t.
-        static_assert(std::derived_from<xstd::basic_bit_static_set<std::uint8_t, 8>, xstd::set_adaptor<xstd::detail::bits::contiguous_bit_array<std::uint8_t, 8>, xstd::storage::owned, xstd::basic_bit_static_set<std::uint8_t, 8>>>);
-        static_assert(std::derived_from<xstd::basic_bit_set<std::uint8_t>, xstd::set_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint8_t>, xstd::storage::owned, xstd::basic_bit_set<std::uint8_t>>>);
+        // The two layers the umbrella shows: basic_ chooses the storage, and the restricted name fixes size_t.
         static_assert(std::same_as<xstd::bit_static_set<8>, xstd::basic_bit_static_set<std::size_t, 8>>);
         static_assert(std::same_as<xstd::bit_array<8>, xstd::basic_bit_array<std::size_t, 8>>);
         static_assert(std::same_as<xstd::bitset<8>, xstd::basic_bitset<std::size_t, 8>>);

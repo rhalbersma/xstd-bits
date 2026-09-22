@@ -3,12 +3,12 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_OWNERSHIP_HPP
-#define XSTD_BITS_OWNERSHIP_HPP
+#ifndef XSTD_BITS_DETAIL_OWNERSHIP_HPP
+#define XSTD_BITS_DETAIL_OWNERSHIP_HPP
 
-#include <xstd/bits/tags.hpp> // bitset_reading_tag, reading_tag
-#include <concepts>           // same_as
-#include <type_traits>        // conditional_t, is_const_v, remove_const_t
+#include <xstd/bits/detail/tags.hpp> // bitset_reading_tag, reading_tag
+#include <concepts>                  // same_as
+#include <type_traits>               // conditional_t, is_const_v, remove_const_t
 
 namespace xstd {
 
@@ -52,4 +52,4 @@ concept owner_of =
 
 } // namespace xstd
 
-#endif // XSTD_BITS_OWNERSHIP_HPP
+#endif // XSTD_BITS_DETAIL_OWNERSHIP_HPP

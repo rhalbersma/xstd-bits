@@ -6,13 +6,13 @@
 #ifndef XSTD_BITS_EXT_BOOST_HPP
 #define XSTD_BITS_EXT_BOOST_HPP
 
-#include <xstd/bits/basic_bits.hpp>                      // basic_bits
-#include <xstd/bits/bitset_adaptor.hpp>                  // IWYU pragma: keep; the adaptor bitset_reading_tag names
+#include <xstd/bits/detail/basic_bits.hpp>               // basic_bits
+#include <xstd/bits/detail/bitset_adaptor.hpp>           // IWYU pragma: keep; the adaptor bitset_reading_tag names
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container, num_blocks_v
-#include <xstd/bits/grid.hpp>                            // bits_of
-#include <xstd/bits/sequence_adaptor.hpp>                // IWYU pragma: keep; the adaptor sequence_reading_tag names
-#include <xstd/bits/set_adaptor.hpp>                     // IWYU pragma: keep; the adaptor set_reading_tag names
-#include <xstd/bits/tags.hpp>                            // bitset_reading_tag, enable_container_tag, sequence_reading_tag, set_reading_tag
+#include <xstd/bits/detail/grid.hpp>                     // bits_of
+#include <xstd/bits/detail/sequence_adaptor.hpp>         // IWYU pragma: keep; the adaptor sequence_reading_tag names
+#include <xstd/bits/detail/set_adaptor.hpp>              // IWYU pragma: keep; the adaptor set_reading_tag names
+#include <xstd/bits/detail/tags.hpp>                     // bitset_reading_tag, enable_container_tag, sequence_reading_tag, set_reading_tag
 #include <xstd/ints/concepts/unsigned_integer.hpp>       // unsigned_integer
 #include <boost/container/new_allocator.hpp>             // new_allocator
 #include <boost/container/small_vector.hpp>              // small_vector

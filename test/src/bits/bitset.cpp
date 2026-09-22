@@ -3,15 +3,15 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/block_types.hpp>         // graded_extents
-#include <xstd/bits/bit_set_view.hpp>   // bit_set_view
-#include <xstd/bits/bitset.hpp>         // bitset
-#include <xstd/bits/bitset_adaptor.hpp> // swap
-#include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <concepts>                     // regular, totally_ordered
-#include <tuple>                        // tuple_cat
-#include <type_traits>                  // is_nothrow_*, is_trivially_*
-#include <utility>                      // declval
+#include <test/block_types.hpp>                // graded_extents
+#include <xstd/bits/bit_set_view.hpp>          // bit_set_view
+#include <xstd/bits/bitset.hpp>                // bitset
+#include <xstd/bits/detail/bitset_adaptor.hpp> // swap
+#include <boost/test/unit_test.hpp>            // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <concepts>                            // regular, totally_ordered
+#include <tuple>                               // tuple_cat
+#include <type_traits>                         // is_nothrow_*, is_trivially_*
+#include <utility>                             // declval
 
 BOOST_AUTO_TEST_SUITE(Bitset)
 

@@ -3,12 +3,12 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_BASIC_BITS_HPP
-#define XSTD_BITS_BASIC_BITS_HPP
+#ifndef XSTD_BITS_DETAIL_BASIC_BITS_HPP
+#define XSTD_BITS_DETAIL_BASIC_BITS_HPP
 
-#include <xstd/bits/grid.hpp>                      // adaptor, bits_t
-#include <xstd/bits/ownership.hpp>                 // owned_storage, storage, window
-#include <xstd/bits/tags.hpp>                      // array_container_tag, container_tag, reading_tag, sequence_reading_tag, set_reading_tag
+#include <xstd/bits/detail/grid.hpp>               // adaptor, bits_t
+#include <xstd/bits/detail/ownership.hpp>          // owned_storage, storage, window
+#include <xstd/bits/detail/tags.hpp>               // array_container_tag, container_tag, reading_tag, sequence_reading_tag, set_reading_tag
 #include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
 #include <boost/container_hash/is_range.hpp>       // is_range
 #include <boost/container_hash/is_tuple_like.hpp>  // is_tuple_like
@@ -90,4 +90,4 @@ struct is_tuple_like<xstd::basic_bits<xstd::set_reading_tag, C, Block, N, Alloc>
 
 } // namespace boost::container_hash
 
-#endif // XSTD_BITS_BASIC_BITS_HPP
+#endif // XSTD_BITS_DETAIL_BASIC_BITS_HPP

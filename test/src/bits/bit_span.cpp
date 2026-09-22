@@ -11,8 +11,8 @@
 #include <xstd/bits/bitset.hpp>                      // bitset
 #include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
 #include <xstd/bits/dynamic_bitset.hpp>              // dynamic_bitset
-#include <xstd/bits/ownership.hpp>                   // storage
-#include <xstd/bits/sequence_adaptor.hpp>            // sequence_adaptor
+#include <xstd/bits/detail/ownership.hpp>            // storage
+#include <xstd/bits/detail/sequence_adaptor.hpp>     // sequence_adaptor
 #include <boost/test/unit_test.hpp>                  // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <algorithm>                                 // equal
 #include <array>                                     // array

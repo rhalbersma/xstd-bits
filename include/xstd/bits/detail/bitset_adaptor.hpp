@@ -3,8 +3,8 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_BITSET_ADAPTOR_HPP
-#define XSTD_BITS_BITSET_ADAPTOR_HPP
+#ifndef XSTD_BITS_DETAIL_BITSET_ADAPTOR_HPP
+#define XSTD_BITS_DETAIL_BITSET_ADAPTOR_HPP
 
 // Bitsets [bitset], Header <bitset> synopsis [bitset.syn]
 
@@ -12,9 +12,9 @@
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/detail/hash.hpp>                     // hash_append_bits, std_hash
 #include <xstd/bits/detail/zero_width.hpp>               // zero_width
-#include <xstd/bits/grid.hpp>                            // adaptor
-#include <xstd/bits/ownership.hpp>                       // owned_storage, storage, window
-#include <xstd/bits/tags.hpp>                            // bitset_reading_tag
+#include <xstd/bits/detail/grid.hpp>                     // adaptor
+#include <xstd/bits/detail/ownership.hpp>                // owned_storage, storage, window
+#include <xstd/bits/detail/tags.hpp>                     // bitset_reading_tag
 #include <xstd/misc/concepts/specialization_of.hpp>      // specialization_of_TN
 #include <boost/hash2/hash_append.hpp>                   // hash_append_tag
 #include <algorithm>                                     // min, ranges::copy
@@ -1094,4 +1094,4 @@ auto operator<<(std::basic_ostream<charT, traits>& os, bitset_adaptor<Bits, Deri
 
 } // namespace xstd
 
-#endif // XSTD_BITS_BITSET_ADAPTOR_HPP
+#endif // XSTD_BITS_DETAIL_BITSET_ADAPTOR_HPP

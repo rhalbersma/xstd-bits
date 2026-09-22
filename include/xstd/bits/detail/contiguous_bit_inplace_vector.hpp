@@ -12,8 +12,8 @@
 #ifdef __cpp_lib_inplace_vector
 
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container, num_blocks_v
-#include <xstd/bits/grid.hpp>                            // bits_of
-#include <xstd/bits/tags.hpp>                            // inplace_vector_container_tag
+#include <xstd/bits/detail/grid.hpp>                     // bits_of
+#include <xstd/bits/detail/tags.hpp>                     // inplace_vector_container_tag
 #include <xstd/ints/concepts/unsigned_integer.hpp>       // unsigned_integer
 #include <cstddef>                                       // size_t
 #include <inplace_vector>                                // inplace_vector

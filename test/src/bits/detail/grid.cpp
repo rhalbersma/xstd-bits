@@ -4,14 +4,14 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/inplace_vector.hpp>                    // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
-#include <xstd/bits/bitset_adaptor.hpp>               // bitset_adaptor
+#include <xstd/bits/detail/bitset_adaptor.hpp>        // bitset_adaptor
 #include <xstd/bits/detail/contiguous_bit_array.hpp>  // contiguous_bit_array
 #include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
-#include <xstd/bits/grid.hpp>                         // adaptor, bits_t
-#include <xstd/bits/ownership.hpp>                    // storage, window
-#include <xstd/bits/sequence_adaptor.hpp>             // sequence_adaptor
-#include <xstd/bits/set_adaptor.hpp>                  // set_adaptor
-#include <xstd/bits/tags.hpp>                         // array_container_tag, bitset_reading_tag, inplace_vector_container_tag, sequence_reading_tag, set_reading_tag, vector_container_tag
+#include <xstd/bits/detail/grid.hpp>                  // adaptor, bits_t
+#include <xstd/bits/detail/ownership.hpp>             // storage, window
+#include <xstd/bits/detail/sequence_adaptor.hpp>      // sequence_adaptor
+#include <xstd/bits/detail/set_adaptor.hpp>           // set_adaptor
+#include <xstd/bits/detail/tags.hpp>                  // array_container_tag, bitset_reading_tag, inplace_vector_container_tag, sequence_reading_tag, set_reading_tag, vector_container_tag
 #include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <concepts>                                   // same_as
 #include <cstddef>                                    // size_t

@@ -5,15 +5,15 @@
 
 #include <test/bit_exchange.hpp>                      // exchanges_bits, exchanges_from_bits, exchanges_to_bits
 #include <test/block_types.hpp>                       // graded_extents
-#include <xstd/bits/basic_bits.hpp>                   // swap
+#include <xstd/bits/detail/basic_bits.hpp>            // swap
 #include <xstd/bits/bit_array.hpp>                    // bit_array
 #include <xstd/bits/bit_span.hpp>                     // bit_span
 #include <xstd/bits/bit_subspan.hpp>                  // bit_subspan
 #include <xstd/bits/bit_vector.hpp>                   // bit_vector
 #include <xstd/bits/detail/contiguous_bit_array.hpp>  // contiguous_bit_array
 #include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
-#include <xstd/bits/ownership.hpp>                    // storage
-#include <xstd/bits/sequence_adaptor.hpp>             // sequence_adaptor
+#include <xstd/bits/detail/ownership.hpp>             // storage
+#include <xstd/bits/detail/sequence_adaptor.hpp>      // sequence_adaptor
 #include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <algorithm>                                  // all_of, any_of, count, equal, lexicographical_compare_three_way, mismatch, none_of
 #include <array>                                      // array

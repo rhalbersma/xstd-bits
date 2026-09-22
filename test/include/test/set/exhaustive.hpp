@@ -6,14 +6,14 @@
 #ifndef TEST_SET_EXHAUSTIVE_HPP
 #define TEST_SET_EXHAUSTIVE_HPP
 
-#include <xstd/bits/ownership.hpp> // owned_storage
-#include <algorithm>               // max
-#include <array>                   // array
-#include <cassert>                 // assert
-#include <cstddef>                 // size_t
-#include <initializer_list>        // initializer_list
-#include <ranges>                  // iota, to
-#include <span>                    // dynamic_extent
+#include <xstd/bits/detail/ownership.hpp> // owned_storage
+#include <algorithm>                      // max
+#include <array>                          // array
+#include <cassert>                        // assert
+#include <cstddef>                        // size_t
+#include <initializer_list>               // initializer_list
+#include <ranges>                         // iota, to
+#include <span>                           // dynamic_extent
 
 #ifdef _MSC_VER
 

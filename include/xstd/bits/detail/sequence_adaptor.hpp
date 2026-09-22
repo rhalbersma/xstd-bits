@@ -3,8 +3,8 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_SEQUENCE_ADAPTOR_HPP
-#define XSTD_BITS_SEQUENCE_ADAPTOR_HPP
+#ifndef XSTD_BITS_DETAIL_SEQUENCE_ADAPTOR_HPP
+#define XSTD_BITS_DETAIL_SEQUENCE_ADAPTOR_HPP
 
 #include <xstd/bits/detail/allocator_base_type.hpp>      // allocator_base_type
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
@@ -13,9 +13,9 @@
 #include <xstd/bits/detail/intrin.hpp>                   // countr_zero, popcount
 #include <xstd/bits/detail/shift.hpp>                    // shl, shr
 #include <xstd/bits/detail/random_access.hpp>            // random_access_bit_iterator, random_access_bit_reference
-#include <xstd/bits/grid.hpp>                            // adaptor
-#include <xstd/bits/ownership.hpp>                       // owned_bits_t, owned_storage, owner_of, owner_reading, storage, owns, window
-#include <xstd/bits/tags.hpp>                            // sequence_reading_tag
+#include <xstd/bits/detail/grid.hpp>                     // adaptor
+#include <xstd/bits/detail/ownership.hpp>                // owned_bits_t, owned_storage, owner_of, owner_reading, storage, owns, window
+#include <xstd/bits/detail/tags.hpp>                     // sequence_reading_tag
 #include <xstd/misc/concepts/specialization_of.hpp>      // specialization_of_TN
 #include <xstd/misc/type_traits/empty_base_type.hpp>     // empty_base_type
 #include <boost/container_hash/is_range.hpp>             // is_range
@@ -1285,4 +1285,4 @@ struct is_tuple_like<xstd::sequence_adaptor<Bits, Store, W, Derived>> : std::fal
 
 } // namespace boost::container_hash
 
-#endif // XSTD_BITS_SEQUENCE_ADAPTOR_HPP
+#endif // XSTD_BITS_DETAIL_SEQUENCE_ADAPTOR_HPP

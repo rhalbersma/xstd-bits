@@ -11,8 +11,8 @@
 #include <test/set/concepts.hpp>                              // bit_set, set_size_t, set_size_t_ranges
 #include <xstd/bits/bit_inplace_set.hpp>                      // basic_bit_inplace_set, bit_inplace_set
 #include <xstd/bits/detail/contiguous_bit_inplace_vector.hpp> // contiguous_bit_inplace_vector
-#include <xstd/bits/ownership.hpp>                            // storage
-#include <xstd/bits/set_adaptor.hpp>                          // set_adaptor
+#include <xstd/bits/detail/ownership.hpp>                     // storage
+#include <xstd/bits/detail/set_adaptor.hpp>                   // set_adaptor
 #include <algorithm>                                          // equal
 #include <concepts>                                           // same_as
 #include <cstddef>                                            // size_t

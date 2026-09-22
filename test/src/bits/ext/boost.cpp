@@ -9,8 +9,8 @@
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // num_blocks_v
 #include <xstd/bits/ext/boost.hpp>                       // basic_bit_small_set, basic_bit_small_vector, basic_small_bitset,
                                                          // bit_small_set, bit_small_vector, small_bitset, small_vector_container_tag
-#include <xstd/bits/grid.hpp>                            // bits_t
-#include <xstd/bits/tags.hpp>                            // container_tag
+#include <xstd/bits/detail/grid.hpp>                     // bits_t
+#include <xstd/bits/detail/tags.hpp>                     // container_tag
 #include <boost/container/new_allocator.hpp>             // new_allocator
 #include <boost/container/small_vector.hpp>              // small_vector
 #include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL

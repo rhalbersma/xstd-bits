@@ -3,8 +3,8 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_TAGS_HPP
-#define XSTD_BITS_TAGS_HPP
+#ifndef XSTD_BITS_DETAIL_TAGS_HPP
+#define XSTD_BITS_DETAIL_TAGS_HPP
 
 #include <version> // IWYU pragma: keep; __cpp_lib_inplace_vector
 
@@ -68,4 +68,4 @@ concept container_tag = enable_container_tag<T>;
 
 } // namespace xstd
 
-#endif // XSTD_BITS_TAGS_HPP
+#endif // XSTD_BITS_DETAIL_TAGS_HPP

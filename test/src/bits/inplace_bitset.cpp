@@ -8,7 +8,7 @@
 #ifdef TEST_HAS_INPLACE_VECTOR
 
 #include <xstd/bits/bit_set_view.hpp>                         // bit_set_view
-#include <xstd/bits/bitset_adaptor.hpp>                       // bitset_adaptor
+#include <xstd/bits/detail/bitset_adaptor.hpp>                // bitset_adaptor
 #include <xstd/bits/detail/contiguous_bit_inplace_vector.hpp> // contiguous_bit_inplace_vector
 #include <xstd/bits/inplace_bitset.hpp>                       // basic_inplace_bitset, inplace_bitset
 #include <concepts>                                           // regular, same_as, totally_ordered

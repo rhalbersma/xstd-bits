@@ -11,8 +11,8 @@
 #include <test/sequence/dense.hpp>                            // yields_every_position
 #include <xstd/bits/bit_inplace_vector.hpp>                   // basic_bit_inplace_vector, bit_inplace_vector
 #include <xstd/bits/detail/contiguous_bit_inplace_vector.hpp> // contiguous_bit_inplace_vector
-#include <xstd/bits/ownership.hpp>                            // storage
-#include <xstd/bits/sequence_adaptor.hpp>                     // sequence_adaptor
+#include <xstd/bits/detail/ownership.hpp>                     // storage
+#include <xstd/bits/detail/sequence_adaptor.hpp>              // sequence_adaptor
 #include <algorithm>                                          // equal
 #include <concepts>                                           // same_as
 #include <cstddef>                                            // size_t

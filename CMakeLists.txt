@@ -69,11 +69,11 @@ target_sources(
     BASE_DIRS include
     FILES
         include/xstd/bits.hpp
-        include/xstd/bits/sequence_adaptor.hpp
-        include/xstd/bits/set_adaptor.hpp
-        include/xstd/bits/bitset_adaptor.hpp
-        include/xstd/bits/basic_bits.hpp
-        include/xstd/bits/grid.hpp
+        include/xstd/bits/detail/sequence_adaptor.hpp
+        include/xstd/bits/detail/set_adaptor.hpp
+        include/xstd/bits/detail/bitset_adaptor.hpp
+        include/xstd/bits/detail/basic_bits.hpp
+        include/xstd/bits/detail/grid.hpp
         include/xstd/bits/bit_array.hpp
         include/xstd/bits/bit_inplace_set.hpp
         include/xstd/bits/bit_inplace_vector.hpp
@@ -104,8 +104,8 @@ target_sources(
         include/xstd/bits/detail/range_const_reference.hpp
         include/xstd/bits/detail/shift.hpp
         include/xstd/bits/detail/zero_width.hpp
-        include/xstd/bits/ownership.hpp
-        include/xstd/bits/tags.hpp
+        include/xstd/bits/detail/ownership.hpp
+        include/xstd/bits/detail/tags.hpp
 )
 
 # The list above is hand-written, and it drifted: the three inplace headers reached include/ and bits.hpp but never this file set, so every installed consumer's <xstd/bits.hpp> named three headers that were not installed. No compiler leg could see it -- they all build from the source tree -- and the consumer translation unit that does build against the install tree had included one container header until it was made the interface gate. Checked here from now on, the way test/ checks that every public header is mirrored. Every header under include/, not just include/xstd/: include/ is exactly what a consumer gets, and the workloads that used to sit beside it now live in examples/. A stray directory here would otherwise ride the file set's BASE_DIRS onto every add_subdirectory consumer's include path while never being installed. HEADER_SET answers in absolute paths, so the glob asks for them that way and the message relativizes back.
