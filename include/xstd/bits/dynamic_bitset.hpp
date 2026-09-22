@@ -6,7 +6,8 @@
 #ifndef XSTD_BITS_DYNAMIC_BITSET_HPP
 #define XSTD_BITS_DYNAMIC_BITSET_HPP
 
-#include <xstd/bits/detail/basic_bits.hpp>            // basic_bits
+#include <xstd/bits/detail/grid.hpp>                  // adaptor, bits_t
+#include <xstd/bits/detail/ownership.hpp>             // storage, window
 #include <xstd/bits/detail/bitset_adaptor.hpp>        // IWYU pragma: keep; the adaptor bitset_reading_tag names
 #include <xstd/bits/detail/contiguous_bit_vector.hpp> // IWYU pragma: keep; the storage vector_container_tag names
 #include <xstd/bits/detail/tags.hpp>                  // bitset_reading_tag, vector_container_tag
@@ -14,15 +15,47 @@
 #include <cstddef>                                    // size_t
 #include <memory>                                     // allocator
 #include <span>                                       // dynamic_extent
+#include <functional>                                 // hash
 
 namespace xstd {
 
 // The bitset reading over a heap of blocks, boost::dynamic_bitset being its counterpart.
 template<xstd::unsigned_integer Block, class Allocator = std::allocator<Block>>
-using basic_dynamic_bitset = basic_bits<bitset_reading_tag, vector_container_tag, Block, std::dynamic_extent, Allocator>;
+class basic_dynamic_bitset : public adaptor<bitset_reading_tag, bits_t<vector_container_tag, Block, std::dynamic_extent, Allocator>, storage::owned, window::all, basic_dynamic_bitset<Block, Allocator>>
+{
+        using base_type = adaptor<bitset_reading_tag, bits_t<vector_container_tag, Block, std::dynamic_extent, Allocator>, storage::owned, window::all, basic_dynamic_bitset<Block, Allocator>>;
+
+public:
+        using base_type::base_type;
+        using base_type::operator=;
+
+        // An allocator names std among the associated namespaces, where std::swap would out-match the container's own.
+        friend constexpr auto swap(basic_dynamic_bitset& x, basic_dynamic_bitset& y) noexcept(noexcept(x.swap(y)))
+                -> void
+        {
+                x.swap(y);
+        }
+};
 
 using dynamic_bitset = basic_dynamic_bitset<std::size_t>;
 
+// A container answers every trait as the vehicle it is built on, which is where each one is defined.
+template<xstd::unsigned_integer Block, class Allocator>
+struct owned_storage<basic_dynamic_bitset<Block, Allocator>> : owned_storage<typename basic_dynamic_bitset<Block, Allocator>::adaptor_type>
+{};
+
 } // namespace xstd
+
+namespace std {
+
+// NOLINTBEGIN(bugprone-std-namespace-modification)
+
+template<xstd::unsigned_integer Block, class Allocator>
+struct hash<xstd::basic_dynamic_bitset<Block, Allocator>> : hash<typename xstd::basic_dynamic_bitset<Block, Allocator>::adaptor_type>
+{};
+
+// NOLINTEND(bugprone-std-namespace-modification)
+
+} // namespace std
 
 #endif // XSTD_BITS_DYNAMIC_BITSET_HPP

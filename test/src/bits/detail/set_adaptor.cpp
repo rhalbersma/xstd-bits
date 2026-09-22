@@ -5,7 +5,6 @@
 
 #include <test/bit_exchange.hpp>                      // exchanges_from_bits, exchanges_to_bits
 #include <xstd/bits/bit_set.hpp>                      // bit_set
-#include <xstd/bits/detail/basic_bits.hpp>            // swap
 #include <xstd/bits/bit_static_set.hpp>               // bit_static_set
 #include <xstd/bits/detail/contiguous_bit_array.hpp>  // contiguous_bit_array
 #include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector

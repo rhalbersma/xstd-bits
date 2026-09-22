@@ -4,7 +4,6 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <xstd/bits.hpp>                   // bit_array, bit_set, bit_static_set, bit_vector, bitset, dynamic_bitset, and the inplace column
-#include <xstd/bits/detail/basic_bits.hpp> // swap
 #include <boost/test/unit_test.hpp>        // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <compare>                         // three_way_comparable
 #include <concepts>                        // copyable, default_initializable, movable, ranges::swap, swappable, totally_ordered
