@@ -6,7 +6,6 @@
 #ifndef XSTD_BITS_BITSET_HPP
 #define XSTD_BITS_BITSET_HPP
 
-#include <xstd/bits/detail/ownership.hpp>            // owned_storage
 #include <xstd/bits/detail/bitset_adaptor.hpp>       // bitset_adaptor
 #include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
 #include <xstd/ints/concepts/unsigned_integer.hpp>   // unsigned_integer
@@ -50,15 +49,6 @@ using bitset = basic_bitset<std::size_t, N>;
 } // namespace aligned
 
 } // namespace xstd
-
-namespace xstd::detail::bits {
-
-// A container answers every trait as the vehicle it is built on, which is where each one is defined.
-template<xstd::unsigned_integer Block, std::size_t N>
-struct owned_storage<basic_bitset<Block, N>> : owned_storage<typename basic_bitset<Block, N>::adaptor_type>
-{};
-
-} // namespace xstd::detail::bits
 
 namespace std {
 

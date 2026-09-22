@@ -10,7 +10,7 @@
 
 #ifdef __cpp_lib_inplace_vector
 
-#include <xstd/bits/detail/ownership.hpp>                     // owned_storage, storage
+#include <xstd/bits/detail/ownership.hpp>                     // storage
 #include <xstd/bits/detail/contiguous_bit_inplace_vector.hpp> // contiguous_bit_inplace_vector
 #include <xstd/bits/detail/set_adaptor.hpp>                   // set_adaptor
 #include <xstd/ints/concepts/unsigned_integer.hpp>            // unsigned_integer
@@ -44,15 +44,6 @@ template<std::size_t N>
 using bit_inplace_set = basic_bit_inplace_set<std::size_t, N>;
 
 } // namespace xstd
-
-namespace xstd::detail::bits {
-
-// A container answers every trait as the vehicle it is built on, which is where each one is defined.
-template<xstd::unsigned_integer Block, std::size_t N>
-struct owned_storage<basic_bit_inplace_set<Block, N>> : owned_storage<typename basic_bit_inplace_set<Block, N>::adaptor_type>
-{};
-
-} // namespace xstd::detail::bits
 
 namespace std {
 

@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_BIT_ARRAY_HPP
 #define XSTD_BITS_BIT_ARRAY_HPP
 
-#include <xstd/bits/detail/ownership.hpp>            // owned_storage, storage, window
+#include <xstd/bits/detail/ownership.hpp>            // storage, window
 #include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
 #include <xstd/bits/detail/sequence_adaptor.hpp>     // sequence_adaptor
 #include <xstd/ints/concepts/unsigned_integer.hpp>   // unsigned_integer
@@ -53,15 +53,6 @@ using bit_array = basic_bit_array<std::size_t, N>;
 } // namespace aligned
 
 } // namespace xstd
-
-namespace xstd::detail::bits {
-
-// A container answers every trait as the vehicle it is built on, which is where each one is defined.
-template<xstd::unsigned_integer Block, std::size_t N>
-struct owned_storage<basic_bit_array<Block, N>> : owned_storage<typename basic_bit_array<Block, N>::adaptor_type>
-{};
-
-} // namespace xstd::detail::bits
 
 namespace std {
 

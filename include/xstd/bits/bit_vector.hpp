@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_BIT_VECTOR_HPP
 #define XSTD_BITS_BIT_VECTOR_HPP
 
-#include <xstd/bits/detail/ownership.hpp>             // owned_storage, storage, window
+#include <xstd/bits/detail/ownership.hpp>             // storage, window
 #include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
 #include <xstd/bits/detail/sequence_adaptor.hpp>      // sequence_adaptor
 #include <xstd/ints/concepts/unsigned_integer.hpp>    // unsigned_integer
@@ -40,15 +40,6 @@ public:
 using bit_vector = basic_bit_vector<std::size_t>;
 
 } // namespace xstd
-
-namespace xstd::detail::bits {
-
-// A container answers every trait as the vehicle it is built on, which is where each one is defined.
-template<xstd::unsigned_integer Block, class Allocator>
-struct owned_storage<basic_bit_vector<Block, Allocator>> : owned_storage<typename basic_bit_vector<Block, Allocator>::adaptor_type>
-{};
-
-} // namespace xstd::detail::bits
 
 namespace std {
 

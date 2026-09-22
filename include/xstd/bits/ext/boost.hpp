@@ -8,7 +8,7 @@
 
 #include <xstd/bits/detail/bitset_adaptor.hpp>           // bitset_adaptor
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container, num_blocks_v
-#include <xstd/bits/detail/ownership.hpp>                // owned_storage, storage, window
+#include <xstd/bits/detail/ownership.hpp>                // storage, window
 #include <xstd/bits/detail/sequence_adaptor.hpp>         // sequence_adaptor
 #include <xstd/bits/detail/set_adaptor.hpp>              // set_adaptor
 #include <xstd/ints/concepts/unsigned_integer.hpp>       // unsigned_integer
@@ -93,23 +93,6 @@ template<std::size_t N>
 using small_bitset = basic_small_bitset<std::size_t, N>;
 
 } // namespace xstd
-
-namespace xstd::detail::bits {
-
-// A container answers every trait as the vehicle it is built on, which is where each one is defined.
-template<xstd::unsigned_integer Block, std::size_t N, class Alloc>
-struct owned_storage<basic_bit_small_set<Block, N, Alloc>> : owned_storage<typename basic_bit_small_set<Block, N, Alloc>::adaptor_type>
-{};
-
-template<xstd::unsigned_integer Block, std::size_t N, class Alloc>
-struct owned_storage<basic_bit_small_vector<Block, N, Alloc>> : owned_storage<typename basic_bit_small_vector<Block, N, Alloc>::adaptor_type>
-{};
-
-template<xstd::unsigned_integer Block, std::size_t N, class Alloc>
-struct owned_storage<basic_small_bitset<Block, N, Alloc>> : owned_storage<typename basic_small_bitset<Block, N, Alloc>::adaptor_type>
-{};
-
-} // namespace xstd::detail::bits
 
 namespace std {
 
