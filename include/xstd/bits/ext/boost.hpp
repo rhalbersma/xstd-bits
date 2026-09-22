@@ -6,13 +6,13 @@
 #ifndef XSTD_BITS_EXT_BOOST_HPP
 #define XSTD_BITS_EXT_BOOST_HPP
 
-#include <xstd/bits/detail/bitset_adaptor.hpp>           // IWYU pragma: keep; the adaptor bitset_reading_tag names
+#include <xstd/bits/detail/bitset_adaptor.hpp>           // bitset_adaptor
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container, num_blocks_v
-#include <xstd/bits/detail/grid.hpp>                     // adaptor, bits_of, bits_t
-#include <xstd/bits/detail/ownership.hpp>                // storage, window
-#include <xstd/bits/detail/sequence_adaptor.hpp>         // IWYU pragma: keep; the adaptor sequence_reading_tag names
-#include <xstd/bits/detail/set_adaptor.hpp>              // IWYU pragma: keep; the adaptor set_reading_tag names
-#include <xstd/bits/detail/tags.hpp>                     // bitset_reading_tag, enable_container_tag, sequence_reading_tag, set_reading_tag
+#include <xstd/bits/detail/grid.hpp>                     // bits_of, bits_t
+#include <xstd/bits/detail/ownership.hpp>                // owned_storage, storage, window
+#include <xstd/bits/detail/sequence_adaptor.hpp>         // sequence_adaptor
+#include <xstd/bits/detail/set_adaptor.hpp>              // set_adaptor
+#include <xstd/bits/detail/tags.hpp>                     // enable_container_tag
 #include <xstd/ints/concepts/unsigned_integer.hpp>       // unsigned_integer
 #include <boost/container/new_allocator.hpp>             // new_allocator
 #include <boost/container/small_vector.hpp>              // small_vector
@@ -48,9 +48,9 @@ struct bits_of<small_vector_container_tag, Block, N, Alloc>
 
 // The allocator is Boost's own, since the container this column is built on defaults to that one rather than std's.
 template<xstd::unsigned_integer Block, std::size_t N, class Alloc = boost::container::new_allocator<Block>>
-class basic_bit_small_set : public adaptor<set_reading_tag, bits_t<small_vector_container_tag, Block, N, Alloc>, storage::owned, window::all, basic_bit_small_set<Block, N, Alloc>>
+class basic_bit_small_set : public set_adaptor<bits_t<small_vector_container_tag, Block, N, Alloc>, storage::owned, basic_bit_small_set<Block, N, Alloc>>
 {
-        using base_type = adaptor<set_reading_tag, bits_t<small_vector_container_tag, Block, N, Alloc>, storage::owned, window::all, basic_bit_small_set<Block, N, Alloc>>;
+        using base_type = set_adaptor<bits_t<small_vector_container_tag, Block, N, Alloc>, storage::owned, basic_bit_small_set<Block, N, Alloc>>;
 
 public:
         using base_type::base_type;
@@ -65,9 +65,9 @@ public:
 };
 
 template<xstd::unsigned_integer Block, std::size_t N, class Alloc = boost::container::new_allocator<Block>>
-class basic_bit_small_vector : public adaptor<sequence_reading_tag, bits_t<small_vector_container_tag, Block, N, Alloc>, storage::owned, window::all, basic_bit_small_vector<Block, N, Alloc>>
+class basic_bit_small_vector : public sequence_adaptor<bits_t<small_vector_container_tag, Block, N, Alloc>, storage::owned, window::all, basic_bit_small_vector<Block, N, Alloc>>
 {
-        using base_type = adaptor<sequence_reading_tag, bits_t<small_vector_container_tag, Block, N, Alloc>, storage::owned, window::all, basic_bit_small_vector<Block, N, Alloc>>;
+        using base_type = sequence_adaptor<bits_t<small_vector_container_tag, Block, N, Alloc>, storage::owned, window::all, basic_bit_small_vector<Block, N, Alloc>>;
 
 public:
         using base_type::base_type;
@@ -82,9 +82,9 @@ public:
 };
 
 template<xstd::unsigned_integer Block, std::size_t N, class Alloc = boost::container::new_allocator<Block>>
-class basic_small_bitset : public adaptor<bitset_reading_tag, bits_t<small_vector_container_tag, Block, N, Alloc>, storage::owned, window::all, basic_small_bitset<Block, N, Alloc>>
+class basic_small_bitset : public bitset_adaptor<bits_t<small_vector_container_tag, Block, N, Alloc>, basic_small_bitset<Block, N, Alloc>>
 {
-        using base_type = adaptor<bitset_reading_tag, bits_t<small_vector_container_tag, Block, N, Alloc>, storage::owned, window::all, basic_small_bitset<Block, N, Alloc>>;
+        using base_type = bitset_adaptor<bits_t<small_vector_container_tag, Block, N, Alloc>, basic_small_bitset<Block, N, Alloc>>;
 
 public:
         using base_type::base_type;

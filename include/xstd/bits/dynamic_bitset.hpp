@@ -6,11 +6,11 @@
 #ifndef XSTD_BITS_DYNAMIC_BITSET_HPP
 #define XSTD_BITS_DYNAMIC_BITSET_HPP
 
-#include <xstd/bits/detail/grid.hpp>                  // adaptor, bits_t
-#include <xstd/bits/detail/ownership.hpp>             // storage, window
-#include <xstd/bits/detail/bitset_adaptor.hpp>        // IWYU pragma: keep; the adaptor bitset_reading_tag names
+#include <xstd/bits/detail/grid.hpp>                  // bits_t
+#include <xstd/bits/detail/ownership.hpp>             // owned_storage
+#include <xstd/bits/detail/bitset_adaptor.hpp>        // bitset_adaptor
 #include <xstd/bits/detail/contiguous_bit_vector.hpp> // IWYU pragma: keep; the storage vector_container_tag names
-#include <xstd/bits/detail/tags.hpp>                  // bitset_reading_tag, vector_container_tag
+#include <xstd/bits/detail/tags.hpp>                  // vector_container_tag
 #include <xstd/ints/concepts/unsigned_integer.hpp>    // unsigned_integer
 #include <cstddef>                                    // size_t
 #include <memory>                                     // allocator
@@ -21,9 +21,9 @@ namespace xstd {
 
 // The bitset reading over a heap of blocks, boost::dynamic_bitset being its counterpart.
 template<xstd::unsigned_integer Block, class Allocator = std::allocator<Block>>
-class basic_dynamic_bitset : public adaptor<bitset_reading_tag, bits_t<vector_container_tag, Block, std::dynamic_extent, Allocator>, storage::owned, window::all, basic_dynamic_bitset<Block, Allocator>>
+class basic_dynamic_bitset : public bitset_adaptor<bits_t<vector_container_tag, Block, std::dynamic_extent, Allocator>, basic_dynamic_bitset<Block, Allocator>>
 {
-        using base_type = adaptor<bitset_reading_tag, bits_t<vector_container_tag, Block, std::dynamic_extent, Allocator>, storage::owned, window::all, basic_dynamic_bitset<Block, Allocator>>;
+        using base_type = bitset_adaptor<bits_t<vector_container_tag, Block, std::dynamic_extent, Allocator>, basic_dynamic_bitset<Block, Allocator>>;
 
 public:
         using base_type::base_type;

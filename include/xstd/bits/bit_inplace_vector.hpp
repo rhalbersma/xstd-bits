@@ -10,11 +10,11 @@
 
 #ifdef __cpp_lib_inplace_vector
 
-#include <xstd/bits/detail/grid.hpp>                          // adaptor, bits_t
-#include <xstd/bits/detail/ownership.hpp>                     // storage, window
+#include <xstd/bits/detail/grid.hpp>                          // bits_t
+#include <xstd/bits/detail/ownership.hpp>                     // owned_storage, storage, window
 #include <xstd/bits/detail/contiguous_bit_inplace_vector.hpp> // IWYU pragma: keep; the storage inplace_vector_container_tag names
-#include <xstd/bits/detail/sequence_adaptor.hpp>              // IWYU pragma: keep; the adaptor sequence_reading_tag names
-#include <xstd/bits/detail/tags.hpp>                          // inplace_vector_container_tag, sequence_reading_tag
+#include <xstd/bits/detail/sequence_adaptor.hpp>              // sequence_adaptor
+#include <xstd/bits/detail/tags.hpp>                          // inplace_vector_container_tag
 #include <xstd/ints/concepts/unsigned_integer.hpp>            // unsigned_integer
 #include <cstddef>                                            // size_t
 #include <functional>                                         // hash
@@ -26,9 +26,9 @@ namespace xstd {
 
 // The packed std::inplace_vector<bool, N> that P0843 declined to write, named after the container it packs.
 template<xstd::unsigned_integer Block, std::size_t N>
-class basic_bit_inplace_vector : public adaptor<sequence_reading_tag, bits_t<inplace_vector_container_tag, Block, N>, storage::owned, window::all, basic_bit_inplace_vector<Block, N>>
+class basic_bit_inplace_vector : public sequence_adaptor<bits_t<inplace_vector_container_tag, Block, N>, storage::owned, window::all, basic_bit_inplace_vector<Block, N>>
 {
-        using base_type = adaptor<sequence_reading_tag, bits_t<inplace_vector_container_tag, Block, N>, storage::owned, window::all, basic_bit_inplace_vector<Block, N>>;
+        using base_type = sequence_adaptor<bits_t<inplace_vector_container_tag, Block, N>, storage::owned, window::all, basic_bit_inplace_vector<Block, N>>;
 
 public:
         using base_type::base_type;

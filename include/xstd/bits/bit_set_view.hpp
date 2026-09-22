@@ -7,8 +7,7 @@
 #define XSTD_BITS_BIT_SET_VIEW_HPP
 
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
-#include <xstd/bits/detail/ownership.hpp>                // storage
-#include <xstd/bits/detail/tags.hpp>                     // set_reading_tag
+#include <xstd/bits/detail/ownership.hpp>                // owned_bits_t, owned_storage, owner_reading, reading, storage
 #include <xstd/bits/detail/set_adaptor.hpp>              // set_adaptor
 #include <xstd/misc/concepts/specialization_of.hpp>      // specialization_of_TN
 #include <boost/container_hash/is_range.hpp>             // is_range
@@ -35,7 +34,7 @@ template<class Bits>
         requires (not requires { typename owned_storage<std::remove_const_t<Bits>>::bits_type; })
 bit_set_view(Bits&) -> bit_set_view<Bits>;
 
-template<owner_reading<set_reading_tag> Owner>
+template<owner_reading<reading::set> Owner>
 bit_set_view(Owner&) -> bit_set_view<owned_bits_t<Owner>>;
 
 } // namespace xstd

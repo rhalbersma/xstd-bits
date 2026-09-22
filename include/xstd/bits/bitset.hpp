@@ -6,11 +6,11 @@
 #ifndef XSTD_BITS_BITSET_HPP
 #define XSTD_BITS_BITSET_HPP
 
-#include <xstd/bits/detail/grid.hpp>                 // adaptor, bits_t
-#include <xstd/bits/detail/ownership.hpp>            // storage, window
-#include <xstd/bits/detail/bitset_adaptor.hpp>       // IWYU pragma: keep; the adaptor bitset_reading_tag names
+#include <xstd/bits/detail/grid.hpp>                 // bits_t
+#include <xstd/bits/detail/ownership.hpp>            // owned_storage
+#include <xstd/bits/detail/bitset_adaptor.hpp>       // bitset_adaptor
 #include <xstd/bits/detail/contiguous_bit_array.hpp> // IWYU pragma: keep; the storage array_container_tag names
-#include <xstd/bits/detail/tags.hpp>                 // array_container_tag, bitset_reading_tag
+#include <xstd/bits/detail/tags.hpp>                 // array_container_tag
 #include <xstd/ints/concepts/unsigned_integer.hpp>   // unsigned_integer
 #include <xstd/ints/memory.hpp>                      // align_up
 #include <cstddef>                                   // size_t
@@ -21,9 +21,9 @@ namespace xstd {
 
 // [template.bitset] over a packed array of Block: what std::bitset<N> is, with the word type in the open.
 template<xstd::unsigned_integer Block, std::size_t N>
-class basic_bitset : public adaptor<bitset_reading_tag, bits_t<array_container_tag, Block, N>, storage::owned, window::all, basic_bitset<Block, N>>
+class basic_bitset : public bitset_adaptor<bits_t<array_container_tag, Block, N>, basic_bitset<Block, N>>
 {
-        using base_type = adaptor<bitset_reading_tag, bits_t<array_container_tag, Block, N>, storage::owned, window::all, basic_bitset<Block, N>>;
+        using base_type = bitset_adaptor<bits_t<array_container_tag, Block, N>, basic_bitset<Block, N>>;
 
 public:
         using base_type::base_type;

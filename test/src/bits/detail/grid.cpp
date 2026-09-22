@@ -4,14 +4,10 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/inplace_vector.hpp>                    // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
-#include <xstd/bits/detail/bitset_adaptor.hpp>        // bitset_adaptor
 #include <xstd/bits/detail/contiguous_bit_array.hpp>  // contiguous_bit_array
 #include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
-#include <xstd/bits/detail/grid.hpp>                  // adaptor, bits_t
-#include <xstd/bits/detail/ownership.hpp>             // storage, window
-#include <xstd/bits/detail/sequence_adaptor.hpp>      // sequence_adaptor
-#include <xstd/bits/detail/set_adaptor.hpp>           // set_adaptor
-#include <xstd/bits/detail/tags.hpp>                  // array_container_tag, bitset_reading_tag, inplace_vector_container_tag, sequence_reading_tag, set_reading_tag, vector_container_tag
+#include <xstd/bits/detail/grid.hpp>                  // bits_t
+#include <xstd/bits/detail/tags.hpp>                  // array_container_tag, inplace_vector_container_tag, vector_container_tag
 #include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <concepts>                                   // same_as
 #include <cstddef>                                    // size_t
@@ -65,15 +61,6 @@ BOOST_AUTO_TEST_CASE(AStaticExtentAskedOfAnAllocatingContainerIsANonMatch)
         static_assert(has_storage<xstd::vector_container_tag, std::dynamic_extent>);
         static_assert(not has_storage<xstd::vector_container_tag, width>);
         static_assert(has_storage<xstd::array_container_tag, width>);
-        BOOST_CHECK(true);
-}
-
-BOOST_AUTO_TEST_CASE(TheReadingTagNamesOneCellOfTheGeneralTemplate)
-{
-        using bits = xstd::detail::bits::contiguous_bit_array<block_type, width>;
-        static_assert(std::same_as<xstd::bitset_adaptor<bits, void>, xstd::adaptor<xstd::bitset_reading_tag, bits, xstd::storage::owned, xstd::window::all, void>>);
-        static_assert(std::same_as<xstd::sequence_adaptor<bits, xstd::storage::owned, xstd::window::all, void>, xstd::adaptor<xstd::sequence_reading_tag, bits, xstd::storage::owned, xstd::window::all, void>>);
-        static_assert(std::same_as<xstd::set_adaptor<bits, xstd::storage::owned, void>, xstd::adaptor<xstd::set_reading_tag, bits, xstd::storage::owned, xstd::window::all, void>>);
         BOOST_CHECK(true);
 }
 

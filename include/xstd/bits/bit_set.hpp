@@ -6,11 +6,11 @@
 #ifndef XSTD_BITS_BIT_SET_HPP
 #define XSTD_BITS_BIT_SET_HPP
 
-#include <xstd/bits/detail/grid.hpp>                  // adaptor, bits_t
-#include <xstd/bits/detail/ownership.hpp>             // storage, window
+#include <xstd/bits/detail/grid.hpp>                  // bits_t
+#include <xstd/bits/detail/ownership.hpp>             // owned_storage, storage
 #include <xstd/bits/detail/contiguous_bit_vector.hpp> // IWYU pragma: keep; the storage vector_container_tag names
-#include <xstd/bits/detail/set_adaptor.hpp>           // IWYU pragma: keep; the adaptor set_reading_tag names
-#include <xstd/bits/detail/tags.hpp>                  // set_reading_tag, vector_container_tag
+#include <xstd/bits/detail/set_adaptor.hpp>           // set_adaptor
+#include <xstd/bits/detail/tags.hpp>                  // vector_container_tag
 #include <xstd/ints/concepts/unsigned_integer.hpp>    // unsigned_integer
 #include <cstddef>                                    // size_t
 #include <memory>                                     // allocator
@@ -24,9 +24,9 @@ namespace xstd {
 
 // The set reading over a heap of blocks: the flagship, and the one name without a qualifier.
 template<xstd::unsigned_integer Block, class Allocator = std::allocator<Block>>
-class basic_bit_set : public adaptor<set_reading_tag, bits_t<vector_container_tag, Block, std::dynamic_extent, Allocator>, storage::owned, window::all, basic_bit_set<Block, Allocator>>
+class basic_bit_set : public set_adaptor<bits_t<vector_container_tag, Block, std::dynamic_extent, Allocator>, storage::owned, basic_bit_set<Block, Allocator>>
 {
-        using base_type = adaptor<set_reading_tag, bits_t<vector_container_tag, Block, std::dynamic_extent, Allocator>, storage::owned, window::all, basic_bit_set<Block, Allocator>>;
+        using base_type = set_adaptor<bits_t<vector_container_tag, Block, std::dynamic_extent, Allocator>, storage::owned, basic_bit_set<Block, Allocator>>;
 
 public:
         using base_type::base_type;

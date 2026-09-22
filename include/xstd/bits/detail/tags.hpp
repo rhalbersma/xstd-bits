@@ -10,32 +10,6 @@
 
 namespace xstd {
 
-// The readings, flat: a bitset is a hybrid of the other two rather than a refinement, so no tag nests inside another.
-struct bitset_reading_tag
-{};
-
-struct sequence_reading_tag
-{};
-
-struct set_reading_tag
-{};
-
-// Opt-in rather than closed, the way std::ranges::enable_view is, so a reading declared elsewhere can join the set.
-template<class T>
-inline constexpr bool enable_reading_tag = false;
-
-template<>
-inline constexpr bool enable_reading_tag<bitset_reading_tag> = true;
-
-template<>
-inline constexpr bool enable_reading_tag<sequence_reading_tag> = true;
-
-template<>
-inline constexpr bool enable_reading_tag<set_reading_tag> = true;
-
-template<class T>
-concept reading_tag = enable_reading_tag<T>;
-
 // What holds the blocks: a static extent, a run-time width over a static capacity, and an allocating one.
 struct array_container_tag
 {};

@@ -6,8 +6,7 @@
 #ifndef XSTD_BITS_DETAIL_GRID_HPP
 #define XSTD_BITS_DETAIL_GRID_HPP
 
-#include <xstd/bits/detail/ownership.hpp>          // storage, window
-#include <xstd/bits/detail/tags.hpp>               // container_tag, reading_tag
+#include <xstd/bits/detail/tags.hpp>               // container_tag
 #include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
 #include <cstddef>                                 // size_t
 #include <span>                                    // dynamic_extent
@@ -20,10 +19,6 @@ struct bits_of;
 
 template<container_tag C, xstd::unsigned_integer Block, std::size_t N = std::dynamic_extent, class Alloc = void>
 using bits_t = bits_of<C, Block, N, Alloc>::type;
-
-// The adaptor a reading tag names: declared here, defined by a partial specialization per reading.
-template<reading_tag R, class Bits, storage Store = storage::owned, window W = window::all, class Derived = void>
-class adaptor;
 
 } // namespace xstd
 
