@@ -37,8 +37,8 @@ led there belongs in a document or in the commit that made the change.
 ## Include order
 
 Three groups, in this order, with no blank line between them: this project's own `<xstd/...>`
-headers, then `<boost/...>`, then the standard library. Alphabetical by path within each group, so
-`<cstddef>` precedes `<functional>`, and
+headers, then third-party ones such as `<boost/...>` and `<absl/...>`, then the standard library.
+Alphabetical by path within each group, so `<cstddef>` precedes `<functional>`, and
 `<xstd/bits/detail/contiguous_bit_array.hpp>` precedes `<xstd/bits/detail/ownership.hpp>`.
 
 `.clang-format` sets `SortIncludes: Never`, so nothing enforces this and nothing will reorder for
