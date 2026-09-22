@@ -13,7 +13,7 @@
 #include <xstd/bits/detail/hash.hpp>                     // hash_append_bits, std_hash
 #include <xstd/bits/detail/zero_width.hpp>               // zero_width
 #include <xstd/bits/grid.hpp>                            // adaptor_of
-#include <xstd/bits/ownership.hpp>                       // owned_storage, storage
+#include <xstd/bits/ownership.hpp>                       // owned_storage, storage, window
 #include <xstd/bits/tags.hpp>                            // bitset_reading_tag
 #include <xstd/misc/concepts/specialization_of.hpp>      // specialization_of_TN
 #include <boost/hash2/hash_append.hpp>                   // hash_append_tag
@@ -66,7 +66,7 @@ class bitset_adaptor : public detail::bits::allocator_base_type<Bits>
         template<specialization_of_TN<detail::bits::contiguous_bit_container> B, storage O, class D>
         friend class set_adaptor;
 
-        template<specialization_of_TN<detail::bits::contiguous_bit_container> B, storage O, bool W, class D>
+        template<specialization_of_TN<detail::bits::contiguous_bit_container> B, storage O, window V, class D>
         friend class sequence_adaptor;
 
         // The value through the trait: the blocks and the width.

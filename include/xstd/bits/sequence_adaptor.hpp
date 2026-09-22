@@ -13,7 +13,7 @@
 #include <xstd/bits/detail/shift.hpp>                    // shl, shr
 #include <xstd/bits/detail/random_access.hpp>            // random_access_bit_iterator, random_access_bit_reference
 #include <xstd/bits/grid.hpp>                            // adaptor_of
-#include <xstd/bits/ownership.hpp>                       // owned_bits_t, owned_storage, owner_of, owner_reading, storage, owns
+#include <xstd/bits/ownership.hpp>                       // owned_bits_t, owned_storage, owner_of, owner_reading, storage, owns, window
 #include <xstd/bits/tags.hpp>                            // sequence_reading_tag
 #include <xstd/misc/concepts/specialization_of.hpp>      // specialization_of_TN
 #include <xstd/misc/type_traits/empty_base_type.hpp>     // empty_base_type
@@ -150,7 +150,7 @@ using block_type_of = std::remove_const_t<Bits>::block_type;
 } // namespace detail::sequence
 
 // An owner names its storage's allocator, as std::vector<bool> names its own; a view names none, owning nothing.
-template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits, storage Store, bool Windowed, class Derived = void>
+template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits, storage Store, window W, class Derived = void>
 class sequence_adaptor;
 
 // The windowed view a span hands back: declared here and defined in its own header, which this one must not include.
@@ -161,14 +161,14 @@ class bit_subspan;
 template<class S, class Block>
 inline constexpr bool blit_source = false;
 
-template<class Bits, storage Store, bool Windowed, class Derived, class Block>
-inline constexpr bool blit_source<sequence_adaptor<Bits, Store, Windowed, Derived>, Block> = std::same_as<detail::sequence::block_type_of<Bits>, Block>;
+template<class Bits, storage Store, window W, class Derived, class Block>
+inline constexpr bool blit_source<sequence_adaptor<Bits, Store, W, Derived>, Block> = std::same_as<detail::sequence::block_type_of<Bits>, Block>;
 
-template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits, storage Store, bool Windowed, class Derived>
+template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits, storage Store, window W, class Derived>
 class sequence_adaptor : public std::conditional_t<owns(Store), detail::bits::allocator_base_type<std::remove_const_t<Bits>>, xstd::empty_base_type<>>
 {
         static constexpr bool is_owner = owns(Store);
-        static constexpr bool is_window = Windowed;
+        static constexpr bool is_window = (W == window::sub);
         static_assert(not(is_owner and is_window), "a window views what another owns");
 
         using bits_type = std::remove_const_t<Bits>;
@@ -182,15 +182,15 @@ class sequence_adaptor : public std::conditional_t<owns(Store), detail::bits::al
         // The middle column: growth inside a capacity the type carries, whose counterparts disagree on name shape.
         static constexpr bool has_static_capacity = can_grow and bits_type::has_static_capacity;
 
-        // A window is what std::span stores, the pointer's role split in two because bits are not addressable.
-        struct window
+        // What a window stores in a plain view's Bits*: the pointer's role split in three, bits not being addressable.
+        struct window_ptr
         {
                 Bits* ptr;
                 std::size_t offset;
                 std::size_t size;
         };
 
-        std::conditional_t<is_owner, Bits, std::conditional_t<is_window, window, Bits*>> m_bits;
+        std::conditional_t<is_owner, Bits, std::conditional_t<is_window, window_ptr, Bits*>> m_bits;
 
         // One accessor: self.m_bits propagates the owner's const, *self.m_bits keeps the view shallow.
         [[nodiscard]] constexpr auto bits(this auto&& self) noexcept
@@ -242,7 +242,7 @@ class sequence_adaptor : public std::conditional_t<owns(Store), detail::bits::al
         friend Derived;
 
         // A sequence view refers into this owner's storage and nothing else does; a set view does not.
-        template<specialization_of_TN<detail::bits::contiguous_bit_container> B, storage O, bool W, class D>
+        template<specialization_of_TN<detail::bits::contiguous_bit_container> B, storage O, window V, class D>
         friend class sequence_adaptor;
 
         // The value under the sequence reading, the owner's alone: a view follows span and hashes no more.
@@ -261,7 +261,7 @@ public:
         // What a trait asks of this vehicle, every container built on it answering alike.
         using adaptor_type = sequence_adaptor;
         using reads_as = sequence_reading_tag;
-        static constexpr bool is_windowed = Windowed;
+        static constexpr bool is_windowed = is_window;
         using adapted_type = Bits;
         static constexpr bool owns_storage = is_owner;
 
@@ -1098,7 +1098,7 @@ private:
         constexpr auto rebuild(size_type pos, size_type tail, Middle&& middle)
                 -> iterator
         {
-                auto const whole = sequence_adaptor<bits_type const, storage::borrowed, false>(std::as_const(bits()));
+                auto const whole = sequence_adaptor<bits_type const, storage::borrowed, window::all>(std::as_const(bits()));
                 auto tmp = sequence_adaptor();
                 tmp.append_range(whole.first(pos));
                 middle(tmp);
@@ -1129,10 +1129,10 @@ private:
 // A view deduces the constness of what it views, the way span<T> and span<T const> do.
 template<class Bits>
         requires (not requires { typename owned_storage<std::remove_const_t<Bits>>::bits_type; })
-sequence_adaptor(Bits&) -> sequence_adaptor<Bits, storage::borrowed, false>;
+sequence_adaptor(Bits&) -> sequence_adaptor<Bits, storage::borrowed, window::all>;
 
 template<owner_reading<sequence_reading_tag> Owner>
-sequence_adaptor(Owner&) -> sequence_adaptor<owned_bits_t<Owner>, storage::borrowed, false>;
+sequence_adaptor(Owner&) -> sequence_adaptor<owned_bits_t<Owner>, storage::borrowed, window::all>;
 
 // Any container built on the sequence vehicle, the vehicle used directly included.
 template<class T>
@@ -1140,7 +1140,7 @@ concept sequence_adaptor_like = requires { typename T::adaptor_type; typename T:
 
 // The owner's side of the protocol above.
 template<class Bits, class Derived>
-struct owned_storage<sequence_adaptor<Bits, storage::owned, false, Derived>>
+struct owned_storage<sequence_adaptor<Bits, storage::owned, window::all, Derived>>
 {
         using bits_type = Bits;
 
@@ -1152,45 +1152,45 @@ struct owned_storage<sequence_adaptor<Bits, storage::owned, false, Derived>>
 template<class Bits, class Derived>
 struct adaptor_of<sequence_reading_tag, Bits, Derived>
 {
-        using type = sequence_adaptor<Bits, storage::owned, false, Derived>;
+        using type = sequence_adaptor<Bits, storage::owned, window::all, Derived>;
 };
 
 // NOLINTBEGIN(readability-redundant-parentheses): a call is no primary expression, so the clause needs them.
 
 // Bulk logical not, the value-returning counterpart of flip(): a sequence's width is its own size().
-template<class Bits, storage Store, bool Windowed, class Derived>
-[[nodiscard]] constexpr auto operator~(sequence_adaptor<Bits, Store, Windowed, Derived> const& lhs) noexcept -> sequence_adaptor<Bits, Store, Windowed, Derived>::derived_type
-        requires (owns(Store)) and requires (sequence_adaptor<Bits, Store, Windowed, Derived> c) { c.flip(); }
+template<class Bits, storage Store, window W, class Derived>
+[[nodiscard]] constexpr auto operator~(sequence_adaptor<Bits, Store, W, Derived> const& lhs) noexcept -> sequence_adaptor<Bits, Store, W, Derived>::derived_type
+        requires (owns(Store)) and requires (sequence_adaptor<Bits, Store, W, Derived> c) { c.flip(); }
 {
-        auto nrv = static_cast<sequence_adaptor<Bits, Store, Windowed, Derived>::derived_type const&>(lhs);
+        auto nrv = static_cast<sequence_adaptor<Bits, Store, W, Derived>::derived_type const&>(lhs);
         nrv.flip();
         return nrv;
 }
 
 // The binary forms of the three above, on an owner alone: a view's copy refers to the storage it views.
-template<class Bits, storage Store, bool Windowed, class Derived>
-[[nodiscard]] constexpr auto operator&(sequence_adaptor<Bits, Store, Windowed, Derived> const& lhs, sequence_adaptor<Bits, Store, Windowed, Derived> const& rhs) noexcept(noexcept(std::declval<sequence_adaptor<Bits, Store, Windowed, Derived>&>() &= rhs)) -> sequence_adaptor<Bits, Store, Windowed, Derived>::derived_type
-        requires (owns(Store)) and requires (sequence_adaptor<Bits, Store, Windowed, Derived> c) { c &= c; }
+template<class Bits, storage Store, window W, class Derived>
+[[nodiscard]] constexpr auto operator&(sequence_adaptor<Bits, Store, W, Derived> const& lhs, sequence_adaptor<Bits, Store, W, Derived> const& rhs) noexcept(noexcept(std::declval<sequence_adaptor<Bits, Store, W, Derived>&>() &= rhs)) -> sequence_adaptor<Bits, Store, W, Derived>::derived_type
+        requires (owns(Store)) and requires (sequence_adaptor<Bits, Store, W, Derived> c) { c &= c; }
 {
-        auto nrv = static_cast<sequence_adaptor<Bits, Store, Windowed, Derived>::derived_type const&>(lhs);
+        auto nrv = static_cast<sequence_adaptor<Bits, Store, W, Derived>::derived_type const&>(lhs);
         nrv &= rhs;
         return nrv;
 }
 
-template<class Bits, storage Store, bool Windowed, class Derived>
-[[nodiscard]] constexpr auto operator|(sequence_adaptor<Bits, Store, Windowed, Derived> const& lhs, sequence_adaptor<Bits, Store, Windowed, Derived> const& rhs) noexcept(noexcept(std::declval<sequence_adaptor<Bits, Store, Windowed, Derived>&>() |= rhs)) -> sequence_adaptor<Bits, Store, Windowed, Derived>::derived_type
-        requires (owns(Store)) and requires (sequence_adaptor<Bits, Store, Windowed, Derived> c) { c |= c; }
+template<class Bits, storage Store, window W, class Derived>
+[[nodiscard]] constexpr auto operator|(sequence_adaptor<Bits, Store, W, Derived> const& lhs, sequence_adaptor<Bits, Store, W, Derived> const& rhs) noexcept(noexcept(std::declval<sequence_adaptor<Bits, Store, W, Derived>&>() |= rhs)) -> sequence_adaptor<Bits, Store, W, Derived>::derived_type
+        requires (owns(Store)) and requires (sequence_adaptor<Bits, Store, W, Derived> c) { c |= c; }
 {
-        auto nrv = static_cast<sequence_adaptor<Bits, Store, Windowed, Derived>::derived_type const&>(lhs);
+        auto nrv = static_cast<sequence_adaptor<Bits, Store, W, Derived>::derived_type const&>(lhs);
         nrv |= rhs;
         return nrv;
 }
 
-template<class Bits, storage Store, bool Windowed, class Derived>
-[[nodiscard]] constexpr auto operator^(sequence_adaptor<Bits, Store, Windowed, Derived> const& lhs, sequence_adaptor<Bits, Store, Windowed, Derived> const& rhs) noexcept(noexcept(std::declval<sequence_adaptor<Bits, Store, Windowed, Derived>&>() ^= rhs)) -> sequence_adaptor<Bits, Store, Windowed, Derived>::derived_type
-        requires (owns(Store)) and requires (sequence_adaptor<Bits, Store, Windowed, Derived> c) { c ^= c; }
+template<class Bits, storage Store, window W, class Derived>
+[[nodiscard]] constexpr auto operator^(sequence_adaptor<Bits, Store, W, Derived> const& lhs, sequence_adaptor<Bits, Store, W, Derived> const& rhs) noexcept(noexcept(std::declval<sequence_adaptor<Bits, Store, W, Derived>&>() ^= rhs)) -> sequence_adaptor<Bits, Store, W, Derived>::derived_type
+        requires (owns(Store)) and requires (sequence_adaptor<Bits, Store, W, Derived> c) { c ^= c; }
 {
-        auto nrv = static_cast<sequence_adaptor<Bits, Store, Windowed, Derived>::derived_type const&>(lhs);
+        auto nrv = static_cast<sequence_adaptor<Bits, Store, W, Derived>::derived_type const&>(lhs);
         nrv ^= rhs;
         return nrv;
 }
@@ -1198,56 +1198,56 @@ template<class Bits, storage Store, bool Windowed, class Derived>
 // NOLINTEND(readability-redundant-parentheses)
 
 // [vector.erasure], over the owner's own erase: the proxies move and swap, so remove_if runs unchanged.
-template<class Bits, storage Store, bool Windowed, class Derived, class Pred>
-constexpr auto erase_if(sequence_adaptor<Bits, Store, Windowed, Derived>& c, Pred pred)
-        -> sequence_adaptor<Bits, Store, Windowed, Derived>::size_type
+template<class Bits, storage Store, window W, class Derived, class Pred>
+constexpr auto erase_if(sequence_adaptor<Bits, Store, W, Derived>& c, Pred pred)
+        -> sequence_adaptor<Bits, Store, W, Derived>::size_type
         requires requires { c.erase(c.cbegin(), c.cend()); }
 {
         auto const [first, last] = std::ranges::remove_if(c, pred);
-        auto const n = static_cast<sequence_adaptor<Bits, Store, Windowed>::size_type>(last - first);
+        auto const n = static_cast<sequence_adaptor<Bits, Store, W>::size_type>(last - first);
         c.erase(first, last);
         return n;
 }
 
-template<class Bits, storage Store, bool Windowed, class Derived, class U = bool>
-constexpr auto erase(sequence_adaptor<Bits, Store, Windowed, Derived>& c, U const& value)
-        -> sequence_adaptor<Bits, Store, Windowed, Derived>::size_type
+template<class Bits, storage Store, window W, class Derived, class U = bool>
+constexpr auto erase(sequence_adaptor<Bits, Store, W, Derived>& c, U const& value)
+        -> sequence_adaptor<Bits, Store, W, Derived>::size_type
         requires requires { c.erase(c.cbegin(), c.cend()); }
 {
         return xstd::erase_if(c, [&](bool x) -> bool { return x == value; });
 }
 
 // [array]'s tuple interface, the one line of that synopsis a packed bool can answer; static width alone.
-template<class Bits, storage Store, bool Windowed>
+template<class Bits, storage Store, window W>
 // NOLINTNEXTLINE(modernize-avoid-c-style-cast): there is no cast here; owns is a function and Store a value.
-inline constexpr bool is_static_width_owner = owns(Store) and (not Windowed) and (Bits::extent != std::dynamic_extent);
+inline constexpr bool is_static_width_owner = owns(Store) and (W == window::all) and (Bits::extent != std::dynamic_extent);
 
 // Found by ADL, as a program-defined type's get must be: std::get is std's to specialize and this is not std's type.
-template<std::size_t I, class Bits, storage Store, bool Windowed, class Derived>
-        requires is_static_width_owner<Bits, Store, Windowed> and (I < Bits::extent)
-[[nodiscard]] constexpr auto get(sequence_adaptor<Bits, Store, Windowed, Derived>& c) noexcept
+template<std::size_t I, class Bits, storage Store, window W, class Derived>
+        requires is_static_width_owner<Bits, Store, W> and (I < Bits::extent)
+[[nodiscard]] constexpr auto get(sequence_adaptor<Bits, Store, W, Derived>& c) noexcept
 {
         return c[I];
 }
 
-template<std::size_t I, class Bits, storage Store, bool Windowed, class Derived>
-        requires is_static_width_owner<Bits, Store, Windowed> and (I < Bits::extent)
-[[nodiscard]] constexpr auto get(sequence_adaptor<Bits, Store, Windowed, Derived> const& c) noexcept
+template<std::size_t I, class Bits, storage Store, window W, class Derived>
+        requires is_static_width_owner<Bits, Store, W> and (I < Bits::extent)
+[[nodiscard]] constexpr auto get(sequence_adaptor<Bits, Store, W, Derived> const& c) noexcept
 {
         return c[I];
 }
 
 // The proxy is returned by value, so the two rvalue overloads forward rather than move.
-template<std::size_t I, class Bits, storage Store, bool Windowed, class Derived>
-        requires is_static_width_owner<Bits, Store, Windowed> and (I < Bits::extent)
-[[nodiscard]] constexpr auto get(sequence_adaptor<Bits, Store, Windowed, Derived>&& c) noexcept
+template<std::size_t I, class Bits, storage Store, window W, class Derived>
+        requires is_static_width_owner<Bits, Store, W> and (I < Bits::extent)
+[[nodiscard]] constexpr auto get(sequence_adaptor<Bits, Store, W, Derived>&& c) noexcept
 {
         return get<I>(c);
 }
 
-template<std::size_t I, class Bits, storage Store, bool Windowed, class Derived>
-        requires is_static_width_owner<Bits, Store, Windowed> and (I < Bits::extent)
-[[nodiscard]] constexpr auto get(sequence_adaptor<Bits, Store, Windowed, Derived> const&& c) noexcept
+template<std::size_t I, class Bits, storage Store, window W, class Derived>
+        requires is_static_width_owner<Bits, Store, W> and (I < Bits::extent)
+[[nodiscard]] constexpr auto get(sequence_adaptor<Bits, Store, W, Derived> const&& c) noexcept
 {
         return get<I>(c);
 }
@@ -1258,11 +1258,11 @@ template<std::size_t I, class Bits, storage Store, bool Windowed, class Derived>
 namespace std::ranges {
 
 // A view is a std::ranges::view outright and borrowed, as set_adaptor's is.
-template<class Bits, bool Windowed>
-inline constexpr bool enable_view<xstd::sequence_adaptor<Bits, xstd::storage::borrowed, Windowed>> = true;
+template<class Bits, xstd::window W>
+inline constexpr bool enable_view<xstd::sequence_adaptor<Bits, xstd::storage::borrowed, W>> = true;
 
-template<class Bits, bool Windowed>
-inline constexpr bool enable_borrowed_range<xstd::sequence_adaptor<Bits, xstd::storage::borrowed, Windowed>> = true;
+template<class Bits, xstd::window W>
+inline constexpr bool enable_borrowed_range<xstd::sequence_adaptor<Bits, xstd::storage::borrowed, W>> = true;
 
 } // namespace std::ranges
 
@@ -1272,31 +1272,31 @@ inline constexpr bool enable_borrowed_range<xstd::sequence_adaptor<Bits, xstd::s
 namespace std {
 
 // [array.tuple]'s three over the static-width owner: tuple_element names the proxy, not bool.
-template<class Bits, xstd::storage Store, bool Windowed, class Derived>
-        requires xstd::is_static_width_owner<Bits, Store, Windowed>
-struct tuple_size<xstd::sequence_adaptor<Bits, Store, Windowed, Derived>>
+template<class Bits, xstd::storage Store, xstd::window W, class Derived>
+        requires xstd::is_static_width_owner<Bits, Store, W>
+struct tuple_size<xstd::sequence_adaptor<Bits, Store, W, Derived>>
         : integral_constant<size_t, Bits::extent>
 {};
 
-template<size_t I, class Bits, xstd::storage Store, bool Windowed, class Derived>
-        requires xstd::is_static_width_owner<Bits, Store, Windowed> and (I < Bits::extent)
-struct tuple_element<I, xstd::sequence_adaptor<Bits, Store, Windowed, Derived>>
+template<size_t I, class Bits, xstd::storage Store, xstd::window W, class Derived>
+        requires xstd::is_static_width_owner<Bits, Store, W> and (I < Bits::extent)
+struct tuple_element<I, xstd::sequence_adaptor<Bits, Store, W, Derived>>
 {
-        using type = xstd::sequence_adaptor<Bits, Store, Windowed, Derived>::reference;
+        using type = xstd::sequence_adaptor<Bits, Store, W, Derived>::reference;
 };
 
-template<size_t I, class Bits, xstd::storage Store, bool Windowed, class Derived>
-        requires xstd::is_static_width_owner<Bits, Store, Windowed> and (I < Bits::extent)
-struct tuple_element<I, const xstd::sequence_adaptor<Bits, Store, Windowed, Derived>>
+template<size_t I, class Bits, xstd::storage Store, xstd::window W, class Derived>
+        requires xstd::is_static_width_owner<Bits, Store, W> and (I < Bits::extent)
+struct tuple_element<I, const xstd::sequence_adaptor<Bits, Store, W, Derived>>
 {
-        using type = xstd::sequence_adaptor<Bits, Store, Windowed, Derived>::const_reference;
+        using type = xstd::sequence_adaptor<Bits, Store, W, Derived>::const_reference;
 };
 
 // The owner hashes as std::vector<bool> does; a view no more than std::span does.
-template<class Bits, bool Windowed, class Derived>
-struct hash<xstd::sequence_adaptor<Bits, xstd::storage::owned, Windowed, Derived>>
+template<class Bits, xstd::window W, class Derived>
+struct hash<xstd::sequence_adaptor<Bits, xstd::storage::owned, W, Derived>>
 {
-        [[nodiscard]] constexpr auto operator()(xstd::sequence_adaptor<Bits, xstd::storage::owned, Windowed, Derived> const& v) const noexcept
+        [[nodiscard]] constexpr auto operator()(xstd::sequence_adaptor<Bits, xstd::storage::owned, W, Derived> const& v) const noexcept
                 -> std::size_t
         {
                 return xstd::detail::bits::std_hash(v);
@@ -1310,12 +1310,12 @@ struct hash<xstd::sequence_adaptor<Bits, xstd::storage::owned, Windowed, Derived
 // Not a range to ContainerHash and not tuple-like: Hash2 takes the hook, not its range or tuple overload.
 namespace boost::container_hash {
 
-template<class Bits, xstd::storage Store, bool Windowed, class Derived>
-struct is_range<xstd::sequence_adaptor<Bits, Store, Windowed, Derived>> : std::false_type
+template<class Bits, xstd::storage Store, xstd::window W, class Derived>
+struct is_range<xstd::sequence_adaptor<Bits, Store, W, Derived>> : std::false_type
 {};
 
-template<class Bits, xstd::storage Store, bool Windowed, class Derived>
-struct is_tuple_like<xstd::sequence_adaptor<Bits, Store, Windowed, Derived>> : std::false_type
+template<class Bits, xstd::storage Store, xstd::window W, class Derived>
+struct is_tuple_like<xstd::sequence_adaptor<Bits, Store, W, Derived>> : std::false_type
 {};
 
 } // namespace boost::container_hash
