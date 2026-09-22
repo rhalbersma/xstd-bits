@@ -241,7 +241,6 @@ public:
 
         // What a trait asks of this vehicle, every container built on it answering alike.
         using adaptor_type = sequence_adaptor;
-        static constexpr auto reads_as = reading::sequence;
         static constexpr bool is_windowed = is_window;
         using adapted_type = Bits;
         static constexpr bool owns_storage = is_owner;
@@ -1106,10 +1105,6 @@ private:
                 );
         }
 };
-
-// Any container built on the sequence vehicle, the vehicle used directly included.
-template<class T>
-concept sequence_adaptor_like = requires { typename T::adaptor_type; T::reads_as; } and T::reads_as == reading::sequence and std::derived_from<T, typename T::adaptor_type>;
 
 // The owner's side of the protocol above.
 template<class Bits, class Derived>
