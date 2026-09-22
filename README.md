@@ -177,6 +177,7 @@ are static or dynamic.
 | `<xstd/bits/bit_set_view.hpp>` | `bit_set_view` | Set reading of bits another container owns | none |
 | `<xstd/bits/bit_span.hpp>` <br> `<xstd/bits/bit_subspan.hpp>` | `bit_span` <br> `bit_subspan` | Sequence reading over borrowed bits, whole or sliced | [views.span] |
 | `<xstd/bits/borrowed_bits.hpp>` | `borrowed_bits` <br> `borrow_bits` | Bits in words someone else owns, for `bit_set_view` and `bit_span` to read and write in place | [views.span] |
+| `<xstd/bits/from_bits.hpp>` | `from_bits` <br> `from_bits_t` | The tag that says an argument is a field of bits, so a static width deduces from it | [range.utility.conv] |
 | `<xstd/bits/contiguous_bit_sequence.hpp>` | `contiguous_bit_sequence` | What a storage must model to be adapted | none |
 
 `<xstd/bits.hpp>` exports the whole surface, so one include brings everything above.

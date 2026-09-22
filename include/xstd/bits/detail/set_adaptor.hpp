@@ -15,6 +15,7 @@
 #include <xstd/bits/detail/ownership.hpp>                // owned_bits_t, owned_storage, owner_of, owner_reading, storage, owns
 #include <xstd/bits/detail/shift.hpp>                    // shl, shr
 #include <xstd/bits/detail/zero_width.hpp>               // zero_width
+#include <xstd/bits/from_bits.hpp>                       // from_bits_t
 #include <xstd/misc/concepts/specialization_of.hpp>      // specialization_of_TN
 #include <xstd/misc/type_traits/empty_base_type.hpp>     // empty_base_type
 #include <boost/container_hash/is_range.hpp>             // is_range
@@ -237,6 +238,14 @@ public:
                 auto result = derived_type();
                 result.bits().assign_bits(b);
                 return result;
+        }
+
+        // The same as a constructor, tagged as std::from_range is, so that a guide can deduce the width from B.
+        template<class B>
+                requires is_owner and Bits::template
+        exchanges_bits<B> [[nodiscard]] constexpr set_adaptor(xstd::from_bits_t, B const& b) noexcept
+        {
+                m_bits.assign_bits(b);
         }
 
         // Through bits() and not m_bits, which is a Bits* wherever this reading refers rather than owns.

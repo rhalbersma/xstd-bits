@@ -20,6 +20,7 @@
 #include <xstd/bits/borrowed_bits.hpp>           // IWYU pragma: export; borrow_bits, borrowed_bits
 #include <xstd/bits/contiguous_bit_sequence.hpp> // IWYU pragma: export; contiguous_bit_sequence
 #include <xstd/bits/dynamic_bitset.hpp>          // IWYU pragma: export; dynamic_bitset
+#include <xstd/bits/from_bits.hpp>               // IWYU pragma: export; from_bits, from_bits_t
 #include <xstd/bits/inplace_bitset.hpp>          // IWYU pragma: export; inplace_bitset
 
 #endif // XSTD_BITS_HPP

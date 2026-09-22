@@ -8,8 +8,11 @@
 
 #include <xstd/bits/detail/bitset_adaptor.hpp>       // bitset_adaptor
 #include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
+#include <xstd/bits/from_bits.hpp>                   // from_bits_t
 #include <xstd/ints/concepts/unsigned_integer.hpp>   // unsigned_integer
+#include <xstd/ints/limits.hpp>                      // numeric_limits
 #include <xstd/ints/memory.hpp>                      // align_up
+#include <array>                                     // array
 #include <cstddef>                                   // size_t
 #include <functional>                                // hash
 #include <limits>                                    // digits
@@ -33,6 +36,18 @@ public:
                 x.swap(y);
         }
 };
+
+// The width a field of bits carries in its type: an integer's digits, or an array's blocks of them.
+template<xstd::unsigned_integer B>
+basic_bitset(from_bits_t, B) -> basic_bitset<B, static_cast<std::size_t>(xstd::numeric_limits<B>::digits)>;
+
+template<xstd::unsigned_integer B, std::size_t K>
+basic_bitset(from_bits_t, std::array<B, K>) -> basic_bitset<B, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>;
+
+// std::bitset's integer constructor at the width of the integer's type, where that constructor reads every digit.
+template<xstd::unsigned_integer B>
+        requires (xstd::numeric_limits<B>::digits <= std::numeric_limits<unsigned long long>::digits)
+basic_bitset(B) -> basic_bitset<std::size_t, static_cast<std::size_t>(xstd::numeric_limits<B>::digits)>;
 
 template<std::size_t N>
 using bitset = basic_bitset<std::size_t, N>;

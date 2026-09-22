@@ -524,6 +524,22 @@ rather than from a decision. `container_source` asks for `set`, `count` and `siz
 a set has `insert` and a sequence has `operator[]`, so neither is a *source* even though both are targets. The
 bitset reading is the hub between them, and going through it is one explicit cast rather than a missing feature.
 
+#### the tag that deduces a width
+
+`from_bits` is a static member, so it names its own type and nothing can be deduced through it:
+`basic_bit_array<std::uint64_t, 64>::from_bits(board)` spells out what `board` already says. The tagged constructor
+is the same door with a place for a deduction guide, and the tag is `std::from_range`'s twin -- `xstd::from_bits_t`,
+an explicitly defaulted constructor, and the object `xstd::from_bits` -- because the job is the same one: saying at
+the call site which reading of the argument is meant. `basic_bit_array(xstd::from_bits, board)` is
+`basic_bit_array<std::uint64_t, 64>`, and `basic_bit_static_set(xstd::from_bits, words)` over a
+`std::array<std::uint8_t, 3>` is `basic_bit_static_set<std::uint8_t, 24>`: the guides deduce the block type and the
+width from an unsigned integer or a `std::array` of them, the two families whose width the type carries.
+
+The bitset reading has one guide more, untagged, because `std::bitset` already gave an integer argument its meaning:
+`basic_bitset(x)` routes to the `unsigned long long` constructor at the width of `x`'s type, and stops at that
+type's digits, which is where that constructor stops reading. A wider integer takes the tag, which every owner has.
+None of this reaches a run-time width, which has no width in its type for a guide to find.
+
 #### the same job `flat_set` gives `extract` and `replace`
 
 `std::flat_set` has a door of its own onto its representation: `extract() &&` hands the underlying
