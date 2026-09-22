@@ -11,7 +11,7 @@
 #include <memory_resource>          // polymorphic_allocator
 #include <scoped_allocator>         // scoped_allocator_adaptor
 #include <type_traits>              // is_nothrow_move_assignable_v, is_nothrow_move_constructible_v
-#include <utility>                  // swap
+#include <utility>                  // move, swap
 
 // What the compiler generates for each cell, held to the table rather than to whichever cell was read last.
 BOOST_AUTO_TEST_SUITE(Generated)
@@ -167,6 +167,61 @@ BOOST_AUTO_TEST_CASE(SwapExchangesTheValues)
         swap(a, b);
         BOOST_CHECK(a.contains(1UZ) and not a.contains(2UZ));
         BOOST_CHECK(b.contains(2UZ) and not b.contains(1UZ));
+}
+
+namespace {
+
+// Each reading's own way of saying empty and of growing by one, asked of an owner whose value was moved away.
+template<class T>
+auto a_moved_from_sequence_grows_again()
+        -> bool
+{
+        auto source = T(100UZ, true);
+        auto const target = std::move(source);
+        auto const empty = source.empty(); // NOLINT(bugprone-use-after-move,hicpp-invalid-access-moved,clang-analyzer-cplusplus.Move): the moved-from state is the check.
+        source.push_back(true);            // NOLINT(clang-analyzer-cplusplus.Move): growing the moved-from state is the check.
+        return empty and target.size() == 100UZ and source.size() == 1UZ and source[0];
+}
+
+template<class T>
+auto a_moved_from_set_grows_again()
+        -> bool
+{
+        auto source = T();
+        source.insert(100UZ);
+        auto const target = std::move(source);
+        auto const empty = source.empty(); // NOLINT(bugprone-use-after-move,hicpp-invalid-access-moved,clang-analyzer-cplusplus.Move): the moved-from state is the check.
+        source.insert(3UZ);                // NOLINT(clang-analyzer-cplusplus.Move): growing the moved-from state is the check.
+        return empty and target.contains(100UZ) and source.size() == 1UZ and source.contains(3UZ);
+}
+
+template<class T>
+auto a_moved_from_bitset_grows_again()
+        -> bool
+{
+        auto source = T(100UZ);
+        source.set();
+        auto const target = std::move(source);
+        auto const empty = source.size() == 0UZ; // NOLINT(bugprone-use-after-move,hicpp-invalid-access-moved,clang-analyzer-cplusplus.Move): the moved-from state is the check.
+        source.push_back(true);                  // NOLINT(clang-analyzer-cplusplus.Move): growing the moved-from state is the check.
+        return empty and target.all() and source.size() == 1UZ and source.test(0UZ);
+}
+
+} // namespace
+
+// A moved-from owner at a run-time width is valid and empty, and grows again from there.
+BOOST_AUTO_TEST_CASE(AMovedFromRunTimeWidthIsEmptyAndGrowsAgain)
+{
+        BOOST_CHECK(a_moved_from_sequence_grows_again<xstd::bit_vector>());
+        BOOST_CHECK(a_moved_from_set_grows_again<xstd::bit_set>());
+        BOOST_CHECK(a_moved_from_bitset_grows_again<xstd::dynamic_bitset>());
+#ifdef __cpp_lib_inplace_vector
+
+        BOOST_CHECK(a_moved_from_sequence_grows_again<xstd::bit_inplace_vector<N>>());
+        BOOST_CHECK(a_moved_from_set_grows_again<xstd::bit_inplace_set<N>>());
+        BOOST_CHECK(a_moved_from_bitset_grows_again<xstd::inplace_bitset<N>>());
+
+#endif
 }
 
 BOOST_AUTO_TEST_CASE(TheBitsetSwapIsTheOneBoostHasAndStdDoesNot)

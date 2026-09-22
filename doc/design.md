@@ -599,7 +599,25 @@ reader goes through `size()`, which converts once, so the arithmetic stays a `si
 ### default-construction
 
 A defaulted default constructor plus an NSDMI, rather than two constructors constrained on the extent:
-`std::vector` default-constructs empty, and the at-least-one-block invariant has to hold from the start.
+`std::vector` default-constructs empty, and so does a run-time width here -- width zero, no blocks, no
+allocation, as `std::vector<bool>` has it. A static width keeps at least one block, because the `std::array`
+under it has a fixed extent that the static arms index directly; `num_blocks_v` floors there, `blocks_for` does
+not.
+
+### the-moved-from-state
+
+A run-time width's move leaves the source at width zero with no blocks: the same object the default constructor
+makes, and one on which every member without a precondition works, `push_back` and `insert` included. The implicit
+moves could not say that -- they moved the blocks and copied the width, so a moved-from `bit_vector` answered
+`size() == 100` over no blocks and a `push_back` wrote past the end. The moves are written out for the run-time
+widths alone, constrained on `not has_static_size`, and defaulted for the static ones, which keeps those trivial.
+
+Zero blocks is what makes the state reachable without allocating. Restoring one block in the source would have
+asked `std::vector` for memory inside a move, which is what `noexcept` on every cell's move rules out. The source's
+blocks are `clear()`ed after the move, because `std::inplace_vector` and `boost::container::small_vector` keep
+their moved-from elements where `std::vector` does not. Move assignment takes the source's blocks into a local
+before writing anything, so a self-move puts back exactly what it took, with no branch on `this == &other` for a
+test to have to take.
 
 ### growth
 
@@ -608,8 +626,8 @@ resizes the blocks to what `n` needs, filled with `value`, moves the width, and 
 growing with ones first sets the old last block's tail, clear by the invariant, since those are the first new
 positions. `push_back` and `pop_back` are `resize` by one, `clear` is `resize(0)` -- the object a default
 constructor makes -- and `append(block)` is boost's: the block's bits become the next `bits_per_block`
-positions, split across two blocks where the width is not aligned, and the floor block takes the first one
-at width zero. `reserve`, `capacity` and `shrink_to_fit` are in bits and exist where the blocks have them:
+positions, split across two blocks where the width is not aligned, and pushed as the first block at width
+zero. `reserve`, `capacity` and `shrink_to_fit` are in bits and exist where the blocks have them:
 `std::vector` and `std::inplace_vector`, not `std::array`.
 
 `clear()` here is the sequence reading's, width to zero, which is what `std::vector<bool>` and
@@ -4437,10 +4455,10 @@ function that exists so nobody has to.
 
 ### `blocks_for` is total over every `size_t`
 
-How many blocks a run-time width needs, floored at one. It is said as boost's `calc_num_blocks` says
+How many blocks a run-time width needs, none at width zero. It is said as boost's `calc_num_blocks` says
 it — divide, then round up by the remainder — because that *cannot* overflow, where
 `align_up(n, bits_per_block)` adds first and wraps for the 63 widths above `max_width`, rounding them
-to zero blocks that the floor then turns into one. A guard against that wrap is a guard against a
+to zero blocks that the one-block floor it once carried then turned into one. A guard against that wrap is a guard against a
 spelling; this spelling has nothing to guard. It is public because that totality is the claim, and a
 `static_assert` is the only way to make it without asking an allocator for two exabytes.
 
