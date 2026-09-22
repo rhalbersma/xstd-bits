@@ -38,16 +38,21 @@ led there belongs in a document or in the commit that made the change.
 
 Three groups, in this order, with no blank line between them: this project's own `<xstd/...>`
 headers, then `<boost/...>`, then the standard library. Alphabetical by path within each group, so
-`<xstd/bits/detail/contiguous_bit_array.hpp>` precedes `<xstd/bits/detail/ownership.hpp>` and
-`<cstddef>` precedes `<functional>`.
+`<cstddef>` precedes `<functional>`, and
+`<xstd/bits/detail/contiguous_bit_array.hpp>` precedes `<xstd/bits/detail/ownership.hpp>`.
 
 `.clang-format` sets `SortIncludes: Never`, so nothing enforces this and nothing will reorder for
 you. A file that already deviates is a file to fix, not the convention speaking.
 
-Every line carries a trailing `//` naming what the include is for, and that comment, an
-`IWYU pragma` and a `NOLINT` all belong to the line rather than to the position: move the whole
-line or none of it. Reordering changes which header is found first, so build and test afterwards
-rather than trusting that only whitespace moved.
+**An umbrella header is the exception.** Where every include carries `IWYU pragma: export`, the
+file publishes a surface rather than naming what it needs, and its order is the one a reader
+should meet it in: a macro before what expands it, a type before the functions returning it, and
+whatever grouping the comments mark. Alphabetizing that throws away the argument it was making.
+
+A trailing `//` names what each include is for, and that comment, an `IWYU pragma` and a `NOLINT`
+belong to the line rather than to the position: move the whole line or none of it. Reordering
+changes which header is found first, so build and test afterwards rather than trusting that only
+whitespace moved.
 
 ## Trailing return types
 
