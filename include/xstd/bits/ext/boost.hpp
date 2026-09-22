@@ -41,7 +41,7 @@ public:
         using base_type::base_type;
         using base_type::operator=;
 
-        // An allocator names std among the associated namespaces, where std::swap would out-match the container's own.
+        // A swap on the base loses to any exact match on this type, so every container declares its own.
         friend constexpr auto swap(basic_bit_small_set& x, basic_bit_small_set& y) noexcept(noexcept(x.swap(y)))
                 -> void
         {
@@ -58,7 +58,7 @@ public:
         using base_type::base_type;
         using base_type::operator=;
 
-        // An allocator names std among the associated namespaces, where std::swap would out-match the container's own.
+        // A swap on the base loses to any exact match on this type, so every container declares its own.
         friend constexpr auto swap(basic_bit_small_vector& x, basic_bit_small_vector& y) noexcept(noexcept(x.swap(y)))
                 -> void
         {
@@ -75,7 +75,7 @@ public:
         using base_type::base_type;
         using base_type::operator=;
 
-        // An allocator names std among the associated namespaces, where std::swap would out-match the container's own.
+        // A swap on the base loses to any exact match on this type, so every container declares its own.
         friend constexpr auto swap(basic_small_bitset& x, basic_small_bitset& y) noexcept(noexcept(x.swap(y)))
                 -> void
         {

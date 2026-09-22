@@ -32,7 +32,7 @@ public:
         using base_type::base_type;
         using base_type::operator=;
 
-        // An allocator names std among the associated namespaces, where std::swap would out-match the container's own.
+        // A swap on the base loses to any exact match on this type, so every container declares its own.
         friend constexpr auto swap(basic_bit_inplace_vector& x, basic_bit_inplace_vector& y) noexcept(noexcept(x.swap(y)))
                 -> void
         {
