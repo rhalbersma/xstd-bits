@@ -14,6 +14,7 @@
 #include <cstddef>                                   // size_t
 #include <limits>                                    // digits
 #include <functional>                                // hash
+#include <tuple>                                     // tuple_element, tuple_size
 #include <type_traits>                               // false_type
 #include <boost/container_hash/is_range.hpp>         // is_range
 #include <boost/container_hash/is_tuple_like.hpp>    // is_tuple_like
