@@ -12,7 +12,7 @@
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/detail/hash.hpp>                     // hash_append_bits, std_hash
 #include <xstd/bits/detail/zero_width.hpp>               // zero_width
-#include <xstd/bits/grid.hpp>                            // adaptor_of
+#include <xstd/bits/grid.hpp>                            // adaptor
 #include <xstd/bits/ownership.hpp>                       // owned_storage, storage, window
 #include <xstd/bits/tags.hpp>                            // bitset_reading_tag
 #include <xstd/misc/concepts/specialization_of.hpp>      // specialization_of_TN
@@ -44,7 +44,7 @@ namespace xstd {
 
 // [template.bitset] over a storage of ours, which speaks the bitset vocabulary by construction.
 template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits, class Derived>
-class bitset_adaptor : public detail::bits::allocator_base_type<Bits>
+class adaptor<bitset_reading_tag, Bits, storage::owned, window::all, Derived> : public detail::bits::allocator_base_type<Bits>
 {
         // One wrapper, two counterparts: std::bitset at a static width, boost::dynamic_bitset at a run-time one.
         static constexpr bool has_static_width = (Bits::extent != std::dynamic_extent);
@@ -63,15 +63,12 @@ class bitset_adaptor : public detail::bits::allocator_base_type<Bits>
         friend Derived;
 
         // Either reading's view refers into this owner's storage: a bitset is committed to neither reading.
-        template<specialization_of_TN<detail::bits::contiguous_bit_container> B, storage O, class D>
-        friend class set_adaptor;
-
-        template<specialization_of_TN<detail::bits::contiguous_bit_container> B, storage O, window V, class D>
-        friend class sequence_adaptor;
+        template<reading_tag, class, storage, window, class>
+        friend class adaptor;
 
         // The value through the trait: the blocks and the width.
         template<class Provider, class Hash, class Flavor>
-        friend constexpr auto tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, bitset_adaptor const* v) noexcept
+        friend constexpr auto tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, adaptor const* v) noexcept
                 -> void
         {
                 detail::bits::hash_append_bits(h, f, v->m_bits);
@@ -86,7 +83,7 @@ class bitset_adaptor : public detail::bits::allocator_base_type<Bits>
 
 public:
         // What a trait asks of this vehicle, every container built on it answering alike.
-        using adaptor_type = bitset_adaptor;
+        using adaptor_type = adaptor;
         using bits_type = Bits;
 
         // boost's typedefs; std::bitset has none, and the block is in the open as boost's interface needs.
@@ -98,12 +95,12 @@ public:
         class reference
         {
                 // A pointer, not a reference, so the copy constructor stays defaulted as [bitset.refs] declares it.
-                bitset_adaptor* m_ptr{};
+                adaptor* m_ptr{};
                 std::size_t m_idx{};
 
-                friend bitset_adaptor;
+                friend adaptor;
 
-                [[nodiscard]] constexpr reference(bitset_adaptor& c, std::size_t idx) noexcept
+                [[nodiscard]] constexpr reference(adaptor& c, std::size_t idx) noexcept
                         : m_ptr(&c)
                         , m_idx(idx)
                 {}
@@ -180,16 +177,16 @@ public:
         static constexpr std::size_t npos = static_cast<std::size_t>(-1);
 
         // Constructors                                            [bitset.cons]
-        [[nodiscard]] bitset_adaptor() noexcept = default;
+        [[nodiscard]] adaptor() noexcept = default;
 
         // [bitset.cons]/2: the low bits of val, as many as the width admits; boost orders its two the other way.
-        [[nodiscard]] constexpr explicit(false) bitset_adaptor(unsigned long long val) noexcept // NOLINT(misc-explicit-constructor)
+        [[nodiscard]] constexpr explicit(false) adaptor(unsigned long long val) noexcept // NOLINT(misc-explicit-constructor)
                 requires has_static_width
         {
                 from_ullong(val);
         }
 
-        [[nodiscard]] constexpr explicit bitset_adaptor(std::size_t num_bits, unsigned long long val = 0ULL)
+        [[nodiscard]] constexpr explicit adaptor(std::size_t num_bits, unsigned long long val = 0ULL)
                 requires (not has_static_width)
                 : m_bits(num_bits)
         {
@@ -198,7 +195,7 @@ public:
 
         // A field of bits in and out, constrained on container_source: the integer door is already taken.
         template<class B>
-                requires (not std::same_as<std::remove_cvref_t<B>, bitset_adaptor>) and Bits::template
+                requires (not std::same_as<std::remove_cvref_t<B>, adaptor>) and Bits::template
         exchanges_bits_as_field<B> [[nodiscard]] static constexpr auto from_bits(B const& b) noexcept
                 -> Derived
         {
@@ -217,7 +214,7 @@ public:
 
         // boost's block-range constructor: the first block's low bit is position zero.
         template<std::input_iterator I, std::sentinel_for<I> S>
-        [[nodiscard]] constexpr bitset_adaptor(I first, S last)
+        [[nodiscard]] constexpr adaptor(I first, S last)
                 requires (not has_static_width) and block_iterator<I>
         {
                 m_bits.append(first, last);
@@ -226,13 +223,13 @@ public:
         // boost's allocator arguments, where the storage takes one.
         template<class Alloc>
                 requires (not has_static_width) and std::same_as<Alloc, typename Bits::allocator_type>
-        [[nodiscard]] constexpr explicit bitset_adaptor(Alloc const& alloc)
+        [[nodiscard]] constexpr explicit adaptor(Alloc const& alloc)
                 : m_bits(alloc)
         {}
 
         template<class Alloc>
                 requires (not has_static_width) and std::same_as<Alloc, typename Bits::allocator_type>
-        [[nodiscard]] constexpr bitset_adaptor(std::size_t num_bits, unsigned long long val, Alloc const& alloc)
+        [[nodiscard]] constexpr adaptor(std::size_t num_bits, unsigned long long val, Alloc const& alloc)
                 : m_bits(num_bits, alloc)
         {
                 from_ullong(val);
@@ -240,7 +237,7 @@ public:
 
         template<std::input_iterator I, std::sentinel_for<I> S, class Alloc>
                 requires (not has_static_width) and block_iterator<I> and std::same_as<Alloc, typename Bits::allocator_type>
-        [[nodiscard]] constexpr bitset_adaptor(I first, S last, Alloc const& alloc)
+        [[nodiscard]] constexpr adaptor(I first, S last, Alloc const& alloc)
                 : m_bits(alloc)
         {
                 m_bits.append(first, last);
@@ -253,7 +250,7 @@ public:
         }
 
         // Boost has the free form beside the member; hidden, since xstd::swap(a, b) is reached for by habit.
-        friend constexpr auto swap(bitset_adaptor& x, bitset_adaptor& y) noexcept(noexcept(x.swap(y)))
+        friend constexpr auto swap(adaptor& x, adaptor& y) noexcept(noexcept(x.swap(y)))
                 -> void
                 requires std::swappable<Bits>
         {
@@ -261,7 +258,7 @@ public:
         }
 
         // Boost's, and so ours at both widths: the storage spells it alike, and an extension may add.
-        constexpr auto swap(bitset_adaptor& other) noexcept(std::is_nothrow_swappable_v<Bits>)
+        constexpr auto swap(adaptor& other) noexcept(std::is_nothrow_swappable_v<Bits>)
                 -> void
                 requires std::swappable<Bits>
         {
@@ -269,18 +266,18 @@ public:
         }
 
         template<class charT, class traits, class Allocator>
-        [[nodiscard]] constexpr explicit bitset_adaptor(
+        [[nodiscard]] constexpr explicit adaptor(
                 std::basic_string<charT, traits, Allocator> const& str,
                 std::basic_string<charT, traits, Allocator>::size_type pos = 0,
                 std::basic_string<charT, traits, Allocator>::size_type n = std::basic_string<charT, traits, Allocator>::npos,
                 charT zero = static_cast<charT>('0'),
                 charT one = static_cast<charT>('1')
         )
-                : bitset_adaptor(std::basic_string_view<charT, traits>(str), pos, n, zero, one)
+                : adaptor(std::basic_string_view<charT, traits>(str), pos, n, zero, one)
         {}
 
         template<class charT, class traits>
-        [[nodiscard]] constexpr explicit bitset_adaptor(
+        [[nodiscard]] constexpr explicit adaptor(
                 std::basic_string_view<charT, traits> str,
                 std::basic_string_view<charT, traits>::size_type pos = 0,
                 std::basic_string_view<charT, traits>::size_type n = std::basic_string_view<charT, traits>::npos,
@@ -313,31 +310,31 @@ public:
         // LWG 4294's four char-like traits, plus one clause: a pointer to a block is the block range's argument.
         template<class charT>
                 requires (not std::same_as<std::remove_cv_t<charT>, block_type>) and (not std::is_array_v<charT>) and std::is_trivially_copyable_v<charT> and std::is_standard_layout_v<charT> and std::is_trivially_default_constructible_v<charT>
-        [[nodiscard]] constexpr explicit bitset_adaptor(
+        [[nodiscard]] constexpr explicit adaptor(
                 charT const* str,
                 std::size_t n = std::basic_string_view<charT>::npos,
                 charT zero = static_cast<charT>('0'),
                 charT one = static_cast<charT>('1')
         )
-                : bitset_adaptor(n == std::basic_string_view<charT>::npos ? std::basic_string_view<charT>(str) : std::basic_string_view<charT>(str, n), 0, n, zero, one)
+                : adaptor(n == std::basic_string_view<charT>::npos ? std::basic_string_view<charT>(str) : std::basic_string_view<charT>(str, n), 0, n, zero, one)
         {}
 
         // Members                                              [bitset.members]
-        constexpr auto operator&=(bitset_adaptor const& rhs) noexcept
+        constexpr auto operator&=(adaptor const& rhs) noexcept
                 -> Derived&
         {
                 m_bits &= rhs.m_bits;
                 return self();
         }
 
-        constexpr auto operator|=(bitset_adaptor const& rhs) noexcept
+        constexpr auto operator|=(adaptor const& rhs) noexcept
                 -> Derived&
         {
                 m_bits |= rhs.m_bits;
                 return self();
         }
 
-        constexpr auto operator^=(bitset_adaptor const& rhs) noexcept
+        constexpr auto operator^=(adaptor const& rhs) noexcept
                 -> Derived&
         {
                 m_bits ^= rhs.m_bits;
@@ -552,10 +549,10 @@ public:
         }
 
         // A friend rather than the member std::bitset specifies: [class.compare.default]/1 admits either.
-        [[nodiscard]] friend auto operator==(bitset_adaptor const& lhs, bitset_adaptor const& rhs) noexcept -> bool = default;
+        [[nodiscard]] friend auto operator==(adaptor const& lhs, adaptor const& rhs) noexcept -> bool = default;
 
         // The bit string's order, most significant position first: two lengths is a question about N, not blocks.
-        [[nodiscard]] friend constexpr auto operator<=>(bitset_adaptor const& lhs, bitset_adaptor const& rhs) noexcept
+        [[nodiscard]] friend constexpr auto operator<=>(adaptor const& lhs, adaptor const& rhs) noexcept
                 -> std::strong_ordering
         {
                 if constexpr (not has_static_width) {
@@ -596,33 +593,33 @@ public:
         }
 
         // The set vocabulary boost has and std::bitset has not, which the storage spells alike at both widths.
-        constexpr auto operator-=(bitset_adaptor const& rhs) noexcept
+        constexpr auto operator-=(adaptor const& rhs) noexcept
                 -> Derived&
         {
                 m_bits -= rhs.m_bits;
                 return self();
         }
 
-        [[nodiscard]] constexpr auto is_subset_of(bitset_adaptor const& rhs) const noexcept
+        [[nodiscard]] constexpr auto is_subset_of(adaptor const& rhs) const noexcept
                 -> bool
         {
                 return m_bits.is_subset_of(rhs.m_bits);
         }
 
-        [[nodiscard]] constexpr auto is_proper_subset_of(bitset_adaptor const& rhs) const noexcept
+        [[nodiscard]] constexpr auto is_proper_subset_of(adaptor const& rhs) const noexcept
                 -> bool
         {
                 return m_bits.is_proper_subset_of(rhs.m_bits);
         }
 
-        [[nodiscard]] constexpr auto intersects(bitset_adaptor const& rhs) const noexcept
+        [[nodiscard]] constexpr auto intersects(adaptor const& rhs) const noexcept
                 -> bool
         {
                 return m_bits.intersects(rhs.m_bits);
         }
 
         // The symmetric spelling beside boost's member: a member of this name would end lookup before ADL.
-        [[nodiscard]] friend constexpr auto intersects(bitset_adaptor const& x, bitset_adaptor const& y) noexcept
+        [[nodiscard]] friend constexpr auto intersects(adaptor const& x, adaptor const& y) noexcept
                 -> bool
         {
                 return x.intersects(y);
@@ -676,7 +673,7 @@ public:
 
         // boost's block interface: every block out including the clear tail, every block in with the tail kept clear.
         template<std::output_iterator<block_type> O>
-        friend constexpr auto to_block_range(bitset_adaptor const& b, O result)
+        friend constexpr auto to_block_range(adaptor const& b, O result)
                 -> void
         {
                 if constexpr (std::contiguous_iterator<O>) {
@@ -690,7 +687,7 @@ public:
 
         template<std::input_iterator I, std::sentinel_for<I> S>
                 requires block_iterator<I>
-        friend constexpr auto from_block_range(I first, S last, bitset_adaptor& result)
+        friend constexpr auto from_block_range(I first, S last, adaptor& result)
                 -> void
         {
                 // A sized sentinel too: the bulk copy must know the length before it writes.
@@ -809,7 +806,7 @@ private:
         }
 
         // boost's unequal-width order: the top min(size()) positions paired from the top, then the shorter is less.
-        [[nodiscard]] constexpr auto top_aligned_three_way(bitset_adaptor const& rhs) const noexcept
+        [[nodiscard]] constexpr auto top_aligned_three_way(adaptor const& rhs) const noexcept
                 -> std::strong_ordering
         {
                 auto const m = std::ranges::min(size(), rhs.size());
@@ -938,6 +935,10 @@ private:
         }
 };
 
+// The reading keeps its name over the general template, as the nine containers keep theirs over basic_bits.
+template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits, class Derived = void>
+using bitset_adaptor = adaptor<bitset_reading_tag, Bits, storage::owned, window::all, Derived>;
+
 // Every container built on the vehicle, the vehicle itself being nobody's owner.
 template<class T>
 concept owning_bitset_adaptor = requires { typename T::bits_type; } and std::derived_from<T, bitset_adaptor<typename T::bits_type, T>>;
@@ -950,13 +951,6 @@ struct owned_storage<bitset_adaptor<Bits, Derived>>
 
         // Committed to neither reading, which is what its two views are for.
         using reads = bitset_reading_tag;
-};
-
-// The bitset cell of the grid, answered where the adaptor it names is defined.
-template<class Bits, class Derived>
-struct adaptor_of<bitset_reading_tag, Bits, Derived>
-{
-        using type = bitset_adaptor<Bits, Derived>;
 };
 
 } // namespace xstd

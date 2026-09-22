@@ -13,7 +13,7 @@
 #include <xstd/bits/detail/intrin.hpp>                   // countr_zero, popcount
 #include <xstd/bits/detail/shift.hpp>                    // shl, shr
 #include <xstd/bits/detail/random_access.hpp>            // random_access_bit_iterator, random_access_bit_reference
-#include <xstd/bits/grid.hpp>                            // adaptor_of
+#include <xstd/bits/grid.hpp>                            // adaptor
 #include <xstd/bits/ownership.hpp>                       // owned_bits_t, owned_storage, owner_of, owner_reading, storage, owns, window
 #include <xstd/bits/tags.hpp>                            // sequence_reading_tag
 #include <xstd/misc/concepts/specialization_of.hpp>      // specialization_of_TN
@@ -129,9 +129,9 @@ using block_type_of = std::remove_const_t<Bits>::block_type;
 
 } // namespace detail::sequence
 
-// An owner names its storage's allocator, as std::vector<bool> names its own; a view names none, owning nothing.
+// The reading keeps its name over the general template, as the nine containers keep theirs over basic_bits.
 template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits, storage Store, window W, class Derived = void>
-class sequence_adaptor;
+using sequence_adaptor = adaptor<sequence_reading_tag, Bits, Store, W, Derived>;
 
 // The windowed view a span hands back: declared here and defined in its own header, which this one must not include.
 template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits>
@@ -145,7 +145,7 @@ template<class Bits, storage Store, window W, class Derived, class Block>
 inline constexpr bool blit_source<sequence_adaptor<Bits, Store, W, Derived>, Block> = std::same_as<detail::sequence::block_type_of<Bits>, Block>;
 
 template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits, storage Store, window W, class Derived>
-class sequence_adaptor : public std::conditional_t<owns(Store), detail::bits::allocator_base_type<std::remove_const_t<Bits>>, xstd::empty_base_type<>>
+class adaptor<sequence_reading_tag, Bits, Store, W, Derived> : public std::conditional_t<owns(Store), detail::bits::allocator_base_type<std::remove_const_t<Bits>>, xstd::empty_base_type<>>
 {
         static constexpr bool is_owner = owns(Store);
         static constexpr bool is_window = (W == window::sub);
@@ -197,7 +197,7 @@ class sequence_adaptor : public std::conditional_t<owns(Store), detail::bits::al
         }
 
         // The window's constructor, which first, last and subspan call and nothing else does.
-        [[nodiscard]] constexpr sequence_adaptor(Bits* ptr, std::size_t offset, std::size_t size) noexcept
+        [[nodiscard]] constexpr adaptor(Bits* ptr, std::size_t offset, std::size_t size) noexcept
                 requires is_window
                 : m_bits{ptr, offset, size}
         {}
@@ -221,13 +221,13 @@ class sequence_adaptor : public std::conditional_t<owns(Store), detail::bits::al
         // The container needs constraints only the vehicle can name; [class.friend]/3 ignores the void a view passes.
         friend Derived;
 
-        // A sequence view refers into this owner's storage and nothing else does; a set view does not.
-        template<specialization_of_TN<detail::bits::contiguous_bit_container> B, storage O, window V, class D>
-        friend class sequence_adaptor;
+        // A view refers into this owner's storage; one friend template, no reading being nameable on its own.
+        template<reading_tag, class, storage, window, class>
+        friend class adaptor;
 
         // The value under the sequence reading, the owner's alone: a view follows span and hashes no more.
         template<class Provider, class Hash, class Flavor>
-        friend constexpr auto tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, sequence_adaptor const* v) noexcept
+        friend constexpr auto tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, adaptor const* v) noexcept
                 -> void
                 requires is_owner
         {
@@ -236,10 +236,10 @@ class sequence_adaptor : public std::conditional_t<owns(Store), detail::bits::al
 
 public:
         // A vehicle used directly is its own container, which is what a view is.
-        using derived_type = std::conditional_t<std::is_void_v<Derived>, sequence_adaptor, Derived>;
+        using derived_type = std::conditional_t<std::is_void_v<Derived>, adaptor, Derived>;
 
         // What a trait asks of this vehicle, every container built on it answering alike.
-        using adaptor_type = sequence_adaptor;
+        using adaptor_type = adaptor;
         using reads_as = sequence_reading_tag;
         static constexpr bool is_windowed = is_window;
         using adapted_type = Bits;
@@ -259,16 +259,16 @@ public:
         using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
         // construct/copy/destroy: an owner is built as std::array is, or std::vector where the storage grows.
-        [[nodiscard]] sequence_adaptor() noexcept
+        [[nodiscard]] adaptor() noexcept
                 requires is_owner
         = default;
 
-        [[nodiscard]] constexpr explicit sequence_adaptor(size_type n)
+        [[nodiscard]] constexpr explicit adaptor(size_type n)
                 requires can_grow
                 : m_bits(bits_type::check_addressable_width(n))
         {}
 
-        [[nodiscard]] constexpr sequence_adaptor(size_type n, value_type const& value)
+        [[nodiscard]] constexpr adaptor(size_type n, value_type const& value)
                 requires can_grow
                 : m_bits(bits_type::check_addressable_width(n))
         {
@@ -279,7 +279,7 @@ public:
 
         template<std::input_iterator I, std::sentinel_for<I> S>
                 requires can_grow and std::constructible_from<value_type, std::iter_reference_t<I>>
-        [[nodiscard]] constexpr sequence_adaptor(I first, S last)
+        [[nodiscard]] constexpr adaptor(I first, S last)
         {
                 for (; first != last; ++first) {
                         m_bits.push_back(static_cast<value_type>(*first));
@@ -288,17 +288,17 @@ public:
 
         template<std::ranges::input_range R>
                 requires can_grow and std::constructible_from<value_type, std::ranges::range_reference_t<R>>
-        [[nodiscard]] constexpr sequence_adaptor(std::from_range_t, R&& rg)
-                : sequence_adaptor(std::ranges::begin(rg), std::ranges::end(rg))
+        [[nodiscard]] constexpr adaptor(std::from_range_t, R&& rg)
+                : adaptor(std::ranges::begin(rg), std::ranges::end(rg))
         {}
 
-        [[nodiscard]] constexpr sequence_adaptor(std::initializer_list<value_type> il)
+        [[nodiscard]] constexpr adaptor(std::initializer_list<value_type> il)
                 requires can_grow
-                : sequence_adaptor(il.begin(), il.end())
+                : adaptor(il.begin(), il.end())
         {}
 
         // std::array's aggregate initialization as a constructor: what is listed leads, the rest stays false.
-        constexpr sequence_adaptor(std::initializer_list<value_type> il)
+        constexpr adaptor(std::initializer_list<value_type> il)
                 requires is_owner and (not can_grow)
                 : m_bits()
         {
@@ -328,19 +328,19 @@ public:
         // [vector.bool]'s allocator arguments, deduced and matched, so a storage without one has no such one.
         template<class Alloc>
                 requires can_grow and std::same_as<Alloc, typename bits_type::allocator_type>
-        [[nodiscard]] constexpr explicit sequence_adaptor(Alloc const& alloc)
+        [[nodiscard]] constexpr explicit adaptor(Alloc const& alloc)
                 : m_bits(alloc)
         {}
 
         template<class Alloc>
                 requires can_grow and std::same_as<Alloc, typename bits_type::allocator_type>
-        [[nodiscard]] constexpr sequence_adaptor(size_type n, Alloc const& alloc)
+        [[nodiscard]] constexpr adaptor(size_type n, Alloc const& alloc)
                 : m_bits(bits_type::check_addressable_width(n), alloc)
         {}
 
         template<class Alloc>
                 requires can_grow and std::same_as<Alloc, typename bits_type::allocator_type>
-        [[nodiscard]] constexpr sequence_adaptor(size_type n, value_type const& value, Alloc const& alloc)
+        [[nodiscard]] constexpr adaptor(size_type n, value_type const& value, Alloc const& alloc)
                 : m_bits(bits_type::check_addressable_width(n), alloc)
         {
                 if (value) {
@@ -350,7 +350,7 @@ public:
 
         template<std::input_iterator I, std::sentinel_for<I> S, class Alloc>
                 requires can_grow and std::constructible_from<value_type, std::iter_reference_t<I>> and std::same_as<Alloc, typename bits_type::allocator_type>
-        [[nodiscard]] constexpr sequence_adaptor(I first, S last, Alloc const& alloc)
+        [[nodiscard]] constexpr adaptor(I first, S last, Alloc const& alloc)
                 : m_bits(alloc)
         {
                 for (; first != last; ++first) {
@@ -360,26 +360,26 @@ public:
 
         template<std::ranges::input_range R, class Alloc>
                 requires can_grow and std::constructible_from<value_type, std::ranges::range_reference_t<R>> and std::same_as<Alloc, typename bits_type::allocator_type>
-        [[nodiscard]] constexpr sequence_adaptor(std::from_range_t, R&& rg, Alloc const& alloc)
-                : sequence_adaptor(std::ranges::begin(rg), std::ranges::end(rg), alloc)
+        [[nodiscard]] constexpr adaptor(std::from_range_t, R&& rg, Alloc const& alloc)
+                : adaptor(std::ranges::begin(rg), std::ranges::end(rg), alloc)
         {}
 
         template<class Alloc>
                 requires can_grow and std::same_as<Alloc, typename bits_type::allocator_type>
-        [[nodiscard]] constexpr sequence_adaptor(sequence_adaptor const& other, Alloc const& alloc)
+        [[nodiscard]] constexpr adaptor(adaptor const& other, Alloc const& alloc)
                 : m_bits(other.m_bits, alloc)
         {}
 
         template<class Alloc>
                 requires can_grow and std::same_as<Alloc, typename bits_type::allocator_type>
-        [[nodiscard]] constexpr sequence_adaptor(sequence_adaptor&& other, Alloc const& alloc)
+        [[nodiscard]] constexpr adaptor(adaptor&& other, Alloc const& alloc)
                 : m_bits(std::move(other.m_bits), alloc)
         {}
 
         template<class Alloc>
                 requires can_grow and std::same_as<Alloc, typename bits_type::allocator_type>
-        [[nodiscard]] constexpr sequence_adaptor(std::initializer_list<value_type> il, Alloc const& alloc)
-                : sequence_adaptor(il.begin(), il.end(), alloc)
+        [[nodiscard]] constexpr adaptor(std::initializer_list<value_type> il, Alloc const& alloc)
+                : adaptor(il.begin(), il.end(), alloc)
         {}
 
         [[nodiscard]] constexpr auto get_allocator() const noexcept
@@ -452,7 +452,7 @@ public:
                 -> iterator
         {
                 auto const pos = index_of(position);
-                return rebuild(pos, pos, [&](sequence_adaptor& tmp) -> void { tmp.append_range(std::forward<R>(rg)); });
+                return rebuild(pos, pos, [&](adaptor& tmp) -> void { tmp.append_range(std::forward<R>(rg)); });
         }
 
         constexpr auto insert(const_iterator position, value_type const& value)
@@ -468,7 +468,7 @@ public:
         {
                 auto const pos = index_of(position);
                 // Through the saturating sum: a wrapped total would answer an insertion with a shorter sequence.
-                return rebuild(pos, pos, [&](sequence_adaptor& tmp) -> void { tmp.m_bits.resize(bits_type::check_addressable_width(bits_type::width_sum(tmp.size(), n)), value); });
+                return rebuild(pos, pos, [&](adaptor& tmp) -> void { tmp.m_bits.resize(bits_type::check_addressable_width(bits_type::width_sum(tmp.size(), n)), value); });
         }
 
         template<std::input_iterator I, std::sentinel_for<I> S>
@@ -509,17 +509,17 @@ public:
         {
                 // A range, not two positions: the order is what the rebuild's tail subtraction needs.
                 assert(first <= last);
-                return rebuild(index_of(first), index_of(last), [](sequence_adaptor&) -> void {});
+                return rebuild(index_of(first), index_of(last), [](adaptor&) -> void {});
         }
 
-        [[nodiscard]] constexpr explicit sequence_adaptor(Bits& c) noexcept
+        [[nodiscard]] constexpr explicit adaptor(Bits& c) noexcept
                 requires (not is_owner) and (not is_window)
                 : m_bits(&c)
         {}
 
         // A view over an owner is a view over the storage it wraps; implicit, claiming nothing the owner lacks.
         template<owner_of<Bits, sequence_reading_tag> Owner>
-        [[nodiscard]] constexpr explicit(false) sequence_adaptor(Owner& c) noexcept // NOLINT(misc-explicit-constructor)
+        [[nodiscard]] constexpr explicit(false) adaptor(Owner& c) noexcept // NOLINT(misc-explicit-constructor)
                 requires (not is_owner) and (not is_window)
                 : m_bits(&c.m_bits)
         {}
@@ -569,7 +569,7 @@ public:
         }
 
         // The non-member beside it: ranges::swap finds this and never the member.
-        friend constexpr auto swap(sequence_adaptor& x, sequence_adaptor& y) noexcept(noexcept(x.swap(y)))
+        friend constexpr auto swap(adaptor& x, adaptor& y) noexcept(noexcept(x.swap(y)))
                 -> void
                 requires is_owner
         {
@@ -577,7 +577,7 @@ public:
         }
 
         // The storage's own swap through the customization point, std::bitset having no member to call.
-        constexpr auto swap(sequence_adaptor& other) noexcept(std::is_nothrow_swappable_v<Bits>)
+        constexpr auto swap(adaptor& other) noexcept(std::is_nothrow_swappable_v<Bits>)
                 -> void
                 requires is_owner and std::swappable<Bits>
         {
@@ -704,7 +704,7 @@ public:
         }
 
         // std::mismatch's answer over the orderings' machinery: the first differing block and its xor.
-        [[nodiscard]] constexpr auto mismatch(sequence_adaptor const& other) const noexcept
+        [[nodiscard]] constexpr auto mismatch(adaptor const& other) const noexcept
                 -> size_type
                 requires (not is_window) and requires (bits_type const& b) { b.first_difference(b); }
         {
@@ -883,11 +883,11 @@ public:
         // The owner's alone, following span: defaulted, the storage being the one member.
 
         // clang-format off: one line, so "= default;" stays where gcovr's branch exclusion looks for it.
-        [[nodiscard]] friend auto operator==(sequence_adaptor const& x, sequence_adaptor const& y) noexcept -> bool requires is_owner = default;
+        [[nodiscard]] friend auto operator==(adaptor const& x, adaptor const& y) noexcept -> bool requires is_owner = default;
         // clang-format on
 
         // The storage's entry and nothing else, spelled over bits_type, which MSVC completes eagerly here.
-        [[nodiscard]] friend constexpr auto operator<=>(sequence_adaptor const& x, sequence_adaptor const& y) noexcept
+        [[nodiscard]] friend constexpr auto operator<=>(adaptor const& x, adaptor const& y) noexcept
                 -> std::strong_ordering
                 requires is_owner and requires (bits_type const& b) { sequence_lexicographical_compare_three_way(b, b); }
         {
@@ -895,21 +895,21 @@ public:
         }
 
         // Elementwise logical, as a bitwise operator on a sequence of bools means. Three, not four.
-        constexpr auto operator&=(this auto&& self, sequence_adaptor const& other) noexcept -> auto&
+        constexpr auto operator&=(this auto&& self, adaptor const& other) noexcept -> auto&
                 requires (not is_window) and requires { self.bits() &= other.bits(); }
         {
                 self.bits() &= other.bits();
                 return self;
         }
 
-        constexpr auto operator|=(this auto&& self, sequence_adaptor const& other) noexcept -> auto&
+        constexpr auto operator|=(this auto&& self, adaptor const& other) noexcept -> auto&
                 requires (not is_window) and requires { self.bits() |= other.bits(); }
         {
                 self.bits() |= other.bits();
                 return self;
         }
 
-        constexpr auto operator^=(this auto&& self, sequence_adaptor const& other) noexcept -> auto&
+        constexpr auto operator^=(this auto&& self, adaptor const& other) noexcept -> auto&
                 requires (not is_window) and requires { self.bits() ^= other.bits(); }
         {
                 self.bits() ^= other.bits();
@@ -1079,7 +1079,7 @@ private:
                 -> iterator
         {
                 auto const whole = sequence_adaptor<bits_type const, storage::borrowed, window::all>(std::as_const(bits()));
-                auto tmp = sequence_adaptor();
+                auto tmp = adaptor();
                 tmp.append_range(whole.first(pos));
                 middle(tmp);
                 tmp.append_range(whole.subspan(tail));
@@ -1106,14 +1106,6 @@ private:
         }
 };
 
-// A view deduces the constness of what it views, the way span<T> and span<T const> do.
-template<class Bits>
-        requires (not requires { typename owned_storage<std::remove_const_t<Bits>>::bits_type; })
-sequence_adaptor(Bits&) -> sequence_adaptor<Bits, storage::borrowed, window::all>;
-
-template<owner_reading<sequence_reading_tag> Owner>
-sequence_adaptor(Owner&) -> sequence_adaptor<owned_bits_t<Owner>, storage::borrowed, window::all>;
-
 // Any container built on the sequence vehicle, the vehicle used directly included.
 template<class T>
 concept sequence_adaptor_like = requires { typename T::adaptor_type; typename T::reads_as; } and std::same_as<typename T::reads_as, sequence_reading_tag> and std::derived_from<T, typename T::adaptor_type>;
@@ -1126,13 +1118,6 @@ struct owned_storage<sequence_adaptor<Bits, storage::owned, window::all, Derived
 
         // Committed to the sequence reading, so only a sequence view refers into one.
         using reads = sequence_reading_tag;
-};
-
-// The sequence cell of the grid, answered where the adaptor it names is defined.
-template<class Bits, class Derived>
-struct adaptor_of<sequence_reading_tag, Bits, Derived>
-{
-        using type = sequence_adaptor<Bits, storage::owned, window::all, Derived>;
 };
 
 // NOLINTBEGIN(readability-redundant-parentheses): a call is no primary expression, so the clause needs them.

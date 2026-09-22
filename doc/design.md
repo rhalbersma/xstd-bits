@@ -1435,11 +1435,27 @@ Each concept is opt-in through a variable template, the way `std::ranges::enable
 open to a reading or a container declared elsewhere.
 
 **Each axis is answered where the thing it names is defined.** `bits_of<array_container_tag, ...>` is
-specialized in the header holding `contiguous_bit_array`, `adaptor_of<set_reading_tag, ...>` in the header
-holding `set_adaptor`, and `grid.hpp` carries only the two primaries. A central switchboard would have been
-shorter to write and would have put all three storages and all three adaptors on every container's include
-path: measured, `bit_array.hpp` began pulling `<vector>`, which is exactly the property the vehicle split was
-for. Distributing the specializations keeps each container including only the vehicle it uses.
+specialized in the header holding `contiguous_bit_array`, `adaptor<set_reading_tag, ...>` in the header
+holding the set reading's body, and `grid.hpp` carries only the two primaries. A central switchboard would
+have been shorter to write and would have put all three storages and all three adaptors on every container's
+include path: measured, `bit_array.hpp` began pulling `<vector>`, which is exactly the property the vehicle
+split was for. Distributing the specializations keeps each container including only the vehicle it uses.
+
+**The two axes are not built alike, because they are not alike.** A container tag's differences are absorbed
+into a type: `bits_of` maps the tag to a storage, and one `basic_bits` body then serves all three columns.
+A reading tag's differences are vocabulary -- 22 members only a bitset has, 23 only a sequence, 13 only a set
+-- so no single body can serve them, and the axis collapses into a specialization key instead of a type
+parameter. `bits_of` stays a trait because a tag must yield a *type*; the reading axis needs no trait at all,
+because a tag yielding a *template specialization* is what partial specialization already does. `adaptor_of`
+was a hand-rolled stand-in for it and is gone.
+
+The three readings keep their names as alias templates over `adaptor`, exactly as the nine containers keep
+theirs over `basic_bits`. What this costs is friendship: a partial specialization cannot be befriended, and a
+friend declaration naming the template is a redeclaration of it, so it cannot add a `requires`-clause to
+single one reading out -- both GCC and Clang reject that as a redeclaration with different constraints. The
+only form left makes every reading a friend of every other. It guards two lines, the `&c.m_bits` each view
+constructor takes, and both are already constrained by `owner_of`, which is what actually decides that a set
+view may not refer into a sequence owner.
 
 `N` sits third and `Alloc` fourth, so the three allocating cells wear `std::dynamic_extent` as a filler. The
 alternative -- two traits, one per family, since `N` and `Alloc` occupy the same slot in the three storages --
