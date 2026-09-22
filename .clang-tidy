@@ -29,11 +29,12 @@
 # no narrower switch: the diagnostic lands on a header every column shares,
 # and IgnoredExceptions does not match a throw found through an indirect call.
 # bugprone-crtp-constructor-accessibility is off because the three adaptors
-# are not pure CRTP bases. Their trailing parameter defaults to void, and a
-# view is then the adaptor itself rather than a class deriving from it, so
-# the constructors the check wants protected are the ones bit_span,
-# bit_subspan and bit_set_view are built out of. Protecting them deletes the
-# view layer; the check's other remedy, befriending the derived type, is
+# are not pure CRTP bases. Their trailing parameter defaults to void, and an
+# adaptor named at that default is its own container rather than a base, so
+# the constructors the check wants protected are the ones such a handle is
+# built out of, and every container inherits them with `using
+# base_type::base_type`, which keeps the base's access. Protecting them
+# deletes both; the check's other remedy, befriending the derived type, is
 # already done.
 #
 # Note for anyone adding to the list below: Checks is a folded scalar, so a
