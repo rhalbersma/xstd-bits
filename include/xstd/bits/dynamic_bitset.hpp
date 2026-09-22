@@ -6,13 +6,12 @@
 #ifndef XSTD_BITS_DYNAMIC_BITSET_HPP
 #define XSTD_BITS_DYNAMIC_BITSET_HPP
 
-#include <xstd/bits/detail/ownership.hpp>             // owned_storage
 #include <xstd/bits/detail/bitset_adaptor.hpp>        // bitset_adaptor
 #include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
 #include <xstd/ints/concepts/unsigned_integer.hpp>    // unsigned_integer
 #include <cstddef>                                    // size_t
-#include <memory>                                     // allocator
 #include <functional>                                 // hash
+#include <memory>                                     // allocator
 
 namespace xstd {
 
@@ -26,7 +25,7 @@ public:
         using base_type::base_type;
         using base_type::operator=;
 
-        // An allocator names std among the associated namespaces, where std::swap would out-match the container's own.
+        // A swap on the base loses to any exact match on this type, so every container declares its own.
         friend constexpr auto swap(basic_dynamic_bitset& x, basic_dynamic_bitset& y) noexcept(noexcept(x.swap(y)))
                 -> void
         {
@@ -37,15 +36,6 @@ public:
 using dynamic_bitset = basic_dynamic_bitset<std::size_t>;
 
 } // namespace xstd
-
-namespace xstd::detail::bits {
-
-// A container answers every trait as the vehicle it is built on, which is where each one is defined.
-template<xstd::unsigned_integer Block, class Allocator>
-struct owned_storage<basic_dynamic_bitset<Block, Allocator>> : owned_storage<typename basic_dynamic_bitset<Block, Allocator>::adaptor_type>
-{};
-
-} // namespace xstd::detail::bits
 
 namespace std {
 

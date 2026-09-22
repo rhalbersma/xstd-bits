@@ -6,16 +6,16 @@
 #ifndef XSTD_BITS_BIT_VECTOR_HPP
 #define XSTD_BITS_BIT_VECTOR_HPP
 
-#include <xstd/bits/detail/ownership.hpp>             // owned_storage, storage, window
 #include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
+#include <xstd/bits/detail/ownership.hpp>             // storage, window
 #include <xstd/bits/detail/sequence_adaptor.hpp>      // sequence_adaptor
 #include <xstd/ints/concepts/unsigned_integer.hpp>    // unsigned_integer
-#include <cstddef>                                    // size_t
-#include <memory>                                     // allocator
-#include <functional>                                 // hash
-#include <type_traits>                                // false_type
 #include <boost/container_hash/is_range.hpp>          // is_range
 #include <boost/container_hash/is_tuple_like.hpp>     // is_tuple_like
+#include <cstddef>                                    // size_t
+#include <functional>                                 // hash
+#include <memory>                                     // allocator
+#include <type_traits>                                // false_type
 
 namespace xstd {
 
@@ -29,7 +29,7 @@ public:
         using base_type::base_type;
         using base_type::operator=;
 
-        // An allocator names std among the associated namespaces, where std::swap would out-match the container's own.
+        // A swap on the base loses to any exact match on this type, so every container declares its own.
         friend constexpr auto swap(basic_bit_vector& x, basic_bit_vector& y) noexcept(noexcept(x.swap(y)))
                 -> void
         {
@@ -40,15 +40,6 @@ public:
 using bit_vector = basic_bit_vector<std::size_t>;
 
 } // namespace xstd
-
-namespace xstd::detail::bits {
-
-// A container answers every trait as the vehicle it is built on, which is where each one is defined.
-template<xstd::unsigned_integer Block, class Allocator>
-struct owned_storage<basic_bit_vector<Block, Allocator>> : owned_storage<typename basic_bit_vector<Block, Allocator>::adaptor_type>
-{};
-
-} // namespace xstd::detail::bits
 
 namespace std {
 
