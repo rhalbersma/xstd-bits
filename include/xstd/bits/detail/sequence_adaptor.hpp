@@ -388,6 +388,23 @@ public:
                 return m_bits.get_allocator();
         }
 
+        // flat_set's door onto its representation, at a run-time width: the blocks come in and go out whole.
+        using block_container_type = bits_type::block_container_type;
+
+        constexpr auto replace(block_container_type&& blocks) noexcept(noexcept(m_bits.replace(std::move(blocks))))
+                -> void
+                requires is_owner and requires (bits_type& b, block_container_type&& c) { b.replace(std::move(c)); }
+        {
+                m_bits.replace(std::move(blocks));
+        }
+
+        [[nodiscard]] constexpr auto extract() && noexcept(noexcept(std::move(m_bits).extract()))
+                -> block_container_type
+                requires is_owner and requires (bits_type&& b) { std::move(b).extract(); }
+        {
+                return std::move(m_bits).extract();
+        }
+
         // NOLINTNEXTLINE(misc-unconventional-assign-operator): the container is what [set] and [vector] return here.
         constexpr auto operator=(std::initializer_list<value_type> il)
                 -> derived_type&

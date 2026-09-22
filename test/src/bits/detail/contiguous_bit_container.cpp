@@ -31,7 +31,7 @@
 #include <stdexcept>                                          // length_error
 #include <tuple>                                              // get, tuple
 #include <type_traits>                                        // is_nothrow_move_assignable_v, is_nothrow_move_constructible_v, is_trivially_*
-#include <utility>                                            // move
+#include <utility>                                            // declval, move
 #include <vector>                                             // vector
 
 BOOST_AUTO_TEST_SUITE(BitBlocks)
@@ -1003,6 +1003,25 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AMovedFromRunTimeWidthIsEmptyAndGrowsAgain, T, run
         // A self-move puts back what it took.
         move_assign(assigned, assigned);
         BOOST_CHECK(assigned == from_model<T>(m));
+}
+
+// The blocks go out with the tail clear and the width zero behind them, and come back as whole blocks.
+BOOST_AUTO_TEST_CASE_TEMPLATE(ARunTimeWidthsBlocksGoOutClearAndComeBackWhole, T, run_time_storages)
+{
+        static_assert(noexcept(std::declval<T>().extract()));
+        auto b = from_model<T>(patterned(19));
+        auto const blocks = std::move(b).extract();
+        BOOST_CHECK_EQUAL(std::ranges::size(blocks), 3UZ);
+        BOOST_CHECK_EQUAL(static_cast<unsigned>(blocks[2]) >> 3U, 0U);
+        BOOST_CHECK(b == T()); // NOLINT(bugprone-use-after-move,hicpp-invalid-access-moved,clang-analyzer-cplusplus.Move): extract leaves width zero, which is the check.
+
+        auto copy = blocks;
+        b.replace(std::move(copy));
+        BOOST_CHECK_EQUAL(b.size(), 24UZ);
+        BOOST_CHECK_EQUAL(b.num_blocks(), 3UZ);
+        auto m = patterned(19);
+        m.resize(24UZ, false);
+        BOOST_CHECK(b == from_model<T>(m));
 }
 
 // A static width keeps the moves the members give it, trivial ones included.

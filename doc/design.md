@@ -559,9 +559,19 @@ container out is the whole point; `to_bits<B>()` is `const` and copies, because 
 move that is cheaper than the copy. A loop that calls `extract` once and `to_bits` once is not the same loop, and
 the `flat_set` one is the one that has to be written carefully.
 
-There is no run-time-width form of either here, and for the reason the run-time widths have no `from_bits`:
-`std::bitset` names one `N`, and a growing set has no single value for it. `flat_set` has no such problem because
-its container carries its own size. That is the one place the standard's pair reaches further than this one.
+The run-time widths have no `from_bits`, for the reason that `std::bitset` names one `N` and a growing set has no
+single value for it. What they have instead is `flat_set`'s own pair, because their blocks *are* a container:
+`extract() &&` hands out `block_container_type` -- the `std::vector`, `std::inplace_vector` or `small_vector` of
+blocks -- and leaves the owner at width zero, and `replace(block_container_type&&)` takes one back. Both are a move
+and nothing else, on every reading's run-time-width owner and on no view, since a view has nothing of its own to hand.
+
+`replace` has no precondition to state, which is where it parts from `flat_set`'s: the width becomes the blocks'
+whole width, every bit a position, so there is no tail for it to find dirty and no order for it to find broken. The
+price is that a width is not carried through the round trip -- `extract` hands out whole blocks, the unused tail
+clear, and `replace` reads them as whole blocks -- so a sequence of 70 comes back as one of 128 with the last 58
+false. The set reading loses nothing, its width being only capacity; the sequence and bitset readings `resize`
+afterwards when the exact width matters. Neither is a constructor, for the reason `from_bits` is not one: a range of
+unsigned integers already means something to each reading's constructors, and the name is what says blocks.
 
 The conversion operator reaches its storage through the `storage()` accessor and never through `m_bits`. The
 member is a `Bits*` wherever a reading refers rather than owns, so naming it directly compiled for an owner and
