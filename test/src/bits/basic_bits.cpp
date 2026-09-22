@@ -11,8 +11,8 @@
 #include <xstd/bits/bit_vector.hpp>     // basic_bit_vector
 #include <xstd/bits/bitset.hpp>         // basic_bitset
 #include <xstd/bits/dynamic_bitset.hpp> // basic_dynamic_bitset
-#include <xstd/bits/grid.hpp>           // adaptor_t, bits_t
-#include <xstd/bits/ownership.hpp>      // owned_bits_t
+#include <xstd/bits/grid.hpp>           // adaptor, bits_t
+#include <xstd/bits/ownership.hpp>      // owned_bits_t, storage, window
 #include <xstd/bits/tags.hpp>           // array_container_tag, bitset_reading_tag, inplace_vector_container_tag, sequence_reading_tag, set_reading_tag, vector_container_tag
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <concepts>                     // derived_from, same_as
@@ -36,7 +36,7 @@ inline constexpr auto width = 100UZ;
 template<class R, class C, class Row, std::size_t N = std::dynamic_extent, class Alloc = void>
 concept reproduces =
         std::same_as<xstd::bits_t<C, block_type, N, Alloc>, xstd::owned_bits_t<Row>> and
-        std::derived_from<Row, xstd::adaptor_t<R, xstd::owned_bits_t<Row>, Row>> and
+        std::derived_from<Row, xstd::adaptor<R, xstd::owned_bits_t<Row>, xstd::storage::owned, xstd::window::all, Row>> and
         std::same_as<Row, xstd::basic_bits<R, C, block_type, N, Alloc>>;
 
 } // namespace

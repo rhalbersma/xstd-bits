@@ -6,8 +6,8 @@
 #ifndef XSTD_BITS_BASIC_BITS_HPP
 #define XSTD_BITS_BASIC_BITS_HPP
 
-#include <xstd/bits/grid.hpp>                      // adaptor_t, bits_t
-#include <xstd/bits/ownership.hpp>                 // owned_storage
+#include <xstd/bits/grid.hpp>                      // adaptor, bits_t
+#include <xstd/bits/ownership.hpp>                 // owned_storage, storage, window
 #include <xstd/bits/tags.hpp>                      // array_container_tag, container_tag, reading_tag, sequence_reading_tag, set_reading_tag
 #include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
 #include <boost/container_hash/is_range.hpp>       // is_range
@@ -22,9 +22,9 @@ namespace xstd {
 
 // One owner per cell of the reading-by-container grid; the nine public names are the cells that have one.
 template<reading_tag R, container_tag C, xstd::unsigned_integer Block, std::size_t N = std::dynamic_extent, class Alloc = void>
-class basic_bits : public adaptor_t<R, bits_t<C, Block, N, Alloc>, basic_bits<R, C, Block, N, Alloc>>
+class basic_bits : public adaptor<R, bits_t<C, Block, N, Alloc>, storage::owned, window::all, basic_bits<R, C, Block, N, Alloc>>
 {
-        using base_type = adaptor_t<R, bits_t<C, Block, N, Alloc>, basic_bits<R, C, Block, N, Alloc>>;
+        using base_type = adaptor<R, bits_t<C, Block, N, Alloc>, storage::owned, window::all, basic_bits<R, C, Block, N, Alloc>>;
 
 public:
         using base_type::base_type;
