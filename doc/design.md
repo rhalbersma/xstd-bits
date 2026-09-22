@@ -623,8 +623,9 @@ test to have to take.
 
 Growth is the run-time width's alone, and every member of it leaves the unused tail clear. `resize(n, value)`
 resizes the blocks to what `n` needs, filled with `value`, moves the width, and masks the new last block;
-growing with ones first sets the old last block's tail, clear by the invariant, since those are the first new
-positions. `push_back` and `pop_back` are `resize` by one, `clear` is `resize(0)` -- the object a default
+growing with ones also sets the old last block's tail, clear by the invariant, since those are the first new
+positions -- and sets it only after the blocks have grown, so that a growth `std::inplace_vector` refuses with
+`bad_alloc` leaves the value as it was. `push_back` and `pop_back` are `resize` by one, `clear` is `resize(0)` -- the object a default
 constructor makes -- and `append(block)` is boost's: the block's bits become the next `bits_per_block`
 positions, split across two blocks where the width is not aligned, and pushed as the first block at width
 zero. `reserve`, `capacity` and `shrink_to_fit` are in bits and exist where the blocks have them:

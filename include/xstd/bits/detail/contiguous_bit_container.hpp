@@ -1458,11 +1458,14 @@ private:
         {
                 auto const count = blocks_for(n);
                 if (value and n > size()) {
-                        // Growing with ones: the old width's partial block gets its tail first, then whole new blocks.
-                        if (has_unused_bits()) {
-                                m_blocks[last_block()] |= static_cast<block_type>(~used_bits());
-                        }
+                        // Which bits become new is read off the old width, and written only once the blocks have grown.
+                        auto const partial = has_unused_bits();
+                        auto const tail = partial ? static_cast<block_type>(~used_bits()) : zero;
+                        auto const old_count = num_blocks();
                         m_blocks.resize(count, ones);
+                        if (partial) {
+                                m_blocks[old_count - 1UZ] |= tail;
+                        }
                 } else {
                         // No new block can be a one here: either the value is false or the width is not growing.
                         m_blocks.resize(count, zero);
