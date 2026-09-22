@@ -10,15 +10,15 @@
 
 #ifdef __cpp_lib_inplace_vector
 
-#include <xstd/bits/detail/ownership.hpp>                     // owned_storage, storage
 #include <xstd/bits/detail/contiguous_bit_inplace_vector.hpp> // contiguous_bit_inplace_vector
+#include <xstd/bits/detail/ownership.hpp>                     // storage
 #include <xstd/bits/detail/set_adaptor.hpp>                   // set_adaptor
 #include <xstd/ints/concepts/unsigned_integer.hpp>            // unsigned_integer
+#include <boost/container_hash/is_range.hpp>                  // is_range
+#include <boost/container_hash/is_tuple_like.hpp>             // is_tuple_like
 #include <cstddef>                                            // size_t
 #include <functional>                                         // hash
 #include <type_traits>                                        // false_type
-#include <boost/container_hash/is_range.hpp>                  // is_range
-#include <boost/container_hash/is_tuple_like.hpp>             // is_tuple_like
 
 namespace xstd {
 
@@ -32,7 +32,7 @@ public:
         using base_type::base_type;
         using base_type::operator=;
 
-        // An allocator names std among the associated namespaces, where std::swap would out-match the container's own.
+        // A swap on the base loses to any exact match on this type, so every container declares its own.
         friend constexpr auto swap(basic_bit_inplace_set& x, basic_bit_inplace_set& y) noexcept(noexcept(x.swap(y)))
                 -> void
         {
@@ -44,15 +44,6 @@ template<std::size_t N>
 using bit_inplace_set = basic_bit_inplace_set<std::size_t, N>;
 
 } // namespace xstd
-
-namespace xstd::detail::bits {
-
-// A container answers every trait as the vehicle it is built on, which is where each one is defined.
-template<xstd::unsigned_integer Block, std::size_t N>
-struct owned_storage<basic_bit_inplace_set<Block, N>> : owned_storage<typename basic_bit_inplace_set<Block, N>::adaptor_type>
-{};
-
-} // namespace xstd::detail::bits
 
 namespace std {
 

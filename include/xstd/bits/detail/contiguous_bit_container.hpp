@@ -31,8 +31,8 @@
 #include <limits>                                            // numeric_limits
 #include <ranges>                                            // begin, drop, iota, rbegin, rend, size, swap, transform, zip
                                                              // (views::drop_last when P22014R2 is accepted)
-#include <source_location>                                   // source_location
 #include <xstd/bits/detail/bit_castable.hpp>                 // bit_bytes, bit_castable, byte_count, bytes_bits, container_source
+#include <source_location>                                   // source_location
 #include <span>                                              // dynamic_extent, span
 #include <stdexcept>                                         // length_error
 #include <type_traits>                                       // conditional_t, is_const_v, remove_reference_t

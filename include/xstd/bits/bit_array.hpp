@@ -6,18 +6,18 @@
 #ifndef XSTD_BITS_BIT_ARRAY_HPP
 #define XSTD_BITS_BIT_ARRAY_HPP
 
-#include <xstd/bits/detail/ownership.hpp>            // owned_storage, storage, window
 #include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
+#include <xstd/bits/detail/ownership.hpp>            // storage, window
 #include <xstd/bits/detail/sequence_adaptor.hpp>     // sequence_adaptor
 #include <xstd/ints/concepts/unsigned_integer.hpp>   // unsigned_integer
 #include <xstd/ints/memory.hpp>                      // align_up
-#include <cstddef>                                   // size_t
-#include <limits>                                    // digits
-#include <functional>                                // hash
-#include <tuple>                                     // tuple_element, tuple_size
-#include <type_traits>                               // false_type
 #include <boost/container_hash/is_range.hpp>         // is_range
 #include <boost/container_hash/is_tuple_like.hpp>    // is_tuple_like
+#include <cstddef>                                   // size_t
+#include <functional>                                // hash
+#include <limits>                                    // digits
+#include <tuple>                                     // tuple_element, tuple_size
+#include <type_traits>                               // false_type
 
 namespace xstd {
 
@@ -31,7 +31,7 @@ public:
         using base_type::base_type;
         using base_type::operator=;
 
-        // An allocator names std among the associated namespaces, where std::swap would out-match the container's own.
+        // A swap on the base loses to any exact match on this type, so every container declares its own.
         friend constexpr auto swap(basic_bit_array& x, basic_bit_array& y) noexcept(noexcept(x.swap(y)))
                 -> void
         {
@@ -53,15 +53,6 @@ using bit_array = basic_bit_array<std::size_t, N>;
 } // namespace aligned
 
 } // namespace xstd
-
-namespace xstd::detail::bits {
-
-// A container answers every trait as the vehicle it is built on, which is where each one is defined.
-template<xstd::unsigned_integer Block, std::size_t N>
-struct owned_storage<basic_bit_array<Block, N>> : owned_storage<typename basic_bit_array<Block, N>::adaptor_type>
-{};
-
-} // namespace xstd::detail::bits
 
 namespace std {
 

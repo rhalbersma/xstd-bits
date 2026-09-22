@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_DETAIL_OWNERSHIP_HPP
 #define XSTD_BITS_DETAIL_OWNERSHIP_HPP
 
-#include <concepts>    // same_as
+#include <concepts>    // derived_from, same_as
 #include <cstdint>     // uint8_t
 #include <type_traits> // conditional_t, is_const_v, remove_const_t
 
@@ -37,6 +37,12 @@ enum class reading : std::uint8_t { set,
 // What an owner wraps: declared, never defined, so a view over a type that owns nothing is unsatisfied.
 template<class Owner>
 struct owned_storage;
+
+// A container answers as the vehicle it derives from, which is the one that knows what it wraps.
+template<class Owner>
+        requires (not std::same_as<Owner, typename Owner::adaptor_type>) and std::derived_from<Owner, typename Owner::adaptor_type> and requires { typename owned_storage<typename Owner::adaptor_type>::bits_type; }
+struct owned_storage<Owner> : owned_storage<typename Owner::adaptor_type>
+{};
 
 // The storage a view over an owner refers to, const where the owner is.
 template<class Owner>
