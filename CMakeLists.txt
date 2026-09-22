@@ -96,6 +96,10 @@ target_sources(
         include/xstd/bits/detail/intrin.hpp
         include/xstd/bits/dynamic_bitset.hpp
         include/xstd/bits/ext/boost.hpp
+        include/xstd/bits/ext/boost/bit_small_sequence.hpp
+        include/xstd/bits/ext/boost/bit_small_set.hpp
+        include/xstd/bits/ext/boost/detail/contiguous_bit_small_vector.hpp
+        include/xstd/bits/ext/boost/small_bitset.hpp
         include/xstd/bits/detail/pred.hpp
         include/xstd/bits/detail/bit_castable.hpp
         include/xstd/bits/detail/random_access.hpp
