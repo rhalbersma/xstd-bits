@@ -7,8 +7,8 @@
 #include <test/set/concepts.hpp>                         // bit_set
 #include <xstd/bits/detail/contiguous_block_range.hpp>   // contiguous_block_range
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // num_blocks_v
-#include <xstd/bits/ext/boost.hpp>                       // basic_bit_small_bitset, basic_bit_small_set, basic_bit_small_vector,
-                                                         // bit_small_bitset, bit_small_set, bit_small_vector, small_vector_container_tag
+#include <xstd/bits/ext/boost.hpp>                       // basic_bit_small_set, basic_bit_small_vector, basic_small_bitset,
+                                                         // bit_small_set, bit_small_vector, small_bitset, small_vector_container_tag
 #include <xstd/bits/grid.hpp>                            // bits_t
 #include <xstd/bits/tags.hpp>                            // container_tag
 #include <boost/container/new_allocator.hpp>             // new_allocator
@@ -33,7 +33,7 @@ inline constexpr auto N = 256UZ;
 
 using SmallSet = xstd::bit_small_set<N>;
 using SmallVector = xstd::bit_small_vector<N>;
-using SmallBitset = xstd::bit_small_bitset<N>;
+using SmallBitset = xstd::small_bitset<N>;
 
 // An allocation count the container cannot reach around, which is what tells an inline width from a heap one.
 inline auto allocations = 0;
@@ -91,7 +91,7 @@ BOOST_AUTO_TEST_CASE(TheShortNamesAreTheGeneralOnesAtTheirDefaults)
 {
         static_assert(std::same_as<SmallSet, xstd::basic_bit_small_set<std::size_t, N, boost::container::new_allocator<std::size_t>>>);
         static_assert(std::same_as<SmallVector, xstd::basic_bit_small_vector<std::size_t, N, boost::container::new_allocator<std::size_t>>>);
-        static_assert(std::same_as<SmallBitset, xstd::basic_bit_small_bitset<std::size_t, N, boost::container::new_allocator<std::size_t>>>);
+        static_assert(std::same_as<SmallBitset, xstd::basic_small_bitset<std::size_t, N, boost::container::new_allocator<std::size_t>>>);
         BOOST_CHECK(true);
 }
 

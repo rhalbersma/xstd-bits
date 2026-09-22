@@ -50,7 +50,7 @@ template<xstd::unsigned_integer Block, std::size_t N, class Alloc = boost::conta
 using basic_bit_small_vector = basic_bits<sequence_reading_tag, small_vector_container_tag, Block, N, Alloc>;
 
 template<xstd::unsigned_integer Block, std::size_t N, class Alloc = boost::container::new_allocator<Block>>
-using basic_bit_small_bitset = basic_bits<bitset_reading_tag, small_vector_container_tag, Block, N, Alloc>;
+using basic_small_bitset = basic_bits<bitset_reading_tag, small_vector_container_tag, Block, N, Alloc>;
 
 template<std::size_t N>
 using bit_small_set = basic_bit_small_set<std::size_t, N>;
@@ -59,7 +59,7 @@ template<std::size_t N>
 using bit_small_vector = basic_bit_small_vector<std::size_t, N>;
 
 template<std::size_t N>
-using bit_small_bitset = basic_bit_small_bitset<std::size_t, N>;
+using small_bitset = basic_small_bitset<std::size_t, N>;
 
 } // namespace xstd
 
