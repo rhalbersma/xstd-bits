@@ -7,8 +7,8 @@
 #define XSTD_BITS_EXT_BOOST_HPP
 
 // The three readings over Boost's small_vector, and no umbrella above this one: an adapted library is asked for by name.
-#include <xstd/bits/ext/boost/bit_small_sequence.hpp> // IWYU pragma: export; basic_bit_small_vector, bit_small_vector
-#include <xstd/bits/ext/boost/bit_small_set.hpp>      // IWYU pragma: export; basic_bit_small_set, bit_small_set
-#include <xstd/bits/ext/boost/small_bitset.hpp>       // IWYU pragma: export; basic_small_bitset, small_bitset
+#include <xstd/bits/ext/boost/bit_small_set.hpp>    // IWYU pragma: export; basic_bit_small_set, bit_small_set
+#include <xstd/bits/ext/boost/bit_small_vector.hpp> // IWYU pragma: export; basic_bit_small_vector, bit_small_vector
+#include <xstd/bits/ext/boost/small_bitset.hpp>     // IWYU pragma: export; basic_small_bitset, small_bitset
 
 #endif // XSTD_BITS_EXT_BOOST_HPP

@@ -3,16 +3,16 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/sequence/concepts.hpp>                 // bit_sequence
-#include <xstd/bits/ext/boost/bit_small_sequence.hpp> // basic_bit_small_vector, bit_small_vector
-#include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <algorithm>                                  // ranges::equal
-#include <concepts>                                   // same_as
-#include <cstddef>                                    // size_t
-#include <ranges>                                     // random_access_range
-#include <vector>                                     // vector
+#include <test/sequence/concepts.hpp>               // bit_sequence
+#include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector, bit_small_vector
+#include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <algorithm>                                // ranges::equal
+#include <concepts>                                 // same_as
+#include <cstddef>                                  // size_t
+#include <ranges>                                   // random_access_range
+#include <vector>                                   // vector
 
-BOOST_AUTO_TEST_SUITE(ExtBoostBitSmallSequence)
+BOOST_AUTO_TEST_SUITE(ExtBoostBitSmallVector)
 
 namespace {
 
