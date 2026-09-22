@@ -7,7 +7,11 @@
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <compare>                  // three_way_comparable
 #include <concepts>                 // copyable, default_initializable, movable, swappable, totally_ordered
+#include <cstddef>                  // size_t
+#include <memory_resource>          // polymorphic_allocator
+#include <scoped_allocator>         // scoped_allocator_adaptor
 #include <type_traits>              // is_nothrow_move_assignable_v, is_nothrow_move_constructible_v
+#include <utility>                  // swap
 
 // What the compiler generates for each cell, held to the table rather than to whichever cell was read last.
 BOOST_AUTO_TEST_SUITE(Generated)
@@ -62,6 +66,29 @@ constexpr auto not_allocator_aware()
         return true;
 }
 
+template<class T>
+concept free_swap_is_nothrow = requires (T& a, T& b) { requires noexcept(swap(a, b)); };
+template<class T>
+concept member_swap_is_nothrow = requires (T& a, T& b) { requires noexcept(a.swap(b)); };
+template<class T>
+concept std_swap_is_nothrow = requires (T& a, T& b) { requires noexcept(std::swap(a, b)); };
+
+// Values come out exchanged whichever swap ran, so the two are told apart by noexcept instead. The
+// allocator has to make std itself an associated namespace, which is why it is the adaptor and not the
+// polymorphic_allocator inside it: ADL associates the innermost enclosing namespace, and std::pmr does
+// not reach std::swap. It propagates on neither swap nor move assignment and is not always equal, so
+// move assignment may allocate and throw where an exchange of pointers cannot. A nothrow free swap is
+// therefore the library's own; std::swap over these cells is potentially throwing.
+template<class T>
+constexpr auto free_swap_is_not_std_swap()
+        -> bool
+{
+        static_assert(member_swap_is_nothrow<T>);
+        static_assert(not std_swap_is_nothrow<T>);
+        static_assert(free_swap_is_nothrow<T>);
+        return true;
+}
+
 } // namespace
 
 BOOST_AUTO_TEST_CASE(EveryCellIsARegularContainer)
@@ -102,6 +129,19 @@ BOOST_AUTO_TEST_CASE(TheAllocatorFollowsTheColumnAndNotTheRow)
         static_assert(not_allocator_aware<xstd::inplace_bitset<N>>());
 
 #endif
+        BOOST_CHECK(true);
+}
+
+// Exchanged values say nothing about which overload did it, so the allocating column says so by noexcept.
+// The six static cells name no allocator, which keeps std out of their associated namespaces entirely.
+BOOST_AUTO_TEST_CASE(TheFreeSwapIsTheLibrarysAndNotStdSwap)
+{
+        using block_type = std::size_t;
+        using allocator_type = std::scoped_allocator_adaptor<std::pmr::polymorphic_allocator<block_type>>;
+
+        static_assert(free_swap_is_not_std_swap<xstd::basic_bit_set<block_type, allocator_type>>());
+        static_assert(free_swap_is_not_std_swap<xstd::basic_bit_vector<block_type, allocator_type>>());
+        static_assert(free_swap_is_not_std_swap<xstd::basic_dynamic_bitset<block_type, allocator_type>>());
         BOOST_CHECK(true);
 }
 
