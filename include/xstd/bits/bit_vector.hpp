@@ -6,16 +6,16 @@
 #ifndef XSTD_BITS_BIT_VECTOR_HPP
 #define XSTD_BITS_BIT_VECTOR_HPP
 
-#include <xstd/bits/detail/ownership.hpp>             // storage, window
 #include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
+#include <xstd/bits/detail/ownership.hpp>             // storage, window
 #include <xstd/bits/detail/sequence_adaptor.hpp>      // sequence_adaptor
 #include <xstd/ints/concepts/unsigned_integer.hpp>    // unsigned_integer
-#include <cstddef>                                    // size_t
-#include <memory>                                     // allocator
-#include <functional>                                 // hash
-#include <type_traits>                                // false_type
 #include <boost/container_hash/is_range.hpp>          // is_range
 #include <boost/container_hash/is_tuple_like.hpp>     // is_tuple_like
+#include <cstddef>                                    // size_t
+#include <functional>                                 // hash
+#include <memory>                                     // allocator
+#include <type_traits>                                // false_type
 
 namespace xstd {
 

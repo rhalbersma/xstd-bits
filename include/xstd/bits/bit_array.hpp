@@ -6,18 +6,18 @@
 #ifndef XSTD_BITS_BIT_ARRAY_HPP
 #define XSTD_BITS_BIT_ARRAY_HPP
 
-#include <xstd/bits/detail/ownership.hpp>            // storage, window
 #include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
+#include <xstd/bits/detail/ownership.hpp>            // storage, window
 #include <xstd/bits/detail/sequence_adaptor.hpp>     // sequence_adaptor
 #include <xstd/ints/concepts/unsigned_integer.hpp>   // unsigned_integer
 #include <xstd/ints/memory.hpp>                      // align_up
-#include <cstddef>                                   // size_t
-#include <limits>                                    // digits
-#include <functional>                                // hash
-#include <tuple>                                     // tuple_element, tuple_size
-#include <type_traits>                               // false_type
 #include <boost/container_hash/is_range.hpp>         // is_range
 #include <boost/container_hash/is_tuple_like.hpp>    // is_tuple_like
+#include <cstddef>                                   // size_t
+#include <functional>                                // hash
+#include <limits>                                    // digits
+#include <tuple>                                     // tuple_element, tuple_size
+#include <type_traits>                               // false_type
 
 namespace xstd {
 

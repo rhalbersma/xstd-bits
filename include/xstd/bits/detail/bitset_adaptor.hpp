@@ -11,8 +11,8 @@
 #include <xstd/bits/detail/allocator_base_type.hpp>      // allocator_base_type
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/detail/hash.hpp>                     // hash_append_bits, std_hash
-#include <xstd/bits/detail/zero_width.hpp>               // zero_width
 #include <xstd/bits/detail/ownership.hpp>                // owned_storage, storage, window
+#include <xstd/bits/detail/zero_width.hpp>               // zero_width
 #include <xstd/misc/concepts/specialization_of.hpp>      // specialization_of_TN
 #include <boost/hash2/hash_append.hpp>                   // hash_append_tag
 #include <algorithm>                                     // min, ranges::copy

@@ -11,9 +11,9 @@
 #include <xstd/bits/detail/functor.hpp>                  // invoke_continues
 #include <xstd/bits/detail/hash.hpp>                     // hash_append_bits, std_hash
 #include <xstd/bits/detail/intrin.hpp>                   // countr_zero, popcount
-#include <xstd/bits/detail/shift.hpp>                    // shl, shr
-#include <xstd/bits/detail/random_access.hpp>            // random_access_bit_iterator, random_access_bit_reference
 #include <xstd/bits/detail/ownership.hpp>                // owned_bits_t, owned_storage, owner_of, owner_reading, storage, owns, window
+#include <xstd/bits/detail/random_access.hpp>            // random_access_bit_iterator, random_access_bit_reference
+#include <xstd/bits/detail/shift.hpp>                    // shl, shr
 #include <xstd/misc/concepts/specialization_of.hpp>      // specialization_of_TN
 #include <xstd/misc/type_traits/empty_base_type.hpp>     // empty_base_type
 #include <boost/container_hash/is_range.hpp>             // is_range

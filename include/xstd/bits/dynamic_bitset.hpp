@@ -10,8 +10,8 @@
 #include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
 #include <xstd/ints/concepts/unsigned_integer.hpp>    // unsigned_integer
 #include <cstddef>                                    // size_t
-#include <memory>                                     // allocator
 #include <functional>                                 // hash
+#include <memory>                                     // allocator
 
 namespace xstd {
 

@@ -6,10 +6,10 @@
 #ifndef XSTD_BITS_DETAIL_RANGE_CONST_REFERENCE_HPP
 #define XSTD_BITS_DETAIL_RANGE_CONST_REFERENCE_HPP
 
-#include <version>     // IWYU pragma: keep; __cpp_lib_ranges_as_const
 #include <iterator>    // indirectly_readable, iter_reference_t, iter_value_t
 #include <ranges>      // iterator_t, range, range_const_reference_t
 #include <type_traits> // common_reference_t
+#include <version>     // IWYU pragma: keep; __cpp_lib_ranges_as_const
 
 namespace xstd::detail::bits {
 

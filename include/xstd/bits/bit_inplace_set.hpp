@@ -10,15 +10,15 @@
 
 #ifdef __cpp_lib_inplace_vector
 
-#include <xstd/bits/detail/ownership.hpp>                     // storage
 #include <xstd/bits/detail/contiguous_bit_inplace_vector.hpp> // contiguous_bit_inplace_vector
+#include <xstd/bits/detail/ownership.hpp>                     // storage
 #include <xstd/bits/detail/set_adaptor.hpp>                   // set_adaptor
 #include <xstd/ints/concepts/unsigned_integer.hpp>            // unsigned_integer
+#include <boost/container_hash/is_range.hpp>                  // is_range
+#include <boost/container_hash/is_tuple_like.hpp>             // is_tuple_like
 #include <cstddef>                                            // size_t
 #include <functional>                                         // hash
 #include <type_traits>                                        // false_type
-#include <boost/container_hash/is_range.hpp>                  // is_range
-#include <boost/container_hash/is_tuple_like.hpp>             // is_tuple_like
 
 namespace xstd {
 

@@ -14,11 +14,11 @@
 #include <xstd/ints/concepts/unsigned_integer.hpp>       // unsigned_integer
 #include <boost/container/new_allocator.hpp>             // new_allocator
 #include <boost/container/small_vector.hpp>              // small_vector
+#include <boost/container_hash/is_range.hpp>             // is_range
+#include <boost/container_hash/is_tuple_like.hpp>        // is_tuple_like
 #include <cstddef>                                       // size_t
 #include <functional>                                    // hash
 #include <type_traits>                                   // false_type
-#include <boost/container_hash/is_range.hpp>             // is_range
-#include <boost/container_hash/is_tuple_like.hpp>        // is_tuple_like
 
 namespace xstd::detail::bits {
 
