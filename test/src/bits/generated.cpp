@@ -3,15 +3,15 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits.hpp>                   // bit_array, bit_set, bit_static_set, bit_vector, bitset, dynamic_bitset, and the inplace column
-#include <boost/test/unit_test.hpp>        // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
-#include <compare>                         // three_way_comparable
-#include <concepts>                        // copyable, default_initializable, movable, ranges::swap, swappable, totally_ordered
-#include <cstddef>                         // size_t
-#include <memory_resource>                 // polymorphic_allocator
-#include <scoped_allocator>                // scoped_allocator_adaptor
-#include <type_traits>                     // is_nothrow_move_assignable_v, is_nothrow_move_constructible_v
-#include <utility>                         // swap
+#include <xstd/bits.hpp>            // bit_array, bit_set, bit_static_set, bit_vector, bitset, dynamic_bitset, and the inplace column
+#include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
+#include <compare>                  // three_way_comparable
+#include <concepts>                 // copyable, default_initializable, movable, ranges::swap, swappable, totally_ordered
+#include <cstddef>                  // size_t
+#include <memory_resource>          // polymorphic_allocator
+#include <scoped_allocator>         // scoped_allocator_adaptor
+#include <type_traits>              // is_nothrow_move_assignable_v, is_nothrow_move_constructible_v
+#include <utility>                  // swap
 
 // What the compiler generates for each cell, held to the table rather than to whichever cell was read last.
 BOOST_AUTO_TEST_SUITE(Generated)

@@ -7,6 +7,7 @@
 #define XSTD_BITS_DETAIL_OWNERSHIP_HPP
 
 #include <concepts>    // same_as
+#include <cstdint>     // uint8_t
 #include <type_traits> // conditional_t, is_const_v, remove_const_t
 
 namespace xstd::detail::bits {
@@ -28,9 +29,9 @@ enum class window : bool { all,
 };
 
 // The three ways the same blocks are read: as a set of keys, as a sequence of bools, or whole, the way std::bitset is.
-enum class reading { set,
-                     sequence,
-                     bitset,
+enum class reading : std::uint8_t { set,
+                                    sequence,
+                                    bitset,
 };
 
 // What an owner wraps: declared, never defined, so a view over a type that owns nothing is unsatisfied.
