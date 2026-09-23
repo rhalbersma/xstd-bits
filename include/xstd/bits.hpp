@@ -9,15 +9,15 @@
 // The umbrella over every container the standard library can store; the ext column stays out, so Boost is opt-in.
 
 // Shared by all three readings.
-#include <xstd/bits/from_bits.hpp>     // IWYU pragma: export; from_bits, from_bits_t
-#include <xstd/bits/borrowed_bits.hpp> // IWYU pragma: export; borrow_bits, borrowed_bits
+#include <xstd/bits/from_bits.hpp>               // IWYU pragma: export; from_bits, from_bits_t
+#include <xstd/bits/borrowed_bits.hpp>           // IWYU pragma: export; borrow_bits, borrowed_bits
+#include <xstd/bits/contiguous_bit_sequence.hpp> // IWYU pragma: export; contiguous_bit_sequence
 
 // The bitset reading.
-#include <xstd/bits/bitset_adaptor.hpp>          // IWYU pragma: export; bitset_adaptor
-#include <xstd/bits/contiguous_bit_sequence.hpp> // IWYU pragma: export; contiguous_bit_sequence
-#include <xstd/bits/bitset.hpp>                  // IWYU pragma: export; bitset
-#include <xstd/bits/inplace_bitset.hpp>          // IWYU pragma: export; inplace_bitset
-#include <xstd/bits/dynamic_bitset.hpp>          // IWYU pragma: export; dynamic_bitset
+#include <xstd/bits/bitset_adaptor.hpp> // IWYU pragma: export; bitset_adaptor
+#include <xstd/bits/bitset.hpp>         // IWYU pragma: export; bitset
+#include <xstd/bits/inplace_bitset.hpp> // IWYU pragma: export; inplace_bitset
+#include <xstd/bits/dynamic_bitset.hpp> // IWYU pragma: export; dynamic_bitset
 
 // The sequence reading.
 #include <xstd/bits/bit_sequence_adaptor.hpp> // IWYU pragma: export; bit_sequence_adaptor
