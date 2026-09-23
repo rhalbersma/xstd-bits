@@ -1501,30 +1501,45 @@ and says nothing about where they live. `ext/boost.hpp` joins on that and nothin
 `boost::container::small_vector` and three containers over it, written from outside the library without a line
 of it changing.
 
-### the-container-adaptor-that-waits
+### the-container-adaptor
 
-There is a cleaner arrangement of the grid than nine classes, and it is deferred rather than rejected. Make the
-primary a container adaptor per reading -- `bit_sequence_adaptor<Container, N>`, `bit_set_adaptor<Container, N>`,
-`bitset_adaptor<Container, N>`, in the manner of `std::stack<T, Container>` and `std::flat_set<Key, Compare,
-KeyContainer>` -- and make the nine names aliases over it: `basic_bit_vector<B, A>` would be
-`bit_sequence_adaptor<std::vector<B, A>>`, `basic_bit_array<B, N>` the adaptor over `std::array<B, K>` at width
-`N`. One type per storage, a printed name the user can write, the `std::hash`, `enable_view` and `owned_storage`
-specializations written once per reading instead of once per class, and the container parameter open to any
-`contiguous_block_range` without a new class for it.
+There is a cleaner arrangement of the grid than nine classes. Make the primary a container adaptor per reading --
+`bit_sequence_adaptor<Blocks, N>`, `bit_set_adaptor<Blocks, N>`, `bitset_adaptor<Blocks, N>`, in the manner of
+`std::stack<T, Container>` and `std::flat_set<Key, Compare, KeyContainer>` -- and make the nine names aliases over
+it: `basic_bit_vector<B, A>` would be `bit_sequence_adaptor<std::vector<B, A>>`, `basic_bit_array<B, N>` the
+adaptor over `std::array<B, blocks_for<B>(N)>` at width `N`. One type per storage, a printed name the user can
+write, the `std::hash`, `enable_view` and `owned_storage` specializations written once per reading instead of
+once per class, and the container parameter open to any `contiguous_block_range` without a new class for it.
+#229 tracks it.
 
-What stands in the way is one compiler. Aliases cannot declare deduction guides, so every owner guide -- the
-`from_bits` tag's, `basic_bitset`'s integer one -- would live on the adaptor and be reached through the alias,
-which is class template argument deduction for alias templates ([P1814](https://wg21.link/P1814)). MSVC 17
-fails exactly that on this shape, one pinned non-type argument beside a defaulted constrained one, which is how
-the views came to be classes ([the-views-are-the-adaptors](#the-views-are-the-adaptors)); `basic_bit_array<B, N>`
-over `std::array<B, num_blocks_v<B, N>>` is that shape again. Every VS 2022 leg is required, so the arrangement
-would cost owner deduction there. Nothing written today deduces through an owner's name, which is why the cost is
-invisible until the guides exist; they do now.
+Aliases cannot declare deduction guides, so every owner guide -- the `from_bits` tag's, `basic_bitset`'s integer
+one -- lives on the adaptor and is reached through the alias, which is class template argument deduction for
+alias templates ([P1814](https://wg21.link/P1814)). This section used to say MSVC 17 fails that on the owners'
+shape and that the arrangement therefore waited for VS 2022 to leave the matrix. That was an inference from the
+views, never a measurement, and a probe on every leg (#228, stand-in types, one `static_assert` per case) says
+otherwise. It found three rules, of which only the second is about VS 2022:
 
-The condition for revisiting is therefore not a design question: it is VS 2022 leaving the matrix, which the
-latest-two-stable rule decides when the next Visual Studio ships. MSVC 18 and clang-cl deduce through these
-aliases already. Until then `bit_sequence<C>` ([a-name-by-storage](#a-name-by-storage)) gives the spelling by
-storage without the aliasing, and the nine stay classes.
+1. **A guide spells the storage as the alias does.** The return type computes the block count from the width,
+   `adaptor<std::array<B, blocks_for<B>(W)>, W>`, and never names it, `adaptor<std::array<B, K>, …>`. With the
+   second spelling GCC 15 and Clang 23 refuse to deduce `basic_bit_array` from `std::array<B, 2>`: `K` meets
+   `blocks_for<B>(N)`, which [temp.deduct.type]/5.3 makes a non-deduced context. This is the language, not a
+   compiler.
+2. **The one-word guide carries a defaulted count.** MSVC 17 (14.44) drops a guide whose only template parameter
+   is the block type when it builds the alias's guides: `basic_bit_array(xstd::from_bits, word)` fails with
+   `C2641` and `C2976`, and the candidate list names every guide but that one. Writing the width as
+   `digits<B> * 1` does not help; `template<std::unsigned_integral B, std::size_t K = 1>`, spelled as the array
+   guide is, does. MSVC 18, clang-cl, GCC and Clang take all three spellings.
+3. **Nothing deduces through a name that pins the block type.** `bit_array<N> = basic_bit_array<std::size_t, N>`
+   is an alias of an alias, and neither MSVC 17 nor MSVC 18 deduces through it, for the one-word and the array
+   guide alike (`C2641`), while GCC, Clang and clang-cl do. No test or example deduces through those names today,
+   and the pinned block is exactly what deduction would have found, so they stay spelled with their arguments.
+
+Adopting a storage, `basic_bit_vector(std::vector<B>())`, deduced on every leg. So the arrangement waits on
+nothing but its own design: with guides written to the first two rules, every name that deduces today would
+deduce as an alias, VS 2022 included. The view shape that made the views classes
+([the-views-are-the-adaptors](#the-views-are-the-adaptors)) did not reproduce on the probe's stand-ins, either
+unconstrained or with a constrained alias parameter, so whatever else the real views carried is part of what
+failed there; the views are a separate question from the owners, and #229 leaves it open.
 
 ### owning-is-ours
 
@@ -2246,9 +2261,10 @@ two answers. Deduction stays on the owners' own names, `basic_bit_array(xstd::fr
 
 The trait is declared and never defined, so a storage with no sequence of its own is refused where the alias is
 named, by the alias's constraint: `bit_sequence<std::deque<std::uint32_t>>` and `bit_sequence<int>` do not name a
-type. The owners stay classes rather than aliases of a container-parameterized adaptor, for the reasons
-[the-grid](#the-grid) records and one it adds while VS 2022 is a required leg: deduction through an alias of this
-shape is what MSVC 17 fails, and every owner guide would then have to deduce through one.
+type. The owners are classes rather than aliases of a container-parameterized adaptor, for the reasons
+[the-grid](#the-grid) records; [the-container-adaptor](#the-container-adaptor) measures what deducing through such
+aliases takes, and it is one respelled guide rather than a compiler leaving the matrix. Once the adaptors are
+public, `bit_sequence_adaptor<C>` names the same owners for every reading rather than one, and deduces.
 
 ### the-generated-table
 
