@@ -22,10 +22,10 @@
 namespace xstd {
 
 // A set of indices packed into a storage of blocks it owns: std::set<std::size_t>'s reading over any block container.
-template<class Blocks, std::size_t N = detail::bits::default_extent_v<Blocks>>
-class bit_set_adaptor : public detail::bits::set_adaptor<detail::bits::contiguous_bit_container<Blocks, N>, detail::bits::storage::owned, bit_set_adaptor<Blocks, N>>
+template<class Blocks, std::size_t N = bits::detail::default_extent_v<Blocks>>
+class bit_set_adaptor : public bits::detail::set_adaptor<bits::detail::contiguous_bit_container<Blocks, N>, bits::detail::storage::owned, bit_set_adaptor<Blocks, N>>
 {
-        using base_type = detail::bits::set_adaptor<detail::bits::contiguous_bit_container<Blocks, N>, detail::bits::storage::owned, bit_set_adaptor<Blocks, N>>;
+        using base_type = bits::detail::set_adaptor<bits::detail::contiguous_bit_container<Blocks, N>, bits::detail::storage::owned, bit_set_adaptor<Blocks, N>>;
 
 public:
         using base_type::base_type;
@@ -41,10 +41,10 @@ public:
 
 // Block counts computed as the aliases compute them; the defaulted K keeps MSVC 17 from dropping the one-word guide.
 template<xstd::unsigned_integer B, std::size_t K = 1>
-bit_set_adaptor(from_bits_t, B) -> bit_set_adaptor<std::array<B, detail::bits::num_blocks_v<B, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>>, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>;
+bit_set_adaptor(from_bits_t, B) -> bit_set_adaptor<std::array<B, bits::detail::num_blocks_v<B, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>>, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>;
 
 template<xstd::unsigned_integer B, std::size_t K>
-bit_set_adaptor(from_bits_t, std::array<B, K>) -> bit_set_adaptor<std::array<B, detail::bits::num_blocks_v<B, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>>, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>;
+bit_set_adaptor(from_bits_t, std::array<B, K>) -> bit_set_adaptor<std::array<B, bits::detail::num_blocks_v<B, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>>, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>;
 
 } // namespace xstd
 

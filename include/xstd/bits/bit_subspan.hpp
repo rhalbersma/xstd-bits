@@ -19,10 +19,10 @@
 namespace xstd {
 
 // A window on the sequence reading: what first, last and subspan hand back, its width in the type where it can be.
-template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits, std::size_t Extent>
-class bit_subspan : public detail::bits::sequence_adaptor<Bits, detail::bits::storage::borrowed, detail::bits::window::sub, bit_subspan<Bits, Extent>, Extent>
+template<specialization_of_TN<bits::detail::contiguous_bit_container> Bits, std::size_t Extent>
+class bit_subspan : public bits::detail::sequence_adaptor<Bits, bits::detail::storage::borrowed, bits::detail::window::sub, bit_subspan<Bits, Extent>, Extent>
 {
-        using base_type = detail::bits::sequence_adaptor<Bits, detail::bits::storage::borrowed, detail::bits::window::sub, bit_subspan<Bits, Extent>, Extent>;
+        using base_type = bits::detail::sequence_adaptor<Bits, bits::detail::storage::borrowed, bits::detail::window::sub, bit_subspan<Bits, Extent>, Extent>;
 
 public:
         static constexpr std::size_t extent = Extent;
@@ -33,21 +33,21 @@ public:
 
 // The vehicle's two guides, restated on the view so a consumer deduces the name rather than what it is built on.
 template<class Bits>
-        requires (not requires { typename detail::bits::owned_storage<std::remove_const_t<Bits>>::bits_type; })
+        requires (not requires { typename bits::detail::owned_storage<std::remove_const_t<Bits>>::bits_type; })
 bit_subspan(Bits&) -> bit_subspan<Bits>;
 
-template<detail::bits::owner_reading<detail::bits::reading::sequence> Owner>
-bit_subspan(Owner&) -> bit_subspan<detail::bits::owned_bits_t<Owner>>;
+template<bits::detail::owner_reading<bits::detail::reading::sequence> Owner>
+bit_subspan(Owner&) -> bit_subspan<bits::detail::owned_bits_t<Owner>>;
 
 } // namespace xstd
 
-namespace xstd::detail::bits {
+namespace xstd::bits::detail {
 
 // A view answers every trait as the vehicle it is built on, which is where each one is defined.
 template<class Bits, std::size_t Extent, class Block>
 inline constexpr bool blit_source<bit_subspan<Bits, Extent>, Block> = blit_source<typename bit_subspan<Bits, Extent>::adaptor_type, Block>; // NOLINT(readability-redundant-typename)
 
-} // namespace xstd::detail::bits
+} // namespace xstd::bits::detail
 
 namespace boost::container_hash {
 

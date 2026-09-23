@@ -20,7 +20,7 @@ namespace xstd {
 
 // The set reading over a run-time width under a compile-time capacity: inplace names where the storage lives.
 template<xstd::unsigned_integer Block, std::size_t N>
-using basic_bit_inplace_set = bit_set_adaptor<std::inplace_vector<Block, detail::bits::num_blocks_v<Block, N>>>;
+using basic_bit_inplace_set = bit_set_adaptor<std::inplace_vector<Block, bits::detail::num_blocks_v<Block, N>>>;
 
 template<std::size_t N>
 using bit_inplace_set = basic_bit_inplace_set<std::size_t, N>;

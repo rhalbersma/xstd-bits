@@ -38,7 +38,7 @@ constexpr bool has_allocator = requires { typename X::allocator_type; };
 // The sequence reading over a run-time width under a compile-time capacity, an alias and nothing more.
 BOOST_AUTO_TEST_CASE(TheInplaceSequenceIsTheSequenceAdaptorOverAnInplaceVectorOfBlocks)
 {
-        static_assert(std::derived_from<T, xstd::detail::bits::sequence_adaptor<xstd::detail::bits::contiguous_bit_inplace_vector<std::uint8_t, 24>, xstd::detail::bits::storage::owned, xstd::detail::bits::window::all, T>>);
+        static_assert(std::derived_from<T, xstd::bits::detail::sequence_adaptor<xstd::bits::detail::contiguous_bit_inplace_vector<std::uint8_t, 24>, xstd::bits::detail::storage::owned, xstd::bits::detail::window::all, T>>);
         static_assert(std::same_as<xstd::bit_inplace_vector<24>, xstd::basic_bit_inplace_vector<std::size_t, 24>>);
         static_assert(test::sequence::bit_sequence<T>);
 }

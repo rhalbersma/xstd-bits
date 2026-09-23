@@ -11,7 +11,7 @@
 #include <cstddef>                                 // size_t
 
 // The seam, now closed on the xstd side.
-namespace xstd::detail::bits {
+namespace xstd::bits::detail {
 
 [[nodiscard]] constexpr auto countl_zero(xstd::unsigned_integer auto block) noexcept
         -> std::size_t
@@ -31,6 +31,6 @@ namespace xstd::detail::bits {
         return static_cast<std::size_t>(xstd::popcount(block));
 }
 
-} // namespace xstd::detail::bits
+} // namespace xstd::bits::detail
 
 #endif // XSTD_BITS_DETAIL_INTRIN_HPP

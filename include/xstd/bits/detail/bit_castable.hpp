@@ -19,7 +19,7 @@
 #include <ranges>                                      // contiguous_range, data, range_value_t
 #include <type_traits>                                 // bool_constant, is_trivially_copyable_v
 
-namespace xstd::detail::bits {
+namespace xstd::bits::detail {
 
 inline constexpr auto bits_per_byte = static_cast<std::size_t>(std::numeric_limits<unsigned char>::digits);
 inline constexpr auto bits_per_word = static_cast<std::size_t>(std::numeric_limits<unsigned long long>::digits);
@@ -248,6 +248,6 @@ template<class B, std::size_t N>
         }
 }
 
-} // namespace xstd::detail::bits
+} // namespace xstd::bits::detail
 
 #endif // XSTD_BITS_DETAIL_BIT_CASTABLE_HPP

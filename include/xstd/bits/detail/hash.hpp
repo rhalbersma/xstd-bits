@@ -15,7 +15,7 @@
 #include <limits>                              // numeric_limits
 #include <ranges>                              // iota
 
-namespace xstd::detail::bits {
+namespace xstd::bits::detail {
 
 // A block wider than Hash2 writes, the 128-bit one, goes in as its two halves, low first.
 template<class Hash, class Flavor, class Block>
@@ -62,6 +62,6 @@ template<class T, class Hash = boost::hash2::fnv1a_64>
         return boost::hash2::get_integral_result<std::size_t>(h);
 }
 
-} // namespace xstd::detail::bits
+} // namespace xstd::bits::detail
 
 #endif // XSTD_BITS_DETAIL_HASH_HPP

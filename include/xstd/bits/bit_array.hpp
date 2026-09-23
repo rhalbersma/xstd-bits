@@ -18,7 +18,7 @@ namespace xstd {
 
 // The packed std::array<bool, N>, named after the container it packs.
 template<xstd::unsigned_integer Block, std::size_t N>
-using basic_bit_array = bit_sequence_adaptor<std::array<Block, detail::bits::num_blocks_v<Block, N>>, N>;
+using basic_bit_array = bit_sequence_adaptor<std::array<Block, bits::detail::num_blocks_v<Block, N>>, N>;
 
 template<std::size_t N>
 using bit_array = basic_bit_array<std::size_t, N>;

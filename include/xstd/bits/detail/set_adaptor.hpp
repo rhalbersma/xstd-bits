@@ -37,7 +37,7 @@
 #include <utility>                                       // declval, forward, move, pair
 
 // The set reading, [set] over a contiguous_bit_container, owning it or referring to it.
-namespace xstd::detail::bits {
+namespace xstd::bits::detail {
 
 namespace set {
 
@@ -908,13 +908,13 @@ template<class Bits, storage Store, class Derived>
 
 // NOLINTEND(readability-redundant-parentheses)
 
-} // namespace xstd::detail::bits
+} // namespace xstd::bits::detail
 
 namespace boost::container_hash {
 
 // Not a range to ContainerHash, so Hash2 takes the hook and not its range overload.
-template<class Bits, xstd::detail::bits::storage Store, class Derived>
-struct is_range<xstd::detail::bits::set_adaptor<Bits, Store, Derived>> : std::false_type
+template<class Bits, xstd::bits::detail::storage Store, class Derived>
+struct is_range<xstd::bits::detail::set_adaptor<Bits, Store, Derived>> : std::false_type
 {};
 
 } // namespace boost::container_hash
@@ -924,13 +924,13 @@ namespace std {
 // NOLINTBEGIN(bugprone-std-namespace-modification)
 
 // Owned or viewed, as std::string_view hashes and std::set does not.
-template<class Bits, xstd::detail::bits::storage Store, class Derived>
-struct hash<xstd::detail::bits::set_adaptor<Bits, Store, Derived>>
+template<class Bits, xstd::bits::detail::storage Store, class Derived>
+struct hash<xstd::bits::detail::set_adaptor<Bits, Store, Derived>>
 {
-        [[nodiscard]] constexpr auto operator()(xstd::detail::bits::set_adaptor<Bits, Store, Derived> const& v) const noexcept
+        [[nodiscard]] constexpr auto operator()(xstd::bits::detail::set_adaptor<Bits, Store, Derived> const& v) const noexcept
                 -> std::size_t
         {
-                return xstd::detail::bits::std_hash(v);
+                return xstd::bits::detail::std_hash(v);
         }
 };
 
@@ -943,10 +943,10 @@ namespace std::ranges {
 
 // A view is a std::ranges::view outright and borrowed, its iterators pointing at the storage.
 template<class Bits>
-inline constexpr bool enable_view<xstd::detail::bits::set_adaptor<Bits, xstd::detail::bits::storage::borrowed>> = true;
+inline constexpr bool enable_view<xstd::bits::detail::set_adaptor<Bits, xstd::bits::detail::storage::borrowed>> = true;
 
 template<class Bits>
-inline constexpr bool enable_borrowed_range<xstd::detail::bits::set_adaptor<Bits, xstd::detail::bits::storage::borrowed>> = true;
+inline constexpr bool enable_borrowed_range<xstd::bits::detail::set_adaptor<Bits, xstd::bits::detail::storage::borrowed>> = true;
 
 } // namespace std::ranges
 

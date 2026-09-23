@@ -39,7 +39,7 @@
 #include <type_traits>                                   // is_array_v, is_nothrow_swappable_v, is_standard_layout_v, is_trivially_copyable_v, is_trivially_default_constructible_v, remove_cv_t, remove_cvref_t
 #include <utility>                                       // as_const, move
 
-namespace xstd::detail::bits {
+namespace xstd::bits::detail {
 
 // [template.bitset] over a storage of ours, which speaks the bitset vocabulary by construction.
 template<specialization_of_TN<contiguous_bit_container> Bits, class Derived = void>
@@ -975,7 +975,7 @@ struct owned_storage<bitset_adaptor<Bits, Derived>>
         static constexpr auto reads = reading::bitset;
 };
 
-} // namespace xstd::detail::bits
+} // namespace xstd::bits::detail
 
 namespace std {
 
@@ -983,12 +983,12 @@ namespace std {
 
 // bitset hash support [bitset.hash]; no redeclaration of std::hash's primary template, which [namespace.std] forbids.
 template<class Bits, class Derived>
-struct hash<xstd::detail::bits::bitset_adaptor<Bits, Derived>>
+struct hash<xstd::bits::detail::bitset_adaptor<Bits, Derived>>
 {
-        [[nodiscard]] constexpr auto operator()(xstd::detail::bits::bitset_adaptor<Bits, Derived> const& v) const noexcept
+        [[nodiscard]] constexpr auto operator()(xstd::bits::detail::bitset_adaptor<Bits, Derived> const& v) const noexcept
                 -> std::size_t
         {
-                return xstd::detail::bits::std_hash(v);
+                return xstd::bits::detail::std_hash(v);
         }
 };
 
@@ -996,7 +996,7 @@ struct hash<xstd::detail::bits::bitset_adaptor<Bits, Derived>>
 
 } // namespace std
 
-namespace xstd::detail::bits {
+namespace xstd::bits::detail {
 
 // bitset operators                                           [bitset.operators]
 template<class Bits, class Derived>
@@ -1095,7 +1095,7 @@ auto operator>>(std::basic_istream<charT, traits>& is, bitset_adaptor<Bits, Deri
                 str.push_back(ch);
         }
         x = Derived(str);
-        if constexpr (not detail::bits::zero_width<Bits>) {
+        if constexpr (not bits::detail::zero_width<Bits>) {
                 if (str.empty()) {
                         state |= std::ios_base::failbit;
                         is.setstate(state);
@@ -1114,6 +1114,6 @@ auto operator<<(std::basic_ostream<charT, traits>& os, bitset_adaptor<Bits, Deri
                );
 }
 
-} // namespace xstd::detail::bits
+} // namespace xstd::bits::detail
 
 #endif // XSTD_BITS_DETAIL_BITSET_ADAPTOR_HPP

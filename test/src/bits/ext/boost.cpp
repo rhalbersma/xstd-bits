@@ -29,16 +29,16 @@ inline constexpr auto N = 256UZ;
 // A back end joins on the block concept alone, which is the whole of what a storage has to satisfy.
 BOOST_AUTO_TEST_CASE(TheSmallVectorIsBlocksAStorageCanHold)
 {
-        static_assert(xstd::detail::bits::contiguous_block_range<boost::container::small_vector<std::size_t, 4>>);
+        static_assert(xstd::bits::detail::contiguous_block_range<boost::container::small_vector<std::size_t, 4>>);
         BOOST_CHECK(true);
 }
 
 // N counts bits and the storage counts blocks, so the vehicle divides by the block width the way the static column does.
 BOOST_AUTO_TEST_CASE(TheCapacityIsBitsAndTheStorageIsBlocks)
 {
-        using Blocks = boost::container::small_vector<std::size_t, xstd::detail::bits::num_blocks_v<std::size_t, N>, boost::container::new_allocator<std::size_t>>;
-        static_assert(std::same_as<xstd::detail::bits::contiguous_bit_small_vector<std::size_t, N, boost::container::new_allocator<std::size_t>>, xstd::detail::bits::contiguous_bit_container<Blocks>>);
-        static_assert(xstd::detail::bits::num_blocks_v<std::uint8_t, 24> == 3);
+        using Blocks = boost::container::small_vector<std::size_t, xstd::bits::detail::num_blocks_v<std::size_t, N>, boost::container::new_allocator<std::size_t>>;
+        static_assert(std::same_as<xstd::bits::detail::contiguous_bit_small_vector<std::size_t, N, boost::container::new_allocator<std::size_t>>, xstd::bits::detail::contiguous_bit_container<Blocks>>);
+        static_assert(xstd::bits::detail::num_blocks_v<std::uint8_t, 24> == 3);
         BOOST_CHECK(true);
 }
 

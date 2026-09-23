@@ -16,12 +16,12 @@
 #include <cstddef>                                       // size_t
 #include <inplace_vector>                                // inplace_vector
 
-namespace xstd::detail::bits {
+namespace xstd::bits::detail {
 
 template<xstd::unsigned_integer Block, std::size_t N>
 using contiguous_bit_inplace_vector = contiguous_bit_container<std::inplace_vector<Block, num_blocks_v<Block, N>>>;
 
-} // namespace xstd::detail::bits
+} // namespace xstd::bits::detail
 
 #endif // __cpp_lib_inplace_vector
 

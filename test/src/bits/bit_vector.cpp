@@ -46,7 +46,7 @@ constexpr bool has_range_members = requires (X x, std::vector<bool> const& r) { 
 // std::vector<bool> under its own name: the sequence adaptor over a heap of blocks.
 BOOST_AUTO_TEST_CASE(TheDynamicSequenceIsTheSequenceAdaptorOverAHeapOfBlocks)
 {
-        static_assert(std::derived_from<T, xstd::detail::bits::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint8_t>, xstd::detail::bits::storage::owned, xstd::detail::bits::window::all, T>>);
+        static_assert(std::derived_from<T, xstd::bits::detail::sequence_adaptor<xstd::bits::detail::contiguous_bit_vector<std::uint8_t>, xstd::bits::detail::storage::owned, xstd::bits::detail::window::all, T>>);
         static_assert(std::same_as<xstd::basic_bit_vector<std::uint8_t, std::allocator<std::uint8_t>>, T>);
         static_assert(test::sequence::bit_sequence<T>);
 }
@@ -177,8 +177,8 @@ BOOST_AUTO_TEST_CASE(ItGrowsLikeAStdVector)
         BOOST_CHECK_GE(v.capacity(), v.size());
 
         // A std::vector<bool>'s ceiling is what a distance can name, where the storage's own bound is whole blocks.
-        BOOST_CHECK_EQUAL(v.max_size(), xstd::detail::bits::contiguous_bit_vector<std::uint8_t>::max_addressable_width);
-        BOOST_CHECK_LT(v.max_size(), xstd::detail::bits::contiguous_bit_vector<std::uint8_t>().max_size());
+        BOOST_CHECK_EQUAL(v.max_size(), xstd::bits::detail::contiguous_bit_vector<std::uint8_t>::max_addressable_width);
+        BOOST_CHECK_LT(v.max_size(), xstd::bits::detail::contiguous_bit_vector<std::uint8_t>().max_size());
         BOOST_CHECK_LE(v.max_size(), static_cast<std::size_t>(std::numeric_limits<std::ptrdiff_t>::max()));
         BOOST_CHECK_EQUAL(v.max_size() % 8UZ, 0UZ);
         BOOST_CHECK_THROW(v.resize(v.max_size() + 1UZ), std::length_error);
@@ -420,7 +420,7 @@ BOOST_AUTO_TEST_CASE(TheOwnerHashesAndTheViewDoesNot)
         BOOST_CHECK_EQUAL(h(T({true, false, true})), h(T({true, false, true})));
         BOOST_CHECK(h(T({true, false, true})) != h(T({true, false, true, false})));
         BOOST_CHECK(h(T()) != h(T(1)));
-        static_assert(not std::is_default_constructible_v<std::hash<xstd::bit_span<xstd::detail::bits::contiguous_bit_vector<std::uint8_t>>>>);
+        static_assert(not std::is_default_constructible_v<std::hash<xstd::bit_span<xstd::bits::detail::contiguous_bit_vector<std::uint8_t>>>>);
 }
 
 // The view over it refers into the contiguous_bit_vector and cannot grow it.

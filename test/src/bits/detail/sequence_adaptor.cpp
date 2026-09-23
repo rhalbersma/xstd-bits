@@ -32,10 +32,10 @@
 
 namespace {
 
-using Storage = xstd::detail::bits::contiguous_bit_array<std::uint64_t, 100>;
+using Storage = xstd::bits::detail::contiguous_bit_array<std::uint64_t, 100>;
 using Owner = xstd::basic_bit_array<std::uint64_t, 100>;
-using View = xstd::detail::bits::sequence_adaptor<Storage, xstd::detail::bits::storage::borrowed, xstd::detail::bits::window::all>;
-using Reader = xstd::detail::bits::sequence_adaptor<Storage const, xstd::detail::bits::storage::borrowed, xstd::detail::bits::window::all>;
+using View = xstd::bits::detail::sequence_adaptor<Storage, xstd::bits::detail::storage::borrowed, xstd::bits::detail::window::all>;
+using Reader = xstd::bits::detail::sequence_adaptor<Storage const, xstd::bits::detail::storage::borrowed, xstd::bits::detail::window::all>;
 
 // Dependent, so an absent member is a false rather than a hard error.
 template<class S>
@@ -52,7 +52,7 @@ template<class Seq>
         return {s.begin(), s.end()};
 }
 
-using DynamicOctet = xstd::detail::bits::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint8_t>, xstd::detail::bits::storage::owned, xstd::detail::bits::window::all>;
+using DynamicOctet = xstd::bits::detail::sequence_adaptor<xstd::bits::detail::contiguous_bit_vector<std::uint8_t>, xstd::bits::detail::storage::owned, xstd::bits::detail::window::all>;
 
 // Every (size, pattern) pair as a sequence and the vector<bool> modelling it, so the comparison is one loop.
 [[nodiscard]] auto dynamic_probes()
@@ -278,8 +278,8 @@ constexpr bool can_grow = requires (X& x) { x.push_back(true); x.pop_back(); x.r
 // Growth is the owner's over storage that grows; a static width and a view have none of it.
 BOOST_AUTO_TEST_CASE(GrowthIsTheOwnersOverStorageThatGrows)
 {
-        using Dynamic = xstd::detail::bits::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint64_t>, xstd::detail::bits::storage::owned, xstd::detail::bits::window::all>;
-        using Span = xstd::detail::bits::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint64_t>, xstd::detail::bits::storage::borrowed, xstd::detail::bits::window::all>;
+        using Dynamic = xstd::bits::detail::sequence_adaptor<xstd::bits::detail::contiguous_bit_vector<std::uint64_t>, xstd::bits::detail::storage::owned, xstd::bits::detail::window::all>;
+        using Span = xstd::bits::detail::sequence_adaptor<xstd::bits::detail::contiguous_bit_vector<std::uint64_t>, xstd::bits::detail::storage::borrowed, xstd::bits::detail::window::all>;
 
         static_assert(can_grow<Dynamic>);
         static_assert(not can_grow<Owner>);
@@ -290,8 +290,8 @@ BOOST_AUTO_TEST_CASE(GrowthIsTheOwnersOverStorageThatGrows)
         BOOST_CHECK_EQUAL(d.size(), 4UZ);
         BOOST_CHECK(std::ranges::equal(d, std::vector<bool>{true, true, true, false}));
         // What a distance can name: a random access range counts its positions by a difference_type.
-        BOOST_CHECK_EQUAL(d.max_size(), xstd::detail::bits::contiguous_bit_vector<std::uint64_t>::max_addressable_width);
-        BOOST_CHECK_LT(d.max_size(), xstd::detail::bits::contiguous_bit_vector<std::uint64_t>().max_size());
+        BOOST_CHECK_EQUAL(d.max_size(), xstd::bits::detail::contiguous_bit_vector<std::uint64_t>::max_addressable_width);
+        BOOST_CHECK_LT(d.max_size(), xstd::bits::detail::contiguous_bit_vector<std::uint64_t>().max_size());
         BOOST_CHECK_THROW(d.resize(d.max_size() + 1UZ), std::length_error);
         BOOST_CHECK_EQUAL(Owner().max_size(), 100UZ);
 
@@ -308,7 +308,7 @@ BOOST_AUTO_TEST_CASE(GrowthIsTheOwnersOverStorageThatGrows)
 // at() is the reading's one checked door, measured against the width that grows.
 BOOST_AUTO_TEST_CASE(AtAnswersAtARunTimeWidthToo)
 {
-        auto d = xstd::detail::bits::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint64_t>, xstd::detail::bits::storage::owned, xstd::detail::bits::window::all>(3, true);
+        auto d = xstd::bits::detail::sequence_adaptor<xstd::bits::detail::contiguous_bit_vector<std::uint64_t>, xstd::bits::detail::storage::owned, xstd::bits::detail::window::all>(3, true);
         BOOST_CHECK_THROW(static_cast<void>(d.at(3UZ)), std::out_of_range);
         d.push_back(false);
         BOOST_CHECK(d.at(3UZ) == false);
@@ -317,7 +317,7 @@ BOOST_AUTO_TEST_CASE(AtAnswersAtARunTimeWidthToo)
 
 namespace {
 
-using Dynamic = xstd::detail::bits::sequence_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint64_t>, xstd::detail::bits::storage::owned, xstd::detail::bits::window::all>;
+using Dynamic = xstd::bits::detail::sequence_adaptor<xstd::bits::detail::contiguous_bit_vector<std::uint64_t>, xstd::bits::detail::storage::owned, xstd::bits::detail::window::all>;
 
 // One functor at namespace scope, so the packing tier is instantiated once rather than once per closure.
 constexpr auto every_third = [](std::size_t i) -> bool { return i % 3 == 0; };
@@ -378,8 +378,8 @@ BOOST_AUTO_TEST_CASE(AZeroWidthSequenceIsEmpty)
 {
         auto const a = xstd::basic_bit_array<std::uint8_t, 0>();
         BOOST_CHECK(a.empty() and a.begin() == a.end());
-        auto c = xstd::detail::bits::contiguous_bit_array<std::uint8_t, 0>();
-        auto const v = xstd::detail::bits::sequence_adaptor<xstd::detail::bits::contiguous_bit_array<std::uint8_t, 0>, xstd::detail::bits::storage::borrowed, xstd::detail::bits::window::all>(c);
+        auto c = xstd::bits::detail::contiguous_bit_array<std::uint8_t, 0>();
+        auto const v = xstd::bits::detail::sequence_adaptor<xstd::bits::detail::contiguous_bit_array<std::uint8_t, 0>, xstd::bits::detail::storage::borrowed, xstd::bits::detail::window::all>(c);
         BOOST_CHECK(v.empty() and v.begin() == v.end());
 }
 
@@ -476,7 +476,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheAggregatesAgreeWithTheModel, T, Graded)
 // The same over a window: a masked word at a time, at every offset and length, so both ends are exercised.
 BOOST_AUTO_TEST_CASE(TheAggregatesAgreeWithTheModelOnAWindowOfOurs)
 {
-        using Storage24 = xstd::detail::bits::contiguous_bit_array<std::uint8_t, 24>;
+        using Storage24 = xstd::bits::detail::contiguous_bit_array<std::uint8_t, 24>;
         auto disagreements = 0UZ;
         for (auto p = 0UZ; p < 6UZ; ++p) {
                 auto c = Storage24();

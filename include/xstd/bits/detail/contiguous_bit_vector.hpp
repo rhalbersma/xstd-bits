@@ -11,12 +11,12 @@
 #include <memory>                                        // allocator
 #include <vector>                                        // vector
 
-namespace xstd::detail::bits {
+namespace xstd::bits::detail {
 
 // The second vehicle: a width on the heap, growing as a set of positions does.
 template<xstd::unsigned_integer Block, class Allocator = std::allocator<Block>>
 using contiguous_bit_vector = contiguous_bit_container<std::vector<Block, Allocator>>;
 
-} // namespace xstd::detail::bits
+} // namespace xstd::bits::detail
 
 #endif // XSTD_BITS_DETAIL_CONTIGUOUS_BIT_VECTOR_HPP

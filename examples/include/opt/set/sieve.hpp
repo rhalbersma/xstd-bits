@@ -3,11 +3,12 @@
 
 // Copyright Rein Halbersma 2014-2026. Distributed under the Boost Software License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-#include <algorithm> // max, min
-#include <cstddef>   // size_t
-#include <map>       // map
-#include <ranges>    // to
-                     // begin, end, iota, range_value_t, take_while
+#include <opt/set/detail/isqrt.hpp> // isqrt
+#include <algorithm>                // max, min
+#include <cstddef>                  // size_t
+#include <map>                      // map
+#include <ranges>                   // to
+                                    // begin, end, iota, range_value_t, take_while
 
 namespace opt {
 
@@ -91,23 +92,6 @@ auto filter_twins(X const& primes)
 
 // The two sieves that need no bound up front, where the one above materializes every candidate first.
 
-namespace detail::sieve {
-
-// Newton on x * x - n, exact in size_t: floor division descends to floor(sqrt(n)), and n < 2 needs no guard.
-constexpr auto isqrt(std::size_t n) noexcept
-        -> std::size_t
-{
-        auto x = n;
-        auto y = (x + 1UZ) / 2UZ;
-        while (y < x) {
-                x = y;
-                y = (x + (n / x)) / 2UZ;
-        }
-        return x;
-}
-
-} // namespace detail::sieve
-
 // The incremental sieve: one entry per prime found, O(pi(n)) space, generating forever (O'Neill, JFP 19(1), 2009).
 class incremental_sieve
 {
@@ -163,7 +147,7 @@ auto sift_primes_segmented(std::size_t n)
         }
 
         // Base primes are those p with p * p < n, so every one of them is below isqrt(n - 1) + 1.
-        auto const base_bound = std::ranges::min(detail::sieve::isqrt(n - 1UZ) + 1UZ, n);
+        auto const base_bound = std::ranges::min(detail::isqrt(n - 1UZ) + 1UZ, n);
         auto const base = sift_primes1<X>(base_bound);
         for (auto const p : base) {
                 primes.insert(static_cast<std::ranges::range_value_t<X>>(p));

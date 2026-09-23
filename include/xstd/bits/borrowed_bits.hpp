@@ -20,7 +20,7 @@ namespace xstd {
 
 // Every bit of the words is a position, bit n of word i being position i * digits + n; the width is the words'.
 template<xstd::unsigned_integer Block, std::size_t Extent = std::dynamic_extent>
-using borrowed_bits = detail::bits::contiguous_bit_container<std::span<Block, Extent>>;
+using borrowed_bits = bits::detail::contiguous_bit_container<std::span<Block, Extent>>;
 
 // One word, as its own digits: bit n is 2^n, so a view over it reads the integer's set bits.
 template<xstd::unsigned_integer Block>
@@ -32,11 +32,11 @@ template<xstd::unsigned_integer Block>
 
 // A contiguous range of words at the extent its type carries: an array's is static, a vector's is not.
 template<std::ranges::contiguous_range R>
-        requires std::ranges::sized_range<R> and detail::bits::borrowed_block_span<decltype(std::span(std::declval<R&>()))>
+        requires std::ranges::sized_range<R> and bits::detail::borrowed_block_span<decltype(std::span(std::declval<R&>()))>
 [[nodiscard]] constexpr auto borrow_bits(R& words) noexcept
-        -> detail::bits::contiguous_bit_container<decltype(std::span(words))>
+        -> bits::detail::contiguous_bit_container<decltype(std::span(words))>
 {
-        return detail::bits::contiguous_bit_container<decltype(std::span(words))>(std::span(words));
+        return bits::detail::contiguous_bit_container<decltype(std::span(words))>(std::span(words));
 }
 
 } // namespace xstd

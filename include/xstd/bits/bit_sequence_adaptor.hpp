@@ -23,10 +23,10 @@
 namespace xstd {
 
 // A sequence of bools packed into a storage of blocks it owns: std::vector<bool>'s reading over any block container.
-template<class Blocks, std::size_t N = detail::bits::default_extent_v<Blocks>>
-class bit_sequence_adaptor : public detail::bits::sequence_adaptor<detail::bits::contiguous_bit_container<Blocks, N>, detail::bits::storage::owned, detail::bits::window::all, bit_sequence_adaptor<Blocks, N>>
+template<class Blocks, std::size_t N = bits::detail::default_extent_v<Blocks>>
+class bit_sequence_adaptor : public bits::detail::sequence_adaptor<bits::detail::contiguous_bit_container<Blocks, N>, bits::detail::storage::owned, bits::detail::window::all, bit_sequence_adaptor<Blocks, N>>
 {
-        using base_type = detail::bits::sequence_adaptor<detail::bits::contiguous_bit_container<Blocks, N>, detail::bits::storage::owned, detail::bits::window::all, bit_sequence_adaptor<Blocks, N>>;
+        using base_type = bits::detail::sequence_adaptor<bits::detail::contiguous_bit_container<Blocks, N>, bits::detail::storage::owned, bits::detail::window::all, bit_sequence_adaptor<Blocks, N>>;
 
 public:
         using base_type::base_type;
@@ -42,10 +42,10 @@ public:
 
 // Block counts computed as the aliases compute them; the defaulted K keeps MSVC 17 from dropping the one-word guide.
 template<xstd::unsigned_integer B, std::size_t K = 1>
-bit_sequence_adaptor(from_bits_t, B) -> bit_sequence_adaptor<std::array<B, detail::bits::num_blocks_v<B, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>>, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>;
+bit_sequence_adaptor(from_bits_t, B) -> bit_sequence_adaptor<std::array<B, bits::detail::num_blocks_v<B, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>>, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>;
 
 template<xstd::unsigned_integer B, std::size_t K>
-bit_sequence_adaptor(from_bits_t, std::array<B, K>) -> bit_sequence_adaptor<std::array<B, detail::bits::num_blocks_v<B, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>>, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>;
+bit_sequence_adaptor(from_bits_t, std::array<B, K>) -> bit_sequence_adaptor<std::array<B, bits::detail::num_blocks_v<B, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>>, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>;
 
 } // namespace xstd
 

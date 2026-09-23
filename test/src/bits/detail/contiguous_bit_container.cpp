@@ -424,7 +424,7 @@ auto sweep(BB const& empty)
 constexpr auto a_static_width_is_constexpr()
         -> bool
 {
-        auto b = xstd::detail::bits::contiguous_bit_array<std::uint8_t, 9>();
+        auto b = xstd::bits::detail::contiguous_bit_array<std::uint8_t, 9>();
         b.set(8);
         return b.count() == 1 and b.find_first() == 8;
 }
@@ -432,7 +432,7 @@ constexpr auto a_static_width_is_constexpr()
 constexpr auto a_run_time_width_is_constexpr()
         -> bool
 {
-        auto b = xstd::detail::bits::contiguous_bit_vector<std::uint8_t>(9);
+        auto b = xstd::bits::detail::contiguous_bit_vector<std::uint8_t>(9);
         b.set(8);
         return b.count() == 1 and b.find_first() == 8;
 }
@@ -442,14 +442,14 @@ constexpr auto a_run_time_width_is_constexpr()
 // Both shipped vehicles satisfy contiguous_block_range: growth is detected where it exists, never required.
 BOOST_AUTO_TEST_CASE(ItsStorageIsAContiguousSizedRangeOfUnsignedIntegers)
 {
-        static_assert(xstd::detail::bits::contiguous_block_range<std::array<std::uint8_t, 4>>);
-        static_assert(xstd::detail::bits::contiguous_block_range<std::vector<std::uint64_t>>);
+        static_assert(xstd::bits::detail::contiguous_block_range<std::array<std::uint8_t, 4>>);
+        static_assert(xstd::bits::detail::contiguous_block_range<std::vector<std::uint64_t>>);
 
-        static_assert(not xstd::detail::bits::contiguous_block_range<std::vector<bool>>); // not a contiguous range
-        static_assert(not xstd::detail::bits::contiguous_block_range<std::vector<int>>);  // nor unsigned integers
+        static_assert(not xstd::bits::detail::contiguous_block_range<std::vector<bool>>); // not a contiguous range
+        static_assert(not xstd::bits::detail::contiguous_block_range<std::vector<int>>);  // nor unsigned integers
 
         // The element clause is unsigned_integer, not bitwise_operators: the <bit> intrinsics want the narrower.
-        static_assert(not xstd::detail::bits::contiguous_block_range<std::array<std::bitset<64>, 4>>);
+        static_assert(not xstd::bits::detail::contiguous_block_range<std::array<std::bitset<64>, 4>>);
 }
 
 // The const subscript against P2278R4's range_const_reference_t: wherever both arms exist they must agree.
@@ -457,25 +457,25 @@ BOOST_AUTO_TEST_CASE(TheConstReferenceIsP2278s)
 {
 #ifdef __cpp_lib_ranges_as_const
 
-        static_assert(std::same_as<xstd::detail::bits::fallback::range_const_reference_t<std::array<std::uint8_t, 4>>, std::ranges::range_const_reference_t<std::array<std::uint8_t, 4>>>);
-        static_assert(std::same_as<xstd::detail::bits::fallback::range_const_reference_t<std::vector<std::uint64_t>>, std::ranges::range_const_reference_t<std::vector<std::uint64_t>>>);
-        static_assert(std::same_as<xstd::detail::bits::fallback::range_const_reference_t<std::vector<bool>>, std::ranges::range_const_reference_t<std::vector<bool>>>);
+        static_assert(std::same_as<xstd::bits::detail::fallback::range_const_reference_t<std::array<std::uint8_t, 4>>, std::ranges::range_const_reference_t<std::array<std::uint8_t, 4>>>);
+        static_assert(std::same_as<xstd::bits::detail::fallback::range_const_reference_t<std::vector<std::uint64_t>>, std::ranges::range_const_reference_t<std::vector<std::uint64_t>>>);
+        static_assert(std::same_as<xstd::bits::detail::fallback::range_const_reference_t<std::vector<bool>>, std::ranges::range_const_reference_t<std::vector<bool>>>);
 
 #endif
 
         // What the clause buys: no blocks are writable through a const contiguous_bit_container.
-        static_assert(std::same_as<xstd::detail::bits::range_const_reference_t<std::array<std::uint8_t, 4>>, std::uint8_t const&>);
-        static_assert(std::same_as<xstd::detail::bits::range_const_reference_t<std::vector<std::uint64_t>>, std::uint64_t const&>);
+        static_assert(std::same_as<xstd::bits::detail::range_const_reference_t<std::array<std::uint8_t, 4>>, std::uint8_t const&>);
+        static_assert(std::same_as<xstd::bits::detail::range_const_reference_t<std::vector<std::uint64_t>>, std::uint64_t const&>);
 
         // Transcribed, not approximated: a conditional_t over is_const says bool const& where the paper says bool.
-        static_assert(std::same_as<xstd::detail::bits::fallback::range_const_reference_t<std::vector<bool>>, bool>);
+        static_assert(std::same_as<xstd::bits::detail::fallback::range_const_reference_t<std::vector<bool>>, bool>);
 }
 
 // The three members the readings call: insert(n) is partial where growing_insert(n) is total.
 BOOST_AUTO_TEST_CASE(TheTotalInsertGrowsWhereThePartialOneAsserts)
 {
-        using A = xstd::detail::bits::contiguous_bit_array<std::uint8_t, 10>;
-        using V = xstd::detail::bits::contiguous_bit_vector<std::uint8_t>;
+        using A = xstd::bits::detail::contiguous_bit_array<std::uint8_t, 10>;
+        using V = xstd::bits::detail::contiguous_bit_vector<std::uint8_t>;
 
         // The width as a type, dynamic_extent where there is none.
         static_assert(A::extent == 10UZ);
@@ -517,7 +517,7 @@ BOOST_AUTO_TEST_CASE(TheTotalInsertGrowsWhereThePartialOneAsserts)
 }
 
 // The semantic half a concept cannot check: a[i] is *(begin(a) + i), the same object and not merely an equal one.
-template<xstd::detail::bits::contiguous_block_range Blocks>
+template<xstd::bits::detail::contiguous_block_range Blocks>
 constexpr auto subscript_agrees_with_iteration(Blocks blocks) noexcept
         -> bool
 {
@@ -627,7 +627,7 @@ struct counting_blocks
 
 BOOST_AUTO_TEST_CASE(ItsSwapIsReachedThroughAdlAndNotTheMoveFallback)
 {
-        using bits = xstd::detail::bits::contiguous_bit_container<counting_blocks, 256>;
+        using bits = xstd::bits::detail::contiguous_bit_container<counting_blocks, 256>;
 
         auto a = bits();
         auto b = bits();
@@ -654,12 +654,12 @@ BOOST_AUTO_TEST_CASE(ItsSwapIsReachedThroughAdlAndNotTheMoveFallback)
 // A compile-time width costs nothing: the absent size member takes no storage.
 BOOST_AUTO_TEST_CASE(AStaticWidthAddsNothingToItsBlocks)
 {
-        static_assert(sizeof(xstd::detail::bits::contiguous_bit_array<std::uint64_t, 64>) == sizeof(std::array<std::uint64_t, 1>));
-        static_assert(sizeof(xstd::detail::bits::contiguous_bit_array<std::uint8_t, 129>) == sizeof(std::array<std::uint8_t, 17>));
-        static_assert(sizeof(xstd::detail::bits::contiguous_bit_array<std::uint8_t, 0>) == sizeof(std::array<std::uint8_t, 1>));
+        static_assert(sizeof(xstd::bits::detail::contiguous_bit_array<std::uint64_t, 64>) == sizeof(std::array<std::uint64_t, 1>));
+        static_assert(sizeof(xstd::bits::detail::contiguous_bit_array<std::uint8_t, 129>) == sizeof(std::array<std::uint8_t, 17>));
+        static_assert(sizeof(xstd::bits::detail::contiguous_bit_array<std::uint8_t, 0>) == sizeof(std::array<std::uint8_t, 1>));
 
-        static_assert(xstd::detail::bits::contiguous_bit_array<std::size_t, 64>::has_static_size);
-        static_assert(not xstd::detail::bits::contiguous_bit_vector<std::size_t>::has_static_size);
+        static_assert(xstd::bits::detail::contiguous_bit_array<std::size_t, 64>::has_static_size);
+        static_assert(not xstd::bits::detail::contiguous_bit_vector<std::size_t>::has_static_size);
 }
 
 // Both widths in a constant expression; the run-time one needs C++20 constexpr allocation.
@@ -670,7 +670,7 @@ BOOST_AUTO_TEST_CASE(BothWidthsAreUsableAtCompileTime)
 }
 
 // The static width at every extent instantiated; the three owners hold this same storage.
-BOOST_AUTO_TEST_CASE_TEMPLATE(AStaticWidthAgreesWithTheModel, T, test::graded_extents<xstd::detail::bits::contiguous_bit_array>)
+BOOST_AUTO_TEST_CASE_TEMPLATE(AStaticWidthAgreesWithTheModel, T, test::graded_extents<xstd::bits::detail::contiguous_bit_array>)
 {
         BOOST_CHECK_EQUAL(sweep(T()), 0);
 }
@@ -678,7 +678,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AStaticWidthAgreesWithTheModel, T, test::graded_ex
 // The run-time width, at the same grading: within one block, and across boundaries either side.
 BOOST_AUTO_TEST_CASE_TEMPLATE(ARunTimeWidthAgreesWithTheModel, Block, test::word_types)
 {
-        using T = xstd::detail::bits::contiguous_bit_vector<Block>;
+        using T = xstd::bits::detail::contiguous_bit_vector<Block>;
         constexpr auto D = test::digits_v<Block>;
 
         auto disagreements = 0;
@@ -691,7 +691,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ARunTimeWidthAgreesWithTheModel, Block, test::word
 // Two run-time widths share a type, so == must answer a pair a static width can never form.
 BOOST_AUTO_TEST_CASE(RunTimeWidthsOfDifferentSizeAreNotEqual)
 {
-        using T = xstd::detail::bits::contiguous_bit_vector<std::uint8_t>;
+        using T = xstd::bits::detail::contiguous_bit_vector<std::uint8_t>;
 
         BOOST_CHECK(T(8) != T(9));
         BOOST_CHECK(T(8) == T(8));
@@ -707,7 +707,7 @@ BOOST_AUTO_TEST_CASE(RunTimeWidthsOfDifferentSizeAreNotEqual)
 // A zero width owns no blocks, and every operation answers for the empty width without reading one.
 BOOST_AUTO_TEST_CASE(AZeroWidthOwnsNoBlocksAndReadsEmpty)
 {
-        auto const b = xstd::detail::bits::contiguous_bit_vector<std::uint8_t>(0);
+        auto const b = xstd::bits::detail::contiguous_bit_vector<std::uint8_t>(0);
 
         BOOST_CHECK_EQUAL(b.size(), 0UZ);
         BOOST_CHECK_EQUAL(b.num_blocks(), 0UZ);
@@ -721,7 +721,7 @@ BOOST_AUTO_TEST_CASE(AZeroWidthOwnsNoBlocksAndReadsEmpty)
 // Setting and flipping every position of no positions writes nothing, and grows nothing.
 BOOST_AUTO_TEST_CASE(AZeroWidthHasNothingToSetOrFlip)
 {
-        auto b = xstd::detail::bits::contiguous_bit_vector<std::uint8_t>(0);
+        auto b = xstd::bits::detail::contiguous_bit_vector<std::uint8_t>(0);
 
         b.set();
         BOOST_CHECK(b.none());
@@ -733,11 +733,11 @@ BOOST_AUTO_TEST_CASE(AZeroWidthHasNothingToSetOrFlip)
 // Default-constructed is zero-width and block-less, as std::vector<bool> is.
 BOOST_AUTO_TEST_CASE(ADefaultConstructedRunTimeWidthIsZeroWidthWithNoBlocks)
 {
-        auto const b = xstd::detail::bits::contiguous_bit_vector<std::uint8_t>();
+        auto const b = xstd::bits::detail::contiguous_bit_vector<std::uint8_t>();
 
         BOOST_CHECK_EQUAL(b.size(), 0UZ);
         BOOST_CHECK_EQUAL(b.num_blocks(), 0UZ);
-        BOOST_CHECK(b == xstd::detail::bits::contiguous_bit_vector<std::uint8_t>(0));
+        BOOST_CHECK(b == xstd::bits::detail::contiguous_bit_vector<std::uint8_t>(0));
 }
 
 namespace {
@@ -825,7 +825,7 @@ template<class Block>
 // Every resize path: each graded width to each other, both fill values, against the model and a fresh build.
 BOOST_AUTO_TEST_CASE_TEMPLATE(ResizingKeepsTheModelAndTheUnusedTailClear, Block, test::word_types)
 {
-        using T = xstd::detail::bits::contiguous_bit_vector<Block>;
+        using T = xstd::bits::detail::contiguous_bit_vector<Block>;
 
         auto disagreements = 0;
         for (auto const from : graded_widths<Block>()) {
@@ -847,7 +847,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ResizingKeepsTheModelAndTheUnusedTailClear, Block,
 // push_back and pop_back are resize by one, checked at every width on the way up and back down.
 BOOST_AUTO_TEST_CASE_TEMPLATE(PushingAndPoppingAreResizeByOne, Block, test::word_types)
 {
-        using T = xstd::detail::bits::contiguous_bit_vector<Block>;
+        using T = xstd::bits::detail::contiguous_bit_vector<Block>;
         constexpr auto D = test::digits_v<Block>;
 
         auto disagreements = 0;
@@ -873,7 +873,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(PushingAndPoppingAreResizeByOne, Block, test::word
 // Boost's append: a whole block at once, split across two where unaligned; at width zero it is the first block.
 BOOST_AUTO_TEST_CASE_TEMPLATE(AppendingABlockSplitsItAtAnUnalignedWidth, Block, test::word_types)
 {
-        using T = xstd::detail::bits::contiguous_bit_vector<Block>;
+        using T = xstd::bits::detail::contiguous_bit_vector<Block>;
 
         auto disagreements = 0;
         for (auto const n : graded_widths<Block>()) {
@@ -899,7 +899,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AppendingABlockSplitsItAtAnUnalignedWidth, Block, 
 // The width-zero range append, where the bulk path pushes onto no blocks at all.
 BOOST_AUTO_TEST_CASE_TEMPLATE(AppendingARangeFromEmptyAgreesWithTheModel, Block, test::word_types)
 {
-        using T = xstd::detail::bits::contiguous_bit_vector<Block>;
+        using T = xstd::bits::detail::contiguous_bit_vector<Block>;
         auto const blocks = std::array{striped<Block>(), static_cast<Block>(~striped<Block>()), Block{1}};
 
         auto disagreements = 0;
@@ -930,7 +930,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AppendingARangeFromEmptyAgreesWithTheModel, Block,
 // Capacity is in bits and follows the blocks; reserving and shrinking change it and nothing else.
 BOOST_AUTO_TEST_CASE(ReservingAndShrinkingChangeCapacityNotTheBits)
 {
-        using T = xstd::detail::bits::contiguous_bit_vector<std::uint8_t>;
+        using T = xstd::bits::detail::contiguous_bit_vector<std::uint8_t>;
 
         auto const m = patterned(17);
         auto b = from_model<T>(m);
@@ -948,7 +948,7 @@ BOOST_AUTO_TEST_CASE(ReservingAndShrinkingChangeCapacityNotTheBits)
 // Width zero and no blocks: the object a default constructor makes.
 BOOST_AUTO_TEST_CASE(ClearingIsResizeToZero)
 {
-        using T = xstd::detail::bits::contiguous_bit_vector<std::uint8_t>;
+        using T = xstd::bits::detail::contiguous_bit_vector<std::uint8_t>;
 
         auto b = from_model<T>(patterned(17));
         b.clear();
@@ -960,11 +960,11 @@ BOOST_AUTO_TEST_CASE(ClearingIsResizeToZero)
 namespace {
 
 // The run-time widths, each of which a move leaves at width zero.
-using run_time_storages = std::tuple<xstd::detail::bits::contiguous_bit_vector<std::uint8_t>
+using run_time_storages = std::tuple<xstd::bits::detail::contiguous_bit_vector<std::uint8_t>
 #ifdef TEST_HAS_INPLACE_VECTOR
 
                                      ,
-                                     xstd::detail::bits::contiguous_bit_inplace_vector<std::uint8_t, 64>
+                                     xstd::bits::detail::contiguous_bit_inplace_vector<std::uint8_t, 64>
 
 #endif
                                      >;
@@ -1027,7 +1027,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ARunTimeWidthsBlocksGoOutClearAndComeBackWhole, T,
 // A static width keeps the moves the members give it, trivial ones included.
 BOOST_AUTO_TEST_CASE(AStaticWidthMovesAsItsBlocksDo)
 {
-        using T = xstd::detail::bits::contiguous_bit_array<std::uint8_t, 24>;
+        using T = xstd::bits::detail::contiguous_bit_array<std::uint8_t, 24>;
         static_assert(std::is_trivially_move_constructible_v<T> and std::is_trivially_move_assignable_v<T>);
         static_assert(std::is_trivially_copy_constructible_v<T> and std::is_trivially_copy_assignable_v<T>);
         BOOST_CHECK(true);
@@ -1036,8 +1036,8 @@ BOOST_AUTO_TEST_CASE(AStaticWidthMovesAsItsBlocksDo)
 // A static width has none of it: the members are constrained away rather than asserting.
 BOOST_AUTO_TEST_CASE(AStaticWidthDoesNotGrow)
 {
-        using S = xstd::detail::bits::contiguous_bit_array<std::uint8_t, 8>;
-        using D = xstd::detail::bits::contiguous_bit_vector<std::uint8_t>;
+        using S = xstd::bits::detail::contiguous_bit_array<std::uint8_t, 8>;
+        using D = xstd::bits::detail::contiguous_bit_vector<std::uint8_t>;
 
         static_assert(not can_resize<S> and not can_push_pop<S> and not can_append<S> and not can_clear<S>);
         static_assert(not can_reserve<S> and not has_capacity<S>);
@@ -1057,20 +1057,20 @@ BOOST_AUTO_TEST_CASE(TheWidthFillsWhatWouldOtherwisePadTheBlocks)
                 return whole == xstd::align_up(blocks + slot, slot);
         };
 
-        static_assert(tiles(sizeof(xstd::detail::bits::contiguous_bit_inplace_vector<std::uint8_t, 24>), sizeof(std::inplace_vector<std::uint8_t, 3>), alignof(std::inplace_vector<std::uint8_t, 3>)));
-        static_assert(tiles(sizeof(xstd::detail::bits::contiguous_bit_vector<std::uint8_t>), sizeof(std::vector<std::uint8_t>), alignof(std::vector<std::uint8_t>)));
+        static_assert(tiles(sizeof(xstd::bits::detail::contiguous_bit_inplace_vector<std::uint8_t, 24>), sizeof(std::inplace_vector<std::uint8_t, 3>), alignof(std::inplace_vector<std::uint8_t, 3>)));
+        static_assert(tiles(sizeof(xstd::bits::detail::contiguous_bit_vector<std::uint8_t>), sizeof(std::vector<std::uint8_t>), alignof(std::vector<std::uint8_t>)));
 
         // A static width carries no width member at all, so the class is its blocks exactly.
-        static_assert(sizeof(xstd::detail::bits::contiguous_bit_array<std::uint8_t, 24>) == sizeof(std::array<std::uint8_t, 3>));
+        static_assert(sizeof(xstd::bits::detail::contiguous_bit_array<std::uint8_t, 24>) == sizeof(std::array<std::uint8_t, 3>));
 
 #ifdef TEST_HAS_UINT128
 
         // The one cell that reaches an over-aligned storage: the width is a block there, and pays nothing for it.
-        static_assert(tiles(sizeof(xstd::detail::bits::contiguous_bit_inplace_vector<xstd::uint128, 384>), sizeof(std::inplace_vector<xstd::uint128, 3>), alignof(std::inplace_vector<xstd::uint128, 3>)));
+        static_assert(tiles(sizeof(xstd::bits::detail::contiguous_bit_inplace_vector<xstd::uint128, 384>), sizeof(std::inplace_vector<xstd::uint128, 3>), alignof(std::inplace_vector<xstd::uint128, 3>)));
         static_assert(alignof(std::inplace_vector<xstd::uint128, 3>) > alignof(std::size_t));
 
         // The heap column never reaches it: a vector is a pointer's alignment whatever it holds.
-        static_assert(sizeof(xstd::detail::bits::contiguous_bit_vector<xstd::uint128>) == sizeof(xstd::detail::bits::contiguous_bit_vector<std::uint64_t>));
+        static_assert(sizeof(xstd::bits::detail::contiguous_bit_vector<xstd::uint128>) == sizeof(xstd::bits::detail::contiguous_bit_vector<std::uint64_t>));
 
 #endif
 }
@@ -1078,10 +1078,10 @@ BOOST_AUTO_TEST_CASE(TheWidthFillsWhatWouldOtherwisePadTheBlocks)
 // The third storage: a run-time width under a compile-time capacity, growth past it a bad_alloc.
 BOOST_AUTO_TEST_CASE(AnInplaceVectorIsARunTimeWidthUnderAStaticCapacity)
 {
-        using T = xstd::detail::bits::contiguous_bit_inplace_vector<std::uint8_t, 24>;
+        using T = xstd::bits::detail::contiguous_bit_inplace_vector<std::uint8_t, 24>;
         static_assert(not T::has_static_size);
-        static_assert(xstd::detail::bits::contiguous_block_range<std::inplace_vector<std::uint8_t, 3>>);
-        static_assert(std::same_as<xstd::detail::bits::range_const_reference_t<std::inplace_vector<std::uint8_t, 3>>, std::uint8_t const&>);
+        static_assert(xstd::bits::detail::contiguous_block_range<std::inplace_vector<std::uint8_t, 3>>);
+        static_assert(std::same_as<xstd::bits::detail::range_const_reference_t<std::inplace_vector<std::uint8_t, 3>>, std::uint8_t const&>);
 
         BOOST_CHECK_EQUAL(sweep(T(17)), 0);
 
@@ -1113,7 +1113,7 @@ BOOST_AUTO_TEST_CASE(AnInplaceVectorIsARunTimeWidthUnderAStaticCapacity)
 #endif
 
 // Every question the three readings ask, asked of the storage in its own name and within the contracts it keeps.
-BOOST_AUTO_TEST_CASE_TEMPLATE(TheStorageAnswersEveryReadingsQuestion, T, test::graded_extents<xstd::detail::bits::contiguous_bit_array>)
+BOOST_AUTO_TEST_CASE_TEMPLATE(TheStorageAnswersEveryReadingsQuestion, T, test::graded_extents<xstd::bits::detail::contiguous_bit_array>)
 {
         constexpr auto N = T::extent;
 
@@ -1140,7 +1140,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheStorageAnswersEveryReadingsQuestion, T, test::g
 }
 
 // The two the readings cannot synthesize a position at a time: insert reports newness, and fill is bulk.
-BOOST_AUTO_TEST_CASE_TEMPLATE(TheInsertAndTheFill, T, test::graded_extents<xstd::detail::bits::contiguous_bit_array>)
+BOOST_AUTO_TEST_CASE_TEMPLATE(TheInsertAndTheFill, T, test::graded_extents<xstd::bits::detail::contiguous_bit_array>)
 {
         constexpr auto N = T::extent;
 
@@ -1243,7 +1243,7 @@ auto disagreements(BB const& empty)
 } // namespace
 
 // All three orderings, at every static extent, against the algorithms that define them.
-BOOST_AUTO_TEST_CASE_TEMPLATE(AllThreeOrderingsAgreeWithTheirReading, T, test::graded_extents<xstd::detail::bits::contiguous_bit_array>)
+BOOST_AUTO_TEST_CASE_TEMPLATE(AllThreeOrderingsAgreeWithTheirReading, T, test::graded_extents<xstd::bits::detail::contiguous_bit_array>)
 {
         BOOST_CHECK_EQUAL(disagreements(T()), 0);
 }
@@ -1251,7 +1251,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AllThreeOrderingsAgreeWithTheirReading, T, test::g
 // The same at a run-time width, which shares no instantiation with the static one.
 BOOST_AUTO_TEST_CASE_TEMPLATE(AllThreeOrderingsAgreeAtARunTimeWidth, Block, test::word_types)
 {
-        using T = xstd::detail::bits::contiguous_bit_vector<Block>;
+        using T = xstd::bits::detail::contiguous_bit_vector<Block>;
         constexpr auto D = test::digits_v<Block>;
 
         auto disagreed = 0;
@@ -1264,7 +1264,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AllThreeOrderingsAgreeAtARunTimeWidth, Block, test
 // Two pairs that separate the three readings pairwise: {0} against {1}, and {0,1} against {1}.
 BOOST_AUTO_TEST_CASE(TheThreeOrderingsDisagree)
 {
-        using T = xstd::detail::bits::contiguous_bit_array<std::uint8_t, 9>;
+        using T = xstd::bits::detail::contiguous_bit_array<std::uint8_t, 9>;
 
         using orderings = std::tuple<std::strong_ordering, std::strong_ordering, std::strong_ordering>;
         constexpr auto compare = [](std::initializer_list<std::size_t> p, std::initializer_list<std::size_t> q) -> orderings {
@@ -1295,7 +1295,7 @@ BOOST_AUTO_TEST_CASE(TheThreeOrderingsDisagree)
 // The prefix clause, which is the whole of what the set reading adds: {1} beats {} only by being longer.
 BOOST_AUTO_TEST_CASE(TheSetOrderingPutsAPrefixFirst)
 {
-        using T = xstd::detail::bits::contiguous_bit_array<std::uint8_t, 9>;
+        using T = xstd::bits::detail::contiguous_bit_array<std::uint8_t, 9>;
 
         auto x = T();
         x.set(1);
@@ -1320,7 +1320,7 @@ constexpr bool has_allocator = requires (X const& x) { sizeof(allocator_of<X>); 
 // The allocator where the blocks have one, and max_size in bits at both widths.
 BOOST_AUTO_TEST_CASE(TheAllocatorAndTheMaximumWidth)
 {
-        using V = xstd::detail::bits::contiguous_bit_vector<std::uint8_t>;
+        using V = xstd::bits::detail::contiguous_bit_vector<std::uint8_t>;
         static_assert(has_allocator<V>);
         static_assert(std::same_as<V::allocator_type, std::allocator<std::uint8_t>>);
         auto const alloc = std::allocator<std::uint8_t>();
@@ -1333,7 +1333,7 @@ BOOST_AUTO_TEST_CASE(TheAllocatorAndTheMaximumWidth)
         BOOST_CHECK_EQUAL(nine.max_size() % V::bits_per_block, 0UZ);
         BOOST_CHECK_GE(nine.max_size(), std::vector<std::uint8_t>().max_size() / 2);
 
-        using A = xstd::detail::bits::contiguous_bit_array<std::uint8_t, 9>;
+        using A = xstd::bits::detail::contiguous_bit_array<std::uint8_t, 9>;
         static_assert(not has_allocator<A>);
         static_assert(A().max_size() == 9UZ);
 }
@@ -1341,7 +1341,7 @@ BOOST_AUTO_TEST_CASE(TheAllocatorAndTheMaximumWidth)
 // The three ceilings a reading can ask for: the storage computes all three and keeps none of them.
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheThreeCeilingsAreComputedHereAndKeptAbove, Block, test::word_types)
 {
-        using V = xstd::detail::bits::contiguous_bit_vector<Block>;
+        using V = xstd::bits::detail::contiguous_bit_vector<Block>;
         constexpr auto top = std::numeric_limits<std::size_t>::max();
         constexpr auto pmax = static_cast<std::size_t>(std::numeric_limits<std::ptrdiff_t>::max());
 
@@ -1376,7 +1376,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheThreeCeilingsAreComputedHereAndKeptAbove, Block
 // The saturating sum every growth computes, and the block count it reaches, said at compile time.
 BOOST_AUTO_TEST_CASE(TheBlockCountIsTotalAndTheSumThatReachesItSaturates)
 {
-        using V = xstd::detail::bits::contiguous_bit_vector<std::uint8_t>;
+        using V = xstd::bits::detail::contiguous_bit_vector<std::uint8_t>;
         constexpr auto top = std::numeric_limits<std::size_t>::max();
 
         // Whole blocks, and no wider than what the blocks themselves can hold.
@@ -1424,7 +1424,7 @@ BOOST_AUTO_TEST_CASE(TheBlockCountIsTotalAndTheSumThatReachesItSaturates)
 }
 
 // A word read and written at any position, and the ranged forms over it: both at a static width and at a run-time one.
-using WordTypes = std::tuple<xstd::detail::bits::contiguous_bit_array<std::uint8_t, 20>, xstd::detail::bits::contiguous_bit_vector<std::uint8_t>>;
+using WordTypes = std::tuple<xstd::bits::detail::contiguous_bit_array<std::uint8_t, 20>, xstd::bits::detail::contiguous_bit_vector<std::uint8_t>>;
 
 namespace {
 
@@ -1533,7 +1533,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheRangedFormsGoAWordAtATime, T, WordTypes)
 }
 
 // Three blocks with no tail, so a shift's destination block is exactly the splice and nothing masks it afterwards.
-using AlignedWordTypes = std::tuple<xstd::detail::bits::contiguous_bit_array<std::uint8_t, 24>, xstd::detail::bits::contiguous_bit_vector<std::uint8_t>>;
+using AlignedWordTypes = std::tuple<xstd::bits::detail::contiguous_bit_array<std::uint8_t, 24>, xstd::bits::detail::contiguous_bit_vector<std::uint8_t>>;
 
 // The identity behind one primitive for all three sites: a left shift reads one block lower than a right.
 BOOST_AUTO_TEST_CASE_TEMPLATE(BothShiftsAreWordAtOnTheOperand, T, AlignedWordTypes)

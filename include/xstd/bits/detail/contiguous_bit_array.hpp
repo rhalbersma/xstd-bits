@@ -11,12 +11,12 @@
 #include <array>                                         // array
 #include <cstddef>                                       // size_t
 
-namespace xstd::detail::bits {
+namespace xstd::bits::detail {
 
 // The first vehicle: a width in the type, over storage that goes wherever the object does.
 template<xstd::unsigned_integer Block, std::size_t N>
 using contiguous_bit_array = contiguous_bit_container<std::array<Block, num_blocks_v<Block, N>>, N>;
 
-} // namespace xstd::detail::bits
+} // namespace xstd::bits::detail
 
 #endif // XSTD_BITS_DETAIL_CONTIGUOUS_BIT_ARRAY_HPP

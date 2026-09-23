@@ -20,7 +20,7 @@ namespace xstd {
 
 // A resizable bitset that never allocates; no bit_ prefix, bitset already carrying the word.
 template<xstd::unsigned_integer Block, std::size_t N>
-using basic_inplace_bitset = bitset_adaptor<std::inplace_vector<Block, detail::bits::num_blocks_v<Block, N>>>;
+using basic_inplace_bitset = bitset_adaptor<std::inplace_vector<Block, bits::detail::num_blocks_v<Block, N>>>;
 
 template<std::size_t N>
 using inplace_bitset = basic_inplace_bitset<std::size_t, N>;

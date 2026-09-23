@@ -197,7 +197,7 @@ struct derived_probe;
 
 // Dependent, so an unsatisfied class constraint is a false rather than a hard error.
 template<class B>
-constexpr bool wrappable = requires { sizeof(xstd::detail::bits::bitset_adaptor<B, derived_probe>); };
+constexpr bool wrappable = requires { sizeof(xstd::bits::detail::bitset_adaptor<B, derived_probe>); };
 
 // Dependent likewise, so a storage without an allocator answers false rather than hard-errors.
 template<class X>
@@ -209,9 +209,9 @@ constexpr bool has_allocator = requires (X const& x) { sizeof(allocator_of<X>); 
 // Only our storages can be wrapped, and the refusal is nominal rather than about vocabulary.
 BOOST_AUTO_TEST_CASE(TheWrappedStoragesAreOursAndTheCounterpartsAreNot)
 {
-        static_assert(wrappable<xstd::detail::bits::contiguous_bit_array<std::uint8_t, 0>>);
-        static_assert(wrappable<xstd::detail::bits::contiguous_bit_array<std::uint64_t, 100>>);
-        static_assert(wrappable<xstd::detail::bits::contiguous_bit_vector<std::size_t>>);
+        static_assert(wrappable<xstd::bits::detail::contiguous_bit_array<std::uint8_t, 0>>);
+        static_assert(wrappable<xstd::bits::detail::contiguous_bit_array<std::uint64_t, 100>>);
+        static_assert(wrappable<xstd::bits::detail::contiguous_bit_vector<std::size_t>>);
 
         // Not for want of the vocabulary: boost::dynamic_bitset speaks all of it and is still refused.
         static_assert(not wrappable<std::bitset<64>>);
@@ -223,8 +223,8 @@ BOOST_AUTO_TEST_CASE(TheWrappedStoragesAreOursAndTheCounterpartsAreNot)
 // The public name is built on the wrapper over a packed array, with the word type in the open.
 BOOST_AUTO_TEST_CASE(TheBitsetIsTheWrapperOverAPackedArray)
 {
-        static_assert(std::derived_from<xstd::basic_bitset<std::uint8_t, 9>, xstd::detail::bits::bitset_adaptor<xstd::detail::bits::contiguous_bit_array<std::uint8_t, 9>, xstd::basic_bitset<std::uint8_t, 9>>>);
-        static_assert(std::derived_from<xstd::bitset<64>, xstd::detail::bits::bitset_adaptor<xstd::detail::bits::contiguous_bit_array<std::size_t, 64>, xstd::bitset<64>>>);
+        static_assert(std::derived_from<xstd::basic_bitset<std::uint8_t, 9>, xstd::bits::detail::bitset_adaptor<xstd::bits::detail::contiguous_bit_array<std::uint8_t, 9>, xstd::basic_bitset<std::uint8_t, 9>>>);
+        static_assert(std::derived_from<xstd::bitset<64>, xstd::bits::detail::bitset_adaptor<xstd::bits::detail::contiguous_bit_array<std::size_t, 64>, xstd::bitset<64>>>);
 }
 
 using Static = std::tuple<xstd::basic_bitset<std::uint8_t, 0>, xstd::basic_bitset<std::uint8_t, 1>, xstd::basic_bitset<std::uint8_t, 64>, xstd::basic_bitset<std::uint8_t, 65>, xstd::basic_bitset<std::uint8_t, 128>, xstd::bitset<0>, xstd::bitset<64>, xstd::bitset<65>>;
@@ -719,8 +719,8 @@ BOOST_AUTO_TEST_CASE(TheViewsReachABitset)
         BOOST_CHECK(va.is_subset_of(va));
         BOOST_CHECK_EQUAL(qa[69], true);
 
-        static_assert(std::same_as<decltype(va), xstd::bit_set_view<xstd::detail::bits::contiguous_bit_array<std::uint8_t, 70>> const>);
-        static_assert(std::same_as<decltype(xstd::bit_set_view(std::as_const(a))), xstd::bit_set_view<xstd::detail::bits::contiguous_bit_array<std::uint8_t, 70> const>>);
+        static_assert(std::same_as<decltype(va), xstd::bit_set_view<xstd::bits::detail::contiguous_bit_array<std::uint8_t, 70>> const>);
+        static_assert(std::same_as<decltype(xstd::bit_set_view(std::as_const(a))), xstd::bit_set_view<xstd::bits::detail::contiguous_bit_array<std::uint8_t, 70> const>>);
 }
 
 // Built from text, streamed back to text, and hashed: the derived members.
@@ -794,7 +794,7 @@ BOOST_AUTO_TEST_CASE(ABitsetReadsAsItsStorage)
         using B = xstd::bitset<100>;
 
         // A view over a bitset binds the storage it wraps, the bitset itself being what the constraint refuses.
-        using Blocks = xstd::detail::bits::contiguous_bit_array<std::size_t, 100>;
+        using Blocks = xstd::bits::detail::contiguous_bit_array<std::size_t, 100>;
         static_assert(std::same_as<decltype(xstd::bit_set_view(std::declval<B&>())), xstd::bit_set_view<Blocks>>);
         static_assert(std::same_as<decltype(xstd::bit_span(std::declval<B&>())), xstd::bit_span<Blocks>>);
 
@@ -908,7 +908,7 @@ BOOST_AUTO_TEST_SUITE_END()
 // contiguous_bit_sequence is structural: it asks the positional members, which the counterparts answer too.
 BOOST_AUTO_TEST_SUITE(TheStructuralQuestionIsNotTheNominalOne)
 
-static_assert(xstd::contiguous_bit_sequence<xstd::detail::bits::contiguous_bit_array<std::uint64_t, 64>>);
+static_assert(xstd::contiguous_bit_sequence<xstd::bits::detail::contiguous_bit_array<std::uint64_t, 64>>);
 static_assert(xstd::contiguous_bit_sequence<boost::dynamic_bitset<>>);
 static_assert(xstd::contiguous_bit_sequence<std::bitset<64>>);
 

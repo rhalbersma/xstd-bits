@@ -16,8 +16,8 @@
 // The common vocabulary the three bit containers answer in their own names.
 namespace {
 
-using ours_static = xstd::detail::bits::contiguous_bit_array<std::uint64_t, 64>;
-using ours_dynamic = xstd::detail::bits::contiguous_bit_vector<std::uint64_t>;
+using ours_static = xstd::bits::detail::contiguous_bit_array<std::uint64_t, 64>;
+using ours_dynamic = xstd::bits::detail::contiguous_bit_vector<std::uint64_t>;
 using theirs = std::bitset<64>;
 using boosts = boost::dynamic_bitset<>;
 

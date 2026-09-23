@@ -18,7 +18,7 @@ namespace xstd {
 
 // The static set: the basic name leaves the block open, the restricted one is the machine word.
 template<xstd::unsigned_integer Block, std::size_t N>
-using basic_bit_static_set = bit_set_adaptor<std::array<Block, detail::bits::num_blocks_v<Block, N>>, N>;
+using basic_bit_static_set = bit_set_adaptor<std::array<Block, bits::detail::num_blocks_v<Block, N>>, N>;
 
 template<std::size_t N>
 using bit_static_set = basic_bit_static_set<std::size_t, N>;
