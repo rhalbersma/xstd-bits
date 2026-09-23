@@ -11,6 +11,7 @@
 #include <limits>                   // numeric_limits
 #include <memory>                   // allocator
 #include <span>                     // dynamic_extent
+#include <tuple>                    // tuple_size_v
 #include <utility>                  // declval
 #include <vector>                   // vector
 
@@ -25,7 +26,7 @@ struct from_bits_t
 inline constexpr auto from_bits = from_bits_t();
 
 template<std::unsigned_integral Block>
-inline constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<Block>::digits);
+inline constexpr std::size_t digits = static_cast<std::size_t>(std::numeric_limits<Block>::digits);
 
 template<std::unsigned_integral Block>
 [[nodiscard]] constexpr auto blocks_for(std::size_t n) noexcept
@@ -35,10 +36,10 @@ template<std::unsigned_integral Block>
 }
 
 template<class C>
-inline constexpr auto default_width = std::dynamic_extent;
+inline constexpr std::size_t default_width = std::dynamic_extent;
 
 template<std::unsigned_integral Block, std::size_t K>
-inline constexpr auto default_width<std::array<Block, K>> = digits<Block> * K;
+inline constexpr std::size_t default_width<std::array<Block, K>> = digits<Block> * K;
 
 // A public adaptor: a storage and a width, the width defaulted from the storage.
 template<class C, std::size_t N = default_width<C>>
@@ -94,6 +95,13 @@ set_adaptor(Bits&) -> set_adaptor<Bits, storage::borrowed>;
 template<class Bits>
 using bit_set_view = set_adaptor<Bits, storage::borrowed>;
 
+template<class T>
+concept array_of_words = std::same_as<T, std::array<typename T::value_type, std::tuple_size_v<T>>>;
+
+// The alias as it was written, its parameter constrained.
+template<array_of_words Bits>
+using constrained_bit_set_view = set_adaptor<Bits, storage::borrowed>;
+
 using word = std::uint64_t;
 using words = std::array<word, 2>;
 
@@ -111,8 +119,9 @@ static_assert(std::same_as<decltype(bit_array(from_bits, std::size_t())), bit_ar
 // 4. An owner alias with a defaulted allocator, deduced from the storage it adopts.
 static_assert(std::same_as<decltype(basic_bit_vector(std::vector<word>())), basic_bit_vector<word>>);
 
-// 5. The view shape, as the control for the diagnostic seen before.
+// 5. The view shape, unconstrained and then constrained, as the controls for the diagnostic seen before.
 static_assert(std::same_as<decltype(bit_set_view(std::declval<words&>())), bit_set_view<words>>);
+static_assert(std::same_as<decltype(constrained_bit_set_view(std::declval<words&>())), constrained_bit_set_view<words>>);
 
 } // namespace probe
 
