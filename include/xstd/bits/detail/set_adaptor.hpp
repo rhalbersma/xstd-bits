@@ -925,6 +925,14 @@ inline constexpr bool enable_borrowed_range<xstd::detail::bits::set_adaptor<Bits
 // NOLINTEND(bugprone-std-namespace-modification)
 
 // NOLINTBEGIN(bugprone-std-namespace-modification)
+namespace boost::container_hash {
+
+template<class Bits, xstd::detail::bits::storage Store, class Derived>
+struct is_range<xstd::detail::bits::set_adaptor<Bits, Store, Derived>> : std::false_type
+{};
+
+} // namespace boost::container_hash
+
 namespace std {
 
 // Owned or viewed, as std::string_view hashes and std::set does not.
@@ -943,12 +951,4 @@ struct hash<xstd::detail::bits::set_adaptor<Bits, Store, Derived>>
 // NOLINTEND(bugprone-std-namespace-modification)
 
 // Not a range to ContainerHash, so Hash2 takes the hook and not its range overload.
-namespace boost::container_hash {
-
-template<class Bits, xstd::detail::bits::storage Store, class Derived>
-struct is_range<xstd::detail::bits::set_adaptor<Bits, Store, Derived>> : std::false_type
-{};
-
-} // namespace boost::container_hash
-
 #endif // XSTD_BITS_DETAIL_SET_ADAPTOR_HPP

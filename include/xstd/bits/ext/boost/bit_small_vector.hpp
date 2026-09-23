@@ -42,18 +42,6 @@ using bit_small_vector = basic_bit_small_vector<std::size_t, N>;
 
 } // namespace xstd
 
-namespace std {
-
-// NOLINTBEGIN(bugprone-std-namespace-modification)
-
-template<xstd::unsigned_integer Block, std::size_t N, class Alloc>
-struct hash<xstd::basic_bit_small_vector<Block, N, Alloc>> : hash<typename xstd::basic_bit_small_vector<Block, N, Alloc>::adaptor_type>
-{};
-
-// NOLINTEND(bugprone-std-namespace-modification)
-
-} // namespace std
-
 namespace boost::container_hash {
 
 // A reading with iterators has to say so; a bitset has none, so the primary template already answers false.
@@ -66,5 +54,17 @@ struct is_tuple_like<xstd::basic_bit_small_vector<Block, N, Alloc>> : std::false
 {};
 
 } // namespace boost::container_hash
+
+namespace std {
+
+// NOLINTBEGIN(bugprone-std-namespace-modification)
+
+template<xstd::unsigned_integer Block, std::size_t N, class Alloc>
+struct hash<xstd::basic_bit_small_vector<Block, N, Alloc>> : hash<typename xstd::basic_bit_small_vector<Block, N, Alloc>::adaptor_type>
+{};
+
+// NOLINTEND(bugprone-std-namespace-modification)
+
+} // namespace std
 
 #endif // XSTD_BITS_EXT_BOOST_BIT_SMALL_VECTOR_HPP

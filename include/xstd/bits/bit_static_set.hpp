@@ -63,18 +63,6 @@ using bit_static_set = basic_bit_static_set<std::size_t, N>;
 
 } // namespace xstd
 
-namespace std {
-
-// NOLINTBEGIN(bugprone-std-namespace-modification)
-
-template<xstd::unsigned_integer Block, std::size_t N>
-struct hash<xstd::basic_bit_static_set<Block, N>> : hash<typename xstd::basic_bit_static_set<Block, N>::adaptor_type>
-{};
-
-// NOLINTEND(bugprone-std-namespace-modification)
-
-} // namespace std
-
 namespace boost::container_hash {
 
 // Only a reading with iterators needs saying: a bitset has none, so the primary template already answers false.
@@ -87,5 +75,17 @@ struct is_tuple_like<xstd::basic_bit_static_set<Block, N>> : std::false_type
 {};
 
 } // namespace boost::container_hash
+
+namespace std {
+
+// NOLINTBEGIN(bugprone-std-namespace-modification)
+
+template<xstd::unsigned_integer Block, std::size_t N>
+struct hash<xstd::basic_bit_static_set<Block, N>> : hash<typename xstd::basic_bit_static_set<Block, N>::adaptor_type>
+{};
+
+// NOLINTEND(bugprone-std-namespace-modification)
+
+} // namespace std
 
 #endif // XSTD_BITS_BIT_STATIC_SET_HPP

@@ -39,6 +39,14 @@ bit_set_view(Owner&) -> bit_set_view<detail::bits::owned_bits_t<Owner>>;
 
 } // namespace xstd
 
+namespace boost::container_hash {
+
+template<class Bits>
+struct is_range<xstd::bit_set_view<Bits>> : std::false_type
+{};
+
+} // namespace boost::container_hash
+
 namespace std {
 
 // NOLINTBEGIN(bugprone-std-namespace-modification)
@@ -50,14 +58,6 @@ struct hash<xstd::bit_set_view<Bits>> : hash<typename xstd::bit_set_view<Bits>::
 // NOLINTEND(bugprone-std-namespace-modification)
 
 } // namespace std
-
-namespace boost::container_hash {
-
-template<class Bits>
-struct is_range<xstd::bit_set_view<Bits>> : std::false_type
-{};
-
-} // namespace boost::container_hash
 
 // NOLINTBEGIN(bugprone-std-namespace-modification): [range.view] and [range.range] invite the opt-in.
 namespace std::ranges {

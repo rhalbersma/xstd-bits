@@ -64,6 +64,19 @@ using bit_array = basic_bit_array<std::size_t, N>;
 
 } // namespace xstd
 
+namespace boost::container_hash {
+
+// Only a reading with iterators needs saying: a bitset has none, so the primary template already answers false.
+template<xstd::unsigned_integer Block, std::size_t N>
+struct is_range<xstd::basic_bit_array<Block, N>> : std::false_type
+{};
+
+template<xstd::unsigned_integer Block, std::size_t N>
+struct is_tuple_like<xstd::basic_bit_array<Block, N>> : std::false_type
+{};
+
+} // namespace boost::container_hash
+
 namespace std {
 
 // NOLINTBEGIN(bugprone-std-namespace-modification)
@@ -87,18 +100,5 @@ struct tuple_size<xstd::basic_bit_array<Block, N>> : tuple_size<typename xstd::b
 // NOLINTEND(bugprone-std-namespace-modification)
 
 } // namespace std
-
-namespace boost::container_hash {
-
-// Only a reading with iterators needs saying: a bitset has none, so the primary template already answers false.
-template<xstd::unsigned_integer Block, std::size_t N>
-struct is_range<xstd::basic_bit_array<Block, N>> : std::false_type
-{};
-
-template<xstd::unsigned_integer Block, std::size_t N>
-struct is_tuple_like<xstd::basic_bit_array<Block, N>> : std::false_type
-{};
-
-} // namespace boost::container_hash
 
 #endif // XSTD_BITS_BIT_ARRAY_HPP
