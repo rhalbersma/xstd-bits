@@ -1299,23 +1299,9 @@ template<std::size_t I, class Bits, storage Store, window W, class Derived, std:
 
 } // namespace xstd::detail::bits
 
-// NOLINTBEGIN(bugprone-std-namespace-modification): [range.view] and [range.range] invite the opt-in.
-namespace std::ranges {
-
-// A view is a std::ranges::view outright and borrowed, as set_adaptor's is.
-template<class Bits, xstd::detail::bits::window W>
-inline constexpr bool enable_view<xstd::detail::bits::sequence_adaptor<Bits, xstd::detail::bits::storage::borrowed, W>> = true;
-
-template<class Bits, xstd::detail::bits::window W>
-inline constexpr bool enable_borrowed_range<xstd::detail::bits::sequence_adaptor<Bits, xstd::detail::bits::storage::borrowed, W>> = true;
-
-} // namespace std::ranges
-
-// NOLINTEND(bugprone-std-namespace-modification)
-
-// NOLINTBEGIN(bugprone-std-namespace-modification)
 namespace boost::container_hash {
 
+// Not a range to ContainerHash and not tuple-like: Hash2 takes the hook, not its range or tuple overload.
 template<class Bits, xstd::detail::bits::storage Store, xstd::detail::bits::window W, class Derived, std::size_t E>
 struct is_range<xstd::detail::bits::sequence_adaptor<Bits, Store, W, Derived, E>> : std::false_type
 {};
@@ -1327,6 +1313,8 @@ struct is_tuple_like<xstd::detail::bits::sequence_adaptor<Bits, Store, W, Derive
 } // namespace boost::container_hash
 
 namespace std {
+
+// NOLINTBEGIN(bugprone-std-namespace-modification)
 
 // [array.tuple]'s three over the static-width owner: tuple_element names the proxy, not bool.
 template<class Bits, xstd::detail::bits::storage Store, xstd::detail::bits::window W, class Derived, std::size_t E>
@@ -1360,9 +1348,22 @@ struct hash<xstd::detail::bits::sequence_adaptor<Bits, xstd::detail::bits::stora
         }
 };
 
+// NOLINTEND(bugprone-std-namespace-modification)
+
 } // namespace std
+
+// NOLINTBEGIN(bugprone-std-namespace-modification): [range.view] and [range.range] invite the opt-in.
+namespace std::ranges {
+
+// A view is a std::ranges::view outright and borrowed, as set_adaptor's is.
+template<class Bits, xstd::detail::bits::window W>
+inline constexpr bool enable_view<xstd::detail::bits::sequence_adaptor<Bits, xstd::detail::bits::storage::borrowed, W>> = true;
+
+template<class Bits, xstd::detail::bits::window W>
+inline constexpr bool enable_borrowed_range<xstd::detail::bits::sequence_adaptor<Bits, xstd::detail::bits::storage::borrowed, W>> = true;
+
+} // namespace std::ranges
 
 // NOLINTEND(bugprone-std-namespace-modification)
 
-// Not a range to ContainerHash and not tuple-like: Hash2 takes the hook, not its range or tuple overload.
 #endif // XSTD_BITS_DETAIL_SEQUENCE_ADAPTOR_HPP
