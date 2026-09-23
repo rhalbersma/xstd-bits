@@ -36,7 +36,7 @@
 #include <string>                                        // basic_string, char_traits
 #include <string_view>                                   // basic_string_view
 #include <type_traits>                                   // is_array_v, is_nothrow_swappable_v, is_standard_layout_v, is_trivially_copyable_v, is_trivially_default_constructible_v, remove_cv_t, remove_cvref_t
-#include <utility>                                       // as_const
+#include <utility>                                       // as_const, move
 
 namespace xstd::detail::bits {
 
@@ -247,6 +247,23 @@ public:
                 requires requires (Bits const& b) { b.get_allocator(); }
         {
                 return m_bits.get_allocator();
+        }
+
+        // flat_set's door onto its representation, at a run-time width: the blocks come in and go out whole.
+        using block_container_type = Bits::block_container_type;
+
+        constexpr auto replace(block_container_type&& blocks) noexcept(noexcept(m_bits.replace(std::move(blocks))))
+                -> void
+                requires requires (Bits& b, block_container_type&& c) { b.replace(std::move(c)); }
+        {
+                m_bits.replace(std::move(blocks));
+        }
+
+        [[nodiscard]] constexpr auto extract() && noexcept(noexcept(std::move(m_bits).extract()))
+                -> block_container_type
+                requires requires (Bits&& b) { std::move(b).extract(); }
+        {
+                return std::move(m_bits).extract();
         }
 
         // Boost has the free form beside the member; hidden, since xstd::swap(a, b) is reached for by habit.

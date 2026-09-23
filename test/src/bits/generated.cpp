@@ -4,7 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <xstd/bits.hpp>            // bit_array, bit_set, bit_static_set, bit_vector, bitset, dynamic_bitset, and the inplace column
-#include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
+#include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <compare>                  // three_way_comparable
 #include <concepts>                 // copyable, default_initializable, movable, ranges::swap, swappable, totally_ordered
 #include <cstddef>                  // size_t
@@ -12,6 +12,7 @@
 #include <scoped_allocator>         // scoped_allocator_adaptor
 #include <type_traits>              // is_nothrow_move_assignable_v, is_nothrow_move_constructible_v
 #include <utility>                  // move, swap
+#include <vector>                   // vector
 
 // What the compiler generates for each cell, held to the table rather than to whichever cell was read last.
 BOOST_AUTO_TEST_SUITE(Generated)
@@ -222,6 +223,59 @@ BOOST_AUTO_TEST_CASE(AMovedFromRunTimeWidthIsEmptyAndGrowsAgain)
         BOOST_CHECK(a_moved_from_bitset_grows_again<xstd::inplace_bitset<N>>());
 
 #endif
+}
+
+namespace {
+
+template<class T>
+concept has_extract = requires (T&& t) { std::move(t).extract(); };
+
+template<class T>
+concept has_replace = requires (T& t, T::block_container_type&& blocks) { t.replace(std::move(blocks)); };
+
+// Two blocks in, the same two blocks out, and the owner left empty behind them, whichever reading it is.
+template<class T>
+auto blocks_go_in_and_come_out_whole()
+        -> bool
+{
+        auto const original = typename T::block_container_type{0b1011UZ, 1UZ << 63U};
+        auto owner = T();
+        auto blocks = original;
+        owner.replace(std::move(blocks));
+        auto const filled = not owner.empty();
+        auto const out = std::move(owner).extract();
+        auto const emptied = owner.empty(); // NOLINT(bugprone-use-after-move,hicpp-invalid-access-moved,clang-analyzer-cplusplus.Move): extract leaves width zero, which is the check.
+        return filled and out == original and emptied;
+}
+
+} // namespace
+
+// flat_set's extract and replace, at every run-time width: the blocks are the representation, in and out.
+BOOST_AUTO_TEST_CASE(ARunTimeWidthHandsItsBlocksOutAndTakesThemBack)
+{
+        BOOST_CHECK(blocks_go_in_and_come_out_whole<xstd::bit_vector>());
+        BOOST_CHECK(blocks_go_in_and_come_out_whole<xstd::bit_set>());
+        BOOST_CHECK(blocks_go_in_and_come_out_whole<xstd::dynamic_bitset>());
+#ifdef __cpp_lib_inplace_vector
+
+        BOOST_CHECK(blocks_go_in_and_come_out_whole<xstd::bit_inplace_vector<N>>());
+        BOOST_CHECK(blocks_go_in_and_come_out_whole<xstd::bit_inplace_set<N>>());
+        BOOST_CHECK(blocks_go_in_and_come_out_whole<xstd::inplace_bitset<N>>());
+
+#endif
+
+        // Every position of the blocks is one: the sequence and the bitset are two whole blocks wide.
+        auto v = xstd::bit_vector();
+        v.replace(std::vector<std::size_t>{1UZ, 0UZ});
+        BOOST_CHECK_EQUAL(v.size(), 128UZ);
+        BOOST_CHECK(v[0] and not v[1]);
+
+        // A static width has nothing to hand over, and a view does not own what it would hand.
+        static_assert(not has_extract<xstd::bit_array<N>> and not has_replace<xstd::bit_array<N>>);
+        static_assert(not has_extract<xstd::bit_static_set<N>> and not has_replace<xstd::bit_static_set<N>>);
+        static_assert(not has_extract<xstd::bitset<N>> and not has_replace<xstd::bitset<N>>);
+        static_assert(not has_extract<decltype(xstd::bit_span(v))> and not has_replace<decltype(xstd::bit_span(v))>);
+        static_assert(has_extract<xstd::bit_vector> and has_replace<xstd::bit_vector>);
 }
 
 BOOST_AUTO_TEST_CASE(TheBitsetSwapIsTheOneBoostHasAndStdDoesNot)

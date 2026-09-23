@@ -68,6 +68,7 @@ class contiguous_bit_container : public detail::bits::allocator_base_type<Blocks
 {
 public:
         using block_type = std::ranges::range_value_t<Blocks>;
+        using block_container_type = Blocks;
 
         static constexpr auto bits_per_block = static_cast<std::size_t>(xstd::numeric_limits<block_type>::digits);
 
@@ -245,6 +246,27 @@ public:
                 requires requires (Blocks const& b) { b.get_allocator(); }
         {
                 return m_blocks.get_allocator();
+        }
+
+        // flat_set's replace: the blocks come in whole, every bit a position, so there is no tail to clear.
+        constexpr auto replace(Blocks&& blocks) noexcept(std::is_nothrow_move_assignable_v<Blocks>)
+                -> void
+                requires has_stored_size
+        {
+                assert(std::ranges::size(blocks) <= max_num_blocks);
+                m_blocks = std::move(blocks);
+                m_size = num_blocks() * bits_per_block;
+        }
+
+        // flat_set's extract: the blocks go out whole, tail clear, and the source is left at width zero.
+        [[nodiscard]] constexpr auto extract() && noexcept(std::is_nothrow_move_constructible_v<Blocks>)
+                -> Blocks
+                requires has_stored_size
+        {
+                auto blocks = std::move(m_blocks);
+                m_blocks.clear();
+                m_size = 0UZ;
+                return blocks;
         }
 
         // Memberwise, width first: the unused bits are kept clear, so the blocks compare as the bits do.
