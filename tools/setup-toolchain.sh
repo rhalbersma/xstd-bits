@@ -32,7 +32,6 @@ fi
 
 readonly CLANG_VERSION=22
 readonly GCC_VERSION=15
-readonly CLANG_FORMAT_VERSION=22.1.8
 
 # apt.llvm.org for clang, the toolchain PPA for a GCC newer than noble's. The PPA signs with RSA-1024, so apt
 # warns about a weak algorithm on every update; that is the archive's key, not a fault in this script.
@@ -64,9 +63,12 @@ fi
 $SUDO apt-get install -y -qq "${packages[@]}"
 
 # The format gate pins 22, and before 22 clang-format reads `{ a * b }` in a requires-expression as a pointer
-# declaration. apt has no clang-format-22 for noble, so it comes from PyPI and lands in ~/.local/bin.
-pip install --quiet --user --break-system-packages "clang-format==${CLANG_FORMAT_VERSION}" \
-        || pip3 install --quiet --user "clang-format==${CLANG_FORMAT_VERSION}"
+# declaration. apt has no clang-format-22 for noble, so it comes from PyPI, pinned by hash in
+# clang-format-requirements.txt beside this script, and lands in ~/.local/bin.
+CLANG_FORMAT_REQUIREMENTS="$(dirname "${BASH_SOURCE[0]}")/clang-format-requirements.txt"
+readonly CLANG_FORMAT_REQUIREMENTS
+pip install --quiet --user --break-system-packages --require-hashes -r "${CLANG_FORMAT_REQUIREMENTS}" \
+        || pip3 install --quiet --user --require-hashes -r "${CLANG_FORMAT_REQUIREMENTS}"
 
 # Report what landed, but never fail a setup over a version banner: everything above has already
 # installed by this point, and a caller that cannot print is not a caller that cannot build.

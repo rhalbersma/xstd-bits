@@ -1,0 +1,6 @@
+# Copyright Rein Halbersma 2014-2026. Distributed under the Boost Software License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+
+# The format gate's clang-format, pinned by hash for setup-toolchain.sh: the manylinux wheels for x86_64 and aarch64.
+clang-format==22.1.8 \
+    --hash=sha256:b00cff6bfd1f1686f073a4fdf1cb937dbd58bf7510c659477805c03afdea0816 \
+    --hash=sha256:48c3b8dcfe9d4e964ced0e744e0f1f8ddc711bce92e50f6cab21e10f54857d08
