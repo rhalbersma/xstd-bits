@@ -1540,8 +1540,9 @@ deduces as an alias, VS 2022 included. `bitset<N>` is the one pinned name someth
 `xstd::bitset(std::uint32_t{1})` -- so it is written over the adaptor directly rather than over `basic_bitset`,
 one alias deep rather than the two the third rule refuses. The view shape that made the views classes
 ([the-views-are-the-adaptors](#the-views-are-the-adaptors)) did not reproduce on the probe's stand-ins, either
-unconstrained or with a constrained alias parameter, so whatever else the real views carried is part of what
-failed there; the views are a separate question from the owners, and #229 leaves it open.
+unconstrained or with a constrained alias parameter, and a later probe of the real view shape did not reproduce it
+either ([the-views-are-the-adaptors](#the-views-are-the-adaptors)); the views are a separate question from the
+owners, open in #235.
 
 ### owning-is-ours
 
@@ -1734,6 +1735,16 @@ footnoted only with the flag gate this project clears at `/std:c++23`; from that
 never what was missing" and that the note here was wrong. The table describes the feature, not this shape of
 it, and on this shape MSVC 17 fails while claiming support. A four-day-old note quoting a specific diagnostic
 was the better evidence, and it deserved to be believed over a vendor's feature matrix.
+
+**The C2976 does not reproduce today.** A probe (#237, asked in #235) put the two view guides back on the detail
+adaptors -- the `requires`-guarded one from `Bits&` and the one from an owner returning `owned_bits_t<Owner>` --
+and deduced through alias templates of the old shape: a constrained `Bits` parameter, the storage pinned, and the
+window both defaulted and pinned as the old `bit_span` pinned it. Every case deduced on the MSVC 17 the stable
+rung resolves to now, Debug and Release, in `msvc` and `msvc_analyze`, as on MSVC 18, the Preview and clang-cl:
+from borrowed words, from an owner, and from a const owner. The 151 diagnostics were real on the toolchain that
+emitted them, and are not on the current one, so the classes are a choice rather than a compiler's limit. The
+probe tested the alias shapes and not the headers of that time; whether the views go back to being aliases is
+open in #235.
 
 **The classes settle C2976, and the rung is back.** Put on trial, the stable MSVC rung returned with
 838 diagnostics and **zero** `C2976`: the views deduce. What it fails on instead is the ledger that opened once
