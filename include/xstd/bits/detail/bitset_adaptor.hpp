@@ -13,6 +13,7 @@
 #include <xstd/bits/detail/hash.hpp>                     // hash_append_bits, std_hash
 #include <xstd/bits/detail/ownership.hpp>                // owned_storage, storage, window
 #include <xstd/bits/detail/zero_width.hpp>               // zero_width
+#include <xstd/bits/from_bits.hpp>                       // from_bits_t
 #include <xstd/misc/concepts/specialization_of.hpp>      // specialization_of_TN
 #include <boost/hash2/hash_append.hpp>                   // hash_append_tag
 #include <algorithm>                                     // min, ranges::copy
@@ -202,6 +203,14 @@ public:
                 auto result = Derived();
                 result.m_bits.assign_bits(b);
                 return result;
+        }
+
+        // Tagged as std::from_range is: any field the storage exchanges, integers wider than the ullong door included.
+        template<class B>
+                requires Bits::template
+        exchanges_bits<B> [[nodiscard]] constexpr bitset_adaptor(xstd::from_bits_t, B const& b) noexcept
+        {
+                m_bits.assign_bits(b);
         }
 
         template<class B>

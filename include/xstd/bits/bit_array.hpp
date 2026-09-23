@@ -9,10 +9,13 @@
 #include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
 #include <xstd/bits/detail/ownership.hpp>            // storage, window
 #include <xstd/bits/detail/sequence_adaptor.hpp>     // sequence_adaptor
+#include <xstd/bits/from_bits.hpp>                   // from_bits_t
 #include <xstd/ints/concepts/unsigned_integer.hpp>   // unsigned_integer
+#include <xstd/ints/limits.hpp>                      // numeric_limits
 #include <xstd/ints/memory.hpp>                      // align_up
 #include <boost/container_hash/is_range.hpp>         // is_range
 #include <boost/container_hash/is_tuple_like.hpp>    // is_tuple_like
+#include <array>                                     // array
 #include <cstddef>                                   // size_t
 #include <functional>                                // hash
 #include <limits>                                    // digits
@@ -38,6 +41,13 @@ public:
                 x.swap(y);
         }
 };
+
+// The width a field of bits carries in its type: an integer's digits, or an array's blocks of them.
+template<xstd::unsigned_integer B>
+basic_bit_array(from_bits_t, B) -> basic_bit_array<B, static_cast<std::size_t>(xstd::numeric_limits<B>::digits)>;
+
+template<xstd::unsigned_integer B, std::size_t K>
+basic_bit_array(from_bits_t, std::array<B, K>) -> basic_bit_array<B, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>;
 
 template<std::size_t N>
 using bit_array = basic_bit_array<std::size_t, N>;
