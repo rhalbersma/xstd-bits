@@ -35,7 +35,7 @@
 #include <source_location>                                   // source_location
 #include <span>                                              // dynamic_extent, span
 #include <stdexcept>                                         // length_error
-#include <type_traits>                                       // conditional_t, is_const_v, remove_reference_t
+#include <type_traits>                                       // conditional_t, is_const_v, is_nothrow_move_assignable_v, is_nothrow_move_constructible_v, remove_reference_t
 #include <utility>                                           // exchange, move, pair
 
 namespace xstd::detail::bits {
@@ -90,11 +90,11 @@ public:
         static constexpr auto exchanges_bits_as_field =
                 has_static_size and (block_range_source<B, bit_extent> or container_source<B, bit_extent>);
 
-        // How many blocks a run-time width needs, floored at one; total over every size_t, as boost spells it.
+        // How many blocks a run-time width needs, none at width zero; total over every size_t, as boost spells it.
         [[nodiscard]] static constexpr auto blocks_for(std::size_t n) noexcept
                 -> std::size_t
         {
-                return std::ranges::max((n / bits_per_block) + (n % bits_per_block != 0UZ ? 1UZ : 0UZ), 1UZ);
+                return (n / bits_per_block) + (n % bits_per_block != 0UZ ? 1UZ : 0UZ);
         }
 
         // The two ceilings the readings choose between, neither enforced here; the blocks' own is narrower.
@@ -181,6 +181,39 @@ public:
                 , m_blocks(std::move(other.m_blocks), alloc)
         {
                 other.m_blocks.clear();
+        }
+
+        // Declared because the moves below are; a static width keeps all four trivial where its blocks are.
+        [[nodiscard]] contiguous_bit_container(contiguous_bit_container const&) = default;
+        auto operator=(contiguous_bit_container const&) -> contiguous_bit_container& = default;
+
+        [[nodiscard]] contiguous_bit_container(contiguous_bit_container&&)
+                requires has_static_size
+        = default;
+        auto operator=(contiguous_bit_container&&) -> contiguous_bit_container&
+                requires has_static_size
+        = default;
+
+        // A run-time width leaves the source at width zero with no blocks, the state a default constructor makes.
+        [[nodiscard]] constexpr contiguous_bit_container(contiguous_bit_container&& other) noexcept(std::is_nothrow_move_constructible_v<Blocks>)
+                requires (not has_static_size)
+                : m_size(std::exchange(other.m_size, 0UZ))
+                , m_blocks(std::move(other.m_blocks))
+        {
+                other.m_blocks.clear();
+        }
+
+        // Taken out of the source before anything is written, so a self-move puts back exactly what it took.
+        constexpr auto operator=(contiguous_bit_container&& other) noexcept(std::is_nothrow_move_constructible_v<Blocks> and std::is_nothrow_move_assignable_v<Blocks>)
+                -> contiguous_bit_container&
+                requires (not has_static_size)
+        {
+                auto blocks = std::move(other.m_blocks);
+                auto const n = std::exchange(other.m_size, 0UZ);
+                other.m_blocks.clear();
+                m_blocks = std::move(blocks);
+                m_size = n;
+                return *this;
         }
 
         [[nodiscard]] constexpr auto get_allocator() const noexcept
@@ -837,9 +870,9 @@ public:
                 } else if constexpr (has_static_size and N > 0) {
                         std::ranges::fill(m_blocks, ones);
                 } else if constexpr (not has_static_size) {
-                        // Uniform: used_bits() is the whole block on an even division, and none of it at width zero.
-                        std::ranges::fill_n(std::ranges::begin(m_blocks), static_cast<std::ptrdiff_t>(last_block()), ones);
-                        m_blocks[last_block()] = used_bits();
+                        // Every block, then the tail: at width zero there are no blocks and no tail.
+                        std::ranges::fill(m_blocks, ones);
+                        erase_unused();
                 }
                 assert(all());
                 return *this;
@@ -908,7 +941,7 @@ public:
                 }
         }
 
-        // Width zero, one block, all of it padding: the same object a default constructor makes.
+        // Width zero and no blocks: the same object a default constructor makes.
         constexpr auto clear()
                 -> void
                 requires (not has_static_size)
@@ -940,11 +973,8 @@ public:
                 if (offset != 0UZ) {
                         m_blocks[last_block()] |= shl(value, offset);
                         m_blocks.push_back(shr(value, bits_per_block - offset));
-                } else if (size() != 0UZ) {
-                        m_blocks.push_back(value);
                 } else {
-                        // The floor block is the fresh one.
-                        m_blocks[0] = value;
+                        m_blocks.push_back(value);
                 }
                 m_size += bits_per_block;
         }
@@ -963,12 +993,7 @@ public:
                 if constexpr (std::forward_iterator<I>) {
                         if (first != last and size() % bits_per_block == 0UZ) {
                                 auto const n = static_cast<std::size_t>(std::ranges::distance(first, last));
-                                if (size() == 0UZ) {
-                                        // The floor block is the one an empty container has, and the first replaces it.
-                                        m_blocks.assign(first, last);
-                                } else {
-                                        m_blocks.insert(m_blocks.end(), first, last);
-                                }
+                                m_blocks.insert(m_blocks.end(), first, last);
                                 m_size += n * bits_per_block;
                                 return;
                         }
@@ -1130,7 +1155,7 @@ public:
                         }
                 } else {
                         // One shape for both; the static arms keep the split only to stay compile-time branches.
-                        return all_but_last_are_ones() and m_blocks[last_block()] == used_bits();
+                        return num_blocks() == 0UZ or (all_but_last_are_ones() and m_blocks[last_block()] == used_bits());
                 }
         }
 
@@ -1229,6 +1254,10 @@ public:
                         }
                         return {1UZ, static_cast<block_type>(this->m_blocks[1] ^ other.m_blocks[1])};
                 } else {
+                        // No blocks is width zero, which has no position to differ at.
+                        if (num_blocks() == 0UZ) {
+                                return {0UZ, zero};
+                        }
                         auto const last = num_blocks() - 1UZ;
                         for (auto i = 0UZ; i < last; ++i) {
                                 if (auto const diff = static_cast<block_type>(this->m_blocks[i] ^ other.m_blocks[i]); diff != zero) {
@@ -1381,11 +1410,12 @@ private:
                 return num_blocks() * bits_per_block != size();
         }
 
-        // static_used_bits at a run-time width, width zero selected rather than computed.
+        // static_used_bits at a run-time width; every caller has a block, so the width is not zero.
         [[nodiscard]] constexpr auto used_bits() const noexcept
                 -> block_type
         {
-                return size() == 0 ? zero : shr(ones, (num_blocks() * bits_per_block) - size());
+                assert(size() != 0UZ);
+                return shr(ones, (num_blocks() * bits_per_block) - size());
         }
 
         [[nodiscard]] constexpr auto is_valid(std::size_t n [[maybe_unused]]) const noexcept
@@ -1427,12 +1457,15 @@ private:
                 requires (not has_static_size)
         {
                 auto const count = blocks_for(n);
-                // Growing with ones: which bits become new is read off the old width, before the blocks grow.
                 if (value and n > size()) {
-                        auto const index = last_block();
-                        auto const tail = static_cast<block_type>(~used_bits());
+                        // Which bits become new is read off the old width, and written only once the blocks have grown.
+                        auto const partial = has_unused_bits();
+                        auto const tail = partial ? static_cast<block_type>(~used_bits()) : zero;
+                        auto const old_count = num_blocks();
                         m_blocks.resize(count, ones);
-                        m_blocks[index] |= tail;
+                        if (partial) {
+                                m_blocks[old_count - 1UZ] |= tail;
+                        }
                 } else {
                         // No new block can be a one here: either the value is false or the width is not growing.
                         m_blocks.resize(count, zero);

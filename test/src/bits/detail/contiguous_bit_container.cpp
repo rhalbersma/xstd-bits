@@ -30,6 +30,8 @@
 #include <span>                                               // dynamic_extent
 #include <stdexcept>                                          // length_error
 #include <tuple>                                              // get, tuple
+#include <type_traits>                                        // is_nothrow_move_assignable_v, is_nothrow_move_constructible_v, is_trivially_*
+#include <utility>                                            // move
 #include <vector>                                             // vector
 
 BOOST_AUTO_TEST_SUITE(BitBlocks)
@@ -702,21 +704,22 @@ BOOST_AUTO_TEST_CASE(RunTimeWidthsOfDifferentSizeAreNotEqual)
         BOOST_CHECK(x == y);
 }
 
-// A zero width still owns one block, and every operation must see through it to the width.
-BOOST_AUTO_TEST_CASE(AZeroWidthOwnsOneBlockAndReadsEmpty)
+// A zero width owns no blocks, and every operation answers for the empty width without reading one.
+BOOST_AUTO_TEST_CASE(AZeroWidthOwnsNoBlocksAndReadsEmpty)
 {
         auto const b = xstd::detail::bits::contiguous_bit_vector<std::uint8_t>(0);
 
         BOOST_CHECK_EQUAL(b.size(), 0UZ);
-        BOOST_CHECK_EQUAL(b.num_blocks(), 1UZ);
+        BOOST_CHECK_EQUAL(b.num_blocks(), 0UZ);
+        BOOST_CHECK(b.blocks().empty());
         BOOST_CHECK_EQUAL(b.count(), 0UZ);
         BOOST_CHECK(b.none());
         BOOST_CHECK(b.all()); // vacuously, as std::bitset<0>::all() is
         BOOST_CHECK(not b.any());
 }
 
-// That sole block is entirely padding, which is what the last-block mask exists to say.
-BOOST_AUTO_TEST_CASE(AZeroWidthsOneBlockIsAllPaddingAndStaysZero)
+// Setting and flipping every position of no positions writes nothing, and grows nothing.
+BOOST_AUTO_TEST_CASE(AZeroWidthHasNothingToSetOrFlip)
 {
         auto b = xstd::detail::bits::contiguous_bit_vector<std::uint8_t>(0);
 
@@ -724,16 +727,16 @@ BOOST_AUTO_TEST_CASE(AZeroWidthsOneBlockIsAllPaddingAndStaysZero)
         BOOST_CHECK(b.none());
         b.flip();
         BOOST_CHECK(b.none());
-        BOOST_CHECK_EQUAL(b.block(0), 0U);
+        BOOST_CHECK_EQUAL(b.num_blocks(), 0UZ);
 }
 
-// Default-constructed is zero-width, not block-less.
-BOOST_AUTO_TEST_CASE(ADefaultConstructedRunTimeWidthIsZeroWidthWithOneBlock)
+// Default-constructed is zero-width and block-less, as std::vector<bool> is.
+BOOST_AUTO_TEST_CASE(ADefaultConstructedRunTimeWidthIsZeroWidthWithNoBlocks)
 {
         auto const b = xstd::detail::bits::contiguous_bit_vector<std::uint8_t>();
 
         BOOST_CHECK_EQUAL(b.size(), 0UZ);
-        BOOST_CHECK_EQUAL(b.num_blocks(), 1UZ);
+        BOOST_CHECK_EQUAL(b.num_blocks(), 0UZ);
         BOOST_CHECK(b == xstd::detail::bits::contiguous_bit_vector<std::uint8_t>(0));
 }
 
@@ -778,7 +781,7 @@ template<class Block>
         -> std::size_t
 {
         constexpr auto D = test::digits_v<Block>;
-        return std::ranges::max((n + D - 1) / D, 1UZ);
+        return (n + D - 1) / D;
 }
 
 // What append(block) should do to the model: the block's bits, least significant first.
@@ -864,10 +867,10 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(PushingAndPoppingAreResizeByOne, Block, test::word
                 disagreements += static_cast<int>(b != from_model<T>(m));
         }
         BOOST_CHECK_EQUAL(disagreements, 0);
-        BOOST_CHECK_EQUAL(b.num_blocks(), 1UZ);
+        BOOST_CHECK_EQUAL(b.num_blocks(), 0UZ);
 }
 
-// Boost's append: a whole block at once, split across two where unaligned; at width zero the floor takes it.
+// Boost's append: a whole block at once, split across two where unaligned; at width zero it is the first block.
 BOOST_AUTO_TEST_CASE_TEMPLATE(AppendingABlockSplitsItAtAnUnalignedWidth, Block, test::word_types)
 {
         using T = xstd::detail::bits::contiguous_bit_vector<Block>;
@@ -893,7 +896,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AppendingABlockSplitsItAtAnUnalignedWidth, Block, 
         BOOST_CHECK_EQUAL(disagreements, 0);
 }
 
-// The width-zero range append, where the bulk path replaces the floor block rather than pushing past it.
+// The width-zero range append, where the bulk path pushes onto no blocks at all.
 BOOST_AUTO_TEST_CASE_TEMPLATE(AppendingARangeFromEmptyAgreesWithTheModel, Block, test::word_types)
 {
         using T = xstd::detail::bits::contiguous_bit_vector<Block>;
@@ -942,7 +945,7 @@ BOOST_AUTO_TEST_CASE(ReservingAndShrinkingChangeCapacityNotTheBits)
         BOOST_CHECK(b == from_model<T>(m));
 }
 
-// Width zero, one block, all padding: the object a default constructor makes.
+// Width zero and no blocks: the object a default constructor makes.
 BOOST_AUTO_TEST_CASE(ClearingIsResizeToZero)
 {
         using T = xstd::detail::bits::contiguous_bit_vector<std::uint8_t>;
@@ -950,9 +953,65 @@ BOOST_AUTO_TEST_CASE(ClearingIsResizeToZero)
         auto b = from_model<T>(patterned(17));
         b.clear();
         BOOST_CHECK_EQUAL(b.size(), 0UZ);
-        BOOST_CHECK_EQUAL(b.num_blocks(), 1UZ);
-        BOOST_CHECK_EQUAL(b.block(0), 0U);
+        BOOST_CHECK_EQUAL(b.num_blocks(), 0UZ);
         BOOST_CHECK(b == T());
+}
+
+namespace {
+
+// The run-time widths, each of which a move leaves at width zero.
+using run_time_storages = std::tuple<xstd::detail::bits::contiguous_bit_vector<std::uint8_t>
+#ifdef TEST_HAS_INPLACE_VECTOR
+
+                                     ,
+                                     xstd::detail::bits::contiguous_bit_inplace_vector<std::uint8_t, 64>
+
+#endif
+                                     >;
+
+// Through two references, so that no compiler reads the self-move below as a mistake in the test.
+template<class T>
+auto move_assign(T& to, T& from)
+        -> void
+{
+        to = std::move(from);
+}
+
+} // namespace
+
+// A moved-from run-time width is at width zero with no blocks, and grows again from there like a new one.
+BOOST_AUTO_TEST_CASE_TEMPLATE(AMovedFromRunTimeWidthIsEmptyAndGrowsAgain, T, run_time_storages)
+{
+        static_assert(std::is_nothrow_move_constructible_v<T> and std::is_nothrow_move_assignable_v<T>);
+        auto const m = patterned(19);
+
+        auto source = from_model<T>(m);
+        auto target = T(std::move(source));
+        BOOST_CHECK(target == from_model<T>(m));
+        BOOST_CHECK(source == T()); // NOLINT(bugprone-use-after-move,hicpp-invalid-access-moved,clang-analyzer-cplusplus.Move): the moved-from state is the check.
+        source.push_back(true);     // NOLINT(clang-analyzer-cplusplus.Move): growing the moved-from state is the check.
+        BOOST_CHECK_EQUAL(source.size(), 1UZ);
+        BOOST_CHECK(source.test(0UZ));
+
+        auto assigned = from_model<T>(patterned(5));
+        move_assign(assigned, target);
+        BOOST_CHECK(assigned == from_model<T>(m));
+        BOOST_CHECK(target == T());
+        target.resize(9UZ, true);
+        BOOST_CHECK_EQUAL(target.count(), 9UZ);
+
+        // A self-move puts back what it took.
+        move_assign(assigned, assigned);
+        BOOST_CHECK(assigned == from_model<T>(m));
+}
+
+// A static width keeps the moves the members give it, trivial ones included.
+BOOST_AUTO_TEST_CASE(AStaticWidthMovesAsItsBlocksDo)
+{
+        using T = xstd::detail::bits::contiguous_bit_array<std::uint8_t, 24>;
+        static_assert(std::is_trivially_move_constructible_v<T> and std::is_trivially_move_assignable_v<T>);
+        static_assert(std::is_trivially_copy_constructible_v<T> and std::is_trivially_copy_assignable_v<T>);
+        BOOST_CHECK(true);
 }
 
 // A static width has none of it: the members are constrained away rather than asserting.
@@ -1317,8 +1376,8 @@ BOOST_AUTO_TEST_CASE(TheBlockCountIsTotalAndTheSumThatReachesItSaturates)
         BOOST_CHECK_EQUAL(V::width_sum(3UZ, 4UZ), 7UZ);
         BOOST_CHECK_EQUAL(V::width_sum(top, 1UZ), top);
 
-        // A division that rounds up by the remainder: floored at one, exact on a boundary, one more just past it.
-        static_assert(V::blocks_for(0UZ) == 1UZ);
+        // A division that rounds up by the remainder: none at zero, exact on a boundary, one more just past it.
+        static_assert(V::blocks_for(0UZ) == 0UZ);
         static_assert(V::blocks_for(1UZ) == 1UZ);
         static_assert(V::blocks_for(V::bits_per_block) == 1UZ);
         static_assert(V::blocks_for(V::bits_per_block + 1UZ) == 2UZ);
