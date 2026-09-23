@@ -45,18 +45,6 @@ using bit_inplace_vector = basic_bit_inplace_vector<std::size_t, N>;
 
 } // namespace xstd
 
-namespace std {
-
-// NOLINTBEGIN(bugprone-std-namespace-modification)
-
-template<xstd::unsigned_integer Block, std::size_t N>
-struct hash<xstd::basic_bit_inplace_vector<Block, N>> : hash<typename xstd::basic_bit_inplace_vector<Block, N>::adaptor_type>
-{};
-
-// NOLINTEND(bugprone-std-namespace-modification)
-
-} // namespace std
-
 namespace boost::container_hash {
 
 // Only a reading with iterators needs saying: a bitset has none, so the primary template already answers false.
@@ -69,6 +57,18 @@ struct is_tuple_like<xstd::basic_bit_inplace_vector<Block, N>> : std::false_type
 {};
 
 } // namespace boost::container_hash
+
+namespace std {
+
+// NOLINTBEGIN(bugprone-std-namespace-modification)
+
+template<xstd::unsigned_integer Block, std::size_t N>
+struct hash<xstd::basic_bit_inplace_vector<Block, N>> : hash<typename xstd::basic_bit_inplace_vector<Block, N>::adaptor_type>
+{};
+
+// NOLINTEND(bugprone-std-namespace-modification)
+
+} // namespace std
 
 #endif // __cpp_lib_inplace_vector
 

@@ -13,6 +13,7 @@
 #include <xstd/ints/limits.hpp>                    // numeric_limits
 #include <array>                                   // array
 #include <cstddef>                                 // size_t
+#include <type_traits>                             // type_identity
 #include <vector>                                  // vector
 #include <version>                                 // IWYU pragma: keep; __cpp_lib_inplace_vector
 
@@ -28,31 +29,27 @@ namespace xstd::detail::bits {
 template<class C>
 struct sequence_for;
 
-template<xstd::unsigned_integer Block>
-struct sequence_for<Block>
-{
-        using type = basic_bit_array<Block, static_cast<std::size_t>(xstd::numeric_limits<Block>::digits)>;
-};
-
 template<xstd::unsigned_integer Block, std::size_t K>
 struct sequence_for<std::array<Block, K>>
-{
-        using type = basic_bit_array<Block, static_cast<std::size_t>(xstd::numeric_limits<Block>::digits) * K>;
-};
+        : std::type_identity<basic_bit_array<Block, static_cast<std::size_t>(xstd::numeric_limits<Block>::digits) * K>>
+{};
+
+template<xstd::unsigned_integer Block>
+struct sequence_for<Block>
+        : sequence_for<std::array<Block, 1>>
+{};
 
 template<xstd::unsigned_integer Block, class Allocator>
 struct sequence_for<std::vector<Block, Allocator>>
-{
-        using type = basic_bit_vector<Block, Allocator>;
-};
+        : std::type_identity<basic_bit_vector<Block, Allocator>>
+{};
 
 #ifdef __cpp_lib_inplace_vector
 
 template<xstd::unsigned_integer Block, std::size_t K>
 struct sequence_for<std::inplace_vector<Block, K>>
-{
-        using type = basic_bit_inplace_vector<Block, static_cast<std::size_t>(xstd::numeric_limits<Block>::digits) * K>;
-};
+        : std::type_identity<basic_bit_inplace_vector<Block, static_cast<std::size_t>(xstd::numeric_limits<Block>::digits) * K>>
+{};
 
 #endif
 

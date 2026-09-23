@@ -1314,6 +1314,18 @@ inline constexpr bool enable_borrowed_range<xstd::detail::bits::sequence_adaptor
 // NOLINTEND(bugprone-std-namespace-modification)
 
 // NOLINTBEGIN(bugprone-std-namespace-modification)
+namespace boost::container_hash {
+
+template<class Bits, xstd::detail::bits::storage Store, xstd::detail::bits::window W, class Derived, std::size_t E>
+struct is_range<xstd::detail::bits::sequence_adaptor<Bits, Store, W, Derived, E>> : std::false_type
+{};
+
+template<class Bits, xstd::detail::bits::storage Store, xstd::detail::bits::window W, class Derived, std::size_t E>
+struct is_tuple_like<xstd::detail::bits::sequence_adaptor<Bits, Store, W, Derived, E>> : std::false_type
+{};
+
+} // namespace boost::container_hash
+
 namespace std {
 
 // [array.tuple]'s three over the static-width owner: tuple_element names the proxy, not bool.
@@ -1353,16 +1365,4 @@ struct hash<xstd::detail::bits::sequence_adaptor<Bits, xstd::detail::bits::stora
 // NOLINTEND(bugprone-std-namespace-modification)
 
 // Not a range to ContainerHash and not tuple-like: Hash2 takes the hook, not its range or tuple overload.
-namespace boost::container_hash {
-
-template<class Bits, xstd::detail::bits::storage Store, xstd::detail::bits::window W, class Derived, std::size_t E>
-struct is_range<xstd::detail::bits::sequence_adaptor<Bits, Store, W, Derived, E>> : std::false_type
-{};
-
-template<class Bits, xstd::detail::bits::storage Store, xstd::detail::bits::window W, class Derived, std::size_t E>
-struct is_tuple_like<xstd::detail::bits::sequence_adaptor<Bits, Store, W, Derived, E>> : std::false_type
-{};
-
-} // namespace boost::container_hash
-
 #endif // XSTD_BITS_DETAIL_SEQUENCE_ADAPTOR_HPP
