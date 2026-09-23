@@ -17,6 +17,7 @@
 #include <xstd/bits/bit_subspan.hpp>             // IWYU pragma: export; bit_subspan
 #include <xstd/bits/bit_vector.hpp>              // IWYU pragma: export; bit_vector
 #include <xstd/bits/bitset.hpp>                  // IWYU pragma: export; bitset
+#include <xstd/bits/borrowed_bits.hpp>           // IWYU pragma: export; borrow_bits, borrowed_bits
 #include <xstd/bits/contiguous_bit_sequence.hpp> // IWYU pragma: export; contiguous_bit_sequence
 #include <xstd/bits/dynamic_bitset.hpp>          // IWYU pragma: export; dynamic_bitset
 #include <xstd/bits/inplace_bitset.hpp>          // IWYU pragma: export; inplace_bitset
