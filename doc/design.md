@@ -1501,6 +1501,31 @@ and says nothing about where they live. `ext/boost.hpp` joins on that and nothin
 `boost::container::small_vector` and three containers over it, written from outside the library without a line
 of it changing.
 
+### the-container-adaptor-that-waits
+
+There is a cleaner arrangement of the grid than nine classes, and it is deferred rather than rejected. Make the
+primary a container adaptor per reading -- `bit_sequence_adaptor<Container, N>`, `bit_set_adaptor<Container, N>`,
+`bitset_adaptor<Container, N>`, in the manner of `std::stack<T, Container>` and `std::flat_set<Key, Compare,
+KeyContainer>` -- and make the nine names aliases over it: `basic_bit_vector<B, A>` would be
+`bit_sequence_adaptor<std::vector<B, A>>`, `basic_bit_array<B, N>` the adaptor over `std::array<B, K>` at width
+`N`. One type per storage, a printed name the user can write, the `std::hash`, `enable_view` and `owned_storage`
+specializations written once per reading instead of once per class, and the container parameter open to any
+`contiguous_block_range` without a new class for it.
+
+What stands in the way is one compiler. Aliases cannot declare deduction guides, so every owner guide -- the
+`from_bits` tag's, `basic_bitset`'s integer one -- would live on the adaptor and be reached through the alias,
+which is class template argument deduction for alias templates ([P1814](https://wg21.link/P1814)). MSVC 17
+fails exactly that on this shape, one pinned non-type argument beside a defaulted constrained one, which is how
+the views came to be classes ([the-views-are-the-adaptors](#the-views-are-the-adaptors)); `basic_bit_array<B, N>`
+over `std::array<B, num_blocks_v<B, N>>` is that shape again. Every VS 2022 leg is required, so the arrangement
+would cost owner deduction there. Nothing written today deduces through an owner's name, which is why the cost is
+invisible until the guides exist; they do now.
+
+The condition for revisiting is therefore not a design question: it is VS 2022 leaving the matrix, which the
+latest-two-stable rule decides when the next Visual Studio ships. MSVC 18 and clang-cl deduce through these
+aliases already. Until then `bit_sequence<C>` ([a-name-by-storage](#a-name-by-storage)) gives the spelling by
+storage without the aliasing, and the nine stay classes.
+
 ### owning-is-ours
 
 Owning is ours and viewing is interop. An owning adaptor sits over a storage of this library,
