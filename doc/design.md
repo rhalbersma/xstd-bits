@@ -1466,10 +1466,12 @@ handing back the container the caller named rather than the vehicle under it
 ### the-grid
 
 **The nine containers are a full three-by-three, and nothing else.** Three readings over three storages, every
-cell occupied, every one an owner and none windowed. The nine class bodies are nearly identical -- `using
-base_type::base_type;`, `using base_type::operator=;` and the hidden friend `swap` -- and differ in their base
-clause and in nothing else, which is what makes the grid a fact about the library rather than a construction
-imposed on it.
+cell occupied, every one an owner and none windowed. Each is one line: an alias of its reading's adaptor
+([the-container-adaptor](#the-container-adaptor)) over its storage, `basic_bit_array<B, N>` being
+`bit_sequence_adaptor<std::array<B, num_blocks_v<B, N>>, N>`. The three adaptor bodies are nearly identical --
+`using base_type::base_type;`, `using base_type::operator=;` and the hidden friend `swap` -- and differ in their
+base clause and in nothing else, which is what makes the grid a fact about the library rather than a
+construction imposed on it.
 
 **The readings are flat: no reading nests inside another.** The temptation is to make `sequence` refine
 `bitset` on the iterator-tag analogy, and the member sets refuse it: `bitset` has 25 members `sequence` lacks
@@ -1489,9 +1491,8 @@ friendships now follow the constraint -- `set_adaptor` befriends `set_adaptor`, 
 diagnostic says `basic_bit_array<unsigned long, 100>` rather than a five-argument cell name.
 
 What the tags keyed on, each container now names outright. `bits_of` mapped `array_container_tag` to
-`contiguous_bit_array` so that one `basic_bits` body could serve three columns; with each container a class of
-its own it mapped a name to a name, and the base clause says `detail::bits::contiguous_bit_array<Block, N>`
-instead. **Each storage is still answered where it is defined**, one header apiece, so a container includes
+`contiguous_bit_array` so that one `basic_bits` body could serve three columns; with each container naming its
+storage it mapped a name to a name, and the alias says `std::array<Block, num_blocks_v<Block, N>>` instead. **Each storage is still answered where it is defined**, one header apiece, so a container includes
 only the vehicle it uses: measured, a central switchboard had `bit_array.hpp` pulling `<vector>`, which is
 exactly the property the vehicle split was for.
 
@@ -1503,14 +1504,13 @@ of it changing.
 
 ### the-container-adaptor
 
-There is a cleaner arrangement of the grid than nine classes. Make the primary a container adaptor per reading --
-`bit_sequence_adaptor<Blocks, N>`, `bit_set_adaptor<Blocks, N>`, `bitset_adaptor<Blocks, N>`, in the manner of
-`std::stack<T, Container>` and `std::flat_set<Key, Compare, KeyContainer>` -- and make the nine names aliases over
-it: `basic_bit_vector<B, A>` would be `bit_sequence_adaptor<std::vector<B, A>>`, `basic_bit_array<B, N>` the
-adaptor over `std::array<B, blocks_for<B>(N)>` at width `N`. One type per storage, a printed name the user can
-write, the `std::hash`, `enable_view` and `owned_storage` specializations written once per reading instead of
-once per class, and the container parameter open to any `contiguous_block_range` without a new class for it.
-#229 tracks it.
+The grid is three container adaptors, one per reading -- `bit_sequence_adaptor<Blocks, N>`,
+`bit_set_adaptor<Blocks, N>`, `bitset_adaptor<Blocks, N>`, in the manner of `std::stack<T, Container>` and
+`std::flat_set<Key, Compare, KeyContainer>` -- and the nine names are aliases over them: `basic_bit_vector<B, A>`
+is `bit_sequence_adaptor<std::vector<B, A>>`, `basic_bit_array<B, N>` the adaptor over
+`std::array<B, num_blocks_v<B, N>>` at width `N`. One type per storage, a printed name the user can write, the
+`std::hash`, tuple and Boost opt-in specializations written once per reading instead of once per class, and the
+container parameter open to any `contiguous_block_range` without a new class for it. #229 set it out.
 
 Aliases cannot declare deduction guides, so every owner guide -- the `from_bits` tag's, `basic_bitset`'s integer
 one -- lives on the adaptor and is reached through the alias, which is class template argument deduction for
@@ -1534,9 +1534,11 @@ otherwise. It found three rules, of which only the second is about VS 2022:
    guide alike (`C2641`), while GCC, Clang and clang-cl do. No test or example deduces through those names today,
    and the pinned block is exactly what deduction would have found, so they stay spelled with their arguments.
 
-Adopting a storage, `basic_bit_vector(std::vector<B>())`, deduced on every leg. So the arrangement waits on
-nothing but its own design: with guides written to the first two rules, every name that deduces today would
-deduce as an alias, VS 2022 included. The view shape that made the views classes
+Adopting a storage, `basic_bit_vector(std::vector<B>())`, deduced on every leg. So the arrangement waited on
+nothing but its own design: with the guides written to the first two rules, every name that deduced as a class
+deduces as an alias, VS 2022 included. `bitset<N>` is the one pinned name something deduces through --
+`xstd::bitset(std::uint32_t{1})` -- so it is written over the adaptor directly rather than over `basic_bitset`,
+one alias deep rather than the two the third rule refuses. The view shape that made the views classes
 ([the-views-are-the-adaptors](#the-views-are-the-adaptors)) did not reproduce on the probe's stand-ins, either
 unconstrained or with a constrained alias parameter, so whatever else the real views carried is part of what
 failed there; the views are a separate question from the owners, and #229 leaves it open.
@@ -1797,7 +1799,8 @@ go undiagnosed until use.
 spelling the user did not write and cannot write back. `std::string` makes that trade and the world lives with
 `basic_string<char, char_traits<char>, allocator<char>>` -- but `std::string` aliases a *class*, where both
 layers here were aliases, which is why the printed name fell through to the adaptor rather than stopping at
-`basic_bit_array`. Both layers are classes now, so it stops.
+`basic_bit_array`. The adaptor is a public class now, so the name stops there: a diagnostic about
+`bit_array<100>` says `bit_sequence_adaptor<std::array<unsigned long, 2>, 100>`, a name the user can write back.
 
 One constraint sits in two places rather than one. The guide for a plain storage is viable for an owner too,
 now that an owner is nothing but a storage under a wrapper, and would tie with the owner guide -- so it is
@@ -2247,24 +2250,13 @@ storage already rounds up rather than a width to round.
 
 ### a-name-by-storage
 
-`bit_sequence<C>` names the sequence owner by the storage its blocks sit in -- `bit_sequence<std::uint64_t>` is
-`basic_bit_array<std::uint64_t, 64>`, `bit_sequence<std::vector<std::uint32_t>>` is
-`basic_bit_vector<std::uint32_t>` -- which is how itsy_bitsy's `bit_sequence<Container>` spells a sequence. It
-is an alias over a trait, and so adds no type: every spelling *is* an owner already in the grid, its guides,
-hashes and friendships included, and a diagnostic prints the owner's name rather than the alias's.
-
-The price of an alias over a trait is that nothing deduces through it. `C` sits in a nested-name-specifier, which
-[temp.deduct.type]/5.1 makes a non-deduced context, so `bit_sequence(x)` is not class template argument deduction
-and `template<class C> f(bit_sequence<C>)` cannot find `C` from an argument either. The map is not one-to-one in
-any case -- `std::uint64_t` and `std::array<std::uint64_t, 1>` name the same owner -- so even an inverse would have
-two answers. Deduction stays on the owners' own names, `basic_bit_array(xstd::from_bits, x)` among them.
-
-The trait is declared and never defined, so a storage with no sequence of its own is refused where the alias is
-named, by the alias's constraint: `bit_sequence<std::deque<std::uint32_t>>` and `bit_sequence<int>` do not name a
-type. The owners are classes rather than aliases of a container-parameterized adaptor, for the reasons
-[the-grid](#the-grid) records; [the-container-adaptor](#the-container-adaptor) measures what deducing through such
-aliases takes, and it is one respelled guide rather than a compiler leaving the matrix. Once the adaptors are
-public, `bit_sequence_adaptor<C>` names the same owners for every reading rather than one, and deduces.
+`bit_sequence<C>` named the sequence owner by the storage its blocks sit in -- `bit_sequence<std::uint64_t>` for
+`basic_bit_array<std::uint64_t, 64>` -- which is how itsy_bitsy's `bit_sequence<Container>` spells a sequence. It
+was an alias over a trait, so nothing deduced through it (`C` sat in a nested-name-specifier, a non-deduced
+context by [temp.deduct.type]/5.1), and it gave the storage spelling to one reading of three. The adaptors of
+[the-container-adaptor](#the-container-adaptor) spell it for every reading and deduce, so it is gone:
+`bit_sequence_adaptor<std::array<std::uint64_t, 1>>` is `basic_bit_array<std::uint64_t, 64>`, and
+`bit_set_adaptor<std::vector<std::uint32_t>>` is `basic_bit_set<std::uint32_t>`.
 
 ### the-generated-table
 

@@ -42,7 +42,7 @@ namespace xstd::detail::bits {
 
 // Floored at one so a zero width still names a block.
 template<xstd::unsigned_integer Block, std::size_t N>
-inline constexpr auto num_blocks_v = std::ranges::max(
+inline constexpr std::size_t num_blocks_v = std::ranges::max(
         align_up(N, static_cast<std::size_t>(xstd::numeric_limits<Block>::digits)) /
                 static_cast<std::size_t>(xstd::numeric_limits<Block>::digits),
         1UZ

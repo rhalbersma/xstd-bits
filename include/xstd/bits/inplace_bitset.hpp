@@ -10,48 +10,22 @@
 
 #ifdef __cpp_lib_inplace_vector
 
-#include <xstd/bits/detail/bitset_adaptor.hpp>                // bitset_adaptor
-#include <xstd/bits/detail/contiguous_bit_inplace_vector.hpp> // contiguous_bit_inplace_vector
-#include <xstd/ints/concepts/unsigned_integer.hpp>            // unsigned_integer
-#include <cstddef>                                            // size_t
-#include <functional>                                         // hash
+#include <xstd/bits/bitset_adaptor.hpp>                  // bitset_adaptor
+#include <xstd/bits/detail/contiguous_bit_container.hpp> // num_blocks_v
+#include <xstd/ints/concepts/unsigned_integer.hpp>       // unsigned_integer
+#include <cstddef>                                       // size_t
+#include <inplace_vector>                                // inplace_vector
 
 namespace xstd {
 
 // A resizable bitset that never allocates; no bit_ prefix, bitset already carrying the word.
 template<xstd::unsigned_integer Block, std::size_t N>
-class basic_inplace_bitset : public detail::bits::bitset_adaptor<detail::bits::contiguous_bit_inplace_vector<Block, N>, basic_inplace_bitset<Block, N>>
-{
-        using base_type = detail::bits::bitset_adaptor<detail::bits::contiguous_bit_inplace_vector<Block, N>, basic_inplace_bitset<Block, N>>;
-
-public:
-        using base_type::base_type;
-        using base_type::operator=;
-
-        // A swap on the base loses to any exact match on this type, so every container declares its own.
-        friend constexpr auto swap(basic_inplace_bitset& x, basic_inplace_bitset& y) noexcept(noexcept(x.swap(y)))
-                -> void
-        {
-                x.swap(y);
-        }
-};
+using basic_inplace_bitset = bitset_adaptor<std::inplace_vector<Block, detail::bits::num_blocks_v<Block, N>>>;
 
 template<std::size_t N>
 using inplace_bitset = basic_inplace_bitset<std::size_t, N>;
 
 } // namespace xstd
-
-namespace std {
-
-// NOLINTBEGIN(bugprone-std-namespace-modification)
-
-template<xstd::unsigned_integer Block, std::size_t N>
-struct hash<xstd::basic_inplace_bitset<Block, N>> : hash<typename xstd::basic_inplace_bitset<Block, N>::adaptor_type>
-{};
-
-// NOLINTEND(bugprone-std-namespace-modification)
-
-} // namespace std
 
 #endif // __cpp_lib_inplace_vector
 
