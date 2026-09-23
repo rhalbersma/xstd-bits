@@ -1835,6 +1835,42 @@ a constraint that simply failed, so even asking whether the operator existed wou
 already did by constraining through `self.storage()`. `set_adaptor`'s const view was never affected: every one
 of its mutators constrains through the storage expression.
 
+### static-windows
+
+`first<Count>()`, `last<Count>()` and `subspan<Offset, Count>()` are [span.sub]'s compile-time three, and they
+hand back `bit_subspan<Bits, Count>`: a window whose width is its type's, as `std::span<T, N>`'s is. The extent is
+the adaptor's fifth parameter, defaulted to `std::dynamic_extent` so that every four-argument spelling means what
+it did, and it is the adaptor's and not the derived class's because the derived class is incomplete when the base
+lays out its members -- which is where the count has to disappear. It does: the count is a
+`conditional_data_member_t`, so a static window is the pointer and the position, 16 bytes beside the dynamic
+window's 24, and `size()` is the extent.
+
+Where the type already says a request cannot fit, it is ill-formed rather than asserted: `first<21>()` over a
+view of a twenty-bit array, or `subspan<10, 11>()` over the same, fail their constraints, as [span.sub] makes
+them fail. Over a run-time width the count is checked at run time, which is where the storage's width is known.
+The extent of `subspan<Offset>()` is what is left of a static one, and dynamic otherwise. Between extents the rule
+is `std::span`'s: a static window converts to a dynamic one implicitly, and a dynamic one to a static one only
+explicitly, asserting the sizes agree.
+
+What is not here is a static *offset*. A window's start is a bit position, so unlike `std::span`'s it cannot be
+folded into the pointer unless it is a whole number of blocks, and putting it in the type is a step past anything
+the standard has; the position stays a member.
+
+### a-set-needs-no-width
+
+A set owner could hold its blocks at `blocks_extent`, and the question is worth answering because the reading lets
+it: nothing a set reading says depends on its width. `max_size()` answers the storage's capacity, not the width;
+`set_equal` and both orderings read a missing block as empty; the hash appends positions. A `bit_set` whose width
+were always its blocks' would answer every question the same and hold one member less, eight bytes beside a
+vector's twenty-four, and no tail for any member to mask.
+
+What it would cost is a growth path of its own. `growing_insert` resizes a stored width by the position asked
+for; at `blocks_extent` it would resize the blocks and have no width to move, and every storage member gated on
+`has_stored_size` -- the moves, `replace`, `extract`, the allocator constructors -- would need a third arm for an
+owner whose width is not a member. The sequence and bitset readings over the same storage do need the width, so
+the saving would be the set reading's alone, over a storage the three readings otherwise share. It is not done;
+the note is here so that the question does not have to be asked again from the start.
+
 ### the-range-members
 
 `append_range` has two tiers. Where the source is a sequence adaptor of any shape, owner, view or window, over

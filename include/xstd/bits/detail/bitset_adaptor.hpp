@@ -64,7 +64,7 @@ class bitset_adaptor : public allocator_base_type<Bits>
         // A view refers into this owner's storage, and only a reading that can view it is named.
         template<specialization_of_TN<contiguous_bit_container>, storage, class>
         friend class set_adaptor;
-        template<specialization_of_TN<contiguous_bit_container>, storage, window, class>
+        template<specialization_of_TN<contiguous_bit_container>, storage, window, class, std::size_t>
         friend class sequence_adaptor;
 
         // The value through the trait: the blocks and the width.

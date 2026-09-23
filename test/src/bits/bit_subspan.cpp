@@ -20,7 +20,7 @@
 #include <span>                                      // dynamic_extent
 #include <stdexcept>                                 // out_of_range
 #include <tuple>                                     // tuple
-#include <type_traits>                               // is_default_constructible_v
+#include <type_traits>                               // is_constructible_v, is_convertible_v, is_default_constructible_v
 #include <utility>                                   // declval
 #include <vector>                                    // vector
 
@@ -287,6 +287,74 @@ BOOST_AUTO_TEST_CASE(WindowsCompose)
         BOOST_CHECK(v.subspan(20).begin() == v.subspan(20).end());
         auto z = xstd::basic_bit_array<std::uint8_t, 0>();
         BOOST_CHECK(xstd::bit_span(z).subspan(0).empty());
+}
+
+namespace {
+
+template<class X, std::size_t Count>
+constexpr bool has_first = requires (X x) { x.template first<Count>(); };
+template<class X, std::size_t Offset, std::size_t Count>
+constexpr bool has_subspan_of = requires (X x) { x.template subspan<Offset, Count>(); };
+
+} // namespace
+
+// [span.sub]'s compile-time three: the count in the type, no count stored, and the same positions as at run time.
+BOOST_AUTO_TEST_CASE(AStaticWindowCarriesItsWidthInItsType)
+{
+        auto a = Owner();
+        for (auto const i : {2UZ, 5UZ, 17UZ, 19UZ}) {
+                a[i] = true;
+        }
+        auto const v = xstd::bit_span(a);
+
+        auto const f = v.first<4>();
+        auto const l = v.last<3>();
+        auto const s = v.subspan<1, 5>();
+        auto const tail = v.subspan<15>();
+        static_assert(std::same_as<decltype(f), xstd::bit_subspan<Blocks, 4> const>);
+        static_assert(std::same_as<decltype(tail), xstd::bit_subspan<Blocks, 5> const>);
+        static_assert(decltype(s)::extent == 5UZ and Sub::extent == std::dynamic_extent);
+        static_assert(sizeof(f) + sizeof(std::size_t) == sizeof(v.first(4)));
+        BOOST_CHECK(std::ranges::equal(f, v.first(4)));
+        BOOST_CHECK(std::ranges::equal(l, v.last(3)));
+        BOOST_CHECK(std::ranges::equal(s, v.subspan(1, 5)));
+        BOOST_CHECK(std::ranges::equal(tail, v.subspan(15)));
+        BOOST_CHECK(std::ranges::equal(s.subspan<1, 2>(), v.subspan(2, 2)));
+        BOOST_CHECK_EQUAL(f.size(), 4UZ);
+
+        // A static window writes as a dynamic one does, a masked word at a time.
+        v.subspan<8, 8>().fill(true);
+        BOOST_CHECK_EQUAL(a.count(), 12UZ);
+
+        // Over a run-time width the count is checked at run time, as std::span's is.
+        auto d = xstd::basic_bit_vector<std::uint8_t>(12UZ);
+        auto const dv = xstd::bit_span(d);
+        dv.last<6>().fill(true);
+        BOOST_CHECK_EQUAL(d.count(), 6UZ);
+        BOOST_CHECK(d[11] and not d[5]);
+}
+
+// Where the type already says it cannot fit, it is ill-formed; to a dynamic extent implicitly, back explicitly.
+BOOST_AUTO_TEST_CASE(AStaticWindowIsCheckedAndConvertedAsStdSpanIs)
+{
+        static_assert(has_first<Span, 20UZ> and not has_first<Span, 21UZ>);
+        static_assert(has_subspan_of<Span, 20UZ, 0UZ> and not has_subspan_of<Span, 21UZ, std::dynamic_extent>);
+        static_assert(has_subspan_of<Span, 10UZ, 10UZ> and not has_subspan_of<Span, 10UZ, 11UZ>);
+        static_assert(has_first<xstd::bit_subspan<Blocks, 4>, 4UZ> and not has_first<xstd::bit_subspan<Blocks, 4>, 5UZ>);
+        static_assert(has_first<Sub, 100UZ>);
+
+        static_assert(std::is_convertible_v<xstd::bit_subspan<Blocks, 4>, Sub>);
+        static_assert(not std::is_convertible_v<Sub, xstd::bit_subspan<Blocks, 4>>);
+        static_assert(std::is_constructible_v<xstd::bit_subspan<Blocks, 4>, Sub>);
+        static_assert(not std::is_constructible_v<xstd::bit_subspan<Blocks, 4>, xstd::bit_subspan<Blocks, 5>>);
+
+        auto a = Owner();
+        a[3] = true;
+        auto const v = xstd::bit_span(a);
+        Sub const dynamic = v.first<4>();
+        auto const back = xstd::bit_subspan<Blocks, 4>(dynamic);
+        BOOST_CHECK_EQUAL(dynamic.size(), 4UZ);
+        BOOST_CHECK(back[3] and not back[0]);
 }
 
 // Every viewed storage windows the same way, ours and the two foreign ones alike, through the trait.

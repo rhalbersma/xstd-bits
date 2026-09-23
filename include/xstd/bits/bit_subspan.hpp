@@ -12,18 +12,21 @@
 #include <xstd/misc/concepts/specialization_of.hpp>      // specialization_of_TN
 #include <boost/container_hash/is_range.hpp>             // is_range
 #include <boost/container_hash/is_tuple_like.hpp>        // is_tuple_like
+#include <cstddef>                                       // size_t
 #include <ranges>                                        // enable_borrowed_range, enable_view
 #include <type_traits>                                   // false_type, remove_const_t
 
 namespace xstd {
 
-// A window on the sequence reading: what first, last and subspan hand back.
-template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits>
-class bit_subspan : public detail::bits::sequence_adaptor<Bits, detail::bits::storage::borrowed, detail::bits::window::sub, bit_subspan<Bits>>
+// A window on the sequence reading: what first, last and subspan hand back, its width in the type where it can be.
+template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits, std::size_t Extent>
+class bit_subspan : public detail::bits::sequence_adaptor<Bits, detail::bits::storage::borrowed, detail::bits::window::sub, bit_subspan<Bits, Extent>, Extent>
 {
-        using base_type = detail::bits::sequence_adaptor<Bits, detail::bits::storage::borrowed, detail::bits::window::sub, bit_subspan<Bits>>;
+        using base_type = detail::bits::sequence_adaptor<Bits, detail::bits::storage::borrowed, detail::bits::window::sub, bit_subspan<Bits, Extent>, Extent>;
 
 public:
+        static constexpr std::size_t extent = Extent;
+
         using base_type::base_type;
         using base_type::operator=;
 };
@@ -41,19 +44,19 @@ bit_subspan(Owner&) -> bit_subspan<detail::bits::owned_bits_t<Owner>>;
 namespace xstd::detail::bits {
 
 // A view answers every trait as the vehicle it is built on, which is where each one is defined.
-template<class Bits, class Block>
-inline constexpr bool blit_source<bit_subspan<Bits>, Block> = blit_source<typename bit_subspan<Bits>::adaptor_type, Block>; // NOLINT(readability-redundant-typename)
+template<class Bits, std::size_t Extent, class Block>
+inline constexpr bool blit_source<bit_subspan<Bits, Extent>, Block> = blit_source<typename bit_subspan<Bits, Extent>::adaptor_type, Block>; // NOLINT(readability-redundant-typename)
 
 } // namespace xstd::detail::bits
 
 namespace boost::container_hash {
 
-template<class Bits>
-struct is_range<xstd::bit_subspan<Bits>> : std::false_type
+template<class Bits, std::size_t Extent>
+struct is_range<xstd::bit_subspan<Bits, Extent>> : std::false_type
 {};
 
-template<class Bits>
-struct is_tuple_like<xstd::bit_subspan<Bits>> : std::false_type
+template<class Bits, std::size_t Extent>
+struct is_tuple_like<xstd::bit_subspan<Bits, Extent>> : std::false_type
 {};
 
 } // namespace boost::container_hash
@@ -61,11 +64,11 @@ struct is_tuple_like<xstd::bit_subspan<Bits>> : std::false_type
 // NOLINTBEGIN(bugprone-std-namespace-modification): [range.view] and [range.range] invite the opt-in.
 namespace std::ranges {
 
-template<class Bits>
-inline constexpr bool enable_view<xstd::bit_subspan<Bits>> = true;
+template<class Bits, std::size_t Extent>
+inline constexpr bool enable_view<xstd::bit_subspan<Bits, Extent>> = true;
 
-template<class Bits>
-inline constexpr bool enable_borrowed_range<xstd::bit_subspan<Bits>> = true;
+template<class Bits, std::size_t Extent>
+inline constexpr bool enable_borrowed_range<xstd::bit_subspan<Bits, Extent>> = true;
 
 } // namespace std::ranges
 
