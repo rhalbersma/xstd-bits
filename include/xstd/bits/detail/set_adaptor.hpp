@@ -910,6 +910,34 @@ template<class Bits, storage Store, class Derived>
 
 } // namespace xstd::detail::bits
 
+namespace boost::container_hash {
+
+// Not a range to ContainerHash, so Hash2 takes the hook and not its range overload.
+template<class Bits, xstd::detail::bits::storage Store, class Derived>
+struct is_range<xstd::detail::bits::set_adaptor<Bits, Store, Derived>> : std::false_type
+{};
+
+} // namespace boost::container_hash
+
+namespace std {
+
+// NOLINTBEGIN(bugprone-std-namespace-modification)
+
+// Owned or viewed, as std::string_view hashes and std::set does not.
+template<class Bits, xstd::detail::bits::storage Store, class Derived>
+struct hash<xstd::detail::bits::set_adaptor<Bits, Store, Derived>>
+{
+        [[nodiscard]] constexpr auto operator()(xstd::detail::bits::set_adaptor<Bits, Store, Derived> const& v) const noexcept
+                -> std::size_t
+        {
+                return xstd::detail::bits::std_hash(v);
+        }
+};
+
+// NOLINTEND(bugprone-std-namespace-modification)
+
+} // namespace std
+
 // NOLINTBEGIN(bugprone-std-namespace-modification): [range.view] and [range.range] invite the opt-in.
 namespace std::ranges {
 
@@ -924,31 +952,4 @@ inline constexpr bool enable_borrowed_range<xstd::detail::bits::set_adaptor<Bits
 
 // NOLINTEND(bugprone-std-namespace-modification)
 
-// NOLINTBEGIN(bugprone-std-namespace-modification)
-namespace boost::container_hash {
-
-template<class Bits, xstd::detail::bits::storage Store, class Derived>
-struct is_range<xstd::detail::bits::set_adaptor<Bits, Store, Derived>> : std::false_type
-{};
-
-} // namespace boost::container_hash
-
-namespace std {
-
-// Owned or viewed, as std::string_view hashes and std::set does not.
-template<class Bits, xstd::detail::bits::storage Store, class Derived>
-struct hash<xstd::detail::bits::set_adaptor<Bits, Store, Derived>>
-{
-        [[nodiscard]] constexpr auto operator()(xstd::detail::bits::set_adaptor<Bits, Store, Derived> const& v) const noexcept
-                -> std::size_t
-        {
-                return xstd::detail::bits::std_hash(v);
-        }
-};
-
-} // namespace std
-
-// NOLINTEND(bugprone-std-namespace-modification)
-
-// Not a range to ContainerHash, so Hash2 takes the hook and not its range overload.
 #endif // XSTD_BITS_DETAIL_SET_ADAPTOR_HPP
