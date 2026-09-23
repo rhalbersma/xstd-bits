@@ -2169,6 +2169,26 @@ block carries an unused tail: `aligned::bitset<9>` is `bitset<64>` and `aligned:
 is `basic_bitset<std::uint8_t, 16>`. The inplace column has no `aligned` form, its `N` being a capacity the
 storage already rounds up rather than a width to round.
 
+### a-name-by-storage
+
+`bit_sequence<C>` names the sequence owner by the storage its blocks sit in -- `bit_sequence<std::uint64_t>` is
+`basic_bit_array<std::uint64_t, 64>`, `bit_sequence<std::vector<std::uint32_t>>` is
+`basic_bit_vector<std::uint32_t>` -- which is how itsy_bitsy's `bit_sequence<Container>` spells a sequence. It
+is an alias over a trait, and so adds no type: every spelling *is* an owner already in the grid, its guides,
+hashes and friendships included, and a diagnostic prints the owner's name rather than the alias's.
+
+The price of an alias over a trait is that nothing deduces through it. `C` sits in a nested-name-specifier, which
+[temp.deduct.type]/5.1 makes a non-deduced context, so `bit_sequence(x)` is not class template argument deduction
+and `template<class C> f(bit_sequence<C>)` cannot find `C` from an argument either. The map is not one-to-one in
+any case -- `std::uint64_t` and `std::array<std::uint64_t, 1>` name the same owner -- so even an inverse would have
+two answers. Deduction stays on the owners' own names, `basic_bit_array(xstd::from_bits, x)` among them.
+
+The trait is declared and never defined, so a storage with no sequence of its own is refused where the alias is
+named, by the alias's constraint: `bit_sequence<std::deque<std::uint32_t>>` and `bit_sequence<int>` do not name a
+type. The owners stay classes rather than aliases of a container-parameterized adaptor, for the reasons
+[the-grid](#the-grid) records and one it adds while VS 2022 is a required leg: deduction through an alias of this
+shape is what MSVC 17 fails, and every owner guide would then have to deduce through one.
+
 ### the-generated-table
 
 Nine cells over three adaptors over three storages is the shape where an inconsistency hides in one cell and

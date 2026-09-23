@@ -10,6 +10,7 @@
 #include <xstd/bits/bit_array.hpp>               // IWYU pragma: export; bit_array
 #include <xstd/bits/bit_inplace_set.hpp>         // IWYU pragma: export; bit_inplace_set
 #include <xstd/bits/bit_inplace_vector.hpp>      // IWYU pragma: export; bit_inplace_vector
+#include <xstd/bits/bit_sequence.hpp>            // IWYU pragma: export; bit_sequence
 #include <xstd/bits/bit_set.hpp>                 // IWYU pragma: export; bit_set
 #include <xstd/bits/bit_set_view.hpp>            // IWYU pragma: export; bit_set_view
 #include <xstd/bits/bit_span.hpp>                // IWYU pragma: export; bit_span
