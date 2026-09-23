@@ -171,7 +171,8 @@ BOOST_AUTO_TEST_CASE(AConstViewReadsAndCannotWrite)
         static_assert(can_assign_element<decltype(xstd::bit_span(bits))>);
 
         // The same words written through the handle itself, and seen by the view that cannot write them.
-        static_cast<void>(xstd::bit_set_view(bits).insert(0UZ));
+        auto const writable = xstd::bit_set_view(bits);
+        BOOST_CHECK(writable.insert(0UZ).second);
         BOOST_CHECK_EQUAL(words[0], 0x0101U);
         BOOST_CHECK(set.contains(0UZ));
 }
