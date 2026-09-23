@@ -29,14 +29,14 @@ namespace xstd::detail::bits {
 template<class C>
 struct sequence_for;
 
-template<xstd::unsigned_integer Block>
-struct sequence_for<Block>
-        : std::type_identity<basic_bit_array<Block, static_cast<std::size_t>(xstd::numeric_limits<Block>::digits)>>
-{};
-
 template<xstd::unsigned_integer Block, std::size_t K>
 struct sequence_for<std::array<Block, K>>
         : std::type_identity<basic_bit_array<Block, static_cast<std::size_t>(xstd::numeric_limits<Block>::digits) * K>>
+{};
+
+template<xstd::unsigned_integer Block>
+struct sequence_for<Block>
+        : sequence_for<std::array<Block, 1>>
 {};
 
 template<xstd::unsigned_integer Block, class Allocator>
