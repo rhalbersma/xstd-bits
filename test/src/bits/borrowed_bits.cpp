@@ -34,7 +34,7 @@ template<class R>
         auto i = 0UZ;
         for (auto const word : words) {
                 for (auto n = 0UZ; n < digits; ++n) {
-                        if (((word >> n) & 1U) != 0U) {
+                        if (((static_cast<std::uint64_t>(word) >> n) & 1U) != 0U) {
                                 positions.push_back((i * digits) + n);
                         }
                 }
@@ -52,7 +52,7 @@ template<class Bits, class R>
         auto const set = xstd::bit_set_view(bits);
         auto const seq = xstd::bit_span(bits);
 
-        auto forward = std::vector<std::size_t>(set.begin(), set.end());
+        auto const forward = std::vector<std::size_t>(set.begin(), set.end());
         auto backward = std::vector<std::size_t>(set.rbegin(), set.rend());
         std::ranges::reverse(backward);
 
@@ -169,6 +169,11 @@ BOOST_AUTO_TEST_CASE(AConstViewReadsAndCannotWrite)
         static_assert(not can_assign_element<decltype(xstd::bit_span(readonly))>);
         static_assert(can_insert<decltype(xstd::bit_set_view(bits))>);
         static_assert(can_assign_element<decltype(xstd::bit_span(bits))>);
+
+        // The same words written through the handle itself, and seen by the view that cannot write them.
+        static_cast<void>(xstd::bit_set_view(bits).insert(0UZ));
+        BOOST_CHECK_EQUAL(words[0], 0x0101U);
+        BOOST_CHECK(set.contains(0UZ));
 }
 
 // Only words that can be written are borrowed, and only as unsigned integers.
