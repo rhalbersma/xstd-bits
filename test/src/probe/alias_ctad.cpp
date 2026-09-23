@@ -73,6 +73,36 @@ using bit_array = basic_bit_array<std::size_t, N>;
 template<std::unsigned_integral Block, class Allocator = std::allocator<Block>>
 using basic_bit_vector = adaptor<std::vector<Block, Allocator>>;
 
+// The one-word guide spelled as the array guide is, with a defaulted count of one.
+template<class C, std::size_t N = default_width<C>>
+class adaptor_k
+{
+public:
+        template<std::unsigned_integral Block>
+        adaptor_k(from_bits_t, Block);
+};
+
+template<std::unsigned_integral Block, std::size_t K = 1>
+adaptor_k(from_bits_t, Block) -> adaptor_k<std::array<Block, blocks_for<Block>(digits<Block>* K)>, digits<Block> * K>;
+
+template<std::unsigned_integral Block, std::size_t N>
+using bit_array_k = adaptor_k<std::array<Block, blocks_for<Block>(N)>, N>;
+
+// The one-word guide with its width written as a product, as the array guide's is.
+template<class C, std::size_t N = default_width<C>>
+class adaptor_1
+{
+public:
+        template<std::unsigned_integral Block>
+        adaptor_1(from_bits_t, Block);
+};
+
+template<std::unsigned_integral Block>
+adaptor_1(from_bits_t, Block) -> adaptor_1<std::array<Block, blocks_for<Block>(digits<Block> * 1)>, digits<Block> * 1>;
+
+template<std::unsigned_integral Block, std::size_t N>
+using bit_array_1 = adaptor_1<std::array<Block, blocks_for<Block>(N)>, N>;
+
 // The view shape MSVC 17 was seen to reject: one pinned non-type argument beside a defaulted constrained one.
 enum class storage : bool { owned,
                             borrowed,
@@ -115,6 +145,12 @@ static_assert(std::same_as<decltype(basic_bit_array(from_bits, words())), basic_
 
 // 3. An alias of that alias, with the block type pinned.
 static_assert(std::same_as<decltype(bit_array(from_bits, std::size_t())), bit_array<64>>);
+
+static_assert(std::same_as<decltype(bit_array(from_bits, std::array<std::size_t, 2>())), bit_array<128>>);
+
+// 3b. The one-word guide respelled: a defaulted count, then a width written as a product.
+static_assert(std::same_as<decltype(bit_array_k(from_bits, word())), bit_array_k<word, 64>>);
+static_assert(std::same_as<decltype(bit_array_1(from_bits, word())), bit_array_1<word, 64>>);
 
 // 4. An owner alias with a defaulted allocator, deduced from the storage it adopts.
 static_assert(std::same_as<decltype(basic_bit_vector(std::vector<word>())), basic_bit_vector<word>>);
