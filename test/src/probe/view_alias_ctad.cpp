@@ -47,6 +47,10 @@ using set_view = xstd::detail::bits::set_adaptor<Bits, xstd::detail::bits::stora
 template<xstd::specialization_of_TN<xstd::detail::bits::contiguous_bit_container> Bits>
 using span = xstd::detail::bits::sequence_adaptor<Bits, xstd::detail::bits::storage::borrowed>;
 
+// The window argument pinned rather than defaulted, as the old bit_span pinned its third argument.
+template<xstd::specialization_of_TN<xstd::detail::bits::contiguous_bit_container> Bits>
+using pinned_span = xstd::detail::bits::sequence_adaptor<Bits, xstd::detail::bits::storage::borrowed, xstd::detail::bits::window::all>;
+
 template<class Owner>
 using bits_of = xstd::detail::bits::owned_bits_t<Owner>;
 
@@ -62,6 +66,10 @@ static_assert(std::same_as<decltype(span(std::declval<xstd::bit_vector&>())), sp
 
 // R3. From a const owner, where the trait adds const to the storage.
 static_assert(std::same_as<decltype(set_view(std::declval<xstd::bit_set const&>())), set_view<bits_of<xstd::bit_set const>>>);
+
+// R4. The pinned window argument, from borrowed words and from an owner.
+static_assert(std::same_as<decltype(pinned_span(std::declval<words&>())), pinned_span<words>>);
+static_assert(std::same_as<decltype(pinned_span(std::declval<xstd::bit_vector&>())), pinned_span<bits_of<xstd::bit_vector>>>);
 
 } // namespace real
 
