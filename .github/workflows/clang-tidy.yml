@@ -21,7 +21,7 @@ on:
 
 jobs:
   clang_tidy:
-    uses: rhalbersma/cpp-ci/.github/workflows/clang-tidy.yml@29fdd6605bf237863ad39c3919c2cf389cfb6d38 # v0.10.2
+    uses: rhalbersma/cpp-ci/.github/workflows/clang-tidy.yml@480aa17d38efd5c1641b861e9e1a0c6df053a451 # v0.10.3
     with:
       # The generated per-header units, as run-clang-tidy matches them against the compile database's absolute paths. They are the one tree that cannot be named as a directory: they live in the build tree, under a path only this project's CMake knows.
       self_sufficiency_regex: ${{ github.workspace }}/build/test/header_self_sufficiency/.*
