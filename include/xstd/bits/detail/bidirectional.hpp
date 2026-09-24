@@ -6,12 +6,13 @@
 #ifndef XSTD_BITS_DETAIL_BIDIRECTIONAL_HPP
 #define XSTD_BITS_DETAIL_BIDIRECTIONAL_HPP
 
-#include <xstd/bits/detail/zero_width.hpp> // zero_width
-#include <cassert>                         // assert
-#include <cstddef>                         // ptrdiff_t, size_t
-#include <format>                          // formatter
-#include <iterator>                        // bidirectional_iterator_tag
-#include <type_traits>                     // is_class_v, is_convertible_v, is_nothrow_constructible_v, remove_const_t
+#include <xstd/bits/detail/storage_ptr.hpp> // storage_ptr_t
+#include <xstd/bits/detail/zero_width.hpp>  // zero_width
+#include <cassert>                          // assert
+#include <cstddef>                          // ptrdiff_t, size_t
+#include <format>                           // formatter
+#include <iterator>                         // bidirectional_iterator_tag
+#include <type_traits>                      // is_class_v, is_convertible_v, is_nothrow_constructible_v, remove_const_t
 
 // The iterator is the primitive: a pointer and a position, reaching the bits through the storage alone.
 namespace xstd::bits::detail {
@@ -27,7 +28,7 @@ class bidirectional_bit_iterator
 {
         using bits_type = std::remove_const_t<Bits>;
 
-        bits_type const* m_ptr{};
+        storage_ptr_t<bits_type const> m_ptr{};
         std::size_t m_idx{};
 
 public:
@@ -40,7 +41,7 @@ public:
         [[nodiscard]] bidirectional_bit_iterator() noexcept = default;
 
         // Public, so an owner or a view constructs one without befriending it: the dependency runs one way.
-        [[nodiscard]] constexpr bidirectional_bit_iterator(bits_type const* ptr, std::size_t idx) noexcept
+        [[nodiscard]] constexpr bidirectional_bit_iterator(storage_ptr_t<bits_type const> ptr, std::size_t idx) noexcept
                 : m_ptr(ptr)
                 , m_idx(idx)
         {
@@ -112,14 +113,14 @@ class bidirectional_bit_reference
 {
         using bits_type = std::remove_const_t<Bits>;
 
-        bits_type const* m_ptr;
+        storage_ptr_t<bits_type const> m_ptr;
         std::size_t m_idx;
 
 public:
         using value_type = std::size_t;
         using iterator = bidirectional_bit_iterator<Bits>;
 
-        [[nodiscard]] constexpr bidirectional_bit_reference(bits_type const* ptr, std::size_t idx) noexcept
+        [[nodiscard]] constexpr bidirectional_bit_reference(storage_ptr_t<bits_type const> ptr, std::size_t idx) noexcept
                 : m_ptr(ptr)
                 , m_idx(idx)
         {

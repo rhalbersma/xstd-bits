@@ -8,12 +8,14 @@
 
 #include <xstd/bits/detail/allocator_base_type.hpp>      // allocator_base_type
 #include <xstd/bits/detail/bidirectional.hpp>            // bidirectional_bit_iterator, bidirectional_bit_reference
+#include <xstd/bits/detail/borrowed_bits.hpp>            // borrow_bits, borrowable_word, borrowable_words, borrowed_bits_t
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/detail/functor.hpp>                  // invoke_continues
 #include <xstd/bits/detail/hash.hpp>                     // hash_append_bits, hash_append_positions, std_hash
 #include <xstd/bits/detail/intrin.hpp>                   // countl_zero, countr_zero
 #include <xstd/bits/detail/ownership.hpp>                // owned_bits_t, owned_storage, owner_of, owner_reading, storage, owns
 #include <xstd/bits/detail/shift.hpp>                    // shl, shr
+#include <xstd/bits/detail/storage_ptr.hpp>              // storage_ref_t
 #include <xstd/bits/detail/zero_width.hpp>               // zero_width
 #include <xstd/bits/from_bits.hpp>                       // from_bits_t
 #include <xstd/misc/concepts/specialization_of.hpp>      // specialization_of_TN
@@ -23,7 +25,7 @@
 #include <algorithm>                                     // all_of, find_if, lexicographical_compare_three_way, max, min
 #include <cassert>                                       // assert
 #include <compare>                                       // strong_ordering
-#include <concepts>                                      // constructible_from, convertible_to, invocable, swappable
+#include <concepts>                                      // constructible_from, convertible_to, invocable, same_as, swappable
 #include <cstddef>                                       // ptrdiff_t, size_t
 #include <format>                                        // format
 #include <functional>                                    // hash, less
@@ -106,7 +108,7 @@ class set_adaptor : public std::conditional_t<owns(Store), allocator_base_type<s
         using bits_type = std::remove_const_t<Bits>;
 
         // Always present and only its type changes, so plain conditional_t.
-        std::conditional_t<is_owner, Bits, Bits*> m_bits;
+        std::conditional_t<is_owner, Bits, storage_ref_t<Bits>> m_bits;
 
         // One accessor: self.m_bits propagates the owner's const, *self.m_bits keeps the view shallow.
         [[nodiscard]] constexpr auto bits(this auto&& self) noexcept
@@ -248,7 +250,7 @@ public:
                 m_bits.assign_bits(b);
         }
 
-        // Through bits() and not m_bits, which is a Bits* wherever this reading refers rather than owns.
+        // Through bits() and not m_bits, which is a handle wherever this reading refers rather than owns.
         template<class B>
                 requires Bits::template
         exchanges_bits<B> [[nodiscard]] constexpr auto to_bits() const noexcept
@@ -260,6 +262,13 @@ public:
         [[nodiscard]] constexpr explicit set_adaptor(Bits& c) noexcept
                 requires (not is_owner)
                 : m_bits(&c)
+        {}
+
+        // Words handed straight over, held as the storage that borrows them, as std::views::all holds a view.
+        template<class Words>
+                requires (not is_owner) and (borrowable_word<Words &&> or borrowable_words<Words &&>) and std::same_as<borrowed_bits_t<Words&&>, Bits>
+        [[nodiscard]] constexpr explicit set_adaptor(Words&& words) noexcept
+                : m_bits(borrow_bits(std::forward<Words>(words)))
         {}
 
         // A view over an owner is a view over the storage it wraps; implicit, claiming nothing the owner lacks.

@@ -7,6 +7,7 @@
 #define XSTD_BITS_DETAIL_SEQUENCE_ADAPTOR_HPP
 
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_base_type
+#include <xstd/bits/detail/borrowed_bits.hpp>                // borrow_bits, borrowable_word, borrowable_words, borrowed_bits_t
 #include <xstd/bits/detail/contiguous_bit_container.hpp>     // contiguous_bit_container
 #include <xstd/bits/detail/functor.hpp>                      // invoke_continues
 #include <xstd/bits/detail/hash.hpp>                         // hash_append_bits, std_hash
@@ -14,6 +15,7 @@
 #include <xstd/bits/detail/ownership.hpp>                    // owned_bits_t, owned_storage, owner_of, owner_reading, storage, owns, window
 #include <xstd/bits/detail/random_access.hpp>                // random_access_bit_iterator, random_access_bit_reference
 #include <xstd/bits/detail/shift.hpp>                        // shl, shr
+#include <xstd/bits/detail/storage_ptr.hpp>                  // storage_ref_t
 #include <xstd/bits/from_bits.hpp>                           // from_bits_t
 #include <xstd/misc/concepts/specialization_of.hpp>          // specialization_of_TN
 #include <xstd/misc/type_traits/conditional_data_member.hpp> // XSTD_NO_UNIQUE_ADDRESS, conditional_data_member_t
@@ -169,15 +171,15 @@ class sequence_adaptor : public std::conditional_t<owns(Store), allocator_base_t
         // The middle column: growth inside a capacity the type carries, whose counterparts disagree on name shape.
         static constexpr bool has_static_capacity = can_grow and bits_type::has_static_capacity;
 
-        // What a window stores in a plain view's Bits*: the pointer's role split in three, bits not being addressable.
+        // What a window stores in a plain view's handle: the pointer's role split in three, bits not being addressable.
         struct window_ptr
         {
-                Bits* ptr;
+                storage_ref_t<Bits> ptr;
                 std::size_t offset;
                 [[XSTD_NO_UNIQUE_ADDRESS]] conditional_data_member_t<not has_static_window, std::size_t, struct window_size_tag> size;
         };
 
-        std::conditional_t<is_owner, Bits, std::conditional_t<is_window, window_ptr, Bits*>> m_bits;
+        std::conditional_t<is_owner, Bits, std::conditional_t<is_window, window_ptr, storage_ref_t<Bits>>> m_bits;
 
         // One accessor: self.m_bits propagates the owner's const, *self.m_bits keeps the view shallow.
         [[nodiscard]] constexpr auto bits(this auto&& self) noexcept
@@ -558,6 +560,13 @@ public:
         [[nodiscard]] constexpr explicit sequence_adaptor(Bits& c) noexcept
                 requires (not is_owner) and (not is_window)
                 : m_bits(&c)
+        {}
+
+        // Words handed straight over, held as the storage that borrows them, as std::views::all holds a view.
+        template<class Words>
+                requires (not is_owner) and (not is_window) and (borrowable_word<Words &&> or borrowable_words<Words &&>) and std::same_as<borrowed_bits_t<Words&&>, Bits>
+        [[nodiscard]] constexpr explicit sequence_adaptor(Words&& words) noexcept
+                : m_bits(borrow_bits(std::forward<Words>(words)))
         {}
 
         // A view over an owner is a view over the storage it wraps; implicit, claiming nothing the owner lacks.
