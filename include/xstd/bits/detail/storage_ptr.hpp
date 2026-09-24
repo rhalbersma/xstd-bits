@@ -12,6 +12,7 @@
 #include <cstddef>                                           // nullptr_t, size_t
 #include <memory>                                            // addressof
 #include <span>                                              // dynamic_extent
+#include <tuple>                                             // tie
 #include <type_traits>                                       // conditional_t, is_const_v, remove_const_t
 
 // How a view and its iterators reach storage, as std::views::all would: a pointer, or a copy of what is itself a view.
@@ -113,7 +114,7 @@ public:
                 -> bool
         {
                 if constexpr (has_count) {
-                        return lhs.m_data == rhs.m_data and lhs.m_count == rhs.m_count;
+                        return std::tie(lhs.m_data, lhs.m_count) == std::tie(rhs.m_data, rhs.m_count);
                 } else {
                         return lhs.m_data == rhs.m_data;
                 }
