@@ -22,4 +22,4 @@ on:
 jobs:
   # Every leg on every rung, leak detection on; all fifteen run now that the missing range adaptors are unused.
   sanitizers:
-    uses: rhalbersma/cpp-ci/.github/workflows/sanitizers.yml@29fdd6605bf237863ad39c3919c2cf389cfb6d38 # v0.10.2
+    uses: rhalbersma/cpp-ci/.github/workflows/sanitizers.yml@480aa17d38efd5c1641b861e9e1a0c6df053a451 # v0.10.3

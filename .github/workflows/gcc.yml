@@ -24,7 +24,7 @@ on:
 jobs:
   # Every rung, and the rungs move with cpp-ci rather than with a local matrix. The one ladder that builds the benchmark tree, now that XSTD_BITS_BUILD_BENCHMARKS is off by default. Its Release legs run the smoke test benchmark/CMakeLists.txt registers -- --benchmark_min_time=1x, that it runs rather than what it costs -- so the benchmarks keep compiling and executing against the current API without every other leg paying to build them.
   gcc:
-    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@29fdd6605bf237863ad39c3919c2cf389cfb6d38 # v0.10.2
+    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@480aa17d38efd5c1641b861e9e1a0c6df053a451 # v0.10.3
     with:
       cmake_args: -DXSTD_BITS_BUILD_BENCHMARKS=ON
 
@@ -40,7 +40,7 @@ jobs:
   # to std::inplace_vector, or to anything else this column leans on, while it is still a change. The stable rung
   # stays out -- GCC 15 has no such header, so it would configure and then test the other six cells a second time.
   gcc_cxx26:
-    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@29fdd6605bf237863ad39c3919c2cf389cfb6d38 # v0.10.2
+    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@480aa17d38efd5c1641b861e9e1a0c6df053a451 # v0.10.3
     with:
       tiers: qualification,development
       cmake_args: -DXSTD_BITS_CXX_STANDARD=26
