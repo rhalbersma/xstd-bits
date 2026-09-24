@@ -11,7 +11,7 @@
 #include <type_traits> // common_reference_t
 #include <version>     // IWYU pragma: keep; __cpp_lib_ranges_as_const
 
-namespace xstd::detail::bits {
+namespace xstd::bits::detail {
 
 // P2278R4's two aliases, transcribed from [const.iterators.alias] and [ranges.syn], constraints included.
 namespace fallback {
@@ -37,6 +37,6 @@ using range_const_reference_t = fallback::range_const_reference_t<R>;
 
 #endif
 
-} // namespace xstd::detail::bits
+} // namespace xstd::bits::detail
 
 #endif // XSTD_BITS_DETAIL_RANGE_CONST_REFERENCE_HPP

@@ -175,9 +175,9 @@ if anyone ever "simplifies" the definition into the dance.
 `detail/contiguous_bit_container.hpp` holds the concept, `num_blocks_v`, the class and the detector that names
 it, and
 `detail/contiguous_bit_array.hpp`, `detail/contiguous_bit_vector.hpp` and
-`detail/contiguous_bit_inplace_vector.hpp` hold one vehicle apiece. The names are in `xstd::detail::bits` with
+`detail/contiguous_bit_inplace_vector.hpp` hold one vehicle apiece. The names are in `xstd::bits::detail` with
 the rest of `detail/`, so nothing outside the library can name a vehicle at all; a container names its own in
-its base clause, as `detail::bits::contiguous_bit_array<Block, N>`. It is the device that turns three readings
+its base clause, as `bits::detail::contiguous_bit_array<Block, N>`. It is the device that turns three readings
 over three storages into three plus three, and a factoring device is machinery rather than vocabulary: a user
 reaches every width through `bit_static_set<N>` or `basic_bit_array<Block, N>` and never spells the pair
 themselves. The split is what lets each of the nine
@@ -862,7 +862,7 @@ then a value. xstd-misc now carries one concept per parameter shape, so the adap
 where they take the parameter:
 
 ```cpp
-template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits, ownership Own>
+template<specialization_of_TN<bits::detail::contiguous_bit_container> Bits, ownership Own>
 class set_adaptor;
 ```
 
@@ -901,7 +901,7 @@ Three members are left over, and they are the three no reading can spell for its
 
 ### why-nested
 
-The free functions live in `xstd::detail::bits` rather than in `xstd`, and the nesting is load-bearing.
+The free functions live in `xstd::bits::detail` rather than in `xstd`, and the nesting is load-bearing.
 
 Since C++20 ([temp.names]/3, P0846) an unqualified call with explicit template arguments — `shl<Block>(b, n)`,
 or the `scan_first<Traits>(c)` this rule was written for — parses its `<` as a template argument list and then
@@ -1316,7 +1316,7 @@ Guarding only the *write* moves the warning rather than removing it: the tail is
 no more reachable. So the zero width gets its own arm, and at that width the whole body is the throw:
 
 ```c++
-if constexpr (detail::bits::zero_width<Bits>) {
+if constexpr (bits::detail::zero_width<Bits>) {
         throw out_of_range(pos);
 } else {
         guard(pos);
@@ -1685,7 +1685,7 @@ equal at any two widths ([width-is-capacity](#width-is-capacity)). The other, th
 `= default` and is now `return x.storage() == y.storage();`.
 
 The two spellings mean the same thing and do not cost the same. A defaulted comparison compares base classes
-before members, and an owner here derives from `detail::bits::allocator_base_type` -- an empty class carrying
+before members, and an owner here derives from `bits::detail::allocator_base_type` -- an empty class carrying
 the storage's `allocator_type` where there is one and nothing at all where there is not. Its own defaulted
 `operator==` can only answer true, so the defaulted form emits a call and a branch that no input can send the
 other way. Probed with equal operands, with operands differing in the first block, with operands differing in
@@ -1795,7 +1795,7 @@ not wrap: 13 lines and one error through the alias, 22 lines and two errors thro
 
 Restating the constraint on the derived class's own parameter recovers all of that, and then some: it fails at
 the declaration, once, in **fewer** lines than the alias, having no indirection to explain. Which is why all
-three views spell `specialization_of_TN<detail::bits::contiguous_bit_container> Bits` on their own template
+three views spell `specialization_of_TN<bits::detail::contiguous_bit_container> Bits` on their own template
 parameter instead of leaving it to the base. A four-line reduction holding a constrained class template, an
 alias of it, and both derived forms reproduces the shape exactly, GCC and Clang agreeing to the line, so it is
 the language rather than a diagnostic quirk. The failure mode is the derived class that skips the restatement,
@@ -2161,7 +2161,7 @@ cannot avoid reading was called interface whether or not anyone could write it, 
 axis tags came along because no adaptor can be named without them. What settled it is that a consumer never has
 to ask. A container is what it is, and what it *does* -- bidirectional with a `key_type`, random-access over
 `bool`, or no range at all with a `to_string` -- is askable in the standard's own vocabulary, without naming a
-base at all. So the adaptors and their vocabulary went to `xstd::detail::bits`, and what remains in
+base at all. So the adaptors and their vocabulary went to `xstd::bits::detail`, and what remains in
 `namespace xstd` is twelve names, their short and aligned aliases, and one concept.
 
 On the other side, the two that had to be argued. The four proxy types are reached only through container
@@ -3261,7 +3261,7 @@ friend: the dependency runs one way, from the container to the iterator, and the
 declarations the earlier views needed (*"Clang requires it, GCC does not"*) have nothing left to declare.
 
 The pointer is to the **storage** an owner wraps, never to the owner: `bit_static_set` hands out
-`detail::bits::bidirectional_bit_iterator<contiguous_bit_array<B, N>>`, which is why an owner is never itself
+`bits::detail::bidirectional_bit_iterator<contiguous_bit_array<B, N>>`, which is why an owner is never itself
 the thing a view or an iterator is parameterized on.
 
 **Where they live, and what they are called.** Both pairs are in `detail/`, one header each --
@@ -3294,7 +3294,7 @@ negative, because it is the one place the bits and the blocks part company: the 
 ([contiguous-block-range](#contiguous-block-range)), while the **bits** are not addressable at all. The
 asymmetry is the reason the vehicle keeps its blocks to itself and hands out proxies above it.
 
-The free functions stay qualified as `detail::bits::shl<Block>(...)` inside `xstd::detail::bits` itself.
+The free functions stay qualified as `bits::detail::shl<Block>(...)` inside `xstd::bits::detail` itself.
 Dropping the qualification would read more naturally and reintroduce exactly the hazard the nesting exists to
 close: an unqualified call with an explicit template argument performs ADL, and the associated namespace of
 the type in play can be `std` or `boost` ([why-nested](#why-nested)).
@@ -4008,7 +4008,7 @@ names on every MSVC-ABI target, clang-cl included; and the two third-party class
 `absl::uint128` and `boost::int128::uint128`. Only the first is a scalar. The other three are **classes**, and
 that difference is the whole of this section.
 
-`detail::bits::intrin` used to forward `countl_zero`, `countr_zero` and `popcount` straight to `<bit>`, whose
+`bits::detail::intrin` used to forward `countl_zero`, `countr_zero` and `popcount` straight to `<bit>`, whose
 domain is `std::unsigned_integral` — a **closed** concept no class can join. So the seam was constrained on an
 open concept and implemented against a closed one: every 128-bit integer class satisfied the interface and
 then failed inside the body. It now forwards to `xstd::countl_zero` and friends, which are that same domain
@@ -4025,7 +4025,7 @@ tree does it in `test/block_types.hpp`, above every container header. The same r
 `test::block_basis` can be spelled, which is why it sits in that header rather than in one of its own: a
 separate header could not be relied on to sort below the adapters.
 
-**A Block being a class breaks two assumptions that a scalar hid.** `detail::bits::pred`'s `intersects`
+**A Block being a class breaks two assumptions that a scalar hid.** `bits::detail::pred`'s `intersects`
 returned `lhs & rhs` into a `bool`, which copy-initializes and so needs an **implicit** conversion; an integer
 class offers only an explicit `operator bool`. Its two neighbours never needed the cast, `not` and `!=` both
 reaching `bool` by a **contextual** conversion, which an explicit operator satisfies. And the sequence proxy in
@@ -4809,7 +4809,7 @@ Notes:
 
 1. Each container in the first two rows is clear about the interface it provides: sequences are random access containers and ordered sets are bidirectional containers. The third row is the deliberate exception, and the fourth is what resolves it.
 2. The `bitset` row is the point the old two-by-two could not express. `std::bitset` and `boost::dynamic_bitset` are faulted above for being unclear about which interface they offer; the answer here is not to abolish the hybrid but to make choosing between its two readings **explicit at the call site**. `xstd::bitset<N>` is a strict extension of `std::bitset<N>` and `xstd::dynamic_bitset` is one of `boost::dynamic_bitset<>` — every expression valid on the counterpart is valid here, with the same result — and neither has iterators of its own, because `begin` is one name and there are two readings. `bit_set_view` and `bit_span` are how you say which you meant, which is why they are a row and not a cell.
-3. A view over a bitset is a view over the storage that bitset wraps: `xstd::bit_set_view(bs)` deduces `xstd::bit_set_view<xstd::detail::bits::contiguous_bit_array<std::size_t, N>>`, and `decltype` is how you name the result. The deduction guide for a plain storage is constrained to non-owners, so an owner and the storage inside it do not tie.
+3. A view over a bitset is a view over the storage that bitset wraps: `xstd::bit_set_view(bs)` deduces `xstd::bit_set_view<xstd::bits::detail::contiguous_bit_array<std::size_t, N>>`, and `decltype` is how you name the result. The deduction guide for a plain storage is constrained to non-owners, so an owner and the storage inside it do not tie.
 4. The variable-size sequence of `bool` is named `xstd::bit_vector` and decoupled from the general `std::vector` class template.
 5. All containers use a dense (single bit per element) representation. Variable-size sparse sets can be provided by `flat_set`, either in [Boost](https://www.boost.org/doc/libs/1_80_0/doc/html/boost/container/flat_set.html) or in [C++ 23](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p1222r4.pdf).
 6. The names above are the short ones, which fix `Block` to `std::size_t` and so take only the width, or nothing at all in the dynamic column where there is no width to give. Each has a `basic_` form that leaves the block open: `xstd::basic_bit_static_set<Block, N>`, `xstd::basic_bit_array<Block, N>`, `xstd::basic_bitset<Block, N>` and their inplace siblings, and `xstd::basic_bit_set<Block, Allocator>`, `xstd::basic_bit_vector<Block, Allocator>`, `xstd::basic_dynamic_bitset<Block, Allocator>` down the dynamic column. So `xstd::bit_set` is an alias, not a template, and `xstd::basic_bit_set<std::uint8_t>` is how a block is chosen.

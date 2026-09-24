@@ -58,7 +58,7 @@ template<class T>
 auto check_set_walk(T const& empty, std::set<std::size_t> const& model)
         -> void
 {
-        using iterator = xstd::detail::bits::bidirectional_bit_iterator<T>;
+        using iterator = xstd::bits::detail::bidirectional_bit_iterator<T>;
         auto const c = make(empty, model);
         auto const size = c.size();
 
@@ -134,29 +134,29 @@ auto check_every_set_pattern(T const& empty)
 
 BOOST_AUTO_TEST_SUITE(Bidirectional)
 
-using ArrayTypes = test::graded_extents<xstd::detail::bits::contiguous_bit_array>;
+using ArrayTypes = test::graded_extents<xstd::bits::detail::contiguous_bit_array>;
 
-using Bits = xstd::detail::bits::contiguous_bit_array<std::uint64_t, 200>;
+using Bits = xstd::bits::detail::contiguous_bit_array<std::uint64_t, 200>;
 
 BOOST_AUTO_TEST_CASE(AnIteratorIsAPointerAndAPosition)
 {
         constexpr auto two_words = 2UZ * sizeof(void*);
 
-        static_assert(sizeof(xstd::detail::bits::bidirectional_bit_iterator<Bits>) == two_words);
-        static_assert(sizeof(xstd::detail::bits::bidirectional_bit_reference<Bits>) == two_words);
+        static_assert(sizeof(xstd::bits::detail::bidirectional_bit_iterator<Bits>) == two_words);
+        static_assert(sizeof(xstd::bits::detail::bidirectional_bit_reference<Bits>) == two_words);
 }
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheSetIteratorIsBidirectional, T, ArrayTypes)
 {
-        static_assert(std::bidirectional_iterator<xstd::detail::bits::bidirectional_bit_iterator<T>>);
+        static_assert(std::bidirectional_iterator<xstd::bits::detail::bidirectional_bit_iterator<T>>);
 }
 
 // The set proxy never writes, so nothing distinguishes its const spelling.
 BOOST_AUTO_TEST_CASE(TheSetProxyNeverWrites)
 {
-        static_assert(not std::is_assignable_v<xstd::detail::bits::bidirectional_bit_reference<Bits> const&, std::size_t>);
-        static_assert(std::is_convertible_v<xstd::detail::bits::bidirectional_bit_reference<Bits>, std::size_t>);
-        static_assert(std::is_convertible_v<xstd::detail::bits::bidirectional_bit_reference<Bits const>, std::size_t>);
+        static_assert(not std::is_assignable_v<xstd::bits::detail::bidirectional_bit_reference<Bits> const&, std::size_t>);
+        static_assert(std::is_convertible_v<xstd::bits::detail::bidirectional_bit_reference<Bits>, std::size_t>);
+        static_assert(std::is_convertible_v<xstd::bits::detail::bidirectional_bit_reference<Bits const>, std::size_t>);
 
         BOOST_CHECK(true);
 }
@@ -164,9 +164,9 @@ BOOST_AUTO_TEST_CASE(TheSetProxyNeverWrites)
 // What a container's const_reference must be: trivially copyable, never assignable, comparable by value.
 BOOST_AUTO_TEST_CASE(TheReadOnlyProxiesAreValues)
 {
-        static_assert(test::value_reference<xstd::detail::bits::bidirectional_bit_reference<Bits>>);
-        static_assert(test::value_reference<xstd::detail::bits::bidirectional_bit_reference<Bits const>>);
-        static_assert(std::is_trivially_destructible_v<xstd::detail::bits::bidirectional_bit_iterator<Bits>>);
+        static_assert(test::value_reference<xstd::bits::detail::bidirectional_bit_reference<Bits>>);
+        static_assert(test::value_reference<xstd::bits::detail::bidirectional_bit_reference<Bits const>>);
+        static_assert(std::is_trivially_destructible_v<xstd::bits::detail::bidirectional_bit_iterator<Bits>>);
 
         BOOST_CHECK(true);
 }
@@ -183,7 +183,7 @@ BOOST_AUTO_TEST_CASE(TheProxyFormatsAsItsValue)
         auto c = Bits();
         c.set(42);
 
-        BOOST_CHECK_EQUAL(format_as(*xstd::detail::bits::bidirectional_bit_iterator<Bits>(&c, 42UZ)), 42UZ);
+        BOOST_CHECK_EQUAL(format_as(*xstd::bits::detail::bidirectional_bit_iterator<Bits>(&c, 42UZ)), 42UZ);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
@@ -193,10 +193,10 @@ BOOST_AUTO_TEST_SUITE(BidirectionalThroughTheView)
 
 namespace {
 
-using Viewed = xstd::detail::bits::contiguous_bit_array<std::uint64_t, 64>;
+using Viewed = xstd::bits::detail::contiguous_bit_array<std::uint64_t, 64>;
 
-using SetIt = xstd::detail::bits::bidirectional_bit_iterator<Viewed>;
-using SetRef = xstd::detail::bits::bidirectional_bit_reference<Viewed>;
+using SetIt = xstd::bits::detail::bidirectional_bit_iterator<Viewed>;
+using SetRef = xstd::bits::detail::bidirectional_bit_reference<Viewed>;
 
 // Dependent, so a type without the member is a substitution failure rather than a hard error.
 template<class R>

@@ -27,10 +27,10 @@
 
 namespace {
 
-using Storage = xstd::detail::bits::contiguous_bit_array<std::uint64_t, 100>;
+using Storage = xstd::bits::detail::contiguous_bit_array<std::uint64_t, 100>;
 using Owner = xstd::basic_bit_static_set<std::uint64_t, 100>;
-using View = xstd::detail::bits::set_adaptor<Storage, xstd::detail::bits::storage::borrowed>;
-using Reader = xstd::detail::bits::set_adaptor<Storage const, xstd::detail::bits::storage::borrowed>;
+using View = xstd::bits::detail::set_adaptor<Storage, xstd::bits::detail::storage::borrowed>;
+using Reader = xstd::bits::detail::set_adaptor<Storage const, xstd::bits::detail::storage::borrowed>;
 
 // Dependent, so an absent member is a false rather than a hard error.
 template<class S>
@@ -223,13 +223,13 @@ BOOST_AUTO_TEST_CASE(TheViewsAnswerEveryReadOverEveryStorage)
 {
         for (auto const& model : {std::set<std::size_t>{}, {0UZ}, {3UZ, 63UZ, 64UZ, 99UZ}, {99UZ}}) {
                 auto a = Storage();
-                auto v = xstd::detail::bits::contiguous_bit_vector<std::uint64_t>(100UZ);
+                auto v = xstd::bits::detail::contiguous_bit_vector<std::uint64_t>(100UZ);
                 for (auto const p : model) {
                         a.set(p);
                         v.set(p);
                 }
                 check_reads(View(a), model, 100UZ);
-                check_reads(xstd::detail::bits::set_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint64_t>, xstd::detail::bits::storage::borrowed>(v), model, 100UZ);
+                check_reads(xstd::bits::detail::set_adaptor<xstd::bits::detail::contiguous_bit_vector<std::uint64_t>, xstd::bits::detail::storage::borrowed>(v), model, 100UZ);
         }
 }
 
@@ -241,13 +241,13 @@ BOOST_AUTO_TEST_CASE(MaxSizeIsThePositionsThereAreToHold)
         BOOST_CHECK_EQUAL(View(storage).max_size(), 100UZ);
 
         // An owner grows to what its storage can address, which is whole blocks of it and never the address space.
-        using Heap = xstd::detail::bits::set_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint64_t>, xstd::detail::bits::storage::owned>;
-        BOOST_CHECK_EQUAL(Heap().max_size(), xstd::detail::bits::contiguous_bit_vector<std::uint64_t>().max_size());
+        using Heap = xstd::bits::detail::set_adaptor<xstd::bits::detail::contiguous_bit_vector<std::uint64_t>, xstd::bits::detail::storage::owned>;
+        BOOST_CHECK_EQUAL(Heap().max_size(), xstd::bits::detail::contiguous_bit_vector<std::uint64_t>().max_size());
         BOOST_CHECK_LT(Heap().max_size(), std::numeric_limits<std::size_t>::max());
 
         // A view cannot grow what it views, so its max_size is that width -- and filling it is what full() means.
-        auto v = xstd::detail::bits::contiguous_bit_vector<std::uint64_t>(10UZ);
-        auto const view = xstd::detail::bits::set_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint64_t>, xstd::detail::bits::storage::borrowed>(v);
+        auto v = xstd::bits::detail::contiguous_bit_vector<std::uint64_t>(10UZ);
+        auto const view = xstd::bits::detail::set_adaptor<xstd::bits::detail::contiguous_bit_vector<std::uint64_t>, xstd::bits::detail::storage::borrowed>(v);
         BOOST_CHECK_EQUAL(view.max_size(), 10UZ);
         BOOST_CHECK(not view.full());
         view.fill();
@@ -255,22 +255,22 @@ BOOST_AUTO_TEST_CASE(MaxSizeIsThePositionsThereAreToHold)
         BOOST_CHECK_EQUAL(view.size(), 10UZ);
 
         // A run-time width, read through the view over it.
-        using Dynamic = xstd::detail::bits::set_adaptor<xstd::detail::bits::contiguous_bit_vector<std::uint64_t>, xstd::detail::bits::storage::borrowed>;
-        auto b = xstd::detail::bits::contiguous_bit_vector<std::uint64_t>(9UZ);
+        using Dynamic = xstd::bits::detail::set_adaptor<xstd::bits::detail::contiguous_bit_vector<std::uint64_t>, xstd::bits::detail::storage::borrowed>;
+        auto b = xstd::bits::detail::contiguous_bit_vector<std::uint64_t>(9UZ);
         BOOST_CHECK_EQUAL(Dynamic(b).max_size(), 9UZ);
 }
 
 // The set operations use the storage's members where it has them, and its bulk operators where it has not.
 BOOST_AUTO_TEST_CASE(TheSetPredicatesAgreeAcrossStorages)
 {
-        using Small = xstd::detail::bits::contiguous_bit_array<std::uint64_t, 9>;
+        using Small = xstd::bits::detail::contiguous_bit_array<std::uint64_t, 9>;
         auto a = Small();
         auto b = Small();
         auto e = Small();
         a.set(1);
         b.set(1);
         b.set(3);
-        using S = xstd::detail::bits::set_adaptor<Small, xstd::detail::bits::storage::borrowed>;
+        using S = xstd::bits::detail::set_adaptor<Small, xstd::bits::detail::storage::borrowed>;
         auto const x = S(a);
         auto const y = S(b);
 
@@ -658,7 +658,7 @@ namespace {
 [[nodiscard]] auto width_of(xstd::bit_set& s)
         -> std::size_t
 {
-        return xstd::detail::bits::set_adaptor<xstd::detail::bits::contiguous_bit_vector<std::size_t>, xstd::detail::bits::storage::borrowed>(s).max_size();
+        return xstd::bits::detail::set_adaptor<xstd::bits::detail::contiguous_bit_vector<std::size_t>, xstd::bits::detail::storage::borrowed>(s).max_size();
 }
 
 } // namespace

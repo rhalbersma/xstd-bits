@@ -45,12 +45,12 @@
 namespace xstd {
 
 // The windowed view a span hands back: declared here and defined in its own header, which this one must not include.
-template<specialization_of_TN<detail::bits::contiguous_bit_container> Bits, std::size_t Extent = std::dynamic_extent>
+template<specialization_of_TN<bits::detail::contiguous_bit_container> Bits, std::size_t Extent = std::dynamic_extent>
 class bit_subspan;
 
 } // namespace xstd
 
-namespace xstd::detail::bits {
+namespace xstd::bits::detail {
 
 namespace sequence {
 
@@ -1259,7 +1259,7 @@ constexpr auto erase(sequence_adaptor<Bits, Store, W, Derived, E>& c, U const& v
         -> sequence_adaptor<Bits, Store, W, Derived, E>::size_type
         requires requires { c.erase(c.cbegin(), c.cend()); }
 {
-        return xstd::detail::bits::erase_if(c, [&](bool x) -> bool { return x == value; });
+        return xstd::bits::detail::erase_if(c, [&](bool x) -> bool { return x == value; });
 }
 
 // [array]'s tuple interface, the one line of that synopsis a packed bool can answer; static width alone.
@@ -1297,17 +1297,17 @@ template<std::size_t I, class Bits, storage Store, window W, class Derived, std:
         return get<I>(c);
 }
 
-} // namespace xstd::detail::bits
+} // namespace xstd::bits::detail
 
 namespace boost::container_hash {
 
 // Not a range to ContainerHash and not tuple-like: Hash2 takes the hook, not its range or tuple overload.
-template<class Bits, xstd::detail::bits::storage Store, xstd::detail::bits::window W, class Derived, std::size_t E>
-struct is_range<xstd::detail::bits::sequence_adaptor<Bits, Store, W, Derived, E>> : std::false_type
+template<class Bits, xstd::bits::detail::storage Store, xstd::bits::detail::window W, class Derived, std::size_t E>
+struct is_range<xstd::bits::detail::sequence_adaptor<Bits, Store, W, Derived, E>> : std::false_type
 {};
 
-template<class Bits, xstd::detail::bits::storage Store, xstd::detail::bits::window W, class Derived, std::size_t E>
-struct is_tuple_like<xstd::detail::bits::sequence_adaptor<Bits, Store, W, Derived, E>> : std::false_type
+template<class Bits, xstd::bits::detail::storage Store, xstd::bits::detail::window W, class Derived, std::size_t E>
+struct is_tuple_like<xstd::bits::detail::sequence_adaptor<Bits, Store, W, Derived, E>> : std::false_type
 {};
 
 } // namespace boost::container_hash
@@ -1317,34 +1317,34 @@ namespace std {
 // NOLINTBEGIN(bugprone-std-namespace-modification)
 
 // [array.tuple]'s three over the static-width owner: tuple_element names the proxy, not bool.
-template<class Bits, xstd::detail::bits::storage Store, xstd::detail::bits::window W, class Derived, std::size_t E>
-        requires xstd::detail::bits::is_static_width_owner<Bits, Store, W>
-struct tuple_size<xstd::detail::bits::sequence_adaptor<Bits, Store, W, Derived, E>>
+template<class Bits, xstd::bits::detail::storage Store, xstd::bits::detail::window W, class Derived, std::size_t E>
+        requires xstd::bits::detail::is_static_width_owner<Bits, Store, W>
+struct tuple_size<xstd::bits::detail::sequence_adaptor<Bits, Store, W, Derived, E>>
         : integral_constant<size_t, Bits::extent>
 {};
 
-template<size_t I, class Bits, xstd::detail::bits::storage Store, xstd::detail::bits::window W, class Derived, std::size_t E>
-        requires xstd::detail::bits::is_static_width_owner<Bits, Store, W> and (I < Bits::extent)
-struct tuple_element<I, xstd::detail::bits::sequence_adaptor<Bits, Store, W, Derived, E>>
+template<size_t I, class Bits, xstd::bits::detail::storage Store, xstd::bits::detail::window W, class Derived, std::size_t E>
+        requires xstd::bits::detail::is_static_width_owner<Bits, Store, W> and (I < Bits::extent)
+struct tuple_element<I, xstd::bits::detail::sequence_adaptor<Bits, Store, W, Derived, E>>
 {
-        using type = xstd::detail::bits::sequence_adaptor<Bits, Store, W, Derived, E>::reference;
+        using type = xstd::bits::detail::sequence_adaptor<Bits, Store, W, Derived, E>::reference;
 };
 
-template<size_t I, class Bits, xstd::detail::bits::storage Store, xstd::detail::bits::window W, class Derived, std::size_t E>
-        requires xstd::detail::bits::is_static_width_owner<Bits, Store, W> and (I < Bits::extent)
-struct tuple_element<I, const xstd::detail::bits::sequence_adaptor<Bits, Store, W, Derived, E>>
+template<size_t I, class Bits, xstd::bits::detail::storage Store, xstd::bits::detail::window W, class Derived, std::size_t E>
+        requires xstd::bits::detail::is_static_width_owner<Bits, Store, W> and (I < Bits::extent)
+struct tuple_element<I, const xstd::bits::detail::sequence_adaptor<Bits, Store, W, Derived, E>>
 {
-        using type = xstd::detail::bits::sequence_adaptor<Bits, Store, W, Derived, E>::const_reference;
+        using type = xstd::bits::detail::sequence_adaptor<Bits, Store, W, Derived, E>::const_reference;
 };
 
 // The owner hashes as std::vector<bool> does; a view no more than std::span does.
-template<class Bits, xstd::detail::bits::window W, class Derived>
-struct hash<xstd::detail::bits::sequence_adaptor<Bits, xstd::detail::bits::storage::owned, W, Derived>>
+template<class Bits, xstd::bits::detail::window W, class Derived>
+struct hash<xstd::bits::detail::sequence_adaptor<Bits, xstd::bits::detail::storage::owned, W, Derived>>
 {
-        [[nodiscard]] constexpr auto operator()(xstd::detail::bits::sequence_adaptor<Bits, xstd::detail::bits::storage::owned, W, Derived> const& v) const noexcept
+        [[nodiscard]] constexpr auto operator()(xstd::bits::detail::sequence_adaptor<Bits, xstd::bits::detail::storage::owned, W, Derived> const& v) const noexcept
                 -> std::size_t
         {
-                return xstd::detail::bits::std_hash(v);
+                return xstd::bits::detail::std_hash(v);
         }
 };
 
@@ -1356,11 +1356,11 @@ struct hash<xstd::detail::bits::sequence_adaptor<Bits, xstd::detail::bits::stora
 namespace std::ranges {
 
 // A view is a std::ranges::view outright and borrowed, as set_adaptor's is.
-template<class Bits, xstd::detail::bits::window W>
-inline constexpr bool enable_view<xstd::detail::bits::sequence_adaptor<Bits, xstd::detail::bits::storage::borrowed, W>> = true;
+template<class Bits, xstd::bits::detail::window W>
+inline constexpr bool enable_view<xstd::bits::detail::sequence_adaptor<Bits, xstd::bits::detail::storage::borrowed, W>> = true;
 
-template<class Bits, xstd::detail::bits::window W>
-inline constexpr bool enable_borrowed_range<xstd::detail::bits::sequence_adaptor<Bits, xstd::detail::bits::storage::borrowed, W>> = true;
+template<class Bits, xstd::bits::detail::window W>
+inline constexpr bool enable_borrowed_range<xstd::bits::detail::sequence_adaptor<Bits, xstd::bits::detail::storage::borrowed, W>> = true;
 
 } // namespace std::ranges
 

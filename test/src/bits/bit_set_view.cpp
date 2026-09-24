@@ -44,7 +44,7 @@ auto eight_bits_with_three_set()
         return bits;
 }
 
-using Blocks = xstd::detail::bits::contiguous_bit_array<std::size_t, 8>;
+using Blocks = xstd::bits::detail::contiguous_bit_array<std::size_t, 8>;
 
 template<class T>
 using view_of = decltype(xstd::bit_set_view(std::declval<T&>()));
@@ -61,13 +61,13 @@ constexpr auto takes_a_set_view(xstd::bit_set_view<Blocks> v) noexcept
 // The view is the referring adaptor under another name, and over an owner it refers into the storage the owner wraps.
 BOOST_AUTO_TEST_CASE(TheViewIsTheReferringAdaptor)
 {
-        static_assert(std::derived_from<xstd::bit_set_view<Blocks>, xstd::detail::bits::set_adaptor<Blocks, xstd::detail::bits::storage::borrowed, xstd::bit_set_view<Blocks>>>);
+        static_assert(std::derived_from<xstd::bit_set_view<Blocks>, xstd::bits::detail::set_adaptor<Blocks, xstd::bits::detail::storage::borrowed, xstd::bit_set_view<Blocks>>>);
         static_assert(std::same_as<view_of<Blocks>, xstd::bit_set_view<Blocks>>);
         static_assert(std::same_as<view_of<Blocks const>, xstd::bit_set_view<Blocks const>>);
 
-        static_assert(std::same_as<view_of<xstd::bitset<8>>, xstd::bit_set_view<xstd::detail::bits::contiguous_bit_array<std::size_t, 8>>>);
-        static_assert(std::same_as<view_of<xstd::bitset<8> const>, xstd::bit_set_view<xstd::detail::bits::contiguous_bit_array<std::size_t, 8> const>>);
-        static_assert(std::same_as<view_of<xstd::bit_static_set<8>>, xstd::bit_set_view<xstd::detail::bits::contiguous_bit_array<std::size_t, 8>>>);
+        static_assert(std::same_as<view_of<xstd::bitset<8>>, xstd::bit_set_view<xstd::bits::detail::contiguous_bit_array<std::size_t, 8>>>);
+        static_assert(std::same_as<view_of<xstd::bitset<8> const>, xstd::bit_set_view<xstd::bits::detail::contiguous_bit_array<std::size_t, 8> const>>);
+        static_assert(std::same_as<view_of<xstd::bit_static_set<8>>, xstd::bit_set_view<xstd::bits::detail::contiguous_bit_array<std::size_t, 8>>>);
 }
 
 // A bitset is committed to neither reading, a sequence owner to the sequence one; only the first admits a set view.

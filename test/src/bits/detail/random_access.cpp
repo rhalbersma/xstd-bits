@@ -68,34 +68,34 @@ template<class T>
 
 BOOST_AUTO_TEST_SUITE(RandomAccess)
 
-using ArrayTypes = test::graded_extents<xstd::detail::bits::contiguous_bit_array>;
+using ArrayTypes = test::graded_extents<xstd::bits::detail::contiguous_bit_array>;
 
-using Bits = xstd::detail::bits::contiguous_bit_array<std::uint64_t, 200>;
+using Bits = xstd::bits::detail::contiguous_bit_array<std::uint64_t, 200>;
 
 BOOST_AUTO_TEST_CASE(AnIteratorIsAPointerAndAPosition)
 {
         constexpr auto two_words = 2UZ * sizeof(void*);
 
-        static_assert(sizeof(xstd::detail::bits::random_access_bit_iterator<Bits>) == two_words);
-        static_assert(sizeof(xstd::detail::bits::random_access_bit_reference<Bits>) == two_words);
-        static_assert(sizeof(xstd::detail::bits::random_access_bit_iterator<Bits const>) == two_words);
-        static_assert(sizeof(xstd::detail::bits::random_access_bit_reference<Bits const>) == two_words);
+        static_assert(sizeof(xstd::bits::detail::random_access_bit_iterator<Bits>) == two_words);
+        static_assert(sizeof(xstd::bits::detail::random_access_bit_reference<Bits>) == two_words);
+        static_assert(sizeof(xstd::bits::detail::random_access_bit_iterator<Bits const>) == two_words);
+        static_assert(sizeof(xstd::bits::detail::random_access_bit_reference<Bits const>) == two_words);
 }
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheSequenceIteratorIsRandomAccess, T, ArrayTypes)
 {
-        static_assert(std::random_access_iterator<xstd::detail::bits::random_access_bit_iterator<T>>);
-        static_assert(std::random_access_iterator<xstd::detail::bits::random_access_bit_iterator<T const>>);
+        static_assert(std::random_access_iterator<xstd::bits::detail::random_access_bit_iterator<T>>);
+        static_assert(std::random_access_iterator<xstd::bits::detail::random_access_bit_iterator<T const>>);
 
-        static_assert(std::sortable<xstd::detail::bits::random_access_bit_iterator<T>>);
-        static_assert(not std::sortable<xstd::detail::bits::random_access_bit_iterator<T const>>);
+        static_assert(std::sortable<xstd::bits::detail::random_access_bit_iterator<T>>);
+        static_assert(not std::sortable<xstd::bits::detail::random_access_bit_iterator<T const>>);
 }
 
 // Const is in the Bits and nowhere else: the proxy asks the storage, and a const storage has no assign to reach.
 BOOST_AUTO_TEST_CASE(ConstnessLivesInTheBits)
 {
-        using Ref = xstd::detail::bits::random_access_bit_reference<Bits>;
-        using ConstRef = xstd::detail::bits::random_access_bit_reference<Bits const>;
+        using Ref = xstd::bits::detail::random_access_bit_reference<Bits>;
+        using ConstRef = xstd::bits::detail::random_access_bit_reference<Bits const>;
 
         static_assert(std::is_assignable_v<Ref const&, bool>);
         static_assert(not std::is_assignable_v<ConstRef const&, bool>);
@@ -109,21 +109,21 @@ BOOST_AUTO_TEST_CASE(ConstnessLivesInTheBits)
 // What a container's const_reference must be: trivially copyable, never assignable, comparable by value.
 BOOST_AUTO_TEST_CASE(TheReadOnlyProxiesAreValues)
 {
-        static_assert(test::value_reference<xstd::detail::bits::random_access_bit_reference<Bits const>>);
+        static_assert(test::value_reference<xstd::bits::detail::random_access_bit_reference<Bits const>>);
 
         // The writable proxy is the one exception by design, and trivial to copy and destroy all the same.
-        static_assert(not test::value_reference<xstd::detail::bits::random_access_bit_reference<Bits>>);
-        static_assert(std::is_trivially_copy_constructible_v<xstd::detail::bits::random_access_bit_reference<Bits>>);
-        static_assert(std::is_trivially_destructible_v<xstd::detail::bits::random_access_bit_reference<Bits>>);
-        static_assert(std::is_trivially_destructible_v<xstd::detail::bits::random_access_bit_iterator<Bits>>);
+        static_assert(not test::value_reference<xstd::bits::detail::random_access_bit_reference<Bits>>);
+        static_assert(std::is_trivially_copy_constructible_v<xstd::bits::detail::random_access_bit_reference<Bits>>);
+        static_assert(std::is_trivially_destructible_v<xstd::bits::detail::random_access_bit_reference<Bits>>);
+        static_assert(std::is_trivially_destructible_v<xstd::bits::detail::random_access_bit_iterator<Bits>>);
 
         BOOST_CHECK(true);
 }
 
 BOOST_AUTO_TEST_CASE(AMutableSequenceIteratorConvertsToItsConstTwin)
 {
-        using It = xstd::detail::bits::random_access_bit_iterator<Bits>;
-        using ConstIt = xstd::detail::bits::random_access_bit_iterator<Bits const>;
+        using It = xstd::bits::detail::random_access_bit_iterator<Bits>;
+        using ConstIt = xstd::bits::detail::random_access_bit_iterator<Bits const>;
 
         static_assert(std::convertible_to<It, ConstIt>);
         static_assert(not std::convertible_to<ConstIt, It>);
@@ -142,8 +142,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheSequenceIteratorReadsAndWritesThroughTheStorage
         auto c = T();
         // Written through check_position below, which the check cannot see past a dependent call.
         auto model = std::vector<bool>(N); // NOLINT(misc-const-correctness)
-        auto const first = xstd::detail::bits::random_access_bit_iterator<T>(&c, 0UZ);
-        BOOST_CHECK(first == xstd::detail::bits::random_access_bit_iterator<T const>(&c, 0UZ));
+        auto const first = xstd::bits::detail::random_access_bit_iterator<T>(&c, 0UZ);
+        BOOST_CHECK(first == xstd::bits::detail::random_access_bit_iterator<T const>(&c, 0UZ));
 
         // Nothing to step over at a zero width, so nothing is instantiated for it.
         if constexpr (N != 0UZ) {
@@ -158,7 +158,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheSequenceIteratorReadsAndWritesThroughTheStorage
 BOOST_AUTO_TEST_CASE(ProxyAssignmentCopiesTheBitAndSwapSwapsTheBits)
 {
         auto c = Bits();
-        auto const first = xstd::detail::bits::random_access_bit_iterator<Bits>(&c, 0UZ);
+        auto const first = xstd::bits::detail::random_access_bit_iterator<Bits>(&c, 0UZ);
         auto const second = std::next(first);
 
         *first = true;
@@ -180,8 +180,8 @@ BOOST_AUTO_TEST_CASE(ProxyAssignmentCopiesTheBitAndSwapSwapsTheBits)
 BOOST_AUTO_TEST_CASE(TheSequenceIteratorArithmeticIsIndexArithmetic)
 {
         auto c = Bits();
-        auto const first = xstd::detail::bits::random_access_bit_iterator<Bits>(&c, 0UZ);
-        auto const last = xstd::detail::bits::random_access_bit_iterator<Bits>(&c, 200UZ);
+        auto const first = xstd::bits::detail::random_access_bit_iterator<Bits>(&c, 0UZ);
+        auto const last = xstd::bits::detail::random_access_bit_iterator<Bits>(&c, 200UZ);
         BOOST_CHECK_EQUAL(last - first, 200);
         BOOST_CHECK(first <= last);
         BOOST_CHECK(first <= first and last >= last);
@@ -204,7 +204,7 @@ BOOST_AUTO_TEST_CASE(TheSequenceIteratorArithmeticIsIndexArithmetic)
 
 BOOST_AUTO_TEST_CASE(RangesAlgorithmsReachTheBitsThroughIterMoveAndIterSwap)
 {
-        using iterator = xstd::detail::bits::random_access_bit_iterator<Bits>;
+        using iterator = xstd::bits::detail::random_access_bit_iterator<Bits>;
 
         auto c = Bits();
         auto model = std::vector<bool>(200);
@@ -243,7 +243,7 @@ BOOST_AUTO_TEST_CASE(RangesAlgorithmsReachTheBitsThroughIterMoveAndIterSwap)
         BOOST_CHECK(as_vector(c) == model);
 
         // and the const twin is reachable by the reverse adaptor, being a proper bidirectional iterator.
-        auto const rfirst = std::reverse_iterator(xstd::detail::bits::random_access_bit_iterator<Bits const>(last));
+        auto const rfirst = std::reverse_iterator(xstd::bits::detail::random_access_bit_iterator<Bits const>(last));
         BOOST_CHECK_EQUAL(static_cast<bool>(*rfirst), model.back());
 }
 
@@ -253,8 +253,8 @@ BOOST_AUTO_TEST_CASE(TheProxyFormatsAsItsValue)
         auto c = Bits();
         c.set(42);
 
-        BOOST_CHECK_EQUAL(format_as(*xstd::detail::bits::random_access_bit_iterator<Bits>(&c, 42UZ)), true);
-        BOOST_CHECK_EQUAL(format_as(*xstd::detail::bits::random_access_bit_iterator<Bits const>(&c, 41UZ)), false);
+        BOOST_CHECK_EQUAL(format_as(*xstd::bits::detail::random_access_bit_iterator<Bits>(&c, 42UZ)), true);
+        BOOST_CHECK_EQUAL(format_as(*xstd::bits::detail::random_access_bit_iterator<Bits const>(&c, 41UZ)), false);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
@@ -264,10 +264,10 @@ BOOST_AUTO_TEST_SUITE(RandomAccessThroughTheView)
 
 namespace {
 
-using Viewed = xstd::detail::bits::contiguous_bit_array<std::uint64_t, 64>;
+using Viewed = xstd::bits::detail::contiguous_bit_array<std::uint64_t, 64>;
 
-using ArrIt = xstd::detail::bits::random_access_bit_iterator<Viewed>;
-using ArrRef = xstd::detail::bits::random_access_bit_reference<Viewed>;
+using ArrIt = xstd::bits::detail::random_access_bit_iterator<Viewed>;
+using ArrRef = xstd::bits::detail::random_access_bit_reference<Viewed>;
 
 // Dependent, so a type without the member is a substitution failure rather than a hard error.
 template<class R>
@@ -303,12 +303,12 @@ BOOST_AUTO_TEST_CASE(AddressOfAProxyYieldsAnIterator)
 // The const path is a proxy too, the same one minus the assignment -- not the plain bool libstdc++ hands back.
 BOOST_AUTO_TEST_CASE(TheConstPathIsAProxyAsWell)
 {
-        using ConstArrRef = xstd::detail::bits::random_access_bit_reference<Viewed const>;
+        using ConstArrRef = xstd::bits::detail::random_access_bit_reference<Viewed const>;
 
         static_assert(std::same_as<xstd::bit_span<Viewed const>::reference, ConstArrRef>);
         static_assert(std::is_convertible_v<ConstArrRef, bool>);
         static_assert(has_address_of<ConstArrRef>);
-        static_assert(std::same_as<decltype(&std::declval<ConstArrRef const&>()), xstd::detail::bits::random_access_bit_iterator<Viewed const>>);
+        static_assert(std::same_as<decltype(&std::declval<ConstArrRef const&>()), xstd::bits::detail::random_access_bit_iterator<Viewed const>>);
 
         // and it is exactly the assignment that the const one drops.
         static_assert(std::is_assignable_v<ArrRef const&, bool>);

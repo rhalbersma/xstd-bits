@@ -8,7 +8,7 @@
 
 #include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
 
-namespace xstd::detail::bits {
+namespace xstd::bits::detail {
 
 // Both masks compare against a zero Block rather than convert to bool, which is the question each name asks.
 template<xstd::unsigned_integer Block>
@@ -32,6 +32,6 @@ template<xstd::unsigned_integer Block>
         return lhs != rhs;
 }
 
-} // namespace xstd::detail::bits
+} // namespace xstd::bits::detail
 
 #endif // XSTD_BITS_DETAIL_PRED_HPP

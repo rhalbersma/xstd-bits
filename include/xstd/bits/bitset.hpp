@@ -18,11 +18,11 @@ namespace xstd {
 
 // [template.bitset] over a packed array of Block: what std::bitset<N> is, with the word type in the open.
 template<xstd::unsigned_integer Block, std::size_t N>
-using basic_bitset = bitset_adaptor<std::array<Block, detail::bits::num_blocks_v<Block, N>>, N>;
+using basic_bitset = bitset_adaptor<std::array<Block, bits::detail::num_blocks_v<Block, N>>, N>;
 
 // Written over the adaptor rather than basic_bitset, as MSVC deduces through one alias here but not through two.
 template<std::size_t N>
-using bitset = bitset_adaptor<std::array<std::size_t, detail::bits::num_blocks_v<std::size_t, N>>, N>;
+using bitset = bitset_adaptor<std::array<std::size_t, bits::detail::num_blocks_v<std::size_t, N>>, N>;
 
 // The width rounded up to whole blocks: no unused tail, so every block is the value.
 namespace aligned {

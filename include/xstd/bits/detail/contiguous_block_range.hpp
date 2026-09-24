@@ -14,7 +14,7 @@
 #include <span>                                       // span
 #include <type_traits>                                // is_const_v
 
-namespace xstd::detail::bits {
+namespace xstd::bits::detail {
 
 // Whether a range IS blocks; block_readable asks if a trait hands a container's blocks over.
 template<class C>
@@ -42,6 +42,6 @@ inline constexpr bool is_block_span<std::span<B, E>> = true;
 template<class C>
 concept borrowed_block_span = is_block_span<C>;
 
-} // namespace xstd::detail::bits
+} // namespace xstd::bits::detail
 
 #endif // XSTD_BITS_DETAIL_CONTIGUOUS_BLOCK_RANGE_HPP

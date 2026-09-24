@@ -9,6 +9,7 @@
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_AUTO_TEST_CASE_TEMPLATE
 #include <cstddef>                      // size_t
 #include <format>                       // format
+#include <opt/set/detail/isqrt.hpp>     // isqrt
 #include <opt/set/sieve.hpp>            // filter_twins, generate_candidates, incremental_sieve, sift_primes0, sift_primes1, sift_primes_incremental, sift_primes_segmented
 #include <set>                          // set
 #include <tuple>                        // tuple
@@ -127,20 +128,20 @@ BOOST_AUTO_TEST_CASE(TheIncrementalSieveGeneratesWithoutABound)
 // The segmented sieve sizes its base pass with isqrt, which needs no n < 2 guard, the Newton loop being total there.
 BOOST_AUTO_TEST_CASE(TheIntegerSquareRootIsExactAndTotal)
 {
-        BOOST_CHECK_EQUAL(opt::detail::sieve::isqrt(0UZ), 0UZ);
-        BOOST_CHECK_EQUAL(opt::detail::sieve::isqrt(1UZ), 1UZ);
+        BOOST_CHECK_EQUAL(opt::detail::isqrt(0UZ), 0UZ);
+        BOOST_CHECK_EQUAL(opt::detail::isqrt(1UZ), 1UZ);
 
         // r * r <= n < (r + 1) * (r + 1) is the whole contract, checked either side of each square.
         for (auto r = 1UZ; r <= 100UZ; ++r) {
-                BOOST_CHECK_EQUAL(opt::detail::sieve::isqrt(r * r), r);
-                BOOST_CHECK_EQUAL(opt::detail::sieve::isqrt((r * r) - 1UZ), r - 1UZ);
-                BOOST_CHECK_EQUAL(opt::detail::sieve::isqrt((r * r) + 1UZ), r);
+                BOOST_CHECK_EQUAL(opt::detail::isqrt(r * r), r);
+                BOOST_CHECK_EQUAL(opt::detail::isqrt((r * r) - 1UZ), r - 1UZ);
+                BOOST_CHECK_EQUAL(opt::detail::isqrt((r * r) + 1UZ), r);
         }
 
         // And at widths where a floating-point isqrt would start rounding the wrong way.
-        BOOST_CHECK_EQUAL(opt::detail::sieve::isqrt(1UZ << 20UZ), 1UZ << 10UZ);
-        BOOST_CHECK_EQUAL(opt::detail::sieve::isqrt((1UZ << 52UZ) - 1UZ), (1UZ << 26UZ) - 1UZ);
-        BOOST_CHECK_EQUAL(opt::detail::sieve::isqrt(1UZ << 52UZ), 1UZ << 26UZ);
+        BOOST_CHECK_EQUAL(opt::detail::isqrt(1UZ << 20UZ), 1UZ << 10UZ);
+        BOOST_CHECK_EQUAL(opt::detail::isqrt((1UZ << 52UZ) - 1UZ), (1UZ << 26UZ) - 1UZ);
+        BOOST_CHECK_EQUAL(opt::detail::isqrt(1UZ << 52UZ), 1UZ << 26UZ);
 }
 
 // generate_candidates is total in n: below two there is nothing to sift, which is an answer.

@@ -10,7 +10,7 @@
 #include <cstdint>     // uint8_t
 #include <type_traits> // conditional_t, is_const_v, remove_const_t
 
-namespace xstd::detail::bits {
+namespace xstd::bits::detail {
 
 // Named for what is owned rather than for the owner: borrowed is the word std::ranges::enable_borrowed_range uses.
 enum class storage : bool { owned,
@@ -61,6 +61,6 @@ concept owner_of =
         std::same_as<typename owned_storage<std::remove_const_t<Owner>>::bits_type, std::remove_const_t<Bits>> and
         (std::is_const_v<Bits> or not std::is_const_v<Owner>);
 
-} // namespace xstd::detail::bits
+} // namespace xstd::bits::detail
 
 #endif // XSTD_BITS_DETAIL_OWNERSHIP_HPP

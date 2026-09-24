@@ -17,7 +17,7 @@ namespace xstd {
 
 // The set reading over the small-vector column; the allocator is Boost's own, as that container defaults to it.
 template<xstd::unsigned_integer Block, std::size_t N, class Alloc = boost::container::new_allocator<Block>>
-using basic_bit_small_set = bit_set_adaptor<boost::container::small_vector<Block, detail::bits::num_blocks_v<Block, N>, Alloc>>;
+using basic_bit_small_set = bit_set_adaptor<boost::container::small_vector<Block, bits::detail::num_blocks_v<Block, N>, Alloc>>;
 
 template<std::size_t N>
 using bit_small_set = basic_bit_small_set<std::size_t, N>;

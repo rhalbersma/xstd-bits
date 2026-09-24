@@ -10,7 +10,7 @@
 #include <cstddef>                                 // size_t
 
 // A shift count reaches a Block as int, not as the size_t the containers count positions in.
-namespace xstd::detail::bits {
+namespace xstd::bits::detail {
 
 template<xstd::unsigned_integer Block>
 [[nodiscard]] constexpr auto shl(Block block, std::size_t n) noexcept
@@ -26,6 +26,6 @@ template<xstd::unsigned_integer Block>
         return static_cast<Block>(block >> static_cast<int>(n)); // NOLINT(bugprone-signed-bitwise)
 }
 
-} // namespace xstd::detail::bits
+} // namespace xstd::bits::detail
 
 #endif // XSTD_BITS_DETAIL_SHIFT_HPP

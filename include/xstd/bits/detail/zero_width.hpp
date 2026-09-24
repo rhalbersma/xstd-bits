@@ -8,12 +8,12 @@
 
 #include <type_traits> // remove_const_t
 
-namespace xstd::detail::bits {
+namespace xstd::bits::detail {
 
 // A zero width answers zero to every question: the exclusive scans need a position it has none to give.
 template<class Bits>
 constexpr bool zero_width = std::remove_const_t<Bits>::extent == 0UZ;
 
-} // namespace xstd::detail::bits
+} // namespace xstd::bits::detail
 
 #endif // XSTD_BITS_DETAIL_ZERO_WIDTH_HPP

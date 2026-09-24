@@ -14,7 +14,7 @@
 #include <type_traits>                     // is_class_v, is_convertible_v, is_nothrow_constructible_v, remove_const_t
 
 // The iterator is the primitive: a pointer and a position, reaching the bits through the storage alone.
-namespace xstd::detail::bits {
+namespace xstd::bits::detail {
 
 template<class Bits>
 class bidirectional_bit_iterator;
@@ -157,16 +157,16 @@ public:
         }
 };
 
-} // namespace xstd::detail::bits
+} // namespace xstd::bits::detail
 
 // std::format over the containers, which needs nothing said about the containers themselves.
 template<class Bits, class CharT>
 // NOLINTNEXTLINE(bugprone-std-namespace-modification)
-struct std::formatter<xstd::detail::bits::bidirectional_bit_reference<Bits>, CharT>
+struct std::formatter<xstd::bits::detail::bidirectional_bit_reference<Bits>, CharT>
         : std::formatter<std::size_t, CharT>
 {
         template<class Context>
-        [[nodiscard]] constexpr auto format(xstd::detail::bits::bidirectional_bit_reference<Bits> ref, Context& ctx) const
+        [[nodiscard]] constexpr auto format(xstd::bits::detail::bidirectional_bit_reference<Bits> ref, Context& ctx) const
         {
                 // Unqualified, so ADL finds the proxy's own hidden friend.
                 return std::formatter<std::size_t, CharT>::format(format_as(ref), ctx);

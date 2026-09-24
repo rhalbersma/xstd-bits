@@ -6,6 +6,7 @@
 #ifndef TEST_BLOCK_TYPES_HPP
 #define TEST_BLOCK_TYPES_HPP
 
+#include <test/detail/expand.hpp>                  // expand
 #include <test/ext_int128.hpp>                     // TEST_HAS_ABSL_INT128, TEST_HAS_BOOST_INT128, uint128
 #include <test/uint128.hpp>                        // TEST_HAS_UINT128, uint128
 #include <xstd/ints/bit.hpp>                       // countl_zero, countr_zero, popcount
@@ -97,13 +98,6 @@ using in_block_extents = std::tuple<C<Block, 0>, C<Block, 1>, C<Block, digits_v<
 // The extents that straddle a block boundary, at the narrowest word: the arithmetic follows digits.
 template<template<class, std::size_t> class C, class Block>
 using straddling_extents = std::tuple<C<Block, digits_v<Block> - 1>, C<Block, digits_v<Block> + 1>, C<Block, (2 * digits_v<Block>)-1>, C<Block, 2 * digits_v<Block>>, C<Block, (2 * digits_v<Block>)+1>, C<Block, 3 * digits_v<Block>>>;
-
-namespace detail {
-
-template<template<class, std::size_t> class C, template<template<class, std::size_t> class, class> class Extents, class... Blocks>
-auto expand(std::tuple<Blocks...>) -> decltype(std::tuple_cat(std::declval<Extents<C, Blocks>>()...));
-
-} // namespace detail
 
 // Every word type at the extents it can afford: all within one block, and the narrow ones across boundaries too.
 template<template<class, std::size_t> class C>

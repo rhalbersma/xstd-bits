@@ -38,7 +38,7 @@
 #include <type_traits>                                       // conditional_t, is_const_v, is_nothrow_move_assignable_v, is_nothrow_move_constructible_v, remove_reference_t
 #include <utility>                                           // exchange, move, pair
 
-namespace xstd::detail::bits {
+namespace xstd::bits::detail {
 
 // Floored at one so a zero width still names a block.
 template<xstd::unsigned_integer Block, std::size_t N>
@@ -64,7 +64,7 @@ inline constexpr auto default_extent_v<std::span<Block, E>> = E == std::dynamic_
 // The one vehicle: it owns the unused-tail invariant, and has no iterators.
 template<class Blocks, std::size_t N = default_extent_v<Blocks>>
         requires contiguous_block_range<Blocks> or (borrowed_block_span<Blocks> and N == default_extent_v<Blocks>)
-class contiguous_bit_container : public detail::bits::allocator_base_type<Blocks>
+class contiguous_bit_container : public bits::detail::allocator_base_type<Blocks>
 {
 public:
         using block_type = std::ranges::range_value_t<Blocks>;
@@ -310,8 +310,8 @@ public:
                         if (diff == zero) {
                                 return std::strong_ordering::equal;
                         }
-                        auto const offset = detail::bits::countr_zero(diff);
-                        if (detail::bits::intersects(x.m_blocks[index], shl(unit, offset))) {
+                        auto const offset = bits::detail::countr_zero(diff);
+                        if (bits::detail::intersects(x.m_blocks[index], shl(unit, offset))) {
                                 return y.any_above(index, offset) ? std::strong_ordering::less : std::strong_ordering::greater;
                         }
                         return x.any_above(index, offset) ? std::strong_ordering::greater : std::strong_ordering::less;
@@ -334,8 +334,8 @@ public:
                         if (diff == zero) {
                                 return std::strong_ordering::equal;
                         }
-                        auto const offset = detail::bits::countr_zero(diff);
-                        return detail::bits::intersects(x.m_blocks[index], shl(unit, offset))
+                        auto const offset = bits::detail::countr_zero(diff);
+                        return bits::detail::intersects(x.m_blocks[index], shl(unit, offset))
                                        ? std::strong_ordering::greater
                                        : std::strong_ordering::less;
                 }
@@ -473,7 +473,7 @@ public:
         {
                 if constexpr (has_static_size and static_has_unused_bits) {
                         m_blocks[static_last_block] &= static_used_bits;
-                        assert(not detail::bits::intersects(m_blocks[static_last_block], static_unused_bits));
+                        assert(not bits::detail::intersects(m_blocks[static_last_block], static_unused_bits));
                 } else if constexpr (has_stored_size) {
                         // The run-time twin of the arm above: what the other asks the compiler, this asks the value.
                         if (has_unused_bits()) {
@@ -626,9 +626,9 @@ public:
         {
                 assert(any());
                 if constexpr (has_static_size and static_num_blocks == 1) {
-                        return detail::bits::countr_zero(m_blocks[0]);
+                        return bits::detail::countr_zero(m_blocks[0]);
                 } else if constexpr (has_static_size and static_num_blocks == 2) {
-                        return m_blocks[0] != zero ? detail::bits::countr_zero(m_blocks[0]) : detail::bits::countr_zero(m_blocks[1]) + bits_per_block;
+                        return m_blocks[0] != zero ? bits::detail::countr_zero(m_blocks[0]) : bits::detail::countr_zero(m_blocks[1]) + bits_per_block;
                 } else {
                         // A while, not a for: any() makes a for's exit untestable.
                         auto i = 0UZ;
@@ -636,7 +636,7 @@ public:
                                 assert(i != last_block());
                                 ++i;
                         }
-                        return (bits_per_block * i) + detail::bits::countr_zero(m_blocks[i]);
+                        return (bits_per_block * i) + bits::detail::countr_zero(m_blocks[i]);
                 }
         }
 
@@ -645,9 +645,9 @@ public:
         {
                 assert(any());
                 if constexpr (has_static_size and static_num_blocks == 1) {
-                        return last_bit() - detail::bits::countl_zero(m_blocks[0]);
+                        return last_bit() - bits::detail::countl_zero(m_blocks[0]);
                 } else if constexpr (has_static_size and static_num_blocks == 2) {
-                        return m_blocks[1] != zero ? last_bit() - detail::bits::countl_zero(m_blocks[1]) : left_bit - detail::bits::countl_zero(m_blocks[0]);
+                        return m_blocks[1] != zero ? last_bit() - bits::detail::countl_zero(m_blocks[1]) : left_bit - bits::detail::countl_zero(m_blocks[0]);
                 } else {
                         // The mirror of find_front, counting up from block i's base to drop the reversed range's term.
                         auto i = last_block();
@@ -655,7 +655,7 @@ public:
                                 assert(i != 0);
                                 --i;
                         }
-                        return (bits_per_block * i) + left_bit - detail::bits::countl_zero(m_blocks[i]);
+                        return (bits_per_block * i) + left_bit - bits::detail::countl_zero(m_blocks[i]);
                 }
         }
 
@@ -682,29 +682,29 @@ public:
                 }
                 if constexpr (has_static_size and static_num_blocks == 1) {
                         if (auto const block = shr(m_blocks[0], n); block != zero) {
-                                return n + detail::bits::countr_zero(block);
+                                return n + bits::detail::countr_zero(block);
                         }
                 } else if constexpr (has_static_size and static_num_blocks == 2) {
                         // Indexed, not branched: an if cost 10 instructions at -O3.
                         auto const [index, offset] = index_offset(n);
                         if (auto const block = shr(m_blocks[index], offset); block != zero) {
-                                return n + detail::bits::countr_zero(block);
+                                return n + bits::detail::countr_zero(block);
                         }
                         if (index == 0 and m_blocks[1] != zero) {
-                                return bits_per_block + detail::bits::countr_zero(m_blocks[1]);
+                                return bits_per_block + bits::detail::countr_zero(m_blocks[1]);
                         }
                 } else {
                         // No offset != 0 guard: >> 0 is the identity.
                         auto [index, offset] = index_offset(n);
                         if (auto const block = shr(m_blocks[index], offset); block != zero) {
-                                return n + detail::bits::countr_zero(block);
+                                return n + bits::detail::countr_zero(block);
                         }
                         ++index;
                         n += bits_per_block - offset;
                         // A plain index walk: drop + find_if made distance() recover the index.
                         for (auto i = index; i < num_blocks(); ++i) {
                                 if (auto const block = m_blocks[i]; block != zero) {
-                                        return n + detail::bits::countr_zero(block) + (bits_per_block * (i - index));
+                                        return n + bits::detail::countr_zero(block) + (bits_per_block * (i - index));
                                 }
                         }
                 }
@@ -727,22 +727,22 @@ public:
                 assert(any());
                 --n;
                 if constexpr (has_static_size and static_num_blocks == 1) {
-                        return n - detail::bits::countl_zero(shl(m_blocks[0], left_bit - n));
+                        return n - bits::detail::countl_zero(shl(m_blocks[0], left_bit - n));
                 } else if constexpr (has_static_size and static_num_blocks == 2) {
                         // Naming the fallback block removes the general path's start-index guard.
                         auto const [index, offset] = index_offset(n);
                         if (auto const block = shl(m_blocks[index], left_bit - offset); block != zero) {
-                                return n - detail::bits::countl_zero(block);
+                                return n - bits::detail::countl_zero(block);
                         }
                         // Reaching here at index 0 would break the precondition the general path asserts instead.
                         assert(index == 1);
                         assert(m_blocks[0] != zero);
-                        return left_bit - detail::bits::countl_zero(m_blocks[0]);
+                        return left_bit - bits::detail::countl_zero(m_blocks[0]);
                 } else {
                         auto [index, offset] = index_offset(n);
                         if (auto const reverse_offset = left_bit - offset; reverse_offset != 0) {
                                 if (auto const block = shl(m_blocks[index], reverse_offset); block != zero) {
-                                        return n - detail::bits::countl_zero(block);
+                                        return n - bits::detail::countl_zero(block);
                                 }
                                 --index;
                                 n -= bits_per_block - reverse_offset;
@@ -753,7 +753,7 @@ public:
                                 assert(i != 0);
                                 --i;
                         }
-                        return n - detail::bits::countl_zero(m_blocks[i]) - (bits_per_block * (index - i));
+                        return n - bits::detail::countl_zero(m_blocks[i]) - (bits_per_block * (index - i));
                 }
         }
 
@@ -1090,7 +1090,7 @@ public:
         {
                 assert(is_valid(n));
                 auto&& [block, mask] = block_mask(n);
-                auto const inserted = not detail::bits::intersects(block, mask);
+                auto const inserted = not bits::detail::intersects(block, mask);
                 block |= mask;
                 assert(test(n));
                 return inserted;
@@ -1140,7 +1140,7 @@ public:
         {
                 assert(is_valid(n));
                 auto&& [block, mask] = block_mask(n);
-                auto const erased = detail::bits::intersects(block, mask);
+                auto const erased = bits::detail::intersects(block, mask);
                 block &= static_cast<block_type>(~mask);
                 assert(not test(n));
                 return erased;
@@ -1161,7 +1161,7 @@ public:
         {
                 assert(is_valid(n));
                 auto&& [block, mask] = block_mask(n);
-                return detail::bits::intersects(block, mask);
+                return bits::detail::intersects(block, mask);
         }
 
         [[nodiscard]] constexpr auto count() const noexcept
@@ -1170,12 +1170,12 @@ public:
                 if constexpr (has_static_size and N == 0) {
                         return 0UZ;
                 } else if constexpr (has_static_size and static_num_blocks == 1) {
-                        return detail::bits::popcount(m_blocks[0]);
+                        return bits::detail::popcount(m_blocks[0]);
                 } else if constexpr (has_static_size and static_num_blocks == 2) {
-                        return detail::bits::popcount(m_blocks[0]) + detail::bits::popcount(m_blocks[1]);
+                        return bits::detail::popcount(m_blocks[0]) + bits::detail::popcount(m_blocks[1]);
                 } else {
                         return std::ranges::fold_left(
-                                m_blocks | std::views::transform([](auto block) { return detail::bits::popcount(block); }),
+                                m_blocks | std::views::transform([](auto block) { return bits::detail::popcount(block); }),
                                 0UZ, std::plus<>()
                         );
                 }
@@ -1234,16 +1234,16 @@ public:
                 if constexpr (has_static_size and N == 0) {
                         return true;
                 } else if constexpr (has_static_size and static_num_blocks == 1) {
-                        return detail::bits::is_subset_of(this->m_blocks[0], other.m_blocks[0]);
+                        return bits::detail::is_subset_of(this->m_blocks[0], other.m_blocks[0]);
                 } else if constexpr (has_static_size and static_num_blocks == 2) {
-                        return detail::bits::is_subset_of(this->m_blocks[0], other.m_blocks[0]) and
-                               detail::bits::is_subset_of(this->m_blocks[1], other.m_blocks[1]);
+                        return bits::detail::is_subset_of(this->m_blocks[0], other.m_blocks[0]) and
+                               bits::detail::is_subset_of(this->m_blocks[1], other.m_blocks[1]);
                 } else {
                         // zip stops at the shorter, which is exactly the blocks both storages have.
                         auto const shared = std::ranges::all_of(
                                 std::views::zip(this->m_blocks, other.m_blocks), [](auto&& _) {
                                         auto&& [lhs, rhs] = _;
-                                        return detail::bits::is_subset_of(lhs, rhs);
+                                        return bits::detail::is_subset_of(lhs, rhs);
                                 }
                         );
                         if constexpr (has_static_size) {
@@ -1270,15 +1270,15 @@ public:
                 if constexpr (has_static_size and N == 0) {
                         return false;
                 } else if constexpr (has_static_size and static_num_blocks == 1) {
-                        return detail::bits::intersects(this->m_blocks[0], other.m_blocks[0]);
+                        return bits::detail::intersects(this->m_blocks[0], other.m_blocks[0]);
                 } else if constexpr (has_static_size and static_num_blocks == 2) {
-                        return detail::bits::intersects(this->m_blocks[0], other.m_blocks[0]) or
-                               detail::bits::intersects(this->m_blocks[1], other.m_blocks[1]);
+                        return bits::detail::intersects(this->m_blocks[0], other.m_blocks[0]) or
+                               bits::detail::intersects(this->m_blocks[1], other.m_blocks[1]);
                 } else {
                         return std::ranges::any_of(
                                 std::views::zip(this->m_blocks, other.m_blocks), [](auto&& _) {
                                         auto&& [lhs, rhs] = _;
-                                        return detail::bits::intersects(lhs, rhs);
+                                        return bits::detail::intersects(lhs, rhs);
                                 }
                         );
                 }
@@ -1384,8 +1384,8 @@ private:
                         return std::strong_ordering::equal;
                 }
                 auto const diff = static_cast<block_type>(this->padded_block(index) ^ other.padded_block(index));
-                auto const offset = static_cast<std::size_t>(detail::bits::countr_zero(diff));
-                if (detail::bits::intersects(this->padded_block(index), shl(unit, offset))) {
+                auto const offset = static_cast<std::size_t>(bits::detail::countr_zero(diff));
+                if (bits::detail::intersects(this->padded_block(index), shl(unit, offset))) {
                         return other.padded_any_above(index, offset) ? std::strong_ordering::less : std::strong_ordering::greater;
                 }
                 return this->padded_any_above(index, offset) ? std::strong_ordering::greater : std::strong_ordering::less;
@@ -1402,8 +1402,8 @@ private:
                         return this->size() < other.size() ? std::strong_ordering::less : std::strong_ordering::greater;
                 }
                 auto const diff = static_cast<block_type>(this->padded_block(index) ^ other.padded_block(index));
-                auto const offset = static_cast<std::size_t>(detail::bits::countr_zero(diff));
-                return detail::bits::intersects(this->padded_block(index), shl(unit, offset))
+                auto const offset = static_cast<std::size_t>(bits::detail::countr_zero(diff));
+                return bits::detail::intersects(this->padded_block(index), shl(unit, offset))
                                ? std::strong_ordering::greater
                                : std::strong_ordering::less;
         }
@@ -1546,6 +1546,6 @@ private:
         }
 };
 
-} // namespace xstd::detail::bits
+} // namespace xstd::bits::detail
 
 #endif // XSTD_BITS_DETAIL_CONTIGUOUS_BIT_CONTAINER_HPP

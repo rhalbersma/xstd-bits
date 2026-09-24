@@ -8,7 +8,7 @@
 
 #include <type_traits> // is_invocable_r_v
 
-namespace xstd::detail::bits {
+namespace xstd::bits::detail {
 
 // A prvalue from a named parameter: MSVC 17 has no auto(x), which is [P0849R8]'s spelling of this.
 template<class T>
@@ -31,6 +31,6 @@ template<class F, class T>
         }
 }
 
-} // namespace xstd::detail::bits
+} // namespace xstd::bits::detail
 
 #endif // XSTD_BITS_DETAIL_FUNCTOR_HPP

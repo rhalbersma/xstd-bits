@@ -19,10 +19,10 @@
 namespace xstd {
 
 // A field of bits in a storage of blocks it owns, read as a whole: std::bitset's reading over any block container.
-template<class Blocks, std::size_t N = detail::bits::default_extent_v<Blocks>>
-class bitset_adaptor : public detail::bits::bitset_adaptor<detail::bits::contiguous_bit_container<Blocks, N>, bitset_adaptor<Blocks, N>>
+template<class Blocks, std::size_t N = bits::detail::default_extent_v<Blocks>>
+class bitset_adaptor : public bits::detail::bitset_adaptor<bits::detail::contiguous_bit_container<Blocks, N>, bitset_adaptor<Blocks, N>>
 {
-        using base_type = detail::bits::bitset_adaptor<detail::bits::contiguous_bit_container<Blocks, N>, bitset_adaptor<Blocks, N>>;
+        using base_type = bits::detail::bitset_adaptor<bits::detail::contiguous_bit_container<Blocks, N>, bitset_adaptor<Blocks, N>>;
 
 public:
         using base_type::base_type;
@@ -38,15 +38,15 @@ public:
 
 // Block counts computed as the aliases compute them; the defaulted K keeps MSVC 17 from dropping the one-word guide.
 template<xstd::unsigned_integer B, std::size_t K = 1>
-bitset_adaptor(from_bits_t, B) -> bitset_adaptor<std::array<B, detail::bits::num_blocks_v<B, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>>, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>;
+bitset_adaptor(from_bits_t, B) -> bitset_adaptor<std::array<B, bits::detail::num_blocks_v<B, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>>, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>;
 
 template<xstd::unsigned_integer B, std::size_t K>
-bitset_adaptor(from_bits_t, std::array<B, K>) -> bitset_adaptor<std::array<B, detail::bits::num_blocks_v<B, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>>, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>;
+bitset_adaptor(from_bits_t, std::array<B, K>) -> bitset_adaptor<std::array<B, bits::detail::num_blocks_v<B, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>>, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>;
 
 // std::bitset's integer constructor at the width of the integer's type, where that constructor reads every digit.
 template<xstd::unsigned_integer B, std::size_t K = 1>
         requires (xstd::numeric_limits<B>::digits <= std::numeric_limits<unsigned long long>::digits)
-bitset_adaptor(B) -> bitset_adaptor<std::array<std::size_t, detail::bits::num_blocks_v<std::size_t, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>>, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>;
+bitset_adaptor(B) -> bitset_adaptor<std::array<std::size_t, bits::detail::num_blocks_v<std::size_t, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>>, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>;
 
 } // namespace xstd
 
