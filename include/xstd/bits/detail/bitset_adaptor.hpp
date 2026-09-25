@@ -8,12 +8,13 @@
 
 // Bitsets [bitset], Header <bitset> synopsis [bitset.syn]
 
+#include <xstd/bits/bit_storage.hpp>                     // bit_storage
 #include <xstd/bits/detail/allocator_base_type.hpp>      // allocator_base_type
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/detail/hash.hpp>                     // hash_append_bits, std_hash
 #include <xstd/bits/detail/ownership.hpp>                // owned_storage, storage, window
 #include <xstd/bits/detail/zero_width.hpp>               // zero_width
-#include <xstd/bits/from_bits.hpp>                       // from_bits_t
+#include <xstd/bits/from_bit_storage.hpp>                // from_bit_storage_t
 #include <xstd/misc/concepts/specialization_of.hpp>      // specialization_of_TN
 #include <boost/hash2/hash_append.hpp>                   // hash_append_tag
 #include <algorithm>                                     // min, ranges::copy
@@ -194,25 +195,15 @@ public:
                 from_ullong(val);
         }
 
-        // A field of bits in and out, constrained on container_source: the integer door is already taken.
+        // Words that are bit storage, integers wider than the ullong door included, read as this bitset's bits.
         template<class B>
-                requires (not std::same_as<std::remove_cvref_t<B>, bitset_adaptor>) and Bits::template
-        exchanges_bits_as_field<B> [[nodiscard]] static constexpr auto from_bits(B const& b) noexcept
-                -> Derived
-        {
-                auto result = Derived();
-                result.m_bits.assign_bits(b);
-                return result;
-        }
-
-        // Tagged as std::from_range is: any field the storage exchanges, integers wider than the ullong door included.
-        template<class B>
-                requires Bits::template
-        exchanges_bits<B> [[nodiscard]] constexpr bitset_adaptor(xstd::from_bits_t, B const& b) noexcept
+                requires xstd::bit_storage<B> and Bits::template
+        exchanges_bits<B> [[nodiscard]] constexpr bitset_adaptor(xstd::from_bit_storage_t, B const& b) noexcept
         {
                 m_bits.assign_bits(b);
         }
 
+        // A field of bits out, other than an integer: to_ullong is that door.
         template<class B>
                 requires Bits::template
         exchanges_bits_as_field<B> [[nodiscard]] constexpr auto to_bits() const noexcept

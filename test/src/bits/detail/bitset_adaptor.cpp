@@ -3,7 +3,8 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/bit_exchange.hpp>                      // exchanges_bits, exchanges_from_bits, exchanges_to_bits
+#include <test/bit_exchange.hpp>                      // casts_between, casts_from, exchanges_bits, exchanges_from_bits, exchanges_to_bits
+#include <xstd/bits/bit_cast.hpp>                     // bit_cast
 #include <xstd/bits/bit_set_view.hpp>                 // bit_set_view
 #include <xstd/bits/bit_span.hpp>                     // bit_span
 #include <xstd/bits/contiguous_bit_sequence.hpp>      // contiguous_bit_sequence
@@ -12,6 +13,7 @@
 #include <xstd/bits/detail/contiguous_bit_array.hpp>  // contiguous_bit_array
 #include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
 #include <xstd/bits/dynamic_bitset.hpp>               // basic_dynamic_bitset
+#include <xstd/bits/from_bit_storage.hpp>             // from_bit_storage
 #include <boost/dynamic_bitset.hpp>                   // dynamic_bitset
 #include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <algorithm>                                  // equal
@@ -822,7 +824,7 @@ BOOST_AUTO_TEST_CASE(ABitsetReadingExchangesBytesWithAnotherFieldOfBits)
                 src.set(i);
         }
 
-        auto const b = xstd::bitset<N>::from_bits(src);
+        auto const b = xstd::bit_cast<xstd::bitset<N>>(src);
         BOOST_CHECK_EQUAL(b.count(), src.count());
         for (auto i = 0UZ; i < N; ++i) {
                 BOOST_CHECK_EQUAL(b.test(i), src.test(i));
@@ -831,7 +833,7 @@ BOOST_AUTO_TEST_CASE(ABitsetReadingExchangesBytesWithAnotherFieldOfBits)
 
         static_assert([] -> bool {
                 auto const bs = std::bitset<64>(0x0F1E'2D3C'4B5A'6978ULL);
-                return xstd::bitset<64>::from_bits(bs).to_bits<std::bitset<64>>() == bs;
+                return xstd::bit_cast<xstd::bitset<64>>(bs).to_bits<std::bitset<64>>() == bs;
         }());
 }
 
@@ -856,8 +858,8 @@ BOOST_AUTO_TEST_CASE(TheIntegerDoorIsUnchangedByTheByteExchange)
 BOOST_AUTO_TEST_CASE(TwoBlockWidthsCrossOnTheSameRule)
 {
         static_assert([] -> bool {
-                auto const wide = xstd::basic_bitset<std::uint64_t, 64>::from_bits(std::bitset<64>(0xABCDULL));
-                auto const narrow = xstd::basic_bitset<std::uint8_t, 64>::from_bits(wide);
+                auto const wide = xstd::bit_cast<xstd::basic_bitset<std::uint64_t, 64>>(std::bitset<64>(0xABCDULL));
+                auto const narrow = xstd::bit_cast<xstd::basic_bitset<std::uint8_t, 64>>(wide);
                 return narrow.to_bits<std::bitset<64>>() == std::bitset<64>(0xABCDULL);
         }());
 }
@@ -867,7 +869,7 @@ BOOST_AUTO_TEST_CASE(TheBitsetExchangeIsNamedAndWidthExact)
 {
         constexpr auto N = 64UZ;
         using T = xstd::bitset<N>;
-        static_assert(test::exchanges_bits<T, std::bitset<N>>);
+        static_assert(test::casts_between<T, std::bitset<N>>);
 
         // The unnamed doors are closed: a conversion operator would be invisible to the concept above.
         static_assert(not std::is_constructible_v<T, std::bitset<N>>);
@@ -876,11 +878,11 @@ BOOST_AUTO_TEST_CASE(TheBitsetExchangeIsNamedAndWidthExact)
         static_assert(not std::is_convertible_v<T, std::bitset<N>>);
 
         // ITS width, not merely one that fits, in the direction the width is checked.
-        static_assert(not test::exchanges_from_bits<T, std::bitset<N + 1UZ>>);
-        static_assert(not test::exchanges_from_bits<T, std::bitset<N - 1UZ>>);
+        static_assert(not test::casts_from<T, std::bitset<N + 1UZ>>);
+        static_assert(not test::casts_from<T, std::bitset<N - 1UZ>>);
 
         using Dynamic = xstd::basic_dynamic_bitset<std::uint64_t>;
-        static_assert(not test::exchanges_from_bits<Dynamic, std::bitset<N>>);
+        static_assert(not test::casts_from<Dynamic, std::bitset<N>>);
         static_assert(not test::exchanges_to_bits<Dynamic, std::bitset<N>>);
 }
 
@@ -899,7 +901,7 @@ BOOST_AUTO_TEST_CASE(ASequenceOfBlocksIsAFieldOfBitsAndAScalarIsNot)
 
         static_assert([] -> bool {
                 auto const b = Blocks{0x0123'4567'89AB'CDEFULL, 0xFEDC'BA98'7654'3210ULL};
-                return xstd::bitset<128>::from_bits(b).to_bits<Blocks>() == b;
+                return xstd::bitset<128>(xstd::from_bit_storage, b).to_bits<Blocks>() == b;
         }());
 }
 

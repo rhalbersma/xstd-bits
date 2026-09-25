@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/bit_exchange.hpp>                      // exchanges_from_bits, exchanges_to_bits
+#include <test/bit_exchange.hpp>                      // casts_from, exchanges_to_bits
 #include <xstd/bits/bit_set.hpp>                      // bit_set
 #include <xstd/bits/bit_set_adaptor.hpp>              // swap
 #include <xstd/bits/bit_static_set.hpp>               // bit_static_set
@@ -824,7 +824,7 @@ BOOST_AUTO_TEST_CASE(ASetViewExchangesThroughTheBitsItRefersTo)
         BOOST_CHECK(out.test(0) and out.test(31) and out.test(N - 1UZ));
 
         // A view is built from what it views, never from a field of bits, so the inbound direction is the owner's.
-        static_assert(not test::exchanges_from_bits<View, std::bitset<N>>);
+        static_assert(not test::casts_from<View, std::bitset<N>>);
 
         // And at compile time, which is where the hard error would have been loudest.
         static_assert([] -> bool {

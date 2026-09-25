@@ -6,6 +6,7 @@
 #ifndef XSTD_BITS_DETAIL_SEQUENCE_ADAPTOR_HPP
 #define XSTD_BITS_DETAIL_SEQUENCE_ADAPTOR_HPP
 
+#include <xstd/bits/bit_storage.hpp>                         // bit_storage
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_base_type
 #include <xstd/bits/detail/borrowed_bits.hpp>                // borrow_bits, borrowable_word, borrowable_words, borrowed_bits_t
 #include <xstd/bits/detail/contiguous_bit_container.hpp>     // contiguous_bit_container
@@ -16,7 +17,7 @@
 #include <xstd/bits/detail/random_access.hpp>                // random_access_bit_iterator, random_access_bit_reference
 #include <xstd/bits/detail/shift.hpp>                        // shl, shr
 #include <xstd/bits/detail/storage_ptr.hpp>                  // storage_ref_t
-#include <xstd/bits/from_bits.hpp>                           // from_bits_t
+#include <xstd/bits/from_bit_storage.hpp>                    // from_bit_storage_t
 #include <xstd/misc/concepts/specialization_of.hpp>          // specialization_of_TN
 #include <xstd/misc/type_traits/conditional_data_member.hpp> // XSTD_NO_UNIQUE_ADDRESS, conditional_data_member_t
 #include <xstd/misc/type_traits/empty_base_type.hpp>         // empty_base_type
@@ -328,25 +329,15 @@ public:
                 std::ranges::copy(il, begin());
         }
 
-        // A field of bits in and out, named rather than spelled as a conversion; never on a window.
+        // Words that are bit storage, read as this sequence's bools; the tag says the words are bits and not elements.
         template<class B>
-                requires is_owner and bits_type::template
-        exchanges_bits<B> [[nodiscard]] static constexpr auto from_bits(B const& b) noexcept
-                -> derived_type
-        {
-                auto result = derived_type();
-                result.bits().assign_bits(b);
-                return result;
-        }
-
-        // The same as a constructor, tagged as std::from_range is, so that a guide can deduce the width from B.
-        template<class B>
-                requires is_owner and bits_type::template
-        exchanges_bits<B> [[nodiscard]] constexpr sequence_adaptor(xstd::from_bits_t, B const& b) noexcept
+                requires is_owner and xstd::bit_storage<B> and bits_type::template
+        exchanges_bits<B> [[nodiscard]] constexpr sequence_adaptor(xstd::from_bit_storage_t, B const& b) noexcept
         {
                 m_bits.assign_bits(b);
         }
 
+        // A field of bits out, named rather than spelled as a conversion; never on a window.
         template<class B>
                 requires (not is_window) and bits_type::template
         exchanges_bits<B> [[nodiscard]] constexpr auto to_bits() const noexcept

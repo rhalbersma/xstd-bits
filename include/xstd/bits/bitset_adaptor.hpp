@@ -10,7 +10,7 @@
 #include <xstd/bits/detail/bitset_adaptor.hpp>           // bitset_adaptor
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // num_blocks_v
 #include <xstd/bits/detail/words.hpp>                    // owner_storage_t, words_extent_v
-#include <xstd/bits/from_bits.hpp>                       // from_bits_t
+#include <xstd/bits/from_bit_storage.hpp>                // from_bit_storage_t
 #include <xstd/ints/concepts/unsigned_integer.hpp>       // unsigned_integer
 #include <xstd/ints/limits.hpp>                          // numeric_limits
 #include <array>                                         // array
@@ -40,10 +40,10 @@ public:
 
 // Block counts computed as the aliases compute them; the defaulted K keeps MSVC 17 from dropping the one-word guide.
 template<xstd::unsigned_integer B, std::size_t K = 1>
-bitset_adaptor(from_bits_t, B) -> bitset_adaptor<std::array<B, bits::detail::num_blocks_v<B, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>>, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>;
+bitset_adaptor(from_bit_storage_t, B) -> bitset_adaptor<std::array<B, bits::detail::num_blocks_v<B, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>>, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>;
 
 template<xstd::unsigned_integer B, std::size_t K>
-bitset_adaptor(from_bits_t, std::array<B, K>) -> bitset_adaptor<std::array<B, bits::detail::num_blocks_v<B, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>>, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>;
+bitset_adaptor(from_bit_storage_t, std::array<B, K>) -> bitset_adaptor<std::array<B, bits::detail::num_blocks_v<B, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>>, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>;
 
 // std::bitset's integer constructor at the width of the integer's type, where that constructor reads every digit.
 template<xstd::unsigned_integer B, std::size_t K = 1>
