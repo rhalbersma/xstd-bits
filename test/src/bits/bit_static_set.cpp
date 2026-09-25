@@ -3,22 +3,23 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/bit_exchange.hpp>        // exchanges_bits, exchanges_from_bits
-#include <test/block_types.hpp>         // graded_extents
-#include <test/set/ascending.hpp>       // yields_ascending_keys
-#include <test/set/concepts.hpp>        // bit_set, set_size_t, set_size_t_ranges
-#include <test/value_reference.hpp>     // value_reference
-#include <xstd/bits/bit_static_set.hpp> // bit_static_set
-#include <xstd/bits/bitset.hpp>         // bitset
-#include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
-#include <array>                        // array
-#include <bitset>                       // bitset
-#include <concepts>                     // regular, totally_ordered
-#include <cstddef>                      // size_t
-#include <cstdint>                      // uint32_t, uint64_t
-#include <iterator>                     // bidirectional_iterator
-#include <ranges>                       // bidirectional_range, iota, to
-#include <type_traits>                  // is_constructible_v, is_convertible_v
+#include <test/bit_exchange.hpp>          // exchanges_bits, exchanges_from_bits
+#include <test/block_types.hpp>           // graded_extents
+#include <test/set/ascending.hpp>         // yields_ascending_keys
+#include <test/set/concepts.hpp>          // bit_set, set_size_t, set_size_t_ranges
+#include <test/value_reference.hpp>       // value_reference
+#include <xstd/bits/bit_static_set.hpp>   // bit_static_set
+#include <xstd/bits/bitset.hpp>           // bitset
+#include <xstd/bits/from_bit_storage.hpp> // from_bit_storage
+#include <boost/test/unit_test.hpp>       // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <array>                          // array
+#include <bitset>                         // bitset
+#include <concepts>                       // regular, totally_ordered
+#include <cstddef>                        // size_t
+#include <cstdint>                        // uint32_t, uint64_t
+#include <iterator>                       // bidirectional_iterator
+#include <ranges>                         // bidirectional_range, iota, to
+#include <type_traits>                    // is_constructible_v, is_convertible_v
 
 BOOST_AUTO_TEST_SUITE(BitFiniteSet)
 
@@ -229,7 +230,7 @@ BOOST_AUTO_TEST_CASE(RawBlocksCrossOnTheSameRule)
         using Narrow = std::array<std::uint32_t, 8>;
 
         auto const blocks = Wide{0x0123'4567'89AB'CDEFULL, 1ULL, 0ULL, 0x8000'0000'0000'0000ULL};
-        auto const s = Set::from_bits(blocks);
+        auto const s = Set(xstd::from_bit_storage, blocks);
 
         BOOST_CHECK(s.contains(0UZ));
         BOOST_CHECK(s.contains(64UZ));
@@ -241,11 +242,11 @@ BOOST_AUTO_TEST_CASE(RawBlocksCrossOnTheSameRule)
         BOOST_CHECK_EQUAL(narrow[0], 0x89AB'CDEFU);
         BOOST_CHECK_EQUAL(narrow[1], 0x0123'4567U);
         BOOST_CHECK_EQUAL(narrow[7], 0x8000'0000U);
-        BOOST_CHECK(Set::from_bits(narrow) == s);
+        BOOST_CHECK(Set(xstd::from_bit_storage, narrow) == s);
 
         static_assert([] -> bool {
                 auto const b = Wide{0xDEAD'BEEFULL, 0ULL, 0ULL, 0ULL};
-                return Set::from_bits(b).to_bits<Wide>() == b;
+                return Set(xstd::from_bit_storage, b).to_bits<Wide>() == b;
         }());
 
         // Too narrow is no exchange and wider is admitted; the door is the stronger question over is_constructible_v.

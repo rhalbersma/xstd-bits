@@ -10,7 +10,8 @@
 
 // Shared by all three readings.
 #include <xstd/bits/bit_storage.hpp>             // IWYU pragma: export; bit_storage
-#include <xstd/bits/from_bits.hpp>               // IWYU pragma: export; from_bits, from_bits_t
+#include <xstd/bits/bit.hpp>                     // IWYU pragma: export; bit_cast, bit_castable
+#include <xstd/bits/from_bit_storage.hpp>        // IWYU pragma: export; from_bit_storage, from_bit_storage_t
 #include <xstd/bits/contiguous_bit_sequence.hpp> // IWYU pragma: export; contiguous_bit_sequence
 
 // The bitset reading.

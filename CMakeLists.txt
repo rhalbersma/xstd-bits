@@ -74,6 +74,8 @@ target_sources(
         include/xstd/bits/detail/bitset_adaptor.hpp
         include/xstd/bits/detail/borrowed_bits.hpp
         include/xstd/bits/bit_array.hpp
+        include/xstd/bits/bit.hpp
+        include/xstd/bits/bit/bit_cast.hpp
         include/xstd/bits/bit_storage.hpp
         include/xstd/bits/bit_inplace_set.hpp
         include/xstd/bits/bit_inplace_vector.hpp
@@ -100,7 +102,7 @@ target_sources(
         include/xstd/bits/detail/hash.hpp
         include/xstd/bits/detail/intrin.hpp
         include/xstd/bits/dynamic_bitset.hpp
-        include/xstd/bits/from_bits.hpp
+        include/xstd/bits/from_bit_storage.hpp
         include/xstd/bits/ext/boost.hpp
         include/xstd/bits/ext/boost/bit_small_set.hpp
         include/xstd/bits/ext/boost/bit_small_vector.hpp

@@ -11,7 +11,7 @@
 #include <xstd/bits/detail/ownership.hpp>                // storage, window
 #include <xstd/bits/detail/sequence_adaptor.hpp>         // sequence_adaptor
 #include <xstd/bits/detail/words.hpp>                    // owner_storage_t, words_extent_v
-#include <xstd/bits/from_bits.hpp>                       // from_bits_t
+#include <xstd/bits/from_bit_storage.hpp>                // from_bit_storage_t
 #include <xstd/ints/concepts/unsigned_integer.hpp>       // unsigned_integer
 #include <xstd/ints/limits.hpp>                          // numeric_limits
 #include <boost/container_hash/is_range.hpp>             // is_range
@@ -44,10 +44,10 @@ public:
 
 // Block counts computed as the aliases compute them; the defaulted K keeps MSVC 17 from dropping the one-word guide.
 template<xstd::unsigned_integer B, std::size_t K = 1>
-bit_sequence_adaptor(from_bits_t, B) -> bit_sequence_adaptor<std::array<B, bits::detail::num_blocks_v<B, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>>, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>;
+bit_sequence_adaptor(from_bit_storage_t, B) -> bit_sequence_adaptor<std::array<B, bits::detail::num_blocks_v<B, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>>, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>;
 
 template<xstd::unsigned_integer B, std::size_t K>
-bit_sequence_adaptor(from_bits_t, std::array<B, K>) -> bit_sequence_adaptor<std::array<B, bits::detail::num_blocks_v<B, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>>, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>;
+bit_sequence_adaptor(from_bit_storage_t, std::array<B, K>) -> bit_sequence_adaptor<std::array<B, bits::detail::num_blocks_v<B, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>>, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>;
 
 } // namespace xstd
 

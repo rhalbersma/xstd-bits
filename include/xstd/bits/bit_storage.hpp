@@ -14,12 +14,12 @@
 namespace xstd {
 
 // One unsigned word, or a sized contiguous range of them that subscripts; const where a view only reads.
-template<class W>
+template<class Bits>
 concept bit_storage =
-        xstd::unsigned_integer<std::remove_const_t<W>> or
-        (std::ranges::sized_range<W> and std::ranges::contiguous_range<W> and
-         xstd::unsigned_integer<std::remove_const_t<std::ranges::range_value_t<W>>> and
-         requires (W& w, std::ranges::range_size_t<W> n) { w[n]; });
+        xstd::unsigned_integer<std::remove_const_t<Bits>> or
+        (std::ranges::sized_range<Bits> and std::ranges::contiguous_range<Bits> and
+         xstd::unsigned_integer<std::remove_const_t<std::ranges::range_value_t<Bits>>> and
+         requires (Bits& bits, std::ranges::range_size_t<Bits> n) { bits[n]; });
 
 } // namespace xstd
 

@@ -6,6 +6,7 @@
 #ifndef XSTD_BITS_DETAIL_SET_ADAPTOR_HPP
 #define XSTD_BITS_DETAIL_SET_ADAPTOR_HPP
 
+#include <xstd/bits/bit_storage.hpp>                     // bit_storage
 #include <xstd/bits/detail/allocator_base_type.hpp>      // allocator_base_type
 #include <xstd/bits/detail/bidirectional.hpp>            // bidirectional_bit_iterator, bidirectional_bit_reference
 #include <xstd/bits/detail/borrowed_bits.hpp>            // borrow_bits, borrowable_word, borrowable_words, borrowed_bits_t
@@ -17,7 +18,7 @@
 #include <xstd/bits/detail/shift.hpp>                    // shl, shr
 #include <xstd/bits/detail/storage_ptr.hpp>              // storage_ref_t
 #include <xstd/bits/detail/zero_width.hpp>               // zero_width
-#include <xstd/bits/from_bits.hpp>                       // from_bits_t
+#include <xstd/bits/from_bit_storage.hpp>                // from_bit_storage_t
 #include <xstd/misc/concepts/specialization_of.hpp>      // specialization_of_TN
 #include <xstd/misc/type_traits/empty_base_type.hpp>     // empty_base_type
 #include <boost/container_hash/is_range.hpp>             // is_range
@@ -231,21 +232,10 @@ public:
                 : m_bits(std::move(other.m_bits), alloc)
         {}
 
-        // A field of bits in and out at a static width, named rather than spelled as a conversion.
+        // Words that are bit storage, read as this set's positions; the tag says the words are bits and not keys.
         template<class B>
-                requires is_owner and Bits::template
-        exchanges_bits<B> [[nodiscard]] static constexpr auto from_bits(B const& b) noexcept
-                -> derived_type
-        {
-                auto result = derived_type();
-                result.bits().assign_bits(b);
-                return result;
-        }
-
-        // The same as a constructor, tagged as std::from_range is, so that a guide can deduce the width from B.
-        template<class B>
-                requires is_owner and Bits::template
-        exchanges_bits<B> [[nodiscard]] constexpr set_adaptor(xstd::from_bits_t, B const& b) noexcept
+                requires is_owner and xstd::bit_storage<B> and Bits::template
+        exchanges_bits<B> [[nodiscard]] constexpr set_adaptor(xstd::from_bit_storage_t, B const& b) noexcept
         {
                 m_bits.assign_bits(b);
         }
