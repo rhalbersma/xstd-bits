@@ -420,7 +420,7 @@ BOOST_AUTO_TEST_CASE(TheOwnerHashesAndTheViewDoesNot)
         BOOST_CHECK_EQUAL(h(T({true, false, true})), h(T({true, false, true})));
         BOOST_CHECK(h(T({true, false, true})) != h(T({true, false, true, false})));
         BOOST_CHECK(h(T()) != h(T(1)));
-        static_assert(not std::is_default_constructible_v<std::hash<xstd::bit_span<xstd::bits::detail::contiguous_bit_vector<std::uint8_t>>>>);
+        static_assert(not std::is_default_constructible_v<std::hash<xstd::bit_span<std::vector<std::uint8_t>>>>);
 }
 
 // The view over it refers into the contiguous_bit_vector and cannot grow it.

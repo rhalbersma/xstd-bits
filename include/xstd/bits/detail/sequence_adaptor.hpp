@@ -44,14 +44,6 @@
 #include <utility>                                           // as_const, declval, forward, move, pair
 
 // The sequence reading, [array] over a contiguous_bit_container, owning it or referring to it.
-namespace xstd {
-
-// The windowed view a span hands back: declared here and defined in its own header, which this one must not include.
-template<specialization_of_TN<bits::detail::contiguous_bit_container> Bits, std::size_t Extent = std::dynamic_extent>
-class bit_subspan;
-
-} // namespace xstd
-
 namespace xstd::bits::detail {
 
 namespace sequence {
@@ -141,6 +133,16 @@ using block_type_of = std::remove_const_t<Bits>::block_type;
 
 template<specialization_of_TN<contiguous_bit_container> Bits, storage Store = storage::owned, window W = window::all, class Derived = void, std::size_t E = std::dynamic_extent>
 class sequence_adaptor;
+
+// The window a view hands back, named by that view's own header; the vehicle used directly windows itself.
+template<class Derived, class Bits, std::size_t E>
+struct window_of
+{
+        using type = sequence_adaptor<Bits, storage::borrowed, window::sub, void, E>;
+};
+
+template<class Derived, class Bits, std::size_t E>
+using window_of_t = window_of<Derived, Bits, E>::type;
 
 // A sequence adaptor whose storage holds blocks of the given type: what a blit reads, and nothing else.
 template<class S, class Block>
@@ -577,7 +579,7 @@ public:
         {}
 
         // [span.sub]'s three, on a view alone: std::array and std::vector have no subviews.
-        using subspan_type = xstd::bit_subspan<Bits>;
+        using subspan_type = window_of_t<Derived, Bits, std::dynamic_extent>;
 
         [[nodiscard]] constexpr auto first(size_type count) const noexcept
                 -> subspan_type
@@ -610,7 +612,7 @@ public:
         // [span.sub]'s compile-time three: the count in the type, and ill-formed where the type already says it cannot fit.
         template<std::size_t Count>
         [[nodiscard]] constexpr auto first() const noexcept
-                -> xstd::bit_subspan<Bits, Count>
+                -> window_of_t<Derived, Bits, Count>
                 requires (not is_owner) and (Count != std::dynamic_extent) and (static_extent == std::dynamic_extent or Count <= static_extent)
         {
                 assert(Count <= size());
@@ -619,7 +621,7 @@ public:
 
         template<std::size_t Count>
         [[nodiscard]] constexpr auto last() const noexcept
-                -> xstd::bit_subspan<Bits, Count>
+                -> window_of_t<Derived, Bits, Count>
                 requires (not is_owner) and (Count != std::dynamic_extent) and (static_extent == std::dynamic_extent or Count <= static_extent)
         {
                 assert(Count <= size());
@@ -628,7 +630,7 @@ public:
 
         template<std::size_t Offset, std::size_t Count = std::dynamic_extent>
         [[nodiscard]] constexpr auto subspan() const noexcept
-                -> xstd::bit_subspan<Bits, Count != std::dynamic_extent ? Count : (static_extent != std::dynamic_extent ? static_extent - Offset : std::dynamic_extent)>
+                -> window_of_t<Derived, Bits, Count != std::dynamic_extent ? Count : (static_extent != std::dynamic_extent ? static_extent - Offset : std::dynamic_extent)>
                 requires (not is_owner) and (static_extent == std::dynamic_extent or (Offset <= static_extent and (Count == std::dynamic_extent or Count <= static_extent - Offset)))
         {
                 assert(Offset <= size());

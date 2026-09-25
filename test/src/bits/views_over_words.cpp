@@ -5,10 +5,11 @@
 
 #include <xstd/bits/bit_set_view.hpp> // bit_set_view
 #include <xstd/bits/bit_span.hpp>     // bit_span
-#include <xstd/bits/bit_subspan.hpp>  // IWYU pragma: keep; bit_subspan, what subspan hands back
+#include <xstd/bits/bit_subspan.hpp>  // bit_subspan
 #include <boost/test/unit_test.hpp>   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                  // ranges::equal, ranges::find, ranges::reverse
 #include <array>                      // array
+#include <concepts>                   // same_as
 #include <cstddef>                    // size_t
 #include <cstdint>                    // uint8_t, uint16_t, uint32_t, uint64_t
 #include <limits>                     // numeric_limits
@@ -202,6 +203,21 @@ BOOST_AUTO_TEST_CASE(IteratorsOutliveTheView)
         auto const bit = xstd::bit_span(words).begin() + 9;
         *bit = true;
         BOOST_CHECK_EQUAL(words[1], 0x02U);
+}
+
+// A view is named by the words it is handed: a word as itself, a range as the span that lends it.
+BOOST_AUTO_TEST_CASE(AViewIsNamedByItsWords)
+{
+        auto board = std::uint64_t{};
+        auto words = std::vector<std::uint32_t>(2);
+        auto fixed = std::array<std::uint16_t, 2>{};
+        static_assert(std::same_as<decltype(xstd::bit_set_view(board)), xstd::bit_set_view<std::uint64_t>>);
+        static_assert(std::same_as<decltype(xstd::bit_set_view(std::as_const(board))), xstd::bit_set_view<std::uint64_t const>>);
+        static_assert(std::same_as<decltype(xstd::bit_span(words)), xstd::bit_span<std::span<std::uint32_t>>>);
+        static_assert(std::same_as<decltype(xstd::bit_span(std::as_const(fixed))), xstd::bit_span<std::span<std::uint16_t const, 2>>>);
+        static_assert(std::same_as<decltype(xstd::bit_span(words).subspan(1, 2)), xstd::bit_subspan<std::span<std::uint32_t>>>);
+        static_assert(std::same_as<decltype(xstd::bit_span(fixed).first<4>()), xstd::bit_subspan<std::span<std::uint16_t, 2>, 4>>);
+        BOOST_CHECK(xstd::bit_set_view(board).empty());
 }
 
 // Only what outlives the view is viewed: a word by lvalue, a range by lvalue or as a borrowed range, of unsigned words.

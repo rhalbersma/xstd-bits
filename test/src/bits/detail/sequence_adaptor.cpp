@@ -25,6 +25,7 @@
 #include <iterator>                                   // reverse_iterator
 #include <limits>                                     // numeric_limits
 #include <ranges>                                     // equal, iota, random_access_range, transform
+#include <span>                                       // dynamic_extent
 #include <stdexcept>                                  // length_error, out_of_range
 #include <type_traits>                                // is_const_v, is_constructible_v, is_convertible_v
 #include <utility>                                    // move, pair
@@ -667,7 +668,7 @@ BOOST_AUTO_TEST_CASE(TheSequenceExchangeIsNamedBothWays)
 // A window is the one shape that must not convert: its position zero is not the storage's.
 BOOST_AUTO_TEST_CASE(AWindowIsNotAFieldOfBitsButAPlainViewIs)
 {
-        static_assert(not test::exchanges_to_bits<xstd::bit_subspan<Storage>, std::bitset<100>>);
+        static_assert(not test::exchanges_to_bits<xstd::bit_subspan<std::array<std::uint64_t, 2>, std::dynamic_extent, 100>, std::bitset<100>>);
         static_assert(test::exchanges_to_bits<View, std::bitset<100>>);
         static_assert(test::exchanges_to_bits<Reader, std::bitset<100>>);
 

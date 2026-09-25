@@ -11,6 +11,7 @@
 #include <xstd/bits/detail/sequence_adaptor.hpp>     // sequence_adaptor
 #include <boost/test/unit_test.hpp>                  // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <algorithm>                                 // equal, fill
+#include <array>                                     // array
 #include <concepts>                                  // equality_comparable, same_as
 #include <cstddef>                                   // size_t
 #include <cstdint>                                   // uint8_t
@@ -28,12 +29,13 @@ BOOST_AUTO_TEST_SUITE(BitSubspan)
 
 namespace {
 
-using Blocks = xstd::bits::detail::contiguous_bit_array<std::uint8_t, 20>;
+using Storage = xstd::bits::detail::contiguous_bit_array<std::uint8_t, 20>;
+using Words = std::array<std::uint8_t, 3>;
 using Owner = xstd::basic_bit_array<std::uint8_t, 20>;
-using Span = xstd::bit_span<Blocks>;
-using Sub = xstd::bit_subspan<Blocks>;
-using CSpan = xstd::bit_span<Blocks const>;
-using CSub = xstd::bit_subspan<Blocks const>;
+using Span = xstd::bit_span<Words, 20>;
+using Sub = xstd::bit_subspan<Words, std::dynamic_extent, 20>;
+using CSpan = xstd::bit_span<Words const, 20>;
+using CSub = xstd::bit_subspan<Words const, std::dynamic_extent, 20>;
 
 // Dependent, so an absent member is a substitution failure rather than a hard error.
 template<class X>
@@ -65,7 +67,7 @@ using ViewedTypes = std::tuple<Owner, xstd::basic_bit_vector<std::uint8_t>>;
 // A window is the referring adaptor windowed, an alias since nothing deduces it, storing what std::span stores.
 BOOST_AUTO_TEST_CASE(TheWindowIsTheAdaptorWindowed)
 {
-        static_assert(std::same_as<Sub, xstd::bit_subspan<Blocks>>);
+        static_assert(std::same_as<Sub, xstd::bit_subspan<Words, std::dynamic_extent, 20>>);
         static_assert(sizeof(Span) == sizeof(void*));
         static_assert(sizeof(Sub) == 3 * sizeof(std::size_t));
 
@@ -311,8 +313,8 @@ BOOST_AUTO_TEST_CASE(AStaticWindowCarriesItsWidthInItsType)
         auto const l = v.last<3>();
         auto const s = v.subspan<1, 5>();
         auto const tail = v.subspan<15>();
-        static_assert(std::same_as<decltype(f), xstd::bit_subspan<Blocks, 4> const>);
-        static_assert(std::same_as<decltype(tail), xstd::bit_subspan<Blocks, 5> const>);
+        static_assert(std::same_as<decltype(f), xstd::bit_subspan<Words, 4, 20> const>);
+        static_assert(std::same_as<decltype(tail), xstd::bit_subspan<Words, 5, 20> const>);
         static_assert(decltype(s)::extent == 5UZ and Sub::extent == std::dynamic_extent);
         static_assert(sizeof(f) + sizeof(std::size_t) == sizeof(v.first(4)));
         BOOST_CHECK(std::ranges::equal(f, v.first(4)));
@@ -340,19 +342,19 @@ BOOST_AUTO_TEST_CASE(AStaticWindowIsCheckedAndConvertedAsStdSpanIs)
         static_assert(has_first<Span, 20UZ> and not has_first<Span, 21UZ>);
         static_assert(has_subspan_of<Span, 20UZ, 0UZ> and not has_subspan_of<Span, 21UZ, std::dynamic_extent>);
         static_assert(has_subspan_of<Span, 10UZ, 10UZ> and not has_subspan_of<Span, 10UZ, 11UZ>);
-        static_assert(has_first<xstd::bit_subspan<Blocks, 4>, 4UZ> and not has_first<xstd::bit_subspan<Blocks, 4>, 5UZ>);
+        static_assert(has_first<xstd::bit_subspan<Words, 4, 20>, 4UZ> and not has_first<xstd::bit_subspan<Words, 4, 20>, 5UZ>);
         static_assert(has_first<Sub, 100UZ>);
 
-        static_assert(std::is_convertible_v<xstd::bit_subspan<Blocks, 4>, Sub>);
-        static_assert(not std::is_convertible_v<Sub, xstd::bit_subspan<Blocks, 4>>);
-        static_assert(std::is_constructible_v<xstd::bit_subspan<Blocks, 4>, Sub>);
-        static_assert(not std::is_constructible_v<xstd::bit_subspan<Blocks, 4>, xstd::bit_subspan<Blocks, 5>>);
+        static_assert(std::is_convertible_v<xstd::bit_subspan<Words, 4, 20>, Sub>);
+        static_assert(not std::is_convertible_v<Sub, xstd::bit_subspan<Words, 4, 20>>);
+        static_assert(std::is_constructible_v<xstd::bit_subspan<Words, 4, 20>, Sub>);
+        static_assert(not std::is_constructible_v<xstd::bit_subspan<Words, 4, 20>, xstd::bit_subspan<Words, 5, 20>>);
 
         auto a = Owner();
         a[3] = true;
         auto const v = xstd::bit_span(a);
         Sub const dynamic = v.first<4>();
-        auto const back = xstd::bit_subspan<Blocks, 4>(dynamic);
+        auto const back = xstd::bit_subspan<Words, 4, 20>(dynamic);
         BOOST_CHECK_EQUAL(dynamic.size(), 4UZ);
         BOOST_CHECK(back[3] and not back[0]);
 }

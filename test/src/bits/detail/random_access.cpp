@@ -12,6 +12,7 @@
 #include <xstd/bits/detail/random_access.hpp>        // random_access_bit_iterator, random_access_bit_reference
 #include <boost/test/unit_test.hpp>                  // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                                 // equal, ranges::reverse, ranges::sort, reverse, sort
+#include <array>                                     // array
 #include <concepts>                                  // convertible_to, equality_comparable, random_access_iterator, same_as, sortable
 #include <cstddef>                                   // ptrdiff_t, size_t
 #include <cstdint>                                   // uint64_t
@@ -277,8 +278,8 @@ constexpr bool has_address_of = requires (R r) { r.operator&(); };
 
 BOOST_AUTO_TEST_CASE(TheViewIteratesWithTheSharedProxy)
 {
-        static_assert(std::same_as<xstd::bit_span<Viewed>::iterator, ArrIt>);
-        static_assert(std::same_as<xstd::bit_span<Viewed>::reference, ArrRef>);
+        static_assert(std::same_as<xstd::bit_span<std::array<std::uint64_t, 1>>::iterator, ArrIt>);
+        static_assert(std::same_as<xstd::bit_span<std::array<std::uint64_t, 1>>::reference, ArrRef>);
 
         BOOST_CHECK(true);
 }
@@ -305,7 +306,7 @@ BOOST_AUTO_TEST_CASE(TheConstPathIsAProxyAsWell)
 {
         using ConstArrRef = xstd::bits::detail::random_access_bit_reference<Viewed const>;
 
-        static_assert(std::same_as<xstd::bit_span<Viewed const>::reference, ConstArrRef>);
+        static_assert(std::same_as<xstd::bit_span<std::array<std::uint64_t, 1> const>::reference, ConstArrRef>);
         static_assert(std::is_convertible_v<ConstArrRef, bool>);
         static_assert(has_address_of<ConstArrRef>);
         static_assert(std::same_as<decltype(&std::declval<ConstArrRef const&>()), xstd::bits::detail::random_access_bit_iterator<Viewed const>>);

@@ -9,6 +9,7 @@
 #include <xstd/bits/detail/bidirectional.hpp>        // bidirectional_bit_iterator, bidirectional_bit_reference
 #include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
 #include <boost/test/unit_test.hpp>                  // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <array>                                     // array
 #include <concepts>                                  // bidirectional_iterator, same_as
 #include <cstddef>                                   // size_t
 #include <cstdint>                                   // uint64_t
@@ -206,8 +207,8 @@ constexpr bool has_address_of = requires (R r) { r.operator&(); };
 
 BOOST_AUTO_TEST_CASE(TheViewIteratesWithTheSharedProxy)
 {
-        static_assert(std::same_as<xstd::bit_set_view<Viewed>::iterator, SetIt>);
-        static_assert(std::same_as<xstd::bit_set_view<Viewed>::reference, SetRef>);
+        static_assert(std::same_as<xstd::bit_set_view<std::array<std::uint64_t, 1>>::iterator, SetIt>);
+        static_assert(std::same_as<xstd::bit_set_view<std::array<std::uint64_t, 1>>::reference, SetRef>);
 
         BOOST_CHECK(true);
 }
