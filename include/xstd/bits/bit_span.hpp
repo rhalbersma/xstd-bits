@@ -7,7 +7,7 @@
 #define XSTD_BITS_BIT_SPAN_HPP
 
 #include <xstd/bits/bit_storage.hpp>                     // bit_storage, bit_storage_extent_v
-#include <xstd/bits/bit_subspan.hpp>                     // bit_subspan, what first, last and subspan hand back
+#include <xstd/bits/bit_subspan.hpp>                     // IWYU pragma: keep; bit_subspan, what first, last and subspan hand back
 #include <xstd/bits/detail/borrowed_bits.hpp>            // borrowable_word, borrowable_words
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/detail/ownership.hpp>                // owned_bits_t, owner_reading, reading, storage, window
