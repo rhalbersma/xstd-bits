@@ -6,9 +6,10 @@
 #ifndef XSTD_BITS_DETAIL_CONTIGUOUS_BIT_CONTAINER_HPP
 #define XSTD_BITS_DETAIL_CONTIGUOUS_BIT_CONTAINER_HPP
 
+#include <xstd/bits/bit_storage.hpp>                         // owned_bit_storage, resizable_bit_storage
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_base_type
 #include <xstd/bits/detail/bit_castable.hpp>                 // bit_bytes, bit_castable, byte_count, bytes_bits, container_source
-#include <xstd/bits/detail/contiguous_block_range.hpp>       // borrowed_block_span, contiguous_block_range
+#include <xstd/bits/detail/borrowed_block_span.hpp>          // borrowed_block_span
 #include <xstd/bits/detail/intrin.hpp>                       // countl_zero, countr_zero, popcount
 #include <xstd/bits/detail/pred.hpp>                         // intersects, is_subset_of, not_equal_to
 #include <xstd/bits/detail/shift.hpp>                        // shl, shr
@@ -62,7 +63,7 @@ inline constexpr auto default_extent_v<std::span<Block, E>> = E == std::dynamic_
 
 // The one vehicle: it owns the unused-tail invariant, and has no iterators.
 template<class Blocks, std::size_t N = default_extent_v<Blocks>>
-        requires contiguous_block_range<Blocks> or (borrowed_block_span<Blocks> and N == default_extent_v<Blocks>)
+        requires (std::ranges::contiguous_range<Blocks> and xstd::owned_bit_storage<Blocks> and (N != std::dynamic_extent or xstd::resizable_bit_storage<Blocks>)) or (borrowed_block_span<Blocks> and N == default_extent_v<Blocks>)
 class contiguous_bit_container : public bits::detail::allocator_base_type<Blocks>
 {
 public:

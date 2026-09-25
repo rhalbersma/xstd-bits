@@ -285,7 +285,7 @@ BOOST_AUTO_TEST_CASE(ASequenceOfBlocksStatesItsLayoutToo)
         // A vector has no bits until one is put in it, so B().size() is zero and it states nothing.
         static_assert(not detail::block_range_source<std::vector<std::uint64_t>, 64UZ>);
 
-        // Signed blocks are not this family: contiguous_block_range asks for an unsigned value type.
+        // Signed blocks are not this family: owned_bit_storage asks for an unsigned value type.
         static_assert(not detail::block_range_source<std::array<int, 4>, 64UZ>);
 
         // And a scalar is not a range, which is why the family keeps two spellings rather than one.

@@ -6,18 +6,18 @@
 #ifndef XSTD_BITS_DETAIL_BIT_CASTABLE_HPP
 #define XSTD_BITS_DETAIL_BIT_CASTABLE_HPP
 
-#include <xstd/bits/detail/contiguous_block_range.hpp> // contiguous_block_range
-#include <xstd/ints/concepts/unsigned_integer.hpp>     // unsigned_integer
-#include <xstd/ints/limits.hpp>                        // numeric_limits
-#include <array>                                       // array
-#include <bit>                                         // bit_cast, endian
-#include <concepts>                                    // convertible_to, default_initializable
-#include <cstddef>                                     // byte, size_t, to_integer
-#include <cstring>                                     // memcpy
-#include <limits>                                      // numeric_limits
-#include <memory>                                      // addressof
-#include <ranges>                                      // contiguous_range, data, iota, range_value_t
-#include <type_traits>                                 // bool_constant, is_trivially_copyable_v
+#include <xstd/bits/bit_storage.hpp>               // owned_bit_storage
+#include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
+#include <xstd/ints/limits.hpp>                    // numeric_limits
+#include <array>                                   // array
+#include <bit>                                     // bit_cast, endian
+#include <concepts>                                // convertible_to, default_initializable
+#include <cstddef>                                 // byte, size_t, to_integer
+#include <cstring>                                 // memcpy
+#include <limits>                                  // numeric_limits
+#include <memory>                                  // addressof
+#include <ranges>                                  // contiguous_range, data, iota, range_value_t
+#include <type_traits>                             // bool_constant, is_trivially_copyable_v
 
 namespace xstd::bits::detail {
 
@@ -47,9 +47,9 @@ concept block_size_is_constant = requires {
 
 template<class B, std::size_t N>
 concept block_range_source =
-        // Contiguous first: contiguous_block_range asks constructible_from, which re-enters this very constraint.
+        // Contiguous first: owned_bit_storage asks constructible_from, which re-enters this very constraint.
         std::ranges::contiguous_range<B> and
-        contiguous_block_range<B> and
+        xstd::owned_bit_storage<B> and
         std::default_initializable<B> and
         block_size_is_constant<B> and
         B().size() * block_digits<B> >= N;

@@ -5,18 +5,22 @@
 
 #include <test/sequence/concepts.hpp>                                 // bit_sequence
 #include <test/set/concepts.hpp>                                      // bit_set
-#include <xstd/bits/bit_storage.hpp>                                  // bit_storage
+#include <xstd/bits/bit_sequence_adaptor.hpp>                         // bit_sequence_adaptor
+#include <xstd/bits/bit_set_adaptor.hpp>                              // bit_set_adaptor
+#include <xstd/bits/bit_storage.hpp>                                  // bit_storage, owned_bit_storage, resizable_bit_storage
 #include <xstd/bits/detail/contiguous_bit_container.hpp>              // contiguous_bit_container, num_blocks_v
-#include <xstd/bits/detail/contiguous_block_range.hpp>                // contiguous_block_range
 #include <xstd/bits/ext/boost.hpp>                                    // bit_small_set, bit_small_vector, small_bitset
 #include <xstd/bits/ext/boost/detail/contiguous_bit_small_vector.hpp> // contiguous_bit_small_vector
 #include <boost/container/new_allocator.hpp>                          // new_allocator
 #include <boost/container/small_vector.hpp>                           // small_vector
-#include <boost/test/unit_test.hpp>                                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
+#include <boost/container/static_vector.hpp>                          // static_vector
+#include <boost/container/throw_exception.hpp>                        // bad_alloc
+#include <boost/test/unit_test.hpp>                                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
+#include <algorithm>                                                  // ranges::count
 #include <concepts>                                                   // regular, same_as, totally_ordered
 #include <cstddef>                                                    // size_t
 #include <cstdint>                                                    // uint8_t
-#include <ranges>                                                     // bidirectional_range, random_access_range
+#include <ranges>                                                     // bidirectional_range, iota, random_access_range
 
 // The one column whose storage comes from outside the standard library, kept off the umbrella so Boost stays opt-in.
 BOOST_AUTO_TEST_SUITE(ExtBoost)
@@ -25,18 +29,21 @@ namespace {
 
 inline constexpr auto N = 256UZ;
 
+// Three bytes held inline: a storage from outside the standard library, with a capacity of 24 bits.
+using small_words = boost::container::static_vector<std::uint8_t, 3>;
+
 } // namespace
 
 // A back end joins on the block concept alone, which is the whole of what a storage has to satisfy.
 BOOST_AUTO_TEST_CASE(TheSmallVectorIsBlocksAStorageCanHold)
 {
-        static_assert(xstd::bits::detail::contiguous_block_range<boost::container::small_vector<std::size_t, 4>>);
+        static_assert(xstd::owned_bit_storage<boost::container::small_vector<std::size_t, 4>>);
         static_assert(xstd::bit_storage<boost::container::small_vector<std::size_t, 4>>);
         static_assert(xstd::bit_storage<boost::container::small_vector<std::uint8_t, 4, boost::container::new_allocator<std::uint8_t>>>);
         BOOST_CHECK(true);
 }
 
-// N counts bits and the storage counts blocks, so the vehicle divides by the block width the way the static column does.
+// N counts bits and the storage counts blocks, so the vehicle divides by the block width as the static column does.
 BOOST_AUTO_TEST_CASE(TheCapacityIsBitsAndTheStorageIsBlocks)
 {
         using Blocks = boost::container::small_vector<std::size_t, xstd::bits::detail::num_blocks_v<std::size_t, N>, boost::container::new_allocator<std::size_t>>;
@@ -56,6 +63,39 @@ BOOST_AUTO_TEST_CASE(TheUmbrellaReachesEveryReading)
         static_assert(std::ranges::random_access_range<xstd::bit_small_vector<N>>);
         static_assert(not std::ranges::range<xstd::small_bitset<N>>);
         BOOST_CHECK(true);
+}
+
+// A storage the library does not ship: the owners take it on the concepts alone, and its capacity is their ceiling.
+BOOST_AUTO_TEST_CASE(AStaticVectorIsAStorageTheOwnersTake)
+{
+        static_assert(xstd::owned_bit_storage<small_words> and xstd::resizable_bit_storage<small_words>);
+        static_assert(test::set::bit_set<xstd::bit_set_adaptor<small_words>>);
+        static_assert(test::sequence::bit_sequence<xstd::bit_sequence_adaptor<small_words>>);
+        BOOST_CHECK(true);
+}
+
+// Past the capacity the set has nowhere to grow, and the storage's own bad_alloc reaches the caller.
+BOOST_AUTO_TEST_CASE(AStaticVectorsCapacityIsTheSetsCeiling)
+{
+        auto s = xstd::bit_set_adaptor<small_words>();
+        BOOST_CHECK_EQUAL(s.max_size(), 24UZ);
+        s.insert(23);
+        BOOST_CHECK(s.contains(23) and s.size() == 1UZ);
+        BOOST_CHECK_THROW(s.insert(24), boost::container::bad_alloc);
+        BOOST_CHECK(s.contains(23) and not s.contains(24));
+}
+
+// The sequence fills to the capacity and refuses one more, keeping what it had.
+BOOST_AUTO_TEST_CASE(AStaticVectorsCapacityIsTheSequencesCeiling)
+{
+        auto v = xstd::bit_sequence_adaptor<small_words>();
+        for (auto const i : std::views::iota(0UZ, 24UZ)) {
+                v.push_back(i % 3UZ == 0UZ);
+        }
+        BOOST_CHECK_EQUAL(v.size(), 24UZ);
+        BOOST_CHECK_EQUAL(std::ranges::count(v, true), 8);
+        BOOST_CHECK_THROW(v.push_back(true), boost::container::bad_alloc);
+        BOOST_CHECK_EQUAL(v.size(), 24UZ);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
