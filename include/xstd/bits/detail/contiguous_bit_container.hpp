@@ -341,7 +341,7 @@ public:
         }
 
         // The bitset reading a word at a time: the bit string is the blocks from the top down, tail clear.
-        [[nodiscard]] friend constexpr auto string_lexicographical_compare_three_way(contiguous_bit_container const& x, contiguous_bit_container const& y) noexcept
+        [[nodiscard]] friend constexpr auto bitset_lexicographical_compare_three_way(contiguous_bit_container const& x, contiguous_bit_container const& y) noexcept
                 -> std::strong_ordering
         {
                 assert(x.size() == y.size());

@@ -982,22 +982,22 @@ over different sequences, and **they disagree**, pairwise, as two pairs show:
 A storage serving three readings cannot hold one of their orderings under a neutral name without choosing for
 its callers, so it holds none under that name. It holds **all three, separately named**:
 `contiguous_bit_container` has a `set_lexicographical_compare_three_way`, a
-`sequence_lexicographical_compare_three_way` and a `string_lexicographical_compare_three_way`, never one
+`sequence_lexicographical_compare_three_way` and a `bitset_lexicographical_compare_three_way`, never one
 `lexicographical_compare_three_way`, so a caller says which reading it means rather than being handed whichever
 the storage happened to pick. Each is the reading's own blockwise answer to the standard algorithm it is named
 for, which is also what pins it: whatever it answers has to agree with `std::lexicographical_compare_three_way`
 over that reading's own iterators.
 
-**Each is named for what it orders over, not for who asks.** Positions, bools from index 0, and the bit
-string — which is why the third is `string_lexicographical_compare_three_way` and not
-`bitset_lexicographical_compare_three_way`. The storage does not know what a bitset is; it knows the order
-`to_string()` would put its bits in, most significant first, and that order is the one `xstd::bitset` and
-`boost::dynamic_bitset` both mean by `<`. Naming two of the three after readings and the third after a
-container would have put a caller's word on the storage's member, which is the same mistake an unqualified
-`lexicographical_compare_three_way` makes one step further along.
+**Each is named for the reading it orders, the same three names `reading::set`, `reading::sequence` and
+`reading::bitset` give.** Positions, bools from index 0, and the bit string. The third orders the bits the way
+`to_string()` would print them, most significant first, and that order is the one `xstd::bitset` and
+`boost::dynamic_bitset` both mean by `<`: it is the bitset reading's order, so it is
+`bitset_lexicographical_compare_three_way`. An earlier name, `string_lexicographical_compare_three_way`, named
+the third after the bit string rather than the reading, which left one of the three spelled differently from the
+enumerator that selects it.
 
 **Recorded against a long-held hypothesis: that with the right bit order the set reading's `<=>` could be a
-plain `lexicographical_compare_three_way` over the blocks, the way the string reading's now is.** It cannot,
+plain `lexicographical_compare_three_way` over the blocks, the way the bitset reading's now is.** It cannot,
 in any bit order, and the README carried a bit-layout claim for years whose whole purpose was to make it true
 -- the set order "equivalent to doing the integer comparison `wL > wR` on the underlying words". Deleting that
 claim without its refutation would leave the layout free to be mirrored again on the same reasoning, so the
@@ -1021,8 +1021,8 @@ Those lists are the *support* of the bit vectors and their lengths are popcounts
 question about what lies above `p` that no fixed positional scan answers. Relabelling positions moves both
 cases together, so the pair above can be built in whatever bit order is chosen; `any_above` is irreducible.
 
-Which is also why the **string** reading does get to be the standard algorithm over the blocks reversed: a bit
-string is a fixed-length vector, so it has no prefix case to answer. The string reading is colexicographic on
+Which is also why the **bitset** reading does get to be the standard algorithm over the blocks reversed: a bit
+string is a fixed-length vector, so it has no prefix case to answer. The bitset reading is colexicographic on
 the elements, comparing from the largest position down; the set reading is lexicographic, from the smallest up.
 Two different orders on sets, not two spellings of one -- which is what the table above shows and this is the
 proof of.
@@ -1119,7 +1119,7 @@ pair costs `n + 1` block reads. And when the values are equal `any_above` is nev
 **The bitset reading needs neither piece, and its width-crossing arm is a third shape again.** The bit string,
 most significant position first, **is** the blocks from the top block down, with the unused tail kept clear, so
 it is the one reading whose order is plain lexicographic over words — and plain lexicographic over words is
-`std::lexicographical_compare_three_way` over the blocks reversed. `string_lexicographical_compare_three_way`
+`std::lexicographical_compare_three_way` over the blocks reversed. `bitset_lexicographical_compare_three_way`
 is that call and nothing else: no loop of its own, and no arm for either degenerate width, since a zero width
 still holds its one all-padding block, clear in both, and a one-block width is the algorithm's first step.
 
@@ -1134,7 +1134,7 @@ wider one holds outside the shared window sits *below* the comparison rather tha
 consulted at all: the top `min(size())` positions of each are paired from the top, read as words at either
 one's own alignment through `word_at`, and only if that window ties does the shorter one lose for being
 shorter. That walk lived in `bitset_adaptor`, which meant the one reading whose adaptor could not simply call
-its storage; it now sits beside `string_lexicographical_compare_three_way` and is reached from it, so all three orderings are total and
+its storage; it now sits beside `bitset_lexicographical_compare_three_way` and is reached from it, so all three orderings are total and
 none of the three adaptors branches on width. A pure relocation, and measured as one: identical answers over
 20,172 unequal-width comparisons.
 
@@ -1200,7 +1200,7 @@ the number 1, and boost orders them strictly, the shorter first. The harness pin
 boost's own `<` pair for pair over those widths, against `to_string()` compared as strings, and within a word
 against `to_ullong()`.
 
-`bitset_adaptor::operator<=>` is `string_lexicographical_compare_three_way` at equal widths, and at unequal ones boost's own walk,
+`bitset_adaptor::operator<=>` is `bitset_lexicographical_compare_three_way` at equal widths, and at unequal ones boost's own walk,
 the top `min(size())` positions paired from the top and then the shorter first, a word at a time through
 `word_at` ([the-blit](#the-blit)). `==` stays width-first, and `<=>` never answers equal at unequal widths,
 so the two agree ([the-hashing-invariant](#the-hashing-invariant)).
@@ -2743,7 +2743,7 @@ and `dynamic_bitset` mean, and those two need it. The width is part of the value
 `vector<bool>` of two elements is not one of three, and a `dynamic_bitset` is equal only at equal size -- and it
 is not part of the value for a set. So the set reading gets an entry of its own, `set_equal`, beside the
 `operator==` the other two keep, for the same reason `set_lexicographical_compare_three_way` sits beside
-`sequence_lexicographical_compare_three_way` and `string_lexicographical_compare_three_way`.
+`sequence_lexicographical_compare_three_way` and `bitset_lexicographical_compare_three_way`.
 
 **Two spellings for two meanings, and it does not come out as evenly as the orderings.** Ordering has three
 meanings and no structural answer at all -- a defaulted `<=>` would order by `m_size` first, which no reading
@@ -3752,7 +3752,7 @@ rather than `not any_true`, so the storage is asked in its own words; `contiguou
 `mismatch` is `contiguous_bit_container::first_difference` plus one `countr_zero`. That helper existed already,
 private and used only by `sequence_lexicographical_compare_three_way`; it is now public, and **keeps its
 name**: it scans low block to high, which is the *ascending* orderings' answer, where
-`string_lexicographical_compare_three_way` deliberately walks the other way and does not use it. Calling it
+`bitset_lexicographical_compare_three_way` deliberately walks the other way and does not use it. Calling it
 `mismatch` on the storage would repeat the mistake an unqualified `lexicographical_compare_three_way` made
 ([two-readings-disagree](#two-readings-disagree)). The counterpart name goes on the public member, which is the
 owner's alone: a window's blocks are not its own.
