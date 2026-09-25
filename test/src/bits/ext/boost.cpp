@@ -5,6 +5,7 @@
 
 #include <test/sequence/concepts.hpp>                                 // bit_sequence
 #include <test/set/concepts.hpp>                                      // bit_set
+#include <xstd/bits/bit_storage.hpp>                                  // bit_storage
 #include <xstd/bits/detail/contiguous_bit_container.hpp>              // contiguous_bit_container, num_blocks_v
 #include <xstd/bits/detail/contiguous_block_range.hpp>                // contiguous_block_range
 #include <xstd/bits/ext/boost.hpp>                                    // bit_small_set, bit_small_vector, small_bitset
@@ -30,6 +31,8 @@ inline constexpr auto N = 256UZ;
 BOOST_AUTO_TEST_CASE(TheSmallVectorIsBlocksAStorageCanHold)
 {
         static_assert(xstd::bits::detail::contiguous_block_range<boost::container::small_vector<std::size_t, 4>>);
+        static_assert(xstd::bit_storage<boost::container::small_vector<std::size_t, 4>>);
+        static_assert(xstd::bit_storage<boost::container::small_vector<std::uint8_t, 4, boost::container::new_allocator<std::uint8_t>>>);
         BOOST_CHECK(true);
 }
 

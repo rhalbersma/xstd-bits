@@ -6,10 +6,11 @@
 #ifndef XSTD_BITS_BIT_SEQUENCE_ADAPTOR_HPP
 #define XSTD_BITS_BIT_SEQUENCE_ADAPTOR_HPP
 
+#include <xstd/bits/bit_storage.hpp>                     // bit_storage
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // num_blocks_v
 #include <xstd/bits/detail/ownership.hpp>                // storage, window
 #include <xstd/bits/detail/sequence_adaptor.hpp>         // sequence_adaptor
-#include <xstd/bits/detail/words.hpp>                    // block_words, owner_storage_t, words_extent_v
+#include <xstd/bits/detail/words.hpp>                    // owner_storage_t, words_extent_v
 #include <xstd/bits/from_bits.hpp>                       // from_bits_t
 #include <xstd/ints/concepts/unsigned_integer.hpp>       // unsigned_integer
 #include <xstd/ints/limits.hpp>                          // numeric_limits
@@ -24,7 +25,7 @@
 namespace xstd {
 
 // A sequence of bools packed into a storage of blocks it owns: std::vector<bool>'s reading over any block container.
-template<bits::detail::block_words Blocks, std::size_t N = bits::detail::words_extent_v<Blocks>>
+template<bit_storage Blocks, std::size_t N = bits::detail::words_extent_v<Blocks>>
 class bit_sequence_adaptor : public bits::detail::sequence_adaptor<bits::detail::owner_storage_t<Blocks, N>, bits::detail::storage::owned, bits::detail::window::all, bit_sequence_adaptor<Blocks, N>>
 {
         using base_type = bits::detail::sequence_adaptor<bits::detail::owner_storage_t<Blocks, N>, bits::detail::storage::owned, bits::detail::window::all, bit_sequence_adaptor<Blocks, N>>;

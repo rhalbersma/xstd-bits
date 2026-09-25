@@ -12,20 +12,11 @@
 #include <xstd/ints/limits.hpp>                          // numeric_limits
 #include <array>                                         // array
 #include <cstddef>                                       // size_t
-#include <ranges>                                        // contiguous_range, range_size_t, range_value_t, sized_range
 #include <span>                                          // span
 #include <type_traits>                                   // conditional_t, is_const_v, remove_const_t, remove_reference_t
 
 // What the public containers and views are named by: the words, never the storage built over them.
 namespace xstd::bits::detail {
-
-// One unsigned word, or a sized contiguous range of them that subscripts; const where a view only reads.
-template<class W>
-concept block_words =
-        xstd::unsigned_integer<std::remove_const_t<W>> or
-        (std::ranges::sized_range<W> and std::ranges::contiguous_range<W> and
-         xstd::unsigned_integer<std::remove_const_t<std::ranges::range_value_t<W>>> and
-         requires (W& w, std::ranges::range_size_t<W> n) { w[n]; });
 
 // The width the words name by their type: a word's digits, or the width the block storage names.
 template<class W>

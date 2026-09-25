@@ -180,6 +180,7 @@ storage.
 | `<xstd/bits/bitset_adaptor.hpp>` | `bitset_adaptor` | The bitset reading over a storage of blocks: `bitset_adaptor<std::array<std::uint64_t, 1>>` is `basic_bitset<std::uint64_t, 64>` | [template.bitset], [container.adaptors] |
 | `<xstd/bits/bit_set_view.hpp>` | `bit_set_view` | Set reading of bits another container owns, or of unsigned words in place: `bit_set_view(board)` is a `bit_set_view<std::uint64_t>` | none |
 | `<xstd/bits/bit_span.hpp>` <br> `<xstd/bits/bit_subspan.hpp>` | `bit_span` <br> `bit_subspan` | Sequence reading over borrowed bits, whole or sliced, or over unsigned words in place: `bit_span(words)` | [views.span] |
+| `<xstd/bits/bit_storage.hpp>` | `bit_storage` | What every container and view presents a packed interface over: one unsigned word, or a sized contiguous range of them, in no reading of its own | none |
 | `<xstd/bits/from_bits.hpp>` | `from_bits` <br> `from_bits_t` | The tag that says an argument is a field of bits, so a static width deduces from it | [range.utility.conv] |
 | `<xstd/bits/contiguous_bit_sequence.hpp>` | `contiguous_bit_sequence` | What a storage must model to be adapted | none |
 

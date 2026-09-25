@@ -1797,7 +1797,7 @@ not wrap: 13 lines and one error through the alias, 22 lines and two errors thro
 
 Restating the constraint on the derived class's own parameter recovers all of that, and then some: it fails at
 the declaration, once, in **fewer** lines than the alias, having no indirection to explain. Which is why all
-three views spell their constraint, now `bits::detail::block_words Blocks`, on their own template
+three views spell their constraint, now `xstd::bit_storage Blocks`, on their own template
 parameter instead of leaving it to the base. A four-line reduction holding a constrained class template, an
 alias of it, and both derived forms reproduces the shape exactly, GCC and Clang agreeing to the line, so it is
 the language rather than a diagnostic quirk. The failure mode is the derived class that skips the restatement,
@@ -1836,7 +1836,9 @@ replaces the forward declaration of `bit_subspan` the adaptor carried while the 
 ### the-views-are-named-by-their-words
 
 Every public class is named by **words**, never by the storage built over them: an unsigned word, or a sized
-contiguous range of unsigned words that subscripts, which is `bits::detail::block_words`. `contiguous_bit_container`
+contiguous range of unsigned words that subscripts, which is the public concept `xstd::bit_storage`. A packed container
+*has* bit storage and is not bit storage itself: `bit_set` is a range of keys, `bit_array` of proxies, and
+`std::bitset` has one too without exposing it. `contiguous_bit_container`
 is a storage device and appears in no public template argument list. `detail/words.hpp` holds the map:
 
 | words | an owner stores | a view stores |
@@ -1860,6 +1862,11 @@ it deduces the span that lends it: `bit_span(words)` over a `std::vector<std::ui
 two names -- `bit_set_adaptor<std::uint64_t>` beside `bit_set_adaptor<std::array<std::uint64_t, 1>>`, as `int`
 beside `std::array<int, 1>` -- and each guide picks one: the owners' `from_bits` guides keep the array, which the
 `basic_bit_array` and `basic_bit_static_set` aliases deduce through.
+
+`bit_storage` is stricter than what itsy-bitsy's `bit_view<R>` adapts, which reaches its words through `R`'s
+iterators and so takes a `std::deque` of words. Contiguity is what the rest leans on: a view borrows the words as a
+`std::span`, a cast between two things that have bit storage is one `memcpy` of the blocks, and the block-wise
+algorithms run on raw words. So `bit_storage<std::deque<std::uint32_t>>` is false, and asserted false.
 
 ### windows
 

@@ -6,9 +6,10 @@
 #ifndef XSTD_BITS_BITSET_ADAPTOR_HPP
 #define XSTD_BITS_BITSET_ADAPTOR_HPP
 
+#include <xstd/bits/bit_storage.hpp>                     // bit_storage
 #include <xstd/bits/detail/bitset_adaptor.hpp>           // bitset_adaptor
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // num_blocks_v
-#include <xstd/bits/detail/words.hpp>                    // block_words, owner_storage_t, words_extent_v
+#include <xstd/bits/detail/words.hpp>                    // owner_storage_t, words_extent_v
 #include <xstd/bits/from_bits.hpp>                       // from_bits_t
 #include <xstd/ints/concepts/unsigned_integer.hpp>       // unsigned_integer
 #include <xstd/ints/limits.hpp>                          // numeric_limits
@@ -20,7 +21,7 @@
 namespace xstd {
 
 // A field of bits in a storage of blocks it owns, read as a whole: std::bitset's reading over any block container.
-template<bits::detail::block_words Blocks, std::size_t N = bits::detail::words_extent_v<Blocks>>
+template<bit_storage Blocks, std::size_t N = bits::detail::words_extent_v<Blocks>>
 class bitset_adaptor : public bits::detail::bitset_adaptor<bits::detail::owner_storage_t<Blocks, N>, bitset_adaptor<Blocks, N>>
 {
         using base_type = bits::detail::bitset_adaptor<bits::detail::owner_storage_t<Blocks, N>, bitset_adaptor<Blocks, N>>;
