@@ -96,7 +96,7 @@ target_sources(
         include/xstd/bits/detail/contiguous_bit_container.hpp
         include/xstd/bits/detail/contiguous_bit_inplace_vector.hpp
         include/xstd/bits/detail/contiguous_bit_vector.hpp
-        include/xstd/bits/detail/contiguous_block_range.hpp
+        include/xstd/bits/detail/borrowed_block_span.hpp
         include/xstd/bits/detail/functor.hpp
         include/xstd/bits/detail/hash.hpp
         include/xstd/bits/detail/intrin.hpp

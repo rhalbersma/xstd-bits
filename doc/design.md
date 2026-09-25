@@ -9,13 +9,40 @@ out of. This file holds what has landed.
 
 ## Storage and containers
 
-### contiguous-block-range
+### owned-bit-storage
 
-`contiguous_block_range` asks whether a range **is** blocks: a regular, sized, contiguous, subscriptable
-range of unsigned integers. Regular is what lets `contiguous_bit_container` default its `==` over the width and
-the blocks, in that member order, so two run-time widths part on the width before a block is read. `std::array`
-and `std::vector` both qualify, and so does `std::inplace_vector` — a runtime width over static capacity, for
-free.
+`xstd::owned_bit_storage` asks whether a type is bit storage a container can **own**: `bit_storage`
+([is-and-has](#is-and-has)) that is also regular, and read-only through a `const` object. For a range that is a
+regular, sized, contiguous, subscriptable range of unsigned integers whose `const` subscript does not write.
+Regular is what lets `contiguous_bit_container` default its `==` over the width and the blocks, in that member
+order, so two run-time widths part on the width before a block is read. `std::array` and `std::vector` both
+qualify, and so does `std::inplace_vector` — a runtime width over static capacity, for free.
+
+**It is public because the owners are named by it.** `bit_set_adaptor`, `bit_sequence_adaptor` and
+`bitset_adaptor` take `owned_bit_storage Blocks`, while the views take any `bit_storage`. The split is the one
+between owning and borrowing: `std::span<B>` is bit storage a view borrows, and it is neither regular -- two
+spans comparing equal would mean the same words, not the same bits -- nor read-only through `const`. The same
+test lived in `detail` as `owned_bit_storage` while the owners were constrained on `bit_storage` alone, so
+`bit_sequence_adaptor<std::span<B>>` passed the public constraint and then failed inside the vehicle. A
+requirement an owner's user has to meet is public API, and a hard error inside `detail/` is not how to state it.
+
+**A run-time width asks one thing more.** `xstd::resizable_bit_storage` refines `owned_bit_storage` with what
+the vehicle calls to change its word count: `resize(count, value)`, `push_back`, `insert` at the end, `clear`
+and `max_size`. An owner requires it only at `N == std::dynamic_extent`, so `std::array<B, K>` still serves a
+fixed width while `bit_set_adaptor<std::array<B, K>, std::dynamic_extent>` is refused at the constraint rather
+than inside `resize`. The test that the contract is the whole of what a storage has to provide
+is `test::minimal_words`: a storage written outside the library with exactly those members and no others, which
+runs the set reading's full primitive suite as a `bit_set_adaptor`. `boost::container::static_vector`
+satisfies both concepts as it comes. Boost's containers are asserted rather than run under coverage: they
+force-inline an asserting `operator[]`, so every subscript in the vehicle would bring along a branch no passing
+test takes.
+
+**Whether growth throws is the storage's own answer.** `std::vector::resize` can throw `std::bad_alloc`, and a
+storage with an inline capacity -- `std::inplace_vector`, `boost::container::static_vector` -- throws its own
+`bad_alloc` past it, which reaches the caller unchanged. Growth keeps whatever guarantee the storage's own `resize`
+gives, because the width moves only after the storage has grown: over any of the standard or Boost vectors, whose
+`resize` on unsigned words either completes or changes nothing, a failed growth leaves the owner as it was. A
+storage whose `resize` is `noexcept` never takes that path.
 
 The element clause is `unsigned_integer` and **not** the wider `bitwise_operators`, which would be the concept
 if the operators were all a block is asked for. They are not. Beyond them the body wants the `<bit>` intrinsics
@@ -40,11 +67,12 @@ asks more of a block than it offers its own user, consuming numbers and yielding
 arithmetic on the way up. That is also why nesting cannot work: a `contiguous_bit_container` will have every
 operator and still no `popcount`, no `digits` and no `- 1`.
 
-The concept has a header of its own at `detail/contiguous_block_range.hpp`: the concept says what a `Blocks` **is**,
-the container is the vehicle built over it, and a reader asking the first question need not open the 1100 lines
-answering the second. Its includes are `<concepts>`, `<ranges>`, the one xstd-ints concept and the alias of
-[the-const-reference](#the-const-reference) — a leaf. `num_blocks_v` stays behind, being a block-count computation rather than a statement about what a
-`Blocks` is, and both alias headers that use it already take the container whole.
+The concept sits beside `bit_storage` in `<xstd/bits/bit_storage.hpp>`, which it refines: the one says what a
+`Blocks` **is**, the container is the vehicle built over it, and a reader asking the first question need not open
+the 1500 lines answering the second. Its includes are `<concepts>`, `<ranges>`, the one xstd-ints concept and the
+alias of [the-const-reference](#the-const-reference). `borrowed_block_span`, the span a view writes through, is
+left in `detail/borrowed_block_span.hpp`. `num_blocks_v` stays with the vehicle, being a block-count computation
+rather than a statement about what a `Blocks` is.
 
 Subscript is spelled out rather than left to `std::ranges::contiguous_range`, which does not imply it.
 `contiguous_range` gives `data()` and a `contiguous_iterator`, and a `contiguous_iterator` is a
@@ -185,8 +213,8 @@ containers include only the vehicle it uses -- `bit_array` names `contiguous_bit
 `std::vector`, and the `#ifdef __cpp_lib_inplace_vector` guard sits in the one header that concerns it rather
 than in the common one.
 
-**The name says what it does to its argument.** It takes a `contiguous_block_range` — a range that *is*
-blocks ([contiguous-block-range](#contiguous-block-range)) — and adds the bit interface. In goes
+**The name says what it does to its argument.** It takes a `owned_bit_storage` — a range that *is*
+blocks ([owned-bit-storage](#owned-bit-storage)) — and adds the bit interface. In goes
 storage that answers about blocks, out comes something that answers about bits. Concept and class differ by one
 word, and it is the word that changes. The three aliases follow the same rule: `contiguous_bit_array`,
 `contiguous_bit_vector` and `contiguous_bit_inplace_vector` each name the bit container over one block
@@ -225,7 +253,7 @@ library is actually instantiated over, so an assertion about them is an assertio
 What that gives up is the negative cases a shim isolates one clause at a time, and here three of the four
 survive on ready-made types alone: `std::vector<bool>` is not contiguous, `std::vector<int>` is signed, and
 `std::array<std::bitset<64>, 4>` is the field of bits that is not a number — the one that separates
-`unsigned_integer` from `bitwise_operators` ([contiguous-block-range](#contiguous-block-range)). Only the
+`unsigned_integer` from `bitwise_operators` ([owned-bit-storage](#owned-bit-storage)). Only the
 range-subscript clause has no ready-made counterexample, and it is argued in prose there instead.
 
 `counting_blocks` in `test/src/bits/detail/contiguous_bit_container.cpp` is not an exception to this. It is a
@@ -380,8 +408,8 @@ expression** — `B().size()` answers `M` for an array and zero for a vector —
 promise made at compile time, and a run-time size cannot keep it. It must cover `N` but need not equal it, which
 is the rule the scalar spelling already follows.
 
-Asking `contiguous_range` **before** `contiguous_block_range` is load-bearing rather than tidy. That concept opens
-with `std::regular`, which asks `constructible_from`, which re-enters the very constructor whose constraint this
+Asking `contiguous_range` **before** `owned_bit_storage` is load-bearing rather than tidy. That concept asks
+`std::regular`, which asks `constructible_from`, which re-enters the very constructor whose constraint this
 is — a concept depending on itself. An adaptor's iterator is a proxy and so never contiguous, so the cheap question
 answers false for every reading here before the recursive one is put.
 
@@ -682,7 +710,7 @@ member, so the landmine #80 recorded -- probing `clear()` on boost and emptying 
 
 `contiguous_bit_inplace_vector<Block, N>` is the third storage: a run-time width under a compile-time capacity
 of `N` bits, behind `__cpp_lib_inplace_vector` until every library in the matrix has it. It needs nothing of its
-own, `std::inplace_vector` satisfying `contiguous_block_range` as it is; `resize`, `reserve` and `push_back`
+own, `std::inplace_vector` satisfying `owned_bit_storage` as it is; `resize`, `reserve` and `push_back`
 past the capacity throw `std::bad_alloc`, as that library specifies.
 
 The adaptors take growth by detection on the storage: growth is a container's business and no view's, so it exists on an owner and on nothing else. `sequence_adaptor` is
@@ -890,7 +918,7 @@ learn that says nothing the spelling does not, and it hid which part was general
 storage is the argument. `TN` is spelt `<class U, U...>` rather than `<class, auto...>`, which would also
 take a value typed by the type, and it strips the const a view over a const owner names -- the reason the
 local concept existed beside the local trait at all. A constrained parameter is no obstacle:
-`contiguous_block_range Blocks` binds it as a bare `class` would.
+`owned_bit_storage Blocks` binds it as a bare `class` would.
 
 ### what-the-readings-share
 
@@ -1516,7 +1544,7 @@ only the vehicle it uses: measured, a central switchboard had `bit_array.hpp` pu
 exactly the property the vehicle split was for.
 
 **The axis stays open, and it is the concept that keeps it open.** What a storage has to satisfy is
-`contiguous_block_range` ([contiguous-block-range](#contiguous-block-range)), which is a claim about blocks
+`owned_bit_storage` ([owned-bit-storage](#owned-bit-storage)), which is a claim about blocks
 and says nothing about where they live. `ext/boost.hpp` joins on that and nothing else: one alias for
 `boost::container::small_vector` and three containers over it, written from outside the library without a line
 of it changing.
@@ -1529,7 +1557,7 @@ The grid is three container adaptors, one per reading -- `bit_sequence_adaptor<B
 is `bit_sequence_adaptor<std::vector<B, A>>`, `basic_bit_array<B, N>` the adaptor over
 `std::array<B, num_blocks_v<B, N>>` at width `N`. One type per storage, a printed name the user can write, the
 `std::hash`, tuple and Boost opt-in specializations written once per reading instead of once per class, and the
-container parameter open to any `contiguous_block_range` without a new class for it. #229 set it out.
+container parameter open to any `owned_bit_storage` without a new class for it. #229 set it out.
 
 Aliases cannot declare deduction guides, so every owner guide -- the `from_bit_storage` tag's, `basic_bitset`'s integer
 one -- lives on the adaptor and is reached through the alias, which is class template argument deduction for
@@ -2105,9 +2133,9 @@ and the members that grow, the written-out moves and the allocator constructors 
 borrowed run-time width neither grows nor moves anything but a span. `extent` still answers
 `std::dynamic_extent` for `blocks_extent`, which is what every reading already asks to mean "not static".
 
-The class admits the span beside `contiguous_block_range`, and only at the span's own default width: a narrower
+The class admits the span beside `owned_bit_storage`, and only at the span's own default width: a narrower
 `N` over someone else's words would have a tail the storage could not keep clear. The span is refused as a
-`contiguous_block_range` on purpose and stays refused -- it is not `regular`, and its const subscript writes --
+`owned_bit_storage` on purpose and stays refused -- it is not `regular`, and its const subscript writes --
 so `borrowed_block_span` is its own concept, with a mutable unsigned element.
 
 **The view holds that storage by value, as `std::views::all` holds a view.** A view over an owner holds a
@@ -3369,8 +3397,8 @@ Random access is nevertheless where the ladder stops, and it stops because of th
 `std::contiguous_iterator` requires `iter_reference_t<I>` to be a real `iter_value_t<I>&`, which no proxy is, so
 no reading here is a `contiguous_range` and no iterator here is a `contiguous_iterator`. That is asserted as a
 negative, because it is the one place the bits and the blocks part company: the **blocks** are contiguous and
-`contiguous_block_range` requires precisely that
-([contiguous-block-range](#contiguous-block-range)), while the **bits** are not addressable at all. The
+`owned_bit_storage` requires precisely that
+([owned-bit-storage](#owned-bit-storage)), while the **bits** are not addressable at all. The
 asymmetry is the reason the vehicle keeps its blocks to itself and hands out proxies above it.
 
 The free functions stay qualified as `bits::detail::shl<Block>(...)` inside `xstd::bits::detail` itself.
@@ -3673,7 +3701,7 @@ compilers disagree about noticing: clang's `-Wshadow` rejected two such paramete
 silently. If the function has an `n` or an `i`, the constraint uses it.
 
 The same rule reaches concepts, where the argument is the type: see
-[contiguous-block-range](#contiguous-block-range), whose subscript requirement exists because the
+[owned-bit-storage](#owned-bit-storage), whose subscript requirement exists because the
 class subscripts and `std::ranges::contiguous_range` does not promise that.
 
 ### the-functor-takes-a-value

@@ -3,11 +3,12 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/minimal_words.hpp>        // minimal_words
 #include <xstd/bits/bit_array.hpp>       // bit_array
 #include <xstd/bits/bit_set.hpp>         // bit_set
 #include <xstd/bits/bit_set_adaptor.hpp> // bit_set_adaptor
 #include <xstd/bits/bit_set_view.hpp>    // bit_set_view
-#include <xstd/bits/bit_storage.hpp>     // bit_storage, bit_storage_extent_v
+#include <xstd/bits/bit_storage.hpp>     // bit_storage, bit_storage_extent_v, owned_bit_storage, resizable_bit_storage
 #include <boost/test/unit_test.hpp>      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <array>                         // array
 #include <bitset>                        // bitset
@@ -35,6 +36,9 @@ concept names_an_owner = requires { typename xstd::bit_set_adaptor<W>; };
 
 template<class W>
 concept names_a_view = requires { typename xstd::bit_set_view<W>; };
+
+template<class W, std::size_t N>
+concept names_an_owner_of = requires { typename xstd::bit_set_adaptor<W, N>; };
 
 } // namespace
 
@@ -82,6 +86,36 @@ BOOST_AUTO_TEST_CASE(TheExtentIsTheWidthTheTypeNames)
         static_assert(xstd::bit_storage_extent_v<std::vector<std::size_t>> == std::dynamic_extent);
         static_assert(std::is_same_v<xstd::bit_set_view<std::span<std::uint32_t>>, xstd::bit_set_view<std::span<std::uint32_t>, std::dynamic_extent>>);
         static_assert(std::is_same_v<xstd::bit_set_adaptor<std::uint64_t>, xstd::bit_set_adaptor<std::uint64_t, 64>>);
+        BOOST_CHECK(true);
+}
+
+// An owner takes what compares by its words and stays read-only through const; a span is neither, so views take it.
+BOOST_AUTO_TEST_CASE(OwnedStorageIsAValueThatConstKeepsReadOnly)
+{
+        static_assert(xstd::owned_bit_storage<std::uint64_t> and xstd::owned_bit_storage<std::array<std::uint16_t, 3>>);
+        static_assert(xstd::owned_bit_storage<std::vector<std::size_t>>);
+        static_assert(not xstd::owned_bit_storage<std::span<std::uint32_t>> and not xstd::owned_bit_storage<std::span<std::uint32_t, 2>>);
+        static_assert(not xstd::owned_bit_storage<std::uint64_t const> and not xstd::owned_bit_storage<std::array<std::uint16_t, 3> const>);
+        static_assert(xstd::bit_storage<std::span<std::uint32_t>> and xstd::bit_storage<std::uint64_t const>);
+        static_assert(not names_an_owner<std::span<std::uint32_t>> and not names_an_owner<std::uint64_t const>);
+        BOOST_CHECK(true);
+}
+
+// A run-time width grows its words, so an owner at one takes only storage that resizes; a fixed width takes any.
+BOOST_AUTO_TEST_CASE(ARunTimeWidthOwnsOnlyStorageThatResizes)
+{
+        static_assert(xstd::resizable_bit_storage<std::vector<std::size_t>>);
+        static_assert(not xstd::resizable_bit_storage<std::array<std::uint64_t, 2>> and not xstd::resizable_bit_storage<std::uint64_t>);
+#ifdef __cpp_lib_inplace_vector
+
+        static_assert(xstd::resizable_bit_storage<std::inplace_vector<std::uint16_t, 3>>);
+
+#endif
+        static_assert(xstd::resizable_bit_storage<test::minimal_words<std::uint32_t>>);
+        static_assert(names_an_owner_of<std::vector<std::size_t>, std::dynamic_extent>);
+        static_assert(names_an_owner_of<test::minimal_words<std::uint32_t>, std::dynamic_extent>);
+        static_assert(names_an_owner_of<std::array<std::uint64_t, 2>, 100> and not names_an_owner_of<std::array<std::uint64_t, 2>, std::dynamic_extent>);
+        static_assert(not names_an_owner_of<std::uint64_t, std::dynamic_extent>);
         BOOST_CHECK(true);
 }
 

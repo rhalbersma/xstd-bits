@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_BITSET_ADAPTOR_HPP
 #define XSTD_BITS_BITSET_ADAPTOR_HPP
 
-#include <xstd/bits/bit_storage.hpp>                     // bit_storage, bit_storage_extent_v
+#include <xstd/bits/bit_storage.hpp>                     // bit_storage_extent_v, owned_bit_storage, resizable_bit_storage
 #include <xstd/bits/detail/bitset_adaptor.hpp>           // bitset_adaptor
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // num_blocks_v
 #include <xstd/bits/detail/words.hpp>                    // owner_storage_t
@@ -17,11 +17,13 @@
 #include <cstddef>                                       // size_t
 #include <functional>                                    // hash
 #include <limits>                                        // numeric_limits
+#include <span>                                          // dynamic_extent
 
 namespace xstd {
 
 // A field of bits in a storage of blocks it owns, read as a whole: std::bitset's reading over any block container.
-template<bit_storage Blocks, std::size_t N = bit_storage_extent_v<Blocks>>
+template<owned_bit_storage Blocks, std::size_t N = bit_storage_extent_v<Blocks>>
+        requires (N != std::dynamic_extent) or resizable_bit_storage<Blocks>
 class bitset_adaptor : public bits::detail::bitset_adaptor<bits::detail::owner_storage_t<Blocks, N>, bitset_adaptor<Blocks, N>>
 {
         using base_type = bits::detail::bitset_adaptor<bits::detail::owner_storage_t<Blocks, N>, bitset_adaptor<Blocks, N>>;

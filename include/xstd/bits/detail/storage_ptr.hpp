@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_DETAIL_STORAGE_PTR_HPP
 #define XSTD_BITS_DETAIL_STORAGE_PTR_HPP
 
-#include <xstd/bits/detail/contiguous_block_range.hpp>       // borrowed_block_span
+#include <xstd/bits/detail/borrowed_block_span.hpp>          // borrowed_block_span
 #include <xstd/misc/type_traits/conditional_data_member.hpp> // XSTD_NO_UNIQUE_ADDRESS, conditional_data_member_t
 #include <concepts>                                          // same_as
 #include <cstddef>                                           // nullptr_t, size_t

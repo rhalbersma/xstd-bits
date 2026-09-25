@@ -6,9 +6,10 @@
 #ifndef XSTD_BITS_DETAIL_CONTIGUOUS_BIT_CONTAINER_HPP
 #define XSTD_BITS_DETAIL_CONTIGUOUS_BIT_CONTAINER_HPP
 
+#include <xstd/bits/bit_storage.hpp>                         // owned_bit_storage, resizable_bit_storage
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_base_type
 #include <xstd/bits/detail/bit_castable.hpp>                 // bit_bytes, bit_castable, byte_count, bytes_bits, container_source
-#include <xstd/bits/detail/contiguous_block_range.hpp>       // borrowed_block_span, contiguous_block_range
+#include <xstd/bits/detail/borrowed_block_span.hpp>          // borrowed_block_span
 #include <xstd/bits/detail/intrin.hpp>                       // countl_zero, countr_zero, popcount
 #include <xstd/bits/detail/pred.hpp>                         // intersects, is_subset_of, not_equal_to
 #include <xstd/bits/detail/shift.hpp>                        // shl, shr
@@ -62,7 +63,7 @@ inline constexpr auto default_extent_v<std::span<Block, E>> = E == std::dynamic_
 
 // The one vehicle: it owns the unused-tail invariant, and has no iterators.
 template<class Blocks, std::size_t N = default_extent_v<Blocks>>
-        requires contiguous_block_range<Blocks> or (borrowed_block_span<Blocks> and N == default_extent_v<Blocks>)
+        requires (std::ranges::contiguous_range<Blocks> and xstd::owned_bit_storage<Blocks> and (N != std::dynamic_extent or xstd::resizable_bit_storage<Blocks>)) or (borrowed_block_span<Blocks> and N == default_extent_v<Blocks>)
 class contiguous_bit_container : public bits::detail::allocator_base_type<Blocks>
 {
 public:
@@ -138,17 +139,6 @@ private:
         static constexpr auto static_unused_bits = static_cast<block_type>(~static_used_bits);
         static constexpr auto static_has_unused_bits = has_static_size and static_used_bits != ones;
 
-        // An NSDMI, not extent-constrained constructors: vector starts empty.
-        [[nodiscard]] static constexpr auto make_blocks(std::size_t n [[maybe_unused]])
-                -> Blocks
-        {
-                if constexpr (has_stored_size) {
-                        return Blocks(blocks_for(n));
-                } else {
-                        return Blocks{};
-                }
-        }
-
         // The width is a size_t unless the blocks out-align one, when it fills what would be padding.
         using width_type = std::conditional_t<(alignof(std::size_t) >= alignof(Blocks)), std::size_t, block_type>;
         static_assert(sizeof(width_type) >= sizeof(std::size_t) and alignof(width_type) >= alignof(Blocks));
@@ -157,7 +147,8 @@ private:
         [[XSTD_NO_UNIQUE_ADDRESS]]
         conditional_data_member_t<has_stored_size, width_type, struct size_tag> m_size{};
 
-        Blocks m_blocks = make_blocks(0UZ);
+        // An NSDMI, not extent-constrained constructors: an array starts zeroed and a vector empty.
+        Blocks m_blocks{};
 
 public:
         [[nodiscard]] contiguous_bit_container()
@@ -174,8 +165,10 @@ public:
         [[nodiscard]] constexpr explicit contiguous_bit_container(std::size_t n)
                 requires has_stored_size
                 : m_size(n)
-                , m_blocks(make_blocks(n))
-        {}
+        {
+                // Grown by resize, not a count constructor: resizable_bit_storage does not ask for one.
+                m_blocks.resize(blocks_for(n), zero);
+        }
 
         // boost's allocator arguments, deduced and matched, so a storage without one has no such constructor.
         template<class Alloc>
