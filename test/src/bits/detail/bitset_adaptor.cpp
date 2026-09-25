@@ -4,10 +4,10 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/bit_exchange.hpp>                      // casts_between, casts_from, exchanges_bits, exchanges_from_bits, exchanges_to_bits
+#include <test/bitset/vocabulary.hpp>                 // vocabulary
 #include <xstd/bits/bit/bit_cast.hpp>                 // bit_cast
 #include <xstd/bits/bit_set_view.hpp>                 // bit_set_view
 #include <xstd/bits/bit_span.hpp>                     // bit_span
-#include <xstd/bits/contiguous_bit_sequence.hpp>      // contiguous_bit_sequence
 #include <xstd/bits/bitset.hpp>                       // basic_bitset, bitset
 #include <xstd/bits/detail/bitset_adaptor.hpp>        // bitset_adaptor
 #include <xstd/bits/detail/contiguous_bit_array.hpp>  // contiguous_bit_array
@@ -907,11 +907,11 @@ BOOST_AUTO_TEST_CASE(ASequenceOfBlocksIsAFieldOfBitsAndAScalarIsNot)
 
 BOOST_AUTO_TEST_SUITE_END()
 
-// contiguous_bit_sequence is structural: it asks the positional members, which the counterparts answer too.
+// The common vocabulary is structural: it asks the positional members, which the counterparts answer too.
 BOOST_AUTO_TEST_SUITE(TheStructuralQuestionIsNotTheNominalOne)
 
-static_assert(xstd::contiguous_bit_sequence<xstd::bits::detail::contiguous_bit_array<std::uint64_t, 64>>);
-static_assert(xstd::contiguous_bit_sequence<boost::dynamic_bitset<>>);
-static_assert(xstd::contiguous_bit_sequence<std::bitset<64>>);
+static_assert(test::bitset::vocabulary<xstd::bits::detail::contiguous_bit_array<std::uint64_t, 64>>);
+static_assert(test::bitset::vocabulary<boost::dynamic_bitset<>>);
+static_assert(test::bitset::vocabulary<std::bitset<64>>);
 
 BOOST_AUTO_TEST_SUITE_END()

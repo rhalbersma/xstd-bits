@@ -35,7 +35,7 @@ error inside the template — the failure mode the subscript clause below exists
 reason to accept it on the element clause when the narrower concept states the truth.
 
 The asymmetry it records is the layering, not an accident. `unsigned_integer` goes **in** and the container
-gives `contiguous_bit_sequence` — and, once the non-assigning operators land, `bitwise_operators` — **out**: it
+gives the common vocabulary ([the-common-vocabulary](#the-common-vocabulary)) — and, once the non-assigning operators land, `bitwise_operators` — **out**: it
 asks more of a block than it offers its own user, consuming numbers and yielding a field of bits, shedding the
 arithmetic on the way up. That is also why nesting cannot work: a `contiguous_bit_container` will have every
 operator and still no `popcount`, no `digits` and no `- 1`.
@@ -235,7 +235,8 @@ std container can be, and it carries no concept assertion of its own: it is inst
 
 ### the-common-vocabulary
 
-`contiguous_bit_sequence` is what the three bit containers answer **in their own names**, with no trait in
+`test::bitset::vocabulary`, in `test/include/test/bitset/vocabulary.hpp`, is what the three bit containers answer
+**in their own names**, with no trait in
 between: the intersection of `std::bitset`'s vocabulary, `boost::dynamic_bitset`'s and
 `contiguous_bit_container`'s. Measured against all three rather than guessed, and larger than it first looks —
 nineteen requirements:
@@ -264,7 +265,7 @@ common. Union below, intersection across.
 
 **Nothing is constrained on it, and that is deliberate.** The adaptors admit their storage *nominally*, by
 `specialization_of_contiguous_bit_container` ([one-storage](#one-storage)), and the structural question is a
-different question: `std::bitset` and `boost::dynamic_bitset` both model `contiguous_bit_sequence` and neither
+different question: `std::bitset` and `boost::dynamic_bitset` both model the common vocabulary and neither
 is a storage this library wraps. Constraining an adaptor on the concept would turn *this is not one of ours*
 into *your type lacks `count()`*, which is the wrong diagnosis about the wrong type.
 
@@ -913,7 +914,7 @@ Three members are left over, and they are the three no reading can spell for its
   deliberately two names: a silent substitution of one for the other is a precondition quietly dropped.
 - **`assign(n, value)`** is the positional write, spelled apart from `set` on purpose. `set(bool)` and
   `set(std::size_t)` are ambiguous for a literal `0`, and `set(n, value)` is one of the five absences that
-  make `contiguous_bit_sequence` the intersection of the three vocabularies rather than the union
+  make the common vocabulary the intersection of the three vocabularies rather than the union
   ([the-common-vocabulary](#the-common-vocabulary)).
 - **`fill(value)`** is bulk, and `clear` is `fill(false)`. Not an overload of `set` for the same reason.
 
@@ -1869,7 +1870,11 @@ A word reaches the storage already wrapped in an array of one, so the storage ne
 the wrapping never shows: `extract` and `replace` exist only at run-time widths, which one word never is. The owners
 and views line up as `std::array<T, N>` and `std::span<T, N>` do -- `bit_set_adaptor<Blocks, N>` and
 `bit_set_view<Blocks, N>` -- and `N` defaults to the width the words name, so a view needs it only over an owner
-of a narrower width, such as `bit_span<std::array<std::size_t, 1>, 20>` over a `bit_array<20>`.
+of a narrower width, such as `bit_span<std::array<std::size_t, 1>, 20>` over a `bit_array<20>`. A default in a
+public argument list is public too, so that width is `xstd::bit_storage_extent_v<Blocks>`, beside the concept: a
+word's digits, all the bits of `std::array<B, K>` or `std::span<B, E>`, and `std::dynamic_extent` for everything
+else, a span of dynamic extent included. The storage keeps its own sentinel for that span's width, and it never
+reaches an argument list.
 `bit_subspan<Blocks, Extent, N>` takes the extent second, so `bit_subspan<Blocks, 4>` is a four-bit window as
 `std::span<T, 4>` is four elements.
 
@@ -2220,12 +2225,10 @@ rule, and it is a test rather than a judgement: `bit_static_set` is spelled, `co
 `bidirectional_bit_reference` is reached only through the `iterator` and `reference` typedefs and is spelled by
 nobody.
 
-What the rule keeps on the interface side, each with the reason it is not obvious:
-
-- **The nine containers and the three views.** Uncontested, and the reason the rest is worth stating.
-- **`contiguous_bit_sequence`.** The vocabulary the three bit containers share, which is a claim about
-  `std::bitset` and `boost::dynamic_bitset` as much as about ours, so it is stated where a reader can check it
-  ([the-common-vocabulary](#the-common-vocabulary)).
+What the rule keeps on the interface side: **the nine containers and the three views**, with the concept they are
+named by (`bit_storage`), the tag and the cast. The common vocabulary was here as a public concept, and is a test
+concept now: nothing constrained on it, so it was a claim about `std::bitset` and `boost::dynamic_bitset` rather than
+an interface ([the-common-vocabulary](#the-common-vocabulary)).
 
 That is the whole of it, and it used to be longer. `bit_traits` was here, with `ext/` as its worked example,
 because specializing `bit_traits<MyStorage>` was *the* extension point; there is no such point now
@@ -2261,7 +2264,7 @@ It found two on the way in. The first was a name: `bit_traits.hpp`, interface un
 not in `bits.hpp`, so it reached consumers only transitively, through the three adaptors and the three views
 that all included it — the same thing the include order guards against, our headers before Boost's and the
 standard's so that a transitive include is found rather than leaned on. That header is gone and
-`contiguous_bit_sequence.hpp` took its place in `bits.hpp`. The second was worse, and no compiler leg could have
+`contiguous_bit_sequence.hpp` took its place in `bits.hpp`, until it too left the public surface for the test tree. The second was worse, and no compiler leg could have
 caught it: `CMakeLists.txt`'s `FILE_SET HEADERS` is hand-written, and the three inplace headers had reached
 `include/` and `bits.hpp` without ever reaching it. `<xstd/bits.hpp>` therefore named three headers that were
 never installed, so **every** installed consumer's umbrella include was broken, on every compiler, for as long
@@ -2744,7 +2747,7 @@ is not part of the value for a set. So the set reading gets an entry of its own,
 meanings and no structural answer at all -- a defaulted `<=>` would order by `m_size` first, which no reading
 means -- so the storage declares none and names all three, and nothing is left over. Equality has two meanings
 and one of them *is* the structural answer: memberwise, width then blocks, exactly what `= default` produces
-and exactly what `std::regular` asks of a storage. `contiguous_bit_sequence` requires that
+and exactly what `std::regular` asks of a storage. the common vocabulary requires that
 ([the-common-vocabulary](#the-common-vocabulary)), and it is not an accident of the concept: `std::bitset` and
 `boost::dynamic_bitset` both have `==` and both mean width first by it. So the count is one operator and one
 name rather than three names, and giving the structural meaning a second name would be three spellings for two

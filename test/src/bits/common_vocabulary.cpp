@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/contiguous_bit_sequence.hpp>      // contiguous_bit_sequence
+#include <test/bitset/vocabulary.hpp>                 // vocabulary
 #include <xstd/bits/detail/contiguous_bit_array.hpp>  // contiguous_bit_array
 #include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>    // dynamic_bitset
@@ -72,10 +72,10 @@ using Models = std::tuple<ours_static, ours_dynamic, theirs, boosts>;
 BOOST_AUTO_TEST_SUITE(TheCommonVocabulary)
 
 // All three model it, at both widths of ours.
-static_assert(xstd::contiguous_bit_sequence<ours_static>);
-static_assert(xstd::contiguous_bit_sequence<ours_dynamic>);
-static_assert(xstd::contiguous_bit_sequence<theirs>);
-static_assert(xstd::contiguous_bit_sequence<boosts>);
+static_assert(test::bitset::vocabulary<ours_static>);
+static_assert(test::bitset::vocabulary<ours_dynamic>);
+static_assert(test::bitset::vocabulary<theirs>);
+static_assert(test::bitset::vocabulary<boosts>);
 
 // The intersection and not the union: each of these is absent from at least one of the three.
 static_assert(not has_subscript<ours_static>);  // ours reads through test, never a subscript
@@ -86,7 +86,7 @@ static_assert(not has_subset_of<theirs>);       // nor boost's set vocabulary
 static_assert(not has_to_string<boosts>);       // to_string is std::bitset's alone
 
 // Structural and nothing more, the adaptors admitting their storage by name instead.
-static_assert(not xstd::contiguous_bit_sequence<word>);
+static_assert(not test::bitset::vocabulary<word>);
 
 // Asked of each model in turn, in the reading's three groups: the whole, a position, the operators.
 BOOST_AUTO_TEST_CASE_TEMPLATE(EveryModelAnswersTheWhole, C, Models)

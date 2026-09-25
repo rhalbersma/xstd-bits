@@ -3,17 +3,17 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_CONTIGUOUS_BIT_SEQUENCE_HPP
-#define XSTD_BITS_CONTIGUOUS_BIT_SEQUENCE_HPP
+#ifndef TEST_BITSET_VOCABULARY_HPP
+#define TEST_BITSET_VOCABULARY_HPP
 
 #include <concepts> // convertible_to, regular, same_as
 #include <cstddef>  // size_t
 
-namespace xstd {
+namespace test::bitset {
 
-// The intersection of the three bit containers' vocabularies; nothing is constrained on it, it documents a shape.
+// The vocabulary std::bitset, boost::dynamic_bitset and our storage share: a claim the tests check, not a constraint.
 template<class C>
-concept contiguous_bit_sequence =
+concept vocabulary =
         std::regular<C> and
         requires (C const& c, std::size_t n) {
                 { c.size() } -> std::convertible_to<std::size_t>;
@@ -39,6 +39,6 @@ concept contiguous_bit_sequence =
                 { b >>= n } -> std::same_as<C&>;
         };
 
-} // namespace xstd
+} // namespace test::bitset
 
-#endif // XSTD_BITS_CONTIGUOUS_BIT_SEQUENCE_HPP
+#endif // TEST_BITSET_VOCABULARY_HPP

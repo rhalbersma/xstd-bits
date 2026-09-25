@@ -180,10 +180,9 @@ storage.
 | `<xstd/bits/bitset_adaptor.hpp>` | `bitset_adaptor` | The bitset reading over a storage of blocks: `bitset_adaptor<std::array<std::uint64_t, 1>>` is `basic_bitset<std::uint64_t, 64>` | [template.bitset], [container.adaptors] |
 | `<xstd/bits/bit_set_view.hpp>` | `bit_set_view` | Set reading of bits another container owns, or of unsigned words in place: `bit_set_view(board)` is a `bit_set_view<std::uint64_t>` | none |
 | `<xstd/bits/bit_span.hpp>` <br> `<xstd/bits/bit_subspan.hpp>` | `bit_span` <br> `bit_subspan` | Sequence reading over borrowed bits, whole or sliced, or over unsigned words in place: `bit_span(words)` | [views.span] |
-| `<xstd/bits/bit_storage.hpp>` | `bit_storage` | What every container and view presents a packed interface over: one unsigned word, or a sized contiguous range of them, in no reading of its own | none |
+| `<xstd/bits/bit_storage.hpp>` | `bit_storage` <br> `bit_storage_extent_v` | What every container and view presents a packed interface over: one unsigned word, or a sized contiguous range of them, in no reading of its own, and the width its type names, which the owners and views default to | none |
 | `<xstd/bits/from_bit_storage.hpp>` | `from_bit_storage` <br> `from_bit_storage_t` | The tag that says an argument's words are read as bits, so a static width deduces from them | [range.utility.conv] |
 | `<xstd/bits/bit.hpp>` <br> `<xstd/bits/bit/bit_cast.hpp>` | `bit_cast` <br> `bit_castable` | A copy of the blocks between any two things that have bit storage of one width: ours, words, a `std::bitset` | [bit.cast] |
-| `<xstd/bits/contiguous_bit_sequence.hpp>` | `contiguous_bit_sequence` | What a storage must model to be adapted | none |
 
 `<xstd/bits.hpp>` exports the whole surface, so one include brings everything above.
 The headers directly under `<xstd/bits/>` are the containers, views and concepts; `<xstd/bits/bit/>` holds free utilities that extend `<bit>`, exported together by `<xstd/bits/bit.hpp>` as in xstd-ints.

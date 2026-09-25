@@ -6,11 +6,11 @@
 #ifndef XSTD_BITS_BIT_SUBSPAN_HPP
 #define XSTD_BITS_BIT_SUBSPAN_HPP
 
-#include <xstd/bits/bit_storage.hpp>                     // bit_storage
+#include <xstd/bits/bit_storage.hpp>                     // bit_storage, bit_storage_extent_v
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/detail/ownership.hpp>                // owned_bits_t, owner_reading, reading, storage, window
 #include <xstd/bits/detail/sequence_adaptor.hpp>         // sequence_adaptor, window_of
-#include <xstd/bits/detail/words.hpp>                    // view_storage_t, words_extent_v, words_of_t, words_width_v
+#include <xstd/bits/detail/words.hpp>                    // view_storage_t, words_of_t, words_width_v
 #include <xstd/misc/concepts/specialization_of.hpp>      // specialization_of_TN
 #include <boost/container_hash/is_range.hpp>             // is_range
 #include <boost/container_hash/is_tuple_like.hpp>        // is_tuple_like
@@ -21,7 +21,7 @@
 
 namespace xstd {
 
-template<bit_storage Blocks, std::size_t Extent = std::dynamic_extent, std::size_t N = bits::detail::words_extent_v<Blocks>>
+template<bit_storage Blocks, std::size_t Extent = std::dynamic_extent, std::size_t N = bit_storage_extent_v<Blocks>>
 class bit_subspan;
 
 } // namespace xstd
