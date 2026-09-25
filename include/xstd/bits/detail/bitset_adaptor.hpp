@@ -577,7 +577,7 @@ public:
                                 return lhs.top_aligned_three_way(rhs);
                         }
                 }
-                return string_lexicographical_compare_three_way(lhs.m_bits, rhs.m_bits);
+                return bitset_lexicographical_compare_three_way(lhs.m_bits, rhs.m_bits);
         }
 
         [[nodiscard]] constexpr auto test(std::size_t pos) const
