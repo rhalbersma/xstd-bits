@@ -4,10 +4,10 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <xstd/bits/bit_array.hpp>       // bit_array
-#include <xstd/bits/bit_storage.hpp>     // bit_storage
 #include <xstd/bits/bit_set.hpp>         // bit_set
 #include <xstd/bits/bit_set_adaptor.hpp> // bit_set_adaptor
 #include <xstd/bits/bit_set_view.hpp>    // bit_set_view
+#include <xstd/bits/bit_storage.hpp>     // bit_storage, bit_storage_extent_v
 #include <boost/test/unit_test.hpp>      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <array>                         // array
 #include <bitset>                        // bitset
@@ -15,7 +15,8 @@
 #include <cstdint>                       // uint8_t, uint16_t, uint32_t, uint64_t
 #include <deque>                         // deque
 #include <list>                          // list
-#include <span>                          // span
+#include <span>                          // dynamic_extent, span
+#include <type_traits>                   // is_same_v
 #include <vector>                        // vector
 #include <version>                       // IWYU pragma: keep; __cpp_lib_inplace_vector
 
@@ -68,6 +69,19 @@ BOOST_AUTO_TEST_CASE(OwnersAndViewsAreNamedByBitStorage)
         static_assert(names_a_view<std::uint64_t const> and names_a_view<std::span<std::uint32_t>>);
         static_assert(not names_an_owner<std::bitset<64>> and not names_an_owner<xstd::bit_set>);
         static_assert(not names_a_view<std::vector<bool>> and not names_a_view<int>);
+        BOOST_CHECK(true);
+}
+
+// The width storage names by its type, which the owners and views default to: fixed words have one, the rest do not.
+BOOST_AUTO_TEST_CASE(TheExtentIsTheWidthTheTypeNames)
+{
+        static_assert(xstd::bit_storage_extent_v<std::uint8_t> == 8 and xstd::bit_storage_extent_v<std::uint64_t const> == 64);
+        static_assert(xstd::bit_storage_extent_v<std::array<std::uint16_t, 3>> == 48 and xstd::bit_storage_extent_v<std::array<std::uint16_t, 3> const> == 48);
+        static_assert(xstd::bit_storage_extent_v<std::span<std::uint32_t, 2>> == 64 and xstd::bit_storage_extent_v<std::span<std::uint32_t const, 2>> == 64);
+        static_assert(xstd::bit_storage_extent_v<std::span<std::uint32_t>> == std::dynamic_extent);
+        static_assert(xstd::bit_storage_extent_v<std::vector<std::size_t>> == std::dynamic_extent);
+        static_assert(std::is_same_v<xstd::bit_set_view<std::span<std::uint32_t>>, xstd::bit_set_view<std::span<std::uint32_t>, std::dynamic_extent>>);
+        static_assert(std::is_same_v<xstd::bit_set_adaptor<std::uint64_t>, xstd::bit_set_adaptor<std::uint64_t, 64>>);
         BOOST_CHECK(true);
 }
 

@@ -6,12 +6,12 @@
 #ifndef XSTD_BITS_BIT_SET_VIEW_HPP
 #define XSTD_BITS_BIT_SET_VIEW_HPP
 
-#include <xstd/bits/bit_storage.hpp>                     // bit_storage
+#include <xstd/bits/bit_storage.hpp>                     // bit_storage, bit_storage_extent_v
 #include <xstd/bits/detail/borrowed_bits.hpp>            // borrowable_word, borrowable_words
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/detail/ownership.hpp>                // owned_bits_t, owner_reading, reading, storage
 #include <xstd/bits/detail/set_adaptor.hpp>              // set_adaptor
-#include <xstd/bits/detail/words.hpp>                    // lent_words_t, view_storage_t, words_extent_v, words_of_t, words_width_v
+#include <xstd/bits/detail/words.hpp>                    // lent_words_t, view_storage_t, words_of_t, words_width_v
 #include <xstd/misc/concepts/specialization_of.hpp>      // specialization_of_TN
 #include <boost/container_hash/is_range.hpp>             // is_range
 #include <cstddef>                                       // size_t
@@ -23,7 +23,7 @@
 namespace xstd {
 
 // A class rather than an alias to the referring adaptor, so deduction and diagnostics name the view itself.
-template<bit_storage Blocks, std::size_t N = bits::detail::words_extent_v<Blocks>>
+template<bit_storage Blocks, std::size_t N = bit_storage_extent_v<Blocks>>
 class bit_set_view : public bits::detail::set_adaptor<bits::detail::view_storage_t<Blocks, N>, bits::detail::storage::borrowed, bit_set_view<Blocks, N>>
 {
         using base_type = bits::detail::set_adaptor<bits::detail::view_storage_t<Blocks, N>, bits::detail::storage::borrowed, bit_set_view<Blocks, N>>;

@@ -9,10 +9,9 @@
 // The umbrella over every container the standard library can store; the ext column stays out, so Boost is opt-in.
 
 // Shared by all three readings.
-#include <xstd/bits/bit_storage.hpp>             // IWYU pragma: export; bit_storage
-#include <xstd/bits/bit.hpp>                     // IWYU pragma: export; bit_cast, bit_castable
-#include <xstd/bits/from_bit_storage.hpp>        // IWYU pragma: export; from_bit_storage, from_bit_storage_t
-#include <xstd/bits/contiguous_bit_sequence.hpp> // IWYU pragma: export; contiguous_bit_sequence
+#include <xstd/bits/bit_storage.hpp>      // IWYU pragma: export; bit_storage
+#include <xstd/bits/bit.hpp>              // IWYU pragma: export; bit_cast, bit_castable
+#include <xstd/bits/from_bit_storage.hpp> // IWYU pragma: export; from_bit_storage, from_bit_storage_t
 
 // The bitset reading.
 #include <xstd/bits/bitset_adaptor.hpp> // IWYU pragma: export; bitset_adaptor

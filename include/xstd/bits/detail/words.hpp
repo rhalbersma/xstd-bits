@@ -6,10 +6,10 @@
 #ifndef XSTD_BITS_DETAIL_WORDS_HPP
 #define XSTD_BITS_DETAIL_WORDS_HPP
 
+#include <xstd/bits/bit_storage.hpp>                     // bit_storage_extent_v
 #include <xstd/bits/detail/borrowed_bits.hpp>            // borrowable_word, borrowable_words, borrowed_bits, words_span_t
-#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container, default_extent_v
+#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/ints/concepts/unsigned_integer.hpp>       // unsigned_integer
-#include <xstd/ints/limits.hpp>                          // numeric_limits
 #include <array>                                         // array
 #include <cstddef>                                       // size_t
 #include <span>                                          // span
@@ -17,14 +17,6 @@
 
 // What the public containers and views are named by: the words, never the storage built over them.
 namespace xstd::bits::detail {
-
-// The width the words name by their type: a word's digits, or the width the block storage names.
-template<class W>
-inline constexpr auto words_extent_v = default_extent_v<std::remove_const_t<W>>;
-
-template<class W>
-        requires xstd::unsigned_integer<std::remove_const_t<W>>
-inline constexpr auto words_extent_v<W> = static_cast<std::size_t>(xstd::numeric_limits<std::remove_const_t<W>>::digits);
 
 // An owner's storage: one word is held as an array of one, so the storage only ever sees a range.
 template<class Blocks, std::size_t N>
@@ -86,11 +78,19 @@ struct words_of<contiguous_bit_container<Blocks, N> const>
         static constexpr std::size_t width = N;
 };
 
-template<class Block, std::size_t E>
-struct words_of<contiguous_bit_container<std::span<Block, E>> const>
+// A span's width is the one its words name, which is what a view over them defaults to.
+template<class Block, std::size_t E, std::size_t N>
+struct words_of<contiguous_bit_container<std::span<Block, E>, N>>
+{
+        using type = std::span<Block, E>;
+        static constexpr std::size_t width = xstd::bit_storage_extent_v<type>;
+};
+
+template<class Block, std::size_t E, std::size_t N>
+struct words_of<contiguous_bit_container<std::span<Block, E>, N> const>
 {
         using type = std::span<Block const, E>;
-        static constexpr std::size_t width = default_extent_v<std::span<Block, E>>;
+        static constexpr std::size_t width = xstd::bit_storage_extent_v<type>;
 };
 
 template<class Bits>

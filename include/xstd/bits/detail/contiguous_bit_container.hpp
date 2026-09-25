@@ -7,6 +7,7 @@
 #define XSTD_BITS_DETAIL_CONTIGUOUS_BIT_CONTAINER_HPP
 
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_base_type
+#include <xstd/bits/detail/bit_castable.hpp>                 // bit_bytes, bit_castable, byte_count, bytes_bits, container_source
 #include <xstd/bits/detail/contiguous_block_range.hpp>       // borrowed_block_span, contiguous_block_range
 #include <xstd/bits/detail/intrin.hpp>                       // countl_zero, countr_zero, popcount
 #include <xstd/bits/detail/pred.hpp>                         // intersects, is_subset_of, not_equal_to
@@ -30,8 +31,6 @@
 #include <iterator>                                          // distance, forward_iterator, input_iterator, prev
 #include <limits>                                            // numeric_limits
 #include <ranges>                                            // begin, drop, iota, rbegin, rend, size, swap, transform, zip
-                                                             // (views::drop_last when P22014R2 is accepted)
-#include <xstd/bits/detail/bit_castable.hpp>                 // bit_bytes, bit_castable, byte_count, bytes_bits, container_source
 #include <source_location>                                   // source_location
 #include <span>                                              // dynamic_extent, span
 #include <stdexcept>                                         // length_error
