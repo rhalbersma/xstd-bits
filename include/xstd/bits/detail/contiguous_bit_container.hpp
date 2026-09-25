@@ -501,7 +501,7 @@ public:
         constexpr auto assign_bytes_by_shifts(std::array<std::byte, E> const& bytes) noexcept
                 -> void
         {
-                for (auto j = 0UZ; j < shared_bytes<E>; ++j) {
+                for (auto const j : std::views::iota(0UZ, shared_bytes<E>)) {
                         auto const byte = static_cast<block_type>(std::to_integer<unsigned char>(bytes[j]));
                         auto& block = m_blocks[j / sizeof(block_type)];
                         block = static_cast<block_type>(block | shl(byte, bits_per_byte * (j % sizeof(block_type))));
@@ -512,7 +512,7 @@ public:
         constexpr auto to_bytes_by_shifts(std::array<std::byte, E>& bytes) const noexcept
                 -> void
         {
-                for (auto j = 0UZ; j < shared_bytes<E>; ++j) {
+                for (auto const j : std::views::iota(0UZ, shared_bytes<E>)) {
                         auto const block = shr(m_blocks[j / sizeof(block_type)], bits_per_byte * (j % sizeof(block_type)));
                         bytes[j] = static_cast<std::byte>(static_cast<unsigned char>(block));
                 }
@@ -709,7 +709,7 @@ public:
                         ++index;
                         n += bits_per_block - offset;
                         // A plain index walk: drop + find_if made distance() recover the index.
-                        for (auto i = index; i < num_blocks(); ++i) {
+                        for (auto const i : std::views::iota(index, num_blocks())) {
                                 if (auto const block = m_blocks[i]; block != zero) {
                                         return n + bits::detail::countr_zero(block) + (bits_per_block * (i - index));
                                 }
@@ -879,7 +879,7 @@ public:
                                 std::shift_right(std::ranges::begin(m_blocks), std::ranges::end(m_blocks), static_cast<std::ptrdiff_t>(n_blocks));
                         } else {
                                 auto const R_shift = bits_per_block - L_shift;
-                                for (auto i = last_block(); i > n_blocks; --i) {
+                                for (auto i = last_block(), count = last_block() - n_blocks; i - n_blocks - 1UZ < count; --i) {
                                         // Read one block lower: the splice of [i - n_blocks - 1, i - n_blocks].
                                         m_blocks[i] = straddled_block(i - n_blocks - 1UZ, L_shift, R_shift);
                                 }
@@ -906,7 +906,7 @@ public:
                                 std::shift_left(std::ranges::begin(m_blocks), std::ranges::end(m_blocks), static_cast<std::ptrdiff_t>(n_blocks));
                         } else {
                                 auto const L_shift = bits_per_block - R_shift;
-                                for (auto i = 0UZ; i + n_blocks < last_block(); ++i) {
+                                for (auto const i : std::views::iota(0UZ, last_block() - n_blocks)) {
                                         // block_at(i * bits_per_block + n), without recomputing the division.
                                         m_blocks[i] = straddled_block(i + n_blocks, L_shift, R_shift);
                                 }
@@ -1315,7 +1315,7 @@ public:
                                 return {0UZ, zero};
                         }
                         auto const last = num_blocks() - 1UZ;
-                        for (auto i = 0UZ; i < last; ++i) {
+                        for (auto const i : std::views::iota(0UZ, last)) {
                                 if (auto const diff = static_cast<block_type>(this->m_blocks[i] ^ other.m_blocks[i]); diff != zero) {
                                         return {i, diff};
                                 }
@@ -1338,12 +1338,7 @@ private:
                 } else if constexpr (has_static_size and static_num_blocks == 2) {
                         return index == 0UZ and m_blocks[1] != zero;
                 } else {
-                        for (auto i = index + 1UZ, n = num_blocks(); i < n; ++i) {
-                                if (m_blocks[i] != zero) {
-                                        return true;
-                                }
-                        }
-                        return false;
+                        return std::ranges::any_of(std::views::iota(index + 1UZ, num_blocks()), [this](std::size_t i) -> bool { return m_blocks[i] != zero; });
                 }
         }
 

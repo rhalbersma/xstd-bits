@@ -46,7 +46,7 @@ auto reference(BB const& b)
         -> model
 {
         auto m = model(b.size());
-        for (auto i = 0UZ; i < b.size(); ++i) {
+        for (auto const i : std::views::iota(0UZ, b.size())) {
                 m[i] = b.test(i);
         }
         return m;
@@ -99,7 +99,7 @@ class checker
         auto same(model const& m, BB const& got)
                 -> void
         {
-                for (auto i = 0UZ; i < m_n; ++i) {
+                for (auto const i : std::views::iota(0UZ, m_n)) {
                         disagree(got.test(i), m[i]);
                 }
         }
@@ -148,7 +148,7 @@ public:
                 unequal(m_x.find_first(), first);
                 unequal(m_x.find_last(), m_n);
 
-                for (auto i = 0UZ; i < m_n; ++i) {
+                for (auto const i : std::views::iota(0UZ, m_n)) {
                         auto next = i + 1;
                         while (next < m_n and not m_mx[next]) {
                                 ++next;
@@ -157,7 +157,7 @@ public:
                 }
 
                 // The primitive, checked over its whole domain, n == size() included.
-                for (auto i = 0UZ; i <= m_n; ++i) {
+                for (auto const i : std::views::iota(0UZ, m_n + 1UZ)) {
                         auto bound = i;
                         while (bound < m_n and not m_mx[bound]) {
                                 ++bound;
@@ -182,7 +182,7 @@ public:
                 auto subset = true;
                 auto differs = false;
                 auto meets = false;
-                for (auto i = 0UZ; i < m_n; ++i) {
+                for (auto const i : std::views::iota(0UZ, m_n)) {
                         subset = subset and (not m_mx[i] or m_my[i]);
                         differs = differs or (m_mx[i] != m_my[i]);
                         meets = meets or (m_mx[i] and m_my[i]);
@@ -204,7 +204,7 @@ public:
                         auto& a = fresh_x();
                         a &= m_y;
                         auto m = model(m_n);
-                        for (auto i = 0UZ; i < m_n; ++i) {
+                        for (auto const i : std::views::iota(0UZ, m_n)) {
                                 m[i] = m_mx[i] and m_my[i];
                         }
                         same(m, a);
@@ -213,7 +213,7 @@ public:
                         auto& a = fresh_x();
                         a |= m_y;
                         auto m = model(m_n);
-                        for (auto i = 0UZ; i < m_n; ++i) {
+                        for (auto const i : std::views::iota(0UZ, m_n)) {
                                 m[i] = m_mx[i] or m_my[i];
                         }
                         same(m, a);
@@ -222,7 +222,7 @@ public:
                         auto& a = fresh_x();
                         a ^= m_y;
                         auto m = model(m_n);
-                        for (auto i = 0UZ; i < m_n; ++i) {
+                        for (auto const i : std::views::iota(0UZ, m_n)) {
                                 m[i] = m_mx[i] != m_my[i];
                         }
                         same(m, a);
@@ -231,7 +231,7 @@ public:
                         auto& a = fresh_x();
                         a -= m_y;
                         auto m = model(m_n);
-                        for (auto i = 0UZ; i < m_n; ++i) {
+                        for (auto const i : std::views::iota(0UZ, m_n)) {
                                 m[i] = m_mx[i] and not m_my[i];
                         }
                         same(m, a);
@@ -241,12 +241,12 @@ public:
         auto shifts()
                 -> void
         {
-                for (auto s = 0UZ; s < m_n; ++s) {
+                for (auto const s : std::views::iota(0UZ, m_n)) {
                         {
                                 auto& a = fresh_x();
                                 a <<= s;
                                 auto m = model(m_n);
-                                for (auto i = s; i < m_n; ++i) {
+                                for (auto const i : std::views::iota(s, m_n)) {
                                         m[i] = m_mx[i - s];
                                 }
                                 same(m, a);
@@ -255,7 +255,7 @@ public:
                                 auto& a = fresh_x();
                                 a >>= s;
                                 auto m = model(m_n);
-                                for (auto i = 0UZ; i + s < m_n; ++i) {
+                                for (auto const i : std::views::iota(0UZ, m_n - s)) {
                                         m[i] = m_mx[i + s];
                                 }
                                 same(m, a);
@@ -307,7 +307,7 @@ public:
         auto positions()
                 -> void
         {
-                for (auto i = 0UZ; i < m_n; ++i) {
+                for (auto const i : std::views::iota(0UZ, m_n)) {
                         {
                                 auto& a = fresh_x();
                                 a.set(i);
@@ -344,7 +344,7 @@ public:
 
                 {
                         auto& a = fresh_x();
-                        for (auto i = 0UZ; i < m_x.num_blocks(); ++i) {
+                        for (auto const i : std::views::iota(0UZ, m_x.num_blocks())) {
                                 a.block(i) = m_x.block(i);
                         }
                         a.erase_unused();
@@ -352,7 +352,7 @@ public:
                 }
                 {
                         auto& a = fresh_x();
-                        for (auto i = 0UZ; i < m_x.num_blocks(); ++i) {
+                        for (auto const i : std::views::iota(0UZ, m_x.num_blocks())) {
                                 a.block(i) = static_cast<BB::block_type>(-1);
                         }
                         // The writer restores the invariant, which the reference hands it rather than doing itself.
@@ -522,7 +522,7 @@ constexpr auto subscript_agrees_with_iteration(Blocks blocks) noexcept
         -> bool
 {
         // The index is the range's difference_type; subscript takes size_type, which is the one cast.
-        for (auto i = std::ranges::range_difference_t<Blocks>{}; i < std::ranges::ssize(blocks); ++i) {
+        for (auto const i : std::views::iota(std::ranges::range_difference_t<Blocks>{}, std::ranges::ssize(blocks))) {
                 if (std::addressof(blocks[static_cast<Blocks::size_type>(i)]) != std::addressof(*(std::ranges::begin(blocks) + i))) {
                         return false;
                 }
@@ -748,7 +748,7 @@ template<class T>
         -> T
 {
         auto b = T(m.size());
-        for (auto i = 0UZ; i < m.size(); ++i) {
+        for (auto const i : std::views::iota(0UZ, m.size())) {
                 if (m[i]) {
                         b.set(i);
                 }
@@ -761,7 +761,7 @@ template<class T>
         -> model
 {
         auto m = model(n);
-        for (auto i = 0UZ; i < n; ++i) {
+        for (auto const i : std::views::iota(0UZ, n)) {
                 m[i] = i % 3 != 1;
         }
         return m;
@@ -789,7 +789,7 @@ template<class Block>
 auto append_to(model& m, Block value)
         -> void
 {
-        for (auto i = 0UZ; i < test::digits_v<Block>; ++i) {
+        for (auto const i : std::views::iota(0UZ, test::digits_v<Block>)) {
                 // Cast back before the mask: a shifted narrow word is an int to bugprone-signed-bitwise.
                 m.push_back((static_cast<Block>(value >> i) & Block{1}) != Block{0});
         }
@@ -853,7 +853,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(PushingAndPoppingAreResizeByOne, Block, test::word
         auto disagreements = 0;
         auto b = T();
         auto m = model();
-        for (auto i = 0UZ; i < (3 * D) + 1; ++i) {
+        for (auto const i : std::views::iota(0UZ, (3 * D) + 1UZ)) {
                 auto const value = i % 3 != 1;
                 b.push_back(value);
                 m.push_back(value);
@@ -1125,7 +1125,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheStorageAnswersEveryReadingsQuestion, T, test::g
         BOOST_CHECK_EQUAL(c.count(), 0UZ);
 
         // One position at a time, set then cleared: assign's two arms are the point.
-        for (auto i = 0UZ; i < N; ++i) {
+        for (auto const i : std::views::iota(0UZ, N)) {
                 c.assign(i, true);
                 BOOST_CHECK(c.test(i));
                 BOOST_CHECK_EQUAL(c.count(), 1UZ);
@@ -1150,7 +1150,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheInsertAndTheFill, T, test::graded_extents<xstd:
         c.fill(false);
         BOOST_CHECK_EQUAL(c.count(), 0UZ);
 
-        for (auto i = 0UZ; i < N; ++i) {
+        for (auto const i : std::views::iota(0UZ, N)) {
                 BOOST_CHECK(c.insert(i));
         }
         BOOST_CHECK_EQUAL(c.count(), N);
@@ -1164,7 +1164,7 @@ auto set_reading(BB const& b)
         -> std::vector<std::size_t>
 {
         auto v = std::vector<std::size_t>();
-        for (auto i = 0UZ; i < b.size(); ++i) {
+        for (auto const i : std::views::iota(0UZ, b.size())) {
                 if (b.test(i)) {
                         v.push_back(i);
                 }
@@ -1193,7 +1193,7 @@ auto probes(BB const& empty)
         if (n > 0) {
                 single(0UZ);
                 single(n - 1UZ);
-                for (auto k = 0UZ; k < empty.num_blocks(); ++k) {
+                for (auto const k : std::views::iota(0UZ, empty.num_blocks())) {
                         auto const lo = k * BB::bits_per_block;
                         if (lo < n) {
                                 single(lo);
@@ -1467,19 +1467,19 @@ auto check_ranged_forms(std::size_t n, std::size_t len)
         auto r = reference(e);
 
         e.set(n, len, true);
-        for (auto i = n; i < n + len; ++i) {
+        for (auto const i : std::views::iota(n, n + len)) {
                 r[i] = true;
         }
         BOOST_CHECK(reference(e) == r);
 
         e.flip(n, len);
-        for (auto i = n; i < n + len; ++i) {
+        for (auto const i : std::views::iota(n, n + len)) {
                 r[i] = not r[i];
         }
         BOOST_CHECK(reference(e) == r);
 
         e.set(n, len, false);
-        for (auto i = n; i < n + len; ++i) {
+        for (auto const i : std::views::iota(n, n + len)) {
                 r[i] = false;
         }
         BOOST_CHECK(reference(e) == r);
@@ -1542,18 +1542,18 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(BothShiftsAreWordAtOnTheOperand, T, AlignedWordTyp
         auto const c = aligned_sample<T>();
         auto const last = c.num_blocks() - 1UZ;
 
-        for (auto n = 0UZ; n < c.size(); ++n) {
+        for (auto const n : std::views::iota(0UZ, c.size())) {
                 auto const n_blocks = n / D;
 
                 auto r = c;
                 r >>= n;
-                for (auto i = 0UZ; i + n_blocks <= last; ++i) {
+                for (auto const i : std::views::iota(0UZ, last - n_blocks + 1UZ)) {
                         BOOST_CHECK_EQUAL(r.block(i), c.block_at((i * D) + n));
                 }
 
                 auto l = c;
                 l <<= n;
-                for (auto i = n_blocks + 1UZ; i <= last; ++i) {
+                for (auto const i : std::views::iota(n_blocks + 1UZ, last + 1UZ)) {
                         BOOST_CHECK_EQUAL(l.block(i), c.block_at((i * D) - n));
                 }
         }

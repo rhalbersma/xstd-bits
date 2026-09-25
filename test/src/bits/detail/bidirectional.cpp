@@ -14,6 +14,7 @@
 #include <cstddef>                                   // size_t
 #include <cstdint>                                   // uint64_t
 #include <iterator>                                  // next, prev
+#include <ranges>                                    // iota
 #include <set>                                       // set
 #include <type_traits>                               // is_assignable_v, is_convertible_v, is_trivially_destructible_v
 #include <utility>                                   // declval
@@ -89,7 +90,7 @@ auto check_set_steps(Iterator first, Iterator last, std::set<std::size_t> const&
 
         auto backward = std::set<std::size_t>();
         auto it = last;
-        for (auto n = model.size(); n != 0UZ; --n) {
+        for (auto n = model.size() - 1UZ; n < model.size(); --n) {
                 --it;
                 backward.insert(*it);
         }
@@ -117,12 +118,12 @@ auto check_every_set_pattern(T const& empty)
         if constexpr (T::extent != 0UZ) {
                 auto const size = empty.size();
                 auto full = std::set<std::size_t>();
-                for (auto i = 0UZ; i < size; ++i) {
+                for (auto const i : std::views::iota(0UZ, size)) {
                         full.insert(i);
                 }
                 check_set_walk(empty, full);
 
-                for (auto i = 0UZ; i < size; ++i) {
+                for (auto const i : std::views::iota(0UZ, size)) {
                         check_set_walk(empty, {i});
                         if (i + 1UZ < size) {
                                 check_set_walk(empty, {i, i + 1UZ});

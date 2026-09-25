@@ -13,7 +13,7 @@
 #include <cstddef>                    // size_t
 #include <cstdint>                    // uint8_t, uint16_t, uint32_t, uint64_t
 #include <limits>                     // numeric_limits
-#include <ranges>                     // borrowed_range, range_value_t, view
+#include <ranges>                     // borrowed_range, iota, range_value_t, view
 #include <span>                       // span
 #include <utility>                    // as_const, forward
 #include <vector>                     // vector
@@ -32,7 +32,7 @@ template<class R>
         auto positions = std::vector<std::size_t>();
         auto i = 0UZ;
         for (auto const word : words) {
-                for (auto n = 0UZ; n < digits; ++n) {
+                for (auto const n : std::views::iota(0UZ, digits)) {
                         if (((static_cast<std::uint64_t>(word) >> n) & 1U) != 0U) {
                                 positions.push_back((i * digits) + n);
                         }
@@ -56,7 +56,7 @@ template<class W, class R>
         std::ranges::reverse(backward);
 
         auto from_sequence = std::vector<std::size_t>();
-        for (auto n = 0UZ; n < seq.size(); ++n) {
+        for (auto const n : std::views::iota(0UZ, seq.size())) {
                 if (seq[n]) {
                         from_sequence.push_back(n);
                 }

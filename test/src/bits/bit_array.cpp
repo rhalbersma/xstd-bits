@@ -16,7 +16,7 @@
 #include <cstddef>                               // ptrdiff_t, size_t
 #include <functional>                            // hash, identity
 #include <iterator>                              // contiguous_iterator, random_access_iterator
-#include <ranges>                                // begin, contiguous_range, drop, random_access_range, take
+#include <ranges>                                // begin, contiguous_range, drop, iota, random_access_range, take
 #include <stdexcept>                             // out_of_range
 #include <tuple>                                 // tuple_cat, tuple_element_t, tuple_size_v
 #include <utility>                               // as_const, declval
@@ -65,7 +65,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AddressOfASubscriptIsTheIteratorToIt, T, Types)
         static_assert(std::same_as<decltype(&std::declval<T&>()[0UZ]), typename T::iterator>);
 
         auto a = T();
-        for (auto n = 0UZ; n < a.size(); ++n) {
+        for (auto const n : std::views::iota(0UZ, a.size())) {
                 auto const step = static_cast<std::ptrdiff_t>(n);
                 BOOST_CHECK(&a[n] == &a[0UZ] + step);
                 BOOST_CHECK(&a[n] == std::ranges::begin(a) + step);
@@ -153,7 +153,7 @@ auto model_of(T const& a)
         -> std::vector<bool>
 {
         auto m = std::vector<bool>(a.size());
-        for (auto i = 0UZ; i < a.size(); ++i) {
+        for (auto const i : std::views::iota(0UZ, a.size())) {
                 m[i] = a[i];
         }
         return m;
@@ -166,7 +166,7 @@ auto access_disagreements(T& a, std::vector<bool> const& m)
 {
         auto const& ca = a;
         auto disagreements = 0UZ;
-        for (auto i = 0UZ; i < a.size(); ++i) {
+        for (auto const i : std::views::iota(0UZ, a.size())) {
                 disagreements += static_cast<std::size_t>(static_cast<bool>(a[i]) != m[i]);
                 disagreements += static_cast<std::size_t>(static_cast<bool>(ca[i]) != m[i]);
                 disagreements += static_cast<std::size_t>(static_cast<bool>(a.at(i)) != m[i]);
@@ -213,9 +213,9 @@ auto comparison_patterns()
         -> std::vector<T>
 {
         auto patterns = std::vector<T>();
-        for (auto p = 0UZ; p < 6UZ; ++p) {
+        for (auto const p : std::views::iota(0UZ, 6UZ)) {
                 auto a = T();
-                for (auto i = 0UZ; i < a.size(); ++i) {
+                for (auto const i : std::views::iota(0UZ, a.size())) {
                         a[i] = pattern_bit(p, i, a.size());
                 }
                 patterns.push_back(a);
@@ -231,7 +231,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ElementAccessAgreesWithTheModel, T, Types)
         auto m = std::vector<bool>(a.size());
 
         // A deterministic pattern rather than a uniform one, so a block boundary lands mid-pattern.
-        for (auto i = 0UZ; i < a.size(); ++i) {
+        for (auto const i : std::views::iota(0UZ, a.size())) {
                 bool const bit = (i % 3UZ) == 1UZ;
                 a[i] = bit;
                 m[i] = bit;
@@ -251,7 +251,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ElementAccessAgreesWithTheModel, T, Types)
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheIteratorsAgreeWithTheModel, T, Types)
 {
         auto a = T();
-        for (auto i = 0UZ; i < a.size(); ++i) {
+        for (auto const i : std::views::iota(0UZ, a.size())) {
                 a[i] = (i % 4UZ) < 2UZ;
         }
         auto const m = model_of(a);
@@ -280,7 +280,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(FillAndSwapAgreeWithTheModel, T, Types)
 
         auto x = T();
         auto y = T();
-        for (auto i = 0UZ; i < x.size(); ++i) {
+        for (auto const i : std::views::iota(0UZ, x.size())) {
                 x[i] = (i % 2UZ) == 0UZ;
                 y[i] = (i % 5UZ) == 0UZ;
         }
@@ -324,7 +324,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItYieldsEveryPosition, T, Types)
         auto c = T();
         test::sequence::yields_every_position(c);
 
-        for (auto n = 0UZ; n < c.size(); ++n) {
+        for (auto const n : std::views::iota(0UZ, c.size())) {
                 c[n] = (n % 3UZ == 0UZ);
         }
         test::sequence::yields_every_position(c);

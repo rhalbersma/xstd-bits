@@ -36,7 +36,7 @@
 #include <limits>                                            // numeric_limits
 #include <new>                                               // bad_alloc
 #include <optional>                                          // nullopt, optional
-#include <ranges>                                            // begin, enable_borrowed_range, enable_view, end, from_range_t, input_range, range_reference_t, size, sized_range, subrange
+#include <ranges>                                            // begin, enable_borrowed_range, enable_view, end, from_range_t, input_range, iota, range_reference_t, size, sized_range, subrange
 #include <source_location>                                   // source_location
 #include <span>                                              // dynamic_extent
 #include <stdexcept>                                         // out_of_range
@@ -70,7 +70,7 @@ constexpr auto walk_blocks(Bits const& c, std::size_t offset, std::size_t size, 
         for (auto k = 0UZ; k < size; k += digits) {
                 auto const count = std::ranges::min(digits, size - k);
                 auto const block = c.block_at(offset + k);
-                for (auto n = 0UZ; n < count; ++n) {
+                for (auto const n : std::views::iota(0UZ, count)) {
                         if (not invoke_continues(f, (shr(block, n) & block_type{1}) != block_type{})) {
                                 return;
                         }
@@ -646,7 +646,7 @@ public:
                 } else if constexpr (requires { self.bits().set(self.offset(), self.size(), u); }) {
                         self.bits().set(self.offset(), self.size(), u);
                 } else {
-                        for (auto i = self.offset(), last = self.offset() + self.size(); i < last; ++i) {
+                        for (auto const i : std::views::iota(self.offset(), self.offset() + self.size())) {
                                 self.bits().assign(i, u);
                         }
                 }

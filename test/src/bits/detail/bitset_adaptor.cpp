@@ -16,7 +16,7 @@
 #include <xstd/bits/from_bit_storage.hpp>             // from_bit_storage
 #include <boost/dynamic_bitset.hpp>                   // dynamic_bitset
 #include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <algorithm>                                  // equal
+#include <algorithm>                                  // copy, copy_backward, equal
 #include <array>                                      // array
 #include <bitset>                                     // bitset
 #include <compare>                                    // is_lt, strong_ordering
@@ -95,7 +95,7 @@ struct std::char_traits<digit_char>
         static constexpr auto compare(char_type const* a, char_type const* b, std::size_t n) noexcept
                 -> int
         {
-                for (auto i = 0UZ; i < n; ++i) {
+                for (auto const i : std::views::iota(0UZ, n)) {
                         if (lt(a[i], b[i])) {
                                 return -1;
                         }
@@ -119,7 +119,7 @@ struct std::char_traits<digit_char>
         static constexpr auto find(char_type const* p, std::size_t n, char_type const& a) noexcept
                 -> char_type const*
         {
-                for (auto i = 0UZ; i < n; ++i) {
+                for (auto const i : std::views::iota(0UZ, n)) {
                         if (eq(p[i], a)) {
                                 return p + i;
                         }
@@ -131,13 +131,9 @@ struct std::char_traits<digit_char>
                 -> char_type*
         {
                 if (d < s) {
-                        for (auto i = 0UZ; i < n; ++i) {
-                                d[i] = s[i];
-                        }
+                        std::ranges::copy(s, s + n, d);
                 } else if (s < d) {
-                        for (auto i = n; i > 0UZ; --i) {
-                                d[i - 1] = s[i - 1];
-                        }
+                        std::ranges::copy_backward(s, s + n, d + n);
                 }
                 return d;
         }
@@ -145,7 +141,7 @@ struct std::char_traits<digit_char>
         static constexpr auto copy(char_type* d, char_type const* s, std::size_t n) noexcept
                 -> char_type*
         {
-                for (auto i = 0UZ; i < n; ++i) {
+                for (auto const i : std::views::iota(0UZ, n)) {
                         d[i] = s[i];
                 }
                 return d;
@@ -154,7 +150,7 @@ struct std::char_traits<digit_char>
         static constexpr auto assign(char_type* p, std::size_t n, char_type a) noexcept
                 -> char_type*
         {
-                for (auto i = 0UZ; i < n; ++i) {
+                for (auto const i : std::views::iota(0UZ, n)) {
                         p[i] = a;
                 }
                 return p;
@@ -826,7 +822,7 @@ BOOST_AUTO_TEST_CASE(ABitsetReadingExchangesBytesWithAnotherFieldOfBits)
 
         auto const b = xstd::bit_cast<xstd::bitset<N>>(src);
         BOOST_CHECK_EQUAL(b.count(), src.count());
-        for (auto i = 0UZ; i < N; ++i) {
+        for (auto const i : std::views::iota(0UZ, N)) {
                 BOOST_CHECK_EQUAL(b.test(i), src.test(i));
         }
         BOOST_CHECK(b.to_bits<std::bitset<N>>() == src);

@@ -11,7 +11,7 @@
 #include <xstd/bits/detail/bidirectional.hpp>            // bidirectional_bit_iterator, bidirectional_bit_reference
 #include <xstd/bits/detail/borrowed_bits.hpp>            // borrow_bits, borrowable_word, borrowable_words, borrowed_bits_t
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
-#include <xstd/bits/detail/functor.hpp>                  // invoke_continues
+#include <xstd/bits/detail/functor.hpp>                  // decay_copy
 #include <xstd/bits/detail/hash.hpp>                     // hash_append_bits, hash_append_positions, std_hash
 #include <xstd/bits/detail/intrin.hpp>                   // countl_zero, countr_zero
 #include <xstd/bits/detail/ownership.hpp>                // owned_bits_t, owned_storage, owner_of, owner_reading, storage, owns
@@ -36,7 +36,7 @@
 #include <source_location>                               // source_location
 #include <span>                                          // dynamic_extent
 #include <stdexcept>                                     // out_of_range
-#include <type_traits>                                   // conditional_t, false_type, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
+#include <type_traits>                                   // conditional_t, false_type, is_invocable_r_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
 #include <utility>                                       // declval, forward, move, pair
 
 // The set reading, [set] over a contiguous_bit_container, owning it or referring to it.
@@ -66,12 +66,17 @@ constexpr auto walk_blocks_ascending(Bits const& c, F& f)
         using block_type = Bits::block_type;
         constexpr auto digits = Bits::bits_per_block;
 
-        for (auto index = 0UZ, blocks = c.num_blocks(); index < blocks; ++index) {
+        for (auto const index : std::views::iota(0UZ, c.num_blocks())) {
                 auto block = c.block(index);
                 while (block != block_type{}) {
                         auto const offset = static_cast<std::size_t>(countr_zero(block));
-                        if (not invoke_continues(f, (digits * index) + offset)) {
-                                return;
+                        // A functor returning void has no exit to take, so its walk is compiled without one.
+                        if constexpr (std::is_invocable_r_v<bool, F&, std::size_t>) {
+                                if (not f(decay_copy((digits * index) + offset))) {
+                                        return;
+                                }
+                        } else {
+                                f(decay_copy((digits * index) + offset));
                         }
                         block = static_cast<block_type>(block & static_cast<block_type>(block - block_type{1}));
                 }
@@ -86,13 +91,18 @@ constexpr auto walk_blocks_descending(Bits const& c, F& f)
         using block_type = Bits::block_type;
         constexpr auto digits = Bits::bits_per_block;
 
-        for (auto n = 0UZ, blocks = c.num_blocks(); n < blocks; ++n) {
-                auto const index = blocks - 1UZ - n;
+        auto const blocks = c.num_blocks();
+        for (auto index = blocks - 1UZ; index < blocks; --index) {
                 auto block = c.block(index);
                 while (block != block_type{}) {
                         auto const offset = digits - 1UZ - static_cast<std::size_t>(countl_zero(block));
-                        if (not invoke_continues(f, (digits * index) + offset)) {
-                                return;
+                        // A functor returning void has no exit to take, so its walk is compiled without one.
+                        if constexpr (std::is_invocable_r_v<bool, F&, std::size_t>) {
+                                if (not f(decay_copy((digits * index) + offset))) {
+                                        return;
+                                }
+                        } else {
+                                f(decay_copy((digits * index) + offset));
                         }
                         block = static_cast<block_type>(block ^ shl(block_type{1}, offset));
                 }

@@ -154,7 +154,7 @@ BOOST_AUTO_TEST_CASE(ItGrowsLikeAStdVector)
 {
         auto v = T();
         auto m = std::vector<bool>();
-        for (auto i = 0UZ; i < 30UZ; ++i) {
+        for (auto const i : std::views::iota(0UZ, 30UZ)) {
                 v.push_back(i % 2 == 0);
                 m.push_back(i % 2 == 0);
         }
@@ -245,7 +245,7 @@ auto pattern(std::size_t n)
         -> std::vector<bool>
 {
         auto v = std::vector<bool>(n);
-        for (auto i = 0UZ; i < n; ++i) {
+        for (auto const i : std::views::iota(0UZ, n)) {
                 v[i] = (i % 3 == 0) or (i % 7 == 1);
         }
         return v;
@@ -443,7 +443,7 @@ BOOST_AUTO_TEST_CASE(ItYieldsEveryPosition)
         auto c = T(70);
         test::sequence::yields_every_position(c);
 
-        for (auto n = 0UZ; n < c.size(); ++n) {
+        for (auto const n : std::views::iota(0UZ, c.size())) {
                 c[n] = (n % 3UZ == 0UZ);
         }
         test::sequence::yields_every_position(c);
@@ -456,7 +456,7 @@ BOOST_AUTO_TEST_CASE(SortingRandomBitsLeavesThemSorted)
         auto lcg = std::uint64_t{0x9E3779B97F4A7C15};
         auto const next_bit = [&lcg] -> bool { lcg = (lcg * 6364136223846793005ULL) + 1442695040888963407ULL; return (lcg >> 33U & 1U) != 0U; };
         auto const fill = [&next_bit](T& v, std::vector<bool>& m) -> void {
-                for (auto i = 0UZ; i < v.size(); ++i) {
+                for (auto const i : std::views::iota(0UZ, v.size())) {
                         auto const b = next_bit();
                         v[i] = b;
                         m[i] = b;

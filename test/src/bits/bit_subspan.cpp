@@ -17,7 +17,7 @@
 #include <cstdint>                                   // uint8_t
 #include <functional>                                // hash
 #include <iterator>                                  // distance
-#include <ranges>                                    // borrowed_range, random_access_range, reverse, view
+#include <ranges>                                    // borrowed_range, iota, random_access_range, reverse, view
 #include <span>                                      // dynamic_extent
 #include <stdexcept>                                 // out_of_range
 #include <tuple>                                     // tuple
@@ -188,7 +188,7 @@ auto pattern(std::size_t n, std::size_t seed)
         -> std::vector<bool>
 {
         auto v = std::vector<bool>(n);
-        for (auto i = 0UZ; i < n; ++i) {
+        for (auto const i : std::views::iota(0UZ, n)) {
                 v[i] = ((i + seed) % 3 == 0) or ((i * seed) % 5 == 1);
         }
         return v;
@@ -234,7 +234,7 @@ auto check_combination(int op, std::size_t off, std::size_t other, std::size_t c
         auto const w = xstd::bit_span(dest).subspan(off, count);
         auto const theirs = bools(xstd::bit_span(source).subspan(other, count));
         window_op(op, w, xstd::bit_span(source).subspan(other, count));
-        for (auto i = 0UZ; i < count; ++i) {
+        for (auto const i : std::views::iota(0UZ, count)) {
                 model[off + i] = model_op(op, model[off + i], theirs[i]);
         }
         BOOST_CHECK(std::ranges::equal(dest, model));

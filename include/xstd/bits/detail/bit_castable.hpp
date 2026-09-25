@@ -16,7 +16,7 @@
 #include <cstring>                                     // memcpy
 #include <limits>                                      // numeric_limits
 #include <memory>                                      // addressof
-#include <ranges>                                      // contiguous_range, data, range_value_t
+#include <ranges>                                      // contiguous_range, data, iota, range_value_t
 #include <type_traits>                                 // bool_constant, is_trivially_copyable_v
 
 namespace xstd::bits::detail {
@@ -148,7 +148,7 @@ constexpr auto block_bytes_by_shifts(B const& b, std::array<std::byte, E>& bytes
         -> void
 {
         constexpr auto bytes_per_block = block_digits<B> / bits_per_byte;
-        for (auto j = 0UZ; j < bytes.size(); ++j) {
+        for (auto const j : std::views::iota(0UZ, bytes.size())) {
                 auto const block = b[j / bytes_per_block];
                 auto const shift = bits_per_byte * (j % bytes_per_block);
                 bytes[j] = static_cast<std::byte>(static_cast<unsigned char>(block >> shift));
@@ -161,7 +161,7 @@ constexpr auto bytes_blocks_by_shifts(std::array<std::byte, E> const& bytes, B& 
 {
         using block_type = std::ranges::range_value_t<B>;
         constexpr auto bytes_per_block = block_digits<B> / bits_per_byte;
-        for (auto j = 0UZ; j < bytes.size(); ++j) {
+        for (auto const j : std::views::iota(0UZ, bytes.size())) {
                 auto const byte = static_cast<block_type>(std::to_integer<unsigned char>(bytes[j]));
                 auto const shift = bits_per_byte * (j % bytes_per_block);
                 auto& block = blocks[j / bytes_per_block];
@@ -178,7 +178,7 @@ template<std::size_t N, class B>
         if constexpr (byte_count<N> > 0UZ) {
                 if constexpr (integer_source<B, N>) {
                         // No copy: memcpy timed at 0.31ns either way, so the branch buys nothing.
-                        for (auto j = 0UZ; j < bytes.size(); ++j) {
+                        for (auto const j : std::views::iota(0UZ, bytes.size())) {
                                 bytes[j] = static_cast<std::byte>(static_cast<unsigned char>(b >> (bits_per_byte * j)));
                         }
                 } else if constexpr (block_range_source<B, N>) {
@@ -196,7 +196,7 @@ template<std::size_t N, class B>
                         // Trivially copyable by container_source, so the object representation reads straight out.
                         if consteval {
                                 auto const object = object_bytes(b);
-                                for (auto j = 0UZ; j < bytes.size(); ++j) {
+                                for (auto const j : std::views::iota(0UZ, bytes.size())) {
                                         bytes[j] = object[j];
                                 }
                         } else {
@@ -217,7 +217,7 @@ template<class B, std::size_t N>
         } else if constexpr (integer_source<B, N>) {
                 // The shifts alone, for the reason bit_bytes gives: a copy measured the same and said less.
                 auto value = B();
-                for (auto j = 0UZ; j < bytes.size(); ++j) {
+                for (auto const j : std::views::iota(0UZ, bytes.size())) {
                         auto const byte = static_cast<B>(std::to_integer<unsigned char>(bytes[j]));
                         value = static_cast<B>(value | static_cast<B>(byte << (bits_per_byte * j)));
                 }
@@ -238,7 +238,7 @@ template<class B, std::size_t N>
         } else {
                 auto object = std::array<std::byte, sizeof(B)>();
                 if consteval {
-                        for (auto j = 0UZ; j < bytes.size(); ++j) {
+                        for (auto const j : std::views::iota(0UZ, bytes.size())) {
                                 object[j] = bytes[j];
                         }
                 } else {

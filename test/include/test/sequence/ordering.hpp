@@ -12,6 +12,7 @@
 #include <algorithm>                // equal, lexicographical_compare, lexicographical_compare_three_way
 #include <compare>                  // is_gt, is_lt, strong_ordering
 #include <cstddef>                  // size_t
+#include <ranges>                   // iota
 #include <vector>                   // vector
 
 namespace test::sequence {
@@ -22,15 +23,15 @@ auto ordering_agrees_with_vector_bool(std::size_t universe = 4)
         -> void
 {
         auto const bound = 1UZ << universe;
-        for (auto i = 0UZ; i < bound; ++i) {
-                for (auto j = 0UZ; j < bound; ++j) {
+        for (auto const i : std::views::iota(0UZ, bound)) {
+                for (auto const j : std::views::iota(0UZ, bound)) {
                         auto x = test::bitset::make_bitset<Bits>(universe);
                         auto y = test::bitset::make_bitset<Bits>(universe);
 
                         // Written through the view; named, CTAD followed by [k] parsing as an array declaration.
                         auto xw = xstd::bit_span(x);
                         auto yw = xstd::bit_span(y);
-                        for (auto k = 0UZ; k < universe; ++k) {
+                        for (auto const k : std::views::iota(0UZ, universe)) {
                                 xw[k] = (i >> k & 1UZ) != 0UZ;
                                 yw[k] = (j >> k & 1UZ) != 0UZ;
                         }
@@ -41,10 +42,10 @@ auto ordering_agrees_with_vector_bool(std::size_t universe = 4)
                         // The reference holds the same bools at the same positions, over the whole width.
                         auto vx = std::vector<bool>(xv.size());
                         auto vy = std::vector<bool>(yv.size());
-                        for (auto k = 0UZ; k < xv.size(); ++k) {
+                        for (auto const k : std::views::iota(0UZ, xv.size())) {
                                 vx[k] = static_cast<bool>(xv[k]);
                         }
-                        for (auto k = 0UZ; k < yv.size(); ++k) {
+                        for (auto const k : std::views::iota(0UZ, yv.size())) {
                                 vy[k] = static_cast<bool>(yv[k]);
                         }
 

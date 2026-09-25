@@ -19,7 +19,7 @@
 #include <concepts>                                  // constructible_from, derived_from, equality_comparable, same_as, totally_ordered
 #include <cstddef>                                   // size_t
 #include <cstdint>                                   // uint8_t
-#include <ranges>                                    // borrowed_range, random_access_range, view
+#include <ranges>                                    // borrowed_range, iota, random_access_range, view
 #include <utility>                                   // declval
 
 BOOST_AUTO_TEST_SUITE(BitSpan)
@@ -95,10 +95,10 @@ BOOST_AUTO_TEST_CASE(TheViewedTypesAreTheOnesHoldingBoolsWithoutOfferingThem)
 BOOST_AUTO_TEST_CASE(TheSequenceReadingIsTheArrayOfBools)
 {
         constexpr auto N = 8UZ;
-        for (auto i = 0UZ; i < (1UZ << N); ++i) {
+        for (auto const i : std::views::iota(0UZ, 1UZ << N)) {
                 auto packed = xstd::bitset<N>();
                 auto plain = std::array<bool, N>{};
-                for (auto k = 0UZ; k < N; ++k) {
+                for (auto const k : std::views::iota(0UZ, N)) {
                         if ((i >> k & 1UZ) != 0UZ) {
                                 packed.set(k);
                                 plain[k] = true;
@@ -134,7 +134,7 @@ BOOST_AUTO_TEST_CASE(APackedArrayAgreesWithItsOwnView)
         packed[6] = true;
 
         auto const view = xstd::bit_span(packed);
-        for (auto k = 0UZ; k < 8UZ; ++k) {
+        for (auto const k : std::views::iota(0UZ, 8UZ)) {
                 BOOST_CHECK_EQUAL(static_cast<bool>(view[k]), static_cast<bool>(packed[k]));
         }
 
