@@ -13,7 +13,6 @@
 #include <xstd/bits/detail/words.hpp>                    // owner_storage_t
 #include <xstd/bits/from_bit_storage.hpp>                // from_bit_storage_t
 #include <xstd/ints/concepts/unsigned_integer.hpp>       // unsigned_integer
-#include <xstd/ints/limits.hpp>                          // numeric_limits
 #include <boost/container_hash/is_range.hpp>             // is_range
 #include <boost/container_hash/is_tuple_like.hpp>        // is_tuple_like
 #include <array>                                         // array
@@ -41,12 +40,14 @@ public:
         }
 };
 
-// Block counts computed as the aliases compute them; the defaulted K keeps MSVC 17 from dropping the one-word guide.
-template<xstd::unsigned_integer B, std::size_t K = 1>
-bit_set_adaptor(from_bit_storage_t, B) -> bit_set_adaptor<std::array<B, bits::detail::num_blocks_v<B, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>>, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>;
+// Spelled as the aliases spell their block count, or alias deduction fails; K = 1 keeps MSVC 17 from dropping it.
+template<xstd::unsigned_integer Block, std::size_t K = 1>
+bit_set_adaptor(from_bit_storage_t, Block) -> bit_set_adaptor<std::array<Block, bits::detail::num_blocks_v<Block, bit_storage_extent_v<Block> * K>>, bit_storage_extent_v<Block> * K>;
 
-template<xstd::unsigned_integer B, std::size_t K>
-bit_set_adaptor(from_bit_storage_t, std::array<B, K>) -> bit_set_adaptor<std::array<B, bits::detail::num_blocks_v<B, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>>, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>;
+// No guide from zero blocks: an empty array names no width worth deducing.
+template<xstd::unsigned_integer Block, std::size_t K>
+        requires (K != 0)
+bit_set_adaptor(from_bit_storage_t, std::array<Block, K>) -> bit_set_adaptor<std::array<Block, bits::detail::num_blocks_v<Block, bit_storage_extent_v<std::array<Block, K>>>>, bit_storage_extent_v<std::array<Block, K>>>;
 
 } // namespace xstd
 

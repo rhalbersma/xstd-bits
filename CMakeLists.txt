@@ -109,10 +109,12 @@ target_sources(
         include/xstd/bits/ext/boost/small_bitset.hpp
         include/xstd/bits/detail/pred.hpp
         include/xstd/bits/detail/bit_castable.hpp
+        include/xstd/bits/detail/bit_width.hpp
         include/xstd/bits/detail/random_access.hpp
         include/xstd/bits/detail/range_const_reference.hpp
         include/xstd/bits/detail/shift.hpp
         include/xstd/bits/detail/storage_ptr.hpp
+        include/xstd/bits/detail/views.hpp
         include/xstd/bits/detail/words.hpp
         include/xstd/bits/detail/zero_width.hpp
         include/xstd/bits/detail/ownership.hpp
