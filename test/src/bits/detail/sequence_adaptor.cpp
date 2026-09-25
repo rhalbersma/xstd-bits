@@ -345,7 +345,7 @@ BOOST_AUTO_TEST_CASE(TheAppendsPackWhatTheRangeComputes)
 
         auto expected = std::vector<bool>();
         for (auto const n : {128UZ, 70UZ}) {
-                for (auto i = 0UZ; i < n; ++i) {
+                for (auto const i : std::views::iota(0UZ, n)) {
                         expected.push_back(every_third(i));
                 }
         }
@@ -417,7 +417,7 @@ auto write_pattern(Seq& s, std::size_t p)
         -> std::vector<bool>
 {
         auto m = std::vector<bool>(s.size());
-        for (auto i = 0UZ; i < s.size(); ++i) {
+        for (auto const i : std::views::iota(0UZ, s.size())) {
                 bool const bit = pattern_bit(p, i, s.size());
                 s[i] = bit;
                 m[i] = bit;
@@ -468,7 +468,7 @@ auto for_each_bools(Seq const& s)
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheAggregatesAgreeWithTheModel, T, Graded)
 {
         auto disagreements = 0UZ;
-        for (auto p = 0UZ; p < 6UZ; ++p) {
+        for (auto const p : std::views::iota(0UZ, 6UZ)) {
                 auto a = T();
                 auto const m = write_pattern(a, p);
                 disagreements += aggregate_disagreements(a, m);
@@ -481,12 +481,12 @@ BOOST_AUTO_TEST_CASE(TheAggregatesAgreeWithTheModelOnAWindowOfOurs)
 {
         using Storage24 = xstd::bits::detail::contiguous_bit_array<std::uint8_t, 24>;
         auto disagreements = 0UZ;
-        for (auto p = 0UZ; p < 6UZ; ++p) {
+        for (auto const p : std::views::iota(0UZ, 6UZ)) {
                 auto c = Storage24();
                 auto v = xstd::bit_span(c);
                 auto const m = write_pattern(v, p);
-                for (auto off = 0UZ; off <= v.size(); ++off) {
-                        for (auto count = 0UZ; off + count <= v.size(); ++count) {
+                for (auto const off : std::views::iota(0UZ, v.size() + 1UZ)) {
+                        for (auto const count : std::views::iota(0UZ, v.size() - off + 1UZ)) {
                                 auto const w = v.subspan(off, count);
                                 auto const mw = std::vector<bool>(m.begin() + static_cast<std::ptrdiff_t>(off), m.begin() + static_cast<std::ptrdiff_t>(off + count));
                                 disagreements += aggregate_disagreements(w, mw);
@@ -501,8 +501,8 @@ BOOST_AUTO_TEST_CASE(TheAggregatesAgreeWithTheModelOnAWindowOfOurs)
 BOOST_AUTO_TEST_CASE_TEMPLATE(MismatchAgreesWithTheModel, T, Graded)
 {
         auto disagreements = 0UZ;
-        for (auto p = 0UZ; p < 6UZ; ++p) {
-                for (auto q = 0UZ; q < 6UZ; ++q) {
+        for (auto const p : std::views::iota(0UZ, 6UZ)) {
+                for (auto const q : std::views::iota(0UZ, 6UZ)) {
                         auto x = T();
                         auto y = T();
                         auto const mx = write_pattern(x, p);
@@ -572,7 +572,7 @@ BOOST_AUTO_TEST_CASE(MismatchIsTheOwnersOverStorageThatHasTheEntry)
 BOOST_AUTO_TEST_CASE_TEMPLATE(ForEachAgreesWithTheRangeFor, T, Graded)
 {
         auto disagreements = 0UZ;
-        for (auto p = 0UZ; p < 6UZ; ++p) {
+        for (auto const p : std::views::iota(0UZ, 6UZ)) {
                 auto a = T();
                 auto const m = write_pattern(a, p);
                 disagreements += static_cast<std::size_t>(not std::ranges::equal(for_each_bools(a), m));
@@ -635,7 +635,7 @@ BOOST_AUTO_TEST_CASE(APackedArrayExchangesBytesWithAFieldOfBits)
 
         auto const a = xstd::bit_cast<xstd::bit_array<N>>(src);
         BOOST_CHECK_EQUAL(a.count(), src.count());
-        for (auto i = 0UZ; i < N; ++i) {
+        for (auto const i : std::views::iota(0UZ, N)) {
                 BOOST_CHECK_EQUAL(a[i], src.test(i));
         }
         BOOST_CHECK(a.to_bits<std::bitset<N>>() == src);

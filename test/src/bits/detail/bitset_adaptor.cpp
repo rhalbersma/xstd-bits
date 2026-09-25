@@ -95,7 +95,7 @@ struct std::char_traits<digit_char>
         static constexpr auto compare(char_type const* a, char_type const* b, std::size_t n) noexcept
                 -> int
         {
-                for (auto i = 0UZ; i < n; ++i) {
+                for (auto const i : std::views::iota(0UZ, n)) {
                         if (lt(a[i], b[i])) {
                                 return -1;
                         }
@@ -119,7 +119,7 @@ struct std::char_traits<digit_char>
         static constexpr auto find(char_type const* p, std::size_t n, char_type const& a) noexcept
                 -> char_type const*
         {
-                for (auto i = 0UZ; i < n; ++i) {
+                for (auto const i : std::views::iota(0UZ, n)) {
                         if (eq(p[i], a)) {
                                 return p + i;
                         }
@@ -131,12 +131,12 @@ struct std::char_traits<digit_char>
                 -> char_type*
         {
                 if (d < s) {
-                        for (auto i = 0UZ; i < n; ++i) {
+                        for (auto const i : std::views::iota(0UZ, n)) {
                                 d[i] = s[i];
                         }
                 } else if (s < d) {
-                        for (auto i = n; i > 0UZ; --i) {
-                                d[i - 1] = s[i - 1];
+                        for (auto i = n - 1UZ; i < n; --i) {
+                                d[i] = s[i];
                         }
                 }
                 return d;
@@ -145,7 +145,7 @@ struct std::char_traits<digit_char>
         static constexpr auto copy(char_type* d, char_type const* s, std::size_t n) noexcept
                 -> char_type*
         {
-                for (auto i = 0UZ; i < n; ++i) {
+                for (auto const i : std::views::iota(0UZ, n)) {
                         d[i] = s[i];
                 }
                 return d;
@@ -154,7 +154,7 @@ struct std::char_traits<digit_char>
         static constexpr auto assign(char_type* p, std::size_t n, char_type a) noexcept
                 -> char_type*
         {
-                for (auto i = 0UZ; i < n; ++i) {
+                for (auto const i : std::views::iota(0UZ, n)) {
                         p[i] = a;
                 }
                 return p;
@@ -826,7 +826,7 @@ BOOST_AUTO_TEST_CASE(ABitsetReadingExchangesBytesWithAnotherFieldOfBits)
 
         auto const b = xstd::bit_cast<xstd::bitset<N>>(src);
         BOOST_CHECK_EQUAL(b.count(), src.count());
-        for (auto i = 0UZ; i < N; ++i) {
+        for (auto const i : std::views::iota(0UZ, N)) {
                 BOOST_CHECK_EQUAL(b.test(i), src.test(i));
         }
         BOOST_CHECK(b.to_bits<std::bitset<N>>() == src);

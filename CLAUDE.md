@@ -112,6 +112,43 @@ not implicitly `noexcept`: `static_assert(!noexcept(plain(1)))` holds for a lamb
 written on it. Write `noexcept` on a lambda where it is wanted, and keep it where it is already
 there.
 
+## Loops
+
+A counted loop tests with `<`, never `!=`: an index that overshoots its bound stops rather than runs on. Where
+it costs nothing, it is not written as a counter at all.
+
+**Ascending by one** is a range over `iota`, and a closed bound is written as the half-open one it is:
+
+```cpp
+for (auto const i : std::views::iota(0UZ, n)) { /* ... */ }
+for (auto const i : std::views::iota(lo, hi + 1UZ)) { /* ... */ }
+```
+
+A loop that only repeats marks its unread counter `[[maybe_unused]]`, as `-Wunused-variable` asks.
+
+**Strided** stays a raw loop. `views::stride` must never step past the end, so each increment computes
+`min(stride, end - current)`, which GCC keeps in the loop and Clang keeps as two `cmov`s that stop it unrolling:
+
+```cpp
+for (auto k = 0UZ; k < n; k += digits) { /* ... */ }
+```
+
+**Descending** runs from `hi - 1` down to `lo` over `N = hi - lo` indices, and lets unsigned wraparound end it:
+one step below `lo`, `i - lo` wraps to the maximum and the `<` test fails. It needs `lo <= hi`, and with `lo == 0`
+it is the plain countdown. It runs zero times when `N == 0`.
+
+```cpp
+for (auto i = N - 1UZ; i < N; --i) { /* ... */ }
+for (auto i = hi - 1UZ, N = hi - lo; i - lo < N; --i) { /* ... */ }
+```
+
+`views::reverse` over `iota` compiles to the same loop at `-O2`, but to 2.5–3.7× the code at `-O0` and in constant
+evaluation, so it is not used. The wraparound is defined behaviour; only Clang's opt-in `-fsanitize=integer`
+reports it.
+
+Iterator loops (`first != last`) and searches that stop at a sentinel such as `npos` are not counted loops, and
+compare as their types allow. A loop whose test carries a second condition stays raw.
+
 ## Checking your work
 
 Compile with the **stable rung** of [README.md](README.md)'s matrix, never with whatever `g++` or `clang++`

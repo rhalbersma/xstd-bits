@@ -143,9 +143,9 @@ namespace on3 {
 template<class X, auto N = limit_v<X, L3>>
 auto all_singleton_set_triples(auto fun)
 {
-        for (auto i : std::views::iota(0UZ, N)) {
-                for (auto j : std::views::iota(0UZ, N)) {
-                        for (auto k : std::views::iota(0UZ, N)) {
+        for (auto const i : std::views::iota(0UZ, N)) {
+                for (auto const j : std::views::iota(0UZ, N)) {
+                        for (auto const k : std::views::iota(0UZ, N)) {
                                 auto a = make_bitset<X>(N);
                                 a.set(i);
                                 assert(a.count() == 1);

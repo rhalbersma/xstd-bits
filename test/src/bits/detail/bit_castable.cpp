@@ -9,6 +9,7 @@
 #include <bitset>                            // bitset
 #include <cstddef>                           // byte, size_t
 #include <cstdint>                           // uint8_t, uint16_t, uint32_t, uint64_t
+#include <ranges>                            // iota
 #include <string>                            // string
 #include <vector>                            // vector
 
@@ -256,11 +257,11 @@ BOOST_AUTO_TEST_CASE(TheTwoDirectionsAreEachOthersInverse)
 BOOST_AUTO_TEST_CASE(OnePositionLightsOneBitOfOneByte)
 {
         constexpr auto N = 200UZ;
-        for (auto i = 0UZ; i < N; ++i) {
+        for (auto const i : std::views::iota(0UZ, N)) {
                 auto bs = std::bitset<N>();
                 bs.set(i);
                 auto const bytes = detail::bit_bytes<N>(bs);
-                for (auto j = 0UZ; j < bytes.size(); ++j) {
+                for (auto const j : std::views::iota(0UZ, bytes.size())) {
                         BOOST_CHECK(bytes[j] == (j == i / 8UZ ? static_cast<std::byte>(1U << (i % 8UZ)) : std::byte{}));
                 }
         }

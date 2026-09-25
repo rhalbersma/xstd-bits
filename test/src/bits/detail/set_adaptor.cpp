@@ -136,7 +136,7 @@ auto check_reads(Set const& s, std::set<std::size_t> const& model, std::size_t w
         -> void
 {
         check_whole(s, model);
-        for (auto x = 0UZ; x <= width + 1UZ; ++x) {
+        for (auto const x : std::views::iota(0UZ, width + 2UZ)) {
                 check_key(s, model, x);
         }
 }
@@ -336,13 +336,13 @@ BOOST_AUTO_TEST_CASE(RangedInsertionAgreesWithTheElementwiseLoop)
         constexpr auto N = 100UZ;
 
         // The consecutive tier, over every [lo, hi) the width admits.
-        for (auto lo = 0UZ; lo <= N; ++lo) {
-                for (auto hi = lo; hi <= N; ++hi) {
+        for (auto const lo : std::views::iota(0UZ, N + 1UZ)) {
+                for (auto const hi : std::views::iota(lo, N + 1UZ)) {
                         auto ranged = xstd::bit_static_set<N>();
                         ranged.insert_range(std::views::iota(lo, hi));
 
                         auto elementwise = xstd::bit_static_set<N>();
-                        for (auto i = lo; i < hi; ++i) {
+                        for (auto const i : std::views::iota(lo, hi)) {
                                 elementwise.insert(i);
                         }
                         BOOST_CHECK(ranged == elementwise);
@@ -356,7 +356,7 @@ BOOST_AUTO_TEST_CASE(RangedInsertionAgreesWithTheElementwiseLoop)
         seeded.insert(99UZ);
         auto expected = seeded;
         seeded.insert_range(std::views::iota(10UZ, 65UZ));
-        for (auto i = 10UZ; i < 65UZ; ++i) {
+        for (auto const i : std::views::iota(10UZ, 65UZ)) {
                 expected.insert(i);
         }
         BOOST_CHECK(seeded == expected);
@@ -383,7 +383,7 @@ BOOST_AUTO_TEST_CASE(RangedInsertionGrowsADynamicWidth)
         ranged.insert_range(std::views::iota(5UZ, 130UZ));
 
         auto elementwise = xstd::bit_set();
-        for (auto i = 5UZ; i < 130UZ; ++i) {
+        for (auto const i : std::views::iota(5UZ, 130UZ)) {
                 elementwise.insert(i);
         }
         BOOST_CHECK(ranged == elementwise);
@@ -391,7 +391,7 @@ BOOST_AUTO_TEST_CASE(RangedInsertionGrowsADynamicWidth)
 
         // Appending a second, disjoint stretch grows it again and keeps the first.
         ranged.insert_range(std::views::iota(200UZ, 260UZ));
-        for (auto i = 200UZ; i < 260UZ; ++i) {
+        for (auto const i : std::views::iota(200UZ, 260UZ)) {
                 elementwise.insert(i);
         }
         BOOST_CHECK(ranged == elementwise);

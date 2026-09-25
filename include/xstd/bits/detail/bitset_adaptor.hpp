@@ -834,14 +834,14 @@ private:
                         // Widths differing by whole blocks make the shared window a block range, walked blockwise.
                         auto const li0 = lhs_start / bits_per_block;
                         auto const ri0 = rhs_start / bits_per_block;
-                        for (auto k = nb; k-- != 0UZ;) {
+                        for (auto k = nb - 1UZ; k < nb; --k) {
                                 if (auto const cmp = m_bits.block(li0 + k) <=> rhs.m_bits.block(ri0 + k); cmp != std::strong_ordering::equal) {
                                         return cmp;
                                 }
                         }
                 } else {
                         // Misaligned by a partial block: a funnel shift per step is the operation, not a shortfall.
-                        for (auto k = nb; k-- != 0UZ;) {
+                        for (auto k = nb - 1UZ; k < nb; --k) {
                                 auto const lhs_block = m_bits.block_at(lhs_start + (k * bits_per_block));
                                 auto const rhs_block = rhs.m_bits.block_at(rhs_start + (k * bits_per_block));
                                 if (auto const cmp = lhs_block <=> rhs_block; cmp != std::strong_ordering::equal) {

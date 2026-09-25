@@ -160,7 +160,7 @@ BOOST_AUTO_TEST_CASE(ItYieldsEveryPosition)
         auto c = T();
         test::sequence::yields_every_position(c);
 
-        for (auto n = 0UZ; n < c.size(); ++n) {
+        for (auto const n : std::views::iota(0UZ, c.size())) {
                 c[n] = (n % 3UZ == 0UZ);
         }
         test::sequence::yields_every_position(c);

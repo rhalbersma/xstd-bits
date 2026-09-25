@@ -9,6 +9,7 @@
 #include <xstd/bits/detail/bitset_adaptor.hpp> // swap
 #include <boost/test/unit_test.hpp>            // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <concepts>                            // regular, totally_ordered
+#include <ranges>                              // iota
 #include <tuple>                               // tuple_cat
 #include <type_traits>                         // is_nothrow_*, is_trivially_*
 #include <utility>                             // declval
@@ -68,7 +69,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AllAnyAndNoneReadEveryBlock, T, Types)
         BOOST_CHECK_EQUAL(b.any(), b.size() != 0);
         BOOST_CHECK_EQUAL(b.none(), b.size() == 0);
 
-        for (auto i = 0UZ; i < b.size(); ++i) {
+        for (auto const i : std::views::iota(0UZ, b.size())) {
                 b.set();
                 b.reset(i);
                 BOOST_CHECK(not b.all());

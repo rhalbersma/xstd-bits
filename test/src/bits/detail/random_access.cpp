@@ -17,7 +17,7 @@
 #include <cstddef>                                   // ptrdiff_t, size_t
 #include <cstdint>                                   // uint64_t
 #include <iterator>                                  // iter_move, next, prev, reverse_iterator
-#include <ranges>                                    // subrange
+#include <ranges>                                    // iota, subrange
 #include <type_traits>                               // is_assignable_v, is_convertible_v, is_trivially_copy_constructible_v, is_trivially_destructible_v
 #include <utility>                                   // declval
 #include <vector>                                    // vector
@@ -59,7 +59,7 @@ template<class T>
         -> std::vector<bool>
 {
         auto v = std::vector<bool>(c.size());
-        for (auto i = 0UZ; i < v.size(); ++i) {
+        for (auto const i : std::views::iota(0UZ, v.size())) {
                 v[i] = c.test(i);
         }
         return v;
@@ -148,7 +148,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheSequenceIteratorReadsAndWritesThroughTheStorage
 
         // Nothing to step over at a zero width, so nothing is instantiated for it.
         if constexpr (N != 0UZ) {
-                for (auto i = 0UZ; i < N; ++i) {
+                for (auto const i : std::views::iota(0UZ, N)) {
                         check_position(first, i, model);
                 }
                 BOOST_CHECK(as_vector(c) == model);

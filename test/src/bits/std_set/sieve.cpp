@@ -11,6 +11,7 @@
 #include <format>                       // format
 #include <opt/set/detail/isqrt.hpp>     // isqrt
 #include <opt/set/sieve.hpp>            // filter_twins, generate_candidates, incremental_sieve, sift_primes0, sift_primes1, sift_primes_incremental, sift_primes_segmented
+#include <ranges>                       // iota
 #include <set>                          // set
 #include <tuple>                        // tuple
 #include <vector>                       // vector
@@ -88,7 +89,7 @@ BOOST_AUTO_TEST_CASE(TheIncrementalSieveGeneratesWithoutABound)
 {
         auto sieve = opt::incremental_sieve();
         auto first = std::vector<std::size_t>();
-        for (auto i = 0UZ; i < 25UZ; ++i) {
+        for ([[maybe_unused]] auto const i : std::views::iota(0UZ, 25UZ)) {
                 first.push_back(sieve.next());
         }
         // Compared as a range, not through std::format, so a disagreement names the first position.
@@ -132,7 +133,7 @@ BOOST_AUTO_TEST_CASE(TheIntegerSquareRootIsExactAndTotal)
         BOOST_CHECK_EQUAL(opt::detail::isqrt(1UZ), 1UZ);
 
         // r * r <= n < (r + 1) * (r + 1) is the whole contract, checked either side of each square.
-        for (auto r = 1UZ; r <= 100UZ; ++r) {
+        for (auto const r : std::views::iota(1UZ, 101UZ)) {
                 BOOST_CHECK_EQUAL(opt::detail::isqrt(r * r), r);
                 BOOST_CHECK_EQUAL(opt::detail::isqrt((r * r) - 1UZ), r - 1UZ);
                 BOOST_CHECK_EQUAL(opt::detail::isqrt((r * r) + 1UZ), r);

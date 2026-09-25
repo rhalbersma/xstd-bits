@@ -66,7 +66,7 @@ constexpr auto walk_blocks_ascending(Bits const& c, F& f)
         using block_type = Bits::block_type;
         constexpr auto digits = Bits::bits_per_block;
 
-        for (auto index = 0UZ, blocks = c.num_blocks(); index < blocks; ++index) {
+        for (auto const index : std::views::iota(0UZ, c.num_blocks())) {
                 auto block = c.block(index);
                 while (block != block_type{}) {
                         auto const offset = static_cast<std::size_t>(countr_zero(block));
@@ -86,8 +86,8 @@ constexpr auto walk_blocks_descending(Bits const& c, F& f)
         using block_type = Bits::block_type;
         constexpr auto digits = Bits::bits_per_block;
 
-        for (auto n = 0UZ, blocks = c.num_blocks(); n < blocks; ++n) {
-                auto const index = blocks - 1UZ - n;
+        auto const blocks = c.num_blocks();
+        for (auto index = blocks - 1UZ; index < blocks; --index) {
                 auto block = c.block(index);
                 while (block != block_type{}) {
                         auto const offset = digits - 1UZ - static_cast<std::size_t>(countl_zero(block));

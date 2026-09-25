@@ -13,6 +13,7 @@
 #include <compare>                    // is_gt, is_lt, strong_ordering
 #include <cstddef>                    // size_t
 #include <cstdint>                    // uint64_t
+#include <ranges>                     // iota
 #include <set>                        // set
 
 namespace test::set {
@@ -27,8 +28,8 @@ auto ordering_agrees_with_std_set(std::size_t universe = 4)
         auto less_disagreements = 0UZ;
         auto greater_disagreements = 0UZ;
 
-        for (auto i = 0UZ; i < bound; ++i) {
-                for (auto j = 0UZ; j < bound; ++j) {
+        for (auto const i : std::views::iota(0UZ, bound)) {
+                for (auto const j : std::views::iota(0UZ, bound)) {
                         auto x = test::bitset::make_bitset<Bits>(universe);
                         auto y = test::bitset::make_bitset<Bits>(universe);
                         auto kx = std::set<std::size_t>();
@@ -37,7 +38,7 @@ auto ordering_agrees_with_std_set(std::size_t universe = 4)
                         // Written through the view; named, clang 23 crashing on a deducing-this call on a prvalue.
                         auto const xw = xstd::bit_set_view(x);
                         auto const yw = xstd::bit_set_view(y);
-                        for (auto k = 0UZ; k < universe; ++k) {
+                        for (auto const k : std::views::iota(0UZ, universe)) {
                                 if (i >> k & 1UZ) {
                                         xw.insert(k);
                                         kx.insert(k);
@@ -78,7 +79,7 @@ auto ordering_agrees_with_std_set_sampled(std::size_t universe, std::size_t tria
         auto lcg = std::uint64_t{0x9E3779B97F4A7C15};
         auto const next = [&lcg] -> std::uint64_t { lcg = (lcg * 6364136223846793005ULL) + 1442695040888963407ULL; return lcg >> 11U; };
 
-        for (auto t = 0UZ; t < trials; ++t) {
+        for ([[maybe_unused]] auto const t : std::views::iota(0UZ, trials)) {
                 auto const i = next();
                 auto const j = next();
 
@@ -89,7 +90,7 @@ auto ordering_agrees_with_std_set_sampled(std::size_t universe, std::size_t tria
 
                 auto const xw = xstd::bit_set_view(x);
                 auto const yw = xstd::bit_set_view(y);
-                for (auto k = 0UZ; k < universe; ++k) {
+                for (auto const k : std::views::iota(0UZ, universe)) {
                         if (i >> k & 1UZ) {
                                 xw.insert(k);
                                 kx.insert(k);

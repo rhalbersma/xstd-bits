@@ -131,7 +131,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItRoundTripsThroughStdBitset, T, Types)
 
                 auto const c = T(bs);
                 BOOST_CHECK_EQUAL(c.size(), bs.count());
-                for (auto i = 0UZ; i < N; ++i) {
+                for (auto const i : std::views::iota(0UZ, N)) {
                         BOOST_CHECK_EQUAL(c.contains(i), bs.test(i));
                 }
 
@@ -214,7 +214,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(OurOwnBitsetReadingCrossesOnTheSameRule, T, Types)
                 }
                 auto const c = T(b);
                 BOOST_CHECK_EQUAL(c.size(), b.count());
-                for (auto i = 0UZ; i < N; ++i) {
+                for (auto const i : std::views::iota(0UZ, N)) {
                         BOOST_CHECK_EQUAL(c.contains(i), b.test(i));
                 }
                 BOOST_CHECK(static_cast<Bitset>(c) == b);
