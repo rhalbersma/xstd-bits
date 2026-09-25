@@ -218,6 +218,13 @@ BOOST_AUTO_TEST_CASE(AViewIsNamedByItsWords)
         static_assert(std::same_as<decltype(xstd::bit_span(words).subspan(1, 2)), xstd::bit_subspan<std::span<std::uint32_t>>>);
         static_assert(std::same_as<decltype(xstd::bit_span(fixed).first<4>()), xstd::bit_subspan<std::span<std::uint16_t, 2>, 4>>);
         BOOST_CHECK(xstd::bit_set_view(board).empty());
+
+        // The deduced views write through to the words they are named by.
+        auto const seq = xstd::bit_span(words);
+        seq[33] = true;
+        BOOST_CHECK_EQUAL(words[1], 0x02U);
+        xstd::bit_span(fixed).first<4>().fill(true);
+        BOOST_CHECK_EQUAL(fixed[0], 0x000FU);
 }
 
 // Only what outlives the view is viewed: a word by lvalue, a range by lvalue or as a borrowed range, of unsigned words.
