@@ -30,9 +30,12 @@ requirement an owner's user has to meet is public API, and a hard error inside `
 the vehicle calls to change its word count: `resize(count, value)`, `push_back`, `insert` at the end, `clear`
 and `max_size`. An owner requires it only at `N == std::dynamic_extent`, so `std::array<B, K>` still serves a
 fixed width while `bit_set_adaptor<std::array<B, K>, std::dynamic_extent>` is refused at the constraint rather
-than inside `resize`. `boost::container::vector` and `boost::container::static_vector` satisfy both concepts
-unmodified, which is the test that the contract is the whole of what a storage has to provide: the first runs
-through the set reading's full primitive suite, and the second shows its capacity becoming the owner's ceiling.
+than inside `resize`. The test that the contract is the whole of what a storage has to provide
+is `test::minimal_words`: a storage written outside the library with exactly those members and no others, which
+runs the set reading's full primitive suite as a `bit_set_adaptor`. `boost::container::static_vector`
+satisfies both concepts as it comes. Boost's containers are asserted rather than run under coverage: they
+force-inline an asserting `operator[]`, so every subscript in the vehicle would bring along a branch no passing
+test takes.
 
 **Whether growth throws is the storage's own answer.** `std::vector::resize` can throw `std::bad_alloc`, and a
 storage with an inline capacity -- `std::inplace_vector`, `boost::container::static_vector` -- throws its own

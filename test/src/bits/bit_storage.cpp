@@ -3,6 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/minimal_words.hpp>        // minimal_words
 #include <xstd/bits/bit_array.hpp>       // bit_array
 #include <xstd/bits/bit_set.hpp>         // bit_set
 #include <xstd/bits/bit_set_adaptor.hpp> // bit_set_adaptor
@@ -110,7 +111,9 @@ BOOST_AUTO_TEST_CASE(ARunTimeWidthOwnsOnlyStorageThatResizes)
         static_assert(xstd::resizable_bit_storage<std::inplace_vector<std::uint16_t, 3>>);
 
 #endif
+        static_assert(xstd::resizable_bit_storage<test::minimal_words<std::uint32_t>>);
         static_assert(names_an_owner_of<std::vector<std::size_t>, std::dynamic_extent>);
+        static_assert(names_an_owner_of<test::minimal_words<std::uint32_t>, std::dynamic_extent>);
         static_assert(names_an_owner_of<std::array<std::uint64_t, 2>, 100> and not names_an_owner_of<std::array<std::uint64_t, 2>, std::dynamic_extent>);
         static_assert(not names_an_owner_of<std::uint64_t, std::dynamic_extent>);
         BOOST_CHECK(true);

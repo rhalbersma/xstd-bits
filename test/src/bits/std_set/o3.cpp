@@ -4,13 +4,13 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/flat_set.hpp>             // IWYU pragma: keep; TEST_HAS_FLAT_SET
+#include <test/minimal_words.hpp>        // minimal_words
 #include <test/set/exhaustive.hpp>       // all_singleton_set_triples
 #include <test/set/primitives.hpp>       // op_less
 #include <test/uint128.hpp>              // TEST_HAS_UINT128, uint128
 #include <xstd/bits/bit_set.hpp>         // bit_set
 #include <xstd/bits/bit_set_adaptor.hpp> // bit_set_adaptor
 #include <xstd/bits/bit_static_set.hpp>  // bit_static_set
-#include <boost/container/vector.hpp>    // vector
 #include <boost/test/unit_test.hpp>      // BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_AUTO_TEST_CASE_TEMPLATE
 #include <cstddef>                       // size_t
 #include <cstdint>                       // uint8_t, uint16_t, uint32_t, uint64_t
@@ -39,7 +39,7 @@ using Types = std::tuple<std::set<std::size_t>
 
 #endif
                          ,
-                         xstd::basic_bit_set<uint8_t>, xstd::basic_bit_set<uint64_t>, xstd::bit_set_adaptor<boost::container::vector<uint8_t>>>;
+                         xstd::basic_bit_set<uint8_t>, xstd::basic_bit_set<uint64_t>, xstd::bit_set_adaptor<test::minimal_words<uint8_t>>>;
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(LessIsTransitiveOverEverySingletonTriple, T, Types)
 {
