@@ -14,6 +14,7 @@
 #include <xstd/bits/detail/ownership.hpp>            // storage
 #include <xstd/bits/detail/set_adaptor.hpp>          // set_adaptor
 #include <boost/test/unit_test.hpp>                  // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <array>                                     // array
 #include <concepts>                                  // constructible_from, derived_from, same_as
 #include <cstddef>                                   // size_t
 #include <cstdint>                                   // uint8_t
@@ -44,13 +45,14 @@ auto eight_bits_with_three_set()
         return bits;
 }
 
-using Blocks = xstd::bits::detail::contiguous_bit_array<std::size_t, 8>;
+using Storage = xstd::bits::detail::contiguous_bit_array<std::size_t, 8>;
+using Words = std::array<std::size_t, 1>;
 
 template<class T>
 using view_of = decltype(xstd::bit_set_view(std::declval<T&>()));
 
 // Named rather than a lambda, so the conversion happens at a call boundary the way a caller would meet it.
-constexpr auto takes_a_set_view(xstd::bit_set_view<Blocks> v) noexcept
+constexpr auto takes_a_set_view(xstd::bit_set_view<Words, 8> v) noexcept
         -> bool
 {
         return v.contains(3UZ);
@@ -61,36 +63,36 @@ constexpr auto takes_a_set_view(xstd::bit_set_view<Blocks> v) noexcept
 // The view is the referring adaptor under another name, and over an owner it refers into the storage the owner wraps.
 BOOST_AUTO_TEST_CASE(TheViewIsTheReferringAdaptor)
 {
-        static_assert(std::derived_from<xstd::bit_set_view<Blocks>, xstd::bits::detail::set_adaptor<Blocks, xstd::bits::detail::storage::borrowed, xstd::bit_set_view<Blocks>>>);
-        static_assert(std::same_as<view_of<Blocks>, xstd::bit_set_view<Blocks>>);
-        static_assert(std::same_as<view_of<Blocks const>, xstd::bit_set_view<Blocks const>>);
+        static_assert(std::derived_from<xstd::bit_set_view<Words, 8>, xstd::bits::detail::set_adaptor<Storage, xstd::bits::detail::storage::borrowed, xstd::bit_set_view<Words, 8>>>);
+        static_assert(std::same_as<view_of<Storage>, xstd::bit_set_view<Words, 8>>);
+        static_assert(std::same_as<view_of<Storage const>, xstd::bit_set_view<Words const, 8>>);
 
-        static_assert(std::same_as<view_of<xstd::bitset<8>>, xstd::bit_set_view<xstd::bits::detail::contiguous_bit_array<std::size_t, 8>>>);
-        static_assert(std::same_as<view_of<xstd::bitset<8> const>, xstd::bit_set_view<xstd::bits::detail::contiguous_bit_array<std::size_t, 8> const>>);
-        static_assert(std::same_as<view_of<xstd::bit_static_set<8>>, xstd::bit_set_view<xstd::bits::detail::contiguous_bit_array<std::size_t, 8>>>);
+        static_assert(std::same_as<view_of<xstd::bitset<8>>, xstd::bit_set_view<Words, 8>>);
+        static_assert(std::same_as<view_of<xstd::bitset<8> const>, xstd::bit_set_view<Words const, 8>>);
+        static_assert(std::same_as<view_of<xstd::bit_static_set<8>>, xstd::bit_set_view<Words, 8>>);
 }
 
 // A bitset is committed to neither reading, a sequence owner to the sequence one; only the first admits a set view.
 BOOST_AUTO_TEST_CASE(TheReadingsDoNotMix)
 {
-        static_assert(std::same_as<decltype(xstd::bit_span(std::declval<xstd::bit_array<8>&>())), xstd::bit_span<Blocks>>);
-        static_assert(std::constructible_from<xstd::bit_set_view<Blocks>, xstd::bitset<8>&>);
-        static_assert(not std::constructible_from<xstd::bit_set_view<Blocks>, xstd::bit_array<8>&>);
+        static_assert(std::same_as<decltype(xstd::bit_span(std::declval<xstd::bit_array<8>&>())), xstd::bit_span<Words, 8>>);
+        static_assert(std::constructible_from<xstd::bit_set_view<Words, 8>, xstd::bitset<8>&>);
+        static_assert(not std::constructible_from<xstd::bit_set_view<Words, 8>, xstd::bit_array<8>&>);
 }
 
 // Viewing an owner is implicit, viewing raw storage is not: the first claims nothing the owner does not carry.
 BOOST_AUTO_TEST_CASE(ViewingAnOwnerIsImplicit)
 {
-        static_assert(std::convertible_to<xstd::bitset<8>&, xstd::bit_set_view<Blocks>>);
-        static_assert(std::convertible_to<xstd::bit_static_set<8>&, xstd::bit_set_view<Blocks>>);
-        static_assert(std::convertible_to<xstd::bitset<8> const&, xstd::bit_set_view<Blocks const>>);
-        static_assert(not std::convertible_to<xstd::bitset<8> const&, xstd::bit_set_view<Blocks>>);
+        static_assert(std::convertible_to<xstd::bitset<8>&, xstd::bit_set_view<Words, 8>>);
+        static_assert(std::convertible_to<xstd::bit_static_set<8>&, xstd::bit_set_view<Words, 8>>);
+        static_assert(std::convertible_to<xstd::bitset<8> const&, xstd::bit_set_view<Words const, 8>>);
+        static_assert(not std::convertible_to<xstd::bitset<8> const&, xstd::bit_set_view<Words, 8>>);
 
-        static_assert(not std::convertible_to<xstd::bitset<8>, xstd::bit_set_view<Blocks>>);
-        static_assert(not std::convertible_to<xstd::bit_static_set<8>&&, xstd::bit_set_view<Blocks>>);
+        static_assert(not std::convertible_to<xstd::bitset<8>, xstd::bit_set_view<Words, 8>>);
+        static_assert(not std::convertible_to<xstd::bit_static_set<8>&&, xstd::bit_set_view<Words, 8>>);
 
-        static_assert(std::constructible_from<xstd::bit_set_view<Blocks>, Blocks&>);
-        static_assert(not std::convertible_to<Blocks&, xstd::bit_set_view<Blocks>>);
+        static_assert(std::constructible_from<xstd::bit_set_view<Words, 8>, Storage&>);
+        static_assert(not std::convertible_to<Storage&, xstd::bit_set_view<Words, 8>>);
 
         auto s = xstd::bit_static_set<8>();
         s.insert(3UZ);
@@ -104,12 +106,12 @@ BOOST_AUTO_TEST_CASE(TheViewedTypesAreTheOnesHoldingASetWithoutOfferingIt)
         static_assert(not std::ranges::range<xstd::dynamic_bitset>);
         static_assert(not std::ranges::range<xstd::bitset<8>>);
 
-        static_assert(std::ranges::bidirectional_range<view_of<Blocks>>);
+        static_assert(std::ranges::bidirectional_range<view_of<Storage>>);
         static_assert(std::ranges::bidirectional_range<view_of<xstd::bitset<8>>>);
         static_assert(std::ranges::bidirectional_range<view_of<xstd::dynamic_bitset>>);
 
-        static_assert(std::ranges::view<view_of<Blocks>>);
-        static_assert(std::ranges::borrowed_range<view_of<Blocks>>);
+        static_assert(std::ranges::view<view_of<Storage>>);
+        static_assert(std::ranges::borrowed_range<view_of<Storage>>);
         static_assert(not std::ranges::view<xstd::bit_static_set<8>>);
 }
 

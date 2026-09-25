@@ -719,8 +719,8 @@ BOOST_AUTO_TEST_CASE(TheViewsReachABitset)
         BOOST_CHECK(va.is_subset_of(va));
         BOOST_CHECK_EQUAL(qa[69], true);
 
-        static_assert(std::same_as<decltype(va), xstd::bit_set_view<xstd::bits::detail::contiguous_bit_array<std::uint8_t, 70>> const>);
-        static_assert(std::same_as<decltype(xstd::bit_set_view(std::as_const(a))), xstd::bit_set_view<xstd::bits::detail::contiguous_bit_array<std::uint8_t, 70> const>>);
+        static_assert(std::same_as<decltype(va), xstd::bit_set_view<std::array<std::uint8_t, 9>, 70> const>);
+        static_assert(std::same_as<decltype(xstd::bit_set_view(std::as_const(a))), xstd::bit_set_view<std::array<std::uint8_t, 9> const, 70>>);
 }
 
 // Built from text, streamed back to text, and hashed: the derived members.
@@ -794,9 +794,9 @@ BOOST_AUTO_TEST_CASE(ABitsetReadsAsItsStorage)
         using B = xstd::bitset<100>;
 
         // A view over a bitset binds the storage it wraps, the bitset itself being what the constraint refuses.
-        using Blocks = xstd::bits::detail::contiguous_bit_array<std::size_t, 100>;
-        static_assert(std::same_as<decltype(xstd::bit_set_view(std::declval<B&>())), xstd::bit_set_view<Blocks>>);
-        static_assert(std::same_as<decltype(xstd::bit_span(std::declval<B&>())), xstd::bit_span<Blocks>>);
+        using Blocks = std::array<std::size_t, 2>;
+        static_assert(std::same_as<decltype(xstd::bit_set_view(std::declval<B&>())), xstd::bit_set_view<Blocks, 100>>);
+        static_assert(std::same_as<decltype(xstd::bit_span(std::declval<B&>())), xstd::bit_span<Blocks, 100>>);
 
         // Naming the bitset changes how a view is spelled, not what the bitset offers.
         static_assert(not std::ranges::range<B>);

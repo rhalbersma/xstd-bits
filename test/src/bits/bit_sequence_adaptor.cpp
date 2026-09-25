@@ -8,7 +8,7 @@
 #include <xstd/bits/bit_sequence_adaptor.hpp> // bit_sequence_adaptor
 #include <xstd/bits/bit_vector.hpp>           // basic_bit_vector
 #include <xstd/bits/from_bits.hpp>            // from_bits
-#include <boost/test/unit_test.hpp>           // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
+#include <boost/test/unit_test.hpp>           // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <array>                              // array
 #include <concepts>                           // same_as
 #include <cstdint>                            // uint8_t, uint16_t, uint32_t, uint64_t
@@ -46,6 +46,16 @@ BOOST_AUTO_TEST_CASE(TheAdaptorDeducesFromBits)
         static_assert(std::same_as<decltype(words), xstd::bit_sequence_adaptor<std::array<std::uint8_t, 3>, 24> const>);
         static_assert(words[0] and words[23] and words.count() == 2UZ);
         BOOST_CHECK((words == xstd::basic_bit_array<std::uint8_t, 24>::from_bits(std::array<std::uint8_t, 3>{0x01, 0x00, 0x80})));
+}
+
+// A word names its own storage: the layout of an array of one, at its digits or a narrower width.
+BOOST_AUTO_TEST_CASE(AWordIsItsOwnStorage)
+{
+        auto word = xstd::bit_sequence_adaptor<std::uint16_t>();
+        static_assert(sizeof(word) == sizeof(std::uint16_t));
+        word[15] = true;
+        BOOST_CHECK_EQUAL(word.to_bits<std::uint16_t>(), 0x8000U);
+        BOOST_CHECK_EQUAL((xstd::bit_sequence_adaptor<std::uint8_t, 5>().size()), 5UZ);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -1709,8 +1709,9 @@ rewriting all four would have spent three defaulted comparisons to buy symmetry.
 
 ### the-views-are-the-adaptors
 
-`bit_set_view<Bits>` derives from `set_adaptor<Bits, storage::borrowed>` and `bit_span<Bits>` from
-`sequence_adaptor<Bits, storage::borrowed, window::all>`, each passing itself as the adaptor's last argument so that
+`bit_set_view<Blocks, N>` derives from `set_adaptor<Bits, storage::borrowed>` and `bit_span<Blocks, N>` from
+`sequence_adaptor<Bits, storage::borrowed, window::all>`, where `Bits` is the storage the words map to
+([the-views-are-named-by-their-words](#the-views-are-named-by-their-words)), each passing itself as the adaptor's last argument so that
 the adaptor hands back the view; `bit_subspan` is the same shape with the window argument set. They are the
 referring adaptors under the names of [the-public-names](#the-public-names), one header each beside the owners,
 and not a second implementation of either reading — the `set_view` and `sequence_view` of the rewire were the
@@ -1796,7 +1797,7 @@ not wrap: 13 lines and one error through the alias, 22 lines and two errors thro
 
 Restating the constraint on the derived class's own parameter recovers all of that, and then some: it fails at
 the declaration, once, in **fewer** lines than the alias, having no indirection to explain. Which is why all
-three views spell `specialization_of_TN<bits::detail::contiguous_bit_container> Bits` on their own template
+three views spell their constraint, now `xstd::bit_storage Blocks`, on their own template
 parameter instead of leaving it to the base. A four-line reduction holding a constrained class template, an
 alias of it, and both derived forms reproduces the shape exactly, GCC and Clang agreeing to the line, so it is
 the language rather than a diagnostic quirk. The failure mode is the derived class that skips the restatement,
@@ -1824,16 +1825,52 @@ The sequence view pays the `span` half of [views-follow-their-precedent](#views-
 being the adaptor: it has no `==` or `<=>`, and the harness checks the sequence reading through the iterators
 instead.
 
-**One forward declaration breaks the cycle deriving opened.** `sequence_adaptor` names `subspan_type` and
-returns it from `first`, `last` and `subspan`, and that type is now `bit_subspan<Bits>` -- a name whose own
-header includes `sequence_adaptor.hpp`. So the adaptor declares `bit_subspan` and must not include it, while
-`bit_span.hpp` does include it, its members handing one back. While the views were aliases the question did not
-arise: the adaptor could spell `sequence_adaptor<Bits, storage::borrowed, window::sub>` for itself, which is the one
-thing a derived view cannot supply without a hook back into a header above it.
+**A trait the views specialize names the windows.** `sequence_adaptor` returns a window from `first`, `last` and
+`subspan`, and the public name of that window is spelled in words the adaptor never sees: `bit_subspan<Blocks,
+Extent, N>`, where the adaptor holds only the storage. So the adaptor asks `window_of<Derived, Bits, E>`, whose
+primary answers the adaptor windowed, and `bit_span.hpp` and `bit_subspan.hpp` each specialize it for their own
+template before defining their class -- the specialization has to exist when the base's member declarations are
+instantiated, which is while the view is still incomplete. That is the hook back into the header above, and it
+replaces the forward declaration of `bit_subspan` the adaptor carried while the views were named by storage.
+
+### the-views-are-named-by-their-words
+
+Every public class is named by **words**, never by the storage built over them: an unsigned word, or a sized
+contiguous range of unsigned words that subscripts, which is the public concept `xstd::bit_storage`. A packed container
+*has* bit storage and is not bit storage itself: `bit_set` is a range of keys, `bit_array` of proxies, and
+`std::bitset` has one too without exposing it. `contiguous_bit_container`
+is a storage device and appears in no public template argument list. `detail/words.hpp` holds the map:
+
+| words | an owner stores | a view stores |
+|---|---|---|
+| `std::uint64_t` | `contiguous_bit_container<std::array<B, 1>, N>` | `contiguous_bit_container<std::span<B, 1>>`, by value |
+| `std::array<B, K>`, `std::vector<B>`, ... | `contiguous_bit_container<W, N>` | a pointer to an owner's storage over the same words |
+| `std::span<B, E>` | -- | `contiguous_bit_container<W>`, by value |
+
+A word reaches the storage already wrapped in an array of one, so the storage never learns what a scalar is, and
+the wrapping never shows: `extract` and `replace` exist only at run-time widths, which one word never is. The owners
+and views line up as `std::array<T, N>` and `std::span<T, N>` do -- `bit_set_adaptor<Blocks, N>` and
+`bit_set_view<Blocks, N>` -- and `N` defaults to the width the words name, so a view needs it only over an owner
+of a narrower width, such as `bit_span<std::array<std::size_t, 1>, 20>` over a `bit_array<20>`.
+`bit_subspan<Blocks, Extent, N>` takes the extent second, so `bit_subspan<Blocks, 4>` is a four-bit window as
+`std::span<T, 4>` is four elements.
+
+The guides answer in words. A word deduces itself and a const word itself const: `bit_set_view(board)` is
+`bit_set_view<std::uint64_t>`. A range that is not one of ours has no storage object for a view to point at, so
+it deduces the span that lends it: `bit_span(words)` over a `std::vector<std::uint32_t>` is
+`bit_span<std::span<std::uint32_t>>`. An owner deduces the words and width it is stored in. So one layout has
+two names -- `bit_set_adaptor<std::uint64_t>` beside `bit_set_adaptor<std::array<std::uint64_t, 1>>`, as `int`
+beside `std::array<int, 1>` -- and each guide picks one: the owners' `from_bits` guides keep the array, which the
+`basic_bit_array` and `basic_bit_static_set` aliases deduce through.
+
+`bit_storage` is stricter than what itsy-bitsy's `bit_view<R>` adapts, which reaches its words through `R`'s
+iterators and so takes a `std::deque` of words. Contiguity is what the rest leans on: a view borrows the words as a
+`std::span`, a cast between two things that have bit storage is one `memcpy` of the blocks, and the block-wise
+algorithms run on raw words. So `bit_storage<std::deque<std::uint32_t>>` is false, and asserted false.
 
 ### windows
 
-`bit_subspan<Bits>` derives from `sequence_adaptor<Bits, storage::borrowed, window::sub>`: the referring adaptor
+`bit_subspan<Blocks, Extent, N>` derives from `sequence_adaptor<Bits, storage::borrowed, window::sub>`: the referring adaptor
 windowed, and the name `first`, `last` and `subspan` hand back on a `bit_span` or on another window. It is a
 class for the reason the other two views are ([the-views-are-the-adaptors](#the-views-are-the-adaptors)), and
 being one is what lets the adaptor return it by name rather than by respelling its own parameters. It stores what
@@ -1868,7 +1905,7 @@ of its mutators constrains through the storage expression.
 ### static-windows
 
 `first<Count>()`, `last<Count>()` and `subspan<Offset, Count>()` are [span.sub]'s compile-time three, and they
-hand back `bit_subspan<Bits, Count>`: a window whose width is its type's, as `std::span<T, N>`'s is. The extent is
+hand back `bit_subspan<Blocks, Count, N>`: a window whose width is its type's, as `std::span<T, N>`'s is. The extent is
 the adaptor's fifth parameter, defaulted to `std::dynamic_extent` so that every four-argument spelling means what
 it did, and it is the adaptor's and not the derived class's because the derived class is incomplete when the base
 lays out its members -- which is where the count has to disappear. It does: the count is a
@@ -3387,9 +3424,9 @@ anyway. The convention is about named functions.
 ### an-owner-reads-as-its-storage
 
 A view over an owner is a view over the **storage** the owner wraps, and that is the only spelling there is.
-`bit_set_view(bs)` over an `xstd::bitset<64>` deduces `bit_set_view<contiguous_bit_array<std::size_t, 64>>`,
-and `bit_set_view<xstd::bitset<64>>` is not a spelling: `Bits` is constrained to a
-`contiguous_bit_container`, and an owner is not one ([one-storage](#one-storage)).
+`bit_set_view(bs)` over an `xstd::bitset<64>` deduces `bit_set_view<std::array<std::size_t, 1>, 64>`, the
+words and width that storage is built over, and `bit_set_view<xstd::bitset<64>>` is not a spelling: `Blocks` is
+constrained to words, and an owner is not words ([one-storage](#one-storage)).
 
 **It was a spelling for a while, and the record of why it stopped is the point of this section.** A
 `bit_traits<bitset_adaptor<Bits, Traits>>` specialization once relayed all twenty of the storage trait's
@@ -4828,7 +4865,7 @@ Notes:
 
 1. Each container in the first two rows is clear about the interface it provides: sequences are random access containers and ordered sets are bidirectional containers. The third row is the deliberate exception, and the fourth is what resolves it.
 2. The `bitset` row is the point the old two-by-two could not express. `std::bitset` and `boost::dynamic_bitset` are faulted above for being unclear about which interface they offer; the answer here is not to abolish the hybrid but to make choosing between its two readings **explicit at the call site**. `xstd::bitset<N>` is a strict extension of `std::bitset<N>` and `xstd::dynamic_bitset` is one of `boost::dynamic_bitset<>` — every expression valid on the counterpart is valid here, with the same result — and neither has iterators of its own, because `begin` is one name and there are two readings. `bit_set_view` and `bit_span` are how you say which you meant, which is why they are a row and not a cell.
-3. A view over a bitset is a view over the storage that bitset wraps: `xstd::bit_set_view(bs)` deduces `xstd::bit_set_view<xstd::bits::detail::contiguous_bit_array<std::size_t, N>>`, and `decltype` is how you name the result. The deduction guide for a plain storage is constrained to non-owners, so an owner and the storage inside it do not tie.
+3. A view over a bitset is a view over the storage that bitset wraps: `xstd::bit_set_view(bs)` deduces `xstd::bit_set_view<std::array<std::size_t, K>, N>`, the words and width the bitset is stored in, and `decltype` is how you name the result. The deduction guide for a plain storage is constrained to non-owners, so an owner and the storage inside it do not tie.
 4. The variable-size sequence of `bool` is named `xstd::bit_vector` and decoupled from the general `std::vector` class template.
 5. All containers use a dense (single bit per element) representation. Variable-size sparse sets can be provided by `flat_set`, either in [Boost](https://www.boost.org/doc/libs/1_80_0/doc/html/boost/container/flat_set.html) or in [C++ 23](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p1222r4.pdf).
 6. The names above are the short ones, which fix `Block` to `std::size_t` and so take only the width, or nothing at all in the dynamic column where there is no width to give. Each has a `basic_` form that leaves the block open: `xstd::basic_bit_static_set<Block, N>`, `xstd::basic_bit_array<Block, N>`, `xstd::basic_bitset<Block, N>` and their inplace siblings, and `xstd::basic_bit_set<Block, Allocator>`, `xstd::basic_bit_vector<Block, Allocator>`, `xstd::basic_dynamic_bitset<Block, Allocator>` down the dynamic column. So `xstd::bit_set` is an alias, not a template, and `xstd::basic_bit_set<std::uint8_t>` is how a block is chosen.

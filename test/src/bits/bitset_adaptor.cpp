@@ -8,7 +8,7 @@
 #include <xstd/bits/dynamic_bitset.hpp> // basic_dynamic_bitset
 #include <xstd/bits/from_bits.hpp>      // from_bits
 #include <xstd/bits/inplace_bitset.hpp> // IWYU pragma: keep; basic_inplace_bitset, named only under __cpp_lib_inplace_vector
-#include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
+#include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <array>                        // array
 #include <concepts>                     // same_as
 #include <cstdint>                      // uint8_t, uint16_t, uint32_t, uint64_t
@@ -46,6 +46,16 @@ BOOST_AUTO_TEST_CASE(TheAdaptorDeducesFromBits)
         static_assert(std::same_as<decltype(words), xstd::bitset_adaptor<std::array<std::uint8_t, 3>, 24> const>);
         static_assert(words.test(0UZ) and words.test(23UZ) and words.count() == 2UZ);
         BOOST_CHECK((words == xstd::basic_bitset<std::uint8_t, 24>::from_bits(std::array<std::uint8_t, 3>{0x01, 0x00, 0x80})));
+}
+
+// A word names its own storage: the layout of an array of one, at its digits or a narrower width.
+BOOST_AUTO_TEST_CASE(AWordIsItsOwnStorage)
+{
+        auto word = xstd::bitset_adaptor<std::uint32_t>();
+        static_assert(sizeof(word) == sizeof(std::uint32_t));
+        word.set(31);
+        BOOST_CHECK_EQUAL(word.to_ullong(), 1ULL << 31U);
+        BOOST_CHECK_EQUAL((xstd::bitset_adaptor<std::uint8_t, 5>().size()), 5UZ);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

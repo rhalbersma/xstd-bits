@@ -74,6 +74,7 @@ target_sources(
         include/xstd/bits/detail/bitset_adaptor.hpp
         include/xstd/bits/detail/borrowed_bits.hpp
         include/xstd/bits/bit_array.hpp
+        include/xstd/bits/bit_storage.hpp
         include/xstd/bits/bit_inplace_set.hpp
         include/xstd/bits/bit_inplace_vector.hpp
         include/xstd/bits/bit_sequence_adaptor.hpp
@@ -111,6 +112,7 @@ target_sources(
         include/xstd/bits/detail/range_const_reference.hpp
         include/xstd/bits/detail/shift.hpp
         include/xstd/bits/detail/storage_ptr.hpp
+        include/xstd/bits/detail/words.hpp
         include/xstd/bits/detail/zero_width.hpp
         include/xstd/bits/detail/ownership.hpp
 )

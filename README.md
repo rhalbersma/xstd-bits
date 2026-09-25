@@ -175,11 +175,12 @@ storage.
 | `<xstd/bits/inplace_bitset.hpp>` | `inplace_bitset` <br> `basic_inplace_bitset` | Both readings, dynamic size within a static capacity | [template.bitset] |
 | `<xstd/bits/dynamic_bitset.hpp>` | `dynamic_bitset` <br> `basic_dynamic_bitset` | Both readings, dynamic size and capacity | [`boost::dynamic_bitset`](https://www.boost.org/doc/libs/release/libs/dynamic_bitset/dynamic_bitset.html) |
 | `<xstd/bits/ext/boost.hpp>` | `bit_small_set` <br> `bit_small_vector` <br> `small_bitset` <br> and their `basic_` forms | All three readings, dynamic size staying inline within a static capacity | [`boost::container::small_vector`](https://www.boost.org/doc/libs/release/doc/html/boost/container/small_vector.html) |
-| `<xstd/bits/bit_set_adaptor.hpp>` | `bit_set_adaptor` | The set reading over a storage of blocks: `bit_set_adaptor<std::vector<std::uint32_t>>` is `basic_bit_set<std::uint32_t>` | [set], [container.adaptors] |
+| `<xstd/bits/bit_set_adaptor.hpp>` | `bit_set_adaptor` | The set reading over a storage of blocks, or over one word: `bit_set_adaptor<std::vector<std::uint32_t>>` is `basic_bit_set<std::uint32_t>`, and `bit_set_adaptor<std::uint64_t>` is a set of 64 in one word | [set], [container.adaptors] |
 | `<xstd/bits/bit_sequence_adaptor.hpp>` | `bit_sequence_adaptor` | The sequence reading over a storage of blocks: `bit_sequence_adaptor<std::array<std::uint64_t, 1>>` is `basic_bit_array<std::uint64_t, 64>` | [vector.bool], [container.adaptors] |
 | `<xstd/bits/bitset_adaptor.hpp>` | `bitset_adaptor` | The bitset reading over a storage of blocks: `bitset_adaptor<std::array<std::uint64_t, 1>>` is `basic_bitset<std::uint64_t, 64>` | [template.bitset], [container.adaptors] |
-| `<xstd/bits/bit_set_view.hpp>` | `bit_set_view` | Set reading of bits another container owns, or of unsigned words in place: `bit_set_view(board)` | none |
+| `<xstd/bits/bit_set_view.hpp>` | `bit_set_view` | Set reading of bits another container owns, or of unsigned words in place: `bit_set_view(board)` is a `bit_set_view<std::uint64_t>` | none |
 | `<xstd/bits/bit_span.hpp>` <br> `<xstd/bits/bit_subspan.hpp>` | `bit_span` <br> `bit_subspan` | Sequence reading over borrowed bits, whole or sliced, or over unsigned words in place: `bit_span(words)` | [views.span] |
+| `<xstd/bits/bit_storage.hpp>` | `bit_storage` | What every container and view presents a packed interface over: one unsigned word, or a sized contiguous range of them, in no reading of its own | none |
 | `<xstd/bits/from_bits.hpp>` | `from_bits` <br> `from_bits_t` | The tag that says an argument is a field of bits, so a static width deduces from it | [range.utility.conv] |
 | `<xstd/bits/contiguous_bit_sequence.hpp>` | `contiguous_bit_sequence` | What a storage must model to be adapted | none |
 
