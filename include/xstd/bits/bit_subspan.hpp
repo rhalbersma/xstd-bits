@@ -7,14 +7,14 @@
 #define XSTD_BITS_BIT_SUBSPAN_HPP
 
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
-#include <xstd/bits/detail/ownership.hpp>                // owned_bits_t, owned_storage, owner_reading, reading, storage, window
+#include <xstd/bits/detail/ownership.hpp>                // owned_bits_t, owner_reading, reading, storage, window
 #include <xstd/bits/detail/sequence_adaptor.hpp>         // sequence_adaptor
 #include <xstd/misc/concepts/specialization_of.hpp>      // specialization_of_TN
 #include <boost/container_hash/is_range.hpp>             // is_range
 #include <boost/container_hash/is_tuple_like.hpp>        // is_tuple_like
 #include <cstddef>                                       // size_t
 #include <ranges>                                        // enable_borrowed_range, enable_view
-#include <type_traits>                                   // false_type, remove_const_t
+#include <type_traits>                                   // false_type
 
 namespace xstd {
 
@@ -32,8 +32,7 @@ public:
 };
 
 // The vehicle's two guides, restated on the view so a consumer deduces the name rather than what it is built on.
-template<class Bits>
-        requires (not requires { typename bits::detail::owned_storage<std::remove_const_t<Bits>>::bits_type; })
+template<specialization_of_TN<bits::detail::contiguous_bit_container> Bits>
 bit_subspan(Bits&) -> bit_subspan<Bits>;
 
 template<bits::detail::owner_reading<bits::detail::reading::sequence> Owner>

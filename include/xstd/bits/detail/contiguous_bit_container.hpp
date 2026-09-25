@@ -467,6 +467,14 @@ public:
                 return {m_blocks.data(), num_blocks()};
         }
 
+        // Someone else's words as the span that borrows them, writable through a const storage as the span itself is.
+        [[nodiscard]] constexpr auto borrowed_blocks() const noexcept
+                -> Blocks
+                requires borrowed_block_span<Blocks>
+        {
+                return m_blocks;
+        }
+
         // Public, because restoring the invariant belongs to whoever wrote the blocks that broke it.
         constexpr auto erase_unused() noexcept
                 -> void

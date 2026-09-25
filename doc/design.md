@@ -1572,7 +1572,8 @@ them had nothing to abstract over either ([one-storage](#one-storage)).
 ### ownership-is-not-an-axis
 
 Owning versus viewing is storage lifetime, not a third axis of the model, and it collapses to one template
-parameter: `storage::owned` stores `Bits`, `storage::borrowed` stores `Bits*`. Always present and only its
+parameter: `storage::owned` stores `Bits`, `storage::borrowed` stores `Bits*` or, over span-backed storage, a
+copy of it ([borrowed-words](#borrowed-words)). Always present and only its
 type changes, so a plain `conditional_t` rather than `conditional_data_member_t`. One accessor, via deducing
 `this`, gives deep const to the owner — `self.m_bits` propagates `self`'s const — and shallow const to the
 view — `*self.m_bits` does not — for free.
@@ -1743,8 +1744,8 @@ window both defaulted and pinned as the old `bit_span` pinned it. Every case ded
 rung resolves to now, Debug and Release, in `msvc` and `msvc_analyze`, as on MSVC 18, the Preview and clang-cl:
 from borrowed words, from an owner, and from a const owner. The 151 diagnostics were real on the toolchain that
 emitted them, and are not on the current one, so the classes are a choice rather than a compiler's limit. The
-probe tested the alias shapes and not the headers of that time; whether the views go back to being aliases is
-open in #235.
+probe tested the alias shapes and not the headers of that time. The views stay classes: #235 weighed aliasing
+them and took them to words instead ([borrowed-words](#borrowed-words)), the guides for which are the classes' own.
 
 **The classes settle C2976, and the rung is back.** Put on trial, the stable MSVC rung returned with
 838 diagnostics and **zero** `C2976`: the views deduce. What it fails on instead is the ledger that opened once
@@ -2018,12 +2019,14 @@ product of `N` objects, and a packed sequence is one object. `std::hash` is aske
 
 ### borrowed-words
 
-A view refers through a `Bits*`, so viewing words that belong to no container of ours takes a storage object for
-the pointer to reach: `xstd::borrowed_bits<Block, Extent>`, which is `contiguous_bit_container` over a
-`std::span<Block, Extent>`. `xstd::borrow_bits` makes one from a single word or a contiguous range of words, and
-`bit_set_view` and `bit_span` take it through the guides they already have for a plain storage. The handle is the
-span and nothing else -- 8 bytes over one word or an array, 16 over a vector -- and a view over it is the usual
-pointer, so reading the set bits of an existing `std::uint64_t` in place costs two objects and no copy.
+A view over words that belong to no container of ours takes them directly: `bit_set_view(board)` over one
+`std::uint64_t`, `bit_span(words)` over a `std::array`, a `std::vector` or a `std::span` of unsigned words. The
+storage underneath is `bits::detail::borrowed_bits<Block, Extent>`, which is `contiguous_bit_container` over a
+`std::span<Block, Extent>`, and a deduction guide on each view names it from the argument: one word is
+`std::span<Block, 1>`, a range is whatever `std::span(words)` deduces. A word is taken by lvalue, a range by
+lvalue or as a `borrowed_range`, so `bit_set_view(std::uint64_t{5})` and `bit_span(std::vector<std::uint32_t>{})`
+do not compile, and a `std::span` temporary does. Const words make const storage, and a view over const
+storage reads and cannot write, as a view over a const owner cannot.
 
 Every bit of the words is a position: bit `n` of word `i` is position `i * digits + n`, which is the order
 `from_bits` already reads an integer in. So the width is the words', and there is no tail for the storage to keep
@@ -2043,12 +2046,28 @@ borrowed run-time width neither grows nor moves anything but a span. `extent` st
 The class admits the span beside `contiguous_block_range`, and only at the span's own default width: a narrower
 `N` over someone else's words would have a tail the storage could not keep clear. The span is refused as a
 `contiguous_block_range` on purpose and stays refused -- it is not `regular`, and its const subscript writes --
-so `borrowed_block_span` is its own concept, with a mutable unsigned element. Constness belongs to the view:
-`bit_set_view(std::as_const(bits))` reads and cannot write, as a view over a const owner cannot.
+so `borrowed_block_span` is its own concept, with a mutable unsigned element.
 
-A temporary cannot be viewed, which is the point of taking the storage by lvalue reference: the handle has to
-outlive the view, and `bit_set_view(borrow_bits(w))` does not compile. What this gives up is the one-expression
-form; what it keeps is the adaptors as they are, with no fourth kind of storage beside owned and borrowed.
+**The view holds that storage by value, as `std::views::all` holds a view.** A view over an owner holds a
+`Bits*`, which is `std::ranges::ref_view`: the owner is not a view, so the view refers to it. Span-backed
+storage *is* a view, and `views::all` would copy it rather than point at it. Pointing at it is what the views
+first did, and it cost a named object for the pointer to reach: `auto bits = borrow_bits(board);` before
+`bit_set_view(bits)`, with `bits` bound to outlive the view. `storage_ref_t<Bits>` is the choice, made once in
+`detail/storage_ptr.hpp`: a `Bits*`, or a `storage_copy` holding the span-backed storage. The copy is `mutable`,
+because the words are not the view's and a const view writes through them as a const `std::span` does. So the
+view is the size of the span, 8 bytes over one word or an array and 16 over a vector, and there is nothing
+beside it to keep alive.
+
+**The iterators hold the words, not the view.** The views are `borrowed_range`s: an iterator outlives the
+view it came from, which is what `std::ranges::find(bit_set_view(board), 7)` returning a live iterator
+needs. An iterator that held a pointer to the view's copy would dangle there. `storage_ptr_t<Bits>` is the
+iterator's and the proxy's hold: a `Bits*`, or a `words_ptr` holding the words' address and, for a dynamic
+extent, their count, from which `->` rebuilds the storage for the one call it makes. It holds no storage
+object because `std::span<Block, 1>` has no default constructor and an iterator must have one. An iterator
+over one word is a pointer and a position, as it is over an owner.
+
+`borrow_bits` and `borrowed_bits` are in `detail/`: with the views taking the words directly, they are how a
+view gets its storage and not something a caller needs to name.
 
 ### views-over-owners
 

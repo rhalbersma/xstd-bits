@@ -6,14 +6,15 @@
 #ifndef XSTD_BITS_DETAIL_RANDOM_ACCESS_HPP
 #define XSTD_BITS_DETAIL_RANDOM_ACCESS_HPP
 
-#include <xstd/ints/concepts/integer.hpp> // integer
-#include <cassert>                        // assert
-#include <compare>                        // strong_ordering
-#include <concepts>                       // same_as
-#include <cstddef>                        // ptrdiff_t, size_t
-#include <format>                         // formatter
-#include <iterator>                       // random_access_iterator_tag
-#include <type_traits>                    // is_class_v, is_const_v, is_convertible_v, is_nothrow_constructible_v, remove_const_t
+#include <xstd/bits/detail/storage_ptr.hpp> // storage_ptr_t
+#include <xstd/ints/concepts/integer.hpp>   // integer
+#include <cassert>                          // assert
+#include <compare>                          // strong_ordering
+#include <concepts>                         // same_as
+#include <cstddef>                          // ptrdiff_t, size_t
+#include <format>                           // formatter
+#include <iterator>                         // random_access_iterator_tag
+#include <type_traits>                      // is_class_v, is_const_v, is_convertible_v, is_nothrow_constructible_v, remove_const_t
 
 // The iterator is the primitive: a pointer and a position, reaching the bits through the storage alone.
 namespace xstd::bits::detail {
@@ -27,7 +28,7 @@ class random_access_bit_reference;
 template<class Bits>
 class random_access_bit_iterator
 {
-        Bits* m_ptr{};
+        storage_ptr_t<Bits> m_ptr{};
         std::size_t m_idx{};
 
         // The const twin, whose conversion below reads these members; naming itself where Bits is already const.
@@ -42,7 +43,7 @@ public:
 
         [[nodiscard]] random_access_bit_iterator() noexcept = default;
 
-        [[nodiscard]] constexpr random_access_bit_iterator(Bits* ptr, std::size_t idx) noexcept
+        [[nodiscard]] constexpr random_access_bit_iterator(storage_ptr_t<Bits> ptr, std::size_t idx) noexcept
                 : m_ptr(ptr)
                 , m_idx(idx)
         {
@@ -182,7 +183,7 @@ public:
 template<class Bits>
 class random_access_bit_reference
 {
-        Bits* m_ptr;
+        storage_ptr_t<Bits> m_ptr;
         std::size_t m_idx;
 
         // Writable where Bits is not const: a const storage has no assign to reach.
@@ -192,7 +193,7 @@ public:
         using value_type = bool;
         using iterator = random_access_bit_iterator<Bits>;
 
-        [[nodiscard]] constexpr random_access_bit_reference(Bits* ptr, std::size_t idx) noexcept
+        [[nodiscard]] constexpr random_access_bit_reference(storage_ptr_t<Bits> ptr, std::size_t idx) noexcept
                 : m_ptr(ptr)
                 , m_idx(idx)
         {

@@ -178,9 +178,8 @@ storage.
 | `<xstd/bits/bit_set_adaptor.hpp>` | `bit_set_adaptor` | The set reading over a storage of blocks: `bit_set_adaptor<std::vector<std::uint32_t>>` is `basic_bit_set<std::uint32_t>` | [set], [container.adaptors] |
 | `<xstd/bits/bit_sequence_adaptor.hpp>` | `bit_sequence_adaptor` | The sequence reading over a storage of blocks: `bit_sequence_adaptor<std::array<std::uint64_t, 1>>` is `basic_bit_array<std::uint64_t, 64>` | [vector.bool], [container.adaptors] |
 | `<xstd/bits/bitset_adaptor.hpp>` | `bitset_adaptor` | The bitset reading over a storage of blocks: `bitset_adaptor<std::array<std::uint64_t, 1>>` is `basic_bitset<std::uint64_t, 64>` | [template.bitset], [container.adaptors] |
-| `<xstd/bits/bit_set_view.hpp>` | `bit_set_view` | Set reading of bits another container owns | none |
-| `<xstd/bits/bit_span.hpp>` <br> `<xstd/bits/bit_subspan.hpp>` | `bit_span` <br> `bit_subspan` | Sequence reading over borrowed bits, whole or sliced | [views.span] |
-| `<xstd/bits/borrowed_bits.hpp>` | `borrowed_bits` <br> `borrow_bits` | Bits in words someone else owns, for `bit_set_view` and `bit_span` to read and write in place | [views.span] |
+| `<xstd/bits/bit_set_view.hpp>` | `bit_set_view` | Set reading of bits another container owns, or of unsigned words in place: `bit_set_view(board)` | none |
+| `<xstd/bits/bit_span.hpp>` <br> `<xstd/bits/bit_subspan.hpp>` | `bit_span` <br> `bit_subspan` | Sequence reading over borrowed bits, whole or sliced, or over unsigned words in place: `bit_span(words)` | [views.span] |
 | `<xstd/bits/from_bits.hpp>` | `from_bits` <br> `from_bits_t` | The tag that says an argument is a field of bits, so a static width deduces from it | [range.utility.conv] |
 | `<xstd/bits/contiguous_bit_sequence.hpp>` | `contiguous_bit_sequence` | What a storage must model to be adapted | none |
 

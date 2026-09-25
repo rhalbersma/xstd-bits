@@ -7,14 +7,15 @@
 #define XSTD_BITS_BIT_SPAN_HPP
 
 #include <xstd/bits/bit_subspan.hpp>                     // IWYU pragma: keep; the inherited first, last and subspan return one
+#include <xstd/bits/detail/borrowed_bits.hpp>            // borrowable_word, borrowable_words, borrowed_bits_t
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
-#include <xstd/bits/detail/ownership.hpp>                // owned_bits_t, owned_storage, owner_reading, reading, storage, window
+#include <xstd/bits/detail/ownership.hpp>                // owned_bits_t, owner_reading, reading, storage, window
 #include <xstd/bits/detail/sequence_adaptor.hpp>         // sequence_adaptor
 #include <xstd/misc/concepts/specialization_of.hpp>      // specialization_of_TN
 #include <boost/container_hash/is_range.hpp>             // is_range
 #include <boost/container_hash/is_tuple_like.hpp>        // is_tuple_like
 #include <ranges>                                        // enable_borrowed_range, enable_view
-#include <type_traits>                                   // false_type, remove_const_t
+#include <type_traits>                                   // false_type
 
 // The sequence reading over bits it does not own: like std::span it neither compares nor orders.
 namespace xstd {
@@ -31,12 +32,16 @@ public:
 };
 
 // The vehicle's two guides, restated on the view so a consumer deduces the name rather than what it is built on.
-template<class Bits>
-        requires (not requires { typename bits::detail::owned_storage<std::remove_const_t<Bits>>::bits_type; })
+template<specialization_of_TN<bits::detail::contiguous_bit_container> Bits>
 bit_span(Bits&) -> bit_span<Bits>;
 
 template<bits::detail::owner_reading<bits::detail::reading::sequence> Owner>
 bit_span(Owner&) -> bit_span<bits::detail::owned_bits_t<Owner>>;
+
+// Words handed straight over: one word by lvalue, or a contiguous range of them, const where they are.
+template<class W>
+        requires bits::detail::borrowable_word<W&&> or bits::detail::borrowable_words<W&&>
+bit_span(W&&) -> bit_span<bits::detail::borrowed_bits_t<W&&>>;
 
 } // namespace xstd
 
