@@ -16,7 +16,7 @@
 #include <xstd/bits/from_bit_storage.hpp>             // from_bit_storage
 #include <boost/dynamic_bitset.hpp>                   // dynamic_bitset
 #include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <algorithm>                                  // equal
+#include <algorithm>                                  // copy, copy_backward, equal
 #include <array>                                      // array
 #include <bitset>                                     // bitset
 #include <compare>                                    // is_lt, strong_ordering
@@ -131,13 +131,9 @@ struct std::char_traits<digit_char>
                 -> char_type*
         {
                 if (d < s) {
-                        for (auto const i : std::views::iota(0UZ, n)) {
-                                d[i] = s[i];
-                        }
+                        std::ranges::copy(s, s + n, d);
                 } else if (s < d) {
-                        for (auto i = n - 1UZ; i < n; --i) {
-                                d[i] = s[i];
-                        }
+                        std::ranges::copy_backward(s, s + n, d + n);
                 }
                 return d;
         }

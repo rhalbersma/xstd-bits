@@ -144,7 +144,8 @@ for (auto i = hi - 1UZ, N = hi - lo; i - lo < N; --i) { /* ... */ }
 
 `views::reverse` over `iota` compiles to the same loop at `-O2`, but to 2.5–3.7× the code at `-O0` and in constant
 evaluation, so it is not used. The wraparound is defined behaviour; only Clang's opt-in `-fsanitize=integer`
-reports it.
+reports it. MSVC's `/analyze` does report it as C6293 in code outside a template, and CI fails on that: there,
+walk backward with an algorithm such as `std::ranges::copy_backward` rather than suppress the warning.
 
 Iterator loops (`first != last`) and searches that stop at a sentinel such as `npos` are not counted loops, and
 compare as their types allow. A loop whose test carries a second condition stays raw.
