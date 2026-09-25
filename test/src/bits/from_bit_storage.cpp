@@ -103,11 +103,12 @@ BOOST_AUTO_TEST_CASE(ABitsetDeducesItsWidthFromAnIntegersType)
         BOOST_CHECK(b8.to_ulong() == 0xA5UL);
 }
 
-// Signed integers are no field of bits, and a run-time width has no width for a guide to deduce.
+// Signed integers are no field of bits, an empty array names no width, and neither does a run-time width.
 BOOST_AUTO_TEST_CASE(OnlyAnUnsignedIntegerOrItsArrayDeduces)
 {
         static_assert(deduces_from_bit_storage_of<std::uint64_t>);
         static_assert(deduces_from_bit_storage_of<std::array<std::uint32_t, 2>>);
+        static_assert(not deduces_from_bit_storage_of<std::array<std::uint32_t, 0>>);
         static_assert(not deduces_from_bit_storage_of<int>);
         static_assert(not deduces_from_bit_storage_of<std::array<int, 2>>);
         static_assert(bitset_deduces_from<std::uint32_t>);

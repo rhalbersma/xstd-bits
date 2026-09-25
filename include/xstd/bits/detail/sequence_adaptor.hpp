@@ -135,7 +135,7 @@ using block_type_of = std::remove_const_t<Bits>::block_type;
 template<specialization_of_TN<contiguous_bit_container> Bits, storage Store = storage::owned, window W = window::all, class Derived = void, std::size_t E = std::dynamic_extent>
 class sequence_adaptor;
 
-// The window a view hands back, named by that view's own header; the vehicle used directly windows itself.
+// The window a view hands back, which each public view specializes; the vehicle used directly windows itself.
 template<class Derived, class Bits, std::size_t E>
 struct window_of
 {

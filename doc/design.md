@@ -1847,9 +1847,11 @@ instead.
 **A trait the views specialize names the windows.** `sequence_adaptor` returns a window from `first`, `last` and
 `subspan`, and the public name of that window is spelled in words the adaptor never sees: `bit_subspan<Blocks,
 Extent, N>`, where the adaptor holds only the storage. So the adaptor asks `window_of<Derived, Bits, E>`, whose
-primary answers the adaptor windowed, and `bit_span.hpp` and `bit_subspan.hpp` each specialize it for their own
-template before defining their class -- the specialization has to exist when the base's member declarations are
-instantiated, which is while the view is still incomplete. That is the hook back into the header above, and it
+primary answers the adaptor windowed, and `detail/views.hpp` specializes it for both views from declarations of
+their templates, which carry no default arguments since those are given once, on each class. `bit_span.hpp` and
+`bit_subspan.hpp` include it before defining their class -- the specialization has to exist when the base's member
+declarations are instantiated, which is while the view is still incomplete. The same header forwards `blit_source`
+for both views to the adaptor each is built on, so no public header opens `xstd::bits::detail`. That is the hook back into the header above, and it
 replaces the forward declaration of `bit_subspan` the adaptor carried while the views were named by storage.
 
 ### the-views-are-named-by-their-words

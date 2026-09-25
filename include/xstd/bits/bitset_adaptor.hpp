@@ -38,17 +38,19 @@ public:
         }
 };
 
-// Block counts computed as the aliases compute them; the defaulted K keeps MSVC 17 from dropping the one-word guide.
-template<xstd::unsigned_integer B, std::size_t K = 1>
-bitset_adaptor(from_bit_storage_t, B) -> bitset_adaptor<std::array<B, bits::detail::num_blocks_v<B, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>>, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>;
+// Spelled as the aliases spell their block count, or alias deduction fails; K = 1 keeps MSVC 17 from dropping it.
+template<xstd::unsigned_integer Block, std::size_t K = 1>
+bitset_adaptor(from_bit_storage_t, Block) -> bitset_adaptor<std::array<Block, bits::detail::num_blocks_v<Block, bit_storage_extent_v<Block> * K>>, bit_storage_extent_v<Block> * K>;
 
-template<xstd::unsigned_integer B, std::size_t K>
-bitset_adaptor(from_bit_storage_t, std::array<B, K>) -> bitset_adaptor<std::array<B, bits::detail::num_blocks_v<B, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>>, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>;
+// No guide from zero blocks: an empty array names no width worth deducing.
+template<xstd::unsigned_integer Block, std::size_t K>
+        requires (K != 0)
+bitset_adaptor(from_bit_storage_t, std::array<Block, K>) -> bitset_adaptor<std::array<Block, bits::detail::num_blocks_v<Block, bit_storage_extent_v<std::array<Block, K>>>>, bit_storage_extent_v<std::array<Block, K>>>;
 
 // std::bitset's integer constructor at the width of the integer's type, where that constructor reads every digit.
-template<xstd::unsigned_integer B, std::size_t K = 1>
-        requires (xstd::numeric_limits<B>::digits <= std::numeric_limits<unsigned long long>::digits)
-bitset_adaptor(B) -> bitset_adaptor<std::array<std::size_t, bits::detail::num_blocks_v<std::size_t, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>>, static_cast<std::size_t>(xstd::numeric_limits<B>::digits) * K>;
+template<xstd::unsigned_integer Block, std::size_t K = 1>
+        requires (xstd::numeric_limits<Block>::digits <= std::numeric_limits<unsigned long long>::digits)
+bitset_adaptor(Block) -> bitset_adaptor<std::array<std::size_t, bits::detail::num_blocks_v<std::size_t, bit_storage_extent_v<Block> * K>>, bit_storage_extent_v<Block> * K>;
 
 } // namespace xstd
 

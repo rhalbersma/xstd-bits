@@ -11,7 +11,8 @@
 #include <xstd/bits/detail/borrowed_bits.hpp>            // borrowable_word, borrowable_words
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/detail/ownership.hpp>                // owned_bits_t, owner_reading, reading, storage, window
-#include <xstd/bits/detail/sequence_adaptor.hpp>         // sequence_adaptor, window_of
+#include <xstd/bits/detail/sequence_adaptor.hpp>         // sequence_adaptor
+#include <xstd/bits/detail/views.hpp>                    // blit_source, window_of
 #include <xstd/bits/detail/words.hpp>                    // lent_words_t, view_storage_t, words_of_t, words_width_v
 #include <xstd/misc/concepts/specialization_of.hpp>      // specialization_of_TN
 #include <boost/container_hash/is_range.hpp>             // is_range
@@ -23,26 +24,8 @@
 // The sequence reading over bits it does not own: like std::span it neither compares nor orders.
 namespace xstd {
 
-template<bit_storage Blocks, std::size_t N = bit_storage_extent_v<Blocks>>
-class bit_span;
-
-} // namespace xstd
-
-namespace xstd::bits::detail {
-
-// A window of the whole sequence is named by the same words and width.
-template<class Blocks, std::size_t N, class Bits, std::size_t E>
-struct window_of<bit_span<Blocks, N>, Bits, E>
-{
-        using type = bit_subspan<Blocks, E, N>;
-};
-
-} // namespace xstd::bits::detail
-
-namespace xstd {
-
 // Differs from bit_subspan in one non-type argument: this is the whole sequence, that one a window.
-template<bit_storage Blocks, std::size_t N>
+template<bit_storage Blocks, std::size_t N = bit_storage_extent_v<Blocks>>
 class bit_span : public bits::detail::sequence_adaptor<bits::detail::view_storage_t<Blocks, N>, bits::detail::storage::borrowed, bits::detail::window::all, bit_span<Blocks, N>>
 {
         using base_type = bits::detail::sequence_adaptor<bits::detail::view_storage_t<Blocks, N>, bits::detail::storage::borrowed, bits::detail::window::all, bit_span<Blocks, N>>;
@@ -65,14 +48,6 @@ template<class W>
 bit_span(W&&) -> bit_span<bits::detail::lent_words_t<W&&>>;
 
 } // namespace xstd
-
-namespace xstd::bits::detail {
-
-// A view answers every trait as the vehicle it is built on, which is where each one is defined.
-template<class Blocks, std::size_t N, class Block>
-inline constexpr bool blit_source<bit_span<Blocks, N>, Block> = blit_source<typename bit_span<Blocks, N>::adaptor_type, Block>; // NOLINT(readability-redundant-typename)
-
-} // namespace xstd::bits::detail
 
 namespace boost::container_hash {
 
