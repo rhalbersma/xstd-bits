@@ -4,7 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/bit_exchange.hpp>                      // casts_between, casts_from, exchanges_bits, exchanges_from_bits, exchanges_to_bits
-#include <xstd/bits/bit_cast.hpp>                     // bit_cast
+#include <xstd/bits/bit/bit_cast.hpp>                 // bit_cast
 #include <xstd/bits/bit_set_view.hpp>                 // bit_set_view
 #include <xstd/bits/bit_span.hpp>                     // bit_span
 #include <xstd/bits/contiguous_bit_sequence.hpp>      // contiguous_bit_sequence

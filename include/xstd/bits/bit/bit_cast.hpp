@@ -3,8 +3,8 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_BIT_CAST_HPP
-#define XSTD_BITS_BIT_CAST_HPP
+#ifndef XSTD_BITS_BIT_BIT_CAST_HPP
+#define XSTD_BITS_BIT_BIT_CAST_HPP
 
 #include <xstd/bits/detail/bit_castable.hpp>       // bit_bytes, bit_castable, byte_count, bytes_bits, container_source
 #include <xstd/bits/detail/ownership.hpp>          // owned_storage
@@ -113,4 +113,4 @@ template<bit_castable To, bit_castable From>
 
 } // namespace xstd
 
-#endif // XSTD_BITS_BIT_CAST_HPP
+#endif // XSTD_BITS_BIT_BIT_CAST_HPP

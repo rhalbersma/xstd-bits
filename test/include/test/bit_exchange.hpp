@@ -6,7 +6,7 @@
 #ifndef TEST_BIT_EXCHANGE_HPP
 #define TEST_BIT_EXCHANGE_HPP
 
-#include <xstd/bits/bit_cast.hpp>         // bit_cast
+#include <xstd/bits/bit/bit_cast.hpp>     // bit_cast
 #include <xstd/bits/from_bit_storage.hpp> // from_bit_storage
 #include <concepts>                       // same_as
 

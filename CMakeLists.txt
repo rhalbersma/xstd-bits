@@ -74,7 +74,8 @@ target_sources(
         include/xstd/bits/detail/bitset_adaptor.hpp
         include/xstd/bits/detail/borrowed_bits.hpp
         include/xstd/bits/bit_array.hpp
-        include/xstd/bits/bit_cast.hpp
+        include/xstd/bits/bit.hpp
+        include/xstd/bits/bit/bit_cast.hpp
         include/xstd/bits/bit_storage.hpp
         include/xstd/bits/bit_inplace_set.hpp
         include/xstd/bits/bit_inplace_vector.hpp

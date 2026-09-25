@@ -182,10 +182,11 @@ storage.
 | `<xstd/bits/bit_span.hpp>` <br> `<xstd/bits/bit_subspan.hpp>` | `bit_span` <br> `bit_subspan` | Sequence reading over borrowed bits, whole or sliced, or over unsigned words in place: `bit_span(words)` | [views.span] |
 | `<xstd/bits/bit_storage.hpp>` | `bit_storage` | What every container and view presents a packed interface over: one unsigned word, or a sized contiguous range of them, in no reading of its own | none |
 | `<xstd/bits/from_bit_storage.hpp>` | `from_bit_storage` <br> `from_bit_storage_t` | The tag that says an argument's words are read as bits, so a static width deduces from them | [range.utility.conv] |
-| `<xstd/bits/bit_cast.hpp>` | `bit_cast` <br> `bit_castable` | A copy of the blocks between any two things that have bit storage of one width: ours, words, a `std::bitset` | [bit.cast] |
+| `<xstd/bits/bit.hpp>` <br> `<xstd/bits/bit/bit_cast.hpp>` | `bit_cast` <br> `bit_castable` | A copy of the blocks between any two things that have bit storage of one width: ours, words, a `std::bitset` | [bit.cast] |
 | `<xstd/bits/contiguous_bit_sequence.hpp>` | `contiguous_bit_sequence` | What a storage must model to be adapted | none |
 
 `<xstd/bits.hpp>` exports the whole surface, so one include brings everything above.
+The headers directly under `<xstd/bits/>` are the containers, views and concepts; `<xstd/bits/bit/>` holds free utilities that extend `<bit>`, exported together by `<xstd/bits/bit.hpp>` as in xstd-ints.
 The headers under `<xstd/bits/detail/>` are implementation and carry no stability promise.
 
 ## Requirements
