@@ -7,7 +7,7 @@
 #define XSTD_BITS_DETAIL_CONTIGUOUS_BIT_CONTAINER_HPP
 
 #include <xstd/bits/bit_storage.hpp>                         // owned_bit_storage, resizable_bit_storage
-#include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_base_type
+#include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_base_type, allocator_param_t, has_allocator_v
 #include <xstd/bits/detail/bit_castable.hpp>                 // bit_bytes, bit_castable, byte_count, bytes_bits, container_source
 #include <xstd/bits/detail/borrowed_block_span.hpp>          // borrowed_block_span
 #include <xstd/bits/detail/intrin.hpp>                       // countl_zero, countr_zero, popcount
@@ -37,7 +37,7 @@
 #include <source_location>                                   // source_location
 #include <span>                                              // dynamic_extent, span
 #include <stdexcept>                                         // length_error
-#include <type_traits>                                       // conditional_t, is_const_v, is_nothrow_move_assignable_v, is_nothrow_move_constructible_v, remove_reference_t
+#include <type_traits>                                       // conditional_t, is_const_v, is_nothrow_constructible_v, is_nothrow_move_assignable_v, is_nothrow_move_constructible_v, remove_reference_t
 #include <utility>                                           // exchange, move, pair
 
 namespace xstd::bits::detail {
@@ -216,24 +216,23 @@ public:
                 assert(not has_static_capacity or size() <= N);
         }
 
-        // boost's allocator arguments, deduced and matched, so a storage without one has no such constructor.
-        template<class Alloc>
-                requires has_stored_size and std::same_as<Alloc, typename Blocks::allocator_type>
-        [[nodiscard]] constexpr explicit contiguous_bit_container(Alloc const& alloc)
-                : m_blocks(blocks_for(0UZ), alloc)
+        // The storage's allocator, converted as [container.alloc.reqmts] converts it; a storage without one has none.
+        [[nodiscard]] constexpr explicit contiguous_bit_container(allocator_param_t<Blocks> const& alloc) noexcept(std::is_nothrow_constructible_v<Blocks, allocator_param_t<Blocks> const&>)
+                requires has_stored_size and has_allocator_v<Blocks>
+                : m_blocks(alloc)
         {}
 
-        template<class Alloc>
-                requires has_stored_size and std::same_as<Alloc, typename Blocks::allocator_type>
-        [[nodiscard]] constexpr contiguous_bit_container(std::size_t n, Alloc const& alloc)
+        [[nodiscard]] constexpr contiguous_bit_container(std::size_t n, allocator_param_t<Blocks> const& alloc)
+                requires has_stored_size and has_allocator_v<Blocks>
                 : m_size(n)
                 , m_blocks(blocks_for(n), alloc)
-        {}
+        {
+                check_capacity(n);
+        }
 
         // flat_set's allocator-extended adopting constructor: the blocks are moved into storage the allocator provides.
-        template<class Alloc>
-                requires has_stored_size and std::same_as<Alloc, typename Blocks::allocator_type>
-        [[nodiscard]] constexpr contiguous_bit_container(xstd::from_bit_storage_t, Blocks blocks, Alloc const& alloc)
+        [[nodiscard]] constexpr contiguous_bit_container(xstd::from_bit_storage_t, Blocks blocks, allocator_param_t<Blocks> const& alloc)
+                requires has_stored_size and has_allocator_v<Blocks>
                 : m_size(std::ranges::size(blocks) * bits_per_block)
                 , m_blocks(std::move(blocks), alloc)
         {
@@ -241,16 +240,14 @@ public:
         }
 
         // [container.alloc.reqmts]'s allocator-extended copy and move; the moved-from is left empty.
-        template<class Alloc>
-                requires has_stored_size and std::same_as<Alloc, typename Blocks::allocator_type>
-        [[nodiscard]] constexpr contiguous_bit_container(contiguous_bit_container const& other, Alloc const& alloc)
+        [[nodiscard]] constexpr contiguous_bit_container(contiguous_bit_container const& other, allocator_param_t<Blocks> const& alloc)
+                requires has_stored_size and has_allocator_v<Blocks>
                 : m_size(other.m_size)
                 , m_blocks(other.m_blocks, alloc)
         {}
 
-        template<class Alloc>
-                requires has_stored_size and std::same_as<Alloc, typename Blocks::allocator_type>
-        [[nodiscard]] constexpr contiguous_bit_container(contiguous_bit_container&& other, Alloc const& alloc)
+        [[nodiscard]] constexpr contiguous_bit_container(contiguous_bit_container&& other, allocator_param_t<Blocks> const& alloc)
+                requires has_stored_size and has_allocator_v<Blocks>
                 : m_size(std::exchange(other.m_size, 0UZ))
                 , m_blocks(std::move(other.m_blocks), alloc)
         {

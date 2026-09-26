@@ -2098,8 +2098,13 @@ the model is held to them only where its standard library has them.
 
 The sweep found what the range members had not needed. The allocator: `allocator_type` through the same empty
 base `bitset_adaptor` has, `get_allocator`, and the allocator-extended constructors,
-`[container.alloc.reqmts]`'s copy and move included, which `contiguous_bit_container` gains beneath them,
-deduced and matched to the storage's own so a static owner has none. `[vector.erasure]`'s `erase` and `erase_if`
+`[container.alloc.reqmts]`'s copy and move included, which `contiguous_bit_container` gains beneath them.
+Each takes `allocator_type const&` as the standard does, not a deduced `Alloc` matched to it: a matched template
+refused every allocator that only converts -- a `memory_resource*` for a `polymorphic_allocator`, a rebound
+`std::allocator`, a braced `{}` -- and so broke uses-allocator construction, a `std::pmr::vector` of owners failing
+to compile at `emplace_back`. Where the storage has no allocator the parameter is an explicit tag, `no_allocator`,
+and a `requires` removes the overload, so a static owner still has none. `dynamic_bitset` gains the
+allocator-extended copy and move that boost lacks and uses-allocator construction needs. `[vector.erasure]`'s `erase` and `erase_if`
 as non-members over the owner's `erase(first, last)`, `std::ranges::remove_if` running unchanged over the
 proxies, which move and swap. And `std::array`'s aggregate initialization as an `initializer_list` constructor
 on the static owner, the listed values leading and the rest false, a longer list being the error it is on

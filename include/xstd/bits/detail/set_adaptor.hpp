@@ -7,7 +7,7 @@
 #define XSTD_BITS_DETAIL_SET_ADAPTOR_HPP
 
 #include <xstd/bits/bit_storage.hpp>                     // bit_storage
-#include <xstd/bits/detail/allocator_base_type.hpp>      // allocator_base_type
+#include <xstd/bits/detail/allocator_base_type.hpp>      // allocator_base_type, allocator_param_t, has_allocator_v
 #include <xstd/bits/detail/bidirectional.hpp>            // bidirectional_bit_iterator, bidirectional_bit_reference
 #include <xstd/bits/detail/borrowed_bits.hpp>            // borrow_bits, borrowable_word, borrowable_words, borrowed_bits_t
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
@@ -36,7 +36,7 @@
 #include <source_location>                               // source_location
 #include <span>                                          // dynamic_extent
 #include <stdexcept>                                     // out_of_range
-#include <type_traits>                                   // conditional_t, false_type, is_invocable_r_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
+#include <type_traits>                                   // conditional_t, false_type, is_invocable_r_v, is_nothrow_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
 #include <utility>                                       // declval, forward, move, pair
 
 // The set reading, [set] over a contiguous_bit_container, owning it or referring to it.
@@ -178,8 +178,14 @@ public:
         using reverse_iterator = std::reverse_iterator<iterator>;
         using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
+private:
+        // An allocator argument as [container.alloc.reqmts] takes it: converting, and only where the storage has one.
+        static constexpr bool has_allocator = has_allocator_v<std::remove_const_t<Bits>>;
+        using allocator_param = allocator_param_t<std::remove_const_t<Bits>>;
+
+public:
         // construct/copy/destroy; an owner is built the way std::set is, a view only from what it views.
-        [[nodiscard]] set_adaptor() noexcept
+        [[nodiscard]] set_adaptor() noexcept(std::is_nothrow_default_constructible_v<Bits>)
                 requires is_owner
         = default;
 
@@ -203,42 +209,82 @@ public:
                 insert(il.begin(), il.end());
         }
 
-        // [set]'s allocator arguments, deduced and matched, so a storage without one has no such constructor.
-        template<class Alloc>
-                requires is_owner and std::same_as<Alloc, typename bits_type::allocator_type>
-        [[nodiscard]] constexpr explicit set_adaptor(Alloc const& alloc)
+        // [set.cons]'s comparator arguments, taken and dropped: key_compare is std::less, which has no state to keep.
+        [[nodiscard]] constexpr explicit set_adaptor(key_compare const& /* comp */) noexcept(std::is_nothrow_default_constructible_v<Bits>)
+                requires is_owner
+        {}
+
+        template<std::input_iterator I, std::sentinel_for<I> S>
+                requires is_owner and std::constructible_from<value_type, std::iter_reference_t<I>>
+        [[nodiscard]] constexpr set_adaptor(I first, S last, key_compare const& /* comp */)
+                : set_adaptor(first, last)
+        {}
+
+        template<std::ranges::input_range R>
+                requires is_owner and std::constructible_from<value_type, std::ranges::range_reference_t<R>>
+        [[nodiscard]] constexpr set_adaptor(std::from_range_t, R&& rg, key_compare const& /* comp */)
+                : set_adaptor(std::from_range, std::forward<R>(rg))
+        {}
+
+        [[nodiscard]] constexpr set_adaptor(std::initializer_list<value_type> il, key_compare const& /* comp */)
+                requires is_owner
+                : set_adaptor(il)
+        {}
+
+        // [set.cons]'s allocator arguments: converting, and offered only where the storage has an allocator.
+        [[nodiscard]] constexpr explicit set_adaptor(allocator_param const& alloc) noexcept(std::is_nothrow_constructible_v<Bits, allocator_param const&>)
+                requires is_owner and has_allocator
                 : m_bits(alloc)
         {}
 
-        template<std::input_iterator I, std::sentinel_for<I> S, class Alloc>
-                requires is_owner and std::constructible_from<value_type, std::iter_reference_t<I>> and std::same_as<Alloc, typename bits_type::allocator_type>
-        [[nodiscard]] constexpr set_adaptor(I first, S last, Alloc const& alloc)
+        [[nodiscard]] constexpr set_adaptor(key_compare const& /* comp */, allocator_param const& alloc) noexcept(std::is_nothrow_constructible_v<Bits, allocator_param const&>)
+                requires is_owner and has_allocator
+                : m_bits(alloc)
+        {}
+
+        template<std::input_iterator I, std::sentinel_for<I> S>
+                requires is_owner and has_allocator and std::constructible_from<value_type, std::iter_reference_t<I>>
+        [[nodiscard]] constexpr set_adaptor(I first, S last, allocator_param const& alloc)
                 : m_bits(alloc)
         {
                 insert(first, last);
         }
 
-        template<std::ranges::input_range R, class Alloc>
-                requires is_owner and std::constructible_from<value_type, std::ranges::range_reference_t<R>> and std::same_as<Alloc, typename bits_type::allocator_type>
-        [[nodiscard]] constexpr set_adaptor(std::from_range_t, R&& rg, Alloc const& alloc)
+        template<std::input_iterator I, std::sentinel_for<I> S>
+                requires is_owner and has_allocator and std::constructible_from<value_type, std::iter_reference_t<I>>
+        [[nodiscard]] constexpr set_adaptor(I first, S last, key_compare const& /* comp */, allocator_param const& alloc)
+                : set_adaptor(first, last, alloc)
+        {}
+
+        template<std::ranges::input_range R>
+                requires is_owner and has_allocator and std::constructible_from<value_type, std::ranges::range_reference_t<R>>
+        [[nodiscard]] constexpr set_adaptor(std::from_range_t, R&& rg, allocator_param const& alloc)
                 : set_adaptor(std::ranges::begin(rg), std::ranges::end(rg), alloc)
         {}
 
-        template<class Alloc>
-                requires is_owner and std::same_as<Alloc, typename bits_type::allocator_type>
-        [[nodiscard]] constexpr set_adaptor(std::initializer_list<value_type> il, Alloc const& alloc)
+        template<std::ranges::input_range R>
+                requires is_owner and has_allocator and std::constructible_from<value_type, std::ranges::range_reference_t<R>>
+        [[nodiscard]] constexpr set_adaptor(std::from_range_t, R&& rg, key_compare const& /* comp */, allocator_param const& alloc)
+                : set_adaptor(std::ranges::begin(rg), std::ranges::end(rg), alloc)
+        {}
+
+        [[nodiscard]] constexpr set_adaptor(std::initializer_list<value_type> il, allocator_param const& alloc)
+                requires is_owner and has_allocator
                 : set_adaptor(il.begin(), il.end(), alloc)
         {}
 
-        template<class Alloc>
-                requires is_owner and std::same_as<Alloc, typename bits_type::allocator_type>
-        [[nodiscard]] constexpr set_adaptor(set_adaptor const& other, Alloc const& alloc)
+        [[nodiscard]] constexpr set_adaptor(std::initializer_list<value_type> il, key_compare const& /* comp */, allocator_param const& alloc)
+                requires is_owner and has_allocator
+                : set_adaptor(il.begin(), il.end(), alloc)
+        {}
+
+        [[nodiscard]] constexpr set_adaptor(set_adaptor const& other, allocator_param const& alloc)
+                requires is_owner and has_allocator
                 : m_bits(other.m_bits, alloc)
         {}
 
-        template<class Alloc>
-                requires is_owner and std::same_as<Alloc, typename bits_type::allocator_type>
-        [[nodiscard]] constexpr set_adaptor(set_adaptor&& other, Alloc const& alloc)
+        [[nodiscard]] constexpr set_adaptor(set_adaptor&& other, allocator_param const& alloc)
+                requires is_owner and has_allocator
                 : m_bits(std::move(other.m_bits), alloc)
         {}
 
@@ -248,9 +294,8 @@ public:
                 : m_bits(xstd::from_bit_storage, std::move(blocks))
         {}
 
-        template<class Alloc>
-                requires is_owner and bits_type::has_stored_size and std::same_as<Alloc, typename bits_type::allocator_type>
-        [[nodiscard]] constexpr set_adaptor(xstd::from_bit_storage_t, bits_type::block_container_type blocks, Alloc const& alloc)
+        [[nodiscard]] constexpr set_adaptor(xstd::from_bit_storage_t, bits_type::block_container_type blocks, allocator_param const& alloc)
+                requires is_owner and bits_type::has_stored_size and has_allocator
                 : m_bits(xstd::from_bit_storage, std::move(blocks), alloc)
         {}
 
