@@ -52,7 +52,7 @@ BOOST_AUTO_TEST_CASE(EveryContainerArrivesThroughTheUmbrella)
 
 #ifdef TEST_HAS_INPLACE_VECTOR
 
-        // The inplace column, the third storage point: one name per reading, each an alias like the rest.
+        // The inplace column, the third storage point: one name per reading, each a class like the rest.
         static_assert(std::ranges::bidirectional_range<xstd::basic_bit_inplace_set<std::uint8_t, 8>>);
         static_assert(std::ranges::random_access_range<xstd::basic_bit_inplace_vector<std::uint8_t, 8>>);
         static_assert(not std::ranges::range<xstd::basic_inplace_bitset<std::uint8_t, 8>>);

@@ -200,9 +200,10 @@ if anyone ever "simplifies" the definition into the dance.
 ### the-one-vehicle
 
 `contiguous_bit_container` lives in `detail/contiguous_bit_container.hpp`, with the concept, `num_blocks_v` and
-the detector that names it. It has no per-storage aliases: an owner is `adaptor<Blocks, N>`, and the adaptor builds
-its container as `contiguous_bit_container<Blocks, N>` through `owner_storage_t`, so the storage is spelled once,
-in the public alias -- `basic_bit_array<Block, N>` is `bit_sequence_adaptor<std::array<Block, num_blocks_v<Block, N>>, N>`.
+the detector that names it. It has no per-storage aliases: each owner spells its storage once, in its base clause --
+`basic_bit_array<Block, N>` derives from the sequence adaptor over
+`contiguous_bit_container<std::array<Block, num_blocks_v<Block, N>>, N>`, and `bit_sequence_adaptor<Blocks, N>` builds
+the same container through `owner_storage_t`.
 The name is in `xstd::bits::detail` with the rest of `detail/`, so nothing outside the library names it; it is the
 device that turns three readings over three storages into three plus three, and a factoring device is machinery
 rather than vocabulary. A user reaches every width through `bit_static_set<N>` or `basic_bit_array<Block, N>`, and a
@@ -625,12 +626,12 @@ at width zero, and `replace(block_container_type&&)` takes one back. All three a
 reading's run-time-width owner and on no view, since a view has nothing of its own to hand. The static widths' tag
 constructor requires a width in the type and the adopting one a width in the object, so the two never meet.
 
-Deduction goes through the aliases. `basic_bit_vector(from_bit_storage, std::move(v))` deduces
+Each owner deduces through guides of its own. `basic_bit_vector(from_bit_storage, std::move(v))` deduces
 `basic_bit_vector<Block, Allocator>` from a guide spelled on `std::vector<Block, Allocator>`, and the inplace names
-deduce their capacity from one spelled as they spell their block count, so a `std::inplace_vector<Block, K>` is
-adopted at `N = K * digits`. There is no guide over every resizable storage: through an alias it competes with the
-spelled ones and is ambiguous, and `std::vector` has no such guide to match; a storage the library does not name is
-adopted with its adaptor named, `bit_sequence_adaptor<Words>(from_bit_storage, std::move(words))`.
+deduce their capacity from `std::inplace_vector<Block, K>`, adopted at `N = K * digits`. The three adaptors keep the
+same guides under their own names, so a storage passed to the adaptor still deduces the adaptor over it. There is no
+guide over every resizable storage, and `std::vector` has no such guide to match; a storage the library does not
+name is adopted with its adaptor named, `bit_sequence_adaptor<Words>(from_bit_storage, std::move(words))`.
 
 `replace` has no precondition to state, which is where it parts from `flat_set`'s: the width becomes the blocks'
 whole width, every bit a position, so there is no tail for it to find dirty and no order for it to find broken. The
@@ -1519,12 +1520,13 @@ handing back the container the caller named rather than the vehicle under it
 ### the-grid
 
 **The nine containers are a full three-by-three, and nothing else.** Three readings over three storages, every
-cell occupied, every one an owner and none windowed. Each is one line: an alias of its reading's adaptor
-([the-container-adaptor](#the-container-adaptor)) over its storage, `basic_bit_array<B, N>` being
-`bit_sequence_adaptor<std::array<B, num_blocks_v<B, N>>, N>`. The three adaptor bodies are nearly identical --
-`using base_type::base_type;`, `using base_type::operator=;` and the hidden friend `swap` -- and differ in their
-base clause and in nothing else, which is what makes the grid a fact about the library rather than a
-construction imposed on it.
+cell occupied, every one an owner and none windowed. Each is a class deriving from its reading's detail adaptor
+over its storage, `basic_bit_array<B, N>` from the sequence adaptor over
+`contiguous_bit_container<std::array<B, num_blocks_v<B, N>>, N>`, and each writes out the constructors of the
+standard container it packs ([the-container-adaptor](#the-container-adaptor)). The three public adaptor bodies are
+nearly identical -- `using base_type::base_type;`, `using base_type::operator=;` and the hidden friend `swap` -- and
+differ in their base clause and in nothing else, which is what makes the grid a fact about the library rather
+than a construction imposed on it.
 
 **The readings are flat: no reading nests inside another.** The temptation is to make `sequence` refine
 `bitset` on the iterator-tag analogy, and the member sets refuse it: `bitset` has 25 members `sequence` lacks
@@ -1545,57 +1547,64 @@ diagnostic says `basic_bit_array<unsigned long, 100>` rather than a five-argumen
 
 What the tags keyed on, each container now names outright. `bits_of` mapped `array_container_tag` to
 `contiguous_bit_array` so that one `basic_bits` body could serve three columns; with each container naming its
-storage it mapped a name to a name, and the alias says `std::array<Block, num_blocks_v<Block, N>>` instead. **Each storage is still answered where it is defined**, one header apiece, so a container includes
+storage it mapped a name to a name, and the base clause says `std::array<Block, num_blocks_v<Block, N>>` instead. **Each storage is still answered where it is defined**, one header apiece, so a container includes
 only the vehicle it uses: measured, a central switchboard had `bit_array.hpp` pulling `<vector>`, which is
 exactly the property the vehicle split was for.
 
 **The axis stays open, and it is the concept that keeps it open.** What a storage has to satisfy is
 `owned_bit_storage` ([owned-bit-storage](#owned-bit-storage)), which is a claim about blocks
-and says nothing about where they live. `ext/boost.hpp` joins on that and nothing else: one alias for
-`boost::container::small_vector` and three containers over it, written from outside the library without a line
-of it changing.
+and says nothing about where they live. `ext/boost.hpp` joins on that and nothing else: three containers over
+`boost::container::small_vector`, written from outside the library without a line of it changing.
 
 ### the-container-adaptor
 
-The grid is three container adaptors, one per reading -- `bit_sequence_adaptor<Blocks, N>`,
+The grid has three container adaptors, one per reading -- `bit_sequence_adaptor<Blocks, N>`,
 `bit_set_adaptor<Blocks, N>`, `bitset_adaptor<Blocks, N>`, in the manner of `std::stack<T, Container>` and
-`std::flat_set<Key, Compare, KeyContainer>` -- and the nine names are aliases over them: `basic_bit_vector<B, A>`
-is `bit_sequence_adaptor<std::vector<B, A>>`, `basic_bit_array<B, N>` the adaptor over
-`std::array<B, num_blocks_v<B, N>>` at width `N`. One type per storage, a printed name the user can write, the
-`std::hash`, tuple and Boost opt-in specializations written once per reading instead of once per class, and the
-container parameter open to any `owned_bit_storage` without a new class for it. #229 set it out.
+`std::flat_set<Key, Compare, KeyContainer>` -- with the container parameter open to any `owned_bit_storage` without
+a new class for it. #229 set them out.
 
-Aliases cannot declare deduction guides, so every owner guide -- the `from_bit_storage` tag's, `basic_bitset`'s integer
-one -- lives on the adaptor and is reached through the alias, which is class template argument deduction for
-alias templates ([P1814](https://wg21.link/P1814)). This section used to say MSVC 17 fails that on the owners'
-shape and that the arrangement therefore waited for VS 2022 to leave the matrix. That was an inference from the
-views, never a measurement, and a probe on every leg (#228, stand-in types, one `static_assert` per case) says
-otherwise. It found three rules, of which only the second is about VS 2022:
+**The nine names are classes beside the adaptors, not aliases over them.** Each derives from the detail adaptor its
+public adaptor derives from, over the same `contiguous_bit_container`, so `owned_bits_t` names one storage for both
+spellings; the two are distinct types all the same. `basic_bit_vector<B, A>` wraps what
+`bit_sequence_adaptor<std::vector<B, A>>` wraps, and is not it. Each writes out its constructors in the order and
+notation of the clause it packs: [set.cons] for the three sets, less the allocator forms where the storage has
+none; [vector.bool.pspc] for `basic_bit_vector` and `basic_bit_small_vector`; [inplace.vector.overview] for
+`basic_bit_inplace_vector`; [bitset.cons] for `basic_bitset`; `boost::dynamic_bitset`'s documented order for the
+three run-time bitsets; and for `basic_bit_array`, `std::array` being an aggregate, the default and initializer-list
+constructors its aggregate initialization stands for. What the clause lacks and the adaptor offers -- the
+`from_bit_storage` doors, and the allocator-extended copy and move `boost::dynamic_bitset` does without -- follows
+the standard ones, each marked as not in the clause. Each declares its own deduction guides and hidden `swap`, and
+specializes `std::hash`, Boost's `is_range` and `is_tuple_like` where it is a range, and for `basic_bit_array`
+`std::tuple_size` and `std::tuple_element`: a partial specialization on the adaptor never matches a class derived
+from it.
+
+The empty allocator base is keyed on its adaptor, which is what keeps the two spellings apart. It carries the
+defaulted `operator==` the defaulted comparisons above it need, and shared between two adaptors over one storage it
+made `bit_set_adaptor<std::array<std::uint8_t, 3>>` compare equal to `basic_bit_static_set<std::uint8_t, 24>`
+whatever their bits, both converting to the one empty base. Keyed, the comparison does not compile, as
+`std::set<int>` against `std::flat_set<int>` does not.
+
+**Classes deduce without CTAD for alias templates.** While the nine were aliases, every owner guide -- the
+`from_bit_storage` tag's, `basic_bitset`'s integer one -- lived on the adaptor and was reached through the alias
+([P1814](https://wg21.link/P1814)). A probe on every leg (#228, stand-in types, one `static_assert` per case) found
+three rules for that arrangement:
 
 1. **A guide spells the storage as the alias does.** The return type computes the block count from the width,
-   `adaptor<std::array<B, blocks_for<B>(W)>, W>`, and never names it, `adaptor<std::array<B, K>, …>`. With the
-   second spelling GCC 15 and Clang 23 refuse to deduce `basic_bit_array` from `std::array<B, 2>`: `K` meets
-   `blocks_for<B>(N)`, which [temp.deduct.type]/5.3 makes a non-deduced context. This is the language, not a
-   compiler.
+   `adaptor<std::array<B, blocks_for<B>(W)>, W>`, and never names it, `adaptor<std::array<B, K>, …>`: `K` meets
+   `blocks_for<B>(N)`, which [temp.deduct.type]/5.3 makes a non-deduced context.
 2. **The one-word guide carries a defaulted count.** MSVC 17 (14.44) drops a guide whose only template parameter
-   is the block type when it builds the alias's guides: `basic_bit_array(xstd::from_bit_storage, word)` fails with
-   `C2641` and `C2976`, and the candidate list names every guide but that one. Writing the width as
-   `digits<B> * 1` does not help; `template<std::unsigned_integral B, std::size_t K = 1>`, spelled as the array
-   guide is, does. MSVC 18, clang-cl, GCC and Clang take all three spellings.
+   is the block type when it builds the alias's guides (`C2641`, `C2976`); `template<std::unsigned_integral B,
+   std::size_t K = 1>`, spelled as the array guide is, is kept.
 3. **Nothing deduces through a name that pins the block type.** `bit_array<N> = basic_bit_array<std::size_t, N>`
-   is an alias of an alias, and neither MSVC 17 nor MSVC 18 deduces through it, for the one-word and the array
-   guide alike (`C2641`), while GCC, Clang and clang-cl do. No test or example deduces through those names today,
-   and the pinned block is exactly what deduction would have found, so they stay spelled with their arguments.
+   was an alias of an alias, and neither MSVC 17 nor MSVC 18 deduced through it (`C2641`), so `bitset<N>`, the one
+   pinned name something deduces through, was written over the adaptor directly.
 
-Adopting a storage, `basic_bit_vector(std::vector<B>())`, deduced on every leg. So the arrangement waited on
-nothing but its own design: with the guides written to the first two rules, every name that deduced as a class
-deduces as an alias, VS 2022 included. `bitset<N>` is the one pinned name something deduces through --
-`xstd::bitset(std::uint32_t{1})` -- so it is written over the adaptor directly rather than over `basic_bitset`,
-one alias deep rather than the two the third rule refuses. The view shape that made the views classes
-([the-views-are-the-adaptors](#the-views-are-the-adaptors)) did not reproduce on the probe's stand-ins, either
-unconstrained or with a constrained alias parameter, and a later probe of the real view shape did not reproduce it
-either ([the-views-are-the-adaptors](#the-views-are-the-adaptors)); the views are a separate question from the
-owners, open in #235.
+MSVC went on to refuse alias deduction through `basic_bit_static_set` and `basic_bitset` themselves with `C7602`,
+and that is what made them classes. A class takes its guides as its own and needs none of the three rules: the
+guides name `basic_bit_array<Block, N>` rather than computing a block count, and `bitset<N>` is an alias of
+`basic_bitset<std::size_t, N>`, one alias over a class, the depth every compiler deduced through. The one-word
+guides keep `K = 1`, which costs nothing. The views are a separate question from the owners
+([the-views-are-the-adaptors](#the-views-are-the-adaptors)).
 
 ### owning-is-ours
 
@@ -1919,8 +1928,8 @@ The guides answer in words. A word deduces itself and a const word itself const:
 it deduces the span that lends it: `bit_span(words)` over a `std::vector<std::uint32_t>` is
 `bit_span<std::span<std::uint32_t>>`. An owner deduces the words and width it is stored in. So one layout has
 two names -- `bit_set_adaptor<std::uint64_t>` beside `bit_set_adaptor<std::array<std::uint64_t, 1>>`, as `int`
-beside `std::array<int, 1>` -- and each guide picks one: the owners' `from_bit_storage` guides keep the array, which the
-`basic_bit_array` and `basic_bit_static_set` aliases deduce through.
+beside `std::array<int, 1>` -- and each guide picks one: the adaptors' `from_bit_storage` guides keep the array, as
+`basic_bit_array` and `basic_bit_static_set` keep their block array.
 
 `bit_storage` is stricter than what itsy-bitsy's `bit_view<R>` adapts, which reaches its words through `R`'s
 iterators and so takes a `std::deque` of words. Contiguity is what the rest leans on: a view borrows the words as a
@@ -2416,7 +2425,7 @@ the expression compiles.
 
 ### the-inplace-column
 
-The third storage point gets public names, one per reading and each an alias like every other name below the
+The third storage point gets public names, one per reading and each a class like every other owner beside the
 adaptors: `basic_bit_inplace_set<Block, N>`, `basic_bit_inplace_vector<Block, N>` and
 `basic_inplace_bitset<Block, N>` over `std::inplace_vector<Block, num_blocks_v<Block, N>>`, with `bit_inplace_set<N>`,
 `bit_inplace_vector<N>` and `inplace_bitset<N>` at the machine word. `inplace_bitset` takes no `bit_` prefix
@@ -2428,18 +2437,18 @@ second vocabulary for the same thing.
 blocks whose last seven bits it never uses. The adaptors read their second parameter by storage -- the width of
 fixed blocks, the capacity of blocks that resize under a constant one, and `dynamic_extent` for blocks that grow
 without bound -- and `bit_storage_capacity_v` is their default, so an adaptor named by its storage alone holds
-every bit of it: `bit_sequence_adaptor<std::inplace_vector<std::uint8_t, 2>>` is
-`basic_bit_inplace_vector<std::uint8_t, 16>`, one type however it is spelled. A capacity only callable at run
+every bit of it: `bit_sequence_adaptor<std::inplace_vector<std::uint8_t, 2>>` wraps the storage
+`basic_bit_inplace_vector<std::uint8_t, 16>` does, one storage however it is spelled. A capacity only callable at run
 time, as `boost::container::static_vector`'s is, names no constant, and an owner over it is unbounded by type.
 
-The alias passes `N` through to the adaptor rather than leaving it in the block count alone, which is what makes
-distinct capacities distinct types and lets alias deduction find `N`: `num_blocks_v<Block, N>` is not a
+The class passes `N` through to the storage rather than leaving it in the block count alone, which is what makes
+distinct capacities distinct types and lets its guide name `N`: `num_blocks_v<Block, N>` is not a
 deducible context, and no inverse exists, since every `N` from 9 to 16 names two `std::uint8_t` blocks. The
 names carry the capacity-versus-width distinction and the parameter lists do not, which is the same hazard
 `basic_bit_static_set<Block, N>` and `basic_bit_inplace_set<Block, N>` share by shape.
 
 The whole column sits behind `__cpp_lib_inplace_vector`, in practice libstdc++ >= 16, which the matrix carries on
-gcc 16 and 17-SVN. An alias adds no capability, so the guard withholds a name rather than a feature, and each
+gcc 16 and 17-SVN. The class adds no capability, so the guard withholds a name rather than a feature, and each
 header's includes sit inside the guard too: on a library without the storage the header is its include guard and
 nothing else. Growth past the capacity throws `std::bad_alloc`, which is `std::inplace_vector`'s own answer,
 given by the container where the capacity stops inside a block; on the set reading that is where `insert` stops
@@ -4945,7 +4954,7 @@ Notes:
 6. The names above are the short ones, which fix `Block` to `std::size_t` and so take only the width, or nothing at all in the dynamic column where there is no width to give. Each has a `basic_` form that leaves the block open: `xstd::basic_bit_static_set<Block, N>`, `xstd::basic_bit_array<Block, N>`, `xstd::basic_bitset<Block, N>` and their inplace siblings, and `xstd::basic_bit_set<Block, Allocator>`, `xstd::basic_bit_vector<Block, Allocator>`, `xstd::basic_dynamic_bitset<Block, Allocator>` down the dynamic column. So `xstd::bit_set` is an alias, not a template, and `xstd::basic_bit_set<std::uint8_t>` is how a block is chosen.
 7. Each static-width name has an `aligned` form in a nested namespace, its width rounded up to whole blocks so that no block carries an unused tail: `xstd::aligned::bitset<120>` is `xstd::bitset<128>`. The inplace names have the same, rounding their capacity. That costs nothing in storage at a width already spanning whole blocks, and removes the tail-restoring mask from `fill`, `flip` and the left shift.
 
-The **middle column** is what allocates nothing and yet carries a run-time width. It depends on `std::inplace_vector`, so those three names exist only where the standard library provides it (`__cpp_lib_inplace_vector`); an alias withholds a name rather than a capability.
+The **middle column** is what allocates nothing and yet carries a run-time width. It depends on `std::inplace_vector`, so those three names exist only where the standard library provides it (`__cpp_lib_inplace_vector`); the guard withholds a name rather than a capability.
 
 Ownership is deliberately **not** a fourth **column**. A view is not a fourth storage: it takes the shape of whatever it views, which is why the fourth row spans the same three columns as the three above it rather than standing beside them. `xstd::bit_subspan` is the one that stays out of the table, because it narrows a sequence to a window rather than choosing a reading. All of them are described under [retrofitting](#choosing-a-reading-over-a-bitset) below.
 

@@ -96,7 +96,7 @@ consteval auto admits_owner_extent() noexcept
         return N != std::dynamic_extent;
 }
 
-// The container's own check, left off the owners' heads, whose alias deduction MSVC fails when they carry it.
+// The container's own check, kept off the owners' heads, which constrain the block type alone.
 template<class Blocks, std::size_t N>
 inline constexpr bool owner_extent_v = admits_owner_extent<Blocks, N>();
 
