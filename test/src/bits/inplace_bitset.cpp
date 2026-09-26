@@ -11,6 +11,7 @@
 #include <xstd/bits/bitset_adaptor.hpp>                  // bitset_adaptor
 #include <xstd/bits/detail/bitset_adaptor.hpp>           // bitset_adaptor
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
+#include <xstd/bits/detail/ownership.hpp>                // owned_bits_t
 #include <xstd/bits/inplace_bitset.hpp>                  // aligned, basic_inplace_bitset, inplace_bitset
 #include <concepts>                                      // regular, same_as, totally_ordered
 #include <cstddef>                                       // size_t
@@ -103,7 +104,7 @@ BOOST_AUTO_TEST_CASE(TheCapacityIsTheRequestedOneExactly)
 {
         using U = xstd::basic_inplace_bitset<std::uint8_t, 12>;
         static_assert(std::same_as<xstd::aligned::basic_inplace_bitset<std::uint8_t, 12>, xstd::basic_inplace_bitset<std::uint8_t, 16>>);
-        static_assert(std::same_as<xstd::bitset_adaptor<std::inplace_vector<std::uint8_t, 2>>, xstd::basic_inplace_bitset<std::uint8_t, 16>>);
+        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::bitset_adaptor<std::inplace_vector<std::uint8_t, 2>>>, xstd::bits::detail::owned_bits_t<xstd::basic_inplace_bitset<std::uint8_t, 16>>>);
 
         auto b = U();
         BOOST_CHECK_EQUAL(b.max_size(), 12UZ);

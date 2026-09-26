@@ -40,7 +40,7 @@ public:
         }
 };
 
-// Spelled as the aliases spell their block count, or alias deduction fails; K = 1 keeps MSVC 17 from dropping it.
+// A word is held as an array of one, at its digits; K = 1 keeps MSVC 17 from dropping the one-word guide.
 template<xstd::unsigned_integer Block, std::size_t K = 1>
 bitset_adaptor(from_bit_storage_t, Block) -> bitset_adaptor<std::array<Block, bits::detail::num_blocks_v<Block, bit_storage_extent_v<Block> * K>>, bit_storage_extent_v<Block> * K>;
 
