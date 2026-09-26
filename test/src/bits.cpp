@@ -37,7 +37,7 @@ BOOST_AUTO_TEST_CASE(EveryContainerArrivesThroughTheUmbrella)
         auto const packed = xstd::bit_array<8>();
         static_assert(std::ranges::random_access_range<decltype(xstd::bit_span(packed))>);
 
-        // The dynamic column, one name per reading, all three over a contiguous_bit_vector.
+        // The dynamic column, one name per reading, all three over a std::vector of blocks.
         static_assert(std::ranges::bidirectional_range<xstd::basic_bit_set<std::size_t>>);
         static_assert(std::ranges::random_access_range<xstd::basic_bit_vector<std::size_t>>);
         static_assert(not std::ranges::range<xstd::basic_dynamic_bitset<std::size_t>>);

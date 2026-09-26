@@ -7,18 +7,18 @@
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #ifdef TEST_HAS_INPLACE_VECTOR
 
-#include <xstd/bits/bit_set_view.hpp>                         // bit_set_view
-#include <xstd/bits/bitset_adaptor.hpp>                       // bitset_adaptor
-#include <xstd/bits/detail/bitset_adaptor.hpp>                // bitset_adaptor
-#include <xstd/bits/detail/contiguous_bit_inplace_vector.hpp> // contiguous_bit_inplace_vector
-#include <xstd/bits/inplace_bitset.hpp>                       // aligned, basic_inplace_bitset, inplace_bitset
-#include <concepts>                                           // regular, same_as, totally_ordered
-#include <cstddef>                                            // size_t
-#include <cstdint>                                            // uint8_t
-#include <inplace_vector>                                     // inplace_vector
-#include <new>                                                // bad_alloc
-#include <string>                                             // string
-#include <utility>                                            // declval
+#include <xstd/bits/bit_set_view.hpp>                    // bit_set_view
+#include <xstd/bits/bitset_adaptor.hpp>                  // bitset_adaptor
+#include <xstd/bits/detail/bitset_adaptor.hpp>           // bitset_adaptor
+#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
+#include <xstd/bits/inplace_bitset.hpp>                  // aligned, basic_inplace_bitset, inplace_bitset
+#include <concepts>                                      // regular, same_as, totally_ordered
+#include <cstddef>                                       // size_t
+#include <cstdint>                                       // uint8_t
+#include <inplace_vector>                                // inplace_vector
+#include <new>                                           // bad_alloc
+#include <string>                                        // string
+#include <utility>                                       // declval
 
 #endif
 
@@ -32,7 +32,7 @@ using T = xstd::basic_inplace_bitset<std::uint8_t, 24>;
 // The bitset reading over a run-time width under a compile-time capacity, adding no member of its own.
 BOOST_AUTO_TEST_CASE(TheInplaceBitsetIsTheBitsetAdaptorOverAnInplaceVectorOfBlocks)
 {
-        static_assert(std::derived_from<T, xstd::bits::detail::bitset_adaptor<xstd::bits::detail::contiguous_bit_inplace_vector<std::uint8_t, 24>, T>>);
+        static_assert(std::derived_from<T, xstd::bits::detail::bitset_adaptor<xstd::bits::detail::contiguous_bit_container<std::inplace_vector<std::uint8_t, 3>, 24>, T>>);
         static_assert(std::same_as<xstd::inplace_bitset<24>, xstd::basic_inplace_bitset<std::size_t, 24>>);
         static_assert(std::regular<T>);
 }

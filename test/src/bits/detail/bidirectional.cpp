@@ -3,21 +3,22 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/block_types.hpp>                      // graded_extents
-#include <test/value_reference.hpp>                  // value_reference
-#include <xstd/bits/bit_set_view.hpp>                // bit_set_view
-#include <xstd/bits/detail/bidirectional.hpp>        // bidirectional_bit_iterator, bidirectional_bit_reference
-#include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
-#include <boost/test/unit_test.hpp>                  // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <array>                                     // array
-#include <concepts>                                  // bidirectional_iterator, same_as
-#include <cstddef>                                   // size_t
-#include <cstdint>                                   // uint64_t
-#include <iterator>                                  // next, prev
-#include <ranges>                                    // iota
-#include <set>                                       // set
-#include <type_traits>                               // is_assignable_v, is_convertible_v, is_trivially_destructible_v
-#include <utility>                                   // declval
+#include <test/array_storage.hpp>                        // array_storage
+#include <test/block_types.hpp>                          // graded_extents
+#include <test/value_reference.hpp>                      // value_reference
+#include <xstd/bits/bit_set_view.hpp>                    // bit_set_view
+#include <xstd/bits/detail/bidirectional.hpp>            // bidirectional_bit_iterator, bidirectional_bit_reference
+#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
+#include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <array>                                         // array
+#include <concepts>                                      // bidirectional_iterator, same_as
+#include <cstddef>                                       // size_t
+#include <cstdint>                                       // uint64_t
+#include <iterator>                                      // next, prev
+#include <ranges>                                        // iota
+#include <set>                                           // set
+#include <type_traits>                                   // is_assignable_v, is_convertible_v, is_trivially_destructible_v
+#include <utility>                                       // declval
 
 namespace {
 
@@ -136,9 +137,9 @@ auto check_every_set_pattern(T const& empty)
 
 BOOST_AUTO_TEST_SUITE(Bidirectional)
 
-using ArrayTypes = test::graded_extents<xstd::bits::detail::contiguous_bit_array>;
+using ArrayTypes = test::graded_extents<test::array_storage>;
 
-using Bits = xstd::bits::detail::contiguous_bit_array<std::uint64_t, 200>;
+using Bits = xstd::bits::detail::contiguous_bit_container<std::array<std::uint64_t, 4>, 200>;
 
 BOOST_AUTO_TEST_CASE(AnIteratorIsAPointerAndAPosition)
 {
@@ -195,7 +196,7 @@ BOOST_AUTO_TEST_SUITE(BidirectionalThroughTheView)
 
 namespace {
 
-using Viewed = xstd::bits::detail::contiguous_bit_array<std::uint64_t, 64>;
+using Viewed = xstd::bits::detail::contiguous_bit_container<std::array<std::uint64_t, 1>, 64>;
 
 using SetIt = xstd::bits::detail::bidirectional_bit_iterator<Viewed>;
 using SetRef = xstd::bits::detail::bidirectional_bit_reference<Viewed>;

@@ -7,21 +7,21 @@
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #ifdef TEST_HAS_INPLACE_VECTOR
 
-#include <test/set/ascending.hpp>                             // yields_ascending_keys
-#include <test/set/concepts.hpp>                              // bit_set, set_size_t, set_size_t_ranges
-#include <xstd/bits/bit_inplace_set.hpp>                      // aligned, basic_bit_inplace_set, bit_inplace_set
-#include <xstd/bits/bit_set_adaptor.hpp>                      // bit_set_adaptor
-#include <xstd/bits/detail/contiguous_bit_inplace_vector.hpp> // contiguous_bit_inplace_vector
-#include <xstd/bits/detail/ownership.hpp>                     // storage
-#include <xstd/bits/detail/set_adaptor.hpp>                   // set_adaptor
-#include <algorithm>                                          // equal
-#include <concepts>                                           // same_as
-#include <cstddef>                                            // size_t
-#include <cstdint>                                            // uint8_t
-#include <inplace_vector>                                     // inplace_vector
-#include <new>                                                // bad_alloc
-#include <ranges>                                             // iota, to
-#include <set>                                                // set
+#include <test/set/ascending.hpp>                        // yields_ascending_keys
+#include <test/set/concepts.hpp>                         // bit_set, set_size_t, set_size_t_ranges
+#include <xstd/bits/bit_inplace_set.hpp>                 // aligned, basic_bit_inplace_set, bit_inplace_set
+#include <xstd/bits/bit_set_adaptor.hpp>                 // bit_set_adaptor
+#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
+#include <xstd/bits/detail/ownership.hpp>                // storage
+#include <xstd/bits/detail/set_adaptor.hpp>              // set_adaptor
+#include <algorithm>                                     // equal
+#include <concepts>                                      // same_as
+#include <cstddef>                                       // size_t
+#include <cstdint>                                       // uint8_t
+#include <inplace_vector>                                // inplace_vector
+#include <new>                                           // bad_alloc
+#include <ranges>                                        // iota, to
+#include <set>                                           // set
 
 #endif
 
@@ -39,7 +39,7 @@ constexpr bool has_capacity = requires (X const& x) { x.capacity(); };
 // The set reading over a run-time width under a compile-time capacity, an alias and nothing more.
 BOOST_AUTO_TEST_CASE(TheInplaceSetIsTheSetAdaptorOverAnInplaceVectorOfBlocks)
 {
-        static_assert(std::derived_from<T, xstd::bits::detail::set_adaptor<xstd::bits::detail::contiguous_bit_inplace_vector<std::uint8_t, 24>, xstd::bits::detail::storage::owned, T>>);
+        static_assert(std::derived_from<T, xstd::bits::detail::set_adaptor<xstd::bits::detail::contiguous_bit_container<std::inplace_vector<std::uint8_t, 3>, 24>, xstd::bits::detail::storage::owned, T>>);
         static_assert(std::same_as<xstd::bit_inplace_set<24>, xstd::basic_bit_inplace_set<std::size_t, 24>>);
         static_assert(test::set::bit_set<T>);
 }

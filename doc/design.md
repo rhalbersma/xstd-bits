@@ -199,27 +199,21 @@ if anyone ever "simplifies" the definition into the dance.
 
 ### the-one-vehicle
 
-`contiguous_bit_container` and its three aliases live under `detail/`, one header each:
-`detail/contiguous_bit_container.hpp` holds the concept, `num_blocks_v`, the class and the detector that names
-it, and
-`detail/contiguous_bit_array.hpp`, `detail/contiguous_bit_vector.hpp` and
-`detail/contiguous_bit_inplace_vector.hpp` hold one vehicle apiece. The names are in `xstd::bits::detail` with
-the rest of `detail/`, so nothing outside the library can name a vehicle at all; a container names its own in
-its base clause, as `bits::detail::contiguous_bit_array<Block, N>`. It is the device that turns three readings
-over three storages into three plus three, and a factoring device is machinery rather than vocabulary: a user
-reaches every width through `bit_static_set<N>` or `basic_bit_array<Block, N>` and never spells the pair
-themselves. The split is what lets each of the nine
-containers include only the vehicle it uses -- `bit_array` names `contiguous_bit_array` and no longer sees
-`std::vector`, and the `#ifdef __cpp_lib_inplace_vector` guard sits in the one header that concerns it rather
-than in the common one.
+`contiguous_bit_container` lives in `detail/contiguous_bit_container.hpp`, with the concept, `num_blocks_v` and
+the detector that names it. It has no per-storage aliases: an owner is `adaptor<Blocks, N>`, and the adaptor builds
+its container as `contiguous_bit_container<Blocks, N>` through `owner_storage_t`, so the storage is spelled once,
+in the public alias -- `basic_bit_array<Block, N>` is `bit_sequence_adaptor<std::array<Block, num_blocks_v<Block, N>>, N>`.
+The name is in `xstd::bits::detail` with the rest of `detail/`, so nothing outside the library names it; it is the
+device that turns three readings over three storages into three plus three, and a factoring device is machinery
+rather than vocabulary. A user reaches every width through `bit_static_set<N>` or `basic_bit_array<Block, N>`, and a
+test that needs the container itself spells its storage, as `contiguous_bit_container<std::vector<std::uint8_t>>`.
+Each public header includes only the storage it names, so `bit_array` does not see `std::vector`, and the
+`#ifdef __cpp_lib_inplace_vector` guard sits in the three inplace headers rather than in the common one.
 
 **The name says what it does to its argument.** It takes a `owned_bit_storage` — a range that *is*
 blocks ([owned-bit-storage](#owned-bit-storage)) — and adds the bit interface. In goes
 storage that answers about blocks, out comes something that answers about bits. Concept and class differ by one
-word, and it is the word that changes. The three aliases follow the same rule: `contiguous_bit_array`,
-`contiguous_bit_vector` and `contiguous_bit_inplace_vector` each name the bit container over one block
-container. Their former names pointed at the argument instead of the result — `block_array` read as *an array of
-blocks*, which is what it is instantiated over, `std::array<Block, n>`, and not what the alias is.
+word, and it is the word that changes.
 
 That is also what earns it the name the adaptors are constrained on. It is the one storage they admit
 ([one-storage](#one-storage)), the only one there is: the `ext/` specializations for `std::bitset` and
@@ -664,7 +658,7 @@ Only a storage holding its blocks inline out-aligns a `size_t`, and it does so b
 `block_type` is both wide enough to hold any width and exactly the size of the gap it fills --
 `contiguous_bit_container` is then its two members and nothing else, at the same size the padding cost.
 `std::array` reaches none of this, a static width carrying no member at all, and neither does `std::vector`,
-whose alignment is a pointer's whatever it holds; `contiguous_bit_inplace_vector<xstd::uint128, N>` is the one
+whose alignment is a pointer's whatever it holds; `contiguous_bit_container<std::inplace_vector<xstd::uint128, K>, N>` is the one
 cell that does. The `static_assert` beside the alias holds the two facts that make `block_type` the right
 carrier, so a storage over-aligned for some other reason fails loudly rather than truncating a width. Every
 reader goes through `size()`, which converts once, so the arithmetic stays a `size_t`'s.
@@ -708,7 +702,7 @@ zero. `reserve`, `capacity` and `shrink_to_fit` are in bits and exist where the 
 `boost::dynamic_bitset` mean by it; the set reading's `clear()` is `fill(false)` and never reaches this
 member, so the landmine #80 recorded -- probing `clear()` on boost and emptying the width -- cannot recur.
 
-`contiguous_bit_inplace_vector<Block, N>` is the third storage: a run-time width under a compile-time capacity
+`std::inplace_vector<Block, num_blocks_v<Block, N>>` is the third storage: a run-time width under a compile-time capacity
 of exactly `N` bits, behind `__cpp_lib_inplace_vector` until every library in the matrix has it.
 `std::inplace_vector` satisfies `owned_bit_storage` as it is, but it counts blocks, so it refuses growth only a
 whole block at a time; a capacity that stops inside the last block is the container's to hold. `check_capacity`
@@ -1499,14 +1493,14 @@ what `-Wunused-lambda-capture` reports.
 
 Three class templates carry the three readings: `set_adaptor`, `sequence_adaptor`, `bitset_adaptor`. Each is
 written against `contiguous_bit_container` and against nothing else, so one adaptor serves
-`contiguous_bit_array`, `contiguous_bit_vector` and `contiguous_bit_inplace_vector` alike, at both widths and
+`contiguous_bit_container` over `std::array`, `std::vector` and `std::inplace_vector` alike, at both widths and
 in both ownerships ([one-storage](#one-storage)). Each takes the parameters its own reading needs and no
 others: `set_adaptor<Bits, Store, Derived>`, `sequence_adaptor<Bits, Store, W, Derived>` and
 `bitset_adaptor<Bits, Derived>`, the bitset reading owning by construction and the set reading never windowed.
 
 Every public name is a class deriving from one of them, passing itself as the last argument so that the
 adaptor names it back: `basic_bit_static_set<B, N>` derives from
-`set_adaptor<contiguous_bit_array<B, N>, storage::owned, basic_bit_static_set<B, N>>`. The short layer stays
+`set_adaptor<contiguous_bit_container<std::array<B, K>, N>, storage::owned, basic_bit_static_set<B, N>>`. The short layer stays
 an alias fixing the block: `bit_static_set<N>`, `bit_array<N>` and `bitset<N>` are those at `std::size_t`.
 Deriving is what keeps a value-returning operation -- `& | ^ -`, `operator~`, the shifts, `xstd::bit_cast` --
 handing back the container the caller named rather than the vehicle under it
@@ -1596,7 +1590,7 @@ owners, open in #235.
 ### owning-is-ours
 
 Owning is ours and viewing is interop. An owning adaptor sits over a storage of this library,
-`contiguous_bit_array` or `contiguous_bit_vector`, and nothing else is supported or tested: `bitset_adaptor`
+`contiguous_bit_container` over `std::array` or `std::vector`, and nothing else is supported or tested: `bitset_adaptor`
 requires the vocabulary ([a-strict-extension](#a-strict-extension)) and block access, which neither counterpart
 satisfies, and the owning `set_adaptor` and `sequence_adaptor` take their ordering from the storage's own
 three-way members, with no synthesized fallback for a storage without them. A view sat over any type with a
@@ -1633,7 +1627,7 @@ reads "the storage lets *this handle* write". A const owner's accessor hands bac
 hands back `Bits const&` again. Const and ownership are the same question, asked once, and answered by the type
 the accessor returns. The exceptions are the constructors and, once storage grows, the growth members, which need an explicit
 `requires (owns(Store))`: the requires-expression tests what the storage can do, not what this handle may do to
-it, and a view over a `contiguous_bit_vector` must not be able to resize what it does not own.
+it, and a view over a `contiguous_bit_container` over `std::vector` must not be able to resize what it does not own.
 
 ### views-follow-their-precedent
 
@@ -2164,9 +2158,9 @@ view gets its storage and not something a caller needs to name.
 ### views-over-owners
 
 An owner is not itself a storage — `bit_static_set`, `bit_array` and `bitset` are thin wrappers over a
-`contiguous_bit_array` — so a view over an owner is a view over the storage it wraps:
-`bit_set_view(xstd::bitset<64>&)` is `set_adaptor<contiguous_bit_array<size_t, 64>, refers>`, and the pointer in
-the iterator is to the `contiguous_bit_array`, never to the `bitset`. The owner hands its storage over through
+`contiguous_bit_container` — so a view over an owner is a view over the storage it wraps:
+`bit_set_view(xstd::bitset<64>&)` is `set_adaptor<contiguous_bit_container<std::array<size_t, 1>, 64>, refers>`, and the pointer in
+the iterator is to the `contiguous_bit_container`, never to the `bitset`. The owner hands its storage over through
 `owned_storage<Owner>`, declared beside it and never defined for anything else, so
 `owner_of<Owner, Bits, R>` reads "this owner wraps exactly the storage this view refers through, and is not
 already committed to another reading". Const flows one way: a const owner gives a
@@ -2176,7 +2170,7 @@ The view's converting constructor takes the owner's private member directly, whi
 a referring adaptor — the one friendship in the tree that runs upward, from a container to the views over it,
 and it grants access to a member and to nothing that member's type does not already expose. Which adaptors it
 befriends is [the-readings-do-not-mix](#the-readings-do-not-mix). Storage stays private; nothing on an owner's
-surface says `contiguous_bit_array`.
+surface says `contiguous_bit_container`.
 
 ### viewing-an-owner-is-implicit
 
@@ -2253,7 +2247,7 @@ one ever should, it belongs beside the containers, where it can be named and its
 ### the-interface-line
 
 **If a user never spells it, it lives in `detail/`.** The name or the header, either counts. That is the whole
-rule, and it is a test rather than a judgement: `bit_static_set` is spelled, `contiguous_bit_array` is not;
+rule, and it is a test rather than a judgement: `bit_static_set` is spelled, `contiguous_bit_container` is not;
 `bidirectional_bit_reference` is reached only through the `iterator` and `reference` typedefs and is spelled by
 nobody.
 
@@ -2324,7 +2318,7 @@ storage, the parameters each reading needs and no more ([the-three-adaptors](#th
 `basic_` layer chooses the storage and leaves the block open, `basic_string`-style:
 `basic_bit_static_set<Block, N>`, `basic_bit_set<Block, Allocator>` and their four siblings. The block leads in
 every column, so a `basic_` name hands its base clause the arguments in the order it was given them --
-`basic_bit_static_set<Block, N>` derives from `set_adaptor<contiguous_bit_array<Block, N>, storage::owned,
+`basic_bit_static_set<Block, N>` derives from `set_adaptor<contiguous_bit_container<std::array<Block, K>, N>, storage::owned,
 basic_bit_static_set<Block, N>>`, straight through. The static and inplace columns used to take `<N, Block>`
 and transpose at the call, which
 nothing gained: `Block` carries no default in those columns, so it is free to lead, and leading is what
@@ -2359,9 +2353,9 @@ that name for exactly the case P0843 was naming ([the-inplace-column](#the-inpla
 counterparts reproduced under their own names ([a-strict-extension](#a-strict-extension)).
 
 One header per restricted name, holding its `basic_` form beside it, each over one storage: `bit_set`,
-`bit_vector` and `dynamic_bitset` over `contiguous_bit_vector<Block, Allocator>`, beside `bit_static_set`,
-`bit_array` and `bitset` over `contiguous_bit_array<Block, N>`, and `bit_inplace_set`, `bit_inplace_vector` and
-`inplace_bitset` over `contiguous_bit_inplace_vector<Block, N>` ([the-inplace-column](#the-inplace-column)). The
+`bit_vector` and `dynamic_bitset` over `std::vector<Block, Allocator>`, beside `bit_static_set`,
+`bit_array` and `bitset` over `std::array<Block, num_blocks_v<Block, N>>`, and `bit_inplace_set`, `bit_inplace_vector` and
+`inplace_bitset` over `std::inplace_vector<Block, num_blocks_v<Block, N>>` ([the-inplace-column](#the-inplace-column)). The
 header is the name's home and the only place it is spelled; `bits.hpp` includes them all. Each static name has
 an `aligned` form in the namespace of that name, in both layers, its width rounded up to whole blocks so that no
 block carries an unused tail: `aligned::bitset<9>` is `bitset<64>` and `aligned::basic_bitset<std::uint8_t, 9>`
@@ -2391,7 +2385,7 @@ could throw would cost every growing container its strong guarantee.
 The allocator is the exception, and it follows the **column, not the row**: the dynamic column allocates and all
 three of its readings answer `get_allocator`; the static column is a `std::array` and has none to show; the
 inplace column holds its blocks inline and has none either. So `bit_set`, `bit_vector` and `dynamic_bitset` have
-it and the other six do not, which is a fact about `contiguous_bit_vector` rather than about sets, sequences or
+it and the other six do not, which is a fact about `std::vector` rather than about sets, sequences or
 bitsets.
 
 Two of those answers were the same fact arriving late. `set_adaptor` was the one owning adaptor without
@@ -2409,7 +2403,7 @@ the expression compiles.
 
 The third storage point gets public names, one per reading and each an alias like every other name below the
 adaptors: `basic_bit_inplace_set<Block, N>`, `basic_bit_inplace_vector<Block, N>` and
-`basic_inplace_bitset<Block, N>` over `contiguous_bit_inplace_vector<Block, N>`, with `bit_inplace_set<N>`,
+`basic_inplace_bitset<Block, N>` over `std::inplace_vector<Block, num_blocks_v<Block, N>>`, with `bit_inplace_set<N>`,
 `bit_inplace_vector<N>` and `inplace_bitset<N>` at the machine word. `inplace_bitset` takes no `bit_` prefix
 because `bitset` already carries the word, and `inplace` is one storage word down each column rather than a
 second vocabulary for the same thing.
@@ -3380,7 +3374,7 @@ friend: the dependency runs one way, from the container to the iterator, and the
 declarations the earlier views needed (*"Clang requires it, GCC does not"*) have nothing left to declare.
 
 The pointer is to the **storage** an owner wraps, never to the owner: `bit_static_set` hands out
-`bits::detail::bidirectional_bit_iterator<contiguous_bit_array<B, N>>`, which is why an owner is never itself
+`bits::detail::bidirectional_bit_iterator<contiguous_bit_container<std::array<B, K>, N>>`, which is why an owner is never itself
 the thing a view or an iterator is parameterized on.
 
 **Where they live, and what they are called.** Both pairs are in `detail/`, one header each --

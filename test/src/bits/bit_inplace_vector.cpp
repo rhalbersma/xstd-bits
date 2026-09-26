@@ -7,22 +7,22 @@
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #ifdef TEST_HAS_INPLACE_VECTOR
 
-#include <test/sequence/concepts.hpp>                         // bit_sequence, inplace_vector_bool, inplace_vector_bool_ranges, inplace_vector_bool_try_returns, packed_inplace_vector_bool
-#include <test/sequence/dense.hpp>                            // yields_every_position
-#include <xstd/bits/bit_inplace_vector.hpp>                   // aligned, basic_bit_inplace_vector, bit_inplace_vector
-#include <xstd/bits/bit_sequence_adaptor.hpp>                 // bit_sequence_adaptor
-#include <xstd/bits/detail/contiguous_bit_inplace_vector.hpp> // contiguous_bit_inplace_vector
-#include <xstd/bits/detail/ownership.hpp>                     // storage
-#include <xstd/bits/detail/sequence_adaptor.hpp>              // sequence_adaptor
-#include <algorithm>                                          // equal
-#include <concepts>                                           // same_as
-#include <cstddef>                                            // size_t
-#include <cstdint>                                            // uint8_t
-#include <inplace_vector>                                     // inplace_vector
-#include <limits>                                             // numeric_limits
-#include <new>                                                // bad_alloc
-#include <ranges>                                             // count, iota, to, transform
-#include <vector>                                             // vector
+#include <test/sequence/concepts.hpp>                    // bit_sequence, inplace_vector_bool, inplace_vector_bool_ranges, inplace_vector_bool_try_returns, packed_inplace_vector_bool
+#include <test/sequence/dense.hpp>                       // yields_every_position
+#include <xstd/bits/bit_inplace_vector.hpp>              // aligned, basic_bit_inplace_vector, bit_inplace_vector
+#include <xstd/bits/bit_sequence_adaptor.hpp>            // bit_sequence_adaptor
+#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
+#include <xstd/bits/detail/ownership.hpp>                // storage
+#include <xstd/bits/detail/sequence_adaptor.hpp>         // sequence_adaptor
+#include <algorithm>                                     // equal
+#include <concepts>                                      // same_as
+#include <cstddef>                                       // size_t
+#include <cstdint>                                       // uint8_t
+#include <inplace_vector>                                // inplace_vector
+#include <limits>                                        // numeric_limits
+#include <new>                                           // bad_alloc
+#include <ranges>                                        // count, iota, to, transform
+#include <vector>                                        // vector
 
 #endif
 
@@ -40,7 +40,7 @@ constexpr bool has_allocator = requires { typename X::allocator_type; };
 // The sequence reading over a run-time width under a compile-time capacity, an alias and nothing more.
 BOOST_AUTO_TEST_CASE(TheInplaceSequenceIsTheSequenceAdaptorOverAnInplaceVectorOfBlocks)
 {
-        static_assert(std::derived_from<T, xstd::bits::detail::sequence_adaptor<xstd::bits::detail::contiguous_bit_inplace_vector<std::uint8_t, 24>, xstd::bits::detail::storage::owned, xstd::bits::detail::window::all, T>>);
+        static_assert(std::derived_from<T, xstd::bits::detail::sequence_adaptor<xstd::bits::detail::contiguous_bit_container<std::inplace_vector<std::uint8_t, 3>, 24>, xstd::bits::detail::storage::owned, xstd::bits::detail::window::all, T>>);
         static_assert(std::same_as<xstd::bit_inplace_vector<24>, xstd::basic_bit_inplace_vector<std::size_t, 24>>);
         static_assert(test::sequence::bit_sequence<T>);
 }

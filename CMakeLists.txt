@@ -92,10 +92,7 @@ target_sources(
         include/xstd/bits/bit_vector.hpp
         include/xstd/bits/detail/allocator_base_type.hpp
         include/xstd/bits/detail/bidirectional.hpp
-        include/xstd/bits/detail/contiguous_bit_array.hpp
         include/xstd/bits/detail/contiguous_bit_container.hpp
-        include/xstd/bits/detail/contiguous_bit_inplace_vector.hpp
-        include/xstd/bits/detail/contiguous_bit_vector.hpp
         include/xstd/bits/detail/borrowed_block_span.hpp
         include/xstd/bits/detail/functor.hpp
         include/xstd/bits/detail/hash.hpp
@@ -105,7 +102,6 @@ target_sources(
         include/xstd/bits/ext/boost.hpp
         include/xstd/bits/ext/boost/bit_small_set.hpp
         include/xstd/bits/ext/boost/bit_small_vector.hpp
-        include/xstd/bits/ext/boost/detail/contiguous_bit_small_vector.hpp
         include/xstd/bits/ext/boost/small_bitset.hpp
         include/xstd/bits/detail/pred.hpp
         include/xstd/bits/detail/bit_castable.hpp

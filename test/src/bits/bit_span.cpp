@@ -3,30 +3,30 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/sequence/ordering.hpp>                // ordering_agrees_with_vector_bool
-#include <xstd/bits/bit_array.hpp>                   // bit_array
-#include <xstd/bits/bit_set_view.hpp>                // bit_set_view
-#include <xstd/bits/bit_span.hpp>                    // bit_span
-#include <xstd/bits/bit_static_set.hpp>              // bit_static_set
-#include <xstd/bits/bitset.hpp>                      // bitset
-#include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
-#include <xstd/bits/dynamic_bitset.hpp>              // dynamic_bitset
-#include <xstd/bits/detail/ownership.hpp>            // storage
-#include <xstd/bits/detail/sequence_adaptor.hpp>     // sequence_adaptor
-#include <boost/test/unit_test.hpp>                  // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
-#include <algorithm>                                 // equal
-#include <array>                                     // array
-#include <concepts>                                  // constructible_from, derived_from, equality_comparable, same_as, totally_ordered
-#include <cstddef>                                   // size_t
-#include <cstdint>                                   // uint8_t
-#include <ranges>                                    // borrowed_range, iota, random_access_range, view
-#include <utility>                                   // declval
+#include <test/sequence/ordering.hpp>                    // ordering_agrees_with_vector_bool
+#include <xstd/bits/bit_array.hpp>                       // bit_array
+#include <xstd/bits/bit_set_view.hpp>                    // bit_set_view
+#include <xstd/bits/bit_span.hpp>                        // bit_span
+#include <xstd/bits/bit_static_set.hpp>                  // bit_static_set
+#include <xstd/bits/bitset.hpp>                          // bitset
+#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
+#include <xstd/bits/dynamic_bitset.hpp>                  // dynamic_bitset
+#include <xstd/bits/detail/ownership.hpp>                // storage
+#include <xstd/bits/detail/sequence_adaptor.hpp>         // sequence_adaptor
+#include <boost/test/unit_test.hpp>                      // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <algorithm>                                     // equal
+#include <array>                                         // array
+#include <concepts>                                      // constructible_from, derived_from, equality_comparable, same_as, totally_ordered
+#include <cstddef>                                       // size_t
+#include <cstdint>                                       // uint8_t
+#include <ranges>                                        // borrowed_range, iota, random_access_range, view
+#include <utility>                                       // declval
 
 BOOST_AUTO_TEST_SUITE(BitSpan)
 
 namespace {
 
-using Storage = xstd::bits::detail::contiguous_bit_array<std::size_t, 8>;
+using Storage = xstd::bits::detail::contiguous_bit_container<std::array<std::size_t, 1>, 8>;
 using Words = std::array<std::size_t, 1>;
 
 template<class T>

@@ -3,24 +3,25 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/block_types.hpp>                      // graded_extents
-#include <test/ext_int128.hpp>                       // TEST_HAS_ABSL_INT128, TEST_HAS_BOOST_INT128, uint128
-#include <test/value_reference.hpp>                  // value_reference
-#include <xstd/bits/bit_array.hpp>                   // basic_bit_array
-#include <xstd/bits/bit_span.hpp>                    // bit_span
-#include <xstd/bits/detail/contiguous_bit_array.hpp> // contiguous_bit_array
-#include <xstd/bits/detail/random_access.hpp>        // random_access_bit_iterator, random_access_bit_reference
-#include <boost/test/unit_test.hpp>                  // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <algorithm>                                 // equal, ranges::reverse, ranges::sort, reverse, sort
-#include <array>                                     // array
-#include <concepts>                                  // convertible_to, equality_comparable, random_access_iterator, same_as, sortable
-#include <cstddef>                                   // ptrdiff_t, size_t
-#include <cstdint>                                   // uint64_t
-#include <iterator>                                  // iter_move, next, prev, reverse_iterator
-#include <ranges>                                    // iota, subrange
-#include <type_traits>                               // is_assignable_v, is_convertible_v, is_trivially_copy_constructible_v, is_trivially_destructible_v
-#include <utility>                                   // declval
-#include <vector>                                    // vector
+#include <test/array_storage.hpp>                        // array_storage
+#include <test/block_types.hpp>                          // graded_extents
+#include <test/ext_int128.hpp>                           // TEST_HAS_ABSL_INT128, TEST_HAS_BOOST_INT128, uint128
+#include <test/value_reference.hpp>                      // value_reference
+#include <xstd/bits/bit_array.hpp>                       // basic_bit_array
+#include <xstd/bits/bit_span.hpp>                        // bit_span
+#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
+#include <xstd/bits/detail/random_access.hpp>            // random_access_bit_iterator, random_access_bit_reference
+#include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <algorithm>                                     // equal, ranges::reverse, ranges::sort, reverse, sort
+#include <array>                                         // array
+#include <concepts>                                      // convertible_to, equality_comparable, random_access_iterator, same_as, sortable
+#include <cstddef>                                       // ptrdiff_t, size_t
+#include <cstdint>                                       // uint64_t
+#include <iterator>                                      // iter_move, next, prev, reverse_iterator
+#include <ranges>                                        // iota, subrange
+#include <type_traits>                                   // is_assignable_v, is_convertible_v, is_trivially_copy_constructible_v, is_trivially_destructible_v
+#include <utility>                                       // declval
+#include <vector>                                        // vector
 
 namespace {
 
@@ -69,9 +70,9 @@ template<class T>
 
 BOOST_AUTO_TEST_SUITE(RandomAccess)
 
-using ArrayTypes = test::graded_extents<xstd::bits::detail::contiguous_bit_array>;
+using ArrayTypes = test::graded_extents<test::array_storage>;
 
-using Bits = xstd::bits::detail::contiguous_bit_array<std::uint64_t, 200>;
+using Bits = xstd::bits::detail::contiguous_bit_container<std::array<std::uint64_t, 4>, 200>;
 
 BOOST_AUTO_TEST_CASE(AnIteratorIsAPointerAndAPosition)
 {
@@ -265,7 +266,7 @@ BOOST_AUTO_TEST_SUITE(RandomAccessThroughTheView)
 
 namespace {
 
-using Viewed = xstd::bits::detail::contiguous_bit_array<std::uint64_t, 64>;
+using Viewed = xstd::bits::detail::contiguous_bit_container<std::array<std::uint64_t, 1>, 64>;
 
 using ArrIt = xstd::bits::detail::random_access_bit_iterator<Viewed>;
 using ArrRef = xstd::bits::detail::random_access_bit_reference<Viewed>;
