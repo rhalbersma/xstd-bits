@@ -66,13 +66,38 @@ template<class Blocks>
         requires xstd::resizable_bit_storage<Blocks> and (xstd::bit_storage_capacity_v<Blocks> != std::dynamic_extent)
 inline constexpr auto default_extent_v<Blocks> = xstd::bit_storage_capacity_v<Blocks>;
 
-// What N is to an owner: the width of fixed blocks, else a capacity its blocks hold in whole, else unbounded.
+// A resizable owner's N: none where the capacity is not a constant, else one its blocks hold in whole.
 template<class Blocks, std::size_t N>
-concept owner_extent =
-        (not xstd::resizable_bit_storage<Blocks> and N != std::dynamic_extent) or
-        (xstd::resizable_bit_storage<Blocks> and N == xstd::bit_storage_capacity_v<Blocks>) or
-        (xstd::resizable_bit_storage<Blocks> and N <= xstd::bit_storage_capacity_v<Blocks> and xstd::bit_storage_capacity_v<Blocks> != std::dynamic_extent and
-         num_blocks_v<std::ranges::range_value_t<Blocks>, N> * xstd::bit_storage_extent_v<std::ranges::range_value_t<Blocks>> == xstd::bit_storage_capacity_v<Blocks>);
+consteval auto admits_capacity() noexcept
+        -> bool
+{
+        constexpr auto capacity = xstd::bit_storage_capacity_v<Blocks>;
+        if constexpr (capacity == std::dynamic_extent) {
+                return N == std::dynamic_extent;
+        } else if constexpr (N > capacity) {
+                return false;
+        } else {
+                using block_type = std::ranges::range_value_t<Blocks>;
+                return num_blocks_v<block_type, N> * xstd::bit_storage_extent_v<block_type> == capacity;
+        }
+}
+
+// What N is to an owner: a width its blocks' type names is settled by it, without asking whether they resize.
+template<class Blocks, std::size_t N>
+consteval auto admits_owner_extent() noexcept
+        -> bool
+{
+        if constexpr (xstd::bit_storage_extent_v<Blocks> == std::dynamic_extent) {
+                if constexpr (xstd::resizable_bit_storage<Blocks>) {
+                        return admits_capacity<Blocks, N>();
+                }
+        }
+        return N != std::dynamic_extent;
+}
+
+// One atomic constraint, so alias deduction checks a value rather than normalizing a disjunction of concepts.
+template<class Blocks, std::size_t N>
+concept owner_extent = admits_owner_extent<Blocks, N>();
 
 // The one vehicle: it owns the unused-tail invariant, and has no iterators.
 template<class Blocks, std::size_t N = default_extent_v<Blocks>>

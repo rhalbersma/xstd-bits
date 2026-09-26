@@ -74,7 +74,7 @@ inline constexpr std::size_t bit_storage_capacity_v = bit_storage_extent_v<Bits>
 
 // A capacity usable as a constant, as std::inplace_vector's is; one only callable at run time names none.
 template<bit_storage Bits>
-        requires resizable_bit_storage<Bits> and requires { typename std::integral_constant<std::size_t, Bits::capacity()>; }
+        requires (bit_storage_extent_v<Bits> == std::dynamic_extent) and resizable_bit_storage<Bits> and requires { typename std::integral_constant<std::size_t, Bits::capacity()>; }
 inline constexpr std::size_t bit_storage_capacity_v<Bits> = Bits::capacity() * bit_storage_extent_v<std::ranges::range_value_t<Bits>>;
 
 } // namespace xstd
