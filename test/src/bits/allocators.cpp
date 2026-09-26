@@ -13,6 +13,7 @@
 #include <memory>                       // allocator, uses_allocator_v
 #include <memory_resource>              // monotonic_buffer_resource, polymorphic_allocator
 #include <type_traits>                  // is_constructible_v, is_nothrow_constructible_v
+#include <utility>                      // move
 #include <vector>                       // pmr::vector, vector
 
 BOOST_AUTO_TEST_SUITE(Allocators)
@@ -102,6 +103,19 @@ BOOST_AUTO_TEST_CASE(OnlyARunTimeWidthTakesAnAllocator)
         static_assert(not std::is_constructible_v<xstd::bit_array<64>, std::allocator<std::size_t>>);
         static_assert(not std::is_constructible_v<xstd::bit_array<64>, std::initializer_list<bool>, std::allocator<std::size_t>>);
         BOOST_CHECK(true);
+}
+
+// [container.alloc.reqmts]'s allocator-extended copy and move, which dynamic_bitset has where boost has not.
+BOOST_AUTO_TEST_CASE(ABitsetIsCopiedAndMovedIntoAnotherAllocator)
+{
+        auto mr = std::pmr::monotonic_buffer_resource();
+        auto source = pmr_dynamic_bitset(70, 5ULL);
+
+        auto const copy = pmr_dynamic_bitset(source, &mr);
+        BOOST_CHECK(copy == source and copy.get_allocator().resource() == &mr);
+
+        auto const moved = pmr_dynamic_bitset(std::move(source), &mr);
+        BOOST_CHECK(moved == copy and moved.get_allocator().resource() == &mr);
 }
 
 // std::set's comparator arguments are accepted and, std::less having no state, change nothing.
