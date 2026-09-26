@@ -10,8 +10,10 @@
 
 #ifdef __cpp_lib_inplace_vector
 
+#include <xstd/bits/bit_storage.hpp>                     // bit_storage_extent_v
 #include <xstd/bits/bitset_adaptor.hpp>                  // bitset_adaptor
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // num_blocks_v
+#include <xstd/bits/from_bit_storage.hpp>                // from_bit_storage_t
 #include <xstd/ints/concepts/unsigned_integer.hpp>       // unsigned_integer
 #include <xstd/ints/memory.hpp>                          // align_up
 #include <cstddef>                                       // size_t
@@ -26,6 +28,10 @@ using basic_inplace_bitset = bitset_adaptor<std::inplace_vector<Block, bits::det
 
 template<std::size_t N>
 using inplace_bitset = basic_inplace_bitset<std::size_t, N>;
+
+// Spelled as the alias spells its block count, so that alias deduction reaches the aligned capacity.
+template<xstd::unsigned_integer Block, std::size_t K>
+bitset_adaptor(from_bit_storage_t, std::inplace_vector<Block, K>) -> bitset_adaptor<std::inplace_vector<Block, bits::detail::num_blocks_v<Block, bit_storage_extent_v<Block> * K>>, bit_storage_extent_v<Block> * K>;
 
 namespace aligned {
 

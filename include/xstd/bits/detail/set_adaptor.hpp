@@ -36,7 +36,7 @@
 #include <source_location>                               // source_location
 #include <span>                                          // dynamic_extent
 #include <stdexcept>                                     // out_of_range
-#include <type_traits>                                   // conditional_t, false_type, is_invocable_r_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
+#include <type_traits>                                   // conditional_t, false_type, is_invocable_r_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
 #include <utility>                                       // declval, forward, move, pair
 
 // The set reading, [set] over a contiguous_bit_container, owning it or referring to it.
@@ -240,6 +240,18 @@ public:
                 requires is_owner and std::same_as<Alloc, typename bits_type::allocator_type>
         [[nodiscard]] constexpr set_adaptor(set_adaptor&& other, Alloc const& alloc)
                 : m_bits(std::move(other.m_bits), alloc)
+        {}
+
+        // flat_set's adopting constructor at a run-time width: the blocks move in, every bit of them a position.
+        [[nodiscard]] constexpr set_adaptor(xstd::from_bit_storage_t, bits_type::block_container_type blocks) noexcept(std::is_nothrow_move_constructible_v<typename bits_type::block_container_type>)
+                requires is_owner and bits_type::has_stored_size
+                : m_bits(xstd::from_bit_storage, std::move(blocks))
+        {}
+
+        template<class Alloc>
+                requires is_owner and bits_type::has_stored_size and std::same_as<Alloc, typename bits_type::allocator_type>
+        [[nodiscard]] constexpr set_adaptor(xstd::from_bit_storage_t, bits_type::block_container_type blocks, Alloc const& alloc)
+                : m_bits(xstd::from_bit_storage, std::move(blocks), alloc)
         {}
 
         // Words that are bit storage, read as this set's positions; the tag says the words are bits and not keys.

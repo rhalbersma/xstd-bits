@@ -13,6 +13,7 @@
 #include <xstd/bits/detail/intrin.hpp>                       // countl_zero, countr_zero, popcount
 #include <xstd/bits/detail/pred.hpp>                         // intersects, is_subset_of, not_equal_to
 #include <xstd/bits/detail/shift.hpp>                        // shl, shr
+#include <xstd/bits/from_bit_storage.hpp>                    // from_bit_storage_t
 #include <xstd/ints/concepts/unsigned_integer.hpp>           // unsigned_integer
 #include <xstd/ints/cstdlib/div.hpp>                         // div, div_result
 #include <xstd/ints/limits.hpp>                              // numeric_limits
@@ -205,6 +206,16 @@ public:
                 m_blocks.resize(blocks_for(n), zero);
         }
 
+        // flat_set's adopting constructor: the blocks move in whole, every bit a position, and no tail to clear.
+        [[nodiscard]] constexpr contiguous_bit_container(xstd::from_bit_storage_t, Blocks blocks) noexcept(std::is_nothrow_move_constructible_v<Blocks>)
+                requires has_stored_size
+                : m_size(std::ranges::size(blocks) * bits_per_block)
+                , m_blocks(std::move(blocks))
+        {
+                assert(num_blocks() <= max_num_blocks);
+                assert(not has_static_capacity or size() <= N);
+        }
+
         // boost's allocator arguments, deduced and matched, so a storage without one has no such constructor.
         template<class Alloc>
                 requires has_stored_size and std::same_as<Alloc, typename Blocks::allocator_type>
@@ -218,6 +229,16 @@ public:
                 : m_size(n)
                 , m_blocks(blocks_for(n), alloc)
         {}
+
+        // flat_set's allocator-extended adopting constructor: the blocks are moved into storage the allocator provides.
+        template<class Alloc>
+                requires has_stored_size and std::same_as<Alloc, typename Blocks::allocator_type>
+        [[nodiscard]] constexpr contiguous_bit_container(xstd::from_bit_storage_t, Blocks blocks, Alloc const& alloc)
+                : m_size(std::ranges::size(blocks) * bits_per_block)
+                , m_blocks(std::move(blocks), alloc)
+        {
+                assert(num_blocks() <= max_num_blocks);
+        }
 
         // [container.alloc.reqmts]'s allocator-extended copy and move; the moved-from is left empty.
         template<class Alloc>
