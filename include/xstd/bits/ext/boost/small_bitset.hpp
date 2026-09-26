@@ -16,7 +16,6 @@
 #include <cstddef>                                       // size_t
 #include <functional>                                    // hash
 #include <iterator>                                      // input_iterator
-#include <memory>                                        // allocator_traits
 #include <string>                                        // basic_string
 #include <string_view>                                   // basic_string_view
 #include <type_traits>                                   // is_nothrow_move_constructible_v, type_identity_t
@@ -86,14 +85,6 @@ public:
         [[nodiscard]] constexpr basic_small_bitset(BlockInputIterator first, BlockInputIterator last, allocator_type const& alloc = allocator_type())
                 : base_type(first, last, alloc)
         {}
-
-        [[nodiscard]] basic_small_bitset(basic_small_bitset const& b) = default;
-        [[nodiscard]] basic_small_bitset(basic_small_bitset&& b) = default;
-
-        ~basic_small_bitset() = default;
-
-        auto operator=(basic_small_bitset const& b) -> basic_small_bitset& = default;
-        auto operator=(basic_small_bitset&& b) noexcept(std::allocator_traits<allocator_type>::propagate_on_container_move_assignment::value or std::allocator_traits<allocator_type>::is_always_equal::value) -> basic_small_bitset& = default;
 
         // Not in boost::dynamic_bitset: [container.alloc.reqmts]'s allocator-extended copy and move.
         [[nodiscard]] constexpr basic_small_bitset(basic_small_bitset const& b, std::type_identity_t<allocator_type> const& alloc)

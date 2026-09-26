@@ -57,9 +57,6 @@ public:
                 : base_type(std::from_range, std::forward<R>(rg), a)
         {}
 
-        [[nodiscard]] basic_bit_set(basic_bit_set const& x) = default;
-        [[nodiscard]] basic_bit_set(basic_bit_set&& x) = default;
-
         [[nodiscard]] constexpr explicit basic_bit_set(Allocator const& a)
                 : base_type(a)
         {}
@@ -89,11 +86,6 @@ public:
         [[nodiscard]] constexpr basic_bit_set(std::initializer_list<value_type> il, Allocator const& a)
                 : basic_bit_set(il, key_compare(), a)
         {}
-
-        ~basic_bit_set() = default;
-
-        auto operator=(basic_bit_set const& x) -> basic_bit_set& = default;
-        auto operator=(basic_bit_set&& x) noexcept(std::allocator_traits<Allocator>::is_always_equal::value) -> basic_bit_set& = default;
 
         // Not in [set.cons]: flat_set's container constructor under the bit-storage tag, every bit a position.
         [[nodiscard]] constexpr basic_bit_set(from_bit_storage_t, std::vector<Block, Allocator> blocks) noexcept

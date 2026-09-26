@@ -323,6 +323,16 @@ BOOST_AUTO_TEST_CASE(TheShiftsSaturateAsStdBitsetDoes)
         BOOST_CHECK_EQUAL((w >> 1).to_string(), (s >> 1).to_string());
 }
 
+// The proxy copies and destroys trivially, and assigns the bit rather than rebinding, so it is not trivially copyable.
+BOOST_AUTO_TEST_CASE(TheProxyCopiesTriviallyAndAssignsTheBit)
+{
+        using reference = xstd::basic_bitset<std::uint8_t, 8>::reference;
+        static_assert(std::is_trivially_copy_constructible_v<reference> and std::is_nothrow_copy_constructible_v<reference>);
+        static_assert(std::is_trivially_destructible_v<reference>);
+        static_assert(not std::is_trivially_copy_assignable_v<reference> and not std::is_trivially_copyable_v<reference>);
+        BOOST_CHECK(true);
+}
+
 // The proxy writes and reads through the trait, and swaps as a value.
 BOOST_AUTO_TEST_CASE(TheProxyWritesThrough)
 {

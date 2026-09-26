@@ -20,7 +20,6 @@
 #include <functional>                                        // hash
 #include <initializer_list>                                  // initializer_list
 #include <iterator>                                          // input_iterator
-#include <memory>                                            // allocator_traits
 #include <ranges>                                            // from_range, from_range_t
 #include <type_traits>                                       // false_type, is_nothrow_move_constructible_v, type_identity_t
 #include <utility>                                           // forward, move
@@ -65,9 +64,6 @@ public:
                 : base_type(std::from_range, std::forward<R>(rg), a)
         {}
 
-        [[nodiscard]] basic_bit_small_vector(basic_bit_small_vector const& x) = default;
-        [[nodiscard]] basic_bit_small_vector(basic_bit_small_vector&& x) = default;
-
         [[nodiscard]] constexpr basic_bit_small_vector(basic_bit_small_vector const& x, std::type_identity_t<allocator_type> const& a)
                 : base_type(x, a)
         {}
@@ -79,11 +75,6 @@ public:
         [[nodiscard]] constexpr basic_bit_small_vector(std::initializer_list<bool> il, allocator_type const& a = allocator_type())
                 : base_type(il, a)
         {}
-
-        ~basic_bit_small_vector() = default;
-
-        auto operator=(basic_bit_small_vector const& x) -> basic_bit_small_vector& = default;
-        auto operator=(basic_bit_small_vector&& x) noexcept(std::allocator_traits<allocator_type>::propagate_on_container_move_assignment::value or std::allocator_traits<allocator_type>::is_always_equal::value) -> basic_bit_small_vector& = default;
 
         // Not in [vector.bool.pspc]: flat_set's container constructor under the bit-storage tag.
         [[nodiscard]] constexpr basic_bit_small_vector(from_bit_storage_t, block_container_type blocks) noexcept(std::is_nothrow_move_constructible_v<block_container_type>)

@@ -70,14 +70,6 @@ public:
                 : base_type(str, n, zero, one)
         {}
 
-        [[nodiscard]] basic_bitset(basic_bitset const& x) = default;
-        [[nodiscard]] basic_bitset(basic_bitset&& x) = default;
-
-        ~basic_bitset() = default;
-
-        auto operator=(basic_bitset const& x) -> basic_bitset& = default;
-        auto operator=(basic_bitset&& x) noexcept -> basic_bitset& = default;
-
         // Not in [bitset.cons]: words that are bit storage, integers wider than the ullong door included.
         template<class B>
                 requires std::constructible_from<base_type, from_bit_storage_t, B const&>

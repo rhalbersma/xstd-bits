@@ -62,17 +62,9 @@ public:
                 : base_type(std::from_range, std::forward<R>(rg))
         {}
 
-        [[nodiscard]] basic_bit_bounded_set(basic_bit_bounded_set const& x) = default;
-        [[nodiscard]] basic_bit_bounded_set(basic_bit_bounded_set&& x) = default;
-
         [[nodiscard]] constexpr basic_bit_bounded_set(std::initializer_list<value_type> il, key_compare const& /* comp */ = key_compare())
                 : base_type(il)
         {}
-
-        ~basic_bit_bounded_set() = default;
-
-        auto operator=(basic_bit_bounded_set const& x) -> basic_bit_bounded_set& = default;
-        auto operator=(basic_bit_bounded_set&& x) noexcept -> basic_bit_bounded_set& = default;
 
         // Not in [set.cons]: flat_set's container constructor under the bit-storage tag, every bit a position.
         [[nodiscard]] constexpr basic_bit_bounded_set(from_bit_storage_t, block_container_type blocks) noexcept

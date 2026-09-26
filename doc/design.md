@@ -1571,7 +1571,10 @@ none; [vector.bool.pspc] for `basic_bit_vector` and `basic_bit_small_vector`; [i
 three run-time bitsets; and for `basic_bit_array`, `std::array` being an aggregate, the default and initializer-list
 constructors its aggregate initialization stands for. What the clause lacks and the adaptor offers -- the
 `from_bit_storage` doors, and the allocator-extended copy and move `boost::dynamic_bitset` does without -- follows
-the standard ones, each marked as not in the clause. Each declares its own deduction guides and hidden `swap`, and
+the standard ones, each marked as not in the clause. The copy and move constructors, both assignments and the
+destructor are left to the compiler, which declares each as the adaptor underneath answers it, `noexcept` and
+triviality included: a static width stays trivially copyable, and a polymorphic allocator's move assignment stays
+potentially throwing, with nothing spelled on the owner to fall out of step. Each declares its own deduction guides and hidden `swap`, and
 specializes `std::hash`, Boost's `is_range` and `is_tuple_like` where it is a range, and for `basic_bit_array`
 `std::tuple_size` and `std::tuple_element`: a partial specialization on the adaptor never matches a class derived
 from it.

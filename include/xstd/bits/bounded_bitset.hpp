@@ -84,14 +84,6 @@ public:
                 : base_type(first, last)
         {}
 
-        [[nodiscard]] basic_bounded_bitset(basic_bounded_bitset const& b) = default;
-        [[nodiscard]] basic_bounded_bitset(basic_bounded_bitset&& b) noexcept = default;
-
-        ~basic_bounded_bitset() = default;
-
-        auto operator=(basic_bounded_bitset const& b) -> basic_bounded_bitset& = default;
-        auto operator=(basic_bounded_bitset&& b) noexcept -> basic_bounded_bitset& = default;
-
         // Not in boost::dynamic_bitset: flat_set's container constructor under the bit-storage tag.
         [[nodiscard]] constexpr basic_bounded_bitset(from_bit_storage_t, block_container_type blocks) noexcept
                 : base_type(from_bit_storage, std::move(blocks))

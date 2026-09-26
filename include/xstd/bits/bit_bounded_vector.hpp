@@ -63,17 +63,9 @@ public:
                 : base_type(std::from_range, std::forward<R>(rg))
         {}
 
-        [[nodiscard]] basic_bit_bounded_vector(basic_bit_bounded_vector const& x) = default;
-        [[nodiscard]] basic_bit_bounded_vector(basic_bit_bounded_vector&& x) noexcept = default;
-
         [[nodiscard]] constexpr basic_bit_bounded_vector(std::initializer_list<bool> il)
                 : base_type(il)
         {}
-
-        ~basic_bit_bounded_vector() = default;
-
-        auto operator=(basic_bit_bounded_vector const& x) -> basic_bit_bounded_vector& = default;
-        auto operator=(basic_bit_bounded_vector&& x) noexcept -> basic_bit_bounded_vector& = default;
 
         // Not in [inplace.vector.cons]: flat_set's container constructor under the bit-storage tag.
         [[nodiscard]] constexpr basic_bit_bounded_vector(from_bit_storage_t, block_container_type blocks) noexcept

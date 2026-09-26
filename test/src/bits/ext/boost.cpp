@@ -17,7 +17,9 @@
 #include <concepts>                                      // regular, same_as, totally_ordered
 #include <cstddef>                                       // size_t
 #include <cstdint>                                       // uint8_t
+#include <memory_resource>                               // polymorphic_allocator
 #include <ranges>                                        // bidirectional_range, random_access_range
+#include <type_traits>                                   // is_nothrow_move_assignable_v, is_nothrow_move_constructible_v
 
 // The one column whose storage comes from outside the standard library, kept off the umbrella so Boost stays opt-in.
 BOOST_AUTO_TEST_SUITE(ExtBoost)
@@ -59,6 +61,23 @@ BOOST_AUTO_TEST_CASE(TheUmbrellaReachesEveryReading)
         static_assert(std::ranges::bidirectional_range<xstd::bit_small_set<N>>);
         static_assert(std::ranges::random_access_range<xstd::bit_small_vector<N>>);
         static_assert(not std::ranges::range<xstd::small_bitset<N>>);
+        BOOST_CHECK(true);
+}
+
+// The implicit moves ask the small vector, whose move assignment may throw under a polymorphic allocator.
+BOOST_AUTO_TEST_CASE(TheMovesAreAsNothrowAsTheSmallVectors)
+{
+        static_assert(std::is_nothrow_move_constructible_v<xstd::bit_small_set<N>> and std::is_nothrow_move_assignable_v<xstd::bit_small_set<N>>);
+        static_assert(std::is_nothrow_move_constructible_v<xstd::bit_small_vector<N>> and std::is_nothrow_move_assignable_v<xstd::bit_small_vector<N>>);
+        static_assert(std::is_nothrow_move_constructible_v<xstd::small_bitset<N>> and std::is_nothrow_move_assignable_v<xstd::small_bitset<N>>);
+
+        using allocator_type = std::pmr::polymorphic_allocator<std::size_t>;
+        static_assert(std::is_nothrow_move_constructible_v<xstd::basic_bit_small_set<std::size_t, N, allocator_type>>);
+        static_assert(std::is_nothrow_move_constructible_v<xstd::basic_bit_small_vector<std::size_t, N, allocator_type>>);
+        static_assert(std::is_nothrow_move_constructible_v<xstd::basic_small_bitset<std::size_t, N, allocator_type>>);
+        static_assert(not std::is_nothrow_move_assignable_v<xstd::basic_bit_small_set<std::size_t, N, allocator_type>>);
+        static_assert(not std::is_nothrow_move_assignable_v<xstd::basic_bit_small_vector<std::size_t, N, allocator_type>>);
+        static_assert(not std::is_nothrow_move_assignable_v<xstd::basic_small_bitset<std::size_t, N, allocator_type>>);
         BOOST_CHECK(true);
 }
 

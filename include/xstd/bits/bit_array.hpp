@@ -43,14 +43,6 @@ public:
                 : base_type(il)
         {}
 
-        [[nodiscard]] basic_bit_array(basic_bit_array const& x) = default;
-        [[nodiscard]] basic_bit_array(basic_bit_array&& x) = default;
-
-        ~basic_bit_array() = default;
-
-        auto operator=(basic_bit_array const& x) -> basic_bit_array& = default;
-        auto operator=(basic_bit_array&& x) noexcept -> basic_bit_array& = default;
-
         // Not in [array]: words that are bit storage, read as this sequence's bools.
         template<class B>
                 requires std::constructible_from<base_type, from_bit_storage_t, B const&>

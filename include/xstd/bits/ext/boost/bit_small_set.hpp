@@ -20,7 +20,6 @@
 #include <functional>                                        // hash
 #include <initializer_list>                                  // initializer_list
 #include <iterator>                                          // input_iterator
-#include <memory>                                            // allocator_traits
 #include <ranges>                                            // from_range, from_range_t
 #include <type_traits>                                       // false_type, is_nothrow_move_constructible_v, type_identity_t
 #include <utility>                                           // forward, move
@@ -58,9 +57,6 @@ public:
                 : base_type(std::from_range, std::forward<R>(rg), a)
         {}
 
-        [[nodiscard]] basic_bit_small_set(basic_bit_small_set const& x) = default;
-        [[nodiscard]] basic_bit_small_set(basic_bit_small_set&& x) = default;
-
         [[nodiscard]] constexpr explicit basic_bit_small_set(allocator_type const& a)
                 : base_type(a)
         {}
@@ -90,11 +86,6 @@ public:
         [[nodiscard]] constexpr basic_bit_small_set(std::initializer_list<value_type> il, allocator_type const& a)
                 : basic_bit_small_set(il, key_compare(), a)
         {}
-
-        ~basic_bit_small_set() = default;
-
-        auto operator=(basic_bit_small_set const& x) -> basic_bit_small_set& = default;
-        auto operator=(basic_bit_small_set&& x) noexcept(std::allocator_traits<allocator_type>::propagate_on_container_move_assignment::value or std::allocator_traits<allocator_type>::is_always_equal::value) -> basic_bit_small_set& = default;
 
         // Not in [set.cons]: flat_set's container constructor under the bit-storage tag, every bit a position.
         [[nodiscard]] constexpr basic_bit_small_set(from_bit_storage_t, block_container_type blocks) noexcept(std::is_nothrow_move_constructible_v<block_container_type>)

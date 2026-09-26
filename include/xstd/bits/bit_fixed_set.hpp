@@ -58,17 +58,9 @@ public:
                 : base_type(std::from_range, std::forward<R>(rg))
         {}
 
-        [[nodiscard]] basic_bit_fixed_set(basic_bit_fixed_set const& x) = default;
-        [[nodiscard]] basic_bit_fixed_set(basic_bit_fixed_set&& x) = default;
-
         [[nodiscard]] constexpr basic_bit_fixed_set(std::initializer_list<value_type> il, key_compare const& /* comp */ = key_compare())
                 : base_type(il)
         {}
-
-        ~basic_bit_fixed_set() = default;
-
-        auto operator=(basic_bit_fixed_set const& x) -> basic_bit_fixed_set& = default;
-        auto operator=(basic_bit_fixed_set&& x) noexcept -> basic_bit_fixed_set& = default;
 
         // Not in [set.cons]: words that are bit storage, read as this set's positions.
         template<class B>
