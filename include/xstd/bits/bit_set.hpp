@@ -6,25 +6,25 @@
 #ifndef XSTD_BITS_BIT_SET_HPP
 #define XSTD_BITS_BIT_SET_HPP
 
-#include <xstd/bits/bit_set_adaptor.hpp>                   // bit_set_adaptor
-#include <xstd/bits/detail/container_compatible_range.hpp> // container_compatible_range
-#include <xstd/bits/detail/contiguous_bit_container.hpp>   // contiguous_bit_container
-#include <xstd/bits/detail/ownership.hpp>                  // storage
-#include <xstd/bits/detail/qualifies_as_allocator.hpp>     // qualifies_as_allocator
-#include <xstd/bits/detail/set_adaptor.hpp>                // set_adaptor
-#include <xstd/bits/from_bit_storage.hpp>                  // from_bit_storage, from_bit_storage_t
-#include <xstd/ints/concepts/unsigned_integer.hpp>         // unsigned_integer
-#include <boost/container_hash/is_range.hpp>               // is_range
-#include <boost/container_hash/is_tuple_like.hpp>          // is_tuple_like
-#include <cstddef>                                         // size_t
-#include <functional>                                      // hash, less
-#include <initializer_list>                                // initializer_list
-#include <iterator>                                        // input_iterator
-#include <memory>                                          // allocator, allocator_traits
-#include <ranges>                                          // from_range, from_range_t, input_range
-#include <type_traits>                                     // false_type, type_identity_t
-#include <utility>                                         // forward, move
-#include <vector>                                          // vector
+#include <xstd/bits/bit_set_adaptor.hpp>                     // bit_set_adaptor
+#include <xstd/bits/detail/contiguous_bit_container.hpp>     // contiguous_bit_container
+#include <xstd/bits/detail/ownership.hpp>                    // storage
+#include <xstd/bits/detail/set_adaptor.hpp>                  // set_adaptor
+#include <xstd/bits/from_bit_storage.hpp>                    // from_bit_storage, from_bit_storage_t
+#include <xstd/ints/concepts/unsigned_integer.hpp>           // unsigned_integer
+#include <xstd/misc/concepts/container_compatible_range.hpp> // container_compatible_range
+#include <xstd/misc/concepts/simple_allocator.hpp>           // simple_allocator
+#include <boost/container_hash/is_range.hpp>                 // is_range
+#include <boost/container_hash/is_tuple_like.hpp>            // is_tuple_like
+#include <cstddef>                                           // size_t
+#include <functional>                                        // hash, less
+#include <initializer_list>                                  // initializer_list
+#include <iterator>                                          // input_iterator
+#include <memory>                                            // allocator, allocator_traits
+#include <ranges>                                            // from_range, from_range_t, input_range
+#include <type_traits>                                       // false_type, type_identity_t
+#include <utility>                                           // forward, move
+#include <vector>                                            // vector
 
 namespace xstd {
 
@@ -53,7 +53,7 @@ public:
                 : base_type(first, last, a)
         {}
 
-        template<bits::detail::container_compatible_range<value_type> R>
+        template<xstd::container_compatible_range<value_type> R>
         [[nodiscard]] constexpr basic_bit_set(std::from_range_t, R&& rg, key_compare const& /* comp */ = key_compare(), Allocator const& a = Allocator())
                 : base_type(std::from_range, std::forward<R>(rg), a)
         {}
@@ -82,7 +82,7 @@ public:
                 : basic_bit_set(first, last, key_compare(), a)
         {}
 
-        template<bits::detail::container_compatible_range<value_type> R>
+        template<xstd::container_compatible_range<value_type> R>
         [[nodiscard]] constexpr basic_bit_set(std::from_range_t, R&& rg, Allocator const& a)
                 : basic_bit_set(std::from_range, std::forward<R>(rg), key_compare(), a)
         {}
@@ -119,27 +119,27 @@ using bit_set = basic_bit_set<std::size_t>;
 
 // [set.overview]'s guides, in its order: Block from the allocator, std::size_t by default, the key being std::size_t.
 template<std::input_iterator InputIterator, class Compare = std::less<std::size_t>, class Allocator = std::allocator<std::size_t>>
-        requires (not bits::detail::qualifies_as_allocator<Compare>) and bits::detail::qualifies_as_allocator<Allocator>
+        requires (not xstd::simple_allocator<Compare>) and xstd::simple_allocator<Allocator>
 basic_bit_set(InputIterator, InputIterator, Compare = Compare(), Allocator = Allocator()) -> basic_bit_set<typename std::allocator_traits<Allocator>::value_type, Allocator>;
 
 template<std::ranges::input_range R, class Compare = std::less<std::size_t>, class Allocator = std::allocator<std::size_t>>
-        requires (not bits::detail::qualifies_as_allocator<Compare>) and bits::detail::qualifies_as_allocator<Allocator>
+        requires (not xstd::simple_allocator<Compare>) and xstd::simple_allocator<Allocator>
 basic_bit_set(std::from_range_t, R&&, Compare = Compare(), Allocator = Allocator()) -> basic_bit_set<typename std::allocator_traits<Allocator>::value_type, Allocator>;
 
 template<class Key, class Compare = std::less<std::size_t>, class Allocator = std::allocator<std::size_t>>
-        requires (not bits::detail::qualifies_as_allocator<Compare>) and bits::detail::qualifies_as_allocator<Allocator>
+        requires (not xstd::simple_allocator<Compare>) and xstd::simple_allocator<Allocator>
 basic_bit_set(std::initializer_list<Key>, Compare = Compare(), Allocator = Allocator()) -> basic_bit_set<typename std::allocator_traits<Allocator>::value_type, Allocator>;
 
 template<std::input_iterator InputIterator, class Allocator>
-        requires bits::detail::qualifies_as_allocator<Allocator>
+        requires xstd::simple_allocator<Allocator>
 basic_bit_set(InputIterator, InputIterator, Allocator) -> basic_bit_set<typename std::allocator_traits<Allocator>::value_type, Allocator>;
 
 template<std::ranges::input_range R, class Allocator>
-        requires bits::detail::qualifies_as_allocator<Allocator>
+        requires xstd::simple_allocator<Allocator>
 basic_bit_set(std::from_range_t, R&&, Allocator) -> basic_bit_set<typename std::allocator_traits<Allocator>::value_type, Allocator>;
 
 template<class Key, class Allocator>
-        requires bits::detail::qualifies_as_allocator<Allocator>
+        requires xstd::simple_allocator<Allocator>
 basic_bit_set(std::initializer_list<Key>, Allocator) -> basic_bit_set<typename std::allocator_traits<Allocator>::value_type, Allocator>;
 
 // The adaptor named by its storage stays the door for a std::vector of blocks passed to it directly.
