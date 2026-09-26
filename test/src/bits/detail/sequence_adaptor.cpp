@@ -3,39 +3,38 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/bit_exchange.hpp>                      // casts_between, casts_from, exchanges_to_bits
-#include <test/block_types.hpp>                       // graded_extents
-#include <xstd/bits/bit/bit_cast.hpp>                 // bit_cast
-#include <xstd/bits/bit_array.hpp>                    // bit_array
-#include <xstd/bits/bit_sequence_adaptor.hpp>         // swap
-#include <xstd/bits/bit_span.hpp>                     // bit_span
-#include <xstd/bits/bit_subspan.hpp>                  // bit_subspan
-#include <xstd/bits/bit_vector.hpp>                   // bit_vector
-#include <xstd/bits/detail/contiguous_bit_array.hpp>  // contiguous_bit_array
-#include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
-#include <xstd/bits/detail/ownership.hpp>             // storage
-#include <xstd/bits/detail/sequence_adaptor.hpp>      // sequence_adaptor
-#include <xstd/bits/from_bit_storage.hpp>             // from_bit_storage
-#include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <algorithm>                                  // all_of, any_of, count, equal, lexicographical_compare_three_way, mismatch, none_of
-#include <array>                                      // array
-#include <bitset>                                     // bitset
-#include <compare>                                    // strong_ordering
-#include <concepts>                                   // copyable, equality_comparable, regular, same_as, totally_ordered
-#include <cstddef>                                    // ptrdiff_t, size_t
-#include <cstdint>                                    // uint64_t
-#include <iterator>                                   // reverse_iterator
-#include <limits>                                     // numeric_limits
-#include <ranges>                                     // equal, iota, random_access_range, transform
-#include <span>                                       // dynamic_extent
-#include <stdexcept>                                  // length_error, out_of_range
-#include <type_traits>                                // is_const_v, is_constructible_v, is_convertible_v
-#include <utility>                                    // move, pair
-#include <vector>                                     // vector
+#include <test/bit_exchange.hpp>                         // casts_between, casts_from, exchanges_to_bits
+#include <test/block_types.hpp>                          // graded_extents
+#include <xstd/bits/bit/bit_cast.hpp>                    // bit_cast
+#include <xstd/bits/bit_array.hpp>                       // bit_array
+#include <xstd/bits/bit_sequence_adaptor.hpp>            // swap
+#include <xstd/bits/bit_span.hpp>                        // bit_span
+#include <xstd/bits/bit_subspan.hpp>                     // bit_subspan
+#include <xstd/bits/bit_vector.hpp>                      // bit_vector
+#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
+#include <xstd/bits/detail/ownership.hpp>                // storage
+#include <xstd/bits/detail/sequence_adaptor.hpp>         // sequence_adaptor
+#include <xstd/bits/from_bit_storage.hpp>                // from_bit_storage
+#include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
+#include <algorithm>                                     // all_of, any_of, count, equal, lexicographical_compare_three_way, mismatch, none_of
+#include <array>                                         // array
+#include <bitset>                                        // bitset
+#include <compare>                                       // strong_ordering
+#include <concepts>                                      // copyable, equality_comparable, regular, same_as, totally_ordered
+#include <cstddef>                                       // ptrdiff_t, size_t
+#include <cstdint>                                       // uint64_t
+#include <iterator>                                      // reverse_iterator
+#include <limits>                                        // numeric_limits
+#include <ranges>                                        // equal, iota, random_access_range, transform
+#include <span>                                          // dynamic_extent
+#include <stdexcept>                                     // length_error, out_of_range
+#include <type_traits>                                   // is_const_v, is_constructible_v, is_convertible_v
+#include <utility>                                       // move, pair
+#include <vector>                                        // vector
 
 namespace {
 
-using Storage = xstd::bits::detail::contiguous_bit_array<std::uint64_t, 100>;
+using Storage = xstd::bits::detail::contiguous_bit_container<std::array<std::uint64_t, 2>, 100>;
 using Owner = xstd::basic_bit_array<std::uint64_t, 100>;
 using View = xstd::bits::detail::sequence_adaptor<Storage, xstd::bits::detail::storage::borrowed, xstd::bits::detail::window::all>;
 using Reader = xstd::bits::detail::sequence_adaptor<Storage const, xstd::bits::detail::storage::borrowed, xstd::bits::detail::window::all>;
@@ -55,7 +54,7 @@ template<class Seq>
         return {s.begin(), s.end()};
 }
 
-using DynamicOctet = xstd::bits::detail::sequence_adaptor<xstd::bits::detail::contiguous_bit_vector<std::uint8_t>, xstd::bits::detail::storage::owned, xstd::bits::detail::window::all>;
+using DynamicOctet = xstd::bits::detail::sequence_adaptor<xstd::bits::detail::contiguous_bit_container<std::vector<std::uint8_t>>, xstd::bits::detail::storage::owned, xstd::bits::detail::window::all>;
 
 // Every (size, pattern) pair as a sequence and the vector<bool> modelling it, so the comparison is one loop.
 [[nodiscard]] auto dynamic_probes()
@@ -281,8 +280,8 @@ constexpr bool can_grow = requires (X& x) { x.push_back(true); x.pop_back(); x.r
 // Growth is the owner's over storage that grows; a static width and a view have none of it.
 BOOST_AUTO_TEST_CASE(GrowthIsTheOwnersOverStorageThatGrows)
 {
-        using Dynamic = xstd::bits::detail::sequence_adaptor<xstd::bits::detail::contiguous_bit_vector<std::uint64_t>, xstd::bits::detail::storage::owned, xstd::bits::detail::window::all>;
-        using Span = xstd::bits::detail::sequence_adaptor<xstd::bits::detail::contiguous_bit_vector<std::uint64_t>, xstd::bits::detail::storage::borrowed, xstd::bits::detail::window::all>;
+        using Dynamic = xstd::bits::detail::sequence_adaptor<xstd::bits::detail::contiguous_bit_container<std::vector<std::uint64_t>>, xstd::bits::detail::storage::owned, xstd::bits::detail::window::all>;
+        using Span = xstd::bits::detail::sequence_adaptor<xstd::bits::detail::contiguous_bit_container<std::vector<std::uint64_t>>, xstd::bits::detail::storage::borrowed, xstd::bits::detail::window::all>;
 
         static_assert(can_grow<Dynamic>);
         static_assert(not can_grow<Owner>);
@@ -293,8 +292,8 @@ BOOST_AUTO_TEST_CASE(GrowthIsTheOwnersOverStorageThatGrows)
         BOOST_CHECK_EQUAL(d.size(), 4UZ);
         BOOST_CHECK(std::ranges::equal(d, std::vector<bool>{true, true, true, false}));
         // What a distance can name: a random access range counts its positions by a difference_type.
-        BOOST_CHECK_EQUAL(d.max_size(), xstd::bits::detail::contiguous_bit_vector<std::uint64_t>::max_addressable_width);
-        BOOST_CHECK_LT(d.max_size(), xstd::bits::detail::contiguous_bit_vector<std::uint64_t>().max_size());
+        BOOST_CHECK_EQUAL(d.max_size(), xstd::bits::detail::contiguous_bit_container<std::vector<std::uint64_t>>::max_addressable_width);
+        BOOST_CHECK_LT(d.max_size(), xstd::bits::detail::contiguous_bit_container<std::vector<std::uint64_t>>().max_size());
         BOOST_CHECK_THROW(d.resize(d.max_size() + 1UZ), std::length_error);
         BOOST_CHECK_EQUAL(Owner().max_size(), 100UZ);
 
@@ -311,7 +310,7 @@ BOOST_AUTO_TEST_CASE(GrowthIsTheOwnersOverStorageThatGrows)
 // at() is the reading's one checked door, measured against the width that grows.
 BOOST_AUTO_TEST_CASE(AtAnswersAtARunTimeWidthToo)
 {
-        auto d = xstd::bits::detail::sequence_adaptor<xstd::bits::detail::contiguous_bit_vector<std::uint64_t>, xstd::bits::detail::storage::owned, xstd::bits::detail::window::all>(3, true);
+        auto d = xstd::bits::detail::sequence_adaptor<xstd::bits::detail::contiguous_bit_container<std::vector<std::uint64_t>>, xstd::bits::detail::storage::owned, xstd::bits::detail::window::all>(3, true);
         BOOST_CHECK_THROW(static_cast<void>(d.at(3UZ)), std::out_of_range);
         d.push_back(false);
         BOOST_CHECK(d.at(3UZ) == false);
@@ -320,7 +319,7 @@ BOOST_AUTO_TEST_CASE(AtAnswersAtARunTimeWidthToo)
 
 namespace {
 
-using Dynamic = xstd::bits::detail::sequence_adaptor<xstd::bits::detail::contiguous_bit_vector<std::uint64_t>, xstd::bits::detail::storage::owned, xstd::bits::detail::window::all>;
+using Dynamic = xstd::bits::detail::sequence_adaptor<xstd::bits::detail::contiguous_bit_container<std::vector<std::uint64_t>>, xstd::bits::detail::storage::owned, xstd::bits::detail::window::all>;
 
 // One functor at namespace scope, so the packing tier is instantiated once rather than once per closure.
 constexpr auto every_third = [](std::size_t i) -> bool { return i % 3 == 0; };
@@ -381,8 +380,8 @@ BOOST_AUTO_TEST_CASE(AZeroWidthSequenceIsEmpty)
 {
         auto const a = xstd::basic_bit_array<std::uint8_t, 0>();
         BOOST_CHECK(a.empty() and a.begin() == a.end());
-        auto c = xstd::bits::detail::contiguous_bit_array<std::uint8_t, 0>();
-        auto const v = xstd::bits::detail::sequence_adaptor<xstd::bits::detail::contiguous_bit_array<std::uint8_t, 0>, xstd::bits::detail::storage::borrowed, xstd::bits::detail::window::all>(c);
+        auto c = xstd::bits::detail::contiguous_bit_container<std::array<std::uint8_t, 1>, 0>();
+        auto const v = xstd::bits::detail::sequence_adaptor<xstd::bits::detail::contiguous_bit_container<std::array<std::uint8_t, 1>, 0>, xstd::bits::detail::storage::borrowed, xstd::bits::detail::window::all>(c);
         BOOST_CHECK(v.empty() and v.begin() == v.end());
 }
 
@@ -479,7 +478,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheAggregatesAgreeWithTheModel, T, Graded)
 // The same over a window: a masked word at a time, at every offset and length, so both ends are exercised.
 BOOST_AUTO_TEST_CASE(TheAggregatesAgreeWithTheModelOnAWindowOfOurs)
 {
-        using Storage24 = xstd::bits::detail::contiguous_bit_array<std::uint8_t, 24>;
+        using Storage24 = xstd::bits::detail::contiguous_bit_container<std::array<std::uint8_t, 3>, 24>;
         auto disagreements = 0UZ;
         for (auto const p : std::views::iota(0UZ, 6UZ)) {
                 auto c = Storage24();

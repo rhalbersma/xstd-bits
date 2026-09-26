@@ -3,20 +3,20 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/sequence/concepts.hpp>                                 // bit_sequence
-#include <test/set/concepts.hpp>                                      // bit_set
-#include <xstd/bits/bit_storage.hpp>                                  // bit_storage, owned_bit_storage, resizable_bit_storage
-#include <xstd/bits/detail/contiguous_bit_container.hpp>              // contiguous_bit_container, num_blocks_v
-#include <xstd/bits/ext/boost.hpp>                                    // bit_small_set, bit_small_vector, small_bitset
-#include <xstd/bits/ext/boost/detail/contiguous_bit_small_vector.hpp> // contiguous_bit_small_vector
-#include <boost/container/new_allocator.hpp>                          // new_allocator
-#include <boost/container/small_vector.hpp>                           // small_vector
-#include <boost/container/static_vector.hpp>                          // static_vector
-#include <boost/test/unit_test.hpp>                                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
-#include <concepts>                                                   // regular, same_as, totally_ordered
-#include <cstddef>                                                    // size_t
-#include <cstdint>                                                    // uint8_t
-#include <ranges>                                                     // bidirectional_range, random_access_range
+#include <test/sequence/concepts.hpp>                    // bit_sequence
+#include <test/set/concepts.hpp>                         // bit_set
+#include <xstd/bits/bit_sequence_adaptor.hpp>            // bit_sequence_adaptor
+#include <xstd/bits/bit_storage.hpp>                     // bit_storage, owned_bit_storage, resizable_bit_storage
+#include <xstd/bits/detail/contiguous_bit_container.hpp> // num_blocks_v
+#include <xstd/bits/ext/boost.hpp>                       // bit_small_set, bit_small_vector, small_bitset
+#include <boost/container/new_allocator.hpp>             // new_allocator
+#include <boost/container/small_vector.hpp>              // small_vector
+#include <boost/container/static_vector.hpp>             // static_vector
+#include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
+#include <concepts>                                      // regular, same_as, totally_ordered
+#include <cstddef>                                       // size_t
+#include <cstdint>                                       // uint8_t
+#include <ranges>                                        // bidirectional_range, random_access_range
 
 // The one column whose storage comes from outside the standard library, kept off the umbrella so Boost stays opt-in.
 BOOST_AUTO_TEST_SUITE(ExtBoost)
@@ -43,7 +43,7 @@ BOOST_AUTO_TEST_CASE(TheSmallVectorIsBlocksAStorageCanHold)
 BOOST_AUTO_TEST_CASE(TheCapacityIsBitsAndTheStorageIsBlocks)
 {
         using Blocks = boost::container::small_vector<std::size_t, xstd::bits::detail::num_blocks_v<std::size_t, N>, boost::container::new_allocator<std::size_t>>;
-        static_assert(std::same_as<xstd::bits::detail::contiguous_bit_small_vector<std::size_t, N, boost::container::new_allocator<std::size_t>>, xstd::bits::detail::contiguous_bit_container<Blocks>>);
+        static_assert(std::same_as<xstd::bit_small_vector<N>, xstd::bit_sequence_adaptor<Blocks>>);
         static_assert(xstd::bits::detail::num_blocks_v<std::uint8_t, 24> == 3);
         BOOST_CHECK(true);
 }

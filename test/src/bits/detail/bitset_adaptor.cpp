@@ -3,42 +3,41 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/bit_exchange.hpp>                      // casts_between, casts_from, exchanges_bits, exchanges_from_bits, exchanges_to_bits
-#include <test/bitset/vocabulary.hpp>                 // vocabulary
-#include <xstd/bits/bit/bit_cast.hpp>                 // bit_cast
-#include <xstd/bits/bit_set_view.hpp>                 // bit_set_view
-#include <xstd/bits/bit_span.hpp>                     // bit_span
-#include <xstd/bits/bitset.hpp>                       // basic_bitset, bitset
-#include <xstd/bits/detail/bitset_adaptor.hpp>        // bitset_adaptor
-#include <xstd/bits/detail/contiguous_bit_array.hpp>  // contiguous_bit_array
-#include <xstd/bits/detail/contiguous_bit_vector.hpp> // contiguous_bit_vector
-#include <xstd/bits/dynamic_bitset.hpp>               // basic_dynamic_bitset
-#include <xstd/bits/from_bit_storage.hpp>             // from_bit_storage
-#include <boost/dynamic_bitset.hpp>                   // dynamic_bitset
-#include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <algorithm>                                  // copy, copy_backward, equal
-#include <array>                                      // array
-#include <bitset>                                     // bitset
-#include <compare>                                    // is_lt, strong_ordering
-#include <concepts>                                   // regular, same_as, totally_ordered
-#include <cstddef>                                    // size_t
-#include <cwchar>                                     // mbstate_t
-#include <cstdint>                                    // uint8_t, uint64_t
-#include <functional>                                 // hash
-#include <ios>                                        // streamoff
-#include <iosfwd>                                     // streampos
-#include <iterator>                                   // back_inserter, contiguous_iterator
-#include <limits>                                     // numeric_limits
-#include <list>                                       // list
-#include <ranges>                                     // equal, iota, range, reverse
-#include <sstream>                                    // istringstream
-#include <stdexcept>                                  // invalid_argument, out_of_range, overflow_error
-#include <string>                                     // char_traits, string
-#include <string_view>                                // basic_string_view
-#include <tuple>                                      // tuple
-#include <type_traits>                                // is_constructible_v, is_convertible_v, is_nothrow_*, is_trivially_*
-#include <utility>                                    // as_const, declval
-#include <vector>                                     // vector
+#include <test/bit_exchange.hpp>                         // casts_between, casts_from, exchanges_bits, exchanges_from_bits, exchanges_to_bits
+#include <test/bitset/vocabulary.hpp>                    // vocabulary
+#include <xstd/bits/bit/bit_cast.hpp>                    // bit_cast
+#include <xstd/bits/bit_set_view.hpp>                    // bit_set_view
+#include <xstd/bits/bit_span.hpp>                        // bit_span
+#include <xstd/bits/bitset.hpp>                          // basic_bitset, bitset
+#include <xstd/bits/detail/bitset_adaptor.hpp>           // bitset_adaptor
+#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
+#include <xstd/bits/dynamic_bitset.hpp>                  // basic_dynamic_bitset
+#include <xstd/bits/from_bit_storage.hpp>                // from_bit_storage
+#include <boost/dynamic_bitset.hpp>                      // dynamic_bitset
+#include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
+#include <algorithm>                                     // copy, copy_backward, equal
+#include <array>                                         // array
+#include <bitset>                                        // bitset
+#include <compare>                                       // is_lt, strong_ordering
+#include <concepts>                                      // regular, same_as, totally_ordered
+#include <cstddef>                                       // size_t
+#include <cwchar>                                        // mbstate_t
+#include <cstdint>                                       // uint8_t, uint64_t
+#include <functional>                                    // hash
+#include <ios>                                           // streamoff
+#include <iosfwd>                                        // streampos
+#include <iterator>                                      // back_inserter, contiguous_iterator
+#include <limits>                                        // numeric_limits
+#include <list>                                          // list
+#include <ranges>                                        // equal, iota, range, reverse
+#include <sstream>                                       // istringstream
+#include <stdexcept>                                     // invalid_argument, out_of_range, overflow_error
+#include <string>                                        // char_traits, string
+#include <string_view>                                   // basic_string_view
+#include <tuple>                                         // tuple
+#include <type_traits>                                   // is_constructible_v, is_convertible_v, is_nothrow_*, is_trivially_*
+#include <utility>                                       // as_const, declval
+#include <vector>                                        // vector
 
 // A program-defined char-like type, in a named namespace so its char_traits members have external linkage.
 namespace test_chars {
@@ -207,9 +206,9 @@ constexpr bool has_allocator = requires (X const& x) { sizeof(allocator_of<X>); 
 // Only our storages can be wrapped, and the refusal is nominal rather than about vocabulary.
 BOOST_AUTO_TEST_CASE(TheWrappedStoragesAreOursAndTheCounterpartsAreNot)
 {
-        static_assert(wrappable<xstd::bits::detail::contiguous_bit_array<std::uint8_t, 0>>);
-        static_assert(wrappable<xstd::bits::detail::contiguous_bit_array<std::uint64_t, 100>>);
-        static_assert(wrappable<xstd::bits::detail::contiguous_bit_vector<std::size_t>>);
+        static_assert(wrappable<xstd::bits::detail::contiguous_bit_container<std::array<std::uint8_t, 1>, 0>>);
+        static_assert(wrappable<xstd::bits::detail::contiguous_bit_container<std::array<std::uint64_t, 2>, 100>>);
+        static_assert(wrappable<xstd::bits::detail::contiguous_bit_container<std::vector<std::size_t>>>);
 
         // Not for want of the vocabulary: boost::dynamic_bitset speaks all of it and is still refused.
         static_assert(not wrappable<std::bitset<64>>);
@@ -221,8 +220,8 @@ BOOST_AUTO_TEST_CASE(TheWrappedStoragesAreOursAndTheCounterpartsAreNot)
 // The public name is built on the wrapper over a packed array, with the word type in the open.
 BOOST_AUTO_TEST_CASE(TheBitsetIsTheWrapperOverAPackedArray)
 {
-        static_assert(std::derived_from<xstd::basic_bitset<std::uint8_t, 9>, xstd::bits::detail::bitset_adaptor<xstd::bits::detail::contiguous_bit_array<std::uint8_t, 9>, xstd::basic_bitset<std::uint8_t, 9>>>);
-        static_assert(std::derived_from<xstd::bitset<64>, xstd::bits::detail::bitset_adaptor<xstd::bits::detail::contiguous_bit_array<std::size_t, 64>, xstd::bitset<64>>>);
+        static_assert(std::derived_from<xstd::basic_bitset<std::uint8_t, 9>, xstd::bits::detail::bitset_adaptor<xstd::bits::detail::contiguous_bit_container<std::array<std::uint8_t, 2>, 9>, xstd::basic_bitset<std::uint8_t, 9>>>);
+        static_assert(std::derived_from<xstd::bitset<64>, xstd::bits::detail::bitset_adaptor<xstd::bits::detail::contiguous_bit_container<std::array<std::size_t, 1>, 64>, xstd::bitset<64>>>);
 }
 
 using Static = std::tuple<xstd::basic_bitset<std::uint8_t, 0>, xstd::basic_bitset<std::uint8_t, 1>, xstd::basic_bitset<std::uint8_t, 64>, xstd::basic_bitset<std::uint8_t, 65>, xstd::basic_bitset<std::uint8_t, 128>, xstd::bitset<0>, xstd::bitset<64>, xstd::bitset<65>>;
@@ -906,7 +905,7 @@ BOOST_AUTO_TEST_SUITE_END()
 // The common vocabulary is structural: it asks the positional members, which the counterparts answer too.
 BOOST_AUTO_TEST_SUITE(TheStructuralQuestionIsNotTheNominalOne)
 
-static_assert(test::bitset::vocabulary<xstd::bits::detail::contiguous_bit_array<std::uint64_t, 64>>);
+static_assert(test::bitset::vocabulary<xstd::bits::detail::contiguous_bit_container<std::array<std::uint64_t, 1>, 64>>);
 static_assert(test::bitset::vocabulary<boost::dynamic_bitset<>>);
 static_assert(test::bitset::vocabulary<std::bitset<64>>);
 

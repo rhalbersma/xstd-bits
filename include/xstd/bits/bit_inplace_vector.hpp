@@ -13,17 +13,29 @@
 #include <xstd/bits/bit_sequence_adaptor.hpp>            // bit_sequence_adaptor
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // num_blocks_v
 #include <xstd/ints/concepts/unsigned_integer.hpp>       // unsigned_integer
+#include <xstd/ints/memory.hpp>                          // align_up
 #include <cstddef>                                       // size_t
 #include <inplace_vector>                                // inplace_vector
+#include <limits>                                        // numeric_limits
 
 namespace xstd {
 
 // The packed std::inplace_vector<bool, N> that P0843 declined to write, named after the container it packs.
 template<xstd::unsigned_integer Block, std::size_t N>
-using basic_bit_inplace_vector = bit_sequence_adaptor<std::inplace_vector<Block, bits::detail::num_blocks_v<Block, N>>>;
+using basic_bit_inplace_vector = bit_sequence_adaptor<std::inplace_vector<Block, bits::detail::num_blocks_v<Block, N>>, N>;
 
 template<std::size_t N>
 using bit_inplace_vector = basic_bit_inplace_vector<std::size_t, N>;
+
+namespace aligned {
+
+template<xstd::unsigned_integer Block, std::size_t N>
+using basic_bit_inplace_vector = xstd::basic_bit_inplace_vector<Block, xstd::align_up(N, static_cast<std::size_t>(std::numeric_limits<Block>::digits))>;
+
+template<std::size_t N>
+using bit_inplace_vector = basic_bit_inplace_vector<std::size_t, N>;
+
+} // namespace aligned
 
 } // namespace xstd
 

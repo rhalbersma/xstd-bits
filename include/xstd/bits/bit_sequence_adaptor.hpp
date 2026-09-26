@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_BIT_SEQUENCE_ADAPTOR_HPP
 #define XSTD_BITS_BIT_SEQUENCE_ADAPTOR_HPP
 
-#include <xstd/bits/bit_storage.hpp>                     // bit_storage_extent_v, owned_bit_storage, resizable_bit_storage
+#include <xstd/bits/bit_storage.hpp>                     // bit_storage_capacity_v, bit_storage_extent_v, owned_bit_storage, resizable_bit_storage
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // num_blocks_v
 #include <xstd/bits/detail/ownership.hpp>                // storage, window
 #include <xstd/bits/detail/sequence_adaptor.hpp>         // sequence_adaptor
@@ -25,7 +25,7 @@
 namespace xstd {
 
 // A sequence of bools packed into a storage of blocks it owns: std::vector<bool>'s reading over any block container.
-template<owned_bit_storage Blocks, std::size_t N = bit_storage_extent_v<Blocks>>
+template<owned_bit_storage Blocks, std::size_t N = bit_storage_capacity_v<Blocks>>
         requires (N != std::dynamic_extent) or resizable_bit_storage<Blocks>
 class bit_sequence_adaptor : public bits::detail::sequence_adaptor<bits::detail::owner_storage_t<Blocks, N>, bits::detail::storage::owned, bits::detail::window::all, bit_sequence_adaptor<Blocks, N>>
 {
