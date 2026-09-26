@@ -7,7 +7,7 @@
 #define XSTD_BITS_BIT_SET_ADAPTOR_HPP
 
 #include <xstd/bits/bit_storage.hpp>                     // bit_storage_capacity_v, bit_storage_extent_v, owned_bit_storage
-#include <xstd/bits/detail/contiguous_bit_container.hpp> // num_blocks_v, owner_extent
+#include <xstd/bits/detail/contiguous_bit_container.hpp> // num_blocks_v, owner_extent_v
 #include <xstd/bits/detail/ownership.hpp>                // storage
 #include <xstd/bits/detail/set_adaptor.hpp>              // set_adaptor
 #include <xstd/bits/detail/words.hpp>                    // owner_storage_t
@@ -24,7 +24,7 @@ namespace xstd {
 
 // A set of indices packed into a storage of blocks it owns: std::set<std::size_t>'s reading over any block container.
 template<owned_bit_storage Blocks, std::size_t N = bit_storage_capacity_v<Blocks>>
-        requires bits::detail::owner_extent<Blocks, N>
+        requires bits::detail::owner_extent_v<Blocks, N>
 class bit_set_adaptor : public bits::detail::set_adaptor<bits::detail::owner_storage_t<Blocks, N>, bits::detail::storage::owned, bit_set_adaptor<Blocks, N>>
 {
         using base_type = bits::detail::set_adaptor<bits::detail::owner_storage_t<Blocks, N>, bits::detail::storage::owned, bit_set_adaptor<Blocks, N>>;

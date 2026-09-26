@@ -95,13 +95,13 @@ consteval auto admits_owner_extent() noexcept
         return N != std::dynamic_extent;
 }
 
-// One atomic constraint, so alias deduction checks a value rather than normalizing a disjunction of concepts.
+// A value, not a concept: MSVC's alias deduction rejects the owners where their constraint names one.
 template<class Blocks, std::size_t N>
-concept owner_extent = admits_owner_extent<Blocks, N>();
+inline constexpr bool owner_extent_v = admits_owner_extent<Blocks, N>();
 
 // The one vehicle: it owns the unused-tail invariant, and has no iterators.
 template<class Blocks, std::size_t N = default_extent_v<Blocks>>
-        requires (std::ranges::contiguous_range<Blocks> and xstd::owned_bit_storage<Blocks> and owner_extent<Blocks, N>) or (borrowed_block_span<Blocks> and N == default_extent_v<Blocks>)
+        requires (std::ranges::contiguous_range<Blocks> and xstd::owned_bit_storage<Blocks> and owner_extent_v<Blocks, N>) or (borrowed_block_span<Blocks> and N == default_extent_v<Blocks>)
 class contiguous_bit_container : public bits::detail::allocator_base_type<Blocks>
 {
 public:
