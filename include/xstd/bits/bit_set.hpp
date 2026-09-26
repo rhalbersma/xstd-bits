@@ -6,24 +6,25 @@
 #ifndef XSTD_BITS_BIT_SET_HPP
 #define XSTD_BITS_BIT_SET_HPP
 
-#include <xstd/bits/bit_set_adaptor.hpp>                 // bit_set_adaptor
-#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
-#include <xstd/bits/detail/ownership.hpp>                // storage
-#include <xstd/bits/detail/set_adaptor.hpp>              // set_adaptor
-#include <xstd/bits/from_bit_storage.hpp>                // from_bit_storage, from_bit_storage_t
-#include <xstd/ints/concepts/unsigned_integer.hpp>       // unsigned_integer
-#include <boost/container_hash/is_range.hpp>             // is_range
-#include <boost/container_hash/is_tuple_like.hpp>        // is_tuple_like
-#include <concepts>                                      // constructible_from
-#include <cstddef>                                       // size_t
-#include <functional>                                    // hash, less
-#include <initializer_list>                              // initializer_list
-#include <iterator>                                      // input_iterator, iter_reference_t, sentinel_for
-#include <memory>                                        // allocator, allocator_traits
-#include <ranges>                                        // from_range, from_range_t, input_range, range_reference_t
-#include <type_traits>                                   // false_type, type_identity_t
-#include <utility>                                       // forward, move
-#include <vector>                                        // vector
+#include <xstd/bits/bit_set_adaptor.hpp>                   // bit_set_adaptor
+#include <xstd/bits/detail/container_compatible_range.hpp> // container_compatible_range
+#include <xstd/bits/detail/contiguous_bit_container.hpp>   // contiguous_bit_container
+#include <xstd/bits/detail/ownership.hpp>                  // storage
+#include <xstd/bits/detail/qualifies_as_allocator.hpp>     // qualifies_as_allocator
+#include <xstd/bits/detail/set_adaptor.hpp>                // set_adaptor
+#include <xstd/bits/from_bit_storage.hpp>                  // from_bit_storage, from_bit_storage_t
+#include <xstd/ints/concepts/unsigned_integer.hpp>         // unsigned_integer
+#include <boost/container_hash/is_range.hpp>               // is_range
+#include <boost/container_hash/is_tuple_like.hpp>          // is_tuple_like
+#include <cstddef>                                         // size_t
+#include <functional>                                      // hash, less
+#include <initializer_list>                                // initializer_list
+#include <iterator>                                        // input_iterator
+#include <memory>                                          // allocator, allocator_traits
+#include <ranges>                                          // from_range, from_range_t, input_range
+#include <type_traits>                                     // false_type, type_identity_t
+#include <utility>                                         // forward, move
+#include <vector>                                          // vector
 
 namespace xstd {
 
@@ -38,64 +39,70 @@ public:
         using typename base_type::key_compare;
         using typename base_type::value_type;
 
-        // [set.cons], line for line; key_compare is std::less and holds no state, so a comparator is taken and dropped.
-        [[nodiscard]] basic_bit_set() noexcept(noexcept(Allocator())) = default;
-
-        [[nodiscard]] constexpr explicit basic_bit_set(key_compare const& /* comp */, Allocator const& alloc = Allocator()) noexcept
-                : base_type(alloc)
+        // [set.cons], in [set.overview]'s order; key_compare is std::less and holds no state, so a comparator is dropped.
+        [[nodiscard]] constexpr basic_bit_set()
+                : basic_bit_set(key_compare())
         {}
 
-        template<std::input_iterator I, std::sentinel_for<I> S>
-                requires std::constructible_from<value_type, std::iter_reference_t<I>>
-        [[nodiscard]] constexpr basic_bit_set(I first, S last, key_compare const& /* comp */ = key_compare(), Allocator const& alloc = Allocator())
-                : base_type(first, last, alloc)
+        [[nodiscard]] constexpr explicit basic_bit_set(key_compare const& /* comp */, Allocator const& a = Allocator())
+                : base_type(a)
         {}
 
-        template<std::ranges::input_range R>
-                requires std::constructible_from<value_type, std::ranges::range_reference_t<R>>
-        [[nodiscard]] constexpr basic_bit_set(std::from_range_t, R&& rg, key_compare const& /* comp */ = key_compare(), Allocator const& alloc = Allocator())
-                : base_type(std::from_range, std::forward<R>(rg), alloc)
+        template<std::input_iterator InputIterator>
+        [[nodiscard]] constexpr basic_bit_set(InputIterator first, InputIterator last, key_compare const& /* comp */ = key_compare(), Allocator const& a = Allocator())
+                : base_type(first, last, a)
         {}
 
-        [[nodiscard]] constexpr explicit basic_bit_set(Allocator const& alloc) noexcept
-                : base_type(alloc)
+        template<bits::detail::container_compatible_range<value_type> R>
+        [[nodiscard]] constexpr basic_bit_set(std::from_range_t, R&& rg, key_compare const& /* comp */ = key_compare(), Allocator const& a = Allocator())
+                : base_type(std::from_range, std::forward<R>(rg), a)
         {}
 
-        [[nodiscard]] constexpr basic_bit_set(basic_bit_set const& other, std::type_identity_t<Allocator> const& alloc)
-                : base_type(other, alloc)
+        [[nodiscard]] basic_bit_set(basic_bit_set const& x) = default;
+        [[nodiscard]] basic_bit_set(basic_bit_set&& x) = default;
+
+        [[nodiscard]] constexpr explicit basic_bit_set(Allocator const& a)
+                : base_type(a)
         {}
 
-        [[nodiscard]] constexpr basic_bit_set(basic_bit_set&& other, std::type_identity_t<Allocator> const& alloc)
-                : base_type(std::move(other), alloc)
+        [[nodiscard]] constexpr basic_bit_set(basic_bit_set const& x, std::type_identity_t<Allocator> const& a)
+                : base_type(x, a)
         {}
 
-        [[nodiscard]] constexpr basic_bit_set(std::initializer_list<value_type> il, key_compare const& /* comp */ = key_compare(), Allocator const& alloc = Allocator())
-                : base_type(il, alloc)
+        [[nodiscard]] constexpr basic_bit_set(basic_bit_set&& x, std::type_identity_t<Allocator> const& a)
+                : base_type(std::move(x), a)
         {}
 
-        template<std::input_iterator I, std::sentinel_for<I> S>
-                requires std::constructible_from<value_type, std::iter_reference_t<I>>
-        [[nodiscard]] constexpr basic_bit_set(I first, S last, Allocator const& alloc)
-                : base_type(first, last, alloc)
+        [[nodiscard]] constexpr basic_bit_set(std::initializer_list<value_type> il, key_compare const& /* comp */ = key_compare(), Allocator const& a = Allocator())
+                : base_type(il, a)
         {}
 
-        template<std::ranges::input_range R>
-                requires std::constructible_from<value_type, std::ranges::range_reference_t<R>>
-        [[nodiscard]] constexpr basic_bit_set(std::from_range_t, R&& rg, Allocator const& alloc)
-                : base_type(std::from_range, std::forward<R>(rg), alloc)
+        template<std::input_iterator InputIterator>
+        [[nodiscard]] constexpr basic_bit_set(InputIterator first, InputIterator last, Allocator const& a)
+                : basic_bit_set(first, last, key_compare(), a)
         {}
 
-        [[nodiscard]] constexpr basic_bit_set(std::initializer_list<value_type> il, Allocator const& alloc)
-                : base_type(il, alloc)
+        template<bits::detail::container_compatible_range<value_type> R>
+        [[nodiscard]] constexpr basic_bit_set(std::from_range_t, R&& rg, Allocator const& a)
+                : basic_bit_set(std::from_range, std::forward<R>(rg), key_compare(), a)
         {}
 
-        // flat_set's container constructor under the bit-storage tag: the blocks move in, every bit a position.
+        [[nodiscard]] constexpr basic_bit_set(std::initializer_list<value_type> il, Allocator const& a)
+                : basic_bit_set(il, key_compare(), a)
+        {}
+
+        ~basic_bit_set() = default;
+
+        auto operator=(basic_bit_set const& x) -> basic_bit_set& = default;
+        auto operator=(basic_bit_set&& x) noexcept(std::allocator_traits<Allocator>::is_always_equal::value) -> basic_bit_set& = default;
+
+        // Not in [set.cons]: flat_set's container constructor under the bit-storage tag, every bit of the blocks a position.
         [[nodiscard]] constexpr basic_bit_set(from_bit_storage_t, std::vector<Block, Allocator> blocks) noexcept
                 : base_type(from_bit_storage, std::move(blocks))
         {}
 
-        [[nodiscard]] constexpr basic_bit_set(from_bit_storage_t, std::vector<Block, Allocator> blocks, Allocator const& alloc)
-                : base_type(from_bit_storage, std::move(blocks), alloc)
+        [[nodiscard]] constexpr basic_bit_set(from_bit_storage_t, std::vector<Block, Allocator> blocks, Allocator const& a)
+                : base_type(from_bit_storage, std::move(blocks), a)
         {}
 
         using base_type::operator=;
@@ -110,38 +117,30 @@ public:
 
 using bit_set = basic_bit_set<std::size_t>;
 
-// std::set's guides, with Block taken from the allocator where one is given and the machine word where none is.
-template<std::input_iterator I, std::sentinel_for<I> S>
-basic_bit_set(I, S, std::less<std::size_t> = std::less<std::size_t>()) -> basic_bit_set<std::size_t>;
+// [set.overview]'s guides, in its order: Block from the allocator, std::size_t by default, the key being std::size_t.
+template<std::input_iterator InputIterator, class Compare = std::less<std::size_t>, class Allocator = std::allocator<std::size_t>>
+        requires (not bits::detail::qualifies_as_allocator<Compare>) and bits::detail::qualifies_as_allocator<Allocator>
+basic_bit_set(InputIterator, InputIterator, Compare = Compare(), Allocator = Allocator()) -> basic_bit_set<typename std::allocator_traits<Allocator>::value_type, Allocator>;
 
-template<std::input_iterator I, std::sentinel_for<I> S, class Allocator>
-        requires xstd::unsigned_integer<typename std::allocator_traits<Allocator>::value_type>
-basic_bit_set(I, S, std::less<std::size_t>, Allocator) -> basic_bit_set<typename std::allocator_traits<Allocator>::value_type, Allocator>;
+template<std::ranges::input_range R, class Compare = std::less<std::size_t>, class Allocator = std::allocator<std::size_t>>
+        requires (not bits::detail::qualifies_as_allocator<Compare>) and bits::detail::qualifies_as_allocator<Allocator>
+basic_bit_set(std::from_range_t, R&&, Compare = Compare(), Allocator = Allocator()) -> basic_bit_set<typename std::allocator_traits<Allocator>::value_type, Allocator>;
 
-template<std::input_iterator I, std::sentinel_for<I> S, class Allocator>
-        requires xstd::unsigned_integer<typename std::allocator_traits<Allocator>::value_type>
-basic_bit_set(I, S, Allocator) -> basic_bit_set<typename std::allocator_traits<Allocator>::value_type, Allocator>;
+template<class Key, class Compare = std::less<std::size_t>, class Allocator = std::allocator<std::size_t>>
+        requires (not bits::detail::qualifies_as_allocator<Compare>) and bits::detail::qualifies_as_allocator<Allocator>
+basic_bit_set(std::initializer_list<Key>, Compare = Compare(), Allocator = Allocator()) -> basic_bit_set<typename std::allocator_traits<Allocator>::value_type, Allocator>;
 
-template<std::ranges::input_range R>
-basic_bit_set(std::from_range_t, R&&, std::less<std::size_t> = std::less<std::size_t>()) -> basic_bit_set<std::size_t>;
-
-template<std::ranges::input_range R, class Allocator>
-        requires xstd::unsigned_integer<typename std::allocator_traits<Allocator>::value_type>
-basic_bit_set(std::from_range_t, R&&, std::less<std::size_t>, Allocator) -> basic_bit_set<typename std::allocator_traits<Allocator>::value_type, Allocator>;
+template<std::input_iterator InputIterator, class Allocator>
+        requires bits::detail::qualifies_as_allocator<Allocator>
+basic_bit_set(InputIterator, InputIterator, Allocator) -> basic_bit_set<typename std::allocator_traits<Allocator>::value_type, Allocator>;
 
 template<std::ranges::input_range R, class Allocator>
-        requires xstd::unsigned_integer<typename std::allocator_traits<Allocator>::value_type>
+        requires bits::detail::qualifies_as_allocator<Allocator>
 basic_bit_set(std::from_range_t, R&&, Allocator) -> basic_bit_set<typename std::allocator_traits<Allocator>::value_type, Allocator>;
 
-basic_bit_set(std::initializer_list<std::size_t>, std::less<std::size_t> = std::less<std::size_t>()) -> basic_bit_set<std::size_t>;
-
-template<class Allocator>
-        requires xstd::unsigned_integer<typename std::allocator_traits<Allocator>::value_type>
-basic_bit_set(std::initializer_list<std::size_t>, std::less<std::size_t>, Allocator) -> basic_bit_set<typename std::allocator_traits<Allocator>::value_type, Allocator>;
-
-template<class Allocator>
-        requires xstd::unsigned_integer<typename std::allocator_traits<Allocator>::value_type>
-basic_bit_set(std::initializer_list<std::size_t>, Allocator) -> basic_bit_set<typename std::allocator_traits<Allocator>::value_type, Allocator>;
+template<class Key, class Allocator>
+        requires bits::detail::qualifies_as_allocator<Allocator>
+basic_bit_set(std::initializer_list<Key>, Allocator) -> basic_bit_set<typename std::allocator_traits<Allocator>::value_type, Allocator>;
 
 // The adaptor named by its storage stays the door for a std::vector of blocks passed to it directly.
 template<xstd::unsigned_integer Block, class Allocator>

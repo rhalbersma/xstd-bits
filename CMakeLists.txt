@@ -94,6 +94,8 @@ target_sources(
         include/xstd/bits/detail/bidirectional.hpp
         include/xstd/bits/detail/contiguous_bit_container.hpp
         include/xstd/bits/detail/borrowed_block_span.hpp
+        include/xstd/bits/detail/container_compatible_range.hpp
+        include/xstd/bits/detail/qualifies_as_allocator.hpp
         include/xstd/bits/detail/functor.hpp
         include/xstd/bits/detail/hash.hpp
         include/xstd/bits/detail/intrin.hpp
