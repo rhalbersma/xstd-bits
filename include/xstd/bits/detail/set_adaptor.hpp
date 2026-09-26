@@ -10,7 +10,7 @@
 #include <xstd/bits/detail/allocator_base_type.hpp>      // allocator_base_type, allocator_param_t, has_allocator_v
 #include <xstd/bits/detail/bidirectional.hpp>            // bidirectional_bit_iterator, bidirectional_bit_reference
 #include <xstd/bits/detail/borrowed_bits.hpp>            // borrow_bits, borrowable_word, borrowable_words, borrowed_bits_t
-#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
+#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container, contiguous_bit_container_type
 #include <xstd/bits/detail/functor.hpp>                  // decay_copy
 #include <xstd/bits/detail/hash.hpp>                     // hash_append_bits, hash_append_positions, std_hash
 #include <xstd/bits/detail/intrin.hpp>                   // countl_zero, countr_zero
@@ -19,7 +19,6 @@
 #include <xstd/bits/detail/storage_ptr.hpp>              // storage_ref_t
 #include <xstd/bits/detail/zero_width.hpp>               // zero_width
 #include <xstd/bits/from_bit_storage.hpp>                // from_bit_storage_t
-#include <xstd/misc/concepts/specialization_of.hpp>      // specialization_of_TN
 #include <xstd/misc/type_traits/empty_base_type.hpp>     // empty_base_type
 #include <boost/container_hash/is_range.hpp>             // is_range
 #include <boost/hash2/hash_append.hpp>                   // hash_append_tag
@@ -111,7 +110,7 @@ constexpr auto walk_blocks_descending(Bits const& c, F& f)
 
 } // namespace set
 
-template<specialization_of_TN<contiguous_bit_container> Bits, storage Store = storage::owned, class Derived = void>
+template<contiguous_bit_container_type Bits, storage Store = storage::owned, class Derived = void>
 class set_adaptor : public std::conditional_t<owns(Store), allocator_base_type<std::remove_const_t<Bits>>, xstd::empty_base_type<>>
 {
         static constexpr bool is_owner = owns(Store);
@@ -136,7 +135,7 @@ class set_adaptor : public std::conditional_t<owns(Store), allocator_base_type<s
         friend Derived;
 
         // A view refers into this owner's storage, and only a reading that can view it is named.
-        template<specialization_of_TN<contiguous_bit_container>, storage, class>
+        template<contiguous_bit_container_type, storage, class>
         friend class set_adaptor;
 
         // The value under the set reading: the bits at a static width, the positions at a run-time one.

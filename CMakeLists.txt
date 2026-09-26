@@ -35,7 +35,7 @@ if(NOT xstd-ints_FOUND)
     FetchContent_MakeAvailable(xstd-ints)
 endif()
 
-# xstd-misc supplies conditional_data_member_t and XSTD_NO_UNIQUE_ADDRESS, which contiguous_bit_container uses to carry a run-time width without paying for it under a compile-time one, and specialization_of_TN, the concept the adaptors name their storage by.
+# xstd-misc supplies conditional_data_member_t and XSTD_NO_UNIQUE_ADDRESS, which contiguous_bit_container uses to carry a run-time width without paying for it under a compile-time one.
 find_package(xstd-misc 0.1.0 CONFIG QUIET)
 if(NOT xstd-misc_FOUND)
     include(FetchContent)
