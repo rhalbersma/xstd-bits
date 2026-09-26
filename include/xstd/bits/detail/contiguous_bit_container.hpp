@@ -37,7 +37,7 @@
 #include <source_location>                                   // source_location
 #include <span>                                              // dynamic_extent, span
 #include <stdexcept>                                         // length_error
-#include <type_traits>                                       // conditional_t, is_const_v, is_nothrow_constructible_v, is_nothrow_move_assignable_v, is_nothrow_move_constructible_v, remove_reference_t
+#include <type_traits>                                       // conditional_t, is_const_v, is_nothrow_constructible_v, is_nothrow_move_assignable_v, is_nothrow_move_constructible_v, remove_const_t, remove_reference_t
 #include <utility>                                           // exchange, move, pair
 
 namespace xstd::bits::detail {
@@ -96,7 +96,7 @@ consteval auto admits_owner_extent() noexcept
         return N != std::dynamic_extent;
 }
 
-// The container's own check, left off the owners' heads, whose alias deduction MSVC fails when they carry it.
+// The container's own check, kept off the owners' heads, which constrain the block type alone.
 template<class Blocks, std::size_t N>
 inline constexpr bool owner_extent_v = admits_owner_extent<Blocks, N>();
 
@@ -1616,6 +1616,16 @@ private:
                 );
         }
 };
+
+// The one vehicle and nothing else, const where a view over a const owner names it.
+template<class T>
+inline constexpr bool is_contiguous_bit_container_v = false;
+
+template<class Blocks, std::size_t N>
+inline constexpr bool is_contiguous_bit_container_v<contiguous_bit_container<Blocks, N>> = true;
+
+template<class T>
+concept contiguous_bit_container_type = is_contiguous_bit_container_v<std::remove_const_t<T>>;
 
 } // namespace xstd::bits::detail
 

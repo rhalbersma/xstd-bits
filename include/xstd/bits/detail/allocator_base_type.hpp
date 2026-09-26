@@ -8,16 +8,16 @@
 
 namespace xstd::bits::detail {
 
-// The allocator's name where the storage has one and nothing where it does not: an empty base.
-template<class Storage>
+// The allocator's name where the storage has one, else an empty base; one per owner, so no two compare through it.
+template<class Storage, class Owner = void>
 struct allocator_base_type
 {
         [[nodiscard]] friend auto operator==(allocator_base_type const&, allocator_base_type const&) -> bool = default;
 };
 
-template<class Storage>
+template<class Storage, class Owner>
         requires requires { typename Storage::allocator_type; }
-struct allocator_base_type<Storage>
+struct allocator_base_type<Storage, Owner>
 {
         using allocator_type = Storage::allocator_type;
 

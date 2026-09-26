@@ -7,7 +7,6 @@
 #include <test/block_types.hpp>                          // graded_extents
 #include <xstd/bits/bit/bit_cast.hpp>                    // bit_cast
 #include <xstd/bits/bit_array.hpp>                       // bit_array
-#include <xstd/bits/bit_sequence_adaptor.hpp>            // swap
 #include <xstd/bits/bit_span.hpp>                        // bit_span
 #include <xstd/bits/bit_subspan.hpp>                     // bit_subspan
 #include <xstd/bits/bit_vector.hpp>                      // bit_vector

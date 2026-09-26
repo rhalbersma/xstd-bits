@@ -160,8 +160,8 @@ All three agree, and the test asserts that rather than the README claiming it.
 
 Nine containers: three readings of a block of bits, each over three storages.
 The reading picks the vocabulary, the storage picks whether size and capacity
-are static or dynamic. Each name is an alias of its reading's adaptor over its
-storage.
+are static or dynamic. Each name is a class built on its reading's adaptor over
+its storage, with the constructors of the standard container it packs.
 
 | Header | Additions | Description | Reference |
 | :----- | :-------- | :---------- | :-------- |

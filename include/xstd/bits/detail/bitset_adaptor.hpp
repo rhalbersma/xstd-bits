@@ -10,12 +10,11 @@
 
 #include <xstd/bits/bit_storage.hpp>                     // bit_storage
 #include <xstd/bits/detail/allocator_base_type.hpp>      // allocator_base_type, allocator_param_t, has_allocator_v
-#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
+#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container, contiguous_bit_container_type
 #include <xstd/bits/detail/hash.hpp>                     // hash_append_bits, std_hash
 #include <xstd/bits/detail/ownership.hpp>                // owned_storage, storage, window
 #include <xstd/bits/detail/zero_width.hpp>               // zero_width
 #include <xstd/bits/from_bit_storage.hpp>                // from_bit_storage_t
-#include <xstd/misc/concepts/specialization_of.hpp>      // specialization_of_TN
 #include <boost/hash2/hash_append.hpp>                   // hash_append_tag
 #include <algorithm>                                     // min, ranges::copy
 #include <cassert>                                       // assert
@@ -43,8 +42,8 @@
 namespace xstd::bits::detail {
 
 // [template.bitset] over a storage of ours, which speaks the bitset vocabulary by construction.
-template<specialization_of_TN<contiguous_bit_container> Bits, class Derived = void>
-class bitset_adaptor : public allocator_base_type<Bits>
+template<contiguous_bit_container_type Bits, class Derived = void>
+class bitset_adaptor : public allocator_base_type<Bits, bitset_adaptor<Bits, Derived>>
 {
         // One wrapper, two counterparts: std::bitset at a static width, boost::dynamic_bitset at a run-time one.
         static constexpr bool has_static_width = (Bits::extent != std::dynamic_extent);
@@ -63,9 +62,9 @@ class bitset_adaptor : public allocator_base_type<Bits>
         friend Derived;
 
         // A view refers into this owner's storage, and only a reading that can view it is named.
-        template<specialization_of_TN<contiguous_bit_container>, storage, class>
+        template<contiguous_bit_container_type, storage, class>
         friend class set_adaptor;
-        template<specialization_of_TN<contiguous_bit_container>, storage, window, class, std::size_t>
+        template<contiguous_bit_container_type, storage, window, class, std::size_t>
         friend class sequence_adaptor;
 
         // The value through the trait: the blocks and the width.

@@ -5,7 +5,6 @@
 
 #include <test/bit_exchange.hpp>                         // casts_from, exchanges_to_bits
 #include <xstd/bits/bit_set.hpp>                         // bit_set
-#include <xstd/bits/bit_set_adaptor.hpp>                 // swap
 #include <xstd/bits/bit_static_set.hpp>                  // bit_static_set
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/detail/ownership.hpp>                // storage

@@ -9,7 +9,7 @@
 #include <xstd/bits/bit_storage.hpp>                         // bit_storage
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_base_type, allocator_param_t, has_allocator_v
 #include <xstd/bits/detail/borrowed_bits.hpp>                // borrow_bits, borrowable_word, borrowable_words, borrowed_bits_t
-#include <xstd/bits/detail/contiguous_bit_container.hpp>     // contiguous_bit_container
+#include <xstd/bits/detail/contiguous_bit_container.hpp>     // contiguous_bit_container, contiguous_bit_container_type
 #include <xstd/bits/detail/functor.hpp>                      // invoke_continues
 #include <xstd/bits/detail/hash.hpp>                         // hash_append_bits, std_hash
 #include <xstd/bits/detail/intrin.hpp>                       // countr_zero, popcount
@@ -18,7 +18,6 @@
 #include <xstd/bits/detail/shift.hpp>                        // shl, shr
 #include <xstd/bits/detail/storage_ptr.hpp>                  // storage_ref_t
 #include <xstd/bits/from_bit_storage.hpp>                    // from_bit_storage_t
-#include <xstd/misc/concepts/specialization_of.hpp>          // specialization_of_TN
 #include <xstd/misc/type_traits/conditional_data_member.hpp> // XSTD_NO_UNIQUE_ADDRESS, conditional_data_member_t
 #include <xstd/misc/type_traits/empty_base_type.hpp>         // empty_base_type
 #include <boost/container_hash/is_range.hpp>                 // is_range
@@ -132,7 +131,7 @@ using block_type_of = std::remove_const_t<Bits>::block_type;
 
 } // namespace sequence
 
-template<specialization_of_TN<contiguous_bit_container> Bits, storage Store = storage::owned, window W = window::all, class Derived = void, std::size_t E = std::dynamic_extent>
+template<contiguous_bit_container_type Bits, storage Store = storage::owned, window W = window::all, class Derived = void, std::size_t E = std::dynamic_extent>
 class sequence_adaptor;
 
 // The window a view hands back, which each public view specializes; the vehicle used directly windows itself.
@@ -152,8 +151,8 @@ inline constexpr bool blit_source = false;
 template<class Bits, storage Store, window W, class Derived, std::size_t E, class Block>
 inline constexpr bool blit_source<sequence_adaptor<Bits, Store, W, Derived, E>, Block> = std::same_as<sequence::block_type_of<Bits>, Block>;
 
-template<specialization_of_TN<contiguous_bit_container> Bits, storage Store, window W, class Derived, std::size_t E>
-class sequence_adaptor : public std::conditional_t<owns(Store), allocator_base_type<std::remove_const_t<Bits>>, xstd::empty_base_type<>>
+template<contiguous_bit_container_type Bits, storage Store, window W, class Derived, std::size_t E>
+class sequence_adaptor : public std::conditional_t<owns(Store), allocator_base_type<std::remove_const_t<Bits>, sequence_adaptor<Bits, Store, W, Derived, E>>, xstd::empty_base_type<>>
 {
         static constexpr bool is_owner = owns(Store);
         static constexpr bool is_window = (W == window::sub);
@@ -246,7 +245,7 @@ class sequence_adaptor : public std::conditional_t<owns(Store), allocator_base_t
         friend Derived;
 
         // A view refers into this owner's storage, and only a reading that can view it is named.
-        template<specialization_of_TN<contiguous_bit_container>, storage, window, class, std::size_t>
+        template<contiguous_bit_container_type, storage, window, class, std::size_t>
         friend class sequence_adaptor;
 
         // The value under the sequence reading, the owner's alone: a view follows span and hashes no more.
@@ -611,7 +610,7 @@ public:
         // The width this view has in its type, if any: a static window's, or a whole view's over a static width.
         static constexpr auto static_extent = has_static_window ? E : (is_window ? std::dynamic_extent : bits_type::extent);
 
-        // [span.sub]'s compile-time three: the count in the type, and ill-formed where the type already says it cannot fit.
+        // [span.sub]'s compile-time three: the count in the type, ill-formed where the type says it cannot fit.
         template<std::size_t Count>
         [[nodiscard]] constexpr auto first() const noexcept
                 -> window_of_t<Derived, Bits, Count>

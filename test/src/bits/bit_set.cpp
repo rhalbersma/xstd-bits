@@ -30,7 +30,7 @@ BOOST_AUTO_TEST_SUITE(BitSet)
 
 using T = xstd::basic_bit_set<std::uint8_t>;
 
-// The flagship: the set reading over a heap of blocks, an alias and nothing more.
+// The flagship: the set reading over a heap of blocks, built on the set adaptor.
 BOOST_AUTO_TEST_CASE(TheDynamicSetIsTheSetAdaptorOverAHeapOfBlocks)
 {
         static_assert(std::derived_from<T, xstd::bits::detail::set_adaptor<xstd::bits::detail::contiguous_bit_container<std::vector<std::uint8_t>>, xstd::bits::detail::storage::owned, T>>);
@@ -207,6 +207,31 @@ BOOST_AUTO_TEST_CASE(AStdBitsetIsNoConversionAtARunTimeWidth)
 {
         static_assert(not std::is_constructible_v<xstd::bit_set, std::bitset<64>>);
         static_assert(not std::is_constructible_v<std::bitset<64>, xstd::bit_set>);
+}
+
+// std::set's guides: the block from the allocator where one is given, the machine word where none is.
+BOOST_AUTO_TEST_CASE(ItDeducesAsStdSetDoes)
+{
+        auto const keys = std::vector<std::size_t>{3, 1, 4};
+        auto const alloc = std::allocator<std::uint8_t>();
+
+        auto const a = xstd::basic_bit_set(keys.begin(), keys.end());
+        static_assert(std::same_as<decltype(a), xstd::bit_set const>);
+        auto const b = xstd::basic_bit_set(keys.begin(), keys.end(), alloc);
+        static_assert(std::same_as<decltype(b), xstd::basic_bit_set<std::uint8_t> const>);
+        auto const c = xstd::basic_bit_set(std::from_range, keys);
+        static_assert(std::same_as<decltype(c), xstd::bit_set const>);
+        auto const d = xstd::basic_bit_set(std::from_range, keys, alloc);
+        static_assert(std::same_as<decltype(d), xstd::basic_bit_set<std::uint8_t> const>);
+        auto const e = xstd::basic_bit_set({3UZ, 1UZ, 4UZ});
+        static_assert(std::same_as<decltype(e), xstd::bit_set const>);
+        auto const f = xstd::basic_bit_set({3UZ, 1UZ, 4UZ}, alloc);
+        static_assert(std::same_as<decltype(f), xstd::basic_bit_set<std::uint8_t> const>);
+        auto const g = xstd::basic_bit_set(b, alloc);
+        static_assert(std::same_as<decltype(g), xstd::basic_bit_set<std::uint8_t> const>);
+
+        BOOST_CHECK(a == c and c == e);
+        BOOST_CHECK(std::ranges::equal(b, a) and std::ranges::equal(d, a) and std::ranges::equal(f, a) and g == b);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

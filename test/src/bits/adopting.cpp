@@ -45,7 +45,7 @@ BOOST_AUTO_TEST_CASE(TheBlocksMoveInWithoutACopy)
         BOOST_CHECK(blocks.data() == data);
 }
 
-// Every bit of the blocks is a position, at each reading, and each reading deduces through its alias.
+// Every bit of the blocks is a position, at each reading, and each reading's owner deduces from them.
 BOOST_AUTO_TEST_CASE(EveryBitOfTheBlocksIsAPosition)
 {
         auto const v = xstd::basic_bit_vector(xstd::from_bit_storage, std::vector<std::uint8_t>{0x05, 0x80});
@@ -122,7 +122,7 @@ BOOST_AUTO_TEST_CASE(AdoptionIsConstexpr)
 
 #ifdef TEST_HAS_INPLACE_VECTOR
 
-// Inline blocks deduce the capacity they hold in whole, through each reading's alias.
+// Inline blocks deduce the capacity they hold in whole, through each reading's owner.
 BOOST_AUTO_TEST_CASE(InlineBlocksDeduceTheirAlignedCapacity)
 {
         auto const v = xstd::basic_bit_inplace_vector(xstd::from_bit_storage, std::inplace_vector<std::uint8_t, 2>{0x81});
