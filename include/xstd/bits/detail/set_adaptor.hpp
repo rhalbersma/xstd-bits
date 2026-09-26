@@ -111,7 +111,7 @@ constexpr auto walk_blocks_descending(Bits const& c, F& f)
 } // namespace set
 
 template<contiguous_bit_container_type Bits, storage Store = storage::owned, class Derived = void>
-class set_adaptor : public std::conditional_t<owns(Store), allocator_base_type<std::remove_const_t<Bits>>, xstd::empty_base_type<>>
+class set_adaptor : public std::conditional_t<owns(Store), allocator_base_type<std::remove_const_t<Bits>, set_adaptor<Bits, Store, Derived>>, xstd::empty_base_type<>>
 {
         static constexpr bool is_owner = owns(Store);
 

@@ -39,7 +39,7 @@ public:
         using typename base_type::key_compare;
         using typename base_type::value_type;
 
-        // [set.cons], in [set.overview]'s order; key_compare is std::less and holds no state, so a comparator is dropped.
+        // [set.cons], in [set.overview]'s order; key_compare is std::less, so comp is dropped.
         [[nodiscard]] constexpr basic_bit_set()
                 : basic_bit_set(key_compare())
         {}
@@ -96,7 +96,7 @@ public:
         auto operator=(basic_bit_set const& x) -> basic_bit_set& = default;
         auto operator=(basic_bit_set&& x) noexcept(std::allocator_traits<Allocator>::is_always_equal::value) -> basic_bit_set& = default;
 
-        // Not in [set.cons]: flat_set's container constructor under the bit-storage tag, every bit of the blocks a position.
+        // Not in [set.cons]: flat_set's container constructor under the bit-storage tag, every bit a position.
         [[nodiscard]] constexpr basic_bit_set(from_bit_storage_t, std::vector<Block, Allocator> blocks) noexcept
                 : base_type(from_bit_storage, std::move(blocks))
         {}
@@ -141,6 +141,13 @@ basic_bit_set(std::from_range_t, R&&, Allocator) -> basic_bit_set<typename std::
 template<class Key, class Allocator>
         requires xstd::simple_allocator<Allocator>
 basic_bit_set(std::initializer_list<Key>, Allocator) -> basic_bit_set<typename std::allocator_traits<Allocator>::value_type, Allocator>;
+
+// The blocks adopted name the block and the allocator both.
+template<xstd::unsigned_integer Block, class Allocator>
+basic_bit_set(from_bit_storage_t, std::vector<Block, Allocator>) -> basic_bit_set<Block, Allocator>;
+
+template<xstd::unsigned_integer Block, class Allocator>
+basic_bit_set(from_bit_storage_t, std::vector<Block, Allocator>, Allocator) -> basic_bit_set<Block, Allocator>;
 
 // The adaptor named by its storage stays the door for a std::vector of blocks passed to it directly.
 template<xstd::unsigned_integer Block, class Allocator>

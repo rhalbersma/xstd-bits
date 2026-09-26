@@ -30,7 +30,7 @@ BOOST_AUTO_TEST_SUITE(BitSet)
 
 using T = xstd::basic_bit_set<std::uint8_t>;
 
-// The flagship: the set reading over a heap of blocks, an alias and nothing more.
+// The flagship: the set reading over a heap of blocks, built on the set adaptor.
 BOOST_AUTO_TEST_CASE(TheDynamicSetIsTheSetAdaptorOverAHeapOfBlocks)
 {
         static_assert(std::derived_from<T, xstd::bits::detail::set_adaptor<xstd::bits::detail::contiguous_bit_container<std::vector<std::uint8_t>>, xstd::bits::detail::storage::owned, T>>);

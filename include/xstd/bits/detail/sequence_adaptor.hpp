@@ -152,7 +152,7 @@ template<class Bits, storage Store, window W, class Derived, std::size_t E, clas
 inline constexpr bool blit_source<sequence_adaptor<Bits, Store, W, Derived, E>, Block> = std::same_as<sequence::block_type_of<Bits>, Block>;
 
 template<contiguous_bit_container_type Bits, storage Store, window W, class Derived, std::size_t E>
-class sequence_adaptor : public std::conditional_t<owns(Store), allocator_base_type<std::remove_const_t<Bits>>, xstd::empty_base_type<>>
+class sequence_adaptor : public std::conditional_t<owns(Store), allocator_base_type<std::remove_const_t<Bits>, sequence_adaptor<Bits, Store, W, Derived, E>>, xstd::empty_base_type<>>
 {
         static constexpr bool is_owner = owns(Store);
         static constexpr bool is_window = (W == window::sub);
@@ -610,7 +610,7 @@ public:
         // The width this view has in its type, if any: a static window's, or a whole view's over a static width.
         static constexpr auto static_extent = has_static_window ? E : (is_window ? std::dynamic_extent : bits_type::extent);
 
-        // [span.sub]'s compile-time three: the count in the type, and ill-formed where the type already says it cannot fit.
+        // [span.sub]'s compile-time three: the count in the type, ill-formed where the type says it cannot fit.
         template<std::size_t Count>
         [[nodiscard]] constexpr auto first() const noexcept
                 -> window_of_t<Derived, Bits, Count>

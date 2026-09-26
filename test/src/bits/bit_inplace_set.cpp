@@ -12,7 +12,7 @@
 #include <xstd/bits/bit_inplace_set.hpp>                 // aligned, basic_bit_inplace_set, bit_inplace_set
 #include <xstd/bits/bit_set_adaptor.hpp>                 // bit_set_adaptor
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
-#include <xstd/bits/detail/ownership.hpp>                // storage
+#include <xstd/bits/detail/ownership.hpp>                // owned_bits_t, storage
 #include <xstd/bits/detail/set_adaptor.hpp>              // set_adaptor
 #include <algorithm>                                     // equal
 #include <concepts>                                      // same_as
@@ -36,7 +36,7 @@ using T = xstd::basic_bit_inplace_set<std::uint8_t, 24>;
 template<class X>
 constexpr bool has_capacity = requires (X const& x) { x.capacity(); };
 
-// The set reading over a run-time width under a compile-time capacity, an alias and nothing more.
+// The set reading over a run-time width under a compile-time capacity, built on the set adaptor.
 BOOST_AUTO_TEST_CASE(TheInplaceSetIsTheSetAdaptorOverAnInplaceVectorOfBlocks)
 {
         static_assert(std::derived_from<T, xstd::bits::detail::set_adaptor<xstd::bits::detail::contiguous_bit_container<std::inplace_vector<std::uint8_t, 3>, 24>, xstd::bits::detail::storage::owned, T>>);
@@ -111,7 +111,7 @@ BOOST_AUTO_TEST_CASE(TheCapacityIsTheRequestedOneExactly)
         using U = xstd::basic_bit_inplace_set<std::uint8_t, 9>;
         static_assert(U().max_size() == 9UZ);
         static_assert(std::same_as<xstd::aligned::basic_bit_inplace_set<std::uint8_t, 9>, xstd::basic_bit_inplace_set<std::uint8_t, 16>>);
-        static_assert(std::same_as<xstd::bit_set_adaptor<std::inplace_vector<std::uint8_t, 2>>, xstd::basic_bit_inplace_set<std::uint8_t, 16>>);
+        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::bit_set_adaptor<std::inplace_vector<std::uint8_t, 2>>>, xstd::bits::detail::owned_bits_t<xstd::basic_bit_inplace_set<std::uint8_t, 16>>>);
 
         auto s = U();
         s.insert(8);
