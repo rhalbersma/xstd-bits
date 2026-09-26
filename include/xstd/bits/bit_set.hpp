@@ -6,7 +6,6 @@
 #ifndef XSTD_BITS_BIT_SET_HPP
 #define XSTD_BITS_BIT_SET_HPP
 
-#include <xstd/bits/bit_set_adaptor.hpp>                     // bit_set_adaptor
 #include <xstd/bits/detail/contiguous_bit_container.hpp>     // contiguous_bit_container
 #include <xstd/bits/detail/ownership.hpp>                    // storage
 #include <xstd/bits/detail/set_adaptor.hpp>                  // set_adaptor
@@ -148,13 +147,6 @@ basic_bit_set(from_bit_storage_t, std::vector<Block, Allocator>) -> basic_bit_se
 
 template<xstd::unsigned_integer Block, class Allocator>
 basic_bit_set(from_bit_storage_t, std::vector<Block, Allocator>, Allocator) -> basic_bit_set<Block, Allocator>;
-
-// The adaptor named by its storage stays the door for a std::vector of blocks passed to it directly.
-template<xstd::unsigned_integer Block, class Allocator>
-bit_set_adaptor(from_bit_storage_t, std::vector<Block, Allocator>) -> bit_set_adaptor<std::vector<Block, Allocator>>;
-
-template<xstd::unsigned_integer Block, class Allocator>
-bit_set_adaptor(from_bit_storage_t, std::vector<Block, Allocator>, Allocator) -> bit_set_adaptor<std::vector<Block, Allocator>>;
 
 } // namespace xstd
 

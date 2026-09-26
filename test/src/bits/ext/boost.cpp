@@ -5,10 +5,10 @@
 
 #include <test/sequence/concepts.hpp>                    // bit_sequence
 #include <test/set/concepts.hpp>                         // bit_set
-#include <xstd/bits/bit_sequence_adaptor.hpp>            // bit_sequence_adaptor
 #include <xstd/bits/bit_storage.hpp>                     // bit_storage, owned_bit_storage, resizable_bit_storage
-#include <xstd/bits/detail/contiguous_bit_container.hpp> // num_blocks_v
+#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container, num_blocks_v
 #include <xstd/bits/detail/ownership.hpp>                // owned_bits_t
+#include <xstd/bits/detail/set_adaptor.hpp>              // set_adaptor
 #include <xstd/bits/ext/boost.hpp>                       // bit_small_set, bit_small_vector, small_bitset
 #include <boost/container/new_allocator.hpp>             // new_allocator
 #include <boost/container/small_vector.hpp>              // small_vector
@@ -44,7 +44,7 @@ BOOST_AUTO_TEST_CASE(TheSmallVectorIsBlocksAStorageCanHold)
 BOOST_AUTO_TEST_CASE(TheCapacityIsBitsAndTheStorageIsBlocks)
 {
         using Blocks = boost::container::small_vector<std::size_t, xstd::bits::detail::num_blocks_v<std::size_t, N>, boost::container::new_allocator<std::size_t>>;
-        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::bit_small_vector<N>>, xstd::bits::detail::owned_bits_t<xstd::bit_sequence_adaptor<Blocks>>>);
+        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::bit_small_vector<N>>, xstd::bits::detail::contiguous_bit_container<Blocks>>);
         static_assert(xstd::bits::detail::num_blocks_v<std::uint8_t, 24> == 3);
         BOOST_CHECK(true);
 }
@@ -62,10 +62,11 @@ BOOST_AUTO_TEST_CASE(TheUmbrellaReachesEveryReading)
         BOOST_CHECK(true);
 }
 
-// A storage the library does not ship meets the owners' contract as it comes: no trait, no wrapper.
-BOOST_AUTO_TEST_CASE(AStaticVectorIsAStorageTheOwnersTake)
+// A storage the library does not ship meets the storage contract as it comes: no trait, no wrapper.
+BOOST_AUTO_TEST_CASE(AStaticVectorIsAStorageTheSetReadingTakes)
 {
         static_assert(xstd::owned_bit_storage<small_words> and xstd::resizable_bit_storage<small_words>);
+        static_assert(test::set::bit_set<xstd::bits::detail::set_adaptor<xstd::bits::detail::contiguous_bit_container<small_words>>>);
         BOOST_CHECK(true);
 }
 

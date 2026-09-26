@@ -6,7 +6,6 @@
 #ifndef XSTD_BITS_DYNAMIC_BITSET_HPP
 #define XSTD_BITS_DYNAMIC_BITSET_HPP
 
-#include <xstd/bits/bitset_adaptor.hpp>                  // bitset_adaptor
 #include <xstd/bits/detail/bitset_adaptor.hpp>           // bitset_adaptor
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/from_bit_storage.hpp>                // from_bit_storage, from_bit_storage_t
@@ -127,13 +126,6 @@ basic_dynamic_bitset(from_bit_storage_t, std::vector<Block, Allocator>) -> basic
 
 template<xstd::unsigned_integer Block, class Allocator>
 basic_dynamic_bitset(from_bit_storage_t, std::vector<Block, Allocator>, Allocator) -> basic_dynamic_bitset<Block, Allocator>;
-
-// The adaptor named by its storage stays the door for a std::vector of blocks passed to it directly.
-template<xstd::unsigned_integer Block, class Allocator>
-bitset_adaptor(from_bit_storage_t, std::vector<Block, Allocator>) -> bitset_adaptor<std::vector<Block, Allocator>>;
-
-template<xstd::unsigned_integer Block, class Allocator>
-bitset_adaptor(from_bit_storage_t, std::vector<Block, Allocator>, Allocator) -> bitset_adaptor<std::vector<Block, Allocator>>;
 
 } // namespace xstd
 

@@ -7,16 +7,16 @@
 #include <xstd/bits/bit_fixed_set.hpp>                   // bit_fixed_set
 #include <xstd/bits/bit_set.hpp>                         // bit_set
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
-#include <xstd/bits/detail/ownership.hpp>                // storage
+#include <xstd/bits/detail/ownership.hpp>                // owned_bits_t, storage
 #include <xstd/bits/detail/set_adaptor.hpp>              // set_adaptor
 #include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <array>                                         // array
 #include <bitset>                                        // bitset
 #include <algorithm>                                     // lexicographical_compare_three_way, ranges::equal
 #include <compare>                                       // strong_ordering
-#include <concepts>                                      // copyable, equality_comparable, invocable, regular, totally_ordered
+#include <concepts>                                      // copyable, equality_comparable, invocable, regular, same_as, totally_ordered
 #include <cstddef>                                       // size_t
-#include <cstdint>                                       // uint8_t, uint64_t
+#include <cstdint>                                       // uint8_t, uint32_t, uint64_t
 #include <initializer_list>                              // initializer_list
 #include <limits>                                        // numeric_limits
 #include <ranges>                                        // bidirectional_range, iota
@@ -143,6 +143,20 @@ auto check_reads(Set const& s, std::set<std::size_t> const& model, std::size_t w
 } // namespace
 
 BOOST_AUTO_TEST_SUITE(SetAdaptor)
+
+// Dependent, so an operator that is missing makes this false rather than ill-formed.
+template<class X, class Y>
+constexpr bool compares_with = requires (X const& x, Y const& y) { x == y; };
+
+// Each owner wraps the storage its base clause names, and two names over one storage are two types that never compare.
+BOOST_AUTO_TEST_CASE(AnOwnerIsATypeOfItsOwnOverItsStorage)
+{
+        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_fixed_set<std::uint8_t, 20>>, xstd::bits::detail::contiguous_bit_container<std::array<std::uint8_t, 3>, 20>>);
+        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_set<std::uint32_t>>, xstd::bits::detail::contiguous_bit_container<std::vector<std::uint32_t>>>);
+        static_assert(not compares_with<xstd::basic_bit_fixed_set<std::uint8_t, 24>, xstd::bits::detail::set_adaptor<xstd::bits::detail::contiguous_bit_container<std::array<std::uint8_t, 3>>>>);
+        static_assert(not compares_with<xstd::basic_bit_set<std::uint32_t>, xstd::bits::detail::set_adaptor<xstd::bits::detail::contiguous_bit_container<std::vector<std::uint32_t>>>>);
+        BOOST_CHECK(true);
+}
 
 BOOST_AUTO_TEST_CASE(AnOwnerIsRegularAndAViewIsCopyable)
 {

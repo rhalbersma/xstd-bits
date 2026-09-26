@@ -20,18 +20,18 @@ namespace consumer {
 // Each reading named by what it means to a caller, in the standard's own vocabulary rather than by what it derives from.
 // Copyable is the floor that owners and views share: a view constructs only from what it views, so it is not regular.
 template<class T>
-concept is_set_adaptor =
+concept is_set_reading =
         std::copyable<T> and std::ranges::bidirectional_range<T> and not std::ranges::random_access_range<T> and
         requires { typename T::key_type; };
 
 template<class T>
-concept is_sequence_adaptor =
+concept is_sequence_reading =
         std::copyable<T> and std::ranges::random_access_range<T> and
         std::same_as<std::ranges::range_value_t<T>, bool>;
 
 // A bit string is the one reading that is no range: it is read whole, the way std::bitset is.
 template<class T>
-concept is_bitset_adaptor =
+concept is_bitset_reading =
         std::copyable<T> and not std::ranges::range<T> and
         requires (T const& t) { { t.to_string() } -> std::convertible_to<std::string>; };
 
@@ -46,32 +46,32 @@ static_assert(std::regular<xstd::bitset<64>> and std::totally_ordered<xstd::bits
 static_assert(std::ranges::view<set_view_of_bitset> and not std::default_initializable<set_view_of_bitset>);
 static_assert(std::ranges::view<span_of_bitset> and not std::equality_comparable<span_of_bitset>);
 
-// The set reading: three widths, one adaptor.
-static_assert(is_set_adaptor<xstd::bit_fixed_set<100>>);
-static_assert(is_set_adaptor<xstd::basic_bit_fixed_set<std::uint8_t, 24>>);
-static_assert(is_set_adaptor<xstd::bit_set>);
-static_assert(is_set_adaptor<set_view_of_bitset>);
+// The set reading, at three widths and as a view.
+static_assert(is_set_reading<xstd::bit_fixed_set<100>>);
+static_assert(is_set_reading<xstd::basic_bit_fixed_set<std::uint8_t, 24>>);
+static_assert(is_set_reading<xstd::bit_set>);
+static_assert(is_set_reading<set_view_of_bitset>);
 
 // The sequence reading, the window included.
-static_assert(is_sequence_adaptor<xstd::bit_array<64>>);
-static_assert(is_sequence_adaptor<xstd::basic_bit_array<std::uint8_t, 24>>);
-static_assert(is_sequence_adaptor<xstd::bit_vector>);
-static_assert(is_sequence_adaptor<span_of_bitset>);
-static_assert(is_sequence_adaptor<subspan_of_bitset>);
+static_assert(is_sequence_reading<xstd::bit_array<64>>);
+static_assert(is_sequence_reading<xstd::basic_bit_array<std::uint8_t, 24>>);
+static_assert(is_sequence_reading<xstd::bit_vector>);
+static_assert(is_sequence_reading<span_of_bitset>);
+static_assert(is_sequence_reading<subspan_of_bitset>);
 
 // The bitset reading, which owns by construction.
-static_assert(is_bitset_adaptor<xstd::bitset<64>>);
-static_assert(is_bitset_adaptor<xstd::basic_bitset<std::uint8_t, 24>>);
-static_assert(is_bitset_adaptor<xstd::dynamic_bitset>);
+static_assert(is_bitset_reading<xstd::bitset<64>>);
+static_assert(is_bitset_reading<xstd::basic_bitset<std::uint8_t, 24>>);
+static_assert(is_bitset_reading<xstd::dynamic_bitset>);
 
-static_assert(is_set_adaptor<set_view_of_bitset>);
+static_assert(is_set_reading<set_view_of_bitset>);
 
 #ifdef __cpp_lib_inplace_vector
 
 // The bounded column, present only where its storage is.
-static_assert(is_set_adaptor<xstd::bit_bounded_set<100>>);
-static_assert(is_sequence_adaptor<xstd::bit_bounded_vector<100>>);
-static_assert(is_bitset_adaptor<xstd::bounded_bitset<100>>);
+static_assert(is_set_reading<xstd::bit_bounded_set<100>>);
+static_assert(is_sequence_reading<xstd::bit_bounded_vector<100>>);
+static_assert(is_bitset_reading<xstd::bounded_bitset<100>>);
 
 #endif
 

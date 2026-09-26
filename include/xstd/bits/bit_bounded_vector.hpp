@@ -10,7 +10,6 @@
 
 #ifdef __cpp_lib_inplace_vector
 
-#include <xstd/bits/bit_sequence_adaptor.hpp>                // bit_sequence_adaptor
 #include <xstd/bits/bit_storage.hpp>                         // bit_storage_extent_v
 #include <xstd/bits/detail/contiguous_bit_container.hpp>     // contiguous_bit_container, num_blocks_v
 #include <xstd/bits/detail/ownership.hpp>                    // storage, window
@@ -97,10 +96,6 @@ using bit_bounded_vector = basic_bit_bounded_vector<std::size_t, N>;
 // Every bit of the blocks an element, so the capacity is theirs, rounded to whole blocks.
 template<xstd::unsigned_integer Block, std::size_t K>
 basic_bit_bounded_vector(from_bit_storage_t, std::inplace_vector<Block, K>) -> basic_bit_bounded_vector<Block, bit_storage_extent_v<Block> * K>;
-
-// The adaptor named by its storage stays the door for an inplace_vector of blocks passed to it directly.
-template<xstd::unsigned_integer Block, std::size_t K>
-bit_sequence_adaptor(from_bit_storage_t, std::inplace_vector<Block, K>) -> bit_sequence_adaptor<std::inplace_vector<Block, K>>;
 
 namespace aligned {
 

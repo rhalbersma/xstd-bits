@@ -11,6 +11,7 @@
 #include <xstd/bits/bitset.hpp>                          // basic_bitset, bitset
 #include <xstd/bits/detail/bitset_adaptor.hpp>           // bitset_adaptor
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
+#include <xstd/bits/detail/ownership.hpp>                // owned_bits_t
 #include <xstd/bits/dynamic_bitset.hpp>                  // basic_dynamic_bitset
 #include <xstd/bits/from_bit_storage.hpp>                // from_bit_storage
 #include <boost/dynamic_bitset.hpp>                      // dynamic_bitset
@@ -22,7 +23,7 @@
 #include <concepts>                                      // regular, same_as, totally_ordered
 #include <cstddef>                                       // size_t
 #include <cwchar>                                        // mbstate_t
-#include <cstdint>                                       // uint8_t, uint64_t
+#include <cstdint>                                       // uint8_t, uint32_t, uint64_t
 #include <functional>                                    // hash
 #include <ios>                                           // streamoff
 #include <iosfwd>                                        // streampos
@@ -222,6 +223,25 @@ BOOST_AUTO_TEST_CASE(TheBitsetIsTheWrapperOverAPackedArray)
 {
         static_assert(std::derived_from<xstd::basic_bitset<std::uint8_t, 9>, xstd::bits::detail::bitset_adaptor<xstd::bits::detail::contiguous_bit_container<std::array<std::uint8_t, 2>, 9>, xstd::basic_bitset<std::uint8_t, 9>>>);
         static_assert(std::derived_from<xstd::bitset<64>, xstd::bits::detail::bitset_adaptor<xstd::bits::detail::contiguous_bit_container<std::array<std::size_t, 1>, 64>, xstd::bitset<64>>>);
+}
+
+// Dependent, so an operator that is missing makes this false rather than ill-formed.
+template<class X, class Y>
+constexpr bool compares_with = requires (X const& x, Y const& y) { x == y; };
+
+// A second name over a storage an owner wraps, which the bitset reading needs to hand its results back as.
+template<class Bits>
+struct another_bitset : xstd::bits::detail::bitset_adaptor<Bits, another_bitset<Bits>>
+{};
+
+// Each owner wraps the storage its base clause names, and two names over one storage are two types that never compare.
+BOOST_AUTO_TEST_CASE(AnOwnerIsATypeOfItsOwnOverItsStorage)
+{
+        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bitset<std::uint8_t, 20>>, xstd::bits::detail::contiguous_bit_container<std::array<std::uint8_t, 3>, 20>>);
+        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_dynamic_bitset<std::uint32_t>>, xstd::bits::detail::contiguous_bit_container<std::vector<std::uint32_t>>>);
+        static_assert(not compares_with<xstd::basic_bitset<std::uint8_t, 24>, another_bitset<xstd::bits::detail::contiguous_bit_container<std::array<std::uint8_t, 3>>>>);
+        static_assert(not compares_with<xstd::basic_dynamic_bitset<std::uint32_t>, another_bitset<xstd::bits::detail::contiguous_bit_container<std::vector<std::uint32_t>>>>);
+        BOOST_CHECK(true);
 }
 
 using Static = std::tuple<xstd::basic_bitset<std::uint8_t, 0>, xstd::basic_bitset<std::uint8_t, 1>, xstd::basic_bitset<std::uint8_t, 64>, xstd::basic_bitset<std::uint8_t, 65>, xstd::basic_bitset<std::uint8_t, 128>, xstd::bitset<0>, xstd::bitset<64>, xstd::bitset<65>>;

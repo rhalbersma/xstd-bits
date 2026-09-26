@@ -3,23 +3,25 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/inplace_vector.hpp>            // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
-#include <test/minimal_words.hpp>             // minimal_words
-#include <xstd/bits/bit_array.hpp>            // bit_array
-#include <xstd/bits/bit_sequence_adaptor.hpp> // bit_sequence_adaptor
-#include <xstd/bits/bit_set.hpp>              // basic_bit_set, bit_set
-#include <xstd/bits/bit_vector.hpp>           // basic_bit_vector, bit_vector
-#include <xstd/bits/dynamic_bitset.hpp>       // basic_dynamic_bitset
-#include <xstd/bits/from_bit_storage.hpp>     // from_bit_storage, from_bit_storage_t
-#include <boost/test/unit_test.hpp>           // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <algorithm>                          // equal
-#include <concepts>                           // same_as
-#include <cstddef>                            // size_t
-#include <cstdint>                            // uint8_t
-#include <memory>                             // allocator
-#include <type_traits>                        // is_constructible_v, is_nothrow_constructible_v
-#include <utility>                            // move
-#include <vector>                             // vector
+#include <test/inplace_vector.hpp>                       // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
+#include <test/minimal_words.hpp>                        // minimal_words
+#include <xstd/bits/bit_array.hpp>                       // bit_array
+#include <xstd/bits/bit_set.hpp>                         // basic_bit_set, bit_set
+#include <xstd/bits/bit_vector.hpp>                      // basic_bit_vector, bit_vector
+#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
+#include <xstd/bits/detail/ownership.hpp>                // storage, window
+#include <xstd/bits/detail/sequence_adaptor.hpp>         // sequence_adaptor
+#include <xstd/bits/dynamic_bitset.hpp>                  // basic_dynamic_bitset
+#include <xstd/bits/from_bit_storage.hpp>                // from_bit_storage, from_bit_storage_t
+#include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <algorithm>                                     // equal
+#include <concepts>                                      // same_as
+#include <cstddef>                                       // size_t
+#include <cstdint>                                       // uint8_t
+#include <memory>                                        // allocator
+#include <type_traits>                                   // is_constructible_v, is_nothrow_constructible_v
+#include <utility>                                       // move
+#include <vector>                                        // vector
 
 #ifdef TEST_HAS_INPLACE_VECTOR
 
@@ -101,12 +103,13 @@ BOOST_AUTO_TEST_CASE(OnlyARunTimeWidthAdopts)
         BOOST_CHECK(true);
 }
 
-// A storage written outside the library is adopted the same way, its adaptor named since no guide spells it.
+// A storage written outside the library is adopted the same way by the reading's adaptor over it.
 BOOST_AUTO_TEST_CASE(AnyResizableStorageIsAdopted)
 {
-        auto words = test::minimal_words<std::uint8_t>();
+        using words_type = test::minimal_words<std::uint8_t>;
+        auto words = words_type();
         words.push_back(0x80);
-        auto const v = xstd::bit_sequence_adaptor<test::minimal_words<std::uint8_t>>(xstd::from_bit_storage, std::move(words));
+        auto const v = xstd::bits::detail::sequence_adaptor<xstd::bits::detail::contiguous_bit_container<words_type>, xstd::bits::detail::storage::owned, xstd::bits::detail::window::all>(xstd::from_bit_storage, std::move(words));
         BOOST_CHECK(v.size() == 8UZ and v[7] and not v[0]);
 }
 

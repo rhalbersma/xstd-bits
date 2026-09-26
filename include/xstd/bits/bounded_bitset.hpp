@@ -11,7 +11,6 @@
 #ifdef __cpp_lib_inplace_vector
 
 #include <xstd/bits/bit_storage.hpp>                     // bit_storage_extent_v
-#include <xstd/bits/bitset_adaptor.hpp>                  // bitset_adaptor
 #include <xstd/bits/detail/bitset_adaptor.hpp>           // bitset_adaptor
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container, num_blocks_v
 #include <xstd/bits/from_bit_storage.hpp>                // from_bit_storage, from_bit_storage_t
@@ -112,10 +111,6 @@ using bounded_bitset = basic_bounded_bitset<std::size_t, N>;
 // Every bit of the blocks a position, so the capacity is theirs, rounded to whole blocks.
 template<xstd::unsigned_integer Block, std::size_t K>
 basic_bounded_bitset(from_bit_storage_t, std::inplace_vector<Block, K>) -> basic_bounded_bitset<Block, bit_storage_extent_v<Block> * K>;
-
-// The adaptor named by its storage stays the door for an inplace_vector of blocks passed to it directly.
-template<xstd::unsigned_integer Block, std::size_t K>
-bitset_adaptor(from_bit_storage_t, std::inplace_vector<Block, K>) -> bitset_adaptor<std::inplace_vector<Block, K>>;
 
 namespace aligned {
 

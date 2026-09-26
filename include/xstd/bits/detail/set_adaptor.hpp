@@ -341,7 +341,7 @@ public:
         {
                 clear();
                 insert(il.begin(), il.end());
-                return self();
+                return self(); // NOLINT(misc-unconventional-assign-operator)
         }
 
         // A static owner's equality is its one member's: every instance carries the same width.

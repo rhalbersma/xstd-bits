@@ -158,10 +158,11 @@ All three agree, and the test asserts that rather than the README claiming it.
 
 ## Headers
 
-Nine containers: three readings of a block of bits, each over three storages.
+Twelve containers: three readings of a block of bits, each over four storages.
 The reading picks the vocabulary, the storage picks whether size and capacity
-are static or dynamic. Each name is a class built on its reading's adaptor over
-its storage, with the constructors of the standard container it packs.
+are static or dynamic. Each name is a class with the constructors of the standard
+container it packs. These twelve owners and the three views are the public surface;
+the adaptor each reading is built on is internal, under `<xstd/bits/detail/>`.
 
 | Header | Additions | Description | Reference |
 | :----- | :-------- | :---------- | :-------- |
@@ -175,12 +176,9 @@ its storage, with the constructors of the standard container it packs.
 | `<xstd/bits/bounded_bitset.hpp>` | `bounded_bitset` <br> `basic_bounded_bitset` | Both readings, dynamic size within a static capacity | [template.bitset] |
 | `<xstd/bits/dynamic_bitset.hpp>` | `dynamic_bitset` <br> `basic_dynamic_bitset` | Both readings, dynamic size and capacity | [`boost::dynamic_bitset`](https://www.boost.org/doc/libs/release/libs/dynamic_bitset/dynamic_bitset.html) |
 | `<xstd/bits/ext/boost.hpp>` | `bit_small_set` <br> `bit_small_vector` <br> `small_bitset` <br> and their `basic_` forms | All three readings, dynamic size staying inline within a static capacity | [`boost::container::small_vector`](https://www.boost.org/doc/libs/release/doc/html/boost/container/small_vector.html) |
-| `<xstd/bits/bit_set_adaptor.hpp>` | `bit_set_adaptor` | The set reading over a storage of blocks, or over one word: `bit_set_adaptor<std::vector<std::uint32_t>>` is `basic_bit_set<std::uint32_t>`, and `bit_set_adaptor<std::uint64_t>` is a set of 64 in one word | [set], [container.adaptors] |
-| `<xstd/bits/bit_sequence_adaptor.hpp>` | `bit_sequence_adaptor` | The sequence reading over a storage of blocks: `bit_sequence_adaptor<std::array<std::uint64_t, 1>>` is `basic_bit_array<std::uint64_t, 64>` | [vector.bool], [container.adaptors] |
-| `<xstd/bits/bitset_adaptor.hpp>` | `bitset_adaptor` | The bitset reading over a storage of blocks: `bitset_adaptor<std::array<std::uint64_t, 1>>` is `basic_bitset<std::uint64_t, 64>` | [template.bitset], [container.adaptors] |
 | `<xstd/bits/bit_set_view.hpp>` | `bit_set_view` | Set reading of bits another container owns, or of unsigned words in place: `bit_set_view(board)` is a `bit_set_view<std::uint64_t>` | none |
 | `<xstd/bits/bit_span.hpp>` <br> `<xstd/bits/bit_subspan.hpp>` | `bit_span` <br> `bit_subspan` | Sequence reading over borrowed bits, whole or sliced, or over unsigned words in place: `bit_span(words)` | [views.span] |
-| `<xstd/bits/bit_storage.hpp>` | `bit_storage` <br> `owned_bit_storage` <br> `resizable_bit_storage` <br> `bit_storage_extent_v` | What every container and view presents a packed interface over: one unsigned word, or a sized contiguous range of them, in no reading of its own. The views take any of it; the owners take what they can own, a regular value read-only through `const`, and at a run-time width only what resizes. Also the width its type names, which the owners and views default to | none |
+| `<xstd/bits/bit_storage.hpp>` | `bit_storage` <br> `owned_bit_storage` <br> `resizable_bit_storage` <br> `bit_storage_extent_v` | What every container and view presents a packed interface over: one unsigned word, or a sized contiguous range of them, in no reading of its own. The views take any of it; the owners hold what can be owned, a regular value read-only through `const`, and at a run-time width only what resizes. Also the width its type names, which the views default to | none |
 | `<xstd/bits/from_bit_storage.hpp>` | `from_bit_storage` <br> `from_bit_storage_t` | The tag that says an argument's words are read as bits, so a static width deduces from them | [range.utility.conv] |
 | `<xstd/bits/bit.hpp>` <br> `<xstd/bits/bit/bit_cast.hpp>` | `bit_cast` <br> `bit_castable` | A copy of the blocks between any two things that have bit storage of one width: ours, words, a `std::bitset` | [bit.cast] |
 

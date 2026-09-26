@@ -10,7 +10,6 @@
 #include <test/sequence/concepts.hpp>                    // bit_sequence, inplace_vector_bool, inplace_vector_bool_ranges, inplace_vector_bool_try_returns, packed_inplace_vector_bool
 #include <test/sequence/dense.hpp>                       // yields_every_position
 #include <xstd/bits/bit_bounded_vector.hpp>              // aligned, basic_bit_bounded_vector, bit_bounded_vector
-#include <xstd/bits/bit_sequence_adaptor.hpp>            // bit_sequence_adaptor
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/detail/ownership.hpp>                // owned_bits_t, storage
 #include <xstd/bits/detail/sequence_adaptor.hpp>         // sequence_adaptor
@@ -143,8 +142,8 @@ BOOST_AUTO_TEST_CASE(TheCapacityIsPartOfTheType)
         static_assert(std::same_as<xstd::aligned::basic_bit_bounded_vector<std::uint8_t, 9>, xstd::basic_bit_bounded_vector<std::uint8_t, 16>>);
         static_assert(std::same_as<xstd::aligned::bit_bounded_vector<9>, xstd::bit_bounded_vector<std::numeric_limits<std::size_t>::digits>>);
 
-        // Named by its storage alone, the adaptor holds every bit of it: one storage, however it is spelled.
-        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::bit_sequence_adaptor<std::inplace_vector<std::uint8_t, 2>>>, xstd::bits::detail::owned_bits_t<xstd::basic_bit_bounded_vector<std::uint8_t, 16>>>);
+        // Named by its storage alone, the container holds every bit of it: one storage, however it is spelled.
+        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_bounded_vector<std::uint8_t, 16>>, xstd::bits::detail::contiguous_bit_container<std::inplace_vector<std::uint8_t, 2>>>);
 }
 
 // A capacity short of the last block's end is enforced here, where the storage would still have room.

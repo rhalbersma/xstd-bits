@@ -6,7 +6,6 @@
 #ifndef XSTD_BITS_BIT_VECTOR_HPP
 #define XSTD_BITS_BIT_VECTOR_HPP
 
-#include <xstd/bits/bit_sequence_adaptor.hpp>                // bit_sequence_adaptor
 #include <xstd/bits/detail/contiguous_bit_container.hpp>     // contiguous_bit_container
 #include <xstd/bits/detail/ownership.hpp>                    // storage, window
 #include <xstd/bits/detail/sequence_adaptor.hpp>             // sequence_adaptor
@@ -121,13 +120,6 @@ basic_bit_vector(from_bit_storage_t, std::vector<Block, Allocator>) -> basic_bit
 
 template<xstd::unsigned_integer Block, class Allocator>
 basic_bit_vector(from_bit_storage_t, std::vector<Block, Allocator>, Allocator) -> basic_bit_vector<Block, Allocator>;
-
-// The adaptor named by its storage stays the door for a std::vector of blocks passed to it directly.
-template<xstd::unsigned_integer Block, class Allocator>
-bit_sequence_adaptor(from_bit_storage_t, std::vector<Block, Allocator>) -> bit_sequence_adaptor<std::vector<Block, Allocator>>;
-
-template<xstd::unsigned_integer Block, class Allocator>
-bit_sequence_adaptor(from_bit_storage_t, std::vector<Block, Allocator>, Allocator) -> bit_sequence_adaptor<std::vector<Block, Allocator>>;
 
 } // namespace xstd
 
