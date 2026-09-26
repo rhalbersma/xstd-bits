@@ -37,7 +37,7 @@
 #include <stdexcept>                                     // invalid_argument, out_of_range, overflow_error
 #include <string>                                        // basic_string, char_traits
 #include <string_view>                                   // basic_string_view
-#include <type_traits>                                   // is_array_v, is_nothrow_swappable_v, is_standard_layout_v, is_trivially_copyable_v, is_trivially_default_constructible_v, remove_cv_t, remove_cvref_t
+#include <type_traits>                                   // is_array_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v, is_standard_layout_v, is_trivially_copyable_v, is_trivially_default_constructible_v, remove_cv_t, remove_cvref_t
 #include <utility>                                       // as_const, move
 
 namespace xstd::bits::detail {
@@ -194,6 +194,18 @@ public:
         {
                 from_ullong(val);
         }
+
+        // flat_set's adopting constructor at a run-time width: the blocks move in, every bit of them a position.
+        [[nodiscard]] constexpr bitset_adaptor(xstd::from_bit_storage_t, Bits::block_container_type blocks) noexcept(std::is_nothrow_move_constructible_v<typename Bits::block_container_type>)
+                requires Bits::has_stored_size
+                : m_bits(xstd::from_bit_storage, std::move(blocks))
+        {}
+
+        template<class Alloc>
+                requires Bits::has_stored_size and std::same_as<Alloc, typename Bits::allocator_type>
+        [[nodiscard]] constexpr bitset_adaptor(xstd::from_bit_storage_t, Bits::block_container_type blocks, Alloc const& alloc)
+                : m_bits(xstd::from_bit_storage, std::move(blocks), alloc)
+        {}
 
         // Words that are bit storage, integers wider than the ullong door included, read as this bitset's bits.
         template<class B>

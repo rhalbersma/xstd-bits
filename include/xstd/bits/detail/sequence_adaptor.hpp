@@ -41,7 +41,7 @@
 #include <span>                                              // dynamic_extent
 #include <stdexcept>                                         // out_of_range
 #include <tuple>                                             // tuple_element, tuple_size
-#include <type_traits>                                       // conditional_t, false_type, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
+#include <type_traits>                                       // conditional_t, false_type, is_nothrow_move_constructible_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
 #include <utility>                                           // as_const, declval, forward, move, pair
 
 // The sequence reading, [array] over a contiguous_bit_container, owning it or referring to it.
@@ -328,6 +328,18 @@ public:
                 assert(il.size() <= size());
                 std::ranges::copy(il, begin());
         }
+
+        // flat_set's adopting constructor at a run-time width: the blocks move in, every bit of them a position.
+        [[nodiscard]] constexpr sequence_adaptor(xstd::from_bit_storage_t, bits_type::block_container_type blocks) noexcept(std::is_nothrow_move_constructible_v<typename bits_type::block_container_type>)
+                requires is_owner and bits_type::has_stored_size
+                : m_bits(xstd::from_bit_storage, std::move(blocks))
+        {}
+
+        template<class Alloc>
+                requires can_grow and bits_type::has_stored_size and std::same_as<Alloc, typename bits_type::allocator_type>
+        [[nodiscard]] constexpr sequence_adaptor(xstd::from_bit_storage_t, bits_type::block_container_type blocks, Alloc const& alloc)
+                : m_bits(xstd::from_bit_storage, std::move(blocks), alloc)
+        {}
 
         // Words that are bit storage, read as this sequence's bools; the tag says the words are bits and not elements.
         template<class B>

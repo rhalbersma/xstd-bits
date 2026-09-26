@@ -616,18 +616,28 @@ container out is the whole point; `to_bits<B>()` is `const` and copies, because 
 move that is cheaper than the copy. A loop that calls `extract` once and `to_bits` once is not the same loop, and
 the `flat_set` one is the one that has to be written carefully.
 
-The run-time widths have no `from_bit_storage`, for the reason that `std::bitset` names one `N` and a growing set has no
-single value for it. What they have instead is `flat_set`'s own pair, because their blocks *are* a container:
-`extract() &&` hands out `block_container_type` -- the `std::vector`, `std::inplace_vector` or `small_vector` of
-blocks -- and leaves the owner at width zero, and `replace(block_container_type&&)` takes one back. Both are a move
-and nothing else, on every reading's run-time-width owner and on no view, since a view has nothing of its own to hand.
+The run-time widths take `from_bit_storage` too, with a different argument: not a word or an array to copy, since
+`std::bitset` names one `N` and a growing set has no single value for it, but the block container itself, which they
+adopt. The constructor is `flat_set`'s container constructor under the tag -- `block_container_type` by value, moved
+in, with an allocator-extended form beside it -- and `flat_set`'s pair completes it: `extract() &&` hands out
+`block_container_type` -- the `std::vector`, `std::inplace_vector` or `small_vector` of blocks -- and leaves the owner
+at width zero, and `replace(block_container_type&&)` takes one back. All three are a move and nothing else, on every
+reading's run-time-width owner and on no view, since a view has nothing of its own to hand. The static widths' tag
+constructor requires a width in the type and the adopting one a width in the object, so the two never meet.
+
+Deduction goes through the aliases. `basic_bit_vector(from_bit_storage, std::move(v))` deduces
+`basic_bit_vector<Block, Allocator>` from a guide spelled on `std::vector<Block, Allocator>`, and the inplace names
+deduce their capacity from one spelled as they spell their block count, so a `std::inplace_vector<Block, K>` is
+adopted at `N = K * digits`. There is no guide over every resizable storage: through an alias it competes with the
+spelled ones and is ambiguous, and `std::vector` has no such guide to match; a storage the library does not name is
+adopted with its adaptor named, `bit_sequence_adaptor<Words>(from_bit_storage, std::move(words))`.
 
 `replace` has no precondition to state, which is where it parts from `flat_set`'s: the width becomes the blocks'
 whole width, every bit a position, so there is no tail for it to find dirty and no order for it to find broken. The
 price is that a width is not carried through the round trip -- `extract` hands out whole blocks, the unused tail
 clear, and `replace` reads them as whole blocks -- so a sequence of 70 comes back as one of 128 with the last 58
 false. The set reading loses nothing, its width being only capacity; the sequence and bitset readings `resize`
-afterwards when the exact width matters. Neither is an untagged constructor, for the reason words take a tag: a
+afterwards when the exact width matters. Adoption reads its blocks the same way. None is untagged, for the reason words take a tag: a
 range of unsigned integers already means something to each reading's constructors, and the name is what says blocks.
 
 The conversion operator reaches its storage through the `storage()` accessor and never through `m_bits`. The
