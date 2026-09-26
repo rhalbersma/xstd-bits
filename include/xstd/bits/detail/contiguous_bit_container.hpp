@@ -95,7 +95,7 @@ consteval auto admits_owner_extent() noexcept
         return N != std::dynamic_extent;
 }
 
-// A value, not a concept: MSVC's alias deduction rejects the owners where their constraint names one.
+// The container's own check, left off the owners' heads, whose alias deduction MSVC fails when they carry it.
 template<class Blocks, std::size_t N>
 inline constexpr bool owner_extent_v = admits_owner_extent<Blocks, N>();
 
