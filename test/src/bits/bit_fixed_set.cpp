@@ -8,7 +8,7 @@
 #include <test/set/ascending.hpp>         // yields_ascending_keys
 #include <test/set/concepts.hpp>          // bit_set, set_size_t, set_size_t_ranges
 #include <test/value_reference.hpp>       // value_reference
-#include <xstd/bits/bit_static_set.hpp>   // bit_static_set
+#include <xstd/bits/bit_fixed_set.hpp>    // bit_fixed_set
 #include <xstd/bits/bitset.hpp>           // bitset
 #include <xstd/bits/from_bit_storage.hpp> // from_bit_storage
 #include <boost/test/unit_test.hpp>       // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
@@ -24,7 +24,7 @@
 BOOST_AUTO_TEST_SUITE(BitFiniteSet)
 
 // Every Block model within one block, and the narrow ones across boundaries.
-using Types = test::graded_extents<xstd::basic_bit_static_set>;
+using Types = test::graded_extents<xstd::basic_bit_fixed_set>;
 
 // The clauses one at a time, so a failure names which one; the umbrella asserts the composite.
 BOOST_AUTO_TEST_CASE_TEMPLATE(IsRegular, T, Types)
@@ -225,7 +225,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(OurOwnBitsetReadingCrossesOnTheSameRule, T, Types)
 BOOST_AUTO_TEST_CASE(RawBlocksCrossOnTheSameRule)
 {
         constexpr auto N = 256UZ;
-        using Set = xstd::bit_static_set<N>;
+        using Set = xstd::bit_fixed_set<N>;
         using Wide = std::array<std::uint64_t, 4>;
         using Narrow = std::array<std::uint32_t, 8>;
 

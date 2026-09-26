@@ -6,9 +6,9 @@
 // What a reading costs as a view rather than a container, over the same backend bit container.
 
 #include <xstd/bits/bit_array.hpp>                       // bit_array
+#include <xstd/bits/bit_fixed_set.hpp>                   // bit_fixed_set
 #include <xstd/bits/bit_set_view.hpp>                    // bit_set_view
 #include <xstd/bits/bit_span.hpp>                        // bit_span
-#include <xstd/bits/bit_static_set.hpp>                  // bit_static_set
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <benchmark/benchmark.h>                         // ClobberMemory, DoNotOptimize, BENCHMARK_TEMPLATE, BENCHMARK_MAIN, State
 #include <array>                                         // array
@@ -53,7 +53,7 @@ template<std::size_t N>
 auto set_iterate_owner(benchmark::State& state)
         -> void
 {
-        auto s = filled<N, xstd::bit_static_set<N>>();
+        auto s = filled<N, xstd::bit_fixed_set<N>>();
         benchmark::DoNotOptimize(&s);
         for (auto _ : state) {
                 auto sum = 0UZ;
@@ -69,7 +69,7 @@ template<std::size_t N>
 auto set_iterate_owner_twin(benchmark::State& state)
         -> void
 {
-        auto s = filled<N, xstd::bit_static_set<N>>();
+        auto s = filled<N, xstd::bit_fixed_set<N>>();
         benchmark::DoNotOptimize(&s);
         for (auto _ : state) {
                 auto sum = 0UZ;

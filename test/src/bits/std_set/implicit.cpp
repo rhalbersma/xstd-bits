@@ -3,16 +3,16 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/flat_set.hpp>            // IWYU pragma: keep; TEST_HAS_FLAT_SET
-#include <test/uint128.hpp>             // TEST_HAS_UINT128, uint128
-#include <xstd/bits/bit_static_set.hpp> // bit_static_set
-#include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_CHECK_EQUAL_COLLECTIONS
-#include <algorithm>                    // copy
-#include <cstddef>                      // size_t
-#include <cstdint>                      // uint16_t, uint32_t, uint64_t
-#include <iterator>                     // inserter
-#include <set>                          // set
-#include <tuple>                        // tuple
+#include <test/flat_set.hpp>           // IWYU pragma: keep; TEST_HAS_FLAT_SET
+#include <test/uint128.hpp>            // TEST_HAS_UINT128, uint128
+#include <xstd/bits/bit_fixed_set.hpp> // bit_fixed_set
+#include <boost/test/unit_test.hpp>    // BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_CHECK_EQUAL_COLLECTIONS
+#include <algorithm>                   // copy
+#include <cstddef>                     // size_t
+#include <cstdint>                     // uint16_t, uint32_t, uint64_t
+#include <iterator>                    // inserter
+#include <set>                         // set
+#include <tuple>                       // tuple
 
 BOOST_AUTO_TEST_SUITE(StdSet)
 BOOST_AUTO_TEST_SUITE(Implicit)
@@ -27,11 +27,11 @@ using Types = std::tuple<std::set<std::size_t>
 
 #endif
                          ,
-                         xstd::basic_bit_static_set<uint16_t, 32>, xstd::basic_bit_static_set<uint16_t, 33>, xstd::basic_bit_static_set<uint16_t, 48>, xstd::basic_bit_static_set<uint32_t, 32>, xstd::basic_bit_static_set<uint32_t, 33>, xstd::basic_bit_static_set<uint32_t, 64>, xstd::basic_bit_static_set<uint32_t, 65>, xstd::basic_bit_static_set<uint32_t, 96>, xstd::basic_bit_static_set<uint64_t, 64>, xstd::basic_bit_static_set<uint64_t, 65>, xstd::basic_bit_static_set<uint64_t, 128>, xstd::basic_bit_static_set<uint64_t, 129>, xstd::basic_bit_static_set<uint64_t, 192>
+                         xstd::basic_bit_fixed_set<uint16_t, 32>, xstd::basic_bit_fixed_set<uint16_t, 33>, xstd::basic_bit_fixed_set<uint16_t, 48>, xstd::basic_bit_fixed_set<uint32_t, 32>, xstd::basic_bit_fixed_set<uint32_t, 33>, xstd::basic_bit_fixed_set<uint32_t, 64>, xstd::basic_bit_fixed_set<uint32_t, 65>, xstd::basic_bit_fixed_set<uint32_t, 96>, xstd::basic_bit_fixed_set<uint64_t, 64>, xstd::basic_bit_fixed_set<uint64_t, 65>, xstd::basic_bit_fixed_set<uint64_t, 128>, xstd::basic_bit_fixed_set<uint64_t, 129>, xstd::basic_bit_fixed_set<uint64_t, 192>
 #ifdef TEST_HAS_UINT128
 
                          ,
-                         xstd::basic_bit_static_set<xstd::uint128, 128>, xstd::basic_bit_static_set<xstd::uint128, 129>, xstd::basic_bit_static_set<xstd::uint128, 256>, xstd::basic_bit_static_set<xstd::uint128, 257>, xstd::basic_bit_static_set<xstd::uint128, 384>
+                         xstd::basic_bit_fixed_set<xstd::uint128, 128>, xstd::basic_bit_fixed_set<xstd::uint128, 129>, xstd::basic_bit_fixed_set<xstd::uint128, 256>, xstd::basic_bit_fixed_set<xstd::uint128, 257>, xstd::basic_bit_fixed_set<xstd::uint128, 384>
 
 #endif
                          >;

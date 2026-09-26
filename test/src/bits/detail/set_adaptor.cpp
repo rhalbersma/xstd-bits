@@ -4,8 +4,8 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/bit_exchange.hpp>                         // casts_from, exchanges_to_bits
+#include <xstd/bits/bit_fixed_set.hpp>                   // bit_fixed_set
 #include <xstd/bits/bit_set.hpp>                         // bit_set
-#include <xstd/bits/bit_static_set.hpp>                  // bit_static_set
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/detail/ownership.hpp>                // storage
 #include <xstd/bits/detail/set_adaptor.hpp>              // set_adaptor
@@ -27,7 +27,7 @@
 namespace {
 
 using Storage = xstd::bits::detail::contiguous_bit_container<std::array<std::uint64_t, 2>, 100>;
-using Owner = xstd::basic_bit_static_set<std::uint64_t, 100>;
+using Owner = xstd::basic_bit_fixed_set<std::uint64_t, 100>;
 using View = xstd::bits::detail::set_adaptor<Storage, xstd::bits::detail::storage::borrowed>;
 using Reader = xstd::bits::detail::set_adaptor<Storage const, xstd::bits::detail::storage::borrowed>;
 
@@ -337,10 +337,10 @@ BOOST_AUTO_TEST_CASE(RangedInsertionAgreesWithTheElementwiseLoop)
         // The consecutive tier, over every [lo, hi) the width admits.
         for (auto const lo : std::views::iota(0UZ, N + 1UZ)) {
                 for (auto const hi : std::views::iota(lo, N + 1UZ)) {
-                        auto ranged = xstd::bit_static_set<N>();
+                        auto ranged = xstd::bit_fixed_set<N>();
                         ranged.insert_range(std::views::iota(lo, hi));
 
-                        auto elementwise = xstd::bit_static_set<N>();
+                        auto elementwise = xstd::bit_fixed_set<N>();
                         for (auto const i : std::views::iota(lo, hi)) {
                                 elementwise.insert(i);
                         }
@@ -349,7 +349,7 @@ BOOST_AUTO_TEST_CASE(RangedInsertionAgreesWithTheElementwiseLoop)
         }
 
         // It has to leave what lies outside the range alone, which a whole-block write would not.
-        auto seeded = xstd::bit_static_set<N>();
+        auto seeded = xstd::bit_fixed_set<N>();
         seeded.insert(0UZ);
         seeded.insert(70UZ);
         seeded.insert(99UZ);
@@ -361,10 +361,10 @@ BOOST_AUTO_TEST_CASE(RangedInsertionAgreesWithTheElementwiseLoop)
         BOOST_CHECK(seeded == expected);
 
         // The set tier: a union, and equally the element-wise answer.
-        auto lhs = xstd::bit_static_set<N>();
+        auto lhs = xstd::bit_fixed_set<N>();
         lhs.insert(1UZ);
         lhs.insert(64UZ);
-        auto rhs = xstd::bit_static_set<N>();
+        auto rhs = xstd::bit_fixed_set<N>();
         rhs.insert(64UZ);
         rhs.insert(99UZ);
         auto united = lhs;
@@ -410,7 +410,7 @@ auto check_refuses(std::invocable auto write)
 // The one key a set can be unable to hold, every other member being total over key_type.
 BOOST_AUTO_TEST_CASE(AKeyAStaticWidthCannotHoldIsOutOfRange)
 {
-        using S = xstd::basic_bit_static_set<std::uint64_t, 100>;
+        using S = xstd::basic_bit_fixed_set<std::uint64_t, 100>;
         static_assert(S().max_size() == 100UZ);
 
         auto s = S();
@@ -434,7 +434,7 @@ BOOST_AUTO_TEST_CASE(AKeyAStaticWidthCannotHoldIsOutOfRange)
 // The bulk inserts refuse it too, the consecutive tier guarding the range's last position before it writes anything.
 BOOST_AUTO_TEST_CASE(TheBulkInsertsRefuseTheKeyAndSayWhatTheyWrote)
 {
-        using S = xstd::basic_bit_static_set<std::uint64_t, 100>;
+        using S = xstd::basic_bit_fixed_set<std::uint64_t, 100>;
 
         auto consecutive = S();
         BOOST_CHECK_THROW(consecutive.insert_range(std::views::iota(98UZ, 102UZ)), std::out_of_range);
@@ -449,7 +449,7 @@ BOOST_AUTO_TEST_CASE(TheBulkInsertsRefuseTheKeyAndSayWhatTheyWrote)
 // Asking stays total, which is what [set] gives it: a key past the width is one the set does not hold.
 BOOST_AUTO_TEST_CASE(AKeyPastTheWidthIsStillAskable)
 {
-        using S = xstd::basic_bit_static_set<std::uint64_t, 100>;
+        using S = xstd::basic_bit_fixed_set<std::uint64_t, 100>;
 
         auto s = S();
         s.insert(3UZ);
@@ -631,7 +631,7 @@ BOOST_AUTO_TEST_CASE(ForEachHandsThePositionByValue)
 // back() has a non-empty set as its precondition, and a zero width has no non-empty state to ask it in.
 BOOST_AUTO_TEST_CASE(AZeroWidthAnswersBackWithoutScanning)
 {
-        auto const z = xstd::bit_static_set<0>();
+        auto const z = xstd::bit_fixed_set<0>();
 
         BOOST_CHECK(z.empty());
         BOOST_CHECK_EQUAL(z.size(), 0UZ);

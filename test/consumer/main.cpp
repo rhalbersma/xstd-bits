@@ -6,8 +6,8 @@
 // The gate on the interface line.
 
 #include <concepts>      // convertible_to, copyable, default_initializable, equality_comparable, regular, same_as, totally_ordered
-#include <xstd/bits.hpp> // bit_array, bit_inplace_set, bit_inplace_vector, bit_set, bit_set_view, bit_span,
-                         // bit_static_set, bit_subspan, bit_vector, bitset, dynamic_bitset, inplace_bitset
+#include <xstd/bits.hpp> // bit_array, bit_bounded_set, bit_bounded_vector, bit_set, bit_set_view, bit_span,
+                         // bit_fixed_set, bit_subspan, bit_vector, bitset, dynamic_bitset, bounded_bitset
 #include <cstddef>       // size_t
 #include <cstdint>       // uint8_t
 #include <ranges>        // bidirectional_range, random_access_range, range, range_value_t, view
@@ -47,8 +47,8 @@ static_assert(std::ranges::view<set_view_of_bitset> and not std::default_initial
 static_assert(std::ranges::view<span_of_bitset> and not std::equality_comparable<span_of_bitset>);
 
 // The set reading: three widths, one adaptor.
-static_assert(is_set_adaptor<xstd::bit_static_set<100>>);
-static_assert(is_set_adaptor<xstd::basic_bit_static_set<std::uint8_t, 24>>);
+static_assert(is_set_adaptor<xstd::bit_fixed_set<100>>);
+static_assert(is_set_adaptor<xstd::basic_bit_fixed_set<std::uint8_t, 24>>);
 static_assert(is_set_adaptor<xstd::bit_set>);
 static_assert(is_set_adaptor<set_view_of_bitset>);
 
@@ -68,10 +68,10 @@ static_assert(is_set_adaptor<set_view_of_bitset>);
 
 #ifdef __cpp_lib_inplace_vector
 
-// The inplace column, present only where its storage is.
-static_assert(is_set_adaptor<xstd::bit_inplace_set<100>>);
-static_assert(is_sequence_adaptor<xstd::bit_inplace_vector<100>>);
-static_assert(is_bitset_adaptor<xstd::inplace_bitset<100>>);
+// The bounded column, present only where its storage is.
+static_assert(is_set_adaptor<xstd::bit_bounded_set<100>>);
+static_assert(is_sequence_adaptor<xstd::bit_bounded_vector<100>>);
+static_assert(is_bitset_adaptor<xstd::bounded_bitset<100>>);
 
 #endif
 
@@ -84,7 +84,7 @@ auto main()
         auto const check = [&failures](bool ok) noexcept { failures += ok ? 0 : 1; };
 
         // The set reading over storage the container owns.
-        auto set = xstd::bit_static_set<100>();
+        auto set = xstd::bit_fixed_set<100>();
         set.insert(1);
         set.insert(2);
         set.insert(3);
@@ -115,7 +115,7 @@ auto main()
 
 #ifdef __cpp_lib_inplace_vector
 
-        auto inplace = xstd::bit_inplace_set<100>();
+        auto inplace = xstd::bit_bounded_set<100>();
         inplace.insert(99);
         check(inplace.contains(99));
 

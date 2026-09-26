@@ -14,7 +14,7 @@
 
 #ifdef _MSC_VER
 
-// std::bitset<0> and xstd::bit_static_set<0> give bogus "unreachable code" warnings
+// std::bitset<0> and xstd::bit_fixed_set<0> give bogus "unreachable code" warnings
 #pragma warning(disable : 4702)
 
 #endif

@@ -23,9 +23,9 @@
 
 #ifdef TEST_HAS_INPLACE_VECTOR
 
-#include <xstd/bits/bit_inplace_set.hpp>    // basic_bit_inplace_set
-#include <xstd/bits/bit_inplace_vector.hpp> // basic_bit_inplace_vector
-#include <xstd/bits/inplace_bitset.hpp>     // basic_inplace_bitset
+#include <xstd/bits/bit_bounded_set.hpp>    // basic_bit_bounded_set
+#include <xstd/bits/bit_bounded_vector.hpp> // basic_bit_bounded_vector
+#include <xstd/bits/bounded_bitset.hpp>     // basic_bounded_bitset
 #include <inplace_vector>                   // inplace_vector
 
 #endif
@@ -125,16 +125,16 @@ BOOST_AUTO_TEST_CASE(AdoptionIsConstexpr)
 // Inline blocks deduce the capacity they hold in whole, through each reading's owner.
 BOOST_AUTO_TEST_CASE(InlineBlocksDeduceTheirAlignedCapacity)
 {
-        auto const v = xstd::basic_bit_inplace_vector(xstd::from_bit_storage, std::inplace_vector<std::uint8_t, 2>{0x81});
-        static_assert(std::same_as<decltype(v), xstd::basic_bit_inplace_vector<std::uint8_t, 16> const>);
+        auto const v = xstd::basic_bit_bounded_vector(xstd::from_bit_storage, std::inplace_vector<std::uint8_t, 2>{0x81});
+        static_assert(std::same_as<decltype(v), xstd::basic_bit_bounded_vector<std::uint8_t, 16> const>);
         BOOST_CHECK(v.size() == 8UZ and v[0] and v[7]);
 
-        auto const s = xstd::basic_bit_inplace_set(xstd::from_bit_storage, std::inplace_vector<std::uint8_t, 2>{0x81});
-        static_assert(std::same_as<decltype(s), xstd::basic_bit_inplace_set<std::uint8_t, 16> const>);
+        auto const s = xstd::basic_bit_bounded_set(xstd::from_bit_storage, std::inplace_vector<std::uint8_t, 2>{0x81});
+        static_assert(std::same_as<decltype(s), xstd::basic_bit_bounded_set<std::uint8_t, 16> const>);
         BOOST_CHECK(s.contains(0) and s.contains(7));
 
-        auto const b = xstd::basic_inplace_bitset(xstd::from_bit_storage, std::inplace_vector<std::uint8_t, 2>{0x81});
-        static_assert(std::same_as<decltype(b), xstd::basic_inplace_bitset<std::uint8_t, 16> const>);
+        auto const b = xstd::basic_bounded_bitset(xstd::from_bit_storage, std::inplace_vector<std::uint8_t, 2>{0x81});
+        static_assert(std::same_as<decltype(b), xstd::basic_bounded_bitset<std::uint8_t, 16> const>);
         BOOST_CHECK_EQUAL(b.count(), 2UZ);
 }
 

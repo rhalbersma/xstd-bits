@@ -5,7 +5,7 @@
 
 #include <test/uint128.hpp>               // IWYU pragma: keep; TEST_HAS_UINT128, uint128
 #include <xstd/bits/bit_array.hpp>        // basic_bit_array, bit_array
-#include <xstd/bits/bit_static_set.hpp>   // basic_bit_static_set, bit_static_set
+#include <xstd/bits/bit_fixed_set.hpp>    // basic_bit_fixed_set, bit_fixed_set
 #include <xstd/bits/bit_vector.hpp>       // bit_vector
 #include <xstd/bits/bitset.hpp>           // basic_bitset, bitset
 #include <xstd/bits/from_bit_storage.hpp> // from_bit_storage, from_bit_storage_t
@@ -56,9 +56,9 @@ BOOST_AUTO_TEST_CASE(AnIntegerDeducesItsOwnWidth)
         static_assert(a == xstd::basic_bit_array<std::uint16_t, 16>(xstd::from_bit_storage, word));
         static_assert(a[0] and not a[1] and a[2] and a[15]);
 
-        constexpr auto s = xstd::basic_bit_static_set(xstd::from_bit_storage, word);
-        static_assert(std::same_as<decltype(s), xstd::basic_bit_static_set<std::uint16_t, 16> const>);
-        static_assert(s == xstd::basic_bit_static_set<std::uint16_t, 16>(xstd::from_bit_storage, word));
+        constexpr auto s = xstd::basic_bit_fixed_set(xstd::from_bit_storage, word);
+        static_assert(std::same_as<decltype(s), xstd::basic_bit_fixed_set<std::uint16_t, 16> const>);
+        static_assert(s == xstd::basic_bit_fixed_set<std::uint16_t, 16>(xstd::from_bit_storage, word));
         static_assert(s.size() == 3UZ and s.contains(15UZ));
 
         constexpr auto b = xstd::basic_bitset(xstd::from_bit_storage, word);
@@ -76,8 +76,8 @@ BOOST_AUTO_TEST_CASE(AnArrayOfBlocksDeducesTheirWidth)
         static_assert(std::same_as<decltype(a), xstd::basic_bit_array<std::uint8_t, 24> const>);
         static_assert(a[0] and a[23] and a.count() == 2UZ);
 
-        constexpr auto s = xstd::basic_bit_static_set(xstd::from_bit_storage, blocks);
-        static_assert(std::same_as<decltype(s), xstd::basic_bit_static_set<std::uint8_t, 24> const>);
+        constexpr auto s = xstd::basic_bit_fixed_set(xstd::from_bit_storage, blocks);
+        static_assert(std::same_as<decltype(s), xstd::basic_bit_fixed_set<std::uint8_t, 24> const>);
         static_assert(s.contains(0UZ) and s.contains(23UZ) and s.size() == 2UZ);
 
         constexpr auto b = xstd::basic_bitset(xstd::from_bit_storage, blocks);
@@ -129,10 +129,10 @@ BOOST_AUTO_TEST_CASE(OnlyAnUnsignedIntegerOrItsArrayDeduces)
 // Only what is bit storage is read through the tag: a std::bitset has bit storage and is not it, so it is cast.
 BOOST_AUTO_TEST_CASE(OnlyWhatIsBitStorageIsReadThroughTheTag)
 {
-        static_assert(std::is_constructible_v<xstd::bit_static_set<64>, xstd::from_bit_storage_t, std::uint64_t>);
-        static_assert(std::is_constructible_v<xstd::bit_static_set<64>, xstd::from_bit_storage_t, std::array<std::uint32_t, 2>>);
-        static_assert(not std::is_constructible_v<xstd::bit_static_set<64>, xstd::from_bit_storage_t, std::bitset<64>>);
-        static_assert(not std::is_constructible_v<xstd::bit_static_set<64>, xstd::from_bit_storage_t, xstd::bit_array<64>>);
+        static_assert(std::is_constructible_v<xstd::bit_fixed_set<64>, xstd::from_bit_storage_t, std::uint64_t>);
+        static_assert(std::is_constructible_v<xstd::bit_fixed_set<64>, xstd::from_bit_storage_t, std::array<std::uint32_t, 2>>);
+        static_assert(not std::is_constructible_v<xstd::bit_fixed_set<64>, xstd::from_bit_storage_t, std::bitset<64>>);
+        static_assert(not std::is_constructible_v<xstd::bit_fixed_set<64>, xstd::from_bit_storage_t, xstd::bit_array<64>>);
         BOOST_CHECK(true);
 }
 

@@ -29,7 +29,7 @@ xstd-bits is **nine containers**: three readings of a block of bits — an order
 
 ### Each one is the packing of a standard container, and speaks that container's vocabulary
 
-The relationship is the one `std::flat_set` has to `std::set`: **a different representation under the same interface**, departing from it only where the representation forces a departure. `xstd::bit_vector` answers `std::vector<bool>`'s synopsis line for line; `xstd::bit_array<N>` answers `std::array<bool, N>`'s, `xstd::bit_inplace_vector<N>` answers `std::inplace_vector<bool, N>`'s, the three `bitset`s answer `std::bitset<N>`'s and `boost::dynamic_bitset<>`'s, and the three sets answer `std::set<std::size_t>`'s. Each is held to its counterpart by a checklist that spells that counterpart's synopsis out as a `requires`-expression and is asserted **on the counterpart first**, so a line the model itself cannot answer can never be asked of the packing.
+The relationship is the one `std::flat_set` has to `std::set`: **a different representation under the same interface**, departing from it only where the representation forces a departure. `xstd::bit_vector` answers `std::vector<bool>`'s synopsis line for line; `xstd::bit_array<N>` answers `std::array<bool, N>`'s, `xstd::bit_bounded_vector<N>` answers `std::inplace_vector<bool, N>`'s, the three `bitset`s answer `std::bitset<N>`'s and `boost::dynamic_bitset<>`'s, and the three sets answer `std::set<std::size_t>`'s. Each is held to its counterpart by a checklist that spells that counterpart's synopsis out as a `requires`-expression and is asserted **on the counterpart first**, so a line the model itself cannot answer can never be asked of the packing.
 
 The yardstick is the [current working draft](https://eel.is/c++draft/), not the standard the library compiles as. Where C++23 and the draft disagree the draft wins, and [design.md](doc/design.md) records which paper moved each line.
 
@@ -121,13 +121,13 @@ auto filter_twins(X const& primes)
 
 This returns **both** members of each twin pair — `{3, 5, 7, 11, 13, ...}`, [OEIS A001097](https://oeis.org/A001097) — rather than the lesser of each pair, `{3, 5, 11, 17, ...}`, [A001359](https://oeis.org/A001359). Both are called "the twin primes" in the wild, so the choice is worth stating.
 
-The calling code for these algorithms is listed below. Here, the pretty-printing as a `set` using `{}` delimiters is triggered by the nested `key_type`. Note that `xstd::bit_static_set<N>` acts as a **drop-in replacement** for `std::set<int>` (or `std::flat_set<int>`).
+The calling code for these algorithms is listed below. Here, the pretty-printing as a `set` using `{}` delimiters is triggered by the nested `key_type`. Note that `xstd::bit_fixed_set<N>` acts as a **drop-in replacement** for `std::set<int>` (or `std::flat_set<int>`).
 
 ```cpp
 int main()
 {
     constexpr auto N = 100UZ;
-    using X = xstd::bit_static_set<N>; /* or xstd::bit_set, std::set<std::size_t>, std::flat_set<std::size_t> */
+    using X = xstd::bit_fixed_set<N>; /* or xstd::bit_set, std::set<std::size_t>, std::flat_set<std::size_t> */
 
     auto const primes = opt::sift_primes0<X>(N);
     assert(std::format("{}", primes) == "{2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97}");
@@ -137,7 +137,7 @@ int main()
 }
 ```
 
-Those two assertions are the ones [`test/src/bits/std_set/sieve.cpp`](test/src/bits/std_set/sieve.cpp) makes, over `std::set`, `std::flat_set`, `bit_static_set<N>` and `bit_set` alike.
+Those two assertions are the ones [`test/src/bits/std_set/sieve.cpp`](test/src/bits/std_set/sieve.cpp) makes, over `std::set`, `std::flat_set`, `bit_fixed_set<N>` and `bit_set` alike.
 
 ### Sieves that need no bound
 
@@ -147,12 +147,12 @@ Those two assertions are the ones [`test/src/bits/std_set/sieve.cpp`](test/src/b
 auto sieve = opt::incremental_sieve();
 sieve.next();  // 2, then 3, 5, 7, ... forever, with no n anywhere
 
-auto primes = opt::sift_primes_segmented<xstd::bit_set, xstd::bit_static_set<1 << 15>>(n);
+auto primes = opt::sift_primes_segmented<xstd::bit_set, xstd::bit_fixed_set<1 << 15>>(n);
 ```
 
 The **incremental** sieve ([O'Neill 2009](https://www.cs.hmc.edu/~oneill/papers/Sieve-JFP.pdf)) keeps one entry per prime found — the next composite that prime will strike — so its space is `O(π(n))` and it generates without end. It is also about **29× slower**, which is the honest price of unboundedness and the reason it is measured rather than recommended.
 
-The **segmented** sieve is the one that pays. Base primes below `√n` once, then a single reusable window walked over the rest, so peak memory is `O(√n + W)` whatever `n` is. `Window` is a template parameter carrying its own extent, which makes `bit_static_set<W>` the natural argument: a compile-time width that allocates nothing in the loop. At `n = 2^20` it is **1.7× faster** than the bounded sieve as well as far thriftier — the window stays in L1 for a whole segment where a megabit sieve is walked with a stride. Less memory *and* less time is the unusual direction for that trade to run.
+The **segmented** sieve is the one that pays. Base primes below `√n` once, then a single reusable window walked over the rest, so peak memory is `O(√n + W)` whatever `n` is. `Window` is a template parameter carrying its own extent, which makes `bit_fixed_set<W>` the natural argument: a compile-time width that allocates nothing in the loop. At `n = 2^20` it is **1.7× faster** than the bounded sieve as well as far thriftier — the window stays in L1 for a whole segment where a megabit sieve is walked with a stride. Less memory *and* less time is the unusual direction for that trade to run.
 
 All three agree, and the test asserts that rather than the README claiming it.
 
@@ -165,14 +165,14 @@ its storage, with the constructors of the standard container it packs.
 
 | Header | Additions | Description | Reference |
 | :----- | :-------- | :---------- | :-------- |
-| `<xstd/bits/bit_static_set.hpp>` | `bit_static_set` <br> `basic_bit_static_set` | Ordered set of `std::size_t`, static size and capacity | [associative.reqmts], [set] |
-| `<xstd/bits/bit_inplace_set.hpp>` | `bit_inplace_set` <br> `basic_bit_inplace_set` | Ordered set, dynamic size within a static capacity | [associative.reqmts], [set] |
+| `<xstd/bits/bit_fixed_set.hpp>` | `bit_fixed_set` <br> `basic_bit_fixed_set` | Ordered set of `std::size_t`, static size and capacity | [associative.reqmts], [set] |
+| `<xstd/bits/bit_bounded_set.hpp>` | `bit_bounded_set` <br> `basic_bit_bounded_set` | Ordered set, dynamic size within a static capacity | [associative.reqmts], [set] |
 | `<xstd/bits/bit_set.hpp>` | `bit_set` <br> `basic_bit_set` | Ordered set, dynamic size and capacity | [associative.reqmts], [set] |
 | `<xstd/bits/bit_array.hpp>` | `bit_array` <br> `basic_bit_array` | Sequence of `bool`, static size and capacity | [array] |
-| `<xstd/bits/bit_inplace_vector.hpp>` | `bit_inplace_vector` <br> `basic_bit_inplace_vector` | Sequence of `bool`, dynamic size within a static capacity | [inplace.vector] |
+| `<xstd/bits/bit_bounded_vector.hpp>` | `bit_bounded_vector` <br> `basic_bit_bounded_vector` | Sequence of `bool`, dynamic size within a static capacity | [inplace.vector] |
 | `<xstd/bits/bit_vector.hpp>` | `bit_vector` <br> `basic_bit_vector` | Sequence of `bool`, dynamic size and capacity | [vector.bool] |
 | `<xstd/bits/bitset.hpp>` | `bitset` <br> `basic_bitset` | Both readings at once, static size and capacity | [template.bitset] |
-| `<xstd/bits/inplace_bitset.hpp>` | `inplace_bitset` <br> `basic_inplace_bitset` | Both readings, dynamic size within a static capacity | [template.bitset] |
+| `<xstd/bits/bounded_bitset.hpp>` | `bounded_bitset` <br> `basic_bounded_bitset` | Both readings, dynamic size within a static capacity | [template.bitset] |
 | `<xstd/bits/dynamic_bitset.hpp>` | `dynamic_bitset` <br> `basic_dynamic_bitset` | Both readings, dynamic size and capacity | [`boost::dynamic_bitset`](https://www.boost.org/doc/libs/release/libs/dynamic_bitset/dynamic_bitset.html) |
 | `<xstd/bits/ext/boost.hpp>` | `bit_small_set` <br> `bit_small_vector` <br> `small_bitset` <br> and their `basic_` forms | All three readings, dynamic size staying inline within a static capacity | [`boost::container::small_vector`](https://www.boost.org/doc/libs/release/doc/html/boost/container/small_vector.html) |
 | `<xstd/bits/bit_set_adaptor.hpp>` | `bit_set_adaptor` | The set reading over a storage of blocks, or over one word: `bit_set_adaptor<std::vector<std::uint32_t>>` is `basic_bit_set<std::uint32_t>`, and `bit_set_adaptor<std::uint64_t>` is a set of 64 in one word | [set], [container.adaptors] |
@@ -197,7 +197,7 @@ The headers under `<xstd/bits/detail/>` are implementation and carry no stabilit
 
 This library depends on the C++ Standard Library, on [xstd-ints](https://github.com/rhalbersma/xstd-ints) and [xstd-misc](https://github.com/rhalbersma/xstd-misc) (both fetched automatically via CMake `FetchContent` when not already installed), and on [Boost.Hash2](https://github.com/boostorg/hash2) for the hashing support. It is continuously being tested with the following conforming [C++23](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/n4950.pdf) compilers, against all three mainstream standard libraries (libstdc++, the MSVC STL, and libc++). Following the model of [apt.llvm.org](https://apt.llvm.org/), we support the latest two stable releases of each compiler, plus its current development branch.
 
-Two standards are in play and they answer different questions. **C++23 is what the library compiles as** — that is the language it requires, and the tests build at C++26 as well — on GCC 16, GCC 17-SVN and MinGW 16, the three rungs whose libstdc++ carries `<inplace_vector>` — which is what reaches the inplace column. **The current [working draft](https://eel.is/c++draft/) is what the interfaces are measured against**, because a counterpart's synopsis is a moving target and the newest one is the one worth answering. So `std::bitset`'s `basic_string_view` constructor ([P2697R1](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p2697r1.pdf)) and its `charT` Constraints ([LWG 4294](https://cplusplus.github.io/LWG/issue4294)) are here even though C++23 has neither, and the proxy carries the hidden-friend `swap`s of [P3612R1](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3612r1.html) beside the static `swap(reference, reference)` that paper moved to `[depr.vector.bool.swap]`.
+Two standards are in play and they answer different questions. **C++23 is what the library compiles as** — that is the language it requires, and the tests build at C++26 as well — on GCC 16, GCC 17-SVN and MinGW 16, the three rungs whose libstdc++ carries `<inplace_vector>` — which is what reaches the bounded column. **The current [working draft](https://eel.is/c++draft/) is what the interfaces are measured against**, because a counterpart's synopsis is a moving target and the newest one is the one worth answering. So `std::bitset`'s `basic_string_view` constructor ([P2697R1](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p2697r1.pdf)) and its `charT` Constraints ([LWG 4294](https://cplusplus.github.io/LWG/issue4294)) are here even though C++23 has neither, and the proxy carries the hidden-friend `swap`s of [P3612R1](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3612r1.html) beside the static `swap(reference, reference)` that paper moved to `[depr.vector.bool.swap]`.
 
 Note that the benchmarks and unit tests depend on [Boost](https://www.boost.io/), [Google Benchmark](https://github.com/google/benchmark) and [range-v3](https://github.com/ericniebler/range-v3). 
 

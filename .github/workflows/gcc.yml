@@ -28,7 +28,7 @@ jobs:
     with:
       cmake_args: -DXSTD_BITS_BUILD_BENCHMARKS=ON
 
-  # The inplace column and nothing else: std::inplace_vector is behind __cpp_lib_inplace_vector, which is C++26, so
+  # The bounded column and nothing else: std::inplace_vector is behind __cpp_lib_inplace_vector, which is C++26, so
   # at the standard every other leg compiles as, three of the nine cells compile to nothing and are never tested.
   # CMakeLists.txt raises the standard for the test tree alone -- the INTERFACE a consumer inherits stays at 23 --
   # and this is the leg that asks it to. No benchmarks: the ladder above builds those, and this one is here for the

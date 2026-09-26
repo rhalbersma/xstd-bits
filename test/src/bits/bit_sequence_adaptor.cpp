@@ -4,7 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <xstd/bits/bit_array.hpp>            // basic_bit_array
-#include <xstd/bits/bit_inplace_vector.hpp>   // IWYU pragma: keep; basic_bit_inplace_vector, named only under __cpp_lib_inplace_vector
+#include <xstd/bits/bit_bounded_vector.hpp>   // IWYU pragma: keep; basic_bit_bounded_vector, named only under __cpp_lib_inplace_vector
 #include <xstd/bits/bit_sequence_adaptor.hpp> // bit_sequence_adaptor
 #include <xstd/bits/bit_vector.hpp>           // basic_bit_vector
 #include <xstd/bits/detail/ownership.hpp>     // owned_bits_t
@@ -36,7 +36,7 @@ BOOST_AUTO_TEST_CASE(OwnersWrapTheStorageOfTheAdaptorOverIt)
         static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_array<std::uint8_t, 20>>, xstd::bits::detail::owned_bits_t<xstd::bit_sequence_adaptor<std::array<std::uint8_t, 3>, 20>>>);
         static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_vector<std::uint32_t>>, xstd::bits::detail::owned_bits_t<xstd::bit_sequence_adaptor<std::vector<std::uint32_t>>>>);
 #ifdef __cpp_lib_inplace_vector
-        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_inplace_vector<std::uint16_t, 48>>, xstd::bits::detail::owned_bits_t<xstd::bit_sequence_adaptor<std::inplace_vector<std::uint16_t, 3>>>>);
+        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_bounded_vector<std::uint16_t, 48>>, xstd::bits::detail::owned_bits_t<xstd::bit_sequence_adaptor<std::inplace_vector<std::uint16_t, 3>>>>);
 #endif
 
         // Two names over one storage are two types, and no comparison crosses between them.

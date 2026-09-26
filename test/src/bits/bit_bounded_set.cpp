@@ -9,7 +9,7 @@
 
 #include <test/set/ascending.hpp>                        // yields_ascending_keys
 #include <test/set/concepts.hpp>                         // bit_set, set_size_t, set_size_t_ranges
-#include <xstd/bits/bit_inplace_set.hpp>                 // aligned, basic_bit_inplace_set, bit_inplace_set
+#include <xstd/bits/bit_bounded_set.hpp>                 // aligned, basic_bit_bounded_set, bit_bounded_set
 #include <xstd/bits/bit_set_adaptor.hpp>                 // bit_set_adaptor
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/detail/ownership.hpp>                // owned_bits_t, storage
@@ -25,22 +25,22 @@
 
 #endif
 
-BOOST_AUTO_TEST_SUITE(BitInplaceSet)
+BOOST_AUTO_TEST_SUITE(BitBoundedSet)
 
 #ifdef TEST_HAS_INPLACE_VECTOR
 
 // A capacity of three whole blocks, so a key can sit past the width and still inside the capacity.
-using T = xstd::basic_bit_inplace_set<std::uint8_t, 24>;
+using T = xstd::basic_bit_bounded_set<std::uint8_t, 24>;
 
 // Dependent, so an absent member is a false rather than a hard error.
 template<class X>
 constexpr bool has_capacity = requires (X const& x) { x.capacity(); };
 
 // The set reading over a run-time width under a compile-time capacity, built on the set adaptor.
-BOOST_AUTO_TEST_CASE(TheInplaceSetIsTheSetAdaptorOverAnInplaceVectorOfBlocks)
+BOOST_AUTO_TEST_CASE(TheBoundedSetIsTheSetAdaptorOverAnInplaceVectorOfBlocks)
 {
         static_assert(std::derived_from<T, xstd::bits::detail::set_adaptor<xstd::bits::detail::contiguous_bit_container<std::inplace_vector<std::uint8_t, 3>, 24>, xstd::bits::detail::storage::owned, T>>);
-        static_assert(std::same_as<xstd::bit_inplace_set<24>, xstd::basic_bit_inplace_set<std::size_t, 24>>);
+        static_assert(std::same_as<xstd::bit_bounded_set<24>, xstd::basic_bit_bounded_set<std::size_t, 24>>);
         static_assert(test::set::bit_set<T>);
 }
 
@@ -58,7 +58,7 @@ BOOST_AUTO_TEST_CASE(ItAnswersEveryLineOfStdSetSizeTAnyway)
 #endif
         static_assert(test::set::set_size_t<std::set<std::size_t>>);
         static_assert(test::set::set_size_t<T>);
-        static_assert(test::set::set_size_t<xstd::bit_inplace_set<24>>);
+        static_assert(test::set::set_size_t<xstd::bit_bounded_set<24>>);
         static_assert(test::set::set_size_t_ranges<T>);
         static_assert(not has_allocator_type<T>);
 }
@@ -108,10 +108,10 @@ BOOST_AUTO_TEST_CASE(InsertingPastTheCapacityThrowsBadAlloc)
 // N is the capacity exactly: a key the last block has room for but N does not is refused all the same.
 BOOST_AUTO_TEST_CASE(TheCapacityIsTheRequestedOneExactly)
 {
-        using U = xstd::basic_bit_inplace_set<std::uint8_t, 9>;
+        using U = xstd::basic_bit_bounded_set<std::uint8_t, 9>;
         static_assert(U().max_size() == 9UZ);
-        static_assert(std::same_as<xstd::aligned::basic_bit_inplace_set<std::uint8_t, 9>, xstd::basic_bit_inplace_set<std::uint8_t, 16>>);
-        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::bit_set_adaptor<std::inplace_vector<std::uint8_t, 2>>>, xstd::bits::detail::owned_bits_t<xstd::basic_bit_inplace_set<std::uint8_t, 16>>>);
+        static_assert(std::same_as<xstd::aligned::basic_bit_bounded_set<std::uint8_t, 9>, xstd::basic_bit_bounded_set<std::uint8_t, 16>>);
+        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::bit_set_adaptor<std::inplace_vector<std::uint8_t, 2>>>, xstd::bits::detail::owned_bits_t<xstd::basic_bit_bounded_set<std::uint8_t, 16>>>);
 
         auto s = U();
         s.insert(8);

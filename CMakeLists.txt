@@ -77,17 +77,17 @@ target_sources(
         include/xstd/bits/bit.hpp
         include/xstd/bits/bit/bit_cast.hpp
         include/xstd/bits/bit_storage.hpp
-        include/xstd/bits/bit_inplace_set.hpp
-        include/xstd/bits/bit_inplace_vector.hpp
+        include/xstd/bits/bit_bounded_set.hpp
+        include/xstd/bits/bit_bounded_vector.hpp
         include/xstd/bits/bit_sequence_adaptor.hpp
         include/xstd/bits/bit_set_adaptor.hpp
         include/xstd/bits/bitset_adaptor.hpp
-        include/xstd/bits/inplace_bitset.hpp
+        include/xstd/bits/bounded_bitset.hpp
         include/xstd/bits/bit_set.hpp
         include/xstd/bits/bit_set_view.hpp
         include/xstd/bits/bit_span.hpp
         include/xstd/bits/bitset.hpp
-        include/xstd/bits/bit_static_set.hpp
+        include/xstd/bits/bit_fixed_set.hpp
         include/xstd/bits/bit_subspan.hpp
         include/xstd/bits/bit_vector.hpp
         include/xstd/bits/detail/allocator_base_type.hpp
@@ -158,8 +158,8 @@ target_compile_features(
 if(PROJECT_IS_TOP_LEVEL)
     include(CTest)
     if(BUILD_TESTING)
-        # The library requires C++23 and says so above, in the INTERFACE a consumer inherits. The inplace column needs more: it is behind __cpp_lib_inplace_vector, which is C++26, so at the minimum those three of the nine cells compile to nothing and are never tested. Raising the standard here rather than in the INTERFACE keeps the requirement a consumer sees at 23 while letting a leg of the matrix build the whole matrix.
-        set(${project_option_prefix}_CXX_STANDARD 23 CACHE STRING "C++ standard for the tests and benchmarks: 23, or 26 to reach the inplace column")
+        # The library requires C++23 and says so above, in the INTERFACE a consumer inherits. The bounded column needs more: it is behind __cpp_lib_inplace_vector, which is C++26, so at the minimum those three of the nine cells compile to nothing and are never tested. Raising the standard here rather than in the INTERFACE keeps the requirement a consumer sees at 23 while letting a leg of the matrix build the whole matrix.
+        set(${project_option_prefix}_CXX_STANDARD 23 CACHE STRING "C++ standard for the tests and benchmarks: 23, or 26 to reach the bounded column")
         set_property(CACHE ${project_option_prefix}_CXX_STANDARD PROPERTY STRINGS 23 26)
 
         # Asking for a standard CMake cannot spell for this compiler fails deep inside a try_compile, with a message blaming the compiler. CMAKE_CXX_COMPILE_FEATURES is what CMake actually knows, so ask it.
@@ -168,7 +168,7 @@ if(PROJECT_IS_TOP_LEVEL)
                 "${project_option_prefix}_CXX_STANDARD=${${project_option_prefix}_CXX_STANDARD} is not something CMake ${CMAKE_VERSION} can ask "
                 "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION} for. CMake 3.30 is the first that knows C++26 "
                 "for GCC and Clang, and this project requires it; a front end CMake has not been taught still answers "
-                "no. The inplace column needs that answer, the other six cells do not."
+                "no. The bounded column needs that answer, the other six cells do not."
             )
         endif()
 

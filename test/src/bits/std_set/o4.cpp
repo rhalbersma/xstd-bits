@@ -9,9 +9,9 @@
 #include <test/set/exhaustive.hpp>       // all_doubleton_set_pairs
 #include <test/set/primitives.hpp>       // op_compare_three_way
 #include <test/uint128.hpp>              // TEST_HAS_UINT128, uint128
+#include <xstd/bits/bit_fixed_set.hpp>   // bit_fixed_set
 #include <xstd/bits/bit_set.hpp>         // bit_set
 #include <xstd/bits/bit_set_adaptor.hpp> // bit_set_adaptor
-#include <xstd/bits/bit_static_set.hpp>  // bit_static_set
 #include <boost/test/unit_test.hpp>      // BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_AUTO_TEST_CASE_TEMPLATE
 #include <cstddef>                       // size_t
 #include <cstdint>                       // uint8_t, uint16_t, uint32_t, uint64_t
@@ -32,11 +32,11 @@ using Types = std::tuple<std::set<std::size_t>
 
 #endif
                          ,
-                         xstd::basic_bit_static_set<uint8_t, 0>, xstd::basic_bit_static_set<uint8_t, 8>, xstd::basic_bit_static_set<uint8_t, 9>, xstd::basic_bit_static_set<uint8_t, 17>, xstd::basic_bit_static_set<uint16_t, 17>, xstd::basic_bit_static_set<uint32_t, 17>, xstd::basic_bit_static_set<uint64_t, 17>
+                         xstd::basic_bit_fixed_set<uint8_t, 0>, xstd::basic_bit_fixed_set<uint8_t, 8>, xstd::basic_bit_fixed_set<uint8_t, 9>, xstd::basic_bit_fixed_set<uint8_t, 17>, xstd::basic_bit_fixed_set<uint16_t, 17>, xstd::basic_bit_fixed_set<uint32_t, 17>, xstd::basic_bit_fixed_set<uint64_t, 17>
 #ifdef TEST_HAS_UINT128
 
                          ,
-                         xstd::basic_bit_static_set<xstd::uint128, 17>
+                         xstd::basic_bit_fixed_set<xstd::uint128, 17>
 
 #endif
                          ,

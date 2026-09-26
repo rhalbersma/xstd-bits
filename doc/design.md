@@ -206,7 +206,7 @@ the detector that names it. It has no per-storage aliases: each owner spells its
 the same container through `owner_storage_t`.
 The name is in `xstd::bits::detail` with the rest of `detail/`, so nothing outside the library names it; it is the
 device that turns three readings over three storages into three plus three, and a factoring device is machinery
-rather than vocabulary. A user reaches every width through `bit_static_set<N>` or `basic_bit_array<Block, N>`, and a
+rather than vocabulary. A user reaches every width through `bit_fixed_set<N>` or `basic_bit_array<Block, N>`, and a
 test that needs the container itself spells its storage, as `contiguous_bit_container<std::vector<std::uint8_t>>`.
 Each public header includes only the storage it names, so `bit_array` does not see `std::vector`, and the
 `#ifdef __cpp_lib_inplace_vector` guard sits in the three inplace headers rather than in the common one.
@@ -345,8 +345,8 @@ with no second basis to reconcile, the layer that reconciled them went too ([one
 A comparison target can become a **value** the set reading converts to and from, and at a static width it is an
 exact one. A field of `N` bits has the same `N`, and under this reading that width is a capacity, so position
 `n` here is bit `n` there with nothing left to choose: nothing truncates, nothing grows, nothing throws, and the
-round trip is the identity both ways. `bit_static_set<N>` therefore reads words that *are* bit storage through
-the tag constructor **`bit_static_set<N>(xstd::from_bit_storage, b)`**, hands a field back through the member
+round trip is the identity both ways. `bit_fixed_set<N>` therefore reads words that *are* bit storage through
+the tag constructor **`bit_fixed_set<N>(xstd::from_bit_storage, b)`**, hands a field back through the member
 **`to_bits<B>()`**, and crosses with anything that *has* bit storage through **`xstd::bit_cast`**
 ([is-and-has](#is-and-has)). Named in both directions, and not because either could fail — a set of positions
 and a field of bits are two readings of the same bits, and this library makes a reader pick one rather than
@@ -360,8 +360,8 @@ contiguous range of unsigned integers already means something at this reading:
 ```cpp
 auto const words = std::array<std::uint64_t, 4>{ 5, 0, 0, 0 };
 
-bit_static_set<256>(std::from_range, words)   // {0, 5} — the values are keys
-bit_static_set<256>(words)                    // {0, 2} — the values are blocks
+bit_fixed_set<256>(std::from_range, words)   // {0, 5} — the values are keys
+bit_fixed_set<256>(words)                    // {0, 2} — the values are blocks
 ```
 
 Both compiled, both succeeded, and they disagreed; a tag was the whole of what separated them. A name is what
@@ -386,7 +386,7 @@ correctly. That is two families, and only one of them has anything to prove.
 
 `unsigned long long` is therefore not a special case in the header but an instance of the first family, which is
 what `to_ullong` and the constructor taking one reduce to. `std::bitset<N>` is an instance of the second, and so
-is this library's own bitset reading — `xstd::bitset<N>` crosses to `bit_static_set<N>` on the same rule, with
+is this library's own bitset reading — `xstd::bitset<N>` crosses to `bit_fixed_set<N>` on the same rule, with
 neither side named in the constraint. An implementation that ever laid its bits out otherwise is simply not
 admitted: a call that fails to compile rather than one quietly wrong.
 
@@ -409,7 +409,7 @@ is — a concept depending on itself. An adaptor's iterator is a proxy and so ne
 answers false for every reading here before the recursive one is put.
 
 One spelling repays reading twice, and it reads differently at each reading — which is the point, and the trap.
-`bit_static_set<32>(xstd::from_bit_storage, 5u)` is the set of positions the **value** five has, `{0, 2}`, not the set `{5}`.
+`bit_fixed_set<32>(xstd::from_bit_storage, 5u)` is the set of positions the **value** five has, `{0, 2}`, not the set `{5}`.
 `bit_array<32>(xstd::from_bit_storage, 5u)` is a packed array of bool, so it is `true, false, true` and twenty-nine more
 `false`. Same bits, two vocabularies. The name is what now carries the distinction: each is asked for by a
 spelling that says which reading of the argument is meant, which is exactly what `explicit` could not do.
@@ -557,8 +557,8 @@ can be deduced through it, and because a constructor is what `emplace_back` and 
 reach. The tag is `std::from_range`'s twin -- `xstd::from_bit_storage_t`,
 an explicitly defaulted constructor, and the object `xstd::from_bit_storage` -- because the job is the same one: saying at
 the call site which reading of the argument is meant. `basic_bit_array(xstd::from_bit_storage, board)` is
-`basic_bit_array<std::uint64_t, 64>`, and `basic_bit_static_set(xstd::from_bit_storage, words)` over a
-`std::array<std::uint8_t, 3>` is `basic_bit_static_set<std::uint8_t, 24>`: the guides deduce the block type and the
+`basic_bit_array<std::uint64_t, 64>`, and `basic_bit_fixed_set(xstd::from_bit_storage, words)` over a
+`std::array<std::uint8_t, 3>` is `basic_bit_fixed_set<std::uint8_t, 24>`: the guides deduce the block type and the
 width from an unsigned integer or a `std::array` of them, the two families whose width the type carries.
 
 The bitset reading has one guide more, untagged, because `std::bitset` already gave an integer argument its meaning:
@@ -736,7 +736,7 @@ the key ([asking-is-total](#asking-is-total)).
 Inclusive and exclusive name the only thing separating the two forward scans: whether `n` itself is a
 candidate. That is a property of the scan rather than of a reading, which is why this is not called
 `lower_bound` — that is the set reading's word, and this layer serves the sequence reading equally.
-`bit_static_set::lower_bound` is where the set name belongs, and it maps here one for one.
+`bit_fixed_set::lower_bound` is where the set name belongs, and it maps here one for one.
 
 The inclusive form is the primitive and the exclusive one is derived, because the reverse does not close:
 
@@ -1510,9 +1510,9 @@ others: `set_adaptor<Bits, Store, Derived>`, `sequence_adaptor<Bits, Store, W, D
 `bitset_adaptor<Bits, Derived>`, the bitset reading owning by construction and the set reading never windowed.
 
 Every public name is a class deriving from one of them, passing itself as the last argument so that the
-adaptor names it back: `basic_bit_static_set<B, N>` derives from
-`set_adaptor<contiguous_bit_container<std::array<B, K>, N>, storage::owned, basic_bit_static_set<B, N>>`. The short layer stays
-an alias fixing the block: `bit_static_set<N>`, `bit_array<N>` and `bitset<N>` are those at `std::size_t`.
+adaptor names it back: `basic_bit_fixed_set<B, N>` derives from
+`set_adaptor<contiguous_bit_container<std::array<B, K>, N>, storage::owned, basic_bit_fixed_set<B, N>>`. The short layer stays
+an alias fixing the block: `bit_fixed_set<N>`, `bit_array<N>` and `bitset<N>` are those at `std::size_t`.
 Deriving is what keeps a value-returning operation -- `& | ^ -`, `operator~`, the shifts, `xstd::bit_cast` --
 handing back the container the caller named rather than the vehicle under it
 ([the-views-are-the-adaptors](#the-views-are-the-adaptors)).
@@ -1569,7 +1569,7 @@ spellings; the two are distinct types all the same. `basic_bit_vector<B, A>` wra
 `bit_sequence_adaptor<std::vector<B, A>>` wraps, and is not it. Each writes out its constructors in the order and
 notation of the clause it packs: [set.cons] for the three sets, less the allocator forms where the storage has
 none; [vector.bool.pspc] for `basic_bit_vector` and `basic_bit_small_vector`; [inplace.vector.overview] for
-`basic_bit_inplace_vector`; [bitset.cons] for `basic_bitset`; `boost::dynamic_bitset`'s documented order for the
+`basic_bit_bounded_vector`; [bitset.cons] for `basic_bitset`; `boost::dynamic_bitset`'s documented order for the
 three run-time bitsets; and for `basic_bit_array`, `std::array` being an aggregate, the default and initializer-list
 constructors its aggregate initialization stands for. What the clause lacks and the adaptor offers -- the
 `from_bit_storage` doors, and the allocator-extended copy and move `boost::dynamic_bitset` does without -- follows
@@ -1580,7 +1580,7 @@ from it.
 
 The empty allocator base is keyed on its adaptor, which is what keeps the two spellings apart. It carries the
 defaulted `operator==` the defaulted comparisons above it need, and shared between two adaptors over one storage it
-made `bit_set_adaptor<std::array<std::uint8_t, 3>>` compare equal to `basic_bit_static_set<std::uint8_t, 24>`
+made `bit_set_adaptor<std::array<std::uint8_t, 3>>` compare equal to `basic_bit_fixed_set<std::uint8_t, 24>`
 whatever their bits, both converting to the one empty base. Keyed, the comparison does not compile, as
 `std::set<int>` against `std::flat_set<int>` does not.
 
@@ -1599,7 +1599,7 @@ three rules for that arrangement:
    was an alias of an alias, and neither MSVC 17 nor MSVC 18 deduced through it (`C2641`), so `bitset<N>`, the one
    pinned name something deduces through, was written over the adaptor directly.
 
-MSVC went on to refuse alias deduction through `basic_bit_static_set` and `basic_bitset` themselves with `C7602`,
+MSVC went on to refuse alias deduction through `basic_bit_fixed_set` and `basic_bitset` themselves with `C7602`,
 and that is what made them classes. A class takes its guides as its own and needs none of the three rules: the
 guides name `basic_bit_array<Block, N>` rather than computing a block count, and `bitset<N>` is an alias of
 `basic_bitset<std::size_t, N>`, one alias over a class, the depth every compiler deduced through. The one-word
@@ -1620,7 +1620,7 @@ through the storage's constructors, growth, the saturating shifts, the checked e
 -- needed an entry in each foreign trait and harness arms over each foreign storage, and the blit and the
 range insertions of #80's 7d would have added more. It bought one object where a view over a member gives the
 same reading: `bit_set_view(my_std_bitset)` is the set reading over a `std::bitset` someone else owns, and
-`bit_static_set` is the same reading over storage of ours. What is given up is the wrapped-equals-raw proof
+`bit_fixed_set` is the same reading over storage of ours. What is given up is the wrapped-equals-raw proof
 that the wrapper adds and drops nothing; the views keep it for reads, writes, iteration, searches and hashing,
 and construction, growth and the ownership protocol are proven over our storages alone.
 
@@ -1929,7 +1929,7 @@ it deduces the span that lends it: `bit_span(words)` over a `std::vector<std::ui
 `bit_span<std::span<std::uint32_t>>`. An owner deduces the words and width it is stored in. So one layout has
 two names -- `bit_set_adaptor<std::uint64_t>` beside `bit_set_adaptor<std::array<std::uint64_t, 1>>`, as `int`
 beside `std::array<int, 1>` -- and each guide picks one: the adaptors' `from_bit_storage` guides keep the array, as
-`basic_bit_array` and `basic_bit_static_set` keep their block array.
+`basic_bit_array` and `basic_bit_fixed_set` keep their block array.
 
 `bit_storage` is stricter than what itsy-bitsy's `bit_view<R>` adapts, which reaches its words through `R`'s
 iterators and so takes a `std::deque` of words. Contiguity is what the rest leans on: a view borrows the words as a
@@ -2181,7 +2181,7 @@ view gets its storage and not something a caller needs to name.
 
 ### views-over-owners
 
-An owner is not itself a storage — `bit_static_set`, `bit_array` and `bitset` are thin wrappers over a
+An owner is not itself a storage — `bit_fixed_set`, `bit_array` and `bitset` are thin wrappers over a
 `contiguous_bit_container` — so a view over an owner is a view over the storage it wraps:
 `bit_set_view(xstd::bitset<64>&)` is `set_adaptor<contiguous_bit_container<std::array<size_t, 1>, 64>, refers>`, and the pointer in
 the iterator is to the `contiguous_bit_container`, never to the `bitset`. The owner hands its storage over through
@@ -2271,7 +2271,7 @@ one ever should, it belongs beside the containers, where it can be named and its
 ### the-interface-line
 
 **If a user never spells it, it lives in `detail/`.** The name or the header, either counts. That is the whole
-rule, and it is a test rather than a judgement: `bit_static_set` is spelled, `contiguous_bit_container` is not;
+rule, and it is a test rather than a judgement: `bit_fixed_set` is spelled, `contiguous_bit_container` is not;
 `bidirectional_bit_reference` is reached only through the `iterator` and `reference` typedefs and is spelled by
 nobody.
 
@@ -2294,7 +2294,7 @@ base at all. So the adaptors and their vocabulary went to `xstd::bits::detail`, 
 On the other side, the two that had to be argued. The four proxy types are reached only through container
 typedefs, so no user spells them. `contiguous_bit_container` and its three aliases are the device that turns
 three readings times three storages into three plus three ([the-one-vehicle](#the-one-vehicle)), and the
-`basic_` layer already exposes the block parameter — `basic_bit_static_set<std::uint8_t, 24>` reaches the
+`basic_` layer already exposes the block parameter — `basic_bit_fixed_set<std::uint8_t, 24>` reaches the
 capability without the storage being named. Recorded against: `contiguous_bit_container` *is* instantiated by
 name throughout `test/`, which is a real signal, and demoting it makes the test tree reach into `detail/`. The
 counter is that a test is not a user; a test tree that mirrors the library, `detail/` included, is what testing
@@ -2318,7 +2318,7 @@ standard's so that a transitive include is found rather than leaned on. That hea
 caught it: `CMakeLists.txt`'s `FILE_SET HEADERS` is hand-written, and the three inplace headers had reached
 `include/` and `bits.hpp` without ever reaching it. `<xstd/bits.hpp>` therefore named three headers that were
 never installed, so **every** installed consumer's umbrella include was broken, on every compiler, for as long
-as the inplace column has existed. Every compiler leg builds from the source tree, where the files are present;
+as the bounded column has existed. Every compiler leg builds from the source tree, where the files are present;
 only the consumer translation unit builds against the install tree, and until it was made this gate it included
 one container header and asked nothing of the umbrella. The file set is now checked against `include/xstd/`
 at configure time, the way `test/` checks that every public header is mirrored — a hand-written list that
@@ -2340,19 +2340,19 @@ path of every consumer who does not.
 Two layers of names, over a third nobody spells. The adaptors under `detail/` carry the reading and take the
 storage, the parameters each reading needs and no more ([the-three-adaptors](#the-three-adaptors)). The
 `basic_` layer chooses the storage and leaves the block open, `basic_string`-style:
-`basic_bit_static_set<Block, N>`, `basic_bit_set<Block, Allocator>` and their four siblings. The block leads in
+`basic_bit_fixed_set<Block, N>`, `basic_bit_set<Block, Allocator>` and their four siblings. The block leads in
 every column, so a `basic_` name hands its base clause the arguments in the order it was given them --
-`basic_bit_static_set<Block, N>` derives from `set_adaptor<contiguous_bit_container<std::array<Block, K>, N>, storage::owned,
-basic_bit_static_set<Block, N>>`, straight through. The static and inplace columns used to take `<N, Block>`
+`basic_bit_fixed_set<Block, N>` derives from `set_adaptor<contiguous_bit_container<std::array<Block, K>, N>, storage::owned,
+basic_bit_fixed_set<Block, N>>`, straight through. The static and bounded columns used to take `<N, Block>`
 and transpose at the call, which
 nothing gained: `Block` carries no default in those columns, so it is free to lead, and leading is what
 `std::array<T, N>`, `std::inplace_vector<T, N>` and `std::span<T, Extent>` all do with the pair. The restricted
-layer fixes `std::size_t` and `std::allocator`: `bit_static_set<N>`, `bit_array<N>` and `bitset<N>` keep one
+layer fixes `std::size_t` and `std::allocator`: `bit_fixed_set<N>`, `bit_array<N>` and `bitset<N>` keep one
 parameter, and `bit_set`, `bit_vector` and `dynamic_bitset` keep none, so the flagship is `xstd::bit_set` and
 the counterpart of `boost::dynamic_bitset<>` is `xstd::dynamic_bitset`, without the `<>`.
 
 The unmarked name goes to the flagship — `bit_set` is the dynamic set
-benchmarked against `std::set` and `std::flat_set` — and the qualifier marks the special case, `bit_static_set`.
+benchmarked against `std::set` and `std::flat_set` — and the qualifier marks the special case, `bit_fixed_set`.
 The sequence row is named after the `std` container it packs, `bit_array` for `std::array<bool, N>`. The rows
 therefore mark different columns, and that is correct by each row's own analogy rather than an inconsistency
 to fix.
@@ -2361,30 +2361,31 @@ to fix.
 `std::flat_set` keeps a sorted sequence of the elements that are there, so it is sparse in the universe of
 possible keys, where `bit_set` keeps one bit per position in that universe, so it is dense but packed. Same
 container, same interface, different representation — and the prefix is what says which, so it has to come
-first. `static_bit_set` would read as a qualified `bit_set`; `bit_static_set` is `bit_` applied to a
-`static_set`, the way `flat_set` is `flat_` applied to a `set`.
+first. `fixed_bit_set` would read as a qualified `bit_set`; `bit_fixed_set` is `bit_` applied to a
+fixed set, the way `flat_set` is `flat_` applied to a `set`.
 
-**Why `static` and not `finite`.** `finite` selects nothing: `bit_set` is a finite set of
-positions too, as every bit set is. What separates them is that `N` is a compile-time constant, which is
-*static*, and static-versus-dynamic is one of the two axes the whole design is built on — so the name reads off
-the design rather than off a true-but-non-distinguishing adjective. Recorded against it: P0843 renamed
-`boost::static_vector` to `std::inplace_vector` partly because *static* is overloaded in C++. Accepted anyway,
-because `inplace` names where the storage lives, which is the interesting property for a vector with static
-capacity and a run-time size, where a `bit_static_set`'s extent is genuinely fixed. The inplace column takes
-that name for exactly the case P0843 was naming ([the-inplace-column](#the-inplace-column)).
+**Why `fixed` and `bounded`.** The qualifier names what the user gets, not where the blocks live. `fixed` is a
+width fixed at compile time; `bounded` is a run-time size under a compile-time capacity. `finite` would select
+nothing, since `bit_set` is a finite set of positions too. `static` is overloaded in C++, which is part of why
+P0843 renamed `boost::static_vector` to `std::inplace_vector`. `inplace` names one storage, and the bounded
+column is not tied to one: `boost::container::static_vector` holds the same blocks where the standard library
+has no `std::inplace_vector`. The qualifier comes after `bit_`, as `small` does in `bit_small_set`, and before
+`bitset`, which already carries the word: `bounded_bitset`, `small_bitset`.
 
 `bitset` and `dynamic_bitset` sit outside the rule on purpose: they are not `bit_` anything, they are the
-counterparts reproduced under their own names ([a-strict-extension](#a-strict-extension)).
+counterparts reproduced under their own names ([a-strict-extension](#a-strict-extension)). The rule cannot
+reach them either: the dynamic column's bitset would lose its qualifier as `bit_set` and `bit_vector` do,
+and plain `bitset` is already the fixed width's.
 
 One header per restricted name, holding its `basic_` form beside it, each over one storage: `bit_set`,
-`bit_vector` and `dynamic_bitset` over `std::vector<Block, Allocator>`, beside `bit_static_set`,
-`bit_array` and `bitset` over `std::array<Block, num_blocks_v<Block, N>>`, and `bit_inplace_set`, `bit_inplace_vector` and
-`inplace_bitset` over `std::inplace_vector<Block, num_blocks_v<Block, N>>` ([the-inplace-column](#the-inplace-column)). The
+`bit_vector` and `dynamic_bitset` over `std::vector<Block, Allocator>`, beside `bit_fixed_set`,
+`bit_array` and `bitset` over `std::array<Block, num_blocks_v<Block, N>>`, and `bit_bounded_set`, `bit_bounded_vector` and
+`bounded_bitset` over `std::inplace_vector<Block, num_blocks_v<Block, N>>` ([the-bounded-column](#the-bounded-column)). The
 header is the name's home and the only place it is spelled; `bits.hpp` includes them all. Each static name has
 an `aligned` form in the namespace of that name, in both layers, its width rounded up to whole blocks so that no
 block carries an unused tail: `aligned::bitset<9>` is `bitset<64>` and `aligned::basic_bitset<std::uint8_t, 9>`
-is `basic_bitset<std::uint8_t, 16>`. The inplace column has the same forms, rounding its capacity:
-`aligned::bit_inplace_vector<9>` is `bit_inplace_vector<64>`.
+is `basic_bitset<std::uint8_t, 16>`. The bounded column has the same forms, rounding its capacity:
+`aligned::bit_bounded_vector<9>` is `bit_bounded_vector<64>`.
 
 ### a-name-by-storage
 
@@ -2408,7 +2409,7 @@ could throw would cost every growing container its strong guarantee.
 
 The allocator is the exception, and it follows the **column, not the row**: the dynamic column allocates and all
 three of its readings answer `get_allocator`; the static column is a `std::array` and has none to show; the
-inplace column holds its blocks inline and has none either. So `bit_set`, `bit_vector` and `dynamic_bitset` have
+bounded column holds its blocks inline and has none either. So `bit_set`, `bit_vector` and `dynamic_bitset` have
 it and the other six do not, which is a fact about `std::vector` rather than about sets, sequences or
 bitsets.
 
@@ -2423,29 +2424,29 @@ a cell nobody had read across.
 own exchange through `std::ranges::swap`, so the test checks that values actually move rather than only that
 the expression compiles.
 
-### the-inplace-column
+### the-bounded-column
 
 The third storage point gets public names, one per reading and each a class like every other owner beside the
-adaptors: `basic_bit_inplace_set<Block, N>`, `basic_bit_inplace_vector<Block, N>` and
-`basic_inplace_bitset<Block, N>` over `std::inplace_vector<Block, num_blocks_v<Block, N>>`, with `bit_inplace_set<N>`,
-`bit_inplace_vector<N>` and `inplace_bitset<N>` at the machine word. `inplace_bitset` takes no `bit_` prefix
-because `bitset` already carries the word, and `inplace` is one storage word down each column rather than a
+adaptors: `basic_bit_bounded_set<Block, N>`, `basic_bit_bounded_vector<Block, N>` and
+`basic_bounded_bitset<Block, N>` over `std::inplace_vector<Block, num_blocks_v<Block, N>>`, with `bit_bounded_set<N>`,
+`bit_bounded_vector<N>` and `bounded_bitset<N>` at the machine word. `bounded_bitset` takes no `bit_` prefix
+because `bitset` already carries the word, and `bounded` is one qualifier down each column rather than a
 second vocabulary for the same thing.
 
 `N` is a **capacity** in bits here, where the static column's `N` is a width, and it is exact in the same way:
-`basic_bit_inplace_vector<std::uint8_t, 9>` holds nine bits, as `std::inplace_vector<bool, 9>` does, in two
+`basic_bit_bounded_vector<std::uint8_t, 9>` holds nine bits, as `std::inplace_vector<bool, 9>` does, in two
 blocks whose last seven bits it never uses. The adaptors read their second parameter by storage -- the width of
 fixed blocks, the capacity of blocks that resize under a constant one, and `dynamic_extent` for blocks that grow
 without bound -- and `bit_storage_capacity_v` is their default, so an adaptor named by its storage alone holds
 every bit of it: `bit_sequence_adaptor<std::inplace_vector<std::uint8_t, 2>>` wraps the storage
-`basic_bit_inplace_vector<std::uint8_t, 16>` does, one storage however it is spelled. A capacity only callable at run
+`basic_bit_bounded_vector<std::uint8_t, 16>` does, one storage however it is spelled. A capacity only callable at run
 time, as `boost::container::static_vector`'s is, names no constant, and an owner over it is unbounded by type.
 
 The class passes `N` through to the storage rather than leaving it in the block count alone, which is what makes
 distinct capacities distinct types and lets its guide name `N`: `num_blocks_v<Block, N>` is not a
 deducible context, and no inverse exists, since every `N` from 9 to 16 names two `std::uint8_t` blocks. The
 names carry the capacity-versus-width distinction and the parameter lists do not, which is the same hazard
-`basic_bit_static_set<Block, N>` and `basic_bit_inplace_set<Block, N>` share by shape.
+`basic_bit_fixed_set<Block, N>` and `basic_bit_bounded_set<Block, N>` share by shape.
 
 The whole column sits behind `__cpp_lib_inplace_vector`, in practice libstdc++ >= 16, which the matrix carries on
 gcc 16 and 17-SVN. The class adds no capability, so the guard withholds a name rather than a feature, and each
@@ -2461,8 +2462,8 @@ reaches, and `std::vector<bool>` answers every line of it, so it is asserted on 
 
 **Building it at all is a separate problem from writing it.** `__cpp_lib_inplace_vector` is a C++26 macro, and
 the library asks for C++23; at that standard the guard closes and the three cells compile to nothing, so a suite
-that passes has never seen a third of the matrix. Measured: `bit_inplace_set`, `bit_inplace_vector` and
-`inplace_bitset` run **six** test cases between them at C++23 and **sixteen** at C++26, and
+that passes has never seen a third of the matrix. Measured: `bit_bounded_set`, `bit_bounded_vector` and
+`bounded_bitset` run **six** test cases between them at C++23 and **sixteen** at C++26, and
 `generated.cpp`'s inplace rows are inert at the lower standard as well.
 
 `XSTD_BITS_CXX_STANDARD` is how a build asks for more -- 23 by default, 26 to reach the column. It raises the
@@ -2487,7 +2488,7 @@ set growing by `insert` ([growth](#growth)), so there a capacity is felt at the 
 
 The column is graded over every block the other two are, `xstd::uint128` included, which it can be because the
 width member now carries its own alignment ([padding](#padding)). Before that, a 16-byte-aligned block after a
-`std::size_t` width padded the class, and `-Wpadded` under `-Werror` rejected it; the inplace column was the only
+`std::size_t` width padded the class, and `-Wpadded` under `-Werror` rejected it; the bounded column was the only
 cell that could reach it, a static width carrying no width member at all and `std::vector`'s alignment being a
 pointer's whatever it holds.
 
@@ -2791,7 +2792,7 @@ a == b       : true          a, b both { 1 3 }
 `~` is then not a function of the set's value, which is a stronger objection than an inconvenience: equal
 inputs, unequal outputs. At a **static** width there is no such gap, because `N` is part of the type and
 equal sets share it, so `complement()` and `operator~` are constrained on `has_static_width` and
-`bit_static_set<N>` keeps both. `bit_set` keeps `complement(x)`, which toggles one position and needs no
+`bit_fixed_set<N>` keeps both. `bit_set` keeps `complement(x)`, which toggles one position and needs no
 universe, along with `fill()` and the four set operators. The alternative -- letting `~` read the width --
 would make the width value for exactly one operation, which is the thing this section says the set reading
 does not do.
@@ -2852,7 +2853,7 @@ The same gate is why each of the three arms sits under `if constexpr (not has_st
 plain `if` that `same_width` would fold anyway. Folding is not enough: a static width still *instantiates* the
 arm, and `blocks_agree` carries a lambda no other call site shares, so those instantiations are reachable from
 no test and their branches are uncovered by construction -- the same hazard the coverage job's own
-`XSTD_BITS_BUILD_BENCHMARKS=OFF` exists to avoid. A translation unit naming only `bit_static_set` instantiated
+`XSTD_BITS_BUILD_BENCHMARKS=OFF` exists to avoid. A translation unit naming only `bit_fixed_set` instantiated
 thirty such functions before the guard and none after.
 
 `<=>` is blockwise for the same reason and by a different route. The set ordering is lexicographic over the
@@ -3397,7 +3398,7 @@ through the storage alone. Their constructors are public, so an owner or a view 
 friend: the dependency runs one way, from the container to the iterator, and the mutual friendship and forward
 declarations the earlier views needed (*"Clang requires it, GCC does not"*) have nothing left to declare.
 
-The pointer is to the **storage** an owner wraps, never to the owner: `bit_static_set` hands out
+The pointer is to the **storage** an owner wraps, never to the owner: `bit_fixed_set` hands out
 `bits::detail::bidirectional_bit_iterator<contiguous_bit_container<std::array<B, K>, N>>`, which is why an owner is never itself
 the thing a view or an iterator is parameterized on.
 
@@ -3524,7 +3525,7 @@ Three things were wrong with it, and only the third was visible at the time.
   `num_blocks` and `block`, every word-parallel walk falls to one position at a time. The test had to assert
   the block tier explicitly to turn that into a failure.
 - **It let the two readings mix.** Naming `bit_set_view<xstd::bitset<N>>` and `bit_span<xstd::bitset<N>>` is
-  exactly what a bitset should allow; naming `bit_span<xstd::bit_static_set<N>>` is not, and a trait keyed on
+  exactly what a bitset should allow; naming `bit_span<xstd::bit_fixed_set<N>>` is not, and a trait keyed on
   the *storage* cannot tell them apart, because they wrap the same storage. That rule had to move into the
   view's constraint anyway ([the-readings-do-not-mix](#the-readings-do-not-mix)), where the owner is still in
   hand.
@@ -3923,8 +3924,8 @@ the bitset reading, whose `reference` is its own class.
 `std::format` over the containers needs nothing said about the containers. Every owner and view here is a
 range, so `[format.range.formatter]` would format each one already, except that it requires
 `formattable<ranges::range_reference_t<R>>` and a reference of ours is a proxy. So each proxy specializes
-`std::formatter` for itself, in its own header, and stops there: `bit_set`, `bit_static_set`, `bit_vector`,
-`bit_array`, the views, the windows and the inplace column all follow from that, none of them mentioned.
+`std::formatter` for itself, in its own header, and stops there: `bit_set`, `bit_fixed_set`, `bit_vector`,
+`bit_array`, the views, the windows and the bounded column all follow from that, none of them mentioned.
 
 This is the same shape the proxies already had for fmt, in fmt's spelling. `format_as` is fmt's generic
 per-type hook: define it for one type and every range over that type formats, which is why the proxies carry
@@ -3989,7 +3990,7 @@ either hook, because the template arguments will not deduce through
 
 ### total-lookups-on-the-container
 
-Every `bit_static_set` lookup is total over `key_type`, because `std::set`'s is: a key outside `[0, N)` names no
+Every `bit_fixed_set` lookup is total over `key_type`, because `std::set`'s is: a key outside `[0, N)` names no
 element, so it answers *absent* rather than reaching the bit. `contiguous_bit_container` asserts `is_valid` on
 every position it accepts and offers no total spelling of any of these — that is the layering working, not a gap
 in it. **The precondition is the sequence's; the guard is the container's.**
@@ -4015,7 +4016,7 @@ failed for a `find_package` one, the header never having been installed, and for
 `xstd::sift_primes0` was a reachable `xstd::` name. Moving it out settles both: the names are in `opt::` now,
 and the configure-time file-set check widened from `include/xstd/` to all of `include/` so the next stray
 directory is caught rather than shipped ([the-interface-line](#the-interface-line)). It speaks **one**
-vocabulary: an ordered set of integers. It runs over `std::set`, `std::flat_set`, `bit_static_set` or
+vocabulary: an ordered set of integers. It runs over `std::set`, `std::flat_set`, `bit_fixed_set` or
 `bit_set`; the candidates are `iota(2, n)` converted to the set, and a sift is `erase`. Nothing
 bitset-shaped takes part.
 
@@ -4028,7 +4029,7 @@ Bitset performance is measured against `std::bitset` and boost on its own bench 
 bitset is actually used at, rather than through an algorithm that suits a set.
 
 The bench is dynamic containers only, so it compares like with like: `std::flat_set`, `std::set` and
-`bit_set`, one of each representation -- sorted vector, node-based, dense bitmap. A `bit_static_set<N>`
+`bit_set`, one of each representation -- sorted vector, node-based, dense bitmap. A `bit_fixed_set<N>`
 sifting a universe it was sized for is not measuring what a growing set is, so it stays in the test and off
 the bench.
 
@@ -4057,7 +4058,7 @@ Under `ctest` a bench is a smoke test -- that it runs, not what it costs -- so t
 `--benchmark_min_time=1x`. Timing the full ladder in CI would put minutes of `std::set` at `2^20` into every
 run for a number a shared runner cannot make meaningful anyway. A manual run takes the defaults.
 
-The test keeps the static types alongside the dynamic ones, `bit_static_set<N>` with `std::set` and
+The test keeps the static types alongside the dynamic ones, `bit_fixed_set<N>` with `std::set` and
 `std::flat_set`, since the sieve is an example before it is a bench, and it keeps the degenerate widths: a
 two-candidate sieve runs `sift_primes1` to exhaustion, and a three-candidate one returns from `filter_twins`
 before it has a triple.
@@ -4079,7 +4080,7 @@ more rungs would only re-derive it.
 
 The **segmented** sieve is the one that pays. Base primes below `sqrt(n)` once, then a single window walked
 over the rest, so peak memory is `O(sqrt(n) + W)` whatever `n` is. `Window` is a template parameter carrying
-its own extent, which makes `bit_static_set<W>` the natural argument: a compile-time width that allocates
+its own extent, which makes `bit_fixed_set<W>` the natural argument: a compile-time width that allocates
 nothing in the loop, `fill`ed and struck and read once per segment.
 
 It is **faster than the bounded sieve, not merely thriftier**: 4.05 ms against 7.01 ms at `2^20`, about
@@ -4534,8 +4535,8 @@ buy. A contiguous range of unsigned integers already means something at this rea
 reads it as a range of *keys*. So the same argument had two meanings a tag apart, and both compiled:
 
 ```cpp
-bit_static_set<256>(std::from_range, words)   // {0, 5} -- the values are keys
-bit_static_set<256>(words)                    // {0, 2} -- the values are blocks
+bit_fixed_set<256>(std::from_range, words)   // {0, 5} -- the values are keys
+bit_fixed_set<256>(words)                    // {0, 2} -- the values are blocks
 ```
 
 `explicit` guards against a conversion nobody asked for. It does nothing about a reader misreading
@@ -4552,7 +4553,7 @@ on the same rule as `unsigned long long`, and an implementation that ever laid i
 is simply not admitted: a call that fails to compile rather than one quietly wrong.
 
 The integer family is the one a set reader can still misread, and the name is what answers it:
-`bit_static_set<32>(xstd::from_bit_storage, 5u)` is the set of positions the value five has, `{0, 2}`, and not the
+`bit_fixed_set<32>(xstd::from_bit_storage, 5u)` is the set of positions the value five has, `{0, 2}`, and not the
 set `{5}`.
 
 ### What each storage says for a key it cannot hold
@@ -4886,7 +4887,7 @@ rounded up to the class's own alignment. That last step is not slack in the layo
 is always a multiple of an `alignof`, so the sum alone names sizes no class can have. Blocks of four
 bytes under a `size_t` width sum to twelve, and twelve is not a size a type aligned to eight can be;
 sixteen is, and sixteen is what the class already was. Written without the round-up, the assertion
-asks the inplace column for the impossible — and no leg compiled that column until the C++26 rung was
+asks the bounded column for the impossible — and no leg compiled that column until the C++26 rung was
 added, so nothing ever said so.
 
 ## Design choices for a `bitset` data structure
@@ -4935,10 +4936,10 @@ The aforementioned issues can be resolved by implementing a single-purpose conta
 
 |                                  | static size and capacity     | dynamic size, static capacity     | dynamic size and capacity |
 | :------------------------------- | :--------------------------- | :-------------------------------- | :------------------------ |
-| **ordered set of `std::size_t`** | `bit_static_set<N>`          | `bit_inplace_set<N>`              | `bit_set` |
-| **sequence of `bool`**           | `bit_array<N>`               | `bit_inplace_vector<N>`           | `bit_vector` |
-| **`bitset`**                     | `bitset<N>`                  | `inplace_bitset<N>`               | `dynamic_bitset` |
-| **a reading of a `bitset`**      | `bit_set_view` / `bit_span` over <br> `bitset<N>`, `std::bitset<N>` | over <br> `inplace_bitset<N>` | over <br> `dynamic_bitset`, `boost::dynamic_bitset<>` |
+| **ordered set of `std::size_t`** | `bit_fixed_set<N>`          | `bit_bounded_set<N>`              | `bit_set` |
+| **sequence of `bool`**           | `bit_array<N>`               | `bit_bounded_vector<N>`           | `bit_vector` |
+| **`bitset`**                     | `bitset<N>`                  | `bounded_bitset<N>`               | `dynamic_bitset` |
+| **a reading of a `bitset`**      | `bit_set_view` / `bit_span` over <br> `bitset<N>`, `std::bitset<N>` | over <br> `bounded_bitset<N>` | over <br> `dynamic_bitset`, `boost::dynamic_bitset<>` |
 
 The columns are the three storages the one underlying vehicle is parameterized on — `std::array` fixes size and capacity, `std::inplace_vector` varies size within a fixed capacity, `std::vector` varies both — so a cell is a reading crossed with a storage, and nothing else. The outer two columns are the ones the current landscape already has; the middle is the pairing it never named.
 
@@ -4951,7 +4952,7 @@ Notes:
 3. A view over a bitset is a view over the storage that bitset wraps: `xstd::bit_set_view(bs)` deduces `xstd::bit_set_view<std::array<std::size_t, K>, N>`, the words and width the bitset is stored in, and `decltype` is how you name the result. The deduction guide for a plain storage is constrained to non-owners, so an owner and the storage inside it do not tie.
 4. The variable-size sequence of `bool` is named `xstd::bit_vector` and decoupled from the general `std::vector` class template.
 5. All containers use a dense (single bit per element) representation. Variable-size sparse sets can be provided by `flat_set`, either in [Boost](https://www.boost.org/doc/libs/1_80_0/doc/html/boost/container/flat_set.html) or in [C++ 23](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p1222r4.pdf).
-6. The names above are the short ones, which fix `Block` to `std::size_t` and so take only the width, or nothing at all in the dynamic column where there is no width to give. Each has a `basic_` form that leaves the block open: `xstd::basic_bit_static_set<Block, N>`, `xstd::basic_bit_array<Block, N>`, `xstd::basic_bitset<Block, N>` and their inplace siblings, and `xstd::basic_bit_set<Block, Allocator>`, `xstd::basic_bit_vector<Block, Allocator>`, `xstd::basic_dynamic_bitset<Block, Allocator>` down the dynamic column. So `xstd::bit_set` is an alias, not a template, and `xstd::basic_bit_set<std::uint8_t>` is how a block is chosen.
+6. The names above are the short ones, which fix `Block` to `std::size_t` and so take only the width, or nothing at all in the dynamic column where there is no width to give. Each has a `basic_` form that leaves the block open: `xstd::basic_bit_fixed_set<Block, N>`, `xstd::basic_bit_array<Block, N>`, `xstd::basic_bitset<Block, N>` and their inplace siblings, and `xstd::basic_bit_set<Block, Allocator>`, `xstd::basic_bit_vector<Block, Allocator>`, `xstd::basic_dynamic_bitset<Block, Allocator>` down the dynamic column. So `xstd::bit_set` is an alias, not a template, and `xstd::basic_bit_set<std::uint8_t>` is how a block is chosen.
 7. Each static-width name has an `aligned` form in a nested namespace, its width rounded up to whole blocks so that no block carries an unused tail: `xstd::aligned::bitset<120>` is `xstd::bitset<128>`. The inplace names have the same, rounding their capacity. That costs nothing in storage at a width already spanning whole blocks, and removes the tail-restoring mask from `fill`, `flip` and the left shift.
 
 The **middle column** is what allocates nothing and yet carries a run-time width. It depends on `std::inplace_vector`, so those three names exist only where the standard library provides it (`__cpp_lib_inplace_vector`); the guard withholds a name rather than a capability.
@@ -4967,7 +4968,7 @@ Looking at the above code, the following four ingredients are necessary to imple
 3. A **nested type** `key_type` (in order for `std::format` to use `{}` delimiters: [format.range.fmtkind] picks `range_format::set` for a range that has one);
 4. A **member function** `erase` to remove elements (for other applications: the rest of a `set`'s interface).
 
-`xstd::bit_static_set<N>` implements all four of the above requirements. Note that Visual C++ support is finicky at the moment because its `<ranges>` implementation cannot (yet) handle the `xstd::bit_static_set<N>` proxy iterators and proxy references correctly.
+`xstd::bit_fixed_set<N>` implements all four of the above requirements. Note that Visual C++ support is finicky at the moment because its `<ranges>` implementation cannot (yet) handle the `xstd::bit_fixed_set<N>` proxy iterators and proxy references correctly.
 
 ## Choosing a reading over a bitset
 
@@ -5016,7 +5017,7 @@ auto filter_twins_parallel(X const& primes)
 }
 ```
 
-That is the same set the loop produces, and on a `bit_static_set<128>` it is four shifts, two ors and an and over two words — no iterator, no branch per element, no comparison. The elementwise form remains the one in `examples/include/opt/set/sieve.hpp`, because it is the form `std::set` and `std::flat_set` can also run and the benchmark needs all three on the same algorithm.
+That is the same set the loop produces, and on a `bit_fixed_set<128>` it is four shifts, two ors and an and over two words — no iterator, no branch per element, no comparison. The elementwise form remains the one in `examples/include/opt/set/sieve.hpp`, because it is the form `std::set` and `std::flat_set` can also run and the benchmark needs all three on the same algorithm.
 
 The shifts read the way they do because of the bit layout: element `0` is the least significant bit of the first word, so `<<` moves toward larger elements. What it does **not** do is make the set order the bitstring order — under this layout those are two different walks over the same blocks, and the FAQ below draws both.
 
@@ -5032,41 +5033,41 @@ What a bitset lacks for the set reading to be built on top of it, apart from dif
 
 ## Documentation
 
-The interface for the class template `xstd::bit_static_set<N>` is the coherent union of the following building blocks:
+The interface for the class template `xstd::bit_fixed_set<N>` is the coherent union of the following building blocks:
 
 1. An almost **drop-in** implementation of the full interface of `std::set<int>`.
 2. An almost complete **translation** of the [`std::bitset<N>`](http://en.cppreference.com/w/cpp/utility/bitset) member functions to the [`std::set<int>`](http://en.cppreference.com/w/cpp/container/set) naming convention.
 3. The single-pass and short-circuiting **set predicates** from [`boost::dynamic_bitset`](https://www.boost.org/doc/libs/1_80_0/libs/dynamic_bitset/dynamic_bitset.html).
 4. The bitwise operators from [`std::bitset<N>`](http://en.cppreference.com/w/cpp/utility/bitset) and [`boost::dynamic_bitset`](https://www.boost.org/doc/libs/1_80_0/libs/dynamic_bitset/dynamic_bitset.html) reimagined as composable and data-parallel **set algorithms**.
 
-The **full** interface of `xstd::bit_static_set` is `constexpr`.
+The **full** interface of `xstd::bit_fixed_set` is `constexpr`.
 
 ### 1 An almost drop-in replacement for `std::set<int>`
 
-`xstd::bit_static_set<N>` is an ordered set of integers over a static width, providing conceptually the same functionality as `std::set<int, std::less<int>, Allocator>`, where `Allocator` statically allocates memory to store `N` integers. In particular, `xstd::bit_static_set<N>` has:
+`xstd::bit_fixed_set<N>` is an ordered set of integers over a static width, providing conceptually the same functionality as `std::set<int, std::less<int>, Allocator>`, where `Allocator` statically allocates memory to store `N` integers. In particular, `xstd::bit_fixed_set<N>` has:
 
-- **No customized key comparison**: `xstd::bit_static_set` uses `std::less<int>` as its fixed comparator (accessible through its nested types `key_compare` and `value_compare`). In particular, the `xstd::bit_static_set` constructors do not take a comparator argument.
-- **No allocators**: `xstd::bit_static_set` is a set of non-negative integers over a static width and does not dynamically allocate memory. In particular, `xstd::bit_static_set` does **not provide** a `get_allocator()` member function and its constructors do not take an allocator argument. Its allocating counterpart `xstd::bit_set` does provide both — the allocator follows the storage column, not the set reading.
-- **No splicing**: `xstd::bit_static_set` is **not a node-based container**, and does not provide the splicing operations as defined in [p0083r3](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2016/p0083r3.pdf). In particular, `xstd::bit_static_set` does **not provide** the nested types `node_type` and `insert_return_type`, the `extract()` or `merge()` member functions, or the `insert()` overloads taking a node handle.
+- **No customized key comparison**: `xstd::bit_fixed_set` uses `std::less<int>` as its fixed comparator (accessible through its nested types `key_compare` and `value_compare`). In particular, the `xstd::bit_fixed_set` constructors do not take a comparator argument.
+- **No allocators**: `xstd::bit_fixed_set` is a set of non-negative integers over a static width and does not dynamically allocate memory. In particular, `xstd::bit_fixed_set` does **not provide** a `get_allocator()` member function and its constructors do not take an allocator argument. Its allocating counterpart `xstd::bit_set` does provide both — the allocator follows the storage column, not the set reading.
+- **No splicing**: `xstd::bit_fixed_set` is **not a node-based container**, and does not provide the splicing operations as defined in [p0083r3](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2016/p0083r3.pdf). In particular, `xstd::bit_fixed_set` does **not provide** the nested types `node_type` and `insert_return_type`, the `extract()` or `merge()` member functions, or the `insert()` overloads taking a node handle.
 
-- **No container exchange**: `std::flat_set` hands its underlying container out with `extract() &&` and takes one back with `replace(container_type&&)`, which is how you build one cheaply and how you get the sorted vector back out. `xstd::bit_static_set` has neither name, and has the capability twice over — see the `from_bit_storage`/`to_bits` bullet below, and [the comparison in design.md](#the-bytes-they-agree-on).
+- **No container exchange**: `std::flat_set` hands its underlying container out with `extract() &&` and takes one back with `replace(container_type&&)`, which is how you build one cheaply and how you get the sorted vector back out. `xstd::bit_fixed_set` has neither name, and has the capability twice over — see the `from_bit_storage`/`to_bits` bullet below, and [the comparison in design.md](#the-bytes-they-agree-on).
 
-Minor **semantic differences** between common functionality in `xstd::bit_static_set<N>` and `std::set<int>` are:
+Minor **semantic differences** between common functionality in `xstd::bit_fixed_set<N>` and `std::set<int>` are:
 
-- the `xstd::bit_static_set` member function `max_size` is `constexpr`, and at a static width its value is a constant expression usable wherever `N` is. It is a **member** rather than a `static` member function because `std::set`'s is a member: each reading takes the shape its own counterpart spells, which is why the sequence reading's middle column has a `static` one instead — `[inplace.vector.capacity]` spells all four of `capacity`, `max_size`, `reserve` and `shrink_to_fit` static there, and `xstd::bit_inplace_vector<N>::capacity()` answers without an object accordingly ([design.md#max-size-is-the-bits](#max-size-is-the-bits)). So for the set reading `s.max_size()` is a constant expression and `decltype(s)::max_size()` does not compile.
-- the `xstd::bit_static_set` iterators are **proxy iterators**, and taking their address yields **proxy references**. The difference should be undetectable. See the FAQ at the end of this document.
-- the `xstd::bit_static_set` members `fill`, `complement` and `full` do not exist for `std::set`.
-- `xstd::bit_static_set<N>` exchanges bits with any field of `N` bits through a **named pair**, the tagged constructor `bit_static_set<N>(xstd::from_bit_storage, b)` and `to_bits<B>()`, and with anything that has bit storage through `xstd::bit_cast`, not through an untagged constructor or a conversion operator. What they admit is named by a concept rather than by a type: an unsigned integer or a sequence of them, whose layout the language and the sequence state between them, or a field of bits whose layout `bit_castable` probes and proves — so `std::bitset<N>` and `xstd::bitset<N>` ride in on the same rule as `unsigned long long`, and an implementation that laid its bits out otherwise fails to compile rather than converting quietly. The widths are the same `N` and a static width is a capacity under this reading, so position `n` here is bit `n` there: nothing truncates, nothing grows, nothing throws, and the round trip is the identity. It is `constexpr` at every width, and a copy rather than a walk over positions.
+- the `xstd::bit_fixed_set` member function `max_size` is `constexpr`, and at a static width its value is a constant expression usable wherever `N` is. It is a **member** rather than a `static` member function because `std::set`'s is a member: each reading takes the shape its own counterpart spells, which is why the sequence reading's middle column has a `static` one instead — `[inplace.vector.capacity]` spells all four of `capacity`, `max_size`, `reserve` and `shrink_to_fit` static there, and `xstd::bit_bounded_vector<N>::capacity()` answers without an object accordingly ([design.md#max-size-is-the-bits](#max-size-is-the-bits)). So for the set reading `s.max_size()` is a constant expression and `decltype(s)::max_size()` does not compile.
+- the `xstd::bit_fixed_set` iterators are **proxy iterators**, and taking their address yields **proxy references**. The difference should be undetectable. See the FAQ at the end of this document.
+- the `xstd::bit_fixed_set` members `fill`, `complement` and `full` do not exist for `std::set`.
+- `xstd::bit_fixed_set<N>` exchanges bits with any field of `N` bits through a **named pair**, the tagged constructor `bit_fixed_set<N>(xstd::from_bit_storage, b)` and `to_bits<B>()`, and with anything that has bit storage through `xstd::bit_cast`, not through an untagged constructor or a conversion operator. What they admit is named by a concept rather than by a type: an unsigned integer or a sequence of them, whose layout the language and the sequence state between them, or a field of bits whose layout `bit_castable` probes and proves — so `std::bitset<N>` and `xstd::bitset<N>` ride in on the same rule as `unsigned long long`, and an implementation that laid its bits out otherwise fails to compile rather than converting quietly. The widths are the same `N` and a static width is a capacity under this reading, so position `n` here is bit `n` there: nothing truncates, nothing grows, nothing throws, and the round trip is the identity. It is `constexpr` at every width, and a copy rather than a walk over positions.
 
-  A name rather than a conversion, because the integer family is the one a set reader can still misread, and only a name answers it at the call site, where the reader is: `bit_static_set<32>(xstd::from_bit_storage, 5u)` is the set of positions the **value** five has, `{0, 2}`, not the set `{5}` ([design.md#the-bytes-they-agree-on](#the-bytes-they-agree-on)). `from_bit_storage` is a static factory on an owner; `to_bits<B>()` is also there on a set view, which spans a whole container and so has that container's bytes. The run-time-width `xstd::bit_set` has neither, a `std::bitset` naming one `N` that a growing set has no single value for.
+  A name rather than a conversion, because the integer family is the one a set reader can still misread, and only a name answers it at the call site, where the reader is: `bit_fixed_set<32>(xstd::from_bit_storage, 5u)` is the set of positions the **value** five has, `{0, 2}`, not the set `{5}` ([design.md#the-bytes-they-agree-on](#the-bytes-they-agree-on)). `from_bit_storage` is a static factory on an owner; `to_bits<B>()` is also there on a set view, which spans a whole container and so has that container's bytes. The run-time-width `xstd::bit_set` has neither, a `std::bitset` naming one `N` that a growing set has no single value for.
 
-With these caveats in mind, all static-width, defaulted comparing, non-allocating, non-splicing `std::set<int>` code in the wild should continue to work out-of-the-box with `xstd::bit_static_set<N>`.
+With these caveats in mind, all static-width, defaulted comparing, non-allocating, non-splicing `std::set<int>` code in the wild should continue to work out-of-the-box with `xstd::bit_fixed_set<N>`.
 
 ### 2 An almost complete translation of `std::bitset<N>`
 
-Almost all existing `std::bitset<N>` code has **a direct translation** (i.e. achievable through search-and-replace) to an equivalent `xstd::bit_static_set<N>` expression, with the same and familiar semantics as `std::set<int>` or `boost::flat_set<int>`.
+Almost all existing `std::bitset<N>` code has **a direct translation** (i.e. achievable through search-and-replace) to an equivalent `xstd::bit_fixed_set<N>` expression, with the same and familiar semantics as `std::set<int>` or `boost::flat_set<int>`.
 
-| `std::bitset<N>`                | `xstd::bit_static_set<N>`              | Notes                                           |
+| `std::bitset<N>`                | `xstd::bit_fixed_set<N>`              | Notes                                           |
 | :---------------                | :-----------------              | :----                                           |
 | `bs.set()`                      | `bs.fill()`                     | not a member of `std::set<int>`                 |
 | `bs.set(n)`                     | `bs.add(n)` <br> `bs.insert(n)` | `out_of_range` past `N`, where `std::bitset` throws it too |
@@ -5082,24 +5083,24 @@ Almost all existing `std::bitset<N>` code has **a direct translation** (i.e. ach
 | `bs.any()`                      | `not bs.empty()`                | |
 | `bs.none()`                     | `bs.empty()`                    | |
 
-The semantic differences between `xstd::bit_static_set<N>` and `std::bitset<N>` are:
+The semantic differences between `xstd::bit_fixed_set<N>` and `std::bitset<N>` are:
 
-- `xstd::bit_static_set<N>` answers `max_size()` as a `constexpr` member, where `std::bitset<N>` answers the same question with `size()`;
-- `xstd::bit_static_set<N>` splits its members by what `[set]` can promise. **Asking is total**: `contains`, `count`, `find`, `lower_bound`, `upper_bound`, `equal_range` and `erase(key)` all answer for a key outside `[0, N)` — it is a key the set does not hold, which is an answer and not a precondition violation, exactly as `std::set::find` returns `end()` for any key it does not hold. **Writing is not**: `insert` and `complement` have nowhere to put such a key, and throw `out_of_range` as `std::bitset<N>` does for a position past `N`. This used to be undefined instead, on the grounds of a performance benefit; measured on the sieve at `N = 2^16`, best of twenty-five, the guard costs nothing — 188.0µs against 188.1µs, and 75.1µs against 75.1µs over 65536 inserts — because the comparison is against a compile-time constant and never taken.
+- `xstd::bit_fixed_set<N>` answers `max_size()` as a `constexpr` member, where `std::bitset<N>` answers the same question with `size()`;
+- `xstd::bit_fixed_set<N>` splits its members by what `[set]` can promise. **Asking is total**: `contains`, `count`, `find`, `lower_bound`, `upper_bound`, `equal_range` and `erase(key)` all answer for a key outside `[0, N)` — it is a key the set does not hold, which is an answer and not a precondition violation, exactly as `std::set::find` returns `end()` for any key it does not hold. **Writing is not**: `insert` and `complement` have nowhere to put such a key, and throw `out_of_range` as `std::bitset<N>` does for a position past `N`. This used to be undefined instead, on the grounds of a performance benefit; measured on the sieve at `N = 2^16`, best of twenty-five, the guard costs nothing — 188.0µs against 188.1µs, and 75.1µs against 75.1µs over 65536 inserts — because the comparison is against a compile-time constant and never taken.
 
-Functionality from `std::bitset<N>` that is not in `xstd::bit_static_set<N>`:
+Functionality from `std::bitset<N>` that is not in `xstd::bit_fixed_set<N>`:
 
-- **No string constructors and no `to_string`**: a bit string is the **`bitset` reading's** vocabulary, and it is there across that whole row — `xstd::bitset<N>`, `xstd::inplace_bitset<N>` and `xstd::dynamic_bitset` all take `std::bitset`'s string constructors and answer `to_string()`, at every width. The set reading declines it as it declines the rest of that vocabulary, and crossing costs one call either way: `s.to_bits<xstd::bitset<N>>().to_string()`, and `xstd::bit_static_set<N>(xstd::from_bit_storage, xstd::bitset<N>(str))` back. What a set prints *as itself* is `{2, 3, 5}`, which is [printing](#printing) above.
-- **No integer constructor and no integer conversion operator**: here what is missing is the language's *unnamed* doors and not the capability. The byte exchange does both under a name, `xstd::bit_static_set<32>(xstd::from_bit_storage, 5u)` and `s.to_bits<unsigned>()` — and it is named for exactly the reason a constructor would be the wrong spelling: `bit_static_set<32>(xstd::from_bit_storage, 5u)` is the set of positions the **value** five has, `{0, 2}`, and not the set `{5}`. A constructor cannot say which of those it meant; a name can.
+- **No string constructors and no `to_string`**: a bit string is the **`bitset` reading's** vocabulary, and it is there across that whole row — `xstd::bitset<N>`, `xstd::bounded_bitset<N>` and `xstd::dynamic_bitset` all take `std::bitset`'s string constructors and answer `to_string()`, at every width. The set reading declines it as it declines the rest of that vocabulary, and crossing costs one call either way: `s.to_bits<xstd::bitset<N>>().to_string()`, and `xstd::bit_fixed_set<N>(xstd::from_bit_storage, xstd::bitset<N>(str))` back. What a set prints *as itself* is `{2, 3, 5}`, which is [printing](#printing) above.
+- **No integer constructor and no integer conversion operator**: here what is missing is the language's *unnamed* doors and not the capability. The byte exchange does both under a name, `xstd::bit_fixed_set<32>(xstd::from_bit_storage, 5u)` and `s.to_bits<unsigned>()` — and it is named for exactly the reason a constructor would be the wrong spelling: `bit_fixed_set<32>(xstd::from_bit_storage, 5u)` is the set of positions the **value** five has, `{0, 2}`, and not the set `{5}`. A constructor cannot say which of those it meant; a name can.
 - **No I/O streaming operators**: `operator<<` and `operator>>` are `[bitset.operators]`'s, so they sit on that row beside `to_string`, at every width. A set formats instead, in its own vocabulary.
 
-Formatting a set needs nothing beyond the standard library: `std::format` and `std::print` take it in its own vocabulary, as [printing](#printing) above shows. A consumer who formats with [{fmt}](https://fmt.dev/latest/) instead gets the same output through the proxy's hidden-friend `format_as`, and pays for that hook without this library depending on fmt either to build or to test. Hashing is **not** on that list: `std::hash<xstd::bit_static_set<N>>` is specialized, over [Boost.Hash2](https://github.com/boostorg/hash2), and every value this library compares it also hashes, so `a == b` implies `hash(a) == hash(b)` under every reading ([design.md#the-hashing-invariant](#the-hashing-invariant)). The `hash_append` hook is there beside it, for a caller wanting an algorithm other than the defaulted `fnv1a_64`.
+Formatting a set needs nothing beyond the standard library: `std::format` and `std::print` take it in its own vocabulary, as [printing](#printing) above shows. A consumer who formats with [{fmt}](https://fmt.dev/latest/) instead gets the same output through the proxy's hidden-friend `format_as`, and pays for that hook without this library depending on fmt either to build or to test. Hashing is **not** on that list: `std::hash<xstd::bit_fixed_set<N>>` is specialized, over [Boost.Hash2](https://github.com/boostorg/hash2), and every value this library compares it also hashes, so `a == b` implies `hash(a) == hash(b)` under every reading ([design.md#the-hashing-invariant](#the-hashing-invariant)). The `hash_append` hook is there beside it, for a caller wanting an algorithm other than the defaulted `fnv1a_64`.
 
 ### 3 Set predicates from `boost::dynamic_bitset`
 
-The set predicates `is_subset`, `is_proper_subset` and `intersects` from `boost::dynamic_bitset` are present in `xstd::bit_static_set` with **identical syntax** and **identical semantics**. Note that these set predicates are not present in `std::bitset`. Efficient emulation of these set predicates for `std::bitset` is not possible using **single-pass** and **short-circuiting** semantics.
+The set predicates `is_subset`, `is_proper_subset` and `intersects` from `boost::dynamic_bitset` are present in `xstd::bit_fixed_set` with **identical syntax** and **identical semantics**. Note that these set predicates are not present in `std::bitset`. Efficient emulation of these set predicates for `std::bitset` is not possible using **single-pass** and **short-circuiting** semantics.
 
-| `xstd::bit_static_set<N>` <br> `boost::dynamic_bitset<>`  | `std::bitset<N>`             |
+| `xstd::bit_fixed_set<N>` <br> `boost::dynamic_bitset<>`  | `std::bitset<N>`             |
 | :------------------------------------------------  | :---------------             |
 | `a.is_subset_of(b)`                                | `(a & ~b).none()`            |
 | `a.is_proper_subset_of(b)`                         | `(a & ~b).none() and a != b` |
@@ -5107,14 +5108,14 @@ The set predicates `is_subset`, `is_proper_subset` and `intersects` from `boost:
 
 ### 4 The bitwise operators from `std::bitset` and `boost::dynamic_bitset` reimagined as set algorithms
 
-The bitwise operators (`&=`, `|=`, `^=`, `-=`, `~`, `&`, `|`, `^`, `-`) from `std::bitset` and `boost::dynamic_bitset` are present in `xstd::bit_static_set` with **identical syntax** and **identical semantics**. Note that the bitwise difference operators (`-=` and `-`) from `boost::dynamic_bitset` are not present in `std::bitset`. The `operator-` can be emulated for `std::bitset` using the identity `a - b == a & ~b`.
+The bitwise operators (`&=`, `|=`, `^=`, `-=`, `~`, `&`, `|`, `^`, `-`) from `std::bitset` and `boost::dynamic_bitset` are present in `xstd::bit_fixed_set` with **identical syntax** and **identical semantics**. Note that the bitwise difference operators (`-=` and `-`) from `boost::dynamic_bitset` are not present in `std::bitset`. The `operator-` can be emulated for `std::bitset` using the identity `a - b == a & ~b`.
 
-The bitwise-shift operators (`<<=`, `>>=`, `<<`, `>>`) from `std::bitset` and `boost::dynamic_bitset` are present in `xstd::bit_static_set` with **identical syntax**, but with the **semantic difference** that `xstd::bit_static_set<N>` does not support bit-shifting for lengths `>= N`. Instead of calling `clear()` for argument values outside the range `[0, N)`, this **behavior is undefined**. Note that these semantics for `xstd::bit_static_set<N>` are identical to bit-shifting on native unsigned integers. This gives `xstd::bit_static_set<N>` a small performance benefit over `std::bitset<N>`.
+The bitwise-shift operators (`<<=`, `>>=`, `<<`, `>>`) from `std::bitset` and `boost::dynamic_bitset` are present in `xstd::bit_fixed_set` with **identical syntax**, but with the **semantic difference** that `xstd::bit_fixed_set<N>` does not support bit-shifting for lengths `>= N`. Instead of calling `clear()` for argument values outside the range `[0, N)`, this **behavior is undefined**. Note that these semantics for `xstd::bit_fixed_set<N>` are identical to bit-shifting on native unsigned integers. This gives `xstd::bit_fixed_set<N>` a small performance benefit over `std::bitset<N>`.
 
 With the exception of `operator~`, the non-member bitwise operators can be reimagined as **composable** and **data-parallel** versions of the set algorithms on sorted ranges. In C++23, the set algorithms are not (yet) composable, but the [range-v3](https://ericniebler.github.io/range-v3/) library contains lazy views for them.
 
 
-| `xstd::bit_static_set<N>`      | `std::set<int>` with the range-v3 set algorithm views                                                |
+| `xstd::bit_fixed_set<N>`      | `std::set<int>` with the range-v3 set algorithm views                                                |
 | :----------------       | :----------------------------------------------------------------------------------------------------|
 | `a.is_subset_of(b)`     | `std::ranges::includes(a, b)`                                                                        |
 | <code>a &vert; b</code> | <code>ranges::views::set_union(a, b)                &vert; std::ranges::to&lt;std::set&gt;() </code> |
@@ -5122,12 +5123,12 @@ With the exception of `operator~`, the non-member bitwise operators can be reima
 | `a - b`                 | <code>ranges::views::set_difference(a, b)           &vert; std::ranges::to&lt;std::set&gt;() </code> |
 | `a ^ b`                 | <code>ranges::views::set_symmetric_difference(a, b) &vert; std::ranges::to&lt;std::set&gt;() </code> |
 
-The bitwise shift operators of `xstd::bit_static_set<N>` can be reimagined as set **transformations** that add or subtract a non-negative constant to all set elements, followed by **filtering** out elements that would fall outside the range `[0, N)`. This can also be formulated in a composable way for `std::set<int>`, albeit without the data-parallelism that `xstd::bit_static_set<N>` provides.
+The bitwise shift operators of `xstd::bit_fixed_set<N>` can be reimagined as set **transformations** that add or subtract a non-negative constant to all set elements, followed by **filtering** out elements that would fall outside the range `[0, N)`. This can also be formulated in a composable way for `std::set<int>`, albeit without the data-parallelism that `xstd::bit_fixed_set<N>` provides.
 
 <table>
 <tr>
     <th>
-        xstd::bit_static_set&ltN&gt
+        xstd::bit_fixed_set&ltN&gt
     </th>
     <th>
         std::set&ltint&gt
@@ -5186,19 +5187,19 @@ auto b = a
 **Q**: Aren't there too many implicit conversions when assigning a proxy reference to an implicitly `int`-constructible class?  
 **A**: No, proxy references also implicity convert to any class type that is implicitly constructible from an `int`.
 
-**Q**: So iterating over an `xstd::bit_static_set` is really fool-proof?  
-**A**: Yes, `xstd::bit_static_set` iterators are [easy to use correctly and hard to use incorrectly](http://www.aristeia.com/Papers/IEEE_Software_JulAug_2004_revised.htm).
+**Q**: So iterating over an `xstd::bit_fixed_set` is really fool-proof?  
+**A**: Yes, `xstd::bit_fixed_set` iterators are [easy to use correctly and hard to use incorrectly](http://www.aristeia.com/Papers/IEEE_Software_JulAug_2004_revised.htm).
 
 ### Bit-layout
 
-**Q**: How is `xstd::bit_static_set` implemented?  
-**A**: `bit_static_set` uses a `std::array` of unsigned integers, so its storage goes wherever the object does. That is true of the static-width column only: the inplace column holds a `std::inplace_vector` inline, and the dynamic column a `std::vector`. All three are the same storage vehicle over a different container, which is an implementation detail rather than a name you reach for.
+**Q**: How is `xstd::bit_fixed_set` implemented?  
+**A**: `bit_fixed_set` uses a `std::array` of unsigned integers, so its storage goes wherever the object does. That is true of the static-width column only: the bounded column holds a `std::inplace_vector` inline, and the dynamic column a `std::vector`. All three are the same storage vehicle over a different container, which is an implementation detail rather than a name you reach for.
 
 **Q**: How is a set value mapped onto the array's bit layout?  
 **A**: Position `n` is bit `n % W` of word `n / W`, for a word of `W` bits. So the **least** significant bit of the first array word maps onto set value `0`, and the most significant bit of the last array word onto set value `N - 1`. That is the conventional layout: `boost::dynamic_bitset` and the mainstream `std::bitset` and `std::vector<bool>` implementations all lay their bits out the same way.
 
 **Q**: I'm visually oriented, can you draw a diagram?  
-**A**: Sure, it looks like this for `basic_bit_static_set<std::uint8_t, 16>`, each word drawn most significant bit first:
+**A**: Sure, it looks like this for `basic_bit_fixed_set<std::uint8_t, 16>`, each word drawn most significant bit first:
 
 |word  |       0|       1|
 |:---- |-------:|-------:|
@@ -5246,14 +5247,14 @@ Bit-0 leftmost buys one thing: the bitstring order and the array order agree, wh
 
 ### Storage type
 
-**Q**: What storage type does `xstd::bit_static_set` use?  
-**A**: By default, `xstd::bit_static_set` uses an array of `std::size_t` integers.
+**Q**: What storage type does `xstd::bit_fixed_set` use?  
+**A**: By default, `xstd::bit_fixed_set` uses an array of `std::size_t` integers.
 
 **Q**: Can I customize the storage type?  
-**A**: Yes. The alias carrying the default is `template<std::size_t N> using bit_static_set = basic_bit_static_set<std::size_t, N>`; the underlying `template<xstd::unsigned_integer Block, std::size_t N> basic_bit_static_set` requires the block explicitly. Every cell of the table follows that pattern: a short name that defaults `Block` to `std::size_t`, and a `basic_` name that does not.
+**A**: Yes. The alias carrying the default is `template<std::size_t N> using bit_fixed_set = basic_bit_fixed_set<std::size_t, N>`; the underlying `template<xstd::unsigned_integer Block, std::size_t N> basic_bit_fixed_set` requires the block explicitly. Every cell of the table follows that pattern: a short name that defaults `Block` to `std::size_t`, and a `basic_` name that does not.
 
 **Q**: What other storage types can be used as template argument for `Block`?  
 **A**: Any type modelling the Standard Library `unsigned_integral` concept, which includes (for GCC and Clang) `xstd::uint128`.
 
-**Q**: Does the `xstd::bit_static_set` implementation optimize for the case of a small number of words of storage?  
+**Q**: Does the `xstd::bit_fixed_set` implementation optimize for the case of a small number of words of storage?  
 **A**: Yes, there are three special cases for 0, 1 and 2 words of storage, as well as the general case of 3 or more words.

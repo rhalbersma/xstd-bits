@@ -20,18 +20,18 @@
 
 #endif
 
-#include <xstd/bits/bit_static_set.hpp> // basic_bit_static_set
-#include <benchmark/benchmark.h>        // DoNotOptimize, BENCHMARK_TEMPLATE, BENCHMARK_MAIN, State
-#include <cstddef>                      // size_t
-#include <cstdint>                      // uint8_t, uint16_t, uint32_t, uint64_t
-#include <vector>                       // vector
+#include <xstd/bits/bit_fixed_set.hpp> // basic_bit_fixed_set
+#include <benchmark/benchmark.h>       // DoNotOptimize, BENCHMARK_TEMPLATE, BENCHMARK_MAIN, State
+#include <cstddef>                     // size_t
+#include <cstdint>                     // uint8_t, uint16_t, uint32_t, uint64_t
+#include <vector>                      // vector
 
 namespace {
 
 inline constexpr auto width = 256UZ;
 
 template<class Block>
-using set_of = xstd::basic_bit_static_set<Block, width>;
+using set_of = xstd::basic_bit_fixed_set<Block, width>;
 
 // A function of the position alone and never of the Block, so every row holds the same elements.
 template<class T>
