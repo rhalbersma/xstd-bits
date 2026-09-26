@@ -10,7 +10,6 @@
 #include <test/set/ascending.hpp>                        // yields_ascending_keys
 #include <test/set/concepts.hpp>                         // bit_set, set_size_t, set_size_t_ranges
 #include <xstd/bits/bit_bounded_set.hpp>                 // aligned, basic_bit_bounded_set, bit_bounded_set
-#include <xstd/bits/bit_set_adaptor.hpp>                 // bit_set_adaptor
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/detail/ownership.hpp>                // owned_bits_t, storage
 #include <xstd/bits/detail/set_adaptor.hpp>              // set_adaptor
@@ -111,7 +110,7 @@ BOOST_AUTO_TEST_CASE(TheCapacityIsTheRequestedOneExactly)
         using U = xstd::basic_bit_bounded_set<std::uint8_t, 9>;
         static_assert(U().max_size() == 9UZ);
         static_assert(std::same_as<xstd::aligned::basic_bit_bounded_set<std::uint8_t, 9>, xstd::basic_bit_bounded_set<std::uint8_t, 16>>);
-        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::bit_set_adaptor<std::inplace_vector<std::uint8_t, 2>>>, xstd::bits::detail::owned_bits_t<xstd::basic_bit_bounded_set<std::uint8_t, 16>>>);
+        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_bounded_set<std::uint8_t, 16>>, xstd::bits::detail::contiguous_bit_container<std::inplace_vector<std::uint8_t, 2>>>);
 
         auto s = U();
         s.insert(8);

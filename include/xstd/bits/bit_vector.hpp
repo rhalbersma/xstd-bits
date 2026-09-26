@@ -6,7 +6,6 @@
 #ifndef XSTD_BITS_BIT_VECTOR_HPP
 #define XSTD_BITS_BIT_VECTOR_HPP
 
-#include <xstd/bits/bit_sequence_adaptor.hpp>                // bit_sequence_adaptor
 #include <xstd/bits/detail/contiguous_bit_container.hpp>     // contiguous_bit_container
 #include <xstd/bits/detail/ownership.hpp>                    // storage, window
 #include <xstd/bits/detail/sequence_adaptor.hpp>             // sequence_adaptor
@@ -65,9 +64,6 @@ public:
                 : base_type(std::from_range, std::forward<R>(rg), a)
         {}
 
-        [[nodiscard]] basic_bit_vector(basic_bit_vector const& x) = default;
-        [[nodiscard]] basic_bit_vector(basic_bit_vector&& x) noexcept = default;
-
         [[nodiscard]] constexpr basic_bit_vector(basic_bit_vector const& x, std::type_identity_t<Allocator> const& a)
                 : base_type(x, a)
         {}
@@ -79,11 +75,6 @@ public:
         [[nodiscard]] constexpr basic_bit_vector(std::initializer_list<bool> il, Allocator const& a = Allocator())
                 : base_type(il, a)
         {}
-
-        ~basic_bit_vector() = default;
-
-        auto operator=(basic_bit_vector const& x) -> basic_bit_vector& = default;
-        auto operator=(basic_bit_vector&& x) noexcept(std::allocator_traits<Allocator>::propagate_on_container_move_assignment::value or std::allocator_traits<Allocator>::is_always_equal::value) -> basic_bit_vector& = default;
 
         // Not in [vector.bool.pspc]: flat_set's container constructor under the bit-storage tag.
         [[nodiscard]] constexpr basic_bit_vector(from_bit_storage_t, std::vector<Block, Allocator> blocks) noexcept
@@ -121,13 +112,6 @@ basic_bit_vector(from_bit_storage_t, std::vector<Block, Allocator>) -> basic_bit
 
 template<xstd::unsigned_integer Block, class Allocator>
 basic_bit_vector(from_bit_storage_t, std::vector<Block, Allocator>, Allocator) -> basic_bit_vector<Block, Allocator>;
-
-// The adaptor named by its storage stays the door for a std::vector of blocks passed to it directly.
-template<xstd::unsigned_integer Block, class Allocator>
-bit_sequence_adaptor(from_bit_storage_t, std::vector<Block, Allocator>) -> bit_sequence_adaptor<std::vector<Block, Allocator>>;
-
-template<xstd::unsigned_integer Block, class Allocator>
-bit_sequence_adaptor(from_bit_storage_t, std::vector<Block, Allocator>, Allocator) -> bit_sequence_adaptor<std::vector<Block, Allocator>>;
 
 } // namespace xstd
 

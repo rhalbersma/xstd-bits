@@ -6,7 +6,6 @@
 #include <test/minimal_words.hpp>                        // minimal_words
 #include <xstd/bits/bit_array.hpp>                       // bit_array
 #include <xstd/bits/bit_set.hpp>                         // bit_set
-#include <xstd/bits/bit_set_adaptor.hpp>                 // bit_set_adaptor
 #include <xstd/bits/bit_set_view.hpp>                    // bit_set_view
 #include <xstd/bits/bit_storage.hpp>                     // bit_storage, bit_storage_capacity_v, bit_storage_extent_v, owned_bit_storage, resizable_bit_storage
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
@@ -33,13 +32,10 @@ BOOST_AUTO_TEST_SUITE(BitStorage)
 namespace {
 
 template<class W>
-concept names_an_owner = requires { typename xstd::bit_set_adaptor<W>; };
+concept holds_words = requires { typename xstd::bits::detail::contiguous_bit_container<W>; };
 
 template<class W>
 concept names_a_view = requires { typename xstd::bit_set_view<W>; };
-
-template<class W, std::size_t N>
-concept names_an_owner_of = requires { typename xstd::bit_set_adaptor<W, N>; };
 
 template<class W, std::size_t N>
 concept holds_extent = requires { typename xstd::bits::detail::contiguous_bit_container<W, N>; };
@@ -70,17 +66,17 @@ BOOST_AUTO_TEST_CASE(EverythingElseIsNot)
         BOOST_CHECK(true);
 }
 
-// The owners and views are named by bit storage and nothing else.
-BOOST_AUTO_TEST_CASE(OwnersAndViewsAreNamedByBitStorage)
+// The storage and the views are named by bit storage and nothing else.
+BOOST_AUTO_TEST_CASE(TheStorageAndTheViewsAreNamedByBitStorage)
 {
-        static_assert(names_an_owner<std::uint64_t> and names_an_owner<std::vector<std::uint32_t>>);
+        static_assert(holds_words<std::vector<std::uint32_t>> and holds_words<std::array<std::uint64_t, 1>>);
         static_assert(names_a_view<std::uint64_t const> and names_a_view<std::span<std::uint32_t>>);
-        static_assert(not names_an_owner<std::bitset<64>> and not names_an_owner<xstd::bit_set>);
+        static_assert(not holds_words<std::bitset<64>> and not holds_words<xstd::bit_set>);
         static_assert(not names_a_view<std::vector<bool>> and not names_a_view<int>);
         BOOST_CHECK(true);
 }
 
-// The width storage names by its type, which the owners and views default to: fixed words have one, the rest do not.
+// The width storage names by its type, which the views default to: fixed words have one, the rest do not.
 BOOST_AUTO_TEST_CASE(TheExtentIsTheWidthTheTypeNames)
 {
         static_assert(xstd::bit_storage_extent_v<std::uint8_t> == 8 and xstd::bit_storage_extent_v<std::uint64_t const> == 64);
@@ -89,7 +85,6 @@ BOOST_AUTO_TEST_CASE(TheExtentIsTheWidthTheTypeNames)
         static_assert(xstd::bit_storage_extent_v<std::span<std::uint32_t>> == std::dynamic_extent);
         static_assert(xstd::bit_storage_extent_v<std::vector<std::size_t>> == std::dynamic_extent);
         static_assert(std::is_same_v<xstd::bit_set_view<std::span<std::uint32_t>>, xstd::bit_set_view<std::span<std::uint32_t>, std::dynamic_extent>>);
-        static_assert(std::is_same_v<xstd::bit_set_adaptor<std::uint64_t>, xstd::bit_set_adaptor<std::uint64_t, 64>>);
         BOOST_CHECK(true);
 }
 
@@ -101,7 +96,6 @@ BOOST_AUTO_TEST_CASE(OwnedStorageIsAValueThatConstKeepsReadOnly)
         static_assert(not xstd::owned_bit_storage<std::span<std::uint32_t>> and not xstd::owned_bit_storage<std::span<std::uint32_t, 2>>);
         static_assert(not xstd::owned_bit_storage<std::uint64_t const> and not xstd::owned_bit_storage<std::array<std::uint16_t, 3> const>);
         static_assert(xstd::bit_storage<std::span<std::uint32_t>> and xstd::bit_storage<std::uint64_t const>);
-        static_assert(not names_an_owner<std::span<std::uint32_t>> and not names_an_owner<std::uint64_t const>);
         BOOST_CHECK(true);
 }
 
@@ -116,10 +110,10 @@ BOOST_AUTO_TEST_CASE(ARunTimeWidthOwnsOnlyStorageThatResizes)
 
 #endif
         static_assert(xstd::resizable_bit_storage<test::minimal_words<std::uint32_t>>);
-        static_assert(names_an_owner_of<std::vector<std::size_t>, std::dynamic_extent>);
-        static_assert(names_an_owner_of<test::minimal_words<std::uint32_t>, std::dynamic_extent>);
-        static_assert(names_an_owner_of<std::array<std::uint64_t, 2>, 100> and not names_an_owner_of<std::array<std::uint64_t, 2>, std::dynamic_extent>);
-        static_assert(not names_an_owner_of<std::uint64_t, std::dynamic_extent>);
+        static_assert(holds_extent<std::vector<std::size_t>, std::dynamic_extent>);
+        static_assert(holds_extent<test::minimal_words<std::uint32_t>, std::dynamic_extent>);
+        static_assert(holds_extent<std::array<std::uint64_t, 2>, 100> and not holds_extent<std::array<std::uint64_t, 2>, std::dynamic_extent>);
+        static_assert(not holds_extent<std::uint64_t, std::dynamic_extent>);
         BOOST_CHECK(true);
 }
 
@@ -133,7 +127,7 @@ BOOST_AUTO_TEST_CASE(AnOwnersExtentIsItsWidthOrItsCapacity)
 
         static_assert(xstd::bit_storage_capacity_v<std::inplace_vector<std::uint16_t, 3>> == 48);
         static_assert(xstd::bit_storage_extent_v<std::inplace_vector<std::uint16_t, 3>> == std::dynamic_extent);
-        static_assert(std::is_same_v<xstd::bit_set_adaptor<std::inplace_vector<std::uint16_t, 3>>, xstd::bit_set_adaptor<std::inplace_vector<std::uint16_t, 3>, 48>>);
+        static_assert(std::is_same_v<xstd::bits::detail::contiguous_bit_container<std::inplace_vector<std::uint16_t, 3>>, xstd::bits::detail::contiguous_bit_container<std::inplace_vector<std::uint16_t, 3>, 48>>);
 
         // Any capacity the blocks hold in whole: stopping inside the last block, but never short of it.
         static_assert(holds_extent<std::inplace_vector<std::uint16_t, 3>, 33> and holds_extent<std::inplace_vector<std::uint16_t, 3>, 47>);

@@ -108,7 +108,6 @@ public:
 
         public:
                 reference(reference const& x) noexcept = default;
-                ~reference() = default;
 
                 constexpr auto operator=(bool x) noexcept
                         -> reference&

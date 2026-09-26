@@ -10,29 +10,12 @@
 #include <xstd/bits/detail/borrowed_bits.hpp>            // borrowable_word, borrowable_words, borrowed_bits, words_span_t
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/ints/concepts/unsigned_integer.hpp>       // unsigned_integer
-#include <array>                                         // array
 #include <cstddef>                                       // size_t
 #include <span>                                          // span
 #include <type_traits>                                   // conditional_t, is_const_v, remove_const_t, remove_reference_t
 
-// What the public containers and views are named by: the words, never the storage built over them.
+// What the public views are named by: the words, never the storage built over them.
 namespace xstd::bits::detail {
-
-// An owner's storage: one word is held as an array of one, so the storage only ever sees a range.
-template<class Blocks, std::size_t N>
-struct owner_storage
-{
-        using type = contiguous_bit_container<Blocks, N>;
-};
-
-template<xstd::unsigned_integer Block, std::size_t N>
-struct owner_storage<Block, N>
-{
-        using type = contiguous_bit_container<std::array<Block, 1>, N>;
-};
-
-template<class Blocks, std::size_t N>
-using owner_storage_t = owner_storage<Blocks, N>::type;
 
 template<class T, class Bits>
 using const_as_t = std::conditional_t<std::is_const_v<T>, Bits const, Bits>;

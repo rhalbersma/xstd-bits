@@ -6,7 +6,6 @@
 #ifndef XSTD_BITS_DYNAMIC_BITSET_HPP
 #define XSTD_BITS_DYNAMIC_BITSET_HPP
 
-#include <xstd/bits/bitset_adaptor.hpp>                  // bitset_adaptor
 #include <xstd/bits/detail/bitset_adaptor.hpp>           // bitset_adaptor
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/from_bit_storage.hpp>                // from_bit_storage, from_bit_storage_t
@@ -15,7 +14,7 @@
 #include <cstddef>                                       // size_t
 #include <functional>                                    // hash
 #include <iterator>                                      // input_iterator
-#include <memory>                                        // allocator, allocator_traits
+#include <memory>                                        // allocator
 #include <string>                                        // basic_string
 #include <string_view>                                   // basic_string_view
 #include <type_traits>                                   // type_identity_t
@@ -85,14 +84,6 @@ public:
                 : base_type(first, last, alloc)
         {}
 
-        [[nodiscard]] basic_dynamic_bitset(basic_dynamic_bitset const& b) = default;
-        [[nodiscard]] basic_dynamic_bitset(basic_dynamic_bitset&& b) noexcept = default;
-
-        ~basic_dynamic_bitset() = default;
-
-        auto operator=(basic_dynamic_bitset const& b) -> basic_dynamic_bitset& = default;
-        auto operator=(basic_dynamic_bitset&& b) noexcept(std::allocator_traits<Allocator>::propagate_on_container_move_assignment::value or std::allocator_traits<Allocator>::is_always_equal::value) -> basic_dynamic_bitset& = default;
-
         // Not in boost::dynamic_bitset: [container.alloc.reqmts]'s allocator-extended copy and move.
         [[nodiscard]] constexpr basic_dynamic_bitset(basic_dynamic_bitset const& b, std::type_identity_t<Allocator> const& alloc)
                 : base_type(b, alloc)
@@ -127,13 +118,6 @@ basic_dynamic_bitset(from_bit_storage_t, std::vector<Block, Allocator>) -> basic
 
 template<xstd::unsigned_integer Block, class Allocator>
 basic_dynamic_bitset(from_bit_storage_t, std::vector<Block, Allocator>, Allocator) -> basic_dynamic_bitset<Block, Allocator>;
-
-// The adaptor named by its storage stays the door for a std::vector of blocks passed to it directly.
-template<xstd::unsigned_integer Block, class Allocator>
-bitset_adaptor(from_bit_storage_t, std::vector<Block, Allocator>) -> bitset_adaptor<std::vector<Block, Allocator>>;
-
-template<xstd::unsigned_integer Block, class Allocator>
-bitset_adaptor(from_bit_storage_t, std::vector<Block, Allocator>, Allocator) -> bitset_adaptor<std::vector<Block, Allocator>>;
 
 } // namespace xstd
 

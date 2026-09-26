@@ -10,7 +10,7 @@
 #include <cstddef>                  // size_t
 #include <memory_resource>          // polymorphic_allocator
 #include <scoped_allocator>         // scoped_allocator_adaptor
-#include <type_traits>              // is_nothrow_move_assignable_v, is_nothrow_move_constructible_v
+#include <type_traits>              // is_nothrow_move_assignable_v, is_nothrow_move_constructible_v, is_trivially_copyable_v
 #include <utility>                  // move, swap
 #include <vector>                   // vector
 
@@ -114,6 +114,26 @@ BOOST_AUTO_TEST_CASE(EveryCellIsARegularContainer)
         static_assert(is_regular_container<xstd::bounded_bitset<N>>());
 
 #endif
+        BOOST_CHECK(true);
+}
+
+// The implicit moves ask the storage, whose move assignment may throw under a polymorphic allocator.
+BOOST_AUTO_TEST_CASE(TheMovesAreAsNothrowAsTheStorages)
+{
+        using allocator_type = std::pmr::polymorphic_allocator<std::size_t>;
+
+        static_assert(std::is_nothrow_move_constructible_v<xstd::basic_bit_set<std::size_t, allocator_type>>);
+        static_assert(std::is_nothrow_move_constructible_v<xstd::basic_bit_vector<std::size_t, allocator_type>>);
+        static_assert(std::is_nothrow_move_constructible_v<xstd::basic_dynamic_bitset<std::size_t, allocator_type>>);
+
+        static_assert(not std::is_nothrow_move_assignable_v<xstd::basic_bit_set<std::size_t, allocator_type>>);
+        static_assert(not std::is_nothrow_move_assignable_v<xstd::basic_bit_vector<std::size_t, allocator_type>>);
+        static_assert(not std::is_nothrow_move_assignable_v<xstd::basic_dynamic_bitset<std::size_t, allocator_type>>);
+
+        // The static column's four stay trivial, as its blocks' are.
+        static_assert(std::is_trivially_copyable_v<xstd::bit_fixed_set<N>>);
+        static_assert(std::is_trivially_copyable_v<xstd::bit_array<N>>);
+        static_assert(std::is_trivially_copyable_v<xstd::bitset<N>>);
         BOOST_CHECK(true);
 }
 
