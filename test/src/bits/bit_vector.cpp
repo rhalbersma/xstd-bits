@@ -486,4 +486,31 @@ BOOST_AUTO_TEST_CASE(SortingRandomBitsLeavesThemSorted)
         }
 }
 
+// std::vector's guides: the block from the allocator where one is given, the machine word where none is.
+BOOST_AUTO_TEST_CASE(ItDeducesAsStdVectorDoes)
+{
+        auto const bools = std::vector<bool>{true, false, true, true};
+        auto const alloc = std::allocator<std::uint8_t>();
+
+        auto const a = xstd::basic_bit_vector(bools.begin(), bools.end());
+        static_assert(std::same_as<decltype(a), xstd::bit_vector const>);
+        static_assert(std::same_as<decltype(std::vector(bools.begin(), bools.end())), std::vector<bool>>);
+        auto const b = xstd::basic_bit_vector(bools.begin(), bools.end(), alloc);
+        static_assert(std::same_as<decltype(b), xstd::basic_bit_vector<std::uint8_t> const>);
+        auto const c = xstd::basic_bit_vector(std::from_range, bools);
+        static_assert(std::same_as<decltype(c), xstd::bit_vector const>);
+        auto const d = xstd::basic_bit_vector(std::from_range, bools, alloc);
+        static_assert(std::same_as<decltype(d), xstd::basic_bit_vector<std::uint8_t> const>);
+#ifdef __cpp_lib_containers_ranges
+
+        static_assert(std::same_as<decltype(std::vector(std::from_range, bools)), std::vector<bool>>);
+
+#endif
+        auto const e = xstd::basic_bit_vector(b, alloc);
+        static_assert(std::same_as<decltype(e), xstd::basic_bit_vector<std::uint8_t> const>);
+
+        BOOST_CHECK(std::ranges::equal(a, bools) and std::ranges::equal(b, bools) and std::ranges::equal(c, bools));
+        BOOST_CHECK(std::ranges::equal(d, bools) and e == b);
+}
+
 BOOST_AUTO_TEST_SUITE_END()

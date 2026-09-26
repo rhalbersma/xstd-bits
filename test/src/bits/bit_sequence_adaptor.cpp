@@ -7,8 +7,10 @@
 #include <xstd/bits/bit_inplace_vector.hpp>   // IWYU pragma: keep; basic_bit_inplace_vector, named only under __cpp_lib_inplace_vector
 #include <xstd/bits/bit_sequence_adaptor.hpp> // bit_sequence_adaptor
 #include <xstd/bits/bit_vector.hpp>           // basic_bit_vector
+#include <xstd/bits/detail/ownership.hpp>     // owned_bits_t
 #include <xstd/bits/from_bit_storage.hpp>     // from_bit_storage
 #include <boost/test/unit_test.hpp>           // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <algorithm>                          // equal
 #include <array>                              // array
 #include <concepts>                           // same_as
 #include <cstdint>                            // uint8_t, uint16_t, uint32_t, uint64_t
@@ -23,15 +25,23 @@
 
 BOOST_AUTO_TEST_SUITE(BitSequenceAdaptor)
 
-// Each owner is the adaptor over its storage, so the two spellings name one type.
-BOOST_AUTO_TEST_CASE(OwnersAreTheAdaptorOverTheirStorage)
+// Dependent, so an operator that is missing makes this false rather than ill-formed.
+template<class X, class Y>
+constexpr bool compares_with = requires (X const& x, Y const& y) { x == y; };
+
+// Each owner wraps the storage the adaptor over it wraps, under a name of its own.
+BOOST_AUTO_TEST_CASE(OwnersWrapTheStorageOfTheAdaptorOverIt)
 {
-        static_assert(std::same_as<xstd::basic_bit_array<std::uint64_t, 64>, xstd::bit_sequence_adaptor<std::array<std::uint64_t, 1>>>);
-        static_assert(std::same_as<xstd::basic_bit_array<std::uint8_t, 20>, xstd::bit_sequence_adaptor<std::array<std::uint8_t, 3>, 20>>);
-        static_assert(std::same_as<xstd::basic_bit_vector<std::uint32_t>, xstd::bit_sequence_adaptor<std::vector<std::uint32_t>>>);
+        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_array<std::uint64_t, 64>>, xstd::bits::detail::owned_bits_t<xstd::bit_sequence_adaptor<std::array<std::uint64_t, 1>>>>);
+        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_array<std::uint8_t, 20>>, xstd::bits::detail::owned_bits_t<xstd::bit_sequence_adaptor<std::array<std::uint8_t, 3>, 20>>>);
+        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_vector<std::uint32_t>>, xstd::bits::detail::owned_bits_t<xstd::bit_sequence_adaptor<std::vector<std::uint32_t>>>>);
 #ifdef __cpp_lib_inplace_vector
-        static_assert(std::same_as<xstd::basic_bit_inplace_vector<std::uint16_t, 48>, xstd::bit_sequence_adaptor<std::inplace_vector<std::uint16_t, 3>>>);
+        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_inplace_vector<std::uint16_t, 48>>, xstd::bits::detail::owned_bits_t<xstd::bit_sequence_adaptor<std::inplace_vector<std::uint16_t, 3>>>>);
 #endif
+
+        // Two names over one storage are two types, and no comparison crosses between them.
+        static_assert(not compares_with<xstd::basic_bit_array<std::uint8_t, 24>, xstd::bit_sequence_adaptor<std::array<std::uint8_t, 3>>>);
+        static_assert(not compares_with<xstd::basic_bit_vector<std::uint32_t>, xstd::bit_sequence_adaptor<std::vector<std::uint32_t>>>);
         BOOST_CHECK(true);
 }
 
@@ -45,7 +55,8 @@ BOOST_AUTO_TEST_CASE(TheAdaptorDeducesFromBits)
         constexpr auto words = xstd::bit_sequence_adaptor(xstd::from_bit_storage, std::array<std::uint8_t, 3>{0x01, 0x00, 0x80});
         static_assert(std::same_as<decltype(words), xstd::bit_sequence_adaptor<std::array<std::uint8_t, 3>, 24> const>);
         static_assert(words[0] and words[23] and words.count() == 2UZ);
-        BOOST_CHECK((words == xstd::basic_bit_array<std::uint8_t, 24>(xstd::from_bit_storage, std::array<std::uint8_t, 3>{0x01, 0x00, 0x80})));
+        constexpr auto owner = xstd::basic_bit_array<std::uint8_t, 24>(xstd::from_bit_storage, std::array<std::uint8_t, 3>{0x01, 0x00, 0x80});
+        BOOST_CHECK(std::ranges::equal(words, owner));
 }
 
 // A word names its own storage: the layout of an array of one, at its digits or a narrower width.
