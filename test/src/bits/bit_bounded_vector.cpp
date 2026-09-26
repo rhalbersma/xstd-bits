@@ -3,43 +3,43 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/inplace_vector.hpp>  // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR, has_inplace_vector
-#include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#ifdef TEST_HAS_INPLACE_VECTOR
-
+#include <test/inplace_vector.hpp>                       // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
 #include <test/sequence/concepts.hpp>                    // bit_sequence, inplace_vector_bool, inplace_vector_bool_ranges, inplace_vector_bool_try_returns, packed_inplace_vector_bool
 #include <test/sequence/dense.hpp>                       // yields_every_position
 #include <xstd/bits/bit_bounded_vector.hpp>              // aligned, basic_bit_bounded_vector, bit_bounded_vector
+#include <xstd/bits/detail/bounded_blocks.hpp>           // bounded_blocks
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/detail/ownership.hpp>                // owned_bits_t, storage
 #include <xstd/bits/detail/sequence_adaptor.hpp>         // sequence_adaptor
+#include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <algorithm>                                     // equal
 #include <concepts>                                      // same_as
 #include <cstddef>                                       // size_t
 #include <cstdint>                                       // uint8_t
-#include <inplace_vector>                                // inplace_vector
 #include <limits>                                        // numeric_limits
 #include <new>                                           // bad_alloc
 #include <ranges>                                        // count, iota, to, transform
 #include <vector>                                        // vector
 
+#ifdef TEST_HAS_INPLACE_VECTOR
+
+#include <inplace_vector> // inplace_vector
+
 #endif
 
 BOOST_AUTO_TEST_SUITE(BitBoundedVector)
-
-#ifdef TEST_HAS_INPLACE_VECTOR
 
 // A capacity of three whole blocks, so the width can straddle a boundary and still stop short of the capacity.
 using T = xstd::basic_bit_bounded_vector<std::uint8_t, 24>;
 
 // Dependent, so an absent typedef is a false rather than a hard error.
 template<class X>
-constexpr bool has_allocator = requires { typename X::allocator_type; };
+constexpr bool has_allocator = requires { typename X::allocator_type; }; // NOLINT(readability-redundant-typename): a type-requirement is spelled with typename.
 
 // The sequence reading over a run-time width under a compile-time capacity, built on the sequence adaptor.
-BOOST_AUTO_TEST_CASE(TheBoundedSequenceIsTheSequenceAdaptorOverAnInplaceVectorOfBlocks)
+BOOST_AUTO_TEST_CASE(TheBoundedSequenceIsTheSequenceAdaptorOverInlineBlocks)
 {
-        static_assert(std::derived_from<T, xstd::bits::detail::sequence_adaptor<xstd::bits::detail::contiguous_bit_container<std::inplace_vector<std::uint8_t, 3>, 24>, xstd::bits::detail::storage::owned, xstd::bits::detail::window::all, T>>);
+        static_assert(std::derived_from<T, xstd::bits::detail::sequence_adaptor<xstd::bits::detail::contiguous_bit_container<xstd::bits::detail::bounded_blocks<std::uint8_t, 3>, 24>, xstd::bits::detail::storage::owned, xstd::bits::detail::window::all, T>>);
         static_assert(std::same_as<xstd::bit_bounded_vector<24>, xstd::basic_bit_bounded_vector<std::size_t, 24>>);
         static_assert(test::sequence::bit_sequence<T>);
 }
@@ -47,14 +47,18 @@ BOOST_AUTO_TEST_CASE(TheBoundedSequenceIsTheSequenceAdaptorOverAnInplaceVectorOf
 // Every line of [inplace.vector], the model first so the checklist is known to be honest.
 BOOST_AUTO_TEST_CASE(ItAnswersEveryLineOfStdInplaceVectorBool)
 {
+#ifdef TEST_HAS_INPLACE_VECTOR
+
         static_assert(test::sequence::inplace_vector_bool<std::inplace_vector<bool, 24>>);
-        static_assert(test::sequence::inplace_vector_bool<T>);
-        static_assert(test::sequence::inplace_vector_bool<xstd::bit_bounded_vector<24>>);
 #ifdef __cpp_lib_containers_ranges
 
         static_assert(test::sequence::inplace_vector_bool_ranges<std::inplace_vector<bool, 24>>);
 
 #endif
+
+#endif
+        static_assert(test::sequence::inplace_vector_bool<T>);
+        static_assert(test::sequence::inplace_vector_bool<xstd::bit_bounded_vector<24>>);
         static_assert(test::sequence::inplace_vector_bool_ranges<T>);
 
         // The allocator is the storage's, and this storage has none: the checklist that asks for one does not apply.
@@ -72,7 +76,11 @@ BOOST_AUTO_TEST_CASE(TheTryDoorsReturnTheOptionalReferenceTheDraftSpells)
 // What the packing adds on top, which the unpacked counterpart has no reason to carry.
 BOOST_AUTO_TEST_CASE(ItAddsTheBitVocabularyStdInplaceVectorBoolHasNoReasonToCarry)
 {
+#ifdef TEST_HAS_INPLACE_VECTOR
+
         static_assert(not test::sequence::packed_inplace_vector_bool<std::inplace_vector<bool, 24>>);
+
+#endif
         static_assert(test::sequence::packed_inplace_vector_bool<T>);
         static_assert(test::sequence::packed_inplace_vector_bool<xstd::bit_bounded_vector<24>>);
 }
@@ -82,7 +90,11 @@ BOOST_AUTO_TEST_CASE(TheCapacityIsAPropertyOfTheTypeAndNotOfAnObject)
 {
         static_assert(T::capacity() == 24);
         static_assert(T::max_size() == 24);
+#ifdef TEST_HAS_INPLACE_VECTOR
+
         static_assert(T::capacity() == std::inplace_vector<bool, 24>::capacity());
+
+#endif
 
         // Within the capacity it does nothing, and past it there is nothing to do but refuse.
         T::reserve(T::capacity());
@@ -94,10 +106,9 @@ BOOST_AUTO_TEST_CASE(TheCapacityIsAPropertyOfTheTypeAndNotOfAnObject)
 BOOST_AUTO_TEST_CASE(TheFullContainerAnswersNulloptWherePushBackWouldThrow)
 {
         auto c = T();
-        while (c.size() < c.capacity()) {
+        while (c.size() < T::capacity()) {
                 auto const r = c.try_push_back(true);
-                BOOST_CHECK(r.has_value());
-                BOOST_CHECK(*r == true);
+                BOOST_CHECK(r.has_value() and *r == true);
         }
         BOOST_CHECK(not c.try_push_back(true).has_value());
         BOOST_CHECK(not c.try_emplace_back(false).has_value());
@@ -116,7 +127,11 @@ BOOST_AUTO_TEST_CASE(TheFullContainerAnswersNulloptWherePushBackWouldThrow)
 BOOST_AUTO_TEST_CASE(TheCapacityIsTheRequestedOneExactly)
 {
         static_assert(xstd::basic_bit_bounded_vector<std::uint8_t, 9>::capacity() == 9UZ);
+#ifdef TEST_HAS_INPLACE_VECTOR
+
         static_assert(xstd::basic_bit_bounded_vector<std::uint8_t, 9>::capacity() == std::inplace_vector<bool, 9>::capacity());
+
+#endif
 
         auto v = T();
         BOOST_CHECK_EQUAL(v.capacity(), 24UZ);
@@ -130,8 +145,8 @@ BOOST_AUTO_TEST_CASE(TheCapacityIsTheRequestedOneExactly)
         BOOST_CHECK_EQUAL(v.capacity(), 24UZ);
         BOOST_CHECK(std::ranges::equal(v, std::vector<bool>(17, true)));
 
-        v.reserve(24);
-        v.shrink_to_fit();
+        T::reserve(24);
+        T::shrink_to_fit();
         BOOST_CHECK_EQUAL(v.size(), 17UZ);
 }
 
@@ -143,13 +158,14 @@ BOOST_AUTO_TEST_CASE(TheCapacityIsPartOfTheType)
         static_assert(std::same_as<xstd::aligned::bit_bounded_vector<9>, xstd::bit_bounded_vector<std::numeric_limits<std::size_t>::digits>>);
 
         // Named by its storage alone, the container holds every bit of it: one storage, however it is spelled.
-        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_bounded_vector<std::uint8_t, 16>>, xstd::bits::detail::contiguous_bit_container<std::inplace_vector<std::uint8_t, 2>>>);
+        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_bounded_vector<std::uint8_t, 16>>, xstd::bits::detail::contiguous_bit_container<xstd::bits::detail::bounded_blocks<std::uint8_t, 2>>>);
 }
 
 // A capacity short of the last block's end is enforced here, where the storage would still have room.
 BOOST_AUTO_TEST_CASE(GrowingPastACapacityInsideTheLastBlockThrowsBadAlloc)
 {
         using U = xstd::basic_bit_bounded_vector<std::uint8_t, 9>;
+        BOOST_CHECK_EQUAL(U(9).size(), 9UZ);
         BOOST_CHECK_THROW(static_cast<void>(U(10)), std::bad_alloc);
 
         auto v = U(9, true);
@@ -161,18 +177,34 @@ BOOST_AUTO_TEST_CASE(GrowingPastACapacityInsideTheLastBlockThrowsBadAlloc)
         BOOST_CHECK_EQUAL(std::ranges::count(v, true), 9);
 }
 
+namespace {
+
+// Every even position set, up to the capacity.
+[[nodiscard]] auto alternating_to_capacity()
+        -> T
+{
+        return std::views::iota(0UZ, T::capacity()) | std::views::transform([](std::size_t i) -> bool { return i % 2 == 0; }) | std::ranges::to<T>();
+}
+
+} // namespace
+
 // Past the capacity growth throws bad_alloc, as [inplace.vector] specifies, and leaves the sequence as it was.
 BOOST_AUTO_TEST_CASE(GrowingPastTheCapacityThrowsBadAlloc)
 {
-        auto v = std::views::iota(0UZ, 24UZ) | std::views::transform([](auto i) { return i % 2 == 0; }) | std::ranges::to<T>();
-        BOOST_CHECK_EQUAL(v.size(), 24UZ);
-        BOOST_CHECK_EQUAL(std::ranges::count(v, true), 12);
-
+        auto v = alternating_to_capacity();
         BOOST_CHECK_THROW(v.push_back(true), std::bad_alloc);
         BOOST_CHECK_THROW(v.resize(25), std::bad_alloc);
         BOOST_CHECK_THROW(v.reserve(25), std::bad_alloc);
 
         // The failed growth left the value alone, which is what the strong guarantee buys.
+        BOOST_CHECK_EQUAL(v.size(), 24UZ);
+        BOOST_CHECK_EQUAL(std::ranges::count(v, true), 12);
+}
+
+// A full sequence has room again once it shrinks, and grows back to the capacity.
+BOOST_AUTO_TEST_CASE(AFullSequenceGrowsAgainOnceItShrinks)
+{
+        auto v = alternating_to_capacity();
         BOOST_CHECK_EQUAL(v.size(), 24UZ);
         BOOST_CHECK_EQUAL(std::ranges::count(v, true), 12);
 
@@ -193,15 +225,5 @@ BOOST_AUTO_TEST_CASE(ItYieldsEveryPosition)
         }
         test::sequence::yields_every_position(c);
 }
-
-#else
-
-// The column is its storage's: without std::inplace_vector there is no name to test.
-BOOST_AUTO_TEST_CASE(TheColumnIsAbsentWithItsStorage)
-{
-        static_assert(not test::has_inplace_vector);
-}
-
-#endif
 
 BOOST_AUTO_TEST_SUITE_END()

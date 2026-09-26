@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_HPP
 #define XSTD_BITS_HPP
 
-// The umbrella over every container the standard library can store; the ext column stays out, so Boost is opt-in.
+// The umbrella over every container but the ext column's, which stays out so boost::container::small_vector is opt-in.
 
 // Shared by all three readings.
 #include <xstd/bits/bit.hpp>              // IWYU pragma: export; bit_cast, bit_castable

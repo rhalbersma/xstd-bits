@@ -6,7 +6,13 @@
 #ifndef XSTD_BITS_DETAIL_ALLOCATOR_BASE_TYPE_HPP
 #define XSTD_BITS_DETAIL_ALLOCATOR_BASE_TYPE_HPP
 
+#include <cstddef> // size_t
+
 namespace xstd::bits::detail {
+
+// An allocator_type that allocates; boost::container::static_vector names one that only holds the elements inline.
+template<class Storage>
+concept allocating_storage = requires (Storage::allocator_type& a, std::size_t n) { a.allocate(n); };
 
 // The allocator's name where the storage has one, else an empty base; one per owner, so no two compare through it.
 template<class Storage, class Owner = void>
@@ -16,7 +22,7 @@ struct allocator_base_type
 };
 
 template<class Storage, class Owner>
-        requires requires { typename Storage::allocator_type; }
+        requires allocating_storage<Storage>
 struct allocator_base_type<Storage, Owner>
 {
         using allocator_type = Storage::allocator_type;
@@ -29,7 +35,7 @@ template<class Storage>
 inline constexpr bool has_allocator_v = false;
 
 template<class Storage>
-        requires requires { typename Storage::allocator_type; }
+        requires allocating_storage<Storage>
 inline constexpr bool has_allocator_v<Storage> = true;
 
 // Stands in for the allocator a storage lacks; explicit, so no argument, {} included, ever becomes one.

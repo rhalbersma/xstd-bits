@@ -5,12 +5,12 @@
 
 #include <test/array_storage.hpp>                        // array_storage
 #include <test/block_types.hpp>                          // digits_v, graded_extents, word_types
-#include <test/inplace_vector.hpp>                       // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
 #include <test/uint128.hpp>                              // IWYU pragma: keep; TEST_HAS_UINT128, uint128
 #include <xstd/bits/bit_storage.hpp>                     // owned_bit_storage
+#include <xstd/bits/detail/bounded_blocks.hpp>           // bounded_blocks
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/detail/range_const_reference.hpp>    // fallback::range_const_reference_t, range_const_reference_t
-#include <xstd/ints/memory.hpp>                          // IWYU pragma: keep; align_up, named only under TEST_HAS_INPLACE_VECTOR
+#include <xstd/ints/memory.hpp>                          // align_up
 #include <boost/test/unit_test.hpp>                      // BOOST_CHECK_EQUAL, BOOST_CHECK_LE, BOOST_CHECK_LT, BOOST_CHECK_THROW, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <algorithm>                                     // count, lexicographical_compare_three_way, min
 #include <array>                                         // array
@@ -23,7 +23,7 @@
 #include <limits>                                        // numeric_limits
 #include <memory>                                        // addressof, allocator
 #include <version>                                       // IWYU pragma: keep; __cpp_lib_ranges_as_const
-#include <new>                                           // IWYU pragma: keep; bad_alloc, named only under TEST_HAS_INPLACE_VECTOR
+#include <new>                                           // bad_alloc
 #include <ranges>                                        // begin, iota, range_const_reference_t, size
 #include <span>                                          // dynamic_extent
 #include <stdexcept>                                     // length_error
@@ -31,12 +31,6 @@
 #include <type_traits>                                   // is_nothrow_move_assignable_v, is_nothrow_move_constructible_v, is_trivially_*
 #include <utility>                                       // declval, move
 #include <vector>                                        // vector
-
-#ifdef TEST_HAS_INPLACE_VECTOR
-
-#include <inplace_vector> // inplace_vector
-
-#endif
 
 BOOST_AUTO_TEST_SUITE(BitBlocks)
 
@@ -964,14 +958,7 @@ BOOST_AUTO_TEST_CASE(ClearingIsResizeToZero)
 namespace {
 
 // The run-time widths, each of which a move leaves at width zero.
-using run_time_storages = std::tuple<xstd::bits::detail::contiguous_bit_container<std::vector<std::uint8_t>>
-#ifdef TEST_HAS_INPLACE_VECTOR
-
-                                     ,
-                                     xstd::bits::detail::contiguous_bit_container<std::inplace_vector<std::uint8_t, 8>, 64>
-
-#endif
-                                     >;
+using run_time_storages = std::tuple<xstd::bits::detail::contiguous_bit_container<std::vector<std::uint8_t>>, xstd::bits::detail::contiguous_bit_container<xstd::bits::detail::bounded_blocks<std::uint8_t, 8>, 64>>;
 
 // Through two references, so that no compiler reads the self-move below as a mistake in the test.
 template<class T>
@@ -1050,18 +1037,16 @@ BOOST_AUTO_TEST_CASE(AStaticWidthDoesNotGrow)
         static_assert(can_reserve<D> and has_capacity<D>);
 }
 
-#ifdef TEST_HAS_INPLACE_VECTOR
-
 // No hole in front of the blocks at any alignment, which is what -Wpadded asks of the class.
 BOOST_AUTO_TEST_CASE(TheWidthFillsWhatWouldOtherwisePadTheBlocks)
 {
         // Rounded up to the class's own alignment: a sizeof is always a multiple of an alignof.
-        constexpr auto tiles = [](std::size_t whole, std::size_t blocks, std::size_t block_align) {
+        constexpr auto tiles = [](std::size_t whole, std::size_t blocks, std::size_t block_align) -> bool {
                 auto const slot = std::ranges::max(sizeof(std::size_t), block_align);
                 return whole == xstd::align_up(blocks + slot, slot);
         };
 
-        static_assert(tiles(sizeof(xstd::bits::detail::contiguous_bit_container<std::inplace_vector<std::uint8_t, 3>, 24>), sizeof(std::inplace_vector<std::uint8_t, 3>), alignof(std::inplace_vector<std::uint8_t, 3>)));
+        static_assert(tiles(sizeof(xstd::bits::detail::contiguous_bit_container<xstd::bits::detail::bounded_blocks<std::uint8_t, 3>, 24>), sizeof(xstd::bits::detail::bounded_blocks<std::uint8_t, 3>), alignof(xstd::bits::detail::bounded_blocks<std::uint8_t, 3>)));
         static_assert(tiles(sizeof(xstd::bits::detail::contiguous_bit_container<std::vector<std::uint8_t>>), sizeof(std::vector<std::uint8_t>), alignof(std::vector<std::uint8_t>)));
 
         // A static width carries no width member at all, so the class is its blocks exactly.
@@ -1070,8 +1055,8 @@ BOOST_AUTO_TEST_CASE(TheWidthFillsWhatWouldOtherwisePadTheBlocks)
 #ifdef TEST_HAS_UINT128
 
         // The one cell that reaches an over-aligned storage: the width is a block there, and pays nothing for it.
-        static_assert(tiles(sizeof(xstd::bits::detail::contiguous_bit_container<std::inplace_vector<xstd::uint128, 3>, 384>), sizeof(std::inplace_vector<xstd::uint128, 3>), alignof(std::inplace_vector<xstd::uint128, 3>)));
-        static_assert(alignof(std::inplace_vector<xstd::uint128, 3>) > alignof(std::size_t));
+        static_assert(tiles(sizeof(xstd::bits::detail::contiguous_bit_container<xstd::bits::detail::bounded_blocks<xstd::uint128, 3>, 384>), sizeof(xstd::bits::detail::bounded_blocks<xstd::uint128, 3>), alignof(xstd::bits::detail::bounded_blocks<xstd::uint128, 3>)));
+        static_assert(alignof(xstd::bits::detail::bounded_blocks<xstd::uint128, 3>) > alignof(std::size_t));
 
         // The heap column never reaches it: a vector is a pointer's alignment whatever it holds.
         static_assert(sizeof(xstd::bits::detail::contiguous_bit_container<std::vector<xstd::uint128>>) == sizeof(xstd::bits::detail::contiguous_bit_container<std::vector<std::uint64_t>>));
@@ -1080,12 +1065,12 @@ BOOST_AUTO_TEST_CASE(TheWidthFillsWhatWouldOtherwisePadTheBlocks)
 }
 
 // The third storage: a run-time width under a compile-time capacity, growth past it a bad_alloc.
-BOOST_AUTO_TEST_CASE(AnInplaceVectorIsARunTimeWidthUnderAStaticCapacity)
+BOOST_AUTO_TEST_CASE(BoundedBlocksAreARunTimeWidthUnderAStaticCapacity)
 {
-        using T = xstd::bits::detail::contiguous_bit_container<std::inplace_vector<std::uint8_t, 3>, 24>;
+        using T = xstd::bits::detail::contiguous_bit_container<xstd::bits::detail::bounded_blocks<std::uint8_t, 3>, 24>;
         static_assert(not T::has_static_size);
-        static_assert(xstd::owned_bit_storage<std::inplace_vector<std::uint8_t, 3>>);
-        static_assert(std::same_as<xstd::bits::detail::range_const_reference_t<std::inplace_vector<std::uint8_t, 3>>, std::uint8_t const&>);
+        static_assert(xstd::owned_bit_storage<xstd::bits::detail::bounded_blocks<std::uint8_t, 3>>);
+        static_assert(std::same_as<xstd::bits::detail::range_const_reference_t<xstd::bits::detail::bounded_blocks<std::uint8_t, 3>>, std::uint8_t const&>);
 
         BOOST_CHECK_EQUAL(sweep(T(17)), 0);
 
@@ -1113,8 +1098,6 @@ BOOST_AUTO_TEST_CASE(AnInplaceVectorIsARunTimeWidthUnderAStaticCapacity)
         BOOST_CHECK_EQUAL(c.count(), 1UZ);
         BOOST_CHECK(c.test(2UZ));
 }
-
-#endif
 
 // Every question the three readings ask, asked of the storage in its own name and within the contracts it keeps.
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheStorageAnswersEveryReadingsQuestion, T, test::graded_extents<test::array_storage>)

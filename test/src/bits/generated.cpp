@@ -10,7 +10,7 @@
 #include <cstddef>                  // size_t
 #include <memory_resource>          // polymorphic_allocator
 #include <scoped_allocator>         // scoped_allocator_adaptor
-#include <type_traits>              // is_nothrow_move_assignable_v, is_nothrow_move_constructible_v, is_trivially_copyable_v
+#include <type_traits>              // is_nothrow_copy_assignable_v, is_nothrow_copy_constructible_v, is_nothrow_move_assignable_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v, is_trivially_copyable_v
 #include <utility>                  // move, swap
 #include <vector>                   // vector
 
@@ -107,13 +107,9 @@ BOOST_AUTO_TEST_CASE(EveryCellIsARegularContainer)
         static_assert(is_regular_container<xstd::bit_vector>());
         static_assert(is_regular_container<xstd::bitset<N>>());
         static_assert(is_regular_container<xstd::dynamic_bitset>());
-#ifdef __cpp_lib_inplace_vector
-
         static_assert(is_regular_container<xstd::bit_bounded_set<N>>());
         static_assert(is_regular_container<xstd::bit_bounded_vector<N>>());
         static_assert(is_regular_container<xstd::bounded_bitset<N>>());
-
-#endif
         BOOST_CHECK(true);
 }
 
@@ -150,13 +146,9 @@ BOOST_AUTO_TEST_CASE(TheAllocatorFollowsTheColumnAndNotTheRow)
         static_assert(not_allocator_aware<xstd::bitset<N>>());
 
         // The bounded column holds its blocks inline, so it has none either.
-#ifdef __cpp_lib_inplace_vector
-
         static_assert(not_allocator_aware<xstd::bit_bounded_set<N>>());
         static_assert(not_allocator_aware<xstd::bit_bounded_vector<N>>());
         static_assert(not_allocator_aware<xstd::bounded_bitset<N>>());
-
-#endif
         BOOST_CHECK(true);
 }
 
@@ -188,6 +180,48 @@ BOOST_AUTO_TEST_CASE(SwapExchangesTheValues)
         swap(a, b);
         BOOST_CHECK(a.contains(1UZ) and not a.contains(2UZ));
         BOOST_CHECK(b.contains(2UZ) and not b.contains(1UZ));
+}
+
+namespace {
+
+// A bounded owner copies and exchanges as its blocks do; its moves empty the source, so it is never trivial.
+template<class T>
+constexpr auto copies_and_swaps_as_its_blocks()
+        -> bool
+{
+        using blocks_type = T::block_container_type;
+        static_assert(not std::is_trivially_copyable_v<T>);
+        static_assert(std::is_nothrow_copy_constructible_v<T> == std::is_nothrow_copy_constructible_v<blocks_type>);
+        static_assert(std::is_nothrow_copy_assignable_v<T> == std::is_nothrow_copy_assignable_v<blocks_type>);
+        static_assert(member_swap_is_nothrow<T> == std::is_nothrow_swappable_v<blocks_type>);
+        static_assert(free_swap_is_nothrow<T> == std::is_nothrow_swappable_v<blocks_type>);
+        return true;
+}
+
+} // namespace
+
+// Where the storages' promises part: std::inplace_vector copies and swaps without throwing, static_vector may throw.
+BOOST_AUTO_TEST_CASE(TheBoundedColumnCopiesAndSwapsAsItsBlocksDo)
+{
+        static_assert(copies_and_swaps_as_its_blocks<xstd::bit_bounded_set<N>>());
+        static_assert(copies_and_swaps_as_its_blocks<xstd::bit_bounded_vector<N>>());
+        static_assert(copies_and_swaps_as_its_blocks<xstd::bounded_bitset<N>>());
+#ifdef XSTD_BITS_HAS_CONSTEXPR_BOUNDED
+
+        // Constant-evaluable owners are the ones whose blocks std::inplace_vector holds.
+        static_assert(std::is_nothrow_copy_constructible_v<xstd::bit_bounded_set<N>> and member_swap_is_nothrow<xstd::bit_bounded_set<N>>);
+        static_assert(std::is_nothrow_copy_constructible_v<xstd::bit_bounded_vector<N>> and member_swap_is_nothrow<xstd::bit_bounded_vector<N>>);
+        static_assert(std::is_nothrow_copy_constructible_v<xstd::bounded_bitset<N>> and member_swap_is_nothrow<xstd::bounded_bitset<N>>);
+
+#else
+
+        // boost::container::static_vector declares its copies and its swap potentially throwing.
+        static_assert(not std::is_nothrow_copy_constructible_v<xstd::bit_bounded_set<N>> and not member_swap_is_nothrow<xstd::bit_bounded_set<N>>);
+        static_assert(not std::is_nothrow_copy_constructible_v<xstd::bit_bounded_vector<N>> and not member_swap_is_nothrow<xstd::bit_bounded_vector<N>>);
+        static_assert(not std::is_nothrow_copy_constructible_v<xstd::bounded_bitset<N>> and not member_swap_is_nothrow<xstd::bounded_bitset<N>>);
+
+#endif
+        BOOST_CHECK(true);
 }
 
 namespace {
@@ -236,13 +270,9 @@ BOOST_AUTO_TEST_CASE(AMovedFromRunTimeWidthIsEmptyAndGrowsAgain)
         BOOST_CHECK(a_moved_from_sequence_grows_again<xstd::bit_vector>());
         BOOST_CHECK(a_moved_from_set_grows_again<xstd::bit_set>());
         BOOST_CHECK(a_moved_from_bitset_grows_again<xstd::dynamic_bitset>());
-#ifdef __cpp_lib_inplace_vector
-
         BOOST_CHECK(a_moved_from_sequence_grows_again<xstd::bit_bounded_vector<N>>());
         BOOST_CHECK(a_moved_from_set_grows_again<xstd::bit_bounded_set<N>>());
         BOOST_CHECK(a_moved_from_bitset_grows_again<xstd::bounded_bitset<N>>());
-
-#endif
 }
 
 namespace {
@@ -276,13 +306,9 @@ BOOST_AUTO_TEST_CASE(ARunTimeWidthHandsItsBlocksOutAndTakesThemBack)
         BOOST_CHECK(blocks_go_in_and_come_out_whole<xstd::bit_vector>());
         BOOST_CHECK(blocks_go_in_and_come_out_whole<xstd::bit_set>());
         BOOST_CHECK(blocks_go_in_and_come_out_whole<xstd::dynamic_bitset>());
-#ifdef __cpp_lib_inplace_vector
-
         BOOST_CHECK(blocks_go_in_and_come_out_whole<xstd::bit_bounded_vector<N>>());
         BOOST_CHECK(blocks_go_in_and_come_out_whole<xstd::bit_bounded_set<N>>());
         BOOST_CHECK(blocks_go_in_and_come_out_whole<xstd::bounded_bitset<N>>());
-
-#endif
 
         // Every position of the blocks is one: the sequence and the bitset are two whole blocks wide.
         auto v = xstd::bit_vector();

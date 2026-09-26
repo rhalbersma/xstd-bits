@@ -8,25 +8,11 @@
 
 #include <version> // IWYU pragma: keep; __cpp_lib_inplace_vector
 
-// The third storage comes and goes with the library, the way xstd::uint128 comes and goes with the compiler.
+// std::inplace_vector comes and goes with the library, and so do the tests that hold ours to it as the model.
 #ifdef __cpp_lib_inplace_vector
 
 #define TEST_HAS_INPLACE_VECTOR
 
 #endif
-
-namespace test {
-
-#ifdef TEST_HAS_INPLACE_VECTOR
-
-inline constexpr bool has_inplace_vector = true;
-
-#else
-
-inline constexpr bool has_inplace_vector = false;
-
-#endif
-
-} // namespace test
 
 #endif // TEST_INPLACE_VECTOR_HPP
