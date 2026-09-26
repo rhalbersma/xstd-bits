@@ -3,14 +3,14 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/bit_set.hpp>        // basic_bit_set, bit_set
-#include <xstd/bits/bit_static_set.hpp> // bit_static_set
-#include <benchmark/benchmark.h>        // DoNotOptimize, BENCHMARK_TEMPLATE1, BENCHMARK_MAIN, State
-#include <cstddef>                      // size_t
-#include <cstdint>                      // int64_t, uint8_t, uint16_t, uint32_t
-#include <opt/set/sieve.hpp>            // filter_twins, sift_primes0, sift_primes1, sift_primes_incremental, sift_primes_segmented
-#include <set>                          // set
-#include <version>                      // __cpp_lib_flat_set
+#include <xstd/bits/bit_fixed_set.hpp> // bit_fixed_set
+#include <xstd/bits/bit_set.hpp>       // basic_bit_set, bit_set
+#include <benchmark/benchmark.h>       // DoNotOptimize, BENCHMARK_TEMPLATE1, BENCHMARK_MAIN, State
+#include <cstddef>                     // size_t
+#include <cstdint>                     // int64_t, uint8_t, uint16_t, uint32_t
+#include <opt/set/sieve.hpp>           // filter_twins, sift_primes0, sift_primes1, sift_primes_incremental, sift_primes_segmented
+#include <set>                         // set
+#include <version>                     // __cpp_lib_flat_set
 #if defined(__cpp_lib_flat_set)
 
 #include <flat_set> // flat_set
@@ -75,7 +75,7 @@ auto bm_sift_primes_segmented(benchmark::State& state)
 {
         auto const n = bound(state);
         for (auto _ : state) {
-                benchmark::DoNotOptimize(opt::sift_primes_segmented<X, xstd::bit_static_set<1UZ << 15>>(n));
+                benchmark::DoNotOptimize(opt::sift_primes_segmented<X, xstd::bit_fixed_set<1UZ << 15>>(n));
         }
         per_candidate(state);
 }

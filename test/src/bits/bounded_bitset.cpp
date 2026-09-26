@@ -9,10 +9,10 @@
 
 #include <xstd/bits/bit_set_view.hpp>                    // bit_set_view
 #include <xstd/bits/bitset_adaptor.hpp>                  // bitset_adaptor
+#include <xstd/bits/bounded_bitset.hpp>                  // aligned, basic_bounded_bitset, bounded_bitset
 #include <xstd/bits/detail/bitset_adaptor.hpp>           // bitset_adaptor
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/detail/ownership.hpp>                // owned_bits_t
-#include <xstd/bits/inplace_bitset.hpp>                  // aligned, basic_inplace_bitset, inplace_bitset
 #include <concepts>                                      // regular, same_as, totally_ordered
 #include <cstddef>                                       // size_t
 #include <cstdint>                                       // uint8_t
@@ -23,18 +23,18 @@
 
 #endif
 
-BOOST_AUTO_TEST_SUITE(InplaceBitset)
+BOOST_AUTO_TEST_SUITE(BoundedBitset)
 
 #ifdef TEST_HAS_INPLACE_VECTOR
 
 // A capacity of three whole blocks, so a resize can straddle a boundary and still stop short of the capacity.
-using T = xstd::basic_inplace_bitset<std::uint8_t, 24>;
+using T = xstd::basic_bounded_bitset<std::uint8_t, 24>;
 
 // The bitset reading over a run-time width under a compile-time capacity, adding no member of its own.
-BOOST_AUTO_TEST_CASE(TheInplaceBitsetIsTheBitsetAdaptorOverAnInplaceVectorOfBlocks)
+BOOST_AUTO_TEST_CASE(TheBoundedBitsetIsTheBitsetAdaptorOverAnInplaceVectorOfBlocks)
 {
         static_assert(std::derived_from<T, xstd::bits::detail::bitset_adaptor<xstd::bits::detail::contiguous_bit_container<std::inplace_vector<std::uint8_t, 3>, 24>, T>>);
-        static_assert(std::same_as<xstd::inplace_bitset<24>, xstd::basic_inplace_bitset<std::size_t, 24>>);
+        static_assert(std::same_as<xstd::bounded_bitset<24>, xstd::basic_bounded_bitset<std::size_t, 24>>);
         static_assert(std::regular<T>);
 }
 
@@ -102,9 +102,9 @@ BOOST_AUTO_TEST_CASE(GrowingPastTheCapacityThrowsBadAlloc)
 // N is the capacity exactly, so a whole block appended where the last block has room left is refused.
 BOOST_AUTO_TEST_CASE(TheCapacityIsTheRequestedOneExactly)
 {
-        using U = xstd::basic_inplace_bitset<std::uint8_t, 12>;
-        static_assert(std::same_as<xstd::aligned::basic_inplace_bitset<std::uint8_t, 12>, xstd::basic_inplace_bitset<std::uint8_t, 16>>);
-        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::bitset_adaptor<std::inplace_vector<std::uint8_t, 2>>>, xstd::bits::detail::owned_bits_t<xstd::basic_inplace_bitset<std::uint8_t, 16>>>);
+        using U = xstd::basic_bounded_bitset<std::uint8_t, 12>;
+        static_assert(std::same_as<xstd::aligned::basic_bounded_bitset<std::uint8_t, 12>, xstd::basic_bounded_bitset<std::uint8_t, 16>>);
+        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::bitset_adaptor<std::inplace_vector<std::uint8_t, 2>>>, xstd::bits::detail::owned_bits_t<xstd::basic_bounded_bitset<std::uint8_t, 16>>>);
 
         auto b = U();
         BOOST_CHECK_EQUAL(b.max_size(), 12UZ);

@@ -9,7 +9,7 @@
 
 #include <test/sequence/concepts.hpp>                    // bit_sequence, inplace_vector_bool, inplace_vector_bool_ranges, inplace_vector_bool_try_returns, packed_inplace_vector_bool
 #include <test/sequence/dense.hpp>                       // yields_every_position
-#include <xstd/bits/bit_inplace_vector.hpp>              // aligned, basic_bit_inplace_vector, bit_inplace_vector
+#include <xstd/bits/bit_bounded_vector.hpp>              // aligned, basic_bit_bounded_vector, bit_bounded_vector
 #include <xstd/bits/bit_sequence_adaptor.hpp>            // bit_sequence_adaptor
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/detail/ownership.hpp>                // owned_bits_t, storage
@@ -26,22 +26,22 @@
 
 #endif
 
-BOOST_AUTO_TEST_SUITE(BitInplaceVector)
+BOOST_AUTO_TEST_SUITE(BitBoundedVector)
 
 #ifdef TEST_HAS_INPLACE_VECTOR
 
 // A capacity of three whole blocks, so the width can straddle a boundary and still stop short of the capacity.
-using T = xstd::basic_bit_inplace_vector<std::uint8_t, 24>;
+using T = xstd::basic_bit_bounded_vector<std::uint8_t, 24>;
 
 // Dependent, so an absent typedef is a false rather than a hard error.
 template<class X>
 constexpr bool has_allocator = requires { typename X::allocator_type; };
 
 // The sequence reading over a run-time width under a compile-time capacity, built on the sequence adaptor.
-BOOST_AUTO_TEST_CASE(TheInplaceSequenceIsTheSequenceAdaptorOverAnInplaceVectorOfBlocks)
+BOOST_AUTO_TEST_CASE(TheBoundedSequenceIsTheSequenceAdaptorOverAnInplaceVectorOfBlocks)
 {
         static_assert(std::derived_from<T, xstd::bits::detail::sequence_adaptor<xstd::bits::detail::contiguous_bit_container<std::inplace_vector<std::uint8_t, 3>, 24>, xstd::bits::detail::storage::owned, xstd::bits::detail::window::all, T>>);
-        static_assert(std::same_as<xstd::bit_inplace_vector<24>, xstd::basic_bit_inplace_vector<std::size_t, 24>>);
+        static_assert(std::same_as<xstd::bit_bounded_vector<24>, xstd::basic_bit_bounded_vector<std::size_t, 24>>);
         static_assert(test::sequence::bit_sequence<T>);
 }
 
@@ -50,7 +50,7 @@ BOOST_AUTO_TEST_CASE(ItAnswersEveryLineOfStdInplaceVectorBool)
 {
         static_assert(test::sequence::inplace_vector_bool<std::inplace_vector<bool, 24>>);
         static_assert(test::sequence::inplace_vector_bool<T>);
-        static_assert(test::sequence::inplace_vector_bool<xstd::bit_inplace_vector<24>>);
+        static_assert(test::sequence::inplace_vector_bool<xstd::bit_bounded_vector<24>>);
 #ifdef __cpp_lib_containers_ranges
 
         static_assert(test::sequence::inplace_vector_bool_ranges<std::inplace_vector<bool, 24>>);
@@ -67,7 +67,7 @@ BOOST_AUTO_TEST_CASE(ItAnswersEveryLineOfStdInplaceVectorBool)
 BOOST_AUTO_TEST_CASE(TheTryDoorsReturnTheOptionalReferenceTheDraftSpells)
 {
         static_assert(test::sequence::inplace_vector_bool_try_returns<T>);
-        static_assert(test::sequence::inplace_vector_bool_try_returns<xstd::bit_inplace_vector<24>>);
+        static_assert(test::sequence::inplace_vector_bool_try_returns<xstd::bit_bounded_vector<24>>);
 }
 
 // What the packing adds on top, which the unpacked counterpart has no reason to carry.
@@ -75,7 +75,7 @@ BOOST_AUTO_TEST_CASE(ItAddsTheBitVocabularyStdInplaceVectorBoolHasNoReasonToCarr
 {
         static_assert(not test::sequence::packed_inplace_vector_bool<std::inplace_vector<bool, 24>>);
         static_assert(test::sequence::packed_inplace_vector_bool<T>);
-        static_assert(test::sequence::packed_inplace_vector_bool<xstd::bit_inplace_vector<24>>);
+        static_assert(test::sequence::packed_inplace_vector_bool<xstd::bit_bounded_vector<24>>);
 }
 
 // [inplace.vector.capacity]'s four answer without an object, the capacity being the type's.
@@ -116,8 +116,8 @@ BOOST_AUTO_TEST_CASE(TheFullContainerAnswersNulloptWherePushBackWouldThrow)
 // N is the capacity exactly, as std::inplace_vector<bool, N>'s is, and the width moves under it.
 BOOST_AUTO_TEST_CASE(TheCapacityIsTheRequestedOneExactly)
 {
-        static_assert(xstd::basic_bit_inplace_vector<std::uint8_t, 9>::capacity() == 9UZ);
-        static_assert(xstd::basic_bit_inplace_vector<std::uint8_t, 9>::capacity() == std::inplace_vector<bool, 9>::capacity());
+        static_assert(xstd::basic_bit_bounded_vector<std::uint8_t, 9>::capacity() == 9UZ);
+        static_assert(xstd::basic_bit_bounded_vector<std::uint8_t, 9>::capacity() == std::inplace_vector<bool, 9>::capacity());
 
         auto v = T();
         BOOST_CHECK_EQUAL(v.capacity(), 24UZ);
@@ -139,18 +139,18 @@ BOOST_AUTO_TEST_CASE(TheCapacityIsTheRequestedOneExactly)
 // Distinct capacities are distinct types, and the aligned form rounds up to whole blocks as the static column's does.
 BOOST_AUTO_TEST_CASE(TheCapacityIsPartOfTheType)
 {
-        static_assert(not std::same_as<xstd::basic_bit_inplace_vector<std::uint8_t, 9>, xstd::basic_bit_inplace_vector<std::uint8_t, 16>>);
-        static_assert(std::same_as<xstd::aligned::basic_bit_inplace_vector<std::uint8_t, 9>, xstd::basic_bit_inplace_vector<std::uint8_t, 16>>);
-        static_assert(std::same_as<xstd::aligned::bit_inplace_vector<9>, xstd::bit_inplace_vector<std::numeric_limits<std::size_t>::digits>>);
+        static_assert(not std::same_as<xstd::basic_bit_bounded_vector<std::uint8_t, 9>, xstd::basic_bit_bounded_vector<std::uint8_t, 16>>);
+        static_assert(std::same_as<xstd::aligned::basic_bit_bounded_vector<std::uint8_t, 9>, xstd::basic_bit_bounded_vector<std::uint8_t, 16>>);
+        static_assert(std::same_as<xstd::aligned::bit_bounded_vector<9>, xstd::bit_bounded_vector<std::numeric_limits<std::size_t>::digits>>);
 
         // Named by its storage alone, the adaptor holds every bit of it: one storage, however it is spelled.
-        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::bit_sequence_adaptor<std::inplace_vector<std::uint8_t, 2>>>, xstd::bits::detail::owned_bits_t<xstd::basic_bit_inplace_vector<std::uint8_t, 16>>>);
+        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::bit_sequence_adaptor<std::inplace_vector<std::uint8_t, 2>>>, xstd::bits::detail::owned_bits_t<xstd::basic_bit_bounded_vector<std::uint8_t, 16>>>);
 }
 
 // A capacity short of the last block's end is enforced here, where the storage would still have room.
 BOOST_AUTO_TEST_CASE(GrowingPastACapacityInsideTheLastBlockThrowsBadAlloc)
 {
-        using U = xstd::basic_bit_inplace_vector<std::uint8_t, 9>;
+        using U = xstd::basic_bit_bounded_vector<std::uint8_t, 9>;
         BOOST_CHECK_THROW(static_cast<void>(U(10)), std::bad_alloc);
 
         auto v = U(9, true);

@@ -5,14 +5,14 @@
 
 #include <test/set/ordering.hpp>                         // ordering_agrees_with_std_set
 #include <xstd/bits/bit_array.hpp>                       // bit_array
+#include <xstd/bits/bit_fixed_set.hpp>                   // bit_fixed_set
 #include <xstd/bits/bit_set_view.hpp>                    // bit_set_view
 #include <xstd/bits/bit_span.hpp>                        // bit_span
-#include <xstd/bits/bit_static_set.hpp>                  // bit_static_set
 #include <xstd/bits/bitset.hpp>                          // bitset
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
-#include <xstd/bits/dynamic_bitset.hpp>                  // basic_dynamic_bitset, dynamic_bitset
 #include <xstd/bits/detail/ownership.hpp>                // storage
 #include <xstd/bits/detail/set_adaptor.hpp>              // set_adaptor
+#include <xstd/bits/dynamic_bitset.hpp>                  // basic_dynamic_bitset, dynamic_bitset
 #include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <array>                                         // array
 #include <concepts>                                      // constructible_from, derived_from, same_as
@@ -69,7 +69,7 @@ BOOST_AUTO_TEST_CASE(TheViewIsTheReferringAdaptor)
 
         static_assert(std::same_as<view_of<xstd::bitset<8>>, xstd::bit_set_view<Words, 8>>);
         static_assert(std::same_as<view_of<xstd::bitset<8> const>, xstd::bit_set_view<Words const, 8>>);
-        static_assert(std::same_as<view_of<xstd::bit_static_set<8>>, xstd::bit_set_view<Words, 8>>);
+        static_assert(std::same_as<view_of<xstd::bit_fixed_set<8>>, xstd::bit_set_view<Words, 8>>);
 }
 
 // A bitset is committed to neither reading, a sequence owner to the sequence one; only the first admits a set view.
@@ -84,17 +84,17 @@ BOOST_AUTO_TEST_CASE(TheReadingsDoNotMix)
 BOOST_AUTO_TEST_CASE(ViewingAnOwnerIsImplicit)
 {
         static_assert(std::convertible_to<xstd::bitset<8>&, xstd::bit_set_view<Words, 8>>);
-        static_assert(std::convertible_to<xstd::bit_static_set<8>&, xstd::bit_set_view<Words, 8>>);
+        static_assert(std::convertible_to<xstd::bit_fixed_set<8>&, xstd::bit_set_view<Words, 8>>);
         static_assert(std::convertible_to<xstd::bitset<8> const&, xstd::bit_set_view<Words const, 8>>);
         static_assert(not std::convertible_to<xstd::bitset<8> const&, xstd::bit_set_view<Words, 8>>);
 
         static_assert(not std::convertible_to<xstd::bitset<8>, xstd::bit_set_view<Words, 8>>);
-        static_assert(not std::convertible_to<xstd::bit_static_set<8>&&, xstd::bit_set_view<Words, 8>>);
+        static_assert(not std::convertible_to<xstd::bit_fixed_set<8>&&, xstd::bit_set_view<Words, 8>>);
 
         static_assert(std::constructible_from<xstd::bit_set_view<Words, 8>, Storage&>);
         static_assert(not std::convertible_to<Storage&, xstd::bit_set_view<Words, 8>>);
 
-        auto s = xstd::bit_static_set<8>();
+        auto s = xstd::bit_fixed_set<8>();
         s.insert(3UZ);
         BOOST_CHECK(takes_a_set_view(s));
 }
@@ -112,15 +112,15 @@ BOOST_AUTO_TEST_CASE(TheViewedTypesAreTheOnesHoldingASetWithoutOfferingIt)
 
         static_assert(std::ranges::view<view_of<Storage>>);
         static_assert(std::ranges::borrowed_range<view_of<Storage>>);
-        static_assert(not std::ranges::view<xstd::bit_static_set<8>>);
+        static_assert(not std::ranges::view<xstd::bit_fixed_set<8>>);
 }
 
 // The view hashes what it presents, so the owner's set reading of the same bits hashes the same.
 BOOST_AUTO_TEST_CASE(TheViewHashesAsAValue)
 {
         auto bits = xstd::bitset<8>("00101010");
-        auto const owned = xstd::bit_static_set<8>({1, 3, 5});
-        BOOST_CHECK_EQUAL(std::hash<view_of<xstd::bitset<8>>>()(xstd::bit_set_view(bits)), std::hash<xstd::bit_static_set<8>>()(owned));
+        auto const owned = xstd::bit_fixed_set<8>({1, 3, 5});
+        BOOST_CHECK_EQUAL(std::hash<view_of<xstd::bitset<8>>>()(xstd::bit_set_view(bits)), std::hash<xstd::bit_fixed_set<8>>()(owned));
 
         auto narrow = xstd::dynamic_bitset(8);
         auto wide = xstd::dynamic_bitset(64);

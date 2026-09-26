@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits.hpp>            // bit_array, bit_set, bit_static_set, bit_vector, bitset, dynamic_bitset, and the inplace column
+#include <xstd/bits.hpp>            // bit_array, bit_set, bit_fixed_set, bit_vector, bitset, dynamic_bitset, and the bounded column
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <compare>                  // three_way_comparable
 #include <concepts>                 // copyable, default_initializable, movable, ranges::swap, swappable, totally_ordered
@@ -101,7 +101,7 @@ constexpr auto free_swap_is_not_std_swap()
 
 BOOST_AUTO_TEST_CASE(EveryCellIsARegularContainer)
 {
-        static_assert(is_regular_container<xstd::bit_static_set<N>>());
+        static_assert(is_regular_container<xstd::bit_fixed_set<N>>());
         static_assert(is_regular_container<xstd::bit_set>());
         static_assert(is_regular_container<xstd::bit_array<N>>());
         static_assert(is_regular_container<xstd::bit_vector>());
@@ -109,9 +109,9 @@ BOOST_AUTO_TEST_CASE(EveryCellIsARegularContainer)
         static_assert(is_regular_container<xstd::dynamic_bitset>());
 #ifdef __cpp_lib_inplace_vector
 
-        static_assert(is_regular_container<xstd::bit_inplace_set<N>>());
-        static_assert(is_regular_container<xstd::bit_inplace_vector<N>>());
-        static_assert(is_regular_container<xstd::inplace_bitset<N>>());
+        static_assert(is_regular_container<xstd::bit_bounded_set<N>>());
+        static_assert(is_regular_container<xstd::bit_bounded_vector<N>>());
+        static_assert(is_regular_container<xstd::bounded_bitset<N>>());
 
 #endif
         BOOST_CHECK(true);
@@ -125,16 +125,16 @@ BOOST_AUTO_TEST_CASE(TheAllocatorFollowsTheColumnAndNotTheRow)
         static_assert(allocator_aware<xstd::dynamic_bitset>());
 
         // The static column is a std::array, which has no allocator for any row to show.
-        static_assert(not_allocator_aware<xstd::bit_static_set<N>>());
+        static_assert(not_allocator_aware<xstd::bit_fixed_set<N>>());
         static_assert(not_allocator_aware<xstd::bit_array<N>>());
         static_assert(not_allocator_aware<xstd::bitset<N>>());
 
-        // The inplace column holds its blocks inline, so it has none either.
+        // The bounded column holds its blocks inline, so it has none either.
 #ifdef __cpp_lib_inplace_vector
 
-        static_assert(not_allocator_aware<xstd::bit_inplace_set<N>>());
-        static_assert(not_allocator_aware<xstd::bit_inplace_vector<N>>());
-        static_assert(not_allocator_aware<xstd::inplace_bitset<N>>());
+        static_assert(not_allocator_aware<xstd::bit_bounded_set<N>>());
+        static_assert(not_allocator_aware<xstd::bit_bounded_vector<N>>());
+        static_assert(not_allocator_aware<xstd::bounded_bitset<N>>());
 
 #endif
         BOOST_CHECK(true);
@@ -156,8 +156,8 @@ BOOST_AUTO_TEST_CASE(TheFreeSwapIsTheLibrarysAndNotStdSwap)
 // A swap falling back on the implicit moves would still compile every assertion above, so moves are checked.
 BOOST_AUTO_TEST_CASE(SwapExchangesTheValues)
 {
-        auto a = xstd::bit_static_set<N>();
-        auto b = xstd::bit_static_set<N>();
+        auto a = xstd::bit_fixed_set<N>();
+        auto b = xstd::bit_fixed_set<N>();
         a.insert(1UZ);
         b.insert(2UZ);
 
@@ -218,9 +218,9 @@ BOOST_AUTO_TEST_CASE(AMovedFromRunTimeWidthIsEmptyAndGrowsAgain)
         BOOST_CHECK(a_moved_from_bitset_grows_again<xstd::dynamic_bitset>());
 #ifdef __cpp_lib_inplace_vector
 
-        BOOST_CHECK(a_moved_from_sequence_grows_again<xstd::bit_inplace_vector<N>>());
-        BOOST_CHECK(a_moved_from_set_grows_again<xstd::bit_inplace_set<N>>());
-        BOOST_CHECK(a_moved_from_bitset_grows_again<xstd::inplace_bitset<N>>());
+        BOOST_CHECK(a_moved_from_sequence_grows_again<xstd::bit_bounded_vector<N>>());
+        BOOST_CHECK(a_moved_from_set_grows_again<xstd::bit_bounded_set<N>>());
+        BOOST_CHECK(a_moved_from_bitset_grows_again<xstd::bounded_bitset<N>>());
 
 #endif
 }
@@ -258,9 +258,9 @@ BOOST_AUTO_TEST_CASE(ARunTimeWidthHandsItsBlocksOutAndTakesThemBack)
         BOOST_CHECK(blocks_go_in_and_come_out_whole<xstd::dynamic_bitset>());
 #ifdef __cpp_lib_inplace_vector
 
-        BOOST_CHECK(blocks_go_in_and_come_out_whole<xstd::bit_inplace_vector<N>>());
-        BOOST_CHECK(blocks_go_in_and_come_out_whole<xstd::bit_inplace_set<N>>());
-        BOOST_CHECK(blocks_go_in_and_come_out_whole<xstd::inplace_bitset<N>>());
+        BOOST_CHECK(blocks_go_in_and_come_out_whole<xstd::bit_bounded_vector<N>>());
+        BOOST_CHECK(blocks_go_in_and_come_out_whole<xstd::bit_bounded_set<N>>());
+        BOOST_CHECK(blocks_go_in_and_come_out_whole<xstd::bounded_bitset<N>>());
 
 #endif
 
@@ -272,7 +272,7 @@ BOOST_AUTO_TEST_CASE(ARunTimeWidthHandsItsBlocksOutAndTakesThemBack)
 
         // A static width has nothing to hand over, and a view does not own what it would hand.
         static_assert(not has_extract<xstd::bit_array<N>> and not has_replace<xstd::bit_array<N>>);
-        static_assert(not has_extract<xstd::bit_static_set<N>> and not has_replace<xstd::bit_static_set<N>>);
+        static_assert(not has_extract<xstd::bit_fixed_set<N>> and not has_replace<xstd::bit_fixed_set<N>>);
         static_assert(not has_extract<xstd::bitset<N>> and not has_replace<xstd::bitset<N>>);
         static_assert(not has_extract<decltype(xstd::bit_span(v))> and not has_replace<decltype(xstd::bit_span(v))>);
         static_assert(has_extract<xstd::bit_vector> and has_replace<xstd::bit_vector>);

@@ -3,18 +3,18 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/flat_set.hpp>            // IWYU pragma: keep; TEST_HAS_FLAT_SET
-#include <xstd/bits/bit_set.hpp>        // bit_set
-#include <xstd/bits/bit_static_set.hpp> // bit_static_set
-#include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_AUTO_TEST_CASE_TEMPLATE
-#include <cstddef>                      // size_t
-#include <format>                       // format
-#include <opt/set/detail/isqrt.hpp>     // isqrt
-#include <opt/set/sieve.hpp>            // filter_twins, generate_candidates, incremental_sieve, sift_primes0, sift_primes1, sift_primes_incremental, sift_primes_segmented
-#include <ranges>                       // iota
-#include <set>                          // set
-#include <tuple>                        // tuple
-#include <vector>                       // vector
+#include <test/flat_set.hpp>           // IWYU pragma: keep; TEST_HAS_FLAT_SET
+#include <xstd/bits/bit_fixed_set.hpp> // bit_fixed_set
+#include <xstd/bits/bit_set.hpp>       // bit_set
+#include <boost/test/unit_test.hpp>    // BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_AUTO_TEST_CASE_TEMPLATE
+#include <cstddef>                     // size_t
+#include <format>                      // format
+#include <opt/set/detail/isqrt.hpp>    // isqrt
+#include <opt/set/sieve.hpp>           // filter_twins, generate_candidates, incremental_sieve, sift_primes0, sift_primes1, sift_primes_incremental, sift_primes_segmented
+#include <ranges>                      // iota
+#include <set>                         // set
+#include <tuple>                       // tuple
+#include <vector>                      // vector
 
 BOOST_AUTO_TEST_SUITE(StdSet)
 BOOST_AUTO_TEST_SUITE(Sieve)
@@ -29,7 +29,7 @@ using Types = std::tuple<std::set<std::size_t>
 
 #endif
                          ,
-                         xstd::bit_static_set<N>, xstd::bit_set>;
+                         xstd::bit_fixed_set<N>, xstd::bit_set>;
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheSiftedPrimesAndTwinsFormatAsExpected, T, Types)
 {
@@ -67,7 +67,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(SievesTooSmallForTheSquareBreakStillSiftCorrectly,
 // The word-at-a-time twins against the elementwise one: the two agreeing is the claim, so it is asserted.
 BOOST_AUTO_TEST_CASE(TheDataParallelTwinsAgreeWithTheElementwiseOnes)
 {
-        auto const primes = opt::sift_primes1<xstd::bit_static_set<N>>(N);
+        auto const primes = opt::sift_primes1<xstd::bit_fixed_set<N>>(N);
         auto const elementwise = opt::filter_twins(primes);
         auto const parallel = primes & (primes << 2 | primes >> 2);
         BOOST_CHECK(elementwise == parallel);
@@ -79,8 +79,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheUnboundedSievesAgreeWithTheBoundedOne, T, Types
         for (auto const n : {0UZ, 1UZ, 2UZ, 3UZ, 4UZ, 5UZ, 9UZ, 10UZ, N / 2UZ, N}) {
                 auto const bounded = opt::sift_primes1<T>(n);
                 BOOST_CHECK(opt::sift_primes_incremental<T>(n) == bounded);
-                BOOST_CHECK((opt::sift_primes_segmented<T, xstd::bit_static_set<8>>(n)) == bounded);
-                BOOST_CHECK((opt::sift_primes_segmented<T, xstd::bit_static_set<256>>(n)) == bounded);
+                BOOST_CHECK((opt::sift_primes_segmented<T, xstd::bit_fixed_set<8>>(n)) == bounded);
+                BOOST_CHECK((opt::sift_primes_segmented<T, xstd::bit_fixed_set<256>>(n)) == bounded);
         }
 }
 

@@ -5,10 +5,10 @@
 
 #include <xstd/bits/bitset.hpp>           // basic_bitset
 #include <xstd/bits/bitset_adaptor.hpp>   // bitset_adaptor
+#include <xstd/bits/bounded_bitset.hpp>   // IWYU pragma: keep; basic_bounded_bitset, named only under __cpp_lib_inplace_vector
 #include <xstd/bits/detail/ownership.hpp> // owned_bits_t
 #include <xstd/bits/dynamic_bitset.hpp>   // basic_dynamic_bitset
 #include <xstd/bits/from_bit_storage.hpp> // from_bit_storage
-#include <xstd/bits/inplace_bitset.hpp>   // IWYU pragma: keep; basic_inplace_bitset, named only under __cpp_lib_inplace_vector
 #include <boost/test/unit_test.hpp>       // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <array>                          // array
 #include <concepts>                       // same_as
@@ -35,7 +35,7 @@ BOOST_AUTO_TEST_CASE(OwnersWrapTheStorageOfTheAdaptorOverIt)
         static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bitset<std::uint8_t, 20>>, xstd::bits::detail::owned_bits_t<xstd::bitset_adaptor<std::array<std::uint8_t, 3>, 20>>>);
         static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_dynamic_bitset<std::uint32_t>>, xstd::bits::detail::owned_bits_t<xstd::bitset_adaptor<std::vector<std::uint32_t>>>>);
 #ifdef __cpp_lib_inplace_vector
-        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_inplace_bitset<std::uint16_t, 48>>, xstd::bits::detail::owned_bits_t<xstd::bitset_adaptor<std::inplace_vector<std::uint16_t, 3>>>>);
+        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bounded_bitset<std::uint16_t, 48>>, xstd::bits::detail::owned_bits_t<xstd::bitset_adaptor<std::inplace_vector<std::uint16_t, 3>>>>);
 #endif
 
         // Two names over one storage are two types, and no comparison crosses between them.

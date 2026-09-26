@@ -72,7 +72,7 @@
     },
     {
       "name": "dev-cxx26",
-      "displayName": "Developer debug build at C++26 (reaches the inplace column; needs a CMake that knows C++26)",
+      "displayName": "Developer debug build at C++26 (reaches the bounded column; needs a CMake that knows C++26)",
       "inherits": [
         "dev"
       ],

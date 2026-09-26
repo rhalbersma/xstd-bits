@@ -5,14 +5,14 @@
 
 #include <test/sequence/ordering.hpp>                    // ordering_agrees_with_vector_bool
 #include <xstd/bits/bit_array.hpp>                       // bit_array
+#include <xstd/bits/bit_fixed_set.hpp>                   // bit_fixed_set
 #include <xstd/bits/bit_set_view.hpp>                    // bit_set_view
 #include <xstd/bits/bit_span.hpp>                        // bit_span
-#include <xstd/bits/bit_static_set.hpp>                  // bit_static_set
 #include <xstd/bits/bitset.hpp>                          // bitset
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
-#include <xstd/bits/dynamic_bitset.hpp>                  // dynamic_bitset
 #include <xstd/bits/detail/ownership.hpp>                // storage
 #include <xstd/bits/detail/sequence_adaptor.hpp>         // sequence_adaptor
+#include <xstd/bits/dynamic_bitset.hpp>                  // dynamic_bitset
 #include <boost/test/unit_test.hpp>                      // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <algorithm>                                     // equal
 #include <array>                                         // array
@@ -54,9 +54,9 @@ BOOST_AUTO_TEST_CASE(TheViewIsTheReferringAdaptor)
 // A bitset is committed to neither reading and a set owner to the set one, so only the first admits a span.
 BOOST_AUTO_TEST_CASE(TheReadingsDoNotMix)
 {
-        static_assert(std::same_as<decltype(xstd::bit_set_view(std::declval<xstd::bit_static_set<8>&>())), xstd::bit_set_view<Words, 8>>);
+        static_assert(std::same_as<decltype(xstd::bit_set_view(std::declval<xstd::bit_fixed_set<8>&>())), xstd::bit_set_view<Words, 8>>);
         static_assert(std::constructible_from<xstd::bit_span<Words, 8>, xstd::bitset<8>&>);
-        static_assert(not std::constructible_from<xstd::bit_span<Words, 8>, xstd::bit_static_set<8>&>);
+        static_assert(not std::constructible_from<xstd::bit_span<Words, 8>, xstd::bit_fixed_set<8>&>);
 }
 
 // Viewing an owner is implicit and viewing raw storage is not, which is where span draws the line.

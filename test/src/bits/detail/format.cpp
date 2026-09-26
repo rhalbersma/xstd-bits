@@ -4,10 +4,10 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <xstd/bits/bit_array.hpp>      // bit_array
+#include <xstd/bits/bit_fixed_set.hpp>  // bit_fixed_set
 #include <xstd/bits/bit_set.hpp>        // bit_set
 #include <xstd/bits/bit_set_view.hpp>   // bit_set_view
 #include <xstd/bits/bit_span.hpp>       // bit_span
-#include <xstd/bits/bit_static_set.hpp> // bit_static_set
 #include <xstd/bits/bit_vector.hpp>     // bit_vector
 #include <xstd/bits/dynamic_bitset.hpp> // dynamic_bitset
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
@@ -27,7 +27,7 @@ BOOST_AUTO_TEST_CASE(TheSetReadingFormatsInBraces)
         d.insert(5UZ);
         BOOST_CHECK_EQUAL(std::format("{}", d), "{1, 3, 5}");
 
-        auto s = xstd::bit_static_set<8>();
+        auto s = xstd::bit_fixed_set<8>();
         s.insert(2UZ);
         s.insert(7UZ);
         BOOST_CHECK_EQUAL(std::format("{}", s), "{2, 7}");
