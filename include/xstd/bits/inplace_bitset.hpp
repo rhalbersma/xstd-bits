@@ -72,7 +72,7 @@ public:
                 requires std::constructible_from<base_type, charT const*>
         [[nodiscard]] constexpr explicit basic_inplace_bitset(
                 charT const* str,
-                std::basic_string_view<charT>::size_type n = std::basic_string_view<charT>::npos,
+                std::size_t n = std::basic_string_view<charT>::npos,
                 charT zero = static_cast<charT>('0'),
                 charT one = static_cast<charT>('1')
         )
