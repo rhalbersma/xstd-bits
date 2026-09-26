@@ -40,12 +40,15 @@ concept set_typedefs = requires {
 
 // [set]'s synopsis as one requires-expression, with std::set<std::size_t> as the model.
 template<class C>
-concept set_size_t = set_typedefs<C> and requires (C c, C o, C const cc, C::key_type k, std::initializer_list<typename C::value_type> il, C::value_type const* first, C::value_type const* last, C::const_iterator p) {
+concept set_size_t = set_typedefs<C> and requires (C c, C o, C const cc, C::key_type k, C::key_compare const comp, std::initializer_list<typename C::value_type> il, C::value_type const* first, C::value_type const* last, C::const_iterator p) {
         C();
+        C(comp);
         C(first, last);
+        C(first, last, comp);
         C(cc);
         C(std::move(o));
         C(il);
+        C(il, comp);
         c = cc;
         c = std::move(o);
         c = il;
@@ -99,26 +102,31 @@ concept set_size_t = set_typedefs<C> and requires (C c, C o, C const cc, C::key_
 
 // [set.cons]'s allocator arguments, which only the column whose storage has an allocator can answer.
 template<class C, class A = C::allocator_type>
-concept set_size_t_allocator = requires (C c, C o, C const cc, A a, std::initializer_list<typename C::value_type> il, C::value_type const* first, C::value_type const* last) {
+concept set_size_t_allocator = requires (C c, C o, C const cc, A a, C::key_compare const comp, std::initializer_list<typename C::value_type> il, C::value_type const* first, C::value_type const* last) {
         typename C::allocator_type;
         C(a);
+        C(comp, a);
         C(first, last, a);
+        C(first, last, comp, a);
         C(cc, a);
         C(std::move(o), a);
         C(il, a);
+        C(il, comp, a);
         { cc.get_allocator() } -> std::same_as<A>;
 };
 
 // [set.cons] and [set.modifiers]'s C++23 lines, apart so the model is held to them where it has them.
 template<class C>
-concept set_size_t_ranges = requires (C c, std::initializer_list<typename C::value_type> il) {
+concept set_size_t_ranges = requires (C c, C::key_compare const comp, std::initializer_list<typename C::value_type> il) {
         C(std::from_range, il);
+        C(std::from_range, il, comp);
         c.insert_range(il);
 };
 
 template<class C, class A = C::allocator_type>
-concept set_size_t_ranges_allocator = requires (A a, std::initializer_list<typename C::value_type> il) {
+concept set_size_t_ranges_allocator = requires (A a, C::key_compare const comp, std::initializer_list<typename C::value_type> il) {
         C(std::from_range, il, a);
+        C(std::from_range, il, comp, a);
 };
 
 } // namespace test::set

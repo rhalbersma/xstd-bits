@@ -7,7 +7,7 @@
 #define XSTD_BITS_DETAIL_SEQUENCE_ADAPTOR_HPP
 
 #include <xstd/bits/bit_storage.hpp>                         // bit_storage
-#include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_base_type
+#include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_base_type, allocator_param_t, has_allocator_v
 #include <xstd/bits/detail/borrowed_bits.hpp>                // borrow_bits, borrowable_word, borrowable_words, borrowed_bits_t
 #include <xstd/bits/detail/contiguous_bit_container.hpp>     // contiguous_bit_container
 #include <xstd/bits/detail/functor.hpp>                      // invoke_continues
@@ -41,7 +41,7 @@
 #include <span>                                              // dynamic_extent
 #include <stdexcept>                                         // out_of_range
 #include <tuple>                                             // tuple_element, tuple_size
-#include <type_traits>                                       // conditional_t, false_type, is_nothrow_move_constructible_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
+#include <type_traits>                                       // conditional_t, false_type, is_nothrow_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
 #include <utility>                                           // as_const, declval, forward, move, pair
 
 // The sequence reading, [array] over a contiguous_bit_container, owning it or referring to it.
@@ -281,8 +281,14 @@ public:
         using reverse_iterator = std::reverse_iterator<iterator>;
         using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
+private:
+        // An allocator argument as [container.alloc.reqmts] takes it: converting, and only where the storage has one.
+        static constexpr bool has_allocator = has_allocator_v<std::remove_const_t<Bits>>;
+        using allocator_param = allocator_param_t<std::remove_const_t<Bits>>;
+
+public:
         // construct/copy/destroy: an owner is built as std::array is, or std::vector where the storage grows.
-        [[nodiscard]] sequence_adaptor() noexcept
+        [[nodiscard]] sequence_adaptor() noexcept(std::is_nothrow_default_constructible_v<Bits>)
                 requires is_owner
         = default;
 
@@ -335,9 +341,8 @@ public:
                 : m_bits(xstd::from_bit_storage, std::move(blocks))
         {}
 
-        template<class Alloc>
-                requires can_grow and bits_type::has_stored_size and std::same_as<Alloc, typename bits_type::allocator_type>
-        [[nodiscard]] constexpr sequence_adaptor(xstd::from_bit_storage_t, bits_type::block_container_type blocks, Alloc const& alloc)
+        [[nodiscard]] constexpr sequence_adaptor(xstd::from_bit_storage_t, bits_type::block_container_type blocks, allocator_param const& alloc)
+                requires can_grow and bits_type::has_stored_size and has_allocator
                 : m_bits(xstd::from_bit_storage, std::move(blocks), alloc)
         {}
 
@@ -358,22 +363,19 @@ public:
                 return bits().template to_bits<B>();
         }
 
-        // [vector.bool]'s allocator arguments, deduced and matched, so a storage without one has no such one.
-        template<class Alloc>
-                requires can_grow and std::same_as<Alloc, typename bits_type::allocator_type>
-        [[nodiscard]] constexpr explicit sequence_adaptor(Alloc const& alloc)
+        // [vector.bool]'s allocator arguments: converting, and offered only where the storage has an allocator.
+        [[nodiscard]] constexpr explicit sequence_adaptor(allocator_param const& alloc) noexcept(std::is_nothrow_constructible_v<bits_type, allocator_param const&>)
+                requires can_grow and has_allocator
                 : m_bits(alloc)
         {}
 
-        template<class Alloc>
-                requires can_grow and std::same_as<Alloc, typename bits_type::allocator_type>
-        [[nodiscard]] constexpr sequence_adaptor(size_type n, Alloc const& alloc)
+        [[nodiscard]] constexpr explicit sequence_adaptor(size_type n, allocator_param const& alloc)
+                requires can_grow and has_allocator
                 : m_bits(bits_type::check_addressable_width(n), alloc)
         {}
 
-        template<class Alloc>
-                requires can_grow and std::same_as<Alloc, typename bits_type::allocator_type>
-        [[nodiscard]] constexpr sequence_adaptor(size_type n, value_type const& value, Alloc const& alloc)
+        [[nodiscard]] constexpr sequence_adaptor(size_type n, value_type const& value, allocator_param const& alloc)
+                requires can_grow and has_allocator
                 : m_bits(bits_type::check_addressable_width(n), alloc)
         {
                 if (value) {
@@ -381,9 +383,9 @@ public:
                 }
         }
 
-        template<std::input_iterator I, std::sentinel_for<I> S, class Alloc>
-                requires can_grow and std::constructible_from<value_type, std::iter_reference_t<I>> and std::same_as<Alloc, typename bits_type::allocator_type>
-        [[nodiscard]] constexpr sequence_adaptor(I first, S last, Alloc const& alloc)
+        template<std::input_iterator I, std::sentinel_for<I> S>
+                requires can_grow and std::constructible_from<value_type, std::iter_reference_t<I>> and has_allocator
+        [[nodiscard]] constexpr sequence_adaptor(I first, S last, allocator_param const& alloc)
                 : m_bits(alloc)
         {
                 for (; first != last; ++first) {
@@ -391,27 +393,24 @@ public:
                 }
         }
 
-        template<std::ranges::input_range R, class Alloc>
-                requires can_grow and std::constructible_from<value_type, std::ranges::range_reference_t<R>> and std::same_as<Alloc, typename bits_type::allocator_type>
-        [[nodiscard]] constexpr sequence_adaptor(std::from_range_t, R&& rg, Alloc const& alloc)
+        template<std::ranges::input_range R>
+                requires can_grow and std::constructible_from<value_type, std::ranges::range_reference_t<R>> and has_allocator
+        [[nodiscard]] constexpr sequence_adaptor(std::from_range_t, R&& rg, allocator_param const& alloc)
                 : sequence_adaptor(std::ranges::begin(rg), std::ranges::end(rg), alloc)
         {}
 
-        template<class Alloc>
-                requires can_grow and std::same_as<Alloc, typename bits_type::allocator_type>
-        [[nodiscard]] constexpr sequence_adaptor(sequence_adaptor const& other, Alloc const& alloc)
+        [[nodiscard]] constexpr sequence_adaptor(sequence_adaptor const& other, allocator_param const& alloc)
+                requires can_grow and has_allocator
                 : m_bits(other.m_bits, alloc)
         {}
 
-        template<class Alloc>
-                requires can_grow and std::same_as<Alloc, typename bits_type::allocator_type>
-        [[nodiscard]] constexpr sequence_adaptor(sequence_adaptor&& other, Alloc const& alloc)
+        [[nodiscard]] constexpr sequence_adaptor(sequence_adaptor&& other, allocator_param const& alloc)
+                requires can_grow and has_allocator
                 : m_bits(std::move(other.m_bits), alloc)
         {}
 
-        template<class Alloc>
-                requires can_grow and std::same_as<Alloc, typename bits_type::allocator_type>
-        [[nodiscard]] constexpr sequence_adaptor(std::initializer_list<value_type> il, Alloc const& alloc)
+        [[nodiscard]] constexpr sequence_adaptor(std::initializer_list<value_type> il, allocator_param const& alloc)
+                requires can_grow and has_allocator
                 : sequence_adaptor(il.begin(), il.end(), alloc)
         {}
 

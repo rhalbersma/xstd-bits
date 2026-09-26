@@ -101,7 +101,7 @@ template<class C, class A = C::allocator_type>
 concept vector_bool = container_members<C> and requires (C c, C o, C const cc, C::size_type n, bool b, A a, std::initializer_list<bool> il, bool const* first, bool const* last, C::const_iterator p) {
         typename C::allocator_type;
         C();
-        C(a);
+        { C(a) } noexcept;
         C(n);
         C(n, a);
         C(n, b);
