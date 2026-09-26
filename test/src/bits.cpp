@@ -59,10 +59,13 @@ BOOST_AUTO_TEST_CASE(EveryContainerArrivesThroughTheUmbrella)
         static_assert(std::same_as<xstd::bit_inplace_set<8>, xstd::basic_bit_inplace_set<std::size_t, 8>>);
         static_assert(std::same_as<xstd::bit_inplace_vector<8>, xstd::basic_bit_inplace_vector<std::size_t, 8>>);
         static_assert(std::same_as<xstd::inplace_bitset<8>, xstd::basic_inplace_bitset<std::size_t, 8>>);
+        static_assert(std::same_as<xstd::aligned::bit_inplace_set<9>, xstd::bit_inplace_set<std::numeric_limits<std::size_t>::digits>>);
+        static_assert(std::same_as<xstd::aligned::bit_inplace_vector<9>, xstd::bit_inplace_vector<std::numeric_limits<std::size_t>::digits>>);
+        static_assert(std::same_as<xstd::aligned::inplace_bitset<9>, xstd::inplace_bitset<std::numeric_limits<std::size_t>::digits>>);
 
 #endif
 
-        // Every static name has an aligned form; the inplace column has none, its capacity already whole blocks.
+        // Every name with an N at compile time has an aligned form, the width or capacity rounded up to whole blocks.
         static_assert(std::same_as<xstd::aligned::bit_static_set<9>, xstd::bit_static_set<std::numeric_limits<std::size_t>::digits>>);
         static_assert(std::same_as<xstd::aligned::bit_array<9>, xstd::bit_array<std::numeric_limits<std::size_t>::digits>>);
         static_assert(std::same_as<xstd::aligned::bitset<9>, xstd::bitset<std::numeric_limits<std::size_t>::digits>>);

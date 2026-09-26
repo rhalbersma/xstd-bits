@@ -19,7 +19,7 @@
 namespace xstd::bits::detail {
 
 template<xstd::unsigned_integer Block, std::size_t N>
-using contiguous_bit_inplace_vector = contiguous_bit_container<std::inplace_vector<Block, num_blocks_v<Block, N>>>;
+using contiguous_bit_inplace_vector = contiguous_bit_container<std::inplace_vector<Block, num_blocks_v<Block, N>>, N>;
 
 } // namespace xstd::bits::detail
 

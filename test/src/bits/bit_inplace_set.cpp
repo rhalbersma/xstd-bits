@@ -9,7 +9,8 @@
 
 #include <test/set/ascending.hpp>                             // yields_ascending_keys
 #include <test/set/concepts.hpp>                              // bit_set, set_size_t, set_size_t_ranges
-#include <xstd/bits/bit_inplace_set.hpp>                      // basic_bit_inplace_set, bit_inplace_set
+#include <xstd/bits/bit_inplace_set.hpp>                      // aligned, basic_bit_inplace_set, bit_inplace_set
+#include <xstd/bits/bit_set_adaptor.hpp>                      // bit_set_adaptor
 #include <xstd/bits/detail/contiguous_bit_inplace_vector.hpp> // contiguous_bit_inplace_vector
 #include <xstd/bits/detail/ownership.hpp>                     // storage
 #include <xstd/bits/detail/set_adaptor.hpp>                   // set_adaptor
@@ -17,6 +18,7 @@
 #include <concepts>                                           // same_as
 #include <cstddef>                                            // size_t
 #include <cstdint>                                            // uint8_t
+#include <inplace_vector>                                     // inplace_vector
 #include <new>                                                // bad_alloc
 #include <ranges>                                             // iota, to
 #include <set>                                                // set
@@ -87,7 +89,7 @@ BOOST_AUTO_TEST_CASE(InsertingPastTheWidthGrowsItUpToTheCapacity)
         BOOST_CHECK_EQUAL(s.erase(23), 0UZ);
 }
 
-// Past the capacity there is nowhere to grow, and the storage's bad_alloc reaches the caller.
+// Past the capacity there is nowhere to grow, and the caller gets std::inplace_vector's bad_alloc.
 BOOST_AUTO_TEST_CASE(InsertingPastTheCapacityThrowsBadAlloc)
 {
         auto s = T();
@@ -101,6 +103,21 @@ BOOST_AUTO_TEST_CASE(InsertingPastTheCapacityThrowsBadAlloc)
         BOOST_CHECK(s.empty());
         BOOST_CHECK(not s.contains(24));
         BOOST_CHECK(s.find(24) == s.end()); // NOLINT(readability-container-contains)
+}
+
+// N is the capacity exactly: a key the last block has room for but N does not is refused all the same.
+BOOST_AUTO_TEST_CASE(TheCapacityIsTheRequestedOneExactly)
+{
+        using U = xstd::basic_bit_inplace_set<std::uint8_t, 9>;
+        static_assert(U().max_size() == 9UZ);
+        static_assert(std::same_as<xstd::aligned::basic_bit_inplace_set<std::uint8_t, 9>, xstd::basic_bit_inplace_set<std::uint8_t, 16>>);
+        static_assert(std::same_as<xstd::bit_set_adaptor<std::inplace_vector<std::uint8_t, 2>>, xstd::basic_bit_inplace_set<std::uint8_t, 16>>);
+
+        auto s = U();
+        s.insert(8);
+        BOOST_CHECK_THROW(s.insert(9), std::bad_alloc);
+        BOOST_CHECK_EQUAL(s.size(), 1UZ);
+        BOOST_CHECK(s.contains(8) and not s.contains(9));
 }
 
 // Width is capacity here as it is on the heap: two sets holding the same keys are equal whatever their widths.

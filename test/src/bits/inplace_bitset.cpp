@@ -8,12 +8,14 @@
 #ifdef TEST_HAS_INPLACE_VECTOR
 
 #include <xstd/bits/bit_set_view.hpp>                         // bit_set_view
+#include <xstd/bits/bitset_adaptor.hpp>                       // bitset_adaptor
 #include <xstd/bits/detail/bitset_adaptor.hpp>                // bitset_adaptor
 #include <xstd/bits/detail/contiguous_bit_inplace_vector.hpp> // contiguous_bit_inplace_vector
-#include <xstd/bits/inplace_bitset.hpp>                       // basic_inplace_bitset, inplace_bitset
+#include <xstd/bits/inplace_bitset.hpp>                       // aligned, basic_inplace_bitset, inplace_bitset
 #include <concepts>                                           // regular, same_as, totally_ordered
 #include <cstddef>                                            // size_t
 #include <cstdint>                                            // uint8_t
+#include <inplace_vector>                                     // inplace_vector
 #include <new>                                                // bad_alloc
 #include <string>                                             // string
 #include <utility>                                            // declval
@@ -70,7 +72,7 @@ BOOST_AUTO_TEST_CASE(ItIsBoostsBitsetAtARunTimeWidthUnderAStaticCapacity)
         BOOST_CHECK(b.test(9));
 }
 
-// Past the capacity the storage throws, as [inplace.vector] specifies, and the bitset forwards that unchanged.
+// Past the capacity growth throws bad_alloc, as [inplace.vector] specifies, and leaves the bitset as it was.
 BOOST_AUTO_TEST_CASE(GrowingPastTheCapacityThrowsBadAlloc)
 {
         auto b = T();
@@ -94,6 +96,23 @@ BOOST_AUTO_TEST_CASE(GrowingPastTheCapacityThrowsBadAlloc)
         BOOST_CHECK_EQUAL(c.size(), 20UZ);
         BOOST_CHECK_EQUAL(c.count(), 1UZ);
         BOOST_CHECK(c.test(2));
+}
+
+// N is the capacity exactly, so a whole block appended where the last block has room left is refused.
+BOOST_AUTO_TEST_CASE(TheCapacityIsTheRequestedOneExactly)
+{
+        using U = xstd::basic_inplace_bitset<std::uint8_t, 12>;
+        static_assert(std::same_as<xstd::aligned::basic_inplace_bitset<std::uint8_t, 12>, xstd::basic_inplace_bitset<std::uint8_t, 16>>);
+        static_assert(std::same_as<xstd::bitset_adaptor<std::inplace_vector<std::uint8_t, 2>>, xstd::basic_inplace_bitset<std::uint8_t, 16>>);
+
+        auto b = U();
+        BOOST_CHECK_EQUAL(b.max_size(), 12UZ);
+        BOOST_CHECK_EQUAL(b.capacity(), 12UZ);
+        b.append(std::uint8_t{0xFF});
+        BOOST_CHECK_THROW(b.append(std::uint8_t{0xFF}), std::bad_alloc);
+        BOOST_CHECK_THROW(b.reserve(13), std::bad_alloc);
+        BOOST_CHECK_EQUAL(b.size(), 8UZ);
+        BOOST_CHECK(b.all());
 }
 
 #else

@@ -31,6 +31,7 @@
 #include <functional>                                        // plus
 #include <iterator>                                          // distance, forward_iterator, input_iterator, prev
 #include <limits>                                            // numeric_limits
+#include <new>                                               // bad_alloc
 #include <ranges>                                            // begin, drop, iota, rbegin, rend, size, swap, transform, zip
 #include <source_location>                                   // source_location
 #include <span>                                              // dynamic_extent, span
@@ -61,9 +62,21 @@ inline constexpr auto default_extent_v<std::array<Block, K>> = K * static_cast<s
 template<class Block, std::size_t E>
 inline constexpr auto default_extent_v<std::span<Block, E>> = E == std::dynamic_extent ? blocks_extent : E * static_cast<std::size_t>(xstd::numeric_limits<Block>::digits);
 
+template<class Blocks>
+        requires xstd::resizable_bit_storage<Blocks> and (xstd::bit_storage_capacity_v<Blocks> != std::dynamic_extent)
+inline constexpr auto default_extent_v<Blocks> = xstd::bit_storage_capacity_v<Blocks>;
+
+// What N is to an owner: the width of fixed blocks, else a capacity its blocks hold in whole, else unbounded.
+template<class Blocks, std::size_t N>
+concept owner_extent =
+        (not xstd::resizable_bit_storage<Blocks> and N != std::dynamic_extent) or
+        (xstd::resizable_bit_storage<Blocks> and N == xstd::bit_storage_capacity_v<Blocks>) or
+        (xstd::resizable_bit_storage<Blocks> and N <= xstd::bit_storage_capacity_v<Blocks> and xstd::bit_storage_capacity_v<Blocks> != std::dynamic_extent and
+         num_blocks_v<std::ranges::range_value_t<Blocks>, N> * xstd::bit_storage_extent_v<std::ranges::range_value_t<Blocks>> == xstd::bit_storage_capacity_v<Blocks>);
+
 // The one vehicle: it owns the unused-tail invariant, and has no iterators.
 template<class Blocks, std::size_t N = default_extent_v<Blocks>>
-        requires (std::ranges::contiguous_range<Blocks> and xstd::owned_bit_storage<Blocks> and (N != std::dynamic_extent or xstd::resizable_bit_storage<Blocks>)) or (borrowed_block_span<Blocks> and N == default_extent_v<Blocks>)
+        requires (std::ranges::contiguous_range<Blocks> and xstd::owned_bit_storage<Blocks> and owner_extent<Blocks, N>) or (borrowed_block_span<Blocks> and N == default_extent_v<Blocks>)
 class contiguous_bit_container : public bits::detail::allocator_base_type<Blocks>
 {
 public:
@@ -74,23 +87,18 @@ public:
 
         // Derived rather than written as an 8: a block's digits over its bytes is the bits in a byte.
         static constexpr auto bits_per_byte = bits_per_block / sizeof(block_type);
-        static constexpr auto has_static_size = N != std::dynamic_extent and N != blocks_extent;
 
         // A width that is a member and moves under growth; the other run-time width is the span's own length.
-        static constexpr auto has_stored_size = N == std::dynamic_extent;
+        static constexpr auto has_stored_size = xstd::resizable_bit_storage<Blocks>;
+        static constexpr auto has_static_size = not has_stored_size and N != blocks_extent;
 
-        // A run-time width over a capacity the type carries: the qualified capacity() call is the discriminator.
-        static constexpr auto has_static_capacity = requires { Blocks::capacity(); };
+        // A run-time width under a capacity the type carries, which is N and may stop short of the blocks' last bit.
+        static constexpr auto has_static_capacity = has_stored_size and N != std::dynamic_extent;
 
-        // The capacity in bits; a function and not a variable, so the std::vector column never instantiates it.
         [[nodiscard]] static constexpr auto static_capacity() noexcept
                 -> std::size_t
         {
-                if constexpr (has_static_capacity) {
-                        return Blocks::capacity() * bits_per_block;
-                } else {
-                        return 0UZ;
-                }
+                return has_static_capacity ? N : 0UZ;
         }
 
         // The width as a type, dynamic_extent where there is none: asked before an object exists.
@@ -166,6 +174,8 @@ public:
                 requires has_stored_size
                 : m_size(n)
         {
+                check_capacity(n);
+
                 // Grown by resize, not a count constructor: resizable_bit_storage does not ask for one.
                 m_blocks.resize(blocks_for(n), zero);
         }
@@ -246,6 +256,7 @@ public:
                 requires has_stored_size
         {
                 assert(std::ranges::size(blocks) <= max_num_blocks);
+                assert(not has_static_capacity or std::ranges::size(blocks) * bits_per_block <= N);
                 m_blocks = std::move(blocks);
                 m_size = num_blocks() * bits_per_block;
         }
@@ -371,6 +382,17 @@ public:
                 return n;
         }
 
+        // The blocks refuse growth a whole block at a time, so a capacity short of their last bit is held here.
+        static constexpr auto check_capacity(std::size_t n [[maybe_unused]])
+                -> void
+        {
+                if constexpr (has_static_capacity) {
+                        if (n > N) {
+                                throw std::bad_alloc();
+                        }
+                }
+        }
+
         [[nodiscard]] static constexpr auto width_sum(std::size_t base, std::size_t count) noexcept
                 -> std::size_t
         {
@@ -382,7 +404,9 @@ public:
         [[nodiscard]] constexpr auto max_size() const noexcept
                 -> std::size_t
         {
-                if constexpr (has_stored_size) {
+                if constexpr (has_static_capacity) {
+                        return N;
+                } else if constexpr (has_stored_size) {
                         return std::ranges::min(m_blocks.max_size(), max_num_blocks) * bits_per_block;
                 } else {
                         return size();
@@ -393,7 +417,9 @@ public:
         [[nodiscard]] constexpr auto saturating_max_size() const noexcept
                 -> std::size_t
         {
-                if constexpr (has_stored_size) {
+                if constexpr (has_static_capacity) {
+                        return N;
+                } else if constexpr (has_stored_size) {
                         auto const saturates = static_cast<std::size_t>(m_blocks.max_size() > max_num_blocks);
                         return max_size() + (saturates * (bits_per_block - 1UZ));
                 } else {
@@ -1018,6 +1044,7 @@ public:
                 -> void
                 requires has_stored_size
         {
+                check_capacity(size() + bits_per_block);
                 auto const offset = size() % bits_per_block;
                 if (offset != 0UZ) {
                         m_blocks[last_block()] |= shl(value, offset);
@@ -1058,6 +1085,7 @@ public:
                 -> void
                 requires has_stored_size and requires (Blocks& b) { b.reserve(blocks_for(n)); }
         {
+                check_capacity(n);
                 m_blocks.reserve(blocks_for(n));
         }
 
@@ -1065,7 +1093,11 @@ public:
                 -> std::size_t
                 requires has_stored_size and requires (Blocks const& b) { b.capacity(); }
         {
-                return m_blocks.capacity() * bits_per_block;
+                if constexpr (has_static_capacity) {
+                        return N;
+                } else {
+                        return m_blocks.capacity() * bits_per_block;
+                }
         }
 
         constexpr auto shrink_to_fit()
@@ -1500,6 +1532,7 @@ private:
                 -> void
                 requires has_stored_size
         {
+                check_capacity(n);
                 auto const count = blocks_for(n);
                 if (value and n > size()) {
                         // Which bits become new is read off the old width, and written only once the blocks have grown.

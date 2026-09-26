@@ -709,9 +709,11 @@ zero. `reserve`, `capacity` and `shrink_to_fit` are in bits and exist where the 
 member, so the landmine #80 recorded -- probing `clear()` on boost and emptying the width -- cannot recur.
 
 `contiguous_bit_inplace_vector<Block, N>` is the third storage: a run-time width under a compile-time capacity
-of `N` bits, behind `__cpp_lib_inplace_vector` until every library in the matrix has it. It needs nothing of its
-own, `std::inplace_vector` satisfying `owned_bit_storage` as it is; `resize`, `reserve` and `push_back`
-past the capacity throw `std::bad_alloc`, as that library specifies.
+of exactly `N` bits, behind `__cpp_lib_inplace_vector` until every library in the matrix has it.
+`std::inplace_vector` satisfies `owned_bit_storage` as it is, but it counts blocks, so it refuses growth only a
+whole block at a time; a capacity that stops inside the last block is the container's to hold. `check_capacity`
+does that on every growth path -- `resize`, `push_back`, `append`, `reserve` and the sized constructor -- and
+throws `std::bad_alloc`, as `std::inplace_vector` specifies, before anything is written.
 
 The adaptors take growth by detection on the storage: growth is a container's business and no view's, so it exists on an owner and on nothing else. `sequence_adaptor` is
 `std::vector<bool>` where its storage grows -- the count and count-value constructors, the range and
@@ -2363,8 +2365,8 @@ One header per restricted name, holding its `basic_` form beside it, each over o
 header is the name's home and the only place it is spelled; `bits.hpp` includes them all. Each static name has
 an `aligned` form in the namespace of that name, in both layers, its width rounded up to whole blocks so that no
 block carries an unused tail: `aligned::bitset<9>` is `bitset<64>` and `aligned::basic_bitset<std::uint8_t, 9>`
-is `basic_bitset<std::uint8_t, 16>`. The inplace column has no `aligned` form, its `N` being a capacity the
-storage already rounds up rather than a width to round.
+is `basic_bitset<std::uint8_t, 16>`. The inplace column has the same forms, rounding its capacity:
+`aligned::bit_inplace_vector<9>` is `bit_inplace_vector<64>`.
 
 ### a-name-by-storage
 
@@ -2412,17 +2414,27 @@ adaptors: `basic_bit_inplace_set<Block, N>`, `basic_bit_inplace_vector<Block, N>
 because `bitset` already carries the word, and `inplace` is one storage word down each column rather than a
 second vocabulary for the same thing.
 
-`N` is a **capacity** in bits here, where the static column's `N` is a width. The names carry that and the
-parameter lists do not, which is the same hazard `basic_bit_static_set<Block, N>` and
-`basic_bit_inplace_set<Block, N>` share by shape. The capacity is rounded up to whole blocks by
-`contiguous_bit_inplace_vector` itself, so `basic_bit_inplace_vector<std::uint8_t, 9>` holds sixteen bits; the
-width under it is a run-time one and carries an unused tail like any other.
+`N` is a **capacity** in bits here, where the static column's `N` is a width, and it is exact in the same way:
+`basic_bit_inplace_vector<std::uint8_t, 9>` holds nine bits, as `std::inplace_vector<bool, 9>` does, in two
+blocks whose last seven bits it never uses. The adaptors read their second parameter by storage -- the width of
+fixed blocks, the capacity of blocks that resize under a constant one, and `dynamic_extent` for blocks that grow
+without bound -- and `bit_storage_capacity_v` is their default, so an adaptor named by its storage alone holds
+every bit of it: `bit_sequence_adaptor<std::inplace_vector<std::uint8_t, 2>>` is
+`basic_bit_inplace_vector<std::uint8_t, 16>`, one type however it is spelled. A capacity only callable at run
+time, as `boost::container::static_vector`'s is, names no constant, and an owner over it is unbounded by type.
+
+The alias passes `N` through to the adaptor rather than leaving it in the block count alone, which is what makes
+distinct capacities distinct types and lets alias deduction find `N`: `num_blocks_v<Block, N>` is not a
+deducible context, and no inverse exists, since every `N` from 9 to 16 names two `std::uint8_t` blocks. The
+names carry the capacity-versus-width distinction and the parameter lists do not, which is the same hazard
+`basic_bit_static_set<Block, N>` and `basic_bit_inplace_set<Block, N>` share by shape.
 
 The whole column sits behind `__cpp_lib_inplace_vector`, in practice libstdc++ >= 16, which the matrix carries on
 gcc 16 and 17-SVN. An alias adds no capability, so the guard withholds a name rather than a feature, and each
 header's includes sit inside the guard too: on a library without the storage the header is its include guard and
-nothing else. Growth past the capacity throws `std::bad_alloc`, which is `std::inplace_vector`'s own answer
-reaching the caller unchanged; on the set reading that is where `insert` stops being total.
+nothing else. Growth past the capacity throws `std::bad_alloc`, which is `std::inplace_vector`'s own answer,
+given by the container where the capacity stops inside a block; on the set reading that is where `insert` stops
+being total.
 
 P0843 declined to repeat `vector<bool>`, so there is no `std::inplace_vector<bool>` to check a packed sequence
 against. `test::sequence::inplace_vector_bool` is `[vector.bool]`'s checklist minus the lines the allocator
@@ -4922,7 +4934,7 @@ Notes:
 4. The variable-size sequence of `bool` is named `xstd::bit_vector` and decoupled from the general `std::vector` class template.
 5. All containers use a dense (single bit per element) representation. Variable-size sparse sets can be provided by `flat_set`, either in [Boost](https://www.boost.org/doc/libs/1_80_0/doc/html/boost/container/flat_set.html) or in [C++ 23](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p1222r4.pdf).
 6. The names above are the short ones, which fix `Block` to `std::size_t` and so take only the width, or nothing at all in the dynamic column where there is no width to give. Each has a `basic_` form that leaves the block open: `xstd::basic_bit_static_set<Block, N>`, `xstd::basic_bit_array<Block, N>`, `xstd::basic_bitset<Block, N>` and their inplace siblings, and `xstd::basic_bit_set<Block, Allocator>`, `xstd::basic_bit_vector<Block, Allocator>`, `xstd::basic_dynamic_bitset<Block, Allocator>` down the dynamic column. So `xstd::bit_set` is an alias, not a template, and `xstd::basic_bit_set<std::uint8_t>` is how a block is chosen.
-7. Each static-width name has an `aligned` form in a nested namespace, its width rounded up to whole blocks so that no block carries an unused tail: `xstd::aligned::bitset<120>` is `xstd::bitset<128>`. That costs nothing in storage at a width already spanning whole blocks, and removes the tail-restoring mask from `fill`, `flip` and the left shift.
+7. Each static-width name has an `aligned` form in a nested namespace, its width rounded up to whole blocks so that no block carries an unused tail: `xstd::aligned::bitset<120>` is `xstd::bitset<128>`. The inplace names have the same, rounding their capacity. That costs nothing in storage at a width already spanning whole blocks, and removes the tail-restoring mask from `fill`, `flip` and the left shift.
 
 The **middle column** is what allocates nothing and yet carries a run-time width. It depends on `std::inplace_vector`, so those three names exist only where the standard library provides it (`__cpp_lib_inplace_vector`); an alias withholds a name rather than a capability.
 

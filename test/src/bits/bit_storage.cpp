@@ -8,7 +8,7 @@
 #include <xstd/bits/bit_set.hpp>         // bit_set
 #include <xstd/bits/bit_set_adaptor.hpp> // bit_set_adaptor
 #include <xstd/bits/bit_set_view.hpp>    // bit_set_view
-#include <xstd/bits/bit_storage.hpp>     // bit_storage, bit_storage_extent_v, owned_bit_storage, resizable_bit_storage
+#include <xstd/bits/bit_storage.hpp>     // bit_storage, bit_storage_capacity_v, bit_storage_extent_v, owned_bit_storage, resizable_bit_storage
 #include <boost/test/unit_test.hpp>      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <array>                         // array
 #include <bitset>                        // bitset
@@ -116,6 +116,28 @@ BOOST_AUTO_TEST_CASE(ARunTimeWidthOwnsOnlyStorageThatResizes)
         static_assert(names_an_owner_of<test::minimal_words<std::uint32_t>, std::dynamic_extent>);
         static_assert(names_an_owner_of<std::array<std::uint64_t, 2>, 100> and not names_an_owner_of<std::array<std::uint64_t, 2>, std::dynamic_extent>);
         static_assert(not names_an_owner_of<std::uint64_t, std::dynamic_extent>);
+        BOOST_CHECK(true);
+}
+
+// An owner's N is its bound: a fixed width, a constant capacity its blocks hold in whole, or none at all.
+BOOST_AUTO_TEST_CASE(AnOwnersExtentIsItsWidthOrItsCapacity)
+{
+        static_assert(xstd::bit_storage_capacity_v<std::uint64_t> == 64 and xstd::bit_storage_capacity_v<std::array<std::uint16_t, 3>> == 48);
+        static_assert(xstd::bit_storage_capacity_v<std::vector<std::size_t>> == std::dynamic_extent);
+        static_assert(xstd::bit_storage_capacity_v<test::minimal_words<std::uint32_t>> == std::dynamic_extent);
+#ifdef __cpp_lib_inplace_vector
+
+        static_assert(xstd::bit_storage_capacity_v<std::inplace_vector<std::uint16_t, 3>> == 48);
+        static_assert(xstd::bit_storage_extent_v<std::inplace_vector<std::uint16_t, 3>> == std::dynamic_extent);
+        static_assert(std::is_same_v<xstd::bit_set_adaptor<std::inplace_vector<std::uint16_t, 3>>, xstd::bit_set_adaptor<std::inplace_vector<std::uint16_t, 3>, 48>>);
+
+        // Any capacity the blocks hold in whole: stopping inside the last block, but never short of it.
+        static_assert(names_an_owner_of<std::inplace_vector<std::uint16_t, 3>, 33> and names_an_owner_of<std::inplace_vector<std::uint16_t, 3>, 47>);
+        static_assert(not names_an_owner_of<std::inplace_vector<std::uint16_t, 3>, 32> and not names_an_owner_of<std::inplace_vector<std::uint16_t, 3>, 49>);
+        static_assert(not names_an_owner_of<std::inplace_vector<std::uint16_t, 3>, std::dynamic_extent>);
+
+#endif
+        static_assert(not names_an_owner_of<std::vector<std::size_t>, 64>);
         BOOST_CHECK(true);
 }
 

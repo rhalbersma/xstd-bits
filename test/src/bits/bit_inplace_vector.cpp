@@ -9,7 +9,8 @@
 
 #include <test/sequence/concepts.hpp>                         // bit_sequence, inplace_vector_bool, inplace_vector_bool_ranges, inplace_vector_bool_try_returns, packed_inplace_vector_bool
 #include <test/sequence/dense.hpp>                            // yields_every_position
-#include <xstd/bits/bit_inplace_vector.hpp>                   // basic_bit_inplace_vector, bit_inplace_vector
+#include <xstd/bits/bit_inplace_vector.hpp>                   // aligned, basic_bit_inplace_vector, bit_inplace_vector
+#include <xstd/bits/bit_sequence_adaptor.hpp>                 // bit_sequence_adaptor
 #include <xstd/bits/detail/contiguous_bit_inplace_vector.hpp> // contiguous_bit_inplace_vector
 #include <xstd/bits/detail/ownership.hpp>                     // storage
 #include <xstd/bits/detail/sequence_adaptor.hpp>              // sequence_adaptor
@@ -18,6 +19,7 @@
 #include <cstddef>                                            // size_t
 #include <cstdint>                                            // uint8_t
 #include <inplace_vector>                                     // inplace_vector
+#include <limits>                                             // numeric_limits
 #include <new>                                                // bad_alloc
 #include <ranges>                                             // count, iota, to, transform
 #include <vector>                                             // vector
@@ -111,10 +113,11 @@ BOOST_AUTO_TEST_CASE(TheFullContainerAnswersNulloptWherePushBackWouldThrow)
         BOOST_CHECK(c.push_back(true) == true);
 }
 
-// The blocks are whole, so the capacity is the requested one rounded up, and the width moves under it.
-BOOST_AUTO_TEST_CASE(TheCapacityIsTheRequestedOneRoundedUpToWholeBlocks)
+// N is the capacity exactly, as std::inplace_vector<bool, N>'s is, and the width moves under it.
+BOOST_AUTO_TEST_CASE(TheCapacityIsTheRequestedOneExactly)
 {
-        static_assert(xstd::basic_bit_inplace_vector<std::uint8_t, 9>().capacity() == 16UZ);
+        static_assert(xstd::basic_bit_inplace_vector<std::uint8_t, 9>::capacity() == 9UZ);
+        static_assert(xstd::basic_bit_inplace_vector<std::uint8_t, 9>::capacity() == std::inplace_vector<bool, 9>::capacity());
 
         auto v = T();
         BOOST_CHECK_EQUAL(v.capacity(), 24UZ);
@@ -133,7 +136,33 @@ BOOST_AUTO_TEST_CASE(TheCapacityIsTheRequestedOneRoundedUpToWholeBlocks)
         BOOST_CHECK_EQUAL(v.size(), 17UZ);
 }
 
-// Past the capacity the storage throws, as [inplace.vector] specifies, and the sequence forwards that unchanged.
+// Distinct capacities are distinct types, and the aligned form rounds up to whole blocks as the static column's does.
+BOOST_AUTO_TEST_CASE(TheCapacityIsPartOfTheType)
+{
+        static_assert(not std::same_as<xstd::basic_bit_inplace_vector<std::uint8_t, 9>, xstd::basic_bit_inplace_vector<std::uint8_t, 16>>);
+        static_assert(std::same_as<xstd::aligned::basic_bit_inplace_vector<std::uint8_t, 9>, xstd::basic_bit_inplace_vector<std::uint8_t, 16>>);
+        static_assert(std::same_as<xstd::aligned::bit_inplace_vector<9>, xstd::bit_inplace_vector<std::numeric_limits<std::size_t>::digits>>);
+
+        // Named by its storage alone, the adaptor holds every bit of it: one type, however it is spelled.
+        static_assert(std::same_as<xstd::bit_sequence_adaptor<std::inplace_vector<std::uint8_t, 2>>, xstd::basic_bit_inplace_vector<std::uint8_t, 16>>);
+}
+
+// A capacity short of the last block's end is enforced here, where the storage would still have room.
+BOOST_AUTO_TEST_CASE(GrowingPastACapacityInsideTheLastBlockThrowsBadAlloc)
+{
+        using U = xstd::basic_bit_inplace_vector<std::uint8_t, 9>;
+        BOOST_CHECK_THROW(static_cast<void>(U(10)), std::bad_alloc);
+
+        auto v = U(9, true);
+        BOOST_CHECK_THROW(v.push_back(false), std::bad_alloc);
+        BOOST_CHECK_THROW(v.resize(10), std::bad_alloc);
+        BOOST_CHECK_THROW(v.reserve(10), std::bad_alloc);
+        BOOST_CHECK(not v.try_push_back(false).has_value());
+        BOOST_CHECK_EQUAL(v.size(), 9UZ);
+        BOOST_CHECK_EQUAL(std::ranges::count(v, true), 9);
+}
+
+// Past the capacity growth throws bad_alloc, as [inplace.vector] specifies, and leaves the sequence as it was.
 BOOST_AUTO_TEST_CASE(GrowingPastTheCapacityThrowsBadAlloc)
 {
         auto v = std::views::iota(0UZ, 24UZ) | std::views::transform([](auto i) { return i % 2 == 0; }) | std::ranges::to<T>();
