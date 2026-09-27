@@ -6,6 +6,8 @@
 #ifndef TEST_SPEC_RANDOM_HPP
 #define TEST_SPEC_RANDOM_HPP
 
+#include <test/bitset/factory.hpp>        // make_bitset
+#include <test/dynamic.hpp>               // dynamic
 #include <test/set/exhaustive.hpp>        // static_capacity, static_width
 #include <xstd/bits/detail/ownership.hpp> // owned_storage
 #include <boost/test/unit_test.hpp>       // BOOST_TEST_CONTEXT
@@ -161,16 +163,15 @@ template<class X>
         return result;
 }
 
-// The keys of each sample in the order drawn, with the width they lie below.
-template<class X>
-auto all_key_vectors(auto fun)
+// The keys of each sample in the order drawn, below a width n, biased to the edges of blocks of the given digits.
+inline auto sample_key_vectors(std::size_t n, std::size_t digits, auto fun)
+        -> void
 {
         auto const s = seed();
         auto g = engine(s);
-        auto const n = width<X>();
         for (auto const k : densities(n)) {
                 for (auto const i : std::views::iota(0UZ, samples())) {
-                        auto const v = keys(g, n, k, block_digits_v<X>);
+                        auto const v = keys(g, n, k, digits);
                         BOOST_TEST_CONTEXT("seed " << s << ", width " << n << ", keys " << k << ", sample " << i)
                         {
                                 fun(v, n);
@@ -179,23 +180,14 @@ auto all_key_vectors(auto fun)
         }
 }
 
-template<class X>
-auto all_sets(auto fun)
-{
-        all_key_vectors<X>([&](auto const& v, std::size_t) {
-                auto a = v | std::ranges::to<X>(); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
-                fun(a);
-        });
-}
-
-// Each sample with the keys a lookup most often gets wrong: both ends of the width and one drawn at random.
-template<class X>
-auto all_set_key_pairs(auto fun)
+// Each sample built by make with the keys a lookup most often gets wrong: both ends of the width and one drawn.
+inline auto sample_key_pairs(std::size_t n, std::size_t digits, auto make, auto fun)
+        -> void
 {
         auto g = engine(seed() + 1);
-        all_key_vectors<X>([&](auto const& v, std::size_t n) {
-                auto a = v | std::ranges::to<X>(); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
-                for (auto const k : {0UZ, n - 1UZ, g.position(n - 1UZ, block_digits_v<X>)}) {
+        sample_key_vectors(n, digits, [&](auto const& v, std::size_t) {
+                auto a = make(v, n); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
+                for (auto const k : {0UZ, n - 1UZ, g.position(n - 1UZ, digits)}) {
                         BOOST_TEST_CONTEXT("key " << k)
                         {
                                 fun(a, k);
@@ -205,18 +197,17 @@ auto all_set_key_pairs(auto fun)
 }
 
 // Each density against itself and against one drawn, so both operands range from empty to full at linear cost.
-template<class X>
-auto all_set_pairs(auto fun)
+inline auto sample_pairs(std::size_t n, std::size_t digits, auto make, auto fun)
+        -> void
 {
         auto const s = seed();
         auto g = engine(s);
-        auto const n = width<X>();
         auto const d = densities(n);
         for (auto const ka : d) {
                 for (auto const kb : {ka, d[g.below(d.size())]}) {
                         for (auto const i : std::views::iota(0UZ, samples())) {
-                                auto a = keys(g, n, ka, block_digits_v<X>) | std::ranges::to<X>(); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
-                                auto b = keys(g, n, kb, block_digits_v<X>) | std::ranges::to<X>(); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
+                                auto a = make(keys(g, n, ka, digits), n); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
+                                auto b = make(keys(g, n, kb, digits), n); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
                                 BOOST_TEST_CONTEXT("seed " << s << ", width " << n << ", keys " << ka << " and " << kb << ", sample " << i)
                                 {
                                         fun(a, b);
@@ -224,6 +215,40 @@ auto all_set_pairs(auto fun)
                         }
                 }
         }
+}
+
+template<class X>
+auto all_key_vectors(auto fun)
+{
+        sample_key_vectors(width<X>(), block_digits_v<X>, fun);
+}
+
+template<class X>
+[[nodiscard]] auto set_from(std::vector<std::size_t> const& v, std::size_t)
+        -> X
+{
+        return v | std::ranges::to<X>();
+}
+
+template<class X>
+auto all_sets(auto fun)
+{
+        all_key_vectors<X>([&](auto const& v, std::size_t n) {
+                auto a = set_from<X>(v, n); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
+                fun(a);
+        });
+}
+
+template<class X>
+auto all_set_key_pairs(auto fun)
+{
+        sample_key_pairs(width<X>(), block_digits_v<X>, set_from<X>, fun);
+}
+
+template<class X>
+auto all_set_pairs(auto fun)
+{
+        sample_pairs(width<X>(), block_digits_v<X>, set_from<X>, fun);
 }
 
 // Seven triples per sample, their densities drawn, since all 343 would cost more than they find.
@@ -246,6 +271,53 @@ auto all_set_triples(auto fun)
                         fun(a, b, c);
                 }
         }
+}
+
+// A bitset is as wide as its type or its capacity, and sampled one past 2048 bits where its width is unbounded.
+template<class X>
+[[nodiscard]] auto bitset_width()
+        -> std::size_t
+{
+        if constexpr (not test::dynamic<X>) {
+                return X().size();
+        } else if constexpr (test::set::static_capacity<X>) {
+                return X().max_size();
+        } else {
+                return 2049UZ;
+        }
+}
+
+// The keys set at the width, which a static width already has and a run-time width is resized to.
+template<class X>
+[[nodiscard]] auto bitset_from(std::vector<std::size_t> const& v, std::size_t n)
+        -> X
+{
+        auto a = test::bitset::make_bitset<X>(n);
+        for (auto const k : v) {
+                a.set(k);
+        }
+        return a;
+}
+
+template<class X>
+auto all_bitsets(auto fun)
+{
+        sample_key_vectors(bitset_width<X>(), block_digits_v<X>, [&](auto const& v, std::size_t n) {
+                auto a = bitset_from<X>(v, n); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
+                fun(a);
+        });
+}
+
+template<class X>
+auto all_bitset_key_pairs(auto fun)
+{
+        sample_key_pairs(bitset_width<X>(), block_digits_v<X>, bitset_from<X>, fun);
+}
+
+template<class X>
+auto all_bitset_pairs(auto fun)
+{
+        sample_pairs(bitset_width<X>(), block_digits_v<X>, bitset_from<X>, fun);
 }
 
 } // namespace test::spec::random

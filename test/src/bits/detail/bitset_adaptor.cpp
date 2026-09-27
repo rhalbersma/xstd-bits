@@ -575,6 +575,18 @@ BOOST_AUTO_TEST_CASE(TheStringConstructorTakesAnyCharLikeTypeButABlock)
         auto const bad = std::array<digit_char, 4>{one, digit_char{static_cast<unsigned char>('2')}, one, digit_char{0}};
         BOOST_CHECK_THROW(static_cast<void>(Ours(bad.data(), std::basic_string_view<digit_char>::npos, zero, one)), std::invalid_argument);
 
+        // A character past the nine stored is still one of the rlen checked, in each of the three arms.
+        BOOST_CHECK_THROW(static_cast<void>(Ours("0000000002")), std::invalid_argument);
+        BOOST_CHECK_THROW(static_cast<void>(Ours(L"0000000002")), std::invalid_argument);
+        BOOST_CHECK_THROW(static_cast<void>(Ours(u8"0000000002")), std::invalid_argument);
+        BOOST_CHECK_THROW(static_cast<void>(Ours(u"0000000002")), std::invalid_argument);
+        BOOST_CHECK_THROW(static_cast<void>(Ours(U"0000000002")), std::invalid_argument);
+        auto past = std::array<digit_char, 11>();
+        past.fill(zero);
+        past[9] = digit_char{static_cast<unsigned char>('2')};
+        past[10] = digit_char{0};
+        BOOST_CHECK_THROW(static_cast<void>(Ours(past.data(), std::basic_string_view<digit_char>::npos, zero, one)), std::invalid_argument);
+
         // The one subtraction, and the reason for it: the block-range constructor keeps its argument.
         static_assert(std::same_as<Ours::block_type, std::uint8_t>);
         static_assert(not std::is_constructible_v<Ours, std::uint8_t const*>);

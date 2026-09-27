@@ -9,21 +9,25 @@
 #include <test/dynamic.hpp>               // dynamic
 #include <xstd/bits/bit_set_view.hpp>     // view
 #include <xstd/bits/detail/ownership.hpp> // owned_storage
-#include <boost/test/unit_test.hpp>       // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_NE, BOOST_CHECK_THROW
-#include <algorithm>                      // all_of, any_of, equal, fold_left
+#include <boost/dynamic_bitset_fwd.hpp>   // dynamic_bitset
+#include <boost/test/unit_test.hpp>       // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_NO_THROW, BOOST_CHECK_THROW
+#include <algorithm>                      // all_of, any_of, equal, fold_left, min, none_of
+#include <bitset>                         // bitset
 #include <cstddef>                        // size_t
-#include <functional>                     // hash
+#include <functional>                     // hash, plus
+#include <limits>                         // numeric_limits
 #include <memory>                         // addressof
+#include <memory_resource>                // pmr::polymorphic_allocator
 #include <ranges>                         // iota, transform
-#include <set>                            // set
 #include <sstream>                        // istringstream, stringstream
-#include <stdexcept>                      // invalid_argument, out_of_range
-#include <string>                         // string
+#include <stdexcept>                      // invalid_argument, out_of_range, overflow_error
+#include <string>                         // basic_string, char_traits, string
 #include <string_view>                    // string_view
+#include <type_traits>                    // remove_cvref_t
 
 namespace test::bitset {
 
-// Nine primitives below NOLINT bugprone-exception-escape: the check reads the callee, not the guard.
+// A primitive holding a BOOST_CHECK_THROW NOLINTs bugprone-exception-escape: the check reads the callee, not the guard.
 
 // The basic_string_view overload, which P2697R1 gave std::bitset for C++26; dynamic_bitset has its own contract.
 template<class X>
@@ -41,7 +45,7 @@ auto check_string_view_at_a_static_width() -> void // NOLINT(bugprone-exception-
 {
         constexpr auto N = X().size();
         auto const zeros = std::string(N, '0');
-        BOOST_CHECK_THROW( // [bitset.cons]/3
+        BOOST_CHECK_THROW( // [bitset.cons]/7
                 (static_cast<void>(X(std::string_view(zeros), N + 1))), std::out_of_range
         );
 }
@@ -52,11 +56,11 @@ auto check_string_view_at_a_nonzero_width() -> void // NOLINT(bugprone-exception
 {
         constexpr auto N = X().size();
         auto const ones = std::string(N, '1');
-        BOOST_CHECK(X(std::string_view(ones)).all()); // [bitset.cons]/4
+        BOOST_CHECK(X(std::string_view(ones)).all()); // [bitset.cons]/3
 
         auto invalid = std::string(N, '0');
         invalid[N - 1] = '2';
-        BOOST_CHECK_THROW( // [bitset.cons]/5
+        BOOST_CHECK_THROW( // [bitset.cons]/7
                 (static_cast<void>(X(std::string_view(invalid)))), std::invalid_argument
         );
 }
@@ -71,6 +75,28 @@ auto check_string_view_at_a_run_time_width() -> void // NOLINT(bugprone-exceptio
         BOOST_CHECK_THROW((static_cast<void>(X(std::string_view("012")))), std::invalid_argument);
 }
 
+// One check per sweep rather than per position, which at a sampled width is thousands of them.
+[[nodiscard]] inline auto every_position(std::size_t N, auto pred)
+        -> bool
+{
+        return std::ranges::all_of(std::views::iota(0UZ, N), pred);
+}
+
+// [bitset.cons]/2: the first M positions are the integer's, M the smaller of the width and its digits, the rest zero.
+template<class Unsigned>
+auto check_integer_positions(auto const& a, Unsigned val)
+        -> void
+{
+        constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<Unsigned>::digits);
+        BOOST_CHECK(every_position(a.size(), [&](std::size_t i) -> bool {
+                return a[i] == (i < digits and ((val >> i) & Unsigned{1}) != 0);
+        }));
+}
+
+// A run-time width asserts on a position out of range, as boost::dynamic_bitset's contract has it; a static one throws.
+template<class X>
+concept throws_out_of_range = not dynamic<std::remove_cvref_t<X>>;
+
 template<class X>
 struct constructor
 {
@@ -79,14 +105,171 @@ struct constructor
                 X a;
                 BOOST_CHECK(a.none()); // [bitset.cons]/1
 
-                // [bitset.cons]/2 describes the constructor taking unsigned long long
                 if constexpr (fixed_string_view_constructible<X>) {
                         check_string_view_at_a_static_width<X>();
                         if constexpr (X().size() > 0) {
                                 check_string_view_at_a_nonzero_width<X>();
                         }
                 } else if constexpr (dynamic_string_view_constructible<X>) {
-                        check_string_view_at_a_run_time_width<X>();
+                        // The texts checked are up to four characters long, which a smaller capacity cannot hold.
+                        if (X().max_size() >= 4) {
+                                check_string_view_at_a_run_time_width<X>();
+                        }
+                }
+        }
+
+        auto operator()(unsigned long long val) const noexcept // NOLINT(bugprone-exception-escape)
+        {
+                check_integer_positions(X(val), val);
+        }
+
+        // boost::dynamic_bitset's count constructor, whose value is an unsigned long and so as wide as the platform's.
+        auto operator()(std::size_t num_bits, unsigned long val) const noexcept // NOLINT(bugprone-exception-escape)
+        {
+                auto const a = X(num_bits, val);
+                BOOST_CHECK_EQUAL(a.size(), num_bits);
+                check_integer_positions(a, val);
+        }
+};
+
+// The bit string, most significant position first: the member where the type has one, boost's free function otherwise.
+template<class X>
+[[nodiscard]] auto bit_string(const X& x)
+{
+        if constexpr (requires { x.to_string(); }) {
+                return x.to_string();
+        } else {
+                auto s = std::string();
+                to_string(x, s);
+                return s;
+        }
+}
+
+// The bit string spelled in other characters: position N - 1 - i is one exactly where bit i is set.
+template<class charT>
+[[nodiscard]] auto spelled(const auto& x, charT zero, charT one)
+        -> std::basic_string<charT>
+{
+        auto const N = x.size();
+        auto str = std::basic_string<charT>(N, zero);
+        for (auto const i : std::views::iota(0UZ, N)) {
+                if (x[i]) {
+                        str[N - 1UZ - i] = one;
+                }
+        }
+        return str;
+}
+
+// The charT pointer form and the zero and one arguments: std::bitset has both, boost::dynamic_bitset neither.
+template<class X>
+concept character_pointer_constructible = requires (char const* str) { X(str, std::string_view::npos, '0', '1'); };
+
+template<class X>
+inline constexpr auto is_std_bitset_v = false;
+
+template<std::size_t N>
+inline constexpr auto is_std_bitset_v<std::bitset<N>> = true;
+
+#if defined(_GLIBCXX_RELEASE) && _GLIBCXX_RELEASE < 16
+
+// libstdc++ before 16 checks only the N characters its std::bitset stores, where [bitset.cons]/7 checks all rlen.
+inline constexpr auto std_bitset_checks_every_character = false;
+
+#else
+
+inline constexpr auto std_bitset_checks_every_character = true;
+
+#endif
+
+template<class X>
+concept checks_every_character = std_bitset_checks_every_character or not is_std_bitset_v<X>;
+
+// [bitset.cons]/3-7 read back: the bit string of a bitset, in every spelling the type takes, constructs that bitset.
+template<class X>
+struct string_constructor
+{
+        // As both models take it: the whole text, and the text as a slice of a longer one.
+        static auto check_strings(const X& x, const std::string& str, const std::string& padded) noexcept
+                -> void
+        {
+                auto const n = str.size();
+                BOOST_CHECK(X(str) == x);
+                BOOST_CHECK(X(padded, 2, n) == x);
+                if constexpr (not dynamic<X>) {
+                        // M is the smaller of N and rlen, so a character past the first N is checked but not stored.
+                        BOOST_CHECK(X(str + "0") == x);
+                        BOOST_CHECK(X(str + "1") == x);
+                }
+                if constexpr (requires { X(std::string_view(str)); }) {
+                        BOOST_CHECK(X(std::string_view(str)) == x);
+                }
+                // Boost's string_view constructor takes a bit count second; only the standard's position form is asked.
+                if constexpr (requires (std::string_view text, std::size_t count) { X(text, count, count); }) {
+                        BOOST_CHECK(X(std::string_view(padded), 2, n) == x);
+                }
+        }
+
+        // The charT pointer, the zero and one arguments, and a wider character type.
+        static auto check_other_spellings(const X& x, const std::string& str, const std::string& padded) noexcept
+                -> void
+        {
+                auto const n = str.size();
+                BOOST_CHECK(X(str.c_str()) == x);
+                BOOST_CHECK(X(padded.c_str() + 2, n) == x);
+                auto const dots = spelled(x, '.', 'x');
+                BOOST_CHECK(X(dots, 0, n, '.', 'x') == x);
+                BOOST_CHECK(X(dots.c_str(), n, '.', 'x') == x);
+                BOOST_CHECK(X(spelled(x, L'0', L'1')) == x);
+        }
+
+        // [bitset.cons]/7, which boost::dynamic_bitset asserts rather than throws.
+        static auto check_out_of_range(const std::string& str) noexcept // NOLINT(bugprone-exception-escape)
+                -> void
+        {
+                BOOST_CHECK_THROW(static_cast<void>(X(str, str.size() + 1)), std::out_of_range);
+        }
+
+        // The refused character needs room at a run-time width, which a full capacity has not.
+        static auto check_invalid_at_a_run_time_width(const X& x, const std::string& str) noexcept // NOLINT(bugprone-exception-escape)
+                -> void
+        {
+                if (str.size() < x.max_size()) {
+                        BOOST_CHECK_THROW(static_cast<void>(X("2" + str)), std::invalid_argument);
+                }
+        }
+
+        // A character among the N stored, which a zero width has none of.
+        static auto check_invalid_at_a_static_width(const std::string& str) noexcept // NOLINT(bugprone-exception-escape)
+                -> void
+        {
+                if (not str.empty()) {
+                        BOOST_CHECK_THROW(static_cast<void>(X("2" + str)), std::invalid_argument);
+                }
+        }
+
+        // Each of the rlen characters is checked, the one past the N stored included.
+        static auto check_invalid_past_a_static_width(const std::string& str) noexcept // NOLINT(bugprone-exception-escape)
+                -> void
+        {
+                BOOST_CHECK_THROW(static_cast<void>(X(str + "2")), std::invalid_argument);
+        }
+
+        auto operator()(const X& x) const noexcept
+        {
+                auto const str = bit_string(x);
+                auto const padded = "01" + str + "10";
+                check_strings(x, str, padded);
+                if constexpr (character_pointer_constructible<X>) {
+                        check_other_spellings(x, str, padded);
+                        check_out_of_range(str);
+                        if constexpr (dynamic<X>) {
+                                check_invalid_at_a_run_time_width(x, str);
+                        } else {
+                                check_invalid_at_a_static_width(str);
+                                if constexpr (checks_every_character<X>) {
+                                        check_invalid_past_a_static_width(str);
+                                }
+                        }
                 }
         }
 };
@@ -98,9 +281,9 @@ struct mem_bit_and_assign
         {
                 auto const src = self;
                 auto const& dst = self &= rhs;
-                for (auto const N = self.size(); auto const i : std::views::iota(0UZ, N)) {
-                        BOOST_CHECK_EQUAL(dst[i], not rhs[i] ? false : src[i]); // [bitset.members]/1
-                }
+                BOOST_CHECK(every_position(self.size(), [&](std::size_t i) -> bool {
+                        return dst[i] == (not rhs[i] ? false : src[i]); // [bitset.members]/1
+                }));
                 BOOST_CHECK_EQUAL(std::addressof(dst), std::addressof(self)); // [bitset.members]/2
         }
 };
@@ -112,9 +295,9 @@ struct mem_bit_or_assign
         {
                 auto const src = self;
                 auto const& dst = self |= rhs;
-                for (auto const N = self.size(); auto const i : std::views::iota(0UZ, N)) {
-                        BOOST_CHECK_EQUAL(dst[i], rhs[i] ? true : src[i]); // [bitset.members]/3
-                }
+                BOOST_CHECK(every_position(self.size(), [&](std::size_t i) -> bool {
+                        return dst[i] == (rhs[i] ? true : src[i]); // [bitset.members]/3
+                }));
                 BOOST_CHECK_EQUAL(std::addressof(dst), std::addressof(self)); // [bitset.members]/4
         }
 };
@@ -126,9 +309,9 @@ struct mem_bit_xor_assign
         {
                 auto const src = self;
                 auto const& dst = self ^= rhs;
-                for (auto const N = self.size(); auto const i : std::views::iota(0UZ, N)) {
-                        BOOST_CHECK_EQUAL(dst[i], rhs[i] ? not src[i] : src[i]); // [bitset.members]/5
-                }
+                BOOST_CHECK(every_position(self.size(), [&](std::size_t i) -> bool {
+                        return dst[i] == (rhs[i] ? not src[i] : src[i]); // [bitset.members]/5
+                }));
                 BOOST_CHECK_EQUAL(std::addressof(dst), std::addressof(self)); // [bitset.members]/6
         }
 };
@@ -142,9 +325,9 @@ struct mem_bit_minus_assign
                 if constexpr (requires { self -= rhs; }) {
                         auto const src = self;
                         auto const& dst = self -= rhs;
-                        for (auto const N = self.size(); auto const i : std::views::iota(0UZ, N)) {
-                                BOOST_CHECK_EQUAL(dst[i], rhs[i] ? false : src[i]);
-                        }
+                        BOOST_CHECK(every_position(self.size(), [&](std::size_t i) -> bool {
+                                return dst[i] == (rhs[i] ? false : src[i]);
+                        }));
                         BOOST_CHECK_EQUAL(std::addressof(dst), std::addressof(self));
                 }
         }
@@ -156,13 +339,9 @@ struct mem_shift_left_assign
         {
                 auto const src = self;
                 auto const& dst = self <<= pos;
-                for (auto const N = self.size(); auto const I : std::views::iota(0UZ, N)) {
-                        if (I < pos) {
-                                BOOST_CHECK(not dst[I]); // [bitset.members]/7.1
-                        } else {
-                                BOOST_CHECK_EQUAL(dst[I], src[I - pos]); // [bitset.members]/7.2
-                        }
-                }
+                BOOST_CHECK(every_position(self.size(), [&](std::size_t I) -> bool {
+                        return I < pos ? not dst[I] : dst[I] == src[I - pos]; // [bitset.members]/7
+                }));
                 BOOST_CHECK_EQUAL(std::addressof(dst), std::addressof(self)); // [bitset.members]/8
         }
 };
@@ -173,13 +352,10 @@ struct mem_shift_right_assign
         {
                 auto const src = self;
                 auto const& dst = self >>= pos;
-                for (auto const N = self.size(); auto const I : std::views::iota(0UZ, N)) {
-                        if (pos >= N - I) {
-                                BOOST_CHECK(not dst[I]); // [bitset.members]/9.1
-                        } else {
-                                BOOST_CHECK_EQUAL(dst[I], src[I + pos]); // [bitset.members]/9.2
-                        }
-                }
+                auto const N = self.size();
+                BOOST_CHECK(every_position(N, [&](std::size_t I) -> bool {
+                        return pos >= N - I ? not dst[I] : dst[I] == src[I + pos]; // [bitset.members]/9
+                }));
                 BOOST_CHECK_EQUAL(std::addressof(dst), std::addressof(self)); // [bitset.members]/10
         }
 };
@@ -216,11 +392,11 @@ struct mem_set
                 if (auto const N = self.size(); pos < N) {
                         auto const src = self;
                         auto const& dst = self.set(pos, val);
-                        for (auto const i : std::views::iota(0UZ, N)) {
-                                BOOST_CHECK_EQUAL(dst[i], i == pos ? val : src[i]); // [bitset.members]/15
-                        }
+                        BOOST_CHECK(every_position(N, [&](std::size_t i) -> bool {
+                                return dst[i] == (i == pos ? val : src[i]); // [bitset.members]/15
+                        }));
                         BOOST_CHECK_EQUAL(std::addressof(dst), std::addressof(self)); // [bitset.members]/16
-                } else {
+                } else if constexpr (throws_out_of_range<decltype(self)>) {
                         BOOST_CHECK_THROW(self.set(pos, val), std::out_of_range); // [bitset.members]/17
                 }
         }
@@ -240,11 +416,11 @@ struct mem_reset
                 if (auto const N = self.size(); pos < N) {
                         auto const src = self;
                         auto const& dst = self.reset(pos);
-                        for (auto const i : std::views::iota(0UZ, N)) {
-                                BOOST_CHECK_EQUAL(dst[i], i == pos ? false : src[i]); // [bitset.members]/20
-                        }
+                        BOOST_CHECK(every_position(N, [&](std::size_t i) -> bool {
+                                return dst[i] == (i == pos ? false : src[i]); // [bitset.members]/20
+                        }));
                         BOOST_CHECK_EQUAL(std::addressof(dst), std::addressof(self)); // [bitset.members]/21
-                } else {
+                } else if constexpr (throws_out_of_range<decltype(self)>) {
                         BOOST_CHECK_THROW(self.reset(pos), std::out_of_range); // [bitset.members]/22
                 }
         }
@@ -266,9 +442,9 @@ struct mem_flip
         {
                 auto const src = self;
                 auto const& dst = self.flip();
-                for (auto const N = self.size(); auto const i : std::views::iota(0UZ, N)) {
-                        BOOST_CHECK_NE(dst[i], src[i]); // [bitset.members]/25
-                }
+                BOOST_CHECK(every_position(self.size(), [&](std::size_t i) -> bool {
+                        return dst[i] != src[i]; // [bitset.members]/25
+                }));
                 BOOST_CHECK_EQUAL(std::addressof(dst), std::addressof(self)); // [bitset.members]/26
         }
 
@@ -277,11 +453,11 @@ struct mem_flip
                 if (auto const N = self.size(); pos < N) {
                         auto const src = self;
                         auto const& dst = self.flip(pos);
-                        for (auto const i : std::views::iota(0UZ, N)) {
-                                BOOST_CHECK_EQUAL(dst[i], i == pos ? not src[i] : src[i]); // [bitset.members]/27
-                        }
+                        BOOST_CHECK(every_position(N, [&](std::size_t i) -> bool {
+                                return dst[i] == (i == pos ? not src[i] : src[i]); // [bitset.members]/27
+                        }));
                         BOOST_CHECK_EQUAL(std::addressof(dst), std::addressof(self)); // [bitset.members]/28
-                } else {
+                } else if constexpr (throws_out_of_range<decltype(self)>) {
                         BOOST_CHECK_THROW(self.flip(pos), std::out_of_range); // [bitset.members]/29
                 }
         }
@@ -298,7 +474,90 @@ struct mem_at
         }
 };
 
-// [bitset.members]/28-33 describe conversion functions to_ulong, to_ullong, to_string
+// [bitset.members]/37-40: the value the low positions spell, or overflow_error if one past the digits is set.
+template<class Unsigned>
+auto check_to_unsigned(const auto& self, auto convert)
+        -> void
+{
+        constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<Unsigned>::digits);
+        auto const N = self.size();
+        auto const M = std::ranges::min(N, digits);
+        auto const fits = std::ranges::none_of(std::views::iota(M, N), [&](auto i) -> bool {
+                return self[i];
+        });
+        if (fits) {
+                auto value = Unsigned{0};
+                for (auto const i : std::views::iota(0UZ, M)) {
+                        if (self[i]) {
+                                value |= static_cast<Unsigned>(Unsigned{1} << i);
+                        }
+                }
+                BOOST_CHECK_EQUAL(convert(self), value);
+        } else {
+                BOOST_CHECK_THROW(static_cast<void>(convert(self)), std::overflow_error);
+        }
+}
+
+template<class X>
+inline constexpr auto is_boost_dynamic_bitset_v = false;
+
+template<class Block, class Allocator>
+inline constexpr auto is_boost_dynamic_bitset_v<boost::dynamic_bitset<Block, Allocator>> = true;
+
+#ifdef __clang_analyzer__
+
+// The static analyzer loses boost::dynamic_bitset::to_ulong's overflow guard before the shift it protects.
+template<class X>
+concept analyzable_to_ulong = not is_boost_dynamic_bitset_v<X>;
+
+#else
+
+template<class X>
+concept analyzable_to_ulong = true;
+
+#endif
+
+struct mem_to_ulong
+{
+        template<class X>
+        auto operator()(const X& self) const noexcept // NOLINT(bugprone-exception-escape)
+        {
+                if constexpr (analyzable_to_ulong<X>) {
+                        check_to_unsigned<unsigned long>(self, [](const auto& x) -> unsigned long {
+                                return x.to_ulong();
+                        });
+                }
+        }
+};
+
+// boost::dynamic_bitset converts to unsigned long only.
+struct mem_to_ullong
+{
+        auto operator()(const auto& self) const noexcept // NOLINT(bugprone-exception-escape)
+        {
+                if constexpr (requires { self.to_ullong(); }) {
+                        check_to_unsigned<unsigned long long>(self, [](const auto& x) -> unsigned long long {
+                                return x.to_ullong();
+                        });
+                }
+        }
+};
+
+// [bitset.members]/41-42, in the characters, traits and allocator asked for; boost's free function spells char only.
+struct mem_to_string
+{
+        auto operator()(const auto& self) const noexcept // NOLINT(bugprone-exception-escape)
+        {
+                BOOST_CHECK_EQUAL(bit_string(self), spelled(self, '0', '1'));
+                if constexpr (requires { self.to_string(); }) {
+                        BOOST_CHECK_EQUAL(self.to_string('.', 'x'), spelled(self, '.', 'x'));
+                        BOOST_CHECK(self.template to_string<wchar_t>() == spelled(self, L'0', L'1'));
+                        BOOST_CHECK(self.template to_string<wchar_t>(L'-', L'+') == spelled(self, L'-', L'+'));
+                        auto const pmr = self.template to_string<char, std::char_traits<char>, std::pmr::polymorphic_allocator<char>>();
+                        BOOST_CHECK_EQUAL(std::string_view(pmr), spelled(self, '0', '1'));
+                }
+        }
+};
 
 struct mem_count
 {
@@ -364,19 +623,6 @@ struct mem_equal_to
         }
 };
 
-// The bit string, most significant position first: the member where the type has one, boost's free function otherwise.
-template<class X>
-[[nodiscard]] auto bit_string(const X& x)
-{
-        if constexpr (requires { x.to_string(); }) {
-                return x.to_string();
-        } else {
-                auto s = std::string();
-                to_string(x, s);
-                return s;
-        }
-}
-
 // Two orderings: the set view's is std::set's over ascending positions, the type's own is the bit string's.
 struct mem_compare_three_way
 {
@@ -409,7 +655,7 @@ struct mem_test
         {
                 if (auto const N = self.size(); pos < N) {
                         BOOST_CHECK_EQUAL(self.test(pos), self[pos]); // [bitset.members]/46
-                } else {
+                } else if constexpr (throws_out_of_range<decltype(self)>) {
                         BOOST_CHECK_THROW(static_cast<void>(self.test(pos)), std::out_of_range); // [bitset.members]/47
                 }
         }
@@ -591,25 +837,47 @@ struct op_istream_failure
         auto operator()() const noexcept // NOLINT(bugprone-exception-escape)
         {
                 if constexpr (fixed_string_view_constructible<X>) {
-                        constexpr auto N = X().size();
-                        for (auto const* input : {"", "2"}) {
-                                auto const exhausted = *input == '\0';
-                                auto is = std::istringstream(input);
-                                auto x = X();
-                                is >> x;
-                                BOOST_CHECK(x.none());
-                                BOOST_CHECK_EQUAL(is.fail(), exhausted or N > 0); // [istream.formatted.reqmts], then [bitset.operators]/6
-                        }
+                        at_static_width();
+                } else if constexpr (dynamic_string_view_constructible<X>) {
+                        at_run_time_width();
+                }
+        }
 
-                        // Fewer digits than N: the loop stops on eof, and x = X(str) puts what was read low.
-                        if constexpr (N > 1) {
-                                auto is = std::istringstream("1");
-                                auto x = X();
-                                is >> x;
-                                BOOST_CHECK(not is.fail());
-                                BOOST_CHECK_EQUAL(x.count(), 1UZ);
-                                BOOST_CHECK(x.test(0)); // [bitset.operators]/6
-                        }
+private:
+        static auto at_static_width()
+                -> void
+        {
+                constexpr auto N = X().size();
+                for (auto const* input : {"", "2"}) {
+                        auto const exhausted = *input == '\0';
+                        auto is = std::istringstream(input);
+                        auto x = X();
+                        is >> x;
+                        BOOST_CHECK(x.none());
+                        BOOST_CHECK_EQUAL(is.fail(), exhausted or N > 0); // [istream.formatted.reqmts], then [bitset.operators]/6
+                }
+
+                // Fewer digits than N: the loop stops on eof, and x = X(str) puts what was read low.
+                if constexpr (N > 1) {
+                        auto is = std::istringstream("1");
+                        auto x = X();
+                        is >> x;
+                        BOOST_CHECK(not is.fail());
+                        BOOST_CHECK_EQUAL(x.count(), 1UZ);
+                        BOOST_CHECK(x.test(0)); // [bitset.operators]/5
+                }
+        }
+
+        // A run-time width reads every digit there is, and none is still a failed read.
+        static auto at_run_time_width()
+                -> void
+        {
+                for (auto const* input : {"", "2"}) {
+                        auto is = std::istringstream(input);
+                        auto x = X();
+                        is >> x;
+                        BOOST_CHECK_EQUAL(x.size(), 0UZ);
+                        BOOST_CHECK(is.fail());
                 }
         }
 };

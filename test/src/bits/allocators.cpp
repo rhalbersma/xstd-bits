@@ -5,14 +5,13 @@
 
 #include <xstd/bits/bit_array.hpp>      // bit_array
 #include <xstd/bits/bit_vector.hpp>     // basic_bit_vector, bit_vector
-#include <xstd/bits/dynamic_bitset.hpp> // basic_dynamic_bitset, dynamic_bitset
+#include <xstd/bits/dynamic_bitset.hpp> // dynamic_bitset
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <cstddef>                      // size_t
 #include <initializer_list>             // initializer_list
 #include <memory>                       // allocator, uses_allocator_v
 #include <memory_resource>              // monotonic_buffer_resource, polymorphic_allocator
 #include <type_traits>                  // is_constructible_v, is_nothrow_constructible_v
-#include <utility>                      // move
 #include <vector>                       // pmr::vector, vector
 
 BOOST_AUTO_TEST_SUITE(Allocators)
@@ -20,7 +19,6 @@ BOOST_AUTO_TEST_SUITE(Allocators)
 namespace {
 
 using pmr_bit_vector = xstd::basic_bit_vector<std::size_t, std::pmr::polymorphic_allocator<std::size_t>>;
-using pmr_dynamic_bitset = xstd::basic_dynamic_bitset<std::size_t, std::pmr::polymorphic_allocator<std::size_t>>;
 
 // Declared only, for the concept below to call in an unevaluated operand.
 template<class C>
@@ -41,9 +39,6 @@ BOOST_AUTO_TEST_CASE(AMemoryResourceConvertsToThePolymorphicAllocator)
         auto const v = pmr_bit_vector(3, true, &mr);
         BOOST_CHECK(v.get_allocator().resource() == &mr);
         BOOST_CHECK_EQUAL(v.size(), 3UZ);
-
-        auto const b = pmr_dynamic_bitset(&mr);
-        BOOST_CHECK(b.get_allocator().resource() == &mr);
 }
 
 // Uses-allocator construction: an allocator-aware container hands each element its own allocator, converted.
@@ -53,14 +48,11 @@ BOOST_AUTO_TEST_CASE(AnAllocatorAwareContainerPassesItsAllocatorOn)
 
         auto mr = std::pmr::monotonic_buffer_resource();
         auto vectors = std::pmr::vector<pmr_bit_vector>(&mr);
-        auto bitsets = std::pmr::vector<pmr_dynamic_bitset>(&mr);
 
         vectors.emplace_back(3);
-        bitsets.emplace_back();
 
         BOOST_CHECK(vectors.back().get_allocator().resource() == &mr);
         BOOST_CHECK_EQUAL(vectors.back().size(), 3UZ);
-        BOOST_CHECK(bitsets.back().get_allocator().resource() == &mr);
 }
 
 // A rebound std::allocator converts, and a braced {} is a value-initialized allocator, as for std::vector<bool>.
@@ -92,19 +84,6 @@ BOOST_AUTO_TEST_CASE(OnlyARunTimeWidthTakesAnAllocator)
         static_assert(not std::is_constructible_v<xstd::bit_array<64>, std::allocator<std::size_t>>);
         static_assert(not std::is_constructible_v<xstd::bit_array<64>, std::initializer_list<bool>, std::allocator<std::size_t>>);
         BOOST_CHECK(true);
-}
-
-// [container.alloc.reqmts]'s allocator-extended copy and move, which dynamic_bitset has where boost has not.
-BOOST_AUTO_TEST_CASE(ABitsetIsCopiedAndMovedIntoAnotherAllocator)
-{
-        auto mr = std::pmr::monotonic_buffer_resource();
-        auto source = pmr_dynamic_bitset(70, 5ULL);
-
-        auto const copy = pmr_dynamic_bitset(source, &mr);
-        BOOST_CHECK(copy == source and copy.get_allocator().resource() == &mr);
-
-        auto const moved = pmr_dynamic_bitset(std::move(source), &mr);
-        BOOST_CHECK(moved == copy and moved.get_allocator().resource() == &mr);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
