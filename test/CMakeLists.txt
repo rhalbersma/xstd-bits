@@ -21,6 +21,7 @@ set(cxx_compile_definitions
     BOOST_ALL_NO_LIB
     BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE
     BOOST_TEST_MAIN
+    BOOST_CONTAINER_DISABLE_FORCEINLINE   # a forced inline puts static_vector's asserting operator[] branch on the library's own line under coverage
     $<$<CXX_COMPILER_ID:MSVC>:
         _SCL_SECURE_NO_WARNINGS
     >

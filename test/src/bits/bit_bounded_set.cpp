@@ -3,30 +3,34 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/inplace_vector.hpp>  // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR, has_inplace_vector
-#include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#ifdef TEST_HAS_INPLACE_VECTOR
-
 #include <test/set/ascending.hpp>                        // yields_ascending_keys
 #include <test/set/concepts.hpp>                         // bit_set, set_size_t, set_size_t_ranges
 #include <xstd/bits/bit_bounded_set.hpp>                 // aligned, basic_bit_bounded_set, bit_bounded_set
+#include <xstd/bits/detail/bounded_blocks.hpp>           // bounded_blocks, XSTD_BITS_HAS_CONSTEXPR_BOUNDED
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/detail/ownership.hpp>                // owned_bits_t, storage
 #include <xstd/bits/detail/set_adaptor.hpp>              // set_adaptor
+#include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <algorithm>                                     // equal
 #include <concepts>                                      // same_as
 #include <cstddef>                                       // size_t
 #include <cstdint>                                       // uint8_t
-#include <inplace_vector>                                // inplace_vector
 #include <new>                                           // bad_alloc
 #include <ranges>                                        // iota, to
 #include <set>                                           // set
 
+#ifdef XSTD_BITS_HAS_CONSTEXPR_BOUNDED
+#include <test/constexpr_check.hpp> // XSTD_CONSTEXPR_CHECK_EQUAL
+#endif
+
+// The bounded checker, whose static_assert half arrives only with std::inplace_vector.
+#ifdef XSTD_BITS_HAS_CONSTEXPR_BOUNDED
+#define XSTD_CONSTEXPR_BOUNDED_CHECK_EQUAL(a, b) XSTD_CONSTEXPR_CHECK_EQUAL((a), (b))
+#else
+#define XSTD_CONSTEXPR_BOUNDED_CHECK_EQUAL(a, b) BOOST_CHECK_EQUAL((a), (b))
 #endif
 
 BOOST_AUTO_TEST_SUITE(BitBoundedSet)
-
-#ifdef TEST_HAS_INPLACE_VECTOR
 
 // A capacity of three whole blocks, so a key can sit past the width and still inside the capacity.
 using T = xstd::basic_bit_bounded_set<std::uint8_t, 24>;
@@ -36,9 +40,9 @@ template<class X>
 constexpr bool has_capacity = requires (X const& x) { x.capacity(); };
 
 // The set reading over a run-time width under a compile-time capacity, built on the set adaptor.
-BOOST_AUTO_TEST_CASE(TheBoundedSetIsTheSetAdaptorOverAnInplaceVectorOfBlocks)
+BOOST_AUTO_TEST_CASE(TheBoundedSetIsTheSetAdaptorOverInlineBlocks)
 {
-        static_assert(std::derived_from<T, xstd::bits::detail::set_adaptor<xstd::bits::detail::contiguous_bit_container<std::inplace_vector<std::uint8_t, 3>, 24>, xstd::bits::detail::storage::owned, T>>);
+        static_assert(std::derived_from<T, xstd::bits::detail::set_adaptor<xstd::bits::detail::contiguous_bit_container<xstd::bits::detail::bounded_blocks<std::uint8_t, 3>, 24>, xstd::bits::detail::storage::owned, T>>);
         static_assert(std::same_as<xstd::bit_bounded_set<24>, xstd::basic_bit_bounded_set<std::size_t, 24>>);
         static_assert(test::set::bit_set<T>);
 }
@@ -88,7 +92,7 @@ BOOST_AUTO_TEST_CASE(InsertingPastTheWidthGrowsItUpToTheCapacity)
         BOOST_CHECK_EQUAL(s.erase(23), 0UZ);
 }
 
-// Past the capacity there is nowhere to grow, and the caller gets std::inplace_vector's bad_alloc.
+// Past the capacity there is nowhere to grow, and the caller gets bad_alloc, as std::inplace_vector's callers do.
 BOOST_AUTO_TEST_CASE(InsertingPastTheCapacityThrowsBadAlloc)
 {
         auto s = T();
@@ -108,9 +112,9 @@ BOOST_AUTO_TEST_CASE(InsertingPastTheCapacityThrowsBadAlloc)
 BOOST_AUTO_TEST_CASE(TheCapacityIsTheRequestedOneExactly)
 {
         using U = xstd::basic_bit_bounded_set<std::uint8_t, 9>;
-        static_assert(U().max_size() == 9UZ);
+        XSTD_CONSTEXPR_BOUNDED_CHECK_EQUAL(U().max_size(), 9UZ);
         static_assert(std::same_as<xstd::aligned::basic_bit_bounded_set<std::uint8_t, 9>, xstd::basic_bit_bounded_set<std::uint8_t, 16>>);
-        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_bounded_set<std::uint8_t, 16>>, xstd::bits::detail::contiguous_bit_container<std::inplace_vector<std::uint8_t, 2>>>);
+        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_bounded_set<std::uint8_t, 16>>, xstd::bits::detail::contiguous_bit_container<xstd::bits::detail::bounded_blocks<std::uint8_t, 2>>>);
 
         auto s = U();
         s.insert(8);
@@ -134,6 +138,22 @@ BOOST_AUTO_TEST_CASE(EqualSetsCompareEqualAtUnequalWidths)
         BOOST_CHECK(not(narrow < wide) and not(wide < narrow));
 }
 
+// A key only the wider set holds tells the two apart, on whichever side of the comparison the wider one stands.
+BOOST_AUTO_TEST_CASE(AKeyPastTheNarrowerWidthMakesTheSetsUnequal)
+{
+        auto narrow = T();
+        auto wide = T();
+
+        narrow.insert(3);
+        wide.insert(3);
+        wide.insert(20);
+        BOOST_CHECK(narrow != wide);
+        BOOST_CHECK(wide != narrow);
+
+        wide.erase(20);
+        BOOST_CHECK(wide == narrow);
+}
+
 // Ascending keys, whatever the insertion order: what makes this a set rather than a bag of positions.
 BOOST_AUTO_TEST_CASE(ItYieldsAscendingKeys)
 {
@@ -148,15 +168,5 @@ BOOST_AUTO_TEST_CASE(ItYieldsAscendingKeys)
         }
         test::set::yields_ascending_keys(c);
 }
-
-#else
-
-// The column is its storage's: without std::inplace_vector there is no name to test.
-BOOST_AUTO_TEST_CASE(TheColumnIsAbsentWithItsStorage)
-{
-        static_assert(not test::has_inplace_vector);
-}
-
-#endif
 
 BOOST_AUTO_TEST_SUITE_END()

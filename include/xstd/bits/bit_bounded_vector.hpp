@@ -6,11 +6,8 @@
 #ifndef XSTD_BITS_BIT_BOUNDED_VECTOR_HPP
 #define XSTD_BITS_BIT_BOUNDED_VECTOR_HPP
 
-#include <version> // IWYU pragma: keep; __cpp_lib_inplace_vector
-
-#ifdef __cpp_lib_inplace_vector
-
 #include <xstd/bits/bit_storage.hpp>                         // bit_storage_extent_v
+#include <xstd/bits/detail/bounded_blocks.hpp>               // bounded_blocks
 #include <xstd/bits/detail/contiguous_bit_container.hpp>     // contiguous_bit_container, num_blocks_v
 #include <xstd/bits/detail/ownership.hpp>                    // storage, window
 #include <xstd/bits/detail/sequence_adaptor.hpp>             // sequence_adaptor
@@ -23,7 +20,6 @@
 #include <cstddef>                                           // size_t
 #include <functional>                                        // hash
 #include <initializer_list>                                  // initializer_list
-#include <inplace_vector>                                    // inplace_vector
 #include <iterator>                                          // input_iterator
 #include <limits>                                            // numeric_limits
 #include <ranges>                                            // from_range, from_range_t
@@ -34,9 +30,9 @@ namespace xstd {
 
 // The packed std::inplace_vector<bool, N> that P0843 declined to write, named after the container it packs.
 template<xstd::unsigned_integer Block, std::size_t N>
-class basic_bit_bounded_vector : public bits::detail::sequence_adaptor<bits::detail::contiguous_bit_container<std::inplace_vector<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_bounded_vector<Block, N>>
+class basic_bit_bounded_vector : public bits::detail::sequence_adaptor<bits::detail::contiguous_bit_container<bits::detail::bounded_blocks<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_bounded_vector<Block, N>>
 {
-        using base_type = bits::detail::sequence_adaptor<bits::detail::contiguous_bit_container<std::inplace_vector<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_bounded_vector<Block, N>>;
+        using base_type = bits::detail::sequence_adaptor<bits::detail::contiguous_bit_container<bits::detail::bounded_blocks<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_bounded_vector<Block, N>>;
 
 public:
         using typename base_type::block_container_type;
@@ -87,7 +83,7 @@ using bit_bounded_vector = basic_bit_bounded_vector<std::size_t, N>;
 
 // Every bit of the blocks an element, so the capacity is theirs, rounded to whole blocks.
 template<xstd::unsigned_integer Block, std::size_t K>
-basic_bit_bounded_vector(from_bit_storage_t, std::inplace_vector<Block, K>) -> basic_bit_bounded_vector<Block, bit_storage_extent_v<Block> * K>;
+basic_bit_bounded_vector(from_bit_storage_t, bits::detail::bounded_blocks<Block, K>) -> basic_bit_bounded_vector<Block, bit_storage_extent_v<Block> * K>;
 
 namespace aligned {
 
@@ -125,7 +121,5 @@ struct hash<xstd::basic_bit_bounded_vector<Block, N>> : hash<typename xstd::basi
 // NOLINTEND(bugprone-std-namespace-modification)
 
 } // namespace std
-
-#endif // __cpp_lib_inplace_vector
 
 #endif // XSTD_BITS_BIT_BOUNDED_VECTOR_HPP

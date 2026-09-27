@@ -13,7 +13,6 @@
 #include <ranges>        // bidirectional_range, random_access_range, range, range_value_t, view
 #include <string>        // string
 #include <utility>       // declval
-#include <version>       // IWYU pragma: keep; __cpp_lib_inplace_vector
 
 namespace consumer {
 
@@ -66,14 +65,10 @@ static_assert(is_bitset_reading<xstd::dynamic_bitset>);
 
 static_assert(is_set_reading<set_view_of_bitset>);
 
-#ifdef __cpp_lib_inplace_vector
-
-// The bounded column, present only where its storage is.
+// The bounded column, over whichever inline storage the standard library leaves it.
 static_assert(is_set_reading<xstd::bit_bounded_set<100>>);
 static_assert(is_sequence_reading<xstd::bit_bounded_vector<100>>);
 static_assert(is_bitset_reading<xstd::bounded_bitset<100>>);
-
-#endif
 
 } // namespace consumer
 
@@ -113,13 +108,9 @@ auto main()
         vector[63] = true;
         check(vector.size() == 64 and vector.count() == 1);
 
-#ifdef __cpp_lib_inplace_vector
-
-        auto inplace = xstd::bit_bounded_set<100>();
-        inplace.insert(99);
-        check(inplace.contains(99));
-
-#endif
+        auto bounded = xstd::bit_bounded_set<100>();
+        bounded.insert(99);
+        check(bounded.contains(99));
 
         // The three view names end to end, over the one owner committed to neither reading.
         auto owner = xstd::bitset<64>();

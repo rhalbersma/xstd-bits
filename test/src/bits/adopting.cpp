@@ -3,11 +3,14 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/inplace_vector.hpp>                       // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
 #include <test/minimal_words.hpp>                        // minimal_words
 #include <xstd/bits/bit_array.hpp>                       // bit_array
+#include <xstd/bits/bit_bounded_set.hpp>                 // basic_bit_bounded_set
+#include <xstd/bits/bit_bounded_vector.hpp>              // basic_bit_bounded_vector
 #include <xstd/bits/bit_set.hpp>                         // basic_bit_set, bit_set
 #include <xstd/bits/bit_vector.hpp>                      // basic_bit_vector, bit_vector
+#include <xstd/bits/bounded_bitset.hpp>                  // basic_bounded_bitset
+#include <xstd/bits/detail/bounded_blocks.hpp>           // bounded_blocks
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
 #include <xstd/bits/detail/ownership.hpp>                // storage, window
 #include <xstd/bits/detail/sequence_adaptor.hpp>         // sequence_adaptor
@@ -22,15 +25,6 @@
 #include <type_traits>                                   // is_constructible_v, is_nothrow_constructible_v
 #include <utility>                                       // move
 #include <vector>                                        // vector
-
-#ifdef TEST_HAS_INPLACE_VECTOR
-
-#include <xstd/bits/bit_bounded_set.hpp>    // basic_bit_bounded_set
-#include <xstd/bits/bit_bounded_vector.hpp> // basic_bit_bounded_vector
-#include <xstd/bits/bounded_bitset.hpp>     // basic_bounded_bitset
-#include <inplace_vector>                   // inplace_vector
-
-#endif
 
 BOOST_AUTO_TEST_SUITE(Adopting)
 
@@ -123,24 +117,20 @@ BOOST_AUTO_TEST_CASE(AdoptionIsConstexpr)
         BOOST_CHECK(true);
 }
 
-#ifdef TEST_HAS_INPLACE_VECTOR
-
-// Inline blocks deduce the capacity they hold in whole, through each reading's owner.
+// Inline blocks deduce the capacity they hold in whole, through each reading's owner, whichever storage holds them.
 BOOST_AUTO_TEST_CASE(InlineBlocksDeduceTheirAlignedCapacity)
 {
-        auto const v = xstd::basic_bit_bounded_vector(xstd::from_bit_storage, std::inplace_vector<std::uint8_t, 2>{0x81});
+        auto const v = xstd::basic_bit_bounded_vector(xstd::from_bit_storage, xstd::bits::detail::bounded_blocks<std::uint8_t, 2>{0x81});
         static_assert(std::same_as<decltype(v), xstd::basic_bit_bounded_vector<std::uint8_t, 16> const>);
         BOOST_CHECK(v.size() == 8UZ and v[0] and v[7]);
 
-        auto const s = xstd::basic_bit_bounded_set(xstd::from_bit_storage, std::inplace_vector<std::uint8_t, 2>{0x81});
+        auto const s = xstd::basic_bit_bounded_set(xstd::from_bit_storage, xstd::bits::detail::bounded_blocks<std::uint8_t, 2>{0x81});
         static_assert(std::same_as<decltype(s), xstd::basic_bit_bounded_set<std::uint8_t, 16> const>);
         BOOST_CHECK(s.contains(0) and s.contains(7));
 
-        auto const b = xstd::basic_bounded_bitset(xstd::from_bit_storage, std::inplace_vector<std::uint8_t, 2>{0x81});
+        auto const b = xstd::basic_bounded_bitset(xstd::from_bit_storage, xstd::bits::detail::bounded_blocks<std::uint8_t, 2>{0x81});
         static_assert(std::same_as<decltype(b), xstd::basic_bounded_bitset<std::uint8_t, 16> const>);
         BOOST_CHECK_EQUAL(b.count(), 2UZ);
 }
-
-#endif
 
 BOOST_AUTO_TEST_SUITE_END()

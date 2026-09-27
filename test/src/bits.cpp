@@ -5,7 +5,6 @@
 
 #include <test/block_types.hpp>       // graded_extents
 #include <test/flat_set.hpp>          // IWYU pragma: keep; TEST_HAS_FLAT_SET
-#include <test/inplace_vector.hpp>    // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
 #include <test/sequence/concepts.hpp> // bit_sequence
 #include <test/set/concepts.hpp>      // bit_set
 #include <xstd/bits.hpp>              // the whole bits surface
@@ -50,8 +49,6 @@ BOOST_AUTO_TEST_CASE(EveryContainerArrivesThroughTheUmbrella)
         static_assert(std::same_as<xstd::bit_vector, xstd::basic_bit_vector<std::size_t, std::allocator<std::size_t>>>);
         static_assert(std::same_as<xstd::dynamic_bitset, xstd::basic_dynamic_bitset<std::size_t, std::allocator<std::size_t>>>);
 
-#ifdef TEST_HAS_INPLACE_VECTOR
-
         // The bounded column, the third storage point: one name per reading, each a class like the rest.
         static_assert(std::ranges::bidirectional_range<xstd::basic_bit_bounded_set<std::uint8_t, 8>>);
         static_assert(std::ranges::random_access_range<xstd::basic_bit_bounded_vector<std::uint8_t, 8>>);
@@ -62,8 +59,6 @@ BOOST_AUTO_TEST_CASE(EveryContainerArrivesThroughTheUmbrella)
         static_assert(std::same_as<xstd::aligned::bit_bounded_set<9>, xstd::bit_bounded_set<std::numeric_limits<std::size_t>::digits>>);
         static_assert(std::same_as<xstd::aligned::bit_bounded_vector<9>, xstd::bit_bounded_vector<std::numeric_limits<std::size_t>::digits>>);
         static_assert(std::same_as<xstd::aligned::bounded_bitset<9>, xstd::bounded_bitset<std::numeric_limits<std::size_t>::digits>>);
-
-#endif
 
         // Every name with an N at compile time has an aligned form, the width or capacity rounded up to whole blocks.
         static_assert(std::same_as<xstd::aligned::bit_fixed_set<9>, xstd::bit_fixed_set<std::numeric_limits<std::size_t>::digits>>);
@@ -90,15 +85,11 @@ BOOST_AUTO_TEST_CASE(APackedArrayIsTheArrayItPacks)
                 static_assert((bit_sequence<std::tuple_element_t<I, packed>> and ...));
         }(std::make_index_sequence<std::tuple_size_v<packed>>{});
 
-#ifdef TEST_HAS_INPLACE_VECTOR
-
         // Storage is the second dimension of the grading: the same claim over the same extents, read as capacities.
         using bounded = test::graded_extents<xstd::basic_bit_bounded_vector>;
         []<std::size_t... I>(std::index_sequence<I...>) {
                 static_assert((bit_sequence<std::tuple_element_t<I, bounded>> and ...));
         }(std::make_index_sequence<std::tuple_size_v<bounded>>{});
-
-#endif
 }
 
 // The same claim on the other reading: a set of keys and a sequence of bools are different interfaces.
@@ -119,13 +110,9 @@ BOOST_AUTO_TEST_CASE(APackedSetIsTheSetItPacks)
                 static_assert((bit_set<std::tuple_element_t<I, packed>> and ...));
         }(std::make_index_sequence<std::tuple_size_v<packed>>{});
 
-#ifdef TEST_HAS_INPLACE_VECTOR
-
         // And the same second dimension on this reading.
         using bounded = test::graded_extents<xstd::basic_bit_bounded_set>;
         []<std::size_t... I>(std::index_sequence<I...>) {
                 static_assert((bit_set<std::tuple_element_t<I, bounded>> and ...));
         }(std::make_index_sequence<std::tuple_size_v<bounded>>{});
-
-#endif
 }

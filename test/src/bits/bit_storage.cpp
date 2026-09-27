@@ -3,12 +3,15 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/inplace_vector.hpp>                       // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
 #include <test/minimal_words.hpp>                        // minimal_words
 #include <xstd/bits/bit_array.hpp>                       // bit_array
 #include <xstd/bits/bit_set.hpp>                         // bit_set
 #include <xstd/bits/bit_set_view.hpp>                    // bit_set_view
 #include <xstd/bits/bit_storage.hpp>                     // bit_storage, bit_storage_capacity_v, bit_storage_extent_v, owned_bit_storage, resizable_bit_storage
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
+#include <boost/container/small_vector.hpp>              // small_vector
+#include <boost/container/static_vector.hpp>             // static_vector
 #include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <array>                                         // array
 #include <bitset>                                        // bitset
@@ -19,9 +22,8 @@
 #include <span>                                          // dynamic_extent, span
 #include <type_traits>                                   // is_same_v
 #include <vector>                                        // vector
-#include <version>                                       // IWYU pragma: keep; __cpp_lib_inplace_vector
 
-#ifdef __cpp_lib_inplace_vector
+#ifdef TEST_HAS_INPLACE_VECTOR
 
 #include <inplace_vector> // inplace_vector
 
@@ -49,7 +51,7 @@ BOOST_AUTO_TEST_CASE(WordsAndContiguousRangesOfWordsAreBitStorage)
         static_assert(xstd::bit_storage<std::array<std::uint16_t, 3>>);
         static_assert(xstd::bit_storage<std::vector<std::size_t>>);
         static_assert(xstd::bit_storage<std::span<std::uint32_t>> and xstd::bit_storage<std::span<std::uint32_t const, 2>>);
-#ifdef __cpp_lib_inplace_vector
+#ifdef TEST_HAS_INPLACE_VECTOR
         static_assert(xstd::bit_storage<std::inplace_vector<std::uint16_t, 3>>);
 #endif
         BOOST_CHECK(true);
@@ -104,7 +106,7 @@ BOOST_AUTO_TEST_CASE(ARunTimeWidthOwnsOnlyStorageThatResizes)
 {
         static_assert(xstd::resizable_bit_storage<std::vector<std::size_t>>);
         static_assert(not xstd::resizable_bit_storage<std::array<std::uint64_t, 2>> and not xstd::resizable_bit_storage<std::uint64_t>);
-#ifdef __cpp_lib_inplace_vector
+#ifdef TEST_HAS_INPLACE_VECTOR
 
         static_assert(xstd::resizable_bit_storage<std::inplace_vector<std::uint16_t, 3>>);
 
@@ -123,7 +125,7 @@ BOOST_AUTO_TEST_CASE(AnOwnersExtentIsItsWidthOrItsCapacity)
         static_assert(xstd::bit_storage_capacity_v<std::uint64_t> == 64 and xstd::bit_storage_capacity_v<std::array<std::uint16_t, 3>> == 48);
         static_assert(xstd::bit_storage_capacity_v<std::vector<std::size_t>> == std::dynamic_extent);
         static_assert(xstd::bit_storage_capacity_v<test::minimal_words<std::uint32_t>> == std::dynamic_extent);
-#ifdef __cpp_lib_inplace_vector
+#ifdef TEST_HAS_INPLACE_VECTOR
 
         static_assert(xstd::bit_storage_capacity_v<std::inplace_vector<std::uint16_t, 3>> == 48);
         static_assert(xstd::bit_storage_extent_v<std::inplace_vector<std::uint16_t, 3>> == std::dynamic_extent);
@@ -136,6 +138,23 @@ BOOST_AUTO_TEST_CASE(AnOwnersExtentIsItsWidthOrItsCapacity)
 
 #endif
         static_assert(not holds_extent<std::vector<std::size_t>, 64>);
+        BOOST_CHECK(true);
+}
+
+// A static capacity() callable only at run time still bounds the type, through the static_capacity beside it.
+BOOST_AUTO_TEST_CASE(AStaticVectorsCapacityIsItsStaticCapacity)
+{
+        static_assert(xstd::resizable_bit_storage<boost::container::static_vector<std::uint16_t, 3>>);
+        static_assert(xstd::bit_storage_capacity_v<boost::container::static_vector<std::uint16_t, 3>> == 48);
+        static_assert(std::is_same_v<xstd::bits::detail::contiguous_bit_container<boost::container::static_vector<std::uint16_t, 3>>, xstd::bits::detail::contiguous_bit_container<boost::container::static_vector<std::uint16_t, 3>, 48>>);
+        static_assert(holds_extent<boost::container::static_vector<std::uint16_t, 3>, 33> and not holds_extent<boost::container::static_vector<std::uint16_t, 3>, 49>);
+        static_assert(not holds_extent<boost::container::static_vector<std::uint16_t, 3>, std::dynamic_extent>);
+
+        // A small_vector's static_capacity is only what it holds before it allocates, so it bounds nothing.
+        static_assert(xstd::resizable_bit_storage<boost::container::small_vector<std::uint16_t, 3>>);
+        static_assert(xstd::bit_storage_capacity_v<boost::container::small_vector<std::uint16_t, 3>> == std::dynamic_extent);
+        static_assert(holds_extent<boost::container::small_vector<std::uint16_t, 3>, std::dynamic_extent>);
+        static_assert(not holds_extent<boost::container::small_vector<std::uint16_t, 3>, 48>);
         BOOST_CHECK(true);
 }
 

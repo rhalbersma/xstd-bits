@@ -288,7 +288,7 @@ public:
         }
 
         [[nodiscard]] constexpr auto get_allocator() const noexcept
-                requires requires (Blocks const& b) { b.get_allocator(); }
+                requires has_allocator_v<Blocks> and requires (Blocks const& b) { b.get_allocator(); }
         {
                 return m_blocks.get_allocator();
         }
