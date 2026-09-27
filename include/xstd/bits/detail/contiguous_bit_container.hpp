@@ -287,7 +287,9 @@ public:
                 return *this;
         }
 
+        // [container.reqmts] fixes the type; boost::container::small_vector hands out an allocator derived from it.
         [[nodiscard]] constexpr auto get_allocator() const noexcept
+                -> allocator_param_t<Blocks>
                 requires has_allocator_v<Blocks> and requires (Blocks const& b) { b.get_allocator(); }
         {
                 return m_blocks.get_allocator();
