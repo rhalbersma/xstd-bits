@@ -346,6 +346,14 @@ public:
                                 throw invalid_argument(ch, zero, one);
                         }
                 }
+                // [bitset.cons]/7 checks all rlen characters, which only a static width stores fewer of.
+                if constexpr (has_static_width) {
+                        auto const unread = str.substr(pos + M, rlen - M);
+                        auto const stray = std::ranges::find_if_not(unread, [&](charT ch) -> bool { return traits::eq(ch, zero) or traits::eq(ch, one); });
+                        if (stray != unread.end()) {
+                                throw invalid_argument(*stray, zero, one);
+                        }
+                }
         }
 
         // LWG 4294's four char-like traits, plus one clause: a pointer to a block is the block range's argument.
@@ -532,7 +540,7 @@ public:
                 throw out_of_range(pos);
         }
 
-        // [bitset.members]/34-37: the value the bits spell, or overflow_error for a position beyond the word.
+        // [bitset.members]/37-40: the value the bits spell, or overflow_error for a position beyond the word.
         [[nodiscard]] constexpr auto to_ulong() const
                 -> unsigned long
         {
@@ -1078,7 +1086,7 @@ template<class Bits, class Derived>
         return nrv;
 }
 
-// [bitset.operators]/6: up to N characters into a temporary string, then x = bitset(str), a short read landing low.
+// [bitset.operators]/5: up to N characters into a temporary string, then x = bitset(str), a short read landing low.
 template<class charT, class traits, class Bits, class Derived>
 auto operator>>(std::basic_istream<charT, traits>& is, bitset_adaptor<Bits, Derived>& x)
         -> std::basic_istream<charT, traits>&
