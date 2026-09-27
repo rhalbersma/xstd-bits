@@ -11,7 +11,7 @@
 #include <boost/test/unit_test.hpp>       // BOOST_TEST_CONTEXT
 #include <algorithm>                      // min
 #include <array>                          // array
-#include <bit>                            // bit_width
+#include <bit>                            // countl_zero
 #include <charconv>                       // from_chars
 #include <cstddef>                        // size_t
 #include <cstdint>                        // uint64_t
@@ -93,7 +93,7 @@ public:
                 if (n <= 1) {
                         return 0;
                 }
-                auto const mask = std::numeric_limits<std::uint64_t>::max() >> (64 - std::bit_width(n - 1));
+                auto const mask = std::numeric_limits<std::uint64_t>::max() >> static_cast<unsigned>(std::countl_zero(n - 1));
                 for (;;) {
                         if (auto const x = m_bits() & mask; x < n) {
                                 return x;
