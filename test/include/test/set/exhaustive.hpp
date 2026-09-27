@@ -7,7 +7,7 @@
 #define TEST_SET_EXHAUSTIVE_HPP
 
 #include <xstd/bits/detail/ownership.hpp> // owned_storage
-#include <algorithm>                      // max
+#include <algorithm>                      // max, min
 #include <array>                          // array
 #include <cassert>                        // assert
 #include <cstddef>                        // size_t
@@ -29,14 +29,21 @@ inline constexpr auto L2 = 64UZ;
 inline constexpr auto L3 = 32UZ;
 inline constexpr auto L4 = 16UZ;
 
-// A static width is its own limit; a growing one, ours or the standard library's, takes the sweep's.
+// A width the type fixes, which a default-constructed object already has.
 template<class X>
 concept static_width = requires { typename xstd::bits::detail::owned_storage<X>::bits_type; } and (xstd::bits::detail::owned_storage<X>::bits_type::extent != std::dynamic_extent);
 
+// A run-time width under a capacity in the type, which a sweep past it would meet as an exception.
+template<class X>
+concept static_capacity = requires { typename xstd::bits::detail::owned_storage<X>::bits_type; } and xstd::bits::detail::owned_storage<X>::bits_type::has_static_capacity;
+
+// A static width is its own limit, a capacity caps the sweep's, and an unbounded one takes the sweep's.
 template<class X, std::size_t Limit>
 inline constexpr auto limit_v = [] -> std::size_t {
         if constexpr (static_width<X>) {
                 return X().max_size();
+        } else if constexpr (static_capacity<X>) {
+                return std::ranges::min(xstd::bits::detail::owned_storage<X>::bits_type::static_capacity(), Limit);
         } else {
                 return Limit;
         }

@@ -17,6 +17,7 @@
 #include <initializer_list>                 // initializer_list
 #include <iterator>                         // distance, empty, iter_difference_t, iter_value_t, next, prev, reverse_iterator, size, ssize
 #include <ranges>                           // count, equal, find, lexicographical_compare, lower_bound, , subrange, upper_bound
+#include <set>                              // erase_if, set
 #include <type_traits>                      // add_const_t, common_type_t, make_signed_t, remove_reference_t
 #include <utility>                          // declval, pair
 
@@ -91,10 +92,10 @@ struct constructor
                 static_assert(std::default_initializable<typename X::key_compare>); // [associative.reqmts.general]/20
         }
 
-        auto operator()(X a) const
+        auto operator()(X const& a) const
         {
-                X u(a);
-                X u1 = a;
+                X u(a);               // NOLINT(performance-unnecessary-copy-initialization): the copy is what is under test
+                X u1 = a;             // NOLINT(performance-unnecessary-copy-initialization): the copy is what is under test
                 BOOST_CHECK(u == a);  // [container.reqmts]/10
                 BOOST_CHECK(u1 == a); // [container.reqmts]/10
         }
@@ -138,7 +139,7 @@ struct constructor
 struct op_assign
 {
         template<class X>
-        auto operator()(X& r, X a) const
+        auto operator()(X& r, X const& a) const
         {
                 r = a;
                 static_assert(std::same_as<decltype(r), X&>); // [container.reqmts]/49
@@ -492,6 +493,22 @@ struct mem_clear
                 a1.erase(a1.begin(), a1.end());
                 BOOST_CHECK(a == a1);   // [associative.reqmts.general]/138
                 BOOST_CHECK(a.empty()); // [associative.reqmts.general]/139
+        }
+};
+
+// [set.erasure]/1: what std::erase_if removes from a std::set of the same keys, counted the same.
+struct fn_erase_if
+{
+        template<class X, class Predicate>
+        auto operator()(X const& c, Predicate pred) const
+        {
+                auto c1 = c;
+                auto model = std::set<typename X::key_type>(c.begin(), c.end());
+                static_assert(std::same_as<decltype(erase_if(c1, pred)), typename X::size_type>);
+                auto const expected = std::erase_if(model, pred);
+                auto const erased = erase_if(c1, pred);
+                BOOST_CHECK_EQUAL(erased, expected);
+                BOOST_CHECK(std::ranges::equal(c1, model));
         }
 };
 

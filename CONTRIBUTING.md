@@ -62,7 +62,11 @@ opens — so each of them needs this script at this path.
 
 The test tree mirrors the header tree, and `test/CMakeLists.txt` fails configuration if it ever stops doing so: `include/xstd/bits/ranges/set_view.hpp` is answered by `test/src/bits/ranges/set_view.cpp`. The rule runs one way — every public header needs a source, `detail/` excepted, being machinery rather than interface. It does not forbid a source that answers no header, and some directories are exactly that.
 
-**A directory whose name is a header's is that header's tests. A `std_`-prefixed one is a contract's.** The sweeps in `bits/std_set/` and `bits/std_bitset/` are not tests of `std::set` or `std::bitset`, and not tests of ours either: each runs one Standard clause's requirements — `[set]`, `[bitset]` — over every type claiming to meet it, ours and the standard library's and Boost's alike, so the claim is checked against the same primitives on all of them. `std_` names which clause; it does not name a type. `bits/std_array/` follows for the sequence contract.
+**A directory whose name is a header's is that header's tests. A `std_`-prefixed one is a contract's.** The sweeps in `bits/std_bitset/` are not tests of `std::bitset`, and not tests of ours either: they run one Standard clause's requirements — `[bitset]` — over every type claiming to meet it, ours and the standard library's and Boost's alike, so the claim is checked against the same primitives on all of them. `std_` names which clause; it does not name a type. `bits/std_set/` holds a workload rather than a clause, the sieve, run over every set alike; the set reading's clauses are in `spec/`.
+
+**`spec/` is laid out by the Standard.** One source per clause, at the path the clause's stable name spells: `[set.cons]` is `spec/set/cons.cpp`, `[container.opt.reqmts]` is `spec/container/opt/reqmts.cpp`, `[associative.reqmts.general]` is `spec/associative/reqmts/general.cpp`. Every case is a template over a named list from `test/include/test/spec/set.hpp`, which puts the standard library's models first and then every column of ours: fixed, dynamic, bounded, small, and a user's own storage through the set adaptor. A requirement the Standard does not state sits under `spec/xstd/` when it is ours alone — a set's shifts, its hash, its `front` and `back` — and under `spec/boost/` when a Boost interface is its anchor.
+
+The lists are cost tiers, not clause groups, and a clause picks per case the one its generator can afford: `every_width` for a sweep constant per type, `boundary_widths` for a linear or quadratic one, `few_widths` for a cubic or quartic one, and `random_widths` for the sampled sweeps of `test/include/test/spec/random.hpp`. Those draw K of N keys by Floyd's algorithm from `std::mt19937_64`, reducing to a range by their own rejection rather than through a `std` distribution, so every standard library draws the same keys from the same seed. `XSTD_BITS_TEST_SEED` sets the seed and `XSTD_BITS_TEST_SAMPLES` the samples per density; a failing check reports the seed, width and density it ran under, which is all a rerun needs.
 
 That prefix is also what keeps `bits/std_bitset/` from being read as more tests of `xstd::bits::bitset` — those are in `bits/bitset.cpp`, one mirrored source, sitting right beside it.
 
@@ -82,9 +86,9 @@ Boost is worth knowing here, because it splits both ways: Boost.Unordered puts i
 | :--- | :--- | :--- |
 | `test/src/bits/ranges/set_view.cpp` | `test.bits.ranges.set_view` | `Ranges` / `SetView` |
 | `test/src/bits/detail/contiguous_bit_container.cpp` | `test.bits.detail.contiguous_bit_container` | `Detail` / `ContiguousBitContainer` |
-| `test/src/bits/std_set/o2.cpp` | `test.bits.std_set.o2` | `StdSet` / `O2` |
+| `test/src/spec/set/cons.cpp` | `test.spec.set.cons` | `Spec` / `Set` / `Cons` |
 
-With one subtraction: `bits` is every source's first component, so as a suite it distinguishes nothing and is left out. `test/src/bits.cpp` is what remains — the umbrella over the whole library, and the one source whose cases sit in the master suite. Should this library ever grow a second top-level directory, `Bits` comes back at the front of every row above.
+With one subtraction: `bits` is the first component of every source outside `spec/`, so as a suite it distinguishes nothing and is left out. `test/src/bits.cpp` is what remains — the umbrella over the whole library, and the one source whose cases sit in the master suite. `spec/` keeps its `Spec`, which is what tells a clause's suites from a header's.
 
 An umbrella source takes the stem like any other, so `test/src/bits/ranges.cpp` is `Ranges`, alongside the `Ranges` / `SetView` of the directory beside it. Nothing else goes in a suite name: the tier a sweep runs at (constant, linear, quadratic) belongs in its case names, not in place of the directory it lives in.
 
