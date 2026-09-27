@@ -21,8 +21,9 @@ struct includes
         template<class X>
         auto operator()(const X& a, const X& b) const noexcept
         {
+                // std::ranges::includes(r1, r2) asks whether r2 lies within r1, so the subset goes second.
                 if constexpr (requires { a.is_subset_of(b); }) {
-                        BOOST_CHECK_EQUAL(a.is_subset_of(b), std::ranges::includes(a, b));
+                        BOOST_CHECK_EQUAL(a.is_subset_of(b), std::ranges::includes(b, a));
                 }
         }
 };
