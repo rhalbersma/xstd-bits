@@ -178,7 +178,7 @@ file(GLOB_RECURSE targets RELATIVE ${current_src_dir} ${current_src_dir}/*.cpp)
 cmake_path(GET CMAKE_CURRENT_SOURCE_DIR FILENAME target_source_dir)
 foreach(t ${targets})
     cmake_path(GET t PARENT_PATH target_parent_path)
-    cmake_path(GET t STEM        target_stem       )
+    cmake_path(GET t STEM LAST_ONLY target_stem)
     # A source directly under src/ has an empty parent path, which used to leave test/src/bits.cpp as test..bits.
     string(REPLACE "/" "." target_id ${target_source_dir}/${target_parent_path}/${target_stem})
     string(REGEX REPLACE "[.]+" "." target_id ${target_id})

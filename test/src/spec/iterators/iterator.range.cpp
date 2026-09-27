@@ -11,8 +11,8 @@
 #include <utility>                  // as_const
 
 BOOST_AUTO_TEST_SUITE(Spec)
-BOOST_AUTO_TEST_SUITE(Iterator)
-BOOST_AUTO_TEST_SUITE(Range)
+BOOST_AUTO_TEST_SUITE(Iterators)
+BOOST_AUTO_TEST_SUITE(IteratorRange)
 
 using namespace test;
 using namespace test::set;

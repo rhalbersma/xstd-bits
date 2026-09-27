@@ -10,9 +10,10 @@
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 
 BOOST_AUTO_TEST_SUITE(Spec)
-BOOST_AUTO_TEST_SUITE(Container)
-BOOST_AUTO_TEST_SUITE(Opt)
-BOOST_AUTO_TEST_SUITE(Reqmts)
+BOOST_AUTO_TEST_SUITE(Containers)
+BOOST_AUTO_TEST_SUITE(ContainerRequirements)
+BOOST_AUTO_TEST_SUITE(General)
+BOOST_AUTO_TEST_SUITE(ContainerOptReqmts)
 
 using namespace test;
 using namespace test::set;
@@ -65,6 +66,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheOrderingHoldsOverRandomSets, T, test::spec::set
         spec::random::all_set_triples<T>(op_less());
 }
 
+BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()

@@ -24,9 +24,10 @@
 #include <vector>                                // pmr::vector, vector
 
 BOOST_AUTO_TEST_SUITE(Spec)
-BOOST_AUTO_TEST_SUITE(Container)
-BOOST_AUTO_TEST_SUITE(Alloc)
-BOOST_AUTO_TEST_SUITE(Reqmts)
+BOOST_AUTO_TEST_SUITE(Containers)
+BOOST_AUTO_TEST_SUITE(ContainerRequirements)
+BOOST_AUTO_TEST_SUITE(General)
+BOOST_AUTO_TEST_SUITE(ContainerAllocReqmts)
 
 namespace {
 
@@ -398,6 +399,7 @@ BOOST_AUTO_TEST_CASE(TheComparatorArgumentsAreAcceptedAlongsideTheAllocator)
         BOOST_CHECK(xstd::bit_set({3, 1}, comp, std::allocator<std::size_t>()) == xstd::bit_set({1, 3}));
 }
 
+BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()

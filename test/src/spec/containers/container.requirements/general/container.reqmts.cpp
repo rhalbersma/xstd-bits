@@ -17,8 +17,10 @@
 #include <utility>                  // as_const
 
 BOOST_AUTO_TEST_SUITE(Spec)
-BOOST_AUTO_TEST_SUITE(Container)
-BOOST_AUTO_TEST_SUITE(Reqmts)
+BOOST_AUTO_TEST_SUITE(Containers)
+BOOST_AUTO_TEST_SUITE(ContainerRequirements)
+BOOST_AUTO_TEST_SUITE(General)
+BOOST_AUTO_TEST_SUITE(ContainerReqmts)
 
 using namespace test;
 using namespace test::set;
@@ -118,6 +120,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheKeysOfRandomSetsCopyIntoASetOfAnImplicitlyConst
         });
 }
 
+BOOST_AUTO_TEST_SUITE_END()
+BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()

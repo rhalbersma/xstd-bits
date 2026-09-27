@@ -11,6 +11,8 @@
 #include <ranges>                   // from_range
 
 BOOST_AUTO_TEST_SUITE(Spec)
+BOOST_AUTO_TEST_SUITE(Containers)
+BOOST_AUTO_TEST_SUITE(Associative)
 BOOST_AUTO_TEST_SUITE(Set)
 BOOST_AUTO_TEST_SUITE(Cons)
 
@@ -83,6 +85,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ConstructionFromRandomKeysIsInsertion, T, test::sp
         });
 }
 
+BOOST_AUTO_TEST_SUITE_END()
+BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()

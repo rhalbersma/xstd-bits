@@ -10,9 +10,9 @@
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 
 BOOST_AUTO_TEST_SUITE(Spec)
-BOOST_AUTO_TEST_SUITE(Alg)
-BOOST_AUTO_TEST_SUITE(Set)
-BOOST_AUTO_TEST_SUITE(Operations)
+BOOST_AUTO_TEST_SUITE(Algorithms)
+BOOST_AUTO_TEST_SUITE(AlgSorting)
+BOOST_AUTO_TEST_SUITE(AlgSetOperations)
 
 using namespace test;
 using namespace test::set;
