@@ -15,13 +15,16 @@
 #include <xstd/bits/detail/ownership.hpp>                // storage, window
 #include <xstd/bits/detail/sequence_adaptor.hpp>         // sequence_adaptor
 #include <xstd/bits/dynamic_bitset.hpp>                  // basic_dynamic_bitset
+#include <xstd/bits/ext/boost/bit_small_set.hpp>         // basic_bit_small_set
 #include <xstd/bits/from_bit_storage.hpp>                // from_bit_storage, from_bit_storage_t
-#include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                                     // equal
 #include <concepts>                                      // same_as
 #include <cstddef>                                       // size_t
 #include <cstdint>                                       // uint8_t
 #include <memory>                                        // allocator
+#include <memory_resource>                               // new_delete_resource, polymorphic_allocator, unsynchronized_pool_resource
+#include <tuple>                                         // tuple
 #include <type_traits>                                   // is_constructible_v, is_nothrow_constructible_v
 #include <utility>                                       // move
 #include <vector>                                        // vector
@@ -131,6 +134,37 @@ BOOST_AUTO_TEST_CASE(InlineBlocksDeduceTheirAlignedCapacity)
         auto const b = xstd::basic_bounded_bitset(xstd::from_bit_storage, xstd::bits::detail::bounded_blocks<std::uint8_t, 2>{0x81});
         static_assert(std::same_as<decltype(b), xstd::basic_bounded_bitset<std::uint8_t, 16> const>);
         BOOST_CHECK_EQUAL(b.count(), 2UZ);
+}
+
+// The heap owners over a polymorphic allocator, which two resources make unequal.
+using polymorphic_owners = std::tuple<xstd::basic_bit_set<std::uint8_t, std::pmr::polymorphic_allocator<std::uint8_t>>, xstd::basic_bit_small_set<std::uint8_t, 16, std::pmr::polymorphic_allocator<std::uint8_t>>>;
+
+// Blocks adopted under an unequal allocator are copied into it; storage taken from new and delete would leak.
+BOOST_AUTO_TEST_CASE_TEMPLATE(AdoptionUnderAnUnequalAllocatorCopiesTheBlocks, S, polymorphic_owners)
+{
+        auto adopter = std::pmr::unsynchronized_pool_resource();
+        auto const keys = std::vector<std::size_t>{0, 9, 100, 700};
+        auto source = S(keys.begin(), keys.end(), typename S::allocator_type(std::pmr::polymorphic_allocator<std::uint8_t>(std::pmr::new_delete_resource())));
+        auto const alloc = typename S::allocator_type(std::pmr::polymorphic_allocator<std::uint8_t>(&adopter));
+
+        auto const s = S(xstd::from_bit_storage, std::move(source).extract(), alloc);
+        BOOST_CHECK(s.get_allocator() == alloc);
+        BOOST_CHECK(std::ranges::equal(s, keys));
+}
+
+// Blocks adopted under the allocator that made them keep their storage: the buffer handed back is the one given.
+BOOST_AUTO_TEST_CASE_TEMPLATE(AdoptionUnderAnEqualAllocatorKeepsTheStorage, S, polymorphic_owners)
+{
+        auto maker = std::pmr::unsynchronized_pool_resource();
+        auto const keys = std::vector<std::size_t>{0, 9, 100, 700};
+        auto const alloc = typename S::allocator_type(std::pmr::polymorphic_allocator<std::uint8_t>(&maker));
+        auto blocks = S(keys.begin(), keys.end(), alloc).extract();
+        auto const* const data = blocks.data();
+
+        auto s = S(xstd::from_bit_storage, std::move(blocks), alloc);
+        BOOST_CHECK(std::ranges::equal(s, keys));
+        auto const handed_back = std::move(s).extract();
+        BOOST_CHECK(handed_back.data() == data);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

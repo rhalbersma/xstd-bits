@@ -20,7 +20,7 @@
 #include <xstd/ints/memory.hpp>                              // align_up
 #include <xstd/misc/type_traits/conditional_data_member.hpp> // XSTD_NO_UNIQUE_ADDRESS, conditional_data_member_t
 #include <boost/hash2/hash_append_fwd.hpp>                   // hash_append, hash_append_tag
-#include <algorithm>                                         // all_of, any_of, equal, fill, fill_n, find_if, fold_left, lexicographical_compare_three_way, max, min, shift_left, shift_right
+#include <algorithm>                                         // all_of, any_of, copy, equal, fill, fill_n, find_if, fold_left, lexicographical_compare_three_way, max, min, shift_left, shift_right
 #include <array>                                             // array
 #include <bit>                                               // endian
 #include <cassert>                                           // assert
@@ -32,6 +32,7 @@
 #include <functional>                                        // plus
 #include <iterator>                                          // distance, forward_iterator, input_iterator, prev
 #include <limits>                                            // numeric_limits
+#include <memory>                                            // allocator_traits
 #include <new>                                               // bad_alloc
 #include <ranges>                                            // begin, drop, iota, rbegin, rend, size, swap, transform, zip
 #include <source_location>                                   // source_location
@@ -234,8 +235,9 @@ public:
         [[nodiscard]] constexpr contiguous_bit_container(xstd::from_bit_storage_t, Blocks blocks, allocator_param_t<Blocks> const& alloc)
                 requires has_stored_size and has_allocator_v<Blocks>
                 : m_size(std::ranges::size(blocks) * bits_per_block)
-                , m_blocks(std::move(blocks), alloc)
+                , m_blocks(alloc)
         {
+                take_blocks(blocks);
                 assert(num_blocks() <= max_num_blocks);
         }
 
@@ -249,8 +251,9 @@ public:
         [[nodiscard]] constexpr contiguous_bit_container(contiguous_bit_container&& other, allocator_param_t<Blocks> const& alloc)
                 requires has_stored_size and has_allocator_v<Blocks>
                 : m_size(std::exchange(other.m_size, 0UZ))
-                , m_blocks(std::move(other.m_blocks), alloc)
+                , m_blocks(alloc)
         {
+                take_blocks(other.m_blocks);
                 other.m_blocks.clear();
         }
 
@@ -1395,6 +1398,20 @@ public:
         }
 
 private:
+        // Into an unequal allocator the blocks are copied, where boost::container::small_vector takes the storage.
+        constexpr auto take_blocks(Blocks& source)
+                -> void
+        {
+                if constexpr (not std::allocator_traits<typename Blocks::allocator_type>::is_always_equal::value) {
+                        if (m_blocks.get_allocator() != source.get_allocator()) {
+                                m_blocks.resize(std::ranges::size(source));
+                                std::ranges::copy(source, std::ranges::begin(m_blocks));
+                                return;
+                        }
+                }
+                m_blocks = std::move(source);
+        }
+
         // Whether any position strictly above the given one is set, which one shift down leaves.
         [[nodiscard]] constexpr auto any_above(std::size_t index, std::size_t offset) const noexcept
                 -> bool

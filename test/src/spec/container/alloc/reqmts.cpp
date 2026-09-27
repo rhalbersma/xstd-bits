@@ -114,10 +114,7 @@ template<class Allocator>
 template<template<class> class Allocator>
 using allocator_aware = std::tuple<std::set<std::size_t, std::less<std::size_t>, Allocator<std::size_t>>, xstd::basic_bit_set<std::uint8_t, Allocator<std::uint8_t>>, xstd::basic_bit_set<std::uint64_t, Allocator<std::uint64_t>>, xstd::basic_bit_small_set<std::uint8_t, 9, Allocator<std::uint8_t>>, xstd::basic_bit_small_set<std::uint64_t, 64, Allocator<std::uint64_t>>>;
 
-// Boost 1.83's small_vector keeps a heap buffer across unequal polymorphic allocators and frees it into the wrong one.
-using polymorphic = std::tuple<std::set<std::size_t, std::less<std::size_t>, std::pmr::polymorphic_allocator<std::size_t>>, xstd::basic_bit_set<std::uint8_t, std::pmr::polymorphic_allocator<std::uint8_t>>, xstd::basic_bit_set<std::uint64_t, std::pmr::polymorphic_allocator<std::uint64_t>>>; // NOLINT(modernize-use-transparent-functors): std::set<std::size_t>'s own key_compare
-
-using Types = decltype(std::tuple_cat(std::declval<allocator_aware<propagating>>(), std::declval<allocator_aware<non_propagating>>(), std::declval<polymorphic>()));
+using Types = decltype(std::tuple_cat(std::declval<allocator_aware<propagating>>(), std::declval<allocator_aware<non_propagating>>(), std::declval<allocator_aware<std::pmr::polymorphic_allocator>>()));
 
 // The allocator the column was declared with, which the small set wraps in one of Boost's own.
 template<class X>
