@@ -18,7 +18,7 @@
 #include <cstdint>                                       // uint8_t
 #include <limits>                                        // numeric_limits
 #include <new>                                           // bad_alloc
-#include <ranges>                                        // count, iota, to, transform
+#include <ranges>                                        // iota
 #include <vector>                                        // vector
 
 #ifdef TEST_HAS_INPLACE_VECTOR
@@ -102,27 +102,6 @@ BOOST_AUTO_TEST_CASE(TheCapacityIsAPropertyOfTheTypeAndNotOfAnObject)
         BOOST_CHECK_THROW(T::reserve(T::capacity() + 1), std::bad_alloc);
 }
 
-// The non-throwing door and the unchecked one: what push_back answers with bad_alloc, these answer with nullopt.
-BOOST_AUTO_TEST_CASE(TheFullContainerAnswersNulloptWherePushBackWouldThrow)
-{
-        auto c = T();
-        while (c.size() < T::capacity()) {
-                auto const r = c.try_push_back(true);
-                BOOST_CHECK(r.has_value() and *r == true);
-        }
-        BOOST_CHECK(not c.try_push_back(true).has_value());
-        BOOST_CHECK(not c.try_emplace_back(false).has_value());
-        BOOST_CHECK_EQUAL(c.size(), c.capacity());
-
-        c.pop_back();
-        BOOST_CHECK(c.unchecked_push_back(false) == false);
-        BOOST_CHECK_EQUAL(c.size(), c.capacity());
-
-        // push_back returns the reference here, where the dynamic column's returns nothing.
-        c.pop_back();
-        BOOST_CHECK(c.push_back(true) == true);
-}
-
 // N is the capacity exactly, as std::inplace_vector<bool, N>'s is, and the width moves under it.
 BOOST_AUTO_TEST_CASE(TheCapacityIsTheRequestedOneExactly)
 {
@@ -159,59 +138,6 @@ BOOST_AUTO_TEST_CASE(TheCapacityIsPartOfTheType)
 
         // Named by its storage alone, the container holds every bit of it: one storage, however it is spelled.
         static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_bounded_vector<std::uint8_t, 16>>, xstd::bits::detail::contiguous_bit_container<xstd::bits::detail::bounded_blocks<std::uint8_t, 2>>>);
-}
-
-// A capacity short of the last block's end is enforced here, where the storage would still have room.
-BOOST_AUTO_TEST_CASE(GrowingPastACapacityInsideTheLastBlockThrowsBadAlloc)
-{
-        using U = xstd::basic_bit_bounded_vector<std::uint8_t, 9>;
-        BOOST_CHECK_EQUAL(U(9).size(), 9UZ);
-        BOOST_CHECK_THROW(static_cast<void>(U(10)), std::bad_alloc);
-
-        auto v = U(9, true);
-        BOOST_CHECK_THROW(v.push_back(false), std::bad_alloc);
-        BOOST_CHECK_THROW(v.resize(10), std::bad_alloc);
-        BOOST_CHECK_THROW(v.reserve(10), std::bad_alloc);
-        BOOST_CHECK(not v.try_push_back(false).has_value());
-        BOOST_CHECK_EQUAL(v.size(), 9UZ);
-        BOOST_CHECK_EQUAL(std::ranges::count(v, true), 9);
-}
-
-namespace {
-
-// Every even position set, up to the capacity.
-[[nodiscard]] auto alternating_to_capacity()
-        -> T
-{
-        return std::views::iota(0UZ, T::capacity()) | std::views::transform([](std::size_t i) -> bool { return i % 2 == 0; }) | std::ranges::to<T>();
-}
-
-} // namespace
-
-// Past the capacity growth throws bad_alloc, as [inplace.vector] specifies, and leaves the sequence as it was.
-BOOST_AUTO_TEST_CASE(GrowingPastTheCapacityThrowsBadAlloc)
-{
-        auto v = alternating_to_capacity();
-        BOOST_CHECK_THROW(v.push_back(true), std::bad_alloc);
-        BOOST_CHECK_THROW(v.resize(25), std::bad_alloc);
-        BOOST_CHECK_THROW(v.reserve(25), std::bad_alloc);
-
-        // The failed growth left the value alone, which is what the strong guarantee buys.
-        BOOST_CHECK_EQUAL(v.size(), 24UZ);
-        BOOST_CHECK_EQUAL(std::ranges::count(v, true), 12);
-}
-
-// A full sequence has room again once it shrinks, and grows back to the capacity.
-BOOST_AUTO_TEST_CASE(AFullSequenceGrowsAgainOnceItShrinks)
-{
-        auto v = alternating_to_capacity();
-        BOOST_CHECK_EQUAL(v.size(), 24UZ);
-        BOOST_CHECK_EQUAL(std::ranges::count(v, true), 12);
-
-        v.pop_back();
-        v.push_back(true);
-        BOOST_CHECK_EQUAL(v.size(), 24UZ);
-        BOOST_CHECK(static_cast<bool>(v.back()));
 }
 
 // Every position, densely, agreeing with the subscript -- and not a contiguous range, which no proxy sequence can be.

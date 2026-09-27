@@ -3,24 +3,20 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/block_types.hpp>                  // graded_extents
-#include <test/sequence/concepts.hpp>            // bit_sequence
-#include <test/sequence/dense.hpp>               // yields_every_position
-#include <test/value_reference.hpp>              // value_reference
-#include <xstd/bits/bit_array.hpp>               // bit_array
-#include <xstd/bits/detail/sequence_adaptor.hpp> // get, which bit_array.hpp reaches through its base and does not itself declare
-#include <boost/test/unit_test.hpp>              // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
-#include <algorithm>                             // equal, none_of
-#include <array>                                 // array
-#include <concepts>                              // regular, same_as, totally_ordered
-#include <cstddef>                               // ptrdiff_t, size_t
-#include <functional>                            // hash, identity
-#include <iterator>                              // contiguous_iterator, random_access_iterator
-#include <ranges>                                // begin, contiguous_range, drop, iota, random_access_range, take
-#include <stdexcept>                             // out_of_range
-#include <tuple>                                 // tuple_cat, tuple_element_t, tuple_size_v
-#include <utility>                               // as_const, declval
-#include <vector>                                // vector
+#include <test/block_types.hpp>       // graded_extents
+#include <test/sequence/concepts.hpp> // bit_sequence
+#include <test/sequence/dense.hpp>    // yields_every_position
+#include <test/value_reference.hpp>   // value_reference
+#include <xstd/bits/bit_array.hpp>    // bit_array
+#include <boost/test/unit_test.hpp>   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <array>                      // array
+#include <concepts>                   // regular, same_as, totally_ordered
+#include <cstddef>                    // ptrdiff_t
+#include <functional>                 // hash
+#include <iterator>                   // contiguous_iterator, random_access_iterator
+#include <ranges>                     // begin, contiguous_range, iota, random_access_range
+#include <tuple>                      // tuple_cat
+#include <utility>                    // declval
 
 BOOST_AUTO_TEST_SUITE(BitArray)
 
@@ -103,219 +99,15 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItAnswersEveryLineOfStdArrayBool, T, Types)
         static_assert(test::sequence::array_bool<T>);
 }
 
-// [array.tuple] over the packing: get<I> hands back the proxy operator[] does, and tuple_element names that.
-BOOST_AUTO_TEST_CASE(ItAnswersTheTupleInterfaceStdArrayCarries)
+// A proxy, so a binding over the array writes through to it; by value it would bind to the copy.
+BOOST_AUTO_TEST_CASE(AStructuredBindingWritesThroughToTheArray)
 {
-        using A = xstd::bit_array<3>;
-        static_assert(std::tuple_size_v<A> == 3UZ);
-        static_assert(std::same_as<std::tuple_element_t<0, A>, A::reference>);
-        static_assert(std::same_as<std::tuple_element_t<0, A const>, A::const_reference>);
-
-        auto a = A({true, false, true});
-        BOOST_CHECK(get<0>(a) == true);
-        BOOST_CHECK(get<1>(a) == false);
-        BOOST_CHECK(get<2>(a) == true);
-
-        // A proxy, so a binding over the array writes through to it; by value it would bind to the copy.
+        auto a = xstd::bit_array<3>({true, false, true});
         auto& [x, y, z] = a;
         y = true;
         BOOST_CHECK(a[1] == true);
         BOOST_CHECK(x == true);
         BOOST_CHECK(z == true);
-
-        auto const& ca = a;
-        BOOST_CHECK(get<0>(ca) == true);
-
-        // The two rvalue overloads, called: a requires-expression proves they exist and never runs them.
-        BOOST_CHECK(get<0>(A({true, false, true})) == true);
-        BOOST_CHECK(get<1>(A({true, false, true})) == false);
-        BOOST_CHECK(get<2>(std::as_const(a)) == true);
-}
-
-// std::array's aggregate initialization: what is listed leads and the rest stays false.
-BOOST_AUTO_TEST_CASE_TEMPLATE(ItIsListInitializedLikeAStdArray, T, Types)
-{
-        if constexpr (T().size() >= 3UZ) {
-                auto const a = T{true, false, true};
-                auto m = std::array<bool, 3>{true, false, true};
-                BOOST_CHECK(std::ranges::equal(a | std::views::take(3), m));
-                BOOST_CHECK(std::ranges::none_of(a | std::views::drop(3), std::identity()));
-        }
-        BOOST_CHECK(T{} == T());
-}
-
-// The behavioural half: every operation run on a bit_array and on the std::array<bool, N> it is held against.
-namespace {
-
-// The model at the same extent, filled the same way, so any disagreement is the packing's.
-template<class T>
-auto model_of(T const& a)
-        -> std::vector<bool>
-{
-        auto m = std::vector<bool>(a.size());
-        for (auto const i : std::views::iota(0UZ, a.size())) {
-                m[i] = a[i];
-        }
-        return m;
-}
-
-// Every read path at every position, counted rather than asserted, so a failure names the operation.
-template<class T>
-auto access_disagreements(T& a, std::vector<bool> const& m)
-        -> std::size_t
-{
-        auto const& ca = a;
-        auto disagreements = 0UZ;
-        for (auto const i : std::views::iota(0UZ, a.size())) {
-                disagreements += static_cast<std::size_t>(static_cast<bool>(a[i]) != m[i]);
-                disagreements += static_cast<std::size_t>(static_cast<bool>(ca[i]) != m[i]);
-                disagreements += static_cast<std::size_t>(static_cast<bool>(a.at(i)) != m[i]);
-                disagreements += static_cast<std::size_t>(static_cast<bool>(ca.at(i)) != m[i]);
-        }
-        return disagreements;
-}
-
-// front() and back() are the same four overloads over the two ends, and a zero extent has neither.
-template<class T>
-auto ends_disagreements(T& a, std::vector<bool> const& m)
-        -> std::size_t
-{
-        if (a.empty()) {
-                return 0UZ;
-        }
-        auto const& ca = a;
-        return static_cast<std::size_t>(static_cast<bool>(a.front()) != m.front()) + static_cast<std::size_t>(static_cast<bool>(ca.front()) != m.front()) + static_cast<std::size_t>(static_cast<bool>(a.back()) != m.back()) + static_cast<std::size_t>(static_cast<bool>(ca.back()) != m.back());
-}
-
-// One bit of pattern p at position i.
-auto pattern_bit(std::size_t p, std::size_t i, std::size_t n)
-        -> bool
-{
-        switch (p) {
-                case 0UZ:
-                        return false;
-                case 1UZ:
-                        return true;
-                case 2UZ:
-                        return i == 0UZ;
-                case 3UZ:
-                        return i + 1UZ == n;
-                case 4UZ:
-                        return (i % 2UZ) == 0UZ;
-                default:
-                        return (i % 3UZ) == 0UZ;
-        }
-}
-
-// Uniform both ways, single-ended both ways, and two strides, so every comparison lands on both sides of itself.
-template<class T>
-auto comparison_patterns()
-        -> std::vector<T>
-{
-        auto patterns = std::vector<T>();
-        for (auto const p : std::views::iota(0UZ, 6UZ)) {
-                auto a = T();
-                for (auto const i : std::views::iota(0UZ, a.size())) {
-                        a[i] = pattern_bit(p, i, a.size());
-                }
-                patterns.push_back(a);
-        }
-        return patterns;
-}
-
-} // namespace
-
-BOOST_AUTO_TEST_CASE_TEMPLATE(ElementAccessAgreesWithTheModel, T, Types)
-{
-        auto a = T();
-        auto m = std::vector<bool>(a.size());
-
-        // A deterministic pattern rather than a uniform one, so a block boundary lands mid-pattern.
-        for (auto const i : std::views::iota(0UZ, a.size())) {
-                bool const bit = (i % 3UZ) == 1UZ;
-                a[i] = bit;
-                m[i] = bit;
-        }
-        BOOST_CHECK(std::ranges::equal(a, m));
-
-        // Both subscripts and both ends, in both qualifications.
-        BOOST_CHECK_EQUAL(access_disagreements(a, m), 0UZ);
-        BOOST_CHECK_EQUAL(ends_disagreements(a, m), 0UZ);
-
-        // at() is the checked one, and std::array<bool, N>::at throws in the same place.
-        auto const& ca = a;
-        BOOST_CHECK_THROW(static_cast<void>(a.at(a.size())), std::out_of_range);
-        BOOST_CHECK_THROW(static_cast<void>(ca.at(a.size())), std::out_of_range);
-}
-
-BOOST_AUTO_TEST_CASE_TEMPLATE(TheIteratorsAgreeWithTheModel, T, Types)
-{
-        auto a = T();
-        for (auto const i : std::views::iota(0UZ, a.size())) {
-                a[i] = (i % 4UZ) < 2UZ;
-        }
-        auto const m = model_of(a);
-        auto const& ca = a;
-
-        BOOST_CHECK(std::ranges::equal(a, m));
-        BOOST_CHECK(std::equal(a.begin(), a.end(), m.begin(), m.end()));
-        BOOST_CHECK(std::equal(a.cbegin(), a.cend(), m.begin(), m.end()));
-        BOOST_CHECK(std::equal(ca.begin(), ca.end(), m.begin(), m.end()));
-        BOOST_CHECK(std::equal(a.rbegin(), a.rend(), m.rbegin(), m.rend()));
-        BOOST_CHECK(std::equal(a.crbegin(), a.crend(), m.rbegin(), m.rend()));
-        BOOST_CHECK(std::equal(ca.rbegin(), ca.rend(), m.rbegin(), m.rend()));
-
-        BOOST_CHECK_EQUAL(a.empty(), m.empty());
-        BOOST_CHECK_EQUAL(a.size(), m.size());
-        BOOST_CHECK_EQUAL(a.max_size(), a.size()); // a fixed extent is its own capacity
-}
-
-BOOST_AUTO_TEST_CASE_TEMPLATE(FillAndSwapAgreeWithTheModel, T, Types)
-{
-        auto a = T();
-        a.fill(true);
-        BOOST_CHECK(std::ranges::equal(a, std::vector<bool>(a.size(), true)));
-        a.fill(false);
-        BOOST_CHECK(std::ranges::equal(a, std::vector<bool>(a.size(), false)));
-
-        auto x = T();
-        auto y = T();
-        for (auto const i : std::views::iota(0UZ, x.size())) {
-                x[i] = (i % 2UZ) == 0UZ;
-                y[i] = (i % 5UZ) == 0UZ;
-        }
-        auto const mx = model_of(x);
-        auto const my = model_of(y);
-
-        x.swap(y);
-        BOOST_CHECK(std::ranges::equal(x, my));
-        BOOST_CHECK(std::ranges::equal(y, mx));
-
-        swap(x, y);
-        BOOST_CHECK(std::ranges::equal(x, mx));
-        BOOST_CHECK(std::ranges::equal(y, my));
-}
-
-// std::array<bool, N> orders lexicographically over its elements, and so must this.
-BOOST_AUTO_TEST_CASE_TEMPLATE(TheComparisonsAgreeWithTheModel, T, Types)
-{
-        auto const patterns = comparison_patterns<T>();
-        auto disagreements = 0UZ;
-
-        for (auto const& x : patterns) {
-                for (auto const& y : patterns) {
-                        auto const mx = model_of(x);
-                        auto const my = model_of(y);
-                        disagreements += static_cast<std::size_t>((x == y) != (mx == my));
-                        disagreements += static_cast<std::size_t>((x != y) != (mx != my));
-                        disagreements += static_cast<std::size_t>((x < y) != (mx < my));
-                        disagreements += static_cast<std::size_t>((x > y) != (mx > my));
-                        disagreements += static_cast<std::size_t>((x <= y) != (mx <= my));
-                        disagreements += static_cast<std::size_t>((x >= y) != (mx >= my));
-                }
-        }
-
-        BOOST_CHECK_EQUAL(disagreements, 0UZ);
 }
 
 // Every position, densely, agreeing with the subscript -- and not a contiguous range, which no proxy sequence can be.

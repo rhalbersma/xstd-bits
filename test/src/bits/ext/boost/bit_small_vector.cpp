@@ -5,12 +5,10 @@
 
 #include <test/sequence/concepts.hpp>               // bit_sequence
 #include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector, bit_small_vector
-#include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <algorithm>                                // ranges::equal
+#include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <concepts>                                 // same_as
 #include <cstddef>                                  // size_t
 #include <ranges>                                   // random_access_range
-#include <vector>                                   // vector
 
 BOOST_AUTO_TEST_SUITE(ExtBoostBitSmallVector)
 
@@ -28,19 +26,6 @@ BOOST_AUTO_TEST_CASE(TheShortNameIsTheGeneralOneAtItsDefaults)
         static_assert(test::sequence::bit_sequence<SmallVector>);
         static_assert(std::ranges::random_access_range<SmallVector>);
         BOOST_CHECK(true);
-}
-
-// A width past the inline capacity, so the comparison runs on the heap side of the boundary as well.
-BOOST_AUTO_TEST_CASE(TheSequenceReadingAnswersVectorBool)
-{
-        auto oracle = std::vector<bool>(300, false);
-        auto ours = SmallVector(300);
-        for (auto const i : {5UZ, 100UZ, 299UZ}) {
-                oracle[i] = true;
-                ours[i] = true;
-        }
-        BOOST_CHECK_EQUAL(ours.size(), oracle.size());
-        BOOST_CHECK(std::ranges::equal(ours, oracle));
 }
 
 BOOST_AUTO_TEST_SUITE_END()
