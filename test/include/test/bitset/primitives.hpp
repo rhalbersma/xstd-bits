@@ -202,6 +202,9 @@ struct string_constructor
                 }
                 if constexpr (requires { X(std::string_view(str)); }) {
                         BOOST_CHECK(X(std::string_view(str)) == x);
+                }
+                // Boost's string_view constructor takes a bit count second; only the standard's position form is asked.
+                if constexpr (requires (std::string_view text, std::size_t count) { X(text, count, count); }) {
                         BOOST_CHECK(X(std::string_view(padded), 2, n) == x);
                 }
         }
