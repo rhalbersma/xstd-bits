@@ -22,7 +22,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheBitwiseOperatorsHoldOnAnEmptyPair, T, test::spe
         on0::empty_set_pair<T>(op_bit_xor());
 }
 
-// A static width is std::bitset's extraction; boost::dynamic_bitset's reads as much as there is and is not checked.
+// A read that stores nothing fails; boost::dynamic_bitset's own extraction is not checked.
 BOOST_AUTO_TEST_CASE_TEMPLATE(ExtractionSetsFailbitWhenNothingIsStored, T, test::spec::bitset::every_width)
 {
         op_istream_failure<T>()();

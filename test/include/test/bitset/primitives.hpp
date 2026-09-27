@@ -837,25 +837,47 @@ struct op_istream_failure
         auto operator()() const noexcept // NOLINT(bugprone-exception-escape)
         {
                 if constexpr (fixed_string_view_constructible<X>) {
-                        constexpr auto N = X().size();
-                        for (auto const* input : {"", "2"}) {
-                                auto const exhausted = *input == '\0';
-                                auto is = std::istringstream(input);
-                                auto x = X();
-                                is >> x;
-                                BOOST_CHECK(x.none());
-                                BOOST_CHECK_EQUAL(is.fail(), exhausted or N > 0); // [istream.formatted.reqmts], then [bitset.operators]/6
-                        }
+                        at_static_width();
+                } else if constexpr (dynamic_string_view_constructible<X>) {
+                        at_run_time_width();
+                }
+        }
 
-                        // Fewer digits than N: the loop stops on eof, and x = X(str) puts what was read low.
-                        if constexpr (N > 1) {
-                                auto is = std::istringstream("1");
-                                auto x = X();
-                                is >> x;
-                                BOOST_CHECK(not is.fail());
-                                BOOST_CHECK_EQUAL(x.count(), 1UZ);
-                                BOOST_CHECK(x.test(0)); // [bitset.operators]/5
-                        }
+private:
+        static auto at_static_width()
+                -> void
+        {
+                constexpr auto N = X().size();
+                for (auto const* input : {"", "2"}) {
+                        auto const exhausted = *input == '\0';
+                        auto is = std::istringstream(input);
+                        auto x = X();
+                        is >> x;
+                        BOOST_CHECK(x.none());
+                        BOOST_CHECK_EQUAL(is.fail(), exhausted or N > 0); // [istream.formatted.reqmts], then [bitset.operators]/6
+                }
+
+                // Fewer digits than N: the loop stops on eof, and x = X(str) puts what was read low.
+                if constexpr (N > 1) {
+                        auto is = std::istringstream("1");
+                        auto x = X();
+                        is >> x;
+                        BOOST_CHECK(not is.fail());
+                        BOOST_CHECK_EQUAL(x.count(), 1UZ);
+                        BOOST_CHECK(x.test(0)); // [bitset.operators]/5
+                }
+        }
+
+        // A run-time width reads every digit there is, and none is still a failed read.
+        static auto at_run_time_width()
+                -> void
+        {
+                for (auto const* input : {"", "2"}) {
+                        auto is = std::istringstream(input);
+                        auto x = X();
+                        is >> x;
+                        BOOST_CHECK_EQUAL(x.size(), 0UZ);
+                        BOOST_CHECK(is.fail());
                 }
         }
 };
