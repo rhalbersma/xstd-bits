@@ -11,8 +11,10 @@
 #include <cstddef>                    // size_t
 
 BOOST_AUTO_TEST_SUITE(Spec)
+BOOST_AUTO_TEST_SUITE(Utilities)
 BOOST_AUTO_TEST_SUITE(Bitset)
-BOOST_AUTO_TEST_SUITE(Members)
+BOOST_AUTO_TEST_SUITE(TemplateBitset)
+BOOST_AUTO_TEST_SUITE(BitsetMembers)
 
 using namespace test::bitset;
 
@@ -216,6 +218,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheWholeBitsetMembersObserversAndConversionsHoldOv
         });
 }
 
+BOOST_AUTO_TEST_SUITE_END()
+BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()

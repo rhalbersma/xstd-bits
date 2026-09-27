@@ -10,6 +10,7 @@
 #include <boost/test/unit_test.hpp>   // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 
 BOOST_AUTO_TEST_SUITE(Spec)
+BOOST_AUTO_TEST_SUITE(Utilities)
 BOOST_AUTO_TEST_SUITE(Bitset)
 BOOST_AUTO_TEST_SUITE(Hash)
 
@@ -31,6 +32,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(EqualBitsetsHashEqualOverRandomPairs, T, test::spe
         test::spec::random::all_bitset_pairs<T>(op_hash());
 }
 
+BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()

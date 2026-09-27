@@ -12,8 +12,10 @@
 #include <array>                      // array
 
 BOOST_AUTO_TEST_SUITE(Spec)
+BOOST_AUTO_TEST_SUITE(Utilities)
 BOOST_AUTO_TEST_SUITE(Bitset)
-BOOST_AUTO_TEST_SUITE(Cons)
+BOOST_AUTO_TEST_SUITE(TemplateBitset)
+BOOST_AUTO_TEST_SUITE(BitsetCons)
 
 using namespace test::bitset;
 
@@ -54,6 +56,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheBitStringOfRandomBitsetsConstructsThem, T, test
         test::spec::random::all_bitsets<T>(string_constructor<T>());
 }
 
+BOOST_AUTO_TEST_SUITE_END()
+BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()

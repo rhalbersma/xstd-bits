@@ -12,8 +12,9 @@
 #include <utility>                  // as_const
 
 BOOST_AUTO_TEST_SUITE(Spec)
-BOOST_AUTO_TEST_SUITE(Associative)
-BOOST_AUTO_TEST_SUITE(Reqmts)
+BOOST_AUTO_TEST_SUITE(Containers)
+BOOST_AUTO_TEST_SUITE(ContainerRequirements)
+BOOST_AUTO_TEST_SUITE(AssociativeReqmts)
 BOOST_AUTO_TEST_SUITE(General)
 
 using namespace test;
@@ -171,6 +172,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(RandomKeysInsertEraseAndAreLookedUp, T, test::spec
         }
 }
 
+BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()
