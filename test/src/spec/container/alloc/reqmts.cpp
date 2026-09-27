@@ -5,7 +5,9 @@
 
 #include <test/set/concepts.hpp>                 // set_size_t_allocator, set_size_t_ranges_allocator
 #include <xstd/bits/bit_set.hpp>                 // basic_bit_set, bit_set
+#include <xstd/bits/dynamic_bitset.hpp>          // basic_dynamic_bitset
 #include <xstd/bits/ext/boost/bit_small_set.hpp> // basic_bit_small_set
+#include <xstd/bits/ext/boost/small_bitset.hpp>  // basic_small_bitset
 #include <boost/test/unit_test.hpp>              // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <array>                                 // array
 #include <concepts>                              // same_as
@@ -129,6 +131,12 @@ struct user_allocator<xstd::basic_bit_small_set<Block, N, Allocator>>
         using type = Allocator;
 };
 
+template<class Block, std::size_t N, class Allocator>
+struct user_allocator<xstd::basic_small_bitset<Block, N, Allocator>>
+{
+        using type = Allocator;
+};
+
 template<class X>
 [[nodiscard]] auto allocator(int tag)
         -> X::allocator_type
@@ -141,6 +149,19 @@ template<class X>
         -> std::array<std::vector<std::size_t>, 2>
 {
         return {{{1, 2, 3}, {0, 100, 1000}}};
+}
+
+// The allocator-aware bitsets, whose model boost::dynamic_bitset has no allocator-extended copy or move.
+template<template<class> class Allocator>
+using bitset_allocator_aware = std::tuple<xstd::basic_dynamic_bitset<std::uint8_t, Allocator<std::uint8_t>>, xstd::basic_dynamic_bitset<std::uint64_t, Allocator<std::uint64_t>>, xstd::basic_small_bitset<std::uint8_t, 9, Allocator<std::uint8_t>>, xstd::basic_small_bitset<std::uint64_t, 64, Allocator<std::uint64_t>>>;
+
+using BitsetTypes = decltype(std::tuple_cat(std::declval<bitset_allocator_aware<propagating>>(), std::declval<bitset_allocator_aware<non_propagating>>(), std::declval<bitset_allocator_aware<std::pmr::polymorphic_allocator>>()));
+
+// A width inside the small bitset's inline blocks, and one that spills it onto the heap.
+[[nodiscard]] auto widths()
+        -> std::array<std::size_t, 2>
+{
+        return {9, 1000};
 }
 
 } // namespace
@@ -245,6 +266,91 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(SwapExchangesTheAllocatorsWhereTheTraitsSaySo, T, 
         }
 }
 
+BOOST_AUTO_TEST_CASE_TEMPLATE(ABitsetsAllocatorExtendedConstructorUsesTheAllocatorGiven, T, BitsetTypes)
+{
+        static_assert(std::same_as<decltype(std::declval<T const&>().get_allocator()), typename T::allocator_type>);
+        auto const m = allocator<T>(1);
+
+        auto const u = T(m);
+        BOOST_CHECK(u.empty());
+        BOOST_CHECK(u.get_allocator() == m);
+
+        for (auto const n : widths()) {
+                auto const t = T(n, 5ULL, allocator<T>(0));
+
+                auto const counted = T(n, 5ULL, m);
+                BOOST_CHECK(counted == t);
+                BOOST_CHECK(counted.get_allocator() == m);
+
+                auto const copy = T(t, m);
+                BOOST_CHECK(copy == t);
+                BOOST_CHECK(copy.get_allocator() == m);
+
+                auto rv = t;
+                auto const moved = T(std::move(rv), m);
+                BOOST_CHECK(moved == t);
+                BOOST_CHECK(moved.get_allocator() == m);
+        }
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(ABitsetsCopyAndMoveConstructionTakeTheAllocatorTheTraitsSay, T, BitsetTypes)
+{
+        using traits = std::allocator_traits<typename T::allocator_type>;
+        for (auto const n : widths()) {
+                auto const t = T(n, 5ULL, allocator<T>(1));
+
+                auto const copy = t; // NOLINT(performance-unnecessary-copy-initialization): the copy constructor is what is under test
+                BOOST_CHECK(copy == t);
+                BOOST_CHECK(copy.get_allocator() == traits::select_on_container_copy_construction(t.get_allocator()));
+
+                auto rv = T(t, t.get_allocator());
+                auto const moved = T(std::move(rv));
+                BOOST_CHECK(moved == t);
+                BOOST_CHECK(moved.get_allocator() == t.get_allocator());
+        }
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(ABitsetsAssignmentPropagatesTheAllocatorWhereTheTraitsSaySo, T, BitsetTypes)
+{
+        using traits = std::allocator_traits<typename T::allocator_type>;
+        auto const a = allocator<T>(0);
+        auto const b = allocator<T>(1);
+        for (auto const n : widths()) {
+                auto const source = T(n, 5ULL, b);
+
+                auto copied = T(3, 1ULL, a);
+                copied = source;
+                BOOST_CHECK(copied == source);
+                BOOST_CHECK(copied.get_allocator() == (traits::propagate_on_container_copy_assignment::value ? b : a));
+
+                auto rv = source;
+                auto moved = T(3, 1ULL, a);
+                moved = std::move(rv);
+                BOOST_CHECK(moved == source);
+                BOOST_CHECK(moved.get_allocator() == (traits::propagate_on_container_move_assignment::value ? b : a));
+        }
+}
+
+// Swapping unequal allocators that do not propagate is undefined, so those are swapped under one allocator.
+BOOST_AUTO_TEST_CASE_TEMPLATE(ABitsetsSwapExchangesTheAllocatorsWhereTheTraitsSaySo, T, BitsetTypes)
+{
+        using traits = std::allocator_traits<typename T::allocator_type>;
+        auto const a = allocator<T>(0);
+        auto const b = traits::propagate_on_container_swap::value ? allocator<T>(1) : a;
+        for (auto const n : widths()) {
+                auto x = T(n, 5ULL, a);
+                auto y = T(3, 1ULL, b);
+                auto const x1 = x;
+                auto const y1 = y;
+                x.swap(y);
+                BOOST_CHECK(x == y1 and y == x1);
+                BOOST_CHECK(x.get_allocator() == b and y.get_allocator() == a);
+                swap(x, y);
+                BOOST_CHECK(x == x1 and y == y1);
+                BOOST_CHECK(x.get_allocator() == a and y.get_allocator() == b);
+        }
+}
+
 // A memory_resource* converts to the polymorphic allocator, as [container.alloc.reqmts] has it.
 BOOST_AUTO_TEST_CASE(AMemoryResourceConvertsToThePolymorphicAllocator)
 {
@@ -254,6 +360,10 @@ BOOST_AUTO_TEST_CASE(AMemoryResourceConvertsToThePolymorphicAllocator)
         auto const s = pmr_bit_set({1, 2}, &mr);
         BOOST_CHECK(s.get_allocator().resource() == &mr);
         BOOST_CHECK_EQUAL(s.size(), 2UZ);
+
+        using pmr_dynamic_bitset = xstd::basic_dynamic_bitset<std::size_t, std::pmr::polymorphic_allocator<std::size_t>>;
+        auto const b = pmr_dynamic_bitset(&mr);
+        BOOST_CHECK(b.get_allocator().resource() == &mr);
 }
 
 // Uses-allocator construction: an allocator-aware container hands each element its own allocator, converted.
@@ -265,6 +375,12 @@ BOOST_AUTO_TEST_CASE(AnAllocatorAwareContainerPassesItsAllocatorOn)
 
         sets.emplace_back();
         BOOST_CHECK(sets.back().get_allocator().resource() == &mr);
+
+        using pmr_dynamic_bitset = xstd::basic_dynamic_bitset<std::size_t, std::pmr::polymorphic_allocator<std::size_t>>;
+        auto bitsets = std::pmr::vector<pmr_dynamic_bitset>(&mr);
+
+        bitsets.emplace_back();
+        BOOST_CHECK(bitsets.back().get_allocator().resource() == &mr);
 }
 
 // A rebound std::allocator converts, as it does for std::set.

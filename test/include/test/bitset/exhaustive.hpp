@@ -6,11 +6,14 @@
 #ifndef TEST_BITSET_EXHAUSTIVE_HPP
 #define TEST_BITSET_EXHAUSTIVE_HPP
 
-#include <test/bitset/factory.hpp> // make_bitset
-#include <test/dynamic.hpp>        // dynamic
-#include <algorithm>               // max
-#include <cassert>                 // assert
-#include <ranges>                  // iota
+#include <test/bitset/factory.hpp>        // make_bitset
+#include <test/dynamic.hpp>               // dynamic
+#include <test/set/exhaustive.hpp>        // static_capacity
+#include <xstd/bits/detail/ownership.hpp> // owned_storage
+#include <algorithm>                      // max, min
+#include <cassert>                        // assert
+#include <cstddef>                        // size_t
+#include <ranges>                         // iota
 
 #ifdef _MSC_VER
 
@@ -21,8 +24,17 @@
 
 namespace test::bitset {
 
-template<class X, auto Limit>
-inline constexpr auto limit_v = dynamic<X> ? Limit : X().size();
+// A static width is its own limit, a capacity caps the sweep's, and an unbounded run-time width takes the sweep's.
+template<class X, std::size_t Limit>
+inline constexpr auto limit_v = [] -> std::size_t {
+        if constexpr (not dynamic<X>) {
+                return X().size();
+        } else if constexpr (test::set::static_capacity<X>) {
+                return std::ranges::min(xstd::bits::detail::owned_storage<X>::bits_type::static_capacity(), Limit);
+        } else {
+                return Limit;
+        }
+}();
 
 inline constexpr auto L0 = 128UZ;
 inline constexpr auto L1 = 64UZ;
