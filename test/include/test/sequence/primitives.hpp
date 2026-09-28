@@ -600,7 +600,7 @@ inline constexpr auto is_std_vector_bool_v = false;
 template<class Allocator>
 inline constexpr auto is_std_vector_bool_v<std::vector<bool, Allocator>> = true;
 
-#if defined(_MSVC_STL_VERSION)
+#ifdef _MSVC_STL_VERSION
 
 // MSVC's vector<bool>::reserve allocates the words for n unchecked, where [vector.capacity]/5 throws length_error.
 inline constexpr auto std_vector_bool_reserve_checks_max_size = false;
@@ -624,13 +624,35 @@ struct mem_reserve
                 if (n <= a.max_size()) {
                         b.reserve(n);
                         BOOST_CHECK_GE(b.capacity(), n); // [vector.capacity]/4
-                } else if constexpr (reserve_checks_max_size<X>) {
-                        BOOST_CHECK_THROW(b.reserve(n), std::length_error); // [vector.capacity]/5
-                } else if constexpr (not has_address_sanitizer) {
-                        // No allocator serves that many words, and AddressSanitizer aborts on the request.
-                        BOOST_CHECK_THROW(b.reserve(n), std::bad_alloc);
+                } else {
+                        past_max_size(b, n);
                 }
                 BOOST_CHECK(b == a); // [vector.capacity]/7
+        }
+
+private:
+        template<class X>
+        static auto past_max_size(X& b, std::size_t n)
+                -> void
+        {
+                if constexpr (reserve_checks_max_size<X>) {
+                        throws_length_error(b, n);
+                } else if constexpr (not has_address_sanitizer) {
+                        // No allocator serves that many words, and AddressSanitizer aborts on the request.
+                        throws_bad_alloc(b, n);
+                }
+        }
+
+        static auto throws_length_error(auto& b, std::size_t n)
+                -> void
+        {
+                BOOST_CHECK_THROW(b.reserve(n), std::length_error); // [vector.capacity]/5
+        }
+
+        static auto throws_bad_alloc(auto& b, std::size_t n)
+                -> void
+        {
+                BOOST_CHECK_THROW(b.reserve(n), std::bad_alloc);
         }
 };
 
