@@ -15,6 +15,7 @@
 #include <functional>               // hash, identity, less
 #include <initializer_list>         // initializer_list
 #include <iterator>                 // back_inserter, distance, empty, iter_difference_t, iter_value_t, next, prev, reverse_iterator, size, ssize
+#include <limits>                   // numeric_limits
 #include <ranges>                   // count, equal, find, lexicographical_compare, lower_bound, , subrange, upper_bound
 #include <set>                      // erase_if, set
 #include <type_traits>              // add_const_t, common_type_t, make_signed_t, remove_reference_t
@@ -796,7 +797,12 @@ struct counted
         [[nodiscard]] static auto bound(auto const& a, auto const& b)
                 -> std::size_t
         {
+#if defined(_ITERATOR_DEBUG_LEVEL) && _ITERATOR_DEBUG_LEVEL == 2
+                // MSVC's debug-mode STL spends comparisons of its own verifying that both inputs are sorted.
+                return std::numeric_limits<std::size_t>::max();
+#else
                 return std::max(2UZ * (a.size() + b.size()), 1UZ) - 1UZ;
+#endif
         }
 };
 
