@@ -480,6 +480,15 @@ public:
         {
                 if constexpr (blittable<std::remove_cvref_t<R>>) {
                         blit(rg.bits(), rg.offset(), rg.size());
+                } else if constexpr (has_static_capacity and not std::ranges::sized_range<R>) {
+                        // [inplace.vector.modifiers]/3: an unsized range finds the capacity by overrunning it, so undo.
+                        auto const n = size();
+                        try {
+                                pack(std::forward<R>(rg));
+                        } catch (...) {
+                                m_bits.resize(n);
+                                throw;
+                        }
                 } else {
                         pack(std::forward<R>(rg));
                 }
@@ -490,6 +499,7 @@ public:
         constexpr auto assign_range(R&& rg)
                 -> void
         {
+                // [sequence.reqmts] gives assign_range no no-effects remark, so an overflow leaves what was appended.
                 m_bits.clear();
                 append_range(std::forward<R>(rg));
         }

@@ -6,22 +6,29 @@
 #ifndef TEST_SEQUENCE_PRIMITIVES_HPP
 #define TEST_SEQUENCE_PRIMITIVES_HPP
 
+#include <test/inplace_vector.hpp>   // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
 #include <test/sanitizer.hpp>        // has_address_sanitizer
 #include <test/sequence/factory.hpp> // model_of, static_width
 #include <boost/test/unit_test.hpp>  // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_GE, BOOST_CHECK_NE, BOOST_CHECK_THROW
-#include <algorithm>                 // ranges::count
+#include <algorithm>                 // ranges::count, ranges::equal
 #include <concepts>                  // convertible_to, derived_from, same_as, unsigned_integral
 #include <cstddef>                   // ptrdiff_t, size_t
 #include <format>                    // format, formattable
 #include <initializer_list>          // initializer_list
-#include <iterator>                  // forward_iterator, iter_value_t, iterator_traits, prev, random_access_iterator_tag, reverse_iterator
+#include <iterator>                  // forward_iterator, input_iterator_tag, iter_value_t, iterator_traits, prev, random_access_iterator_tag, reverse_iterator
 #include <new>                       // bad_alloc
-#include <ranges>                    // begin, end, filter, forward_range, from_range, from_range_t, iota, transform
+#include <ranges>                    // begin, end, filter, forward_range, from_range, from_range_t, iota, subrange, take, transform
 #include <stdexcept>                 // length_error, out_of_range
 #include <string>                    // string
 #include <string_view>               // string_view
 #include <utility>                   // move
 #include <vector>                    // erase_if, vector
+
+#ifdef TEST_HAS_INPLACE_VECTOR
+
+#include <inplace_vector> // inplace_vector
+
+#endif
 
 namespace test::sequence {
 
@@ -712,6 +719,181 @@ struct mem_insert_past_capacity
                 check_counted_past_capacity(b, more);
                 check_ranged_past_capacity(b, more);
                 BOOST_CHECK(b == a); // [inplace.vector.modifiers]/3
+        }
+};
+
+// An iterator over the bools that admits to input and nothing more, so a container gets exactly one pass.
+class single_pass_iterator
+{
+public:
+        using iterator_concept = std::input_iterator_tag;
+        using iterator_category = std::input_iterator_tag;
+        using value_type = bool;
+        using difference_type = std::ptrdiff_t;
+        using pointer = void;
+        using reference = bool;
+
+        single_pass_iterator() = default;
+
+        explicit single_pass_iterator(std::vector<bool>::const_iterator it)
+                : m_it(it)
+        {}
+
+        [[nodiscard]] auto operator*() const
+                -> bool
+        {
+                return *m_it;
+        }
+
+        auto operator++()
+                -> single_pass_iterator&
+        {
+                ++m_it;
+                return *this;
+        }
+
+        auto operator++(int)
+                -> single_pass_iterator
+        {
+                auto const old = *this;
+                ++m_it;
+                return old;
+        }
+
+        [[nodiscard]] friend auto operator==(single_pass_iterator const&, single_pass_iterator const&) -> bool = default;
+
+private:
+        std::vector<bool>::const_iterator m_it;
+};
+
+// The bools as an input range with no size, whose count a container learns only by reaching its end.
+[[nodiscard]] inline auto single_pass(std::vector<bool> const& v)
+{
+        return std::ranges::subrange(single_pass_iterator(v.cbegin()), single_pass_iterator(v.cend()));
+}
+
+// The bools as a forward range with no size, which a container may count by walking it before it writes.
+[[nodiscard]] inline auto unsized_forward(std::vector<bool> const& v)
+{
+        return v | std::views::filter([](bool) -> bool { return true; });
+}
+
+template<class X>
+inline constexpr auto is_std_inplace_vector_v = false;
+
+#ifdef TEST_HAS_INPLACE_VECTOR
+
+template<std::size_t N>
+inline constexpr auto is_std_inplace_vector_v<std::inplace_vector<bool, N>> = true;
+
+#endif
+
+#ifdef __GLIBCXX__
+
+// libstdc++ fills a single pass up to the capacity and then throws, where [inplace.vector.modifiers]/3 has no effects.
+inline constexpr auto std_inplace_vector_single_pass_has_no_effects = false;
+
+#else
+
+inline constexpr auto std_inplace_vector_single_pass_has_no_effects = true;
+
+#endif
+
+template<class X>
+concept single_pass_overflow_has_no_effects = std_inplace_vector_single_pass_has_no_effects or not is_std_inplace_vector_v<X>;
+
+// No effects where the library gives them, and the weaker remainder of [inplace.vector.modifiers]/3 where not.
+template<class X>
+auto check_single_pass_left_alone(X const& a, X const& b) -> void
+{
+        if constexpr (single_pass_overflow_has_no_effects<X>) {
+                BOOST_CHECK(b == a);
+        } else {
+                BOOST_CHECK_GE(b.size(), a.size());
+                BOOST_CHECK(std::ranges::equal(a, b | std::views::take(a.size())));
+        }
+}
+
+// A single pass one past the room, in place at position p: the throw comes only once the capacity is overrun.
+template<class X>
+auto check_single_pass_past_capacity(X const& a, std::size_t p, std::vector<bool> const& more) -> void // NOLINT(bugprone-exception-escape)
+{
+        auto b = a;
+        BOOST_CHECK_THROW(b.insert(nth(b, p), single_pass_iterator(more.cbegin()), single_pass_iterator(more.cend())), std::bad_alloc);
+        check_single_pass_left_alone(a, b);
+        if constexpr (requires { b.insert_range(nth(b, p), single_pass(more)); }) {
+                auto c = a;
+                BOOST_CHECK_THROW(c.insert_range(nth(c, p), single_pass(more)), std::bad_alloc);
+                check_single_pass_left_alone(a, c);
+        }
+}
+
+// The same overrun from a forward range with no size, which every library can count before writing.
+template<class X>
+auto check_unsized_forward_past_capacity(X const& a, std::size_t p, std::vector<bool> const& more) -> void // NOLINT(bugprone-exception-escape)
+{
+        if constexpr (requires (X& b) { b.insert_range(nth(b, p), unsized_forward(more)); }) {
+                auto b = a;
+                BOOST_CHECK_THROW(b.insert_range(nth(b, p), unsized_forward(more)), std::bad_alloc);
+                BOOST_CHECK(b == a);
+        }
+}
+
+// At the end, where append_range is the door as well as insert_range.
+template<class X>
+auto check_single_pass_append_past_capacity(X const& a, std::vector<bool> const& more) -> void // NOLINT(bugprone-exception-escape)
+{
+        if constexpr (requires (X& b) { b.append_range(single_pass(more)); }) {
+                auto b = a;
+                BOOST_CHECK_THROW(b.append_range(single_pass(more)), std::bad_alloc);
+                check_single_pass_left_alone(a, b);
+        }
+}
+
+template<class X>
+auto check_unsized_forward_append_past_capacity(X const& a, std::vector<bool> const& more) -> void // NOLINT(bugprone-exception-escape)
+{
+        if constexpr (requires (X& b) { b.append_range(unsized_forward(more)); }) {
+                auto b = a;
+                BOOST_CHECK_THROW(b.append_range(unsized_forward(more)), std::bad_alloc);
+                BOOST_CHECK(b == a);
+        }
+}
+
+// Exactly the room from a single pass fits, in place at position p or at the end.
+template<class X>
+auto check_single_pass_fits(X const& a, std::size_t p, std::vector<bool> const& fits) -> void
+{
+        auto const m = spliced(model_of(a), p, fits);
+        auto b = a;
+        b.insert(nth(b, p), single_pass_iterator(fits.cbegin()), single_pass_iterator(fits.cend()));
+        BOOST_CHECK(model_of(b) == m);
+        if constexpr (requires { b.insert_range(nth(b, p), single_pass(fits)); }) {
+                auto c = a;
+                c.insert_range(nth(c, p), single_pass(fits));
+                BOOST_CHECK(model_of(c) == m);
+                auto d = a;
+                d.append_range(single_pass(fits));
+                BOOST_CHECK(model_of(d) == spliced(model_of(a), a.size(), fits));
+        }
+}
+
+// [inplace.vector.modifiers]/1-3 from ranges with no size: up to the room they fit, and one past it has no effect.
+struct mem_insert_unsized_past_capacity
+{
+        template<class X>
+        auto operator()(X const& a) const
+        {
+                auto const room = a.max_size() - a.size();
+                auto const fits = alternating(room);
+                auto const more = alternating(room + 1UZ);
+                for (auto const p : std::views::iota(0UZ, a.size() + 1UZ)) {
+                        check_single_pass_fits(a, p, fits);
+                        check_single_pass_past_capacity(a, p, more);
+                        check_unsized_forward_past_capacity(a, p, more);
+                }
+                check_single_pass_append_past_capacity(a, more);
+                check_unsized_forward_append_past_capacity(a, more);
         }
 };
 
