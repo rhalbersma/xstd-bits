@@ -1501,6 +1501,20 @@ The same folding is why lambdas capture by reference throughout rather than nami
 static width the compiler folds those to constants, and naming something usable in a constant expression is
 what `-Wunused-lambda-capture` reports.
 
+### the-audit
+
+The clauses under `test/src/spec/` cite the paragraphs they check, which is a numerator. `doc/audit/` holds the
+denominator: one file per audited specification, pinned to the draft commit it was read from, with a row for
+every numbered paragraph of every leaf clause, saying which element it states and what the tests do with it:
+`answered` where a test cites it, `declined` or `forced` where a note says why not or what instead,
+`no-requirement` for text with nothing to test, and `gap` for what is testable and not yet cited.
+
+`python3 tools/audit.py` reads every table there and every citation under `test/`, lists and ranges expanded,
+and fails on an answered row nothing cites, a cited paragraph with no row, an unexplained `declined`, `forced`
+or `no-requirement`, one that a test cites all the same, and any `gap` unless given `--allow-gaps`. It prints
+the numerator against the denominator per clause, and the Audit workflow runs it on every pull request. When the
+draft moves, re-pin the file, renumber the rows, and let the checker name the citations left behind.
+
 ## Views and containers
 
 ### the-three-adaptors
@@ -3180,7 +3194,7 @@ Nor a `const_reference` proxy
 from the const subscript, libc++'s way: `auto x = cb[i]` would change type and could dangle, and a strict
 extension re-types nothing.
 
-Extraction is `[bitset.operators]/6` at both widths: the characters read become `x = bitset_adaptor(str)`,
+Extraction is `[bitset.operators]/5` at both widths: the characters read become `x = bitset_adaptor(str)`,
 so a short read lands in the low positions, and a run-time width becomes the count of characters read,
 as boost's does. The static width reads at most `size()` characters; the run-time width reads to the first
 character that is neither `0` nor `1`.
@@ -3945,7 +3959,7 @@ reach a proxy only through them, and it is where `vector<bool>` historically fel
 overloads on the proxy are the pre-ranges spelling of the same thing, for `std::sort` and everything else
 still built on `std::iter_swap`. `format_as` is fmt's protocol in the same sense.
 
-The sequence proxy borrows nothing else from `[bitset.refs]`: no `flip()` and no `operator~`. Those belong to
+The sequence proxy borrows nothing else from `[template.bitset.general]`: no `flip()` and no `operator~`. Those belong to
 the bitset reading, whose `reference` is its own class.
 
 ### formatting-the-proxies
@@ -4637,7 +4651,7 @@ widen it:
   an exact match where that one needs a conversion, so it would win for `bitset<32> b(5u)` — and
   being explicit, it would make `bitset<32> b = 5u` ill-formed, which compiles today.
 - `to_ullong()` **throws** `overflow_error` where a set position lies beyond the word
-  ([bitset.members]/34-37), where a byte copy would silently keep the low bits. Two contracts for one
+  ([bitset.members]/37-40), where a byte copy would silently keep the low bits. Two contracts for one
   conversion is a trap, and the standard's is the one this reading owes.
 
 So integers keep their door and `to_bits` opens the other one: `std::bitset<N>`, and any field of bits

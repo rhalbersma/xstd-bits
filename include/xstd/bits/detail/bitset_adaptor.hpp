@@ -92,10 +92,10 @@ public:
         using block_type = Bits::block_type;
         static constexpr std::size_t bits_per_block = Bits::bits_per_block;
 
-        // [bitset.refs], reaching the bits through the unchecked way in, with the flip and ~ the sequence proxy lacks.
+        // [template.bitset.general]'s proxy, the unchecked way in, with the flip and ~ the sequence proxy lacks.
         class reference
         {
-                // A pointer, not a reference, so the copy constructor stays defaulted as [bitset.refs] declares it.
+                // A pointer, so the defaulted copy refers to the same bit, as [template.bitset.general]/4 asks.
                 bitset_adaptor* m_ptr{};
                 std::size_t m_idx{};
 

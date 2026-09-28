@@ -365,7 +365,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItIsAsWideAsItsText, T, Dynamic)
         bad >> q;
         BOOST_CHECK(bad.fail());
 
-        // The text constructor's two throws, as [bitset.cons]/3-4 has them at a static width.
+        // The text constructor's two throws, as [bitset.cons]/7 has them at a static width.
         BOOST_CHECK_THROW(static_cast<void>(T(std::string("0101"), 5)), std::out_of_range);
         BOOST_CHECK_THROW(static_cast<void>(T(std::string("0x01"))), std::invalid_argument);
 }

@@ -778,7 +778,7 @@ BOOST_AUTO_TEST_CASE(TheDerivedMembersHold)
         BOOST_CHECK_EQUAL(Ours("1111", 2).count(), 2UZ);
 }
 
-// [bitset.cons]/2 and [bitset.members]/34-37: the word in and out, and the overflow beyond it.
+// [bitset.cons]/2 and [bitset.members]/37-40: the word in and out, and the overflow beyond it.
 BOOST_AUTO_TEST_CASE(TheWordConstructorAndConversionsAgreeWithStdBitset)
 {
         auto const s = std::bitset<9>(0b101ULL);
