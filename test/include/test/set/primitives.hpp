@@ -793,16 +793,22 @@ struct counted
                 };
         }
 
+#if defined(_ITERATOR_DEBUG_LEVEL) && _ITERATOR_DEBUG_LEVEL == 2
+        // MSVC's debug-mode STL spends comparisons of its own verifying that both inputs are sorted.
+        static constexpr auto library_verifies_order = true;
+#else
+        static constexpr auto library_verifies_order = false;
+#endif
+
         // At most 2 * (N1 + N2) - 1, and nothing at all for two empty ranges, where the formula leaves -1.
         [[nodiscard]] static auto bound(auto const& a, auto const& b)
                 -> std::size_t
         {
-#if defined(_ITERATOR_DEBUG_LEVEL) && _ITERATOR_DEBUG_LEVEL == 2
-                // MSVC's debug-mode STL spends comparisons of its own verifying that both inputs are sorted.
-                return std::numeric_limits<std::size_t>::max();
-#else
-                return std::max(2UZ * (a.size() + b.size()), 1UZ) - 1UZ;
-#endif
+                if constexpr (library_verifies_order) {
+                        return std::numeric_limits<std::size_t>::max();
+                } else {
+                        return std::max(2UZ * (a.size() + b.size()), 1UZ) - 1UZ;
+                }
         }
 };
 
