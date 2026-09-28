@@ -8,6 +8,7 @@
 #include <test/spec/container.hpp>  // all, objects
 #include <test/spec/input.hpp>      // context
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <concepts>                 // same_as
 
 BOOST_AUTO_TEST_SUITE(Spec)
 BOOST_AUTO_TEST_SUITE(Containers)
@@ -24,6 +25,7 @@ namespace inputs = test::spec::container::inputs;
 BOOST_AUTO_TEST_CASE(Size)
 {
         test::for_each_type<test::spec::container::all>([]<class T> -> void {
+                static_assert(requires (T const cc) { { cc.size() } -> std::same_as<typename T::size_type>; });
                 for (auto const [from, a] : inputs::objects<T>()) {
                         auto const on_failure = context(from, a);
                         mem_size()(a);
@@ -35,6 +37,7 @@ BOOST_AUTO_TEST_CASE(Size)
 BOOST_AUTO_TEST_CASE(MaxSize)
 {
         test::for_each_type<test::spec::container::all>([]<class T> -> void {
+                static_assert(requires (T const cc) { { cc.max_size() } -> std::same_as<typename T::size_type>; });
                 for (auto const [from, a] : inputs::objects<T>()) {
                         auto const on_failure = context(from, a);
                         mem_max_size()(a);
@@ -46,6 +49,7 @@ BOOST_AUTO_TEST_CASE(MaxSize)
 BOOST_AUTO_TEST_CASE(Empty)
 {
         test::for_each_type<test::spec::container::all>([]<class T> -> void {
+                static_assert(requires (T const cc) { { cc.empty() } -> std::same_as<bool>; });
                 for (auto const [from, a] : inputs::objects<T>()) {
                         auto const on_failure = context(from, a);
                         mem_empty()(a);

@@ -8,6 +8,7 @@
 #include <test/spec/input.hpp>          // context
 #include <test/spec/sequence.hpp>       // inplace_vector_all, sequences
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <concepts>                     // same_as
 
 BOOST_AUTO_TEST_SUITE(Spec)
 BOOST_AUTO_TEST_SUITE(Containers)
@@ -44,6 +45,7 @@ auto check_erase_if(auto const& a)
 BOOST_AUTO_TEST_CASE(Erase)
 {
         test::for_each_type<test::spec::sequence::inplace_vector_all>([]<class T> -> void {
+                static_assert(requires (T c, bool b) { { erase(c, b) } -> std::same_as<typename T::size_type>; });
                 for (auto const [from, a] : inputs::sequences<T>()) {
                         auto const on_failure = context(from, a);
                         check_erase(a);
@@ -55,6 +57,7 @@ BOOST_AUTO_TEST_CASE(Erase)
 BOOST_AUTO_TEST_CASE(EraseIf)
 {
         test::for_each_type<test::spec::sequence::inplace_vector_all>([]<class T> -> void {
+                static_assert(requires (T c) { { erase_if(c, [](bool) -> bool { return true; }) } -> std::same_as<typename T::size_type>; });
                 for (auto const [from, a] : inputs::sequences<T>()) {
                         auto const on_failure = context(from, a);
                         check_erase_if(a);

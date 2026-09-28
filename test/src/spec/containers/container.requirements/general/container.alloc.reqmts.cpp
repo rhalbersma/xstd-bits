@@ -5,7 +5,6 @@
 
 #include <test/for_each_type.hpp>                   // for_each_type
 #include <test/sequence/factory.hpp>                // make_sequence, stripes
-#include <test/set/concepts.hpp>                    // set_size_t_allocator, set_size_t_ranges_allocator
 #include <xstd/bits/bit_array.hpp>                  // bit_array
 #include <xstd/bits/bit_set.hpp>                    // basic_bit_set, bit_set
 #include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
@@ -252,14 +251,6 @@ BOOST_AUTO_TEST_CASE(AllocatorType)
 {
         test::for_each_type<all>([]<class T> -> void {
                 static_assert(std::same_as<typename std::allocator_traits<typename T::allocator_type>::allocator_type, typename T::allocator_type>);
-                if constexpr (requires { typename T::key_type; }) {
-                        static_assert(test::set::set_size_t_allocator<T>);
-#ifdef __cpp_lib_containers_ranges
-
-                        static_assert(test::set::set_size_t_ranges_allocator<T>);
-
-#endif
-                }
                 BOOST_CHECK(true);
         });
 }
@@ -287,6 +278,7 @@ BOOST_AUTO_TEST_CASE(DefaultConstructor)
 BOOST_AUTO_TEST_CASE(AllocatorConstructor)
 {
         test::for_each_type<all>([]<class T> -> void {
+                static_assert(requires (T::allocator_type a) { T(a); });
                 auto const m = allocator<T>(1);
                 auto const u = T(m);
                 BOOST_CHECK(u.empty());              // [container.alloc.reqmts]/11
@@ -298,6 +290,7 @@ BOOST_AUTO_TEST_CASE(AllocatorConstructor)
 BOOST_AUTO_TEST_CASE(CopyWithAllocator)
 {
         test::for_each_type<all>([]<class T> -> void {
+                static_assert(requires (T const cc, T::allocator_type a) { T(cc, a); });
                 auto const m = allocator<T>(1);
                 for (auto const& t : samples<T>(allocator<T>(0))) {
                         auto const u = T(t, m);
@@ -330,6 +323,7 @@ BOOST_AUTO_TEST_CASE(MoveConstructor)
 BOOST_AUTO_TEST_CASE(MoveWithAllocator)
 {
         test::for_each_type<all>([]<class T> -> void {
+                static_assert(requires (T o, T::allocator_type a) { T(std::move(o), a); });
                 auto const m = allocator<T>(1);
                 for (auto const& t : samples<T>(allocator<T>(0))) {
                         auto rv = t;
@@ -402,10 +396,20 @@ BOOST_AUTO_TEST_CASE(AllocatorArguments)
         test::for_each_type<all>([]<class T> -> void {
                 auto const m = allocator<T>(1);
                 if constexpr (requires { typename T::key_type; }) {
+                        static_assert(requires (T::allocator_type a, T::key_compare const comp, std::initializer_list<typename T::value_type> il, T::value_type const* first, T::value_type const* last) {
+                                T(comp, a);
+                                T(first, last, a);
+                                T(first, last, comp, a);
+                                T(il, a);
+                                T(il, comp, a);
+                                T(std::from_range, il, a);
+                                T(std::from_range, il, comp, a);
+                        });
                         check_listed_and_ranged<T>(m);
                 } else if constexpr (is_bitset<T>) {
                         check_counted<T>(m, 5ULL);
                 } else {
+                        static_assert(requires (T::allocator_type a, std::initializer_list<bool> il) { T(il, a); });
                         check_counted<T>(m, true);
                 }
         });
@@ -508,6 +512,7 @@ BOOST_AUTO_TEST_CASE(OnlyARunTimeWidthTakesAnAllocator)
 {
         static_assert(std::is_nothrow_constructible_v<std::vector<bool>, std::allocator<bool> const&>);
         static_assert(std::is_nothrow_constructible_v<xstd::bit_vector, std::allocator<std::size_t> const&>);
+        static_assert(std::is_nothrow_constructible_v<xstd::basic_bit_vector<std::uint8_t>, std::allocator<std::uint8_t> const&>);
         static_assert(std::is_nothrow_constructible_v<xstd::dynamic_bitset, std::allocator<std::size_t> const&>);
         static_assert(not std::is_constructible_v<xstd::bit_array<64>, std::allocator<std::size_t>>);
         static_assert(not std::is_constructible_v<xstd::bit_array<64>, std::initializer_list<bool>, std::allocator<std::size_t>>);

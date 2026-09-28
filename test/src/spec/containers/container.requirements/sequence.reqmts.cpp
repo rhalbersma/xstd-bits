@@ -9,7 +9,10 @@
 #include <test/spec/input.hpp>          // context
 #include <test/spec/sequence.hpp>       // all, growable_all, indexed, positions, prefixes, sequences, spans
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <concepts>                     // same_as
+#include <initializer_list>             // initializer_list
 #include <ranges>                       // from_range
+#include <version>                      // IWYU pragma: keep; __cpp_lib_containers_ranges
 
 BOOST_AUTO_TEST_SUITE(Spec)
 BOOST_AUTO_TEST_SUITE(Containers)
@@ -24,6 +27,7 @@ namespace inputs = test::spec::sequence::inputs;
 BOOST_AUTO_TEST_CASE(CountConstructor)
 {
         test::for_each_type<test::spec::sequence::growable_all>([]<class T> -> void {
+                static_assert(requires (T::size_type n, bool b) { T(n, b); });
                 for (auto const [from, a] : inputs::sequences<T>()) {
                         auto const on_failure = context(from, a);
                         constructor<T>()(a.size(), false);
@@ -36,6 +40,7 @@ BOOST_AUTO_TEST_CASE(CountConstructor)
 BOOST_AUTO_TEST_CASE(IteratorConstructor)
 {
         test::for_each_type<test::spec::sequence::growable_all>([]<class T> -> void {
+                static_assert(requires (bool const* first, bool const* last) { T(first, last); });
                 for (auto const [from, a] : inputs::sequences<T>()) {
                         auto const on_failure = context(from, a);
                         auto const sized = model_of(a);
@@ -50,6 +55,9 @@ BOOST_AUTO_TEST_CASE(IteratorConstructor)
 BOOST_AUTO_TEST_CASE(RangeConstructor)
 {
         test::for_each_type<test::spec::sequence::growable_all>([]<class T> -> void {
+#ifdef __cpp_lib_containers_ranges
+                static_assert(requires (std::initializer_list<bool> il) { T(std::from_range, il); });
+#endif
                 for (auto const [from, a] : inputs::sequences<T>()) {
                         auto const on_failure = context(from, a);
                         constructor<T>()(std::from_range, model_of(a));
@@ -62,6 +70,7 @@ BOOST_AUTO_TEST_CASE(RangeConstructor)
 BOOST_AUTO_TEST_CASE(InitializerListConstructor)
 {
         test::for_each_type<test::spec::sequence::growable_all>([]<class T> -> void {
+                static_assert(requires (std::initializer_list<bool> il) { T(il); });
                 constructor<T>()({});
                 constructor<T>()({true});
                 constructor<T>()({true, false, true});
@@ -74,6 +83,7 @@ BOOST_AUTO_TEST_CASE(InitializerListConstructor)
 BOOST_AUTO_TEST_CASE(InitializerListAssignment)
 {
         test::for_each_type<test::spec::sequence::growable_all>([]<class T> -> void {
+                static_assert(requires (T c, std::initializer_list<bool> il) { c = il; });
                 for (auto const [from, a] : inputs::sequences<T>()) {
                         auto const on_failure = context(from, a);
                         op_assign()(a, {});
@@ -86,6 +96,10 @@ BOOST_AUTO_TEST_CASE(InitializerListAssignment)
 BOOST_AUTO_TEST_CASE(Emplace)
 {
         test::for_each_type<test::spec::sequence::growable_all>([]<class T> -> void {
+                static_assert(requires (T c, bool b, T::const_iterator p) {
+                        { c.emplace(p, b) } -> std::same_as<typename T::iterator>;
+                        { c.emplace(p) } -> std::same_as<typename T::iterator>;
+                });
                 for (auto const [from, a, p] : inputs::positions<T>()) {
                         auto const on_failure = context(from, a, p);
                         mem_emplace()(a, p, false);
@@ -99,6 +113,7 @@ BOOST_AUTO_TEST_CASE(Emplace)
 BOOST_AUTO_TEST_CASE(Insert)
 {
         test::for_each_type<test::spec::sequence::growable_all>([]<class T> -> void {
+                static_assert(requires (T c, bool b, T::const_iterator p) { { c.insert(p, b) } -> std::same_as<typename T::iterator>; });
                 for (auto const [from, a, p] : inputs::positions<T>()) {
                         auto const on_failure = context(from, a, p);
                         mem_insert()(a, p, false);
@@ -111,6 +126,7 @@ BOOST_AUTO_TEST_CASE(Insert)
 BOOST_AUTO_TEST_CASE(InsertCount)
 {
         test::for_each_type<test::spec::sequence::growable_all>([]<class T> -> void {
+                static_assert(requires (T c, T::size_type n, bool b, T::const_iterator p) { { c.insert(p, n, b) } -> std::same_as<typename T::iterator>; });
                 for (auto const [from, a, p, n] : inputs::spans<T>()) {
                         auto const on_failure = context(from, a, p, n);
                         mem_insert()(a, p, n, true);
@@ -122,6 +138,7 @@ BOOST_AUTO_TEST_CASE(InsertCount)
 BOOST_AUTO_TEST_CASE(InsertIterators)
 {
         test::for_each_type<test::spec::sequence::growable_all>([]<class T> -> void {
+                static_assert(requires (T c, bool const* first, bool const* last, T::const_iterator p) { { c.insert(p, first, last) } -> std::same_as<typename T::iterator>; });
                 for (auto const [from, a, p, n] : inputs::spans<T>()) {
                         auto const on_failure = context(from, a, p, n);
                         auto const sized = alternating(n);
@@ -136,6 +153,9 @@ BOOST_AUTO_TEST_CASE(InsertIterators)
 BOOST_AUTO_TEST_CASE(InsertRange)
 {
         test::for_each_type<test::spec::sequence::growable_all>([]<class T> -> void {
+#ifdef __cpp_lib_containers_ranges
+                static_assert(requires (T c, std::initializer_list<bool> il, T::const_iterator p) { { c.insert_range(p, il) } -> std::same_as<typename T::iterator>; });
+#endif
                 for (auto const [from, a, p, n] : inputs::spans<T>()) {
                         auto const on_failure = context(from, a, p, n);
                         mem_insert_range()(a, p, alternating(n));
@@ -148,6 +168,7 @@ BOOST_AUTO_TEST_CASE(InsertRange)
 BOOST_AUTO_TEST_CASE(InsertInitializerList)
 {
         test::for_each_type<test::spec::sequence::growable_all>([]<class T> -> void {
+                static_assert(requires (T c, std::initializer_list<bool> il, T::const_iterator p) { { c.insert(p, il) } -> std::same_as<typename T::iterator>; });
                 for (auto const [from, a, p] : inputs::positions<T>()) {
                         auto const on_failure = context(from, a, p);
                         mem_insert()(a, p, {true, false, true});
@@ -161,6 +182,7 @@ BOOST_AUTO_TEST_CASE(InsertInitializerList)
 BOOST_AUTO_TEST_CASE(Erase)
 {
         test::for_each_type<test::spec::sequence::growable_all>([]<class T> -> void {
+                static_assert(requires (T c, T::const_iterator p) { { c.erase(p) } -> std::same_as<typename T::iterator>; });
                 for (auto const [from, a, p] : inputs::positions<T>()) {
                         auto const on_failure = context(from, a, p);
                         mem_erase()(a, p);
@@ -172,6 +194,7 @@ BOOST_AUTO_TEST_CASE(Erase)
 BOOST_AUTO_TEST_CASE(EraseRange)
 {
         test::for_each_type<test::spec::sequence::growable_all>([]<class T> -> void {
+                static_assert(requires (T c, T::const_iterator p) { { c.erase(p, p) } -> std::same_as<typename T::iterator>; });
                 for (auto const [from, a, p, n] : inputs::spans<T>()) {
                         auto const on_failure = context(from, a, p, n);
                         mem_erase()(a, p, p + n);
@@ -183,6 +206,7 @@ BOOST_AUTO_TEST_CASE(EraseRange)
 BOOST_AUTO_TEST_CASE(Clear)
 {
         test::for_each_type<test::spec::sequence::growable_all>([]<class T> -> void {
+                static_assert(requires (T c) { c.clear(); });
                 for (auto const [from, a] : inputs::sequences<T>()) {
                         auto const on_failure = context(from, a);
                         mem_clear()(a);
@@ -194,6 +218,7 @@ BOOST_AUTO_TEST_CASE(Clear)
 BOOST_AUTO_TEST_CASE(AssignIterators)
 {
         test::for_each_type<test::spec::sequence::growable_all>([]<class T> -> void {
+                static_assert(requires (T c, bool const* first, bool const* last) { c.assign(first, last); });
                 for (auto const [from, a] : inputs::sequences<T>()) {
                         auto const on_failure = context(from, a);
                         for (auto const k : {0UZ, 1UZ, 7UZ, 8UZ, 9UZ, 17UZ, a.size()}) {
@@ -210,6 +235,9 @@ BOOST_AUTO_TEST_CASE(AssignIterators)
 BOOST_AUTO_TEST_CASE(AssignRange)
 {
         test::for_each_type<test::spec::sequence::growable_all>([]<class T> -> void {
+#ifdef __cpp_lib_containers_ranges
+                static_assert(requires (T c, std::initializer_list<bool> il) { c.assign_range(il); });
+#endif
                 for (auto const [from, a] : inputs::sequences<T>()) {
                         auto const on_failure = context(from, a);
                         for (auto const k : {0UZ, 1UZ, 7UZ, 8UZ, 9UZ, 17UZ, a.size()}) {
@@ -224,6 +252,7 @@ BOOST_AUTO_TEST_CASE(AssignRange)
 BOOST_AUTO_TEST_CASE(AssignInitializerList)
 {
         test::for_each_type<test::spec::sequence::growable_all>([]<class T> -> void {
+                static_assert(requires (T c, std::initializer_list<bool> il) { c.assign(il); });
                 for (auto const [from, a] : inputs::sequences<T>()) {
                         auto const on_failure = context(from, a);
                         mem_assign()(a, {});
@@ -238,6 +267,7 @@ BOOST_AUTO_TEST_CASE(AssignInitializerList)
 BOOST_AUTO_TEST_CASE(AssignCount)
 {
         test::for_each_type<test::spec::sequence::growable_all>([]<class T> -> void {
+                static_assert(requires (T c, T::size_type n, bool b) { c.assign(n, b); });
                 for (auto const [from, a] : inputs::sequences<T>()) {
                         auto const on_failure = context(from, a);
                         for (auto const k : {0UZ, 1UZ, 7UZ, 8UZ, 9UZ, 17UZ, a.size()}) {
@@ -252,6 +282,10 @@ BOOST_AUTO_TEST_CASE(AssignCount)
 BOOST_AUTO_TEST_CASE(Front)
 {
         test::for_each_type<test::spec::sequence::all>([]<class T> -> void {
+                static_assert(requires (T c, T const cc) {
+                        { c.front() } -> std::same_as<typename T::reference>;
+                        { cc.front() } -> std::same_as<typename T::const_reference>;
+                });
                 for (auto const [from, a] : inputs::sequences<T>()) {
                         auto const on_failure = context(from, a);
                         mem_front()(a);
@@ -263,6 +297,10 @@ BOOST_AUTO_TEST_CASE(Front)
 BOOST_AUTO_TEST_CASE(Back)
 {
         test::for_each_type<test::spec::sequence::all>([]<class T> -> void {
+                static_assert(requires (T c, T const cc) {
+                        { c.back() } -> std::same_as<typename T::reference>;
+                        { cc.back() } -> std::same_as<typename T::const_reference>;
+                });
                 for (auto const [from, a] : inputs::sequences<T>()) {
                         auto const on_failure = context(from, a);
                         mem_back()(a);
@@ -274,6 +312,10 @@ BOOST_AUTO_TEST_CASE(Back)
 BOOST_AUTO_TEST_CASE(EmplaceBack)
 {
         test::for_each_type<test::spec::sequence::growable_all>([]<class T> -> void {
+                static_assert(requires (T c, bool b) {
+                        { c.emplace_back(b) } -> std::same_as<typename T::reference>;
+                        { c.emplace_back() } -> std::same_as<typename T::reference>;
+                });
                 for (auto const [from, a] : inputs::prefixes<T>()) {
                         auto const on_failure = context(from, a);
                         mem_emplace_back()(a, false);
@@ -287,6 +329,7 @@ BOOST_AUTO_TEST_CASE(EmplaceBack)
 BOOST_AUTO_TEST_CASE(PushBack)
 {
         test::for_each_type<test::spec::sequence::growable_all>([]<class T> -> void {
+                static_assert(requires (T c, bool b) { c.push_back(b); });
                 for (auto const [from, a] : inputs::prefixes<T>()) {
                         auto const on_failure = context(from, a);
                         mem_push_back()(a, false);
@@ -299,6 +342,9 @@ BOOST_AUTO_TEST_CASE(PushBack)
 BOOST_AUTO_TEST_CASE(AppendRange)
 {
         test::for_each_type<test::spec::sequence::growable_all>([]<class T> -> void {
+#ifdef __cpp_lib_containers_ranges
+                static_assert(requires (T c, std::initializer_list<bool> il) { c.append_range(il); });
+#endif
                 for (auto const [from, a] : inputs::prefixes<T>()) {
                         auto const on_failure = context(from, a);
                         for (auto const k : {0UZ, 1UZ, 7UZ, 8UZ, 9UZ, 17UZ, 33UZ}) {
@@ -313,6 +359,7 @@ BOOST_AUTO_TEST_CASE(AppendRange)
 BOOST_AUTO_TEST_CASE(PopBack)
 {
         test::for_each_type<test::spec::sequence::growable_all>([]<class T> -> void {
+                static_assert(requires (T c) { c.pop_back(); });
                 for (auto const [from, a] : inputs::sequences<T>()) {
                         auto const on_failure = context(from, a);
                         mem_pop_back()(a);
@@ -324,6 +371,12 @@ BOOST_AUTO_TEST_CASE(PopBack)
 BOOST_AUTO_TEST_CASE(Subscript)
 {
         test::for_each_type<test::spec::sequence::all>([]<class T> -> void {
+                static_assert(requires (T c, T const cc, T::size_type n) {
+                        { c[n] } -> std::same_as<typename T::reference>;
+                        { cc[n] } -> std::same_as<typename T::const_reference>;
+                        { c.at(n) } -> std::same_as<typename T::reference>;
+                        { cc.at(n) } -> std::same_as<typename T::const_reference>;
+                });
                 for (auto const [from, a, i] : inputs::indexed<T>()) {
                         auto const on_failure = context(from, a, i);
                         mem_subscript()(a);

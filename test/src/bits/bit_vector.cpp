@@ -4,7 +4,6 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/sanitizer.hpp>                            // IWYU pragma: keep; TEST_HAS_ADDRESS_SANITIZER
-#include <test/sequence/concepts.hpp>                    // bit_sequence
 #include <test/sequence/dense.hpp>                       // yields_every_position
 #include <xstd/bits/bit_array.hpp>                       // basic_bit_array
 #include <xstd/bits/bit_span.hpp>                        // bit_span
@@ -47,22 +46,6 @@ BOOST_AUTO_TEST_CASE(TheDynamicSequenceIsTheSequenceAdaptorOverAHeapOfBlocks)
 {
         static_assert(std::derived_from<T, xstd::bits::detail::sequence_adaptor<xstd::bits::detail::contiguous_bit_container<std::vector<std::uint8_t>>, xstd::bits::detail::storage::owned, xstd::bits::detail::window::all, T>>);
         static_assert(std::same_as<xstd::basic_bit_vector<std::uint8_t, std::allocator<std::uint8_t>>, T>);
-        static_assert(test::sequence::bit_sequence<T>);
-}
-
-// [vector]'s constructors, every shape, against std::vector<bool> built the same way.
-BOOST_AUTO_TEST_CASE(ItAnswersEveryLineOfStdVectorBool)
-{
-        static_assert(test::sequence::vector_bool<std::vector<bool>>);
-        static_assert(test::sequence::vector_bool<T>);
-        static_assert(test::sequence::vector_bool<xstd::bit_vector>);
-#ifdef __cpp_lib_containers_ranges
-
-        static_assert(test::sequence::vector_bool_ranges<std::vector<bool>>);
-
-#endif
-        static_assert(test::sequence::vector_bool_ranges<T>);
-        static_assert(test::sequence::vector_bool_ranges<xstd::bit_vector>);
         static_assert(std::same_as<T::allocator_type, std::allocator<std::uint8_t>>);
 }
 

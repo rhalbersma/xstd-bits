@@ -138,7 +138,7 @@ foreach(h ${public_headers})
     add_test(NAME header.${header_test_id} COMMAND header.${header_test_id})
 endforeach()
 
-# Every public header is answered by one test source at the same path, detail/ excepted; enforced here so it cannot drift. detail/ is excepted because a detail header has no contract to mirror. Where such a test exists all the same -- and the two proxy headers have one each -- it is white-box: it names what nobody outside the library names, and may be rewritten whenever the internals are. The contract those types do carry is asserted through the containers that hand them out, in test/include/test/set/concepts.hpp and test/include/test/sequence/concepts.hpp.
+# Every public header is answered by one test source at the same path, detail/ excepted; enforced here so it cannot drift. detail/ is excepted because a detail header has no contract to mirror. Where such a test exists all the same -- and the two proxy headers have one each -- it is white-box: it names what nobody outside the library names, and may be rewritten whenever the internals are. The contract those types do carry is asserted through the containers that hand them out, in the Standard clauses under test/src/spec/.
 file(
     GLOB_RECURSE mirrored_headers
     CONFIGURE_DEPENDS

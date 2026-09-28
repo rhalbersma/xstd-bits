@@ -8,6 +8,7 @@
 #include <test/spec/container.hpp>  // all, pairs
 #include <test/spec/input.hpp>      // context
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <concepts>                 // regular, same_as
 
 BOOST_AUTO_TEST_SUITE(Spec)
 BOOST_AUTO_TEST_SUITE(Containers)
@@ -24,6 +25,8 @@ namespace inputs = test::spec::container::inputs;
 BOOST_AUTO_TEST_CASE(EqualTo)
 {
         test::for_each_type<test::spec::container::all>([]<class T> -> void {
+                static_assert(requires (T const cc) { { cc == cc } -> std::same_as<bool>; });
+                static_assert(std::regular<T>);
                 for (auto const [from, a, b] : inputs::pairs<T>()) {
                         auto const on_failure = context(from, a, b);
                         op_equal_to()(a, b);

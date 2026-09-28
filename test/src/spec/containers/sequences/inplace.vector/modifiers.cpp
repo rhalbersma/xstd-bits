@@ -4,10 +4,12 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/for_each_type.hpp>       // for_each_type
-#include <test/sequence/primitives.hpp> // mem_insert_past_capacity, mem_insert_unsized_past_capacity, mem_push_back_or_throw, mem_try_emplace_back, mem_unchecked_emplace_back, mem_unchecked_push_back
+#include <test/sequence/primitives.hpp> // is_std_inplace_vector_v, mem_insert_past_capacity, mem_insert_unsized_past_capacity, mem_push_back_or_throw, mem_try_emplace_back, mem_unchecked_emplace_back, mem_unchecked_push_back
 #include <test/spec/input.hpp>          // context
 #include <test/spec/sequence.hpp>       // fixed_prefixes, inplace_vector_all, prefixes
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <concepts>                     // same_as
+#include <optional>                     // optional
 
 BOOST_AUTO_TEST_SUITE(Spec)
 BOOST_AUTO_TEST_SUITE(Containers)
@@ -40,6 +42,7 @@ BOOST_AUTO_TEST_CASE(Insert)
 BOOST_AUTO_TEST_CASE(PushBack)
 {
         test::for_each_type<test::spec::sequence::inplace_vector_all>([]<class T> -> void {
+                static_assert(requires (T c, bool b) { { c.push_back(b) } -> std::same_as<typename T::reference>; });
                 for (auto const [from, a] : inputs::prefixes<T>()) {
                         auto const on_failure = context(from, a);
                         mem_push_back_or_throw()(a, false);
@@ -52,6 +55,17 @@ BOOST_AUTO_TEST_CASE(PushBack)
 BOOST_AUTO_TEST_CASE(TryEmplaceBack)
 {
         test::for_each_type<test::spec::sequence::inplace_vector_all>([]<class T> -> void {
+                static_assert(requires (T c, bool b) {
+                        c.try_emplace_back(b);
+                        c.try_push_back(b);
+                });
+
+                // P3981R0's return type, held to the packing alone: libstdc++ 16 still returns P0843R14's pointer.
+                static_assert(is_std_inplace_vector_v<T> or requires (T c, bool b) {
+                        { c.try_emplace_back(b) } -> std::same_as<std::optional<typename T::reference>>;
+                        { c.try_push_back(b) } -> std::same_as<std::optional<typename T::reference>>;
+                });
+
                 for (auto const [from, a] : inputs::prefixes<T>()) {
                         auto const on_failure = context(from, a);
                         mem_try_emplace_back()(a, false);
@@ -64,6 +78,7 @@ BOOST_AUTO_TEST_CASE(TryEmplaceBack)
 BOOST_AUTO_TEST_CASE(UncheckedEmplaceBack)
 {
         test::for_each_type<test::spec::sequence::inplace_vector_all>([]<class T> -> void {
+                static_assert(requires (T c, bool b) { { c.unchecked_emplace_back(b) } -> std::same_as<typename T::reference>; });
                 for (auto const [from, a] : inputs::prefixes<T>()) {
                         auto const on_failure = context(from, a);
                         mem_unchecked_emplace_back()(a, false);
@@ -76,6 +91,7 @@ BOOST_AUTO_TEST_CASE(UncheckedEmplaceBack)
 BOOST_AUTO_TEST_CASE(UncheckedPushBack)
 {
         test::for_each_type<test::spec::sequence::inplace_vector_all>([]<class T> -> void {
+                static_assert(requires (T c, bool b) { { c.unchecked_push_back(b) } -> std::same_as<typename T::reference>; });
                 for (auto const [from, a] : inputs::prefixes<T>()) {
                         auto const on_failure = context(from, a);
                         mem_unchecked_push_back()(a, false);

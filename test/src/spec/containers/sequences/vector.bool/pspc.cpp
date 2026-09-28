@@ -9,6 +9,9 @@
 #include <test/spec/input.hpp>          // context
 #include <test/spec/sequence.hpp>       // index_pairs, indexed, pairs, sequences, vector_all
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <concepts>                     // same_as
+#include <cstddef>                      // size_t
+#include <functional>                   // hash
 
 BOOST_AUTO_TEST_SUITE(Spec)
 BOOST_AUTO_TEST_SUITE(Containers)
@@ -35,6 +38,7 @@ BOOST_AUTO_TEST_CASE(ReferenceAssign)
 BOOST_AUTO_TEST_CASE(ReferenceFlip)
 {
         test::for_each_type<test::spec::sequence::vector_all>([]<class T> -> void {
+                static_assert(requires (T c, T::size_type n) { { c[n].flip() } -> std::same_as<void>; });
                 for (auto const [from, a, i] : inputs::indexed<T>()) {
                         auto const on_failure = context(from, a, i);
                         mem_reference_flip()(a, i);
@@ -46,6 +50,7 @@ BOOST_AUTO_TEST_CASE(ReferenceFlip)
 BOOST_AUTO_TEST_CASE(ReferenceSwap)
 {
         test::for_each_type<test::spec::sequence::vector_all>([]<class T> -> void {
+                static_assert(requires (T c, T::size_type n) { T::swap(c[n], c[n]); });
                 // With a bool on either side as well.
                 for (auto const [from, a, i, j] : inputs::index_pairs<T>()) {
                         auto const on_failure = context(from, a, i, j);
@@ -58,6 +63,7 @@ BOOST_AUTO_TEST_CASE(ReferenceSwap)
 BOOST_AUTO_TEST_CASE(Flip)
 {
         test::for_each_type<test::spec::sequence::vector_all>([]<class T> -> void {
+                static_assert(requires (T c) { c.flip(); });
                 for (auto const [from, a] : inputs::sequences<T>()) {
                         auto const on_failure = context(from, a);
                         mem_flip()(a);
@@ -69,6 +75,7 @@ BOOST_AUTO_TEST_CASE(Flip)
 BOOST_AUTO_TEST_CASE(Hash)
 {
         test::for_each_type<test::spec::sequence::vector_all>([]<class T> -> void {
+                static_assert(requires (T const cc) { { std::hash<T>()(cc) } -> std::same_as<std::size_t>; });
                 // Equal values hash equal, whatever the capacity or allocation behind them.
                 for (auto const [from, a] : inputs::sequences<T>()) {
                         auto const on_failure = context(from, a);

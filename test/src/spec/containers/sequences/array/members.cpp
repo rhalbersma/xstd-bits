@@ -4,6 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/for_each_type.hpp>    // for_each_type
+#include <test/reference.hpp>        // proxy_reference
 #include <test/sequence/factory.hpp> // model_of
 #include <test/spec/input.hpp>       // context
 #include <test/spec/sequence.hpp>    // array_all, pairs, sequences
@@ -76,10 +77,24 @@ BOOST_AUTO_TEST_CASE(Size)
         });
 }
 
+// [array.members]/2: constexpr T* data() noexcept; constexpr const T* data() const noexcept;
+BOOST_AUTO_TEST_CASE(Data)
+{
+        test::for_each_type<test::spec::sequence::array_all>([]<class T> -> void {
+                // A proxy has no element to point at, so only a real reference is asked for data().
+                static_assert(test::proxy_reference<T> or requires (T c, T const cc) {
+                        { c.data() } -> std::same_as<bool*>;
+                        { cc.data() } -> std::same_as<bool const*>;
+                });
+                BOOST_CHECK(true);
+        });
+}
+
 // [array.members]/3: constexpr void fill(const T& u);
 BOOST_AUTO_TEST_CASE(Fill)
 {
         test::for_each_type<test::spec::sequence::array_all>([]<class T> -> void {
+                static_assert(requires (T c, bool b) { c.fill(b); });
                 for (auto const [from, a] : inputs::sequences<T>()) {
                         auto const on_failure = context(from, a);
                         mem_fill()(a);

@@ -24,6 +24,7 @@ namespace inputs = test::spec::container::inputs;
 BOOST_AUTO_TEST_CASE(Swap)
 {
         test::for_each_type<test::spec::container::all>([]<class T> -> void {
+                static_assert(requires (T c) { c.swap(c); });
                 for (auto const [from, a, b] : inputs::pairs<T>()) {
                         auto const on_failure = context(from, a, b);
                         auto x = a;
@@ -37,6 +38,7 @@ BOOST_AUTO_TEST_CASE(Swap)
 BOOST_AUTO_TEST_CASE(NonMemberSwap)
 {
         test::for_each_type<test::spec::container::all>([]<class T> -> void {
+                static_assert(requires (T c) { swap(c, c); });
                 for (auto const [from, a, b] : inputs::pairs<T>()) {
                         auto const on_failure = context(from, a, b);
                         auto x = a;

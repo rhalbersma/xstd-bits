@@ -91,7 +91,7 @@ template<class X>
         return std::views::iota(0UZ, k) | std::views::filter([](std::size_t) -> bool { return true; }) | std::views::transform([](std::size_t i) -> bool { return i % 2UZ == 0UZ; });
 }
 
-// [container.reqmts]/4 and /5 ask for a T& and a T const&, which [vector.bool] relaxes to a proxy converting to bool.
+// The value, iterator and size types [container.reqmts] and [container.rev.reqmts] ask of a sequence of bool.
 template<class X>
 constexpr auto nested_types()
         -> void
@@ -100,8 +100,6 @@ constexpr auto nested_types()
         using CI = X::const_iterator;
 
         static_assert(std::same_as<typename X::value_type, bool>); // [container.reqmts]/2
-        static_assert(std::convertible_to<typename X::reference, bool>);
-        static_assert(std::convertible_to<typename X::const_reference, bool>);
 
         // [container.reqmts]/6 and /7 ask for forward iterators, which every sequence here betters.
         static_assert(std::derived_from<typename std::iterator_traits<I>::iterator_category, std::random_access_iterator_tag>);

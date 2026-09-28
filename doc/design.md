@@ -2107,11 +2107,13 @@ three binary ones, `fill`, and the four aggregates -- and nothing that needs a b
 ### the-sequence-contract
 
 `bit_vector` answers every line of `[vector.bool]`'s synopsis and `bit_array<N>` every line of `[array]`'s,
-and the test says so as a checklist rather than a claim: `test/sequence/concepts.hpp` spells each synopsis
-as one requires-expression, `vector_bool` and `array_bool`, and `std::vector<bool>` and `std::array<bool, N>`
-are asserted against it first. A line the model itself fails is a wrong line, so the checklist is known to
-be honest before ours is held to it; the C++23 range members are a second concept, `vector_bool_ranges`, so
-the model is held to them only where its standard library has them.
+and the test says so declaration by declaration rather than as a claim: each line is asserted in the case of
+the clause under `test/src/spec/` that describes it, over that clause's list, where `std::vector<bool>` and
+`std::array<bool, N>` come first. A line the model itself fails is a wrong line, so the check is known to be
+honest before ours is held to it; the C++23 range members are asserted only where the standard library has
+them. Where a packed sequence parts from its model because its reference is a proxy -- no `data()`, random
+access where the model is contiguous, a `tuple_element` that converts to `bool` -- the case says so through
+`test::proxy_reference` in `test/include/test/reference.hpp`, the named relaxation of `test::real_reference`.
 
 The sweep found what the range members had not needed. The allocator: `allocator_type` through the same empty
 base `bitset_adaptor` has, `get_allocator`, and the allocator-extended constructors,
@@ -2484,10 +2486,11 @@ makes an owner trivially copyable, `std::inplace_vector` included: a run-time wi
 zero, which a trivial move could not. `generated.cpp` asserts each storage's answer, and asserts for both that the
 owner answers as its blocks do.
 
-P0843 declined to repeat `vector<bool>`, so there is no `std::inplace_vector<bool>` to check a packed sequence
-against. `test::sequence::inplace_vector_bool` is `[vector.bool]`'s checklist minus the lines the allocator
-reaches, and `std::vector<bool>` answers every line of it, so it is asserted on the model first exactly as
-`vector_bool` is ([the-sequence-contract](#the-sequence-contract)).
+P0843 declined to repeat `vector<bool>`, so `std::inplace_vector<bool, N>` holds real `bool`s and is a model
+only up to its reference. The `[inplace.vector]` clauses assert each declaration on it first where the standard
+library has it, exactly as the `[vector]` ones do ([the-sequence-contract](#the-sequence-contract)); what the
+packing adds, `flip`, `reference::flip` and `hash`, is under `test/src/spec/xstd/inplace_vector/`, asserted to
+be there exactly where `test::proxy_reference` holds.
 
 **Testing both storages takes two standards.** `__cpp_lib_inplace_vector` is a C++26 macro, and the library asks
 for C++23, where every library in the matrix holds the column in `boost::container::static_vector`. The three
@@ -4433,8 +4436,8 @@ a run-time width it read past the blocks.
 
 ### What `[set]`'s synopsis leaves out for a packed set
 
-`test/include/test/set/concepts.hpp` transcribes `[set]`'s synopsis as one requires-expression, with
-`std::set<std::size_t>` as the model. Three families are left out, each for a reason the packing
+The `[set]` and `[container.requirements]` clauses under `test/src/spec/` assert `[set]`'s synopsis
+declaration by declaration, with `std::set<std::size_t>` as the model. Three families are left out, each for a reason the packing
 gives:
 
 - `node_type`, `extract`, `insert(node_type&&)` and `merge`: there is no node. A position is a bit in
@@ -4541,11 +4544,11 @@ A `back_inserter` is the other output shape and gets no rung: it costs a `push_b
 against this row's 36ns, and what that measures is a vector growing rather than the interface
 answering.
 
-### Why the array checklists spell `tuple_size<C>::value`
+### Why a checklist spells `tuple_size<C>::value`
 
-`modernize-type-traits` asks for `tuple_size_v<C>` and the checklists in
-`test/include/test/sequence/concepts.hpp` cannot take it. A checklist is asked of types that *fail*
-it — that is the whole of what it is for — and the two spellings fail differently.
+`modernize-type-traits` asks for `tuple_size_v<C>`, and a concept asked of types without `tuple_size`
+cannot take it. A checklist is asked of types that *fail* it — that is the whole of what it is for — and
+the two spellings fail differently.
 
 `tuple_size<C>::value` is a nested name, so for a `C` with no `tuple_size` at all the substitution
 fails in the immediate context and the constraint answers false. `tuple_size_v` is a variable
@@ -4555,8 +4558,9 @@ error no requires-expression can catch. Measured rather than assumed: the `_v` s
 specifier".
 
 The `tuple_element` half has no such problem and the rewrite is taken — an alias template substitutes
-transparently, so its failure stays in the immediate context. Both `::value` sites carry a
-`NOLINT(modernize-type-traits)`.
+transparently, so its failure stays in the immediate context. The `[array.tuple]` clause puts `tuple_size`
+only to types that have it, so it takes `std::tuple_size<T>` whole, as the base it must derive from, and
+needs neither spelling.
 
 `[array.tuple]`'s element half also only exists for a non-empty array: `tuple_element<I, array<T, N>>`
 Mandates `I < N`, so element zero is a question that cannot be put to a width of nought — on the
