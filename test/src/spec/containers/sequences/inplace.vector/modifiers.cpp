@@ -4,7 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/sequence/exhaustive.hpp> // all_widths, full_sequence
-#include <test/sequence/primitives.hpp> // mem_insert_past_capacity, mem_push_back_or_throw, mem_try_emplace_back, mem_unchecked_emplace_back, mem_unchecked_push_back
+#include <test/sequence/primitives.hpp> // mem_insert_past_capacity, mem_insert_unsized_past_capacity, mem_push_back_or_throw, mem_try_emplace_back, mem_unchecked_emplace_back, mem_unchecked_push_back
 #include <test/spec/random.hpp>         // all_sequence_key_pairs, all_sequences
 #include <test/spec/sequence.hpp>       // inplace_vector_boundary_widths, inplace_vector_every_width, inplace_vector_random_widths
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
@@ -58,6 +58,16 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ThrowsBadAllocWithNoEffectPastTheCapacityOverRando
 {
         test::spec::random::all_sequences<T>(mem_insert_past_capacity());
         test::spec::random::all_sequence_key_pairs<T>(on_prefix(mem_insert_past_capacity()));
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(ThrowsBadAllocWithNoEffectFromAnUnsizedRangeOnAFullSequence, T, test::spec::sequence::inplace_vector_every_width)
+{
+        on0::full_sequence<T>(mem_insert_unsized_past_capacity());
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(ThrowsBadAllocWithNoEffectFromAnUnsizedRangeAtEveryWidthAndPosition, T, test::spec::sequence::inplace_vector_boundary_widths)
+{
+        on1::all_widths<T>(mem_insert_unsized_past_capacity());
 }
 
 BOOST_AUTO_TEST_SUITE_END()
