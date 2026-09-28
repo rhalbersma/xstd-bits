@@ -882,6 +882,8 @@ public:
                 return try_emplace_back(value);
         }
 
+        // No try_append_range: P4022R0 took it out of C++26 until a partial insertion has a meaning and a return type.
+
         // The caller has established the room, so this asserts it: size() < capacity() is the precondition.
         template<class... Args>
                 requires has_static_capacity and std::constructible_from<value_type, Args...>

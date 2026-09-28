@@ -4481,6 +4481,19 @@ P3981R0 changed `try_push_back` and `try_emplace_back` to return `optional<refer
 asks the model for the name, and `TheTryDoorsReturnTheOptionalReferenceTheDraftSpells` asks the
 packing for the signature the draft spells.
 
+**There is no `try_append_range`, on purpose.** P0843R14 gave `inplace_vector` a third try-door that
+appended as many elements as fit and returned an iterator to the first one left over. P3981R0 proposed
+to return a `borrowed_subrange_t` instead, and the LEWG discussion of that change led to P4022R0
+(Revzin, Wakely, Kamiński, February 2026), which removes the member from C++26 altogether. Its two
+reasons are the ones any packing would inherit. A partial insertion is neither a success nor a failure,
+so the `try_` name promises a contract the function does not keep. And a returned `subrange` converts
+to `bool` the opposite way round from the `optional<reference>` of the other two doors: truthy means
+something was left over, not that the call succeeded. The paper defers the design to C++29.
+
+The current draft has no `try_append_range`, so the bounded owners have none either. libstdc++ 16
+still ships P0843R14's version, and the suite asks it of no implementation, the model included.
+When C++29 settles what the member means, it is added here and tested in the same change.
+
 ### The dynamic-bitset benchmark rows
 
 `benchmark/src/bitset/dynamic.cpp` measures at 32768 bits and 40% set, medians of seven runs.
