@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/bitset/primitives.hpp> // op_hash
+#include <test/bitset/primitives.hpp> // op_hash, op_hash_enabled
 #include <test/for_each_type.hpp>     // for_each_type
 #include <test/spec/bitset.hpp>       // all, pairs
 #include <test/spec/input.hpp>        // context
@@ -22,6 +22,7 @@ namespace inputs = test::spec::bitset::inputs;
 BOOST_AUTO_TEST_CASE(Hash)
 {
         test::for_each_type<test::spec::bitset::all>([]<class T> -> void {
+                op_hash_enabled<T>()();
                 // Every candidate with a std::hash is checked, and one without passes vacuously.
                 for (auto const [from, a, b] : inputs::pairs<T>()) {
                         auto const on_failure = context(from, a, b);

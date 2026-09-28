@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/bitset/primitives.hpp> // mem_all, mem_any, mem_at, mem_bit_and_assign, mem_bit_not, mem_bit_or_assign, mem_bit_xor_assign, mem_count, mem_equal_to, mem_flip, mem_none, mem_reset, mem_set, mem_shift_left, mem_shift_left_assign, mem_shift_right, mem_shift_right_assign, mem_size, mem_test, mem_to_string, mem_to_ullong, mem_to_ulong
+#include <test/bitset/primitives.hpp> // mem_all, mem_any, mem_at, mem_at_reference, mem_bit_and_assign, mem_bit_not, mem_bit_or_assign, mem_bit_xor_assign, mem_count, mem_equal_to, mem_flip, mem_none, mem_reset, mem_set, mem_shift_left, mem_shift_left_assign, mem_shift_right, mem_shift_right_assign, mem_size, mem_test, mem_to_string, mem_to_ullong, mem_to_ulong
 #include <test/for_each_type.hpp>     // for_each_type
 #include <test/spec/bitset.hpp>       // all, bitsets, pairs, positions, positions_with_singletons
 #include <test/spec/input.hpp>        // context, on_copy
@@ -176,7 +176,7 @@ BOOST_AUTO_TEST_CASE(FlipPos)
         });
 }
 
-// [bitset.members]/30-32: constexpr bool operator[](size_t pos) const;
+// [bitset.members]/31-32: constexpr bool operator[](size_t pos) const;
 BOOST_AUTO_TEST_CASE(Subscript)
 {
         test::for_each_type<test::spec::bitset::all>([]<class T> -> void {
@@ -184,6 +184,19 @@ BOOST_AUTO_TEST_CASE(Subscript)
                         auto const on_failure = context(from, a, pos);
                         if (pos < a.size()) {
                                 mem_at()(a, pos);
+                        }
+                }
+        });
+}
+
+// [bitset.members]/34-35: constexpr reference operator[](size_t pos);
+BOOST_AUTO_TEST_CASE(SubscriptReference)
+{
+        test::for_each_type<test::spec::bitset::all>([]<class T> -> void {
+                for (auto const [from, a, pos] : inputs::positions<T>()) {
+                        auto const on_failure = context(from, a, pos);
+                        if (pos < a.size()) {
+                                mem_at_reference()(a, pos);
                         }
                 }
         });

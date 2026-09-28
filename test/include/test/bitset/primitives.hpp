@@ -13,17 +13,20 @@
 #include <boost/test/unit_test.hpp>       // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_NO_THROW, BOOST_CHECK_THROW
 #include <algorithm>                      // all_of, any_of, equal, fold_left, min, none_of
 #include <bitset>                         // bitset
+#include <concepts>                       // same_as
 #include <cstddef>                        // size_t
 #include <functional>                     // hash, plus
+#include <istream>                        // istream
 #include <limits>                         // numeric_limits
 #include <memory>                         // addressof
 #include <memory_resource>                // pmr::polymorphic_allocator
 #include <ranges>                         // iota, transform
-#include <sstream>                        // istringstream, stringstream
+#include <sstream>                        // istringstream, stringstream, wostringstream
 #include <stdexcept>                      // invalid_argument, out_of_range, overflow_error
 #include <string>                         // basic_string, char_traits, string
-#include <string_view>                    // string_view
-#include <type_traits>                    // remove_cvref_t
+#include <string_view>                    // basic_string_view, string_view
+#include <type_traits>                    // is_constructible_v, is_default_constructible_v, is_invocable_r_v, remove_cvref_t
+#include <utility>                        // as_const
 
 namespace test::bitset {
 
@@ -188,7 +191,49 @@ inline constexpr auto std_bitset_checks_every_character = true;
 template<class X>
 concept checks_every_character = std_bitset_checks_every_character or not is_std_bitset_v<X>;
 
-// [bitset.cons]/3-7 read back: the bit string of a bitset, in every spelling the type takes, constructs that bitset.
+#if (defined(_GLIBCXX_RELEASE) && _GLIBCXX_RELEASE >= 16) || (defined(_LIBCPP_VERSION) && _LIBCPP_VERSION >= 230000)
+
+// LWG 4294's char-like Constraints, which libstdc++ states from 16 and libc++ from 23.
+inline constexpr auto std_bitset_states_char_like = true;
+
+#else
+
+// Unconstrained, a charT that is not char-like makes the declaration ill-formed rather than absent.
+inline constexpr auto std_bitset_states_char_like = false;
+
+#endif
+
+template<class X>
+concept states_char_like = std_bitset_states_char_like or not is_std_bitset_v<X>;
+
+// Traits comparing letters regardless of case, so that only traits::eq reads 'A' as the zero character 'a'.
+struct case_blind_traits : std::char_traits<char>
+{
+        [[nodiscard]] static constexpr auto lower(char c) noexcept
+                -> char
+        {
+                return 'A' <= c and c <= 'Z' ? static_cast<char>(c - 'A' + 'a') : c;
+        }
+
+        [[nodiscard]] static constexpr auto eq(char c, char d) noexcept
+                -> bool
+        {
+                return lower(c) == lower(d);
+        }
+};
+
+// The bit string in 'a' and 'b', every other character in upper case.
+[[nodiscard]] inline auto case_blind_spelling(const auto& x)
+        -> std::basic_string<char, case_blind_traits>
+{
+        auto str = spelled(x, 'a', 'b');
+        for (auto k = 0UZ; k < str.size(); k += 2UZ) {
+                str[k] = static_cast<char>(str[k] - 'a' + 'A');
+        }
+        return {str.begin(), str.end()};
+}
+
+// [bitset.cons]/3-9 read back: the bit string of a bitset, in every spelling the type takes, constructs that bitset.
 template<class X>
 struct string_constructor
 {
@@ -197,12 +242,18 @@ struct string_constructor
                 -> void
         {
                 auto const n = str.size();
-                BOOST_CHECK(X(str) == x);
-                BOOST_CHECK(X(padded, 2, n) == x);
+                BOOST_CHECK(X(str) == x);          // [bitset.cons]/4
+                BOOST_CHECK(X(padded, 2, n) == x); // [bitset.cons]/3
                 if constexpr (not dynamic<X>) {
                         // M is the smaller of N and rlen, so a character past the first N is checked but not stored.
                         BOOST_CHECK(X(str + "0") == x);
                         BOOST_CHECK(X(str + "1") == x);
+                }
+                if constexpr (not dynamic<X> and not zero_static_width<X>) {
+                        // Starting one character in, M is N - 1: every position but the top reads as before.
+                        auto low = x;
+                        low.reset(n - 1UZ);
+                        BOOST_CHECK(X(str, 1) == low); // [bitset.cons]/5
                 }
                 if constexpr (requires { X(std::string_view(str)); }) {
                         BOOST_CHECK(X(std::string_view(str)) == x);
@@ -218,19 +269,28 @@ struct string_constructor
                 -> void
         {
                 auto const n = str.size();
-                BOOST_CHECK(X(str.c_str()) == x);
+                BOOST_CHECK(X(str.c_str()) == x); // [bitset.cons]/9
                 BOOST_CHECK(X(padded.c_str() + 2, n) == x);
                 auto const dots = spelled(x, '.', 'x');
                 BOOST_CHECK(X(dots, 0, n, '.', 'x') == x);
                 BOOST_CHECK(X(dots.c_str(), n, '.', 'x') == x);
                 BOOST_CHECK(X(spelled(x, L'0', L'1')) == x);
+                BOOST_CHECK(X(spelled(x, u8'0', u8'1').c_str()) == x); // [bitset.cons]/8
+                if constexpr (states_char_like<X>) {
+                        BOOST_CHECK((not std::is_constructible_v<X, std::string const*>)); // [bitset.cons]/8
+                }
+                auto const blind = case_blind_spelling(x);
+                BOOST_CHECK(X(blind, 0, n, 'a', 'b') == x); // [bitset.cons]/6
+                if constexpr (requires { X(std::string_view(str)); }) {
+                        BOOST_CHECK(X(std::basic_string_view<char, case_blind_traits>(blind), 0, n, 'a', 'b') == x); // [bitset.cons]/6
+                }
         }
 
         // [bitset.cons]/7, which boost::dynamic_bitset asserts rather than throws.
         static auto check_out_of_range(const std::string& str) noexcept // NOLINT(bugprone-exception-escape)
                 -> void
         {
-                BOOST_CHECK_THROW(static_cast<void>(X(str, str.size() + 1)), std::out_of_range);
+                BOOST_CHECK_THROW(static_cast<void>(X(str, str.size() + 1)), std::out_of_range); // [bitset.cons]/7
         }
 
         // The refused character needs room at a run-time width, which a full capacity has not.
@@ -238,7 +298,7 @@ struct string_constructor
                 -> void
         {
                 if (str.size() < x.max_size()) {
-                        BOOST_CHECK_THROW(static_cast<void>(X("2" + str)), std::invalid_argument);
+                        BOOST_CHECK_THROW(static_cast<void>(X("2" + str)), std::invalid_argument); // [bitset.cons]/7
                 }
         }
 
@@ -247,7 +307,18 @@ struct string_constructor
                 -> void
         {
                 if (not str.empty()) {
-                        BOOST_CHECK_THROW(static_cast<void>(X("2" + str)), std::invalid_argument);
+                        BOOST_CHECK_THROW(static_cast<void>(X("2" + str)), std::invalid_argument); // [bitset.cons]/7
+                }
+        }
+
+        // A character that traits::eq finds equal to neither zero nor one, among the positions stored.
+        static auto check_invalid_under_traits(const X& x) noexcept // NOLINT(bugprone-exception-escape)
+                -> void
+        {
+                auto blind = case_blind_spelling(x);
+                if (not blind.empty()) {
+                        blind[0] = 'c';
+                        BOOST_CHECK_THROW(static_cast<void>(X(blind, 0, blind.size(), 'a', 'b')), std::invalid_argument); // [bitset.cons]/7
                 }
         }
 
@@ -255,7 +326,7 @@ struct string_constructor
         static auto check_invalid_past_a_static_width(const std::string& str) noexcept // NOLINT(bugprone-exception-escape)
                 -> void
         {
-                BOOST_CHECK_THROW(static_cast<void>(X(str + "2")), std::invalid_argument);
+                BOOST_CHECK_THROW(static_cast<void>(X(str + "2")), std::invalid_argument); // [bitset.cons]/7
         }
 
         auto operator()(const X& x) const noexcept
@@ -265,6 +336,7 @@ struct string_constructor
                 check_strings(x, str, padded);
                 if constexpr (character_pointer_constructible<X>) {
                         check_other_spellings(x, str, padded);
+                        check_invalid_under_traits(x);
                         check_out_of_range(str);
                         if constexpr (dynamic<X>) {
                                 check_invalid_at_a_run_time_width(x, str);
@@ -467,14 +539,177 @@ struct mem_flip
         }
 };
 
+// A copy of a with position pos holding val, as set(pos, val) stores it.
+template<class X>
+[[nodiscard]] auto with_bit(const X& a, std::size_t pos, bool val)
+        -> X
+{
+        auto x = a;
+        x.set(pos, val);
+        return x;
+}
+
+// Called only where pos < size(), the hardened precondition, whose violation no check in the process can observe.
 struct mem_at
 {
         auto operator()(const auto& self, std::size_t pos) const noexcept // NOLINT(bugprone-exception-escape)
         {
-                auto const N = self.size();
-                BOOST_CHECK(pos < N);                               // [bitset.members]/30
                 BOOST_CHECK_EQUAL(self[pos], self.test(pos));       // [bitset.members]/31
                 BOOST_CHECK_NO_THROW(static_cast<void>(self[pos])); // [bitset.members]/32
+        }
+};
+
+// The non-const subscript, under the same precondition: a proxy that reads as test(pos) and assigns as set(pos, val).
+struct mem_at_reference
+{
+        template<class X>
+        auto operator()(const X& a, std::size_t pos) const noexcept // NOLINT(bugprone-exception-escape)
+        {
+                auto self = a;
+                BOOST_CHECK(self[pos] == a.test(pos)); // [bitset.members]/34
+                for (auto const val : {false, true}) {
+                        auto b = a;
+                        b[pos] = val;
+                        BOOST_CHECK(b == with_bit(a, pos, val)); // [bitset.members]/34
+                }
+                BOOST_CHECK_NO_THROW(static_cast<void>(self[pos])); // [bitset.members]/35
+        }
+};
+
+// The proxy's copy refers to the same bit: a write through the copy is read through the original.
+struct mem_reference_copy
+{
+        template<class X>
+        auto operator()(const X& a, std::size_t i) const noexcept
+        {
+                auto b = a;
+                auto const r = b[i];
+                auto s = r;
+                s = not a[i];
+                BOOST_CHECK(std::as_const(b)[i] != a[i] and r == s); // [template.bitset.general]/4
+        }
+};
+
+// Destroying a proxy leaves the bit it referred to as it was.
+struct mem_reference_destroy
+{
+        template<class X>
+        auto operator()(const X& a, std::size_t i) const noexcept
+        {
+                auto b = a;
+                {
+                        auto const r = b[i];
+                        static_cast<void>(r);
+                }
+                BOOST_CHECK(b == a); // [template.bitset.general]/5
+        }
+};
+
+// The draft's proxy assigns through const, as vector<bool>'s does since P2321R2; libstdc++'s and boost's do not.
+template<class R>
+concept const_assignable = requires (R const r) { r = true; };
+
+// The proxy's three assignments, from a bool, from another proxy, and through a const proxy where the type has it.
+struct mem_reference_assign
+{
+        template<class X>
+        auto operator()(const X& a, std::size_t i, std::size_t j) const noexcept // NOLINT(bugprone-exception-escape)
+        {
+                for (auto const val : {false, true}) {
+                        auto b = a;
+                        auto r = b[i];
+                        auto const& dst = (r = val);
+                        BOOST_CHECK(b == with_bit(a, i, val));                     // [template.bitset.general]/6
+                        BOOST_CHECK_EQUAL(std::addressof(dst), std::addressof(r)); // [template.bitset.general]/7
+                }
+
+                // From a proxy into the same bitset, which is where rebinding instead of assigning would show.
+                auto b = a;
+                auto r = b[i];
+                auto const& dst = (r = b[j]);
+                BOOST_CHECK(b == with_bit(a, i, a[j]));                    // [template.bitset.general]/6
+                BOOST_CHECK_EQUAL(std::addressof(dst), std::addressof(r)); // [template.bitset.general]/7
+
+                if constexpr (const_assignable<typename X::reference>) {
+                        auto c = a;
+                        auto const q = c[i];
+                        auto const& cdst = (q = not a[i]);
+                        BOOST_CHECK(c == with_bit(a, i, not a[i]));                 // [template.bitset.general]/6
+                        BOOST_CHECK_EQUAL(std::addressof(cdst), std::addressof(q)); // [template.bitset.general]/7
+                }
+        }
+};
+
+struct mem_reference_bool
+{
+        template<class X>
+        auto operator()(const X& a, std::size_t i) const noexcept
+        {
+                auto b = a;
+                BOOST_CHECK_EQUAL(static_cast<bool>(b[i]), a[i]); // [template.bitset.general]/8
+        }
+};
+
+struct mem_reference_complement
+{
+        template<class X>
+        auto operator()(const X& a, std::size_t i) const noexcept
+        {
+                auto b = a;
+                BOOST_CHECK_EQUAL(~b[i], not a[i]); // [template.bitset.general]/9
+        }
+};
+
+// The hidden-friend swaps, which libstdc++'s and boost's proxies do not have.
+template<class X>
+concept swaps_references = requires (X& x, std::size_t k) { swap(x[k], x[k]); };
+
+template<class X>
+concept swaps_reference_and_bool = requires (X& x, std::size_t k, bool& y) { swap(x[k], y); swap(y, x[k]); };
+
+// The three hidden-friend swaps, two positions of one bitset or a position and a bool, where the type has them.
+struct fn_swap_reference
+{
+        template<class X>
+        auto operator()(const X& a, std::size_t i, std::size_t j) const noexcept // NOLINT(bugprone-exception-escape)
+        {
+                if constexpr (swaps_references<X>) {
+                        auto b = a;
+                        swap(b[i], b[j]);
+                        BOOST_CHECK(b == with_bit(with_bit(a, i, a[j]), j, a[i])); // [template.bitset.general]/10
+                }
+                if constexpr (swaps_reference_and_bool<X>) {
+                        auto c = a;
+                        auto y = not a[i];
+                        swap(c[i], y);
+                        BOOST_CHECK(y == a[i] and c == with_bit(a, i, not a[i])); // [template.bitset.general]/10
+
+                        auto d = a;
+                        auto z = not a[i];
+                        swap(z, d[i]);
+                        BOOST_CHECK(z == a[i] and d == with_bit(a, i, not a[i])); // [template.bitset.general]/10
+                }
+        }
+};
+
+// libc++ gives std::bitset vector<bool>'s proxy, whose flip returns void: the Returns is asked where it is answered.
+template<class R>
+concept flip_returns_reference = requires (R r) { { r.flip() } -> std::same_as<R&>; };
+
+struct mem_reference_flip
+{
+        template<class X>
+        auto operator()(const X& a, std::size_t i) const noexcept // NOLINT(bugprone-exception-escape)
+        {
+                auto b = a;
+                auto r = b[i];
+                if constexpr (flip_returns_reference<decltype(r)>) {
+                        auto const& dst = r.flip();
+                        BOOST_CHECK_EQUAL(std::addressof(dst), std::addressof(r)); // [template.bitset.general]/12
+                } else {
+                        r.flip();
+                }
+                BOOST_CHECK(b == with_bit(a, i, not a[i])); // [template.bitset.general]/11
         }
 };
 
@@ -779,7 +1014,19 @@ struct mem_intersects
         }
 };
 
-// [bitset.hash]/1 stipulates a std::hash<std::bitset<N>>; equal values hash equal wherever one exists.
+// [bitset.hash]/1 enables std::hash for a width in the type; boost::dynamic_bitset's own contract says nothing of it.
+template<class X>
+struct op_hash_enabled
+{
+        auto operator()() const noexcept
+        {
+                if constexpr (not dynamic<X>) {
+                        BOOST_CHECK((std::is_default_constructible_v<std::hash<X>> and std::is_invocable_r_v<std::size_t, std::hash<X> const&, X const&>)); // [bitset.hash]/1
+                }
+        }
+};
+
+// Equal values hash equal wherever a std::hash exists.
 struct op_hash
 {
         template<class X>
@@ -839,8 +1086,21 @@ struct op_iostream
                 std::stringstream sstr;
                 X y;
                 sstr << x;
-                sstr >> y;
-                BOOST_CHECK_EQUAL(x, y); // [bitset.operators]/4-8
+                BOOST_CHECK_EQUAL(sstr.str(), bit_string(x)); // [bitset.operators]/8
+                auto const& is = (sstr >> y);
+                BOOST_CHECK_EQUAL(x, y);                                                                 // [bitset.operators]/5
+                BOOST_CHECK_EQUAL(std::addressof(is), std::addressof(static_cast<std::istream&>(sstr))); // [bitset.operators]/7
+
+                // A formatted input function skips leading whitespace before the first digit.
+                auto padded = std::istringstream(" \t\n" + bit_string(x));
+                X z;
+                padded >> z;
+                BOOST_CHECK_EQUAL(z, x); // [bitset.operators]/4
+
+                // The characters are the stream's own, widened from '0' and '1'.
+                std::wostringstream wide;
+                wide << x;
+                BOOST_CHECK(wide.str() == spelled(x, L'0', L'1')); // [bitset.operators]/8
         }
 };
 
