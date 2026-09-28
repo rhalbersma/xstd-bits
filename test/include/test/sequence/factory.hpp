@@ -35,17 +35,21 @@ inline constexpr auto limit_v = [] -> std::size_t {
         }
 }();
 
-// A static width ignores n and a run-time width is resized to it; each position then holds what pred says.
+// A static width ignores n and a run-time width grows to it; each position holds what pred says.
 template<class X>
 [[nodiscard]] auto make_sequence(std::size_t n, auto pred)
         -> X
 {
         auto a = X();
         if constexpr (test::dynamic<X>) {
-                a.resize(n);
-        }
-        for (auto const i : std::views::iota(0UZ, a.size())) {
-                a[i] = pred(i);
+                // Appended rather than resized and indexed, which GCC at -O3 misreads as writing past a fixed capacity.
+                for (auto const i : std::views::iota(0UZ, n)) {
+                        a.push_back(pred(i));
+                }
+        } else {
+                for (auto const i : std::views::iota(0UZ, a.size())) {
+                        a[i] = pred(i);
+                }
         }
         return a;
 }

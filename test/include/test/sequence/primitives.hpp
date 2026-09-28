@@ -6,6 +6,7 @@
 #ifndef TEST_SEQUENCE_PRIMITIVES_HPP
 #define TEST_SEQUENCE_PRIMITIVES_HPP
 
+#include <test/sanitizer.hpp>        // has_address_sanitizer
 #include <test/sequence/factory.hpp> // model_of, static_width
 #include <boost/test/unit_test.hpp>  // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_GE, BOOST_CHECK_NE, BOOST_CHECK_THROW
 #include <algorithm>                 // ranges::count
@@ -593,6 +594,26 @@ struct mem_capacity
         }
 };
 
+template<class X>
+inline constexpr auto is_std_vector_bool_v = false;
+
+template<class Allocator>
+inline constexpr auto is_std_vector_bool_v<std::vector<bool, Allocator>> = true;
+
+#if defined(_MSVC_STL_VERSION)
+
+// MSVC's vector<bool>::reserve allocates the words for n unchecked, where [vector.capacity]/5 throws length_error.
+inline constexpr auto std_vector_bool_reserve_checks_max_size = false;
+
+#else
+
+inline constexpr auto std_vector_bool_reserve_checks_max_size = true;
+
+#endif
+
+template<class X>
+concept reserve_checks_max_size = std_vector_bool_reserve_checks_max_size or not is_std_vector_bool_v<X>;
+
 // Storage for n at least, and the value unchanged; past max_size() there is none to be had.
 struct mem_reserve
 {
@@ -603,8 +624,11 @@ struct mem_reserve
                 if (n <= a.max_size()) {
                         b.reserve(n);
                         BOOST_CHECK_GE(b.capacity(), n); // [vector.capacity]/4
-                } else {
+                } else if constexpr (reserve_checks_max_size<X>) {
                         BOOST_CHECK_THROW(b.reserve(n), std::length_error); // [vector.capacity]/5
+                } else if constexpr (not has_address_sanitizer) {
+                        // No allocator serves that many words, and AddressSanitizer aborts on the request.
+                        BOOST_CHECK_THROW(b.reserve(n), std::bad_alloc);
                 }
                 BOOST_CHECK(b == a); // [vector.capacity]/7
         }
