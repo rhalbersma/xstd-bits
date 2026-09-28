@@ -7,18 +7,19 @@
 #define TEST_SET_PRIMITIVES_HPP
 
 #include <test/reference.hpp>       // proxy_reference
-#include <boost/test/unit_test.hpp> // BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <algorithm>                // equal_range, lexicographical_compare_three_way
+#include <boost/test/unit_test.hpp> // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_LE, BOOST_CHECK_NO_THROW
+#include <algorithm>                // adjacent_find, all_of, copy, equal_range, includes, is_sorted, lexicographical_compare_three_way, max, set_difference, set_intersection, set_symmetric_difference, set_union, sort
 #include <compare>                  // is_gteq, is_gt, is_lteq, is_lt, strong_ordering
 #include <concepts>                 // convertible_to, default_initializable, equality_comparable, integral, same_as, unsigned_integral
 #include <cstddef>                  // ptrdiff_t
-#include <functional>               // hash
+#include <functional>               // hash, identity, less
 #include <initializer_list>         // initializer_list
-#include <iterator>                 // distance, empty, iter_difference_t, iter_value_t, next, prev, reverse_iterator, size, ssize
+#include <iterator>                 // back_inserter, distance, empty, iter_difference_t, iter_value_t, next, prev, reverse_iterator, size, ssize
 #include <ranges>                   // count, equal, find, lexicographical_compare, lower_bound, , subrange, upper_bound
 #include <set>                      // erase_if, set
 #include <type_traits>              // add_const_t, common_type_t, make_signed_t, remove_reference_t
-#include <utility>                  // declval, pair
+#include <utility>                  // declval, move, pair
+#include <vector>                   // vector
 
 namespace test::set {
 
@@ -30,8 +31,8 @@ template<class X, std::integral T = typename X::key_type> // NOLINT(readability-
 constexpr auto nested_types()
         -> void
 {
-        static_assert(std::same_as<typename X::value_type, T>);                  // [container.reqmts]/2
-        static_assert(requires { std::declval<X>().erase(std::declval<T>()); }); // [container.reqmts]/3
+        static_assert(std::same_as<typename X::value_type, T>); // [container.reqmts]/2
+        static_assert(requires { std::declval<X>().erase(std::declval<T>()); });
 
         static_assert(ref_same_as<X, typename X::reference, T&>);             // [container.reqmts]/4
         static_assert(ref_same_as<X, typename X::const_reference, T const&>); // [container.reqmts]/5
@@ -56,14 +57,28 @@ constexpr auto nested_types()
         static_assert(std::same_as<std::iter_value_t<typename X::const_reverse_iterator>, T>);
 
         using Key = T;
+        static_assert(std::same_as<typename X::value_type, typename X::key_type>); // [associative.reqmts.general]/5
         static_assert(std::same_as<typename X::key_type, Key>);                    // [associative.reqmts.general]/9
         static_assert(std::same_as<typename X::value_type, Key>);                  // [associative.reqmts.general]/12
-        static_assert(requires { std::declval<X>().erase(std::declval<Key>()); }); // [associative.reqmts.general]/13
+        static_assert(std::destructible<Key>);                                     // [associative.reqmts.general]/13
 
         using Compare = std::less<Key>;
         static_assert(std::same_as<Compare, typename X::key_compare>);   // [associative.reqmts.general]/14
-        static_assert(std::copy_constructible<Key>);                     // [associative.reqmts.general]/15
+        static_assert(std::copy_constructible<Compare>);                 // [associative.reqmts.general]/15
         static_assert(std::same_as<Compare, typename X::value_compare>); // [associative.reqmts.general]/16
+
+        // Constant iterators: a key can be read through either, and written through neither.
+        static_assert(std::bidirectional_iterator<typename X::iterator>);             // [associative.reqmts.general]/6
+        static_assert(not std::indirectly_writable<typename X::iterator, Key>);       // [associative.reqmts.general]/6
+        static_assert(not std::indirectly_writable<typename X::const_iterator, Key>); // [associative.reqmts.general]/6
+}
+
+// Two comparators order alike where they agree on a pair either way round and on a key against itself.
+template<class Compare>
+[[nodiscard]] constexpr auto same_order(Compare const& lhs, Compare const& rhs)
+        -> bool
+{
+        return lhs(0UZ, 1UZ) == rhs(0UZ, 1UZ) and lhs(1UZ, 0UZ) == rhs(1UZ, 0UZ) and lhs(1UZ, 1UZ) == rhs(1UZ, 1UZ);
 }
 
 template<class X>
@@ -82,16 +97,16 @@ struct constructor
         {
                 X u(a);               // NOLINT(performance-unnecessary-copy-initialization): the copy is what is under test
                 X u1 = a;             // NOLINT(performance-unnecessary-copy-initialization): the copy is what is under test
-                BOOST_CHECK(u == a);  // [container.reqmts]/10
-                BOOST_CHECK(u1 == a); // [container.reqmts]/10
+                BOOST_CHECK(u == a);  // [container.reqmts]/13
+                BOOST_CHECK(u1 == a); // [container.reqmts]/13
         }
 
         auto operator()(X&& rv) const
         {
                 X u(rv);
                 X u1 = rv;
-                BOOST_CHECK(u == rv);  // [container.reqmts]/10
-                BOOST_CHECK(u1 == rv); // [container.reqmts]/10
+                BOOST_CHECK(u == rv);  // [container.reqmts]/13
+                BOOST_CHECK(u1 == rv); // [container.reqmts]/13
         }
 
         template<std::input_iterator I>
@@ -120,6 +135,40 @@ struct constructor
                 X u1(il.begin(), il.end());
                 BOOST_CHECK(u == u1); // [associative.reqmts.general]/36
         }
+
+        // The forms taking a comparison object, which std::less makes observable only by what it answers.
+        auto operator()(X::key_compare const& c) const
+        {
+                X u(c);
+                BOOST_CHECK(u.empty() and same_order(u.key_comp(), c)); // [associative.reqmts.general]/18
+        }
+
+        template<std::input_iterator I>
+        auto operator()(I i, I j, X::key_compare const& c) const
+        {
+                static_assert(std::constructible_from<typename X::value_type, std::iter_reference_t<I>>); // [associative.reqmts.general]/23
+                X u(i, j, c);
+                X u1(c);
+                u1.insert(i, j);
+                BOOST_CHECK(u == u1); // [associative.reqmts.general]/24
+        }
+
+        template<std::ranges::input_range R>
+        auto operator()(std::from_range_t, R&& rg, X::key_compare const& c) const
+        {
+                static_assert(std::constructible_from<typename X::value_type, std::ranges::range_reference_t<R>>); // [associative.reqmts.general]/29
+                X u(std::from_range, rg, c);
+                X u1(c);
+                u1.insert(std::ranges::begin(rg), std::ranges::end(rg));
+                BOOST_CHECK(u == u1); // [associative.reqmts.general]/30
+        }
+
+        auto operator()(std::initializer_list<typename X::value_type> il, X::key_compare const& c) const
+        {
+                X u(il, c);
+                X u1(il.begin(), il.end(), c);
+                BOOST_CHECK(u == u1); // [associative.reqmts.general]/35
+        }
 };
 
 struct op_assign
@@ -128,16 +177,18 @@ struct op_assign
         auto operator()(X& r, X const& a) const
         {
                 r = a;
-                static_assert(std::same_as<decltype(r), X&>); // [container.reqmts]/49
-                BOOST_CHECK(r == a);                          // [container.reqmts]/50
+                static_assert(std::same_as<decltype(r), X&>); // [container.reqmts]/17
+                BOOST_CHECK(r == a);                          // [container.reqmts]/18
         }
 
         template<class X>
-        auto operator()(X& a, std::initializer_list<typename X::value_type> il) const // [tab:container.assoc.req]
+        auto operator()(X& a, std::initializer_list<typename X::value_type> il) const
         {
+                static_assert(std::same_as<decltype(a = il), X&>);                                                                                               // [associative.reqmts.general]/37
+                static_assert(std::copy_constructible<typename X::value_type> and std::assignable_from<typename X::value_type&, typename X::value_type const&>); // [associative.reqmts.general]/38
                 a = il;
                 X a1(il);
-                BOOST_CHECK(a == a1);
+                BOOST_CHECK(a == a1); // [associative.reqmts.general]/39
         }
 };
 
@@ -157,8 +208,8 @@ struct mem_const_iterator
         auto operator()(X& a) const noexcept
         {
                 using I = X::iterator;
-                static_assert(std::same_as<decltype(a.begin()), I>); // [container.reqmts]/24
-                static_assert(std::same_as<decltype(a.end()), I>);   // [container.reqmts]/27
+                static_assert(std::same_as<decltype(a.begin()), I>); // [container.reqmts]/27
+                static_assert(std::same_as<decltype(a.end()), I>);   // [container.reqmts]/30
 
                 using R = X::reverse_iterator;
                 static_assert(std::same_as<decltype(a.rbegin()), R>);        // [container.rev.reqmts]/4
@@ -172,14 +223,14 @@ struct mem_const_iterator
         auto operator()(const X& a) const noexcept
         {
                 using I = X::const_iterator;
-                static_assert(std::same_as<decltype(a.begin()), I>); // [container.reqmts]/24
-                static_assert(std::same_as<decltype(a.end()), I>);   // [container.reqmts]/27
+                static_assert(std::same_as<decltype(a.begin()), I>); // [container.reqmts]/27
+                static_assert(std::same_as<decltype(a.end()), I>);   // [container.reqmts]/30
 
-                static_assert(std::same_as<decltype(a.cbegin()), I>);       // [container.reqmts]/30
-                BOOST_CHECK(a.cbegin() == const_cast<X const&>(a).begin()); // [container.reqmts]/31
+                static_assert(std::same_as<decltype(a.cbegin()), I>);       // [container.reqmts]/33
+                BOOST_CHECK(a.cbegin() == const_cast<X const&>(a).begin()); // [container.reqmts]/34
 
-                static_assert(std::same_as<decltype(a.cend()), I>);     // [container.reqmts]/33
-                BOOST_CHECK(a.cend() == const_cast<X const&>(a).end()); // [container.reqmts]/34
+                static_assert(std::same_as<decltype(a.cend()), I>);     // [container.reqmts]/36
+                BOOST_CHECK(a.cend() == const_cast<X const&>(a).end()); // [container.reqmts]/37
 
                 using R = X::const_reverse_iterator;
                 static_assert(std::same_as<decltype(a.rbegin()), R>);        // [container.rev.reqmts]/4
@@ -198,8 +249,8 @@ struct mem_const_iterator
         template<std::input_iterator I>
         auto operator()(I i, I j) const noexcept
         {
-                if constexpr (std::random_access_iterator<I>) {                               // [container.reqmts]/37
-                        static_assert(std::same_as<decltype(i <=> j), std::strong_ordering>); // [container.reqmts]/36
+                if constexpr (std::random_access_iterator<I>) {                               // [container.reqmts]/40
+                        static_assert(std::same_as<decltype(i <=> j), std::strong_ordering>); // [container.reqmts]/39
                 }
         }
 };
@@ -209,10 +260,10 @@ struct op_equal_to
         template<class X, class Key = X::value_type>
         auto operator()(const X& a, const X& b) const noexcept
         {
-                static_assert(std::equality_comparable<Key>);                     // [container.reqmts]/39
-                static_assert(std::convertible_to<decltype(a == b), bool>);       // [container.reqmts]/40
-                BOOST_CHECK_EQUAL(a == b, std::ranges::equal(a, b));              // [container.reqmts]/41
-                static_assert(std::equivalence_relation<std::equal_to<X>, X, X>); // [container.reqmts]/43
+                static_assert(std::equality_comparable<Key>);
+                static_assert(std::convertible_to<decltype(a == b), bool>);       // [container.reqmts]/43
+                BOOST_CHECK_EQUAL(a == b, std::ranges::equal(a, b));              // [container.reqmts]/44
+                static_assert(std::equivalence_relation<std::equal_to<X>, X, X>); // [container.reqmts]/46
         }
 };
 
@@ -240,7 +291,7 @@ struct op_not_equal_to
 {
         auto operator()(auto const& a, auto const& b) const noexcept
         {
-                BOOST_CHECK_EQUAL(a != b, not(a == b)); // [container.reqmts]/44
+                BOOST_CHECK_EQUAL(a != b, not(a == b)); // [container.reqmts]/47
         }
 };
 
@@ -248,11 +299,11 @@ struct mem_swap
 {
         auto operator()(auto& a, auto& b) const noexcept
         {
-                static_assert(std::same_as<decltype(a.swap(b)), void>); // [container.reqmts]/45
+                static_assert(std::same_as<decltype(a.swap(b)), void>); // [container.reqmts]/48
                 auto a1 = a;
                 auto b1 = b;
                 a1.swap(b1);
-                BOOST_CHECK(a1 == b and b1 == a); // [container.reqmts]/46
+                BOOST_CHECK(a1 == b and b1 == a); // [container.reqmts]/49
         }
 };
 
@@ -266,7 +317,7 @@ struct fn_swap
                 auto b2 = b;
                 swap(a1, b1);
                 a2.swap(b2);
-                BOOST_CHECK(a1 == a2 and b1 == b2); // [container.reqmts]/48
+                BOOST_CHECK(a1 == a2 and b1 == b2); // [container.reqmts]/51
         }
 };
 
@@ -305,8 +356,8 @@ struct mem_front
         auto operator()(const X& a [[maybe_unused]]) const noexcept
         {
                 if constexpr (requires { a.front(); }) {
-                        static_assert(std::same_as<decltype(a.front()), R>); // [sequence.reqmts]/70
-                        BOOST_CHECK(a.empty() or (a.front() == *a.begin())); // [sequence.reqmts]/71
+                        static_assert(std::same_as<decltype(a.front()), R>); // [sequence.reqmts]/71
+                        BOOST_CHECK(a.empty() or (a.front() == *a.begin())); // [sequence.reqmts]/73
                 }
         }
 };
@@ -317,8 +368,8 @@ struct mem_back
         auto operator()(const X& a [[maybe_unused]]) const noexcept
         {
                 if constexpr (requires { a.back(); }) {
-                        static_assert(std::same_as<decltype(a.back()), R>);          // [sequence.reqmts]/73
-                        BOOST_CHECK(a.empty() or (a.back() == *std::prev(a.end()))); // [sequence.reqmts]/74
+                        static_assert(std::same_as<decltype(a.back()), R>);          // [sequence.reqmts]/75
+                        BOOST_CHECK(a.empty() or (a.back() == *std::prev(a.end()))); // [sequence.reqmts]/77
                 }
         }
 };
@@ -370,35 +421,45 @@ struct mem_insert
                 auto const inserted = not a.contains(t);
                 auto const r = a.insert(t);                            // [associative.reqmts.general]/63
                 BOOST_CHECK(r == std::make_pair(a.find(t), inserted)); // [associative.reqmts.general]/64
+                BOOST_CHECK_EQUAL(a.count(t), 1UZ);                    // [associative.reqmts.general]/4
         }
 
         template<class X>
         auto operator()(X& a, X::value_type&& t) const
         { // [associative.reqmts.general]/61
-                static_assert(std::same_as<decltype(a.insert(t)), std::pair<typename X::iterator, bool>>);
+                static_assert(std::same_as<decltype(a.insert(std::move(t))), std::pair<typename X::iterator, bool>>);
                 // [associative.reqmts.general]/62
-                static_assert(std::constructible_from<typename X::value_type, decltype(t)>);
-                auto const inserted = not a.contains(t);
-                auto const r = a.insert(t);                            // [associative.reqmts.general]/63
-                BOOST_CHECK(r == std::make_pair(a.find(t), inserted)); // [associative.reqmts.general]/64
+                static_assert(std::constructible_from<typename X::value_type, decltype(std::move(t))>);
+                auto const key = t;
+                auto const inserted = not a.contains(key);
+                auto const r = a.insert(std::move(t));                   // [associative.reqmts.general]/63
+                BOOST_CHECK(r == std::make_pair(a.find(key), inserted)); // [associative.reqmts.general]/64
+                BOOST_CHECK_EQUAL(a.count(key), 1UZ);                    // [associative.reqmts.general]/4
         }
 
         template<class X>
         auto operator()(X& a, X::iterator p, X::value_type const& t) const
         {
-                auto r = a.insert(p, t);                                        // NOLINT(misc-const-correctness): the next line asserts decltype(r), so const would break the assertion this exists to make
-                static_assert(std::same_as<decltype(r), typename X::iterator>); // [associative.reqmts.general]/70
-                static_assert(requires { a.insert(p, t); });                    // [associative.reqmts.general]/71
-                BOOST_CHECK(r == a.find(t));                                    // [associative.reqmts.general]/73
+                auto const size = a.size();
+                auto const inserted = not a.contains(t);
+                auto r = a.insert(p, t);                                                  // NOLINT(misc-const-correctness): the next line asserts decltype(r), so const would break the assertion this exists to make
+                static_assert(std::same_as<decltype(r), typename X::iterator>);           // [associative.reqmts.general]/70
+                static_assert(requires { a.insert(p, t); });                              // [associative.reqmts.general]/71
+                BOOST_CHECK(a.contains(t) and a.size() == size + (inserted ? 1UZ : 0UZ)); // [associative.reqmts.general]/72
+                BOOST_CHECK(r == a.find(t));                                              // [associative.reqmts.general]/73
         }
 
         template<class X>
         auto operator()(X& a, X::iterator p, X::value_type&& t) const
         {
-                auto r = a.insert(p, t);
-                static_assert(std::same_as<decltype(r), typename X::iterator>); // [associative.reqmts.general]/70
-                static_assert(requires { a.insert(p, t); });                    // [associative.reqmts.general]/71
-                BOOST_CHECK(r == a.find(t));                                    // [associative.reqmts.general]/73
+                auto const key = t;
+                auto const size = a.size();
+                auto const inserted = not a.contains(key);
+                auto r = a.insert(p, std::move(t));                                         // NOLINT(misc-const-correctness): the next line asserts decltype(r), so const would break the assertion this exists to make
+                static_assert(std::same_as<decltype(r), typename X::iterator>);             // [associative.reqmts.general]/70
+                static_assert(requires { a.insert(p, std::move(t)); });                     // [associative.reqmts.general]/71
+                BOOST_CHECK(a.contains(key) and a.size() == size + (inserted ? 1UZ : 0UZ)); // [associative.reqmts.general]/72
+                BOOST_CHECK(r == a.find(key));                                              // [associative.reqmts.general]/73
         }
 
         template<class X, std::input_iterator I>
@@ -482,7 +543,7 @@ struct mem_clear
         }
 };
 
-// [set.erasure]/1: what std::erase_if removes from a std::set of the same keys, counted the same.
+// What std::erase_if removes from a std::set of the same keys, counted the same.
 struct fn_erase_if
 {
         template<class X, class Predicate>
@@ -493,8 +554,8 @@ struct fn_erase_if
                 static_assert(std::same_as<decltype(erase_if(c1, pred)), typename X::size_type>);
                 auto const expected = std::erase_if(model, pred);
                 auto const erased = erase_if(c1, pred);
-                BOOST_CHECK_EQUAL(erased, expected);
-                BOOST_CHECK(std::ranges::equal(c1, model));
+                BOOST_CHECK_EQUAL(erased, expected);        // [set.erasure]/1
+                BOOST_CHECK(std::ranges::equal(c1, model)); // [set.erasure]/1
         }
 };
 
@@ -530,8 +591,8 @@ struct mem_contains
         template<class X>
         auto operator()(const X& b, X::key_type const& k) const
         {
-                static_assert(std::same_as<decltype(b.contains(k)), bool>);
-                BOOST_CHECK_EQUAL(b.contains(k), b.find(k) != b.end()); // [associative.reqmts.general]/154
+                static_assert(std::same_as<decltype(b.contains(k)), bool>); // [associative.reqmts.general]/153
+                BOOST_CHECK_EQUAL(b.contains(k), b.find(k) != b.end());     // [associative.reqmts.general]/154
         }
 };
 
@@ -585,6 +646,405 @@ struct mem_equal_range
                 using const_iterator = X::const_iterator;
                 static_assert(std::same_as<decltype(b.equal_range(k)), std::pair<const_iterator, const_iterator>>); // [associative.reqmts.general]/169
                 BOOST_CHECK(b.equal_range(k) == std::make_pair(b.lower_bound(k), b.upper_bound(k)));                // [associative.reqmts.general]/170
+        }
+};
+
+// a.erase(r): the erase of a.erase(q) through the iterator that is not necessarily constant.
+struct mem_erase_mutable
+{
+        template<class X>
+        auto operator()(X& a, X::iterator r) const
+        {
+                static_assert(std::same_as<decltype(a.erase(r)), typename X::iterator>); // [associative.reqmts.general]/130
+                // What follows r is compared by key, a vector-backed set moving its elements up as it erases.
+                auto const key = static_cast<X::key_type>(*r);
+                auto const last = std::next(r) == a.end();
+                auto const following = last ? key : static_cast<X::key_type>(*std::next(r));
+                auto const returns = a.erase(r);
+                BOOST_CHECK(not a.contains(key));                                                      // [associative.reqmts.general]/131
+                BOOST_CHECK(last ? returns == a.end() : returns != a.end() and *returns == following); // [associative.reqmts.general]/132
+        }
+};
+
+// Each key before the next under value_comp(), and never equivalent to it.
+struct key_order
+{
+        template<class X>
+        auto operator()(X const& a) const
+        {
+                auto const comp = a.value_comp();
+                BOOST_CHECK(std::ranges::adjacent_find(a, [&](auto&& i, auto&& j) -> bool { return comp(j, i); }) == a.end());     // [associative.reqmts.general]/177
+                BOOST_CHECK(std::ranges::adjacent_find(a, [&](auto&& i, auto&& j) -> bool { return not comp(i, j); }) == a.end()); // [associative.reqmts.general]/178
+        }
+};
+
+// A key that orders against std::size_t without converting to it, so only a member template can take it.
+struct heterogeneous_key
+{
+        std::size_t value;
+
+        [[nodiscard]] friend constexpr auto operator<=>(heterogeneous_key const& lhs, std::size_t rhs) noexcept
+                -> std::strong_ordering
+        {
+                return lhs.value <=> rhs;
+        }
+
+        [[nodiscard]] friend constexpr auto operator==(heterogeneous_key const& lhs, std::size_t rhs) noexcept
+                -> bool
+        {
+                return lhs.value == rhs;
+        }
+};
+
+// A comparator without is_transparent leaves the heterogeneous member templates out of overload resolution.
+template<class X>
+constexpr auto no_heterogeneous_members()
+        -> void
+{
+        using K = heterogeneous_key;
+        static_assert(not requires { typename X::key_compare::is_transparent; });
+        static_assert(not requires (X const b, K k) { b.find(k); });        // [associative.reqmts.general]/180
+        static_assert(not requires (X const b, K k) { b.count(k); });       // [associative.reqmts.general]/180
+        static_assert(not requires (X const b, K k) { b.contains(k); });    // [associative.reqmts.general]/180
+        static_assert(not requires (X const b, K k) { b.lower_bound(k); }); // [associative.reqmts.general]/180
+        static_assert(not requires (X const b, K k) { b.upper_bound(k); }); // [associative.reqmts.general]/180
+        static_assert(not requires (X const b, K k) { b.equal_range(k); }); // [associative.reqmts.general]/180
+        static_assert(not requires (X a, K k) { a.erase(k); });             // [associative.reqmts.general]/180
+        static_assert(not requires (X a, K k) { a.extract(k); });           // [associative.reqmts.general]/180
+}
+
+// Neither clear() nor erase(k) throws, std::less having nothing to throw.
+struct mem_clear_erase_nothrow
+{
+        template<class X>
+        auto operator()(X const& a, X::key_type k) const
+        {
+                auto x = a;
+                BOOST_CHECK_NO_THROW(x.clear()); // [associative.reqmts.except]/1
+                auto y = a;
+                BOOST_CHECK_NO_THROW(static_cast<void>(y.erase(k))); // [associative.reqmts.except]/1
+        }
+};
+
+// Neither swap throws, std::less having nothing to throw.
+struct mem_swap_nothrow
+{
+        template<class X>
+        auto operator()(X const& a, X const& b) const
+        {
+                auto x = a;
+                auto y = b;
+                BOOST_CHECK_NO_THROW(x.swap(y));  // [associative.reqmts.except]/3
+                BOOST_CHECK_NO_THROW(swap(x, y)); // [associative.reqmts.except]/3
+        }
+};
+
+// An insertion of one key that throws leaves the set as it was.
+struct mem_insert_or_nothing
+{
+        template<class X>
+        auto operator()(X const& a, X::key_type k) const
+        {
+                auto const unchanged = [&](auto insert) -> bool {
+                        auto x = a;
+                        try {
+                                insert(x);
+                        } catch (...) {
+                                return x == a;
+                        }
+                        return true;
+                };
+                BOOST_CHECK(unchanged([&](X& x) -> void { static_cast<void>(x.insert(k)); }));                // [associative.reqmts.except]/2
+                BOOST_CHECK(unchanged([&](X& x) -> void { static_cast<void>(x.insert(x.end(), k)); }));       // [associative.reqmts.except]/2
+                BOOST_CHECK(unchanged([&](X& x) -> void { static_cast<void>(x.emplace(k)); }));               // [associative.reqmts.except]/2
+                BOOST_CHECK(unchanged([&](X& x) -> void { static_cast<void>(x.emplace_hint(x.end(), k)); })); // [associative.reqmts.except]/2
+        }
+};
+
+// A comparison that counts itself, and projections that count their applications, for a Complexity bound.
+struct counted
+{
+        std::size_t comparisons = 0;
+        std::size_t projections1 = 0;
+        std::size_t projections2 = 0;
+
+        [[nodiscard]] auto comp()
+        {
+                return [this](std::size_t x, std::size_t y) -> bool {
+                        ++comparisons;
+                        return x < y;
+                };
+        }
+
+        [[nodiscard]] auto proj1()
+        {
+                return [this](std::size_t x) -> std::size_t {
+                        ++projections1;
+                        return x;
+                };
+        }
+
+        [[nodiscard]] auto proj2()
+        {
+                return [this](std::size_t x) -> std::size_t {
+                        ++projections2;
+                        return x;
+                };
+        }
+
+        // At most 2 * (N1 + N2) - 1, and nothing at all for two empty ranges, where the formula leaves -1.
+        [[nodiscard]] static auto bound(auto const& a, auto const& b)
+                -> std::size_t
+        {
+                return std::max(2UZ * (a.size() + b.size()), 1UZ) - 1UZ;
+        }
+};
+
+// The keys of a set, in its own order, as the elements an algorithm writes out.
+template<class X>
+[[nodiscard]] auto keys_of(X const& a)
+        -> std::vector<std::size_t>
+{
+        return std::vector<std::size_t>(a.begin(), a.end());
+}
+
+// includes(a, b): whether every key of b is also one of a.
+struct fn_includes
+{
+        template<class X>
+        auto operator()(X const& a, X const& b) const
+        {
+                BOOST_CHECK(std::ranges::is_sorted(a) and std::ranges::is_sorted(b)); // [includes]/2
+                auto const expected = std::ranges::all_of(b, [&](auto&& k) -> bool { return a.contains(k); });
+                auto n = counted();
+                auto const returns = std::includes(a.begin(), a.end(), b.begin(), b.end(), n.comp());
+                BOOST_CHECK_EQUAL(std::includes(a.begin(), a.end(), b.begin(), b.end()), std::includes(a.begin(), a.end(), b.begin(), b.end(), std::less())); // [includes]/1
+                BOOST_CHECK_EQUAL(returns, expected);                                                                                                         // [includes]/3
+                BOOST_CHECK_LE(n.comparisons, counted::bound(a, b));                                                                                          // [includes]/4
+        }
+};
+
+struct fn_ranges_includes
+{
+        template<class X>
+        auto operator()(X const& a, X const& b) const
+        {
+                auto const expected = std::ranges::all_of(b, [&](auto&& k) -> bool { return a.contains(k); });
+                auto n = counted();
+                auto const returns = std::ranges::includes(a, b, n.comp(), n.proj1(), n.proj2());
+                BOOST_CHECK_EQUAL(std::ranges::includes(a, b), std::ranges::includes(a, b, std::ranges::less(), std::identity(), std::identity()));       // [includes]/1
+                BOOST_CHECK_EQUAL(returns, expected);                                                                                                     // [includes]/3
+                BOOST_CHECK(n.comparisons <= counted::bound(a, b) and n.projections1 <= counted::bound(a, b) and n.projections2 <= counted::bound(a, b)); // [includes]/4
+        }
+};
+
+// The keys of a set operation, each worked out from contains() alone.
+struct expected_keys
+{
+        template<class X>
+        [[nodiscard]] static auto set_union(X const& a, X const& b)
+                -> std::vector<std::size_t>
+        {
+                auto result = keys_of(a);
+                std::ranges::copy(b | std::views::filter([&](auto&& k) -> bool { return not a.contains(k); }), std::back_inserter(result));
+                std::ranges::sort(result);
+                return result;
+        }
+
+        template<class X>
+        [[nodiscard]] static auto set_intersection(X const& a, X const& b)
+                -> std::vector<std::size_t>
+        {
+                return a | std::views::filter([&](auto&& k) -> bool { return b.contains(k); }) | std::ranges::to<std::vector<std::size_t>>();
+        }
+
+        template<class X>
+        [[nodiscard]] static auto set_difference(X const& a, X const& b)
+                -> std::vector<std::size_t>
+        {
+                return a | std::views::filter([&](auto&& k) -> bool { return not b.contains(k); }) | std::ranges::to<std::vector<std::size_t>>();
+        }
+
+        template<class X>
+        [[nodiscard]] static auto set_symmetric_difference(X const& a, X const& b)
+                -> std::vector<std::size_t>
+        {
+                auto result = set_difference(a, b);
+                std::ranges::copy(set_difference(b, a), std::back_inserter(result));
+                std::ranges::sort(result);
+                return result;
+        }
+};
+
+struct fn_set_union
+{
+        template<class X>
+        auto operator()(X const& a, X const& b) const
+        {
+                auto const into = [&](auto... comp) -> std::vector<std::size_t> {
+                        auto result = std::vector<std::size_t>(a.size() + b.size());
+                        result.erase(std::set_union(a.begin(), a.end(), b.begin(), b.end(), result.begin(), comp...), result.end());
+                        return result;
+                };
+                BOOST_CHECK(std::ranges::is_sorted(a) and std::ranges::is_sorted(b)); // [set.union]/2
+                auto const expected = expected_keys::set_union(a, b);
+                auto out = std::vector<std::size_t>(a.size() + b.size());
+                auto n = counted();
+                auto const last = std::set_union(a.begin(), a.end(), b.begin(), b.end(), out.begin(), n.comp());
+                BOOST_CHECK(into() == into(std::less()));                                            // [set.union]/1
+                BOOST_CHECK(std::ranges::equal(std::ranges::subrange(out.begin(), last), expected)); // [set.union]/3
+                BOOST_CHECK(last == out.begin() + std::ranges::ssize(expected));                     // [set.union]/4
+                BOOST_CHECK_LE(n.comparisons, counted::bound(a, b));                                 // [set.union]/5
+        }
+};
+
+struct fn_ranges_set_union
+{
+        template<class X>
+        auto operator()(X const& a, X const& b) const
+        {
+                auto const into = [&](auto... comp) -> std::vector<std::size_t> {
+                        auto result = std::vector<std::size_t>(a.size() + b.size());
+                        result.erase(std::ranges::set_union(a, b, result.begin(), comp...).out, result.end());
+                        return result;
+                };
+                auto const expected = expected_keys::set_union(a, b);
+                auto out = std::vector<std::size_t>(a.size() + b.size());
+                auto n = counted();
+                auto const [in1, in2, last] = std::ranges::set_union(a, b, out.begin(), n.comp(), n.proj1(), n.proj2());
+                BOOST_CHECK(into() == into(std::ranges::less(), std::identity(), std::identity()));                                                       // [set.union]/1
+                BOOST_CHECK(std::ranges::equal(std::ranges::subrange(out.begin(), last), expected));                                                      // [set.union]/3
+                BOOST_CHECK(in1 == a.end() and in2 == b.end() and last == out.begin() + std::ranges::ssize(expected));                                    // [set.union]/4
+                BOOST_CHECK(n.comparisons <= counted::bound(a, b) and n.projections1 <= counted::bound(a, b) and n.projections2 <= counted::bound(a, b)); // [set.union]/5
+        }
+};
+
+struct fn_set_intersection
+{
+        template<class X>
+        auto operator()(X const& a, X const& b) const
+        {
+                auto const into = [&](auto... comp) -> std::vector<std::size_t> {
+                        auto result = std::vector<std::size_t>(a.size() + b.size());
+                        result.erase(std::set_intersection(a.begin(), a.end(), b.begin(), b.end(), result.begin(), comp...), result.end());
+                        return result;
+                };
+                BOOST_CHECK(std::ranges::is_sorted(a) and std::ranges::is_sorted(b)); // [set.intersection]/2
+                auto const expected = expected_keys::set_intersection(a, b);
+                auto out = std::vector<std::size_t>(a.size() + b.size());
+                auto n = counted();
+                auto const last = std::set_intersection(a.begin(), a.end(), b.begin(), b.end(), out.begin(), n.comp());
+                BOOST_CHECK(into() == into(std::less()));                                            // [set.intersection]/1
+                BOOST_CHECK(std::ranges::equal(std::ranges::subrange(out.begin(), last), expected)); // [set.intersection]/3
+                BOOST_CHECK(last == out.begin() + std::ranges::ssize(expected));                     // [set.intersection]/4
+                BOOST_CHECK_LE(n.comparisons, counted::bound(a, b));                                 // [set.intersection]/5
+        }
+};
+
+struct fn_ranges_set_intersection
+{
+        template<class X>
+        auto operator()(X const& a, X const& b) const
+        {
+                auto const into = [&](auto... comp) -> std::vector<std::size_t> {
+                        auto result = std::vector<std::size_t>(a.size() + b.size());
+                        result.erase(std::ranges::set_intersection(a, b, result.begin(), comp...).out, result.end());
+                        return result;
+                };
+                auto const expected = expected_keys::set_intersection(a, b);
+                auto out = std::vector<std::size_t>(a.size() + b.size());
+                auto n = counted();
+                auto const [in1, in2, last] = std::ranges::set_intersection(a, b, out.begin(), n.comp(), n.proj1(), n.proj2());
+                BOOST_CHECK(into() == into(std::ranges::less(), std::identity(), std::identity()));                                                       // [set.intersection]/1
+                BOOST_CHECK(std::ranges::equal(std::ranges::subrange(out.begin(), last), expected));                                                      // [set.intersection]/3
+                BOOST_CHECK(in1 == a.end() and in2 == b.end() and last == out.begin() + std::ranges::ssize(expected));                                    // [set.intersection]/4
+                BOOST_CHECK(n.comparisons <= counted::bound(a, b) and n.projections1 <= counted::bound(a, b) and n.projections2 <= counted::bound(a, b)); // [set.intersection]/5
+        }
+};
+
+struct fn_set_difference
+{
+        template<class X>
+        auto operator()(X const& a, X const& b) const
+        {
+                auto const into = [&](auto... comp) -> std::vector<std::size_t> {
+                        auto result = std::vector<std::size_t>(a.size() + b.size());
+                        result.erase(std::set_difference(a.begin(), a.end(), b.begin(), b.end(), result.begin(), comp...), result.end());
+                        return result;
+                };
+                BOOST_CHECK(std::ranges::is_sorted(a) and std::ranges::is_sorted(b)); // [set.difference]/2
+                auto const expected = expected_keys::set_difference(a, b);
+                auto out = std::vector<std::size_t>(a.size() + b.size());
+                auto n = counted();
+                auto const last = std::set_difference(a.begin(), a.end(), b.begin(), b.end(), out.begin(), n.comp());
+                BOOST_CHECK(into() == into(std::less()));                                            // [set.difference]/1
+                BOOST_CHECK(std::ranges::equal(std::ranges::subrange(out.begin(), last), expected)); // [set.difference]/3
+                BOOST_CHECK(last == out.begin() + std::ranges::ssize(expected));                     // [set.difference]/4
+                BOOST_CHECK_LE(n.comparisons, counted::bound(a, b));                                 // [set.difference]/5
+        }
+};
+
+struct fn_ranges_set_difference
+{
+        template<class X>
+        auto operator()(X const& a, X const& b) const
+        {
+                auto const into = [&](auto... comp) -> std::vector<std::size_t> {
+                        auto result = std::vector<std::size_t>(a.size() + b.size());
+                        result.erase(std::ranges::set_difference(a, b, result.begin(), comp...).out, result.end());
+                        return result;
+                };
+                auto const expected = expected_keys::set_difference(a, b);
+                auto out = std::vector<std::size_t>(a.size() + b.size());
+                auto n = counted();
+                auto const [in1, last] = std::ranges::set_difference(a, b, out.begin(), n.comp(), n.proj1(), n.proj2());
+                BOOST_CHECK(into() == into(std::ranges::less(), std::identity(), std::identity()));                                                       // [set.difference]/1
+                BOOST_CHECK(std::ranges::equal(std::ranges::subrange(out.begin(), last), expected));                                                      // [set.difference]/3
+                BOOST_CHECK(in1 == a.end() and last == out.begin() + std::ranges::ssize(expected));                                                       // [set.difference]/4
+                BOOST_CHECK(n.comparisons <= counted::bound(a, b) and n.projections1 <= counted::bound(a, b) and n.projections2 <= counted::bound(a, b)); // [set.difference]/5
+        }
+};
+
+struct fn_set_symmetric_difference
+{
+        template<class X>
+        auto operator()(X const& a, X const& b) const
+        {
+                auto const into = [&](auto... comp) -> std::vector<std::size_t> {
+                        auto result = std::vector<std::size_t>(a.size() + b.size());
+                        result.erase(std::set_symmetric_difference(a.begin(), a.end(), b.begin(), b.end(), result.begin(), comp...), result.end());
+                        return result;
+                };
+                BOOST_CHECK(std::ranges::is_sorted(a) and std::ranges::is_sorted(b)); // [set.symmetric.difference]/2
+                auto const expected = expected_keys::set_symmetric_difference(a, b);
+                auto out = std::vector<std::size_t>(a.size() + b.size());
+                auto n = counted();
+                auto const last = std::set_symmetric_difference(a.begin(), a.end(), b.begin(), b.end(), out.begin(), n.comp());
+                BOOST_CHECK(into() == into(std::less()));                                            // [set.symmetric.difference]/1
+                BOOST_CHECK(std::ranges::equal(std::ranges::subrange(out.begin(), last), expected)); // [set.symmetric.difference]/3
+                BOOST_CHECK(last == out.begin() + std::ranges::ssize(expected));                     // [set.symmetric.difference]/4
+                BOOST_CHECK_LE(n.comparisons, counted::bound(a, b));                                 // [set.symmetric.difference]/5
+        }
+};
+
+struct fn_ranges_set_symmetric_difference
+{
+        template<class X>
+        auto operator()(X const& a, X const& b) const
+        {
+                auto const into = [&](auto... comp) -> std::vector<std::size_t> {
+                        auto result = std::vector<std::size_t>(a.size() + b.size());
+                        result.erase(std::ranges::set_symmetric_difference(a, b, result.begin(), comp...).out, result.end());
+                        return result;
+                };
+                auto const expected = expected_keys::set_symmetric_difference(a, b);
+                auto out = std::vector<std::size_t>(a.size() + b.size());
+                auto n = counted();
+                auto const [in1, in2, last] = std::ranges::set_symmetric_difference(a, b, out.begin(), n.comp(), n.proj1(), n.proj2());
+                BOOST_CHECK(into() == into(std::ranges::less(), std::identity(), std::identity()));                                                       // [set.symmetric.difference]/1
+                BOOST_CHECK(std::ranges::equal(std::ranges::subrange(out.begin(), last), expected));                                                      // [set.symmetric.difference]/3
+                BOOST_CHECK(in1 == a.end() and in2 == b.end() and last == out.begin() + std::ranges::ssize(expected));                                    // [set.symmetric.difference]/4
+                BOOST_CHECK(n.comparisons <= counted::bound(a, b) and n.projections1 <= counted::bound(a, b) and n.projections2 <= counted::bound(a, b)); // [set.symmetric.difference]/5
         }
 };
 

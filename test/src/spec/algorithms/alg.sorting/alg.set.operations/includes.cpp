@@ -4,7 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/for_each_type.hpp>   // for_each_type
-#include <test/set/composable.hpp>  // includes
+#include <test/set/primitives.hpp>  // fn_includes, fn_ranges_includes
 #include <test/spec/input.hpp>      // context
 #include <test/spec/set.hpp>        // all, pairs_with_doubletons
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
@@ -19,14 +19,24 @@ using namespace test::set;
 using test::spec::context;
 namespace inputs = test::spec::set::inputs;
 
-// [includes]/1-4: bool includes(first1, last1, first2, last2)
+// [includes]/1-4: bool includes(first1, last1, first2, last2, comp)
 BOOST_AUTO_TEST_CASE(Includes)
 {
         test::for_each_type<test::spec::set::all>([]<class T> -> void {
-                // Each member operator a set has is the algorithm over its keys; a set without the member is skipped.
                 for (auto const [from, a, b] : inputs::pairs_with_doubletons<T>()) {
                         auto const on_failure = context(from, a, b);
-                        composable::includes()(a, b);
+                        fn_includes()(a, b);
+                }
+        });
+}
+
+// [includes]/1,3-4: ranges::includes(r1, r2, comp, proj1, proj2)
+BOOST_AUTO_TEST_CASE(RangesIncludes)
+{
+        test::for_each_type<test::spec::set::all>([]<class T> -> void {
+                for (auto const [from, a, b] : inputs::pairs_with_doubletons<T>()) {
+                        auto const on_failure = context(from, a, b);
+                        fn_ranges_includes()(a, b);
                 }
         });
 }
