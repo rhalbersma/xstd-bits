@@ -45,27 +45,27 @@ inline constexpr auto L4 = 8UZ;
 namespace on0 {
 
 template<class X, auto N = limit_v<X, L0>>
-auto empty_set(auto fun)
+constexpr auto empty_set(auto fun, std::size_t width = N)
 {
-        auto a = make_bitset<X>(N); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
+        auto a = make_bitset<X>(width); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
         assert(a.none());
         fun(a);
 }
 
 template<class X, auto N = limit_v<X, L0>>
-auto full_set(auto fun)
+constexpr auto full_set(auto fun, std::size_t width = N)
 {
-        auto a = make_bitset<X>(N, true); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
+        auto a = make_bitset<X>(width, true); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
         assert(a.all());
         fun(a);
 }
 
 template<class X, auto N = limit_v<X, L0>>
-auto empty_set_pair(auto fun)
+constexpr auto empty_set_pair(auto fun, std::size_t width = N)
 {
-        auto a = make_bitset<X>(N); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
+        auto a = make_bitset<X>(width); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
         assert(a.none());
-        auto b = make_bitset<X>(N); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
+        auto b = make_bitset<X>(width); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
         assert(b.none());
         fun(a, b);
 }
@@ -75,26 +75,26 @@ auto empty_set_pair(auto fun)
 namespace on1 {
 
 template<class X, auto N = limit_v<X, L1>>
-auto all_valid(auto fun)
+constexpr auto all_valid(auto fun, std::size_t width = N)
 {
-        for (auto const i : std::views::iota(0UZ, N)) {
+        for (auto const i : std::views::iota(0UZ, width)) {
                 fun(i);
         }
 }
 
 template<class X, auto N = limit_v<X, L1>>
-auto any_value(auto fun)
+constexpr auto any_value(auto fun, std::size_t width = N)
 {
-        for (auto const i : std::views::iota(0UZ, N + 1)) {
+        for (auto const i : std::views::iota(0UZ, width + 1)) {
                 fun(i);
         }
 }
 
 template<class X, auto N = limit_v<X, L1>>
-auto all_cardinality_sets(auto fun)
+constexpr auto all_cardinality_sets(auto fun, std::size_t width = N)
 {
-        for (auto const i : std::views::iota(0UZ, N + 1)) {
-                auto a = make_bitset<X>(N);
+        for (auto const i : std::views::iota(0UZ, width + 1)) {
+                auto a = make_bitset<X>(width);
                 for (auto const j : std::views::iota(0UZ, i)) {
                         a.set(j);
                 }
@@ -104,10 +104,10 @@ auto all_cardinality_sets(auto fun)
 }
 
 template<class X, auto N = limit_v<X, L1>>
-auto all_singleton_sets(auto fun)
+constexpr auto all_singleton_sets(auto fun, std::size_t width = N)
 {
-        for (auto const i : std::views::iota(0UZ, N)) {
-                auto a = make_bitset<X>(N);
+        for (auto const i : std::views::iota(0UZ, width)) {
+                auto a = make_bitset<X>(width);
                 a.set(i);
                 assert(a.count() == 1);
                 fun(a);
@@ -119,14 +119,14 @@ auto all_singleton_sets(auto fun)
 namespace on2 {
 
 template<class X, auto N = limit_v<X, L2>>
-auto all_singleton_set_pairs(auto fun)
+constexpr auto all_singleton_set_pairs(auto fun, std::size_t width = N)
 {
-        for (auto const i : std::views::iota(0UZ, N)) {
-                for (auto const j : std::views::iota(0UZ, N)) {
-                        auto a = make_bitset<X>(N);
+        for (auto const i : std::views::iota(0UZ, width)) {
+                for (auto const j : std::views::iota(0UZ, width)) {
+                        auto a = make_bitset<X>(width);
                         a.set(i);
                         assert(a.count() == 1);
-                        auto b = make_bitset<X>(N);
+                        auto b = make_bitset<X>(width);
                         b.set(j);
                         assert(b.count() == 1);
                         fun(a, b);
@@ -135,11 +135,11 @@ auto all_singleton_set_pairs(auto fun)
 }
 
 template<class X, auto N = limit_v<X, L2>>
-auto all_doubleton_sets(auto fun)
+constexpr auto all_doubleton_sets(auto fun, std::size_t width = N)
 {
-        for (auto const j : std::views::iota(1UZ, std::ranges::max(N, 1UZ))) {
+        for (auto const j : std::views::iota(1UZ, std::ranges::max(width, 1UZ))) {
                 for (auto const i : std::views::iota(0UZ, j)) {
-                        auto a = make_bitset<X>(N);
+                        auto a = make_bitset<X>(width);
                         a.set(i);
                         a.set(j);
                         assert(a.count() == 2);
@@ -153,18 +153,18 @@ auto all_doubleton_sets(auto fun)
 namespace on3 {
 
 template<class X, auto N = limit_v<X, L3>>
-auto all_singleton_set_triples(auto fun)
+constexpr auto all_singleton_set_triples(auto fun, std::size_t width = N)
 {
-        for (auto const i : std::views::iota(0UZ, N)) {
-                for (auto const j : std::views::iota(0UZ, N)) {
-                        for (auto const k : std::views::iota(0UZ, N)) {
-                                auto a = make_bitset<X>(N);
+        for (auto const i : std::views::iota(0UZ, width)) {
+                for (auto const j : std::views::iota(0UZ, width)) {
+                        for (auto const k : std::views::iota(0UZ, width)) {
+                                auto a = make_bitset<X>(width);
                                 a.set(i);
                                 assert(a.count() == 1);
-                                auto b = make_bitset<X>(N);
+                                auto b = make_bitset<X>(width);
                                 b.set(j);
                                 assert(b.count() == 1);
-                                auto c = make_bitset<X>(N);
+                                auto c = make_bitset<X>(width);
                                 c.set(k);
                                 assert(c.count() == 1);
                                 fun(a, b, c);
@@ -174,12 +174,12 @@ auto all_singleton_set_triples(auto fun)
 }
 
 template<class X, auto N = limit_v<X, L3>>
-auto all_triplet_sets(auto fun)
+constexpr auto all_triplet_sets(auto fun, std::size_t width = N)
 {
-        for (auto const k : std::views::iota(2UZ, std::ranges::max(N, 2UZ))) {
+        for (auto const k : std::views::iota(2UZ, std::ranges::max(width, 2UZ))) {
                 for (auto const j : std::views::iota(1UZ, k)) {
                         for (auto const i : std::views::iota(0UZ, j)) {
-                                auto a = make_bitset<X>(N);
+                                auto a = make_bitset<X>(width);
                                 a.set(i);
                                 a.set(j);
                                 a.set(k);
@@ -195,17 +195,17 @@ auto all_triplet_sets(auto fun)
 namespace on4 {
 
 template<class X, auto N = limit_v<X, L4>>
-auto all_doubleton_set_pairs(auto fun)
+constexpr auto all_doubleton_set_pairs(auto fun, std::size_t width = N)
 {
-        for (auto const j : std::views::iota(1UZ, std::ranges::max(N, 1UZ))) {
-                for (auto const n : std::views::iota(1UZ, std::ranges::max(N, 1UZ))) {
+        for (auto const j : std::views::iota(1UZ, std::ranges::max(width, 1UZ))) {
+                for (auto const n : std::views::iota(1UZ, std::ranges::max(width, 1UZ))) {
                         for (auto const i : std::views::iota(0UZ, j)) {
                                 for (auto const m : std::views::iota(0UZ, n)) {
-                                        auto a = make_bitset<X>(N);
+                                        auto a = make_bitset<X>(width);
                                         a.set(i);
                                         a.set(j);
                                         assert(a.count() == 2);
-                                        auto b = make_bitset<X>(N);
+                                        auto b = make_bitset<X>(width);
                                         b.set(m);
                                         b.set(n);
                                         assert(b.count() == 2);

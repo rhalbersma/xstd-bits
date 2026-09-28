@@ -3,54 +3,46 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/for_each_type.hpp>   // for_each_type
 #include <test/set/composable.hpp>  // decrement_modulo, increment_modulo, increment_within_capacity
-#include <test/set/exhaustive.hpp>  // all_singleton_sets, all_valid, static_capacity
-#include <test/spec/random.hpp>     // all_set_key_pairs
-#include <test/spec/set.hpp>        // boundary_widths, random_widths
-#include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
-#include <cstddef>                  // size_t
+#include <test/set/exhaustive.hpp>  // static_capacity
+#include <test/spec/input.hpp>      // context
+#include <test/spec/set.hpp>        // all, keyed_sets_with_singletons
+#include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 
 BOOST_AUTO_TEST_SUITE(Spec)
 BOOST_AUTO_TEST_SUITE(Xstd)
 BOOST_AUTO_TEST_SUITE(Set)
 BOOST_AUTO_TEST_SUITE(Shift)
 
-using namespace test;
 using namespace test::set;
+using test::spec::context;
+namespace inputs = test::spec::set::inputs;
 
-// A shift adds or subtracts n from every key and drops what leaves the width; a set without one is skipped.
-BOOST_AUTO_TEST_CASE_TEMPLATE(EverySingletonShiftsByEveryDistance, T, test::spec::set::boundary_widths)
+// xstd set: constexpr X operator<<(const X& lhs, size_t n);
+BOOST_AUTO_TEST_CASE(ShiftLeft)
 {
-        // A left shift drops no key from a run-time width, and under a capacity throws where the highest would not fit.
-        if constexpr (not static_capacity<T>) {
-                on1::all_valid<T>([](auto pos) {
-                        on1::all_singleton_sets<T>([&](auto const& bs1) {
-                                composable::increment_modulo()(bs1, static_cast<std::size_t>(pos));
-                        });
-                });
-        } else {
-                on1::all_valid<T>([](auto pos) {
-                        on1::all_singleton_sets<T>([&](auto const& bs1) {
-                                composable::increment_within_capacity()(bs1, static_cast<std::size_t>(pos));
-                        });
-                });
-        }
-        on1::all_valid<T>([](auto pos) {
-                on1::all_singleton_sets<T>([&](auto const& bs1) {
-                        composable::decrement_modulo()(bs1, static_cast<std::size_t>(pos));
-                });
+        test::for_each_type<test::spec::set::all>([]<class T> -> void {
+                // A left shift keeps every key, and under a capacity throws where the highest one would not fit.
+                for (auto const [from, a, k] : inputs::keyed_sets_with_singletons<T>()) {
+                        auto const on_failure = context(from, a, k);
+                        if constexpr (not static_capacity<T>) {
+                                composable::increment_modulo()(a, k);
+                        } else {
+                                composable::increment_within_capacity()(a, k);
+                        }
+                }
         });
 }
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(RandomSetsShiftByRandomDistances, T, test::spec::set::random_widths)
+// xstd set: constexpr X operator>>(const X& lhs, size_t n);
+BOOST_AUTO_TEST_CASE(ShiftRight)
 {
-        spec::random::all_set_key_pairs<T>([](auto const& a, auto n) {
-                if constexpr (not static_capacity<T>) {
-                        composable::increment_modulo()(a, n);
-                } else {
-                        composable::increment_within_capacity()(a, n);
+        test::for_each_type<test::spec::set::all>([]<class T> -> void {
+                for (auto const [from, a, k] : inputs::keyed_sets_with_singletons<T>()) {
+                        auto const on_failure = context(from, a, k);
+                        composable::decrement_modulo()(a, k);
                 }
-                composable::decrement_modulo()(a, n);
         });
 }
 

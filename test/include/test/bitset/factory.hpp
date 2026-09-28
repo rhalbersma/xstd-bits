@@ -43,7 +43,7 @@ struct factory<boost::dynamic_bitset<Block, Allocator>>
 };
 
 template<class T>
-auto make_bitset(std::size_t num_bits, bool value = false)
+constexpr auto make_bitset(std::size_t num_bits, bool value = false)
 {
         return factory<T>()(num_bits, value);
 }

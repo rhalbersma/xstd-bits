@@ -3,11 +3,11 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/bitset/exhaustive.hpp> // all_doubleton_set_pairs, all_singleton_set_pairs, empty_set_pair
 #include <test/bitset/primitives.hpp> // mem_is_proper_subset_of, mem_is_proper_subset_of_edges, mem_is_subset_of
-#include <test/spec/bitset.hpp>       // byte_widths, every_width, few_widths, random_widths
-#include <test/spec/random.hpp>       // all_bitset_pairs, all_bitsets
-#include <boost/test/unit_test.hpp>   // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <test/for_each_type.hpp>     // for_each_type
+#include <test/spec/bitset.hpp>       // all, bitsets, pairs_with_doubletons
+#include <test/spec/input.hpp>        // context
+#include <boost/test/unit_test.hpp>   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 
 BOOST_AUTO_TEST_SUITE(Spec)
 BOOST_AUTO_TEST_SUITE(Boost)
@@ -15,36 +15,35 @@ BOOST_AUTO_TEST_SUITE(DynamicBitset)
 BOOST_AUTO_TEST_SUITE(Subset)
 
 using namespace test::bitset;
+using test::spec::context;
+namespace inputs = test::spec::bitset::inputs;
 
-// std::bitset has no subset test, so it is answered position by position, which is what the member is checked against.
-BOOST_AUTO_TEST_CASE_TEMPLATE(TheSubsetTestsHoldOnAnEmptyPair, T, test::spec::bitset::every_width)
+// boost::dynamic_bitset: bool is_subset_of(const dynamic_bitset& a) const;
+BOOST_AUTO_TEST_CASE(IsSubsetOf)
 {
-        on0::empty_set_pair<T>(mem_is_subset_of());
-        on0::empty_set_pair<T>(mem_is_proper_subset_of());
-        on0::empty_set_pair<T>(mem_is_proper_subset_of_edges());
-}
-
-BOOST_AUTO_TEST_CASE_TEMPLATE(TheSubsetTestsHoldOverEverySingletonPair, T, test::spec::bitset::byte_widths)
-{
-        on2::all_singleton_set_pairs<T>(mem_is_subset_of());
-        on2::all_singleton_set_pairs<T>(mem_is_proper_subset_of());
-}
-
-BOOST_AUTO_TEST_CASE_TEMPLATE(TheSubsetTestsHoldOverEveryDoubletonPair, T, test::spec::bitset::few_widths)
-{
-        on4::all_doubleton_set_pairs<T>(mem_is_subset_of());
-        on4::all_doubleton_set_pairs<T>(mem_is_proper_subset_of());
-}
-
-// A random bitset is also the base of the four edges, which then differ in its first and last blocks.
-BOOST_AUTO_TEST_CASE_TEMPLATE(TheSubsetTestsHoldOverRandomPairs, T, test::spec::bitset::random_widths)
-{
-        test::spec::random::all_bitset_pairs<T>([](auto const& a, auto const& b) {
-                mem_is_subset_of()(a, b);
-                mem_is_proper_subset_of()(a, b);
+        test::for_each_type<test::spec::bitset::all>([]<class T> -> void {
+                // std::bitset has no subset test, so it is answered bit by bit, and the member is checked against that.
+                for (auto const [from, a, b] : inputs::pairs_with_doubletons<T>()) {
+                        auto const on_failure = context(from, a, b);
+                        mem_is_subset_of()(a, b);
+                }
         });
-        test::spec::random::all_bitsets<T>([](auto& a) {
-                mem_is_proper_subset_of_edges()(a, a);
+}
+
+// boost::dynamic_bitset: bool is_proper_subset_of(const dynamic_bitset& a) const;
+BOOST_AUTO_TEST_CASE(IsProperSubsetOf)
+{
+        test::for_each_type<test::spec::bitset::all>([]<class T> -> void {
+                for (auto const [from, a, b] : inputs::pairs_with_doubletons<T>()) {
+                        auto const on_failure = context(from, a, b);
+                        mem_is_proper_subset_of()(a, b);
+                }
+                // Each bitset is also the base of four edges, which then differ in its first and last blocks.
+                for (auto const [from, a] : inputs::bitsets<T>()) {
+                        auto const on_failure = context(from, a);
+                        auto x = a;
+                        mem_is_proper_subset_of_edges()(x, x);
+                }
         });
 }
 

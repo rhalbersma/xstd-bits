@@ -6,12 +6,11 @@
 #ifndef TEST_SPEC_RANDOM_HPP
 #define TEST_SPEC_RANDOM_HPP
 
-#include <test/bitset/factory.hpp>        // make_bitset
 #include <test/dynamic.hpp>               // dynamic
 #include <test/sequence/factory.hpp>      // make_sequence, static_capacity, static_width
 #include <test/set/exhaustive.hpp>        // static_capacity, static_width
+#include <test/spec/input.hpp>            // key_list, key_vector, keyed, origin, three, two
 #include <xstd/bits/detail/ownership.hpp> // owned_storage
-#include <boost/test/unit_test.hpp>       // BOOST_TEST_CONTEXT
 #include <algorithm>                      // min
 #include <array>                          // array
 #include <bit>                            // countl_zero
@@ -25,9 +24,10 @@
 #include <ranges>                         // iota, to
 #include <string>                         // string
 #include <system_error>                   // errc
+#include <utility>                        // move
 #include <vector>                         // vector
 
-// Sampled keys over widths no exhaustive sweep can reach, reproducible on every standard library from one seed.
+// Sampled keys at every width, including those no exhaustive sweep reaches, reproducible anywhere from one seed.
 namespace test::spec::random {
 
 inline constexpr auto default_seed = 187ULL;
@@ -164,114 +164,88 @@ template<class X>
         return result;
 }
 
+// A sample's origin: the seed it was drawn from, its width, the key count of each operand, and its index.
+[[nodiscard]] inline auto sampled(std::size_t n, std::array<std::size_t, 3> k, std::size_t operands, std::size_t i)
+        -> origin
+{
+        return {.tier = "random", .name = "sample", .width = n, .seed = seed(), .sample = i, .keys = k, .operands = operands};
+}
+
 // The keys of each sample in the order drawn, below a width n, biased to the edges of blocks of the given digits.
 inline auto sample_key_vectors(std::size_t n, std::size_t digits, auto fun)
         -> void
 {
-        auto const s = seed();
-        auto g = engine(s);
+        auto g = engine(seed());
         for (auto const k : densities(n)) {
                 for (auto const i : std::views::iota(0UZ, samples())) {
                         auto const v = keys(g, n, k, digits);
-                        BOOST_TEST_CONTEXT("seed " << s << ", width " << n << ", keys " << k << ", sample " << i)
-                        {
-                                fun(v, n);
-                        }
+                        fun(sampled(n, {k}, 1, i), v);
                 }
         }
 }
 
-// Each sample built by make with the keys a lookup most often gets wrong: both ends of the width and one drawn.
-inline auto sample_key_pairs(std::size_t n, std::size_t digits, auto make, auto fun)
-        -> void
+// Every sample's keys in the order drawn.
+[[nodiscard]] inline auto key_samples(std::size_t n, std::size_t digits)
+        -> std::vector<key_list>
 {
+        auto result = std::vector<key_list>();
+        sample_key_vectors(n, digits, [&](origin const& from, key_vector const& v) -> void { result.push_back({.from = from, .a = v}); });
+        return result;
+}
+
+// Each sample with the keys a lookup most often gets wrong: both ends of the width and one drawn.
+[[nodiscard]] inline auto keyed_samples(std::size_t n, std::size_t digits)
+        -> std::vector<keyed<key_vector>>
+{
+        auto result = std::vector<keyed<key_vector>>();
+        if (n == 0) {
+                return result;
+        }
         auto g = engine(seed() + 1);
-        sample_key_vectors(n, digits, [&](auto const& v, std::size_t) {
-                auto a = make(v, n); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
+        sample_key_vectors(n, digits, [&](origin const& from, key_vector const& v) -> void {
                 for (auto const k : {0UZ, n - 1UZ, g.position(n - 1UZ, digits)}) {
-                        BOOST_TEST_CONTEXT("key " << k)
-                        {
-                                fun(a, k);
-                        }
+                        result.push_back({.from = from, .a = v, .k = k});
                 }
         });
+        return result;
 }
 
 // Each density against itself and against one drawn, so both operands range from empty to full at linear cost.
-inline auto sample_pairs(std::size_t n, std::size_t digits, auto make, auto fun)
-        -> void
+[[nodiscard]] inline auto pair_samples(std::size_t n, std::size_t digits)
+        -> std::vector<two<key_vector>>
 {
-        auto const s = seed();
-        auto g = engine(s);
+        auto result = std::vector<two<key_vector>>();
+        auto g = engine(seed());
         auto const d = densities(n);
         for (auto const ka : d) {
                 for (auto const kb : {ka, d[g.below(d.size())]}) {
                         for (auto const i : std::views::iota(0UZ, samples())) {
-                                auto a = make(keys(g, n, ka, digits), n); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
-                                auto b = make(keys(g, n, kb, digits), n); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
-                                BOOST_TEST_CONTEXT("seed " << s << ", width " << n << ", keys " << ka << " and " << kb << ", sample " << i)
-                                {
-                                        fun(a, b);
-                                }
+                                auto a = keys(g, n, ka, digits);
+                                auto b = keys(g, n, kb, digits);
+                                result.push_back({.from = sampled(n, {ka, kb}, 2, i), .a = std::move(a), .b = std::move(b)});
                         }
                 }
         }
-}
-
-template<class X>
-auto all_key_vectors(auto fun)
-{
-        sample_key_vectors(width<X>(), block_digits_v<X>, fun);
-}
-
-template<class X>
-[[nodiscard]] auto set_from(std::vector<std::size_t> const& v, std::size_t)
-        -> X
-{
-        return v | std::ranges::to<X>();
-}
-
-template<class X>
-auto all_sets(auto fun)
-{
-        all_key_vectors<X>([&](auto const& v, std::size_t n) {
-                auto a = set_from<X>(v, n); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
-                fun(a);
-        });
-}
-
-template<class X>
-auto all_set_key_pairs(auto fun)
-{
-        sample_key_pairs(width<X>(), block_digits_v<X>, set_from<X>, fun);
-}
-
-template<class X>
-auto all_set_pairs(auto fun)
-{
-        sample_pairs(width<X>(), block_digits_v<X>, set_from<X>, fun);
+        return result;
 }
 
 // Seven triples per sample, their densities drawn, since all 343 would cost more than they find.
-template<class X>
-auto all_set_triples(auto fun)
+[[nodiscard]] inline auto triple_samples(std::size_t n, std::size_t digits)
+        -> std::vector<three<key_vector>>
 {
-        auto const s = seed();
-        auto g = engine(s);
-        auto const n = width<X>();
+        auto result = std::vector<three<key_vector>>();
+        auto g = engine(seed());
         auto const d = densities(n);
         for (auto const i : std::views::iota(0UZ, samples() * d.size())) {
                 auto const ka = d[g.below(d.size())];
                 auto const kb = d[g.below(d.size())];
                 auto const kc = d[g.below(d.size())];
-                auto a = keys(g, n, ka, block_digits_v<X>) | std::ranges::to<X>(); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
-                auto b = keys(g, n, kb, block_digits_v<X>) | std::ranges::to<X>(); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
-                auto c = keys(g, n, kc, block_digits_v<X>) | std::ranges::to<X>(); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
-                BOOST_TEST_CONTEXT("seed " << s << ", width " << n << ", keys " << ka << ", " << kb << " and " << kc << ", sample " << i)
-                {
-                        fun(a, b, c);
-                }
+                auto a = keys(g, n, ka, digits);
+                auto b = keys(g, n, kb, digits);
+                auto c = keys(g, n, kc, digits);
+                result.push_back({.from = sampled(n, {ka, kb, kc}, 3, i), .a = std::move(a), .b = std::move(b), .c = std::move(c)});
         }
+        return result;
 }
 
 // A bitset is as wide as its type or its capacity, and sampled one past 2048 bits where its width is unbounded.
@@ -288,39 +262,6 @@ template<class X>
         }
 }
 
-// The keys set at the width, which a static width already has and a run-time width is resized to.
-template<class X>
-[[nodiscard]] auto bitset_from(std::vector<std::size_t> const& v, std::size_t n)
-        -> X
-{
-        auto a = test::bitset::make_bitset<X>(n);
-        for (auto const k : v) {
-                a.set(k);
-        }
-        return a;
-}
-
-template<class X>
-auto all_bitsets(auto fun)
-{
-        sample_key_vectors(bitset_width<X>(), block_digits_v<X>, [&](auto const& v, std::size_t n) {
-                auto a = bitset_from<X>(v, n); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
-                fun(a);
-        });
-}
-
-template<class X>
-auto all_bitset_key_pairs(auto fun)
-{
-        sample_key_pairs(bitset_width<X>(), block_digits_v<X>, bitset_from<X>, fun);
-}
-
-template<class X>
-auto all_bitset_pairs(auto fun)
-{
-        sample_pairs(bitset_width<X>(), block_digits_v<X>, bitset_from<X>, fun);
-}
-
 // A sequence is as wide as its type or its capacity, and sampled one past 2048 bits where its width is unbounded.
 template<class X>
 [[nodiscard]] auto sequence_width()
@@ -333,39 +274,6 @@ template<class X>
         } else {
                 return 2049UZ;
         }
-}
-
-// The keys set at the width and every other position clear.
-template<class X>
-[[nodiscard]] auto sequence_from(std::vector<std::size_t> const& v, std::size_t n)
-        -> X
-{
-        auto a = test::sequence::make_sequence<X>(n, [](std::size_t) -> bool { return false; });
-        for (auto const k : v) {
-                a[k] = true;
-        }
-        return a;
-}
-
-template<class X>
-auto all_sequences(auto fun)
-{
-        sample_key_vectors(sequence_width<X>(), block_digits_v<X>, [&](auto const& v, std::size_t n) {
-                auto a = sequence_from<X>(v, n); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
-                fun(a);
-        });
-}
-
-template<class X>
-auto all_sequence_key_pairs(auto fun)
-{
-        sample_key_pairs(sequence_width<X>(), block_digits_v<X>, sequence_from<X>, fun);
-}
-
-template<class X>
-auto all_sequence_pairs(auto fun)
-{
-        sample_pairs(sequence_width<X>(), block_digits_v<X>, sequence_from<X>, fun);
 }
 
 } // namespace test::spec::random

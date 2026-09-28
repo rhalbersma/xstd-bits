@@ -3,11 +3,13 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/set/exhaustive.hpp>  // all_cardinality_sets, all_doubleton_arrays, all_doubleton_ilists, all_singleton_arrays, all_singleton_ilists, all_singleton_set_pairs, all_singleton_sets
+#include <test/for_each_type.hpp>   // for_each_type
 #include <test/set/primitives.hpp>  // constructor, op_assign
-#include <test/spec/random.hpp>     // all_key_vectors
-#include <test/spec/set.hpp>        // boundary_widths, every_width, random_widths
-#include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
+#include <test/spec/input.hpp>      // context, on_copy, with_initializer_list
+#include <test/spec/set.hpp>        // all, key_lists, listed_sets_with_singletons, pairs, sets
+#include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
+#include <cstddef>                  // size_t
+#include <initializer_list>         // initializer_list
 #include <ranges>                   // from_range
 
 BOOST_AUTO_TEST_SUITE(Spec)
@@ -16,72 +18,101 @@ BOOST_AUTO_TEST_SUITE(Associative)
 BOOST_AUTO_TEST_SUITE(Set)
 BOOST_AUTO_TEST_SUITE(Cons)
 
-using namespace test;
 using namespace test::set;
+using test::spec::context;
+using test::spec::on_copy;
+using test::spec::with_initializer_list;
+namespace inputs = test::spec::set::inputs;
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(DefaultConstructionYieldsAnEmptySet, T, test::spec::set::every_width)
+// [set.overview]: constexpr set() : set(Compare()) { }
+BOOST_AUTO_TEST_CASE(Set)
 {
-        constructor<T>()();
-}
-
-// std::less has no state, so a comparator argument is accepted and changes nothing.
-BOOST_AUTO_TEST_CASE_TEMPLATE(TheComparatorArgumentsAreAcceptedAsStdSetsAre, T, test::spec::set::boundary_widths)
-{
-        auto const comp = typename T::key_compare();
-        BOOST_CHECK(T(comp).empty());
-        on1::all_singleton_ilists<T>([&](auto ilist1) {
-                BOOST_CHECK(T(ilist1, comp) == T(ilist1));
-                BOOST_CHECK(T(ilist1.begin(), ilist1.end(), comp) == T(ilist1));
+        test::for_each_type<test::spec::set::all>([]<class T> -> void {
+                constructor<T>()();
         });
 }
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(ACopyOfEveryCardinalityIsEqual, T, test::spec::set::boundary_widths)
+// [set.cons]/1-2: constexpr explicit set(const Compare& comp, const Allocator& = Allocator());
+BOOST_AUTO_TEST_CASE(SetComp)
 {
-        on1::all_cardinality_sets<T>([](auto const& is) {
-                constructor<T>()(is);
+        test::for_each_type<test::spec::set::all>([]<class T> -> void {
+                // std::less has no state, so a comparator argument is accepted and changes nothing.
+                BOOST_CHECK(T(typename T::key_compare()).empty());
         });
 }
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(ConstructionFromEverySingletonIsInsertion, T, test::spec::set::boundary_widths)
+// [set.cons]/3-4: set(InputIterator first, InputIterator last, const Compare& comp = Compare(), ...);
+BOOST_AUTO_TEST_CASE(SetFirstLast)
 {
-        on1::all_singleton_arrays<T>([](auto const& a1) {
-                constructor<T>()(a1.begin(), a1.end());
-                constructor<T>()(std::from_range, a1);
-        });
-        on1::all_singleton_ilists<T>([](auto ilist1) {
-                constructor<T>()(std::from_range, ilist1);
-                constructor<T>()(ilist1);
+        test::for_each_type<test::spec::set::all>([]<class T> -> void {
+                for (auto const [from, keys] : inputs::key_lists<T>()) {
+                        auto const on_failure = context(from, keys);
+                        constructor<T>()(keys.begin(), keys.end());
+                        BOOST_CHECK(T(keys.begin(), keys.end(), typename T::key_compare()) == T(keys.begin(), keys.end()));
+                }
         });
 }
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(ConstructionFromEveryDoubletonIsInsertion, T, test::spec::set::boundary_widths)
+// [set.cons]/5-6: set(from_range_t, R&& rg, const Compare& comp = Compare(), const Allocator& = Allocator());
+BOOST_AUTO_TEST_CASE(SetFromRange)
 {
-        on2::all_doubleton_arrays<T>([](auto const& a2) {
-                constructor<T>()(a2.begin(), a2.end());
-                constructor<T>()(std::from_range, a2);
-        });
-        on2::all_doubleton_ilists<T>([](auto ilist2) {
-                constructor<T>()(std::from_range, ilist2);
-                constructor<T>()(ilist2);
+        test::for_each_type<test::spec::set::all>([]<class T> -> void {
+                for (auto const [from, keys] : inputs::key_lists<T>()) {
+                        auto const on_failure = context(from, keys);
+                        constructor<T>()(std::from_range, keys);
+                        with_initializer_list(keys, [&](std::initializer_list<std::size_t> il) -> void {
+                                constructor<T>()(std::from_range, il);
+                        });
+                }
         });
 }
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(AssignmentFromEverySingletonIsConstruction, T, test::spec::set::boundary_widths)
+// [set.overview]: constexpr set(const set& x);
+BOOST_AUTO_TEST_CASE(SetCopy)
 {
-        on1::all_singleton_sets<T>([](auto& is1) {
-                on1::all_singleton_ilists<T>([&](auto ilist1) {
-                        op_assign()(is1, ilist1);
-                });
+        test::for_each_type<test::spec::set::all>([]<class T> -> void {
+                for (auto const [from, a] : inputs::sets<T>()) {
+                        auto const on_failure = context(from, a);
+                        constructor<T>()(a);
+                }
         });
-        on2::all_singleton_set_pairs<T>(op_assign());
 }
 
-// Keys in the order they were drawn, so the input is unsorted as often as not.
-BOOST_AUTO_TEST_CASE_TEMPLATE(ConstructionFromRandomKeysIsInsertion, T, test::spec::set::random_widths)
+// [set.overview]: set(initializer_list<value_type>, const Compare& = Compare(), const Allocator& = Allocator());
+BOOST_AUTO_TEST_CASE(SetInitializerList)
 {
-        spec::random::all_key_vectors<T>([](auto const& v, auto) {
-                constructor<T>()(v.begin(), v.end());
-                constructor<T>()(std::from_range, v);
+        test::for_each_type<test::spec::set::all>([]<class T> -> void {
+                for (auto const [from, keys] : inputs::key_lists<T>()) {
+                        auto const on_failure = context(from, keys);
+                        with_initializer_list(keys, [&](std::initializer_list<std::size_t> il) -> void {
+                                constructor<T>()(il);
+                                BOOST_CHECK(T(il, typename T::key_compare()) == T(il));
+                        });
+                }
+        });
+}
+
+// [set.overview]: constexpr set& operator=(const set& x);
+BOOST_AUTO_TEST_CASE(Assign)
+{
+        test::for_each_type<test::spec::set::all>([]<class T> -> void {
+                for (auto const [from, a, b] : inputs::pairs<T>()) {
+                        auto const on_failure = context(from, a, b);
+                        on_copy(op_assign(), a, b);
+                }
+        });
+}
+
+// [set.overview]: constexpr set& operator=(initializer_list<value_type>);
+BOOST_AUTO_TEST_CASE(AssignInitializerList)
+{
+        test::for_each_type<test::spec::set::all>([]<class T> -> void {
+                for (auto const [from, a, keys] : inputs::listed_sets_with_singletons<T>()) {
+                        auto const on_failure = context(from, a, keys);
+                        with_initializer_list(keys, [&](std::initializer_list<std::size_t> il) -> void {
+                                on_copy(op_assign(), a, il);
+                        });
+                }
         });
 }
 

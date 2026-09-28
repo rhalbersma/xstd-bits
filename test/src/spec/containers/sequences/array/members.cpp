@@ -3,13 +3,13 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/sequence/exhaustive.hpp> // all_prefix_sequences, all_singleton_sequence_pairs, all_singleton_sequences, empty_sequence
-#include <test/sequence/factory.hpp>    // model_of
-#include <test/spec/random.hpp>         // all_sequence_pairs, all_sequences
-#include <test/spec/sequence.hpp>       // array_boundary_widths, array_every_width, array_random_widths
-#include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <concepts>                     // same_as
-#include <vector>                       // vector
+#include <test/for_each_type.hpp>    // for_each_type
+#include <test/sequence/factory.hpp> // model_of
+#include <test/spec/input.hpp>       // context
+#include <test/spec/sequence.hpp>    // array_all, pairs, sequences
+#include <boost/test/unit_test.hpp>  // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <concepts>                  // same_as
+#include <vector>                    // vector
 
 BOOST_AUTO_TEST_SUITE(Spec)
 BOOST_AUTO_TEST_SUITE(Containers)
@@ -18,6 +18,8 @@ BOOST_AUTO_TEST_SUITE(Array)
 BOOST_AUTO_TEST_SUITE(Members)
 
 using namespace test::sequence;
+using test::spec::context;
+namespace inputs = test::spec::sequence::inputs;
 
 namespace {
 
@@ -63,46 +65,38 @@ struct mem_swap
 
 } // namespace
 
-// [array.members]/1: size()
-BOOST_AUTO_TEST_SUITE(Size)
-
-BOOST_AUTO_TEST_CASE_TEMPLATE(IsTheWidthInTheTypeAtEveryWidth, T, test::spec::sequence::array_every_width)
+// [array.members]/1: constexpr size_type size() const noexcept;
+BOOST_AUTO_TEST_CASE(Size)
 {
-        on0::empty_sequence<T>(mem_size());
+        test::for_each_type<test::spec::sequence::array_all>([]<class T> -> void {
+                for (auto const [from, a] : inputs::sequences<T>()) {
+                        auto const on_failure = context(from, a);
+                        mem_size()(a);
+                }
+        });
 }
 
-BOOST_AUTO_TEST_SUITE_END()
-
-// [array.members]/3: fill(u)
-BOOST_AUTO_TEST_SUITE(Fill)
-
-BOOST_AUTO_TEST_CASE_TEMPLATE(HoldsOverEveryPrefixAndSingleton, T, test::spec::sequence::array_boundary_widths)
+// [array.members]/3: constexpr void fill(const T& u);
+BOOST_AUTO_TEST_CASE(Fill)
 {
-        on1::all_prefix_sequences<T>(mem_fill());
-        on1::all_singleton_sequences<T>(mem_fill());
+        test::for_each_type<test::spec::sequence::array_all>([]<class T> -> void {
+                for (auto const [from, a] : inputs::sequences<T>()) {
+                        auto const on_failure = context(from, a);
+                        mem_fill()(a);
+                }
+        });
 }
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(HoldsOverRandomSequences, T, test::spec::sequence::array_random_widths)
+// [array.members]/4-5: constexpr void swap(array& y) noexcept(is_nothrow_swappable_v<T>);
+BOOST_AUTO_TEST_CASE(Swap)
 {
-        test::spec::random::all_sequences<T>(mem_fill());
+        test::for_each_type<test::spec::sequence::array_all>([]<class T> -> void {
+                for (auto const [from, a, b] : inputs::pairs<T>()) {
+                        auto const on_failure = context(from, a, b);
+                        mem_swap()(a, b);
+                }
+        });
 }
-
-BOOST_AUTO_TEST_SUITE_END()
-
-// [array.members]/4-5: swap(y)
-BOOST_AUTO_TEST_SUITE(Swap)
-
-BOOST_AUTO_TEST_CASE_TEMPLATE(HoldsOverEverySingletonPair, T, test::spec::sequence::array_boundary_widths)
-{
-        on2::all_singleton_sequence_pairs<T>(mem_swap());
-}
-
-BOOST_AUTO_TEST_CASE_TEMPLATE(HoldsOverRandomPairs, T, test::spec::sequence::array_random_widths)
-{
-        test::spec::random::all_sequence_pairs<T>(mem_swap());
-}
-
-BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()

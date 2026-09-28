@@ -3,9 +3,10 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/for_each_type.hpp>   // for_each_type
 #include <test/set/concepts.hpp>    // set_size_t, set_size_t_ranges
-#include <test/spec/set.hpp>        // every_width
-#include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
+#include <test/spec/set.hpp>        // all
+#include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <cstddef>                  // size_t
 #include <set>                      // set
 
@@ -15,18 +16,21 @@ BOOST_AUTO_TEST_SUITE(Associative)
 BOOST_AUTO_TEST_SUITE(Set)
 BOOST_AUTO_TEST_SUITE(Overview)
 
-// The model is held to the synopsis first, so a line it does not answer is the checklist's error and not ours.
-BOOST_AUTO_TEST_CASE_TEMPLATE(AnswersEveryLineOfTheSynopsis, T, test::spec::set::every_width)
+// [set.overview]/1-3: template<class Key, class Compare = less<Key>, class Allocator = allocator<Key>> class set;
+BOOST_AUTO_TEST_CASE(Set)
 {
-        static_assert(test::set::set_size_t<std::set<std::size_t>>);
-        static_assert(test::set::set_size_t<T>);
+        test::for_each_type<test::spec::set::all>([]<class T> -> void {
+                // The model is held to the synopsis first, so a line it fails is the checklist's error, not ours.
+                static_assert(test::set::set_size_t<std::set<std::size_t>>);
+                static_assert(test::set::set_size_t<T>);
 #ifdef __cpp_lib_containers_ranges
 
-        static_assert(test::set::set_size_t_ranges<std::set<std::size_t>>);
-        static_assert(test::set::set_size_t_ranges<T>);
+                static_assert(test::set::set_size_t_ranges<std::set<std::size_t>>);
+                static_assert(test::set::set_size_t_ranges<T>);
 
 #endif
-        BOOST_CHECK(true);
+                BOOST_CHECK(true);
+        });
 }
 
 BOOST_AUTO_TEST_SUITE_END()

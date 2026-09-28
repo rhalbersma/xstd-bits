@@ -3,9 +3,10 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/for_each_type.hpp>    // for_each_type
 #include <test/sequence/factory.hpp> // make_sequence, stripes
-#include <test/spec/sequence.hpp>    // array_every_width
-#include <boost/test/unit_test.hpp>  // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <test/spec/sequence.hpp>    // array_all
+#include <boost/test/unit_test.hpp>  // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK_EQUAL
 #include <concepts>                  // convertible_to
 #include <cstddef>                   // size_t
 #include <tuple>                     // tuple_element_t, tuple_size_v
@@ -48,38 +49,34 @@ auto check_get(X const& a)
 
 } // namespace
 
-// [array.tuple]/1: tuple_size and tuple_element
-BOOST_AUTO_TEST_SUITE(TupleElement)
-
-BOOST_AUTO_TEST_CASE_TEMPLATE(HoldsForTheFirstMiddleAndLastPositionAtEveryWidth, T, test::spec::sequence::array_every_width)
+// [array.tuple]/1: template<size_t I, class T, size_t N> struct tuple_element<I, array<T, N>> { using type = T; };
+BOOST_AUTO_TEST_CASE(TupleElement)
 {
-        constexpr auto N = std::tuple_size_v<T>;
-        BOOST_CHECK_EQUAL(N, T().size());
-        if constexpr (N > 0UZ) {
-                check_tuple_element<0UZ, T>();
-                check_tuple_element<N / 2UZ, T>();
-                check_tuple_element<N - 1UZ, T>();
-        }
+        test::for_each_type<test::spec::sequence::array_all>([]<class T> -> void {
+                constexpr auto N = std::tuple_size_v<T>;
+                BOOST_CHECK_EQUAL(N, T().size());
+                if constexpr (N > 0UZ) {
+                        check_tuple_element<0UZ, T>();
+                        check_tuple_element<N / 2UZ, T>();
+                        check_tuple_element<N - 1UZ, T>();
+                }
+        });
 }
 
-BOOST_AUTO_TEST_SUITE_END()
-
-// [array.tuple]/2-3: get<I>
-BOOST_AUTO_TEST_SUITE(Get)
-
-// The first, a middle and the last position, which is what an index in the type can reach without a sweep per index.
-BOOST_AUTO_TEST_CASE_TEMPLATE(ReadsAndWritesTheFirstMiddleAndLastPositionAtEveryWidth, T, test::spec::sequence::array_every_width)
+// [array.tuple]/2-3: template<size_t I, class T, size_t N> constexpr T& get(array<T, N>& a) noexcept;
+BOOST_AUTO_TEST_CASE(Get)
 {
-        constexpr auto N = T().size();
-        if constexpr (N > 0UZ) {
-                auto const a = make_sequence<T>(N, stripes);
-                check_get<0UZ>(a);
-                check_get<N / 2UZ>(a);
-                check_get<N - 1UZ>(a);
-        }
+        test::for_each_type<test::spec::sequence::array_all>([]<class T> -> void {
+                // The first, a middle and the last position: what an index in the type reaches without a sweep.
+                constexpr auto N = T().size();
+                if constexpr (N > 0UZ) {
+                        auto const a = make_sequence<T>(N, stripes);
+                        check_get<0UZ>(a);
+                        check_get<N / 2UZ>(a);
+                        check_get<N - 1UZ>(a);
+                }
+        });
 }
-
-BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()

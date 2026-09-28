@@ -3,34 +3,42 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/set/exhaustive.hpp>  // all_cardinality_sets, all_singleton_sets
+#include <test/for_each_type.hpp>   // for_each_type
 #include <test/set/primitives.hpp>  // mem_back, mem_front
-#include <test/spec/random.hpp>     // all_sets
-#include <test/spec/set.hpp>        // boundary_widths, random_widths
-#include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <test/spec/input.hpp>      // context
+#include <test/spec/set.hpp>        // all, sets
+#include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 
 BOOST_AUTO_TEST_SUITE(Spec)
 BOOST_AUTO_TEST_SUITE(Xstd)
 BOOST_AUTO_TEST_SUITE(Set)
 BOOST_AUTO_TEST_SUITE(Access)
 
-using namespace test;
 using namespace test::set;
+using test::spec::context;
+namespace inputs = test::spec::set::inputs;
 
-// front and back are [sequence.reqmts]'s, which std::set lacks, so the models pass vacuously.
-BOOST_AUTO_TEST_CASE_TEMPLATE(FrontAndBackAreTheFirstAndLastKeyOverEveryCardinalityAndSingleton, T, test::spec::set::boundary_widths)
+// xstd set: constexpr value_type front() const noexcept;
+BOOST_AUTO_TEST_CASE(Front)
 {
-        on1::all_cardinality_sets<T>(mem_front());
-        on1::all_singleton_sets<T>(mem_front());
-
-        on1::all_cardinality_sets<T>(mem_back());
-        on1::all_singleton_sets<T>(mem_back());
+        test::for_each_type<test::spec::set::all>([]<class T> -> void {
+                // front and back are [sequence.reqmts]'s, which std::set lacks, so the models pass vacuously.
+                for (auto const [from, a] : inputs::sets<T>()) {
+                        auto const on_failure = context(from, a);
+                        mem_front()(a);
+                }
+        });
 }
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(FrontAndBackAreTheFirstAndLastKeyOverRandomSets, T, test::spec::set::random_widths)
+// xstd set: constexpr value_type back() const noexcept;
+BOOST_AUTO_TEST_CASE(Back)
 {
-        spec::random::all_sets<T>(mem_front());
-        spec::random::all_sets<T>(mem_back());
+        test::for_each_type<test::spec::set::all>([]<class T> -> void {
+                for (auto const [from, a] : inputs::sets<T>()) {
+                        auto const on_failure = context(from, a);
+                        mem_back()(a);
+                }
+        });
 }
 
 BOOST_AUTO_TEST_SUITE_END()
