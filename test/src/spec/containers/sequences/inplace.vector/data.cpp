@@ -15,7 +15,7 @@ BOOST_AUTO_TEST_SUITE(Sequences)
 BOOST_AUTO_TEST_SUITE(InplaceVector)
 BOOST_AUTO_TEST_SUITE(Data)
 
-// [inplace.vector.data]/1-2: constexpr T* data() noexcept; constexpr const T* data() const noexcept;
+// [inplace.vector.data]: constexpr T* data() noexcept; constexpr const T* data() const noexcept;
 BOOST_AUTO_TEST_CASE(Data)
 {
         test::for_each_type<test::spec::sequence::inplace_vector_all>([]<class T> -> void {

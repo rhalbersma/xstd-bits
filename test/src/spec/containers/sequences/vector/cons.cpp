@@ -23,17 +23,17 @@ using namespace test::sequence;
 using test::spec::context;
 namespace inputs = test::spec::sequence::inputs;
 
-// [vector.cons]/1-2: constexpr explicit vector(const Allocator&) noexcept;
+// [vector.cons]/1: constexpr explicit vector(const Allocator&) noexcept;
 BOOST_AUTO_TEST_CASE(VectorAllocator)
 {
         test::for_each_type<test::spec::sequence::vector_all>([]<class T> -> void {
-                static_assert(requires (T::allocator_type a) { T(a); });
-                // The default constructor delegates to this one.
-                BOOST_CHECK(T().empty()); // [vector.cons]/1
+                auto const m = typename T::allocator_type();
+                auto const u = T(m);
+                BOOST_CHECK(u.empty() and u.get_allocator() == m); // [vector.cons]/1
         });
 }
 
-// [vector.cons]/3-5: constexpr explicit vector(size_type n, const Allocator& = Allocator());
+// [vector.cons]/4: constexpr explicit vector(size_type n, const Allocator& = Allocator());
 BOOST_AUTO_TEST_CASE(VectorCount)
 {
         test::for_each_type<test::spec::sequence::vector_all>([]<class T> -> void {
@@ -49,7 +49,7 @@ BOOST_AUTO_TEST_CASE(VectorCount)
         });
 }
 
-// [vector.cons]/6-8: constexpr vector(size_type n, const T& value, const Allocator& = Allocator());
+// [vector.cons]/7: constexpr vector(size_type n, const T& value, const Allocator& = Allocator());
 BOOST_AUTO_TEST_CASE(VectorCountValue)
 {
         test::for_each_type<test::spec::sequence::vector_all>([]<class T> -> void {
@@ -61,7 +61,7 @@ BOOST_AUTO_TEST_CASE(VectorCountValue)
         });
 }
 
-// [vector.cons]/9-10: vector(InputIterator first, InputIterator last, const Allocator& = Allocator());
+// [vector.cons]/9: vector(InputIterator first, InputIterator last, const Allocator& = Allocator());
 BOOST_AUTO_TEST_CASE(VectorFirstLast)
 {
         test::for_each_type<test::spec::sequence::vector_all>([]<class T> -> void {
@@ -74,7 +74,7 @@ BOOST_AUTO_TEST_CASE(VectorFirstLast)
         });
 }
 
-// [vector.cons]/11-13: vector(from_range_t, R&& rg, const Allocator& = Allocator());
+// [vector.cons]/11: vector(from_range_t, R&& rg, const Allocator& = Allocator());
 BOOST_AUTO_TEST_CASE(VectorFromRange)
 {
         test::for_each_type<test::spec::sequence::vector_all>([]<class T> -> void {

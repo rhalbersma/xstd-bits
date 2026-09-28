@@ -2540,7 +2540,7 @@ pointer's whatever it holds.
 
 ### max-size-is-the-bits
 
-`[container.reqmts]/56` asks for `distance(begin(), end())` for the largest possible container, and under every
+`[container.reqmts]/57` asks for `distance(begin(), end())` for the largest possible container, and under every
 reading of bits that counts the same thing: **the positions there are to hold**. The set reading iterates the
 positions it holds, so its largest is every position set; the sequence reading iterates one `bool` per position;
 the bitset reading counts positions too. There is no separate key domain -- a set over `[0, W)` holds at most `W`

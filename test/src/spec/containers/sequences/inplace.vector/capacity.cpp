@@ -7,7 +7,7 @@
 #include <test/sequence/primitives.hpp> // mem_resize
 #include <test/spec/input.hpp>          // context
 #include <test/spec/sequence.hpp>       // inplace_vector_all, sequences
-#include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
+#include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_NO_THROW, BOOST_CHECK_THROW
 #include <concepts>                     // same_as
 #include <new>                          // bad_alloc
 
@@ -30,8 +30,9 @@ auto check_resize_past_capacity(X const& a)
 {
         auto b = a;
         BOOST_CHECK_THROW(b.resize(X::capacity() + 1UZ), std::bad_alloc);
-        BOOST_CHECK_THROW(b.resize(X::capacity() + 1UZ, true), std::bad_alloc);
         BOOST_CHECK(b == a); // [inplace.vector.capacity]/4
+        BOOST_CHECK_THROW(b.resize(X::capacity() + 1UZ, true), std::bad_alloc);
+        BOOST_CHECK(b == a); // [inplace.vector.capacity]/7
 }
 
 } // namespace
@@ -50,7 +51,7 @@ BOOST_AUTO_TEST_CASE(Capacity)
         });
 }
 
-// [inplace.vector.capacity]/2-7: constexpr void resize(size_type sz); constexpr void resize(size_type sz, const T& c);
+// [inplace.vector.capacity]/3-4,6-7: constexpr void resize(size_type sz); and the overload with a value
 BOOST_AUTO_TEST_CASE(Resize)
 {
         test::for_each_type<test::spec::sequence::inplace_vector_all>([]<class T> -> void {
@@ -75,6 +76,7 @@ BOOST_AUTO_TEST_CASE(Reserve)
         test::for_each_type<test::spec::sequence::inplace_vector_all>([]<class T> -> void {
                 static_assert(requires (T::size_type n) { T::reserve(n); });
                 T::reserve(0UZ);
+                BOOST_CHECK_NO_THROW(T::reserve(T::capacity()));                    // [inplace.vector.capacity]/9
                 T::reserve(T::capacity());                                          // [inplace.vector.capacity]/8
                 BOOST_CHECK_THROW(T::reserve(T::capacity() + 1UZ), std::bad_alloc); // [inplace.vector.capacity]/9
         });

@@ -3,12 +3,12 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/for_each_type.hpp>   // for_each_type
-#include <test/set/primitives.hpp>  // op_equal_to, op_not_equal_to
-#include <test/spec/container.hpp>  // all, pairs
-#include <test/spec/input.hpp>      // context
-#include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
-#include <concepts>                 // regular, same_as
+#include <test/container/primitives.hpp> // op_equal_to, op_not_equal_to
+#include <test/for_each_type.hpp>        // for_each_type
+#include <test/spec/container.hpp>       // all, pairs
+#include <test/spec/input.hpp>           // context
+#include <boost/test/unit_test.hpp>      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <concepts>                      // regular, same_as
 
 BOOST_AUTO_TEST_SUITE(Spec)
 BOOST_AUTO_TEST_SUITE(Containers)
@@ -17,11 +17,11 @@ BOOST_AUTO_TEST_SUITE(General)
 BOOST_AUTO_TEST_SUITE(ContainerReqmts)
 BOOST_AUTO_TEST_SUITE(Equality)
 
-using namespace test::set;
+using namespace test::container;
 using test::spec::context;
 namespace inputs = test::spec::container::inputs;
 
-// [container.reqmts]/42-46: c == b
+// [container.reqmts]/43-44,46: c == b
 BOOST_AUTO_TEST_CASE(EqualTo)
 {
         test::for_each_type<test::spec::container::all>([]<class T> -> void {

@@ -458,7 +458,7 @@ public:
                 return bits().count();
         }
 
-        // [container.reqmts]/56, distance(begin(), end()) for the largest container: every position set.
+        // [container.reqmts]/57, distance(begin(), end()) for the largest container: every position set.
         [[nodiscard]] constexpr auto max_size() const noexcept
                 -> size_type
         {
