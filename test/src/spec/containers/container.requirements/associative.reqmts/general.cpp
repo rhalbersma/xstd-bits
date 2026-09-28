@@ -212,7 +212,7 @@ BOOST_AUTO_TEST_CASE(Insert)
                         auto x = a;
                         mem_insert()(x, k);
                         auto y = a;
-                        mem_insert()(y, auto(k));
+                        mem_insert()(y, typename T::key_type{k});
                 }
         });
 }
@@ -227,7 +227,7 @@ BOOST_AUTO_TEST_CASE(InsertHint)
                         auto x = a;
                         mem_insert()(x, x.end(), k);
                         auto y = a;
-                        mem_insert()(y, y.end(), auto(k));
+                        mem_insert()(y, y.end(), typename T::key_type{k});
                 }
         });
 }
