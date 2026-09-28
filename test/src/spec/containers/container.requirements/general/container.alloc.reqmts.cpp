@@ -3,25 +3,30 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/set/concepts.hpp>                 // set_size_t_allocator, set_size_t_ranges_allocator
-#include <xstd/bits/bit_set.hpp>                 // basic_bit_set, bit_set
-#include <xstd/bits/dynamic_bitset.hpp>          // basic_dynamic_bitset
-#include <xstd/bits/ext/boost/bit_small_set.hpp> // basic_bit_small_set
-#include <xstd/bits/ext/boost/small_bitset.hpp>  // basic_small_bitset
-#include <boost/test/unit_test.hpp>              // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <array>                                 // array
-#include <concepts>                              // same_as
-#include <cstddef>                               // size_t
-#include <cstdint>                               // uint64_t, uint8_t
-#include <functional>                            // less
-#include <memory>                                // allocator, allocator_traits
-#include <memory_resource>                       // memory_resource, monotonic_buffer_resource, polymorphic_allocator, unsynchronized_pool_resource
-#include <ranges>                                // from_range
-#include <set>                                   // set
-#include <tuple>                                 // tuple, tuple_cat
-#include <type_traits>                           // bool_constant, false_type, is_constructible_v, true_type
-#include <utility>                               // declval, move
-#include <vector>                                // pmr::vector, vector
+#include <test/sequence/factory.hpp>                // make_sequence, stripes
+#include <test/set/concepts.hpp>                    // set_size_t_allocator, set_size_t_ranges_allocator
+#include <xstd/bits/bit_array.hpp>                  // bit_array
+#include <xstd/bits/bit_set.hpp>                    // basic_bit_set, bit_set
+#include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
+#include <xstd/bits/dynamic_bitset.hpp>             // basic_dynamic_bitset, dynamic_bitset
+#include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
+#include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector
+#include <xstd/bits/ext/boost/small_bitset.hpp>     // basic_small_bitset
+#include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <array>                                    // array
+#include <concepts>                                 // same_as
+#include <cstddef>                                  // size_t
+#include <cstdint>                                  // uint64_t, uint8_t
+#include <functional>                               // less
+#include <initializer_list>                         // initializer_list
+#include <memory>                                   // allocator, allocator_traits, uses_allocator_v
+#include <memory_resource>                          // memory_resource, monotonic_buffer_resource, polymorphic_allocator, unsynchronized_pool_resource
+#include <ranges>                                   // from_range
+#include <set>                                      // set
+#include <tuple>                                    // tuple, tuple_cat
+#include <type_traits>                              // bool_constant, false_type, is_constructible_v, is_nothrow_constructible_v, true_type
+#include <utility>                                  // declval, move
+#include <vector>                                   // pmr::vector, vector
 
 BOOST_AUTO_TEST_SUITE(Spec)
 BOOST_AUTO_TEST_SUITE(Containers)
@@ -138,12 +143,27 @@ struct user_allocator<xstd::basic_small_bitset<Block, N, Allocator>>
         using type = Allocator;
 };
 
+template<class Block, std::size_t N, class Allocator>
+struct user_allocator<xstd::basic_bit_small_vector<Block, N, Allocator>>
+{
+        using type = Allocator;
+};
+
 template<class X>
 [[nodiscard]] auto allocator(int tag)
         -> X::allocator_type
 {
         return typename X::allocator_type(make_allocator<typename user_allocator<X>::type>(tag));
 }
+
+// Declared only, for the concept below to call in an unevaluated operand.
+template<class C>
+[[maybe_unused]] auto accept(C)
+        -> void;
+
+// Copy-list-initialization from the braced list: what an explicit constructor refuses.
+template<class C, class... Args>
+concept list_converts_from = requires (Args... args) { accept<C>({args...}); };
 
 // Keys inside the small set's inline blocks, and keys that spill it onto the heap.
 [[nodiscard]] auto samples()
@@ -163,6 +183,22 @@ using BitsetTypes = decltype(std::tuple_cat(std::declval<bitset_allocator_aware<
         -> std::array<std::size_t, 2>
 {
         return {9, 1000};
+}
+
+// std::vector<bool> is the model, over bool; the bit sequences take the allocator rebound to their Block.
+template<template<class> class Allocator>
+using sequence_allocator_aware = std::tuple<std::vector<bool, Allocator<bool>>, xstd::basic_bit_vector<std::uint8_t, Allocator<std::uint8_t>>, xstd::basic_bit_vector<std::uint64_t, Allocator<std::uint64_t>>, xstd::basic_bit_small_vector<std::uint8_t, 9, Allocator<std::uint8_t>>, xstd::basic_bit_small_vector<std::uint64_t, 64, Allocator<std::uint64_t>>>;
+
+using SequenceTypes = decltype(std::tuple_cat(std::declval<sequence_allocator_aware<propagating>>(), std::declval<sequence_allocator_aware<non_propagating>>(), std::declval<sequence_allocator_aware<std::pmr::polymorphic_allocator>>()));
+
+// A width inside the small sequence's inline blocks, and one that spills it onto the heap.
+template<class X>
+[[nodiscard]] auto sequence_samples(typename X::allocator_type const& a)
+        -> std::array<X, 2>
+{
+        auto const narrow = test::sequence::make_sequence<std::vector<bool>>(9UZ, test::sequence::stripes);
+        auto const wide = test::sequence::make_sequence<std::vector<bool>>(1000UZ, test::sequence::stripes);
+        return {X(narrow.begin(), narrow.end(), a), X(wide.begin(), wide.end(), a)};
 }
 
 } // namespace
@@ -398,6 +434,217 @@ BOOST_AUTO_TEST_CASE(TheComparatorArgumentsAreAcceptedAlongsideTheAllocator)
         auto const comp = xstd::bit_set::key_compare(); // NOLINT(modernize-use-transparent-functors): std::set<std::size_t>::key_compare
         BOOST_CHECK(xstd::bit_set({3, 1}, comp, std::allocator<std::size_t>()) == xstd::bit_set({1, 3}));
 }
+
+// [container.alloc.reqmts]/6-7: c.get_allocator()
+BOOST_AUTO_TEST_SUITE(GetAllocator)
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(ReturnsTheAllocatorTypeForEverySequence, T, SequenceTypes)
+{
+        static_assert(std::same_as<decltype(std::declval<T const&>().get_allocator()), typename T::allocator_type>); // [container.alloc.reqmts]/6
+        BOOST_CHECK(T(allocator<T>(1)).get_allocator() == allocator<T>(1));
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+// [container.alloc.reqmts]/8-10: X u
+BOOST_AUTO_TEST_SUITE(DefaultConstructor)
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(ValueInitializesTheAllocatorForEverySequence, T, SequenceTypes)
+{
+        auto const u = T();
+        BOOST_CHECK(u.empty());                                         // [container.alloc.reqmts]/9
+        BOOST_CHECK(u.get_allocator() == typename T::allocator_type()); // [container.alloc.reqmts]/9
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+// [container.alloc.reqmts]/11-12: X u(m)
+BOOST_AUTO_TEST_SUITE(AllocatorConstructor)
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(UsesTheAllocatorGivenForEverySequence, T, SequenceTypes)
+{
+        auto const m = allocator<T>(1);
+        auto const u = T(m);
+        BOOST_CHECK(u.empty());              // [container.alloc.reqmts]/11
+        BOOST_CHECK(u.get_allocator() == m); // [container.alloc.reqmts]/11
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+// [container.alloc.reqmts]/13-15: X u(t, m)
+BOOST_AUTO_TEST_SUITE(CopyWithAllocator)
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(CopiesUnderTheAllocatorGivenForEverySequence, T, SequenceTypes)
+{
+        auto const m = allocator<T>(1);
+        for (auto const& t : sequence_samples<T>(allocator<T>(0))) {
+                auto const u = T(t, m);
+                BOOST_CHECK(u == t);                 // [container.alloc.reqmts]/14
+                BOOST_CHECK(u.get_allocator() == m); // [container.alloc.reqmts]/14
+        }
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+// [container.alloc.reqmts]/16-17: X u(rv)
+BOOST_AUTO_TEST_SUITE(MoveConstructor)
+
+// The allocator moves with the elements, and a copy asks the traits which one to take.
+BOOST_AUTO_TEST_CASE_TEMPLATE(TakesTheAllocatorAlongForEverySequence, T, SequenceTypes)
+{
+        using traits = std::allocator_traits<typename T::allocator_type>;
+        for (auto const& t : sequence_samples<T>(allocator<T>(1))) {
+                auto rv = T(t, t.get_allocator());
+                auto const u = T(std::move(rv));
+                BOOST_CHECK(u == t);                                 // [container.alloc.reqmts]/16
+                BOOST_CHECK(u.get_allocator() == t.get_allocator()); // [container.alloc.reqmts]/16
+
+                auto const copy = t; // NOLINT(performance-unnecessary-copy-initialization): the copy constructor is what is under test
+                BOOST_CHECK(copy == t);
+                BOOST_CHECK(copy.get_allocator() == traits::select_on_container_copy_construction(t.get_allocator())); // [container.reqmts]/64
+        }
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+// [container.alloc.reqmts]/18-20: X u(rv, m)
+BOOST_AUTO_TEST_SUITE(MoveWithAllocator)
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(MovesUnderTheAllocatorGivenForEverySequence, T, SequenceTypes)
+{
+        auto const m = allocator<T>(1);
+        for (auto const& t : sequence_samples<T>(allocator<T>(0))) {
+                auto rv = t;
+                auto const u = T(std::move(rv), m);
+                BOOST_CHECK(u == t);                 // [container.alloc.reqmts]/19
+                BOOST_CHECK(u.get_allocator() == m); // [container.alloc.reqmts]/19
+        }
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+// [container.reqmts]/641-24: a = t
+BOOST_AUTO_TEST_SUITE(CopyAssignment)
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(PropagatesTheAllocatorWhereTheTraitsSaySoForEverySequence, T, SequenceTypes)
+{
+        using traits = std::allocator_traits<typename T::allocator_type>;
+        auto const a = allocator<T>(0);
+        auto const b = allocator<T>(1);
+        for (auto const& t : sequence_samples<T>(b)) {
+                auto u = T({true}, a);
+                u = t;
+                BOOST_CHECK(u == t); // [container.reqmts]/643
+                BOOST_CHECK(u.get_allocator() == (traits::propagate_on_container_copy_assignment::value ? b : a));
+        }
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+// [container.reqmts]/645-29: a = rv
+BOOST_AUTO_TEST_SUITE(MoveAssignment)
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(PropagatesTheAllocatorWhereTheTraitsSaySoForEverySequence, T, SequenceTypes)
+{
+        using traits = std::allocator_traits<typename T::allocator_type>;
+        auto const a = allocator<T>(0);
+        auto const b = allocator<T>(1);
+        for (auto const& t : sequence_samples<T>(b)) {
+                auto rv = t;
+                auto u = T({true}, a);
+                u = std::move(rv);
+                BOOST_CHECK(u == t); // [container.reqmts]/648
+                BOOST_CHECK(u.get_allocator() == (traits::propagate_on_container_move_assignment::value ? b : a));
+        }
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+// [container.alloc.reqmts]/30-32: a.swap(b)
+BOOST_AUTO_TEST_SUITE(Swap)
+
+// Swapping unequal allocators that do not propagate is undefined, so those are swapped under one allocator.
+BOOST_AUTO_TEST_CASE_TEMPLATE(ExchangesTheAllocatorsWhereTheTraitsSaySoForEverySequence, T, SequenceTypes)
+{
+        using traits = std::allocator_traits<typename T::allocator_type>;
+        auto const a = allocator<T>(0);
+        auto const b = traits::propagate_on_container_swap::value ? allocator<T>(1) : a;
+        for (auto const& t : sequence_samples<T>(a)) {
+                auto x = T(t, a);
+                auto y = T({true}, b);
+                auto const x1 = x;
+                auto const y1 = y;
+                x.swap(y);
+                BOOST_CHECK(x == y1 and y == x1); // [container.alloc.reqmts]/31
+                BOOST_CHECK(x.get_allocator() == b and y.get_allocator() == a);
+                swap(x, y);
+                BOOST_CHECK(x == x1 and y == y1);
+                BOOST_CHECK(x.get_allocator() == a and y.get_allocator() == b);
+        }
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+// [container.alloc.reqmts]/3: the allocator arguments each container takes
+BOOST_AUTO_TEST_SUITE(AllocatorArguments)
+
+// A memory_resource* converts to the polymorphic allocator, as for std::vector<bool>.
+BOOST_AUTO_TEST_CASE(AMemoryResourceConvertsToThePolymorphicAllocatorOfASequence)
+{
+        using pmr_bit_vector = xstd::basic_bit_vector<std::size_t, std::pmr::polymorphic_allocator<std::size_t>>;
+        auto mr = std::pmr::monotonic_buffer_resource();
+
+        auto const v = pmr_bit_vector(3, true, &mr);
+        BOOST_CHECK(v.get_allocator().resource() == &mr);
+        BOOST_CHECK_EQUAL(v.size(), 3UZ);
+}
+
+// Uses-allocator construction: an allocator-aware container hands each element its own allocator, converted.
+BOOST_AUTO_TEST_CASE(AnAllocatorAwareContainerPassesItsAllocatorOnToASequence)
+{
+        using pmr_bit_vector = xstd::basic_bit_vector<std::size_t, std::pmr::polymorphic_allocator<std::size_t>>;
+        static_assert(std::uses_allocator_v<pmr_bit_vector, std::pmr::polymorphic_allocator<pmr_bit_vector>>);
+
+        auto mr = std::pmr::monotonic_buffer_resource();
+        auto vectors = std::pmr::vector<pmr_bit_vector>(&mr);
+        vectors.emplace_back(3);
+
+        BOOST_CHECK(vectors.back().get_allocator().resource() == &mr);
+        BOOST_CHECK_EQUAL(vectors.back().size(), 3UZ);
+}
+
+// A rebound std::allocator converts, and a braced {} is a value-initialized allocator, as for std::vector<bool>.
+BOOST_AUTO_TEST_CASE(AConvertibleOrEmptyAllocatorArgumentIsTakenByASequence)
+{
+        static_assert(std::is_constructible_v<std::vector<bool>, std::size_t, std::allocator<int>>);
+        static_assert(std::is_constructible_v<xstd::bit_vector, std::size_t, std::allocator<int>>);
+        static_assert(std::is_constructible_v<xstd::dynamic_bitset, std::allocator<int>>);
+
+        auto const v = xstd::bit_vector(3, true, {});
+        BOOST_CHECK_EQUAL(v.size(), 3UZ);
+}
+
+// std::vector<bool>'s and boost's count constructors are explicit with the allocator as without it.
+BOOST_AUTO_TEST_CASE(TheCountConstructorsAreExplicit)
+{
+        static_assert(not list_converts_from<std::vector<bool>, std::size_t, std::allocator<bool>>);
+        static_assert(not list_converts_from<xstd::bit_vector, std::size_t, std::allocator<std::size_t>>);
+        static_assert(not list_converts_from<xstd::dynamic_bitset, std::size_t, unsigned long long, std::allocator<std::size_t>>);
+        BOOST_CHECK(true);
+}
+
+// The allocator-only constructors cannot throw, as [vector.bool.pspc] has it; a width in the type takes no allocator.
+BOOST_AUTO_TEST_CASE(OnlyARunTimeWidthTakesAnAllocator)
+{
+        static_assert(std::is_nothrow_constructible_v<std::vector<bool>, std::allocator<bool> const&>);
+        static_assert(std::is_nothrow_constructible_v<xstd::bit_vector, std::allocator<std::size_t> const&>);
+        static_assert(std::is_nothrow_constructible_v<xstd::dynamic_bitset, std::allocator<std::size_t> const&>);
+        static_assert(not std::is_constructible_v<xstd::bit_array<64>, std::allocator<std::size_t>>);
+        static_assert(not std::is_constructible_v<xstd::bit_array<64>, std::initializer_list<bool>, std::allocator<std::size_t>>);
+        BOOST_CHECK(true);
+}
+
+BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()

@@ -18,11 +18,10 @@
 #include <cstddef>                                       // ptrdiff_t, size_t
 #include <cstdint>                                       // uint64_t, uint8_t
 #include <functional>                                    // hash, ranges::greater
-#include <iterator>                                      // next
 #include <limits>                                        // numeric_limits
 #include <memory>                                        // allocator
 #include <new>                                           // IWYU pragma: keep; bad_alloc, named only without TEST_HAS_ADDRESS_SANITIZER
-#include <ranges>                                        // equal, from_range, iota, next, transform
+#include <ranges>                                        // equal, from_range, iota, transform
 #include <stdexcept>                                     // length_error
 #include <type_traits>                                   // is_default_constructible_v
 #include <utility>                                       // move
@@ -67,53 +66,6 @@ BOOST_AUTO_TEST_CASE(ItAnswersEveryLineOfStdVectorBool)
         static_assert(std::same_as<T::allocator_type, std::allocator<std::uint8_t>>);
 }
 
-// What the checklist names and never runs: a requires-expression proves a member exists, only a call proves it works.
-BOOST_AUTO_TEST_CASE(TheProxyFlipsAndTheEmptyArgumentListPushesFalse)
-{
-        auto v = xstd::bit_vector(4UZ);
-        v[1] = true;
-
-        // [vector.bool]'s reference::flip, required of it since C++98.
-        v[0].flip();
-        v[1].flip();
-        BOOST_CHECK(v[0] == true);
-        BOOST_CHECK(v[1] == false);
-
-        // Variadic, so value-initialization is one of the argument lists it takes, and it pushes a false.
-        auto const n = v.size();
-        BOOST_CHECK(v.emplace_back() == false);
-        BOOST_CHECK_EQUAL(v.size(), n + 1UZ);
-        BOOST_CHECK(v.emplace_back(true) == true);
-
-        auto const it = v.emplace(v.cbegin());
-        BOOST_CHECK(*it == false);
-        BOOST_CHECK_EQUAL(v.size(), n + 3UZ);
-}
-
-BOOST_AUTO_TEST_CASE(ItIsBuiltLikeAStdVector)
-{
-        auto const pattern = std::views::iota(0UZ, 20UZ) | std::views::transform([](auto i) { return i % 3 == 0; });
-        auto const model = std::vector<bool>(pattern.begin(), pattern.end());
-
-        BOOST_CHECK(T().empty());
-        BOOST_CHECK_EQUAL(T(17).size(), 17UZ);
-        BOOST_CHECK(std::ranges::equal(T(5, true), std::vector<bool>(5, true)));
-        BOOST_CHECK(std::ranges::equal(T(5, false), std::vector<bool>(5, false)));
-        BOOST_CHECK(std::ranges::equal(T(pattern.begin(), pattern.end()), model));
-        BOOST_CHECK(std::ranges::equal(T(std::from_range, pattern), model));
-        BOOST_CHECK(std::ranges::equal(T{true, false, true}, std::vector<bool>{true, false, true}));
-
-        auto v = T();
-        v = {false, true};
-        BOOST_CHECK(std::ranges::equal(v, std::vector<bool>{false, true}));
-        v.assign(3, true);
-        BOOST_CHECK(std::ranges::equal(v, std::vector<bool>(3, true)));
-        v.assign(pattern.begin(), pattern.end());
-        BOOST_CHECK(std::ranges::equal(v, model));
-        v.assign({true});
-        BOOST_CHECK(std::ranges::equal(v, std::vector<bool>{true}));
-}
-
 // The allocator forms, each against the one without: the allocator is a construction argument, never part of the value.
 BOOST_AUTO_TEST_CASE(ItIsBuiltWithAnAllocatorLikeAStdVector)
 {
@@ -137,55 +89,16 @@ BOOST_AUTO_TEST_CASE(ItIsBuiltWithAnAllocatorLikeAStdVector)
         BOOST_CHECK(source.empty()); // NOLINT(bugprone-use-after-move,hicpp-invalid-access-moved): the moved-from is empty by contract, which is the check.
 }
 
-// [vector.erasure] against the model, erasing a value and then a predicate.
-BOOST_AUTO_TEST_CASE(ErasureIsTheStdVectorsOwn)
+// A std::vector<bool>'s ceiling is what a distance can name, where the storage's own bound is whole blocks.
+BOOST_AUTO_TEST_CASE(TheCeilingIsWhatADistanceCanName)
 {
-        auto v = T{true, false, true, true, false, false, true};
-        auto m = std::vector<bool>{true, false, true, true, false, false, true};
-        BOOST_CHECK_EQUAL(erase(v, true), std::erase(m, true));
-        BOOST_CHECK(std::ranges::equal(v, m));
-        BOOST_CHECK_EQUAL(erase_if(v, [](bool x) -> bool { return not x; }), std::erase_if(m, [](bool x) -> bool { return not x; }));
-        BOOST_CHECK(v.empty());
-        BOOST_CHECK_EQUAL(erase(v, false), 0UZ);
-}
-
-// Growth is the owner's: push, pop, emplace, resize, reserve, shrink and clear, each against the model.
-BOOST_AUTO_TEST_CASE(ItGrowsLikeAStdVector)
-{
-        auto v = T();
-        auto m = std::vector<bool>();
-        for (auto const i : std::views::iota(0UZ, 30UZ)) {
-                v.push_back(i % 2 == 0);
-                m.push_back(i % 2 == 0);
-        }
-        BOOST_CHECK(std::ranges::equal(v, m));
-        BOOST_CHECK_EQUAL(static_cast<bool>(v.emplace_back(true)), true);
-        v.pop_back();
-        BOOST_CHECK(std::ranges::equal(v, m));
-
-        v.resize(40, true);
-        m.resize(40, true);
-        BOOST_CHECK(std::ranges::equal(v, m));
-        v.resize(7);
-        m.resize(7);
-        BOOST_CHECK(std::ranges::equal(v, m));
-
-        v.reserve(100);
-        BOOST_CHECK_GE(v.capacity(), 100UZ);
-        BOOST_CHECK(std::ranges::equal(v, m));
-        v.shrink_to_fit();
-        BOOST_CHECK_GE(v.capacity(), v.size());
-
-        // A std::vector<bool>'s ceiling is what a distance can name, where the storage's own bound is whole blocks.
+        auto v = T(7);
         BOOST_CHECK_EQUAL(v.max_size(), xstd::bits::detail::contiguous_bit_container<std::vector<std::uint8_t>>::max_addressable_width);
         BOOST_CHECK_LT(v.max_size(), xstd::bits::detail::contiguous_bit_container<std::vector<std::uint8_t>>().max_size());
         BOOST_CHECK_LE(v.max_size(), static_cast<std::size_t>(std::numeric_limits<std::ptrdiff_t>::max()));
         BOOST_CHECK_EQUAL(v.max_size() % 8UZ, 0UZ);
         BOOST_CHECK_THROW(v.resize(v.max_size() + 1UZ), std::length_error);
-
-        v.clear();
-        BOOST_CHECK(v.empty());
-        BOOST_CHECK_EQUAL(v.size(), 0UZ);
+        BOOST_CHECK_EQUAL(v.size(), 7UZ);
 }
 
 namespace {
@@ -324,79 +237,25 @@ BOOST_AUTO_TEST_CASE(AppendRangePacksAnyRangeOfBools)
         BOOST_CHECK(std::ranges::equal(v, pattern(20)));
 }
 
-namespace {
-
-// The position under test on the sequence and on the model alike.
-template<class C>
-auto at(C const& c, std::size_t pos)
-{
-        return std::ranges::next(c.cbegin(), static_cast<std::ptrdiff_t>(pos));
-}
-
-// The two results first, their offsets after: begin() is taken once the insert has moved everything.
-template<class V, class M>
-auto same_offset_and_contents(V const& v, typename V::iterator vit, M const& m, typename M::iterator mit)
-{
-        BOOST_CHECK_EQUAL(vit - v.begin(), mit - m.begin());
-        BOOST_CHECK(std::ranges::equal(v, m));
-}
-
-} // namespace
-
-// insert's single-value shapes and emplace, rebuilt around the position, against the model.
-BOOST_AUTO_TEST_CASE(InsertingValuesRebuildsAsAStdVectorDoes)
+// insert_range from a window into the sequence itself, which reads the old width while the new one is built.
+BOOST_AUTO_TEST_CASE(InsertingAWindowOfItselfRebuildsAsAStdVectorDoes)
 {
         for (auto const pos : {0UZ, 1UZ, 8UZ, 13UZ, 20UZ}) {
                 auto v = T(std::from_range, pattern(20));
                 auto m = pattern(20);
-
-                same_offset_and_contents(v, v.insert(at(v, pos), true), m, m.insert(at(m, pos), true));
-                same_offset_and_contents(v, v.insert(at(v, pos), 3UZ, false), m, m.insert(at(m, pos), 3UZ, false));
-                same_offset_and_contents(v, v.emplace(at(v, pos), false), m, m.emplace(at(m, pos), false));
-        }
-}
-
-// insert's range shapes and insert_range, one of them a window into the sequence itself.
-BOOST_AUTO_TEST_CASE(InsertingRangesRebuildsAsAStdVectorDoes)
-{
-        for (auto const pos : {0UZ, 1UZ, 8UZ, 13UZ, 20UZ}) {
-                auto v = T(std::from_range, pattern(20));
-                auto m = pattern(20);
-
-                // Shorter than a word, exactly a word, and spilling into a second: the packing tier's three endings.
-                auto const more = pattern(11);
-                same_offset_and_contents(v, v.insert(at(v, pos), more.begin(), more.end()), m, m.insert(at(m, pos), more.begin(), more.end()));
-                auto const word = pattern(8);
-                same_offset_and_contents(v, v.insert(at(v, pos), word.begin(), word.end()), m, m.insert(at(m, pos), word.begin(), word.end()));
-                same_offset_and_contents(v, v.insert(at(v, pos), {true, true, false}), m, m.insert(at(m, pos), {true, true, false}));
-                same_offset_and_contents(v, v.insert(at(v, pos), {true, false, true, false, true, false, true, false}), m, m.insert(at(m, pos), {true, false, true, false, true, false, true, false}));
-                same_offset_and_contents(v, v.insert(at(v, pos), {true, false, true, false, true, false, true, false, true}), m, m.insert(at(m, pos), {true, false, true, false, true, false, true, false, true}));
                 auto const middle = std::vector<bool>(m.begin() + 2, m.begin() + 11);
-                same_offset_and_contents(v, v.insert_range(at(v, pos), xstd::bit_span(v).subspan(2, 9)), m, m.insert(at(m, pos), middle.begin(), middle.end()));
+                auto const r = v.insert_range(v.cbegin() + static_cast<std::ptrdiff_t>(pos), xstd::bit_span(v).subspan(2, 9));
+                m.insert(m.cbegin() + static_cast<std::ptrdiff_t>(pos), middle.begin(), middle.end());
+                BOOST_CHECK_EQUAL(r - v.begin(), static_cast<std::ptrdiff_t>(pos));
+                BOOST_CHECK(std::ranges::equal(v, m));
         }
 }
 
-// erase in both shapes, an empty range included.
-BOOST_AUTO_TEST_CASE(ErasingRebuildsAsAStdVectorDoes)
-{
-        for (auto const pos : {0UZ, 1UZ, 8UZ, 13UZ, 19UZ}) {
-                auto v = T(std::from_range, pattern(40));
-                auto m = pattern(40);
-
-                same_offset_and_contents(v, v.erase(at(v, pos)), m, m.erase(at(m, pos)));
-                same_offset_and_contents(v, v.erase(at(v, pos), at(v, pos + 9)), m, m.erase(at(m, pos), at(m, pos + 9)));
-                same_offset_and_contents(v, v.erase(at(v, pos), at(v, pos)), m, m.erase(at(m, pos), at(m, pos)));
-        }
-}
-
-// [vector.bool]'s two: flip every bit, and swap two proxies.
-BOOST_AUTO_TEST_CASE(FlipAndSwapAreStdVectorBools)
+// The static swap of two proxies, and a view that flips what it views where a window does not.
+BOOST_AUTO_TEST_CASE(TheStaticSwapAndTheViewsFlipAreStdVectorBools)
 {
         auto v = T(std::from_range, pattern(20));
         auto m = pattern(20);
-        v.flip();
-        m.flip();
-        BOOST_CHECK(std::ranges::equal(v, m));
 
         // Ours is [vector.bool]'s static swap; the model's own is deprecated by C++26 (LWG-3638, P3612R1).
         T::swap(v[0], v[1]);

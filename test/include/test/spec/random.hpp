@@ -8,6 +8,7 @@
 
 #include <test/bitset/factory.hpp>        // make_bitset
 #include <test/dynamic.hpp>               // dynamic
+#include <test/sequence/factory.hpp>      // make_sequence, static_capacity, static_width
 #include <test/set/exhaustive.hpp>        // static_capacity, static_width
 #include <xstd/bits/detail/ownership.hpp> // owned_storage
 #include <boost/test/unit_test.hpp>       // BOOST_TEST_CONTEXT
@@ -318,6 +319,53 @@ template<class X>
 auto all_bitset_pairs(auto fun)
 {
         sample_pairs(bitset_width<X>(), block_digits_v<X>, bitset_from<X>, fun);
+}
+
+// A sequence is as wide as its type or its capacity, and sampled one past 2048 bits where its width is unbounded.
+template<class X>
+[[nodiscard]] auto sequence_width()
+        -> std::size_t
+{
+        if constexpr (test::sequence::static_width<X>) {
+                return X().size();
+        } else if constexpr (test::sequence::static_capacity<X>) {
+                return X::capacity();
+        } else {
+                return 2049UZ;
+        }
+}
+
+// The keys set at the width and every other position clear.
+template<class X>
+[[nodiscard]] auto sequence_from(std::vector<std::size_t> const& v, std::size_t n)
+        -> X
+{
+        auto a = test::sequence::make_sequence<X>(n, [](std::size_t) -> bool { return false; });
+        for (auto const k : v) {
+                a[k] = true;
+        }
+        return a;
+}
+
+template<class X>
+auto all_sequences(auto fun)
+{
+        sample_key_vectors(sequence_width<X>(), block_digits_v<X>, [&](auto const& v, std::size_t n) {
+                auto a = sequence_from<X>(v, n); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
+                fun(a);
+        });
+}
+
+template<class X>
+auto all_sequence_key_pairs(auto fun)
+{
+        sample_key_pairs(sequence_width<X>(), block_digits_v<X>, sequence_from<X>, fun);
+}
+
+template<class X>
+auto all_sequence_pairs(auto fun)
+{
+        sample_pairs(sequence_width<X>(), block_digits_v<X>, sequence_from<X>, fun);
 }
 
 } // namespace test::spec::random

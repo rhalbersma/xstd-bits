@@ -108,6 +108,25 @@ BOOST_AUTO_TEST_CASE(InsertingPastTheCapacityThrowsBadAlloc)
         BOOST_CHECK(s.find(24) == s.end()); // NOLINT(readability-container-contains)
 }
 
+// A left shift grows the width by its distance, so a key it would carry past the capacity is refused, as an insert is.
+BOOST_AUTO_TEST_CASE(ShiftingPastTheCapacityThrowsBadAllocAndLeavesTheSetUnchanged)
+{
+        for (auto const key : {0UZ, 3UZ, 9UZ, 23UZ}) {
+                auto const s = T({0UZ, key});
+                auto const room = 23UZ - key;
+
+                // Landing on the last position is still inside the capacity.
+                auto at_capacity = s;
+                at_capacity <<= room;
+                BOOST_CHECK(at_capacity == T({room, 23UZ}));
+
+                // One further is not, and the set is as it was.
+                auto past_capacity = s;
+                BOOST_CHECK_THROW(past_capacity <<= room + 1UZ, std::bad_alloc);
+                BOOST_CHECK(past_capacity == s);
+        }
+}
+
 // N is the capacity exactly: a key the last block has room for but N does not is refused all the same.
 BOOST_AUTO_TEST_CASE(TheCapacityIsTheRequestedOneExactly)
 {

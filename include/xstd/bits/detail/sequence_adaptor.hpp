@@ -1126,6 +1126,7 @@ private:
         constexpr auto blit(SBits const& src, size_type first, size_type count)
                 -> void
         {
+                using block_type = bits_type::block_type;
                 constexpr auto digits = bits_type::bits_per_block;
                 auto const old = size();
                 // Through the saturating sum: a wrapped total would answer an append with something shorter.
@@ -1133,10 +1134,18 @@ private:
                 if constexpr (requires (bits_type& b, std::size_t n) { b.reserve(n); }) {
                         m_bits.reserve(total);
                 }
-                for (auto pos = first; pos < first + count; pos += digits) {
+                auto const last = first + count;
+                auto pos = first;
+                for (; last - pos >= digits; pos += digits) {
                         m_bits.append(src.block_at(pos));
                 }
-                m_bits.resize(total);
+                // Grown by the positions left and no further, so a capacity refuses only what does not fit.
+                if (pos < last) {
+                        auto const word = src.block_at(pos);
+                        auto const width = size();
+                        m_bits.resize(width + (last - pos));
+                        m_bits.block_at(width, word, sequence::partial_block_mask<block_type>(last - pos));
+                }
         }
 
         // Tier two: the bools packed into words, boost's bit_appender, and the last word trimmed to what it holds.
@@ -1162,10 +1171,11 @@ private:
                                 n = 0UZ;
                         }
                 }
+                // Grown by the n positions left and no further, so a capacity refuses only what does not fit.
                 if (n != 0UZ) {
-                        auto const total = size() + n;
-                        m_bits.append(block);
-                        m_bits.resize(total);
+                        auto const width = size();
+                        m_bits.resize(width + n);
+                        m_bits.block_at(width, block, sequence::partial_block_mask<block_type>(n));
                 }
         }
 
