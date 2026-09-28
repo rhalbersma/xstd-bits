@@ -7,7 +7,7 @@
 #define TEST_SPEC_INPUT_HPP
 
 #include <boost/test/results_collector.hpp> // results_collector
-#include <boost/test/unit_test.hpp>         // BOOST_ERROR, counter_t, current_test_case_id
+#include <boost/test/unit_test.hpp>         // BOOST_ERROR, current_test_case_id
 #include <array>                            // array
 #include <concepts>                         // integral
 #include <cstddef>                          // ptrdiff_t, size_t
@@ -357,10 +357,11 @@ private:
         origin const& m_from;
         void const* m_operands;
         printer m_print;
-        boost::unit_test::counter_t m_failed;
+        std::uint64_t m_failed;
 
+        // Widened past counter_t, whose unsigned long pads this class on a 32-bit long.
         [[nodiscard]] static auto failed()
-                -> boost::unit_test::counter_t
+                -> std::uint64_t
         {
                 return boost::unit_test::results_collector.results(boost::unit_test::framework::current_test_case_id()).p_assertions_failed;
         }

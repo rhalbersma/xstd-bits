@@ -6,6 +6,13 @@
 #ifndef TEST_FOR_EACH_TYPE_HPP
 #define TEST_FOR_EACH_TYPE_HPP
 
+#ifdef _MSC_VER
+
+// xstd::bit_fixed_set<0> gives bogus "unreachable code" warnings, Boost.Test's inlined code among them
+#pragma warning(disable : 4702)
+
+#endif
+
 #include <boost/core/demangle.hpp>  // demangle
 #include <boost/test/unit_test.hpp> // BOOST_TEST_CONTEXT
 #include <string>                   // string

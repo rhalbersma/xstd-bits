@@ -140,7 +140,7 @@ namespace values {
 [[nodiscard]] constexpr auto filled(std::size_t n, bool value)
         -> bools
 {
-        return bools(n, value);
+        return bools(n, value); // NOLINT(modernize-return-braced-init-list): braces would pick the initializer_list of two bools
 }
 
 [[nodiscard]] constexpr auto striped(std::size_t n)
