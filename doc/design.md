@@ -2018,6 +2018,13 @@ clearing whatever the last word carried past it. Everything else, a `std::vector
 `bit_appender`, and trimmed the same way. A source inside the very storage being appended to is safe: the blit
 reads positions below the old width alone, and no append writes one.
 
+Under a static capacity `[inplace.vector.modifiers]/3` asks more of `append_range`: past the capacity, no
+effects. A sized source gets that for free, the width it needs being reserved, and refused, before a word is
+written. A source with no size finds the capacity only by overrunning it, so the bounded owner remembers its
+width, and on any exception resizes back to it before rethrowing -- the resize clearing the tail as every
+shrink does. `assign_range` has no such remark in `[sequence.reqmts]`, so its clear-and-append keeps only the
+basic guarantee, and an overflowing source leaves what it appended.
+
 `insert_range`, `insert` in its four shapes, `emplace` and both `erase`s rebuild rather than shift: the head
 through `first(pos)`, the middle, the tail through `subspan(pos)`, into a fresh sequence that is then swapped
 in. Every step runs at the blit's tier, insertion into a packed sequence is linear however it is done, and
@@ -2462,7 +2469,12 @@ nothing new. Over `std::inplace_vector` the owners are constant-evaluable, and t
 are run-time values only. Code that constant-evaluates a bounded owner tests `#ifdef XSTD_BITS_HAS_CONSTEXPR_BOUNDED`,
 never `__cpp_lib_inplace_vector`, which says what the standard library has rather than what the owners are built
 on. Growth past the capacity throws `std::bad_alloc` over either storage, given by the container before the
-storage is asked; on the set reading that is where `insert` stops being total.
+storage is asked; on the set reading that is where `insert` stops being total. A left shift is refused by the
+highest key it would carry, not by `width + n`: the width is no part of a set's value, so `operator<<=` throws
+`bad_alloc`, the set unchanged, exactly when that key plus `n` reaches `N`. An empty set shifts by any distance
+and stays empty, and a set whose width outran its keys -- an `insert(20)` undone by `erase(20)` -- shifts as far
+as its highest remaining key allows, the width growing to `min(width + n, N)`. The unbounded column keeps
+`width + n` against its `length_error` ceiling.
 
 **The two storages promise different things**, and the owners pass each promise on rather than paper over it.
 `std::inplace_vector` of trivially copyable blocks copies and swaps without throwing; `boost::container::static_vector`
@@ -2613,7 +2625,7 @@ width it asks for by **addition** over a `size_t` the caller names, and every on
 | where | the sum |
 |---|---|
 | `contiguous_bit_container::growing_insert` | `n + 1`, to admit the position |
-| `set_adaptor::operator<<=` at a run-time width | `width + n`, the translation being total over `size_t` |
+| `set_adaptor::operator<<=` at a run-time width | `width + n`, the translation being total over `size_t`; clamped to a capacity |
 | `set_adaptor::insert_range`, consecutive tier | `lo + len - 1`, the range's last position |
 | `sequence_adaptor::insert(position, n, value)` | `size() + n` |
 | `sequence_adaptor::blit` | `size() + count`, the source's own width |
