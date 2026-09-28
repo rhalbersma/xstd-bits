@@ -4,7 +4,6 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/set/ascending.hpp>                        // yields_ascending_keys
-#include <test/set/concepts.hpp>                         // bit_set, set_size_t, set_size_t_allocator, set_size_t_ranges, set_size_t_ranges_allocator
 #include <xstd/bits/bit_set.hpp>                         // bit_set
 #include <xstd/bits/bit_set_view.hpp>                    // bit_set_view
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
@@ -35,28 +34,6 @@ BOOST_AUTO_TEST_CASE(TheDynamicSetIsTheSetAdaptorOverAHeapOfBlocks)
 {
         static_assert(std::derived_from<T, xstd::bits::detail::set_adaptor<xstd::bits::detail::contiguous_bit_container<std::vector<std::uint8_t>>, xstd::bits::detail::storage::owned, T>>);
         static_assert(std::same_as<xstd::basic_bit_set<std::uint8_t, std::allocator<std::uint8_t>>, T>);
-        static_assert(test::set::bit_set<T>);
-}
-
-// Every line of [set], the model first, bar the node family and heterogeneous overloads neither side has.
-BOOST_AUTO_TEST_CASE(ItAnswersEveryLineOfStdSetSizeT)
-{
-        static_assert(test::set::set_size_t<std::set<std::size_t>>);
-        static_assert(test::set::set_size_t<T>);
-        static_assert(test::set::set_size_t<xstd::bit_set>);
-
-        static_assert(test::set::set_size_t_allocator<std::set<std::size_t>>);
-        static_assert(test::set::set_size_t_allocator<T>);
-        static_assert(test::set::set_size_t_allocator<xstd::bit_set>);
-
-#ifdef __cpp_lib_containers_ranges
-
-        static_assert(test::set::set_size_t_ranges<std::set<std::size_t>>);
-        static_assert(test::set::set_size_t_ranges_allocator<std::set<std::size_t>>);
-
-#endif
-        static_assert(test::set::set_size_t_ranges<T>);
-        static_assert(test::set::set_size_t_ranges_allocator<T>);
 }
 
 // [set.cons]'s allocator arguments, constructed rather than merely asked about in a requires-expression.

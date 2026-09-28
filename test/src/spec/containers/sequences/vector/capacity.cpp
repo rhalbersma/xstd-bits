@@ -8,6 +8,7 @@
 #include <test/spec/input.hpp>          // context
 #include <test/spec/sequence.hpp>       // sequences, vector_all
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_THROW
+#include <concepts>                     // same_as
 #include <stdexcept>                    // length_error
 
 BOOST_AUTO_TEST_SUITE(Spec)
@@ -59,6 +60,7 @@ auto check_resize(auto const& a)
 BOOST_AUTO_TEST_CASE(Capacity)
 {
         test::for_each_type<test::spec::sequence::vector_all>([]<class T> -> void {
+                static_assert(requires (T const cc) { { cc.capacity() } -> std::same_as<typename T::size_type>; });
                 for (auto const [from, a] : inputs::sequences<T>()) {
                         auto const on_failure = context(from, a);
                         mem_capacity()(a);
@@ -70,6 +72,7 @@ BOOST_AUTO_TEST_CASE(Capacity)
 BOOST_AUTO_TEST_CASE(Reserve)
 {
         test::for_each_type<test::spec::sequence::vector_all>([]<class T> -> void {
+                static_assert(requires (T c, T::size_type n) { c.reserve(n); });
                 for (auto const [from, a] : inputs::sequences<T>()) {
                         auto const on_failure = context(from, a);
                         check_reserve(a);
@@ -81,6 +84,7 @@ BOOST_AUTO_TEST_CASE(Reserve)
 BOOST_AUTO_TEST_CASE(ShrinkToFit)
 {
         test::for_each_type<test::spec::sequence::vector_all>([]<class T> -> void {
+                static_assert(requires (T c) { c.shrink_to_fit(); });
                 for (auto const [from, a] : inputs::sequences<T>()) {
                         auto const on_failure = context(from, a);
                         mem_shrink_to_fit()(a);
@@ -92,6 +96,10 @@ BOOST_AUTO_TEST_CASE(ShrinkToFit)
 BOOST_AUTO_TEST_CASE(Resize)
 {
         test::for_each_type<test::spec::sequence::vector_all>([]<class T> -> void {
+                static_assert(requires (T c, T::size_type n, bool b) {
+                        c.resize(n);
+                        c.resize(n, b);
+                });
                 check_resize_past_max_size<T>();
                 for (auto const [from, a] : inputs::sequences<T>()) {
                         auto const on_failure = context(from, a);

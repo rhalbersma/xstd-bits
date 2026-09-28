@@ -3,22 +3,14 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/block_types.hpp>       // graded_extents
-#include <test/flat_set.hpp>          // IWYU pragma: keep; TEST_HAS_FLAT_SET
-#include <test/sequence/concepts.hpp> // bit_sequence
-#include <test/set/concepts.hpp>      // bit_set
-#include <xstd/bits.hpp>              // the whole bits surface
-#include <boost/test/unit_test.hpp>   // BOOST_AUTO_TEST_CASE
-#include <array>                      // array
-#include <concepts>                   // same_as
-#include <cstddef>                    // size_t
-#include <cstdint>                    // uint8_t
-#include <limits>                     // numeric_limits
-#include <memory>                     // allocator
-#include <ranges>                     // bidirectional_range, random_access_range
-#include <set>                        // set
-#include <tuple>                      // tuple_element_t, tuple_size_v
-#include <utility>                    // index_sequence, make_index_sequence
+#include <xstd/bits.hpp>            // the whole bits surface
+#include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE
+#include <concepts>                 // same_as
+#include <cstddef>                  // size_t
+#include <cstdint>                  // uint8_t
+#include <limits>                   // numeric_limits
+#include <memory>                   // allocator
+#include <ranges>                   // bidirectional_range, random_access_range
 
 // Every entity the umbrella promises, reached through it alone: no leaf test sees the umbrella at all.
 BOOST_AUTO_TEST_CASE(EveryContainerArrivesThroughTheUmbrella)
@@ -66,53 +58,4 @@ BOOST_AUTO_TEST_CASE(EveryContainerArrivesThroughTheUmbrella)
         static_assert(std::same_as<xstd::aligned::bitset<9>, xstd::bitset<std::numeric_limits<std::size_t>::digits>>);
         static_assert(std::same_as<xstd::aligned::basic_bitset<std::uint8_t, 9>, xstd::basic_bitset<std::uint8_t, 16>>);
         static_assert(std::same_as<xstd::aligned::basic_bitset<std::uint8_t, 0>, xstd::basic_bitset<std::uint8_t, 0>>);
-}
-
-// A packed container satisfies the same interface as the one it packs, as std::array answers to it too.
-BOOST_AUTO_TEST_CASE(APackedArrayIsTheArrayItPacks)
-{
-        using namespace test::sequence;
-
-        // The standard's side, at the extents a packed array grades over.
-        static_assert(bit_sequence<std::array<bool, 0>>);
-        static_assert(bit_sequence<std::array<bool, 1>>);
-        static_assert(bit_sequence<std::array<bool, 8>>);
-        static_assert(bit_sequence<std::array<bool, 64>>);
-
-        // And ours, over every Block model and extent the grading names.
-        using packed = test::graded_extents<xstd::basic_bit_array>;
-        []<std::size_t... I>(std::index_sequence<I...>) {
-                static_assert((bit_sequence<std::tuple_element_t<I, packed>> and ...));
-        }(std::make_index_sequence<std::tuple_size_v<packed>>{});
-
-        // Storage is the second dimension of the grading: the same claim over the same extents, read as capacities.
-        using bounded = test::graded_extents<xstd::basic_bit_bounded_vector>;
-        []<std::size_t... I>(std::index_sequence<I...>) {
-                static_assert((bit_sequence<std::tuple_element_t<I, bounded>> and ...));
-        }(std::make_index_sequence<std::tuple_size_v<bounded>>{});
-}
-
-// The same claim on the other reading: a set of keys and a sequence of bools are different interfaces.
-BOOST_AUTO_TEST_CASE(APackedSetIsTheSetItPacks)
-{
-        using namespace test::set;
-
-        // std::flat_set as a second reference, so the concept describes more than one implementation.
-        static_assert(bit_set<std::set<std::size_t>>);
-#ifdef TEST_HAS_FLAT_SET
-
-        static_assert(bit_set<std::flat_set<std::size_t>>);
-
-#endif
-
-        using packed = test::graded_extents<xstd::basic_bit_fixed_set>;
-        []<std::size_t... I>(std::index_sequence<I...>) {
-                static_assert((bit_set<std::tuple_element_t<I, packed>> and ...));
-        }(std::make_index_sequence<std::tuple_size_v<packed>>{});
-
-        // And the same second dimension on this reading.
-        using bounded = test::graded_extents<xstd::basic_bit_bounded_set>;
-        []<std::size_t... I>(std::index_sequence<I...>) {
-                static_assert((bit_set<std::tuple_element_t<I, bounded>> and ...));
-        }(std::make_index_sequence<std::tuple_size_v<bounded>>{});
 }

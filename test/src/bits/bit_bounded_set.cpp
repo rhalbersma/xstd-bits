@@ -4,7 +4,6 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/set/ascending.hpp>                        // yields_ascending_keys
-#include <test/set/concepts.hpp>                         // bit_set, set_size_t, set_size_t_ranges
 #include <xstd/bits/bit_bounded_set.hpp>                 // aligned, basic_bit_bounded_set, bit_bounded_set
 #include <xstd/bits/detail/bounded_blocks.hpp>           // bounded_blocks, XSTD_BITS_HAS_CONSTEXPR_BOUNDED
 #include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
@@ -45,25 +44,15 @@ BOOST_AUTO_TEST_CASE(TheBoundedSetIsTheSetAdaptorOverInlineBlocks)
 {
         static_assert(std::derived_from<T, xstd::bits::detail::set_adaptor<xstd::bits::detail::contiguous_bit_container<xstd::bits::detail::bounded_blocks<std::uint8_t, 3>, 24>, xstd::bits::detail::storage::owned, T>>);
         static_assert(std::same_as<xstd::bit_bounded_set<24>, xstd::basic_bit_bounded_set<std::size_t, 24>>);
-        static_assert(test::set::bit_set<T>);
 }
 
 // A requires-expression failing for a concrete type is ill-formed rather than false ([expr.prim.req]/5).
 template<class X>
 constexpr bool has_allocator_type = requires { typename X::allocator_type; };
 
-// This column has no counterpart either, and answers the dynamic column's synopsis all the same.
-BOOST_AUTO_TEST_CASE(ItAnswersEveryLineOfStdSetSizeTAnyway)
+// The capacity is inline, so there is no allocator for the synopsis's allocator lines to name.
+BOOST_AUTO_TEST_CASE(ItHasNoAllocatorType)
 {
-#ifdef __cpp_lib_containers_ranges
-
-        static_assert(test::set::set_size_t_ranges<std::set<std::size_t>>);
-
-#endif
-        static_assert(test::set::set_size_t<std::set<std::size_t>>);
-        static_assert(test::set::set_size_t<T>);
-        static_assert(test::set::set_size_t<xstd::bit_bounded_set<24>>);
-        static_assert(test::set::set_size_t_ranges<T>);
         static_assert(not has_allocator_type<T>);
 }
 

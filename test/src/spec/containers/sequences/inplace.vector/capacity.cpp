@@ -41,7 +41,10 @@ BOOST_AUTO_TEST_CASE(Capacity)
 {
         test::for_each_type<test::spec::sequence::inplace_vector_all>([]<class T> -> void {
                 // The capacity is the type's, so both answer without an object.
-                static_assert(std::same_as<decltype(T::capacity()), typename T::size_type>);
+                static_assert(requires {
+                        { T::capacity() } -> std::same_as<typename T::size_type>;
+                        { T::max_size() } -> std::same_as<typename T::size_type>;
+                });
                 static_assert(T::capacity() == T::max_size()); // [inplace.vector.capacity]/1
                 BOOST_CHECK_EQUAL(T().max_size(), T::capacity());
         });
@@ -51,6 +54,10 @@ BOOST_AUTO_TEST_CASE(Capacity)
 BOOST_AUTO_TEST_CASE(Resize)
 {
         test::for_each_type<test::spec::sequence::inplace_vector_all>([]<class T> -> void {
+                static_assert(requires (T c, T::size_type n, bool b) {
+                        c.resize(n);
+                        c.resize(n, b);
+                });
                 for (auto const [from, a] : inputs::sequences<T>()) {
                         auto const on_failure = context(from, a);
                         for (auto const n : {0UZ, a.size() / 2UZ, a.size(), (a.size() + T::capacity()) / 2UZ, T::capacity()}) {
@@ -66,6 +73,7 @@ BOOST_AUTO_TEST_CASE(Resize)
 BOOST_AUTO_TEST_CASE(Reserve)
 {
         test::for_each_type<test::spec::sequence::inplace_vector_all>([]<class T> -> void {
+                static_assert(requires (T::size_type n) { T::reserve(n); });
                 T::reserve(0UZ);
                 T::reserve(T::capacity());                                          // [inplace.vector.capacity]/8
                 BOOST_CHECK_THROW(T::reserve(T::capacity() + 1UZ), std::bad_alloc); // [inplace.vector.capacity]/9
@@ -76,6 +84,7 @@ BOOST_AUTO_TEST_CASE(Reserve)
 BOOST_AUTO_TEST_CASE(ShrinkToFit)
 {
         test::for_each_type<test::spec::sequence::inplace_vector_all>([]<class T> -> void {
+                static_assert(requires { T::shrink_to_fit(); });
                 auto const a = T(T::capacity(), true);
                 T::shrink_to_fit(); // [inplace.vector.capacity]/10
                 BOOST_CHECK(a == T(T::capacity(), true));

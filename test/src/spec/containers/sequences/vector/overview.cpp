@@ -4,22 +4,22 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/for_each_type.hpp>   // for_each_type
-#include <test/spec/set.hpp>        // all
+#include <test/spec/sequence.hpp>   // vector_all
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
-#include <iterator>                 // bidirectional_iterator
-#include <ranges>                   // bidirectional_range
+#include <ranges>                   // random_access_range
 
 BOOST_AUTO_TEST_SUITE(Spec)
 BOOST_AUTO_TEST_SUITE(Containers)
-BOOST_AUTO_TEST_SUITE(Associative)
-BOOST_AUTO_TEST_SUITE(Set)
+BOOST_AUTO_TEST_SUITE(Sequences)
+BOOST_AUTO_TEST_SUITE(Vector)
 BOOST_AUTO_TEST_SUITE(Overview)
 
-// [set.overview]/1-3: template<class Key, class Compare = less<Key>, class Allocator = allocator<Key>> class set;
-BOOST_AUTO_TEST_CASE(Set)
+// [vector.overview]/1-3: template<class T, class Allocator = allocator<T>> class vector;
+BOOST_AUTO_TEST_CASE(Vector)
 {
-        test::for_each_type<test::spec::set::all>([]<class T> -> void {
-                static_assert(std::ranges::bidirectional_range<T> and std::bidirectional_iterator<typename T::iterator>); // [set.overview]/1
+        test::for_each_type<test::spec::sequence::vector_all>([]<class T> -> void {
+                // Contiguous only for an element type other than bool, so a vector of bool is asked for random access.
+                static_assert(std::ranges::random_access_range<T>); // [vector.overview]/2
                 BOOST_CHECK(true);
         });
 }

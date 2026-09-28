@@ -9,6 +9,8 @@
 #include <test/spec/input.hpp>      // context
 #include <test/spec/set.hpp>        // triples
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <compare>                  // strong_ordering
+#include <concepts>                 // same_as, totally_ordered
 
 BOOST_AUTO_TEST_SUITE(Spec)
 BOOST_AUTO_TEST_SUITE(Containers)
@@ -24,6 +26,8 @@ namespace inputs = test::spec::container::inputs;
 BOOST_AUTO_TEST_CASE(ThreeWayComparison)
 {
         test::for_each_type<test::spec::container::all>([]<class T> -> void {
+                static_assert(requires (T const cc) { { cc <=> cc } -> std::same_as<std::strong_ordering>; });
+                static_assert(std::totally_ordered<T>);
                 // The operators it rewrites into follow from it, so doubleton pairs check the three-way result alone.
                 for (auto const [from, a] : inputs::objects<T>()) {
                         auto const on_failure = context(from, a);

@@ -8,6 +8,7 @@
 #include <test/spec/input.hpp>      // context
 #include <test/spec/set.hpp>        // all, sets
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <concepts>                 // same_as
 #include <cstddef>                  // size_t
 
 BOOST_AUTO_TEST_SUITE(Spec)
@@ -33,6 +34,7 @@ auto const odd = [](std::size_t x) -> bool { return x % 2 == 1; };
 BOOST_AUTO_TEST_CASE(EraseIf)
 {
         test::for_each_type<test::spec::set::all>([]<class T> -> void {
+                static_assert(requires (T c) { { erase_if(c, always) } -> std::same_as<typename T::size_type>; });
                 for (auto const [from, a] : inputs::sets<T>()) {
                         auto const on_failure = context(from, a);
                         fn_erase_if()(a, never);

@@ -8,6 +8,7 @@
 #include <test/spec/input.hpp>          // context
 #include <test/spec/sequence.hpp>       // all, pairs, sequences
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <utility>                      // move
 
 BOOST_AUTO_TEST_SUITE(Spec)
 BOOST_AUTO_TEST_SUITE(Containers)
@@ -24,6 +25,7 @@ namespace inputs = test::spec::sequence::inputs;
 BOOST_AUTO_TEST_CASE(DefaultConstructor)
 {
         test::for_each_type<test::spec::sequence::all>([]<class T> -> void {
+                static_assert(requires { T(); });
                 constructor_default<T>()();
         });
 }
@@ -32,6 +34,7 @@ BOOST_AUTO_TEST_CASE(DefaultConstructor)
 BOOST_AUTO_TEST_CASE(CopyConstructor)
 {
         test::for_each_type<test::spec::sequence::all>([]<class T> -> void {
+                static_assert(requires (T const cc) { T(cc); });
                 for (auto const [from, a] : inputs::sequences<T>()) {
                         auto const on_failure = context(from, a);
                         constructor_copy()(a);
@@ -43,6 +46,7 @@ BOOST_AUTO_TEST_CASE(CopyConstructor)
 BOOST_AUTO_TEST_CASE(MoveConstructor)
 {
         test::for_each_type<test::spec::sequence::all>([]<class T> -> void {
+                static_assert(requires (T o) { T(std::move(o)); });
                 for (auto const [from, a] : inputs::sequences<T>()) {
                         auto const on_failure = context(from, a);
                         constructor_move()(a);
@@ -54,6 +58,7 @@ BOOST_AUTO_TEST_CASE(MoveConstructor)
 BOOST_AUTO_TEST_CASE(CopyAssignment)
 {
         test::for_each_type<test::spec::sequence::all>([]<class T> -> void {
+                static_assert(requires (T c, T const cc) { c = cc; });
                 for (auto const [from, a, b] : inputs::pairs<T>()) {
                         auto const on_failure = context(from, a, b);
                         op_copy_assign()(a, b);
@@ -65,6 +70,7 @@ BOOST_AUTO_TEST_CASE(CopyAssignment)
 BOOST_AUTO_TEST_CASE(MoveAssignment)
 {
         test::for_each_type<test::spec::sequence::all>([]<class T> -> void {
+                static_assert(requires (T c, T o) { c = std::move(o); });
                 for (auto const [from, a, b] : inputs::pairs<T>()) {
                         auto const on_failure = context(from, a, b);
                         op_move_assign()(a, b);

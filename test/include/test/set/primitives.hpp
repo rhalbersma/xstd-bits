@@ -6,40 +6,25 @@
 #ifndef TEST_SET_PRIMITIVES_HPP
 #define TEST_SET_PRIMITIVES_HPP
 
-#include <xstd/bits/detail/ownership.hpp>   // storage
-#include <xstd/bits/detail/set_adaptor.hpp> // set_adaptor
-#include <boost/test/unit_test.hpp>         // BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <algorithm>                        // equal_range, lexicographical_compare_three_way
-#include <compare>                          // is_gteq, is_gt, is_lteq, is_lt, strong_ordering
-#include <concepts>                         // convertible_to, default_initializable, equality_comparable, integral, same_as, unsigned_integral
-#include <cstddef>                          // ptrdiff_t
-#include <functional>                       // hash
-#include <initializer_list>                 // initializer_list
-#include <iterator>                         // distance, empty, iter_difference_t, iter_value_t, next, prev, reverse_iterator, size, ssize
-#include <ranges>                           // count, equal, find, lexicographical_compare, lower_bound, , subrange, upper_bound
-#include <set>                              // erase_if, set
-#include <type_traits>                      // add_const_t, common_type_t, make_signed_t, remove_reference_t
-#include <utility>                          // declval, pair
+#include <test/reference.hpp>       // proxy_reference
+#include <boost/test/unit_test.hpp> // BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <algorithm>                // equal_range, lexicographical_compare_three_way
+#include <compare>                  // is_gteq, is_gt, is_lteq, is_lt, strong_ordering
+#include <concepts>                 // convertible_to, default_initializable, equality_comparable, integral, same_as, unsigned_integral
+#include <cstddef>                  // ptrdiff_t
+#include <functional>               // hash
+#include <initializer_list>         // initializer_list
+#include <iterator>                 // distance, empty, iter_difference_t, iter_value_t, next, prev, reverse_iterator, size, ssize
+#include <ranges>                   // count, equal, find, lexicographical_compare, lower_bound, , subrange, upper_bound
+#include <set>                      // erase_if, set
+#include <type_traits>              // add_const_t, common_type_t, make_signed_t, remove_reference_t
+#include <utility>                  // declval, pair
 
 namespace test::set {
 
-template<class X>
-struct ref_same_as_pred
-{
-        template<class R, class T>
-        static constexpr auto value = std::same_as<R, T>;
-};
-
-// Every set adaptor hands out a proxy converting to the key, whatever its storage, storage or container.
-template<xstd::bits::detail::set_adaptor_like X>
-struct ref_same_as_pred<X>
-{
-        template<class R, class T>
-        static constexpr auto value = std::convertible_to<R, std::add_const_t<std::remove_reference_t<T>>&>;
-};
-
+// The reference type asked for, or where X hands out a proxy for it, one converting to a reference to the key.
 template<class X, class R, class T>
-inline constexpr auto ref_same_as = ref_same_as_pred<X>::template value<R, T>;
+concept ref_same_as = std::same_as<R, T> or (test::proxy_reference<X> and std::convertible_to<R, std::add_const_t<std::remove_reference_t<T>>&>);
 
 template<class X, std::integral T = typename X::key_type> // NOLINT(readability-redundant-typename): MSVC 17 reads the constrained parameter as C2061 without it.
 constexpr auto nested_types()

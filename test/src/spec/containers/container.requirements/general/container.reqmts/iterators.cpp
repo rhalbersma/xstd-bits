@@ -8,6 +8,7 @@
 #include <test/spec/container.hpp>  // all, objects
 #include <test/spec/input.hpp>      // context
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <concepts>                 // same_as
 #include <utility>                  // as_const
 
 BOOST_AUTO_TEST_SUITE(Spec)
@@ -25,6 +26,14 @@ namespace inputs = test::spec::container::inputs;
 BOOST_AUTO_TEST_CASE(BeginEnd)
 {
         test::for_each_type<test::spec::container::all>([]<class T> -> void {
+                static_assert(requires (T c, T const cc) {
+                        { c.begin() } -> std::same_as<typename T::iterator>;
+                        { c.end() } -> std::same_as<typename T::iterator>;
+                        { cc.begin() } -> std::same_as<typename T::const_iterator>;
+                        { cc.end() } -> std::same_as<typename T::const_iterator>;
+                        { c.cbegin() } -> std::same_as<typename T::const_iterator>;
+                        { c.cend() } -> std::same_as<typename T::const_iterator>;
+                });
                 for (auto const [from, a] : inputs::objects<T>()) {
                         auto const on_failure = context(from, a);
                         auto x = a;

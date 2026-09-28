@@ -9,9 +9,11 @@
 #include <test/spec/input.hpp>          // context
 #include <test/spec/sequence.hpp>       // inplace_vector_all, sequences
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_THROW
+#include <initializer_list>             // initializer_list
 #include <new>                          // bad_alloc
 #include <ranges>                       // from_range
 #include <vector>                       // vector
+#include <version>                      // IWYU pragma: keep; __cpp_lib_containers_ranges
 
 BOOST_AUTO_TEST_SUITE(Spec)
 BOOST_AUTO_TEST_SUITE(Containers)
@@ -27,6 +29,7 @@ namespace inputs = test::spec::sequence::inputs;
 BOOST_AUTO_TEST_CASE(InplaceVectorCount)
 {
         test::for_each_type<test::spec::sequence::inplace_vector_all>([]<class T> -> void {
+                static_assert(requires (T::size_type n) { T(n); });
                 // n default-inserted bools, each of them false, and bad_alloc past the capacity.
                 BOOST_CHECK_THROW(static_cast<void>(T(T::capacity() + 1UZ)), std::bad_alloc);
                 for (auto const [from, a] : inputs::sequences<T>()) {
@@ -40,6 +43,7 @@ BOOST_AUTO_TEST_CASE(InplaceVectorCount)
 BOOST_AUTO_TEST_CASE(InplaceVectorCountValue)
 {
         test::for_each_type<test::spec::sequence::inplace_vector_all>([]<class T> -> void {
+                static_assert(requires (T::size_type n, bool b) { T(n, b); });
                 BOOST_CHECK_THROW(static_cast<void>(T(T::capacity() + 1UZ, true)), std::bad_alloc);
                 for (auto const [from, a] : inputs::sequences<T>()) {
                         auto const on_failure = context(from, a);
@@ -52,6 +56,7 @@ BOOST_AUTO_TEST_CASE(InplaceVectorCountValue)
 BOOST_AUTO_TEST_CASE(InplaceVectorFirstLast)
 {
         test::for_each_type<test::spec::sequence::inplace_vector_all>([]<class T> -> void {
+                static_assert(requires (bool const* first, bool const* last) { T(first, last); });
                 auto const more = alternating(T::capacity() + 1UZ);
                 BOOST_CHECK_THROW(static_cast<void>(T(more.begin(), more.end())), std::bad_alloc);
                 for (auto const [from, a] : inputs::sequences<T>()) {
@@ -66,6 +71,9 @@ BOOST_AUTO_TEST_CASE(InplaceVectorFirstLast)
 BOOST_AUTO_TEST_CASE(InplaceVectorFromRange)
 {
         test::for_each_type<test::spec::sequence::inplace_vector_all>([]<class T> -> void {
+#ifdef __cpp_lib_containers_ranges
+                static_assert(requires (std::initializer_list<bool> il) { T(std::from_range, il); });
+#endif
                 // The standard libraries without P1206R7 have no from_range constructor to check.
                 if constexpr (requires { T(std::from_range, std::vector<bool>()); }) {
                         auto const more = alternating(T::capacity() + 1UZ);

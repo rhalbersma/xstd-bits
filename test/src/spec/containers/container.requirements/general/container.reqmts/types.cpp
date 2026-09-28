@@ -4,6 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/for_each_type.hpp>       // for_each_type
+#include <test/reference.hpp>           // proxy_reference, real_reference
 #include <test/sequence/primitives.hpp> // nested_types
 #include <test/set/primitives.hpp>      // mem_const_reference, nested_types
 #include <test/spec/container.hpp>      // all, keyed
@@ -48,6 +49,19 @@ public:
 BOOST_AUTO_TEST_CASE(NestedTypes)
 {
         test::for_each_type<test::spec::container::all>([]<class T> -> void {
+                static_assert(requires {
+                        typename T::value_type;
+                        typename T::reference;
+                        typename T::const_reference;
+                        typename T::iterator;
+                        typename T::const_iterator;
+                        typename T::difference_type;
+                        typename T::size_type;
+                });
+
+                // [container.reqmts]/4-5 ask for value_type& and const value_type&, which a proxy stands in for.
+                static_assert(test::real_reference<T> or test::proxy_reference<T>);
+
                 // A set's const_reference is a key it holds, converting to a key type constructible from it.
                 if constexpr (test::spec::container::keyed<T>) {
                         test::set::nested_types<T>();

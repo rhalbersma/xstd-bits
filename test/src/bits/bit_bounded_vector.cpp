@@ -4,7 +4,6 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/inplace_vector.hpp>                       // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
-#include <test/sequence/concepts.hpp>                    // bit_sequence, inplace_vector_bool, inplace_vector_bool_ranges, inplace_vector_bool_try_returns, packed_inplace_vector_bool
 #include <test/sequence/dense.hpp>                       // yields_every_position
 #include <xstd/bits/bit_bounded_vector.hpp>              // aligned, basic_bit_bounded_vector, bit_bounded_vector
 #include <xstd/bits/detail/bounded_blocks.hpp>           // bounded_blocks
@@ -41,48 +40,13 @@ BOOST_AUTO_TEST_CASE(TheBoundedSequenceIsTheSequenceAdaptorOverInlineBlocks)
 {
         static_assert(std::derived_from<T, xstd::bits::detail::sequence_adaptor<xstd::bits::detail::contiguous_bit_container<xstd::bits::detail::bounded_blocks<std::uint8_t, 3>, 24>, xstd::bits::detail::storage::owned, xstd::bits::detail::window::all, T>>);
         static_assert(std::same_as<xstd::bit_bounded_vector<24>, xstd::basic_bit_bounded_vector<std::size_t, 24>>);
-        static_assert(test::sequence::bit_sequence<T>);
 }
 
-// Every line of [inplace.vector], the model first so the checklist is known to be honest.
-BOOST_AUTO_TEST_CASE(ItAnswersEveryLineOfStdInplaceVectorBool)
+// The allocator is the storage's, and this storage has none: the synopsis lines that ask for one do not apply.
+BOOST_AUTO_TEST_CASE(ItHasNoAllocatorType)
 {
-#ifdef TEST_HAS_INPLACE_VECTOR
-
-        static_assert(test::sequence::inplace_vector_bool<std::inplace_vector<bool, 24>>);
-#ifdef __cpp_lib_containers_ranges
-
-        static_assert(test::sequence::inplace_vector_bool_ranges<std::inplace_vector<bool, 24>>);
-
-#endif
-
-#endif
-        static_assert(test::sequence::inplace_vector_bool<T>);
-        static_assert(test::sequence::inplace_vector_bool<xstd::bit_bounded_vector<24>>);
-        static_assert(test::sequence::inplace_vector_bool_ranges<T>);
-
-        // The allocator is the storage's, and this storage has none: the checklist that asks for one does not apply.
         static_assert(has_allocator<std::vector<bool>>);
         static_assert(not has_allocator<T>);
-}
-
-// P3981R0's return type, over the packing alone: the checklist asks the model only for the name.
-BOOST_AUTO_TEST_CASE(TheTryDoorsReturnTheOptionalReferenceTheDraftSpells)
-{
-        static_assert(test::sequence::inplace_vector_bool_try_returns<T>);
-        static_assert(test::sequence::inplace_vector_bool_try_returns<xstd::bit_bounded_vector<24>>);
-}
-
-// What the packing adds on top, which the unpacked counterpart has no reason to carry.
-BOOST_AUTO_TEST_CASE(ItAddsTheBitVocabularyStdInplaceVectorBoolHasNoReasonToCarry)
-{
-#ifdef TEST_HAS_INPLACE_VECTOR
-
-        static_assert(not test::sequence::packed_inplace_vector_bool<std::inplace_vector<bool, 24>>);
-
-#endif
-        static_assert(test::sequence::packed_inplace_vector_bool<T>);
-        static_assert(test::sequence::packed_inplace_vector_bool<xstd::bit_bounded_vector<24>>);
 }
 
 // [inplace.vector.capacity]'s four answer without an object, the capacity being the type's.

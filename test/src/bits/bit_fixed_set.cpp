@@ -6,7 +6,6 @@
 #include <test/bit_exchange.hpp>          // exchanges_bits, exchanges_from_bits
 #include <test/block_types.hpp>           // graded_extents
 #include <test/set/ascending.hpp>         // yields_ascending_keys
-#include <test/set/concepts.hpp>          // bit_set, set_size_t, set_size_t_ranges
 #include <test/value_reference.hpp>       // value_reference
 #include <xstd/bits/bit_fixed_set.hpp>    // bit_fixed_set
 #include <xstd/bits/bitset.hpp>           // bitset
@@ -53,20 +52,13 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItsConstReferenceIsAValue, T, Types)
         static_assert(test::value_reference<typename T::const_reference>);
 }
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(IsABitSet, T, Types)
-{
-        static_assert(test::set::bit_set<T>);
-}
-
 // A requires-expression on a concrete type is ill-formed rather than false ([expr.prim.req]/5).
 template<class X>
 constexpr bool has_allocator_type = requires { typename X::allocator_type; };
 
-// No counterpart at a static width, and it answers the dynamic column's synopsis but for the allocator lines.
-BOOST_AUTO_TEST_CASE_TEMPLATE(ItAnswersEveryLineOfStdSetSizeTAnyway, T, Types)
+// The width is the type's, so there is no allocator for the synopsis's allocator lines to name.
+BOOST_AUTO_TEST_CASE_TEMPLATE(ItHasNoAllocatorType, T, Types)
 {
-        static_assert(test::set::set_size_t<T>);
-        static_assert(test::set::set_size_t_ranges<T>);
         static_assert(not has_allocator_type<T>);
 }
 
