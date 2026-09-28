@@ -19,7 +19,7 @@
 #include <functional>                                        // hash
 #include <initializer_list>                                  // initializer_list
 #include <iterator>                                          // input_iterator
-#include <memory>                                            // allocator, allocator_traits
+#include <memory>                                            // allocator
 #include <ranges>                                            // from_range, from_range_t, input_range
 #include <type_traits>                                       // false_type, type_identity_t
 #include <utility>                                           // forward, move
@@ -100,11 +100,11 @@ using bit_vector = basic_bit_vector<std::size_t>;
 // [vector.overview]'s guides: Block from the allocator, std::size_t by default, the element being bool.
 template<std::input_iterator InputIterator, class Allocator = std::allocator<std::size_t>>
         requires xstd::simple_allocator<Allocator>
-basic_bit_vector(InputIterator, InputIterator, Allocator = Allocator()) -> basic_bit_vector<typename std::allocator_traits<Allocator>::value_type, Allocator>;
+basic_bit_vector(InputIterator, InputIterator, Allocator = Allocator()) -> basic_bit_vector<typename Allocator::value_type, Allocator>;
 
 template<std::ranges::input_range R, class Allocator = std::allocator<std::size_t>>
         requires xstd::simple_allocator<Allocator>
-basic_bit_vector(std::from_range_t, R&&, Allocator = Allocator()) -> basic_bit_vector<typename std::allocator_traits<Allocator>::value_type, Allocator>;
+basic_bit_vector(std::from_range_t, R&&, Allocator = Allocator()) -> basic_bit_vector<typename Allocator::value_type, Allocator>;
 
 // The blocks adopted name the block and the allocator both.
 template<xstd::unsigned_integer Block, class Allocator>
