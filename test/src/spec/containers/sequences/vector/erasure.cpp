@@ -3,11 +3,11 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/sequence/exhaustive.hpp> // all_prefix_sequences, all_singleton_sequences, all_widths
+#include <test/for_each_type.hpp>       // for_each_type
 #include <test/sequence/primitives.hpp> // fn_erase, fn_erase_if
-#include <test/spec/random.hpp>         // all_sequences
-#include <test/spec/sequence.hpp>       // vector_boundary_widths, vector_random_widths
-#include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <test/spec/input.hpp>          // context
+#include <test/spec/sequence.hpp>       // sequences, vector_all
+#include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 
 BOOST_AUTO_TEST_SUITE(Spec)
 BOOST_AUTO_TEST_SUITE(Containers)
@@ -16,6 +16,8 @@ BOOST_AUTO_TEST_SUITE(Vector)
 BOOST_AUTO_TEST_SUITE(Erasure)
 
 using namespace test::sequence;
+using test::spec::context;
+namespace inputs = test::spec::sequence::inputs;
 
 namespace {
 
@@ -38,43 +40,27 @@ auto check_erase_if(auto const& a)
 
 } // namespace
 
-// [vector.erasure]/1: erase(c, value)
-BOOST_AUTO_TEST_SUITE(Erase)
-
-BOOST_AUTO_TEST_CASE_TEMPLATE(RemovesWhatItRemovesFromAStdVectorBoolAtBoundaryWidths, T, test::spec::sequence::vector_boundary_widths)
+// [vector.erasure]/1: vector<T, Allocator>::size_type erase(vector<T, Allocator>& c, const U& value);
+BOOST_AUTO_TEST_CASE(Erase)
 {
-        on1::all_sequences<T>([](auto const& a) {
-                check_erase(a);
+        test::for_each_type<test::spec::sequence::vector_all>([]<class T> -> void {
+                for (auto const [from, a] : inputs::sequences<T>()) {
+                        auto const on_failure = context(from, a);
+                        check_erase(a);
+                }
         });
 }
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(RemovesWhatItRemovesFromAStdVectorBoolOverRandomSequences, T, test::spec::sequence::vector_random_widths)
+// [vector.erasure]/2: vector<T, Allocator>::size_type erase_if(vector<T, Allocator>& c, Predicate pred);
+BOOST_AUTO_TEST_CASE(EraseIf)
 {
-        test::spec::random::all_sequences<T>([](auto const& a) {
-                check_erase(a);
+        test::for_each_type<test::spec::sequence::vector_all>([]<class T> -> void {
+                for (auto const [from, a] : inputs::sequences<T>()) {
+                        auto const on_failure = context(from, a);
+                        check_erase_if(a);
+                }
         });
 }
-
-BOOST_AUTO_TEST_SUITE_END()
-
-// [vector.erasure]/2: erase_if(c, pred)
-BOOST_AUTO_TEST_SUITE(EraseIf)
-
-BOOST_AUTO_TEST_CASE_TEMPLATE(RemovesWhatItRemovesFromAStdVectorBoolAtBoundaryWidths, T, test::spec::sequence::vector_boundary_widths)
-{
-        on1::all_sequences<T>([](auto const& a) {
-                check_erase_if(a);
-        });
-}
-
-BOOST_AUTO_TEST_CASE_TEMPLATE(RemovesWhatItRemovesFromAStdVectorBoolOverRandomSequences, T, test::spec::sequence::vector_random_widths)
-{
-        test::spec::random::all_sequences<T>([](auto const& a) {
-                check_erase_if(a);
-        });
-}
-
-BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()

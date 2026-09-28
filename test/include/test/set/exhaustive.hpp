@@ -52,7 +52,7 @@ inline constexpr auto limit_v = [] -> std::size_t {
 namespace on0 {
 
 template<class X>
-auto empty_set(auto fun)
+constexpr auto empty_set(auto fun)
 {
         X a;
         assert(a.empty());
@@ -60,15 +60,15 @@ auto empty_set(auto fun)
 }
 
 template<class X, std::size_t N = limit_v<X, L1>>
-auto full_set(auto fun)
+constexpr auto full_set(auto fun, std::size_t width = N)
 {
-        auto a = std::views::iota(0UZ, N) | std::ranges::to<X>();
-        assert(a.size() == N);
+        auto a = std::views::iota(0UZ, width) | std::ranges::to<X>(); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
+        assert(a.size() == width);
         fun(a);
 }
 
 template<class X>
-auto empty_set_pair(auto fun)
+constexpr auto empty_set_pair(auto fun)
 {
         X a;
         assert(a.empty());
@@ -82,17 +82,17 @@ auto empty_set_pair(auto fun)
 namespace on1 {
 
 template<class X, std::size_t N = limit_v<X, L1>>
-auto all_valid(auto fun)
+constexpr auto all_valid(auto fun, std::size_t width = N)
 {
-        for (auto const i : std::views::iota(0UZ, N)) {
+        for (auto const i : std::views::iota(0UZ, width)) {
                 fun(i);
         }
 }
 
 template<class X, std::size_t N = limit_v<X, L1>>
-auto all_cardinality_sets(auto fun)
+constexpr auto all_cardinality_sets(auto fun, std::size_t width = N)
 {
-        for (auto const i : std::views::iota(0UZ, N + 1)) {
+        for (auto const i : std::views::iota(0UZ, width + 1)) {
                 auto a = std::views::iota(0UZ, i) | std::ranges::to<X>(); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
                 assert(a.size() == i);
                 fun(a);
@@ -100,9 +100,9 @@ auto all_cardinality_sets(auto fun)
 }
 
 template<class X, std::size_t N = limit_v<X, L1>>
-auto all_singleton_arrays(auto fun)
+constexpr auto all_singleton_arrays(auto fun, std::size_t width = N)
 {
-        for (auto const i : std::views::iota(0UZ, N)) {
+        for (auto const i : std::views::iota(0UZ, width)) {
                 auto a = std::array{i}; // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
                 assert(a.size() == 1);
                 fun(a);
@@ -110,19 +110,9 @@ auto all_singleton_arrays(auto fun)
 }
 
 template<class X, std::size_t N = limit_v<X, L1>>
-auto all_singleton_ilists(auto fun)
+constexpr auto all_singleton_sets(auto fun, std::size_t width = N)
 {
-        for (auto const i : std::views::iota(0UZ, N)) {
-                auto a = {i}; // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
-                assert(a.size() == 1);
-                fun(a);
-        }
-}
-
-template<class X, std::size_t N = limit_v<X, L1>>
-auto all_singleton_sets(auto fun)
-{
-        for (auto const i : std::views::iota(0UZ, N)) {
+        for (auto const i : std::views::iota(0UZ, width)) {
                 auto a = X({i}); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
                 assert(a.size() == 1);
                 fun(a);
@@ -134,9 +124,9 @@ auto all_singleton_sets(auto fun)
 namespace on2 {
 
 template<class X, std::size_t N = limit_v<X, L2>>
-auto all_doubleton_arrays(auto fun)
+constexpr auto all_doubleton_arrays(auto fun, std::size_t width = N)
 {
-        for (auto const j : std::views::iota(1UZ, std::ranges::max(N, 1UZ))) {
+        for (auto const j : std::views::iota(1UZ, std::ranges::max(width, 1UZ))) {
                 for (auto const i : std::views::iota(0UZ, j)) {
                         auto a = std::array{i, j}; // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
                         assert(a.size() == 2);
@@ -146,11 +136,11 @@ auto all_doubleton_arrays(auto fun)
 }
 
 template<class X, std::size_t N = limit_v<X, L2>>
-auto all_doubleton_ilists(auto fun)
+constexpr auto all_doubleton_sets(auto fun, std::size_t width = N)
 {
-        for (auto const j : std::views::iota(1UZ, std::ranges::max(N, 1UZ))) {
+        for (auto const j : std::views::iota(1UZ, std::ranges::max(width, 1UZ))) {
                 for (auto const i : std::views::iota(0UZ, j)) {
-                        auto a = {i, j}; // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
+                        auto a = X({i, j}); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
                         assert(a.size() == 2);
                         fun(a);
                 }
@@ -158,22 +148,10 @@ auto all_doubleton_ilists(auto fun)
 }
 
 template<class X, std::size_t N = limit_v<X, L2>>
-auto all_doubleton_sets(auto fun)
+constexpr auto all_singleton_set_pairs(auto fun, std::size_t width = N)
 {
-        for (auto const j : std::views::iota(1UZ, std::ranges::max(N, 1UZ))) {
-                for (auto const i : std::views::iota(0UZ, j)) {
-                        auto a = X({i, j});
-                        assert(a.size() == 2);
-                        fun(a);
-                }
-        }
-}
-
-template<class X, std::size_t N = limit_v<X, L2>>
-auto all_singleton_set_pairs(auto fun)
-{
-        for (auto const i : std::views::iota(0UZ, N)) {
-                for (auto const j : std::views::iota(0UZ, N)) {
+        for (auto const i : std::views::iota(0UZ, width)) {
+                for (auto const j : std::views::iota(0UZ, width)) {
                         auto a = X({i}); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
                         assert(a.size() == 1);
                         auto b = X({j}); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
@@ -188,11 +166,11 @@ auto all_singleton_set_pairs(auto fun)
 namespace on3 {
 
 template<class X, std::size_t N = limit_v<X, L3>>
-auto all_singleton_set_triples(auto fun)
+constexpr auto all_singleton_set_triples(auto fun, std::size_t width = N)
 {
-        for (auto const i : std::views::iota(0UZ, N)) {
-                for (auto const j : std::views::iota(0UZ, N)) {
-                        for (auto const k : std::views::iota(0UZ, N)) {
+        for (auto const i : std::views::iota(0UZ, width)) {
+                for (auto const j : std::views::iota(0UZ, width)) {
+                        for (auto const k : std::views::iota(0UZ, width)) {
                                 auto a = X({i}); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
                                 assert(a.size() == 1);
                                 auto b = X({j}); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference
@@ -210,10 +188,10 @@ auto all_singleton_set_triples(auto fun)
 namespace on4 {
 
 template<class X, std::size_t N = limit_v<X, L4>>
-auto all_doubleton_set_pairs(auto fun)
+constexpr auto all_doubleton_set_pairs(auto fun, std::size_t width = N)
 {
-        for (auto const j : std::views::iota(1UZ, std::ranges::max(N, 1UZ))) {
-                for (auto const n : std::views::iota(1UZ, std::ranges::max(N, 1UZ))) {
+        for (auto const j : std::views::iota(1UZ, std::ranges::max(width, 1UZ))) {
+                for (auto const n : std::views::iota(1UZ, std::ranges::max(width, 1UZ))) {
                         for (auto const i : std::views::iota(0UZ, j)) {
                                 for (auto const m : std::views::iota(0UZ, n)) {
                                         auto a = X({i, j}); // NOLINT(misc-const-correctness): handed to fun, which some functors take by non-const reference

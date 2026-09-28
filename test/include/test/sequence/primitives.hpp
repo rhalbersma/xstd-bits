@@ -93,7 +93,8 @@ template<class X>
 
 // [container.reqmts]/4 and /5 ask for a T& and a T const&, which [vector.bool] relaxes to a proxy converting to bool.
 template<class X>
-struct nested_types
+constexpr auto nested_types()
+        -> void
 {
         using I = X::iterator;
         using CI = X::const_iterator;
@@ -114,7 +115,7 @@ struct nested_types
 
         static_assert(std::same_as<typename X::reverse_iterator, std::reverse_iterator<I>>);        // [container.rev.reqmts]/2
         static_assert(std::same_as<typename X::const_reverse_iterator, std::reverse_iterator<CI>>); // [container.rev.reqmts]/3
-};
+}
 
 // [container.reqmts]/10 asks an empty object of every container but array, whose width is its type's.
 template<class X>

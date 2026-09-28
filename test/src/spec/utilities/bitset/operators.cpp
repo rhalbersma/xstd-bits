@@ -3,11 +3,11 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/bitset/exhaustive.hpp> // all_cardinality_sets, all_singleton_set_pairs, all_singleton_sets, empty_set_pair
 #include <test/bitset/primitives.hpp> // op_bit_and, op_bit_or, op_bit_xor, op_iostream, op_istream_failure
-#include <test/spec/bitset.hpp>       // boundary_widths, byte_widths, every_width, random_widths
-#include <test/spec/random.hpp>       // all_bitset_pairs, all_bitsets
-#include <boost/test/unit_test.hpp>   // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <test/for_each_type.hpp>     // for_each_type
+#include <test/spec/bitset.hpp>       // all, bitsets, pairs
+#include <test/spec/input.hpp>        // context
+#include <boost/test/unit_test.hpp>   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 
 BOOST_AUTO_TEST_SUITE(Spec)
 BOOST_AUTO_TEST_SUITE(Utilities)
@@ -15,45 +15,53 @@ BOOST_AUTO_TEST_SUITE(Bitset)
 BOOST_AUTO_TEST_SUITE(Operators)
 
 using namespace test::bitset;
+using test::spec::context;
+namespace inputs = test::spec::bitset::inputs;
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(TheBitwiseOperatorsHoldOnAnEmptyPair, T, test::spec::bitset::every_width)
+// [bitset.operators]/1: constexpr bitset<N> operator&(const bitset<N>& lhs, const bitset<N>& rhs) noexcept;
+BOOST_AUTO_TEST_CASE(And)
 {
-        on0::empty_set_pair<T>(op_bit_and());
-        on0::empty_set_pair<T>(op_bit_or());
-        on0::empty_set_pair<T>(op_bit_xor());
-}
-
-// A read that stores nothing fails; boost::dynamic_bitset's own extraction is not checked.
-BOOST_AUTO_TEST_CASE_TEMPLATE(ExtractionSetsFailbitWhenNothingIsStored, T, test::spec::bitset::every_width)
-{
-        op_istream_failure<T>()();
-}
-
-BOOST_AUTO_TEST_CASE_TEMPLATE(StreamingRoundTripsOverEveryCardinalityAndSingleton, T, test::spec::bitset::boundary_widths)
-{
-        on1::all_cardinality_sets<T>(op_iostream());
-        on1::all_singleton_sets<T>(op_iostream());
-}
-
-BOOST_AUTO_TEST_CASE_TEMPLATE(TheBitwiseOperatorsHoldOverEverySingletonPair, T, test::spec::bitset::byte_widths)
-{
-        on2::all_singleton_set_pairs<T>(op_bit_and());
-        on2::all_singleton_set_pairs<T>(op_bit_or());
-        on2::all_singleton_set_pairs<T>(op_bit_xor());
-}
-
-BOOST_AUTO_TEST_CASE_TEMPLATE(TheBitwiseOperatorsHoldOverRandomPairs, T, test::spec::bitset::random_widths)
-{
-        test::spec::random::all_bitset_pairs<T>([](auto const& a, auto const& b) {
-                op_bit_and()(a, b);
-                op_bit_or()(a, b);
-                op_bit_xor()(a, b);
+        test::for_each_type<test::spec::bitset::all>([]<class T> -> void {
+                for (auto const [from, a, b] : inputs::pairs<T>()) {
+                        auto const on_failure = context(from, a, b);
+                        op_bit_and()(a, b);
+                }
         });
 }
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(StreamingRoundTripsOverRandomBitsets, T, test::spec::bitset::random_widths)
+// [bitset.operators]/2: constexpr bitset<N> operator|(const bitset<N>& lhs, const bitset<N>& rhs) noexcept;
+BOOST_AUTO_TEST_CASE(Or)
 {
-        test::spec::random::all_bitsets<T>(op_iostream());
+        test::for_each_type<test::spec::bitset::all>([]<class T> -> void {
+                for (auto const [from, a, b] : inputs::pairs<T>()) {
+                        auto const on_failure = context(from, a, b);
+                        op_bit_or()(a, b);
+                }
+        });
+}
+
+// [bitset.operators]/3: constexpr bitset<N> operator^(const bitset<N>& lhs, const bitset<N>& rhs) noexcept;
+BOOST_AUTO_TEST_CASE(Xor)
+{
+        test::for_each_type<test::spec::bitset::all>([]<class T> -> void {
+                for (auto const [from, a, b] : inputs::pairs<T>()) {
+                        auto const on_failure = context(from, a, b);
+                        op_bit_xor()(a, b);
+                }
+        });
+}
+
+// [bitset.operators]/4-8: operator>>(basic_istream& is, bitset<N>& x), operator<<(basic_ostream& os, const bitset<N>&)
+BOOST_AUTO_TEST_CASE(ExtractInsert)
+{
+        test::for_each_type<test::spec::bitset::all>([]<class T> -> void {
+                // A read that stores nothing fails; boost::dynamic_bitset's own extraction is not checked.
+                op_istream_failure<T>()();
+                for (auto const [from, a] : inputs::bitsets<T>()) {
+                        auto const on_failure = context(from, a);
+                        op_iostream()(a);
+                }
+        });
 }
 
 BOOST_AUTO_TEST_SUITE_END()

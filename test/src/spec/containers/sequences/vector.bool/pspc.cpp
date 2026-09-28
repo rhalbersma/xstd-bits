@@ -3,15 +3,12 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/sequence/exhaustive.hpp> // L2, all_prefix_sequences, all_singleton_sequences, all_widths
-#include <test/sequence/factory.hpp>    // limit_v
+#include <test/for_each_type.hpp>       // for_each_type
 #include <test/sequence/primitives.hpp> // fn_swap_reference, mem_flip, mem_reference_assign, mem_reference_flip
 #include <test/set/primitives.hpp>      // op_hash
-#include <test/spec/random.hpp>         // all_sequence_key_pairs, all_sequence_pairs, all_sequences
-#include <test/spec/sequence.hpp>       // vector_boundary_widths, vector_random_widths
-#include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
-#include <cstddef>                      // size_t
-#include <ranges>                       // iota
+#include <test/spec/input.hpp>          // context
+#include <test/spec/sequence.hpp>       // index_pairs, indexed, pairs, sequences, vector_all
+#include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 
 BOOST_AUTO_TEST_SUITE(Spec)
 BOOST_AUTO_TEST_SUITE(Containers)
@@ -20,114 +17,69 @@ BOOST_AUTO_TEST_SUITE(VectorBool)
 BOOST_AUTO_TEST_SUITE(Pspc)
 
 using namespace test::sequence;
+using test::spec::context;
+namespace inputs = test::spec::sequence::inputs;
 
-namespace {
-
-// Every pair of positions at every width up to the quadratic limit.
-template<class X>
-auto every_position_pair(auto fun)
-        -> void
+// [vector.bool.pspc]/7-9: reference& reference::operator=(bool x) noexcept; reference::operator bool() const noexcept;
+BOOST_AUTO_TEST_CASE(ReferenceAssign)
 {
-        on1::all_widths<X, limit_v<X, L2>>([&](auto const& a) {
-                for (auto const i : std::views::iota(0UZ, a.size())) {
-                        for (auto const j : std::views::iota(0UZ, a.size())) {
-                                fun(a, i, j);
-                        }
+        test::for_each_type<test::spec::sequence::vector_all>([]<class T> -> void {
+                for (auto const [from, a, i, j] : inputs::index_pairs<T>()) {
+                        auto const on_failure = context(from, a, i, j);
+                        mem_reference_assign()(a, i, j);
                 }
         });
 }
 
-} // namespace
-
-// [vector.bool.pspc]/7-9: reference::operator= and reference::operator bool
-BOOST_AUTO_TEST_SUITE(ReferenceAssignment)
-
-BOOST_AUTO_TEST_CASE_TEMPLATE(HoldsOverEveryPositionPairAtBoundaryWidths, T, test::spec::sequence::vector_boundary_widths)
+// [vector.bool.pspc]/10: constexpr void reference::flip() noexcept;
+BOOST_AUTO_TEST_CASE(ReferenceFlip)
 {
-        every_position_pair<T>(mem_reference_assign());
-}
-
-BOOST_AUTO_TEST_CASE_TEMPLATE(HoldsOverRandomSequencesAndPositions, T, test::spec::sequence::vector_random_widths)
-{
-        test::spec::random::all_sequence_key_pairs<T>([](auto const& a, std::size_t i) {
-                mem_reference_assign()(a, i, a.size() - 1UZ - i);
-        });
-}
-
-BOOST_AUTO_TEST_SUITE_END()
-
-// [vector.bool.pspc]/10: reference::flip()
-BOOST_AUTO_TEST_SUITE(ReferenceFlip)
-
-BOOST_AUTO_TEST_CASE_TEMPLATE(HoldsAtEveryWidthAndPosition, T, test::spec::sequence::vector_boundary_widths)
-{
-        on1::all_widths<T>([](auto const& a) {
-                for (auto const i : std::views::iota(0UZ, a.size())) {
+        test::for_each_type<test::spec::sequence::vector_all>([]<class T> -> void {
+                for (auto const [from, a, i] : inputs::indexed<T>()) {
+                        auto const on_failure = context(from, a, i);
                         mem_reference_flip()(a, i);
                 }
         });
 }
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(HoldsOverRandomSequencesAndPositions, T, test::spec::sequence::vector_random_widths)
+// [vector.bool.pspc]/11: constexpr void swap(reference x, reference y) noexcept;
+BOOST_AUTO_TEST_CASE(ReferenceSwap)
 {
-        test::spec::random::all_sequence_key_pairs<T>(mem_reference_flip());
-}
-
-BOOST_AUTO_TEST_SUITE_END()
-
-// [vector.bool.pspc]/11: swap(reference, reference), and with a bool on either side
-BOOST_AUTO_TEST_SUITE(ReferenceSwap)
-
-BOOST_AUTO_TEST_CASE_TEMPLATE(HoldsOverEveryPositionPairAtBoundaryWidths, T, test::spec::sequence::vector_boundary_widths)
-{
-        every_position_pair<T>(fn_swap_reference());
-}
-
-BOOST_AUTO_TEST_CASE_TEMPLATE(HoldsOverRandomSequencesAndPositions, T, test::spec::sequence::vector_random_widths)
-{
-        test::spec::random::all_sequence_key_pairs<T>([](auto const& a, std::size_t i) {
-                fn_swap_reference()(a, i, a.size() - 1UZ - i);
+        test::for_each_type<test::spec::sequence::vector_all>([]<class T> -> void {
+                // With a bool on either side as well.
+                for (auto const [from, a, i, j] : inputs::index_pairs<T>()) {
+                        auto const on_failure = context(from, a, i, j);
+                        fn_swap_reference()(a, i, j);
+                }
         });
 }
 
-BOOST_AUTO_TEST_SUITE_END()
-
-// [vector.bool.pspc]/12: flip()
-BOOST_AUTO_TEST_SUITE(Flip)
-
-BOOST_AUTO_TEST_CASE_TEMPLATE(ComplementsEveryPositionAtBoundaryWidths, T, test::spec::sequence::vector_boundary_widths)
+// [vector.bool.pspc]/12: constexpr void flip() noexcept;
+BOOST_AUTO_TEST_CASE(Flip)
 {
-        on1::all_sequences<T>(mem_flip());
+        test::for_each_type<test::spec::sequence::vector_all>([]<class T> -> void {
+                for (auto const [from, a] : inputs::sequences<T>()) {
+                        auto const on_failure = context(from, a);
+                        mem_flip()(a);
+                }
+        });
 }
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(ComplementsEveryPositionOverRandomSequences, T, test::spec::sequence::vector_random_widths)
+// [vector.bool.pspc]/13: template<class Allocator> struct hash<vector<bool, Allocator>>;
+BOOST_AUTO_TEST_CASE(Hash)
 {
-        test::spec::random::all_sequences<T>(mem_flip());
-}
-
-BOOST_AUTO_TEST_SUITE_END()
-
-// [vector.bool.pspc]/13: hash<vector<bool, Allocator>>
-BOOST_AUTO_TEST_SUITE(Hash)
-
-// Equal values hash equal, whatever the capacity or allocation behind them.
-BOOST_AUTO_TEST_CASE_TEMPLATE(HoldsOverEverySequenceAndWidthPairAtBoundaryWidths, T, test::spec::sequence::vector_boundary_widths)
-{
-        on1::all_sequences<T>(test::set::op_hash());
-        on1::all_widths<T, limit_v<T, L2>>([](auto const& a) {
-                on1::all_widths<T, limit_v<T, L2>>([&](auto const& b) {
+        test::for_each_type<test::spec::sequence::vector_all>([]<class T> -> void {
+                // Equal values hash equal, whatever the capacity or allocation behind them.
+                for (auto const [from, a] : inputs::sequences<T>()) {
+                        auto const on_failure = context(from, a);
+                        test::set::op_hash()(a);
+                }
+                for (auto const [from, a, b] : inputs::pairs<T>()) {
+                        auto const on_failure = context(from, a, b);
                         test::set::op_hash()(a, b);
-                });
+                }
         });
 }
-
-BOOST_AUTO_TEST_CASE_TEMPLATE(HoldsOverRandomSequencePairs, T, test::spec::sequence::vector_random_widths)
-{
-        test::spec::random::all_sequences<T>(test::set::op_hash());
-        test::spec::random::all_sequence_pairs<T>(test::set::op_hash());
-}
-
-BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()

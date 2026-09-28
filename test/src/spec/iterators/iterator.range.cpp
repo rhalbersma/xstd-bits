@@ -3,42 +3,63 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/set/exhaustive.hpp>  // all_cardinality_sets
+#include <test/for_each_type.hpp>   // for_each_type
 #include <test/set/primitives.hpp>  // fn_empty, fn_iterator, fn_size, fn_ssize
-#include <test/spec/random.hpp>     // all_sets
-#include <test/spec/set.hpp>        // boundary_widths, random_widths
-#include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
-#include <utility>                  // as_const
+#include <test/spec/input.hpp>      // context, on_copy
+#include <test/spec/set.hpp>        // all, sets
+#include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 
 BOOST_AUTO_TEST_SUITE(Spec)
 BOOST_AUTO_TEST_SUITE(Iterators)
 BOOST_AUTO_TEST_SUITE(IteratorRange)
 
-using namespace test;
 using namespace test::set;
+using test::spec::context;
+using test::spec::on_copy;
+namespace inputs = test::spec::set::inputs;
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(TheRangeAccessFunctionsAgreeWithTheMembersOverEveryCardinality, T, test::spec::set::boundary_widths)
+// [iterator.range]/2-15: begin(c), end(c), cbegin(c), cend(c), rbegin(c), rend(c), crbegin(c), crend(c)
+BOOST_AUTO_TEST_CASE(BeginEnd)
 {
-        on1::all_cardinality_sets<T>([](auto& is) {
-                fn_iterator()(is);
+        test::for_each_type<test::spec::set::all>([]<class T> -> void {
+                for (auto const [from, a] : inputs::sets<T>()) {
+                        auto const on_failure = context(from, a);
+                        on_copy(fn_iterator(), a);
+                        fn_iterator()(a);
+                }
         });
-        on1::all_cardinality_sets<T>([](auto const& is) {
-                fn_iterator()(is);
-        });
-
-        on1::all_cardinality_sets<T>(fn_size());
-        on1::all_cardinality_sets<T>(fn_ssize());
-        on1::all_cardinality_sets<T>(fn_empty());
 }
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(TheRangeAccessFunctionsAgreeWithTheMembersOverRandomSets, T, test::spec::set::random_widths)
+// [iterator.range]/16: size(const C& c)
+BOOST_AUTO_TEST_CASE(Size)
 {
-        spec::random::all_sets<T>([](auto& is) {
-                fn_iterator()(is);
-                fn_iterator()(std::as_const(is));
-                fn_size()(is);
-                fn_ssize()(is);
-                fn_empty()(is);
+        test::for_each_type<test::spec::set::all>([]<class T> -> void {
+                for (auto const [from, a] : inputs::sets<T>()) {
+                        auto const on_failure = context(from, a);
+                        fn_size()(a);
+                }
+        });
+}
+
+// [iterator.range]/18: ssize(const C& c)
+BOOST_AUTO_TEST_CASE(Ssize)
+{
+        test::for_each_type<test::spec::set::all>([]<class T> -> void {
+                for (auto const [from, a] : inputs::sets<T>()) {
+                        auto const on_failure = context(from, a);
+                        fn_ssize()(a);
+                }
+        });
+}
+
+// [iterator.range]/20: empty(const C& c)
+BOOST_AUTO_TEST_CASE(Empty)
+{
+        test::for_each_type<test::spec::set::all>([]<class T> -> void {
+                for (auto const [from, a] : inputs::sets<T>()) {
+                        auto const on_failure = context(from, a);
+                        fn_empty()(a);
+                }
         });
 }
 

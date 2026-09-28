@@ -164,6 +164,10 @@ template<class charT>
 template<class X>
 concept character_pointer_constructible = requires (char const* str) { X(str, std::string_view::npos, '0', '1'); };
 
+// A width the type fixes at zero, as std::bitset<0>'s, which no run-time width can be.
+template<class X>
+concept zero_static_width = not dynamic<X> and (X().size() == 0);
+
 template<class X>
 inline constexpr auto is_std_bitset_v = false;
 
@@ -729,10 +733,20 @@ struct mem_is_proper_subset_of_edges
         template<class X>
         auto operator()(X& a, X&) const noexcept // NOLINT(bugprone-exception-escape)
         {
-                auto const N = a.size();
-                if (N == 0) {
-                        return;
+                // A width of zero in the type is decided here, or MSVC's C4702 calls the edges below unreachable.
+                if constexpr (not zero_static_width<X>) {
+                        if (a.size() != 0) {
+                                edges(a);
+                        }
                 }
+        }
+
+private:
+        template<class X>
+        static auto edges(X const& a)
+                -> void
+        {
+                auto const N = a.size();
                 auto const lo = 0UZ;
                 auto const hi = N - 1;
                 auto const one = [&](std::size_t i) -> X { auto x = a; x.set(i);           return x; };

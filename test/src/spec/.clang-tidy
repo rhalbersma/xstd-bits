@@ -1,0 +1,10 @@
+#          Copyright Rein Halbersma 2014-2026.
+# Distributed under the Boost Software License, Version 1.0.
+#    (See accompanying file LICENSE_1_0.txt or copy at
+#          http://www.boost.org/LICENSE_1_0.txt)
+
+---
+# No static analyzer here: its cost scales with each clause's declaration-by-type pairs, and test/src/bits keeps the library analyzed.
+InheritParentConfig: true
+Checks: >
+  -clang-analyzer-*

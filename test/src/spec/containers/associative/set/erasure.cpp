@@ -3,11 +3,11 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/set/exhaustive.hpp>  // all_cardinality_sets, all_singleton_sets
+#include <test/for_each_type.hpp>   // for_each_type
 #include <test/set/primitives.hpp>  // fn_erase_if
-#include <test/spec/random.hpp>     // all_sets
-#include <test/spec/set.hpp>        // boundary_widths, random_widths
-#include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <test/spec/input.hpp>      // context
+#include <test/spec/set.hpp>        // all, sets
+#include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <cstddef>                  // size_t
 
 BOOST_AUTO_TEST_SUITE(Spec)
@@ -16,8 +16,9 @@ BOOST_AUTO_TEST_SUITE(Associative)
 BOOST_AUTO_TEST_SUITE(Set)
 BOOST_AUTO_TEST_SUITE(Erasure)
 
-using namespace test;
 using namespace test::set;
+using test::spec::context;
+namespace inputs = test::spec::set::inputs;
 
 namespace {
 
@@ -28,24 +29,16 @@ auto const odd = [](std::size_t x) -> bool { return x % 2 == 1; };
 
 } // namespace
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(EraseIfRemovesWhatItRemovesFromAStdSet, T, test::spec::set::boundary_widths)
+// [set.erasure]/1: set<Key, Compare, Allocator>::size_type erase_if(set<Key, Compare, Allocator>& c, Predicate pred);
+BOOST_AUTO_TEST_CASE(EraseIf)
 {
-        on1::all_cardinality_sets<T>([](auto const& is) {
-                fn_erase_if()(is, never);
-                fn_erase_if()(is, always);
-                fn_erase_if()(is, odd);
-        });
-        on1::all_singleton_sets<T>([](auto const& is1) {
-                fn_erase_if()(is1, odd);
-        });
-}
-
-BOOST_AUTO_TEST_CASE_TEMPLATE(EraseIfRemovesWhatItRemovesFromAStdSetOverRandomSets, T, test::spec::set::random_widths)
-{
-        spec::random::all_sets<T>([](auto const& is) {
-                fn_erase_if()(is, never);
-                fn_erase_if()(is, always);
-                fn_erase_if()(is, odd);
+        test::for_each_type<test::spec::set::all>([]<class T> -> void {
+                for (auto const [from, a] : inputs::sets<T>()) {
+                        auto const on_failure = context(from, a);
+                        fn_erase_if()(a, never);
+                        fn_erase_if()(a, always);
+                        fn_erase_if()(a, odd);
+                }
         });
 }
 

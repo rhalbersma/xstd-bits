@@ -42,7 +42,8 @@ template<class X, class R, class T>
 inline constexpr auto ref_same_as = ref_same_as_pred<X>::template value<R, T>;
 
 template<class X, std::integral T = typename X::key_type> // NOLINT(readability-redundant-typename): MSVC 17 reads the constrained parameter as C2061 without it.
-struct nested_types
+constexpr auto nested_types()
+        -> void
 {
         static_assert(std::same_as<typename X::value_type, T>);                  // [container.reqmts]/2
         static_assert(requires { std::declval<X>().erase(std::declval<T>()); }); // [container.reqmts]/3
@@ -78,7 +79,7 @@ struct nested_types
         static_assert(std::same_as<Compare, typename X::key_compare>);   // [associative.reqmts.general]/14
         static_assert(std::copy_constructible<Key>);                     // [associative.reqmts.general]/15
         static_assert(std::same_as<Compare, typename X::value_compare>); // [associative.reqmts.general]/16
-};
+}
 
 template<class X>
 struct constructor
