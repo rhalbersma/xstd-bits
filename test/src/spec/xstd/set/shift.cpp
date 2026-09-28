@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/set/composable.hpp>  // decrement_modulo, increment_modulo
+#include <test/set/composable.hpp>  // decrement_modulo, increment_modulo, increment_within_capacity
 #include <test/set/exhaustive.hpp>  // all_singleton_sets, all_valid, static_capacity
 #include <test/spec/random.hpp>     // all_set_key_pairs
 #include <test/spec/set.hpp>        // boundary_widths, random_widths
@@ -21,11 +21,17 @@ using namespace test::set;
 // A shift adds or subtracts n from every key and drops what leaves the width; a set without one is skipped.
 BOOST_AUTO_TEST_CASE_TEMPLATE(EverySingletonShiftsByEveryDistance, T, test::spec::set::boundary_widths)
 {
-        // A left shift grows a run-time width, which past a bounded set's capacity throws rather than drops the keys.
+        // A left shift drops no key from a run-time width, and under a capacity throws where the highest would not fit.
         if constexpr (not static_capacity<T>) {
                 on1::all_valid<T>([](auto pos) {
                         on1::all_singleton_sets<T>([&](auto const& bs1) {
                                 composable::increment_modulo()(bs1, static_cast<std::size_t>(pos));
+                        });
+                });
+        } else {
+                on1::all_valid<T>([](auto pos) {
+                        on1::all_singleton_sets<T>([&](auto const& bs1) {
+                                composable::increment_within_capacity()(bs1, static_cast<std::size_t>(pos));
                         });
                 });
         }
@@ -41,6 +47,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(RandomSetsShiftByRandomDistances, T, test::spec::s
         spec::random::all_set_key_pairs<T>([](auto const& a, auto n) {
                 if constexpr (not static_capacity<T>) {
                         composable::increment_modulo()(a, n);
+                } else {
+                        composable::increment_within_capacity()(a, n);
                 }
                 composable::decrement_modulo()(a, n);
         });

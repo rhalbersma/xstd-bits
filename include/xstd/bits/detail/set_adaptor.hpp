@@ -31,6 +31,7 @@
 #include <functional>                                    // hash, less
 #include <initializer_list>                              // initializer_list
 #include <iterator>                                      // input_iterator, iter_reference_t, make_reverse_iterator, reverse_iterator, sentinel_for
+#include <new>                                           // bad_alloc
 #include <ranges>                                        // begin, enable_borrowed_range, enable_view, end, input_range, iota, range_reference_t, from_range_t, swap, transform
 #include <source_location>                               // source_location
 #include <span>                                          // dynamic_extent
@@ -717,6 +718,15 @@ public:
         {
                 if constexpr (has_static_width) {
                         self.bits() <<= n;
+                } else if constexpr (bits_type::has_static_capacity) {
+                        // Under a capacity it is the highest element that must fit: the width is no part of the value.
+                        if (auto const width = self.bits().size(); self.bits().any()) {
+                                if (n >= bits_type::static_capacity() - self.bits().exclusive_find_prev(width)) {
+                                        throw std::bad_alloc();
+                                }
+                                self.bits().resize(std::ranges::min(bits_type::width_sum(width, n), bits_type::static_capacity()));
+                                self.bits() <<= n;
+                        }
                 } else if (auto const width = self.bits().size(); width > 0UZ) {
                         // width + n through the saturating sum; past the positions there are it is length_error.
                         self.bits().resize(bits_type::check_width(bits_type::width_sum(width, n)));

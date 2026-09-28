@@ -15,6 +15,7 @@
 #include <concepts>                                      // same_as
 #include <cstddef>                                       // size_t
 #include <cstdint>                                       // uint8_t
+#include <limits>                                        // numeric_limits
 #include <new>                                           // bad_alloc
 #include <ranges>                                        // iota, to
 #include <set>                                           // set
@@ -108,23 +109,69 @@ BOOST_AUTO_TEST_CASE(InsertingPastTheCapacityThrowsBadAlloc)
         BOOST_CHECK(s.find(24) == s.end()); // NOLINT(readability-container-contains)
 }
 
-// A left shift grows the width by its distance, so a key it would carry past the capacity is refused, as an insert is.
+namespace {
+
+// The set holding 0 and key at the capacity's width, so only the highest key can decide what fits.
+auto check_shift_up_to_the_capacity(std::size_t key) -> void // NOLINT(bugprone-exception-escape)
+{
+        auto s = T({23UZ});
+        s.erase(23UZ);
+        s.insert({0UZ, key});
+        auto const room = 23UZ - key;
+
+        // Landing the highest key on the last position is still inside the capacity.
+        auto at_capacity = s;
+        at_capacity <<= room;
+        BOOST_CHECK(at_capacity == T({room, 23UZ}));
+        BOOST_CHECK((s << room) == T({room, 23UZ}));
+
+        // One further is not, and the set is as it was.
+        auto past_capacity = s;
+        BOOST_CHECK_THROW(past_capacity <<= room + 1UZ, std::bad_alloc);
+        BOOST_CHECK(past_capacity == s);
+        BOOST_CHECK_THROW(static_cast<void>(s << (room + 1UZ)), std::bad_alloc);
+}
+
+} // namespace
+
+// A left shift is refused when it carries the highest key to the capacity or past it, whatever the width.
 BOOST_AUTO_TEST_CASE(ShiftingPastTheCapacityThrowsBadAllocAndLeavesTheSetUnchanged)
 {
         for (auto const key : {0UZ, 3UZ, 9UZ, 23UZ}) {
-                auto const s = T({0UZ, key});
-                auto const room = 23UZ - key;
-
-                // Landing on the last position is still inside the capacity.
-                auto at_capacity = s;
-                at_capacity <<= room;
-                BOOST_CHECK(at_capacity == T({room, 23UZ}));
-
-                // One further is not, and the set is as it was.
-                auto past_capacity = s;
-                BOOST_CHECK_THROW(past_capacity <<= room + 1UZ, std::bad_alloc);
-                BOOST_CHECK(past_capacity == s);
+                check_shift_up_to_the_capacity(key);
         }
+}
+
+// A width left behind by an erased key is no bar to a shift its highest remaining key survives.
+BOOST_AUTO_TEST_CASE(ShiftingAfterAnEraseIsBoundedByTheHighestKeyNotTheWidth)
+{
+        auto s = T();
+        s.insert(20);
+        s.erase(20);
+        s.insert(3);
+        s <<= 5;
+        BOOST_CHECK(s == T({8UZ}));
+}
+
+// An empty set has no key to carry, so no distance is too far for it, not even the widest.
+BOOST_AUTO_TEST_CASE(ShiftingAnEmptySetNeverThrows)
+{
+        auto s = T();
+        s <<= 24;
+        BOOST_CHECK(s.empty());
+
+        s.insert(23);
+        s.erase(23);
+        s <<= std::numeric_limits<std::size_t>::max();
+        BOOST_CHECK(s.empty());
+}
+
+// A distance near the top of size_t is refused rather than wrapped onto a key that fits.
+BOOST_AUTO_TEST_CASE(ShiftingByTheWidestDistanceThrowsRatherThanWraps)
+{
+        auto s = T({1UZ});
+        BOOST_CHECK_THROW(s <<= std::numeric_limits<std::size_t>::max(), std::bad_alloc);
+        BOOST_CHECK(s == T({1UZ}));
 }
 
 // N is the capacity exactly: a key the last block has room for but N does not is refused all the same.

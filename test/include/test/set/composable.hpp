@@ -6,11 +6,12 @@
 #ifndef TEST_SET_COMPOSABLE_HPP
 #define TEST_SET_COMPOSABLE_HPP
 
-#include <boost/test/unit_test.hpp>        // BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <algorithm>                       // includes
+#include <boost/test/unit_test.hpp>        // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <range/v3/view/set_algorithm.hpp> // set_difference, set_intersection, set_symmetric_difference, set_union
-#include <ranges>                          // to
-                                           // filter, transform
+#include <algorithm>                       // includes
+#include <cstddef>                         // size_t
+#include <new>                             // bad_alloc
+#include <ranges>                          // filter, to, transform
 
 namespace test::set::composable {
 
@@ -83,6 +84,31 @@ struct increment_modulo
                                 (a << n) == (a | std::views::transform([=](auto x) { return x + n; }) | std::views::filter([=](auto x) { return x < N; }) | std::ranges::to<X>())
                         );
                 }
+        }
+};
+
+// Under a capacity nothing is dropped: the translation where the highest key still fits, and no change where not.
+struct increment_within_capacity
+{
+        template<class X>
+        auto operator()(X const& a, std::size_t n) const
+        {
+                if (a.empty() or n < a.max_size() - *a.rbegin()) {
+                        auto b = a;
+                        b <<= n;
+                        BOOST_CHECK(b == (a | std::views::transform([=](auto x) { return x + n; }) | std::ranges::to<X>()));
+                } else {
+                        refuses(a, n);
+                }
+        }
+
+private:
+        template<class X>
+        static auto refuses(X const& a, std::size_t n) -> void // NOLINT(bugprone-exception-escape)
+        {
+                auto b = a;
+                BOOST_CHECK_THROW(b <<= n, std::bad_alloc);
+                BOOST_CHECK(b == a);
         }
 };
 
