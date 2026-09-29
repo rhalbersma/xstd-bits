@@ -12,8 +12,10 @@
 namespace xstd::bits::detail {
 
 // Named for what is owned rather than for the owner: borrowed is the word std::ranges::enable_borrowed_range uses.
-enum class storage : bool { owned,
-                            borrowed,
+enum class storage : bool
+{
+        owned,
+        borrowed,
 };
 
 [[nodiscard]] constexpr auto owns(storage s) noexcept
@@ -23,8 +25,10 @@ enum class storage : bool { owned,
 }
 
 // Named for how much of the storage a view reaches: all of it, or the sub-range a subspan was cut down to.
-enum class window : bool { all,
-                           sub,
+enum class window : bool
+{
+        all,
+        sub,
 };
 
 // The three ways the same blocks are read: as a set of keys, as a sequence of bools, or whole, the way std::bitset is.

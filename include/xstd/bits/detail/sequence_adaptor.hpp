@@ -1378,8 +1378,7 @@ namespace std {
 // [array.tuple]'s three over the static-width owner: tuple_element names the proxy, not bool.
 template<class Bits, xstd::bits::detail::storage Store, xstd::bits::detail::window W, class Derived, std::size_t E>
         requires xstd::bits::detail::is_static_width_owner<Bits, Store, W>
-struct tuple_size<xstd::bits::detail::sequence_adaptor<Bits, Store, W, Derived, E>>
-        : integral_constant<size_t, Bits::extent>
+struct tuple_size<xstd::bits::detail::sequence_adaptor<Bits, Store, W, Derived, E>> : integral_constant<size_t, Bits::extent>
 {};
 
 template<size_t I, class Bits, xstd::bits::detail::storage Store, xstd::bits::detail::window W, class Derived, std::size_t E>

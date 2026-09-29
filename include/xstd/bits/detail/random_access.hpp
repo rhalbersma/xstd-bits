@@ -298,8 +298,7 @@ public:
 // std::format over the containers, which needs nothing said about the containers themselves.
 template<class Bits, class CharT>
 // NOLINTNEXTLINE(bugprone-std-namespace-modification)
-struct std::formatter<xstd::bits::detail::random_access_bit_reference<Bits>, CharT>
-        : std::formatter<bool, CharT>
+struct std::formatter<xstd::bits::detail::random_access_bit_reference<Bits>, CharT> : std::formatter<bool, CharT>
 {
         template<class Context>
         [[nodiscard]] constexpr auto format(xstd::bits::detail::random_access_bit_reference<Bits> ref, Context& ctx) const
