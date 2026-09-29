@@ -883,7 +883,7 @@ BOOST_AUTO_TEST_CASE(TheIntegerDoorIsUnchangedByTheByteExchange)
         xstd::bitset<32> const implicitly = 5U;
         BOOST_CHECK_EQUAL(implicitly.to_ullong(), 5ULL);
 
-        // And to_ullong keeps its contract: a position beyond the word throws where a byte copy keeps the low bits.
+        // to_ullong keeps its contract: past the result's width it throws, where a byte copy keeps the low bits.
         auto wide = xstd::bitset<100>();
         wide.set(99);
         BOOST_CHECK_THROW((void)wide.to_ullong(), std::overflow_error);

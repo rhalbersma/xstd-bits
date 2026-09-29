@@ -537,8 +537,8 @@ already has a door for integers and a second one would collide with the first ra
 `unsigned long long` constructor is *implicit*; an explicit template admitting `unsigned int` would be an exact
 match where that constructor takes a conversion, so it would win for `bitset<32>(5u)` and, being explicit, turn
 `bitset<32> b = 5u` from legal into ill-formed. And `to_ullong` **throws** `overflow_error` where a set position
-lies beyond the word, where a byte copy keeps the low bits and says nothing. Two contracts for one conversion is
-a trap, and between them the standard's is the one this reading owes. So integers keep their door and the byte
+lies beyond the result's width, where a byte copy keeps the low bits and says nothing. Two contracts for one conversion
+is a trap, and between them the standard's is the one this reading owes. So integers keep their door and the byte
 exchange opens the other.
 
 Two block widths over the same `N` are two spellings of one field of bits, so they cross on this rule with
@@ -4672,7 +4672,7 @@ widen it:
 - the `unsigned long long` constructor is **implicit**. A template admitting `unsigned int` would be
   an exact match where that one needs a conversion, so it would win for `bitset<32> b(5u)` — and
   being explicit, it would make `bitset<32> b = 5u` ill-formed, which compiles today.
-- `to_ullong()` **throws** `overflow_error` where a set position lies beyond the word
+- `to_ullong()` **throws** `overflow_error` where a set position lies beyond the width of the result
   ([bitset.members]/37-40), where a byte copy would silently keep the low bits. Two contracts for one
   conversion is a trap, and the standard's is the one this reading owes.
 

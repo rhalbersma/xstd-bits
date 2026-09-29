@@ -541,7 +541,7 @@ public:
                 throw out_of_range(pos);
         }
 
-        // [bitset.members]/37-40: the value the bits spell, or overflow_error for a position beyond the word.
+        // [bitset.members]/37-40: the value the bits spell, or overflow_error for a position beyond the result's width.
         [[nodiscard]] constexpr auto to_ulong() const
                 -> unsigned long
         {
@@ -978,7 +978,7 @@ private:
         {
                 return std::overflow_error(
                         std::format(
-                                "{}:{}:{}: exception: ‘{}‘: a set position lies beyond the word",
+                                "{}:{}:{}: exception: ‘{}‘: a set position lies beyond the width of the result",
                                 loc.file_name(), loc.line(), loc.column(), loc.function_name()
                         )
                 );
