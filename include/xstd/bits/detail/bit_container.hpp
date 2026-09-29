@@ -375,6 +375,7 @@ public:
         }
 
         // Memberwise, width first: the unused bits are kept clear, so the blocks compare as the bits do.
+        // noexcept by choice: std::array's and std::vector's == are not, and the adaptors' == build on this.
         [[nodiscard]] friend auto operator==(bit_container const&, bit_container const&) noexcept -> bool = default;
 
         // The set reading's equality, where width is capacity: a hidden friend, neither value being the subject.

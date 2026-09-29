@@ -29,7 +29,7 @@ struct counting_allocator
 {
         using value_type = T;
 
-        counting_allocator() noexcept = default;
+        counting_allocator() = default;
 
         template<class U>
         explicit constexpr counting_allocator(counting_allocator<U> const&) noexcept
@@ -48,7 +48,7 @@ struct counting_allocator
                 std::allocator<T>().deallocate(p, n);
         }
 
-        [[nodiscard]] friend auto operator==(counting_allocator const&, counting_allocator const&) noexcept -> bool = default;
+        [[nodiscard]] friend auto operator==(counting_allocator const&, counting_allocator const&) -> bool = default;
 };
 
 using CountedSet = xstd::basic_bit_small_set<std::size_t, N, counting_allocator<std::size_t>>;

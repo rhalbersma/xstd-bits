@@ -8,6 +8,7 @@
 #include <test/spec/bitset.hpp>       // all, bitsets, pairs, positions, positions_with_singletons
 #include <test/spec/input.hpp>        // context, on_copy
 #include <boost/test/unit_test.hpp>   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <utility>                    // declval
 
 BOOST_AUTO_TEST_SUITE(Spec)
 BOOST_AUTO_TEST_SUITE(Utilities)
@@ -261,6 +262,7 @@ BOOST_AUTO_TEST_CASE(Size)
 BOOST_AUTO_TEST_CASE(EqualTo)
 {
         test::for_each_type<test::spec::bitset::all>([]<class T> -> void {
+                static_assert(noexcept(std::declval<T const&>() == std::declval<T const&>())); // [bitset.members]/45
                 for (auto const [from, a, b] : inputs::pairs<T>()) {
                         auto const on_failure = context(from, a, b);
                         mem_equal_to()(a, b);

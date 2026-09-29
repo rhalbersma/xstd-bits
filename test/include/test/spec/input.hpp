@@ -219,7 +219,7 @@ public:
                 using value_type = rebuilt::value_type;
                 using difference_type = std::ptrdiff_t;
 
-                [[nodiscard]] constexpr iterator() = default;
+                [[nodiscard]] iterator() = default;
 
                 [[nodiscard]] constexpr iterator(rebuilt const* inputs, std::size_t s) noexcept
                         : m_inputs(inputs)
@@ -250,10 +250,10 @@ public:
                         return old;
                 }
 
-                [[nodiscard]] friend constexpr auto operator==(iterator const&, iterator const&) noexcept -> bool = default;
+                [[nodiscard]] friend auto operator==(iterator const&, iterator const&) -> bool = default;
         };
 
-        [[nodiscard]] constexpr rebuilt() = default;
+        [[nodiscard]] rebuilt() = default;
 
         [[nodiscard]] constexpr auto begin() const noexcept
                 -> iterator
