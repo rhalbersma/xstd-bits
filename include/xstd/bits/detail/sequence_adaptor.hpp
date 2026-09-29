@@ -233,6 +233,7 @@ class sequence_adaptor : public std::conditional_t<owns(Store), allocator_base_t
 
         template<class Self>
         using iterator_t = random_access_bit_iterator<storage_t<Self>>;
+
         template<class Self>
         using reference_t = random_access_bit_reference<storage_t<Self>>;
 

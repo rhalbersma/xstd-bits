@@ -21,6 +21,7 @@ namespace xstd::bits::detail {
 
 template<class Bits>
 class random_access_bit_iterator;
+
 template<class Bits>
 class random_access_bit_reference;
 

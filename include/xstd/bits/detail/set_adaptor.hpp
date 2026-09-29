@@ -53,6 +53,7 @@ concept equality_comparable_storage = requires (Bits const& a, Bits const& b) {
 // A range of consecutive ascending positions, which is what a block-wise fill needs.
 template<class R>
 inline constexpr bool is_consecutive = false;
+
 template<class W, class B>
 inline constexpr bool is_consecutive<std::ranges::iota_view<W, B>> = true;
 

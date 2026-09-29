@@ -41,8 +41,10 @@ using Reader = xstd::bits::detail::sequence_adaptor<Storage const, xstd::bits::d
 // Dependent, so an absent member is a false rather than a hard error.
 template<class S>
 constexpr bool can_fill = requires (S s) { s.fill(true); };
+
 template<class S>
 constexpr bool can_write = requires (S s) { s[0] = true; };
+
 template<class S>
 constexpr bool can_swap = requires (S s) { s.swap(s); };
 
@@ -80,16 +82,22 @@ using DynamicOctet = xstd::bits::detail::sequence_adaptor<xstd::bits::detail::bi
 // Named so each requirement is checked on a template parameter: a deleted overload is a hard error otherwise.
 template<class T>
 concept eq_comparable = requires (T a, T b) { a == b; };
+
 template<class T>
 concept ne_comparable = requires (T a, T b) { a != b; };
+
 template<class T>
 concept spaceship_comparable = requires (T a, T b) { a <=> b; };
+
 template<class T>
 concept lt_comparable = requires (T a, T b) { a < b; };
+
 template<class T>
 concept gt_comparable = requires (T a, T b) { a > b; };
+
 template<class T>
 concept le_comparable = requires (T a, T b) { a <= b; };
+
 template<class T>
 concept ge_comparable = requires (T a, T b) { a >= b; };
 

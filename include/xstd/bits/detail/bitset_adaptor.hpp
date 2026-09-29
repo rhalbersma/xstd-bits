@@ -64,6 +64,7 @@ class bitset_adaptor : public allocator_base_type<Bits, bitset_adaptor<Bits, Der
         // A view refers into this owner's storage, and only a reading that can view it is named.
         template<bit_container_type, storage, class>
         friend class set_adaptor;
+
         template<bit_container_type, storage, window, class, std::size_t>
         friend class sequence_adaptor;
 

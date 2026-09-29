@@ -19,6 +19,7 @@ namespace xstd::bits::detail {
 
 template<class Bits>
 class bidirectional_bit_iterator;
+
 template<class Bits>
 class bidirectional_bit_reference;
 

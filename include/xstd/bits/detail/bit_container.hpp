@@ -318,6 +318,7 @@ public:
         [[nodiscard]] bit_container(bit_container&&)
                 requires (not has_stored_size or has_zero_capacity)
         = default;
+
         auto operator=(bit_container&&) -> bit_container&
                 requires (not has_stored_size or has_zero_capacity)
         = default;

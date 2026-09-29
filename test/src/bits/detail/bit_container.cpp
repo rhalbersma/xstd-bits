@@ -796,14 +796,19 @@ auto append_to(model& m, Block value)
 // Alternating pairs of bits, so a split at any offset lands ones on both sides.
 template<class X>
 constexpr bool can_resize = requires (X& x) { x.resize(1UZ); x.resize(1UZ, true); };
+
 template<class X>
 constexpr bool can_push_pop = requires (X& x) { x.push_back(true); x.pop_back(); };
+
 template<class X>
 constexpr bool can_append = requires (X& x) { x.append(x.block(0UZ)); };
+
 template<class X>
 constexpr bool can_clear = requires (X& x) { x.clear(); };
+
 template<class X>
 constexpr bool can_reserve = requires (X& x) { x.reserve(1UZ); x.shrink_to_fit(); };
+
 template<class X>
 constexpr bool has_capacity = requires (X const& x) { x.capacity(); };
 

@@ -40,12 +40,16 @@ using CSub = xstd::bit_subspan<Blocks const, std::dynamic_extent, 20>;
 // Dependent, so an absent member is a substitution failure rather than a hard error.
 template<class X>
 constexpr bool has_subspan = requires (X x) { x.subspan(0UZ); x.first(0UZ); x.last(0UZ); };
+
 template<class X>
 constexpr bool can_fill = requires (X x) { x.fill(true); };
+
 template<class X>
 constexpr bool has_bulk_ops = requires (X x) { x &= x; x |= x; x ^= x; };
+
 template<class X>
 constexpr bool has_shifts = requires (X x) { x <<= 1UZ; x >>= 1UZ; };
+
 template<class W, class O>
 constexpr bool combinable = requires (W w, O const& o) { w &= o; };
 
@@ -295,6 +299,7 @@ namespace {
 
 template<class X, std::size_t Count>
 constexpr bool has_first = requires (X x) { x.template first<Count>(); };
+
 template<class X, std::size_t Offset, std::size_t Count>
 constexpr bool has_subspan_of = requires (X x) { x.template subspan<Offset, Count>(); };
 

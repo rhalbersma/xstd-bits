@@ -25,14 +25,19 @@ using boosts = boost::dynamic_bitset<>;
 // Each probe is a template: a requires-expression over a concrete type hard-errors rather than answering false.
 template<class C>
 concept has_subscript = requires (C const& c, std::size_t n) { c[n]; };
+
 template<class C>
 concept has_complement = requires (C const& c) { ~c; };
+
 template<class C>
 concept has_set_value = requires (C& b, std::size_t n, bool v) { b.set(n, v); };
+
 template<class C>
 concept has_difference = requires (C& b, C const& c) { b -= c; };
+
 template<class C>
 concept has_subset_of = requires (C const& c) { c.is_subset_of(c); };
+
 template<class C>
 concept has_to_string = requires (C const& c) { c.to_string(); };
 
