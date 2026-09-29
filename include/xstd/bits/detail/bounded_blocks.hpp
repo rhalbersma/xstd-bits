@@ -6,11 +6,16 @@
 #ifndef XSTD_BITS_DETAIL_BOUNDED_BLOCKS_HPP
 #define XSTD_BITS_DETAIL_BOUNDED_BLOCKS_HPP
 
-#include <version> // IWYU pragma: keep; __cpp_lib_inplace_vector
+#include <xstd/ints/limits.hpp> // numeric_limits
+#include <xstd/ints/memory.hpp> // align_up
+#include <cstddef>              // size_t
+#include <iterator>             // input_iterator
+#include <new>                  // bad_alloc
+#include <type_traits>          // conditional_t
+#include <version>              // IWYU pragma: keep; __cpp_lib_inplace_vector
 
 #ifdef __cpp_lib_inplace_vector
 
-#include <cstddef>        // size_t
 #include <inplace_vector> // inplace_vector
 
 // The bounded owners are constant-evaluable exactly where std::inplace_vector holds their blocks.
@@ -26,7 +31,6 @@ using bounded_blocks = std::inplace_vector<Block, K>;
 #else
 
 #include <boost/container/static_vector.hpp> // static_vector
-#include <cstddef>                           // size_t
 
 namespace xstd::bits::detail {
 
@@ -37,5 +41,120 @@ using bounded_blocks = boost::container::static_vector<Block, K>;
 } // namespace xstd::bits::detail
 
 #endif
+
+namespace xstd::bits::detail {
+
+// The blocks of a capacity of nought: none, in an empty trivial type, as std::inplace_vector<Block, 0> holds them.
+template<class Block>
+class no_blocks
+{
+public:
+        // Nothing held, so any two are equal.
+        [[nodiscard]] friend constexpr auto operator==(no_blocks const&, no_blocks const&) noexcept
+                -> bool
+        {
+                return true;
+        }
+
+        // The null pointers of an empty contiguous range.
+        [[nodiscard]] constexpr auto data() noexcept
+                -> Block*
+        {
+                return nullptr;
+        }
+
+        [[nodiscard]] constexpr auto data() const noexcept
+                -> Block const*
+        {
+                return nullptr;
+        }
+
+        [[nodiscard]] constexpr auto begin() noexcept
+                -> Block*
+        {
+                return data();
+        }
+
+        [[nodiscard]] constexpr auto begin() const noexcept
+                -> Block const*
+        {
+                return data();
+        }
+
+        [[nodiscard]] constexpr auto end() noexcept
+                -> Block*
+        {
+                return data();
+        }
+
+        [[nodiscard]] constexpr auto end() const noexcept
+                -> Block const*
+        {
+                return data();
+        }
+
+        // The subscript is the built-in one: a member would have to be defined for an index no call can pass.
+        [[nodiscard]] constexpr operator Block*() noexcept // NOLINT(misc-explicit-constructor): the subscript is this conversion.
+        {
+                return data();
+        }
+
+        [[nodiscard]] constexpr operator Block const*() const noexcept // NOLINT(misc-explicit-constructor): the subscript is this conversion.
+        {
+                return data();
+        }
+
+        [[nodiscard]] static constexpr auto size() noexcept
+                -> std::size_t
+        {
+                return 0UZ;
+        }
+
+        [[nodiscard]] static constexpr auto capacity() noexcept
+                -> std::size_t
+        {
+                return 0UZ;
+        }
+
+        [[nodiscard]] static constexpr auto max_size() noexcept
+                -> std::size_t
+        {
+                return 0UZ;
+        }
+
+        // Growth past nought is std::inplace_vector's bad_alloc, and a resize to nought leaves nothing to change.
+        static constexpr auto resize(std::size_t n, Block const& /* value */)
+                -> void
+        {
+                if (n != 0UZ) {
+                        throw std::bad_alloc();
+                }
+        }
+
+        [[noreturn]] static constexpr auto push_back(Block const& /* value */)
+                -> void
+        {
+                throw std::bad_alloc();
+        }
+
+        template<std::input_iterator I>
+        static constexpr auto insert(Block const* /* pos */, I first, I last)
+                -> void
+        {
+                if (first != last) {
+                        throw std::bad_alloc();
+                }
+        }
+
+        static constexpr auto clear() noexcept
+                -> void
+        {}
+};
+
+// The blocks under a capacity of N bits, and none at all under nought, which leaves the owner an empty type.
+template<class Block, std::size_t N>
+using bounded_blocks_for = std::conditional_t<N == 0UZ, no_blocks<Block>, bounded_blocks<Block, xstd::align_up(N, static_cast<std::size_t>(xstd::numeric_limits<Block>::digits)) / static_cast<std::size_t>(xstd::numeric_limits<Block>::digits)>>;
+
+} // namespace xstd::bits::detail
 
 #endif // XSTD_BITS_DETAIL_BOUNDED_BLOCKS_HPP

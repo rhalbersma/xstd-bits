@@ -181,6 +181,8 @@ class sequence_adaptor : public std::conditional_t<owns(Store), allocator_base_t
                 [[XSTD_NO_UNIQUE_ADDRESS]] conditional_data_member_t<not has_static_window, std::size_t, struct window_size_tag> size;
         };
 
+        // Overlappable, so that an owner of a capacity of nought, whose storage is empty, is an empty type.
+        [[XSTD_NO_UNIQUE_ADDRESS]]
         std::conditional_t<is_owner, Bits, std::conditional_t<is_window, window_ptr, storage_ref_t<Bits>>> m_bits;
 
         // One accessor: self.m_bits propagates the owner's const, *self.m_bits keeps the view shallow.
@@ -309,8 +311,13 @@ public:
                 requires can_grow and std::constructible_from<value_type, std::iter_reference_t<I>>
         [[nodiscard]] constexpr sequence_adaptor(I first, S last)
         {
-                for (; first != last; ++first) {
-                        m_bits.push_back(static_cast<value_type>(*first));
+                // A capacity of nought refuses any element outright, rather than through a loop that cannot go round.
+                if constexpr (bits_type::has_zero_capacity) {
+                        refuse_any(first != last);
+                } else {
+                        for (; first != last; ++first) {
+                                m_bits.push_back(static_cast<value_type>(*first));
+                        }
                 }
         }
 
@@ -1133,30 +1140,44 @@ private:
                 }
         }
 
+        // A capacity of nought takes no element, and says so with the bad_alloc of growth past any capacity.
+        static constexpr auto refuse_any(bool some)
+                -> void
+                requires bits_type::has_zero_capacity
+        {
+                if (some) {
+                        throw std::bad_alloc();
+                }
+        }
+
         // Tier one: the source's bits as words at its own alignment, appended a word at a time.
         template<class SBits>
         constexpr auto blit(SBits const& src, size_type first, size_type count)
                 -> void
         {
-                using block_type = bits_type::block_type;
-                constexpr auto digits = bits_type::bits_per_block;
-                auto const old = size();
-                // Through the saturating sum: a wrapped total would answer an append with something shorter.
-                auto const total = bits_type::check_addressable_width(bits_type::width_sum(old, count));
-                if constexpr (requires (bits_type& b, std::size_t n) { b.reserve(n); }) {
-                        m_bits.reserve(total);
-                }
-                auto const last = first + count;
-                auto pos = first;
-                for (; last - pos >= digits; pos += digits) {
-                        m_bits.append(src.block_at(pos));
-                }
-                // Grown by the positions left and no further, so a capacity refuses only what does not fit.
-                if (pos < last) {
-                        auto const word = src.block_at(pos);
-                        auto const width = size();
-                        m_bits.resize(width + (last - pos));
-                        m_bits.block_at(width, word, sequence::partial_block_mask<block_type>(last - pos));
+                if constexpr (bits_type::has_zero_capacity) {
+                        refuse_any(count != 0UZ);
+                } else {
+                        using block_type = bits_type::block_type;
+                        constexpr auto digits = bits_type::bits_per_block;
+                        auto const old = size();
+                        // Through the saturating sum: a wrapped total would answer an append with something shorter.
+                        auto const total = bits_type::check_addressable_width(bits_type::width_sum(old, count));
+                        if constexpr (requires (bits_type& b, std::size_t n) { b.reserve(n); }) {
+                                m_bits.reserve(total);
+                        }
+                        auto const last = first + count;
+                        auto pos = first;
+                        for (; last - pos >= digits; pos += digits) {
+                                m_bits.append(src.block_at(pos));
+                        }
+                        // Grown by the positions left and no further, so a capacity refuses only what does not fit.
+                        if (pos < last) {
+                                auto const word = src.block_at(pos);
+                                auto const width = size();
+                                m_bits.resize(width + (last - pos));
+                                m_bits.block_at(width, word, sequence::partial_block_mask<block_type>(last - pos));
+                        }
                 }
         }
 
@@ -1165,29 +1186,33 @@ private:
         constexpr auto pack(R&& rg)
                 -> void
         {
-                using block_type = bits_type::block_type;
-                constexpr auto digits = bits_type::bits_per_block;
-                // Saturating: a sized range's count is the one sum here a caller can wrap on purpose.
-                if constexpr (std::ranges::sized_range<R> and requires (bits_type& b, std::size_t n) { b.reserve(n); }) {
-                        m_bits.reserve(bits_type::check_addressable_width(bits_type::width_sum(size(), static_cast<std::size_t>(std::ranges::size(rg)))));
-                }
-                auto block = block_type{};
-                auto n = 0UZ;
-                for (auto&& e : rg) {
-                        if (static_cast<value_type>(e)) {
-                                block |= shl(block_type{1}, n);
+                if constexpr (bits_type::has_zero_capacity) {
+                        refuse_any(std::ranges::begin(rg) != std::ranges::end(rg));
+                } else {
+                        using block_type = bits_type::block_type;
+                        constexpr auto digits = bits_type::bits_per_block;
+                        // Saturating: a sized range's count is the one sum here a caller can wrap on purpose.
+                        if constexpr (std::ranges::sized_range<R> and requires (bits_type& b, std::size_t n) { b.reserve(n); }) {
+                                m_bits.reserve(bits_type::check_addressable_width(bits_type::width_sum(size(), static_cast<std::size_t>(std::ranges::size(rg)))));
                         }
-                        if (++n == digits) {
-                                m_bits.append(block);
-                                block = block_type{};
-                                n = 0UZ;
+                        auto block = block_type{};
+                        auto n = 0UZ;
+                        for (auto&& e : rg) {
+                                if (static_cast<value_type>(e)) {
+                                        block |= shl(block_type{1}, n);
+                                }
+                                if (++n == digits) {
+                                        m_bits.append(block);
+                                        block = block_type{};
+                                        n = 0UZ;
+                                }
                         }
-                }
-                // Grown by the n positions left and no further, so a capacity refuses only what does not fit.
-                if (n != 0UZ) {
-                        auto const width = size();
-                        m_bits.resize(width + n);
-                        m_bits.block_at(width, block, sequence::partial_block_mask<block_type>(n));
+                        // Grown by the n positions left and no further, so a capacity refuses only what does not fit.
+                        if (n != 0UZ) {
+                                auto const width = size();
+                                m_bits.resize(width + n);
+                                m_bits.block_at(width, block, sequence::partial_block_mask<block_type>(n));
+                        }
                 }
         }
 

@@ -7,8 +7,8 @@
 #define XSTD_BITS_BIT_BOUNDED_VECTOR_HPP
 
 #include <xstd/bits/bit_storage.hpp>                         // bit_storage_extent_v
-#include <xstd/bits/detail/bounded_blocks.hpp>               // bounded_blocks
-#include <xstd/bits/detail/contiguous_bit_container.hpp>     // contiguous_bit_container, num_blocks_v
+#include <xstd/bits/detail/bounded_blocks.hpp>               // bounded_blocks, bounded_blocks_for
+#include <xstd/bits/detail/contiguous_bit_container.hpp>     // contiguous_bit_container
 #include <xstd/bits/detail/ownership.hpp>                    // storage, window
 #include <xstd/bits/detail/sequence_adaptor.hpp>             // sequence_adaptor
 #include <xstd/bits/from_bit_storage.hpp>                    // from_bit_storage, from_bit_storage_t
@@ -30,9 +30,9 @@ namespace xstd {
 
 // The packed std::inplace_vector<bool, N> that P0843 declined to write, named after the container it packs.
 template<xstd::unsigned_integer Block, std::size_t N>
-class basic_bit_bounded_vector : public bits::detail::sequence_adaptor<bits::detail::contiguous_bit_container<bits::detail::bounded_blocks<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_bounded_vector<Block, N>>
+class basic_bit_bounded_vector : public bits::detail::sequence_adaptor<bits::detail::contiguous_bit_container<bits::detail::bounded_blocks_for<Block, N>, N>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_bounded_vector<Block, N>>
 {
-        using base_type = bits::detail::sequence_adaptor<bits::detail::contiguous_bit_container<bits::detail::bounded_blocks<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_bounded_vector<Block, N>>;
+        using base_type = bits::detail::sequence_adaptor<bits::detail::contiguous_bit_container<bits::detail::bounded_blocks_for<Block, N>, N>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_bounded_vector<Block, N>>;
 
 public:
         using typename base_type::block_container_type;
