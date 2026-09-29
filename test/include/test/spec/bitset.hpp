@@ -97,7 +97,7 @@ class bit_positions
 public:
         using size_type = std::size_t;
 
-        [[nodiscard]] constexpr bit_positions() = default;
+        [[nodiscard]] bit_positions() = default;
 
         // Distinct positions below a width, as a sample draws them.
         [[nodiscard]] constexpr bit_positions(size_type n, key_vector positions) noexcept

@@ -86,7 +86,7 @@ A row's `outcome` is one of:
 | `[bitset.members]` | 42 | `to_string(charT zero, charT one) const` | Returns | answered | |
 | `[bitset.members]` | 43 | `count() const` | Returns | answered | |
 | `[bitset.members]` | 44 | `size() const` | Returns | answered | At a static width; a run-time width is the one the bitset was given. |
-| `[bitset.members]` | 45 | `operator==(const bitset& rhs) const` | Returns | answered | |
+| `[bitset.members]` | 45 | `operator==(const bitset& rhs) const` | Returns | answered | `noexcept` is asserted of every implementation but `boost::dynamic_bitset`, whose `==` declares none. |
 | `[bitset.members]` | 46 | `test(size_t pos) const` | Returns | answered | |
 | `[bitset.members]` | 47 | `test(size_t pos) const` | Throws | answered | At a static width, as ¶17. |
 | `[bitset.members]` | 48 | `all() const` | Returns | answered | |
