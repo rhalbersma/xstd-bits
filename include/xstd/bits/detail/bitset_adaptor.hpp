@@ -210,7 +210,7 @@ public:
                 : m_bits(xstd::from_bit_storage, std::move(blocks), alloc)
         {}
 
-        // Words that are bit storage, integers wider than the ullong door included, read as this bitset's bits.
+        // Blocks that are bit storage, integers wider than the ullong door included, read as this bitset's bits.
         template<class B>
                 requires xstd::bit_storage<B> and Bits::template
         exchanges_bits<B> [[nodiscard]] constexpr bitset_adaptor(xstd::from_bit_storage_t, B const& b) noexcept
@@ -471,7 +471,7 @@ public:
                 }
         }
 
-        // boost's ranged forms: the guard on the whole range, then the storage's own a word at a time.
+        // boost's ranged forms: the guard on the whole range, then the storage's own a block at a time.
         constexpr auto set(std::size_t pos, std::size_t len, bool val)
                 -> Derived&
         {

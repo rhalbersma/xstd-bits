@@ -52,7 +52,7 @@ public:
                 std::ranges::copy(a, this->begin());
         }
 
-        // Not in [array]: words that are bit storage, read as this sequence's bools.
+        // Not in [array]: blocks that are bit storage, read as this sequence's bools.
         template<class B>
                 requires std::constructible_from<base_type, from_bit_storage_t, B const&>
         [[nodiscard]] constexpr basic_bit_array(from_bit_storage_t, B const& b) noexcept
@@ -72,7 +72,7 @@ public:
 template<std::size_t N>
 using bit_array = basic_bit_array<std::size_t, N>;
 
-// The width of one word or of an array of them; K = 1 keeps MSVC 17 from dropping the one-word guide.
+// The width of one block or of an array of them; K = 1 keeps MSVC 17 from dropping the one-block guide.
 template<xstd::unsigned_integer Block, std::size_t K = 1>
 basic_bit_array(from_bit_storage_t, Block) -> basic_bit_array<Block, bit_storage_extent_v<Block> * K>;
 

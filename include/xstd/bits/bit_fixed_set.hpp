@@ -62,7 +62,7 @@ public:
                 : base_type(il)
         {}
 
-        // Not in [set.cons]: words that are bit storage, read as this set's positions.
+        // Not in [set.cons]: blocks that are bit storage, read as this set's positions.
         template<class B>
                 requires std::constructible_from<base_type, from_bit_storage_t, B const&>
         [[nodiscard]] constexpr basic_bit_fixed_set(from_bit_storage_t, B const& b) noexcept
@@ -82,7 +82,7 @@ public:
 template<std::size_t N>
 using bit_fixed_set = basic_bit_fixed_set<std::size_t, N>;
 
-// The width of one word or of an array of them; K = 1 keeps MSVC 17 from dropping the one-word guide.
+// The width of one block or of an array of them; K = 1 keeps MSVC 17 from dropping the one-block guide.
 template<xstd::unsigned_integer Block, std::size_t K = 1>
 basic_bit_fixed_set(from_bit_storage_t, Block) -> basic_bit_fixed_set<Block, bit_storage_extent_v<Block> * K>;
 

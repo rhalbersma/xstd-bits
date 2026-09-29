@@ -7,7 +7,7 @@
 #define TEST_SPEC_SET_HPP
 
 #include <test/flat_set.hpp>                     // IWYU pragma: keep; TEST_HAS_FLAT_SET, flat_set
-#include <test/minimal_words.hpp>                // minimal_words
+#include <test/minimal_blocks.hpp>               // minimal_blocks
 #include <test/set/exhaustive.hpp>               // L1, L2, L3, L4, limit_v, on0, on1, on2, on3, on4, static_capacity, static_width
 #include <test/spec/input.hpp>                   // edge, exhaustive, key_list, key_vector, keyed, listed, memo, one, rebuilt, three, two
 #include <test/spec/random.hpp>                  // block_digits_v, key_samples, keyed_samples, pair_samples, triple_samples, width
@@ -57,7 +57,7 @@ using bounded = std::tuple<xstd::basic_bit_bounded_set<std::uint8_t, 0>, xstd::b
 using small = std::tuple<xstd::basic_bit_small_set<std::uint8_t, 9>, xstd::basic_bit_small_set<std::uint64_t, 64>, xstd::basic_bit_small_set<std::uint64_t, 1024>>;
 
 // Storage written outside the library, adapted by the same set adaptor the owners derive from.
-using user_storage = std::tuple<xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_container<test::minimal_words<std::uint8_t>>>>;
+using user_storage = std::tuple<xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_container<test::minimal_blocks<std::uint8_t>>>>;
 
 using all = decltype(std::tuple_cat(std::declval<models>(), std::declval<fixed>(), std::declval<dynamic>(), std::declval<bounded>(), std::declval<small>(), std::declval<user_storage>()));
 

@@ -26,7 +26,7 @@ concept casts = requires (From const& from) { xstd::bit_cast<To>(from); };
 
 } // namespace
 
-// What has bit storage of a fixed width: our owners and full-width views, words and arrays of them, a std::bitset.
+// What has bit storage of a fixed width: our owners and full-width views, blocks and arrays of them, a std::bitset.
 BOOST_AUTO_TEST_CASE(WhatHasBitStorageOfAFixedWidthIsCastable)
 {
         static_assert(xstd::bit_castable<std::uint64_t> and xstd::bit_castable<std::array<std::uint8_t, 3>>);
@@ -38,16 +38,16 @@ BOOST_AUTO_TEST_CASE(WhatHasBitStorageOfAFixedWidthIsCastable)
         BOOST_CHECK(true);
 }
 
-// Between any two readings, and to and from the words and a std::bitset: the blocks are copied, whatever each reads.
+// Between any two readings, and to and from the blocks and a std::bitset: the blocks are copied, whatever each reads.
 BOOST_AUTO_TEST_CASE(TheBlocksAreCopiedAcrossReadings)
 {
         static_assert([] -> bool {
                 auto const set = xstd::bit_fixed_set<64>{0, 5, 63};
-                auto const word = xstd::bit_cast<std::uint64_t>(set);
+                auto const block = xstd::bit_cast<std::uint64_t>(set);
                 auto const seq = xstd::bit_cast<xstd::bit_array<64>>(set);
                 auto const bits = xstd::bit_cast<xstd::bitset<64>>(seq);
                 auto const legacy = xstd::bit_cast<std::bitset<64>>(bits);
-                return word == ((1ULL << 63U) | (1ULL << 5U) | 1ULL) and seq[5] and bits.test(63) and legacy.count() == 3 and xstd::bit_cast<xstd::bit_fixed_set<64>>(legacy) == set;
+                return block == ((1ULL << 63U) | (1ULL << 5U) | 1ULL) and seq[5] and bits.test(63) and legacy.count() == 3 and xstd::bit_cast<xstd::bit_fixed_set<64>>(legacy) == set;
         }());
 
         // A width that is no whole number of blocks round-trips through a std::bitset of the same width.
@@ -60,7 +60,7 @@ BOOST_AUTO_TEST_CASE(TheBlocksAreCopiedAcrossReadings)
         BOOST_CHECK(xstd::bit_cast<std::bitset<0>>(xstd::bit_array<0>()).none());
 }
 
-// A view is read from as the words it spans, and never written into.
+// A view is read from as the blocks it spans, and never written into.
 BOOST_AUTO_TEST_CASE(AViewIsCastFromAndNotInto)
 {
         auto board = std::uint64_t{0b1010};

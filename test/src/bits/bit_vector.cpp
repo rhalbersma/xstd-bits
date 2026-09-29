@@ -195,7 +195,7 @@ BOOST_AUTO_TEST_CASE(AppendRangeBlitsFromASequenceAtAnyAlignment)
         BOOST_CHECK(std::ranges::equal(w, n));
 }
 
-// append_range's second tier: any range of bools, packed a word at a time, the last word trimmed.
+// append_range's second tier: any range of bools, packed a block at a time, the last block trimmed.
 BOOST_AUTO_TEST_CASE(AppendRangePacksAnyRangeOfBools)
 {
         for (auto const prefix : {0UZ, 3UZ, 8UZ}) {

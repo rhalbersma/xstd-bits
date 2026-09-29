@@ -18,11 +18,11 @@
 // How a view and its iterators reach storage, as std::views::all would: a pointer, or a copy of what is itself a view.
 namespace xstd::bits::detail {
 
-// Storage over words someone else owns: a span and nothing else, so copying it copies no bits.
+// Storage over blocks someone else owns: a span and nothing else, so copying it copies no bits.
 template<class Bits>
 concept view_storage = borrowed_block_span<typename std::remove_const_t<Bits>::block_container_type>;
 
-// A view's copy of storage that is itself a view; its words are not its own, so a const view still writes them.
+// A view's copy of storage that is itself a view; its blocks are not its own, so a const view still writes them.
 template<class Bits>
 class storage_copy
 {
@@ -44,9 +44,9 @@ public:
         }
 };
 
-// An iterator's hold on the words themselves, rebuilt into storage at each use, so it outlives the view it came from.
+// An iterator's hold on the blocks themselves, rebuilt into storage at each use, so it outlives the view it came from.
 template<class Bits>
-class words_ptr
+class block_ptr
 {
         using bits_type = std::remove_const_t<Bits>;
         using span_type = bits_type::block_container_type;
@@ -60,7 +60,7 @@ class words_ptr
 
         // The const twin, whose conversion below reads these members.
         template<class>
-        friend class words_ptr;
+        friend class block_ptr;
 
         // What -> hands back, holding the rebuilt storage until the end of the full-expression.
         struct arrow
@@ -85,9 +85,9 @@ class words_ptr
         }
 
 public:
-        [[nodiscard]] words_ptr() noexcept = default;
+        [[nodiscard]] block_ptr() noexcept = default;
 
-        [[nodiscard]] constexpr explicit(false) words_ptr(Bits* ptr) noexcept // NOLINT(misc-explicit-constructor)
+        [[nodiscard]] constexpr explicit(false) block_ptr(Bits* ptr) noexcept // NOLINT(misc-explicit-constructor)
                 : m_data(ptr->borrowed_blocks().data())
         {
                 if constexpr (has_count) {
@@ -98,7 +98,7 @@ public:
         // A mutable hold converts to its const twin, as the iterators holding it do.
         template<class Mutable>
                 requires std::is_const_v<Bits> and std::same_as<Mutable const, Bits>
-        [[nodiscard]] constexpr explicit(false) words_ptr(words_ptr<Mutable> other) noexcept // NOLINT(misc-explicit-constructor)
+        [[nodiscard]] constexpr explicit(false) block_ptr(block_ptr<Mutable> other) noexcept // NOLINT(misc-explicit-constructor)
                 : m_data(other.m_data)
                 , m_count(other.m_count)
         {}
@@ -109,8 +109,8 @@ public:
                 return {rebuild()};
         }
 
-        // The same words, which is what two iterators into one view share.
-        [[nodiscard]] friend constexpr auto operator==(words_ptr lhs, words_ptr rhs) noexcept
+        // The same blocks, which is what two iterators into one view share.
+        [[nodiscard]] friend constexpr auto operator==(block_ptr lhs, block_ptr rhs) noexcept
                 -> bool
         {
                 if constexpr (has_count) {
@@ -121,7 +121,7 @@ public:
         }
 
         // Never null as a pointer is: an empty span may have no address and is still a width of zero.
-        [[nodiscard]] friend constexpr auto operator==(words_ptr /* ptr */, std::nullptr_t) noexcept
+        [[nodiscard]] friend constexpr auto operator==(block_ptr /* ptr */, std::nullptr_t) noexcept
                 -> bool
         {
                 return false;
@@ -132,9 +132,9 @@ public:
 template<class Bits>
 using storage_ref_t = std::conditional_t<view_storage<Bits>, storage_copy<Bits>, Bits*>;
 
-// What an iterator or proxy holds: a pointer to storage, or a hold on the words that storage is a view of.
+// What an iterator or proxy holds: a pointer to storage, or a hold on the blocks that storage is a view of.
 template<class Bits>
-using storage_ptr_t = std::conditional_t<view_storage<Bits>, words_ptr<Bits>, Bits*>;
+using storage_ptr_t = std::conditional_t<view_storage<Bits>, block_ptr<Bits>, Bits*>;
 
 } // namespace xstd::bits::detail
 

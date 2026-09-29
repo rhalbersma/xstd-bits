@@ -37,7 +37,7 @@ template<class C>
 concept has_to_string = requires (C const& c) { c.to_string(); };
 
 // A storage carrying none of this vocabulary, so it is one the library never wraps rather than one it rejects.
-struct word
+struct block
 {
         std::uint64_t bits = 0;
 };
@@ -87,7 +87,7 @@ static_assert(not has_subset_of<theirs>);       // nor boost's set vocabulary
 static_assert(not has_to_string<boosts>);       // to_string is std::bitset's alone
 
 // Structural and nothing more, the adaptors admitting their storage by name instead.
-static_assert(not test::bitset::vocabulary<word>);
+static_assert(not test::bitset::vocabulary<block>);
 
 // Asked of each model in turn, in the reading's three groups: the whole, a position, the operators.
 BOOST_AUTO_TEST_CASE_TEMPLATE(EveryModelAnswersTheWhole, C, Models)

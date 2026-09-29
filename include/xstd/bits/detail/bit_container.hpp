@@ -249,7 +249,7 @@ public:
                 requires std::default_initializable<Blocks>
         = default;
 
-        // Someone else's words, every bit of which is a position: nothing is copied, and there is no tail to clear.
+        // Someone else's blocks, every bit of which is a position: nothing is copied, and there is no tail to clear.
         [[nodiscard]] constexpr explicit bit_container(Blocks blocks) noexcept
                 requires borrowed_block_span<Blocks>
                 : members_type(0UZ, blocks)
@@ -422,7 +422,7 @@ public:
                 }
         }
 
-        // The sequence reading a word at a time: whoever holds the lowest differing position is greater.
+        // The sequence reading a block at a time: whoever holds the lowest differing position is greater.
         [[nodiscard]] friend constexpr auto sequence_lexicographical_compare_three_way(bit_container const& x [[maybe_unused]], bit_container const& y [[maybe_unused]]) noexcept
                 -> std::strong_ordering
         {
@@ -446,7 +446,7 @@ public:
                 }
         }
 
-        // The bitset reading a word at a time: the bit string is the blocks from the top down, tail clear.
+        // The bitset reading a block at a time: the bit string is the blocks from the top down, tail clear.
         [[nodiscard]] friend constexpr auto bitset_lexicographical_compare_three_way(bit_container const& x, bit_container const& y) noexcept
                 -> std::strong_ordering
         {
@@ -589,7 +589,7 @@ public:
                 return {m_blocks.data(), num_blocks()};
         }
 
-        // Someone else's words as the span that borrows them, writable through a const storage as the span itself is.
+        // Someone else's blocks as the span that borrows them, writable through a const storage as the span itself is.
         [[nodiscard]] constexpr auto borrowed_blocks() const noexcept
                 -> Blocks
                 requires borrowed_block_span<Blocks>
@@ -703,7 +703,7 @@ public:
                 return bytes;
         }
 
-        // A word at any position: the bits [n, n + bits_per_block), the clear tail and nothing beyond.
+        // A block at any position: the bits [n, n + bits_per_block), the clear tail and nothing beyond.
         [[nodiscard]] constexpr auto block_at(std::size_t n) const noexcept
                 -> block_type
         {
@@ -1572,7 +1572,7 @@ private:
                 return num_blocks() - 1UZ;
         }
 
-        // The words a range of positions spans, each with its mask: whole words, a partial one at the end.
+        // The blocks a range of positions spans, each with its mask: whole blocks, a partial one at the end.
         template<class F>
         constexpr auto for_each_block(std::size_t n, std::size_t len, F f) const noexcept
                 -> void

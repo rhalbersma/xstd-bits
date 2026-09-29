@@ -9,7 +9,7 @@
 #include <xstd/bits/bit_storage.hpp>                         // bit_storage
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_base_type, allocator_param_t, has_allocator_v
 #include <xstd/bits/detail/bit_container.hpp>                // bit_container, bit_container_type
-#include <xstd/bits/detail/borrowed_bits.hpp>                // borrow_bits, borrowable_word, borrowable_words, borrowed_bits_t
+#include <xstd/bits/detail/borrowed_bits.hpp>                // borrow_bits, borrowable_block, borrowable_blocks, borrowed_bits_t
 #include <xstd/bits/detail/functor.hpp>                      // invoke_continues
 #include <xstd/bits/detail/hash.hpp>                         // hash_append_bits, std_hash
 #include <xstd/bits/detail/intrin.hpp>                       // countr_zero, popcount
@@ -48,17 +48,17 @@ namespace xstd::bits::detail {
 
 namespace sequence {
 
-// The bits a window's word holds: every one but for the last word, which holds what is left over.
+// The bits a window's block holds: every one but for the last block, which holds what is left over.
 template<class Block>
 [[nodiscard]] constexpr auto partial_block_mask(std::size_t count) noexcept
         -> Block
 {
         constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<Block>::digits);
-        // No shift by digits, which is undefined: a full word is every bit, spelled without one.
+        // No shift by digits, which is undefined: a full block is every bit, spelled without one.
         return count == digits ? static_cast<Block>(~Block{}) : static_cast<Block>(shl(Block{1}, count) - Block{1});
 }
 
-// Every position, lowest first, a word at a time: the reload is the inner loop's exit test.
+// Every position, lowest first, a block at a time: the reload is the inner loop's exit test.
 template<class Bits, class F>
 constexpr auto walk_blocks(Bits const& c, std::size_t offset, std::size_t size, F& f)
         -> void
@@ -77,7 +77,7 @@ constexpr auto walk_blocks(Bits const& c, std::size_t offset, std::size_t size, 
         }
 }
 
-// The three aggregates over a window, masked to what it holds: a word at a time, not a test per bit.
+// The three aggregates over a window, masked to what it holds: a block at a time, not a test per bit.
 template<class Bits>
 [[nodiscard]] constexpr auto count_blocks(Bits const& c, std::size_t offset, std::size_t size) noexcept
         -> std::size_t
@@ -240,7 +240,7 @@ class sequence_adaptor : public std::conditional_t<owns(Store), allocator_base_t
         template<class S>
         static constexpr bool blittable = blit_source<S, typename bits_type::block_type>;
 
-        // A storage taking a masked word at any position, asked of Bits so a const window answers no.
+        // A storage taking a masked block at any position, asked of Bits so a const window answers no.
         static constexpr bool block_writable = requires (Bits& b, std::size_t pos, bits_type::block_type w) { b.block_at(pos, w, w); };
 
         // The container needs constraints only the vehicle can name; [class.friend]/3 ignores the void a view passes.
@@ -352,7 +352,7 @@ public:
                 : m_bits(xstd::from_bit_storage, std::move(blocks), alloc)
         {}
 
-        // Words that are bit storage, read as this sequence's bools; the tag says the words are bits and not elements.
+        // Blocks that are bit storage, read as this sequence's bools; the tag says they are bits and not elements.
         template<class B>
                 requires is_owner and xstd::bit_storage<B> and bits_type::template
         exchanges_bits<B> [[nodiscard]] constexpr sequence_adaptor(xstd::from_bit_storage_t, B const& b) noexcept
@@ -582,11 +582,11 @@ public:
                 : m_bits(&c)
         {}
 
-        // Words handed straight over, held as the storage that borrows them, as std::views::all holds a view.
-        template<class Words>
-                requires (not is_owner) and (not is_window) and (borrowable_word<Words &&> or borrowable_words<Words &&>) and std::same_as<borrowed_bits_t<Words&&>, Bits>
-        [[nodiscard]] constexpr explicit sequence_adaptor(Words&& words) noexcept
-                : m_bits(borrow_bits(std::forward<Words>(words)))
+        // Blocks handed straight over, held as the storage that borrows them, as std::views::all holds a view.
+        template<class Blocks>
+                requires (not is_owner) and (not is_window) and (borrowable_block<Blocks &&> or borrowable_blocks<Blocks &&>) and std::same_as<borrowed_bits_t<Blocks&&>, Bits>
+        [[nodiscard]] constexpr explicit sequence_adaptor(Blocks&& blocks) noexcept
+                : m_bits(borrow_bits(std::forward<Blocks>(blocks)))
         {}
 
         // A view over an owner is a view over the storage it wraps; implicit, claiming nothing the owner lacks.
@@ -663,7 +663,7 @@ public:
                 : sequence_adaptor(&other.bits(), other.offset(), other.size())
         {}
 
-        // fill: a masked word at a time over a window of ours, one position at a time over any other.
+        // fill: a masked block at a time over a window of ours, one position at a time over any other.
         constexpr auto fill(this auto&& self, value_type const& u) noexcept
                 -> void
                 requires (is_window and requires (std::size_t i) { self.bits().assign(i, u); }) or (not is_window and requires { self.bits().fill(u); })
@@ -742,7 +742,7 @@ public:
                 return std::make_reverse_iterator(cbegin());
         }
 
-        // The sequence reading a word at a time, which the range-for cannot be.
+        // The sequence reading a block at a time, which the range-for cannot be.
         template<class F>
                 requires std::invocable<F&, bool>
         constexpr auto for_each(this auto&& self, F f)
@@ -1033,7 +1033,7 @@ public:
 
         // No shifts: this reading already spells moving elements std::shift_left and std::shift_right.
 
-        // Bulk on a window of ours against a source read by block: a word at a time at either alignment.
+        // Bulk on a window of ours against a source read by block: a block at a time at either alignment.
         template<class Other>
         constexpr auto operator&=(this auto&& self, Other const& other) noexcept -> auto&
                 requires is_window and block_writable and blittable<Other>
@@ -1102,7 +1102,7 @@ private:
                 }
         }
 
-        // Its own helper rather than not any_true(), so a storage spelling none() is asked in its words.
+        // Its own helper rather than not any_true(), so a storage spelling none() is asked in its blocks.
         [[nodiscard]] constexpr auto none_true() const noexcept
                 -> bool
         {
@@ -1113,7 +1113,7 @@ private:
                 }
         }
 
-        // Not count() == size(): a clear position ends it, which is what a word that is not all ones says in one test.
+        // Not count() == size(): a clear position ends it, which is what a block that is not all ones says in one test.
         [[nodiscard]] constexpr auto all_true() const noexcept
                 -> bool
         {
@@ -1124,7 +1124,7 @@ private:
                 }
         }
 
-        // The words of this window against another's at its own alignment, masked to what it holds.
+        // The blocks of this window against another's at its own alignment, masked to what it holds.
         template<class Other, class F>
         constexpr auto combine(this auto&& self, Other const& other, F f) noexcept
                 -> void
@@ -1150,7 +1150,7 @@ private:
                 }
         }
 
-        // Tier one: the source's bits as words at its own alignment, appended a word at a time.
+        // Tier one: the source's bits as blocks at its own alignment, appended a block at a time.
         template<class SBits>
         constexpr auto blit(SBits const& src, size_type first, size_type count)
                 -> void
@@ -1173,15 +1173,15 @@ private:
                         }
                         // Grown by the positions left and no further, so a capacity refuses only what does not fit.
                         if (pos < last) {
-                                auto const word = src.block_at(pos);
+                                auto const block = src.block_at(pos);
                                 auto const width = size();
                                 m_bits.resize(width + (last - pos));
-                                m_bits.block_at(width, word, sequence::partial_block_mask<block_type>(last - pos));
+                                m_bits.block_at(width, block, sequence::partial_block_mask<block_type>(last - pos));
                         }
                 }
         }
 
-        // Tier two: the bools packed into words, boost's bit_appender, and the last word trimmed to what it holds.
+        // Tier two: the bools packed into blocks, boost's bit_appender, and the last block trimmed to what it holds.
         template<std::ranges::input_range R>
         constexpr auto pack(R&& rg)
                 -> void

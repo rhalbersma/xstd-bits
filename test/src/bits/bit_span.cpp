@@ -27,13 +27,13 @@ BOOST_AUTO_TEST_SUITE(BitSpan)
 namespace {
 
 using Storage = xstd::bits::detail::bit_container<std::array<std::size_t, 1>, 8>;
-using Words = std::array<std::size_t, 1>;
+using Blocks = std::array<std::size_t, 1>;
 
 template<class T>
 using view_of = decltype(xstd::bit_span(std::declval<T&>()));
 
 // Named rather than a lambda, so the conversion happens at a call boundary the way a caller would meet it.
-constexpr auto takes_a_span(xstd::bit_span<Words, 8> v) noexcept
+constexpr auto takes_a_span(xstd::bit_span<Blocks, 8> v) noexcept
         -> bool
 {
         return v[3];
@@ -44,34 +44,34 @@ constexpr auto takes_a_span(xstd::bit_span<Words, 8> v) noexcept
 // The view is the referring adaptor under another name, and over an owner it refers into the storage the owner wraps.
 BOOST_AUTO_TEST_CASE(TheViewIsTheReferringAdaptor)
 {
-        static_assert(std::derived_from<xstd::bit_span<Words, 8>, xstd::bits::detail::sequence_adaptor<Storage, xstd::bits::detail::storage::borrowed, xstd::bits::detail::window::all, xstd::bit_span<Words, 8>>>);
-        static_assert(std::same_as<view_of<Storage>, xstd::bit_span<Words, 8>>);
-        static_assert(std::same_as<view_of<Storage const>, xstd::bit_span<Words const, 8>>);
-        static_assert(std::same_as<view_of<xstd::bitset<8>>, xstd::bit_span<Words, 8>>);
-        static_assert(std::same_as<view_of<xstd::bit_array<8>>, xstd::bit_span<Words, 8>>);
+        static_assert(std::derived_from<xstd::bit_span<Blocks, 8>, xstd::bits::detail::sequence_adaptor<Storage, xstd::bits::detail::storage::borrowed, xstd::bits::detail::window::all, xstd::bit_span<Blocks, 8>>>);
+        static_assert(std::same_as<view_of<Storage>, xstd::bit_span<Blocks, 8>>);
+        static_assert(std::same_as<view_of<Storage const>, xstd::bit_span<Blocks const, 8>>);
+        static_assert(std::same_as<view_of<xstd::bitset<8>>, xstd::bit_span<Blocks, 8>>);
+        static_assert(std::same_as<view_of<xstd::bit_array<8>>, xstd::bit_span<Blocks, 8>>);
 }
 
 // A bitset is committed to neither reading and a set owner to the set one, so only the first admits a span.
 BOOST_AUTO_TEST_CASE(TheReadingsDoNotMix)
 {
-        static_assert(std::same_as<decltype(xstd::bit_set_view(std::declval<xstd::bit_fixed_set<8>&>())), xstd::bit_set_view<Words, 8>>);
-        static_assert(std::constructible_from<xstd::bit_span<Words, 8>, xstd::bitset<8>&>);
-        static_assert(not std::constructible_from<xstd::bit_span<Words, 8>, xstd::bit_fixed_set<8>&>);
+        static_assert(std::same_as<decltype(xstd::bit_set_view(std::declval<xstd::bit_fixed_set<8>&>())), xstd::bit_set_view<Blocks, 8>>);
+        static_assert(std::constructible_from<xstd::bit_span<Blocks, 8>, xstd::bitset<8>&>);
+        static_assert(not std::constructible_from<xstd::bit_span<Blocks, 8>, xstd::bit_fixed_set<8>&>);
 }
 
 // Viewing an owner is implicit and viewing raw storage is not, which is where span draws the line.
 BOOST_AUTO_TEST_CASE(ViewingAnOwnerIsImplicit)
 {
-        static_assert(std::convertible_to<xstd::bitset<8>&, xstd::bit_span<Words, 8>>);
-        static_assert(std::convertible_to<xstd::bit_array<8>&, xstd::bit_span<Words, 8>>);
-        static_assert(std::convertible_to<xstd::bitset<8> const&, xstd::bit_span<Words const, 8>>);
-        static_assert(not std::convertible_to<xstd::bitset<8> const&, xstd::bit_span<Words, 8>>);
+        static_assert(std::convertible_to<xstd::bitset<8>&, xstd::bit_span<Blocks, 8>>);
+        static_assert(std::convertible_to<xstd::bit_array<8>&, xstd::bit_span<Blocks, 8>>);
+        static_assert(std::convertible_to<xstd::bitset<8> const&, xstd::bit_span<Blocks const, 8>>);
+        static_assert(not std::convertible_to<xstd::bitset<8> const&, xstd::bit_span<Blocks, 8>>);
 
-        static_assert(not std::convertible_to<xstd::bitset<8>, xstd::bit_span<Words, 8>>);
-        static_assert(not std::convertible_to<xstd::bit_array<8>&&, xstd::bit_span<Words, 8>>);
+        static_assert(not std::convertible_to<xstd::bitset<8>, xstd::bit_span<Blocks, 8>>);
+        static_assert(not std::convertible_to<xstd::bit_array<8>&&, xstd::bit_span<Blocks, 8>>);
 
-        static_assert(std::constructible_from<xstd::bit_span<Words, 8>, Storage&>);
-        static_assert(not std::convertible_to<Storage&, xstd::bit_span<Words, 8>>);
+        static_assert(std::constructible_from<xstd::bit_span<Blocks, 8>, Storage&>);
+        static_assert(not std::convertible_to<Storage&, xstd::bit_span<Blocks, 8>>);
 
         auto a = xstd::bit_array<8>();
         a[3] = true;

@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_FROM_BIT_STORAGE_HPP
 #define XSTD_BITS_FROM_BIT_STORAGE_HPP
 
-// The tag that says an argument's words are read as bits, as std::from_range says a range's elements are read.
+// The tag that says an argument's blocks are read as bits, as std::from_range says a range's elements are read.
 namespace xstd {
 
 struct from_bit_storage_t

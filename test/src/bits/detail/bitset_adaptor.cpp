@@ -218,7 +218,7 @@ BOOST_AUTO_TEST_CASE(TheWrappedStoragesAreOursAndTheCounterpartsAreNot)
         static_assert(not wrappable<std::vector<std::uint8_t>>);
 }
 
-// The public name is built on the wrapper over a packed array, with the word type in the open.
+// The public name is built on the wrapper over a packed array, with the block type in the open.
 BOOST_AUTO_TEST_CASE(TheBitsetIsTheWrapperOverAPackedArray)
 {
         static_assert(std::derived_from<xstd::basic_bitset<std::uint8_t, 9>, xstd::bits::detail::bitset_adaptor<xstd::bits::detail::bit_container<std::array<std::uint8_t, 2>, 9>, xstd::basic_bitset<std::uint8_t, 9>>>);
@@ -515,7 +515,7 @@ BOOST_AUTO_TEST_CASE(TheScanWalksWhatIterationWalksAtARunTimeWidth)
         }
 }
 
-// The ordering is the bit string's, to_string() compared, which within a word is the number's.
+// The ordering is the bit string's, to_string() compared, which within a block is the number's.
 BOOST_AUTO_TEST_CASE(TheOrderingIsTheBitStrings)
 {
         static_assert(std::totally_ordered<Ours>);
@@ -779,7 +779,7 @@ BOOST_AUTO_TEST_CASE(TheDerivedMembersHold)
 }
 
 // [bitset.cons]/2 and [bitset.members]/37-40: the word in and out, and the overflow beyond it.
-BOOST_AUTO_TEST_CASE(TheWordConstructorAndConversionsAgreeWithStdBitset)
+BOOST_AUTO_TEST_CASE(TheUllongConstructorAndConversionsAgreeWithStdBitset)
 {
         auto const s = std::bitset<9>(0b101ULL);
         auto const p = Ours(0b101ULL);

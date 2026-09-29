@@ -127,7 +127,7 @@ BOOST_AUTO_TEST_CASE(ACapacityOfNoughtTakesOnlyAnEmptySource)
         BOOST_CHECK(Z(none.begin(), none.end()).empty());
         BOOST_CHECK_THROW(static_cast<void>(Z(some.begin(), some.end())), std::bad_alloc);
 
-        // Bools are packed into words, and a bit sequence of the same block type is copied a word at a time.
+        // Bools are packed into blocks, and a bit sequence of the same block type is copied a block at a time.
         auto z = Z();
         z.append_range(none);
         z.append_range(no_bits);

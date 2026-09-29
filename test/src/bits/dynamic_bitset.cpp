@@ -151,7 +151,7 @@ auto disagreements_against_boost(std::size_t w, std::size_t u, unsigned long lon
 
 } // namespace
 
-// And across blocks at unequal widths, where the top windows are read a word at a time at either alignment.
+// And across blocks at unequal widths, where the top windows are read a block at a time at either alignment.
 BOOST_AUTO_TEST_CASE(TheOrderingIsBoostsAcrossBlocksAtUnequalWidths)
 {
         constexpr auto widths = std::array{0UZ, 3UZ, 8UZ, 9UZ, 16UZ, 17UZ, 25UZ, 70UZ};
@@ -371,7 +371,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItIsAsWideAsItsText, T, Dynamic)
 }
 
 // Appending blocks is the storage's own where it has it: ours has, boost has, and the widths agree.
-BOOST_AUTO_TEST_CASE(AppendingBlocksWidensByAWord)
+BOOST_AUTO_TEST_CASE(AppendingBlocksWidensByABlock)
 {
         using T = xstd::basic_dynamic_bitset<std::uint8_t>;
         auto d = T(3, 0b111ULL);

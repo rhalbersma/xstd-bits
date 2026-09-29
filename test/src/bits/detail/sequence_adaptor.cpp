@@ -345,7 +345,7 @@ constexpr auto every_third = [](std::size_t i) -> bool { return i % 3 == 0; };
 
 } // namespace
 
-// The packing tier over a computed range; two lengths, 128 ending on a word boundary and 70 not.
+// The packing tier over a computed range; two lengths, 128 ending on a block boundary and 70 not.
 BOOST_AUTO_TEST_CASE(TheAppendsPackWhatTheRangeComputes)
 {
         auto d = Dynamic();
@@ -488,7 +488,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheAggregatesAgreeWithTheModel, T, Graded)
         BOOST_CHECK_EQUAL(disagreements, 0UZ);
 }
 
-// The same over a window: a masked word at a time, at every offset and length, so both ends are exercised.
+// The same over a window: a masked block at a time, at every offset and length, so both ends are exercised.
 BOOST_AUTO_TEST_CASE(TheAggregatesAgreeWithTheModelOnAWindowOfOurs)
 {
         using Storage24 = xstd::bits::detail::bit_container<std::array<std::uint8_t, 3>, 24>;

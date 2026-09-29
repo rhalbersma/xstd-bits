@@ -9,11 +9,11 @@
 #include <xstd/bits/bit_storage.hpp>              // bit_storage, bit_storage_extent_v
 #include <xstd/bits/bit_subspan.hpp>              // IWYU pragma: keep; bit_subspan, what first, last and subspan hand back
 #include <xstd/bits/detail/bit_container.hpp>     // bit_container, bit_container_type
-#include <xstd/bits/detail/borrowed_bits.hpp>     // borrowable_word, borrowable_words
+#include <xstd/bits/detail/blocks.hpp>            // blocks_of_t, blocks_width_v, lent_blocks_t, view_storage_t
+#include <xstd/bits/detail/borrowed_bits.hpp>     // borrowable_block, borrowable_blocks
 #include <xstd/bits/detail/ownership.hpp>         // owned_bits_t, owner_reading, reading, storage, window
 #include <xstd/bits/detail/sequence_adaptor.hpp>  // sequence_adaptor
 #include <xstd/bits/detail/views.hpp>             // blit_source, window_of
-#include <xstd/bits/detail/words.hpp>             // lent_words_t, view_storage_t, words_of_t, words_width_v
 #include <boost/container_hash/is_range.hpp>      // is_range
 #include <boost/container_hash/is_tuple_like.hpp> // is_tuple_like
 #include <cstddef>                                // size_t
@@ -36,15 +36,15 @@ public:
 
 // The vehicle's two guides, restated on the view so a consumer deduces the name rather than what it is built on.
 template<bits::detail::bit_container_type Bits>
-bit_span(Bits&) -> bit_span<bits::detail::words_of_t<Bits>, bits::detail::words_width_v<Bits>>;
+bit_span(Bits&) -> bit_span<bits::detail::blocks_of_t<Bits>, bits::detail::blocks_width_v<Bits>>;
 
 template<bits::detail::owner_reading<bits::detail::reading::sequence> Owner>
-bit_span(Owner&) -> bit_span<bits::detail::words_of_t<bits::detail::owned_bits_t<Owner>>, bits::detail::words_width_v<bits::detail::owned_bits_t<Owner>>>;
+bit_span(Owner&) -> bit_span<bits::detail::blocks_of_t<bits::detail::owned_bits_t<Owner>>, bits::detail::blocks_width_v<bits::detail::owned_bits_t<Owner>>>;
 
-// Words handed straight over: a word as itself, a contiguous range as the span that lends it, const where they are.
+// Blocks handed straight over: a block as itself, a contiguous range as the span that lends it, const where they are.
 template<class W>
-        requires bits::detail::borrowable_word<W&&> or bits::detail::borrowable_words<W&&>
-bit_span(W&&) -> bit_span<bits::detail::lent_words_t<W&&>>;
+        requires bits::detail::borrowable_block<W&&> or bits::detail::borrowable_blocks<W&&>
+bit_span(W&&) -> bit_span<bits::detail::lent_blocks_t<W&&>>;
 
 } // namespace xstd
 

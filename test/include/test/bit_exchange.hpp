@@ -23,7 +23,7 @@ concept exchanges_to_bits = requires (Reading const& r) {
         { r.template to_bits<B>() } -> std::same_as<B>;
 };
 
-// Both directions for words that are bit storage, which is what an owner of a static width answers.
+// Both directions for blocks that are bit storage, which is what an owner of a static width answers.
 template<class Reading, class B>
 concept exchanges_bits = exchanges_from_bits<Reading, B> and exchanges_to_bits<Reading, B>;
 

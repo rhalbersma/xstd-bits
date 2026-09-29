@@ -642,7 +642,7 @@ inline constexpr auto is_std_vector_bool_v<std::vector<bool, Allocator>> = true;
 
 #ifdef _MSVC_STL_VERSION
 
-// MSVC's vector<bool>::reserve allocates the words for n unchecked, where [vector.capacity]/5 throws length_error.
+// MSVC's vector<bool>::reserve allocates the blocks for n unchecked, where [vector.capacity]/5 throws length_error.
 inline constexpr auto std_vector_bool_reserve_checks_max_size = false;
 
 #else
@@ -685,7 +685,7 @@ private:
                 if constexpr (reserve_checks_max_size<X>) {
                         throws_length_error(b, n);
                 } else if constexpr (not has_address_sanitizer) {
-                        // No allocator serves that many words, and AddressSanitizer aborts on the request.
+                        // No allocator serves that many blocks, and AddressSanitizer aborts on the request.
                         throws_bad_alloc(b, n);
                 }
         }

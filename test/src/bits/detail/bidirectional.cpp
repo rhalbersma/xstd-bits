@@ -143,10 +143,10 @@ using Bits = xstd::bits::detail::bit_container<std::array<std::uint64_t, 4>, 200
 
 BOOST_AUTO_TEST_CASE(AnIteratorIsAPointerAndAPosition)
 {
-        constexpr auto two_words = 2UZ * sizeof(void*);
+        constexpr auto two_pointers = 2UZ * sizeof(void*);
 
-        static_assert(sizeof(xstd::bits::detail::bidirectional_bit_iterator<Bits>) == two_words);
-        static_assert(sizeof(xstd::bits::detail::bidirectional_bit_reference<Bits>) == two_words);
+        static_assert(sizeof(xstd::bits::detail::bidirectional_bit_iterator<Bits>) == two_pointers);
+        static_assert(sizeof(xstd::bits::detail::bidirectional_bit_reference<Bits>) == two_pointers);
 }
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheSetIteratorIsBidirectional, T, ArrayTypes)

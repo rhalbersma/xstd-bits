@@ -17,7 +17,7 @@
 
 namespace {
 
-inline constexpr auto bits_per_word = 64UZ;
+inline constexpr auto bits_per_block = 64UZ;
 
 // The same bit pattern in every subject, so the three variants differ only in how the bits are reached.
 constexpr auto is_set(std::size_t i)
@@ -121,7 +121,7 @@ auto sequence_count_view_of_storage(benchmark::State& state)
         }
 }
 
-// The sequence reading element-wise: a random read, with at() on the hot path and no word-parallelism.
+// The sequence reading element-wise: a random read, with at() on the hot path and no block-parallelism.
 
 constexpr auto next_index(std::uint64_t& lcg, std::size_t n)
         -> std::size_t
@@ -157,12 +157,12 @@ auto sequence_read_view_of_storage(benchmark::State& state)
 
 } // namespace
 
-// From four words up.
+// From four blocks up.
 #define LADDER(fn) \
-        BENCHMARK_TEMPLATE(fn, 4UZ * bits_per_word); \
-        BENCHMARK_TEMPLATE(fn, 16UZ * bits_per_word); \
-        BENCHMARK_TEMPLATE(fn, 64UZ * bits_per_word); \
-        BENCHMARK_TEMPLATE(fn, 256UZ * bits_per_word)
+        BENCHMARK_TEMPLATE(fn, 4UZ * bits_per_block); \
+        BENCHMARK_TEMPLATE(fn, 16UZ * bits_per_block); \
+        BENCHMARK_TEMPLATE(fn, 64UZ * bits_per_block); \
+        BENCHMARK_TEMPLATE(fn, 256UZ * bits_per_block)
 
 LADDER(set_iterate_owner);
 LADDER(set_iterate_owner_twin);

@@ -8,7 +8,7 @@
 
 #include <test/flat_set.hpp>                        // IWYU pragma: keep; TEST_HAS_FLAT_SET, flat_set
 #include <test/inplace_vector.hpp>                  // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
-#include <test/minimal_words.hpp>                   // minimal_words
+#include <test/minimal_blocks.hpp>                  // minimal_blocks
 #include <test/spec/sequence.hpp>                   // all, pairs, sequences
 #include <test/spec/set.hpp>                        // all, pairs, pairs_with_doubletons, sets
 #include <xstd/bits/bit_bounded_set.hpp>            // basic_bit_bounded_set
@@ -59,7 +59,7 @@ template<class Block, std::size_t N, class Allocator>
 inline constexpr auto constant_evaluable_v<xstd::basic_bit_small_vector<Block, N, Allocator>> = false;
 
 template<class Block>
-inline constexpr auto constant_evaluable_v<xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_container<test::minimal_words<Block>>>> = false;
+inline constexpr auto constant_evaluable_v<xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_container<test::minimal_blocks<Block>>>> = false;
 
 #ifndef XSTD_BITS_HAS_CONSTEXPR_BOUNDED
 

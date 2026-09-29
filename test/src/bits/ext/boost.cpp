@@ -29,7 +29,7 @@ namespace {
 inline constexpr auto N = 256UZ;
 
 // Three bytes held inline: a storage from outside the standard library, with a capacity of 24 bits.
-using small_words = boost::container::static_vector<std::uint8_t, 3>;
+using small_blocks = boost::container::static_vector<std::uint8_t, 3>;
 
 } // namespace
 
@@ -84,8 +84,8 @@ BOOST_AUTO_TEST_CASE(TheMovesAreAsNothrowAsTheSmallVectors)
 // A storage the library does not ship meets the storage contract as it comes: no trait, no wrapper.
 BOOST_AUTO_TEST_CASE(AStaticVectorIsAStorageTheSetReadingTakes)
 {
-        static_assert(xstd::owned_bit_storage<small_words> and xstd::resizable_bit_storage<small_words>);
-        static_assert(test::set::bit_set<xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_container<small_words>>>);
+        static_assert(xstd::owned_bit_storage<small_blocks> and xstd::resizable_bit_storage<small_blocks>);
+        static_assert(test::set::bit_set<xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_container<small_blocks>>>);
         BOOST_CHECK(true);
 }
 

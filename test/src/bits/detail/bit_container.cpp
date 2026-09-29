@@ -4,7 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/array_storage.hpp>                     // array_storage
-#include <test/block_types.hpp>                       // digits_v, graded_extents, word_types
+#include <test/block_types.hpp>                       // block_types, digits_v, graded_extents
 #include <test/uint128.hpp>                           // IWYU pragma: keep; TEST_HAS_UINT128, uint128
 #include <xstd/bits/bit_storage.hpp>                  // owned_bit_storage
 #include <xstd/bits/detail/bit_container.hpp>         // bit_container
@@ -674,7 +674,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AStaticWidthAgreesWithTheModel, T, test::graded_ex
 }
 
 // The run-time width, at the same grading: within one block, and across boundaries either side.
-BOOST_AUTO_TEST_CASE_TEMPLATE(ARunTimeWidthAgreesWithTheModel, Block, test::word_types)
+BOOST_AUTO_TEST_CASE_TEMPLATE(ARunTimeWidthAgreesWithTheModel, Block, test::block_types)
 {
         using T = xstd::bits::detail::bit_container<std::vector<Block>>;
         constexpr auto D = test::digits_v<Block>;
@@ -788,7 +788,7 @@ auto append_to(model& m, Block value)
         -> void
 {
         for (auto const i : std::views::iota(0UZ, test::digits_v<Block>)) {
-                // Cast back before the mask: a shifted narrow word is an int to bugprone-signed-bitwise.
+                // Cast back before the mask: a shifted narrow block is an int to bugprone-signed-bitwise.
                 m.push_back((static_cast<Block>(value >> i) & Block{1}) != Block{0});
         }
 }
@@ -821,7 +821,7 @@ template<class Block>
 } // namespace
 
 // Every resize path: each graded width to each other, both fill values, against the model and a fresh build.
-BOOST_AUTO_TEST_CASE_TEMPLATE(ResizingKeepsTheModelAndTheUnusedTailClear, Block, test::word_types)
+BOOST_AUTO_TEST_CASE_TEMPLATE(ResizingKeepsTheModelAndTheUnusedTailClear, Block, test::block_types)
 {
         using T = xstd::bits::detail::bit_container<std::vector<Block>>;
 
@@ -843,7 +843,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ResizingKeepsTheModelAndTheUnusedTailClear, Block,
 }
 
 // push_back and pop_back are resize by one, checked at every width on the way up and back down.
-BOOST_AUTO_TEST_CASE_TEMPLATE(PushingAndPoppingAreResizeByOne, Block, test::word_types)
+BOOST_AUTO_TEST_CASE_TEMPLATE(PushingAndPoppingAreResizeByOne, Block, test::block_types)
 {
         using T = xstd::bits::detail::bit_container<std::vector<Block>>;
         constexpr auto D = test::digits_v<Block>;
@@ -869,7 +869,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(PushingAndPoppingAreResizeByOne, Block, test::word
 }
 
 // Boost's append: a whole block at once, split across two where unaligned; at width zero it is the first block.
-BOOST_AUTO_TEST_CASE_TEMPLATE(AppendingABlockSplitsItAtAnUnalignedWidth, Block, test::word_types)
+BOOST_AUTO_TEST_CASE_TEMPLATE(AppendingABlockSplitsItAtAnUnalignedWidth, Block, test::block_types)
 {
         using T = xstd::bits::detail::bit_container<std::vector<Block>>;
 
@@ -895,7 +895,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AppendingABlockSplitsItAtAnUnalignedWidth, Block, 
 }
 
 // The width-zero range append, where the bulk path pushes onto no blocks at all.
-BOOST_AUTO_TEST_CASE_TEMPLATE(AppendingARangeFromEmptyAgreesWithTheModel, Block, test::word_types)
+BOOST_AUTO_TEST_CASE_TEMPLATE(AppendingARangeFromEmptyAgreesWithTheModel, Block, test::block_types)
 {
         using T = xstd::bits::detail::bit_container<std::vector<Block>>;
         auto const blocks = std::array{striped<Block>(), static_cast<Block>(~striped<Block>()), Block{1}};
@@ -1236,7 +1236,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AllThreeOrderingsAgreeWithTheirReading, T, test::g
 }
 
 // The same at a run-time width, which shares no instantiation with the static one.
-BOOST_AUTO_TEST_CASE_TEMPLATE(AllThreeOrderingsAgreeAtARunTimeWidth, Block, test::word_types)
+BOOST_AUTO_TEST_CASE_TEMPLATE(AllThreeOrderingsAgreeAtARunTimeWidth, Block, test::block_types)
 {
         using T = xstd::bits::detail::bit_container<std::vector<Block>>;
         constexpr auto D = test::digits_v<Block>;
@@ -1326,7 +1326,7 @@ BOOST_AUTO_TEST_CASE(TheAllocatorAndTheMaximumWidth)
 }
 
 // The three ceilings a reading can ask for: the storage computes all three and keeps none of them.
-BOOST_AUTO_TEST_CASE_TEMPLATE(TheThreeCeilingsAreComputedHereAndKeptAbove, Block, test::word_types)
+BOOST_AUTO_TEST_CASE_TEMPLATE(TheThreeCeilingsAreComputedHereAndKeptAbove, Block, test::block_types)
 {
         using V = xstd::bits::detail::bit_container<std::vector<Block>>;
         constexpr auto top = std::numeric_limits<std::size_t>::max();
@@ -1410,14 +1410,14 @@ BOOST_AUTO_TEST_CASE(TheBlockCountIsTotalAndTheSumThatReachesItSaturates)
         BOOST_CHECK_EQUAL(v.count(), 2UZ);
 }
 
-// A word read and written at any position, and the ranged forms over it: both at a static width and at a run-time one.
-using WordTypes = std::tuple<xstd::bits::detail::bit_container<std::array<std::uint8_t, 3>, 20>, xstd::bits::detail::bit_container<std::vector<std::uint8_t>>>;
+// A block read and written at any position, and the ranged forms over it: both at a static width and at a run-time one.
+using BlockAtTypes = std::tuple<xstd::bits::detail::bit_container<std::array<std::uint8_t, 3>, 20>, xstd::bits::detail::bit_container<std::vector<std::uint8_t>>>;
 
 namespace {
 
-// Twenty bits with a fixed pattern, grown first where the width is a run-time one: the sample both word cases read.
+// Twenty bits with a fixed pattern, grown first where the width is a run-time one: the sample both block cases read.
 template<class T>
-auto word_sample()
+auto block_at_sample()
         -> T
 {
         auto b = T();
@@ -1450,7 +1450,7 @@ template<class T>
 auto check_ranged_forms(std::size_t n, std::size_t len)
         -> void
 {
-        auto e = word_sample<T>();
+        auto e = block_at_sample<T>();
         auto r = reference(e);
 
         e.set(n, len, true);
@@ -1474,9 +1474,9 @@ auto check_ranged_forms(std::size_t n, std::size_t len)
 
 } // namespace
 
-BOOST_AUTO_TEST_CASE_TEMPLATE(WordsAreReadAndWrittenAtAnyPosition, T, WordTypes)
+BOOST_AUTO_TEST_CASE_TEMPLATE(BlocksAreReadAndWrittenAtAnyPosition, T, BlockAtTypes)
 {
-        auto const c = word_sample<T>();
+        auto const c = block_at_sample<T>();
         // Blocks: 0b1000'1001, 0b1001'0001, 0b0000'1000.
         BOOST_CHECK_EQUAL(c.block_at(0UZ), 0b1000'1001);
         BOOST_CHECK_EQUAL(c.block_at(8UZ), 0b1001'0001);
@@ -1486,7 +1486,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(WordsAreReadAndWrittenAtAnyPosition, T, WordTypes)
         BOOST_CHECK_EQUAL(c.block_at(17UZ), 0b0000'0100);
 
         // block_at lands the masked bits and nothing else, the mask never selecting past size().
-        auto d = word_sample<T>();
+        auto d = block_at_sample<T>();
         d.block_at(3UZ, 0b1111'1111, 0b0001'1110);
         auto m = reference(c);
         for (auto const i : {4UZ, 5UZ, 6UZ, 7UZ}) {
@@ -1506,8 +1506,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(WordsAreReadAndWrittenAtAnyPosition, T, WordTypes)
         BOOST_CHECK_EQUAL(d.block(2), 0b0000'1111);
 }
 
-// The ranged forms: every start and length, whole words and partial ones, against the model.
-BOOST_AUTO_TEST_CASE_TEMPLATE(TheRangedFormsGoAWordAtATime, T, WordTypes)
+// The ranged forms: every start and length, whole blocks and partial ones, against the model.
+BOOST_AUTO_TEST_CASE_TEMPLATE(TheRangedFormsGoABlockAtATime, T, BlockAtTypes)
 {
         constexpr auto D = 8UZ;
         for (auto const n : {0UZ, 1UZ, 7UZ, 8UZ, 9UZ, 15UZ}) {
@@ -1520,10 +1520,10 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheRangedFormsGoAWordAtATime, T, WordTypes)
 }
 
 // Three blocks with no tail, so a shift's destination block is exactly the splice and nothing masks it afterwards.
-using AlignedWordTypes = std::tuple<xstd::bits::detail::bit_container<std::array<std::uint8_t, 3>, 24>, xstd::bits::detail::bit_container<std::vector<std::uint8_t>>>;
+using AlignedBlockAtTypes = std::tuple<xstd::bits::detail::bit_container<std::array<std::uint8_t, 3>, 24>, xstd::bits::detail::bit_container<std::vector<std::uint8_t>>>;
 
 // The identity behind one primitive for all three sites: a left shift reads one block lower than a right.
-BOOST_AUTO_TEST_CASE_TEMPLATE(BothShiftsAreWordAtOnTheOperand, T, AlignedWordTypes)
+BOOST_AUTO_TEST_CASE_TEMPLATE(BothShiftsAreBlockAtOnTheOperand, T, AlignedBlockAtTypes)
 {
         constexpr auto D = 8UZ;
         auto const c = aligned_sample<T>();

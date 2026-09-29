@@ -17,7 +17,7 @@
 // Between any two things that have bit storage of one width: the blocks are copied, whatever reading each presents.
 namespace xstd {
 
-// T has bit storage of a width fixed at compile time: one of ours, a word or an array of them, or a field it proves.
+// T has bit storage of a width fixed at compile time: one of ours, a block or an array of them, or a field it proves.
 template<class T>
 concept bit_castable =
         bits::detail::bit_width_v<T> != std::dynamic_extent and

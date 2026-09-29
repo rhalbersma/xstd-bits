@@ -10,7 +10,7 @@
 #include <xstd/bits/detail/allocator_base_type.hpp>  // allocator_base_type, allocator_param_t, has_allocator_v
 #include <xstd/bits/detail/bidirectional.hpp>        // bidirectional_bit_iterator, bidirectional_bit_reference
 #include <xstd/bits/detail/bit_container.hpp>        // bit_container, bit_container_type
-#include <xstd/bits/detail/borrowed_bits.hpp>        // borrow_bits, borrowable_word, borrowable_words, borrowed_bits_t
+#include <xstd/bits/detail/borrowed_bits.hpp>        // borrow_bits, borrowable_block, borrowable_blocks, borrowed_bits_t
 #include <xstd/bits/detail/functor.hpp>              // decay_copy
 #include <xstd/bits/detail/hash.hpp>                 // hash_append_bits, hash_append_positions, std_hash
 #include <xstd/bits/detail/intrin.hpp>               // countl_zero, countr_zero
@@ -299,7 +299,7 @@ public:
                 : m_bits(xstd::from_bit_storage, std::move(blocks), alloc)
         {}
 
-        // Words that are bit storage, read as this set's positions; the tag says the words are bits and not keys.
+        // Blocks that are bit storage, read as this set's positions; the tag says the blocks are bits and not keys.
         template<class B>
                 requires is_owner and xstd::bit_storage<B> and Bits::template
         exchanges_bits<B> [[nodiscard]] constexpr set_adaptor(xstd::from_bit_storage_t, B const& b) noexcept
@@ -321,11 +321,11 @@ public:
                 : m_bits(&c)
         {}
 
-        // Words handed straight over, held as the storage that borrows them, as std::views::all holds a view.
-        template<class Words>
-                requires (not is_owner) and (borrowable_word<Words &&> or borrowable_words<Words &&>) and std::same_as<borrowed_bits_t<Words&&>, Bits>
-        [[nodiscard]] constexpr explicit set_adaptor(Words&& words) noexcept
-                : m_bits(borrow_bits(std::forward<Words>(words)))
+        // Blocks handed straight over, held as the storage that borrows them, as std::views::all holds a view.
+        template<class Blocks>
+                requires (not is_owner) and (borrowable_block<Blocks &&> or borrowable_blocks<Blocks &&>) and std::same_as<borrowed_bits_t<Blocks&&>, Bits>
+        [[nodiscard]] constexpr explicit set_adaptor(Blocks&& blocks) noexcept
+                : m_bits(borrow_bits(std::forward<Blocks>(blocks)))
         {}
 
         // A view over an owner is a view over the storage it wraps; implicit, claiming nothing the owner lacks.

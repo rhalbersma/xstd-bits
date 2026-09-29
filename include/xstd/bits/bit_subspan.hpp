@@ -8,10 +8,10 @@
 
 #include <xstd/bits/bit_storage.hpp>              // bit_storage, bit_storage_extent_v
 #include <xstd/bits/detail/bit_container.hpp>     // bit_container, bit_container_type
+#include <xstd/bits/detail/blocks.hpp>            // blocks_of_t, blocks_width_v, view_storage_t
 #include <xstd/bits/detail/ownership.hpp>         // owned_bits_t, owner_reading, reading, storage, window
 #include <xstd/bits/detail/sequence_adaptor.hpp>  // sequence_adaptor
 #include <xstd/bits/detail/views.hpp>             // blit_source, window_of
-#include <xstd/bits/detail/words.hpp>             // view_storage_t, words_of_t, words_width_v
 #include <boost/container_hash/is_range.hpp>      // is_range
 #include <boost/container_hash/is_tuple_like.hpp> // is_tuple_like
 #include <cstddef>                                // size_t
@@ -36,10 +36,10 @@ public:
 
 // The vehicle's two guides, restated on the view so a consumer deduces the name rather than what it is built on.
 template<bits::detail::bit_container_type Bits>
-bit_subspan(Bits&) -> bit_subspan<bits::detail::words_of_t<Bits>, std::dynamic_extent, bits::detail::words_width_v<Bits>>;
+bit_subspan(Bits&) -> bit_subspan<bits::detail::blocks_of_t<Bits>, std::dynamic_extent, bits::detail::blocks_width_v<Bits>>;
 
 template<bits::detail::owner_reading<bits::detail::reading::sequence> Owner>
-bit_subspan(Owner&) -> bit_subspan<bits::detail::words_of_t<bits::detail::owned_bits_t<Owner>>, std::dynamic_extent, bits::detail::words_width_v<bits::detail::owned_bits_t<Owner>>>;
+bit_subspan(Owner&) -> bit_subspan<bits::detail::blocks_of_t<bits::detail::owned_bits_t<Owner>>, std::dynamic_extent, bits::detail::blocks_width_v<bits::detail::owned_bits_t<Owner>>>;
 
 } // namespace xstd
 

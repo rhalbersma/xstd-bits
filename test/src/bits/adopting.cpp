@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/minimal_words.hpp>                // minimal_words
+#include <test/minimal_blocks.hpp>               // minimal_blocks
 #include <xstd/bits/bit_array.hpp>               // bit_array
 #include <xstd/bits/bit_bounded_set.hpp>         // basic_bit_bounded_set
 #include <xstd/bits/bit_bounded_vector.hpp>      // basic_bit_bounded_vector
@@ -103,10 +103,10 @@ BOOST_AUTO_TEST_CASE(OnlyARunTimeWidthAdopts)
 // A storage written outside the library is adopted the same way by the reading's adaptor over it.
 BOOST_AUTO_TEST_CASE(AnyResizableStorageIsAdopted)
 {
-        using words_type = test::minimal_words<std::uint8_t>;
-        auto words = words_type();
-        words.push_back(0x80);
-        auto const v = xstd::bits::detail::sequence_adaptor<xstd::bits::detail::bit_container<words_type>, xstd::bits::detail::storage::owned, xstd::bits::detail::window::all>(xstd::from_bit_storage, std::move(words));
+        using blocks_type = test::minimal_blocks<std::uint8_t>;
+        auto blocks = blocks_type();
+        blocks.push_back(0x80);
+        auto const v = xstd::bits::detail::sequence_adaptor<xstd::bits::detail::bit_container<blocks_type>, xstd::bits::detail::storage::owned, xstd::bits::detail::window::all>(xstd::from_bit_storage, std::move(blocks));
         BOOST_CHECK(v.size() == 8UZ and v[7] and not v[0]);
 }
 
