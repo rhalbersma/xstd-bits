@@ -6,40 +6,40 @@
 #ifndef XSTD_BITS_DETAIL_SET_ADAPTOR_HPP
 #define XSTD_BITS_DETAIL_SET_ADAPTOR_HPP
 
-#include <xstd/bits/bit_storage.hpp>                     // bit_storage
-#include <xstd/bits/detail/allocator_base_type.hpp>      // allocator_base_type, allocator_param_t, has_allocator_v
-#include <xstd/bits/detail/bidirectional.hpp>            // bidirectional_bit_iterator, bidirectional_bit_reference
-#include <xstd/bits/detail/borrowed_bits.hpp>            // borrow_bits, borrowable_word, borrowable_words, borrowed_bits_t
-#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container, contiguous_bit_container_type
-#include <xstd/bits/detail/functor.hpp>                  // decay_copy
-#include <xstd/bits/detail/hash.hpp>                     // hash_append_bits, hash_append_positions, std_hash
-#include <xstd/bits/detail/intrin.hpp>                   // countl_zero, countr_zero
-#include <xstd/bits/detail/ownership.hpp>                // owned_bits_t, owned_storage, owner_of, owner_reading, storage, owns
-#include <xstd/bits/detail/shift.hpp>                    // shl, shr
-#include <xstd/bits/detail/storage_ptr.hpp>              // storage_ref_t
-#include <xstd/bits/detail/zero_width.hpp>               // zero_width
-#include <xstd/bits/from_bit_storage.hpp>                // from_bit_storage_t
-#include <xstd/misc/type_traits/empty_base_type.hpp>     // empty_base_type
-#include <boost/container_hash/is_range.hpp>             // is_range
-#include <boost/hash2/hash_append.hpp>                   // hash_append_tag
-#include <algorithm>                                     // all_of, find_if, lexicographical_compare_three_way, max, min
-#include <cassert>                                       // assert
-#include <compare>                                       // strong_ordering
-#include <concepts>                                      // constructible_from, convertible_to, invocable, same_as, swappable
-#include <cstddef>                                       // ptrdiff_t, size_t
-#include <format>                                        // format
-#include <functional>                                    // hash, less
-#include <initializer_list>                              // initializer_list
-#include <iterator>                                      // input_iterator, iter_reference_t, make_reverse_iterator, reverse_iterator, sentinel_for
-#include <new>                                           // bad_alloc
-#include <ranges>                                        // begin, enable_borrowed_range, enable_view, end, input_range, iota, range_reference_t, from_range_t, swap, transform
-#include <source_location>                               // source_location
-#include <span>                                          // dynamic_extent
-#include <stdexcept>                                     // out_of_range
-#include <type_traits>                                   // conditional_t, false_type, is_invocable_r_v, is_nothrow_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
-#include <utility>                                       // declval, forward, move, pair
+#include <xstd/bits/bit_storage.hpp>                 // bit_storage
+#include <xstd/bits/detail/allocator_base_type.hpp>  // allocator_base_type, allocator_param_t, has_allocator_v
+#include <xstd/bits/detail/bidirectional.hpp>        // bidirectional_bit_iterator, bidirectional_bit_reference
+#include <xstd/bits/detail/bit_container.hpp>        // bit_container, bit_container_type
+#include <xstd/bits/detail/borrowed_bits.hpp>        // borrow_bits, borrowable_word, borrowable_words, borrowed_bits_t
+#include <xstd/bits/detail/functor.hpp>              // decay_copy
+#include <xstd/bits/detail/hash.hpp>                 // hash_append_bits, hash_append_positions, std_hash
+#include <xstd/bits/detail/intrin.hpp>               // countl_zero, countr_zero
+#include <xstd/bits/detail/ownership.hpp>            // owned_bits_t, owned_storage, owner_of, owner_reading, storage, owns
+#include <xstd/bits/detail/shift.hpp>                // shl, shr
+#include <xstd/bits/detail/storage_ptr.hpp>          // storage_ref_t
+#include <xstd/bits/detail/zero_width.hpp>           // zero_width
+#include <xstd/bits/from_bit_storage.hpp>            // from_bit_storage_t
+#include <xstd/misc/type_traits/empty_base_type.hpp> // empty_base_type
+#include <boost/container_hash/is_range.hpp>         // is_range
+#include <boost/hash2/hash_append.hpp>               // hash_append_tag
+#include <algorithm>                                 // all_of, find_if, lexicographical_compare_three_way, max, min
+#include <cassert>                                   // assert
+#include <compare>                                   // strong_ordering
+#include <concepts>                                  // constructible_from, convertible_to, invocable, same_as, swappable
+#include <cstddef>                                   // ptrdiff_t, size_t
+#include <format>                                    // format
+#include <functional>                                // hash, less
+#include <initializer_list>                          // initializer_list
+#include <iterator>                                  // input_iterator, iter_reference_t, make_reverse_iterator, reverse_iterator, sentinel_for
+#include <new>                                       // bad_alloc
+#include <ranges>                                    // begin, enable_borrowed_range, enable_view, end, input_range, iota, range_reference_t, from_range_t, swap, transform
+#include <source_location>                           // source_location
+#include <span>                                      // dynamic_extent
+#include <stdexcept>                                 // out_of_range
+#include <type_traits>                               // conditional_t, false_type, is_invocable_r_v, is_nothrow_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
+#include <utility>                                   // declval, forward, move, pair
 
-// The set reading, [set] over a contiguous_bit_container, owning it or referring to it.
+// The set reading, [set] over a bit_container, owning it or referring to it.
 namespace xstd::bits::detail {
 
 namespace set {
@@ -111,7 +111,7 @@ constexpr auto walk_blocks_descending(Bits const& c, F& f)
 
 } // namespace set
 
-template<contiguous_bit_container_type Bits, storage Store = storage::owned, class Derived = void>
+template<bit_container_type Bits, storage Store = storage::owned, class Derived = void>
 class set_adaptor : public std::conditional_t<owns(Store), allocator_base_type<std::remove_const_t<Bits>, set_adaptor<Bits, Store, Derived>>, xstd::empty_base_type<>>
 {
         static constexpr bool is_owner = owns(Store);
@@ -136,7 +136,7 @@ class set_adaptor : public std::conditional_t<owns(Store), allocator_base_type<s
         friend Derived;
 
         // A view refers into this owner's storage, and only a reading that can view it is named.
-        template<contiguous_bit_container_type, storage, class>
+        template<bit_container_type, storage, class>
         friend class set_adaptor;
 
         // The value under the set reading: the bits at a static width, the positions at a run-time one.

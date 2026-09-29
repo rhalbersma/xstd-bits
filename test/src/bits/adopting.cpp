@@ -3,31 +3,31 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/minimal_words.hpp>                        // minimal_words
-#include <xstd/bits/bit_array.hpp>                       // bit_array
-#include <xstd/bits/bit_bounded_set.hpp>                 // basic_bit_bounded_set
-#include <xstd/bits/bit_bounded_vector.hpp>              // basic_bit_bounded_vector
-#include <xstd/bits/bit_set.hpp>                         // basic_bit_set, bit_set
-#include <xstd/bits/bit_vector.hpp>                      // basic_bit_vector, bit_vector
-#include <xstd/bits/bounded_bitset.hpp>                  // basic_bounded_bitset
-#include <xstd/bits/detail/bounded_blocks.hpp>           // bounded_blocks
-#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
-#include <xstd/bits/detail/ownership.hpp>                // storage, window
-#include <xstd/bits/detail/sequence_adaptor.hpp>         // sequence_adaptor
-#include <xstd/bits/dynamic_bitset.hpp>                  // basic_dynamic_bitset
-#include <xstd/bits/ext/boost/bit_small_set.hpp>         // basic_bit_small_set
-#include <xstd/bits/from_bit_storage.hpp>                // from_bit_storage, from_bit_storage_t
-#include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <algorithm>                                     // equal
-#include <concepts>                                      // same_as
-#include <cstddef>                                       // size_t
-#include <cstdint>                                       // uint8_t
-#include <memory>                                        // allocator
-#include <memory_resource>                               // new_delete_resource, polymorphic_allocator, unsynchronized_pool_resource
-#include <tuple>                                         // tuple
-#include <type_traits>                                   // is_constructible_v, is_nothrow_constructible_v
-#include <utility>                                       // move
-#include <vector>                                        // vector
+#include <test/minimal_words.hpp>                // minimal_words
+#include <xstd/bits/bit_array.hpp>               // bit_array
+#include <xstd/bits/bit_bounded_set.hpp>         // basic_bit_bounded_set
+#include <xstd/bits/bit_bounded_vector.hpp>      // basic_bit_bounded_vector
+#include <xstd/bits/bit_set.hpp>                 // basic_bit_set, bit_set
+#include <xstd/bits/bit_vector.hpp>              // basic_bit_vector, bit_vector
+#include <xstd/bits/bounded_bitset.hpp>          // basic_bounded_bitset
+#include <xstd/bits/detail/bit_container.hpp>    // bit_container
+#include <xstd/bits/detail/bounded_blocks.hpp>   // bounded_blocks
+#include <xstd/bits/detail/ownership.hpp>        // storage, window
+#include <xstd/bits/detail/sequence_adaptor.hpp> // sequence_adaptor
+#include <xstd/bits/dynamic_bitset.hpp>          // basic_dynamic_bitset
+#include <xstd/bits/ext/boost/bit_small_set.hpp> // basic_bit_small_set
+#include <xstd/bits/from_bit_storage.hpp>        // from_bit_storage, from_bit_storage_t
+#include <boost/test/unit_test.hpp>              // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <algorithm>                             // equal
+#include <concepts>                              // same_as
+#include <cstddef>                               // size_t
+#include <cstdint>                               // uint8_t
+#include <memory>                                // allocator
+#include <memory_resource>                       // new_delete_resource, polymorphic_allocator, unsynchronized_pool_resource
+#include <tuple>                                 // tuple
+#include <type_traits>                           // is_constructible_v, is_nothrow_constructible_v
+#include <utility>                               // move
+#include <vector>                                // vector
 
 BOOST_AUTO_TEST_SUITE(Adopting)
 
@@ -106,7 +106,7 @@ BOOST_AUTO_TEST_CASE(AnyResizableStorageIsAdopted)
         using words_type = test::minimal_words<std::uint8_t>;
         auto words = words_type();
         words.push_back(0x80);
-        auto const v = xstd::bits::detail::sequence_adaptor<xstd::bits::detail::contiguous_bit_container<words_type>, xstd::bits::detail::storage::owned, xstd::bits::detail::window::all>(xstd::from_bit_storage, std::move(words));
+        auto const v = xstd::bits::detail::sequence_adaptor<xstd::bits::detail::bit_container<words_type>, xstd::bits::detail::storage::owned, xstd::bits::detail::window::all>(xstd::from_bit_storage, std::move(words));
         BOOST_CHECK(v.size() == 8UZ and v[7] and not v[0]);
 }
 

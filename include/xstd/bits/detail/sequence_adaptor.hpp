@@ -8,8 +8,8 @@
 
 #include <xstd/bits/bit_storage.hpp>                         // bit_storage
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_base_type, allocator_param_t, has_allocator_v
+#include <xstd/bits/detail/bit_container.hpp>                // bit_container, bit_container_type
 #include <xstd/bits/detail/borrowed_bits.hpp>                // borrow_bits, borrowable_word, borrowable_words, borrowed_bits_t
-#include <xstd/bits/detail/contiguous_bit_container.hpp>     // contiguous_bit_container, contiguous_bit_container_type
 #include <xstd/bits/detail/functor.hpp>                      // invoke_continues
 #include <xstd/bits/detail/hash.hpp>                         // hash_append_bits, std_hash
 #include <xstd/bits/detail/intrin.hpp>                       // countr_zero, popcount
@@ -43,7 +43,7 @@
 #include <type_traits>                                       // conditional_t, false_type, is_nothrow_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
 #include <utility>                                           // as_const, declval, forward, move, pair
 
-// The sequence reading, [array] over a contiguous_bit_container, owning it or referring to it.
+// The sequence reading, [array] over a bit_container, owning it or referring to it.
 namespace xstd::bits::detail {
 
 namespace sequence {
@@ -131,7 +131,7 @@ using block_type_of = std::remove_const_t<Bits>::block_type;
 
 } // namespace sequence
 
-template<contiguous_bit_container_type Bits, storage Store = storage::owned, window W = window::all, class Derived = void, std::size_t E = std::dynamic_extent>
+template<bit_container_type Bits, storage Store = storage::owned, window W = window::all, class Derived = void, std::size_t E = std::dynamic_extent>
 class sequence_adaptor;
 
 // The window a view hands back, which each public view specializes; the vehicle used directly windows itself.
@@ -151,7 +151,7 @@ inline constexpr bool blit_source = false;
 template<class Bits, storage Store, window W, class Derived, std::size_t E, class Block>
 inline constexpr bool blit_source<sequence_adaptor<Bits, Store, W, Derived, E>, Block> = std::same_as<sequence::block_type_of<Bits>, Block>;
 
-template<contiguous_bit_container_type Bits, storage Store, window W, class Derived, std::size_t E>
+template<bit_container_type Bits, storage Store, window W, class Derived, std::size_t E>
 class sequence_adaptor : public std::conditional_t<owns(Store), allocator_base_type<std::remove_const_t<Bits>, sequence_adaptor<Bits, Store, W, Derived, E>>, xstd::empty_base_type<>>
 {
         static constexpr bool is_owner = owns(Store);
@@ -247,7 +247,7 @@ class sequence_adaptor : public std::conditional_t<owns(Store), allocator_base_t
         friend Derived;
 
         // A view refers into this owner's storage, and only a reading that can view it is named.
-        template<contiguous_bit_container_type, storage, window, class, std::size_t>
+        template<bit_container_type, storage, window, class, std::size_t>
         friend class sequence_adaptor;
 
         // The value under the sequence reading, the owner's alone: a view follows span and hashes no more.

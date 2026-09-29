@@ -3,25 +3,25 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/inplace_vector.hpp>                       // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
-#include <test/minimal_words.hpp>                        // minimal_words
-#include <xstd/bits/bit_array.hpp>                       // bit_array
-#include <xstd/bits/bit_set.hpp>                         // bit_set
-#include <xstd/bits/bit_set_view.hpp>                    // bit_set_view
-#include <xstd/bits/bit_storage.hpp>                     // bit_storage, bit_storage_capacity_v, bit_storage_extent_v, owned_bit_storage, resizable_bit_storage
-#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
-#include <boost/container/small_vector.hpp>              // small_vector
-#include <boost/container/static_vector.hpp>             // static_vector
-#include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
-#include <array>                                         // array
-#include <bitset>                                        // bitset
-#include <cstddef>                                       // size_t
-#include <cstdint>                                       // uint8_t, uint16_t, uint32_t, uint64_t
-#include <deque>                                         // deque
-#include <list>                                          // list
-#include <span>                                          // dynamic_extent, span
-#include <type_traits>                                   // is_same_v
-#include <vector>                                        // vector
+#include <test/inplace_vector.hpp>            // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
+#include <test/minimal_words.hpp>             // minimal_words
+#include <xstd/bits/bit_array.hpp>            // bit_array
+#include <xstd/bits/bit_set.hpp>              // bit_set
+#include <xstd/bits/bit_set_view.hpp>         // bit_set_view
+#include <xstd/bits/bit_storage.hpp>          // bit_storage, bit_storage_capacity_v, bit_storage_extent_v, owned_bit_storage, resizable_bit_storage
+#include <xstd/bits/detail/bit_container.hpp> // bit_container
+#include <boost/container/small_vector.hpp>   // small_vector
+#include <boost/container/static_vector.hpp>  // static_vector
+#include <boost/test/unit_test.hpp>           // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
+#include <array>                              // array
+#include <bitset>                             // bitset
+#include <cstddef>                            // size_t
+#include <cstdint>                            // uint8_t, uint16_t, uint32_t, uint64_t
+#include <deque>                              // deque
+#include <list>                               // list
+#include <span>                               // dynamic_extent, span
+#include <type_traits>                        // is_same_v
+#include <vector>                             // vector
 
 #ifdef TEST_HAS_INPLACE_VECTOR
 
@@ -34,13 +34,13 @@ BOOST_AUTO_TEST_SUITE(BitStorage)
 namespace {
 
 template<class W>
-concept holds_words = requires { typename xstd::bits::detail::contiguous_bit_container<W>; };
+concept holds_words = requires { typename xstd::bits::detail::bit_container<W>; };
 
 template<class W>
 concept names_a_view = requires { typename xstd::bit_set_view<W>; };
 
 template<class W, std::size_t N>
-concept holds_extent = requires { typename xstd::bits::detail::contiguous_bit_container<W, N>; };
+concept holds_extent = requires { typename xstd::bits::detail::bit_container<W, N>; };
 
 } // namespace
 
@@ -129,7 +129,7 @@ BOOST_AUTO_TEST_CASE(AnOwnersExtentIsItsWidthOrItsCapacity)
 
         static_assert(xstd::bit_storage_capacity_v<std::inplace_vector<std::uint16_t, 3>> == 48);
         static_assert(xstd::bit_storage_extent_v<std::inplace_vector<std::uint16_t, 3>> == std::dynamic_extent);
-        static_assert(std::is_same_v<xstd::bits::detail::contiguous_bit_container<std::inplace_vector<std::uint16_t, 3>>, xstd::bits::detail::contiguous_bit_container<std::inplace_vector<std::uint16_t, 3>, 48>>);
+        static_assert(std::is_same_v<xstd::bits::detail::bit_container<std::inplace_vector<std::uint16_t, 3>>, xstd::bits::detail::bit_container<std::inplace_vector<std::uint16_t, 3>, 48>>);
 
         // Any capacity the blocks hold in whole: stopping inside the last block, but never short of it.
         static_assert(holds_extent<std::inplace_vector<std::uint16_t, 3>, 33> and holds_extent<std::inplace_vector<std::uint16_t, 3>, 47>);
@@ -146,7 +146,7 @@ BOOST_AUTO_TEST_CASE(AStaticVectorsCapacityIsItsStaticCapacity)
 {
         static_assert(xstd::resizable_bit_storage<boost::container::static_vector<std::uint16_t, 3>>);
         static_assert(xstd::bit_storage_capacity_v<boost::container::static_vector<std::uint16_t, 3>> == 48);
-        static_assert(std::is_same_v<xstd::bits::detail::contiguous_bit_container<boost::container::static_vector<std::uint16_t, 3>>, xstd::bits::detail::contiguous_bit_container<boost::container::static_vector<std::uint16_t, 3>, 48>>);
+        static_assert(std::is_same_v<xstd::bits::detail::bit_container<boost::container::static_vector<std::uint16_t, 3>>, xstd::bits::detail::bit_container<boost::container::static_vector<std::uint16_t, 3>, 48>>);
         static_assert(holds_extent<boost::container::static_vector<std::uint16_t, 3>, 33> and not holds_extent<boost::container::static_vector<std::uint16_t, 3>, 49>);
         static_assert(not holds_extent<boost::container::static_vector<std::uint16_t, 3>, std::dynamic_extent>);
 

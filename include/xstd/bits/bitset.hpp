@@ -6,28 +6,28 @@
 #ifndef XSTD_BITS_BITSET_HPP
 #define XSTD_BITS_BITSET_HPP
 
-#include <xstd/bits/bit_storage.hpp>                     // bit_storage_extent_v
-#include <xstd/bits/detail/bitset_adaptor.hpp>           // bitset_adaptor
-#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container, num_blocks_v
-#include <xstd/bits/from_bit_storage.hpp>                // from_bit_storage, from_bit_storage_t
-#include <xstd/ints/concepts/unsigned_integer.hpp>       // unsigned_integer
-#include <xstd/ints/limits.hpp>                          // numeric_limits
-#include <xstd/ints/memory.hpp>                          // align_up
-#include <array>                                         // array
-#include <concepts>                                      // constructible_from
-#include <cstddef>                                       // size_t
-#include <functional>                                    // hash
-#include <limits>                                        // numeric_limits
-#include <string>                                        // basic_string
-#include <string_view>                                   // basic_string_view
+#include <xstd/bits/bit_storage.hpp>               // bit_storage_extent_v
+#include <xstd/bits/detail/bit_container.hpp>      // bit_container, num_blocks_v
+#include <xstd/bits/detail/bitset_adaptor.hpp>     // bitset_adaptor
+#include <xstd/bits/from_bit_storage.hpp>          // from_bit_storage, from_bit_storage_t
+#include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
+#include <xstd/ints/limits.hpp>                    // numeric_limits
+#include <xstd/ints/memory.hpp>                    // align_up
+#include <array>                                   // array
+#include <concepts>                                // constructible_from
+#include <cstddef>                                 // size_t
+#include <functional>                              // hash
+#include <limits>                                  // numeric_limits
+#include <string>                                  // basic_string
+#include <string_view>                             // basic_string_view
 
 namespace xstd {
 
 // [template.bitset] over a packed array of Block: what std::bitset<N> is, with the word type in the open.
 template<xstd::unsigned_integer Block, std::size_t N>
-class basic_bitset : public bits::detail::bitset_adaptor<bits::detail::contiguous_bit_container<std::array<Block, bits::detail::num_blocks_v<Block, N>>, N>, basic_bitset<Block, N>>
+class basic_bitset : public bits::detail::bitset_adaptor<bits::detail::bit_container<std::array<Block, bits::detail::num_blocks_v<Block, N>>, N>, basic_bitset<Block, N>>
 {
-        using base_type = bits::detail::bitset_adaptor<bits::detail::contiguous_bit_container<std::array<Block, bits::detail::num_blocks_v<Block, N>>, N>, basic_bitset<Block, N>>;
+        using base_type = bits::detail::bitset_adaptor<bits::detail::bit_container<std::array<Block, bits::detail::num_blocks_v<Block, N>>, N>, basic_bitset<Block, N>>;
 
 public:
         // [bitset.cons], in its order.

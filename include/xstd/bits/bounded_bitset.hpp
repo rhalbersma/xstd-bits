@@ -6,29 +6,29 @@
 #ifndef XSTD_BITS_BOUNDED_BITSET_HPP
 #define XSTD_BITS_BOUNDED_BITSET_HPP
 
-#include <xstd/bits/bit_storage.hpp>                     // bit_storage_extent_v
-#include <xstd/bits/detail/bitset_adaptor.hpp>           // bitset_adaptor
-#include <xstd/bits/detail/bounded_blocks.hpp>           // bounded_blocks
-#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container, num_blocks_v
-#include <xstd/bits/from_bit_storage.hpp>                // from_bit_storage, from_bit_storage_t
-#include <xstd/ints/concepts/unsigned_integer.hpp>       // unsigned_integer
-#include <xstd/ints/memory.hpp>                          // align_up
-#include <concepts>                                      // constructible_from
-#include <cstddef>                                       // size_t
-#include <functional>                                    // hash
-#include <iterator>                                      // input_iterator
-#include <limits>                                        // numeric_limits
-#include <string>                                        // basic_string
-#include <string_view>                                   // basic_string_view
-#include <utility>                                       // move
+#include <xstd/bits/bit_storage.hpp>               // bit_storage_extent_v
+#include <xstd/bits/detail/bit_container.hpp>      // bit_container, num_blocks_v
+#include <xstd/bits/detail/bitset_adaptor.hpp>     // bitset_adaptor
+#include <xstd/bits/detail/bounded_blocks.hpp>     // bounded_blocks
+#include <xstd/bits/from_bit_storage.hpp>          // from_bit_storage, from_bit_storage_t
+#include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
+#include <xstd/ints/memory.hpp>                    // align_up
+#include <concepts>                                // constructible_from
+#include <cstddef>                                 // size_t
+#include <functional>                              // hash
+#include <iterator>                                // input_iterator
+#include <limits>                                  // numeric_limits
+#include <string>                                  // basic_string
+#include <string_view>                             // basic_string_view
+#include <utility>                                 // move
 
 namespace xstd {
 
 // A resizable bitset that never allocates; no bit_ prefix, bitset already carrying the word.
 template<xstd::unsigned_integer Block, std::size_t N>
-class basic_bounded_bitset : public bits::detail::bitset_adaptor<bits::detail::contiguous_bit_container<bits::detail::bounded_blocks<Block, bits::detail::num_blocks_v<Block, N>>, N>, basic_bounded_bitset<Block, N>>
+class basic_bounded_bitset : public bits::detail::bitset_adaptor<bits::detail::bit_container<bits::detail::bounded_blocks<Block, bits::detail::num_blocks_v<Block, N>>, N>, basic_bounded_bitset<Block, N>>
 {
-        using base_type = bits::detail::bitset_adaptor<bits::detail::contiguous_bit_container<bits::detail::bounded_blocks<Block, bits::detail::num_blocks_v<Block, N>>, N>, basic_bounded_bitset<Block, N>>;
+        using base_type = bits::detail::bitset_adaptor<bits::detail::bit_container<bits::detail::bounded_blocks<Block, bits::detail::num_blocks_v<Block, N>>, N>, basic_bounded_bitset<Block, N>>;
 
 public:
         using typename base_type::block_container_type;

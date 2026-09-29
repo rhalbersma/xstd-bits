@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_BIT_SET_HPP
 #define XSTD_BITS_BIT_SET_HPP
 
-#include <xstd/bits/detail/contiguous_bit_container.hpp>     // contiguous_bit_container
+#include <xstd/bits/detail/bit_container.hpp>                // bit_container
 #include <xstd/bits/detail/ownership.hpp>                    // storage
 #include <xstd/bits/detail/set_adaptor.hpp>                  // set_adaptor
 #include <xstd/bits/from_bit_storage.hpp>                    // from_bit_storage, from_bit_storage_t
@@ -29,9 +29,9 @@ namespace xstd {
 
 // The set reading over a heap of blocks: the flagship, and the one name without a qualifier.
 template<xstd::unsigned_integer Block, class Allocator = std::allocator<Block>>
-class basic_bit_set : public bits::detail::set_adaptor<bits::detail::contiguous_bit_container<std::vector<Block, Allocator>>, bits::detail::storage::owned, basic_bit_set<Block, Allocator>>
+class basic_bit_set : public bits::detail::set_adaptor<bits::detail::bit_container<std::vector<Block, Allocator>>, bits::detail::storage::owned, basic_bit_set<Block, Allocator>>
 {
-        using base_type = bits::detail::set_adaptor<bits::detail::contiguous_bit_container<std::vector<Block, Allocator>>, bits::detail::storage::owned, basic_bit_set<Block, Allocator>>;
+        using base_type = bits::detail::set_adaptor<bits::detail::bit_container<std::vector<Block, Allocator>>, bits::detail::storage::owned, basic_bit_set<Block, Allocator>>;
 
 public:
         using typename base_type::allocator_type;

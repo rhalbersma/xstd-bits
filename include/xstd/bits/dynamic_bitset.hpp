@@ -6,28 +6,28 @@
 #ifndef XSTD_BITS_DYNAMIC_BITSET_HPP
 #define XSTD_BITS_DYNAMIC_BITSET_HPP
 
-#include <xstd/bits/detail/bitset_adaptor.hpp>           // bitset_adaptor
-#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
-#include <xstd/bits/from_bit_storage.hpp>                // from_bit_storage, from_bit_storage_t
-#include <xstd/ints/concepts/unsigned_integer.hpp>       // unsigned_integer
-#include <concepts>                                      // constructible_from
-#include <cstddef>                                       // size_t
-#include <functional>                                    // hash
-#include <iterator>                                      // input_iterator
-#include <memory>                                        // allocator
-#include <string>                                        // basic_string
-#include <string_view>                                   // basic_string_view
-#include <type_traits>                                   // type_identity_t
-#include <utility>                                       // move
-#include <vector>                                        // vector
+#include <xstd/bits/detail/bit_container.hpp>      // bit_container
+#include <xstd/bits/detail/bitset_adaptor.hpp>     // bitset_adaptor
+#include <xstd/bits/from_bit_storage.hpp>          // from_bit_storage, from_bit_storage_t
+#include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
+#include <concepts>                                // constructible_from
+#include <cstddef>                                 // size_t
+#include <functional>                              // hash
+#include <iterator>                                // input_iterator
+#include <memory>                                  // allocator
+#include <string>                                  // basic_string
+#include <string_view>                             // basic_string_view
+#include <type_traits>                             // type_identity_t
+#include <utility>                                 // move
+#include <vector>                                  // vector
 
 namespace xstd {
 
 // The bitset reading over a heap of blocks, boost::dynamic_bitset being its counterpart.
 template<xstd::unsigned_integer Block, class Allocator = std::allocator<Block>>
-class basic_dynamic_bitset : public bits::detail::bitset_adaptor<bits::detail::contiguous_bit_container<std::vector<Block, Allocator>>, basic_dynamic_bitset<Block, Allocator>>
+class basic_dynamic_bitset : public bits::detail::bitset_adaptor<bits::detail::bit_container<std::vector<Block, Allocator>>, basic_dynamic_bitset<Block, Allocator>>
 {
-        using base_type = bits::detail::bitset_adaptor<bits::detail::contiguous_bit_container<std::vector<Block, Allocator>>, basic_dynamic_bitset<Block, Allocator>>;
+        using base_type = bits::detail::bitset_adaptor<bits::detail::bit_container<std::vector<Block, Allocator>>, basic_dynamic_bitset<Block, Allocator>>;
 
 public:
         using typename base_type::size_type;

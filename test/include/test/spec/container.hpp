@@ -6,22 +6,22 @@
 #ifndef TEST_SPEC_CONTAINER_HPP
 #define TEST_SPEC_CONTAINER_HPP
 
-#include <test/flat_set.hpp>                             // IWYU pragma: keep; TEST_HAS_FLAT_SET, flat_set
-#include <test/inplace_vector.hpp>                       // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
-#include <test/minimal_words.hpp>                        // minimal_words
-#include <test/spec/sequence.hpp>                        // all, pairs, sequences
-#include <test/spec/set.hpp>                             // all, pairs, pairs_with_doubletons, sets
-#include <xstd/bits/bit_bounded_set.hpp>                 // basic_bit_bounded_set
-#include <xstd/bits/bit_bounded_vector.hpp>              // basic_bit_bounded_vector
-#include <xstd/bits/detail/bounded_blocks.hpp>           // IWYU pragma: keep; XSTD_BITS_HAS_CONSTEXPR_BOUNDED
-#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
-#include <xstd/bits/detail/set_adaptor.hpp>              // set_adaptor
-#include <xstd/bits/ext/boost/bit_small_set.hpp>         // basic_bit_small_set
-#include <xstd/bits/ext/boost/bit_small_vector.hpp>      // basic_bit_small_vector
-#include <cstddef>                                       // size_t
-#include <set>                                           // set
-#include <tuple>                                         // tuple_cat
-#include <utility>                                       // declval
+#include <test/flat_set.hpp>                        // IWYU pragma: keep; TEST_HAS_FLAT_SET, flat_set
+#include <test/inplace_vector.hpp>                  // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
+#include <test/minimal_words.hpp>                   // minimal_words
+#include <test/spec/sequence.hpp>                   // all, pairs, sequences
+#include <test/spec/set.hpp>                        // all, pairs, pairs_with_doubletons, sets
+#include <xstd/bits/bit_bounded_set.hpp>            // basic_bit_bounded_set
+#include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector
+#include <xstd/bits/detail/bit_container.hpp>       // bit_container
+#include <xstd/bits/detail/bounded_blocks.hpp>      // IWYU pragma: keep; XSTD_BITS_HAS_CONSTEXPR_BOUNDED
+#include <xstd/bits/detail/set_adaptor.hpp>         // set_adaptor
+#include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
+#include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector
+#include <cstddef>                                  // size_t
+#include <set>                                      // set
+#include <tuple>                                    // tuple_cat
+#include <utility>                                  // declval
 
 #ifdef TEST_HAS_INPLACE_VECTOR
 
@@ -59,7 +59,7 @@ template<class Block, std::size_t N, class Allocator>
 inline constexpr auto constant_evaluable_v<xstd::basic_bit_small_vector<Block, N, Allocator>> = false;
 
 template<class Block>
-inline constexpr auto constant_evaluable_v<xstd::bits::detail::set_adaptor<xstd::bits::detail::contiguous_bit_container<test::minimal_words<Block>>>> = false;
+inline constexpr auto constant_evaluable_v<xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_container<test::minimal_words<Block>>>> = false;
 
 #ifndef XSTD_BITS_HAS_CONSTEXPR_BOUNDED
 

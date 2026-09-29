@@ -3,21 +3,21 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/set/ascending.hpp>                        // yields_ascending_keys
-#include <xstd/bits/bit_bounded_set.hpp>                 // aligned, basic_bit_bounded_set, bit_bounded_set
-#include <xstd/bits/detail/bounded_blocks.hpp>           // bounded_blocks, XSTD_BITS_HAS_CONSTEXPR_BOUNDED
-#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
-#include <xstd/bits/detail/ownership.hpp>                // owned_bits_t, storage
-#include <xstd/bits/detail/set_adaptor.hpp>              // set_adaptor
-#include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <algorithm>                                     // equal
-#include <concepts>                                      // same_as
-#include <cstddef>                                       // size_t
-#include <cstdint>                                       // uint8_t
-#include <limits>                                        // numeric_limits
-#include <new>                                           // bad_alloc
-#include <ranges>                                        // iota, to
-#include <set>                                           // set
+#include <test/set/ascending.hpp>              // yields_ascending_keys
+#include <xstd/bits/bit_bounded_set.hpp>       // aligned, basic_bit_bounded_set, bit_bounded_set
+#include <xstd/bits/detail/bit_container.hpp>  // bit_container
+#include <xstd/bits/detail/bounded_blocks.hpp> // bounded_blocks, XSTD_BITS_HAS_CONSTEXPR_BOUNDED
+#include <xstd/bits/detail/ownership.hpp>      // owned_bits_t, storage
+#include <xstd/bits/detail/set_adaptor.hpp>    // set_adaptor
+#include <boost/test/unit_test.hpp>            // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
+#include <algorithm>                           // equal
+#include <concepts>                            // same_as
+#include <cstddef>                             // size_t
+#include <cstdint>                             // uint8_t
+#include <limits>                              // numeric_limits
+#include <new>                                 // bad_alloc
+#include <ranges>                              // iota, to
+#include <set>                                 // set
 
 #ifdef XSTD_BITS_HAS_CONSTEXPR_BOUNDED
 #include <test/constexpr_check.hpp> // XSTD_CONSTEXPR_CHECK_EQUAL
@@ -42,7 +42,7 @@ constexpr bool has_capacity = requires (X const& x) { x.capacity(); };
 // The set reading over a run-time width under a compile-time capacity, built on the set adaptor.
 BOOST_AUTO_TEST_CASE(TheBoundedSetIsTheSetAdaptorOverInlineBlocks)
 {
-        static_assert(std::derived_from<T, xstd::bits::detail::set_adaptor<xstd::bits::detail::contiguous_bit_container<xstd::bits::detail::bounded_blocks<std::uint8_t, 3>, 24>, xstd::bits::detail::storage::owned, T>>);
+        static_assert(std::derived_from<T, xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_container<xstd::bits::detail::bounded_blocks<std::uint8_t, 3>, 24>, xstd::bits::detail::storage::owned, T>>);
         static_assert(std::same_as<xstd::bit_bounded_set<24>, xstd::basic_bit_bounded_set<std::size_t, 24>>);
 }
 
@@ -169,7 +169,7 @@ BOOST_AUTO_TEST_CASE(TheCapacityIsTheRequestedOneExactly)
         using U = xstd::basic_bit_bounded_set<std::uint8_t, 9>;
         XSTD_CONSTEXPR_BOUNDED_CHECK_EQUAL(U().max_size(), 9UZ);
         static_assert(std::same_as<xstd::aligned::basic_bit_bounded_set<std::uint8_t, 9>, xstd::basic_bit_bounded_set<std::uint8_t, 16>>);
-        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_bounded_set<std::uint8_t, 16>>, xstd::bits::detail::contiguous_bit_container<xstd::bits::detail::bounded_blocks<std::uint8_t, 2>>>);
+        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_bounded_set<std::uint8_t, 16>>, xstd::bits::detail::bit_container<xstd::bits::detail::bounded_blocks<std::uint8_t, 2>>>);
 
         auto s = U();
         s.insert(8);

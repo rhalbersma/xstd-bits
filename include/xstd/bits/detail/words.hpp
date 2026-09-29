@@ -6,13 +6,13 @@
 #ifndef XSTD_BITS_DETAIL_WORDS_HPP
 #define XSTD_BITS_DETAIL_WORDS_HPP
 
-#include <xstd/bits/bit_storage.hpp>                     // bit_storage_extent_v
-#include <xstd/bits/detail/borrowed_bits.hpp>            // borrowable_word, borrowable_words, borrowed_bits, words_span_t
-#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
-#include <xstd/ints/concepts/unsigned_integer.hpp>       // unsigned_integer
-#include <cstddef>                                       // size_t
-#include <span>                                          // span
-#include <type_traits>                                   // conditional_t, is_const_v, remove_const_t, remove_reference_t
+#include <xstd/bits/bit_storage.hpp>               // bit_storage_extent_v
+#include <xstd/bits/detail/bit_container.hpp>      // bit_container
+#include <xstd/bits/detail/borrowed_bits.hpp>      // borrowable_word, borrowable_words, borrowed_bits, words_span_t
+#include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
+#include <cstddef>                                 // size_t
+#include <span>                                    // span
+#include <type_traits>                             // conditional_t, is_const_v, remove_const_t, remove_reference_t
 
 // What the public views are named by: the words, never the storage built over them.
 namespace xstd::bits::detail {
@@ -24,7 +24,7 @@ using const_as_t = std::conditional_t<std::is_const_v<T>, Bits const, Bits>;
 template<class Words, std::size_t N>
 struct view_storage_for
 {
-        using type = const_as_t<Words, contiguous_bit_container<std::remove_const_t<Words>, N>>;
+        using type = const_as_t<Words, bit_container<std::remove_const_t<Words>, N>>;
 };
 
 template<class Word, std::size_t N>
@@ -48,14 +48,14 @@ template<class Bits>
 struct words_of;
 
 template<class Blocks, std::size_t N>
-struct words_of<contiguous_bit_container<Blocks, N>>
+struct words_of<bit_container<Blocks, N>>
 {
         using type = Blocks;
         static constexpr std::size_t width = N;
 };
 
 template<class Blocks, std::size_t N>
-struct words_of<contiguous_bit_container<Blocks, N> const>
+struct words_of<bit_container<Blocks, N> const>
 {
         using type = Blocks const;
         static constexpr std::size_t width = N;
@@ -63,14 +63,14 @@ struct words_of<contiguous_bit_container<Blocks, N> const>
 
 // A span's width is the one its words name, which is what a view over them defaults to.
 template<class Block, std::size_t E, std::size_t N>
-struct words_of<contiguous_bit_container<std::span<Block, E>, N>>
+struct words_of<bit_container<std::span<Block, E>, N>>
 {
         using type = std::span<Block, E>;
         static constexpr std::size_t width = xstd::bit_storage_extent_v<type>;
 };
 
 template<class Block, std::size_t E, std::size_t N>
-struct words_of<contiguous_bit_container<std::span<Block, E>, N> const>
+struct words_of<bit_container<std::span<Block, E>, N> const>
 {
         using type = std::span<Block const, E>;
         static constexpr std::size_t width = xstd::bit_storage_extent_v<type>;

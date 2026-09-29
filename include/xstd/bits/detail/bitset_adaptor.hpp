@@ -8,41 +8,41 @@
 
 // Bitsets [bitset], Header <bitset> synopsis [bitset.syn]
 
-#include <xstd/bits/bit_storage.hpp>                     // bit_storage
-#include <xstd/bits/detail/allocator_base_type.hpp>      // allocator_base_type, allocator_param_t, has_allocator_v
-#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container, contiguous_bit_container_type
-#include <xstd/bits/detail/hash.hpp>                     // hash_append_bits, std_hash
-#include <xstd/bits/detail/ownership.hpp>                // owned_storage, storage, window
-#include <xstd/bits/detail/zero_width.hpp>               // zero_width
-#include <xstd/bits/from_bit_storage.hpp>                // from_bit_storage_t
-#include <boost/hash2/hash_append.hpp>                   // hash_append_tag
-#include <algorithm>                                     // min, ranges::copy
-#include <cassert>                                       // assert
-#include <compare>                                       // strong_ordering
-#include <concepts>                                      // integral, same_as, swappable
-#include <cstddef>                                       // size_t
-#include <cstdint>                                       // uint_least32_t
-#include <format>                                        // format, formattable
-#include <functional>                                    // hash
-#include <ios>                                           // ios_base
-#include <iosfwd>                                        // basic_istream, basic_ostream
-#include <iterator>                                      // contiguous_iterator, input_iterator, iter_value_t, output_iterator, sentinel_for, sized_sentinel_for
-#include <limits>                                        // numeric_limits
-#include <locale>                                        // ctype, use_facet
-#include <memory>                                        // allocator
-#include <ranges>                                        // iota, swap
-#include <source_location>                               // source_location
-#include <span>                                          // dynamic_extent
-#include <stdexcept>                                     // invalid_argument, out_of_range, overflow_error
-#include <string>                                        // basic_string, char_traits
-#include <string_view>                                   // basic_string_view
-#include <type_traits>                                   // is_array_v, is_nothrow_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v, is_standard_layout_v, is_trivially_copyable_v, is_trivially_default_constructible_v, remove_cv_t, remove_cvref_t
-#include <utility>                                       // as_const, move
+#include <xstd/bits/bit_storage.hpp>                // bit_storage
+#include <xstd/bits/detail/allocator_base_type.hpp> // allocator_base_type, allocator_param_t, has_allocator_v
+#include <xstd/bits/detail/bit_container.hpp>       // bit_container, bit_container_type
+#include <xstd/bits/detail/hash.hpp>                // hash_append_bits, std_hash
+#include <xstd/bits/detail/ownership.hpp>           // owned_storage, storage, window
+#include <xstd/bits/detail/zero_width.hpp>          // zero_width
+#include <xstd/bits/from_bit_storage.hpp>           // from_bit_storage_t
+#include <boost/hash2/hash_append.hpp>              // hash_append_tag
+#include <algorithm>                                // min, ranges::copy
+#include <cassert>                                  // assert
+#include <compare>                                  // strong_ordering
+#include <concepts>                                 // integral, same_as, swappable
+#include <cstddef>                                  // size_t
+#include <cstdint>                                  // uint_least32_t
+#include <format>                                   // format, formattable
+#include <functional>                               // hash
+#include <ios>                                      // ios_base
+#include <iosfwd>                                   // basic_istream, basic_ostream
+#include <iterator>                                 // contiguous_iterator, input_iterator, iter_value_t, output_iterator, sentinel_for, sized_sentinel_for
+#include <limits>                                   // numeric_limits
+#include <locale>                                   // ctype, use_facet
+#include <memory>                                   // allocator
+#include <ranges>                                   // iota, swap
+#include <source_location>                          // source_location
+#include <span>                                     // dynamic_extent
+#include <stdexcept>                                // invalid_argument, out_of_range, overflow_error
+#include <string>                                   // basic_string, char_traits
+#include <string_view>                              // basic_string_view
+#include <type_traits>                              // is_array_v, is_nothrow_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v, is_standard_layout_v, is_trivially_copyable_v, is_trivially_default_constructible_v, remove_cv_t, remove_cvref_t
+#include <utility>                                  // as_const, move
 
 namespace xstd::bits::detail {
 
 // [template.bitset] over a storage of ours, which speaks the bitset vocabulary by construction.
-template<contiguous_bit_container_type Bits, class Derived = void>
+template<bit_container_type Bits, class Derived = void>
 class bitset_adaptor : public allocator_base_type<Bits, bitset_adaptor<Bits, Derived>>
 {
         // One wrapper, two counterparts: std::bitset at a static width, boost::dynamic_bitset at a run-time one.
@@ -62,9 +62,9 @@ class bitset_adaptor : public allocator_base_type<Bits, bitset_adaptor<Bits, Der
         friend Derived;
 
         // A view refers into this owner's storage, and only a reading that can view it is named.
-        template<contiguous_bit_container_type, storage, class>
+        template<bit_container_type, storage, class>
         friend class set_adaptor;
-        template<contiguous_bit_container_type, storage, window, class, std::size_t>
+        template<bit_container_type, storage, window, class, std::size_t>
         friend class sequence_adaptor;
 
         // The value through the trait: the blocks and the width.

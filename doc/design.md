@@ -14,12 +14,12 @@ out of. This file holds what has landed.
 `xstd::owned_bit_storage` asks whether a type is bit storage a container can **own**: `bit_storage`
 ([is-and-has](#is-and-has)) that is also regular, and read-only through a `const` object. For a range that is a
 regular, sized, contiguous, subscriptable range of unsigned integers whose `const` subscript does not write.
-Regular is what lets `contiguous_bit_container` default its `==` over the width and the blocks, in that member
+Regular is what lets `bit_container` default its `==` over the width and the blocks, in that member
 order, so two run-time widths part on the width before a block is read. `std::array` and `std::vector` both
 qualify, and so does `std::inplace_vector` — a runtime width over static capacity, for free.
 
 **It is public because a storage joins the library through it.** The storage under every owner is a
-`contiguous_bit_container` over `owned_bit_storage Blocks`, while the views take any `bit_storage`. The split is
+`bit_container` over `owned_bit_storage Blocks`, while the views take any `bit_storage`. The split is
 the one between owning and borrowing: `std::span<B>` is bit storage a view borrows, and it is neither regular --
 two spans comparing equal would mean the same words, not the same bits -- nor read-only through `const`. The
 owners over `boost::container::small_vector` in `ext/` are written against this concept and nothing else, so a
@@ -28,7 +28,7 @@ requirement a storage's author has to meet is public API, and a hard error insid
 **A run-time width asks one thing more.** `xstd::resizable_bit_storage` refines `owned_bit_storage` with what
 the vehicle calls to change its word count: `resize(count, value)`, `push_back`, `insert` at the end, `clear`
 and `max_size`. The storage requires it only at `N == std::dynamic_extent`, so `std::array<B, K>` still serves a
-fixed width while `contiguous_bit_container<std::array<B, K>, std::dynamic_extent>` is refused at the constraint
+fixed width while `bit_container<std::array<B, K>, std::dynamic_extent>` is refused at the constraint
 rather than inside `resize`. The test that the contract is the whole of what a storage has to provide
 is `test::minimal_words`: a storage written outside the library with exactly those members and no others, which
 runs the set reading's full primitive suite through the set adaptor over it. `boost::container::static_vector`
@@ -64,7 +64,7 @@ reason to accept it on the element clause when the narrower concept states the t
 The asymmetry it records is the layering, not an accident. `unsigned_integer` goes **in** and the container
 gives the common vocabulary ([the-common-vocabulary](#the-common-vocabulary)) — and, once the non-assigning operators land, `bitwise_operators` — **out**: it
 asks more of a block than it offers its own user, consuming numbers and yielding a field of bits, shedding the
-arithmetic on the way up. That is also why nesting cannot work: a `contiguous_bit_container` will have every
+arithmetic on the way up. That is also why nesting cannot work: a `bit_container` will have every
 operator and still no `popcount`, no `digits` and no `- 1`.
 
 The concept sits beside `bit_storage` in `<xstd/bits/bit_storage.hpp>`, which it refines: the one says what a
@@ -83,7 +83,7 @@ this concept fails for some other clause first (`span` and `subrange` are not `r
 `vector<int>`'s elements are not unsigned integers, `vector<bool>` is not contiguous) — and the gap is not worth
 a class written only to be
 asked about ([concepts-are-tested-on-ready-made-types](#concepts-are-tested-on-ready-made-types)), so it is
-stated here from [range.refinements] rather than pinned by a test. `contiguous_bit_container` reaches for the
+stated here from [range.refinements] rather than pinned by a test. `bit_container` reaches for the
 range's subscript in 140 places, `block_mask` among them, so without this the concept admits storages the class
 cannot be instantiated over — the shortfall surfacing as a hard error inside the template rather than as an
 unsatisfied constraint, which is the failure mode
@@ -121,13 +121,13 @@ Naming it `container` follows from the same fact. A contiguous container general
 the C array's defining operation; a concept claiming a range *is* blocks while unable to index one would be
 describing something else. The word is deliberately close to the standard's *contiguous container*
 ([container.reqmts]/68) without claiming it: that term drags in the whole *Container* table — `empty()`,
-`max_size()`, `cbegin`/`cend`, member `swap`, seven nested typedefs — and `contiguous_bit_container` needs
+`max_size()`, `cbegin`/`cend`, member `swap`, seven nested typedefs — and `bit_container` needs
 almost none of it. At a static width it needs none; at a run-time width it needs `max_size`, `resize`,
 `push_back` and `clear`, which are *sequence* container operations, not `Container` ones. Neither path draws the
 line where [container.reqmts]/68 draws it, so the concept states its own five requirements and borrows nothing.
 
 The name says *container*, not *storage*: what an adaptor sits on is a different question, asked by
-`specialization_of_contiguous_bit_container` and answered by name rather than by members
+`specialization_of_bit_container` and answered by name rather than by members
 ([one-storage](#one-storage)).
 
 ### the-const-reference
@@ -175,7 +175,7 @@ two are not the same question: P2278 asks what `C`'s own iterator yields once co
 
 Within `contiguous_range` that makes P2278 strictly the tighter arm, and the one thing it catches is a
 **shallow-const** blocks type: one whose `c[n]` hands back a writable `Block&` through a `C const&`, which would
-let a `contiguous_bit_container const` be written through. That conditional would therefore have admitted such a
+let a `bit_container const` be written through. That conditional would therefore have admitted such a
 storage on libc++ and refused it everywhere else — a concept meaning two things on two thirds of the matrix.
 Transcribing does not remove the conditional; it makes the other arm *the same type* rather than a second
 contract, which is the only reason a conditional is the right shape here at all.
@@ -199,14 +199,14 @@ if anyone ever "simplifies" the definition into the dance.
 
 ### the-one-vehicle
 
-`contiguous_bit_container` lives in `detail/contiguous_bit_container.hpp`, with the concept, `num_blocks_v` and
+`bit_container` lives in `detail/bit_container.hpp`, with the concept, `num_blocks_v` and
 the detector that names it. It has no per-storage aliases: each owner spells its storage once, in its base clause --
 `basic_bit_array<Block, N>` derives from the sequence adaptor over
-`contiguous_bit_container<std::array<Block, num_blocks_v<Block, N>>, N>`.
+`bit_container<std::array<Block, num_blocks_v<Block, N>>, N>`.
 The name is in `xstd::bits::detail` with the rest of `detail/`, so nothing outside the library names it; it is the
 device that turns three readings over three storages into three plus three, and a factoring device is machinery
 rather than vocabulary. A user reaches every width through `bit_fixed_set<N>` or `basic_bit_array<Block, N>`, and a
-test that needs the container itself spells its storage, as `contiguous_bit_container<std::vector<std::uint8_t>>`.
+test that needs the container itself spells its storage, as `bit_container<std::vector<std::uint8_t>>`.
 Each public header includes only the storage it names, so `bit_array` does not see `std::vector`, and the
 choice between `std::inplace_vector` and `boost::container::static_vector` sits in `detail/bounded_blocks.hpp`,
 which only the three bounded headers include.
@@ -225,7 +225,7 @@ That is also what earns it the name the adaptors are constrained on. It is the o
 blocks* reads as storage that happens to have been adapted, where a *bit container* reads as the thing the
 readings are built on.
 
-`contiguous_bit_container<Blocks, N>` is the single storage vehicle. `N` is the width when that is a constant
+`bit_container<Blocks, N>` is the single storage vehicle. `N` is the width when that is a constant
 and `std::dynamic_extent` when the width is carried at run time.
 
 It owns the **unused-tail invariant** — every bit at or above `size()` reads zero — which is what makes
@@ -251,17 +251,17 @@ survive on ready-made types alone: `std::vector<bool>` is not contiguous, `std::
 `unsigned_integer` from `bitwise_operators` ([owned-bit-storage](#owned-bit-storage)). Only the
 range-subscript clause has no ready-made counterexample, and it is argued in prose there instead.
 
-`counting_blocks` in `test/src/bits/detail/contiguous_bit_container.cpp` is not an exception to this. It is a
+`counting_blocks` in `test/src/bits/detail/bit_container.cpp` is not an exception to this. It is a
 swap-and-move fixture with instrumented operations ([swap-goes-through-adl](#swap-goes-through-adl)), which no
 std container can be, and it carries no concept assertion of its own: it is instantiated as a
-`contiguous_bit_container`'s `Blocks`, and that instantiation is the only check it needs to satisfy.
+`bit_container`'s `Blocks`, and that instantiation is the only check it needs to satisfy.
 
 ### the-common-vocabulary
 
 `test::bitset::vocabulary`, in `test/include/test/bitset/vocabulary.hpp`, is what the three bit containers answer
 **in their own names**, with no trait in
 between: the intersection of `std::bitset`'s vocabulary, `boost::dynamic_bitset`'s and
-`contiguous_bit_container`'s. Measured against all three rather than guessed, and larger than it first looks —
+`bit_container`'s. Measured against all three rather than guessed, and larger than it first looks —
 nineteen requirements:
 
 | | |
@@ -276,18 +276,18 @@ asking for it would drop a model:
 
 | absent from | |
 |---|---|
-| `contiguous_bit_container` | `operator[]` ([test-not-subscript](#test-not-subscript)), unary `~`, `set(n, value)` |
+| `bit_container` | `operator[]` ([test-not-subscript](#test-not-subscript)), unary `~`, `set(n, value)` |
 | `std::bitset` | `-=`, `is_subset_of`, `find_first`, member `swap` |
 | `boost::dynamic_bitset` | `to_string` |
 
-The asymmetry is the point, and it runs in two directions at once. `contiguous_bit_container` provides the
+The asymmetry is the point, and it runs in two directions at once. `bit_container` provides the
 **union** of what the three readings ask of it — a set reading needs `find_first` and `find_next`, a sequence
 reading needs positional writes, a bitset reading needs [template.bitset] and boost's set vocabulary both
 ([a-strict-extension](#a-strict-extension)) — while the concept asks only what the three *containers* have in
 common. Union below, intersection across.
 
 **Nothing is constrained on it, and that is deliberate.** The adaptors admit their storage *nominally*, by
-`specialization_of_contiguous_bit_container` ([one-storage](#one-storage)), and the structural question is a
+`specialization_of_bit_container` ([one-storage](#one-storage)), and the structural question is a
 different question: `std::bitset` and `boost::dynamic_bitset` both model the common vocabulary and neither
 is a storage this library wraps. Constraining an adaptor on the concept would turn *this is not one of ours*
 into *your type lacks `count()`*, which is the wrong diagnosis about the wrong type.
@@ -297,7 +297,7 @@ common and fails loudly if one of them drifts.
 
 ### the-primitive-basis
 
-Two layers now, and the lower one is the whole design. `contiguous_bit_container` provides the **primitives** —
+Two layers now, and the lower one is the whole design. `bit_container` provides the **primitives** —
 the operations a reading needs to be efficient rather than merely correct — and each adaptor **assembles** them
 into the standard-like API its reading presents. There was a third layer between them, and
 [one-storage](#one-storage) is why there no longer is.
@@ -305,7 +305,7 @@ into the standard-like API its reading presents. There was a third layer between
 The primitives are the point, and the reason is measurable: they are exactly what the counterparts do not have.
 What each provides natively, on libstdc++:
 
-| primitive | `contiguous_bit_container` | `std::bitset<N>` | `boost::dynamic_bitset` |
+| primitive | `bit_container` | `std::bitset<N>` | `boost::dynamic_bitset` |
 |---|---|---|---|
 | block read | yes | only `N <= 64`, through `to_ullong` | **no** |
 | `find_first` | yes | `_Find_first`, where the library has it | yes |
@@ -367,7 +367,7 @@ bit_fixed_set<256>(words)                    // {0, 2} — the values are blocks
 Both compiled, both succeeded, and they disagreed; a tag was the whole of what separated them. A name is what
 tells them apart at the call site, where the reader is. `std::bitset` spells its own exit `to_ullong` for the
 same reason and offers no conversion operator at all, Boost.dynamic_bitset spells this pair `from_block_range`
-and `to_block_range`, and `contiguous_bit_container` had said `assign_bits` and `to_bits` one layer down all
+and `to_block_range`, and `bit_container` had said `assign_bits` and `to_bits` one layer down all
 along — so the rename carries the library's own vocabulary up to the readings, rather than inventing one.
 
 It also settles an older hazard at the bitset reading by construction. A templated **constructor** is a candidate
@@ -518,7 +518,7 @@ A run-time width has neither conversion, and that is the policy and not an omiss
 one `N` at compile time and a growing set has no single one to mean.
 
 **All three readings carry the exchange**, and it is said **once, in the container**. The width is
-`contiguous_bit_container`'s own property rather than any reading's, so that is where `bit_extent`, the two
+`bit_container`'s own property rather than any reading's, so that is where `bit_extent`, the two
 `exchanges_bits` predicates and the `assign_bits`/`to_bits` pair live; a reading forwards to them in one line and
 adds only what its own vocabulary requires. Said in each adaptor instead, the `dynamic_extent`-to-zero guard —
 needed because `dynamic_extent` is `SIZE_MAX` and `byte_count` of that is two exabytes — was three copies of one
@@ -669,9 +669,9 @@ using width_type = std::conditional_t<(alignof(std::size_t) >= alignof(Blocks)),
 
 Only a storage holding its blocks inline out-aligns a `size_t`, and it does so by the blocks' own alignment, so
 `block_type` is both wide enough to hold any width and exactly the size of the gap it fills --
-`contiguous_bit_container` is then its two members and nothing else, at the same size the padding cost.
+`bit_container` is then its two members and nothing else, at the same size the padding cost.
 `std::array` reaches none of this, a static width carrying no member at all, and neither does `std::vector`,
-whose alignment is a pointer's whatever it holds; `contiguous_bit_container<std::inplace_vector<xstd::uint128, K>, N>` is the one
+whose alignment is a pointer's whatever it holds; `bit_container<std::inplace_vector<xstd::uint128, K>, N>` is the one
 cell that does. The `static_assert` beside the alias holds the two facts that make `block_type` the right
 carrier, so a storage over-aligned for some other reason fails loudly rather than truncating a width. Every
 reader goes through `size()`, which converts once, so the arithmetic stays a `size_t`'s.
@@ -797,7 +797,7 @@ undo them.
 
 ### the-blit
 
-`contiguous_bit_container::word_at(pos)` is the block-wide word at any position:
+`bit_container::word_at(pos)` is the block-wide word at any position:
 the bits `[pos, pos + digits)`, assembled from `block(pos / digits) >> r` and the next block `<< (digits - r)`
 where `r = pos % digits`. Two things make it total where it is called. A shift by `digits` is undefined, so
 an aligned read is the block itself with no second term; and the last block has nothing above it, so the
@@ -808,7 +808,7 @@ operations on a window ([windows](#windows)), and the bitset reading's order at 
 ([the-ordering-invariant](#the-ordering-invariant)), where each operand's top window is read as words at its
 own alignment and both windows end at their own width, so the tail needs no mask.
 
-`contiguous_bit_container::set_word(pos, value, mask)` is its write side, on our storage alone as `set_block`
+`bit_container::set_word(pos, value, mask)` is its write side, on our storage alone as `set_block`
 is: the bits of `value` under `mask` land at `[pos, pos + digits)`, split over two blocks where `pos` is not
 aligned, the tail kept clear. Every masked write goes through it: boost's ranged `set`, `reset` and `flip`, a
 window's `fill`, and a window's bulk operators, each walking the words a range spans with the mask of what each
@@ -817,7 +817,7 @@ holds, whole words and a partial one at the end.
 ### the-funnel-shift
 
 Under `word_at` and both shift operators is one operation: two adjacent blocks spliced into a double-width word
-and shifted down. `contiguous_bit_container::straddled_block(index, L_shift, R_shift)` is that splice, and the
+and shifted down. `bit_container::straddled_block(index, L_shift, R_shift)` is that splice, and the
 three sites now read as three uses of it rather than three spellings.
 
 It takes the shift **and** its complement, named as both operators already name them, because both already hold
@@ -846,7 +846,7 @@ once instead of three times.
 
 ### total-versus-precondition
 
-`contiguous_bit_container::exclusive_find_prev` is deliberately **not** total. Where `inclusive_find_next`
+`bit_container::exclusive_find_prev` is deliberately **not** total. Where `inclusive_find_next`
 answers `size()` for "nothing at or above", this one has a precondition instead, and that is the whole of why it
 is three instructions cheaper at every width: it never materializes a not-found value.
 
@@ -869,7 +869,7 @@ would be wrong: `size()` is a legitimate argument, meaning "from the end".
 
 ### the-cheapest-contract
 
-`contiguous_bit_container` states each operation in its cheapest form and lets the caller that needs more pay
+`bit_container` states each operation in its cheapest form and lets the caller that needs more pay
 for more. `exclusive_find_next` requires `is_valid(n)`; `exclusive_find_prev` requires a set position strictly
 below `n` — which `any()` does not establish, a container whose set positions all lie above `n` having none
 below it.
@@ -897,9 +897,9 @@ element tier by whether the entry was there.
 All of that existed for a plurality that no longer exists. The `ext/` specializations for `std::bitset` and
 `boost::dynamic_bitset` became comparison targets rather than adapted storages
 ([owning-is-ours](#owning-is-ours)), and the three adaptors were constrained to
-`specialization_of_contiguous_bit_container` — nominally, so a storage is ours because the detector says so
+`specialization_of_bit_container` — nominally, so a storage is ours because the detector says so
 and not because its members answer. From there the trait named exactly one thing, the adaptors named it twice,
-and `bit_traits<contiguous_bit_container<...>>` was twenty entries forwarding to members its only caller
+and `bit_traits<bit_container<...>>` was twenty entries forwarding to members its only caller
 already had. So the parameter is gone, the trait is gone, and the scans are gone with it: the storage answers
 in its own name.
 
@@ -912,18 +912,18 @@ now has one answer at one address, so a reader chasing `find_first` reaches the 
 over a probe.
 
 **What it costs is the extension point.** Specializing `bit_traits<MyStorage>` was how an outside storage
-joined, and nothing replaces it: a storage joins by being a `contiguous_bit_container`, which lives under
+joined, and nothing replaces it: a storage joins by being a `bit_container`, which lives under
 `detail/` and is spelled by the library alone. That is a real narrowing and it is deliberate — the trait was
 paying for a generality with no second instance ([the-interface-line](#the-interface-line)).
 
-**There is no local detector.** `specialization_of_contiguous_bit_container` was a variable template
-specialized on `contiguous_bit_container<Blocks, N>` plus a concept stripping the const, because the obvious
+**There is no local detector.** `specialization_of_bit_container` was a variable template
+specialized on `bit_container<Blocks, N>` plus a concept stripping the const, because the obvious
 `is_specialization_of` names a template through a `template<class...>` parameter and this storage is a type
 then a value. xstd-misc now carries one concept per parameter shape, so the adaptors spell the constraint
 where they take the parameter:
 
 ```cpp
-template<specialization_of_TN<bits::detail::contiguous_bit_container> Bits, ownership Own>
+template<specialization_of_TN<bits::detail::bit_container> Bits, ownership Own>
 class set_adaptor;
 ```
 
@@ -1006,7 +1006,7 @@ already said.
 ### block-writes
 
 `set_block` is the write side of `block()`, and was deliberately never one of the questions a reading asks:
-block writes are only ever needed on storage we control, and the unused tail is `contiguous_bit_container`'s
+block writes are only ever needed on storage we control, and the unused tail is `bit_container`'s
 to keep.
 
 ## Orderings
@@ -1023,7 +1023,7 @@ over different sequences, and **they disagree**, pairwise, as two pairs show:
 
 A storage serving three readings cannot hold one of their orderings under a neutral name without choosing for
 its callers, so it holds none under that name. It holds **all three, separately named**:
-`contiguous_bit_container` has a `set_lexicographical_compare_three_way`, a
+`bit_container` has a `set_lexicographical_compare_three_way`, a
 `sequence_lexicographical_compare_three_way` and a `bitset_lexicographical_compare_three_way`, never one
 `lexicographical_compare_three_way`, so a caller says which reading it means rather than being handed whichever
 the storage happened to pick. Each is the reading's own blockwise answer to the standard algorithm it is named
@@ -1229,7 +1229,7 @@ Every ordering in the library satisfies
 std::lexicographical_compare_three_way(a.begin(), a.end(), b.begin(), b.end()) == (a <=> b)
 ```
 
-which is stated on the **reading**, never on the storage: `contiguous_bit_container` has no `begin()`/`end()`,
+which is stated on the **reading**, never on the storage: `bit_container` has no `begin()`/`end()`,
 and `boost::dynamic_bitset` has no public iterators, so it cannot be written against a backend at all.
 
 `bitset_adaptor` does not iterate, so its left-hand side is the sequence reading's traversal **reversed**:
@@ -1297,7 +1297,7 @@ gcovr counts branch slots **per template instantiation and never merges them**. 
 instantiation can never enter is a branch never taken, whatever every other instantiation does.
 
 So a degenerate width does not get an unreachable loop; it gets **different code**, via `if constexpr` on
-`static_num_blocks == 1` and `== 2` in `contiguous_bit_container`, and on `static_block_count` and `extent == 0`
+`static_num_blocks == 1` and `== 2` in `bit_container`, and on `static_block_count` and `extent == 0`
 in the storage's own scans. The block count is derived from the width rather than declared for exactly this
 reason: nothing new has to be supplied to know it, the block layout being fixed already.
 
@@ -1445,7 +1445,7 @@ compile on libc++ where it happens to compile on libstdc++. `BOOST_CHECK` compar
 
 ### test-not-subscript
 
-`contiguous_bit_container::test` rather than `operator[]`: this reads and cannot be written through.
+`bit_container::test` rather than `operator[]`: this reads and cannot be written through.
 `std::bitset`'s `operator[]` returns an assignable proxy and this returns `bool`, so the subscript spelling
 would promise an assignment that does not compile.
 
@@ -1524,8 +1524,8 @@ draft moves, re-pin the file, renumber the rows, and let the checker name the ci
 ### the-three-adaptors
 
 Three class templates carry the three readings: `set_adaptor`, `sequence_adaptor`, `bitset_adaptor`. Each is
-written against `contiguous_bit_container` and against nothing else, so one adaptor serves
-`contiguous_bit_container` over `std::array`, `std::vector` and the bounded blocks alike, at both widths and
+written against `bit_container` and against nothing else, so one adaptor serves
+`bit_container` over `std::array`, `std::vector` and the bounded blocks alike, at both widths and
 in both ownerships ([one-storage](#one-storage)). Each takes the parameters its own reading needs and no
 others: `set_adaptor<Bits, Store, Derived>`, `sequence_adaptor<Bits, Store, W, Derived>` and
 `bitset_adaptor<Bits, Derived>`, the bitset reading owning by construction and the set reading never windowed.
@@ -1533,7 +1533,7 @@ others: `set_adaptor<Bits, Store, Derived>`, `sequence_adaptor<Bits, Store, W, D
 The three are internal: the twelve owners and the three views are the public surface, and no public template
 argument list, deduction guide or specialization spells an adaptor. Every public name is a class deriving from
 one of them, passing itself as the last argument so that the adaptor names it back: `basic_bit_fixed_set<B, N>` derives from
-`set_adaptor<contiguous_bit_container<std::array<B, K>, N>, storage::owned, basic_bit_fixed_set<B, N>>`. The short layer stays
+`set_adaptor<bit_container<std::array<B, K>, N>, storage::owned, basic_bit_fixed_set<B, N>>`. The short layer stays
 an alias fixing the block: `bit_fixed_set<N>`, `bit_array<N>` and `bitset<N>` are those at `std::size_t`.
 Deriving is what keeps a value-returning operation -- `& | ^ -`, `operator~`, the shifts, `xstd::bit_cast` --
 handing back the container the caller named rather than the vehicle under it
@@ -1544,7 +1544,7 @@ handing back the container the caller named rather than the vehicle under it
 **The nine containers are a full three-by-three, and nothing else.** Three readings over three storages, every
 cell occupied, every one an owner and none windowed. Each is a class deriving from its reading's detail adaptor
 over its storage, `basic_bit_array<B, N>` from the sequence adaptor over
-`contiguous_bit_container<std::array<B, num_blocks_v<B, N>>, N>`, and each writes out the constructors of the
+`bit_container<std::array<B, num_blocks_v<B, N>>, N>`, and each writes out the constructors of the
 standard container it packs ([the-container-adaptor](#the-container-adaptor)). A reading over a storage is
 reached through its owner's name and no other, so the grid is a fact about the public surface rather than a
 construction imposed on it.
@@ -1581,12 +1581,12 @@ and says nothing about where they live. `ext/boost.hpp` joins on that and nothin
 
 The grid has three container adaptors, one per reading -- `set_adaptor`, `sequence_adaptor` and `bitset_adaptor`
 in `xstd::bits::detail`, in the manner of `std::stack<T, Container>` and `std::flat_set<Key, Compare, KeyContainer>`
--- each over a `contiguous_bit_container` open to any `owned_bit_storage` without a new class for it. They are
+-- each over a `bit_container` open to any `owned_bit_storage` without a new class for it. They are
 internal. The public surface is the twelve owners and the three views, and an adaptor over a storage no owner
 names is reached from inside the library and its tests alone.
 
 **The owners are classes deriving from the adaptors, not aliases over them.** Each passes itself as its adaptor's
-last argument over the `contiguous_bit_container` its base clause spells, which `owned_bits_t` names; a second
+last argument over the `bit_container` its base clause spells, which `owned_bits_t` names; a second
 class over the same storage is a distinct type all the same. Each writes out its constructors in the order and
 notation of the clause it packs: [set.cons] for the three sets, less the allocator forms where the storage has
 none; [vector.bool.pspc] for `basic_bit_vector` and `basic_bit_small_vector`; [inplace.vector.overview] for
@@ -1632,7 +1632,7 @@ guides keep `K = 1`, which costs nothing. The views are a separate question from
 ### owning-is-ours
 
 Owning is ours and viewing is interop. An owning adaptor sits over a storage of this library,
-`contiguous_bit_container` over `std::array` or `std::vector`, and nothing else is supported or tested: `bitset_adaptor`
+`bit_container` over `std::array` or `std::vector`, and nothing else is supported or tested: `bitset_adaptor`
 requires the vocabulary ([a-strict-extension](#a-strict-extension)) and block access, which neither counterpart
 satisfies, and the owning `set_adaptor` and `sequence_adaptor` take their ordering from the storage's own
 three-way members, with no synthesized fallback for a storage without them. A view sat over any type with a
@@ -1669,7 +1669,7 @@ reads "the storage lets *this handle* write". A const owner's accessor hands bac
 hands back `Bits const&` again. Const and ownership are the same question, asked once, and answered by the type
 the accessor returns. The exceptions are the constructors and, once storage grows, the growth members, which need an explicit
 `requires (owns(Store))`: the requires-expression tests what the storage can do, not what this handle may do to
-it, and a view over a `contiguous_bit_container` over `std::vector` must not be able to resize what it does not own.
+it, and a view over a `bit_container` over `std::vector` must not be able to resize what it does not own.
 
 ### views-follow-their-precedent
 
@@ -1779,7 +1779,7 @@ the second, and with an object against itself: that edge stayed at zero every ti
 
 Which is a curiosity until a gate counts it. `gcovr` is told to drop branches on a line matching
 `= default;`, which is there to excuse exactly this synthesized branch -- and the pattern matches a LINE, not
-a declaration. `sequence_adaptor`'s comparison, `bitset_adaptor`'s and `contiguous_bit_container`'s each fit
+a declaration. `sequence_adaptor`'s comparison, `bitset_adaptor`'s and `bit_container`'s each fit
 on the one line that carries `= default;`, so the exclusion finds them. `set_adaptor`'s static-width overload
 wrapped over three, its trailing *requires-clause* being longer than everything else about it, and gcov
 anchors a function's branches at the first line of its declaration -- where there is no `= default;` to match.
@@ -1893,7 +1893,7 @@ constrained at every layer. A view takes the storage -- that is what a view is f
 go undiagnosed until use.
 
 **The printed name is what the classes collect.** An alias is not what a compiler prints, so a diagnostic about
-`bit_array<100>` named `sequence_adaptor<contiguous_bit_container<array<unsigned long, 2>, 100>, ...>`, a
+`bit_array<100>` named `sequence_adaptor<bit_container<array<unsigned long, 2>, 100>, ...>`, a
 spelling the user did not write and cannot write back. `std::string` makes that trade and the world lives with
 `basic_string<char, char_traits<char>, allocator<char>>` -- but `std::string` aliases a *class*, where both
 layers here were aliases, which is why the printed name fell through to the adaptor rather than stopping at
@@ -1925,14 +1925,14 @@ replaces the forward declaration of `bit_subspan` the adaptor carried while the 
 Every public view is named by **words**, never by the storage built over them: an unsigned word, or a sized
 contiguous range of unsigned words that subscripts, which is the public concept `xstd::bit_storage`. A packed container
 *has* bit storage and is not bit storage itself: `bit_set` is a range of keys, `bit_array` of proxies, and
-`std::bitset` has one too without exposing it. `contiguous_bit_container`
+`std::bitset` has one too without exposing it. `bit_container`
 is a storage device and appears in no public template argument list. `detail/words.hpp` holds the map:
 
 | words | a view stores |
 |---|---|
-| `std::uint64_t` | `contiguous_bit_container<std::span<B, 1>>`, by value |
+| `std::uint64_t` | `bit_container<std::span<B, 1>>`, by value |
 | `std::array<B, K>`, `std::vector<B>`, ... | a pointer to an owner's storage over the same words |
-| `std::span<B, E>` | `contiguous_bit_container<W>`, by value |
+| `std::span<B, E>` | `bit_container<W>`, by value |
 
 The views line up as `std::span<T, N>` does -- `bit_set_view<Blocks, N>` -- and `N` defaults to the width the words name, so a view needs it only over an owner
 of a narrower width, such as `bit_span<std::array<std::size_t, 1>, 20>` over a `bit_array<20>`. A default in a
@@ -1972,7 +1972,7 @@ to-the-end sentinel. A window is a view in `std::ranges`' sense and borrowed lik
 neither compares nor hashes ([views-follow-their-precedent](#views-follow-their-precedent)).
 
 A window's end blocks are shared with what lies outside it, so its bulk operations are masked words: `fill` over
-a window of ours is `contiguous_bit_container::set(pos, len, value)`, a word at a time through `set_word`, and
+a window of ours is `bit_container::set(pos, len, value)`, a word at a time through `set_word`, and
 one position at a time over a window of anything else; `&=`, `|=` and `^=` on a window of ours take a
 source of any shape that reads blocks of the same block type, a window at any other alignment included, reading
 both sides through `word_at` and writing through `set_word` masked to the window ([the-blit](#the-blit)). The
@@ -2029,7 +2029,7 @@ the note is here so that the question does not have to be asked again from the s
 
 `append_range` has two tiers. Where the source is a sequence adaptor of any shape, owner, view or window, over
 a storage whose blocks are the destination's block type, the source's bits are read as words at the source's own
-alignment through `word_at` and appended a word at a time through `contiguous_bit_container::append(block)`,
+alignment through `word_at` and appended a word at a time through `bit_container::append(block)`,
 which splits each word over the destination's own alignment; then the width is trimmed to the count, `resize`
 clearing whatever the last word carried past it. Everything else, a `std::vector<bool>`, an `iota` under a
 `transform`, a sequence over another block type, is packed a word at a time, which is boost's private
@@ -2135,7 +2135,7 @@ access where the model is contiguous, a `tuple_element` that converts to `bool` 
 
 The sweep found what the range members had not needed. The allocator: `allocator_type` through the same empty
 base `bitset_adaptor` has, `get_allocator`, and the allocator-extended constructors,
-`[container.alloc.reqmts]`'s copy and move included, which `contiguous_bit_container` gains beneath them.
+`[container.alloc.reqmts]`'s copy and move included, which `bit_container` gains beneath them.
 Each takes `allocator_type const&` as the standard does, not a deduced `Alloc` matched to it: a matched template
 refused every allocator that only converts -- a `memory_resource*` for a `polymorphic_allocator`, a rebound
 `std::allocator`, a braced `{}` -- and so broke uses-allocator construction, a `std::pmr::vector` of owners failing
@@ -2159,7 +2159,7 @@ product of `N` objects, and a packed sequence is one object. `std::hash` is aske
 
 A view over words that belong to no container of ours takes them directly: `bit_set_view(board)` over one
 `std::uint64_t`, `bit_span(words)` over a `std::array`, a `std::vector` or a `std::span` of unsigned words. The
-storage underneath is `bits::detail::borrowed_bits<Block, Extent>`, which is `contiguous_bit_container` over a
+storage underneath is `bits::detail::borrowed_bits<Block, Extent>`, which is `bit_container` over a
 `std::span<Block, Extent>`, and a deduction guide on each view names it from the argument: one word is
 `std::span<Block, 1>`, a range is whatever `std::span(words)` deduces. A word is taken by lvalue, a range by
 lvalue or as a `borrowed_range`, so `bit_set_view(std::uint64_t{5})` and `bit_span(std::vector<std::uint32_t>{})`
@@ -2210,9 +2210,9 @@ view gets its storage and not something a caller needs to name.
 ### views-over-owners
 
 An owner is not itself a storage — `bit_fixed_set`, `bit_array` and `bitset` are thin wrappers over a
-`contiguous_bit_container` — so a view over an owner is a view over the storage it wraps:
-`bit_set_view(xstd::bitset<64>&)` is `set_adaptor<contiguous_bit_container<std::array<size_t, 1>, 64>, refers>`, and the pointer in
-the iterator is to the `contiguous_bit_container`, never to the `bitset`. The owner hands its storage over through
+`bit_container` — so a view over an owner is a view over the storage it wraps:
+`bit_set_view(xstd::bitset<64>&)` is `set_adaptor<bit_container<std::array<size_t, 1>, 64>, refers>`, and the pointer in
+the iterator is to the `bit_container`, never to the `bitset`. The owner hands its storage over through
 `owned_storage<Owner>`, declared beside it and never defined for anything else, so
 `owner_of<Owner, Bits, R>` reads "this owner wraps exactly the storage this view refers through, and is not
 already committed to another reading". Const flows one way: a const owner gives a
@@ -2222,7 +2222,7 @@ The view's converting constructor takes the owner's private member directly, whi
 a referring adaptor — the one friendship in the tree that runs upward, from a container to the views over it,
 and it grants access to a member and to nothing that member's type does not already expose. Which adaptors it
 befriends is [the-readings-do-not-mix](#the-readings-do-not-mix). Storage stays private; nothing on an owner's
-surface says `contiguous_bit_container`.
+surface says `bit_container`.
 
 ### viewing-an-owner-is-implicit
 
@@ -2299,7 +2299,7 @@ one ever should, it belongs beside the containers, where it can be named and its
 ### the-interface-line
 
 **If a user never spells it, it lives in `detail/`.** The name or the header, either counts. That is the whole
-rule, and it is a test rather than a judgement: `bit_fixed_set` is spelled, `contiguous_bit_container` is not;
+rule, and it is a test rather than a judgement: `bit_fixed_set` is spelled, `bit_container` is not;
 `bidirectional_bit_reference` is reached only through the `iterator` and `reference` typedefs and is spelled by
 nobody.
 
@@ -2310,7 +2310,7 @@ an interface ([the-common-vocabulary](#the-common-vocabulary)).
 
 That is the whole of it, and it used to be longer. `bit_traits` was here, with `ext/` as its worked example,
 because specializing `bit_traits<MyStorage>` was *the* extension point; there is no such point now
-([one-storage](#one-storage)), `Bits` having to be a `contiguous_bit_container`. **The three adaptors were here
+([one-storage](#one-storage)), `Bits` having to be a `bit_container`. **The three adaptors were here
 next, and they were the harder call.** Every container and every view derives from one, so a name a consumer
 cannot avoid reading was called interface whether or not anyone could write it, and `storage`, `window` and the
 axis tags came along because no adaptor can be named without them. What settled it is that a consumer never has
@@ -2320,10 +2320,10 @@ base at all. So the adaptors and their vocabulary went to `xstd::bits::detail`, 
 `namespace xstd` is twelve names, their short and aligned aliases, and one concept.
 
 On the other side, the two that had to be argued. The four proxy types are reached only through container
-typedefs, so no user spells them. `contiguous_bit_container` and its three aliases are the device that turns
+typedefs, so no user spells them. `bit_container` and its three aliases are the device that turns
 three readings times three storages into three plus three ([the-one-vehicle](#the-one-vehicle)), and the
 `basic_` layer already exposes the block parameter — `basic_bit_fixed_set<std::uint8_t, 24>` reaches the
-capability without the storage being named. Recorded against: `contiguous_bit_container` *is* instantiated by
+capability without the storage being named. Recorded against: `bit_container` *is* instantiated by
 name throughout `test/`, which is a real signal, and demoting it makes the test tree reach into `detail/`. The
 counter is that a test is not a user; a test tree that mirrors the library, `detail/` included, is what testing
 an implementation looks like.
@@ -2370,7 +2370,7 @@ storage, the parameters each reading needs and no more ([the-three-adaptors](#th
 `basic_` layer chooses the storage and leaves the block open, `basic_string`-style:
 `basic_bit_fixed_set<Block, N>`, `basic_bit_set<Block, Allocator>` and their four siblings. The block leads in
 every column, so a `basic_` name hands its base clause the arguments in the order it was given them --
-`basic_bit_fixed_set<Block, N>` derives from `set_adaptor<contiguous_bit_container<std::array<Block, K>, N>, storage::owned,
+`basic_bit_fixed_set<Block, N>` derives from `set_adaptor<bit_container<std::array<Block, K>, N>, storage::owned,
 basic_bit_fixed_set<Block, N>>`, straight through. The static and bounded columns used to take `<N, Block>`
 and transpose at the call, which
 nothing gained: `Block` carries no default in those columns, so it is free to lead, and leading is what
@@ -2464,10 +2464,10 @@ second vocabulary for the same thing.
 
 `N` is a **capacity** in bits here, where the static column's `N` is a width, and it is exact in the same way:
 `basic_bit_bounded_vector<std::uint8_t, 9>` holds nine bits, as `std::inplace_vector<bool, 9>` does, in two
-blocks whose last seven bits it never uses. `contiguous_bit_container` reads its second parameter by storage -- the
+blocks whose last seven bits it never uses. `bit_container` reads its second parameter by storage -- the
 width of fixed blocks, the capacity of blocks that resize under a constant one, and `dynamic_extent` for blocks that
 grow without bound -- and defaults it to that, so a container named by its storage alone holds every bit of it:
-`contiguous_bit_container<bounded_blocks<std::uint8_t, 2>>` is the storage `basic_bit_bounded_vector<std::uint8_t, 16>`
+`bit_container<bounded_blocks<std::uint8_t, 2>>` is the storage `basic_bit_bounded_vector<std::uint8_t, 16>`
 wraps, one storage however it is spelled. The constant capacity is read without an object: from a `capacity()`
 usable in a constant expression, as `std::inplace_vector`'s is, or from the `static_capacity` beside a static
 `capacity()` callable only at run time, as `boost::container::static_vector`'s is. `boost::container::small_vector`
@@ -2508,7 +2508,7 @@ owner answers as its blocks do.
 copyable and trivially default constructible, and `static_vector<Block, 0>` is none of these: it keeps a size.
 `bounded_blocks_for<Block, N>` is therefore `no_blocks<Block>` at `N == 0`, on either library, and
 `bounded_blocks<Block, num_blocks_v<Block, N>>` above it. `no_blocks` is an empty contiguous range whose growth
-past nought throws `std::bad_alloc`, as `std::inplace_vector<Block, 0>`'s does; over it `contiguous_bit_container`
+past nought throws `std::bad_alloc`, as `std::inplace_vector<Block, 0>`'s does; over it `bit_container`
 stores no width (`has_zero_capacity`), defaults its moves, and takes the `bit_members` whose two members overlap and
 have no initializer; `sequence_adaptor` holds the container `[[no_unique_address]]`, so
 `basic_bit_bounded_vector<Block, 0>` is an empty type. There the range constructor and both append tiers refuse
@@ -2575,7 +2575,7 @@ places and each reading owes its own:
 So `max_size()` is not one function with three callers. **The storage computes all three** -- `max_size()`,
 `saturating_max_size()`, `addressable_max_size()` -- because all three are made of `bits_per_block` and the block
 container, which is knowledge only the storage has, and each reading returns the one its counterpart names. That
-is what `contiguous_bit_container` is for: the primitives are its, the contracts are the readings'.
+is what `bit_container` is for: the primitives are its, the contracts are the readings'.
 
 Both differences are observable, and neither is small:
 
@@ -2658,7 +2658,7 @@ width it asks for by **addition** over a `size_t` the caller names, and every on
 
 | where | the sum |
 |---|---|
-| `contiguous_bit_container::growing_insert` | `n + 1`, to admit the position |
+| `bit_container::growing_insert` | `n + 1`, to admit the position |
 | `set_adaptor::operator<<=` at a run-time width | `width + n`, the translation being total over `size_t`; clamped to a capacity |
 | `set_adaptor::insert_range`, consecutive tier | `lo + len - 1`, the range's last position |
 | `sequence_adaptor::insert(position, n, value)` | `size() + n` |
@@ -2857,7 +2857,7 @@ universe, along with `fill()` and the four set operators. The alternative -- let
 would make the width value for exactly one operation, which is the thing this section says the set reading
 does not do.
 
-`contiguous_bit_container`'s `operator==` cannot say that: it is width first, which is what the sequence reading
+`bit_container`'s `operator==` cannot say that: it is width first, which is what the sequence reading
 and `dynamic_bitset` mean, and those two need it. The width is part of the value for both of them -- a
 `vector<bool>` of two elements is not one of three, and a `dynamic_bitset` is equal only at equal size -- and it
 is not part of the value for a set. So the set reading gets an entry of its own, `set_equal`, beside the
@@ -3152,7 +3152,7 @@ transcribing and starts choosing ([an-opinionated-reimagining](#an-opinionated-r
 
 The vocabulary used to be a concept, `has_bitops` -- the compound operators including `-=`, the shifts, `set`
 `reset` `flip` `all` `any` `none` `count` `size`, the three set predicates and regularity -- because a foreign
-storage might arrive not speaking it. Only `contiguous_bit_container` can arrive now, and it speaks all of it by
+storage might arrive not speaking it. Only `bit_container` can arrive now, and it speaks all of it by
 construction, so the question was answering itself; the gate is nominal like the other two
 ([one-storage](#one-storage)) and each member is forwarded one line each.
 
@@ -3221,7 +3221,7 @@ character that is neither `0` nor `1`.
 Several members share a spelling with different contracts between the storage and the counterparts, and the
 wrapper carries the one guard between them.
 
-**Shift.** `contiguous_bit_container`'s `<<=` is unchecked, with `n < size()` as its precondition;
+**Shift.** `bit_container`'s `<<=` is unchecked, with `n < size()` as its precondition;
 `std::bitset`'s and `boost::dynamic_bitset`'s are total and saturate to none. The wrapper guards the storage's
 shift, `n < size()` else `reset()`, which is the guard `xstd::bitset` used to write by hand. At width zero even
 `<<= 0` trips the storage's assert, so the guard is what makes that instantiation well-formed.
@@ -3431,7 +3431,7 @@ named -- reaches both. `random_access_bit_iterator::operator*` says `m_idx < siz
 proxy reads and writes **through the storage**, so a position it hands out has to be one the storage has. The
 set reading's iterator needs no such guard and has none: its proxy converts to `m_idx` itself, so there the
 position *is* the value and `*end()` is the width rather than a read. Before, `*v.end()` and `v.begin()[100]`
-both reported `contiguous_bit_container::test`'s `is_valid` — a private predicate of a detail type, two levels
+both reported `bit_container::test`'s `is_valid` — a private predicate of a detail type, two levels
 below the expression that was wrong — where `std::vector<bool>` reported the first as `true` and the second as
 a heap-buffer-overflow.
 
@@ -3448,7 +3448,7 @@ The sequence proxy writes through the storage's `assign(n, value)` and never thr
 view fell back on `c[n] = value` for a type without `set(n, value)`, and were such a type's `operator[]` to
 return our own proxy, that proxy's assignment would land back in the fallback and **recurse until the stack
 is gone**. A named member cannot loop back into the proxy, which is one more reason the write is a member the
-storage spells rather than a probe over whatever answers — and `contiguous_bit_container` has no `operator[]`
+storage spells rather than a probe over whatever answers — and `bit_container` has no `operator[]`
 at all ([test-not-subscript](#test-not-subscript)), so there is nothing for a fallback to find.
 
 ### the-iterator-is-the-primitive
@@ -3459,7 +3459,7 @@ friend: the dependency runs one way, from the container to the iterator, and the
 declarations the earlier views needed (*"Clang requires it, GCC does not"*) have nothing left to declare.
 
 The pointer is to the **storage** an owner wraps, never to the owner: `bit_fixed_set` hands out
-`bits::detail::bidirectional_bit_iterator<contiguous_bit_container<std::array<B, K>, N>>`, which is why an owner is never itself
+`bits::detail::bidirectional_bit_iterator<bit_container<std::array<B, K>, N>>`, which is why an owner is never itself
 the thing a view or an iterator is parameterized on.
 
 **Where they live, and what they are called.** Both pairs are in `detail/`, one header each --
@@ -3599,7 +3599,7 @@ the bitset offers. [a-strict-extension](#a-strict-extension)
 
 ### what-a-view-costs
 
-Measured on the same backend `contiguous_bit_container` in every row -- an owner, a view holding a pointer to
+Measured on the same backend `bit_container` in every row -- an owner, a view holding a pointer to
 that storage, and a view over the `bitset_adaptor` wrapping it -- so the two layers price separately.
 `benchmark/` builds at `-O3 -march=native`, which is what these numbers are; an earlier version of this section
 said `-O2`, which was never true of any build in the tree.
@@ -3718,8 +3718,8 @@ found that way. When it finds none it falls back to a move-construct and two mov
 correct and, for a storage whose moves are cheap, not obviously worse -- which is how this went unnoticed.
 
 `set_adaptor`, `sequence_adaptor` and `bitset_adaptor` each ship a free `swap` beside the member.
-`contiguous_bit_container` had only the member, and every one of the nine containers swaps by
-`std::ranges::swap(m_bits, other.m_bits)` where `m_bits` **is** a `contiguous_bit_container`. So the member was
+`bit_container` had only the member, and every one of the nine containers swaps by
+`std::ranges::swap(m_bits, other.m_bits)` where `m_bits` **is** a `bit_container`. So the member was
 unreachable from the containers, and a storage with an optimized `swap` never saw it. Measured over a
 storage whose swap and moves are counted, once per reading:
 
@@ -3865,10 +3865,10 @@ Short-circuiting survives them: `all(false)` really does stop at the first set b
 `none(true)`. So there are four private helpers -- `count_true`, `any_true`, `all_true`, `none_true` -- and the
 public members are spelled over those, each helper choosing its tier once: the storage's own member over the
 whole, and a masked word at a time over a window ([windows](#windows)). `none_true` is a helper of its own
-rather than `not any_true`, so the storage is asked in its own words; `contiguous_bit_container` spells
+rather than `not any_true`, so the storage is asked in its own words; `bit_container` spells
 `count`, `all`, `any` and `none` itself, each at the block tier.
 
-`mismatch` is `contiguous_bit_container::first_difference` plus one `countr_zero`. That helper existed already,
+`mismatch` is `bit_container::first_difference` plus one `countr_zero`. That helper existed already,
 private and used only by `sequence_lexicographical_compare_three_way`; it is now public, and **keeps its
 name**: it scans low block to high, which is the *ascending* orderings' answer, where
 `bitset_lexicographical_compare_three_way` deliberately walks the other way and does not use it. Calling it
@@ -4051,7 +4051,7 @@ either hook, because the template arguments will not deduce through
 ### total-lookups-on-the-container
 
 Every `bit_fixed_set` lookup is total over `key_type`, because `std::set`'s is: a key outside `[0, N)` names no
-element, so it answers *absent* rather than reaching the bit. `contiguous_bit_container` asserts `is_valid` on
+element, so it answers *absent* rather than reaching the bit. `bit_container` asserts `is_valid` on
 every position it accepts and offers no total spelling of any of these — that is the layering working, not a gap
 in it. **The precondition is the sequence's; the guard is the container's.**
 
@@ -4319,7 +4319,7 @@ specialization. P0634 made `typename` optional only in listed contexts, and a **
 them** — GCC 14 rejects the elision outright, *type/value mismatch at argument 1*. An alias-declaration **is**
 on the list, so the block type is named through one and the template argument is a simple-template-id that
 needs no `typename` and trips no check. The same pattern already names `allocator_of` in
-`contiguous_bit_container`'s test. Measured before pushing, because "clang-tidy suggested it" is not evidence
+`bit_container`'s test. Measured before pushing, because "clang-tidy suggested it" is not evidence
 that it compiles.
 
 The same check came back later from the other side, and there it is simply right. On the set reading's
@@ -4383,7 +4383,7 @@ execute.
 
 It was a Block-width benchmark that surfaced this. `benchmark/src/set/blocks.cpp` instantiates the two-block
 arm of the scan for three 128-bit carriers in one translation unit, a combination no single test unit makes;
-the per-line branch totals at `contiguous_bit_container.hpp:410`, `:413` and `:454` went from 2, 6 and 2 to 4,
+the per-line branch totals at `bit_container.hpp:410`, `:413` and `:454` went from 2, 6 and 2 to 4,
 11 and 4, and the nine new branches were covered by nothing. The first attempt at a fix added a benchmark shape
 that reaches the missing arm, and it changed the numbers by exactly zero -- which is the proof that the
 benchmark never ran, and the reason the gate is now answered at the CMake level instead.
@@ -4617,7 +4617,7 @@ bit_fixed_set<256>(words)                    // {0, 2} -- the values are blocks
 one that *was* asked for, and that is the failure available here. A name does: `from_bit_storage` says which
 reading of the argument is meant, at the call site, where the reader is. `std::bitset` spells its own
 exit `to_ullong` for the same reason, Boost spells this pair `from_block_range` and `to_block_range`,
-and `contiguous_bit_container` has said `assign_bits` and `to_bits` one layer down all along.
+and `bit_container` has said `assign_bits` and `to_bits` one layer down all along.
 
 They are named **by a concept** rather than by a type. `std::bitset` appears nowhere in them, which is
 the point: what these two admit is anything whose N bits this library can prove it reads correctly —
@@ -4920,7 +4920,7 @@ those members the friend is unreachable by any spelling. Measured, not assumed.
 
 ### The one unreachable line
 
-`is_valid`'s empty case is called only from an `assert`, and a zero-width `contiguous_bit_container`
+`is_valid`'s empty case is called only from an `assert`, and a zero-width `bit_container`
 has no member that reaches one. It is not removable either: MSVC's `/W4` rejects a bare `n < N` as
 always false (C4296). It carries a trailing `GCOVR_EXCL_LINE`, which drops that one line from the
 denominator rather than counting it as reached.

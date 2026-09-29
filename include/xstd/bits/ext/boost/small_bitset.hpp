@@ -6,28 +6,28 @@
 #ifndef XSTD_BITS_EXT_BOOST_SMALL_BITSET_HPP
 #define XSTD_BITS_EXT_BOOST_SMALL_BITSET_HPP
 
-#include <xstd/bits/detail/bitset_adaptor.hpp>           // bitset_adaptor
-#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container, num_blocks_v
-#include <xstd/bits/from_bit_storage.hpp>                // from_bit_storage, from_bit_storage_t
-#include <xstd/ints/concepts/unsigned_integer.hpp>       // unsigned_integer
-#include <boost/container/new_allocator.hpp>             // new_allocator
-#include <boost/container/small_vector.hpp>              // small_vector
-#include <concepts>                                      // constructible_from
-#include <cstddef>                                       // size_t
-#include <functional>                                    // hash
-#include <iterator>                                      // input_iterator
-#include <string>                                        // basic_string
-#include <string_view>                                   // basic_string_view
-#include <type_traits>                                   // is_nothrow_move_constructible_v, type_identity_t
-#include <utility>                                       // move
+#include <xstd/bits/detail/bit_container.hpp>      // bit_container, num_blocks_v
+#include <xstd/bits/detail/bitset_adaptor.hpp>     // bitset_adaptor
+#include <xstd/bits/from_bit_storage.hpp>          // from_bit_storage, from_bit_storage_t
+#include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
+#include <boost/container/new_allocator.hpp>       // new_allocator
+#include <boost/container/small_vector.hpp>        // small_vector
+#include <concepts>                                // constructible_from
+#include <cstddef>                                 // size_t
+#include <functional>                              // hash
+#include <iterator>                                // input_iterator
+#include <string>                                  // basic_string
+#include <string_view>                             // basic_string_view
+#include <type_traits>                             // is_nothrow_move_constructible_v, type_identity_t
+#include <utility>                                 // move
 
 namespace xstd {
 
 // The bitset reading over the small-vector column; the allocator is Boost's own, as that container defaults to it.
 template<xstd::unsigned_integer Block, std::size_t N, class Alloc = boost::container::new_allocator<Block>>
-class basic_small_bitset : public bits::detail::bitset_adaptor<bits::detail::contiguous_bit_container<boost::container::small_vector<Block, bits::detail::num_blocks_v<Block, N>, Alloc>>, basic_small_bitset<Block, N, Alloc>>
+class basic_small_bitset : public bits::detail::bitset_adaptor<bits::detail::bit_container<boost::container::small_vector<Block, bits::detail::num_blocks_v<Block, N>, Alloc>>, basic_small_bitset<Block, N, Alloc>>
 {
-        using base_type = bits::detail::bitset_adaptor<bits::detail::contiguous_bit_container<boost::container::small_vector<Block, bits::detail::num_blocks_v<Block, N>, Alloc>>, basic_small_bitset<Block, N, Alloc>>;
+        using base_type = bits::detail::bitset_adaptor<bits::detail::bit_container<boost::container::small_vector<Block, bits::detail::num_blocks_v<Block, N>, Alloc>>, basic_small_bitset<Block, N, Alloc>>;
 
 public:
         using typename base_type::allocator_type;

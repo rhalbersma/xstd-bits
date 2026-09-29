@@ -3,22 +3,22 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/inplace_vector.hpp>                       // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
-#include <test/sequence/dense.hpp>                       // yields_every_position
-#include <xstd/bits/bit_bounded_vector.hpp>              // aligned, basic_bit_bounded_vector, bit_bounded_vector
-#include <xstd/bits/detail/bounded_blocks.hpp>           // bounded_blocks
-#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
-#include <xstd/bits/detail/ownership.hpp>                // owned_bits_t, storage
-#include <xstd/bits/detail/sequence_adaptor.hpp>         // sequence_adaptor
-#include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <algorithm>                                     // equal
-#include <concepts>                                      // same_as
-#include <cstddef>                                       // size_t
-#include <cstdint>                                       // uint8_t
-#include <limits>                                        // numeric_limits
-#include <new>                                           // bad_alloc
-#include <ranges>                                        // iota
-#include <vector>                                        // vector
+#include <test/inplace_vector.hpp>               // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
+#include <test/sequence/dense.hpp>               // yields_every_position
+#include <xstd/bits/bit_bounded_vector.hpp>      // aligned, basic_bit_bounded_vector, bit_bounded_vector
+#include <xstd/bits/detail/bit_container.hpp>    // bit_container
+#include <xstd/bits/detail/bounded_blocks.hpp>   // bounded_blocks
+#include <xstd/bits/detail/ownership.hpp>        // owned_bits_t, storage
+#include <xstd/bits/detail/sequence_adaptor.hpp> // sequence_adaptor
+#include <boost/test/unit_test.hpp>              // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
+#include <algorithm>                             // equal
+#include <concepts>                              // same_as
+#include <cstddef>                               // size_t
+#include <cstdint>                               // uint8_t
+#include <limits>                                // numeric_limits
+#include <new>                                   // bad_alloc
+#include <ranges>                                // iota
+#include <vector>                                // vector
 
 #ifdef TEST_HAS_INPLACE_VECTOR
 
@@ -38,7 +38,7 @@ constexpr bool has_allocator = requires { typename X::allocator_type; }; // NOLI
 // The sequence reading over a run-time width under a compile-time capacity, built on the sequence adaptor.
 BOOST_AUTO_TEST_CASE(TheBoundedSequenceIsTheSequenceAdaptorOverInlineBlocks)
 {
-        static_assert(std::derived_from<T, xstd::bits::detail::sequence_adaptor<xstd::bits::detail::contiguous_bit_container<xstd::bits::detail::bounded_blocks<std::uint8_t, 3>, 24>, xstd::bits::detail::storage::owned, xstd::bits::detail::window::all, T>>);
+        static_assert(std::derived_from<T, xstd::bits::detail::sequence_adaptor<xstd::bits::detail::bit_container<xstd::bits::detail::bounded_blocks<std::uint8_t, 3>, 24>, xstd::bits::detail::storage::owned, xstd::bits::detail::window::all, T>>);
         static_assert(std::same_as<xstd::bit_bounded_vector<24>, xstd::basic_bit_bounded_vector<std::size_t, 24>>);
 }
 
@@ -101,7 +101,7 @@ BOOST_AUTO_TEST_CASE(TheCapacityIsPartOfTheType)
         static_assert(std::same_as<xstd::aligned::bit_bounded_vector<9>, xstd::bit_bounded_vector<std::numeric_limits<std::size_t>::digits>>);
 
         // Named by its storage alone, the container holds every bit of it: one storage, however it is spelled.
-        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_bounded_vector<std::uint8_t, 16>>, xstd::bits::detail::contiguous_bit_container<xstd::bits::detail::bounded_blocks<std::uint8_t, 2>>>);
+        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_bounded_vector<std::uint8_t, 16>>, xstd::bits::detail::bit_container<xstd::bits::detail::bounded_blocks<std::uint8_t, 2>>>);
 }
 
 // Every position, densely, agreeing with the subscript -- and not a contiguous range, which no proxy sequence can be.

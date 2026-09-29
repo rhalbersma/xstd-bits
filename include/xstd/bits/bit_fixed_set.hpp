@@ -7,7 +7,7 @@
 #define XSTD_BITS_BIT_FIXED_SET_HPP
 
 #include <xstd/bits/bit_storage.hpp>                         // bit_storage_extent_v
-#include <xstd/bits/detail/contiguous_bit_container.hpp>     // contiguous_bit_container, num_blocks_v
+#include <xstd/bits/detail/bit_container.hpp>                // bit_container, num_blocks_v
 #include <xstd/bits/detail/ownership.hpp>                    // storage
 #include <xstd/bits/detail/set_adaptor.hpp>                  // set_adaptor
 #include <xstd/bits/from_bit_storage.hpp>                    // from_bit_storage, from_bit_storage_t
@@ -31,9 +31,9 @@ namespace xstd {
 
 // The fixed-width set: the basic name leaves the block open, the restricted one is the machine word.
 template<xstd::unsigned_integer Block, std::size_t N>
-class basic_bit_fixed_set : public bits::detail::set_adaptor<bits::detail::contiguous_bit_container<std::array<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, basic_bit_fixed_set<Block, N>>
+class basic_bit_fixed_set : public bits::detail::set_adaptor<bits::detail::bit_container<std::array<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, basic_bit_fixed_set<Block, N>>
 {
-        using base_type = bits::detail::set_adaptor<bits::detail::contiguous_bit_container<std::array<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, basic_bit_fixed_set<Block, N>>;
+        using base_type = bits::detail::set_adaptor<bits::detail::bit_container<std::array<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, basic_bit_fixed_set<Block, N>>;
 
 public:
         using typename base_type::key_compare;
