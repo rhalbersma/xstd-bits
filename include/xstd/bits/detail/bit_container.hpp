@@ -20,11 +20,10 @@
 #include <xstd/ints/memory.hpp>                              // align_up
 #include <xstd/misc/type_traits/conditional_data_member.hpp> // XSTD_NO_UNIQUE_ADDRESS, conditional_data_member_t
 #include <boost/hash2/hash_append_fwd.hpp>                   // hash_append, hash_append_tag
-#include <algorithm>                                         // all_of, any_of, copy, equal, fill, fill_n, find_if, fold_left, lexicographical_compare_three_way, max, min, shift_left, shift_right
+#include <algorithm>                                         // all_of, any_of, copy, fill, fill_n, find_if, fold_left, max, min, shift_left, shift_right
 #include <array>                                             // array
 #include <bit>                                               // endian
 #include <cassert>                                           // assert
-#include <compare>                                           // strong_ordering
 #include <concepts>                                          // default_initializable, same_as
 #include <cstddef>                                           // byte, ptrdiff_t, size_t, to_integer
 #include <cstring>                                           // memcpy
@@ -34,7 +33,7 @@
 #include <limits>                                            // numeric_limits
 #include <memory>                                            // allocator_traits
 #include <new>                                               // bad_alloc
-#include <ranges>                                            // begin, drop, iota, rbegin, rend, size, swap, transform, zip
+#include <ranges>                                            // begin, data, drop, iota, size, swap, transform, zip
 #include <source_location>                                   // source_location
 #include <span>                                              // dynamic_extent, span
 #include <stdexcept>                                         // length_error
@@ -377,86 +376,7 @@ public:
         // Memberwise, width first, unused bits clear; noexcept by choice, as std::array's and std::vector's == are not.
         [[nodiscard]] friend auto operator==(bit_container const&, bit_container const&) noexcept -> bool = default;
 
-        // The set reading's equality, where width is capacity: a hidden friend, neither value being the subject.
-        [[nodiscard]] friend constexpr auto set_equal(bit_container const& x, bit_container const& y) noexcept
-                -> bool
-        {
-                if constexpr (has_static_size) {
-                        // One width, so holding the same positions and being equal are the same statement.
-                        return x == y;
-                } else {
-                        // ranges::equal over the shared prefix as an iterator pair, which lowers to a memcmp.
-                        auto const shared = static_cast<std::ptrdiff_t>(std::ranges::min(x.num_blocks(), y.num_blocks()));
-                        auto const xf = std::ranges::begin(x.m_blocks);
-                        auto const yf = std::ranges::begin(y.m_blocks);
-                        return std::ranges::equal(xf, xf + shared, yf, yf + shared) and
-                               (x.num_blocks() < y.num_blocks()
-                                        ? not y.any_block_set(x.num_blocks(), y.num_blocks())
-                                        : not x.any_block_set(y.num_blocks(), x.num_blocks()));
-                }
-        }
-
-        // No operator<=>: pure storage names all three orderings and picks none, each a hidden friend.
-        [[nodiscard]] friend constexpr auto set_lexicographical_compare_three_way(bit_container const& x [[maybe_unused]], bit_container const& y [[maybe_unused]]) noexcept
-                -> std::strong_ordering
-        {
-                if constexpr (has_static_size and N == 0) {
-                        return std::strong_ordering::equal;
-                } else if constexpr (has_static_size and N == 1) {
-                        // One position, so the loser is empty and any_above is constantly false.
-                        return x.test(0UZ) <=> y.test(0UZ);
-                } else {
-                        if constexpr (not has_static_size) {
-                                if (x.size() != y.size()) {
-                                        return x.padded_set_three_way(y);
-                                }
-                        }
-                        auto const [index, diff] = x.first_difference(y);
-                        if (diff == zero) {
-                                return std::strong_ordering::equal;
-                        }
-                        auto const offset = bits::detail::countr_zero(diff);
-                        if (bits::detail::intersects(x.m_blocks[index], shl(unit, offset))) {
-                                return y.any_above(index, offset) ? std::strong_ordering::less : std::strong_ordering::greater;
-                        }
-                        return x.any_above(index, offset) ? std::strong_ordering::greater : std::strong_ordering::less;
-                }
-        }
-
-        // The sequence reading a block at a time: whoever holds the lowest differing position is greater.
-        [[nodiscard]] friend constexpr auto sequence_lexicographical_compare_three_way(bit_container const& x [[maybe_unused]], bit_container const& y [[maybe_unused]]) noexcept
-                -> std::strong_ordering
-        {
-                if constexpr (has_static_size and N == 0) {
-                        return std::strong_ordering::equal;
-                } else {
-                        // A capacity of nought holds only width zero, so there both widths are that.
-                        if constexpr (not has_static_size and not has_zero_capacity) {
-                                if (x.size() != y.size()) {
-                                        return x.padded_sequence_three_way(y);
-                                }
-                        }
-                        auto const [index, diff] = x.first_difference(y);
-                        if (diff == zero) {
-                                return std::strong_ordering::equal;
-                        }
-                        auto const offset = bits::detail::countr_zero(diff);
-                        return bits::detail::intersects(x.m_blocks[index], shl(unit, offset))
-                                       ? std::strong_ordering::greater
-                                       : std::strong_ordering::less;
-                }
-        }
-
-        // The bitset reading a block at a time: the bit string is the blocks from the top down, tail clear.
-        [[nodiscard]] friend constexpr auto bitset_lexicographical_compare_three_way(bit_container const& x, bit_container const& y) noexcept
-                -> std::strong_ordering
-        {
-                assert(x.size() == y.size());
-                return std::lexicographical_compare_three_way(
-                        std::ranges::rbegin(x.m_blocks), std::ranges::rend(x.m_blocks),
-                        std::ranges::rbegin(y.m_blocks), std::ranges::rend(y.m_blocks)
-                );
-        }
+        // No operator<=>: the three readings order the same bits differently, so the storage picks none.
 
         template<class Provider, class Hash, class Flavor>
         friend constexpr auto tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, bit_container const* v) noexcept
@@ -581,13 +501,13 @@ public:
         [[nodiscard]] constexpr auto blocks() noexcept
                 -> std::span<block_type>
         {
-                return {m_blocks.data(), num_blocks()};
+                return {std::ranges::data(m_blocks), num_blocks()};
         }
 
         [[nodiscard]] constexpr auto blocks() const noexcept
                 -> std::span<block_type const>
         {
-                return {m_blocks.data(), num_blocks()};
+                return {std::ranges::data(m_blocks), num_blocks()};
         }
 
         // Someone else's blocks as the span that borrows them, writable through a const storage as the span itself is.
@@ -1393,13 +1313,6 @@ public:
                 }
         }
 
-        // A proper subset is a subset that differs, and both halves are already here.
-        [[nodiscard]] constexpr auto is_proper_subset_of(bit_container const& other) const noexcept
-                -> bool
-        {
-                return is_subset_of(other) and not set_equal(*this, other);
-        }
-
         [[nodiscard]] constexpr auto intersects(bit_container const& other [[maybe_unused]]) const noexcept
                 -> bool
         {
@@ -1454,21 +1367,6 @@ public:
                 }
         }
 
-private:
-        // Into an unequal allocator the blocks are copied, where boost::container::small_vector takes the storage.
-        constexpr auto take_blocks(Blocks& source)
-                -> void
-        {
-                if constexpr (not std::allocator_traits<typename Blocks::allocator_type>::is_always_equal::value) {
-                        if (m_blocks.get_allocator() != source.get_allocator()) {
-                                m_blocks.resize(std::ranges::size(source));
-                                std::ranges::copy(source, std::ranges::begin(m_blocks));
-                                return;
-                        }
-                }
-                m_blocks = std::move(source);
-        }
-
         // Whether any position strictly above the given one is set, which one shift down leaves.
         [[nodiscard]] constexpr auto any_above(std::size_t index, std::size_t offset) const noexcept
                 -> bool
@@ -1520,38 +1418,19 @@ private:
                 return found == std::ranges::end(blocks) ? n : *found;
         }
 
-        // The set ordering across two widths, turning on the lowest position at which the two disagree.
-        [[nodiscard]] constexpr auto padded_set_three_way(bit_container const& other) const noexcept
-                -> std::strong_ordering
+private:
+        // Into an unequal allocator the blocks are copied, where boost::container::small_vector takes the storage.
+        constexpr auto take_blocks(Blocks& source)
+                -> void
         {
-                auto const n = std::ranges::max(this->num_blocks(), other.num_blocks());
-                auto const index = padded_first_difference(other, n);
-                if (index == n) {
-                        return std::strong_ordering::equal;
+                if constexpr (not std::allocator_traits<typename Blocks::allocator_type>::is_always_equal::value) {
+                        if (m_blocks.get_allocator() != source.get_allocator()) {
+                                m_blocks.resize(std::ranges::size(source));
+                                std::ranges::copy(source, std::ranges::begin(m_blocks));
+                                return;
+                        }
                 }
-                auto const diff = static_cast<block_type>(this->padded_block(index) ^ other.padded_block(index));
-                auto const offset = static_cast<std::size_t>(bits::detail::countr_zero(diff));
-                if (bits::detail::intersects(this->padded_block(index), shl(unit, offset))) {
-                        return other.padded_any_above(index, offset) ? std::strong_ordering::less : std::strong_ordering::greater;
-                }
-                return this->padded_any_above(index, offset) ? std::strong_ordering::greater : std::strong_ordering::less;
-        }
-
-        // The sequence ordering: position 0 is the first element, so the lowest disagreement decides alone.
-        [[nodiscard]] constexpr auto padded_sequence_three_way(bit_container const& other) const noexcept
-                -> std::strong_ordering
-        {
-                auto const n = std::ranges::max(this->num_blocks(), other.num_blocks());
-                auto const index = padded_first_difference(other, n);
-                if (index == n) {
-                        // The two answers this can give: the caller arrives only with the sizes differing.
-                        return this->size() < other.size() ? std::strong_ordering::less : std::strong_ordering::greater;
-                }
-                auto const diff = static_cast<block_type>(this->padded_block(index) ^ other.padded_block(index));
-                auto const offset = static_cast<std::size_t>(bits::detail::countr_zero(diff));
-                return bits::detail::intersects(this->padded_block(index), shl(unit, offset))
-                               ? std::strong_ordering::greater
-                               : std::strong_ordering::less;
+                m_blocks = std::move(source);
         }
 
         // The block straddling index and index + 1, spliced from a shift up and a shift down.
