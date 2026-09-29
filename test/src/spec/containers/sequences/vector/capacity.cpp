@@ -10,6 +10,7 @@
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_THROW
 #include <concepts>                     // same_as
 #include <stdexcept>                    // length_error
+#include <utility>                      // cmp_not_equal
 
 BOOST_AUTO_TEST_SUITE(Spec)
 BOOST_AUTO_TEST_SUITE(Containers)
@@ -99,7 +100,7 @@ BOOST_AUTO_TEST_CASE(Swap)
         test::for_each_type<test::spec::sequence::vector_all>([]<class T> -> void {
                 for (auto const [from, a, b] : inputs::pairs<T>()) {
                         auto const on_failure = context(from, a, b);
-                        mem_swap_capacity()(a, b, test::spec::sequence::held_width_v<T> != 0UZ);
+                        mem_swap_capacity()(a, b, std::cmp_not_equal(test::spec::sequence::held_width_v<T>, 0UZ));
                 }
         });
 }
