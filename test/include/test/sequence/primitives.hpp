@@ -6,22 +6,25 @@
 #ifndef TEST_SEQUENCE_PRIMITIVES_HPP
 #define TEST_SEQUENCE_PRIMITIVES_HPP
 
+#include <test/dynamic.hpp>          // dynamic
 #include <test/inplace_vector.hpp>   // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
 #include <test/sanitizer.hpp>        // has_address_sanitizer
-#include <test/sequence/factory.hpp> // model_of, static_width
-#include <boost/test/unit_test.hpp>  // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_GE, BOOST_CHECK_NE, BOOST_CHECK_THROW
-#include <algorithm>                 // ranges::count, ranges::equal
-#include <concepts>                  // convertible_to, derived_from, same_as, unsigned_integral
+#include <test/sequence/factory.hpp> // model_of, static_capacity
+#include <boost/test/unit_test.hpp>  // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_GE, BOOST_CHECK_NE, BOOST_CHECK_NO_THROW, BOOST_CHECK_THROW
+#include <algorithm>                 // ranges::all_of, ranges::count, ranges::equal, ranges::min
+#include <concepts>                  // derived_from, same_as
 #include <cstddef>                   // ptrdiff_t, size_t
 #include <format>                    // format, formattable
 #include <initializer_list>          // initializer_list
-#include <iterator>                  // forward_iterator, input_iterator_tag, iter_value_t, iterator_traits, prev, random_access_iterator_tag, reverse_iterator
+#include <iterator>                  // distance, forward_iterator, input_iterator_tag, iter_value_t, iterator_traits, prev, random_access_iterator_tag
+#include <memory>                    // addressof
 #include <new>                       // bad_alloc
-#include <ranges>                    // begin, end, filter, forward_range, from_range, from_range_t, iota, subrange, take, transform
+#include <ranges>                    // begin, distance, end, filter, forward_range, from_range, from_range_t, iota, subrange, take, transform
 #include <stdexcept>                 // length_error, out_of_range
 #include <string>                    // string
 #include <string_view>               // string_view
-#include <utility>                   // move
+#include <type_traits>               // type_identity
+#include <utility>                   // declval
 #include <vector>                    // erase_if, vector
 
 #ifdef TEST_HAS_INPLACE_VECTOR
@@ -48,6 +51,13 @@ template<class X>
         -> std::size_t
 {
         return static_cast<std::size_t>(it - a.begin());
+}
+
+// A copy of b as a prvalue, so the overload taking an rvalue is the one called.
+[[nodiscard]] constexpr auto temporary(bool b) noexcept
+        -> bool
+{
+        return b;
 }
 
 // The model with in placed before position p.
@@ -85,13 +95,22 @@ template<class X>
         return v;
 }
 
+// The bools of m as a random access range that counts in reads how often an element is read.
+[[nodiscard]] inline auto counted(std::vector<bool> const& m, std::size_t& reads)
+{
+        return std::views::iota(0UZ, m.size()) | std::views::transform([&m, &reads](std::size_t i) -> bool {
+                       ++reads;
+                       return m[i];
+               });
+}
+
 // k alternating bools with no size to reserve by, which is the other path a range can take in.
 [[nodiscard]] inline auto unsized_alternating(std::size_t k)
 {
         return std::views::iota(0UZ, k) | std::views::filter([](std::size_t) -> bool { return true; }) | std::views::transform([](std::size_t i) -> bool { return i % 2UZ == 0UZ; });
 }
 
-// The value, iterator and size types [container.reqmts] and [container.rev.reqmts] ask of a sequence of bool.
+// A sequence of bool: the element type [container.reqmts] asks of the rest is bool, and its iterators random access.
 template<class X>
 constexpr auto nested_types()
         -> void
@@ -100,77 +119,11 @@ constexpr auto nested_types()
         using CI = X::const_iterator;
 
         static_assert(std::same_as<typename X::value_type, bool>); // [container.reqmts]/2
-
-        // [container.reqmts]/6 and /7 ask for forward iterators, which every sequence here betters.
         static_assert(std::derived_from<typename std::iterator_traits<I>::iterator_category, std::random_access_iterator_tag>);
         static_assert(std::derived_from<typename std::iterator_traits<CI>::iterator_category, std::random_access_iterator_tag>);
         static_assert(std::same_as<std::iter_value_t<I>, bool>);
         static_assert(std::same_as<std::iter_value_t<CI>, bool>);
-        static_assert(std::convertible_to<I, CI>);
-
-        static_assert(std::same_as<typename X::difference_type, typename std::iterator_traits<I>::difference_type>); // [container.reqmts]/8
-        static_assert(std::unsigned_integral<typename X::size_type>);                                                // [container.reqmts]/9
-
-        static_assert(std::same_as<typename X::reverse_iterator, std::reverse_iterator<I>>);        // [container.rev.reqmts]/2
-        static_assert(std::same_as<typename X::const_reverse_iterator, std::reverse_iterator<CI>>); // [container.rev.reqmts]/3
 }
-
-// [container.reqmts]/10 asks an empty object of every container but array, whose width is its type's.
-template<class X>
-struct constructor_default
-{
-        auto operator()() const
-        {
-                auto const u = X();
-                BOOST_CHECK(u.empty() or static_width<X>); // [container.reqmts]/10
-        }
-};
-
-struct constructor_copy
-{
-        template<class X>
-        auto operator()(X const& v) const
-        {
-                auto const u = v;    // NOLINT(performance-unnecessary-copy-initialization): the copy is what is under test
-                BOOST_CHECK(u == v); // [container.reqmts]/13
-        }
-};
-
-struct constructor_move
-{
-        template<class X>
-        auto operator()(X const& a) const
-        {
-                auto rv = a;
-                auto const u = std::move(rv);
-                BOOST_CHECK(u == a); // [container.reqmts]/15
-        }
-};
-
-struct op_copy_assign
-{
-        template<class X>
-        auto operator()(X const& t0, X const& v) const
-        {
-                auto t = t0;
-                static_assert(std::same_as<decltype(t = v), X&>); // [container.reqmts]/17
-                t = v;
-                BOOST_CHECK(t == v); // [container.reqmts]/18
-        }
-};
-
-struct op_move_assign
-{
-        template<class X>
-        auto operator()(X const& t0, X const& v) const
-        {
-                auto t = t0;
-                auto rv = v;
-                static_assert(std::same_as<decltype(t = std::move(rv)), X&>); // [container.reqmts]/20
-                t = std::move(rv);
-                BOOST_CHECK(t == v); // [container.reqmts]/22
-        }
-};
 
 // The subscript is *(a.begin() + n) at every position, and writing through it changes that position alone.
 struct mem_subscript
@@ -249,6 +202,23 @@ struct mem_back
         }
 };
 
+// Iterators walked, written through and measured in a constant expression: two positions where the type can grow.
+template<class X>
+[[nodiscard]] constexpr auto iterates_as_a_constant()
+        -> bool
+{
+        auto a = X();
+        if constexpr (test::dynamic<X>) {
+                a.resize(std::ranges::min(a.max_size(), 2UZ));
+        }
+        auto n = 0Z;
+        for (auto it = a.begin(); it != a.end(); ++it) {
+                *it = true;
+                ++n;
+        }
+        return n == a.cend() - a.cbegin() and std::ranges::all_of(a, [](bool b) -> bool { return b; });
+}
+
 // [sequence.reqmts]'s constructors; one a capacity cannot hold is the capacity's clause to answer.
 template<class X>
 struct constructor
@@ -256,7 +226,9 @@ struct constructor
         auto operator()(std::size_t n, bool t) const
         {
                 if (n <= X().max_size()) {
-                        BOOST_CHECK(model_of(X(n, t)) == std::vector<bool>(n, t)); // [sequence.reqmts]/6
+                        auto const u = X(n, t);
+                        BOOST_CHECK(model_of(u) == std::vector<bool>(n, t));                               // [sequence.reqmts]/6
+                        BOOST_CHECK_EQUAL(static_cast<std::size_t>(std::distance(u.begin(), u.end())), n); // [sequence.reqmts]/7
                 }
         }
 
@@ -265,7 +237,9 @@ struct constructor
         {
                 auto const m = std::vector<bool>(i, j);
                 if (m.size() <= X().max_size()) {
-                        BOOST_CHECK(model_of(X(i, j)) == m); // [sequence.reqmts]/9
+                        auto const u = X(i, j);
+                        BOOST_CHECK(model_of(u) == m);                                                                          // [sequence.reqmts]/9
+                        BOOST_CHECK_EQUAL(std::distance(u.begin(), u.end()), static_cast<std::ptrdiff_t>(std::distance(i, j))); // [sequence.reqmts]/10
                 }
         }
 
@@ -276,7 +250,9 @@ struct constructor
                 if constexpr (requires { X(std::from_range, rg); }) {
                         auto const m = std::vector<bool>(std::ranges::begin(rg), std::ranges::end(rg));
                         if (m.size() <= X().max_size()) {
-                                BOOST_CHECK(model_of(X(std::from_range, rg)) == m); // [sequence.reqmts]/12
+                                auto const u = X(std::from_range, rg);
+                                BOOST_CHECK(model_of(u) == m);                                                                                // [sequence.reqmts]/12
+                                BOOST_CHECK_EQUAL(std::distance(u.begin(), u.end()), static_cast<std::ptrdiff_t>(std::ranges::distance(rg))); // [sequence.reqmts]/14
                         }
                 }
         }
@@ -297,8 +273,9 @@ struct op_assign
                 if (il.size() <= a.max_size()) {
                         auto r = a;
                         static_assert(std::same_as<decltype(r = il), X&>); // [sequence.reqmts]/16
-                        r = il;
-                        BOOST_CHECK(r == X(il)); // [sequence.reqmts]/18
+                        auto const& s = (r = il);
+                        BOOST_CHECK(r == X(il));                             // [sequence.reqmts]/18
+                        BOOST_CHECK(std::addressof(s) == std::addressof(r)); // [sequence.reqmts]/19
                 }
         }
 };
@@ -395,6 +372,12 @@ struct mem_insert
                         static_assert(std::same_as<decltype(b.insert(nth(b, p), t)), typename X::iterator>); // [sequence.reqmts]/24
                         BOOST_CHECK_EQUAL(offset(b, r), p);                                                  // [sequence.reqmts]/27
                         BOOST_CHECK(model_of(b) == spliced(model_of(a), p, {t}));                            // [sequence.reqmts]/26
+
+                        auto c = a;
+                        auto const s = c.insert(nth(c, p), temporary(t));
+                        static_assert(std::same_as<decltype(c.insert(nth(c, p), temporary(t))), typename X::iterator>); // [sequence.reqmts]/28
+                        BOOST_CHECK_EQUAL(offset(c, s), p);                                                             // [sequence.reqmts]/31
+                        BOOST_CHECK(model_of(c) == spliced(model_of(a), p, {t}));                                       // [sequence.reqmts]/30
                 }
         }
 
@@ -489,7 +472,8 @@ struct mem_clear
                 auto b = a;
                 static_assert(std::same_as<decltype(b.clear()), void>); // [sequence.reqmts]/53
                 b.clear();
-                BOOST_CHECK(b.empty()); // [sequence.reqmts]/55
+                BOOST_CHECK(b.begin() == b.end()); // [sequence.reqmts]/54
+                BOOST_CHECK(b.empty());            // [sequence.reqmts]/55
         }
 };
 
@@ -523,10 +507,17 @@ struct mem_push_back
         template<class X>
         auto operator()(X const& a, bool t) const
         {
+                // [inplace.vector.modifiers] returns the reference where [sequence.reqmts] returns nothing.
+                static_assert(static_capacity<X> or std::same_as<decltype(std::declval<X&>().push_back(t)), void>);            // [sequence.reqmts]/101
+                static_assert(static_capacity<X> or std::same_as<decltype(std::declval<X&>().push_back(temporary(t))), void>); // [sequence.reqmts]/105
                 if (has_room(a, 1UZ)) {
+                        auto const m = spliced(model_of(a), a.size(), {t});
                         auto b = a;
                         b.push_back(t);
-                        BOOST_CHECK(model_of(b) == spliced(model_of(a), a.size(), {t})); // [sequence.reqmts]/103
+                        BOOST_CHECK(model_of(b) == m); // [sequence.reqmts]/103
+                        auto c = a;
+                        c.push_back(temporary(t));
+                        BOOST_CHECK(model_of(c) == m); // [sequence.reqmts]/107
                 }
         }
 };
@@ -543,6 +534,49 @@ struct mem_append_range
                                 static_assert(std::same_as<decltype(b.append_range(rg)), void>); // [sequence.reqmts]/109
                                 b.append_range(rg);
                                 BOOST_CHECK(model_of(b) == spliced(model_of(a), a.size(), in)); // [sequence.reqmts]/111
+                        }
+                }
+        }
+};
+
+// A range is read one element at a time, each exactly once, however the container takes its size.
+struct reads_once
+{
+        template<class X>
+        auto operator()(std::type_identity<X>, std::vector<bool> const& m) const
+        {
+                if (m.size() <= X().max_size()) {
+                        auto reads = 0UZ;
+                        auto const rg = counted(m, reads);
+                        BOOST_CHECK(model_of(X(rg.begin(), rg.end())) == m);
+                        BOOST_CHECK_EQUAL(reads, m.size()); // [sequence.reqmts]/9
+                        if constexpr (requires { X(std::from_range, rg); }) {
+                                reads = 0UZ;
+                                BOOST_CHECK(model_of(X(std::from_range, rg)) == m);
+                                BOOST_CHECK_EQUAL(reads, m.size()); // [sequence.reqmts]/12
+                        }
+                }
+        }
+
+        template<class X>
+        auto operator()(X const& a, std::size_t p, std::vector<bool> const& in) const
+        {
+                if (has_room(a, in.size())) {
+                        auto reads = 0UZ;
+                        auto const rg = counted(in, reads);
+                        auto b = a;
+                        b.insert(nth(b, p), rg.begin(), rg.end());
+                        BOOST_CHECK_EQUAL(reads, in.size()); // [sequence.reqmts]/38
+                        if constexpr (requires { b.insert_range(nth(b, p), rg); }) {
+                                reads = 0UZ;
+                                auto c = a;
+                                c.insert_range(nth(c, p), rg);
+                                BOOST_CHECK_EQUAL(reads, in.size()); // [sequence.reqmts]/42
+                                reads = 0UZ;
+                                auto d = a;
+                                d.append_range(rg);
+                                BOOST_CHECK_EQUAL(reads, in.size()); // [sequence.reqmts]/111
+                                BOOST_CHECK(b == c and model_of(d) == spliced(model_of(a), a.size(), in));
                         }
                 }
         }
@@ -573,7 +607,7 @@ struct mem_resize
                         b.resize(n);
                         auto m = model_of(a);
                         m.resize(n);
-                        BOOST_CHECK(model_of(b) == m);
+                        BOOST_CHECK(model_of(b) == m); // [vector.capacity]/15 [inplace.vector.capacity]/3
                 }
         }
 
@@ -585,7 +619,7 @@ struct mem_resize
                         b.resize(n, t);
                         auto m = model_of(a);
                         m.resize(n, t);
-                        BOOST_CHECK(model_of(b) == m);
+                        BOOST_CHECK(model_of(b) == m); // [vector.capacity]/18 [inplace.vector.capacity]/6
                 }
         }
 };
@@ -619,6 +653,13 @@ inline constexpr auto std_vector_bool_reserve_checks_max_size = true;
 
 template<class X>
 concept reserve_checks_max_size = std_vector_bool_reserve_checks_max_size or not is_std_vector_bool_v<X>;
+
+// P3612R1's two swaps between a reference and a bool&, which MSVC 2022's STL lacks.
+template<class X>
+concept reference_swaps_with_bool = requires (X c, X::size_type n, bool& b) {
+        swap(c[n], b);
+        swap(b, c[n]);
+};
 
 // Storage for n at least, and the value unchanged; past max_size() there is none to be had.
 struct mem_reserve
@@ -673,6 +714,76 @@ struct mem_shrink_to_fit
                 b.shrink_to_fit();
                 BOOST_CHECK_GE(b.capacity(), b.size()); // [vector.capacity]/9
                 BOOST_CHECK(b == a);
+
+                // Where the request reallocates nothing, an iterator taken before it still stands where it stood.
+                auto c = a;
+                c.shrink_to_fit();
+                auto const capacity = c.capacity();
+                auto const first = c.begin();
+                c.shrink_to_fit();
+                if (c.capacity() == capacity) {
+                        BOOST_CHECK(first == c.begin()); // [vector.capacity]/11
+                }
+        }
+};
+
+// The contents and the capacities change places.
+struct mem_swap_capacity
+{
+        // Blocks held inline stay where they are, so a small vector exchanges only the contents.
+        template<class X>
+        auto operator()(X const& a, X const& b, bool inline_blocks) const
+        {
+                auto x = a;
+                auto y = b;
+                x.reserve(a.size() + 64UZ);
+                auto const cx = x.capacity();
+                auto const cy = y.capacity();
+                x.swap(y);
+                BOOST_CHECK(x == b and y == a); // [vector.capacity]/12
+                if (not inline_blocks) {
+                        BOOST_CHECK_EQUAL(x.capacity(), cy); // [vector.capacity]/12
+                        BOOST_CHECK_EQUAL(y.capacity(), cx); // [vector.capacity]/12
+                }
+        }
+};
+
+// Room for one more, then one inserted at p: the iterators before p keep their places and their values.
+struct mem_insert_keeps_prefix
+{
+        template<class X>
+        auto operator()(X const& a, std::size_t p) const
+        {
+                if (has_room(a, 1UZ) and p > 0UZ) {
+                        auto b = a;
+                        b.reserve(a.size() + 1UZ);
+                        auto const before = b.begin() + static_cast<X::difference_type>(p - 1UZ);
+                        auto const capacity = b.capacity();
+                        b.insert(nth(b, p), true);
+                        if (b.capacity() == capacity) {
+                                BOOST_CHECK(before == b.begin() + static_cast<X::difference_type>(p - 1UZ));  // [vector.modifiers]/2
+                                BOOST_CHECK_EQUAL(static_cast<bool>(*before), static_cast<bool>(a[p - 1UZ])); // [vector.modifiers]/2
+                        }
+                }
+        }
+};
+
+// One erased at p: nothing is thrown, and the iterators before p keep their places and their values.
+struct mem_erase_keeps_prefix
+{
+        template<class X>
+        auto operator()(X const& a, std::size_t p) const
+        {
+                if (p < a.size()) {
+                        auto b = a;
+                        auto const first = b.begin();
+                        BOOST_CHECK_NO_THROW(b.erase(nth(b, p))); // [vector.modifiers]/5 [inplace.vector.modifiers]/20
+                        if (p > 0UZ) {
+                                BOOST_CHECK(first == b.begin()); // [vector.modifiers]/4 [inplace.vector.modifiers]/19
+                                auto const before = b.begin() + static_cast<X::difference_type>(p - 1UZ);
+                                BOOST_CHECK_EQUAL(static_cast<bool>(*before), static_cast<bool>(a[p - 1UZ])); // [vector.modifiers]/4
+                        }
+                }
         }
 };
 
@@ -704,7 +815,7 @@ auto check_ranged_past_capacity(X& b, std::vector<bool> const& more) -> void // 
         }
 }
 
-// [inplace.vector.modifiers]/1-3: an insertion past the capacity throws bad_alloc and leaves the value alone.
+// [inplace.vector.modifiers]/3: an insertion past the capacity throws bad_alloc and leaves the value alone.
 struct mem_insert_past_capacity
 {
         template<class X>
@@ -877,7 +988,7 @@ auto check_single_pass_fits(X const& a, std::size_t p, std::vector<bool> const& 
         }
 }
 
-// [inplace.vector.modifiers]/1-3 from ranges with no size: up to the room they fit, and one past it has no effect.
+// [inplace.vector.modifiers]/3 from ranges with no size: up to the room they fit, and one past it has no effect.
 struct mem_insert_unsized_past_capacity
 {
         template<class X>
@@ -907,7 +1018,7 @@ auto check_push_back_past_capacity(X const& a, bool t) -> void // NOLINT(bugpron
         BOOST_CHECK(b == a and c == a);                       // [inplace.vector.modifiers]/7
 }
 
-// [inplace.vector.modifiers]/4-7: the end grows by one where there is room, and throws with no effect where not.
+// [inplace.vector.modifiers]/4-5,7: the end grows by one where there is room, and throws with no effect where not.
 struct mem_push_back_or_throw
 {
         template<class X>
@@ -929,7 +1040,7 @@ struct mem_push_back_or_throw
         }
 };
 
-// [inplace.vector.modifiers]/8-14: the end grows by one where there is room, and the answer is disengaged where not.
+// [inplace.vector.modifiers]/10-12: the end grows by one where there is room, and the answer is disengaged where not.
 struct mem_try_emplace_back
 {
         template<class X>
@@ -949,11 +1060,22 @@ struct mem_try_emplace_back
                         BOOST_CHECK(not static_cast<bool>(r)); // [inplace.vector.modifiers]/11
                         BOOST_CHECK(not static_cast<bool>(s));
                         BOOST_CHECK(b == a and c == a); // [inplace.vector.modifiers]/10
+                        check_full_does_not_throw(b, t);
                 }
+        }
+
+private:
+        // A full vector answers without an exception, either door.
+        template<class X>
+        static auto check_full_does_not_throw(X& b, bool t)
+                -> void
+        {
+                BOOST_CHECK_NO_THROW(static_cast<void>(b.try_push_back(t)));    // [inplace.vector.modifiers]/12
+                BOOST_CHECK_NO_THROW(static_cast<void>(b.try_emplace_back(t))); // [inplace.vector.modifiers]/12
         }
 };
 
-// [inplace.vector.modifiers]/15-16: the room is the caller's to establish, and the end grows by one into it.
+// [inplace.vector.modifiers]/16: the room is the caller's to establish, and the end grows by one into it.
 struct mem_unchecked_emplace_back
 {
         template<class X>
@@ -968,7 +1090,7 @@ struct mem_unchecked_emplace_back
         }
 };
 
-// [inplace.vector.modifiers]/17-18: as unchecked_emplace_back, from the value.
+// [inplace.vector.modifiers]/18: as unchecked_emplace_back, from the value.
 struct mem_unchecked_push_back
 {
         template<class X>
@@ -994,11 +1116,42 @@ struct mem_flip
                 b.flip();
                 auto m = model_of(a);
                 m.flip();
+                BOOST_CHECK(model_of(b) == m); // [vector.bool.pspc]/12
+        }
+};
+
+// A copy of the proxy refers to the bit the original does, so writing through it writes that bit.
+struct ref_copy
+{
+        template<class X>
+        auto operator()(X const& a, std::size_t i) const
+        {
+                auto b = a;
+                auto r = b[i]; // NOLINT(misc-const-correctness): the copy is assigned through as a mutable proxy
+                r = not static_cast<bool>(a[i]);
+                BOOST_CHECK_NE(static_cast<bool>(b[i]), static_cast<bool>(a[i])); // [vector.bool.pspc]/5
+                auto m = model_of(a);
+                m[i] = not m[i];
                 BOOST_CHECK(model_of(b) == m);
         }
 };
 
-// [vector.bool.pspc]/7-9: the proxy is assigned from a bool and from another proxy, and reads back as that bool.
+// The proxy's end leaves the bit it referred to as it was.
+struct ref_destructor
+{
+        template<class X>
+        auto operator()(X const& a, std::size_t i) const
+        {
+                auto b = a;
+                {
+                        auto const r = b[i];
+                        static_cast<void>(static_cast<bool>(r));
+                }
+                BOOST_CHECK(b == a); // [vector.bool.pspc]/6
+        }
+};
+
+// The proxy is assigned from a bool, from another proxy and through const, and hands itself back each time.
 struct mem_reference_assign
 {
         template<class X>
@@ -1012,9 +1165,36 @@ struct mem_reference_assign
 
                 for (auto const x : {false, true}) {
                         auto c = a;
-                        c[i] = x;
-                        BOOST_CHECK_EQUAL(static_cast<bool>(c[i]), x); // [vector.bool.pspc]/9
+                        auto r = c[i];
+                        auto const& s = (r = x);
+                        BOOST_CHECK_EQUAL(static_cast<bool>(c[i]), x);       // [vector.bool.pspc]/7
+                        BOOST_CHECK(std::addressof(s) == std::addressof(r)); // [vector.bool.pspc]/8
+
+                        // P2321R2's const-qualified assignment, where the library has it.
+                        auto d = a;
+                        auto const t = d[i];
+                        if constexpr (requires { t = x; }) {
+                                auto const& u = (t = x);
+                                BOOST_CHECK_EQUAL(static_cast<bool>(d[i]), x);       // [vector.bool.pspc]/7
+                                BOOST_CHECK(std::addressof(u) == std::addressof(t)); // [vector.bool.pspc]/8
+                        }
                 }
+        }
+};
+
+// The proxy reads as the bit it refers to.
+struct ref_operator_bool
+{
+        template<class X>
+        auto operator()(X const& a, std::size_t i) const
+        {
+                auto b = a;
+                auto const m = model_of(a);
+                BOOST_CHECK_EQUAL(static_cast<bool>(b[i]), static_cast<bool>(m[i])); // [vector.bool.pspc]/9
+                b[i] = true;
+                BOOST_CHECK(static_cast<bool>(b[i])); // [vector.bool.pspc]/9
+                b[i] = false;
+                BOOST_CHECK(not static_cast<bool>(b[i])); // [vector.bool.pspc]/9
         }
 };
 
@@ -1033,7 +1213,7 @@ struct mem_reference_flip
         }
 };
 
-// [vector.bool.pspc]/11: the non-member swaps exchange two positions, or a position and a bool, where they exist.
+// The three swaps found by argument-dependent lookup exchange two positions, or a position and a bool.
 struct fn_swap_reference
 {
         template<class X>
@@ -1043,21 +1223,46 @@ struct fn_swap_reference
                 m[i] = a[j];
                 m[j] = a[i];
                 auto b = a;
-                if constexpr (requires { swap(b[i], b[j]); }) {
-                        swap(b[i], b[j]);
-                        BOOST_CHECK(model_of(b) == m);
-                }
+                swap(b[i], b[j]);
+                BOOST_CHECK(model_of(b) == m); // [vector.bool.pspc]/11
 
-                auto x = not static_cast<bool>(a[i]);
-                auto c = a;
-                if constexpr (requires { swap(c[i], x); swap(x, c[i]); }) {
+                if constexpr (reference_swaps_with_bool<X>) {
+                        auto x = not static_cast<bool>(a[i]);
+                        auto c = a;
                         swap(c[i], x);
-                        BOOST_CHECK(x == static_cast<bool>(a[i]) and static_cast<bool>(c[i]) != x);
+                        BOOST_CHECK(x == static_cast<bool>(a[i]) and static_cast<bool>(c[i]) != x); // [vector.bool.pspc]/11
                         swap(x, c[i]);
-                        BOOST_CHECK(c == a);
+                        BOOST_CHECK(c == a); // [vector.bool.pspc]/11
                 }
         }
 };
+
+// The static member swap that C++26 keeps only as deprecated.
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#else
+#pragma warning(push)
+#pragma warning(disable : 4996)
+#endif
+struct mem_static_swap
+{
+        template<class X>
+        auto operator()(X const& a, std::size_t i, std::size_t j) const
+        {
+                auto m = model_of(a);
+                m[i] = a[j];
+                m[j] = a[i];
+                auto b = a;
+                X::swap(b[i], b[j]);
+                BOOST_CHECK(model_of(b) == m); // [depr.vector.bool.swap]/2
+        }
+};
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic pop
+#else
+#pragma warning(pop)
+#endif
 
 // [vector.erasure]: what equals the value, or satisfies the predicate, goes, and the count says how much did.
 struct fn_erase
@@ -1070,7 +1275,7 @@ struct fn_erase
                 auto const r = erase(b, t);
                 static_assert(std::same_as<decltype(erase(b, t)), typename X::size_type>);
                 BOOST_CHECK_EQUAL(r, static_cast<std::size_t>(std::ranges::count(m, t)));
-                BOOST_CHECK(model_of(b) == std::vector<bool>(a.size() - r, not t));
+                BOOST_CHECK(model_of(b) == std::vector<bool>(a.size() - r, not t)); // [vector.erasure]/1 [inplace.vector.erasure]/1
         }
 };
 
@@ -1085,7 +1290,7 @@ struct fn_erase_if
                 static_assert(std::same_as<decltype(erase_if(b, pred)), typename X::size_type>);
                 auto const n = std::erase_if(m, pred);
                 BOOST_CHECK_EQUAL(r, n);
-                BOOST_CHECK(model_of(b) == m);
+                BOOST_CHECK(model_of(b) == m); // [vector.erasure]/2 [inplace.vector.erasure]/2
         }
 };
 
@@ -1114,7 +1319,7 @@ template<class X>
         return text + "]";
 }
 
-// [vector.bool.fmt]/1-2: the proxy formats as the bool it stands for, under the same spec, and a sequence follows.
+// The proxy formats as the bool it stands for, under the same spec, and a sequence of them follows.
 struct fn_format
 {
         template<class X>
@@ -1126,9 +1331,9 @@ struct fn_format
                         auto b = a;
                         for (auto const i : std::views::iota(0UZ, b.size())) {
                                 auto const t = static_cast<bool>(b[i]);
-                                BOOST_CHECK_EQUAL(std::format("{}", b[i]), bool_text(t, false));
-                                BOOST_CHECK_EQUAL(std::format("{:d}", b[i]), bool_text(t, true));
-                                BOOST_CHECK_EQUAL(std::format("{:>7}", b[i]), std::format("{:>7}", t));
+                                BOOST_CHECK_EQUAL(std::format("{}", b[i]), bool_text(t, false));        // [vector.bool.fmt]/2
+                                BOOST_CHECK_EQUAL(std::format("{:d}", b[i]), bool_text(t, true));       // [vector.bool.fmt]/1
+                                BOOST_CHECK_EQUAL(std::format("{:>7}", b[i]), std::format("{:>7}", t)); // [vector.bool.fmt]/1
                         }
                 }
         }

@@ -680,9 +680,12 @@ reader goes through `size()`, which converts once, so the arithmetic stays a `si
 
 A defaulted default constructor plus an NSDMI, rather than two constructors constrained on the extent:
 `std::vector` default-constructs empty, and so does a run-time width here -- width zero, no blocks, no
-allocation, as `std::vector<bool>` has it. A static width keeps at least one block, because the `std::array`
-under it has a fixed extent that the static arms index directly; `num_blocks_v` floors there, `blocks_for` does
-not.
+allocation, as `std::vector<bool>` has it. The two members live in a base, `bit_members`, whose specialization for a
+capacity of nought declares them with no initializer and `[[no_unique_address]]`, since a default member initializer
+makes a defaulted default constructor nontrivial ([the-bounded-column](#the-bounded-column)); everywhere else the
+blocks stay a plain member, whose tail padding an overlappable one would expose to `-Wpadded`.
+A static width keeps at least one block, because the `std::array` under it has a fixed extent that the static arms
+index directly; `num_blocks_v` floors there, `blocks_for` does not.
 
 ### the-moved-from-state
 
@@ -691,6 +694,7 @@ makes, and one on which every member without a precondition works, `push_back` a
 moves could not say that -- they moved the blocks and copied the width, so a moved-from `bit_vector` answered
 `size() == 100` over no blocks and a `push_back` wrote past the end. The moves are written out for the run-time
 widths alone, constrained on `not has_static_size`, and defaulted for the static ones, which keeps those trivial.
+A capacity of nought is defaulted too: its width is zero without being stored, so there is nothing to reset.
 
 Zero blocks is what makes the state reachable without allocating. Restoring one block in the source would have
 asked `std::vector` for memory inside a move, which is what `noexcept` on every cell's move rules out. The source's
@@ -2500,6 +2504,19 @@ makes an owner trivially copyable, `std::inplace_vector` included: a run-time wi
 zero, which a trivial move could not. `generated.cpp` asserts each storage's answer, and asserts for both that the
 owner answers as its blocks do.
 
+**A capacity of nought holds nothing.** `[inplace.vector.overview]/5` makes `inplace_vector<T, 0>` empty, trivially
+copyable and trivially default constructible, and `static_vector<Block, 0>` is none of these: it keeps a size.
+`bounded_blocks_for<Block, N>` is therefore `no_blocks<Block>` at `N == 0`, on either library, and
+`bounded_blocks<Block, num_blocks_v<Block, N>>` above it. `no_blocks` is an empty contiguous range whose growth
+past nought throws `std::bad_alloc`, as `std::inplace_vector<Block, 0>`'s does; over it `contiguous_bit_container`
+stores no width (`has_zero_capacity`), defaults its moves, and takes the `bit_members` whose two members overlap and
+have no initializer; `sequence_adaptor` holds the container `[[no_unique_address]]`, so
+`basic_bit_bounded_vector<Block, 0>` is an empty type. There the range constructor and both append tiers refuse
+any element up front through one `refuse_any`, and the ordering never compares unequal widths. A loop that cannot go
+round a second time is a branch no test can take, and being trivially destructible the owner compiles to control flow
+no other capacity shares, so gcov counts that branch on its own; it is also code MSVC's C4702 calls unreachable. Only
+the vector takes it: the bounded set and bitset keep one block at `N == 0`, being bound by no such paragraph.
+
 P0843 declined to repeat `vector<bool>`, so `std::inplace_vector<bool, N>` holds real `bool`s and is a model
 only up to its reference. The `[inplace.vector]` clauses assert each declaration on it first where the standard
 library has it, exactly as the `[vector]` ones do ([the-sequence-contract](#the-sequence-contract)); what the
@@ -2540,7 +2557,7 @@ pointer's whatever it holds.
 
 ### max-size-is-the-bits
 
-`[container.reqmts]/56` asks for `distance(begin(), end())` for the largest possible container, and under every
+`[container.reqmts]/57` asks for `distance(begin(), end())` for the largest possible container, and under every
 reading of bits that counts the same thing: **the positions there are to hold**. The set reading iterates the
 positions it holds, so its largest is every position set; the sequence reading iterates one `bool` per position;
 the bitset reading counts positions too. There is no separate key domain -- a set over `[0, W)` holds at most `W`

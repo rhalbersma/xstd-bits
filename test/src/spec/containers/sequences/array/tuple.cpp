@@ -29,7 +29,7 @@ template<std::size_t I, class X>
 auto check_tuple_element()
         -> void
 {
-        static_assert(std::same_as<std::tuple_element_t<I, X>, bool> or (test::proxy_reference<X> and std::convertible_to<std::tuple_element_t<I, X>, bool>)); // [array.tuple]/1
+        static_assert(std::same_as<std::tuple_element_t<I, X>, bool> or (test::proxy_reference<X> and std::convertible_to<std::tuple_element_t<I, X>, bool>));
         static_assert(std::same_as<std::tuple_element_t<I, X const>, bool const> or (test::proxy_reference<X> and std::convertible_to<std::tuple_element_t<I, X const>, bool>));
 }
 
@@ -60,7 +60,7 @@ BOOST_AUTO_TEST_CASE(TupleSize)
         });
 }
 
-// [array.tuple]/1: template<size_t I, class T, size_t N> struct tuple_element<I, array<T, N>> { using type = T; };
+// [array.tuple]: template<size_t I, class T, size_t N> struct tuple_element<I, array<T, N>> { using type = T; };
 BOOST_AUTO_TEST_CASE(TupleElement)
 {
         test::for_each_type<test::spec::sequence::array_all>([]<class T> -> void {
@@ -74,7 +74,7 @@ BOOST_AUTO_TEST_CASE(TupleElement)
         });
 }
 
-// [array.tuple]/2-3: template<size_t I, class T, size_t N> constexpr T& get(array<T, N>& a) noexcept;
+// [array.tuple]/3: template<size_t I, class T, size_t N> constexpr T& get(array<T, N>& a) noexcept;
 BOOST_AUTO_TEST_CASE(Get)
 {
         test::for_each_type<test::spec::sequence::array_all>([]<class T> -> void {

@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_DETAIL_CONTIGUOUS_BIT_CONTAINER_HPP
 #define XSTD_BITS_DETAIL_CONTIGUOUS_BIT_CONTAINER_HPP
 
-#include <xstd/bits/bit_storage.hpp>                         // owned_bit_storage, resizable_bit_storage
+#include <xstd/bits/bit_storage.hpp>                         // bit_storage_capacity_v, owned_bit_storage, resizable_bit_storage
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_base_type, allocator_param_t, has_allocator_v
 #include <xstd/bits/detail/bit_castable.hpp>                 // bit_bytes, bit_castable, byte_count, bytes_bits, container_source
 #include <xstd/bits/detail/borrowed_block_span.hpp>          // borrowed_block_span
@@ -39,7 +39,7 @@
 #include <span>                                              // dynamic_extent, span
 #include <stdexcept>                                         // length_error
 #include <type_traits>                                       // conditional_t, is_const_v, is_nothrow_constructible_v, is_nothrow_move_assignable_v, is_nothrow_move_constructible_v, remove_const_t, remove_reference_t
-#include <utility>                                           // exchange, move, pair
+#include <utility>                                           // exchange, forward, move, pair
 
 namespace xstd::bits::detail {
 
@@ -80,7 +80,7 @@ consteval auto admits_capacity() noexcept
                 return false;
         } else {
                 using block_type = std::ranges::range_value_t<Blocks>;
-                return num_blocks_v<block_type, N> * xstd::bit_storage_extent_v<block_type> == capacity;
+                return capacity == 0UZ or num_blocks_v<block_type, N> * xstd::bit_storage_extent_v<block_type> == capacity;
         }
 }
 
@@ -101,11 +101,74 @@ consteval auto admits_owner_extent() noexcept
 template<class Blocks, std::size_t N>
 inline constexpr bool owner_extent_v = admits_owner_extent<Blocks, N>();
 
+// The vehicle's two members, the width first: initialized where they are declared, as a vector starts empty.
+template<class Width, class Blocks, bool Empty>
+struct bit_members : bits::detail::allocator_base_type<Blocks>
+{
+        // Dynamic widths only; the tag keeps the absent member distinct from any other in an enclosing layout.
+        [[XSTD_NO_UNIQUE_ADDRESS]]
+        Width m_size{};
+
+        // An NSDMI, not extent-constrained constructors: an array starts zeroed and a vector empty.
+        Blocks m_blocks{};
+
+        [[nodiscard]] bit_members() = default;
+
+        template<class W, class... Args>
+        [[nodiscard]] constexpr explicit bit_members(W&& w, Args&&... args) noexcept(std::is_nothrow_constructible_v<Blocks, Args...>)
+                : m_size(std::forward<W>(w))
+                , m_blocks(std::forward<Args>(args)...)
+        {}
+
+        [[nodiscard]] friend auto operator==(bit_members const&, bit_members const&) -> bool = default;
+};
+
+// A capacity of nought: both members empty and overlapping, and uninitialized, which [inplace.vector.overview] asks.
+template<class Width, class Blocks>
+struct bit_members<Width, Blocks, true> : bits::detail::allocator_base_type<Blocks>
+{
+        [[XSTD_NO_UNIQUE_ADDRESS]]
+        Width m_size;
+
+#ifdef _MSC_VER
+        // The MSVC ABI pads a class whose members are all [[msvc::no_unique_address]], which -Wpadded reports.
+        Blocks m_blocks;
+#else
+        [[XSTD_NO_UNIQUE_ADDRESS]]
+        Blocks m_blocks;
+#endif
+
+        [[nodiscard]] bit_members() = default;
+
+        template<class W, class... Args>
+        [[nodiscard]] constexpr explicit bit_members(W&& w, Args&&... args) noexcept(std::is_nothrow_constructible_v<Blocks, Args...>)
+                : m_size(std::forward<W>(w))
+                , m_blocks(std::forward<Args>(args)...)
+        {}
+
+        [[nodiscard]] friend auto operator==(bit_members const&, bit_members const&) -> bool = default;
+};
+
+// Blocks of a capacity of nought, under which the width is zero without being stored.
+template<class Blocks, std::size_t N>
+concept zero_capacity = xstd::resizable_bit_storage<Blocks> and N == 0UZ and xstd::bit_storage_capacity_v<Blocks> == 0UZ;
+
+// The width a vehicle over these blocks stores: one that moves under growth, where it is not always zero.
+template<class Blocks, std::size_t N>
+using width_member_t = conditional_data_member_t<
+        xstd::resizable_bit_storage<Blocks> and not zero_capacity<Blocks, N>,
+        std::conditional_t<(alignof(std::size_t) >= alignof(Blocks)), std::size_t, std::ranges::range_value_t<Blocks>>,
+        struct size_tag>;
+
 // The one vehicle: it owns the unused-tail invariant, and has no iterators.
 template<class Blocks, std::size_t N = default_extent_v<Blocks>>
         requires (std::ranges::contiguous_range<Blocks> and xstd::owned_bit_storage<Blocks> and owner_extent_v<Blocks, N>) or (borrowed_block_span<Blocks> and N == default_extent_v<Blocks>)
-class contiguous_bit_container : public bits::detail::allocator_base_type<Blocks>
+class contiguous_bit_container : public bit_members<width_member_t<Blocks, N>, Blocks, zero_capacity<Blocks, N>>
 {
+        using members_type = bit_members<width_member_t<Blocks, N>, Blocks, zero_capacity<Blocks, N>>;
+        using members_type::m_blocks;
+        using members_type::m_size;
+
 public:
         using block_type = std::ranges::range_value_t<Blocks>;
         using block_container_type = Blocks;
@@ -121,6 +184,9 @@ public:
 
         // A run-time width under a capacity the type carries, which is N and may stop short of the blocks' last bit.
         static constexpr auto has_static_capacity = has_stored_size and N != std::dynamic_extent;
+
+        // A capacity of nought holds no position, so the width is zero without a member to store it in.
+        static constexpr auto has_zero_capacity = zero_capacity<Blocks, N>;
 
         [[nodiscard]] static constexpr auto static_capacity() noexcept
                 -> std::size_t
@@ -178,13 +244,6 @@ private:
         using width_type = std::conditional_t<(alignof(std::size_t) >= alignof(Blocks)), std::size_t, block_type>;
         static_assert(sizeof(width_type) >= sizeof(std::size_t) and alignof(width_type) >= alignof(Blocks));
 
-        // Dynamic widths only; the tag keeps the absent member distinct from any other in an enclosing layout.
-        [[XSTD_NO_UNIQUE_ADDRESS]]
-        conditional_data_member_t<has_stored_size, width_type, struct size_tag> m_size{};
-
-        // An NSDMI, not extent-constrained constructors: an array starts zeroed and a vector empty.
-        Blocks m_blocks{};
-
 public:
         [[nodiscard]] contiguous_bit_container()
                 requires std::default_initializable<Blocks>
@@ -193,13 +252,13 @@ public:
         // Someone else's words, every bit of which is a position: nothing is copied, and there is no tail to clear.
         [[nodiscard]] constexpr explicit contiguous_bit_container(Blocks blocks) noexcept
                 requires borrowed_block_span<Blocks>
-                : m_blocks(blocks)
+                : members_type(0UZ, blocks)
         {}
 
         // The width is a constructor argument exactly when it is not a template argument.
         [[nodiscard]] constexpr explicit contiguous_bit_container(std::size_t n)
                 requires has_stored_size
-                : m_size(n)
+                : members_type(n)
         {
                 check_capacity(n);
 
@@ -210,8 +269,7 @@ public:
         // flat_set's adopting constructor: the blocks move in whole, every bit a position, and no tail to clear.
         [[nodiscard]] constexpr contiguous_bit_container(xstd::from_bit_storage_t, Blocks blocks) noexcept(std::is_nothrow_move_constructible_v<Blocks>)
                 requires has_stored_size
-                : m_size(std::ranges::size(blocks) * bits_per_block)
-                , m_blocks(std::move(blocks))
+                : members_type(std::ranges::size(blocks) * bits_per_block, std::move(blocks))
         {
                 assert(num_blocks() <= max_num_blocks);
                 assert(not has_static_capacity or size() <= N);
@@ -220,13 +278,12 @@ public:
         // The storage's allocator, converted as [container.alloc.reqmts] converts it; a storage without one has none.
         [[nodiscard]] constexpr explicit contiguous_bit_container(allocator_param_t<Blocks> const& alloc) noexcept(std::is_nothrow_constructible_v<Blocks, allocator_param_t<Blocks> const&>)
                 requires has_stored_size and has_allocator_v<Blocks>
-                : m_blocks(alloc)
+                : members_type(0UZ, alloc)
         {}
 
         [[nodiscard]] constexpr contiguous_bit_container(std::size_t n, allocator_param_t<Blocks> const& alloc)
                 requires has_stored_size and has_allocator_v<Blocks>
-                : m_size(n)
-                , m_blocks(blocks_for(n), alloc)
+                : members_type(n, blocks_for(n), alloc)
         {
                 check_capacity(n);
         }
@@ -234,8 +291,7 @@ public:
         // flat_set's allocator-extended adopting constructor: the blocks are moved into storage the allocator provides.
         [[nodiscard]] constexpr contiguous_bit_container(xstd::from_bit_storage_t, Blocks blocks, allocator_param_t<Blocks> const& alloc)
                 requires has_stored_size and has_allocator_v<Blocks>
-                : m_size(std::ranges::size(blocks) * bits_per_block)
-                , m_blocks(alloc)
+                : members_type(std::ranges::size(blocks) * bits_per_block, alloc)
         {
                 take_blocks(blocks);
                 assert(num_blocks() <= max_num_blocks);
@@ -244,14 +300,12 @@ public:
         // [container.alloc.reqmts]'s allocator-extended copy and move; the moved-from is left empty.
         [[nodiscard]] constexpr contiguous_bit_container(contiguous_bit_container const& other, allocator_param_t<Blocks> const& alloc)
                 requires has_stored_size and has_allocator_v<Blocks>
-                : m_size(other.m_size)
-                , m_blocks(other.m_blocks, alloc)
+                : members_type(other.m_size, other.m_blocks, alloc)
         {}
 
         [[nodiscard]] constexpr contiguous_bit_container(contiguous_bit_container&& other, allocator_param_t<Blocks> const& alloc)
                 requires has_stored_size and has_allocator_v<Blocks>
-                : m_size(std::exchange(other.m_size, 0UZ))
-                , m_blocks(alloc)
+                : members_type(std::exchange(other.m_size, 0UZ), alloc)
         {
                 take_blocks(other.m_blocks);
                 other.m_blocks.clear();
@@ -262,17 +316,16 @@ public:
         auto operator=(contiguous_bit_container const&) -> contiguous_bit_container& = default;
 
         [[nodiscard]] contiguous_bit_container(contiguous_bit_container&&)
-                requires (not has_stored_size)
+                requires (not has_stored_size or has_zero_capacity)
         = default;
         auto operator=(contiguous_bit_container&&) -> contiguous_bit_container&
-                requires (not has_stored_size)
+                requires (not has_stored_size or has_zero_capacity)
         = default;
 
         // A run-time width leaves the source at width zero with no blocks, the state a default constructor makes.
         [[nodiscard]] constexpr contiguous_bit_container(contiguous_bit_container&& other) noexcept(std::is_nothrow_move_constructible_v<Blocks>)
-                requires has_stored_size
-                : m_size(std::exchange(other.m_size, 0UZ))
-                , m_blocks(std::move(other.m_blocks))
+                requires has_stored_size and (not has_zero_capacity)
+                : members_type(std::exchange(other.m_size, 0UZ), std::move(other.m_blocks))
         {
                 other.m_blocks.clear();
         }
@@ -280,7 +333,7 @@ public:
         // Taken out of the source before anything is written, so a self-move puts back exactly what it took.
         constexpr auto operator=(contiguous_bit_container&& other) noexcept(std::is_nothrow_move_constructible_v<Blocks> and std::is_nothrow_move_assignable_v<Blocks>)
                 -> contiguous_bit_container&
-                requires has_stored_size
+                requires has_stored_size and (not has_zero_capacity)
         {
                 auto blocks = std::move(other.m_blocks);
                 auto const n = std::exchange(other.m_size, 0UZ);
@@ -306,7 +359,7 @@ public:
                 assert(std::ranges::size(blocks) <= max_num_blocks);
                 assert(not has_static_capacity or std::ranges::size(blocks) * bits_per_block <= N);
                 m_blocks = std::move(blocks);
-                m_size = num_blocks() * bits_per_block;
+                store_size(num_blocks() * bits_per_block);
         }
 
         // flat_set's extract: the blocks go out whole, tail clear, and the source is left at width zero.
@@ -316,7 +369,7 @@ public:
         {
                 auto blocks = std::move(m_blocks);
                 m_blocks.clear();
-                m_size = 0UZ;
+                store_size(0UZ);
                 return blocks;
         }
 
@@ -376,7 +429,8 @@ public:
                 if constexpr (has_static_size and N == 0) {
                         return std::strong_ordering::equal;
                 } else {
-                        if constexpr (not has_static_size) {
+                        // A capacity of nought holds only width zero, so there both widths are that.
+                        if constexpr (not has_static_size and not has_zero_capacity) {
                                 if (x.size() != y.size()) {
                                         return x.padded_sequence_three_way(y);
                                 }
@@ -487,6 +541,8 @@ public:
         {
                 if constexpr (has_static_size) {
                         return N;
+                } else if constexpr (has_zero_capacity) {
+                        return 0UZ;
                 } else if constexpr (has_stored_size) {
                         return static_cast<std::size_t>(m_size);
                 } else {
@@ -1100,7 +1156,7 @@ public:
                 } else {
                         m_blocks.push_back(value);
                 }
-                m_size += bits_per_block;
+                store_size(size() + bits_per_block);
         }
 
         // Reserved first where the distance is known, so nothing below reallocates: boost's strong guarantee.
@@ -1118,7 +1174,7 @@ public:
                         if (first != last and size() % bits_per_block == 0UZ) {
                                 auto const n = static_cast<std::size_t>(std::ranges::distance(first, last));
                                 m_blocks.insert(m_blocks.end(), first, last);
-                                m_size += n * bits_per_block;
+                                store_size(size() + (n * bits_per_block));
                                 return;
                         }
                 }
@@ -1609,8 +1665,19 @@ private:
                         // No new block can be a one here: either the value is false or the width is not growing.
                         m_blocks.resize(count, zero);
                 }
-                m_size = n;
+                store_size(n);
                 erase_unused();
+        }
+
+        // The width written back, where there is one to write: a capacity of nought's is zero without a member.
+        constexpr auto store_size(std::size_t n [[maybe_unused]]) noexcept
+                -> void
+        {
+                if constexpr (has_zero_capacity) {
+                        assert(n == 0UZ);
+                } else {
+                        m_size = n;
+                }
         }
 
         // std::length_error, what a container throws for a size it cannot represent; the readings inherit it.

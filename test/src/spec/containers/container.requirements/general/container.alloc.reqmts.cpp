@@ -16,12 +16,14 @@
 #include <array>                                    // array
 #include <concepts>                                 // same_as
 #include <cstddef>                                  // size_t
-#include <cstdint>                                  // uint64_t, uint8_t
+#include <cstdint>                                  // int64_t, uint64_t, uint8_t
 #include <functional>                               // less
 #include <initializer_list>                         // initializer_list
+#include <iterator>                                 // prev
 #include <memory>                                   // allocator, allocator_traits, uses_allocator_v
 #include <memory_resource>                          // memory_resource, monotonic_buffer_resource, polymorphic_allocator, unsynchronized_pool_resource
-#include <ranges>                                   // from_range
+#include <new>                                      // bad_alloc
+#include <ranges>                                   // from_range, iota
 #include <set>                                      // set
 #include <tuple>                                    // tuple, tuple_cat
 #include <type_traits>                              // bool_constant, false_type, is_constructible_v, is_nothrow_constructible_v, true_type
@@ -36,11 +38,19 @@ BOOST_AUTO_TEST_SUITE(ContainerAllocReqmts)
 
 namespace {
 
+// The allocations an allocator has outstanding, and how many more it grants.
+struct ledger
+{
+        std::int64_t live = 0;
+        std::int64_t budget = -1; // allocations still granted, and no limit while negative
+};
+
 // Stateful, so two instances can differ, and propagating on every assignment and swap or on none of them.
 template<class T, bool Propagates>
 class tagged_allocator
 {
-        int m_tag = 0;
+        ledger* m_ledger = nullptr;
+        std::int64_t m_tag = 0;
 
 public:
         using value_type = T;
@@ -57,30 +67,51 @@ public:
 
         [[nodiscard]] tagged_allocator() = default;
 
-        [[nodiscard]] constexpr explicit tagged_allocator(int tag) noexcept
-                : m_tag(tag)
+        [[nodiscard]] constexpr explicit tagged_allocator(int tag, ledger* book = nullptr) noexcept
+                : m_ledger(book)
+                , m_tag(tag)
         {}
 
         template<class U>
         [[nodiscard]] constexpr explicit(false) tagged_allocator(tagged_allocator<U, Propagates> const& other) noexcept
-                : m_tag(other.tag())
+                : m_ledger(other.book())
+                , m_tag(other.tag())
         {}
 
         [[nodiscard]] constexpr auto tag() const noexcept
                 -> int
         {
-                return m_tag;
+                return static_cast<int>(m_tag);
+        }
+
+        [[nodiscard]] constexpr auto book() const noexcept
+                -> ledger*
+        {
+                return m_ledger;
         }
 
         [[nodiscard]] auto allocate(std::size_t n)
                 -> T*
         {
+                if (m_ledger == nullptr) {
+                        return std::allocator<T>().allocate(n);
+                }
+                if (m_ledger->budget == 0) {
+                        throw std::bad_alloc();
+                }
+                if (m_ledger->budget > 0) {
+                        --m_ledger->budget;
+                }
+                ++m_ledger->live;
                 return std::allocator<T>().allocate(n);
         }
 
         auto deallocate(T* p, std::size_t n) noexcept
                 -> void
         {
+                if (m_ledger != nullptr) {
+                        --m_ledger->live;
+                }
                 std::allocator<T>().deallocate(p, n);
         }
 
@@ -149,11 +180,35 @@ struct user_allocator<xstd::basic_bit_small_vector<Block, N, Allocator>>
         using type = Allocator;
 };
 
+// The small columns, whose allocator_type is Boost's wrapper around the one they were declared with.
+template<class X>
+inline constexpr auto wraps_allocator = false;
+
+template<class Block, std::size_t N, class Allocator>
+inline constexpr auto wraps_allocator<xstd::basic_bit_small_set<Block, N, Allocator>> = true;
+
+template<class Block, std::size_t N, class Allocator>
+inline constexpr auto wraps_allocator<xstd::basic_small_bitset<Block, N, Allocator>> = true;
+
+template<class Block, std::size_t N, class Allocator>
+inline constexpr auto wraps_allocator<xstd::basic_bit_small_vector<Block, N, Allocator>> = true;
+
 template<class X>
 [[nodiscard]] auto allocator(int tag)
         -> X::allocator_type
 {
         return typename X::allocator_type(make_allocator<typename user_allocator<X>::type>(tag));
+}
+
+// An allocator that keeps its accounts in book, where the column takes one that can.
+template<class X>
+concept keeps_a_ledger = std::is_constructible_v<typename user_allocator<X>::type, int, ledger*>;
+
+template<class X>
+[[nodiscard]] auto ledger_allocator(ledger& book)
+        -> X::allocator_type
+{
+        return typename X::allocator_type(typename user_allocator<X>::type(0, &book));
 }
 
 // Declared only, for the concept below to call in an unevaluated operand.
@@ -187,6 +242,56 @@ inline constexpr auto is_bitset<xstd::basic_dynamic_bitset<Block, Allocator>> = 
 
 template<class Block, std::size_t N, class Allocator>
 inline constexpr auto is_bitset<xstd::basic_small_bitset<Block, N, Allocator>> = true;
+
+// One more element than the value holds: a key past its largest, or a bool at the end.
+template<class X>
+auto grow_by_one(X& x)
+        -> void
+{
+        if constexpr (requires { typename X::key_type; }) {
+                x.insert(x.empty() ? 0UZ : *std::prev(x.end()) + 1UZ);
+        } else {
+                x.push_back(true);
+        }
+}
+
+// One more element before the first: a key past the largest for a set, which has no position to choose.
+template<class X>
+auto insert_one(X& x)
+        -> void
+{
+        if constexpr (requires { typename X::key_type; }) {
+                x.insert(x.empty() ? 0UZ : *std::prev(x.end()) + 1UZ);
+        } else {
+                x.insert(x.cbegin(), false);
+        }
+}
+
+// Grown up to the storage it holds without allocating, then one past it, a failed insertion changes nothing.
+template<class X>
+auto check_failed_insertion()
+        -> void
+{
+        auto book = ledger();
+        auto spare = ledger();
+        auto x = X(ledger_allocator<X>(book));
+        book.budget = 0;
+        for ([[maybe_unused]] auto const i : std::views::iota(0UZ, 2048UZ)) {
+                // A copy under book would itself allocate where MSVC's debug containers keep a proxy.
+                auto const before = X(x, ledger_allocator<X>(spare));
+                try {
+                        grow_by_one(x);
+                } catch (std::bad_alloc const&) {
+                        BOOST_CHECK(x == before); // [container.reqmts]/66
+                        try {
+                                insert_one(x);
+                        } catch (std::bad_alloc const&) {
+                                BOOST_CHECK(x == before); // [container.reqmts]/66
+                        }
+                        return;
+                }
+        }
+}
 
 // Two values under allocator a: one inside the small columns' inline blocks, and one that spills them onto the heap.
 template<class X>
@@ -246,35 +351,39 @@ auto check_counted(typename X::allocator_type const& m, auto value)
 
 } // namespace
 
-// [container.alloc.reqmts]/4-5: typename X::allocator_type
+// [container.alloc.reqmts]/1,4: typename X::allocator_type
 BOOST_AUTO_TEST_CASE(AllocatorType)
 {
         test::for_each_type<all>([]<class T> -> void {
-                static_assert(std::same_as<typename std::allocator_traits<typename T::allocator_type>::allocator_type, typename T::allocator_type>);
-                BOOST_CHECK(true);
+                // The allocator the column was declared with, or for the small columns Boost's wrapper around it.
+                using A = user_allocator<T>::type;
+                using allocator_type = T::allocator_type;
+                static_assert(std::same_as<allocator_type, A> or wraps_allocator<T>);                    // [container.alloc.reqmts]/4
+                BOOST_CHECK(T(allocator<T>(1)).get_allocator() == allocator_type(make_allocator<A>(1))); // [container.alloc.reqmts]/1
         });
 }
 
-// [container.alloc.reqmts]/6-7: c.get_allocator()
+// [container.alloc.reqmts]/6: c.get_allocator()
 BOOST_AUTO_TEST_CASE(GetAllocator)
 {
         test::for_each_type<all>([]<class T> -> void {
                 static_assert(std::same_as<decltype(std::declval<T const&>().get_allocator()), typename T::allocator_type>); // [container.alloc.reqmts]/6
-                BOOST_CHECK(T(allocator<T>(1)).get_allocator() == allocator<T>(1));
+                BOOST_CHECK(T(allocator<T>(1)).get_allocator() == allocator<T>(1));                                          // [container.alloc.reqmts]/6
         });
 }
 
-// [container.alloc.reqmts]/8-10: X u; X u = X();
+// [container.alloc.reqmts]/9: X u; X u = X();
 BOOST_AUTO_TEST_CASE(DefaultConstructor)
 {
         test::for_each_type<all>([]<class T> -> void {
-                auto const u = T();
-                BOOST_CHECK(u.empty());                                         // [container.alloc.reqmts]/9
-                BOOST_CHECK(u.get_allocator() == typename T::allocator_type()); // [container.alloc.reqmts]/9
+                T u;
+                auto const u1 = T();
+                BOOST_CHECK(u.empty() and u1.empty());                                                                                 // [container.alloc.reqmts]/9
+                BOOST_CHECK(u.get_allocator() == typename T::allocator_type() and u1.get_allocator() == typename T::allocator_type()); // [container.alloc.reqmts]/9
         });
 }
 
-// [container.alloc.reqmts]/11-12: X u(m);
+// [container.alloc.reqmts]/11: X u(m);
 BOOST_AUTO_TEST_CASE(AllocatorConstructor)
 {
         test::for_each_type<all>([]<class T> -> void {
@@ -286,7 +395,7 @@ BOOST_AUTO_TEST_CASE(AllocatorConstructor)
         });
 }
 
-// [container.alloc.reqmts]/13-15: X u(t, m);
+// [container.alloc.reqmts]/14: X u(t, m);
 BOOST_AUTO_TEST_CASE(CopyWithAllocator)
 {
         test::for_each_type<all>([]<class T> -> void {
@@ -300,7 +409,7 @@ BOOST_AUTO_TEST_CASE(CopyWithAllocator)
         });
 }
 
-// [container.alloc.reqmts]/16-17: X u(rv);
+// [container.alloc.reqmts]/16: X u(rv);
 BOOST_AUTO_TEST_CASE(MoveConstructor)
 {
         test::for_each_type<all>([]<class T> -> void {
@@ -319,7 +428,7 @@ BOOST_AUTO_TEST_CASE(MoveConstructor)
         });
 }
 
-// [container.alloc.reqmts]/18-20: X u(rv, m);
+// [container.alloc.reqmts]/19: X u(rv, m);
 BOOST_AUTO_TEST_CASE(MoveWithAllocator)
 {
         test::for_each_type<all>([]<class T> -> void {
@@ -334,45 +443,49 @@ BOOST_AUTO_TEST_CASE(MoveWithAllocator)
         });
 }
 
-// [container.alloc.reqmts]/21-24: a = t
+// [container.alloc.reqmts]/21,23: a = t
 BOOST_AUTO_TEST_CASE(CopyAssignment)
 {
         test::for_each_type<all>([]<class T> -> void {
                 using traits = std::allocator_traits<typename T::allocator_type>;
+                static_assert(requires (T c, T const cc) { { c = cc } -> std::same_as<T&>; }); // [container.alloc.reqmts]/21
                 auto const a = allocator<T>(0);
                 auto const b = allocator<T>(1);
                 for (auto const& t : samples<T>(b)) {
                         auto u = other<T>(a);
                         u = t;
-                        BOOST_CHECK(u == t); // [container.alloc.reqmts]/23
-                        BOOST_CHECK(u.get_allocator() == (traits::propagate_on_container_copy_assignment::value ? b : a));
+                        BOOST_CHECK(u == t);                                                                               // [container.alloc.reqmts]/23
+                        BOOST_CHECK(u.get_allocator() == (traits::propagate_on_container_copy_assignment::value ? b : a)); // [container.reqmts]/64
                 }
         });
 }
 
-// [container.alloc.reqmts]/25-29: a = rv
+// [container.alloc.reqmts]/25,27-28: a = rv
 BOOST_AUTO_TEST_CASE(MoveAssignment)
 {
         test::for_each_type<all>([]<class T> -> void {
                 using traits = std::allocator_traits<typename T::allocator_type>;
+                static_assert(requires (T c, T o) { { c = std::move(o) } -> std::same_as<T&>; }); // [container.alloc.reqmts]/25
                 auto const a = allocator<T>(0);
                 auto const b = allocator<T>(1);
                 for (auto const& t : samples<T>(b)) {
                         auto rv = t;
                         auto u = other<T>(a);
                         u = std::move(rv);
-                        BOOST_CHECK(u == t); // [container.alloc.reqmts]/27
-                        BOOST_CHECK(u.get_allocator() == (traits::propagate_on_container_move_assignment::value ? b : a));
+                        BOOST_CHECK_EQUAL(u.size(), t.size());                                                             // [container.alloc.reqmts]/27
+                        BOOST_CHECK(u == t);                                                                               // [container.alloc.reqmts]/28
+                        BOOST_CHECK(u.get_allocator() == (traits::propagate_on_container_move_assignment::value ? b : a)); // [container.reqmts]/64
                 }
         });
 }
 
-// [container.alloc.reqmts]/30-32: a.swap(b)
+// [container.alloc.reqmts]/30-31: a.swap(b)
 BOOST_AUTO_TEST_CASE(Swap)
 {
         test::for_each_type<all>([]<class T> -> void {
                 // Swapping unequal allocators that do not propagate is undefined, so those swap under one allocator.
                 using traits = std::allocator_traits<typename T::allocator_type>;
+                static_assert(requires (T c) { { c.swap(c) } -> std::same_as<void>; }); // [container.alloc.reqmts]/30
                 auto const a = allocator<T>(0);
                 auto const b = traits::propagate_on_container_swap::value ? allocator<T>(1) : a;
                 for (auto const& t : samples<T>(a)) {
@@ -381,8 +494,8 @@ BOOST_AUTO_TEST_CASE(Swap)
                         auto const x1 = x;
                         auto const y1 = y;
                         x.swap(y);
-                        BOOST_CHECK(x == y1 and y == x1); // [container.alloc.reqmts]/31
-                        BOOST_CHECK(x.get_allocator() == b and y.get_allocator() == a);
+                        BOOST_CHECK(x == y1 and y == x1);                               // [container.alloc.reqmts]/31
+                        BOOST_CHECK(x.get_allocator() == b and y.get_allocator() == a); // [container.reqmts]/65
                         swap(x, y);
                         BOOST_CHECK(x == x1 and y == y1);
                         BOOST_CHECK(x.get_allocator() == a and y.get_allocator() == b);
@@ -390,7 +503,34 @@ BOOST_AUTO_TEST_CASE(Swap)
         });
 }
 
-// [container.alloc.reqmts]/3: the allocator-extended constructors each column adds to the ones above
+// [container.reqmts]/25: a.~X() gives back every allocation it made
+BOOST_AUTO_TEST_CASE(DestructorDeallocates)
+{
+        test::for_each_type<all>([]<class T> -> void {
+                if constexpr (keeps_a_ledger<T>) {
+                        auto book = ledger();
+                        for (auto const& t : samples<T>(allocator<T>(0))) {
+                                {
+                                        auto const u = T(t, ledger_allocator<T>(book));
+                                        BOOST_CHECK(u == t);
+                                }
+                                BOOST_CHECK_EQUAL(book.live, 0LL); // [container.reqmts]/25
+                        }
+                }
+        });
+}
+
+// [container.reqmts]/66: a single element that cannot be allocated leaves the container as it was
+BOOST_AUTO_TEST_CASE(AFailedInsertionHasNoEffects)
+{
+        test::for_each_type<all>([]<class T> -> void {
+                if constexpr (keeps_a_ledger<T> and not is_bitset<T>) {
+                        check_failed_insertion<T>();
+                }
+        });
+}
+
+// [container.reqmts]/64: the allocator-extended constructors each column adds to the ones above
 BOOST_AUTO_TEST_CASE(AllocatorArguments)
 {
         test::for_each_type<all>([]<class T> -> void {
@@ -415,7 +555,7 @@ BOOST_AUTO_TEST_CASE(AllocatorArguments)
         });
 }
 
-// [container.alloc.reqmts]/3: a memory_resource* converts to the polymorphic allocator.
+// [container.reqmts]/64: a memory_resource* converts to the polymorphic allocator.
 BOOST_AUTO_TEST_CASE(AMemoryResourceConvertsToThePolymorphicAllocator)
 {
         using pmr_bit_set = xstd::basic_bit_set<std::size_t, std::pmr::polymorphic_allocator<std::size_t>>;
@@ -430,7 +570,7 @@ BOOST_AUTO_TEST_CASE(AMemoryResourceConvertsToThePolymorphicAllocator)
         BOOST_CHECK(b.get_allocator().resource() == &mr);
 }
 
-// [container.alloc.reqmts]/3: uses-allocator construction hands each element the container's allocator.
+// [container.reqmts]/64: uses-allocator construction hands each element the container's allocator.
 BOOST_AUTO_TEST_CASE(AnAllocatorAwareContainerPassesItsAllocatorOn)
 {
         using pmr_bit_set = xstd::basic_bit_set<std::size_t, std::pmr::polymorphic_allocator<std::size_t>>;
@@ -447,7 +587,7 @@ BOOST_AUTO_TEST_CASE(AnAllocatorAwareContainerPassesItsAllocatorOn)
         BOOST_CHECK(bitsets.back().get_allocator().resource() == &mr);
 }
 
-// [container.alloc.reqmts]/3: a rebound std::allocator converts, as it does for std::set.
+// [container.reqmts]/64: a rebound std::allocator converts, as it does for std::set.
 BOOST_AUTO_TEST_CASE(AConvertibleAllocatorArgumentIsTaken)
 {
         static_assert(std::is_constructible_v<std::set<std::size_t>, std::allocator<int>>);
@@ -455,14 +595,14 @@ BOOST_AUTO_TEST_CASE(AConvertibleAllocatorArgumentIsTaken)
         BOOST_CHECK(true);
 }
 
-// [container.alloc.reqmts]/3: std::set's comparator arguments are taken alongside the allocator, and change nothing.
+// [container.reqmts]/64: std::set's comparator arguments are taken alongside the allocator, and change nothing.
 BOOST_AUTO_TEST_CASE(TheComparatorArgumentsAreAcceptedAlongsideTheAllocator)
 {
         auto const comp = xstd::bit_set::key_compare(); // NOLINT(modernize-use-transparent-functors): std::set<std::size_t>::key_compare
         BOOST_CHECK(xstd::bit_set({3, 1}, comp, std::allocator<std::size_t>()) == xstd::bit_set({1, 3}));
 }
 
-// [container.alloc.reqmts]/3: a memory_resource* converts to a sequence's polymorphic allocator.
+// [container.reqmts]/64: a memory_resource* converts to a sequence's polymorphic allocator.
 BOOST_AUTO_TEST_CASE(AMemoryResourceConvertsToThePolymorphicAllocatorOfASequence)
 {
         using pmr_bit_vector = xstd::basic_bit_vector<std::size_t, std::pmr::polymorphic_allocator<std::size_t>>;
@@ -473,7 +613,7 @@ BOOST_AUTO_TEST_CASE(AMemoryResourceConvertsToThePolymorphicAllocatorOfASequence
         BOOST_CHECK_EQUAL(v.size(), 3UZ);
 }
 
-// [container.alloc.reqmts]/3: uses-allocator construction hands each sequence the container's allocator.
+// [container.reqmts]/64: uses-allocator construction hands each sequence the container's allocator.
 BOOST_AUTO_TEST_CASE(AnAllocatorAwareContainerPassesItsAllocatorOnToASequence)
 {
         using pmr_bit_vector = xstd::basic_bit_vector<std::size_t, std::pmr::polymorphic_allocator<std::size_t>>;
@@ -487,7 +627,7 @@ BOOST_AUTO_TEST_CASE(AnAllocatorAwareContainerPassesItsAllocatorOnToASequence)
         BOOST_CHECK_EQUAL(vectors.back().size(), 3UZ);
 }
 
-// [container.alloc.reqmts]/3: a rebound std::allocator converts, and {} is a default one, as for std::vector<bool>.
+// [container.reqmts]/64: a rebound std::allocator converts, and {} is a default one, as for std::vector<bool>.
 BOOST_AUTO_TEST_CASE(AConvertibleOrEmptyAllocatorArgumentIsTakenByASequence)
 {
         static_assert(std::is_constructible_v<std::vector<bool>, std::size_t, std::allocator<int>>);
@@ -498,7 +638,7 @@ BOOST_AUTO_TEST_CASE(AConvertibleOrEmptyAllocatorArgumentIsTakenByASequence)
         BOOST_CHECK_EQUAL(v.size(), 3UZ);
 }
 
-// [container.alloc.reqmts]/3: the count constructors are explicit with the allocator as without it.
+// [container.reqmts]/64: the count constructors are explicit with the allocator as without it.
 BOOST_AUTO_TEST_CASE(TheCountConstructorsAreExplicit)
 {
         static_assert(not list_converts_from<std::vector<bool>, std::size_t, std::allocator<bool>>);
@@ -507,7 +647,7 @@ BOOST_AUTO_TEST_CASE(TheCountConstructorsAreExplicit)
         BOOST_CHECK(true);
 }
 
-// [container.alloc.reqmts]/3: the allocator-only constructors cannot throw, and a width in the type takes no allocator.
+// [container.reqmts]/64: the allocator-only constructors cannot throw, and a width in the type takes no allocator.
 BOOST_AUTO_TEST_CASE(OnlyARunTimeWidthTakesAnAllocator)
 {
         static_assert(std::is_nothrow_constructible_v<std::vector<bool>, std::allocator<bool> const&>);

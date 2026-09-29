@@ -4,12 +4,13 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/for_each_type.hpp>       // for_each_type
-#include <test/sequence/primitives.hpp> // mem_capacity, mem_reserve, mem_resize, mem_shrink_to_fit
+#include <test/sequence/primitives.hpp> // mem_capacity, mem_reserve, mem_resize, mem_shrink_to_fit, mem_swap_capacity
 #include <test/spec/input.hpp>          // context
-#include <test/spec/sequence.hpp>       // sequences, vector_all
+#include <test/spec/sequence.hpp>       // held_width_v, pairs, sequences, vector_all
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_THROW
 #include <concepts>                     // same_as
 #include <stdexcept>                    // length_error
+#include <utility>                      // cmp_not_equal
 
 BOOST_AUTO_TEST_SUITE(Spec)
 BOOST_AUTO_TEST_SUITE(Containers)
@@ -39,6 +40,7 @@ auto check_resize_past_max_size()
 {
         auto b = X();
         BOOST_CHECK_THROW(b.resize(b.max_size() + 1UZ), std::length_error);
+        BOOST_CHECK(b.empty()); // [vector.capacity]/16
         BOOST_CHECK_THROW(b.resize(b.max_size() + 1UZ, true), std::length_error);
         BOOST_CHECK(b.empty()); // [vector.capacity]/19
 }
@@ -56,7 +58,7 @@ auto check_resize(auto const& a)
 
 } // namespace
 
-// [vector.capacity]/1-2: constexpr size_type capacity() const noexcept;
+// [vector.capacity]/1: constexpr size_type capacity() const noexcept;
 BOOST_AUTO_TEST_CASE(Capacity)
 {
         test::for_each_type<test::spec::sequence::vector_all>([]<class T> -> void {
@@ -68,7 +70,7 @@ BOOST_AUTO_TEST_CASE(Capacity)
         });
 }
 
-// [vector.capacity]/3-7: constexpr void reserve(size_type n);
+// [vector.capacity]/4-5,7: constexpr void reserve(size_type n);
 BOOST_AUTO_TEST_CASE(Reserve)
 {
         test::for_each_type<test::spec::sequence::vector_all>([]<class T> -> void {
@@ -80,7 +82,7 @@ BOOST_AUTO_TEST_CASE(Reserve)
         });
 }
 
-// [vector.capacity]/8-11: constexpr void shrink_to_fit();
+// [vector.capacity]/9,11: constexpr void shrink_to_fit();
 BOOST_AUTO_TEST_CASE(ShrinkToFit)
 {
         test::for_each_type<test::spec::sequence::vector_all>([]<class T> -> void {
@@ -92,7 +94,18 @@ BOOST_AUTO_TEST_CASE(ShrinkToFit)
         });
 }
 
-// [vector.capacity]/14-19: constexpr void resize(size_type sz); constexpr void resize(size_type sz, const T& c);
+// [vector.capacity]/12: constexpr void swap(vector& x) noexcept(...);
+BOOST_AUTO_TEST_CASE(Swap)
+{
+        test::for_each_type<test::spec::sequence::vector_all>([]<class T> -> void {
+                for (auto const [from, a, b] : inputs::pairs<T>()) {
+                        auto const on_failure = context(from, a, b);
+                        mem_swap_capacity()(a, b, std::cmp_not_equal(test::spec::sequence::held_width_v<T>, 0UZ));
+                }
+        });
+}
+
+// [vector.capacity]/15-16,18-19: constexpr void resize(size_type sz); constexpr void resize(size_type sz, const T& c);
 BOOST_AUTO_TEST_CASE(Resize)
 {
         test::for_each_type<test::spec::sequence::vector_all>([]<class T> -> void {

@@ -77,7 +77,7 @@ BOOST_AUTO_TEST_CASE(Size)
         });
 }
 
-// [array.members]/2: constexpr T* data() noexcept; constexpr const T* data() const noexcept;
+// [array.members]: constexpr T* data() noexcept; constexpr const T* data() const noexcept;
 BOOST_AUTO_TEST_CASE(Data)
 {
         test::for_each_type<test::spec::sequence::array_all>([]<class T> -> void {
@@ -102,7 +102,7 @@ BOOST_AUTO_TEST_CASE(Fill)
         });
 }
 
-// [array.members]/4-5: constexpr void swap(array& y) noexcept(is_nothrow_swappable_v<T>);
+// [array.members]/4: constexpr void swap(array& y) noexcept(is_nothrow_swappable_v<T>);
 BOOST_AUTO_TEST_CASE(Swap)
 {
         test::for_each_type<test::spec::sequence::array_all>([]<class T> -> void {

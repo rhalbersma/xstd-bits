@@ -3,18 +3,18 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/for_each_type.hpp>       // for_each_type
-#include <test/reference.hpp>           // proxy_reference, real_reference
-#include <test/sequence/primitives.hpp> // nested_types
-#include <test/set/primitives.hpp>      // mem_const_reference, nested_types
-#include <test/spec/container.hpp>      // all, keyed
-#include <test/spec/input.hpp>          // context
-#include <test/spec/set.hpp>            // sets
-#include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK_EQUAL_COLLECTIONS
-#include <algorithm>                    // copy
-#include <cstddef>                      // size_t
-#include <iterator>                     // inserter
-#include <set>                          // set
+#include <test/container/primitives.hpp> // destructor, nested_types
+#include <test/for_each_type.hpp>        // for_each_type
+#include <test/sequence/primitives.hpp>  // nested_types
+#include <test/set/primitives.hpp>       // mem_const_reference, nested_types
+#include <test/spec/container.hpp>       // all, keyed
+#include <test/spec/input.hpp>           // context
+#include <test/spec/set.hpp>             // sets
+#include <boost/test/unit_test.hpp>      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL_COLLECTIONS
+#include <algorithm>                     // copy
+#include <cstddef>                       // size_t
+#include <iterator>                      // inserter
+#include <set>                           // set
 
 BOOST_AUTO_TEST_SUITE(Spec)
 BOOST_AUTO_TEST_SUITE(Containers)
@@ -45,7 +45,7 @@ public:
 
 } // namespace
 
-// [container.reqmts]/2-9: value_type, reference, const_reference, iterator, const_iterator, difference_type, size_type
+// [container.reqmts]/2,4-9: value_type, reference, const_reference, the iterators, difference_type, size_type
 BOOST_AUTO_TEST_CASE(NestedTypes)
 {
         test::for_each_type<test::spec::container::all>([]<class T> -> void {
@@ -58,9 +58,7 @@ BOOST_AUTO_TEST_CASE(NestedTypes)
                         typename T::difference_type;
                         typename T::size_type;
                 });
-
-                // [container.reqmts]/4-5 ask for value_type& and const value_type&, which a proxy stands in for.
-                static_assert(test::real_reference<T> or test::proxy_reference<T>);
+                test::container::nested_types<T>();
 
                 // A set's const_reference is a key it holds, converting to a key type constructible from it.
                 if constexpr (test::spec::container::keyed<T>) {
@@ -74,7 +72,17 @@ BOOST_AUTO_TEST_CASE(NestedTypes)
                         }
                 } else {
                         test::sequence::nested_types<T>();
+                        BOOST_CHECK(true);
                 }
+        });
+}
+
+// [container.reqmts]/24: a.~X()
+BOOST_AUTO_TEST_CASE(Destructor)
+{
+        test::for_each_type<test::spec::container::all>([]<class T> -> void {
+                test::container::destructor<T>();
+                BOOST_CHECK(true);
         });
 }
 

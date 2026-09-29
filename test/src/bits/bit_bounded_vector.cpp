@@ -116,4 +116,25 @@ BOOST_AUTO_TEST_CASE(ItYieldsEveryPosition)
         test::sequence::yields_every_position(c);
 }
 
+// A capacity of nought takes nothing: an empty source leaves it empty, and any other throws std::bad_alloc.
+BOOST_AUTO_TEST_CASE(ACapacityOfNoughtTakesOnlyAnEmptySource)
+{
+        using Z = xstd::basic_bit_bounded_vector<std::uint8_t, 0>;
+        auto const none = std::vector<bool>();
+        auto const some = std::vector<bool>({true});
+        auto const no_bits = xstd::basic_bit_bounded_vector<std::uint8_t, 9>();
+        auto const some_bits = xstd::basic_bit_bounded_vector<std::uint8_t, 9>({true});
+        BOOST_CHECK(Z(none.begin(), none.end()).empty());
+        BOOST_CHECK_THROW(static_cast<void>(Z(some.begin(), some.end())), std::bad_alloc);
+
+        // Bools are packed into words, and a bit sequence of the same block type is copied a word at a time.
+        auto z = Z();
+        z.append_range(none);
+        z.append_range(no_bits);
+        BOOST_CHECK(z.empty());
+        BOOST_CHECK_THROW(z.append_range(some), std::bad_alloc);
+        BOOST_CHECK_THROW(z.append_range(some_bits), std::bad_alloc);
+        BOOST_CHECK(z.empty());
+}
+
 BOOST_AUTO_TEST_SUITE_END()

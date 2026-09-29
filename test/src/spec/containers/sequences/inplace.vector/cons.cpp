@@ -25,13 +25,13 @@ using namespace test::sequence;
 using test::spec::context;
 namespace inputs = test::spec::sequence::inputs;
 
-// [inplace.vector.cons]/1-3: constexpr explicit inplace_vector(size_type n);
+// [inplace.vector.cons]/2: constexpr explicit inplace_vector(size_type n);
 BOOST_AUTO_TEST_CASE(InplaceVectorCount)
 {
         test::for_each_type<test::spec::sequence::inplace_vector_all>([]<class T> -> void {
                 static_assert(requires (T::size_type n) { T(n); });
                 // n default-inserted bools, each of them false, and bad_alloc past the capacity.
-                BOOST_CHECK_THROW(static_cast<void>(T(T::capacity() + 1UZ)), std::bad_alloc);
+                BOOST_CHECK_THROW(static_cast<void>(T(T::capacity() + 1UZ)), std::bad_alloc); // [inplace.vector.overview]/4
                 for (auto const [from, a] : inputs::sequences<T>()) {
                         auto const on_failure = context(from, a);
                         BOOST_CHECK(model_of(T(a.size())) == std::vector<bool>(a.size())); // [inplace.vector.cons]/2
@@ -39,12 +39,12 @@ BOOST_AUTO_TEST_CASE(InplaceVectorCount)
         });
 }
 
-// [inplace.vector.cons]/4-6: constexpr inplace_vector(size_type n, const T& value);
+// [inplace.vector.cons]/5: constexpr inplace_vector(size_type n, const T& value);
 BOOST_AUTO_TEST_CASE(InplaceVectorCountValue)
 {
         test::for_each_type<test::spec::sequence::inplace_vector_all>([]<class T> -> void {
                 static_assert(requires (T::size_type n, bool b) { T(n, b); });
-                BOOST_CHECK_THROW(static_cast<void>(T(T::capacity() + 1UZ, true)), std::bad_alloc);
+                BOOST_CHECK_THROW(static_cast<void>(T(T::capacity() + 1UZ, true)), std::bad_alloc); // [inplace.vector.overview]/4
                 for (auto const [from, a] : inputs::sequences<T>()) {
                         auto const on_failure = context(from, a);
                         BOOST_CHECK(model_of(T(a.size(), true)) == std::vector<bool>(a.size(), true)); // [inplace.vector.cons]/5
@@ -52,13 +52,13 @@ BOOST_AUTO_TEST_CASE(InplaceVectorCountValue)
         });
 }
 
-// [inplace.vector.cons]/7-8: template<class InputIterator> inplace_vector(InputIterator first, InputIterator last);
+// [inplace.vector.cons]/7: template<class InputIterator> inplace_vector(InputIterator first, InputIterator last);
 BOOST_AUTO_TEST_CASE(InplaceVectorFirstLast)
 {
         test::for_each_type<test::spec::sequence::inplace_vector_all>([]<class T> -> void {
                 static_assert(requires (bool const* first, bool const* last) { T(first, last); });
                 auto const more = alternating(T::capacity() + 1UZ);
-                BOOST_CHECK_THROW(static_cast<void>(T(more.begin(), more.end())), std::bad_alloc);
+                BOOST_CHECK_THROW(static_cast<void>(T(more.begin(), more.end())), std::bad_alloc); // [inplace.vector.overview]/4
                 for (auto const [from, a] : inputs::sequences<T>()) {
                         auto const on_failure = context(from, a);
                         auto const in = model_of(a);
@@ -67,7 +67,7 @@ BOOST_AUTO_TEST_CASE(InplaceVectorFirstLast)
         });
 }
 
-// [inplace.vector.cons]/9-11: template<container-compatible-range<T> R> constexpr inplace_vector(from_range_t, R&& rg);
+// [inplace.vector.cons]/10: template<container-compatible-range<T> R> constexpr inplace_vector(from_range_t, R&& rg);
 BOOST_AUTO_TEST_CASE(InplaceVectorFromRange)
 {
         test::for_each_type<test::spec::sequence::inplace_vector_all>([]<class T> -> void {
@@ -77,7 +77,7 @@ BOOST_AUTO_TEST_CASE(InplaceVectorFromRange)
                 // The standard libraries without P1206R7 have no from_range constructor to check.
                 if constexpr (requires { T(std::from_range, std::vector<bool>()); }) {
                         auto const more = alternating(T::capacity() + 1UZ);
-                        BOOST_CHECK_THROW(static_cast<void>(T(std::from_range, more)), std::bad_alloc);
+                        BOOST_CHECK_THROW(static_cast<void>(T(std::from_range, more)), std::bad_alloc); // [inplace.vector.overview]/4
                         for (auto const [from, a] : inputs::sequences<T>()) {
                                 auto const on_failure = context(from, a);
                                 auto const in = model_of(a);

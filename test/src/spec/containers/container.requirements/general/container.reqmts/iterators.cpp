@@ -3,13 +3,12 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/for_each_type.hpp>   // for_each_type
-#include <test/set/primitives.hpp>  // mem_const_iterator
-#include <test/spec/container.hpp>  // all, objects
-#include <test/spec/input.hpp>      // context
-#include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
-#include <concepts>                 // same_as
-#include <utility>                  // as_const
+#include <test/container/primitives.hpp> // mem_begin_end, mem_cbegin_cend, op_iterator_compare
+#include <test/for_each_type.hpp>        // for_each_type
+#include <test/spec/container.hpp>       // all, objects
+#include <test/spec/input.hpp>           // context
+#include <boost/test/unit_test.hpp>      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <utility>                       // as_const
 
 BOOST_AUTO_TEST_SUITE(Spec)
 BOOST_AUTO_TEST_SUITE(Containers)
@@ -18,27 +17,41 @@ BOOST_AUTO_TEST_SUITE(General)
 BOOST_AUTO_TEST_SUITE(ContainerReqmts)
 BOOST_AUTO_TEST_SUITE(Iterators)
 
-using namespace test::set;
+using namespace test::container;
 using test::spec::context;
 namespace inputs = test::spec::container::inputs;
 
-// [container.reqmts]/27-38: b.begin(), b.end(), b.cbegin(), b.cend()
+// [container.reqmts]/27-28,30-31: b.begin(), b.end()
 BOOST_AUTO_TEST_CASE(BeginEnd)
 {
         test::for_each_type<test::spec::container::all>([]<class T> -> void {
-                static_assert(requires (T c, T const cc) {
-                        { c.begin() } -> std::same_as<typename T::iterator>;
-                        { c.end() } -> std::same_as<typename T::iterator>;
-                        { cc.begin() } -> std::same_as<typename T::const_iterator>;
-                        { cc.end() } -> std::same_as<typename T::const_iterator>;
-                        { c.cbegin() } -> std::same_as<typename T::const_iterator>;
-                        { c.cend() } -> std::same_as<typename T::const_iterator>;
-                });
                 for (auto const [from, a] : inputs::objects<T>()) {
                         auto const on_failure = context(from, a);
                         auto x = a;
-                        mem_const_iterator()(x);
-                        mem_const_iterator()(std::as_const(x));
+                        mem_begin_end()(x);
+                        mem_begin_end()(std::as_const(x));
+                }
+        });
+}
+
+// [container.reqmts]/33-34,36-37: b.cbegin(), b.cend()
+BOOST_AUTO_TEST_CASE(CbeginCend)
+{
+        test::for_each_type<test::spec::container::all>([]<class T> -> void {
+                for (auto const [from, a] : inputs::objects<T>()) {
+                        auto const on_failure = context(from, a);
+                        mem_cbegin_cend()(a);
+                }
+        });
+}
+
+// [container.reqmts]/39-40,63: i <=> j, and an iterator against a constant one
+BOOST_AUTO_TEST_CASE(IteratorComparison)
+{
+        test::for_each_type<test::spec::container::all>([]<class T> -> void {
+                for (auto const [from, a] : inputs::objects<T>()) {
+                        auto const on_failure = context(from, a);
+                        op_iterator_compare()(a);
                 }
         });
 }
