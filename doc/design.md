@@ -1030,8 +1030,8 @@ the storage happened to pick. Each is the reading's own blockwise answer to the 
 for, which is also what pins it: whatever it answers has to agree with `std::lexicographical_compare_three_way`
 over that reading's own iterators.
 
-**Each is named for the reading it orders, the same three names `reading::set`, `reading::sequence` and
-`reading::bitset` give.** Positions, bools from index 0, and the bit string. The third orders the bits the way
+**Each is named for the reading it orders, the same three names `set_reading_tag`, `sequence_reading_tag` and
+`bitset_reading_tag` give.** Positions, bools from index 0, and the bit string. The third orders the bits the way
 `to_string()` would print them, most significant first, and that order is the one `xstd::bitset` and
 `boost::dynamic_bitset` both mean by `<`: it is the bitset reading's order, so it is
 `bitset_lexicographical_compare_three_way`. An earlier name, `string_lexicographical_compare_three_way`, named
@@ -2276,8 +2276,13 @@ of bits and the operators over it, committed to neither reading; its whole docum
 ask it something it does not answer itself — which positions are set, or what the bools are at each index.
 That is what a view is for, so a `bitset` admits either.
 
-The rule is one typedef on the owner's side of the protocol, `owned_storage<Owner>::reads`, and one clause
-in `owner_of`: the owner's reading is the view's, or it is `reading::bitset`. It has to live in the constraint
+The rule is one typedef on the owner's side of the protocol, `owned_storage<Owner>::reads`, naming one of the
+empty tag types `set_reading_tag`, `sequence_reading_tag` and `bitset_reading_tag`, and one clause in `owner_of`,
+asked with `std::derived_from`: the owner's reading is the view's or refines it, or it is `bitset_reading_tag`.
+The readings are types rather than enumerators so that the set of them is open: another reading, a string one
+say, declares a tag of its own and touches nothing already there, and one that refines an existing reading
+derives its tag from that one's, so it is accepted wherever its base is asked for. The bitset stays a clause of
+its own rather than a base of the other two, since it refines neither. It has to live in the constraint
 and not in the friendship alone. Dropping only the friendship leaves the constructor declared and viable, and
 its `m_bits(&c.m_bits)` is a mem-initializer — not the immediate context — so the access check happens at
 instantiation and nowhere earlier. Measured: `std::is_constructible_v<bit_set_view<Blocks>, bit_array<8>&>`

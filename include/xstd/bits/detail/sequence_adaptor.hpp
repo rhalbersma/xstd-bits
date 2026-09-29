@@ -13,7 +13,7 @@
 #include <xstd/bits/detail/functor.hpp>                      // invoke_continues
 #include <xstd/bits/detail/hash.hpp>                         // hash_append_bits, std_hash
 #include <xstd/bits/detail/intrin.hpp>                       // countr_zero, popcount
-#include <xstd/bits/detail/ownership.hpp>                    // owned_bits_t, owned_storage, owner_of, owner_reading, storage, owns, window
+#include <xstd/bits/detail/ownership.hpp>                    // owned_bits_t, owned_storage, owner_of, owner_reading, sequence_reading_tag, storage, owns, window
 #include <xstd/bits/detail/random_access.hpp>                // random_access_bit_iterator, random_access_bit_reference
 #include <xstd/bits/detail/shift.hpp>                        // shl, shr
 #include <xstd/bits/detail/storage_ptr.hpp>                  // storage_ref_t
@@ -590,7 +590,7 @@ public:
         {}
 
         // A view over an owner is a view over the storage it wraps; implicit, claiming nothing the owner lacks.
-        template<owner_of<Bits, reading::sequence> Owner>
+        template<owner_of<Bits, sequence_reading_tag> Owner>
         [[nodiscard]] constexpr explicit(false) sequence_adaptor(Owner& c) noexcept // NOLINT(misc-explicit-constructor)
                 requires (not is_owner) and (not is_window)
                 : m_bits(&c.m_bits)
@@ -1256,7 +1256,7 @@ struct owned_storage<sequence_adaptor<Bits, storage::owned, window::all, Derived
         using bits_type = Bits;
 
         // Committed to the sequence reading, so only a sequence view refers into one.
-        static constexpr auto reads = reading::sequence;
+        using reads = sequence_reading_tag;
 };
 
 // NOLINTBEGIN(readability-redundant-parentheses): a call is no primary expression, so the clause needs them.

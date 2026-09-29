@@ -10,7 +10,7 @@
 #include <xstd/bits/detail/bit_container.hpp> // bit_container, bit_container_type
 #include <xstd/bits/detail/blocks.hpp>        // blocks_of_t, blocks_width_v, lent_blocks_t, view_storage_t
 #include <xstd/bits/detail/borrowed_bits.hpp> // borrowable_block, borrowable_blocks
-#include <xstd/bits/detail/ownership.hpp>     // owned_bits_t, owner_reading, reading, storage
+#include <xstd/bits/detail/ownership.hpp>     // owned_bits_t, owner_reading, set_reading_tag, storage
 #include <xstd/bits/detail/set_adaptor.hpp>   // set_adaptor
 #include <boost/container_hash/is_range.hpp>  // is_range
 #include <cstddef>                            // size_t
@@ -36,7 +36,7 @@ public:
 template<bits::detail::bit_container_type Bits>
 bit_set_view(Bits&) -> bit_set_view<bits::detail::blocks_of_t<Bits>, bits::detail::blocks_width_v<Bits>>;
 
-template<bits::detail::owner_reading<bits::detail::reading::set> Owner>
+template<bits::detail::owner_reading<bits::detail::set_reading_tag> Owner>
 bit_set_view(Owner&) -> bit_set_view<bits::detail::blocks_of_t<bits::detail::owned_bits_t<Owner>>, bits::detail::blocks_width_v<bits::detail::owned_bits_t<Owner>>>;
 
 // Blocks handed straight over: a block as itself, a contiguous range as the span that lends it, const where they are.

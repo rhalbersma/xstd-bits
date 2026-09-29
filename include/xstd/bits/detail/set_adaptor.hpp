@@ -14,7 +14,7 @@
 #include <xstd/bits/detail/functor.hpp>              // decay_copy
 #include <xstd/bits/detail/hash.hpp>                 // hash_append_bits, hash_append_positions, std_hash
 #include <xstd/bits/detail/intrin.hpp>               // countl_zero, countr_zero
-#include <xstd/bits/detail/ownership.hpp>            // owned_bits_t, owned_storage, owner_of, owner_reading, storage, owns
+#include <xstd/bits/detail/ownership.hpp>            // owned_bits_t, owned_storage, owner_of, owner_reading, set_reading_tag, storage, owns
 #include <xstd/bits/detail/shift.hpp>                // shl, shr
 #include <xstd/bits/detail/storage_ptr.hpp>          // storage_ref_t
 #include <xstd/bits/detail/zero_width.hpp>           // zero_width
@@ -157,7 +157,7 @@ public:
 
         // What a trait asks of this vehicle, every container built on it answering alike.
         using adaptor_type = set_adaptor;
-        static constexpr auto reads_as = reading::set;
+        using reads_as = set_reading_tag;
         using adapted_type = Bits;
         static constexpr bool owns_storage = is_owner;
 
@@ -329,7 +329,7 @@ public:
         {}
 
         // A view over an owner is a view over the storage it wraps; implicit, claiming nothing the owner lacks.
-        template<owner_of<Bits, reading::set> Owner>
+        template<owner_of<Bits, set_reading_tag> Owner>
         [[nodiscard]] constexpr explicit(false) set_adaptor(Owner& c) noexcept // NOLINT(misc-explicit-constructor)
                 requires (not is_owner)
                 : m_bits(&c.m_bits)
@@ -887,7 +887,7 @@ private:
 
 // Any container built on the set vehicle, the vehicle used directly included.
 template<class T>
-concept set_adaptor_like = requires { typename T::adaptor_type; T::reads_as; } and T::reads_as == reading::set and std::derived_from<T, typename T::adaptor_type>;
+concept set_adaptor_like = requires { typename T::adaptor_type; typename T::reads_as; } and std::same_as<typename T::reads_as, set_reading_tag> and std::derived_from<T, typename T::adaptor_type>;
 
 // The owner's side of the protocol above.
 template<class Bits, class Derived>
@@ -896,7 +896,7 @@ struct owned_storage<set_adaptor<Bits, storage::owned, Derived>>
         using bits_type = Bits;
 
         // Committed to the set reading, so only a set view refers into one.
-        static constexpr auto reads = reading::set;
+        using reads = set_reading_tag;
 };
 
 // NOLINTBEGIN(readability-redundant-parentheses): a call is no primary expression, so the clause needs them.

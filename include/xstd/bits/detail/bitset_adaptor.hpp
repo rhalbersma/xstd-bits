@@ -12,7 +12,7 @@
 #include <xstd/bits/detail/allocator_base_type.hpp> // allocator_base_type, allocator_param_t, has_allocator_v
 #include <xstd/bits/detail/bit_container.hpp>       // bit_container, bit_container_type
 #include <xstd/bits/detail/hash.hpp>                // hash_append_bits, std_hash
-#include <xstd/bits/detail/ownership.hpp>           // owned_storage, storage, window
+#include <xstd/bits/detail/ownership.hpp>           // bitset_reading_tag, owned_storage, storage, window
 #include <xstd/bits/detail/zero_width.hpp>          // zero_width
 #include <xstd/bits/from_bit_storage.hpp>           // from_bit_storage_t
 #include <boost/hash2/hash_append.hpp>              // hash_append_tag
@@ -995,7 +995,7 @@ struct owned_storage<bitset_adaptor<Bits, Derived>>
         using bits_type = Bits;
 
         // Committed to neither reading, which is what its two views are for.
-        static constexpr auto reads = reading::bitset;
+        using reads = bitset_reading_tag;
 };
 
 } // namespace xstd::bits::detail

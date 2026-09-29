@@ -7,7 +7,6 @@
 #define XSTD_BITS_DETAIL_OWNERSHIP_HPP
 
 #include <concepts>    // derived_from, same_as
-#include <cstdint>     // uint8_t
 #include <type_traits> // conditional_t, is_const_v, remove_const_t
 
 namespace xstd::bits::detail {
@@ -29,10 +28,14 @@ enum class window : bool { all,
 };
 
 // The three ways the same blocks are read: as a set of keys, as a sequence of bools, or whole, the way std::bitset is.
-enum class reading : std::uint8_t { set,
-                                    sequence,
-                                    bitset,
-};
+struct set_reading_tag
+{};
+
+struct sequence_reading_tag
+{};
+
+struct bitset_reading_tag
+{};
 
 // What an owner wraps: declared, never defined, so a view over a type that owns nothing is unsatisfied.
 template<class Owner>
@@ -48,14 +51,14 @@ struct owned_storage<Owner> : owned_storage<typename Owner::adaptor_type>
 template<class Owner>
 using owned_bits_t = std::conditional_t<std::is_const_v<Owner>, typename owned_storage<std::remove_const_t<Owner>>::bits_type const, typename owned_storage<std::remove_const_t<Owner>>::bits_type>;
 
-// Whether Owner is an owner a view of reading R may refer into; a bitset is committed to neither reading.
-template<class Owner, reading R>
+// Whether a view of reading R may refer into Owner: a refinement of R answers for R, and a bitset for either reading.
+template<class Owner, class R>
 concept owner_reading =
         requires { typename owned_storage<std::remove_const_t<Owner>>::bits_type; } and
-        (owned_storage<std::remove_const_t<Owner>>::reads == R or owned_storage<std::remove_const_t<Owner>>::reads == reading::bitset);
+        (std::derived_from<typename owned_storage<std::remove_const_t<Owner>>::reads, R> or std::same_as<typename owned_storage<std::remove_const_t<Owner>>::reads, bitset_reading_tag>);
 
 // Whether a view of reading R over Bits can refer into Owner: same storage, const flowing owner to view.
-template<class Owner, class Bits, reading R>
+template<class Owner, class Bits, class R>
 concept owner_of =
         owner_reading<Owner, R> and
         std::same_as<typename owned_storage<std::remove_const_t<Owner>>::bits_type, std::remove_const_t<Bits>> and
