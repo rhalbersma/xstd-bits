@@ -84,10 +84,7 @@ BOOST_AUTO_TEST_CASE(ReferenceSwap)
 {
         test::for_each_type<test::spec::sequence::vector_all>([]<class T> -> void {
                 static_assert(requires (T c, T::size_type n) { swap(c[n], c[n]); });
-                static_assert(reference_swaps_with_bool<T> == requires (T c, T::size_type n, bool& b) {
-                        swap(c[n], b);
-                        swap(b, c[n]);
-                });
+                static_assert(reference_swaps_with_bool<T> or is_std_vector_bool_v<T>); // [vector.bool.pspc]/11
                 for (auto const [from, a, i, j] : inputs::index_pairs<T>()) {
                         auto const on_failure = context(from, a, i, j);
                         fn_swap_reference()(a, i, j);

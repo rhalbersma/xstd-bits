@@ -130,8 +130,13 @@ struct bit_members<Width, Blocks, true> : bits::detail::allocator_base_type<Bloc
         [[XSTD_NO_UNIQUE_ADDRESS]]
         Width m_size;
 
+#ifdef _MSC_VER
+        // The MSVC ABI pads a class whose members are all [[msvc::no_unique_address]], which -Wpadded reports.
+        Blocks m_blocks;
+#else
         [[XSTD_NO_UNIQUE_ADDRESS]]
         Blocks m_blocks;
+#endif
 
         [[nodiscard]] bit_members() = default;
 

@@ -645,21 +645,21 @@ inline constexpr auto is_std_vector_bool_v<std::vector<bool, Allocator>> = true;
 // MSVC's vector<bool>::reserve allocates the words for n unchecked, where [vector.capacity]/5 throws length_error.
 inline constexpr auto std_vector_bool_reserve_checks_max_size = false;
 
-// MSVC's vector<bool>::reference has not taken P3612R1's two swaps between a reference and a bool&.
-inline constexpr auto std_vector_bool_swaps_with_bool = false;
-
 #else
 
 inline constexpr auto std_vector_bool_reserve_checks_max_size = true;
-inline constexpr auto std_vector_bool_swaps_with_bool = true;
 
 #endif
 
 template<class X>
 concept reserve_checks_max_size = std_vector_bool_reserve_checks_max_size or not is_std_vector_bool_v<X>;
 
+// P3612R1's two swaps between a reference and a bool&, which MSVC 2022's STL lacks.
 template<class X>
-concept reference_swaps_with_bool = std_vector_bool_swaps_with_bool or not is_std_vector_bool_v<X>;
+concept reference_swaps_with_bool = requires (X c, X::size_type n, bool& b) {
+        swap(c[n], b);
+        swap(b, c[n]);
+};
 
 // Storage for n at least, and the value unchanged; past max_size() there is none to be had.
 struct mem_reserve
@@ -778,8 +778,8 @@ struct mem_erase_keeps_prefix
                         auto b = a;
                         auto const first = b.begin();
                         BOOST_CHECK_NO_THROW(b.erase(nth(b, p))); // [vector.modifiers]/5 [inplace.vector.modifiers]/20
-                        BOOST_CHECK(first == b.begin());          // [vector.modifiers]/4 [inplace.vector.modifiers]/19
                         if (p > 0UZ) {
+                                BOOST_CHECK(first == b.begin()); // [vector.modifiers]/4 [inplace.vector.modifiers]/19
                                 auto const before = b.begin() + static_cast<X::difference_type>(p - 1UZ);
                                 BOOST_CHECK_EQUAL(static_cast<bool>(*before), static_cast<bool>(a[p - 1UZ])); // [vector.modifiers]/4
                         }

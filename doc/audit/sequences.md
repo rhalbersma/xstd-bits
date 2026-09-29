@@ -231,7 +231,7 @@ A row's `outcome` is one of:
 | `[vector.bool.pspc]` | 8 | `reference::operator=`, three overloads | Returns | answered |  |
 | `[vector.bool.pspc]` | 9 | `reference::operator bool() const` | Returns | answered |  |
 | `[vector.bool.pspc]` | 10 | `reference::flip()` | Effects | answered |  |
-| `[vector.bool.pspc]` | 11 | `swap`, three hidden friends | Effects | answered | P3612R1's hidden friends, reached by argument-dependent lookup; MSVC's STL lacks the two with a `bool&`, which is asserted rather than skipped. |
+| `[vector.bool.pspc]` | 11 | `swap`, three hidden friends | Effects | answered | P3612R1's hidden friends, reached by argument-dependent lookup; asked of every packed column, and of `std::vector<bool>` where its library has them, which MSVC 2022's STL does not. |
 | `[vector.bool.pspc]` | 12 | `flip()` | Effects | answered |  |
 | `[vector.bool.pspc]` | 13 | `hash<vector<bool, Allocator>>` | — | answered |  |
 | `[vector.bool.pspc]` | 14 | `is-vector-bool-reference<T>` | — | no-requirement | An exposition-only variable, observed only through `[vector.bool.fmt]`. |

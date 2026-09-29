@@ -273,10 +273,12 @@ auto check_failed_insertion()
         -> void
 {
         auto book = ledger();
+        auto spare = ledger();
         auto x = X(ledger_allocator<X>(book));
         book.budget = 0;
         for ([[maybe_unused]] auto const i : std::views::iota(0UZ, 2048UZ)) {
-                auto const before = x;
+                // A copy under book would itself allocate where MSVC's debug containers keep a proxy.
+                auto const before = X(x, ledger_allocator<X>(spare));
                 try {
                         grow_by_one(x);
                 } catch (std::bad_alloc const&) {
