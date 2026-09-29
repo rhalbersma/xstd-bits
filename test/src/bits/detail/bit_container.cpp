@@ -9,6 +9,7 @@
 #include <xstd/bits/bit_storage.hpp>                  // owned_bit_storage
 #include <xstd/bits/detail/bit_container.hpp>         // bit_container
 #include <xstd/bits/detail/bounded_blocks.hpp>        // bounded_blocks
+#include <xstd/bits/detail/comparisons.hpp>           // bitset_three_way, sequence_three_way, set_equal, set_three_way
 #include <xstd/bits/detail/range_const_reference.hpp> // fallback::range_const_reference_t, range_const_reference_t
 #include <xstd/ints/memory.hpp>                       // align_up
 #include <boost/test/unit_test.hpp>                   // BOOST_CHECK_EQUAL, BOOST_CHECK_LE, BOOST_CHECK_LT, BOOST_CHECK_THROW, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
@@ -186,7 +187,7 @@ public:
                         meets = meets or (m_mx[i] and m_my[i]);
                 }
                 disagree(m_x.is_subset_of(m_y), subset);
-                disagree(m_x.is_proper_subset_of(m_y), subset and differs);
+                disagree(set_equal(m_x, m_y), not differs);
                 disagree(m_x.intersects(m_y), meets);
 
                 // The hidden friend answers the member, and both operand orders alike: a meets b when b meets a.
@@ -1214,17 +1215,17 @@ auto disagreements(BB const& empty)
                 for (auto const& y : values) {
                         auto const sx = set_reading(x);
                         auto const sy = set_reading(y);
-                        if (std::lexicographical_compare_three_way(sx.begin(), sx.end(), sy.begin(), sy.end()) != set_lexicographical_compare_three_way(x, y)) {
+                        if (std::lexicographical_compare_three_way(sx.begin(), sx.end(), sy.begin(), sy.end()) != set_three_way(x, y)) {
                                 ++n;
                         }
                         // No comparator: vector<bool>'s proxy converts to bool, so it is three_way_comparable.
                         auto const qx = reference(x);
                         auto const qy = reference(y);
-                        if (std::lexicographical_compare_three_way(qx.begin(), qx.end(), qy.begin(), qy.end()) != sequence_lexicographical_compare_three_way(x, y)) {
+                        if (std::lexicographical_compare_three_way(qx.begin(), qx.end(), qy.begin(), qy.end()) != sequence_three_way(x, y)) {
                                 ++n;
                         }
                         // The bitset reading is the sequence reading from the top, the bit string's order.
-                        if (std::lexicographical_compare_three_way(qx.rbegin(), qx.rend(), qy.rbegin(), qy.rend()) != bitset_lexicographical_compare_three_way(x, y)) {
+                        if (std::lexicographical_compare_three_way(qx.rbegin(), qx.rend(), qy.rbegin(), qy.rend()) != bitset_three_way(x, y)) {
                                 ++n;
                         }
                 }
@@ -1268,7 +1269,7 @@ BOOST_AUTO_TEST_CASE(TheThreeOrderingsDisagree)
                 for (auto const i : q) {
                         y.set(i);
                 }
-                return {set_lexicographical_compare_three_way(x, y), sequence_lexicographical_compare_three_way(x, y), bitset_lexicographical_compare_three_way(x, y)};
+                return {set_three_way(x, y), sequence_three_way(x, y), bitset_three_way(x, y)};
         };
 
         // {0} against {1}: [0] < [1]; [1,0] > [0,1]; "01" < "10".
@@ -1294,12 +1295,12 @@ BOOST_AUTO_TEST_CASE(TheSetOrderingPutsAPrefixFirst)
         auto const y = T();
 
         // {} is a prefix of {1}, so it sorts below -- the opposite of what holding the lower position would say.
-        BOOST_CHECK(set_lexicographical_compare_three_way(x, y) == std::strong_ordering::greater);
+        BOOST_CHECK(set_three_way(x, y) == std::strong_ordering::greater);
 
         // And with something above that position, the clause no longer applies.
         auto z = T();
         z.set(8);
-        BOOST_CHECK(set_lexicographical_compare_three_way(x, z) == std::strong_ordering::less);
+        BOOST_CHECK(set_three_way(x, z) == std::strong_ordering::less);
 }
 
 // Dependent, so a storage without an allocator answers false rather than hard-errors.

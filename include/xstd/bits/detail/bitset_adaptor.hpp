@@ -11,6 +11,7 @@
 #include <xstd/bits/bit_storage.hpp>                // bit_storage
 #include <xstd/bits/detail/allocator_base_type.hpp> // allocator_base_type, allocator_param_t, has_allocator_v
 #include <xstd/bits/detail/bit_container.hpp>       // bit_container, bit_container_type
+#include <xstd/bits/detail/comparisons.hpp>         // bitset_three_way, set_equal
 #include <xstd/bits/detail/hash.hpp>                // hash_append_bits, std_hash
 #include <xstd/bits/detail/ownership.hpp>           // bitset_reading_tag, owned_storage, storage, window
 #include <xstd/bits/detail/zero_width.hpp>          // zero_width
@@ -610,7 +611,7 @@ public:
                                 return lhs.top_aligned_three_way(rhs);
                         }
                 }
-                return bitset_lexicographical_compare_three_way(lhs.m_bits, rhs.m_bits);
+                return bitset_three_way(lhs.m_bits, rhs.m_bits);
         }
 
         [[nodiscard]] constexpr auto test(std::size_t pos) const
@@ -656,10 +657,11 @@ public:
                 return m_bits.is_subset_of(rhs.m_bits);
         }
 
+        // Not proper where both hold the same positions, at any two widths, as is_subset_of answers across them too.
         [[nodiscard]] constexpr auto is_proper_subset_of(bitset_adaptor const& rhs) const noexcept
                 -> bool
         {
-                return m_bits.is_proper_subset_of(rhs.m_bits);
+                return m_bits.is_subset_of(rhs.m_bits) and not set_equal(m_bits, rhs.m_bits);
         }
 
         [[nodiscard]] constexpr auto intersects(bitset_adaptor const& rhs) const noexcept
