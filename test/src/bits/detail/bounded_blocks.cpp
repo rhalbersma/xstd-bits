@@ -3,6 +3,13 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#ifdef _MSC_VER
+
+// Growth past a capacity of nought always throws, and MSVC calls what follows it inside BOOST_CHECK_THROW unreachable.
+#pragma warning(disable : 4702)
+
+#endif
+
 #include <xstd/bits/bit_storage.hpp>           // bit_storage_capacity_v, resizable_bit_storage
 #include <xstd/bits/detail/bounded_blocks.hpp> // bounded_blocks, bounded_blocks_for, no_blocks
 #include <boost/test/unit_test.hpp>            // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW

@@ -11,7 +11,7 @@
 #include <boost/test/unit_test.hpp>  // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_LE, BOOST_CHECK_NO_THROW
 #include <algorithm>                 // equal, lexicographical_compare_three_way
 #include <compare>                   // is_eq, strong_ordering
-#include <concepts>                  // convertible_to, same_as, signed_integral, unsigned_integral
+#include <concepts>                  // convertible_to, destructible, same_as, signed_integral, unsigned_integral
 #include <cstddef>                   // ptrdiff_t, size_t
 #include <iterator>                  // bidirectional_iterator, distance, forward_iterator, indirectly_writable, iter_difference_t, iter_value_t, next, random_access_iterator, reverse_iterator
 #include <limits>                    // numeric_limits
@@ -141,7 +141,12 @@ template<class X>
 constexpr auto destructor()
         -> void
 {
+#if defined(_MSC_VER) && !defined(__clang__)
+        // MSVC mis-types an explicit destructor call named through a template parameter, so only destructibility is asked.
+        static_assert(std::destructible<X>); // [container.reqmts]/24
+#else
         static_assert(std::same_as<decltype(std::declval<X&>().~X()), void>); // [container.reqmts]/24
+#endif
 }
 
 // begin() and end() on a non-const object, which hand out the mutable iterator.

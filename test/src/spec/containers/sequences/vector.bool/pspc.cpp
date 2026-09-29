@@ -83,8 +83,8 @@ BOOST_AUTO_TEST_CASE(ReferenceFlip)
 BOOST_AUTO_TEST_CASE(ReferenceSwap)
 {
         test::for_each_type<test::spec::sequence::vector_all>([]<class T> -> void {
-                static_assert(requires (T c, T::size_type n, bool& b) {
-                        swap(c[n], c[n]);
+                static_assert(requires (T c, T::size_type n) { swap(c[n], c[n]); });
+                static_assert(reference_swaps_with_bool<T> == requires (T c, T::size_type n, bool& b) {
                         swap(c[n], b);
                         swap(b, c[n]);
                 });

@@ -42,7 +42,7 @@ A row's `outcome` is one of:
 | `[container.reqmts]` | 21 | `t = rv` | Effects | answered | Checked as the size the target ends with: none of its former elements survive the assignment. |
 | `[container.reqmts]` | 22 | `t = rv` | Postconditions | answered |  |
 | `[container.reqmts]` | 23 | `t = rv` | Complexity | declined | A complexity bound, which no functional check can observe. |
-| `[container.reqmts]` | 24 | `a.~X()` | Result | answered |  |
+| `[container.reqmts]` | 24 | `a.~X()` | Result | answered | MSVC mis-types an explicit destructor call through a template parameter, so there only destructibility is asked. |
 | `[container.reqmts]` | 25 | `a.~X()` | Effects | answered | Checked through an allocator that counts its outstanding allocations, on the allocator-aware columns; the others allocate nothing. |
 | `[container.reqmts]` | 26 | `a.~X()` | Complexity | declined | A complexity bound, which no functional check can observe. |
 | `[container.reqmts]` | 27 | `b.begin()` | Result | answered |  |

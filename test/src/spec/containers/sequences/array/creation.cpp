@@ -72,7 +72,7 @@ BOOST_AUTO_TEST_CASE(ToArrayLvalue)
                         auto const& c = s;
                         static_assert(std::same_as<decltype(to_array_of<T>(s.a)), created_t<T>> and std::same_as<decltype(to_array_of<T>(c.a)), created_t<T>>); // [array.creation]/3
                         static_assert([] -> bool {
-                                auto const t = striped<N>();
+                                auto const t = striped<T().size()>();
                                 return std::ranges::equal(to_array_of<T>(t.a), t.a);
                         }());
                         BOOST_CHECK(std::ranges::equal(to_array_of<T>(s.a), s.a)); // [array.creation]/3

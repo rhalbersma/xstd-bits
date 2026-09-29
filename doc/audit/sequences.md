@@ -231,7 +231,7 @@ A row's `outcome` is one of:
 | `[vector.bool.pspc]` | 8 | `reference::operator=`, three overloads | Returns | answered |  |
 | `[vector.bool.pspc]` | 9 | `reference::operator bool() const` | Returns | answered |  |
 | `[vector.bool.pspc]` | 10 | `reference::flip()` | Effects | answered |  |
-| `[vector.bool.pspc]` | 11 | `swap`, three hidden friends | Effects | answered | P3612R1's hidden friends, reached by argument-dependent lookup. |
+| `[vector.bool.pspc]` | 11 | `swap`, three hidden friends | Effects | answered | P3612R1's hidden friends, reached by argument-dependent lookup; MSVC's STL lacks the two with a `bool&`, which is asserted rather than skipped. |
 | `[vector.bool.pspc]` | 12 | `flip()` | Effects | answered |  |
 | `[vector.bool.pspc]` | 13 | `hash<vector<bool, Allocator>>` | — | answered |  |
 | `[vector.bool.pspc]` | 14 | `is-vector-bool-reference<T>` | — | no-requirement | An exposition-only variable, observed only through `[vector.bool.fmt]`. |
@@ -243,7 +243,7 @@ A row's `outcome` is one of:
 | `[inplace.vector.overview]` | 2 | — | — | answered |  |
 | `[inplace.vector.overview]` | 3 | — | — | answered | Asked where the bounded columns hold their blocks in `std::inplace_vector`. Before C++26 they use Boost's `static_vector`, which is not constant-evaluable. |
 | `[inplace.vector.overview]` | 4 | — | — | answered |  |
-| `[inplace.vector.overview]` | 5 | — | — | answered | At capacity nought `xstd::bit_bounded_vector` holds no blocks and no width, and is empty, trivially copyable and trivially default constructible. At other capacities the trivial copy constructor, copy assignment and destructor are asked where the blocks are in `std::inplace_vector`; over Boost's `static_vector`, before C++26, none of them is trivial. The moves are not trivial at any capacity above nought: they leave the source empty, a departure the repo owner should confirm. |
+| `[inplace.vector.overview]` | 5 | — | — | answered | At capacity nought `xstd::bit_bounded_vector` holds no blocks and no width, and is empty (not under MSVC, whose `[[msvc::no_unique_address]]` still leaves a byte), trivially copyable and trivially default constructible. At other capacities the trivial copy constructor, copy assignment and destructor are asked where the blocks are in `std::inplace_vector`; over Boost's `static_vector`, before C++26, none of them is trivial. The moves are not trivial at any capacity above nought: they leave the source empty, a departure the repo owner should confirm. |
 | `[inplace.vector.cons]` | 1 | `inplace_vector(size_type n)` | Preconditions | no-requirement | A precondition on the element type, which `bool` meets; it asks nothing of the container. |
 | `[inplace.vector.cons]` | 2 | `inplace_vector(size_type n)` | Effects | answered |  |
 | `[inplace.vector.cons]` | 3 | `inplace_vector(size_type n)` | Complexity | declined | A complexity bound, which no functional check can observe. |

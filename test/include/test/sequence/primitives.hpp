@@ -645,14 +645,21 @@ inline constexpr auto is_std_vector_bool_v<std::vector<bool, Allocator>> = true;
 // MSVC's vector<bool>::reserve allocates the words for n unchecked, where [vector.capacity]/5 throws length_error.
 inline constexpr auto std_vector_bool_reserve_checks_max_size = false;
 
+// MSVC's vector<bool>::reference has not taken P3612R1's two swaps between a reference and a bool&.
+inline constexpr auto std_vector_bool_swaps_with_bool = false;
+
 #else
 
 inline constexpr auto std_vector_bool_reserve_checks_max_size = true;
+inline constexpr auto std_vector_bool_swaps_with_bool = true;
 
 #endif
 
 template<class X>
 concept reserve_checks_max_size = std_vector_bool_reserve_checks_max_size or not is_std_vector_bool_v<X>;
+
+template<class X>
+concept reference_swaps_with_bool = std_vector_bool_swaps_with_bool or not is_std_vector_bool_v<X>;
 
 // Storage for n at least, and the value unchanged; past max_size() there is none to be had.
 struct mem_reserve
@@ -1219,12 +1226,14 @@ struct fn_swap_reference
                 swap(b[i], b[j]);
                 BOOST_CHECK(model_of(b) == m); // [vector.bool.pspc]/11
 
-                auto x = not static_cast<bool>(a[i]);
-                auto c = a;
-                swap(c[i], x);
-                BOOST_CHECK(x == static_cast<bool>(a[i]) and static_cast<bool>(c[i]) != x); // [vector.bool.pspc]/11
-                swap(x, c[i]);
-                BOOST_CHECK(c == a); // [vector.bool.pspc]/11
+                if constexpr (reference_swaps_with_bool<X>) {
+                        auto x = not static_cast<bool>(a[i]);
+                        auto c = a;
+                        swap(c[i], x);
+                        BOOST_CHECK(x == static_cast<bool>(a[i]) and static_cast<bool>(c[i]) != x); // [vector.bool.pspc]/11
+                        swap(x, c[i]);
+                        BOOST_CHECK(c == a); // [vector.bool.pspc]/11
+                }
         }
 };
 
