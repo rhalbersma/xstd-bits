@@ -35,7 +35,7 @@ The yardstick is the [current working draft](https://eel.is/c++draft/), not the 
 
 Three things the packing genuinely forces, and nothing else:
 
-- **No nodes.** A position is a bit in a word, so there is nothing to unlink and hand over: `node_type`, `extract`, `insert(node_type&&)` and `merge` have no meaning here. `std::flat_set` drops the same four for the same reason.
+- **No nodes.** A position is a bit in a block, so there is nothing to unlink and hand over: `node_type`, `extract`, `insert(node_type&&)` and `merge` have no meaning here. `std::flat_set` drops the same four for the same reason.
 - **A proxy reference.** A bit has no address, so `operator[]` returns a proxy, `pointer` names nothing, and `data()` goes with it. `std::vector<bool>` makes exactly this trade. Everything the standard asks *of* the proxy is here — the const-qualified assignment of [P2321R2](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2021/p2321r2.html), `flip()`, and the three hidden-friend `swap`s of [P3612R1](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3612r1.html).
 - **Different invalidation — mostly the other way.** An iterator here is a container and an index, not a pointer into the blocks, so growth that reallocates the blocks leaves it valid. That is `std::set`'s guarantee over storage that is `std::flat_set`'s.
 
@@ -176,11 +176,11 @@ the adaptor each reading is built on is internal, under `<xstd/bits/detail/>`.
 | `<xstd/bits/bounded_bitset.hpp>` | `bounded_bitset` <br> `basic_bounded_bitset` | Both readings, dynamic size within a static capacity | [template.bitset] |
 | `<xstd/bits/dynamic_bitset.hpp>` | `dynamic_bitset` <br> `basic_dynamic_bitset` | Both readings, dynamic size and capacity | [`boost::dynamic_bitset`](https://www.boost.org/doc/libs/release/libs/dynamic_bitset/dynamic_bitset.html) |
 | `<xstd/bits/ext/boost.hpp>` | `bit_small_set` <br> `bit_small_vector` <br> `small_bitset` <br> and their `basic_` forms | All three readings, dynamic size staying inline within a static capacity | [`boost::container::small_vector`](https://www.boost.org/doc/libs/release/doc/html/boost/container/small_vector.html) |
-| `<xstd/bits/bit_set_view.hpp>` | `bit_set_view` | Set reading of bits another container owns, or of unsigned words in place: `bit_set_view(board)` is a `bit_set_view<std::uint64_t>` | none |
-| `<xstd/bits/bit_span.hpp>` <br> `<xstd/bits/bit_subspan.hpp>` | `bit_span` <br> `bit_subspan` | Sequence reading over borrowed bits, whole or sliced, or over unsigned words in place: `bit_span(words)` | [views.span] |
-| `<xstd/bits/bit_storage.hpp>` | `bit_storage` <br> `owned_bit_storage` <br> `resizable_bit_storage` <br> `bit_storage_extent_v` | What every container and view presents a packed interface over: one unsigned word, or a sized contiguous range of them, in no reading of its own. The views take any of it; the owners hold what can be owned, a regular value read-only through `const`, and at a run-time width only what resizes. Also the width its type names, which the views default to | none |
-| `<xstd/bits/from_bit_storage.hpp>` | `from_bit_storage` <br> `from_bit_storage_t` | The tag that says an argument's words are read as bits, so a static width deduces from them | [range.utility.conv] |
-| `<xstd/bits/bit.hpp>` <br> `<xstd/bits/bit/bit_cast.hpp>` | `bit_cast` <br> `bit_castable` | A copy of the blocks between any two things that have bit storage of one width: ours, words, a `std::bitset` | [bit.cast] |
+| `<xstd/bits/bit_set_view.hpp>` | `bit_set_view` | Set reading of bits another container owns, or of unsigned blocks in place: `bit_set_view(board)` is a `bit_set_view<std::uint64_t>` | none |
+| `<xstd/bits/bit_span.hpp>` <br> `<xstd/bits/bit_subspan.hpp>` | `bit_span` <br> `bit_subspan` | Sequence reading over borrowed bits, whole or sliced, or over unsigned blocks in place: `bit_span(blocks)` | [views.span] |
+| `<xstd/bits/bit_storage.hpp>` | `bit_storage` <br> `owned_bit_storage` <br> `resizable_bit_storage` <br> `bit_storage_extent_v` | What every container and view presents a packed interface over: one unsigned block, or a sized contiguous range of them, in no reading of its own. The views take any of it; the owners hold what can be owned, a regular value read-only through `const`, and at a run-time width only what resizes. Also the width its type names, which the views default to | none |
+| `<xstd/bits/from_bit_storage.hpp>` | `from_bit_storage` <br> `from_bit_storage_t` | The tag that says an argument's blocks are read as bits, so a static width deduces from them | [range.utility.conv] |
+| `<xstd/bits/bit.hpp>` <br> `<xstd/bits/bit/bit_cast.hpp>` | `bit_cast` <br> `bit_castable` | A copy of the blocks between any two things that have bit storage of one width: ours, blocks, a `std::bitset` | [bit.cast] |
 
 `<xstd/bits.hpp>` exports the whole surface, so one include brings everything above.
 The headers directly under `<xstd/bits/>` are the containers, views and concepts; `<xstd/bits/bit/>` holds free utilities that extend `<bit>`, exported together by `<xstd/bits/bit.hpp>` as in xstd-ints.

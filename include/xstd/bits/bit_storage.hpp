@@ -16,10 +16,10 @@
 #include <span>                                       // dynamic_extent, span
 #include <type_traits>                                // integral_constant, is_pointer_v, remove_const_t
 
-// What every container and view here presents a packed interface over: bits in contiguous unsigned words.
+// What every container and view here presents a packed interface over: bits in contiguous unsigned blocks.
 namespace xstd {
 
-// One unsigned word, or a sized contiguous range of them that subscripts; const where a view only reads.
+// One unsigned block, or a sized contiguous range of them that subscripts; const where a view only reads.
 template<class Bits>
 concept bit_storage =
         xstd::unsigned_integer<std::remove_const_t<Bits>> or
@@ -27,7 +27,7 @@ concept bit_storage =
          xstd::unsigned_integer<std::remove_const_t<std::ranges::range_value_t<Bits>>> and
          requires (Bits& bits, std::ranges::range_size_t<Bits> n) { bits[n]; });
 
-// Bit storage a container can own: a value compared by its words, and read-only through a const object.
+// Bit storage a container can own: a value compared by its blocks, and read-only through a const object.
 template<class Bits>
 concept owned_bit_storage =
         bit_storage<Bits> and std::regular<Bits> and
@@ -38,19 +38,19 @@ concept owned_bit_storage =
                  { cbits[n] } -> std::same_as<bits::detail::range_const_reference_t<Bits>>;
          });
 
-// Owned words whose count changes at run time: what an owner of a run-time width grows and shrinks.
+// Owned blocks whose count changes at run time: what an owner of a run-time width grows and shrinks.
 template<class Bits>
 concept resizable_bit_storage =
         owned_bit_storage<Bits> and std::ranges::range<Bits> and
-        requires (Bits& bits, Bits const& cbits, std::ranges::range_size_t<Bits> n, std::ranges::range_value_t<Bits> const* words) {
-                bits.resize(n, *words);
-                bits.push_back(*words);
-                bits.insert(std::ranges::end(bits), words, words);
+        requires (Bits& bits, Bits const& cbits, std::ranges::range_size_t<Bits> n, std::ranges::range_value_t<Bits> const* blocks) {
+                bits.resize(n, *blocks);
+                bits.push_back(*blocks);
+                bits.insert(std::ranges::end(bits), blocks, blocks);
                 bits.clear();
                 { cbits.max_size() } -> std::convertible_to<std::ranges::range_size_t<Bits>>;
         };
 
-// The width bit storage names by its type: every bit of a word or of a fixed number of words, else dynamic_extent.
+// The width bit storage names by its type: every bit of a block or of a fixed number of blocks, else dynamic_extent.
 template<bit_storage Bits>
 inline constexpr std::size_t bit_storage_extent_v = std::dynamic_extent;
 
@@ -58,15 +58,15 @@ template<bit_storage Bits>
         requires xstd::unsigned_integer<std::remove_const_t<Bits>>
 inline constexpr std::size_t bit_storage_extent_v<Bits> = static_cast<std::size_t>(xstd::numeric_limits<std::remove_const_t<Bits>>::digits);
 
-template<xstd::unsigned_integer Word, std::size_t K>
-inline constexpr std::size_t bit_storage_extent_v<std::array<Word, K>> = K * bit_storage_extent_v<Word>;
+template<xstd::unsigned_integer Block, std::size_t K>
+inline constexpr std::size_t bit_storage_extent_v<std::array<Block, K>> = K * bit_storage_extent_v<Block>;
 
-template<xstd::unsigned_integer Word, std::size_t K>
-inline constexpr std::size_t bit_storage_extent_v<std::array<Word, K> const> = bit_storage_extent_v<std::array<Word, K>>;
+template<xstd::unsigned_integer Block, std::size_t K>
+inline constexpr std::size_t bit_storage_extent_v<std::array<Block, K> const> = bit_storage_extent_v<std::array<Block, K>>;
 
-template<class Word, std::size_t E>
-        requires xstd::unsigned_integer<std::remove_const_t<Word>> and (E != std::dynamic_extent)
-inline constexpr std::size_t bit_storage_extent_v<std::span<Word, E>> = E * bit_storage_extent_v<Word>;
+template<class Block, std::size_t E>
+        requires xstd::unsigned_integer<std::remove_const_t<Block>> and (E != std::dynamic_extent)
+inline constexpr std::size_t bit_storage_extent_v<std::span<Block, E>> = E * bit_storage_extent_v<Block>;
 
 // The most bits an owner holds by its storage's type: a fixed width, else a constant capacity, else dynamic_extent.
 template<bit_storage Bits>
@@ -74,9 +74,9 @@ inline constexpr std::size_t bit_storage_capacity_v = bit_storage_extent_v<Bits>
 
 namespace bits::detail {
 
-// In words, the capacity the type answers without an object, else dynamic_extent.
+// In blocks, the capacity the type answers without an object, else dynamic_extent.
 template<class Bits>
-consteval auto static_word_capacity() noexcept
+consteval auto static_block_capacity() noexcept
         -> std::size_t
 {
         // A capacity() usable as a constant, as std::inplace_vector's is.
@@ -94,8 +94,8 @@ consteval auto static_word_capacity() noexcept
 
 // The capacity in bits; boost::container::small_vector's static_capacity is its inline part and bounds nothing.
 template<bit_storage Bits>
-        requires (bit_storage_extent_v<Bits> == std::dynamic_extent) and resizable_bit_storage<Bits> and (bits::detail::static_word_capacity<Bits>() != std::dynamic_extent)
-inline constexpr std::size_t bit_storage_capacity_v<Bits> = bits::detail::static_word_capacity<Bits>() * bit_storage_extent_v<std::ranges::range_value_t<Bits>>;
+        requires (bit_storage_extent_v<Bits> == std::dynamic_extent) and resizable_bit_storage<Bits> and (bits::detail::static_block_capacity<Bits>() != std::dynamic_extent)
+inline constexpr std::size_t bit_storage_capacity_v<Bits> = bits::detail::static_block_capacity<Bits>() * bit_storage_extent_v<std::ranges::range_value_t<Bits>>;
 
 } // namespace xstd
 

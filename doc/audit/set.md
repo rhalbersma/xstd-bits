@@ -35,7 +35,7 @@ A row's `outcome` is one of:
 | `[associative.reqmts.general]` | 14 | `typename X::key_compare` | Result | answered | |
 | `[associative.reqmts.general]` | 15 | `typename X::key_compare` | Preconditions | answered | |
 | `[associative.reqmts.general]` | 16 | `typename X::value_compare` | Result | answered | |
-| `[associative.reqmts.general]` | 17 | `typename X::node_type` | Result | forced | No nodes: a key is a bit in a word, so there is nothing to unlink and hand over. `erase(k)` removes a key where `extract` would, and `a \|= a2` inserts every key of `a2` where `merge` would, leaving `a2` unchanged. |
+| `[associative.reqmts.general]` | 17 | `typename X::node_type` | Result | forced | No nodes: a key is a bit in a block, so there is nothing to unlink and hand over. `erase(k)` removes a key where `extract` would, and `a \|= a2` inserts every key of `a2` where `merge` would, leaving `a2` unchanged. |
 | `[associative.reqmts.general]` | 18 | `X(c)` | Effects | answered | |
 | `[associative.reqmts.general]` | 19 | `X(c)` | Complexity | declined | Not checked: the tests observe results rather than count steps, and every subject's `key_compare` is `std::less<key_type>`, which gives nothing to count comparisons through. |
 | `[associative.reqmts.general]` | 20 | `X u = X(); X u;` | Preconditions | answered | |

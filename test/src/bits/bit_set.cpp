@@ -3,27 +3,27 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/set/ascending.hpp>                        // yields_ascending_keys
-#include <xstd/bits/bit_set.hpp>                         // bit_set
-#include <xstd/bits/bit_set_view.hpp>                    // bit_set_view
-#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
-#include <xstd/bits/detail/ownership.hpp>                // storage
-#include <xstd/bits/detail/set_adaptor.hpp>              // set_adaptor
-#include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <algorithm>                                     // equal, ranges::equal
-#include <array>                                         // array
-#include <bitset>                                        // bitset
-#include <compare>                                       // is_eq
-#include <concepts>                                      // same_as
-#include <cstddef>                                       // size_t
-#include <cstdint>                                       // uint8_t
-#include <functional>                                    // hash
-#include <memory>                                        // allocator
-#include <ranges>                                        // equal, iota, to
-#include <set>                                           // set
-#include <type_traits>                                   // is_constructible_v
-#include <utility>                                       // move
-#include <vector>                                        // vector
+#include <test/set/ascending.hpp>             // yields_ascending_keys
+#include <xstd/bits/bit_set.hpp>              // bit_set
+#include <xstd/bits/bit_set_view.hpp>         // bit_set_view
+#include <xstd/bits/detail/bit_container.hpp> // bit_container
+#include <xstd/bits/detail/ownership.hpp>     // storage
+#include <xstd/bits/detail/set_adaptor.hpp>   // set_adaptor
+#include <boost/test/unit_test.hpp>           // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <algorithm>                          // equal, ranges::equal
+#include <array>                              // array
+#include <bitset>                             // bitset
+#include <compare>                            // is_eq
+#include <concepts>                           // same_as
+#include <cstddef>                            // size_t
+#include <cstdint>                            // uint8_t
+#include <functional>                         // hash
+#include <memory>                             // allocator
+#include <ranges>                             // equal, iota, to
+#include <set>                                // set
+#include <type_traits>                        // is_constructible_v
+#include <utility>                            // move
+#include <vector>                             // vector
 
 BOOST_AUTO_TEST_SUITE(BitSet)
 
@@ -32,7 +32,7 @@ using T = xstd::basic_bit_set<std::uint8_t>;
 // The flagship: the set reading over a heap of blocks, built on the set adaptor.
 BOOST_AUTO_TEST_CASE(TheDynamicSetIsTheSetAdaptorOverAHeapOfBlocks)
 {
-        static_assert(std::derived_from<T, xstd::bits::detail::set_adaptor<xstd::bits::detail::contiguous_bit_container<std::vector<std::uint8_t>>, xstd::bits::detail::storage::owned, T>>);
+        static_assert(std::derived_from<T, xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_container<std::vector<std::uint8_t>>, xstd::bits::detail::storage::owned, T>>);
         static_assert(std::same_as<xstd::basic_bit_set<std::uint8_t, std::allocator<std::uint8_t>>, T>);
 }
 
@@ -81,7 +81,7 @@ BOOST_AUTO_TEST_CASE(InsertingPastTheWidthGrowsIt)
 {
         auto s = T();
         BOOST_CHECK(s.empty());
-        BOOST_CHECK_EQUAL(s.max_size(), xstd::bits::detail::contiguous_bit_container<std::vector<std::uint8_t>>().max_size());
+        BOOST_CHECK_EQUAL(s.max_size(), xstd::bits::detail::bit_container<std::vector<std::uint8_t>>().max_size());
 
         auto const [where, inserted] = s.insert(100);
         BOOST_CHECK(inserted);

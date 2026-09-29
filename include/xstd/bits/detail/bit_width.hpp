@@ -32,9 +32,9 @@ concept packed_view =
 template<class T>
 concept packed = packed_owner<T> or packed_view<T>;
 
-// An array of words by value: its width is its length times the word's digits.
+// An array of blocks by value: its width is its length times the block's digits.
 template<class T>
-concept word_array =
+concept block_array =
         requires {
                 typename std::tuple_size<T>::type;
                 typename T::value_type;
@@ -55,7 +55,7 @@ template<class T>
                 return std::remove_const_t<typename owned_storage<std::remove_const_t<T>>::bits_type>::extent;
         } else if constexpr (packed_view<T>) {
                 return std::remove_const_t<typename T::adapted_type>::extent;
-        } else if constexpr (word_array<T>) {
+        } else if constexpr (block_array<T>) {
                 return std::tuple_size_v<T> * static_cast<std::size_t>(xstd::numeric_limits<typename T::value_type>::digits);
         } else if constexpr (has_constant_size<T>) {
                 if constexpr (container_source<T, T().size()>) {

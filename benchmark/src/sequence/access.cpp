@@ -14,12 +14,12 @@
 
 namespace {
 
-inline constexpr auto bits_per_word = 64UZ;
+inline constexpr auto bits_per_block = 64UZ;
 
 auto bits(benchmark::State const& state)
         -> std::size_t
 {
-        return static_cast<std::size_t>(state.range(0)) * bits_per_word;
+        return static_cast<std::size_t>(state.range(0)) * bits_per_block;
 }
 
 // One LCG step per lookup: cheap against a DRAM miss, and unpredictable enough to defeat the prefetcher.
@@ -73,7 +73,7 @@ auto bm_sequential_count(benchmark::State& state)
         state.SetBytesProcessed(state.iterations() * static_cast<std::int64_t>(n / 8UZ));
 }
 
-// The same sweep asked of the sequence reading: one popcount per word, and the loop is ours either way.
+// The same sweep asked of the sequence reading: one popcount per block, and the loop is ours either way.
 template<class T>
 auto bm_sequential_count_member(benchmark::State& state)
         -> void

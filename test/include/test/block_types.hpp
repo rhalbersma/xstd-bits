@@ -54,20 +54,20 @@ template<class Block>
 inline constexpr auto digits_v = static_cast<std::size_t>(xstd::numeric_limits<Block>::digits);
 
 // Every Block the library is instantiated over; xstd::uint128 rides on <bit>.
-using word_types = std::tuple<std::uint8_t, std::uint16_t, std::uint32_t, std::uint64_t
+using block_types = std::tuple<std::uint8_t, std::uint16_t, std::uint32_t, std::uint64_t
 #ifdef TEST_HAS_UINT128
 
-                              ,
-                              xstd::uint128
+                               ,
+                               xstd::uint128
 
 #endif
-                              >;
+                               >;
 
 // The Blocks narrow enough to straddle block boundaries exhaustively; a bit-precise unsigned _BitInt(4) belongs here.
-using narrow_word_types = std::tuple<std::uint8_t>;
+using narrow_block_types = std::tuple<std::uint8_t>;
 
 // The widest Blocks, which cross a boundary for two reasons the narrow ones cannot cover.
-using wide_word_types = decltype(std::tuple_cat(
+using wide_block_types = decltype(std::tuple_cat(
         std::declval<std::tuple<
 #if defined(TEST_HAS_UINT128) || defined(TEST_HAS_MSVC_INT128)
 
@@ -95,20 +95,20 @@ using wide_word_types = decltype(std::tuple_cat(
 template<template<class, std::size_t> class C, class Block>
 using in_block_extents = std::tuple<C<Block, 0>, C<Block, 1>, C<Block, digits_v<Block>>>;
 
-// The extents that straddle a block boundary, at the narrowest word: the arithmetic follows digits.
+// The extents that straddle a block boundary, at the narrowest block type: the arithmetic follows digits.
 template<template<class, std::size_t> class C, class Block>
 using straddling_extents = std::tuple<C<Block, digits_v<Block> - 1>, C<Block, digits_v<Block> + 1>, C<Block, (2 * digits_v<Block>)-1>, C<Block, 2 * digits_v<Block>>, C<Block, (2 * digits_v<Block>)+1>, C<Block, 3 * digits_v<Block>>>;
 
-// Every word type at the extents it can afford: all within one block, and the narrow ones across boundaries too.
+// Every block type at the extents it can afford: all within one block, and the narrow ones across boundaries too.
 template<template<class, std::size_t> class C>
 using graded_extents = decltype(std::tuple_cat(
-        std::declval<decltype(detail::expand<C, in_block_extents>(std::declval<word_types>()))>(),
-        std::declval<decltype(detail::expand<C, straddling_extents>(std::declval<narrow_word_types>()))>()
+        std::declval<decltype(detail::expand<C, in_block_extents>(std::declval<block_types>()))>(),
+        std::declval<decltype(detail::expand<C, straddling_extents>(std::declval<narrow_block_types>()))>()
 ));
 
 // The widest Block across block boundaries, for the suites that can afford it.
 template<template<class, std::size_t> class C>
-using wide_extents = decltype(detail::expand<C, straddling_extents>(std::declval<wide_word_types>()));
+using wide_extents = decltype(detail::expand<C, straddling_extents>(std::declval<wide_block_types>()));
 
 } // namespace test
 

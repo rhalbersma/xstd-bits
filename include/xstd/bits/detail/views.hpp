@@ -24,7 +24,7 @@ class bit_subspan;
 
 namespace xstd::bits::detail {
 
-// A window of the whole sequence is named by the same words and width.
+// A window of the whole sequence is named by the same blocks and width.
 template<class Blocks, std::size_t N, class Bits, std::size_t E>
 struct window_of<bit_span<Blocks, N>, Bits, E>
 {

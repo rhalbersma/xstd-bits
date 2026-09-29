@@ -19,6 +19,7 @@ namespace xstd::bits::detail {
 
 template<class Bits>
 class bidirectional_bit_iterator;
+
 template<class Bits>
 class bidirectional_bit_reference;
 
@@ -163,8 +164,7 @@ public:
 // std::format over the containers, which needs nothing said about the containers themselves.
 template<class Bits, class CharT>
 // NOLINTNEXTLINE(bugprone-std-namespace-modification)
-struct std::formatter<xstd::bits::detail::bidirectional_bit_reference<Bits>, CharT>
-        : std::formatter<std::size_t, CharT>
+struct std::formatter<xstd::bits::detail::bidirectional_bit_reference<Bits>, CharT> : std::formatter<std::size_t, CharT>
 {
         template<class Context>
         [[nodiscard]] constexpr auto format(xstd::bits::detail::bidirectional_bit_reference<Bits> ref, Context& ctx) const

@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-// The run-time width against boost's, on the same word ladder the static width runs.
+// The run-time width against boost's, on the same block ladder the static width runs.
 
 #include <xstd/bits/bit_set_view.hpp>   // bit_set_view
 #include <xstd/bits/dynamic_bitset.hpp> // dynamic_bitset
@@ -15,9 +15,9 @@
 
 namespace {
 
-inline constexpr auto bits_per_word = 64UZ;
+inline constexpr auto bits_per_block = 64UZ;
 
-auto words(benchmark::State const& state)
+auto num_blocks(benchmark::State const& state)
         -> std::size_t
 {
         return static_cast<std::size_t>(state.range(0));
@@ -39,7 +39,7 @@ auto filled(std::size_t n, std::uint64_t seed)
         return bits;
 }
 
-// The bits as their blocks, taken out once so both halves run over the same words at the same density.
+// The bits as their blocks, taken out once so both halves run over the same blocks at the same density.
 template<class T>
 auto blocks_of(T const& a)
         -> std::vector<typename T::block_type>
@@ -52,7 +52,7 @@ auto blocks_of(T const& a)
 auto per_byte(benchmark::State& state)
         -> void
 {
-        state.SetBytesProcessed(state.iterations() * static_cast<std::int64_t>(words(state) * sizeof(std::uint64_t)));
+        state.SetBytesProcessed(state.iterations() * static_cast<std::int64_t>(num_blocks(state) * sizeof(std::uint64_t)));
 }
 
 } // namespace
@@ -62,8 +62,8 @@ auto per_byte(benchmark::State& state)
         auto name(benchmark::State& state) \
                 -> void \
         { \
-                auto a = filled<T>(words(state) * bits_per_word, 1); \
-                auto b = filled<T>(words(state) * bits_per_word, 2); \
+                auto a = filled<T>(num_blocks(state) * bits_per_block, 1); \
+                auto b = filled<T>(num_blocks(state) * bits_per_block, 2); \
                 for (auto _ : state) { \
                         benchmark::DoNotOptimize(a); \
                         benchmark::DoNotOptimize(b); \
@@ -81,7 +81,7 @@ template<class T>
 auto bm_shift_left(benchmark::State& state)
         -> void
 {
-        auto a = filled<T>(words(state) * bits_per_word, 1);
+        auto a = filled<T>(num_blocks(state) * bits_per_block, 1);
         for (auto _ : state) {
                 benchmark::DoNotOptimize(a);
                 a <<= 3UZ;
@@ -94,7 +94,7 @@ template<class T>
 auto bm_count(benchmark::State& state)
         -> void
 {
-        auto a = filled<T>(words(state) * bits_per_word, 1);
+        auto a = filled<T>(num_blocks(state) * bits_per_block, 1);
         for (auto _ : state) {
                 benchmark::DoNotOptimize(a);
                 auto n = a.count();
@@ -107,7 +107,7 @@ template<class T>
 auto bm_flip(benchmark::State& state)
         -> void
 {
-        auto a = filled<T>(words(state) * bits_per_word, 1);
+        auto a = filled<T>(num_blocks(state) * bits_per_block, 1);
         for (auto _ : state) {
                 benchmark::DoNotOptimize(a);
                 a.flip();
@@ -121,7 +121,7 @@ template<class T>
 auto bm_scan(benchmark::State& state)
         -> void
 {
-        auto a = filled<T>(words(state) * bits_per_word, 1);
+        auto a = filled<T>(num_blocks(state) * bits_per_block, 1);
         for (auto _ : state) {
                 benchmark::DoNotOptimize(a);
                 auto sum = 0UZ;
@@ -138,7 +138,7 @@ template<class T>
 auto bm_scan_view(benchmark::State& state)
         -> void
 {
-        auto a = filled<T>(words(state) * bits_per_word, 1);
+        auto a = filled<T>(num_blocks(state) * bits_per_block, 1);
         for (auto _ : state) {
                 benchmark::DoNotOptimize(a);
                 auto sum = 0UZ;
@@ -155,7 +155,7 @@ template<class T>
 auto bm_scan_blocks(benchmark::State& state)
         -> void
 {
-        auto a = filled<T>(words(state) * bits_per_word, 1);
+        auto a = filled<T>(num_blocks(state) * bits_per_block, 1);
         for (auto _ : state) {
                 benchmark::DoNotOptimize(a);
                 auto sum = 0UZ;
@@ -171,8 +171,8 @@ auto bm_from_block_range(benchmark::State& state)
         -> void
 {
         // Not const, though nothing writes it: DoNotOptimize's const-ref overload is deprecated upstream.
-        auto blocks = blocks_of(filled<T>(words(state) * bits_per_word, 1));
-        auto a = T(words(state) * bits_per_word);
+        auto blocks = blocks_of(filled<T>(num_blocks(state) * bits_per_block, 1));
+        auto a = T(num_blocks(state) * bits_per_block);
         for (auto _ : state) {
                 benchmark::DoNotOptimize(blocks);
                 from_block_range(blocks.begin(), blocks.end(), a);
@@ -186,7 +186,7 @@ template<class T>
 auto bm_to_block_range(benchmark::State& state)
         -> void
 {
-        auto a = filled<T>(words(state) * bits_per_word, 1);
+        auto a = filled<T>(num_blocks(state) * bits_per_block, 1);
         auto blocks = std::vector<typename T::block_type>(a.num_blocks());
         for (auto _ : state) {
                 benchmark::DoNotOptimize(a);
@@ -196,7 +196,7 @@ auto bm_to_block_range(benchmark::State& state)
         per_byte(state);
 }
 
-// A run-time width takes the ladder as a Range; the rungs are the same 1, 2, 4 ... 512 words as the static one.
+// A run-time width takes the ladder as a Range; the rungs are the same 1, 2, 4 ... 512 blocks as the static one.
 #define BM_LADDER_OURS(fn) \
         BENCHMARK_TEMPLATE1(fn, xstd::dynamic_bitset) \
                 ->RangeMultiplier(2) \

@@ -6,17 +6,17 @@
 #ifndef XSTD_BITS_BIT_SET_VIEW_HPP
 #define XSTD_BITS_BIT_SET_VIEW_HPP
 
-#include <xstd/bits/bit_storage.hpp>                     // bit_storage, bit_storage_extent_v
-#include <xstd/bits/detail/borrowed_bits.hpp>            // borrowable_word, borrowable_words
-#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container, contiguous_bit_container_type
-#include <xstd/bits/detail/ownership.hpp>                // owned_bits_t, owner_reading, reading, storage
-#include <xstd/bits/detail/set_adaptor.hpp>              // set_adaptor
-#include <xstd/bits/detail/words.hpp>                    // lent_words_t, view_storage_t, words_of_t, words_width_v
-#include <boost/container_hash/is_range.hpp>             // is_range
-#include <cstddef>                                       // size_t
-#include <functional>                                    // hash
-#include <ranges>                                        // enable_borrowed_range, enable_view
-#include <type_traits>                                   // false_type
+#include <xstd/bits/bit_storage.hpp>          // bit_storage, bit_storage_extent_v
+#include <xstd/bits/detail/bit_container.hpp> // bit_container, bit_container_type
+#include <xstd/bits/detail/blocks.hpp>        // blocks_of_t, blocks_width_v, lent_blocks_t, view_storage_t
+#include <xstd/bits/detail/borrowed_bits.hpp> // borrowable_block, borrowable_blocks
+#include <xstd/bits/detail/ownership.hpp>     // owned_bits_t, owner_reading, set_reading_tag, storage
+#include <xstd/bits/detail/set_adaptor.hpp>   // set_adaptor
+#include <boost/container_hash/is_range.hpp>  // is_range
+#include <cstddef>                            // size_t
+#include <functional>                         // hash
+#include <ranges>                             // enable_borrowed_range, enable_view
+#include <type_traits>                        // false_type
 
 // The set reading over bits it does not own: the referring adaptor under the name the sieve calls it by.
 namespace xstd {
@@ -33,16 +33,16 @@ public:
 };
 
 // The vehicle's two guides, restated on the view so a consumer deduces the name rather than what it is built on.
-template<bits::detail::contiguous_bit_container_type Bits>
-bit_set_view(Bits&) -> bit_set_view<bits::detail::words_of_t<Bits>, bits::detail::words_width_v<Bits>>;
+template<bits::detail::bit_container_type Bits>
+bit_set_view(Bits&) -> bit_set_view<bits::detail::blocks_of_t<Bits>, bits::detail::blocks_width_v<Bits>>;
 
-template<bits::detail::owner_reading<bits::detail::reading::set> Owner>
-bit_set_view(Owner&) -> bit_set_view<bits::detail::words_of_t<bits::detail::owned_bits_t<Owner>>, bits::detail::words_width_v<bits::detail::owned_bits_t<Owner>>>;
+template<bits::detail::owner_reading<bits::detail::set_reading_tag> Owner>
+bit_set_view(Owner&) -> bit_set_view<bits::detail::blocks_of_t<bits::detail::owned_bits_t<Owner>>, bits::detail::blocks_width_v<bits::detail::owned_bits_t<Owner>>>;
 
-// Words handed straight over: a word as itself, a contiguous range as the span that lends it, const where they are.
+// Blocks handed straight over: a block as itself, a contiguous range as the span that lends it, const where they are.
 template<class W>
-        requires bits::detail::borrowable_word<W&&> or bits::detail::borrowable_words<W&&>
-bit_set_view(W&&) -> bit_set_view<bits::detail::lent_words_t<W&&>>;
+        requires bits::detail::borrowable_block<W&&> or bits::detail::borrowable_blocks<W&&>
+bit_set_view(W&&) -> bit_set_view<bits::detail::lent_blocks_t<W&&>>;
 
 } // namespace xstd
 

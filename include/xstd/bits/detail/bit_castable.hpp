@@ -22,7 +22,7 @@
 namespace xstd::bits::detail {
 
 inline constexpr auto bits_per_byte = static_cast<std::size_t>(std::numeric_limits<unsigned char>::digits);
-inline constexpr auto bits_per_word = static_cast<std::size_t>(std::numeric_limits<unsigned long long>::digits);
+inline constexpr auto bits_per_ullong = static_cast<std::size_t>(std::numeric_limits<unsigned long long>::digits);
 
 // The bytes a width needs: byte j holds the positions [8j, 8j + 8) least significant bit first, at every block width.
 template<std::size_t N>
@@ -111,7 +111,7 @@ template<class B, std::size_t N>
                         return false;
                 }
         }
-        for (auto const i : {0UZ, 7UZ, bits_per_byte, bits_per_word, N - 1UZ}) {
+        for (auto const i : {0UZ, 7UZ, bits_per_byte, bits_per_ullong, N - 1UZ}) {
                 if (i >= N) {
                         continue;
                 }
@@ -135,7 +135,7 @@ concept container_source =
         // Its width, not merely one that fits, and asked before the probe so it never reaches a missing position.
         B().size() == N and
         sizeof(B) * bits_per_byte >= N and
-        sizeof(B) * bits_per_byte < N + bits_per_word and
+        sizeof(B) * bits_per_byte < N + bits_per_ullong and
         // With no byte to exchange there is nothing to prove, and bit_cast of std::bitset<0> reads uninitialised.
         (byte_count<N> == 0UZ or (bit_cast_is_constant<B> and probe_is_constant<B> and bit_layout_holds<B, N>()));
 

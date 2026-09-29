@@ -3,27 +3,27 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/set/ordering.hpp>                         // ordering_agrees_with_std_set
-#include <xstd/bits/bit_array.hpp>                       // bit_array
-#include <xstd/bits/bit_fixed_set.hpp>                   // bit_fixed_set
-#include <xstd/bits/bit_set_view.hpp>                    // bit_set_view
-#include <xstd/bits/bit_span.hpp>                        // bit_span
-#include <xstd/bits/bitset.hpp>                          // bitset
-#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
-#include <xstd/bits/detail/ownership.hpp>                // storage
-#include <xstd/bits/detail/set_adaptor.hpp>              // set_adaptor
-#include <xstd/bits/dynamic_bitset.hpp>                  // basic_dynamic_bitset, dynamic_bitset
-#include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
-#include <array>                                         // array
-#include <concepts>                                      // constructible_from, derived_from, same_as
-#include <cstddef>                                       // size_t
-#include <cstdint>                                       // uint8_t
-#include <functional>                                    // hash
-#include <range/v3/view/set_algorithm.hpp>               // set_union
-#include <ranges>                                        // bidirectional_range, borrowed_range, range, view
-#include <set>                                           // set
-#include <tuple>                                         // tuple
-#include <utility>                                       // declval
+#include <test/set/ordering.hpp>              // ordering_agrees_with_std_set
+#include <xstd/bits/bit_array.hpp>            // bit_array
+#include <xstd/bits/bit_fixed_set.hpp>        // bit_fixed_set
+#include <xstd/bits/bit_set_view.hpp>         // bit_set_view
+#include <xstd/bits/bit_span.hpp>             // bit_span
+#include <xstd/bits/bitset.hpp>               // bitset
+#include <xstd/bits/detail/bit_container.hpp> // bit_container
+#include <xstd/bits/detail/ownership.hpp>     // storage
+#include <xstd/bits/detail/set_adaptor.hpp>   // set_adaptor
+#include <xstd/bits/dynamic_bitset.hpp>       // basic_dynamic_bitset, dynamic_bitset
+#include <boost/test/unit_test.hpp>           // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <array>                              // array
+#include <concepts>                           // constructible_from, derived_from, same_as
+#include <cstddef>                            // size_t
+#include <cstdint>                            // uint8_t
+#include <functional>                         // hash
+#include <range/v3/view/set_algorithm.hpp>    // set_union
+#include <ranges>                             // bidirectional_range, borrowed_range, range, view
+#include <set>                                // set
+#include <tuple>                              // tuple
+#include <utility>                            // declval
 
 BOOST_AUTO_TEST_SUITE(BitSetView)
 
@@ -45,14 +45,14 @@ auto eight_bits_with_three_set()
         return bits;
 }
 
-using Storage = xstd::bits::detail::contiguous_bit_container<std::array<std::size_t, 1>, 8>;
-using Words = std::array<std::size_t, 1>;
+using Storage = xstd::bits::detail::bit_container<std::array<std::size_t, 1>, 8>;
+using Blocks = std::array<std::size_t, 1>;
 
 template<class T>
 using view_of = decltype(xstd::bit_set_view(std::declval<T&>()));
 
 // Named rather than a lambda, so the conversion happens at a call boundary the way a caller would meet it.
-constexpr auto takes_a_set_view(xstd::bit_set_view<Words, 8> v) noexcept
+constexpr auto takes_a_set_view(xstd::bit_set_view<Blocks, 8> v) noexcept
         -> bool
 {
         return v.contains(3UZ);
@@ -63,36 +63,36 @@ constexpr auto takes_a_set_view(xstd::bit_set_view<Words, 8> v) noexcept
 // The view is the referring adaptor under another name, and over an owner it refers into the storage the owner wraps.
 BOOST_AUTO_TEST_CASE(TheViewIsTheReferringAdaptor)
 {
-        static_assert(std::derived_from<xstd::bit_set_view<Words, 8>, xstd::bits::detail::set_adaptor<Storage, xstd::bits::detail::storage::borrowed, xstd::bit_set_view<Words, 8>>>);
-        static_assert(std::same_as<view_of<Storage>, xstd::bit_set_view<Words, 8>>);
-        static_assert(std::same_as<view_of<Storage const>, xstd::bit_set_view<Words const, 8>>);
+        static_assert(std::derived_from<xstd::bit_set_view<Blocks, 8>, xstd::bits::detail::set_adaptor<Storage, xstd::bits::detail::storage::borrowed, xstd::bit_set_view<Blocks, 8>>>);
+        static_assert(std::same_as<view_of<Storage>, xstd::bit_set_view<Blocks, 8>>);
+        static_assert(std::same_as<view_of<Storage const>, xstd::bit_set_view<Blocks const, 8>>);
 
-        static_assert(std::same_as<view_of<xstd::bitset<8>>, xstd::bit_set_view<Words, 8>>);
-        static_assert(std::same_as<view_of<xstd::bitset<8> const>, xstd::bit_set_view<Words const, 8>>);
-        static_assert(std::same_as<view_of<xstd::bit_fixed_set<8>>, xstd::bit_set_view<Words, 8>>);
+        static_assert(std::same_as<view_of<xstd::bitset<8>>, xstd::bit_set_view<Blocks, 8>>);
+        static_assert(std::same_as<view_of<xstd::bitset<8> const>, xstd::bit_set_view<Blocks const, 8>>);
+        static_assert(std::same_as<view_of<xstd::bit_fixed_set<8>>, xstd::bit_set_view<Blocks, 8>>);
 }
 
 // A bitset is committed to neither reading, a sequence owner to the sequence one; only the first admits a set view.
 BOOST_AUTO_TEST_CASE(TheReadingsDoNotMix)
 {
-        static_assert(std::same_as<decltype(xstd::bit_span(std::declval<xstd::bit_array<8>&>())), xstd::bit_span<Words, 8>>);
-        static_assert(std::constructible_from<xstd::bit_set_view<Words, 8>, xstd::bitset<8>&>);
-        static_assert(not std::constructible_from<xstd::bit_set_view<Words, 8>, xstd::bit_array<8>&>);
+        static_assert(std::same_as<decltype(xstd::bit_span(std::declval<xstd::bit_array<8>&>())), xstd::bit_span<Blocks, 8>>);
+        static_assert(std::constructible_from<xstd::bit_set_view<Blocks, 8>, xstd::bitset<8>&>);
+        static_assert(not std::constructible_from<xstd::bit_set_view<Blocks, 8>, xstd::bit_array<8>&>);
 }
 
 // Viewing an owner is implicit, viewing raw storage is not: the first claims nothing the owner does not carry.
 BOOST_AUTO_TEST_CASE(ViewingAnOwnerIsImplicit)
 {
-        static_assert(std::convertible_to<xstd::bitset<8>&, xstd::bit_set_view<Words, 8>>);
-        static_assert(std::convertible_to<xstd::bit_fixed_set<8>&, xstd::bit_set_view<Words, 8>>);
-        static_assert(std::convertible_to<xstd::bitset<8> const&, xstd::bit_set_view<Words const, 8>>);
-        static_assert(not std::convertible_to<xstd::bitset<8> const&, xstd::bit_set_view<Words, 8>>);
+        static_assert(std::convertible_to<xstd::bitset<8>&, xstd::bit_set_view<Blocks, 8>>);
+        static_assert(std::convertible_to<xstd::bit_fixed_set<8>&, xstd::bit_set_view<Blocks, 8>>);
+        static_assert(std::convertible_to<xstd::bitset<8> const&, xstd::bit_set_view<Blocks const, 8>>);
+        static_assert(not std::convertible_to<xstd::bitset<8> const&, xstd::bit_set_view<Blocks, 8>>);
 
-        static_assert(not std::convertible_to<xstd::bitset<8>, xstd::bit_set_view<Words, 8>>);
-        static_assert(not std::convertible_to<xstd::bit_fixed_set<8>&&, xstd::bit_set_view<Words, 8>>);
+        static_assert(not std::convertible_to<xstd::bitset<8>, xstd::bit_set_view<Blocks, 8>>);
+        static_assert(not std::convertible_to<xstd::bit_fixed_set<8>&&, xstd::bit_set_view<Blocks, 8>>);
 
-        static_assert(std::constructible_from<xstd::bit_set_view<Words, 8>, Storage&>);
-        static_assert(not std::convertible_to<Storage&, xstd::bit_set_view<Words, 8>>);
+        static_assert(std::constructible_from<xstd::bit_set_view<Blocks, 8>, Storage&>);
+        static_assert(not std::convertible_to<Storage&, xstd::bit_set_view<Blocks, 8>>);
 
         auto s = xstd::bit_fixed_set<8>();
         s.insert(3UZ);
@@ -191,7 +191,7 @@ BOOST_AUTO_TEST_CASE(EveryViewedTypeOrdersLikeAStdSet)
         test::set::ordering_agrees_with_std_set<xstd::dynamic_bitset>();
 }
 
-// One block cannot reach the arm the word-parallel comparison exists for.
+// One block cannot reach the arm the block-parallel comparison exists for.
 BOOST_AUTO_TEST_CASE(TheOrderingSpansBlocksAndNotJustPositions)
 {
         test::set::ordering_agrees_with_std_set<xstd::basic_bitset<std::uint8_t, 9>>(9);

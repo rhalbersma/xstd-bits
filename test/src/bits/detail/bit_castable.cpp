@@ -123,8 +123,8 @@ struct reversed
         }
 };
 
-// It is a whole spare word wider than its positions, which is what the size window is for.
-struct spare_word
+// It is a whole spare block wider than its positions, which is what the size window is for.
+struct spare_block
 {
         std::uint64_t w = 0ULL;
         std::uint64_t unused = 0ULL;
@@ -190,7 +190,7 @@ BOOST_AUTO_TEST_CASE(TheProbeRefusesALayoutThatIsWrong)
         static_assert(not detail::bit_castable<wrong::dirty_default, 64UZ>);
         static_assert(not detail::bit_castable<wrong::miscounting, 64UZ>);
         static_assert(not detail::bit_castable<wrong::reversed, 64UZ>);
-        static_assert(not detail::bit_castable<wrong::spare_word, 64UZ>);
+        static_assert(not detail::bit_castable<wrong::spare_block, 64UZ>);
 
         // A right one, built the same way, so the four above are refused for their defect and not their shape.
         struct right
@@ -253,7 +253,7 @@ BOOST_AUTO_TEST_CASE(TheTwoDirectionsAreEachOthersInverse)
         static_assert(detail::byte_count<0UZ> == 0UZ);
 }
 
-// The byte view is the whole object and nothing besides, refusing a reordered word and a big-endian target both.
+// The byte view is the whole object and nothing besides, refusing a reordered block and a big-endian target both.
 BOOST_AUTO_TEST_CASE(OnePositionLightsOneBitOfOneByte)
 {
         constexpr auto N = 200UZ;
@@ -267,7 +267,7 @@ BOOST_AUTO_TEST_CASE(OnePositionLightsOneBitOfOneByte)
         }
 }
 
-// A contiguous sequence of blocks is the same stated family over more than one word, and nothing is probed here.
+// A contiguous sequence of blocks is the same stated family over more than one block, and nothing is probed here.
 BOOST_AUTO_TEST_CASE(ASequenceOfBlocksStatesItsLayoutToo)
 {
         static_assert(detail::block_range_source<std::array<std::uint64_t, 4>, 256UZ>);

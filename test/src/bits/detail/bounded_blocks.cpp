@@ -77,18 +77,18 @@ BOOST_AUTO_TEST_CASE(NoBlocksIsAnEmptyContiguousRange)
 
 BOOST_AUTO_TEST_CASE(GrowthPastNoughtThrowsBadAlloc)
 {
-        auto const words = std::array<std::uint8_t, 1>{0xFFU};
-        BOOST_CHECK_THROW(Blocks::resize(1UZ, words[0]), std::bad_alloc);
-        BOOST_CHECK_THROW(Blocks::push_back(words[0]), std::bad_alloc);
-        BOOST_CHECK_THROW(Blocks::insert(nullptr, words.begin(), words.end()), std::bad_alloc);
+        auto const blocks = std::array<std::uint8_t, 1>{0xFFU};
+        BOOST_CHECK_THROW(Blocks::resize(1UZ, blocks[0]), std::bad_alloc);
+        BOOST_CHECK_THROW(Blocks::push_back(blocks[0]), std::bad_alloc);
+        BOOST_CHECK_THROW(Blocks::insert(nullptr, blocks.begin(), blocks.end()), std::bad_alloc);
 }
 
 BOOST_AUTO_TEST_CASE(ChangesThatStayAtNoughtChangeNothing)
 {
         auto a = Blocks();
-        auto const words = std::array<std::uint8_t, 1>{0xFFU};
-        Blocks::resize(0UZ, words[0]);
-        Blocks::insert(a.end(), words.begin(), words.begin());
+        auto const blocks = std::array<std::uint8_t, 1>{0xFFU};
+        Blocks::resize(0UZ, blocks[0]);
+        Blocks::insert(a.end(), blocks.begin(), blocks.begin());
         Blocks::clear();
         BOOST_CHECK(a == Blocks());
 }

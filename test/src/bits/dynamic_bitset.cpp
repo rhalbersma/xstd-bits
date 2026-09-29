@@ -3,37 +3,37 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/sanitizer.hpp>                            // IWYU pragma: keep; TEST_HAS_ADDRESS_SANITIZER
-#include <xstd/bits/detail/bitset_adaptor.hpp>           // bitset_adaptor
-#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
-#include <xstd/bits/dynamic_bitset.hpp>                  // dynamic_bitset
-#include <boost/dynamic_bitset.hpp>                      // dynamic_bitset, to_string
-#include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <algorithm>                                     // equal
-#include <array>                                         // array
-#include <compare>                                       // is_eq, is_gt, is_lt
-#include <concepts>                                      // regular, same_as, totally_ordered
-#include <cstddef>                                       // size_t
-#include <cstdint>                                       // uint8_t, uint64_t
-#include <functional>                                    // hash
-#include <iterator>                                      // back_inserter
-#include <limits>                                        // numeric_limits
-#include <memory>                                        // allocator
-#include <new>                                           // IWYU pragma: keep; bad_alloc, named only without TEST_HAS_ADDRESS_SANITIZER
-#include <ranges>                                        // equal, iota
-#include <sstream>                                       // istringstream, ostringstream
-#include <stdexcept>                                     // invalid_argument, out_of_range, overflow_error
-#include <string>                                        // string
-#include <tuple>                                         // tuple
-#include <utility>                                       // as_const, pair
-#include <vector>                                        // vector
+#include <test/sanitizer.hpp>                  // IWYU pragma: keep; TEST_HAS_ADDRESS_SANITIZER
+#include <xstd/bits/detail/bit_container.hpp>  // bit_container
+#include <xstd/bits/detail/bitset_adaptor.hpp> // bitset_adaptor
+#include <xstd/bits/dynamic_bitset.hpp>        // dynamic_bitset
+#include <boost/dynamic_bitset.hpp>            // dynamic_bitset, to_string
+#include <boost/test/unit_test.hpp>            // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
+#include <algorithm>                           // equal
+#include <array>                               // array
+#include <compare>                             // is_eq, is_gt, is_lt
+#include <concepts>                            // regular, same_as, totally_ordered
+#include <cstddef>                             // size_t
+#include <cstdint>                             // uint8_t, uint64_t
+#include <functional>                          // hash
+#include <iterator>                            // back_inserter
+#include <limits>                              // numeric_limits
+#include <memory>                              // allocator
+#include <new>                                 // IWYU pragma: keep; bad_alloc, named only without TEST_HAS_ADDRESS_SANITIZER
+#include <ranges>                              // equal, iota
+#include <sstream>                             // istringstream, ostringstream
+#include <stdexcept>                           // invalid_argument, out_of_range, overflow_error
+#include <string>                              // string
+#include <tuple>                               // tuple
+#include <utility>                             // as_const, pair
+#include <vector>                              // vector
 
 BOOST_AUTO_TEST_SUITE(DynamicBitset)
 
 // boost::dynamic_bitset's counterpart over a heap of blocks: the same wrapper, at a run-time width.
 BOOST_AUTO_TEST_CASE(TheDynamicBitsetIsTheWrapperOverAHeapOfBlocks)
 {
-        static_assert(std::derived_from<xstd::basic_dynamic_bitset<std::uint8_t>, xstd::bits::detail::bitset_adaptor<xstd::bits::detail::contiguous_bit_container<std::vector<std::uint8_t>>, xstd::basic_dynamic_bitset<std::uint8_t>>>);
+        static_assert(std::derived_from<xstd::basic_dynamic_bitset<std::uint8_t>, xstd::bits::detail::bitset_adaptor<xstd::bits::detail::bit_container<std::vector<std::uint8_t>>, xstd::basic_dynamic_bitset<std::uint8_t>>>);
         static_assert(std::same_as<xstd::basic_dynamic_bitset<std::uint8_t, std::allocator<std::uint8_t>>, xstd::basic_dynamic_bitset<std::uint8_t>>);
         static_assert(std::regular<xstd::basic_dynamic_bitset<std::uint8_t>>);
 }
@@ -151,7 +151,7 @@ auto disagreements_against_boost(std::size_t w, std::size_t u, unsigned long lon
 
 } // namespace
 
-// And across blocks at unequal widths, where the top windows are read a word at a time at either alignment.
+// And across blocks at unequal widths, where the top windows are read a block at a time at either alignment.
 BOOST_AUTO_TEST_CASE(TheOrderingIsBoostsAcrossBlocksAtUnequalWidths)
 {
         constexpr auto widths = std::array{0UZ, 3UZ, 8UZ, 9UZ, 16UZ, 17UZ, 25UZ, 70UZ};
@@ -371,7 +371,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItIsAsWideAsItsText, T, Dynamic)
 }
 
 // Appending blocks is the storage's own where it has it: ours has, boost has, and the widths agree.
-BOOST_AUTO_TEST_CASE(AppendingBlocksWidensByAWord)
+BOOST_AUTO_TEST_CASE(AppendingBlocksWidensByABlock)
 {
         using T = xstd::basic_dynamic_bitset<std::uint8_t>;
         auto d = T(3, 0b111ULL);

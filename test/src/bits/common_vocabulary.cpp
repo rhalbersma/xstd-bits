@@ -3,41 +3,46 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/bitset/vocabulary.hpp>                    // vocabulary
-#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
-#include <boost/dynamic_bitset/dynamic_bitset.hpp>       // dynamic_bitset
-#include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <array>                                         // array
-#include <bitset>                                        // bitset
-#include <cstddef>                                       // size_t
-#include <cstdint>                                       // uint64_t
-#include <tuple>                                         // tuple
-#include <vector>                                        // vector
+#include <test/bitset/vocabulary.hpp>              // vocabulary
+#include <xstd/bits/detail/bit_container.hpp>      // bit_container
+#include <boost/dynamic_bitset/dynamic_bitset.hpp> // dynamic_bitset
+#include <boost/test/unit_test.hpp>                // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <array>                                   // array
+#include <bitset>                                  // bitset
+#include <cstddef>                                 // size_t
+#include <cstdint>                                 // uint64_t
+#include <tuple>                                   // tuple
+#include <vector>                                  // vector
 
 // The common vocabulary the three bit containers answer in their own names.
 namespace {
 
-using ours_static = xstd::bits::detail::contiguous_bit_container<std::array<std::uint64_t, 1>, 64>;
-using ours_dynamic = xstd::bits::detail::contiguous_bit_container<std::vector<std::uint64_t>>;
+using ours_static = xstd::bits::detail::bit_container<std::array<std::uint64_t, 1>, 64>;
+using ours_dynamic = xstd::bits::detail::bit_container<std::vector<std::uint64_t>>;
 using theirs = std::bitset<64>;
 using boosts = boost::dynamic_bitset<>;
 
 // Each probe is a template: a requires-expression over a concrete type hard-errors rather than answering false.
 template<class C>
 concept has_subscript = requires (C const& c, std::size_t n) { c[n]; };
+
 template<class C>
 concept has_complement = requires (C const& c) { ~c; };
+
 template<class C>
 concept has_set_value = requires (C& b, std::size_t n, bool v) { b.set(n, v); };
+
 template<class C>
 concept has_difference = requires (C& b, C const& c) { b -= c; };
+
 template<class C>
 concept has_subset_of = requires (C const& c) { c.is_subset_of(c); };
+
 template<class C>
 concept has_to_string = requires (C const& c) { c.to_string(); };
 
 // A storage carrying none of this vocabulary, so it is one the library never wraps rather than one it rejects.
-struct word
+struct block
 {
         std::uint64_t bits = 0;
 };
@@ -87,7 +92,7 @@ static_assert(not has_subset_of<theirs>);       // nor boost's set vocabulary
 static_assert(not has_to_string<boosts>);       // to_string is std::bitset's alone
 
 // Structural and nothing more, the adaptors admitting their storage by name instead.
-static_assert(not test::bitset::vocabulary<word>);
+static_assert(not test::bitset::vocabulary<block>);
 
 // Asked of each model in turn, in the reading's three groups: the whole, a position, the operators.
 BOOST_AUTO_TEST_CASE_TEMPLATE(EveryModelAnswersTheWhole, C, Models)

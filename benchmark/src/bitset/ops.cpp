@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-// The static-width ladder: what a block of bits costs at 1, 2, 4, ... 1024 words, ours against std::bitset.
+// The static-width ladder: what a block of bits costs at 1, 2, 4, ... 1024 blocks, ours against std::bitset.
 
 #include <xstd/bits/bit_set_view.hpp> // bit_set_view
 #include <xstd/bits/bitset.hpp>       // aligned::bitset, bitset
@@ -14,7 +14,7 @@
 
 namespace {
 
-inline constexpr auto bits_per_word = 64UZ;
+inline constexpr auto bits_per_block = 64UZ;
 
 // A board-game density: an occupancy bitboard is neither empty nor full, and find_next scales with it.
 template<class T>
@@ -34,7 +34,7 @@ auto filled(std::size_t n, std::uint64_t seed)
 
 } // namespace
 
-// The operand escapes and memory is clobbered each iteration: an unrolled two-word AND is what a compiler deletes.
+// The operand escapes and memory is clobbered each iteration: an unrolled two-block AND is what a compiler deletes.
 #define BM_BINARY(name, op) \
         template<class T, std::size_t N> \
         auto name(benchmark::State& state) \
@@ -135,11 +135,11 @@ auto bm_scan(benchmark::State& state)
 }
 
 // N is a template argument on both sides, so the ladder is a compile-time list rather than a Range.
-#define BM_RUNG(fn, words) \
-        BENCHMARK_TEMPLATE(fn, std::bitset<words * bits_per_word>, words* bits_per_word); \
-        BENCHMARK_TEMPLATE(fn, xstd::bitset<words * bits_per_word>, words* bits_per_word)
+#define BM_RUNG(fn, blocks) \
+        BENCHMARK_TEMPLATE(fn, std::bitset<blocks * bits_per_block>, blocks* bits_per_block); \
+        BENCHMARK_TEMPLATE(fn, xstd::bitset<blocks * bits_per_block>, blocks* bits_per_block)
 
-// Three words breaks the doubling on purpose: the first width with no unrolled arm, so it is the control.
+// Three blocks breaks the doubling on purpose: the first width with no unrolled arm, so it is the control.
 #define BM_LADDER(fn) \
         BM_RUNG(fn, 1); \
         BM_RUNG(fn, 2); \

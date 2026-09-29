@@ -3,8 +3,8 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_DETAIL_CONTIGUOUS_BIT_CONTAINER_HPP
-#define XSTD_BITS_DETAIL_CONTIGUOUS_BIT_CONTAINER_HPP
+#ifndef XSTD_BITS_DETAIL_BIT_CONTAINER_HPP
+#define XSTD_BITS_DETAIL_BIT_CONTAINER_HPP
 
 #include <xstd/bits/bit_storage.hpp>                         // bit_storage_capacity_v, owned_bit_storage, resizable_bit_storage
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_base_type, allocator_param_t, has_allocator_v
@@ -163,7 +163,7 @@ using width_member_t = conditional_data_member_t<
 // The one vehicle: it owns the unused-tail invariant, and has no iterators.
 template<class Blocks, std::size_t N = default_extent_v<Blocks>>
         requires (std::ranges::contiguous_range<Blocks> and xstd::owned_bit_storage<Blocks> and owner_extent_v<Blocks, N>) or (borrowed_block_span<Blocks> and N == default_extent_v<Blocks>)
-class contiguous_bit_container : public bit_members<width_member_t<Blocks, N>, Blocks, zero_capacity<Blocks, N>>
+class bit_container : public bit_members<width_member_t<Blocks, N>, Blocks, zero_capacity<Blocks, N>>
 {
         using members_type = bit_members<width_member_t<Blocks, N>, Blocks, zero_capacity<Blocks, N>>;
         using members_type::m_blocks;
@@ -245,18 +245,18 @@ private:
         static_assert(sizeof(width_type) >= sizeof(std::size_t) and alignof(width_type) >= alignof(Blocks));
 
 public:
-        [[nodiscard]] contiguous_bit_container()
+        [[nodiscard]] bit_container()
                 requires std::default_initializable<Blocks>
         = default;
 
-        // Someone else's words, every bit of which is a position: nothing is copied, and there is no tail to clear.
-        [[nodiscard]] constexpr explicit contiguous_bit_container(Blocks blocks) noexcept
+        // Someone else's blocks, every bit of which is a position: nothing is copied, and there is no tail to clear.
+        [[nodiscard]] constexpr explicit bit_container(Blocks blocks) noexcept
                 requires borrowed_block_span<Blocks>
                 : members_type(0UZ, blocks)
         {}
 
         // The width is a constructor argument exactly when it is not a template argument.
-        [[nodiscard]] constexpr explicit contiguous_bit_container(std::size_t n)
+        [[nodiscard]] constexpr explicit bit_container(std::size_t n)
                 requires has_stored_size
                 : members_type(n)
         {
@@ -267,7 +267,7 @@ public:
         }
 
         // flat_set's adopting constructor: the blocks move in whole, every bit a position, and no tail to clear.
-        [[nodiscard]] constexpr contiguous_bit_container(xstd::from_bit_storage_t, Blocks blocks) noexcept(std::is_nothrow_move_constructible_v<Blocks>)
+        [[nodiscard]] constexpr bit_container(xstd::from_bit_storage_t, Blocks blocks) noexcept(std::is_nothrow_move_constructible_v<Blocks>)
                 requires has_stored_size
                 : members_type(std::ranges::size(blocks) * bits_per_block, std::move(blocks))
         {
@@ -276,12 +276,12 @@ public:
         }
 
         // The storage's allocator, converted as [container.alloc.reqmts] converts it; a storage without one has none.
-        [[nodiscard]] constexpr explicit contiguous_bit_container(allocator_param_t<Blocks> const& alloc) noexcept(std::is_nothrow_constructible_v<Blocks, allocator_param_t<Blocks> const&>)
+        [[nodiscard]] constexpr explicit bit_container(allocator_param_t<Blocks> const& alloc) noexcept(std::is_nothrow_constructible_v<Blocks, allocator_param_t<Blocks> const&>)
                 requires has_stored_size and has_allocator_v<Blocks>
                 : members_type(0UZ, alloc)
         {}
 
-        [[nodiscard]] constexpr contiguous_bit_container(std::size_t n, allocator_param_t<Blocks> const& alloc)
+        [[nodiscard]] constexpr bit_container(std::size_t n, allocator_param_t<Blocks> const& alloc)
                 requires has_stored_size and has_allocator_v<Blocks>
                 : members_type(n, blocks_for(n), alloc)
         {
@@ -289,7 +289,7 @@ public:
         }
 
         // flat_set's allocator-extended adopting constructor: the blocks are moved into storage the allocator provides.
-        [[nodiscard]] constexpr contiguous_bit_container(xstd::from_bit_storage_t, Blocks blocks, allocator_param_t<Blocks> const& alloc)
+        [[nodiscard]] constexpr bit_container(xstd::from_bit_storage_t, Blocks blocks, allocator_param_t<Blocks> const& alloc)
                 requires has_stored_size and has_allocator_v<Blocks>
                 : members_type(std::ranges::size(blocks) * bits_per_block, alloc)
         {
@@ -298,12 +298,12 @@ public:
         }
 
         // [container.alloc.reqmts]'s allocator-extended copy and move; the moved-from is left empty.
-        [[nodiscard]] constexpr contiguous_bit_container(contiguous_bit_container const& other, allocator_param_t<Blocks> const& alloc)
+        [[nodiscard]] constexpr bit_container(bit_container const& other, allocator_param_t<Blocks> const& alloc)
                 requires has_stored_size and has_allocator_v<Blocks>
                 : members_type(other.m_size, other.m_blocks, alloc)
         {}
 
-        [[nodiscard]] constexpr contiguous_bit_container(contiguous_bit_container&& other, allocator_param_t<Blocks> const& alloc)
+        [[nodiscard]] constexpr bit_container(bit_container&& other, allocator_param_t<Blocks> const& alloc)
                 requires has_stored_size and has_allocator_v<Blocks>
                 : members_type(std::exchange(other.m_size, 0UZ), alloc)
         {
@@ -312,18 +312,19 @@ public:
         }
 
         // Declared because the moves below are; a static width keeps all four trivial where its blocks are.
-        [[nodiscard]] contiguous_bit_container(contiguous_bit_container const&) = default;
-        auto operator=(contiguous_bit_container const&) -> contiguous_bit_container& = default;
+        [[nodiscard]] bit_container(bit_container const&) = default;
+        auto operator=(bit_container const&) -> bit_container& = default;
 
-        [[nodiscard]] contiguous_bit_container(contiguous_bit_container&&)
+        [[nodiscard]] bit_container(bit_container&&)
                 requires (not has_stored_size or has_zero_capacity)
         = default;
-        auto operator=(contiguous_bit_container&&) -> contiguous_bit_container&
+
+        auto operator=(bit_container&&) -> bit_container&
                 requires (not has_stored_size or has_zero_capacity)
         = default;
 
         // A run-time width leaves the source at width zero with no blocks, the state a default constructor makes.
-        [[nodiscard]] constexpr contiguous_bit_container(contiguous_bit_container&& other) noexcept(std::is_nothrow_move_constructible_v<Blocks>)
+        [[nodiscard]] constexpr bit_container(bit_container&& other) noexcept(std::is_nothrow_move_constructible_v<Blocks>)
                 requires has_stored_size and (not has_zero_capacity)
                 : members_type(std::exchange(other.m_size, 0UZ), std::move(other.m_blocks))
         {
@@ -331,8 +332,8 @@ public:
         }
 
         // Taken out of the source before anything is written, so a self-move puts back exactly what it took.
-        constexpr auto operator=(contiguous_bit_container&& other) noexcept(std::is_nothrow_move_constructible_v<Blocks> and std::is_nothrow_move_assignable_v<Blocks>)
-                -> contiguous_bit_container&
+        constexpr auto operator=(bit_container&& other) noexcept(std::is_nothrow_move_constructible_v<Blocks> and std::is_nothrow_move_assignable_v<Blocks>)
+                -> bit_container&
                 requires has_stored_size and (not has_zero_capacity)
         {
                 auto blocks = std::move(other.m_blocks);
@@ -374,10 +375,10 @@ public:
         }
 
         // Memberwise, width first: the unused bits are kept clear, so the blocks compare as the bits do.
-        [[nodiscard]] friend auto operator==(contiguous_bit_container const&, contiguous_bit_container const&) noexcept -> bool = default;
+        [[nodiscard]] friend auto operator==(bit_container const&, bit_container const&) noexcept -> bool = default;
 
         // The set reading's equality, where width is capacity: a hidden friend, neither value being the subject.
-        [[nodiscard]] friend constexpr auto set_equal(contiguous_bit_container const& x, contiguous_bit_container const& y) noexcept
+        [[nodiscard]] friend constexpr auto set_equal(bit_container const& x, bit_container const& y) noexcept
                 -> bool
         {
                 if constexpr (has_static_size) {
@@ -396,7 +397,7 @@ public:
         }
 
         // No operator<=>: pure storage names all three orderings and picks none, each a hidden friend.
-        [[nodiscard]] friend constexpr auto set_lexicographical_compare_three_way(contiguous_bit_container const& x [[maybe_unused]], contiguous_bit_container const& y [[maybe_unused]]) noexcept
+        [[nodiscard]] friend constexpr auto set_lexicographical_compare_three_way(bit_container const& x [[maybe_unused]], bit_container const& y [[maybe_unused]]) noexcept
                 -> std::strong_ordering
         {
                 if constexpr (has_static_size and N == 0) {
@@ -422,8 +423,8 @@ public:
                 }
         }
 
-        // The sequence reading a word at a time: whoever holds the lowest differing position is greater.
-        [[nodiscard]] friend constexpr auto sequence_lexicographical_compare_three_way(contiguous_bit_container const& x [[maybe_unused]], contiguous_bit_container const& y [[maybe_unused]]) noexcept
+        // The sequence reading a block at a time: whoever holds the lowest differing position is greater.
+        [[nodiscard]] friend constexpr auto sequence_lexicographical_compare_three_way(bit_container const& x [[maybe_unused]], bit_container const& y [[maybe_unused]]) noexcept
                 -> std::strong_ordering
         {
                 if constexpr (has_static_size and N == 0) {
@@ -446,8 +447,8 @@ public:
                 }
         }
 
-        // The bitset reading a word at a time: the bit string is the blocks from the top down, tail clear.
-        [[nodiscard]] friend constexpr auto bitset_lexicographical_compare_three_way(contiguous_bit_container const& x, contiguous_bit_container const& y) noexcept
+        // The bitset reading a block at a time: the bit string is the blocks from the top down, tail clear.
+        [[nodiscard]] friend constexpr auto bitset_lexicographical_compare_three_way(bit_container const& x, bit_container const& y) noexcept
                 -> std::strong_ordering
         {
                 assert(x.size() == y.size());
@@ -458,7 +459,7 @@ public:
         }
 
         template<class Provider, class Hash, class Flavor>
-        friend constexpr auto tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, contiguous_bit_container const* v) noexcept
+        friend constexpr auto tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, bit_container const* v) noexcept
                 -> void
         {
                 boost::hash2::hash_append(h, f, v->m_blocks);
@@ -589,7 +590,7 @@ public:
                 return {m_blocks.data(), num_blocks()};
         }
 
-        // Someone else's words as the span that borrows them, writable through a const storage as the span itself is.
+        // Someone else's blocks as the span that borrows them, writable through a const storage as the span itself is.
         [[nodiscard]] constexpr auto borrowed_blocks() const noexcept
                 -> Blocks
                 requires borrowed_block_span<Blocks>
@@ -703,7 +704,7 @@ public:
                 return bytes;
         }
 
-        // A word at any position: the bits [n, n + bits_per_block), the clear tail and nothing beyond.
+        // A block at any position: the bits [n, n + bits_per_block), the clear tail and nothing beyond.
         [[nodiscard]] constexpr auto block_at(std::size_t n) const noexcept
                 -> block_type
         {
@@ -736,7 +737,7 @@ public:
 
         // boost's ranged forms through block_at; the precondition is a subtraction, n + len being what wraps.
         constexpr auto set(std::size_t n, std::size_t len, bool value) noexcept
-                -> contiguous_bit_container&
+                -> bit_container&
         {
                 assert(n <= size() and len <= size() - n);
                 for_each_block(n, len, [&](std::size_t pos, block_type mask) -> void { block_at(pos, value ? ones : zero, mask); });
@@ -744,7 +745,7 @@ public:
         }
 
         constexpr auto flip(std::size_t n, std::size_t len) noexcept
-                -> contiguous_bit_container&
+                -> bit_container&
         {
                 assert(n <= size() and len <= size() - n);
                 for_each_block(n, len, [&](std::size_t pos, block_type mask) -> void { block_at(pos, static_cast<block_type>(~block_at(pos)), mask); });
@@ -888,8 +889,8 @@ public:
         }
 
         // Total across two widths and reading-neutral: the blocks the other lacks read as zero. Growing is not here.
-        constexpr auto operator&=(contiguous_bit_container const& other [[maybe_unused]]) noexcept
-                -> contiguous_bit_container&
+        constexpr auto operator&=(bit_container const& other [[maybe_unused]]) noexcept
+                -> bit_container&
         {
                 if constexpr (has_static_size and N > 0 and static_num_blocks == 1) {
                         this->m_blocks[0] &= other.m_blocks[0];
@@ -913,8 +914,8 @@ public:
         }
 
         // Total across two widths and reading-neutral: the blocks the other lacks read as zero. Growing is not here.
-        constexpr auto operator|=(contiguous_bit_container const& other [[maybe_unused]]) noexcept
-                -> contiguous_bit_container&
+        constexpr auto operator|=(bit_container const& other [[maybe_unused]]) noexcept
+                -> bit_container&
         {
                 if constexpr (has_static_size and N > 0 and static_num_blocks == 1) {
                         this->m_blocks[0] |= other.m_blocks[0];
@@ -938,8 +939,8 @@ public:
         }
 
         // Total across two widths and reading-neutral: the blocks the other lacks read as zero. Growing is not here.
-        constexpr auto operator^=(contiguous_bit_container const& other [[maybe_unused]]) noexcept
-                -> contiguous_bit_container&
+        constexpr auto operator^=(bit_container const& other [[maybe_unused]]) noexcept
+                -> bit_container&
         {
                 if constexpr (has_static_size and N > 0 and static_num_blocks == 1) {
                         this->m_blocks[0] ^= other.m_blocks[0];
@@ -963,8 +964,8 @@ public:
         }
 
         // Total across two widths and reading-neutral: the blocks the other lacks read as zero. Growing is not here.
-        constexpr auto operator-=(contiguous_bit_container const& other [[maybe_unused]]) noexcept
-                -> contiguous_bit_container&
+        constexpr auto operator-=(bit_container const& other [[maybe_unused]]) noexcept
+                -> bit_container&
         {
                 if constexpr (has_static_size and N > 0 and static_num_blocks == 1) {
                         this->m_blocks[0] &= static_cast<block_type>(~other.m_blocks[0]);
@@ -988,7 +989,7 @@ public:
         }
 
         constexpr auto operator<<=(std::size_t n [[maybe_unused]]) noexcept
-                -> contiguous_bit_container&
+                -> bit_container&
         {
                 assert(is_valid(n));
                 if constexpr (has_static_size and static_num_blocks == 1) {
@@ -1015,7 +1016,7 @@ public:
         }
 
         constexpr auto operator>>=(std::size_t n [[maybe_unused]]) noexcept
-                -> contiguous_bit_container&
+                -> bit_container&
         {
                 assert(is_valid(n));
                 if constexpr (has_static_size and static_num_blocks == 1) {
@@ -1041,7 +1042,7 @@ public:
         }
 
         constexpr auto set() noexcept
-                -> contiguous_bit_container&
+                -> bit_container&
         {
                 if constexpr (has_static_size and static_has_unused_bits) {
                         std::ranges::fill_n(std::ranges::begin(m_blocks), static_cast<std::ptrdiff_t>(static_last_block), ones);
@@ -1058,7 +1059,7 @@ public:
         }
 
         constexpr auto reset() noexcept
-                -> contiguous_bit_container&
+                -> bit_container&
         {
                 std::ranges::fill(m_blocks, zero);
                 assert(none());
@@ -1066,7 +1067,7 @@ public:
         }
 
         constexpr auto flip() noexcept
-                -> contiguous_bit_container&
+                -> bit_container&
         {
                 if constexpr (has_static_size and N > 0 and static_num_blocks == 1) {
                         m_blocks[0] = static_cast<block_type>(~m_blocks[0]);
@@ -1082,7 +1083,7 @@ public:
                 return *this;
         }
 
-        constexpr auto swap(contiguous_bit_container& other) noexcept(noexcept(std::ranges::swap(this->m_size, other.m_size)) and noexcept(std::ranges::swap(this->m_blocks, other.m_blocks)))
+        constexpr auto swap(bit_container& other) noexcept(noexcept(std::ranges::swap(this->m_size, other.m_size)) and noexcept(std::ranges::swap(this->m_blocks, other.m_blocks)))
                 -> void
         {
                 // m_size is empty_type under a static width, and swapping that is a no-op.
@@ -1091,7 +1092,7 @@ public:
         }
 
         // ranges::swap finds a free swap by ADL and a member never, so the member is reached through this.
-        friend constexpr auto swap(contiguous_bit_container& x, contiguous_bit_container& y) noexcept(noexcept(x.swap(y)))
+        friend constexpr auto swap(bit_container& x, bit_container& y) noexcept(noexcept(x.swap(y)))
                 -> void
         {
                 x.swap(y);
@@ -1107,7 +1108,7 @@ public:
         }
 
         // Widen to the other's largest element, not its size(); a static width has nothing to widen.
-        constexpr auto grow_to_admit(contiguous_bit_container const& other [[maybe_unused]]) noexcept(not has_stored_size)
+        constexpr auto grow_to_admit(bit_container const& other [[maybe_unused]]) noexcept(not has_stored_size)
                 -> void
         {
                 if constexpr (has_stored_size) {
@@ -1212,7 +1213,7 @@ public:
         }
 
         constexpr auto set(std::size_t n) noexcept
-                -> contiguous_bit_container&
+                -> bit_container&
         {
                 assert(is_valid(n));
                 auto&& [block, mask] = block_mask(n);
@@ -1249,20 +1250,20 @@ public:
 
         // set(n) and reset(n) under one name, for a reading holding the value rather than the verb.
         constexpr auto assign(std::size_t n, bool value) noexcept
-                -> contiguous_bit_container&
+                -> bit_container&
         {
                 return value ? set(n) : reset(n);
         }
 
         // The bulk counterpart: set(bool) would be ambiguous with set(std::size_t) for a literal 0.
         constexpr auto fill(bool value) noexcept
-                -> contiguous_bit_container&
+                -> bit_container&
         {
                 return value ? set() : reset();
         }
 
         constexpr auto reset(std::size_t n) noexcept
-                -> contiguous_bit_container&
+                -> bit_container&
         {
                 assert(is_valid(n));
                 auto&& [block, mask] = block_mask(n);
@@ -1283,7 +1284,7 @@ public:
         }
 
         constexpr auto flip(std::size_t n) noexcept
-                -> contiguous_bit_container&
+                -> bit_container&
         {
                 assert(is_valid(n));
                 auto&& [block, mask] = block_mask(n);
@@ -1364,7 +1365,7 @@ public:
                 }
         }
 
-        [[nodiscard]] constexpr auto is_subset_of(contiguous_bit_container const& other [[maybe_unused]]) const noexcept
+        [[nodiscard]] constexpr auto is_subset_of(bit_container const& other [[maybe_unused]]) const noexcept
                 -> bool
         {
                 if constexpr (has_static_size and N == 0) {
@@ -1393,13 +1394,13 @@ public:
         }
 
         // A proper subset is a subset that differs, and both halves are already here.
-        [[nodiscard]] constexpr auto is_proper_subset_of(contiguous_bit_container const& other) const noexcept
+        [[nodiscard]] constexpr auto is_proper_subset_of(bit_container const& other) const noexcept
                 -> bool
         {
                 return is_subset_of(other) and not set_equal(*this, other);
         }
 
-        [[nodiscard]] constexpr auto intersects(contiguous_bit_container const& other [[maybe_unused]]) const noexcept
+        [[nodiscard]] constexpr auto intersects(bit_container const& other [[maybe_unused]]) const noexcept
                 -> bool
         {
                 // Only the blocks both storages have can meet, so zip stopping at the shorter is the question.
@@ -1421,14 +1422,14 @@ public:
         }
 
         // A hidden friend beside the member: a member of this name stops ADL ([basic.lookup.argdep]/1).
-        [[nodiscard]] friend constexpr auto intersects(contiguous_bit_container const& x, contiguous_bit_container const& y) noexcept
+        [[nodiscard]] friend constexpr auto intersects(bit_container const& x, bit_container const& y) noexcept
                 -> bool
         {
                 return x.intersects(y);
         }
 
         // The first block at which two values differ, with that block's xor; equal values answer a zero xor.
-        [[nodiscard]] constexpr auto first_difference(contiguous_bit_container const& other) const noexcept
+        [[nodiscard]] constexpr auto first_difference(bit_container const& other) const noexcept
                 -> std::pair<std::size_t, block_type>
         {
                 if constexpr (has_static_size and static_num_blocks == 1) {
@@ -1511,7 +1512,7 @@ private:
         }
 
         // The lowest block at which two storages differ, or n when they hold the same positions.
-        [[nodiscard]] constexpr auto padded_first_difference(contiguous_bit_container const& other, std::size_t n) const noexcept
+        [[nodiscard]] constexpr auto padded_first_difference(bit_container const& other, std::size_t n) const noexcept
                 -> std::size_t
         {
                 auto const blocks = std::views::iota(0UZ, n);
@@ -1520,7 +1521,7 @@ private:
         }
 
         // The set ordering across two widths, turning on the lowest position at which the two disagree.
-        [[nodiscard]] constexpr auto padded_set_three_way(contiguous_bit_container const& other) const noexcept
+        [[nodiscard]] constexpr auto padded_set_three_way(bit_container const& other) const noexcept
                 -> std::strong_ordering
         {
                 auto const n = std::ranges::max(this->num_blocks(), other.num_blocks());
@@ -1537,7 +1538,7 @@ private:
         }
 
         // The sequence ordering: position 0 is the first element, so the lowest disagreement decides alone.
-        [[nodiscard]] constexpr auto padded_sequence_three_way(contiguous_bit_container const& other) const noexcept
+        [[nodiscard]] constexpr auto padded_sequence_three_way(bit_container const& other) const noexcept
                 -> std::strong_ordering
         {
                 auto const n = std::ranges::max(this->num_blocks(), other.num_blocks());
@@ -1572,7 +1573,7 @@ private:
                 return num_blocks() - 1UZ;
         }
 
-        // The words a range of positions spans, each with its mask: whole words, a partial one at the end.
+        // The blocks a range of positions spans, each with its mask: whole blocks, a partial one at the end.
         template<class F>
         constexpr auto for_each_block(std::size_t n, std::size_t len, F f) const noexcept
                 -> void
@@ -1705,14 +1706,14 @@ private:
 
 // The one vehicle and nothing else, const where a view over a const owner names it.
 template<class T>
-inline constexpr bool is_contiguous_bit_container_v = false;
+inline constexpr bool is_bit_container_v = false;
 
 template<class Blocks, std::size_t N>
-inline constexpr bool is_contiguous_bit_container_v<contiguous_bit_container<Blocks, N>> = true;
+inline constexpr bool is_bit_container_v<bit_container<Blocks, N>> = true;
 
 template<class T>
-concept contiguous_bit_container_type = is_contiguous_bit_container_v<std::remove_const_t<T>>;
+concept bit_container_type = is_bit_container_v<std::remove_const_t<T>>;
 
 } // namespace xstd::bits::detail
 
-#endif // XSTD_BITS_DETAIL_CONTIGUOUS_BIT_CONTAINER_HPP
+#endif // XSTD_BITS_DETAIL_BIT_CONTAINER_HPP

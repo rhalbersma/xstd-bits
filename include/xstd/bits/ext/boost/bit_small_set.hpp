@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_EXT_BOOST_BIT_SMALL_SET_HPP
 #define XSTD_BITS_EXT_BOOST_BIT_SMALL_SET_HPP
 
-#include <xstd/bits/detail/contiguous_bit_container.hpp>     // contiguous_bit_container, num_blocks_v
+#include <xstd/bits/detail/bit_container.hpp>                // bit_container, num_blocks_v
 #include <xstd/bits/detail/ownership.hpp>                    // storage
 #include <xstd/bits/detail/set_adaptor.hpp>                  // set_adaptor
 #include <xstd/bits/from_bit_storage.hpp>                    // from_bit_storage, from_bit_storage_t
@@ -28,9 +28,9 @@ namespace xstd {
 
 // The set reading over the small-vector column; the allocator is Boost's own, as that container defaults to it.
 template<xstd::unsigned_integer Block, std::size_t N, class Alloc = boost::container::new_allocator<Block>>
-class basic_bit_small_set : public bits::detail::set_adaptor<bits::detail::contiguous_bit_container<boost::container::small_vector<Block, bits::detail::num_blocks_v<Block, N>, Alloc>>, bits::detail::storage::owned, basic_bit_small_set<Block, N, Alloc>>
+class basic_bit_small_set : public bits::detail::set_adaptor<bits::detail::bit_container<boost::container::small_vector<Block, bits::detail::num_blocks_v<Block, N>, Alloc>>, bits::detail::storage::owned, basic_bit_small_set<Block, N, Alloc>>
 {
-        using base_type = bits::detail::set_adaptor<bits::detail::contiguous_bit_container<boost::container::small_vector<Block, bits::detail::num_blocks_v<Block, N>, Alloc>>, bits::detail::storage::owned, basic_bit_small_set<Block, N, Alloc>>;
+        using base_type = bits::detail::set_adaptor<bits::detail::bit_container<boost::container::small_vector<Block, bits::detail::num_blocks_v<Block, N>, Alloc>>, bits::detail::storage::owned, basic_bit_small_set<Block, N, Alloc>>;
 
 public:
         using typename base_type::allocator_type;

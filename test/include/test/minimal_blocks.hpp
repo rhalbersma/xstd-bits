@@ -3,8 +3,8 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef TEST_MINIMAL_WORDS_HPP
-#define TEST_MINIMAL_WORDS_HPP
+#ifndef TEST_MINIMAL_BLOCKS_HPP
+#define TEST_MINIMAL_BLOCKS_HPP
 
 #include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
 #include <cstddef>                                 // ptrdiff_t, size_t
@@ -14,9 +14,9 @@ namespace test {
 
 // Storage written outside the library with the members resizable_bit_storage names and no others.
 template<xstd::unsigned_integer Block>
-class minimal_words
+class minimal_blocks
 {
-        std::vector<Block> m_words;
+        std::vector<Block> m_blocks;
 
 public:
         using value_type = Block;
@@ -27,82 +27,82 @@ public:
         using iterator = std::vector<Block>::iterator;
         using const_iterator = std::vector<Block>::const_iterator;
 
-        [[nodiscard]] friend auto operator==(minimal_words const&, minimal_words const&) -> bool = default;
+        [[nodiscard]] friend auto operator==(minimal_blocks const&, minimal_blocks const&) -> bool = default;
 
         [[nodiscard]] constexpr auto begin() noexcept
                 -> iterator
         {
-                return m_words.begin();
+                return m_blocks.begin();
         }
 
         [[nodiscard]] constexpr auto begin() const noexcept
                 -> const_iterator
         {
-                return m_words.begin();
+                return m_blocks.begin();
         }
 
         [[nodiscard]] constexpr auto end() noexcept
                 -> iterator
         {
-                return m_words.end();
+                return m_blocks.end();
         }
 
         [[nodiscard]] constexpr auto end() const noexcept
                 -> const_iterator
         {
-                return m_words.end();
+                return m_blocks.end();
         }
 
         [[nodiscard]] constexpr auto size() const noexcept
                 -> size_type
         {
-                return m_words.size();
+                return m_blocks.size();
         }
 
         [[nodiscard]] constexpr auto max_size() const noexcept
                 -> size_type
         {
-                return m_words.max_size();
+                return m_blocks.max_size();
         }
 
         [[nodiscard]] constexpr auto operator[](size_type n) noexcept
                 -> reference
         {
-                return m_words[n];
+                return m_blocks[n];
         }
 
         [[nodiscard]] constexpr auto operator[](size_type n) const noexcept
                 -> const_reference
         {
-                return m_words[n];
+                return m_blocks[n];
         }
 
-        constexpr auto resize(size_type n, Block word)
+        constexpr auto resize(size_type n, Block block)
                 -> void
         {
-                m_words.resize(n, word);
+                m_blocks.resize(n, block);
         }
 
-        constexpr auto push_back(Block word)
+        constexpr auto push_back(Block block)
                 -> void
         {
-                m_words.push_back(word);
+                m_blocks.push_back(block);
         }
 
         template<class InputIt>
         constexpr auto insert(const_iterator pos, InputIt first, InputIt last)
                 -> iterator
         {
-                return m_words.insert(pos, first, last);
+                return m_blocks.insert(pos, first, last);
         }
 
         constexpr auto clear() noexcept
                 -> void
         {
-                m_words.clear();
+                m_blocks.clear();
         }
 };
 
 } // namespace test
 
-#endif // TEST_MINIMAL_WORDS_HPP
+#endif // TEST_MINIMAL_BLOCKS_HPP

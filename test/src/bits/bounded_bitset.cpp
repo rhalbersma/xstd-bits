@@ -3,19 +3,19 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/bit_set_view.hpp>                    // bit_set_view
-#include <xstd/bits/bounded_bitset.hpp>                  // aligned, basic_bounded_bitset, bounded_bitset
-#include <xstd/bits/detail/bitset_adaptor.hpp>           // bitset_adaptor
-#include <xstd/bits/detail/bounded_blocks.hpp>           // bounded_blocks
-#include <xstd/bits/detail/contiguous_bit_container.hpp> // contiguous_bit_container
-#include <xstd/bits/detail/ownership.hpp>                // owned_bits_t
-#include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <concepts>                                      // regular, same_as, totally_ordered
-#include <cstddef>                                       // size_t
-#include <cstdint>                                       // uint8_t
-#include <new>                                           // bad_alloc
-#include <string>                                        // string
-#include <utility>                                       // declval
+#include <xstd/bits/bit_set_view.hpp>          // bit_set_view
+#include <xstd/bits/bounded_bitset.hpp>        // aligned, basic_bounded_bitset, bounded_bitset
+#include <xstd/bits/detail/bit_container.hpp>  // bit_container
+#include <xstd/bits/detail/bitset_adaptor.hpp> // bitset_adaptor
+#include <xstd/bits/detail/bounded_blocks.hpp> // bounded_blocks
+#include <xstd/bits/detail/ownership.hpp>      // owned_bits_t
+#include <boost/test/unit_test.hpp>            // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
+#include <concepts>                            // regular, same_as, totally_ordered
+#include <cstddef>                             // size_t
+#include <cstdint>                             // uint8_t
+#include <new>                                 // bad_alloc
+#include <string>                              // string
+#include <utility>                             // declval
 
 BOOST_AUTO_TEST_SUITE(BoundedBitset)
 
@@ -25,7 +25,7 @@ using T = xstd::basic_bounded_bitset<std::uint8_t, 24>;
 // The bitset reading over a run-time width under a compile-time capacity, adding no member of its own.
 BOOST_AUTO_TEST_CASE(TheBoundedBitsetIsTheBitsetAdaptorOverInlineBlocks)
 {
-        static_assert(std::derived_from<T, xstd::bits::detail::bitset_adaptor<xstd::bits::detail::contiguous_bit_container<xstd::bits::detail::bounded_blocks<std::uint8_t, 3>, 24>, T>>);
+        static_assert(std::derived_from<T, xstd::bits::detail::bitset_adaptor<xstd::bits::detail::bit_container<xstd::bits::detail::bounded_blocks<std::uint8_t, 3>, 24>, T>>);
         static_assert(std::same_as<xstd::bounded_bitset<24>, xstd::basic_bounded_bitset<std::size_t, 24>>);
         static_assert(std::regular<T>);
 }
@@ -96,7 +96,7 @@ BOOST_AUTO_TEST_CASE(TheCapacityIsTheRequestedOneExactly)
 {
         using U = xstd::basic_bounded_bitset<std::uint8_t, 12>;
         static_assert(std::same_as<xstd::aligned::basic_bounded_bitset<std::uint8_t, 12>, xstd::basic_bounded_bitset<std::uint8_t, 16>>);
-        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bounded_bitset<std::uint8_t, 16>>, xstd::bits::detail::contiguous_bit_container<xstd::bits::detail::bounded_blocks<std::uint8_t, 2>>>);
+        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bounded_bitset<std::uint8_t, 16>>, xstd::bits::detail::bit_container<xstd::bits::detail::bounded_blocks<std::uint8_t, 2>>>);
 
         auto b = U();
         BOOST_CHECK_EQUAL(b.max_size(), 12UZ);

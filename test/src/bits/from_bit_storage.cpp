@@ -49,22 +49,22 @@ BOOST_AUTO_TEST_CASE(TheTagIsExplicitlyDefaultConstructible)
 // An integer's digits are the width, and its value's bits are the positions, at every reading.
 BOOST_AUTO_TEST_CASE(AnIntegerDeducesItsOwnWidth)
 {
-        constexpr auto word = std::uint16_t{0b1000'0000'0000'0101};
+        constexpr auto block = std::uint16_t{0b1000'0000'0000'0101};
 
-        constexpr auto a = xstd::basic_bit_array(xstd::from_bit_storage, word);
+        constexpr auto a = xstd::basic_bit_array(xstd::from_bit_storage, block);
         static_assert(std::same_as<decltype(a), xstd::basic_bit_array<std::uint16_t, 16> const>);
-        static_assert(a == xstd::basic_bit_array<std::uint16_t, 16>(xstd::from_bit_storage, word));
+        static_assert(a == xstd::basic_bit_array<std::uint16_t, 16>(xstd::from_bit_storage, block));
         static_assert(a[0] and not a[1] and a[2] and a[15]);
 
-        constexpr auto s = xstd::basic_bit_fixed_set(xstd::from_bit_storage, word);
+        constexpr auto s = xstd::basic_bit_fixed_set(xstd::from_bit_storage, block);
         static_assert(std::same_as<decltype(s), xstd::basic_bit_fixed_set<std::uint16_t, 16> const>);
-        static_assert(s == xstd::basic_bit_fixed_set<std::uint16_t, 16>(xstd::from_bit_storage, word));
+        static_assert(s == xstd::basic_bit_fixed_set<std::uint16_t, 16>(xstd::from_bit_storage, block));
         static_assert(s.size() == 3UZ and s.contains(15UZ));
 
-        constexpr auto b = xstd::basic_bitset(xstd::from_bit_storage, word);
+        constexpr auto b = xstd::basic_bitset(xstd::from_bit_storage, block);
         static_assert(std::same_as<decltype(b), xstd::basic_bitset<std::uint16_t, 16> const>);
         static_assert(b.count() == 3UZ and b.test(15UZ));
-        BOOST_CHECK(a.to_bits<std::uint16_t>() == word);
+        BOOST_CHECK(a.to_bits<std::uint16_t>() == block);
 }
 
 // An array of blocks is its blocks' width, block i holding positions [i * digits, (i + 1) * digits).

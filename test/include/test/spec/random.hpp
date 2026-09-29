@@ -117,7 +117,7 @@ public:
         }
 };
 
-// The block the bias aims at: the type's own, and the widest builtin word for the standard library's models.
+// The block the bias aims at: the type's own, and the widest builtin block for the standard library's models.
 template<class X>
 inline constexpr auto block_digits_v = [] -> std::size_t {
         if constexpr (requires { xstd::bits::detail::owned_storage<X>::bits_type::bits_per_block; }) {

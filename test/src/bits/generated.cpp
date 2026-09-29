@@ -23,8 +23,10 @@ inline constexpr auto N = 128UZ;
 
 template<class T>
 concept has_swap_member = requires (T& a, T& b) { a.swap(b); };
+
 template<class T>
 concept has_swap_free = requires (T& a, T& b) { swap(a, b); };
+
 template<class T>
 concept has_get_allocator = requires (T const& a) { a.get_allocator(); };
 
@@ -69,10 +71,13 @@ constexpr auto not_allocator_aware()
 
 template<class T>
 concept free_swap_is_nothrow = requires (T& a, T& b) { requires noexcept(swap(a, b)); };
+
 template<class T>
 concept member_swap_is_nothrow = requires (T& a, T& b) { requires noexcept(a.swap(b)); };
+
 template<class T>
 concept std_swap_is_nothrow = requires (T& a, T& b) { requires noexcept(std::swap(a, b)); };
+
 template<class T>
 concept cpo_swap_is_nothrow = requires (T& a, T& b) { requires noexcept(std::ranges::swap(a, b)); };
 

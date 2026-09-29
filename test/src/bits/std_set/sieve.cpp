@@ -64,7 +64,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(SievesTooSmallForTheSquareBreakStillSiftCorrectly,
         BOOST_CHECK(opt::filter_twins(one).empty());
 }
 
-// The word-at-a-time twins against the elementwise one: the two agreeing is the claim, so it is asserted.
+// The block-at-a-time twins against the elementwise one: the two agreeing is the claim, so it is asserted.
 BOOST_AUTO_TEST_CASE(TheDataParallelTwinsAgreeWithTheElementwiseOnes)
 {
         auto const primes = opt::sift_primes1<xstd::bit_fixed_set<N>>(N);
