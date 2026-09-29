@@ -44,6 +44,14 @@ public:
                 : base_type(il)
         {}
 
+        // Not in [array]: a built-in array of bools, position by position; M spares a zero width from naming bool[0].
+        template<std::size_t M>
+                requires (M == N)
+        [[nodiscard]] constexpr explicit basic_bit_array(value_type const (&a)[M]) noexcept // NOLINT(modernize-avoid-c-arrays): a built-in array is what it converts.
+        {
+                std::ranges::copy(a, this->begin());
+        }
+
         // Not in [array]: words that are bit storage, read as this sequence's bools.
         template<class B>
                 requires std::constructible_from<base_type, from_bit_storage_t, B const&>
@@ -78,9 +86,7 @@ template<std::size_t N>
 [[nodiscard]] constexpr auto to_bit_array(bool const (&a)[N]) // NOLINT(modernize-avoid-c-arrays): a built-in array is what it converts.
         -> bit_array<N>
 {
-        auto result = bit_array<N>();
-        std::ranges::copy(a, result.begin());
-        return result;
+        return bit_array<N>(a);
 }
 
 // [array.creation]'s second overload, which for a bool moves exactly what the first copies.
