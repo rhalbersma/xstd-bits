@@ -8,9 +8,13 @@
 #include <test/sequence/factory.hpp>    // make_sequence, model_of, stripes
 #include <test/sequence/primitives.hpp> // iterates_as_a_constant
 #include <test/spec/sequence.hpp>       // array_all
+#include <test/structural.hpp>          // structural, value_parameter
+#include <xstd/bits/bit_array.hpp>      // basic_bit_array
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <concepts>                     // same_as
+#include <cstddef>                      // size_t
 #include <iterator>                     // reverse_iterator
+#include <limits>                       // numeric_limits
 #include <ranges>                       // bidirectional_range, contiguous_range, random_access_range
 #include <vector>                       // vector
 
@@ -21,6 +25,27 @@ BOOST_AUTO_TEST_SUITE(Array)
 BOOST_AUTO_TEST_SUITE(Overview)
 
 using namespace test::sequence;
+
+namespace {
+
+// Where a packed array is structural: at a width with no unused bits for a public block to let a caller set.
+template<class T>
+inline constexpr bool fills_its_blocks = true;
+
+template<class Block, std::size_t N>
+inline constexpr bool fills_its_blocks<xstd::basic_bit_array<Block, N>> = N != 0UZ and N % static_cast<std::size_t>(std::numeric_limits<Block>::digits) == 0UZ;
+
+// Only the last element set, the one a packed array keeps in the high bit of its last block.
+template<class T>
+[[nodiscard]] constexpr auto make_last()
+        -> T
+{
+        auto a = T();
+        a.back() = true;
+        return a;
+}
+
+} // namespace
 
 // [array.overview]/1: template<class T, size_t N> struct array;
 BOOST_AUTO_TEST_CASE(Array)
@@ -66,6 +91,24 @@ BOOST_AUTO_TEST_CASE(ContainerRequirements)
                 auto const u = T();
                 BOOST_CHECK_EQUAL(u.size(), T().max_size());   // [array.overview]/3
                 BOOST_CHECK_EQUAL(u.empty(), u.size() == 0UZ); // [array.overview]/3
+        });
+}
+
+// [array.overview]/4: array<T, N> is a structural type if T is, its values template-argument-equivalent by element
+BOOST_AUTO_TEST_CASE(StructuralType)
+{
+        test::for_each_type<test::spec::sequence::array_all>([]<class T> -> void {
+                static_assert(test::structural<T> == fills_its_blocks<T>); // [array.overview]/4
+                constexpr auto N = T().size();
+                if constexpr (fills_its_blocks<T> and N >= 1UZ) {
+                        static_assert(std::same_as<test::value_parameter<T{}>, test::value_parameter<T{false}>>);                  // [array.overview]/4
+                        static_assert(std::same_as<test::value_parameter<make_last<T>()>, test::value_parameter<make_last<T>()>>); // [array.overview]/4
+                        static_assert(not std::same_as<test::value_parameter<T{}>, test::value_parameter<make_last<T>()>>);        // [array.overview]/4
+                }
+                if constexpr (fills_its_blocks<T> and N >= 2UZ) {
+                        static_assert(std::same_as<test::value_parameter<T{true}>, test::value_parameter<T{true, false}>>);     // [array.overview]/4
+                        static_assert(not std::same_as<test::value_parameter<T{true}>, test::value_parameter<T{false, true}>>); // [array.overview]/4
+                }
         });
 }
 

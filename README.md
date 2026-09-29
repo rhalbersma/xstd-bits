@@ -47,6 +47,8 @@ The **set reading** takes a key, and a key outside the domain is a lookup that a
 
 `constexpr` is not on that list of advantages, and has not been since [P3372R3](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3372r3.html) made the standard's own containers `constexpr` throughout. It is table stakes now; what the packing buys is density and the bit-parallel operations over it.
 
+A constant can also be a template argument, as a `std::array<bool, N>` can, wherever the width fills its blocks: `template<xstd::aligned::bitset<64> Mask> struct S;` takes a mask by value, and so do `aligned::bit_array` and `aligned::bit_fixed_set`. A width that leaves unused bits in its last block is not a structural type, since those bits must stay clear for `==`, `<=>` and hashing to hold; [design.md](doc/design.md#structural-at-aligned-widths) has the reasoning.
+
 ## Usage
 
 ### Hello World: generating (twin) primes
