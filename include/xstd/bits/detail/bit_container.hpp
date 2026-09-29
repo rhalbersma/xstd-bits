@@ -163,7 +163,7 @@ using width_member_t = conditional_data_member_t<
         std::conditional_t<(alignof(std::size_t) >= alignof(Blocks)), std::size_t, std::ranges::range_value_t<Blocks>>,
         struct size_tag>;
 
-// Blocks held inline and filled by the width, so that every pattern of their words is a value and none breaks the tail.
+// Blocks held inline and filled by the width, so that every pattern of their blocks is a value.
 template<class Blocks, std::size_t N>
 inline constexpr bool structural_blocks_v = false;
 
@@ -225,7 +225,7 @@ public:
         // A capacity of nought holds no position, so the width is zero without a member to store it in.
         static constexpr auto has_zero_capacity = zero_capacity<Blocks, N>;
 
-        // Every word pattern a value, so the blocks are public and the container a structural type.
+        // Every block pattern a value, so the blocks are public and the container a structural type.
         static constexpr auto is_structural = structural_blocks_v<Blocks, N>;
 
         [[nodiscard]] static constexpr auto static_capacity() noexcept

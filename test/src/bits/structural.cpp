@@ -90,7 +90,7 @@ template<class T>
         return t;
 }
 
-// The block and the width each owner is instantiated with, which its words are built from.
+// The block and the width each owner is instantiated with, which its blocks are built from.
 template<class T>
 struct shape_of;
 
@@ -115,7 +115,7 @@ struct shape_of<xstd::basic_bitset<Block, N>>
         static constexpr auto width = N;
 };
 
-// The same bits as words: the low bit of the first block and the high bit of the last one.
+// The same bits as blocks: the low bit of the first block and the high bit of the last one.
 template<class T>
 [[nodiscard]] constexpr auto from_words()
         -> T
