@@ -11,6 +11,7 @@
 #include <xstd/bits/detail/bidirectional.hpp>        // bidirectional_bit_iterator, bidirectional_bit_reference
 #include <xstd/bits/detail/bit_container.hpp>        // bit_container, bit_container_type
 #include <xstd/bits/detail/borrowed_bits.hpp>        // borrow_bits, borrowable_block, borrowable_blocks, borrowed_bits_t
+#include <xstd/bits/detail/comparisons.hpp>          // set_equal, set_three_way
 #include <xstd/bits/detail/functor.hpp>              // decay_copy
 #include <xstd/bits/detail/hash.hpp>                 // hash_append_bits, hash_append_positions, std_hash
 #include <xstd/bits/detail/intrin.hpp>               // countl_zero, countr_zero
@@ -362,12 +363,12 @@ public:
                 return set_equal(x.bits(), y.bits());
         }
 
-        // The storage's entry: the set ordering turns on the lowest position at which the two disagree.
+        // The blockwise set ordering where the storage is a bit_container, the standard algorithm otherwise.
         [[nodiscard]] friend constexpr auto operator<=>(set_adaptor const& x, set_adaptor const& y) noexcept
                 -> std::strong_ordering
         {
-                if constexpr (requires { set_lexicographical_compare_three_way(x.bits(), y.bits()); }) {
-                        return set_lexicographical_compare_three_way(x.bits(), y.bits());
+                if constexpr (requires { set_three_way(x.bits(), y.bits()); }) {
+                        return set_three_way(x.bits(), y.bits());
                 } else {
                         return std::lexicographical_compare_three_way(x.begin(), x.end(), y.begin(), y.end());
                 }
@@ -815,14 +816,11 @@ public:
                 }
         }
 
+        // A subset missing some position of the other's, at any two widths: set_equal, not the width-first ==.
         [[nodiscard]] constexpr auto is_proper_subset_of(set_adaptor const& other) const noexcept
                 -> bool
         {
-                if constexpr (requires { bits().is_proper_subset_of(other.bits()); }) {
-                        return bits().is_proper_subset_of(other.bits());
-                } else {
-                        return is_subset_of(other) and *this != other;
-                }
+                return is_subset_of(other) and not set_equal(bits(), other.bits());
         }
 
         // A hidden friend: intersects is to set_intersection what contains is to find.
