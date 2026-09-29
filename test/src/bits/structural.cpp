@@ -137,6 +137,8 @@ BOOST_AUTO_TEST_CASE(AnAlignedOwnerIsATemplateArgument)
         static_assert(std::same_as<bitset_parameter<xstd::aligned::bitset<64>(1ULL)>, bitset_parameter<xstd::aligned::bitset<64>(1ULL)>>);
 
         test::for_each_type<aligned_owners>([]<class T> -> void {
+                // A constant T{} first: MSVC does not define a defaulted constructor for a requires-expression's sake.
+                static_assert(T{} == T{});
                 static_assert(test::structural<T>);
         });
 }
