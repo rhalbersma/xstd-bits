@@ -1229,6 +1229,13 @@ struct fn_swap_reference
 };
 
 // The static member swap that C++26 keeps only as deprecated.
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#else
+#pragma warning(push)
+#pragma warning(disable : 4996)
+#endif
 struct mem_static_swap
 {
         template<class X>
@@ -1242,6 +1249,11 @@ struct mem_static_swap
                 BOOST_CHECK(model_of(b) == m); // [depr.vector.bool.swap]/2
         }
 };
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic pop
+#else
+#pragma warning(pop)
+#endif
 
 // [vector.erasure]: what equals the value, or satisfies the predicate, goes, and the count says how much did.
 struct fn_erase
