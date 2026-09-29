@@ -168,10 +168,10 @@ A row's `outcome` is one of:
 | `[array.zero]` | 3 | — | — | answered |  |
 | `[array.creation]` | 1 | `to_array(T (&a)[N])` | Mandates | declined | A Mandates, whose violation makes the program ill-formed rather than observable; the cases stay within it. |
 | `[array.creation]` | 2 | `to_array(T (&a)[N])` | Preconditions | no-requirement | A precondition on the element type, which `bool` meets; it asks nothing of the container. |
-| `[array.creation]` | 3 | `to_array(T (&a)[N])` | Returns | gap | `std::to_array` makes a `std::array`; nothing makes an `xstd::bit_array` from a built-in array. Whether something should needs the repo owner. |
+| `[array.creation]` | 3 | `to_array(T (&a)[N])` | Returns | answered | `xstd::to_bit_array` makes an `xstd::bit_array<N>` from a built-in array of `bool`, `const` or not; a built-in array names no block type, so the default one is taken. |
 | `[array.creation]` | 4 | `to_array(T (&&a)[N])` | Mandates | declined | A Mandates, whose violation makes the program ill-formed rather than observable; the cases stay within it. |
 | `[array.creation]` | 5 | `to_array(T (&&a)[N])` | Preconditions | no-requirement | A precondition on the element type, which `bool` meets; it asks nothing of the container. |
-| `[array.creation]` | 6 | `to_array(T (&&a)[N])` | Returns | gap | `std::to_array` makes a `std::array`; nothing makes an `xstd::bit_array` from a built-in array. Whether something should needs the repo owner. |
+| `[array.creation]` | 6 | `to_array(T (&&a)[N])` | Returns | answered | `xstd::to_bit_array`'s rvalue overload, which for `bool` moves exactly what the lvalue one copies. |
 | `[array.tuple]` | 1 | `tuple_element<I, array<T, N>>` | Mandates | declined | A Mandates `I < N`, whose violation makes the program ill-formed rather than observable. The cases ask only `I < N`, so a width of nought is asked nothing. |
 | `[array.tuple]` | 2 | `get(array<T, N>& a)`, and three more | Mandates | declined | A Mandates `I < N`, whose violation makes the program ill-formed rather than observable. The cases ask only `I < N`, so a width of nought is asked nothing. |
 | `[array.tuple]` | 3 | `get(array<T, N>& a)`, and three more | Returns | answered |  |

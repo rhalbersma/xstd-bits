@@ -15,6 +15,7 @@
 #include <xstd/ints/memory.hpp>                          // align_up
 #include <boost/container_hash/is_range.hpp>             // is_range
 #include <boost/container_hash/is_tuple_like.hpp>        // is_tuple_like
+#include <algorithm>                                     // copy
 #include <array>                                         // array
 #include <concepts>                                      // constructible_from
 #include <cstddef>                                       // size_t
@@ -71,6 +72,24 @@ basic_bit_array(from_bit_storage_t, Block) -> basic_bit_array<Block, bit_storage
 template<xstd::unsigned_integer Block, std::size_t K>
         requires (K != 0)
 basic_bit_array(from_bit_storage_t, std::array<Block, K>) -> basic_bit_array<Block, bit_storage_extent_v<std::array<Block, K>>>;
+
+// [array.creation]'s to_array, of bool alone: a built-in array names no block type, so the default one is taken.
+template<std::size_t N>
+[[nodiscard]] constexpr auto to_bit_array(bool const (&a)[N]) // NOLINT(modernize-avoid-c-arrays): a built-in array is what it converts.
+        -> bit_array<N>
+{
+        auto result = bit_array<N>();
+        std::ranges::copy(a, result.begin());
+        return result;
+}
+
+// [array.creation]'s second overload, which for a bool moves exactly what the first copies.
+template<std::size_t N>
+[[nodiscard]] constexpr auto to_bit_array(bool (&&a)[N]) // NOLINT(modernize-avoid-c-arrays): a built-in array is what it converts.
+        -> bit_array<N>
+{
+        return xstd::to_bit_array(a);
+}
 
 namespace aligned {
 
