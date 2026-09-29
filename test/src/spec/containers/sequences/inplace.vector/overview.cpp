@@ -22,11 +22,7 @@ namespace {
 
 // An owner copies as its blocks do: std::inplace_vector's trivially, and Boost's static_vector's not.
 template<class T>
-constexpr bool trivially_stored = true;
-
-template<class T>
-        requires requires { typename T::block_container_type; }
-constexpr bool trivially_stored<T> = std::is_trivially_copyable_v<typename T::block_container_type>;
+concept trivially_stored = not requires { typename T::block_container_type; } or std::is_trivially_copyable_v<typename T::block_container_type>;
 
 } // namespace
 
