@@ -34,17 +34,17 @@ BOOST_AUTO_TEST_CASE(Set)
         });
 }
 
-// [set.cons]/1-2: constexpr explicit set(const Compare& comp, const Allocator& = Allocator());
+// [set.cons]/1: constexpr explicit set(const Compare& comp, const Allocator& = Allocator());
 BOOST_AUTO_TEST_CASE(SetComp)
 {
         test::for_each_type<test::spec::set::all>([]<class T> -> void {
                 static_assert(requires (T::key_compare const comp) { T(comp); });
                 // std::less has no state, so a comparator argument is accepted and changes nothing.
-                BOOST_CHECK(T(typename T::key_compare()).empty());
+                BOOST_CHECK(T(typename T::key_compare()).empty()); // [set.cons]/1
         });
 }
 
-// [set.cons]/3-4: set(InputIterator first, InputIterator last, const Compare& comp = Compare(), ...);
+// [set.cons]/3: set(InputIterator first, InputIterator last, const Compare& comp = Compare(), ...);
 BOOST_AUTO_TEST_CASE(SetFirstLast)
 {
         test::for_each_type<test::spec::set::all>([]<class T> -> void {
@@ -55,12 +55,12 @@ BOOST_AUTO_TEST_CASE(SetFirstLast)
                 for (auto const [from, keys] : inputs::key_lists<T>()) {
                         auto const on_failure = context(from, keys);
                         constructor<T>()(keys.begin(), keys.end());
-                        BOOST_CHECK(T(keys.begin(), keys.end(), typename T::key_compare()) == T(keys.begin(), keys.end()));
+                        BOOST_CHECK(T(keys.begin(), keys.end(), typename T::key_compare()) == T(keys.begin(), keys.end())); // [set.cons]/3
                 }
         });
 }
 
-// [set.cons]/5-6: set(from_range_t, R&& rg, const Compare& comp = Compare(), const Allocator& = Allocator());
+// [set.cons]/5: set(from_range_t, R&& rg, const Compare& comp = Compare(), const Allocator& = Allocator());
 BOOST_AUTO_TEST_CASE(SetFromRange)
 {
         test::for_each_type<test::spec::set::all>([]<class T> -> void {
@@ -71,6 +71,7 @@ BOOST_AUTO_TEST_CASE(SetFromRange)
                 for (auto const [from, keys] : inputs::key_lists<T>()) {
                         auto const on_failure = context(from, keys);
                         constructor<T>()(std::from_range, keys);
+                        BOOST_CHECK(T(std::from_range, keys, typename T::key_compare()) == T(keys.begin(), keys.end())); // [set.cons]/5
                         with_initializer_list(keys, [&](std::initializer_list<std::size_t> il) -> void {
                                 constructor<T>()(std::from_range, il);
                         });
