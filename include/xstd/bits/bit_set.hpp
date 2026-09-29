@@ -19,7 +19,7 @@
 #include <functional>                                        // hash, less
 #include <initializer_list>                                  // initializer_list
 #include <iterator>                                          // input_iterator
-#include <memory>                                            // allocator, allocator_traits
+#include <memory>                                            // allocator
 #include <ranges>                                            // from_range, from_range_t, input_range
 #include <type_traits>                                       // false_type, type_identity_t
 #include <utility>                                           // forward, move
@@ -111,27 +111,27 @@ using bit_set = basic_bit_set<std::size_t>;
 // [set.overview]'s guides, in its order: Block from the allocator, std::size_t by default, the key being std::size_t.
 template<std::input_iterator InputIterator, class Compare = std::less<std::size_t>, class Allocator = std::allocator<std::size_t>>
         requires (not xstd::simple_allocator<Compare>) and xstd::simple_allocator<Allocator>
-basic_bit_set(InputIterator, InputIterator, Compare = Compare(), Allocator = Allocator()) -> basic_bit_set<typename std::allocator_traits<Allocator>::value_type, Allocator>;
+basic_bit_set(InputIterator, InputIterator, Compare = Compare(), Allocator = Allocator()) -> basic_bit_set<typename Allocator::value_type, Allocator>;
 
 template<std::ranges::input_range R, class Compare = std::less<std::size_t>, class Allocator = std::allocator<std::size_t>>
         requires (not xstd::simple_allocator<Compare>) and xstd::simple_allocator<Allocator>
-basic_bit_set(std::from_range_t, R&&, Compare = Compare(), Allocator = Allocator()) -> basic_bit_set<typename std::allocator_traits<Allocator>::value_type, Allocator>;
+basic_bit_set(std::from_range_t, R&&, Compare = Compare(), Allocator = Allocator()) -> basic_bit_set<typename Allocator::value_type, Allocator>;
 
 template<class Key, class Compare = std::less<std::size_t>, class Allocator = std::allocator<std::size_t>>
         requires (not xstd::simple_allocator<Compare>) and xstd::simple_allocator<Allocator>
-basic_bit_set(std::initializer_list<Key>, Compare = Compare(), Allocator = Allocator()) -> basic_bit_set<typename std::allocator_traits<Allocator>::value_type, Allocator>;
+basic_bit_set(std::initializer_list<Key>, Compare = Compare(), Allocator = Allocator()) -> basic_bit_set<typename Allocator::value_type, Allocator>;
 
 template<std::input_iterator InputIterator, class Allocator>
         requires xstd::simple_allocator<Allocator>
-basic_bit_set(InputIterator, InputIterator, Allocator) -> basic_bit_set<typename std::allocator_traits<Allocator>::value_type, Allocator>;
+basic_bit_set(InputIterator, InputIterator, Allocator) -> basic_bit_set<typename Allocator::value_type, Allocator>;
 
 template<std::ranges::input_range R, class Allocator>
         requires xstd::simple_allocator<Allocator>
-basic_bit_set(std::from_range_t, R&&, Allocator) -> basic_bit_set<typename std::allocator_traits<Allocator>::value_type, Allocator>;
+basic_bit_set(std::from_range_t, R&&, Allocator) -> basic_bit_set<typename Allocator::value_type, Allocator>;
 
 template<class Key, class Allocator>
         requires xstd::simple_allocator<Allocator>
-basic_bit_set(std::initializer_list<Key>, Allocator) -> basic_bit_set<typename std::allocator_traits<Allocator>::value_type, Allocator>;
+basic_bit_set(std::initializer_list<Key>, Allocator) -> basic_bit_set<typename Allocator::value_type, Allocator>;
 
 // The blocks adopted name the block and the allocator both.
 template<xstd::unsigned_integer Block, class Allocator>
