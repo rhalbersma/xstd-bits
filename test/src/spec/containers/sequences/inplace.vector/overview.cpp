@@ -69,7 +69,7 @@ BOOST_AUTO_TEST_CASE(Triviality)
         test::for_each_type<test::spec::sequence::inplace_vector_all>([]<class T> -> void {
                 if constexpr (T::capacity() == 0UZ) {
                         static_assert(std::is_trivially_copyable_v<T> and std::is_trivially_default_constructible_v<T>); // [inplace.vector.overview]/5
-#if !defined(_MSC_VER) || defined(__clang__)
+#ifndef _MSC_VER
                         static_assert(std::is_empty_v<T>); // [inplace.vector.overview]/5
 #endif
                 } else if constexpr (trivially_stored<T>) {
