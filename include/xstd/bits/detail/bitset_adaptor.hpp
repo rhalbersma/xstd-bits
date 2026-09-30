@@ -9,6 +9,7 @@
 // Bitsets [bitset], Header <bitset> synopsis [bitset.syn]
 
 #include <xstd/bits/bit_storage.hpp>                // bit_storage
+#include <xstd/bits/detail/adapted_bits.hpp>        // adapted_bits
 #include <xstd/bits/detail/allocator_base_type.hpp> // allocator_base_type, allocator_param_t, has_allocator_v
 #include <xstd/bits/detail/bit_container.hpp>       // bit_container, bit_container_type
 #include <xstd/bits/detail/comparisons.hpp>         // bitset_three_way, set_equal
@@ -38,19 +39,20 @@
 #include <string>                                   // basic_string, char_traits
 #include <string_view>                              // basic_string_view
 #include <type_traits>                              // is_array_v, is_nothrow_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v, is_standard_layout_v, is_trivially_copyable_v, is_trivially_default_constructible_v, remove_cv_t, remove_cvref_t
-#include <utility>                                  // as_const, move
+#include <utility>                                  // as_const, in_place, move
 
 namespace xstd::bits::detail {
 
 // [template.bitset] over a storage of ours, which speaks the bitset vocabulary by construction.
 template<bit_container_type Bits, class Derived = void>
-class bitset_adaptor : public allocator_base_type<Bits, bitset_adaptor<Bits, Derived>>
+class bitset_adaptor : public adapted_bits<Bits, allocator_base_type<Bits, bitset_adaptor<Bits, Derived>>, Bits::is_structural>
 {
         // One wrapper, two counterparts: std::bitset at a static width, boost::dynamic_bitset at a run-time one.
         static constexpr bool has_static_width = (Bits::extent != std::dynamic_extent);
 
         // No iteration here, neither counterpart having it: the two views refer into the storage instead.
-        Bits m_bits{};
+        using members_type = adapted_bits<Bits, allocator_base_type<Bits, bitset_adaptor>, Bits::is_structural>;
+        using members_type::m_bits;
 
         template<std::input_iterator I>
         static constexpr bool block_iterator = std::same_as<std::remove_cvref_t<std::iter_value_t<I>>, typename Bits::block_type>;
@@ -196,7 +198,7 @@ public:
 
         [[nodiscard]] constexpr explicit bitset_adaptor(std::size_t num_bits, unsigned long long val = 0ULL)
                 requires (not has_static_width)
-                : m_bits(num_bits)
+                : members_type(std::in_place, num_bits)
         {
                 from_ullong(val);
         }
@@ -204,12 +206,12 @@ public:
         // flat_set's adopting constructor at a run-time width: the blocks move in, every bit of them a position.
         [[nodiscard]] constexpr bitset_adaptor(xstd::from_bit_storage_t, Bits::block_container_type blocks) noexcept(std::is_nothrow_move_constructible_v<typename Bits::block_container_type>)
                 requires Bits::has_stored_size
-                : m_bits(xstd::from_bit_storage, std::move(blocks))
+                : members_type(std::in_place, xstd::from_bit_storage, std::move(blocks))
         {}
 
         [[nodiscard]] constexpr bitset_adaptor(xstd::from_bit_storage_t, Bits::block_container_type blocks, allocator_param const& alloc)
                 requires Bits::has_stored_size and has_allocator
-                : m_bits(xstd::from_bit_storage, std::move(blocks), alloc)
+                : members_type(std::in_place, xstd::from_bit_storage, std::move(blocks), alloc)
         {}
 
         // Blocks that are bit storage, integers wider than the ullong door included, read as this bitset's bits.
@@ -240,12 +242,12 @@ public:
         // boost's allocator arguments: converting, and offered only where the storage has an allocator.
         [[nodiscard]] constexpr explicit bitset_adaptor(allocator_param const& alloc) noexcept(std::is_nothrow_constructible_v<Bits, allocator_param const&>)
                 requires (not has_static_width) and has_allocator
-                : m_bits(alloc)
+                : members_type(std::in_place, alloc)
         {}
 
         [[nodiscard]] constexpr explicit bitset_adaptor(std::size_t num_bits, unsigned long long val, allocator_param const& alloc)
                 requires (not has_static_width) and has_allocator
-                : m_bits(num_bits, alloc)
+                : members_type(std::in_place, num_bits, alloc)
         {
                 from_ullong(val);
         }
@@ -253,7 +255,7 @@ public:
         template<std::input_iterator I, std::sentinel_for<I> S>
                 requires (not has_static_width) and block_iterator<I> and has_allocator
         [[nodiscard]] constexpr bitset_adaptor(I first, S last, allocator_param const& alloc)
-                : m_bits(alloc)
+                : members_type(std::in_place, alloc)
         {
                 m_bits.append(first, last);
         }
@@ -261,12 +263,12 @@ public:
         // [container.alloc.reqmts]'s allocator-extended copy and move: boost lacks them, uses-allocator needs them.
         [[nodiscard]] constexpr bitset_adaptor(bitset_adaptor const& other, allocator_param const& alloc)
                 requires (not has_static_width) and has_allocator
-                : m_bits(other.m_bits, alloc)
+                : members_type(std::in_place, other.m_bits, alloc)
         {}
 
         [[nodiscard]] constexpr bitset_adaptor(bitset_adaptor&& other, allocator_param const& alloc)
                 requires (not has_static_width) and has_allocator
-                : m_bits(std::move(other.m_bits), alloc)
+                : members_type(std::in_place, std::move(other.m_bits), alloc)
         {}
 
         [[nodiscard]] constexpr auto get_allocator() const noexcept

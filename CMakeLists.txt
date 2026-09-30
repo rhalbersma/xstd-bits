@@ -87,6 +87,7 @@ target_sources(
         include/xstd/bits/bit_fixed_set.hpp
         include/xstd/bits/bit_subspan.hpp
         include/xstd/bits/bit_vector.hpp
+        include/xstd/bits/detail/adapted_bits.hpp
         include/xstd/bits/detail/allocator_base_type.hpp
         include/xstd/bits/detail/bidirectional.hpp
         include/xstd/bits/detail/bounded_blocks.hpp

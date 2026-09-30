@@ -102,8 +102,9 @@ inline constexpr bool owner_extent_v = admits_owner_extent<Blocks, N>();
 
 // The vehicle's two members, the width first: initialized where they are declared, as a vector starts empty.
 template<class Width, class Blocks, bool Empty>
-struct bit_members : bits::detail::allocator_base_type<Blocks>
+class bit_members : public bits::detail::allocator_base_type<Blocks>
 {
+protected:
         // Dynamic widths only; the tag keeps the absent member distinct from any other in an enclosing layout.
         [[XSTD_NO_UNIQUE_ADDRESS]]
         Width m_size{};
@@ -111,6 +112,7 @@ struct bit_members : bits::detail::allocator_base_type<Blocks>
         // An NSDMI, not extent-constrained constructors: an array starts zeroed and a vector empty.
         Blocks m_blocks{};
 
+public:
         [[nodiscard]] bit_members() = default;
 
         template<class W, class... Args>
@@ -124,8 +126,9 @@ struct bit_members : bits::detail::allocator_base_type<Blocks>
 
 // A capacity of nought: both members empty and overlapping, and uninitialized, which [inplace.vector.overview] asks.
 template<class Width, class Blocks>
-struct bit_members<Width, Blocks, true> : bits::detail::allocator_base_type<Blocks>
+class bit_members<Width, Blocks, true> : public bits::detail::allocator_base_type<Blocks>
 {
+protected:
         [[XSTD_NO_UNIQUE_ADDRESS]]
         Width m_size;
 
@@ -137,6 +140,7 @@ struct bit_members<Width, Blocks, true> : bits::detail::allocator_base_type<Bloc
         Blocks m_blocks;
 #endif
 
+public:
         [[nodiscard]] bit_members() = default;
 
         template<class W, class... Args>
@@ -159,12 +163,46 @@ using width_member_t = conditional_data_member_t<
         std::conditional_t<(alignof(std::size_t) >= alignof(Blocks)), std::size_t, std::ranges::range_value_t<Blocks>>,
         struct size_tag>;
 
+// Blocks held inline and filled by the width, so that every pattern of their blocks is a value.
+template<class Blocks, std::size_t N>
+inline constexpr bool structural_blocks_v = false;
+
+template<xstd::unsigned_integer Block, std::size_t K, std::size_t N>
+inline constexpr bool structural_blocks_v<std::array<Block, K>, N> = (N == default_extent_v<std::array<Block, K>>);
+
+// The members with no invariant to keep: public only so that the owner is structural, not for direct use.
+template<class Width, class Blocks>
+struct structural_bit_members : bits::detail::allocator_base_type<Blocks>
+{
+        [[XSTD_NO_UNIQUE_ADDRESS]]
+        Width m_size{};
+
+        Blocks m_blocks{};
+
+        [[nodiscard]] structural_bit_members() = default;
+
+        template<class W, class... Args>
+        [[nodiscard]] constexpr explicit structural_bit_members(W&& w, Args&&... args) noexcept(std::is_nothrow_constructible_v<Blocks, Args...>)
+                : m_size(std::forward<W>(w))
+                , m_blocks(std::forward<Args>(args)...)
+        {}
+
+        [[nodiscard]] friend auto operator==(structural_bit_members const&, structural_bit_members const&) -> bool = default;
+};
+
+// Access cannot follow the width, so the base does: public members where there are no unused bits to keep clear.
+template<class Blocks, std::size_t N>
+using bit_members_t = std::conditional_t<
+        structural_blocks_v<Blocks, N>,
+        structural_bit_members<width_member_t<Blocks, N>, Blocks>,
+        bit_members<width_member_t<Blocks, N>, Blocks, zero_capacity<Blocks, N>>>;
+
 // The one vehicle: it owns the unused-tail invariant, and has no iterators.
 template<class Blocks, std::size_t N = default_extent_v<Blocks>>
         requires (std::ranges::contiguous_range<Blocks> and xstd::owned_bit_storage<Blocks> and owner_extent_v<Blocks, N>) or (borrowed_block_span<Blocks> and N == default_extent_v<Blocks>)
-class bit_container : public bit_members<width_member_t<Blocks, N>, Blocks, zero_capacity<Blocks, N>>
+class bit_container : public bit_members_t<Blocks, N>
 {
-        using members_type = bit_members<width_member_t<Blocks, N>, Blocks, zero_capacity<Blocks, N>>;
+        using members_type = bit_members_t<Blocks, N>;
         using members_type::m_blocks;
         using members_type::m_size;
 
@@ -186,6 +224,9 @@ public:
 
         // A capacity of nought holds no position, so the width is zero without a member to store it in.
         static constexpr auto has_zero_capacity = zero_capacity<Blocks, N>;
+
+        // Every block pattern a value, so the blocks are public and the container a structural type.
+        static constexpr auto is_structural = structural_blocks_v<Blocks, N>;
 
         [[nodiscard]] static constexpr auto static_capacity() noexcept
                 -> std::size_t

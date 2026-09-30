@@ -710,6 +710,31 @@ blocks stay a plain member, whose tail padding an overlappable one would expose 
 A static width keeps at least one block, because the `std::array` under it has a fixed extent that the static arms
 index directly; `num_blocks_v` floors there, `blocks_for` does not.
 
+### structural-at-aligned-widths
+
+`[array.overview]/4` makes `std::array<bool, N>` a structural type, usable as a non-type template argument. A
+structural class has every base and every non-static data member public and non-`mutable` ([temp.param]/7), and two
+values name the same specialization exactly when their members do, word for word. That is only sound where every word
+pattern is a value. At a width that is not a multiple of the block's digits, the last block has unused high bits,
+and `==`, `<=>` and hashing compare whole blocks on the promise that those bits stay clear. Public blocks would let a
+caller set them, so those widths keep their blocks non-public and are not structural.
+
+At an aligned width, where N fills its blocks, there is no invariant to protect: every bit is a position, and the
+layout is exactly the `std::array<Block, K>` plus an empty width tag. Access control cannot depend on a template
+argument, but the choice of base can. `bit_container` takes `structural_bit_members`, a struct whose `m_size` and
+`m_blocks` are public, when its blocks are a `std::array` whose extent is exactly N bits (`structural_blocks_v`,
+answered as `bit_container::is_structural`), and `bit_members`, whose members are protected, otherwise. Each adaptor
+keeps its `m_bits` in an `adapted_bits` base on the same terms, public only for an owner over structural storage. The
+names are the same in either base and the adaptors reach them through the same `using`-declarations, so nothing else
+in the library notices which one it got; the public members are not an interface, only what makes the owner
+structural.
+
+That gives `aligned::bit_array`, `aligned::bit_fixed_set` and `aligned::bitset` at any nonzero width, and the plain
+owners at a multiple of the block's digits. Width zero is not among them: it still holds the one block `num_blocks_v`
+floors at, every bit of which is unused, so its storage stays protected. The bounded owners cannot follow at any width,
+since neither `std::inplace_vector` nor `boost::container::static_vector` is structural, and the views hold pointers
+kept non-public as before.
+
 ### the-moved-from-state
 
 A run-time width's move leaves the source at width zero with no blocks: the same object the default constructor
@@ -2553,7 +2578,7 @@ copyable and trivially default constructible, and `static_vector<Block, 0>` is n
 `bounded_blocks<Block, num_blocks_v<Block, N>>` above it. `no_blocks` is an empty contiguous range whose growth
 past nought throws `std::bad_alloc`, as `std::inplace_vector<Block, 0>`'s does; over it `bit_container`
 stores no width (`has_zero_capacity`), defaults its moves, and takes the `bit_members` whose two members overlap and
-have no initializer; `sequence_adaptor` holds the container `[[no_unique_address]]`, so
+have no initializer; every adaptor holds the container `[[no_unique_address]]` in its `adapted_bits` base, so
 `basic_bit_bounded_vector<Block, 0>` is an empty type. There the range constructor and both append tiers refuse
 any element up front through one `refuse_any`, and the ordering never compares unequal widths. A loop that cannot go
 round a second time is a branch no test can take, and being trivially destructible the owner compiles to control flow

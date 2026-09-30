@@ -7,6 +7,7 @@
 #define XSTD_BITS_DETAIL_SET_ADAPTOR_HPP
 
 #include <xstd/bits/bit_storage.hpp>                 // bit_storage
+#include <xstd/bits/detail/adapted_bits.hpp>         // adapted_bits
 #include <xstd/bits/detail/allocator_base_type.hpp>  // allocator_base_type, allocator_param_t, has_allocator_v
 #include <xstd/bits/detail/bidirectional.hpp>        // bidirectional_bit_iterator, bidirectional_bit_reference
 #include <xstd/bits/detail/bit_container.hpp>        // bit_container, bit_container_type
@@ -38,7 +39,7 @@
 #include <span>                                      // dynamic_extent
 #include <stdexcept>                                 // out_of_range
 #include <type_traits>                               // conditional_t, false_type, is_invocable_r_v, is_nothrow_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
-#include <utility>                                   // declval, forward, move, pair
+#include <utility>                                   // declval, forward, in_place, move, pair
 
 // The set reading, [set] over a bit_container, owning it or referring to it.
 namespace xstd::bits::detail {
@@ -114,14 +115,28 @@ constexpr auto walk_blocks_descending(Bits const& c, F& f)
 } // namespace set
 
 template<bit_container_type Bits, storage Store = storage::owned, class Derived = void>
-class set_adaptor : public std::conditional_t<owns(Store), allocator_base_type<std::remove_const_t<Bits>, set_adaptor<Bits, Store, Derived>>, xstd::empty_base_type<>>
+class set_adaptor;
+
+namespace set {
+
+// The storage an owner has or a view's handle into another's, in a base public exactly where the owner is structural.
+template<class Bits, storage Store, class Derived>
+using members_t = adapted_bits<
+        std::conditional_t<owns(Store), Bits, storage_ref_t<Bits>>,
+        std::conditional_t<owns(Store), allocator_base_type<std::remove_const_t<Bits>, set_adaptor<Bits, Store, Derived>>, xstd::empty_base_type<>>,
+        owns(Store) and std::remove_const_t<Bits>::is_structural>;
+
+} // namespace set
+
+template<bit_container_type Bits, storage Store, class Derived>
+class set_adaptor : public set::members_t<Bits, Store, Derived>
 {
         static constexpr bool is_owner = owns(Store);
 
         using bits_type = std::remove_const_t<Bits>;
 
-        // Always present and only its type changes, so plain conditional_t.
-        std::conditional_t<is_owner, Bits, storage_ref_t<Bits>> m_bits;
+        using members_type = set::members_t<Bits, Store, Derived>;
+        using members_type::m_bits;
 
         // One accessor: self.m_bits propagates the owner's const, *self.m_bits keeps the view shallow.
         [[nodiscard]] constexpr auto bits(this auto&& self) noexcept
@@ -236,18 +251,18 @@ public:
         // [set.cons]'s allocator arguments: converting, and offered only where the storage has an allocator.
         [[nodiscard]] constexpr explicit set_adaptor(allocator_param const& alloc) noexcept(std::is_nothrow_constructible_v<Bits, allocator_param const&>)
                 requires is_owner and has_allocator
-                : m_bits(alloc)
+                : members_type(std::in_place, alloc)
         {}
 
         [[nodiscard]] constexpr set_adaptor(key_compare const& /* comp */, allocator_param const& alloc) noexcept(std::is_nothrow_constructible_v<Bits, allocator_param const&>)
                 requires is_owner and has_allocator
-                : m_bits(alloc)
+                : members_type(std::in_place, alloc)
         {}
 
         template<std::input_iterator I, std::sentinel_for<I> S>
                 requires is_owner and has_allocator and std::constructible_from<value_type, std::iter_reference_t<I>>
         [[nodiscard]] constexpr set_adaptor(I first, S last, allocator_param const& alloc)
-                : m_bits(alloc)
+                : members_type(std::in_place, alloc)
         {
                 insert(first, last);
         }
@@ -282,23 +297,23 @@ public:
 
         [[nodiscard]] constexpr set_adaptor(set_adaptor const& other, allocator_param const& alloc)
                 requires is_owner and has_allocator
-                : m_bits(other.m_bits, alloc)
+                : members_type(std::in_place, other.m_bits, alloc)
         {}
 
         [[nodiscard]] constexpr set_adaptor(set_adaptor&& other, allocator_param const& alloc)
                 requires is_owner and has_allocator
-                : m_bits(std::move(other.m_bits), alloc)
+                : members_type(std::in_place, std::move(other.m_bits), alloc)
         {}
 
         // flat_set's adopting constructor at a run-time width: the blocks move in, every bit of them a position.
         [[nodiscard]] constexpr set_adaptor(xstd::from_bit_storage_t, bits_type::block_container_type blocks) noexcept(std::is_nothrow_move_constructible_v<typename bits_type::block_container_type>)
                 requires is_owner and bits_type::has_stored_size
-                : m_bits(xstd::from_bit_storage, std::move(blocks))
+                : members_type(std::in_place, xstd::from_bit_storage, std::move(blocks))
         {}
 
         [[nodiscard]] constexpr set_adaptor(xstd::from_bit_storage_t, bits_type::block_container_type blocks, allocator_param const& alloc)
                 requires is_owner and bits_type::has_stored_size and has_allocator
-                : m_bits(xstd::from_bit_storage, std::move(blocks), alloc)
+                : members_type(std::in_place, xstd::from_bit_storage, std::move(blocks), alloc)
         {}
 
         // Blocks that are bit storage, read as this set's positions; the tag says the blocks are bits and not keys.
@@ -320,21 +335,21 @@ public:
 
         [[nodiscard]] constexpr explicit set_adaptor(Bits& c) noexcept
                 requires (not is_owner)
-                : m_bits(&c)
+                : members_type(std::in_place, &c)
         {}
 
         // Blocks handed straight over, held as the storage that borrows them, as std::views::all holds a view.
         template<class Blocks>
                 requires (not is_owner) and (borrowable_block<Blocks &&> or borrowable_blocks<Blocks &&>) and std::same_as<borrowed_bits_t<Blocks&&>, Bits>
         [[nodiscard]] constexpr explicit set_adaptor(Blocks&& blocks) noexcept
-                : m_bits(borrow_bits(std::forward<Blocks>(blocks)))
+                : members_type(std::in_place, borrow_bits(std::forward<Blocks>(blocks)))
         {}
 
         // A view over an owner is a view over the storage it wraps; implicit, claiming nothing the owner lacks.
         template<owner_of<Bits, set_reading_tag> Owner>
         [[nodiscard]] constexpr explicit(false) set_adaptor(Owner& c) noexcept // NOLINT(misc-explicit-constructor)
                 requires (not is_owner)
-                : m_bits(&c.m_bits)
+                : members_type(std::in_place, &c.m_bits)
         {}
 
         // NOLINTNEXTLINE(misc-unconventional-assign-operator): the container is what [set] and [vector] return here.

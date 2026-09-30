@@ -7,6 +7,7 @@
 #define XSTD_BITS_DETAIL_SEQUENCE_ADAPTOR_HPP
 
 #include <xstd/bits/bit_storage.hpp>                         // bit_storage
+#include <xstd/bits/detail/adapted_bits.hpp>                 // adapted_bits
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_base_type, allocator_param_t, has_allocator_v
 #include <xstd/bits/detail/bit_container.hpp>                // bit_container, bit_container_type
 #include <xstd/bits/detail/borrowed_bits.hpp>                // borrow_bits, borrowable_block, borrowable_blocks, borrowed_bits_t
@@ -42,7 +43,7 @@
 #include <stdexcept>                                         // out_of_range
 #include <tuple>                                             // tuple_element, tuple_size
 #include <type_traits>                                       // conditional_t, false_type, is_nothrow_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
-#include <utility>                                           // as_const, declval, forward, move, pair
+#include <utility>                                           // as_const, declval, forward, in_place, move, pair
 
 // The sequence reading, [array] over a bit_container, owning it or referring to it.
 namespace xstd::bits::detail {
@@ -130,6 +131,15 @@ template<class Bits>
 template<class Bits>
 using block_type_of = std::remove_const_t<Bits>::block_type;
 
+// What a window stores in a plain view's handle: the pointer's role split in three, bits not being addressable.
+template<class Bits, bool HasStaticWindow>
+struct window_ptr
+{
+        storage_ref_t<Bits> ptr;
+        std::size_t offset;
+        [[XSTD_NO_UNIQUE_ADDRESS]] conditional_data_member_t<not HasStaticWindow, std::size_t, struct window_size_tag> size;
+};
+
 } // namespace sequence
 
 template<bit_container_type Bits, storage Store = storage::owned, window W = window::all, class Derived = void, std::size_t E = std::dynamic_extent>
@@ -152,8 +162,19 @@ inline constexpr bool blit_source = false;
 template<class Bits, storage Store, window W, class Derived, std::size_t E, class Block>
 inline constexpr bool blit_source<sequence_adaptor<Bits, Store, W, Derived, E>, Block> = std::same_as<sequence::block_type_of<Bits>, Block>;
 
+namespace sequence {
+
+// The storage an owner has or a view's handle into another's, in a base public exactly where the owner is structural.
+template<class Bits, storage Store, window W, class Derived, std::size_t E>
+using members_t = adapted_bits<
+        std::conditional_t<owns(Store), Bits, std::conditional_t<W == window::sub, window_ptr<Bits, E != std::dynamic_extent>, storage_ref_t<Bits>>>,
+        std::conditional_t<owns(Store), allocator_base_type<std::remove_const_t<Bits>, sequence_adaptor<Bits, Store, W, Derived, E>>, xstd::empty_base_type<>>,
+        owns(Store) and std::remove_const_t<Bits>::is_structural>;
+
+} // namespace sequence
+
 template<bit_container_type Bits, storage Store, window W, class Derived, std::size_t E>
-class sequence_adaptor : public std::conditional_t<owns(Store), allocator_base_type<std::remove_const_t<Bits>, sequence_adaptor<Bits, Store, W, Derived, E>>, xstd::empty_base_type<>>
+class sequence_adaptor : public sequence::members_t<Bits, Store, W, Derived, E>
 {
         static constexpr bool is_owner = owns(Store);
         static constexpr bool is_window = (W == window::sub);
@@ -174,17 +195,10 @@ class sequence_adaptor : public std::conditional_t<owns(Store), allocator_base_t
         // The middle column: growth inside a capacity the type carries, whose counterparts disagree on name shape.
         static constexpr bool has_static_capacity = can_grow and bits_type::has_static_capacity;
 
-        // What a window stores in a plain view's handle: the pointer's role split in three, bits not being addressable.
-        struct window_ptr
-        {
-                storage_ref_t<Bits> ptr;
-                std::size_t offset;
-                [[XSTD_NO_UNIQUE_ADDRESS]] conditional_data_member_t<not has_static_window, std::size_t, struct window_size_tag> size;
-        };
+        using window_ptr = sequence::window_ptr<Bits, has_static_window>;
 
-        // Overlappable, so that an owner of a capacity of nought, whose storage is empty, is an empty type.
-        [[XSTD_NO_UNIQUE_ADDRESS]]
-        std::conditional_t<is_owner, Bits, std::conditional_t<is_window, window_ptr, storage_ref_t<Bits>>> m_bits;
+        using members_type = sequence::members_t<Bits, Store, W, Derived, E>;
+        using members_type::m_bits;
 
         // One accessor: self.m_bits propagates the owner's const, *self.m_bits keeps the view shallow.
         [[nodiscard]] constexpr auto bits(this auto&& self) noexcept
@@ -213,7 +227,7 @@ class sequence_adaptor : public std::conditional_t<owns(Store), allocator_base_t
         // The window's constructor, which first, last and subspan call and nothing else does.
         [[nodiscard]] constexpr sequence_adaptor(Bits* ptr, std::size_t offset, std::size_t size) noexcept
                 requires is_window
-                : m_bits(make_window(ptr, offset, size))
+                : members_type(std::in_place, make_window(ptr, offset, size))
         {}
 
         // A static window is handed the count it already has, and asserts that the two agree.
@@ -297,12 +311,12 @@ public:
 
         [[nodiscard]] constexpr explicit sequence_adaptor(size_type n)
                 requires can_grow
-                : m_bits(bits_type::check_addressable_width(n))
+                : members_type(std::in_place, bits_type::check_addressable_width(n))
         {}
 
         [[nodiscard]] constexpr sequence_adaptor(size_type n, value_type const& value)
                 requires can_grow
-                : m_bits(bits_type::check_addressable_width(n))
+                : members_type(std::in_place, bits_type::check_addressable_width(n))
         {
                 if (value) {
                         m_bits.fill(true);
@@ -337,7 +351,7 @@ public:
         // std::array's aggregate initialization as a constructor: what is listed leads, the rest stays false.
         constexpr sequence_adaptor(std::initializer_list<value_type> il)
                 requires is_owner and (not can_grow)
-                : m_bits()
+                : members_type(std::in_place)
         {
                 assert(il.size() <= size());
                 std::ranges::copy(il, begin());
@@ -346,12 +360,12 @@ public:
         // flat_set's adopting constructor at a run-time width: the blocks move in, every bit of them a position.
         [[nodiscard]] constexpr sequence_adaptor(xstd::from_bit_storage_t, bits_type::block_container_type blocks) noexcept(std::is_nothrow_move_constructible_v<typename bits_type::block_container_type>)
                 requires is_owner and bits_type::has_stored_size
-                : m_bits(xstd::from_bit_storage, std::move(blocks))
+                : members_type(std::in_place, xstd::from_bit_storage, std::move(blocks))
         {}
 
         [[nodiscard]] constexpr sequence_adaptor(xstd::from_bit_storage_t, bits_type::block_container_type blocks, allocator_param const& alloc)
                 requires can_grow and bits_type::has_stored_size and has_allocator
-                : m_bits(xstd::from_bit_storage, std::move(blocks), alloc)
+                : members_type(std::in_place, xstd::from_bit_storage, std::move(blocks), alloc)
         {}
 
         // Blocks that are bit storage, read as this sequence's bools; the tag says they are bits and not elements.
@@ -374,17 +388,17 @@ public:
         // [vector.bool]'s allocator arguments: converting, and offered only where the storage has an allocator.
         [[nodiscard]] constexpr explicit sequence_adaptor(allocator_param const& alloc) noexcept(std::is_nothrow_constructible_v<bits_type, allocator_param const&>)
                 requires can_grow and has_allocator
-                : m_bits(alloc)
+                : members_type(std::in_place, alloc)
         {}
 
         [[nodiscard]] constexpr explicit sequence_adaptor(size_type n, allocator_param const& alloc)
                 requires can_grow and has_allocator
-                : m_bits(bits_type::check_addressable_width(n), alloc)
+                : members_type(std::in_place, bits_type::check_addressable_width(n), alloc)
         {}
 
         [[nodiscard]] constexpr sequence_adaptor(size_type n, value_type const& value, allocator_param const& alloc)
                 requires can_grow and has_allocator
-                : m_bits(bits_type::check_addressable_width(n), alloc)
+                : members_type(std::in_place, bits_type::check_addressable_width(n), alloc)
         {
                 if (value) {
                         m_bits.fill(true);
@@ -394,7 +408,7 @@ public:
         template<std::input_iterator I, std::sentinel_for<I> S>
                 requires can_grow and std::constructible_from<value_type, std::iter_reference_t<I>> and has_allocator
         [[nodiscard]] constexpr sequence_adaptor(I first, S last, allocator_param const& alloc)
-                : m_bits(alloc)
+                : members_type(std::in_place, alloc)
         {
                 for (; first != last; ++first) {
                         m_bits.push_back(static_cast<value_type>(*first));
@@ -409,12 +423,12 @@ public:
 
         [[nodiscard]] constexpr sequence_adaptor(sequence_adaptor const& other, allocator_param const& alloc)
                 requires can_grow and has_allocator
-                : m_bits(other.m_bits, alloc)
+                : members_type(std::in_place, other.m_bits, alloc)
         {}
 
         [[nodiscard]] constexpr sequence_adaptor(sequence_adaptor&& other, allocator_param const& alloc)
                 requires can_grow and has_allocator
-                : m_bits(std::move(other.m_bits), alloc)
+                : members_type(std::in_place, std::move(other.m_bits), alloc)
         {}
 
         [[nodiscard]] constexpr sequence_adaptor(std::initializer_list<value_type> il, allocator_param const& alloc)
@@ -581,21 +595,21 @@ public:
 
         [[nodiscard]] constexpr explicit sequence_adaptor(Bits& c) noexcept
                 requires (not is_owner) and (not is_window)
-                : m_bits(&c)
+                : members_type(std::in_place, &c)
         {}
 
         // Blocks handed straight over, held as the storage that borrows them, as std::views::all holds a view.
         template<class Blocks>
                 requires (not is_owner) and (not is_window) and (borrowable_block<Blocks &&> or borrowable_blocks<Blocks &&>) and std::same_as<borrowed_bits_t<Blocks&&>, Bits>
         [[nodiscard]] constexpr explicit sequence_adaptor(Blocks&& blocks) noexcept
-                : m_bits(borrow_bits(std::forward<Blocks>(blocks)))
+                : members_type(std::in_place, borrow_bits(std::forward<Blocks>(blocks)))
         {}
 
         // A view over an owner is a view over the storage it wraps; implicit, claiming nothing the owner lacks.
         template<owner_of<Bits, sequence_reading_tag> Owner>
         [[nodiscard]] constexpr explicit(false) sequence_adaptor(Owner& c) noexcept // NOLINT(misc-explicit-constructor)
                 requires (not is_owner) and (not is_window)
-                : m_bits(&c.m_bits)
+                : members_type(std::in_place, &c.m_bits)
         {}
 
         // [span.sub]'s three, on a view alone: std::array and std::vector have no subviews.
