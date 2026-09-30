@@ -7,7 +7,6 @@
 #define TEST_SPEC_CONTAINER_HPP
 
 #include <test/flat_set.hpp>                        // IWYU pragma: keep; TEST_HAS_FLAT_SET, flat_set
-#include <test/inplace_vector.hpp>                  // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
 #include <test/minimal_blocks.hpp>                  // minimal_blocks
 #include <test/spec/sequence.hpp>                   // all, pairs, sequences
 #include <test/spec/set.hpp>                        // all, pairs, pairs_with_doubletons, sets
@@ -22,12 +21,6 @@
 #include <set>                                      // set
 #include <tuple>                                    // tuple_cat
 #include <utility>                                  // declval
-
-#ifdef TEST_HAS_INPLACE_VECTOR
-
-#include <inplace_vector> // inplace_vector
-
-#endif
 
 // The candidates for [container.requirements], which both the set and the sequence reading meet.
 namespace test::spec::container {
@@ -68,23 +61,6 @@ inline constexpr auto constant_evaluable_v<xstd::basic_bit_bounded_set<Block, N>
 
 template<class Block, std::size_t N>
 inline constexpr auto constant_evaluable_v<xstd::basic_bit_bounded_vector<Block, N>> = false;
-
-#endif
-
-// The columns [inplace.vector] specifies, whose swap it gives an exception specification of its own.
-template<class X>
-inline constexpr auto bounded_v = false;
-
-template<class Block, std::size_t N>
-inline constexpr auto bounded_v<xstd::basic_bit_bounded_set<Block, N>> = true;
-
-template<class Block, std::size_t N>
-inline constexpr auto bounded_v<xstd::basic_bit_bounded_vector<Block, N>> = true;
-
-#ifdef TEST_HAS_INPLACE_VECTOR
-
-template<std::size_t N>
-inline constexpr auto bounded_v<std::inplace_vector<bool, N>> = true;
 
 #endif
 

@@ -10,6 +10,7 @@
 #include <boost/test/unit_test.hpp>  // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <initializer_list>          // initializer_list
 #include <ranges>                    // from_range
+#include <type_traits>               // is_nothrow_constructible_v
 #include <vector>                    // vector
 #include <version>                   // IWYU pragma: keep; __cpp_lib_containers_ranges
 
@@ -27,6 +28,7 @@ namespace inputs = test::spec::sequence::inputs;
 BOOST_AUTO_TEST_CASE(VectorAllocator)
 {
         test::for_each_type<test::spec::sequence::vector_all>([]<class T> -> void {
+                static_assert(std::is_nothrow_constructible_v<T, typename T::allocator_type const&>); // [vector.cons]/1
                 auto const m = typename T::allocator_type();
                 auto const u = T(m);
                 BOOST_CHECK(u.empty() and u.get_allocator() == m); // [vector.cons]/1
