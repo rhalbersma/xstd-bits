@@ -42,13 +42,9 @@
 
 namespace xstd::bits::detail {
 
-// Floored at one so a zero width still names a block.
+// The whole blocks that N bits take, and so none at width zero.
 template<xstd::unsigned_integer Block, std::size_t N>
-inline constexpr std::size_t num_blocks_v = std::ranges::max(
-        align_up(N, static_cast<std::size_t>(xstd::numeric_limits<Block>::digits)) /
-                static_cast<std::size_t>(xstd::numeric_limits<Block>::digits),
-        1UZ
-);
+inline constexpr std::size_t num_blocks_v = align_up(N, static_cast<std::size_t>(xstd::numeric_limits<Block>::digits)) / static_cast<std::size_t>(xstd::numeric_limits<Block>::digits);
 
 // The width a span of blocks implies: all of its bits, for as long as the span is that long. Above every width.
 inline constexpr auto blocks_extent = std::dynamic_extent - 1UZ;
@@ -266,7 +262,7 @@ public:
 
 private:
         static constexpr auto static_num_bits = has_static_size ? align_up(N, bits_per_block) : 0UZ;
-        static constexpr auto static_num_blocks = has_static_size ? std::ranges::max(static_num_bits / bits_per_block, 1UZ) : 0UZ;
+        static constexpr auto static_num_blocks = has_static_size ? static_num_bits / bits_per_block : 0UZ;
         static constexpr auto static_last_block = static_num_blocks - 1UZ;
 
         static constexpr auto left_bit = bits_per_block - 1UZ;
@@ -274,9 +270,8 @@ private:
         static constexpr auto zero = static_cast<block_type>(0);
         static constexpr auto ones = static_cast<block_type>(-1);
 
-        // Width zero named, not computed: MSVC folds both ?: arms and answers C4293.
         static constexpr auto static_num_unused_bits = has_static_size ? static_num_bits - N : 0UZ;
-        static constexpr auto static_used_bits = has_static_size and N == 0 ? zero : shr(ones, static_num_unused_bits);
+        static constexpr auto static_used_bits = shr(ones, static_num_unused_bits);
         static constexpr auto static_unused_bits = static_cast<block_type>(~static_used_bits);
         static constexpr auto static_has_unused_bits = has_static_size and static_used_bits != ones;
 
@@ -853,7 +848,7 @@ public:
         constexpr auto operator&=(bit_container const& other [[maybe_unused]]) noexcept
                 -> bit_container&
         {
-                if constexpr (has_static_size and N > 0 and static_num_blocks == 1) {
+                if constexpr (has_static_size and static_num_blocks == 1) {
                         this->m_blocks[0] &= other.m_blocks[0];
                 } else if constexpr (has_static_size and static_num_blocks == 2) {
                         this->m_blocks[0] &= other.m_blocks[0];
@@ -878,7 +873,7 @@ public:
         constexpr auto operator|=(bit_container const& other [[maybe_unused]]) noexcept
                 -> bit_container&
         {
-                if constexpr (has_static_size and N > 0 and static_num_blocks == 1) {
+                if constexpr (has_static_size and static_num_blocks == 1) {
                         this->m_blocks[0] |= other.m_blocks[0];
                 } else if constexpr (has_static_size and static_num_blocks == 2) {
                         this->m_blocks[0] |= other.m_blocks[0];
@@ -903,7 +898,7 @@ public:
         constexpr auto operator^=(bit_container const& other [[maybe_unused]]) noexcept
                 -> bit_container&
         {
-                if constexpr (has_static_size and N > 0 and static_num_blocks == 1) {
+                if constexpr (has_static_size and static_num_blocks == 1) {
                         this->m_blocks[0] ^= other.m_blocks[0];
                 } else if constexpr (has_static_size and static_num_blocks == 2) {
                         this->m_blocks[0] ^= other.m_blocks[0];
@@ -928,7 +923,7 @@ public:
         constexpr auto operator-=(bit_container const& other [[maybe_unused]]) noexcept
                 -> bit_container&
         {
-                if constexpr (has_static_size and N > 0 and static_num_blocks == 1) {
+                if constexpr (has_static_size and static_num_blocks == 1) {
                         this->m_blocks[0] &= static_cast<block_type>(~other.m_blocks[0]);
                 } else if constexpr (has_static_size and static_num_blocks == 2) {
                         this->m_blocks[0] &= static_cast<block_type>(~other.m_blocks[0]);
@@ -1030,7 +1025,7 @@ public:
         constexpr auto flip() noexcept
                 -> bit_container&
         {
-                if constexpr (has_static_size and N > 0 and static_num_blocks == 1) {
+                if constexpr (has_static_size and static_num_blocks == 1) {
                         m_blocks[0] = static_cast<block_type>(~m_blocks[0]);
                 } else if constexpr (has_static_size and static_num_blocks == 2) {
                         m_blocks[0] = static_cast<block_type>(~m_blocks[0]);

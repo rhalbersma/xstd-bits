@@ -735,6 +735,8 @@ public:
         {
                 if constexpr (has_static_width) {
                         self.bits() <<= n;
+                } else if constexpr (bits_type::has_zero_capacity) {
+                        // A capacity of nought holds no element, so there is nothing to translate.
                 } else if constexpr (bits_type::has_static_capacity) {
                         // Under a capacity it is the highest element that must fit: the width is no part of the value.
                         if (auto const width = self.bits().size(); self.bits().any()) {

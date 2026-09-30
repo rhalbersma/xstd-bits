@@ -33,7 +33,7 @@ template<class T>
 inline constexpr bool fills_its_blocks = true;
 
 template<class Block, std::size_t N>
-inline constexpr bool fills_its_blocks<xstd::basic_bit_array<Block, N>> = N != 0UZ and N % static_cast<std::size_t>(std::numeric_limits<Block>::digits) == 0UZ;
+inline constexpr bool fills_its_blocks<xstd::basic_bit_array<Block, N>> = N % static_cast<std::size_t>(std::numeric_limits<Block>::digits) == 0UZ;
 
 // Only the last element set, the one a packed array keeps in the high bit of its last block.
 template<class T>

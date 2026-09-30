@@ -59,7 +59,7 @@ using unaligned_owners = std::tuple<
         xstd::bitset<3>,
         xstd::bitset<127>>;
 
-// Width zero still holds one block, every bit of it unused, so it is an unaligned width like any other.
+// Width zero holds no block at all, so it is aligned at every block and has no unused bit to keep clear.
 using empty_owners = std::tuple<
         xstd::bit_array<0>,
         xstd::aligned::bit_array<0>,
@@ -176,11 +176,13 @@ BOOST_AUTO_TEST_CASE(AnUnalignedWidthIsNotStructural)
         });
 }
 
-BOOST_AUTO_TEST_CASE(WidthZeroIsNotStructural)
+BOOST_AUTO_TEST_CASE(WidthZeroIsStructural)
 {
         test::for_each_type<empty_owners>([]<class T> -> void {
+                // A constant T{} first: MSVC does not define a defaulted constructor for a requires-expression's sake.
                 static_assert(T{} == T{});
-                static_assert(not test::structural<T>);
+                static_assert(test::structural<T>);
+                static_assert(std::same_as<test::value_parameter<T{}>, test::value_parameter<with_bits<T>({})>>);
         });
 }
 
@@ -196,6 +198,7 @@ BOOST_AUTO_TEST_CASE(TheVehicleIsStructuralExactlyWhereItsBlocksFillTheWidth)
 {
         static_assert(test::structural<xstd::bits::detail::bit_container<std::array<std::uint64_t, 2>, 128>>);
         static_assert(test::structural<xstd::bits::detail::bit_container<std::array<std::uint8_t, 3>, 24>>);
+        static_assert(test::structural<xstd::bits::detail::bit_container<std::array<std::uint64_t, 0>, 0>>);
         static_assert(not test::structural<xstd::bits::detail::bit_container<std::array<std::uint64_t, 2>, 127>>);
         static_assert(not test::structural<xstd::bits::detail::bit_container<std::array<std::uint8_t, 1>, 0>>);
 }
