@@ -948,7 +948,9 @@ public:
                 -> bit_container&
         {
                 assert(is_valid(n));
-                if constexpr (has_static_size and static_num_blocks == 1) {
+                if constexpr (has_static_size and static_num_blocks == 0) {
+                        // No blocks to move, and the general arm would hand a null pointer to fill_n.
+                } else if constexpr (has_static_size and static_num_blocks == 1) {
                         // m_blocks[0] <<= n narrows the promoted int, which -fsanitize=implicit-conversion aborts on.
                         m_blocks[0] = shl(m_blocks[0], n);
                 } else {
@@ -975,7 +977,9 @@ public:
                 -> bit_container&
         {
                 assert(is_valid(n));
-                if constexpr (has_static_size and static_num_blocks == 1) {
+                if constexpr (has_static_size and static_num_blocks == 0) {
+                        // No blocks to move, and the general arm would hand a null pointer to fill_n.
+                } else if constexpr (has_static_size and static_num_blocks == 1) {
                         // m_blocks[0] >>= n narrows the promoted int, which -fsanitize=implicit-conversion sees.
                         m_blocks[0] = shr(m_blocks[0], n);
                 } else {
