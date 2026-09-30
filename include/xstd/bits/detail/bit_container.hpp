@@ -19,6 +19,7 @@
 #include <xstd/ints/limits.hpp>                              // numeric_limits
 #include <xstd/ints/memory.hpp>                              // align_up
 #include <xstd/misc/type_traits/conditional_data_member.hpp> // XSTD_NO_UNIQUE_ADDRESS, conditional_data_member_t
+#include <boost/container/container_fwd.hpp>                 // static_vector
 #include <boost/hash2/hash_append_fwd.hpp>                   // hash_append, hash_append_tag
 #include <algorithm>                                         // all_of, any_of, copy, fill, fill_n, find_if, fold_left, max, min, shift_left, shift_right
 #include <array>                                             // array
@@ -95,6 +96,14 @@ consteval auto admits_owner_extent() noexcept
 // The container's own check, kept off the owners' heads, which constrain the block type alone.
 template<class Blocks, std::size_t N>
 inline constexpr bool owner_extent_v = admits_owner_extent<Blocks, N>();
+
+// Storage whose swap throws nothing without declaring it: its own spec is the answer where it is not listed here.
+template<class Blocks>
+inline constexpr bool swaps_without_throwing_v = false;
+
+// Unsigned blocks inline under one capacity on both sides: static_vector's swap moves them and allocates nothing.
+template<class Block, std::size_t K, class Options>
+inline constexpr bool swaps_without_throwing_v<boost::container::static_vector<Block, K, Options>> = true;
 
 // The vehicle's two members, the width first: initialized where they are declared, as a vector starts empty.
 template<class Width, class Blocks, bool Empty>
@@ -1043,7 +1052,7 @@ public:
                 return *this;
         }
 
-        constexpr auto swap(bit_container& other) noexcept(noexcept(std::ranges::swap(this->m_size, other.m_size)) and noexcept(std::ranges::swap(this->m_blocks, other.m_blocks)))
+        constexpr auto swap(bit_container& other) noexcept(noexcept(std::ranges::swap(this->m_size, other.m_size)) and (swaps_without_throwing_v<Blocks> or noexcept(std::ranges::swap(this->m_blocks, other.m_blocks))))
                 -> void
         {
                 // m_size is empty_type under a static width, and swapping that is a no-op.

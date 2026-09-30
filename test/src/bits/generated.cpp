@@ -189,41 +189,40 @@ BOOST_AUTO_TEST_CASE(SwapExchangesTheValues)
 
 namespace {
 
-// A bounded owner copies and exchanges as its blocks do; its moves empty the source, so it is never trivial.
+// A bounded owner copies as its blocks do and swaps without throwing; a move empties its source, so it is not trivial.
 template<class T>
-constexpr auto copies_and_swaps_as_its_blocks()
+constexpr auto copies_as_its_blocks_and_swaps_without_throwing()
         -> bool
 {
         using blocks_type = T::block_container_type;
         static_assert(not std::is_trivially_copyable_v<T>);
         static_assert(std::is_nothrow_copy_constructible_v<T> == std::is_nothrow_copy_constructible_v<blocks_type>);
         static_assert(std::is_nothrow_copy_assignable_v<T> == std::is_nothrow_copy_assignable_v<blocks_type>);
-        static_assert(member_swap_is_nothrow<T> == std::is_nothrow_swappable_v<blocks_type>);
-        static_assert(free_swap_is_nothrow<T> == std::is_nothrow_swappable_v<blocks_type>);
+        static_assert(member_swap_is_nothrow<T> and free_swap_is_nothrow<T>);
         return true;
 }
 
 } // namespace
 
-// Where the storages' promises part: std::inplace_vector copies and swaps without throwing, static_vector may throw.
-BOOST_AUTO_TEST_CASE(TheBoundedColumnCopiesAndSwapsAsItsBlocksDo)
+// Where the storages' promises part: std::inplace_vector copies without throwing, static_vector may throw.
+BOOST_AUTO_TEST_CASE(TheBoundedColumnCopiesAsItsBlocksDoAndSwapsWithoutThrowing)
 {
-        static_assert(copies_and_swaps_as_its_blocks<xstd::bit_bounded_set<N>>());
-        static_assert(copies_and_swaps_as_its_blocks<xstd::bit_bounded_vector<N>>());
-        static_assert(copies_and_swaps_as_its_blocks<xstd::bounded_bitset<N>>());
+        static_assert(copies_as_its_blocks_and_swaps_without_throwing<xstd::bit_bounded_set<N>>());
+        static_assert(copies_as_its_blocks_and_swaps_without_throwing<xstd::bit_bounded_vector<N>>());
+        static_assert(copies_as_its_blocks_and_swaps_without_throwing<xstd::bounded_bitset<N>>());
 #ifdef XSTD_BITS_HAS_CONSTEXPR_BOUNDED
 
         // Constant-evaluable owners are the ones whose blocks std::inplace_vector holds.
-        static_assert(std::is_nothrow_copy_constructible_v<xstd::bit_bounded_set<N>> and member_swap_is_nothrow<xstd::bit_bounded_set<N>>);
-        static_assert(std::is_nothrow_copy_constructible_v<xstd::bit_bounded_vector<N>> and member_swap_is_nothrow<xstd::bit_bounded_vector<N>>);
-        static_assert(std::is_nothrow_copy_constructible_v<xstd::bounded_bitset<N>> and member_swap_is_nothrow<xstd::bounded_bitset<N>>);
+        static_assert(std::is_nothrow_copy_constructible_v<xstd::bit_bounded_set<N>>);
+        static_assert(std::is_nothrow_copy_constructible_v<xstd::bit_bounded_vector<N>>);
+        static_assert(std::is_nothrow_copy_constructible_v<xstd::bounded_bitset<N>>);
 
 #else
 
-        // boost::container::static_vector declares its copies and its swap potentially throwing.
-        static_assert(not std::is_nothrow_copy_constructible_v<xstd::bit_bounded_set<N>> and not member_swap_is_nothrow<xstd::bit_bounded_set<N>>);
-        static_assert(not std::is_nothrow_copy_constructible_v<xstd::bit_bounded_vector<N>> and not member_swap_is_nothrow<xstd::bit_bounded_vector<N>>);
-        static_assert(not std::is_nothrow_copy_constructible_v<xstd::bounded_bitset<N>> and not member_swap_is_nothrow<xstd::bounded_bitset<N>>);
+        // boost::container::static_vector declares its copies and swap potentially throwing; the swap never throws.
+        static_assert(not std::is_nothrow_copy_constructible_v<xstd::bit_bounded_set<N>> and not std::is_nothrow_swappable_v<xstd::bit_bounded_set<N>::block_container_type>);
+        static_assert(not std::is_nothrow_copy_constructible_v<xstd::bit_bounded_vector<N>> and not std::is_nothrow_swappable_v<xstd::bit_bounded_vector<N>::block_container_type>);
+        static_assert(not std::is_nothrow_copy_constructible_v<xstd::bounded_bitset<N>> and not std::is_nothrow_swappable_v<xstd::bounded_bitset<N>::block_container_type>);
 
 #endif
         BOOST_CHECK(true);

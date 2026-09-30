@@ -57,7 +57,8 @@ public:
                 : base_type(std::from_range, std::forward<R>(rg), a)
         {}
 
-        [[nodiscard]] constexpr explicit basic_bit_small_set(allocator_type const& a)
+        // [allocator.requirements.general] forbids an allocator copy to throw, and inline blocks allocate nothing.
+        [[nodiscard]] constexpr explicit basic_bit_small_set(allocator_type const& a) noexcept
                 : base_type(a)
         {}
 

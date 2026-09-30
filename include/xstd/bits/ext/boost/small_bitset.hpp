@@ -39,7 +39,8 @@ public:
                 : basic_small_bitset(allocator_type())
         {}
 
-        [[nodiscard]] constexpr explicit basic_small_bitset(allocator_type const& alloc)
+        // [allocator.requirements.general] forbids an allocator copy to throw, and inline blocks allocate nothing.
+        [[nodiscard]] constexpr explicit basic_small_bitset(allocator_type const& alloc) noexcept
                 : base_type(alloc)
         {}
 

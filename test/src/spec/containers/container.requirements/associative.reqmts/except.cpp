@@ -8,6 +8,7 @@
 #include <test/spec/input.hpp>      // context
 #include <test/spec/set.hpp>        // all, keyed_sets, pairs, sets
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <concepts>                 // swap
 
 BOOST_AUTO_TEST_SUITE(Spec)
 BOOST_AUTO_TEST_SUITE(Containers)
@@ -50,6 +51,11 @@ BOOST_AUTO_TEST_CASE(InsertEmplace)
 BOOST_AUTO_TEST_CASE(Swap)
 {
         test::for_each_type<test::spec::set::all>([]<class T> -> void {
+                static_assert(requires (T x, T y) {
+                        { x.swap(y) } noexcept;
+                        { swap(x, y) } noexcept;
+                        { std::ranges::swap(x, y) } noexcept;
+                }); // [associative.reqmts.except]/3
                 for (auto const [from, a, b] : inputs::pairs<T>()) {
                         auto const on_failure = context(from, a, b);
                         mem_swap_nothrow()(a, b);

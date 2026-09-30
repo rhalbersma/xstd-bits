@@ -8,7 +8,7 @@
 #include <test/spec/input.hpp>          // context
 #include <test/spec/sequence.hpp>       // fixed_prefixes, inplace_vector_all, pairs, positions, prefixes
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
-#include <concepts>                     // same_as
+#include <concepts>                     // same_as, swap
 #include <optional>                     // optional
 
 BOOST_AUTO_TEST_SUITE(Spec)
@@ -115,6 +115,11 @@ BOOST_AUTO_TEST_CASE(Erase)
 BOOST_AUTO_TEST_CASE(Swap)
 {
         test::for_each_type<test::spec::sequence::inplace_vector_all>([]<class T> -> void {
+                static_assert(requires (T x, T y) {
+                        { x.swap(y) } noexcept;
+                        { swap(x, y) } noexcept;
+                        { std::ranges::swap(x, y) } noexcept;
+                }); // [inplace.vector.modifiers]/23
                 for (auto const [from, a, b] : inputs::pairs<T>()) {
                         auto const on_failure = context(from, a, b);
                         auto x = a;

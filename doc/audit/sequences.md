@@ -179,7 +179,7 @@ A row's `outcome` is one of:
 | `[vector.overview]` | 2 | — | — | answered | Checked as a random access range with an allocator: `vector<bool>` is exempt from contiguity. |
 | `[vector.overview]` | 3 | — | — | answered | Asked of the columns whose storage is constant-evaluable. Boost's `small_vector`, under the small columns, is not. |
 | `[vector.overview]` | 4 | — | — | no-requirement | Admits an incomplete element type; `bool` is complete. |
-| `[vector.cons]` | 1 | `vector(const Allocator&)` | Effects | answered |  |
+| `[vector.cons]` | 1 | `vector(const Allocator&)` | Effects | answered | `noexcept` is asserted of every column, the small ones included. |
 | `[vector.cons]` | 2 | `vector(const Allocator&)` | Complexity | declined | A complexity bound, which no functional check can observe. |
 | `[vector.cons]` | 3 | `vector(size_type n, const Allocator& = Allocator())` | Preconditions | no-requirement | A precondition on the element type, which `bool` meets; it asks nothing of the container. |
 | `[vector.cons]` | 4 | `vector(size_type n, const Allocator& = Allocator())` | Effects | answered |  |
@@ -203,7 +203,7 @@ A row's `outcome` is one of:
 | `[vector.capacity]` | 9 | `shrink_to_fit()` | Effects | answered |  |
 | `[vector.capacity]` | 10 | `shrink_to_fit()` | Complexity | declined | A complexity bound, which no functional check can observe. |
 | `[vector.capacity]` | 11 | `shrink_to_fit()` | Remarks | answered | Checked for the half a valid program can see: without a reallocation an iterator taken before still stands at `begin()`. |
-| `[vector.capacity]` | 12 | `swap(vector& x)` | Effects | answered | The capacities are asked to change places where the blocks are on the heap. The small columns keep their inline blocks, so there only the contents do: a departure the repo owner should confirm. |
+| `[vector.capacity]` | 12 | `swap(vector& x)` | Effects | answered | The capacities are asked to change places where the blocks are on the heap. The small columns keep their inline blocks, so there only the contents do: a departure the repo owner should confirm. `noexcept` is asserted of every column under its default allocator, for the member, the free function and `std::ranges::swap`. |
 | `[vector.capacity]` | 13 | `swap(vector& x)` | Complexity | declined | A complexity bound, which no functional check can observe. |
 | `[vector.capacity]` | 14 | `resize(size_type sz)` | Preconditions | no-requirement | A precondition on the element type, which `bool` meets; it asks nothing of the container. |
 | `[vector.capacity]` | 15 | `resize(size_type sz)` | Effects | answered |  |
@@ -289,6 +289,6 @@ A row's `outcome` is one of:
 | `[inplace.vector.modifiers]` | 20 | `erase`, two overloads, and `pop_back()` | Throws | answered |  |
 | `[inplace.vector.modifiers]` | 21 | `erase`, two overloads, and `pop_back()` | Complexity | declined | A complexity bound, which no functional check can observe. |
 | `[inplace.vector.modifiers]` | 22 | `swap(inplace_vector& x)` | Preconditions | no-requirement | A precondition on the element type, which `bool` meets; it asks nothing of the container. |
-| `[inplace.vector.modifiers]` | 23 | `swap(inplace_vector& x)` | Effects | answered |  |
+| `[inplace.vector.modifiers]` | 23 | `swap(inplace_vector& x)` | Effects | answered | `noexcept` is asserted of every column, over `std::inplace_vector` and Boost's `static_vector` alike, for the member, the free function and `std::ranges::swap`. |
 | `[inplace.vector.erasure]` | 1 | `erase(inplace_vector<T, N>& c, const U& value)` | Effects | answered |  |
 | `[inplace.vector.erasure]` | 2 | `erase_if(inplace_vector<T, N>& c, Predicate pred)` | Effects | answered |  |

@@ -84,7 +84,7 @@ A row's `outcome` is one of:
 | `[container.reqmts]` | 63 | `c.empty()` | — | answered |  |
 | `[container.reqmts]` | 64 | `c.empty()` | — | answered | Checked on the allocator-aware columns: the copy takes `select_on_container_copy_construction`, assignment replaces the allocator only as the propagation traits say, and every other constructor takes an allocator argument. |
 | `[container.reqmts]` | 65 | `c.empty()` | — | answered | Checked as the allocators exchanged where `propagate_on_container_swap` says so. That an iterator follows its element is not asked: the small columns swap inline storage, the recorded invalidation departure. |
-| `[container.reqmts]` | 66 | `c.empty()` | — | answered | Checked as `swap`, `clear`, `erase` and `pop_back` not throwing, and a single-element insertion that cannot allocate having no effects. The bounded columns' `swap` is `[inplace.vector.modifiers]`'s to specify. |
+| `[container.reqmts]` | 66 | `c.empty()` | — | answered | Checked as `swap`, `clear`, `erase` and `pop_back` not throwing, and a single-element insertion that cannot allocate having no effects. `swap` is asserted `noexcept` of every column. |
 | `[container.reqmts]` | 67 | `c.empty()` | — | answered | Checked for the observers: `size`, `max_size`, `empty` and `==` move no iterator and change no value. |
 | `[container.reqmts]` | 68 | `c.empty()` | — | no-requirement | Defines a contiguous container; `[array.overview]/1` and `[inplace.vector.overview]/1` are where it is asked. |
 | `[container.reqmts]` | 69 | `c.empty()` | — | answered | Checked for the iterator half: two integers construct by count. Which types qualify as allocators is unspecified beyond a minimum no constructor call can tell apart. |

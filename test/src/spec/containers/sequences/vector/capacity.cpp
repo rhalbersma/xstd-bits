@@ -8,7 +8,7 @@
 #include <test/spec/input.hpp>          // context
 #include <test/spec/sequence.hpp>       // held_width_v, pairs, sequences, vector_all
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_THROW
-#include <concepts>                     // same_as
+#include <concepts>                     // same_as, swap
 #include <stdexcept>                    // length_error
 #include <utility>                      // cmp_not_equal
 
@@ -98,6 +98,11 @@ BOOST_AUTO_TEST_CASE(ShrinkToFit)
 BOOST_AUTO_TEST_CASE(Swap)
 {
         test::for_each_type<test::spec::sequence::vector_all>([]<class T> -> void {
+                static_assert(requires (T x, T y) {
+                        { x.swap(y) } noexcept;
+                        { swap(x, y) } noexcept;
+                        { std::ranges::swap(x, y) } noexcept;
+                }); // [vector.capacity]/12
                 for (auto const [from, a, b] : inputs::pairs<T>()) {
                         auto const on_failure = context(from, a, b);
                         mem_swap_capacity()(a, b, std::cmp_not_equal(test::spec::sequence::held_width_v<T>, 0UZ));

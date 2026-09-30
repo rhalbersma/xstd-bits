@@ -42,7 +42,8 @@ public:
                 : basic_bit_small_vector(allocator_type())
         {}
 
-        [[nodiscard]] constexpr explicit basic_bit_small_vector(allocator_type const& a)
+        // [allocator.requirements.general] forbids an allocator copy to throw, and inline blocks allocate nothing.
+        [[nodiscard]] constexpr explicit basic_bit_small_vector(allocator_type const& a) noexcept
                 : base_type(a)
         {}
 
