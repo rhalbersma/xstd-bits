@@ -6,7 +6,7 @@
 #include <test/container/primitives.hpp> // mem_erasers, mem_observers
 #include <test/for_each_type.hpp>        // for_each_type
 #include <test/sequence/factory.hpp>     // model_of
-#include <test/spec/container.hpp>       // all, bounded_v, objects
+#include <test/spec/container.hpp>       // all, objects
 #include <test/spec/input.hpp>           // context
 #include <test/spec/sequence.hpp>        // growable_all
 #include <boost/test/unit_test.hpp>      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
@@ -24,11 +24,11 @@ using test::sequence::model_of;
 using test::spec::context;
 namespace inputs = test::spec::container::inputs;
 
-// [container.reqmts]/66: no swap(), clear(), erase() or pop_back() throws, where [inplace.vector] says nothing else
+// [container.reqmts]/66: no swap(), clear(), erase() or pop_back() throws
 BOOST_AUTO_TEST_CASE(NoThrow)
 {
         test::for_each_type<test::spec::container::all>([]<class T> -> void {
-                static_assert(test::spec::container::bounded_v<T> or requires (T c) { { c.swap(c) } noexcept; }); // [container.reqmts]/66
+                static_assert(requires (T c) { { c.swap(c) } noexcept; }); // [container.reqmts]/66
                 if constexpr (requires (T c) { c.clear(); }) {
                         for (auto const [from, a] : inputs::objects<T>()) {
                                 auto const on_failure = context(from, a);

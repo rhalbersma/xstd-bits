@@ -2564,13 +2564,17 @@ and stays empty, and a set whose width outran its keys -- an `insert(20)` undone
 as its highest remaining key allows, the width growing to `min(width + n, N)`. The unbounded column keeps
 `width + n` against its `length_error` ceiling.
 
-**The two storages promise different things**, and the owners pass each promise on rather than paper over it.
+**The two storages promise different things**, and the owners pass the copies' promise on rather than paper over it.
 `std::inplace_vector` of trivially copyable blocks copies and swaps without throwing; `boost::container::static_vector`
 declares its copy constructor, its copy assignment and its `swap` potentially throwing, so over it the bounded
-owners' copies and `swap`, member and free, are not `noexcept` either. The moves are `noexcept` over both. Neither
-makes an owner trivially copyable, `std::inplace_vector` included: a run-time width's move leaves its source at width
-zero, which a trivial move could not. `generated.cpp` asserts each storage's answer, and asserts for both that the
-owner answers as its blocks do.
+owners' copies are not `noexcept` either. Their `swap`, member and free, is `noexcept` over both, as
+`[inplace.vector.modifiers]` declares it for `bool`. `bit_container` still calls the storage's own `swap` through
+`std::ranges::swap`, and `swaps_without_throwing_v` names the one storage whose `swap` cannot throw without saying so:
+`static_vector`, which moves unsigned blocks between two inline buffers of one capacity and never allocates. Every
+other storage answers with its own specification. The moves are `noexcept` over both. Neither makes an owner
+trivially copyable, `std::inplace_vector` included: a run-time width's move leaves its source at width zero, which a
+trivial move could not. `generated.cpp` asserts each storage's answer, that the owner copies as its blocks do, and
+that it swaps without throwing over either.
 
 **A capacity of nought holds nothing.** `[inplace.vector.overview]/5` makes `inplace_vector<T, 0>` empty, trivially
 copyable and trivially default constructible, and `static_vector<Block, 0>` is none of these: it keeps a size.

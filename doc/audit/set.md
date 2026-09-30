@@ -202,7 +202,7 @@ A row's `outcome` is one of:
 | `[associative.reqmts.general]` | 181 | — | — | answered | Asked of the two class templates with guides: `std::set` and `xstd::basic_bit_set`. The others fix a width or a capacity in the type, which no argument deduces. |
 | `[associative.reqmts.except]` | 1 | `clear()`, `erase(k)` | — | answered | |
 | `[associative.reqmts.except]` | 2 | `insert`, `emplace` | — | answered | Checked on a key past what the set can hold, which a static width refuses with `out_of_range` and a run-time one with `length_error`; the standard library's sets hold it. |
-| `[associative.reqmts.except]` | 3 | `swap` | — | answered | |
+| `[associative.reqmts.except]` | 3 | `swap` | — | answered | Checked as no swap throwing, and as `noexcept` on every column for the member, the free function and `std::ranges::swap`. |
 | `[set.overview]` | 1 | `class set` | — | answered | |
 | `[set.overview]` | 2 | `class set` | — | answered | Each requirements clause it names is audited on its own; checked here are `key_type` and `value_type` both being the key, and `insert` answering as `a_uniq` does. |
 | `[set.overview]` | 3 | `iterator`, `const_iterator` | — | answered | Walked in a constant expression where one can hold the set: at a static width, at a static capacity where `std::inplace_vector` holds the blocks, at a run-time width, and `std::set` from `__cpp_lib_constexpr_set`. Elsewhere walked at run time. |
