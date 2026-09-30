@@ -25,6 +25,33 @@
 [![CodeQL](https://github.com/rhalbersma/xstd-bits/actions/workflows/codeql.yml/badge.svg)](https://github.com/rhalbersma/xstd-bits/actions/workflows/codeql.yml)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/rhalbersma/xstd-bits/badge)](https://scorecard.dev/viewer/?uri=github.com/rhalbersma/xstd-bits)
 
+## From flag words to containers
+
+An unsigned integer is raw bit storage. Used directly, it is a *flag word*: a row of flags set,
+cleared and tested with `&`, `|`, `^`, `~` and shifts, where the number it spells is beside the point.
+
+`std::bitset` generalized the flag word to any width, and in doing so mixed three vocabularies:
+that of a **sequence** of `bool` (`operator[]` returning a proxy `reference`, `test`/`set`/`reset`/`flip`
+by position), that of a **set** of positions (`&`, `|`, `^`, `count`, `any`/`none`/`all`, and Boost's
+`is_subset_of`/`intersects`), and that of a **string** of `'0'`s and `'1'`s. Its `to_ulong`/`to_ullong` and
+its `unsigned long long` constructor are not arithmetic — it has no `+`, `-`, `*` or `/` — but access to
+the storage when it fits one word. Being all of these, it is none of them cleanly: it has no iterators,
+compares only at one width, and prints its bits in the opposite order from how it indexes them.
+
+xstd-bits separates the three. Each becomes the bit-packed counterpart of the standard container it
+already resembled, speaking that container's vocabulary; the `bitset` stays as the hybrid itself, for
+code that wants `std::bitset` or `boost::dynamic_bitset`:
+
+| reading  | standard counterpart                                                       | packed here as                                  |
+| :------- | :------------------------------------------------------------------------- | :---------------------------------------------- |
+| sequence | `std::array<bool, N>`, `std::inplace_vector<bool, N>`, `std::vector<bool>` | `bit_array`, `bit_bounded_vector`, `bit_vector` |
+| set      | `std::set<std::size_t>`                                                    | `bit_fixed_set`, `bit_bounded_set`, `bit_set`   |
+| string   | `std::string`                                                              | `bit_string` (planned)                          |
+| bitset   | `std::bitset<N>`, `boost::dynamic_bitset<>`                                | `bitset`, `bounded_bitset`, `dynamic_bitset`    |
+
+Every one of them reads and writes its raw blocks the same way, through `from_bit_storage` and
+`xstd::bit_cast` — the general form of what `to_ullong` does for one word.
+
 xstd-bits is **nine containers**: three readings of a block of bits — an ordered set of `std::size_t`, a sequence of `bool`, and the `bitset` that deliberately offers both — over three storages, which differ in whether size and capacity are static or dynamic: both static, a dynamic size within a static capacity, and both dynamic.
 
 ### Each one is the packing of a standard container, and speaks that container's vocabulary

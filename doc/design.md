@@ -7,6 +7,28 @@ Decisions still in flight live on the [open issues](https://github.com/rhalbersm
 [#80](https://github.com/rhalbersma/xstd-bits/issues/80) is the closed design plan the current shape came
 out of. This file holds what has landed.
 
+## Storage, readings, refinements
+
+The library has two layers and one extension point.
+
+**Storage** is blocks of unsigned integers, owned by `bit_container`. It knows widths, blocks and the
+primitives every reading is built from — `first_difference`, `any_above`, `is_subset_of` and the like —
+and it compares only memberwise: it names no ordering, because the readings order the same bits
+differently.
+
+**A reading** is what the bits mean: a set of positions, a sequence of `bool`, or the bitset hybrid. Each
+is a tag type (`set_reading_tag`, `sequence_reading_tag`, `bitset_reading_tag`) and an adaptor over the
+storage that decides what `==`, `<=>`, iterators and `operator[]` mean, with the orderings themselves in
+`detail/comparisons.hpp` as free functions over the storage's primitives.
+
+**A refinement** extends a reading without touching it: a future `string_reading_tag` derives from
+`sequence_reading_tag`, so every view and algorithm that accepts a sequence accepts a string, and
+`sequence_three_way` serves both. The views check a reading with `std::derived_from`, which is what keeps
+the set of readings open.
+
+Each reading is held to the specification of the container it imitates, paragraph by paragraph: the
+inventories in `doc/audit/` and the check that runs them are that denominator.
+
 ## Storage and containers
 
 ### owned-bit-storage
