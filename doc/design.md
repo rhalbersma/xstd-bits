@@ -677,12 +677,9 @@ owner's alone, since writing through a view would write bits it does not own.
 `static_used_bits` is the mask of the last block that is not padding. `num_bits` is `align_up(N)`, so
 `num_bits - N` lies in `[0, bits_per_block)` and the shift is always in range.
 
-Width zero is the one case that form cannot express — there is nothing to align up, so it reports no
-padding where in truth the sole block is all of it — and it gets a selection instead.
-
-**Naming zero rather than computing it matters on MSVC**, which constant-folds both arms of a `?:` and
-answers C4293, *shift count too big*, on the arm it discards. `used_bits()` is the same two cases at a
-run-time width.
+Width zero needs no case of its own: it holds no block, so it has no padding, and the mask of all ones that
+`num_bits - N == 0` gives it names nothing, since every arm that applies the mask asks first whether there is
+padding to clear. `used_bits()` is the same mask at a run-time width, asked only where a block exists.
 
 The width member takes the blocks' alignment where they out-align a `std::size_t`:
 
@@ -707,8 +704,8 @@ allocation, as `std::vector<bool>` has it. The two members live in a base, `bit_
 capacity of nought declares them with no initializer and `[[no_unique_address]]`, since a default member initializer
 makes a defaulted default constructor nontrivial ([the-bounded-column](#the-bounded-column)); everywhere else the
 blocks stay a plain member, whose tail padding an overlappable one would expose to `-Wpadded`.
-A static width keeps at least one block, because the `std::array` under it has a fixed extent that the static arms
-index directly; `num_blocks_v` floors there, `blocks_for` does not.
+A static width holds exactly the blocks its width fills, which is none at width zero: `num_blocks_v` and `blocks_for`
+give the same count, and the static arms that index a block directly are the ones selected at one block or two.
 
 ### structural-at-aligned-widths
 
@@ -729,9 +726,9 @@ names are the same in either base and the adaptors reach them through the same `
 in the library notices which one it got; the public members are not an interface, only what makes the owner
 structural.
 
-That gives `aligned::bit_array`, `aligned::bit_fixed_set` and `aligned::bitset` at any nonzero width, and the plain
-owners at a multiple of the block's digits. Width zero is not among them: it still holds the one block `num_blocks_v`
-floors at, every bit of which is unused, so its storage stays protected. The bounded owners cannot follow at any width,
+That gives `aligned::bit_array`, `aligned::bit_fixed_set` and `aligned::bitset` at any width, and the plain owners
+at a multiple of the block's digits. Width zero is among them: its blocks are a `std::array<Block, 0>`, structural by
+`[array.overview]/4` like any other extent, with no bit in it to keep clear. The bounded owners cannot follow at any width,
 since neither `std::inplace_vector` nor `boost::container::static_vector` is structural, and the views hold pointers
 kept non-public as before.
 
@@ -2586,8 +2583,11 @@ have no initializer; every adaptor holds the container `[[no_unique_address]]` i
 `basic_bit_bounded_vector<Block, 0>` is an empty type. There the range constructor and both append tiers refuse
 any element up front through one `refuse_any`, and the ordering never compares unequal widths. A loop that cannot go
 round a second time is a branch no test can take, and being trivially destructible the owner compiles to control flow
-no other capacity shares, so gcov counts that branch on its own; it is also code MSVC's C4702 calls unreachable. Only
-the vector takes it: the bounded set and bitset keep one block at `N == 0`, being bound by no such paragraph.
+no other capacity shares, so gcov counts that branch on its own; it is also code MSVC's C4702 calls unreachable. The
+bounded set and bitset, bound by no such paragraph, hold `bounded_blocks<Block, 0>` at `N == 0` rather than
+`no_blocks`, and reach the same capacity of nought: no width is stored, and every growth past nought throws
+`std::bad_alloc`. The set's left shift and the bitset's ordering across two widths each take an arm there, for the
+same reason the vector's ordering does: with no element to hold, the rest of the body is a branch no test can take.
 
 P0843 declined to repeat `vector<bool>`, so `std::inplace_vector<bool, N>` holds real `bool`s and is a model
 only up to its reference. The `[inplace.vector]` clauses assert each declaration on it first where the standard

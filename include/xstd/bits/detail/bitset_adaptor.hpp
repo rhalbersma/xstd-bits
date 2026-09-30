@@ -608,7 +608,8 @@ public:
         [[nodiscard]] friend constexpr auto operator<=>(bitset_adaptor const& lhs, bitset_adaptor const& rhs) noexcept
                 -> std::strong_ordering
         {
-                if constexpr (not has_static_width) {
+                // A capacity of nought holds only width zero, so there both widths are that.
+                if constexpr (not has_static_width and not bits_type::has_zero_capacity) {
                         if (lhs.size() != rhs.size()) {
                                 return lhs.top_aligned_three_way(rhs);
                         }
