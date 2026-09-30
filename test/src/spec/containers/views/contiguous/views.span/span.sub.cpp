@@ -79,6 +79,16 @@ auto check_static_subspan(S const& s)
         }
 }
 
+// Every count at one offset, spelled out rather than nested in a second generic lambda, on which MSVC 2022 fails.
+template<std::size_t Offset, class S>
+auto check_static_subspans(S const& s)
+        -> void
+{
+        check_static_subspan<Offset, dyn>(s);
+        check_static_subspan<Offset, 0UZ>(s);
+        check_static_subspan<Offset, 2UZ>(s);
+}
+
 } // namespace
 
 // [span.sub]/3: template<size_t Count> constexpr span<element_type, Count> first() const;
@@ -128,9 +138,9 @@ BOOST_AUTO_TEST_CASE(StaticSubspan)
                 for (auto const [from, a] : inputs::views<T>()) {
                         auto const on_failure = context(from, a);
                         auto const s = a.view();
-                        for_each_value<0UZ, 1UZ, 3UZ>([&]<std::size_t Offset> -> void {
-                                for_each_value<dyn, 0UZ, 2UZ>([&]<std::size_t Count> -> void { check_static_subspan<Offset, Count>(s); });
-                        });
+                        check_static_subspans<0UZ>(s);
+                        check_static_subspans<1UZ>(s);
+                        check_static_subspans<3UZ>(s);
                 }
         });
 }
