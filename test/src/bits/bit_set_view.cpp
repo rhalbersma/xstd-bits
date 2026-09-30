@@ -20,7 +20,7 @@
 #include <cstdint>                            // uint8_t
 #include <functional>                         // hash
 #include <range/v3/view/set_algorithm.hpp>    // set_union
-#include <ranges>                             // bidirectional_range, borrowed_range, range, view
+#include <ranges>                             // borrowed_range, range, view
 #include <set>                                // set
 #include <tuple>                              // tuple
 #include <utility>                            // declval
@@ -105,10 +105,6 @@ BOOST_AUTO_TEST_CASE(TheViewedTypesAreTheOnesHoldingASetWithoutOfferingIt)
         // None of them is a range on its own; the view supplies that, borrowed like span.
         static_assert(not std::ranges::range<xstd::dynamic_bitset>);
         static_assert(not std::ranges::range<xstd::bitset<8>>);
-
-        static_assert(std::ranges::bidirectional_range<view_of<Storage>>);
-        static_assert(std::ranges::bidirectional_range<view_of<xstd::bitset<8>>>);
-        static_assert(std::ranges::bidirectional_range<view_of<xstd::dynamic_bitset>>);
 
         static_assert(std::ranges::view<view_of<Storage>>);
         static_assert(std::ranges::borrowed_range<view_of<Storage>>);

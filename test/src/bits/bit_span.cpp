@@ -14,12 +14,11 @@
 #include <xstd/bits/detail/sequence_adaptor.hpp> // sequence_adaptor
 #include <xstd/bits/dynamic_bitset.hpp>          // dynamic_bitset
 #include <boost/test/unit_test.hpp>              // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
-#include <algorithm>                             // equal
 #include <array>                                 // array
-#include <concepts>                              // constructible_from, derived_from, equality_comparable, same_as, totally_ordered
+#include <concepts>                              // constructible_from, convertible_to, derived_from, equality_comparable, same_as, totally_ordered
 #include <cstddef>                               // size_t
 #include <cstdint>                               // uint8_t
-#include <ranges>                                // borrowed_range, iota, random_access_range, view
+#include <ranges>                                // iota
 #include <utility>                               // declval
 
 BOOST_AUTO_TEST_SUITE(BitSpan)
@@ -78,37 +77,11 @@ BOOST_AUTO_TEST_CASE(ViewingAnOwnerIsImplicit)
         BOOST_CHECK(takes_a_span(a));
 }
 
-BOOST_AUTO_TEST_CASE(TheViewedTypesAreTheOnesHoldingBoolsWithoutOfferingThem)
+// Like span it neither compares nor orders, where the owner it views does both.
+BOOST_AUTO_TEST_CASE(TheViewNeitherComparesNorOrders)
 {
-        static_assert(std::ranges::random_access_range<view_of<Storage>>);
-        static_assert(std::ranges::random_access_range<view_of<xstd::bitset<8>>>);
-        static_assert(std::ranges::random_access_range<view_of<xstd::bit_array<8>>>);
-
-        // A view in std::ranges' sense and borrowed, like span; and like span it neither compares nor orders.
-        static_assert(std::ranges::view<view_of<Storage>>);
-        static_assert(std::ranges::borrowed_range<view_of<Storage>>);
         static_assert(not std::equality_comparable<view_of<Storage>>);
         static_assert(not std::totally_ordered<view_of<Storage>>);
-}
-
-// The sequence reading is the bools at every position, checked against the std::array<bool, N> holding the same bits.
-BOOST_AUTO_TEST_CASE(TheSequenceReadingIsTheArrayOfBools)
-{
-        constexpr auto N = 8UZ;
-        for (auto const i : std::views::iota(0UZ, 1UZ << N)) {
-                auto packed = xstd::bitset<N>();
-                auto plain = std::array<bool, N>{};
-                for (auto const k : std::views::iota(0UZ, N)) {
-                        if ((i >> k & 1UZ) != 0UZ) {
-                                packed.set(k);
-                                plain[k] = true;
-                        }
-                }
-
-                auto const view = xstd::bit_span(packed);
-                BOOST_CHECK_EQUAL(view.size(), N);
-                BOOST_CHECK(std::ranges::equal(view, plain));
-        }
 }
 
 // A view is mutable through: writing a position through the view writes the bit.

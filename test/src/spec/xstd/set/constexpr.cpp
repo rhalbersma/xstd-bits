@@ -5,7 +5,7 @@
 
 #include <test/for_each_type.hpp>   // for_each_type
 #include <test/set/exhaustive.hpp>  // static_width
-#include <test/spec/set.hpp>        // all
+#include <test/spec/set.hpp>        // owners
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <compare>                  // strong_ordering
 
@@ -17,7 +17,7 @@ BOOST_AUTO_TEST_SUITE(Constexpr)
 // xstd set: constexpr X();
 BOOST_AUTO_TEST_CASE(DefaultConstructor)
 {
-        test::for_each_type<test::spec::set::all>([]<class T> -> void {
+        test::for_each_type<test::spec::set::owners>([]<class T> -> void {
                 // std::set is not a literal type, so there is no model, and only a width in the type makes a set one.
                 if constexpr (test::set::static_width<T>) {
                         constexpr auto b = T();
@@ -34,7 +34,7 @@ BOOST_AUTO_TEST_CASE(DefaultConstructor)
 // xstd set: constexpr X operator~(const X& lhs);
 BOOST_AUTO_TEST_CASE(Complement)
 {
-        test::for_each_type<test::spec::set::all>([]<class T> -> void {
+        test::for_each_type<test::spec::set::owners>([]<class T> -> void {
                 if constexpr (test::set::static_width<T>) {
                         constexpr auto b = ~T();
                         static_assert(b.full());

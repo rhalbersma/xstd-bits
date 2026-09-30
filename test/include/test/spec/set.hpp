@@ -11,18 +11,22 @@
 #include <test/set/exhaustive.hpp>               // L1, L2, L3, L4, limit_v, on0, on1, on2, on3, on4, static_capacity, static_width
 #include <test/spec/input.hpp>                   // edge, exhaustive, key_list, key_vector, keyed, listed, memo, one, rebuilt, three, two
 #include <test/spec/random.hpp>                  // block_digits_v, key_samples, keyed_samples, pair_samples, triple_samples, width
+#include <test/spec/view.hpp>                    // input_t, owner_t, view_traits, view_type, viewed
 #include <test/uint128.hpp>                      // TEST_HAS_UINT128, uint128
 #include <xstd/bits/bit_bounded_set.hpp>         // basic_bit_bounded_set
 #include <xstd/bits/bit_fixed_set.hpp>           // basic_bit_fixed_set
 #include <xstd/bits/bit_set.hpp>                 // basic_bit_set
+#include <xstd/bits/bit_set_view.hpp>            // bit_set_view
 #include <xstd/bits/detail/bit_container.hpp>    // bit_container
 #include <xstd/bits/detail/ownership.hpp>        // owned_storage
 #include <xstd/bits/detail/set_adaptor.hpp>      // set_adaptor
 #include <xstd/bits/ext/boost/bit_small_set.hpp> // basic_bit_small_set
 #include <algorithm>                             // sort
+#include <array>                                 // array
 #include <cstddef>                               // size_t
 #include <cstdint>                               // uint8_t, uint16_t, uint32_t, uint64_t
 #include <set>                                   // set
+#include <span>                                  // dynamic_extent
 #include <tuple>                                 // tuple, tuple_cat
 #include <utility>                               // declval, move, pair
 #include <vector>                                // vector
@@ -59,7 +63,44 @@ using small = std::tuple<xstd::basic_bit_small_set<std::uint8_t, 9>, xstd::basic
 // Storage written outside the library, adapted by the same set adaptor the owners derive from.
 using user_storage = std::tuple<xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_container<test::minimal_blocks<std::uint8_t>>>>;
 
-using all = decltype(std::tuple_cat(std::declval<models>(), std::declval<fixed>(), std::declval<dynamic>(), std::declval<bounded>(), std::declval<small>(), std::declval<user_storage>()));
+// Everything that owns the keys it holds, which is what [container.requirements] and a constructor ask for.
+using owners = decltype(std::tuple_cat(std::declval<models>(), std::declval<fixed>(), std::declval<dynamic>(), std::declval<bounded>(), std::declval<small>(), std::declval<user_storage>()));
+
+// Keys another object owns, with no std model: [set] less what owning implies; a clause they lack takes owners.
+using views = std::tuple<xstd::bit_set_view<std::array<std::uint8_t, 3>, 17>, xstd::bit_set_view<std::vector<std::uint64_t>>>;
+
+using all = decltype(std::tuple_cat(std::declval<owners>(), std::declval<views>()));
+
+} // namespace test::spec::set
+
+namespace test::spec {
+
+// A set view over the whole of a fixed or a growing set; it has no windows, so the width is the owner's.
+template<class Block, std::size_t K, std::size_t N>
+struct view_traits<xstd::bit_set_view<std::array<Block, K>, N>>
+{
+        using owner_type = xstd::basic_bit_fixed_set<Block, N>;
+
+        [[nodiscard]] static auto view(owner_type& owner, std::size_t)
+        {
+                return xstd::bit_set_view(owner);
+        }
+};
+
+template<class Block, class Allocator>
+struct view_traits<xstd::bit_set_view<std::vector<Block, Allocator>, std::dynamic_extent>>
+{
+        using owner_type = xstd::basic_bit_set<Block, Allocator>;
+
+        [[nodiscard]] static auto view(owner_type& owner, std::size_t)
+        {
+                return xstd::bit_set_view(owner);
+        }
+};
+
+} // namespace test::spec
+
+namespace test::spec::set {
 
 // The keys a set holds without growing: a width or a capacity in its type, a small set's inline blocks, or none at all.
 template<class X>
@@ -88,10 +129,10 @@ namespace inputs {
 
 // A linear or quadratic enumeration runs up to 24 keys, a cubic or quartic one up to 17, an unbounded set's at a limit.
 template<class X>
-inline constexpr auto quadratic = held_width_v<X> <= 24UZ;
+inline constexpr auto quadratic = held_width_v<owner_t<X>> <= 24UZ;
 
 template<class X>
-inline constexpr auto quartic = held_width_v<X> <= 17UZ;
+inline constexpr auto quartic = held_width_v<owner_t<X>> <= 17UZ;
 
 // The keys of each enumeration, at the limits a type's sweep takes, shared by every type with the same limits.
 namespace keys {
@@ -255,16 +296,16 @@ using test::set::on4::all_doubleton_set_pairs;
 } // namespace keys
 
 template<class X>
-inline constexpr auto n1 = test::set::limit_v<X, test::set::L1>;
+inline constexpr auto n1 = test::set::limit_v<owner_t<X>, test::set::L1>;
 
 template<class X>
-inline constexpr auto n2 = test::set::limit_v<X, test::set::L2>;
+inline constexpr auto n2 = test::set::limit_v<owner_t<X>, test::set::L2>;
 
 template<class X>
-inline constexpr auto n3 = test::set::limit_v<X, test::set::L3>;
+inline constexpr auto n3 = test::set::limit_v<owner_t<X>, test::set::L3>;
 
 template<class X>
-inline constexpr auto n4 = test::set::limit_v<X, test::set::L4>;
+inline constexpr auto n4 = test::set::limit_v<owner_t<X>, test::set::L4>;
 
 template<class X>
 struct set_of
@@ -276,8 +317,19 @@ struct set_of
         }
 };
 
+// A view's keys in an owner of its own, which the view is taken over.
+template<view_type X>
+struct set_of<X>
+{
+        [[nodiscard]] auto operator()(key_vector const& keys) const
+                -> viewed<X>
+        {
+                return viewed<X>(set_of<owner_t<X>>()(keys), 0UZ);
+        }
+};
+
 template<class X, class Carrier>
-using over = rebuilt<X, Carrier, set_of<X>>;
+using over = rebuilt<input_t<X>, Carrier, set_of<X>>;
 
 // A list of keys handed over as it is.
 struct keys_of
@@ -304,7 +356,7 @@ template<class X>
         -> over<X, one<key_vector>>
 {
         auto result = over<X, one<key_vector>>();
-        result.share(memo<&random::key_samples>(random::width<X>(), random::block_digits_v<X>));
+        result.share(memo<&random::key_samples>(random::width<owner_t<X>>(), random::block_digits_v<owner_t<X>>));
         return result;
 }
 
@@ -314,7 +366,7 @@ template<class X>
 {
         auto result = over<X, one<key_vector>>();
         result.share(memo<&keys::sets>(n1<X>, quadratic<X>));
-        result.share(memo<&random::key_samples>(random::width<X>(), random::block_digits_v<X>));
+        result.share(memo<&random::key_samples>(random::width<owner_t<X>>(), random::block_digits_v<owner_t<X>>));
         return result;
 }
 
@@ -336,7 +388,7 @@ template<class X>
         -> over<X, one<key_vector>>
 {
         auto result = over<X, one<key_vector>>();
-        result.share(memo<&random::key_samples>(random::width<X>(), random::block_digits_v<X>));
+        result.share(memo<&random::key_samples>(random::width<owner_t<X>>(), random::block_digits_v<owner_t<X>>));
         return result;
 }
 
@@ -349,7 +401,7 @@ template<class X>
         if constexpr (quadratic<X>) {
                 result.share(memo<&keys::doubletons>(n2<X>));
         }
-        result.share(memo<&random::key_samples>(random::width<X>(), random::block_digits_v<X>));
+        result.share(memo<&random::key_samples>(random::width<owner_t<X>>(), random::block_digits_v<owner_t<X>>));
         return result;
 }
 
@@ -368,7 +420,7 @@ template<class X>
         -> over<X, two<key_vector>>
 {
         auto result = over<X, two<key_vector>>();
-        result.share(memo<&random::pair_samples>(random::width<X>(), random::block_digits_v<X>));
+        result.share(memo<&random::pair_samples>(random::width<owner_t<X>>(), random::block_digits_v<owner_t<X>>));
         return result;
 }
 
@@ -378,7 +430,7 @@ template<class X>
 {
         auto result = over<X, two<key_vector>>();
         result.share(memo<&keys::pairs>(n1<X>, n2<X>, quadratic<X>));
-        result.share(memo<&random::pair_samples>(random::width<X>(), random::block_digits_v<X>));
+        result.share(memo<&random::pair_samples>(random::width<owner_t<X>>(), random::block_digits_v<owner_t<X>>));
         return result;
 }
 
@@ -400,7 +452,7 @@ template<class X>
         -> over<X, two<key_vector>>
 {
         auto result = over<X, two<key_vector>>();
-        result.share(memo<&random::pair_samples>(random::width<X>(), random::block_digits_v<X>));
+        result.share(memo<&random::pair_samples>(random::width<owner_t<X>>(), random::block_digits_v<owner_t<X>>));
         return result;
 }
 
@@ -413,7 +465,7 @@ template<class X>
         if constexpr (quartic<X>) {
                 result.share(memo<&keys::doubleton_pairs>(n4<X>));
         }
-        result.share(memo<&random::pair_samples>(random::width<X>(), random::block_digits_v<X>));
+        result.share(memo<&random::pair_samples>(random::width<owner_t<X>>(), random::block_digits_v<owner_t<X>>));
         return result;
 }
 
@@ -432,7 +484,7 @@ template<class X>
         -> over<X, three<key_vector>>
 {
         auto result = over<X, three<key_vector>>();
-        result.share(memo<&random::triple_samples>(random::width<X>(), random::block_digits_v<X>));
+        result.share(memo<&random::triple_samples>(random::width<owner_t<X>>(), random::block_digits_v<owner_t<X>>));
         return result;
 }
 
@@ -442,7 +494,7 @@ template<class X>
 {
         auto result = over<X, three<key_vector>>();
         result.share(memo<&keys::triples>(n1<X>, n3<X>, quartic<X>));
-        result.share(memo<&random::triple_samples>(random::width<X>(), random::block_digits_v<X>));
+        result.share(memo<&random::triple_samples>(random::width<owner_t<X>>(), random::block_digits_v<owner_t<X>>));
         return result;
 }
 
@@ -461,7 +513,7 @@ template<class X>
         -> over<X, keyed<key_vector>>
 {
         auto result = over<X, keyed<key_vector>>();
-        result.share(memo<&random::keyed_samples>(random::width<X>(), random::block_digits_v<X>));
+        result.share(memo<&random::keyed_samples>(random::width<owner_t<X>>(), random::block_digits_v<owner_t<X>>));
         return result;
 }
 
@@ -471,7 +523,7 @@ template<class X>
 {
         auto result = over<X, keyed<key_vector>>();
         result.share(memo<&keys::keyed_sets>(n1<X>, quadratic<X>));
-        result.share(memo<&random::keyed_samples>(random::width<X>(), random::block_digits_v<X>));
+        result.share(memo<&random::keyed_samples>(random::width<owner_t<X>>(), random::block_digits_v<owner_t<X>>));
         return result;
 }
 
@@ -493,7 +545,7 @@ template<class X>
         -> over<X, keyed<key_vector>>
 {
         auto result = over<X, keyed<key_vector>>();
-        result.share(memo<&random::keyed_samples>(random::width<X>(), random::block_digits_v<X>));
+        result.share(memo<&random::keyed_samples>(random::width<owner_t<X>>(), random::block_digits_v<owner_t<X>>));
         return result;
 }
 
@@ -506,7 +558,7 @@ template<class X>
         if constexpr (quadratic<X>) {
                 result.share(memo<&keys::keyed_singletons>(n1<X>));
         }
-        result.share(memo<&random::keyed_samples>(random::width<X>(), random::block_digits_v<X>));
+        result.share(memo<&random::keyed_samples>(random::width<owner_t<X>>(), random::block_digits_v<owner_t<X>>));
         return result;
 }
 
@@ -525,7 +577,7 @@ template<class X>
         -> rebuilt<key_vector, key_list, keys_of>
 {
         auto result = rebuilt<key_vector, key_list, keys_of>();
-        result.share(memo<&random::key_samples>(random::width<X>(), random::block_digits_v<X>));
+        result.share(memo<&random::key_samples>(random::width<owner_t<X>>(), random::block_digits_v<owner_t<X>>));
         return result;
 }
 
@@ -535,7 +587,7 @@ template<class X>
 {
         auto result = rebuilt<key_vector, key_list, keys_of>();
         result.share(memo<&keys::lists>(n1<X>, n2<X>, quadratic<X>));
-        result.share(memo<&random::key_samples>(random::width<X>(), random::block_digits_v<X>));
+        result.share(memo<&random::key_samples>(random::width<owner_t<X>>(), random::block_digits_v<owner_t<X>>));
         return result;
 }
 
@@ -554,7 +606,7 @@ template<class X>
         -> over<X, listed<key_vector>>
 {
         auto result = over<X, listed<key_vector>>();
-        result.share(memo<&keys::sampled_listed>(random::width<X>(), random::block_digits_v<X>));
+        result.share(memo<&keys::sampled_listed>(random::width<owner_t<X>>(), random::block_digits_v<owner_t<X>>));
         return result;
 }
 
@@ -564,7 +616,7 @@ template<class X>
 {
         auto result = over<X, listed<key_vector>>();
         result.share(memo<&keys::listed_sets>(n1<X>, n2<X>, quadratic<X>));
-        result.share(memo<&keys::sampled_listed>(random::width<X>(), random::block_digits_v<X>));
+        result.share(memo<&keys::sampled_listed>(random::width<owner_t<X>>(), random::block_digits_v<owner_t<X>>));
         return result;
 }
 
@@ -586,7 +638,7 @@ template<class X>
         -> over<X, listed<key_vector>>
 {
         auto result = over<X, listed<key_vector>>();
-        result.share(memo<&keys::sampled_listed>(random::width<X>(), random::block_digits_v<X>));
+        result.share(memo<&keys::sampled_listed>(random::width<owner_t<X>>(), random::block_digits_v<owner_t<X>>));
         return result;
 }
 
@@ -599,7 +651,7 @@ template<class X>
         if constexpr (quadratic<X>) {
                 result.share(memo<&keys::listed_singletons>(n1<X>));
         }
-        result.share(memo<&keys::sampled_listed>(random::width<X>(), random::block_digits_v<X>));
+        result.share(memo<&keys::sampled_listed>(random::width<owner_t<X>>(), random::block_digits_v<owner_t<X>>));
         return result;
 }
 

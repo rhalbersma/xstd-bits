@@ -8,6 +8,7 @@
 #include <test/inplace_vector.hpp>       // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
 #include <test/set/exhaustive.hpp>       // static_width
 #include <test/spec/set.hpp>             // all
+#include <test/spec/view.hpp>            // owner_t, view_type
 #include <xstd/bits/bit_bounded_set.hpp> // IWYU pragma: keep; basic_bit_bounded_set
 #include <xstd/bits/bit_set.hpp>         // basic_bit_set
 #include <boost/test/unit_test.hpp>      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
@@ -50,16 +51,23 @@ inline constexpr bool constant_evaluable<std::set<Key, Compare, Allocator>> = tr
 
 #endif
 
-// Up to three keys, walked to the end and back again.
+// Up to three keys, walked to the end and back again, through a view over the owner where the candidate is one.
 template<class X>
 [[nodiscard]] constexpr auto walks_both_ways()
         -> bool
 {
-        auto x = X();
-        for (auto const k : std::views::iota(0UZ, std::ranges::min(x.max_size(), 3UZ))) {
-                x.insert(k);
+        auto owner = test::spec::owner_t<X>();
+        for (auto const k : std::views::iota(0UZ, std::ranges::min(owner.max_size(), 3UZ))) {
+                owner.insert(k);
         }
-        return std::cmp_equal(std::distance(x.begin(), x.end()), x.size()) and std::cmp_equal(std::distance(x.rbegin(), x.rend()), x.size());
+        auto const walks = [](auto const& x) -> bool {
+                return std::cmp_equal(std::distance(x.begin(), x.end()), x.size()) and std::cmp_equal(std::distance(x.rbegin(), x.rend()), x.size());
+        };
+        if constexpr (test::spec::view_type<X>) {
+                return walks(X(owner));
+        } else {
+                return walks(owner);
+        }
 }
 
 } // namespace
@@ -71,7 +79,7 @@ BOOST_AUTO_TEST_CASE(Set)
                 static_assert(std::ranges::bidirectional_range<T> and std::bidirectional_iterator<typename T::iterator>); // [set.overview]/1
                 static_assert(std::same_as<typename T::key_type, typename T::value_type>);                                // [set.overview]/2
                 static_assert(requires (T a, T::key_type k) { { a.insert(k) } -> std::same_as<std::pair<typename T::iterator, bool>>; });                                                         // [set.overview]/2
-                if constexpr (constant_evaluable<T>) {
+                if constexpr (constant_evaluable<test::spec::owner_t<T>>) {
                         XSTD_CONSTEXPR_CHECK(walks_both_ways<T>()); // [set.overview]/3
                 } else {
                         BOOST_CHECK(walks_both_ways<T>()); // [set.overview]/3

@@ -17,7 +17,7 @@
 #include <cstddef>                                // size_t
 #include <ranges>                                 // enable_borrowed_range, enable_view
 #include <span>                                   // dynamic_extent
-#include <type_traits>                            // false_type
+#include <type_traits>                            // conditional_t, false_type, is_const_v
 
 namespace xstd {
 
@@ -28,6 +28,9 @@ class bit_subspan : public bits::detail::sequence_adaptor<bits::detail::view_sto
         using base_type = bits::detail::sequence_adaptor<bits::detail::view_storage_t<Blocks, N>, bits::detail::storage::borrowed, bits::detail::window::sub, bit_subspan<Blocks, Extent, N>, Extent>;
 
 public:
+        // std::span's element_type, const where the bits are, beside the value_type of bool the adaptor declares.
+        using element_type = std::conditional_t<std::is_const_v<typename base_type::adapted_type>, bool const, bool>;
+
         static constexpr std::size_t extent = Extent;
 
         using base_type::base_type;
