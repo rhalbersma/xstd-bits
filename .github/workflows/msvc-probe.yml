@@ -36,3 +36,15 @@ jobs:
           cl /nologo /std:c++latest /EHsc /permissive- /O2 probe\vector_insert_guarantee.cpp /Fe:probe.exe || exit /b 1
           cl 2>&1 | findstr /i "version"
           probe.exe
+      - name: Does a debug std::vector allocate in its noexcept move constructor?
+        shell: cmd
+        run: |
+          for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do set VSPATH=%%i
+          call "%VSPATH%\VC\Auxiliary\Build\vcvars64.bat" || exit /b 1
+          cl /nologo /std:c++latest /EHsc /permissive- /Od /MDd probe\debug_proxy_move.cpp /Fe:debug_proxy_move.exe || exit /b 1
+          debug_proxy_move.exe
+          echo exit code %ERRORLEVEL%
+          cl /nologo /std:c++latest /EHsc /permissive- /O2 /MD probe\debug_proxy_move.cpp /Fe:release_proxy_move.exe || exit /b 1
+          release_proxy_move.exe
+          echo exit code %ERRORLEVEL%
+          exit /b 0
