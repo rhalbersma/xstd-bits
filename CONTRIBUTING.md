@@ -30,7 +30,8 @@ Ubuntu 24.04 ships GCC 13 and clang 18, neither of which can build this library:
 clang-format before 22 reads `{ a * b }` in a requires-expression as a pointer declaration, so it calls files dirty
 that are clean against [`.clang-format`](.clang-format). [`tools/setup-toolchain.sh`](tools/setup-toolchain.sh)
 installs the `stable` column of [README.md](README.md)'s matrix — GCC 15, clang 22, libc++ 22 and clang-format 22 —
-from apt.llvm.org and the Ubuntu toolchain PPA, range-v3 and Google Benchmark from apt, and Boost 1.92, the release CI
+from apt.llvm.org, the Ubuntu toolchain PPA and PyPI, range-v3 and Google Benchmark from apt, CMake 4.4 from PyPI
+(noble's 3.28 is older than the 3.30 [`CMakeLists.txt`](CMakeLists.txt) requires), and Boost 1.92, the release CI
 builds against, from its CMake release archive into `~/.local/opt/boost-1.92.0`:
 
 ```sh

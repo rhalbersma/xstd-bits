@@ -11,8 +11,8 @@
 #
 # Installed by default, matching the `stable` column of the README's matrix:
 #
-#   GCC 15, clang 22, libc++ 22, clang-format 22, range-v3 and Google Benchmark from apt, and Boost 1.92 built from
-#   its CMake release archive into XSTD_BOOST_PREFIX (default ~/.local/opt/boost-1.92.0).
+#   GCC 15, clang 22, libc++ 22, range-v3 and Google Benchmark from apt, clang-format 22 and CMake 4.4 from PyPI, and
+#   Boost 1.92 built from its CMake release archive into XSTD_BOOST_PREFIX (default ~/.local/opt/boost-1.92.0).
 #
 # Set XSTD_TOOLCHAIN_FULL=1 to add GCC 16, the qualification rung. Its libstdc++ is the oldest carrying
 # <inplace_vector>, so a repository with a C++26 leg needs it to reach that leg locally.
@@ -70,8 +70,7 @@ packages=(
         "libc++abi-${CLANG_VERSION}-dev"
         libbenchmark-dev
         librange-v3-dev
-        # What the Boost build below calls for.
-        cmake
+        # What the Boost build below calls for, beside the CMake from PyPI.
         curl
         ninja-build
 )
@@ -83,12 +82,17 @@ fi
 $SUDO apt-get install -y -qq "${packages[@]}"
 
 # The format gate pins 22, and before 22 clang-format reads `{ a * b }` in a requires-expression as a pointer
-# declaration. apt has no clang-format-22 for noble, so it comes from PyPI, pinned by hash in
-# clang-format-requirements.txt beside this script, and lands in ~/.local/bin.
+# declaration. CMakeLists.txt requires CMake 3.30, and noble's is 3.28. apt has neither, so both come from PyPI,
+# pinned by hash in clang-format-requirements.txt and cmake-requirements.txt beside this script, and land in
+# ~/.local/bin.
 CLANG_FORMAT_REQUIREMENTS="$(dirname "${BASH_SOURCE[0]}")/clang-format-requirements.txt"
 readonly CLANG_FORMAT_REQUIREMENTS
-pip install --quiet --user --break-system-packages --require-hashes -r "${CLANG_FORMAT_REQUIREMENTS}" \
-        || pip3 install --quiet --user --require-hashes -r "${CLANG_FORMAT_REQUIREMENTS}"
+CMAKE_REQUIREMENTS="$(dirname "${BASH_SOURCE[0]}")/cmake-requirements.txt"
+readonly CMAKE_REQUIREMENTS
+pip install --quiet --user --break-system-packages --require-hashes -r "${CLANG_FORMAT_REQUIREMENTS}" -r "${CMAKE_REQUIREMENTS}" \
+        || pip3 install --quiet --user --require-hashes -r "${CLANG_FORMAT_REQUIREMENTS}" -r "${CMAKE_REQUIREMENTS}"
+CMAKE="${HOME:-/root}/.local/bin/cmake"
+readonly CMAKE
 
 # Boost's CMake release archive, verified against the pinned digest, with vcpkg.json's four libraries and what they
 # depend on built once into BOOST_PREFIX.
@@ -98,11 +102,11 @@ if [[ "${XSTD_TOOLCHAIN_BOOST:-1}" == "1" && ! -f "${BOOST_PREFIX}/lib/cmake/boo
         curl -fsSL "https://github.com/boostorg/boost/releases/download/boost-${BOOST_VERSION}/${BOOST_ARCHIVE}" -o "${BOOST_WORK}/${BOOST_ARCHIVE}"
         echo "${BOOST_SHA256}  ${BOOST_WORK}/${BOOST_ARCHIVE}" | sha256sum --check --quiet
         tar -xzf "${BOOST_WORK}/${BOOST_ARCHIVE}" -C "${BOOST_WORK}"
-        cmake -S "${BOOST_WORK}/boost-${BOOST_VERSION}" -B "${BOOST_WORK}/build" -G Ninja -DCMAKE_BUILD_TYPE=Release \
+        "${CMAKE}" -S "${BOOST_WORK}/boost-${BOOST_VERSION}" -B "${BOOST_WORK}/build" -G Ninja -DCMAKE_BUILD_TYPE=Release \
                 -DBUILD_SHARED_LIBS=OFF -DBOOST_INCLUDE_LIBRARIES="container;dynamic_bitset;hash2;test" \
                 -DCMAKE_INSTALL_PREFIX="${BOOST_PREFIX}" > /dev/null
-        cmake --build "${BOOST_WORK}/build" > /dev/null
-        cmake --install "${BOOST_WORK}/build" > /dev/null
+        "${CMAKE}" --build "${BOOST_WORK}/build" > /dev/null
+        "${CMAKE}" --install "${BOOST_WORK}/build" > /dev/null
         rm -rf "${BOOST_WORK}"
 fi
 
@@ -111,6 +115,7 @@ fi
 "g++-${GCC_VERSION}" --version | head -1 || true
 "clang++-${CLANG_VERSION}" --version | head -1 || true
 "${HOME:-/root}/.local/bin/clang-format" --version || true
+"${CMAKE}" --version | head -1 || true
 if [[ "${XSTD_TOOLCHAIN_BOOST:-1}" == "1" ]]; then
         grep -m1 'define BOOST_LIB_VERSION' "${BOOST_PREFIX}/include/boost/version.hpp" || true
 fi
