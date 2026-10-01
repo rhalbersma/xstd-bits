@@ -32,6 +32,17 @@ struct ledger
         std::set<void const*> held;
 };
 
+// MSVC's debug containers allocate a bookkeeping proxy through the user's allocator, noexcept moves included.
+template<class T>
+inline constexpr bool is_debug_proxy_v = false;
+
+#if defined(_ITERATOR_DEBUG_LEVEL) && _ITERATOR_DEBUG_LEVEL != 0
+
+template<>
+inline constexpr bool is_debug_proxy_v<std::_Container_proxy> = true;
+
+#endif
+
 // Stateful, so two instances can differ, and propagating on every assignment and swap or on none of them.
 template<class T, bool Propagates>
 class tagged_allocator
@@ -83,12 +94,15 @@ public:
                 if (m_ledger == nullptr) {
                         return std::allocator<T>().allocate(n);
                 }
-                if (m_ledger->budget == 0) {
-                        ++m_ledger->refusals;
-                        throw std::bad_alloc();
-                }
-                if (m_ledger->budget > 0) {
-                        --m_ledger->budget;
+                // A debug proxy is accounted for but never refused: no guarantee the standard gives depends on it.
+                if constexpr (not is_debug_proxy_v<T>) {
+                        if (m_ledger->budget == 0) {
+                                ++m_ledger->refusals;
+                                throw std::bad_alloc();
+                        }
+                        if (m_ledger->budget > 0) {
+                                --m_ledger->budget;
+                        }
                 }
                 auto* const p = std::allocator<T>().allocate(n);
                 m_ledger->held.insert(p);
