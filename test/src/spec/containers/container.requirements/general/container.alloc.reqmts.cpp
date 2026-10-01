@@ -344,6 +344,35 @@ BOOST_AUTO_TEST_CASE(CopyAssignment)
         });
 }
 
+namespace {
+
+template<class X>
+inline constexpr auto is_std_set_v = false;
+
+template<class Key, class Compare, class Allocator>
+inline constexpr auto is_std_set_v<std::set<Key, Compare, Allocator>> = true;
+
+#ifdef _LIBCPP_VERSION
+
+// libc++'s std::set reuses its nodes to move in under an unequal allocator, and a refusal part way leaves it corrupt.
+inline constexpr auto std_set_moving_in_is_valid_after_a_refusal = false;
+
+#else
+
+inline constexpr auto std_set_moving_in_is_valid_after_a_refusal = true;
+
+#endif
+
+// Unequal under one ledger, so a staying allocator moves elements one by one; a named template spares MSVC a C1001.
+template<class X>
+auto check_moving_in_element_by_element(X const& t, typename X::allocator_type const& a)
+        -> void
+{
+        BOOST_CHECK(basic_guarantee(other<X>(a), [&](X& x) -> void { x = X(t, ledger_allocator<X>(*x.get_allocator().book(), 1)); }));
+}
+
+} // namespace
+
 // [container.alloc.reqmts]/25,27-28: a = rv
 BOOST_AUTO_TEST_CASE(MoveAssignment)
 {
@@ -359,9 +388,8 @@ BOOST_AUTO_TEST_CASE(MoveAssignment)
                         BOOST_CHECK_EQUAL(u.size(), t.size());                                                             // [container.alloc.reqmts]/27
                         BOOST_CHECK(u == t);                                                                               // [container.alloc.reqmts]/28
                         BOOST_CHECK(u.get_allocator() == (traits::propagate_on_container_move_assignment::value ? b : a)); // [container.reqmts]/64
-                        if constexpr (keeps_a_ledger<T>) {
-                                // Unequal under the same ledger, so a staying allocator moves elements one by one.
-                                BOOST_CHECK(basic_guarantee(other<T>(a), [&](T& x) -> void { x = T(t, ledger_allocator<T>(*x.get_allocator().book(), 1)); })); // [container.reqmts]/25
+                        if constexpr (keeps_a_ledger<T> and (std_set_moving_in_is_valid_after_a_refusal or not is_std_set_v<T>)) {
+                                check_moving_in_element_by_element(t, a); // [container.reqmts]/25
                         }
                 }
         });
