@@ -3,6 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/container/allocator.hpp>             // basic_guarantee, keeps_a_ledger, ledger, ledger_allocator, non_propagating, propagating, user_allocator
 #include <test/for_each_type.hpp>                   // for_each_type
 #include <test/sequence/factory.hpp>                // make_sequence, stripes
 #include <xstd/bits/bit_array.hpp>                  // bit_array
@@ -16,7 +17,7 @@
 #include <array>                                    // array
 #include <concepts>                                 // same_as
 #include <cstddef>                                  // size_t
-#include <cstdint>                                  // int64_t, uint64_t, uint8_t
+#include <cstdint>                                  // uint64_t, uint8_t
 #include <functional>                               // less
 #include <initializer_list>                         // initializer_list
 #include <iterator>                                 // prev
@@ -26,7 +27,7 @@
 #include <ranges>                                   // from_range, iota
 #include <set>                                      // set
 #include <tuple>                                    // tuple, tuple_cat
-#include <type_traits>                              // bool_constant, false_type, is_constructible_v, is_nothrow_constructible_v, true_type
+#include <type_traits>                              // is_constructible_v, is_nothrow_constructible_v
 #include <utility>                                  // declval, move
 #include <vector>                                   // pmr::vector, vector
 
@@ -38,96 +39,13 @@ BOOST_AUTO_TEST_SUITE(ContainerAllocReqmts)
 
 namespace {
 
-// The allocations an allocator has outstanding, and how many more it grants.
-struct ledger
-{
-        std::int64_t live = 0;
-        std::int64_t budget = -1; // allocations still granted, and no limit while negative
-};
-
-// Stateful, so two instances can differ, and propagating on every assignment and swap or on none of them.
-template<class T, bool Propagates>
-class tagged_allocator
-{
-        ledger* m_ledger = nullptr;
-        std::int64_t m_tag = 0;
-
-public:
-        using value_type = T;
-        using propagate_on_container_copy_assignment = std::bool_constant<Propagates>;
-        using propagate_on_container_move_assignment = std::bool_constant<Propagates>;
-        using propagate_on_container_swap = std::bool_constant<Propagates>;
-        using is_always_equal = std::false_type;
-
-        template<class U>
-        struct rebind
-        {
-                using other = tagged_allocator<U, Propagates>;
-        };
-
-        [[nodiscard]] tagged_allocator() = default;
-
-        [[nodiscard]] constexpr explicit tagged_allocator(int tag, ledger* book = nullptr) noexcept
-                : m_ledger(book)
-                , m_tag(tag)
-        {}
-
-        template<class U>
-        [[nodiscard]] constexpr explicit(false) tagged_allocator(tagged_allocator<U, Propagates> const& other) noexcept
-                : m_ledger(other.book())
-                , m_tag(other.tag())
-        {}
-
-        [[nodiscard]] constexpr auto tag() const noexcept
-                -> int
-        {
-                return static_cast<int>(m_tag);
-        }
-
-        [[nodiscard]] constexpr auto book() const noexcept
-                -> ledger*
-        {
-                return m_ledger;
-        }
-
-        [[nodiscard]] auto allocate(std::size_t n)
-                -> T*
-        {
-                if (m_ledger == nullptr) {
-                        return std::allocator<T>().allocate(n);
-                }
-                if (m_ledger->budget == 0) {
-                        throw std::bad_alloc();
-                }
-                if (m_ledger->budget > 0) {
-                        --m_ledger->budget;
-                }
-                ++m_ledger->live;
-                return std::allocator<T>().allocate(n);
-        }
-
-        auto deallocate(T* p, std::size_t n) noexcept
-                -> void
-        {
-                if (m_ledger != nullptr) {
-                        --m_ledger->live;
-                }
-                std::allocator<T>().deallocate(p, n);
-        }
-
-        template<class U>
-        [[nodiscard]] friend constexpr auto operator==(tagged_allocator const& lhs, tagged_allocator<U, Propagates> const& rhs) noexcept
-                -> bool
-        {
-                return lhs.tag() == rhs.tag();
-        }
-};
-
-template<class T>
-using propagating = tagged_allocator<T, true>;
-
-template<class T>
-using non_propagating = tagged_allocator<T, false>;
+using test::container::basic_guarantee;
+using test::container::keeps_a_ledger;
+using test::container::ledger;
+using test::container::ledger_allocator;
+using test::container::non_propagating;
+using test::container::propagating;
+using test::container::user_allocator;
 
 // Two resources to tell polymorphic allocators apart by, never destroyed, so no exit-time destructor frees under a set.
 [[nodiscard]] auto resource(int tag)
@@ -155,31 +73,6 @@ using allocator_aware = std::tuple<std::set<std::size_t, std::less<std::size_t>,
 
 using Types = decltype(std::tuple_cat(std::declval<allocator_aware<propagating>>(), std::declval<allocator_aware<non_propagating>>(), std::declval<allocator_aware<std::pmr::polymorphic_allocator>>()));
 
-// The allocator the column was declared with, which the small set wraps in one of Boost's own.
-template<class X>
-struct user_allocator
-{
-        using type = X::allocator_type;
-};
-
-template<class Block, std::size_t N, class Allocator>
-struct user_allocator<xstd::basic_bit_small_set<Block, N, Allocator>>
-{
-        using type = Allocator;
-};
-
-template<class Block, std::size_t N, class Allocator>
-struct user_allocator<xstd::basic_small_bitset<Block, N, Allocator>>
-{
-        using type = Allocator;
-};
-
-template<class Block, std::size_t N, class Allocator>
-struct user_allocator<xstd::basic_bit_small_vector<Block, N, Allocator>>
-{
-        using type = Allocator;
-};
-
 // The small columns, whose allocator_type is Boost's wrapper around the one they were declared with.
 template<class X>
 inline constexpr auto wraps_allocator = false;
@@ -198,17 +91,6 @@ template<class X>
         -> X::allocator_type
 {
         return typename X::allocator_type(make_allocator<typename user_allocator<X>::type>(tag));
-}
-
-// An allocator that keeps its accounts in book, where the column takes one that can.
-template<class X>
-concept keeps_a_ledger = std::is_constructible_v<typename user_allocator<X>::type, int, ledger*>;
-
-template<class X>
-[[nodiscard]] auto ledger_allocator(ledger& book)
-        -> X::allocator_type
-{
-        return typename X::allocator_type(typename user_allocator<X>::type(0, &book));
 }
 
 // Declared only, for the concept below to call in an unevaluated operand.
@@ -403,8 +285,9 @@ BOOST_AUTO_TEST_CASE(CopyWithAllocator)
                 auto const m = allocator<T>(1);
                 for (auto const& t : samples<T>(allocator<T>(0))) {
                         auto const u = T(t, m);
-                        BOOST_CHECK(u == t);                 // [container.alloc.reqmts]/14
-                        BOOST_CHECK(u.get_allocator() == m); // [container.alloc.reqmts]/14
+                        BOOST_CHECK(u == t);                                                                               // [container.alloc.reqmts]/14
+                        BOOST_CHECK(u.get_allocator() == m);                                                               // [container.alloc.reqmts]/14
+                        BOOST_CHECK(basic_guarantee(t, [](T& x) -> void { static_cast<void>(T(x, x.get_allocator())); })); // [container.reqmts]/25
                 }
         });
 }
@@ -456,6 +339,7 @@ BOOST_AUTO_TEST_CASE(CopyAssignment)
                         u = t;
                         BOOST_CHECK(u == t);                                                                               // [container.alloc.reqmts]/23
                         BOOST_CHECK(u.get_allocator() == (traits::propagate_on_container_copy_assignment::value ? b : a)); // [container.reqmts]/64
+                        BOOST_CHECK(basic_guarantee(other<T>(a), [&](T& x) -> void { x = T(t, x.get_allocator()); }));     // [container.reqmts]/25
                 }
         });
 }
@@ -475,6 +359,10 @@ BOOST_AUTO_TEST_CASE(MoveAssignment)
                         BOOST_CHECK_EQUAL(u.size(), t.size());                                                             // [container.alloc.reqmts]/27
                         BOOST_CHECK(u == t);                                                                               // [container.alloc.reqmts]/28
                         BOOST_CHECK(u.get_allocator() == (traits::propagate_on_container_move_assignment::value ? b : a)); // [container.reqmts]/64
+                        if constexpr (keeps_a_ledger<T>) {
+                                // Unequal under the same ledger, so a staying allocator moves elements one by one.
+                                BOOST_CHECK(basic_guarantee(other<T>(a), [&](T& x) -> void { x = T(t, ledger_allocator<T>(*x.get_allocator().book(), 1)); })); // [container.reqmts]/25
+                        }
                 }
         });
 }

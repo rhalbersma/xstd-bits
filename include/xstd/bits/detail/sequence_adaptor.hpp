@@ -503,8 +503,8 @@ public:
         {
                 if constexpr (blittable<std::remove_cvref_t<R>>) {
                         blit(rg.bits(), rg.offset(), rg.size());
-                } else if constexpr (has_static_capacity and not std::ranges::sized_range<R>) {
-                        // [inplace.vector.modifiers]/3: an unsized range finds the capacity by overrunning it, so undo.
+                } else if constexpr (not std::ranges::sized_range<R>) {
+                        // No size to check first, so a failure part way, at a capacity or an allocation, is undone.
                         auto const n = size();
                         try {
                                 pack(std::forward<R>(rg));
@@ -1232,17 +1232,28 @@ private:
                 }
         }
 
-        // Rebuilt rather than shifted: head, middle, tail, then one swap, so the strong guarantee is free.
+        // Empty, and under this one's allocator, so that what is rebuilt in it can be moved in.
+        [[nodiscard]] constexpr auto empty_like() const
+                -> sequence_adaptor
+        {
+                if constexpr (has_allocator) {
+                        return sequence_adaptor(get_allocator());
+                } else {
+                        return sequence_adaptor();
+                }
+        }
+
+        // Head, middle and tail rebuilt aside, then moved in, which unlike a small vector's swap never allocates.
         template<class Middle>
         constexpr auto rebuild(size_type pos, size_type tail, Middle&& middle)
                 -> iterator
         {
                 auto const whole = sequence_adaptor<bits_type const, storage::borrowed, window::all>(std::as_const(bits()));
-                auto tmp = sequence_adaptor();
+                auto tmp = empty_like();
                 tmp.append_range(whole.first(pos));
                 middle(tmp);
                 tmp.append_range(whole.subspan(tail));
-                swap(tmp);
+                m_bits = std::move(tmp.m_bits);
                 return begin() + static_cast<difference_type>(pos);
         }
 

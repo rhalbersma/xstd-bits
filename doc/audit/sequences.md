@@ -195,7 +195,7 @@ A row's `outcome` is one of:
 | `[vector.capacity]` | 1 | `capacity() const` | Returns | answered |  |
 | `[vector.capacity]` | 2 | `capacity() const` | Complexity | declined | A complexity bound, which no functional check can observe. |
 | `[vector.capacity]` | 3 | `reserve(size_type n)` | Preconditions | no-requirement | A precondition on the element type, which `bool` meets; it asks nothing of the container. |
-| `[vector.capacity]` | 4 | `reserve(size_type n)` | Effects | answered |  |
+| `[vector.capacity]` | 4 | `reserve(size_type n)` | Effects | answered | The no-effects clause is asked on the allocator-aware columns, `std::vector<bool>` first, with each allocation refused in turn. |
 | `[vector.capacity]` | 5 | `reserve(size_type n)` | Throws | answered | MSVC's `vector<bool>` allocates rather than throwing `length_error`, and is asked for `bad_alloc` there. |
 | `[vector.capacity]` | 6 | `reserve(size_type n)` | Complexity | declined | A complexity bound, which no functional check can observe. |
 | `[vector.capacity]` | 7 | `reserve(size_type n)` | Remarks | answered | Checked as the value unchanged; what a reallocation invalidates a valid program cannot observe. |
@@ -207,14 +207,14 @@ A row's `outcome` is one of:
 | `[vector.capacity]` | 13 | `swap(vector& x)` | Complexity | declined | A complexity bound, which no functional check can observe. |
 | `[vector.capacity]` | 14 | `resize(size_type sz)` | Preconditions | no-requirement | A precondition on the element type, which `bool` meets; it asks nothing of the container. |
 | `[vector.capacity]` | 15 | `resize(size_type sz)` | Effects | answered |  |
-| `[vector.capacity]` | 16 | `resize(size_type sz)` | Remarks | answered | Checked as `resize` past `max_size()` throwing `length_error` with no effect. |
+| `[vector.capacity]` | 16 | `resize(size_type sz)` | Remarks | answered | Checked as `resize` past `max_size()` throwing `length_error` with no effect, and on the allocator-aware columns as no effect with each allocation refused in turn. |
 | `[vector.capacity]` | 17 | `resize(size_type sz, const T& c)` | Preconditions | no-requirement | A precondition on the element type, which `bool` meets; it asks nothing of the container. |
 | `[vector.capacity]` | 18 | `resize(size_type sz, const T& c)` | Effects | answered |  |
-| `[vector.capacity]` | 19 | `resize(size_type sz, const T& c)` | Remarks | answered |  |
+| `[vector.capacity]` | 19 | `resize(size_type sz, const T& c)` | Remarks | answered | Checked as for `[vector.capacity]/16`. |
 | `[vector.data]` | 1 | `data()`, two overloads | Returns | forced | A packed column has no `data()`: a bit has no address, the recorded forced departure. `std::vector<bool>` has none either. |
 | `[vector.data]` | 2 | `data()`, two overloads | Complexity | forced | A packed column has no `data()`: a bit has no address, the recorded forced departure. `std::vector<bool>` has none either. |
 | `[vector.modifiers]` | 1 | `insert`, `insert_range`, `emplace`, `emplace_back`, `push_back`, `append_range` | Complexity | declined | A complexity bound, which no functional check can observe. |
-| `[vector.modifiers]` | 2 | `insert`, `insert_range`, `emplace`, `emplace_back`, `push_back`, `append_range` | Remarks | answered | Checked for what a valid program can see: without a reallocation the iterators before the insertion point stand and read as before. The no-effects clause is asked through `[container.reqmts]/66`'s refused allocation, a `bool` raising nothing of its own. |
+| `[vector.modifiers]` | 2 | `insert`, `insert_range`, `emplace`, `emplace_back`, `push_back`, `append_range` | Remarks | answered | Checked for what a valid program can see: without a reallocation the iterators before the insertion point stand and read as before. The no-effects clause is asked of every insertion on the allocator-aware columns, `std::vector<bool>` first, with each allocation refused in turn, a `bool` raising nothing of its own. libstdc++'s `vector<bool>` inserts a single pass through `insert` and `append_range` a bool at a time and keeps what it inserted, a departure of the model, so there only the basic guarantee is asked; MSVC's STL does the same through `insert_range` as well, and libc++ has no effects. |
 | `[vector.modifiers]` | 3 | `insert`, `insert_range`, `emplace`, `emplace_back`, `push_back`, `append_range` | — | declined | A bound on reallocations, which no functional check can observe. |
 | `[vector.modifiers]` | 4 | `erase`, two overloads, and `pop_back()` | Effects | answered | Checked as the iterators before the erasure standing and reading as before. |
 | `[vector.modifiers]` | 5 | `erase`, two overloads, and `pop_back()` | Throws | answered |  |
