@@ -1,0 +1,38 @@
+#          Copyright Rein Halbersma 2014-2026.
+# Distributed under the Boost Software License, Version 1.0.
+#    (See accompanying file LICENSE_1_0.txt or copy at
+#          http://www.boost.org/LICENSE_1_0.txt)
+
+# A one-off probe, not a gate: does MSVC's std::vector keep a partial insertion of a single-pass range when an
+# allocation fails ([vector.modifiers]/2)? The output is the answer; the job fails only if the probe cannot build.
+name: MSVC probe
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - .github/workflows/msvc-probe.yml
+      - probe/**
+
+jobs:
+  probe:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ windows-2022, windows-2025 ]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build and run with cl /std:c++latest
+        shell: cmd
+        run: |
+          for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do set VSPATH=%%i
+          call "%VSPATH%\VC\Auxiliary\Build\vcvars64.bat" || exit /b 1
+          cl /nologo /std:c++latest /EHsc /permissive- /O2 probe\vector_insert_guarantee.cpp /Fe:probe.exe || exit /b 1
+          cl 2>&1 | findstr /i "version"
+          probe.exe
