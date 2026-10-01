@@ -11,14 +11,24 @@
 #
 # Installed by default, matching the `stable` column of the README's matrix:
 #
-#   GCC 15, clang 22, libc++ 22, clang-format 22, and Boost's headers with Boost.Test.
+#   GCC 15, clang 22, libc++ 22, clang-format 22, range-v3 and Google Benchmark from apt, and Boost 1.92 built from
+#   its CMake release archive into XSTD_BOOST_PREFIX (default ~/.local/opt/boost-1.92.0).
 #
 # Set XSTD_TOOLCHAIN_FULL=1 to add GCC 16, the qualification rung. Its libstdc++ is the oldest carrying
 # <inplace_vector>, so a repository with a C++26 leg needs it to reach that leg locally.
 #
-# This gets syntax-only checks, clang-tidy and the format gate, and it is what a comment or style sweep needs.
-# It is not a test run: vcpkg.json's dependencies come through vcpkg, and CMake fetches any sibling xstd
-# repository on top, which is a build worth starting deliberately rather than on every container start.
+# Boost is the version CI's vcpkg resolves, not noble's 1.83, which predates Boost.Hash2 and answers questions about
+# a Boost that CI never sees. It comes from the release's own CMake archive rather than through vcpkg, because a
+# Claude Code cloud session's GitHub proxy serves release assets and git clones of public repositories but refuses
+# their source archives, and every vcpkg Boost port downloads one. Boost's CMake build, unlike b2, installs a CMake
+# package for each header-only library too, Boost.Hash2 among them. It builds once: re-running finds the install
+# and skips it. A configure then points at the prefix:
+#
+#   cmake -S . -B build -DCMAKE_PREFIX_PATH="${XSTD_BOOST_PREFIX:-$HOME/.local/opt/boost-1.92.0}"
+#
+# Building Boost takes a few minutes on a fresh container; set XSTD_TOOLCHAIN_BOOST=0 to skip it when only
+# syntax-only checks, clang-tidy or the format gate are wanted. CMake still fetches any sibling xstd repository
+# at configure time.
 
 set -euo pipefail
 
@@ -32,6 +42,12 @@ fi
 
 readonly CLANG_VERSION=22
 readonly GCC_VERSION=15
+
+# The release CI's vcpkg resolves, and the digest of its CMake archive, which the release does not publish itself.
+readonly BOOST_VERSION=1.92.0
+readonly BOOST_SHA256=f51707c27359a0df0cac1beada86de31bb5eed5e8285592dadec384df99c2984
+BOOST_PREFIX="${XSTD_BOOST_PREFIX:-${HOME:-/root}/.local/opt/boost-${BOOST_VERSION}}"
+readonly BOOST_PREFIX
 
 # apt.llvm.org for clang, the toolchain PPA for a GCC newer than noble's. The PPA signs with RSA-1024, so apt
 # warns about a weak algorithm on every update; that is the archive's key, not a fault in this script.
@@ -52,8 +68,12 @@ packages=(
         "clang-tidy-${CLANG_VERSION}"
         "libc++-${CLANG_VERSION}-dev"
         "libc++abi-${CLANG_VERSION}-dev"
-        libboost-dev
-        libboost-test-dev
+        libbenchmark-dev
+        librange-v3-dev
+        # What the Boost build below calls for.
+        cmake
+        curl
+        ninja-build
 )
 
 if [[ "${XSTD_TOOLCHAIN_FULL:-0}" == "1" ]]; then
@@ -70,8 +90,27 @@ readonly CLANG_FORMAT_REQUIREMENTS
 pip install --quiet --user --break-system-packages --require-hashes -r "${CLANG_FORMAT_REQUIREMENTS}" \
         || pip3 install --quiet --user --require-hashes -r "${CLANG_FORMAT_REQUIREMENTS}"
 
+# Boost's CMake release archive, verified against the pinned digest, with vcpkg.json's four libraries and what they
+# depend on built once into BOOST_PREFIX.
+if [[ "${XSTD_TOOLCHAIN_BOOST:-1}" == "1" && ! -f "${BOOST_PREFIX}/lib/cmake/boost_hash2-${BOOST_VERSION}/boost_hash2-config.cmake" ]]; then
+        BOOST_ARCHIVE="boost-${BOOST_VERSION}-cmake.tar.gz"
+        BOOST_WORK="$(mktemp -d)"
+        curl -fsSL "https://github.com/boostorg/boost/releases/download/boost-${BOOST_VERSION}/${BOOST_ARCHIVE}" -o "${BOOST_WORK}/${BOOST_ARCHIVE}"
+        echo "${BOOST_SHA256}  ${BOOST_WORK}/${BOOST_ARCHIVE}" | sha256sum --check --quiet
+        tar -xzf "${BOOST_WORK}/${BOOST_ARCHIVE}" -C "${BOOST_WORK}"
+        cmake -S "${BOOST_WORK}/boost-${BOOST_VERSION}" -B "${BOOST_WORK}/build" -G Ninja -DCMAKE_BUILD_TYPE=Release \
+                -DBUILD_SHARED_LIBS=OFF -DBOOST_INCLUDE_LIBRARIES="container;dynamic_bitset;hash2;test" \
+                -DCMAKE_INSTALL_PREFIX="${BOOST_PREFIX}" > /dev/null
+        cmake --build "${BOOST_WORK}/build" > /dev/null
+        cmake --install "${BOOST_WORK}/build" > /dev/null
+        rm -rf "${BOOST_WORK}"
+fi
+
 # Report what landed, but never fail a setup over a version banner: everything above has already
 # installed by this point, and a caller that cannot print is not a caller that cannot build.
 "g++-${GCC_VERSION}" --version | head -1 || true
 "clang++-${CLANG_VERSION}" --version | head -1 || true
 "${HOME:-/root}/.local/bin/clang-format" --version || true
+if [[ "${XSTD_TOOLCHAIN_BOOST:-1}" == "1" ]]; then
+        grep -m1 'define BOOST_LIB_VERSION' "${BOOST_PREFIX}/include/boost/version.hpp" || true
+fi

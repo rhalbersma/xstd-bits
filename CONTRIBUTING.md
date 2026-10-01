@@ -29,15 +29,19 @@ This repository enforces its quality bar through CI rather than through review d
 Ubuntu 24.04 ships GCC 13 and clang 18, neither of which can build this library: GCC 13 rejects `-std=c++2c`, and
 clang-format before 22 reads `{ a * b }` in a requires-expression as a pointer declaration, so it calls files dirty
 that are clean against [`.clang-format`](.clang-format). [`tools/setup-toolchain.sh`](tools/setup-toolchain.sh)
-installs the `stable` column of [README.md](README.md)'s matrix — GCC 15, clang 22, libc++ 22, clang-format 22, and Boost with
-Boost.Test — from apt.llvm.org and the Ubuntu toolchain PPA:
+installs the `stable` column of [README.md](README.md)'s matrix — GCC 15, clang 22, libc++ 22 and clang-format 22 —
+from apt.llvm.org and the Ubuntu toolchain PPA, range-v3 and Google Benchmark from apt, and Boost 1.92, the release CI
+builds against, from its CMake release archive into `~/.local/opt/boost-1.92.0`:
 
 ```sh
 tools/setup-toolchain.sh
+cmake -S . -B build -DCMAKE_PREFIX_PATH=~/.local/opt/boost-1.92.0
 ```
 
 `XSTD_TOOLCHAIN_FULL=1` adds GCC 16, the qualification rung, whose libstdc++ is the oldest carrying
-`<inplace_vector>`. The script is idempotent, so re-running it on a warm container is safe.
+`<inplace_vector>`. `XSTD_BOOST_PREFIX` moves the Boost install, and `XSTD_TOOLCHAIN_BOOST=0` skips it where only
+syntax-only checks, clang-tidy or the format gate are wanted. The script is idempotent, so re-running it on a warm
+container is safe.
 
 In a [Claude Code cloud](https://code.claude.com/docs/en/claude-code-on-the-web) environment, the environment's
 setup script runs it, so every session starts with the rung already in place. That field holds a script rather than
