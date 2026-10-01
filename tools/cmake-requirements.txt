@@ -1,0 +1,6 @@
+# Copyright Rein Halbersma 2014-2026. Distributed under the Boost Software License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+
+# CMake at least the 3.30 that CMakeLists.txt requires, pinned by hash for setup-toolchain.sh: the manylinux wheels for x86_64 and aarch64.
+cmake==4.4.3 \
+    --hash=sha256:bae3c4954623ec4d62e62c70443f0da7988b733111c2871fcc6a31ead5137e20 \
+    --hash=sha256:520ff2ba3afb7a1e34a0ab222c0f4e89ad334dc7462814886e099bdf6ba8cbb3
