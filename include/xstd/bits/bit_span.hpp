@@ -18,7 +18,7 @@
 #include <boost/container_hash/is_tuple_like.hpp> // is_tuple_like
 #include <cstddef>                                // size_t
 #include <ranges>                                 // enable_borrowed_range, enable_view
-#include <type_traits>                            // false_type
+#include <type_traits>                            // conditional_t, false_type, is_const_v
 
 // The sequence reading over bits it does not own: like std::span it neither compares nor orders.
 namespace xstd {
@@ -30,6 +30,11 @@ class bit_span : public bits::detail::sequence_adaptor<bits::detail::view_storag
         using base_type = bits::detail::sequence_adaptor<bits::detail::view_storage_t<Blocks, N>, bits::detail::storage::borrowed, bits::detail::window::all, bit_span<Blocks, N>>;
 
 public:
+        // std::span's element_type, const where the bits are, beside the value_type of bool the adaptor declares.
+        using element_type = std::conditional_t<std::is_const_v<typename base_type::adapted_type>, bool const, bool>;
+
+        static constexpr std::size_t extent = N;
+
         using base_type::base_type;
         using base_type::operator=;
 };

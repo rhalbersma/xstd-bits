@@ -5,7 +5,7 @@ Every numbered paragraph of the general container requirements, and of `[iterato
 
 - **Source:** [cplusplus/draft `f2aa898ea51c1cdc42ad8096bbfebdc2ab54baea`](https://github.com/cplusplus/draft/blob/f2aa898ea51c1cdc42ad8096bbfebdc2ab54baea/source/containers.tex), `source/containers.tex`, `\rSec3[container.reqmts]`, `[container.rev.reqmts]`, `[container.opt.reqmts]` and `[container.alloc.reqmts]`; and [`source/iterators.tex`](https://github.com/cplusplus/draft/blob/f2aa898ea51c1cdc42ad8096bbfebdc2ab54baea/source/iterators.tex), `\rSec2[iterator.range]`.
 - **Cross-checked:** [eel.is/c++draft](https://eel.is/c++draft/container.reqmts), generated from Eelis/draft `c7015b485cc3db8efaa9dfb9ff0809c5394a4ed1`: the same paragraph numbers in all five clauses.
-- **Subjects:** `test::spec::container::all`, every candidate of the set reading and of the sequence reading; the allocator-aware ones, `std::set`, `std::vector<bool>` and the dynamic and small bit containers, under three kinds of allocator.
+- **Subjects:** `test::spec::container::all`, every owner of the set reading, `test::spec::set::owners`, and every candidate of the sequence reading; the allocator-aware ones, `std::set`, `std::vector<bool>` and the dynamic and small bit containers, under three kinds of allocator.
 
 A row's `outcome` is one of:
 

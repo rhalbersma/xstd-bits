@@ -7,7 +7,7 @@
 #include <test/for_each_type.hpp>   // for_each_type
 #include <test/set/primitives.hpp>  // constructor, key_order, mem_clear, mem_contains, mem_count, mem_emplace, mem_emplace_hint, mem_equal_range, mem_erase, mem_erase_mutable, mem_find, mem_insert, mem_lower_bound, mem_upper_bound, nested_types, no_heterogeneous_members, op_assign, same_order
 #include <test/spec/input.hpp>      // context, with_initializer_list
-#include <test/spec/set.hpp>        // all, key_lists, keyed_sets, keyed_sets_with_singletons, listed_sets, sets, sets_with_doubletons
+#include <test/spec/set.hpp>        // all, key_lists, keyed_sets, keyed_sets_with_singletons, listed_sets, owners, sets, sets_with_doubletons
 #include <xstd/bits/bit_set.hpp>    // basic_bit_set, bit_set
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <concepts>                 // same_as
@@ -50,7 +50,7 @@ BOOST_AUTO_TEST_CASE(NestedTypes)
 // [associative.reqmts.general]/18: X(c)
 BOOST_AUTO_TEST_CASE(Comp)
 {
-        test::for_each_type<test::spec::set::all>([]<class T> -> void {
+        test::for_each_type<test::spec::set::owners>([]<class T> -> void {
                 static_assert(requires (T::key_compare const c) { T(c); });
                 constructor<T>()(typename T::key_compare());
         });
@@ -59,7 +59,7 @@ BOOST_AUTO_TEST_CASE(Comp)
 // [associative.reqmts.general]/20-21: X u = X(); X u;
 BOOST_AUTO_TEST_CASE(Default)
 {
-        test::for_each_type<test::spec::set::all>([]<class T> -> void {
+        test::for_each_type<test::spec::set::owners>([]<class T> -> void {
                 constructor<T>()();
                 T const u;
                 BOOST_CHECK(u.empty() and same_order(u.key_comp(), typename T::key_compare())); // [associative.reqmts.general]/21
@@ -69,7 +69,7 @@ BOOST_AUTO_TEST_CASE(Default)
 // [associative.reqmts.general]/23-24: X(i, j, c)
 BOOST_AUTO_TEST_CASE(FirstLastComp)
 {
-        test::for_each_type<test::spec::set::all>([]<class T> -> void {
+        test::for_each_type<test::spec::set::owners>([]<class T> -> void {
                 for (auto const [from, keys] : inputs::key_lists<T>()) {
                         auto const on_failure = context(from, keys);
                         constructor<T>()(keys.begin(), keys.end(), typename T::key_compare());
@@ -80,7 +80,7 @@ BOOST_AUTO_TEST_CASE(FirstLastComp)
 // [associative.reqmts.general]/26-27: X(i, j)
 BOOST_AUTO_TEST_CASE(FirstLast)
 {
-        test::for_each_type<test::spec::set::all>([]<class T> -> void {
+        test::for_each_type<test::spec::set::owners>([]<class T> -> void {
                 for (auto const [from, keys] : inputs::key_lists<T>()) {
                         auto const on_failure = context(from, keys);
                         constructor<T>()(keys.begin(), keys.end());
@@ -91,7 +91,7 @@ BOOST_AUTO_TEST_CASE(FirstLast)
 // [associative.reqmts.general]/29-30: X(from_range, rg, c)
 BOOST_AUTO_TEST_CASE(FromRangeComp)
 {
-        test::for_each_type<test::spec::set::all>([]<class T> -> void {
+        test::for_each_type<test::spec::set::owners>([]<class T> -> void {
                 for (auto const [from, keys] : inputs::key_lists<T>()) {
                         auto const on_failure = context(from, keys);
                         constructor<T>()(std::from_range, keys, typename T::key_compare());
@@ -102,7 +102,7 @@ BOOST_AUTO_TEST_CASE(FromRangeComp)
 // [associative.reqmts.general]/32-33: X(from_range, rg)
 BOOST_AUTO_TEST_CASE(FromRange)
 {
-        test::for_each_type<test::spec::set::all>([]<class T> -> void {
+        test::for_each_type<test::spec::set::owners>([]<class T> -> void {
                 for (auto const [from, keys] : inputs::key_lists<T>()) {
                         auto const on_failure = context(from, keys);
                         constructor<T>()(std::from_range, keys);
@@ -113,7 +113,7 @@ BOOST_AUTO_TEST_CASE(FromRange)
 // [associative.reqmts.general]/35: X(il, c)
 BOOST_AUTO_TEST_CASE(InitializerListComp)
 {
-        test::for_each_type<test::spec::set::all>([]<class T> -> void {
+        test::for_each_type<test::spec::set::owners>([]<class T> -> void {
                 for (auto const [from, keys] : inputs::key_lists<T>()) {
                         auto const on_failure = context(from, keys);
                         with_initializer_list(keys, [&](std::initializer_list<std::size_t> il) -> void {
@@ -126,7 +126,7 @@ BOOST_AUTO_TEST_CASE(InitializerListComp)
 // [associative.reqmts.general]/36: X(il)
 BOOST_AUTO_TEST_CASE(InitializerList)
 {
-        test::for_each_type<test::spec::set::all>([]<class T> -> void {
+        test::for_each_type<test::spec::set::owners>([]<class T> -> void {
                 for (auto const [from, keys] : inputs::key_lists<T>()) {
                         auto const on_failure = context(from, keys);
                         with_initializer_list(keys, [&](std::initializer_list<std::size_t> il) -> void {
@@ -139,7 +139,7 @@ BOOST_AUTO_TEST_CASE(InitializerList)
 // [associative.reqmts.general]/37-39: a = il
 BOOST_AUTO_TEST_CASE(AssignInitializerList)
 {
-        test::for_each_type<test::spec::set::all>([]<class T> -> void {
+        test::for_each_type<test::spec::set::owners>([]<class T> -> void {
                 for (auto const [from, a, keys] : inputs::listed_sets<T>()) {
                         auto const on_failure = context(from, a, keys);
                         with_initializer_list(keys, [&](std::initializer_list<std::size_t> il) -> void {
@@ -153,7 +153,7 @@ BOOST_AUTO_TEST_CASE(AssignInitializerList)
 // [associative.reqmts.general]/41-42: b.key_comp()
 BOOST_AUTO_TEST_CASE(KeyComp)
 {
-        test::for_each_type<test::spec::set::all>([]<class T> -> void {
+        test::for_each_type<test::spec::set::owners>([]<class T> -> void {
                 static_assert(requires (T const cc) { { cc.key_comp() } -> std::same_as<typename T::key_compare>; }); // [associative.reqmts.general]/41
                 auto const c = typename T::key_compare();
                 BOOST_CHECK(same_order(T(c).key_comp(), c)); // [associative.reqmts.general]/42
@@ -163,7 +163,7 @@ BOOST_AUTO_TEST_CASE(KeyComp)
 // [associative.reqmts.general]/44-45: b.value_comp()
 BOOST_AUTO_TEST_CASE(ValueComp)
 {
-        test::for_each_type<test::spec::set::all>([]<class T> -> void {
+        test::for_each_type<test::spec::set::owners>([]<class T> -> void {
                 static_assert(requires (T const cc) { { cc.value_comp() } -> std::same_as<typename T::value_compare>; }); // [associative.reqmts.general]/44
                 auto const c = typename T::key_compare();
                 BOOST_CHECK(same_order(T(c).value_comp(), c)); // [associative.reqmts.general]/45

@@ -6,7 +6,7 @@
 #include <test/for_each_type.hpp>   // for_each_type
 #include <test/set/composable.hpp>  // includes, set_difference, set_intersection, set_symmetric_difference, set_union
 #include <test/spec/input.hpp>      // context
-#include <test/spec/set.hpp>        // all, pairs, pairs_with_doubletons
+#include <test/spec/set.hpp>        // all, owners, pairs, pairs_with_doubletons
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 
 BOOST_AUTO_TEST_SUITE(Spec)
@@ -34,7 +34,7 @@ BOOST_AUTO_TEST_CASE(IsSubsetOf)
 // xstd set: constexpr X operator|(const X& lhs, const X& rhs);
 BOOST_AUTO_TEST_CASE(BitOr)
 {
-        test::for_each_type<test::spec::set::all>([]<class T> -> void {
+        test::for_each_type<test::spec::set::owners>([]<class T> -> void {
                 for (auto const [from, a, b] : inputs::pairs<T>()) {
                         auto const on_failure = context(from, a, b);
                         composable::set_union()(a, b);
@@ -45,7 +45,7 @@ BOOST_AUTO_TEST_CASE(BitOr)
 // xstd set: constexpr X operator&(const X& lhs, const X& rhs);
 BOOST_AUTO_TEST_CASE(BitAnd)
 {
-        test::for_each_type<test::spec::set::all>([]<class T> -> void {
+        test::for_each_type<test::spec::set::owners>([]<class T> -> void {
                 for (auto const [from, a, b] : inputs::pairs<T>()) {
                         auto const on_failure = context(from, a, b);
                         composable::set_intersection()(a, b);
@@ -56,7 +56,7 @@ BOOST_AUTO_TEST_CASE(BitAnd)
 // xstd set: constexpr X operator-(const X& lhs, const X& rhs);
 BOOST_AUTO_TEST_CASE(Minus)
 {
-        test::for_each_type<test::spec::set::all>([]<class T> -> void {
+        test::for_each_type<test::spec::set::owners>([]<class T> -> void {
                 for (auto const [from, a, b] : inputs::pairs<T>()) {
                         auto const on_failure = context(from, a, b);
                         composable::set_difference()(a, b);
@@ -67,7 +67,7 @@ BOOST_AUTO_TEST_CASE(Minus)
 // xstd set: constexpr X operator^(const X& lhs, const X& rhs);
 BOOST_AUTO_TEST_CASE(BitXor)
 {
-        test::for_each_type<test::spec::set::all>([]<class T> -> void {
+        test::for_each_type<test::spec::set::owners>([]<class T> -> void {
                 for (auto const [from, a, b] : inputs::pairs<T>()) {
                         auto const on_failure = context(from, a, b);
                         composable::set_symmetric_difference()(a, b);

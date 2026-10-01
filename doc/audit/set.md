@@ -5,7 +5,7 @@ Every numbered paragraph of `[associative.reqmts]` and of every leaf clause of `
 
 - **Source:** [cplusplus/draft `f2aa898ea51c1cdc42ad8096bbfebdc2ab54baea`](https://github.com/cplusplus/draft/blob/f2aa898ea51c1cdc42ad8096bbfebdc2ab54baea/source/containers.tex), `source/containers.tex`, `\rSec3[associative.reqmts]` and `\rSec3[set]`.
 - **Cross-checked:** [eel.is/c++draft](https://eel.is/c++draft/set), generated from Eelis/draft `c7015b485cc3db8efaa9dfb9ff0809c5394a4ed1`: the same paragraph numbers in all six clauses.
-- **Subjects:** `test::spec::set::all`, the standard library's `std::set<std::size_t>` and, where it has one, `std::flat_set<std::size_t>`, and every xstd set.
+- **Subjects:** `test::spec::set::all`, the standard library's `std::set<std::size_t>` and, where it has one, `std::flat_set<std::size_t>`, every xstd set, and `xstd::bit_set_view` over a fixed and a growing set. The views have no standard model and are held to what they declare: the constructors, assignments and swaps a view lacks run over `test::spec::set::owners` alone.
 
 A row's `outcome` is one of:
 

@@ -469,7 +469,7 @@ struct mem_insert
                 static_assert(std::same_as<decltype(a.insert(i, j)), void>); // [associative.reqmts.general]/75
                                                                              // [associative.reqmts.general]/76
                 static_assert(std::constructible_from<typename X::value_type, decltype(*i)>);
-                auto a1 = a;
+                auto a1 = a; // NOLINT(misc-const-correctness): a view writes through const where an owner does not
                 a.insert(i, j);
                 for (auto const& t : std::ranges::subrange(i, j)) {
                         a1.insert(t);
@@ -483,7 +483,7 @@ struct mem_insert
                 static_assert(std::same_as<decltype(a.insert_range(rg)), void>);
                 // [associative.reqmts.general]/80
                 static_assert(std::constructible_from<typename X::value_type, decltype(*rg.begin())>);
-                auto a1 = a;
+                auto a1 = a; // NOLINT(misc-const-correctness): a view writes through const where an owner does not
                 a.insert_range(rg);
                 for (auto const& t : rg) {
                         a1.insert(t);
@@ -494,7 +494,7 @@ struct mem_insert
         template<class X>
         auto operator()(X& a, std::initializer_list<typename X::value_type> il) const
         {
-                auto a1 = a;
+                auto a1 = a; // NOLINT(misc-const-correctness): a view writes through const where an owner does not
                 a.insert(il);
                 a1.insert(il.begin(), il.end());
                 BOOST_CHECK(a == a1); // [associative.reqmts.general]/83
@@ -536,7 +536,7 @@ struct mem_clear
 {
         auto operator()(auto& a) const noexcept
         {
-                auto a1 = a;
+                auto a1 = a; // NOLINT(misc-const-correctness): a view writes through const where an owner does not
                 a.clear();
                 a1.erase(a1.begin(), a1.end());
                 BOOST_CHECK(a == a1);   // [associative.reqmts.general]/138
@@ -720,9 +720,9 @@ struct mem_clear_erase_nothrow
         template<class X>
         auto operator()(X const& a, X::key_type k) const
         {
-                auto x = a;
-                BOOST_CHECK_NO_THROW(x.clear()); // [associative.reqmts.except]/1
-                auto y = a;
+                auto x = a;                                          // NOLINT(misc-const-correctness): a view writes through const where an owner does not
+                BOOST_CHECK_NO_THROW(x.clear());                     // [associative.reqmts.except]/1
+                auto y = a;                                          // NOLINT(misc-const-correctness): a view writes through const where an owner does not
                 BOOST_CHECK_NO_THROW(static_cast<void>(y.erase(k))); // [associative.reqmts.except]/1
         }
 };

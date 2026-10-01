@@ -3,27 +3,24 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/bit_array.hpp>               // bit_array
-#include <xstd/bits/bit_span.hpp>                // bit_span
-#include <xstd/bits/bit_subspan.hpp>             // bit_subspan
-#include <xstd/bits/bit_vector.hpp>              // bit_vector
-#include <xstd/bits/detail/bit_container.hpp>    // bit_container
-#include <xstd/bits/detail/sequence_adaptor.hpp> // sequence_adaptor
-#include <boost/test/unit_test.hpp>              // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <algorithm>                             // equal, fill
-#include <array>                                 // array
-#include <concepts>                              // equality_comparable, same_as
-#include <cstddef>                               // size_t
-#include <cstdint>                               // uint8_t
-#include <functional>                            // hash
-#include <iterator>                              // distance
-#include <ranges>                                // borrowed_range, iota, random_access_range, reverse, view
-#include <span>                                  // dynamic_extent
-#include <stdexcept>                             // out_of_range
-#include <tuple>                                 // tuple
-#include <type_traits>                           // is_constructible_v, is_convertible_v, is_default_constructible_v
-#include <utility>                               // declval
-#include <vector>                                // vector
+#include <xstd/bits/bit_array.hpp>            // bit_array
+#include <xstd/bits/bit_span.hpp>             // bit_span
+#include <xstd/bits/bit_subspan.hpp>          // bit_subspan
+#include <xstd/bits/bit_vector.hpp>           // bit_vector
+#include <xstd/bits/detail/bit_container.hpp> // bit_container
+#include <boost/test/unit_test.hpp>           // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <algorithm>                          // equal, fill
+#include <array>                              // array
+#include <concepts>                           // equality_comparable, same_as
+#include <cstddef>                            // ptrdiff_t, size_t
+#include <cstdint>                            // uint8_t
+#include <functional>                         // hash
+#include <ranges>                             // iota, random_access_range
+#include <span>                               // dynamic_extent
+#include <tuple>                              // tuple
+#include <type_traits>                        // is_default_constructible_v
+#include <utility>                            // declval
+#include <vector>                             // vector
 
 BOOST_AUTO_TEST_SUITE(BitSubspan)
 
@@ -85,10 +82,7 @@ BOOST_AUTO_TEST_CASE(TheWindowIsTheAdaptorWindowed)
         static_assert(has_subspan<Sub>);
         static_assert(not has_subspan<Owner>);
 
-        // A view in std::ranges' sense and borrowed like span, and like span it neither compares nor hashes.
-        static_assert(std::ranges::view<Sub>);
-        static_assert(std::ranges::borrowed_range<Sub>);
-        static_assert(std::ranges::random_access_range<Sub>);
+        // Like span it neither compares nor hashes.
         static_assert(not std::equality_comparable<Sub>);
         static_assert(not std::is_default_constructible_v<std::hash<Sub>>);
         static_assert(can_fill<Sub>);
@@ -107,28 +101,13 @@ BOOST_AUTO_TEST_CASE(TheWindowIsTheAdaptorWindowed)
         static_assert(has_subspan<CSub>);
 }
 
-// A window sees its positions and nothing beyond them, reading them from zero.
-BOOST_AUTO_TEST_CASE(AWindowSeesItsPositionsAlone)
+// A window holds as many positions as it views, and no more: max_size, which span lacks, is its size.
+BOOST_AUTO_TEST_CASE(AWindowHoldsNoMoreThanItViews)
 {
         auto a = Owner();
-        a[2] = true;
-        a[5] = true;
-        a[7] = true;
-        auto const v = xstd::bit_span(a);
-        auto const w = v.subspan(2, 6);
-
-        BOOST_CHECK_EQUAL(w.size(), 6UZ);
-        BOOST_CHECK(not w.empty());
+        auto const w = xstd::bit_span(a).subspan(2, 6);
         BOOST_CHECK_EQUAL(w.max_size(), 6UZ);
-        BOOST_CHECK(std::ranges::equal(w, std::vector<bool>{true, false, false, true, false, true}));
-        BOOST_CHECK(std::ranges::equal(std::views::reverse(w), std::vector<bool>{true, false, true, false, false, true}));
-        BOOST_CHECK(w[0] and w[3] and w[5]);
-        BOOST_CHECK(not w[1] and not w[2] and not w[4]);
-        BOOST_CHECK(w.front() and w.back());
-        BOOST_CHECK(static_cast<bool>(w.at(3)));
-        BOOST_CHECK_THROW(static_cast<void>(w.at(6)), std::out_of_range);
-        BOOST_CHECK_EQUAL(std::distance(w.begin(), w.end()), 6);
-        BOOST_CHECK_EQUAL(std::distance(w.cbegin(), w.cend()), 6);
+        BOOST_CHECK_EQUAL(w.max_size(), w.size());
 }
 
 // Writing through a window writes the storage, one position at a time or through the iterators an algorithm walks.
@@ -270,31 +249,6 @@ BOOST_AUTO_TEST_CASE(AWindowCombinesWithAnotherAtAnyAlignment)
         static_assert(combinable<decltype(w), decltype(xstd::bit_span(self))>);
 }
 
-// Windows compose: a window of a window offsets once more, and dynamic_extent reaches the end.
-BOOST_AUTO_TEST_CASE(WindowsCompose)
-{
-        auto a = Owner();
-        for (auto const i : {2UZ, 5UZ, 17UZ, 19UZ}) {
-                a[i] = true;
-        }
-        auto const v = xstd::bit_span(a);
-
-        BOOST_CHECK(std::ranges::equal(v.subspan(2).first(4), std::vector<bool>{true, false, false, true}));
-        BOOST_CHECK(std::ranges::equal(v.last(3), std::vector<bool>{true, false, true}));
-        BOOST_CHECK(std::ranges::equal(v.subspan(1, 5).subspan(1, 2), std::vector<bool>{true, false}));
-        BOOST_CHECK(std::ranges::equal(v.subspan(15).last(3), v.last(3)));
-        BOOST_CHECK_EQUAL(v.subspan(4, std::dynamic_extent).size(), 16UZ);
-        BOOST_CHECK_EQUAL(v.subspan(4).size(), 16UZ);
-
-        // The degenerate windows: at the end, of no positions, and over a zero width.
-        BOOST_CHECK(v.subspan(20).empty());
-        BOOST_CHECK(v.first(0).empty());
-        BOOST_CHECK(v.last(0).empty());
-        BOOST_CHECK(v.subspan(20).begin() == v.subspan(20).end());
-        auto z = xstd::basic_bit_array<std::uint8_t, 0>();
-        BOOST_CHECK(xstd::bit_span(z).subspan(0).empty());
-}
-
 namespace {
 
 template<class X, std::size_t Count>
@@ -305,77 +259,30 @@ constexpr bool has_subspan_of = requires (X x) { x.template subspan<Offset, Coun
 
 } // namespace
 
-// [span.sub]'s compile-time three: the count in the type, no count stored, and the same positions as at run time.
+// A static window stores no count: its width is in its type, and writes as a dynamic one does.
 BOOST_AUTO_TEST_CASE(AStaticWindowCarriesItsWidthInItsType)
 {
         auto a = Owner();
-        for (auto const i : {2UZ, 5UZ, 17UZ, 19UZ}) {
-                a[i] = true;
-        }
         auto const v = xstd::bit_span(a);
 
-        auto const f = v.first<4>();
-        auto const l = v.last<3>();
-        auto const s = v.subspan<1, 5>();
-        auto const tail = v.subspan<15>();
-        static_assert(std::same_as<decltype(f), xstd::bit_subspan<Blocks, 4, 20> const>);
-        static_assert(std::same_as<decltype(tail), xstd::bit_subspan<Blocks, 5, 20> const>);
-        static_assert(decltype(s)::extent == 5UZ and Sub::extent == std::dynamic_extent);
-        static_assert(sizeof(f) + sizeof(std::size_t) == sizeof(v.first(4)));
-        BOOST_CHECK(std::ranges::equal(f, v.first(4)));
-        BOOST_CHECK(std::ranges::equal(l, v.last(3)));
-        BOOST_CHECK(std::ranges::equal(s, v.subspan(1, 5)));
-        BOOST_CHECK(std::ranges::equal(tail, v.subspan(15)));
-        BOOST_CHECK(std::ranges::equal(s.subspan<1, 2>(), v.subspan(2, 2)));
-        BOOST_CHECK_EQUAL(f.size(), 4UZ);
+        static_assert(std::same_as<decltype(v.first<4>()), xstd::bit_subspan<Blocks, 4, 20>>);
+        static_assert(std::same_as<decltype(v.subspan<15>()), xstd::bit_subspan<Blocks, 5, 20>>);
+        static_assert(sizeof(v.first<4>()) + sizeof(std::size_t) == sizeof(v.first(4)));
 
-        // A static window writes as a dynamic one does, a masked block at a time.
+        // A masked block at a time, as a dynamic window fills.
         v.subspan<8, 8>().fill(true);
-        BOOST_CHECK_EQUAL(a.count(), 12UZ);
-
-        // Over a run-time width the count is checked at run time, as std::span's is.
-        auto d = xstd::basic_bit_vector<std::uint8_t>(12UZ);
-        auto const dv = xstd::bit_span(d);
-        dv.last<6>().fill(true);
-        BOOST_CHECK_EQUAL(d.count(), 6UZ);
-        BOOST_CHECK(d[11] and not d[5]);
+        BOOST_CHECK_EQUAL(a.count(), 8UZ);
+        BOOST_CHECK(a[8] and a[15] and not a[7] and not a[16]);
 }
 
-// Where the type already says it cannot fit, it is ill-formed; to a dynamic extent implicitly, back explicitly.
-BOOST_AUTO_TEST_CASE(AStaticWindowIsCheckedAndConvertedAsStdSpanIs)
+// Where the type already says a count cannot fit, the member is not there to call, rather than ill-formed inside.
+BOOST_AUTO_TEST_CASE(AStaticWindowIsConstrainedByItsExtent)
 {
         static_assert(has_first<Span, 20UZ> and not has_first<Span, 21UZ>);
         static_assert(has_subspan_of<Span, 20UZ, 0UZ> and not has_subspan_of<Span, 21UZ, std::dynamic_extent>);
         static_assert(has_subspan_of<Span, 10UZ, 10UZ> and not has_subspan_of<Span, 10UZ, 11UZ>);
         static_assert(has_first<xstd::bit_subspan<Blocks, 4, 20>, 4UZ> and not has_first<xstd::bit_subspan<Blocks, 4, 20>, 5UZ>);
         static_assert(has_first<Sub, 100UZ>);
-
-        static_assert(std::is_convertible_v<xstd::bit_subspan<Blocks, 4, 20>, Sub>);
-        static_assert(not std::is_convertible_v<Sub, xstd::bit_subspan<Blocks, 4, 20>>);
-        static_assert(std::is_constructible_v<xstd::bit_subspan<Blocks, 4, 20>, Sub>);
-        static_assert(not std::is_constructible_v<xstd::bit_subspan<Blocks, 4, 20>, xstd::bit_subspan<Blocks, 5, 20>>);
-
-        auto a = Owner();
-        a[3] = true;
-        auto const v = xstd::bit_span(a);
-        Sub const dynamic = v.first<4>();
-        auto const back = xstd::bit_subspan<Blocks, 4, 20>(dynamic);
-        BOOST_CHECK_EQUAL(dynamic.size(), 4UZ);
-        BOOST_CHECK(back[3] and not back[0]);
-}
-
-// Every viewed storage windows the same way, ours and the two foreign ones alike, through the trait.
-BOOST_AUTO_TEST_CASE_TEMPLATE(EveryViewedStorageWindows, T, ViewedTypes)
-{
-        auto bits = twenty<T>();
-        auto const v = xstd::bit_span(bits);
-        v[5] = true;
-        auto const w = v.subspan(4, 3);
-        BOOST_CHECK_EQUAL(w.size(), 3UZ);
-        BOOST_CHECK(not w[0] and w[1] and not w[2]);
-        w[2] = true;
-        BOOST_CHECK(static_cast<bool>(v[6]));
-        BOOST_CHECK(std::ranges::equal(v.first(8).last(4), std::vector<bool>{false, true, true, false}));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

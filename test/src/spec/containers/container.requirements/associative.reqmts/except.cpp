@@ -6,7 +6,7 @@
 #include <test/for_each_type.hpp>   // for_each_type
 #include <test/set/primitives.hpp>  // mem_clear_erase_nothrow, mem_insert_or_nothing, mem_swap_nothrow
 #include <test/spec/input.hpp>      // context
-#include <test/spec/set.hpp>        // all, keyed_sets, pairs, sets
+#include <test/spec/set.hpp>        // all, keyed_sets, owners, pairs, sets
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <concepts>                 // swap
 
@@ -50,7 +50,7 @@ BOOST_AUTO_TEST_CASE(InsertEmplace)
 // [associative.reqmts.except]/3: a.swap(b), swap(a, b)
 BOOST_AUTO_TEST_CASE(Swap)
 {
-        test::for_each_type<test::spec::set::all>([]<class T> -> void {
+        test::for_each_type<test::spec::set::owners>([]<class T> -> void {
                 static_assert(requires (T x, T y) {
                         { x.swap(y) } noexcept;
                         { swap(x, y) } noexcept;

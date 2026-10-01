@@ -5,7 +5,7 @@ Every numbered paragraph of every leaf clause of `[alg.set.operations]`, and wha
 
 - **Source:** [cplusplus/draft `f2aa898ea51c1cdc42ad8096bbfebdc2ab54baea`](https://github.com/cplusplus/draft/blob/f2aa898ea51c1cdc42ad8096bbfebdc2ab54baea/source/algorithms.tex), `source/algorithms.tex`, `\rSec3[alg.set.operations]`.
 - **Cross-checked:** [eel.is/c++draft](https://eel.is/c++draft/alg.set.operations), generated from Eelis/draft `c7015b485cc3db8efaa9dfb9ff0809c5394a4ed1`: the same paragraph numbers in all six clauses.
-- **Subjects:** the algorithms, run over the iterators of every set in `test::spec::set::all`: the standard library's `std::set<std::size_t>` and, where it has one, `std::flat_set<std::size_t>`, and every xstd set.
+- **Subjects:** the algorithms, run over the iterators of every set in `test::spec::set::all`: the standard library's `std::set<std::size_t>` and, where it has one, `std::flat_set<std::size_t>`, every xstd set, and `xstd::bit_set_view`.
 
 A row's `outcome` is one of:
 

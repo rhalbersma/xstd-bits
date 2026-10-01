@@ -9,7 +9,7 @@
 #include <test/flat_set.hpp>                        // IWYU pragma: keep; TEST_HAS_FLAT_SET, flat_set
 #include <test/minimal_blocks.hpp>                  // minimal_blocks
 #include <test/spec/sequence.hpp>                   // all, pairs, sequences
-#include <test/spec/set.hpp>                        // all, pairs, pairs_with_doubletons, sets
+#include <test/spec/set.hpp>                        // owners, pairs, pairs_with_doubletons, sets
 #include <xstd/bits/bit_bounded_set.hpp>            // basic_bit_bounded_set
 #include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector
 #include <xstd/bits/detail/bit_container.hpp>       // bit_container
@@ -25,7 +25,8 @@
 // The candidates for [container.requirements], which both the set and the sequence reading meet.
 namespace test::spec::container {
 
-using all = decltype(std::tuple_cat(std::declval<set::all>(), std::declval<sequence::all>()));
+// A container owns its elements, so the set reading's views, like std::span, are not among them.
+using all = decltype(std::tuple_cat(std::declval<set::owners>(), std::declval<sequence::all>()));
 
 // A set names the key it holds, where a sequence holds bools by position.
 template<class X>
