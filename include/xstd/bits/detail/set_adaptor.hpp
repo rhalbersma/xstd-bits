@@ -33,7 +33,6 @@
 #include <functional>                                // hash, less
 #include <initializer_list>                          // initializer_list
 #include <iterator>                                  // input_iterator, iter_reference_t, make_reverse_iterator, reverse_iterator, sentinel_for
-#include <new>                                       // bad_alloc
 #include <ranges>                                    // begin, enable_borrowed_range, enable_view, end, input_range, iota, range_reference_t, from_range_t, swap, transform
 #include <source_location>                           // source_location
 #include <span>                                      // dynamic_extent
@@ -728,8 +727,8 @@ public:
                 return self;
         }
 
-        // The shifts translate the set; a static width empties past it, and a run-time one grows for a left shift.
-        constexpr auto operator<<=(this auto&& self, std::size_t n) noexcept(has_static_width)
+        // The shifts translate the set and keep the keys below max_size(); a run-time width grows towards it first.
+        constexpr auto operator<<=(this auto&& self, std::size_t n) noexcept(has_static_width or bits_type::has_static_capacity)
                 -> auto&
                 requires requires { self.bits() <<= n; } and (has_static_width or requires { self.bits().resize(n); })
         {
@@ -742,18 +741,12 @@ public:
                         }
                 } else if constexpr (bits_type::has_zero_capacity) {
                         // A capacity of nought holds no element, so there is nothing to translate.
-                } else if constexpr (bits_type::has_static_capacity) {
-                        // Under a capacity it is the highest element that must fit: the width is no part of the value.
-                        if (auto const width = self.bits().size(); self.bits().any()) {
-                                if (n >= bits_type::static_capacity() - self.bits().exclusive_find_prev(width)) {
-                                        throw std::bad_alloc();
-                                }
-                                self.bits().resize(std::ranges::min(bits_type::width_sum(width, n), bits_type::static_capacity()));
-                                self.bits() <<= n;
-                        }
-                } else if (auto const width = self.bits().size(); width > 0UZ) {
-                        // width + n through the saturating sum; past the positions there are it is length_error.
-                        self.bits().resize(bits_type::check_width(bits_type::width_sum(width, n)));
+                } else if (auto const lowest = self.bits().find_first(), width = self.bits().size(), top = self.max_size(); lowest == width or n >= top - lowest) {
+                        // No key lands below max_size(): the set empties at its width and asks for no growth.
+                        self.bits().fill(false);
+                } else {
+                        // width + n saturates and stops at max_size(); the storage's shift drops what passes the width.
+                        self.bits().resize(std::ranges::min(bits_type::width_sum(width, n), top));
                         self.bits() <<= n;
                 }
                 return self;
