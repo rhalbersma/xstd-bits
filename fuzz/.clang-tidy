@@ -1,0 +1,20 @@
+#          Copyright Rein Halbersma 2014-2026.
+# Distributed under the Boost Software License, Version 1.0.
+#    (See accompanying file LICENSE_1_0.txt or copy at
+#          http://www.boost.org/LICENSE_1_0.txt)
+
+---
+# Static analysis for the libFuzzer targets, extending the root config rather than replacing it.
+# The filter adds fuzz/include, so the decoder the three targets share is analyzed as well.
+# Two checks are dropped, neither saying anything true about a differential harness:
+# - readability-magic-numbers: the widths the owners are instantiated at, the case labels of the
+#   operation switch, and the slack past a width that out-of-range inputs reach for. Naming each
+#   would say the same thing twice and hide the list.
+# - readability-function-cognitive-complexity: each target is one switch over its operations,
+#   every case a few lines applying one operation to the owner and its model. Splitting it into a
+#   function per case moves the switch rather than simplifying it.
+InheritParentConfig: true
+HeaderFilterRegex: '(include/xstd|fuzz/include)/.*'
+Checks: >
+  -readability-magic-numbers,
+  -readability-function-cognitive-complexity
