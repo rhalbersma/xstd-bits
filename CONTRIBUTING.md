@@ -125,6 +125,31 @@ This is [xstd](https://github.com/rhalbersma/xstd-ints)'s convention as well, in
 
 The [Scorecard workflow](.github/workflows/scorecard.yml) cannot be required: it runs on pushes to `main` and on a schedule, never on a pull request.
 
+## Fuzzing
+
+The tests check each operation on its own; the libFuzzer targets under [`fuzz/`](fuzz) check *sequences* of them. Each target decodes its input bytes into operations, applies them to two owners of one type and to a model of each side by side, and after every step compares the two; on a divergence it prints the operation's index and name and aborts. Keys and positions are reduced into range, so every input is valid.
+
+| Target | xstd owners | Model |
+| :--- | :--- | :--- |
+| `fuzz_set` | `bit_set`, `bit_fixed_set<N>`, `bit_bounded_set<N>`, `bit_small_set` | `std::set<std::size_t>` |
+| `fuzz_bitset` | `bitset<N>`, `dynamic_bitset`, `bounded_bitset<N>`, `small_bitset` | `std::bitset<N>` and `boost::dynamic_bitset<>` |
+| `fuzz_vector` | `bit_vector`, `bit_array<N>`, `bit_bounded_vector<N>`, `bit_small_vector` | `std::vector<bool>` |
+
+The first input byte picks the owner type, at widths on both sides of a block boundary. A set's left shift is modelled as what the library does for every owner: translate by `n` and keep the keys below `max_size()`.
+
+They need clang, which is what ships libFuzzer, and Boost.DynamicBitset for the bitset model. `XSTD_BITS_BUILD_FUZZERS` is off by default and independent of `BUILD_TESTING`:
+
+```sh
+cmake -S . -B build-fuzz -DCMAKE_CXX_COMPILER=clang++-22 -DBUILD_TESTING=OFF -DXSTD_BITS_BUILD_FUZZERS=ON \
+      -DCMAKE_PREFIX_PATH=~/.local/opt/boost-1.92.0
+cmake --build build-fuzz --parallel 2
+mkdir -p corpus && build-fuzz/fuzz/fuzz_set -max_total_time=120 corpus fuzz/corpus/fuzz_set
+```
+
+The targets are built with ASan and UBSan, and `XSTD_BITS_FUZZ_COMPILE_OPTIONS` and `XSTD_BITS_FUZZ_LINK_OPTIONS` replace those flags. The first directory on the command line receives what the run discovers; the checked-in seeds under `fuzz/corpus/<target>/` are read but left alone. A crash is written as `crash-<sha1>` in the working directory, and reproduces by passing that file to the target binary. With `BUILD_TESTING` on as well, CTest replays each seed corpus once as `fuzz.<target>`. A seed named `regression-...` is a minimized input that once found a bug, and stays to keep it found.
+
+[ClusterFuzzLite](https://google.github.io/clusterfuzzlite/) runs the same targets in CI, built by [`.clusterfuzzlite/build.sh`](.clusterfuzzlite/build.sh) in the OSS-Fuzz builder image: [`cflite_pr.yml`](.github/workflows/cflite_pr.yml) for five minutes on every pull request, under ASan and UBSan, and [`cflite_batch.yml`](.github/workflows/cflite_batch.yml) nightly for half an hour, keeping the corpus it grows. A crash fails the job and is uploaded as an artifact.
+
 ## Required status checks
 
 The names to tick under branch protection, exactly as GitHub reports them:
