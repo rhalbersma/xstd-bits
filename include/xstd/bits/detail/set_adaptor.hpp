@@ -728,13 +728,18 @@ public:
                 return self;
         }
 
-        // The shifts translate the set; a run-time width grows for a left shift and empties past a right.
+        // The shifts translate the set; a static width empties past it, and a run-time one grows for a left shift.
         constexpr auto operator<<=(this auto&& self, std::size_t n) noexcept(has_static_width)
                 -> auto&
                 requires requires { self.bits() <<= n; } and (has_static_width or requires { self.bits().resize(n); })
         {
                 if constexpr (has_static_width) {
-                        self.bits() <<= n;
+                        // The storage's shift has n < size() as its precondition; a constant n folds the test away.
+                        if (n < self.bits().size()) {
+                                self.bits() <<= n;
+                        } else {
+                                self.bits().fill(false);
+                        }
                 } else if constexpr (bits_type::has_zero_capacity) {
                         // A capacity of nought holds no element, so there is nothing to translate.
                 } else if constexpr (bits_type::has_static_capacity) {
@@ -758,13 +763,11 @@ public:
                 -> auto&
                 requires requires { self.bits() >>= n; }
         {
-                if constexpr (not has_static_width) {
-                        if (n >= self.bits().size()) {
-                                self.bits().fill(false);
-                                return self;
-                        }
+                if (n < self.bits().size()) {
+                        self.bits() >>= n;
+                } else {
+                        self.bits().fill(false);
                 }
-                self.bits() >>= n;
                 return self;
         }
 
