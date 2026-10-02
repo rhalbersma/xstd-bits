@@ -73,6 +73,9 @@ using views = std::tuple<xstd::bit_set_view<std::array<std::uint8_t, 3>, 17>, xs
 
 using all = decltype(std::tuple_cat(std::declval<owners>(), std::declval<views>()));
 
+// The same views over const blocks, which read the keys and write none: a clause asks them only what they lack.
+using const_views = std::tuple<xstd::bit_set_view<std::array<std::uint8_t, 3> const, 17>, xstd::bit_set_view<std::vector<std::uint64_t> const>>;
+
 // The owners that take an allocator, under one that keeps a ledger and refuses on request, std::set first.
 using ledgered = std::tuple<std::set<std::size_t, std::less<>, test::container::non_propagating<std::size_t>>, xstd::basic_bit_set<std::uint8_t, test::container::non_propagating<std::uint8_t>>, xstd::basic_bit_set<std::uint64_t, test::container::non_propagating<std::uint64_t>>, xstd::basic_bit_small_set<std::uint8_t, 9, test::container::non_propagating<std::uint8_t>>, xstd::basic_bit_small_set<std::uint64_t, 64, test::container::non_propagating<std::uint64_t>>>;
 

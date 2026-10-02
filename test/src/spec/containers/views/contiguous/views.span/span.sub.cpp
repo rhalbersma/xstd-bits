@@ -6,7 +6,7 @@
 #include <test/for_each_type.hpp>   // for_each_type
 #include <test/spec/input.hpp>      // context
 #include <test/spec/sequence.hpp>   // bools
-#include <test/spec/span.hpp>       // all, read, same_position, spans, views
+#include <test/spec/span.hpp>       // all, is_model, read, same_position, spans, views
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <concepts>                 // same_as
 #include <cstddef>                  // ptrdiff_t, size_t
@@ -49,6 +49,20 @@ using element_t = std::remove_const_t<X>::element_type;
 // The subview a member hands back: its extent the one given, its elements those of the view it came from.
 template<class R, class T>
 inline constexpr bool subview_at = std::same_as<element_t<R>, element_t<T>>;
+
+// The compile-time subviews, asked as templates so that a refused count is a false rather than a hard error.
+template<class S, std::size_t Count>
+concept has_static_first = requires (S const s) { s.template first<Count>(); };
+
+template<class S, std::size_t Count>
+concept has_static_last = requires (S const s) { s.template last<Count>(); };
+
+template<class S, std::size_t Offset, std::size_t Count>
+concept has_static_subspan = requires (S const s) { s.template subspan<Offset, Count>(); };
+
+// A std::span past its static extent breaks a Mandates, a hard error; the packed views constrain it instead.
+template<class S>
+inline constexpr bool constrains_extent_v = not test::spec::span::is_model<S> and S::extent != dyn;
 
 template<std::size_t... N>
 auto for_each_value(auto fun)
@@ -95,6 +109,10 @@ auto check_static_subspans(S const& s)
 BOOST_AUTO_TEST_CASE(StaticFirst)
 {
         test::for_each_type<test::spec::span::all>([]<class T> -> void {
+                if constexpr (constrains_extent_v<T>) {
+                        static_assert(has_static_first<T, T::extent>);
+                        static_assert(not has_static_first<T, T::extent + 1UZ>); // [span.sub]/1
+                }
                 for (auto const [from, a] : inputs::views<T>()) {
                         auto const on_failure = context(from, a);
                         auto const s = a.view();
@@ -115,6 +133,10 @@ BOOST_AUTO_TEST_CASE(StaticFirst)
 BOOST_AUTO_TEST_CASE(StaticLast)
 {
         test::for_each_type<test::spec::span::all>([]<class T> -> void {
+                if constexpr (constrains_extent_v<T>) {
+                        static_assert(has_static_last<T, T::extent>);
+                        static_assert(not has_static_last<T, T::extent + 1UZ>); // [span.sub]/4
+                }
                 for (auto const [from, a] : inputs::views<T>()) {
                         auto const on_failure = context(from, a);
                         auto const s = a.view();
@@ -135,6 +157,12 @@ BOOST_AUTO_TEST_CASE(StaticLast)
 BOOST_AUTO_TEST_CASE(StaticSubspan)
 {
         test::for_each_type<test::spec::span::all>([]<class T> -> void {
+                if constexpr (constrains_extent_v<T>) {
+                        static_assert(has_static_subspan<T, T::extent, dyn> and has_static_subspan<T, 0UZ, T::extent>);
+                        static_assert(not has_static_subspan<T, T::extent + 1UZ, dyn>); // [span.sub]/7
+                        static_assert(not has_static_subspan<T, 0UZ, T::extent + 1UZ>); // [span.sub]/7
+                        static_assert(not has_static_subspan<T, 1UZ, T::extent>);       // [span.sub]/7
+                }
                 for (auto const [from, a] : inputs::views<T>()) {
                         auto const on_failure = context(from, a);
                         auto const s = a.view();

@@ -6,12 +6,13 @@
 #include <test/for_each_type.hpp>    // for_each_type
 #include <test/spec/input.hpp>       // context
 #include <test/spec/span.hpp>        // all, pairs, read, same_position, views
+#include <xstd/bits/bit_span.hpp>    // bit_span
 #include <xstd/bits/bit_subspan.hpp> // bit_subspan
 #include <boost/test/unit_test.hpp>  // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <concepts>                  // same_as
 #include <cstddef>                   // size_t
 #include <span>                      // dynamic_extent, span
-#include <type_traits>               // is_constructible_v, is_convertible_v, is_nothrow_constructible_v, is_nothrow_copy_assignable_v, is_nothrow_copy_constructible_v
+#include <type_traits>               // is_const_v, is_constructible_v, is_convertible_v, is_nothrow_constructible_v, is_nothrow_copy_assignable_v, is_nothrow_copy_constructible_v
 
 BOOST_AUTO_TEST_SUITE(Spec)
 BOOST_AUTO_TEST_SUITE(Containers)
@@ -46,6 +47,32 @@ struct at_extent<xstd::bit_subspan<Blocks, X, N>, E>
 
 template<class T, std::size_t E>
 using at_extent_t = at_extent<T, E>::type;
+
+// The same candidate over writable elements, for one over const elements: std::span's element type or a view's blocks.
+template<class T>
+struct writable
+{};
+
+template<class Element, std::size_t X>
+struct writable<std::span<Element const, X>>
+{
+        using type = std::span<Element, X>;
+};
+
+template<class Blocks, std::size_t N>
+struct writable<xstd::bit_span<Blocks const, N>>
+{
+        using type = xstd::bit_span<Blocks, N>;
+};
+
+template<class Blocks, std::size_t X, std::size_t N>
+struct writable<xstd::bit_subspan<Blocks const, X, N>>
+{
+        using type = xstd::bit_subspan<Blocks, X, N>;
+};
+
+template<class T>
+using writable_t = writable<T>::type;
 
 // Whether u views what s does: as many positions, each the same one.
 template<class U, class S>
@@ -84,6 +111,10 @@ BOOST_AUTO_TEST_CASE(CopyConstructor)
 BOOST_AUTO_TEST_CASE(ConvertingConstructor)
 {
         test::for_each_type<test::spec::span::all>([]<class T> -> void {
+                // Const elements never become writable ones, which would write through what was handed over to be read.
+                if constexpr (std::is_const_v<typename T::element_type>) {
+                        static_assert(not std::is_constructible_v<writable_t<T>, T const&>); // [span.cons]/22
+                }
                 // A whole view has one extent, its owner's width: only std::span and a window have another.
                 if constexpr (requires { typename at_extent_t<T, std::dynamic_extent>; }) {
                         using D = at_extent_t<T, std::dynamic_extent>;
