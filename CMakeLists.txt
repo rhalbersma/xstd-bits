@@ -189,6 +189,13 @@ if(PROJECT_IS_TOP_LEVEL)
         endif()
         add_subdirectory(test)
     endif()
+
+    # Off by default, and outside BUILD_TESTING: ClusterFuzzLite builds the fuzz targets alone, without the test tree's Boost.Test and range-v3. Clang only, libFuzzer being clang's.
+    option(${project_option_prefix}_BUILD_FUZZERS "Build the libFuzzer differential targets under fuzz/" OFF)
+
+    if(${project_option_prefix}_BUILD_FUZZERS)
+        add_subdirectory(fuzz)
+    endif()
 endif()
 
 install(
