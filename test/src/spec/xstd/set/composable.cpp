@@ -5,9 +5,12 @@
 
 #include <test/for_each_type.hpp>   // for_each_type
 #include <test/set/composable.hpp>  // includes, set_difference, set_intersection, set_symmetric_difference, set_union
+#include <test/set/exhaustive.hpp>  // static_width
 #include <test/spec/input.hpp>      // context
-#include <test/spec/set.hpp>        // all, owners, pairs, pairs_with_doubletons
-#include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <test/spec/rejection.hpp>  // has_and_assign, has_bit_and, has_bit_or, has_bit_xor, has_complement, has_minus, has_minus_assign, has_or_assign, has_xor_assign
+#include <test/spec/set.hpp>        // all, const_views, owners, pairs, pairs_with_doubletons, views
+#include <test/spec/view.hpp>       // owner_t
+#include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 
 BOOST_AUTO_TEST_SUITE(Spec)
 BOOST_AUTO_TEST_SUITE(Xstd)
@@ -40,6 +43,12 @@ BOOST_AUTO_TEST_CASE(BitOr)
                         composable::set_union()(a, b);
                 }
         });
+        // A view writes in place, and copies no keys into a value it could return, by this library's design.
+        test::for_each_type<test::spec::set::views>([]<class T> -> void {
+                static_assert(test::spec::has_or_assign<T> and test::spec::has_bit_or<test::spec::owner_t<T>>);
+                static_assert(not test::spec::has_bit_or<T>);
+        });
+        test::for_each_type<test::spec::set::const_views>([]<class T> -> void { static_assert(not test::spec::has_or_assign<T>); });
 }
 
 // xstd set: constexpr X operator&(const X& lhs, const X& rhs);
@@ -51,6 +60,12 @@ BOOST_AUTO_TEST_CASE(BitAnd)
                         composable::set_intersection()(a, b);
                 }
         });
+        // A view writes in place, and copies no keys into a value it could return, by this library's design.
+        test::for_each_type<test::spec::set::views>([]<class T> -> void {
+                static_assert(test::spec::has_and_assign<T> and test::spec::has_bit_and<test::spec::owner_t<T>>);
+                static_assert(not test::spec::has_bit_and<T>);
+        });
+        test::for_each_type<test::spec::set::const_views>([]<class T> -> void { static_assert(not test::spec::has_and_assign<T>); });
 }
 
 // xstd set: constexpr X operator-(const X& lhs, const X& rhs);
@@ -62,6 +77,12 @@ BOOST_AUTO_TEST_CASE(Minus)
                         composable::set_difference()(a, b);
                 }
         });
+        // A view writes in place, and copies no keys into a value it could return, by this library's design.
+        test::for_each_type<test::spec::set::views>([]<class T> -> void {
+                static_assert(test::spec::has_minus_assign<T> and test::spec::has_minus<test::spec::owner_t<T>>);
+                static_assert(not test::spec::has_minus<T>);
+        });
+        test::for_each_type<test::spec::set::const_views>([]<class T> -> void { static_assert(not test::spec::has_minus_assign<T>); });
 }
 
 // xstd set: constexpr X operator^(const X& lhs, const X& rhs);
@@ -73,6 +94,21 @@ BOOST_AUTO_TEST_CASE(BitXor)
                         composable::set_symmetric_difference()(a, b);
                 }
         });
+        // A view writes in place, and copies no keys into a value it could return, by this library's design.
+        test::for_each_type<test::spec::set::views>([]<class T> -> void {
+                static_assert(test::spec::has_xor_assign<T> and test::spec::has_bit_xor<test::spec::owner_t<T>>);
+                static_assert(not test::spec::has_bit_xor<T>);
+        });
+        test::for_each_type<test::spec::set::const_views>([]<class T> -> void { static_assert(not test::spec::has_xor_assign<T>); });
+}
+
+// xstd set: constexpr X operator~(const X& lhs);
+BOOST_AUTO_TEST_CASE(Complement)
+{
+        // Only an owner's width in the type is a universe to complement in, by this library's design.
+        test::for_each_type<test::spec::set::all>([]<class T> -> void { static_assert(test::spec::has_complement<T> == test::set::static_width<T>); });
+        test::for_each_type<test::spec::set::const_views>([]<class T> -> void { static_assert(not test::spec::has_complement<T>); });
+        BOOST_CHECK(true);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

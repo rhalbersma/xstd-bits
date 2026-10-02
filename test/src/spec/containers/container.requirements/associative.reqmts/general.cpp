@@ -7,7 +7,8 @@
 #include <test/for_each_type.hpp>   // for_each_type
 #include <test/set/primitives.hpp>  // constructor, key_order, mem_clear, mem_contains, mem_count, mem_emplace, mem_emplace_hint, mem_equal_range, mem_erase, mem_erase_mutable, mem_find, mem_insert, mem_lower_bound, mem_upper_bound, nested_types, no_heterogeneous_members, op_assign, same_order
 #include <test/spec/input.hpp>      // context, with_initializer_list
-#include <test/spec/set.hpp>        // all, key_lists, keyed_sets, keyed_sets_with_singletons, listed_sets, owners, sets, sets_with_doubletons
+#include <test/spec/rejection.hpp>  // has_assign_list, has_clear, has_emplace, has_emplace_hint, has_erase_at, has_erase_key, has_erase_range, has_insert_at, has_insert_iterators, has_insert_key, has_insert_list, has_insert_range
+#include <test/spec/set.hpp>        // all, const_views, key_lists, keyed_sets, keyed_sets_with_singletons, listed_sets, owners, sets, sets_with_doubletons, views
 #include <xstd/bits/bit_set.hpp>    // basic_bit_set, bit_set
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <concepts>                 // same_as
@@ -140,6 +141,7 @@ BOOST_AUTO_TEST_CASE(InitializerList)
 BOOST_AUTO_TEST_CASE(AssignInitializerList)
 {
         test::for_each_type<test::spec::set::owners>([]<class T> -> void {
+                static_assert(test::spec::has_assign_list<T>);
                 for (auto const [from, a, keys] : inputs::listed_sets<T>()) {
                         auto const on_failure = context(from, a, keys);
                         with_initializer_list(keys, [&](std::initializer_list<std::size_t> il) -> void {
@@ -148,6 +150,9 @@ BOOST_AUTO_TEST_CASE(AssignInitializerList)
                         });
                 }
         });
+        // A view is built and assigned only from what it views, by this library's design, so it takes no list.
+        test::for_each_type<test::spec::set::views>([]<class T> -> void { static_assert(not test::spec::has_assign_list<T>); });
+        test::for_each_type<test::spec::set::const_views>([]<class T> -> void { static_assert(not test::spec::has_assign_list<T>); });
 }
 
 // [associative.reqmts.general]/41-42: b.key_comp()
@@ -174,6 +179,7 @@ BOOST_AUTO_TEST_CASE(ValueComp)
 BOOST_AUTO_TEST_CASE(Emplace)
 {
         test::for_each_type<test::spec::set::all>([]<class T> -> void {
+                static_assert(test::spec::has_emplace<T>);
                 static_assert(requires (T c, T::key_type k) {
                         { c.emplace(k) } -> std::same_as<std::pair<typename T::iterator, bool>>;
                         { c.emplace() } -> std::same_as<std::pair<typename T::iterator, bool>>;
@@ -184,12 +190,15 @@ BOOST_AUTO_TEST_CASE(Emplace)
                         mem_emplace()(x, k);
                 }
         });
+        // A view over const blocks writes nothing, by this library's design.
+        test::for_each_type<test::spec::set::const_views>([]<class T> -> void { static_assert(not test::spec::has_emplace<T>); });
 }
 
 // [associative.reqmts.general]/57-59: a.emplace_hint(p, args)
 BOOST_AUTO_TEST_CASE(EmplaceHint)
 {
         test::for_each_type<test::spec::set::all>([]<class T> -> void {
+                static_assert(test::spec::has_emplace_hint<T>);
                 static_assert(requires (T c, T::key_type k, T::const_iterator p) {
                         { c.emplace_hint(p, k) } -> std::same_as<typename T::iterator>;
                         { c.emplace_hint(p) } -> std::same_as<typename T::iterator>;
@@ -200,12 +209,15 @@ BOOST_AUTO_TEST_CASE(EmplaceHint)
                         mem_emplace_hint()(x, x.end(), k);
                 }
         });
+        // A view over const blocks writes nothing, by this library's design.
+        test::for_each_type<test::spec::set::const_views>([]<class T> -> void { static_assert(not test::spec::has_emplace_hint<T>); });
 }
 
 // [associative.reqmts.general]/4,61-64: a_uniq.insert(t)
 BOOST_AUTO_TEST_CASE(Insert)
 {
         test::for_each_type<test::spec::set::all>([]<class T> -> void {
+                static_assert(test::spec::has_insert_key<T>);
                 static_assert(requires (T c, T::key_type k) { { c.insert(k) } -> std::same_as<std::pair<typename T::iterator, bool>>; });
                 for (auto const [from, a, k] : inputs::keyed_sets<T>()) {
                         auto const on_failure = context(from, a, k);
@@ -215,12 +227,15 @@ BOOST_AUTO_TEST_CASE(Insert)
                         mem_insert()(y, typename T::key_type{k});
                 }
         });
+        // A view over const blocks writes nothing, by this library's design.
+        test::for_each_type<test::spec::set::const_views>([]<class T> -> void { static_assert(not test::spec::has_insert_key<T>); });
 }
 
 // [associative.reqmts.general]/70-73: a.insert(p, t)
 BOOST_AUTO_TEST_CASE(InsertHint)
 {
         test::for_each_type<test::spec::set::all>([]<class T> -> void {
+                static_assert(test::spec::has_insert_at<T>);
                 static_assert(requires (T c, T::key_type k, T::const_iterator p) { { c.insert(p, k) } -> std::same_as<typename T::iterator>; });
                 for (auto const [from, a, k] : inputs::keyed_sets<T>()) {
                         auto const on_failure = context(from, a, k);
@@ -230,12 +245,15 @@ BOOST_AUTO_TEST_CASE(InsertHint)
                         mem_insert()(y, y.end(), typename T::key_type{k});
                 }
         });
+        // A view over const blocks writes nothing, by this library's design.
+        test::for_each_type<test::spec::set::const_views>([]<class T> -> void { static_assert(not test::spec::has_insert_at<T>); });
 }
 
 // [associative.reqmts.general]/75-77: a.insert(i, j)
 BOOST_AUTO_TEST_CASE(InsertFirstLast)
 {
         test::for_each_type<test::spec::set::all>([]<class T> -> void {
+                static_assert(test::spec::has_insert_iterators<T>);
                 static_assert(requires (T c, T::value_type const* first, T::value_type const* last) { c.insert(first, last); });
                 for (auto const [from, a, keys] : inputs::listed_sets<T>()) {
                         auto const on_failure = context(from, a, keys);
@@ -243,6 +261,8 @@ BOOST_AUTO_TEST_CASE(InsertFirstLast)
                         mem_insert()(x, keys.begin(), keys.end());
                 }
         });
+        // A view over const blocks writes nothing, by this library's design.
+        test::for_each_type<test::spec::set::const_views>([]<class T> -> void { static_assert(not test::spec::has_insert_iterators<T>); });
 }
 
 // [associative.reqmts.general]/79-81: a.insert_range(rg)
@@ -250,6 +270,7 @@ BOOST_AUTO_TEST_CASE(InsertRange)
 {
         test::for_each_type<test::spec::set::all>([]<class T> -> void {
 #ifdef __cpp_lib_containers_ranges
+                static_assert(test::spec::has_insert_range<T>);
                 static_assert(requires (T c, std::initializer_list<typename T::value_type> il) { c.insert_range(il); });
                 for (auto const [from, a, keys] : inputs::listed_sets<T>()) {
                         auto const on_failure = context(from, a, keys);
@@ -259,12 +280,15 @@ BOOST_AUTO_TEST_CASE(InsertRange)
 #endif
                 BOOST_CHECK(true);
         });
+        // A view over const blocks writes nothing, by this library's design.
+        test::for_each_type<test::spec::set::const_views>([]<class T> -> void { static_assert(not test::spec::has_insert_range<T>); });
 }
 
 // [associative.reqmts.general]/83: a.insert(il)
 BOOST_AUTO_TEST_CASE(InsertInitializerList)
 {
         test::for_each_type<test::spec::set::all>([]<class T> -> void {
+                static_assert(test::spec::has_insert_list<T>);
                 static_assert(requires (T c, std::initializer_list<typename T::value_type> il) { c.insert(il); });
                 for (auto const [from, a, keys] : inputs::listed_sets<T>()) {
                         auto const on_failure = context(from, a, keys);
@@ -274,12 +298,15 @@ BOOST_AUTO_TEST_CASE(InsertInitializerList)
                         });
                 }
         });
+        // A view over const blocks writes nothing, by this library's design.
+        test::for_each_type<test::spec::set::const_views>([]<class T> -> void { static_assert(not test::spec::has_insert_list<T>); });
 }
 
 // [associative.reqmts.general]/118-120: a.erase(k)
 BOOST_AUTO_TEST_CASE(EraseKey)
 {
         test::for_each_type<test::spec::set::all>([]<class T> -> void {
+                static_assert(test::spec::has_erase_key<T>);
                 static_assert(requires (T c, T::key_type k) { { c.erase(k) } -> std::same_as<typename T::size_type>; });
                 for (auto const [from, a, k] : inputs::keyed_sets<T>()) {
                         auto const on_failure = context(from, a, k);
@@ -287,12 +314,15 @@ BOOST_AUTO_TEST_CASE(EraseKey)
                         mem_erase()(x, k);
                 }
         });
+        // A view over const blocks writes nothing, by this library's design.
+        test::for_each_type<test::spec::set::const_views>([]<class T> -> void { static_assert(not test::spec::has_erase_key<T>); });
 }
 
 // [associative.reqmts.general]/126-128: a.erase(q)
 BOOST_AUTO_TEST_CASE(EraseIterator)
 {
         test::for_each_type<test::spec::set::all>([]<class T> -> void {
+                static_assert(test::spec::has_erase_at<T>);
                 static_assert(requires (T c, T::const_iterator p) { { c.erase(p) } -> std::same_as<typename T::iterator>; });
                 // std::flat_set's erase invalidates the iterators past it, so it is not erased from one by one.
                 if constexpr (not test::is_flat_set<T>) {
@@ -305,6 +335,8 @@ BOOST_AUTO_TEST_CASE(EraseIterator)
                         }
                 }
         });
+        // A view over const blocks writes nothing, by this library's design.
+        test::for_each_type<test::spec::set::const_views>([]<class T> -> void { static_assert(not test::spec::has_erase_at<T>); });
 }
 
 // [associative.reqmts.general]/130-132: a.erase(r)
@@ -328,6 +360,7 @@ BOOST_AUTO_TEST_CASE(EraseMutableIterator)
 BOOST_AUTO_TEST_CASE(EraseRange)
 {
         test::for_each_type<test::spec::set::all>([]<class T> -> void {
+                static_assert(test::spec::has_erase_range<T>);
                 static_assert(requires (T c, T::const_iterator p) { { c.erase(p, p) } -> std::same_as<typename T::iterator>; });
                 if constexpr (not test::is_flat_set<T>) {
                         for (auto const [from, a] : inputs::sets_with_doubletons<T>()) {
@@ -337,12 +370,15 @@ BOOST_AUTO_TEST_CASE(EraseRange)
                         }
                 }
         });
+        // A view over const blocks writes nothing, by this library's design.
+        test::for_each_type<test::spec::set::const_views>([]<class T> -> void { static_assert(not test::spec::has_erase_range<T>); });
 }
 
 // [associative.reqmts.general]/138-139: a.clear()
 BOOST_AUTO_TEST_CASE(Clear)
 {
         test::for_each_type<test::spec::set::all>([]<class T> -> void {
+                static_assert(test::spec::has_clear<T>);
                 static_assert(requires (T c) { c.clear(); });
                 for (auto const [from, a] : inputs::sets<T>()) {
                         auto const on_failure = context(from, a);
@@ -350,6 +386,8 @@ BOOST_AUTO_TEST_CASE(Clear)
                         mem_clear()(x);
                 }
         });
+        // A view over const blocks writes nothing, by this library's design.
+        test::for_each_type<test::spec::set::const_views>([]<class T> -> void { static_assert(not test::spec::has_clear<T>); });
 }
 
 // [associative.reqmts.general]/141-142: b.find(k)
