@@ -588,9 +588,23 @@ public:
                 -> iterator
                 requires can_grow
         {
-                // A range, not two positions: the order is what the rebuild's tail subtraction needs.
+                // A range, not two positions: the order is what the tail's subtraction needs.
                 assert(first <= last);
-                return rebuild(index_of(first), index_of(last), [](sequence_adaptor&) -> void {});
+                auto const pos = index_of(first);
+                auto const tail = index_of(last);
+                auto const width = size();
+                using block_type = bits_type::block_type;
+                constexpr auto digits = bits_type::bits_per_block;
+                // A capacity of nought has no tail to shift, rather than through a loop that cannot go round.
+                if constexpr (not bits_type::has_zero_capacity) {
+                        // In place and ascending, each write below every read still to come, so nothing is allocated.
+                        for (auto k = 0UZ; k < width - tail; k += digits) {
+                                auto const count = std::ranges::min(digits, width - tail - k);
+                                m_bits.block_at(pos + k, m_bits.block_at(tail + k), sequence::partial_block_mask<block_type>(count));
+                        }
+                }
+                m_bits.resize(width - (tail - pos));
+                return begin() + static_cast<difference_type>(pos);
         }
 
         [[nodiscard]] constexpr explicit sequence_adaptor(Bits& c) noexcept
