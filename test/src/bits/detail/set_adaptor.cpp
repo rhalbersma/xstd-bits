@@ -517,18 +517,22 @@ BOOST_AUTO_TEST_CASE(TheGrowthsThatComputeAWidthSaturateRatherThanWrap)
         auto ranged = xstd::bit_set();
         BOOST_CHECK_THROW(ranged.insert_range(std::views::iota(top - 2UZ, top)), std::length_error);
         BOOST_CHECK(ranged.empty());
+}
 
-        // Total over size_t, so past max_size() the width it asks for is length_error, not a shorter set.
+// A left shift grows the width only towards max_size(), and a key it would carry past that is dropped, not refused.
+BOOST_AUTO_TEST_CASE(ALeftShiftDropsTheKeysItCarriesPastMaxSize)
+{
+        constexpr auto top = std::numeric_limits<std::size_t>::max();
         auto shifted = xstd::bit_set();
         shifted.insert(0UZ);
-        BOOST_CHECK_THROW(shifted <<= top, std::length_error);
-        BOOST_CHECK_EQUAL(shifted.size(), 1UZ);
-        BOOST_CHECK(shifted.contains(0UZ));
-
-        // And the translation a width can hold is unaffected.
         shifted <<= 64UZ;
         BOOST_CHECK_EQUAL(shifted.size(), 1UZ);
         BOOST_CHECK(shifted.contains(64UZ));
+        for (auto const n : {shifted.max_size() - 64UZ, top - 64UZ, top}) {
+                auto emptied = shifted;
+                emptied <<= n;
+                BOOST_CHECK(emptied.empty());
+        }
 }
 
 // for_each is the block-at-a-time walk an iterator cannot be, so it must answer exactly what iteration answers.
@@ -681,6 +685,22 @@ namespace {
 }
 
 } // namespace
+
+// A left shift that keeps no key empties the set at the width it has, rather than grow for an empty result.
+BOOST_AUTO_TEST_CASE(ALeftShiftThatKeepsNoKeyKeepsTheWidth)
+{
+        auto s = grown_to(300UZ, {1UZ, 5UZ, 59UZ});
+        auto const width = width_of(s);
+        s <<= s.max_size() - 1UZ;
+        BOOST_CHECK(s.empty());
+        BOOST_CHECK_EQUAL(width_of(s), width);
+
+        // An empty set has no key to keep, so even a distance a width could hold leaves the width as it is.
+        auto e = grown_to(10UZ, {});
+        e <<= 100UZ;
+        BOOST_CHECK(e.empty());
+        BOOST_CHECK_EQUAL(width_of(e), 11UZ);
+}
 
 BOOST_AUTO_TEST_CASE(EqualityAcrossWidthsComparesBlocks)
 {
