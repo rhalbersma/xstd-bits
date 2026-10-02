@@ -2103,12 +2103,14 @@ width, and on any exception resizes back to it before rethrowing -- the resize c
 shrink does. `assign_range` has no such remark in `[sequence.reqmts]`, so its clear-and-append keeps only the
 basic guarantee, and an overflowing source leaves what it appended.
 
-`insert_range`, `insert` in its four shapes, `emplace` and both `erase`s rebuild rather than shift: the head
-through `first(pos)`, the middle, the tail through `subspan(pos)`, into a fresh sequence that is then swapped
+`insert_range`, `insert` in its four shapes and `emplace` rebuild rather than shift: the head
+through `first(pos)`, the middle, the tail through `subspan(pos)`, into a fresh sequence that is then moved
 in. Every step runs at the blit's tier, insertion into a packed sequence is linear however it is done, and
 the strong exception guarantee comes free, which is what `std::vector::insert_range` gives on reallocation.
-`subspan` pays for itself here, the head and the tail being exactly windows. In-place block-wise shifting of
-the suffix stays available as a later optimization behind profiling.
+`subspan` pays for itself here, the head and the tail being exactly windows. Both `erase`s shift instead:
+the tail moves down a block at a time, ascending, each write landing below every read still to come, and the
+width shrinks behind it. A rebuild allocates, and `[vector.modifiers]`/5 lets an erase throw only what the
+element's copy, move or assignment throws, which for a `bool` is nothing.
 
 `flip()` is `[vector.bool]`'s, a bulk operation like the three operators beside it, so an owner and a whole
 view have it and a window does not; the static `swap(reference, reference)` is the proxies' own swap under

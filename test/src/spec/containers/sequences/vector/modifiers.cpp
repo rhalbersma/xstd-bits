@@ -3,12 +3,13 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/container/allocator.hpp> // strong_guarantee
+#include <test/container/allocator.hpp> // basic_guarantee, ledger, ledger_allocator, strong_guarantee
 #include <test/for_each_type.hpp>       // for_each_type
 #include <test/sequence/primitives.hpp> // alternating, mem_erase_keeps_prefix, mem_insert_keeps_prefix, nth, single_pass, single_pass_iterator
 #include <test/spec/input.hpp>          // context
 #include <test/spec/sequence.hpp>       // ledgered, positions, vector_all
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
+#include <algorithm>                    // equal
 #include <cstddef>                      // size_t
 #include <vector>                       // vector
 
@@ -95,6 +96,33 @@ auto check_range_insertions_have_no_effects(X const& a, std::size_t p)
         }
 }
 
+// A bool's copy, move and assignment throw nothing, so no erase may throw, and none asks the allocator for anything.
+template<class X>
+[[nodiscard]] auto erases_without_allocating(X const& a, std::size_t first, std::size_t last, bool single)
+        -> bool
+{
+        auto book = test::container::ledger();
+        auto x = X(a, test::container::ledger_allocator<X>(book));
+        book.budget = 0;
+        try {
+                static_cast<void>(single ? x.erase(nth(x, first)) : x.erase(nth(x, first), nth(x, last)));
+        } catch (...) {
+                return false;
+        }
+        return book.refusals == 0 and std::equal(x.cbegin(), nth(x, first), a.cbegin()) and std::equal(nth(x, first), x.cend(), nth(a, last), a.cend());
+}
+
+template<class X>
+auto check_erasures_allocate_nothing(X const& a, std::size_t p)
+        -> void
+{
+        if (p < a.size()) {
+                BOOST_CHECK(erases_without_allocating(a, p, p + 1UZ, true)); // [vector.modifiers]/5
+        }
+        BOOST_CHECK(erases_without_allocating(a, p, a.size(), false)); // [vector.modifiers]/5
+        BOOST_CHECK(erases_without_allocating(a, 0UZ, p, false));      // [vector.modifiers]/5
+}
+
 } // namespace
 
 // [vector.modifiers]/2: constexpr iterator insert(const_iterator position, const T& x);
@@ -123,6 +151,12 @@ BOOST_AUTO_TEST_CASE(Erase)
                 for (auto const [from, a, p] : inputs::positions<T>()) {
                         auto const on_failure = context(from, a, p);
                         mem_erase_keeps_prefix()(a, p);
+                }
+        });
+        test::for_each_type<test::spec::sequence::ledgered>([]<class T> -> void {
+                for (auto const [from, a, p] : inputs::positions<T>()) {
+                        auto const on_failure = context(from, a, p);
+                        check_erasures_allocate_nothing(a, p);
                 }
         });
 }
