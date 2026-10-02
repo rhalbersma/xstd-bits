@@ -9,8 +9,9 @@
 #include <test/spec/input.hpp>          // context
 #include <test/spec/sequence.hpp>       // ledgered, positions, vector_all
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
-#include <algorithm>                    // equal
+#include <algorithm>                    // ranges::all_of
 #include <cstddef>                      // size_t
+#include <ranges>                       // views::iota
 #include <vector>                       // vector
 
 BOOST_AUTO_TEST_SUITE(Spec)
@@ -96,6 +97,14 @@ auto check_range_insertions_have_no_effects(X const& a, std::size_t p)
         }
 }
 
+// Element by element: libc++'s std::equal over two bit iterators at different offsets can answer false for equal bits.
+template<class X>
+[[nodiscard]] auto equal_bits(X const& x, std::size_t x_pos, X const& a, std::size_t a_pos, std::size_t n)
+        -> bool
+{
+        return std::ranges::all_of(std::views::iota(0UZ, n), [&](std::size_t k) -> bool { return x[x_pos + k] == a[a_pos + k]; });
+}
+
 // A bool's copy, move and assignment throw nothing, so no erase may throw, and none asks the allocator for anything.
 template<class X>
 [[nodiscard]] auto erases_without_allocating(X const& a, std::size_t first, std::size_t last, bool single)
@@ -109,7 +118,7 @@ template<class X>
         } catch (...) {
                 return false;
         }
-        return book.refusals == 0 and std::equal(x.cbegin(), nth(x, first), a.cbegin()) and std::equal(nth(x, first), x.cend(), nth(a, last), a.cend());
+        return book.refusals == 0 and x.size() == a.size() - (last - first) and equal_bits(x, 0UZ, a, 0UZ, first) and equal_bits(x, first, a, last, a.size() - last);
 }
 
 template<class X>
