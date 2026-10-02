@@ -3,6 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/container/allocator.hpp>          // basic_guarantee, copy_and_swap_propagating, copy_propagating, ledger_allocator, strong_guarantee
 #include <test/sanitizer.hpp>                    // IWYU pragma: keep; TEST_HAS_ADDRESS_SANITIZER
 #include <test/sequence/dense.hpp>               // yields_every_position
 #include <xstd/bits/bit_array.hpp>               // basic_bit_array
@@ -70,6 +71,44 @@ BOOST_AUTO_TEST_CASE(ItIsBuiltWithAnAllocatorLikeAStdVector)
         auto const moved = T(std::move(source), alloc);
         BOOST_CHECK(moved == model);
         BOOST_CHECK(source.empty()); // NOLINT(bugprone-use-after-move,hicpp-invalid-access-moved): the moved-from is empty by contract, which is the check.
+}
+
+namespace {
+
+// A wide source copied in as an lvalue, on x's ledger under an allocator that differs from x's.
+template<class X>
+[[nodiscard]] auto copy_in_from(X const& t)
+{
+        return [&t](X& x) -> void {
+                auto const source = X(t, test::container::ledger_allocator<X>(*x.get_allocator().book(), 1));
+                x = source;
+        };
+}
+
+} // namespace
+
+// An allocator a copy hands over and a move does not: taken strongly where a swap hands it over, else basically.
+BOOST_AUTO_TEST_CASE(ACopyTakesAnAllocatorThatAMoveCannotAsStronglyAsASwapAllows)
+{
+        using swapping = xstd::basic_bit_vector<std::uint8_t, test::container::copy_and_swap_propagating<std::uint8_t>>;
+        auto const wide_swapping = swapping(1000UZ, true, swapping::allocator_type(1));
+        auto narrow_swapping = swapping(1UZ, true, swapping::allocator_type(0));
+        narrow_swapping = wide_swapping;
+        BOOST_CHECK(narrow_swapping == wide_swapping and narrow_swapping.get_allocator() == wide_swapping.get_allocator());
+        auto alike_swapping = swapping(1UZ, true, swapping::allocator_type(1));
+        alike_swapping = wide_swapping;
+        BOOST_CHECK(alike_swapping == wide_swapping);
+        BOOST_CHECK(test::container::strong_guarantee(swapping(1UZ, true), copy_in_from(wide_swapping)));
+
+        using copying = xstd::basic_bit_vector<std::uint8_t, test::container::copy_propagating<std::uint8_t>>;
+        auto const wide_copying = copying(1000UZ, true, copying::allocator_type(1));
+        auto narrow_copying = copying(1UZ, true, copying::allocator_type(0));
+        narrow_copying = wide_copying;
+        BOOST_CHECK(narrow_copying == wide_copying and narrow_copying.get_allocator() == wide_copying.get_allocator());
+        auto alike_copying = copying(1UZ, true, copying::allocator_type(1));
+        alike_copying = wide_copying;
+        BOOST_CHECK(alike_copying == wide_copying);
+        BOOST_CHECK(test::container::basic_guarantee(copying(1UZ, true), copy_in_from(wide_copying)));
 }
 
 // A std::vector<bool>'s ceiling is what a distance can name, where the storage's own bound is whole blocks.
