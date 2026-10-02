@@ -88,7 +88,7 @@ A row's `outcome` is one of:
 | `[sequence.reqmts]` | 66 | `a.assign(n, t)` | Result | answered |  |
 | `[sequence.reqmts]` | 67 | `a.assign(n, t)` | Preconditions | no-requirement | A precondition on the program: `bool` is Cpp17CopyInsertable and Cpp17CopyAssignable, and the value passed is never a reference into `a`. |
 | `[sequence.reqmts]` | 68 | `a.assign(n, t)` | Effects | answered |  |
-| `[sequence.reqmts]` | 69 | `a.assign(n, t)` | — | answered | Checked as two integers taken as a count and a value by the constructor, `assign` and `insert`. The deduction-guide half is not asked. |
+| `[sequence.reqmts]` | 69 | `a.assign(n, t)` | — | answered | Checked as two integers taken as a count and a value by the constructor, `assign` and `insert`. The deduction-guide half is asked of the two class templates with guides, `std::vector` and `xstd::basic_bit_vector`. |
 | `[sequence.reqmts]` | 70 | `a.assign(n, t)` | — | declined | Introduces the optional operations and bounds them to amortized constant time, which no functional check can observe. |
 | `[sequence.reqmts]` | 71 | `a.front()` | Result | answered |  |
 | `[sequence.reqmts]` | 72 | `a.front()` | Hardened preconditions | declined | A violation ends the process under a hardened library and an `assert` in ours, so no in-process check can observe it. The cases call only within it. |

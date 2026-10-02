@@ -106,6 +106,10 @@ template<std::ranges::input_range R, class Allocator = std::allocator<std::size_
         requires xstd::simple_allocator<Allocator>
 basic_bit_vector(std::from_range_t, R&&, Allocator = Allocator()) -> basic_bit_vector<typename Allocator::value_type, Allocator>;
 
+template<class Allocator = std::allocator<std::size_t>>
+        requires xstd::simple_allocator<Allocator>
+basic_bit_vector(std::initializer_list<bool>, Allocator = Allocator()) -> basic_bit_vector<typename Allocator::value_type, Allocator>;
+
 // The blocks adopted name the block and the allocator both.
 template<xstd::unsigned_integer Block, class Allocator>
 basic_bit_vector(from_bit_storage_t, std::vector<Block, Allocator>) -> basic_bit_vector<Block, Allocator>;

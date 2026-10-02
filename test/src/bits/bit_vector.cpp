@@ -389,9 +389,14 @@ BOOST_AUTO_TEST_CASE(ItDeducesAsStdVectorDoes)
 #endif
         auto const e = xstd::basic_bit_vector(b, alloc);
         static_assert(std::same_as<decltype(e), xstd::basic_bit_vector<std::uint8_t> const>);
+        auto const f = xstd::basic_bit_vector({true, false, true, true});
+        static_assert(std::same_as<decltype(f), xstd::bit_vector const>);
+        static_assert(std::same_as<decltype(std::vector({true, false, true, true})), std::vector<bool>>);
+        auto const g = xstd::basic_bit_vector({true, false, true, true}, alloc);
+        static_assert(std::same_as<decltype(g), xstd::basic_bit_vector<std::uint8_t> const>);
 
         BOOST_CHECK(std::ranges::equal(a, bools) and std::ranges::equal(b, bools) and std::ranges::equal(c, bools));
-        BOOST_CHECK(std::ranges::equal(d, bools) and e == b);
+        BOOST_CHECK(std::ranges::equal(d, bools) and e == b and f == a and g == b);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
