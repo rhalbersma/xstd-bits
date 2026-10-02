@@ -2157,8 +2157,8 @@ The four ways a reading answers an operation are all visible in the current surf
 
 `std::vector<bool>` has no shifts, and neither has any sequence here. The storage keeps `<<=` and `>>=`
 because two of the three readings ask for them and mean different things by them: the bitset reading's is
-`[bitset.members]`'s truncating bit string, and the set reading's translates, `<<=` growing a run-time width
-to hold the result and `>>=` emptying past it. The sequence reading is the one with nothing to add. Worse,
+`[bitset.members]`'s truncating bit string, and the set reading's translates, `<<=` keeping the keys that land
+below `max_size()` and `>>=` emptying past the width. The sequence reading is the one with nothing to add. Worse,
 it already spells moving elements, and spells it the other way round: `operator<<=` is implemented with
 `std::shift_right` and `operator>>=` with `std::shift_left`, because a sequence's low index is its front
 where a bit string's low bit is its right. Exposing the operators would have `v <<= 1` mean the opposite of
@@ -2556,12 +2556,14 @@ nothing new. Over `std::inplace_vector` the owners are constant-evaluable, and t
 are run-time values only. Code that constant-evaluates a bounded owner tests `#ifdef XSTD_BITS_HAS_CONSTEXPR_BOUNDED`,
 never `__cpp_lib_inplace_vector`, which says what the standard library has rather than what the owners are built
 on. Growth past the capacity throws `std::bad_alloc` over either storage, given by the container before the
-storage is asked; on the set reading that is where `insert` stops being total. A left shift is refused by the
-highest key it would carry, not by `width + n`: the width is no part of a set's value, so `operator<<=` throws
-`bad_alloc`, the set unchanged, exactly when that key plus `n` reaches `N`. An empty set shifts by any distance
-and stays empty, and a set whose width outran its keys -- an `insert(20)` undone by `erase(20)` -- shifts as far
-as its highest remaining key allows, the width growing to `min(width + n, N)`. The unbounded column keeps
-`width + n` against its `length_error` ceiling.
+storage is asked; on the set reading that is where `insert` stops being total. A left shift is not refused: it
+translates every key by `n` and keeps those below `N`, the width growing to `min(width + n, N)` first, which the
+blocks always have room for, so `operator<<=` is `noexcept` over this column. The width is no part of a set's
+value, so a set whose width outran its keys -- an `insert(20)` undone by `erase(20)` -- shifts exactly as one at a
+narrow width does, and a shift that keeps no key empties the set at the width it has. `insert` past `N` still
+throws: it names one key the set cannot hold, where a shift is a set-wide operation with a rule for what it drops,
+as `std::bitset`'s is. The unbounded column follows the same rule with `max_size()` for `N`
+([width-is-capacity](#width-is-capacity)).
 
 **The two storages promise different things**, and the owners pass the copies' promise on rather than paper over it.
 `std::inplace_vector` of trivially copyable blocks copies and swaps without throwing; `boost::container::static_vector`
@@ -2733,7 +2735,7 @@ width it asks for by **addition** over a `size_t` the caller names, and every on
 | where | the sum |
 |---|---|
 | `bit_container::growing_insert` | `n + 1`, to admit the position |
-| `set_adaptor::operator<<=` at a run-time width | `width + n`, the translation being total over `size_t`; clamped to a capacity |
+| `set_adaptor::operator<<=` at a run-time width | `width + n`, the translation being total over `size_t`; capped at `max_size()` |
 | `set_adaptor::insert_range`, consecutive tier | `lo + len - 1`, the range's last position |
 | `sequence_adaptor::insert(position, n, value)` | `size() + n` |
 | `sequence_adaptor::blit` | `size() + count`, the source's own width |
@@ -2781,8 +2783,9 @@ which is the whole of the difference from the two readings beside that one.
 **The ceiling is therefore a policy, and it belongs to the reading**, because the counterparts disagree about it.
 Two ceilings are computed in the storage and two refusals are spelled there -- `check_width` above `max_width`,
 `check_addressable_width` above `max_addressable_width`, both `std::length_error` -- and the storage asks neither
-at any door of its own. The **set** reading asks `check_width` in `guard_key` and in `operator<<=`: a key past the
-widest it could ever grow to is the one thing `insert` on a dynamic extent can refuse. The **sequence** reading
+at any door of its own. The **set** reading asks `check_width` in `guard_key`: a key past the widest it could
+ever grow to is the one thing `insert` on a dynamic extent can refuse. Its `operator<<=` asks neither, capping
+`width + n` at `max_size()` and dropping the keys that land past it. The **sequence** reading
 asks `check_addressable_width` -- at its width constructors, `resize`, `reserve`, and each of the three sums it
 computes -- because `std::vector<bool>` throws `length_error` for a size it cannot represent, and what it cannot
 represent is a distance, not a `size_t`. The **bitset** reading asks neither, because `boost::dynamic_bitset` has
@@ -2879,8 +2882,8 @@ The padding invariant could live one level up, each adaptor restoring it after t
 and it does not. Two reasons, one measured and one structural.
 
 **Measured**, the prize is one masked store. `operator<<=` at a run-time width erases where the set reading
-has already grown past anything the shift can reach ([the-set-operations-across-widths](#the-set-operations-across-widths)),
-so the call is dead in that path. Removing it, GCC 14, `-O3 -march=native`, best of twenty-five:
+has already grown past anything the shift can reach ([the-set-operations-across-widths](#the-set-operations-across-widths))
+unless the growth stopped at `max_size()`, so the call is dead in that path short of it. Removing it, GCC 14, `-O3 -march=native`, best of twenty-five:
 
 | width | with | without |
 |---:|---:|---:|
@@ -3006,9 +3009,30 @@ prefix of the other.
 
 `|=` `&=` `^=` `-=` are blockwise too, and
 [the-set-operations-across-widths](#the-set-operations-across-widths) is what it took to mutate rather than
-merely read. The shifts translate the set, so `<<=` grows the width to hold the result and `>>=` empties past
-it. Hashing appends the positions and the count at a run-time width and the bits at a static one, where equal
+merely read. The shifts translate the set: `<<=` grows the width towards `max_size()` and keeps the keys that
+land below it, and `>>=` empties past the width. Hashing appends the positions and the count at a run-time width and the bits at a static one, where equal
 sets share a width ([the-hashing-invariant](#the-hashing-invariant)).
+
+**Two run-time widths, read two ways.** `xstd::dynamic_bitset` is the bitset reading, and its width is
+`boost::dynamic_bitset`'s: part of the value, so `==` includes it and `&`, `|`, `^` and `-` require equal widths.
+The width changes only when the caller asks -- `resize`, `push_back`, `pop_back`, `append`, `clear` -- and no
+operation changes it as a side effect: `&`, `|`, `^`, `-` and `~` return the operands' width, and both shifts do
+too, dropping what crosses `size()` and resetting at `n >= size()`. That algebra is closed over one width, which
+is why a shift cannot grow it: `a & (b << 1)` would otherwise break the equal-width precondition. `xstd::bit_set`
+and `xstd::bit_bounded_set` are the set reading, and their width is storage: operations grow it as they need --
+`insert`, `|`, and `<<=` up to `max_size()` -- invisibly, since growth changes nothing observable. Hence the
+shift's rule, grow and then truncate at `max_size()`: that is the one bound fixed by the type rather than by how
+the set happened to be stored, and truncating at the current width would give two equal sets two different
+results. `insert` past `max_size()` still throws, since it names one key the set cannot hold, where a shift is a
+set-wide operation with a rule for what it drops, as `std::bitset`'s is. The two readings meet at a static width:
+in `bitset<N>` and `bit_fixed_set<N>` the width and `max_size()` are both `N`, so both shift as `std::bitset<N>`
+does.
+
+| | who sets the width | operations change it | part of the value | a left shift truncates at |
+| --- | --- | --- | --- | --- |
+| `dynamic_bitset` | the caller alone | no | yes | `size()` |
+| `bit_set`, `bit_bounded_set` | the operations, as they need | yes, growing | no | `max_size()` |
+| `bitset<N>`, `bit_fixed_set<N>` | the type | no | the type's | `N`, which is both |
 
 ### the-set-operations-across-widths
 
