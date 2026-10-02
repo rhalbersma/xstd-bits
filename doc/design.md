@@ -3309,7 +3309,9 @@ storage takes an allocator, `allocator_type`, `get_allocator()` and the allocato
 constructors. The name `allocator_type` is an empty base a class either has or has not, a class having no
 conditional typedef. One boost constructor is left out on purpose: `dynamic_bitset(str, pos, n, num_bits,
 alloc)` puts a width where `std::bitset`'s `(str, pos, n, zero, one)` puts a character, and one signature
-cannot extend both; `std::bitset`'s wins, the width being the characters read.
+cannot extend both; `std::bitset`'s wins, the width being the characters read. The block range converts its
+values to the block, as boost's insert into its blocks does, and two integers of one type are no iterators, so
+they reach the count and value constructor, as boost dispatches them.
 
 What ours does not add is a range, and there is no opt-in that adds one either. Becoming a range would change
 what generic code does with it, from `std::format` to `std::ranges::to`, which is the one addition a strict extension
