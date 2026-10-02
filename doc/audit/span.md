@@ -54,13 +54,13 @@ A row's `outcome` is one of:
 | `[span.cons]` | 27 | `operator=(const span& other)` | Postconditions | answered | As ¶21. |
 | `[span.deduct]` | 1 | `span(It, EndOrSize)` | Constraints | forced | As `[span.cons]/3`: there is no iterator constructor to deduce from. A packed view deduces from its owner or its blocks instead. |
 | `[span.deduct]` | 2 | `span(R&&)` | Constraints | forced | As `[span.cons]/16`: a packed view deduces from its owner or from a contiguous range of blocks. |
-| `[span.sub]` | 1 | `first<Count>()` | Mandates | declined | A Mandates, whose violation makes the program ill-formed rather than observable; the cases stay within it. |
+| `[span.sub]` | 1 | `first<Count>()` | Mandates | answered | Checked as a count past a static extent refused by the packed views, which constrain it. `std::span` makes it a hard error that no requires-expression observes, so the models are asked only counts within it. |
 | `[span.sub]` | 2 | `first<Count>()` | Hardened preconditions | declined | As `[span.cons]/23`. The cases take only what the view holds. |
 | `[span.sub]` | 3 | `first<Count>()` | Effects | answered | Checked as the same positions, read alike and written through, and for the extent of the view handed back. |
-| `[span.sub]` | 4 | `last<Count>()` | Mandates | declined | As ¶1. |
+| `[span.sub]` | 4 | `last<Count>()` | Mandates | answered | As ¶1. |
 | `[span.sub]` | 5 | `last<Count>()` | Hardened preconditions | declined | As ¶2. |
 | `[span.sub]` | 6 | `last<Count>()` | Effects | answered | As ¶3. |
-| `[span.sub]` | 7 | `subspan<Offset, Count>()` | Mandates | declined | As ¶1. |
+| `[span.sub]` | 7 | `subspan<Offset, Count>()` | Mandates | answered | As ¶1, for an offset past the extent and for a count past what follows it. |
 | `[span.sub]` | 8 | `subspan<Offset, Count>()` | Hardened preconditions | declined | As ¶2. |
 | `[span.sub]` | 9 | `subspan<Offset, Count>()` | Effects | answered | As ¶3. |
 | `[span.sub]` | 10 | `subspan<Offset, Count>()` | Remarks | answered |  |

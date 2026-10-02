@@ -4,8 +4,14 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/container/allocator.hpp>             // basic_guarantee, keeps_a_ledger, ledger, ledger_allocator, non_propagating, propagating, strong_guarantee, user_allocator
+#include <test/flat_set.hpp>                        // is_flat_set
 #include <test/for_each_type.hpp>                   // for_each_type
 #include <test/sequence/factory.hpp>                // make_sequence, stripes
+#include <test/spec/bitset.hpp>                     // all
+#include <test/spec/rejection.hpp>                  // has_allocator_constructor, has_allocator_extended_copy, has_allocator_extended_move, has_allocator_type, has_get_allocator
+#include <test/spec/sequence.hpp>                   // all
+#include <test/spec/set.hpp>                        // all, const_views
+#include <test/spec/span.hpp>                       // all
 #include <xstd/bits/bit_array.hpp>                  // bit_array
 #include <xstd/bits/bit_set.hpp>                    // basic_bit_set, bit_set
 #include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
@@ -125,6 +131,22 @@ inline constexpr auto is_bitset<xstd::basic_dynamic_bitset<Block, Allocator>> = 
 
 template<class Block, std::size_t N, class Allocator>
 inline constexpr auto is_bitset<xstd::basic_small_bitset<Block, N, Allocator>> = true;
+
+// The allocator members, present together where the type names an allocator and absent together where it names none.
+template<class X>
+auto check_allocator_members()
+        -> void
+{
+        // std::flat_set names none and hands an allocator argument to its key container.
+        if constexpr (not test::is_flat_set<X>) {
+                static_assert(test::spec::has_get_allocator<X> == test::spec::has_allocator_type<X>);
+                static_assert(test::spec::has_allocator_constructor<X> == test::spec::has_allocator_type<X>);
+                if constexpr (not test::spec::has_allocator_type<X>) {
+                        static_assert(not test::spec::has_allocator_extended_copy<X>);
+                        static_assert(not test::spec::has_allocator_extended_move<X>);
+                }
+        }
+}
 
 // One more element than the value holds: a key past its largest, or a bool at the end.
 template<class X>
@@ -612,6 +634,20 @@ BOOST_AUTO_TEST_CASE(OnlyARunTimeWidthTakesAnAllocator)
         static_assert(std::is_nothrow_constructible_v<xstd::basic_small_bitset<std::uint64_t, 64>, xstd::basic_small_bitset<std::uint64_t, 64>::allocator_type const&>);
         static_assert(not std::is_constructible_v<xstd::bit_array<64>, std::allocator<std::size_t>>);
         static_assert(not std::is_constructible_v<xstd::bit_array<64>, std::initializer_list<bool>, std::allocator<std::size_t>>);
+        BOOST_CHECK(true);
+}
+
+// [container.alloc.reqmts]/1: every container is allocator-aware but array and inplace_vector, and a view is not one
+BOOST_AUTO_TEST_CASE(OnlyAnAllocatorAwareCandidateTakesAnAllocator)
+{
+        // The fixed and bounded columns of every reading take no allocator argument, and no view does.
+        test::for_each_type<test::spec::set::all>([]<class T> -> void { check_allocator_members<T>(); });
+        test::for_each_type<test::spec::set::const_views>([]<class T> -> void { check_allocator_members<T>(); });
+        test::for_each_type<test::spec::sequence::all>([]<class T> -> void { check_allocator_members<T>(); });
+        test::for_each_type<test::spec::bitset::all>([]<class T> -> void { check_allocator_members<T>(); });
+        test::for_each_type<test::spec::span::all>([]<class T> -> void { check_allocator_members<T>(); });
+        static_assert(test::spec::has_allocator_extended_copy<xstd::bit_vector> and test::spec::has_allocator_extended_move<xstd::bit_vector>);
+        static_assert(test::spec::has_allocator_extended_copy<xstd::bit_set> and test::spec::has_allocator_extended_move<xstd::bit_set>);
         BOOST_CHECK(true);
 }
 
