@@ -43,7 +43,7 @@ A row's `outcome` is one of:
 | `[container.reqmts]` | 22 | `t = rv` | Postconditions | answered |  |
 | `[container.reqmts]` | 23 | `t = rv` | Complexity | declined | A complexity bound, which no functional check can observe. |
 | `[container.reqmts]` | 24 | `a.~X()` | Result | answered | MSVC mis-types an explicit destructor call through a template parameter, so there only destructibility is asked. |
-| `[container.reqmts]` | 25 | `a.~X()` | Effects | answered | Checked through an allocator that counts its outstanding allocations, on the allocator-aware columns; the others allocate nothing. |
+| `[container.reqmts]` | 25 | `a.~X()` | Effects | answered | Checked through an allocator that counts its outstanding allocations, on the allocator-aware columns; the others allocate nothing. The same allocator refuses each allocation in turn of a set's range insertion, an assignment and the allocator-extended copy, and asks that the object left behind is valid and gives back every allocation, which is the basic guarantee. |
 | `[container.reqmts]` | 26 | `a.~X()` | Complexity | declined | A complexity bound, which no functional check can observe. |
 | `[container.reqmts]` | 27 | `b.begin()` | Result | answered |  |
 | `[container.reqmts]` | 28 | `b.begin()` | Returns | answered |  |

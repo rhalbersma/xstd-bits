@@ -3,10 +3,11 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/container/allocator.hpp> // strong_guarantee
 #include <test/for_each_type.hpp>       // for_each_type
 #include <test/sequence/primitives.hpp> // mem_capacity, mem_reserve, mem_resize, mem_shrink_to_fit, mem_swap_capacity
 #include <test/spec/input.hpp>          // context
-#include <test/spec/sequence.hpp>       // held_width_v, pairs, sequences, vector_all
+#include <test/spec/sequence.hpp>       // held_width_v, ledgered, pairs, sequences, vector_all
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_THROW
 #include <concepts>                     // same_as, swap
 #include <stdexcept>                    // length_error
@@ -19,6 +20,7 @@ BOOST_AUTO_TEST_SUITE(Vector)
 BOOST_AUTO_TEST_SUITE(Capacity)
 
 using namespace test::sequence;
+using test::container::strong_guarantee;
 using test::spec::context;
 namespace inputs = test::spec::sequence::inputs;
 
@@ -56,6 +58,27 @@ auto check_resize(auto const& a)
         }
 }
 
+// A reserve past the capacity, each allocation refused in turn: whatever is thrown, there are no effects.
+template<class X>
+auto check_reserve_has_no_effects(X const& a)
+        -> void
+{
+        for (auto const n : {a.size() + 1UZ, a.size() + 1000UZ}) {
+                BOOST_CHECK(strong_guarantee(a, [&](X& x) -> void { x.reserve(n); })); // [vector.capacity]/4
+        }
+}
+
+// A resize either way, each allocation refused in turn: a bool raises nothing, so there are no effects.
+template<class X>
+auto check_resize_has_no_effects(X const& a)
+        -> void
+{
+        for (auto const n : {a.size() / 2UZ, a.size() + 1UZ, a.size() + 1000UZ}) {
+                BOOST_CHECK(strong_guarantee(a, [&](X& x) -> void { x.resize(n); }));       // [vector.capacity]/16
+                BOOST_CHECK(strong_guarantee(a, [&](X& x) -> void { x.resize(n, true); })); // [vector.capacity]/19
+        }
+}
+
 } // namespace
 
 // [vector.capacity]/1: constexpr size_type capacity() const noexcept;
@@ -78,6 +101,12 @@ BOOST_AUTO_TEST_CASE(Reserve)
                 for (auto const [from, a] : inputs::sequences<T>()) {
                         auto const on_failure = context(from, a);
                         check_reserve(a);
+                }
+        });
+        test::for_each_type<test::spec::sequence::ledgered>([]<class T> -> void {
+                for (auto const [from, a] : inputs::sequences<T>()) {
+                        auto const on_failure = context(from, a);
+                        check_reserve_has_no_effects(a);
                 }
         });
 }
@@ -122,6 +151,12 @@ BOOST_AUTO_TEST_CASE(Resize)
                 for (auto const [from, a] : inputs::sequences<T>()) {
                         auto const on_failure = context(from, a);
                         check_resize(a);
+                }
+        });
+        test::for_each_type<test::spec::sequence::ledgered>([]<class T> -> void {
+                for (auto const [from, a] : inputs::sequences<T>()) {
+                        auto const on_failure = context(from, a);
+                        check_resize_has_no_effects(a);
                 }
         });
 }

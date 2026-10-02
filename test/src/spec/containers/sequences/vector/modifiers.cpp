@@ -3,11 +3,14 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/container/allocator.hpp> // strong_guarantee
 #include <test/for_each_type.hpp>       // for_each_type
-#include <test/sequence/primitives.hpp> // mem_erase_keeps_prefix, mem_insert_keeps_prefix
+#include <test/sequence/primitives.hpp> // alternating, mem_erase_keeps_prefix, mem_insert_keeps_prefix, nth, single_pass, single_pass_iterator
 #include <test/spec/input.hpp>          // context
-#include <test/spec/sequence.hpp>       // positions, vector_all
-#include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <test/spec/sequence.hpp>       // ledgered, positions, vector_all
+#include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
+#include <cstddef>                      // size_t
+#include <vector>                       // vector
 
 BOOST_AUTO_TEST_SUITE(Spec)
 BOOST_AUTO_TEST_SUITE(Containers)
@@ -16,8 +19,83 @@ BOOST_AUTO_TEST_SUITE(Vector)
 BOOST_AUTO_TEST_SUITE(Modifiers)
 
 using namespace test::sequence;
+using test::container::basic_guarantee;
+using test::container::strong_guarantee;
 using test::spec::context;
 namespace inputs = test::spec::sequence::inputs;
+
+namespace {
+
+template<class X>
+inline constexpr auto is_std_vector_v = false;
+
+template<class Allocator>
+inline constexpr auto is_std_vector_v<std::vector<bool, Allocator>> = true;
+
+#ifdef _MSVC_STL_VERSION
+
+// MSVC's STL inserts or appends a single pass a bool at a time through every member, insert_range included.
+inline constexpr auto std_vector_single_pass_has_no_effects = false;
+inline constexpr auto std_vector_single_pass_insert_range_has_no_effects = false;
+
+#elifdef __GLIBCXX__
+
+// libstdc++ inserts or appends a single pass a bool at a time, except insert_range, which collects it first.
+inline constexpr auto std_vector_single_pass_has_no_effects = false;
+inline constexpr auto std_vector_single_pass_insert_range_has_no_effects = true;
+
+#else
+
+inline constexpr auto std_vector_single_pass_has_no_effects = true;
+inline constexpr auto std_vector_single_pass_insert_range_has_no_effects = true;
+
+#endif
+
+// No effects where the library gives them, and the basic guarantee of the departure where not.
+template<bool HasNoEffects, class X, class Op>
+[[nodiscard]] auto single_pass_guarantee(X const& a, Op op)
+        -> bool
+{
+        if constexpr (HasNoEffects or not is_std_vector_v<X>) {
+                return strong_guarantee(a, op);
+        } else {
+                return basic_guarantee(a, op);
+        }
+}
+
+// One insertion at position p in each shape, from a single bool to a range past a small sequence's inline blocks.
+template<class X>
+auto check_insertions_have_no_effects(X const& a, std::size_t p)
+        -> void
+{
+        auto const more = alternating(100UZ);
+        BOOST_CHECK(strong_guarantee(a, [&](X& x) -> void { static_cast<void>(x.insert(nth(x, p), true)); }));                     // [vector.modifiers]/2
+        BOOST_CHECK(strong_guarantee(a, [&](X& x) -> void { static_cast<void>(x.insert(nth(x, p), more.size(), true)); }));        // [vector.modifiers]/2
+        BOOST_CHECK(strong_guarantee(a, [&](X& x) -> void { static_cast<void>(x.insert(nth(x, p), more.begin(), more.end())); })); // [vector.modifiers]/2
+        BOOST_CHECK(strong_guarantee(a, [&](X& x) -> void { static_cast<void>(x.insert(nth(x, p), {true, false, true})); }));      // [vector.modifiers]/2
+        BOOST_CHECK(strong_guarantee(a, [&](X& x) -> void { static_cast<void>(x.emplace(nth(x, p), true)); }));                    // [vector.modifiers]/2
+        BOOST_CHECK(strong_guarantee(a, [&](X& x) -> void { static_cast<void>(x.emplace_back(true)); }));                          // [vector.modifiers]/2
+        BOOST_CHECK(strong_guarantee(a, [&](X& x) -> void { x.push_back(true); }));                                                // [vector.modifiers]/2
+        auto const first = single_pass_iterator(more.cbegin());
+        auto const last = single_pass_iterator(more.cend());
+        BOOST_CHECK(single_pass_guarantee<std_vector_single_pass_has_no_effects>(a, [&](X& x) -> void { static_cast<void>(x.insert(nth(x, p), first, last)); })); // [vector.modifiers]/2
+}
+
+// The range members, where the standard library has them, from a sized range and from a single pass.
+template<class X>
+auto check_range_insertions_have_no_effects(X const& a, std::size_t p)
+        -> void
+{
+        auto const more = alternating(100UZ);
+        if constexpr (requires (X& x) { x.append_range(more); }) {
+                BOOST_CHECK(strong_guarantee(a, [&](X& x) -> void { static_cast<void>(x.insert_range(nth(x, p), more)); }));                                                                       // [vector.modifiers]/2
+                BOOST_CHECK(strong_guarantee(a, [&](X& x) -> void { x.append_range(more); }));                                                                                                     // [vector.modifiers]/2
+                BOOST_CHECK(single_pass_guarantee<std_vector_single_pass_insert_range_has_no_effects>(a, [&](X& x) -> void { static_cast<void>(x.insert_range(nth(x, p), single_pass(more))); })); // [vector.modifiers]/2
+                BOOST_CHECK(single_pass_guarantee<std_vector_single_pass_has_no_effects>(a, [&](X& x) -> void { x.append_range(single_pass(more)); }));                                            // [vector.modifiers]/2
+        }
+}
+
+} // namespace
 
 // [vector.modifiers]/2: constexpr iterator insert(const_iterator position, const T& x);
 BOOST_AUTO_TEST_CASE(Insert)
@@ -26,6 +104,14 @@ BOOST_AUTO_TEST_CASE(Insert)
                 for (auto const [from, a, p] : inputs::positions<T>()) {
                         auto const on_failure = context(from, a, p);
                         mem_insert_keeps_prefix()(a, p);
+                }
+        });
+        test::for_each_type<test::spec::sequence::ledgered>([]<class T> -> void {
+                // A bool raises nothing of its own, so every insertion an allocation refuses has no effects.
+                for (auto const [from, a, p] : inputs::positions<T>()) {
+                        auto const on_failure = context(from, a, p);
+                        check_insertions_have_no_effects(a, p);
+                        check_range_insertions_have_no_effects(a, p);
                 }
         });
 }

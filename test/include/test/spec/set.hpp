@@ -6,6 +6,7 @@
 #ifndef TEST_SPEC_SET_HPP
 #define TEST_SPEC_SET_HPP
 
+#include <test/container/allocator.hpp>          // non_propagating
 #include <test/flat_set.hpp>                     // IWYU pragma: keep; TEST_HAS_FLAT_SET, flat_set
 #include <test/minimal_blocks.hpp>               // minimal_blocks
 #include <test/set/exhaustive.hpp>               // L1, L2, L3, L4, limit_v, on0, on1, on2, on3, on4, static_capacity, static_width
@@ -25,6 +26,7 @@
 #include <array>                                 // array
 #include <cstddef>                               // size_t
 #include <cstdint>                               // uint8_t, uint16_t, uint32_t, uint64_t
+#include <functional>                            // less
 #include <set>                                   // set
 #include <span>                                  // dynamic_extent
 #include <tuple>                                 // tuple, tuple_cat
@@ -70,6 +72,9 @@ using owners = decltype(std::tuple_cat(std::declval<models>(), std::declval<fixe
 using views = std::tuple<xstd::bit_set_view<std::array<std::uint8_t, 3>, 17>, xstd::bit_set_view<std::vector<std::uint64_t>>>;
 
 using all = decltype(std::tuple_cat(std::declval<owners>(), std::declval<views>()));
+
+// The owners that take an allocator, under one that keeps a ledger and refuses on request, std::set first.
+using ledgered = std::tuple<std::set<std::size_t, std::less<>, test::container::non_propagating<std::size_t>>, xstd::basic_bit_set<std::uint8_t, test::container::non_propagating<std::uint8_t>>, xstd::basic_bit_set<std::uint64_t, test::container::non_propagating<std::uint64_t>>, xstd::basic_bit_small_set<std::uint8_t, 9, test::container::non_propagating<std::uint8_t>>, xstd::basic_bit_small_set<std::uint64_t, 64, test::container::non_propagating<std::uint64_t>>>;
 
 } // namespace test::spec::set
 

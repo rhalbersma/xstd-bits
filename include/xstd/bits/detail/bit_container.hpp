@@ -375,16 +375,28 @@ public:
                 other.m_blocks.clear();
         }
 
-        // Taken out of the source before anything is written, so a self-move puts back exactly what it took.
+        // Assigned in place: a moved-into temporary would allocate the proxy a debug MSVC vector keeps, and can throw.
         constexpr auto operator=(bit_container&& other) noexcept(std::is_nothrow_move_constructible_v<Blocks> and std::is_nothrow_move_assignable_v<Blocks>)
                 -> bit_container&
                 requires has_stored_size and (not has_zero_capacity)
         {
-                auto blocks = std::move(other.m_blocks);
-                auto const n = std::exchange(other.m_size, 0UZ);
+                if (this == &other) {
+                        return *this;
+                }
+                if constexpr (std::is_nothrow_move_assignable_v<Blocks>) {
+                        m_blocks = std::move(other.m_blocks);
+                } else {
+                        // Staying unequal allocators copy block by block, and libc++ and MSVC free the old ones first.
+                        try {
+                                m_blocks = std::move(other.m_blocks);
+                        } catch (...) {
+                                m_blocks.clear();
+                                m_size = 0UZ;
+                                throw;
+                        }
+                }
+                m_size = std::exchange(other.m_size, 0UZ);
                 other.m_blocks.clear();
-                m_blocks = std::move(blocks);
-                m_size = n;
                 return *this;
         }
 
