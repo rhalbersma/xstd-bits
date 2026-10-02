@@ -39,6 +39,17 @@ using owners = std::tuple<
 
 using model = std::vector<bool>;
 
+// libc++'s vector<bool> moves a tail with a mask shifted by the word's full width, so the model never inserts mid-way.
+[[nodiscard]] auto spliced(model const& m, std::size_t pos, model const& middle)
+        -> model
+{
+        auto const split = std::next(m.begin(), static_cast<std::ptrdiff_t>(pos));
+        auto result = model(m.begin(), split);
+        result.insert(result.end(), middle.begin(), middle.end());
+        result.insert(result.end(), split, m.end());
+        return result;
+}
+
 // A run-time size stays within a few blocks, which is where growth and the clear tail are exercised.
 inline constexpr auto dynamic_bits = 520UZ;
 
@@ -334,8 +345,8 @@ auto fuzz_one(fuzz::decoder& in)
                                         if (in.boolean()) {
                                                 auto const n = in.below(top - size + 1UZ);
                                                 auto const it = x.insert(position, n, val);
-                                                auto const mit = m.insert(mposition, n, val);
-                                                check.expect(index_of(x, it) == static_cast<std::size_t>(mit - m.begin()), "position");
+                                                m = spliced(m, pos, model(n, val));
+                                                check.expect(index_of(x, it) == pos, "position");
                                         } else if (size < top) {
                                                 auto const it = x.insert(position, val);
                                                 auto const mit = m.insert(mposition, val);
@@ -352,8 +363,8 @@ auto fuzz_one(fuzz::decoder& in)
                                         auto const pos = in.below(size + 1UZ);
                                         auto const rg = bools(in, in.below(top - size + 1UZ));
                                         auto const it = in.boolean() ? x.insert_range(std::next(x.cbegin(), static_cast<std::ptrdiff_t>(pos)), rg) : x.insert(std::next(x.cbegin(), static_cast<std::ptrdiff_t>(pos)), rg.begin(), rg.end());
-                                        auto const mit = m.insert(std::next(m.cbegin(), static_cast<std::ptrdiff_t>(pos)), rg.begin(), rg.end());
-                                        check.expect(index_of(x, it) == static_cast<std::size_t>(mit - m.begin()), "position");
+                                        m = spliced(m, pos, model(rg.begin(), rg.end()));
+                                        check.expect(index_of(x, it) == pos, "position");
                                 }
                                 break;
                         }
