@@ -20,7 +20,7 @@ A row's `outcome` is one of:
 | clause | ¶ | declaration | element | outcome | note |
 | :--- | ---: | :--- | :--- | :--- | :--- |
 | `[bitset.syn]` | 1 | `<bitset>` | — | no-requirement | Says what the header declares; each declaration is audited in the clause that specifies it. |
-| `[template.bitset.general]` | 1 | `class bitset` | — | no-requirement | Describes a sequence of `N` bits; the width is `size()`'s Returns in `[bitset.members]`. |
+| `[template.bitset.general]` | 1 | `class bitset` | — | answered | Checked as a fixed number of bits: a static width has none of the members `boost::dynamic_bitset` grows and shrinks by, and every run-time width has all of them. The width itself is `size()`'s Returns in `[bitset.members]`. |
 | `[template.bitset.general]` | 2 | `class bitset` | — | no-requirement | Defines set, reset, toggle and bit value, the terms `[bitset.cons]/2` and `[bitset.members]/37-40` are stated in and checked by. |
 | `[template.bitset.general]` | 3 | `class reference` | — | no-requirement | Introduces the proxy; what it does is ¶4-12. |
 | `[template.bitset.general]` | 4 | `reference(const reference& x)` | Effects | answered | |

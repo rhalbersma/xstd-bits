@@ -3,10 +3,13 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/bit_exchange.hpp>     // exchanges_from_bits
 #include <test/for_each_type.hpp>    // for_each_type
 #include <test/sequence/factory.hpp> // make_sequence, stripes
+#include <test/spec/rejection.hpp>   // covers_static_width_v
 #include <test/spec/sequence.hpp>    // array_all
 #include <boost/test/unit_test.hpp>  // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
+#include <cstdint>                   // uint8_t
 #include <type_traits>               // is_trivially_copy_assignable_v, is_trivially_copy_constructible_v, is_trivially_destructible_v, is_trivially_move_assignable_v, is_trivially_move_constructible_v
 #include <utility>                   // move
 
@@ -30,6 +33,17 @@ BOOST_AUTO_TEST_CASE(SpecialMemberFunctions)
                 auto b = a;
                 auto const c = std::move(b);
                 BOOST_CHECK(c == a); // [array.cons]/1
+        });
+}
+
+// xstd array: template<class B> constexpr X(from_bit_storage_t, const B& b) noexcept;
+BOOST_AUTO_TEST_CASE(ArrayFromBitStorage)
+{
+        test::for_each_type<test::spec::sequence::array_all>([]<class T> -> void {
+                // An integer is read as bools only where it covers the width, by this library's design.
+                static_assert(test::exchanges_from_bits<T, std::uint8_t> == test::spec::covers_static_width_v<T, std::uint8_t>);
+                static_assert(test::exchanges_from_bits<T, unsigned long long> == test::spec::covers_static_width_v<T, unsigned long long>);
+                BOOST_CHECK(true);
         });
 }
 
