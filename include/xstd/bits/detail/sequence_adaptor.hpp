@@ -595,10 +595,13 @@ public:
                 auto const width = size();
                 using block_type = bits_type::block_type;
                 constexpr auto digits = bits_type::bits_per_block;
-                // In place and ascending, each write below every read still to come, so nothing is allocated.
-                for (auto k = 0UZ; k < width - tail; k += digits) {
-                        auto const count = std::ranges::min(digits, width - tail - k);
-                        m_bits.block_at(pos + k, m_bits.block_at(tail + k), sequence::partial_block_mask<block_type>(count));
+                // A capacity of nought has no tail to shift, rather than through a loop that cannot go round.
+                if constexpr (not bits_type::has_zero_capacity) {
+                        // In place and ascending, each write below every read still to come, so nothing is allocated.
+                        for (auto k = 0UZ; k < width - tail; k += digits) {
+                                auto const count = std::ranges::min(digits, width - tail - k);
+                                m_bits.block_at(pos + k, m_bits.block_at(tail + k), sequence::partial_block_mask<block_type>(count));
+                        }
                 }
                 m_bits.resize(width - (tail - pos));
                 return begin() + static_cast<difference_type>(pos);
