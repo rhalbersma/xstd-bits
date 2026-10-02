@@ -396,9 +396,11 @@ auto fuzz_one(fuzz::decoder& in)
                                         x.insert_range(keys_in);
                                         m.insert(keys_in.begin(), keys_in.end());
                                 } else {
+                                        // [associative.reqmts] forbids a range into its own set.
                                         auto const other = y;
+                                        auto const mother = my;
                                         x.insert_range(other);
-                                        m.insert(my.begin(), my.end());
+                                        m.insert(mother.begin(), mother.end());
                                 }
                                 break;
                         }

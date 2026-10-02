@@ -403,9 +403,11 @@ auto fuzz_one(fuzz::decoder& in)
                                                 x.append_range(rg);
                                                 m.insert(m.end(), rg.begin(), rg.end());
                                         } else if (size + my.size() <= top) {
+                                                // [sequence.reqmts] forbids appending a vector to itself.
                                                 auto const other = y;
+                                                auto const mother = my;
                                                 x.append_range(other);
-                                                m.insert(m.end(), my.begin(), my.end());
+                                                m.insert(m.end(), mother.begin(), mother.end());
                                         } else if (capped<X>()) {
                                                 auto const other = y;
                                                 expect_unchanged_on_refusal(check, x, m, [&](X& z) -> void { z.append_range(other); });
