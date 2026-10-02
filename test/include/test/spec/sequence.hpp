@@ -6,6 +6,7 @@
 #ifndef TEST_SPEC_SEQUENCE_HPP
 #define TEST_SPEC_SEQUENCE_HPP
 
+#include <test/container/allocator.hpp>             // non_propagating
 #include <test/dynamic.hpp>                         // dynamic
 #include <test/inplace_vector.hpp>                  // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
 #include <test/sequence/factory.hpp>                // make_sequence, static_capacity, static_width, stripes
@@ -78,6 +79,9 @@ using inplace_vector_all = decltype(std::tuple_cat(std::declval<inplace_models<0
 using growable_all = decltype(std::tuple_cat(std::declval<vector_all>(), std::declval<inplace_vector_all>()));
 
 using all = decltype(std::tuple_cat(std::declval<array_all>(), std::declval<growable_all>()));
+
+// The owners that take an allocator, under one that keeps a ledger and refuses on request, std::vector<bool> first.
+using ledgered = std::tuple<std::vector<bool, test::container::non_propagating<bool>>, xstd::basic_bit_vector<std::uint8_t, test::container::non_propagating<std::uint8_t>>, xstd::basic_bit_vector<std::uint64_t, test::container::non_propagating<std::uint64_t>>, xstd::basic_bit_small_vector<std::uint8_t, 9, test::container::non_propagating<std::uint8_t>>, xstd::basic_bit_small_vector<std::uint64_t, 64, test::container::non_propagating<std::uint64_t>>>;
 
 // The positions a sequence holds without growing: a width or capacity in its type, a small one's inline bits, or none.
 template<class X>
