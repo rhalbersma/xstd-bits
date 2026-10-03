@@ -22,7 +22,7 @@ on:
 jobs:
   # The last stub to arrive: the shared workflow could not express this library before cpp-ci v0.4.1.
   consumption:
-    uses: rhalbersma/cpp-ci/.github/workflows/consumption.yml@480aa17d38efd5c1641b861e9e1a0c6df053a451 # v0.10.3
+    uses: rhalbersma/cpp-ci/.github/workflows/consumption.yml@5e70b2dfcf6a2a4d8f8d442c65703588d198548c # v0.11.1
     with:
       # CMakeLists.txt find_package()s boost_hash2 and boost_container unconditionally, so every configure here needs vcpkg.
       vcpkg: true
