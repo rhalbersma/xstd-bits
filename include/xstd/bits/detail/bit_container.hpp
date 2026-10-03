@@ -1145,15 +1145,16 @@ public:
                 check_capacity(size() + bits_per_block);
                 auto const offset = size() % bits_per_block;
                 if (offset != 0UZ) {
-                        m_blocks[last_block()] |= shl(value, offset);
+                        // Pushed first, as boost's is, so a refused push leaves the old last block's unused bits clear.
                         m_blocks.push_back(shr(value, bits_per_block - offset));
+                        m_blocks[last_block() - 1UZ] |= shl(value, offset);
                 } else {
                         m_blocks.push_back(value);
                 }
                 store_size(size() + bits_per_block);
         }
 
-        // Reserved first where the distance is known, so nothing below reallocates: boost's strong guarantee.
+        // boost's strong guarantee: reserved first where the distance is known, else undone back to the old width.
         template<std::input_iterator I>
         constexpr auto append(I first, I last)
                 -> void
@@ -1171,10 +1172,20 @@ public:
                                 store_size(size() + (n * bits_per_block));
                                 return;
                         }
-                }
-
-                for (; first != last; ++first) {
-                        append(*first);
+                        for (; first != last; ++first) {
+                                append(*first);
+                        }
+                } else {
+                        // A single pass meets a refusal part way, and the shrink back to the old width cannot throw.
+                        auto const old_size = size();
+                        try {
+                                for (; first != last; ++first) {
+                                        append(*first);
+                                }
+                        } catch (...) {
+                                resize_to(old_size, false);
+                                throw;
+                        }
                 }
         }
 

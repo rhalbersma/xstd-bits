@@ -3,30 +3,33 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/sanitizer.hpp>                  // IWYU pragma: keep; TEST_HAS_ADDRESS_SANITIZER
-#include <xstd/bits/detail/bit_container.hpp>  // bit_container
-#include <xstd/bits/detail/bitset_adaptor.hpp> // bitset_adaptor
-#include <xstd/bits/dynamic_bitset.hpp>        // dynamic_bitset
-#include <boost/dynamic_bitset.hpp>            // dynamic_bitset, to_string
-#include <boost/test/unit_test.hpp>            // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <algorithm>                           // equal
-#include <array>                               // array
-#include <compare>                             // is_eq, is_gt, is_lt
-#include <concepts>                            // regular, same_as, totally_ordered
-#include <cstddef>                             // size_t
-#include <cstdint>                             // uint8_t, uint64_t
-#include <functional>                          // hash
-#include <iterator>                            // back_inserter
-#include <limits>                              // numeric_limits
-#include <memory>                              // allocator
-#include <new>                                 // IWYU pragma: keep; bad_alloc, named only without TEST_HAS_ADDRESS_SANITIZER
-#include <ranges>                              // equal, iota
-#include <sstream>                             // istringstream, ostringstream
-#include <stdexcept>                           // invalid_argument, out_of_range, overflow_error
-#include <string>                              // string
-#include <tuple>                               // tuple
-#include <utility>                             // as_const, pair
-#include <vector>                              // vector
+#include <test/container/allocator.hpp>         // propagating, strong_guarantee
+#include <test/sanitizer.hpp>                   // IWYU pragma: keep; TEST_HAS_ADDRESS_SANITIZER
+#include <xstd/bits/bounded_bitset.hpp>         // basic_bounded_bitset
+#include <xstd/bits/detail/bit_container.hpp>   // bit_container
+#include <xstd/bits/detail/bitset_adaptor.hpp>  // bitset_adaptor
+#include <xstd/bits/dynamic_bitset.hpp>         // dynamic_bitset
+#include <xstd/bits/ext/boost/small_bitset.hpp> // basic_small_bitset
+#include <boost/dynamic_bitset.hpp>             // dynamic_bitset, to_string
+#include <boost/test/unit_test.hpp>             // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
+#include <algorithm>                            // equal
+#include <array>                                // array
+#include <compare>                              // is_eq, is_gt, is_lt
+#include <concepts>                             // regular, same_as, totally_ordered
+#include <cstddef>                              // ptrdiff_t, size_t
+#include <cstdint>                              // uint8_t, uint64_t
+#include <functional>                           // hash
+#include <iterator>                             // back_inserter, input_iterator_tag
+#include <limits>                               // numeric_limits
+#include <memory>                               // allocator
+#include <new>                                  // IWYU pragma: keep; bad_alloc, named only without TEST_HAS_ADDRESS_SANITIZER
+#include <ranges>                               // equal, iota
+#include <sstream>                              // istringstream, ostringstream
+#include <stdexcept>                            // invalid_argument, out_of_range, overflow_error
+#include <string>                               // string
+#include <tuple>                                // tuple
+#include <utility>                              // as_const, pair
+#include <vector>                               // vector
 
 BOOST_AUTO_TEST_SUITE(DynamicBitset)
 
@@ -385,6 +388,73 @@ BOOST_AUTO_TEST_CASE(AppendingBlocksWidensByABlock)
         BOOST_CHECK_EQUAL(d.size(), 27UZ);
         BOOST_CHECK_EQUAL(d.count(), 7UZ);
         BOOST_CHECK(d.test(11) and d.test(12) and d.test(21));
+}
+
+namespace {
+
+// The blocks as an input range alone, whose count an append learns only by reaching its end.
+template<class Block>
+class single_pass_blocks
+{
+public:
+        using iterator_concept = std::input_iterator_tag;
+        using iterator_category = std::input_iterator_tag;
+        using value_type = Block;
+        using difference_type = std::ptrdiff_t;
+        using pointer = void;
+        using reference = Block;
+
+        single_pass_blocks() = default;
+
+        explicit single_pass_blocks(Block const* p)
+                : m_p(p)
+        {}
+
+        [[nodiscard]] auto operator*() const
+                -> Block
+        {
+                return *m_p;
+        }
+
+        auto operator++()
+                -> single_pass_blocks&
+        {
+                ++m_p;
+                return *this;
+        }
+
+        auto operator++(int)
+                -> single_pass_blocks
+        {
+                auto const old = *this;
+                ++m_p;
+                return old;
+        }
+
+        [[nodiscard]] friend auto operator==(single_pass_blocks const&, single_pass_blocks const&) -> bool = default;
+
+private:
+        Block const* m_p = nullptr;
+};
+
+} // namespace
+
+// Each storage that grows by append: a ledger refuses its allocations one by one, a capacity the block past it.
+using Appending = std::tuple<xstd::basic_dynamic_bitset<std::uint8_t, test::container::propagating<std::uint8_t>>, xstd::basic_small_bitset<std::uint8_t, 9, test::container::propagating<std::uint8_t>>, xstd::basic_bounded_bitset<std::uint8_t, 24>>;
+
+// boost's strong guarantee, for a block, a forward range and a single pass, at aligned widths and unaligned ones.
+BOOST_AUTO_TEST_CASE_TEMPLATE(AFailedAppendLeavesTheBitsetAsItWas, T, Appending)
+{
+        auto const blocks = std::array<std::uint8_t, 3>{0b1010'1010, 0xFF, 0b1};
+        auto const append_block = [](T& x) -> void { x.append(std::uint8_t{0xFF}); };
+        auto const append_forward = [&](T& x) -> void { x.append(blocks.begin(), blocks.end()); };
+        auto const append_single_pass = [&](T& x) -> void { x.append(single_pass_blocks(blocks.data()), single_pass_blocks(blocks.data() + blocks.size())); };
+        for (auto const n : {0UZ, 3UZ, 8UZ, 11UZ, 17UZ}) {
+                auto const a = T(n, 0b101ULL);
+                BOOST_CHECK(test::container::strong_guarantee(a, append_block));
+                BOOST_CHECK(test::container::strong_guarantee(a, append_forward));
+                BOOST_CHECK(test::container::strong_guarantee(a, append_single_pass));
+        }
 }
 
 BOOST_AUTO_TEST_SUITE_END()
