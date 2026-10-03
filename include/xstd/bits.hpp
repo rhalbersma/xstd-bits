@@ -8,15 +8,10 @@
 
 // The umbrella over every container but the ext column's, which stays out so boost::container::small_vector is opt-in.
 
-// Shared by all three readings.
+// Shared by both readings.
 #include <xstd/bits/bit.hpp>              // IWYU pragma: export; bit_cast, bit_castable
 #include <xstd/bits/bit_storage.hpp>      // IWYU pragma: export; bit_storage, bit_storage_extent_v, owned_bit_storage, resizable_bit_storage
 #include <xstd/bits/from_bit_storage.hpp> // IWYU pragma: export; from_bit_storage, from_bit_storage_t
-
-// The bitset reading.
-#include <xstd/bits/bitset.hpp>         // IWYU pragma: export; bitset
-#include <xstd/bits/bounded_bitset.hpp> // IWYU pragma: export; bounded_bitset
-#include <xstd/bits/dynamic_bitset.hpp> // IWYU pragma: export; dynamic_bitset
 
 // The sequence reading.
 #include <xstd/bits/bit_array.hpp>          // IWYU pragma: export; bit_array

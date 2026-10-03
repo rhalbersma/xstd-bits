@@ -39,7 +39,7 @@ set(cxx_compile_options_warnings
     $<$<CXX_COMPILER_ID:Clang>:
         -Weverything
         -Wno-unknown-warning-option         # forward compatibility for new Clang warnings
-        -Wno-lifetime-safety-intra-tu-suggestions             # Clang trunk (23-SVN); suggests [[clang::lifetimebound]] across xstd::bits::detail::bidirectional_bit_iterator and xstd::bitset - not yet acted on
+        -Wno-lifetime-safety-intra-tu-suggestions             # Clang trunk (23-SVN); suggests [[clang::lifetimebound]] across xstd::bits::detail::bidirectional_bit_iterator - not yet acted on
         -Wno-lifetime-safety-intra-tu-constructor-suggestions # ditto, for constructors
         -Wno-lifetime-safety-invalidation                     # ditto; false positive on a.clear() in test/include/test/set/primitives.hpp treating the container itself as invalidated
         -Wno-c++98-compat
@@ -70,7 +70,7 @@ set(cxx_compile_options_warnings
         -Wno-array-bounds                   # triggered by Boost.DynamicBitset for gcc >= 12 in Release mode
         -Wno-stringop-overflow              # triggered by Boost.DynamicBitset for gcc >= 12 in Release mode
         -Wno-maybe-uninitialized            # false positive on detail::array's std::array member (WinLibs gcc 15.3.0, Release mode)
-        -Wno-restrict                       # false positive on std::vector's copy inside bit_container's, inlined into bitset_adaptor's non-member operators (gcc 17-SVN, Release mode)
+        -Wno-restrict                       # false positive on std::vector's copy inside bit_container's, inlined into the adaptors' non-member operators (gcc 17-SVN, Release mode)
         -Wno-stringop-overread              # the same copy inlined into set_adaptor's non-member operators, under the name gcc 17-SVN gives it there (Release mode)
     >
     $<$<AND:$<BOOL:${${project_option_prefix}_WARNINGS_AS_ERRORS}>,$<CXX_COMPILER_ID:MSVC>>:/WX>

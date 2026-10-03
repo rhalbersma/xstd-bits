@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/detail/ownership.hpp> // bitset_reading_tag, owned_storage, owner_of, owner_reading, owns, sequence_reading_tag, set_reading_tag, storage
+#include <xstd/bits/detail/ownership.hpp> // owned_storage, owner_of, owner_reading, owns, sequence_reading_tag, set_reading_tag, storage
 #include <boost/test/unit_test.hpp>       // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <concepts>                       // derived_from, same_as
 
@@ -22,9 +22,6 @@ struct set_owner
 {};
 
 struct sequence_owner
-{};
-
-struct bitset_owner
 {};
 
 struct refined_owner
@@ -47,13 +44,6 @@ struct xstd::bits::detail::owned_storage<sequence_owner>
 };
 
 template<>
-struct xstd::bits::detail::owned_storage<bitset_owner>
-{
-        using bits_type = fake_bits;
-        using reads = bitset_reading_tag;
-};
-
-template<>
 struct xstd::bits::detail::owned_storage<refined_owner>
 {
         using bits_type = fake_bits;
@@ -69,22 +59,17 @@ BOOST_AUTO_TEST_CASE(OwningIsOneOfTwoAnswers)
         BOOST_CHECK(xstd::bits::detail::storage::owned != xstd::bits::detail::storage::borrowed);
 }
 
-// A bitset is a hybrid of the other two rather than a refinement, so the three stand apart with none nested inside another.
-BOOST_AUTO_TEST_CASE(TheReadingsAreThreeAndDistinct)
+// Neither reading refines the other, so the two stand apart.
+BOOST_AUTO_TEST_CASE(TheReadingsAreTwoAndDistinct)
 {
-        using xstd::bits::detail::bitset_reading_tag;
         using xstd::bits::detail::sequence_reading_tag;
         using xstd::bits::detail::set_reading_tag;
         static_assert(not std::same_as<set_reading_tag, sequence_reading_tag>);
-        static_assert(not std::same_as<sequence_reading_tag, bitset_reading_tag>);
-        static_assert(not std::same_as<bitset_reading_tag, set_reading_tag>);
-        static_assert(not std::derived_from<bitset_reading_tag, set_reading_tag> and not std::derived_from<bitset_reading_tag, sequence_reading_tag>);
-        static_assert(not std::derived_from<set_reading_tag, bitset_reading_tag> and not std::derived_from<sequence_reading_tag, bitset_reading_tag>);
         static_assert(not std::derived_from<set_reading_tag, sequence_reading_tag> and not std::derived_from<sequence_reading_tag, set_reading_tag>);
         BOOST_CHECK(true);
 }
 
-// A set owner and a sequence owner each refuse the other's view, and a bitset owner admits both.
+// A set owner and a sequence owner each refuse the other's view.
 BOOST_AUTO_TEST_CASE(TheSetAndSequenceReadingsRejectEachOther)
 {
         using xstd::bits::detail::owner_reading;
@@ -92,7 +77,6 @@ BOOST_AUTO_TEST_CASE(TheSetAndSequenceReadingsRejectEachOther)
         using xstd::bits::detail::set_reading_tag;
         static_assert(owner_reading<set_owner, set_reading_tag> and not owner_reading<set_owner, sequence_reading_tag>);
         static_assert(owner_reading<sequence_owner, sequence_reading_tag> and not owner_reading<sequence_owner, set_reading_tag>);
-        static_assert(owner_reading<bitset_owner, set_reading_tag> and owner_reading<bitset_owner, sequence_reading_tag>);
         BOOST_CHECK(true);
 }
 

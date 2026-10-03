@@ -30,7 +30,7 @@
 #include <cstring>                                           // memcpy
 #include <format>                                            // format
 #include <functional>                                        // plus
-#include <iterator>                                          // distance, forward_iterator, input_iterator, prev
+#include <iterator>                                          // prev
 #include <limits>                                            // numeric_limits
 #include <memory>                                            // allocator_traits
 #include <new>                                               // bad_alloc
@@ -445,7 +445,7 @@ public:
         // Memberwise, width first, unused bits clear; noexcept by choice, as std::array's and std::vector's == are not.
         [[nodiscard]] friend auto operator==(bit_container const&, bit_container const&) noexcept -> bool = default;
 
-        // No operator<=>: the three readings order the same bits differently, so the storage picks none.
+        // No operator<=>: the two readings order the same bits differently, so the storage picks none.
 
         template<class Provider, class Hash, class Flavor>
         friend constexpr auto tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, bit_container const* v) noexcept
@@ -500,20 +500,6 @@ public:
                         return N;
                 } else if constexpr (has_stored_size) {
                         return std::ranges::min(m_blocks.max_size(), max_num_blocks) * bits_per_block;
-                } else {
-                        return size();
-                }
-        }
-
-        // boost::dynamic_bitset's answer, which saturates where the one above clamps; said as a sum, not a branch.
-        [[nodiscard]] constexpr auto saturating_max_size() const noexcept
-                -> std::size_t
-        {
-                if constexpr (has_static_capacity) {
-                        return N;
-                } else if constexpr (has_stored_size) {
-                        auto const saturates = static_cast<std::size_t>(m_blocks.max_size() > max_num_blocks);
-                        return max_size() + (saturates * (bits_per_block - 1UZ));
                 } else {
                         return size();
                 }
@@ -730,14 +716,6 @@ public:
         {
                 assert(n <= size() and len <= size() - n);
                 for_each_block(n, len, [&](std::size_t pos, block_type mask) -> void { block_at(pos, value ? ones : zero, mask); });
-                return *this;
-        }
-
-        constexpr auto flip(std::size_t n, std::size_t len) noexcept
-                -> bit_container&
-        {
-                assert(n <= size() and len <= size() - n);
-                for_each_block(n, len, [&](std::size_t pos, block_type mask) -> void { block_at(pos, static_cast<block_type>(~block_at(pos)), mask); });
                 return *this;
         }
 
@@ -1152,41 +1130,6 @@ public:
                         m_blocks.push_back(value);
                 }
                 store_size(size() + bits_per_block);
-        }
-
-        // boost's strong guarantee: reserved first where the distance is known, else undone back to the old width.
-        template<std::input_iterator I>
-        constexpr auto append(I first, I last)
-                -> void
-                requires has_stored_size
-        {
-                if constexpr (std::forward_iterator<I> and requires (Blocks& b, std::size_t n) { b.reserve(n); }) {
-                        reserve(size() + (static_cast<std::size_t>(std::ranges::distance(first, last)) * bits_per_block));
-                }
-
-                // Whole blocks land whole where the width is a multiple, which every block-range construction is.
-                if constexpr (std::forward_iterator<I>) {
-                        if (first != last and size() % bits_per_block == 0UZ) {
-                                auto const n = static_cast<std::size_t>(std::ranges::distance(first, last));
-                                m_blocks.insert(m_blocks.end(), first, last);
-                                store_size(size() + (n * bits_per_block));
-                                return;
-                        }
-                        for (; first != last; ++first) {
-                                append(*first);
-                        }
-                } else {
-                        // A single pass meets a refusal part way, and the shrink back to the old width cannot throw.
-                        auto const old_size = size();
-                        try {
-                                for (; first != last; ++first) {
-                                        append(*first);
-                                }
-                        } catch (...) {
-                                resize_to(old_size, false);
-                                throw;
-                        }
-                }
         }
 
         // In bits, where the blocks have the member: vector and inplace_vector do, array does not.

@@ -39,24 +39,26 @@ the storage when it fits one word. Being all of these, it is none of them cleanl
 compares only at one width, and prints its bits in the opposite order from how it indexes them.
 
 xstd-bits separates the three. Each becomes the bit-packed counterpart of the standard container it
-already resembled, speaking that container's vocabulary; the `bitset` stays as the hybrid itself, for
-code that wants `std::bitset` or `boost::dynamic_bitset`:
+already resembled, speaking that container's vocabulary, with one interface across every storage. The
+hybrid itself is not reproduced: there is no bitset type here, and `std::bitset<N>` interoperates
+exactly through `xstd::bit_cast` instead.
 
 | reading  | standard counterpart                                                       | packed here as                                  |
 | :------- | :------------------------------------------------------------------------- | :---------------------------------------------- |
 | sequence | `std::array<bool, N>`, `std::inplace_vector<bool, N>`, `std::vector<bool>` | `bit_array`, `bit_bounded_vector`, `bit_vector` |
 | set      | `std::set<std::size_t>`                                                    | `bit_fixed_set`, `bit_bounded_set`, `bit_set`   |
 | string   | `std::string`                                                              | `bit_string` (planned)                          |
-| bitset   | `std::bitset<N>`, `boost::dynamic_bitset<>`                                | `bitset`, `bounded_bitset`, `dynamic_bitset`    |
 
 Every one of them reads and writes its raw blocks the same way, through `from_bit_storage` and
-`xstd::bit_cast` — the general form of what `to_ullong` does for one word.
+`xstd::bit_cast` — the general form of what `to_ullong` does for one word. `xstd::bit_cast` copies the
+blocks between any two things of one fixed width, a `std::bitset<N>` included; the run-time-width
+counterpart, reaching `boost::dynamic_bitset<>` too, is planned as `xstd::bit_convert`.
 
-xstd-bits is **nine containers**: three readings of a block of bits — an ordered set of `std::size_t`, a sequence of `bool`, and the `bitset` that deliberately offers both — over three storages, which differ in whether size and capacity are static or dynamic: both static, a dynamic size within a static capacity, and both dynamic.
+xstd-bits is **six containers**: two readings of a block of bits — an ordered set of `std::size_t` and a sequence of `bool` — over three storages, which differ in whether size and capacity are static or dynamic: both static, a dynamic size within a static capacity, and both dynamic.
 
 ### Each one is the packing of a standard container, and speaks that container's vocabulary
 
-The relationship is the one `std::flat_set` has to `std::set`: **a different representation under the same interface**, departing from it only where the representation forces a departure. `xstd::bit_vector` answers `std::vector<bool>`'s synopsis line for line; `xstd::bit_array<N>` answers `std::array<bool, N>`'s, `xstd::bit_bounded_vector<N>` answers `std::inplace_vector<bool, N>`'s, the three `bitset`s answer `std::bitset<N>`'s and `boost::dynamic_bitset<>`'s, and the three sets answer `std::set<std::size_t>`'s. Each is held to its counterpart by a checklist that spells that counterpart's synopsis out as a `requires`-expression and is asserted **on the counterpart first**, so a line the model itself cannot answer can never be asked of the packing.
+The relationship is the one `std::flat_set` has to `std::set`: **a different representation under the same interface**, departing from it only where the representation forces a departure. `xstd::bit_vector` answers `std::vector<bool>`'s synopsis line for line; `xstd::bit_array<N>` answers `std::array<bool, N>`'s, `xstd::bit_bounded_vector<N>` answers `std::inplace_vector<bool, N>`'s, and the three sets answer `std::set<std::size_t>`'s. Each is held to its counterpart by a checklist that spells that counterpart's synopsis out as a `requires`-expression and is asserted **on the counterpart first**, so a line the model itself cannot answer can never be asked of the packing.
 
 The yardstick is the [current working draft](https://eel.is/c++draft/), not the standard the library compiles as. Where C++23 and the draft disagree the draft wins, and [design.md](doc/design.md) records which paper moved each line.
 
@@ -70,11 +72,11 @@ Everything else is addition rather than subtraction: the bitwise operators, `fin
 
 ### Out of range means what each counterpart means by it
 
-The **set reading** takes a key, and a key outside the domain is a lookup that answers no rather than an error: `contains`, `find`, `count`, `lower_bound`, `upper_bound` and `equal_range` are total, as they are on `std::set`. A shift names no one key, so `<<=` keeps what lands below `max_size()` and drops the rest, as `std::bitset`'s does past `N`. The **bitset reading** keeps `std::bitset`'s checked members and their `out_of_range`; a dynamic width asked to grow past `max_size()` throws `std::length_error`, as a container does for a size it cannot represent. The **sequence reading** indexes, so out of range is out of bounds there: `at(n)` throws `out_of_range` at every width and through every handle, and everything else is the precondition `std::vector`, `std::array` and `std::span` already make it — stated with an `assert`, at the member you called.
+The **set reading** takes a key, and a key outside the domain is a lookup that answers no rather than an error: `contains`, `find`, `count`, `lower_bound`, `upper_bound` and `equal_range` are total, as they are on `std::set`. A shift names no one key, so `<<=` keeps what lands below `max_size()` and drops the rest, as `std::bitset`'s does past `N`. The **sequence reading** indexes, so out of range is out of bounds there: `at(n)` throws `out_of_range` at every width and through every handle, and everything else is the precondition `std::vector`, `std::array` and `std::span` already make it — stated with an `assert`, at the member you called.
 
 `constexpr` is not on that list of advantages, and has not been since [P3372R3](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3372r3.html) made the standard's own containers `constexpr` throughout. It is table stakes now; what the packing buys is density and the bit-parallel operations over it.
 
-A constant can also be a template argument, as a `std::array<bool, N>` can, wherever the width fills its blocks: `template<xstd::aligned::bitset<64> Mask> struct S;` takes a mask by value, and so do `aligned::bit_array` and `aligned::bit_fixed_set`. A width that leaves unused bits in its last block is not a structural type, since those bits must stay clear for `==`, `<=>` and hashing to hold; [design.md](doc/design.md#structural-at-aligned-widths) has the reasoning.
+A constant can also be a template argument, as a `std::array<bool, N>` can, wherever the width fills its blocks: `template<xstd::aligned::bit_fixed_set<64> Mask> struct S;` takes a mask by value, and so does `aligned::bit_array`. A width that leaves unused bits in its last block is not a structural type, since those bits must stay clear for `==`, `<=>` and hashing to hold; [design.md](doc/design.md#structural-at-aligned-widths) has the reasoning.
 
 ## Usage
 
@@ -187,10 +189,10 @@ All three agree, and the test asserts that rather than the README claiming it.
 
 ## Headers
 
-Twelve containers: three readings of a block of bits, each over four storages.
+Eight containers: two readings of a block of bits, each over four storages.
 The reading picks the vocabulary, the storage picks whether size and capacity
 are static or dynamic. Each name is a class with the constructors of the standard
-container it packs. These twelve owners and the three views are the public surface;
+container it packs. These eight owners and the three views are the public surface;
 the adaptor each reading is built on is internal, under `<xstd/bits/detail/>`.
 
 | Header | Additions | Description | Reference |
@@ -201,10 +203,7 @@ the adaptor each reading is built on is internal, under `<xstd/bits/detail/>`.
 | `<xstd/bits/bit_array.hpp>` | `bit_array` <br> `basic_bit_array` | Sequence of `bool`, static size and capacity | [array] |
 | `<xstd/bits/bit_bounded_vector.hpp>` | `bit_bounded_vector` <br> `basic_bit_bounded_vector` | Sequence of `bool`, dynamic size within a static capacity | [inplace.vector] |
 | `<xstd/bits/bit_vector.hpp>` | `bit_vector` <br> `basic_bit_vector` | Sequence of `bool`, dynamic size and capacity | [vector.bool] |
-| `<xstd/bits/bitset.hpp>` | `bitset` <br> `basic_bitset` | Both readings at once, static size and capacity | [template.bitset] |
-| `<xstd/bits/bounded_bitset.hpp>` | `bounded_bitset` <br> `basic_bounded_bitset` | Both readings, dynamic size within a static capacity | [template.bitset] |
-| `<xstd/bits/dynamic_bitset.hpp>` | `dynamic_bitset` <br> `basic_dynamic_bitset` | Both readings, dynamic size and capacity | [`boost::dynamic_bitset`](https://www.boost.org/doc/libs/release/libs/dynamic_bitset/dynamic_bitset.html) |
-| `<xstd/bits/ext/boost.hpp>` | `bit_small_set` <br> `bit_small_vector` <br> `small_bitset` <br> and their `basic_` forms | All three readings, dynamic size staying inline within a static capacity | [`boost::container::small_vector`](https://www.boost.org/doc/libs/release/doc/html/boost/container/small_vector.html) |
+| `<xstd/bits/ext/boost.hpp>` | `bit_small_set` <br> `bit_small_vector` <br> and their `basic_` forms | Both readings, dynamic size staying inline within a static capacity | [`boost::container::small_vector`](https://www.boost.org/doc/libs/release/doc/html/boost/container/small_vector.html) |
 | `<xstd/bits/bit_set_view.hpp>` | `bit_set_view` | Set reading of bits another container owns, or of unsigned blocks in place: `bit_set_view(board)` is a `bit_set_view<std::uint64_t>` | none |
 | `<xstd/bits/bit_span.hpp>` <br> `<xstd/bits/bit_subspan.hpp>` | `bit_span` <br> `bit_subspan` | Sequence reading over borrowed bits, whole or sliced, or over unsigned blocks in place: `bit_span(blocks)` | [views.span] |
 | `<xstd/bits/bit_storage.hpp>` | `bit_storage` <br> `owned_bit_storage` <br> `resizable_bit_storage` <br> `bit_storage_extent_v` | What every container and view presents a packed interface over: one unsigned block, or a sized contiguous range of them, in no reading of its own. The views take any of it; the owners hold what can be owned, a regular value read-only through `const`, and at a run-time width only what resizes. Also the width its type names, which the views default to | none |

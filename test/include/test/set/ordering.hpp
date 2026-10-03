@@ -6,7 +6,7 @@
 #ifndef TEST_SET_ORDERING_HPP
 #define TEST_SET_ORDERING_HPP
 
-#include <test/bitset/factory.hpp>    // make_bitset
+#include <test/viewed.hpp>            // make_viewed
 #include <xstd/bits/bit_set_view.hpp> // bit_set_view
 #include <boost/test/unit_test.hpp>   // BOOST_CHECK_EQUAL
 #include <algorithm>                  // lexicographical_compare
@@ -30,8 +30,8 @@ auto ordering_agrees_with_std_set(std::size_t universe = 4)
 
         for (auto const i : std::views::iota(0UZ, bound)) {
                 for (auto const j : std::views::iota(0UZ, bound)) {
-                        auto x = test::bitset::make_bitset<Bits>(universe);
-                        auto y = test::bitset::make_bitset<Bits>(universe);
+                        auto x = test::make_viewed<Bits>(universe);
+                        auto y = test::make_viewed<Bits>(universe);
                         auto kx = std::set<std::size_t>();
                         auto ky = std::set<std::size_t>();
 
@@ -83,8 +83,8 @@ auto ordering_agrees_with_std_set_sampled(std::size_t universe, std::size_t tria
                 auto const i = next();
                 auto const j = next();
 
-                auto x = test::bitset::make_bitset<Bits>(universe);
-                auto y = test::bitset::make_bitset<Bits>(universe);
+                auto x = test::make_viewed<Bits>(universe);
+                auto y = test::make_viewed<Bits>(universe);
                 auto kx = std::set<std::size_t>();
                 auto ky = std::set<std::size_t>();
 

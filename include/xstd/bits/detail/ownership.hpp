@@ -31,14 +31,11 @@ enum class window : bool
         sub,
 };
 
-// The three ways the same blocks are read: as a set of keys, as a sequence of bools, or whole, the way std::bitset is.
+// The two ways the same blocks are read: as a set of keys, or as a sequence of bools.
 struct set_reading_tag
 {};
 
 struct sequence_reading_tag
-{};
-
-struct bitset_reading_tag
 {};
 
 // What an owner wraps: declared, never defined, so a view over a type that owns nothing is unsatisfied.
@@ -55,11 +52,11 @@ struct owned_storage<Owner> : owned_storage<typename Owner::adaptor_type>
 template<class Owner>
 using owned_bits_t = std::conditional_t<std::is_const_v<Owner>, typename owned_storage<std::remove_const_t<Owner>>::bits_type const, typename owned_storage<std::remove_const_t<Owner>>::bits_type>;
 
-// Whether a view of reading R may refer into Owner: a refinement of R answers for R, and a bitset for either reading.
+// Whether a view of reading R may refer into Owner: a refinement of R answers for R.
 template<class Owner, class R>
 concept owner_reading =
         requires { typename owned_storage<std::remove_const_t<Owner>>::bits_type; } and
-        (std::derived_from<typename owned_storage<std::remove_const_t<Owner>>::reads, R> or std::same_as<typename owned_storage<std::remove_const_t<Owner>>::reads, bitset_reading_tag>);
+        std::derived_from<typename owned_storage<std::remove_const_t<Owner>>::reads, R>;
 
 // Whether a view of reading R over Bits can refer into Owner: same storage, const flowing owner to view.
 template<class Owner, class Bits, class R>

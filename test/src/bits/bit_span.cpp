@@ -8,11 +8,9 @@
 #include <xstd/bits/bit_fixed_set.hpp>           // bit_fixed_set
 #include <xstd/bits/bit_set_view.hpp>            // bit_set_view
 #include <xstd/bits/bit_span.hpp>                // bit_span
-#include <xstd/bits/bitset.hpp>                  // bitset
 #include <xstd/bits/detail/bit_container.hpp>    // bit_container
 #include <xstd/bits/detail/ownership.hpp>        // storage
 #include <xstd/bits/detail/sequence_adaptor.hpp> // sequence_adaptor
-#include <xstd/bits/dynamic_bitset.hpp>          // dynamic_bitset
 #include <boost/test/unit_test.hpp>              // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <array>                                 // array
 #include <concepts>                              // constructible_from, convertible_to, derived_from, equality_comparable, same_as, totally_ordered
@@ -20,6 +18,7 @@
 #include <cstdint>                               // uint8_t
 #include <ranges>                                // iota
 #include <utility>                               // declval
+#include <vector>                                // vector
 
 BOOST_AUTO_TEST_SUITE(BitSpan)
 
@@ -46,27 +45,26 @@ BOOST_AUTO_TEST_CASE(TheViewIsTheReferringAdaptor)
         static_assert(std::derived_from<xstd::bit_span<Blocks, 8>, xstd::bits::detail::sequence_adaptor<Storage, xstd::bits::detail::storage::borrowed, xstd::bits::detail::window::all, xstd::bit_span<Blocks, 8>>>);
         static_assert(std::same_as<view_of<Storage>, xstd::bit_span<Blocks, 8>>);
         static_assert(std::same_as<view_of<Storage const>, xstd::bit_span<Blocks const, 8>>);
-        static_assert(std::same_as<view_of<xstd::bitset<8>>, xstd::bit_span<Blocks, 8>>);
         static_assert(std::same_as<view_of<xstd::bit_array<8>>, xstd::bit_span<Blocks, 8>>);
+        static_assert(std::same_as<view_of<xstd::bit_array<8> const>, xstd::bit_span<Blocks const, 8>>);
 }
 
-// A bitset is committed to neither reading and a set owner to the set one, so only the first admits a span.
+// A sequence owner is committed to the sequence reading and a set owner to the set one; only the first is spanned.
 BOOST_AUTO_TEST_CASE(TheReadingsDoNotMix)
 {
         static_assert(std::same_as<decltype(xstd::bit_set_view(std::declval<xstd::bit_fixed_set<8>&>())), xstd::bit_set_view<Blocks, 8>>);
-        static_assert(std::constructible_from<xstd::bit_span<Blocks, 8>, xstd::bitset<8>&>);
+        static_assert(std::constructible_from<xstd::bit_span<Blocks, 8>, xstd::bit_array<8>&>);
         static_assert(not std::constructible_from<xstd::bit_span<Blocks, 8>, xstd::bit_fixed_set<8>&>);
 }
 
 // Viewing an owner is implicit and viewing raw storage is not, which is where span draws the line.
 BOOST_AUTO_TEST_CASE(ViewingAnOwnerIsImplicit)
 {
-        static_assert(std::convertible_to<xstd::bitset<8>&, xstd::bit_span<Blocks, 8>>);
         static_assert(std::convertible_to<xstd::bit_array<8>&, xstd::bit_span<Blocks, 8>>);
-        static_assert(std::convertible_to<xstd::bitset<8> const&, xstd::bit_span<Blocks const, 8>>);
-        static_assert(not std::convertible_to<xstd::bitset<8> const&, xstd::bit_span<Blocks, 8>>);
+        static_assert(std::convertible_to<xstd::bit_array<8> const&, xstd::bit_span<Blocks const, 8>>);
+        static_assert(not std::convertible_to<xstd::bit_array<8> const&, xstd::bit_span<Blocks, 8>>);
 
-        static_assert(not std::convertible_to<xstd::bitset<8>, xstd::bit_span<Blocks, 8>>);
+        static_assert(not std::convertible_to<xstd::bit_array<8>, xstd::bit_span<Blocks, 8>>);
         static_assert(not std::convertible_to<xstd::bit_array<8>&&, xstd::bit_span<Blocks, 8>>);
 
         static_assert(std::constructible_from<xstd::bit_span<Blocks, 8>, Storage&>);
@@ -87,16 +85,14 @@ BOOST_AUTO_TEST_CASE(TheViewNeitherComparesNorOrders)
 // A view is mutable through: writing a position through the view writes the bit.
 BOOST_AUTO_TEST_CASE(WritingThroughTheViewWritesTheBits)
 {
-        auto packed = xstd::bitset<8>();
+        auto packed = std::uint8_t{};
         auto const view = xstd::bit_span(packed);
 
         view[3] = true;
-        BOOST_CHECK(packed.test(3));
-        BOOST_CHECK_EQUAL(packed.count(), 1);
+        BOOST_CHECK_EQUAL(packed, std::uint8_t{0b1000});
 
         view[3] = false;
-        BOOST_CHECK(not packed.test(3));
-        BOOST_CHECK(packed.none());
+        BOOST_CHECK_EQUAL(packed, std::uint8_t{0});
 }
 
 // The same reading over the type this library packs, so bit_array's operator[] and the view agree position by position.
@@ -126,9 +122,10 @@ BOOST_AUTO_TEST_CASE(APackedArrayAgreesWithItsOwnView)
 // The sequence reading against std::vector<bool>, through the iterators the view hands out, for every viewed type.
 BOOST_AUTO_TEST_CASE(EveryViewedTypeReadsLikeAVectorBool)
 {
-        test::sequence::ordering_agrees_with_vector_bool<xstd::bitset<8>>();
-        test::sequence::ordering_agrees_with_vector_bool<xstd::basic_bitset<std::uint8_t, 8>>();
-        test::sequence::ordering_agrees_with_vector_bool<xstd::dynamic_bitset>();
+        test::sequence::ordering_agrees_with_vector_bool<std::uint8_t>();
+        test::sequence::ordering_agrees_with_vector_bool<std::array<std::uint8_t, 1>>();
+        test::sequence::ordering_agrees_with_vector_bool<std::vector<std::uint64_t>>();
+        test::sequence::ordering_agrees_with_vector_bool<xstd::bit_array<8>>();
 }
 
 BOOST_AUTO_TEST_SUITE_END()
