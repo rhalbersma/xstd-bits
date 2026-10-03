@@ -29,7 +29,7 @@ jobs:
       cmake_args: -DXSTD_BITS_BUILD_BENCHMARKS=ON
 
   # The bounded column over std::inplace_vector: __cpp_lib_inplace_vector is C++26, so at the standard every other
-  # leg compiles as, the three bounded cells stand on boost::container::static_vector instead and are never
+  # leg compiles as, the two bounded cells stand on boost::container::static_vector instead and are never
   # constant-evaluated. CMakeLists.txt raises the standard for the test tree alone -- the INTERFACE a consumer
   # inherits stays at 23 -- and this is the leg that asks it to. No benchmarks: the ladder above builds those, and
   # this one is here for the storage it is the only leg to reach.

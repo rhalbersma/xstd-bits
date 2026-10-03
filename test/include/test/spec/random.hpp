@@ -6,7 +6,6 @@
 #ifndef TEST_SPEC_RANDOM_HPP
 #define TEST_SPEC_RANDOM_HPP
 
-#include <test/dynamic.hpp>               // dynamic
 #include <test/sequence/factory.hpp>      // make_sequence, static_capacity, static_width
 #include <test/set/exhaustive.hpp>        // static_capacity, static_width
 #include <test/spec/input.hpp>            // key_list, key_vector, keyed, origin, three, two
@@ -246,20 +245,6 @@ inline auto sample_key_vectors(std::size_t n, std::size_t digits, auto fun)
                 result.push_back({.from = sampled(n, {ka, kb, kc}, 3, i), .a = std::move(a), .b = std::move(b), .c = std::move(c)});
         }
         return result;
-}
-
-// A bitset is as wide as its type or its capacity, and sampled one past 2048 bits where its width is unbounded.
-template<class X>
-[[nodiscard]] auto bitset_width()
-        -> std::size_t
-{
-        if constexpr (not test::dynamic<X>) {
-                return X().size();
-        } else if constexpr (test::set::static_capacity<X>) {
-                return X().max_size();
-        } else {
-                return 2049UZ;
-        }
 }
 
 // A sequence is as wide as its type or its capacity, and sampled one past 2048 bits where its width is unbounded.

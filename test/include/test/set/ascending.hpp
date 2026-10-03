@@ -11,7 +11,7 @@
 #include <cstddef>                  // size_t
 #include <optional>                 // optional
 
-// Its own header: the set ordering sweeps reach for bit_set_view and make_bitset, and this needs neither.
+// Its own header: the set ordering sweeps reach for bit_set_view and make_viewed, and this needs neither.
 namespace test::set {
 
 // The set reading yields its keys in ASCENDING order, at every width and for every storage.

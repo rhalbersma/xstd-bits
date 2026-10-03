@@ -9,12 +9,12 @@
 #include <xstd/bits/detail/bit_container.hpp> // bit_container, num_blocks_v
 #include <xstd/bits/detail/ownership.hpp>     // owned_bits_t
 #include <xstd/bits/detail/set_adaptor.hpp>   // set_adaptor
-#include <xstd/bits/ext/boost.hpp>            // bit_small_set, bit_small_vector, small_bitset
+#include <xstd/bits/ext/boost.hpp>            // bit_small_set, bit_small_vector
 #include <boost/container/new_allocator.hpp>  // new_allocator
 #include <boost/container/small_vector.hpp>   // small_vector
 #include <boost/container/static_vector.hpp>  // static_vector
 #include <boost/test/unit_test.hpp>           // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
-#include <concepts>                           // regular, same_as, totally_ordered
+#include <concepts>                           // same_as
 #include <cstddef>                            // size_t
 #include <cstdint>                            // uint8_t
 #include <memory_resource>                    // polymorphic_allocator
@@ -51,16 +51,14 @@ BOOST_AUTO_TEST_CASE(TheCapacityIsBitsAndTheStorageIsBlocks)
         BOOST_CHECK(true);
 }
 
-// What the umbrella is for: one include, and all three readings over the one column are reachable by name.
+// What the umbrella is for: one include, and both readings over the one column are reachable by name.
 BOOST_AUTO_TEST_CASE(TheUmbrellaReachesEveryReading)
 {
         static_assert(test::set::bit_set<xstd::bit_small_set<N>>);
         static_assert(test::sequence::bit_sequence<xstd::bit_small_vector<N>>);
-        static_assert(std::regular<xstd::small_bitset<N>> and std::totally_ordered<xstd::small_bitset<N>>);
 
         static_assert(std::ranges::bidirectional_range<xstd::bit_small_set<N>>);
         static_assert(std::ranges::random_access_range<xstd::bit_small_vector<N>>);
-        static_assert(not std::ranges::range<xstd::small_bitset<N>>);
         BOOST_CHECK(true);
 }
 
@@ -69,15 +67,12 @@ BOOST_AUTO_TEST_CASE(TheMovesAreAsNothrowAsTheSmallVectors)
 {
         static_assert(std::is_nothrow_move_constructible_v<xstd::bit_small_set<N>> and std::is_nothrow_move_assignable_v<xstd::bit_small_set<N>>);
         static_assert(std::is_nothrow_move_constructible_v<xstd::bit_small_vector<N>> and std::is_nothrow_move_assignable_v<xstd::bit_small_vector<N>>);
-        static_assert(std::is_nothrow_move_constructible_v<xstd::small_bitset<N>> and std::is_nothrow_move_assignable_v<xstd::small_bitset<N>>);
 
         using allocator_type = std::pmr::polymorphic_allocator<std::size_t>;
         static_assert(std::is_nothrow_move_constructible_v<xstd::basic_bit_small_set<std::size_t, N, allocator_type>>);
         static_assert(std::is_nothrow_move_constructible_v<xstd::basic_bit_small_vector<std::size_t, N, allocator_type>>);
-        static_assert(std::is_nothrow_move_constructible_v<xstd::basic_small_bitset<std::size_t, N, allocator_type>>);
         static_assert(not std::is_nothrow_move_assignable_v<xstd::basic_bit_small_set<std::size_t, N, allocator_type>>);
         static_assert(not std::is_nothrow_move_assignable_v<xstd::basic_bit_small_vector<std::size_t, N, allocator_type>>);
-        static_assert(not std::is_nothrow_move_assignable_v<xstd::basic_small_bitset<std::size_t, N, allocator_type>>);
         BOOST_CHECK(true);
 }
 

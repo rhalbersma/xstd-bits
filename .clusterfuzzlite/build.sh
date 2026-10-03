@@ -6,7 +6,7 @@
 
 # Boost with the builder's compiler and flags, so its one compiled library shares the fuzzers' libc++ and sanitizer.
 cmake -S "$SRC/boost" -B "$WORK/boost-build" -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
-        -DBOOST_INCLUDE_LIBRARIES="container;dynamic_bitset;hash2" -DCMAKE_INSTALL_PREFIX="$WORK/boost"
+        -DBOOST_INCLUDE_LIBRARIES="container;hash2" -DCMAKE_INSTALL_PREFIX="$WORK/boost"
 cmake --build "$WORK/boost-build" --parallel "$(nproc)"
 cmake --install "$WORK/boost-build"
 
@@ -17,9 +17,9 @@ cmake -S "$SRC/xstd-bits" -B "$WORK/build" -DBUILD_TESTING=OFF \
         -DXSTD_BITS_BUILD_FUZZERS=ON \
         -DXSTD_BITS_FUZZ_COMPILE_OPTIONS="" \
         -DXSTD_BITS_FUZZ_LINK_OPTIONS="$LIB_FUZZING_ENGINE"
-cmake --build "$WORK/build" --parallel "$(nproc)" --target fuzz_bitset fuzz_set fuzz_vector
+cmake --build "$WORK/build" --parallel "$(nproc)" --target fuzz_set fuzz_vector
 
-for target in fuzz_bitset fuzz_set fuzz_vector; do
+for target in fuzz_set fuzz_vector; do
         cp "$WORK/build/fuzz/$target" "$OUT/"
         # The checked-in seeds, which ClusterFuzzLite unpacks beside the corpus it keeps.
         (cd "$SRC/xstd-bits/fuzz/corpus/$target" && zip -q -j "$OUT/${target}_seed_corpus.zip" ./*)

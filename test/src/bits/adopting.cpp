@@ -9,12 +9,10 @@
 #include <xstd/bits/bit_bounded_vector.hpp>      // basic_bit_bounded_vector
 #include <xstd/bits/bit_set.hpp>                 // basic_bit_set, bit_set
 #include <xstd/bits/bit_vector.hpp>              // basic_bit_vector, bit_vector
-#include <xstd/bits/bounded_bitset.hpp>          // basic_bounded_bitset
 #include <xstd/bits/detail/bit_container.hpp>    // bit_container
 #include <xstd/bits/detail/bounded_blocks.hpp>   // bounded_blocks
 #include <xstd/bits/detail/ownership.hpp>        // storage, window
 #include <xstd/bits/detail/sequence_adaptor.hpp> // sequence_adaptor
-#include <xstd/bits/dynamic_bitset.hpp>          // basic_dynamic_bitset
 #include <xstd/bits/ext/boost/bit_small_set.hpp> // basic_bit_small_set
 #include <xstd/bits/from_bit_storage.hpp>        // from_bit_storage, from_bit_storage_t
 #include <boost/test/unit_test.hpp>              // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
@@ -51,11 +49,6 @@ BOOST_AUTO_TEST_CASE(EveryBitOfTheBlocksIsAPosition)
         static_assert(std::same_as<decltype(v), xstd::basic_bit_vector<std::uint8_t> const>);
         BOOST_CHECK_EQUAL(v.size(), 16UZ);
         BOOST_CHECK(v[0] and not v[1] and v[2] and v[15]);
-
-        auto const b = xstd::basic_dynamic_bitset(xstd::from_bit_storage, std::vector<std::uint8_t>{0x05, 0x80});
-        static_assert(std::same_as<decltype(b), xstd::basic_dynamic_bitset<std::uint8_t> const>);
-        BOOST_CHECK_EQUAL(b.size(), 16UZ);
-        BOOST_CHECK_EQUAL(b.count(), 3UZ);
 }
 
 // flat_set's allocator-extended form: the allocator is deduced with the blocks, and given to the storage.
@@ -69,10 +62,6 @@ BOOST_AUTO_TEST_CASE(TheAllocatorExtendedFormDeducesAsThePlainOne)
         auto const v = xstd::basic_bit_vector(xstd::from_bit_storage, std::vector<std::uint8_t>{0x01}, alloc);
         static_assert(std::same_as<decltype(v), xstd::basic_bit_vector<std::uint8_t> const>);
         BOOST_CHECK(v.size() == 8UZ and v[0]);
-
-        auto const b = xstd::basic_dynamic_bitset(xstd::from_bit_storage, std::vector<std::uint8_t>{0x01}, alloc);
-        static_assert(std::same_as<decltype(b), xstd::basic_dynamic_bitset<std::uint8_t> const>);
-        BOOST_CHECK(b.size() == 8UZ and b.test(0));
 }
 
 // extract and adoption round-trip whole blocks, so a width short of them comes back padded, and resize restores it.
@@ -120,7 +109,7 @@ BOOST_AUTO_TEST_CASE(AdoptionIsConstexpr)
         BOOST_CHECK(true);
 }
 
-// Inline blocks deduce the capacity they hold in whole, through each reading's owner, whichever storage holds them.
+// Inline blocks deduce the capacity they hold in whole, through each bounded owner, whichever storage holds them.
 BOOST_AUTO_TEST_CASE(InlineBlocksDeduceTheirAlignedCapacity)
 {
         auto const v = xstd::basic_bit_bounded_vector(xstd::from_bit_storage, xstd::bits::detail::bounded_blocks<std::uint8_t, 2>{0x81});
@@ -130,10 +119,6 @@ BOOST_AUTO_TEST_CASE(InlineBlocksDeduceTheirAlignedCapacity)
         auto const s = xstd::basic_bit_bounded_set(xstd::from_bit_storage, xstd::bits::detail::bounded_blocks<std::uint8_t, 2>{0x81});
         static_assert(std::same_as<decltype(s), xstd::basic_bit_bounded_set<std::uint8_t, 16> const>);
         BOOST_CHECK(s.contains(0) and s.contains(7));
-
-        auto const b = xstd::basic_bounded_bitset(xstd::from_bit_storage, xstd::bits::detail::bounded_blocks<std::uint8_t, 2>{0x81});
-        static_assert(std::same_as<decltype(b), xstd::basic_bounded_bitset<std::uint8_t, 16> const>);
-        BOOST_CHECK_EQUAL(b.count(), 2UZ);
 }
 
 // The heap owners over a polymorphic allocator, which two resources make unequal.

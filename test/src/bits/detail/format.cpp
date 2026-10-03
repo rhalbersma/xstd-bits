@@ -3,16 +3,16 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/bit_array.hpp>      // bit_array
-#include <xstd/bits/bit_fixed_set.hpp>  // bit_fixed_set
-#include <xstd/bits/bit_set.hpp>        // bit_set
-#include <xstd/bits/bit_set_view.hpp>   // bit_set_view
-#include <xstd/bits/bit_span.hpp>       // bit_span
-#include <xstd/bits/bit_vector.hpp>     // bit_vector
-#include <xstd/bits/dynamic_bitset.hpp> // dynamic_bitset
-#include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
-#include <array>                        // array
-#include <format>                       // format
+#include <xstd/bits/bit_array.hpp>     // bit_array
+#include <xstd/bits/bit_fixed_set.hpp> // bit_fixed_set
+#include <xstd/bits/bit_set.hpp>       // bit_set
+#include <xstd/bits/bit_set_view.hpp>  // bit_set_view
+#include <xstd/bits/bit_span.hpp>      // bit_span
+#include <xstd/bits/bit_vector.hpp>    // bit_vector
+#include <boost/test/unit_test.hpp>    // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <array>                       // array
+#include <cstdint>                     // uint8_t
+#include <format>                      // format
 
 BOOST_AUTO_TEST_SUITE(Format)
 
@@ -51,15 +51,13 @@ BOOST_AUTO_TEST_CASE(TheSequenceReadingFormatsInBrackets)
         BOOST_CHECK_EQUAL(std::format("{}", xstd::bit_vector()), "[]");
 }
 
-// A view formats as its reading does and never as the owner's, the owner being a bitset committed to neither.
+// A view formats as its reading does, over blocks committed to neither.
 BOOST_AUTO_TEST_CASE(TheViewsFormatAsTheirReading)
 {
-        auto b = xstd::dynamic_bitset(4UZ);
-        b.set(1UZ);
-        b.set(3UZ);
+        auto b = std::array<std::uint8_t, 1>{0b1010};
 
         BOOST_CHECK_EQUAL(std::format("{}", xstd::bit_set_view(b)), "{1, 3}");
-        BOOST_CHECK_EQUAL(std::format("{}", xstd::bit_span(b)), "[false, true, false, true]");
+        BOOST_CHECK_EQUAL(std::format("{}", xstd::bit_span(b)), "[false, true, false, true, false, false, false, false]");
 }
 
 // Deriving from formatter<size_t> and formatter<bool> keeps the spec, so a forwarded nested spec arrives intact.

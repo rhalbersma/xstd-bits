@@ -7,8 +7,8 @@
 #include <test/spec/rejection.hpp>  // has_shift_left, has_shift_left_assign, has_shift_right, has_shift_right_assign
 #include <test/spec/sequence.hpp>   // all
 #include <test/spec/span.hpp>       // all
-#include <xstd/bits/bitset.hpp>     // bitset
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
+#include <bitset>                   // bitset
 
 BOOST_AUTO_TEST_SUITE(Spec)
 BOOST_AUTO_TEST_SUITE(Xstd)
@@ -41,8 +41,8 @@ BOOST_AUTO_TEST_CASE(ShiftLeft)
 {
         test::for_each_type<test::spec::sequence::all>([]<class T> -> void { check_no_left_shift<T>(); });
         test::for_each_type<test::spec::span::all>([]<class T> -> void { check_no_left_shift<T>(); });
-        // The bitset reading over the same storage shifts, so a misspelled operator cannot pass the checks above.
-        static_assert(test::spec::has_shift_left_assign<xstd::bitset<17>> and test::spec::has_shift_left<xstd::bitset<17>>);
+        // std::bitset shifts, so a misspelled operator cannot pass the checks above.
+        static_assert(test::spec::has_shift_left_assign<std::bitset<17>> and test::spec::has_shift_left<std::bitset<17>>);
         BOOST_CHECK(true);
 }
 
@@ -51,7 +51,7 @@ BOOST_AUTO_TEST_CASE(ShiftRight)
 {
         test::for_each_type<test::spec::sequence::all>([]<class T> -> void { check_no_right_shift<T>(); });
         test::for_each_type<test::spec::span::all>([]<class T> -> void { check_no_right_shift<T>(); });
-        static_assert(test::spec::has_shift_right_assign<xstd::bitset<17>> and test::spec::has_shift_right<xstd::bitset<17>>);
+        static_assert(test::spec::has_shift_right_assign<std::bitset<17>> and test::spec::has_shift_right<std::bitset<17>>);
         BOOST_CHECK(true);
 }
 

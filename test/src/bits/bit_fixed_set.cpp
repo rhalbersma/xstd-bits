@@ -8,7 +8,6 @@
 #include <test/set/ascending.hpp>         // yields_ascending_keys
 #include <test/value_reference.hpp>       // value_reference
 #include <xstd/bits/bit_fixed_set.hpp>    // bit_fixed_set
-#include <xstd/bits/bitset.hpp>           // bitset
 #include <xstd/bits/from_bit_storage.hpp> // from_bit_storage
 #include <boost/test/unit_test.hpp>       // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <array>                          // array
@@ -191,25 +190,6 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AnUnsignedIntegerIsAFieldOfBitsToo, T, Types)
 
                 static_assert(not std::is_convertible_v<std::uint64_t, T>);
                 static_assert(not std::is_convertible_v<T, std::uint64_t>);
-        }
-}
-
-// Our own bitset reading crosses on that same rule, with neither side named in the constraint.
-BOOST_AUTO_TEST_CASE_TEMPLATE(OurOwnBitsetReadingCrossesOnTheSameRule, T, Types)
-{
-        constexpr auto N = T().max_size();
-        using Bitset = xstd::bitset<N>;
-        if constexpr (std::is_constructible_v<T, Bitset>) {
-                auto b = Bitset();
-                for (auto i = 0UZ; i < N; i += 5UZ) {
-                        b.set(i);
-                }
-                auto const c = T(b);
-                BOOST_CHECK_EQUAL(c.size(), b.count());
-                for (auto const i : std::views::iota(0UZ, N)) {
-                        BOOST_CHECK_EQUAL(c.contains(i), b.test(i));
-                }
-                BOOST_CHECK(static_cast<Bitset>(c) == b);
         }
 }
 
