@@ -52,6 +52,24 @@ struct owned_storage<Owner> : owned_storage<typename Owner::adaptor_type>
 template<class Owner>
 using owned_bits_t = std::conditional_t<std::is_const_v<Owner>, typename owned_storage<std::remove_const_t<Owner>>::bits_type const, typename owned_storage<std::remove_const_t<Owner>>::bits_type>;
 
+// The storage under a reading, for the library's free functions: both adaptors befriend this, and nothing else does.
+struct storage_access
+{
+        template<class Reading>
+        [[nodiscard]] static constexpr auto bits(Reading const& r) noexcept
+                -> auto const&
+        {
+                return static_cast<Reading::adaptor_type const&>(r).bits();
+        }
+
+        template<class Reading>
+        [[nodiscard]] static constexpr auto bits(Reading& r) noexcept
+                -> auto&
+        {
+                return static_cast<Reading::adaptor_type&>(r).bits();
+        }
+};
+
 // Whether a view of reading R may refer into Owner: a refinement of R answers for R.
 template<class Owner, class R>
 concept owner_reading =

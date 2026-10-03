@@ -40,8 +40,8 @@ compares only at one width, and prints its bits in the opposite order from how i
 
 xstd-bits separates the three. Each becomes the bit-packed counterpart of the standard container it
 already resembled, speaking that container's vocabulary, with one interface across every storage. The
-hybrid itself is not reproduced: there is no bitset type here, and `std::bitset<N>` interoperates
-exactly through `xstd::bit_cast` instead.
+hybrid itself is not reproduced: there is no bitset type here. `std::bitset<N>` and `boost::dynamic_bitset`
+interoperate through `xstd::bit_convert` instead.
 
 | reading  | standard counterpart                                                       | packed here as                                  |
 | :------- | :------------------------------------------------------------------------- | :---------------------------------------------- |
@@ -49,10 +49,12 @@ exactly through `xstd::bit_cast` instead.
 | set      | `std::set<std::size_t>`                                                    | `bit_fixed_set`, `bit_bounded_set`, `bit_set`   |
 | string   | `std::string`                                                              | `bit_string` (planned)                          |
 
-Every one of them reads and writes its raw blocks the same way, through `from_bit_storage` and
-`xstd::bit_cast` — the general form of what `to_ullong` does for one word. `xstd::bit_cast` copies the
-blocks between any two things of one fixed width, a `std::bitset<N>` included; the run-time-width
-counterpart, reaching `boost::dynamic_bitset<>` too, is planned as `xstd::bit_convert`.
+Every one of them reads its raw blocks through `from_bit_storage`, and converts to and from anything else that has
+bit storage through `xstd::bit_convert` — the general form of what `to_ullong` does for one word. Position `i`
+stays position `i` at any two widths: two fixed widths must be equal, a run-time width converts into a fixed one by
+value and throws `std::overflow_error` for a position the target cannot hold, and anything converts into a bounded,
+small or dynamic owner, which adopts the blocks outright from an rvalue holding the same container. Because
+positions are kept, a `std::bitset`'s `to_string()` reads reversed against its positions.
 
 xstd-bits is **six containers**: two readings of a block of bits — an ordered set of `std::size_t` and a sequence of `bool` — over three storages, which differ in whether size and capacity are static or dynamic: both static, a dynamic size within a static capacity, and both dynamic.
 
@@ -208,7 +210,8 @@ the adaptor each reading is built on is internal, under `<xstd/bits/detail/>`.
 | `<xstd/bits/bit_span.hpp>` <br> `<xstd/bits/bit_subspan.hpp>` | `bit_span` <br> `bit_subspan` | Sequence reading over borrowed bits, whole or sliced, or over unsigned blocks in place: `bit_span(blocks)` | [views.span] |
 | `<xstd/bits/bit_storage.hpp>` | `bit_storage` <br> `owned_bit_storage` <br> `resizable_bit_storage` <br> `bit_storage_extent_v` | What every container and view presents a packed interface over: one unsigned block, or a sized contiguous range of them, in no reading of its own. The views take any of it; the owners hold what can be owned, a regular value read-only through `const`, and at a run-time width only what resizes. Also the width its type names, which the views default to | none |
 | `<xstd/bits/from_bit_storage.hpp>` | `from_bit_storage` <br> `from_bit_storage_t` | The tag that says an argument's blocks are read as bits, so a static width deduces from them | [range.utility.conv] |
-| `<xstd/bits/bit.hpp>` <br> `<xstd/bits/bit/bit_cast.hpp>` | `bit_cast` <br> `bit_castable` | A copy of the blocks between any two things that have bit storage of one width: ours, blocks, a `std::bitset` | [bit.cast] |
+| `<xstd/bits/bit.hpp>` <br> `<xstd/bits/bit/bit_convert.hpp>` | `bit_convert` <br> `bit_convertible_to` <br> `bit_constructible_from` | Positions from anything that has bit storage into anything else that does, at any two widths: ours, blocks, a `std::bitset`; and the concepts for a valid conversion and for blocks an owner takes as they are | none |
+| `<xstd/bits/ext/boost/dynamic_bitset.hpp>` | `bit_convert` | Both ways between `boost::dynamic_bitset` and the owners, by block range; opt-in, outside every umbrella | [`boost::dynamic_bitset`](https://www.boost.org/doc/libs/release/libs/dynamic_bitset/) |
 
 `<xstd/bits.hpp>` exports the whole surface, so one include brings everything above.
 The headers directly under `<xstd/bits/>` are the containers, views and concepts; `<xstd/bits/bit/>` holds free utilities that extend `<bit>`, exported together by `<xstd/bits/bit.hpp>` as in xstd-ints.
@@ -221,6 +224,7 @@ The headers under `<xstd/bits/detail/>` are implementation and carry no stabilit
 - [xstd-ints](https://github.com/rhalbersma/xstd-ints) and [xstd-misc](https://github.com/rhalbersma/xstd-misc), fetched automatically via CMake `FetchContent` when not already installed
 - [Boost.Hash2](https://github.com/boostorg/hash2) for the hashing support
 - [Boost.Container](https://github.com/boostorg/container) for the bounded column's blocks where the standard library has no `std::inplace_vector`, and for the `ext/` column
+- [Boost.DynamicBitset](https://github.com/boostorg/dynamic_bitset), only where `<xstd/bits/ext/boost/dynamic_bitset.hpp>` is included: the `dynamic-bitset` feature in `vcpkg.json`, and a `Boost::dynamic_bitset` the consumer links itself
 
 This library depends on the C++ Standard Library, on [xstd-ints](https://github.com/rhalbersma/xstd-ints) and [xstd-misc](https://github.com/rhalbersma/xstd-misc) (both fetched automatically via CMake `FetchContent` when not already installed), on [Boost.Hash2](https://github.com/boostorg/hash2) for the hashing support, and on [Boost.Container](https://github.com/boostorg/container) for the bounded column where the standard library has no `std::inplace_vector`. It is continuously being tested with the following conforming [C++23](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/n4950.pdf) compilers, against all three mainstream standard libraries (libstdc++, the MSVC STL, and libc++). Following the model of [apt.llvm.org](https://apt.llvm.org/), we support the latest two stable releases of each compiler, plus its current development branch.
 

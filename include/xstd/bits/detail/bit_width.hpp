@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_DETAIL_BIT_WIDTH_HPP
 #define XSTD_BITS_DETAIL_BIT_WIDTH_HPP
 
-#include <xstd/bits/detail/bit_castable.hpp>       // container_source
+#include <xstd/bits/detail/bit_layout.hpp>         // container_source
 #include <xstd/bits/detail/ownership.hpp>          // owned_storage
 #include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
 #include <xstd/ints/limits.hpp>                    // numeric_limits
@@ -15,7 +15,7 @@
 #include <tuple>                                   // tuple_size, tuple_size_v
 #include <type_traits>                             // bool_constant, remove_const_t
 
-// The width of bit storage a type has, fixed by its type: what xstd::bit_cast checks both of its ends against.
+// The width of bit storage a type has, fixed by its type: what xstd::bit_convert matches two fixed widths by.
 namespace xstd::bits::detail {
 
 // One of our owners, of any reading: its storage is named by the owner protocol.

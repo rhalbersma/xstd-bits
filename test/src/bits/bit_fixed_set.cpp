@@ -3,10 +3,11 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/bit_exchange.hpp>          // exchanges_bits, exchanges_from_bits
+#include <test/bit_exchange.hpp>          // converts_between, exchanges_from_bits
 #include <test/block_types.hpp>           // graded_extents
 #include <test/set/ascending.hpp>         // yields_ascending_keys
 #include <test/value_reference.hpp>       // value_reference
+#include <xstd/bits/bit/bit_convert.hpp>  // bit_convert
 #include <xstd/bits/bit_fixed_set.hpp>    // bit_fixed_set
 #include <xstd/bits/from_bit_storage.hpp> // from_bit_storage
 #include <boost/test/unit_test.hpp>       // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
@@ -207,10 +208,10 @@ BOOST_AUTO_TEST_CASE(RawBlocksCrossOnTheSameRule)
         BOOST_CHECK(s.contains(0UZ));
         BOOST_CHECK(s.contains(64UZ));
         BOOST_CHECK(s.contains(N - 1UZ));
-        BOOST_CHECK(s.to_bits<Wide>() == blocks);
+        BOOST_CHECK(xstd::bit_convert<Wide>(s) == blocks);
 
         // The same positions over a different block width.
-        auto const narrow = s.to_bits<Narrow>();
+        auto const narrow = xstd::bit_convert<Narrow>(s);
         BOOST_CHECK_EQUAL(narrow[0], 0x89AB'CDEFU);
         BOOST_CHECK_EQUAL(narrow[1], 0x0123'4567U);
         BOOST_CHECK_EQUAL(narrow[7], 0x8000'0000U);
@@ -218,14 +219,14 @@ BOOST_AUTO_TEST_CASE(RawBlocksCrossOnTheSameRule)
 
         static_assert([] -> bool {
                 auto const b = Wide{0xDEAD'BEEFULL, 0ULL, 0ULL, 0ULL};
-                return Set(xstd::from_bit_storage, b).to_bits<Wide>() == b;
+                return xstd::bit_convert<Wide>(Set(xstd::from_bit_storage, b)) == b;
         }());
 
         // Too narrow is no exchange and wider is admitted; the door is the stronger question over is_constructible_v.
         static_assert(not test::exchanges_from_bits<Set, std::array<std::uint64_t, 3>>);
         static_assert(test::exchanges_from_bits<Set, std::array<std::uint64_t, 5>>);
-        static_assert(test::exchanges_bits<Set, Wide>);
-        static_assert(test::exchanges_bits<Set, Narrow>);
+        static_assert(test::exchanges_from_bits<Set, Wide> and test::converts_between<Set, Wide>);
+        static_assert(test::exchanges_from_bits<Set, Narrow> and test::converts_between<Set, Narrow>);
 
         // And the unnamed door is closed, so a sequence of blocks does not read as the from_range spelling.
         static_assert(not std::is_constructible_v<Set, Wide>);

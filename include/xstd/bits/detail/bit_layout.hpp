@@ -3,8 +3,8 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_DETAIL_BIT_CASTABLE_HPP
-#define XSTD_BITS_DETAIL_BIT_CASTABLE_HPP
+#ifndef XSTD_BITS_DETAIL_BIT_LAYOUT_HPP
+#define XSTD_BITS_DETAIL_BIT_LAYOUT_HPP
 
 #include <xstd/bits/bit_storage.hpp>               // owned_bit_storage
 #include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
@@ -17,6 +17,7 @@
 #include <limits>                                  // numeric_limits
 #include <memory>                                  // addressof
 #include <ranges>                                  // contiguous_range, data, iota, range_value_t
+#include <span>                                    // span
 #include <type_traits>                             // bool_constant, is_trivially_copyable_v
 
 namespace xstd::bits::detail {
@@ -140,18 +141,39 @@ concept container_source =
         (byte_count<N> == 0UZ or (bit_cast_is_constant<B> and probe_is_constant<B> and bit_layout_holds<B, N>()));
 
 template<class B, std::size_t N>
-concept bit_castable = integer_source<B, N> or block_range_source<B, N> or container_source<B, N>;
+concept bit_layout = integer_source<B, N> or block_range_source<B, N> or container_source<B, N>;
 
 // The shifts, in one place: they say where a position goes rather than assuming a byte order.
+template<class B>
+inline constexpr auto bytes_per_block = block_digits<B> / bits_per_byte;
+
+// Byte j of a range of blocks: the positions [8j, 8j + 8), at every block width.
+template<class B>
+[[nodiscard]] constexpr auto block_byte(B const& blocks, std::size_t j) noexcept
+        -> std::byte
+{
+        auto const block = blocks[j / bytes_per_block<B>];
+        auto const shift = bits_per_byte * (j % bytes_per_block<B>);
+        return static_cast<std::byte>(static_cast<unsigned char>(block >> shift));
+}
+
+// The write side, an or into blocks that start clear, so every byte is written once whatever the order.
+template<class T, std::size_t E>
+constexpr auto or_block_byte(std::span<T, E> blocks, std::size_t j, std::byte byte) noexcept
+        -> void
+{
+        constexpr auto per_block = bytes_per_block<std::span<T, E>>;
+        auto const value = static_cast<T>(std::to_integer<unsigned char>(byte));
+        auto& block = blocks[j / per_block];
+        block = static_cast<T>(block | static_cast<T>(value << (bits_per_byte * (j % per_block))));
+}
+
 template<std::size_t N, class B, std::size_t E>
 constexpr auto block_bytes_by_shifts(B const& b, std::array<std::byte, E>& bytes) noexcept
         -> void
 {
-        constexpr auto bytes_per_block = block_digits<B> / bits_per_byte;
         for (auto const j : std::views::iota(0UZ, bytes.size())) {
-                auto const block = b[j / bytes_per_block];
-                auto const shift = bits_per_byte * (j % bytes_per_block);
-                bytes[j] = static_cast<std::byte>(static_cast<unsigned char>(block >> shift));
+                bytes[j] = block_byte(b, j);
         }
 }
 
@@ -159,18 +181,13 @@ template<std::size_t N, class B, std::size_t E>
 constexpr auto bytes_blocks_by_shifts(std::array<std::byte, E> const& bytes, B& blocks) noexcept
         -> void
 {
-        using block_type = std::ranges::range_value_t<B>;
-        constexpr auto bytes_per_block = block_digits<B> / bits_per_byte;
         for (auto const j : std::views::iota(0UZ, bytes.size())) {
-                auto const byte = static_cast<block_type>(std::to_integer<unsigned char>(bytes[j]));
-                auto const shift = bits_per_byte * (j % bytes_per_block);
-                auto& block = blocks[j / bytes_per_block];
-                block = static_cast<block_type>(block | static_cast<block_type>(byte << shift));
+                or_block_byte(std::span(blocks), j, bytes[j]);
         }
 }
 
 template<std::size_t N, class B>
-        requires bit_castable<B, N>
+        requires bit_layout<B, N>
 [[nodiscard]] constexpr auto bit_bytes(B const& b) noexcept
         -> std::array<std::byte, byte_count<N>>
 {
@@ -208,7 +225,7 @@ template<std::size_t N, class B>
 }
 
 template<class B, std::size_t N>
-        requires bit_castable<B, N>
+        requires bit_layout<B, N>
 [[nodiscard]] constexpr auto bytes_bits(std::array<std::byte, byte_count<N>> const& bytes) noexcept
         -> B
 {
@@ -250,4 +267,4 @@ template<class B, std::size_t N>
 
 } // namespace xstd::bits::detail
 
-#endif // XSTD_BITS_DETAIL_BIT_CASTABLE_HPP
+#endif // XSTD_BITS_DETAIL_BIT_LAYOUT_HPP

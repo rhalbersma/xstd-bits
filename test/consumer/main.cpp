@@ -5,7 +5,7 @@
 
 // The gate on the interface line.
 
-#include <xstd/bits.hpp> // bit_array, bit_bounded_set, bit_bounded_vector, bit_fixed_set, bit_set, bit_set_view, bit_span, bit_subspan, bit_vector
+#include <xstd/bits.hpp> // bit_array, bit_bounded_set, bit_bounded_vector, bit_convert, bit_fixed_set, bit_set, bit_set_view, bit_span, bit_subspan, bit_vector
 #include <array>         // array
 #include <concepts>      // copyable, default_initializable, equality_comparable, regular, same_as, totally_ordered
 #include <cstdint>       // uint8_t, uint64_t
@@ -84,6 +84,10 @@ auto main()
         auto vector = xstd::bit_vector(64);
         vector[63] = true;
         check(vector.size() == 64 and vector.count() == 1);
+
+        // A fixed width into a run-time one, the width carried along.
+        auto const converted = xstd::bit_convert<xstd::bit_vector>(array);
+        check(converted.size() == 64 and converted[7]);
 
         auto bounded = xstd::bit_bounded_set<100>();
         bounded.insert(99);
