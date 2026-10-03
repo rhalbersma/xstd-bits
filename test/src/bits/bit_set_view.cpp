@@ -38,7 +38,8 @@ auto three_set()
         -> T
 {
         auto bits = T();
-        xstd::bit_set_view(bits).insert(3UZ);
+        auto const view = xstd::bit_set_view(bits);
+        view.insert(3UZ);
         return bits;
 }
 

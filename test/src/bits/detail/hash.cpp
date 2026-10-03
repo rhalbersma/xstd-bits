@@ -23,7 +23,7 @@ using set_type = xstd::bit_fixed_set<8>;
 [[nodiscard]] auto make(std::uint8_t bits)
         -> set_type
 {
-        return set_type(xstd::from_bit_storage, bits);
+        return {xstd::from_bit_storage, bits};
 }
 
 } // namespace
