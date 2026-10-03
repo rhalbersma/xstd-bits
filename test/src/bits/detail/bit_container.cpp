@@ -9,7 +9,7 @@
 #include <xstd/bits/bit_storage.hpp>                  // owned_bit_storage
 #include <xstd/bits/detail/bit_container.hpp>         // bit_container
 #include <xstd/bits/detail/bounded_blocks.hpp>        // bounded_blocks
-#include <xstd/bits/detail/comparisons.hpp>           // bitset_three_way, sequence_three_way, set_equal, set_three_way
+#include <xstd/bits/detail/comparisons.hpp>           // sequence_three_way, set_equal, set_three_way
 #include <xstd/bits/detail/range_const_reference.hpp> // fallback::range_const_reference_t, range_const_reference_t
 #include <xstd/ints/memory.hpp>                       // align_up
 #include <boost/test/unit_test.hpp>                   // BOOST_CHECK_EQUAL, BOOST_CHECK_LE, BOOST_CHECK_LT, BOOST_CHECK_THROW, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
@@ -887,47 +887,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AppendingABlockSplitsItAtAnUnalignedWidth, Block, 
                 b.append(striped<Block>());
                 append_to(m, striped<Block>());
                 disagreements += static_cast<int>(b != from_model<T>(m));
-
-                // And a range of blocks, reserved for first, so the width grows by one block per element.
-                auto const blocks = std::array{striped<Block>(), static_cast<Block>(~striped<Block>()), Block{1}};
-                b.append(blocks.begin(), blocks.end());
-                for (auto const value : blocks) {
-                        append_to(m, value);
-                }
-                disagreements += static_cast<int>(b != from_model<T>(m));
-                disagreements += static_cast<int>(b.size() != n + (4 * test::digits_v<Block>));
+                disagreements += static_cast<int>(b.size() != n + test::digits_v<Block>);
         }
-        BOOST_CHECK_EQUAL(disagreements, 0);
-}
-
-// The width-zero range append, where the bulk path pushes onto no blocks at all.
-BOOST_AUTO_TEST_CASE_TEMPLATE(AppendingARangeFromEmptyAgreesWithTheModel, Block, test::block_types)
-{
-        using T = xstd::bits::detail::bit_container<std::vector<Block>>;
-        auto const blocks = std::array{striped<Block>(), static_cast<Block>(~striped<Block>()), Block{1}};
-
-        auto disagreements = 0;
-
-        {
-                auto m = patterned(0UZ);
-                auto b = from_model<T>(m);
-                b.append(blocks.begin(), blocks.end());
-                for (auto const value : blocks) {
-                        append_to(m, value);
-                }
-                disagreements += static_cast<int>(b != from_model<T>(m));
-                disagreements += static_cast<int>(b.size() != 3 * test::digits_v<Block>);
-        }
-
-        // Nothing appended is nothing changed, at every width including zero.
-        for (auto const n : graded_widths<Block>()) {
-                auto const m = patterned(n);
-                auto b = from_model<T>(m);
-                b.append(blocks.begin(), blocks.begin());
-                disagreements += static_cast<int>(b != from_model<T>(m));
-                disagreements += static_cast<int>(b.size() != n);
-        }
-
         BOOST_CHECK_EQUAL(disagreements, 0);
 }
 
@@ -1131,7 +1092,7 @@ BOOST_AUTO_TEST_CASE(BoundedBlocksAreARunTimeWidthUnderAStaticCapacity)
         BOOST_CHECK(c.test(2UZ));
 }
 
-// Every question the three readings ask, asked of the storage in its own name and within the contracts it keeps.
+// Every question the readings ask, asked of the storage in its own name and within the contracts it keeps.
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheStorageAnswersEveryReadingsQuestion, T, test::graded_extents<test::array_storage>)
 {
         constexpr auto N = T::extent;
@@ -1230,7 +1191,7 @@ auto probes(BB const& empty)
         return out;
 }
 
-// The invariant on all three readings: the block-wise answer is the standard algorithm's, or it is wrong.
+// The invariant on both readings: the block-wise answer is the standard algorithm's, or it is wrong.
 template<class BB>
 auto disagreements(BB const& empty)
         -> int
@@ -1250,10 +1211,6 @@ auto disagreements(BB const& empty)
                         if (std::lexicographical_compare_three_way(qx.begin(), qx.end(), qy.begin(), qy.end()) != sequence_three_way(x, y)) {
                                 ++n;
                         }
-                        // The bitset reading is the sequence reading from the top, the bit string's order.
-                        if (std::lexicographical_compare_three_way(qx.rbegin(), qx.rend(), qy.rbegin(), qy.rend()) != bitset_three_way(x, y)) {
-                                ++n;
-                        }
                 }
         }
         return n;
@@ -1261,14 +1218,14 @@ auto disagreements(BB const& empty)
 
 } // namespace
 
-// All three orderings, at every static extent, against the algorithms that define them.
-BOOST_AUTO_TEST_CASE_TEMPLATE(AllThreeOrderingsAgreeWithTheirReading, T, test::graded_extents<test::array_storage>)
+// Both orderings, at every static extent, against the algorithms that define them.
+BOOST_AUTO_TEST_CASE_TEMPLATE(BothOrderingsAgreeWithTheirReading, T, test::graded_extents<test::array_storage>)
 {
         BOOST_CHECK_EQUAL(disagreements(T()), 0);
 }
 
 // The same at a run-time width, which shares no instantiation with the static one.
-BOOST_AUTO_TEST_CASE_TEMPLATE(AllThreeOrderingsAgreeAtARunTimeWidth, Block, test::block_types)
+BOOST_AUTO_TEST_CASE_TEMPLATE(BothOrderingsAgreeAtARunTimeWidth, Block, test::block_types)
 {
         using T = xstd::bits::detail::bit_container<std::vector<Block>>;
         constexpr auto D = test::digits_v<Block>;
@@ -1280,12 +1237,12 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AllThreeOrderingsAgreeAtARunTimeWidth, Block, test
         BOOST_CHECK_EQUAL(disagreed, 0);
 }
 
-// Two pairs that separate the three readings pairwise: {0} against {1}, and {0,1} against {1}.
-BOOST_AUTO_TEST_CASE(TheThreeOrderingsDisagree)
+// Two pairs that separate the readings: {0} against {1}, and {0,1} against {1}.
+BOOST_AUTO_TEST_CASE(TheTwoOrderingsDisagree)
 {
         using T = xstd::bits::detail::bit_container<std::array<std::uint8_t, 2>, 9>;
 
-        using orderings = std::tuple<std::strong_ordering, std::strong_ordering, std::strong_ordering>;
+        using orderings = std::tuple<std::strong_ordering, std::strong_ordering>;
         constexpr auto compare = [](std::initializer_list<std::size_t> p, std::initializer_list<std::size_t> q) -> orderings {
                 auto x = T();
                 for (auto const i : p) {
@@ -1295,20 +1252,18 @@ BOOST_AUTO_TEST_CASE(TheThreeOrderingsDisagree)
                 for (auto const i : q) {
                         y.set(i);
                 }
-                return {set_three_way(x, y), sequence_three_way(x, y), bitset_three_way(x, y)};
+                return {set_three_way(x, y), sequence_three_way(x, y)};
         };
 
-        // {0} against {1}: [0] < [1]; [1,0] > [0,1]; "01" < "10".
+        // {0} against {1}: [0] < [1]; [1,0] > [0,1].
         constexpr auto singletons = compare({0}, {1});
         static_assert(std::get<0>(singletons) == std::strong_ordering::less);
         static_assert(std::get<1>(singletons) == std::strong_ordering::greater);
-        static_assert(std::get<2>(singletons) == std::strong_ordering::less);
 
-        // {0,1} against {1}: [0,1] < [1]; [1,1] > [0,1]; "11" > "10".
+        // {0,1} against {1}: [0,1] < [1]; [1,1] > [0,1].
         constexpr auto prefix = compare({0, 1}, {1});
         static_assert(std::get<0>(prefix) == std::strong_ordering::less);
         static_assert(std::get<1>(prefix) == std::strong_ordering::greater);
-        static_assert(std::get<2>(prefix) == std::strong_ordering::greater);
 }
 
 // The prefix clause, which is the whole of what the set reading adds: {1} beats {} only by being longer.
@@ -1357,8 +1312,8 @@ BOOST_AUTO_TEST_CASE(TheAllocatorAndTheMaximumWidth)
         static_assert(A().max_size() == 9UZ);
 }
 
-// The three ceilings a reading can ask for: the storage computes all three and keeps none of them.
-BOOST_AUTO_TEST_CASE_TEMPLATE(TheThreeCeilingsAreComputedHereAndKeptAbove, Block, test::block_types)
+// The two ceilings a reading can ask for: the storage computes both and keeps neither.
+BOOST_AUTO_TEST_CASE_TEMPLATE(TheTwoCeilingsAreComputedHereAndKeptAbove, Block, test::block_types)
 {
         using V = xstd::bits::detail::bit_container<std::vector<Block>>;
         constexpr auto top = std::numeric_limits<std::size_t>::max();
@@ -1376,10 +1331,6 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheThreeCeilingsAreComputedHereAndKeptAbove, Block
         // What the blocks can hold and a size_t can count, which is the set reading's answer.
         BOOST_CHECK_EQUAL(v.max_size() % V::bits_per_block, 0UZ);
         BOOST_CHECK_LE(v.max_size(), V::max_width);
-
-        // boost::dynamic_bitset's answer, which saturates where that one clamps: the top of size_t.
-        BOOST_CHECK_EQUAL(v.saturating_max_size(), top);
-        BOOST_CHECK_EQUAL(v.saturating_max_size() - v.max_size(), V::bits_per_block - 1UZ);
 
         // std::vector<bool>'s answer, which clamps further, to what a difference_type can count.
         BOOST_CHECK_EQUAL(v.addressable_max_size(), V::max_addressable_width);
@@ -1477,7 +1428,7 @@ auto aligned_sample()
         return b;
 }
 
-// One start and length through set, flip and reset; a function so the sweeping case stays under the threshold.
+// One start and length through set and reset; a function so the sweeping case stays under the threshold.
 template<class T>
 auto check_ranged_forms(std::size_t n, std::size_t len)
         -> void
@@ -1488,12 +1439,6 @@ auto check_ranged_forms(std::size_t n, std::size_t len)
         e.set(n, len, true);
         for (auto const i : std::views::iota(n, n + len)) {
                 r[i] = true;
-        }
-        BOOST_CHECK(reference(e) == r);
-
-        e.flip(n, len);
-        for (auto const i : std::views::iota(n, n + len)) {
-                r[i] = not r[i];
         }
         BOOST_CHECK(reference(e) == r);
 

@@ -7,7 +7,7 @@ cmake_minimum_required(VERSION 3.30)
 project(
     xstd-bits
     VERSION 0.1.0
-    DESCRIPTION "Bit-packed C++ containers, views and bitsets modelling their standard counterparts, with the bit-parallel operations packing makes possible"
+    DESCRIPTION "Bit-packed C++ containers and views modelling their standard counterparts, with the bit-parallel operations packing makes possible"
     # Spelled out: project()'s own arguments expand before it sets PROJECT_NAME, so ${PROJECT_NAME} here is empty.
     HOMEPAGE_URL https://github.com/rhalbersma/xstd-bits
     LANGUAGES CXX
@@ -71,7 +71,6 @@ target_sources(
         include/xstd/bits.hpp
         include/xstd/bits/detail/sequence_adaptor.hpp
         include/xstd/bits/detail/set_adaptor.hpp
-        include/xstd/bits/detail/bitset_adaptor.hpp
         include/xstd/bits/detail/borrowed_bits.hpp
         include/xstd/bits/bit_array.hpp
         include/xstd/bits/bit.hpp
@@ -79,11 +78,9 @@ target_sources(
         include/xstd/bits/bit_storage.hpp
         include/xstd/bits/bit_bounded_set.hpp
         include/xstd/bits/bit_bounded_vector.hpp
-        include/xstd/bits/bounded_bitset.hpp
         include/xstd/bits/bit_set.hpp
         include/xstd/bits/bit_set_view.hpp
         include/xstd/bits/bit_span.hpp
-        include/xstd/bits/bitset.hpp
         include/xstd/bits/bit_fixed_set.hpp
         include/xstd/bits/bit_subspan.hpp
         include/xstd/bits/bit_vector.hpp
@@ -97,12 +94,10 @@ target_sources(
         include/xstd/bits/detail/functor.hpp
         include/xstd/bits/detail/hash.hpp
         include/xstd/bits/detail/intrin.hpp
-        include/xstd/bits/dynamic_bitset.hpp
         include/xstd/bits/from_bit_storage.hpp
         include/xstd/bits/ext/boost.hpp
         include/xstd/bits/ext/boost/bit_small_set.hpp
         include/xstd/bits/ext/boost/bit_small_vector.hpp
-        include/xstd/bits/ext/boost/small_bitset.hpp
         include/xstd/bits/detail/pred.hpp
         include/xstd/bits/detail/bit_castable.hpp
         include/xstd/bits/detail/bit_width.hpp

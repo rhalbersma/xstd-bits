@@ -8,7 +8,6 @@
 
 #include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
 #include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector
-#include <xstd/bits/ext/boost/small_bitset.hpp>     // basic_small_bitset
 #include <cstddef>                                  // size_t
 #include <cstdint>                                  // int64_t, uint8_t
 #include <iterator>                                 // ranges::distance
@@ -153,12 +152,6 @@ struct user_allocator
 
 template<class Block, std::size_t N, class Allocator>
 struct user_allocator<xstd::basic_bit_small_set<Block, N, Allocator>>
-{
-        using type = Allocator;
-};
-
-template<class Block, std::size_t N, class Allocator>
-struct user_allocator<xstd::basic_small_bitset<Block, N, Allocator>>
 {
         using type = Allocator;
 };

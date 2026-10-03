@@ -286,9 +286,8 @@ BOOST_AUTO_TEST_CASE(TheOrderingAcrossTwoSizesIsStillTheLexicographicOrder)
         auto const cases = dynamic_probes();
         for (auto const& [x, vx] : cases) {
                 for (auto const& [y, vy] : cases) {
-                        auto const expected = std::lexicographical_compare_three_way(vx.begin(), vx.end(), vy.begin(), vy.end());
-                        BOOST_CHECK((x <=> y) == expected);
-                        BOOST_CHECK((y <=> x) == (0 <=> expected));
+                        BOOST_CHECK((x <=> y) == std::lexicographical_compare_three_way(vx.begin(), vx.end(), vy.begin(), vy.end()));
+                        BOOST_CHECK((y <=> x) == std::lexicographical_compare_three_way(vy.begin(), vy.end(), vx.begin(), vx.end()));
                         BOOST_CHECK((x == y) == (vx == vy));
                 }
         }
@@ -460,7 +459,7 @@ auto aggregate_disagreements(Seq const& s, std::vector<bool> const& m)
                 disagreements += static_cast<std::size_t>(s.any(value) != std::ranges::any_of(m, is));
                 disagreements += static_cast<std::size_t>(s.none(value) != std::ranges::none_of(m, is));
         }
-        // The argument defaults to the true arm, which is where the bitset reading's four already are.
+        // The argument defaults to the true arm, which is where std::bitset's four already are.
         disagreements += static_cast<std::size_t>(s.count() != s.count(true));
         disagreements += static_cast<std::size_t>(s.all() != s.all(true));
         disagreements += static_cast<std::size_t>(s.any() != s.any(true));

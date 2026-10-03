@@ -6,7 +6,7 @@
 #ifndef TEST_SEQUENCE_ORDERING_HPP
 #define TEST_SEQUENCE_ORDERING_HPP
 
-#include <test/bitset/factory.hpp>  // make_bitset
+#include <test/viewed.hpp>          // make_viewed
 #include <xstd/bits/bit_span.hpp>   // bit_span
 #include <boost/test/unit_test.hpp> // BOOST_CHECK_EQUAL
 #include <algorithm>                // equal, lexicographical_compare, lexicographical_compare_three_way
@@ -25,8 +25,8 @@ auto ordering_agrees_with_vector_bool(std::size_t universe = 4)
         auto const bound = 1UZ << universe;
         for (auto const i : std::views::iota(0UZ, bound)) {
                 for (auto const j : std::views::iota(0UZ, bound)) {
-                        auto x = test::bitset::make_bitset<Bits>(universe);
-                        auto y = test::bitset::make_bitset<Bits>(universe);
+                        auto x = test::make_viewed<Bits>(universe);
+                        auto y = test::make_viewed<Bits>(universe);
 
                         // Written through the view; named, CTAD followed by [k] parsing as an array declaration.
                         auto xw = xstd::bit_span(x);

@@ -7,7 +7,6 @@
 #include <test/flat_set.hpp>                        // is_flat_set
 #include <test/for_each_type.hpp>                   // for_each_type
 #include <test/sequence/factory.hpp>                // make_sequence, stripes
-#include <test/spec/bitset.hpp>                     // all
 #include <test/spec/rejection.hpp>                  // has_allocator_constructor, has_allocator_extended_copy, has_allocator_extended_move, has_allocator_type, has_get_allocator
 #include <test/spec/sequence.hpp>                   // all
 #include <test/spec/set.hpp>                        // all, const_views
@@ -15,10 +14,8 @@
 #include <xstd/bits/bit_array.hpp>                  // bit_array
 #include <xstd/bits/bit_set.hpp>                    // basic_bit_set, bit_set
 #include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
-#include <xstd/bits/dynamic_bitset.hpp>             // basic_dynamic_bitset, dynamic_bitset
 #include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
 #include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector
-#include <xstd/bits/ext/boost/small_bitset.hpp>     // basic_small_bitset
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <array>                                    // array
 #include <concepts>                                 // same_as
@@ -89,9 +86,6 @@ template<class Block, std::size_t N, class Allocator>
 inline constexpr auto wraps_allocator<xstd::basic_bit_small_set<Block, N, Allocator>> = true;
 
 template<class Block, std::size_t N, class Allocator>
-inline constexpr auto wraps_allocator<xstd::basic_small_bitset<Block, N, Allocator>> = true;
-
-template<class Block, std::size_t N, class Allocator>
 inline constexpr auto wraps_allocator<xstd::basic_bit_small_vector<Block, N, Allocator>> = true;
 
 template<class X>
@@ -110,28 +104,13 @@ template<class C>
 template<class C, class... Args>
 concept list_converts_from = requires (Args... args) { accept<C>({args...}); };
 
-// The allocator-aware bitsets, whose model boost::dynamic_bitset has no allocator-extended copy or move.
-template<template<class> class Allocator>
-using bitset_allocator_aware = std::tuple<xstd::basic_dynamic_bitset<std::uint8_t, Allocator<std::uint8_t>>, xstd::basic_dynamic_bitset<std::uint64_t, Allocator<std::uint64_t>>, xstd::basic_small_bitset<std::uint8_t, 9, Allocator<std::uint8_t>>, xstd::basic_small_bitset<std::uint64_t, 64, Allocator<std::uint64_t>>>;
-
-using BitsetTypes = decltype(std::tuple_cat(std::declval<bitset_allocator_aware<propagating>>(), std::declval<bitset_allocator_aware<non_propagating>>(), std::declval<bitset_allocator_aware<std::pmr::polymorphic_allocator>>()));
-
 // std::vector<bool> is the model, over bool; the bit sequences take the allocator rebound to their Block.
 template<template<class> class Allocator>
 using sequence_allocator_aware = std::tuple<std::vector<bool, Allocator<bool>>, xstd::basic_bit_vector<std::uint8_t, Allocator<std::uint8_t>>, xstd::basic_bit_vector<std::uint64_t, Allocator<std::uint64_t>>, xstd::basic_bit_small_vector<std::uint8_t, 9, Allocator<std::uint8_t>>, xstd::basic_bit_small_vector<std::uint64_t, 64, Allocator<std::uint64_t>>>;
 
 using SequenceTypes = decltype(std::tuple_cat(std::declval<sequence_allocator_aware<propagating>>(), std::declval<sequence_allocator_aware<non_propagating>>(), std::declval<sequence_allocator_aware<std::pmr::polymorphic_allocator>>()));
 
-using all = decltype(std::tuple_cat(std::declval<Types>(), std::declval<BitsetTypes>(), std::declval<SequenceTypes>()));
-
-template<class X>
-inline constexpr auto is_bitset = false;
-
-template<class Block, class Allocator>
-inline constexpr auto is_bitset<xstd::basic_dynamic_bitset<Block, Allocator>> = true;
-
-template<class Block, std::size_t N, class Allocator>
-inline constexpr auto is_bitset<xstd::basic_small_bitset<Block, N, Allocator>> = true;
+using all = decltype(std::tuple_cat(std::declval<Types>(), std::declval<SequenceTypes>()));
 
 // The allocator members, present together where the type names an allocator and absent together where it names none.
 template<class X>
@@ -208,8 +187,6 @@ template<class X>
                 auto const narrow = std::vector<std::size_t>{1, 2, 3};
                 auto const wide = std::vector<std::size_t>{0, 100, 1000};
                 return {X(narrow.begin(), narrow.end(), a), X(wide.begin(), wide.end(), a)};
-        } else if constexpr (is_bitset<X>) {
-                return {X(9UZ, 5ULL, a), X(1000UZ, 5ULL, a)};
         } else {
                 auto const narrow = test::sequence::make_sequence<std::vector<bool>>(9UZ, test::sequence::stripes);
                 auto const wide = test::sequence::make_sequence<std::vector<bool>>(1000UZ, test::sequence::stripes);
@@ -224,8 +201,6 @@ template<class X>
 {
         if constexpr (requires { typename X::key_type; }) {
                 return X({5}, a);
-        } else if constexpr (is_bitset<X>) {
-                return X(3UZ, 1ULL, a);
         } else {
                 return X({true}, a);
         }
@@ -245,7 +220,7 @@ auto check_listed_and_ranged(typename X::allocator_type const& m)
         BOOST_CHECK(ranged.get_allocator() == m);
 }
 
-// A bitset's or a sequence's allocator-extended count constructor.
+// A sequence's allocator-extended count constructor.
 template<class X>
 auto check_counted(typename X::allocator_type const& m, auto value)
         -> void
@@ -500,7 +475,7 @@ BOOST_AUTO_TEST_CASE(DestructorDeallocates)
 BOOST_AUTO_TEST_CASE(AFailedInsertionHasNoEffects)
 {
         test::for_each_type<all>([]<class T> -> void {
-                if constexpr (keeps_a_ledger<T> and not is_bitset<T>) {
+                if constexpr (keeps_a_ledger<T>) {
                         check_failed_insertion<T>();
                 }
         });
@@ -522,8 +497,6 @@ BOOST_AUTO_TEST_CASE(AllocatorArguments)
                                 T(std::from_range, il, comp, a);
                         });
                         check_listed_and_ranged<T>(m);
-                } else if constexpr (is_bitset<T>) {
-                        check_counted<T>(m, 5ULL);
                 } else {
                         static_assert(requires (T::allocator_type a, std::initializer_list<bool> il) { T(il, a); });
                         check_counted<T>(m, true);
@@ -540,16 +513,6 @@ BOOST_AUTO_TEST_CASE(AMemoryResourceConvertsToThePolymorphicAllocator)
         auto const s = pmr_bit_set({1, 2}, &mr);
         BOOST_CHECK(s.get_allocator().resource() == &mr);
         BOOST_CHECK_EQUAL(s.size(), 2UZ);
-
-        using pmr_dynamic_bitset = xstd::basic_dynamic_bitset<std::size_t, std::pmr::polymorphic_allocator<std::size_t>>;
-        auto const b = pmr_dynamic_bitset(&mr);
-        BOOST_CHECK(b.get_allocator().resource() == &mr);
-
-        // boost's trailing allocator, after a block range.
-        auto const blocks = std::array{5UZ, 3UZ};
-        auto const c = pmr_dynamic_bitset(blocks.begin(), blocks.end(), &mr);
-        BOOST_CHECK(c.get_allocator().resource() == &mr);
-        BOOST_CHECK_EQUAL(c.count(), 4UZ);
 }
 
 // [container.reqmts]/64: uses-allocator construction hands each element the container's allocator.
@@ -561,12 +524,6 @@ BOOST_AUTO_TEST_CASE(AnAllocatorAwareContainerPassesItsAllocatorOn)
 
         sets.emplace_back();
         BOOST_CHECK(sets.back().get_allocator().resource() == &mr);
-
-        using pmr_dynamic_bitset = xstd::basic_dynamic_bitset<std::size_t, std::pmr::polymorphic_allocator<std::size_t>>;
-        auto bitsets = std::pmr::vector<pmr_dynamic_bitset>(&mr);
-
-        bitsets.emplace_back();
-        BOOST_CHECK(bitsets.back().get_allocator().resource() == &mr);
 }
 
 namespace {
@@ -594,7 +551,6 @@ BOOST_AUTO_TEST_CASE(AScopedAllocatorAdaptorPassesItsAllocatorOn)
         check_scoped_construction<xstd::basic_bit_set<std::size_t, pmr_allocator>>();
         check_scoped_construction<std::pmr::vector<bool>>(3UZ, true);
         check_scoped_construction<xstd::basic_bit_vector<std::size_t, pmr_allocator>>(3UZ, true);
-        check_scoped_construction<xstd::basic_dynamic_bitset<std::size_t, pmr_allocator>>(3UZ, 5ULL);
 }
 
 // [container.reqmts]/64: a rebound std::allocator converts, as it does for std::set.
@@ -618,7 +574,6 @@ BOOST_AUTO_TEST_CASE(AnEmptyBraceIsADefaultAllocator)
         auto const comp = xstd::bit_set::key_compare(); // NOLINT(modernize-use-transparent-functors): std::set<std::size_t>::key_compare
         BOOST_CHECK(std::set<std::size_t>({3, 1}, comp, {}) == std::set<std::size_t>({1, 3}));
         BOOST_CHECK(xstd::bit_set({3, 1}, comp, {}) == xstd::bit_set({1, 3}));
-        BOOST_CHECK(xstd::dynamic_bitset(8, 5ULL, {}) == xstd::dynamic_bitset(8, 5ULL));
 }
 
 // [container.reqmts]/64: a memory_resource* converts to a sequence's polymorphic allocator.
@@ -655,7 +610,6 @@ BOOST_AUTO_TEST_CASE(AConvertibleOrEmptyAllocatorArgumentIsTakenByASequence)
 {
         static_assert(std::is_constructible_v<std::vector<bool>, std::size_t, std::allocator<int>>);
         static_assert(std::is_constructible_v<xstd::bit_vector, std::size_t, std::allocator<int>>);
-        static_assert(std::is_constructible_v<xstd::dynamic_bitset, std::allocator<int>>);
 
         auto const v = xstd::bit_vector(3, true, {});
         BOOST_CHECK_EQUAL(v.size(), 3UZ);
@@ -666,7 +620,6 @@ BOOST_AUTO_TEST_CASE(TheCountConstructorsAreExplicit)
 {
         static_assert(not list_converts_from<std::vector<bool>, std::size_t, std::allocator<bool>>);
         static_assert(not list_converts_from<xstd::bit_vector, std::size_t, std::allocator<std::size_t>>);
-        static_assert(not list_converts_from<xstd::dynamic_bitset, std::size_t, unsigned long long, std::allocator<std::size_t>>);
         BOOST_CHECK(true);
 }
 
@@ -676,10 +629,8 @@ BOOST_AUTO_TEST_CASE(OnlyARunTimeWidthTakesAnAllocator)
         static_assert(std::is_nothrow_constructible_v<std::vector<bool>, std::allocator<bool> const&>);
         static_assert(std::is_nothrow_constructible_v<xstd::bit_vector, std::allocator<std::size_t> const&>);
         static_assert(std::is_nothrow_constructible_v<xstd::basic_bit_vector<std::uint8_t>, std::allocator<std::uint8_t> const&>);
-        static_assert(std::is_nothrow_constructible_v<xstd::dynamic_bitset, std::allocator<std::size_t> const&>);
         static_assert(std::is_nothrow_constructible_v<xstd::basic_bit_small_vector<std::uint64_t, 64>, xstd::basic_bit_small_vector<std::uint64_t, 64>::allocator_type const&>);
         static_assert(std::is_nothrow_constructible_v<xstd::basic_bit_small_set<std::uint64_t, 64>, xstd::basic_bit_small_set<std::uint64_t, 64>::allocator_type const&>);
-        static_assert(std::is_nothrow_constructible_v<xstd::basic_small_bitset<std::uint64_t, 64>, xstd::basic_small_bitset<std::uint64_t, 64>::allocator_type const&>);
         static_assert(not std::is_constructible_v<xstd::bit_array<64>, std::allocator<std::size_t>>);
         static_assert(not std::is_constructible_v<xstd::bit_array<64>, std::initializer_list<bool>, std::allocator<std::size_t>>);
         BOOST_CHECK(true);
@@ -692,7 +643,6 @@ BOOST_AUTO_TEST_CASE(OnlyAnAllocatorAwareCandidateTakesAnAllocator)
         test::for_each_type<test::spec::set::all>([]<class T> -> void { check_allocator_members<T>(); });
         test::for_each_type<test::spec::set::const_views>([]<class T> -> void { check_allocator_members<T>(); });
         test::for_each_type<test::spec::sequence::all>([]<class T> -> void { check_allocator_members<T>(); });
-        test::for_each_type<test::spec::bitset::all>([]<class T> -> void { check_allocator_members<T>(); });
         test::for_each_type<test::spec::span::all>([]<class T> -> void { check_allocator_members<T>(); });
         static_assert(test::spec::has_allocator_extended_copy<xstd::bit_vector> and test::spec::has_allocator_extended_move<xstd::bit_vector>);
         static_assert(test::spec::has_allocator_extended_copy<xstd::bit_set> and test::spec::has_allocator_extended_move<xstd::bit_set>);

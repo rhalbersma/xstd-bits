@@ -9,8 +9,6 @@
 #include <xstd/bits/bit_bounded_set.hpp>      // bit_bounded_set
 #include <xstd/bits/bit_bounded_vector.hpp>   // bit_bounded_vector
 #include <xstd/bits/bit_fixed_set.hpp>        // aligned::bit_fixed_set, bit_fixed_set
-#include <xstd/bits/bitset.hpp>               // aligned::bitset, bitset
-#include <xstd/bits/bounded_bitset.hpp>       // bounded_bitset
 #include <xstd/bits/detail/bit_container.hpp> // bit_container
 #include <xstd/bits/from_bit_storage.hpp>     // from_bit_storage
 #include <boost/test/unit_test.hpp>           // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
@@ -35,19 +33,13 @@ template<xstd::aligned::bit_fixed_set<64> V>
 struct set_parameter
 {};
 
-template<xstd::aligned::bitset<64> V>
-struct bitset_parameter
-{};
-
 // Every owner with an aligned form, at one block and at two, and at a narrow block filled three times over.
 using aligned_owners = std::tuple<
         xstd::aligned::bit_array<64>,
         xstd::aligned::bit_array<128>,
         xstd::aligned::basic_bit_array<std::uint8_t, 24>,
         xstd::aligned::bit_fixed_set<64>,
-        xstd::aligned::bit_fixed_set<128>,
-        xstd::aligned::bitset<64>,
-        xstd::aligned::bitset<128>>;
+        xstd::aligned::bit_fixed_set<128>>;
 
 // A width short of its last block by one bit and by all but one, at the machine word and at a byte.
 using unaligned_owners = std::tuple<
@@ -55,24 +47,20 @@ using unaligned_owners = std::tuple<
         xstd::bit_array<65>,
         xstd::basic_bit_array<std::uint8_t, 9>,
         xstd::bit_fixed_set<3>,
-        xstd::bit_fixed_set<127>,
-        xstd::bitset<3>,
-        xstd::bitset<127>>;
+        xstd::bit_fixed_set<127>>;
 
 // Width zero holds no block at all, so it is aligned at every block and has no unused bit to keep clear.
 using empty_owners = std::tuple<
         xstd::bit_array<0>,
         xstd::aligned::bit_array<0>,
-        xstd::bit_fixed_set<0>,
-        xstd::bitset<0>>;
+        xstd::bit_fixed_set<0>>;
 
 // A run-time width over storage that is not structural itself, and under Boost's static_vector not even literal.
 using bounded_owners = std::tuple<
         xstd::bit_bounded_vector<64>,
-        xstd::bit_bounded_set<64>,
-        xstd::bounded_bitset<64>>;
+        xstd::bit_bounded_set<64>>;
 
-// Each reading's own door to a bit: a set inserts, a bitset sets, and a sequence assigns through its proxy.
+// Each reading's own door to a bit: a set inserts, and a sequence assigns through its proxy.
 template<class T>
 [[nodiscard]] constexpr auto with_bits(std::initializer_list<std::size_t> positions)
         -> T
@@ -81,8 +69,6 @@ template<class T>
         for (auto const pos : positions) {
                 if constexpr (requires { t.insert(pos); }) {
                         t.insert(pos);
-                } else if constexpr (requires { t.set(pos); }) {
-                        t.set(pos);
                 } else {
                         t[pos] = true;
                 }
@@ -108,13 +94,6 @@ struct shape_of<xstd::basic_bit_fixed_set<Block, N>>
         static constexpr auto width = N;
 };
 
-template<class Block, std::size_t N>
-struct shape_of<xstd::basic_bitset<Block, N>>
-{
-        using block_type = Block;
-        static constexpr auto width = N;
-};
-
 // The same bits as blocks: the low bit of the first block and the high bit of the last one.
 template<class T>
 [[nodiscard]] constexpr auto from_words()
@@ -134,7 +113,6 @@ BOOST_AUTO_TEST_CASE(AnAlignedOwnerIsATemplateArgument)
 {
         static_assert(std::same_as<array_parameter<xstd::aligned::bit_array<64>{true}>, array_parameter<xstd::aligned::bit_array<64>{true}>>);
         static_assert(std::same_as<set_parameter<xstd::aligned::bit_fixed_set<64>{0UZ}>, set_parameter<xstd::aligned::bit_fixed_set<64>{0UZ}>>);
-        static_assert(std::same_as<bitset_parameter<xstd::aligned::bitset<64>(1ULL)>, bitset_parameter<xstd::aligned::bitset<64>(1ULL)>>);
 
         test::for_each_type<aligned_owners>([]<class T> -> void {
                 // A constant T{} first: MSVC does not define a defaulted constructor for a requires-expression's sake.

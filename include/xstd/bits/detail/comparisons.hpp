@@ -10,11 +10,10 @@
 #include <xstd/bits/detail/intrin.hpp>        // countr_zero
 #include <xstd/bits/detail/pred.hpp>          // intersects
 #include <xstd/bits/detail/shift.hpp>         // shl
-#include <algorithm>                          // equal, lexicographical_compare_three_way, max, min
-#include <cassert>                            // assert
+#include <algorithm>                          // equal, max, min
 #include <compare>                            // strong_ordering
 #include <cstddef>                            // ptrdiff_t, size_t
-#include <ranges>                             // begin, rbegin, rend
+#include <ranges>                             // begin
 
 // Each reading's equality and ordering over a bit_container, spelled in its primitives and named for the reading.
 namespace xstd::bits::detail {
@@ -130,20 +129,6 @@ template<bit_container_type Bits>
                                ? std::strong_ordering::greater
                                : std::strong_ordering::less;
         }
-}
-
-// The bitset reading at one width a block at a time: the bit string is the blocks from the top down, tail clear.
-template<bit_container_type Bits>
-[[nodiscard]] constexpr auto bitset_three_way(Bits const& x, Bits const& y) noexcept
-        -> std::strong_ordering
-{
-        assert(x.size() == y.size());
-        auto const xb = x.blocks();
-        auto const yb = y.blocks();
-        return std::lexicographical_compare_three_way(
-                std::ranges::rbegin(xb), std::ranges::rend(xb),
-                std::ranges::rbegin(yb), std::ranges::rend(yb)
-        );
 }
 
 } // namespace xstd::bits::detail
