@@ -12,6 +12,12 @@
     "test"
   ],
   "features": {
+    "dynamic-bitset": {
+      "description": "Interoperate with boost::dynamic_bitset through <xstd/bits/ext/boost/dynamic_bitset.hpp>",
+      "dependencies": [
+        "boost-dynamic-bitset"
+      ]
+    },
     "test": {
       "description": "Build the unit tests and benchmarks",
       "dependencies": [

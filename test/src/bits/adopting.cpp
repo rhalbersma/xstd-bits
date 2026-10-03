@@ -79,7 +79,7 @@ BOOST_AUTO_TEST_CASE(ARoundTripKeepsTheBitsAndPadsTheWidth)
         BOOST_CHECK(w == original);
 }
 
-// The move is the whole of the plain form, and a static width takes no block container, its tag door being bit_cast.
+// The move is the whole of the plain form, and a static width takes no block container, its tag door being bit_convert.
 BOOST_AUTO_TEST_CASE(OnlyARunTimeWidthAdopts)
 {
         static_assert(std::is_nothrow_constructible_v<xstd::bit_vector, xstd::from_bit_storage_t, std::vector<std::size_t>>);

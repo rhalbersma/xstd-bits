@@ -74,7 +74,7 @@ target_sources(
         include/xstd/bits/detail/borrowed_bits.hpp
         include/xstd/bits/bit_array.hpp
         include/xstd/bits/bit.hpp
-        include/xstd/bits/bit/bit_cast.hpp
+        include/xstd/bits/bit/bit_convert.hpp
         include/xstd/bits/bit_storage.hpp
         include/xstd/bits/bit_bounded_set.hpp
         include/xstd/bits/bit_bounded_vector.hpp
@@ -98,8 +98,10 @@ target_sources(
         include/xstd/bits/ext/boost.hpp
         include/xstd/bits/ext/boost/bit_small_set.hpp
         include/xstd/bits/ext/boost/bit_small_vector.hpp
+        include/xstd/bits/ext/boost/dynamic_bitset.hpp
         include/xstd/bits/detail/pred.hpp
-        include/xstd/bits/detail/bit_castable.hpp
+        include/xstd/bits/detail/bit_layout.hpp
+        include/xstd/bits/detail/bit_convertible.hpp
         include/xstd/bits/detail/bit_width.hpp
         include/xstd/bits/detail/random_access.hpp
         include/xstd/bits/detail/range_const_reference.hpp

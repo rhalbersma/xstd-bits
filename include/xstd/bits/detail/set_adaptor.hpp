@@ -16,7 +16,7 @@
 #include <xstd/bits/detail/functor.hpp>              // decay_copy
 #include <xstd/bits/detail/hash.hpp>                 // hash_append_bits, hash_append_positions, std_hash
 #include <xstd/bits/detail/intrin.hpp>               // countl_zero, countr_zero
-#include <xstd/bits/detail/ownership.hpp>            // owned_bits_t, owned_storage, owner_of, owner_reading, set_reading_tag, storage, owns
+#include <xstd/bits/detail/ownership.hpp>            // owned_bits_t, owned_storage, owner_of, owner_reading, set_reading_tag, storage, storage_access, owns
 #include <xstd/bits/detail/shift.hpp>                // shl, shr
 #include <xstd/bits/detail/storage_ptr.hpp>          // storage_ref_t
 #include <xstd/bits/detail/zero_width.hpp>           // zero_width
@@ -154,6 +154,9 @@ class set_adaptor : public set::members_t<Bits, Store, Derived>
         // A view refers into this owner's storage, and only a reading that can view it is named.
         template<bit_container_type, storage, class>
         friend class set_adaptor;
+
+        // The free functions over every reading, bit_convert among them, reach the storage through this one door.
+        friend struct storage_access;
 
         // The value under the set reading: the bits at a static width, the positions at a run-time one.
         template<class Provider, class Hash, class Flavor>
@@ -321,15 +324,6 @@ public:
         exchanges_bits<B> [[nodiscard]] constexpr set_adaptor(xstd::from_bit_storage_t, B const& b) noexcept
         {
                 m_bits.assign_bits(b);
-        }
-
-        // Through bits() and not m_bits, which is a handle wherever this reading refers rather than owns.
-        template<class B>
-                requires Bits::template
-        exchanges_bits<B> [[nodiscard]] constexpr auto to_bits() const noexcept
-                -> B
-        {
-                return bits().template to_bits<B>();
         }
 
         [[nodiscard]] constexpr explicit set_adaptor(Bits& c) noexcept

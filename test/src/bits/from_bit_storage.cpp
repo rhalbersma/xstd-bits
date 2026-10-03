@@ -4,6 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/uint128.hpp>               // IWYU pragma: keep; TEST_HAS_UINT128, uint128
+#include <xstd/bits/bit/bit_convert.hpp>  // bit_convert
 #include <xstd/bits/bit_array.hpp>        // basic_bit_array, bit_array
 #include <xstd/bits/bit_fixed_set.hpp>    // basic_bit_fixed_set, bit_fixed_set
 #include <xstd/bits/bit_vector.hpp>       // bit_vector
@@ -55,7 +56,7 @@ BOOST_AUTO_TEST_CASE(AnIntegerDeducesItsOwnWidth)
         static_assert(std::same_as<decltype(s), xstd::basic_bit_fixed_set<std::uint16_t, 16> const>);
         static_assert(s == xstd::basic_bit_fixed_set<std::uint16_t, 16>(xstd::from_bit_storage, block));
         static_assert(s.size() == 3UZ and s.contains(15UZ));
-        BOOST_CHECK(a.to_bits<std::uint16_t>() == block);
+        BOOST_CHECK(xstd::bit_convert<std::uint16_t>(a) == block);
 }
 
 // An array of blocks is its blocks' width, block i holding positions [i * digits, (i + 1) * digits).
@@ -94,7 +95,7 @@ BOOST_AUTO_TEST_CASE(OnlyAnUnsignedIntegerOrItsArrayDeduces)
         BOOST_CHECK(true);
 }
 
-// Only what is bit storage is read through the tag: a std::bitset has bit storage and is not it, so it is cast.
+// Only what is bit storage is read through the tag: a std::bitset has bit storage and is not it, so it is converted.
 BOOST_AUTO_TEST_CASE(OnlyWhatIsBitStorageIsReadThroughTheTag)
 {
         static_assert(std::is_constructible_v<xstd::bit_fixed_set<64>, xstd::from_bit_storage_t, std::uint64_t>);

@@ -6,7 +6,7 @@
 #ifndef TEST_BIT_EXCHANGE_HPP
 #define TEST_BIT_EXCHANGE_HPP
 
-#include <xstd/bits/bit/bit_cast.hpp>     // bit_cast
+#include <xstd/bits/bit/bit_convert.hpp>  // bit_convert
 #include <xstd/bits/from_bit_storage.hpp> // from_bit_storage
 #include <concepts>                       // same_as
 
@@ -18,26 +18,21 @@ concept exchanges_from_bits = requires (B const& b) {
         { Reading(xstd::from_bit_storage, b) } -> std::same_as<Reading>;
 };
 
+// A conversion into Reading, which no view answers.
 template<class Reading, class B>
-concept exchanges_to_bits = requires (Reading const& r) {
-        { r.template to_bits<B>() } -> std::same_as<B>;
+concept converts_from = requires (B const& b) {
+        { xstd::bit_convert<Reading>(b) } -> std::same_as<Reading>;
 };
 
-// Both directions for blocks that are bit storage, which is what an owner of a static width answers.
+// A conversion out of Reading, which a view over a whole width answers as an owner does.
 template<class Reading, class B>
-concept exchanges_bits = exchanges_from_bits<Reading, B> and exchanges_to_bits<Reading, B>;
-
-// A cast into Reading from anything that has bit storage of its width.
-template<class Reading, class B>
-concept casts_from = requires (B const& b) {
-        { xstd::bit_cast<Reading>(b) } -> std::same_as<Reading>;
+concept converts_to = requires (Reading const& r) {
+        { xstd::bit_convert<B>(r) } -> std::same_as<B>;
 };
 
-// Both directions of the cast, which an owner answers and a view does not.
+// Both directions, which an owner answers and a view does not.
 template<class Reading, class B>
-concept casts_between = casts_from<Reading, B> and requires (Reading const& r) {
-        { xstd::bit_cast<B>(r) } -> std::same_as<B>;
-};
+concept converts_between = converts_from<Reading, B> and converts_to<Reading, B>;
 
 } // namespace test
 

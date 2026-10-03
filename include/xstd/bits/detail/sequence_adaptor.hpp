@@ -15,7 +15,7 @@
 #include <xstd/bits/detail/functor.hpp>                      // invoke_continues
 #include <xstd/bits/detail/hash.hpp>                         // hash_append_bits, std_hash
 #include <xstd/bits/detail/intrin.hpp>                       // countr_zero, popcount
-#include <xstd/bits/detail/ownership.hpp>                    // owned_bits_t, owned_storage, owner_of, owner_reading, sequence_reading_tag, storage, owns, window
+#include <xstd/bits/detail/ownership.hpp>                    // owned_bits_t, owned_storage, owner_of, owner_reading, sequence_reading_tag, storage, storage_access, owns, window
 #include <xstd/bits/detail/random_access.hpp>                // random_access_bit_iterator, random_access_bit_reference
 #include <xstd/bits/detail/shift.hpp>                        // shl, shr
 #include <xstd/bits/detail/storage_ptr.hpp>                  // storage_ref_t
@@ -266,6 +266,9 @@ class sequence_adaptor : public sequence::members_t<Bits, Store, W, Derived, E>
         template<bit_container_type, storage, window, class, std::size_t>
         friend class sequence_adaptor;
 
+        // The free functions over every reading, bit_convert among them, reach the storage through this one door.
+        friend struct storage_access;
+
         // The value under the sequence reading, the owner's alone: a view follows span and hashes no more.
         template<class Provider, class Hash, class Flavor>
         friend constexpr auto tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, sequence_adaptor const* v) noexcept
@@ -374,15 +377,6 @@ public:
         exchanges_bits<B> [[nodiscard]] constexpr sequence_adaptor(xstd::from_bit_storage_t, B const& b) noexcept
         {
                 m_bits.assign_bits(b);
-        }
-
-        // A field of bits out, named rather than spelled as a conversion; never on a window.
-        template<class B>
-                requires (not is_window) and bits_type::template
-        exchanges_bits<B> [[nodiscard]] constexpr auto to_bits() const noexcept
-                -> B
-        {
-                return bits().template to_bits<B>();
         }
 
         // [vector.bool]'s allocator arguments: converting, and offered only where the storage has an allocator.

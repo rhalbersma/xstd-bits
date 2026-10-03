@@ -3,16 +3,17 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/bit_exchange.hpp>              // casts_from, exchanges_to_bits
+#include <test/bit_exchange.hpp>              // converts_from, converts_to
+#include <xstd/bits/bit/bit_convert.hpp>      // bit_convert
 #include <xstd/bits/bit_fixed_set.hpp>        // bit_fixed_set
 #include <xstd/bits/bit_set.hpp>              // bit_set
 #include <xstd/bits/detail/bit_container.hpp> // bit_container
 #include <xstd/bits/detail/ownership.hpp>     // owned_bits_t, storage
 #include <xstd/bits/detail/set_adaptor.hpp>   // set_adaptor
 #include <boost/test/unit_test.hpp>           // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <algorithm>                          // lexicographical_compare_three_way, ranges::equal
 #include <array>                              // array
 #include <bitset>                             // bitset
-#include <algorithm>                          // lexicographical_compare_three_way, ranges::equal
 #include <compare>                            // strong_ordering
 #include <concepts>                           // copyable, equality_comparable, invocable, regular, same_as, totally_ordered
 #include <cstddef>                            // size_t
@@ -849,8 +850,8 @@ BOOST_AUTO_TEST_CASE(ASetViewExchangesThroughTheBitsItRefersTo)
         // The file's own Storage and views: bit_set_view<Storage> is set_adaptor<Storage, refers>, which View spells.
         constexpr auto N = Storage::extent;
 
-        static_assert(test::exchanges_to_bits<View, std::bitset<N>>);
-        static_assert(test::exchanges_to_bits<Reader, std::bitset<N>>);
+        static_assert(test::converts_to<View, std::bitset<N>>);
+        static_assert(test::converts_to<Reader, std::bitset<N>>);
 
         auto storage = Storage();
         auto const view = View(storage);
@@ -858,19 +859,19 @@ BOOST_AUTO_TEST_CASE(ASetViewExchangesThroughTheBitsItRefersTo)
         view.insert(31UZ);
         view.insert(N - 1UZ);
 
-        auto const out = view.to_bits<std::bitset<N>>();
+        auto const out = xstd::bit_convert<std::bitset<N>>(view);
         BOOST_CHECK_EQUAL(out.count(), 3UZ);
         BOOST_CHECK(out.test(0) and out.test(31) and out.test(N - 1UZ));
 
         // A view is built from what it views, never from a field of bits, so the inbound direction is the owner's.
-        static_assert(not test::casts_from<View, std::bitset<N>>);
+        static_assert(not test::converts_from<View, std::bitset<N>>);
 
         // And at compile time, which is where the hard error would have been loudest.
         static_assert([] -> bool {
                 auto bits = Storage();
                 auto const v = View(bits);
                 v.insert(7UZ);
-                return v.to_bits<std::bitset<N>>().count() == 1UZ;
+                return xstd::bit_convert<std::bitset<N>>(v).count() == 1UZ;
         }());
 }
 

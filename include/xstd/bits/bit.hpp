@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_BIT_HPP
 #define XSTD_BITS_BIT_HPP
 
-// What <bit> has, extended to everything that has bit storage.
-#include <xstd/bits/bit/bit_cast.hpp> // IWYU pragma: export; bit_cast, bit_castable
+// The conversion between everything that has bit storage, and the two concepts that name its halves.
+#include <xstd/bits/bit/bit_convert.hpp> // IWYU pragma: export; bit_constructible_from, bit_convert, bit_convertible_to
 
 #endif // XSTD_BITS_BIT_HPP

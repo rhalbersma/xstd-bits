@@ -3,17 +3,17 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/detail/bit_castable.hpp> // bit_bytes, bit_castable, bit_layout_holds, block_range_source, byte_count, bytes_bits, container_source, integer_source
-#include <boost/test/unit_test.hpp>          // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
-#include <array>                             // array
-#include <bitset>                            // bitset
-#include <cstddef>                           // byte, size_t
-#include <cstdint>                           // uint8_t, uint16_t, uint32_t, uint64_t
-#include <ranges>                            // iota
-#include <string>                            // string
-#include <vector>                            // vector
+#include <xstd/bits/detail/bit_layout.hpp> // bit_bytes, bit_layout, bit_layout_holds, block_range_source, byte_count, bytes_bits, container_source, integer_source
+#include <boost/test/unit_test.hpp>        // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
+#include <array>                           // array
+#include <bitset>                          // bitset
+#include <cstddef>                         // byte, size_t
+#include <cstdint>                         // uint8_t, uint16_t, uint32_t, uint64_t
+#include <ranges>                          // iota
+#include <string>                          // string
+#include <vector>                          // vector
 
-BOOST_AUTO_TEST_SUITE(BitCastable)
+BOOST_AUTO_TEST_SUITE(BitLayout)
 
 namespace detail = xstd::bits::detail;
 
@@ -184,13 +184,13 @@ BOOST_AUTO_TEST_CASE(TheProbeRefusesALayoutThatIsWrong)
         static_assert(detail::probeable_bits<wrong::non_constant_set>);
         static_assert(not detail::probe_is_constant<wrong::non_constant_set>);
         static_assert(not detail::container_source<wrong::non_constant_set, 64UZ>);
-        static_assert(not detail::bit_castable<wrong::non_constant_set, 64UZ>);
+        static_assert(not detail::bit_layout<wrong::non_constant_set, 64UZ>);
 
         // And the concept refuses all four, the last of them before the probe ever runs.
-        static_assert(not detail::bit_castable<wrong::dirty_default, 64UZ>);
-        static_assert(not detail::bit_castable<wrong::miscounting, 64UZ>);
-        static_assert(not detail::bit_castable<wrong::reversed, 64UZ>);
-        static_assert(not detail::bit_castable<wrong::spare_block, 64UZ>);
+        static_assert(not detail::bit_layout<wrong::dirty_default, 64UZ>);
+        static_assert(not detail::bit_layout<wrong::miscounting, 64UZ>);
+        static_assert(not detail::bit_layout<wrong::reversed, 64UZ>);
+        static_assert(not detail::bit_layout<wrong::spare_block, 64UZ>);
 
         // A right one, built the same way, so the four above are refused for their defect and not their shape.
         struct right
@@ -217,16 +217,16 @@ BOOST_AUTO_TEST_CASE(TheProbeRefusesALayoutThatIsWrong)
         };
 
         static_assert(detail::bit_layout_holds<right, 64UZ>());
-        static_assert(detail::bit_castable<right, 64UZ>);
+        static_assert(detail::bit_layout<right, 64UZ>);
 }
 
 // Neither family: a heap container is not its own bits, and a width the object cannot hold is not a conversion.
 BOOST_AUTO_TEST_CASE(WhatIsRefusedAndWhy)
 {
-        static_assert(not detail::bit_castable<std::vector<bool>, 64UZ>);
-        static_assert(not detail::bit_castable<std::string, 64UZ>);
-        static_assert(not detail::bit_castable<std::bitset<64UZ>, 65UZ>);
-        static_assert(not detail::bit_castable<std::uint32_t, 64UZ>);
+        static_assert(not detail::bit_layout<std::vector<bool>, 64UZ>);
+        static_assert(not detail::bit_layout<std::string, 64UZ>);
+        static_assert(not detail::bit_layout<std::bitset<64UZ>, 65UZ>);
+        static_assert(not detail::bit_layout<std::uint32_t, 64UZ>);
 }
 
 BOOST_AUTO_TEST_CASE(TheTwoDirectionsAreEachOthersInverse)
@@ -290,7 +290,7 @@ BOOST_AUTO_TEST_CASE(ASequenceOfBlocksStatesItsLayoutToo)
 
         // And a scalar is not a range, which is why the family keeps two spellings rather than one.
         static_assert(not detail::block_range_source<std::uint64_t, 64UZ>);
-        static_assert(detail::bit_castable<std::uint64_t, 64UZ>);
+        static_assert(detail::bit_layout<std::uint64_t, 64UZ>);
 }
 
 // The bytes a block sequence spells are the bytes of its values, so b[j] >> k is the same on either byte order.

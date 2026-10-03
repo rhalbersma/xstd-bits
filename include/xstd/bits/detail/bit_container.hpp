@@ -8,7 +8,7 @@
 
 #include <xstd/bits/bit_storage.hpp>                         // bit_storage_capacity_v, owned_bit_storage, resizable_bit_storage
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_base_type, allocator_param_t, has_allocator_v
-#include <xstd/bits/detail/bit_castable.hpp>                 // bit_bytes, bit_castable, byte_count, bytes_bits, container_source
+#include <xstd/bits/detail/bit_layout.hpp>                   // bit_bytes, bit_layout, block_range_source, container_source
 #include <xstd/bits/detail/borrowed_block_span.hpp>          // borrowed_block_span
 #include <xstd/bits/detail/intrin.hpp>                       // countl_zero, countr_zero, popcount
 #include <xstd/bits/detail/pred.hpp>                         // intersects, is_subset_of, not_equal_to
@@ -255,7 +255,7 @@ public:
 
         // The two shapes a reading asks for: either family, or the field-of-bits family where integers have a door.
         template<class B>
-        static constexpr auto exchanges_bits = has_static_size and bit_castable<B, bit_extent>;
+        static constexpr auto exchanges_bits = has_static_size and bit_layout<B, bit_extent>;
 
         // A field of bits is anything but the bare scalar, which is left out only because it has its own door.
         template<class B>
@@ -642,21 +642,13 @@ public:
                 erase_unused();
         }
 
-        // A whole field of bits in and out over the two byte primitives, the width being known here.
+        // A whole field of bits in over the byte primitive, the width being known here; bit_convert reads them out.
         template<class B>
                 requires exchanges_bits<B>
         constexpr auto assign_bits(B const& b) noexcept
                 -> void
         {
                 assign_bytes(bit_bytes<bit_extent>(b));
-        }
-
-        template<class B>
-                requires exchanges_bits<B>
-        [[nodiscard]] constexpr auto to_bits() const noexcept
-                -> B
-        {
-                return bytes_bits<B, bit_extent>(to_bytes<byte_count<bit_extent>>());
         }
 
         template<std::size_t E>

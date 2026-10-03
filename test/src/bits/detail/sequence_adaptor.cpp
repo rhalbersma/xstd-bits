@@ -3,9 +3,9 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/bit_exchange.hpp>                 // casts_between, casts_from, exchanges_to_bits
+#include <test/bit_exchange.hpp>                 // converts_between, converts_from, converts_to, exchanges_from_bits
 #include <test/block_types.hpp>                  // graded_extents
-#include <xstd/bits/bit/bit_cast.hpp>            // bit_cast
+#include <xstd/bits/bit/bit_convert.hpp>         // bit_convert
 #include <xstd/bits/bit_array.hpp>               // bit_array
 #include <xstd/bits/bit_span.hpp>                // bit_span
 #include <xstd/bits/bit_subspan.hpp>             // bit_subspan
@@ -652,21 +652,21 @@ BOOST_AUTO_TEST_CASE(APackedArrayExchangesBytesWithAFieldOfBits)
                 src.set(i);
         }
 
-        auto const a = xstd::bit_cast<xstd::bit_array<N>>(src);
+        auto const a = xstd::bit_convert<xstd::bit_array<N>>(src);
         BOOST_CHECK_EQUAL(a.count(), src.count());
         for (auto const i : std::views::iota(0UZ, N)) {
                 BOOST_CHECK_EQUAL(a[i], src.test(i));
         }
-        BOOST_CHECK(a.to_bits<std::bitset<N>>() == src);
+        BOOST_CHECK(xstd::bit_convert<std::bitset<N>>(a) == src);
 
         // At compile time too, and at a width that is a whole number of bytes and one that is not.
         static_assert([] -> bool {
                 auto const bs = std::bitset<64>(0xDEAD'BEEF'0123'4567ULL);
-                return xstd::bit_cast<xstd::bit_array<64>>(bs).to_bits<std::bitset<64>>() == bs;
+                return xstd::bit_convert<std::bitset<64>>(xstd::bit_convert<xstd::bit_array<64>>(bs)) == bs;
         }());
         static_assert([] -> bool {
                 auto const bs = std::bitset<17>(0x1'5A5AULL);
-                return xstd::bit_cast<xstd::bit_array<17>>(bs).to_bits<std::bitset<17>>() == bs;
+                return xstd::bit_convert<std::bitset<17>>(xstd::bit_convert<xstd::bit_array<17>>(bs)) == bs;
         }());
 }
 
@@ -675,23 +675,23 @@ BOOST_AUTO_TEST_CASE(TheSequenceExchangeIsNamedBothWays)
 {
         constexpr auto N = 64UZ;
         using T = xstd::bit_array<N>;
-        static_assert(test::casts_between<T, std::bitset<N>>);
+        static_assert(test::converts_between<T, std::bitset<N>>);
 
         // The unnamed doors are closed, in both directions.
         static_assert(not std::is_constructible_v<T, std::bitset<N>>);
         static_assert(not std::is_constructible_v<std::bitset<N>, T>);
 
         // Any other width is no exchange at all, rather than a narrowing one.
-        static_assert(not test::casts_from<T, std::bitset<N + 1UZ>>);
-        static_assert(not test::casts_from<T, std::bitset<N - 1UZ>>);
+        static_assert(not test::converts_from<T, std::bitset<N + 1UZ>>);
+        static_assert(not test::converts_from<T, std::bitset<N - 1UZ>>);
 }
 
 // A window is the one shape that must not convert: its position zero is not the storage's.
 BOOST_AUTO_TEST_CASE(AWindowIsNotAFieldOfBitsButAPlainViewIs)
 {
-        static_assert(not test::exchanges_to_bits<xstd::bit_subspan<std::array<std::uint64_t, 2>, std::dynamic_extent, 100>, std::bitset<100>>);
-        static_assert(test::exchanges_to_bits<View, std::bitset<100>>);
-        static_assert(test::exchanges_to_bits<Reader, std::bitset<100>>);
+        static_assert(not test::converts_to<xstd::bit_subspan<std::array<std::uint64_t, 2>, std::dynamic_extent, 100>, std::bitset<100>>);
+        static_assert(test::converts_to<View, std::bitset<100>>);
+        static_assert(test::converts_to<Reader, std::bitset<100>>);
 
         // A view reads the bits it spans, which are the whole container's.
         auto storage = Storage();
@@ -699,20 +699,21 @@ BOOST_AUTO_TEST_CASE(AWindowIsNotAFieldOfBitsButAPlainViewIs)
         auto const view = View(storage);
         view[0] = true;
         view[Storage::extent - 1UZ] = true;
-        auto const out = view.to_bits<std::bitset<100>>();
+        auto const out = xstd::bit_convert<std::bitset<100>>(view);
         BOOST_CHECK_EQUAL(out.count(), 2UZ);
         BOOST_CHECK(out.test(0) and out.test(Storage::extent - 1UZ));
 
         // A view never gains the INBOUND direction, which would write through bits it does not own.
-        static_assert(not test::casts_from<View, std::bitset<100>>);
+        static_assert(not test::converts_from<View, std::bitset<100>>);
 }
 
-// A run-time width has neither: a field of N bits names one N, and a growing sequence has no single one.
-BOOST_AUTO_TEST_CASE(ARunTimeWidthHasNoByteExchange)
+// A run-time width takes no field of N bits through the tag, a growing sequence having no single N, but converts.
+BOOST_AUTO_TEST_CASE(ARunTimeWidthConvertsRatherThanExchanges)
 {
-        static_assert(not test::casts_from<xstd::bit_vector, std::bitset<64>>);
-        static_assert(not test::exchanges_to_bits<xstd::bit_vector, std::bitset<64>>);
-        static_assert(not test::casts_from<DynamicOctet, std::bitset<64>>);
+        static_assert(not test::exchanges_from_bits<xstd::bit_vector, std::bitset<64>>);
+        static_assert(not test::exchanges_from_bits<DynamicOctet, std::bitset<64>>);
+        static_assert(test::converts_between<xstd::bit_vector, std::bitset<64>>);
+        static_assert(test::converts_between<DynamicOctet, std::bitset<64>>);
 }
 
 // Raw blocks read differently here than at the set reading: five is true, false, true, then false.
@@ -725,7 +726,7 @@ BOOST_AUTO_TEST_CASE(RawBlocksAreElementsUnderThisReading)
 
         static_assert([] -> bool {
                 auto const b = std::array<std::uint64_t, 2>{0xF0F0ULL, 3ULL};
-                return xstd::bit_array<128>(xstd::from_bit_storage, b).to_bits<std::array<std::uint64_t, 2>>() == b;
+                return xstd::bit_convert<std::array<std::uint64_t, 2>>(xstd::bit_array<128>(xstd::from_bit_storage, b)) == b;
         }());
 }
 
