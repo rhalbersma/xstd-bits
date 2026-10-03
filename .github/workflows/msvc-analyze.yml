@@ -22,6 +22,6 @@ on:
 jobs:
   # MSVC's /analyze, in the role clang-tidy.yml fills for Clang, the flag compiling the whole tree. All three rungs, the 2022 one back for the reason msvc.yml states.
   msvc_analyze:
-    uses: rhalbersma/cpp-ci/.github/workflows/msvc-analyze.yml@b5161ff82d9d4cb1a123ed37c8b0b5295ce8044b # v0.11.0
+    uses: rhalbersma/cpp-ci/.github/workflows/msvc-analyze.yml@5e70b2dfcf6a2a4d8f8d442c65703588d198548c # v0.11.1
     with:
       tiers: stable,qualification,development
