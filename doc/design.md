@@ -773,7 +773,12 @@ positions -- and sets it only after the blocks have grown, so that a growth `std
 `bad_alloc` leaves the value as it was. `push_back` and `pop_back` are `resize` by one, `clear` is `resize(0)` -- the object a default
 constructor makes -- and `append(block)` is boost's: the block's bits become the next `bits_per_block`
 positions, split across two blocks where the width is not aligned, and pushed as the first block at width
-zero. `reserve`, `capacity` and `shrink_to_fit` are in bits and exist where the blocks have them:
+zero. Both appends keep boost's strong guarantee. The split pushes the new block before it writes the old last
+block's tail, as boost's does, so a refused push leaves that tail clear. `append(first, last)` reserves the whole
+range first where its iterators are forward; a single pass learns its length only by reaching the end, so it
+remembers the width and on any exception resizes back to it before rethrowing, a shrink that neither allocates nor
+leaves a bit past the width. Boost instead copies a single pass into a vector of blocks first, which costs an
+allocation that the shrink does not. `reserve`, `capacity` and `shrink_to_fit` are in bits and exist where the blocks have them:
 `std::vector` and `std::inplace_vector`, not `std::array`.
 
 `clear()` here is the sequence reading's, width to zero, which is what `std::vector<bool>` and
