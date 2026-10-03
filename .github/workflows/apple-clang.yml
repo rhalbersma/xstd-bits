@@ -24,4 +24,4 @@ on:
 jobs:
   # Two rungs, Apple publishing no Clang trunk; the file keeps its name because the README badge is the workflow's path.
   apple_clang:
-    uses: rhalbersma/cpp-ci/.github/workflows/apple-clang.yml@480aa17d38efd5c1641b861e9e1a0c6df053a451 # v0.10.3
+    uses: rhalbersma/cpp-ci/.github/workflows/apple-clang.yml@5e70b2dfcf6a2a4d8f8d442c65703588d198548c # v0.11.1
