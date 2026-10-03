@@ -27,6 +27,7 @@
 #include <sstream>                              // istringstream, ostringstream
 #include <stdexcept>                            // invalid_argument, out_of_range, overflow_error
 #include <string>                               // string
+#include <string_view>                          // string_view
 #include <tuple>                                // tuple
 #include <utility>                              // as_const, pair
 #include <vector>                               // vector
@@ -455,6 +456,41 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AFailedAppendLeavesTheBitsetAsItWas, T, Appending)
                 BOOST_CHECK(test::container::strong_guarantee(a, append_forward));
                 BOOST_CHECK(test::container::strong_guarantee(a, append_single_pass));
         }
+}
+
+// boost::dynamic_bitset's default arguments, as guides: the block from the allocator where one is given, else the word.
+BOOST_AUTO_TEST_CASE(ItDeducesAsBoostDoes)
+{
+        auto const alloc = std::allocator<std::uint8_t>();
+        auto const blocks = std::array<std::uint8_t, 2>{0b101, 0b1};
+
+        auto const a = xstd::basic_dynamic_bitset(8, 5);
+        static_assert(std::same_as<decltype(a), xstd::dynamic_bitset const>);
+        static_assert(std::same_as<decltype(boost::dynamic_bitset(8, 5)), boost::dynamic_bitset<>>);
+        auto const b = xstd::basic_dynamic_bitset(8, 5, alloc);
+        static_assert(std::same_as<decltype(b), xstd::basic_dynamic_bitset<std::uint8_t> const>);
+        auto const c = xstd::basic_dynamic_bitset(alloc);
+        static_assert(std::same_as<decltype(c), xstd::basic_dynamic_bitset<std::uint8_t> const>);
+        auto const d = xstd::basic_dynamic_bitset(std::string("00000101"));
+        static_assert(std::same_as<decltype(d), xstd::dynamic_bitset const>);
+        static_assert(std::same_as<decltype(boost::dynamic_bitset(std::string("00000101"))), boost::dynamic_bitset<>>);
+        auto const e = xstd::basic_dynamic_bitset(std::string_view("00000101"));
+        static_assert(std::same_as<decltype(e), xstd::dynamic_bitset const>);
+        auto const f = xstd::basic_dynamic_bitset("00000101");
+        static_assert(std::same_as<decltype(f), xstd::dynamic_bitset const>);
+        auto const g = xstd::basic_dynamic_bitset(blocks.begin(), blocks.end());
+        static_assert(std::same_as<decltype(g), xstd::dynamic_bitset const>);
+        static_assert(std::same_as<decltype(boost::dynamic_bitset(blocks.begin(), blocks.end())), boost::dynamic_bitset<>>);
+        auto const h = xstd::basic_dynamic_bitset(blocks.begin(), blocks.end(), alloc);
+        static_assert(std::same_as<decltype(h), xstd::basic_dynamic_bitset<std::uint8_t> const>);
+        auto const i = xstd::basic_dynamic_bitset(h, alloc);
+        static_assert(std::same_as<decltype(i), xstd::basic_dynamic_bitset<std::uint8_t> const>);
+        xstd::basic_dynamic_bitset const j;
+        static_assert(std::same_as<decltype(j), xstd::dynamic_bitset const>);
+        static_assert(std::same_as<decltype(boost::dynamic_bitset()), boost::dynamic_bitset<>>);
+
+        BOOST_CHECK(a == d and a == e and a == f and b.size() == 8UZ and b.count() == 2UZ);
+        BOOST_CHECK(c.empty() and j.empty() and g.count() == 3UZ and h.count() == 3UZ and i == h);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -10,6 +10,7 @@
 #include <xstd/bits/detail/bitset_adaptor.hpp>     // bitset_adaptor
 #include <xstd/bits/from_bit_storage.hpp>          // from_bit_storage, from_bit_storage_t
 #include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
+#include <xstd/misc/concepts/simple_allocator.hpp> // simple_allocator
 #include <concepts>                                // constructible_from
 #include <cstddef>                                 // size_t
 #include <functional>                              // hash
@@ -111,6 +112,34 @@ public:
 };
 
 using dynamic_bitset = basic_dynamic_bitset<std::size_t>;
+
+// boost::dynamic_bitset's defaults as guides: Block from the allocator, std::size_t by default.
+basic_dynamic_bitset() -> basic_dynamic_bitset<std::size_t>;
+
+template<class Allocator>
+        requires xstd::simple_allocator<Allocator>
+explicit basic_dynamic_bitset(Allocator) -> basic_dynamic_bitset<typename Allocator::value_type, Allocator>;
+
+explicit basic_dynamic_bitset(std::size_t, unsigned long long = 0ULL) -> basic_dynamic_bitset<std::size_t>;
+
+template<class Allocator>
+        requires xstd::simple_allocator<Allocator>
+explicit basic_dynamic_bitset(std::size_t, unsigned long long, Allocator) -> basic_dynamic_bitset<typename Allocator::value_type, Allocator>;
+
+// The digits are not the block's argument, so zero and one take part in no deduction.
+template<class charT, class traits, class StringAllocator>
+explicit basic_dynamic_bitset(std::basic_string<charT, traits, StringAllocator>, std::size_t = 0, std::size_t = std::basic_string<charT, traits, StringAllocator>::npos, std::type_identity_t<charT> = static_cast<charT>('0'), std::type_identity_t<charT> = static_cast<charT>('1')) -> basic_dynamic_bitset<std::size_t>;
+
+template<class charT, class traits>
+explicit basic_dynamic_bitset(std::basic_string_view<charT, traits>, std::size_t = 0, std::size_t = std::basic_string_view<charT, traits>::npos, std::type_identity_t<charT> = static_cast<charT>('0'), std::type_identity_t<charT> = static_cast<charT>('1')) -> basic_dynamic_bitset<std::size_t>;
+
+template<class charT>
+explicit basic_dynamic_bitset(charT const*, std::size_t = std::basic_string_view<charT>::npos, std::type_identity_t<charT> = static_cast<charT>('0'), std::type_identity_t<charT> = static_cast<charT>('1')) -> basic_dynamic_bitset<std::size_t>;
+
+// The values are converted to the block, so they name none: the allocator does, or std::size_t by default.
+template<std::input_iterator BlockInputIterator, class Allocator = std::allocator<std::size_t>>
+        requires xstd::simple_allocator<Allocator>
+basic_dynamic_bitset(BlockInputIterator, BlockInputIterator, Allocator = Allocator()) -> basic_dynamic_bitset<typename Allocator::value_type, Allocator>;
 
 // The blocks adopted name the block and the allocator both.
 template<xstd::unsigned_integer Block, class Allocator>

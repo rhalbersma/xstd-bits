@@ -21,14 +21,14 @@
 #include <algorithm>                                // min, ranges::copy
 #include <cassert>                                  // assert
 #include <compare>                                  // strong_ordering
-#include <concepts>                                 // integral, same_as, swappable
+#include <concepts>                                 // convertible_to, integral, same_as, swappable
 #include <cstddef>                                  // size_t
 #include <cstdint>                                  // uint_least32_t
 #include <format>                                   // format, formattable
 #include <functional>                               // hash
 #include <ios>                                      // ios_base
 #include <iosfwd>                                   // basic_istream, basic_ostream
-#include <iterator>                                 // contiguous_iterator, input_iterator, iter_value_t, output_iterator, sentinel_for, sized_sentinel_for
+#include <iterator>                                 // contiguous_iterator, input_iterator, iter_reference_t, iter_value_t, output_iterator, sentinel_for, sized_sentinel_for
 #include <limits>                                   // numeric_limits
 #include <locale>                                   // ctype, use_facet
 #include <memory>                                   // allocator
@@ -56,6 +56,10 @@ class bitset_adaptor : public adapted_bits<Bits, allocator_base_type<Bits, bitse
 
         template<std::input_iterator I>
         static constexpr bool block_iterator = std::same_as<std::remove_cvref_t<std::iter_value_t<I>>, typename Bits::block_type>;
+
+        // boost's block-range constructor converts each value, as its insert into the blocks does.
+        template<std::input_iterator I>
+        static constexpr bool block_convertible_iterator = std::convertible_to<std::iter_reference_t<I>, typename Bits::block_type>;
 
         // owned_storage names this owner's storage, so a view over a bitset is a view over what the bitset wraps.
         template<class>
@@ -234,9 +238,9 @@ public:
         // boost's block-range constructor: the first block's low bit is position zero.
         template<std::input_iterator I, std::sentinel_for<I> S>
         [[nodiscard]] constexpr bitset_adaptor(I first, S last)
-                requires (not has_static_width) and block_iterator<I>
+                requires (not has_static_width) and block_convertible_iterator<I>
         {
-                m_bits.append(first, last);
+                append_blocks(first, last);
         }
 
         // boost's allocator arguments: converting, and offered only where the storage has an allocator.
@@ -253,11 +257,11 @@ public:
         }
 
         template<std::input_iterator I, std::sentinel_for<I> S>
-                requires (not has_static_width) and block_iterator<I> and has_allocator
+                requires (not has_static_width) and block_convertible_iterator<I> and has_allocator
         [[nodiscard]] constexpr bitset_adaptor(I first, S last, allocator_param const& alloc)
                 : members_type(std::in_place, alloc)
         {
-                m_bits.append(first, last);
+                append_blocks(first, last);
         }
 
         // [container.alloc.reqmts]'s allocator-extended copy and move: boost lacks them, uses-allocator needs them.
@@ -834,6 +838,20 @@ public:
         }
 
 private:
+        // The block range's values, converted one at a time where they are not blocks already.
+        template<std::input_iterator I, std::sentinel_for<I> S>
+        constexpr auto append_blocks(I first, S last)
+                -> void
+        {
+                if constexpr (block_iterator<I>) {
+                        m_bits.append(first, last);
+                } else {
+                        for (; first != last; ++first) {
+                                m_bits.append(static_cast<block_type>(*first));
+                        }
+                }
+        }
+
         // The one guard: out_of_range at a static width, std::bitset's, an assert at a run-time one, boost's.
         constexpr auto guard(std::size_t pos) const
                 -> void

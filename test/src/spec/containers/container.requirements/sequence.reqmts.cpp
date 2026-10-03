@@ -8,9 +8,12 @@
 #include <test/sequence/primitives.hpp> // alternating, constructor, mem_append_range, mem_assign, mem_assign_range, mem_at, mem_back, mem_clear, mem_emplace, mem_emplace_back, mem_erase, mem_front, mem_insert, mem_insert_range, mem_pop_back, mem_push_back, mem_subscript, op_assign, reads_once, unsized_alternating
 #include <test/spec/input.hpp>          // context
 #include <test/spec/sequence.hpp>       // all, growable_all, indexed, positions, prefixes, sequences, spans
+#include <xstd/bits/bit_vector.hpp>     // basic_bit_vector, bit_vector
 #include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <concepts>                     // same_as
+#include <cstddef>                      // size_t
 #include <initializer_list>             // initializer_list
+#include <memory>                       // allocator
 #include <ranges>                       // from_range
 #include <type_traits>                  // type_identity
 #include <vector>                       // vector
@@ -296,6 +299,34 @@ BOOST_AUTO_TEST_CASE(IntegralArguments)
                         BOOST_CHECK(model_of(a) == std::vector<bool>({false, false, true, true, true})); // [sequence.reqmts]/69
                 }
         });
+}
+
+namespace {
+
+// What each of the two guided sequences deduces, or cannot, from an iterator pair and one more argument.
+template<class I, class... Args>
+concept deduces_std_vector = requires (I i, Args... args) { std::vector(i, i, args...); };
+
+template<class I, class... Args>
+concept deduces_bit_vector = requires (I i, Args... args) { xstd::basic_bit_vector(i, i, args...); };
+
+} // namespace
+
+// [sequence.reqmts]/69: deduction guides
+BOOST_AUTO_TEST_CASE(DeductionGuides)
+{
+        using I = bool const*;
+        using Alloc = std::allocator<std::size_t>;
+
+        // A third argument that is no allocator selects no guide.
+        static_assert(deduces_std_vector<I> and deduces_std_vector<I, std::allocator<bool>> and not deduces_std_vector<I, int>); // [sequence.reqmts]/69
+        static_assert(std::same_as<decltype(std::vector(I(), I())), std::vector<bool>>);                                         // [sequence.reqmts]/69
+
+        static_assert(deduces_bit_vector<I> and deduces_bit_vector<I, Alloc> and not deduces_bit_vector<I, int>); // [sequence.reqmts]/69
+        static_assert(std::same_as<decltype(xstd::basic_bit_vector(I(), I(), Alloc())), xstd::bit_vector>);       // [sequence.reqmts]/69
+        // An integer pair is a count and a value, whose bools name no block.
+        static_assert(not deduces_bit_vector<int>); // [sequence.reqmts]/69
+        BOOST_CHECK(true);
 }
 
 // [sequence.reqmts]/71,73-74: a.front()

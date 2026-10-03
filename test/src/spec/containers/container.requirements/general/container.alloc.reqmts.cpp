@@ -31,7 +31,8 @@
 #include <memory_resource>                          // memory_resource, monotonic_buffer_resource, polymorphic_allocator, unsynchronized_pool_resource
 #include <new>                                      // bad_alloc
 #include <ranges>                                   // from_range, iota
-#include <set>                                      // set
+#include <scoped_allocator>                         // scoped_allocator_adaptor
+#include <set>                                      // pmr::set, set
 #include <tuple>                                    // tuple, tuple_cat
 #include <type_traits>                              // is_constructible_v, is_nothrow_constructible_v
 #include <utility>                                  // declval, move
@@ -543,6 +544,12 @@ BOOST_AUTO_TEST_CASE(AMemoryResourceConvertsToThePolymorphicAllocator)
         using pmr_dynamic_bitset = xstd::basic_dynamic_bitset<std::size_t, std::pmr::polymorphic_allocator<std::size_t>>;
         auto const b = pmr_dynamic_bitset(&mr);
         BOOST_CHECK(b.get_allocator().resource() == &mr);
+
+        // boost's trailing allocator, after a block range.
+        auto const blocks = std::array{5UZ, 3UZ};
+        auto const c = pmr_dynamic_bitset(blocks.begin(), blocks.end(), &mr);
+        BOOST_CHECK(c.get_allocator().resource() == &mr);
+        BOOST_CHECK_EQUAL(c.count(), 4UZ);
 }
 
 // [container.reqmts]/64: uses-allocator construction hands each element the container's allocator.
@@ -562,6 +569,34 @@ BOOST_AUTO_TEST_CASE(AnAllocatorAwareContainerPassesItsAllocatorOn)
         BOOST_CHECK(bitsets.back().get_allocator().resource() == &mr);
 }
 
+namespace {
+
+// A scoped_allocator_adaptor hands its inner allocator to an element it constructs, which must take it as converted.
+template<class T, class... Args>
+auto check_scoped_construction(Args... args)
+        -> void
+{
+        using inner_allocator = std::pmr::polymorphic_allocator<std::size_t>;
+        using scoped_allocator = std::scoped_allocator_adaptor<std::allocator<T>, inner_allocator>;
+        auto mr = std::pmr::monotonic_buffer_resource();
+        auto elements = std::vector<T, scoped_allocator>(scoped_allocator(std::allocator<T>(), inner_allocator(&mr)));
+        elements.emplace_back(args...);
+        BOOST_CHECK(elements.back().get_allocator().resource() == &mr);
+}
+
+} // namespace
+
+// [container.reqmts]/64: uses-allocator construction through a scoped_allocator_adaptor, in each reading.
+BOOST_AUTO_TEST_CASE(AScopedAllocatorAdaptorPassesItsAllocatorOn)
+{
+        using pmr_allocator = std::pmr::polymorphic_allocator<std::size_t>;
+        check_scoped_construction<std::pmr::set<std::size_t>>();
+        check_scoped_construction<xstd::basic_bit_set<std::size_t, pmr_allocator>>();
+        check_scoped_construction<std::pmr::vector<bool>>(3UZ, true);
+        check_scoped_construction<xstd::basic_bit_vector<std::size_t, pmr_allocator>>(3UZ, true);
+        check_scoped_construction<xstd::basic_dynamic_bitset<std::size_t, pmr_allocator>>(3UZ, 5ULL);
+}
+
 // [container.reqmts]/64: a rebound std::allocator converts, as it does for std::set.
 BOOST_AUTO_TEST_CASE(AConvertibleAllocatorArgumentIsTaken)
 {
@@ -575,6 +610,15 @@ BOOST_AUTO_TEST_CASE(TheComparatorArgumentsAreAcceptedAlongsideTheAllocator)
 {
         auto const comp = xstd::bit_set::key_compare(); // NOLINT(modernize-use-transparent-functors): std::set<std::size_t>::key_compare
         BOOST_CHECK(xstd::bit_set({3, 1}, comp, std::allocator<std::size_t>()) == xstd::bit_set({1, 3}));
+}
+
+// [container.reqmts]/64: {} is a default allocator after a comparator, as for std::set, and after a count and a value.
+BOOST_AUTO_TEST_CASE(AnEmptyBraceIsADefaultAllocator)
+{
+        auto const comp = xstd::bit_set::key_compare(); // NOLINT(modernize-use-transparent-functors): std::set<std::size_t>::key_compare
+        BOOST_CHECK(std::set<std::size_t>({3, 1}, comp, {}) == std::set<std::size_t>({1, 3}));
+        BOOST_CHECK(xstd::bit_set({3, 1}, comp, {}) == xstd::bit_set({1, 3}));
+        BOOST_CHECK(xstd::dynamic_bitset(8, 5ULL, {}) == xstd::dynamic_bitset(8, 5ULL));
 }
 
 // [container.reqmts]/64: a memory_resource* converts to a sequence's polymorphic allocator.
@@ -600,6 +644,10 @@ BOOST_AUTO_TEST_CASE(AnAllocatorAwareContainerPassesItsAllocatorOnToASequence)
 
         BOOST_CHECK(vectors.back().get_allocator().resource() == &mr);
         BOOST_CHECK_EQUAL(vectors.back().size(), 3UZ);
+
+        vectors.emplace_back();
+        BOOST_CHECK(vectors.back().get_allocator().resource() == &mr);
+        BOOST_CHECK(vectors.back().empty());
 }
 
 // [container.reqmts]/64: a rebound std::allocator converts, and {} is a default one, as for std::vector<bool>.
