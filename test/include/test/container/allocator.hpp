@@ -43,8 +43,8 @@ inline constexpr bool is_debug_proxy_v<std::_Container_proxy> = true;
 
 #endif
 
-// Stateful, so two instances can differ, and propagating on every assignment and swap or on none of them.
-template<class T, bool Propagates>
+// Stateful, so two instances can differ, and propagating on a copy, and unless told otherwise on a move and a swap.
+template<class T, bool OnCopy, bool OnMove = OnCopy, bool OnSwap = OnCopy>
 class tagged_allocator
 {
         ledger* m_ledger = nullptr;
@@ -52,15 +52,15 @@ class tagged_allocator
 
 public:
         using value_type = T;
-        using propagate_on_container_copy_assignment = std::bool_constant<Propagates>;
-        using propagate_on_container_move_assignment = std::bool_constant<Propagates>;
-        using propagate_on_container_swap = std::bool_constant<Propagates>;
+        using propagate_on_container_copy_assignment = std::bool_constant<OnCopy>;
+        using propagate_on_container_move_assignment = std::bool_constant<OnMove>;
+        using propagate_on_container_swap = std::bool_constant<OnSwap>;
         using is_always_equal = std::false_type;
 
         template<class U>
         struct rebind
         {
-                using other = tagged_allocator<U, Propagates>;
+                using other = tagged_allocator<U, OnCopy, OnMove, OnSwap>;
         };
 
         [[nodiscard]] tagged_allocator() = default;
@@ -71,7 +71,7 @@ public:
         {}
 
         template<class U>
-        [[nodiscard]] constexpr explicit(false) tagged_allocator(tagged_allocator<U, Propagates> const& other) noexcept
+        [[nodiscard]] constexpr explicit(false) tagged_allocator(tagged_allocator<U, OnCopy, OnMove, OnSwap> const& other) noexcept
                 : m_ledger(other.book())
                 , m_tag(other.tag())
         {}
@@ -124,7 +124,7 @@ public:
         }
 
         template<class U>
-        [[nodiscard]] friend constexpr auto operator==(tagged_allocator const& lhs, tagged_allocator<U, Propagates> const& rhs) noexcept
+        [[nodiscard]] friend constexpr auto operator==(tagged_allocator const& lhs, tagged_allocator<U, OnCopy, OnMove, OnSwap> const& rhs) noexcept
                 -> bool
         {
                 return lhs.tag() == rhs.tag();
@@ -136,6 +136,13 @@ using propagating = tagged_allocator<T, true>;
 
 template<class T>
 using non_propagating = tagged_allocator<T, false>;
+
+// Propagating on a copy but not on a move, so that a swap hands the allocator over or nothing that cannot throw does.
+template<class T>
+using copy_and_swap_propagating = tagged_allocator<T, true, false, true>;
+
+template<class T>
+using copy_propagating = tagged_allocator<T, true, false, false>;
 
 // The allocator the column was declared with, which the small columns wrap in one of Boost's own.
 template<class X>

@@ -748,6 +748,22 @@ their moved-from elements where `std::vector` does not. Move assignment takes th
 before writing anything, so a self-move puts back exactly what it took, with no branch on `this == &other` for a
 test to have to take.
 
+### the-strong-assignments
+
+Both assignments of a run-time width give the strong guarantee, where the standard asks a container only for the
+basic one. Blocks are trivially copyable, so the one step that can throw is an allocation, and it comes first: blocks
+that fit the capacity already held are copied over the old ones, which allocates nothing, and otherwise the copy is
+built in storage of its own and moved in whole; the width is written last. A defaulted copy assignment would write
+the width first, it being the first member, so a refused allocation would leave a width over blocks that do not hold
+it, and reads past the old blocks would go out of bounds. The move assignment copies only between unequal allocators that
+stay, and anywhere else moves the blocks without throwing. An allocator that propagates on copy assignment comes
+over with a copy built under it, moved in where the allocator propagates on move assignment and swapped in where it
+propagates on swap; one that does neither leaves that copy only the basic guarantee, which is all `std::vector`'s
+gives. The copy is moved in rather than swapped wherever both would do: Boost 1.83 swaps a `small_vector` that
+holds its blocks inline with one that does not element by element, growing the inline one, which allocates. A
+capacity in the type keeps the defaulted copy assignment, which cannot allocate and so stays trivial where its
+blocks are.
+
 ### growth
 
 Growth is the run-time width's alone, and every member of it leaves the unused tail clear. `resize(n, value)`

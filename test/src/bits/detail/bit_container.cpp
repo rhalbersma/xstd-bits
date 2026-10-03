@@ -974,6 +974,14 @@ auto move_assign(T& to, T& from)
         to = std::move(from);
 }
 
+// Through two references, so that no compiler reads the self-copy below as a mistake in the test.
+template<class T>
+auto copy_assign(T& to, T const& from)
+        -> void
+{
+        to = from;
+}
+
 } // namespace
 
 // A moved-from run-time width is at width zero with no blocks, and grows again from there like a new one.
@@ -1000,6 +1008,24 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AMovedFromRunTimeWidthIsEmptyAndGrowsAgain, T, run
         // A self-move puts back what it took.
         move_assign(assigned, assigned);
         BOOST_CHECK(assigned == from_model<T>(m));
+}
+
+// A copy-assigned run-time width takes the source's width and blocks, whether or not they fit where the old ones were.
+BOOST_AUTO_TEST_CASE_TEMPLATE(ACopyAssignedRunTimeWidthTakesTheSourcesWidthAndBlocks, T, run_time_storages)
+{
+        auto const source = from_model<T>(patterned(19));
+
+        auto narrow = from_model<T>(patterned(5));
+        copy_assign(narrow, source);
+        BOOST_CHECK(narrow == source);
+
+        auto wide = from_model<T>(patterned(40));
+        copy_assign(wide, source);
+        BOOST_CHECK(wide == source);
+
+        // A self-copy changes nothing.
+        copy_assign(wide, wide);
+        BOOST_CHECK(wide == source);
 }
 
 // The blocks go out with the tail clear and the width zero behind them, and come back as whole blocks.

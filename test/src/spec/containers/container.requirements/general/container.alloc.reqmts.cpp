@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/container/allocator.hpp>             // basic_guarantee, keeps_a_ledger, ledger, ledger_allocator, non_propagating, propagating, user_allocator
+#include <test/container/allocator.hpp>             // basic_guarantee, keeps_a_ledger, ledger, ledger_allocator, non_propagating, propagating, strong_guarantee, user_allocator
 #include <test/flat_set.hpp>                        // is_flat_set
 #include <test/for_each_type.hpp>                   // for_each_type
 #include <test/sequence/factory.hpp>                // make_sequence, stripes
@@ -51,6 +51,7 @@ using test::container::ledger;
 using test::container::ledger_allocator;
 using test::container::non_propagating;
 using test::container::propagating;
+using test::container::strong_guarantee;
 using test::container::user_allocator;
 
 // Two resources to tell polymorphic allocators apart by, never destroyed, so no exit-time destructor frees under a set.
@@ -348,6 +349,50 @@ BOOST_AUTO_TEST_CASE(MoveWithAllocator)
         });
 }
 
+namespace {
+
+template<class X>
+inline constexpr auto is_std_set_v = false;
+
+template<class Key, class Compare, class Allocator>
+inline constexpr auto is_std_set_v<std::set<Key, Compare, Allocator>> = true;
+
+// The standard's models, held to the basic guarantee it gives; ours allocate before they change anything.
+template<class X>
+inline constexpr auto is_std_model_v = is_std_set_v<X>;
+
+template<class Allocator>
+inline constexpr auto is_std_model_v<std::vector<bool, Allocator>> = true;
+
+#ifdef _LIBCPP_VERSION
+
+// libc++'s std::set reuses its nodes to assign into, and a refusal part way leaves it corrupt.
+inline constexpr auto std_set_assigning_in_is_valid_after_a_refusal = false;
+
+#else
+
+inline constexpr auto std_set_assigning_in_is_valid_after_a_refusal = true;
+
+#endif
+
+// An lvalue on x's ledger under an allocator tagged alike or not; a named template spares MSVC a C1001.
+template<class X>
+auto check_copying_in(X const& t, typename X::allocator_type const& a, int tag)
+        -> void
+{
+        auto const copy_in = [&](X& x) -> void {
+                auto const source = X(t, ledger_allocator<X>(*x.get_allocator().book(), tag));
+                x = source;
+        };
+        if constexpr (is_std_model_v<X>) {
+                BOOST_CHECK(basic_guarantee(other<X>(a), copy_in));
+        } else {
+                BOOST_CHECK(strong_guarantee(other<X>(a), copy_in));
+        }
+}
+
+} // namespace
+
 // [container.alloc.reqmts]/21,23: a = t
 BOOST_AUTO_TEST_CASE(CopyAssignment)
 {
@@ -362,35 +407,27 @@ BOOST_AUTO_TEST_CASE(CopyAssignment)
                         BOOST_CHECK(u == t);                                                                               // [container.alloc.reqmts]/23
                         BOOST_CHECK(u.get_allocator() == (traits::propagate_on_container_copy_assignment::value ? b : a)); // [container.reqmts]/64
                         BOOST_CHECK(basic_guarantee(other<T>(a), [&](T& x) -> void { x = T(t, x.get_allocator()); }));     // [container.reqmts]/25
+                        if constexpr (keeps_a_ledger<T> and (std_set_assigning_in_is_valid_after_a_refusal or not is_std_set_v<T>)) {
+                                check_copying_in(t, a, 0); // [container.reqmts]/25
+                                check_copying_in(t, a, 1); // [container.reqmts]/25
+                        }
                 }
         });
 }
 
 namespace {
 
-template<class X>
-inline constexpr auto is_std_set_v = false;
-
-template<class Key, class Compare, class Allocator>
-inline constexpr auto is_std_set_v<std::set<Key, Compare, Allocator>> = true;
-
-#ifdef _LIBCPP_VERSION
-
-// libc++'s std::set reuses its nodes to move in under an unequal allocator, and a refusal part way leaves it corrupt.
-inline constexpr auto std_set_moving_in_is_valid_after_a_refusal = false;
-
-#else
-
-inline constexpr auto std_set_moving_in_is_valid_after_a_refusal = true;
-
-#endif
-
 // Unequal under one ledger, so a staying allocator moves elements one by one; a named template spares MSVC a C1001.
 template<class X>
 auto check_moving_in_element_by_element(X const& t, typename X::allocator_type const& a)
         -> void
 {
-        BOOST_CHECK(basic_guarantee(other<X>(a), [&](X& x) -> void { x = X(t, ledger_allocator<X>(*x.get_allocator().book(), 1)); }));
+        auto const move_in = [&](X& x) -> void { x = X(t, ledger_allocator<X>(*x.get_allocator().book(), 1)); };
+        if constexpr (is_std_model_v<X>) {
+                BOOST_CHECK(basic_guarantee(other<X>(a), move_in));
+        } else {
+                BOOST_CHECK(strong_guarantee(other<X>(a), move_in));
+        }
 }
 
 } // namespace
@@ -410,7 +447,7 @@ BOOST_AUTO_TEST_CASE(MoveAssignment)
                         BOOST_CHECK_EQUAL(u.size(), t.size());                                                             // [container.alloc.reqmts]/27
                         BOOST_CHECK(u == t);                                                                               // [container.alloc.reqmts]/28
                         BOOST_CHECK(u.get_allocator() == (traits::propagate_on_container_move_assignment::value ? b : a)); // [container.reqmts]/64
-                        if constexpr (keeps_a_ledger<T> and (std_set_moving_in_is_valid_after_a_refusal or not is_std_set_v<T>)) {
+                        if constexpr (keeps_a_ledger<T> and (std_set_assigning_in_is_valid_after_a_refusal or not is_std_set_v<T>)) {
                                 check_moving_in_element_by_element(t, a); // [container.reqmts]/25
                         }
                 }

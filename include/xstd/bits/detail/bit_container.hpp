@@ -105,6 +105,14 @@ inline constexpr bool swaps_without_throwing_v = false;
 template<class Block, std::size_t K, class Options>
 inline constexpr bool swaps_without_throwing_v<boost::container::static_vector<Block, K, Options>> = true;
 
+// Whether a copy assignment hands the source's allocator over, which storage without an allocator never does.
+template<class Blocks>
+inline constexpr bool propagates_on_copy_assignment_v = false;
+
+template<class Blocks>
+        requires has_allocator_v<Blocks>
+inline constexpr bool propagates_on_copy_assignment_v<Blocks> = std::allocator_traits<allocator_param_t<Blocks>>::propagate_on_container_copy_assignment::value;
+
 // The vehicle's two members, the width first: initialized where they are declared, as a vector starts empty.
 template<class Width, class Blocks, bool Empty>
 class bit_members : public bits::detail::allocator_base_type<Blocks>
@@ -357,7 +365,22 @@ public:
 
         // Declared because the moves below are; a static width keeps all four trivial where its blocks are.
         [[nodiscard]] bit_container(bit_container const&) = default;
-        auto operator=(bit_container const&) -> bit_container& = default;
+
+        auto operator=(bit_container const&) -> bit_container&
+                requires (not has_stored_size or has_static_capacity)
+        = default;
+
+        // Blocks that can allocate are copied before the width is assigned, so a refusal leaves both as they were.
+        constexpr auto operator=(bit_container const& other)
+                -> bit_container&
+                requires has_stored_size and (not has_static_capacity)
+        {
+                if (this != &other) {
+                        copy_blocks(other.m_blocks);
+                        m_size = other.m_size;
+                }
+                return *this;
+        }
 
         [[nodiscard]] bit_container(bit_container&&)
                 requires (not has_stored_size or has_zero_capacity)
@@ -383,18 +406,7 @@ public:
                 if (this == &other) {
                         return *this;
                 }
-                if constexpr (std::is_nothrow_move_assignable_v<Blocks>) {
-                        m_blocks = std::move(other.m_blocks);
-                } else {
-                        // Staying unequal allocators copy block by block, and libc++ and MSVC free the old ones first.
-                        try {
-                                m_blocks = std::move(other.m_blocks);
-                        } catch (...) {
-                                m_blocks.clear();
-                                m_size = 0UZ;
-                                throw;
-                        }
-                }
+                move_blocks(other.m_blocks);
                 m_size = std::exchange(other.m_size, 0UZ);
                 other.m_blocks.clear();
                 return *this;
@@ -1488,6 +1500,65 @@ private:
                         if (m_blocks.get_allocator() != source.get_allocator()) {
                                 m_blocks.resize(std::ranges::size(source));
                                 std::ranges::copy(source, std::ranges::begin(m_blocks));
+                                return;
+                        }
+                }
+                m_blocks = std::move(source);
+        }
+
+        // Under the allocator held: copied in place where the capacity suffices, else built in full and then moved in.
+        constexpr auto assign_blocks(Blocks const& source)
+                -> void
+        {
+                if constexpr (requires (Blocks const& b) { b.capacity(); }) {
+                        if (std::ranges::size(source) <= m_blocks.capacity()) {
+                                m_blocks.resize(std::ranges::size(source), zero);
+                                std::ranges::copy(source, std::ranges::begin(m_blocks));
+                                return;
+                        }
+                }
+                if constexpr (has_allocator_v<Blocks>) {
+                        m_blocks = Blocks(source, m_blocks.get_allocator());
+                } else {
+                        m_blocks = Blocks(source);
+                }
+        }
+
+        // A propagating allocator that differs comes over with a copy built under it, else the one held stays.
+        constexpr auto copy_blocks(Blocks const& source)
+                -> void
+        {
+                if constexpr (propagates_on_copy_assignment_v<Blocks>) {
+                        using traits = std::allocator_traits<typename Blocks::allocator_type>;
+                        if (m_blocks.get_allocator() != source.get_allocator()) {
+                                if constexpr (traits::propagate_on_container_move_assignment::value) {
+                                        m_blocks = Blocks(source, source.get_allocator());
+                                } else if constexpr (traits::propagate_on_container_swap::value) {
+                                        auto blocks = Blocks(source, source.get_allocator());
+                                        std::ranges::swap(m_blocks, blocks);
+                                } else {
+                                        // Nothing installs this allocator without a step that throws: basic only.
+                                        try {
+                                                m_blocks = source;
+                                        } catch (...) {
+                                                m_blocks.clear();
+                                                m_size = 0UZ;
+                                                throw;
+                                        }
+                                }
+                                return;
+                        }
+                }
+                assign_blocks(source);
+        }
+
+        // Taken whole where the allocators allow, else copied under the one held, which stays.
+        constexpr auto move_blocks(Blocks& source)
+                -> void
+        {
+                if constexpr (not std::is_nothrow_move_assignable_v<Blocks>) {
+                        if (m_blocks.get_allocator() != source.get_allocator()) {
+                                assign_blocks(source);
                                 return;
                         }
                 }
