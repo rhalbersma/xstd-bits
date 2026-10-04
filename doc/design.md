@@ -3788,10 +3788,11 @@ a reverse sequence walk is `std::ranges::reverse_view` over a random-access rang
 
 The set reading's proxy is read-only whatever the qualification of `Bits`, because a key is nothing to write
 through: assigning to a position would mean moving an element, which a set has no spelling for. It earns its
-keep anyway — `operator&` round-trips to the iterator, and the conversion to any class a `size_t` converts to
-lets `*it` initialize a strong index type in one step, where the two user-defined conversions of going through
-`size_t` would be one too many. A type with an explicit constructor takes the `size_t` route, `index(*it)`,
-and the proxy offers no explicit conversion of its own: MSVC cannot resolve one beside that constructor.
+keep anyway — `operator&` round-trips to the iterator, and the one conversion, to the key, is what every
+comparison goes through. A class constructible from the key is direct-initialized from the proxy, `index(*it)`,
+whether its constructor is explicit or not; copy-initialization, `index i = *it;`, would take two user-defined
+conversions and is not offered (see [uint128-support](#uint128-support) for why). Nor does the proxy offer an
+explicit conversion of its own: MSVC cannot resolve one beside such a constructor.
 
 ### the-proxy-copies-the-handle
 
@@ -4053,23 +4054,30 @@ separate header could not be relied on to sort below the adapters.
 **A Block being a class breaks two assumptions that a scalar hid.** `bits::detail::pred`'s `intersects`
 returned `lhs & rhs` into a `bool`, which copy-initializes and so needs an **implicit** conversion; an integer
 class offers only an explicit `operator bool`. Its two neighbours never needed the cast, `not` and `!=` both
-reaching `bool` by a **contextual** conversion, which an explicit operator satisfies. And the sequence proxy in
-`random_access.hpp` carried a templated implicit conversion to any class type constructible from its
-`value_type`. An integer class is such a class, so every operator on that proxy acquired a second, equally good
-reading — convert both sides to `bool`, or convert both sides to the Block — which cost it
-`equality_comparable` and with it `std::ranges::equal`. The conversion now excludes `xstd::integer`: a proxy
-stands for one bit, and a bit is not an integer. That alone is not enough, because a proxy names its Block
-among its template arguments, so the Block's namespace is an **associated** one and ADL contributes whatever
-templated comparisons it declares — Boost.Int128 declares exactly such a set. It therefore also declares
-comparisons that are exact in both operands, which win outright.
+reaching `bool` by a **contextual** conversion, which an explicit operator satisfies.
 
-The set proxy in `bidirectional.hpp` is deliberately **untouched**, and the attempt to keep it in step was a
-mistake worth recording. Nothing had failed there: a set over an integer-class Block already worked, because
-that proxy stands for a position rather than a bit and its `value_type` is `size_t`. Giving it the same exact
-comparisons broke a case no integer class is involved in at all — `std::ranges::equal` over **two different**
-instantiations of it, which is how `bit_set_view<B>` is compared against the view deduced from `B`'s own
-storage, and which those homogeneous overloads no longer serve. A fix that no failure asked for cost a working
-path, at a Block as ordinary as `uint64_t`.
+And the proxies. Both of them convert to their `value_type` and to nothing else — `bool` for the sequence
+proxy in `random_access.hpp`, the key for the set proxy in `bidirectional.hpp` — which is the shape
+`std::vector<bool>::reference` has on libstdc++, libc++ and the MSVC STL alike. Neither declares an
+`operator==` or an `operator<=>`: every comparison is the built-in one, or the key's own, reached through that
+one conversion, so it serves two proxies over **different** Blocks exactly as it serves two over the same one.
+
+Both proxies used to carry a second, templated implicit conversion, to any class type implicitly constructible
+from the `value_type`. It was removed, because any such class with a non-template `operator==` in a namespace
+associated with the proxy — its Block's, its key's, its key traits' — gives every comparison a second,
+equally good reading: convert both sides to the `value_type`, or convert both sides to that class. Two
+user-defined conversions of equal rank tie, and the tie cost `equality_comparable` and with it
+`std::ranges::equal`. The 128-bit integer classes were one instance, the Block naming its own namespace among
+the proxy's template arguments; excluding `xstd::integer` and adding comparisons exact in both operands patched
+that instance and left every other one open, a user's strong type in a key-traits namespace among them. A set's
+comparator is no way in: it reaches the proxy only as a direction. The cost of the removal is
+copy-initializing a class from a proxy, `C c = *it;`, which needs two user-defined conversions;
+direct-initialization, `C c(*it);`, needs one and still works.
+
+One exception remains, and it is Boost.Int128's to make. It declares non-template `operator==(uint128, bool)`
+and `operator==(bool, uint128)`, which ADL finds for a sequence proxy over a `boost::int128::uint128` Block, so
+there `r == true` and `r == 1` are ambiguous. The proxy is still `totally_ordered`, two proxies still compare,
+and `r < true` still holds; `static_cast<bool>(r) == true`, or just `r`, says the rest.
 
 **Two facts, two flags, because one flag conflated them.** `TEST_HAS_UINT128` names the compiler's 128-bit
 **builtin**: a scalar, and a `std::unsigned_integral`. It feeds `block_types`, which every suite grades over, and
@@ -4904,7 +4912,7 @@ auto b = a
 **A**: `int` is not a class-type and does not have member functions, so this situation never occurs.
 
 **Q**: Aren't there too many implicit conversions when assigning a proxy reference to an implicitly `int`-constructible class?  
-**A**: No, proxy references also implicity convert to any class type that is implicitly constructible from an `int`.
+**A**: Yes, copy-initialization `C c = *it;` takes two, which is one too many; direct-initialization `C c(*it);` takes one and works. A proxy reference converts only to its value type, as `std::vector<bool>::reference` does, because a conversion to every class constructible from that type made comparisons ambiguous wherever such a class declares its own `operator==`.
 
 **Q**: So iterating over an `xstd::bit_fixed_set` is really fool-proof?  
 **A**: Yes, `xstd::bit_fixed_set` iterators are [easy to use correctly and hard to use incorrectly](http://www.aristeia.com/Papers/IEEE_Software_JulAug_2004_revised.htm).

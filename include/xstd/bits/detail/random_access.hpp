@@ -9,14 +9,13 @@
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container_type
 #include <xstd/bits/detail/ownership.hpp>           // storage, window
 #include <xstd/bits/detail/storage_ptr.hpp>         // storage_ptr_t
-#include <xstd/ints/concepts/integer.hpp>           // integer
 #include <cassert>                                  // assert
 #include <compare>                                  // strong_ordering
 #include <concepts>                                 // same_as
 #include <cstddef>                                  // ptrdiff_t, size_t
 #include <format>                                   // formatter
 #include <iterator>                                 // random_access_iterator_tag
-#include <type_traits>                              // is_class_v, is_const_v, is_convertible_v, is_nothrow_constructible_v, remove_const_t
+#include <type_traits>                              // is_const_v
 
 // The iterator is the primitive: a pointer and a position, reaching the bits through the storage alone.
 namespace xstd::bits::detail {
@@ -184,9 +183,9 @@ public:
                 -> void
                 requires (not std::is_const_v<Bits>)
         {
-                bool const t = *x;
-                *x           = *y;
-                *y           = t;
+                value_type const t = *x;
+                *x                 = *y;
+                *y                 = t;
         }
 };
 
@@ -194,11 +193,16 @@ public:
 template<class Bits>
 class random_access_bit_reference
 {
+public:
+        using value_type = bool;
+        using iterator   = random_access_bit_iterator<Bits>;
+
+private:
         storage_ptr_t<Bits> m_ptr;
         std::size_t m_idx;
 
         // Writable where Bits is not const: a const storage has no assign to reach.
-        static constexpr bool is_writable = not std::is_const_v<Bits> and requires (Bits& c, std::size_t n, bool value) { c.assign(n, value); };
+        static constexpr bool is_writable = not std::is_const_v<Bits> and requires (Bits& c, std::size_t n, value_type value) { c.assign(n, value); };
 
         template<bit_block_container_type OtherBits, storage OtherStore, window OtherWindow, class OtherDerived, std::size_t OtherE>
         friend class sequence_adaptor;
@@ -213,9 +217,6 @@ class random_access_bit_reference
         }
 
 public:
-        using value_type = bool;
-        using iterator   = random_access_bit_iterator<Bits>;
-
         // Said out loud: the assignments below are user-provided, which deprecates the implicit copy constructor.
         random_access_bit_reference(random_access_bit_reference const&) = default;
 
@@ -225,34 +226,14 @@ public:
                 return {m_ptr, m_idx};
         }
 
+        // The one conversion, as std::vector<bool>::reference has: comparisons are the built-in ones through it.
         [[nodiscard]] constexpr explicit(false) operator value_type() const noexcept // NOLINT(misc-explicit-constructor)
         {
                 return m_ptr->test(m_idx);
         }
 
-        // Not to an integer, though, however class-shaped it is.
-        template<class T>
-        [[nodiscard]] constexpr explicit(false) operator T() const noexcept(std::is_nothrow_constructible_v<T, value_type>) // NOLINT(misc-explicit-constructor)
-                requires std::is_class_v<T> and std::is_convertible_v<value_type, T> and (not xstd::integer<T>)
-        {
-                return m_ptr->test(m_idx);
-        }
-
-        // Exact matches, so a comparison never reaches for a conversion.
-        [[nodiscard]] friend constexpr auto operator==(random_access_bit_reference lhs, random_access_bit_reference rhs) noexcept
-                -> bool
-        {
-                return static_cast<value_type>(lhs) == static_cast<value_type>(rhs);
-        }
-
-        [[nodiscard]] friend constexpr auto operator==(random_access_bit_reference lhs, value_type rhs) noexcept
-                -> bool
-        {
-                return static_cast<value_type>(lhs) == rhs;
-        }
-
         // const-qualified and returning a const reference, the proxy shape P2321R2 gave std::vector<bool>::reference.
-        constexpr auto operator=(bool value) const noexcept // NOLINT(misc-unconventional-assign-operator)
+        constexpr auto operator=(value_type value) const noexcept // NOLINT(misc-unconventional-assign-operator)
                 -> random_access_bit_reference const&
                 requires is_writable
         {
@@ -265,7 +246,7 @@ public:
                 -> random_access_bit_reference const&
                 requires is_writable
         {
-                return *this = static_cast<bool>(other);
+                return *this = static_cast<value_type>(other);
         }
 
         // [vector.bool] has required it of the proxy since C++98, where the const-qualified assignment is C++23.
@@ -280,25 +261,25 @@ public:
         friend constexpr auto swap(random_access_bit_reference x, random_access_bit_reference y) noexcept -> void
                 requires is_writable
         {
-                bool const t = x;
-                x            = y;
-                y            = t;
+                value_type const t = x;
+                x                  = y;
+                y                  = t;
         }
 
-        friend constexpr auto swap(random_access_bit_reference x, bool& y) noexcept -> void
+        friend constexpr auto swap(random_access_bit_reference x, value_type& y) noexcept -> void
                 requires is_writable
         {
-                bool const t = x;
-                x            = y;
-                y            = t;
+                value_type const t = x;
+                x                  = y;
+                y                  = t;
         }
 
-        friend constexpr auto swap(bool& x, random_access_bit_reference y) noexcept -> void
+        friend constexpr auto swap(value_type& x, random_access_bit_reference y) noexcept -> void
                 requires is_writable
         {
-                bool const t = x;
-                x            = y;
-                y            = t;
+                value_type const t = x;
+                x                  = y;
+                y                  = t;
         }
 
         // What this proxy prints as, said once: our std::formatter calls it unqualified, and fmt finds it by ADL.

@@ -11,9 +11,7 @@
 #include <test/spec/input.hpp>           // context
 #include <test/spec/set.hpp>             // sets
 #include <boost/test/unit_test.hpp>      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL_COLLECTIONS
-#include <algorithm>                     // copy
 #include <cstddef>                       // size_t
-#include <iterator>                      // inserter
 #include <set>                           // set
 
 BOOST_AUTO_TEST_SUITE(Spec)
@@ -60,14 +58,16 @@ BOOST_AUTO_TEST_CASE(NestedTypes)
                 });
                 test::container::nested_types<T>();
 
-                // A set's const_reference is a key it holds, converting to a key type constructible from it.
+                // A set's const_reference is a key it holds, direct-initializing a key type constructible from it.
                 if constexpr (test::spec::container::keyed<T>) {
                         test::set::nested_types<T>();
                         for (auto const [from, a] : test::spec::set::inputs::sets<T>()) {
                                 auto const on_failure = context(from, a);
                                 test::set::mem_const_reference()(a);
-                                std::set<Implicit, typename T::key_compare> dst;
-                                std::ranges::copy(a, std::inserter(dst, dst.end()));
+                                auto dst = std::set<Implicit, typename T::key_compare>();
+                                for (auto const& key : a) {
+                                        dst.emplace(key);
+                                }
                                 BOOST_CHECK_EQUAL_COLLECTIONS(a.begin(), a.end(), dst.begin(), dst.end());
                         }
                 } else {
