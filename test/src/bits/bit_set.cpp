@@ -20,6 +20,8 @@
 #include <cstddef>                            // size_t
 #include <cstdint>                            // uint8_t
 #include <functional>                         // hash
+#include <initializer_list>                   // initializer_list
+#include <iterator>                           // iter_value_t
 #include <memory>                             // allocator
 #include <ranges>                             // equal, iota, to
 #include <set>                                // set

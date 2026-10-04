@@ -80,20 +80,14 @@ struct std::formatter<test::set::strong_index, CharT> : std::formatter<std::size
 
 namespace test::set {
 
-// A set keyed by strong_index against std::set<strong_index>, over keys the set can hold and a probe one past them.
+// Construction each way std::set has, iteration in both directions, and the walks, which hand out keys.
 template<class X>
-auto agrees_with_std_set_of_strong_indices(std::vector<std::size_t> const& values, std::size_t first, std::size_t past)
+auto constructs_and_walks_as_std_set(std::vector<strong_index> const& keys, std::set<strong_index> const& model)
         -> void
 {
-        using key = strong_index;
-        auto const keys = values | std::views::transform([](std::size_t v) -> key { return {.value = v}; }) | std::ranges::to<std::vector>();
-        auto const model = std::set<key>(keys.begin(), keys.end());
-        auto const same = [](X const& x, std::set<key> const& m) -> bool { return std::ranges::equal(x, m); };
-
-        // Construction, each way std::set has, and iteration in both directions.
         auto const a = X(keys.begin(), keys.end());
-        BOOST_CHECK(same(a, model));
-        BOOST_CHECK(same(X(std::from_range, keys), model));
+        BOOST_CHECK(std::ranges::equal(a, model));
+        BOOST_CHECK(std::ranges::equal(X(std::from_range, keys), model));
         BOOST_CHECK(std::ranges::equal(a | std::views::reverse, model | std::views::reverse));
         BOOST_CHECK_EQUAL(a.size(), model.size());
         if (not model.empty()) {
@@ -101,97 +95,119 @@ auto agrees_with_std_set_of_strong_indices(std::vector<std::size_t> const& value
                 BOOST_CHECK(a.back() == *model.rbegin());
         }
 
-        // The walks hand out keys, as the iterators do.
-        auto walked = std::vector<key>();
-        a.for_each([&](key k) -> void { walked.push_back(k); });
+        auto walked = std::vector<strong_index>();
+        a.for_each([&](strong_index k) -> void { walked.push_back(k); });
         BOOST_CHECK(std::ranges::equal(walked, model));
         walked.clear();
-        a.for_each_reverse([&](key k) -> void { walked.push_back(k); });
+        a.for_each_reverse([&](strong_index k) -> void { walked.push_back(k); });
         BOOST_CHECK(std::ranges::equal(walked, model | std::views::reverse));
+}
 
-        // Lookup over every key of the universe and one past it, total as std::set's is.
-        for (auto const v : std::views::iota(first, past + 1UZ)) {
-                auto const k = key{.value = v};
-                BOOST_CHECK_EQUAL(a.contains(k), model.contains(k));
-                BOOST_CHECK_EQUAL(a.count(k), model.count(k));
-                BOOST_CHECK_EQUAL(a.find(k) == a.end(), model.find(k) == model.end());
-                auto const lb = a.lower_bound(k);
-                auto const mlb = model.lower_bound(k);
-                BOOST_CHECK_EQUAL(lb == a.end(), mlb == model.end());
-                if (mlb != model.end()) {
-                        BOOST_CHECK(*lb == *mlb);
-                }
-                auto const ub = a.upper_bound(k);
-                auto const mub = model.upper_bound(k);
-                BOOST_CHECK_EQUAL(ub == a.end(), mub == model.end());
-                if (mub != model.end()) {
-                        BOOST_CHECK(*ub == *mub);
-                }
-                auto const [lo, hi] = a.equal_range(k);
-                BOOST_CHECK(lo == lb);
-                BOOST_CHECK(hi == ub);
-        }
+// Lookup of one key, total as std::set's is.
+template<class X>
+auto looks_up_as_std_set(X const& a, std::set<strong_index> const& model, strong_index k)
+        -> void
+{
+        BOOST_CHECK_EQUAL(a.contains(k), model.contains(k));
+        BOOST_CHECK_EQUAL(a.count(k), model.contains(k) ? 1UZ : 0UZ);
+        auto const lb = a.lower_bound(k);
+        BOOST_CHECK(a.find(k) == (model.contains(k) ? lb : a.end()));
+        auto const mlb = model.lower_bound(k);
+        BOOST_CHECK_EQUAL(lb == a.end(), mlb == model.end());
+        BOOST_CHECK(mlb == model.end() or *lb == *mlb);
+        auto const ub = a.upper_bound(k);
+        auto const mub = model.upper_bound(k);
+        BOOST_CHECK_EQUAL(ub == a.end(), mub == model.end());
+        BOOST_CHECK(mub == model.end() or *ub == *mub);
+        auto const [lo, hi] = a.equal_range(k);
+        BOOST_CHECK(lo == lb);
+        BOOST_CHECK(hi == ub);
+}
 
-        // The modifiers, one key at a time, each against the model.
-        for (auto const v : std::views::iota(first, past)) {
-                auto const k = key{.value = v};
-                auto x = a;
-                auto m = model;
-                auto const [it, inserted] = x.insert(k);
-                auto const [mit, minserted] = m.insert(k);
-                BOOST_CHECK_EQUAL(inserted, minserted);
-                BOOST_CHECK(*it == *mit);
-                BOOST_CHECK(same(x, m));
+// The modifiers taking one key, each against the model.
+template<class X>
+auto modifies_as_std_set(X const& a, std::set<strong_index> const& model, strong_index k)
+        -> void
+{
+        auto x = a;
+        auto m = model;
+        auto const [it, inserted] = x.insert(k);
+        auto const [mit, minserted] = m.insert(k);
+        BOOST_CHECK_EQUAL(inserted, minserted);
+        BOOST_CHECK(*it == *mit);
+        BOOST_CHECK(std::ranges::equal(x, m));
 
-                BOOST_CHECK(*x.insert(x.begin(), k) == k);
-                BOOST_CHECK(x.emplace(k).first == x.find(k));
-                BOOST_CHECK(*x.emplace_hint(x.end(), k) == k);
-                BOOST_CHECK(same(x, m));
+        BOOST_CHECK(*x.insert(x.begin(), k) == k);
+        BOOST_CHECK(x.emplace(k).first == x.find(k));
+        BOOST_CHECK(*x.emplace_hint(x.end(), k) == k);
+        BOOST_CHECK(std::ranges::equal(x, m));
 
-                BOOST_CHECK_EQUAL(x.erase(k), m.erase(k));
-                BOOST_CHECK_EQUAL(x.erase(k), m.erase(k));
-                BOOST_CHECK(same(x, m));
+        BOOST_CHECK_EQUAL(x.erase(k), m.erase(k));
+        BOOST_CHECK_EQUAL(x.erase(k), m.erase(k));
+        BOOST_CHECK(std::ranges::equal(x, m));
 
-                x.complement(k);
-                BOOST_CHECK(x.contains(k));
-                x.complement(k);
-                BOOST_CHECK(not x.contains(k));
-        }
+        x.complement(k);
+        BOOST_CHECK(x.contains(k));
+        x.complement(k);
+        BOOST_CHECK(not x.contains(k));
+}
 
-        // Erasure by iterator and by range, and by predicate.
+// Erasure by iterator, by range and by predicate, the bulk inserts, the list forms, and the key as printed.
+template<class X>
+auto erases_inserts_and_prints_as_std_set(std::vector<strong_index> const& keys, std::set<strong_index> const& model, std::size_t first)
+        -> void
+{
+        auto const a = X(keys.begin(), keys.end());
         if (not model.empty()) {
                 auto x = a;
                 auto m = model;
                 BOOST_CHECK_EQUAL(x.erase(x.begin()) == x.end(), m.erase(m.begin()) == m.end());
-                BOOST_CHECK(same(x, m));
+                BOOST_CHECK(std::ranges::equal(x, m));
                 BOOST_CHECK(x.erase(x.begin(), x.end()) == x.end());
                 BOOST_CHECK(x.empty());
         }
         auto x = a;
         auto m = model;
-        auto const odd = [](key k) -> bool { return k.value % 2UZ == 1UZ; };
+        auto const odd = [](strong_index k) -> bool { return k.value % 2UZ == 1UZ; };
         BOOST_CHECK_EQUAL(erase_if(x, odd), std::erase_if(m, odd));
-        BOOST_CHECK(same(x, m));
+        BOOST_CHECK(std::ranges::equal(x, m));
 
-        // The bulk inserts, and the list forms.
         auto y = X();
         y.insert(keys.begin(), keys.end());
         BOOST_CHECK(y == a);
         auto z = X();
         z.insert_range(keys);
         BOOST_CHECK(z == a);
-        auto const k0 = key{.value = first};
+        auto const k0 = strong_index{.value = first};
         auto w = X({k0});
         w.insert({k0});
         w = {k0};
-        BOOST_CHECK(same(w, std::set<key>{k0}));
+        BOOST_CHECK(std::ranges::equal(w, std::set<strong_index>{k0}));
 
-        // The key, not its position, is what is printed.
         auto expected = std::string("{");
         for (auto const& k : model) {
                 expected += std::format("{}#{}", k == *model.begin() ? "" : ", ", k.value);
         }
         BOOST_CHECK_EQUAL(std::format("{}", a), expected + "}");
+}
+
+// A set keyed by strong_index against std::set<strong_index>, over keys the set can hold and a probe one past them.
+template<class X>
+auto agrees_with_std_set_of_strong_indices(std::vector<std::size_t> const& values, std::size_t first, std::size_t past)
+        -> void
+{
+        auto const keys = values | std::views::transform([](std::size_t v) -> strong_index { return {.value = v}; }) | std::ranges::to<std::vector>();
+        auto const model = std::set<strong_index>(keys.begin(), keys.end());
+        constructs_and_walks_as_std_set<X>(keys, model);
+
+        auto const a = X(keys.begin(), keys.end());
+        for (auto const v : std::views::iota(first, past + 1UZ)) {
+                looks_up_as_std_set(a, model, strong_index{.value = v});
+        }
+        for (auto const v : std::views::iota(first, past)) {
+                modifies_as_std_set(a, model, strong_index{.value = v});
+        }
+        erases_inserts_and_prints_as_std_set<X>(keys, model, first);
 }
 
 } // namespace test::set
