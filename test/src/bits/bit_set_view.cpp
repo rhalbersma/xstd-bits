@@ -3,27 +3,27 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/set/ordering.hpp>              // ordering_agrees_with_std_set
-#include <xstd/bits/bit_array.hpp>            // bit_array
-#include <xstd/bits/bit_fixed_set.hpp>        // bit_fixed_set
-#include <xstd/bits/bit_set.hpp>              // bit_set
-#include <xstd/bits/bit_set_view.hpp>         // bit_set_view
-#include <xstd/bits/bit_span.hpp>             // bit_span
-#include <xstd/bits/detail/bit_container.hpp> // bit_container
-#include <xstd/bits/detail/ownership.hpp>     // storage
-#include <xstd/bits/detail/set_adaptor.hpp>   // set_adaptor
-#include <boost/test/unit_test.hpp>           // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
-#include <array>                              // array
-#include <concepts>                           // constructible_from, derived_from, same_as
-#include <cstddef>                            // size_t
-#include <cstdint>                            // uint64_t, uint8_t
-#include <functional>                         // hash
-#include <range/v3/view/set_algorithm.hpp>    // set_union
-#include <ranges>                             // borrowed_range, range, range_value_t, view
-#include <set>                                // set
-#include <tuple>                              // tuple
-#include <utility>                            // declval
-#include <vector>                             // vector
+#include <test/set/ordering.hpp>                    // ordering_agrees_with_std_set
+#include <xstd/bits/bit_array.hpp>                  // bit_array
+#include <xstd/bits/bit_fixed_set.hpp>              // bit_fixed_set
+#include <xstd/bits/bit_set.hpp>                    // bit_set
+#include <xstd/bits/bit_set_view.hpp>               // bit_set_view
+#include <xstd/bits/bit_span.hpp>                   // bit_span
+#include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
+#include <xstd/bits/detail/ownership.hpp>           // storage
+#include <xstd/bits/detail/set_adaptor.hpp>         // set_adaptor
+#include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <array>                                    // array
+#include <concepts>                                 // constructible_from, derived_from, same_as
+#include <cstddef>                                  // size_t
+#include <cstdint>                                  // uint64_t, uint8_t
+#include <functional>                               // hash
+#include <range/v3/view/set_algorithm.hpp>          // set_union
+#include <ranges>                                   // borrowed_range, range, range_value_t, view
+#include <set>                                      // set
+#include <tuple>                                    // tuple
+#include <utility>                                  // declval
+#include <vector>                                   // vector
 
 BOOST_AUTO_TEST_SUITE(BitSetView)
 
@@ -43,7 +43,7 @@ auto three_set()
         return bits;
 }
 
-using Storage = xstd::bits::detail::bit_container<std::array<std::size_t, 1>, 8>;
+using Storage = xstd::bits::detail::bit_block_container<std::array<std::size_t, 1>, 8>;
 using Blocks  = std::array<std::size_t, 1>;
 
 template<class T>

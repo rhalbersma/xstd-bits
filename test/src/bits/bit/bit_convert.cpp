@@ -17,7 +17,7 @@
 #include <xstd/bits/detail/bit_convertible.hpp>     // adopts_from
 #include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set, bit_small_set
 #include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector, bit_small_vector
-#include <xstd/bits/from_bit_storage.hpp>           // from_bit_storage
+#include <xstd/bits/from_blocks.hpp>                // from_blocks
 #include <xstd/ints/memory.hpp>                     // align_up
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <array>                                    // array
@@ -40,6 +40,9 @@ namespace {
 
 template<class T>
 concept is_set = requires { typename T::key_type; };
+
+// A built-in array of blocks, named once so the storage under test is spelled where the check can be told why.
+using four_words = std::uint64_t[4]; // NOLINT(modernize-avoid-c-arrays): the storage under test
 
 // The positions a reading holds: a set's keys, and a sequence's true indices.
 template<class T>
@@ -94,29 +97,29 @@ template<class From>
         }
 }
 
-template<class B>
+template<class Block>
 using sources_of = std::tuple<
-        xstd::basic_bit_fixed_set<std::size_t, B, 100>,
-        xstd::basic_bit_array<B, 100>,
-        xstd::basic_bit_set<std::size_t, B>,
-        xstd::basic_bit_vector<B>,
-        xstd::basic_bit_bounded_set<std::size_t, B, 128>,
-        xstd::basic_bit_bounded_vector<B, 128>,
-        xstd::basic_bit_small_set<std::size_t, B, 128>,
-        xstd::basic_bit_small_vector<B, 128>>;
+        xstd::basic_bit_fixed_set<std::size_t, Block, 100>,
+        xstd::basic_bit_array<Block, 100>,
+        xstd::basic_bit_set<std::size_t, Block>,
+        xstd::basic_bit_vector<Block>,
+        xstd::basic_bit_bounded_set<std::size_t, Block, 128>,
+        xstd::basic_bit_bounded_vector<Block, 128>,
+        xstd::basic_bit_small_set<std::size_t, Block, 128>,
+        xstd::basic_bit_small_vector<Block, 128>>;
 
 using sources = decltype(std::tuple_cat(
         sources_of<std::uint8_t>(), sources_of<std::uint16_t>(), sources_of<std::uint32_t>(), sources_of<std::uint64_t>()
 ));
 
-template<class B>
+template<class Block>
 using targets_of = std::tuple<
-        xstd::basic_bit_set<std::size_t, B>,
-        xstd::basic_bit_vector<B>,
-        xstd::basic_bit_bounded_set<std::size_t, B, 128>,
-        xstd::basic_bit_bounded_vector<B, 128>,
-        xstd::basic_bit_small_set<std::size_t, B, 128>,
-        xstd::basic_bit_small_vector<B, 128>>;
+        xstd::basic_bit_set<std::size_t, Block>,
+        xstd::basic_bit_vector<Block>,
+        xstd::basic_bit_bounded_set<std::size_t, Block, 128>,
+        xstd::basic_bit_bounded_vector<Block, 128>,
+        xstd::basic_bit_small_set<std::size_t, Block, 128>,
+        xstd::basic_bit_small_vector<Block, 128>>;
 
 using targets = decltype(std::tuple_cat(targets_of<std::uint8_t>(), targets_of<std::uint64_t>()));
 
@@ -170,7 +173,7 @@ BOOST_AUTO_TEST_CASE(EqualFixedWidthsCrossWhole)
         }());
 
         // A width that is no whole number of blocks round-trips through a std::bitset of the same width.
-        auto const narrow = xstd::bit_array<20>(xstd::from_bit_storage, std::array<std::uint8_t, 3>{0x01, 0x00, 0x08});
+        auto const narrow = xstd::bit_array<20>(xstd::from_blocks, std::array<std::uint8_t, 3>{0x01, 0x00, 0x08});
         auto const legacy = xstd::bit_convert<std::bitset<20>>(narrow);
         BOOST_CHECK(legacy.test(0) and legacy.test(19));
         BOOST_CHECK(xstd::bit_convert<xstd::bit_array<20>>(legacy) == narrow);
@@ -181,6 +184,34 @@ BOOST_AUTO_TEST_CASE(EqualFixedWidthsCrossWhole)
         // A view is read from as the blocks it spans.
         auto board = std::uint64_t{0b1010};
         BOOST_CHECK_EQUAL(xstd::bit_convert<std::uint64_t>(xstd::bit_set_view(board)), board);
+}
+
+// A built-in array converts as the std::array of its blocks does, and is no target: no function returns one.
+BOOST_AUTO_TEST_CASE(ABuiltInArrayConvertsAsTheStdArrayOfItsBlocks)
+{
+        static constexpr four_words blocks = {0x8000'0000'0000'0001ULL, 0x0ULL, 0xF0ULL, 0x8000'0000'0000'0000ULL};
+        constexpr auto same                = std::array<std::uint64_t, 4>{0x8000'0000'0000'0001ULL, 0x0ULL, 0xF0ULL, 0x8000'0000'0000'0000ULL};
+
+        // Into every fixed width a std::array reaches, in a constant expression, and without a throw.
+        static_assert(xstd::bit_convert<std::array<std::uint64_t, 4>>(blocks) == same);
+        static_assert(xstd::bit_convert<std::array<std::uint8_t, 32>>(blocks) == xstd::bit_convert<std::array<std::uint8_t, 32>>(same));
+        static_assert(xstd::bit_convert<xstd::bit_array<256>>(blocks) == xstd::bit_convert<xstd::bit_array<256>>(same));
+        static_assert(xstd::bit_convert<xstd::bit_fixed_set<256>>(blocks) == xstd::bit_fixed_set<256>{0, 63, 132, 133, 134, 135, 255});
+        static_assert(noexcept(xstd::bit_convert<xstd::bit_array<256>>(blocks)));
+        BOOST_CHECK(xstd::bit_convert<std::bitset<256>>(blocks) == xstd::bit_convert<std::bitset<256>>(same));
+
+        // Into a run-time width, as a copy of its positions.
+        BOOST_CHECK(positions(xstd::bit_convert<xstd::bit_vector>(blocks)) == positions(xstd::bit_convert<xstd::bit_vector>(same)));
+        BOOST_CHECK(xstd::bit_convert<xstd::bit_set>(blocks) == xstd::bit_convert<xstd::bit_set>(same));
+
+        // And back the other way, into the std::array that holds the array's blocks.
+        BOOST_CHECK((xstd::bit_convert<std::array<std::uint64_t, 4>>(xstd::bit_convert<xstd::bit_fixed_set<256>>(blocks)) == same));
+
+        // Equal widths only, as for a std::array, and never into the array itself.
+        static_assert(xstd::bit_convertible_to<four_words const&, xstd::bit_array<256>> and xstd::bit_convertible<four_words, std::bitset<256>>);
+        static_assert(not xstd::bit_convertible_to<four_words const&, xstd::bit_array<255>>);
+        static_assert(not xstd::bit_convertible_to<xstd::bit_array<256>, four_words> and not xstd::bit_convertible_to<std::array<std::uint64_t, 4>, four_words>);
+        static_assert(not xstd::bit_convertible<xstd::bit_vector, four_words>);
 }
 
 // Nothing throws between fixed widths, and only that pair is noexcept: a run-time end can refuse or allocate.
@@ -266,7 +297,7 @@ BOOST_AUTO_TEST_CASE(AnRvalueOfTheSameBlocksIsAdoptedWithoutACopy)
 {
         auto blocks            = std::vector<std::size_t>{0b101, 0, 1};
         auto const* const data = blocks.data();
-        auto v                 = xstd::bit_vector(xstd::from_bit_storage, std::move(blocks));
+        auto v                 = xstd::bit_vector(xstd::from_blocks, std::move(blocks));
         v.resize(130);
 
         auto s             = xstd::bit_convert<xstd::bit_set>(std::move(v));
@@ -283,7 +314,7 @@ BOOST_AUTO_TEST_CASE(AnRvalueOfTheSameBlocksIsAdoptedWithoutACopy)
         // A sequence to a sequence keeps its width exactly.
         auto two               = std::vector<std::size_t>(2);
         auto const* const wide = two.data();
-        auto w                 = xstd::bit_vector(xstd::from_bit_storage, std::move(two));
+        auto w                 = xstd::bit_vector(xstd::from_blocks, std::move(two));
         w.resize(70);
         w[69]     = true;
         auto same = xstd::bit_convert<xstd::bit_vector>(std::move(w));

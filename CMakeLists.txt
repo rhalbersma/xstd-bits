@@ -35,7 +35,7 @@ if(NOT xstd-ints_FOUND)
     FetchContent_MakeAvailable(xstd-ints)
 endif()
 
-# xstd-misc supplies conditional_data_member_t and XSTD_NO_UNIQUE_ADDRESS, which bit_container uses to carry a run-time width without paying for it under a compile-time one, and simple_allocator and container_compatible_range, which the owners constrain their constructors and deduction guides by.
+# xstd-misc supplies conditional_data_member_t and XSTD_NO_UNIQUE_ADDRESS, which bit_block_container uses to carry a run-time width without paying for it under a compile-time one, and simple_allocator and container_compatible_range, which the owners constrain their constructors and deduction guides by.
 find_package(xstd-misc 0.1.0 CONFIG QUIET)
 if(NOT xstd-misc_FOUND)
     include(FetchContent)
@@ -75,7 +75,7 @@ target_sources(
         include/xstd/bits/bit_array.hpp
         include/xstd/bits/bit.hpp
         include/xstd/bits/bit/bit_convert.hpp
-        include/xstd/bits/bit_storage.hpp
+        include/xstd/bits/bit_blocks.hpp
         include/xstd/bits/bit_bounded_set.hpp
         include/xstd/bits/bit_bounded_vector.hpp
         include/xstd/bits/bit_key_traits.hpp
@@ -89,13 +89,13 @@ target_sources(
         include/xstd/bits/detail/allocator_base_type.hpp
         include/xstd/bits/detail/bidirectional.hpp
         include/xstd/bits/detail/bounded_blocks.hpp
-        include/xstd/bits/detail/bit_container.hpp
+        include/xstd/bits/detail/bit_block_container.hpp
         include/xstd/bits/detail/comparisons.hpp
         include/xstd/bits/detail/borrowed_block_span.hpp
         include/xstd/bits/detail/functor.hpp
         include/xstd/bits/detail/hash.hpp
         include/xstd/bits/detail/intrin.hpp
-        include/xstd/bits/from_bit_storage.hpp
+        include/xstd/bits/from_blocks.hpp
         include/xstd/bits/ext/boost.hpp
         include/xstd/bits/ext/boost/bit_small_set.hpp
         include/xstd/bits/ext/boost/bit_small_vector.hpp

@@ -12,6 +12,7 @@
 #include <concepts>                   // same_as
 #include <cstddef>                    // size_t
 #include <cstdint>                    // uint8_t, uint16_t, uint32_t, uint64_t
+#include <initializer_list>           // initializer_list
 #include <limits>                     // numeric_limits
 #include <ranges>                     // borrowed_range, iota, range_value_t, view
 #include <span>                       // span
@@ -76,6 +77,9 @@ concept can_insert = requires (V const& v) { v.insert(0UZ); };
 template<class S>
 concept can_assign_element = requires (S const& s) { s[0] = true; };
 
+// A built-in array of blocks, named once so the storage under test is spelled where the check can be told why.
+using four_words = std::uint64_t[4]; // NOLINT(modernize-avoid-c-arrays): the storage under test
+
 } // namespace
 
 // One block is its own digits: a static width of one block, held as a pointer and nothing else.
@@ -113,6 +117,39 @@ BOOST_AUTO_TEST_CASE(AnArrayOfBlocksIsAStaticWidth)
         xstd::bit_span(four).fill(true);
         BOOST_CHECK(std::ranges::equal(four, std::array<std::uint32_t, 4>{~0U, ~0U, ~0U, ~0U}));
         BOOST_CHECK(xstd::bit_span(four).all());
+}
+
+// A contiguous range of blocks that does not subscript is no bit storage, so no view lends it.
+BOOST_AUTO_TEST_CASE(ARangeThatDoesNotSubscriptIsNotLent)
+{
+        static_assert(not span_viewable<std::initializer_list<std::uint64_t>&>);
+        static_assert(not span_viewable<std::initializer_list<std::uint64_t> const&>);
+        BOOST_CHECK(true);
+}
+
+// A built-in array is a static width over its blocks, as std::span deduces span<T, N> from T (&)[N].
+BOOST_AUTO_TEST_CASE(ABuiltInArrayIsAStaticWidth)
+{
+        four_words blocks = {0x8000'0000'0000'0001ULL, 0x0ULL, 0xF0ULL, 0x8000'0000'0000'0000ULL};
+        auto const& view  = blocks;
+        auto same         = std::array<std::uint64_t, 4>{0x8000'0000'0000'0001ULL, 0x0ULL, 0xF0ULL, 0x8000'0000'0000'0000ULL};
+
+        static_assert(std::same_as<decltype(xstd::bit_span(blocks)), xstd::bit_span<std::span<std::uint64_t, 4>>>);
+        static_assert(std::same_as<decltype(xstd::bit_set_view(blocks)), xstd::bit_set_view<std::span<std::uint64_t, 4>>>);
+        static_assert(std::same_as<decltype(xstd::bit_span(view)), xstd::bit_span<std::span<std::uint64_t const, 4>>>);
+        static_assert(decltype(xstd::bit_span(blocks))::static_extent == 256UZ);
+        static_assert(std::same_as<decltype(xstd::bit_set_view(view)), xstd::bit_set_view<std::span<std::uint64_t const, 4>, 256>>);
+        BOOST_CHECK(readings_agree_with(blocks, blocks));
+        BOOST_CHECK(readings_agree_with(view, same));
+        BOOST_CHECK(std::ranges::equal(xstd::bit_span(blocks), xstd::bit_span(same)));
+        BOOST_CHECK_EQUAL(xstd::bit_set_view(blocks).max_size(), 256UZ);
+        BOOST_CHECK(std::ranges::equal(xstd::bit_set_view(blocks), xstd::bit_set_view(same)));
+
+        // The views write through to the array, and a const one reads without writing.
+        auto const seq = xstd::bit_span(blocks);
+        seq[64]        = true;
+        BOOST_CHECK_EQUAL(blocks[1], 1U);
+        static_assert(not can_assign_element<decltype(xstd::bit_span(view))>);
 }
 
 // A growable container's blocks are a run-time width, the whole of them, and never grow through the view.

@@ -13,7 +13,7 @@
 #include <xstd/bits/bit_bounded_set.hpp>            // basic_bit_bounded_set
 #include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector
 #include <xstd/bits/bit_key_traits.hpp>             // bit_key_traits
-#include <xstd/bits/detail/bit_container.hpp>       // bit_container
+#include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
 #include <xstd/bits/detail/bounded_blocks.hpp>      // IWYU pragma: keep; XSTD_BITS_HAS_CONSTEXPR_BOUNDED
 #include <xstd/bits/detail/ownership.hpp>           // storage
 #include <xstd/bits/detail/set_adaptor.hpp>         // set_adaptor
@@ -55,7 +55,7 @@ template<class Block, std::size_t N, class Allocator>
 inline constexpr auto constant_evaluable_v<xstd::basic_bit_small_vector<Block, N, Allocator>> = false;
 
 template<class Block, class Compare>
-inline constexpr auto constant_evaluable_v<xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_container<test::minimal_blocks<Block>>, xstd::bits::detail::storage::owned, void, std::size_t, xstd::bit_key_traits<std::size_t>, Compare>> = false;
+inline constexpr auto constant_evaluable_v<xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_block_container<test::minimal_blocks<Block>>, xstd::bits::detail::storage::owned, void, std::size_t, xstd::bit_key_traits<std::size_t>, Compare>> = false;
 
 #ifndef XSTD_BITS_HAS_CONSTEXPR_BOUNDED
 

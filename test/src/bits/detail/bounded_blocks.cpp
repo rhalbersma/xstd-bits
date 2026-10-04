@@ -10,7 +10,7 @@
 
 #endif
 
-#include <xstd/bits/bit_storage.hpp>           // bit_storage_capacity_v, resizable_bit_storage
+#include <xstd/bits/bit_blocks.hpp>            // bit_blocks_capacity_v, resizable_bit_blocks
 #include <xstd/bits/detail/bounded_blocks.hpp> // bounded_blocks, bounded_blocks_for, no_blocks
 #include <boost/test/unit_test.hpp>            // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <array>                               // array
@@ -48,7 +48,7 @@ BOOST_AUTO_TEST_CASE(ACapacityOfNoughtHoldsNoBlocks)
         static_assert(std::same_as<xstd::bits::detail::bounded_blocks_for<std::uint8_t, 0>, Blocks>);
         static_assert(std::same_as<xstd::bits::detail::bounded_blocks_for<std::uint8_t, 9>, xstd::bits::detail::bounded_blocks<std::uint8_t, 2>>);
         static_assert(std::same_as<xstd::bits::detail::bounded_blocks_for<std::uint64_t, 64>, xstd::bits::detail::bounded_blocks<std::uint64_t, 1>>);
-        static_assert(xstd::resizable_bit_storage<Blocks> and xstd::bit_storage_capacity_v<Blocks> == 0UZ);
+        static_assert(xstd::resizable_bit_blocks<Blocks> and xstd::bit_blocks_capacity_v<Blocks> == 0UZ);
         BOOST_CHECK_EQUAL(Blocks::capacity(), 0UZ);
         BOOST_CHECK_EQUAL(Blocks::max_size(), 0UZ);
 }

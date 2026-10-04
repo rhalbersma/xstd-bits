@@ -3,14 +3,14 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/bit_fixed_set.hpp>    // bit_fixed_set
-#include <xstd/bits/detail/hash.hpp>      // std_hash
-#include <xstd/bits/from_bit_storage.hpp> // from_bit_storage
-#include <boost/hash2/fnv1a.hpp>          // fnv1a_32, fnv1a_64
-#include <boost/hash2/xxhash.hpp>         // xxhash_64
-#include <boost/test/unit_test.hpp>       // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <cstdint>                        // uint64_t, uint8_t
-#include <functional>                     // hash
+#include <xstd/bits/bit_fixed_set.hpp> // bit_fixed_set
+#include <xstd/bits/detail/hash.hpp>   // std_hash
+#include <xstd/bits/from_blocks.hpp>   // from_blocks
+#include <boost/hash2/fnv1a.hpp>       // fnv1a_32, fnv1a_64
+#include <boost/hash2/xxhash.hpp>      // xxhash_64
+#include <boost/test/unit_test.hpp>    // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <cstdint>                     // uint64_t, uint8_t
+#include <functional>                  // hash
 
 // std_hash's Hash parameter is the one thing std::hash cannot reach, so it is asserted here.
 BOOST_AUTO_TEST_SUITE(DetailHash)
@@ -23,7 +23,7 @@ using set_type = xstd::bit_fixed_set<8>;
 [[nodiscard]] auto make(std::uint8_t bits)
         -> set_type
 {
-        return {xstd::from_bit_storage, bits};
+        return {xstd::from_blocks, bits};
 }
 
 } // namespace

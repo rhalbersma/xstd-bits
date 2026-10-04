@@ -6,36 +6,33 @@
 #ifndef XSTD_BITS_DETAIL_BORROWED_BITS_HPP
 #define XSTD_BITS_DETAIL_BORROWED_BITS_HPP
 
-#include <xstd/bits/detail/bit_container.hpp>      // bit_container
-#include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
-#include <cstddef>                                 // size_t
-#include <memory>                                  // addressof
-#include <ranges>                                  // borrowed_range, contiguous_range, range_value_t, sized_range
-#include <span>                                    // dynamic_extent, span
-#include <type_traits>                             // conditional_t, is_const_v, is_lvalue_reference_v, remove_const_t, remove_reference_t
-#include <utility>                                 // declval
+#include <xstd/bits/bit_blocks.hpp>                 // bit_block, bit_block_range
+#include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
+#include <xstd/ints/concepts/unsigned_integer.hpp>  // unsigned_integer
+#include <cstddef>                                  // size_t
+#include <memory>                                   // addressof
+#include <ranges>                                   // borrowed_range
+#include <span>                                     // dynamic_extent, span
+#include <type_traits>                              // conditional_t, is_const_v, is_lvalue_reference_v, remove_const_t, remove_reference_t
+#include <utility>                                  // declval
 
 // Bits in blocks someone else owns, which bit_set_view and bit_span hold by value and read and write in place.
 namespace xstd::bits::detail {
 
 // Every bit of the blocks is a position, bit n of block i being position i * digits + n; the width is the blocks'.
 template<xstd::unsigned_integer Block, std::size_t Extent = std::dynamic_extent>
-using borrowed_bits = bit_container<std::span<Block, Extent>>;
+using borrowed_bits = bit_block_container<std::span<Block, Extent>>;
 
 // The span over a range of blocks, at the extent its type carries: an array's is static, a vector's is not.
 template<class R>
 using block_span_t = decltype(std::span(std::declval<R&>()));
 
-// One block lent by lvalue, or blocks lent by a range that is contiguous, sized and, as an rvalue, borrowed.
+// One block lent by lvalue, or a range of blocks lent by lvalue or, as an rvalue, borrowed.
 template<class W>
-concept borrowable_block =
-        std::is_lvalue_reference_v<W> and xstd::unsigned_integer<std::remove_const_t<std::remove_reference_t<W>>>;
+concept borrowable_block = std::is_lvalue_reference_v<W> and xstd::bit_block<std::remove_reference_t<W>>;
 
 template<class W>
-concept borrowable_blocks =
-        std::ranges::contiguous_range<W> and std::ranges::sized_range<W> and
-        (std::is_lvalue_reference_v<W> or std::ranges::borrowed_range<W>) and
-        xstd::unsigned_integer<std::ranges::range_value_t<W>>;
+concept borrowable_blocks = xstd::bit_block_range<W> and (std::is_lvalue_reference_v<W> or std::ranges::borrowed_range<W>);
 
 template<class W>
 struct borrowed_bits_for;
@@ -70,7 +67,7 @@ template<class W>
         using bits_type  = std::remove_const_t<borrowed_bits_t<W&&>>;
         using span_type  = bits_type::block_container_type;
         using block_type = bits_type::block_type;
-        if constexpr (borrowable_block<W&&>) {
+        if constexpr (xstd::bit_block<std::remove_reference_t<W>>) {
                 return bits_type(span_type(const_cast<block_type*>(std::addressof(blocks)), 1UZ));
         } else {
                 auto const s = std::span(blocks);

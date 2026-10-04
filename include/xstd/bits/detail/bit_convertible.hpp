@@ -6,11 +6,11 @@
 #ifndef XSTD_BITS_DETAIL_BIT_CONVERTIBLE_HPP
 #define XSTD_BITS_DETAIL_BIT_CONVERTIBLE_HPP
 
-#include <xstd/bits/bit_storage.hpp>       // bit_storage_capacity_v
+#include <xstd/bits/bit_blocks.hpp>        // bit_blocks_capacity_v
 #include <xstd/bits/detail/bit_layout.hpp> // bit_bytes, bit_layout, block_byte, blocks_copy_as_bytes, byte_count, bytes_bits, bytes_per_block, or_block_byte
 #include <xstd/bits/detail/bit_width.hpp>  // bit_width_v, packed, packed_owner, packed_view
 #include <xstd/bits/detail/ownership.hpp>  // owned_bits_t, owner_reading, set_reading_tag, storage_access
-#include <xstd/bits/from_bit_storage.hpp>  // bit_constructible_from, from_bit_storage
+#include <xstd/bits/from_blocks.hpp>       // bit_constructible_from, from_blocks
 #include <algorithm>                       // copy, min
 #include <array>                           // array
 #include <bit>                             // bit_cast, popcount
@@ -20,7 +20,7 @@
 #include <ranges>                          // iota, size
 #include <span>                            // as_bytes, as_writable_bytes, dynamic_extent, span
 #include <stdexcept>                       // overflow_error
-#include <type_traits>                     // is_const_v, is_rvalue_reference_v, remove_cvref_t, remove_reference_t
+#include <type_traits>                     // is_array_v, is_const_v, is_rvalue_reference_v, remove_cvref_t, remove_reference_t
 #include <utility>                         // declval, forward
 
 // What xstd::bit_convert asks of its two ends, and the copy between them: position i to position i, at any widths.
@@ -32,9 +32,9 @@ concept fixed_width =
         bit_width_v<T> != std::dynamic_extent and
         (packed<T> or bit_layout<T, bit_width_v<T>>);
 
-// What a fixed width is written into: anything of a fixed width but a view, which writes bits it does not own.
+// What a fixed width is written into: not a view, which writes bits it does not own, nor an array no function returns.
 template<class T>
-concept fixed_target = fixed_width<T> and (not packed_view<T>);
+concept fixed_target = fixed_width<T> and (not packed_view<T>) and (not std::is_array_v<T>);
 
 // One of our owners whose width is a value rather than part of its type.
 template<class T>
@@ -49,11 +49,11 @@ template<class T>
 inline constexpr bool reads_as_set = owner_reading<T, set_reading_tag>;
 
 // The bytes a range of blocks holds as positions, its value bits alone, at every block width.
-template<class B>
-[[nodiscard]] constexpr auto value_bytes(B const& blocks) noexcept
+template<class Blocks>
+[[nodiscard]] constexpr auto value_bytes(Blocks const& blocks) noexcept
         -> std::size_t
 {
-        return std::ranges::size(blocks) * bytes_per_block<B>;
+        return std::ranges::size(blocks) * bytes_per_block<Blocks>;
 }
 
 template<class Src, class T>
@@ -104,7 +104,7 @@ template<fixed_target To>
         if constexpr (N == 0UZ) {
                 return To();
         } else if constexpr (packed<To>) {
-                return To(xstd::from_bit_storage, std::bit_cast<std::array<unsigned char, byte_count<N>>>(bytes));
+                return To(xstd::from_blocks, std::bit_cast<std::array<unsigned char, byte_count<N>>>(bytes));
         } else {
                 return bytes_bits<To, N>(bytes);
         }
@@ -303,7 +303,7 @@ concept run_time_source = bit_convert_source<T> and (not fixed_width<T>);
 template<class To>
 concept holds_whole_blocks =
         (not owned_bits_t<To>::has_static_capacity) or
-        owned_bits_t<To>::static_capacity() == xstd::bit_storage_capacity_v<typename owned_bits_t<To>::block_container_type>;
+        owned_bits_t<To>::static_capacity() == xstd::bit_blocks_capacity_v<typename owned_bits_t<To>::block_container_type>;
 
 // An rvalue whose blocks To takes as they are, all of them: they move rather than being copied.
 template<class To, class From>
@@ -320,7 +320,7 @@ template<class To, class From>
         -> To
 {
         auto const width = bit_source<std::remove_cvref_t<From>>::width(from);
-        auto to          = To(xstd::from_bit_storage, std::forward<From>(from).extract());
+        auto to          = To(xstd::from_blocks, std::forward<From>(from).extract());
         if constexpr (not reads_as_set<To>) {
                 storage_access::bits(to).resize(width);
         }

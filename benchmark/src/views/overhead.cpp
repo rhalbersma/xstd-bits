@@ -5,15 +5,15 @@
 
 // What a reading costs as a view rather than a container, over the same backend bit container.
 
-#include <xstd/bits/bit_array.hpp>            // bit_array
-#include <xstd/bits/bit_fixed_set.hpp>        // bit_fixed_set
-#include <xstd/bits/bit_set_view.hpp>         // bit_set_view
-#include <xstd/bits/bit_span.hpp>             // bit_span
-#include <xstd/bits/detail/bit_container.hpp> // bit_container
-#include <benchmark/benchmark.h>              // ClobberMemory, DoNotOptimize, BENCHMARK_TEMPLATE, BENCHMARK_MAIN, State
-#include <array>                              // array
-#include <cstddef>                            // size_t
-#include <cstdint>                            // uint64_t
+#include <xstd/bits/bit_array.hpp>                  // bit_array
+#include <xstd/bits/bit_fixed_set.hpp>              // bit_fixed_set
+#include <xstd/bits/bit_set_view.hpp>               // bit_set_view
+#include <xstd/bits/bit_span.hpp>                   // bit_span
+#include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
+#include <benchmark/benchmark.h>                    // ClobberMemory, DoNotOptimize, BENCHMARK_TEMPLATE, BENCHMARK_MAIN, State
+#include <array>                                    // array
+#include <cstddef>                                  // size_t
+#include <cstdint>                                  // uint64_t
 
 namespace {
 
@@ -84,7 +84,7 @@ template<std::size_t N>
 auto set_iterate_view_of_storage(benchmark::State& state)
         -> void
 {
-        auto blocks = filled<N, xstd::bits::detail::bit_container<std::array<std::size_t, xstd::bits::detail::num_blocks_v<std::size_t, N>>, N>>();
+        auto blocks = filled<N, xstd::bits::detail::bit_block_container<std::array<std::size_t, xstd::bits::detail::num_blocks_v<std::size_t, N>>, N>>();
         benchmark::DoNotOptimize(&blocks);
         auto const s = xstd::bit_set_view(blocks);
         for (auto _ : state) {
@@ -113,7 +113,7 @@ template<std::size_t N>
 auto sequence_count_view_of_storage(benchmark::State& state)
         -> void
 {
-        auto blocks = filled<N, xstd::bits::detail::bit_container<std::array<std::size_t, xstd::bits::detail::num_blocks_v<std::size_t, N>>, N>>();
+        auto blocks = filled<N, xstd::bits::detail::bit_block_container<std::array<std::size_t, xstd::bits::detail::num_blocks_v<std::size_t, N>>, N>>();
         benchmark::DoNotOptimize(&blocks);
         auto const v = xstd::bit_span(blocks);
         for (auto _ : state) {
@@ -146,7 +146,7 @@ template<std::size_t N>
 auto sequence_read_view_of_storage(benchmark::State& state)
         -> void
 {
-        auto blocks = filled<N, xstd::bits::detail::bit_container<std::array<std::size_t, xstd::bits::detail::num_blocks_v<std::size_t, N>>, N>>();
+        auto blocks = filled<N, xstd::bits::detail::bit_block_container<std::array<std::size_t, xstd::bits::detail::num_blocks_v<std::size_t, N>>, N>>();
         benchmark::DoNotOptimize(&blocks);
         auto const v = xstd::bit_span(blocks);
         auto lcg     = std::uint64_t{1};

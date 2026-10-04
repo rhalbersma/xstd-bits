@@ -3,24 +3,24 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/bitset/vocabulary.hpp>              // vocabulary
-#include <xstd/bits/detail/bit_container.hpp>      // bit_container
-#include <boost/dynamic_bitset/dynamic_bitset.hpp> // dynamic_bitset
-#include <boost/test/unit_test.hpp>                // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <array>                                   // array
-#include <bitset>                                  // bitset
-#include <concepts>                                // same_as
-#include <cstddef>                                 // size_t
-#include <cstdint>                                 // uint64_t
-#include <tuple>                                   // tuple
-#include <utility>                                 // declval
-#include <vector>                                  // vector
+#include <test/bitset/vocabulary.hpp>               // vocabulary
+#include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
+#include <boost/dynamic_bitset/dynamic_bitset.hpp>  // dynamic_bitset
+#include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <array>                                    // array
+#include <bitset>                                   // bitset
+#include <concepts>                                 // same_as
+#include <cstddef>                                  // size_t
+#include <cstdint>                                  // uint64_t
+#include <tuple>                                    // tuple
+#include <utility>                                  // declval
+#include <vector>                                   // vector
 
 // The common vocabulary the three bit containers answer in their own names.
 namespace {
 
-using ours_static  = xstd::bits::detail::bit_container<std::array<std::uint64_t, 1>, 64>;
-using ours_dynamic = xstd::bits::detail::bit_container<std::vector<std::uint64_t>>;
+using ours_static  = xstd::bits::detail::bit_block_container<std::array<std::uint64_t, 1>, 64>;
+using ours_dynamic = xstd::bits::detail::bit_block_container<std::vector<std::uint64_t>>;
 using theirs       = std::bitset<64>;
 using boosts       = boost::dynamic_bitset<>;
 

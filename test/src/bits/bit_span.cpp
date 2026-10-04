@@ -3,28 +3,28 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/sequence/ordering.hpp>            // ordering_agrees_with_vector_bool
-#include <xstd/bits/bit_array.hpp>               // bit_array
-#include <xstd/bits/bit_fixed_set.hpp>           // bit_fixed_set
-#include <xstd/bits/bit_set_view.hpp>            // bit_set_view
-#include <xstd/bits/bit_span.hpp>                // bit_span
-#include <xstd/bits/detail/bit_container.hpp>    // bit_container
-#include <xstd/bits/detail/ownership.hpp>        // storage
-#include <xstd/bits/detail/sequence_adaptor.hpp> // sequence_adaptor
-#include <boost/test/unit_test.hpp>              // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
-#include <array>                                 // array
-#include <concepts>                              // constructible_from, convertible_to, derived_from, equality_comparable, same_as, totally_ordered
-#include <cstddef>                               // size_t
-#include <cstdint>                               // uint8_t
-#include <ranges>                                // iota
-#include <utility>                               // declval
-#include <vector>                                // vector
+#include <test/sequence/ordering.hpp>               // ordering_agrees_with_vector_bool
+#include <xstd/bits/bit_array.hpp>                  // bit_array
+#include <xstd/bits/bit_fixed_set.hpp>              // bit_fixed_set
+#include <xstd/bits/bit_set_view.hpp>               // bit_set_view
+#include <xstd/bits/bit_span.hpp>                   // bit_span
+#include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
+#include <xstd/bits/detail/ownership.hpp>           // storage
+#include <xstd/bits/detail/sequence_adaptor.hpp>    // sequence_adaptor
+#include <boost/test/unit_test.hpp>                 // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <array>                                    // array
+#include <concepts>                                 // constructible_from, convertible_to, derived_from, equality_comparable, same_as, totally_ordered
+#include <cstddef>                                  // size_t
+#include <cstdint>                                  // uint8_t
+#include <ranges>                                   // iota
+#include <utility>                                  // declval
+#include <vector>                                   // vector
 
 BOOST_AUTO_TEST_SUITE(BitSpan)
 
 namespace {
 
-using Storage = xstd::bits::detail::bit_container<std::array<std::size_t, 1>, 8>;
+using Storage = xstd::bits::detail::bit_block_container<std::array<std::size_t, 1>, 8>;
 using Blocks  = std::array<std::size_t, 1>;
 
 template<class T>

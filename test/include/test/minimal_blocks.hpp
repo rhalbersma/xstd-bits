@@ -12,7 +12,7 @@
 
 namespace test {
 
-// Storage written outside the library with the members resizable_bit_storage names and no others.
+// Storage written outside the library with the members resizable_bit_blocks names and no others.
 template<xstd::unsigned_integer Block>
 class minimal_blocks
 {

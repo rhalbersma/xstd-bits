@@ -6,12 +6,12 @@
 #ifndef XSTD_BITS_BIT_FIXED_SET_HPP
 #define XSTD_BITS_BIT_FIXED_SET_HPP
 
+#include <xstd/bits/bit_blocks.hpp>                          // bit_block, bit_blocks_extent_v
 #include <xstd/bits/bit_key_traits.hpp>                      // bit_key_traits
-#include <xstd/bits/bit_storage.hpp>                         // bit_storage_extent_v
-#include <xstd/bits/detail/bit_container.hpp>                // bit_container, num_blocks_v
+#include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container, num_blocks_v
 #include <xstd/bits/detail/ownership.hpp>                    // storage
 #include <xstd/bits/detail/set_adaptor.hpp>                  // admits_width, key_direction, set_adaptor
-#include <xstd/bits/from_bit_storage.hpp>                    // from_bit_storage, from_bit_storage_t
+#include <xstd/bits/from_blocks.hpp>                         // from_blocks, from_blocks_t
 #include <xstd/ints/concepts/unsigned_integer.hpp>           // unsigned_integer
 #include <xstd/ints/memory.hpp>                              // align_up
 #include <xstd/misc/concepts/container_compatible_range.hpp> // container_compatible_range
@@ -32,9 +32,9 @@ namespace xstd {
 
 // The fixed-width set: the basic name leaves the key and the block open, the short one makes both std::size_t.
 template<class Key, xstd::unsigned_integer Block, std::size_t N, class KeyTraits = bit_key_traits<Key>, bits::detail::set::key_direction<Key> Compare = std::less<Key>>
-class basic_bit_fixed_set : public bits::detail::set_adaptor<bits::detail::bit_container<std::array<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, basic_bit_fixed_set<Key, Block, N, KeyTraits, Compare>, Key, KeyTraits, Compare>
+class basic_bit_fixed_set : public bits::detail::set_adaptor<bits::detail::bit_block_container<std::array<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, basic_bit_fixed_set<Key, Block, N, KeyTraits, Compare>, Key, KeyTraits, Compare>
 {
-        using base_type = bits::detail::set_adaptor<bits::detail::bit_container<std::array<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, basic_bit_fixed_set<Key, Block, N, KeyTraits, Compare>, Key, KeyTraits, Compare>;
+        using base_type = bits::detail::set_adaptor<bits::detail::bit_block_container<std::array<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, basic_bit_fixed_set<Key, Block, N, KeyTraits, Compare>, Key, KeyTraits, Compare>;
 
         // A traits type that names a size closes the universe, and the width must be that size.
         static_assert(bits::detail::set::admits_width<KeyTraits, N>);
@@ -67,10 +67,10 @@ public:
         {}
 
         // Not in [set.cons]: blocks that are bit storage, read as this set's positions.
-        template<class B>
-                requires std::constructible_from<base_type, from_bit_storage_t, B const&>
-        [[nodiscard]] constexpr basic_bit_fixed_set(from_bit_storage_t, B const& b) noexcept
-                : base_type(from_bit_storage, b)
+        template<class Bits>
+                requires std::constructible_from<base_type, from_blocks_t, Bits const&>
+        [[nodiscard]] constexpr basic_bit_fixed_set(from_blocks_t, Bits const& b) noexcept
+                : base_type(from_blocks, b)
         {}
 
         using base_type::operator=;
@@ -88,11 +88,15 @@ using bit_fixed_set = basic_bit_fixed_set<std::size_t, std::size_t, N>;
 
 // The width of one block.
 template<xstd::unsigned_integer Block>
-basic_bit_fixed_set(from_bit_storage_t, Block) -> basic_bit_fixed_set<std::size_t, Block, bit_storage_extent_v<Block>>;
+basic_bit_fixed_set(from_blocks_t, Block) -> basic_bit_fixed_set<std::size_t, Block, bit_blocks_extent_v<Block>>;
 
 // The width of an array of blocks, zero blocks included, as [span.deduct] takes an array's bound.
 template<xstd::unsigned_integer Block, std::size_t K>
-basic_bit_fixed_set(from_bit_storage_t, std::array<Block, K>) -> basic_bit_fixed_set<std::size_t, Block, bit_storage_extent_v<std::array<Block, K>>>;
+basic_bit_fixed_set(from_blocks_t, std::array<Block, K>) -> basic_bit_fixed_set<std::size_t, Block, bit_blocks_extent_v<std::array<Block, K>>>;
+
+// A built-in array of blocks, by reference so it keeps its bound: what the std::array of its blocks deduces.
+template<xstd::bit_block Block, std::size_t K>
+basic_bit_fixed_set(from_blocks_t, Block const (&)[K]) -> basic_bit_fixed_set<std::size_t, Block, bit_blocks_extent_v<std::array<Block, K>>>; // NOLINT(modernize-avoid-c-arrays): a built-in array is what it reads.
 
 namespace aligned {
 
@@ -120,6 +124,7 @@ struct is_tuple_like<xstd::basic_bit_fixed_set<Key, Block, N, KeyTraits, Compare
 } // namespace boost::container_hash
 
 // NOLINTBEGIN(bugprone-std-namespace-modification): [namespace.std]/2 admits specializing for a program-defined type.
+
 namespace std {
 
 template<class Key, class Block, std::size_t N, class KeyTraits, class Compare>

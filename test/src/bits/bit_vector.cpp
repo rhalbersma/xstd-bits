@@ -3,30 +3,30 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/container/allocator.hpp>          // basic_guarantee, copy_and_swap_propagating, copy_propagating, ledger_allocator, strong_guarantee
-#include <test/sanitizer.hpp>                    // IWYU pragma: keep; TEST_HAS_ADDRESS_SANITIZER
-#include <test/sequence/dense.hpp>               // yields_every_position
-#include <xstd/bits/bit_array.hpp>               // basic_bit_array
-#include <xstd/bits/bit_span.hpp>                // bit_span
-#include <xstd/bits/bit_vector.hpp>              // bit_vector
-#include <xstd/bits/detail/bit_container.hpp>    // bit_container
-#include <xstd/bits/detail/ownership.hpp>        // storage
-#include <xstd/bits/detail/sequence_adaptor.hpp> // sequence_adaptor
-#include <boost/test/unit_test.hpp>              // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_LT, BOOST_CHECK_THROW
-#include <algorithm>                             // copy, equal, is_sorted, ranges::count, ranges::is_sorted, ranges::sort, sort
-#include <concepts>                              // same_as
-#include <cstddef>                               // ptrdiff_t, size_t
-#include <cstdint>                               // uint64_t, uint8_t
-#include <functional>                            // hash, ranges::greater
-#include <limits>                                // numeric_limits
-#include <memory>                                // allocator
-#include <new>                                   // IWYU pragma: keep; bad_alloc, named only without TEST_HAS_ADDRESS_SANITIZER
-#include <ranges>                                // equal, from_range, iota, transform
-#include <stdexcept>                             // length_error
-#include <type_traits>                           // is_default_constructible_v
-#include <utility>                               // move
-#include <vector>                                // vector
-#include <version>                               // IWYU pragma: keep; __cpp_lib_containers_ranges
+#include <test/container/allocator.hpp>             // basic_guarantee, copy_and_swap_propagating, copy_propagating, ledger_allocator, strong_guarantee
+#include <test/sanitizer.hpp>                       // IWYU pragma: keep; TEST_HAS_ADDRESS_SANITIZER
+#include <test/sequence/dense.hpp>                  // yields_every_position
+#include <xstd/bits/bit_array.hpp>                  // basic_bit_array
+#include <xstd/bits/bit_span.hpp>                   // bit_span
+#include <xstd/bits/bit_vector.hpp>                 // bit_vector
+#include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
+#include <xstd/bits/detail/ownership.hpp>           // storage
+#include <xstd/bits/detail/sequence_adaptor.hpp>    // sequence_adaptor
+#include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_LT, BOOST_CHECK_THROW
+#include <algorithm>                                // copy, equal, is_sorted, ranges::count, ranges::is_sorted, ranges::sort, sort
+#include <concepts>                                 // same_as
+#include <cstddef>                                  // ptrdiff_t, size_t
+#include <cstdint>                                  // uint64_t, uint8_t
+#include <functional>                               // hash, ranges::greater
+#include <limits>                                   // numeric_limits
+#include <memory>                                   // allocator
+#include <new>                                      // IWYU pragma: keep; bad_alloc, named only without TEST_HAS_ADDRESS_SANITIZER
+#include <ranges>                                   // equal, from_range, iota, transform
+#include <stdexcept>                                // length_error
+#include <type_traits>                              // is_default_constructible_v
+#include <utility>                                  // move
+#include <vector>                                   // vector
+#include <version>                                  // IWYU pragma: keep; __cpp_lib_containers_ranges
 
 BOOST_AUTO_TEST_SUITE(BitVector)
 
@@ -45,7 +45,7 @@ constexpr bool has_range_members = requires (X x, std::vector<bool> const& r) { 
 // std::vector<bool> under its own name: the sequence adaptor over a heap of blocks.
 BOOST_AUTO_TEST_CASE(TheDynamicSequenceIsTheSequenceAdaptorOverAHeapOfBlocks)
 {
-        static_assert(std::derived_from<T, xstd::bits::detail::sequence_adaptor<xstd::bits::detail::bit_container<std::vector<std::uint8_t>>, xstd::bits::detail::storage::owned, xstd::bits::detail::window::all, T>>);
+        static_assert(std::derived_from<T, xstd::bits::detail::sequence_adaptor<xstd::bits::detail::bit_block_container<std::vector<std::uint8_t>>, xstd::bits::detail::storage::owned, xstd::bits::detail::window::all, T>>);
         static_assert(std::same_as<xstd::basic_bit_vector<std::uint8_t, std::allocator<std::uint8_t>>, T>);
         static_assert(std::same_as<T::allocator_type, std::allocator<std::uint8_t>>);
 }
@@ -115,8 +115,8 @@ BOOST_AUTO_TEST_CASE(ACopyTakesAnAllocatorThatAMoveCannotAsStronglyAsASwapAllows
 BOOST_AUTO_TEST_CASE(TheCeilingIsWhatADistanceCanName)
 {
         auto v = T(7);
-        BOOST_CHECK_EQUAL(v.max_size(), xstd::bits::detail::bit_container<std::vector<std::uint8_t>>::max_addressable_width);
-        BOOST_CHECK_LT(v.max_size(), xstd::bits::detail::bit_container<std::vector<std::uint8_t>>().max_size());
+        BOOST_CHECK_EQUAL(v.max_size(), xstd::bits::detail::bit_block_container<std::vector<std::uint8_t>>::max_addressable_width);
+        BOOST_CHECK_LT(v.max_size(), xstd::bits::detail::bit_block_container<std::vector<std::uint8_t>>().max_size());
         BOOST_CHECK_LE(v.max_size(), static_cast<std::size_t>(std::numeric_limits<std::ptrdiff_t>::max()));
         BOOST_CHECK_EQUAL(v.max_size() % 8UZ, 0UZ);
         BOOST_CHECK_THROW(v.resize(v.max_size() + 1UZ), std::length_error);

@@ -3,31 +3,31 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/bit_array.hpp>            // bit_array
-#include <xstd/bits/bit_span.hpp>             // bit_span
-#include <xstd/bits/bit_subspan.hpp>          // bit_subspan
-#include <xstd/bits/bit_vector.hpp>           // bit_vector
-#include <xstd/bits/detail/bit_container.hpp> // bit_container
-#include <boost/test/unit_test.hpp>           // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <algorithm>                          // equal, fill
-#include <array>                              // array
-#include <concepts>                           // equality_comparable, same_as
-#include <cstddef>                            // ptrdiff_t, size_t
-#include <cstdint>                            // uint8_t
-#include <functional>                         // hash
-#include <iterator>                           // size
-#include <ranges>                             // empty, iota, random_access_range, size
-#include <span>                               // dynamic_extent
-#include <tuple>                              // tuple
-#include <type_traits>                        // false_type, integral_constant, is_default_constructible_v, is_member_function_pointer_v, true_type
-#include <utility>                            // declval
-#include <vector>                             // vector
+#include <xstd/bits/bit_array.hpp>                  // bit_array
+#include <xstd/bits/bit_span.hpp>                   // bit_span
+#include <xstd/bits/bit_subspan.hpp>                // bit_subspan
+#include <xstd/bits/bit_vector.hpp>                 // bit_vector
+#include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
+#include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <algorithm>                                // equal, fill
+#include <array>                                    // array
+#include <concepts>                                 // equality_comparable, same_as
+#include <cstddef>                                  // ptrdiff_t, size_t
+#include <cstdint>                                  // uint8_t
+#include <functional>                               // hash
+#include <iterator>                                 // size
+#include <ranges>                                   // empty, iota, random_access_range, size
+#include <span>                                     // dynamic_extent
+#include <tuple>                                    // tuple
+#include <type_traits>                              // false_type, integral_constant, is_default_constructible_v, is_member_function_pointer_v, true_type
+#include <utility>                                  // declval
+#include <vector>                                   // vector
 
 BOOST_AUTO_TEST_SUITE(BitSubspan)
 
 namespace {
 
-using Storage = xstd::bits::detail::bit_container<std::array<std::uint8_t, 3>, 20>;
+using Storage = xstd::bits::detail::bit_block_container<std::array<std::uint8_t, 3>, 20>;
 using Blocks  = std::array<std::uint8_t, 3>;
 using Owner   = xstd::basic_bit_array<std::uint8_t, 20>;
 using Span    = xstd::bit_span<Blocks, 20>;

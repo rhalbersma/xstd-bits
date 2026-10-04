@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_DETAIL_VIEWS_HPP
 #define XSTD_BITS_DETAIL_VIEWS_HPP
 
-#include <xstd/bits/bit_storage.hpp>             // bit_storage
+#include <xstd/bits/bit_blocks.hpp>              // bit_blocks
 #include <xstd/bits/detail/sequence_adaptor.hpp> // blit_source, window_of
 #include <cstddef>                               // size_t
 
@@ -14,10 +14,10 @@
 namespace xstd {
 
 // Declared without default arguments: those are given once, where each view is defined.
-template<bit_storage Blocks, std::size_t N>
+template<bit_blocks Blocks, std::size_t N>
 class bit_span;
 
-template<bit_storage Blocks, std::size_t Extent, std::size_t N>
+template<bit_blocks Blocks, std::size_t Extent, std::size_t N>
 class bit_subspan;
 
 } // namespace xstd
