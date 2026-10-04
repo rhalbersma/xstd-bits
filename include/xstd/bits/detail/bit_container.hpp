@@ -296,6 +296,11 @@ private:
         using width_type = std::conditional_t<(alignof(std::size_t) >= alignof(Blocks)), std::size_t, block_type>;
         static_assert(sizeof(width_type) >= sizeof(std::size_t) and alignof(width_type) >= alignof(Blocks));
 
+        // cl rejects a member of the explicit object parameter in a trailing return type (C2228).
+        template<class Self>
+        using block_reference_t = std::conditional_t<
+                std::is_const_v<std::remove_reference_t<Self>>, block_type const&, block_type&>;
+
 public:
         [[nodiscard]] bit_container()
                 requires std::default_initializable<Blocks>
@@ -536,20 +541,12 @@ public:
                 }
         }
 
-        // The block, and not operator[]: a subscript on a bit container means a bit, which test() answers.
-        [[nodiscard]] constexpr auto block(std::size_t i) const noexcept
-                -> block_type
+        // The block, not operator[], whose subscript means a bit; a writer restores the invariant with erase_unused.
+        [[nodiscard]] constexpr auto block(this auto&& self, std::size_t i) noexcept
+                -> block_reference_t<decltype(self)>
         {
-                assert(i < num_blocks());
-                return m_blocks[i];
-        }
-
-        // The write side, a reference rather than a setter: the caller restores the invariant with erase_unused.
-        [[nodiscard]] constexpr auto block(std::size_t i) noexcept
-                -> block_type&
-        {
-                assert(i < num_blocks());
-                return m_blocks[i];
+                assert(i < self.num_blocks());
+                return std::forward<decltype(self)>(self).m_blocks[i];
         }
 
         // block(i) as a range, so a caller writing every block writes them in one call.
@@ -1611,11 +1608,6 @@ private:
                         return xstd::div(n, bits_per_block);
                 }
         }
-
-        // cl rejects a member of the explicit object parameter in a trailing return type (C2228).
-        template<class Self>
-        using block_reference_t = std::conditional_t<
-                std::is_const_v<std::remove_reference_t<Self>>, block_type const&, block_type&>;
 
         [[nodiscard]] constexpr auto block_mask(this auto&& self, std::size_t n) noexcept
                 -> std::pair<block_reference_t<decltype(self)>, block_type>
