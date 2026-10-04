@@ -38,7 +38,7 @@
 #include <source_location>                           // source_location
 #include <span>                                      // dynamic_extent
 #include <stdexcept>                                 // out_of_range
-#include <type_traits>                               // conditional_t, false_type, is_invocable_r_v, is_nothrow_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
+#include <type_traits>                               // conditional_t, false_type, integral_constant, is_invocable_r_v, is_nothrow_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
 #include <utility>                                   // declval, forward, in_place, move, pair
 
 // The set reading, [set] over a bit_container, owning it or referring to it.
@@ -144,10 +144,64 @@ using members_t = adapted_bits<
         std::conditional_t<owns(Store), allocator_base_type<std::remove_const_t<Bits>, set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare>>, xstd::empty_base_type<>>,
         owns(Store) and std::remove_const_t<Bits>::is_structural>;
 
+// The positions an owner can hold where its type fixes them, its width or its capacity, else dynamic_extent.
+template<class Bits, storage Store>
+consteval auto static_max_size() noexcept
+        -> std::size_t
+{
+        using bits_type = std::remove_const_t<Bits>;
+        if constexpr (owns(Store) and bits_type::extent != std::dynamic_extent) {
+                return bits_type::extent;
+        } else if constexpr (owns(Store) and bits_type::has_static_capacity) {
+                return bits_type::static_capacity();
+        } else {
+                return std::dynamic_extent;
+        }
+}
+
+// [container.reqmts]/57's max_size() as a constant, where the type fixes it; a set's size() counts its keys.
+template<class Members, std::size_t N>
+struct fixed_max_size : Members
+{
+        using Members::Members;
+
+        static constexpr std::integral_constant<std::size_t, N> max_size = {};
+
+        [[nodiscard]] friend auto operator==(fixed_max_size const&, fixed_max_size const&) -> bool = default;
+};
+
+// [container.reqmts]/57, distance(begin(), end()) for the largest container: every position set.
+template<class Members, class Bits, storage Store>
+struct run_time_max_size : Members
+{
+        using Members::Members;
+
+        [[nodiscard]] constexpr auto max_size() const noexcept
+                -> std::size_t
+        {
+                if constexpr ((std::remove_const_t<Bits>::extent != std::dynamic_extent)) {
+                        return std::remove_const_t<Bits>::extent;
+                } else if constexpr (owns(Store)) {
+                        return this->m_bits.max_size();
+                } else {
+                        return (*this->m_bits).size();
+                }
+        }
+
+        [[nodiscard]] friend auto operator==(run_time_max_size const&, run_time_max_size const&) -> bool = default;
+};
+
+// The adaptor's base: its storage under max_size() as its column has it, which the adaptor does not declare.
+template<class Bits, storage Store, class Derived, class Key, class KeyTraits, class Compare>
+using sizes_t = std::conditional_t<
+        static_max_size<Bits, Store>() != std::dynamic_extent,
+        fixed_max_size<members_t<Bits, Store, Derived, Key, KeyTraits, Compare>, static_max_size<Bits, Store>()>,
+        run_time_max_size<members_t<Bits, Store, Derived, Key, KeyTraits, Compare>, Bits, Store>>;
+
 } // namespace set
 
 template<bit_container_type Bits, storage Store, class Derived, class Key, class KeyTraits, class Compare>
-class set_adaptor : public set::members_t<Bits, Store, Derived, Key, KeyTraits, Compare>
+class set_adaptor : public set::sizes_t<Bits, Store, Derived, Key, KeyTraits, Compare>
 {
         static_assert(set::key_direction<Compare, Key>);
 
@@ -156,7 +210,7 @@ class set_adaptor : public set::members_t<Bits, Store, Derived, Key, KeyTraits, 
 
         using bits_type = std::remove_const_t<Bits>;
 
-        using members_type = set::members_t<Bits, Store, Derived, Key, KeyTraits, Compare>;
+        using members_type = set::sizes_t<Bits, Store, Derived, Key, KeyTraits, Compare>;
         using members_type::m_bits;
 
         // One accessor: self.m_bits propagates the owner's const, *self.m_bits keeps the view shallow.
@@ -506,18 +560,7 @@ public:
                 return bits().count();
         }
 
-        // [container.reqmts]/57, distance(begin(), end()) for the largest container: every position set.
-        [[nodiscard]] constexpr auto max_size() const noexcept
-                -> size_type
-        {
-                if constexpr ((bits_type::extent != std::dynamic_extent)) {
-                        return bits_type::extent;
-                } else if constexpr (owns(Store)) {
-                        return bits().max_size();
-                } else {
-                        return bits().size();
-                }
-        }
+        using members_type::max_size;
 
         // element access, both with a non-empty set as their precondition.
         [[nodiscard]] constexpr auto front() const noexcept

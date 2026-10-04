@@ -42,7 +42,7 @@
 #include <span>                                              // dynamic_extent
 #include <stdexcept>                                         // out_of_range
 #include <tuple>                                             // tuple_element, tuple_size
-#include <type_traits>                                       // conditional_t, false_type, is_nothrow_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
+#include <type_traits>                                       // bool_constant, conditional_t, false_type, integral_constant, is_nothrow_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
 #include <utility>                                           // as_const, declval, forward, in_place, move, pair
 
 // The sequence reading, [array] over a bit_container, owning it or referring to it.
@@ -171,10 +171,130 @@ using members_t = adapted_bits<
         std::conditional_t<owns(Store), allocator_base_type<std::remove_const_t<Bits>, sequence_adaptor<Bits, Store, W, Derived, E>>, xstd::empty_base_type<>>,
         owns(Store) and std::remove_const_t<Bits>::is_structural>;
 
+// Growth is the owner's over storage that grows: a view must never resize what it does not own.
+template<class Bits, storage Store>
+consteval auto can_grow() noexcept
+        -> bool
+{
+        using bits_type = std::remove_const_t<Bits>;
+        if constexpr (owns(Store) and bits_type::extent == std::dynamic_extent) {
+                return requires (bits_type& b, std::size_t n, bool value) { b.resize(n, value); b.push_back(value); b.pop_back(); b.clear(); };
+        } else {
+                return false;
+        }
+}
+
+// The width the type fixes, an owner's or a static window's, and dynamic_extent where it is read at run time.
+template<class Bits, storage Store, window W, std::size_t E>
+consteval auto static_size() noexcept
+        -> std::size_t
+{
+        if constexpr (W == window::sub) {
+                return E;
+        } else if constexpr (owns(Store)) {
+                return std::remove_const_t<Bits>::extent;
+        } else {
+                return std::dynamic_extent;
+        }
+}
+
+// A width the type fixes, as constants: a.size() calls operator(), and a.size is constant through any reference.
+template<class Members, std::size_t N>
+struct fixed_sizes : Members
+{
+        using Members::Members;
+
+        static constexpr std::integral_constant<std::size_t, N> size = {};
+        static constexpr std::bool_constant<N == 0UZ> empty = {};
+        static constexpr std::integral_constant<std::size_t, N> max_size = {};
+
+        [[nodiscard]] friend auto operator==(fixed_sizes const&, fixed_sizes const&) -> bool = default;
+};
+
+// A run-time width under a capacity the type carries: the width a function, the capacity a constant.
+template<class Members, std::size_t Capacity>
+struct bounded_sizes : Members
+{
+        using Members::Members;
+
+        [[nodiscard]] constexpr auto empty() const noexcept
+                -> bool
+        {
+                return size() == 0UZ;
+        }
+
+        [[nodiscard]] constexpr auto size() const noexcept
+                -> std::size_t
+        {
+                return this->m_bits.size();
+        }
+
+        // [inplace.vector.capacity] makes both static, and they can be constants: the capacity is the type's.
+        static constexpr std::integral_constant<std::size_t, Capacity> max_size = {};
+        static constexpr std::integral_constant<std::size_t, Capacity> capacity = {};
+
+        [[nodiscard]] friend auto operator==(bounded_sizes const&, bounded_sizes const&) -> bool = default;
+};
+
+// A width read at run time, from the storage or from a window's count, and so as functions.
+template<class Members, class Bits, storage Store, window W>
+struct run_time_sizes : Members
+{
+        using Members::Members;
+
+        [[nodiscard]] constexpr auto empty() const noexcept
+                -> bool
+        {
+                return size() == 0UZ;
+        }
+
+        [[nodiscard]] constexpr auto size() const noexcept
+                -> std::size_t
+        {
+                if constexpr (W == window::sub) {
+                        return this->m_bits.size;
+                } else if constexpr (owns(Store)) {
+                        return this->m_bits.size();
+                } else {
+                        return (*this->m_bits).size();
+                }
+        }
+
+        // std::vector<bool>'s answer where this reading can grow, and the width itself where it cannot.
+        [[nodiscard]] constexpr auto max_size() const noexcept
+                -> std::size_t
+        {
+                if constexpr (can_grow<Bits, Store>()) {
+                        return this->m_bits.addressable_max_size();
+                } else {
+                        return size();
+                }
+        }
+
+        [[nodiscard]] constexpr auto capacity() const noexcept
+                -> std::size_t
+                requires (can_grow<Bits, Store>()) and requires (std::remove_const_t<Bits> const& b) { b.capacity(); }
+        {
+                return this->m_bits.capacity();
+        }
+
+        [[nodiscard]] friend auto operator==(run_time_sizes const&, run_time_sizes const&) -> bool = default;
+};
+
+// The adaptor's base: its storage under the size-like members of its column, which the adaptor does not declare.
+template<class Bits, storage Store, window W, class Derived, std::size_t E>
+using sizes_t = std::conditional_t<
+        static_size<Bits, Store, W, E>() != std::dynamic_extent,
+        fixed_sizes<members_t<Bits, Store, W, Derived, E>, static_size<Bits, Store, W, E>()>,
+        std::conditional_t<
+                can_grow<Bits, Store>() and std::remove_const_t<Bits>::has_static_capacity,
+                bounded_sizes<members_t<Bits, Store, W, Derived, E>, std::remove_const_t<Bits>::static_capacity()>,
+                run_time_sizes<members_t<Bits, Store, W, Derived, E>, Bits, Store, W>>>;
+
 } // namespace sequence
 
 template<bit_container_type Bits, storage Store, window W, class Derived, std::size_t E>
-class sequence_adaptor : public sequence::members_t<Bits, Store, W, Derived, E>
+class sequence_adaptor : public sequence::sizes_t<Bits, Store, W, Derived, E>
 {
         static constexpr bool is_owner = owns(Store);
         static constexpr bool is_window = (W == window::sub);
@@ -186,18 +306,14 @@ class sequence_adaptor : public sequence::members_t<Bits, Store, W, Derived, E>
 
         using bits_type = std::remove_const_t<Bits>;
 
-        // A width fixed at compile time, which the byte exchange below asks and can_grow is the absence of.
-        static constexpr bool has_static_width = (bits_type::extent != std::dynamic_extent);
-
-        // Growth is the owner's over storage that grows: a view must never resize what it does not own.
-        static constexpr bool can_grow = is_owner and not has_static_width and requires (bits_type& b, std::size_t n, bool value) { b.resize(n, value); b.push_back(value); b.pop_back(); b.clear(); };
+        static constexpr bool can_grow = sequence::can_grow<Bits, Store>();
 
         // The middle column: growth inside a capacity the type carries, whose counterparts disagree on name shape.
         static constexpr bool has_static_capacity = can_grow and bits_type::has_static_capacity;
 
         using window_ptr = sequence::window_ptr<Bits, has_static_window>;
 
-        using members_type = sequence::members_t<Bits, Store, W, Derived, E>;
+        using members_type = sequence::sizes_t<Bits, Store, W, Derived, E>;
         using members_type::m_bits;
 
         // One accessor: self.m_bits propagates the owner's const, *self.m_bits keeps the view shallow.
@@ -225,20 +341,20 @@ class sequence_adaptor : public sequence::members_t<Bits, Store, W, Derived, E>
         }
 
         // The window's constructor, which first, last and subspan call and nothing else does.
-        [[nodiscard]] constexpr sequence_adaptor(Bits* ptr, std::size_t offset, std::size_t size) noexcept
+        [[nodiscard]] constexpr sequence_adaptor(Bits* ptr, std::size_t offset, std::size_t count) noexcept
                 requires is_window
-                : members_type(std::in_place, make_window(ptr, offset, size))
+                : members_type(std::in_place, make_window(ptr, offset, count))
         {}
 
         // A static window is handed the count it already has, and asserts that the two agree.
-        [[nodiscard]] static constexpr auto make_window(Bits* ptr, std::size_t offset, std::size_t size [[maybe_unused]]) noexcept
+        [[nodiscard]] static constexpr auto make_window(Bits* ptr, std::size_t offset, std::size_t count [[maybe_unused]]) noexcept
                 -> window_ptr
         {
                 if constexpr (has_static_window) {
-                        assert(size == E);
+                        assert(count == E);
                         return {.ptr = ptr, .offset = offset, .size = {}};
                 } else {
-                        return {.ptr = ptr, .offset = offset, .size = size};
+                        return {.ptr = ptr, .offset = offset, .size = count};
                 }
         }
 
@@ -776,43 +892,9 @@ public:
         }
 
         // capacity; max_size() is the positions there are to hold, which only a growing one can extend.
-        [[nodiscard]] constexpr auto empty() const noexcept
-                -> bool
-        {
-                return size() == 0UZ;
-        }
-
-        [[nodiscard]] constexpr auto size() const noexcept
-                -> size_type
-        {
-                if constexpr (has_static_window) {
-                        return E;
-                } else if constexpr (is_window) {
-                        return m_bits.size;
-                } else {
-                        return bits().size();
-                }
-        }
-
-        // [inplace.vector.capacity] makes max_size() a static member, and it can be one: the capacity is the type's.
-        [[nodiscard]] static constexpr auto max_size() noexcept
-                -> size_type
-                requires has_static_capacity
-        {
-                return bits_type::static_capacity();
-        }
-
-        // std::vector<bool>'s answer where this reading can grow, and the width itself where it cannot.
-        [[nodiscard]] constexpr auto max_size() const noexcept
-                -> size_type
-                requires (not has_static_capacity)
-        {
-                if constexpr (can_grow) {
-                        return m_bits.addressable_max_size();
-                } else {
-                        return size();
-                }
-        }
+        using members_type::empty;
+        using members_type::max_size;
+        using members_type::size;
 
         // The sequence reading's aggregates, with the bool [alg.count] and [alg.all.of] give them.
         [[nodiscard]] constexpr auto count(value_type value = true) const noexcept
@@ -910,7 +992,7 @@ public:
         constexpr auto try_emplace_back(Args&&... args)
                 -> std::optional<reference>
         {
-                if (size() == capacity()) {
+                if (size() == members_type::capacity()) {
                         return std::nullopt;
                 }
                 return emplace_back(std::forward<Args>(args)...);
@@ -931,7 +1013,7 @@ public:
         constexpr auto unchecked_emplace_back(Args&&... args)
                 -> reference
         {
-                assert(size() < capacity());
+                assert(size() < members_type::capacity());
                 return emplace_back(std::forward<Args>(args)...);
         }
 
@@ -942,20 +1024,12 @@ public:
                 return unchecked_emplace_back(value);
         }
 
-        // The middle column's three, static as [inplace.vector.capacity] spells them ([over.load] admits both).
-        [[nodiscard]] static constexpr auto capacity() noexcept
-                -> size_type
-                requires has_static_capacity
-        {
-                return bits_type::static_capacity();
-        }
-
         // Static, and throwing rather than growing: past the capacity is [inplace.vector.capacity]'s bad_alloc.
         static constexpr auto reserve(size_type n)
                 -> void
                 requires has_static_capacity
         {
-                if (n > capacity()) {
+                if (n > members_type::capacity()) {
                         throw std::bad_alloc();
                 }
         }
@@ -971,13 +1045,6 @@ public:
                 requires can_grow and (not has_static_capacity) and requires (bits_type& b) { b.reserve(n); }
         {
                 m_bits.reserve(bits_type::check_addressable_width(n));
-        }
-
-        [[nodiscard]] constexpr auto capacity() const noexcept
-                -> size_type
-                requires can_grow and (not has_static_capacity) and requires (bits_type const& b) { b.capacity(); }
-        {
-                return m_bits.capacity();
         }
 
         constexpr auto shrink_to_fit()
@@ -1273,12 +1340,12 @@ private:
                 return static_cast<size_type>(position - cbegin());
         }
 
-        static constexpr auto out_of_range(std::size_t n, std::size_t size, std::source_location const& loc = std::source_location::current())
+        static constexpr auto out_of_range(std::size_t n, std::size_t width, std::source_location const& loc = std::source_location::current())
         {
                 return std::out_of_range(
                         std::format(
                                 "{}:{}:{}: exception: ‘{}‘: argument ‘n‘ is out of range [{} >= {}]",
-                                loc.file_name(), loc.line(), loc.column(), loc.function_name(), n, size
+                                loc.file_name(), loc.line(), loc.column(), loc.function_name(), n, width
                         )
                 );
         }

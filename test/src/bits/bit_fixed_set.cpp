@@ -11,16 +11,17 @@
 #include <xstd/bits/bit/bit_convert.hpp>  // bit_convert
 #include <xstd/bits/bit_fixed_set.hpp>    // bit_fixed_set
 #include <xstd/bits/from_bit_storage.hpp> // from_bit_storage
-#include <boost/test/unit_test.hpp>       // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <boost/test/unit_test.hpp>       // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <array>                          // array
 #include <bitset>                         // bitset
-#include <concepts>                       // regular, totally_ordered
+#include <concepts>                       // regular, same_as, totally_ordered
 #include <cstddef>                        // size_t
-#include <cstdint>                        // uint32_t, uint64_t
+#include <cstdint>                        // uint32_t, uint64_t, uint8_t
 #include <iterator>                       // bidirectional_iterator
-#include <ranges>                         // bidirectional_range, iota, to
+#include <ranges>                         // bidirectional_range, iota, size, to
 #include <stdexcept>                      // out_of_range
-#include <type_traits>                    // is_constructible_v, is_convertible_v
+#include <type_traits>                    // integral_constant, is_constructible_v, is_convertible_v, is_member_function_pointer_v
+#include <utility>                        // declval
 
 BOOST_AUTO_TEST_SUITE(BitFiniteSet)
 
@@ -66,6 +67,30 @@ constexpr bool has_allocator_type = requires { typename X::allocator_type; };
 BOOST_AUTO_TEST_CASE_TEMPLATE(ItHasNoAllocatorType, T, Types)
 {
         static_assert(not has_allocator_type<T>);
+}
+
+// The positions there are to hold are the type's, so max_size is a constant; size() and empty() count the keys.
+BOOST_AUTO_TEST_CASE(MaxSizeIsAConstantOfTheTypeAndTheCountsAreFunctions)
+{
+        using T = xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 9>;
+        static_assert(std::same_as<decltype(T::max_size), std::integral_constant<std::size_t, 9> const>);
+        static_assert(std::same_as<decltype(xstd::bit_fixed_set<0>::max_size), std::integral_constant<std::size_t, 0> const>);
+        // NOLINTBEGIN(readability-static-accessed-through-instance): the call through an object is what is checked.
+        static_assert(std::same_as<decltype(std::declval<T const&>().max_size()), T::size_type>);
+        static_assert(noexcept(std::declval<T const&>().max_size()));
+        static_assert(std::is_member_function_pointer_v<decltype(&T::size)>);
+        static_assert(std::is_member_function_pointer_v<decltype(&T::empty)>);
+
+        // A reference of unknown origin still names a constant, which a member function's answer is not.
+        auto const through_reference = [](T const& a) -> void {
+                static_assert(a.max_size == 9UZ);
+        };
+        auto const a = T({1UZ, 8UZ});
+        through_reference(a);
+        BOOST_CHECK_EQUAL(a.max_size(), 9UZ);
+        BOOST_CHECK_EQUAL(std::ranges::size(a), 2UZ);
+        BOOST_CHECK(not a.empty());
+        // NOLINTEND(readability-static-accessed-through-instance)
 }
 
 // Total lookups, swept over every width because no single one exposed all six operations.
@@ -247,7 +272,7 @@ BOOST_AUTO_TEST_CASE(AStrongIndexWithItsOwnTraitsKeysItAsStdSetIsKeyed)
         static_assert(std::same_as<X::key_type, test::set::strong_index>);
         static_assert(std::same_as<X::key_traits_type, traits>);
         static_assert(std::same_as<std::iter_value_t<X::iterator>, test::set::strong_index>);
-        static_assert(X().max_size() == 20UZ);
+        static_assert(X::max_size() == 20UZ);
 
         test::set::agrees_with_std_set_of_strong_indices<X>({}, 10UZ, 30UZ);
         test::set::agrees_with_std_set_of_strong_indices<X>({10UZ, 17UZ, 18UZ, 29UZ}, 10UZ, 30UZ);
