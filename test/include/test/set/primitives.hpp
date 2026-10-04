@@ -76,7 +76,6 @@ constexpr auto nested_types()
         static_assert(not std::indirectly_writable<typename X::const_iterator, Key>); // [associative.reqmts.general]/6
 }
 
-// A set's comparator, named where no typename is asked for.
 template<class X>
 using key_compare_t = X::key_compare;
 
