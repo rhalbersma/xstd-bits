@@ -6,10 +6,10 @@
 #ifndef XSTD_BITS_DETAIL_SEQUENCE_ADAPTOR_HPP
 #define XSTD_BITS_DETAIL_SEQUENCE_ADAPTOR_HPP
 
-#include <xstd/bits/bit_storage.hpp>                         // bit_storage
+#include <xstd/bits/bit_blocks.hpp>                          // bit_blocks
 #include <xstd/bits/detail/adapted_bits.hpp>                 // adapted_bits
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_base_type, allocator_param_t, has_allocator_v
-#include <xstd/bits/detail/bit_container.hpp>                // bit_container, bit_container_type
+#include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container, bit_block_container_type
 #include <xstd/bits/detail/borrowed_bits.hpp>                // borrow_bits, borrowable_block, borrowable_blocks, borrowed_bits_t
 #include <xstd/bits/detail/comparisons.hpp>                  // sequence_three_way
 #include <xstd/bits/detail/functor.hpp>                      // invoke_continues
@@ -19,7 +19,7 @@
 #include <xstd/bits/detail/random_access.hpp>                // random_access_bit_iterator, random_access_bit_reference
 #include <xstd/bits/detail/shift.hpp>                        // shl, shr
 #include <xstd/bits/detail/storage_ptr.hpp>                  // storage_ref_t
-#include <xstd/bits/from_bit_storage.hpp>                    // from_bit_storage_t
+#include <xstd/bits/from_blocks.hpp>                         // from_blocks_t
 #include <xstd/misc/type_traits/conditional_data_member.hpp> // XSTD_NO_UNIQUE_ADDRESS, conditional_data_member_t
 #include <xstd/misc/type_traits/empty_base_type.hpp>         // empty_base_type
 #include <boost/container_hash/is_range.hpp>                 // is_range
@@ -45,7 +45,7 @@
 #include <type_traits>                                       // bool_constant, conditional_t, false_type, integral_constant, is_nothrow_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
 #include <utility>                                           // as_const, declval, forward, in_place, move, pair
 
-// The sequence reading, [array] over a bit_container, owning it or referring to it.
+// The sequence reading, [array] over a bit_block_container, owning it or referring to it.
 namespace xstd::bits::detail {
 
 namespace sequence {
@@ -142,7 +142,7 @@ struct window_ptr
 
 } // namespace sequence
 
-template<bit_container_type Bits, storage Store = storage::owned, window W = window::all, class Derived = void, std::size_t E = std::dynamic_extent>
+template<bit_block_container_type Bits, storage Store = storage::owned, window W = window::all, class Derived = void, std::size_t E = std::dynamic_extent>
 class sequence_adaptor;
 
 // The window a view hands back, which each public view specializes; the vehicle used directly windows itself.
@@ -294,7 +294,7 @@ using sizes_t = std::conditional_t<
 
 } // namespace sequence
 
-template<bit_container_type Bits, storage Store, window W, class Derived, std::size_t E>
+template<bit_block_container_type Bits, storage Store, window W, class Derived, std::size_t E>
 class sequence_adaptor : public sequence::sizes_t<Bits, Store, W, Derived, E>
 {
         static constexpr bool is_owner  = owns(Store);
@@ -380,7 +380,7 @@ class sequence_adaptor : public sequence::sizes_t<Bits, Store, W, Derived, E>
         friend Derived;
 
         // A view refers into this owner's storage, and only a reading that can view it is named.
-        template<bit_container_type, storage, window, class, std::size_t>
+        template<bit_block_container_type, storage, window, class, std::size_t>
         friend class sequence_adaptor;
 
         // The free functions over every reading, bit_convert among them, reach the storage through this one door.
@@ -478,20 +478,20 @@ public:
         }
 
         // flat_set's adopting constructor at a run-time width: the blocks move in, every bit of them a position.
-        [[nodiscard]] constexpr sequence_adaptor(xstd::from_bit_storage_t, bits_type::block_container_type blocks) noexcept(std::is_nothrow_move_constructible_v<typename bits_type::block_container_type>)
+        [[nodiscard]] constexpr sequence_adaptor(xstd::from_blocks_t, bits_type::block_container_type blocks) noexcept(std::is_nothrow_move_constructible_v<typename bits_type::block_container_type>)
                 requires is_owner and bits_type::has_stored_size
-                : members_type(std::in_place, xstd::from_bit_storage, std::move(blocks))
+                : members_type(std::in_place, xstd::from_blocks, std::move(blocks))
         {}
 
-        [[nodiscard]] constexpr sequence_adaptor(xstd::from_bit_storage_t, bits_type::block_container_type blocks, allocator_param const& alloc)
+        [[nodiscard]] constexpr sequence_adaptor(xstd::from_blocks_t, bits_type::block_container_type blocks, allocator_param const& alloc)
                 requires can_grow and bits_type::has_stored_size and has_allocator
-                : members_type(std::in_place, xstd::from_bit_storage, std::move(blocks), alloc)
+                : members_type(std::in_place, xstd::from_blocks, std::move(blocks), alloc)
         {}
 
         // Blocks that are bit storage, read as this sequence's bools; the tag says they are bits and not elements.
         template<class B>
-                requires is_owner and xstd::bit_storage<B> and bits_type::template
-        exchanges_bits<B> [[nodiscard]] constexpr sequence_adaptor(xstd::from_bit_storage_t, B const& b) noexcept
+                requires is_owner and xstd::bit_blocks<B> and bits_type::template
+        exchanges_bits<B> [[nodiscard]] constexpr sequence_adaptor(xstd::from_blocks_t, B const& b) noexcept
         {
                 m_bits.assign_bits(b);
         }

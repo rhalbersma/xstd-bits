@@ -6,16 +6,16 @@
 #ifndef TEST_BIT_EXCHANGE_HPP
 #define TEST_BIT_EXCHANGE_HPP
 
-#include <xstd/bits/bit/bit_convert.hpp>  // bit_convert
-#include <xstd/bits/from_bit_storage.hpp> // from_bit_storage
-#include <concepts>                       // same_as
+#include <xstd/bits/bit/bit_convert.hpp> // bit_convert
+#include <xstd/bits/from_blocks.hpp>     // from_blocks
+#include <concepts>                      // same_as
 
 namespace test {
 
 // The exchanges asked as templates: a non-dependent requirement hard-errors instead of failing.
 template<class Reading, class B>
 concept exchanges_from_bits = requires (B const& b) {
-        { Reading(xstd::from_bit_storage, b) } -> std::same_as<Reading>;
+        { Reading(xstd::from_blocks, b) } -> std::same_as<Reading>;
 };
 
 // A conversion into Reading, which no view answers.

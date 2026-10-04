@@ -6,21 +6,21 @@
 #ifndef XSTD_BITS_DETAIL_BORROWED_BITS_HPP
 #define XSTD_BITS_DETAIL_BORROWED_BITS_HPP
 
-#include <xstd/bits/detail/bit_container.hpp>      // bit_container
-#include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
-#include <cstddef>                                 // size_t
-#include <memory>                                  // addressof
-#include <ranges>                                  // borrowed_range, contiguous_range, range_value_t, sized_range
-#include <span>                                    // dynamic_extent, span
-#include <type_traits>                             // conditional_t, is_const_v, is_lvalue_reference_v, remove_const_t, remove_reference_t
-#include <utility>                                 // declval
+#include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
+#include <xstd/ints/concepts/unsigned_integer.hpp>  // unsigned_integer
+#include <cstddef>                                  // size_t
+#include <memory>                                   // addressof
+#include <ranges>                                   // borrowed_range, contiguous_range, range_value_t, sized_range
+#include <span>                                     // dynamic_extent, span
+#include <type_traits>                              // conditional_t, is_const_v, is_lvalue_reference_v, remove_const_t, remove_reference_t
+#include <utility>                                  // declval
 
 // Bits in blocks someone else owns, which bit_set_view and bit_span hold by value and read and write in place.
 namespace xstd::bits::detail {
 
 // Every bit of the blocks is a position, bit n of block i being position i * digits + n; the width is the blocks'.
 template<xstd::unsigned_integer Block, std::size_t Extent = std::dynamic_extent>
-using borrowed_bits = bit_container<std::span<Block, Extent>>;
+using borrowed_bits = bit_block_container<std::span<Block, Extent>>;
 
 // The span over a range of blocks, at the extent its type carries: an array's is static, a vector's is not.
 template<class R>

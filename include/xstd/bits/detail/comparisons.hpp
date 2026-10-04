@@ -6,20 +6,20 @@
 #ifndef XSTD_BITS_DETAIL_COMPARISONS_HPP
 #define XSTD_BITS_DETAIL_COMPARISONS_HPP
 
-#include <xstd/bits/detail/bit_container.hpp> // bit_container_type
-#include <xstd/bits/detail/intrin.hpp>        // countr_zero
-#include <xstd/bits/detail/pred.hpp>          // intersects
-#include <xstd/bits/detail/shift.hpp>         // shl
-#include <algorithm>                          // equal, max, min
-#include <compare>                            // strong_ordering
-#include <cstddef>                            // ptrdiff_t, size_t
-#include <ranges>                             // begin
+#include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container_type
+#include <xstd/bits/detail/intrin.hpp>              // countr_zero
+#include <xstd/bits/detail/pred.hpp>                // intersects
+#include <xstd/bits/detail/shift.hpp>               // shl
+#include <algorithm>                                // equal, max, min
+#include <compare>                                  // strong_ordering
+#include <cstddef>                                  // ptrdiff_t, size_t
+#include <ranges>                                   // begin
 
-// Each reading's equality and ordering over a bit_container, spelled in its primitives and named for the reading.
+// Each reading's equality and ordering over a bit_block_container, spelled in its primitives and named for the reading.
 namespace xstd::bits::detail {
 
 // The set reading's equality, where width is capacity: neither value being the subject, it takes both.
-template<bit_container_type Bits>
+template<bit_block_container_type Bits>
 [[nodiscard]] constexpr auto set_equal(Bits const& x, Bits const& y) noexcept
         -> bool
 {
@@ -39,7 +39,7 @@ template<bit_container_type Bits>
 }
 
 // The set ordering across two widths, turning on the lowest position at which the two disagree.
-template<bit_container_type Bits>
+template<bit_block_container_type Bits>
 [[nodiscard]] constexpr auto padded_set_three_way(Bits const& x, Bits const& y) noexcept
         -> std::strong_ordering
 {
@@ -58,7 +58,7 @@ template<bit_container_type Bits>
 }
 
 // The set reading a block at a time: std::lexicographical_compare_three_way over the ascending positions.
-template<bit_container_type Bits>
+template<bit_block_container_type Bits>
 [[nodiscard]] constexpr auto set_three_way(Bits const& x [[maybe_unused]], Bits const& y [[maybe_unused]]) noexcept
         -> std::strong_ordering
 {
@@ -87,7 +87,7 @@ template<bit_container_type Bits>
 }
 
 // The set ordering over descending positions, [associative.reqmts]' lexicographic one: the masks as unsigned numbers.
-template<bit_container_type Bits>
+template<bit_block_container_type Bits>
 [[nodiscard]] constexpr auto numeric_three_way(Bits const& x, Bits const& y) noexcept
         -> std::strong_ordering
 {
@@ -102,7 +102,7 @@ template<bit_container_type Bits>
 }
 
 // The sequence ordering across two widths: position 0 is the first element, so the lowest disagreement decides alone.
-template<bit_container_type Bits>
+template<bit_block_container_type Bits>
 [[nodiscard]] constexpr auto padded_sequence_three_way(Bits const& x, Bits const& y) noexcept
         -> std::strong_ordering
 {
@@ -121,7 +121,7 @@ template<bit_container_type Bits>
 }
 
 // Bools from index 0 a block at a time, for any reading of that order: the holder of the lowest difference is greater.
-template<bit_container_type Bits>
+template<bit_block_container_type Bits>
 [[nodiscard]] constexpr auto sequence_three_way(Bits const& x [[maybe_unused]], Bits const& y [[maybe_unused]]) noexcept
         -> std::strong_ordering
 {

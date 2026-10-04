@@ -6,16 +6,16 @@
 #ifndef XSTD_BITS_DETAIL_BIDIRECTIONAL_HPP
 #define XSTD_BITS_DETAIL_BIDIRECTIONAL_HPP
 
-#include <xstd/bits/bit_key_traits.hpp>       // bit_key_traits
-#include <xstd/bits/detail/bit_container.hpp> // bit_container_type
-#include <xstd/bits/detail/ownership.hpp>     // storage
-#include <xstd/bits/detail/storage_ptr.hpp>   // storage_ptr_t
-#include <xstd/bits/detail/zero_width.hpp>    // zero_width
-#include <cassert>                            // assert
-#include <cstddef>                            // ptrdiff_t, size_t
-#include <format>                             // formatter
-#include <iterator>                           // bidirectional_iterator_tag
-#include <type_traits>                        // is_class_v, is_convertible_v, is_nothrow_constructible_v, remove_const_t
+#include <xstd/bits/bit_key_traits.hpp>             // bit_key_traits
+#include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container_type
+#include <xstd/bits/detail/ownership.hpp>           // storage
+#include <xstd/bits/detail/storage_ptr.hpp>         // storage_ptr_t
+#include <xstd/bits/detail/zero_width.hpp>          // zero_width
+#include <cassert>                                  // assert
+#include <cstddef>                                  // ptrdiff_t, size_t
+#include <format>                                   // formatter
+#include <iterator>                                 // bidirectional_iterator_tag
+#include <type_traits>                              // is_class_v, is_convertible_v, is_nothrow_constructible_v, remove_const_t
 
 // The iterator is the primitive: a pointer and a position, reaching the bits through the storage alone.
 namespace xstd::bits::detail {
@@ -33,7 +33,7 @@ class bidirectional_bit_iterator;
 template<class Bits, class Key = std::size_t, class KeyTraits = bit_key_traits<Key>, direction Direction = direction::ascending>
 class bidirectional_bit_reference;
 
-template<bit_container_type Bits, storage Store, class Derived, class Key, class KeyTraits, class Compare>
+template<bit_block_container_type Bits, storage Store, class Derived, class Key, class KeyTraits, class Compare>
 class set_adaptor;
 
 // A position in the set reading, read-only whatever Bits' qualification: a key is nothing to write through.
@@ -45,7 +45,7 @@ class bidirectional_bit_iterator
         storage_ptr_t<bits_type const> m_ptr{};
         std::size_t m_idx{};
 
-        template<bit_container_type B, storage S, class D, class K, class T, class C>
+        template<bit_block_container_type B, storage S, class D, class K, class T, class C>
         friend class set_adaptor;
 
         friend class bidirectional_bit_reference<Bits, Key, KeyTraits, Direction>;
@@ -147,7 +147,7 @@ class bidirectional_bit_reference
         storage_ptr_t<bits_type const> m_ptr;
         std::size_t m_idx;
 
-        template<bit_container_type B, storage S, class D, class K, class T, class C>
+        template<bit_block_container_type B, storage S, class D, class K, class T, class C>
         friend class set_adaptor;
 
         friend class bidirectional_bit_iterator<Bits, Key, KeyTraits, Direction>;

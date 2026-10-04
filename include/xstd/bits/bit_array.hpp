@@ -6,33 +6,33 @@
 #ifndef XSTD_BITS_BIT_ARRAY_HPP
 #define XSTD_BITS_BIT_ARRAY_HPP
 
-#include <xstd/bits/bit_storage.hpp>               // bit_storage_extent_v
-#include <xstd/bits/detail/bit_container.hpp>      // bit_container, num_blocks_v
-#include <xstd/bits/detail/ownership.hpp>          // storage, window
-#include <xstd/bits/detail/sequence_adaptor.hpp>   // sequence_adaptor
-#include <xstd/bits/from_bit_storage.hpp>          // from_bit_storage, from_bit_storage_t
-#include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
-#include <xstd/ints/memory.hpp>                    // align_up
-#include <boost/container_hash/is_range.hpp>       // is_range
-#include <boost/container_hash/is_tuple_like.hpp>  // is_tuple_like
-#include <algorithm>                               // copy
-#include <array>                                   // array
-#include <concepts>                                // constructible_from, same_as
-#include <cstddef>                                 // size_t
-#include <functional>                              // hash
-#include <initializer_list>                        // initializer_list
-#include <limits>                                  // numeric_limits
-#include <tuple>                                   // tuple_element, tuple_size
-#include <type_traits>                             // false_type, remove_cv_t
-#include <utility>                                 // move
+#include <xstd/bits/bit_blocks.hpp>                 // bit_blocks_extent_v
+#include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container, num_blocks_v
+#include <xstd/bits/detail/ownership.hpp>           // storage, window
+#include <xstd/bits/detail/sequence_adaptor.hpp>    // sequence_adaptor
+#include <xstd/bits/from_blocks.hpp>                // from_blocks, from_blocks_t
+#include <xstd/ints/concepts/unsigned_integer.hpp>  // unsigned_integer
+#include <xstd/ints/memory.hpp>                     // align_up
+#include <boost/container_hash/is_range.hpp>        // is_range
+#include <boost/container_hash/is_tuple_like.hpp>   // is_tuple_like
+#include <algorithm>                                // copy
+#include <array>                                    // array
+#include <concepts>                                 // constructible_from, same_as
+#include <cstddef>                                  // size_t
+#include <functional>                               // hash
+#include <initializer_list>                         // initializer_list
+#include <limits>                                   // numeric_limits
+#include <tuple>                                    // tuple_element, tuple_size
+#include <type_traits>                              // false_type, remove_cv_t
+#include <utility>                                  // move
 
 namespace xstd {
 
 // The packed std::array<bool, N>, named after the container it packs.
 template<xstd::unsigned_integer Block, std::size_t N>
-class basic_bit_array : public bits::detail::sequence_adaptor<bits::detail::bit_container<std::array<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_array<Block, N>>
+class basic_bit_array : public bits::detail::sequence_adaptor<bits::detail::bit_block_container<std::array<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_array<Block, N>>
 {
-        using base_type = bits::detail::sequence_adaptor<bits::detail::bit_container<std::array<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_array<Block, N>>;
+        using base_type = bits::detail::sequence_adaptor<bits::detail::bit_block_container<std::array<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_array<Block, N>>;
 
 public:
         using typename base_type::value_type;
@@ -55,9 +55,9 @@ public:
 
         // Not in [array]: blocks that are bit storage, read as this sequence's bools.
         template<class B>
-                requires std::constructible_from<base_type, from_bit_storage_t, B const&>
-        [[nodiscard]] constexpr basic_bit_array(from_bit_storage_t, B const& b) noexcept
-                : base_type(from_bit_storage, b)
+                requires std::constructible_from<base_type, from_blocks_t, B const&>
+        [[nodiscard]] constexpr basic_bit_array(from_blocks_t, B const& b) noexcept
+                : base_type(from_blocks, b)
         {}
 
         using base_type::operator=;
@@ -75,11 +75,11 @@ using bit_array = basic_bit_array<std::size_t, N>;
 
 // The width of one block.
 template<xstd::unsigned_integer Block>
-basic_bit_array(from_bit_storage_t, Block) -> basic_bit_array<Block, bit_storage_extent_v<Block>>;
+basic_bit_array(from_blocks_t, Block) -> basic_bit_array<Block, bit_blocks_extent_v<Block>>;
 
 // The width of an array of blocks, zero blocks included, as [span.deduct] takes an array's bound.
 template<xstd::unsigned_integer Block, std::size_t K>
-basic_bit_array(from_bit_storage_t, std::array<Block, K>) -> basic_bit_array<Block, bit_storage_extent_v<std::array<Block, K>>>;
+basic_bit_array(from_blocks_t, std::array<Block, K>) -> basic_bit_array<Block, bit_blocks_extent_v<std::array<Block, K>>>;
 
 // [array.creation]'s to_array, of bits: a built-in array names no block type, so the default one is taken.
 template<class T, std::size_t N>

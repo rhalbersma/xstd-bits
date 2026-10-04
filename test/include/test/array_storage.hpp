@@ -6,15 +6,15 @@
 #ifndef TEST_ARRAY_STORAGE_HPP
 #define TEST_ARRAY_STORAGE_HPP
 
-#include <xstd/bits/detail/bit_container.hpp> // bit_container, num_blocks_v
-#include <array>                              // array
-#include <cstddef>                            // size_t
+#include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container, num_blocks_v
+#include <array>                                    // array
+#include <cstddef>                                  // size_t
 
 namespace test {
 
 // The storage of a width fixed at compile time, taking <class Block, size_t N> as graded_extents instantiates it.
 template<class Block, std::size_t N>
-using array_storage = xstd::bits::detail::bit_container<std::array<Block, xstd::bits::detail::num_blocks_v<Block, N>>, N>;
+using array_storage = xstd::bits::detail::bit_block_container<std::array<Block, xstd::bits::detail::num_blocks_v<Block, N>>, N>;
 
 } // namespace test
 

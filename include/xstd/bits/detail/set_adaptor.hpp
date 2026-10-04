@@ -6,12 +6,12 @@
 #ifndef XSTD_BITS_DETAIL_SET_ADAPTOR_HPP
 #define XSTD_BITS_DETAIL_SET_ADAPTOR_HPP
 
+#include <xstd/bits/bit_blocks.hpp>                  // bit_blocks
 #include <xstd/bits/bit_key_traits.hpp>              // bit_key_traits
-#include <xstd/bits/bit_storage.hpp>                 // bit_storage
 #include <xstd/bits/detail/adapted_bits.hpp>         // adapted_bits
 #include <xstd/bits/detail/allocator_base_type.hpp>  // allocator_base_type, allocator_param_t, has_allocator_v
 #include <xstd/bits/detail/bidirectional.hpp>        // bidirectional_bit_iterator, bidirectional_bit_reference, direction
-#include <xstd/bits/detail/bit_container.hpp>        // bit_container, bit_container_type
+#include <xstd/bits/detail/bit_block_container.hpp>  // bit_block_container, bit_block_container_type
 #include <xstd/bits/detail/borrowed_bits.hpp>        // borrow_bits, borrowable_block, borrowable_blocks, borrowed_bits_t
 #include <xstd/bits/detail/comparisons.hpp>          // numeric_three_way, set_equal, set_three_way
 #include <xstd/bits/detail/functor.hpp>              // decay_copy
@@ -21,7 +21,7 @@
 #include <xstd/bits/detail/shift.hpp>                // shl, shr
 #include <xstd/bits/detail/storage_ptr.hpp>          // storage_ref_t
 #include <xstd/bits/detail/zero_width.hpp>           // zero_width
-#include <xstd/bits/from_bit_storage.hpp>            // from_bit_storage_t
+#include <xstd/bits/from_blocks.hpp>                 // from_blocks_t
 #include <xstd/misc/type_traits/empty_base_type.hpp> // empty_base_type
 #include <boost/container_hash/is_range.hpp>         // is_range
 #include <boost/hash2/hash_append.hpp>               // hash_append_tag
@@ -41,7 +41,7 @@
 #include <type_traits>                               // conditional_t, false_type, integral_constant, is_invocable_r_v, is_nothrow_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
 #include <utility>                                   // declval, forward, in_place, move, pair
 
-// The set reading, [set] over a bit_container, owning it or referring to it.
+// The set reading, [set] over a bit_block_container, owning it or referring to it.
 namespace xstd::bits::detail {
 
 namespace set {
@@ -132,7 +132,7 @@ concept transparent = requires { typename Compare::is_transparent; };
 
 } // namespace set
 
-template<bit_container_type Bits, storage Store = storage::owned, class Derived = void, class Key = std::size_t, class KeyTraits = bit_key_traits<Key>, class Compare = std::less<Key>>
+template<bit_block_container_type Bits, storage Store = storage::owned, class Derived = void, class Key = std::size_t, class KeyTraits = bit_key_traits<Key>, class Compare = std::less<Key>>
 class set_adaptor;
 
 namespace set {
@@ -200,7 +200,7 @@ using sizes_t = std::conditional_t<
 
 } // namespace set
 
-template<bit_container_type Bits, storage Store, class Derived, class Key, class KeyTraits, class Compare>
+template<bit_block_container_type Bits, storage Store, class Derived, class Key, class KeyTraits, class Compare>
 class set_adaptor : public set::sizes_t<Bits, Store, Derived, Key, KeyTraits, Compare>
 {
         static_assert(set::key_direction<Compare, Key>);
@@ -228,7 +228,7 @@ class set_adaptor : public set::sizes_t<Bits, Store, Derived, Key, KeyTraits, Co
         friend Derived;
 
         // A view refers into this owner's storage, and only a reading that can view it is named.
-        template<bit_container_type, storage, class, class, class, class>
+        template<bit_block_container_type, storage, class, class, class, class>
         friend class set_adaptor;
 
         // The free functions over every reading, bit_convert among them, reach the storage through this one door.
@@ -385,20 +385,20 @@ public:
         {}
 
         // flat_set's adopting constructor at a run-time width: the blocks move in, every bit of them a position.
-        [[nodiscard]] constexpr set_adaptor(xstd::from_bit_storage_t, bits_type::block_container_type blocks) noexcept(std::is_nothrow_move_constructible_v<typename bits_type::block_container_type>)
+        [[nodiscard]] constexpr set_adaptor(xstd::from_blocks_t, bits_type::block_container_type blocks) noexcept(std::is_nothrow_move_constructible_v<typename bits_type::block_container_type>)
                 requires is_owner and bits_type::has_stored_size
-                : members_type(std::in_place, xstd::from_bit_storage, std::move(blocks))
+                : members_type(std::in_place, xstd::from_blocks, std::move(blocks))
         {}
 
-        [[nodiscard]] constexpr set_adaptor(xstd::from_bit_storage_t, bits_type::block_container_type blocks, allocator_param const& alloc)
+        [[nodiscard]] constexpr set_adaptor(xstd::from_blocks_t, bits_type::block_container_type blocks, allocator_param const& alloc)
                 requires is_owner and bits_type::has_stored_size and has_allocator
-                : members_type(std::in_place, xstd::from_bit_storage, std::move(blocks), alloc)
+                : members_type(std::in_place, xstd::from_blocks, std::move(blocks), alloc)
         {}
 
         // Blocks that are bit storage, read as this set's positions; the tag says the blocks are bits and not keys.
         template<class B>
-                requires is_owner and xstd::bit_storage<B> and Bits::template
-        exchanges_bits<B> [[nodiscard]] constexpr set_adaptor(xstd::from_bit_storage_t, B const& b) noexcept
+                requires is_owner and xstd::bit_blocks<B> and Bits::template
+        exchanges_bits<B> [[nodiscard]] constexpr set_adaptor(xstd::from_blocks_t, B const& b) noexcept
         {
                 m_bits.assign_bits(b);
         }
@@ -448,7 +448,7 @@ public:
                 return set_equal(x.bits(), y.bits());
         }
 
-        // The blockwise set ordering where the storage is a bit_container, the standard algorithm otherwise.
+        // The blockwise set ordering where the storage is a bit_block_container, the standard algorithm otherwise.
         [[nodiscard]] friend constexpr auto operator<=>(set_adaptor const& x, set_adaptor const& y) noexcept
                 -> std::strong_ordering
         {

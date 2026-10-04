@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_DETAIL_BIT_LAYOUT_HPP
 #define XSTD_BITS_DETAIL_BIT_LAYOUT_HPP
 
-#include <xstd/bits/bit_storage.hpp>               // owned_bit_storage
+#include <xstd/bits/bit_blocks.hpp>                // owned_bit_blocks
 #include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
 #include <xstd/ints/limits.hpp>                    // numeric_limits
 #include <array>                                   // array
@@ -48,9 +48,9 @@ concept block_size_is_constant = requires {
 
 template<class B, std::size_t N>
 concept block_range_source =
-        // Contiguous first: owned_bit_storage asks constructible_from, which re-enters this very constraint.
+        // Contiguous first: owned_bit_blocks asks constructible_from, which re-enters this very constraint.
         std::ranges::contiguous_range<B> and
-        xstd::owned_bit_storage<B> and
+        xstd::owned_bit_blocks<B> and
         std::default_initializable<B> and
         block_size_is_constant<B> and
         B().size() * block_digits<B> >= N;

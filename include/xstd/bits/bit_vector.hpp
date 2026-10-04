@@ -6,10 +6,10 @@
 #ifndef XSTD_BITS_BIT_VECTOR_HPP
 #define XSTD_BITS_BIT_VECTOR_HPP
 
-#include <xstd/bits/detail/bit_container.hpp>                // bit_container
+#include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container
 #include <xstd/bits/detail/ownership.hpp>                    // storage, window
 #include <xstd/bits/detail/sequence_adaptor.hpp>             // sequence_adaptor
-#include <xstd/bits/from_bit_storage.hpp>                    // from_bit_storage, from_bit_storage_t
+#include <xstd/bits/from_blocks.hpp>                         // from_blocks, from_blocks_t
 #include <xstd/ints/concepts/unsigned_integer.hpp>           // unsigned_integer
 #include <xstd/misc/concepts/container_compatible_range.hpp> // container_compatible_range
 #include <xstd/misc/concepts/simple_allocator.hpp>           // simple_allocator
@@ -29,9 +29,9 @@ namespace xstd {
 
 // The sequence reading over a heap of blocks: std::vector<bool> under the name Hinnant proposed for it.
 template<xstd::unsigned_integer Block, class Allocator = std::allocator<Block>>
-class basic_bit_vector : public bits::detail::sequence_adaptor<bits::detail::bit_container<std::vector<Block, Allocator>>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_vector<Block, Allocator>>
+class basic_bit_vector : public bits::detail::sequence_adaptor<bits::detail::bit_block_container<std::vector<Block, Allocator>>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_vector<Block, Allocator>>
 {
-        using base_type = bits::detail::sequence_adaptor<bits::detail::bit_container<std::vector<Block, Allocator>>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_vector<Block, Allocator>>;
+        using base_type = bits::detail::sequence_adaptor<bits::detail::bit_block_container<std::vector<Block, Allocator>>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_vector<Block, Allocator>>;
 
 public:
         using typename base_type::allocator_type;
@@ -77,12 +77,12 @@ public:
         {}
 
         // Not in [vector.bool.pspc]: flat_set's container constructor under the bit-storage tag.
-        [[nodiscard]] constexpr basic_bit_vector(from_bit_storage_t, std::vector<Block, Allocator> blocks) noexcept
-                : base_type(from_bit_storage, std::move(blocks))
+        [[nodiscard]] constexpr basic_bit_vector(from_blocks_t, std::vector<Block, Allocator> blocks) noexcept
+                : base_type(from_blocks, std::move(blocks))
         {}
 
-        [[nodiscard]] constexpr basic_bit_vector(from_bit_storage_t, std::vector<Block, Allocator> blocks, Allocator const& a)
-                : base_type(from_bit_storage, std::move(blocks), a)
+        [[nodiscard]] constexpr basic_bit_vector(from_blocks_t, std::vector<Block, Allocator> blocks, Allocator const& a)
+                : base_type(from_blocks, std::move(blocks), a)
         {}
 
         using base_type::operator=;
@@ -112,10 +112,10 @@ basic_bit_vector(std::initializer_list<bool>, Allocator = Allocator()) -> basic_
 
 // The blocks adopted name the block and the allocator both.
 template<xstd::unsigned_integer Block, class Allocator>
-basic_bit_vector(from_bit_storage_t, std::vector<Block, Allocator>) -> basic_bit_vector<Block, Allocator>;
+basic_bit_vector(from_blocks_t, std::vector<Block, Allocator>) -> basic_bit_vector<Block, Allocator>;
 
 template<xstd::unsigned_integer Block, class Allocator>
-basic_bit_vector(from_bit_storage_t, std::vector<Block, Allocator>, Allocator) -> basic_bit_vector<Block, Allocator>;
+basic_bit_vector(from_blocks_t, std::vector<Block, Allocator>, Allocator) -> basic_bit_vector<Block, Allocator>;
 
 } // namespace xstd
 

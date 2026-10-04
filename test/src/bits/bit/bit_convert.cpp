@@ -17,7 +17,7 @@
 #include <xstd/bits/detail/bit_convertible.hpp>     // adopts_from
 #include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set, bit_small_set
 #include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector, bit_small_vector
-#include <xstd/bits/from_bit_storage.hpp>           // from_bit_storage
+#include <xstd/bits/from_blocks.hpp>                // from_blocks
 #include <xstd/ints/memory.hpp>                     // align_up
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <array>                                    // array
@@ -170,7 +170,7 @@ BOOST_AUTO_TEST_CASE(EqualFixedWidthsCrossWhole)
         }());
 
         // A width that is no whole number of blocks round-trips through a std::bitset of the same width.
-        auto const narrow = xstd::bit_array<20>(xstd::from_bit_storage, std::array<std::uint8_t, 3>{0x01, 0x00, 0x08});
+        auto const narrow = xstd::bit_array<20>(xstd::from_blocks, std::array<std::uint8_t, 3>{0x01, 0x00, 0x08});
         auto const legacy = xstd::bit_convert<std::bitset<20>>(narrow);
         BOOST_CHECK(legacy.test(0) and legacy.test(19));
         BOOST_CHECK(xstd::bit_convert<xstd::bit_array<20>>(legacy) == narrow);
@@ -266,7 +266,7 @@ BOOST_AUTO_TEST_CASE(AnRvalueOfTheSameBlocksIsAdoptedWithoutACopy)
 {
         auto blocks            = std::vector<std::size_t>{0b101, 0, 1};
         auto const* const data = blocks.data();
-        auto v                 = xstd::bit_vector(xstd::from_bit_storage, std::move(blocks));
+        auto v                 = xstd::bit_vector(xstd::from_blocks, std::move(blocks));
         v.resize(130);
 
         auto s             = xstd::bit_convert<xstd::bit_set>(std::move(v));
@@ -283,7 +283,7 @@ BOOST_AUTO_TEST_CASE(AnRvalueOfTheSameBlocksIsAdoptedWithoutACopy)
         // A sequence to a sequence keeps its width exactly.
         auto two               = std::vector<std::size_t>(2);
         auto const* const wide = two.data();
-        auto w                 = xstd::bit_vector(xstd::from_bit_storage, std::move(two));
+        auto w                 = xstd::bit_vector(xstd::from_blocks, std::move(two));
         w.resize(70);
         w[69]     = true;
         auto same = xstd::bit_convert<xstd::bit_vector>(std::move(w));

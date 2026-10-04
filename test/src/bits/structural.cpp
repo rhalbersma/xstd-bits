@@ -3,22 +3,22 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/for_each_type.hpp>             // for_each_type
-#include <test/structural.hpp>                // structural, value_parameter
-#include <xstd/bits/bit_array.hpp>            // aligned::basic_bit_array, aligned::bit_array, basic_bit_array, bit_array
-#include <xstd/bits/bit_bounded_set.hpp>      // bit_bounded_set
-#include <xstd/bits/bit_bounded_vector.hpp>   // bit_bounded_vector
-#include <xstd/bits/bit_fixed_set.hpp>        // aligned::bit_fixed_set, bit_fixed_set
-#include <xstd/bits/detail/bit_container.hpp> // bit_container
-#include <xstd/bits/from_bit_storage.hpp>     // from_bit_storage
-#include <boost/test/unit_test.hpp>           // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
-#include <array>                              // array
-#include <concepts>                           // same_as
-#include <cstddef>                            // size_t
-#include <cstdint>                            // uint8_t, uint64_t
-#include <initializer_list>                   // initializer_list
-#include <limits>                             // numeric_limits
-#include <tuple>                              // tuple
+#include <test/for_each_type.hpp>                   // for_each_type
+#include <test/structural.hpp>                      // structural, value_parameter
+#include <xstd/bits/bit_array.hpp>                  // aligned::basic_bit_array, aligned::bit_array, basic_bit_array, bit_array
+#include <xstd/bits/bit_bounded_set.hpp>            // bit_bounded_set
+#include <xstd/bits/bit_bounded_vector.hpp>         // bit_bounded_vector
+#include <xstd/bits/bit_fixed_set.hpp>              // aligned::bit_fixed_set, bit_fixed_set
+#include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
+#include <xstd/bits/from_blocks.hpp>                // from_blocks
+#include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <array>                                    // array
+#include <concepts>                                 // same_as
+#include <cstddef>                                  // size_t
+#include <cstdint>                                  // uint8_t, uint64_t
+#include <initializer_list>                         // initializer_list
+#include <limits>                                   // numeric_limits
+#include <tuple>                                    // tuple
 
 BOOST_AUTO_TEST_SUITE(Structural)
 
@@ -104,7 +104,7 @@ template<class T>
         auto blocks           = std::array<block_type, shape_of<T>::width / digits>();
         blocks.front()        = static_cast<block_type>(1U);
         blocks.back() |= static_cast<block_type>(block_type{1U} << (digits - 1UZ));
-        return T(xstd::from_bit_storage, blocks);
+        return T(xstd::from_blocks, blocks);
 }
 
 } // namespace
@@ -174,11 +174,11 @@ BOOST_AUTO_TEST_CASE(ABoundedOwnerIsNotStructural)
 // The vehicle alone: its blocks are public where they fill the width, and kept to it where a tail must stay clear.
 BOOST_AUTO_TEST_CASE(TheVehicleIsStructuralExactlyWhereItsBlocksFillTheWidth)
 {
-        static_assert(test::structural<xstd::bits::detail::bit_container<std::array<std::uint64_t, 2>, 128>>);
-        static_assert(test::structural<xstd::bits::detail::bit_container<std::array<std::uint8_t, 3>, 24>>);
-        static_assert(test::structural<xstd::bits::detail::bit_container<std::array<std::uint64_t, 0>, 0>>);
-        static_assert(not test::structural<xstd::bits::detail::bit_container<std::array<std::uint64_t, 2>, 127>>);
-        static_assert(not test::structural<xstd::bits::detail::bit_container<std::array<std::uint8_t, 1>, 0>>);
+        static_assert(test::structural<xstd::bits::detail::bit_block_container<std::array<std::uint64_t, 2>, 128>>);
+        static_assert(test::structural<xstd::bits::detail::bit_block_container<std::array<std::uint8_t, 3>, 24>>);
+        static_assert(test::structural<xstd::bits::detail::bit_block_container<std::array<std::uint64_t, 0>, 0>>);
+        static_assert(not test::structural<xstd::bits::detail::bit_block_container<std::array<std::uint64_t, 2>, 127>>);
+        static_assert(not test::structural<xstd::bits::detail::bit_block_container<std::array<std::uint8_t, 1>, 0>>);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

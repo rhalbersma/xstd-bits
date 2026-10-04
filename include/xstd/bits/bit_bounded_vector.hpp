@@ -6,12 +6,12 @@
 #ifndef XSTD_BITS_BIT_BOUNDED_VECTOR_HPP
 #define XSTD_BITS_BIT_BOUNDED_VECTOR_HPP
 
-#include <xstd/bits/bit_storage.hpp>                         // bit_storage_extent_v
-#include <xstd/bits/detail/bit_container.hpp>                // bit_container
+#include <xstd/bits/bit_blocks.hpp>                          // bit_blocks_extent_v
+#include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container
 #include <xstd/bits/detail/bounded_blocks.hpp>               // bounded_blocks, bounded_blocks_for
 #include <xstd/bits/detail/ownership.hpp>                    // storage, window
 #include <xstd/bits/detail/sequence_adaptor.hpp>             // sequence_adaptor
-#include <xstd/bits/from_bit_storage.hpp>                    // from_bit_storage, from_bit_storage_t
+#include <xstd/bits/from_blocks.hpp>                         // from_blocks, from_blocks_t
 #include <xstd/ints/concepts/unsigned_integer.hpp>           // unsigned_integer
 #include <xstd/ints/memory.hpp>                              // align_up
 #include <xstd/misc/concepts/container_compatible_range.hpp> // container_compatible_range
@@ -30,9 +30,9 @@ namespace xstd {
 
 // The packed std::inplace_vector<bool, N> that P0843 declined to write, named after the container it packs.
 template<xstd::unsigned_integer Block, std::size_t N>
-class basic_bit_bounded_vector : public bits::detail::sequence_adaptor<bits::detail::bit_container<bits::detail::bounded_blocks_for<Block, N>, N>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_bounded_vector<Block, N>>
+class basic_bit_bounded_vector : public bits::detail::sequence_adaptor<bits::detail::bit_block_container<bits::detail::bounded_blocks_for<Block, N>, N>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_bounded_vector<Block, N>>
 {
-        using base_type = bits::detail::sequence_adaptor<bits::detail::bit_container<bits::detail::bounded_blocks_for<Block, N>, N>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_bounded_vector<Block, N>>;
+        using base_type = bits::detail::sequence_adaptor<bits::detail::bit_block_container<bits::detail::bounded_blocks_for<Block, N>, N>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_bounded_vector<Block, N>>;
 
 public:
         using typename base_type::block_container_type;
@@ -64,8 +64,8 @@ public:
         {}
 
         // Not in [inplace.vector.cons]: flat_set's container constructor under the bit-storage tag.
-        [[nodiscard]] constexpr basic_bit_bounded_vector(from_bit_storage_t, block_container_type blocks) noexcept
-                : base_type(from_bit_storage, std::move(blocks))
+        [[nodiscard]] constexpr basic_bit_bounded_vector(from_blocks_t, block_container_type blocks) noexcept
+                : base_type(from_blocks, std::move(blocks))
         {}
 
         using base_type::operator=;
@@ -83,7 +83,7 @@ using bit_bounded_vector = basic_bit_bounded_vector<std::size_t, N>;
 
 // Every bit of the blocks an element, so the capacity is theirs, rounded to whole blocks.
 template<xstd::unsigned_integer Block, std::size_t K>
-basic_bit_bounded_vector(from_bit_storage_t, bits::detail::bounded_blocks<Block, K>) -> basic_bit_bounded_vector<Block, bit_storage_extent_v<Block> * K>;
+basic_bit_bounded_vector(from_blocks_t, bits::detail::bounded_blocks<Block, K>) -> basic_bit_bounded_vector<Block, bit_blocks_extent_v<Block> * K>;
 
 namespace aligned {
 

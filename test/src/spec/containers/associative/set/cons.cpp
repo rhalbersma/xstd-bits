@@ -195,8 +195,8 @@ BOOST_AUTO_TEST_CASE(AssignInitializerList)
         });
 }
 
-// xstd set: template<class B> constexpr X(from_bit_storage_t, const B& b) noexcept;
-BOOST_AUTO_TEST_CASE(SetFromBitStorage)
+// xstd set: template<class B> constexpr X(from_blocks_t, const B& b) noexcept;
+BOOST_AUTO_TEST_CASE(SetFromBlocks)
 {
         test::for_each_type<test::spec::set::all>([]<class T> -> void {
                 // An integer is read as positions only where it covers a width in the type, by this library's design.

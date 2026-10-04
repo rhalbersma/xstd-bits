@@ -8,7 +8,7 @@
 
 #include <xstd/bits/detail/bit_convertible.hpp> // adopt_blocks, adopts_from, bit_convert_source, bit_target, convert_fixed, copy_blocks, fixed_target, fixed_width, foreign_convertible, narrow_blocks, run_time_owner, run_time_source
 #include <xstd/bits/detail/bit_width.hpp>       // bit_width_v
-#include <xstd/bits/from_bit_storage.hpp>       // IWYU pragma: export; bit_constructible_from
+#include <xstd/bits/from_blocks.hpp>            // IWYU pragma: export; bit_constructible_from
 #include <concepts>                             // same_as
 #include <type_traits>                          // remove_cvref_t
 #include <utility>                              // as_const, forward

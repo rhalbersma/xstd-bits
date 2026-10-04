@@ -110,7 +110,7 @@ Boost is worth knowing here, because it splits both ways: Boost.Unordered puts i
 | source | target | suites |
 | :--- | :--- | :--- |
 | `test/src/bits/ranges/set_view.cpp` | `test.bits.ranges.set_view` | `Ranges` / `SetView` |
-| `test/src/bits/detail/bit_container.cpp` | `test.bits.detail.bit_container` | `Detail` / `BitContainer` |
+| `test/src/bits/detail/bit_block_container.cpp` | `test.bits.detail.bit_block_container` | `Detail` / `BitBlockContainer` |
 | `test/src/spec/containers/associative/set/cons.cpp` | `test.spec.containers.associative.set.cons` | `Spec` / `Containers` / `Associative` / `Set` / `Cons` |
 
 With one subtraction: `bits` is the first component of every source outside `spec/`, so as a suite it distinguishes nothing and is left out. `test/src/bits.cpp` is what remains — the umbrella over the whole library, and the one source whose cases sit in the master suite. `spec/` keeps its `Spec`, which is what tells a clause's suites from a header's.

@@ -36,8 +36,8 @@ BOOST_AUTO_TEST_CASE(SpecialMemberFunctions)
         });
 }
 
-// xstd array: template<class B> constexpr X(from_bit_storage_t, const B& b) noexcept;
-BOOST_AUTO_TEST_CASE(ArrayFromBitStorage)
+// xstd array: template<class B> constexpr X(from_blocks_t, const B& b) noexcept;
+BOOST_AUTO_TEST_CASE(ArrayFromBlocks)
 {
         test::for_each_type<test::spec::sequence::array_all>([]<class T> -> void {
                 // An integer is read as bools only where it covers the width, by this library's design.
