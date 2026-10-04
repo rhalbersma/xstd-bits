@@ -28,7 +28,7 @@
 namespace {
 
 using Storage = xstd::bits::detail::bit_container<std::array<std::uint64_t, 2>, 100>;
-using Owner = xstd::basic_bit_fixed_set<std::uint64_t, 100>;
+using Owner = xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 100>;
 using View = xstd::bits::detail::set_adaptor<Storage, xstd::bits::detail::storage::borrowed>;
 using Reader = xstd::bits::detail::set_adaptor<Storage const, xstd::bits::detail::storage::borrowed>;
 
@@ -158,10 +158,10 @@ constexpr bool compares_with = requires (X const& x, Y const& y) { x == y; };
 // Each owner wraps the storage its base clause names, and two names over one storage are two types that never compare.
 BOOST_AUTO_TEST_CASE(AnOwnerIsATypeOfItsOwnOverItsStorage)
 {
-        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_fixed_set<std::uint8_t, 20>>, xstd::bits::detail::bit_container<std::array<std::uint8_t, 3>, 20>>);
-        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_set<std::uint32_t>>, xstd::bits::detail::bit_container<std::vector<std::uint32_t>>>);
-        static_assert(not compares_with<xstd::basic_bit_fixed_set<std::uint8_t, 24>, xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_container<std::array<std::uint8_t, 3>>>>);
-        static_assert(not compares_with<xstd::basic_bit_set<std::uint32_t>, xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_container<std::vector<std::uint32_t>>>>);
+        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 20>>, xstd::bits::detail::bit_container<std::array<std::uint8_t, 3>, 20>>);
+        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_set<std::size_t, std::uint32_t>>, xstd::bits::detail::bit_container<std::vector<std::uint32_t>>>);
+        static_assert(not compares_with<xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 24>, xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_container<std::array<std::uint8_t, 3>>>>);
+        static_assert(not compares_with<xstd::basic_bit_set<std::size_t, std::uint32_t>, xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_container<std::vector<std::uint32_t>>>>);
         BOOST_CHECK(true);
 }
 
@@ -431,7 +431,7 @@ auto check_refuses(std::invocable auto write)
 // The one key a set can be unable to hold, every other member being total over key_type.
 BOOST_AUTO_TEST_CASE(AKeyAStaticWidthCannotHoldIsOutOfRange)
 {
-        using S = xstd::basic_bit_fixed_set<std::uint64_t, 100>;
+        using S = xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 100>;
         static_assert(S().max_size() == 100UZ);
 
         auto s = S();
@@ -455,7 +455,7 @@ BOOST_AUTO_TEST_CASE(AKeyAStaticWidthCannotHoldIsOutOfRange)
 // The bulk inserts refuse it too, the consecutive tier guarding the range's last position before it writes anything.
 BOOST_AUTO_TEST_CASE(TheBulkInsertsRefuseTheKeyAndSayWhatTheyWrote)
 {
-        using S = xstd::basic_bit_fixed_set<std::uint64_t, 100>;
+        using S = xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 100>;
 
         auto consecutive = S();
         BOOST_CHECK_THROW(consecutive.insert_range(std::views::iota(98UZ, 102UZ)), std::out_of_range);
@@ -470,7 +470,7 @@ BOOST_AUTO_TEST_CASE(TheBulkInsertsRefuseTheKeyAndSayWhatTheyWrote)
 // Asking stays total, which is what [set] gives it: a key past the width is one the set does not hold.
 BOOST_AUTO_TEST_CASE(AKeyPastTheWidthIsStillAskable)
 {
-        using S = xstd::basic_bit_fixed_set<std::uint64_t, 100>;
+        using S = xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 100>;
 
         auto s = S();
         s.insert(3UZ);

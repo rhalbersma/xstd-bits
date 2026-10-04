@@ -6,6 +6,7 @@
 #include <test/array_storage.hpp>             // array_storage
 #include <test/block_types.hpp>               // graded_extents
 #include <test/value_reference.hpp>           // value_reference
+#include <xstd/bits/bit_fixed_set.hpp>        // basic_bit_fixed_set
 #include <xstd/bits/bit_set_view.hpp>         // bit_set_view
 #include <xstd/bits/detail/bidirectional.hpp> // bidirectional_bit_iterator, bidirectional_bit_reference
 #include <xstd/bits/detail/bit_container.hpp> // bit_container
@@ -14,7 +15,7 @@
 #include <concepts>                           // bidirectional_iterator, same_as
 #include <cstddef>                            // size_t
 #include <cstdint>                            // uint64_t
-#include <iterator>                           // next, prev
+#include <iterator>                           // iter_reference_t, iter_value_t, next, prev
 #include <ranges>                             // iota
 #include <set>                                // set
 #include <type_traits>                        // is_assignable_v, is_convertible_v, is_trivially_destructible_v
@@ -22,14 +23,35 @@
 
 namespace {
 
-// Strong types to receive what the proxy converts to: one that takes a size_t implicitly, one only explicitly.
+// A key the proxy hands out through its traits, and a strong type that takes the size_t only explicitly.
 struct key
 {
         std::size_t value;
+};
+
+struct key_traits
+{
+        [[nodiscard]] static constexpr auto to_index(key k) noexcept
+                -> std::size_t
+        {
+                return k.value;
+        }
+
+        [[nodiscard]] static constexpr auto from_index(std::size_t i) noexcept
+                -> key
+        {
+                return {.value = i};
+        }
+};
+
+// A class implicitly constructible from the key, which a held key initializes in one step.
+struct holder
+{
+        key held;
 
         // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
-        constexpr explicit(false) key(std::size_t v) noexcept
-                : value(v)
+        constexpr explicit(false) holder(key k) noexcept
+                : held(k)
         {}
 };
 
@@ -82,9 +104,8 @@ auto check_set_steps(Iterator first, Iterator last, std::set<std::size_t> const&
         for (auto it = first; it != last; ++it) {
                 BOOST_CHECK(&*it == it);
                 forward.insert(*it);
-                key const k = *it;
-                BOOST_CHECK_EQUAL(k.value, static_cast<std::size_t>(*it));
-                BOOST_CHECK_EQUAL(index(*it).value, k.value);
+                std::size_t const k = *it;
+                BOOST_CHECK_EQUAL(index(*it).value, k);
         }
         BOOST_CHECK(forward == model);
 
@@ -186,6 +207,25 @@ BOOST_AUTO_TEST_CASE(TheProxyFormatsAsItsValue)
         c.set(42);
 
         BOOST_CHECK_EQUAL(format_as(*xstd::bit_set_view(c).begin()), 42UZ);
+}
+
+// The key arrives through the traits, in one implicit step; a type the traits do not name is no conversion.
+BOOST_AUTO_TEST_CASE(TheProxyConvertsToTheKeyItsTraitsName)
+{
+        using iterator = xstd::bits::detail::bidirectional_bit_iterator<Bits, key, key_traits>;
+        static_assert(std::same_as<std::iter_value_t<iterator>, key>);
+        static_assert(std::bidirectional_iterator<iterator>);
+        static_assert(not std::is_convertible_v<std::iter_reference_t<iterator>, std::size_t>);
+
+        auto s = xstd::basic_bit_fixed_set<key, std::uint64_t, 200, key_traits>();
+        s.insert(key{42});
+        static_assert(std::same_as<decltype(s.begin()), iterator>);
+        key const k = *s.begin();
+        BOOST_CHECK_EQUAL(k.value, 42UZ);
+        BOOST_CHECK_EQUAL(format_as(*s.begin()).value, 42UZ);
+        BOOST_CHECK_EQUAL(key_traits::to_index(*s.begin()), 42UZ);
+        holder const h = *s.begin();
+        BOOST_CHECK_EQUAL(h.held.value, 42UZ);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

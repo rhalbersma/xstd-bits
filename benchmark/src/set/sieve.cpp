@@ -29,6 +29,10 @@
 inline constexpr auto lo = 1L << 10;
 inline constexpr auto hi = 1L << 20;
 
+// The dynamic set at a chosen block and a std::size_t key, named so a macro takes it as one argument.
+template<class Block>
+using bit_set_of = xstd::basic_bit_set<std::size_t, Block>;
+
 namespace {
 
 auto bound(benchmark::State const& state)
@@ -132,17 +136,17 @@ auto bm_filter_twins(benchmark::State& state)
 #if defined(BENCH_HAS_UINT128)
 
 #define BENCH_BLOCKS(fn) \
-        BENCH_LADDER(fn, xstd::basic_bit_set<std::uint8_t>); \
-        BENCH_LADDER(fn, xstd::basic_bit_set<std::uint16_t>); \
-        BENCH_LADDER(fn, xstd::basic_bit_set<std::uint32_t>); \
-        BENCH_LADDER(fn, xstd::basic_bit_set<xstd::uint128>)
+        BENCH_LADDER(fn, bit_set_of<std::uint8_t>); \
+        BENCH_LADDER(fn, bit_set_of<std::uint16_t>); \
+        BENCH_LADDER(fn, bit_set_of<std::uint32_t>); \
+        BENCH_LADDER(fn, bit_set_of<xstd::uint128>)
 
 #else
 
 #define BENCH_BLOCKS(fn) \
-        BENCH_LADDER(fn, xstd::basic_bit_set<std::uint8_t>); \
-        BENCH_LADDER(fn, xstd::basic_bit_set<std::uint16_t>); \
-        BENCH_LADDER(fn, xstd::basic_bit_set<std::uint32_t>)
+        BENCH_LADDER(fn, bit_set_of<std::uint8_t>); \
+        BENCH_LADDER(fn, bit_set_of<std::uint16_t>); \
+        BENCH_LADDER(fn, bit_set_of<std::uint32_t>)
 
 #endif
 

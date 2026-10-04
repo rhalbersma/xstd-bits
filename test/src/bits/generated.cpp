@@ -120,10 +120,10 @@ BOOST_AUTO_TEST_CASE(TheMovesAreAsNothrowAsTheStorages)
 {
         using allocator_type = std::pmr::polymorphic_allocator<std::size_t>;
 
-        static_assert(std::is_nothrow_move_constructible_v<xstd::basic_bit_set<std::size_t, allocator_type>>);
+        static_assert(std::is_nothrow_move_constructible_v<xstd::basic_bit_set<std::size_t, std::size_t, xstd::bit_key_traits<std::size_t>, allocator_type>>);
         static_assert(std::is_nothrow_move_constructible_v<xstd::basic_bit_vector<std::size_t, allocator_type>>);
 
-        static_assert(not std::is_nothrow_move_assignable_v<xstd::basic_bit_set<std::size_t, allocator_type>>);
+        static_assert(not std::is_nothrow_move_assignable_v<xstd::basic_bit_set<std::size_t, std::size_t, xstd::bit_key_traits<std::size_t>, allocator_type>>);
         static_assert(not std::is_nothrow_move_assignable_v<xstd::basic_bit_vector<std::size_t, allocator_type>>);
 
         // The static column stays trivial, as its blocks are.
@@ -155,7 +155,7 @@ BOOST_AUTO_TEST_CASE(TheFreeSwapIsTheLibrarysAndNotStdSwap)
         using block_type = std::size_t;
         using allocator_type = std::scoped_allocator_adaptor<std::pmr::polymorphic_allocator<block_type>>;
 
-        static_assert(free_swap_is_not_std_swap<xstd::basic_bit_set<block_type, allocator_type>>());
+        static_assert(free_swap_is_not_std_swap<xstd::basic_bit_set<std::size_t, block_type, xstd::bit_key_traits<std::size_t>, allocator_type>>());
         static_assert(free_swap_is_not_std_swap<xstd::basic_bit_vector<block_type, allocator_type>>());
         BOOST_CHECK(true);
 }

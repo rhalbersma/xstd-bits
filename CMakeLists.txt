@@ -78,6 +78,7 @@ target_sources(
         include/xstd/bits/bit_storage.hpp
         include/xstd/bits/bit_bounded_set.hpp
         include/xstd/bits/bit_bounded_vector.hpp
+        include/xstd/bits/bit_key_traits.hpp
         include/xstd/bits/bit_set.hpp
         include/xstd/bits/bit_set_view.hpp
         include/xstd/bits/bit_span.hpp

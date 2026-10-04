@@ -63,7 +63,7 @@ BOOST_AUTO_TEST_CASE(ADynamicBitsetConvertsInKeepingItsSizeAndPositions)
         BOOST_CHECK_EQUAL(v.size(), 13UZ);
         BOOST_CHECK(positions(v) == keys);
         BOOST_CHECK(positions(xstd::bit_convert<xstd::basic_bit_vector<std::uint8_t>>(narrow)) == keys);
-        BOOST_CHECK(positions(xstd::bit_convert<xstd::basic_bit_set<std::uint16_t>>(narrow)) == keys);
+        BOOST_CHECK(positions(xstd::bit_convert<xstd::basic_bit_set<std::size_t, std::uint16_t>>(narrow)) == keys);
 
         // A set target takes whole blocks of its own, and a wider source block lands on narrower ones.
         auto const wide = make<std::uint64_t>(70, {0, 69});
@@ -126,9 +126,9 @@ BOOST_AUTO_TEST_CASE(ABoundedTargetTooSmallThrowsWhatItsGrowthThrows)
         // Blocks past a set's capacity drop, of the target's block width or not, and a key among them throws.
         BOOST_CHECK(positions(xstd::bit_convert<xstd::bit_bounded_set<100>>(make<std::size_t>(300, {5}))) == (std::vector<std::size_t>{5}));
         BOOST_CHECK(positions(xstd::bit_convert<xstd::bit_bounded_set<100>>(make<std::uint8_t>(300, {5}))) == (std::vector<std::size_t>{5}));
-        BOOST_CHECK(positions(xstd::bit_convert<xstd::basic_bit_bounded_set<std::uint8_t, 100>>(make<std::uint8_t>(300, {5}))) == (std::vector<std::size_t>{5}));
+        BOOST_CHECK(positions(xstd::bit_convert<xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 100>>(make<std::uint8_t>(300, {5}))) == (std::vector<std::size_t>{5}));
         BOOST_CHECK_THROW(static_cast<void>(xstd::bit_convert<xstd::bit_bounded_set<100>>(make<std::size_t>(300, {250}))), std::bad_alloc);
-        BOOST_CHECK_THROW(static_cast<void>(xstd::bit_convert<xstd::basic_bit_bounded_set<std::uint16_t, 100>>(make<std::uint8_t>(300, {250}))), std::bad_alloc);
+        BOOST_CHECK_THROW(static_cast<void>(xstd::bit_convert<xstd::basic_bit_bounded_set<std::size_t, std::uint16_t, 100>>(make<std::uint8_t>(300, {250}))), std::bad_alloc);
 }
 
 // Boost hands none of its storage out, so an rvalue is copied from and keeps its bits.

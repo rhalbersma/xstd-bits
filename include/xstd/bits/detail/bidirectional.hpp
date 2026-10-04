@@ -6,6 +6,7 @@
 #ifndef XSTD_BITS_DETAIL_BIDIRECTIONAL_HPP
 #define XSTD_BITS_DETAIL_BIDIRECTIONAL_HPP
 
+#include <xstd/bits/bit_key_traits.hpp>       // bit_key_traits
 #include <xstd/bits/detail/bit_container.hpp> // bit_container_type
 #include <xstd/bits/detail/ownership.hpp>     // storage
 #include <xstd/bits/detail/storage_ptr.hpp>   // storage_ptr_t
@@ -19,17 +20,17 @@
 // The iterator is the primitive: a pointer and a position, reaching the bits through the storage alone.
 namespace xstd::bits::detail {
 
-template<class Bits>
+template<class Bits, class Key = std::size_t, class KeyTraits = bit_key_traits<Key>>
 class bidirectional_bit_iterator;
 
-template<class Bits>
+template<class Bits, class Key = std::size_t, class KeyTraits = bit_key_traits<Key>>
 class bidirectional_bit_reference;
 
-template<bit_container_type Bits, storage Store, class Derived>
+template<bit_container_type Bits, storage Store, class Derived, class Key, class KeyTraits>
 class set_adaptor;
 
 // A position in the set reading, read-only whatever Bits' qualification: a key is nothing to write through.
-template<class Bits>
+template<class Bits, class Key, class KeyTraits>
 class bidirectional_bit_iterator
 {
         using bits_type = std::remove_const_t<Bits>;
@@ -37,9 +38,9 @@ class bidirectional_bit_iterator
         storage_ptr_t<bits_type const> m_ptr{};
         std::size_t m_idx{};
 
-        template<bit_container_type B, storage S, class D>
+        template<bit_container_type B, storage S, class D, class K, class T>
         friend class set_adaptor;
-        friend class bidirectional_bit_reference<Bits>;
+        friend class bidirectional_bit_reference<Bits, Key, KeyTraits>;
 
         [[nodiscard]] constexpr bidirectional_bit_iterator(storage_ptr_t<bits_type const> ptr, std::size_t idx) noexcept
                 : m_ptr(ptr)
@@ -50,10 +51,10 @@ class bidirectional_bit_iterator
 
 public:
         using iterator_category = std::bidirectional_iterator_tag;
-        using value_type = std::size_t;
+        using value_type = Key;
         using difference_type = std::ptrdiff_t;
         using pointer = void;
-        using reference = bidirectional_bit_reference<Bits>;
+        using reference = bidirectional_bit_reference<Bits, Key, KeyTraits>;
 
         [[nodiscard]] bidirectional_bit_iterator() noexcept = default;
 
@@ -116,8 +117,8 @@ public:
         }
 };
 
-// The key at a position, arriving by conversion; & hands the iterator back, so the pair round-trips.
-template<class Bits>
+// The key at a position, arriving by conversion through KeyTraits; & hands the iterator back, so the pair round-trips.
+template<class Bits, class Key, class KeyTraits>
 class bidirectional_bit_reference
 {
         using bits_type = std::remove_const_t<Bits>;
@@ -125,9 +126,9 @@ class bidirectional_bit_reference
         storage_ptr_t<bits_type const> m_ptr;
         std::size_t m_idx;
 
-        template<bit_container_type B, storage S, class D>
+        template<bit_container_type B, storage S, class D, class K, class T>
         friend class set_adaptor;
-        friend class bidirectional_bit_iterator<Bits>;
+        friend class bidirectional_bit_iterator<Bits, Key, KeyTraits>;
 
         [[nodiscard]] constexpr bidirectional_bit_reference(storage_ptr_t<bits_type const> ptr, std::size_t idx) noexcept
                 : m_ptr(ptr)
@@ -137,8 +138,8 @@ class bidirectional_bit_reference
         }
 
 public:
-        using value_type = std::size_t;
-        using iterator = bidirectional_bit_iterator<Bits>;
+        using value_type = Key;
+        using iterator = bidirectional_bit_iterator<Bits, Key, KeyTraits>;
 
         // A value, not a handle to rebind: trivially copyable, never assignable, as a reference to a key is.
         bidirectional_bit_reference(bidirectional_bit_reference const&) noexcept = default;
@@ -152,37 +153,37 @@ public:
 
         [[nodiscard]] constexpr explicit(false) operator value_type() const noexcept // NOLINT(misc-explicit-constructor)
         {
-                return m_idx;
+                return KeyTraits::from_index(m_idx);
         }
 
-        // A strong index type initializes from *it in one step; an explicit one takes the size_t route.
+        // As a held key would, the key initializes any class implicitly constructible from it, through KeyTraits.
         template<class T>
         [[nodiscard]] constexpr explicit(false) operator T() const noexcept(std::is_nothrow_constructible_v<T, value_type>) // NOLINT(misc-explicit-constructor)
                 requires std::is_class_v<T> and std::is_convertible_v<value_type, T>
         {
-                return m_idx;
+                return KeyTraits::from_index(m_idx);
         }
 
         // What this proxy prints as, said once: our std::formatter calls it unqualified, and fmt finds it by ADL.
         [[nodiscard]] friend constexpr auto format_as(bidirectional_bit_reference ref) noexcept
                 -> value_type
         {
-                return ref.m_idx;
+                return ref;
         }
 };
 
 } // namespace xstd::bits::detail
 
-// std::format over the containers, which needs nothing said about the containers themselves.
-template<class Bits, class CharT>
+// std::format over the containers, which prints the key as the key's own formatter does.
+template<class Bits, class Key, class KeyTraits, class CharT>
 // NOLINTNEXTLINE(bugprone-std-namespace-modification)
-struct std::formatter<xstd::bits::detail::bidirectional_bit_reference<Bits>, CharT> : std::formatter<std::size_t, CharT>
+struct std::formatter<xstd::bits::detail::bidirectional_bit_reference<Bits, Key, KeyTraits>, CharT> : std::formatter<Key, CharT>
 {
         template<class Context>
-        [[nodiscard]] constexpr auto format(xstd::bits::detail::bidirectional_bit_reference<Bits> ref, Context& ctx) const
+        [[nodiscard]] constexpr auto format(xstd::bits::detail::bidirectional_bit_reference<Bits, Key, KeyTraits> ref, Context& ctx) const
         {
                 // Unqualified, so ADL finds the proxy's own hidden friend.
-                return std::formatter<std::size_t, CharT>::format(format_as(ref), ctx);
+                return std::formatter<Key, CharT>::format(format_as(ref), ctx);
         }
 };
 
