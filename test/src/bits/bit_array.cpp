@@ -9,11 +9,12 @@
 #include <xstd/bits/bit_array.hpp>  // bit_array
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <concepts>                 // constructible_from, convertible_to, regular, same_as, totally_ordered
-#include <cstddef>                  // ptrdiff_t
+#include <cstddef>                  // ptrdiff_t, size_t
 #include <functional>               // hash
-#include <iterator>                 // contiguous_iterator, random_access_iterator
-#include <ranges>                   // begin, contiguous_range, iota, random_access_range
-#include <tuple>                    // tuple_cat
+#include <iterator>                 // contiguous_iterator, random_access_iterator, size
+#include <ranges>                   // begin, contiguous_range, empty, iota, random_access_range, size
+#include <tuple>                    // tuple_cat, tuple_size_v
+#include <type_traits>              // bool_constant, integral_constant
 #include <utility>                  // declval
 
 BOOST_AUTO_TEST_SUITE(BitArray)
@@ -70,6 +71,35 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AddressOfASubscriptIsTheIteratorToIt, T, Types)
 BOOST_AUTO_TEST_CASE_TEMPLATE(ItsConstReferenceIsAValue, T, Types)
 {
         static_assert(test::value_reference<typename T::const_reference>);
+}
+
+// The width is the type's: T::size names it as a value, a.size() answers size_type, and std::size reads it as before.
+BOOST_AUTO_TEST_CASE_TEMPLATE(ItsSizesAreConstantsOfItsType, T, Types)
+{
+        constexpr auto N = std::tuple_size_v<T>;
+        static_assert(std::same_as<decltype(T::size), std::integral_constant<std::size_t, N> const>);
+        static_assert(std::same_as<decltype(T::empty), std::bool_constant<N == 0UZ> const>);
+        static_assert(std::same_as<decltype(T::max_size), std::integral_constant<std::size_t, N> const>);
+
+        static_assert(std::same_as<decltype(std::declval<T const&>().size()), typename T::size_type>);
+        static_assert(std::same_as<decltype(std::declval<T const&>().empty()), bool>);
+        static_assert(std::same_as<decltype(std::declval<T const&>().max_size()), typename T::size_type>);
+        static_assert(noexcept(std::declval<T const&>().size()));
+        static_assert(noexcept(std::declval<T const&>().empty()));
+        static_assert(noexcept(std::declval<T const&>().max_size()));
+
+        // A reference of unknown origin still names a constant, which a member function's answer is not.
+        auto const through_reference = [](T const& a) -> void {
+                static_assert(a.size == N);
+                static_assert(a.empty == (N == 0UZ));
+                static_assert(a.max_size == N);
+        };
+        auto const a = T();
+        through_reference(a);
+        BOOST_CHECK_EQUAL(std::ranges::size(a), N);
+        BOOST_CHECK_EQUAL(std::size(a), N);
+        BOOST_CHECK_EQUAL(a.size(), N);
+        BOOST_CHECK_EQUAL(std::ranges::empty(a), N == 0UZ);
 }
 
 // Every owner hashes, this one although std::array<bool, N> does not: equal values equal, at every extent.

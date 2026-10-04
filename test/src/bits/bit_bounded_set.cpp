@@ -16,8 +16,9 @@
 #include <cstdint>                             // uint8_t
 #include <limits>                              // numeric_limits
 #include <new>                                 // bad_alloc
-#include <ranges>                              // iota, to
+#include <ranges>                              // iota, size, to
 #include <set>                                 // set
+#include <type_traits>                         // integral_constant, is_member_function_pointer_v
 #include <utility>                             // declval
 
 #ifdef XSTD_BITS_HAS_CONSTEXPR_BOUNDED
@@ -55,6 +56,29 @@ constexpr bool has_allocator_type = requires { typename X::allocator_type; };
 BOOST_AUTO_TEST_CASE(ItHasNoAllocatorType)
 {
         static_assert(not has_allocator_type<T>);
+}
+
+// The capacity is the type's, so max_size is a constant; size() and empty() count the keys.
+BOOST_AUTO_TEST_CASE(MaxSizeIsAConstantOfTheTypeAndTheCountsAreFunctions)
+{
+        static_assert(std::same_as<decltype(T::max_size), std::integral_constant<std::size_t, 24> const>);
+        static_assert(std::same_as<decltype(xstd::bit_bounded_set<0>::max_size), std::integral_constant<std::size_t, 0> const>);
+        // NOLINTBEGIN(readability-static-accessed-through-instance): the call through an object is what is checked.
+        static_assert(std::same_as<decltype(std::declval<T const&>().max_size()), T::size_type>);
+        static_assert(noexcept(std::declval<T const&>().max_size()));
+        static_assert(std::is_member_function_pointer_v<decltype(&T::size)>);
+        static_assert(std::is_member_function_pointer_v<decltype(&T::empty)>);
+
+        // A reference of unknown origin still names a constant, which a member function's answer is not.
+        auto const through_reference = [](T const& a) -> void {
+                static_assert(a.max_size == 24UZ);
+        };
+        auto const a = T({1UZ, 8UZ});
+        through_reference(a);
+        BOOST_CHECK_EQUAL(a.max_size(), 24UZ);
+        BOOST_CHECK_EQUAL(std::ranges::size(a), 2UZ);
+        BOOST_CHECK(not a.empty());
+        // NOLINTEND(readability-static-accessed-through-instance)
 }
 
 // Built from a range as std::set is, and ordered as std::set is.
@@ -233,7 +257,7 @@ BOOST_AUTO_TEST_CASE(ItYieldsAscendingKeys)
 
         // Inserted high to low and across block boundaries, so the ascending answer is the container's doing.
         for (auto const key : {70UZ, 64UZ, 63UZ, 9UZ, 1UZ, 0UZ}) {
-                if (key < c.max_size()) {
+                if (key < T::max_size()) {
                         c.insert(key);
                 }
         }

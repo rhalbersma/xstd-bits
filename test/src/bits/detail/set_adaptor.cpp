@@ -257,7 +257,7 @@ BOOST_AUTO_TEST_CASE(TheViewsAnswerEveryReadOverEveryStorage)
 BOOST_AUTO_TEST_CASE(MaxSizeIsThePositionsThereAreToHold)
 {
         auto storage = Storage();
-        static_assert(Owner().max_size() == 100UZ);
+        static_assert(Owner::max_size() == 100UZ);
         BOOST_CHECK_EQUAL(View(storage).max_size(), 100UZ);
 
         // An owner grows to what its storage can address, which is whole blocks of it and never the address space.
@@ -432,7 +432,7 @@ auto check_refuses(std::invocable auto write)
 BOOST_AUTO_TEST_CASE(AKeyAStaticWidthCannotHoldIsOutOfRange)
 {
         using S = xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 100>;
-        static_assert(S().max_size() == 100UZ);
+        static_assert(S::max_size() == 100UZ);
 
         auto s = S();
         s.insert(3UZ);
