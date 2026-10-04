@@ -85,7 +85,7 @@ BOOST_AUTO_TEST_CASE(GrowthPastNoughtThrowsBadAlloc)
 
 BOOST_AUTO_TEST_CASE(ChangesThatStayAtNoughtChangeNothing)
 {
-        auto a            = Blocks();
+        auto const a      = Blocks();
         auto const blocks = std::array<std::uint8_t, 1>{0xFFU};
         Blocks::resize(0UZ, blocks[0]);
         Blocks::insert(a.end(), blocks.begin(), blocks.begin());

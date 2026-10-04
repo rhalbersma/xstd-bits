@@ -76,9 +76,13 @@ constexpr auto nested_types()
         static_assert(not std::indirectly_writable<typename X::const_iterator, Key>); // [associative.reqmts.general]/6
 }
 
+// A set's comparator, named where no typename is asked for.
+template<class X>
+using key_compare_t = X::key_compare;
+
 // Whether a set's keys come lowest first, as std::less orders them, rather than highest first.
 template<class X>
-inline constexpr bool ascending = typename X::key_compare()(0UZ, 1UZ);
+inline constexpr bool ascending = key_compare_t<X>()(0UZ, 1UZ);
 
 // Two comparators order alike where they agree on a pair either way round and on a key against itself.
 template<class Compare>
