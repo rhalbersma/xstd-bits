@@ -21,6 +21,7 @@
 #include <concepts>                              // same_as
 #include <cstddef>                               // size_t
 #include <cstdint>                               // uint8_t
+#include <functional>                            // less
 #include <memory>                                // allocator
 #include <memory_resource>                       // new_delete_resource, polymorphic_allocator, unsynchronized_pool_resource
 #include <tuple>                                 // tuple
@@ -123,7 +124,7 @@ BOOST_AUTO_TEST_CASE(InlineBlocksDeduceTheirAlignedCapacity)
 }
 
 // The heap owners over a polymorphic allocator, which two resources make unequal.
-using polymorphic_owners = std::tuple<xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_traits<std::size_t>, std::pmr::polymorphic_allocator<std::uint8_t>>, xstd::basic_bit_small_set<std::size_t, std::uint8_t, 16, xstd::bit_key_traits<std::size_t>, std::pmr::polymorphic_allocator<std::uint8_t>>>;
+using polymorphic_owners = std::tuple<xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_traits<std::size_t>, std::less<std::size_t>, std::pmr::polymorphic_allocator<std::uint8_t>>, xstd::basic_bit_small_set<std::size_t, std::uint8_t, 16, xstd::bit_key_traits<std::size_t>, std::less<std::size_t>, std::pmr::polymorphic_allocator<std::uint8_t>>>; // NOLINT(modernize-use-transparent-functors): the default comparator, spelled to reach the allocator
 
 // Blocks adopted under an unequal allocator are copied into it; storage taken from new and delete would leak.
 BOOST_AUTO_TEST_CASE_TEMPLATE(AdoptionUnderAnUnequalAllocatorCopiesTheBlocks, S, polymorphic_owners)

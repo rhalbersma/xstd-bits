@@ -19,7 +19,7 @@
 #include <concepts>                           // same_as
 #include <cstddef>                            // size_t
 #include <cstdint>                            // uint8_t
-#include <functional>                         // hash
+#include <functional>                         // hash, less
 #include <initializer_list>                   // initializer_list
 #include <iterator>                           // iter_value_t
 #include <memory>                             // allocator
@@ -37,7 +37,7 @@ using T = xstd::basic_bit_set<std::size_t, std::uint8_t>;
 BOOST_AUTO_TEST_CASE(TheDynamicSetIsTheSetAdaptorOverAHeapOfBlocks)
 {
         static_assert(std::derived_from<T, xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_container<std::vector<std::uint8_t>>, xstd::bits::detail::storage::owned, T>>);
-        static_assert(std::same_as<xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_traits<std::size_t>, std::allocator<std::uint8_t>>, T>);
+        static_assert(std::same_as<xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_traits<std::size_t>, std::less<std::size_t>, std::allocator<std::uint8_t>>, T>); // NOLINT(modernize-use-transparent-functors): the default comparator, spelled to reach the allocator
 }
 
 // [set.cons]'s allocator arguments, constructed rather than merely asked about in a requires-expression.

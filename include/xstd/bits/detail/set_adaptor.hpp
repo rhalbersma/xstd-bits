@@ -10,10 +10,10 @@
 #include <xstd/bits/bit_storage.hpp>                 // bit_storage
 #include <xstd/bits/detail/adapted_bits.hpp>         // adapted_bits
 #include <xstd/bits/detail/allocator_base_type.hpp>  // allocator_base_type, allocator_param_t, has_allocator_v
-#include <xstd/bits/detail/bidirectional.hpp>        // bidirectional_bit_iterator, bidirectional_bit_reference
+#include <xstd/bits/detail/bidirectional.hpp>        // bidirectional_bit_iterator, bidirectional_bit_reference, direction
 #include <xstd/bits/detail/bit_container.hpp>        // bit_container, bit_container_type
 #include <xstd/bits/detail/borrowed_bits.hpp>        // borrow_bits, borrowable_block, borrowable_blocks, borrowed_bits_t
-#include <xstd/bits/detail/comparisons.hpp>          // set_equal, set_three_way
+#include <xstd/bits/detail/comparisons.hpp>          // numeric_three_way, set_equal, set_three_way
 #include <xstd/bits/detail/functor.hpp>              // decay_copy
 #include <xstd/bits/detail/hash.hpp>                 // hash_append_bits, hash_append_positions, std_hash
 #include <xstd/bits/detail/intrin.hpp>               // countl_zero, countr_zero
@@ -25,16 +25,16 @@
 #include <xstd/misc/type_traits/empty_base_type.hpp> // empty_base_type
 #include <boost/container_hash/is_range.hpp>         // is_range
 #include <boost/hash2/hash_append.hpp>               // hash_append_tag
-#include <algorithm>                                 // all_of, find_if, lexicographical_compare_three_way, max, min
+#include <algorithm>                                 // all_of, find_if, lexicographical_compare_three_way, max, min, partition_point
 #include <cassert>                                   // assert
 #include <compare>                                   // strong_ordering
 #include <concepts>                                  // constructible_from, convertible_to, invocable, same_as, swappable
 #include <cstddef>                                   // ptrdiff_t, size_t
 #include <format>                                    // format
-#include <functional>                                // hash, less
+#include <functional>                                // greater, hash, less
 #include <initializer_list>                          // initializer_list
 #include <iterator>                                  // input_iterator, iter_reference_t, make_reverse_iterator, reverse_iterator, sentinel_for
-#include <ranges>                                    // begin, enable_borrowed_range, enable_view, end, input_range, iota, range_reference_t, from_range_t, swap, transform
+#include <ranges>                                    // begin, enable_borrowed_range, enable_view, end, input_range, iota, range_reference_t, from_range_t, subrange, swap, transform
 #include <source_location>                           // source_location
 #include <span>                                      // dynamic_extent
 #include <stdexcept>                                 // out_of_range
@@ -116,18 +116,32 @@ constexpr auto walk_blocks_descending(Bits const& c, F& f)
 template<class KeyTraits, std::size_t N>
 concept admits_width = (not requires { KeyTraits::size; }) or (KeyTraits::size == N);
 
+// Position order is structural, so a comparator only picks a direction, with the key named or transparently.
+template<class Compare, class Key>
+concept key_direction = std::same_as<Compare, std::less<Key>> or std::same_as<Compare, std::less<>> or std::same_as<Compare, std::greater<Key>> or std::same_as<Compare, std::greater<>>;
+
+template<class Compare>
+inline constexpr auto direction_of = std::same_as<Compare, std::greater<>> ? direction::descending : direction::ascending;
+
+template<class Key>
+inline constexpr auto direction_of<std::greater<Key>> = direction::descending;
+
+// A comparator that lets a key of another type in, as [associative.reqmts.general]/180 has it.
+template<class Compare>
+concept transparent = requires { typename Compare::is_transparent; };
+
 } // namespace set
 
-template<bit_container_type Bits, storage Store = storage::owned, class Derived = void, class Key = std::size_t, class KeyTraits = bit_key_traits<Key>>
+template<bit_container_type Bits, storage Store = storage::owned, class Derived = void, class Key = std::size_t, class KeyTraits = bit_key_traits<Key>, class Compare = std::less<Key>>
 class set_adaptor;
 
 namespace set {
 
 // The storage an owner has or a view's handle into another's, in a base public exactly where the owner is structural.
-template<class Bits, storage Store, class Derived, class Key, class KeyTraits>
+template<class Bits, storage Store, class Derived, class Key, class KeyTraits, class Compare>
 using members_t = adapted_bits<
         std::conditional_t<owns(Store), Bits, storage_ref_t<Bits>>,
-        std::conditional_t<owns(Store), allocator_base_type<std::remove_const_t<Bits>, set_adaptor<Bits, Store, Derived, Key, KeyTraits>>, xstd::empty_base_type<>>,
+        std::conditional_t<owns(Store), allocator_base_type<std::remove_const_t<Bits>, set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare>>, xstd::empty_base_type<>>,
         owns(Store) and std::remove_const_t<Bits>::is_structural>;
 
 // The positions an owner can hold where its type fixes them, its width or its capacity, else dynamic_extent.
@@ -178,22 +192,25 @@ struct run_time_max_size : Members
 };
 
 // The adaptor's base: its storage under max_size() as its column has it, which the adaptor does not declare.
-template<class Bits, storage Store, class Derived, class Key, class KeyTraits>
+template<class Bits, storage Store, class Derived, class Key, class KeyTraits, class Compare>
 using sizes_t = std::conditional_t<
         static_max_size<Bits, Store>() != std::dynamic_extent,
-        fixed_max_size<members_t<Bits, Store, Derived, Key, KeyTraits>, static_max_size<Bits, Store>()>,
-        run_time_max_size<members_t<Bits, Store, Derived, Key, KeyTraits>, Bits, Store>>;
+        fixed_max_size<members_t<Bits, Store, Derived, Key, KeyTraits, Compare>, static_max_size<Bits, Store>()>,
+        run_time_max_size<members_t<Bits, Store, Derived, Key, KeyTraits, Compare>, Bits, Store>>;
 
 } // namespace set
 
-template<bit_container_type Bits, storage Store, class Derived, class Key, class KeyTraits>
-class set_adaptor : public set::sizes_t<Bits, Store, Derived, Key, KeyTraits>
+template<bit_container_type Bits, storage Store, class Derived, class Key, class KeyTraits, class Compare>
+class set_adaptor : public set::sizes_t<Bits, Store, Derived, Key, KeyTraits, Compare>
 {
+        static_assert(set::key_direction<Compare, Key>);
+
         static constexpr bool is_owner = owns(Store);
+        static constexpr bool is_descending = (set::direction_of<Compare> == direction::descending);
 
         using bits_type = std::remove_const_t<Bits>;
 
-        using members_type = set::sizes_t<Bits, Store, Derived, Key, KeyTraits>;
+        using members_type = set::sizes_t<Bits, Store, Derived, Key, KeyTraits, Compare>;
         using members_type::m_bits;
 
         // One accessor: self.m_bits propagates the owner's const, *self.m_bits keeps the view shallow.
@@ -211,7 +228,7 @@ class set_adaptor : public set::sizes_t<Bits, Store, Derived, Key, KeyTraits>
         friend Derived;
 
         // A view refers into this owner's storage, and only a reading that can view it is named.
-        template<bit_container_type, storage, class, class, class>
+        template<bit_container_type, storage, class, class, class, class>
         friend class set_adaptor;
 
         // The free functions over every reading, bit_convert among them, reach the storage through this one door.
@@ -242,17 +259,17 @@ public:
         // types
         using key_type = Key;
         using key_traits_type = KeyTraits;
-        using key_compare = std::less<key_type>;
+        using key_compare = Compare;
         using value_type = key_type;
         using value_compare = key_compare;
         static constexpr bool has_static_width = (Bits::extent != std::dynamic_extent);
         using pointer = void;
         using const_pointer = pointer;
-        using reference = bidirectional_bit_reference<Bits, Key, KeyTraits>;
+        using reference = bidirectional_bit_reference<Bits, Key, KeyTraits, set::direction_of<Compare>>;
         using const_reference = reference;
         using size_type = std::size_t;
         using difference_type = std::ptrdiff_t;
-        using iterator = bidirectional_bit_iterator<Bits, Key, KeyTraits>;
+        using iterator = bidirectional_bit_iterator<Bits, Key, KeyTraits, set::direction_of<Compare>>;
         using const_iterator = iterator;
         using reverse_iterator = std::reverse_iterator<iterator>;
         using const_reverse_iterator = std::reverse_iterator<const_iterator>;
@@ -288,7 +305,7 @@ public:
                 insert(il.begin(), il.end());
         }
 
-        // [set.cons]'s comparator arguments, taken and dropped: key_compare is std::less, which has no state to keep.
+        // [set.cons]'s comparator arguments, taken and dropped: each key_compare a set reading admits has no state.
         [[nodiscard]] constexpr explicit set_adaptor(key_compare const& /* comp */) noexcept(std::is_nothrow_default_constructible_v<Bits>)
                 requires is_owner
         {}
@@ -435,18 +452,25 @@ public:
         [[nodiscard]] friend constexpr auto operator<=>(set_adaptor const& x, set_adaptor const& y) noexcept
                 -> std::strong_ordering
         {
-                if constexpr (requires { set_three_way(x.bits(), y.bits()); }) {
+                if constexpr (is_descending and requires { numeric_three_way(x.bits(), y.bits()); }) {
+                        // [associative.reqmts]' order over descending keys is the masks' as unsigned numbers.
+                        return numeric_three_way(x.bits(), y.bits());
+                } else if constexpr (not is_descending and requires { set_three_way(x.bits(), y.bits()); }) {
                         return set_three_way(x.bits(), y.bits());
                 } else {
                         return std::lexicographical_compare_three_way(x.begin(), x.end(), y.begin(), y.end());
                 }
         }
 
-        // iterators; one type for both, this reading being read-only through its proxy.
+        // iterators; one type for both, this reading being read-only through its proxy, and size() the end either way.
         [[nodiscard]] constexpr auto begin() const noexcept
                 -> const_iterator
         {
-                return {&bits(), bits().find_first()};
+                if constexpr (is_descending) {
+                        return {&bits(), bits().total_find_prev(bits().size())};
+                } else {
+                        return {&bits(), bits().find_first()};
+                }
         }
 
         [[nodiscard]] constexpr auto end() const noexcept
@@ -491,22 +515,30 @@ public:
                 return rend();
         }
 
-        // The set reading a block at a time, which is what an iterator cannot be.
+        // The set reading a block at a time in the iteration order, which is what an iterator cannot be.
         template<class F>
                 requires std::invocable<F&, key_type>
         constexpr auto for_each(this auto&& self, F f)
                 -> void
         {
-                set::walk_blocks_ascending<Key, KeyTraits>(self.bits(), f);
+                if constexpr (is_descending) {
+                        set::walk_blocks_descending<Key, KeyTraits>(self.bits(), f);
+                } else {
+                        set::walk_blocks_ascending<Key, KeyTraits>(self.bits(), f);
+                }
         }
 
-        // The mirror, highest position first.
+        // The mirror, the last key in the iteration order first.
         template<class F>
                 requires std::invocable<F&, key_type>
         constexpr auto for_each_reverse(this auto&& self, F f)
                 -> void
         {
-                set::walk_blocks_descending<Key, KeyTraits>(self.bits(), f);
+                if constexpr (is_descending) {
+                        set::walk_blocks_ascending<Key, KeyTraits>(self.bits(), f);
+                } else {
+                        set::walk_blocks_descending<Key, KeyTraits>(self.bits(), f);
+                }
         }
 
         // capacity; a bitset's count() is a set's size(), and max_size() is the positions there are to hold.
@@ -543,6 +575,8 @@ public:
         {
                 if constexpr (zero_width<bits_type>) {
                         return {&bits(), 0UZ};
+                } else if constexpr (is_descending) {
+                        return {&bits(), bits().find_first()};
                 } else {
                         return {&bits(), bits().exclusive_find_prev(bits().size())};
                 }
@@ -658,7 +692,7 @@ public:
                 requires requires (std::size_t pos) { self.bits().assign(pos, false); }
         {
                 // A range, not two positions: reversed, the walk steps past last into a scan nothing answers.
-                assert(KeyTraits::to_index(*first) <= KeyTraits::to_index(*last));
+                assert(is_descending ? (last == self.end() or KeyTraits::to_index(*last) <= KeyTraits::to_index(*first)) : KeyTraits::to_index(*first) <= KeyTraits::to_index(*last));
                 while (first != last) {
                         self.bits().assign(KeyTraits::to_index(*first++), false);
                 }
@@ -841,27 +875,116 @@ public:
                 return contains(x) ? const_iterator{&bits(), KeyTraits::to_index(x)} : end();
         }
 
-        // The first element not less than x, asked about directly because stepping from x - 1 would underflow at zero.
+        // The first element key_compare puts no earlier than x; ascending, stepping from x - 1 would underflow at zero.
         [[nodiscard]] constexpr auto lower_bound(key_type const& x) const noexcept
                 -> const_iterator
         {
-                return contains(x) ? const_iterator{&bits(), KeyTraits::to_index(x)} : upper_bound(x);
+                if constexpr (is_descending) {
+                        // The highest position not above x's, which is the scan below the one past it.
+                        auto const pos = KeyTraits::to_index(x);
+                        return {&bits(), bits().total_find_prev(pos < bits().size() ? pos + 1UZ : bits().size())};
+                } else {
+                        return contains(x) ? const_iterator{&bits(), KeyTraits::to_index(x)} : upper_bound(x);
+                }
         }
 
         [[nodiscard]] constexpr auto upper_bound(key_type const& x) const noexcept
                 -> const_iterator
         {
                 auto const pos = KeyTraits::to_index(x);
-                if (pos >= bits().size()) {
-                        return end();
+                if constexpr (is_descending) {
+                        return {&bits(), bits().total_find_prev(std::ranges::min(pos, bits().size()))};
+                } else {
+                        if (pos >= bits().size()) {
+                                return end();
+                        }
+                        return {&bits(), bits().exclusive_find_next(pos)};
                 }
-                return {&bits(), bits().exclusive_find_next(pos)};
         }
 
         [[nodiscard]] constexpr auto equal_range(key_type const& x) const noexcept
                 -> std::pair<const_iterator, const_iterator>
         {
                 return {lower_bound(x), upper_bound(x)};
+        }
+
+        // The heterogeneous forms, over the positions whose keys are equivalent to x under key_compare.
+        template<class K>
+                requires set::transparent<key_compare>
+        [[nodiscard]] constexpr auto contains(K const& x) const
+                -> bool
+        {
+                auto const [lo, hi] = equivalent_positions(x);
+                return bits().inclusive_find_next(lo) < hi;
+        }
+
+        template<class K>
+                requires set::transparent<key_compare>
+        [[nodiscard]] constexpr auto count(K const& x) const
+                -> size_type
+        {
+                auto const [lo, hi] = equivalent_positions(x);
+                auto n = 0UZ;
+                for (auto pos = bits().inclusive_find_next(lo); pos < hi; pos = bits().exclusive_find_next(pos)) {
+                        ++n;
+                }
+                return n;
+        }
+
+        template<class K>
+                requires set::transparent<key_compare>
+        [[nodiscard]] constexpr auto find(K const& x) const
+                -> const_iterator
+        {
+                auto const [lo, hi] = equivalent_positions(x);
+                auto const pos = bits().inclusive_find_next(lo);
+                return pos < hi ? const_iterator{&bits(), pos} : end();
+        }
+
+        template<class K>
+                requires set::transparent<key_compare>
+        [[nodiscard]] constexpr auto lower_bound(K const& x) const
+                -> const_iterator
+        {
+                auto const [lo, hi] = equivalent_positions(x);
+                if constexpr (is_descending) {
+                        return {&bits(), bits().total_find_prev(hi)};
+                } else {
+                        return {&bits(), bits().inclusive_find_next(lo)};
+                }
+        }
+
+        template<class K>
+                requires set::transparent<key_compare>
+        [[nodiscard]] constexpr auto upper_bound(K const& x) const
+                -> const_iterator
+        {
+                auto const [lo, hi] = equivalent_positions(x);
+                if constexpr (is_descending) {
+                        return {&bits(), bits().total_find_prev(lo)};
+                } else {
+                        return {&bits(), bits().inclusive_find_next(hi)};
+                }
+        }
+
+        template<class K>
+                requires set::transparent<key_compare>
+        [[nodiscard]] constexpr auto equal_range(K const& x) const
+                -> std::pair<const_iterator, const_iterator>
+        {
+                return {lower_bound(x), upper_bound(x)};
+        }
+
+        // [associative.reqmts.general]/122: an argument that converts to an iterator still erases at that iterator.
+        template<class K>
+                requires set::transparent<key_compare> and (not std::convertible_to<K &&, iterator>) and (not std::convertible_to<K &&, const_iterator>)
+                                                                                                 constexpr auto erase(this auto&& self, K&& x) -> size_type
+                                 requires requires (std::size_t pos, std::size_t len) { self.bits().set(pos, len, false); }
+        {
+                auto const erased = self.count(x);
+                auto const [lo, hi] = self.equivalent_positions(x);
+                self.bits().set(lo, hi - lo, false);
+                return erased;
         }
 
         // The storage's own member where it has one, its bulk operators otherwise.
@@ -894,6 +1017,34 @@ public:
         }
 
 private:
+        // The positions whose keys are equivalent to x, bisected under key_compare, the keys being in position order.
+        template<class K>
+        [[nodiscard]] constexpr auto equivalent_positions(K const& x) const
+                -> std::pair<std::size_t, std::size_t>
+        {
+                auto const comp = key_compare();
+                auto const positions = std::views::iota(0UZ, bits().size());
+                // Descending, a key orders before x exactly where comp(x, key) holds.
+                auto const below = [&](std::size_t pos) -> bool {
+                        if constexpr (is_descending) {
+                                return comp(x, KeyTraits::from_index(pos));
+                        } else {
+                                return comp(KeyTraits::from_index(pos), x);
+                        }
+                };
+                auto const not_above = [&](std::size_t pos) -> bool {
+                        if constexpr (is_descending) {
+                                return not comp(KeyTraits::from_index(pos), x);
+                        } else {
+                                return not comp(x, KeyTraits::from_index(pos));
+                        }
+                };
+                auto const first = std::ranges::begin(positions);
+                auto const lo = std::ranges::partition_point(positions, below);
+                auto const hi = std::ranges::partition_point(std::ranges::subrange(lo, std::ranges::end(positions)), not_above);
+                return {static_cast<std::size_t>(lo - first), static_cast<std::size_t>(hi - first)};
+        }
+
         // The container built on this vehicle, which is what its value-returning operators hand back.
         [[nodiscard]] constexpr auto self() noexcept
                 -> derived_type&
@@ -948,8 +1099,8 @@ template<class T>
 concept set_adaptor_like = requires { typename T::adaptor_type; typename T::reads_as; } and std::same_as<typename T::reads_as, set_reading_tag> and std::derived_from<T, typename T::adaptor_type>;
 
 // The owner's side of the protocol above.
-template<class Bits, class Derived, class Key, class KeyTraits>
-struct owned_storage<set_adaptor<Bits, storage::owned, Derived, Key, KeyTraits>>
+template<class Bits, class Derived, class Key, class KeyTraits, class Compare>
+struct owned_storage<set_adaptor<Bits, storage::owned, Derived, Key, KeyTraits, Compare>>
 {
         using bits_type = Bits;
 
@@ -960,9 +1111,9 @@ struct owned_storage<set_adaptor<Bits, storage::owned, Derived, Key, KeyTraits>>
 // NOLINTBEGIN(readability-redundant-parentheses): a call is no primary expression, so the clause needs them.
 
 // 23.4.6.3 Erasure                                                [set.erasure]
-template<class Bits, storage Store, class Derived, class Key, class KeyTraits, class Predicate>
-constexpr auto erase_if(set_adaptor<Bits, Store, Derived, Key, KeyTraits>& c, Predicate pred)
-        -> set_adaptor<Bits, Store, Derived, Key, KeyTraits>::size_type
+template<class Bits, storage Store, class Derived, class Key, class KeyTraits, class Compare, class Predicate>
+constexpr auto erase_if(set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare>& c, Predicate pred)
+        -> set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare>::size_type
 {
         auto const original_size = c.size();
         for (auto i = c.begin(), last = c.end(); i != last;) {
@@ -976,65 +1127,65 @@ constexpr auto erase_if(set_adaptor<Bits, Store, Derived, Key, KeyTraits>& c, Pr
 }
 
 // The non-member forms copy, so they are the owner's alone: a copied view would write through.
-template<class Bits, storage Store, class Derived, class Key, class KeyTraits>
-[[nodiscard]] constexpr auto operator~(set_adaptor<Bits, Store, Derived, Key, KeyTraits> const& lhs) noexcept(set_adaptor<Bits, Store, Derived, Key, KeyTraits>::has_static_width) -> set_adaptor<Bits, Store, Derived, Key, KeyTraits>::derived_type
-        requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived, Key, KeyTraits> c) { c.complement(); }
+template<class Bits, storage Store, class Derived, class Key, class KeyTraits, class Compare>
+[[nodiscard]] constexpr auto operator~(set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare> const& lhs) noexcept(set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare>::has_static_width) -> set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare>::derived_type
+        requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare> c) { c.complement(); }
 {
-        auto nrv = static_cast<set_adaptor<Bits, Store, Derived, Key, KeyTraits>::derived_type const&>(lhs);
+        auto nrv = static_cast<set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare>::derived_type const&>(lhs);
         nrv.complement();
         return nrv;
 }
 
-template<class Bits, storage Store, class Derived, class Key, class KeyTraits>
-[[nodiscard]] constexpr auto operator&(set_adaptor<Bits, Store, Derived, Key, KeyTraits> const& lhs, set_adaptor<Bits, Store, Derived, Key, KeyTraits> const& rhs) noexcept(set_adaptor<Bits, Store, Derived, Key, KeyTraits>::has_static_width) -> set_adaptor<Bits, Store, Derived, Key, KeyTraits>::derived_type
-        requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived, Key, KeyTraits> c) { c &= c; }
+template<class Bits, storage Store, class Derived, class Key, class KeyTraits, class Compare>
+[[nodiscard]] constexpr auto operator&(set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare> const& lhs, set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare> const& rhs) noexcept(set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare>::has_static_width) -> set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare>::derived_type
+        requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare> c) { c &= c; }
 {
-        auto nrv = static_cast<set_adaptor<Bits, Store, Derived, Key, KeyTraits>::derived_type const&>(lhs);
+        auto nrv = static_cast<set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare>::derived_type const&>(lhs);
         nrv &= rhs;
         return nrv;
 }
 
-template<class Bits, storage Store, class Derived, class Key, class KeyTraits>
-[[nodiscard]] constexpr auto operator|(set_adaptor<Bits, Store, Derived, Key, KeyTraits> const& lhs, set_adaptor<Bits, Store, Derived, Key, KeyTraits> const& rhs) noexcept(set_adaptor<Bits, Store, Derived, Key, KeyTraits>::has_static_width) -> set_adaptor<Bits, Store, Derived, Key, KeyTraits>::derived_type
-        requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived, Key, KeyTraits> c) { c |= c; }
+template<class Bits, storage Store, class Derived, class Key, class KeyTraits, class Compare>
+[[nodiscard]] constexpr auto operator|(set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare> const& lhs, set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare> const& rhs) noexcept(set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare>::has_static_width) -> set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare>::derived_type
+        requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare> c) { c |= c; }
 {
-        auto nrv = static_cast<set_adaptor<Bits, Store, Derived, Key, KeyTraits>::derived_type const&>(lhs);
+        auto nrv = static_cast<set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare>::derived_type const&>(lhs);
         nrv |= rhs;
         return nrv;
 }
 
-template<class Bits, storage Store, class Derived, class Key, class KeyTraits>
-[[nodiscard]] constexpr auto operator^(set_adaptor<Bits, Store, Derived, Key, KeyTraits> const& lhs, set_adaptor<Bits, Store, Derived, Key, KeyTraits> const& rhs) noexcept(set_adaptor<Bits, Store, Derived, Key, KeyTraits>::has_static_width) -> set_adaptor<Bits, Store, Derived, Key, KeyTraits>::derived_type
-        requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived, Key, KeyTraits> c) { c ^= c; }
+template<class Bits, storage Store, class Derived, class Key, class KeyTraits, class Compare>
+[[nodiscard]] constexpr auto operator^(set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare> const& lhs, set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare> const& rhs) noexcept(set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare>::has_static_width) -> set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare>::derived_type
+        requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare> c) { c ^= c; }
 {
-        auto nrv = static_cast<set_adaptor<Bits, Store, Derived, Key, KeyTraits>::derived_type const&>(lhs);
+        auto nrv = static_cast<set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare>::derived_type const&>(lhs);
         nrv ^= rhs;
         return nrv;
 }
 
-template<class Bits, storage Store, class Derived, class Key, class KeyTraits>
-[[nodiscard]] constexpr auto operator-(set_adaptor<Bits, Store, Derived, Key, KeyTraits> const& lhs, set_adaptor<Bits, Store, Derived, Key, KeyTraits> const& rhs) noexcept(set_adaptor<Bits, Store, Derived, Key, KeyTraits>::has_static_width) -> set_adaptor<Bits, Store, Derived, Key, KeyTraits>::derived_type
-        requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived, Key, KeyTraits> c) { c -= c; }
+template<class Bits, storage Store, class Derived, class Key, class KeyTraits, class Compare>
+[[nodiscard]] constexpr auto operator-(set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare> const& lhs, set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare> const& rhs) noexcept(set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare>::has_static_width) -> set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare>::derived_type
+        requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare> c) { c -= c; }
 {
-        auto nrv = static_cast<set_adaptor<Bits, Store, Derived, Key, KeyTraits>::derived_type const&>(lhs);
+        auto nrv = static_cast<set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare>::derived_type const&>(lhs);
         nrv -= rhs;
         return nrv;
 }
 
-template<class Bits, storage Store, class Derived, class Key, class KeyTraits>
-[[nodiscard]] constexpr auto operator<<(set_adaptor<Bits, Store, Derived, Key, KeyTraits> const& lhs, std::size_t n) noexcept(set_adaptor<Bits, Store, Derived, Key, KeyTraits>::has_static_width) -> set_adaptor<Bits, Store, Derived, Key, KeyTraits>::derived_type
-        requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived, Key, KeyTraits> c) { c <<= n; }
+template<class Bits, storage Store, class Derived, class Key, class KeyTraits, class Compare>
+[[nodiscard]] constexpr auto operator<<(set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare> const& lhs, std::size_t n) noexcept(set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare>::has_static_width) -> set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare>::derived_type
+        requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare> c) { c <<= n; }
 {
-        auto nrv = static_cast<set_adaptor<Bits, Store, Derived, Key, KeyTraits>::derived_type const&>(lhs);
+        auto nrv = static_cast<set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare>::derived_type const&>(lhs);
         nrv <<= n;
         return nrv;
 }
 
-template<class Bits, storage Store, class Derived, class Key, class KeyTraits>
-[[nodiscard]] constexpr auto operator>>(set_adaptor<Bits, Store, Derived, Key, KeyTraits> const& lhs, std::size_t n) noexcept(set_adaptor<Bits, Store, Derived, Key, KeyTraits>::has_static_width) -> set_adaptor<Bits, Store, Derived, Key, KeyTraits>::derived_type
-        requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived, Key, KeyTraits> c) { c >>= n; }
+template<class Bits, storage Store, class Derived, class Key, class KeyTraits, class Compare>
+[[nodiscard]] constexpr auto operator>>(set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare> const& lhs, std::size_t n) noexcept(set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare>::has_static_width) -> set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare>::derived_type
+        requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare> c) { c >>= n; }
 {
-        auto nrv = static_cast<set_adaptor<Bits, Store, Derived, Key, KeyTraits>::derived_type const&>(lhs);
+        auto nrv = static_cast<set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare>::derived_type const&>(lhs);
         nrv >>= n;
         return nrv;
 }
@@ -1046,8 +1197,8 @@ template<class Bits, storage Store, class Derived, class Key, class KeyTraits>
 namespace boost::container_hash {
 
 // Not a range to ContainerHash, so Hash2 takes the hook and not its range overload.
-template<class Bits, xstd::bits::detail::storage Store, class Derived, class Key, class KeyTraits>
-struct is_range<xstd::bits::detail::set_adaptor<Bits, Store, Derived, Key, KeyTraits>> : std::false_type
+template<class Bits, xstd::bits::detail::storage Store, class Derived, class Key, class KeyTraits, class Compare>
+struct is_range<xstd::bits::detail::set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare>> : std::false_type
 {};
 
 } // namespace boost::container_hash
@@ -1057,10 +1208,10 @@ namespace std {
 // NOLINTBEGIN(bugprone-std-namespace-modification)
 
 // Owned or viewed, as std::string_view hashes and std::set does not.
-template<class Bits, xstd::bits::detail::storage Store, class Derived, class Key, class KeyTraits>
-struct hash<xstd::bits::detail::set_adaptor<Bits, Store, Derived, Key, KeyTraits>>
+template<class Bits, xstd::bits::detail::storage Store, class Derived, class Key, class KeyTraits, class Compare>
+struct hash<xstd::bits::detail::set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare>>
 {
-        [[nodiscard]] constexpr auto operator()(xstd::bits::detail::set_adaptor<Bits, Store, Derived, Key, KeyTraits> const& v) const noexcept
+        [[nodiscard]] constexpr auto operator()(xstd::bits::detail::set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare> const& v) const noexcept
                 -> std::size_t
         {
                 return xstd::bits::detail::std_hash(v);

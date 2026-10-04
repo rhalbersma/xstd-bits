@@ -29,7 +29,7 @@ A row's `outcome` is one of:
 | `[set.union]` | 3 | as ¶1 | Effects | answered | Over unique keys, so the multiset counts of the second sentence reduce to the set operation. |
 | `[set.union]` | 4 | as ¶1 | Returns | answered | The iterator-returning overloads; the output-range overloads of the parallel `ranges` algorithms are not in any standard library the suite builds with. |
 | `[set.union]` | 5 | as ¶1 | Complexity | answered | As `[includes]/4`. |
-| `[set.union]` | 6 | as ¶1 | Remarks | declined | Not checked: stability orders equivalent elements, and under a set's own `std::less<std::size_t>` equivalent keys are equal values, so which range an element was copied from cannot be observed. |
+| `[set.union]` | 6 | as ¶1 | Remarks | declined | Not checked: stability orders equivalent elements, and under a set's own `std::less<std::size_t>` or `std::greater<std::size_t>` equivalent keys are equal values, so which range an element was copied from cannot be observed. |
 | `[set.intersection]` | 1 | `set_intersection(first1, last1, first2, last2, result)`, and the `comp`, execution-policy and `ranges` overloads | — | answered | Checked as the overloads without `comp` answering as the ones given `less{}`. |
 | `[set.intersection]` | 2 | as ¶1 | Preconditions | answered | As `[includes]/2`; the result is written to a buffer of its own. |
 | `[set.intersection]` | 3 | as ¶1 | Effects | answered | Over unique keys, so the multiset counts of the second sentence reduce to the set operation. |

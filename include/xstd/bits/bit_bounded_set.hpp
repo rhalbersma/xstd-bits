@@ -11,7 +11,7 @@
 #include <xstd/bits/detail/bit_container.hpp>                // bit_container, num_blocks_v
 #include <xstd/bits/detail/bounded_blocks.hpp>               // bounded_blocks
 #include <xstd/bits/detail/ownership.hpp>                    // storage
-#include <xstd/bits/detail/set_adaptor.hpp>                  // admits_width, set_adaptor
+#include <xstd/bits/detail/set_adaptor.hpp>                  // admits_width, key_direction, set_adaptor
 #include <xstd/bits/from_bit_storage.hpp>                    // from_bit_storage, from_bit_storage_t
 #include <xstd/ints/concepts/unsigned_integer.hpp>           // unsigned_integer
 #include <xstd/ints/memory.hpp>                              // align_up
@@ -19,7 +19,7 @@
 #include <boost/container_hash/is_range.hpp>                 // is_range
 #include <boost/container_hash/is_tuple_like.hpp>            // is_tuple_like
 #include <cstddef>                                           // size_t
-#include <functional>                                        // hash
+#include <functional>                                        // hash, less
 #include <initializer_list>                                  // initializer_list
 #include <iterator>                                          // input_iterator
 #include <limits>                                            // numeric_limits
@@ -30,10 +30,10 @@
 namespace xstd {
 
 // The set reading over a run-time width under a compile-time capacity: bounded by the type, not by the heap.
-template<class Key, xstd::unsigned_integer Block, std::size_t N, class KeyTraits = bit_key_traits<Key>>
-class basic_bit_bounded_set : public bits::detail::set_adaptor<bits::detail::bit_container<bits::detail::bounded_blocks<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, basic_bit_bounded_set<Key, Block, N, KeyTraits>, Key, KeyTraits>
+template<class Key, xstd::unsigned_integer Block, std::size_t N, class KeyTraits = bit_key_traits<Key>, bits::detail::set::key_direction<Key> Compare = std::less<Key>>
+class basic_bit_bounded_set : public bits::detail::set_adaptor<bits::detail::bit_container<bits::detail::bounded_blocks<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, basic_bit_bounded_set<Key, Block, N, KeyTraits, Compare>, Key, KeyTraits, Compare>
 {
-        using base_type = bits::detail::set_adaptor<bits::detail::bit_container<bits::detail::bounded_blocks<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, basic_bit_bounded_set<Key, Block, N, KeyTraits>, Key, KeyTraits>;
+        using base_type = bits::detail::set_adaptor<bits::detail::bit_container<bits::detail::bounded_blocks<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, basic_bit_bounded_set<Key, Block, N, KeyTraits, Compare>, Key, KeyTraits, Compare>;
 
         // A traits type that names a size closes the universe, and the width must be that size.
         static_assert(bits::detail::set::admits_width<KeyTraits, N>);
@@ -43,7 +43,7 @@ public:
         using typename base_type::key_compare;
         using typename base_type::value_type;
 
-        // [set.cons] less its allocator forms, in [set.overview]'s order; key_compare is std::less, so comp is dropped.
+        // [set.cons] less its allocator forms, in [set.overview]'s order; key_compare has no state, so comp is dropped.
         [[nodiscard]] constexpr basic_bit_bounded_set() noexcept
                 : basic_bit_bounded_set(key_compare())
         {}
@@ -90,8 +90,8 @@ basic_bit_bounded_set(from_bit_storage_t, bits::detail::bounded_blocks<Block, K>
 
 namespace aligned {
 
-template<class Key, xstd::unsigned_integer Block, std::size_t N, class KeyTraits = bit_key_traits<Key>>
-using basic_bit_bounded_set = xstd::basic_bit_bounded_set<Key, Block, xstd::align_up(N, static_cast<std::size_t>(std::numeric_limits<Block>::digits)), KeyTraits>;
+template<class Key, xstd::unsigned_integer Block, std::size_t N, class KeyTraits = bit_key_traits<Key>, class Compare = std::less<Key>>
+using basic_bit_bounded_set = xstd::basic_bit_bounded_set<Key, Block, xstd::align_up(N, static_cast<std::size_t>(std::numeric_limits<Block>::digits)), KeyTraits, Compare>;
 
 template<std::size_t N>
 using bit_bounded_set = basic_bit_bounded_set<std::size_t, std::size_t, N>;
@@ -103,12 +103,12 @@ using bit_bounded_set = basic_bit_bounded_set<std::size_t, std::size_t, N>;
 namespace boost::container_hash {
 
 // A reading with iterators says it is neither range nor tuple, so Boost hashes it as the value it is.
-template<class Key, class Block, std::size_t N, class KeyTraits>
-struct is_range<xstd::basic_bit_bounded_set<Key, Block, N, KeyTraits>> : std::false_type
+template<class Key, class Block, std::size_t N, class KeyTraits, class Compare>
+struct is_range<xstd::basic_bit_bounded_set<Key, Block, N, KeyTraits, Compare>> : std::false_type
 {};
 
-template<class Key, class Block, std::size_t N, class KeyTraits>
-struct is_tuple_like<xstd::basic_bit_bounded_set<Key, Block, N, KeyTraits>> : std::false_type
+template<class Key, class Block, std::size_t N, class KeyTraits, class Compare>
+struct is_tuple_like<xstd::basic_bit_bounded_set<Key, Block, N, KeyTraits, Compare>> : std::false_type
 {};
 
 } // namespace boost::container_hash
@@ -117,8 +117,8 @@ namespace std {
 
 // NOLINTBEGIN(bugprone-std-namespace-modification)
 
-template<class Key, class Block, std::size_t N, class KeyTraits>
-struct hash<xstd::basic_bit_bounded_set<Key, Block, N, KeyTraits>> : hash<typename xstd::basic_bit_bounded_set<Key, Block, N, KeyTraits>::adaptor_type>
+template<class Key, class Block, std::size_t N, class KeyTraits, class Compare>
+struct hash<xstd::basic_bit_bounded_set<Key, Block, N, KeyTraits, Compare>> : hash<typename xstd::basic_bit_bounded_set<Key, Block, N, KeyTraits, Compare>::adaptor_type>
 {};
 
 // NOLINTEND(bugprone-std-namespace-modification)

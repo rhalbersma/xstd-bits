@@ -11,6 +11,7 @@
 #include <concepts>                              // regular, same_as
 #include <cstddef>                               // size_t
 #include <cstdint>                               // uint8_t
+#include <functional>                            // less
 #include <memory>                                // allocator
 #include <ranges>                                // bidirectional_range
 #include <set>                                   // set
@@ -52,14 +53,14 @@ struct counting_allocator
         [[nodiscard]] friend auto operator==(counting_allocator const&, counting_allocator const&) -> bool = default;
 };
 
-using CountedSet = xstd::basic_bit_small_set<std::size_t, std::size_t, N, xstd::bit_key_traits<std::size_t>, counting_allocator<std::size_t>>;
+using CountedSet = xstd::basic_bit_small_set<std::size_t, std::size_t, N, xstd::bit_key_traits<std::size_t>, std::less<std::size_t>, counting_allocator<std::size_t>>; // NOLINT(modernize-use-transparent-functors): the default comparator, spelled to reach the allocator
 
 } // namespace
 
 // The short name is the general one at its defaults, and the allocator defaulted to is the storage's own.
 BOOST_AUTO_TEST_CASE(TheShortNameIsTheGeneralOneAtItsDefaults)
 {
-        static_assert(std::same_as<SmallSet, xstd::basic_bit_small_set<std::size_t, std::size_t, N, xstd::bit_key_traits<std::size_t>, boost::container::new_allocator<std::size_t>>>);
+        static_assert(std::same_as<SmallSet, xstd::basic_bit_small_set<std::size_t, std::size_t, N, xstd::bit_key_traits<std::size_t>, std::less<std::size_t>, boost::container::new_allocator<std::size_t>>>); // NOLINT(modernize-use-transparent-functors): the default comparator, spelled to reach the allocator
         static_assert(test::set::bit_set<SmallSet>);
         static_assert(std::ranges::bidirectional_range<SmallSet>);
         static_assert(std::regular<xstd::basic_bit_small_set<std::size_t, std::uint8_t, 24>>);

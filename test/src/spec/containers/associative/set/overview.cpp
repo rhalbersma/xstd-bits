@@ -37,13 +37,13 @@ inline constexpr bool constant_evaluable = test::set::static_width<X>;
 #ifdef TEST_HAS_INPLACE_VECTOR
 
 // The bounded sets hold their blocks in std::inplace_vector where there is one, and in a static_vector otherwise.
-template<class Block, std::size_t N>
-inline constexpr bool constant_evaluable<xstd::basic_bit_bounded_set<std::size_t, Block, N>> = true;
+template<class Block, std::size_t N, class Compare>
+inline constexpr bool constant_evaluable<xstd::basic_bit_bounded_set<std::size_t, Block, N, xstd::bit_key_traits<std::size_t>, Compare>> = true;
 
 #endif
 
-template<class Block, class Allocator>
-inline constexpr bool constant_evaluable<xstd::basic_bit_set<std::size_t, Block, xstd::bit_key_traits<std::size_t>, Allocator>> = true;
+template<class Block, class Compare, class Allocator>
+inline constexpr bool constant_evaluable<xstd::basic_bit_set<std::size_t, Block, xstd::bit_key_traits<std::size_t>, Compare, Allocator>> = true;
 
 #if defined(__cpp_lib_constexpr_set) && __cpp_lib_constexpr_set >= 202502L
 

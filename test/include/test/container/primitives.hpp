@@ -9,7 +9,7 @@
 #include <test/reference.hpp>        // proxy_reference
 #include <test/sequence/factory.hpp> // static_width
 #include <boost/test/unit_test.hpp>  // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_LE, BOOST_CHECK_NO_THROW
-#include <algorithm>                 // equal, lexicographical_compare_three_way
+#include <algorithm>                 // equal, lexicographical_compare_three_way, min_element
 #include <compare>                   // is_eq, strong_ordering
 #include <concepts>                  // convertible_to, destructible, same_as, signed_integral, unsigned_integral
 #include <cstddef>                   // ptrdiff_t, size_t
@@ -29,13 +29,13 @@ concept keyed = requires { typename X::key_type; };
 template<class X>
 concept fixed_width = not keyed<X> and test::sequence::static_width<X>;
 
-// The element an iteration reaches first: a set's least key, a sequence's position zero.
+// The element an iteration reaches first: a set's least key under its key_compare, a sequence's position zero.
 template<class X>
 [[nodiscard]] auto first_element(X const& a)
         -> X::value_type
 {
         if constexpr (keyed<X>) {
-                return *a.lower_bound(typename X::key_type());
+                return *std::ranges::min_element(a, a.key_comp());
         } else {
                 return a[0];
         }

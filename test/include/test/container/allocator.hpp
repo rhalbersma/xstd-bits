@@ -151,8 +151,8 @@ struct user_allocator
         using type = X::allocator_type;
 };
 
-template<class Block, std::size_t N, class Allocator>
-struct user_allocator<xstd::basic_bit_small_set<std::size_t, Block, N, xstd::bit_key_traits<std::size_t>, Allocator>>
+template<class Block, std::size_t N, class Compare, class Allocator>
+struct user_allocator<xstd::basic_bit_small_set<std::size_t, Block, N, xstd::bit_key_traits<std::size_t>, Compare, Allocator>>
 {
         using type = Allocator;
 };
