@@ -11,6 +11,7 @@
 #include <xstd/bits/detail/bounded_blocks.hpp>        // bounded_blocks
 #include <xstd/bits/detail/comparisons.hpp>           // sequence_three_way, set_equal, set_three_way
 #include <xstd/bits/detail/range_const_reference.hpp> // fallback::range_const_reference_t, range_const_reference_t
+#include <xstd/bits/from_blocks.hpp>                  // from_blocks
 #include <xstd/ints/memory.hpp>                       // align_up
 #include <boost/test/unit_test.hpp>                   // BOOST_CHECK_EQUAL, BOOST_CHECK_LE, BOOST_CHECK_LT, BOOST_CHECK_THROW, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <algorithm>                                  // count, lexicographical_compare_three_way, min
@@ -1521,6 +1522,35 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(BothShiftsAreBlockAtOnTheOperand, T, AlignedBlockA
                         BOOST_CHECK_EQUAL(l[i], c.block_at((i * D) - n));
                 }
         }
+}
+
+namespace {
+
+// Whether the blocks name a vehicle, asked so a refusal answers false rather than erroring.
+template<class Blocks>
+concept names_a_bit_block_container = requires { typename xstd::bits::detail::bit_block_container<Blocks>; };
+
+// A built-in array of blocks, named once so the storage under test is spelled where the check can be told why.
+using four_words = std::uint64_t[4]; // NOLINT(modernize-avoid-c-arrays): the storage under test
+
+} // namespace
+
+// A built-in array is read and never held: it deduces the std::array of its blocks, which holds every bit of it.
+BOOST_AUTO_TEST_CASE(ABuiltInArrayDeducesTheStdArrayOfItsBlocks)
+{
+        static constexpr four_words blocks = {0x8000'0000'0000'0001ULL, 0x0ULL, 0xF0ULL, 0x8000'0000'0000'0000ULL};
+        constexpr auto same                = std::array<std::uint64_t, 4>{0x8000'0000'0000'0001ULL, 0x0ULL, 0xF0ULL, 0x8000'0000'0000'0000ULL};
+
+        constexpr auto c = xstd::bits::detail::bit_block_container(xstd::from_blocks, blocks);
+        static_assert(std::same_as<decltype(c), xstd::bits::detail::bit_block_container<std::array<std::uint64_t, 4>> const>);
+        static_assert(std::same_as<decltype(c), decltype(xstd::bits::detail::bit_block_container(xstd::from_blocks, same)) const>);
+        static_assert(decltype(c)::extent == 256UZ);
+        static_assert(c == xstd::bits::detail::bit_block_container(xstd::from_blocks, same));
+        for (auto const i : std::views::iota(0UZ, 256UZ)) {
+                BOOST_CHECK_EQUAL(c.test(i), ((same[i / 64UZ] >> (i % 64UZ)) & 1U) != 0U);
+        }
+        static_assert(not xstd::owned_bit_blocks<four_words>);
+        static_assert(not names_a_bit_block_container<four_words>);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

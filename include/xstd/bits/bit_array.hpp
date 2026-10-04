@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_BIT_ARRAY_HPP
 #define XSTD_BITS_BIT_ARRAY_HPP
 
-#include <xstd/bits/bit_blocks.hpp>                 // bit_blocks_extent_v
+#include <xstd/bits/bit_blocks.hpp>                 // bit_block, bit_blocks_extent_v
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container, num_blocks_v
 #include <xstd/bits/detail/ownership.hpp>           // storage, window
 #include <xstd/bits/detail/sequence_adaptor.hpp>    // sequence_adaptor
@@ -80,6 +80,10 @@ basic_bit_array(from_blocks_t, Block) -> basic_bit_array<Block, bit_blocks_exten
 // The width of an array of blocks, zero blocks included, as [span.deduct] takes an array's bound.
 template<xstd::unsigned_integer Block, std::size_t K>
 basic_bit_array(from_blocks_t, std::array<Block, K>) -> basic_bit_array<Block, bit_blocks_extent_v<std::array<Block, K>>>;
+
+// A built-in array of blocks, by reference so it keeps its bound: what the std::array of its blocks deduces.
+template<xstd::bit_block Block, std::size_t K>
+basic_bit_array(from_blocks_t, Block const (&)[K]) -> basic_bit_array<Block, bit_blocks_extent_v<std::array<Block, K>>>; // NOLINT(modernize-avoid-c-arrays): a built-in array is what it reads.
 
 // [array.creation]'s to_array, of bits: a built-in array names no block type, so the default one is taken.
 template<class T, std::size_t N>

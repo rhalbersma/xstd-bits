@@ -20,7 +20,7 @@
 #include <ranges>                          // iota, size
 #include <span>                            // as_bytes, as_writable_bytes, dynamic_extent, span
 #include <stdexcept>                       // overflow_error
-#include <type_traits>                     // is_const_v, is_rvalue_reference_v, remove_cvref_t, remove_reference_t
+#include <type_traits>                     // is_array_v, is_const_v, is_rvalue_reference_v, remove_cvref_t, remove_reference_t
 #include <utility>                         // declval, forward
 
 // What xstd::bit_convert asks of its two ends, and the copy between them: position i to position i, at any widths.
@@ -32,9 +32,9 @@ concept fixed_width =
         bit_width_v<T> != std::dynamic_extent and
         (packed<T> or bit_layout<T, bit_width_v<T>>);
 
-// What a fixed width is written into: anything of a fixed width but a view, which writes bits it does not own.
+// What a fixed width is written into: not a view, which writes bits it does not own, nor an array no function returns.
 template<class T>
-concept fixed_target = fixed_width<T> and (not packed_view<T>);
+concept fixed_target = fixed_width<T> and (not packed_view<T>) and (not std::is_array_v<T>);
 
 // One of our owners whose width is a value rather than part of its type.
 template<class T>

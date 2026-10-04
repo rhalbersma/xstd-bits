@@ -13,11 +13,12 @@
 #include <concepts>                 // convertible_to, default_initializable
 #include <cstddef>                  // byte, size_t, to_integer
 #include <cstring>                  // memcpy
+#include <iterator>                 // size
 #include <limits>                   // numeric_limits
 #include <memory>                   // addressof
 #include <ranges>                   // data, iota, range_value_t
 #include <span>                     // dynamic_extent, span
-#include <type_traits>              // bool_constant, is_trivially_copyable_v
+#include <type_traits>              // bool_constant, is_bounded_array_v, is_trivially_copyable_v
 
 namespace xstd::bits::detail {
 
@@ -43,13 +44,14 @@ template<class Bits, std::size_t N>
 concept fixed_blocks_source =
         // Fixed first: owned_bit_blocks asks constructible_from, which can re-enter this very constraint.
         fixed_bit_blocks<Bits> and
-        xstd::owned_bit_blocks<Bits> and
+        // A built-in array is read and never owned.
+        (std::is_bounded_array_v<Bits> or xstd::owned_bit_blocks<Bits>) and
         xstd::bit_blocks_extent_v<Bits> >= N;
 
-// Whether size() is a constant expression, asked so it answers false rather than erroring.
+// Whether std::size of a value-initialised one is a constant expression, answering false rather than erroring.
 template<class Bits>
 concept has_constant_size = requires {
-        typename std::bool_constant<(Bits().size(), true)>;
+        typename std::bool_constant<(std::size(Bits{}), true)>;
 };
 
 // A copy answers what the shifts do only when every bit of the object is a value bit: digits against sizeof.
@@ -71,7 +73,7 @@ template<class Bits>
 // Whether bit_cast of a value-initialised Bits is a constant expression, answering false rather than erroring.
 template<class Bits>
 concept bit_cast_is_constant = requires {
-        typename std::bool_constant<(object_bytes(Bits()), true)>;
+        typename std::bool_constant<(object_bytes(Bits{}), true)>;
 };
 
 // What the probe below has to be able to ask of a candidate: build an empty one, light one position, count them.
@@ -81,7 +83,7 @@ concept probeable_bits =
         requires (Bits& b, Bits const& c, std::size_t n) {
                 b.set(n);
                 { c.count() } -> std::convertible_to<std::size_t>;
-                { c.size() } -> std::convertible_to<std::size_t>;
+                { std::size(c) } -> std::convertible_to<std::size_t>;
         };
 
 // One position lit and counted, asked only for whether it is a constant expression.
@@ -89,7 +91,7 @@ template<class Bits>
 [[nodiscard]] constexpr auto probe_once()
         -> bool
 {
-        auto b = Bits();
+        auto b = Bits{};
         b.set(0UZ);
         return static_cast<std::size_t>(b.count()) == 1UZ;
 }
@@ -104,7 +106,7 @@ template<class Bits, std::size_t N>
 [[nodiscard]] constexpr auto bit_layout_holds()
         -> bool
 {
-        for (auto const byte : object_bytes(Bits())) {
+        for (auto const byte : object_bytes(Bits{})) {
                 if (byte != std::byte{}) {
                         return false;
                 }
@@ -113,7 +115,7 @@ template<class Bits, std::size_t N>
                 if (i >= N) {
                         continue;
                 }
-                auto b = Bits();
+                auto b = Bits{};
                 b.set(i);
                 if (static_cast<std::size_t>(b.count()) != 1UZ) {
                         return false;
@@ -131,7 +133,7 @@ concept container_source =
         probeable_bits<Bits> and
         std::is_trivially_copyable_v<Bits> and
         // Its width, not merely one that fits, and asked before the probe so it never reaches a missing position.
-        Bits().size() == N and
+        std::size(Bits{}) == N and
         sizeof(Bits) * bits_per_byte >= N and
         sizeof(Bits) * bits_per_byte < N + bits_per_ullong and
         // With no byte to exchange there is nothing to prove, and bit_cast of std::bitset<0> reads uninitialised.
@@ -169,7 +171,7 @@ template<std::size_t N, class Blocks, std::size_t E>
 constexpr auto block_bytes_by_shifts(Blocks const& b, std::array<std::byte, E>& bytes) noexcept
         -> void
 {
-        for (auto const j : std::views::iota(0UZ, bytes.size())) {
+        for (auto const j : std::views::iota(0UZ, std::size(bytes))) {
                 bytes[j] = block_byte(b, j);
         }
 }
@@ -178,7 +180,7 @@ template<std::size_t N, class Blocks, std::size_t E>
 constexpr auto bytes_blocks_by_shifts(std::array<std::byte, E> const& bytes, Blocks& blocks) noexcept
         -> void
 {
-        for (auto const j : std::views::iota(0UZ, bytes.size())) {
+        for (auto const j : std::views::iota(0UZ, std::size(bytes))) {
                 or_block_byte(std::span(blocks), j, bytes[j]);
         }
 }
@@ -192,7 +194,7 @@ template<std::size_t N, class Bits>
         if constexpr (byte_count<N> > 0UZ) {
                 if constexpr (xstd::bit_block<Bits>) {
                         // No copy: memcpy timed at 0.31ns either way, so the branch buys nothing.
-                        for (auto const j : std::views::iota(0UZ, bytes.size())) {
+                        for (auto const j : std::views::iota(0UZ, std::size(bytes))) {
                                 bytes[j] = static_cast<std::byte>(static_cast<unsigned char>(b >> (bits_per_byte * j)));
                         }
                 } else if constexpr (fixed_blocks_source<Bits, N>) {
@@ -201,7 +203,7 @@ template<std::size_t N, class Bits>
                                 block_bytes_by_shifts<N>(b, bytes);
                         } else {
                                 if constexpr (blocks_copy_as_bytes<Bits>) {
-                                        std::memcpy(bytes.data(), std::ranges::data(b), bytes.size());
+                                        std::memcpy(bytes.data(), std::ranges::data(b), std::size(bytes));
                                 } else {
                                         block_bytes_by_shifts<N>(b, bytes);
                                 }
@@ -210,11 +212,11 @@ template<std::size_t N, class Bits>
                         // Trivially copyable by container_source, so the object representation reads straight out.
                         if consteval {
                                 auto const object = object_bytes(b);
-                                for (auto const j : std::views::iota(0UZ, bytes.size())) {
+                                for (auto const j : std::views::iota(0UZ, std::size(bytes))) {
                                         bytes[j] = object[j];
                                 }
                         } else {
-                                std::memcpy(bytes.data(), std::addressof(b), bytes.size());
+                                std::memcpy(bytes.data(), std::addressof(b), std::size(bytes));
                         }
                 }
         }
@@ -227,23 +229,23 @@ template<class Bits, std::size_t N>
         -> Bits
 {
         if constexpr (byte_count<N> == 0UZ) {
-                return Bits();
+                return Bits{};
         } else if constexpr (xstd::bit_block<Bits>) {
                 // The shifts alone, for the reason bit_bytes gives: a copy measured the same and said less.
-                auto value = Bits();
-                for (auto const j : std::views::iota(0UZ, bytes.size())) {
+                auto value = Bits{};
+                for (auto const j : std::views::iota(0UZ, std::size(bytes))) {
                         auto const byte = static_cast<Bits>(std::to_integer<unsigned char>(bytes[j]));
                         value           = static_cast<Bits>(value | static_cast<Bits>(byte << (bits_per_byte * j)));
                 }
                 return value;
         } else if constexpr (fixed_blocks_source<Bits, N>) {
                 // Value-initialised first, clearing the blocks above N, so set -> blocks -> set is the identity.
-                auto blocks = Bits();
+                auto blocks = Bits{};
                 if consteval {
                         bytes_blocks_by_shifts<N>(bytes, blocks);
                 } else {
                         if constexpr (blocks_copy_as_bytes<Bits>) {
-                                std::memcpy(std::ranges::data(blocks), bytes.data(), bytes.size());
+                                std::memcpy(std::ranges::data(blocks), bytes.data(), std::size(bytes));
                         } else {
                                 bytes_blocks_by_shifts<N>(bytes, blocks);
                         }
@@ -252,11 +254,11 @@ template<class Bits, std::size_t N>
         } else {
                 auto object = std::array<std::byte, sizeof(Bits)>();
                 if consteval {
-                        for (auto const j : std::views::iota(0UZ, bytes.size())) {
+                        for (auto const j : std::views::iota(0UZ, std::size(bytes))) {
                                 object[j] = bytes[j];
                         }
                 } else {
-                        std::memcpy(object.data(), bytes.data(), bytes.size());
+                        std::memcpy(object.data(), bytes.data(), std::size(bytes));
                 }
                 return std::bit_cast<Bits>(object);
         }

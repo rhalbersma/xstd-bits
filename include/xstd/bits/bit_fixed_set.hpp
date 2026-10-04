@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_BIT_FIXED_SET_HPP
 #define XSTD_BITS_BIT_FIXED_SET_HPP
 
-#include <xstd/bits/bit_blocks.hpp>                          // bit_blocks_extent_v
+#include <xstd/bits/bit_blocks.hpp>                          // bit_block, bit_blocks_extent_v
 #include <xstd/bits/bit_key_traits.hpp>                      // bit_key_traits
 #include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container, num_blocks_v
 #include <xstd/bits/detail/ownership.hpp>                    // storage
@@ -93,6 +93,10 @@ basic_bit_fixed_set(from_blocks_t, Block) -> basic_bit_fixed_set<std::size_t, Bl
 // The width of an array of blocks, zero blocks included, as [span.deduct] takes an array's bound.
 template<xstd::unsigned_integer Block, std::size_t K>
 basic_bit_fixed_set(from_blocks_t, std::array<Block, K>) -> basic_bit_fixed_set<std::size_t, Block, bit_blocks_extent_v<std::array<Block, K>>>;
+
+// A built-in array of blocks, by reference so it keeps its bound: what the std::array of its blocks deduces.
+template<xstd::bit_block Block, std::size_t K>
+basic_bit_fixed_set(from_blocks_t, Block const (&)[K]) -> basic_bit_fixed_set<std::size_t, Block, bit_blocks_extent_v<std::array<Block, K>>>; // NOLINT(modernize-avoid-c-arrays): a built-in array is what it reads.
 
 namespace aligned {
 

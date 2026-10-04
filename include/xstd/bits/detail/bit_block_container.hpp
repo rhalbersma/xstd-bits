@@ -1689,6 +1689,10 @@ private:
 template<xstd::bit_block Block>
 bit_block_container(xstd::from_blocks_t, Block) -> bit_block_container<std::array<Block, 1>>;
 
+// A built-in array of blocks deduces the std::array of the same blocks.
+template<xstd::bit_block Block, std::size_t K>
+bit_block_container(xstd::from_blocks_t, Block const (&)[K]) -> bit_block_container<std::array<Block, K>>; // NOLINT(modernize-avoid-c-arrays): a built-in array is what it reads.
+
 // The one vehicle and nothing else, const where a view over a const owner names it.
 template<class T>
 inline constexpr bool is_bit_block_container_v = false;

@@ -41,6 +41,9 @@ namespace {
 template<class T>
 concept is_set = requires { typename T::key_type; };
 
+// A built-in array of blocks, named once so the storage under test is spelled where the check can be told why.
+using four_words = std::uint64_t[4]; // NOLINT(modernize-avoid-c-arrays): the storage under test
+
 // The positions a reading holds: a set's keys, and a sequence's true indices.
 template<class T>
 [[nodiscard]] constexpr auto positions(T const& x)
@@ -181,6 +184,34 @@ BOOST_AUTO_TEST_CASE(EqualFixedWidthsCrossWhole)
         // A view is read from as the blocks it spans.
         auto board = std::uint64_t{0b1010};
         BOOST_CHECK_EQUAL(xstd::bit_convert<std::uint64_t>(xstd::bit_set_view(board)), board);
+}
+
+// A built-in array converts as the std::array of its blocks does, and is no target: no function returns one.
+BOOST_AUTO_TEST_CASE(ABuiltInArrayConvertsAsTheStdArrayOfItsBlocks)
+{
+        static constexpr four_words blocks = {0x8000'0000'0000'0001ULL, 0x0ULL, 0xF0ULL, 0x8000'0000'0000'0000ULL};
+        constexpr auto same                = std::array<std::uint64_t, 4>{0x8000'0000'0000'0001ULL, 0x0ULL, 0xF0ULL, 0x8000'0000'0000'0000ULL};
+
+        // Into every fixed width a std::array reaches, in a constant expression, and without a throw.
+        static_assert(xstd::bit_convert<std::array<std::uint64_t, 4>>(blocks) == same);
+        static_assert(xstd::bit_convert<std::array<std::uint8_t, 32>>(blocks) == xstd::bit_convert<std::array<std::uint8_t, 32>>(same));
+        static_assert(xstd::bit_convert<xstd::bit_array<256>>(blocks) == xstd::bit_convert<xstd::bit_array<256>>(same));
+        static_assert(xstd::bit_convert<xstd::bit_fixed_set<256>>(blocks) == xstd::bit_fixed_set<256>{0, 63, 132, 133, 134, 135, 255});
+        static_assert(noexcept(xstd::bit_convert<xstd::bit_array<256>>(blocks)));
+        BOOST_CHECK(xstd::bit_convert<std::bitset<256>>(blocks) == xstd::bit_convert<std::bitset<256>>(same));
+
+        // Into a run-time width, as a copy of its positions.
+        BOOST_CHECK(positions(xstd::bit_convert<xstd::bit_vector>(blocks)) == positions(xstd::bit_convert<xstd::bit_vector>(same)));
+        BOOST_CHECK(xstd::bit_convert<xstd::bit_set>(blocks) == xstd::bit_convert<xstd::bit_set>(same));
+
+        // And back the other way, into the std::array that holds the array's blocks.
+        BOOST_CHECK((xstd::bit_convert<std::array<std::uint64_t, 4>>(xstd::bit_convert<xstd::bit_fixed_set<256>>(blocks)) == same));
+
+        // Equal widths only, as for a std::array, and never into the array itself.
+        static_assert(xstd::bit_convertible_to<four_words const&, xstd::bit_array<256>> and xstd::bit_convertible<four_words, std::bitset<256>>);
+        static_assert(not xstd::bit_convertible_to<four_words const&, xstd::bit_array<255>>);
+        static_assert(not xstd::bit_convertible_to<xstd::bit_array<256>, four_words> and not xstd::bit_convertible_to<std::array<std::uint64_t, 4>, four_words>);
+        static_assert(not xstd::bit_convertible<xstd::bit_vector, four_words>);
 }
 
 // Nothing throws between fixed widths, and only that pair is noexcept: a run-time end can refuse or allocate.

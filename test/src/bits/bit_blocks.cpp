@@ -42,6 +42,10 @@ concept names_a_view = requires { typename xstd::bit_set_view<W>; };
 template<class W, std::size_t N>
 concept holds_extent = requires { typename xstd::bits::detail::bit_block_container<W, N>; };
 
+// Built-in arrays of blocks, named once so the storage under test is spelled where the check can be told why.
+using four_words        = std::uint64_t[4];       // NOLINT(modernize-avoid-c-arrays): the storage under test
+using three_const_words = std::uint16_t const[3]; // NOLINT(modernize-avoid-c-arrays): the storage under test
+
 } // namespace
 
 // A block is bit storage, and so is a sized contiguous range of blocks: every storage the containers hold.
@@ -51,6 +55,7 @@ BOOST_AUTO_TEST_CASE(BlocksAndContiguousRangesOfBlocksAreBitStorage)
         static_assert(xstd::bit_blocks<std::array<std::uint16_t, 3>>);
         static_assert(xstd::bit_blocks<std::vector<std::size_t>>);
         static_assert(xstd::bit_blocks<std::span<std::uint32_t>> and xstd::bit_blocks<std::span<std::uint32_t const, 2>>);
+        static_assert(xstd::bit_blocks<four_words> and xstd::bit_blocks<three_const_words>);
 #ifdef TEST_HAS_INPLACE_VECTOR
         static_assert(xstd::bit_blocks<std::inplace_vector<std::uint16_t, 3>>);
 #endif
@@ -84,6 +89,8 @@ BOOST_AUTO_TEST_CASE(TheExtentIsTheWidthTheTypeNames)
         static_assert(xstd::bit_blocks_extent_v<std::uint8_t> == 8 and xstd::bit_blocks_extent_v<std::uint64_t const> == 64);
         static_assert(xstd::bit_blocks_extent_v<std::array<std::uint16_t, 3>> == 48 and xstd::bit_blocks_extent_v<std::array<std::uint16_t, 3> const> == 48);
         static_assert(xstd::bit_blocks_extent_v<std::span<std::uint32_t, 2>> == 64 and xstd::bit_blocks_extent_v<std::span<std::uint32_t const, 2>> == 64);
+        static_assert(xstd::bit_blocks_extent_v<four_words> == 256 and xstd::bit_blocks_extent_v<three_const_words> == 48);
+        static_assert(xstd::bit_blocks_extent_v<four_words> == xstd::bit_blocks_extent_v<std::array<std::uint64_t, 4>>);
         static_assert(xstd::bit_blocks_extent_v<std::span<std::uint32_t>> == std::dynamic_extent);
         static_assert(xstd::bit_blocks_extent_v<std::vector<std::size_t>> == std::dynamic_extent);
         static_assert(std::is_same_v<xstd::bit_set_view<std::span<std::uint32_t>>, xstd::bit_set_view<std::span<std::uint32_t>, std::dynamic_extent>>);
@@ -98,6 +105,10 @@ BOOST_AUTO_TEST_CASE(OwnedStorageIsAValueThatConstKeepsReadOnly)
         static_assert(not xstd::owned_bit_blocks<std::span<std::uint32_t>> and not xstd::owned_bit_blocks<std::span<std::uint32_t, 2>>);
         static_assert(not xstd::owned_bit_blocks<std::uint64_t const> and not xstd::owned_bit_blocks<std::array<std::uint16_t, 3> const>);
         static_assert(xstd::bit_blocks<std::span<std::uint32_t>> and xstd::bit_blocks<std::uint64_t const>);
+
+        // A built-in array is bit storage and no value: it neither assigns nor compares, so no owner holds one.
+        static_assert(not xstd::owned_bit_blocks<four_words> and not xstd::owned_bit_blocks<three_const_words>);
+        static_assert(not holds_blocks<four_words> and not holds_extent<four_words, 256>);
         BOOST_CHECK(true);
 }
 

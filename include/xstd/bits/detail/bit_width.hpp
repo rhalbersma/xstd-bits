@@ -10,8 +10,9 @@
 #include <xstd/bits/detail/bit_layout.hpp> // container_source, fixed_bit_blocks, has_constant_size
 #include <xstd/bits/detail/ownership.hpp>  // owned_storage
 #include <cstddef>                         // size_t
+#include <iterator>                        // size
 #include <span>                            // dynamic_extent
-#include <type_traits>                     // remove_const_t
+#include <type_traits>                     // is_bounded_array_v, remove_const_t
 
 // The width of bit storage a type has, fixed by its type: what xstd::bit_convert matches two fixed widths by.
 namespace xstd::bits::detail {
@@ -39,12 +40,12 @@ template<class T>
                 return std::remove_const_t<typename owned_storage<std::remove_const_t<T>>::bits_type>::extent;
         } else if constexpr (packed_view<T>) {
                 return std::remove_const_t<typename T::adapted_type>::extent;
-        } else if constexpr (fixed_bit_blocks<T> and xstd::owned_bit_blocks<std::remove_const_t<T>>) {
-                // Owned, so a span of a static extent stays out: it lends its width rather than having it.
+        } else if constexpr (fixed_bit_blocks<T> and (std::is_bounded_array_v<T> or xstd::owned_bit_blocks<std::remove_const_t<T>>)) {
+                // Held by value, so a span of a static extent stays out: it lends its width rather than having it.
                 return xstd::bit_blocks_extent_v<T>;
         } else if constexpr (has_constant_size<T>) {
-                if constexpr (container_source<T, T().size()>) {
-                        return T().size();
+                if constexpr (container_source<T, std::size(T{})>) {
+                        return std::size(T{});
                 } else {
                         return std::dynamic_extent;
                 }

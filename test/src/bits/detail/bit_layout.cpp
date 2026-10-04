@@ -5,7 +5,7 @@
 
 #include <xstd/bits/detail/bit_layout.hpp> // bit_bytes, bit_layout, bit_layout_holds, byte_count, bytes_bits, container_source, fixed_blocks_source
 #include <boost/test/unit_test.hpp>        // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
-#include <array>                           // array
+#include <array>                           // array, to_array
 #include <bitset>                          // bitset
 #include <cstddef>                         // byte, size_t
 #include <cstdint>                         // uint8_t, uint16_t, uint32_t, uint64_t
@@ -16,6 +16,14 @@
 BOOST_AUTO_TEST_SUITE(BitLayout)
 
 namespace detail = xstd::bits::detail;
+
+namespace {
+
+// Built-in arrays of blocks, named once so the storage under test is spelled where the check can be told why.
+using four_words = std::uint64_t[4]; // NOLINT(modernize-avoid-c-arrays): the storage under test
+using four_ints  = int[4];           // NOLINT(modernize-avoid-c-arrays): the storage under test
+
+} // namespace
 
 // An unsigned integer is its own layout: bit n of the value is 2^n by the language, so nothing is probed.
 BOOST_AUTO_TEST_CASE(AnUnsignedIntegerIsItsOwnLayout)
@@ -287,6 +295,20 @@ BOOST_AUTO_TEST_CASE(ASequenceOfBlocksStatesItsLayoutToo)
 
         // Signed blocks are not this family: owned_bit_blocks asks for an unsigned value type.
         static_assert(not detail::fixed_blocks_source<std::array<int, 4>, 64UZ>);
+
+        // A built-in array is read as its std::array, and its signed blocks are refused as theirs are.
+        static_assert(detail::fixed_blocks_source<four_words, 256UZ> and not detail::fixed_blocks_source<four_words, 257UZ>);
+        static_assert(detail::bit_layout<four_words, 256UZ> and not detail::bit_layout<four_words, 257UZ>);
+        static_assert(not detail::fixed_blocks_source<four_ints, 64UZ> and not detail::bit_layout<four_ints, 64UZ>);
+        static_assert([] -> bool {
+                four_words const blocks = {0x0123'4567'89AB'CDEFULL, 0x0ULL, 0x1ULL, 0x8000'0000'0000'0000ULL};
+                auto const same         = std::array<std::uint64_t, 4>{0x0123'4567'89AB'CDEFULL, 0x0ULL, 0x1ULL, 0x8000'0000'0000'0000ULL};
+                return detail::bit_bytes<256UZ>(blocks) == detail::bit_bytes<256UZ>(same);
+        }());
+
+        // At run time too, where the blocks cross as one copy rather than by shifts.
+        static constexpr four_words words = {0x0123'4567'89AB'CDEFULL, 0x0ULL, 0x1ULL, 0x8000'0000'0000'0000ULL};
+        BOOST_CHECK(detail::bit_bytes<256UZ>(words) == detail::bit_bytes<256UZ>(std::to_array(words)));
 
         // And a scalar is the length-one case of the same family.
         static_assert(detail::fixed_blocks_source<std::uint64_t, 64UZ>);
