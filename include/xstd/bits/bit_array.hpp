@@ -129,6 +129,7 @@ struct is_tuple_like<xstd::basic_bit_array<Block, N>> : std::false_type
 } // namespace boost::container_hash
 
 // NOLINTBEGIN(bugprone-std-namespace-modification): [namespace.std]/2 admits specializing for a program-defined type.
+
 namespace std {
 
 template<class Block, std::size_t N>

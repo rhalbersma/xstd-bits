@@ -133,6 +133,7 @@ struct is_tuple_like<xstd::basic_bit_vector<Block, Allocator>> : std::false_type
 } // namespace boost::container_hash
 
 // NOLINTBEGIN(bugprone-std-namespace-modification): [namespace.std]/2 admits specializing for a program-defined type.
+
 namespace std {
 
 template<class Block, class Allocator>

@@ -1475,6 +1475,7 @@ struct is_tuple_like<xstd::bits::detail::sequence_adaptor<Bits, Store, W, Derive
 } // namespace boost::container_hash
 
 // NOLINTBEGIN(bugprone-std-namespace-modification): [namespace.std]/2 admits specializing for a program-defined type.
+
 namespace std {
 
 // [array.tuple]'s three over the static-width owner: tuple_element names the proxy, not bool.
@@ -1513,6 +1514,7 @@ struct hash<xstd::bits::detail::sequence_adaptor<Bits, xstd::bits::detail::stora
 // NOLINTEND(bugprone-std-namespace-modification)
 
 // NOLINTBEGIN(bugprone-std-namespace-modification): [range.view] and [range.range] invite the opt-in.
+
 namespace std::ranges {
 
 // A view is a std::ranges::view outright and borrowed, as set_adaptor's is.

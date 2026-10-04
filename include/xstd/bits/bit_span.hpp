@@ -66,6 +66,7 @@ struct is_tuple_like<xstd::bit_span<Blocks, N>> : std::false_type
 } // namespace boost::container_hash
 
 // NOLINTBEGIN(bugprone-std-namespace-modification): [range.view] and [range.range] invite the opt-in.
+
 namespace std::ranges {
 
 template<class Blocks, std::size_t N>

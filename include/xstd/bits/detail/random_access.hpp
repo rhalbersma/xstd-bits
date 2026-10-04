@@ -312,6 +312,7 @@ public:
 } // namespace xstd::bits::detail
 
 // NOLINTBEGIN(bugprone-std-namespace-modification): [namespace.std]/2 admits specializing for a program-defined type.
+
 namespace std {
 
 // std::format over the containers, which needs nothing said about the containers themselves.
