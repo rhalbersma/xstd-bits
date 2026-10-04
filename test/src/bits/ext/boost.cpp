@@ -18,6 +18,7 @@
 #include <concepts>                           // same_as
 #include <cstddef>                            // size_t
 #include <cstdint>                            // uint8_t
+#include <functional>                         // less
 #include <memory_resource>                    // polymorphic_allocator
 #include <ranges>                             // bidirectional_range, random_access_range
 #include <type_traits>                        // is_nothrow_move_assignable_v, is_nothrow_move_constructible_v
@@ -70,9 +71,9 @@ BOOST_AUTO_TEST_CASE(TheMovesAreAsNothrowAsTheSmallVectors)
         static_assert(std::is_nothrow_move_constructible_v<xstd::bit_small_vector<N>> and std::is_nothrow_move_assignable_v<xstd::bit_small_vector<N>>);
 
         using allocator_type = std::pmr::polymorphic_allocator<std::size_t>;
-        static_assert(std::is_nothrow_move_constructible_v<xstd::basic_bit_small_set<std::size_t, std::size_t, N, xstd::bit_key_traits<std::size_t>, allocator_type>>);
+        static_assert(std::is_nothrow_move_constructible_v<xstd::basic_bit_small_set<std::size_t, std::size_t, N, xstd::bit_key_traits<std::size_t>, std::less<std::size_t>, allocator_type>>); // NOLINT(modernize-use-transparent-functors): the default comparator, spelled to reach the allocator
         static_assert(std::is_nothrow_move_constructible_v<xstd::basic_bit_small_vector<std::size_t, N, allocator_type>>);
-        static_assert(not std::is_nothrow_move_assignable_v<xstd::basic_bit_small_set<std::size_t, std::size_t, N, xstd::bit_key_traits<std::size_t>, allocator_type>>);
+        static_assert(not std::is_nothrow_move_assignable_v<xstd::basic_bit_small_set<std::size_t, std::size_t, N, xstd::bit_key_traits<std::size_t>, std::less<std::size_t>, allocator_type>>); // NOLINT(modernize-use-transparent-functors): the default comparator, spelled to reach the allocator
         static_assert(not std::is_nothrow_move_assignable_v<xstd::basic_bit_small_vector<std::size_t, N, allocator_type>>);
         BOOST_CHECK(true);
 }

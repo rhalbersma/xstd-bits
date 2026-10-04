@@ -66,7 +66,7 @@ BOOST_AUTO_TEST_CASE(NestedTypes)
                         for (auto const [from, a] : test::spec::set::inputs::sets<T>()) {
                                 auto const on_failure = context(from, a);
                                 test::set::mem_const_reference()(a);
-                                std::set<Implicit> dst;
+                                std::set<Implicit, typename T::key_compare> dst;
                                 std::ranges::copy(a, std::inserter(dst, dst.end()));
                                 BOOST_CHECK_EQUAL_COLLECTIONS(a.begin(), a.end(), dst.begin(), dst.end());
                         }

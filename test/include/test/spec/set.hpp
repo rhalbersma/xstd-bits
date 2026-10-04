@@ -20,14 +20,14 @@
 #include <xstd/bits/bit_set.hpp>                 // basic_bit_set
 #include <xstd/bits/bit_set_view.hpp>            // bit_set_view
 #include <xstd/bits/detail/bit_container.hpp>    // bit_container
-#include <xstd/bits/detail/ownership.hpp>        // owned_storage
+#include <xstd/bits/detail/ownership.hpp>        // owned_storage, storage
 #include <xstd/bits/detail/set_adaptor.hpp>      // set_adaptor
 #include <xstd/bits/ext/boost/bit_small_set.hpp> // basic_bit_small_set
 #include <algorithm>                             // sort
 #include <array>                                 // array
 #include <cstddef>                               // size_t
 #include <cstdint>                               // uint8_t, uint16_t, uint32_t, uint64_t
-#include <functional>                            // less
+#include <functional>                            // greater, less
 #include <set>                                   // set
 #include <span>                                  // dynamic_extent
 #include <tuple>                                 // tuple, tuple_cat
@@ -66,8 +66,11 @@ using small = std::tuple<xstd::basic_bit_small_set<std::size_t, std::uint8_t, 9>
 // Storage written outside the library, adapted by the same set adaptor the owners derive from.
 using user_storage = std::tuple<xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_container<test::minimal_blocks<std::uint8_t>>>>;
 
+// The columns once more under std::greater, std::set's model first: an empty width, across blocks, and growing.
+using descending = std::tuple<std::set<std::size_t, std::greater<std::size_t>>, xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 0, xstd::bit_key_traits<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 17, xstd::bit_key_traits<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 64, xstd::bit_key_traits<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 65, xstd::bit_key_traits<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_traits<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 17, xstd::bit_key_traits<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_small_set<std::size_t, std::uint8_t, 9, xstd::bit_key_traits<std::size_t>, std::greater<std::size_t>>, xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_container<test::minimal_blocks<std::uint8_t>>, xstd::bits::detail::storage::owned, void, std::size_t, xstd::bit_key_traits<std::size_t>, std::greater<std::size_t>>>;
+
 // Everything that owns the keys it holds, which is what [container.requirements] and a constructor ask for.
-using owners = decltype(std::tuple_cat(std::declval<models>(), std::declval<fixed>(), std::declval<dynamic>(), std::declval<bounded>(), std::declval<small>(), std::declval<user_storage>()));
+using owners = decltype(std::tuple_cat(std::declval<models>(), std::declval<fixed>(), std::declval<dynamic>(), std::declval<bounded>(), std::declval<small>(), std::declval<user_storage>(), std::declval<descending>()));
 
 // Keys another object owns, with no std model: [set] less what owning implies; a clause they lack takes owners.
 using views = std::tuple<xstd::bit_set_view<std::array<std::uint8_t, 3>, 17>, xstd::bit_set_view<std::vector<std::uint64_t>>>;
@@ -78,7 +81,7 @@ using all = decltype(std::tuple_cat(std::declval<owners>(), std::declval<views>(
 using const_views = std::tuple<xstd::bit_set_view<std::array<std::uint8_t, 3> const, 17>, xstd::bit_set_view<std::vector<std::uint64_t> const>>;
 
 // The owners that take an allocator, under one that keeps a ledger and refuses on request, std::set first.
-using ledgered = std::tuple<std::set<std::size_t, std::less<>, test::container::non_propagating<std::size_t>>, xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_traits<std::size_t>, test::container::non_propagating<std::uint8_t>>, xstd::basic_bit_set<std::size_t, std::uint64_t, xstd::bit_key_traits<std::size_t>, test::container::non_propagating<std::uint64_t>>, xstd::basic_bit_small_set<std::size_t, std::uint8_t, 9, xstd::bit_key_traits<std::size_t>, test::container::non_propagating<std::uint8_t>>, xstd::basic_bit_small_set<std::size_t, std::uint64_t, 64, xstd::bit_key_traits<std::size_t>, test::container::non_propagating<std::uint64_t>>>;
+using ledgered = std::tuple<std::set<std::size_t, std::less<>, test::container::non_propagating<std::size_t>>, xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_traits<std::size_t>, std::less<std::size_t>, test::container::non_propagating<std::uint8_t>>, xstd::basic_bit_set<std::size_t, std::uint64_t, xstd::bit_key_traits<std::size_t>, std::less<std::size_t>, test::container::non_propagating<std::uint64_t>>, xstd::basic_bit_small_set<std::size_t, std::uint8_t, 9, xstd::bit_key_traits<std::size_t>, std::less<std::size_t>, test::container::non_propagating<std::uint8_t>>, xstd::basic_bit_small_set<std::size_t, std::uint64_t, 64, xstd::bit_key_traits<std::size_t>, std::less<std::size_t>, test::container::non_propagating<std::uint64_t>>>;
 
 } // namespace test::spec::set
 
@@ -99,7 +102,7 @@ struct view_traits<xstd::bit_set_view<std::array<Block, K>, N>>
 template<class Block, class Allocator>
 struct view_traits<xstd::bit_set_view<std::vector<Block, Allocator>, std::dynamic_extent>>
 {
-        using owner_type = xstd::basic_bit_set<std::size_t, Block, xstd::bit_key_traits<std::size_t>, Allocator>;
+        using owner_type = xstd::basic_bit_set<std::size_t, Block, xstd::bit_key_traits<std::size_t>, std::less<std::size_t>, Allocator>;
 
         [[nodiscard]] static auto view(owner_type& owner, std::size_t)
         {
@@ -123,8 +126,8 @@ inline constexpr auto held_width_v = [] -> std::size_t {
         }
 }();
 
-template<class Block, std::size_t N, class Allocator>
-inline constexpr auto held_width_v<xstd::basic_bit_small_set<std::size_t, Block, N, xstd::bit_key_traits<std::size_t>, Allocator>> = N;
+template<class Block, std::size_t N, class Compare, class Allocator>
+inline constexpr auto held_width_v<xstd::basic_bit_small_set<std::size_t, Block, N, xstd::bit_key_traits<std::size_t>, Compare, Allocator>> = N;
 
 #ifdef __clang__
 

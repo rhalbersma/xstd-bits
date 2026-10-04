@@ -23,7 +23,7 @@ struct includes
         {
                 // std::ranges::includes(r1, r2) asks whether r2 lies within r1, so the subset goes second.
                 if constexpr (requires { a.is_subset_of(b); }) {
-                        BOOST_CHECK_EQUAL(a.is_subset_of(b), std::ranges::includes(b, a));
+                        BOOST_CHECK_EQUAL(a.is_subset_of(b), std::ranges::includes(b, a, a.value_comp()));
                 }
         }
 };
@@ -34,7 +34,7 @@ struct set_union
         auto operator()(const X& a, const X& b) const
         {
                 if constexpr (requires { a | b; }) {
-                        BOOST_CHECK((a | b) == (::ranges::views::set_union(a, b) | std::ranges::to<X>()));
+                        BOOST_CHECK((a | b) == (::ranges::views::set_union(a, b, a.value_comp()) | std::ranges::to<X>()));
                 }
         }
 };
@@ -45,7 +45,7 @@ struct set_intersection
         auto operator()(const X& a, const X& b) const
         {
                 if constexpr (requires { a & b; }) {
-                        BOOST_CHECK((a & b) == (::ranges::views::set_intersection(a, b) | std::ranges::to<X>()));
+                        BOOST_CHECK((a & b) == (::ranges::views::set_intersection(a, b, a.value_comp()) | std::ranges::to<X>()));
                 }
         }
 };
@@ -56,7 +56,7 @@ struct set_difference
         auto operator()(const X& a, const X& b) const
         {
                 if constexpr (requires { a - b; }) {
-                        BOOST_CHECK((a - b) == (::ranges::views::set_difference(a, b) | std::ranges::to<X>()));
+                        BOOST_CHECK((a - b) == (::ranges::views::set_difference(a, b, a.value_comp()) | std::ranges::to<X>()));
                 }
         }
 };
@@ -67,7 +67,7 @@ struct set_symmetric_difference
         auto operator()(const X& a, const X& b) const
         {
                 if constexpr (requires { a ^ b; }) {
-                        BOOST_CHECK((a ^ b) == (::ranges::views::set_symmetric_difference(a, b) | std::ranges::to<X>()));
+                        BOOST_CHECK((a ^ b) == (::ranges::views::set_symmetric_difference(a, b, a.value_comp()) | std::ranges::to<X>()));
                 }
         }
 };

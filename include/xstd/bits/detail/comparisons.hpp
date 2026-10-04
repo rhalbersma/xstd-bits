@@ -86,6 +86,21 @@ template<bit_container_type Bits>
         }
 }
 
+// The set ordering over descending positions, [associative.reqmts]' lexicographic one: the masks as unsigned numbers.
+template<bit_container_type Bits>
+[[nodiscard]] constexpr auto numeric_three_way(Bits const& x, Bits const& y) noexcept
+        -> std::strong_ordering
+{
+        // A missing high block reads as zero, so two widths compare aligned at every position.
+        auto const n = std::ranges::max(x.num_blocks(), y.num_blocks());
+        for (auto index = n - 1UZ; index < n; --index) {
+                if (auto const xb = x.padded_block(index), yb = y.padded_block(index); xb != yb) {
+                        return xb < yb ? std::strong_ordering::less : std::strong_ordering::greater;
+                }
+        }
+        return std::strong_ordering::equal;
+}
+
 // The sequence ordering across two widths: position 0 is the first element, so the lowest disagreement decides alone.
 template<bit_container_type Bits>
 [[nodiscard]] constexpr auto padded_sequence_three_way(Bits const& x, Bits const& y) noexcept

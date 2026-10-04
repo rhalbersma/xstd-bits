@@ -15,6 +15,7 @@
 #include <xstd/bits/bit_key_traits.hpp>             // bit_key_traits
 #include <xstd/bits/detail/bit_container.hpp>       // bit_container
 #include <xstd/bits/detail/bounded_blocks.hpp>      // IWYU pragma: keep; XSTD_BITS_HAS_CONSTEXPR_BOUNDED
+#include <xstd/bits/detail/ownership.hpp>           // storage
 #include <xstd/bits/detail/set_adaptor.hpp>         // set_adaptor
 #include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
 #include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector
@@ -47,19 +48,19 @@ inline constexpr auto constant_evaluable_v<std::flat_set<Key, Compare, KeyContai
 
 #endif
 
-template<class Block, std::size_t N, class Allocator>
-inline constexpr auto constant_evaluable_v<xstd::basic_bit_small_set<std::size_t, Block, N, xstd::bit_key_traits<std::size_t>, Allocator>> = false;
+template<class Block, std::size_t N, class Compare, class Allocator>
+inline constexpr auto constant_evaluable_v<xstd::basic_bit_small_set<std::size_t, Block, N, xstd::bit_key_traits<std::size_t>, Compare, Allocator>> = false;
 
 template<class Block, std::size_t N, class Allocator>
 inline constexpr auto constant_evaluable_v<xstd::basic_bit_small_vector<Block, N, Allocator>> = false;
 
-template<class Block>
-inline constexpr auto constant_evaluable_v<xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_container<test::minimal_blocks<Block>>>> = false;
+template<class Block, class Compare>
+inline constexpr auto constant_evaluable_v<xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_container<test::minimal_blocks<Block>>, xstd::bits::detail::storage::owned, void, std::size_t, xstd::bit_key_traits<std::size_t>, Compare>> = false;
 
 #ifndef XSTD_BITS_HAS_CONSTEXPR_BOUNDED
 
-template<class Block, std::size_t N>
-inline constexpr auto constant_evaluable_v<xstd::basic_bit_bounded_set<std::size_t, Block, N>> = false;
+template<class Block, std::size_t N, class Compare>
+inline constexpr auto constant_evaluable_v<xstd::basic_bit_bounded_set<std::size_t, Block, N, xstd::bit_key_traits<std::size_t>, Compare>> = false;
 
 template<class Block, std::size_t N>
 inline constexpr auto constant_evaluable_v<xstd::basic_bit_bounded_vector<Block, N>> = false;

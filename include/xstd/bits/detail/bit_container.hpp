@@ -847,6 +847,27 @@ public:
                 }
         }
 
+        // The total twin of exclusive_find_prev: the highest set position below n, or size() where there is none.
+        [[nodiscard]] constexpr auto total_find_prev(std::size_t n) const noexcept
+                -> std::size_t
+        {
+                assert(n <= size());
+                if constexpr (not(has_static_size and N == 0)) {
+                        if (n != 0UZ) {
+                                auto const [index, offset] = index_offset(n - 1UZ);
+                                if (auto const block = shl(m_blocks[index], left_bit - offset); block != zero) {
+                                        return n - 1UZ - bits::detail::countl_zero(block);
+                                }
+                                for (auto i = index - 1UZ; i < index; --i) {
+                                        if (m_blocks[i] != zero) {
+                                                return (bits_per_block * i) + left_bit - bits::detail::countl_zero(m_blocks[i]);
+                                        }
+                                }
+                        }
+                }
+                return size();
+        }
+
         // Total across two widths and reading-neutral: the blocks the other lacks read as zero. Growing is not here.
         constexpr auto operator&=(bit_container const& other [[maybe_unused]]) noexcept
                 -> bit_container&

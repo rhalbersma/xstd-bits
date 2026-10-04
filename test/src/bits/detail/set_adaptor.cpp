@@ -3,27 +3,35 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/bit_exchange.hpp>              // converts_from, converts_to
-#include <xstd/bits/bit/bit_convert.hpp>      // bit_convert
-#include <xstd/bits/bit_fixed_set.hpp>        // bit_fixed_set
-#include <xstd/bits/bit_set.hpp>              // bit_set
-#include <xstd/bits/detail/bit_container.hpp> // bit_container
-#include <xstd/bits/detail/ownership.hpp>     // owned_bits_t, storage
-#include <xstd/bits/detail/set_adaptor.hpp>   // set_adaptor
-#include <boost/test/unit_test.hpp>           // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <algorithm>                          // lexicographical_compare_three_way, ranges::equal
-#include <array>                              // array
-#include <bitset>                             // bitset
-#include <compare>                            // strong_ordering
-#include <concepts>                           // copyable, equality_comparable, invocable, regular, same_as, totally_ordered
-#include <cstddef>                            // size_t
-#include <cstdint>                            // uint8_t, uint32_t, uint64_t
-#include <initializer_list>                   // initializer_list
-#include <limits>                             // numeric_limits
-#include <ranges>                             // bidirectional_range, iota
-#include <set>                                // set
-#include <stdexcept>                          // length_error, out_of_range
-#include <vector>                             // vector
+#include <test/bit_exchange.hpp>                 // converts_from, converts_to
+#include <test/set/primitives.hpp>               // heterogeneous_key
+#include <test/spec/random.hpp>                  // engine, seed
+#include <xstd/bits/bit/bit_convert.hpp>         // bit_convert
+#include <xstd/bits/bit_bounded_set.hpp>         // basic_bit_bounded_set
+#include <xstd/bits/bit_fixed_set.hpp>           // basic_bit_fixed_set, bit_fixed_set
+#include <xstd/bits/bit_key_traits.hpp>          // bit_key_traits
+#include <xstd/bits/bit_set.hpp>                 // basic_bit_set, bit_set
+#include <xstd/bits/bit_set_view.hpp>            // bit_set_view
+#include <xstd/bits/detail/bit_container.hpp>    // bit_container
+#include <xstd/bits/detail/ownership.hpp>        // owned_bits_t, storage
+#include <xstd/bits/detail/set_adaptor.hpp>      // set_adaptor
+#include <xstd/bits/ext/boost/bit_small_set.hpp> // basic_bit_small_set
+#include <boost/test/unit_test.hpp>              // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <algorithm>                             // lexicographical_compare_three_way, ranges::equal
+#include <array>                                 // array
+#include <bitset>                                // bitset
+#include <compare>                               // strong_ordering
+#include <concepts>                              // copyable, equality_comparable, invocable, regular, same_as, totally_ordered
+#include <cstddef>                               // ptrdiff_t, size_t
+#include <cstdint>                               // uint8_t, uint32_t, uint64_t
+#include <functional>                            // greater, greater_equal, less, less_equal, ranges::less
+#include <initializer_list>                      // initializer_list
+#include <iterator>                              // ranges::distance
+#include <limits>                                // numeric_limits
+#include <ranges>                                // bidirectional_range, iota
+#include <set>                                   // set
+#include <stdexcept>                             // length_error, out_of_range
+#include <vector>                                // vector
 
 namespace {
 
@@ -873,6 +881,249 @@ BOOST_AUTO_TEST_CASE(ASetViewExchangesThroughTheBitsItRefersTo)
                 v.insert(7UZ);
                 return xstd::bit_convert<std::bitset<N>>(v).count() == 1UZ;
         }());
+}
+
+namespace {
+
+template<class Compare, std::size_t N>
+using fixed_by = xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, N, xstd::bit_key_traits<std::size_t>, Compare>;
+
+template<class Compare>
+using dynamic_by = xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_traits<std::size_t>, Compare>;
+
+using descending_fixed = fixed_by<std::greater<std::size_t>, 130>;
+
+// Dependent, so a comparator the owners reject is a false rather than a hard error.
+template<class Compare>
+constexpr bool fixed_takes = requires { typename xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 8, xstd::bit_key_traits<std::size_t>, Compare>; }; // NOLINT(readability-redundant-typename): a type-requirement is spelled with it
+
+template<class Compare>
+constexpr bool bounded_takes = requires { typename xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 8, xstd::bit_key_traits<std::size_t>, Compare>; }; // NOLINT(readability-redundant-typename): a type-requirement is spelled with it
+
+template<class Compare>
+constexpr bool small_takes = requires { typename xstd::basic_bit_small_set<std::size_t, std::uint8_t, 8, xstd::bit_key_traits<std::size_t>, Compare>; }; // NOLINT(readability-redundant-typename): a type-requirement is spelled with it
+
+template<class Compare>
+constexpr bool dynamic_takes = requires { typename xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_traits<std::size_t>, Compare>; }; // NOLINT(readability-redundant-typename): a type-requirement is spelled with it
+
+template<class Compare>
+constexpr bool every_owner_takes = fixed_takes<Compare> and bounded_takes<Compare> and small_takes<Compare> and dynamic_takes<Compare>;
+
+template<class Compare>
+constexpr bool no_owner_takes = not fixed_takes<Compare> and not bounded_takes<Compare> and not small_takes<Compare> and not dynamic_takes<Compare>;
+
+// A set's mask as 64-bit words, lowest first, whatever its block.
+template<class Set>
+[[nodiscard]] auto words_of(Set const& s, std::size_t width)
+        -> std::vector<std::uint64_t>
+{
+        auto words = std::vector<std::uint64_t>((width + 63UZ) / 64UZ);
+        for (std::size_t const k : s) {
+                words[k / 64UZ] |= std::uint64_t{1} << (k % 64UZ);
+        }
+        return words;
+}
+
+// The masks as unsigned numbers: the highest word decides first.
+[[nodiscard]] auto numeric_order(std::vector<std::uint64_t> const& x, std::vector<std::uint64_t> const& y)
+        -> std::strong_ordering
+{
+        return std::lexicographical_compare_three_way(x.rbegin(), x.rend(), y.rbegin(), y.rend());
+}
+
+// Each key below the width kept with probability density / 4.
+template<class Set>
+[[nodiscard]] auto drawn(test::spec::random::engine& engine, std::size_t width, std::uint64_t density)
+        -> Set
+{
+        auto s = Set();
+        for (auto const k : std::views::iota(0UZ, width)) {
+                if (engine.below(4U) < density) {
+                        s.insert(k);
+                }
+        }
+        return s;
+}
+
+// A key that stands for every key in one decade, so its equivalence class spans ten positions.
+struct decade
+{
+        std::size_t tens;
+
+        [[nodiscard]] friend constexpr auto operator<=>(decade const& lhs, std::size_t rhs) noexcept
+                -> std::strong_ordering
+        {
+                return lhs.tens <=> rhs / 10UZ;
+        }
+
+        [[nodiscard]] friend constexpr auto operator==(decade const& lhs, std::size_t rhs) noexcept
+                -> bool
+        {
+                return lhs.tens == rhs / 10UZ;
+        }
+};
+
+// Each heterogeneous member against std::set under the same transparent comparator, iterators as distances.
+template<class Set, class Model, class K>
+auto check_heterogeneous(Set const& s, Model const& model, K const& k)
+        -> void
+{
+        auto const at = [](auto const& c, auto i) -> std::ptrdiff_t { return std::ranges::distance(c.begin(), i); };
+        BOOST_CHECK_EQUAL(s.contains(k), model.contains(k));
+        BOOST_CHECK_EQUAL(s.count(k), model.count(k));
+        BOOST_CHECK_EQUAL(s.find(k) == s.end(), model.find(k) == model.end());
+        if (auto const found = s.find(k); found != s.end()) {
+                BOOST_CHECK(k == static_cast<std::size_t>(*found));
+        }
+        BOOST_CHECK_EQUAL(at(s, s.lower_bound(k)), at(model, model.lower_bound(k)));
+        BOOST_CHECK_EQUAL(at(s, s.upper_bound(k)), at(model, model.upper_bound(k)));
+        auto const [first, last] = s.equal_range(k);
+        BOOST_CHECK(first == s.lower_bound(k) and last == s.upper_bound(k));
+
+        // The model erases its equal range: not every standard library has P2077's heterogeneous erase on std::set.
+        auto erased = s;
+        auto erased_model = model;
+        auto const [model_first, model_last] = erased_model.equal_range(k);
+        erased_model.erase(model_first, model_last);
+        BOOST_CHECK_EQUAL(erased.erase(k), model.count(k));
+        BOOST_CHECK(std::ranges::equal(erased, erased_model));
+}
+
+template<class Compare, class Set>
+auto check_transparent()
+        -> void
+{
+        auto engine = test::spec::random::engine(test::spec::random::seed());
+        for (auto const trial : std::views::iota(0UZ, 20UZ)) {
+                auto const s = drawn<Set>(engine, 100UZ, 1U + (trial % 3UZ));
+                auto const model = std::set<std::size_t, Compare>(s.begin(), s.end());
+                BOOST_CHECK(std::ranges::equal(s, model));
+                for (auto const k : std::views::iota(0UZ, 102UZ)) {
+                        check_heterogeneous(s, model, test::set::heterogeneous_key{.value = k});
+                }
+                for (auto const t : std::views::iota(0UZ, 12UZ)) {
+                        check_heterogeneous(s, model, decade{.tens = t});
+                }
+        }
+}
+
+} // namespace
+
+// Position order is structural: the comparators that pick a direction are taken, and nothing else is.
+BOOST_AUTO_TEST_CASE(OnlyTheFourDirectionsAreComparators)
+{
+        static_assert(every_owner_takes<std::less<std::size_t>>);
+        static_assert(every_owner_takes<std::less<>>);
+        static_assert(every_owner_takes<std::greater<std::size_t>>);
+        static_assert(every_owner_takes<std::greater<>>);
+
+        static_assert(no_owner_takes<std::less_equal<std::size_t>>);
+        static_assert(no_owner_takes<std::greater_equal<>>);
+        static_assert(no_owner_takes<std::less<int>>);
+        static_assert(no_owner_takes<std::ranges::less>);
+        static_assert(no_owner_takes<decltype([](std::size_t x, std::size_t y) -> bool { return x < y; })>);
+        BOOST_CHECK(true);
+}
+
+// The short aliases keep std::less, and key_comp() hands back whichever comparator the set is named with.
+BOOST_AUTO_TEST_CASE(KeyCompIsTheComparatorTheSetIsNamedWith)
+{
+        static_assert(std::same_as<xstd::bit_fixed_set<8>::key_compare, std::less<std::size_t>>);
+        static_assert(std::same_as<xstd::bit_set::key_compare, std::less<std::size_t>>);
+        static_assert(std::same_as<descending_fixed::key_compare, std::greater<std::size_t>>);
+        static_assert(std::same_as<descending_fixed::value_compare, std::greater<std::size_t>>);
+        static_assert(std::same_as<decltype(fixed_by<std::greater<>, 8>().key_comp()), std::greater<>>);
+        static_assert(std::same_as<decltype(dynamic_by<std::less<>>().value_comp()), std::less<>>);
+        BOOST_CHECK(true);
+}
+
+// [associative.reqmts]' ordering over descending keys: the masks compared as unsigned numbers, highest block first.
+BOOST_AUTO_TEST_CASE(ADescendingOrderIsTheMasksNumericOrder)
+{
+        using byte = fixed_by<std::greater<std::size_t>, 8>;
+        BOOST_CHECK((byte{5UZ, 1UZ} <=> byte{3UZ}) == std::strong_ordering::greater);
+        BOOST_CHECK((byte{4UZ, 3UZ} <=> byte{4UZ, 2UZ, 1UZ}) == std::strong_ordering::greater);
+        BOOST_CHECK((byte{5UZ} <=> byte{5UZ, 1UZ}) == std::strong_ordering::less);
+
+        auto engine = test::spec::random::engine(test::spec::random::seed());
+        auto const agrees = [&]<class Set>(std::size_t width) -> void {
+                for (auto const trial : std::views::iota(0UZ, 200UZ)) {
+                        auto const x = drawn<Set>(engine, width, 1U + (trial % 3UZ));
+                        auto const y = trial % 5UZ == 0UZ ? x : drawn<Set>(engine, width, 1U + (trial % 2UZ));
+                        BOOST_CHECK((x <=> y) == numeric_order(words_of(x, width), words_of(y, width)));
+                        BOOST_CHECK((x <=> y) == std::lexicographical_compare_three_way(x.begin(), x.end(), y.begin(), y.end()));
+                }
+        };
+        agrees.template operator()<fixed_by<std::greater<std::size_t>, 0>>(0UZ);
+        agrees.template operator()<fixed_by<std::greater<std::size_t>, 17>>(17UZ);
+        agrees.template operator()<fixed_by<std::greater<std::size_t>, 64>>(64UZ);
+        agrees.template operator()<descending_fixed>(130UZ);
+        agrees.template operator()<xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 17, xstd::bit_key_traits<std::size_t>, std::greater<>>>(17UZ);
+}
+
+// Across two run-time widths a missing high block reads as zero, so the numbers line up at every position.
+BOOST_AUTO_TEST_CASE(ADescendingOrderAcrossWidthsComparesAlignedBlocks)
+{
+        using descending = dynamic_by<std::greater<std::size_t>>;
+        auto const grown = [](std::size_t width, std::initializer_list<std::size_t> positions) -> descending {
+                auto s = descending();
+                s.insert(width);
+                s.erase(width);
+                s.insert(positions);
+                return s;
+        };
+        BOOST_CHECK((grown(10UZ, {1UZ, 5UZ}) <=> grown(300UZ, {1UZ, 5UZ})) == std::strong_ordering::equal);
+        BOOST_CHECK((grown(10UZ, {1UZ, 5UZ}) <=> grown(300UZ, {200UZ})) == std::strong_ordering::less);
+        BOOST_CHECK((grown(300UZ, {200UZ}) <=> grown(10UZ, {1UZ, 5UZ})) == std::strong_ordering::greater);
+        BOOST_CHECK((grown(10UZ, {7UZ}) <=> grown(300UZ, {1UZ, 5UZ})) == std::strong_ordering::greater);
+}
+
+// for_each walks in the iteration order and for_each_reverse against it, whichever the direction.
+BOOST_AUTO_TEST_CASE(ForEachFollowsTheComparator)
+{
+        auto const s = descending_fixed{0UZ, 1UZ, 63UZ, 64UZ, 65UZ, 129UZ};
+        auto forward = std::vector<std::size_t>();
+        auto backward = std::vector<std::size_t>();
+        s.for_each([&](std::size_t k) -> void { forward.push_back(k); });
+        s.for_each_reverse([&](std::size_t k) -> void { backward.push_back(k); });
+        BOOST_CHECK(forward == (std::vector<std::size_t>{s.begin(), s.end()}));
+        BOOST_CHECK(backward == (std::vector<std::size_t>{s.rbegin(), s.rend()}));
+        BOOST_CHECK(forward == (std::vector<std::size_t>{129UZ, 65UZ, 64UZ, 63UZ, 1UZ, 0UZ}));
+}
+
+// A view reads the positions it refers to in ascending order, whatever the owner's comparator.
+BOOST_AUTO_TEST_CASE(AViewOverADescendingOwnerAscends)
+{
+        auto owner = descending_fixed{3UZ, 70UZ, 129UZ};
+        auto const view = xstd::bit_set_view(owner);
+        static_assert(std::same_as<decltype(view)::key_compare, std::less<std::size_t>>);
+        BOOST_CHECK(std::ranges::equal(view, std::vector<std::size_t>{3UZ, 70UZ, 129UZ}));
+        BOOST_CHECK(std::ranges::equal(owner, std::vector<std::size_t>{129UZ, 70UZ, 3UZ}));
+}
+
+// The guides carry a comparator through, as std::set's do.
+BOOST_AUTO_TEST_CASE(TheGuidesDeduceTheComparator)
+{
+        auto const keys = std::vector<std::size_t>{2UZ, 9UZ, 4UZ};
+        auto const s = xstd::basic_bit_set(keys.begin(), keys.end(), std::greater<std::size_t>()); // NOLINT(modernize-use-transparent-functors): the key-typed form is the one deduced
+        static_assert(std::same_as<decltype(s), xstd::basic_bit_set<std::size_t, std::size_t, xstd::bit_key_traits<std::size_t>, std::greater<std::size_t>> const>);
+        BOOST_CHECK(std::ranges::equal(s, std::vector<std::size_t>{9UZ, 4UZ, 2UZ}));
+}
+
+// The transparent directions find, count, bound and erase a key of another type, as std::set does.
+BOOST_AUTO_TEST_CASE(TheTransparentDirectionsLookUpHeterogeneously)
+{
+        check_transparent<std::less<>, fixed_by<std::less<>, 100>>();
+        check_transparent<std::greater<>, fixed_by<std::greater<>, 100>>();
+        check_transparent<std::less<>, dynamic_by<std::less<>>>();
+        check_transparent<std::greater<>, dynamic_by<std::greater<>>>();
+
+        // A key past what the set holds, and a set with no positions at all.
+        auto const narrow = dynamic_by<std::greater<>>{3UZ};
+        BOOST_CHECK(not narrow.contains(test::set::heterogeneous_key{.value = 50UZ}));
+        BOOST_CHECK(narrow.lower_bound(test::set::heterogeneous_key{.value = 50UZ}) == narrow.begin());
+        auto const none = dynamic_by<std::less<>>();
+        BOOST_CHECK(not none.contains(decade{.tens = 0UZ}));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

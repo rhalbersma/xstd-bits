@@ -1506,13 +1506,13 @@ Two class templates carry the two readings: `set_adaptor` and `sequence_adaptor`
 written against `bit_container` and against nothing else, so one adaptor serves
 `bit_container` over `std::array`, `std::vector` and the bounded blocks alike, at both widths and
 in both ownerships ([one-storage](#one-storage)). Each takes the parameters its own reading needs and no
-others: `set_adaptor<Bits, Store, Derived, Key, KeyTraits>` and `sequence_adaptor<Bits, Store, W, Derived>`, the set reading
+others: `set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare>` and `sequence_adaptor<Bits, Store, W, Derived>`, the set reading
 never windowed and the only one with a key.
 
 The two are internal: the eight owners and the three views are the public surface, and no public template
 argument list, deduction guide or specialization spells an adaptor. Every public name is a class deriving from
-one of them, passing itself as an argument so that the adaptor names it back: `basic_bit_fixed_set<Key, B, N, KeyTraits>` derives from
-`set_adaptor<bit_container<std::array<B, K>, N>, storage::owned, basic_bit_fixed_set<Key, B, N, KeyTraits>, Key, KeyTraits>`. The short layer stays
+one of them, passing itself as an argument so that the adaptor names it back: `basic_bit_fixed_set<Key, B, N, KeyTraits, Compare>` derives from
+`set_adaptor<bit_container<std::array<B, K>, N>, storage::owned, basic_bit_fixed_set<Key, B, N, KeyTraits, Compare>, Key, KeyTraits, Compare>`. The short layer stays
 an alias fixing the block, and for a set the key: `bit_fixed_set<N>` and `bit_array<N>` are those at `std::size_t`.
 Deriving is what keeps a value-returning operation -- `& | ^ -`, `operator~`, the shifts, `xstd::bit_convert` --
 handing back the container the caller named rather than the vehicle under it
@@ -2324,12 +2324,12 @@ storage, the parameters each reading needs and no more ([the-two-adaptors](#the-
 `basic_` layer chooses the storage and leaves the block open, `basic_string`-style:
 `basic_bit_array<Block, N>`, `basic_bit_vector<Block, Allocator>` and their sequence siblings. A set's `basic_` name
 leads with its key, as `std::set<Key>` does, then the storage, then the defaulted policies, the key's traits first:
-`basic_bit_fixed_set<Key, Block, N, KeyTraits>`, `basic_bit_bounded_set<Key, Block, N, KeyTraits>`,
-`basic_bit_small_set<Key, Block, N, KeyTraits, Alloc>` and `basic_bit_set<Key, Block, KeyTraits, Allocator>`, with
-`KeyTraits` defaulting to `bit_key_traits<Key>`. The block leads the storage in every column, so a `basic_` name hands
-its base clause the arguments in the order it was given them -- `basic_bit_fixed_set<Key, Block, N, KeyTraits>` derives
-from `set_adaptor<bit_container<std::array<Block, K>, N>, storage::owned, basic_bit_fixed_set<Key, Block, N, KeyTraits>,
-Key, KeyTraits>`, straight through. The static and bounded columns used to take `<N, Block>`
+`basic_bit_fixed_set<Key, Block, N, KeyTraits, Compare>`, `basic_bit_bounded_set<Key, Block, N, KeyTraits, Compare>`,
+`basic_bit_small_set<Key, Block, N, KeyTraits, Compare, Alloc>` and `basic_bit_set<Key, Block, KeyTraits, Compare, Allocator>`,
+with `KeyTraits` defaulting to `bit_key_traits<Key>` and `Compare` to `std::less<Key>`. The block leads the storage in
+every column, so a `basic_` name hands its base clause the arguments in the order it was given them --
+`basic_bit_fixed_set<Key, Block, N, KeyTraits, Compare>` derives from `set_adaptor<bit_container<std::array<Block, K>, N>,
+storage::owned, basic_bit_fixed_set<Key, Block, N, KeyTraits, Compare>, Key, KeyTraits, Compare>`, straight through. The static and bounded columns used to take `<N, Block>`
 and transpose at the call, which
 nothing gained: `Block` carries no default in those columns, so it is free to lead, and leading is what
 `std::array<T, N>`, `std::inplace_vector<T, N>` and `std::span<T, Extent>` all do with the pair. The restricted
@@ -2347,6 +2347,22 @@ are ascending keys. Every member that takes a key maps it through `to_index`, an
 `from_index` of the position, so a set formats as its keys do; set algebra, comparison, hashing and the block
 exchange work on blocks and never see a key. The views stay keyed by `std::size_t`: a view reads positions it does
 not own, and names no key of its own.
+
+`Compare` keeps `std::set`'s place, after the key's traits and before the allocator, and is defaulted because it
+leaves every member signature as it is. Position order is structural, so a comparator can only choose a direction:
+`std::less<Key>` and `std::less<>` ascend, `std::greater<Key>` and `std::greater<>` descend, and any other type is
+rejected by the owners' template heads. The traits come first because the direction is defined over the order
+`to_index` preserves. Under `std::greater` the set behaves as `std::set<Key, std::greater<Key>>` specifies: `begin()`
+is the highest set position and `++` steps down, `lower_bound` is the largest key not above its argument and
+`upper_bound` the largest below it, `key_comp()` and `value_comp()` return `std::greater`, and `for_each` walks in that
+order with `for_each_reverse` against it. The iterator carries the direction rather than wrapping
+`std::reverse_iterator`, which would step back on every dereference; both directions end at `size()`. Equality, set
+algebra, hashing and the block exchange are unchanged, since they see the same blocks. `<=>` is
+`[associative.reqmts]`' lexicographic comparison of the keys in iteration order, which over descending keys is the masks
+compared as unsigned numbers, highest block first, a missing high block reading as zero; `numeric_three_way` beside
+`set_three_way` does that a block at a time. The transparent forms add the heterogeneous `find`, `count`, `contains`,
+`lower_bound`, `upper_bound`, `equal_range` and `erase`: a key of another type has no position, so they bisect the
+positions for the run of keys equivalent to it under `Compare`. The short names keep `std::less`, and the views ascend.
 
 The unmarked name goes to the flagship — `bit_set` is the dynamic set
 benchmarked against `std::set` and `std::flat_set` — and the qualifier marks the special case, `bit_fixed_set`.
@@ -4217,9 +4233,10 @@ gives:
 - `node_type`, `extract`, `insert(node_type&&)` and `merge`: there is no node. A position is a bit in
   a block, so there is nothing to unlink and hand over, and nothing to relink.
 - the `template<class K>` heterogeneous overloads: they participate only where
-  `Compare::is_transparent` is valid, and `key_compare` is `std::less<key_type>` here as it is on
-  `std::set<std::size_t>`. Neither side has them, so asking would hold the model to a line the model
-  does not answer either.
+  `Compare::is_transparent` is valid, and `key_compare` is `std::less<key_type>` or `std::greater<key_type>` here as
+  it is on the `std::set` models. Neither side has them, so asking would hold the model to a line the model
+  does not answer either. The owners declared with `std::less<>` or `std::greater<>` do have them, and are checked
+  against `std::set` under the same transparent comparator outside the clauses.
 - `insert_range` and the from_range constructors: `[set.cons]`'s C++23 lines, kept apart so the model
   can be held to them where its standard library has them (`__cpp_lib_containers_ranges`).
 

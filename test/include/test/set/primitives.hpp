@@ -13,7 +13,7 @@
 #include <compare>                      // is_gteq, is_gt, is_lteq, is_lt, strong_ordering
 #include <concepts>                     // convertible_to, default_initializable, equality_comparable, integral, same_as, unsigned_integral
 #include <cstddef>                      // ptrdiff_t
-#include <functional>                   // hash, identity, less
+#include <functional>                   // greater, hash, identity, less
 #include <initializer_list>             // initializer_list
 #include <iterator>                     // back_inserter, distance, empty, iter_difference_t, iter_value_t, next, prev, reverse_iterator, size, ssize
 #include <limits>                       // numeric_limits
@@ -64,7 +64,8 @@ constexpr auto nested_types()
         static_assert(std::same_as<typename X::value_type, Key>);                  // [associative.reqmts.general]/12
         static_assert(std::destructible<Key>);                                     // [associative.reqmts.general]/13
 
-        using Compare = std::less<Key>;
+        using Compare = X::key_compare;
+        static_assert(std::same_as<Compare, std::less<Key>> or std::same_as<Compare, std::greater<Key>>);
         static_assert(std::same_as<Compare, typename X::key_compare>);   // [associative.reqmts.general]/14
         static_assert(std::copy_constructible<Compare>);                 // [associative.reqmts.general]/15
         static_assert(std::same_as<Compare, typename X::value_compare>); // [associative.reqmts.general]/16
@@ -74,6 +75,10 @@ constexpr auto nested_types()
         static_assert(not std::indirectly_writable<typename X::iterator, Key>);       // [associative.reqmts.general]/6
         static_assert(not std::indirectly_writable<typename X::const_iterator, Key>); // [associative.reqmts.general]/6
 }
+
+// Whether a set's keys come lowest first, as std::less orders them, rather than highest first.
+template<class X>
+inline constexpr bool ascending = typename X::key_compare()(0UZ, 1UZ);
 
 // Two comparators order alike where they agree on a pair either way round and on a key against itself.
 template<class Compare>
@@ -138,7 +143,7 @@ struct constructor
                 BOOST_CHECK(u == u1); // [associative.reqmts.general]/36
         }
 
-        // The forms taking a comparison object, which std::less makes observable only by what it answers.
+        // The forms taking a comparison object, which a stateless one makes observable only by what it answers.
         auto operator()(X::key_compare const& c) const
         {
                 X u(c);
@@ -552,7 +557,7 @@ struct fn_erase_if
         auto operator()(X const& c, Predicate pred) const
         {
                 auto c1 = c;
-                auto model = std::set<typename X::key_type>(c.begin(), c.end());
+                auto model = std::set<typename X::key_type, typename X::key_compare>(c.begin(), c.end());
                 static_assert(std::same_as<decltype(erase_if(c1, pred)), typename X::size_type>);
                 auto const expected = std::erase_if(model, pred);
                 auto const erased = erase_if(c1, pred);
@@ -604,14 +609,14 @@ struct mem_lower_bound
         auto operator()(X& b, X::key_type const& k) const
         {
                 static_assert(std::same_as<decltype(b.lower_bound(k)), typename X::iterator>); // [associative.reqmts.general]/157
-                BOOST_CHECK(b.lower_bound(k) == std::ranges::lower_bound(b, k));               // [associative.reqmts.general]/158
+                BOOST_CHECK(b.lower_bound(k) == std::ranges::lower_bound(b, k, b.key_comp())); // [associative.reqmts.general]/158
         }
 
         template<class X>
         auto operator()(const X& b, X::key_type const& k) const
         {
                 static_assert(std::same_as<decltype(b.lower_bound(k)), typename X::const_iterator>); // [associative.reqmts.general]/157
-                BOOST_CHECK(b.lower_bound(k) == std::ranges::lower_bound(b, k));                     // [associative.reqmts.general]/158
+                BOOST_CHECK(b.lower_bound(k) == std::ranges::lower_bound(b, k, b.key_comp()));       // [associative.reqmts.general]/158
         }
 };
 
@@ -621,14 +626,14 @@ struct mem_upper_bound
         auto operator()(X& b, X::key_type const& k) const
         {
                 static_assert(std::same_as<decltype(b.upper_bound(k)), typename X::iterator>); // [associative.reqmts.general]/163
-                BOOST_CHECK(b.upper_bound(k) == std::ranges::upper_bound(b, k));               // [associative.reqmts.general]/164
+                BOOST_CHECK(b.upper_bound(k) == std::ranges::upper_bound(b, k, b.key_comp())); // [associative.reqmts.general]/164
         }
 
         template<class X>
         auto operator()(const X& b, X::key_type const& k) const
         {
                 static_assert(std::same_as<decltype(b.upper_bound(k)), typename X::const_iterator>); // [associative.reqmts.general]/163
-                BOOST_CHECK(b.upper_bound(k) == std::ranges::upper_bound(b, k));                     // [associative.reqmts.general]/164
+                BOOST_CHECK(b.upper_bound(k) == std::ranges::upper_bound(b, k, b.key_comp()));       // [associative.reqmts.general]/164
         }
 };
 
@@ -715,7 +720,7 @@ constexpr auto no_heterogeneous_members()
         static_assert(not requires (X a, K k) { a.extract(k); });           // [associative.reqmts.general]/180
 }
 
-// Neither clear() nor erase(k) throws, std::less having nothing to throw.
+// Neither clear() nor erase(k) throws, the comparator having nothing to throw.
 struct mem_clear_erase_nothrow
 {
         template<class X>
@@ -728,7 +733,7 @@ struct mem_clear_erase_nothrow
         }
 };
 
-// Neither swap throws, std::less having nothing to throw.
+// Neither swap throws, the comparator having nothing to throw.
 struct mem_swap_nothrow
 {
         template<class X>
@@ -762,11 +767,13 @@ struct counted
         std::size_t projections1 = 0;
         std::size_t projections2 = 0;
 
-        [[nodiscard]] auto comp()
+        // A set's comparator is stateless, so the lambda builds its own rather than carry a padded copy.
+        template<class Compare>
+        [[nodiscard]] auto comp(Compare /* order */)
         {
                 return [this](std::size_t x, std::size_t y) -> bool {
                         ++comparisons;
-                        return x < y;
+                        return Compare()(x, y);
                 };
         }
 
@@ -819,13 +826,13 @@ struct fn_includes
         template<class X>
         auto operator()(X const& a, X const& b) const
         {
-                BOOST_CHECK(std::ranges::is_sorted(a) and std::ranges::is_sorted(b)); // [includes]/2
+                BOOST_CHECK(std::ranges::is_sorted(a, a.value_comp()) and std::ranges::is_sorted(b, b.value_comp())); // [includes]/2
                 auto const expected = std::ranges::all_of(b, [&](auto&& k) -> bool { return a.contains(k); });
                 auto n = counted();
-                auto const returns = std::includes(a.begin(), a.end(), b.begin(), b.end(), n.comp());
-                BOOST_CHECK_EQUAL(std::includes(a.begin(), a.end(), b.begin(), b.end()), std::includes(a.begin(), a.end(), b.begin(), b.end(), std::less())); // [includes]/1
-                BOOST_CHECK_EQUAL(returns, expected);                                                                                                         // [includes]/3
-                BOOST_CHECK_LE(n.comparisons, counted::bound(a, b));                                                                                          // [includes]/4
+                auto const returns = std::includes(a.begin(), a.end(), b.begin(), b.end(), n.comp(a.value_comp()));
+                BOOST_CHECK(not ascending<X> or std::includes(a.begin(), a.end(), b.begin(), b.end()) == std::includes(a.begin(), a.end(), b.begin(), b.end(), std::less())); // [includes]/1
+                BOOST_CHECK_EQUAL(returns, expected);                                                                                                                         // [includes]/3
+                BOOST_CHECK_LE(n.comparisons, counted::bound(a, b));                                                                                                          // [includes]/4
         }
 };
 
@@ -836,10 +843,10 @@ struct fn_ranges_includes
         {
                 auto const expected = std::ranges::all_of(b, [&](auto&& k) -> bool { return a.contains(k); });
                 auto n = counted();
-                auto const returns = std::ranges::includes(a, b, n.comp(), n.proj1(), n.proj2());
-                BOOST_CHECK_EQUAL(std::ranges::includes(a, b), std::ranges::includes(a, b, std::ranges::less(), std::identity(), std::identity()));       // [includes]/1
-                BOOST_CHECK_EQUAL(returns, expected);                                                                                                     // [includes]/3
-                BOOST_CHECK(n.comparisons <= counted::bound(a, b) and n.projections1 <= counted::bound(a, b) and n.projections2 <= counted::bound(a, b)); // [includes]/4
+                auto const returns = std::ranges::includes(a, b, n.comp(a.value_comp()), n.proj1(), n.proj2());
+                BOOST_CHECK(not ascending<X> or std::ranges::includes(a, b) == std::ranges::includes(a, b, std::ranges::less(), std::identity(), std::identity())); // [includes]/1
+                BOOST_CHECK_EQUAL(returns, expected);                                                                                                               // [includes]/3
+                BOOST_CHECK(n.comparisons <= counted::bound(a, b) and n.projections1 <= counted::bound(a, b) and n.projections2 <= counted::bound(a, b));           // [includes]/4
         }
 };
 
@@ -852,7 +859,7 @@ struct expected_keys
         {
                 auto result = keys_of(a);
                 std::ranges::copy(b | std::views::filter([&](auto&& k) -> bool { return not a.contains(k); }), std::back_inserter(result));
-                std::ranges::sort(result);
+                std::ranges::sort(result, a.value_comp());
                 return result;
         }
 
@@ -876,7 +883,7 @@ struct expected_keys
         {
                 auto result = set_difference(a, b);
                 std::ranges::copy(set_difference(b, a), std::back_inserter(result));
-                std::ranges::sort(result);
+                std::ranges::sort(result, a.value_comp());
                 return result;
         }
 };
@@ -891,12 +898,12 @@ struct fn_set_union
                         result.erase(std::set_union(a.begin(), a.end(), b.begin(), b.end(), result.begin(), comp...), result.end());
                         return result;
                 };
-                BOOST_CHECK(std::ranges::is_sorted(a) and std::ranges::is_sorted(b)); // [set.union]/2
+                BOOST_CHECK(std::ranges::is_sorted(a, a.value_comp()) and std::ranges::is_sorted(b, b.value_comp())); // [set.union]/2
                 auto const expected = expected_keys::set_union(a, b);
                 auto out = std::vector<std::size_t>(a.size() + b.size());
                 auto n = counted();
-                auto const last = std::set_union(a.begin(), a.end(), b.begin(), b.end(), out.begin(), n.comp());
-                BOOST_CHECK(into() == into(std::less()));                                            // [set.union]/1
+                auto const last = std::set_union(a.begin(), a.end(), b.begin(), b.end(), out.begin(), n.comp(a.value_comp()));
+                BOOST_CHECK(not ascending<X> or into() == into(std::less()));                        // [set.union]/1
                 BOOST_CHECK(std::ranges::equal(std::ranges::subrange(out.begin(), last), expected)); // [set.union]/3
                 BOOST_CHECK(last == out.begin() + std::ranges::ssize(expected));                     // [set.union]/4
                 BOOST_CHECK_LE(n.comparisons, counted::bound(a, b));                                 // [set.union]/5
@@ -916,8 +923,8 @@ struct fn_ranges_set_union
                 auto const expected = expected_keys::set_union(a, b);
                 auto out = std::vector<std::size_t>(a.size() + b.size());
                 auto n = counted();
-                auto const [in1, in2, last] = std::ranges::set_union(a, b, out.begin(), n.comp(), n.proj1(), n.proj2());
-                BOOST_CHECK(into() == into(std::ranges::less(), std::identity(), std::identity()));                                                       // [set.union]/1
+                auto const [in1, in2, last] = std::ranges::set_union(a, b, out.begin(), n.comp(a.value_comp()), n.proj1(), n.proj2());
+                BOOST_CHECK(not ascending<X> or into() == into(std::ranges::less(), std::identity(), std::identity()));                                   // [set.union]/1
                 BOOST_CHECK(std::ranges::equal(std::ranges::subrange(out.begin(), last), expected));                                                      // [set.union]/3
                 BOOST_CHECK(in1 == a.end() and in2 == b.end() and last == out.begin() + std::ranges::ssize(expected));                                    // [set.union]/4
                 BOOST_CHECK(n.comparisons <= counted::bound(a, b) and n.projections1 <= counted::bound(a, b) and n.projections2 <= counted::bound(a, b)); // [set.union]/5
@@ -934,12 +941,12 @@ struct fn_set_intersection
                         result.erase(std::set_intersection(a.begin(), a.end(), b.begin(), b.end(), result.begin(), comp...), result.end());
                         return result;
                 };
-                BOOST_CHECK(std::ranges::is_sorted(a) and std::ranges::is_sorted(b)); // [set.intersection]/2
+                BOOST_CHECK(std::ranges::is_sorted(a, a.value_comp()) and std::ranges::is_sorted(b, b.value_comp())); // [set.intersection]/2
                 auto const expected = expected_keys::set_intersection(a, b);
                 auto out = std::vector<std::size_t>(a.size() + b.size());
                 auto n = counted();
-                auto const last = std::set_intersection(a.begin(), a.end(), b.begin(), b.end(), out.begin(), n.comp());
-                BOOST_CHECK(into() == into(std::less()));                                            // [set.intersection]/1
+                auto const last = std::set_intersection(a.begin(), a.end(), b.begin(), b.end(), out.begin(), n.comp(a.value_comp()));
+                BOOST_CHECK(not ascending<X> or into() == into(std::less()));                        // [set.intersection]/1
                 BOOST_CHECK(std::ranges::equal(std::ranges::subrange(out.begin(), last), expected)); // [set.intersection]/3
                 BOOST_CHECK(last == out.begin() + std::ranges::ssize(expected));                     // [set.intersection]/4
                 BOOST_CHECK_LE(n.comparisons, counted::bound(a, b));                                 // [set.intersection]/5
@@ -959,8 +966,8 @@ struct fn_ranges_set_intersection
                 auto const expected = expected_keys::set_intersection(a, b);
                 auto out = std::vector<std::size_t>(a.size() + b.size());
                 auto n = counted();
-                auto const [in1, in2, last] = std::ranges::set_intersection(a, b, out.begin(), n.comp(), n.proj1(), n.proj2());
-                BOOST_CHECK(into() == into(std::ranges::less(), std::identity(), std::identity()));                                                       // [set.intersection]/1
+                auto const [in1, in2, last] = std::ranges::set_intersection(a, b, out.begin(), n.comp(a.value_comp()), n.proj1(), n.proj2());
+                BOOST_CHECK(not ascending<X> or into() == into(std::ranges::less(), std::identity(), std::identity()));                                   // [set.intersection]/1
                 BOOST_CHECK(std::ranges::equal(std::ranges::subrange(out.begin(), last), expected));                                                      // [set.intersection]/3
                 BOOST_CHECK(in1 == a.end() and in2 == b.end() and last == out.begin() + std::ranges::ssize(expected));                                    // [set.intersection]/4
                 BOOST_CHECK(n.comparisons <= counted::bound(a, b) and n.projections1 <= counted::bound(a, b) and n.projections2 <= counted::bound(a, b)); // [set.intersection]/5
@@ -977,12 +984,12 @@ struct fn_set_difference
                         result.erase(std::set_difference(a.begin(), a.end(), b.begin(), b.end(), result.begin(), comp...), result.end());
                         return result;
                 };
-                BOOST_CHECK(std::ranges::is_sorted(a) and std::ranges::is_sorted(b)); // [set.difference]/2
+                BOOST_CHECK(std::ranges::is_sorted(a, a.value_comp()) and std::ranges::is_sorted(b, b.value_comp())); // [set.difference]/2
                 auto const expected = expected_keys::set_difference(a, b);
                 auto out = std::vector<std::size_t>(a.size() + b.size());
                 auto n = counted();
-                auto const last = std::set_difference(a.begin(), a.end(), b.begin(), b.end(), out.begin(), n.comp());
-                BOOST_CHECK(into() == into(std::less()));                                            // [set.difference]/1
+                auto const last = std::set_difference(a.begin(), a.end(), b.begin(), b.end(), out.begin(), n.comp(a.value_comp()));
+                BOOST_CHECK(not ascending<X> or into() == into(std::less()));                        // [set.difference]/1
                 BOOST_CHECK(std::ranges::equal(std::ranges::subrange(out.begin(), last), expected)); // [set.difference]/3
                 BOOST_CHECK(last == out.begin() + std::ranges::ssize(expected));                     // [set.difference]/4
                 BOOST_CHECK_LE(n.comparisons, counted::bound(a, b));                                 // [set.difference]/5
@@ -1002,8 +1009,8 @@ struct fn_ranges_set_difference
                 auto const expected = expected_keys::set_difference(a, b);
                 auto out = std::vector<std::size_t>(a.size() + b.size());
                 auto n = counted();
-                auto const [in1, last] = std::ranges::set_difference(a, b, out.begin(), n.comp(), n.proj1(), n.proj2());
-                BOOST_CHECK(into() == into(std::ranges::less(), std::identity(), std::identity()));                                                       // [set.difference]/1
+                auto const [in1, last] = std::ranges::set_difference(a, b, out.begin(), n.comp(a.value_comp()), n.proj1(), n.proj2());
+                BOOST_CHECK(not ascending<X> or into() == into(std::ranges::less(), std::identity(), std::identity()));                                   // [set.difference]/1
                 BOOST_CHECK(std::ranges::equal(std::ranges::subrange(out.begin(), last), expected));                                                      // [set.difference]/3
                 BOOST_CHECK(in1 == a.end() and last == out.begin() + std::ranges::ssize(expected));                                                       // [set.difference]/4
                 BOOST_CHECK(n.comparisons <= counted::bound(a, b) and n.projections1 <= counted::bound(a, b) and n.projections2 <= counted::bound(a, b)); // [set.difference]/5
@@ -1020,12 +1027,12 @@ struct fn_set_symmetric_difference
                         result.erase(std::set_symmetric_difference(a.begin(), a.end(), b.begin(), b.end(), result.begin(), comp...), result.end());
                         return result;
                 };
-                BOOST_CHECK(std::ranges::is_sorted(a) and std::ranges::is_sorted(b)); // [set.symmetric.difference]/2
+                BOOST_CHECK(std::ranges::is_sorted(a, a.value_comp()) and std::ranges::is_sorted(b, b.value_comp())); // [set.symmetric.difference]/2
                 auto const expected = expected_keys::set_symmetric_difference(a, b);
                 auto out = std::vector<std::size_t>(a.size() + b.size());
                 auto n = counted();
-                auto const last = std::set_symmetric_difference(a.begin(), a.end(), b.begin(), b.end(), out.begin(), n.comp());
-                BOOST_CHECK(into() == into(std::less()));                                            // [set.symmetric.difference]/1
+                auto const last = std::set_symmetric_difference(a.begin(), a.end(), b.begin(), b.end(), out.begin(), n.comp(a.value_comp()));
+                BOOST_CHECK(not ascending<X> or into() == into(std::less()));                        // [set.symmetric.difference]/1
                 BOOST_CHECK(std::ranges::equal(std::ranges::subrange(out.begin(), last), expected)); // [set.symmetric.difference]/3
                 BOOST_CHECK(last == out.begin() + std::ranges::ssize(expected));                     // [set.symmetric.difference]/4
                 BOOST_CHECK_LE(n.comparisons, counted::bound(a, b));                                 // [set.symmetric.difference]/5
@@ -1045,8 +1052,8 @@ struct fn_ranges_set_symmetric_difference
                 auto const expected = expected_keys::set_symmetric_difference(a, b);
                 auto out = std::vector<std::size_t>(a.size() + b.size());
                 auto n = counted();
-                auto const [in1, in2, last] = std::ranges::set_symmetric_difference(a, b, out.begin(), n.comp(), n.proj1(), n.proj2());
-                BOOST_CHECK(into() == into(std::ranges::less(), std::identity(), std::identity()));                                                       // [set.symmetric.difference]/1
+                auto const [in1, in2, last] = std::ranges::set_symmetric_difference(a, b, out.begin(), n.comp(a.value_comp()), n.proj1(), n.proj2());
+                BOOST_CHECK(not ascending<X> or into() == into(std::ranges::less(), std::identity(), std::identity()));                                   // [set.symmetric.difference]/1
                 BOOST_CHECK(std::ranges::equal(std::ranges::subrange(out.begin(), last), expected));                                                      // [set.symmetric.difference]/3
                 BOOST_CHECK(in1 == a.end() and in2 == b.end() and last == out.begin() + std::ranges::ssize(expected));                                    // [set.symmetric.difference]/4
                 BOOST_CHECK(n.comparisons <= counted::bound(a, b) and n.projections1 <= counted::bound(a, b) and n.projections2 <= counted::bound(a, b)); // [set.symmetric.difference]/5

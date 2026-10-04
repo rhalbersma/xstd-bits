@@ -21,7 +21,7 @@ A row's `outcome` is one of:
 | :--- | ---: | :--- | :--- | :--- | :--- |
 | `[associative.reqmts.general]` | 1 | — | — | no-requirement | Introduces the four associative containers and the flat adaptors. |
 | `[associative.reqmts.general]` | 2 | — | — | no-requirement | Defines `Compare` and the comparison object; the ordering it induces is ¶177-178's. |
-| `[associative.reqmts.general]` | 3 | — | — | no-requirement | Defines equivalence of keys, and asks a stable result of the program's comparator, which `std::less` gives. |
+| `[associative.reqmts.general]` | 3 | — | — | no-requirement | Defines equivalence of keys, and asks a stable result of the program's comparator, which `std::less` and `std::greater` give. |
 | `[associative.reqmts.general]` | 4 | — | — | answered | Checked as one element holding the key after each `insert`. |
 | `[associative.reqmts.general]` | 5 | — | — | answered | |
 | `[associative.reqmts.general]` | 6 | `iterator`, `const_iterator` | — | answered | Constant: nothing is writable through either, a proxy that converts to the key and a `const Key&` alike. |
@@ -37,7 +37,7 @@ A row's `outcome` is one of:
 | `[associative.reqmts.general]` | 16 | `typename X::value_compare` | Result | answered | |
 | `[associative.reqmts.general]` | 17 | `typename X::node_type` | Result | forced | No nodes: a key is a bit in a block, so there is nothing to unlink and hand over. `erase(k)` removes a key where `extract` would, and `a \|= a2` inserts every key of `a2` where `merge` would, leaving `a2` unchanged. |
 | `[associative.reqmts.general]` | 18 | `X(c)` | Effects | answered | |
-| `[associative.reqmts.general]` | 19 | `X(c)` | Complexity | declined | Not checked: the tests observe results rather than count steps, and every subject's `key_compare` is `std::less<key_type>`, which gives nothing to count comparisons through. |
+| `[associative.reqmts.general]` | 19 | `X(c)` | Complexity | declined | Not checked: the tests observe results rather than count steps, and every subject's `key_compare` is `std::less<key_type>` or `std::greater<key_type>`, which give nothing to count comparisons through. |
 | `[associative.reqmts.general]` | 20 | `X u = X(); X u;` | Preconditions | answered | |
 | `[associative.reqmts.general]` | 21 | `X u = X(); X u;` | Effects | answered | |
 | `[associative.reqmts.general]` | 22 | `X u = X(); X u;` | Complexity | declined | As ¶19. |
@@ -60,7 +60,7 @@ A row's `outcome` is one of:
 | `[associative.reqmts.general]` | 39 | `a = il` | Effects | answered | |
 | `[associative.reqmts.general]` | 40 | `a = il` | Complexity | declined | As ¶19. |
 | `[associative.reqmts.general]` | 41 | `b.key_comp()` | Result | answered | |
-| `[associative.reqmts.general]` | 42 | `b.key_comp()` | Returns | answered | `std::less` has no state, so the object is checked by what it answers. |
+| `[associative.reqmts.general]` | 42 | `b.key_comp()` | Returns | answered | Neither `std::less` nor `std::greater` has state, so the object is checked by what it answers. |
 | `[associative.reqmts.general]` | 43 | `b.key_comp()` | Complexity | declined | As ¶19. |
 | `[associative.reqmts.general]` | 44 | `b.value_comp()` | Result | answered | |
 | `[associative.reqmts.general]` | 45 | `b.value_comp()` | Returns | answered | As ¶42. |
@@ -162,7 +162,7 @@ A row's `outcome` is one of:
 | `[associative.reqmts.general]` | 141 | `b.find(k)` | Result | answered | |
 | `[associative.reqmts.general]` | 142 | `b.find(k)` | Returns | answered | |
 | `[associative.reqmts.general]` | 143 | `b.find(k)` | Complexity | declined | As ¶19. |
-| `[associative.reqmts.general]` | 144 | `a_tran.find(ke)` | Result | declined | `key_compare` is `std::less<key_type>` on every subject and has no `is_transparent`, so no value is an `a_tran`; ¶180 checks that the member templates are absent. |
+| `[associative.reqmts.general]` | 144 | `a_tran.find(ke)` | Result | declined | `key_compare` is `std::less<key_type>` or `std::greater<key_type>` on every subject, neither with `is_transparent`, so no value is an `a_tran`; ¶180 checks that the member templates are absent. |
 | `[associative.reqmts.general]` | 145 | `a_tran.find(ke)` | Returns | declined | As ¶144. |
 | `[associative.reqmts.general]` | 146 | `a_tran.find(ke)` | Complexity | declined | As ¶144. |
 | `[associative.reqmts.general]` | 147 | `b.count(k)` | Result | answered | |
@@ -197,7 +197,7 @@ A row's `outcome` is one of:
 | `[associative.reqmts.general]` | 176 | — | — | forced | As ¶17. |
 | `[associative.reqmts.general]` | 177 | — | — | answered | |
 | `[associative.reqmts.general]` | 178 | — | — | answered | |
-| `[associative.reqmts.general]` | 179 | — | — | declined | `std::less<key_type>` has no state, so neither a stored reference to it nor which object a copy compares with can be observed. |
+| `[associative.reqmts.general]` | 179 | — | — | declined | Neither `std::less<key_type>` nor `std::greater<key_type>` has state, so neither a stored reference to it nor which object a copy compares with can be observed. |
 | `[associative.reqmts.general]` | 180 | — | — | answered | Checked with a key that orders against `std::size_t` without converting to it. |
 | `[associative.reqmts.general]` | 181 | — | — | answered | Asked of the two class templates with guides: `std::set` and `xstd::basic_bit_set`. The others fix a width or a capacity in the type, which no argument deduces. |
 | `[associative.reqmts.except]` | 1 | `clear()`, `erase(k)` | — | answered | |
@@ -213,7 +213,7 @@ A row's `outcome` is one of:
 | `[set.cons]` | 5 | `set(from_range_t, R&& rg, const Compare& comp = Compare(), ...)` | Effects | answered | |
 | `[set.cons]` | 6 | `set(from_range_t, R&& rg, const Compare& comp = Compare(), ...)` | Complexity | declined | As ¶2. |
 | `[set.modifiers]` | 1 | `template<class K> pair<iterator, bool> insert(K&& x)`, `template<class K> iterator insert(const_iterator hint, K&& x)` | Constraints | answered | |
-| `[set.modifiers]` | 2 | as ¶1 | Preconditions | declined | P2363R5's heterogeneous `insert` is constrained on `Compare::is_transparent`, which `std::less<key_type>` does not have; ¶1 checks both overloads are absent, so there is no call to observe. |
+| `[set.modifiers]` | 2 | as ¶1 | Preconditions | declined | P2363R5's heterogeneous `insert` is constrained on `Compare::is_transparent`, which neither `std::less<key_type>` nor `std::greater<key_type>` has; ¶1 checks both overloads are absent, so there is no call to observe. |
 | `[set.modifiers]` | 3 | as ¶1 | Effects | declined | As ¶2. |
 | `[set.modifiers]` | 4 | as ¶1 | Returns | declined | As ¶2. |
 | `[set.modifiers]` | 5 | as ¶1 | Complexity | declined | As ¶2. |

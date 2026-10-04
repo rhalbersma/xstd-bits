@@ -66,7 +66,7 @@ BOOST_AUTO_TEST_CASE(SetComp)
                 static_assert(requires (T::key_compare const comp) { T(comp); });
                 // An allocator argument only where the owner takes an allocator, by this library's design.
                 static_assert(has_comp_allocator_constructor<T> == takes_allocator_v<T>);
-                // std::less has no state, so a comparator argument is accepted and changes nothing.
+                // Each key_compare is stateless, so a comparator argument is accepted and changes nothing.
                 BOOST_CHECK(T(typename T::key_compare()).empty()); // [set.cons]/1
         });
 }

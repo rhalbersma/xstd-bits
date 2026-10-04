@@ -18,7 +18,7 @@ BOOST_AUTO_TEST_SUITE(Modifiers)
 BOOST_AUTO_TEST_CASE(InsertHeterogeneous)
 {
         test::for_each_type<test::spec::set::all>([]<class T> -> void {
-                // Each key_compare is std::less<key_type>, with no is_transparent to let a key of another type in.
+                // No key_compare here has is_transparent to let a key of another type in.
                 using K = test::set::heterogeneous_key;
                 static_assert(not requires (T a, K k) { a.insert(k); });             // [set.modifiers]/1
                 static_assert(not requires (T a, K k) { a.insert(a.cbegin(), k); }); // [set.modifiers]/1
