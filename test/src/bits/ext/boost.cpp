@@ -5,6 +5,7 @@
 
 #include <test/sequence/concepts.hpp>         // bit_sequence
 #include <test/set/concepts.hpp>              // bit_set
+#include <xstd/bits/bit_key_traits.hpp>       // bit_key_traits
 #include <xstd/bits/bit_storage.hpp>          // bit_storage, owned_bit_storage, resizable_bit_storage
 #include <xstd/bits/detail/bit_container.hpp> // bit_container, num_blocks_v
 #include <xstd/bits/detail/ownership.hpp>     // owned_bits_t
@@ -69,9 +70,9 @@ BOOST_AUTO_TEST_CASE(TheMovesAreAsNothrowAsTheSmallVectors)
         static_assert(std::is_nothrow_move_constructible_v<xstd::bit_small_vector<N>> and std::is_nothrow_move_assignable_v<xstd::bit_small_vector<N>>);
 
         using allocator_type = std::pmr::polymorphic_allocator<std::size_t>;
-        static_assert(std::is_nothrow_move_constructible_v<xstd::basic_bit_small_set<std::size_t, N, allocator_type>>);
+        static_assert(std::is_nothrow_move_constructible_v<xstd::basic_bit_small_set<std::size_t, std::size_t, N, xstd::bit_key_traits<std::size_t>, allocator_type>>);
         static_assert(std::is_nothrow_move_constructible_v<xstd::basic_bit_small_vector<std::size_t, N, allocator_type>>);
-        static_assert(not std::is_nothrow_move_assignable_v<xstd::basic_bit_small_set<std::size_t, N, allocator_type>>);
+        static_assert(not std::is_nothrow_move_assignable_v<xstd::basic_bit_small_set<std::size_t, std::size_t, N, xstd::bit_key_traits<std::size_t>, allocator_type>>);
         static_assert(not std::is_nothrow_move_assignable_v<xstd::basic_bit_small_vector<std::size_t, N, allocator_type>>);
         BOOST_CHECK(true);
 }

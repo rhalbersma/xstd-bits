@@ -6,6 +6,7 @@
 #ifndef XSTD_BITS_DETAIL_SET_ADAPTOR_HPP
 #define XSTD_BITS_DETAIL_SET_ADAPTOR_HPP
 
+#include <xstd/bits/bit_key_traits.hpp>              // bit_key_traits
 #include <xstd/bits/bit_storage.hpp>                 // bit_storage
 #include <xstd/bits/detail/adapted_bits.hpp>         // adapted_bits
 #include <xstd/bits/detail/allocator_base_type.hpp>  // allocator_base_type, allocator_param_t, has_allocator_v
@@ -61,7 +62,7 @@ inline constexpr bool is_consecutive<std::ranges::iota_view<W, B>> = true;
 // One tier each: sharing a body puts the whole over readability-function-cognitive-complexity.
 
 // Blocks, lowest position first: load once per block, then tzcnt for the position and blsr to drop it.
-template<class Bits, class F>
+template<class Key, class KeyTraits, class Bits, class F>
 constexpr auto walk_blocks_ascending(Bits const& c, F& f)
         -> void
 {
@@ -73,12 +74,12 @@ constexpr auto walk_blocks_ascending(Bits const& c, F& f)
                 while (block != block_type{}) {
                         auto const offset = static_cast<std::size_t>(countr_zero(block));
                         // A functor returning void has no exit to take, so its walk is compiled without one.
-                        if constexpr (std::is_invocable_r_v<bool, F&, std::size_t>) {
-                                if (not f(decay_copy((digits * index) + offset))) {
+                        if constexpr (std::is_invocable_r_v<bool, F&, Key>) {
+                                if (not f(decay_copy<Key>(KeyTraits::from_index((digits * index) + offset)))) {
                                         return;
                                 }
                         } else {
-                                f(decay_copy((digits * index) + offset));
+                                f(decay_copy<Key>(KeyTraits::from_index((digits * index) + offset)));
                         }
                         block = static_cast<block_type>(block & static_cast<block_type>(block - block_type{1}));
                 }
@@ -86,7 +87,7 @@ constexpr auto walk_blocks_ascending(Bits const& c, F& f)
 }
 
 // The mirror. w & (w - 1) has no descending twin, so this clears the bit it just reported.
-template<class Bits, class F>
+template<class Key, class KeyTraits, class Bits, class F>
 constexpr auto walk_blocks_descending(Bits const& c, F& f)
         -> void
 {
@@ -99,42 +100,46 @@ constexpr auto walk_blocks_descending(Bits const& c, F& f)
                 while (block != block_type{}) {
                         auto const offset = digits - 1UZ - static_cast<std::size_t>(countl_zero(block));
                         // A functor returning void has no exit to take, so its walk is compiled without one.
-                        if constexpr (std::is_invocable_r_v<bool, F&, std::size_t>) {
-                                if (not f(decay_copy((digits * index) + offset))) {
+                        if constexpr (std::is_invocable_r_v<bool, F&, Key>) {
+                                if (not f(decay_copy<Key>(KeyTraits::from_index((digits * index) + offset)))) {
                                         return;
                                 }
                         } else {
-                                f(decay_copy((digits * index) + offset));
+                                f(decay_copy<Key>(KeyTraits::from_index((digits * index) + offset)));
                         }
                         block = static_cast<block_type>(block ^ shl(block_type{1}, offset));
                 }
         }
 }
 
+// A traits type that closes the universe says how many keys it has, which an owner's width must then be.
+template<class KeyTraits, std::size_t N>
+concept admits_width = (not requires { KeyTraits::size; }) or (KeyTraits::size == N);
+
 } // namespace set
 
-template<bit_container_type Bits, storage Store = storage::owned, class Derived = void>
+template<bit_container_type Bits, storage Store = storage::owned, class Derived = void, class Key = std::size_t, class KeyTraits = bit_key_traits<Key>>
 class set_adaptor;
 
 namespace set {
 
 // The storage an owner has or a view's handle into another's, in a base public exactly where the owner is structural.
-template<class Bits, storage Store, class Derived>
+template<class Bits, storage Store, class Derived, class Key, class KeyTraits>
 using members_t = adapted_bits<
         std::conditional_t<owns(Store), Bits, storage_ref_t<Bits>>,
-        std::conditional_t<owns(Store), allocator_base_type<std::remove_const_t<Bits>, set_adaptor<Bits, Store, Derived>>, xstd::empty_base_type<>>,
+        std::conditional_t<owns(Store), allocator_base_type<std::remove_const_t<Bits>, set_adaptor<Bits, Store, Derived, Key, KeyTraits>>, xstd::empty_base_type<>>,
         owns(Store) and std::remove_const_t<Bits>::is_structural>;
 
 } // namespace set
 
-template<bit_container_type Bits, storage Store, class Derived>
-class set_adaptor : public set::members_t<Bits, Store, Derived>
+template<bit_container_type Bits, storage Store, class Derived, class Key, class KeyTraits>
+class set_adaptor : public set::members_t<Bits, Store, Derived, Key, KeyTraits>
 {
         static constexpr bool is_owner = owns(Store);
 
         using bits_type = std::remove_const_t<Bits>;
 
-        using members_type = set::members_t<Bits, Store, Derived>;
+        using members_type = set::members_t<Bits, Store, Derived, Key, KeyTraits>;
         using members_type::m_bits;
 
         // One accessor: self.m_bits propagates the owner's const, *self.m_bits keeps the view shallow.
@@ -152,7 +157,7 @@ class set_adaptor : public set::members_t<Bits, Store, Derived>
         friend Derived;
 
         // A view refers into this owner's storage, and only a reading that can view it is named.
-        template<bit_container_type, storage, class>
+        template<bit_container_type, storage, class, class, class>
         friend class set_adaptor;
 
         // The free functions over every reading, bit_convert among them, reach the storage through this one door.
@@ -181,18 +186,19 @@ public:
         static constexpr bool owns_storage = is_owner;
 
         // types
-        using key_type = std::size_t;
+        using key_type = Key;
+        using key_traits_type = KeyTraits;
         using key_compare = std::less<key_type>;
         using value_type = key_type;
         using value_compare = key_compare;
         static constexpr bool has_static_width = (Bits::extent != std::dynamic_extent);
         using pointer = void;
         using const_pointer = pointer;
-        using reference = bidirectional_bit_reference<Bits>;
+        using reference = bidirectional_bit_reference<Bits, Key, KeyTraits>;
         using const_reference = reference;
         using size_type = std::size_t;
         using difference_type = std::ptrdiff_t;
-        using iterator = bidirectional_bit_iterator<Bits>;
+        using iterator = bidirectional_bit_iterator<Bits, Key, KeyTraits>;
         using const_iterator = iterator;
         using reverse_iterator = std::reverse_iterator<iterator>;
         using const_reverse_iterator = std::reverse_iterator<const_iterator>;
@@ -433,20 +439,20 @@ public:
 
         // The set reading a block at a time, which is what an iterator cannot be.
         template<class F>
-                requires std::invocable<F&, std::size_t>
+                requires std::invocable<F&, key_type>
         constexpr auto for_each(this auto&& self, F f)
                 -> void
         {
-                set::walk_blocks_ascending(self.bits(), f);
+                set::walk_blocks_ascending<Key, KeyTraits>(self.bits(), f);
         }
 
         // The mirror, highest position first.
         template<class F>
-                requires std::invocable<F&, std::size_t>
+                requires std::invocable<F&, key_type>
         constexpr auto for_each_reverse(this auto&& self, F f)
                 -> void
         {
-                set::walk_blocks_descending(self.bits(), f);
+                set::walk_blocks_descending<Key, KeyTraits>(self.bits(), f);
         }
 
         // capacity; a bitset's count() is a set's size(), and max_size() is the positions there are to hold.
@@ -503,39 +509,39 @@ public:
         template<class... Args>
         constexpr auto emplace(this auto&& self, Args&&... args)
                 -> std::pair<iterator, bool>
-                requires (sizeof...(args) <= 1) and requires { self.bits().growing_insert(value_type(std::forward<Args>(args)...)); }
+                requires (sizeof...(args) <= 1) and requires { self.bits().growing_insert(KeyTraits::to_index(value_type(std::forward<Args>(args)...))); }
         {
-                return self.do_insert(value_type(std::forward<Args>(args)...));
+                return self.do_insert(KeyTraits::to_index(value_type(std::forward<Args>(args)...)));
         }
 
         template<class... Args>
         constexpr auto emplace_hint(this auto&& self, const_iterator position, Args&&... args)
                 -> iterator
-                requires (sizeof...(args) <= 1) and requires { self.bits().growing_insert(value_type(std::forward<Args>(args)...)); }
+                requires (sizeof...(args) <= 1) and requires { self.bits().growing_insert(KeyTraits::to_index(value_type(std::forward<Args>(args)...))); }
         {
-                return self.do_insert(position, value_type(std::forward<Args>(args)...));
+                return self.do_insert(position, KeyTraits::to_index(value_type(std::forward<Args>(args)...)));
         }
 
-        // [set]'s two overloads by value: a key is a size_t, and there is nothing to move.
+        // [set]'s two overloads by value: a key is kept only as its position, so there is nothing to move.
         constexpr auto insert(this auto&& self, value_type x) -> std::pair<iterator, bool>
-                requires requires { self.bits().growing_insert(x); }
+                requires requires { self.bits().growing_insert(KeyTraits::to_index(x)); }
         {
-                return self.do_insert(x);
+                return self.do_insert(KeyTraits::to_index(x));
         }
 
         constexpr auto insert(this auto&& self, const_iterator position, value_type x) -> iterator
-                requires requires { self.bits().growing_insert(x); }
+                requires requires { self.bits().growing_insert(KeyTraits::to_index(x)); }
         {
-                return self.do_insert(position, x);
+                return self.do_insert(position, KeyTraits::to_index(x));
         }
 
         template<std::input_iterator I, std::sentinel_for<I> S>
         constexpr auto insert(this auto&& self, I first, S last)
                 -> void
-                requires std::constructible_from<value_type, std::iter_reference_t<I>> and requires { self.bits().growing_insert(static_cast<value_type>(*first)); }
+                requires std::constructible_from<value_type, std::iter_reference_t<I>> and requires { self.bits().growing_insert(KeyTraits::to_index(static_cast<value_type>(*first))); }
         {
                 for (; first != last; ++first) {
-                        auto const x = static_cast<value_type>(*first);
+                        auto const x = KeyTraits::to_index(static_cast<value_type>(*first));
                         self.guard_key(x);
                         self.bits().growing_insert(x);
                 }
@@ -545,13 +551,13 @@ public:
         template<std::ranges::input_range R>
         constexpr auto insert_range(this auto&& self, R&& rg)
                 -> void
-                requires std::constructible_from<value_type, std::ranges::range_reference_t<R>> and requires { self.bits().growing_insert(static_cast<value_type>(*std::ranges::begin(rg))); }
+                requires std::constructible_from<value_type, std::ranges::range_reference_t<R>> and requires { self.bits().growing_insert(KeyTraits::to_index(static_cast<value_type>(*std::ranges::begin(rg)))); }
         {
                 if constexpr (requires { self |= rg; }) {
                         // Tier one: another set over the same storage, which is a union done block-wise.
                         self |= rg;
-                } else if constexpr (set::is_consecutive<std::remove_cvref_t<R>> and requires (std::size_t pos, std::size_t len) { self.bits().set(pos, len, true); }) {
-                        // Tier two: consecutive positions, the first and last blocks masked, the rest whole.
+                } else if constexpr (set::is_consecutive<std::remove_cvref_t<R>> and std::same_as<KeyTraits, bit_key_traits<std::size_t>> and requires (std::size_t pos, std::size_t len) { self.bits().set(pos, len, true); }) {
+                        // Tier two: consecutive identity keys, the first and last blocks masked, the rest whole.
                         if (not std::ranges::empty(rg)) {
                                 auto const lo = static_cast<value_type>(*std::ranges::begin(rg));
                                 auto const len = static_cast<std::size_t>(std::ranges::distance(rg));
@@ -568,7 +574,7 @@ public:
 
         constexpr auto insert(this auto&& self, std::initializer_list<value_type> ilist)
                 -> void
-                requires requires { self.bits().growing_insert(*ilist.begin()); }
+                requires requires { self.bits().growing_insert(KeyTraits::to_index(*ilist.begin())); }
         {
                 self.insert(ilist.begin(), ilist.end());
         }
@@ -583,35 +589,35 @@ public:
         // The successor first: exclusive_find_next never reads the position it steps from.
         constexpr auto erase(this auto&& self, const_iterator position) noexcept
                 -> iterator
-                requires requires { self.bits().assign(*position, false); }
+                requires requires (std::size_t pos) { self.bits().assign(pos, false); }
         {
                 assert(position != self.end());
                 auto nrv = position;
                 ++nrv;
-                self.bits().assign(*position, false);
+                self.bits().assign(KeyTraits::to_index(*position), false);
                 return nrv;
         }
 
         // Total over key_type, as std::set's is: an absent key is the no-op returning zero.
         constexpr auto erase(this auto&& self, key_type const& x) noexcept
                 -> size_type
-                requires requires { self.bits().assign(x, false); }
+                requires requires { self.bits().assign(KeyTraits::to_index(x), false); }
         {
                 if (not self.contains(x)) {
                         return 0UZ;
                 }
-                self.bits().assign(x, false);
+                self.bits().assign(KeyTraits::to_index(x), false);
                 return 1UZ;
         }
 
         constexpr auto erase(this auto&& self, const_iterator first, const_iterator last) noexcept
                 -> iterator
-                requires requires { self.bits().assign(*first, false); }
+                requires requires (std::size_t pos) { self.bits().assign(pos, false); }
         {
                 // A range, not two positions: reversed, the walk steps past last into a scan nothing answers.
-                assert(static_cast<key_type>(*first) <= static_cast<key_type>(*last));
+                assert(KeyTraits::to_index(*first) <= KeyTraits::to_index(*last));
                 while (first != last) {
-                        self.bits().assign(*first++, false);
+                        self.bits().assign(KeyTraits::to_index(*first++), false);
                 }
                 return last;
         }
@@ -666,17 +672,18 @@ public:
         // Toggling one key, growing where insert grows; not noexcept, since growing allocates.
         constexpr auto complement(this auto&& self, value_type x)
                 -> void
-                requires requires { self.bits().assign(x, true); }
+                requires requires { self.bits().assign(KeyTraits::to_index(x), true); }
         {
-                self.guard_key(x);
-                if constexpr (not has_static_width and requires { self.bits().growing_insert(x); }) {
-                        if (x >= self.bits().size()) {
-                                static_cast<void>(self.bits().growing_insert(x));
+                auto const pos = KeyTraits::to_index(x);
+                self.guard_key(pos);
+                if constexpr (not has_static_width and requires { self.bits().growing_insert(pos); }) {
+                        if (pos >= self.bits().size()) {
+                                static_cast<void>(self.bits().growing_insert(pos));
                                 return;
                         }
                 }
-                assert(x < self.bits().size());
-                self.bits().assign(x, not self.bits().test(x));
+                assert(pos < self.bits().size());
+                self.bits().assign(pos, not self.bits().test(pos));
         }
 
         // The whole-set complement, at a static width alone: complementing needs a universe, which N is.
@@ -775,7 +782,8 @@ public:
         [[nodiscard]] constexpr auto contains(key_type const& x) const noexcept
                 -> bool
         {
-                return x < bits().size() and bits().test(x);
+                auto const pos = KeyTraits::to_index(x);
+                return pos < bits().size() and bits().test(pos);
         }
 
         [[nodiscard]] constexpr auto count(key_type const& x) const noexcept
@@ -787,23 +795,24 @@ public:
         [[nodiscard]] constexpr auto find(key_type const& x) const noexcept
                 -> const_iterator
         {
-                return contains(x) ? const_iterator{&bits(), x} : end();
+                return contains(x) ? const_iterator{&bits(), KeyTraits::to_index(x)} : end();
         }
 
         // The first element not less than x, asked about directly because stepping from x - 1 would underflow at zero.
         [[nodiscard]] constexpr auto lower_bound(key_type const& x) const noexcept
                 -> const_iterator
         {
-                return contains(x) ? const_iterator{&bits(), x} : upper_bound(x);
+                return contains(x) ? const_iterator{&bits(), KeyTraits::to_index(x)} : upper_bound(x);
         }
 
         [[nodiscard]] constexpr auto upper_bound(key_type const& x) const noexcept
                 -> const_iterator
         {
-                if (x >= bits().size()) {
+                auto const pos = KeyTraits::to_index(x);
+                if (pos >= bits().size()) {
                         return end();
                 }
-                return {&bits(), bits().exclusive_find_next(x)};
+                return {&bits(), bits().exclusive_find_next(pos)};
         }
 
         [[nodiscard]] constexpr auto equal_range(key_type const& x) const noexcept
@@ -849,7 +858,7 @@ private:
                 return static_cast<derived_type&>(*this);
         }
 
-        // The one key a set of this reading can be unable to hold; every other member is total over key_type.
+        // The one position a set of this reading can be unable to hold; every other member is total over key_type.
         constexpr auto guard_key(std::size_t x) const
                 -> void
         {
@@ -874,7 +883,7 @@ private:
         }
 
         // growing_insert reports whether the bit was new, so one walk answers where two did.
-        constexpr auto do_insert(this auto&& self, value_type x)
+        constexpr auto do_insert(this auto&& self, std::size_t x)
                 -> std::pair<iterator, bool>
         {
                 self.guard_key(x);
@@ -882,7 +891,7 @@ private:
                 return {{&self.bits(), x}, inserted};
         }
 
-        constexpr auto do_insert(this auto&& self, const_iterator, value_type x)
+        constexpr auto do_insert(this auto&& self, const_iterator, std::size_t x)
                 -> iterator
         {
                 self.guard_key(x);
@@ -896,8 +905,8 @@ template<class T>
 concept set_adaptor_like = requires { typename T::adaptor_type; typename T::reads_as; } and std::same_as<typename T::reads_as, set_reading_tag> and std::derived_from<T, typename T::adaptor_type>;
 
 // The owner's side of the protocol above.
-template<class Bits, class Derived>
-struct owned_storage<set_adaptor<Bits, storage::owned, Derived>>
+template<class Bits, class Derived, class Key, class KeyTraits>
+struct owned_storage<set_adaptor<Bits, storage::owned, Derived, Key, KeyTraits>>
 {
         using bits_type = Bits;
 
@@ -908,9 +917,9 @@ struct owned_storage<set_adaptor<Bits, storage::owned, Derived>>
 // NOLINTBEGIN(readability-redundant-parentheses): a call is no primary expression, so the clause needs them.
 
 // 23.4.6.3 Erasure                                                [set.erasure]
-template<class Bits, storage Store, class Derived, class Predicate>
-constexpr auto erase_if(set_adaptor<Bits, Store, Derived>& c, Predicate pred)
-        -> set_adaptor<Bits, Store, Derived>::size_type
+template<class Bits, storage Store, class Derived, class Key, class KeyTraits, class Predicate>
+constexpr auto erase_if(set_adaptor<Bits, Store, Derived, Key, KeyTraits>& c, Predicate pred)
+        -> set_adaptor<Bits, Store, Derived, Key, KeyTraits>::size_type
 {
         auto const original_size = c.size();
         for (auto i = c.begin(), last = c.end(); i != last;) {
@@ -924,65 +933,65 @@ constexpr auto erase_if(set_adaptor<Bits, Store, Derived>& c, Predicate pred)
 }
 
 // The non-member forms copy, so they are the owner's alone: a copied view would write through.
-template<class Bits, storage Store, class Derived>
-[[nodiscard]] constexpr auto operator~(set_adaptor<Bits, Store, Derived> const& lhs) noexcept(set_adaptor<Bits, Store, Derived>::has_static_width) -> set_adaptor<Bits, Store, Derived>::derived_type
-        requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived> c) { c.complement(); }
+template<class Bits, storage Store, class Derived, class Key, class KeyTraits>
+[[nodiscard]] constexpr auto operator~(set_adaptor<Bits, Store, Derived, Key, KeyTraits> const& lhs) noexcept(set_adaptor<Bits, Store, Derived, Key, KeyTraits>::has_static_width) -> set_adaptor<Bits, Store, Derived, Key, KeyTraits>::derived_type
+        requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived, Key, KeyTraits> c) { c.complement(); }
 {
-        auto nrv = static_cast<set_adaptor<Bits, Store, Derived>::derived_type const&>(lhs);
+        auto nrv = static_cast<set_adaptor<Bits, Store, Derived, Key, KeyTraits>::derived_type const&>(lhs);
         nrv.complement();
         return nrv;
 }
 
-template<class Bits, storage Store, class Derived>
-[[nodiscard]] constexpr auto operator&(set_adaptor<Bits, Store, Derived> const& lhs, set_adaptor<Bits, Store, Derived> const& rhs) noexcept(set_adaptor<Bits, Store, Derived>::has_static_width) -> set_adaptor<Bits, Store, Derived>::derived_type
-        requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived> c) { c &= c; }
+template<class Bits, storage Store, class Derived, class Key, class KeyTraits>
+[[nodiscard]] constexpr auto operator&(set_adaptor<Bits, Store, Derived, Key, KeyTraits> const& lhs, set_adaptor<Bits, Store, Derived, Key, KeyTraits> const& rhs) noexcept(set_adaptor<Bits, Store, Derived, Key, KeyTraits>::has_static_width) -> set_adaptor<Bits, Store, Derived, Key, KeyTraits>::derived_type
+        requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived, Key, KeyTraits> c) { c &= c; }
 {
-        auto nrv = static_cast<set_adaptor<Bits, Store, Derived>::derived_type const&>(lhs);
+        auto nrv = static_cast<set_adaptor<Bits, Store, Derived, Key, KeyTraits>::derived_type const&>(lhs);
         nrv &= rhs;
         return nrv;
 }
 
-template<class Bits, storage Store, class Derived>
-[[nodiscard]] constexpr auto operator|(set_adaptor<Bits, Store, Derived> const& lhs, set_adaptor<Bits, Store, Derived> const& rhs) noexcept(set_adaptor<Bits, Store, Derived>::has_static_width) -> set_adaptor<Bits, Store, Derived>::derived_type
-        requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived> c) { c |= c; }
+template<class Bits, storage Store, class Derived, class Key, class KeyTraits>
+[[nodiscard]] constexpr auto operator|(set_adaptor<Bits, Store, Derived, Key, KeyTraits> const& lhs, set_adaptor<Bits, Store, Derived, Key, KeyTraits> const& rhs) noexcept(set_adaptor<Bits, Store, Derived, Key, KeyTraits>::has_static_width) -> set_adaptor<Bits, Store, Derived, Key, KeyTraits>::derived_type
+        requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived, Key, KeyTraits> c) { c |= c; }
 {
-        auto nrv = static_cast<set_adaptor<Bits, Store, Derived>::derived_type const&>(lhs);
+        auto nrv = static_cast<set_adaptor<Bits, Store, Derived, Key, KeyTraits>::derived_type const&>(lhs);
         nrv |= rhs;
         return nrv;
 }
 
-template<class Bits, storage Store, class Derived>
-[[nodiscard]] constexpr auto operator^(set_adaptor<Bits, Store, Derived> const& lhs, set_adaptor<Bits, Store, Derived> const& rhs) noexcept(set_adaptor<Bits, Store, Derived>::has_static_width) -> set_adaptor<Bits, Store, Derived>::derived_type
-        requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived> c) { c ^= c; }
+template<class Bits, storage Store, class Derived, class Key, class KeyTraits>
+[[nodiscard]] constexpr auto operator^(set_adaptor<Bits, Store, Derived, Key, KeyTraits> const& lhs, set_adaptor<Bits, Store, Derived, Key, KeyTraits> const& rhs) noexcept(set_adaptor<Bits, Store, Derived, Key, KeyTraits>::has_static_width) -> set_adaptor<Bits, Store, Derived, Key, KeyTraits>::derived_type
+        requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived, Key, KeyTraits> c) { c ^= c; }
 {
-        auto nrv = static_cast<set_adaptor<Bits, Store, Derived>::derived_type const&>(lhs);
+        auto nrv = static_cast<set_adaptor<Bits, Store, Derived, Key, KeyTraits>::derived_type const&>(lhs);
         nrv ^= rhs;
         return nrv;
 }
 
-template<class Bits, storage Store, class Derived>
-[[nodiscard]] constexpr auto operator-(set_adaptor<Bits, Store, Derived> const& lhs, set_adaptor<Bits, Store, Derived> const& rhs) noexcept(set_adaptor<Bits, Store, Derived>::has_static_width) -> set_adaptor<Bits, Store, Derived>::derived_type
-        requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived> c) { c -= c; }
+template<class Bits, storage Store, class Derived, class Key, class KeyTraits>
+[[nodiscard]] constexpr auto operator-(set_adaptor<Bits, Store, Derived, Key, KeyTraits> const& lhs, set_adaptor<Bits, Store, Derived, Key, KeyTraits> const& rhs) noexcept(set_adaptor<Bits, Store, Derived, Key, KeyTraits>::has_static_width) -> set_adaptor<Bits, Store, Derived, Key, KeyTraits>::derived_type
+        requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived, Key, KeyTraits> c) { c -= c; }
 {
-        auto nrv = static_cast<set_adaptor<Bits, Store, Derived>::derived_type const&>(lhs);
+        auto nrv = static_cast<set_adaptor<Bits, Store, Derived, Key, KeyTraits>::derived_type const&>(lhs);
         nrv -= rhs;
         return nrv;
 }
 
-template<class Bits, storage Store, class Derived>
-[[nodiscard]] constexpr auto operator<<(set_adaptor<Bits, Store, Derived> const& lhs, std::size_t n) noexcept(set_adaptor<Bits, Store, Derived>::has_static_width) -> set_adaptor<Bits, Store, Derived>::derived_type
-        requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived> c) { c <<= n; }
+template<class Bits, storage Store, class Derived, class Key, class KeyTraits>
+[[nodiscard]] constexpr auto operator<<(set_adaptor<Bits, Store, Derived, Key, KeyTraits> const& lhs, std::size_t n) noexcept(set_adaptor<Bits, Store, Derived, Key, KeyTraits>::has_static_width) -> set_adaptor<Bits, Store, Derived, Key, KeyTraits>::derived_type
+        requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived, Key, KeyTraits> c) { c <<= n; }
 {
-        auto nrv = static_cast<set_adaptor<Bits, Store, Derived>::derived_type const&>(lhs);
+        auto nrv = static_cast<set_adaptor<Bits, Store, Derived, Key, KeyTraits>::derived_type const&>(lhs);
         nrv <<= n;
         return nrv;
 }
 
-template<class Bits, storage Store, class Derived>
-[[nodiscard]] constexpr auto operator>>(set_adaptor<Bits, Store, Derived> const& lhs, std::size_t n) noexcept(set_adaptor<Bits, Store, Derived>::has_static_width) -> set_adaptor<Bits, Store, Derived>::derived_type
-        requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived> c) { c >>= n; }
+template<class Bits, storage Store, class Derived, class Key, class KeyTraits>
+[[nodiscard]] constexpr auto operator>>(set_adaptor<Bits, Store, Derived, Key, KeyTraits> const& lhs, std::size_t n) noexcept(set_adaptor<Bits, Store, Derived, Key, KeyTraits>::has_static_width) -> set_adaptor<Bits, Store, Derived, Key, KeyTraits>::derived_type
+        requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived, Key, KeyTraits> c) { c >>= n; }
 {
-        auto nrv = static_cast<set_adaptor<Bits, Store, Derived>::derived_type const&>(lhs);
+        auto nrv = static_cast<set_adaptor<Bits, Store, Derived, Key, KeyTraits>::derived_type const&>(lhs);
         nrv >>= n;
         return nrv;
 }
@@ -994,8 +1003,8 @@ template<class Bits, storage Store, class Derived>
 namespace boost::container_hash {
 
 // Not a range to ContainerHash, so Hash2 takes the hook and not its range overload.
-template<class Bits, xstd::bits::detail::storage Store, class Derived>
-struct is_range<xstd::bits::detail::set_adaptor<Bits, Store, Derived>> : std::false_type
+template<class Bits, xstd::bits::detail::storage Store, class Derived, class Key, class KeyTraits>
+struct is_range<xstd::bits::detail::set_adaptor<Bits, Store, Derived, Key, KeyTraits>> : std::false_type
 {};
 
 } // namespace boost::container_hash
@@ -1005,10 +1014,10 @@ namespace std {
 // NOLINTBEGIN(bugprone-std-namespace-modification)
 
 // Owned or viewed, as std::string_view hashes and std::set does not.
-template<class Bits, xstd::bits::detail::storage Store, class Derived>
-struct hash<xstd::bits::detail::set_adaptor<Bits, Store, Derived>>
+template<class Bits, xstd::bits::detail::storage Store, class Derived, class Key, class KeyTraits>
+struct hash<xstd::bits::detail::set_adaptor<Bits, Store, Derived, Key, KeyTraits>>
 {
-        [[nodiscard]] constexpr auto operator()(xstd::bits::detail::set_adaptor<Bits, Store, Derived> const& v) const noexcept
+        [[nodiscard]] constexpr auto operator()(xstd::bits::detail::set_adaptor<Bits, Store, Derived, Key, KeyTraits> const& v) const noexcept
                 -> std::size_t
         {
                 return xstd::bits::detail::std_hash(v);

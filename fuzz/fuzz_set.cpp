@@ -30,14 +30,14 @@ namespace {
 // The set reading's owners at each kind of width: dynamic, small, fixed across block boundaries, and bounded.
 using owners = std::tuple<
         xstd::bit_set,
-        xstd::basic_bit_set<std::uint8_t>,
-        xstd::basic_bit_small_set<std::uint64_t, 64>,
+        xstd::basic_bit_set<std::size_t, std::uint8_t>,
+        xstd::basic_bit_small_set<std::size_t, std::uint64_t, 64>,
         xstd::bit_fixed_set<1>,
-        xstd::basic_bit_fixed_set<std::uint8_t, 17>,
+        xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 17>,
         xstd::bit_fixed_set<64>,
         xstd::bit_fixed_set<65>,
         xstd::bit_fixed_set<200>,
-        xstd::basic_bit_bounded_set<std::uint8_t, 17>,
+        xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 17>,
         xstd::bit_bounded_set<130>>;
 
 using model = std::set<std::size_t>;

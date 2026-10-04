@@ -6,6 +6,7 @@
 #include <test/bit_exchange.hpp>          // converts_between, exchanges_from_bits
 #include <test/block_types.hpp>           // graded_extents
 #include <test/set/ascending.hpp>         // yields_ascending_keys
+#include <test/set/strong_index.hpp>      // agrees_with_std_set_of_strong_indices, offset_traits, strong_index
 #include <test/value_reference.hpp>       // value_reference
 #include <xstd/bits/bit/bit_convert.hpp>  // bit_convert
 #include <xstd/bits/bit_fixed_set.hpp>    // bit_fixed_set
@@ -18,12 +19,17 @@
 #include <cstdint>                        // uint32_t, uint64_t
 #include <iterator>                       // bidirectional_iterator
 #include <ranges>                         // bidirectional_range, iota, to
+#include <stdexcept>                      // out_of_range
 #include <type_traits>                    // is_constructible_v, is_convertible_v
 
 BOOST_AUTO_TEST_SUITE(BitFiniteSet)
 
+// The block and the width as the extents expand them, the key being std::size_t.
+template<class Block, std::size_t N>
+using fixed_set_of = xstd::basic_bit_fixed_set<std::size_t, Block, N>;
+
 // Every Block model within one block, and the narrow ones across boundaries.
-using Types = test::graded_extents<xstd::basic_bit_fixed_set>;
+using Types = test::graded_extents<fixed_set_of>;
 
 // The clauses one at a time, so a failure names which one; the umbrella asserts the composite.
 BOOST_AUTO_TEST_CASE_TEMPLATE(IsRegular, T, Types)
@@ -231,6 +237,26 @@ BOOST_AUTO_TEST_CASE(RawBlocksCrossOnTheSameRule)
         // And the unnamed door is closed, so a sequence of blocks does not read as the from_range spelling.
         static_assert(not std::is_constructible_v<Set, Wide>);
         static_assert(not std::is_constructible_v<Set, Narrow>);
+}
+
+// A traits type of its own closes the universe: keys 10 to 29 at positions 0 to 19, answering as std::set does.
+BOOST_AUTO_TEST_CASE(AStrongIndexWithItsOwnTraitsKeysItAsStdSetIsKeyed)
+{
+        using traits = test::set::offset_traits<10UZ, 20UZ>;
+        using X = xstd::basic_bit_fixed_set<test::set::strong_index, std::uint8_t, 20UZ, traits>;
+        static_assert(std::same_as<X::key_type, test::set::strong_index>);
+        static_assert(std::same_as<X::key_traits_type, traits>);
+        static_assert(std::same_as<std::iter_value_t<X::iterator>, test::set::strong_index>);
+        static_assert(X().max_size() == 20UZ);
+
+        test::set::agrees_with_std_set_of_strong_indices<X>({}, 10UZ, 30UZ);
+        test::set::agrees_with_std_set_of_strong_indices<X>({10UZ, 17UZ, 18UZ, 29UZ}, 10UZ, 30UZ);
+        test::set::agrees_with_std_set_of_strong_indices<X>({10UZ, 11UZ, 12UZ, 13UZ, 14UZ, 15UZ, 16UZ, 17UZ, 18UZ, 19UZ, 20UZ, 21UZ, 22UZ, 23UZ, 24UZ, 25UZ, 26UZ, 27UZ, 28UZ, 29UZ}, 10UZ, 30UZ);
+
+        // The positions are the keys less 10, which is what the blocks hold.
+        auto const x = X({test::set::strong_index{.value = 10UZ}, test::set::strong_index{.value = 19UZ}});
+        BOOST_CHECK(xstd::bit_convert<std::bitset<20>>(x) == std::bitset<20>(0x201ULL));
+        BOOST_CHECK_THROW(static_cast<void>(X({test::set::strong_index{.value = 30UZ}})), std::out_of_range);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

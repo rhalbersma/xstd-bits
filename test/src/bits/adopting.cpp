@@ -7,6 +7,7 @@
 #include <xstd/bits/bit_array.hpp>               // bit_array
 #include <xstd/bits/bit_bounded_set.hpp>         // basic_bit_bounded_set
 #include <xstd/bits/bit_bounded_vector.hpp>      // basic_bit_bounded_vector
+#include <xstd/bits/bit_key_traits.hpp>          // bit_key_traits
 #include <xstd/bits/bit_set.hpp>                 // basic_bit_set, bit_set
 #include <xstd/bits/bit_vector.hpp>              // basic_bit_vector, bit_vector
 #include <xstd/bits/detail/bit_container.hpp>    // bit_container
@@ -36,7 +37,7 @@ BOOST_AUTO_TEST_CASE(TheBlocksMoveInWithoutACopy)
         auto const* const data = v.data();
 
         auto s = xstd::basic_bit_set(xstd::from_bit_storage, std::move(v));
-        static_assert(std::same_as<decltype(s), xstd::basic_bit_set<std::uint8_t>>);
+        static_assert(std::same_as<decltype(s), xstd::basic_bit_set<std::size_t, std::uint8_t>>);
         BOOST_CHECK(std::ranges::equal(s, std::vector<std::size_t>{0, 2, 15}));
         auto const blocks = std::move(s).extract();
         BOOST_CHECK(blocks.data() == data);
@@ -56,7 +57,7 @@ BOOST_AUTO_TEST_CASE(TheAllocatorExtendedFormDeducesAsThePlainOne)
 {
         auto const alloc = std::allocator<std::uint8_t>();
         auto const s = xstd::basic_bit_set(xstd::from_bit_storage, std::vector<std::uint8_t>{0x01}, alloc);
-        static_assert(std::same_as<decltype(s), xstd::basic_bit_set<std::uint8_t> const>);
+        static_assert(std::same_as<decltype(s), xstd::basic_bit_set<std::size_t, std::uint8_t> const>);
         BOOST_CHECK(s.contains(0));
 
         auto const v = xstd::basic_bit_vector(xstd::from_bit_storage, std::vector<std::uint8_t>{0x01}, alloc);
@@ -117,12 +118,12 @@ BOOST_AUTO_TEST_CASE(InlineBlocksDeduceTheirAlignedCapacity)
         BOOST_CHECK(v.size() == 8UZ and v[0] and v[7]);
 
         auto const s = xstd::basic_bit_bounded_set(xstd::from_bit_storage, xstd::bits::detail::bounded_blocks<std::uint8_t, 2>{0x81});
-        static_assert(std::same_as<decltype(s), xstd::basic_bit_bounded_set<std::uint8_t, 16> const>);
+        static_assert(std::same_as<decltype(s), xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 16> const>);
         BOOST_CHECK(s.contains(0) and s.contains(7));
 }
 
 // The heap owners over a polymorphic allocator, which two resources make unequal.
-using polymorphic_owners = std::tuple<xstd::basic_bit_set<std::uint8_t, std::pmr::polymorphic_allocator<std::uint8_t>>, xstd::basic_bit_small_set<std::uint8_t, 16, std::pmr::polymorphic_allocator<std::uint8_t>>>;
+using polymorphic_owners = std::tuple<xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_traits<std::size_t>, std::pmr::polymorphic_allocator<std::uint8_t>>, xstd::basic_bit_small_set<std::size_t, std::uint8_t, 16, xstd::bit_key_traits<std::size_t>, std::pmr::polymorphic_allocator<std::uint8_t>>>;
 
 // Blocks adopted under an unequal allocator are copied into it; storage taken from new and delete would leak.
 BOOST_AUTO_TEST_CASE_TEMPLATE(AdoptionUnderAnUnequalAllocatorCopiesTheBlocks, S, polymorphic_owners)

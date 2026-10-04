@@ -88,7 +88,7 @@ struct shape_of<xstd::basic_bit_array<Block, N>>
 };
 
 template<class Block, std::size_t N>
-struct shape_of<xstd::basic_bit_fixed_set<Block, N>>
+struct shape_of<xstd::basic_bit_fixed_set<std::size_t, Block, N>>
 {
         using block_type = Block;
         static constexpr auto width = N;
