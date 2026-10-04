@@ -6,9 +6,9 @@
 #ifndef XSTD_BITS_DETAIL_BIT_BLOCK_CONTAINER_HPP
 #define XSTD_BITS_DETAIL_BIT_BLOCK_CONTAINER_HPP
 
-#include <xstd/bits/bit_blocks.hpp>                          // bit_block_range, bit_blocks_capacity_v, owned_bit_blocks, resizable_bit_blocks
+#include <xstd/bits/bit_blocks.hpp>                          // bit_block, bit_block_range, bit_blocks_capacity_v, bit_blocks_extent_v, owned_bit_blocks, resizable_bit_blocks
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_base_type, allocator_param_t, has_allocator_v
-#include <xstd/bits/detail/bit_layout.hpp>                   // bit_bytes, bit_layout, block_range_source, container_source
+#include <xstd/bits/detail/bit_layout.hpp>                   // bit_bytes, bit_layout, container_source, fixed_blocks_source
 #include <xstd/bits/detail/borrowed_block_span.hpp>          // borrowed_block_span
 #include <xstd/bits/detail/intrin.hpp>                       // countl_zero, countr_zero, popcount
 #include <xstd/bits/detail/pred.hpp>                         // intersects, is_subset_of, not_equal_to
@@ -50,19 +50,28 @@ inline constexpr std::size_t num_blocks_v = align_up(N, static_cast<std::size_t>
 // The width a span of blocks implies: all of its bits, for as long as the span is that long. Above every width.
 inline constexpr auto blocks_extent = std::dynamic_extent - 1UZ;
 
-// The width a block storage names by its own type: whole blocks at a fixed extent, stored for a growable one.
+// A span of a dynamic extent, over blocks of any constness.
 template<class Blocks>
-inline constexpr auto default_extent_v = std::dynamic_extent;
+concept dynamic_span = requires { typename Blocks::element_type; } and std::same_as<Blocks, std::span<typename Blocks::element_type>>;
 
-template<xstd::unsigned_integer Block, std::size_t K>
-inline constexpr auto default_extent_v<std::array<Block, K>> = K * static_cast<std::size_t>(xstd::numeric_limits<Block>::digits);
-
-template<class Block, std::size_t E>
-inline constexpr auto default_extent_v<std::span<Block, E>> = E == std::dynamic_extent ? blocks_extent : E * static_cast<std::size_t>(xstd::numeric_limits<Block>::digits);
+// The width a range of blocks names by its own type: its fixed width, all of a dynamic span, else its capacity.
+template<class Blocks>
+consteval auto default_extent() noexcept
+        -> std::size_t
+{
+        if constexpr (not xstd::bit_block_range<Blocks>) {
+                return std::dynamic_extent;
+        } else if constexpr (xstd::bit_blocks_extent_v<Blocks> != std::dynamic_extent) {
+                return xstd::bit_blocks_extent_v<Blocks>;
+        } else if constexpr (dynamic_span<Blocks>) {
+                return blocks_extent;
+        } else {
+                return xstd::bit_blocks_capacity_v<Blocks>;
+        }
+}
 
 template<class Blocks>
-        requires xstd::resizable_bit_blocks<Blocks> and (xstd::bit_blocks_capacity_v<Blocks> != std::dynamic_extent)
-inline constexpr auto default_extent_v<Blocks> = xstd::bit_blocks_capacity_v<Blocks>;
+inline constexpr auto default_extent_v = default_extent<Blocks>();
 
 // A resizable owner's N: none where the capacity is not a constant, else one its blocks hold in whole.
 template<class Blocks, std::size_t N>
@@ -181,7 +190,7 @@ template<class Blocks, std::size_t N>
 inline constexpr bool structural_blocks_v = false;
 
 template<xstd::unsigned_integer Block, std::size_t K, std::size_t N>
-inline constexpr bool structural_blocks_v<std::array<Block, K>, N> = (N == default_extent_v<std::array<Block, K>>);
+inline constexpr bool structural_blocks_v<std::array<Block, K>, N> = (N == xstd::bit_blocks_extent_v<std::array<Block, K>>);
 
 // The members with no invariant to keep: public only so that the owner is structural, not for direct use.
 template<class Width, class Blocks>
@@ -260,7 +269,7 @@ public:
         // A field of bits is anything but the bare scalar, which is left out only because it has its own door.
         template<class Bits>
         static constexpr auto exchanges_bits_as_field =
-                has_static_size and (block_range_source<Bits, bit_extent> or container_source<Bits, bit_extent>);
+                has_static_size and ((fixed_blocks_source<Bits, bit_extent> and not xstd::bit_block<Bits>) or container_source<Bits, bit_extent>);
 
         // How many blocks a run-time width needs, none at width zero; total over every size_t, as boost spells it.
         [[nodiscard]] static constexpr auto blocks_for(std::size_t n) noexcept
@@ -325,11 +334,19 @@ public:
 
         // flat_set's adopting constructor: the blocks move in whole, every bit a position, and no tail to clear.
         [[nodiscard]] constexpr bit_block_container(xstd::from_blocks_t, Blocks blocks) noexcept(std::is_nothrow_move_constructible_v<Blocks>)
-                requires has_stored_size
-                : members_type(std::ranges::size(blocks) * bits_per_block, std::move(blocks))
+                requires has_stored_size or (xstd::owned_bit_blocks<Blocks> and N == xstd::bit_blocks_extent_v<Blocks>)
+                : members_type(has_stored_size ? std::ranges::size(blocks) * bits_per_block : 0UZ, std::move(blocks))
         {
                 assert(num_blocks() <= max_num_blocks);
                 assert(not has_static_capacity or size() <= N);
+        }
+
+        // Any bits of a layout this width reads, assigned position by position; for Blocks itself, adopting wins.
+        template<class Bits>
+                requires exchanges_bits<Bits>
+        [[nodiscard]] constexpr bit_block_container(xstd::from_blocks_t, Bits const& bits) noexcept
+        {
+                assign_bits(bits);
         }
 
         // The storage's allocator, converted as [container.alloc.reqmts] converts it; a storage without one has none.
@@ -1667,6 +1684,10 @@ private:
                 );
         }
 };
+
+// One block deduces the array of one block, at the block's width.
+template<xstd::bit_block Block>
+bit_block_container(xstd::from_blocks_t, Block) -> bit_block_container<std::array<Block, 1>>;
 
 // The one vehicle and nothing else, const where a view over a const owner names it.
 template<class T>

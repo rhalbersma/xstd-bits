@@ -6,14 +6,12 @@
 #ifndef XSTD_BITS_DETAIL_BIT_WIDTH_HPP
 #define XSTD_BITS_DETAIL_BIT_WIDTH_HPP
 
-#include <xstd/bits/detail/bit_layout.hpp>         // container_source
-#include <xstd/bits/detail/ownership.hpp>          // owned_storage
-#include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
-#include <xstd/ints/limits.hpp>                    // numeric_limits
-#include <cstddef>                                 // size_t
-#include <span>                                    // dynamic_extent
-#include <tuple>                                   // tuple_size, tuple_size_v
-#include <type_traits>                             // bool_constant, remove_const_t
+#include <xstd/bits/bit_blocks.hpp>        // bit_blocks_extent_v, owned_bit_blocks
+#include <xstd/bits/detail/bit_layout.hpp> // container_source, fixed_bit_blocks, has_constant_size
+#include <xstd/bits/detail/ownership.hpp>  // owned_storage
+#include <cstddef>                         // size_t
+#include <span>                            // dynamic_extent
+#include <type_traits>                     // remove_const_t
 
 // The width of bit storage a type has, fixed by its type: what xstd::bit_convert matches two fixed widths by.
 namespace xstd::bits::detail {
@@ -32,31 +30,18 @@ concept packed_view =
 template<class T>
 concept packed = packed_owner<T> or packed_view<T>;
 
-// An array of blocks by value: its width is its length times the block's digits.
-template<class T>
-concept block_array =
-        requires {
-                typename std::tuple_size<T>::type;
-                typename T::value_type;
-        } and
-        xstd::unsigned_integer<typename T::value_type>;
-
-template<class T>
-concept has_constant_size = requires { typename std::bool_constant<(T().size(), true)>; };
-
 // The width a type has bit storage of, or dynamic_extent where it has none of a width fixed at compile time.
 template<class T>
 [[nodiscard]] consteval auto bit_width_of() noexcept
         -> std::size_t
 {
-        if constexpr (xstd::unsigned_integer<T>) {
-                return static_cast<std::size_t>(xstd::numeric_limits<T>::digits);
-        } else if constexpr (packed_owner<T>) {
+        if constexpr (packed_owner<T>) {
                 return std::remove_const_t<typename owned_storage<std::remove_const_t<T>>::bits_type>::extent;
         } else if constexpr (packed_view<T>) {
                 return std::remove_const_t<typename T::adapted_type>::extent;
-        } else if constexpr (block_array<T>) {
-                return std::tuple_size_v<T> * static_cast<std::size_t>(xstd::numeric_limits<typename T::value_type>::digits);
+        } else if constexpr (fixed_bit_blocks<T> and xstd::owned_bit_blocks<std::remove_const_t<T>>) {
+                // Owned, so a span of a static extent stays out: it lends its width rather than having it.
+                return xstd::bit_blocks_extent_v<T>;
         } else if constexpr (has_constant_size<T>) {
                 if constexpr (container_source<T, T().size()>) {
                         return T().size();

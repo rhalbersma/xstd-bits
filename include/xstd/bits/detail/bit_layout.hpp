@@ -6,19 +6,18 @@
 #ifndef XSTD_BITS_DETAIL_BIT_LAYOUT_HPP
 #define XSTD_BITS_DETAIL_BIT_LAYOUT_HPP
 
-#include <xstd/bits/bit_blocks.hpp>                // owned_bit_blocks
-#include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
-#include <xstd/ints/limits.hpp>                    // numeric_limits
-#include <array>                                   // array
-#include <bit>                                     // bit_cast, endian
-#include <concepts>                                // convertible_to, default_initializable
-#include <cstddef>                                 // byte, size_t, to_integer
-#include <cstring>                                 // memcpy
-#include <limits>                                  // numeric_limits
-#include <memory>                                  // addressof
-#include <ranges>                                  // contiguous_range, data, iota, range_value_t
-#include <span>                                    // span
-#include <type_traits>                             // bool_constant, is_trivially_copyable_v
+#include <xstd/bits/bit_blocks.hpp> // bit_block, bit_blocks, bit_blocks_extent_v, owned_bit_blocks
+#include <xstd/ints/limits.hpp>     // numeric_limits
+#include <array>                    // array
+#include <bit>                      // bit_cast, endian
+#include <concepts>                 // convertible_to, default_initializable
+#include <cstddef>                  // byte, size_t, to_integer
+#include <cstring>                  // memcpy
+#include <limits>                   // numeric_limits
+#include <memory>                   // addressof
+#include <ranges>                   // data, iota, range_value_t
+#include <span>                     // dynamic_extent, span
+#include <type_traits>              // bool_constant, is_trivially_copyable_v
 
 namespace xstd::bits::detail {
 
@@ -29,31 +28,29 @@ inline constexpr auto bits_per_ullong = static_cast<std::size_t>(std::numeric_li
 template<std::size_t N>
 inline constexpr auto byte_count = (N + bits_per_byte - 1UZ) / bits_per_byte;
 
-// An unsigned integer states its own layout: bit n of the value is 2^n, by the language, so there is nothing to probe.
-template<class Block, std::size_t N>
-concept integer_source =
-        xstd::unsigned_integer<Block> and
-        N <= static_cast<std::size_t>(xstd::numeric_limits<Block>::digits);
+// Bit blocks whose type names their width: a block, or a fixed number of them.
+template<class Bits>
+concept fixed_bit_blocks = xstd::bit_blocks<Bits> and xstd::bit_blocks_extent_v<Bits> != std::dynamic_extent;
 
-// The same family over a sequence: block j holds [j*digits, (j+1)*digits), and a scalar is the length-one case.
+// The digits of each block in a range of them: block j holds the positions [j*digits, (j+1)*digits).
 template<class Blocks>
 inline constexpr auto block_digits = static_cast<std::size_t>(
         xstd::numeric_limits<std::ranges::range_value_t<Blocks>>::digits
 );
 
+// Blocks that state their own layout, at a width that holds N: bit n of a block is 2^n, by the language.
+template<class Bits, std::size_t N>
+concept fixed_blocks_source =
+        // Fixed first: owned_bit_blocks asks constructible_from, which can re-enter this very constraint.
+        fixed_bit_blocks<Bits> and
+        xstd::owned_bit_blocks<Bits> and
+        xstd::bit_blocks_extent_v<Bits> >= N;
+
+// Whether size() is a constant expression, asked so it answers false rather than erroring.
 template<class Bits>
-concept block_size_is_constant = requires {
+concept has_constant_size = requires {
         typename std::bool_constant<(Bits().size(), true)>;
 };
-
-template<class Blocks, std::size_t N>
-concept block_range_source =
-        // Contiguous first: owned_bit_blocks asks constructible_from, which re-enters this very constraint.
-        std::ranges::contiguous_range<Blocks> and
-        xstd::owned_bit_blocks<Blocks> and
-        std::default_initializable<Blocks> and
-        block_size_is_constant<Blocks> and
-        Blocks().size() * block_digits<Blocks> >= N;
 
 // A copy answers what the shifts do only when every bit of the object is a value bit: digits against sizeof.
 template<class Block>
@@ -141,7 +138,7 @@ concept container_source =
         (byte_count<N> == 0UZ or (bit_cast_is_constant<Bits> and probe_is_constant<Bits> and bit_layout_holds<Bits, N>()));
 
 template<class Bits, std::size_t N>
-concept bit_layout = integer_source<Bits, N> or block_range_source<Bits, N> or container_source<Bits, N>;
+concept bit_layout = fixed_blocks_source<Bits, N> or container_source<Bits, N>;
 
 // The shifts, in one place: they say where a position goes rather than assuming a byte order.
 template<class Blocks>
@@ -193,12 +190,12 @@ template<std::size_t N, class Bits>
 {
         auto bytes = std::array<std::byte, byte_count<N>>();
         if constexpr (byte_count<N> > 0UZ) {
-                if constexpr (integer_source<Bits, N>) {
+                if constexpr (xstd::bit_block<Bits>) {
                         // No copy: memcpy timed at 0.31ns either way, so the branch buys nothing.
                         for (auto const j : std::views::iota(0UZ, bytes.size())) {
                                 bytes[j] = static_cast<std::byte>(static_cast<unsigned char>(b >> (bits_per_byte * j)));
                         }
-                } else if constexpr (block_range_source<Bits, N>) {
+                } else if constexpr (fixed_blocks_source<Bits, N>) {
                         // Two alternatives rather than an early return, or MSVC's C4702 calls the shifts unreachable.
                         if consteval {
                                 block_bytes_by_shifts<N>(b, bytes);
@@ -231,7 +228,7 @@ template<class Bits, std::size_t N>
 {
         if constexpr (byte_count<N> == 0UZ) {
                 return Bits();
-        } else if constexpr (integer_source<Bits, N>) {
+        } else if constexpr (xstd::bit_block<Bits>) {
                 // The shifts alone, for the reason bit_bytes gives: a copy measured the same and said less.
                 auto value = Bits();
                 for (auto const j : std::views::iota(0UZ, bytes.size())) {
@@ -239,7 +236,7 @@ template<class Bits, std::size_t N>
                         value           = static_cast<Bits>(value | static_cast<Bits>(byte << (bits_per_byte * j)));
                 }
                 return value;
-        } else if constexpr (block_range_source<Bits, N>) {
+        } else if constexpr (fixed_blocks_source<Bits, N>) {
                 // Value-initialised first, clearing the blocks above N, so set -> blocks -> set is the identity.
                 auto blocks = Bits();
                 if consteval {

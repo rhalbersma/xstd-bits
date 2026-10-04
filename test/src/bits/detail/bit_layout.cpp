@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/detail/bit_layout.hpp> // bit_bytes, bit_layout, bit_layout_holds, block_range_source, byte_count, bytes_bits, container_source, integer_source
+#include <xstd/bits/detail/bit_layout.hpp> // bit_bytes, bit_layout, bit_layout_holds, byte_count, bytes_bits, container_source, fixed_blocks_source
 #include <boost/test/unit_test.hpp>        // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <array>                           // array
 #include <bitset>                          // bitset
@@ -20,17 +20,17 @@ namespace detail = xstd::bits::detail;
 // An unsigned integer is its own layout: bit n of the value is 2^n by the language, so nothing is probed.
 BOOST_AUTO_TEST_CASE(AnUnsignedIntegerIsItsOwnLayout)
 {
-        static_assert(detail::integer_source<unsigned char, 8UZ>);
-        static_assert(detail::integer_source<std::uint64_t, 64UZ>);
-        static_assert(detail::integer_source<std::uint64_t, 1UZ>);
+        static_assert(detail::fixed_blocks_source<unsigned char, 8UZ>);
+        static_assert(detail::fixed_blocks_source<std::uint64_t, 64UZ>);
+        static_assert(detail::fixed_blocks_source<std::uint64_t, 1UZ>);
 
         // A width the integer cannot hold is not a narrower conversion, it is none.
-        static_assert(not detail::integer_source<std::uint32_t, 33UZ>);
-        static_assert(not detail::integer_source<unsigned char, 9UZ>);
+        static_assert(not detail::fixed_blocks_source<std::uint32_t, 33UZ>);
+        static_assert(not detail::fixed_blocks_source<unsigned char, 9UZ>);
 
         // Signed is not a field of bits under this rule; nor is a type with no bits to offer.
-        static_assert(not detail::integer_source<int, 8UZ>);
-        static_assert(not detail::integer_source<bool, 1UZ>);
+        static_assert(not detail::fixed_blocks_source<int, 8UZ>);
+        static_assert(not detail::fixed_blocks_source<bool, 1UZ>);
 }
 
 // The other family proves what the first states, asserted as a value so a rung where it failed reports one assertion.
@@ -270,26 +270,26 @@ BOOST_AUTO_TEST_CASE(OnePositionLightsOneBitOfOneByte)
 // A contiguous sequence of blocks is the same stated family over more than one block, and nothing is probed here.
 BOOST_AUTO_TEST_CASE(ASequenceOfBlocksStatesItsLayoutToo)
 {
-        static_assert(detail::block_range_source<std::array<std::uint64_t, 4>, 256UZ>);
-        static_assert(detail::block_range_source<std::array<std::uint32_t, 8>, 256UZ>);
-        static_assert(detail::block_range_source<std::array<std::uint8_t, 32>, 256UZ>);
+        static_assert(detail::fixed_blocks_source<std::array<std::uint64_t, 4>, 256UZ>);
+        static_assert(detail::fixed_blocks_source<std::array<std::uint32_t, 8>, 256UZ>);
+        static_assert(detail::fixed_blocks_source<std::array<std::uint8_t, 32>, 256UZ>);
 
         // AT LEAST N, the rule the scalar spelling already follows: wider is admitted, narrower is no conversion.
-        static_assert(detail::block_range_source<std::array<std::uint64_t, 5>, 256UZ>);
-        static_assert(not detail::block_range_source<std::array<std::uint64_t, 3>, 256UZ>);
+        static_assert(detail::fixed_blocks_source<std::array<std::uint64_t, 5>, 256UZ>);
+        static_assert(not detail::fixed_blocks_source<std::array<std::uint64_t, 3>, 256UZ>);
 
         // A width that is not a whole number of blocks still only needs enough blocks to cover it.
-        static_assert(detail::block_range_source<std::array<std::uint64_t, 2>, 65UZ>);
-        static_assert(not detail::block_range_source<std::array<std::uint64_t, 1>, 65UZ>);
+        static_assert(detail::fixed_blocks_source<std::array<std::uint64_t, 2>, 65UZ>);
+        static_assert(not detail::fixed_blocks_source<std::array<std::uint64_t, 1>, 65UZ>);
 
-        // A vector has no bits until one is put in it, so B().size() is zero and it states nothing.
-        static_assert(not detail::block_range_source<std::vector<std::uint64_t>, 64UZ>);
+        // A vector names no width by its type, so it states nothing.
+        static_assert(not detail::fixed_blocks_source<std::vector<std::uint64_t>, 64UZ>);
 
         // Signed blocks are not this family: owned_bit_blocks asks for an unsigned value type.
-        static_assert(not detail::block_range_source<std::array<int, 4>, 64UZ>);
+        static_assert(not detail::fixed_blocks_source<std::array<int, 4>, 64UZ>);
 
-        // And a scalar is not a range, which is why the family keeps two spellings rather than one.
-        static_assert(not detail::block_range_source<std::uint64_t, 64UZ>);
+        // And a scalar is the length-one case of the same family.
+        static_assert(detail::fixed_blocks_source<std::uint64_t, 64UZ>);
         static_assert(detail::bit_layout<std::uint64_t, 64UZ>);
 }
 
