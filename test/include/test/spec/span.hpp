@@ -256,6 +256,7 @@ inline constexpr auto room_v = [] -> std::size_t {
                 return T::extent;
         } else if constexpr (requires { view_traits<T>::offset; }) {
                 // A run-time width holds nothing until grown, and the margin takes three positions past the window.
+                // NOLINTNEXTLINE(readability-static-accessed-through-instance): a function on the standard's owners.
                 constexpr auto n = owner_t<T>().size();
                 return n == 0UZ ? 0UZ : n - view_traits<T>::offset - 3UZ;
         } else {
