@@ -34,7 +34,7 @@
 BOOST_AUTO_TEST_SUITE(BitBoundedSet)
 
 // A capacity of three whole blocks, so a key can sit past the width and still inside the capacity.
-using T = xstd::basic_bit_bounded_set<std::uint8_t, 24>;
+using T = xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 24>;
 
 // Dependent, so an absent member is a false rather than a hard error.
 template<class X>
@@ -44,7 +44,7 @@ constexpr bool has_capacity = requires (X const& x) { x.capacity(); };
 BOOST_AUTO_TEST_CASE(TheBoundedSetIsTheSetAdaptorOverInlineBlocks)
 {
         static_assert(std::derived_from<T, xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_container<xstd::bits::detail::bounded_blocks<std::uint8_t, 3>, 24>, xstd::bits::detail::storage::owned, T>>);
-        static_assert(std::same_as<xstd::bit_bounded_set<24>, xstd::basic_bit_bounded_set<std::size_t, 24>>);
+        static_assert(std::same_as<xstd::bit_bounded_set<24>, xstd::basic_bit_bounded_set<std::size_t, std::size_t, 24>>);
 }
 
 // A requires-expression failing for a concrete type is ill-formed rather than false ([expr.prim.req]/5).
@@ -138,7 +138,7 @@ BOOST_AUTO_TEST_CASE(ShiftingPastTheCapacityDropsTheKeysThatLandPastIt)
 BOOST_AUTO_TEST_CASE(ShiftingLeftIsNoexcept)
 {
         static_assert(noexcept(std::declval<T&>() <<= 1UZ));
-        static_assert(noexcept(std::declval<xstd::basic_bit_bounded_set<std::uint8_t, 0>&>() <<= 1UZ));
+        static_assert(noexcept(std::declval<xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 0>&>() <<= 1UZ));
 }
 
 // The width a set carries is no part of its value, so a shift keeps the same keys whether the width is wide or narrow.
@@ -182,10 +182,10 @@ BOOST_AUTO_TEST_CASE(ShiftingByTheWidestDistancesEmptiesRatherThanWraps)
 // N is the capacity exactly: a key the last block has room for but N does not is refused all the same.
 BOOST_AUTO_TEST_CASE(TheCapacityIsTheRequestedOneExactly)
 {
-        using U = xstd::basic_bit_bounded_set<std::uint8_t, 9>;
+        using U = xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 9>;
         XSTD_CONSTEXPR_BOUNDED_CHECK_EQUAL(U().max_size(), 9UZ);
-        static_assert(std::same_as<xstd::aligned::basic_bit_bounded_set<std::uint8_t, 9>, xstd::basic_bit_bounded_set<std::uint8_t, 16>>);
-        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_bounded_set<std::uint8_t, 16>>, xstd::bits::detail::bit_container<xstd::bits::detail::bounded_blocks<std::uint8_t, 2>>>);
+        static_assert(std::same_as<xstd::aligned::basic_bit_bounded_set<std::size_t, std::uint8_t, 9>, xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 16>>);
+        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 16>>, xstd::bits::detail::bit_container<xstd::bits::detail::bounded_blocks<std::uint8_t, 2>>>);
 
         auto s = U();
         s.insert(8);

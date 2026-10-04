@@ -13,6 +13,7 @@
 #include <array>                          // array
 #include <bitset>                         // bitset
 #include <concepts>                       // same_as
+#include <cstddef>                        // size_t
 #include <cstdint>                        // uint8_t, uint16_t, uint32_t, uint64_t
 #include <type_traits>                    // is_constructible_v, is_default_constructible_v
 
@@ -53,8 +54,8 @@ BOOST_AUTO_TEST_CASE(AnIntegerDeducesItsOwnWidth)
         static_assert(a[0] and not a[1] and a[2] and a[15]);
 
         constexpr auto s = xstd::basic_bit_fixed_set(xstd::from_bit_storage, block);
-        static_assert(std::same_as<decltype(s), xstd::basic_bit_fixed_set<std::uint16_t, 16> const>);
-        static_assert(s == xstd::basic_bit_fixed_set<std::uint16_t, 16>(xstd::from_bit_storage, block));
+        static_assert(std::same_as<decltype(s), xstd::basic_bit_fixed_set<std::size_t, std::uint16_t, 16> const>);
+        static_assert(s == xstd::basic_bit_fixed_set<std::size_t, std::uint16_t, 16>(xstd::from_bit_storage, block));
         static_assert(s.size() == 3UZ and s.contains(15UZ));
         BOOST_CHECK(xstd::bit_convert<std::uint16_t>(a) == block);
 }
@@ -69,7 +70,7 @@ BOOST_AUTO_TEST_CASE(AnArrayOfBlocksDeducesTheirWidth)
         static_assert(a[0] and a[23] and a.count() == 2UZ);
 
         constexpr auto s = xstd::basic_bit_fixed_set(xstd::from_bit_storage, blocks);
-        static_assert(std::same_as<decltype(s), xstd::basic_bit_fixed_set<std::uint8_t, 24> const>);
+        static_assert(std::same_as<decltype(s), xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 24> const>);
         static_assert(s.contains(0UZ) and s.contains(23UZ) and s.size() == 2UZ);
         BOOST_CHECK((a == xstd::basic_bit_array<std::uint8_t, 24>(xstd::from_bit_storage, blocks)));
 }

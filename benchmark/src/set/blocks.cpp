@@ -31,7 +31,7 @@ namespace {
 inline constexpr auto width = 256UZ;
 
 template<class Block>
-using set_of = xstd::basic_bit_fixed_set<Block, width>;
+using set_of = xstd::basic_bit_fixed_set<std::size_t, Block, width>;
 
 // A function of the position alone and never of the Block, so every row holds the same elements.
 template<class T>

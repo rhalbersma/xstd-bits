@@ -6,9 +6,10 @@
 #ifndef XSTD_BITS_EXT_BOOST_BIT_SMALL_SET_HPP
 #define XSTD_BITS_EXT_BOOST_BIT_SMALL_SET_HPP
 
+#include <xstd/bits/bit_key_traits.hpp>                      // bit_key_traits
 #include <xstd/bits/detail/bit_container.hpp>                // bit_container, num_blocks_v
 #include <xstd/bits/detail/ownership.hpp>                    // storage
-#include <xstd/bits/detail/set_adaptor.hpp>                  // set_adaptor
+#include <xstd/bits/detail/set_adaptor.hpp>                  // admits_width, set_adaptor
 #include <xstd/bits/from_bit_storage.hpp>                    // from_bit_storage, from_bit_storage_t
 #include <xstd/ints/concepts/unsigned_integer.hpp>           // unsigned_integer
 #include <xstd/misc/concepts/container_compatible_range.hpp> // container_compatible_range
@@ -27,10 +28,13 @@
 namespace xstd {
 
 // The set reading over the small-vector column; the allocator is Boost's own, as that container defaults to it.
-template<xstd::unsigned_integer Block, std::size_t N, class Alloc = boost::container::new_allocator<Block>>
-class basic_bit_small_set : public bits::detail::set_adaptor<bits::detail::bit_container<boost::container::small_vector<Block, bits::detail::num_blocks_v<Block, N>, Alloc>>, bits::detail::storage::owned, basic_bit_small_set<Block, N, Alloc>>
+template<class Key, xstd::unsigned_integer Block, std::size_t N, class KeyTraits = bit_key_traits<Key>, class Alloc = boost::container::new_allocator<Block>>
+class basic_bit_small_set : public bits::detail::set_adaptor<bits::detail::bit_container<boost::container::small_vector<Block, bits::detail::num_blocks_v<Block, N>, Alloc>>, bits::detail::storage::owned, basic_bit_small_set<Key, Block, N, KeyTraits, Alloc>, Key, KeyTraits>
 {
-        using base_type = bits::detail::set_adaptor<bits::detail::bit_container<boost::container::small_vector<Block, bits::detail::num_blocks_v<Block, N>, Alloc>>, bits::detail::storage::owned, basic_bit_small_set<Block, N, Alloc>>;
+        using base_type = bits::detail::set_adaptor<bits::detail::bit_container<boost::container::small_vector<Block, bits::detail::num_blocks_v<Block, N>, Alloc>>, bits::detail::storage::owned, basic_bit_small_set<Key, Block, N, KeyTraits, Alloc>, Key, KeyTraits>;
+
+        // A traits type that names a size closes the universe, and the width must be that size.
+        static_assert(bits::detail::set::admits_width<KeyTraits, N>);
 
 public:
         using typename base_type::allocator_type;
@@ -108,19 +112,19 @@ public:
 };
 
 template<std::size_t N>
-using bit_small_set = basic_bit_small_set<std::size_t, N>;
+using bit_small_set = basic_bit_small_set<std::size_t, std::size_t, N>;
 
 } // namespace xstd
 
 namespace boost::container_hash {
 
 // A reading with iterators says it is neither range nor tuple, so Boost hashes it as the value it is.
-template<class Block, std::size_t N, class Alloc>
-struct is_range<xstd::basic_bit_small_set<Block, N, Alloc>> : std::false_type
+template<class Key, class Block, std::size_t N, class KeyTraits, class Alloc>
+struct is_range<xstd::basic_bit_small_set<Key, Block, N, KeyTraits, Alloc>> : std::false_type
 {};
 
-template<class Block, std::size_t N, class Alloc>
-struct is_tuple_like<xstd::basic_bit_small_set<Block, N, Alloc>> : std::false_type
+template<class Key, class Block, std::size_t N, class KeyTraits, class Alloc>
+struct is_tuple_like<xstd::basic_bit_small_set<Key, Block, N, KeyTraits, Alloc>> : std::false_type
 {};
 
 } // namespace boost::container_hash
@@ -129,8 +133,8 @@ namespace std {
 
 // NOLINTBEGIN(bugprone-std-namespace-modification)
 
-template<class Block, std::size_t N, class Alloc>
-struct hash<xstd::basic_bit_small_set<Block, N, Alloc>> : hash<typename xstd::basic_bit_small_set<Block, N, Alloc>::adaptor_type>
+template<class Key, class Block, std::size_t N, class KeyTraits, class Alloc>
+struct hash<xstd::basic_bit_small_set<Key, Block, N, KeyTraits, Alloc>> : hash<typename xstd::basic_bit_small_set<Key, Block, N, KeyTraits, Alloc>::adaptor_type>
 {};
 
 // NOLINTEND(bugprone-std-namespace-modification)

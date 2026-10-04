@@ -4,6 +4,8 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/set/ascending.hpp>             // yields_ascending_keys
+#include <test/set/strong_index.hpp>          // agrees_with_std_set_of_strong_indices, strong_index
+#include <xstd/bits/bit_key_traits.hpp>       // bit_key_traits
 #include <xstd/bits/bit_set.hpp>              // bit_set
 #include <xstd/bits/bit_set_view.hpp>         // bit_set_view
 #include <xstd/bits/detail/bit_container.hpp> // bit_container
@@ -27,13 +29,13 @@
 
 BOOST_AUTO_TEST_SUITE(BitSet)
 
-using T = xstd::basic_bit_set<std::uint8_t>;
+using T = xstd::basic_bit_set<std::size_t, std::uint8_t>;
 
 // The flagship: the set reading over a heap of blocks, built on the set adaptor.
 BOOST_AUTO_TEST_CASE(TheDynamicSetIsTheSetAdaptorOverAHeapOfBlocks)
 {
         static_assert(std::derived_from<T, xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_container<std::vector<std::uint8_t>>, xstd::bits::detail::storage::owned, T>>);
-        static_assert(std::same_as<xstd::basic_bit_set<std::uint8_t, std::allocator<std::uint8_t>>, T>);
+        static_assert(std::same_as<xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_traits<std::size_t>, std::allocator<std::uint8_t>>, T>);
 }
 
 // [set.cons]'s allocator arguments, constructed rather than merely asked about in a requires-expression.
@@ -195,20 +197,35 @@ BOOST_AUTO_TEST_CASE(ItDeducesAsStdSetDoes)
         auto const a = xstd::basic_bit_set(keys.begin(), keys.end());
         static_assert(std::same_as<decltype(a), xstd::bit_set const>);
         auto const b = xstd::basic_bit_set(keys.begin(), keys.end(), alloc);
-        static_assert(std::same_as<decltype(b), xstd::basic_bit_set<std::uint8_t> const>);
+        static_assert(std::same_as<decltype(b), xstd::basic_bit_set<std::size_t, std::uint8_t> const>);
         auto const c = xstd::basic_bit_set(std::from_range, keys);
         static_assert(std::same_as<decltype(c), xstd::bit_set const>);
         auto const d = xstd::basic_bit_set(std::from_range, keys, alloc);
-        static_assert(std::same_as<decltype(d), xstd::basic_bit_set<std::uint8_t> const>);
+        static_assert(std::same_as<decltype(d), xstd::basic_bit_set<std::size_t, std::uint8_t> const>);
         auto const e = xstd::basic_bit_set({3UZ, 1UZ, 4UZ});
         static_assert(std::same_as<decltype(e), xstd::bit_set const>);
         auto const f = xstd::basic_bit_set({3UZ, 1UZ, 4UZ}, alloc);
-        static_assert(std::same_as<decltype(f), xstd::basic_bit_set<std::uint8_t> const>);
+        static_assert(std::same_as<decltype(f), xstd::basic_bit_set<std::size_t, std::uint8_t> const>);
         auto const g = xstd::basic_bit_set(b, alloc);
-        static_assert(std::same_as<decltype(g), xstd::basic_bit_set<std::uint8_t> const>);
+        static_assert(std::same_as<decltype(g), xstd::basic_bit_set<std::size_t, std::uint8_t> const>);
 
         BOOST_CHECK(a == c and c == e);
         BOOST_CHECK(std::ranges::equal(b, a) and std::ranges::equal(d, a) and std::ranges::equal(f, a) and g == b);
+}
+
+// A strong index keys the set through bit_key_traits, and the set answers as std::set<strong_index> does.
+BOOST_AUTO_TEST_CASE(AStrongIndexKeysItAsStdSetIsKeyed)
+{
+        using X = xstd::basic_bit_set<test::set::strong_index, std::uint8_t>;
+        static_assert(std::same_as<X::key_type, test::set::strong_index>);
+        static_assert(std::same_as<X::value_type, test::set::strong_index>);
+        static_assert(std::same_as<X::key_traits_type, xstd::bit_key_traits<test::set::strong_index>>);
+        static_assert(std::same_as<std::iter_value_t<X::iterator>, test::set::strong_index>);
+        static_assert(not std::is_constructible_v<X, std::initializer_list<std::size_t>>);
+
+        test::set::agrees_with_std_set_of_strong_indices<X>({}, 0UZ, 20UZ);
+        test::set::agrees_with_std_set_of_strong_indices<X>({0UZ, 7UZ, 8UZ, 19UZ}, 0UZ, 20UZ);
+        test::set::agrees_with_std_set_of_strong_indices<X>({3UZ, 5UZ, 300UZ}, 0UZ, 310UZ);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

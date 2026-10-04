@@ -27,19 +27,19 @@ BOOST_AUTO_TEST_CASE(EveryContainerArrivesThroughTheUmbrella)
         static_assert(std::ranges::random_access_range<decltype(xstd::bit_span(packed))>);
 
         // The dynamic column, one name per reading, both over a std::vector of blocks.
-        static_assert(std::ranges::bidirectional_range<xstd::basic_bit_set<std::size_t>>);
+        static_assert(std::ranges::bidirectional_range<xstd::basic_bit_set<std::size_t, std::size_t>>);
         static_assert(std::ranges::random_access_range<xstd::basic_bit_vector<std::size_t>>);
 
         // The two layers the umbrella shows: basic_ chooses the storage, and the restricted name fixes size_t.
-        static_assert(std::same_as<xstd::bit_fixed_set<8>, xstd::basic_bit_fixed_set<std::size_t, 8>>);
+        static_assert(std::same_as<xstd::bit_fixed_set<8>, xstd::basic_bit_fixed_set<std::size_t, std::size_t, 8>>);
         static_assert(std::same_as<xstd::bit_array<8>, xstd::basic_bit_array<std::size_t, 8>>);
-        static_assert(std::same_as<xstd::bit_set, xstd::basic_bit_set<std::size_t, std::allocator<std::size_t>>>);
+        static_assert(std::same_as<xstd::bit_set, xstd::basic_bit_set<std::size_t, std::size_t, xstd::bit_key_traits<std::size_t>, std::allocator<std::size_t>>>);
         static_assert(std::same_as<xstd::bit_vector, xstd::basic_bit_vector<std::size_t, std::allocator<std::size_t>>>);
 
         // The bounded column, the third storage point: one name per reading, each a class like the rest.
-        static_assert(std::ranges::bidirectional_range<xstd::basic_bit_bounded_set<std::uint8_t, 8>>);
+        static_assert(std::ranges::bidirectional_range<xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 8>>);
         static_assert(std::ranges::random_access_range<xstd::basic_bit_bounded_vector<std::uint8_t, 8>>);
-        static_assert(std::same_as<xstd::bit_bounded_set<8>, xstd::basic_bit_bounded_set<std::size_t, 8>>);
+        static_assert(std::same_as<xstd::bit_bounded_set<8>, xstd::basic_bit_bounded_set<std::size_t, std::size_t, 8>>);
         static_assert(std::same_as<xstd::bit_bounded_vector<8>, xstd::basic_bit_bounded_vector<std::size_t, 8>>);
         static_assert(std::same_as<xstd::aligned::bit_bounded_set<9>, xstd::bit_bounded_set<std::numeric_limits<std::size_t>::digits>>);
         static_assert(std::same_as<xstd::aligned::bit_bounded_vector<9>, xstd::bit_bounded_vector<std::numeric_limits<std::size_t>::digits>>);

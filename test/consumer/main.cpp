@@ -8,6 +8,7 @@
 #include <xstd/bits.hpp> // bit_array, bit_bounded_set, bit_bounded_vector, bit_convert, bit_fixed_set, bit_set, bit_set_view, bit_span, bit_subspan, bit_vector
 #include <array>         // array
 #include <concepts>      // copyable, default_initializable, equality_comparable, regular, same_as, totally_ordered
+#include <cstddef>       // size_t
 #include <cstdint>       // uint8_t, uint64_t
 #include <ranges>        // bidirectional_range, random_access_range, range_value_t, view
 #include <utility>       // declval
@@ -40,7 +41,7 @@ static_assert(std::ranges::view<span_of_blocks> and not std::equality_comparable
 
 // The set reading, at three widths and as a view.
 static_assert(is_set_reading<xstd::bit_fixed_set<100>>);
-static_assert(is_set_reading<xstd::basic_bit_fixed_set<std::uint8_t, 24>>);
+static_assert(is_set_reading<xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 24>>);
 static_assert(is_set_reading<xstd::bit_set>);
 static_assert(is_set_reading<set_view_of_blocks>);
 

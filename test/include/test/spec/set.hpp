@@ -16,6 +16,7 @@
 #include <test/uint128.hpp>                      // TEST_HAS_UINT128, uint128
 #include <xstd/bits/bit_bounded_set.hpp>         // basic_bit_bounded_set
 #include <xstd/bits/bit_fixed_set.hpp>           // basic_bit_fixed_set
+#include <xstd/bits/bit_key_traits.hpp>          // bit_key_traits
 #include <xstd/bits/bit_set.hpp>                 // basic_bit_set
 #include <xstd/bits/bit_set_view.hpp>            // bit_set_view
 #include <xstd/bits/detail/bit_container.hpp>    // bit_container
@@ -46,21 +47,21 @@ using models = std::tuple<std::set<std::size_t>
                           >;
 
 // Every Block empty, at a single bit, either side of its first two block boundaries, at 17 and 24, and far past.
-using fixed = std::tuple<xstd::basic_bit_fixed_set<std::uint8_t, 0>, xstd::basic_bit_fixed_set<std::uint8_t, 1>, xstd::basic_bit_fixed_set<std::uint8_t, 7>, xstd::basic_bit_fixed_set<std::uint8_t, 8>, xstd::basic_bit_fixed_set<std::uint8_t, 9>, xstd::basic_bit_fixed_set<std::uint8_t, 15>, xstd::basic_bit_fixed_set<std::uint8_t, 16>, xstd::basic_bit_fixed_set<std::uint8_t, 17>, xstd::basic_bit_fixed_set<std::uint8_t, 24>, xstd::basic_bit_fixed_set<std::uint8_t, 257>, xstd::basic_bit_fixed_set<std::uint16_t, 0>, xstd::basic_bit_fixed_set<std::uint16_t, 1>, xstd::basic_bit_fixed_set<std::uint16_t, 15>, xstd::basic_bit_fixed_set<std::uint16_t, 16>, xstd::basic_bit_fixed_set<std::uint16_t, 17>, xstd::basic_bit_fixed_set<std::uint16_t, 24>, xstd::basic_bit_fixed_set<std::uint16_t, 31>, xstd::basic_bit_fixed_set<std::uint16_t, 32>, xstd::basic_bit_fixed_set<std::uint16_t, 33>, xstd::basic_bit_fixed_set<std::uint16_t, 48>, xstd::basic_bit_fixed_set<std::uint32_t, 0>, xstd::basic_bit_fixed_set<std::uint32_t, 1>, xstd::basic_bit_fixed_set<std::uint32_t, 17>, xstd::basic_bit_fixed_set<std::uint32_t, 24>, xstd::basic_bit_fixed_set<std::uint32_t, 31>, xstd::basic_bit_fixed_set<std::uint32_t, 32>, xstd::basic_bit_fixed_set<std::uint32_t, 33>, xstd::basic_bit_fixed_set<std::uint32_t, 63>, xstd::basic_bit_fixed_set<std::uint32_t, 64>, xstd::basic_bit_fixed_set<std::uint32_t, 65>, xstd::basic_bit_fixed_set<std::uint32_t, 1023>, xstd::basic_bit_fixed_set<std::uint64_t, 0>, xstd::basic_bit_fixed_set<std::uint64_t, 1>, xstd::basic_bit_fixed_set<std::uint64_t, 17>, xstd::basic_bit_fixed_set<std::uint64_t, 24>, xstd::basic_bit_fixed_set<std::uint64_t, 63>, xstd::basic_bit_fixed_set<std::uint64_t, 64>, xstd::basic_bit_fixed_set<std::uint64_t, 65>, xstd::basic_bit_fixed_set<std::uint64_t, 1025>
+using fixed = std::tuple<xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 0>, xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 1>, xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 7>, xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 8>, xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 9>, xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 15>, xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 16>, xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 17>, xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 24>, xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 257>, xstd::basic_bit_fixed_set<std::size_t, std::uint16_t, 0>, xstd::basic_bit_fixed_set<std::size_t, std::uint16_t, 1>, xstd::basic_bit_fixed_set<std::size_t, std::uint16_t, 15>, xstd::basic_bit_fixed_set<std::size_t, std::uint16_t, 16>, xstd::basic_bit_fixed_set<std::size_t, std::uint16_t, 17>, xstd::basic_bit_fixed_set<std::size_t, std::uint16_t, 24>, xstd::basic_bit_fixed_set<std::size_t, std::uint16_t, 31>, xstd::basic_bit_fixed_set<std::size_t, std::uint16_t, 32>, xstd::basic_bit_fixed_set<std::size_t, std::uint16_t, 33>, xstd::basic_bit_fixed_set<std::size_t, std::uint16_t, 48>, xstd::basic_bit_fixed_set<std::size_t, std::uint32_t, 0>, xstd::basic_bit_fixed_set<std::size_t, std::uint32_t, 1>, xstd::basic_bit_fixed_set<std::size_t, std::uint32_t, 17>, xstd::basic_bit_fixed_set<std::size_t, std::uint32_t, 24>, xstd::basic_bit_fixed_set<std::size_t, std::uint32_t, 31>, xstd::basic_bit_fixed_set<std::size_t, std::uint32_t, 32>, xstd::basic_bit_fixed_set<std::size_t, std::uint32_t, 33>, xstd::basic_bit_fixed_set<std::size_t, std::uint32_t, 63>, xstd::basic_bit_fixed_set<std::size_t, std::uint32_t, 64>, xstd::basic_bit_fixed_set<std::size_t, std::uint32_t, 65>, xstd::basic_bit_fixed_set<std::size_t, std::uint32_t, 1023>, xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 0>, xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 1>, xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 17>, xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 24>, xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 63>, xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 64>, xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 65>, xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 1025>
 #ifdef TEST_HAS_UINT128
 
                          ,
-                         xstd::basic_bit_fixed_set<xstd::uint128, 0>, xstd::basic_bit_fixed_set<xstd::uint128, 1>, xstd::basic_bit_fixed_set<xstd::uint128, 17>, xstd::basic_bit_fixed_set<xstd::uint128, 24>, xstd::basic_bit_fixed_set<xstd::uint128, 127>, xstd::basic_bit_fixed_set<xstd::uint128, 128>, xstd::basic_bit_fixed_set<xstd::uint128, 129>, xstd::basic_bit_fixed_set<xstd::uint128, 2049>
+                         xstd::basic_bit_fixed_set<std::size_t, xstd::uint128, 0>, xstd::basic_bit_fixed_set<std::size_t, xstd::uint128, 1>, xstd::basic_bit_fixed_set<std::size_t, xstd::uint128, 17>, xstd::basic_bit_fixed_set<std::size_t, xstd::uint128, 24>, xstd::basic_bit_fixed_set<std::size_t, xstd::uint128, 127>, xstd::basic_bit_fixed_set<std::size_t, xstd::uint128, 128>, xstd::basic_bit_fixed_set<std::size_t, xstd::uint128, 129>, xstd::basic_bit_fixed_set<std::size_t, xstd::uint128, 2049>
 
 #endif
                          >;
 
-using dynamic = std::tuple<xstd::basic_bit_set<std::uint8_t>, xstd::basic_bit_set<std::uint64_t>>;
+using dynamic = std::tuple<xstd::basic_bit_set<std::size_t, std::uint8_t>, xstd::basic_bit_set<std::size_t, std::uint64_t>>;
 
-using bounded = std::tuple<xstd::basic_bit_bounded_set<std::uint8_t, 0>, xstd::basic_bit_bounded_set<std::uint8_t, 9>, xstd::basic_bit_bounded_set<std::uint8_t, 17>, xstd::basic_bit_bounded_set<std::uint8_t, 24>, xstd::basic_bit_bounded_set<std::uint64_t, 24>, xstd::basic_bit_bounded_set<std::uint64_t, 65>, xstd::basic_bit_bounded_set<std::uint64_t, 4097>>;
+using bounded = std::tuple<xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 0>, xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 9>, xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 17>, xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 24>, xstd::basic_bit_bounded_set<std::size_t, std::uint64_t, 24>, xstd::basic_bit_bounded_set<std::size_t, std::uint64_t, 65>, xstd::basic_bit_bounded_set<std::size_t, std::uint64_t, 4097>>;
 
 // Inline blocks that a sweep to its limit spills from, that a sweep fits in, and that hold half of what a sample spans.
-using small = std::tuple<xstd::basic_bit_small_set<std::uint8_t, 9>, xstd::basic_bit_small_set<std::uint64_t, 64>, xstd::basic_bit_small_set<std::uint64_t, 1024>>;
+using small = std::tuple<xstd::basic_bit_small_set<std::size_t, std::uint8_t, 9>, xstd::basic_bit_small_set<std::size_t, std::uint64_t, 64>, xstd::basic_bit_small_set<std::size_t, std::uint64_t, 1024>>;
 
 // Storage written outside the library, adapted by the same set adaptor the owners derive from.
 using user_storage = std::tuple<xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_container<test::minimal_blocks<std::uint8_t>>>>;
@@ -77,7 +78,7 @@ using all = decltype(std::tuple_cat(std::declval<owners>(), std::declval<views>(
 using const_views = std::tuple<xstd::bit_set_view<std::array<std::uint8_t, 3> const, 17>, xstd::bit_set_view<std::vector<std::uint64_t> const>>;
 
 // The owners that take an allocator, under one that keeps a ledger and refuses on request, std::set first.
-using ledgered = std::tuple<std::set<std::size_t, std::less<>, test::container::non_propagating<std::size_t>>, xstd::basic_bit_set<std::uint8_t, test::container::non_propagating<std::uint8_t>>, xstd::basic_bit_set<std::uint64_t, test::container::non_propagating<std::uint64_t>>, xstd::basic_bit_small_set<std::uint8_t, 9, test::container::non_propagating<std::uint8_t>>, xstd::basic_bit_small_set<std::uint64_t, 64, test::container::non_propagating<std::uint64_t>>>;
+using ledgered = std::tuple<std::set<std::size_t, std::less<>, test::container::non_propagating<std::size_t>>, xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_traits<std::size_t>, test::container::non_propagating<std::uint8_t>>, xstd::basic_bit_set<std::size_t, std::uint64_t, xstd::bit_key_traits<std::size_t>, test::container::non_propagating<std::uint64_t>>, xstd::basic_bit_small_set<std::size_t, std::uint8_t, 9, xstd::bit_key_traits<std::size_t>, test::container::non_propagating<std::uint8_t>>, xstd::basic_bit_small_set<std::size_t, std::uint64_t, 64, xstd::bit_key_traits<std::size_t>, test::container::non_propagating<std::uint64_t>>>;
 
 } // namespace test::spec::set
 
@@ -87,7 +88,7 @@ namespace test::spec {
 template<class Block, std::size_t K, std::size_t N>
 struct view_traits<xstd::bit_set_view<std::array<Block, K>, N>>
 {
-        using owner_type = xstd::basic_bit_fixed_set<Block, N>;
+        using owner_type = xstd::basic_bit_fixed_set<std::size_t, Block, N>;
 
         [[nodiscard]] static auto view(owner_type& owner, std::size_t)
         {
@@ -98,7 +99,7 @@ struct view_traits<xstd::bit_set_view<std::array<Block, K>, N>>
 template<class Block, class Allocator>
 struct view_traits<xstd::bit_set_view<std::vector<Block, Allocator>, std::dynamic_extent>>
 {
-        using owner_type = xstd::basic_bit_set<Block, Allocator>;
+        using owner_type = xstd::basic_bit_set<std::size_t, Block, xstd::bit_key_traits<std::size_t>, Allocator>;
 
         [[nodiscard]] static auto view(owner_type& owner, std::size_t)
         {
@@ -123,7 +124,7 @@ inline constexpr auto held_width_v = [] -> std::size_t {
 }();
 
 template<class Block, std::size_t N, class Allocator>
-inline constexpr auto held_width_v<xstd::basic_bit_small_set<Block, N, Allocator>> = N;
+inline constexpr auto held_width_v<xstd::basic_bit_small_set<std::size_t, Block, N, xstd::bit_key_traits<std::size_t>, Allocator>> = N;
 
 #ifdef __clang__
 

@@ -199,9 +199,10 @@ the adaptor each reading is built on is internal, under `<xstd/bits/detail/>`.
 
 | Header | Additions | Description | Reference |
 | :----- | :-------- | :---------- | :-------- |
-| `<xstd/bits/bit_fixed_set.hpp>` | `bit_fixed_set` <br> `basic_bit_fixed_set` | Ordered set of `std::size_t`, static size and capacity | [associative.reqmts], [set] |
-| `<xstd/bits/bit_bounded_set.hpp>` | `bit_bounded_set` <br> `basic_bit_bounded_set` | Ordered set, dynamic size within a static capacity | [associative.reqmts], [set] |
-| `<xstd/bits/bit_set.hpp>` | `bit_set` <br> `basic_bit_set` | Ordered set, dynamic size and capacity | [associative.reqmts], [set] |
+| `<xstd/bits/bit_key_traits.hpp>` | `bit_key_traits` | How a set's key maps onto a position and back, preserving order: the identity for `std::size_t`, specialized for a strong index type | none |
+| `<xstd/bits/bit_fixed_set.hpp>` | `bit_fixed_set` <br> `basic_bit_fixed_set` | Ordered set of `std::size_t`, static size and capacity; the `basic_` form takes the key first, `basic_bit_fixed_set<Key, Block, N, KeyTraits>` | [associative.reqmts], [set] |
+| `<xstd/bits/bit_bounded_set.hpp>` | `bit_bounded_set` <br> `basic_bit_bounded_set` | Ordered set, dynamic size within a static capacity; `basic_bit_bounded_set<Key, Block, N, KeyTraits>` | [associative.reqmts], [set] |
+| `<xstd/bits/bit_set.hpp>` | `bit_set` <br> `basic_bit_set` | Ordered set, dynamic size and capacity; `basic_bit_set<Key, Block, KeyTraits, Allocator>` | [associative.reqmts], [set] |
 | `<xstd/bits/bit_array.hpp>` | `bit_array` <br> `basic_bit_array` | Sequence of `bool`, static size and capacity | [array] |
 | `<xstd/bits/bit_bounded_vector.hpp>` | `bit_bounded_vector` <br> `basic_bit_bounded_vector` | Sequence of `bool`, dynamic size within a static capacity | [inplace.vector] |
 | `<xstd/bits/bit_vector.hpp>` | `bit_vector` <br> `basic_bit_vector` | Sequence of `bool`, dynamic size and capacity | [vector.bool] |

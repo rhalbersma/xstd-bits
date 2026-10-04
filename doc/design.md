@@ -565,8 +565,8 @@ reach. The tag is `std::from_range`'s twin -- `xstd::from_bit_storage_t`,
 an explicitly defaulted constructor, and the object `xstd::from_bit_storage` -- because the job is the same one: saying at
 the call site which reading of the argument is meant. `basic_bit_array(xstd::from_bit_storage, board)` is
 `basic_bit_array<std::uint64_t, 64>`, and `basic_bit_fixed_set(xstd::from_bit_storage, blocks)` over a
-`std::array<std::uint8_t, 3>` is `basic_bit_fixed_set<std::uint8_t, 24>`: the guides deduce the block type and the
-width from an unsigned integer or a `std::array` of them, the two families whose width the type carries.
+`std::array<std::uint8_t, 3>` is `basic_bit_fixed_set<std::size_t, std::uint8_t, 24>`: the guides deduce the block type and the
+width, with `std::size_t` as the key, from an unsigned integer or a `std::array` of them, the two families whose width the type carries.
 
 None of this reaches a run-time width, which has no width in its type for a guide to find.
 
@@ -1506,14 +1506,14 @@ Two class templates carry the two readings: `set_adaptor` and `sequence_adaptor`
 written against `bit_container` and against nothing else, so one adaptor serves
 `bit_container` over `std::array`, `std::vector` and the bounded blocks alike, at both widths and
 in both ownerships ([one-storage](#one-storage)). Each takes the parameters its own reading needs and no
-others: `set_adaptor<Bits, Store, Derived>` and `sequence_adaptor<Bits, Store, W, Derived>`, the set reading
-never windowed.
+others: `set_adaptor<Bits, Store, Derived, Key, KeyTraits>` and `sequence_adaptor<Bits, Store, W, Derived>`, the set reading
+never windowed and the only one with a key.
 
 The two are internal: the eight owners and the three views are the public surface, and no public template
 argument list, deduction guide or specialization spells an adaptor. Every public name is a class deriving from
-one of them, passing itself as the last argument so that the adaptor names it back: `basic_bit_fixed_set<B, N>` derives from
-`set_adaptor<bit_container<std::array<B, K>, N>, storage::owned, basic_bit_fixed_set<B, N>>`. The short layer stays
-an alias fixing the block: `bit_fixed_set<N>` and `bit_array<N>` are those at `std::size_t`.
+one of them, passing itself as an argument so that the adaptor names it back: `basic_bit_fixed_set<Key, B, N, KeyTraits>` derives from
+`set_adaptor<bit_container<std::array<B, K>, N>, storage::owned, basic_bit_fixed_set<Key, B, N, KeyTraits>, Key, KeyTraits>`. The short layer stays
+an alias fixing the block, and for a set the key: `bit_fixed_set<N>` and `bit_array<N>` are those at `std::size_t`.
 Deriving is what keeps a value-returning operation -- `& | ^ -`, `operator~`, the shifts, `xstd::bit_convert` --
 handing back the container the caller named rather than the vehicle under it
 ([the-views-are-the-adaptors](#the-views-are-the-adaptors)).
@@ -1599,7 +1599,7 @@ three rules for that arrangement:
 MSVC went on to refuse alias deduction through `basic_bit_fixed_set` and `basic_bitset` themselves with `C7602`,
 and that is what made them classes. A class takes its guides as its own and needs none of the three rules: the
 guides name `basic_bit_array<Block, N>` rather than computing a block count, and `bit_fixed_set<N>` is an alias of
-`basic_bit_fixed_set<std::size_t, N>`, one alias over a class, the depth every compiler deduced through. The one-block
+`basic_bit_fixed_set<std::size_t, std::size_t, N>`, one alias over a class, the depth every compiler deduced through. The one-block
 guides keep `K = 1`, which costs nothing. The views are a separate question from the owners
 ([the-views-are-the-adaptors](#the-views-are-the-adaptors)).
 
@@ -2276,7 +2276,7 @@ base at all. So the adaptors and their vocabulary went to `xstd::bits::detail`, 
 On the other side, the two that had to be argued. The four proxy types are reached only through container
 typedefs, so no user spells them. `bit_container` and its three aliases are the device that turns
 two readings times three storages into two plus three ([the-one-vehicle](#the-one-vehicle)), and the
-`basic_` layer already exposes the block parameter — `basic_bit_fixed_set<std::uint8_t, 24>` reaches the
+`basic_` layer already exposes the block parameter — `basic_bit_fixed_set<std::size_t, std::uint8_t, 24>` reaches the
 capability without the storage being named. Recorded against: `bit_container` *is* instantiated by
 name throughout `test/`, which is a real signal, and demoting it makes the test tree reach into `detail/`. The
 counter is that a test is not a user; a test tree that mirrors the library, `detail/` included, is what testing
@@ -2322,15 +2322,31 @@ every consumer who does not.
 Two layers of names, over a third nobody spells. The adaptors under `detail/` carry the reading and take the
 storage, the parameters each reading needs and no more ([the-two-adaptors](#the-two-adaptors)). The
 `basic_` layer chooses the storage and leaves the block open, `basic_string`-style:
-`basic_bit_fixed_set<Block, N>`, `basic_bit_set<Block, Allocator>` and their four siblings. The block leads in
-every column, so a `basic_` name hands its base clause the arguments in the order it was given them --
-`basic_bit_fixed_set<Block, N>` derives from `set_adaptor<bit_container<std::array<Block, K>, N>, storage::owned,
-basic_bit_fixed_set<Block, N>>`, straight through. The static and bounded columns used to take `<N, Block>`
+`basic_bit_array<Block, N>`, `basic_bit_vector<Block, Allocator>` and their sequence siblings. A set's `basic_` name
+leads with its key, as `std::set<Key>` does, then the storage, then the defaulted policies, the key's traits first:
+`basic_bit_fixed_set<Key, Block, N, KeyTraits>`, `basic_bit_bounded_set<Key, Block, N, KeyTraits>`,
+`basic_bit_small_set<Key, Block, N, KeyTraits, Alloc>` and `basic_bit_set<Key, Block, KeyTraits, Allocator>`, with
+`KeyTraits` defaulting to `bit_key_traits<Key>`. The block leads the storage in every column, so a `basic_` name hands
+its base clause the arguments in the order it was given them -- `basic_bit_fixed_set<Key, Block, N, KeyTraits>` derives
+from `set_adaptor<bit_container<std::array<Block, K>, N>, storage::owned, basic_bit_fixed_set<Key, Block, N, KeyTraits>,
+Key, KeyTraits>`, straight through. The static and bounded columns used to take `<N, Block>`
 and transpose at the call, which
 nothing gained: `Block` carries no default in those columns, so it is free to lead, and leading is what
 `std::array<T, N>`, `std::inplace_vector<T, N>` and `std::span<T, Extent>` all do with the pair. The restricted
 layer fixes `std::size_t` and `std::allocator`: `bit_fixed_set<N>` and `bit_array<N>` keep one
-parameter, and `bit_set` and `bit_vector` keep none, so the flagship is `xstd::bit_set`, without the `<>`.
+parameter, and `bit_set` and `bit_vector` keep none, so the flagship is `xstd::bit_set`, without the `<>`. A set's
+short name fixes its key to `std::size_t` as well: `bit_fixed_set<N>` is `basic_bit_fixed_set<std::size_t, std::size_t, N>`.
+
+The key is spelled wherever the `basic_` form is, because it changes the interface: `key_type`, what iteration
+yields, and what `insert`, `find` and `contains` accept. The positions stay the storage, and `KeyTraits` maps a key
+onto one and back: `to_index(key)` and `from_index(index)`, static members as `std::char_traits`' are, and for a
+closed universe a `size`, which an owner with a width or a capacity in its type must equal, checked by a
+`static_assert`. `bit_key_traits<std::size_t>` is the identity with no `size`; a strong index type specializes
+`bit_key_traits` or is given a traits type of its own. `to_index` must preserve order, so that ascending positions
+are ascending keys. Every member that takes a key maps it through `to_index`, and the iterator and its proxy hand out
+`from_index` of the position, so a set formats as its keys do; set algebra, comparison, hashing and the block
+exchange work on blocks and never see a key. The views stay keyed by `std::size_t`: a view reads positions it does
+not own, and names no key of its own.
 
 The unmarked name goes to the flagship — `bit_set` is the dynamic set
 benchmarked against `std::set` and `std::flat_set` — and the qualifier marks the special case, `bit_fixed_set`.
@@ -2399,7 +2415,7 @@ the expression compiles.
 ### the-bounded-column
 
 The third storage point gets public names, one per reading and each a class like every other
-owner: `basic_bit_bounded_set<Block, N>` and `basic_bit_bounded_vector<Block, N>` over
+owner: `basic_bit_bounded_set<Key, Block, N>` and `basic_bit_bounded_vector<Block, N>` over
 `bounded_blocks<Block, num_blocks_v<Block, N>>`, with `bit_bounded_set<N>` and `bit_bounded_vector<N>` at the
 machine word. `bounded` is one qualifier down each column rather than a second vocabulary for the same thing.
 
@@ -2419,7 +2435,7 @@ The class passes `N` through to the storage rather than leaving it in the block 
 distinct capacities distinct types and lets its guide name `N`: `num_blocks_v<Block, N>` is not a
 deducible context, and no inverse exists, since every `N` from 9 to 16 names two `std::uint8_t` blocks. The
 names carry the capacity-versus-width distinction and the parameter lists do not, which is the same hazard
-`basic_bit_fixed_set<Block, N>` and `basic_bit_bounded_set<Block, N>` share by shape.
+`basic_bit_fixed_set<Key, Block, N>` and `basic_bit_bounded_set<Key, Block, N>` share by shape.
 
 The column exists on every standard library, at C++23 and at C++26 alike. `detail/bounded_blocks.hpp` names its
 storage `bounded_blocks<Block, K>`: `std::inplace_vector<Block, K>` where `__cpp_lib_inplace_vector` is defined, in
@@ -4578,7 +4594,7 @@ Notes:
 3. A view over an owner is a view over the storage that owner wraps: `xstd::bit_set_view(s)` over a `bit_fixed_set<N>` deduces `xstd::bit_set_view<std::array<std::size_t, K>, N>`, the blocks and width the set is stored in, and `decltype` is how you name the result. The deduction guide for a plain storage is constrained to non-owners, so an owner and the storage inside it do not tie.
 4. The variable-size sequence of `bool` is named `xstd::bit_vector` and decoupled from the general `std::vector` class template.
 5. All containers use a dense (single bit per element) representation. Variable-size sparse sets can be provided by `flat_set`, either in [Boost](https://www.boost.org/doc/libs/1_80_0/doc/html/boost/container/flat_set.html) or in [C++ 23](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p1222r4.pdf).
-6. The names above are the short ones, which fix `Block` to `std::size_t` and so take only the width, or nothing at all in the dynamic column where there is no width to give. Each has a `basic_` form that leaves the block open: `xstd::basic_bit_fixed_set<Block, N>`, `xstd::basic_bit_array<Block, N>` and their inplace siblings, and `xstd::basic_bit_set<Block, Allocator>` and `xstd::basic_bit_vector<Block, Allocator>` down the dynamic column. So `xstd::bit_set` is an alias, not a template, and `xstd::basic_bit_set<std::uint8_t>` is how a block is chosen.
+6. The names above are the short ones, which fix `Block` to `std::size_t` and so take only the width, or nothing at all in the dynamic column where there is no width to give. Each has a `basic_` form that leaves the block open, and for a set the key before it: `xstd::basic_bit_fixed_set<Key, Block, N>`, `xstd::basic_bit_array<Block, N>` and their inplace siblings, and `xstd::basic_bit_set<Key, Block>` and `xstd::basic_bit_vector<Block, Allocator>` down the dynamic column. So `xstd::bit_set` is an alias, not a template, and `xstd::basic_bit_set<std::size_t, std::uint8_t>` is how a block is chosen.
 7. Each static-width name has an `aligned` form in a nested namespace, its width rounded up to whole blocks so that no block carries an unused tail: `xstd::aligned::bit_array<120>` is `xstd::bit_array<128>`. The inplace names have the same, rounding their capacity. That costs nothing in storage at a width already spanning whole blocks, and removes the tail-restoring mask from `fill`, `flip` and the left shift.
 
 The **middle column** is what allocates nothing and yet carries a run-time width. Its blocks are a `std::inplace_vector` where the standard library provides one (`__cpp_lib_inplace_vector`) and a `boost::container::static_vector` elsewhere, so those two names exist everywhere; only over `std::inplace_vector` are they usable in a constant expression, which `XSTD_BITS_HAS_CONSTEXPR_BOUNDED` says.
@@ -4825,7 +4841,7 @@ auto b = a
 **A**: Position `n` is bit `n % W` of block `n / W`, for a block of `W` bits. So the **least** significant bit of the first array block maps onto set value `0`, and the most significant bit of the last array block onto set value `N - 1`. That is the conventional layout: `boost::dynamic_bitset` and the mainstream `std::bitset` and `std::vector<bool>` implementations all lay their bits out the same way.
 
 **Q**: I'm visually oriented, can you draw a diagram?  
-**A**: Sure, it looks like this for `basic_bit_fixed_set<std::uint8_t, 16>`, each block drawn most significant bit first:
+**A**: Sure, it looks like this for `basic_bit_fixed_set<std::size_t, std::uint8_t, 16>`, each block drawn most significant bit first:
 
 |block |       0|       1|
 |:---- |-------:|-------:|
@@ -4876,7 +4892,7 @@ Bit-0 leftmost buys one thing: the bitstring order and the array order agree, wh
 **A**: By default, `xstd::bit_fixed_set` uses an array of `std::size_t` integers.
 
 **Q**: Can I customize the storage type?  
-**A**: Yes. The alias carrying the default is `template<std::size_t N> using bit_fixed_set = basic_bit_fixed_set<std::size_t, N>`; the underlying `template<xstd::unsigned_integer Block, std::size_t N> basic_bit_fixed_set` requires the block explicitly. Every cell of the table follows that pattern: a short name that defaults `Block` to `std::size_t`, and a `basic_` name that does not.
+**A**: Yes. The alias carrying the default is `template<std::size_t N> using bit_fixed_set = basic_bit_fixed_set<std::size_t, std::size_t, N>`; the underlying `template<class Key, xstd::unsigned_integer Block, std::size_t N, class KeyTraits = bit_key_traits<Key>> basic_bit_fixed_set` requires the key and the block explicitly. Every cell of the table follows that pattern: a short name that fixes `Block`, and a set's `Key`, to `std::size_t`, and a `basic_` name that does not.
 
 **Q**: What other storage types can be used as template argument for `Block`?  
 **A**: Any type modelling the Standard Library `unsigned_integral` concept, which includes (for GCC and Clang) `xstd::uint128`.

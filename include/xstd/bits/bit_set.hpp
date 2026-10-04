@@ -6,6 +6,7 @@
 #ifndef XSTD_BITS_BIT_SET_HPP
 #define XSTD_BITS_BIT_SET_HPP
 
+#include <xstd/bits/bit_key_traits.hpp>                      // bit_key_traits
 #include <xstd/bits/detail/bit_container.hpp>                // bit_container
 #include <xstd/bits/detail/ownership.hpp>                    // storage
 #include <xstd/bits/detail/set_adaptor.hpp>                  // set_adaptor
@@ -28,10 +29,10 @@
 namespace xstd {
 
 // The set reading over a heap of blocks: the flagship, and the one name without a qualifier.
-template<xstd::unsigned_integer Block, class Allocator = std::allocator<Block>>
-class basic_bit_set : public bits::detail::set_adaptor<bits::detail::bit_container<std::vector<Block, Allocator>>, bits::detail::storage::owned, basic_bit_set<Block, Allocator>>
+template<class Key, xstd::unsigned_integer Block, class KeyTraits = bit_key_traits<Key>, class Allocator = std::allocator<Block>>
+class basic_bit_set : public bits::detail::set_adaptor<bits::detail::bit_container<std::vector<Block, Allocator>>, bits::detail::storage::owned, basic_bit_set<Key, Block, KeyTraits, Allocator>, Key, KeyTraits>
 {
-        using base_type = bits::detail::set_adaptor<bits::detail::bit_container<std::vector<Block, Allocator>>, bits::detail::storage::owned, basic_bit_set<Block, Allocator>>;
+        using base_type = bits::detail::set_adaptor<bits::detail::bit_container<std::vector<Block, Allocator>>, bits::detail::storage::owned, basic_bit_set<Key, Block, KeyTraits, Allocator>, Key, KeyTraits>;
 
 public:
         using typename base_type::allocator_type;
@@ -106,51 +107,51 @@ public:
         }
 };
 
-using bit_set = basic_bit_set<std::size_t>;
+using bit_set = basic_bit_set<std::size_t, std::size_t>;
 
 // [set.overview]'s guides, in its order: Block from the allocator, std::size_t by default, the key being std::size_t.
 template<std::input_iterator InputIterator, class Compare = std::less<std::size_t>, class Allocator = std::allocator<std::size_t>>
         requires (not xstd::simple_allocator<Compare>) and xstd::simple_allocator<Allocator>
-basic_bit_set(InputIterator, InputIterator, Compare = Compare(), Allocator = Allocator()) -> basic_bit_set<typename Allocator::value_type, Allocator>;
+basic_bit_set(InputIterator, InputIterator, Compare = Compare(), Allocator = Allocator()) -> basic_bit_set<std::size_t, typename Allocator::value_type, bit_key_traits<std::size_t>, Allocator>;
 
 template<std::ranges::input_range R, class Compare = std::less<std::size_t>, class Allocator = std::allocator<std::size_t>>
         requires (not xstd::simple_allocator<Compare>) and xstd::simple_allocator<Allocator>
-basic_bit_set(std::from_range_t, R&&, Compare = Compare(), Allocator = Allocator()) -> basic_bit_set<typename Allocator::value_type, Allocator>;
+basic_bit_set(std::from_range_t, R&&, Compare = Compare(), Allocator = Allocator()) -> basic_bit_set<std::size_t, typename Allocator::value_type, bit_key_traits<std::size_t>, Allocator>;
 
 template<class Key, class Compare = std::less<std::size_t>, class Allocator = std::allocator<std::size_t>>
         requires (not xstd::simple_allocator<Compare>) and xstd::simple_allocator<Allocator>
-basic_bit_set(std::initializer_list<Key>, Compare = Compare(), Allocator = Allocator()) -> basic_bit_set<typename Allocator::value_type, Allocator>;
+basic_bit_set(std::initializer_list<Key>, Compare = Compare(), Allocator = Allocator()) -> basic_bit_set<std::size_t, typename Allocator::value_type, bit_key_traits<std::size_t>, Allocator>;
 
 template<std::input_iterator InputIterator, class Allocator>
         requires xstd::simple_allocator<Allocator>
-basic_bit_set(InputIterator, InputIterator, Allocator) -> basic_bit_set<typename Allocator::value_type, Allocator>;
+basic_bit_set(InputIterator, InputIterator, Allocator) -> basic_bit_set<std::size_t, typename Allocator::value_type, bit_key_traits<std::size_t>, Allocator>;
 
 template<std::ranges::input_range R, class Allocator>
         requires xstd::simple_allocator<Allocator>
-basic_bit_set(std::from_range_t, R&&, Allocator) -> basic_bit_set<typename Allocator::value_type, Allocator>;
+basic_bit_set(std::from_range_t, R&&, Allocator) -> basic_bit_set<std::size_t, typename Allocator::value_type, bit_key_traits<std::size_t>, Allocator>;
 
 template<class Key, class Allocator>
         requires xstd::simple_allocator<Allocator>
-basic_bit_set(std::initializer_list<Key>, Allocator) -> basic_bit_set<typename Allocator::value_type, Allocator>;
+basic_bit_set(std::initializer_list<Key>, Allocator) -> basic_bit_set<std::size_t, typename Allocator::value_type, bit_key_traits<std::size_t>, Allocator>;
 
 // The blocks adopted name the block and the allocator both.
 template<xstd::unsigned_integer Block, class Allocator>
-basic_bit_set(from_bit_storage_t, std::vector<Block, Allocator>) -> basic_bit_set<Block, Allocator>;
+basic_bit_set(from_bit_storage_t, std::vector<Block, Allocator>) -> basic_bit_set<std::size_t, Block, bit_key_traits<std::size_t>, Allocator>;
 
 template<xstd::unsigned_integer Block, class Allocator>
-basic_bit_set(from_bit_storage_t, std::vector<Block, Allocator>, Allocator) -> basic_bit_set<Block, Allocator>;
+basic_bit_set(from_bit_storage_t, std::vector<Block, Allocator>, Allocator) -> basic_bit_set<std::size_t, Block, bit_key_traits<std::size_t>, Allocator>;
 
 } // namespace xstd
 
 namespace boost::container_hash {
 
 // A reading with iterators says it is neither range nor tuple, so Boost hashes it as the value it is.
-template<class Block, class Allocator>
-struct is_range<xstd::basic_bit_set<Block, Allocator>> : std::false_type
+template<class Key, class Block, class KeyTraits, class Allocator>
+struct is_range<xstd::basic_bit_set<Key, Block, KeyTraits, Allocator>> : std::false_type
 {};
 
-template<class Block, class Allocator>
-struct is_tuple_like<xstd::basic_bit_set<Block, Allocator>> : std::false_type
+template<class Key, class Block, class KeyTraits, class Allocator>
+struct is_tuple_like<xstd::basic_bit_set<Key, Block, KeyTraits, Allocator>> : std::false_type
 {};
 
 } // namespace boost::container_hash
@@ -159,8 +160,8 @@ namespace std {
 
 // NOLINTBEGIN(bugprone-std-namespace-modification)
 
-template<class Block, class Allocator>
-struct hash<xstd::basic_bit_set<Block, Allocator>> : hash<typename xstd::basic_bit_set<Block, Allocator>::adaptor_type>
+template<class Key, class Block, class KeyTraits, class Allocator>
+struct hash<xstd::basic_bit_set<Key, Block, KeyTraits, Allocator>> : hash<typename xstd::basic_bit_set<Key, Block, KeyTraits, Allocator>::adaptor_type>
 {};
 
 // NOLINTEND(bugprone-std-namespace-modification)

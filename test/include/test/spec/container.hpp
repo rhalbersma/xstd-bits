@@ -12,6 +12,7 @@
 #include <test/spec/set.hpp>                        // owners, pairs, pairs_with_doubletons, sets
 #include <xstd/bits/bit_bounded_set.hpp>            // basic_bit_bounded_set
 #include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector
+#include <xstd/bits/bit_key_traits.hpp>             // bit_key_traits
 #include <xstd/bits/detail/bit_container.hpp>       // bit_container
 #include <xstd/bits/detail/bounded_blocks.hpp>      // IWYU pragma: keep; XSTD_BITS_HAS_CONSTEXPR_BOUNDED
 #include <xstd/bits/detail/set_adaptor.hpp>         // set_adaptor
@@ -47,7 +48,7 @@ inline constexpr auto constant_evaluable_v<std::flat_set<Key, Compare, KeyContai
 #endif
 
 template<class Block, std::size_t N, class Allocator>
-inline constexpr auto constant_evaluable_v<xstd::basic_bit_small_set<Block, N, Allocator>> = false;
+inline constexpr auto constant_evaluable_v<xstd::basic_bit_small_set<std::size_t, Block, N, xstd::bit_key_traits<std::size_t>, Allocator>> = false;
 
 template<class Block, std::size_t N, class Allocator>
 inline constexpr auto constant_evaluable_v<xstd::basic_bit_small_vector<Block, N, Allocator>> = false;
@@ -58,7 +59,7 @@ inline constexpr auto constant_evaluable_v<xstd::bits::detail::set_adaptor<xstd:
 #ifndef XSTD_BITS_HAS_CONSTEXPR_BOUNDED
 
 template<class Block, std::size_t N>
-inline constexpr auto constant_evaluable_v<xstd::basic_bit_bounded_set<Block, N>> = false;
+inline constexpr auto constant_evaluable_v<xstd::basic_bit_bounded_set<std::size_t, Block, N>> = false;
 
 template<class Block, std::size_t N>
 inline constexpr auto constant_evaluable_v<xstd::basic_bit_bounded_vector<Block, N>> = false;
