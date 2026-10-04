@@ -238,17 +238,17 @@ public:
         static constexpr auto bits_per_byte = bits_per_block / sizeof(block_type);
 
         // A width that is a member and moves under growth; the other run-time width is the span's own length.
-        static constexpr auto has_stored_size = xstd::resizable_bit_blocks<Blocks>;
-        static constexpr auto has_static_size = not has_stored_size and N != blocks_extent;
+        static constexpr bool has_stored_size = xstd::resizable_bit_blocks<Blocks>;
+        static constexpr bool has_static_size = not has_stored_size and N != blocks_extent;
 
         // A run-time width under a capacity the type carries, which is N and may stop short of the blocks' last bit.
-        static constexpr auto has_static_capacity = has_stored_size and N != std::dynamic_extent;
+        static constexpr bool has_static_capacity = has_stored_size and N != std::dynamic_extent;
 
         // A capacity of nought holds no position, so the width is zero without a member to store it in.
-        static constexpr auto has_zero_capacity = zero_capacity<Blocks, N>;
+        static constexpr bool has_zero_capacity = zero_capacity<Blocks, N>;
 
         // Every block pattern a value, so the blocks are public and the container a structural type.
-        static constexpr auto is_structural = structural_blocks_v<Blocks, N>;
+        static constexpr bool is_structural = structural_blocks_v<Blocks, N>;
 
         [[nodiscard]] static constexpr auto static_capacity() noexcept
                 -> std::size_t
@@ -264,11 +264,11 @@ public:
 
         // The two shapes a reading asks for: either family, or the field-of-bits family where integers have a door.
         template<class Bits>
-        static constexpr auto exchanges_bits = has_static_size and bit_layout<Bits, bit_extent>;
+        static constexpr bool exchanges_bits = has_static_size and bit_layout<Bits, bit_extent>;
 
         // A field of bits is anything but the bare scalar, which is left out only because it has its own door.
         template<class Bits>
-        static constexpr auto exchanges_bits_as_field =
+        static constexpr bool exchanges_bits_as_field =
                 has_static_size and ((fixed_blocks_source<Bits, bit_extent> and not xstd::bit_block<Bits>) or container_source<Bits, bit_extent>);
 
         // How many blocks a run-time width needs, none at width zero; total over every size_t, as boost spells it.
@@ -299,7 +299,7 @@ private:
         static constexpr auto static_num_unused_bits = has_static_size ? static_num_bits - N : 0UZ;
         static constexpr auto static_used_bits       = shr(ones, static_num_unused_bits);
         static constexpr auto static_unused_bits     = static_cast<block_type>(~static_used_bits);
-        static constexpr auto static_has_unused_bits = has_static_size and static_used_bits != ones;
+        static constexpr bool static_has_unused_bits = has_static_size and static_used_bits != ones;
 
         // The width is a size_t unless the blocks out-align one, when it fills what would be padding.
         using width_type = std::conditional_t<(alignof(std::size_t) >= alignof(Blocks)), std::size_t, block_type>;
@@ -601,7 +601,7 @@ public:
         static constexpr auto shared_bytes = std::ranges::min(E, static_num_blocks * sizeof(block_type));
 
         // On a little-endian target a straight copy of those bytes is the same answer, and not byte at a time.
-        static constexpr auto bytes_copy_as_blocks = std::endian::native == std::endian::little;
+        static constexpr bool bytes_copy_as_blocks = std::endian::native == std::endian::little;
 
         // The shifts, in one place: they say where a position goes rather than assume a byte order.
         template<std::size_t E>
