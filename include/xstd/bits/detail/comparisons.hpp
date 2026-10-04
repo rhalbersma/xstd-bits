@@ -79,7 +79,7 @@ template<bit_container_type Bits>
                         return std::strong_ordering::equal;
                 }
                 auto const offset = bits::detail::countr_zero(diff);
-                if (bits::detail::intersects(x.block(index), shl(block_type{1}, offset))) {
+                if (bits::detail::intersects(x[index], shl(block_type{1}, offset))) {
                         return y.any_above(index, offset) ? std::strong_ordering::less : std::strong_ordering::greater;
                 }
                 return x.any_above(index, offset) ? std::strong_ordering::greater : std::strong_ordering::less;
@@ -140,7 +140,7 @@ template<bit_container_type Bits>
                         return std::strong_ordering::equal;
                 }
                 auto const offset = bits::detail::countr_zero(diff);
-                return bits::detail::intersects(x.block(index), shl(block_type{1}, offset))
+                return bits::detail::intersects(x[index], shl(block_type{1}, offset))
                                ? std::strong_ordering::greater
                                : std::strong_ordering::less;
         }

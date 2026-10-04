@@ -299,7 +299,7 @@ asking for it would drop a model:
 
 | absent from | |
 |---|---|
-| `bit_container` | `operator[]` ([test-not-subscript](#test-not-subscript)), unary `~`, `set(n, value)` |
+| `bit_container` | a subscript to a bit, its `operator[]` being a block's ([test-not-subscript](#test-not-subscript)), unary `~`, `set(n, value)` |
 | `std::bitset` | `-=`, `is_subset_of`, `find_first`, member `swap` |
 | `boost::dynamic_bitset` | `to_string` |
 
@@ -1424,9 +1424,12 @@ compile on libc++ where it happens to compile on libstdc++. `BOOST_CHECK` compar
 
 ### test-not-subscript
 
-`bit_container::test` rather than `operator[]`: this reads and cannot be written through.
-`std::bitset`'s `operator[]` returns an assignable proxy and this returns `bool`, so the subscript spelling
-would promise an assignment that does not compile.
+`bit_container::test` reads a bit, and cannot be written through. `std::bitset`'s `operator[]` returns an
+assignable proxy and `test` returns `bool`, so a subscript to a bit would promise an assignment that does not
+compile. `bit_container`'s `operator[]` is the subscript of the blocks it wraps -- a `std::array`, a
+`std::vector`, a `std::span` -- and yields a block, read through a `const` storage and written through a mutable
+one, after which the caller restores the unused bits with `erase_unused`. Only the sequence containers lift the
+subscript to a bit: `bit_array`'s `operator[]` is `std::array<bool, N>`'s, and returns the proxy.
 
 The writable proxy belongs to the containers above, which is also where the checked reading lives —
 `std::bitset::test` throws where this asserts, a difference the containers state as a guard rather than
@@ -3276,8 +3279,8 @@ The sequence proxy writes through the storage's `assign(n, value)` and never thr
 view fell back on `c[n] = value` for a type without `set(n, value)`, and were such a type's `operator[]` to
 return our own proxy, that proxy's assignment would land back in the fallback and **recurse until the stack
 is gone**. A named member cannot loop back into the proxy, which is one more reason the write is a member the
-storage spells rather than a probe over whatever answers — and `bit_container` has no `operator[]`
-at all ([test-not-subscript](#test-not-subscript)), so there is nothing for a fallback to find.
+storage spells rather than a probe over whatever answers — and `bit_container`'s `operator[]` yields a block,
+never a bit ([test-not-subscript](#test-not-subscript)), so a fallback would find nothing that loops back.
 
 ### the-iterator-is-the-primitive
 
@@ -4515,9 +4518,9 @@ by a `difference_type`.
 
 ### The block span, and what an assertion per block costs
 
-`block(i)` as a range rather than one block at a time. The write side carries `block(i)`'s write-side
+`operator[]` as a range rather than one block at a time. The write side carries the subscript's write-side
 contract once for the range; the read side carries nothing and exists one build short of the write
-side. `block(i)` asserts its index, and an assertion per block is a loop the vectoriser leaves alone.
+side. `operator[]` asserts its index, and an assertion per block is a loop the vectoriser leaves alone.
 A Release build never sees it — a loop over the blocks reaches the memcpy floor there by itself —
 but an assert-on build pays **3.4x** for a bounds check on an index the caller just produced in order.
 

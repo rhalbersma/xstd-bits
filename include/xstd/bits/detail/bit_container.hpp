@@ -541,15 +541,15 @@ public:
                 }
         }
 
-        // The block, not a subscript, which would mean a bit; a writer restores the invariant with erase_unused.
-        [[nodiscard]] constexpr auto block(this auto&& self, std::size_t i) noexcept
+        // A block, as the wrapped blocks subscript, not a bit; a writer then restores the invariant with erase_unused.
+        [[nodiscard]] constexpr auto operator[](this auto&& self, std::size_t n) noexcept
                 -> block_reference_t<decltype(self)>
         {
-                assert(i < self.num_blocks());
-                return std::forward<decltype(self)>(self).m_blocks[i];
+                assert(n < self.num_blocks());
+                return std::forward<decltype(self)>(self).m_blocks[n];
         }
 
-        // block(i) as a range, so a caller writing every block writes them in one call.
+        // The subscript as a range, so a caller writing every block writes them in one call.
         [[nodiscard]] constexpr auto blocks(this auto&& self) noexcept
                 -> std::span<std::remove_reference_t<block_reference_t<decltype(self)>>>
         {
@@ -1243,7 +1243,7 @@ public:
                 return *this;
         }
 
-        // test, not operator[]: this returns bool, std::bitset's a proxy.
+        // test reads a bit as bool, where std::bitset's subscript gives a proxy and this one a block.
         [[nodiscard]] constexpr auto test(std::size_t n) const noexcept
                 -> bool
         {

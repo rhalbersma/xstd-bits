@@ -70,7 +70,7 @@ constexpr auto walk_blocks_ascending(Bits const& c, F& f)
         constexpr auto digits = Bits::bits_per_block;
 
         for (auto const index : std::views::iota(0UZ, c.num_blocks())) {
-                auto block = c.block(index);
+                auto block = c[index];
                 while (block != block_type{}) {
                         auto const offset = static_cast<std::size_t>(countr_zero(block));
                         // A functor returning void has no exit to take, so its walk is compiled without one.
@@ -96,7 +96,7 @@ constexpr auto walk_blocks_descending(Bits const& c, F& f)
 
         auto const blocks = c.num_blocks();
         for (auto index = blocks - 1UZ; index < blocks; --index) {
-                auto block = c.block(index);
+                auto block = c[index];
                 while (block != block_type{}) {
                         auto const offset = digits - 1UZ - static_cast<std::size_t>(countl_zero(block));
                         // A functor returning void has no exit to take, so its walk is compiled without one.

@@ -344,7 +344,7 @@ public:
                 {
                         auto& a = fresh_x();
                         for (auto const i : std::views::iota(0UZ, m_x.num_blocks())) {
-                                a.block(i) = m_x.block(i);
+                                a[i] = m_x[i];
                         }
                         a.erase_unused();
                         disagree(a == m_x, true);
@@ -352,7 +352,7 @@ public:
                 {
                         auto& a = fresh_x();
                         for (auto const i : std::views::iota(0UZ, m_x.num_blocks())) {
-                                a.block(i) = static_cast<BB::block_type>(-1);
+                                a[i] = static_cast<BB::block_type>(-1);
                         }
                         // The writer restores the invariant, which the reference hands it rather than doing itself.
                         a.erase_unused();
@@ -802,7 +802,7 @@ template<class X>
 constexpr bool can_push_pop = requires (X& x) { x.push_back(true); x.pop_back(); };
 
 template<class X>
-constexpr bool can_append = requires (X& x) { x.append(x.block(0UZ)); };
+constexpr bool can_append = requires (X& x) { x.append(x[0UZ]); };
 
 template<class X>
 constexpr bool can_clear = requires (X& x) { x.clear(); };
@@ -1480,7 +1480,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(BlocksAreReadAndWrittenAtAnyPosition, T, BlockAtTy
                 m[i] = true;
         }
         BOOST_CHECK(reference(d) == m);
-        BOOST_CHECK_EQUAL(d.block(2), 0b0000'1111);
+        BOOST_CHECK_EQUAL(d[2], 0b0000'1111);
 }
 
 // The ranged forms: every start and length, whole blocks and partial ones, against the model.
@@ -1512,13 +1512,13 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(BothShiftsAreBlockAtOnTheOperand, T, AlignedBlockA
                 auto r = c;
                 r >>= n;
                 for (auto const i : std::views::iota(0UZ, last - n_blocks + 1UZ)) {
-                        BOOST_CHECK_EQUAL(r.block(i), c.block_at((i * D) + n));
+                        BOOST_CHECK_EQUAL(r[i], c.block_at((i * D) + n));
                 }
 
                 auto l = c;
                 l <<= n;
                 for (auto const i : std::views::iota(n_blocks + 1UZ, last + 1UZ)) {
-                        BOOST_CHECK_EQUAL(l.block(i), c.block_at((i * D) - n));
+                        BOOST_CHECK_EQUAL(l[i], c.block_at((i * D) - n));
                 }
         }
 }
