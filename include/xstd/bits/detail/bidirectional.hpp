@@ -47,6 +47,7 @@ class bidirectional_bit_iterator
 
         template<bit_container_type B, storage S, class D, class K, class T, class C>
         friend class set_adaptor;
+
         friend class bidirectional_bit_reference<Bits, Key, KeyTraits, Direction>;
 
         [[nodiscard]] constexpr bidirectional_bit_iterator(storage_ptr_t<bits_type const> ptr, std::size_t idx) noexcept
@@ -148,6 +149,7 @@ class bidirectional_bit_reference
 
         template<bit_container_type B, storage S, class D, class K, class T, class C>
         friend class set_adaptor;
+
         friend class bidirectional_bit_iterator<Bits, Key, KeyTraits, Direction>;
 
         [[nodiscard]] constexpr bidirectional_bit_reference(storage_ptr_t<bits_type const> ptr, std::size_t idx) noexcept

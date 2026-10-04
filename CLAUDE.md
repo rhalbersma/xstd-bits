@@ -85,6 +85,20 @@ for_each_block(n, len, [&](std::size_t pos, block_type mask) -> void { block_at(
 }
 ```
 
+## Template declarations
+
+A template declaration is followed by a blank line before whatever comes next, as a definition is. The
+`template<...>` head and the declaration it introduces read as one unit, and the next declaration starts another:
+
+```cpp
+template<bit_container_type B, storage S, class D, class K, class T, class C>
+friend class set_adaptor;
+
+friend class bidirectional_bit_reference<Bits, Key, KeyTraits, Direction>;
+```
+
+`.clang-format` cannot insert this line, so it is yours to keep.
+
 ## What the language already says
 
 Do not write out what a declaration already has.
