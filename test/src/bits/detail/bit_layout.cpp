@@ -3,13 +3,14 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/detail/bit_layout.hpp> // bit_bytes, bit_layout, bit_layout_holds, byte_count, bytes_bits, container_source, fixed_blocks_source
+#include <xstd/bits/detail/bit_layout.hpp> // bit_bytes, bit_layout, bit_layout_holds, byte_count, bytes_bits, container_source, fixed_bit_blocks, fixed_blocks_source
 #include <boost/test/unit_test.hpp>        // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <array>                           // array, to_array
 #include <bitset>                          // bitset
 #include <cstddef>                         // byte, size_t
 #include <cstdint>                         // uint8_t, uint16_t, uint32_t, uint64_t
 #include <ranges>                          // iota
+#include <span>                            // span
 #include <string>                          // string
 #include <vector>                          // vector
 
@@ -273,6 +274,16 @@ BOOST_AUTO_TEST_CASE(OnePositionLightsOneBitOfOneByte)
                         BOOST_CHECK(bytes[j] == (j == i / 8UZ ? static_cast<std::byte>(1U << (i % 8UZ)) : std::byte{}));
                 }
         }
+}
+
+// Bit blocks whose type names their width: a block, an array of blocks, and a span of a static extent.
+BOOST_AUTO_TEST_CASE(FixedBitBlocksNameTheirWidthByType)
+{
+        static_assert(detail::fixed_bit_blocks<std::uint64_t>);
+        static_assert(detail::fixed_bit_blocks<std::array<std::uint32_t, 3>>);
+        static_assert(detail::fixed_bit_blocks<std::span<std::uint16_t, 2>>);
+        static_assert(not detail::fixed_bit_blocks<std::span<std::uint16_t>>);
+        static_assert(not detail::fixed_bit_blocks<std::vector<std::uint64_t>>);
 }
 
 // A contiguous sequence of blocks is the same stated family over more than one block, and nothing is probed here.

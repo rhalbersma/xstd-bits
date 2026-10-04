@@ -1553,4 +1553,39 @@ BOOST_AUTO_TEST_CASE(ABuiltInArrayDeducesTheStdArrayOfItsBlocks)
         static_assert(not names_a_bit_block_container<four_words>);
 }
 
+// One block deduces the array of one block, and an array of blocks deduces itself through the adopting constructor.
+BOOST_AUTO_TEST_CASE(TheTagDeducesTheBlocksAWidthIsHeldIn)
+{
+        constexpr auto one = xstd::bits::detail::bit_block_container(xstd::from_blocks, std::uint64_t{0x8000'0000'0000'0001ULL});
+        static_assert(std::same_as<decltype(one), xstd::bits::detail::bit_block_container<std::array<std::uint64_t, 1>> const>);
+        static_assert(decltype(one)::extent == 64UZ and one.test(0UZ) and one.test(63UZ) and one.count() == 2UZ);
+
+        constexpr auto three = xstd::bits::detail::bit_block_container(xstd::from_blocks, std::array<std::uint8_t, 3>{0x01, 0x00, 0x80});
+        static_assert(std::same_as<decltype(three), xstd::bits::detail::bit_block_container<std::array<std::uint8_t, 3>> const>);
+        static_assert(decltype(three)::extent == 24UZ and three.test(0UZ) and three.test(23UZ) and three.count() == 2UZ);
+
+        auto const grown = xstd::bits::detail::bit_block_container(xstd::from_blocks, std::vector<std::uint64_t>{1U, 2U});
+        static_assert(std::same_as<decltype(grown), xstd::bits::detail::bit_block_container<std::vector<std::uint64_t>> const>);
+        BOOST_CHECK_EQUAL(grown.size(), 128UZ);
+        BOOST_CHECK(grown.test(0UZ) and grown.test(65UZ) and grown.count() == 2UZ);
+}
+
+// Adopting a std::array moves its blocks in whole: every bit is a position, so nothing is cleared.
+BOOST_AUTO_TEST_CASE(AdoptingAnArrayKeepsEveryBit)
+{
+        constexpr auto blocks = std::array<std::uint32_t, 3>{0xFFFF'FFFFU, 0x8000'0001U, 0xDEAD'BEEFU};
+        constexpr auto c      = xstd::bits::detail::bit_block_container<std::array<std::uint32_t, 3>>(xstd::from_blocks, blocks);
+        static_assert(c.num_blocks() == 3UZ and c[0] == blocks[0] and c[1] == blocks[1] and c[2] == blocks[2]);
+        for (auto const i : std::views::iota(0UZ, 96UZ)) {
+                BOOST_CHECK_EQUAL(c.test(i), ((blocks[i / 32UZ] >> (i % 32UZ)) & 1U) != 0U);
+        }
+}
+
+// A bare block is no range of blocks, so the vehicle refuses it by its constraint rather than failing inside.
+BOOST_AUTO_TEST_CASE(ABareBlockIsRefusedByTheConstraint)
+{
+        static_assert(not names_a_bit_block_container<std::uint64_t>);
+        static_assert(names_a_bit_block_container<std::array<std::uint64_t, 1>>);
+}
+
 BOOST_AUTO_TEST_SUITE_END()

@@ -6,7 +6,7 @@
 #include <test/inplace_vector.hpp>                  // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
 #include <test/minimal_blocks.hpp>                  // minimal_blocks
 #include <xstd/bits/bit_array.hpp>                  // bit_array
-#include <xstd/bits/bit_blocks.hpp>                 // bit_blocks, bit_blocks_capacity_v, bit_blocks_extent_v, owned_bit_blocks, resizable_bit_blocks
+#include <xstd/bits/bit_blocks.hpp>                 // bit_block, bit_block_range, bit_blocks, bit_blocks_capacity_v, bit_blocks_extent_v, owned_bit_blocks, resizable_bit_blocks
 #include <xstd/bits/bit_set.hpp>                    // bit_set
 #include <xstd/bits/bit_set_view.hpp>               // bit_set_view
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
@@ -59,6 +59,17 @@ BOOST_AUTO_TEST_CASE(BlocksAndContiguousRangesOfBlocksAreBitStorage)
 #ifdef TEST_HAS_INPLACE_VECTOR
         static_assert(xstd::bit_blocks<std::inplace_vector<std::uint16_t, 3>>);
 #endif
+        BOOST_CHECK(true);
+}
+
+// Bit blocks are one block or a range of them, and the two halves are named apart.
+BOOST_AUTO_TEST_CASE(BitBlocksAreABlockOrARangeOfThem)
+{
+        static_assert(xstd::bit_block<std::uint64_t> and xstd::bit_block<std::uint64_t const> and xstd::bit_block<std::uint8_t volatile>);
+        static_assert(not xstd::bit_block<int> and not xstd::bit_block<bool> and not xstd::bit_block<std::array<std::uint64_t, 1>>);
+        static_assert(xstd::bit_block_range<std::array<std::uint16_t, 3>> and xstd::bit_block_range<std::span<std::uint32_t const>>);
+        static_assert(xstd::bit_block_range<std::vector<std::size_t>> and xstd::bit_block_range<four_words>);
+        static_assert(not xstd::bit_block_range<std::uint64_t> and not xstd::bit_block_range<std::deque<std::uint32_t>>);
         BOOST_CHECK(true);
 }
 

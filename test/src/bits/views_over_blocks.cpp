@@ -12,6 +12,7 @@
 #include <concepts>                   // same_as
 #include <cstddef>                    // size_t
 #include <cstdint>                    // uint8_t, uint16_t, uint32_t, uint64_t
+#include <initializer_list>           // initializer_list
 #include <limits>                     // numeric_limits
 #include <ranges>                     // borrowed_range, iota, range_value_t, view
 #include <span>                       // span
@@ -116,6 +117,14 @@ BOOST_AUTO_TEST_CASE(AnArrayOfBlocksIsAStaticWidth)
         xstd::bit_span(four).fill(true);
         BOOST_CHECK(std::ranges::equal(four, std::array<std::uint32_t, 4>{~0U, ~0U, ~0U, ~0U}));
         BOOST_CHECK(xstd::bit_span(four).all());
+}
+
+// A contiguous range of blocks that does not subscript is no bit storage, so no view lends it.
+BOOST_AUTO_TEST_CASE(ARangeThatDoesNotSubscriptIsNotLent)
+{
+        static_assert(not span_viewable<std::initializer_list<std::uint64_t>&>);
+        static_assert(not span_viewable<std::initializer_list<std::uint64_t> const&>);
+        BOOST_CHECK(true);
 }
 
 // A built-in array is a static width over its blocks, as std::span deduces span<T, N> from T (&)[N].
