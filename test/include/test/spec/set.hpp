@@ -118,6 +118,7 @@ namespace test::spec::set {
 template<class X>
 inline constexpr auto held_width_v = [] -> std::size_t {
         if constexpr (test::set::static_width<X>) {
+                // NOLINTNEXTLINE(readability-static-accessed-through-instance): a function on the standard's owners.
                 return X().max_size();
         } else if constexpr (test::set::static_capacity<X>) {
                 return xstd::bits::detail::owned_storage<X>::bits_type::static_capacity();

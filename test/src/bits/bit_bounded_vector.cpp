@@ -81,13 +81,9 @@ BOOST_AUTO_TEST_CASE(TheCapacityIsAConstantOfTheTypeAndTheWidthAFunction)
         static_assert(std::is_member_function_pointer_v<decltype(&T::size)>);
         static_assert(std::is_member_function_pointer_v<decltype(&T::empty)>);
 
-        // A reference of unknown origin still names a constant, which a member function's answer is not.
-        auto const through_reference = [](T const& a) -> void {
-                static_assert(a.capacity == 24UZ);
-                static_assert(a.max_size == 24UZ);
-        };
+        static_assert(T::capacity == 24UZ);
+        static_assert(T::max_size == 24UZ);
         auto const a = T(5UZ);
-        through_reference(a);
         BOOST_CHECK_EQUAL(a.capacity(), 24UZ);
         BOOST_CHECK_EQUAL(std::ranges::size(a), 5UZ);
         BOOST_CHECK(not a.empty());

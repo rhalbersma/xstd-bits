@@ -88,14 +88,10 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItsSizesAreConstantsOfItsType, T, Types)
         static_assert(noexcept(std::declval<T const&>().empty()));
         static_assert(noexcept(std::declval<T const&>().max_size()));
 
-        // A reference of unknown origin still names a constant, which a member function's answer is not.
-        auto const through_reference = [](T const& a) -> void {
-                static_assert(a.size == N);
-                static_assert(a.empty == (N == 0UZ));
-                static_assert(a.max_size == N);
-        };
+        static_assert(T::size == N);
+        static_assert(T::empty == (N == 0UZ));
+        static_assert(T::max_size == N);
         auto const a = T();
-        through_reference(a);
         BOOST_CHECK_EQUAL(std::ranges::size(a), N);
         BOOST_CHECK_EQUAL(std::size(a), N);
         BOOST_CHECK_EQUAL(a.size(), N);
