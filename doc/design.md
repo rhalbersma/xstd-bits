@@ -38,7 +38,16 @@ inventories in `doc/audit/` and the check that runs them are that denominator.
 regular, sized, contiguous, subscriptable range of unsigned integers whose `const` subscript does not write.
 Regular is what lets `bit_block_container` default its `==` over the width and the blocks, in that member
 order, so two run-time widths part on the width before a block is read. `std::array` and `std::vector` both
-qualify, and so does `std::inplace_vector` — a runtime width over static capacity, for free.
+qualify, and so does `std::inplace_vector` — a runtime width over static capacity, for free. A built-in array of
+blocks, `std::uint64_t[4]`, is bit storage and not owned bit storage: it is not regular, having neither copy
+assignment nor an `==` over its blocks, so no owner holds one and no `bit_block_container` has it as `Blocks`. The tag
+constructors, `xstd::bit_convert` and the views read it as they read the `std::array` of the same blocks.
+
+**`bit_blocks` is two concepts joined.** `xstd::bit_block` is one unsigned block, const or not, as
+`xstd::unsigned_integer` already admits a cv-qualified integer; `xstd::bit_block_range` is a sized contiguous range of
+them that subscripts; `xstd::bit_blocks` is either. Code that treats the scalar and the range differently branches on
+`bit_block`, and `bit_block_container` asks `bit_block_range` of its `Blocks`, which is how a bare block is refused at
+the constraint while contiguity is named rather than implied.
 
 **It is public because a storage joins the library through it.** The storage under every owner is a
 `bit_block_container` over `owned_bit_blocks Blocks`, while the views take any `bit_blocks`. The split is
@@ -66,7 +75,7 @@ gives, because the width moves only after the storage has grown: over any of the
 `resize` on unsigned blocks either completes or changes nothing, a failed growth leaves the owner as it was. A
 storage whose `resize` is `noexcept` never takes that path.
 
-The element clause is `unsigned_integer` and **not** the wider `bitwise_operators`, which would be the concept
+The element clause is `bit_block`, which is `unsigned_integer`, and **not** the wider `bitwise_operators`, which would be the concept
 if the operators were all a block is asked for. They are not. Beyond them the body wants the `<bit>` intrinsics
 — `popcount`, `countr_zero` and `countl_zero`, each constrained on `xstd::unsigned_integer` in
 `detail/intrin.hpp` and reached at some thirty sites — a `numeric_limits<block_type>::digits` for
@@ -396,31 +405,37 @@ correctly. That is two families, and only one of them has anything to prove.
 
 | family | admitted because | what it costs |
 |---|---|---|
-| unsigned integer | bit `n` of the value is 2^n, *by the language* | nothing: no probe, no assumption |
-| field of bits | a layout proved below | five fixed probes |
+| fixed blocks (`fixed_blocks_source`) | bit `n` of a block is 2^n, *by the language* | nothing: no probe, no assumption |
+| field of bits (`container_source`) | a layout proved below | five fixed probes |
 
 `unsigned long long` is therefore not a special case in the header but an instance of the first family, which is
 what `to_ullong` and the constructor taking one reduce to. `std::bitset<N>` is an instance of the second, and
 crosses to `bit_fixed_set<N>` with neither side named in the constraint. An implementation that ever laid its bits out otherwise is simply not
 admitted: a call that fails to compile rather than one quietly wrong.
 
-The stated family has **two spellings of one idea**, and the second is what makes raw blocks convertible. An
-unsigned integer states its own layout; a **contiguous sequence of unsigned integer blocks** states the rest of
-it, block `j` holding the positions `[j·digits, (j+1)·digits)`. A scalar is the sequence of length one, which is
-why these are one family and not two. Everything in it is read by **shifts on values**, never by `std::bit_cast` on an
+The stated family is **one concept over a block or a fixed number of them**, and it is what makes raw blocks
+convertible. An unsigned integer states its own layout; a **contiguous sequence of unsigned integer blocks** states
+the rest of it, block `j` holding the positions `[j·digits, (j+1)·digits)`. A scalar is the sequence of length one,
+which is why `fixed_blocks_source` is one concept: `fixed_bit_blocks` whose width covers `N` and that a value owns.
+The byte conversions still branch on `bit_block` inside, where a scalar is shifted and a range is copied. Everything in it is read by **shifts on values**, never by `std::bit_cast` on an
 object, so no probe runs, no padding is reachable, and endianness never enters: `b[j] >> k` is the same number on
 either byte order. Only a foreign field of bits, whose internals this library cannot name, has to be proved.
 
 So `std::array<uint64_t, 4>` crosses, and so does `std::array<uint32_t, 8>` over the same two hundred and
-fifty-six positions, because the byte is the common ground where the block is not. The width must be a **constant
-expression** — `B().size()` answers `M` for an array and zero for a vector — because "nothing truncates" is a
-promise made at compile time, and a run-time size cannot keep it. It must cover `N` but need not equal it, which
-is the rule the scalar spelling already follows.
+fifty-six positions, because the byte is the common ground where the block is not. The width must be **named by the
+type** — `xstd::bit_blocks_extent_v` answers it for a block, a `std::array` and a built-in array, and
+`std::dynamic_extent` for a vector — because "nothing truncates" is a promise made at compile time, and a run-time
+size cannot keep it. It must cover `N` but need not equal it, at one block as at many. A type with a constant
+`size()` and no `bit_blocks_extent_v` is not in this family; it crosses as a field of bits or not at all.
 
-Asking `contiguous_range` **before** `owned_bit_blocks` is load-bearing rather than tidy. That concept asks
+A built-in array of blocks is in the family as a **source** only. It is read and never owned, and its blocks are the
+bits of the `std::array` of the same blocks, so it is read through the same shifts and the same copy. No function
+returns one, so it is never a target: `bit_convert` writes into a `std::array` and not into a `std::uint64_t[4]`.
+
+Asking `fixed_bit_blocks` **before** `owned_bit_blocks` is load-bearing rather than tidy. That concept asks
 `std::regular`, which asks `constructible_from`, which re-enters the very constructor whose constraint this
-is — a concept depending on itself. An adaptor's iterator is a proxy and so never contiguous, so the cheap question
-answers false for every reading here before the recursive one is put.
+is — a concept depending on itself. `fixed_bit_blocks` asks `bit_blocks` first, and an adaptor's iterator is a proxy
+and so never contiguous, so the cheap question answers false for every reading here before the recursive one is put.
 
 One spelling repays reading twice, and it reads differently at each reading — which is the point, and the trap.
 `bit_fixed_set<32>(xstd::from_blocks, 5u)` is the set of positions the **value** five has, `{0, 2}`, not the set `{5}`.
@@ -488,19 +503,19 @@ guard **is** this probe, with no second one to fall out of step with it. Four de
 tests take each refusal, so what it rejects is exercised rather than asserted.
 
 **Five** positions, and the count is a budget rather than a taste. Each probe materialises the whole byte array
-through `std::bit_cast`, so it costs O(`sizeof(B)`) however few bytes it then reads; clang's default
+through `std::bit_cast`, so it costs O(`sizeof(Bits)`) however few bytes it then reads; clang's default
 `-fconstexpr-steps` admits six at a width of 2^20 and refuses seven, where GCC's limit is higher. Five leaves
 margin and puts the ceiling at 2^20 — a 128 KiB object — past which a caller raises the flag.
 
 Two constraints before it are load-bearing, and atomic constraints being checked in order is what makes them
-work. `B().size() == N` pins the source's **own** width: without it the size window admits a neighbour, since a
+work. `std::size(Bits{}) == N` pins the source's **own** width: without it the size window admits a neighbour, since a
 `std::bitset<9>` is eight bytes and clears every bound a width of eight sets, and eight of its nine positions
 would convert while the ninth vanished. It also keeps the probe from asking a narrower source for a position it
 does not have, where `std::bitset<8>::set(8)` throws and a throw is no constant expression — an unsatisfied
-concept where that would be a hard error. And `bit_cast_is_constant<B>` rules out the shapes `std::bit_cast` refuses
+concept where that would be a hard error. And `bit_cast_is_constant<Bits>` rules out the shapes `std::bit_cast` refuses
 to be `constexpr` for: a pointer member, a reference member, a union.
 
-`probe_is_constant<B>` is the third of them, and it guards a failure the other two do not reach. A `set()` can be
+`probe_is_constant<Bits>` is the third of them, and it guards a failure the other two do not reach. A `set()` can be
 perfectly **well-formed and yet unusable in a constant expression** — a block type whose `operator|=` is not
 `constexpr` gives exactly that, and `absl::uint128` is one, so a bitset over it satisfies `probeable_bits`,
 reaches the probe, and turns a constraint into a hard error rather than a false. That is not the throwing `set()`
@@ -566,7 +581,16 @@ an explicitly defaulted constructor, and the object `xstd::from_blocks` -- becau
 the call site which reading of the argument is meant. `basic_bit_array(xstd::from_blocks, board)` is
 `basic_bit_array<std::uint64_t, 64>`, and `basic_bit_fixed_set(xstd::from_blocks, blocks)` over a
 `std::array<std::uint8_t, 3>` is `basic_bit_fixed_set<std::size_t, std::uint8_t, 24>`: the guides deduce the block type and the
-width, with `std::size_t` as the key, from an unsigned integer or a `std::array` of them, the two families whose width the type carries.
+width, with `std::size_t` as the key, from an unsigned integer, a `std::array` of them or a built-in array of them, the
+storage whose width the type carries. The guide for a built-in array takes it by reference, `Block const (&)[K]`, so
+it keeps its bound rather than decaying to a pointer, and deduces what the `std::array<Block, K>` guide does.
+
+`bit_block_container` takes the same tag. Its adopting constructor moves in owned blocks whose type holds exactly
+the width, as well as the growable blocks a run-time width adopts, and stores a width only where the storage has
+one; so `bit_block_container(xstd::from_blocks, std::array<std::uint8_t, 3>{})` deduces
+`bit_block_container<std::array<std::uint8_t, 3>>` through that constructor's own guide. A templated constructor
+reads any other bits of a layout its width exchanges. Two explicit guides remain, both for what is not a range of
+owned blocks: one block deduces `std::array<Block, 1>`, and a built-in array `Block[K]` deduces `std::array<Block, K>`.
 
 None of this reaches a run-time width, which has no width in its type for a guide to find.
 
@@ -702,7 +726,7 @@ caller set them, so those widths keep their blocks non-public and are not struct
 At an aligned width, where N fills its blocks, there is no invariant to protect: every bit is a position, and the
 layout is exactly the `std::array<Block, K>` plus an empty width tag. Access control cannot depend on a template
 argument, but the choice of base can. `bit_block_container` takes `structural_bit_members`, a struct whose `m_size` and
-`m_blocks` are public, when its blocks are a `std::array` whose extent is exactly N bits (`structural_blocks_v`,
+`m_blocks` are public, when its blocks are a `std::array` whose `xstd::bit_blocks_extent_v` is exactly N bits (`structural_blocks_v`,
 answered as `bit_block_container::is_structural`), and `bit_members`, whose members are protected, otherwise. Each adaptor
 keeps its `m_bits` in an `adapted_bits` base on the same terms, public only for an owner over structural storage. The
 names are the same in either base and the adaptors reach them through the same `using`-declarations, so nothing else
@@ -1894,7 +1918,7 @@ is a storage device and appears in no public template argument list. `detail/blo
 The views line up as `std::span<T, N>` does -- `bit_set_view<Blocks, N>` -- and `N` defaults to the width the blocks name, so a view needs it only over an owner
 of a narrower width, such as `bit_span<std::array<std::size_t, 1>, 20>` over a `bit_array<20>`. A default in a
 public argument list is public too, so that width is `xstd::bit_blocks_extent_v<Blocks>`, beside the concept: a
-block's digits, all the bits of `std::array<B, K>` or `std::span<B, E>`, and `std::dynamic_extent` for everything
+block's digits, all the bits of `std::array<B, K>`, `B[K]` or `std::span<B, E>`, and `std::dynamic_extent` for everything
 else, a span of dynamic extent included. The storage keeps its own sentinel for that span's width, and it never
 reaches an argument list.
 `bit_subspan<Blocks, Extent, N>` takes the extent second, so `bit_subspan<Blocks, 4>` is a four-bit window as
@@ -2157,18 +2181,22 @@ product of `N` objects, and a packed sequence is one object. `std::hash` is aske
 ### borrowed-blocks
 
 A view over blocks that belong to no container of ours takes them directly: `bit_set_view(board)` over one
-`std::uint64_t`, `bit_span(blocks)` over a `std::array`, a `std::vector` or a `std::span` of unsigned blocks. The
+`std::uint64_t`, `bit_span(blocks)` over a `std::array`, a built-in array, a `std::vector` or a `std::span` of unsigned blocks. The
 storage underneath is `bits::detail::borrowed_bits<Block, Extent>`, which is `bit_block_container` over a
 `std::span<Block, Extent>`, and a deduction guide on each view names it from the argument: one block is
-`std::span<Block, 1>`, a range is whatever `std::span(blocks)` deduces. A block is taken by lvalue, a range by
-lvalue or as a `borrowed_range`, so `bit_set_view(std::uint64_t{5})` and `bit_span(std::vector<std::uint32_t>{})`
+`std::span<Block, 1>`, a range is whatever `std::span(blocks)` deduces, which over a built-in array `Block[K]` is
+`std::span<Block, K>`, a static width, as [span.deduct] takes the bound of `T (&)[N]`. A `bit_block` is taken by
+lvalue, a `bit_block_range` by lvalue or as a `borrowed_range`, so a contiguous range that does not subscript, such
+as a `std::initializer_list`, is not lent at all, and `bit_set_view(std::uint64_t{5})` and `bit_span(std::vector<std::uint32_t>{})`
 do not compile, and a `std::span` temporary does. Const blocks make const storage, and a view over const
 storage reads and cannot write, as a view over a const owner cannot.
 
 Every bit of the blocks is a position: bit `n` of block `i` is position `i * digits + n`, which is the order
 `from_blocks` already reads an integer in. So the width is the blocks', and there is no tail for the storage to keep
 clear -- the invariant a width of our own needs is vacuous here, which is what lets the blocks be anyone's. The
-width takes one of two forms, both named by the span's own type through `default_extent_v`:
+width takes one of two forms, both named by the span's own type through `default_extent_v`, which is
+`xstd::bit_blocks_extent_v` wherever that is fixed, `blocks_extent` for a span of dynamic extent, and the
+storage's capacity otherwise:
 
 - A span of static extent `K` is a static width of `K * digits`, and runs the same arms as a `std::array`,
   the one- and two-block paths included. One block is `std::span<Block, 1>`.
