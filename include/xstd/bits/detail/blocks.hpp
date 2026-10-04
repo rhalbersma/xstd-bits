@@ -48,14 +48,16 @@ struct blocks_of;
 template<class Blocks, std::size_t N>
 struct blocks_of<bit_block_container<Blocks, N>>
 {
-        using type                         = Blocks;
+        using type = Blocks;
+
         static constexpr std::size_t width = N;
 };
 
 template<class Blocks, std::size_t N>
 struct blocks_of<bit_block_container<Blocks, N> const>
 {
-        using type                         = Blocks const;
+        using type = Blocks const;
+
         static constexpr std::size_t width = N;
 };
 
@@ -63,14 +65,16 @@ struct blocks_of<bit_block_container<Blocks, N> const>
 template<class Block, std::size_t E, std::size_t N>
 struct blocks_of<bit_block_container<std::span<Block, E>, N>>
 {
-        using type                         = std::span<Block, E>;
+        using type = std::span<Block, E>;
+
         static constexpr std::size_t width = xstd::bit_blocks_extent_v<type>;
 };
 
 template<class Block, std::size_t E, std::size_t N>
 struct blocks_of<bit_block_container<std::span<Block, E>, N> const>
 {
-        using type                         = std::span<Block const, E>;
+        using type = std::span<Block const, E>;
+
         static constexpr std::size_t width = xstd::bit_blocks_extent_v<type>;
 };
 

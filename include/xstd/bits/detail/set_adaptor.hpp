@@ -251,9 +251,10 @@ public:
         using derived_type = std::conditional_t<std::is_void_v<Derived>, set_adaptor, Derived>;
 
         // What a trait asks of this vehicle, every container built on it answering alike.
-        using adaptor_type                     = set_adaptor;
-        using reads_as                         = set_reading_tag;
-        using adapted_type                     = Bits;
+        using adaptor_type = set_adaptor;
+        using reads_as     = set_reading_tag;
+        using adapted_type = Bits;
+
         static constexpr bool owns_storage     = is_owner;
         static constexpr bool has_static_width = (Bits::extent != std::dynamic_extent);
 
@@ -279,7 +280,8 @@ public:
 private:
         // An allocator argument as [container.alloc.reqmts] takes it: converting, and only where the storage has one.
         static constexpr bool has_allocator = has_allocator_v<std::remove_const_t<Bits>>;
-        using allocator_param               = allocator_param_t<std::remove_const_t<Bits>>;
+
+        using allocator_param = allocator_param_t<std::remove_const_t<Bits>>;
 
 public:
         // construct/copy/destroy; an owner is built the way std::set is, a view only from what it views.
