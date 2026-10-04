@@ -99,6 +99,13 @@ friend class bidirectional_bit_reference<Bits, Key, KeyTraits, Direction>;
 
 `.clang-format` cannot insert this line, so it is yours to keep.
 
+## Size parameters
+
+A template's size parameter is one letter, and the letter is its unit: `N` counts bits, `K` counts blocks, and `E` is
+an extent, which may be `std::dynamic_extent`. So `basic_bit_array<Block, N>` is `N` bits wide, and its guide from
+`std::array<Block, K>` deduces `K` blocks of them. A second count of the same unit takes the next letter, as a
+constructor's `M` beside `N`.
+
 ## What the language already says
 
 Do not write out what a declaration already has.

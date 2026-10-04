@@ -91,8 +91,8 @@ template<xstd::unsigned_integer Block>
 basic_bit_fixed_set(from_bit_storage_t, Block) -> basic_bit_fixed_set<std::size_t, Block, bit_storage_extent_v<Block>>;
 
 // The width of an array of blocks, zero blocks included, as [span.deduct] takes an array's bound.
-template<xstd::unsigned_integer Block, std::size_t N>
-basic_bit_fixed_set(from_bit_storage_t, std::array<Block, N>) -> basic_bit_fixed_set<std::size_t, Block, bit_storage_extent_v<std::array<Block, N>>>;
+template<xstd::unsigned_integer Block, std::size_t K>
+basic_bit_fixed_set(from_bit_storage_t, std::array<Block, K>) -> basic_bit_fixed_set<std::size_t, Block, bit_storage_extent_v<std::array<Block, K>>>;
 
 namespace aligned {
 

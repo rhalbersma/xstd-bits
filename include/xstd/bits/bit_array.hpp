@@ -78,8 +78,8 @@ template<xstd::unsigned_integer Block>
 basic_bit_array(from_bit_storage_t, Block) -> basic_bit_array<Block, bit_storage_extent_v<Block>>;
 
 // The width of an array of blocks, zero blocks included, as [span.deduct] takes an array's bound.
-template<xstd::unsigned_integer Block, std::size_t N>
-basic_bit_array(from_bit_storage_t, std::array<Block, N>) -> basic_bit_array<Block, bit_storage_extent_v<std::array<Block, N>>>;
+template<xstd::unsigned_integer Block, std::size_t K>
+basic_bit_array(from_bit_storage_t, std::array<Block, K>) -> basic_bit_array<Block, bit_storage_extent_v<std::array<Block, K>>>;
 
 // [array.creation]'s to_array, of bits: a built-in array names no block type, so the default one is taken.
 template<class T, std::size_t N>
