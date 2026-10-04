@@ -3,25 +3,28 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/array_storage.hpp>             // array_storage
-#include <test/block_types.hpp>               // graded_extents
-#include <test/ext_int128.hpp>                // TEST_HAS_ABSL_INT128, TEST_HAS_BOOST_INT128, uint128
-#include <test/value_reference.hpp>           // value_reference
-#include <xstd/bits/bit_array.hpp>            // basic_bit_array
-#include <xstd/bits/bit_span.hpp>             // bit_span
-#include <xstd/bits/detail/bit_container.hpp> // bit_container
-#include <xstd/bits/detail/random_access.hpp> // random_access_bit_iterator, random_access_bit_reference
-#include <boost/test/unit_test.hpp>           // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <algorithm>                          // equal, ranges::reverse, ranges::sort, reverse, sort
-#include <array>                              // array
-#include <concepts>                           // convertible_to, equality_comparable, random_access_iterator, same_as, sortable
-#include <cstddef>                            // ptrdiff_t, size_t
-#include <cstdint>                            // uint64_t
-#include <iterator>                           // iter_move, next, prev, reverse_iterator
-#include <ranges>                             // iota, subrange
-#include <type_traits>                        // is_assignable_v, is_convertible_v, is_trivially_copy_constructible_v, is_trivially_destructible_v
-#include <utility>                            // declval
-#include <vector>                             // vector
+#include <test/array_storage.hpp>                // array_storage
+#include <test/block_types.hpp>                  // graded_extents
+#include <test/ext_int128.hpp>                   // TEST_HAS_ABSL_INT128, TEST_HAS_BOOST_INT128, uint128
+#include <test/value_reference.hpp>              // value_reference
+#include <xstd/bits/bit_array.hpp>               // basic_bit_array
+#include <xstd/bits/bit_span.hpp>                // bit_span
+#include <xstd/bits/detail/bit_container.hpp>    // bit_container
+#include <xstd/bits/detail/ownership.hpp>        // storage
+#include <xstd/bits/detail/random_access.hpp>    // random_access_bit_iterator, random_access_bit_reference
+#include <xstd/bits/detail/sequence_adaptor.hpp> // sequence_adaptor
+#include <xstd/bits/detail/storage_ptr.hpp>      // storage_ptr_t
+#include <boost/test/unit_test.hpp>              // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <algorithm>                             // equal, ranges::reverse, ranges::sort, reverse, sort
+#include <array>                                 // array
+#include <concepts>                              // convertible_to, equality_comparable, random_access_iterator, same_as, sortable
+#include <cstddef>                               // ptrdiff_t, size_t
+#include <cstdint>                               // uint64_t
+#include <iterator>                              // iter_move, next, prev, reverse_iterator
+#include <ranges>                                // iota, subrange
+#include <type_traits>                           // is_assignable_v, is_constructible_v, is_convertible_v, is_trivially_copy_constructible_v, is_trivially_destructible_v
+#include <utility>                               // as_const, declval
+#include <vector>                                // vector
 
 namespace {
 
@@ -53,6 +56,13 @@ auto check_position(Iterator first, std::size_t i, std::vector<bool>& model)
         *it      = not *it;
         model[i] = not model[i];
         BOOST_CHECK_EQUAL(static_cast<bool>(first[static_cast<std::ptrdiff_t>(i)]), model[i]);
+}
+
+// An iterator into the storage at a position, as a view borrowing it hands one out: only a view may build one.
+template<class Bits>
+[[nodiscard]] auto iterator_at(Bits& c, std::size_t n)
+{
+        return xstd::bits::detail::sequence_adaptor<Bits, xstd::bits::detail::storage::borrowed>(c).begin() + static_cast<std::ptrdiff_t>(n);
 }
 
 template<class T>
@@ -122,6 +132,15 @@ BOOST_AUTO_TEST_CASE(TheReadOnlyProxiesAreValues)
         BOOST_CHECK(true);
 }
 
+// A pointer and a position make a proxy only inside the library: a user reaches one through a sequence.
+BOOST_AUTO_TEST_CASE(OnlyTheLibraryBuildsAProxyFromAPointerAndAPosition)
+{
+        using Ptr = xstd::bits::detail::storage_ptr_t<Bits>;
+        static_assert(not std::is_constructible_v<xstd::bits::detail::random_access_bit_iterator<Bits>, Ptr, std::size_t>);
+        static_assert(not std::is_constructible_v<xstd::bits::detail::random_access_bit_reference<Bits>, Ptr, std::size_t>);
+        BOOST_CHECK(true);
+}
+
 BOOST_AUTO_TEST_CASE(AMutableSequenceIteratorConvertsToItsConstTwin)
 {
         using It      = xstd::bits::detail::random_access_bit_iterator<Bits>;
@@ -131,9 +150,9 @@ BOOST_AUTO_TEST_CASE(AMutableSequenceIteratorConvertsToItsConstTwin)
         static_assert(not std::convertible_to<ConstIt, It>);
 
         auto b            = Bits();
-        auto const it     = It(&b, 7UZ);
+        auto const it     = iterator_at(b, 7UZ);
         ConstIt const cit = it;
-        BOOST_CHECK(cit == ConstIt(&b, 7UZ));
+        BOOST_CHECK(cit == iterator_at(std::as_const(b), 7UZ));
         BOOST_CHECK(*cit == false);
 }
 
@@ -144,8 +163,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheSequenceIteratorReadsAndWritesThroughTheStorage
         auto c = T();
         // Written through check_position below, which the check cannot see past a dependent call.
         auto model       = std::vector<bool>(N); // NOLINT(misc-const-correctness)
-        auto const first = xstd::bits::detail::random_access_bit_iterator<T>(&c, 0UZ);
-        BOOST_CHECK(first == xstd::bits::detail::random_access_bit_iterator<T const>(&c, 0UZ));
+        auto const first = iterator_at(c, 0UZ);
+        BOOST_CHECK(first == iterator_at(std::as_const(c), 0UZ));
 
         // Nothing to step over at a zero width, so nothing is instantiated for it.
         if constexpr (N != 0UZ) {
@@ -160,7 +179,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheSequenceIteratorReadsAndWritesThroughTheStorage
 BOOST_AUTO_TEST_CASE(ProxyAssignmentCopiesTheBitAndSwapSwapsTheBits)
 {
         auto c            = Bits();
-        auto const first  = xstd::bits::detail::random_access_bit_iterator<Bits>(&c, 0UZ);
+        auto const first  = iterator_at(c, 0UZ);
         auto const second = std::next(first);
 
         *first  = true;
@@ -182,8 +201,8 @@ BOOST_AUTO_TEST_CASE(ProxyAssignmentCopiesTheBitAndSwapSwapsTheBits)
 BOOST_AUTO_TEST_CASE(TheSequenceIteratorArithmeticIsIndexArithmetic)
 {
         auto c           = Bits();
-        auto const first = xstd::bits::detail::random_access_bit_iterator<Bits>(&c, 0UZ);
-        auto const last  = xstd::bits::detail::random_access_bit_iterator<Bits>(&c, 200UZ);
+        auto const first = iterator_at(c, 0UZ);
+        auto const last  = iterator_at(c, 200UZ);
         BOOST_CHECK_EQUAL(last - first, 200);
         BOOST_CHECK(first <= last);
         BOOST_CHECK(first <= first and last >= last);
@@ -206,16 +225,14 @@ BOOST_AUTO_TEST_CASE(TheSequenceIteratorArithmeticIsIndexArithmetic)
 
 BOOST_AUTO_TEST_CASE(RangesAlgorithmsReachTheBitsThroughIterMoveAndIterSwap)
 {
-        using iterator = xstd::bits::detail::random_access_bit_iterator<Bits>;
-
         auto c     = Bits();
         auto model = std::vector<bool>(200);
         for (auto const p : {0UZ, 5UZ, 63UZ, 64UZ, 130UZ, 199UZ}) {
                 c.set(p);
                 model[p] = true;
         }
-        auto const first = iterator(&c, 0UZ);
-        auto const last  = iterator(&c, 200UZ);
+        auto const first = iterator_at(c, 0UZ);
+        auto const last  = iterator_at(c, 200UZ);
         BOOST_CHECK(std::ranges::equal(std::ranges::subrange(first, last), model));
 
         static_assert(std::same_as<decltype(std::ranges::iter_move(first)), bool>);
@@ -255,8 +272,8 @@ BOOST_AUTO_TEST_CASE(TheProxyFormatsAsItsValue)
         auto c = Bits();
         c.set(42);
 
-        BOOST_CHECK_EQUAL(format_as(*xstd::bits::detail::random_access_bit_iterator<Bits>(&c, 42UZ)), true);
-        BOOST_CHECK_EQUAL(format_as(*xstd::bits::detail::random_access_bit_iterator<Bits const>(&c, 41UZ)), false);
+        BOOST_CHECK_EQUAL(format_as(*iterator_at(c, 42UZ)), true);
+        BOOST_CHECK_EQUAL(format_as(*iterator_at(std::as_const(c), 41UZ)), false);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
