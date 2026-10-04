@@ -100,9 +100,11 @@ target_sources(
         include/xstd/bits/ext/boost/bit_small_set.hpp
         include/xstd/bits/ext/boost/bit_small_vector.hpp
         include/xstd/bits/ext/boost/dynamic_bitset.hpp
+        include/xstd/bits/ext/boost/detail/dynamic_bitset.hpp
         include/xstd/bits/detail/pred.hpp
         include/xstd/bits/detail/bit_layout.hpp
         include/xstd/bits/detail/bit_convertible.hpp
+        include/xstd/bits/detail/static_block_capacity.hpp
         include/xstd/bits/detail/bit_width.hpp
         include/xstd/bits/detail/random_access.hpp
         include/xstd/bits/detail/range_const_reference.hpp

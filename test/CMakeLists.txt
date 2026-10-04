@@ -167,6 +167,24 @@ if(unmirrored_headers)
     )
 endif()
 
+# The same headers are the interface line: none of them opens a detail namespace, so what a user never spells sits under detail/, where it is excepted from the mirror above.
+set(detail_opening_headers)
+foreach(h ${mirrored_headers})
+    file(STRINGS ${public_header_dir}/${h} detail_namespaces REGEX "^namespace [a-z:]*detail")
+    if(detail_namespaces)
+        list(APPEND detail_opening_headers "    include/${h}")
+    endif()
+endforeach()
+
+if(detail_opening_headers)
+    list(JOIN detail_opening_headers "\n" detail_opening_report)
+    message(
+        FATAL_ERROR
+        "These public headers open a detail namespace:\n${detail_opening_report}\n"
+        "Move what they define into a header under a detail/ directory and include it from there."
+    )
+endif()
+
 set(current_include_dir ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # The workloads the containers are exercised against, shared with benchmark/ and deliberately outside include/: they are subjects, not library code, and include/ is what a consumer gets.

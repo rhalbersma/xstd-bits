@@ -82,12 +82,11 @@ template<class T>
 auto check_set_walk(T const& empty, std::set<std::size_t> const& model)
         -> void
 {
-        using iterator = xstd::bits::detail::bidirectional_bit_iterator<T>;
-        auto const c = make(empty, model);
-        auto const size = c.size();
+        auto c = make(empty, model);
+        auto const v = xstd::bit_set_view(c);
 
-        auto const first = iterator(&c, model.empty() ? size : *model.begin());
-        auto const last = iterator(&c, size);
+        auto const first = v.begin();
+        auto const last = v.end();
         BOOST_CHECK((first == last) == model.empty());
 
         // Behind if constexpr rather than an early return, or MSVC reports the rest unreachable at a zero width.
@@ -206,7 +205,7 @@ BOOST_AUTO_TEST_CASE(TheProxyFormatsAsItsValue)
         auto c = Bits();
         c.set(42);
 
-        BOOST_CHECK_EQUAL(format_as(*xstd::bits::detail::bidirectional_bit_iterator<Bits>(&c, 42UZ)), 42UZ);
+        BOOST_CHECK_EQUAL(format_as(*xstd::bit_set_view(c).begin()), 42UZ);
 }
 
 // The key arrives through the traits, in one implicit step; a type the traits do not name is no conversion.

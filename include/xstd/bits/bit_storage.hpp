@@ -7,6 +7,7 @@
 #define XSTD_BITS_BIT_STORAGE_HPP
 
 #include <xstd/bits/detail/range_const_reference.hpp> // range_const_reference_t
+#include <xstd/bits/detail/static_block_capacity.hpp> // static_block_capacity
 #include <xstd/ints/concepts/unsigned_integer.hpp>    // unsigned_integer
 #include <xstd/ints/limits.hpp>                       // numeric_limits
 #include <array>                                      // array
@@ -14,7 +15,7 @@
 #include <cstddef>                                    // size_t
 #include <ranges>                                     // contiguous_range, end, range, range_reference_t, range_size_t, range_value_t, sized_range
 #include <span>                                       // dynamic_extent, span
-#include <type_traits>                                // integral_constant, is_pointer_v, remove_const_t
+#include <type_traits>                                // remove_const_t
 
 // What every container and view here presents a packed interface over: bits in contiguous unsigned blocks.
 namespace xstd {
@@ -71,26 +72,6 @@ inline constexpr std::size_t bit_storage_extent_v<std::span<Block, E>> = E * bit
 // The most bits an owner holds by its storage's type: a fixed width, else a constant capacity, else dynamic_extent.
 template<bit_storage Bits>
 inline constexpr std::size_t bit_storage_capacity_v = bit_storage_extent_v<Bits>;
-
-namespace bits::detail {
-
-// In blocks, the capacity the type answers without an object, else dynamic_extent.
-template<class Bits>
-consteval auto static_block_capacity() noexcept
-        -> std::size_t
-{
-        // A capacity() usable as a constant, as std::inplace_vector's is.
-        if constexpr (requires { typename std::integral_constant<std::size_t, Bits::capacity()>; }) {
-                return Bits::capacity();
-        } else if constexpr (requires { requires std::is_pointer_v<decltype(&Bits::capacity)>; typename std::integral_constant<std::size_t, Bits::static_capacity>; }) {
-                // A static run-time capacity(), as boost::container::static_vector's, names static_capacity too.
-                return Bits::static_capacity;
-        } else {
-                return std::dynamic_extent;
-        }
-}
-
-} // namespace bits::detail
 
 // The capacity in bits; boost::container::small_vector's static_capacity is its inline part and bounds nothing.
 template<bit_storage Bits>

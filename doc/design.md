@@ -3014,9 +3014,10 @@ nothing to say that one of those does not say better, and with a contract owed t
 with each other about growth, element access and order.
 
 It interoperates instead, through one function for every pair of widths, **`xstd::bit_convert<To>(from)`** in
-`<xstd/bits/bit/bit_convert.hpp>`, with two concepts naming its halves: `xstd::bit_convertible_to<From, To>`, that
-the call is valid, and `xstd::bit_constructible_from<To, Blocks>`, that `Blocks` *is* bit storage `To` takes as it
-is through the tag ([is-and-has](#is-and-has)).
+`<xstd/bits/bit/bit_convert.hpp>`. Its constraint is `xstd::bit_convertible<From, To>`, over the two types as
+declared; `xstd::bit_convertible_to<From, To>` says the call is valid, and `xstd::bit_constructible_from<To, Blocks>`,
+in `<xstd/bits/from_bit_storage.hpp>`, that `Blocks` *is* bit storage `To` takes as it is through the tag
+([is-and-has](#is-and-has)).
 
 - **Its two ends.** A target is any owner of either reading at any width and block width, an unsigned integer, a
   `std::array` of blocks, or a `std::bitset<N>`; never a view, which would write bits it does not own. A source is

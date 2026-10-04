@@ -4,7 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/for_each_type.hpp>                   // for_each_type
-#include <xstd/bits/bit/bit_convert.hpp>            // adopts_from, bit_constructible_from, bit_convert, bit_convertible_to
+#include <xstd/bits/bit/bit_convert.hpp>            // bit_convert, bit_convertible, bit_convertible_to
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
 #include <xstd/bits/bit_bounded_set.hpp>            // basic_bit_bounded_set, bit_bounded_set
 #include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector, bit_bounded_vector
@@ -14,6 +14,7 @@
 #include <xstd/bits/bit_span.hpp>                   // bit_span
 #include <xstd/bits/bit_subspan.hpp>                // bit_subspan
 #include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
+#include <xstd/bits/detail/bit_convertible.hpp>     // adopts_from
 #include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set, bit_small_set
 #include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector, bit_small_vector
 #include <xstd/bits/from_bit_storage.hpp>           // from_bit_storage
@@ -147,23 +148,13 @@ BOOST_AUTO_TEST_CASE(BitConvertibleToNamesEveryWidthButAViewTarget)
         BOOST_CHECK(true);
 }
 
-// Blocks an owner takes as they are: its own container at a run-time width, or a field at a fixed one.
-BOOST_AUTO_TEST_CASE(BitConstructibleFromNamesBlocksTakenAsTheyAre)
+// The constraint is on the two types as they are declared: a reference or a const source is the same conversion.
+BOOST_AUTO_TEST_CASE(BitConvertibleConstrainsTheTypesNotTheExpression)
 {
-        static_assert(xstd::bit_constructible_from<xstd::bit_vector, std::vector<std::size_t>> and xstd::bit_constructible_from<xstd::bit_set, std::vector<std::size_t>>);
-        static_assert(xstd::bit_constructible_from<xstd::bit_fixed_set<64>, std::array<std::uint64_t, 1>> and xstd::bit_constructible_from<xstd::bit_array<20>, std::array<std::uint8_t, 3>>);
-        static_assert(xstd::bit_constructible_from<xstd::bit_bounded_set<100>, xstd::bit_bounded_set<100>::block_container_type>);
-
-        // Another block type, a field too narrow, and a container a bounded owner does not hold are none of those.
-        static_assert(not xstd::bit_constructible_from<xstd::bit_vector, std::vector<std::uint8_t>>);
-        static_assert(not xstd::bit_constructible_from<xstd::bit_fixed_set<256>, std::array<std::uint64_t, 3>>);
-        static_assert(not xstd::bit_constructible_from<xstd::bit_bounded_set<100>, std::array<std::uint64_t, 2>>);
-        static_assert(not xstd::bit_constructible_from<xstd::bit_bounded_vector<100>, std::vector<std::size_t>>);
-
-        // What has bit storage without being it, and a view, which owns nothing to take blocks into.
-        static_assert(not xstd::bit_constructible_from<xstd::bit_fixed_set<64>, std::bitset<64>>);
-        static_assert(not xstd::bit_constructible_from<xstd::bit_vector, xstd::bit_set>);
-        static_assert(not xstd::bit_constructible_from<xstd::bit_set_view<std::uint64_t>, std::uint64_t>);
+        static_assert(xstd::bit_convertible<xstd::bit_array<64>, std::uint64_t> and xstd::bit_convertible<xstd::bit_vector, xstd::bit_array<64>>);
+        static_assert(xstd::bit_convertible<xstd::bit_set, xstd::bit_vector> and xstd::bit_convertible<std::bitset<70>, xstd::bit_small_vector<64>>);
+        static_assert(not xstd::bit_convertible<std::uint32_t, xstd::bit_array<20>> and not xstd::bit_convertible<std::uint64_t, xstd::bit_set_view<std::uint64_t>>);
+        static_assert(xstd::bit_convertible_to<xstd::bit_set const&, xstd::bit_vector> and xstd::bit_convertible<xstd::bit_set, xstd::bit_vector>);
         BOOST_CHECK(true);
 }
 
