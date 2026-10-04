@@ -17,13 +17,14 @@
 #include <boost/container_hash/is_tuple_like.hpp>  // is_tuple_like
 #include <algorithm>                               // copy
 #include <array>                                   // array
-#include <concepts>                                // constructible_from
+#include <concepts>                                // constructible_from, same_as
 #include <cstddef>                                 // size_t
 #include <functional>                              // hash
 #include <initializer_list>                        // initializer_list
 #include <limits>                                  // numeric_limits
 #include <tuple>                                   // tuple_element, tuple_size
-#include <type_traits>                             // false_type
+#include <type_traits>                             // false_type, remove_cv_t
+#include <utility>                                 // move
 
 namespace xstd {
 
@@ -81,20 +82,22 @@ template<xstd::unsigned_integer Block, std::size_t K>
         requires (K != 0)
 basic_bit_array(from_bit_storage_t, std::array<Block, K>) -> basic_bit_array<Block, bit_storage_extent_v<std::array<Block, K>>>;
 
-// [array.creation]'s to_array, of bool alone: a built-in array names no block type, so the default one is taken.
-template<std::size_t N>
-[[nodiscard]] constexpr auto to_bit_array(bool const (&a)[N]) // NOLINT(modernize-avoid-c-arrays): a built-in array is what it converts.
+// [array.creation]'s to_array, of bits: a built-in array names no block type, so the default one is taken.
+template<class T, std::size_t N>
+[[nodiscard]] constexpr auto to_bit_array(T (&a)[N]) // NOLINT(modernize-avoid-c-arrays): a built-in array is what it converts.
         -> bit_array<N>
 {
+        static_assert(std::same_as<std::remove_cv_t<T>, bool>, "[array.creation]/1: the element is a bit");
         return bit_array<N>(a);
 }
 
-// [array.creation]'s second overload, which for a bool moves exactly what the first copies.
-template<std::size_t N>
-[[nodiscard]] constexpr auto to_bit_array(bool (&&a)[N]) // NOLINT(modernize-avoid-c-arrays): a built-in array is what it converts.
+// [array.creation]'s second overload, moving the elements as to_array does.
+template<class T, std::size_t N>
+[[nodiscard]] constexpr auto to_bit_array(T (&&a)[N]) // NOLINT(modernize-avoid-c-arrays): a built-in array is what it converts.
         -> bit_array<N>
 {
-        return xstd::to_bit_array(a);
+        static_assert(std::same_as<std::remove_cv_t<T>, bool>, "[array.creation]/4: the element is a bit");
+        return bit_array<N>(std::move(a));
 }
 
 namespace aligned {
