@@ -14,7 +14,9 @@
 #include <xstd/bits/bit_span.hpp>                   // bit_span
 #include <xstd/bits/bit_subspan.hpp>                // bit_subspan
 #include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
-#include <xstd/bits/detail/bit_convertible.hpp>     // adopts_from
+#include <xstd/bits/detail/bit_convertible.hpp>     // adopts_from, bit_source, fixed_target, fixed_width
+#include <xstd/bits/detail/bit_width.hpp>           // bit_width_v
+#include <xstd/bits/detail/ownership.hpp>           // owner, view
 #include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set, bit_small_set
 #include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector, bit_small_vector
 #include <xstd/bits/from_blocks.hpp>                // from_blocks
@@ -22,7 +24,7 @@
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <array>                                    // array
 #include <bitset>                                   // bitset
-#include <concepts>                                 // constructible_from
+#include <concepts>                                 // constructible_from, same_as
 #include <cstddef>                                  // size_t
 #include <cstdint>                                  // uint8_t, uint16_t, uint32_t, uint64_t
 #include <limits>                                   // numeric_limits
@@ -158,6 +160,47 @@ BOOST_AUTO_TEST_CASE(BitConvertibleConstrainsTheTypesNotTheExpression)
         static_assert(xstd::bit_convertible<xstd::bit_set, xstd::bit_vector> and xstd::bit_convertible<std::bitset<70>, xstd::bit_small_vector<64>>);
         static_assert(not xstd::bit_convertible<std::uint32_t, xstd::bit_array<20>> and not xstd::bit_convertible<std::uint64_t, xstd::bit_set_view<std::uint64_t>>);
         static_assert(xstd::bit_convertible_to<xstd::bit_set const&, xstd::bit_vector> and xstd::bit_convertible<xstd::bit_set, xstd::bit_vector>);
+        BOOST_CHECK(true);
+}
+
+// Ours are owners or views, a window among the views, and nothing else is either.
+BOOST_AUTO_TEST_CASE(OwnersAndViewsAreOursAndApart)
+{
+        using xstd::bits::detail::owner;
+        using xstd::bits::detail::view;
+        using window = xstd::bit_subspan<std::array<std::uint64_t, 2>, std::dynamic_extent, 100>;
+        static_assert(owner<xstd::bit_vector> and owner<xstd::bit_set const> and owner<xstd::bit_array<64>> and owner<xstd::bit_small_set<256>>);
+        static_assert(not view<xstd::bit_vector> and not view<xstd::bit_set const> and not view<xstd::bit_array<64>>);
+        static_assert(view<xstd::bit_set_view<std::uint64_t>> and view<xstd::bit_span<std::array<std::uint8_t, 3>>> and view<window> and view<window const>);
+        static_assert(not owner<xstd::bit_set_view<std::uint64_t>> and not owner<xstd::bit_span<std::array<std::uint8_t, 3>>> and not owner<window>);
+        static_assert(not owner<std::bitset<64>> and not view<std::bitset<64>> and not owner<std::uint64_t> and not view<four_words>);
+        static_assert(not owner<xstd::bit_vector&> and not view<xstd::bit_set_view<std::uint64_t>&>);
+        BOOST_CHECK(true);
+}
+
+// A whole view has its storage's width and a window has none fixed, so a window is neither a fixed source nor target.
+BOOST_AUTO_TEST_CASE(AWindowHasNoFixedWidth)
+{
+        using xstd::bits::detail::bit_width_v;
+        using xstd::bits::detail::fixed_target;
+        using xstd::bits::detail::fixed_width;
+        using window = xstd::bit_subspan<std::array<std::uint64_t, 2>, std::dynamic_extent, 100>;
+        static_assert(bit_width_v<xstd::bit_span<std::array<std::uint8_t, 3>>> == 24UZ and bit_width_v<xstd::bit_set_view<std::uint64_t>> == 64UZ);
+        static_assert(bit_width_v<window> == std::dynamic_extent and bit_width_v<window const> == std::dynamic_extent);
+        static_assert(not fixed_width<window> and not fixed_target<window> and not fixed_target<xstd::bit_span<std::array<std::uint8_t, 3>>>);
+        static_assert(fixed_width<xstd::bit_span<std::array<std::uint8_t, 3>>> and fixed_target<xstd::bit_array<24>> and fixed_target<std::bitset<24>>);
+        BOOST_CHECK(true);
+}
+
+// An owner is read through its storage, whatever its width, and any other fixed width through its bytes.
+BOOST_AUTO_TEST_CASE(AnOwnerIsReadThroughItsStorageAndAFixedWidthElseThroughItsBytes)
+{
+        using xstd::bits::detail::bit_source;
+        static_assert(not std::same_as<decltype(bit_source<xstd::bit_array<64>>::blocks(std::declval<xstd::bit_array<64> const&>())), std::array<unsigned char, 8>>);
+        static_assert(not std::same_as<decltype(bit_source<xstd::bit_fixed_set<64> const>::blocks(std::declval<xstd::bit_fixed_set<64> const&>())), std::array<unsigned char, 8>>);
+        static_assert(std::same_as<decltype(bit_source<std::bitset<64>>::blocks(std::declval<std::bitset<64> const&>())), std::array<unsigned char, 8>>);
+        static_assert(std::same_as<decltype(bit_source<xstd::bit_set_view<std::uint64_t>>::blocks(std::declval<xstd::bit_set_view<std::uint64_t> const&>())), std::array<unsigned char, 8>>);
+        static_assert(std::same_as<decltype(bit_source<xstd::bit_span<std::array<std::uint8_t, 3>>>::blocks(std::declval<xstd::bit_span<std::array<std::uint8_t, 3>> const&>())), std::array<unsigned char, 3>>);
         BOOST_CHECK(true);
 }
 

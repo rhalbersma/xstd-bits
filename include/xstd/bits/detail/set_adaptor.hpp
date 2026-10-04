@@ -1098,10 +1098,6 @@ private:
         }
 };
 
-// Any container built on the set vehicle, the vehicle used directly included.
-template<class T>
-concept set_adaptor_like = requires { typename T::adaptor_type; typename T::reads_as; } and std::same_as<typename T::reads_as, set_reading_tag> and std::derived_from<T, typename T::adaptor_type>;
-
 // The owner's side of the protocol above.
 template<class Bits, class Derived, class Key, class KeyTraits, class Compare>
 struct owned_storage<set_adaptor<Bits, storage::owned, Derived, Key, KeyTraits, Compare>>

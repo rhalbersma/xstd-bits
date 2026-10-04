@@ -540,7 +540,7 @@ the set reading has no need of. A `bit_subspan` is a *window*: a bit offset and 
 does not span, so its position zero is not the storage's and its bytes are not the storage's bytes. Asking
 `has_static_width` alone would wave it through, because a window over a static container reports that
 *container's* extent rather than its own size, and `to_bytes` would then hand back the wrong bits. So
-`bit_convert` reads a view only where it is not windowed (`packed_view` asks `is_windowed`). A `bit_span`, which
+`bit_convert` reads a view only where it is not windowed (`bit_width_of` asks a `view` for `is_windowed`). A `bit_span`, which
 is not a window, spans the whole container and converts like an owner.
 
 Two block widths over the same `N` are two spellings of one field of bits, so they cross on this rule with

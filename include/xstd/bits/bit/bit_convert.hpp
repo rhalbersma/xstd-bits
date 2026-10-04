@@ -6,11 +6,12 @@
 #ifndef XSTD_BITS_BIT_BIT_CONVERT_HPP
 #define XSTD_BITS_BIT_BIT_CONVERT_HPP
 
-#include <xstd/bits/detail/bit_convertible.hpp> // adopt_blocks, adopts_from, bit_convert_source, bit_target, convert_fixed, copy_blocks, fixed_target, fixed_width, foreign_convertible, narrow_blocks, run_time_owner, run_time_source
+#include <xstd/bits/detail/bit_convertible.hpp> // adopt_blocks, adopts_from, bit_convert_source, bit_target, convert_fixed, copy_blocks, fixed_target, fixed_width, foreign_convertible, narrow_blocks
 #include <xstd/bits/detail/bit_width.hpp>       // bit_width_v
+#include <xstd/bits/detail/ownership.hpp>       // owned_bits_t, owner
 #include <xstd/bits/from_blocks.hpp>            // IWYU pragma: export; bit_constructible_from
-#include <concepts>                             // same_as
-#include <type_traits>                          // remove_cvref_t
+#include <concepts>                             // default_initializable, same_as
+#include <type_traits>                          // is_const_v, remove_cvref_t
 #include <utility>                              // as_const, forward
 
 // One conversion between everything that has bit storage, at any two widths: position i stays position i.
@@ -20,8 +21,8 @@ namespace xstd {
 template<class From, class To>
 concept bit_convertible =
         (bits::detail::fixed_target<To> and bits::detail::fixed_width<From> and bits::detail::bit_width_v<To> == bits::detail::bit_width_v<From>) or
-        (bits::detail::fixed_target<To> and bits::detail::run_time_source<From>) or
-        (bits::detail::run_time_owner<To> and bits::detail::bit_convert_source<From>) or
+        (bits::detail::fixed_target<To> and bits::detail::bit_convert_source<From> and (not bits::detail::fixed_width<From>)) or
+        (bits::detail::owner<To> and (not std::is_const_v<To>) and std::default_initializable<To> and bits::detail::owned_bits_t<To>::has_stored_size and bits::detail::bit_convert_source<From>) or
         bits::detail::foreign_convertible<To, From>;
 
 // The source's positions into To: equal fixed widths, a run-time width into a fixed one, anything into a run-time one.
