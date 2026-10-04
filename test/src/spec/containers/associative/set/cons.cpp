@@ -195,7 +195,7 @@ BOOST_AUTO_TEST_CASE(AssignInitializerList)
         });
 }
 
-// xstd set: template<class B> constexpr X(from_blocks_t, const B& b) noexcept;
+// xstd set: template<class Bits> constexpr X(from_blocks_t, const Bits& b) noexcept;
 BOOST_AUTO_TEST_CASE(SetFromBlocks)
 {
         test::for_each_type<test::spec::set::all>([]<class T> -> void {

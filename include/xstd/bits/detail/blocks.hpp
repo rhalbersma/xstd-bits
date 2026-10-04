@@ -6,10 +6,9 @@
 #ifndef XSTD_BITS_DETAIL_BLOCKS_HPP
 #define XSTD_BITS_DETAIL_BLOCKS_HPP
 
-#include <xstd/bits/bit_blocks.hpp>                 // bit_blocks_extent_v
+#include <xstd/bits/bit_blocks.hpp>                 // bit_block, bit_blocks_extent_v
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
 #include <xstd/bits/detail/borrowed_bits.hpp>       // block_span_t, borrowable_block, borrowable_blocks, borrowed_bits
-#include <xstd/ints/concepts/unsigned_integer.hpp>  // unsigned_integer
 #include <cstddef>                                  // size_t
 #include <span>                                     // span
 #include <type_traits>                              // conditional_t, is_const_v, remove_const_t, remove_reference_t
@@ -27,8 +26,7 @@ struct view_storage_for
         using type = const_as_t<Blocks, bit_block_container<std::remove_const_t<Blocks>, N>>;
 };
 
-template<class Block, std::size_t N>
-        requires xstd::unsigned_integer<std::remove_const_t<Block>>
+template<xstd::bit_block Block, std::size_t N>
 struct view_storage_for<Block, N>
 {
         using type = const_as_t<Block, borrowed_bits<std::remove_const_t<Block>, 1>>;

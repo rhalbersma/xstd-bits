@@ -15,24 +15,30 @@
 #include <cstddef>                                    // size_t
 #include <ranges>                                     // contiguous_range, end, range, range_reference_t, range_size_t, range_value_t, sized_range
 #include <span>                                       // dynamic_extent, span
-#include <type_traits>                                // remove_const_t
 
 // What every container and view here presents a packed interface over: bits in contiguous unsigned blocks.
 namespace xstd {
 
-// One unsigned block, or a sized contiguous range of them that subscripts; const where a view only reads.
+// One unsigned block, const where a view only reads.
+template<class Block>
+concept bit_block = xstd::unsigned_integer<Block>;
+
+// A sized contiguous range of blocks that subscripts.
+template<class Blocks>
+concept bit_block_range =
+        std::ranges::sized_range<Blocks> and std::ranges::contiguous_range<Blocks> and
+        bit_block<std::ranges::range_value_t<Blocks>> and
+        requires (Blocks& blocks, std::ranges::range_size_t<Blocks> n) { blocks[n]; };
+
+// One block, or a range of them: what every container and view here holds its bits in.
 template<class Bits>
-concept bit_blocks =
-        xstd::unsigned_integer<std::remove_const_t<Bits>> or
-        (std::ranges::sized_range<Bits> and std::ranges::contiguous_range<Bits> and
-         xstd::unsigned_integer<std::remove_const_t<std::ranges::range_value_t<Bits>>> and
-         requires (Bits& bits, std::ranges::range_size_t<Bits> n) { bits[n]; });
+concept bit_blocks = bit_block<Bits> or bit_block_range<Bits>;
 
 // Bit storage a container can own: a value compared by its blocks, and read-only through a const object.
 template<class Bits>
 concept owned_bit_blocks =
         bit_blocks<Bits> and std::regular<Bits> and
-        (xstd::unsigned_integer<Bits> or
+        (bit_block<Bits> or
          requires (Bits& bits, Bits const& cbits, std::ranges::range_size_t<Bits> n) {
                  { bits[n] } -> std::same_as<std::ranges::range_reference_t<Bits>>;
                  // P2278R4's alias: a storage whose const subscript yields a writable reference is refused.
@@ -56,17 +62,17 @@ template<bit_blocks Bits>
 inline constexpr std::size_t bit_blocks_extent_v = std::dynamic_extent;
 
 template<bit_blocks Bits>
-        requires xstd::unsigned_integer<std::remove_const_t<Bits>>
-inline constexpr std::size_t bit_blocks_extent_v<Bits> = static_cast<std::size_t>(xstd::numeric_limits<std::remove_const_t<Bits>>::digits);
+        requires bit_block<Bits>
+inline constexpr std::size_t bit_blocks_extent_v<Bits> = static_cast<std::size_t>(xstd::numeric_limits<Bits>::digits);
 
-template<xstd::unsigned_integer Block, std::size_t K>
+template<bit_block Block, std::size_t K>
 inline constexpr std::size_t bit_blocks_extent_v<std::array<Block, K>> = K * bit_blocks_extent_v<Block>;
 
-template<xstd::unsigned_integer Block, std::size_t K>
+template<bit_block Block, std::size_t K>
 inline constexpr std::size_t bit_blocks_extent_v<std::array<Block, K> const> = bit_blocks_extent_v<std::array<Block, K>>;
 
-template<class Block, std::size_t E>
-        requires xstd::unsigned_integer<std::remove_const_t<Block>> and (E != std::dynamic_extent)
+template<bit_block Block, std::size_t E>
+        requires (E != std::dynamic_extent)
 inline constexpr std::size_t bit_blocks_extent_v<std::span<Block, E>> = E * bit_blocks_extent_v<Block>;
 
 // The most bits an owner holds by its storage's type: a fixed width, else a constant capacity, else dynamic_extent.

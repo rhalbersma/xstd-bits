@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_DETAIL_BIT_BLOCK_CONTAINER_HPP
 #define XSTD_BITS_DETAIL_BIT_BLOCK_CONTAINER_HPP
 
-#include <xstd/bits/bit_blocks.hpp>                          // bit_blocks_capacity_v, owned_bit_blocks, resizable_bit_blocks
+#include <xstd/bits/bit_blocks.hpp>                          // bit_block_range, bit_blocks_capacity_v, owned_bit_blocks, resizable_bit_blocks
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_base_type, allocator_param_t, has_allocator_v
 #include <xstd/bits/detail/bit_layout.hpp>                   // bit_bytes, bit_layout, block_range_source, container_source
 #include <xstd/bits/detail/borrowed_block_span.hpp>          // borrowed_block_span
@@ -212,7 +212,7 @@ using bit_members_t = std::conditional_t<
 
 // The one vehicle: it owns the unused-tail invariant, and has no iterators.
 template<class Blocks, std::size_t N = default_extent_v<Blocks>>
-        requires (std::ranges::contiguous_range<Blocks> and xstd::owned_bit_blocks<Blocks> and owner_extent_v<Blocks, N>) or (borrowed_block_span<Blocks> and N == default_extent_v<Blocks>)
+        requires (xstd::bit_block_range<Blocks> and xstd::owned_bit_blocks<Blocks> and owner_extent_v<Blocks, N>) or (borrowed_block_span<Blocks> and N == default_extent_v<Blocks>)
 class bit_block_container : public bit_members_t<Blocks, N>
 {
         using members_type = bit_members_t<Blocks, N>;
@@ -254,13 +254,13 @@ public:
         static constexpr auto bit_extent = has_static_size ? N : 0UZ;
 
         // The two shapes a reading asks for: either family, or the field-of-bits family where integers have a door.
-        template<class B>
-        static constexpr auto exchanges_bits = has_static_size and bit_layout<B, bit_extent>;
+        template<class Bits>
+        static constexpr auto exchanges_bits = has_static_size and bit_layout<Bits, bit_extent>;
 
         // A field of bits is anything but the bare scalar, which is left out only because it has its own door.
-        template<class B>
+        template<class Bits>
         static constexpr auto exchanges_bits_as_field =
-                has_static_size and (block_range_source<B, bit_extent> or container_source<B, bit_extent>);
+                has_static_size and (block_range_source<Bits, bit_extent> or container_source<Bits, bit_extent>);
 
         // How many blocks a run-time width needs, none at width zero; total over every size_t, as boost spells it.
         [[nodiscard]] static constexpr auto blocks_for(std::size_t n) noexcept
@@ -634,9 +634,9 @@ public:
         }
 
         // A whole field of bits in over the byte primitive, the width being known here; bit_convert reads them out.
-        template<class B>
-                requires exchanges_bits<B>
-        constexpr auto assign_bits(B const& b) noexcept
+        template<class Bits>
+                requires exchanges_bits<Bits>
+        constexpr auto assign_bits(Bits const& b) noexcept
                 -> void
         {
                 assign_bytes(bit_bytes<bit_extent>(b));

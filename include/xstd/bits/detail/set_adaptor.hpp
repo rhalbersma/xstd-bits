@@ -56,8 +56,8 @@ concept equality_comparable_storage = requires (Bits const& a, Bits const& b) {
 template<class R>
 inline constexpr bool is_consecutive = false;
 
-template<class W, class B>
-inline constexpr bool is_consecutive<std::ranges::iota_view<W, B>> = true;
+template<class Value, class Bound>
+inline constexpr bool is_consecutive<std::ranges::iota_view<Value, Bound>> = true;
 
 // One tier each: sharing a body puts the whole over readability-function-cognitive-complexity.
 
@@ -396,9 +396,9 @@ public:
         {}
 
         // Blocks that are bit storage, read as this set's positions; the tag says the blocks are bits and not keys.
-        template<class B>
-                requires is_owner and xstd::bit_blocks<B> and Bits::template
-        exchanges_bits<B> [[nodiscard]] constexpr set_adaptor(xstd::from_blocks_t, B const& b) noexcept
+        template<class OtherBits>
+                requires is_owner and xstd::bit_blocks<OtherBits> and Bits::template
+        exchanges_bits<OtherBits> [[nodiscard]] constexpr set_adaptor(xstd::from_blocks_t, OtherBits const& b) noexcept
         {
                 m_bits.assign_bits(b);
         }

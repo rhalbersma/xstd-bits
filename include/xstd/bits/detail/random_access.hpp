@@ -40,7 +40,7 @@ class random_access_bit_iterator
         // The const twin, whose conversion below reads these members; naming itself where Bits is already const.
         friend class random_access_bit_iterator<Bits const>;
 
-        template<bit_block_container_type B, storage S, window W, class D, std::size_t E>
+        template<bit_block_container_type OtherBits, storage OtherStore, window OtherWindow, class OtherDerived, std::size_t OtherE>
         friend class sequence_adaptor;
 
         friend class random_access_bit_reference<Bits>;
@@ -200,7 +200,7 @@ class random_access_bit_reference
         // Writable where Bits is not const: a const storage has no assign to reach.
         static constexpr bool is_writable = not std::is_const_v<Bits> and requires (Bits& c, std::size_t n, bool value) { c.assign(n, value); };
 
-        template<bit_block_container_type B, storage S, window W, class D, std::size_t E>
+        template<bit_block_container_type OtherBits, storage OtherStore, window OtherWindow, class OtherDerived, std::size_t OtherE>
         friend class sequence_adaptor;
 
         friend class random_access_bit_iterator<Bits>;

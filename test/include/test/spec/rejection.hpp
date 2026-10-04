@@ -119,13 +119,13 @@ concept has_allocator_extended_copy = std::constructible_from<X, X const&, alloc
 template<class X>
 concept has_allocator_extended_move = std::constructible_from<X, X&&, allocator_argument_t<X> const&>;
 
-// Whether the unsigned integer B covers the width an owner has in its type, which its tag constructor asks of one.
-template<class X, class B>
+// Whether the unsigned integer Block covers the width an owner has in its type, which its tag constructor asks of one.
+template<class X, class Block>
 inline constexpr bool covers_static_width_v = false;
 
-template<class X, class B>
+template<class X, class Block>
         requires (xstd::bits::detail::owned_storage<X>::bits_type::extent != std::dynamic_extent)
-inline constexpr bool covers_static_width_v<X, B> = xstd::bits::detail::owned_storage<X>::bits_type::extent <= static_cast<std::size_t>(std::numeric_limits<B>::digits);
+inline constexpr bool covers_static_width_v<X, Block> = xstd::bits::detail::owned_storage<X>::bits_type::extent <= static_cast<std::size_t>(std::numeric_limits<Block>::digits);
 
 // The shifts, in place and into a copy.
 template<class X>

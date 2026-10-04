@@ -16,9 +16,9 @@ namespace xstd::bits::detail {
 template<class C>
 inline constexpr bool is_block_span = false;
 
-template<class B, std::size_t E>
-        requires xstd::unsigned_integer<B> and (not std::is_const_v<B>)
-inline constexpr bool is_block_span<std::span<B, E>> = true;
+template<class Block, std::size_t E>
+        requires xstd::unsigned_integer<Block> and (not std::is_const_v<Block>)
+inline constexpr bool is_block_span<std::span<Block, E>> = true;
 
 // Blocks someone else owns, written through a span: a handle, so neither regular nor deep-const.
 template<class C>

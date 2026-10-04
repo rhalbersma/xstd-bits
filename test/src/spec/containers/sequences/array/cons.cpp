@@ -36,7 +36,7 @@ BOOST_AUTO_TEST_CASE(SpecialMemberFunctions)
         });
 }
 
-// xstd array: template<class B> constexpr X(from_blocks_t, const B& b) noexcept;
+// xstd array: template<class Bits> constexpr X(from_blocks_t, const Bits& b) noexcept;
 BOOST_AUTO_TEST_CASE(ArrayFromBlocks)
 {
         test::for_each_type<test::spec::sequence::array_all>([]<class T> -> void {

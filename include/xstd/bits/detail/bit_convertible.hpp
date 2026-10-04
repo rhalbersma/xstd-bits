@@ -49,11 +49,11 @@ template<class T>
 inline constexpr bool reads_as_set = owner_reading<T, set_reading_tag>;
 
 // The bytes a range of blocks holds as positions, its value bits alone, at every block width.
-template<class B>
-[[nodiscard]] constexpr auto value_bytes(B const& blocks) noexcept
+template<class Blocks>
+[[nodiscard]] constexpr auto value_bytes(Blocks const& blocks) noexcept
         -> std::size_t
 {
-        return std::ranges::size(blocks) * bytes_per_block<B>;
+        return std::ranges::size(blocks) * bytes_per_block<Blocks>;
 }
 
 template<class Src, class T>

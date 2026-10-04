@@ -489,9 +489,9 @@ public:
         {}
 
         // Blocks that are bit storage, read as this sequence's bools; the tag says they are bits and not elements.
-        template<class B>
-                requires is_owner and xstd::bit_blocks<B> and bits_type::template
-        exchanges_bits<B> [[nodiscard]] constexpr sequence_adaptor(xstd::from_blocks_t, B const& b) noexcept
+        template<class OtherBits>
+                requires is_owner and xstd::bit_blocks<OtherBits> and bits_type::template
+        exchanges_bits<OtherBits> [[nodiscard]] constexpr sequence_adaptor(xstd::from_blocks_t, OtherBits const& b) noexcept
         {
                 m_bits.assign_bits(b);
         }

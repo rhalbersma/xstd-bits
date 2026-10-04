@@ -45,7 +45,7 @@ class bidirectional_bit_iterator
         storage_ptr_t<bits_type const> m_ptr{};
         std::size_t m_idx{};
 
-        template<bit_block_container_type B, storage S, class D, class K, class T, class C>
+        template<bit_block_container_type OtherBits, storage OtherStore, class OtherDerived, class OtherKey, class OtherKeyTraits, class OtherCompare>
         friend class set_adaptor;
 
         friend class bidirectional_bit_reference<Bits, Key, KeyTraits, Direction>;
@@ -147,7 +147,7 @@ class bidirectional_bit_reference
         storage_ptr_t<bits_type const> m_ptr;
         std::size_t m_idx;
 
-        template<bit_block_container_type B, storage S, class D, class K, class T, class C>
+        template<bit_block_container_type OtherBits, storage OtherStore, class OtherDerived, class OtherKey, class OtherKeyTraits, class OtherCompare>
         friend class set_adaptor;
 
         friend class bidirectional_bit_iterator<Bits, Key, KeyTraits, Direction>;

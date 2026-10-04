@@ -54,9 +54,9 @@ public:
         }
 
         // Not in [array]: blocks that are bit storage, read as this sequence's bools.
-        template<class B>
-                requires std::constructible_from<base_type, from_blocks_t, B const&>
-        [[nodiscard]] constexpr basic_bit_array(from_blocks_t, B const& b) noexcept
+        template<class Bits>
+                requires std::constructible_from<base_type, from_blocks_t, Bits const&>
+        [[nodiscard]] constexpr basic_bit_array(from_blocks_t, Bits const& b) noexcept
                 : base_type(from_blocks, b)
         {}
 

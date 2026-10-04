@@ -94,29 +94,29 @@ template<class From>
         }
 }
 
-template<class B>
+template<class Block>
 using sources_of = std::tuple<
-        xstd::basic_bit_fixed_set<std::size_t, B, 100>,
-        xstd::basic_bit_array<B, 100>,
-        xstd::basic_bit_set<std::size_t, B>,
-        xstd::basic_bit_vector<B>,
-        xstd::basic_bit_bounded_set<std::size_t, B, 128>,
-        xstd::basic_bit_bounded_vector<B, 128>,
-        xstd::basic_bit_small_set<std::size_t, B, 128>,
-        xstd::basic_bit_small_vector<B, 128>>;
+        xstd::basic_bit_fixed_set<std::size_t, Block, 100>,
+        xstd::basic_bit_array<Block, 100>,
+        xstd::basic_bit_set<std::size_t, Block>,
+        xstd::basic_bit_vector<Block>,
+        xstd::basic_bit_bounded_set<std::size_t, Block, 128>,
+        xstd::basic_bit_bounded_vector<Block, 128>,
+        xstd::basic_bit_small_set<std::size_t, Block, 128>,
+        xstd::basic_bit_small_vector<Block, 128>>;
 
 using sources = decltype(std::tuple_cat(
         sources_of<std::uint8_t>(), sources_of<std::uint16_t>(), sources_of<std::uint32_t>(), sources_of<std::uint64_t>()
 ));
 
-template<class B>
+template<class Block>
 using targets_of = std::tuple<
-        xstd::basic_bit_set<std::size_t, B>,
-        xstd::basic_bit_vector<B>,
-        xstd::basic_bit_bounded_set<std::size_t, B, 128>,
-        xstd::basic_bit_bounded_vector<B, 128>,
-        xstd::basic_bit_small_set<std::size_t, B, 128>,
-        xstd::basic_bit_small_vector<B, 128>>;
+        xstd::basic_bit_set<std::size_t, Block>,
+        xstd::basic_bit_vector<Block>,
+        xstd::basic_bit_bounded_set<std::size_t, Block, 128>,
+        xstd::basic_bit_bounded_vector<Block, 128>,
+        xstd::basic_bit_small_set<std::size_t, Block, 128>,
+        xstd::basic_bit_small_vector<Block, 128>>;
 
 using targets = decltype(std::tuple_cat(targets_of<std::uint8_t>(), targets_of<std::uint64_t>()));
 

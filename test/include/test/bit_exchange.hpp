@@ -13,26 +13,26 @@
 namespace test {
 
 // The exchanges asked as templates: a non-dependent requirement hard-errors instead of failing.
-template<class Reading, class B>
-concept exchanges_from_bits = requires (B const& b) {
+template<class Reading, class Bits>
+concept exchanges_from_bits = requires (Bits const& b) {
         { Reading(xstd::from_blocks, b) } -> std::same_as<Reading>;
 };
 
 // A conversion into Reading, which no view answers.
-template<class Reading, class B>
-concept converts_from = requires (B const& b) {
+template<class Reading, class Bits>
+concept converts_from = requires (Bits const& b) {
         { xstd::bit_convert<Reading>(b) } -> std::same_as<Reading>;
 };
 
 // A conversion out of Reading, which a view over a whole width answers as an owner does.
-template<class Reading, class B>
+template<class Reading, class Bits>
 concept converts_to = requires (Reading const& r) {
-        { xstd::bit_convert<B>(r) } -> std::same_as<B>;
+        { xstd::bit_convert<Bits>(r) } -> std::same_as<Bits>;
 };
 
 // Both directions, which an owner answers and a view does not.
-template<class Reading, class B>
-concept converts_between = converts_from<Reading, B> and converts_to<Reading, B>;
+template<class Reading, class Bits>
+concept converts_between = converts_from<Reading, Bits> and converts_to<Reading, Bits>;
 
 } // namespace test
 

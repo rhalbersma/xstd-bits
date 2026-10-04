@@ -91,7 +91,7 @@ A template declaration is followed by a blank line before whatever comes next, a
 `template<...>` head and the declaration it introduces read as one unit, and the next declaration starts another:
 
 ```cpp
-template<bit_block_container_type B, storage S, class D, class K, class T, class C>
+template<bit_block_container_type OtherBits, storage OtherStore, class OtherDerived, class OtherKey, class OtherKeyTraits, class OtherCompare>
 friend class set_adaptor;
 
 friend class bidirectional_bit_reference<Bits, Key, KeyTraits, Direction>;
@@ -104,7 +104,8 @@ friend class bidirectional_bit_reference<Bits, Key, KeyTraits, Direction>;
 A template's size parameter is one letter, and the letter is its unit: `N` counts bits, `K` counts blocks, and `E` is
 an extent, which may be `std::dynamic_extent`. So `basic_bit_array<Block, N>` is `N` bits wide, and its guide from
 `std::array<Block, K>` deduces `K` blocks of them. A second count of the same unit takes the next letter, as a
-constructor's `M` beside `N`.
+constructor's `M` beside `N`. A type parameter names what it holds, `Block` for one block, `Blocks` for a range of
+them and `Bits` for either, and takes `Other…` where an enclosing template already has the name.
 
 ## What the language already says
 
