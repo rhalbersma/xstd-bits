@@ -6,38 +6,27 @@
 #ifndef XSTD_BITS_BIT_BIT_CONVERT_HPP
 #define XSTD_BITS_BIT_BIT_CONVERT_HPP
 
-#include <xstd/bits/bit_storage.hpp>            // owned_bit_storage
-#include <xstd/bits/detail/bit_convertible.hpp> // adopt_blocks, bit_convertible, bit_target, convert_fixed, copy_blocks, fixed_width, foreign_convertible, holds_whole_blocks, narrow_blocks
-#include <xstd/bits/from_bit_storage.hpp>       // from_bit_storage_t
-#include <concepts>                             // constructible_from, same_as
-#include <type_traits>                          // is_const_v, is_rvalue_reference_v, remove_cvref_t, remove_reference_t
-#include <utility>                              // as_const, declval, forward
+#include <xstd/bits/detail/bit_convertible.hpp> // adopt_blocks, adopts_from, bit_convert_source, bit_target, convert_fixed, copy_blocks, fixed_target, fixed_width, foreign_convertible, narrow_blocks, run_time_owner, run_time_source
+#include <xstd/bits/detail/bit_width.hpp>       // bit_width_v
+#include <xstd/bits/from_bit_storage.hpp>       // IWYU pragma: export; bit_constructible_from
+#include <concepts>                             // same_as
+#include <type_traits>                          // remove_cvref_t
+#include <utility>                              // as_const, forward
 
 // One conversion between everything that has bit storage, at any two widths: position i stays position i.
 namespace xstd {
 
-// Blocks that are bit storage for To as they are: the tag constructor takes them, and nothing is copied or shifted.
-template<class To, class Blocks>
-concept bit_constructible_from =
-        xstd::owned_bit_storage<std::remove_cvref_t<Blocks>> and
-        std::constructible_from<To, from_bit_storage_t, Blocks>;
-
-namespace bits::detail {
-
-// An rvalue whose blocks To takes as they are, all of them: they move rather than being copied.
-template<class To, class From>
-concept adopts_from =
-        std::is_rvalue_reference_v<From&&> and
-        (not std::is_const_v<std::remove_reference_t<From>>) and
-        requires (From&& from) { std::forward<From>(from).extract(); } and
-        bit_constructible_from<To, decltype(std::declval<From&&>().extract())> and
-        holds_whole_blocks<To>;
-
-} // namespace bits::detail
+// What bit_convert takes: equal fixed widths, run-time into fixed, anything into a run-time owner or foreign type.
+template<class From, class To>
+concept bit_convertible =
+        (bits::detail::fixed_target<To> and bits::detail::fixed_width<From> and bits::detail::bit_width_v<To> == bits::detail::bit_width_v<From>) or
+        (bits::detail::fixed_target<To> and bits::detail::run_time_source<From>) or
+        (bits::detail::run_time_owner<To> and bits::detail::bit_convert_source<From>) or
+        bits::detail::foreign_convertible<To, From>;
 
 // The source's positions into To: equal fixed widths, a run-time width into a fixed one, anything into a run-time one.
 template<class To, class From>
-        requires bits::detail::bit_convertible<std::remove_cvref_t<From>, To>
+        requires bit_convertible<std::remove_cvref_t<From>, To>
 [[nodiscard]] constexpr auto bit_convert(From&& from) noexcept(bits::detail::fixed_width<To> and bits::detail::fixed_width<std::remove_cvref_t<From>>)
         -> To
 {

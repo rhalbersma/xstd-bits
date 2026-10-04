@@ -10,7 +10,7 @@
 #include <xstd/bits/detail/bit_layout.hpp> // bit_bytes, bit_layout, block_byte, blocks_copy_as_bytes, byte_count, bytes_bits, bytes_per_block, or_block_byte
 #include <xstd/bits/detail/bit_width.hpp>  // bit_width_v, packed, packed_owner, packed_view
 #include <xstd/bits/detail/ownership.hpp>  // owned_bits_t, owner_reading, set_reading_tag, storage_access
-#include <xstd/bits/from_bit_storage.hpp>  // from_bit_storage
+#include <xstd/bits/from_bit_storage.hpp>  // bit_constructible_from, from_bit_storage
 #include <algorithm>                       // copy, min
 #include <array>                           // array
 #include <bit>                             // bit_cast, popcount
@@ -20,8 +20,8 @@
 #include <ranges>                          // iota, size
 #include <span>                            // as_bytes, as_writable_bytes, dynamic_extent, span
 #include <stdexcept>                       // overflow_error
-#include <type_traits>                     // is_const_v, remove_cvref_t
-#include <utility>                         // forward
+#include <type_traits>                     // is_const_v, is_rvalue_reference_v, remove_cvref_t, remove_reference_t
+#include <utility>                         // declval, forward
 
 // What xstd::bit_convert asks of its two ends, and the copy between them: position i to position i, at any widths.
 namespace xstd::bits::detail {
@@ -299,19 +299,20 @@ concept foreign_convertible = requires (From const& from) {
 template<class T>
 concept run_time_source = bit_convert_source<T> and (not fixed_width<T>);
 
-// What bit_convert takes: equal fixed widths, run-time into fixed, anything into a run-time owner or foreign type.
-template<class From, class To>
-concept bit_convertible =
-        (fixed_target<To> and fixed_width<From> and bit_width_v<To> == bit_width_v<From>) or
-        (fixed_target<To> and run_time_source<From>) or
-        (run_time_owner<To> and bit_convert_source<From>) or
-        foreign_convertible<To, From>;
-
 // A target whose capacity is the whole of its blocks, so that adopting them can never overfill it.
 template<class To>
 concept holds_whole_blocks =
         (not owned_bits_t<To>::has_static_capacity) or
         owned_bits_t<To>::static_capacity() == xstd::bit_storage_capacity_v<typename owned_bits_t<To>::block_container_type>;
+
+// An rvalue whose blocks To takes as they are, all of them: they move rather than being copied.
+template<class To, class From>
+concept adopts_from =
+        std::is_rvalue_reference_v<From&&> and
+        (not std::is_const_v<std::remove_reference_t<From>>) and
+        requires (From&& from) { std::forward<From>(from).extract(); } and
+        xstd::bit_constructible_from<To, decltype(std::declval<From&&>().extract())> and
+        holds_whole_blocks<To>;
 
 // The blocks move over and the source is left at width zero; adopted whole, a sequence then takes the source's width.
 template<class To, class From>
