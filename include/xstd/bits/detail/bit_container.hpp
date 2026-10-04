@@ -541,7 +541,7 @@ public:
                 }
         }
 
-        // The block, not operator[], whose subscript means a bit; a writer restores the invariant with erase_unused.
+        // The block, not a subscript, which would mean a bit; a writer restores the invariant with erase_unused.
         [[nodiscard]] constexpr auto block(this auto&& self, std::size_t i) noexcept
                 -> block_reference_t<decltype(self)>
         {
@@ -550,16 +550,10 @@ public:
         }
 
         // block(i) as a range, so a caller writing every block writes them in one call.
-        [[nodiscard]] constexpr auto blocks() noexcept
-                -> std::span<block_type>
+        [[nodiscard]] constexpr auto blocks(this auto&& self) noexcept
+                -> std::span<std::remove_reference_t<block_reference_t<decltype(self)>>>
         {
-                return {std::ranges::data(m_blocks), num_blocks()};
-        }
-
-        [[nodiscard]] constexpr auto blocks() const noexcept
-                -> std::span<block_type const>
-        {
-                return {std::ranges::data(m_blocks), num_blocks()};
+                return {std::ranges::data(self.m_blocks), self.num_blocks()};
         }
 
         // Someone else's blocks as the span that borrows them, writable through a const storage as the span itself is.
