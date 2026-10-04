@@ -129,16 +129,15 @@ struct is_tuple_like<xstd::basic_bit_small_set<Key, Block, N, KeyTraits, Compare
 
 } // namespace boost::container_hash
 
+// NOLINTBEGIN(bugprone-std-namespace-modification): [namespace.std]/2 admits specializing for a program-defined type.
 namespace std {
-
-// NOLINTBEGIN(bugprone-std-namespace-modification)
 
 template<class Key, class Block, std::size_t N, class KeyTraits, class Compare, class Alloc>
 struct hash<xstd::basic_bit_small_set<Key, Block, N, KeyTraits, Compare, Alloc>> : hash<typename xstd::basic_bit_small_set<Key, Block, N, KeyTraits, Compare, Alloc>::adaptor_type>
 {};
 
-// NOLINTEND(bugprone-std-namespace-modification)
-
 } // namespace std
+
+// NOLINTEND(bugprone-std-namespace-modification)
 
 #endif // XSTD_BITS_EXT_BOOST_BIT_SMALL_SET_HPP

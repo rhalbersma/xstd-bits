@@ -114,16 +114,15 @@ struct is_tuple_like<xstd::basic_bit_small_vector<Block, N, Alloc>> : std::false
 
 } // namespace boost::container_hash
 
+// NOLINTBEGIN(bugprone-std-namespace-modification): [namespace.std]/2 admits specializing for a program-defined type.
 namespace std {
-
-// NOLINTBEGIN(bugprone-std-namespace-modification)
 
 template<class Block, std::size_t N, class Alloc>
 struct hash<xstd::basic_bit_small_vector<Block, N, Alloc>> : hash<typename xstd::basic_bit_small_vector<Block, N, Alloc>::adaptor_type>
 {};
 
-// NOLINTEND(bugprone-std-namespace-modification)
-
 } // namespace std
+
+// NOLINTEND(bugprone-std-namespace-modification)
 
 #endif // XSTD_BITS_EXT_BOOST_BIT_SMALL_VECTOR_HPP

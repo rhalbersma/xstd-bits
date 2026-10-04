@@ -1203,9 +1203,8 @@ struct is_range<xstd::bits::detail::set_adaptor<Bits, Store, Derived, Key, KeyTr
 
 } // namespace boost::container_hash
 
+// NOLINTBEGIN(bugprone-std-namespace-modification): [namespace.std]/2 admits specializing for a program-defined type.
 namespace std {
-
-// NOLINTBEGIN(bugprone-std-namespace-modification)
 
 // Owned or viewed, as std::string_view hashes and std::set does not.
 template<class Bits, xstd::bits::detail::storage Store, class Derived, class Key, class KeyTraits, class Compare>
@@ -1218,9 +1217,9 @@ struct hash<xstd::bits::detail::set_adaptor<Bits, Store, Derived, Key, KeyTraits
         }
 };
 
-// NOLINTEND(bugprone-std-namespace-modification)
-
 } // namespace std
+
+// NOLINTEND(bugprone-std-namespace-modification)
 
 // NOLINTBEGIN(bugprone-std-namespace-modification): [range.view] and [range.range] invite the opt-in.
 namespace std::ranges {
