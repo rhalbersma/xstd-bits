@@ -81,8 +81,8 @@ BOOST_AUTO_TEST_CASE(Triviality)
                         static_assert(std::is_trivially_move_assignable_v<T> == not test::proxy_reference<T>);
                 }
                 auto const a = T(T::capacity(), true);
-                auto b = T();
-                b = a;
+                auto b       = T();
+                b            = a;
                 BOOST_CHECK(b == a); // [inplace.vector.overview]/5
         });
 }

@@ -25,7 +25,7 @@ struct strong_index
 {
         std::size_t value;
 
-        [[nodiscard]] friend auto operator==(strong_index, strong_index) -> bool = default;
+        [[nodiscard]] friend auto operator==(strong_index, strong_index) -> bool                  = default;
         [[nodiscard]] friend auto operator<=>(strong_index, strong_index) -> std::strong_ordering = default;
 };
 
@@ -115,7 +115,7 @@ auto looks_up_as_std_set(X const& a, std::set<strong_index> const& model, strong
         auto const mlb = model.lower_bound(k);
         BOOST_CHECK_EQUAL(lb == a.end(), mlb == model.end());
         BOOST_CHECK(mlb == model.end() or *lb == *mlb);
-        auto const ub = a.upper_bound(k);
+        auto const ub  = a.upper_bound(k);
         auto const mub = model.upper_bound(k);
         BOOST_CHECK_EQUAL(ub == a.end(), mub == model.end());
         BOOST_CHECK(mub == model.end() or *ub == *mub);
@@ -129,9 +129,9 @@ template<class X>
 auto modifies_as_std_set(X const& a, std::set<strong_index> const& model, strong_index k)
         -> void
 {
-        auto x = a;
-        auto m = model;
-        auto const [it, inserted] = x.insert(k);
+        auto x                      = a;
+        auto m                      = model;
+        auto const [it, inserted]   = x.insert(k);
         auto const [mit, minserted] = m.insert(k);
         BOOST_CHECK_EQUAL(inserted, minserted);
         BOOST_CHECK(*it == *mit);
@@ -166,8 +166,8 @@ auto erases_inserts_and_prints_as_std_set(std::vector<strong_index> const& keys,
                 BOOST_CHECK(x.erase(x.begin(), x.end()) == x.end());
                 BOOST_CHECK(x.empty());
         }
-        auto x = a;
-        auto m = model;
+        auto x         = a;
+        auto m         = model;
         auto const odd = [](strong_index k) -> bool { return k.value % 2UZ == 1UZ; };
         BOOST_CHECK_EQUAL(erase_if(x, odd), std::erase_if(m, odd));
         BOOST_CHECK(std::ranges::equal(x, m));
@@ -179,7 +179,7 @@ auto erases_inserts_and_prints_as_std_set(std::vector<strong_index> const& keys,
         z.insert_range(keys);
         BOOST_CHECK(z == a);
         auto const k0 = strong_index{.value = first};
-        auto w = X({k0});
+        auto w        = X({k0});
         w.insert({k0});
         w = {k0};
         BOOST_CHECK(std::ranges::equal(w, std::set<strong_index>{k0}));
@@ -196,7 +196,7 @@ template<class X>
 auto agrees_with_std_set_of_strong_indices(std::vector<std::size_t> const& values, std::size_t first, std::size_t past)
         -> void
 {
-        auto const keys = values | std::views::transform([](std::size_t v) -> strong_index { return {.value = v}; }) | std::ranges::to<std::vector>();
+        auto const keys  = values | std::views::transform([](std::size_t v) -> strong_index { return {.value = v}; }) | std::ranges::to<std::vector>();
         auto const model = std::set<strong_index>(keys.begin(), keys.end());
         constructs_and_walks_as_std_set<X>(keys, model);
 

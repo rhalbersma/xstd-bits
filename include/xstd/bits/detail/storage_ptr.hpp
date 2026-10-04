@@ -48,8 +48,8 @@ public:
 template<class Bits>
 class block_ptr
 {
-        using bits_type = std::remove_const_t<Bits>;
-        using span_type = bits_type::block_container_type;
+        using bits_type  = std::remove_const_t<Bits>;
+        using span_type  = bits_type::block_container_type;
         using block_type = bits_type::block_type;
 
         // A span of static extent is a pointer alone, as the storage it rebuilds is.

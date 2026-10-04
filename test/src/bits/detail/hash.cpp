@@ -39,7 +39,7 @@ BOOST_AUTO_TEST_CASE(TheDefaultIsFnv1a64)
 
 BOOST_AUTO_TEST_CASE(ASeededInstanceSubstitutes)
 {
-        auto const value = make(0b1010'0101);
+        auto const value    = make(0b1010'0101);
         constexpr auto seed = std::uint64_t{0x9E37'79B9'7F4A'7C15};
 
         // By value, not by type alone: this is what a defaulted template parameter on its own could not express.
@@ -60,8 +60,8 @@ BOOST_AUTO_TEST_CASE(AnotherAlgorithmSubstitutes)
 // The invariant is per algorithm, and holds under a substituted one too: equal values hash equal.
 BOOST_AUTO_TEST_CASE(EqualValuesHashEqualUnderASubstitutedHash)
 {
-        auto const lhs = make(0b1010'0101);
-        auto const rhs = make(0b1010'0101);
+        auto const lhs   = make(0b1010'0101);
+        auto const rhs   = make(0b1010'0101);
         auto const other = make(0b0101'1010);
 
         BOOST_CHECK_EQUAL(

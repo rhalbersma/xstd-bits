@@ -37,14 +37,14 @@ template<class T>
 auto three_set()
         -> T
 {
-        auto bits = T();
+        auto bits       = T();
         auto const view = xstd::bit_set_view(bits);
         view.insert(3UZ);
         return bits;
 }
 
 using Storage = xstd::bits::detail::bit_container<std::array<std::size_t, 1>, 8>;
-using Blocks = std::array<std::size_t, 1>;
+using Blocks  = std::array<std::size_t, 1>;
 
 template<class T>
 using view_of = decltype(xstd::bit_set_view(std::declval<T&>()));
@@ -118,14 +118,14 @@ BOOST_AUTO_TEST_CASE(TheViewHashesAsAValue)
         BOOST_CHECK_EQUAL(std::hash<view_of<Storage>>()(xstd::bit_set_view(bits)), std::hash<xstd::bit_fixed_set<8>>()(owned));
 
         auto narrow = std::vector<std::uint8_t>{0b0010'1010};
-        auto wide = std::vector<std::uint8_t>{0b0010'1010, 0, 0, 0, 0, 0, 0, 0};
+        auto wide   = std::vector<std::uint8_t>{0b0010'1010, 0, 0, 0, 0, 0, 0, 0};
         BOOST_CHECK_EQUAL(std::hash<view_of<std::vector<std::uint8_t>>>()(xstd::bit_set_view(narrow)), std::hash<view_of<std::vector<std::uint8_t>>>()(xstd::bit_set_view(wide)));
 }
 
 // Asking is total whatever the extent, exactly as [set] has it.
 BOOST_AUTO_TEST_CASE_TEMPLATE(EveryExtentAnswersForPositionsPastItsWidth, T, ViewedTypes)
 {
-        auto bits = three_set<T>();
+        auto bits    = three_set<T>();
         auto const v = xstd::bit_set_view(bits);
 
         // Both ways round, so that find and lower_bound are each seen taking either arm.
@@ -153,7 +153,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(EveryExtentAnswersForPositionsPastItsWidth, T, Vie
 // [set] gives insert no way to fail, so a dynamic extent grows its owner's storage rather than asserting.
 BOOST_AUTO_TEST_CASE(ADynamicExtentGrowsToHoldAPositionPastItsCurrentSize)
 {
-        auto bits = xstd::bit_set{3};
+        auto bits    = xstd::bit_set{3};
         auto const v = xstd::bit_set_view(bits);
 
         auto const [where, inserted] = v.insert(99);

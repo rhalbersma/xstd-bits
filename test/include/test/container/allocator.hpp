@@ -25,10 +25,10 @@ namespace test::container {
 // What an allocator has outstanding, how many more it grants, and what it refused or was handed back unasked.
 struct ledger
 {
-        std::int64_t live = 0;
-        std::int64_t budget = -1; // allocations still granted, and no limit while negative
+        std::int64_t live     = 0;
+        std::int64_t budget   = -1; // allocations still granted, and no limit while negative
         std::int64_t refusals = 0;
-        std::int64_t strays = 0; // deallocations of what no allocator over this ledger allocated
+        std::int64_t strays   = 0; // deallocations of what no allocator over this ledger allocated
         std::set<void const*> held;
 };
 
@@ -47,15 +47,15 @@ inline constexpr bool is_debug_proxy_v<std::_Container_proxy> = true;
 template<class T, bool OnCopy, bool OnMove = OnCopy, bool OnSwap = OnCopy>
 class tagged_allocator
 {
-        ledger* m_ledger = nullptr;
+        ledger* m_ledger   = nullptr;
         std::int64_t m_tag = 0;
 
 public:
-        using value_type = T;
+        using value_type                             = T;
         using propagate_on_container_copy_assignment = std::bool_constant<OnCopy>;
         using propagate_on_container_move_assignment = std::bool_constant<OnMove>;
-        using propagate_on_container_swap = std::bool_constant<OnSwap>;
-        using is_always_equal = std::false_type;
+        using propagate_on_container_swap            = std::bool_constant<OnSwap>;
+        using is_always_equal                        = std::false_type;
 
         template<class U>
         struct rebind
@@ -190,9 +190,9 @@ template<class Op>
 [[nodiscard]] auto run_granting(ledger& book, std::int64_t granted, Op op)
         -> outcome
 {
-        auto ended = outcome::completed;
+        auto ended          = outcome::completed;
         auto const refusals = book.refusals;
-        book.budget = granted;
+        book.budget         = granted;
         try {
                 op();
         } catch (...) {
@@ -225,7 +225,7 @@ template<class X, class Op>
         -> bool
 {
         if constexpr (keeps_a_ledger<X>) {
-                auto book = ledger();
+                auto book  = ledger();
                 auto holds = true;
                 auto ended = outcome::refused;
                 {
@@ -260,13 +260,13 @@ template<class X, class Op>
         -> bool
 {
         if constexpr (keeps_a_ledger<X>) {
-                auto book = ledger();
+                auto book  = ledger();
                 auto holds = true;
                 for (auto const granted : std::views::iota(std::int64_t{0}, refusal_limit)) {
                         auto ended = outcome::completed;
                         {
                                 auto x = X(a, ledger_allocator<X>(book));
-                                ended = run_granting(book, granted, [&] -> void { op(x); });
+                                ended  = run_granting(book, granted, [&] -> void { op(x); });
                                 if (ended != outcome::completed) {
                                         holds = is_valid(x) and holds;
                                 }

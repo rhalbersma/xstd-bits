@@ -158,9 +158,9 @@ template<class X>
 auto check_failed_insertion()
         -> void
 {
-        auto book = ledger();
-        auto spare = ledger();
-        auto x = X(ledger_allocator<X>(book));
+        auto book   = ledger();
+        auto spare  = ledger();
+        auto x      = X(ledger_allocator<X>(book));
         book.budget = 0;
         for ([[maybe_unused]] auto const i : std::views::iota(0UZ, 2048UZ)) {
                 // A copy under book would itself allocate where MSVC's debug containers keep a proxy.
@@ -186,11 +186,11 @@ template<class X>
 {
         if constexpr (requires { typename X::key_type; }) {
                 auto const narrow = std::vector<std::size_t>{1, 2, 3};
-                auto const wide = std::vector<std::size_t>{0, 100, 1000};
+                auto const wide   = std::vector<std::size_t>{0, 100, 1000};
                 return {X(narrow.begin(), narrow.end(), a), X(wide.begin(), wide.end(), a)};
         } else {
                 auto const narrow = test::sequence::make_sequence<std::vector<bool>>(9UZ, test::sequence::stripes);
-                auto const wide = test::sequence::make_sequence<std::vector<bool>>(1000UZ, test::sequence::stripes);
+                auto const wide   = test::sequence::make_sequence<std::vector<bool>>(1000UZ, test::sequence::stripes);
                 return {X(narrow.begin(), narrow.end(), a), X(wide.begin(), wide.end(), a)};
         }
 }
@@ -215,7 +215,7 @@ auto check_listed_and_ranged(typename X::allocator_type const& m)
         auto const listed = X({3, 1}, m);
         BOOST_CHECK(listed == X({1, 3}));
         BOOST_CHECK(listed.get_allocator() == m);
-        auto const keys = std::vector<std::size_t>{0, 100, 1000};
+        auto const keys   = std::vector<std::size_t>{0, 100, 1000};
         auto const ranged = X(std::from_range, keys, m);
         BOOST_CHECK(ranged == X(keys.begin(), keys.end()));
         BOOST_CHECK(ranged.get_allocator() == m);
@@ -238,7 +238,7 @@ BOOST_AUTO_TEST_CASE(AllocatorType)
 {
         test::for_each_type<all>([]<class T> -> void {
                 // The allocator the column was declared with, or for the small columns Boost's wrapper around it.
-                using A = user_allocator<T>::type;
+                using A              = user_allocator<T>::type;
                 using allocator_type = T::allocator_type;
                 static_assert(std::same_as<allocator_type, A> or wraps_allocator<T>);                    // [container.alloc.reqmts]/4
                 BOOST_CHECK(T(allocator<T>(1)).get_allocator() == allocator_type(make_allocator<A>(1))); // [container.alloc.reqmts]/1
@@ -299,7 +299,7 @@ BOOST_AUTO_TEST_CASE(MoveConstructor)
                 // The allocator moves with the elements, and a copy asks the traits which one to take.
                 using traits = std::allocator_traits<typename T::allocator_type>;
                 for (auto const& t : samples<T>(allocator<T>(1))) {
-                        auto rv = T(t, t.get_allocator());
+                        auto rv      = T(t, t.get_allocator());
                         auto const u = T(std::move(rv));
                         BOOST_CHECK(u == t);                                 // [container.alloc.reqmts]/16
                         BOOST_CHECK(u.get_allocator() == t.get_allocator()); // [container.alloc.reqmts]/16
@@ -318,7 +318,7 @@ BOOST_AUTO_TEST_CASE(MoveWithAllocator)
                 static_assert(requires (T o, T::allocator_type a) { T(std::move(o), a); });
                 auto const m = allocator<T>(1);
                 for (auto const& t : samples<T>(allocator<T>(0))) {
-                        auto rv = t;
+                        auto rv      = t;
                         auto const u = T(std::move(rv), m);
                         BOOST_CHECK(u == t);                 // [container.alloc.reqmts]/19
                         BOOST_CHECK(u.get_allocator() == m); // [container.alloc.reqmts]/19
@@ -359,7 +359,7 @@ auto check_copying_in(X const& t, typename X::allocator_type const& a, int tag)
 {
         auto const copy_in = [&](X& x) -> void {
                 auto const source = X(t, ledger_allocator<X>(*x.get_allocator().book(), tag));
-                x = source;
+                x                 = source;
         };
         if constexpr (is_std_model_v<X>) {
                 BOOST_CHECK(basic_guarantee(other<X>(a), copy_in));
@@ -380,7 +380,7 @@ BOOST_AUTO_TEST_CASE(CopyAssignment)
                 auto const b = allocator<T>(1);
                 for (auto const& t : samples<T>(b)) {
                         auto u = other<T>(a);
-                        u = t;
+                        u      = t;
                         BOOST_CHECK(u == t);                                                                               // [container.alloc.reqmts]/23
                         BOOST_CHECK(u.get_allocator() == (traits::propagate_on_container_copy_assignment::value ? b : a)); // [container.reqmts]/64
                         BOOST_CHECK(basic_guarantee(other<T>(a), [&](T& x) -> void { x = T(t, x.get_allocator()); }));     // [container.reqmts]/25
@@ -419,8 +419,8 @@ BOOST_AUTO_TEST_CASE(MoveAssignment)
                 auto const b = allocator<T>(1);
                 for (auto const& t : samples<T>(b)) {
                         auto rv = t;
-                        auto u = other<T>(a);
-                        u = std::move(rv);
+                        auto u  = other<T>(a);
+                        u       = std::move(rv);
                         BOOST_CHECK_EQUAL(u.size(), t.size());                                                             // [container.alloc.reqmts]/27
                         BOOST_CHECK(u == t);                                                                               // [container.alloc.reqmts]/28
                         BOOST_CHECK(u.get_allocator() == (traits::propagate_on_container_move_assignment::value ? b : a)); // [container.reqmts]/64
@@ -441,8 +441,8 @@ BOOST_AUTO_TEST_CASE(Swap)
                 auto const a = allocator<T>(0);
                 auto const b = traits::propagate_on_container_swap::value ? allocator<T>(1) : a;
                 for (auto const& t : samples<T>(a)) {
-                        auto x = T(t, a);
-                        auto y = other<T>(b);
+                        auto x        = T(t, a);
+                        auto y        = other<T>(b);
                         auto const x1 = x;
                         auto const y1 = y;
                         x.swap(y);
@@ -509,7 +509,7 @@ BOOST_AUTO_TEST_CASE(AllocatorArguments)
 BOOST_AUTO_TEST_CASE(AMemoryResourceConvertsToThePolymorphicAllocator)
 {
         using pmr_bit_set = xstd::basic_bit_set<std::size_t, std::size_t, xstd::bit_key_traits<std::size_t>, std::less<std::size_t>, std::pmr::polymorphic_allocator<std::size_t>>; // NOLINT(modernize-use-transparent-functors): the default comparator, named to reach the allocator
-        auto mr = std::pmr::monotonic_buffer_resource();
+        auto mr           = std::pmr::monotonic_buffer_resource();
 
         auto const s = pmr_bit_set({1, 2}, &mr);
         BOOST_CHECK(s.get_allocator().resource() == &mr);
@@ -520,8 +520,8 @@ BOOST_AUTO_TEST_CASE(AMemoryResourceConvertsToThePolymorphicAllocator)
 BOOST_AUTO_TEST_CASE(AnAllocatorAwareContainerPassesItsAllocatorOn)
 {
         using pmr_bit_set = xstd::basic_bit_set<std::size_t, std::size_t, xstd::bit_key_traits<std::size_t>, std::less<std::size_t>, std::pmr::polymorphic_allocator<std::size_t>>; // NOLINT(modernize-use-transparent-functors): the default comparator, named to reach the allocator
-        auto mr = std::pmr::monotonic_buffer_resource();
-        auto sets = std::pmr::vector<pmr_bit_set>(&mr);
+        auto mr           = std::pmr::monotonic_buffer_resource();
+        auto sets         = std::pmr::vector<pmr_bit_set>(&mr);
 
         sets.emplace_back();
         BOOST_CHECK(sets.back().get_allocator().resource() == &mr);
@@ -534,10 +534,10 @@ template<class T, class... Args>
 auto check_scoped_construction(Args... args)
         -> void
 {
-        using inner_allocator = std::pmr::polymorphic_allocator<std::size_t>;
+        using inner_allocator  = std::pmr::polymorphic_allocator<std::size_t>;
         using scoped_allocator = std::scoped_allocator_adaptor<std::allocator<T>, inner_allocator>;
-        auto mr = std::pmr::monotonic_buffer_resource();
-        auto elements = std::vector<T, scoped_allocator>(scoped_allocator(std::allocator<T>(), inner_allocator(&mr)));
+        auto mr                = std::pmr::monotonic_buffer_resource();
+        auto elements          = std::vector<T, scoped_allocator>(scoped_allocator(std::allocator<T>(), inner_allocator(&mr)));
         elements.emplace_back(args...);
         BOOST_CHECK(elements.back().get_allocator().resource() == &mr);
 }
@@ -581,7 +581,7 @@ BOOST_AUTO_TEST_CASE(AnEmptyBraceIsADefaultAllocator)
 BOOST_AUTO_TEST_CASE(AMemoryResourceConvertsToThePolymorphicAllocatorOfASequence)
 {
         using pmr_bit_vector = xstd::basic_bit_vector<std::size_t, std::pmr::polymorphic_allocator<std::size_t>>;
-        auto mr = std::pmr::monotonic_buffer_resource();
+        auto mr              = std::pmr::monotonic_buffer_resource();
 
         auto const v = pmr_bit_vector(3, true, &mr);
         BOOST_CHECK(v.get_allocator().resource() == &mr);
@@ -594,7 +594,7 @@ BOOST_AUTO_TEST_CASE(AnAllocatorAwareContainerPassesItsAllocatorOnToASequence)
         using pmr_bit_vector = xstd::basic_bit_vector<std::size_t, std::pmr::polymorphic_allocator<std::size_t>>;
         static_assert(std::uses_allocator_v<pmr_bit_vector, std::pmr::polymorphic_allocator<pmr_bit_vector>>);
 
-        auto mr = std::pmr::monotonic_buffer_resource();
+        auto mr      = std::pmr::monotonic_buffer_resource();
         auto vectors = std::pmr::vector<pmr_bit_vector>(&mr);
         vectors.emplace_back(3);
 

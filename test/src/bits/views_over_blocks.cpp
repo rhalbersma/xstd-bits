@@ -27,10 +27,10 @@ template<class R>
 [[nodiscard]] auto positions_of(R const& blocks)
         -> std::vector<std::size_t>
 {
-        using block_type = std::ranges::range_value_t<R>;
+        using block_type      = std::ranges::range_value_t<R>;
         constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<block_type>::digits);
-        auto positions = std::vector<std::size_t>();
-        auto i = 0UZ;
+        auto positions        = std::vector<std::size_t>();
+        auto i                = 0UZ;
         for (auto const block : blocks) {
                 for (auto const n : std::views::iota(0UZ, digits)) {
                         if (((static_cast<std::uint64_t>(block) >> n) & 1U) != 0U) {
@@ -48,11 +48,11 @@ template<class W, class R>
         -> bool
 {
         auto const expected = positions_of(blocks);
-        auto const set = xstd::bit_set_view(viewed);
-        auto const seq = xstd::bit_span(viewed);
+        auto const set      = xstd::bit_set_view(viewed);
+        auto const seq      = xstd::bit_span(viewed);
 
         auto const forward = std::vector<std::size_t>(set.begin(), set.end());
-        auto backward = std::vector<std::size_t>(set.rbegin(), set.rend());
+        auto backward      = std::vector<std::size_t>(set.rbegin(), set.rend());
         std::ranges::reverse(backward);
 
         auto from_sequence = std::vector<std::size_t>();
@@ -81,7 +81,7 @@ concept can_assign_element = requires (S const& s) { s[0] = true; };
 // One block is its own digits: a static width of one block, held as a pointer and nothing else.
 BOOST_AUTO_TEST_CASE(OneBlockIsItsOwnDigits)
 {
-        auto board = std::uint64_t{0b1010'0101};
+        auto board         = std::uint64_t{0b1010'0101};
         auto const squares = xstd::bit_set_view(board);
         static_assert(sizeof(squares) == sizeof(std::uint64_t*));
         static_assert(sizeof(xstd::bit_span(board)) == sizeof(std::uint64_t*));
@@ -99,8 +99,8 @@ BOOST_AUTO_TEST_CASE(OneBlockIsItsOwnDigits)
 // A fixed number of blocks is a static width over them: one block, two, and more, each the storage's own path.
 BOOST_AUTO_TEST_CASE(AnArrayOfBlocksIsAStaticWidth)
 {
-        auto one = std::array<std::uint8_t, 1>{0x81};
-        auto two = std::array<std::uint16_t, 2>{0x0001, 0x8000};
+        auto one  = std::array<std::uint8_t, 1>{0x81};
+        auto two  = std::array<std::uint16_t, 2>{0x0001, 0x8000};
         auto four = std::array<std::uint32_t, 4>{0x0000'0003, 0x0000'0000, 0x8000'0000, 0x0001'0000};
 
         static_assert(decltype(xstd::bit_span(one))::static_extent == 8UZ);
@@ -118,7 +118,7 @@ BOOST_AUTO_TEST_CASE(AnArrayOfBlocksIsAStaticWidth)
 // A growable container's blocks are a run-time width, the whole of them, and never grow through the view.
 BOOST_AUTO_TEST_CASE(AVectorOfBlocksIsARunTimeWidth)
 {
-        auto blocks = std::vector<std::uint32_t>{1U, 0x8000'0000U, 0U};
+        auto blocks    = std::vector<std::uint32_t>{1U, 0x8000'0000U, 0U};
         auto const seq = xstd::bit_span(blocks);
         static_assert(sizeof(seq) == sizeof(std::span<std::uint32_t>));
         static_assert(decltype(seq)::static_extent == std::dynamic_extent);
@@ -142,7 +142,7 @@ BOOST_AUTO_TEST_CASE(AVectorOfBlocksIsARunTimeWidth)
 // A span is blocks already lent, so it is handed over as it is, temporary or not.
 BOOST_AUTO_TEST_CASE(ASpanIsHandedOverAsItIs)
 {
-        auto blocks = std::array<std::uint16_t, 3>{0x0001, 0x0000, 0x8000};
+        auto blocks       = std::array<std::uint16_t, 3>{0x0001, 0x0000, 0x8000};
         auto const middle = xstd::bit_span(std::span(blocks).subspan(1, 1));
         BOOST_CHECK_EQUAL(middle.size(), 16UZ);
         middle[3] = true;
@@ -168,7 +168,7 @@ BOOST_AUTO_TEST_CASE(NoBlocksIsWidthZero)
 // A view over const blocks reads them and cannot write, and one over the same blocks unqualified sees what it writes.
 BOOST_AUTO_TEST_CASE(AConstViewReadsAndCannotWrite)
 {
-        auto blocks = std::array<std::uint16_t, 2>{0x0100, 0x0000};
+        auto blocks    = std::array<std::uint16_t, 2>{0x0100, 0x0000};
         auto const set = xstd::bit_set_view(std::as_const(blocks));
         BOOST_CHECK(set.contains(8UZ));
         BOOST_CHECK_EQUAL(set.size(), 1UZ);
@@ -199,18 +199,18 @@ BOOST_AUTO_TEST_CASE(IteratorsOutliveTheView)
         auto const found = std::ranges::find(xstd::bit_set_view(board), 7UZ);
         BOOST_CHECK_EQUAL(*found, 7UZ);
 
-        auto blocks = std::vector<std::uint8_t>{0x00, 0x00};
+        auto blocks    = std::vector<std::uint8_t>{0x00, 0x00};
         auto const bit = xstd::bit_span(blocks).begin() + 9;
-        *bit = true;
+        *bit           = true;
         BOOST_CHECK_EQUAL(blocks[1], 0x02U);
 }
 
 // A view is named by the blocks it is handed: a block as itself, a range as the span that lends it.
 BOOST_AUTO_TEST_CASE(AViewIsNamedByItsBlocks)
 {
-        auto board = std::uint64_t{};
+        auto board  = std::uint64_t{};
         auto blocks = std::vector<std::uint32_t>(2);
-        auto fixed = std::array<std::uint16_t, 2>{};
+        auto fixed  = std::array<std::uint16_t, 2>{};
         static_assert(std::same_as<decltype(xstd::bit_set_view(board)), xstd::bit_set_view<std::uint64_t>>);
         static_assert(std::same_as<decltype(xstd::bit_set_view(std::as_const(board))), xstd::bit_set_view<std::uint64_t const>>);
         static_assert(std::same_as<decltype(xstd::bit_span(blocks)), xstd::bit_span<std::span<std::uint32_t>>>);
@@ -221,7 +221,7 @@ BOOST_AUTO_TEST_CASE(AViewIsNamedByItsBlocks)
 
         // The deduced views write through to the blocks they are named by.
         auto const seq = xstd::bit_span(blocks);
-        seq[33] = true;
+        seq[33]        = true;
         BOOST_CHECK_EQUAL(blocks[1], 0x02U);
         xstd::bit_span(fixed).first<4>().fill(true);
         BOOST_CHECK_EQUAL(fixed[0], 0x000FU);

@@ -66,7 +66,7 @@ template<class Key, class KeyTraits, class Bits, class F>
 constexpr auto walk_blocks_ascending(Bits const& c, F& f)
         -> void
 {
-        using block_type = Bits::block_type;
+        using block_type      = Bits::block_type;
         constexpr auto digits = Bits::bits_per_block;
 
         for (auto const index : std::views::iota(0UZ, c.num_blocks())) {
@@ -91,7 +91,7 @@ template<class Key, class KeyTraits, class Bits, class F>
 constexpr auto walk_blocks_descending(Bits const& c, F& f)
         -> void
 {
-        using block_type = Bits::block_type;
+        using block_type      = Bits::block_type;
         constexpr auto digits = Bits::bits_per_block;
 
         auto const blocks = c.num_blocks();
@@ -205,7 +205,7 @@ class set_adaptor : public set::sizes_t<Bits, Store, Derived, Key, KeyTraits, Co
 {
         static_assert(set::key_direction<Compare, Key>);
 
-        static constexpr bool is_owner = owns(Store);
+        static constexpr bool is_owner      = owns(Store);
         static constexpr bool is_descending = (set::direction_of<Compare> == direction::descending);
 
         using bits_type = std::remove_const_t<Bits>;
@@ -251,33 +251,33 @@ public:
         using derived_type = std::conditional_t<std::is_void_v<Derived>, set_adaptor, Derived>;
 
         // What a trait asks of this vehicle, every container built on it answering alike.
-        using adaptor_type = set_adaptor;
-        using reads_as = set_reading_tag;
-        using adapted_type = Bits;
+        using adaptor_type                 = set_adaptor;
+        using reads_as                     = set_reading_tag;
+        using adapted_type                 = Bits;
         static constexpr bool owns_storage = is_owner;
 
         // types
-        using key_type = Key;
-        using key_traits_type = KeyTraits;
-        using key_compare = Compare;
-        using value_type = key_type;
-        using value_compare = key_compare;
+        using key_type                         = Key;
+        using key_traits_type                  = KeyTraits;
+        using key_compare                      = Compare;
+        using value_type                       = key_type;
+        using value_compare                    = key_compare;
         static constexpr bool has_static_width = (Bits::extent != std::dynamic_extent);
-        using pointer = void;
-        using const_pointer = pointer;
-        using reference = bidirectional_bit_reference<Bits, Key, KeyTraits, set::direction_of<Compare>>;
-        using const_reference = reference;
-        using size_type = std::size_t;
-        using difference_type = std::ptrdiff_t;
-        using iterator = bidirectional_bit_iterator<Bits, Key, KeyTraits, set::direction_of<Compare>>;
-        using const_iterator = iterator;
-        using reverse_iterator = std::reverse_iterator<iterator>;
-        using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+        using pointer                          = void;
+        using const_pointer                    = pointer;
+        using reference                        = bidirectional_bit_reference<Bits, Key, KeyTraits, set::direction_of<Compare>>;
+        using const_reference                  = reference;
+        using size_type                        = std::size_t;
+        using difference_type                  = std::ptrdiff_t;
+        using iterator                         = bidirectional_bit_iterator<Bits, Key, KeyTraits, set::direction_of<Compare>>;
+        using const_iterator                   = iterator;
+        using reverse_iterator                 = std::reverse_iterator<iterator>;
+        using const_reverse_iterator           = std::reverse_iterator<const_iterator>;
 
 private:
         // An allocator argument as [container.alloc.reqmts] takes it: converting, and only where the storage has one.
         static constexpr bool has_allocator = has_allocator_v<std::remove_const_t<Bits>>;
-        using allocator_param = allocator_param_t<std::remove_const_t<Bits>>;
+        using allocator_param               = allocator_param_t<std::remove_const_t<Bits>>;
 
 public:
         // construct/copy/destroy; an owner is built the way std::set is, a view only from what it views.
@@ -636,7 +636,7 @@ public:
                 } else if constexpr (set::is_consecutive<std::remove_cvref_t<R>> and std::same_as<KeyTraits, bit_key_traits<std::size_t>> and requires (std::size_t pos, std::size_t len) { self.bits().set(pos, len, true); }) {
                         // Tier two: consecutive identity keys, the first and last blocks masked, the rest whole.
                         if (not std::ranges::empty(rg)) {
-                                auto const lo = static_cast<value_type>(*std::ranges::begin(rg));
+                                auto const lo  = static_cast<value_type>(*std::ranges::begin(rg));
                                 auto const len = static_cast<std::size_t>(std::ranges::distance(rg));
                                 // The last position first, so a growable storage is wide enough.
                                 auto const hi = bits_type::width_sum(lo, len - 1UZ);
@@ -924,7 +924,7 @@ public:
                 -> size_type
         {
                 auto const [lo, hi] = equivalent_positions(x);
-                auto n = 0UZ;
+                auto n              = 0UZ;
                 for (auto pos = bits().inclusive_find_next(lo); pos < hi; pos = bits().exclusive_find_next(pos)) {
                         ++n;
                 }
@@ -937,7 +937,7 @@ public:
                 -> const_iterator
         {
                 auto const [lo, hi] = equivalent_positions(x);
-                auto const pos = bits().inclusive_find_next(lo);
+                auto const pos      = bits().inclusive_find_next(lo);
                 return pos < hi ? const_iterator{&bits(), pos} : end();
         }
 
@@ -981,7 +981,7 @@ public:
                                                                                                  constexpr auto erase(this auto&& self, K&& x) -> size_type
                                  requires requires (std::size_t pos, std::size_t len) { self.bits().set(pos, len, false); }
         {
-                auto const erased = self.count(x);
+                auto const erased   = self.count(x);
                 auto const [lo, hi] = self.equivalent_positions(x);
                 self.bits().set(lo, hi - lo, false);
                 return erased;
@@ -1022,7 +1022,7 @@ private:
         [[nodiscard]] constexpr auto equivalent_positions(K const& x) const
                 -> std::pair<std::size_t, std::size_t>
         {
-                auto const comp = key_compare();
+                auto const comp      = key_compare();
                 auto const positions = std::views::iota(0UZ, bits().size());
                 // Descending, a key orders before x exactly where comp(x, key) holds.
                 auto const below = [&](std::size_t pos) -> bool {
@@ -1040,8 +1040,8 @@ private:
                         }
                 };
                 auto const first = std::ranges::begin(positions);
-                auto const lo = std::ranges::partition_point(positions, below);
-                auto const hi = std::ranges::partition_point(std::ranges::subrange(lo, std::ranges::end(positions)), not_above);
+                auto const lo    = std::ranges::partition_point(positions, below);
+                auto const hi    = std::ranges::partition_point(std::ranges::subrange(lo, std::ranges::end(positions)), not_above);
                 return {static_cast<std::size_t>(lo - first), static_cast<std::size_t>(hi - first)};
         }
 

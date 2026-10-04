@@ -61,7 +61,7 @@ BOOST_AUTO_TEST_CASE(InplaceVectorFirstLast)
                 BOOST_CHECK_THROW(static_cast<void>(T(more.begin(), more.end())), std::bad_alloc); // [inplace.vector.overview]/4
                 for (auto const [from, a] : inputs::sequences<T>()) {
                         auto const on_failure = context(from, a);
-                        auto const in = model_of(a);
+                        auto const in         = model_of(a);
                         BOOST_CHECK(model_of(T(in.begin(), in.end())) == in); // [inplace.vector.cons]/7
                 }
         });
@@ -80,7 +80,7 @@ BOOST_AUTO_TEST_CASE(InplaceVectorFromRange)
                         BOOST_CHECK_THROW(static_cast<void>(T(std::from_range, more)), std::bad_alloc); // [inplace.vector.overview]/4
                         for (auto const [from, a] : inputs::sequences<T>()) {
                                 auto const on_failure = context(from, a);
-                                auto const in = model_of(a);
+                                auto const in         = model_of(a);
                                 BOOST_CHECK(model_of(T(std::from_range, in)) == in); // [inplace.vector.cons]/10
                         }
                 }

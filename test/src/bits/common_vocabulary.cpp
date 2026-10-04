@@ -17,10 +17,10 @@
 // The common vocabulary the three bit containers answer in their own names.
 namespace {
 
-using ours_static = xstd::bits::detail::bit_container<std::array<std::uint64_t, 1>, 64>;
+using ours_static  = xstd::bits::detail::bit_container<std::array<std::uint64_t, 1>, 64>;
 using ours_dynamic = xstd::bits::detail::bit_container<std::vector<std::uint64_t>>;
-using theirs = std::bitset<64>;
-using boosts = boost::dynamic_bitset<>;
+using theirs       = std::bitset<64>;
+using boosts       = boost::dynamic_bitset<>;
 
 // Each probe is a template: a requires-expression over a concrete type hard-errors rather than answering false.
 template<class C>

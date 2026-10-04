@@ -28,7 +28,7 @@ BOOST_AUTO_TEST_CASE(Size)
         test::for_each_type<test::spec::span::all>([]<class T> -> void {
                 for (auto const [from, a] : inputs::views<T>()) {
                         auto const on_failure = context(from, a);
-                        auto const s = a.view();
+                        auto const s          = a.view();
                         static_assert(noexcept(s.size()) and std::same_as<decltype(s.size()), typename T::size_type>);
                         BOOST_CHECK_EQUAL(s.size(), static_cast<std::size_t>(std::distance(s.begin(), s.end()))); // [span.obs]/1
                         BOOST_CHECK(T::extent == std::dynamic_extent or s.size() == T::extent);                   // [span.obs]/1
@@ -42,7 +42,7 @@ BOOST_AUTO_TEST_CASE(Empty)
         test::for_each_type<test::spec::span::all>([]<class T> -> void {
                 for (auto const [from, a] : inputs::views<T>()) {
                         auto const on_failure = context(from, a);
-                        auto const s = a.view();
+                        auto const s          = a.view();
                         static_assert(noexcept(s.empty()) and std::same_as<decltype(s.empty()), bool>);
                         BOOST_CHECK_EQUAL(s.empty(), s.size() == 0UZ); // [span.obs]/3
                 }

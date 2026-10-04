@@ -99,7 +99,7 @@ BOOST_AUTO_TEST_CASE(CopyConstructor)
                 static_assert(std::is_nothrow_copy_constructible_v<T>);
                 for (auto const [from, a] : inputs::views<T>()) {
                         auto const on_failure = context(from, a);
-                        auto const s = a.view();
+                        auto const s          = a.view();
                         auto const u(s);
                         BOOST_CHECK(u.begin() == s.begin() and u.end() == s.end()); // [span.cons]/21
                         BOOST_CHECK(views_the_same(u, s));                          // [span.cons]/21
@@ -127,9 +127,9 @@ BOOST_AUTO_TEST_CASE(ConvertingConstructor)
                         }
                         for (auto const [from, a] : inputs::views<T>()) {
                                 auto const on_failure = context(from, a);
-                                auto const s = a.view();
-                                auto const d = D(s);
-                                auto const t = T(d);
+                                auto const s          = a.view();
+                                auto const d          = D(s);
+                                auto const t          = T(d);
                                 BOOST_CHECK(views_the_same(d, s)); // [span.cons]/24-25
                                 BOOST_CHECK(views_the_same(t, s)); // [span.cons]/24-25
                         }
@@ -144,8 +144,8 @@ BOOST_AUTO_TEST_CASE(CopyAssign)
                 static_assert(std::is_nothrow_copy_assignable_v<T>);
                 for (auto const [from, a, b] : inputs::pairs<T>()) {
                         auto const on_failure = context(from, a, b);
-                        auto u = a.view();
-                        auto const s = b.view();
+                        auto u                = a.view();
+                        auto const s          = b.view();
                         static_assert(std::same_as<decltype(u = s), T&>);
                         auto const& r = (u = s);
                         BOOST_CHECK(&r == &u);

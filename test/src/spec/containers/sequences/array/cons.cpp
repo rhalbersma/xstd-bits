@@ -30,7 +30,7 @@ BOOST_AUTO_TEST_CASE(SpecialMemberFunctions)
                 static_assert(std::is_trivially_copy_assignable_v<T> and std::is_trivially_move_assignable_v<T>);       // [array.cons]/1
                 static_assert(std::is_trivially_destructible_v<T>);                                                     // [array.cons]/1
                 auto const a = make_sequence<T>(T().size(), stripes);
-                auto b = a;
+                auto b       = a;
                 auto const c = std::move(b);
                 BOOST_CHECK(c == a); // [array.cons]/1
         });

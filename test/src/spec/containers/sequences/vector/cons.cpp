@@ -70,7 +70,7 @@ BOOST_AUTO_TEST_CASE(VectorFirstLast)
                 static_assert(requires (bool const* first, bool const* last, T::allocator_type a) { T(first, last, a); });
                 for (auto const [from, a] : inputs::sequences<T>()) {
                         auto const on_failure = context(from, a);
-                        auto const in = model_of(a);
+                        auto const in         = model_of(a);
                         BOOST_CHECK(model_of(T(in.begin(), in.end(), typename T::allocator_type())) == in); // [vector.cons]/9
                 }
         });
@@ -84,7 +84,7 @@ BOOST_AUTO_TEST_CASE(VectorFromRange)
                 static_assert(requires (std::initializer_list<bool> il, T::allocator_type a) { T(std::from_range, il, a); });
                 for (auto const [from, a] : inputs::sequences<T>()) {
                         auto const on_failure = context(from, a);
-                        auto const in = model_of(a);
+                        auto const in         = model_of(a);
                         BOOST_CHECK(model_of(T(std::from_range, in, typename T::allocator_type())) == in); // [vector.cons]/11
                 }
 #endif

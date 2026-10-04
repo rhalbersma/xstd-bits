@@ -27,10 +27,10 @@ BOOST_AUTO_TEST_CASE(Swap)
                 static_assert(std::is_swappable_v<T>); // [array.special]/1
                 for (auto const [from, a, b] : inputs::pairs<T>()) {
                         auto const on_failure = context(from, a, b);
-                        auto x = a;
-                        auto y = b;
-                        auto x1 = a;
-                        auto y1 = b;
+                        auto x                = a;
+                        auto y                = b;
+                        auto x1               = a;
+                        auto y1               = b;
                         swap(x, y);
                         x1.swap(y1);
                         BOOST_CHECK(x == x1 and y == y1); // [array.special]/2

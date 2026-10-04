@@ -58,10 +58,10 @@ class bidirectional_bit_iterator
 
 public:
         using iterator_category = std::bidirectional_iterator_tag;
-        using value_type = Key;
-        using difference_type = std::ptrdiff_t;
-        using pointer = void;
-        using reference = bidirectional_bit_reference<Bits, Key, KeyTraits, Direction>;
+        using value_type        = Key;
+        using difference_type   = std::ptrdiff_t;
+        using pointer           = void;
+        using reference         = bidirectional_bit_reference<Bits, Key, KeyTraits, Direction>;
 
         [[nodiscard]] bidirectional_bit_iterator() = default;
 
@@ -159,10 +159,10 @@ class bidirectional_bit_reference
 
 public:
         using value_type = Key;
-        using iterator = bidirectional_bit_iterator<Bits, Key, KeyTraits, Direction>;
+        using iterator   = bidirectional_bit_iterator<Bits, Key, KeyTraits, Direction>;
 
         // A value, not a handle to rebind: trivially copyable, never assignable, as a reference to a key is.
-        bidirectional_bit_reference(bidirectional_bit_reference const&) = default;
+        bidirectional_bit_reference(bidirectional_bit_reference const&)                    = default;
         auto operator=(bidirectional_bit_reference const&) -> bidirectional_bit_reference& = delete;
 
         [[nodiscard]] constexpr auto operator&() const noexcept

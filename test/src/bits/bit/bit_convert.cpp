@@ -162,9 +162,9 @@ BOOST_AUTO_TEST_CASE(BitConvertibleConstrainsTheTypesNotTheExpression)
 BOOST_AUTO_TEST_CASE(EqualFixedWidthsCrossWhole)
 {
         static_assert([] -> bool {
-                auto const set = xstd::bit_fixed_set<64>{0, 5, 63};
-                auto const block = xstd::bit_convert<std::uint64_t>(set);
-                auto const seq = xstd::bit_convert<xstd::bit_array<64>>(set);
+                auto const set    = xstd::bit_fixed_set<64>{0, 5, 63};
+                auto const block  = xstd::bit_convert<std::uint64_t>(set);
+                auto const seq    = xstd::bit_convert<xstd::bit_array<64>>(set);
                 auto const legacy = xstd::bit_convert<std::bitset<64>>(seq);
                 return block == ((1ULL << 63U) | (1ULL << 5U) | 1ULL) and seq[5] and legacy.test(63) and legacy.count() == 3 and xstd::bit_convert<xstd::bit_fixed_set<64>>(legacy) == set;
         }());
@@ -207,7 +207,7 @@ BOOST_AUTO_TEST_CASE(ARunTimeWidthNarrowsByValue)
 
         // A sequence wider than the target narrows when its tail is clear, and a shorter one zero-extends.
         auto wide = xstd::bit_vector(70);
-        wide[63] = true;
+        wide[63]  = true;
         BOOST_CHECK(xstd::bit_convert<std::bitset<64>>(wide).test(63));
         wide[69] = true;
         BOOST_CHECK_THROW(static_cast<void>(xstd::bit_convert<std::bitset<64>>(wide)), std::overflow_error);
@@ -264,12 +264,12 @@ BOOST_AUTO_TEST_CASE(ASetTargetTakesWholeBlocksOfItsOwn)
 // The same blocks from an rvalue move over whole: the buffer is the one the source had, and the source is left empty.
 BOOST_AUTO_TEST_CASE(AnRvalueOfTheSameBlocksIsAdoptedWithoutACopy)
 {
-        auto blocks = std::vector<std::size_t>{0b101, 0, 1};
+        auto blocks            = std::vector<std::size_t>{0b101, 0, 1};
         auto const* const data = blocks.data();
-        auto v = xstd::bit_vector(xstd::from_bit_storage, std::move(blocks));
+        auto v                 = xstd::bit_vector(xstd::from_bit_storage, std::move(blocks));
         v.resize(130);
 
-        auto s = xstd::bit_convert<xstd::bit_set>(std::move(v));
+        auto s             = xstd::bit_convert<xstd::bit_set>(std::move(v));
         auto const emptied = v.empty(); // NOLINT(bugprone-use-after-move,hicpp-invalid-access-moved,clang-analyzer-cplusplus.Move): the moved-from state is the check.
         BOOST_CHECK(emptied);
         BOOST_CHECK(positions(s) == (std::vector<std::size_t>{0, 2, 128}));
@@ -281,11 +281,11 @@ BOOST_AUTO_TEST_CASE(AnRvalueOfTheSameBlocksIsAdoptedWithoutACopy)
         BOOST_CHECK(std::move(back).extract().data() == data);
 
         // A sequence to a sequence keeps its width exactly.
-        auto two = std::vector<std::size_t>(2);
+        auto two               = std::vector<std::size_t>(2);
         auto const* const wide = two.data();
-        auto w = xstd::bit_vector(xstd::from_bit_storage, std::move(two));
+        auto w                 = xstd::bit_vector(xstd::from_bit_storage, std::move(two));
         w.resize(70);
-        w[69] = true;
+        w[69]     = true;
         auto same = xstd::bit_convert<xstd::bit_vector>(std::move(w));
         BOOST_CHECK_EQUAL(same.size(), 70UZ);
         BOOST_CHECK(same[69] and not same[68]);
@@ -305,13 +305,13 @@ BOOST_AUTO_TEST_CASE(OnlyTheSameBlockContainerIsAdopted)
         static_assert(adopts_from<xstd::bit_bounded_vector<128>, xstd::bit_bounded_set<100>>);
         static_assert(not adopts_from<xstd::bit_bounded_vector<100>, xstd::bit_bounded_set<128>>);
 
-        auto s = xstd::bit_bounded_set<100>{5, 99};
+        auto s       = xstd::bit_bounded_set<100>{5, 99};
         auto const v = xstd::bit_convert<xstd::bit_bounded_vector<128>>(std::move(s));
         BOOST_CHECK_EQUAL(v.size(), 100UZ);
         BOOST_CHECK(positions(v) == (std::vector<std::size_t>{5, 99}));
 
-        auto small = xstd::bit_small_vector<256>(200);
-        small[199] = true;
+        auto small   = xstd::bit_small_vector<256>(200);
+        small[199]   = true;
         auto const t = xstd::bit_convert<xstd::bit_small_set<256>>(std::move(small));
         BOOST_CHECK(positions(t) == (std::vector<std::size_t>{199}));
 }
@@ -319,7 +319,7 @@ BOOST_AUTO_TEST_CASE(OnlyTheSameBlockContainerIsAdopted)
 // A copy leaves its source as it was, from an lvalue and from an rvalue whose blocks cannot be adopted alike.
 BOOST_AUTO_TEST_CASE(ACopyLeavesTheSourceUnchanged)
 {
-        auto v = make<xstd::bit_vector>(70, {1, 69});
+        auto v            = make<xstd::bit_vector>(70, {1, 69});
         auto const before = v;
 
         auto const s = xstd::bit_convert<xstd::bit_set>(v);
@@ -335,15 +335,15 @@ BOOST_AUTO_TEST_CASE(ACopyLeavesTheSourceUnchanged)
 BOOST_AUTO_TEST_CASE(TheConversionIsAConstantExpression)
 {
         static_assert([] -> bool {
-                auto s = xstd::basic_bit_set<std::size_t, std::uint8_t>{3, 9, 20};
-                auto const wide = xstd::bit_convert<xstd::basic_bit_vector<std::uint32_t>>(s);
+                auto s             = xstd::basic_bit_set<std::size_t, std::uint8_t>{3, 9, 20};
+                auto const wide    = xstd::bit_convert<xstd::basic_bit_vector<std::uint32_t>>(s);
                 auto const adopted = xstd::bit_convert<xstd::basic_bit_vector<std::uint8_t>>(std::move(s));
                 return wide.size() == 24UZ and wide[20] and adopted.size() == 24UZ and adopted.count() == 3UZ;
         }());
         static_assert([] -> bool {
-                auto a = xstd::basic_bit_array<std::uint16_t, 70>();
-                a[0] = true;
-                a[69] = true;
+                auto a       = xstd::basic_bit_array<std::uint16_t, 70>();
+                a[0]         = true;
+                a[69]        = true;
                 auto const s = xstd::bit_convert<xstd::bit_set>(a);
                 auto const v = xstd::bit_convert<xstd::basic_bit_vector<std::uint8_t>>(std::bitset<70>(0b1011));
                 return s.contains(69UZ) and s.size() == 2UZ and v.size() == 70UZ and v.count() == 3UZ;
@@ -358,7 +358,7 @@ BOOST_AUTO_TEST_CASE(TheConversionIsAConstantExpression)
 BOOST_AUTO_TEST_CASE(AStdBitsetIsASequenceOfItsWidth)
 {
         auto const check = []<std::size_t N> -> void {
-                auto b = std::bitset<N>();
+                auto b    = std::bitset<N>();
                 auto keys = std::vector<std::size_t>();
                 for (auto i = 0UZ; i < b.size(); i += 7UZ) {
                         b.set(i);

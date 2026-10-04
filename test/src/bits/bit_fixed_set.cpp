@@ -113,7 +113,7 @@ auto check_key_outside_the_domain(X a, std::size_t x)
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(LookupIsTotalOverKeyType, T, Types)
 {
-        auto const N = T().max_size();
+        auto const N    = T().max_size();
         auto const full = std::views::iota(0UZ, N) | std::ranges::to<T>();
 
         // Just past the end, past the last block, and the value that would wrap any n + 1.
@@ -171,7 +171,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItRoundTripsAtCompileTime, T, Types)
                 static_assert([] -> bool {
                         // A pattern, not a mutation: ~0ULL masks to the width, which at the zero width is no position.
                         auto const bs = std::bitset<N>(~0ULL);
-                        auto const c = T(bs);
+                        auto const c  = T(bs);
                         return c.size() == bs.count() and static_cast<std::bitset<N>>(c) == bs;
                 }());
         }
@@ -208,7 +208,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AnUnsignedIntegerIsAFieldOfBitsToo, T, Types)
         if constexpr (std::is_constructible_v<T, std::uint64_t>) {
                 // Every position and none, said without a shift: 1ULL << N still compiles at sixty-four (MSVC's C4293).
                 constexpr auto all = std::bitset<N>().flip().to_ullong();
-                auto const full = T(all);
+                auto const full    = T(all);
                 BOOST_CHECK_EQUAL(full.size(), N);
                 BOOST_CHECK(static_cast<std::uint64_t>(full) == all);
 
@@ -225,12 +225,12 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AnUnsignedIntegerIsAFieldOfBitsToo, T, Types)
 BOOST_AUTO_TEST_CASE(RawBlocksCrossOnTheSameRule)
 {
         constexpr auto N = 256UZ;
-        using Set = xstd::bit_fixed_set<N>;
-        using Wide = std::array<std::uint64_t, 4>;
-        using Narrow = std::array<std::uint32_t, 8>;
+        using Set        = xstd::bit_fixed_set<N>;
+        using Wide       = std::array<std::uint64_t, 4>;
+        using Narrow     = std::array<std::uint32_t, 8>;
 
         auto const blocks = Wide{0x0123'4567'89AB'CDEFULL, 1ULL, 0ULL, 0x8000'0000'0000'0000ULL};
-        auto const s = Set(xstd::from_bit_storage, blocks);
+        auto const s      = Set(xstd::from_bit_storage, blocks);
 
         BOOST_CHECK(s.contains(0UZ));
         BOOST_CHECK(s.contains(64UZ));
@@ -264,7 +264,7 @@ BOOST_AUTO_TEST_CASE(RawBlocksCrossOnTheSameRule)
 BOOST_AUTO_TEST_CASE(AStrongIndexWithItsOwnTraitsKeysItAsStdSetIsKeyed)
 {
         using traits = test::set::offset_traits<10UZ, 20UZ>;
-        using X = xstd::basic_bit_fixed_set<test::set::strong_index, std::uint8_t, 20UZ, traits>;
+        using X      = xstd::basic_bit_fixed_set<test::set::strong_index, std::uint8_t, 20UZ, traits>;
         static_assert(std::same_as<X::key_type, test::set::strong_index>);
         static_assert(std::same_as<X::key_traits_type, traits>);
         static_assert(std::same_as<std::iter_value_t<X::iterator>, test::set::strong_index>);

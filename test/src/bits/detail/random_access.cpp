@@ -44,13 +44,13 @@ auto check_position(Iterator first, std::size_t i, std::vector<bool>& model)
         auto const it = first + static_cast<std::ptrdiff_t>(i);
         BOOST_CHECK(&*it == it);
 
-        *it = (i % 3 == 0);
+        *it      = (i % 3 == 0);
         model[i] = (i % 3 == 0);
         BOOST_CHECK_EQUAL(static_cast<bool>(*it), model[i]);
         flag const f = *it;
         BOOST_CHECK_EQUAL(f.value, model[i]);
 
-        *it = not *it;
+        *it      = not *it;
         model[i] = not model[i];
         BOOST_CHECK_EQUAL(static_cast<bool>(first[static_cast<std::ptrdiff_t>(i)]), model[i]);
 }
@@ -96,7 +96,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheSequenceIteratorIsRandomAccess, T, ArrayTypes)
 // Const is in the Bits and nowhere else: the proxy asks the storage, and a const storage has no assign to reach.
 BOOST_AUTO_TEST_CASE(ConstnessLivesInTheBits)
 {
-        using Ref = xstd::bits::detail::random_access_bit_reference<Bits>;
+        using Ref      = xstd::bits::detail::random_access_bit_reference<Bits>;
         using ConstRef = xstd::bits::detail::random_access_bit_reference<Bits const>;
 
         static_assert(std::is_assignable_v<Ref const&, bool>);
@@ -124,14 +124,14 @@ BOOST_AUTO_TEST_CASE(TheReadOnlyProxiesAreValues)
 
 BOOST_AUTO_TEST_CASE(AMutableSequenceIteratorConvertsToItsConstTwin)
 {
-        using It = xstd::bits::detail::random_access_bit_iterator<Bits>;
+        using It      = xstd::bits::detail::random_access_bit_iterator<Bits>;
         using ConstIt = xstd::bits::detail::random_access_bit_iterator<Bits const>;
 
         static_assert(std::convertible_to<It, ConstIt>);
         static_assert(not std::convertible_to<ConstIt, It>);
 
-        auto b = Bits();
-        auto const it = It(&b, 7UZ);
+        auto b            = Bits();
+        auto const it     = It(&b, 7UZ);
         ConstIt const cit = it;
         BOOST_CHECK(cit == ConstIt(&b, 7UZ));
         BOOST_CHECK(*cit == false);
@@ -143,7 +143,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheSequenceIteratorReadsAndWritesThroughTheStorage
 
         auto c = T();
         // Written through check_position below, which the check cannot see past a dependent call.
-        auto model = std::vector<bool>(N); // NOLINT(misc-const-correctness)
+        auto model       = std::vector<bool>(N); // NOLINT(misc-const-correctness)
         auto const first = xstd::bits::detail::random_access_bit_iterator<T>(&c, 0UZ);
         BOOST_CHECK(first == xstd::bits::detail::random_access_bit_iterator<T const>(&c, 0UZ));
 
@@ -159,11 +159,11 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheSequenceIteratorReadsAndWritesThroughTheStorage
 // Proxy-to-proxy assignment copies the bit and never rebinds, which is what makes the swaps work.
 BOOST_AUTO_TEST_CASE(ProxyAssignmentCopiesTheBitAndSwapSwapsTheBits)
 {
-        auto c = Bits();
-        auto const first = xstd::bits::detail::random_access_bit_iterator<Bits>(&c, 0UZ);
+        auto c            = Bits();
+        auto const first  = xstd::bits::detail::random_access_bit_iterator<Bits>(&c, 0UZ);
         auto const second = std::next(first);
 
-        *first = true;
+        *first  = true;
         *second = false;
         *second = *first;
         BOOST_CHECK(*second == true);
@@ -181,9 +181,9 @@ BOOST_AUTO_TEST_CASE(ProxyAssignmentCopiesTheBitAndSwapSwapsTheBits)
 
 BOOST_AUTO_TEST_CASE(TheSequenceIteratorArithmeticIsIndexArithmetic)
 {
-        auto c = Bits();
+        auto c           = Bits();
         auto const first = xstd::bits::detail::random_access_bit_iterator<Bits>(&c, 0UZ);
-        auto const last = xstd::bits::detail::random_access_bit_iterator<Bits>(&c, 200UZ);
+        auto const last  = xstd::bits::detail::random_access_bit_iterator<Bits>(&c, 200UZ);
         BOOST_CHECK_EQUAL(last - first, 200);
         BOOST_CHECK(first <= last);
         BOOST_CHECK(first <= first and last >= last);
@@ -208,14 +208,14 @@ BOOST_AUTO_TEST_CASE(RangesAlgorithmsReachTheBitsThroughIterMoveAndIterSwap)
 {
         using iterator = xstd::bits::detail::random_access_bit_iterator<Bits>;
 
-        auto c = Bits();
+        auto c     = Bits();
         auto model = std::vector<bool>(200);
         for (auto const p : {0UZ, 5UZ, 63UZ, 64UZ, 130UZ, 199UZ}) {
                 c.set(p);
                 model[p] = true;
         }
         auto const first = iterator(&c, 0UZ);
-        auto const last = iterator(&c, 200UZ);
+        auto const last  = iterator(&c, 200UZ);
         BOOST_CHECK(std::ranges::equal(std::ranges::subrange(first, last), model));
 
         static_assert(std::same_as<decltype(std::ranges::iter_move(first)), bool>);
@@ -239,9 +239,9 @@ BOOST_AUTO_TEST_CASE(RangesAlgorithmsReachTheBitsThroughIterMoveAndIterSwap)
         BOOST_CHECK(as_vector(c) == model);
 
         std::ranges::iter_swap(first, std::prev(last));
-        bool const t = model.front();
+        bool const t  = model.front();
         model.front() = model.back();
-        model.back() = t;
+        model.back()  = t;
         BOOST_CHECK(as_vector(c) == model);
 
         // and the const twin is reachable by the reverse adaptor, being a proper bidirectional iterator.
@@ -268,7 +268,7 @@ namespace {
 
 using Viewed = xstd::bits::detail::bit_container<std::array<std::uint64_t, 1>, 64>;
 
-using ArrIt = xstd::bits::detail::random_access_bit_iterator<Viewed>;
+using ArrIt  = xstd::bits::detail::random_access_bit_iterator<Viewed>;
 using ArrRef = xstd::bits::detail::random_access_bit_reference<Viewed>;
 
 // Dependent, so a type without the member is a substitution failure rather than a hard error.
@@ -327,7 +327,7 @@ BOOST_AUTO_TEST_CASE(TheValueArrivesByImplicitConversion)
         b.set(3);
         b.set(5);
 
-        auto const a = xstd::bit_span(b);
+        auto const a   = xstd::bit_span(b);
         bool const bit = a[3];
         BOOST_CHECK(bit);
         BOOST_CHECK(a[5] == true);
@@ -349,7 +349,7 @@ BOOST_AUTO_TEST_CASE(AProxyNeverBecomesAnIntegerBlock)
                 static_assert(std::equality_comparable<B::const_reference>);
 
                 auto a = B();
-                a[0] = true;
+                a[0]   = true;
                 a[256] = true;
                 BOOST_CHECK(a[0] == a[256]);
                 BOOST_CHECK(a[0] != a[1]);
@@ -367,7 +367,7 @@ BOOST_AUTO_TEST_CASE(AProxyNeverBecomesAnIntegerBlock)
                 static_assert(std::equality_comparable<B::const_reference>);
 
                 auto a = B();
-                a[0] = true;
+                a[0]   = true;
                 a[256] = true;
                 BOOST_CHECK(a[0] == a[256]);
                 BOOST_CHECK(a[0] != a[1]);
@@ -385,7 +385,7 @@ BOOST_AUTO_TEST_CASE(AProxyNeverBecomesAnIntegerBlock)
                 static_assert(std::equality_comparable<B::const_reference>);
 
                 auto a = B();
-                a[0] = true;
+                a[0]   = true;
                 a[256] = true;
                 BOOST_CHECK(a[0] == a[256]);
                 BOOST_CHECK(a[0] != a[1]);

@@ -131,7 +131,7 @@ BOOST_AUTO_TEST_CASE(ConstantIterators)
                 if constexpr (requires (T const s) { s.cbegin(); s.cend(); s.crbegin(); s.crend(); }) {
                         for (auto const [from, a] : inputs::views<T>()) {
                                 auto const on_failure = context(from, a);
-                                auto const s = a.view();
+                                auto const s          = a.view();
                                 static_assert(noexcept(s.cbegin()) and noexcept(s.cend()) and noexcept(s.crbegin()) and noexcept(s.crend()));
                                 static_assert(std::same_as<decltype(s.cbegin()), typename T::const_iterator>);
                                 static_assert(std::same_as<decltype(s.crbegin()), typename T::const_reverse_iterator>);

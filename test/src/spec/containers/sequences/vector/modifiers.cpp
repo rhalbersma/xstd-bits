@@ -37,18 +37,18 @@ inline constexpr auto is_std_vector_v<std::vector<bool, Allocator>> = true;
 #ifdef _MSVC_STL_VERSION
 
 // MSVC's STL inserts or appends a single pass a bool at a time through every member, insert_range included.
-inline constexpr auto std_vector_single_pass_has_no_effects = false;
+inline constexpr auto std_vector_single_pass_has_no_effects              = false;
 inline constexpr auto std_vector_single_pass_insert_range_has_no_effects = false;
 
 #elifdef __GLIBCXX__
 
 // libstdc++ inserts or appends a single pass a bool at a time, except insert_range, which collects it first.
-inline constexpr auto std_vector_single_pass_has_no_effects = false;
+inline constexpr auto std_vector_single_pass_has_no_effects              = false;
 inline constexpr auto std_vector_single_pass_insert_range_has_no_effects = true;
 
 #else
 
-inline constexpr auto std_vector_single_pass_has_no_effects = true;
+inline constexpr auto std_vector_single_pass_has_no_effects              = true;
 inline constexpr auto std_vector_single_pass_insert_range_has_no_effects = true;
 
 #endif
@@ -79,7 +79,7 @@ auto check_insertions_have_no_effects(X const& a, std::size_t p)
         BOOST_CHECK(strong_guarantee(a, [&](X& x) -> void { static_cast<void>(x.emplace_back(true)); }));                          // [vector.modifiers]/2
         BOOST_CHECK(strong_guarantee(a, [&](X& x) -> void { x.push_back(true); }));                                                // [vector.modifiers]/2
         auto const first = single_pass_iterator(more.cbegin());
-        auto const last = single_pass_iterator(more.cend());
+        auto const last  = single_pass_iterator(more.cend());
         BOOST_CHECK(single_pass_guarantee<std_vector_single_pass_has_no_effects>(a, [&](X& x) -> void { static_cast<void>(x.insert(nth(x, p), first, last)); })); // [vector.modifiers]/2
 }
 
@@ -110,8 +110,8 @@ template<class X>
 [[nodiscard]] auto erases_without_allocating(X const& a, std::size_t first, std::size_t last, bool single)
         -> bool
 {
-        auto book = test::container::ledger();
-        auto x = X(a, test::container::ledger_allocator<X>(book));
+        auto book   = test::container::ledger();
+        auto x      = X(a, test::container::ledger_allocator<X>(book));
         book.budget = 0;
         try {
                 static_cast<void>(single ? x.erase(nth(x, first)) : x.erase(nth(x, first), nth(x, last)));

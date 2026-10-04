@@ -126,7 +126,7 @@ struct reversed
 // It is a whole spare block wider than its positions, which is what the size window is for.
 struct spare_block
 {
-        std::uint64_t w = 0ULL;
+        std::uint64_t w      = 0ULL;
         std::uint64_t unused = 0ULL;
 
         constexpr auto set(std::size_t n) noexcept
@@ -296,7 +296,7 @@ BOOST_AUTO_TEST_CASE(ASequenceOfBlocksStatesItsLayoutToo)
 // The bytes a block sequence spells are the bytes of its values, so b[j] >> k is the same on either byte order.
 BOOST_AUTO_TEST_CASE(BlocksAndBytesAreEachOthersInverse)
 {
-        using Blocks = std::array<std::uint64_t, 2>;
+        using Blocks     = std::array<std::uint64_t, 2>;
         constexpr auto N = 128UZ;
 
         static_assert([] -> bool {
@@ -307,13 +307,13 @@ BOOST_AUTO_TEST_CASE(BlocksAndBytesAreEachOthersInverse)
         // Byte j of the field is byte j % 8 of block j / 8, said as a shift on the value.
         static_assert([] -> bool {
                 auto const blocks = Blocks{0x0000'0000'0000'FF01ULL, 0x0000'0000'0000'0002ULL};
-                auto const bytes = detail::bit_bytes<N>(blocks);
+                auto const bytes  = detail::bit_bytes<N>(blocks);
                 return bytes[0] == std::byte{0x01} and bytes[1] == std::byte{0xFF} and bytes[2] == std::byte{0x00} and bytes[8] == std::byte{0x02};
         }());
 
         // Two block widths over the same positions spell the same bytes, which is the whole claim.
         static_assert([] -> bool {
-                auto const wide = std::array<std::uint64_t, 1>{0x0123'4567'89AB'CDEFULL};
+                auto const wide   = std::array<std::uint64_t, 1>{0x0123'4567'89AB'CDEFULL};
                 auto const narrow = std::array<std::uint8_t, 8>{0xEF, 0xCD, 0xAB, 0x89, 0x67, 0x45, 0x23, 0x01};
                 return detail::bit_bytes<64UZ>(wide) == detail::bit_bytes<64UZ>(narrow);
         }());
@@ -333,34 +333,34 @@ BOOST_AUTO_TEST_CASE(TheCopyAndTheShiftsAgree)
         // A sequence of blocks, at two block widths, so the bytes-per-block arithmetic is exercised either side.
         {
                 constexpr auto N = 128UZ;
-                using Wide = std::array<std::uint64_t, 2>;
-                using Narrow = std::array<std::uint8_t, 16>;
+                using Wide       = std::array<std::uint64_t, 2>;
+                using Narrow     = std::array<std::uint8_t, 16>;
 
-                constexpr auto wide = Wide{0x0123'4567'89AB'CDEFULL, 0xFEDC'BA98'7654'3210ULL};
+                constexpr auto wide   = Wide{0x0123'4567'89AB'CDEFULL, 0xFEDC'BA98'7654'3210ULL};
                 constexpr auto folded = detail::bit_bytes<N>(wide);
-                auto const copied = detail::bit_bytes<N>(wide);
+                auto const copied     = detail::bit_bytes<N>(wide);
                 BOOST_CHECK(copied == folded);
 
                 constexpr auto back_folded = detail::bytes_bits<Wide, N>(folded);
-                auto const back_copied = detail::bytes_bits<Wide, N>(folded);
+                auto const back_copied     = detail::bytes_bits<Wide, N>(folded);
                 BOOST_CHECK(back_copied == back_folded);
                 BOOST_CHECK(back_copied == wide);
 
                 constexpr auto narrow_folded = detail::bytes_bits<Narrow, N>(folded);
-                auto const narrow_copied = detail::bytes_bits<Narrow, N>(folded);
+                auto const narrow_copied     = detail::bytes_bits<Narrow, N>(folded);
                 BOOST_CHECK(narrow_copied == narrow_folded);
         }
 
         // A bare unsigned integer, at a width narrower than the value, so the copy takes fewer bytes than sizeof.
         {
-                constexpr auto N = 32UZ;
-                constexpr auto value = 0xDEAD'BEEFULL;
+                constexpr auto N      = 32UZ;
+                constexpr auto value  = 0xDEAD'BEEFULL;
                 constexpr auto folded = detail::bit_bytes<N>(value);
-                auto const copied = detail::bit_bytes<N>(value);
+                auto const copied     = detail::bit_bytes<N>(value);
                 BOOST_CHECK(copied == folded);
 
                 constexpr auto back_folded = detail::bytes_bits<unsigned long long, N>(folded);
-                auto const back_copied = detail::bytes_bits<unsigned long long, N>(folded);
+                auto const back_copied     = detail::bytes_bits<unsigned long long, N>(folded);
                 BOOST_CHECK_EQUAL(back_copied, back_folded);
                 BOOST_CHECK_EQUAL(back_copied, value);
         }
@@ -368,15 +368,15 @@ BOOST_AUTO_TEST_CASE(TheCopyAndTheShiftsAgree)
         // A foreign field of bits at a width that is not a whole number of bytes, so the last byte is a partial one.
         {
                 constexpr auto N = 100UZ;
-                using Field = std::bitset<N>;
+                using Field      = std::bitset<N>;
 
-                constexpr auto field = Field(0x0F1E'2D3C'4B5A'6978ULL);
+                constexpr auto field  = Field(0x0F1E'2D3C'4B5A'6978ULL);
                 constexpr auto folded = detail::bit_bytes<N>(field);
-                auto const copied = detail::bit_bytes<N>(field);
+                auto const copied     = detail::bit_bytes<N>(field);
                 BOOST_CHECK(copied == folded);
 
                 constexpr auto back_folded = detail::bytes_bits<Field, N>(folded);
-                auto const back_copied = detail::bytes_bits<Field, N>(folded);
+                auto const back_copied     = detail::bytes_bits<Field, N>(folded);
                 BOOST_CHECK(back_copied == back_folded);
                 BOOST_CHECK(back_copied == field);
         }

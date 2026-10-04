@@ -33,21 +33,21 @@ template<>
 struct xstd::bits::detail::owned_storage<set_owner>
 {
         using bits_type = fake_bits;
-        using reads = set_reading_tag;
+        using reads     = set_reading_tag;
 };
 
 template<>
 struct xstd::bits::detail::owned_storage<sequence_owner>
 {
         using bits_type = fake_bits;
-        using reads = sequence_reading_tag;
+        using reads     = sequence_reading_tag;
 };
 
 template<>
 struct xstd::bits::detail::owned_storage<refined_owner>
 {
         using bits_type = fake_bits;
-        using reads = refined_reading_tag;
+        using reads     = refined_reading_tag;
 };
 
 BOOST_AUTO_TEST_SUITE(Ownership)

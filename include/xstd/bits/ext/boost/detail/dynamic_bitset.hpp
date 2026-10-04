@@ -28,10 +28,10 @@ class block_sink
 
 public:
         using iterator_category = std::output_iterator_tag;
-        using value_type = void;
-        using difference_type = std::ptrdiff_t;
-        using pointer = void;
-        using reference = void;
+        using value_type        = void;
+        using difference_type   = std::ptrdiff_t;
+        using pointer           = void;
+        using reference         = void;
 
         [[nodiscard]] constexpr explicit block_sink(std::span<T> dst) noexcept
                 : m_dst(dst)
@@ -59,9 +59,9 @@ public:
                         }
                 } else {
                         constexpr auto per_block = bytes_per_block<std::span<Block>>;
-                        auto const source = std::span(&block, 1UZ);
-                        auto const first = m_index * per_block;
-                        auto const last = std::ranges::max(first, std::ranges::min(first + per_block, value_bytes(m_dst)));
+                        auto const source        = std::span(&block, 1UZ);
+                        auto const first         = m_index * per_block;
+                        auto const last          = std::ranges::max(first, std::ranges::min(first + per_block, value_bytes(m_dst)));
                         for (auto const j : std::views::iota(first, last)) {
                                 or_block_byte(m_dst, j, block_byte(source, j - first));
                         }
@@ -104,9 +104,9 @@ template<class T, class Src>
                 return src[i];
         } else {
                 constexpr auto per_block = bytes_per_block<std::span<T>>;
-                auto block = T();
-                auto const target = std::span(&block, 1UZ);
-                auto const first = i * per_block;
+                auto block               = T();
+                auto const target        = std::span(&block, 1UZ);
+                auto const first         = i * per_block;
                 for (auto const j : std::views::iota(first, std::ranges::min(first + per_block, value_bytes(src)))) {
                         or_block_byte(target, j - first, block_byte(src, j));
                 }
@@ -125,10 +125,10 @@ struct bit_target<boost::dynamic_bitset<Block, AllocatorOrContainer>>
         [[nodiscard]] static constexpr auto convert(From const& from)
                 -> bitset_type
         {
-                using source = bit_source<From>;
-                auto to = bitset_type(source::width(from));
-                auto const blocks = source::blocks(from);
-                auto const gather = [&](std::size_t i) -> Block { return gather_block<Block>(blocks, i); };
+                using source        = bit_source<From>;
+                auto to             = bitset_type(source::width(from));
+                auto const blocks   = source::blocks(from);
+                auto const gather   = [&](std::size_t i) -> Block { return gather_block<Block>(blocks, i); };
                 auto const gathered = std::views::iota(0UZ, to.num_blocks()) | std::views::transform(gather);
                 boost::from_block_range(std::ranges::begin(gathered), std::ranges::end(gathered), to);
                 return to;

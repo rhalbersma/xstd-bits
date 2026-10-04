@@ -22,7 +22,7 @@
 
 namespace xstd::bits::detail {
 
-inline constexpr auto bits_per_byte = static_cast<std::size_t>(std::numeric_limits<unsigned char>::digits);
+inline constexpr auto bits_per_byte   = static_cast<std::size_t>(std::numeric_limits<unsigned char>::digits);
 inline constexpr auto bits_per_ullong = static_cast<std::size_t>(std::numeric_limits<unsigned long long>::digits);
 
 // The bytes a width needs: byte j holds the positions [8j, 8j + 8) least significant bit first, at every block width.
@@ -163,9 +163,9 @@ constexpr auto or_block_byte(std::span<T, E> blocks, std::size_t j, std::byte by
         -> void
 {
         constexpr auto per_block = bytes_per_block<std::span<T, E>>;
-        auto const value = static_cast<T>(std::to_integer<unsigned char>(byte));
-        auto& block = blocks[j / per_block];
-        block = static_cast<T>(block | static_cast<T>(value << (bits_per_byte * (j % per_block))));
+        auto const value         = static_cast<T>(std::to_integer<unsigned char>(byte));
+        auto& block              = blocks[j / per_block];
+        block                    = static_cast<T>(block | static_cast<T>(value << (bits_per_byte * (j % per_block))));
 }
 
 template<std::size_t N, class B, std::size_t E>
@@ -236,7 +236,7 @@ template<class B, std::size_t N>
                 auto value = B();
                 for (auto const j : std::views::iota(0UZ, bytes.size())) {
                         auto const byte = static_cast<B>(std::to_integer<unsigned char>(bytes[j]));
-                        value = static_cast<B>(value | static_cast<B>(byte << (bits_per_byte * j)));
+                        value           = static_cast<B>(value | static_cast<B>(byte << (bits_per_byte * j)));
                 }
                 return value;
         } else if constexpr (block_range_source<B, N>) {

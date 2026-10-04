@@ -93,7 +93,7 @@ template<class X>
                 }
                 case 1: {
                         // One short of the room keeps the lowest key at max_size() - 1; one more and nothing is kept.
-                        auto const room = m.empty() ? top : top - *m.begin();
+                        auto const room  = m.empty() ? top : top - *m.begin();
                         auto const extra = in.below(3UZ);
                         return extra > size_max - (room - 1UZ) ? size_max : room - 1UZ + extra;
                 }
@@ -197,21 +197,21 @@ auto fuzz_one(fuzz::decoder& in)
         -> void
 {
         auto const keys = universe<X>();
-        auto const top = X().max_size();
-        auto check = fuzz::checker();
-        auto xs = std::array<X, 2>();
-        auto ms = std::array<model, 2>();
+        auto const top  = X().max_size();
+        auto check      = fuzz::checker();
+        auto xs         = std::array<X, 2>();
+        auto ms         = std::array<model, 2>();
         while (not in.empty()) {
-                auto const i = in.byte() % 2UZ;
-                auto const j = in.byte() % 2UZ;
-                auto& x = xs[i];
-                auto& m = ms[i];
-                auto const& y = xs[j];
+                auto const i   = in.byte() % 2UZ;
+                auto const j   = in.byte() % 2UZ;
+                auto& x        = xs[i];
+                auto& m        = ms[i];
+                auto const& y  = xs[j];
                 auto const& my = ms[j];
                 switch (in.byte() % 23U) {
                         case 0: {
                                 check.step("insert(k)");
-                                auto const k = in.below(keys);
+                                auto const k              = in.below(keys);
                                 auto const [it, inserted] = x.insert(k);
                                 check.expect(inserted == m.insert(k).second, "inserted");
                                 check.expect(static_cast<std::size_t>(*it) == k, "position");
@@ -219,7 +219,7 @@ auto fuzz_one(fuzz::decoder& in)
                         }
                         case 1: {
                                 check.step("insert(hint, k)");
-                                auto const k = in.below(keys);
+                                auto const k  = in.below(keys);
                                 auto const it = x.insert(in.boolean() ? x.begin() : x.end(), k);
                                 m.insert(k);
                                 check.expect(static_cast<std::size_t>(*it) == k, "position");
@@ -235,7 +235,7 @@ auto fuzz_one(fuzz::decoder& in)
                                 check.step("erase(position)");
                                 auto const k = in.below(keys);
                                 if (auto const it = x.lower_bound(k); it != x.end()) {
-                                        auto const next = x.erase(it);
+                                        auto const next  = x.erase(it);
                                         auto const mnext = m.erase(m.lower_bound(k));
                                         expect_position(check, x, next, m, mnext, "successor");
                                 }
@@ -248,7 +248,7 @@ auto fuzz_one(fuzz::decoder& in)
                                 if (hi < lo) {
                                         std::swap(lo, hi);
                                 }
-                                auto const last = x.erase(x.lower_bound(lo), x.lower_bound(hi));
+                                auto const last  = x.erase(x.lower_bound(lo), x.lower_bound(hi));
                                 auto const mlast = m.erase(m.lower_bound(lo), m.lower_bound(hi));
                                 expect_position(check, x, last, m, mlast, "last");
                                 break;
@@ -266,7 +266,7 @@ auto fuzz_one(fuzz::decoder& in)
                                 auto const k = in.below(keys + 2UZ);
                                 expect_position(check, x, x.lower_bound(k), m, m.lower_bound(k), "lower_bound");
                                 expect_position(check, x, x.upper_bound(k), m, m.upper_bound(k), "upper_bound");
-                                auto const [first, last] = x.equal_range(k);
+                                auto const [first, last]   = x.equal_range(k);
                                 auto const [mfirst, mlast] = m.equal_range(k);
                                 expect_position(check, x, first, m, mfirst, "equal_range.first");
                                 expect_position(check, x, last, m, mlast, "equal_range.second");
@@ -307,7 +307,7 @@ auto fuzz_one(fuzz::decoder& in)
                         }
                         case 12: {
                                 check.step("&, |, ^, -");
-                                auto const& z = xs[1UZ - j];
+                                auto const& z  = xs[1UZ - j];
                                 auto const& mz = ms[1UZ - j];
                                 expect_equal(check, y & z, intersection(my, mz));
                                 expect_equal(check, y | z, union_of(my, mz));
@@ -357,8 +357,8 @@ auto fuzz_one(fuzz::decoder& in)
                                         m = my;
                                 } else {
                                         auto tmp = y;
-                                        x = std::move(tmp);
-                                        m = my;
+                                        x        = std::move(tmp);
+                                        m        = my;
                                 }
                                 auto const copied = X(x);
                                 expect_equal(check, copied, m);
@@ -367,7 +367,7 @@ auto fuzz_one(fuzz::decoder& in)
                         case 18: {
                                 check.step("==, <=>, is_subset_of, is_proper_subset_of, intersects, hash");
                                 check.expect((x == y) == (m == my), "==");
-                                auto const order = x <=> y;
+                                auto const order  = x <=> y;
                                 auto const morder = m <=> my;
                                 check.expect(std::is_eq(order) == std::is_eq(morder), "<=> equal");
                                 check.expect(std::is_lt(order) == std::is_lt(morder), "<=> less");
@@ -397,7 +397,7 @@ auto fuzz_one(fuzz::decoder& in)
                                         m.insert(keys_in.begin(), keys_in.end());
                                 } else {
                                         // [associative.reqmts] forbids a range into its own set.
-                                        auto const other = y;
+                                        auto const other  = y;
                                         auto const mother = my;
                                         x.insert_range(other);
                                         m.insert(mother.begin(), mother.end());
@@ -406,8 +406,8 @@ auto fuzz_one(fuzz::decoder& in)
                         }
                         case 21: {
                                 check.step("erase_if, fill, complement()");
-                                auto const r = in.below(keys);
-                                auto const d = in.below(7UZ) + 1UZ;
+                                auto const r    = in.below(keys);
+                                auto const d    = in.below(7UZ) + 1UZ;
                                 auto const pred = [=](std::size_t k) -> bool { return k % d == r % d; };
                                 check.expect(erase_if(x, pred) == std::erase_if(m, pred), "erase_if count");
                                 if constexpr (static_width<X>) {

@@ -153,7 +153,7 @@ BOOST_AUTO_TEST_CASE(TheAllocatorFollowsTheColumnAndNotTheRow)
 // The four inline cells name no allocator, which keeps std out of their associated namespaces entirely.
 BOOST_AUTO_TEST_CASE(TheFreeSwapIsTheLibrarysAndNotStdSwap)
 {
-        using block_type = std::size_t;
+        using block_type     = std::size_t;
         using allocator_type = std::scoped_allocator_adaptor<std::pmr::polymorphic_allocator<block_type>>;
 
         static_assert(free_swap_is_not_std_swap<xstd::basic_bit_set<std::size_t, block_type, xstd::bit_key_traits<std::size_t>, std::less<std::size_t>, allocator_type>>()); // NOLINT(modernize-use-transparent-functors): the default comparator, spelled to reach the allocator
@@ -239,10 +239,10 @@ template<class T>
 auto a_moved_from_sequence_grows_again()
         -> bool
 {
-        auto source = T(100UZ, true);
+        auto source       = T(100UZ, true);
         auto const target = std::move(source);
-        auto const empty = source.empty(); // NOLINT(bugprone-use-after-move,hicpp-invalid-access-moved,clang-analyzer-cplusplus.Move): the moved-from state is the check.
-        source.push_back(true);            // NOLINT(clang-analyzer-cplusplus.Move): growing the moved-from state is the check.
+        auto const empty  = source.empty(); // NOLINT(bugprone-use-after-move,hicpp-invalid-access-moved,clang-analyzer-cplusplus.Move): the moved-from state is the check.
+        source.push_back(true);             // NOLINT(clang-analyzer-cplusplus.Move): growing the moved-from state is the check.
         return empty and target.size() == 100UZ and source.size() == 1UZ and source[0];
 }
 
@@ -253,8 +253,8 @@ auto a_moved_from_set_grows_again()
         auto source = T();
         source.insert(100UZ);
         auto const target = std::move(source);
-        auto const empty = source.empty(); // NOLINT(bugprone-use-after-move,hicpp-invalid-access-moved,clang-analyzer-cplusplus.Move): the moved-from state is the check.
-        source.insert(3UZ);                // NOLINT(clang-analyzer-cplusplus.Move): growing the moved-from state is the check.
+        auto const empty  = source.empty(); // NOLINT(bugprone-use-after-move,hicpp-invalid-access-moved,clang-analyzer-cplusplus.Move): the moved-from state is the check.
+        source.insert(3UZ);                 // NOLINT(clang-analyzer-cplusplus.Move): growing the moved-from state is the check.
         return empty and target.contains(100UZ) and source.size() == 1UZ and source.contains(3UZ);
 }
 
@@ -283,11 +283,11 @@ auto blocks_go_in_and_come_out_whole()
         -> bool
 {
         auto const original = typename T::block_container_type{0b1011UZ, 1UZ << 63U};
-        auto owner = T();
-        auto blocks = original;
+        auto owner          = T();
+        auto blocks         = original;
         owner.replace(std::move(blocks));
-        auto const filled = not owner.empty();
-        auto const out = std::move(owner).extract();
+        auto const filled  = not owner.empty();
+        auto const out     = std::move(owner).extract();
         auto const emptied = owner.empty(); // NOLINT(bugprone-use-after-move,hicpp-invalid-access-moved,clang-analyzer-cplusplus.Move): extract leaves width zero, which is the check.
         return filled and out == original and emptied;
 }

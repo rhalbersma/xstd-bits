@@ -29,7 +29,7 @@
 // Sampled keys at every width, including those no exhaustive sweep reaches, reproducible anywhere from one seed.
 namespace test::spec::random {
 
-inline constexpr auto default_seed = 187ULL;
+inline constexpr auto default_seed    = 187ULL;
 inline constexpr auto default_samples = 1UZ;
 
 // Unset, unreadable and out of range all read as absent, so a typo falls back to the default rather than to zero.
@@ -39,7 +39,7 @@ inline constexpr auto default_samples = 1UZ;
 #ifdef _MSC_VER
 
         char* buffer = nullptr;
-        auto length = 0UZ;
+        auto length  = 0UZ;
         if (_dupenv_s(&buffer, &length, name) != 0 or buffer == nullptr) {
                 return std::nullopt;
         }
@@ -56,7 +56,7 @@ inline constexpr auto default_samples = 1UZ;
 
 #endif
 
-        auto value = std::uint64_t();
+        auto value              = std::uint64_t();
         auto const [end, error] = std::from_chars(text.data(), text.data() + text.size(), value);
         if (error != std::errc() or end != text.data() + text.size()) {
                 return std::nullopt;
@@ -149,7 +149,7 @@ template<class X>
 [[nodiscard]] inline auto keys(engine& g, std::size_t n, std::size_t k, std::size_t digits)
         -> std::vector<std::size_t>
 {
-        auto drawn = std::vector<bool>(n);
+        auto drawn  = std::vector<bool>(n);
         auto result = std::vector<std::size_t>();
         result.reserve(k);
         for (auto const j : std::views::iota(n - k, n)) {
@@ -213,8 +213,8 @@ inline auto sample_key_vectors(std::size_t n, std::size_t digits, auto fun)
 [[nodiscard]] inline auto pair_samples(std::size_t n, std::size_t digits)
         -> std::vector<two<key_vector>>
 {
-        auto result = std::vector<two<key_vector>>();
-        auto g = engine(seed());
+        auto result  = std::vector<two<key_vector>>();
+        auto g       = engine(seed());
         auto const d = densities(n);
         for (auto const ka : d) {
                 for (auto const kb : {ka, d[g.below(d.size())]}) {
@@ -232,16 +232,16 @@ inline auto sample_key_vectors(std::size_t n, std::size_t digits, auto fun)
 [[nodiscard]] inline auto triple_samples(std::size_t n, std::size_t digits)
         -> std::vector<three<key_vector>>
 {
-        auto result = std::vector<three<key_vector>>();
-        auto g = engine(seed());
+        auto result  = std::vector<three<key_vector>>();
+        auto g       = engine(seed());
         auto const d = densities(n);
         for (auto const i : std::views::iota(0UZ, samples() * d.size())) {
                 auto const ka = d[g.below(d.size())];
                 auto const kb = d[g.below(d.size())];
                 auto const kc = d[g.below(d.size())];
-                auto a = keys(g, n, ka, digits);
-                auto b = keys(g, n, kb, digits);
-                auto c = keys(g, n, kc, digits);
+                auto a        = keys(g, n, ka, digits);
+                auto b        = keys(g, n, kb, digits);
+                auto c        = keys(g, n, kc, digits);
                 result.push_back({.from = sampled(n, {ka, kb, kc}, 3, i), .a = std::move(a), .b = std::move(b), .c = std::move(c)});
         }
         return result;

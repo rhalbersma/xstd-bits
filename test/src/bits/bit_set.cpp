@@ -43,8 +43,8 @@ BOOST_AUTO_TEST_CASE(TheDynamicSetIsTheSetAdaptorOverAHeapOfBlocks)
 // [set.cons]'s allocator arguments, constructed rather than merely asked about in a requires-expression.
 BOOST_AUTO_TEST_CASE(TheAllocatorConstructorsBuildWhatTheyName)
 {
-        using A = T::allocator_type;
-        auto const a = A();
+        using A         = T::allocator_type;
+        auto const a    = A();
         auto const keys = std::array<std::size_t, 3>{1UZ, 3UZ, 5UZ};
 
         auto const x0 = T(a);
@@ -59,7 +59,7 @@ BOOST_AUTO_TEST_CASE(TheAllocatorConstructorsBuildWhatTheyName)
         auto const x3 = T(x1, a);
         BOOST_CHECK(x3 == x1);
 
-        auto y = x1;
+        auto y        = x1;
         auto const x4 = T(std::move(y), a);
         BOOST_CHECK(x4 == x1);
 
@@ -69,7 +69,7 @@ BOOST_AUTO_TEST_CASE(TheAllocatorConstructorsBuildWhatTheyName)
 // A key is default-constructible, so the empty argument list is one of the lists emplace has to take.
 BOOST_AUTO_TEST_CASE(TheEmptyArgumentListEmplacesTheZeroKey)
 {
-        auto s = T();
+        auto s                    = T();
         auto const [it, inserted] = s.emplace();
         BOOST_CHECK(inserted);
         BOOST_CHECK_EQUAL(*it, 0UZ);
@@ -123,7 +123,7 @@ BOOST_AUTO_TEST_CASE(ItIsBuiltAndOrderedLikeAStdSet)
 BOOST_AUTO_TEST_CASE(TheWidthIsCapacityNotValue)
 {
         auto const narrow = T({1, 3});
-        auto wide = T({1, 3});
+        auto wide         = T({1, 3});
         wide.insert(100);
         wide.erase(100);
         auto const digest = std::hash<T>();
@@ -193,7 +193,7 @@ BOOST_AUTO_TEST_CASE(AStdBitsetIsNoConversionAtARunTimeWidth)
 // std::set's guides: the block from the allocator where one is given, the machine word where none is.
 BOOST_AUTO_TEST_CASE(ItDeducesAsStdSetDoes)
 {
-        auto const keys = std::vector<std::size_t>{3, 1, 4};
+        auto const keys  = std::vector<std::size_t>{3, 1, 4};
         auto const alloc = std::allocator<std::uint8_t>();
 
         auto const a = xstd::basic_bit_set(keys.begin(), keys.end());

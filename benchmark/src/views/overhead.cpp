@@ -149,7 +149,7 @@ auto sequence_read_view_of_storage(benchmark::State& state)
         auto blocks = filled<N, xstd::bits::detail::bit_container<std::array<std::size_t, xstd::bits::detail::num_blocks_v<std::size_t, N>>, N>>();
         benchmark::DoNotOptimize(&blocks);
         auto const v = xstd::bit_span(blocks);
-        auto lcg = std::uint64_t{1};
+        auto lcg     = std::uint64_t{1};
         for (auto _ : state) {
                 benchmark::DoNotOptimize(static_cast<bool>(v[next_index(lcg, N)]));
         }

@@ -28,12 +28,12 @@ BOOST_AUTO_TEST_SUITE(BitSubspan)
 namespace {
 
 using Storage = xstd::bits::detail::bit_container<std::array<std::uint8_t, 3>, 20>;
-using Blocks = std::array<std::uint8_t, 3>;
-using Owner = xstd::basic_bit_array<std::uint8_t, 20>;
-using Span = xstd::bit_span<Blocks, 20>;
-using Sub = xstd::bit_subspan<Blocks, std::dynamic_extent, 20>;
-using CSpan = xstd::bit_span<Blocks const, 20>;
-using CSub = xstd::bit_subspan<Blocks const, std::dynamic_extent, 20>;
+using Blocks  = std::array<std::uint8_t, 3>;
+using Owner   = xstd::basic_bit_array<std::uint8_t, 20>;
+using Span    = xstd::bit_span<Blocks, 20>;
+using Sub     = xstd::bit_subspan<Blocks, std::dynamic_extent, 20>;
+using CSpan   = xstd::bit_span<Blocks const, 20>;
+using CSub    = xstd::bit_subspan<Blocks const, std::dynamic_extent, 20>;
 
 // Dependent, so an absent member is a substitution failure rather than a hard error.
 template<class X>
@@ -105,7 +105,7 @@ BOOST_AUTO_TEST_CASE(TheWindowIsTheAdaptorWindowed)
 // A window holds as many positions as it views, and no more: max_size, which span lacks, is its size.
 BOOST_AUTO_TEST_CASE(AWindowHoldsNoMoreThanItViews)
 {
-        auto a = Owner();
+        auto a       = Owner();
         auto const w = xstd::bit_span(a).subspan(2, 6);
         BOOST_CHECK_EQUAL(w.max_size(), 6UZ);
         BOOST_CHECK_EQUAL(w.max_size(), w.size());
@@ -114,10 +114,10 @@ BOOST_AUTO_TEST_CASE(AWindowHoldsNoMoreThanItViews)
 // Writing through a window writes the storage, one position at a time or through the iterators an algorithm walks.
 BOOST_AUTO_TEST_CASE(AWindowWritesThrough)
 {
-        auto a = Owner();
-        a[2] = true;
-        a[7] = true;
-        a[9] = true;
+        auto a       = Owner();
+        a[2]         = true;
+        a[7]         = true;
+        a[9]         = true;
         auto const w = xstd::bit_span(a).subspan(2, 6);
 
         w[1] = true;
@@ -148,11 +148,11 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AWindowFillsItsPositionsAlone, T, ViewedTypes)
                         if (off + count > 20UZ) {
                                 continue;
                         }
-                        auto bits = twenty<T>();
+                        auto bits    = twenty<T>();
                         auto const v = xstd::bit_span(bits);
-                        auto model = std::vector<bool>(20, false);
+                        auto model   = std::vector<bool>(20, false);
                         for (auto const i : {2UZ, 8UZ, 13UZ, 19UZ}) {
-                                v[i] = true;
+                                v[i]     = true;
                                 model[i] = true;
                         }
                         v.subspan(off, count).fill(true);
@@ -212,10 +212,10 @@ auto window_op(int op, auto const& w, auto const& o)
 auto check_combination(int op, std::size_t off, std::size_t other, std::size_t count)
         -> void
 {
-        auto source = xstd::basic_bit_vector<std::uint8_t>(std::from_range, pattern(40, 2));
-        auto dest = xstd::basic_bit_vector<std::uint8_t>(std::from_range, pattern(40, 3));
-        auto model = pattern(40, 3);
-        auto const w = xstd::bit_span(dest).subspan(off, count);
+        auto source       = xstd::basic_bit_vector<std::uint8_t>(std::from_range, pattern(40, 2));
+        auto dest         = xstd::basic_bit_vector<std::uint8_t>(std::from_range, pattern(40, 3));
+        auto model        = pattern(40, 3);
+        auto const w      = xstd::bit_span(dest).subspan(off, count);
         auto const theirs = bools(xstd::bit_span(source).subspan(other, count));
         window_op(op, w, xstd::bit_span(source).subspan(other, count));
         for (auto const i : std::views::iota(0UZ, count)) {
@@ -240,9 +240,9 @@ BOOST_AUTO_TEST_CASE(AWindowCombinesWithAnotherAtAnyAlignment)
         }
 
         // A window against itself, block by block in place; asking clang if another block type is a source crashes it.
-        auto self = xstd::basic_bit_vector<std::uint8_t>(std::from_range, pattern(20, 1));
+        auto self          = xstd::basic_bit_vector<std::uint8_t>(std::from_range, pattern(20, 1));
         auto const outside = bools(xstd::bit_span(self).first(3));
-        auto const w = xstd::bit_span(self).subspan(3, 12);
+        auto const w       = xstd::bit_span(self).subspan(3, 12);
         w ^= w;
         BOOST_CHECK(std::ranges::equal(w, std::vector<bool>(12, false)));
         BOOST_CHECK(std::ranges::equal(xstd::bit_span(self).first(3), outside));
@@ -263,7 +263,7 @@ constexpr bool has_subspan_of = requires (X x) { x.template subspan<Offset, Coun
 // A static window stores no count: its width is in its type, and writes as a dynamic one does.
 BOOST_AUTO_TEST_CASE(AStaticWindowCarriesItsWidthInItsType)
 {
-        auto a = Owner();
+        auto a       = Owner();
         auto const v = xstd::bit_span(a);
 
         static_assert(std::same_as<decltype(v.first<4>()), xstd::bit_subspan<Blocks, 4, 20>>);
@@ -291,7 +291,7 @@ BOOST_AUTO_TEST_CASE(AStaticWindowsSizesAreConstantsOfItsType)
 
         static_assert(W::size == 4UZ);
         static_assert(not W::empty);
-        auto a = Owner();
+        auto a       = Owner();
         auto const w = xstd::bit_span(a).first<4>();
         BOOST_CHECK_EQUAL(std::ranges::size(w), 4UZ);
         BOOST_CHECK_EQUAL(std::size(w), 4UZ);

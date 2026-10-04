@@ -195,7 +195,7 @@ namespace values {
                 }
                 for (auto const i : std::views::iota(0UZ, n1)) {
                         auto a = filled(n1, false);
-                        a[i] = true;
+                        a[i]   = true;
                         result.push_back({.from = exhaustive("every singleton", n1), .a = std::move(a)});
                 }
         }
@@ -205,7 +205,7 @@ namespace values {
 [[nodiscard]] constexpr auto pairs(bool grows, std::size_t n0, std::size_t n2, bool sweep)
         -> std::vector<two<bools>>
 {
-        auto result = std::vector<two<bools>>();
+        auto result  = std::vector<two<bools>>();
         auto const e = empty(grows, n0);
         auto const f = filled(n0, true);
         result.push_back({.from = edge("empty and empty", n0), .a = e, .b = e});
@@ -217,8 +217,8 @@ namespace values {
                         for (auto const j : std::views::iota(0UZ, n2)) {
                                 auto a = filled(n2, false);
                                 auto b = filled(n2, false);
-                                a[i] = true;
-                                b[j] = true;
+                                a[i]   = true;
+                                b[j]   = true;
                                 result.push_back({.from = exhaustive("every singleton pair", n2), .a = std::move(a), .b = std::move(b)});
                         }
                 }

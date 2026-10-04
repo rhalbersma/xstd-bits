@@ -93,7 +93,7 @@ BOOST_AUTO_TEST_CASE(Begin)
         test::for_each_type<test::spec::span::all>([]<class T> -> void {
                 for (auto const [from, a] : inputs::views<T>()) {
                         auto const on_failure = context(from, a);
-                        auto const s = a.view();
+                        auto const s          = a.view();
                         static_assert(noexcept(s.begin()) and std::same_as<decltype(s.begin()), typename T::iterator>);
                         BOOST_CHECK_EQUAL(s.begin() == s.end(), s.empty()); // [span.iterators]/3
                         if (not s.empty()) {
@@ -109,7 +109,7 @@ BOOST_AUTO_TEST_CASE(End)
         test::for_each_type<test::spec::span::all>([]<class T> -> void {
                 for (auto const [from, a] : inputs::views<T>()) {
                         auto const on_failure = context(from, a);
-                        auto const s = a.view();
+                        auto const s          = a.view();
                         static_assert(noexcept(s.end()) and std::same_as<decltype(s.end()), typename T::iterator>);
                         BOOST_CHECK_EQUAL(s.end() - s.begin(), static_cast<std::ptrdiff_t>(s.size())); // [span.iterators]/4
                         if (not s.empty()) {
@@ -125,7 +125,7 @@ BOOST_AUTO_TEST_CASE(Rbegin)
         test::for_each_type<test::spec::span::all>([]<class T> -> void {
                 for (auto const [from, a] : inputs::views<T>()) {
                         auto const on_failure = context(from, a);
-                        auto const s = a.view();
+                        auto const s          = a.view();
                         static_assert(noexcept(s.rbegin()) and std::same_as<decltype(s.rbegin()), typename T::reverse_iterator>);
                         BOOST_CHECK(s.rbegin() == typename T::reverse_iterator(s.end())); // [span.iterators]/5
                 }
@@ -138,7 +138,7 @@ BOOST_AUTO_TEST_CASE(Rend)
         test::for_each_type<test::spec::span::all>([]<class T> -> void {
                 for (auto const [from, a] : inputs::views<T>()) {
                         auto const on_failure = context(from, a);
-                        auto const s = a.view();
+                        auto const s          = a.view();
                         static_assert(noexcept(s.rend()) and std::same_as<decltype(s.rend()), typename T::reverse_iterator>);
                         BOOST_CHECK(s.rend() == typename T::reverse_iterator(s.begin())); // [span.iterators]/6
                 }

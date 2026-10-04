@@ -109,7 +109,7 @@ BOOST_AUTO_TEST_CASE(ARefusedRangeInsertionLeavesAValidSet)
                 // No strong guarantee, so only a valid set; a sample with a key per refusal would make this quadratic.
                 for (auto const [from, a, keys] : inputs::fixed_listed_sets<T>()) {
                         auto const on_failure = context(from, a, keys);
-                        auto const more = spilled<T>(keys);
+                        auto const more       = spilled<T>(keys);
                         BOOST_CHECK(basic_guarantee(a, [&](T& x) -> void { x.insert(more.begin(), more.end()); }));                   // [container.reqmts]/25
                         BOOST_CHECK(basic_guarantee(a, [&](T& x) -> void { x.insert_range(more); }));                                 // [container.reqmts]/25
                         BOOST_CHECK(basic_guarantee(a, [&](T& x) -> void { x.insert({spilled<T>(0UZ), spilled<T>(keys.size())}); })); // [container.reqmts]/25

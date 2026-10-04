@@ -26,13 +26,13 @@ namespace test::spec {
 // A named edge case or exhaustive enumeration at its sweep width, or a sample its seed and key counts reproduce.
 struct origin
 {
-        char const* tier = "edge";
-        char const* name = "";
-        std::size_t width = 0;
-        std::uint64_t seed = 0;
-        std::size_t sample = 0;
+        char const* tier                = "edge";
+        char const* name                = "";
+        std::size_t width               = 0;
+        std::uint64_t seed              = 0;
+        std::size_t sample              = 0;
         std::array<std::size_t, 3> keys = {};
-        std::size_t operands = 0;
+        std::size_t operands            = 0;
 
         friend auto operator<<(std::ostream& os, origin const& from)
                 -> std::ostream&
@@ -203,8 +203,8 @@ public:
         class iterator
         {
                 rebuilt const* m_inputs = nullptr;
-                std::size_t m_segment = 0;
-                std::size_t m_carrier = 0;
+                std::size_t m_segment   = 0;
+                std::size_t m_carrier   = 0;
 
                 constexpr auto skip_empty() noexcept
                         -> void
@@ -216,7 +216,7 @@ public:
                 }
 
         public:
-                using value_type = rebuilt::value_type;
+                using value_type      = rebuilt::value_type;
                 using difference_type = std::ptrdiff_t;
 
                 [[nodiscard]] iterator() = default;
@@ -298,7 +298,7 @@ template<auto Enumerate, class... Args>
         -> decltype(Enumerate(args...)) const&
 {
         // Never destroyed, so no exit-time destructor runs.
-        static auto& cache = *new std::map<std::tuple<Args...>, decltype(Enumerate(args...))>();
+        static auto& cache        = *new std::map<std::tuple<Args...>, decltype(Enumerate(args...))>();
         auto const [it, inserted] = cache.try_emplace(std::tuple(args...));
         if (inserted) {
                 it->second = Enumerate(args...);
@@ -386,10 +386,10 @@ public:
                 , m_report(from, &m_operands, &print_all)
         {}
 
-        context(context const&) = delete;
-        context(context&&) = delete;
+        context(context const&)                    = delete;
+        context(context&&)                         = delete;
         auto operator=(context const&) -> context& = delete;
-        auto operator=(context&&) -> context& = delete;
+        auto operator=(context&&) -> context&      = delete;
 
         ~context()
         {

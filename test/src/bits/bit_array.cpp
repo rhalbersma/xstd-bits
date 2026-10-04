@@ -105,7 +105,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItHashesAsAnOwner, T, Types)
         BOOST_CHECK_EQUAL(h(T()), h(T()));
         if constexpr (T().size() > 0UZ) {
                 auto x = T();
-                x[0] = true;
+                x[0]   = true;
                 BOOST_CHECK(h(x) != h(T()));
         }
 }
@@ -113,9 +113,9 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItHashesAsAnOwner, T, Types)
 // A proxy, so a binding over the array writes through to it; by value it would bind to the copy.
 BOOST_AUTO_TEST_CASE(AStructuredBindingWritesThroughToTheArray)
 {
-        auto a = xstd::bit_array<3>({true, false, true});
+        auto a          = xstd::bit_array<3>({true, false, true});
         auto& [x, y, z] = a;
-        y = true;
+        y               = true;
         BOOST_CHECK(a[1] == true);
         BOOST_CHECK(x == true);
         BOOST_CHECK(z == true);
@@ -125,9 +125,9 @@ BOOST_AUTO_TEST_CASE(AStructuredBindingWritesThroughToTheArray)
 BOOST_AUTO_TEST_CASE(ABuiltInArrayOfItsWidthConverts)
 {
         constexpr bool c[3] = {true, false, true}; // NOLINT(modernize-avoid-c-arrays): the built-in array is what is converted.
-        bool const m[3] = {false, true, true};     // NOLINT(modernize-avoid-c-arrays): the built-in array is what is converted.
-        auto const a = xstd::bit_array<3>(c);
-        auto const b = xstd::bit_array<3>(m);
+        bool const m[3]     = {false, true, true}; // NOLINT(modernize-avoid-c-arrays): the built-in array is what is converted.
+        auto const a        = xstd::bit_array<3>(c);
+        auto const b        = xstd::bit_array<3>(m);
         BOOST_CHECK(a == xstd::bit_array<3>({true, false, true}));
         BOOST_CHECK(b == xstd::bit_array<3>({false, true, true}));
         static_assert(xstd::bit_array<3>(c) == xstd::to_bit_array(c));

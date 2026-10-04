@@ -27,7 +27,7 @@ BOOST_AUTO_TEST_CASE(BeginEnd)
         test::for_each_type<test::spec::container::all>([]<class T> -> void {
                 for (auto const [from, a] : inputs::objects<T>()) {
                         auto const on_failure = context(from, a);
-                        auto x = a;
+                        auto x                = a;
                         mem_begin_end()(x);
                         mem_begin_end()(std::as_const(x));
                 }

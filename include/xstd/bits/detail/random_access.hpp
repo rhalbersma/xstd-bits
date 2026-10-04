@@ -37,10 +37,10 @@ class random_access_bit_iterator
 
 public:
         using iterator_category = std::random_access_iterator_tag;
-        using value_type = bool;
-        using difference_type = std::ptrdiff_t;
-        using pointer = void;
-        using reference = random_access_bit_reference<Bits>;
+        using value_type        = bool;
+        using difference_type   = std::ptrdiff_t;
+        using pointer           = void;
+        using reference         = random_access_bit_reference<Bits>;
 
         [[nodiscard]] random_access_bit_iterator() = default;
 
@@ -175,8 +175,8 @@ public:
                 requires (not std::is_const_v<Bits>)
         {
                 bool const t = *x;
-                *x = *y;
-                *y = t;
+                *x           = *y;
+                *y           = t;
         }
 };
 
@@ -192,7 +192,7 @@ class random_access_bit_reference
 
 public:
         using value_type = bool;
-        using iterator = random_access_bit_iterator<Bits>;
+        using iterator   = random_access_bit_iterator<Bits>;
 
         [[nodiscard]] constexpr random_access_bit_reference(storage_ptr_t<Bits> ptr, std::size_t idx) noexcept
                 : m_ptr(ptr)
@@ -266,24 +266,24 @@ public:
                 requires is_writable
         {
                 bool const t = x;
-                x = y;
-                y = t;
+                x            = y;
+                y            = t;
         }
 
         friend constexpr auto swap(random_access_bit_reference x, bool& y) noexcept -> void
                 requires is_writable
         {
                 bool const t = x;
-                x = y;
-                y = t;
+                x            = y;
+                y            = t;
         }
 
         friend constexpr auto swap(bool& x, random_access_bit_reference y) noexcept -> void
                 requires is_writable
         {
                 bool const t = x;
-                x = y;
-                y = t;
+                x            = y;
+                y            = t;
         }
 
         // What this proxy prints as, said once: our std::formatter calls it unqualified, and fmt finds it by ADL.

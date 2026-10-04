@@ -24,9 +24,9 @@ namespace inputs = test::spec::set::inputs;
 namespace {
 
 // Nothing, everything, and every other key, so a removal can be none, all, or interleaved with what stays.
-auto const never = [](std::size_t) -> bool { return false; };
+auto const never  = [](std::size_t) -> bool { return false; };
 auto const always = [](std::size_t) -> bool { return true; };
-auto const odd = [](std::size_t x) -> bool { return x % 2 == 1; };
+auto const odd    = [](std::size_t x) -> bool { return x % 2 == 1; };
 
 } // namespace
 

@@ -66,7 +66,7 @@ BOOST_AUTO_TEST_CASE(NoBlocksIsAnEmptyContiguousRange)
         static_assert(std::ranges::contiguous_range<Blocks> and std::ranges::contiguous_range<Blocks const>);
         static_assert(std::same_as<decltype(std::declval<Blocks&>()[0UZ]), std::uint8_t&>);
         static_assert(std::same_as<decltype(std::declval<Blocks const&>()[0UZ]), std::uint8_t const&>);
-        auto a = Blocks();
+        auto a        = Blocks();
         auto const& c = a;
         BOOST_CHECK(a.begin() == a.end() and a.data() == nullptr);
         BOOST_CHECK(c.begin() == c.end() and c.data() == nullptr);
@@ -85,7 +85,7 @@ BOOST_AUTO_TEST_CASE(GrowthPastNoughtThrowsBadAlloc)
 
 BOOST_AUTO_TEST_CASE(ChangesThatStayAtNoughtChangeNothing)
 {
-        auto a = Blocks();
+        auto a            = Blocks();
         auto const blocks = std::array<std::uint8_t, 1>{0xFFU};
         Blocks::resize(0UZ, blocks[0]);
         Blocks::insert(a.end(), blocks.begin(), blocks.begin());

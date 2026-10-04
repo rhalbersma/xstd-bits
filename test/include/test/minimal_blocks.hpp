@@ -19,13 +19,13 @@ class minimal_blocks
         std::vector<Block> m_blocks;
 
 public:
-        using value_type = Block;
-        using size_type = std::size_t;
+        using value_type      = Block;
+        using size_type       = std::size_t;
         using difference_type = std::ptrdiff_t;
-        using reference = Block&;
+        using reference       = Block&;
         using const_reference = Block const&;
-        using iterator = std::vector<Block>::iterator;
-        using const_iterator = std::vector<Block>::const_iterator;
+        using iterator        = std::vector<Block>::iterator;
+        using const_iterator  = std::vector<Block>::const_iterator;
 
         [[nodiscard]] friend auto operator==(minimal_blocks const&, minimal_blocks const&) -> bool = default;
 

@@ -57,9 +57,9 @@ class checker
 {
         BB const& m_x;
         BB const& m_y;
-        model m_mx = reference(m_x);
-        model m_my = reference(m_y);
-        std::size_t m_n = m_x.size();
+        model m_mx                = reference(m_x);
+        model m_my                = reference(m_y);
+        std::size_t m_n           = m_x.size();
         std::size_t m_cardinality = static_cast<std::size_t>(std::ranges::count(m_mx, true));
         int& m_disagreements;
 
@@ -178,13 +178,13 @@ public:
         auto relational()
                 -> void
         {
-                auto subset = true;
+                auto subset  = true;
                 auto differs = false;
-                auto meets = false;
+                auto meets   = false;
                 for (auto const i : std::views::iota(0UZ, m_n)) {
-                        subset = subset and (not m_mx[i] or m_my[i]);
+                        subset  = subset and (not m_mx[i] or m_my[i]);
                         differs = differs or (m_mx[i] != m_my[i]);
-                        meets = meets or (m_mx[i] and m_my[i]);
+                        meets   = meets or (m_mx[i] and m_my[i]);
                 }
                 disagree(m_x.is_subset_of(m_y), subset);
                 disagree(set_equal(m_x, m_y), not differs);
@@ -550,8 +550,8 @@ struct counting_blocks
         std::array<std::uint64_t, 4> m_data{};
 
         // The move operations are counted rather than used: the free swap is what should be called.
-        counting_blocks() = default;
-        [[maybe_unused]] counting_blocks(counting_blocks const&) = default;
+        counting_blocks()                                                           = default;
+        [[maybe_unused]] counting_blocks(counting_blocks const&)                    = default;
         [[maybe_unused]] auto operator=(counting_blocks const&) -> counting_blocks& = default;
 
         [[maybe_unused]] counting_blocks(counting_blocks&& other) noexcept
@@ -677,7 +677,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AStaticWidthAgreesWithTheModel, T, test::graded_ex
 // The run-time width, at the same grading: within one block, and across boundaries either side.
 BOOST_AUTO_TEST_CASE_TEMPLATE(ARunTimeWidthAgreesWithTheModel, Block, test::block_types)
 {
-        using T = xstd::bits::detail::bit_container<std::vector<Block>>;
+        using T          = xstd::bits::detail::bit_container<std::vector<Block>>;
         constexpr auto D = test::digits_v<Block>;
 
         auto disagreements = 0;
@@ -851,12 +851,12 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ResizingKeepsTheModelAndTheUnusedTailClear, Block,
 // push_back and pop_back are resize by one, checked at every width on the way up and back down.
 BOOST_AUTO_TEST_CASE_TEMPLATE(PushingAndPoppingAreResizeByOne, Block, test::block_types)
 {
-        using T = xstd::bits::detail::bit_container<std::vector<Block>>;
+        using T          = xstd::bits::detail::bit_container<std::vector<Block>>;
         constexpr auto D = test::digits_v<Block>;
 
         auto disagreements = 0;
-        auto b = T();
-        auto m = model();
+        auto b             = T();
+        auto m             = model();
         for (auto const i : std::views::iota(0UZ, (3 * D) + 1UZ)) {
                 auto const value = i % 3 != 1;
                 b.push_back(value);
@@ -898,7 +898,7 @@ BOOST_AUTO_TEST_CASE(ReservingAndShrinkingChangeCapacityNotTheBits)
         using T = xstd::bits::detail::bit_container<std::vector<std::uint8_t>>;
 
         auto const m = patterned(17);
-        auto b = from_model<T>(m);
+        auto b       = from_model<T>(m);
 
         b.reserve(40);
         BOOST_CHECK_GE(b.capacity(), 40UZ);
@@ -993,7 +993,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ACopyAssignedRunTimeWidthTakesTheSourcesWidthAndBl
 BOOST_AUTO_TEST_CASE_TEMPLATE(ARunTimeWidthsBlocksGoOutClearAndComeBackWhole, T, run_time_storages)
 {
         static_assert(noexcept(std::declval<T>().extract()));
-        auto b = from_model<T>(patterned(19));
+        auto b            = from_model<T>(patterned(19));
         auto const blocks = std::move(b).extract();
         BOOST_CHECK_EQUAL(std::ranges::size(blocks), 3UZ);
         BOOST_CHECK_EQUAL(static_cast<unsigned>(blocks[2]) >> 3U, 0U);
@@ -1158,7 +1158,7 @@ auto probes(BB const& empty)
         -> std::vector<BB>
 {
         auto const n = empty.size();
-        auto out = std::vector<BB>{empty};
+        auto out     = std::vector<BB>{empty};
 
         auto full = empty;
         full.set();
@@ -1197,7 +1197,7 @@ auto disagreements(BB const& empty)
         -> int
 {
         auto const values = probes(empty);
-        auto n = 0;
+        auto n            = 0;
         for (auto const& x : values) {
                 for (auto const& y : values) {
                         auto const sx = set_reading(x);
@@ -1227,7 +1227,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(BothOrderingsAgreeWithTheirReading, T, test::grade
 // The same at a run-time width, which shares no instantiation with the static one.
 BOOST_AUTO_TEST_CASE_TEMPLATE(BothOrderingsAgreeAtARunTimeWidth, Block, test::block_types)
 {
-        using T = xstd::bits::detail::bit_container<std::vector<Block>>;
+        using T          = xstd::bits::detail::bit_container<std::vector<Block>>;
         constexpr auto D = test::digits_v<Block>;
 
         auto disagreed = 0;
@@ -1242,7 +1242,7 @@ BOOST_AUTO_TEST_CASE(TheTwoOrderingsDisagree)
 {
         using T = xstd::bits::detail::bit_container<std::array<std::uint8_t, 2>, 9>;
 
-        using orderings = std::tuple<std::strong_ordering, std::strong_ordering>;
+        using orderings        = std::tuple<std::strong_ordering, std::strong_ordering>;
         constexpr auto compare = [](std::initializer_list<std::size_t> p, std::initializer_list<std::size_t> q) -> orderings {
                 auto x = T();
                 for (auto const i : p) {
@@ -1315,8 +1315,8 @@ BOOST_AUTO_TEST_CASE(TheAllocatorAndTheMaximumWidth)
 // The two ceilings a reading can ask for: the storage computes both and keeps neither.
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheTwoCeilingsAreComputedHereAndKeptAbove, Block, test::block_types)
 {
-        using V = xstd::bits::detail::bit_container<std::vector<Block>>;
-        constexpr auto top = std::numeric_limits<std::size_t>::max();
+        using V             = xstd::bits::detail::bit_container<std::vector<Block>>;
+        constexpr auto top  = std::numeric_limits<std::size_t>::max();
         constexpr auto pmax = static_cast<std::size_t>(std::numeric_limits<std::ptrdiff_t>::max());
 
         // Whole blocks, both widths, and the one a distance can name is the narrower by construction.
@@ -1346,7 +1346,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheTwoCeilingsAreComputedHereAndKeptAbove, Block, 
 // The saturating sum every growth computes, and the block count it reaches, said at compile time.
 BOOST_AUTO_TEST_CASE(TheBlockCountIsTotalAndTheSumThatReachesItSaturates)
 {
-        using V = xstd::bits::detail::bit_container<std::vector<std::uint8_t>>;
+        using V            = xstd::bits::detail::bit_container<std::vector<std::uint8_t>>;
         constexpr auto top = std::numeric_limits<std::size_t>::max();
 
         // Whole blocks, and no wider than what the blocks themselves can hold.
@@ -1503,8 +1503,8 @@ using AlignedBlockAtTypes = std::tuple<xstd::bits::detail::bit_container<std::ar
 BOOST_AUTO_TEST_CASE_TEMPLATE(BothShiftsAreBlockAtOnTheOperand, T, AlignedBlockAtTypes)
 {
         constexpr auto D = 8UZ;
-        auto const c = aligned_sample<T>();
-        auto const last = c.num_blocks() - 1UZ;
+        auto const c     = aligned_sample<T>();
+        auto const last  = c.num_blocks() - 1UZ;
 
         for (auto const n : std::views::iota(0UZ, c.size())) {
                 auto const n_blocks = n / D;

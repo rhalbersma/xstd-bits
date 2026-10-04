@@ -115,7 +115,7 @@ template<class X>
 constexpr auto nested_types()
         -> void
 {
-        using I = X::iterator;
+        using I  = X::iterator;
         using CI = X::const_iterator;
 
         static_assert(std::same_as<typename X::value_type, bool>); // [container.reqmts]/2
@@ -144,9 +144,9 @@ struct mem_subscript
         {
                 auto b = a;
                 static_assert(std::same_as<decltype(b[n]), typename X::reference>); // [sequence.reqmts]/121
-                b[n] = not static_cast<bool>(a[n]);
+                b[n]   = not static_cast<bool>(a[n]);
                 auto m = model_of(a);
-                m[n] = not m[n];
+                m[n]   = not m[n];
                 BOOST_CHECK(model_of(b) == m);
         }
 };
@@ -340,7 +340,7 @@ struct mem_emplace
         auto operator()(X const& a, std::size_t p, bool t) const
         {
                 if (has_room(a, 1UZ)) {
-                        auto b = a;
+                        auto b       = a;
                         auto const r = b.emplace(nth(b, p), t);
                         static_assert(std::same_as<decltype(b.emplace(nth(b, p), t)), typename X::iterator>); // [sequence.reqmts]/20
                         BOOST_CHECK_EQUAL(offset(b, r), p);                                                   // [sequence.reqmts]/23
@@ -353,7 +353,7 @@ struct mem_emplace
         auto operator()(X const& a, std::size_t p) const
         {
                 if (has_room(a, 1UZ)) {
-                        auto b = a;
+                        auto b       = a;
                         auto const r = b.emplace(nth(b, p));
                         BOOST_CHECK_EQUAL(offset(b, r), p);
                         BOOST_CHECK(model_of(b) == spliced(model_of(a), p, {false}));
@@ -367,13 +367,13 @@ struct mem_insert
         auto operator()(X const& a, std::size_t p, bool t) const
         {
                 if (has_room(a, 1UZ)) {
-                        auto b = a;
+                        auto b       = a;
                         auto const r = b.insert(nth(b, p), t);
                         static_assert(std::same_as<decltype(b.insert(nth(b, p), t)), typename X::iterator>); // [sequence.reqmts]/24
                         BOOST_CHECK_EQUAL(offset(b, r), p);                                                  // [sequence.reqmts]/27
                         BOOST_CHECK(model_of(b) == spliced(model_of(a), p, {t}));                            // [sequence.reqmts]/26
 
-                        auto c = a;
+                        auto c       = a;
                         auto const s = c.insert(nth(c, p), temporary(t));
                         static_assert(std::same_as<decltype(c.insert(nth(c, p), temporary(t))), typename X::iterator>); // [sequence.reqmts]/28
                         BOOST_CHECK_EQUAL(offset(c, s), p);                                                             // [sequence.reqmts]/31
@@ -385,7 +385,7 @@ struct mem_insert
         auto operator()(X const& a, std::size_t p, std::size_t n, bool t) const
         {
                 if (has_room(a, n)) {
-                        auto b = a;
+                        auto b       = a;
                         auto const r = b.insert(nth(b, p), n, t);
                         static_assert(std::same_as<decltype(b.insert(nth(b, p), n, t)), typename X::iterator>); // [sequence.reqmts]/32
                         BOOST_CHECK_EQUAL(offset(b, r), p);                                                     // [sequence.reqmts]/35
@@ -398,7 +398,7 @@ struct mem_insert
         {
                 auto const in = std::vector<bool>(i, j);
                 if (has_room(a, in.size())) {
-                        auto b = a;
+                        auto b       = a;
                         auto const r = b.insert(nth(b, p), i, j);
                         static_assert(std::same_as<decltype(b.insert(nth(b, p), i, j)), typename X::iterator>); // [sequence.reqmts]/36
                         BOOST_CHECK_EQUAL(offset(b, r), p);                                                     // [sequence.reqmts]/39
@@ -410,7 +410,7 @@ struct mem_insert
         auto operator()(X const& a, std::size_t p, std::initializer_list<bool> il) const
         {
                 if (has_room(a, il.size())) {
-                        auto b = a;
+                        auto b       = a;
                         auto const r = b.insert(nth(b, p), il);
                         BOOST_CHECK_EQUAL(offset(b, r), p);                                         // [sequence.reqmts]/44
                         BOOST_CHECK(model_of(b) == spliced(model_of(a), p, std::vector<bool>(il))); // [sequence.reqmts]/44
@@ -427,7 +427,7 @@ struct mem_insert_range
                 if constexpr (requires (X& b) { b.insert_range(nth(b, p), rg); }) {
                         auto const in = std::vector<bool>(std::ranges::begin(rg), std::ranges::end(rg));
                         if (has_room(a, in.size())) {
-                                auto b = a;
+                                auto b       = a;
                                 auto const r = b.insert_range(nth(b, p), rg);
                                 static_assert(std::same_as<decltype(b.insert_range(nth(b, p), rg)), typename X::iterator>); // [sequence.reqmts]/40
                                 BOOST_CHECK_EQUAL(offset(b, r), p);                                                         // [sequence.reqmts]/43
@@ -443,7 +443,7 @@ struct mem_erase
         auto operator()(X const& a, std::size_t p) const
         {
                 if (p < a.size()) {
-                        auto b = a;
+                        auto b       = a;
                         auto const r = b.erase(nth(b, p));
                         static_assert(std::same_as<decltype(b.erase(nth(b, p))), typename X::iterator>); // [sequence.reqmts]/45
                         BOOST_CHECK_EQUAL(offset(b, r), p);                                              // [sequence.reqmts]/48
@@ -455,7 +455,7 @@ struct mem_erase
         auto operator()(X const& a, std::size_t p, std::size_t q) const
         {
                 if (p <= q and q <= a.size()) {
-                        auto b = a;
+                        auto b       = a;
                         auto const r = b.erase(nth(b, p), nth(b, q));
                         static_assert(std::same_as<decltype(b.erase(nth(b, p), nth(b, q))), typename X::iterator>); // [sequence.reqmts]/49
                         BOOST_CHECK_EQUAL(offset(b, r), p);                                                         // [sequence.reqmts]/52
@@ -512,7 +512,7 @@ struct mem_push_back
                 static_assert(static_capacity<X> or std::same_as<decltype(std::declval<X&>().push_back(temporary(t))), void>); // [sequence.reqmts]/105
                 if (has_room(a, 1UZ)) {
                         auto const m = spliced(model_of(a), a.size(), {t});
-                        auto b = a;
+                        auto b       = a;
                         b.push_back(t);
                         BOOST_CHECK(model_of(b) == m); // [sequence.reqmts]/103
                         auto c = a;
@@ -546,7 +546,7 @@ struct reads_once
         auto operator()(std::type_identity<X>, std::vector<bool> const& m) const
         {
                 if (m.size() <= X().max_size()) {
-                        auto reads = 0UZ;
+                        auto reads    = 0UZ;
                         auto const rg = counted(m, reads);
                         BOOST_CHECK(model_of(X(rg.begin(), rg.end())) == m);
                         BOOST_CHECK_EQUAL(reads, m.size()); // [sequence.reqmts]/9
@@ -562,17 +562,17 @@ struct reads_once
         auto operator()(X const& a, std::size_t p, std::vector<bool> const& in) const
         {
                 if (has_room(a, in.size())) {
-                        auto reads = 0UZ;
+                        auto reads    = 0UZ;
                         auto const rg = counted(in, reads);
-                        auto b = a;
+                        auto b        = a;
                         b.insert(nth(b, p), rg.begin(), rg.end());
                         BOOST_CHECK_EQUAL(reads, in.size()); // [sequence.reqmts]/38
                         if constexpr (requires { b.insert_range(nth(b, p), rg); }) {
-                                reads = 0UZ;
+                                reads  = 0UZ;
                                 auto c = a;
                                 c.insert_range(nth(c, p), rg);
                                 BOOST_CHECK_EQUAL(reads, in.size()); // [sequence.reqmts]/42
-                                reads = 0UZ;
+                                reads  = 0UZ;
                                 auto d = a;
                                 d.append_range(rg);
                                 BOOST_CHECK_EQUAL(reads, in.size()); // [sequence.reqmts]/111
@@ -719,7 +719,7 @@ struct mem_shrink_to_fit
                 auto c = a;
                 c.shrink_to_fit();
                 auto const capacity = c.capacity();
-                auto const first = c.begin();
+                auto const first    = c.begin();
                 c.shrink_to_fit();
                 if (c.capacity() == capacity) {
                         BOOST_CHECK(first == c.begin()); // [vector.capacity]/11
@@ -757,7 +757,7 @@ struct mem_insert_keeps_prefix
                 if (has_room(a, 1UZ) and p > 0UZ) {
                         auto b = a;
                         b.reserve(a.size() + 1UZ);
-                        auto const before = b.begin() + static_cast<X::difference_type>(p - 1UZ);
+                        auto const before   = b.begin() + static_cast<X::difference_type>(p - 1UZ);
                         auto const capacity = b.capacity();
                         b.insert(nth(b, p), true);
                         if (b.capacity() == capacity) {
@@ -775,7 +775,7 @@ struct mem_erase_keeps_prefix
         auto operator()(X const& a, std::size_t p) const
         {
                 if (p < a.size()) {
-                        auto b = a;
+                        auto b           = a;
                         auto const first = b.begin();
                         BOOST_CHECK_NO_THROW(b.erase(nth(b, p))); // [vector.modifiers]/5 [inplace.vector.modifiers]/20
                         if (p > 0UZ) {
@@ -821,7 +821,7 @@ struct mem_insert_past_capacity
         template<class X>
         auto operator()(X const& a) const
         {
-                auto b = a;
+                auto b          = a;
                 auto const more = alternating(a.max_size() - a.size() + 1UZ);
                 if (not has_room(a, 1UZ)) {
                         check_one_past_capacity(b);
@@ -836,12 +836,12 @@ struct mem_insert_past_capacity
 class single_pass_iterator
 {
 public:
-        using iterator_concept = std::input_iterator_tag;
+        using iterator_concept  = std::input_iterator_tag;
         using iterator_category = std::input_iterator_tag;
-        using value_type = bool;
-        using difference_type = std::ptrdiff_t;
-        using pointer = void;
-        using reference = bool;
+        using value_type        = bool;
+        using difference_type   = std::ptrdiff_t;
+        using pointer           = void;
+        using reference         = bool;
 
         single_pass_iterator() = default;
 
@@ -975,7 +975,7 @@ template<class X>
 auto check_single_pass_fits(X const& a, std::size_t p, std::vector<bool> const& fits) -> void
 {
         auto const m = spliced(model_of(a), p, fits);
-        auto b = a;
+        auto b       = a;
         b.insert(nth(b, p), single_pass_iterator(fits.cbegin()), single_pass_iterator(fits.cend()));
         BOOST_CHECK(model_of(b) == m);
         if constexpr (requires { b.insert_range(nth(b, p), single_pass(fits)); }) {
@@ -1046,8 +1046,8 @@ struct mem_try_emplace_back
         template<class X>
         auto operator()(X const& a, bool t) const
         {
-                auto b = a;
-                auto c = a;
+                auto b       = a;
+                auto c       = a;
                 auto const r = b.try_emplace_back(t);
                 auto const s = c.try_push_back(t);
                 if (has_room(a, 1UZ)) {
@@ -1128,10 +1128,10 @@ struct ref_copy
         {
                 auto b = a;
                 auto r = b[i]; // NOLINT(misc-const-correctness): the copy is assigned through as a mutable proxy
-                r = not static_cast<bool>(a[i]);
+                r      = not static_cast<bool>(a[i]);
                 BOOST_CHECK_NE(static_cast<bool>(b[i]), static_cast<bool>(a[i])); // [vector.bool.pspc]/5
                 auto m = model_of(a);
-                m[i] = not m[i];
+                m[i]   = not m[i];
                 BOOST_CHECK(model_of(b) == m);
         }
 };
@@ -1158,20 +1158,20 @@ struct mem_reference_assign
         auto operator()(X const& a, std::size_t i, std::size_t j) const
         {
                 auto b = a;
-                b[i] = b[j];
+                b[i]   = b[j];
                 auto m = model_of(a);
-                m[i] = m[j];
+                m[i]   = m[j];
                 BOOST_CHECK(model_of(b) == m); // [vector.bool.pspc]/7
 
                 for (auto const x : {false, true}) {
-                        auto c = a;
-                        auto r = c[i];
+                        auto c        = a;
+                        auto r        = c[i];
                         auto const& s = (r = x);
                         BOOST_CHECK_EQUAL(static_cast<bool>(c[i]), x);       // [vector.bool.pspc]/7
                         BOOST_CHECK(std::addressof(s) == std::addressof(r)); // [vector.bool.pspc]/8
 
                         // P2321R2's const-qualified assignment, where the library has it.
-                        auto d = a;
+                        auto d       = a;
                         auto const t = d[i];
                         if constexpr (requires { t = x; }) {
                                 auto const& u = (t = x);
@@ -1188,7 +1188,7 @@ struct ref_operator_bool
         template<class X>
         auto operator()(X const& a, std::size_t i) const
         {
-                auto b = a;
+                auto b       = a;
                 auto const m = model_of(a);
                 BOOST_CHECK_EQUAL(static_cast<bool>(b[i]), static_cast<bool>(m[i])); // [vector.bool.pspc]/9
                 b[i] = true;
@@ -1208,7 +1208,7 @@ struct mem_reference_flip
                 static_assert(std::same_as<decltype(b[i].flip()), void>);
                 b[i].flip();
                 auto m = model_of(a);
-                m[i] = not m[i];
+                m[i]   = not m[i];
                 BOOST_CHECK(model_of(b) == m); // [vector.bool.pspc]/10
         }
 };
@@ -1220,8 +1220,8 @@ struct fn_swap_reference
         auto operator()(X const& a, std::size_t i, std::size_t j) const
         {
                 auto m = model_of(a);
-                m[i] = a[j];
-                m[j] = a[i];
+                m[i]   = a[j];
+                m[j]   = a[i];
                 auto b = a;
                 swap(b[i], b[j]);
                 BOOST_CHECK(model_of(b) == m); // [vector.bool.pspc]/11
@@ -1251,8 +1251,8 @@ struct mem_static_swap
         auto operator()(X const& a, std::size_t i, std::size_t j) const
         {
                 auto m = model_of(a);
-                m[i] = a[j];
-                m[j] = a[i];
+                m[i]   = a[j];
+                m[j]   = a[i];
                 auto b = a;
                 X::swap(b[i], b[j]);
                 BOOST_CHECK(model_of(b) == m); // [depr.vector.bool.swap]/2
@@ -1270,7 +1270,7 @@ struct fn_erase
         template<class X>
         auto operator()(X const& a, bool t) const
         {
-                auto b = a;
+                auto b       = a;
                 auto const m = model_of(a);
                 auto const r = erase(b, t);
                 static_assert(std::same_as<decltype(erase(b, t)), typename X::size_type>);
@@ -1284,8 +1284,8 @@ struct fn_erase_if
         template<class X>
         auto operator()(X const& a, auto pred) const
         {
-                auto b = a;
-                auto m = model_of(a);
+                auto b       = a;
+                auto m       = model_of(a);
                 auto const r = erase_if(b, pred);
                 static_assert(std::same_as<decltype(erase_if(b, pred)), typename X::size_type>);
                 auto const n = std::erase_if(m, pred);

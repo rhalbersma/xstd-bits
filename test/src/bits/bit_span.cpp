@@ -25,7 +25,7 @@ BOOST_AUTO_TEST_SUITE(BitSpan)
 namespace {
 
 using Storage = xstd::bits::detail::bit_container<std::array<std::size_t, 1>, 8>;
-using Blocks = std::array<std::size_t, 1>;
+using Blocks  = std::array<std::size_t, 1>;
 
 template<class T>
 using view_of = decltype(xstd::bit_span(std::declval<T&>()));
@@ -71,7 +71,7 @@ BOOST_AUTO_TEST_CASE(ViewingAnOwnerIsImplicit)
         static_assert(not std::convertible_to<Storage&, xstd::bit_span<Blocks, 8>>);
 
         auto a = xstd::bit_array<8>();
-        a[3] = true;
+        a[3]   = true;
         BOOST_CHECK(takes_a_span(a));
 }
 
@@ -85,7 +85,7 @@ BOOST_AUTO_TEST_CASE(TheViewNeitherComparesNorOrders)
 // A view is mutable through: writing a position through the view writes the bit.
 BOOST_AUTO_TEST_CASE(WritingThroughTheViewWritesTheBits)
 {
-        auto packed = std::uint8_t{};
+        auto packed     = std::uint8_t{};
         auto const view = xstd::bit_span(packed);
 
         view[3] = true;
@@ -99,8 +99,8 @@ BOOST_AUTO_TEST_CASE(WritingThroughTheViewWritesTheBits)
 BOOST_AUTO_TEST_CASE(APackedArrayAgreesWithItsOwnView)
 {
         auto packed = xstd::basic_bit_array<unsigned char, 8>{};
-        packed[1] = true;
-        packed[6] = true;
+        packed[1]   = true;
+        packed[6]   = true;
 
         auto const view = xstd::bit_span(packed);
         for (auto const k : std::views::iota(0UZ, 8UZ)) {
