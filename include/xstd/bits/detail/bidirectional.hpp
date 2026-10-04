@@ -196,17 +196,23 @@ public:
 
 } // namespace xstd::bits::detail
 
+// NOLINTBEGIN(bugprone-std-namespace-modification): [namespace.std]/2 admits specializing for a program-defined type.
+namespace std {
+
 // std::format over the containers, which prints the key as the key's own formatter does.
 template<class Bits, class Key, class KeyTraits, xstd::bits::detail::direction Direction, class CharT>
-// NOLINTNEXTLINE(bugprone-std-namespace-modification)
-struct std::formatter<xstd::bits::detail::bidirectional_bit_reference<Bits, Key, KeyTraits, Direction>, CharT> : std::formatter<Key, CharT>
+struct formatter<xstd::bits::detail::bidirectional_bit_reference<Bits, Key, KeyTraits, Direction>, CharT> : formatter<Key, CharT>
 {
         template<class Context>
         [[nodiscard]] constexpr auto format(xstd::bits::detail::bidirectional_bit_reference<Bits, Key, KeyTraits, Direction> ref, Context& ctx) const
         {
                 // Unqualified, so ADL finds the proxy's own hidden friend.
-                return std::formatter<Key, CharT>::format(format_as(ref), ctx);
+                return formatter<Key, CharT>::format(format_as(ref), ctx);
         }
 };
+
+} // namespace std
+
+// NOLINTEND(bugprone-std-namespace-modification)
 
 #endif // XSTD_BITS_DETAIL_BIDIRECTIONAL_HPP

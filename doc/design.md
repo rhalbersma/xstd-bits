@@ -4105,10 +4105,10 @@ Four findings are suppressed because the checker cannot see what makes them righ
   `bugprone-signed-bitwise` rejects that. The type's own operator decides which is right, and the count is a
   bit position within one block, so the signedness the check objects to cannot be reached.
 - `misc-redundant-expression` on a reflexivity check, which cannot be written without naming the object twice.
-- `bugprone-std-namespace-modification` on the two `std::formatter` specializations, which is precisely the
-  modification `[namespace.std]/2` allows: a specialization of a standard library template for a
-  program-defined type. clang-tidy 22 and 23 read the qualified definition as modifying the namespace; 24 no
-  longer does, and the suppression stays until the whole ladder is past 23.
+- `bugprone-std-namespace-modification` around each `namespace std` block, which holds only what
+  `[namespace.std]/2` allows: a specialization of a standard library template for a program-defined type.
+  `hash`, `tuple_size`, `tuple_element`, `formatter` and the rest are written alike, each block bracketed by
+  `NOLINTBEGIN` and `NOLINTEND` outside its braces, with the clause as the reason.
 - `modernize-avoid-c-style-cast` on `sequence_adaptor`'s `is_static_width_owner`, where it points at the
   `Store` in `owns(Store)` and offers to make it a `static_cast`. There is no cast on that line. `owns` is
   `constexpr auto owns(storage) -> bool` in `ownership.hpp`, the only entity that name denotes, and `Store` is

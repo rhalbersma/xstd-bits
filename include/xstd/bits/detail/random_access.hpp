@@ -311,17 +311,23 @@ public:
 
 } // namespace xstd::bits::detail
 
+// NOLINTBEGIN(bugprone-std-namespace-modification): [namespace.std]/2 admits specializing for a program-defined type.
+namespace std {
+
 // std::format over the containers, which needs nothing said about the containers themselves.
 template<class Bits, class CharT>
-// NOLINTNEXTLINE(bugprone-std-namespace-modification)
-struct std::formatter<xstd::bits::detail::random_access_bit_reference<Bits>, CharT> : std::formatter<bool, CharT>
+struct formatter<xstd::bits::detail::random_access_bit_reference<Bits>, CharT> : formatter<bool, CharT>
 {
         template<class Context>
         [[nodiscard]] constexpr auto format(xstd::bits::detail::random_access_bit_reference<Bits> ref, Context& ctx) const
         {
                 // Unqualified, so ADL finds the proxy's own hidden friend.
-                return std::formatter<bool, CharT>::format(format_as(ref), ctx);
+                return formatter<bool, CharT>::format(format_as(ref), ctx);
         }
 };
+
+} // namespace std
+
+// NOLINTEND(bugprone-std-namespace-modification)
 
 #endif // XSTD_BITS_DETAIL_RANDOM_ACCESS_HPP
