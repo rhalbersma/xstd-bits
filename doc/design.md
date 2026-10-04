@@ -3282,9 +3282,12 @@ at all ([test-not-subscript](#test-not-subscript)), so there is nothing for a fa
 ### the-iterator-is-the-primitive
 
 `bidirectional_bit_iterator` and `random_access_bit_iterator` are a pointer and a position, and they reach the bits
-through the storage alone. Their constructors are public, so an owner or a view builds one without being a
-friend: the dependency runs one way, from the container to the iterator, and the mutual friendship and forward
-declarations the earlier views needed (*"Clang requires it, GCC does not"*) have nothing left to declare.
+through the storage alone. Their constructors from a pointer and a position, and their references' too, are
+**private**: a user reaches a proxy through a container and never builds one over storage it cannot see. Two kinds
+of caller may: the adaptor that hands proxies out -- `sequence_adaptor` or `set_adaptor`, which each proxy header
+declares ahead for the purpose -- and the proxy's twin, since the iterator's `*` builds a reference and the
+reference's `&` builds an iterator. So each iterator befriends its reference and its adaptor, and each reference
+its iterator and its adaptor.
 
 The pointer is to the **storage** an owner wraps, never to the owner: `bit_fixed_set` hands out
 `bits::detail::bidirectional_bit_iterator<bit_container<std::array<B, K>, N>>`, which is why an owner is never itself
