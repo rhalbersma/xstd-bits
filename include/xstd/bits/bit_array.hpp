@@ -17,13 +17,14 @@
 #include <boost/container_hash/is_tuple_like.hpp>  // is_tuple_like
 #include <algorithm>                               // copy
 #include <array>                                   // array
-#include <concepts>                                // constructible_from
+#include <concepts>                                // constructible_from, same_as
 #include <cstddef>                                 // size_t
 #include <functional>                              // hash
 #include <initializer_list>                        // initializer_list
 #include <limits>                                  // numeric_limits
 #include <tuple>                                   // tuple_element, tuple_size
-#include <type_traits>                             // false_type
+#include <type_traits>                             // false_type, remove_cv_t
+#include <utility>                                 // move
 
 namespace xstd {
 
@@ -37,7 +38,7 @@ public:
         using typename base_type::value_type;
 
         // std::array is an aggregate and declares none: these are what its initialization does, as constructors.
-        [[nodiscard]] basic_bit_array() noexcept = default;
+        [[nodiscard]] basic_bit_array() = default;
 
         // What is listed leads, the rest stays false.
         constexpr basic_bit_array(std::initializer_list<value_type> il)
@@ -72,29 +73,30 @@ public:
 template<std::size_t N>
 using bit_array = basic_bit_array<std::size_t, N>;
 
-// The width of one block or of an array of them; K = 1 keeps MSVC 17 from dropping the one-block guide.
-template<xstd::unsigned_integer Block, std::size_t K = 1>
-basic_bit_array(from_bit_storage_t, Block) -> basic_bit_array<Block, bit_storage_extent_v<Block> * K>;
+// The width of one block.
+template<xstd::unsigned_integer Block>
+basic_bit_array(from_bit_storage_t, Block) -> basic_bit_array<Block, bit_storage_extent_v<Block>>;
 
-// No guide from zero blocks: an empty array names no width worth deducing.
+// The width of an array of blocks, zero blocks included, as [span.deduct] takes an array's bound.
 template<xstd::unsigned_integer Block, std::size_t K>
-        requires (K != 0)
 basic_bit_array(from_bit_storage_t, std::array<Block, K>) -> basic_bit_array<Block, bit_storage_extent_v<std::array<Block, K>>>;
 
-// [array.creation]'s to_array, of bool alone: a built-in array names no block type, so the default one is taken.
-template<std::size_t N>
-[[nodiscard]] constexpr auto to_bit_array(bool const (&a)[N]) // NOLINT(modernize-avoid-c-arrays): a built-in array is what it converts.
+// [array.creation]'s to_array, of bits: a built-in array names no block type, so the default one is taken.
+template<class T, std::size_t N>
+[[nodiscard]] constexpr auto to_bit_array(T (&a)[N]) // NOLINT(modernize-avoid-c-arrays): a built-in array is what it converts.
         -> bit_array<N>
 {
+        static_assert(std::same_as<std::remove_cv_t<T>, bool>, "[array.creation]/1: the element is a bit");
         return bit_array<N>(a);
 }
 
-// [array.creation]'s second overload, which for a bool moves exactly what the first copies.
-template<std::size_t N>
-[[nodiscard]] constexpr auto to_bit_array(bool (&&a)[N]) // NOLINT(modernize-avoid-c-arrays): a built-in array is what it converts.
+// [array.creation]'s second overload, moving the elements as to_array does.
+template<class T, std::size_t N>
+[[nodiscard]] constexpr auto to_bit_array(T (&&a)[N]) // NOLINT(modernize-avoid-c-arrays): a built-in array is what it converts.
         -> bit_array<N>
 {
-        return xstd::to_bit_array(a);
+        static_assert(std::same_as<std::remove_cv_t<T>, bool>, "[array.creation]/4: the element is a bit");
+        return bit_array<N>(std::move(a));
 }
 
 namespace aligned {
@@ -122,9 +124,8 @@ struct is_tuple_like<xstd::basic_bit_array<Block, N>> : std::false_type
 
 } // namespace boost::container_hash
 
+// NOLINTBEGIN(bugprone-std-namespace-modification): [namespace.std]/2 admits specializing for a program-defined type.
 namespace std {
-
-// NOLINTBEGIN(bugprone-std-namespace-modification)
 
 template<class Block, std::size_t N>
 struct hash<xstd::basic_bit_array<Block, N>> : hash<typename xstd::basic_bit_array<Block, N>::adaptor_type>
@@ -143,8 +144,8 @@ template<class Block, std::size_t N>
 struct tuple_size<xstd::basic_bit_array<Block, N>> : tuple_size<typename xstd::basic_bit_array<Block, N>::adaptor_type>
 {};
 
-// NOLINTEND(bugprone-std-namespace-modification)
-
 } // namespace std
+
+// NOLINTEND(bugprone-std-namespace-modification)
 
 #endif // XSTD_BITS_BIT_ARRAY_HPP

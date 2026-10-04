@@ -186,7 +186,7 @@ BOOST_AUTO_TEST_CASE(Emplace)
                 });
                 for (auto const [from, a, k] : inputs::keyed_sets<T>()) {
                         auto const on_failure = context(from, a, k);
-                        auto x = a;
+                        auto x                = a;
                         mem_emplace()(x, k);
                 }
         });
@@ -205,7 +205,7 @@ BOOST_AUTO_TEST_CASE(EmplaceHint)
                 });
                 for (auto const [from, a, k] : inputs::keyed_sets<T>()) {
                         auto const on_failure = context(from, a, k);
-                        auto x = a;
+                        auto x                = a;
                         mem_emplace_hint()(x, x.end(), k);
                 }
         });
@@ -221,7 +221,7 @@ BOOST_AUTO_TEST_CASE(Insert)
                 static_assert(requires (T c, T::key_type k) { { c.insert(k) } -> std::same_as<std::pair<typename T::iterator, bool>>; });
                 for (auto const [from, a, k] : inputs::keyed_sets<T>()) {
                         auto const on_failure = context(from, a, k);
-                        auto x = a;
+                        auto x                = a;
                         mem_insert()(x, k);
                         auto y = a;
                         mem_insert()(y, typename T::key_type{k});
@@ -239,7 +239,7 @@ BOOST_AUTO_TEST_CASE(InsertHint)
                 static_assert(requires (T c, T::key_type k, T::const_iterator p) { { c.insert(p, k) } -> std::same_as<typename T::iterator>; });
                 for (auto const [from, a, k] : inputs::keyed_sets<T>()) {
                         auto const on_failure = context(from, a, k);
-                        auto x = a;
+                        auto x                = a;
                         mem_insert()(x, x.end(), k);
                         auto y = a;
                         mem_insert()(y, y.end(), typename T::key_type{k});
@@ -257,7 +257,7 @@ BOOST_AUTO_TEST_CASE(InsertFirstLast)
                 static_assert(requires (T c, T::value_type const* first, T::value_type const* last) { c.insert(first, last); });
                 for (auto const [from, a, keys] : inputs::listed_sets<T>()) {
                         auto const on_failure = context(from, a, keys);
-                        auto x = a;
+                        auto x                = a;
                         mem_insert()(x, keys.begin(), keys.end());
                 }
         });
@@ -274,7 +274,7 @@ BOOST_AUTO_TEST_CASE(InsertRange)
                 static_assert(requires (T c, std::initializer_list<typename T::value_type> il) { c.insert_range(il); });
                 for (auto const [from, a, keys] : inputs::listed_sets<T>()) {
                         auto const on_failure = context(from, a, keys);
-                        auto x = a;
+                        auto x                = a;
                         mem_insert()(x, keys);
                 }
 #endif
@@ -310,7 +310,7 @@ BOOST_AUTO_TEST_CASE(EraseKey)
                 static_assert(requires (T c, T::key_type k) { { c.erase(k) } -> std::same_as<typename T::size_type>; });
                 for (auto const [from, a, k] : inputs::keyed_sets<T>()) {
                         auto const on_failure = context(from, a, k);
-                        auto x = a;
+                        auto x                = a;
                         mem_erase()(x, k);
                 }
         });
@@ -328,7 +328,7 @@ BOOST_AUTO_TEST_CASE(EraseIterator)
                 if constexpr (not test::is_flat_set<T>) {
                         for (auto const [from, a] : inputs::sets<T>()) {
                                 auto const on_failure = context(from, a);
-                                auto x = a;
+                                auto x                = a;
                                 for (auto first = x.begin(), last = x.end(); first != last; /* expression inside loop */) {
                                         mem_erase()(x, first++);
                                 }
@@ -365,7 +365,7 @@ BOOST_AUTO_TEST_CASE(EraseRange)
                 if constexpr (not test::is_flat_set<T>) {
                         for (auto const [from, a] : inputs::sets_with_doubletons<T>()) {
                                 auto const on_failure = context(from, a);
-                                auto x = a;
+                                auto x                = a;
                                 mem_erase()(x, x.begin(), x.end());
                         }
                 }
@@ -382,7 +382,7 @@ BOOST_AUTO_TEST_CASE(Clear)
                 static_assert(requires (T c) { c.clear(); });
                 for (auto const [from, a] : inputs::sets<T>()) {
                         auto const on_failure = context(from, a);
-                        auto x = a;
+                        auto x                = a;
                         mem_clear()(x);
                 }
         });
@@ -400,7 +400,7 @@ BOOST_AUTO_TEST_CASE(Find)
                 });
                 for (auto const [from, a, k] : inputs::keyed_sets_with_singletons<T>()) {
                         auto const on_failure = context(from, a, k);
-                        auto x = a;
+                        auto x                = a;
                         mem_find()(x, k);
                         mem_find()(std::as_const(x), k);
                 }
@@ -414,7 +414,7 @@ BOOST_AUTO_TEST_CASE(Count)
                 static_assert(requires (T const cc, T::key_type k) { { cc.count(k) } -> std::same_as<typename T::size_type>; });
                 for (auto const [from, a, k] : inputs::keyed_sets_with_singletons<T>()) {
                         auto const on_failure = context(from, a, k);
-                        auto const x = a;
+                        auto const x          = a;
                         mem_count()(x, k);
                 }
         });
@@ -427,7 +427,7 @@ BOOST_AUTO_TEST_CASE(Contains)
                 static_assert(requires (T const cc, T::key_type k) { { cc.contains(k) } -> std::same_as<bool>; });
                 for (auto const [from, a, k] : inputs::keyed_sets_with_singletons<T>()) {
                         auto const on_failure = context(from, a, k);
-                        auto const x = a;
+                        auto const x          = a;
                         mem_contains()(x, k);
                 }
         });
@@ -443,7 +443,7 @@ BOOST_AUTO_TEST_CASE(LowerBound)
                 });
                 for (auto const [from, a, k] : inputs::keyed_sets_with_singletons<T>()) {
                         auto const on_failure = context(from, a, k);
-                        auto x = a;
+                        auto x                = a;
                         mem_lower_bound()(x, k);
                         mem_lower_bound()(std::as_const(x), k);
                 }
@@ -460,7 +460,7 @@ BOOST_AUTO_TEST_CASE(UpperBound)
                 });
                 for (auto const [from, a, k] : inputs::keyed_sets_with_singletons<T>()) {
                         auto const on_failure = context(from, a, k);
-                        auto x = a;
+                        auto x                = a;
                         mem_upper_bound()(x, k);
                         mem_upper_bound()(std::as_const(x), k);
                 }
@@ -477,7 +477,7 @@ BOOST_AUTO_TEST_CASE(EqualRange)
                 });
                 for (auto const [from, a, k] : inputs::keyed_sets_with_singletons<T>()) {
                         auto const on_failure = context(from, a, k);
-                        auto x = a;
+                        auto x                = a;
                         mem_equal_range()(x, k);
                         mem_equal_range()(std::as_const(x), k);
                 }
@@ -518,9 +518,9 @@ concept deduces_bit_set = requires (I i, Args... args) { xstd::basic_bit_set(i, 
 // [associative.reqmts.general]/181: deduction guides
 BOOST_AUTO_TEST_CASE(DeductionGuides)
 {
-        using I = std::size_t const*;
+        using I     = std::size_t const*;
         using Alloc = std::allocator<std::size_t>;
-        using Less = std::less<std::size_t>;
+        using Less  = std::less<std::size_t>;
 
         static_assert(deduces_std_set<I> and not deduces_std_set<int>);                            // [associative.reqmts.general]/181
         static_assert(deduces_std_set<I, Less, Alloc> and not deduces_std_set<I, Less, int>);      // [associative.reqmts.general]/181

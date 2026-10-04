@@ -220,7 +220,7 @@ class bit_container : public bit_members_t<Blocks, N>
         using members_type::m_size;
 
 public:
-        using block_type = std::ranges::range_value_t<Blocks>;
+        using block_type           = std::ranges::range_value_t<Blocks>;
         using block_container_type = Blocks;
 
         static constexpr auto bits_per_block = static_cast<std::size_t>(xstd::numeric_limits<block_type>::digits);
@@ -271,30 +271,35 @@ public:
 
         // The two ceilings the readings choose between, neither enforced here; the blocks' own is narrower.
         static constexpr auto max_num_blocks = std::numeric_limits<std::size_t>::max() / bits_per_block;
-        static constexpr auto max_width = max_num_blocks * bits_per_block;
+        static constexpr auto max_width      = max_num_blocks * bits_per_block;
 
         // A width whose positions a difference_type can all name, which is what std::vector<bool> refuses against.
         static constexpr auto max_addressable_num_blocks = static_cast<std::size_t>(std::numeric_limits<std::ptrdiff_t>::max()) / bits_per_block;
-        static constexpr auto max_addressable_width = max_addressable_num_blocks * bits_per_block;
+        static constexpr auto max_addressable_width      = max_addressable_num_blocks * bits_per_block;
 
 private:
-        static constexpr auto static_num_bits = has_static_size ? align_up(N, bits_per_block) : 0UZ;
+        static constexpr auto static_num_bits   = has_static_size ? align_up(N, bits_per_block) : 0UZ;
         static constexpr auto static_num_blocks = has_static_size ? static_num_bits / bits_per_block : 0UZ;
         static constexpr auto static_last_block = static_num_blocks - 1UZ;
 
         static constexpr auto left_bit = bits_per_block - 1UZ;
-        static constexpr auto unit = static_cast<block_type>(1);
-        static constexpr auto zero = static_cast<block_type>(0);
-        static constexpr auto ones = static_cast<block_type>(-1);
+        static constexpr auto unit     = static_cast<block_type>(1);
+        static constexpr auto zero     = static_cast<block_type>(0);
+        static constexpr auto ones     = static_cast<block_type>(-1);
 
         static constexpr auto static_num_unused_bits = has_static_size ? static_num_bits - N : 0UZ;
-        static constexpr auto static_used_bits = shr(ones, static_num_unused_bits);
-        static constexpr auto static_unused_bits = static_cast<block_type>(~static_used_bits);
+        static constexpr auto static_used_bits       = shr(ones, static_num_unused_bits);
+        static constexpr auto static_unused_bits     = static_cast<block_type>(~static_used_bits);
         static constexpr auto static_has_unused_bits = has_static_size and static_used_bits != ones;
 
         // The width is a size_t unless the blocks out-align one, when it fills what would be padding.
         using width_type = std::conditional_t<(alignof(std::size_t) >= alignof(Blocks)), std::size_t, block_type>;
         static_assert(sizeof(width_type) >= sizeof(std::size_t) and alignof(width_type) >= alignof(Blocks));
+
+        // cl rejects a member of the explicit object parameter in a trailing return type (C2228).
+        template<class Self>
+        using block_reference_t = std::conditional_t<
+                std::is_const_v<std::remove_reference_t<Self>>, block_type const&, block_type&>;
 
 public:
         [[nodiscard]] bit_container()
@@ -536,33 +541,19 @@ public:
                 }
         }
 
-        // The block, and not operator[]: a subscript on a bit container means a bit, which test() answers.
-        [[nodiscard]] constexpr auto block(std::size_t i) const noexcept
-                -> block_type
+        // A block, as the wrapped blocks subscript, not a bit; a writer then restores the invariant with erase_unused.
+        [[nodiscard]] constexpr auto operator[](this auto&& self, std::size_t n) noexcept
+                -> block_reference_t<decltype(self)>
         {
-                assert(i < num_blocks());
-                return m_blocks[i];
+                assert(n < self.num_blocks());
+                return std::forward<decltype(self)>(self).m_blocks[n];
         }
 
-        // The write side, a reference rather than a setter: the caller restores the invariant with erase_unused.
-        [[nodiscard]] constexpr auto block(std::size_t i) noexcept
-                -> block_type&
+        // The subscript as a range, so a caller writing every block writes them in one call.
+        [[nodiscard]] constexpr auto blocks(this auto&& self) noexcept
+                -> std::span<std::remove_reference_t<block_reference_t<decltype(self)>>>
         {
-                assert(i < num_blocks());
-                return m_blocks[i];
-        }
-
-        // block(i) as a range, so a caller writing every block writes them in one call.
-        [[nodiscard]] constexpr auto blocks() noexcept
-                -> std::span<block_type>
-        {
-                return {std::ranges::data(m_blocks), num_blocks()};
-        }
-
-        [[nodiscard]] constexpr auto blocks() const noexcept
-                -> std::span<block_type const>
-        {
-                return {std::ranges::data(m_blocks), num_blocks()};
+                return {std::ranges::data(self.m_blocks), self.num_blocks()};
         }
 
         // Someone else's blocks as the span that borrows them, writable through a const storage as the span itself is.
@@ -602,8 +593,8 @@ public:
         {
                 for (auto const j : std::views::iota(0UZ, shared_bytes<E>)) {
                         auto const byte = static_cast<block_type>(std::to_integer<unsigned char>(bytes[j]));
-                        auto& block = m_blocks[j / sizeof(block_type)];
-                        block = static_cast<block_type>(block | shl(byte, bits_per_byte * (j % sizeof(block_type))));
+                        auto& block     = m_blocks[j / sizeof(block_type)];
+                        block           = static_cast<block_type>(block | shl(byte, bits_per_byte * (j % sizeof(block_type))));
                 }
         }
 
@@ -613,7 +604,7 @@ public:
         {
                 for (auto const j : std::views::iota(0UZ, shared_bytes<E>)) {
                         auto const block = shr(m_blocks[j / sizeof(block_type)], bits_per_byte * (j % sizeof(block_type)));
-                        bytes[j] = static_cast<std::byte>(static_cast<unsigned char>(block));
+                        bytes[j]         = static_cast<std::byte>(static_cast<unsigned char>(block));
                 }
         }
 
@@ -694,10 +685,10 @@ public:
 
                 // Each step lands back in block_type: a promoted operand is what bugprone-signed-bitwise reads.
                 auto const low_kept = static_cast<block_type>(m_blocks[index] & static_cast<block_type>(~shl(mask, offset)));
-                m_blocks[index] = static_cast<block_type>(low_kept | shl(bits, offset));
+                m_blocks[index]     = static_cast<block_type>(low_kept | shl(bits, offset));
                 if (offset != 0UZ and index != last_block()) {
-                        auto const shift = bits_per_block - offset;
-                        auto const high_kept = static_cast<block_type>(m_blocks[index + 1UZ] & static_cast<block_type>(~shr(mask, shift)));
+                        auto const shift      = bits_per_block - offset;
+                        auto const high_kept  = static_cast<block_type>(m_blocks[index + 1UZ] & static_cast<block_type>(~shr(mask, shift)));
                         m_blocks[index + 1UZ] = static_cast<block_type>(high_kept | shr(bits, shift));
                 }
         }
@@ -1187,7 +1178,7 @@ public:
         {
                 assert(is_valid(n));
                 auto&& [block, mask] = block_mask(n);
-                auto const inserted = not bits::detail::intersects(block, mask);
+                auto const inserted  = not bits::detail::intersects(block, mask);
                 block |= mask;
                 assert(test(n));
                 return inserted;
@@ -1237,7 +1228,7 @@ public:
         {
                 assert(is_valid(n));
                 auto&& [block, mask] = block_mask(n);
-                auto const erased = bits::detail::intersects(block, mask);
+                auto const erased    = bits::detail::intersects(block, mask);
                 block &= static_cast<block_type>(~mask);
                 assert(not test(n));
                 return erased;
@@ -1252,7 +1243,7 @@ public:
                 return *this;
         }
 
-        // test, not operator[]: this returns bool, std::bitset's a proxy.
+        // test reads a bit as bool, where std::bitset's subscript gives a proxy and this one a block.
         [[nodiscard]] constexpr auto test(std::size_t n) const noexcept
                 -> bool
         {
@@ -1454,7 +1445,7 @@ public:
                 -> std::size_t
         {
                 auto const blocks = std::views::iota(0UZ, n);
-                auto const found = std::ranges::find_if(blocks, [&](std::size_t index) -> bool { return this->padded_block(index) != other.padded_block(index); });
+                auto const found  = std::ranges::find_if(blocks, [&](std::size_t index) -> bool { return this->padded_block(index) != other.padded_block(index); });
                 return found == std::ranges::end(blocks) ? n : *found;
         }
 
@@ -1612,11 +1603,6 @@ private:
                 }
         }
 
-        // cl rejects a member of the explicit object parameter in a trailing return type (C2228).
-        template<class Self>
-        using block_reference_t = std::conditional_t<
-                std::is_const_v<std::remove_reference_t<Self>>, block_type const&, block_type&>;
-
         [[nodiscard]] constexpr auto block_mask(this auto&& self, std::size_t n) noexcept
                 -> std::pair<block_reference_t<decltype(self)>, block_type>
         {
@@ -1633,8 +1619,8 @@ private:
                 auto const count = blocks_for(n);
                 if (value and n > size()) {
                         // Which bits become new is read off the old width, and written only once the blocks have grown.
-                        auto const partial = has_unused_bits();
-                        auto const tail = partial ? static_cast<block_type>(~used_bits()) : zero;
+                        auto const partial   = has_unused_bits();
+                        auto const tail      = partial ? static_cast<block_type>(~used_bits()) : zero;
                         auto const old_count = num_blocks();
                         m_blocks.resize(count, ones);
                         if (partial) {

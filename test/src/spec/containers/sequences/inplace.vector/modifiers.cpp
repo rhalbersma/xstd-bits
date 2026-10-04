@@ -122,8 +122,8 @@ BOOST_AUTO_TEST_CASE(Swap)
                 }); // [inplace.vector.modifiers]/23
                 for (auto const [from, a, b] : inputs::pairs<T>()) {
                         auto const on_failure = context(from, a, b);
-                        auto x = a;
-                        auto y = b;
+                        auto x                = a;
+                        auto y                = b;
                         x.swap(y);
                         BOOST_CHECK(x == b and y == a); // [inplace.vector.modifiers]/23
                 }

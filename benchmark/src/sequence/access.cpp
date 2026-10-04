@@ -34,7 +34,7 @@ template<class T>
 auto filled(std::size_t n)
         -> T
 {
-        auto v = T(n);
+        auto v   = T(n);
         auto lcg = std::uint64_t{1};
         for (auto i = 0UZ; i < n; ++i) {
                 v[i] = (next_index(lcg, 5UZ) < 2UZ); // ~40% set, deterministic
@@ -51,7 +51,7 @@ auto bm_random_read(benchmark::State& state)
 {
         auto const n = bits(state);
         auto const v = filled<T>(n);
-        auto lcg = std::uint64_t{12345};
+        auto lcg     = std::uint64_t{12345};
         for (auto _ : state) {
                 bool b = v[next_index(lcg, n)];
                 benchmark::DoNotOptimize(b);

@@ -134,7 +134,7 @@ auto check_shift_up_to_the_capacity(T const& s, std::size_t key) -> void
 
         // One further carries it past, and it alone is dropped: the lower key lands one higher, unless it was that key.
         auto const survivor = key == 0UZ ? T() : T({room + 1UZ});
-        auto past_capacity = s;
+        auto past_capacity  = s;
         past_capacity <<= room + 1UZ;
         BOOST_CHECK(past_capacity == survivor);
         BOOST_CHECK((s << (room + 1UZ)) == survivor);
@@ -218,7 +218,7 @@ BOOST_AUTO_TEST_CASE(TheCapacityIsTheRequestedOneExactly)
 BOOST_AUTO_TEST_CASE(EqualSetsCompareEqualAtUnequalWidths)
 {
         auto narrow = T();
-        auto wide = T();
+        auto wide   = T();
 
         narrow.insert(3);
         wide.insert(20);
@@ -233,7 +233,7 @@ BOOST_AUTO_TEST_CASE(EqualSetsCompareEqualAtUnequalWidths)
 BOOST_AUTO_TEST_CASE(AKeyPastTheNarrowerWidthMakesTheSetsUnequal)
 {
         auto narrow = T();
-        auto wide = T();
+        auto wide   = T();
 
         narrow.insert(3);
         wide.insert(3);

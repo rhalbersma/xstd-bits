@@ -46,11 +46,11 @@ template<class X>
 constexpr auto nested_types()
         -> void
 {
-        using T = X::value_type;
-        using I = X::iterator;
+        using T  = X::value_type;
+        using I  = X::iterator;
         using CI = X::const_iterator;
-        using D = X::difference_type;
-        using S = X::size_type;
+        using D  = X::difference_type;
+        using S  = X::size_type;
 
         static_assert(std::same_as<std::iter_value_t<I>, T>);                                                                // [container.reqmts]/2
         static_assert(std::same_as<typename X::reference, T&> or test::proxy_reference<X>);                                  // [container.reqmts]/4
@@ -103,7 +103,7 @@ struct constructor_move
         template<class X>
         auto operator()(X const& a) const
         {
-                auto rv = a;
+                auto rv  = a;
                 auto rv1 = a;
                 X u(std::move(rv));
                 X u1 = std::move(rv1);
@@ -128,7 +128,7 @@ struct op_move_assign
         template<class X>
         auto operator()(X const& t0, X const& v) const
         {
-                auto t = t0;
+                auto t  = t0;
                 auto rv = v;
                 static_assert(std::same_as<decltype(t = std::move(rv)), X&>); // [container.reqmts]/20
                 t = std::move(rv);
@@ -194,10 +194,10 @@ struct op_iterator_compare
         template<class X>
         auto operator()(X const& b) const
         {
-                using I = X::iterator;
-                using CI = X::const_iterator;
-                auto a = b;
-                auto const i = a.begin();
+                using I       = X::iterator;
+                using CI      = X::const_iterator;
+                auto a        = b;
+                auto const i  = a.begin();
                 auto const ci = std::as_const(a).begin();
                 if constexpr (std::random_access_iterator<I>) {
                         static_assert(std::same_as<decltype(i <=> i), std::strong_ordering>); // [container.reqmts]/39
@@ -255,8 +255,8 @@ struct fn_swap
         template<class X>
         auto operator()(X const& a, X const& b) const
         {
-                auto t = a;
-                auto s = b;
+                auto t  = a;
+                auto s  = b;
                 auto t1 = a;
                 auto s1 = b;
                 swap(t, s);
@@ -305,9 +305,9 @@ struct mem_observers
         template<class X>
         auto operator()(X const& b) const
         {
-                auto a = b; // NOLINT(performance-unnecessary-copy-initialization,misc-const-correctness): the members are called on a mutable object
+                auto a           = b; // NOLINT(performance-unnecessary-copy-initialization,misc-const-correctness): the members are called on a mutable object
                 auto const first = a.begin();
-                auto const last = a.end();
+                auto const last  = a.end();
                 static_cast<void>(a.size());
                 static_cast<void>(a.max_size());
                 static_cast<void>(a.empty());

@@ -299,7 +299,7 @@ asking for it would drop a model:
 
 | absent from | |
 |---|---|
-| `bit_container` | `operator[]` ([test-not-subscript](#test-not-subscript)), unary `~`, `set(n, value)` |
+| `bit_container` | a subscript to a bit, its `operator[]` being a block's ([test-not-subscript](#test-not-subscript)), unary `~`, `set(n, value)` |
 | `std::bitset` | `-=`, `is_subset_of`, `find_first`, member `swap` |
 | `boost::dynamic_bitset` | `to_string` |
 
@@ -1424,9 +1424,12 @@ compile on libc++ where it happens to compile on libstdc++. `BOOST_CHECK` compar
 
 ### test-not-subscript
 
-`bit_container::test` rather than `operator[]`: this reads and cannot be written through.
-`std::bitset`'s `operator[]` returns an assignable proxy and this returns `bool`, so the subscript spelling
-would promise an assignment that does not compile.
+`bit_container::test` reads a bit, and cannot be written through. `std::bitset`'s `operator[]` returns an
+assignable proxy and `test` returns `bool`, so a subscript to a bit would promise an assignment that does not
+compile. `bit_container`'s `operator[]` is the subscript of the blocks it wraps -- a `std::array`, a
+`std::vector`, a `std::span` -- and yields a block, read through a `const` storage and written through a mutable
+one, after which the caller restores the unused bits with `erase_unused`. Only the sequence containers lift the
+subscript to a bit: `bit_array`'s `operator[]` is `std::array<bool, N>`'s, and returns the proxy.
 
 The writable proxy belongs to the containers above, which is also where the checked reading lives —
 `std::bitset::test` throws where this asserts, a difference the containers state as a guard rather than
@@ -1600,7 +1603,7 @@ MSVC went on to refuse alias deduction through `basic_bit_fixed_set` and `basic_
 and that is what made them classes. A class takes its guides as its own and needs none of the three rules: the
 guides name `basic_bit_array<Block, N>` rather than computing a block count, and `bit_fixed_set<N>` is an alias of
 `basic_bit_fixed_set<std::size_t, std::size_t, N>`, one alias over a class, the depth every compiler deduced through. The one-block
-guides keep `K = 1`, which costs nothing. The views are a separate question from the owners
+guides need no defaulted count either. The views are a separate question from the owners
 ([the-views-are-the-adaptors](#the-views-are-the-adaptors)).
 
 ### owning-is-ours
@@ -3276,15 +3279,18 @@ The sequence proxy writes through the storage's `assign(n, value)` and never thr
 view fell back on `c[n] = value` for a type without `set(n, value)`, and were such a type's `operator[]` to
 return our own proxy, that proxy's assignment would land back in the fallback and **recurse until the stack
 is gone**. A named member cannot loop back into the proxy, which is one more reason the write is a member the
-storage spells rather than a probe over whatever answers — and `bit_container` has no `operator[]`
-at all ([test-not-subscript](#test-not-subscript)), so there is nothing for a fallback to find.
+storage spells rather than a probe over whatever answers — and `bit_container`'s `operator[]` yields a block,
+never a bit ([test-not-subscript](#test-not-subscript)), so a fallback would find nothing that loops back.
 
 ### the-iterator-is-the-primitive
 
 `bidirectional_bit_iterator` and `random_access_bit_iterator` are a pointer and a position, and they reach the bits
-through the storage alone. Their constructors are public, so an owner or a view builds one without being a
-friend: the dependency runs one way, from the container to the iterator, and the mutual friendship and forward
-declarations the earlier views needed (*"Clang requires it, GCC does not"*) have nothing left to declare.
+through the storage alone. Their constructors from a pointer and a position, and their references' too, are
+**private**: a user reaches a proxy through a container and never builds one over storage it cannot see. Two kinds
+of caller may: the adaptor that hands proxies out -- `sequence_adaptor` or `set_adaptor`, which each proxy header
+declares ahead for the purpose -- and the proxy's twin, since the iterator's `*` builds a reference and the
+reference's `&` builds an iterator. So each iterator befriends its reference and its adaptor, and each reference
+its iterator and its adaptor.
 
 The pointer is to the **storage** an owner wraps, never to the owner: `bit_fixed_set` hands out
 `bits::detail::bidirectional_bit_iterator<bit_container<std::array<B, K>, N>>`, which is why an owner is never itself
@@ -4102,10 +4108,10 @@ Four findings are suppressed because the checker cannot see what makes them righ
   `bugprone-signed-bitwise` rejects that. The type's own operator decides which is right, and the count is a
   bit position within one block, so the signedness the check objects to cannot be reached.
 - `misc-redundant-expression` on a reflexivity check, which cannot be written without naming the object twice.
-- `bugprone-std-namespace-modification` on the two `std::formatter` specializations, which is precisely the
-  modification `[namespace.std]/2` allows: a specialization of a standard library template for a
-  program-defined type. clang-tidy 22 and 23 read the qualified definition as modifying the namespace; 24 no
-  longer does, and the suppression stays until the whole ladder is past 23.
+- `bugprone-std-namespace-modification` around each `namespace std` block, which holds only what
+  `[namespace.std]/2` allows: a specialization of a standard library template for a program-defined type.
+  `hash`, `tuple_size`, `tuple_element`, `formatter` and the rest are written alike, each block bracketed by
+  `NOLINTBEGIN` and `NOLINTEND` outside its braces, with the clause as the reason.
 - `modernize-avoid-c-style-cast` on `sequence_adaptor`'s `is_static_width_owner`, where it points at the
   `Store` in `owns(Store)` and offers to make it a `static_cast`. There is no cast on that line. `owns` is
   `constexpr auto owns(storage) -> bool` in `ownership.hpp`, the only entity that name denotes, and `Store` is
@@ -4512,9 +4518,9 @@ by a `difference_type`.
 
 ### The block span, and what an assertion per block costs
 
-`block(i)` as a range rather than one block at a time. The write side carries `block(i)`'s write-side
+`operator[]` as a range rather than one block at a time. The write side carries the subscript's write-side
 contract once for the range; the read side carries nothing and exists one build short of the write
-side. `block(i)` asserts its index, and an assertion per block is a loop the vectoriser leaves alone.
+side. `operator[]` asserts its index, and an assertion per block is a loop the vectoriser leaves alone.
 A Release build never sees it — a loop over the blocks reaches the memcpy floor there by itself —
 but an assert-on build pays **3.4x** for a bounds check on an index the caller just produced in order.
 
@@ -4755,7 +4761,7 @@ The **full** interface of `xstd::bit_fixed_set` is `constexpr`.
 - **No allocators**: `xstd::bit_fixed_set` is a set of non-negative integers over a static width and does not dynamically allocate memory. In particular, `xstd::bit_fixed_set` does **not provide** a `get_allocator()` member function and its constructors do not take an allocator argument. Its allocating counterpart `xstd::bit_set` does provide both — the allocator follows the storage column, not the set reading.
 - **No splicing**: `xstd::bit_fixed_set` is **not a node-based container**, and does not provide the splicing operations as defined in [p0083r3](http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2016/p0083r3.pdf). In particular, `xstd::bit_fixed_set` does **not provide** the nested types `node_type` and `insert_return_type`, the `extract()` or `merge()` member functions, or the `insert()` overloads taking a node handle.
 
-- **No container exchange**: `std::flat_set` hands its underlying container out with `extract() &&` and takes one back with `replace(container_type&&)`, which is how you build one cheaply and how you get the sorted vector back out. `xstd::bit_fixed_set` has neither name, and has the capability twice over — see the `from_bit_storage`/`bit_cast` bullet below, and [the comparison in design.md](#the-bytes-they-agree-on).
+- **No container exchange**: `std::flat_set` hands its underlying container out with `extract() &&` and takes one back with `replace(container_type&&)`, which is how you build one cheaply and how you get the sorted vector back out. `xstd::bit_fixed_set` has neither name, and has the capability twice over — see the `from_bit_storage`/`bit_convert` bullet below, and [the comparison in design.md](#the-bytes-they-agree-on).
 
 Minor **semantic differences** between common functionality in `xstd::bit_fixed_set<N>` and `std::set<int>` are:
 
@@ -4764,7 +4770,7 @@ Minor **semantic differences** between common functionality in `xstd::bit_fixed_
 - the `xstd::bit_fixed_set` members `fill`, `complement` and `full` do not exist for `std::set`.
 - `xstd::bit_fixed_set<N>` exchanges bits with any field of `N` bits through a **named pair**, the tagged constructor `bit_fixed_set<N>(xstd::from_bit_storage, b)` and `xstd::bit_convert<B>(s)`, which also crosses with anything else that has bit storage, not through an untagged constructor or a conversion operator. What they admit is named by a concept rather than by a type: an unsigned integer or a sequence of them, whose layout the language and the sequence state between them, or a field of bits whose layout `bits::detail::bit_layout` probes and proves — so `std::bitset<N>` rides in on the same rule as `unsigned long long`, and an implementation that laid its bits out otherwise fails to compile rather than converting quietly. The widths are the same `N` and a static width is a capacity under this reading, so position `n` here is bit `n` there: nothing truncates, nothing grows, nothing throws, and the round trip is the identity. It is `constexpr` at every width, and a copy rather than a walk over positions.
 
-  A name rather than a conversion, because the integer family is the one a set reader can still misread, and only a name answers it at the call site, where the reader is: `bit_fixed_set<32>(xstd::from_bit_storage, 5u)` is the set of positions the **value** five has, `{0, 2}`, not the set `{5}` ([design.md#the-bytes-they-agree-on](#the-bytes-they-agree-on)). `from_bit_storage` is a constructor on an owner; `bit_cast` also reads a set view, which spans a whole container and so has that container's bytes. The run-time-width `xstd::bit_set` has neither, a `std::bitset` naming one `N` that a growing set has no single value for; it crosses through `xstd::bit_convert`, which carries the width along.
+  A name rather than a conversion, because the integer family is the one a set reader can still misread, and only a name answers it at the call site, where the reader is: `bit_fixed_set<32>(xstd::from_bit_storage, 5u)` is the set of positions the **value** five has, `{0, 2}`, not the set `{5}` ([design.md#the-bytes-they-agree-on](#the-bytes-they-agree-on)). `from_bit_storage` is a constructor on an owner; `bit_convert` also reads a set view, which spans a whole container and so has that container's bytes. The run-time-width `xstd::bit_set` has no `from_bit_storage`, a `std::bitset` naming one `N` that a growing set has no single value for; it crosses through `bit_convert` alone, which carries the width along.
 
 With these caveats in mind, all static-width, defaulted comparing, non-allocating, non-splicing `std::set<int>` code in the wild should continue to work out-of-the-box with `xstd::bit_fixed_set<N>`.
 

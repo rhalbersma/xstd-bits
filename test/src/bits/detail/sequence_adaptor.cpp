@@ -34,9 +34,9 @@
 namespace {
 
 using Storage = xstd::bits::detail::bit_container<std::array<std::uint64_t, 2>, 100>;
-using Owner = xstd::basic_bit_array<std::uint64_t, 100>;
-using View = xstd::bits::detail::sequence_adaptor<Storage, xstd::bits::detail::storage::borrowed, xstd::bits::detail::window::all>;
-using Reader = xstd::bits::detail::sequence_adaptor<Storage const, xstd::bits::detail::storage::borrowed, xstd::bits::detail::window::all>;
+using Owner   = xstd::basic_bit_array<std::uint64_t, 100>;
+using View    = xstd::bits::detail::sequence_adaptor<Storage, xstd::bits::detail::storage::borrowed, xstd::bits::detail::window::all>;
+using Reader  = xstd::bits::detail::sequence_adaptor<Storage const, xstd::bits::detail::storage::borrowed, xstd::bits::detail::window::all>;
 
 // Dependent, so an absent member is a false rather than a hard error.
 template<class S>
@@ -62,7 +62,7 @@ using DynamicOctet = xstd::bits::detail::sequence_adaptor<xstd::bits::detail::bi
         -> std::vector<std::pair<DynamicOctet, std::vector<bool>>>
 {
         auto const patterns = std::vector<std::vector<std::size_t>>{{}, {0}, {1}, {7}, {8}, {0, 8}, {7, 8}};
-        auto out = std::vector<std::pair<DynamicOctet, std::vector<bool>>>();
+        auto out            = std::vector<std::pair<DynamicOctet, std::vector<bool>>>();
         for (auto const n : {0UZ, 1UZ, 7UZ, 8UZ, 9UZ, 16UZ, 17UZ}) {
                 for (auto const& p : patterns) {
                         auto x = DynamicOctet(n, false);
@@ -150,7 +150,7 @@ BOOST_AUTO_TEST_CASE(AnOwnerIsRegularAndAViewIsCopyable)
 // Deep const for the owner, shallow for the view: what each hands out says which.
 BOOST_AUTO_TEST_CASE(ConstIsDeepForTheOwnerAndShallowForTheView)
 {
-        auto a = Owner(); // NOLINT(misc-const-correctness): the non-const overloads are what the decltypes below ask about
+        auto a         = Owner(); // NOLINT(misc-const-correctness): the non-const overloads are what the decltypes below ask about
         auto const& ca = a;
         static_assert(std::same_as<decltype(a.begin()), Owner::iterator>);
         static_assert(std::same_as<decltype(ca.begin()), Owner::const_iterator>);
@@ -177,10 +177,10 @@ BOOST_AUTO_TEST_CASE(AViewWritesThroughToWhatItViews)
         View const v(c);
         auto model = std::vector<bool>(100);
 
-        v[3] = true;
-        v.at(5) = true;
+        v[3]      = true;
+        v.at(5)   = true;
         v.front() = true;
-        v.back() = true;
+        v.back()  = true;
         model[3] = model[5] = model[0] = model[99] = true;
         BOOST_CHECK(bools(v) == model);
         BOOST_CHECK(c.test(3) and c.test(5) and c.test(0) and c.test(99));
@@ -301,7 +301,7 @@ constexpr bool can_grow = requires (X& x) { x.push_back(true); x.pop_back(); x.r
 BOOST_AUTO_TEST_CASE(GrowthIsTheOwnersOverStorageThatGrows)
 {
         using Dynamic = xstd::bits::detail::sequence_adaptor<xstd::bits::detail::bit_container<std::vector<std::uint64_t>>, xstd::bits::detail::storage::owned, xstd::bits::detail::window::all>;
-        using Span = xstd::bits::detail::sequence_adaptor<xstd::bits::detail::bit_container<std::vector<std::uint64_t>>, xstd::bits::detail::storage::borrowed, xstd::bits::detail::window::all>;
+        using Span    = xstd::bits::detail::sequence_adaptor<xstd::bits::detail::bit_container<std::vector<std::uint64_t>>, xstd::bits::detail::storage::borrowed, xstd::bits::detail::window::all>;
 
         static_assert(can_grow<Dynamic>);
         static_assert(not can_grow<Owner>);
@@ -400,7 +400,7 @@ BOOST_AUTO_TEST_CASE(AZeroWidthSequenceIsEmpty)
 {
         auto const a = xstd::basic_bit_array<std::uint8_t, 0>();
         BOOST_CHECK(a.empty() and a.begin() == a.end());
-        auto c = xstd::bits::detail::bit_container<std::array<std::uint8_t, 1>, 0>();
+        auto c       = xstd::bits::detail::bit_container<std::array<std::uint8_t, 1>, 0>();
         auto const v = xstd::bits::detail::sequence_adaptor<xstd::bits::detail::bit_container<std::array<std::uint8_t, 1>, 0>, xstd::bits::detail::storage::borrowed, xstd::bits::detail::window::all>(c);
         BOOST_CHECK(v.empty() and v.begin() == v.end());
 }
@@ -438,8 +438,8 @@ auto write_pattern(Seq& s, std::size_t p)
         auto m = std::vector<bool>(s.size());
         for (auto const i : std::views::iota(0UZ, s.size())) {
                 bool const bit = pattern_bit(p, i, s.size());
-                s[i] = bit;
-                m[i] = bit;
+                s[i]           = bit;
+                m[i]           = bit;
         }
         return m;
 }
@@ -488,7 +488,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheAggregatesAgreeWithTheModel, T, Graded)
 {
         auto disagreements = 0UZ;
         for (auto const p : std::views::iota(0UZ, 6UZ)) {
-                auto a = T();
+                auto a       = T();
                 auto const m = write_pattern(a, p);
                 disagreements += aggregate_disagreements(a, m);
         }
@@ -498,15 +498,15 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheAggregatesAgreeWithTheModel, T, Graded)
 // The same over a window: a masked block at a time, at every offset and length, so both ends are exercised.
 BOOST_AUTO_TEST_CASE(TheAggregatesAgreeWithTheModelOnAWindowOfOurs)
 {
-        using Storage24 = xstd::bits::detail::bit_container<std::array<std::uint8_t, 3>, 24>;
+        using Storage24    = xstd::bits::detail::bit_container<std::array<std::uint8_t, 3>, 24>;
         auto disagreements = 0UZ;
         for (auto const p : std::views::iota(0UZ, 6UZ)) {
-                auto c = Storage24();
-                auto v = xstd::bit_span(c);
+                auto c       = Storage24();
+                auto v       = xstd::bit_span(c);
                 auto const m = write_pattern(v, p);
                 for (auto const off : std::views::iota(0UZ, v.size() + 1UZ)) {
                         for (auto const count : std::views::iota(0UZ, v.size() - off + 1UZ)) {
-                                auto const w = v.subspan(off, count);
+                                auto const w  = v.subspan(off, count);
                                 auto const mw = std::vector<bool>(m.begin() + static_cast<std::ptrdiff_t>(off), m.begin() + static_cast<std::ptrdiff_t>(off + count));
                                 disagreements += aggregate_disagreements(w, mw);
                                 disagreements += static_cast<std::size_t>(not std::ranges::equal(for_each_bools(w), mw));
@@ -522,11 +522,11 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(MismatchAgreesWithTheModel, T, Graded)
         auto disagreements = 0UZ;
         for (auto const p : std::views::iota(0UZ, 6UZ)) {
                 for (auto const q : std::views::iota(0UZ, 6UZ)) {
-                        auto x = T();
-                        auto y = T();
-                        auto const mx = write_pattern(x, p);
-                        auto const my = write_pattern(y, q);
-                        auto const [i, j] = std::ranges::mismatch(mx, my);
+                        auto x              = T();
+                        auto y              = T();
+                        auto const mx       = write_pattern(x, p);
+                        auto const my       = write_pattern(y, q);
+                        auto const [i, j]   = std::ranges::mismatch(mx, my);
                         auto const expected = static_cast<std::size_t>(i - mx.begin());
                         disagreements += static_cast<std::size_t>(x.mismatch(y) != expected);
                         // Symmetric, and equal values answer the width rather than any position in it.
@@ -592,7 +592,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ForEachAgreesWithTheRangeFor, T, Graded)
 {
         auto disagreements = 0UZ;
         for (auto const p : std::views::iota(0UZ, 6UZ)) {
-                auto a = T();
+                auto a       = T();
                 auto const m = write_pattern(a, p);
                 disagreements += static_cast<std::size_t>(not std::ranges::equal(for_each_bools(a), m));
 
@@ -647,7 +647,7 @@ BOOST_AUTO_TEST_CASE(ForEachHandsTheBoolByValue)
 BOOST_AUTO_TEST_CASE(APackedArrayExchangesBytesWithAFieldOfBits)
 {
         constexpr auto N = 100UZ;
-        auto src = std::bitset<N>();
+        auto src         = std::bitset<N>();
         for (auto i = 0UZ; i < N; i += 7UZ) {
                 src.set(i);
         }
@@ -674,7 +674,7 @@ BOOST_AUTO_TEST_CASE(APackedArrayExchangesBytesWithAFieldOfBits)
 BOOST_AUTO_TEST_CASE(TheSequenceExchangeIsNamedBothWays)
 {
         constexpr auto N = 64UZ;
-        using T = xstd::bit_array<N>;
+        using T          = xstd::bit_array<N>;
         static_assert(test::converts_between<T, std::bitset<N>>);
 
         // The unnamed doors are closed, in both directions.
@@ -696,10 +696,10 @@ BOOST_AUTO_TEST_CASE(AWindowIsNotAFieldOfBitsButAPlainViewIs)
         // A view reads the bits it spans, which are the whole container's.
         auto storage = Storage();
         // const, because a view's const is SHALLOW: the handle does not change, the bits it refers to do.
-        auto const view = View(storage);
-        view[0] = true;
+        auto const view             = View(storage);
+        view[0]                     = true;
         view[Storage::extent - 1UZ] = true;
-        auto const out = xstd::bit_convert<std::bitset<100>>(view);
+        auto const out              = xstd::bit_convert<std::bitset<100>>(view);
         BOOST_CHECK_EQUAL(out.count(), 2UZ);
         BOOST_CHECK(out.test(0) and out.test(Storage::extent - 1UZ));
 

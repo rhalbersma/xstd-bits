@@ -38,7 +38,7 @@ template<class T>
 auto filled(std::size_t per_mille, std::size_t limit = width)
         -> T
 {
-        auto s = T();
+        auto s     = T();
         auto state = 1ULL;
         for (auto i = 0UZ; i < limit; ++i) {
                 state = state * 6364136223846793005ULL + 1442695040888963407ULL;

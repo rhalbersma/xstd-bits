@@ -397,10 +397,10 @@ struct mem_emplace
 
                 static_assert(std::constructible_from<typename X::value_type, Args...>); // [associative.reqmts.general]/48
                 // Built once and then used three times.
-                auto const value = typename X::value_type(std::forward<Args>(args)...);
+                auto const value    = typename X::value_type(std::forward<Args>(args)...);
                 auto const emplaced = not a.contains(value);
-                auto const r = a.emplace(value); // [associative.reqmts.general]/49
-                                                 // [associative.reqmts.general]/50
+                auto const r        = a.emplace(value); // [associative.reqmts.general]/49
+                                                        // [associative.reqmts.general]/50
                 BOOST_CHECK(r == std::make_pair(a.find(value), emplaced));
         }
 };
@@ -416,8 +416,8 @@ struct mem_emplace_hint
                 );
                 // Built once, for the reason mem_emplace gives.
                 auto const value = typename X::value_type(std::forward<Args>(args)...);
-                auto const r = a.emplace_hint(p, value); // [associative.reqmts.general]/58
-                BOOST_CHECK(r == a.find(value));         // [associative.reqmts.general]/59
+                auto const r     = a.emplace_hint(p, value); // [associative.reqmts.general]/58
+                BOOST_CHECK(r == a.find(value));             // [associative.reqmts.general]/59
         }
 };
 
@@ -429,7 +429,7 @@ struct mem_insert
                 static_assert(std::same_as<decltype(a.insert(t)), std::pair<typename X::iterator, bool>>); // [associative.reqmts.general]/61
                 static_assert(std::constructible_from<typename X::value_type, decltype(t)>);               // [associative.reqmts.general]/62
                 auto const inserted = not a.contains(t);
-                auto const r = a.insert(t);                            // [associative.reqmts.general]/63
+                auto const r        = a.insert(t);                     // [associative.reqmts.general]/63
                 BOOST_CHECK(r == std::make_pair(a.find(t), inserted)); // [associative.reqmts.general]/64
                 BOOST_CHECK_EQUAL(a.count(t), 1UZ);                    // [associative.reqmts.general]/4
         }
@@ -440,9 +440,9 @@ struct mem_insert
                 static_assert(std::same_as<decltype(a.insert(std::move(t))), std::pair<typename X::iterator, bool>>);
                 // [associative.reqmts.general]/62
                 static_assert(std::constructible_from<typename X::value_type, decltype(std::move(t))>);
-                auto const key = t;
+                auto const key      = t;
                 auto const inserted = not a.contains(key);
-                auto const r = a.insert(std::move(t));                   // [associative.reqmts.general]/63
+                auto const r        = a.insert(std::move(t));            // [associative.reqmts.general]/63
                 BOOST_CHECK(r == std::make_pair(a.find(key), inserted)); // [associative.reqmts.general]/64
                 BOOST_CHECK_EQUAL(a.count(key), 1UZ);                    // [associative.reqmts.general]/4
         }
@@ -450,9 +450,9 @@ struct mem_insert
         template<class X>
         auto operator()(X& a, X::iterator p, X::value_type const& t) const
         {
-                auto const size = a.size();
+                auto const size     = a.size();
                 auto const inserted = not a.contains(t);
-                auto r = a.insert(p, t);                                                  // NOLINT(misc-const-correctness): the next line asserts decltype(r), so const would break the assertion this exists to make
+                auto r              = a.insert(p, t);                                     // NOLINT(misc-const-correctness): the next line asserts decltype(r), so const would break the assertion this exists to make
                 static_assert(std::same_as<decltype(r), typename X::iterator>);           // [associative.reqmts.general]/70
                 static_assert(requires { a.insert(p, t); });                              // [associative.reqmts.general]/71
                 BOOST_CHECK(a.contains(t) and a.size() == size + (inserted ? 1UZ : 0UZ)); // [associative.reqmts.general]/72
@@ -462,10 +462,10 @@ struct mem_insert
         template<class X>
         auto operator()(X& a, X::iterator p, X::value_type&& t) const
         {
-                auto const key = t;
-                auto const size = a.size();
+                auto const key      = t;
+                auto const size     = a.size();
                 auto const inserted = not a.contains(key);
-                auto r = a.insert(p, std::move(t));                                         // NOLINT(misc-const-correctness): the next line asserts decltype(r), so const would break the assertion this exists to make
+                auto r              = a.insert(p, std::move(t));                            // NOLINT(misc-const-correctness): the next line asserts decltype(r), so const would break the assertion this exists to make
                 static_assert(std::same_as<decltype(r), typename X::iterator>);             // [associative.reqmts.general]/70
                 static_assert(requires { a.insert(p, std::move(t)); });                     // [associative.reqmts.general]/71
                 BOOST_CHECK(a.contains(key) and a.size() == size + (inserted ? 1UZ : 0UZ)); // [associative.reqmts.general]/72
@@ -516,7 +516,7 @@ struct mem_erase
         auto operator()(X& a, X::key_type const& k) const
         {
                 static_assert(std::same_as<decltype(a.erase(k)), typename X::size_type>); // [associative.reqmts.general]/118
-                auto const erased = a.count(k);
+                auto const erased  = a.count(k);
                 auto const returns = a.erase(k); // [associative.reqmts.general]/119
                 BOOST_CHECK(returns == erased);  // [associative.reqmts.general]/120
         }
@@ -527,7 +527,7 @@ struct mem_erase
                 static_assert(std::same_as<decltype(a.erase(q)), typename X::iterator>); // [associative.reqmts.general]/126
                 BOOST_CHECK(q != a.end());
                 auto const expected = std::next(q); // assumes erase does not invalidate iterators
-                auto const returns = a.erase(q);    // [associative.reqmts.general]/127
+                auto const returns  = a.erase(q);   // [associative.reqmts.general]/127
                 BOOST_CHECK(returns == expected);   // [associative.reqmts.general]/128
         }
 
@@ -536,7 +536,7 @@ struct mem_erase
         {
                 static_assert(std::same_as<decltype(a.erase(q1, q2)), typename X::iterator>); // [associative.reqmts.general]/134
                 auto const expected = q2;                                                     // assumes erase does not invalidate iterators
-                auto const returns = a.erase(q1, q2);                                         // [associative.reqmts.general]/135
+                auto const returns  = a.erase(q1, q2);                                        // [associative.reqmts.general]/135
                 BOOST_CHECK(returns == expected);                                             // [associative.reqmts.general]/136
         }
 };
@@ -559,11 +559,11 @@ struct fn_erase_if
         template<class X, class Predicate>
         auto operator()(X const& c, Predicate pred) const
         {
-                auto c1 = c;
+                auto c1    = c;
                 auto model = std::set<typename X::key_type, typename X::key_compare>(c.begin(), c.end());
                 static_assert(std::same_as<decltype(erase_if(c1, pred)), typename X::size_type>);
                 auto const expected = std::erase_if(model, pred);
-                auto const erased = erase_if(c1, pred);
+                auto const erased   = erase_if(c1, pred);
                 BOOST_CHECK_EQUAL(erased, expected);        // [set.erasure]/1
                 BOOST_CHECK(std::ranges::equal(c1, model)); // [set.erasure]/1
         }
@@ -667,10 +667,10 @@ struct mem_erase_mutable
         {
                 static_assert(std::same_as<decltype(a.erase(r)), typename X::iterator>); // [associative.reqmts.general]/130
                 // What follows r is compared by key, a vector-backed set moving its elements up as it erases.
-                auto const key = static_cast<X::key_type>(*r);
-                auto const last = std::next(r) == a.end();
+                auto const key       = static_cast<X::key_type>(*r);
+                auto const last      = std::next(r) == a.end();
                 auto const following = last ? key : static_cast<X::key_type>(*std::next(r));
-                auto const returns = a.erase(r);
+                auto const returns   = a.erase(r);
                 BOOST_CHECK(not a.contains(key));                                                      // [associative.reqmts.general]/131
                 BOOST_CHECK(last ? returns == a.end() : returns != a.end() and *returns == following); // [associative.reqmts.general]/132
         }
@@ -766,7 +766,7 @@ struct mem_insert_or_nothing
 // A comparison that counts itself, and projections that count their applications, for a Complexity bound.
 struct counted
 {
-        std::size_t comparisons = 0;
+        std::size_t comparisons  = 0;
         std::size_t projections1 = 0;
         std::size_t projections2 = 0;
 
@@ -831,8 +831,8 @@ struct fn_includes
         {
                 BOOST_CHECK(std::ranges::is_sorted(a, a.value_comp()) and std::ranges::is_sorted(b, b.value_comp())); // [includes]/2
                 auto const expected = std::ranges::all_of(b, [&](auto&& k) -> bool { return a.contains(k); });
-                auto n = counted();
-                auto const returns = std::includes(a.begin(), a.end(), b.begin(), b.end(), n.comp(a.value_comp()));
+                auto n              = counted();
+                auto const returns  = std::includes(a.begin(), a.end(), b.begin(), b.end(), n.comp(a.value_comp()));
                 BOOST_CHECK(not ascending<X> or std::includes(a.begin(), a.end(), b.begin(), b.end()) == std::includes(a.begin(), a.end(), b.begin(), b.end(), std::less())); // [includes]/1
                 BOOST_CHECK_EQUAL(returns, expected);                                                                                                                         // [includes]/3
                 BOOST_CHECK_LE(n.comparisons, counted::bound(a, b));                                                                                                          // [includes]/4
@@ -845,8 +845,8 @@ struct fn_ranges_includes
         auto operator()(X const& a, X const& b) const
         {
                 auto const expected = std::ranges::all_of(b, [&](auto&& k) -> bool { return a.contains(k); });
-                auto n = counted();
-                auto const returns = std::ranges::includes(a, b, n.comp(a.value_comp()), n.proj1(), n.proj2());
+                auto n              = counted();
+                auto const returns  = std::ranges::includes(a, b, n.comp(a.value_comp()), n.proj1(), n.proj2());
                 BOOST_CHECK(not ascending<X> or std::ranges::includes(a, b) == std::ranges::includes(a, b, std::ranges::less(), std::identity(), std::identity())); // [includes]/1
                 BOOST_CHECK_EQUAL(returns, expected);                                                                                                               // [includes]/3
                 BOOST_CHECK(n.comparisons <= counted::bound(a, b) and n.projections1 <= counted::bound(a, b) and n.projections2 <= counted::bound(a, b));           // [includes]/4
@@ -903,9 +903,9 @@ struct fn_set_union
                 };
                 BOOST_CHECK(std::ranges::is_sorted(a, a.value_comp()) and std::ranges::is_sorted(b, b.value_comp())); // [set.union]/2
                 auto const expected = expected_keys::set_union(a, b);
-                auto out = std::vector<std::size_t>(a.size() + b.size());
-                auto n = counted();
-                auto const last = std::set_union(a.begin(), a.end(), b.begin(), b.end(), out.begin(), n.comp(a.value_comp()));
+                auto out            = std::vector<std::size_t>(a.size() + b.size());
+                auto n              = counted();
+                auto const last     = std::set_union(a.begin(), a.end(), b.begin(), b.end(), out.begin(), n.comp(a.value_comp()));
                 BOOST_CHECK(not ascending<X> or into() == into(std::less()));                        // [set.union]/1
                 BOOST_CHECK(std::ranges::equal(std::ranges::subrange(out.begin(), last), expected)); // [set.union]/3
                 BOOST_CHECK(last == out.begin() + std::ranges::ssize(expected));                     // [set.union]/4
@@ -923,9 +923,9 @@ struct fn_ranges_set_union
                         result.erase(std::ranges::set_union(a, b, result.begin(), comp...).out, result.end());
                         return result;
                 };
-                auto const expected = expected_keys::set_union(a, b);
-                auto out = std::vector<std::size_t>(a.size() + b.size());
-                auto n = counted();
+                auto const expected         = expected_keys::set_union(a, b);
+                auto out                    = std::vector<std::size_t>(a.size() + b.size());
+                auto n                      = counted();
                 auto const [in1, in2, last] = std::ranges::set_union(a, b, out.begin(), n.comp(a.value_comp()), n.proj1(), n.proj2());
                 BOOST_CHECK(not ascending<X> or into() == into(std::ranges::less(), std::identity(), std::identity()));                                   // [set.union]/1
                 BOOST_CHECK(std::ranges::equal(std::ranges::subrange(out.begin(), last), expected));                                                      // [set.union]/3
@@ -946,9 +946,9 @@ struct fn_set_intersection
                 };
                 BOOST_CHECK(std::ranges::is_sorted(a, a.value_comp()) and std::ranges::is_sorted(b, b.value_comp())); // [set.intersection]/2
                 auto const expected = expected_keys::set_intersection(a, b);
-                auto out = std::vector<std::size_t>(a.size() + b.size());
-                auto n = counted();
-                auto const last = std::set_intersection(a.begin(), a.end(), b.begin(), b.end(), out.begin(), n.comp(a.value_comp()));
+                auto out            = std::vector<std::size_t>(a.size() + b.size());
+                auto n              = counted();
+                auto const last     = std::set_intersection(a.begin(), a.end(), b.begin(), b.end(), out.begin(), n.comp(a.value_comp()));
                 BOOST_CHECK(not ascending<X> or into() == into(std::less()));                        // [set.intersection]/1
                 BOOST_CHECK(std::ranges::equal(std::ranges::subrange(out.begin(), last), expected)); // [set.intersection]/3
                 BOOST_CHECK(last == out.begin() + std::ranges::ssize(expected));                     // [set.intersection]/4
@@ -966,9 +966,9 @@ struct fn_ranges_set_intersection
                         result.erase(std::ranges::set_intersection(a, b, result.begin(), comp...).out, result.end());
                         return result;
                 };
-                auto const expected = expected_keys::set_intersection(a, b);
-                auto out = std::vector<std::size_t>(a.size() + b.size());
-                auto n = counted();
+                auto const expected         = expected_keys::set_intersection(a, b);
+                auto out                    = std::vector<std::size_t>(a.size() + b.size());
+                auto n                      = counted();
                 auto const [in1, in2, last] = std::ranges::set_intersection(a, b, out.begin(), n.comp(a.value_comp()), n.proj1(), n.proj2());
                 BOOST_CHECK(not ascending<X> or into() == into(std::ranges::less(), std::identity(), std::identity()));                                   // [set.intersection]/1
                 BOOST_CHECK(std::ranges::equal(std::ranges::subrange(out.begin(), last), expected));                                                      // [set.intersection]/3
@@ -989,9 +989,9 @@ struct fn_set_difference
                 };
                 BOOST_CHECK(std::ranges::is_sorted(a, a.value_comp()) and std::ranges::is_sorted(b, b.value_comp())); // [set.difference]/2
                 auto const expected = expected_keys::set_difference(a, b);
-                auto out = std::vector<std::size_t>(a.size() + b.size());
-                auto n = counted();
-                auto const last = std::set_difference(a.begin(), a.end(), b.begin(), b.end(), out.begin(), n.comp(a.value_comp()));
+                auto out            = std::vector<std::size_t>(a.size() + b.size());
+                auto n              = counted();
+                auto const last     = std::set_difference(a.begin(), a.end(), b.begin(), b.end(), out.begin(), n.comp(a.value_comp()));
                 BOOST_CHECK(not ascending<X> or into() == into(std::less()));                        // [set.difference]/1
                 BOOST_CHECK(std::ranges::equal(std::ranges::subrange(out.begin(), last), expected)); // [set.difference]/3
                 BOOST_CHECK(last == out.begin() + std::ranges::ssize(expected));                     // [set.difference]/4
@@ -1009,9 +1009,9 @@ struct fn_ranges_set_difference
                         result.erase(std::ranges::set_difference(a, b, result.begin(), comp...).out, result.end());
                         return result;
                 };
-                auto const expected = expected_keys::set_difference(a, b);
-                auto out = std::vector<std::size_t>(a.size() + b.size());
-                auto n = counted();
+                auto const expected    = expected_keys::set_difference(a, b);
+                auto out               = std::vector<std::size_t>(a.size() + b.size());
+                auto n                 = counted();
                 auto const [in1, last] = std::ranges::set_difference(a, b, out.begin(), n.comp(a.value_comp()), n.proj1(), n.proj2());
                 BOOST_CHECK(not ascending<X> or into() == into(std::ranges::less(), std::identity(), std::identity()));                                   // [set.difference]/1
                 BOOST_CHECK(std::ranges::equal(std::ranges::subrange(out.begin(), last), expected));                                                      // [set.difference]/3
@@ -1032,9 +1032,9 @@ struct fn_set_symmetric_difference
                 };
                 BOOST_CHECK(std::ranges::is_sorted(a, a.value_comp()) and std::ranges::is_sorted(b, b.value_comp())); // [set.symmetric.difference]/2
                 auto const expected = expected_keys::set_symmetric_difference(a, b);
-                auto out = std::vector<std::size_t>(a.size() + b.size());
-                auto n = counted();
-                auto const last = std::set_symmetric_difference(a.begin(), a.end(), b.begin(), b.end(), out.begin(), n.comp(a.value_comp()));
+                auto out            = std::vector<std::size_t>(a.size() + b.size());
+                auto n              = counted();
+                auto const last     = std::set_symmetric_difference(a.begin(), a.end(), b.begin(), b.end(), out.begin(), n.comp(a.value_comp()));
                 BOOST_CHECK(not ascending<X> or into() == into(std::less()));                        // [set.symmetric.difference]/1
                 BOOST_CHECK(std::ranges::equal(std::ranges::subrange(out.begin(), last), expected)); // [set.symmetric.difference]/3
                 BOOST_CHECK(last == out.begin() + std::ranges::ssize(expected));                     // [set.symmetric.difference]/4
@@ -1052,9 +1052,9 @@ struct fn_ranges_set_symmetric_difference
                         result.erase(std::ranges::set_symmetric_difference(a, b, result.begin(), comp...).out, result.end());
                         return result;
                 };
-                auto const expected = expected_keys::set_symmetric_difference(a, b);
-                auto out = std::vector<std::size_t>(a.size() + b.size());
-                auto n = counted();
+                auto const expected         = expected_keys::set_symmetric_difference(a, b);
+                auto out                    = std::vector<std::size_t>(a.size() + b.size());
+                auto n                      = counted();
                 auto const [in1, in2, last] = std::ranges::set_symmetric_difference(a, b, out.begin(), n.comp(a.value_comp()), n.proj1(), n.proj2());
                 BOOST_CHECK(not ascending<X> or into() == into(std::ranges::less(), std::identity(), std::identity()));                                   // [set.symmetric.difference]/1
                 BOOST_CHECK(std::ranges::equal(std::ranges::subrange(out.begin(), last), expected));                                                      // [set.symmetric.difference]/3

@@ -68,7 +68,7 @@ BOOST_AUTO_TEST_CASE(ToArrayLvalue)
         test::for_each_type<test::spec::sequence::array_all>([]<class T> -> void {
                 constexpr auto N = T().size();
                 if constexpr (N != 0UZ) {
-                        auto s = striped<N>();
+                        auto s        = striped<N>();
                         auto const& c = s;
                         static_assert(std::same_as<decltype(to_array_of<T>(s.a)), created_t<T>> and std::same_as<decltype(to_array_of<T>(c.a)), created_t<T>>); // [array.creation]/3
                         static_assert([] -> bool {
@@ -87,7 +87,7 @@ BOOST_AUTO_TEST_CASE(ToArrayRvalue)
         test::for_each_type<test::spec::sequence::array_all>([]<class T> -> void {
                 constexpr auto N = T().size();
                 if constexpr (N != 0UZ) {
-                        auto s = striped<N>();
+                        auto s           = striped<N>();
                         auto const model = std::vector<bool>(std::ranges::begin(s.a), std::ranges::end(s.a));
                         static_assert(std::same_as<decltype(to_array_of<T>(std::move(s.a))), created_t<T>>); // [array.creation]/6
                         BOOST_CHECK(model_of(to_array_of<T>(std::move(s.a))) == model);                      // [array.creation]/6

@@ -23,15 +23,15 @@ template<class Bits>
 auto ordering_agrees_with_std_set(std::size_t universe = 4)
         -> void
 {
-        auto const bound = 1UZ << universe;
+        auto const bound            = 1UZ << universe;
         auto equality_disagreements = 0UZ;
-        auto less_disagreements = 0UZ;
-        auto greater_disagreements = 0UZ;
+        auto less_disagreements     = 0UZ;
+        auto greater_disagreements  = 0UZ;
 
         for (auto const i : std::views::iota(0UZ, bound)) {
                 for (auto const j : std::views::iota(0UZ, bound)) {
-                        auto x = test::make_viewed<Bits>(universe);
-                        auto y = test::make_viewed<Bits>(universe);
+                        auto x  = test::make_viewed<Bits>(universe);
+                        auto y  = test::make_viewed<Bits>(universe);
                         auto kx = std::set<std::size_t>();
                         auto ky = std::set<std::size_t>();
 
@@ -73,18 +73,18 @@ auto ordering_agrees_with_std_set_sampled(std::size_t universe, std::size_t tria
         -> void
 {
         auto equality_disagreements = 0UZ;
-        auto less_disagreements = 0UZ;
-        auto greater_disagreements = 0UZ;
+        auto less_disagreements     = 0UZ;
+        auto greater_disagreements  = 0UZ;
         // Fixed width, not ULL: a fixed seed should reproduce the same sequence on every platform.
-        auto lcg = std::uint64_t{0x9E3779B97F4A7C15};
+        auto lcg        = std::uint64_t{0x9E3779B97F4A7C15};
         auto const next = [&lcg] -> std::uint64_t { lcg = (lcg * 6364136223846793005ULL) + 1442695040888963407ULL; return lcg >> 11U; };
 
         for ([[maybe_unused]] auto const t : std::views::iota(0UZ, trials)) {
                 auto const i = next();
                 auto const j = next();
 
-                auto x = test::make_viewed<Bits>(universe);
-                auto y = test::make_viewed<Bits>(universe);
+                auto x  = test::make_viewed<Bits>(universe);
+                auto y  = test::make_viewed<Bits>(universe);
                 auto kx = std::set<std::size_t>();
                 auto ky = std::set<std::size_t>();
 

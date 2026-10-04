@@ -85,7 +85,7 @@ BOOST_AUTO_TEST_CASE(ShiftingByMaxSizeOrMoreEmpties)
                 for (auto const [from, a] : inputs::sets<T>()) {
                         auto const on_failure = context(from, a);
                         // Saturated: near the top of size_t, N + k would wrap onto a distance below max_size().
-                        auto const N = a.max_size();
+                        auto const N    = a.max_size();
                         auto const past = [=](std::size_t k) -> std::size_t { return k > top - N ? top : N + k; };
                         for (auto const n : {N, past(1UZ), past(N + 3UZ), top}) {
                                 check_empties(a, n);

@@ -65,7 +65,7 @@ template<class Bits, class F>
 constexpr auto walk_blocks(Bits const& c, std::size_t offset, std::size_t size, F& f)
         -> void
 {
-        using block_type = Bits::block_type;
+        using block_type      = Bits::block_type;
         constexpr auto digits = Bits::bits_per_block;
 
         for (auto k = 0UZ; k < size; k += digits) {
@@ -84,7 +84,7 @@ template<class Bits>
 [[nodiscard]] constexpr auto count_blocks(Bits const& c, std::size_t offset, std::size_t size) noexcept
         -> std::size_t
 {
-        using block_type = Bits::block_type;
+        using block_type      = Bits::block_type;
         constexpr auto digits = Bits::bits_per_block;
 
         auto n = 0UZ;
@@ -99,7 +99,7 @@ template<class Bits>
 [[nodiscard]] constexpr auto any_blocks(Bits const& c, std::size_t offset, std::size_t size) noexcept
         -> bool
 {
-        using block_type = Bits::block_type;
+        using block_type      = Bits::block_type;
         constexpr auto digits = Bits::bits_per_block;
 
         for (auto k = 0UZ; k < size; k += digits) {
@@ -115,7 +115,7 @@ template<class Bits>
 [[nodiscard]] constexpr auto all_blocks(Bits const& c, std::size_t offset, std::size_t size) noexcept
         -> bool
 {
-        using block_type = Bits::block_type;
+        using block_type      = Bits::block_type;
         constexpr auto digits = Bits::bits_per_block;
 
         for (auto k = 0UZ; k < size; k += digits) {
@@ -204,8 +204,8 @@ struct fixed_sizes : Members
 {
         using Members::Members;
 
-        static constexpr std::integral_constant<std::size_t, N> size = {};
-        static constexpr std::bool_constant<N == 0UZ> empty = {};
+        static constexpr std::integral_constant<std::size_t, N> size     = {};
+        static constexpr std::bool_constant<N == 0UZ> empty              = {};
         static constexpr std::integral_constant<std::size_t, N> max_size = {};
 
         [[nodiscard]] friend auto operator==(fixed_sizes const&, fixed_sizes const&) -> bool = default;
@@ -297,7 +297,7 @@ using sizes_t = std::conditional_t<
 template<bit_container_type Bits, storage Store, window W, class Derived, std::size_t E>
 class sequence_adaptor : public sequence::sizes_t<Bits, Store, W, Derived, E>
 {
-        static constexpr bool is_owner = owns(Store);
+        static constexpr bool is_owner  = owns(Store);
         static constexpr bool is_window = (W == window::sub);
         static_assert(not(is_owner and is_window), "a window views what another owns");
         static_assert(is_window or E == std::dynamic_extent, "only a window carries an extent of its own");
@@ -400,28 +400,28 @@ public:
         using derived_type = std::conditional_t<std::is_void_v<Derived>, sequence_adaptor, Derived>;
 
         // What a trait asks of this vehicle, every container built on it answering alike.
-        using adaptor_type = sequence_adaptor;
-        static constexpr bool is_windowed = is_window;
-        using adapted_type = Bits;
+        using adaptor_type                 = sequence_adaptor;
+        static constexpr bool is_windowed  = is_window;
+        using adapted_type                 = Bits;
         static constexpr bool owns_storage = is_owner;
 
         // types
-        using value_type = bool;
-        using pointer = void;
-        using const_pointer = pointer;
-        using reference = random_access_bit_reference<Bits>;
-        using const_reference = random_access_bit_reference<Bits const>;
-        using size_type = std::size_t;
-        using difference_type = std::ptrdiff_t;
-        using iterator = random_access_bit_iterator<Bits>;
-        using const_iterator = random_access_bit_iterator<Bits const>;
-        using reverse_iterator = std::reverse_iterator<iterator>;
+        using value_type             = bool;
+        using pointer                = void;
+        using const_pointer          = pointer;
+        using reference              = random_access_bit_reference<Bits>;
+        using const_reference        = random_access_bit_reference<Bits const>;
+        using size_type              = std::size_t;
+        using difference_type        = std::ptrdiff_t;
+        using iterator               = random_access_bit_iterator<Bits>;
+        using const_iterator         = random_access_bit_iterator<Bits const>;
+        using reverse_iterator       = std::reverse_iterator<iterator>;
         using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
 private:
         // An allocator argument as [container.alloc.reqmts] takes it: converting, and only where the storage has one.
         static constexpr bool has_allocator = has_allocator_v<std::remove_const_t<Bits>>;
-        using allocator_param = allocator_param_t<std::remove_const_t<Bits>>;
+        using allocator_param               = allocator_param_t<std::remove_const_t<Bits>>;
 
 public:
         // construct/copy/destroy: an owner is built as std::array is, or std::vector where the storage grows.
@@ -701,10 +701,10 @@ public:
         {
                 // A range, not two positions: the order is what the tail's subtraction needs.
                 assert(first <= last);
-                auto const pos = index_of(first);
-                auto const tail = index_of(last);
-                auto const width = size();
-                using block_type = bits_type::block_type;
+                auto const pos        = index_of(first);
+                auto const tail       = index_of(last);
+                auto const width      = size();
+                using block_type      = bits_type::block_type;
                 constexpr auto digits = bits_type::bits_per_block;
                 // A capacity of nought has no tail to shift, rather than through a loop that cannot go round.
                 if constexpr (not bits_type::has_zero_capacity) {
@@ -934,8 +934,8 @@ public:
                         return 0UZ;
                 }
                 auto const [index, diff] = bits().first_difference(other.bits());
-                using block_type = bits_type::block_type;
-                constexpr auto digits = bits_type::bits_per_block;
+                using block_type         = bits_type::block_type;
+                constexpr auto digits    = bits_type::bits_per_block;
                 if (diff == block_type{}) {
                         return size();
                 }
@@ -1090,7 +1090,7 @@ public:
         // The owner's alone, following span: defaulted, the storage being the one member.
 
         // clang-format off: one line, so "= default;" stays where gcovr's branch exclusion looks for it.
-        [[nodiscard]] friend auto operator==(sequence_adaptor const& x, sequence_adaptor const& y) noexcept -> bool requires is_owner = default;
+        [[nodiscard]] friend auto operator==(sequence_adaptor const& x, sequence_adaptor const& y) -> bool requires is_owner = default;
         // clang-format on
 
         // The storage's entry and nothing else, spelled over bits_type, which MSVC completes eagerly here.
@@ -1161,8 +1161,8 @@ public:
                 -> void
         {
                 bool const t = x;
-                x = y;
-                y = t;
+                x            = y;
+                y            = t;
         }
 
 private:
@@ -1221,12 +1221,12 @@ private:
         constexpr auto combine(this auto&& self, Other const& other, F f) noexcept
                 -> void
         {
-                using block_type = bits_type::block_type;
+                using block_type      = bits_type::block_type;
                 constexpr auto digits = bits_type::bits_per_block;
                 assert(self.size() == other.size());
                 for (auto k = 0UZ; k < self.size(); k += digits) {
-                        auto const mask = sequence::partial_block_mask<block_type>(std::ranges::min(digits, self.size() - k));
-                        auto const mine = self.bits().block_at(self.offset() + k);
+                        auto const mask   = sequence::partial_block_mask<block_type>(std::ranges::min(digits, self.size() - k));
+                        auto const mine   = self.bits().block_at(self.offset() + k);
                         auto const theirs = other.bits().block_at(other.offset() + k);
                         self.bits().block_at(self.offset() + k, f(mine, theirs), mask);
                 }
@@ -1250,16 +1250,16 @@ private:
                 if constexpr (bits_type::has_zero_capacity) {
                         refuse_any(count != 0UZ);
                 } else {
-                        using block_type = bits_type::block_type;
+                        using block_type      = bits_type::block_type;
                         constexpr auto digits = bits_type::bits_per_block;
-                        auto const old = size();
+                        auto const old        = size();
                         // Through the saturating sum: a wrapped total would answer an append with something shorter.
                         auto const total = bits_type::check_addressable_width(bits_type::width_sum(old, count));
                         if constexpr (requires (bits_type& b, std::size_t n) { b.reserve(n); }) {
                                 m_bits.reserve(total);
                         }
                         auto const last = first + count;
-                        auto pos = first;
+                        auto pos        = first;
                         for (; last - pos >= digits; pos += digits) {
                                 m_bits.append(src.block_at(pos));
                         }
@@ -1281,14 +1281,14 @@ private:
                 if constexpr (bits_type::has_zero_capacity) {
                         refuse_any(std::ranges::begin(rg) != std::ranges::end(rg));
                 } else {
-                        using block_type = bits_type::block_type;
+                        using block_type      = bits_type::block_type;
                         constexpr auto digits = bits_type::bits_per_block;
                         // Saturating: a sized range's count is the one sum here a caller can wrap on purpose.
                         if constexpr (std::ranges::sized_range<R> and requires (bits_type& b, std::size_t n) { b.reserve(n); }) {
                                 m_bits.reserve(bits_type::check_addressable_width(bits_type::width_sum(size(), static_cast<std::size_t>(std::ranges::size(rg)))));
                         }
                         auto block = block_type{};
-                        auto n = 0UZ;
+                        auto n     = 0UZ;
                         for (auto&& e : rg) {
                                 if (static_cast<value_type>(e)) {
                                         block |= shl(block_type{1}, n);
@@ -1296,7 +1296,7 @@ private:
                                 if (++n == digits) {
                                         m_bits.append(block);
                                         block = block_type{};
-                                        n = 0UZ;
+                                        n     = 0UZ;
                                 }
                         }
                         // Grown by the n positions left and no further, so a capacity refuses only what does not fit.
@@ -1325,7 +1325,7 @@ private:
                 -> iterator
         {
                 auto const whole = sequence_adaptor<bits_type const, storage::borrowed, window::all>(std::as_const(bits()));
-                auto tmp = empty_like();
+                auto tmp         = empty_like();
                 tmp.append_range(whole.first(pos));
                 middle(tmp);
                 tmp.append_range(whole.subspan(tail));
@@ -1411,7 +1411,7 @@ constexpr auto erase_if(sequence_adaptor<Bits, Store, W, Derived, E>& c, Pred pr
         requires requires { c.erase(c.cbegin(), c.cend()); }
 {
         auto const [first, last] = std::ranges::remove_if(c, pred);
-        auto const n = static_cast<sequence_adaptor<Bits, Store, W>::size_type>(last - first);
+        auto const n             = static_cast<sequence_adaptor<Bits, Store, W>::size_type>(last - first);
         c.erase(first, last);
         return n;
 }
@@ -1474,9 +1474,8 @@ struct is_tuple_like<xstd::bits::detail::sequence_adaptor<Bits, Store, W, Derive
 
 } // namespace boost::container_hash
 
+// NOLINTBEGIN(bugprone-std-namespace-modification): [namespace.std]/2 admits specializing for a program-defined type.
 namespace std {
-
-// NOLINTBEGIN(bugprone-std-namespace-modification)
 
 // [array.tuple]'s three over the static-width owner: tuple_element names the proxy, not bool.
 template<class Bits, xstd::bits::detail::storage Store, xstd::bits::detail::window W, class Derived, std::size_t E>
@@ -1509,9 +1508,9 @@ struct hash<xstd::bits::detail::sequence_adaptor<Bits, xstd::bits::detail::stora
         }
 };
 
-// NOLINTEND(bugprone-std-namespace-modification)
-
 } // namespace std
+
+// NOLINTEND(bugprone-std-namespace-modification)
 
 // NOLINTBEGIN(bugprone-std-namespace-modification): [range.view] and [range.range] invite the opt-in.
 namespace std::ranges {

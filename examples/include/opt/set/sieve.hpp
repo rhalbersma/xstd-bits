@@ -29,7 +29,7 @@ auto generate_candidates(std::size_t n)
 template<class X>
 auto sift_primes0(std::size_t n)
 {
-        auto primes = generate_candidates<X>(n);
+        auto primes           = generate_candidates<X>(n);
         auto const candidates = primes;
         for (auto p : candidates | std::views::take_while([&](auto x) { return x * x < n; })) {
                 if (not primes.contains(p)) {
@@ -45,7 +45,7 @@ auto sift_primes0(std::size_t n)
 template<class X>
 auto sift_primes1(std::size_t n)
 {
-        auto primes = generate_candidates<X>(n);
+        auto primes           = generate_candidates<X>(n);
         auto const candidates = primes;
         for (auto p : candidates) {
                 if (auto m = p * p; m < n) {
@@ -67,9 +67,9 @@ auto sift_primes1(std::size_t n)
 template<class X>
 auto filter_twins(X const& primes)
 {
-        using key = std::ranges::range_value_t<X>;
-        auto twins = X();
-        auto first = std::ranges::begin(primes);
+        using key       = std::ranges::range_value_t<X>;
+        auto twins      = X();
+        auto first      = std::ranges::begin(primes);
         auto const last = std::ranges::end(primes);
         if (first == last) {
                 return twins;
@@ -127,7 +127,7 @@ template<class X>
 auto sift_primes_incremental(std::size_t n)
 {
         auto primes = X();
-        auto sieve = incremental_sieve();
+        auto sieve  = incremental_sieve();
         for (auto p = sieve.next(); p < n; p = sieve.next()) {
                 primes.insert(p);
         }
@@ -148,7 +148,7 @@ auto sift_primes_segmented(std::size_t n)
 
         // Base primes are those p with p * p < n, so every one of them is below isqrt(n - 1) + 1.
         auto const base_bound = std::ranges::min(detail::isqrt(n - 1UZ) + 1UZ, n);
-        auto const base = sift_primes1<X>(base_bound);
+        auto const base       = sift_primes1<X>(base_bound);
         for (auto const p : base) {
                 primes.insert(static_cast<std::ranges::range_value_t<X>>(p));
         }

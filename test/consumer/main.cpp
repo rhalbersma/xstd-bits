@@ -28,10 +28,10 @@ concept is_sequence_reading =
         std::same_as<std::ranges::range_value_t<T>, bool>;
 
 // A view's Bits is the storage it reads, so a consumer reaches the view names by deduction.
-using blocks = std::array<std::uint64_t, 1>;
+using blocks             = std::array<std::uint64_t, 1>;
 using set_view_of_blocks = decltype(xstd::bit_set_view(std::declval<blocks&>()));
-using span_of_blocks = decltype(xstd::bit_span(std::declval<blocks&>()));
-using subspan_of_blocks = decltype(std::declval<span_of_blocks&>().subspan(8, 8));
+using span_of_blocks     = decltype(xstd::bit_span(std::declval<blocks&>()));
+using subspan_of_blocks  = decltype(std::declval<span_of_blocks&>().subspan(8, 8));
 
 // What separates the two kinds: an owner is a value, a view is a handle, and std::span drops equality for the same reason.
 static_assert(std::regular<xstd::bit_set> and std::totally_ordered<xstd::bit_set>);
@@ -61,7 +61,7 @@ static_assert(is_sequence_reading<xstd::bit_bounded_vector<100>>);
 auto main()
         -> int
 {
-        auto failures = 0;
+        auto failures    = 0;
         auto const check = [&failures](bool ok) noexcept { failures += ok ? 0 : 1; };
 
         // The set reading over storage the container owns.
@@ -79,11 +79,11 @@ auto main()
 
         // The sequence reading.
         auto array = xstd::bit_array<64>();
-        array[7] = true;
+        array[7]   = true;
         check(array.count() == 1);
 
         auto vector = xstd::bit_vector(64);
-        vector[63] = true;
+        vector[63]  = true;
         check(vector.size() == 64 and vector.count() == 1);
 
         // A fixed width into a run-time one, the width carried along.
@@ -96,7 +96,7 @@ auto main()
 
         // The three view names end to end, over blocks no container owns, read one way and then the other.
         auto owner = consumer::blocks();
-        auto view = xstd::bit_set_view(owner);
+        auto view  = xstd::bit_set_view(owner);
         view.insert(9);
         view.insert(40);
         check(owner[0] == ((std::uint64_t{1} << 9U) | (std::uint64_t{1} << 40U)));
@@ -112,7 +112,7 @@ auto main()
 
         // Const blocks reach a read-only view, and the const is part of the type.
         auto const& frozen = owner;
-        auto const reader = xstd::bit_set_view(frozen);
+        auto const reader  = xstd::bit_set_view(frozen);
         check(reader.size() == 2);
 
         return failures;

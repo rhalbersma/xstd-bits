@@ -11,7 +11,7 @@
 #include <cstddef>              // size_t
 #include <iterator>             // input_iterator
 #include <new>                  // bad_alloc
-#include <type_traits>          // conditional_t
+#include <type_traits>          // conditional_t, is_const_v, remove_reference_t
 #include <version>              // IWYU pragma: keep; __cpp_lib_inplace_vector
 
 #ifdef __cpp_lib_inplace_vector
@@ -48,6 +48,9 @@ namespace xstd::bits::detail {
 template<class Block>
 class no_blocks
 {
+        template<class Self>
+        using pointer_t = std::conditional_t<std::is_const_v<std::remove_reference_t<Self>>, Block const*, Block*>;
+
 public:
         // Nothing held, so any two are equal.
         [[nodiscard]] friend constexpr auto operator==(no_blocks const&, no_blocks const&) noexcept
@@ -57,40 +60,23 @@ public:
         }
 
         // The null pointers of an empty contiguous range.
-        [[nodiscard]] constexpr auto data() noexcept
-                -> Block*
+        template<class Self>
+        [[nodiscard]] constexpr auto data(this Self&& /* self */) noexcept
+                -> pointer_t<Self>
         {
                 return nullptr;
         }
 
-        [[nodiscard]] constexpr auto data() const noexcept
-                -> Block const*
+        [[nodiscard]] constexpr auto begin(this auto&& self) noexcept
+                -> pointer_t<decltype(self)>
         {
-                return nullptr;
+                return self.data();
         }
 
-        [[nodiscard]] constexpr auto begin() noexcept
-                -> Block*
+        [[nodiscard]] constexpr auto end(this auto&& self) noexcept
+                -> pointer_t<decltype(self)>
         {
-                return data();
-        }
-
-        [[nodiscard]] constexpr auto begin() const noexcept
-                -> Block const*
-        {
-                return data();
-        }
-
-        [[nodiscard]] constexpr auto end() noexcept
-                -> Block*
-        {
-                return data();
-        }
-
-        [[nodiscard]] constexpr auto end() const noexcept
-                -> Block const*
-        {
-                return data();
+                return self.data();
         }
 
         // The subscript is the built-in one: a member would have to be defined for an index no call can pass.

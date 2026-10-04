@@ -41,7 +41,7 @@ public:
                         return 0;
                 }
                 auto const b = m_bytes.front();
-                m_bytes = m_bytes.subspan(1);
+                m_bytes      = m_bytes.subspan(1);
                 return b;
         }
 

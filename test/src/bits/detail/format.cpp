@@ -39,12 +39,12 @@ BOOST_AUTO_TEST_CASE(TheSetReadingFormatsInBraces)
 BOOST_AUTO_TEST_CASE(TheSequenceReadingFormatsInBrackets)
 {
         auto v = xstd::bit_vector(4UZ);
-        v[1] = true;
+        v[1]   = true;
         BOOST_CHECK_EQUAL(std::format("{}", v), "[false, true, false, false]");
 
         // A tuple_size specialization does not divert std::format: these brackets are the assertion of it.
         auto a = xstd::bit_array<4>();
-        a[2] = true;
+        a[2]   = true;
         BOOST_CHECK_EQUAL(std::format("{}", a), "[false, false, true, false]");
         BOOST_CHECK_EQUAL(std::format("{}", std::array<bool, 2>{false, true}), "[false, true]");
 
@@ -70,7 +70,7 @@ BOOST_AUTO_TEST_CASE(TheNestedSpecReachesTheUnderlyingFormatter)
         BOOST_CHECK_EQUAL(std::format("{::#x}", d), "{0x1, 0x3, 0x5}");
 
         auto v = xstd::bit_vector(4UZ);
-        v[1] = true;
+        v[1]   = true;
         BOOST_CHECK_EQUAL(std::format("{::d}", v), "[0, 1, 0, 0]");
 }
 
@@ -83,7 +83,7 @@ BOOST_AUTO_TEST_CASE(AProxyFormatsAsItsValue)
         BOOST_CHECK_EQUAL(std::format("{:>4}", *d.begin()), "  42");
 
         auto v = xstd::bit_vector(2UZ);
-        v[1] = true;
+        v[1]   = true;
         BOOST_CHECK_EQUAL(std::format("{}", v[1]), "true");
         BOOST_CHECK_EQUAL(std::format("{:>7}", v[0]), "  false");
         BOOST_CHECK_EQUAL(std::format("{:d}", v[1]), "1");

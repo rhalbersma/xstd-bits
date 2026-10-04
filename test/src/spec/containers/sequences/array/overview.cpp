@@ -42,7 +42,7 @@ template<class T>
 [[nodiscard]] constexpr auto make_last()
         -> T
 {
-        auto a = T();
+        auto a   = T();
         a.back() = true;
         return a;
 }
@@ -56,8 +56,8 @@ BOOST_AUTO_TEST_CASE(Array)
                 // A contiguous container, which a proxy relaxes to random access: a bit has no address to lie at.
                 static_assert(std::ranges::contiguous_range<T> or (test::proxy_reference<T> and std::ranges::random_access_range<T>)); // [array.overview]/1
                 auto const a = make_sequence<T>(T().size(), stripes);
-                auto b = a;
-                b = T();
+                auto b       = a;
+                b            = T();
                 BOOST_CHECK_EQUAL(b.size(), a.size()); // [array.overview]/1
         });
 }
@@ -68,18 +68,18 @@ BOOST_AUTO_TEST_CASE(ListInitialization)
         test::for_each_type<test::spec::sequence::array_all>([]<class T> -> void {
                 // What is listed leads, each in its place, and every position after it is value-initialized.
                 constexpr auto N = T().size();
-                auto const none = std::vector<bool>(N, false);
+                auto const none  = std::vector<bool>(N, false);
                 BOOST_CHECK(model_of(T{}) == none); // [array.overview]/2
                 if constexpr (N >= 1UZ) {
                         auto m = none;
-                        m[0] = true;
+                        m[0]   = true;
                         BOOST_CHECK(model_of(T{true}) == m);
                 }
                 if constexpr (N >= 3UZ) {
                         static_assert(requires (bool b) { T{b, b}; });
                         auto m = none;
-                        m[0] = true;
-                        m[2] = true;
+                        m[0]   = true;
+                        m[2]   = true;
                         BOOST_CHECK(model_of(T{true, false, true}) == m);
                 }
         });

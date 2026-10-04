@@ -29,8 +29,8 @@ template<bit_container_type Bits>
         } else {
                 // ranges::equal over the shared prefix as an iterator pair, which lowers to a memcmp.
                 auto const shared = static_cast<std::ptrdiff_t>(std::ranges::min(x.num_blocks(), y.num_blocks()));
-                auto const xf = std::ranges::begin(x.blocks());
-                auto const yf = std::ranges::begin(y.blocks());
+                auto const xf     = std::ranges::begin(x.blocks());
+                auto const yf     = std::ranges::begin(y.blocks());
                 return std::ranges::equal(xf, xf + shared, yf, yf + shared) and
                        (x.num_blocks() < y.num_blocks()
                                 ? not y.any_block_set(x.num_blocks(), y.num_blocks())
@@ -44,12 +44,12 @@ template<bit_container_type Bits>
         -> std::strong_ordering
 {
         using block_type = Bits::block_type;
-        auto const n = std::ranges::max(x.num_blocks(), y.num_blocks());
+        auto const n     = std::ranges::max(x.num_blocks(), y.num_blocks());
         auto const index = x.padded_first_difference(y, n);
         if (index == n) {
                 return std::strong_ordering::equal;
         }
-        auto const diff = static_cast<block_type>(x.padded_block(index) ^ y.padded_block(index));
+        auto const diff   = static_cast<block_type>(x.padded_block(index) ^ y.padded_block(index));
         auto const offset = static_cast<std::size_t>(bits::detail::countr_zero(diff));
         if (bits::detail::intersects(x.padded_block(index), shl(block_type{1}, offset))) {
                 return y.padded_any_above(index, offset) ? std::strong_ordering::less : std::strong_ordering::greater;
@@ -79,7 +79,7 @@ template<bit_container_type Bits>
                         return std::strong_ordering::equal;
                 }
                 auto const offset = bits::detail::countr_zero(diff);
-                if (bits::detail::intersects(x.block(index), shl(block_type{1}, offset))) {
+                if (bits::detail::intersects(x[index], shl(block_type{1}, offset))) {
                         return y.any_above(index, offset) ? std::strong_ordering::less : std::strong_ordering::greater;
                 }
                 return x.any_above(index, offset) ? std::strong_ordering::greater : std::strong_ordering::less;
@@ -107,13 +107,13 @@ template<bit_container_type Bits>
         -> std::strong_ordering
 {
         using block_type = Bits::block_type;
-        auto const n = std::ranges::max(x.num_blocks(), y.num_blocks());
+        auto const n     = std::ranges::max(x.num_blocks(), y.num_blocks());
         auto const index = x.padded_first_difference(y, n);
         if (index == n) {
                 // The two answers this can give: the caller arrives only with the sizes differing.
                 return x.size() < y.size() ? std::strong_ordering::less : std::strong_ordering::greater;
         }
-        auto const diff = static_cast<block_type>(x.padded_block(index) ^ y.padded_block(index));
+        auto const diff   = static_cast<block_type>(x.padded_block(index) ^ y.padded_block(index));
         auto const offset = static_cast<std::size_t>(bits::detail::countr_zero(diff));
         return bits::detail::intersects(x.padded_block(index), shl(block_type{1}, offset))
                        ? std::strong_ordering::greater
@@ -140,7 +140,7 @@ template<bit_container_type Bits>
                         return std::strong_ordering::equal;
                 }
                 auto const offset = bits::detail::countr_zero(diff);
-                return bits::detail::intersects(x.block(index), shl(block_type{1}, offset))
+                return bits::detail::intersects(x[index], shl(block_type{1}, offset))
                                ? std::strong_ordering::greater
                                : std::strong_ordering::less;
         }

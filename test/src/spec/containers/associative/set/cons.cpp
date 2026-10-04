@@ -129,8 +129,8 @@ BOOST_AUTO_TEST_CASE(SetMove)
                 static_assert(requires (T o) { T(std::move(o)); });
                 for (auto const [from, a] : inputs::sets<T>()) {
                         auto const on_failure = context(from, a);
-                        auto rv = a;
-                        auto const u = T(std::move(rv));
+                        auto rv               = a;
+                        auto const u          = T(std::move(rv));
                         BOOST_CHECK(u == a);
                 }
         });
@@ -173,9 +173,9 @@ BOOST_AUTO_TEST_CASE(AssignMove)
                 static_assert(requires (T c, T o) { c = std::move(o); });
                 for (auto const [from, a, b] : inputs::pairs<T>()) {
                         auto const on_failure = context(from, a, b);
-                        auto t = a;
-                        auto rv = b;
-                        t = std::move(rv);
+                        auto t                = a;
+                        auto rv               = b;
+                        t                     = std::move(rv);
                         BOOST_CHECK(t == b);
                 }
         });

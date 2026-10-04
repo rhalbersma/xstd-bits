@@ -36,9 +36,9 @@
 namespace {
 
 using Storage = xstd::bits::detail::bit_container<std::array<std::uint64_t, 2>, 100>;
-using Owner = xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 100>;
-using View = xstd::bits::detail::set_adaptor<Storage, xstd::bits::detail::storage::borrowed>;
-using Reader = xstd::bits::detail::set_adaptor<Storage const, xstd::bits::detail::storage::borrowed>;
+using Owner   = xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 100>;
+using View    = xstd::bits::detail::set_adaptor<Storage, xstd::bits::detail::storage::borrowed>;
+using Reader  = xstd::bits::detail::set_adaptor<Storage const, xstd::bits::detail::storage::borrowed>;
 
 // Dependent, so an absent member is a false rather than a hard error.
 template<class S>
@@ -199,7 +199,7 @@ BOOST_AUTO_TEST_CASE(WritingIsGatedByTheStorageNotByThisConst)
 
 BOOST_AUTO_TEST_CASE(AViewWritesThroughToWhatItViews)
 {
-        auto c = Storage();
+        auto c       = Storage();
         auto const v = View(c);
 
         auto const [it, inserted] = v.insert(3UZ);
@@ -274,7 +274,7 @@ BOOST_AUTO_TEST_CASE(MaxSizeIsThePositionsThereAreToHold)
         BOOST_CHECK_LT(Heap().max_size(), std::numeric_limits<std::size_t>::max());
 
         // A view cannot grow what it views, so its max_size is that width -- and filling it is what full() means.
-        auto v = xstd::bits::detail::bit_container<std::vector<std::uint64_t>>(10UZ);
+        auto v          = xstd::bits::detail::bit_container<std::vector<std::uint64_t>>(10UZ);
         auto const view = xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_container<std::vector<std::uint64_t>>, xstd::bits::detail::storage::borrowed>(v);
         BOOST_CHECK_EQUAL(view.max_size(), 10UZ);
         BOOST_CHECK(not view.full());
@@ -284,7 +284,7 @@ BOOST_AUTO_TEST_CASE(MaxSizeIsThePositionsThereAreToHold)
 
         // A run-time width, read through the view over it.
         using Dynamic = xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_container<std::vector<std::uint64_t>>, xstd::bits::detail::storage::borrowed>;
-        auto b = xstd::bits::detail::bit_container<std::vector<std::uint64_t>>(9UZ);
+        auto b        = xstd::bits::detail::bit_container<std::vector<std::uint64_t>>(9UZ);
         BOOST_CHECK_EQUAL(Dynamic(b).max_size(), 9UZ);
 }
 
@@ -292,13 +292,13 @@ BOOST_AUTO_TEST_CASE(MaxSizeIsThePositionsThereAreToHold)
 BOOST_AUTO_TEST_CASE(TheSetPredicatesAgreeAcrossStorages)
 {
         using Small = xstd::bits::detail::bit_container<std::array<std::uint64_t, 1>, 9>;
-        auto a = Small();
-        auto b = Small();
-        auto e = Small();
+        auto a      = Small();
+        auto b      = Small();
+        auto e      = Small();
         a.set(1);
         b.set(1);
         b.set(3);
-        using S = xstd::bits::detail::set_adaptor<Small, xstd::bits::detail::storage::borrowed>;
+        using S      = xstd::bits::detail::set_adaptor<Small, xstd::bits::detail::storage::borrowed>;
         auto const x = S(a);
         auto const y = S(b);
 
@@ -350,7 +350,7 @@ BOOST_AUTO_TEST_CASE(TheNonMemberFormsAreTheOwners)
         BOOST_CHECK((~x).size() == 97UZ and not(~x).contains(2UZ));
 
         auto z = x;
-        z = {5, 6};
+        z      = {5, 6};
         BOOST_CHECK(keys(z) == std::set<std::size_t>({5, 6}));
         BOOST_CHECK_EQUAL(erase_if(z, [](auto k) { return k == 5UZ; }), 1UZ);
         BOOST_CHECK(keys(z) == std::set<std::size_t>({6}));
@@ -532,7 +532,7 @@ BOOST_AUTO_TEST_CASE(TheGrowthsThatComputeAWidthSaturateRatherThanWrap)
 BOOST_AUTO_TEST_CASE(ALeftShiftDropsTheKeysItCarriesPastMaxSize)
 {
         constexpr auto top = std::numeric_limits<std::size_t>::max();
-        auto shifted = xstd::bit_set();
+        auto shifted       = xstd::bit_set();
         shifted.insert(0UZ);
         shifted <<= 64UZ;
         BOOST_CHECK_EQUAL(shifted.size(), 1UZ);
@@ -560,10 +560,10 @@ BOOST_AUTO_TEST_CASE(ForEachVisitsWhatIterationVisits)
         }
         auto const fv = View(blocked);
 
-        auto const collect = [](auto const& s) -> std::vector<std::size_t> { auto v = std::vector<std::size_t>(); s.for_each        ([&](std::size_t p) -> void { v.push_back(p); }); return v; };
+        auto const collect         = [](auto const& s) -> std::vector<std::size_t> { auto v = std::vector<std::size_t>(); s.for_each        ([&](std::size_t p) -> void { v.push_back(p); }); return v; };
         auto const collect_reverse = [](auto const& s) -> std::vector<std::size_t> { auto v = std::vector<std::size_t>(); s.for_each_reverse([&](std::size_t p) -> void { v.push_back(p); }); return v; };
-        auto const iterated = [](auto const& s) -> std::vector<std::size_t> { return {s.begin(), s.end()}; };
-        auto const reversed = [](auto const& s) -> std::vector<std::size_t> { return {s.rbegin(), s.rend()}; };
+        auto const iterated        = [](auto const& s) -> std::vector<std::size_t> { return {s.begin(), s.end()}; };
+        auto const reversed        = [](auto const& s) -> std::vector<std::size_t> { return {s.rbegin(), s.rend()}; };
 
         BOOST_CHECK(collect(owner) == iterated(owner));
         BOOST_CHECK(collect(fv) == iterated(fv));
@@ -572,10 +572,10 @@ BOOST_AUTO_TEST_CASE(ForEachVisitsWhatIterationVisits)
         BOOST_CHECK(collect_reverse(fv) == reversed(fv));
 
         // An empty set calls nothing, in either direction, owned or viewed.
-        auto const empty = Owner();
-        auto bnone = Storage();
+        auto const empty  = Owner();
+        auto bnone        = Storage();
         auto const bnonev = View(bnone);
-        auto calls = 0UZ;
+        auto calls        = 0UZ;
         empty.for_each([&](std::size_t) -> void { ++calls; });
         empty.for_each_reverse([&](std::size_t) -> void { ++calls; });
         bnonev.for_each([&](std::size_t) -> void { ++calls; });
@@ -698,7 +698,7 @@ namespace {
 // A left shift that keeps no key empties the set at the width it has, rather than grow for an empty result.
 BOOST_AUTO_TEST_CASE(ALeftShiftThatKeepsNoKeyKeepsTheWidth)
 {
-        auto s = grown_to(300UZ, {1UZ, 5UZ, 59UZ});
+        auto s           = grown_to(300UZ, {1UZ, 5UZ, 59UZ});
         auto const width = width_of(s);
         s <<= s.max_size() - 1UZ;
         BOOST_CHECK(s.empty());
@@ -713,7 +713,7 @@ BOOST_AUTO_TEST_CASE(ALeftShiftThatKeepsNoKeyKeepsTheWidth)
 
 BOOST_AUTO_TEST_CASE(EqualityAcrossWidthsComparesBlocks)
 {
-        auto const one_block = grown_to(60UZ, {1UZ, 5UZ, 59UZ});    // width 61
+        auto const one_block   = grown_to(60UZ, {1UZ, 5UZ, 59UZ});  // width 61
         auto const one_block_2 = grown_to(63UZ, {1UZ, 5UZ, 59UZ});  // width 64: same block count, other width
         auto const five_blocks = grown_to(300UZ, {1UZ, 5UZ, 59UZ}); // width 301
 
@@ -739,7 +739,7 @@ BOOST_AUTO_TEST_CASE(EqualityAcrossWidthsComparesBlocks)
 BOOST_AUTO_TEST_CASE(SubsetAndIntersectionAcrossWidthsCompareBlocks)
 {
         auto const narrow = grown_to(60UZ, {1UZ, 5UZ});
-        auto const wide = grown_to(300UZ, {1UZ, 5UZ, 59UZ, 280UZ});
+        auto const wide   = grown_to(300UZ, {1UZ, 5UZ, 59UZ, 280UZ});
 
         // Ours inside theirs: nothing of ours lies above their last block, so the remainder is empty.
         BOOST_CHECK(narrow.is_subset_of(wide));
@@ -768,8 +768,8 @@ BOOST_AUTO_TEST_CASE(SubsetAndIntersectionAcrossWidthsCompareBlocks)
 // The ordering turns on one position, the lowest at which the two sets disagree, in both operand orders.
 BOOST_AUTO_TEST_CASE(OrderingAcrossWidthsComparesBlocks)
 {
-        auto const narrow = [](std::initializer_list<std::size_t> p) -> xstd::bit_set { return grown_to(60UZ, p); }; // width 61, one block
-        auto const wide = [](std::initializer_list<std::size_t> p) -> xstd::bit_set { return grown_to(300UZ, p); };  // width 301, five blocks
+        auto const narrow = [](std::initializer_list<std::size_t> p) -> xstd::bit_set { return grown_to(60UZ, p); };  // width 61, one block
+        auto const wide   = [](std::initializer_list<std::size_t> p) -> xstd::bit_set { return grown_to(300UZ, p); }; // width 301, five blocks
 
         // Equal contents at different widths: no differing block at all.
         BOOST_CHECK((narrow({1UZ, 5UZ}) <=> wide({1UZ, 5UZ})) == std::strong_ordering::equal);
@@ -800,8 +800,8 @@ BOOST_AUTO_TEST_CASE(OrderingAcrossWidthsComparesBlocks)
 // The four compound operators blockwise: intersection and difference never widen, union and symmetric difference do.
 BOOST_AUTO_TEST_CASE(TheCompoundOperatorsAcrossWidthsWorkOnBlocks)
 {
-        auto const narrow = grown_to(60UZ, {1UZ, 5UZ, 59UZ});  // width 61
-        auto const wide = grown_to(300UZ, {5UZ, 59UZ, 280UZ}); // width 301
+        auto const narrow = grown_to(60UZ, {1UZ, 5UZ, 59UZ});    // width 61
+        auto const wide   = grown_to(300UZ, {5UZ, 59UZ, 280UZ}); // width 301
 
         // Intersection keeps the shared positions at its own width, the wider operand's 280 having nowhere to land.
         auto a = narrow;
@@ -861,7 +861,7 @@ BOOST_AUTO_TEST_CASE(ASetViewExchangesThroughTheBitsItRefersTo)
         static_assert(test::converts_to<View, std::bitset<N>>);
         static_assert(test::converts_to<Reader, std::bitset<N>>);
 
-        auto storage = Storage();
+        auto storage    = Storage();
         auto const view = View(storage);
         view.insert(0UZ);
         view.insert(31UZ);
@@ -876,7 +876,7 @@ BOOST_AUTO_TEST_CASE(ASetViewExchangesThroughTheBitsItRefersTo)
 
         // And at compile time, which is where the hard error would have been loudest.
         static_assert([] -> bool {
-                auto bits = Storage();
+                auto bits    = Storage();
                 auto const v = View(bits);
                 v.insert(7UZ);
                 return xstd::bit_convert<std::bitset<N>>(v).count() == 1UZ;
@@ -981,8 +981,8 @@ auto check_heterogeneous(Set const& s, Model const& model, K const& k)
         BOOST_CHECK(first == s.lower_bound(k) and last == s.upper_bound(k));
 
         // The model erases its equal range: not every standard library has P2077's heterogeneous erase on std::set.
-        auto erased = s;
-        auto erased_model = model;
+        auto erased                          = s;
+        auto erased_model                    = model;
         auto const [model_first, model_last] = erased_model.equal_range(k);
         erased_model.erase(model_first, model_last);
         BOOST_CHECK_EQUAL(erased.erase(k), model.count(k));
@@ -995,7 +995,7 @@ auto check_transparent()
 {
         auto engine = test::spec::random::engine(test::spec::random::seed());
         for (auto const trial : std::views::iota(0UZ, 20UZ)) {
-                auto const s = drawn<Set>(engine, 100UZ, 1U + (trial % 3UZ));
+                auto const s     = drawn<Set>(engine, 100UZ, 1U + (trial % 3UZ));
                 auto const model = std::set<std::size_t, Compare>(s.begin(), s.end());
                 BOOST_CHECK(std::ranges::equal(s, model));
                 for (auto const k : std::views::iota(0UZ, 102UZ)) {
@@ -1045,7 +1045,7 @@ BOOST_AUTO_TEST_CASE(ADescendingOrderIsTheMasksNumericOrder)
         BOOST_CHECK((byte{4UZ, 3UZ} <=> byte{4UZ, 2UZ, 1UZ}) == std::strong_ordering::greater);
         BOOST_CHECK((byte{5UZ} <=> byte{5UZ, 1UZ}) == std::strong_ordering::less);
 
-        auto engine = test::spec::random::engine(test::spec::random::seed());
+        auto engine       = test::spec::random::engine(test::spec::random::seed());
         auto const agrees = [&]<class Set>(std::size_t width) -> void {
                 for (auto const trial : std::views::iota(0UZ, 200UZ)) {
                         auto const x = drawn<Set>(engine, width, 1U + (trial % 3UZ));
@@ -1081,8 +1081,8 @@ BOOST_AUTO_TEST_CASE(ADescendingOrderAcrossWidthsComparesAlignedBlocks)
 // for_each walks in the iteration order and for_each_reverse against it, whichever the direction.
 BOOST_AUTO_TEST_CASE(ForEachFollowsTheComparator)
 {
-        auto const s = descending_fixed{0UZ, 1UZ, 63UZ, 64UZ, 65UZ, 129UZ};
-        auto forward = std::vector<std::size_t>();
+        auto const s  = descending_fixed{0UZ, 1UZ, 63UZ, 64UZ, 65UZ, 129UZ};
+        auto forward  = std::vector<std::size_t>();
         auto backward = std::vector<std::size_t>();
         s.for_each([&](std::size_t k) -> void { forward.push_back(k); });
         s.for_each_reverse([&](std::size_t k) -> void { backward.push_back(k); });
@@ -1094,7 +1094,7 @@ BOOST_AUTO_TEST_CASE(ForEachFollowsTheComparator)
 // A view reads the positions it refers to in ascending order, whatever the owner's comparator.
 BOOST_AUTO_TEST_CASE(AViewOverADescendingOwnerAscends)
 {
-        auto owner = descending_fixed{3UZ, 70UZ, 129UZ};
+        auto owner      = descending_fixed{3UZ, 70UZ, 129UZ};
         auto const view = xstd::bit_set_view(owner);
         static_assert(std::same_as<decltype(view)::key_compare, std::less<std::size_t>>);
         BOOST_CHECK(std::ranges::equal(view, std::vector<std::size_t>{3UZ, 70UZ, 129UZ}));
@@ -1105,7 +1105,7 @@ BOOST_AUTO_TEST_CASE(AViewOverADescendingOwnerAscends)
 BOOST_AUTO_TEST_CASE(TheGuidesDeduceTheComparator)
 {
         auto const keys = std::vector<std::size_t>{2UZ, 9UZ, 4UZ};
-        auto const s = xstd::basic_bit_set(keys.begin(), keys.end(), std::greater<std::size_t>()); // NOLINT(modernize-use-transparent-functors): the key-typed form is the one deduced
+        auto const s    = xstd::basic_bit_set(keys.begin(), keys.end(), std::greater<std::size_t>()); // NOLINT(modernize-use-transparent-functors): the key-typed form is the one deduced
         static_assert(std::same_as<decltype(s), xstd::basic_bit_set<std::size_t, std::size_t, xstd::bit_key_traits<std::size_t>, std::greater<std::size_t>> const>);
         BOOST_CHECK(std::ranges::equal(s, std::vector<std::size_t>{9UZ, 4UZ, 2UZ}));
 }

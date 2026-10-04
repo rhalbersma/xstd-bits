@@ -22,7 +22,7 @@ auto yields_ascending_keys(C const& c)
         BOOST_CHECK(std::ranges::is_sorted(c));
 
         auto previous = std::optional<std::size_t>();
-        auto counted = 0UZ;
+        auto counted  = 0UZ;
         for (auto const key : c) {
                 auto const current = static_cast<std::size_t>(key);
                 if (previous.has_value()) {

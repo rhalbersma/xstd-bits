@@ -9,18 +9,20 @@
 #include <boost/test/unit_test.hpp>                // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <array>                                   // array
 #include <bitset>                                  // bitset
+#include <concepts>                                // same_as
 #include <cstddef>                                 // size_t
 #include <cstdint>                                 // uint64_t
 #include <tuple>                                   // tuple
+#include <utility>                                 // declval
 #include <vector>                                  // vector
 
 // The common vocabulary the three bit containers answer in their own names.
 namespace {
 
-using ours_static = xstd::bits::detail::bit_container<std::array<std::uint64_t, 1>, 64>;
+using ours_static  = xstd::bits::detail::bit_container<std::array<std::uint64_t, 1>, 64>;
 using ours_dynamic = xstd::bits::detail::bit_container<std::vector<std::uint64_t>>;
-using theirs = std::bitset<64>;
-using boosts = boost::dynamic_bitset<>;
+using theirs       = std::bitset<64>;
+using boosts       = boost::dynamic_bitset<>;
 
 // Each probe is a template: a requires-expression over a concrete type hard-errors rather than answering false.
 template<class C>
@@ -84,12 +86,14 @@ static_assert(test::bitset::vocabulary<theirs>);
 static_assert(test::bitset::vocabulary<boosts>);
 
 // The intersection and not the union: each of these is absent from at least one of the three.
-static_assert(not has_subscript<ours_static>);  // ours reads through test, never a subscript
 static_assert(not has_complement<ours_static>); // nor does it complement in place
 static_assert(not has_set_value<ours_static>);  // nor take the two-argument set, assign being spelled apart from it
 static_assert(not has_difference<theirs>);      // std::bitset has no difference
 static_assert(not has_subset_of<theirs>);       // nor boost's set vocabulary
 static_assert(not has_to_string<boosts>);       // to_string is std::bitset's alone
+
+// A subscript all three have, meaning a bit in theirs and a block in ours, so the vocabulary leaves it out.
+static_assert(std::same_as<decltype(std::declval<ours_static const&>()[0UZ]), std::uint64_t const&>);
 
 // Structural and nothing more, the adaptors admitting their storage by name instead.
 static_assert(not test::bitset::vocabulary<block>);

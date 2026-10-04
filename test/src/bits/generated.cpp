@@ -11,8 +11,8 @@
 #include <functional>               // less
 #include <memory_resource>          // polymorphic_allocator
 #include <scoped_allocator>         // scoped_allocator_adaptor
-#include <type_traits>              // is_nothrow_copy_assignable_v, is_nothrow_copy_constructible_v, is_nothrow_move_assignable_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v, is_trivially_copyable_v
-#include <utility>                  // move, swap
+#include <type_traits>              // is_nothrow_copy_assignable_v, is_nothrow_copy_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_assignable_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v, is_trivially_copyable_v
+#include <utility>                  // declval, move, swap
 #include <vector>                   // vector
 
 // What the compiler generates for each cell, held to the table rather than to whichever cell was read last.
@@ -153,7 +153,7 @@ BOOST_AUTO_TEST_CASE(TheAllocatorFollowsTheColumnAndNotTheRow)
 // The four inline cells name no allocator, which keeps std out of their associated namespaces entirely.
 BOOST_AUTO_TEST_CASE(TheFreeSwapIsTheLibrarysAndNotStdSwap)
 {
-        using block_type = std::size_t;
+        using block_type     = std::size_t;
         using allocator_type = std::scoped_allocator_adaptor<std::pmr::polymorphic_allocator<block_type>>;
 
         static_assert(free_swap_is_not_std_swap<xstd::basic_bit_set<std::size_t, block_type, xstd::bit_key_traits<std::size_t>, std::less<std::size_t>, allocator_type>>()); // NOLINT(modernize-use-transparent-functors): the default comparator, spelled to reach the allocator
@@ -216,6 +216,22 @@ BOOST_AUTO_TEST_CASE(TheBoundedColumnCopiesAsItsBlocksDoAndSwapsWithoutThrowing)
         BOOST_CHECK(true);
 }
 
+// The defaulted members deduce their exception specification: what the owners, iterators and proxies promise.
+BOOST_AUTO_TEST_CASE(TheDefaultedMembersDeduceTheyThrowNothing)
+{
+        static_assert(std::is_nothrow_default_constructible_v<xstd::bit_array<N>>);
+        static_assert(std::is_nothrow_default_constructible_v<xstd::bit_bounded_vector<N>>);
+        static_assert(std::is_nothrow_default_constructible_v<xstd::bit_array<N>::iterator>);
+        static_assert(std::is_nothrow_default_constructible_v<xstd::bit_vector::const_iterator>);
+        static_assert(std::is_nothrow_default_constructible_v<xstd::bit_fixed_set<N>::iterator>);
+        static_assert(std::is_nothrow_copy_constructible_v<xstd::bit_array<N>::reference>);
+        static_assert(std::is_nothrow_copy_constructible_v<xstd::bit_vector::reference>);
+        static_assert(noexcept(std::declval<xstd::bit_array<N> const&>() == std::declval<xstd::bit_array<N> const&>()));
+        static_assert(noexcept(std::declval<xstd::bit_vector const&>() == std::declval<xstd::bit_vector const&>()));
+        static_assert(noexcept(std::declval<xstd::bit_bounded_vector<N> const&>() == std::declval<xstd::bit_bounded_vector<N> const&>()));
+        BOOST_CHECK(true);
+}
+
 namespace {
 
 // Each reading's own way of saying empty and of growing by one, asked of an owner whose value was moved away.
@@ -223,10 +239,10 @@ template<class T>
 auto a_moved_from_sequence_grows_again()
         -> bool
 {
-        auto source = T(100UZ, true);
+        auto source       = T(100UZ, true);
         auto const target = std::move(source);
-        auto const empty = source.empty(); // NOLINT(bugprone-use-after-move,hicpp-invalid-access-moved,clang-analyzer-cplusplus.Move): the moved-from state is the check.
-        source.push_back(true);            // NOLINT(clang-analyzer-cplusplus.Move): growing the moved-from state is the check.
+        auto const empty  = source.empty(); // NOLINT(bugprone-use-after-move,hicpp-invalid-access-moved,clang-analyzer-cplusplus.Move): the moved-from state is the check.
+        source.push_back(true);             // NOLINT(clang-analyzer-cplusplus.Move): growing the moved-from state is the check.
         return empty and target.size() == 100UZ and source.size() == 1UZ and source[0];
 }
 
@@ -237,8 +253,8 @@ auto a_moved_from_set_grows_again()
         auto source = T();
         source.insert(100UZ);
         auto const target = std::move(source);
-        auto const empty = source.empty(); // NOLINT(bugprone-use-after-move,hicpp-invalid-access-moved,clang-analyzer-cplusplus.Move): the moved-from state is the check.
-        source.insert(3UZ);                // NOLINT(clang-analyzer-cplusplus.Move): growing the moved-from state is the check.
+        auto const empty  = source.empty(); // NOLINT(bugprone-use-after-move,hicpp-invalid-access-moved,clang-analyzer-cplusplus.Move): the moved-from state is the check.
+        source.insert(3UZ);                 // NOLINT(clang-analyzer-cplusplus.Move): growing the moved-from state is the check.
         return empty and target.contains(100UZ) and source.size() == 1UZ and source.contains(3UZ);
 }
 
@@ -267,11 +283,11 @@ auto blocks_go_in_and_come_out_whole()
         -> bool
 {
         auto const original = typename T::block_container_type{0b1011UZ, 1UZ << 63U};
-        auto owner = T();
-        auto blocks = original;
+        auto owner          = T();
+        auto blocks         = original;
         owner.replace(std::move(blocks));
-        auto const filled = not owner.empty();
-        auto const out = std::move(owner).extract();
+        auto const filled  = not owner.empty();
+        auto const out     = std::move(owner).extract();
         auto const emptied = owner.empty(); // NOLINT(bugprone-use-after-move,hicpp-invalid-access-moved,clang-analyzer-cplusplus.Move): extract leaves width zero, which is the check.
         return filled and out == original and emptied;
 }

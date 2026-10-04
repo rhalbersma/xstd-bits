@@ -44,7 +44,7 @@ using model = std::vector<bool>;
         -> model
 {
         auto const split = std::next(m.begin(), static_cast<std::ptrdiff_t>(pos));
-        auto result = model(m.begin(), split);
+        auto result      = model(m.begin(), split);
         result.insert(result.end(), middle.begin(), middle.end());
         result.insert(result.end(), split, m.end());
         return result;
@@ -134,16 +134,16 @@ auto fuzz_one(fuzz::decoder& in)
         -> void
 {
         auto const top = ceiling<X>();
-        auto check = fuzz::checker();
-        auto xs = std::array<X, 2>();
-        auto ms = std::array<model, 2>{model(xs[0].size()), model(xs[1].size())};
+        auto check     = fuzz::checker();
+        auto xs        = std::array<X, 2>();
+        auto ms        = std::array<model, 2>{model(xs[0].size()), model(xs[1].size())};
         while (not in.empty()) {
-                auto const i = in.byte() % 2UZ;
-                auto const j = in.byte() % 2UZ;
-                auto& x = xs[i];
-                auto& m = ms[i];
-                auto const& y = xs[j];
-                auto const& my = ms[j];
+                auto const i    = in.byte() % 2UZ;
+                auto const j    = in.byte() % 2UZ;
+                auto& x         = xs[i];
+                auto& m         = ms[i];
+                auto const& y   = xs[j];
+                auto const& my  = ms[j];
                 auto const size = m.size();
                 switch (in.byte() % 20U) {
                         case 0: {
@@ -153,8 +153,8 @@ auto fuzz_one(fuzz::decoder& in)
                                         switch (in.byte() % 3U) {
                                                 case 0: {
                                                         auto const val = in.boolean();
-                                                        x[pos] = val;
-                                                        m[pos] = val;
+                                                        x[pos]         = val;
+                                                        m[pos]         = val;
                                                         break;
                                                 }
                                                 case 1: {
@@ -164,8 +164,8 @@ auto fuzz_one(fuzz::decoder& in)
                                                 }
                                                 default: {
                                                         auto const val = in.boolean();
-                                                        x.at(pos) = val;
-                                                        m.at(pos) = val;
+                                                        x.at(pos)      = val;
+                                                        m.at(pos)      = val;
                                                         break;
                                                 }
                                         }
@@ -192,7 +192,7 @@ auto fuzz_one(fuzz::decoder& in)
                         }
                         case 3: {
                                 check.step("&=, |=, ^=");
-                                auto z = y;
+                                auto z  = y;
                                 auto mz = my;
                                 align(z, mz, size);
                                 auto const op = in.byte() % 3U;
@@ -217,17 +217,17 @@ auto fuzz_one(fuzz::decoder& in)
                         }
                         case 4: {
                                 check.step("~, &, |, ^");
-                                auto z = y;
+                                auto z  = y;
                                 auto mz = my;
                                 align(z, mz, size);
                                 auto mnot = m;
                                 mnot.flip();
                                 auto mand = m;
-                                auto mor = m;
+                                auto mor  = m;
                                 auto mxor = m;
                                 for (auto const k : std::views::iota(0UZ, size)) {
                                         mand[k] = m[k] and mz[k];
-                                        mor[k] = m[k] or mz[k];
+                                        mor[k]  = m[k] or mz[k];
                                         mxor[k] = m[k] != mz[k];
                                 }
                                 expect_equal(check, ~x, mnot);
@@ -239,12 +239,12 @@ auto fuzz_one(fuzz::decoder& in)
                         case 5: {
                                 check.step("count, all, any, none, mismatch");
                                 auto const val = in.boolean();
-                                auto const n = static_cast<std::size_t>(std::ranges::count(m, val));
+                                auto const n   = static_cast<std::size_t>(std::ranges::count(m, val));
                                 check.expect(x.count(val) == n, "count");
                                 check.expect(x.all(val) == (n == size), "all");
                                 check.expect(x.any(val) == (n != 0UZ), "any");
                                 check.expect(x.none(val) == (n == 0UZ), "none");
-                                auto z = y;
+                                auto z  = y;
                                 auto mz = my;
                                 align(z, mz, size);
                                 if (z.size() == size) {
@@ -256,7 +256,7 @@ auto fuzz_one(fuzz::decoder& in)
                         case 6: {
                                 check.step("==, <=>, hash");
                                 check.expect((x == y) == (m == my), "==");
-                                auto const order = x <=> y;
+                                auto const order  = x <=> y;
                                 auto const morder = m <=> my;
                                 check.expect(std::is_eq(order) == std::is_eq(morder), "<=> equal");
                                 check.expect(std::is_lt(order) == std::is_lt(morder), "<=> less");
@@ -281,7 +281,7 @@ auto fuzz_one(fuzz::decoder& in)
                                         x = y;
                                 } else {
                                         auto tmp = y;
-                                        x = std::move(tmp);
+                                        x        = std::move(tmp);
                                 }
                                 m = my;
                                 expect_equal(check, X(x), m);
@@ -338,17 +338,17 @@ auto fuzz_one(fuzz::decoder& in)
                         case 12: {
                                 check.step("insert(position, value), insert(position, n, value)");
                                 if constexpr (growing<X>) {
-                                        auto const pos = in.below(size + 1UZ);
-                                        auto const val = in.boolean();
-                                        auto const position = std::next(x.cbegin(), static_cast<std::ptrdiff_t>(pos));
+                                        auto const pos       = in.below(size + 1UZ);
+                                        auto const val       = in.boolean();
+                                        auto const position  = std::next(x.cbegin(), static_cast<std::ptrdiff_t>(pos));
                                         auto const mposition = std::next(m.cbegin(), static_cast<std::ptrdiff_t>(pos));
                                         if (in.boolean()) {
-                                                auto const n = in.below(top - size + 1UZ);
+                                                auto const n  = in.below(top - size + 1UZ);
                                                 auto const it = x.insert(position, n, val);
-                                                m = spliced(m, pos, model(n, val));
+                                                m             = spliced(m, pos, model(n, val));
                                                 check.expect(index_of(x, it) == pos, "position");
                                         } else if (size < top) {
-                                                auto const it = x.insert(position, val);
+                                                auto const it  = x.insert(position, val);
                                                 auto const mit = m.insert(mposition, val);
                                                 check.expect(index_of(x, it) == static_cast<std::size_t>(mit - m.begin()), "single insert's position");
                                         } else if (capped<X>()) {
@@ -361,9 +361,9 @@ auto fuzz_one(fuzz::decoder& in)
                                 check.step("insert_range, insert(position, first, last)");
                                 if constexpr (growing<X>) {
                                         auto const pos = in.below(size + 1UZ);
-                                        auto const rg = bools(in, in.below(top - size + 1UZ));
-                                        auto const it = in.boolean() ? x.insert_range(std::next(x.cbegin(), static_cast<std::ptrdiff_t>(pos)), rg) : x.insert(std::next(x.cbegin(), static_cast<std::ptrdiff_t>(pos)), rg.begin(), rg.end());
-                                        m = spliced(m, pos, model(rg.begin(), rg.end()));
+                                        auto const rg  = bools(in, in.below(top - size + 1UZ));
+                                        auto const it  = in.boolean() ? x.insert_range(std::next(x.cbegin(), static_cast<std::ptrdiff_t>(pos)), rg) : x.insert(std::next(x.cbegin(), static_cast<std::ptrdiff_t>(pos)), rg.begin(), rg.end());
+                                        m              = spliced(m, pos, model(rg.begin(), rg.end()));
                                         check.expect(index_of(x, it) == pos, "position");
                                 }
                                 break;
@@ -378,11 +378,11 @@ auto fuzz_one(fuzz::decoder& in)
                                                         std::swap(lo, hi);
                                                 }
                                                 if (in.boolean()) {
-                                                        auto const it = x.erase(std::next(x.cbegin(), static_cast<std::ptrdiff_t>(lo)));
+                                                        auto const it  = x.erase(std::next(x.cbegin(), static_cast<std::ptrdiff_t>(lo)));
                                                         auto const mit = m.erase(std::next(m.cbegin(), static_cast<std::ptrdiff_t>(lo)));
                                                         check.expect(index_of(x, it) == static_cast<std::size_t>(mit - m.begin()), "position");
                                                 } else {
-                                                        auto const it = x.erase(std::next(x.cbegin(), static_cast<std::ptrdiff_t>(lo)), std::next(x.cbegin(), static_cast<std::ptrdiff_t>(hi)));
+                                                        auto const it  = x.erase(std::next(x.cbegin(), static_cast<std::ptrdiff_t>(lo)), std::next(x.cbegin(), static_cast<std::ptrdiff_t>(hi)));
                                                         auto const mit = m.erase(std::next(m.cbegin(), static_cast<std::ptrdiff_t>(lo)), std::next(m.cbegin(), static_cast<std::ptrdiff_t>(hi)));
                                                         check.expect(index_of(x, it) == static_cast<std::size_t>(mit - m.begin()), "range position");
                                                 }
@@ -394,7 +394,7 @@ auto fuzz_one(fuzz::decoder& in)
                                 check.step("assign(n, value), assign_range");
                                 if constexpr (growing<X>) {
                                         if (in.boolean()) {
-                                                auto const n = in.below(top + 1UZ);
+                                                auto const n   = in.below(top + 1UZ);
                                                 auto const val = in.boolean();
                                                 x.assign(n, val);
                                                 m.assign(n, val);
@@ -415,7 +415,7 @@ auto fuzz_one(fuzz::decoder& in)
                                                 m.insert(m.end(), rg.begin(), rg.end());
                                         } else if (size + my.size() <= top) {
                                                 // [sequence.reqmts] forbids appending a vector to itself.
-                                                auto const other = y;
+                                                auto const other  = y;
                                                 auto const mother = my;
                                                 x.append_range(other);
                                                 m.insert(m.end(), mother.begin(), mother.end());
@@ -444,7 +444,7 @@ auto fuzz_one(fuzz::decoder& in)
                                 check.step("try_push_back");
                                 if constexpr (requires { x.try_push_back(true); }) {
                                         auto const val = in.boolean();
-                                        auto const r = x.try_push_back(val);
+                                        auto const r   = x.try_push_back(val);
                                         check.expect(r.has_value() == (size < top), "try_push_back's answer");
                                         if (r) {
                                                 check.expect(*r == val, "try_push_back's reference");
@@ -457,14 +457,14 @@ auto fuzz_one(fuzz::decoder& in)
                                 check.step("construct from a size and a value, or from a range");
                                 if constexpr (growing<X>) {
                                         if (in.boolean()) {
-                                                auto const n = in.below(top + 1UZ);
+                                                auto const n   = in.below(top + 1UZ);
                                                 auto const val = in.boolean();
-                                                x = X(n, val);
-                                                m = model(n, val);
+                                                x              = X(n, val);
+                                                m              = model(n, val);
                                         } else {
                                                 auto const rg = bools(in, in.below(top + 1UZ));
-                                                x = X(std::from_range, rg);
-                                                m = rg;
+                                                x             = X(std::from_range, rg);
+                                                m             = rg;
                                         }
                                 }
                                 break;

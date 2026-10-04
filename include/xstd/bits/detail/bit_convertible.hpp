@@ -239,9 +239,9 @@ template<class To, class From>
 [[nodiscard]] constexpr auto copy_blocks(From const& from)
         -> To
 {
-        using source = bit_source<From>;
-        auto to = To();
-        auto& bits = storage_access::bits(to);
+        using source     = bit_source<From>;
+        auto to          = To();
+        auto& bits       = storage_access::bits(to);
         auto const width = source::width(from);
         bits.resize(target_width<To>(width));
         source::copy(from, bits.blocks());
@@ -276,8 +276,8 @@ template<fixed_target To, class From>
         -> To
 {
         constexpr auto N = bit_width_v<To>;
-        using source = bit_source<From>;
-        auto bytes = std::array<unsigned char, byte_count<N>>();
+        using source     = bit_source<From>;
+        auto bytes       = std::array<unsigned char, byte_count<N>>();
         source::copy(from, std::span<unsigned char>(bytes));
         if constexpr (N % bits_per_byte != 0UZ) {
                 bytes.back() = static_cast<unsigned char>(bytes.back() & ((1U << (N % bits_per_byte)) - 1U));
@@ -320,7 +320,7 @@ template<class To, class From>
         -> To
 {
         auto const width = bit_source<std::remove_cvref_t<From>>::width(from);
-        auto to = To(xstd::from_bit_storage, std::forward<From>(from).extract());
+        auto to          = To(xstd::from_bit_storage, std::forward<From>(from).extract());
         if constexpr (not reads_as_set<To>) {
                 storage_access::bits(to).resize(width);
         }

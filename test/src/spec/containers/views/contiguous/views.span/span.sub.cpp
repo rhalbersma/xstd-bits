@@ -35,7 +35,7 @@ template<class W, class S>
 [[nodiscard]] auto is_window_of(W const& w, S const& s, std::size_t offset, std::size_t count)
         -> bool
 {
-        auto const all = read(s);
+        auto const all   = read(s);
         auto const first = all.begin() + static_cast<std::ptrdiff_t>(offset);
         if (w.size() != count or read(w) != bools(first, first + static_cast<std::ptrdiff_t>(count))) {
                 return false;
@@ -85,7 +85,7 @@ auto check_static_subspan(S const& s)
 {
         if constexpr (S::extent == dyn or fits(S::extent, Offset, Count)) {
                 if (fits(s.size(), Offset, Count)) {
-                        auto const w = s.template subspan<Offset, Count>();
+                        auto const w          = s.template subspan<Offset, Count>();
                         constexpr auto extent = Count != dyn ? Count : (S::extent != dyn ? S::extent - Offset : dyn);
                         static_assert(subview_at<decltype(w), S> and decltype(w)::extent == extent);       // [span.sub]/10
                         BOOST_CHECK(is_window_of(w, s, Offset, Count != dyn ? Count : s.size() - Offset)); // [span.sub]/9
@@ -115,7 +115,7 @@ BOOST_AUTO_TEST_CASE(StaticFirst)
                 }
                 for (auto const [from, a] : inputs::views<T>()) {
                         auto const on_failure = context(from, a);
-                        auto const s = a.view();
+                        auto const s          = a.view();
                         for_each_value<0UZ, 1UZ, 2UZ, 9UZ>([&]<std::size_t Count> -> void {
                                 if constexpr (T::extent == dyn or Count <= T::extent) {
                                         if (Count <= s.size()) {
@@ -139,7 +139,7 @@ BOOST_AUTO_TEST_CASE(StaticLast)
                 }
                 for (auto const [from, a] : inputs::views<T>()) {
                         auto const on_failure = context(from, a);
-                        auto const s = a.view();
+                        auto const s          = a.view();
                         for_each_value<0UZ, 1UZ, 2UZ, 9UZ>([&]<std::size_t Count> -> void {
                                 if constexpr (T::extent == dyn or Count <= T::extent) {
                                         if (Count <= s.size()) {
@@ -165,7 +165,7 @@ BOOST_AUTO_TEST_CASE(StaticSubspan)
                 }
                 for (auto const [from, a] : inputs::views<T>()) {
                         auto const on_failure = context(from, a);
-                        auto const s = a.view();
+                        auto const s          = a.view();
                         check_static_subspans<0UZ>(s);
                         check_static_subspans<1UZ>(s);
                         check_static_subspans<3UZ>(s);
@@ -179,7 +179,7 @@ BOOST_AUTO_TEST_CASE(First)
         test::for_each_type<test::spec::span::all>([]<class T> -> void {
                 for (auto const [from, a, offset, count] : inputs::spans<T>()) {
                         auto const on_failure = context(from, a, offset, count);
-                        auto const s = a.view();
+                        auto const s          = a.view();
                         if (count <= s.size()) {
                                 auto const w = s.first(count);
                                 static_assert(subview_at<decltype(w), T> and decltype(w)::extent == dyn);
@@ -195,7 +195,7 @@ BOOST_AUTO_TEST_CASE(Last)
         test::for_each_type<test::spec::span::all>([]<class T> -> void {
                 for (auto const [from, a, offset, count] : inputs::spans<T>()) {
                         auto const on_failure = context(from, a, offset, count);
-                        auto const s = a.view();
+                        auto const s          = a.view();
                         if (count <= s.size()) {
                                 auto const w = s.last(count);
                                 static_assert(subview_at<decltype(w), T> and decltype(w)::extent == dyn);
@@ -211,7 +211,7 @@ BOOST_AUTO_TEST_CASE(Subspan)
         test::for_each_type<test::spec::span::all>([]<class T> -> void {
                 for (auto const [from, a, offset, count] : inputs::spans<T>()) {
                         auto const on_failure = context(from, a, offset, count);
-                        auto const s = a.view();
+                        auto const s          = a.view();
                         if (offset <= s.size()) {
                                 auto const rest = s.subspan(offset);
                                 static_assert(subview_at<decltype(rest), T> and decltype(rest)::extent == dyn);

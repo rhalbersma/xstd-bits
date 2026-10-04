@@ -45,8 +45,8 @@ template<borrowable_block W>
 struct borrowed_bits_for<W>
 {
         using block_type = std::remove_reference_t<W>;
-        using bits_type = borrowed_bits<std::remove_const_t<block_type>, 1>;
-        using type = std::conditional_t<std::is_const_v<block_type>, bits_type const, bits_type>;
+        using bits_type  = borrowed_bits<std::remove_const_t<block_type>, 1>;
+        using type       = std::conditional_t<std::is_const_v<block_type>, bits_type const, bits_type>;
 };
 
 template<borrowable_blocks W>
@@ -54,7 +54,7 @@ struct borrowed_bits_for<W>
 {
         using span_type = block_span_t<std::remove_reference_t<W>>;
         using bits_type = borrowed_bits<std::remove_const_t<typename span_type::element_type>, span_type::extent>;
-        using type = std::conditional_t<std::is_const_v<typename span_type::element_type>, bits_type const, bits_type>;
+        using type      = std::conditional_t<std::is_const_v<typename span_type::element_type>, bits_type const, bits_type>;
 };
 
 // The storage a view deduces from the blocks it is handed, const where they are.
@@ -67,8 +67,8 @@ template<class W>
 [[nodiscard]] constexpr auto borrow_bits(W&& blocks) noexcept
         -> std::remove_const_t<borrowed_bits_t<W&&>>
 {
-        using bits_type = std::remove_const_t<borrowed_bits_t<W&&>>;
-        using span_type = bits_type::block_container_type;
+        using bits_type  = std::remove_const_t<borrowed_bits_t<W&&>>;
+        using span_type  = bits_type::block_container_type;
         using block_type = bits_type::block_type;
         if constexpr (borrowable_block<W&&>) {
                 return bits_type(span_type(const_cast<block_type*>(std::addressof(blocks)), 1UZ));

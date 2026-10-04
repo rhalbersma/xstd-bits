@@ -34,7 +34,7 @@ BOOST_AUTO_TEST_SUITE(Adopting)
 // The buffer the owner hands back is the one it was given: the blocks moved in and out, and were never copied.
 BOOST_AUTO_TEST_CASE(TheBlocksMoveInWithoutACopy)
 {
-        auto v = std::vector<std::uint8_t>{0x05, 0x80};
+        auto v                 = std::vector<std::uint8_t>{0x05, 0x80};
         auto const* const data = v.data();
 
         auto s = xstd::basic_bit_set(xstd::from_bit_storage, std::move(v));
@@ -57,7 +57,7 @@ BOOST_AUTO_TEST_CASE(EveryBitOfTheBlocksIsAPosition)
 BOOST_AUTO_TEST_CASE(TheAllocatorExtendedFormDeducesAsThePlainOne)
 {
         auto const alloc = std::allocator<std::uint8_t>();
-        auto const s = xstd::basic_bit_set(xstd::from_bit_storage, std::vector<std::uint8_t>{0x01}, alloc);
+        auto const s     = xstd::basic_bit_set(xstd::from_bit_storage, std::vector<std::uint8_t>{0x01}, alloc);
         static_assert(std::same_as<decltype(s), xstd::basic_bit_set<std::size_t, std::uint8_t> const>);
         BOOST_CHECK(s.contains(0));
 
@@ -69,9 +69,9 @@ BOOST_AUTO_TEST_CASE(TheAllocatorExtendedFormDeducesAsThePlainOne)
 // extract and adoption round-trip whole blocks, so a width short of them comes back padded, and resize restores it.
 BOOST_AUTO_TEST_CASE(ARoundTripKeepsTheBitsAndPadsTheWidth)
 {
-        auto v = xstd::bit_vector(70);
-        v[0] = true;
-        v[69] = true;
+        auto v              = xstd::bit_vector(70);
+        v[0]                = true;
+        v[69]               = true;
         auto const original = v;
 
         auto w = xstd::bit_vector(xstd::from_bit_storage, std::move(v).extract());
@@ -95,7 +95,7 @@ BOOST_AUTO_TEST_CASE(OnlyARunTimeWidthAdopts)
 BOOST_AUTO_TEST_CASE(AnyResizableStorageIsAdopted)
 {
         using blocks_type = test::minimal_blocks<std::uint8_t>;
-        auto blocks = blocks_type();
+        auto blocks       = blocks_type();
         blocks.push_back(0x80);
         auto const v = xstd::bits::detail::sequence_adaptor<xstd::bits::detail::bit_container<blocks_type>, xstd::bits::detail::storage::owned, xstd::bits::detail::window::all>(xstd::from_bit_storage, std::move(blocks));
         BOOST_CHECK(v.size() == 8UZ and v[7] and not v[0]);
@@ -129,9 +129,9 @@ using polymorphic_owners = std::tuple<xstd::basic_bit_set<std::size_t, std::uint
 // Blocks adopted under an unequal allocator are copied into it; storage taken from new and delete would leak.
 BOOST_AUTO_TEST_CASE_TEMPLATE(AdoptionUnderAnUnequalAllocatorCopiesTheBlocks, S, polymorphic_owners)
 {
-        auto adopter = std::pmr::unsynchronized_pool_resource();
-        auto const keys = std::vector<std::size_t>{0, 9, 100, 700};
-        auto source = S(keys.begin(), keys.end(), typename S::allocator_type(std::pmr::polymorphic_allocator<std::uint8_t>(std::pmr::new_delete_resource())));
+        auto adopter     = std::pmr::unsynchronized_pool_resource();
+        auto const keys  = std::vector<std::size_t>{0, 9, 100, 700};
+        auto source      = S(keys.begin(), keys.end(), typename S::allocator_type(std::pmr::polymorphic_allocator<std::uint8_t>(std::pmr::new_delete_resource())));
         auto const alloc = typename S::allocator_type(std::pmr::polymorphic_allocator<std::uint8_t>(&adopter));
 
         auto const s = S(xstd::from_bit_storage, std::move(source).extract(), alloc);
@@ -142,10 +142,10 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AdoptionUnderAnUnequalAllocatorCopiesTheBlocks, S,
 // Blocks adopted under the allocator that made them keep their storage: the buffer handed back is the one given.
 BOOST_AUTO_TEST_CASE_TEMPLATE(AdoptionUnderAnEqualAllocatorKeepsTheStorage, S, polymorphic_owners)
 {
-        auto maker = std::pmr::unsynchronized_pool_resource();
-        auto const keys = std::vector<std::size_t>{0, 9, 100, 700};
-        auto const alloc = typename S::allocator_type(std::pmr::polymorphic_allocator<std::uint8_t>(&maker));
-        auto blocks = S(keys.begin(), keys.end(), alloc).extract();
+        auto maker             = std::pmr::unsynchronized_pool_resource();
+        auto const keys        = std::vector<std::size_t>{0, 9, 100, 700};
+        auto const alloc       = typename S::allocator_type(std::pmr::polymorphic_allocator<std::uint8_t>(&maker));
+        auto blocks            = S(keys.begin(), keys.end(), alloc).extract();
         auto const* const data = blocks.data();
 
         auto s = S(xstd::from_bit_storage, std::move(blocks), alloc);

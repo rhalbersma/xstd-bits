@@ -56,7 +56,7 @@ template<class Block>
 // In: the size is a sequence's width, position i stays position i, at any two block widths.
 BOOST_AUTO_TEST_CASE(ADynamicBitsetConvertsInKeepingItsSizeAndPositions)
 {
-        auto const keys = std::vector<std::size_t>{0, 5, 12};
+        auto const keys   = std::vector<std::size_t>{0, 5, 12};
         auto const narrow = make<std::uint8_t>(13, keys);
 
         auto const v = xstd::bit_convert<xstd::bit_vector>(narrow);
@@ -78,8 +78,8 @@ BOOST_AUTO_TEST_CASE(ADynamicBitsetConvertsInKeepingItsSizeAndPositions)
 BOOST_AUTO_TEST_CASE(AnOwnerConvertsOutKeepingItsWidthAndPositions)
 {
         auto v = xstd::bit_vector(70);
-        v[0] = true;
-        v[69] = true;
+        v[0]   = true;
+        v[69]  = true;
 
         auto const same = xstd::bit_convert<boost::dynamic_bitset<std::size_t>>(v);
         BOOST_CHECK_EQUAL(same.size(), 70UZ);
@@ -134,7 +134,7 @@ BOOST_AUTO_TEST_CASE(ABoundedTargetTooSmallThrowsWhatItsGrowthThrows)
 // Boost hands none of its storage out, so an rvalue is copied from and keeps its bits.
 BOOST_AUTO_TEST_CASE(NothingIsAdoptedFromADynamicBitset)
 {
-        auto b = make<std::size_t>(70, {69});
+        auto b       = make<std::size_t>(70, {69});
         auto const v = xstd::bit_convert<xstd::bit_vector>(std::move(b));
         BOOST_CHECK(positions(v) == (std::vector<std::size_t>{69}));
         BOOST_CHECK_EQUAL(b.size(), 70UZ); // NOLINT(bugprone-use-after-move,hicpp-invalid-access-moved,clang-analyzer-cplusplus.Move): a copy leaves the source, which is the check.
@@ -146,7 +146,7 @@ BOOST_AUTO_TEST_CASE(NothingIsAdoptedFromADynamicBitset)
 BOOST_AUTO_TEST_CASE(AContainerParameterConvertsAlike)
 {
         using small_bitset = boost::dynamic_bitset<std::size_t, boost::container::small_vector<std::size_t, 2>>;
-        auto b = small_bitset(130);
+        auto b             = small_bitset(130);
         b.set(129);
         auto const v = xstd::bit_convert<xstd::bit_vector>(b);
         BOOST_CHECK_EQUAL(v.size(), 130UZ);
@@ -159,7 +159,7 @@ BOOST_AUTO_TEST_CASE(BothDirectionsAreConstantExpressions)
         static_assert([] -> bool {
                 auto b = boost::dynamic_bitset<std::uint8_t>(13);
                 b.set(12);
-                auto const v = xstd::bit_convert<xstd::bit_vector>(b);
+                auto const v    = xstd::bit_convert<xstd::bit_vector>(b);
                 auto const back = xstd::bit_convert<boost::dynamic_bitset<std::uint16_t>>(v);
                 return v.size() == 13UZ and v[12] and back.size() == 13UZ and back.test(12);
         }());

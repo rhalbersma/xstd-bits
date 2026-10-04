@@ -54,17 +54,16 @@ struct is_range<xstd::bit_set_view<Blocks, N>> : std::false_type
 
 } // namespace boost::container_hash
 
+// NOLINTBEGIN(bugprone-std-namespace-modification): [namespace.std]/2 admits specializing for a program-defined type.
 namespace std {
-
-// NOLINTBEGIN(bugprone-std-namespace-modification)
 
 template<class Blocks, std::size_t N>
 struct hash<xstd::bit_set_view<Blocks, N>> : hash<typename xstd::bit_set_view<Blocks, N>::adaptor_type>
 {};
 
-// NOLINTEND(bugprone-std-namespace-modification)
-
 } // namespace std
+
+// NOLINTEND(bugprone-std-namespace-modification)
 
 // NOLINTBEGIN(bugprone-std-namespace-modification): [range.view] and [range.range] invite the opt-in.
 namespace std::ranges {

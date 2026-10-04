@@ -83,11 +83,11 @@ template<class T>
 auto check_set_walk(T const& empty, std::set<std::size_t> const& model)
         -> void
 {
-        auto c = make(empty, model);
+        auto c       = make(empty, model);
         auto const v = xstd::bit_set_view(c);
 
         auto const first = v.begin();
-        auto const last = v.end();
+        auto const last  = v.end();
         BOOST_CHECK((first == last) == model.empty());
 
         // Behind if constexpr rather than an early return, or MSVC reports the rest unreachable at a zero width.
@@ -110,7 +110,7 @@ auto check_set_steps(Iterator first, Iterator last, std::set<std::size_t> const&
         BOOST_CHECK(forward == model);
 
         auto backward = std::set<std::size_t>();
-        auto it = last;
+        auto it       = last;
         for (auto n = model.size() - 1UZ; n < model.size(); --n) {
                 --it;
                 backward.insert(*it);
@@ -119,7 +119,7 @@ auto check_set_steps(Iterator first, Iterator last, std::set<std::size_t> const&
 
         // The postfix forms step the same way and hand back where they were.
         if (not model.empty()) {
-                it = first;
+                it             = first;
                 auto const was = it++;
                 BOOST_CHECK(was == first);
                 auto const back = it--;
@@ -138,7 +138,7 @@ auto check_every_set_pattern(T const& empty)
         // Behind if constexpr, or MSVC's analyzer reports loops whose body never runs at a zero width, which is so.
         if constexpr (T::extent != 0UZ) {
                 auto const size = empty.size();
-                auto full = std::set<std::size_t>();
+                auto full       = std::set<std::size_t>();
                 for (auto const i : std::views::iota(0UZ, size)) {
                         full.insert(i);
                 }
@@ -237,7 +237,7 @@ namespace {
 
 using Viewed = xstd::bits::detail::bit_container<std::array<std::uint64_t, 1>, 64>;
 
-using SetIt = xstd::bits::detail::bidirectional_bit_iterator<Viewed>;
+using SetIt  = xstd::bits::detail::bidirectional_bit_iterator<Viewed>;
 using SetRef = xstd::bits::detail::bidirectional_bit_reference<Viewed>;
 
 // Dependent, so a type without the member is a substitution failure rather than a hard error.
@@ -275,7 +275,7 @@ BOOST_AUTO_TEST_CASE(TheValueArrivesByImplicitConversion)
 {
         static_assert(std::is_convertible_v<SetRef, std::size_t>);
 
-        auto b = Viewed();
+        auto b       = Viewed();
         auto const v = xstd::bit_set_view(b);
         v.insert({3, 5, 7});
 
@@ -288,7 +288,7 @@ BOOST_AUTO_TEST_CASE(TheValueArrivesByImplicitConversion)
 // & . * and * . & are both the identity, which makes the pair a round trip rather than two one-way conversions.
 BOOST_AUTO_TEST_CASE(TheProxyPairRoundTrips)
 {
-        auto b = Viewed();
+        auto b       = Viewed();
         auto const v = xstd::bit_set_view(b);
         v.insert({3, 5, 7, 11});
 

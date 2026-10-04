@@ -6,15 +6,17 @@
 #ifndef XSTD_BITS_DETAIL_RANDOM_ACCESS_HPP
 #define XSTD_BITS_DETAIL_RANDOM_ACCESS_HPP
 
-#include <xstd/bits/detail/storage_ptr.hpp> // storage_ptr_t
-#include <xstd/ints/concepts/integer.hpp>   // integer
-#include <cassert>                          // assert
-#include <compare>                          // strong_ordering
-#include <concepts>                         // same_as
-#include <cstddef>                          // ptrdiff_t, size_t
-#include <format>                           // formatter
-#include <iterator>                         // random_access_iterator_tag
-#include <type_traits>                      // is_class_v, is_const_v, is_convertible_v, is_nothrow_constructible_v, remove_const_t
+#include <xstd/bits/detail/bit_container.hpp> // bit_container_type
+#include <xstd/bits/detail/ownership.hpp>     // storage, window
+#include <xstd/bits/detail/storage_ptr.hpp>   // storage_ptr_t
+#include <xstd/ints/concepts/integer.hpp>     // integer
+#include <cassert>                            // assert
+#include <compare>                            // strong_ordering
+#include <concepts>                           // same_as
+#include <cstddef>                            // ptrdiff_t, size_t
+#include <format>                             // formatter
+#include <iterator>                           // random_access_iterator_tag
+#include <type_traits>                        // is_class_v, is_const_v, is_convertible_v, is_nothrow_constructible_v, remove_const_t
 
 // The iterator is the primitive: a pointer and a position, reaching the bits through the storage alone.
 namespace xstd::bits::detail {
@@ -24,6 +26,9 @@ class random_access_bit_iterator;
 
 template<class Bits>
 class random_access_bit_reference;
+
+template<bit_container_type Bits, storage Store, window W, class Derived, std::size_t E>
+class sequence_adaptor;
 
 // A position in the sequence reading; const Bits is the const iterator, the old IsConst bool folded into the type.
 template<class Bits>
@@ -35,14 +40,10 @@ class random_access_bit_iterator
         // The const twin, whose conversion below reads these members; naming itself where Bits is already const.
         friend class random_access_bit_iterator<Bits const>;
 
-public:
-        using iterator_category = std::random_access_iterator_tag;
-        using value_type = bool;
-        using difference_type = std::ptrdiff_t;
-        using pointer = void;
-        using reference = random_access_bit_reference<Bits>;
+        template<bit_container_type B, storage S, window W, class D, std::size_t E>
+        friend class sequence_adaptor;
 
-        [[nodiscard]] random_access_bit_iterator() noexcept = default;
+        friend class random_access_bit_reference<Bits>;
 
         [[nodiscard]] constexpr random_access_bit_iterator(storage_ptr_t<Bits> ptr, std::size_t idx) noexcept
                 : m_ptr(ptr)
@@ -50,6 +51,15 @@ public:
         {
                 assert(m_ptr != nullptr);
         }
+
+public:
+        using iterator_category = std::random_access_iterator_tag;
+        using value_type        = bool;
+        using difference_type   = std::ptrdiff_t;
+        using pointer           = void;
+        using reference         = random_access_bit_reference<Bits>;
+
+        [[nodiscard]] random_access_bit_iterator() = default;
 
         // A mutable iterator converts to its const twin, as a container's iterator converts to its const_iterator.
         template<class Mutable>
@@ -175,8 +185,8 @@ public:
                 requires (not std::is_const_v<Bits>)
         {
                 bool const t = *x;
-                *x = *y;
-                *y = t;
+                *x           = *y;
+                *y           = t;
         }
 };
 
@@ -190,9 +200,10 @@ class random_access_bit_reference
         // Writable where Bits is not const: a const storage has no assign to reach.
         static constexpr bool is_writable = not std::is_const_v<Bits> and requires (Bits& c, std::size_t n, bool value) { c.assign(n, value); };
 
-public:
-        using value_type = bool;
-        using iterator = random_access_bit_iterator<Bits>;
+        template<bit_container_type B, storage S, window W, class D, std::size_t E>
+        friend class sequence_adaptor;
+
+        friend class random_access_bit_iterator<Bits>;
 
         [[nodiscard]] constexpr random_access_bit_reference(storage_ptr_t<Bits> ptr, std::size_t idx) noexcept
                 : m_ptr(ptr)
@@ -201,8 +212,12 @@ public:
                 assert(m_ptr != nullptr);
         }
 
+public:
+        using value_type = bool;
+        using iterator   = random_access_bit_iterator<Bits>;
+
         // Said out loud: the assignments below are user-provided, which deprecates the implicit copy constructor.
-        random_access_bit_reference(random_access_bit_reference const&) noexcept = default;
+        random_access_bit_reference(random_access_bit_reference const&) = default;
 
         [[nodiscard]] constexpr auto operator&() const noexcept
                 -> iterator
@@ -266,24 +281,24 @@ public:
                 requires is_writable
         {
                 bool const t = x;
-                x = y;
-                y = t;
+                x            = y;
+                y            = t;
         }
 
         friend constexpr auto swap(random_access_bit_reference x, bool& y) noexcept -> void
                 requires is_writable
         {
                 bool const t = x;
-                x = y;
-                y = t;
+                x            = y;
+                y            = t;
         }
 
         friend constexpr auto swap(bool& x, random_access_bit_reference y) noexcept -> void
                 requires is_writable
         {
                 bool const t = x;
-                x = y;
-                y = t;
+                x            = y;
+                y            = t;
         }
 
         // What this proxy prints as, said once: our std::formatter calls it unqualified, and fmt finds it by ADL.
@@ -296,17 +311,23 @@ public:
 
 } // namespace xstd::bits::detail
 
+// NOLINTBEGIN(bugprone-std-namespace-modification): [namespace.std]/2 admits specializing for a program-defined type.
+namespace std {
+
 // std::format over the containers, which needs nothing said about the containers themselves.
 template<class Bits, class CharT>
-// NOLINTNEXTLINE(bugprone-std-namespace-modification)
-struct std::formatter<xstd::bits::detail::random_access_bit_reference<Bits>, CharT> : std::formatter<bool, CharT>
+struct formatter<xstd::bits::detail::random_access_bit_reference<Bits>, CharT> : formatter<bool, CharT>
 {
         template<class Context>
         [[nodiscard]] constexpr auto format(xstd::bits::detail::random_access_bit_reference<Bits> ref, Context& ctx) const
         {
                 // Unqualified, so ADL finds the proxy's own hidden friend.
-                return std::formatter<bool, CharT>::format(format_as(ref), ctx);
+                return formatter<bool, CharT>::format(format_as(ref), ctx);
         }
 };
+
+} // namespace std
+
+// NOLINTEND(bugprone-std-namespace-modification)
 
 #endif // XSTD_BITS_DETAIL_RANDOM_ACCESS_HPP

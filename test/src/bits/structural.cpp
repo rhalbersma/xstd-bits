@@ -83,14 +83,14 @@ struct shape_of;
 template<class Block, std::size_t N>
 struct shape_of<xstd::basic_bit_array<Block, N>>
 {
-        using block_type = Block;
+        using block_type            = Block;
         static constexpr auto width = N;
 };
 
 template<class Block, std::size_t N>
 struct shape_of<xstd::basic_bit_fixed_set<std::size_t, Block, N>>
 {
-        using block_type = Block;
+        using block_type            = Block;
         static constexpr auto width = N;
 };
 
@@ -99,10 +99,10 @@ template<class T>
 [[nodiscard]] constexpr auto from_words()
         -> T
 {
-        using block_type = shape_of<T>::block_type;
+        using block_type      = shape_of<T>::block_type;
         constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<block_type>::digits);
-        auto blocks = std::array<block_type, shape_of<T>::width / digits>();
-        blocks.front() = static_cast<block_type>(1U);
+        auto blocks           = std::array<block_type, shape_of<T>::width / digits>();
+        blocks.front()        = static_cast<block_type>(1U);
         blocks.back() |= static_cast<block_type>(block_type{1U} << (digits - 1UZ));
         return T(xstd::from_bit_storage, blocks);
 }
@@ -124,8 +124,8 @@ BOOST_AUTO_TEST_CASE(AnAlignedOwnerIsATemplateArgument)
 BOOST_AUTO_TEST_CASE(EqualValuesNameTheSameSpecialization)
 {
         test::for_each_type<aligned_owners>([]<class T> -> void {
-                constexpr auto last = shape_of<T>::width - 1UZ;
-                constexpr auto by_bits = with_bits<T>({0UZ, last});
+                constexpr auto last     = shape_of<T>::width - 1UZ;
+                constexpr auto by_bits  = with_bits<T>({0UZ, last});
                 constexpr auto by_words = from_words<T>();
                 static_assert(std::same_as<test::value_parameter<by_bits>, test::value_parameter<by_words>>);
                 static_assert(std::same_as<test::value_parameter<T{}>, test::value_parameter<with_bits<T>({})>>);
@@ -136,7 +136,7 @@ BOOST_AUTO_TEST_CASE(UnequalValuesNameDifferentSpecializations)
 {
         test::for_each_type<aligned_owners>([]<class T> -> void {
                 constexpr auto last = shape_of<T>::width - 1UZ;
-                constexpr auto low = with_bits<T>({0UZ});
+                constexpr auto low  = with_bits<T>({0UZ});
                 constexpr auto high = with_bits<T>({last});
                 constexpr auto both = with_bits<T>({0UZ, last});
                 static_assert(not std::same_as<test::value_parameter<T{}>, test::value_parameter<low>>);

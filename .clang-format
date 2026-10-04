@@ -60,6 +60,9 @@ ReferenceAlignment: Left
 AlignTrailingComments:
   Kind: Always
 
+AlignConsecutiveAssignments:
+  Enabled: true
+
 FixNamespaceComments: true
 
 AllowShortEnumsOnASingleLine: false

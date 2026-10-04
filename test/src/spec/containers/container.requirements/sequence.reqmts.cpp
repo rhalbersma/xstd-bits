@@ -48,8 +48,8 @@ BOOST_AUTO_TEST_CASE(IteratorConstructor)
                 static_assert(requires (bool const* first, bool const* last) { T(first, last); });
                 for (auto const [from, a] : inputs::sequences<T>()) {
                         auto const on_failure = context(from, a);
-                        auto const sized = model_of(a);
-                        auto unsized = unsized_alternating(a.size());
+                        auto const sized      = model_of(a);
+                        auto unsized          = unsized_alternating(a.size());
                         constructor<T>()(sized.begin(), sized.end());
                         constructor<T>()(unsized.begin(), unsized.end());
                         reads_once()(std::type_identity<T>(), sized);
@@ -147,8 +147,8 @@ BOOST_AUTO_TEST_CASE(InsertIterators)
                 static_assert(requires (T c, bool const* first, bool const* last, T::const_iterator p) { { c.insert(p, first, last) } -> std::same_as<typename T::iterator>; });
                 for (auto const [from, a, p, n] : inputs::spans<T>()) {
                         auto const on_failure = context(from, a, p, n);
-                        auto const sized = alternating(n);
-                        auto unsized = unsized_alternating(n);
+                        auto const sized      = alternating(n);
+                        auto unsized          = unsized_alternating(n);
                         mem_insert()(a, p, sized.begin(), sized.end());
                         mem_insert()(a, p, unsized.begin(), unsized.end());
                         reads_once()(a, p, sized);
@@ -230,7 +230,7 @@ BOOST_AUTO_TEST_CASE(AssignIterators)
                         auto const on_failure = context(from, a);
                         for (auto const k : {0UZ, 1UZ, 7UZ, 8UZ, 9UZ, 17UZ, a.size()}) {
                                 auto const sized = alternating(k);
-                                auto unsized = unsized_alternating(k);
+                                auto unsized     = unsized_alternating(k);
                                 mem_assign()(a, sized.begin(), sized.end());
                                 mem_assign()(a, unsized.begin(), unsized.end());
                         }
@@ -315,7 +315,7 @@ concept deduces_bit_vector = requires (I i, Args... args) { xstd::basic_bit_vect
 // [sequence.reqmts]/69: deduction guides
 BOOST_AUTO_TEST_CASE(DeductionGuides)
 {
-        using I = bool const*;
+        using I     = bool const*;
         using Alloc = std::allocator<std::size_t>;
 
         // A third argument that is no allocator selects no guide.

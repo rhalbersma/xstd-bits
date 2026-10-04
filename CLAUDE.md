@@ -70,7 +70,7 @@ Where the arrow goes depends on what follows it.
 included — and for every lambda:
 
 ```cpp
-[[nodiscard]] friend auto operator==(T const&, T const&) noexcept -> bool = default;
+[[nodiscard]] friend auto operator==(T const&, T const&) -> bool = default;
 auto operator=(T const&) -> T& = delete;
 for_each_block(n, len, [&](std::size_t pos, block_type mask) -> void { block_at(pos, ones, mask); });
 ```
@@ -85,6 +85,27 @@ for_each_block(n, len, [&](std::size_t pos, block_type mask) -> void { block_at(
 }
 ```
 
+## Template declarations
+
+A template declaration is followed by a blank line before whatever comes next, as a definition is. The
+`template<...>` head and the declaration it introduces read as one unit, and the next declaration starts another:
+
+```cpp
+template<bit_container_type B, storage S, class D, class K, class T, class C>
+friend class set_adaptor;
+
+friend class bidirectional_bit_reference<Bits, Key, KeyTraits, Direction>;
+```
+
+`.clang-format` cannot insert this line, so it is yours to keep.
+
+## Size parameters
+
+A template's size parameter is one letter, and the letter is its unit: `N` counts bits, `K` counts blocks, and `E` is
+an extent, which may be `std::dynamic_extent`. So `basic_bit_array<Block, N>` is `N` bits wide, and its guide from
+`std::array<Block, K>` deduces `K` blocks of them. A second count of the same unit takes the next letter, as a
+constructor's `M` beside `N`.
+
 ## What the language already says
 
 Do not write out what a declaration already has.
@@ -93,19 +114,22 @@ Do not write out what a declaration already has.
 where the function would have been implicitly `constexpr` anyway, so it never carries information.
 
 ```cpp
-[[nodiscard]] friend auto operator==(T const&, T const&) noexcept -> bool = default;
+[[nodiscard]] friend auto operator==(T const&, T const&) -> bool = default;
 auto operator=(T const&) -> T& = delete;
 ```
 
-`noexcept` on a defaulted member is a different matter, and **is** written: since P1286R2 the explicit
-specification is honoured rather than making the function deleted, so it can differ from the one the
-members imply — which means removing it can change the answer.
+`noexcept` is not written on a **defaulted** member either. Its exception specification is deduced from
+what the definition calls, and a guarantee worth having is asserted in a test, which proves the deduced
+answer rather than imposing one that a throwing member would turn into `std::terminate`.
 
 ```cpp
-struct Throwy { Throwy() {} };                     // not noexcept
-struct T { Throwy t; T() noexcept = default; };    // noexcept anyway, and not deleted
+[[nodiscard]] T() = default;
 static_assert(std::is_nothrow_default_constructible_v<T>);
 ```
+
+The exception is a member over a dependency that throws nothing without declaring so, such as
+`std::vector`'s `==` or `boost::container::static_vector`'s `swap`. There the deduced answer is wrong,
+so the right one is written, and a comment names the dependency.
 
 A **lambda** is implicitly `constexpr` when it is eligible, so that is not written either. It is also
 not implicitly `noexcept`: `static_assert(!noexcept(plain(1)))` holds for a lambda with nothing

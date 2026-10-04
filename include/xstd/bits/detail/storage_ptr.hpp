@@ -48,8 +48,8 @@ public:
 template<class Bits>
 class block_ptr
 {
-        using bits_type = std::remove_const_t<Bits>;
-        using span_type = bits_type::block_container_type;
+        using bits_type  = std::remove_const_t<Bits>;
+        using span_type  = bits_type::block_container_type;
         using block_type = bits_type::block_type;
 
         // A span of static extent is a pointer alone, as the storage it rebuilds is.
@@ -85,7 +85,7 @@ class block_ptr
         }
 
 public:
-        [[nodiscard]] block_ptr() noexcept = default;
+        [[nodiscard]] block_ptr() = default;
 
         [[nodiscard]] constexpr explicit(false) block_ptr(Bits* ptr) noexcept // NOLINT(misc-explicit-constructor)
                 : m_data(ptr->borrowed_blocks().data())

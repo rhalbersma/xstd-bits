@@ -21,7 +21,7 @@ BOOST_AUTO_TEST_SUITE(ExtBoostBitSmallSet)
 namespace {
 
 inline constexpr auto N = 256UZ;
-using SmallSet = xstd::bit_small_set<N>;
+using SmallSet          = xstd::bit_small_set<N>;
 
 // An allocation count the container cannot reach around, which is what tells an inline width from a heap one.
 inline auto allocations = 0;
@@ -71,7 +71,7 @@ BOOST_AUTO_TEST_CASE(TheShortNameIsTheGeneralOneAtItsDefaults)
 BOOST_AUTO_TEST_CASE(TheSetReadingAnswersStdSetAcrossTheBoundary)
 {
         auto oracle = std::set<std::size_t>();
-        auto ours = SmallSet();
+        auto ours   = SmallSet();
         for (auto const i : {0UZ, 1UZ, 63UZ, 64UZ, 255UZ, 256UZ, 1000UZ}) {
                 oracle.insert(i);
                 ours.insert(i);

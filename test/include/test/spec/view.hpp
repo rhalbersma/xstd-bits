@@ -79,7 +79,7 @@ template<class V>
 class viewed : private detail::holds<typename view_traits<V>::owner_type>, public V // NOLINT(misc-multiple-inheritance): the owner is built before the view that refers into it
 {
         using traits = view_traits<V>;
-        using holds = detail::holds<typename traits::owner_type>;
+        using holds  = detail::holds<typename traits::owner_type>;
 
 public:
         using owner_type = traits::owner_type;
@@ -98,8 +98,8 @@ public:
         auto operator=(viewed const& other)
                 -> viewed&
         {
-                holds::m_owner = other.m_owner;
-                holds::m_width = other.m_width;
+                holds::m_owner         = other.m_owner;
+                holds::m_width         = other.m_width;
                 static_cast<V&>(*this) = traits::view(holds::m_owner, other.m_width);
                 return *this;
         }

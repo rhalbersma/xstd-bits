@@ -101,7 +101,7 @@ template<class X>
 auto bm_filter_twins(benchmark::State& state)
         -> void
 {
-        auto const n = bound(state);
+        auto const n      = bound(state);
         auto const primes = opt::sift_primes1<X>(n);
         for (auto _ : state) {
                 benchmark::DoNotOptimize(opt::filter_twins(primes));

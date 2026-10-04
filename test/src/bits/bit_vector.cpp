@@ -54,8 +54,8 @@ BOOST_AUTO_TEST_CASE(TheDynamicSequenceIsTheSequenceAdaptorOverAHeapOfBlocks)
 BOOST_AUTO_TEST_CASE(ItIsBuiltWithAnAllocatorLikeAStdVector)
 {
         auto const pattern = std::views::iota(0UZ, 20UZ) | std::views::transform([](auto i) { return i % 3 == 0; });
-        auto const alloc = std::allocator<std::uint8_t>();
-        auto const model = T(pattern.begin(), pattern.end());
+        auto const alloc   = std::allocator<std::uint8_t>();
+        auto const model   = T(pattern.begin(), pattern.end());
 
         BOOST_CHECK(T(alloc).get_allocator() == alloc);
         BOOST_CHECK(T(alloc).empty());
@@ -67,7 +67,7 @@ BOOST_AUTO_TEST_CASE(ItIsBuiltWithAnAllocatorLikeAStdVector)
         BOOST_CHECK(T(model, alloc) == model);
         BOOST_CHECK(T({true, false, true}, alloc) == T({true, false, true}));
 
-        auto source = model;
+        auto source      = model;
         auto const moved = T(std::move(source), alloc);
         BOOST_CHECK(moved == model);
         BOOST_CHECK(source.empty()); // NOLINT(bugprone-use-after-move,hicpp-invalid-access-moved): the moved-from is empty by contract, which is the check.
@@ -81,7 +81,7 @@ template<class X>
 {
         return [&t](X& x) -> void {
                 auto const source = X(t, test::container::ledger_allocator<X>(*x.get_allocator().book(), 1));
-                x = source;
+                x                 = source;
         };
 }
 
@@ -90,23 +90,23 @@ template<class X>
 // An allocator a copy hands over and a move does not: taken strongly where a swap hands it over, else basically.
 BOOST_AUTO_TEST_CASE(ACopyTakesAnAllocatorThatAMoveCannotAsStronglyAsASwapAllows)
 {
-        using swapping = xstd::basic_bit_vector<std::uint8_t, test::container::copy_and_swap_propagating<std::uint8_t>>;
+        using swapping           = xstd::basic_bit_vector<std::uint8_t, test::container::copy_and_swap_propagating<std::uint8_t>>;
         auto const wide_swapping = swapping(1000UZ, true, swapping::allocator_type(1));
-        auto narrow_swapping = swapping(1UZ, true, swapping::allocator_type(0));
-        narrow_swapping = wide_swapping;
+        auto narrow_swapping     = swapping(1UZ, true, swapping::allocator_type(0));
+        narrow_swapping          = wide_swapping;
         BOOST_CHECK(narrow_swapping == wide_swapping and narrow_swapping.get_allocator() == wide_swapping.get_allocator());
         auto alike_swapping = swapping(1UZ, true, swapping::allocator_type(1));
-        alike_swapping = wide_swapping;
+        alike_swapping      = wide_swapping;
         BOOST_CHECK(alike_swapping == wide_swapping);
         BOOST_CHECK(test::container::strong_guarantee(swapping(1UZ, true), copy_in_from(wide_swapping)));
 
-        using copying = xstd::basic_bit_vector<std::uint8_t, test::container::copy_propagating<std::uint8_t>>;
+        using copying           = xstd::basic_bit_vector<std::uint8_t, test::container::copy_propagating<std::uint8_t>>;
         auto const wide_copying = copying(1000UZ, true, copying::allocator_type(1));
-        auto narrow_copying = copying(1UZ, true, copying::allocator_type(0));
-        narrow_copying = wide_copying;
+        auto narrow_copying     = copying(1UZ, true, copying::allocator_type(0));
+        narrow_copying          = wide_copying;
         BOOST_CHECK(narrow_copying == wide_copying and narrow_copying.get_allocator() == wide_copying.get_allocator());
         auto alike_copying = copying(1UZ, true, copying::allocator_type(1));
-        alike_copying = wide_copying;
+        alike_copying      = wide_copying;
         BOOST_CHECK(alike_copying == wide_copying);
         BOOST_CHECK(test::container::basic_guarantee(copying(1UZ, true), copy_in_from(wide_copying)));
 }
@@ -137,8 +137,8 @@ auto model_of(R const& r)
 BOOST_AUTO_TEST_CASE(TheCeilingIsStdVectorBoolsRowForRow)
 {
         constexpr auto pmax = static_cast<std::size_t>(std::numeric_limits<std::ptrdiff_t>::max());
-        auto v = xstd::bit_vector();
-        auto m = std::vector<bool>();
+        auto v              = xstd::bit_vector();
+        auto m              = std::vector<bool>();
 
         // Both bound by what a distance can name, and ours never above theirs.
         BOOST_CHECK_LE(v.max_size(), pmax);
@@ -192,7 +192,7 @@ auto pattern(std::size_t n)
 BOOST_AUTO_TEST_CASE(AppendRangeBlitsFromASequenceAtAnyAlignment)
 {
         auto const source = T(std::from_range, pattern(50));
-        auto const view = xstd::bit_span(source);
+        auto const view   = xstd::bit_span(source);
 
         for (auto const start : {0UZ, 1UZ, 7UZ, 8UZ, 9UZ, 16UZ, 40UZ, 43UZ}) {
                 for (auto const count : {0UZ, 1UZ, 7UZ, 8UZ, 9UZ, 17UZ, 50UZ - start}) {
@@ -200,8 +200,8 @@ BOOST_AUTO_TEST_CASE(AppendRangeBlitsFromASequenceAtAnyAlignment)
                                 continue;
                         }
                         for (auto const prefix : {0UZ, 1UZ, 8UZ, 11UZ}) {
-                                auto v = T(std::from_range, pattern(prefix));
-                                auto m = model_of(v);
+                                auto v            = T(std::from_range, pattern(prefix));
+                                auto m            = model_of(v);
                                 auto const window = view.subspan(start, count);
                                 v.append_range(window);
                                 append_to(m, model_of(window));
@@ -239,8 +239,8 @@ BOOST_AUTO_TEST_CASE(AppendRangePacksAnyRangeOfBools)
 {
         for (auto const prefix : {0UZ, 3UZ, 8UZ}) {
                 for (auto const count : {0UZ, 1UZ, 8UZ, 9UZ, 16UZ, 23UZ}) {
-                        auto v = T(std::from_range, pattern(prefix));
-                        auto m = model_of(v);
+                        auto v          = T(std::from_range, pattern(prefix));
+                        auto m          = model_of(v);
                         auto const more = pattern(count);
                         v.append_range(more);
                         append_to(m, more);
@@ -263,10 +263,10 @@ BOOST_AUTO_TEST_CASE(AppendRangePacksAnyRangeOfBools)
 BOOST_AUTO_TEST_CASE(InsertingAWindowOfItselfRebuildsAsAStdVectorDoes)
 {
         for (auto const pos : {0UZ, 1UZ, 8UZ, 13UZ, 20UZ}) {
-                auto v = T(std::from_range, pattern(20));
-                auto m = pattern(20);
+                auto v            = T(std::from_range, pattern(20));
+                auto m            = pattern(20);
                 auto const middle = std::vector<bool>(m.begin() + 2, m.begin() + 11);
-                auto const r = v.insert_range(v.cbegin() + static_cast<std::ptrdiff_t>(pos), xstd::bit_span(v).subspan(2, 9));
+                auto const r      = v.insert_range(v.cbegin() + static_cast<std::ptrdiff_t>(pos), xstd::bit_span(v).subspan(2, 9));
                 m.insert(m.cbegin() + static_cast<std::ptrdiff_t>(pos), middle.begin(), middle.end());
                 BOOST_CHECK_EQUAL(r - v.begin(), static_cast<std::ptrdiff_t>(pos));
                 BOOST_CHECK(std::ranges::equal(v, m));
@@ -282,8 +282,8 @@ BOOST_AUTO_TEST_CASE(TheStaticSwapAndTheViewsFlipAreStdVectorBools)
         // Ours is [vector.bool]'s static swap; the model's own is deprecated by C++26 (LWG-3638, P3612R1).
         T::swap(v[0], v[1]);
         auto const m0 = static_cast<bool>(m[0]);
-        m[0] = static_cast<bool>(m[1]);
-        m[1] = m0;
+        m[0]          = static_cast<bool>(m[1]);
+        m[1]          = m0;
         BOOST_CHECK(std::ranges::equal(v, m));
 
         // A view flips what it views, a window does not.
@@ -307,9 +307,9 @@ BOOST_AUTO_TEST_CASE(TheOwnerHashesAndTheViewDoesNot)
 // The view over it refers into the owner's std::vector of blocks and cannot grow it.
 BOOST_AUTO_TEST_CASE(AViewOverItCannotGrowIt)
 {
-        auto v = T(5);
+        auto v       = T(5);
         auto const s = xstd::bit_span(v);
-        s[2] = true;
+        s[2]         = true;
         BOOST_CHECK(static_cast<bool>(v[2]));
 
         static_assert(not can_grow<decltype(s)>);
@@ -334,13 +334,13 @@ BOOST_AUTO_TEST_CASE(ItYieldsEveryPosition)
 BOOST_AUTO_TEST_CASE(SortingRandomBitsLeavesThemSorted)
 {
         // Fixed width, not ULL: a fixed seed should reproduce the same sequence on every platform.
-        auto lcg = std::uint64_t{0x9E3779B97F4A7C15};
+        auto lcg            = std::uint64_t{0x9E3779B97F4A7C15};
         auto const next_bit = [&lcg] -> bool { lcg = (lcg * 6364136223846793005ULL) + 1442695040888963407ULL; return (lcg >> 33U & 1U) != 0U; };
-        auto const fill = [&next_bit](T& v, std::vector<bool>& m) -> void {
+        auto const fill     = [&next_bit](T& v, std::vector<bool>& m) -> void {
                 for (auto const i : std::views::iota(0UZ, v.size())) {
                         auto const b = next_bit();
-                        v[i] = b;
-                        m[i] = b;
+                        v[i]         = b;
+                        m[i]         = b;
                 }
         };
 

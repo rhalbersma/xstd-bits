@@ -47,6 +47,7 @@ class bidirectional_bit_iterator
 
         template<bit_container_type B, storage S, class D, class K, class T, class C>
         friend class set_adaptor;
+
         friend class bidirectional_bit_reference<Bits, Key, KeyTraits, Direction>;
 
         [[nodiscard]] constexpr bidirectional_bit_iterator(storage_ptr_t<bits_type const> ptr, std::size_t idx) noexcept
@@ -58,12 +59,12 @@ class bidirectional_bit_iterator
 
 public:
         using iterator_category = std::bidirectional_iterator_tag;
-        using value_type = Key;
-        using difference_type = std::ptrdiff_t;
-        using pointer = void;
-        using reference = bidirectional_bit_reference<Bits, Key, KeyTraits, Direction>;
+        using value_type        = Key;
+        using difference_type   = std::ptrdiff_t;
+        using pointer           = void;
+        using reference         = bidirectional_bit_reference<Bits, Key, KeyTraits, Direction>;
 
-        [[nodiscard]] bidirectional_bit_iterator() noexcept = default;
+        [[nodiscard]] bidirectional_bit_iterator() = default;
 
         // A zero width has one position, so every iterator over it is the same one and every loop stops early.
         [[nodiscard]] friend constexpr auto operator==(bidirectional_bit_iterator lhs, bidirectional_bit_iterator rhs) noexcept
@@ -148,6 +149,7 @@ class bidirectional_bit_reference
 
         template<bit_container_type B, storage S, class D, class K, class T, class C>
         friend class set_adaptor;
+
         friend class bidirectional_bit_iterator<Bits, Key, KeyTraits, Direction>;
 
         [[nodiscard]] constexpr bidirectional_bit_reference(storage_ptr_t<bits_type const> ptr, std::size_t idx) noexcept
@@ -159,10 +161,10 @@ class bidirectional_bit_reference
 
 public:
         using value_type = Key;
-        using iterator = bidirectional_bit_iterator<Bits, Key, KeyTraits, Direction>;
+        using iterator   = bidirectional_bit_iterator<Bits, Key, KeyTraits, Direction>;
 
         // A value, not a handle to rebind: trivially copyable, never assignable, as a reference to a key is.
-        bidirectional_bit_reference(bidirectional_bit_reference const&) noexcept = default;
+        bidirectional_bit_reference(bidirectional_bit_reference const&)                    = default;
         auto operator=(bidirectional_bit_reference const&) -> bidirectional_bit_reference& = delete;
 
         [[nodiscard]] constexpr auto operator&() const noexcept
@@ -194,17 +196,23 @@ public:
 
 } // namespace xstd::bits::detail
 
+// NOLINTBEGIN(bugprone-std-namespace-modification): [namespace.std]/2 admits specializing for a program-defined type.
+namespace std {
+
 // std::format over the containers, which prints the key as the key's own formatter does.
 template<class Bits, class Key, class KeyTraits, xstd::bits::detail::direction Direction, class CharT>
-// NOLINTNEXTLINE(bugprone-std-namespace-modification)
-struct std::formatter<xstd::bits::detail::bidirectional_bit_reference<Bits, Key, KeyTraits, Direction>, CharT> : std::formatter<Key, CharT>
+struct formatter<xstd::bits::detail::bidirectional_bit_reference<Bits, Key, KeyTraits, Direction>, CharT> : formatter<Key, CharT>
 {
         template<class Context>
         [[nodiscard]] constexpr auto format(xstd::bits::detail::bidirectional_bit_reference<Bits, Key, KeyTraits, Direction> ref, Context& ctx) const
         {
                 // Unqualified, so ADL finds the proxy's own hidden friend.
-                return std::formatter<Key, CharT>::format(format_as(ref), ctx);
+                return formatter<Key, CharT>::format(format_as(ref), ctx);
         }
 };
+
+} // namespace std
+
+// NOLINTEND(bugprone-std-namespace-modification)
 
 #endif // XSTD_BITS_DETAIL_BIDIRECTIONAL_HPP

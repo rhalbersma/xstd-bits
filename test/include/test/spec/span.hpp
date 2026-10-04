@@ -201,9 +201,9 @@ template<class X, class Y>
                 return false;
         }
         if constexpr (std::is_assignable_v<X&, bool>) {
-                x = not old;
+                x               = not old;
                 auto const seen = static_cast<bool>(y) == not old;
-                x = old;
+                x               = old;
                 return seen;
         } else {
                 return true;

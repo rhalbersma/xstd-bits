@@ -15,7 +15,7 @@ BOOST_AUTO_TEST_SUITE(ExtBoostBitSmallVector)
 namespace {
 
 inline constexpr auto N = 256UZ;
-using SmallVector = xstd::bit_small_vector<N>;
+using SmallVector       = xstd::bit_small_vector<N>;
 
 } // namespace
 

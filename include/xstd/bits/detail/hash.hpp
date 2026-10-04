@@ -37,7 +37,7 @@ constexpr auto hash_append_bits(Hash& h, Flavor const& f, Bits const& c)
         -> void
 {
         for (auto const i : std::views::iota(0UZ, c.num_blocks())) {
-                hash_append_block(h, f, c.block(i));
+                hash_append_block(h, f, c[i]);
         }
         boost::hash2::hash_append(h, f, c.size());
 }

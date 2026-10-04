@@ -57,7 +57,7 @@ auto check_get(X const& a)
         -> void
 {
         auto const expected = static_cast<bool>(a[I]);
-        auto b = a;
+        auto b              = a;
         BOOST_CHECK_EQUAL(static_cast<bool>(get<I>(b)), expected); // [array.tuple]/3
         BOOST_CHECK_EQUAL(static_cast<bool>(get<I>(std::as_const(b))), expected);
         BOOST_CHECK_EQUAL(static_cast<bool>(get<I>(X(a))), expected);

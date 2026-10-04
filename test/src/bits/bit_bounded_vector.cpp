@@ -143,10 +143,10 @@ BOOST_AUTO_TEST_CASE(ItYieldsEveryPosition)
 // A capacity of nought takes nothing: an empty source leaves it empty, and any other throws std::bad_alloc.
 BOOST_AUTO_TEST_CASE(ACapacityOfNoughtTakesOnlyAnEmptySource)
 {
-        using Z = xstd::basic_bit_bounded_vector<std::uint8_t, 0>;
-        auto const none = std::vector<bool>();
-        auto const some = std::vector<bool>({true});
-        auto const no_bits = xstd::basic_bit_bounded_vector<std::uint8_t, 9>();
+        using Z              = xstd::basic_bit_bounded_vector<std::uint8_t, 0>;
+        auto const none      = std::vector<bool>();
+        auto const some      = std::vector<bool>({true});
+        auto const no_bits   = xstd::basic_bit_bounded_vector<std::uint8_t, 9>();
         auto const some_bits = xstd::basic_bit_bounded_vector<std::uint8_t, 9>({true});
         BOOST_CHECK(Z(none.begin(), none.end()).empty());
         BOOST_CHECK_THROW(static_cast<void>(Z(some.begin(), some.end())), std::bad_alloc);

@@ -226,7 +226,7 @@ using test::set::on4::all_doubleton_set_pairs;
 [[nodiscard]] constexpr auto keyed_sets(std::size_t n, bool sweep)
         -> std::vector<keyed<key_vector>>
 {
-        auto result = std::vector<keyed<key_vector>>();
+        auto result          = std::vector<keyed<key_vector>>();
         auto const with_keys = [&](char const* name, char const* every, key_vector const& a) -> void {
                 if (sweep) {
                         all_valid<key_vector>([&](std::size_t k) -> void { result.push_back({.from = exhaustive(every, n), .a = a, .k = k}); }, n);
@@ -269,8 +269,8 @@ using test::set::on4::all_doubleton_set_pairs;
 [[nodiscard]] constexpr auto listed_sets(std::size_t n, std::size_t n2, bool sweep)
         -> std::vector<listed<key_vector>>
 {
-        auto result = std::vector<listed<key_vector>>();
-        auto const all_lists = lists(n, n2, sweep);
+        auto result           = std::vector<listed<key_vector>>();
+        auto const all_lists  = lists(n, n2, sweep);
         auto const with_lists = [&](auto const& a) -> void {
                 for (auto const& [from, list] : all_lists) {
                         result.push_back({.from = from, .a = a, .keys = list});
