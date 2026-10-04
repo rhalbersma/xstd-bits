@@ -19,7 +19,7 @@
 #include <ranges>                             // empty, iota, random_access_range, size
 #include <span>                               // dynamic_extent
 #include <tuple>                              // tuple
-#include <type_traits>                        // false_type, integral_constant, is_default_constructible_v, is_member_function_pointer_v, remove_cvref_t, true_type
+#include <type_traits>                        // false_type, integral_constant, is_default_constructible_v, is_member_function_pointer_v, true_type
 #include <utility>                            // declval
 #include <vector>                             // vector
 
@@ -289,14 +289,10 @@ BOOST_AUTO_TEST_CASE(AStaticWindowsSizesAreConstantsOfItsType)
         static_assert(noexcept(std::declval<W const&>().size()) and noexcept(std::declval<W const&>().empty()));
         static_assert(std::is_member_function_pointer_v<decltype(&Sub::size)>);
 
-        // A reference of unknown origin still names a constant, which a member function's answer is not.
-        auto const through_reference = [](W const& w) -> void {
-                static_assert(std::remove_cvref_t<decltype(w)>::size == 4UZ);
-                static_assert(not std::remove_cvref_t<decltype(w)>::empty);
-        };
+        static_assert(W::size == 4UZ);
+        static_assert(not W::empty);
         auto a = Owner();
         auto const w = xstd::bit_span(a).first<4>();
-        through_reference(w);
         BOOST_CHECK_EQUAL(std::ranges::size(w), 4UZ);
         BOOST_CHECK_EQUAL(std::size(w), 4UZ);
         BOOST_CHECK(not std::ranges::empty(w));
