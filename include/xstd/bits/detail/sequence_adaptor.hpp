@@ -273,6 +273,7 @@ struct run_time_sizes : Members
 
         [[nodiscard]] constexpr auto capacity() const noexcept
                 -> std::size_t
+                // NOLINTNEXTLINE(readability-redundant-parentheses): a call in a requires-clause needs them.
                 requires (can_grow<Bits, Store>()) and requires (std::remove_const_t<Bits> const& b) { b.capacity(); }
         {
                 return this->m_bits.capacity();
