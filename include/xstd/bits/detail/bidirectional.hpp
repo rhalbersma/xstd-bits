@@ -24,7 +24,7 @@ namespace xstd::bits::detail {
 enum struct direction : bool
 {
         ascending,
-        descending
+        descending,
 };
 
 template<class Bits, class Key = std::size_t, class KeyTraits = bit_key_traits<Key>, direction Direction = direction::ascending>
