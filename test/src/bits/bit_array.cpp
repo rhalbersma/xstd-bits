@@ -14,7 +14,7 @@
 #include <iterator>                 // contiguous_iterator, random_access_iterator, size
 #include <ranges>                   // begin, contiguous_range, empty, iota, random_access_range, size
 #include <tuple>                    // tuple_cat, tuple_size_v
-#include <type_traits>              // bool_constant, integral_constant
+#include <type_traits>              // bool_constant, integral_constant, remove_cvref_t
 #include <utility>                  // declval
 
 BOOST_AUTO_TEST_SUITE(BitArray)
@@ -90,9 +90,9 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItsSizesAreConstantsOfItsType, T, Types)
 
         // A reference of unknown origin still names a constant, which a member function's answer is not.
         auto const through_reference = [](T const& a) -> void {
-                static_assert(a.size == N);
-                static_assert(a.empty == (N == 0UZ));
-                static_assert(a.max_size == N);
+                static_assert(std::remove_cvref_t<decltype(a)>::size == N);
+                static_assert(std::remove_cvref_t<decltype(a)>::empty == (N == 0UZ));
+                static_assert(std::remove_cvref_t<decltype(a)>::max_size == N);
         };
         auto const a = T();
         through_reference(a);

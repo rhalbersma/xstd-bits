@@ -18,7 +18,7 @@
 #include <limits>                                // numeric_limits
 #include <new>                                   // bad_alloc
 #include <ranges>                                // iota, size
-#include <type_traits>                           // integral_constant, is_member_function_pointer_v
+#include <type_traits>                           // integral_constant, is_member_function_pointer_v, remove_cvref_t
 #include <vector>                                // vector
 
 #ifdef TEST_HAS_INPLACE_VECTOR
@@ -83,8 +83,8 @@ BOOST_AUTO_TEST_CASE(TheCapacityIsAConstantOfTheTypeAndTheWidthAFunction)
 
         // A reference of unknown origin still names a constant, which a member function's answer is not.
         auto const through_reference = [](T const& a) -> void {
-                static_assert(a.capacity == 24UZ);
-                static_assert(a.max_size == 24UZ);
+                static_assert(std::remove_cvref_t<decltype(a)>::capacity == 24UZ);
+                static_assert(std::remove_cvref_t<decltype(a)>::max_size == 24UZ);
         };
         auto const a = T(5UZ);
         through_reference(a);

@@ -20,7 +20,7 @@
 #include <iterator>                       // bidirectional_iterator
 #include <ranges>                         // bidirectional_range, iota, size, to
 #include <stdexcept>                      // out_of_range
-#include <type_traits>                    // integral_constant, is_constructible_v, is_convertible_v, is_member_function_pointer_v
+#include <type_traits>                    // integral_constant, is_constructible_v, is_convertible_v, is_member_function_pointer_v, remove_cvref_t
 #include <utility>                        // declval
 
 BOOST_AUTO_TEST_SUITE(BitFiniteSet)
@@ -83,7 +83,7 @@ BOOST_AUTO_TEST_CASE(MaxSizeIsAConstantOfTheTypeAndTheCountsAreFunctions)
 
         // A reference of unknown origin still names a constant, which a member function's answer is not.
         auto const through_reference = [](T const& a) -> void {
-                static_assert(a.max_size == 9UZ);
+                static_assert(std::remove_cvref_t<decltype(a)>::max_size == 9UZ);
         };
         auto const a = T({1UZ, 8UZ});
         through_reference(a);

@@ -1990,7 +1990,8 @@ One declaration gives three spellings. `A::size` is a value whose type carries `
 `std::size_t`. So every call `std::array`, `std::span` or `std::inplace_vector` allows compiles with the same result
 type and `noexcept`, and the synopsis checklists hold as written. The one observable difference is `&A::size`, which
 `[namespace.std]` does not let a program take of a standard library member in the first place. Through a parameter
-`A const& a`, `a.size` is a constant expression, as `a.size()` on a `std::array` is only under P2280.
+`A const& a`, `std::remove_cvref_t<decltype(a)>::size` is a constant expression on every compiler; `a.size` is one
+only under P2280, as `a.size()` on a `std::array` is.
 
 The adaptors declare none of these members. A static data member cannot carry a `requires`-clause, and a member
 function `size()` declared in the adaptor hides a base's `size` even where its own constraints fail, so the members
