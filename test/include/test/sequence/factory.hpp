@@ -27,6 +27,7 @@ concept static_capacity = test::dynamic<X> and requires { typename std::integral
 template<class X, std::size_t Limit>
 inline constexpr auto limit_v = [] -> std::size_t {
         if constexpr (static_width<X>) {
+                // NOLINTNEXTLINE(readability-static-accessed-through-instance): a function on the standard's owners.
                 return X().size();
         } else if constexpr (static_capacity<X>) {
                 return std::ranges::min(X::capacity(), Limit);
