@@ -10,7 +10,6 @@
 #include <xstd/ints/limits.hpp>     // numeric_limits
 #include <array>                    // array
 #include <bit>                      // bit_cast, endian
-#include <concepts>                 // convertible_to, default_initializable
 #include <cstddef>                  // byte, size_t, to_integer
 #include <cstring>                  // memcpy
 #include <iterator>                 // size
@@ -18,12 +17,11 @@
 #include <memory>                   // addressof
 #include <ranges>                   // data, iota, range_value_t
 #include <span>                     // dynamic_extent, span
-#include <type_traits>              // bool_constant, is_bounded_array_v, is_trivially_copyable_v
+#include <type_traits>              // is_bounded_array_v, is_trivially_copyable_v
 
 namespace xstd::bits::detail {
 
-inline constexpr auto bits_per_byte   = static_cast<std::size_t>(std::numeric_limits<unsigned char>::digits);
-inline constexpr auto bits_per_ullong = static_cast<std::size_t>(std::numeric_limits<unsigned long long>::digits);
+inline constexpr auto bits_per_byte = static_cast<std::size_t>(std::numeric_limits<unsigned char>::digits);
 
 // The bytes a width needs: byte j holds the positions [8j, 8j + 8) least significant bit first, at every block width.
 template<std::size_t N>
@@ -48,12 +46,6 @@ concept fixed_blocks_source =
         (std::is_bounded_array_v<Bits> or xstd::owned_bit_blocks<Bits>) and
         xstd::bit_blocks_extent_v<Bits> >= N;
 
-// Whether std::size of a value-initialised one is a constant expression, answering false rather than erroring.
-template<class Bits>
-concept has_constant_size = requires {
-        typename std::bool_constant<(std::size(Bits{}), true)>;
-};
-
 // A copy answers what the shifts do only when every bit of the object is a value bit: digits against sizeof.
 template<class Block>
 inline constexpr auto value_bits_fill_object =
@@ -70,74 +62,12 @@ template<class Bits>
         return std::bit_cast<std::array<std::byte, sizeof(Bits)>>(b);
 }
 
-// Whether bit_cast of a value-initialised Bits is a constant expression, answering false rather than erroring.
-template<class Bits>
-concept bit_cast_is_constant = requires {
-        typename std::bool_constant<(object_bytes(Bits{}), true)>;
-};
-
-// What the probe below has to be able to ask of a candidate: build an empty one, light one position, count them.
-template<class Bits>
-concept probeable_bits =
-        std::default_initializable<Bits> and
-        requires (Bits& b, Bits const& c, std::size_t n) {
-                b.set(n);
-                { c.count() } -> std::convertible_to<std::size_t>;
-                { std::size(c) } -> std::convertible_to<std::size_t>;
-        };
-
-// One position lit and counted, asked only for whether it is a constant expression.
-template<class Bits>
-[[nodiscard]] constexpr auto probe_once()
-        -> bool
-{
-        auto b = Bits{};
-        b.set(0UZ);
-        return static_cast<std::size_t>(b.count()) == 1UZ;
-}
-
-template<class Bits>
-concept probe_is_constant = requires {
-        typename std::bool_constant<(probe_once<Bits>(), true)>;
-};
-
-// All clear, then one position at a time: with count() == 1, no other byte can hold anything.
-template<class Bits, std::size_t N>
-[[nodiscard]] constexpr auto bit_layout_holds()
-        -> bool
-{
-        for (auto const byte : object_bytes(Bits{})) {
-                if (byte != std::byte{}) {
-                        return false;
-                }
-        }
-        for (auto const i : {0UZ, 7UZ, bits_per_byte, bits_per_ullong, N - 1UZ}) {
-                if (i >= N) {
-                        continue;
-                }
-                auto b = Bits{};
-                b.set(i);
-                if (static_cast<std::size_t>(b.count()) != 1UZ) {
-                        return false;
-                }
-                if (object_bytes(b)[i / bits_per_byte] != static_cast<std::byte>(1U << (i % bits_per_byte))) {
-                        return false;
-                }
-        }
-        return true;
-}
-
-// The second family: a field of bits whose layout is proved rather than believed, cheap structural questions first.
+// The second family: a foreign field of bits, read under std::bit_cast's rules wherever its object has room for N bits.
 template<class Bits, std::size_t N>
 concept container_source =
-        probeable_bits<Bits> and
         std::is_trivially_copyable_v<Bits> and
-        // Its width, not merely one that fits, and asked before the probe so it never reaches a missing position.
-        std::size(Bits{}) == N and
-        sizeof(Bits) * bits_per_byte >= N and
-        sizeof(Bits) * bits_per_byte < N + bits_per_ullong and
-        // With no byte to exchange there is nothing to prove, and bit_cast of std::bitset<0> reads uninitialised.
-        (byte_count<N> == 0UZ or (bit_cast_is_constant<Bits> and probe_is_constant<Bits> and bit_layout_holds<Bits, N>()));
+        std::endian::native == std::endian::little and
+        N <= sizeof(Bits) * bits_per_byte;
 
 template<class Bits, std::size_t N>
 concept bit_layout = fixed_blocks_source<Bits, N> or container_source<Bits, N>;
@@ -229,7 +159,12 @@ template<class Bits, std::size_t N>
         -> Bits
 {
         if constexpr (byte_count<N> == 0UZ) {
-                return Bits{};
+                if constexpr (fixed_blocks_source<Bits, N>) {
+                        return Bits{};
+                } else {
+                        // No byte to read, and bit_cast of std::bitset<0> reads uninitialised: zero bytes are cast in.
+                        return std::bit_cast<Bits>(std::array<std::byte, sizeof(Bits)>());
+                }
         } else if constexpr (xstd::bit_block<Bits>) {
                 // The shifts alone, for the reason bit_bytes gives: a copy measured the same and said less.
                 auto value = Bits{};
@@ -252,6 +187,7 @@ template<class Bits, std::size_t N>
                 }
                 return blocks;
         } else {
+                // Zero bytes past the width and a bit_cast, so nothing of Bits is constructed or called.
                 auto object = std::array<std::byte, sizeof(Bits)>();
                 if consteval {
                         for (auto const j : std::views::iota(0UZ, std::size(bytes))) {
