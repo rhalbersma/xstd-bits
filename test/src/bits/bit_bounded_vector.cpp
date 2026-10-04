@@ -17,7 +17,8 @@
 #include <cstdint>                               // uint8_t
 #include <limits>                                // numeric_limits
 #include <new>                                   // bad_alloc
-#include <ranges>                                // iota
+#include <ranges>                                // iota, size
+#include <type_traits>                           // integral_constant, is_member_function_pointer_v
 #include <vector>                                // vector
 
 #ifdef TEST_HAS_INPLACE_VECTOR
@@ -64,6 +65,29 @@ BOOST_AUTO_TEST_CASE(TheCapacityIsAPropertyOfTheTypeAndNotOfAnObject)
         T::reserve(T::capacity());
         T::shrink_to_fit();
         BOOST_CHECK_THROW(T::reserve(T::capacity() + 1), std::bad_alloc);
+}
+
+// The capacity is a constant of the type, called as [inplace.vector.capacity] calls it; the width stays a function.
+BOOST_AUTO_TEST_CASE(TheCapacityIsAConstantOfTheTypeAndTheWidthAFunction)
+{
+        static_assert(std::same_as<decltype(T::capacity), std::integral_constant<std::size_t, 24> const>);
+        static_assert(std::same_as<decltype(T::max_size), std::integral_constant<std::size_t, 24> const>);
+        static_assert(std::same_as<decltype(xstd::bit_bounded_vector<0>::capacity), std::integral_constant<std::size_t, 0> const>);
+        // NOLINTBEGIN(readability-static-accessed-through-instance): the call through an object is what is checked.
+        static_assert(std::same_as<decltype(T::capacity()), T::size_type>);
+        static_assert(std::same_as<decltype(T::max_size()), T::size_type>);
+        static_assert(noexcept(T::capacity()) and noexcept(T::max_size()));
+
+        static_assert(std::is_member_function_pointer_v<decltype(&T::size)>);
+        static_assert(std::is_member_function_pointer_v<decltype(&T::empty)>);
+
+        static_assert(T::capacity == 24UZ);
+        static_assert(T::max_size == 24UZ);
+        auto const a = T(5UZ);
+        BOOST_CHECK_EQUAL(a.capacity(), 24UZ);
+        BOOST_CHECK_EQUAL(std::ranges::size(a), 5UZ);
+        BOOST_CHECK(not a.empty());
+        // NOLINTEND(readability-static-accessed-through-instance)
 }
 
 // N is the capacity exactly, as std::inplace_vector<bool, N>'s is, and the width moves under it.

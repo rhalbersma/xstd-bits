@@ -41,6 +41,7 @@ concept static_capacity = requires { typename xstd::bits::detail::owned_storage<
 template<class X, std::size_t Limit>
 inline constexpr auto limit_v = [] -> std::size_t {
         if constexpr (static_width<X>) {
+                // NOLINTNEXTLINE(readability-static-accessed-through-instance): a function on the standard's owners.
                 return X().max_size();
         } else if constexpr (static_capacity<X>) {
                 return std::ranges::min(xstd::bits::detail::owned_storage<X>::bits_type::static_capacity(), Limit);

@@ -1964,6 +1964,49 @@ What is not here is a static *offset*. A window's start is a bit position, so un
 folded into the pointer unless it is a whole number of blocks, and putting it in the type is a step past anything
 the standard has; the position stays a member.
 
+### constant-sizes
+
+A size-like member whose value the type fixes is a static `std::integral_constant`, and `empty` a
+`std::bool_constant`, after Jonathan Müller's
+[static `constexpr std::integral_constant` idiom](https://www.think-cell.com/en/career/devblog/the-new-static-constexpr-std-integral_constant-idiom):
+
+```cpp
+static constexpr std::integral_constant<std::size_t, N> size = {};
+static constexpr std::bool_constant<N == 0> empty = {};
+```
+
+| type | constants | functions |
+|---|---|---|
+| `bit_array<N>` | `size`, `empty`, `max_size` | -- |
+| `bit_subspan` at a static extent | `size`, `empty`, `max_size` | -- |
+| `bit_bounded_vector<N>` | `capacity`, `max_size` | `size`, `empty` |
+| `bit_fixed_set<N>`, `bit_bounded_set<N>` | `max_size` | `size`, `empty`, which count the keys |
+
+The run-time widths keep functions, and so do the whole views, `bit_span` and `bit_set_view`, whose width is
+whatever they borrow. A set has no `capacity` at any width ([growth](#growth)).
+
+One declaration gives three spellings. `A::size` is a value whose type carries `N`, for metaprogramming by type;
+`A::size()` and `a.size()` call `integral_constant`'s `operator()`, which is `constexpr` and `noexcept` and returns
+`std::size_t`. So every call `std::array`, `std::span` or `std::inplace_vector` allows compiles with the same result
+type and `noexcept`, and the synopsis checklists hold as written. The one observable difference is `&A::size`, which
+`[namespace.std]` does not let a program take of a standard library member in the first place. Through a parameter
+`A const& a`, `std::remove_cvref_t<decltype(a)>::size` is a constant expression on every compiler; `a.size` is one
+only under P2280, as `a.size()` on a `std::array` is.
+
+The adaptors declare none of these members. A static data member cannot carry a `requires`-clause, and a member
+function `size()` declared in the adaptor hides a base's `size` even where its own constraints fail, so the members
+come from a base between the adaptor and its storage, chosen per column: `fixed_sizes`, `bounded_sizes` or
+`run_time_sizes` under the sequence reading, `fixed_max_size` or `run_time_max_size` under the set reading. The
+adaptor's using-declarations make them visible to its own unqualified calls, and a call `size()` there resolves
+through `operator()` as it did through a function. `capacity` is not among them, a fixed column having none, so the
+bounded column's own members name it as `members_type::capacity()`.
+
+Two consequences follow from the members being constants rather than functions:
+
+- `auto n = A::size;` deduces `std::integral_constant<std::size_t, N>`, not `std::size_t`. It converts implicitly,
+  so this rarely matters, but `auto n = a.size();` is the spelling that gives `size_type`.
+- `a.size` without parentheses compiles, and names the constant.
+
 ### a-set-needs-no-width
 
 A set owner could hold its blocks at `blocks_extent`, and the question is worth answering because the reading lets
@@ -2606,8 +2649,10 @@ Nothing above the storage restates the arithmetic, and nothing above it should: 
 from the storage the moment the storage learns something, which is how `set_adaptor` came to answer `SIZE_MAX - 1`
 while the storage answered `SIZE_MAX - 63` over the same blocks.
 
-That the set's is not `static` follows: an owner must ask its storage and a view must ask what it views, neither
-of which a static member can reach. `std::set::max_size()` is not static either.
+The set's is `static` exactly where the type fixes it, at a static width or under a static capacity, and is then
+the storage's `extent` or `static_capacity()` as a constant ([constant-sizes](#constant-sizes)). Elsewhere an owner
+must ask its storage and a view must ask what it views, neither of which a static member can reach.
+`std::set::max_size()` is not static at all.
 
 ### the-sum-that-wraps
 

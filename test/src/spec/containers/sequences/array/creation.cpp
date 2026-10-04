@@ -9,7 +9,7 @@
 #include <xstd/bits/bit_array.hpp>   // bit_array, to_bit_array
 #include <boost/test/unit_test.hpp>  // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <algorithm>                 // equal
-#include <array>                     // array, to_array
+#include <array>                     // array, to_array, tuple_size_v
 #include <concepts>                  // same_as
 #include <cstddef>                   // size_t
 #include <ranges>                    // begin, end, iota
@@ -28,7 +28,7 @@ using namespace test::sequence;
 namespace {
 
 template<class T>
-constexpr bool is_std_array = std::same_as<T, std::array<bool, T().size()>>;
+constexpr bool is_std_array = std::same_as<T, std::array<bool, std::tuple_size_v<T>>>;
 
 // The creation function of T's own column: std::to_array for std::array, xstd::to_bit_array for a packed one.
 template<class T, class A>
@@ -43,7 +43,7 @@ template<class T, class A>
 
 // What it returns: a std::array<bool, N> for the standard's, and a bit_array<N> whatever block the packed column has.
 template<class T>
-using created_t = std::conditional_t<is_std_array<T>, T, xstd::bit_array<T().size()>>;
+using created_t = std::conditional_t<is_std_array<T>, T, xstd::bit_array<std::tuple_size_v<T>>>;
 
 // The stripes as a built-in array, which has no width of nought to be declared at.
 template<std::size_t N>

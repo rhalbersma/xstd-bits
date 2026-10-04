@@ -87,6 +87,7 @@ using ledgered = std::tuple<std::vector<bool, test::container::non_propagating<b
 template<class X>
 inline constexpr auto held_width_v = [] -> std::size_t {
         if constexpr (test::sequence::static_width<X>) {
+                // NOLINTNEXTLINE(readability-static-accessed-through-instance): a function on the standard's owners.
                 return X().size();
         } else if constexpr (test::sequence::static_capacity<X>) {
                 return X::capacity();

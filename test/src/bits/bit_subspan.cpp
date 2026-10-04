@@ -15,10 +15,11 @@
 #include <cstddef>                            // ptrdiff_t, size_t
 #include <cstdint>                            // uint8_t
 #include <functional>                         // hash
-#include <ranges>                             // iota, random_access_range
+#include <iterator>                           // size
+#include <ranges>                             // empty, iota, random_access_range, size
 #include <span>                               // dynamic_extent
 #include <tuple>                              // tuple
-#include <type_traits>                        // is_default_constructible_v
+#include <type_traits>                        // false_type, integral_constant, is_default_constructible_v, is_member_function_pointer_v, true_type
 #include <utility>                            // declval
 #include <vector>                             // vector
 
@@ -273,6 +274,29 @@ BOOST_AUTO_TEST_CASE(AStaticWindowCarriesItsWidthInItsType)
         v.subspan<8, 8>().fill(true);
         BOOST_CHECK_EQUAL(a.count(), 8UZ);
         BOOST_CHECK(a[8] and a[15] and not a[7] and not a[16]);
+}
+
+// A static window's width is a constant of its type, as an array's is; a dynamic one's stays a function.
+BOOST_AUTO_TEST_CASE(AStaticWindowsSizesAreConstantsOfItsType)
+{
+        using W = xstd::bit_subspan<Blocks, 4, 20>;
+        static_assert(std::same_as<decltype(W::size), std::integral_constant<std::size_t, 4> const>);
+        static_assert(std::same_as<decltype(W::empty), std::false_type const>);
+        static_assert(std::same_as<decltype(xstd::bit_subspan<Blocks, 0, 20>::empty), std::true_type const>);
+        // NOLINTBEGIN(readability-static-accessed-through-instance): the call through an object is what is checked.
+        static_assert(std::same_as<decltype(std::declval<W const&>().size()), W::size_type>);
+        static_assert(std::same_as<decltype(std::declval<W const&>().empty()), bool>);
+        static_assert(noexcept(std::declval<W const&>().size()) and noexcept(std::declval<W const&>().empty()));
+        static_assert(std::is_member_function_pointer_v<decltype(&Sub::size)>);
+
+        static_assert(W::size == 4UZ);
+        static_assert(not W::empty);
+        auto a = Owner();
+        auto const w = xstd::bit_span(a).first<4>();
+        BOOST_CHECK_EQUAL(std::ranges::size(w), 4UZ);
+        BOOST_CHECK_EQUAL(std::size(w), 4UZ);
+        BOOST_CHECK(not std::ranges::empty(w));
+        // NOLINTEND(readability-static-accessed-through-instance)
 }
 
 // Where the type already says a count cannot fit, the member is not there to call, rather than ill-formed inside.
