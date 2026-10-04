@@ -37,7 +37,7 @@ public:
         using typename base_type::value_type;
 
         // std::array is an aggregate and declares none: these are what its initialization does, as constructors.
-        [[nodiscard]] basic_bit_array() noexcept = default;
+        [[nodiscard]] basic_bit_array() = default;
 
         // What is listed leads, the rest stays false.
         constexpr basic_bit_array(std::initializer_list<value_type> il)

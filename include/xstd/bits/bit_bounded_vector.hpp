@@ -39,7 +39,7 @@ public:
         using typename base_type::size_type;
 
         // [inplace.vector.cons], in [inplace.vector.overview]'s order.
-        [[nodiscard]] basic_bit_bounded_vector() noexcept = default;
+        [[nodiscard]] basic_bit_bounded_vector() = default;
 
         [[nodiscard]] constexpr explicit basic_bit_bounded_vector(size_type n)
                 : base_type(n)

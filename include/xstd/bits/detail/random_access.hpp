@@ -42,7 +42,7 @@ public:
         using pointer = void;
         using reference = random_access_bit_reference<Bits>;
 
-        [[nodiscard]] random_access_bit_iterator() noexcept = default;
+        [[nodiscard]] random_access_bit_iterator() = default;
 
         [[nodiscard]] constexpr random_access_bit_iterator(storage_ptr_t<Bits> ptr, std::size_t idx) noexcept
                 : m_ptr(ptr)
@@ -202,7 +202,7 @@ public:
         }
 
         // Said out loud: the assignments below are user-provided, which deprecates the implicit copy constructor.
-        random_access_bit_reference(random_access_bit_reference const&) noexcept = default;
+        random_access_bit_reference(random_access_bit_reference const&) = default;
 
         [[nodiscard]] constexpr auto operator&() const noexcept
                 -> iterator

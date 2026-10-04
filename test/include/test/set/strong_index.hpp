@@ -25,8 +25,8 @@ struct strong_index
 {
         std::size_t value;
 
-        [[nodiscard]] friend auto operator==(strong_index, strong_index) noexcept -> bool = default;
-        [[nodiscard]] friend auto operator<=>(strong_index, strong_index) noexcept -> std::strong_ordering = default;
+        [[nodiscard]] friend auto operator==(strong_index, strong_index) -> bool = default;
+        [[nodiscard]] friend auto operator<=>(strong_index, strong_index) -> std::strong_ordering = default;
 };
 
 // Positions start at the key First, in a universe of N keys: a mapping that is not the identity, and closes.

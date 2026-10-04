@@ -85,7 +85,7 @@ class block_ptr
         }
 
 public:
-        [[nodiscard]] block_ptr() noexcept = default;
+        [[nodiscard]] block_ptr() = default;
 
         [[nodiscard]] constexpr explicit(false) block_ptr(Bits* ptr) noexcept // NOLINT(misc-explicit-constructor)
                 : m_data(ptr->borrowed_blocks().data())

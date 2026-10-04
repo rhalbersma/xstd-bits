@@ -11,8 +11,8 @@
 #include <functional>               // less
 #include <memory_resource>          // polymorphic_allocator
 #include <scoped_allocator>         // scoped_allocator_adaptor
-#include <type_traits>              // is_nothrow_copy_assignable_v, is_nothrow_copy_constructible_v, is_nothrow_move_assignable_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v, is_trivially_copyable_v
-#include <utility>                  // move, swap
+#include <type_traits>              // is_nothrow_copy_assignable_v, is_nothrow_copy_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_assignable_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v, is_trivially_copyable_v
+#include <utility>                  // declval, move, swap
 #include <vector>                   // vector
 
 // What the compiler generates for each cell, held to the table rather than to whichever cell was read last.
@@ -213,6 +213,22 @@ BOOST_AUTO_TEST_CASE(TheBoundedColumnCopiesAsItsBlocksDoAndSwapsWithoutThrowing)
         static_assert(not std::is_nothrow_copy_constructible_v<xstd::bit_bounded_vector<N>> and not std::is_nothrow_swappable_v<xstd::bit_bounded_vector<N>::block_container_type>);
 
 #endif
+        BOOST_CHECK(true);
+}
+
+// The defaulted members deduce their exception specification: what the owners, iterators and proxies promise.
+BOOST_AUTO_TEST_CASE(TheDefaultedMembersDeduceTheyThrowNothing)
+{
+        static_assert(std::is_nothrow_default_constructible_v<xstd::bit_array<N>>);
+        static_assert(std::is_nothrow_default_constructible_v<xstd::bit_bounded_vector<N>>);
+        static_assert(std::is_nothrow_default_constructible_v<xstd::bit_array<N>::iterator>);
+        static_assert(std::is_nothrow_default_constructible_v<xstd::bit_vector::const_iterator>);
+        static_assert(std::is_nothrow_default_constructible_v<xstd::bit_fixed_set<N>::iterator>);
+        static_assert(std::is_nothrow_copy_constructible_v<xstd::bit_array<N>::reference>);
+        static_assert(std::is_nothrow_copy_constructible_v<xstd::bit_vector::reference>);
+        static_assert(noexcept(std::declval<xstd::bit_array<N> const&>() == std::declval<xstd::bit_array<N> const&>()));
+        static_assert(noexcept(std::declval<xstd::bit_vector const&>() == std::declval<xstd::bit_vector const&>()));
+        static_assert(noexcept(std::declval<xstd::bit_bounded_vector<N> const&>() == std::declval<xstd::bit_bounded_vector<N> const&>()));
         BOOST_CHECK(true);
 }
 

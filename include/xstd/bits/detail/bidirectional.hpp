@@ -63,7 +63,7 @@ public:
         using pointer = void;
         using reference = bidirectional_bit_reference<Bits, Key, KeyTraits, Direction>;
 
-        [[nodiscard]] bidirectional_bit_iterator() noexcept = default;
+        [[nodiscard]] bidirectional_bit_iterator() = default;
 
         // A zero width has one position, so every iterator over it is the same one and every loop stops early.
         [[nodiscard]] friend constexpr auto operator==(bidirectional_bit_iterator lhs, bidirectional_bit_iterator rhs) noexcept
@@ -162,7 +162,7 @@ public:
         using iterator = bidirectional_bit_iterator<Bits, Key, KeyTraits, Direction>;
 
         // A value, not a handle to rebind: trivially copyable, never assignable, as a reference to a key is.
-        bidirectional_bit_reference(bidirectional_bit_reference const&) noexcept = default;
+        bidirectional_bit_reference(bidirectional_bit_reference const&) = default;
         auto operator=(bidirectional_bit_reference const&) -> bidirectional_bit_reference& = delete;
 
         [[nodiscard]] constexpr auto operator&() const noexcept
