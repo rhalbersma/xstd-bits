@@ -6,6 +6,7 @@
 #include <test/array_storage.hpp>             // array_storage
 #include <test/block_types.hpp>               // graded_extents
 #include <test/value_reference.hpp>           // value_reference
+#include <xstd/bits/bit_fixed_set.hpp>        // basic_bit_fixed_set
 #include <xstd/bits/bit_set_view.hpp>         // bit_set_view
 #include <xstd/bits/detail/bidirectional.hpp> // bidirectional_bit_iterator, bidirectional_bit_reference
 #include <xstd/bits/detail/bit_container.hpp> // bit_container
@@ -216,13 +217,14 @@ BOOST_AUTO_TEST_CASE(TheProxyConvertsToTheKeyItsTraitsName)
         static_assert(std::bidirectional_iterator<iterator>);
         static_assert(not std::is_convertible_v<std::iter_reference_t<iterator>, std::size_t>);
 
-        auto c = Bits();
-        c.set(42);
-        key const k = *iterator(&c, 42UZ);
+        auto s = xstd::basic_bit_fixed_set<key, std::uint64_t, 200, key_traits>();
+        s.insert(key{42});
+        static_assert(std::same_as<decltype(s.begin()), iterator>);
+        key const k = *s.begin();
         BOOST_CHECK_EQUAL(k.value, 42UZ);
-        BOOST_CHECK_EQUAL(format_as(*iterator(&c, 42UZ)).value, 42UZ);
-        BOOST_CHECK_EQUAL(key_traits::to_index(*iterator(&c, 42UZ)), 42UZ);
-        holder const h = *iterator(&c, 42UZ);
+        BOOST_CHECK_EQUAL(format_as(*s.begin()).value, 42UZ);
+        BOOST_CHECK_EQUAL(key_traits::to_index(*s.begin()), 42UZ);
+        holder const h = *s.begin();
         BOOST_CHECK_EQUAL(h.held.value, 42UZ);
 }
 

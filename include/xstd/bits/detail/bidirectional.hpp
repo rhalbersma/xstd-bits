@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_DETAIL_BIDIRECTIONAL_HPP
 #define XSTD_BITS_DETAIL_BIDIRECTIONAL_HPP
 
-#include <xstd/bits/bit_key_traits.hpp>        // bit_key_traits
+#include <xstd/bits/bit_key_traits.hpp>       // bit_key_traits
 #include <xstd/bits/detail/bit_container.hpp> // bit_container_type
 #include <xstd/bits/detail/ownership.hpp>     // storage
 #include <xstd/bits/detail/storage_ptr.hpp>   // storage_ptr_t
