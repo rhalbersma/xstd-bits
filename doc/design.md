@@ -1600,7 +1600,7 @@ MSVC went on to refuse alias deduction through `basic_bit_fixed_set` and `basic_
 and that is what made them classes. A class takes its guides as its own and needs none of the three rules: the
 guides name `basic_bit_array<Block, N>` rather than computing a block count, and `bit_fixed_set<N>` is an alias of
 `basic_bit_fixed_set<std::size_t, std::size_t, N>`, one alias over a class, the depth every compiler deduced through. The one-block
-guides keep `K = 1`, which costs nothing. The views are a separate question from the owners
+guides need no defaulted count either. The views are a separate question from the owners
 ([the-views-are-the-adaptors](#the-views-are-the-adaptors)).
 
 ### owning-is-ours

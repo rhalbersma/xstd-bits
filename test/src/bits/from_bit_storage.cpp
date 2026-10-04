@@ -80,12 +80,13 @@ BOOST_AUTO_TEST_CASE(AnArrayOfBlocksDeducesTheirWidth)
         BOOST_CHECK((a == xstd::basic_bit_array<std::uint8_t, 24>(xstd::from_bit_storage, blocks)));
 }
 
-// Signed integers are no field of bits, an empty array names no width, and neither does a run-time width.
+// Signed integers are no field of bits, and a run-time width names none; an empty array names width zero.
 BOOST_AUTO_TEST_CASE(OnlyAnUnsignedIntegerOrItsArrayDeduces)
 {
         static_assert(deduces_from_bit_storage_of<std::uint64_t>);
         static_assert(deduces_from_bit_storage_of<std::array<std::uint32_t, 2>>);
-        static_assert(not deduces_from_bit_storage_of<std::array<std::uint32_t, 0>>);
+        static_assert(std::same_as<decltype(xstd::basic_bit_array(xstd::from_bit_storage, std::array<std::uint32_t, 0>())), xstd::basic_bit_array<std::uint32_t, 0>>);
+        static_assert(std::same_as<decltype(xstd::basic_bit_fixed_set(xstd::from_bit_storage, std::array<std::uint32_t, 0>())), xstd::basic_bit_fixed_set<std::size_t, std::uint32_t, 0>>);
         static_assert(not deduces_from_bit_storage_of<int>);
         static_assert(not deduces_from_bit_storage_of<std::array<int, 2>>);
         static_assert(not std::is_constructible_v<xstd::bit_vector, xstd::from_bit_storage_t, std::uint64_t>);

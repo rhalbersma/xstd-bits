@@ -73,14 +73,13 @@ public:
 template<std::size_t N>
 using bit_array = basic_bit_array<std::size_t, N>;
 
-// The width of one block or of an array of them; K = 1 keeps MSVC 17 from dropping the one-block guide.
-template<xstd::unsigned_integer Block, std::size_t K = 1>
-basic_bit_array(from_bit_storage_t, Block) -> basic_bit_array<Block, bit_storage_extent_v<Block> * K>;
+// The width of one block.
+template<xstd::unsigned_integer Block>
+basic_bit_array(from_bit_storage_t, Block) -> basic_bit_array<Block, bit_storage_extent_v<Block>>;
 
-// No guide from zero blocks: an empty array names no width worth deducing.
-template<xstd::unsigned_integer Block, std::size_t K>
-        requires (K != 0)
-basic_bit_array(from_bit_storage_t, std::array<Block, K>) -> basic_bit_array<Block, bit_storage_extent_v<std::array<Block, K>>>;
+// The width of an array of blocks, zero blocks included, as [span.deduct] takes an array's bound.
+template<xstd::unsigned_integer Block, std::size_t N>
+basic_bit_array(from_bit_storage_t, std::array<Block, N>) -> basic_bit_array<Block, bit_storage_extent_v<std::array<Block, N>>>;
 
 // [array.creation]'s to_array, of bits: a built-in array names no block type, so the default one is taken.
 template<class T, std::size_t N>
