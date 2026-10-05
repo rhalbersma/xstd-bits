@@ -235,7 +235,7 @@ BOOST_AUTO_TEST_CASE(AStrongIndexKeysItAsStdSetIsKeyed)
 BOOST_AUTO_TEST_CASE_TEMPLATE(AnUnsignedKeyKeysItAsStdSetIsKeyed, Key, test::all_block_types)
 {
         using X = xstd::basic_bit_set<Key, std::uint8_t>;
-        using Y = xstd::basic_bit_set<Key, std::uint8_t, xstd::bit_key_traits<Key>, std::greater<Key>>;
+        using Y = xstd::basic_bit_set<Key, std::uint8_t, xstd::bit_key_traits<Key>, std::greater<>>;
         static_assert(std::same_as<typename X::key_type, Key>);
         static_assert(std::same_as<std::iter_value_t<typename X::iterator>, Key>);
 
