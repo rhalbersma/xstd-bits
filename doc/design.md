@@ -2489,6 +2489,82 @@ block carries an unused tail: `aligned::bit_array<9>` is `bit_array<64>` and `al
 is `basic_bit_array<std::uint8_t, 16>`. The bounded column has the same forms, rounding its capacity:
 `aligned::bit_bounded_vector<9>` is `bit_bounded_vector<64>`.
 
+### flag-types
+
+A flag type replaces a bitmask enumeration such as `std::filesystem::perms`: code that names the enumeration compiles
+with the type's name respelled, and the set vocabulary comes on top. `bit_flag_set<Derived, Key, Block, N, KeyTraits,
+Interop>` is the base it derives from, `Derived` being the flag type itself, so that every operator returns it.
+`examples/include/xstd/filesystem.hpp` builds `xstd::filesystem::perms` this way, as the worked case. A flag type
+combines three pieces, and no other library combines all three.
+
+1. **A rank enumeration names the elements.** `enum class perm : std::uint8_t { others_exec, ..., set_uid }` gives
+   each POSIX permission bit its position as its rank, and `enum_traits<perm>` lists the twelve. It is what iteration
+   yields, so a `switch`, a `formatter` and the set vocabulary all speak it.
+2. **Constants of the flag type itself.** `perms::owner_read`, `perms::owner_all` and `perms::none` are `perms`,
+   so `|` needs no opt-in, a composite is an ordinary value, and the standard's spelling carries over. This is how
+   `[ios.base]` specifies `fmtflags`, and how Rust's `bitflags` and Swift's `OptionSet` declare flags. A class is
+   incomplete inside its own definition, so the constants are declared `static const` in the class and defined
+   `inline constexpr` after it, from where they are usable in constant expressions.
+3. **Implicit conversions to and from the interop enumeration.** Values from the standard's functions flow in,
+   `xfs::perms p = fs::status(path).permissions();`, and ours flow out, `fs::permissions(path, p)`. Rank `i` is bit
+   `i`, so the block is the mode word and each conversion is a cast.
+
+**The base holds one block, not a set.** A `basic_bit_fixed_set<Key, Block, N, KeyTraits>` would insist on `N` being
+the traits' `size`, and `perms` wants twelve keys in sixteen bits, so that `std::filesystem::perms::unknown`,
+`0xFFFF`, survives the round trip, as `bitflags`' `from_bits_retain` does. `N` is the word's width and the traits'
+`size`, where they close a universe, is the number of named positions, at most `N`. Every bit below `N` is kept and
+takes part in `==`, `|`, `&`, `^`, `-`, `~` and the conversions; a bit no key names is in the word but not in the
+range, so iteration and `size()` see the named flags alone, and `size()` stays the distance from `begin()` to `end()`.
+`~` is taken within `N`, so `~perms::none` is `perms::unknown`. The iterator is nested and holds a copy of the word
+still to visit, so it refers to nothing, and its `*` hands out the key by value: ADL on that searches the rank
+enumeration's namespace, where its `formatter` lives, and `std::format("{}", p)` prints `{owner_write, owner_read}`
+through the standard's range formatter, the flag type having a `key_type`. `N` narrower than the block adds a
+precondition on the conversion in, no bit at or above `N`, checked by an `assert` rather than truncated.
+
+**The mixed operators are generated, because hand-writing them goes wrong.** With only the homogeneous operators,
+`p ^ std::filesystem::perms::owner_write` is ambiguous: ours wants a conversion on the right, the enumeration's own
+`operator^` one on the left. Given an `Interop`, the base declares `==`, `|`, `&`, `^` and `-` against it in both
+orders, each an exact match for both operands, so it wins outright; `==` is one declaration, its reversed form being
+the language's. All of them are hidden friends taking `Derived` rather than the base, since a derived-to-base
+conversion on one operand against a user conversion on the other would tie as well. The model this design came from
+left `^` out by hand, which is how the ambiguity was found.
+
+**`p[k]` is a proxy for a `bool`**, reading as `contains(k)` and assigning as insert or erase: Qt's `setFlag(f, on)`
+and `bitflags`' `set(f, value)`, which a set can offer without becoming a sequence. It takes the sequence proxy's
+shape: `value_type` is `bool`, one implicit `operator value_type()`, const-qualified assignment from `value_type`,
+and a copy assignment that assigns the bit rather than rebinding, with no templated conversion and no `operator==`,
+so `p[k] == true` and `if (p[k])` go through the built-in comparison and contextual conversion. It is a class nested in
+the base, not a namespace-scope template over the user's types, so ADL on it searches `xstd` alone and never the
+namespaces of `Derived`, `Block`, `KeyTraits` or `Interop`: a mixed `operator==(bool, T)` there, as Boost.Int128
+declares for its `uint128`, cannot tie with the built-in comparison. On a `const` flag type `p[k]` is `contains(k)`.
+
+The names follow the vocabulary Rust and Swift already share. `contains(Key)` is `std::set`'s membership and
+`contains(Derived)` is all-of, as in `bitflags` and Swift, and the two agree on a single flag. Overlap is asked
+positively, `intersects`, since flags code nearly always asks whether any flag is set. `is_subset_of` is the
+library's own spelling. There is no nullary `count()`: `size()` answers it, and `std::set`'s `count(key)` is
+membership. The key constructor is `explicit`, so a key meets the flag type only through its constant.
+
+**Without a parallel enumeration**, `bit_flag_traits<E, N>` keys a set on the mask enumeration itself: `to_index` is
+`countr_zero` of a one-bit value and `from_index(i)` is `E(1 << i)`, both in the underlying type's unsigned
+counterpart, so an enumerator on a signed type's sign bit is the highest position like any other. Iteration yields
+one-bit values. `to_index` asserts a single bit, so `insert(E::all)` fails there instead of inserting bit 0. A set
+orders keys by position, which for the sign bit is not the order of the underlying values.
+
+Where it is not drop-in:
+
+- **The type's spelling changes.** `fs::perms` becomes `xfs::perms` where code names it, and the rest of `fs::` is
+  untouched. Re-exporting `std::filesystem` from `xstd::filesystem`, so that only the alias changes, would work, but
+  would make every `fs::` name pass through this library.
+- **It is a class, not an enumeration.** `std::to_underlying(p)` and `static_cast<unsigned>(p)` do not compile;
+  `switch (p)`, `fs::perms(p)` and the relational operators do, through the conversion.
+- **A standard function's result keeps the standard type.** `auto q = fs::status(path).permissions();` is a
+  `std::filesystem::perms`, with none of the queries until it is assigned to `xfs::perms`.
+- **A value with bits above `N` does not convert in.** `~` on the standard's enumeration sets every bit of its
+  underlying type, so `p & ~fs::perms::group_write` asserts where `p & ~xfs::perms::group_write` does not.
+- **Each name is written twice**, as an enumerator and as a constant. Reflection can read an enumeration but cannot
+  declare members, so nothing generates the constants yet.
+- **Printing** needs a `formatter` for the rank enumeration: a name table today, reflection later.
+
 ### a-name-by-storage
 
 `bit_sequence<C>` named the sequence owner by the storage its blocks sit in -- `bit_sequence<std::uint64_t>` for
