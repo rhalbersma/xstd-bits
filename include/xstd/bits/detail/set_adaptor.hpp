@@ -251,33 +251,37 @@ public:
         using derived_type = std::conditional_t<std::is_void_v<Derived>, set_adaptor, Derived>;
 
         // What a trait asks of this vehicle, every container built on it answering alike.
-        using adaptor_type                 = set_adaptor;
-        using reads_as                     = set_reading_tag;
-        using adapted_type                 = Bits;
-        static constexpr bool owns_storage = is_owner;
+        using adaptor_type = set_adaptor;
+        using reads_as     = set_reading_tag;
+        using adapted_type = Bits;
+
+        static constexpr bool owns_storage     = is_owner;
+        static constexpr bool has_static_width = (Bits::extent != std::dynamic_extent);
 
         // types
-        using key_type                         = Key;
-        using key_traits_type                  = KeyTraits;
-        using key_compare                      = Compare;
-        using value_type                       = key_type;
-        using value_compare                    = key_compare;
-        static constexpr bool has_static_width = (Bits::extent != std::dynamic_extent);
-        using pointer                          = void;
-        using const_pointer                    = pointer;
-        using reference                        = bidirectional_bit_reference<Bits, Key, KeyTraits, set::direction_of<Compare>>;
-        using const_reference                  = reference;
-        using size_type                        = std::size_t;
-        using difference_type                  = std::ptrdiff_t;
-        using iterator                         = bidirectional_bit_iterator<Bits, Key, KeyTraits, set::direction_of<Compare>>;
-        using const_iterator                   = iterator;
-        using reverse_iterator                 = std::reverse_iterator<iterator>;
-        using const_reverse_iterator           = std::reverse_iterator<const_iterator>;
+        using key_type               = Key;
+        using key_compare            = Compare;
+        using value_type             = key_type;
+        using value_compare          = key_compare;
+        using pointer                = void;
+        using const_pointer          = pointer;
+        using reference              = bidirectional_bit_reference<Bits, Key, KeyTraits, set::direction_of<Compare>>;
+        using const_reference        = reference;
+        using size_type              = std::size_t;
+        using difference_type        = std::ptrdiff_t;
+        using iterator               = bidirectional_bit_iterator<Bits, Key, KeyTraits, set::direction_of<Compare>>;
+        using const_iterator         = iterator;
+        using reverse_iterator       = std::reverse_iterator<iterator>;
+        using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+
+        // Not in [set.overview]: how a key maps to a position.
+        using key_traits_type = KeyTraits;
 
 private:
         // An allocator argument as [container.alloc.reqmts] takes it: converting, and only where the storage has one.
         static constexpr bool has_allocator = has_allocator_v<std::remove_const_t<Bits>>;
-        using allocator_param               = allocator_param_t<std::remove_const_t<Bits>>;
+
+        using allocator_param = allocator_param_t<std::remove_const_t<Bits>>;
 
 public:
         // construct/copy/destroy; an owner is built the way std::set is, a view only from what it views.
