@@ -131,18 +131,21 @@ namespace {
 using hostile_bits = xstd::bits::detail::bit_block_container<acme::blocks<std::uint64_t>>;
 
 // The proxies over acme's storage compare as their bools do, and the iterators as their positions do.
-[[nodiscard]] constexpr auto hostile_storage_compares_as_ours() noexcept
+[[nodiscard]] constexpr auto hostile_storage_compares_as_ours()
         -> bool
 {
         auto c = hostile_bits(64UZ);
         c.set(1);
-        auto const first  = iterator_at(c, 0UZ);
-        auto const again  = iterator_at(c, 0UZ);
-        auto const second = std::next(first);
-        auto const clear  = *first;
-        auto const same   = *again;
-        auto const set    = *second;
-        return clear == same and not(clear != same) and not(clear < same) and clear != set and clear < set and first == again and first != second and first < second;
+        auto const first      = iterator_at(c, 0UZ);
+        auto const again      = iterator_at(c, 0UZ);
+        auto const second     = std::next(first);
+        auto const clear      = *first;
+        auto const same       = *again;
+        auto const set        = *second;
+        auto const equalities = clear == same and not(clear != same) and clear != set;
+        // The built-in < is the comparison under test, and it compares the two bools as ints.
+        auto const orderings = not(clear < same) and clear < set; // NOLINT(readability-implicit-bool-conversion)
+        return equalities and orderings and first == again and first != second and first < second;
 }
 
 } // namespace

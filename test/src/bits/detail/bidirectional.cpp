@@ -133,7 +133,7 @@ namespace {
 using hostile_set = xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 64, acme::key_traits>;
 
 // The proxies under acme's key traits compare as their keys do, and the iterators as their positions do.
-[[nodiscard]] constexpr auto hostile_key_traits_compare_as_ours() noexcept
+[[nodiscard]] constexpr auto hostile_key_traits_compare_as_ours()
         -> bool
 {
         auto s = hostile_set();
@@ -355,7 +355,7 @@ BOOST_AUTO_TEST_CASE(TheProxyComparesThroughItsOneConversion)
         BOOST_CHECK(user::flag(*narrow_view.begin()) == user::flag(3));
 }
 
-// acme's operators decide a comparison between its own key traits, and none between the proxies or iterators using them.
+// acme's operators decide a comparison between its own key traits, and none between proxies or iterators using them.
 BOOST_AUTO_TEST_CASE(AKeyTraitsNamespaceIsNotAssociatedWithItsProxies)
 {
         auto const lhs = acme::key_traits();
