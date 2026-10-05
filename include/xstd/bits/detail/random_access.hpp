@@ -20,12 +20,20 @@
 // The iterator is the primitive: a pointer and a position, reaching the bits through the storage alone.
 namespace xstd::bits::detail {
 
-// Nested in a class template, which is no specialization: Bits' namespaces are not associated with them by ADL.
+// Member templates on the value type alone: ADL associates its namespaces with the pair, and none of Bits'.
 template<class Bits>
 struct random_access
 {
-        class iterator;
-        class reference;
+        using value_type = bool;
+
+        template<class Value>
+        class basic_iterator;
+
+        template<class Value>
+        class basic_reference;
+
+        using iterator  = basic_iterator<value_type>;
+        using reference = basic_reference<value_type>;
 };
 
 template<class Bits>
@@ -49,20 +57,24 @@ class sequence_adaptor;
 
 // A position in the sequence reading; const Bits is the const iterator, the old IsConst bool folded into the type.
 template<class Bits>
-class random_access<Bits>::iterator
+template<class Value>
+class random_access<Bits>::basic_iterator
 {
+        // Value exists only to put the value type's namespaces among the associated ones: it is no second axis.
+        static_assert(std::same_as<Value, random_access::value_type>);
+
         storage_ptr_t<Bits> m_ptr{};
         std::size_t m_idx{};
 
         // The const twin, whose conversion below reads these members; naming itself where Bits is already const.
-        friend class random_access<Bits const>::iterator;
+        friend class random_access<Bits const>::template basic_iterator<Value>;
 
         template<bit_block_container_type OtherBits, storage OtherStore, window OtherWindow, class OtherDerived, std::size_t OtherE>
         friend class sequence_adaptor;
 
-        friend class random_access::reference;
+        friend class basic_reference<Value>;
 
-        [[nodiscard]] constexpr iterator(storage_ptr_t<Bits> ptr, std::size_t idx) noexcept
+        [[nodiscard]] constexpr basic_iterator(storage_ptr_t<Bits> ptr, std::size_t idx) noexcept
                 : m_ptr(ptr)
                 , m_idx(idx)
         {
@@ -71,29 +83,29 @@ class random_access<Bits>::iterator
 
 public:
         using iterator_category = std::random_access_iterator_tag;
-        using value_type        = bool;
+        using value_type        = Value;
         using difference_type   = std::ptrdiff_t;
         using pointer           = void;
-        using reference         = random_access::reference;
+        using reference         = basic_reference<Value>;
 
-        [[nodiscard]] iterator() = default;
+        [[nodiscard]] basic_iterator() = default;
 
         // A mutable iterator converts to its const twin, as a container's iterator converts to its const_iterator.
         template<class MutableIterator>
                 requires std::is_const_v<Bits> and std::same_as<MutableIterator, typename random_access<std::remove_const_t<Bits>>::iterator>
-        [[nodiscard]] constexpr explicit(false) iterator(MutableIterator other) noexcept // NOLINT(misc-explicit-constructor)
+        [[nodiscard]] constexpr explicit(false) basic_iterator(MutableIterator other) noexcept // NOLINT(misc-explicit-constructor)
                 : m_ptr(other.m_ptr)
                 , m_idx(other.m_idx)
         {}
 
-        [[nodiscard]] friend constexpr auto operator==(iterator lhs, iterator rhs) noexcept
+        [[nodiscard]] friend constexpr auto operator==(basic_iterator lhs, basic_iterator rhs) noexcept
                 -> bool
         {
                 assert(lhs.m_ptr == rhs.m_ptr);
                 return lhs.m_idx == rhs.m_idx;
         }
 
-        [[nodiscard]] friend constexpr auto operator<=>(iterator lhs, iterator rhs) noexcept
+        [[nodiscard]] friend constexpr auto operator<=>(basic_iterator lhs, basic_iterator rhs) noexcept
                 -> std::strong_ordering
         {
                 assert(lhs.m_ptr == rhs.m_ptr);
@@ -110,21 +122,21 @@ public:
         }
 
         constexpr auto operator++() noexcept
-                -> iterator&
+                -> basic_iterator&
         {
                 ++m_idx;
                 return *this;
         }
 
         constexpr auto operator--() noexcept
-                -> iterator&
+                -> basic_iterator&
         {
                 --m_idx;
                 return *this;
         }
 
         constexpr auto operator++(int) noexcept
-                -> iterator
+                -> basic_iterator
         {
                 auto nrv = *this;
                 ++*this;
@@ -132,7 +144,7 @@ public:
         }
 
         constexpr auto operator--(int) noexcept
-                -> iterator
+                -> basic_iterator
         {
                 auto nrv = *this;
                 --*this;
@@ -140,44 +152,44 @@ public:
         }
 
         constexpr auto operator+=(difference_type n) noexcept
-                -> iterator&
+                -> basic_iterator&
         {
                 m_idx = static_cast<std::size_t>(static_cast<difference_type>(m_idx) + n);
                 return *this;
         }
 
         constexpr auto operator-=(difference_type n) noexcept
-                -> iterator&
+                -> basic_iterator&
         {
                 m_idx = static_cast<std::size_t>(static_cast<difference_type>(m_idx) - n);
                 return *this;
         }
 
-        [[nodiscard]] friend constexpr auto operator+(iterator lhs, difference_type n) noexcept
-                -> iterator
+        [[nodiscard]] friend constexpr auto operator+(basic_iterator lhs, difference_type n) noexcept
+                -> basic_iterator
         {
                 auto nrv = lhs;
                 nrv += n;
                 return nrv;
         }
 
-        [[nodiscard]] friend constexpr auto operator+(difference_type n, iterator rhs) noexcept
-                -> iterator
+        [[nodiscard]] friend constexpr auto operator+(difference_type n, basic_iterator rhs) noexcept
+                -> basic_iterator
         {
                 auto nrv = rhs;
                 nrv += n;
                 return nrv;
         }
 
-        [[nodiscard]] friend constexpr auto operator-(iterator lhs, difference_type n) noexcept
-                -> iterator
+        [[nodiscard]] friend constexpr auto operator-(basic_iterator lhs, difference_type n) noexcept
+                -> basic_iterator
         {
                 auto nrv = lhs;
                 nrv -= n;
                 return nrv;
         }
 
-        [[nodiscard]] friend constexpr auto operator-(iterator lhs, iterator rhs) noexcept
+        [[nodiscard]] friend constexpr auto operator-(basic_iterator lhs, basic_iterator rhs) noexcept
                 -> difference_type
         {
                 assert(lhs.m_ptr == rhs.m_ptr);
@@ -191,13 +203,13 @@ public:
         }
 
         // The one ADL exception: std::ranges' own protocol, which is how sort and swap_ranges reach a proxy.
-        [[nodiscard]] friend constexpr auto iter_move(iterator it) noexcept
+        [[nodiscard]] friend constexpr auto iter_move(basic_iterator it) noexcept
                 -> value_type
         {
                 return *it;
         }
 
-        friend constexpr auto iter_swap(iterator x, iterator y) noexcept
+        friend constexpr auto iter_swap(basic_iterator x, basic_iterator y) noexcept
                 -> void
                 requires (not std::is_const_v<Bits>)
         {
@@ -209,11 +221,15 @@ public:
 
 // A proxy bool spelled as [vector.bool] spells std::vector<bool>::reference; operator~ is std::bitset's.
 template<class Bits>
-class random_access<Bits>::reference
+template<class Value>
+class random_access<Bits>::basic_reference
 {
+        // Value exists only to put the value type's namespaces among the associated ones: it is no second axis.
+        static_assert(std::same_as<Value, random_access::value_type>);
+
 public:
-        using value_type     = bool;
-        using iterator       = random_access::iterator;
+        using value_type     = Value;
+        using iterator       = basic_iterator<Value>;
         using enclosing_type = random_access;
 
 private:
@@ -226,9 +242,9 @@ private:
         template<bit_block_container_type OtherBits, storage OtherStore, window OtherWindow, class OtherDerived, std::size_t OtherE>
         friend class sequence_adaptor;
 
-        friend class random_access::iterator;
+        friend class basic_iterator<Value>;
 
-        [[nodiscard]] constexpr reference(storage_ptr_t<Bits> ptr, std::size_t idx) noexcept
+        [[nodiscard]] constexpr basic_reference(storage_ptr_t<Bits> ptr, std::size_t idx) noexcept
                 : m_ptr(ptr)
                 , m_idx(idx)
         {
@@ -237,7 +253,7 @@ private:
 
 public:
         // Said out loud: the assignments below are user-provided, which deprecates the implicit copy constructor.
-        reference(reference const&) = default;
+        basic_reference(basic_reference const&) = default;
 
         [[nodiscard]] constexpr auto operator&() const noexcept
                 -> iterator
@@ -253,7 +269,7 @@ public:
 
         // const-qualified and returning a const reference, the proxy shape P2321R2 gave std::vector<bool>::reference.
         constexpr auto operator=(value_type value) const noexcept // NOLINT(misc-unconventional-assign-operator)
-                -> reference const&
+                -> basic_reference const&
                 requires is_writable
         {
                 m_ptr->assign(m_idx, value);
@@ -261,8 +277,8 @@ public:
         }
 
         // Assigns the bit, not the proxy: rebinding would break the swaps below.
-        constexpr auto operator=(reference const& other) const noexcept // NOLINT(misc-unconventional-assign-operator,bugprone-unhandled-self-assignment)
-                -> reference const&
+        constexpr auto operator=(basic_reference const& other) const noexcept // NOLINT(misc-unconventional-assign-operator,bugprone-unhandled-self-assignment)
+                -> basic_reference const&
                 requires is_writable
         {
                 return *this = static_cast<value_type>(other);
@@ -277,7 +293,7 @@ public:
         }
 
         // The pre-ranges spelling of iter_swap, for std::swap and the algorithms still built on it.
-        friend constexpr auto swap(reference x, reference y) noexcept -> void
+        friend constexpr auto swap(basic_reference x, basic_reference y) noexcept -> void
                 requires is_writable
         {
                 value_type const t = x;
@@ -285,7 +301,7 @@ public:
                 y                  = t;
         }
 
-        friend constexpr auto swap(reference x, value_type& y) noexcept -> void
+        friend constexpr auto swap(basic_reference x, value_type& y) noexcept -> void
                 requires is_writable
         {
                 value_type const t = x;
@@ -293,7 +309,7 @@ public:
                 y                  = t;
         }
 
-        friend constexpr auto swap(value_type& x, reference y) noexcept -> void
+        friend constexpr auto swap(value_type& x, basic_reference y) noexcept -> void
                 requires is_writable
         {
                 value_type const t = x;
@@ -302,7 +318,7 @@ public:
         }
 
         // What this proxy prints as, said once: our std::formatter calls it unqualified, and fmt finds it by ADL.
-        [[nodiscard]] friend constexpr auto format_as(reference ref) noexcept
+        [[nodiscard]] friend constexpr auto format_as(basic_reference ref) noexcept
                 -> value_type
         {
                 return ref;

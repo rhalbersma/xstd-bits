@@ -28,41 +28,49 @@ enum struct direction : bool
         descending,
 };
 
-// Member templates of a class template: only Key, their own argument, puts its namespaces in ADL's associated set.
-template<class Bits, class KeyTraits, direction Direction>
+// Member templates on the key alone: ADL associates its namespaces with the pair, and none of the others'.
+template<class Bits, class Key, class KeyTraits, direction Direction>
 struct bidirectional
 {
-        template<class Key>
-        class iterator;
+        using value_type = Key;
 
-        template<class Key>
-        class reference;
+        template<class Value>
+        class basic_iterator;
+
+        template<class Value>
+        class basic_reference;
+
+        using iterator  = basic_iterator<value_type>;
+        using reference = basic_reference<value_type>;
 };
 
 template<class Bits, class Key = std::size_t, class KeyTraits = bit_key_traits<Key>, direction Direction = direction::ascending>
-using bidirectional_bit_iterator = bidirectional<Bits, KeyTraits, Direction>::template iterator<Key>;
+using bidirectional_bit_iterator = bidirectional<Bits, Key, KeyTraits, Direction>::iterator;
 
 template<class Bits, class Key = std::size_t, class KeyTraits = bit_key_traits<Key>, direction Direction = direction::ascending>
-using bidirectional_bit_reference = bidirectional<Bits, KeyTraits, Direction>::template reference<Key>;
+using bidirectional_bit_reference = bidirectional<Bits, Key, KeyTraits, Direction>::reference;
 
 template<class>
 inline constexpr bool is_bidirectional = false;
 
-template<class Bits, class KeyTraits, direction Direction>
-inline constexpr bool is_bidirectional<bidirectional<Bits, KeyTraits, Direction>> = true;
+template<class Bits, class Key, class KeyTraits, direction Direction>
+inline constexpr bool is_bidirectional<bidirectional<Bits, Key, KeyTraits, Direction>> = true;
 
 // Recognized through the enclosing class it names, since no deduction reaches Bits through a nested class.
 template<class R>
-concept bidirectional_reference = is_bidirectional<typename R::enclosing_type> and std::same_as<R, typename R::enclosing_type::template reference<typename R::value_type>>;
+concept bidirectional_reference = is_bidirectional<typename R::enclosing_type> and std::same_as<R, typename R::enclosing_type::reference>;
 
 template<bit_block_container_type Bits, storage Store, class Derived, class Key, class KeyTraits, class Compare>
 class set_adaptor;
 
 // A position in the set reading, read-only whatever Bits' qualification: a key is nothing to write through.
-template<class Bits, class KeyTraits, direction Direction>
-template<class Key>
-class bidirectional<Bits, KeyTraits, Direction>::iterator
+template<class Bits, class Key, class KeyTraits, direction Direction>
+template<class Value>
+class bidirectional<Bits, Key, KeyTraits, Direction>::basic_iterator
 {
+        // Value exists only to put the key's namespaces among the associated ones: it is no second axis.
+        static_assert(std::same_as<Value, Key>);
+
         using bits_type = std::remove_const_t<Bits>;
 
         storage_ptr_t<bits_type const> m_ptr{};
@@ -71,9 +79,9 @@ class bidirectional<Bits, KeyTraits, Direction>::iterator
         template<bit_block_container_type OtherBits, storage OtherStore, class OtherDerived, class OtherKey, class OtherKeyTraits, class OtherCompare>
         friend class set_adaptor;
 
-        friend class bidirectional::reference<Key>;
+        friend class basic_reference<Value>;
 
-        [[nodiscard]] constexpr iterator(storage_ptr_t<bits_type const> ptr, std::size_t idx) noexcept
+        [[nodiscard]] constexpr basic_iterator(storage_ptr_t<bits_type const> ptr, std::size_t idx) noexcept
                 : m_ptr(ptr)
                 , m_idx(idx)
         {
@@ -85,12 +93,12 @@ public:
         using value_type        = Key;
         using difference_type   = std::ptrdiff_t;
         using pointer           = void;
-        using reference         = bidirectional::reference<Key>;
+        using reference         = basic_reference<Value>;
 
-        [[nodiscard]] iterator() = default;
+        [[nodiscard]] basic_iterator() = default;
 
         // A zero width has one position, so every iterator over it is the same one and every loop stops early.
-        [[nodiscard]] friend constexpr auto operator==(iterator lhs, iterator rhs) noexcept
+        [[nodiscard]] friend constexpr auto operator==(basic_iterator lhs, basic_iterator rhs) noexcept
                 -> bool
         {
                 assert(lhs.m_ptr == rhs.m_ptr);
@@ -110,7 +118,7 @@ public:
 
         // Both steps guarded at a zero width: the exclusive scans take a position it has none to give.
         constexpr auto operator++() noexcept
-                -> iterator&
+                -> basic_iterator&
         {
                 assert(m_ptr != nullptr);
                 if constexpr (not zero_width<Bits>) {
@@ -126,7 +134,7 @@ public:
 
         // Descending, the end is size() as well, so stepping back from it is a step up to the lowest position.
         constexpr auto operator--() noexcept
-                -> iterator&
+                -> basic_iterator&
         {
                 assert(m_ptr != nullptr);
                 if constexpr (not zero_width<Bits>) {
@@ -145,7 +153,7 @@ public:
         }
 
         constexpr auto operator++(int) noexcept
-                -> iterator
+                -> basic_iterator
         {
                 auto nrv = *this;
                 ++*this;
@@ -153,7 +161,7 @@ public:
         }
 
         constexpr auto operator--(int) noexcept
-                -> iterator
+                -> basic_iterator
         {
                 auto nrv = *this;
                 --*this;
@@ -162,10 +170,13 @@ public:
 };
 
 // The key at a position, arriving by conversion through KeyTraits; & hands the iterator back, so the pair round-trips.
-template<class Bits, class KeyTraits, direction Direction>
-template<class Key>
-class bidirectional<Bits, KeyTraits, Direction>::reference
+template<class Bits, class Key, class KeyTraits, direction Direction>
+template<class Value>
+class bidirectional<Bits, Key, KeyTraits, Direction>::basic_reference
 {
+        // Value exists only to put the key's namespaces among the associated ones: it is no second axis.
+        static_assert(std::same_as<Value, Key>);
+
         using bits_type = std::remove_const_t<Bits>;
 
         storage_ptr_t<bits_type const> m_ptr;
@@ -174,9 +185,9 @@ class bidirectional<Bits, KeyTraits, Direction>::reference
         template<bit_block_container_type OtherBits, storage OtherStore, class OtherDerived, class OtherKey, class OtherKeyTraits, class OtherCompare>
         friend class set_adaptor;
 
-        friend class bidirectional::iterator<Key>;
+        friend class basic_iterator<Value>;
 
-        [[nodiscard]] constexpr reference(storage_ptr_t<bits_type const> ptr, std::size_t idx) noexcept
+        [[nodiscard]] constexpr basic_reference(storage_ptr_t<bits_type const> ptr, std::size_t idx) noexcept
                 : m_ptr(ptr)
                 , m_idx(idx)
         {
@@ -185,12 +196,12 @@ class bidirectional<Bits, KeyTraits, Direction>::reference
 
 public:
         using value_type     = Key;
-        using iterator       = bidirectional::iterator<Key>;
+        using iterator       = basic_iterator<Value>;
         using enclosing_type = bidirectional;
 
         // A value, not a handle to rebind: trivially copyable, never assignable, as a reference to a key is.
-        reference(reference const&)                    = default;
-        auto operator=(reference const&) -> reference& = delete;
+        basic_reference(basic_reference const&)                    = default;
+        auto operator=(basic_reference const&) -> basic_reference& = delete;
 
         [[nodiscard]] constexpr auto operator&() const noexcept
                 -> iterator
@@ -205,7 +216,7 @@ public:
         }
 
         // What this proxy prints as, said once: our std::formatter calls it unqualified, and fmt finds it by ADL.
-        [[nodiscard]] friend constexpr auto format_as(reference ref) noexcept
+        [[nodiscard]] friend constexpr auto format_as(basic_reference ref) noexcept
                 -> value_type
         {
                 return ref;
