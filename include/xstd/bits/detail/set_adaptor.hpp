@@ -10,7 +10,6 @@
 #include <xstd/bits/bit_key_traits.hpp>              // bit_key_traits
 #include <xstd/bits/detail/adapted_bits.hpp>         // adapted_bits
 #include <xstd/bits/detail/allocator_base_type.hpp>  // allocator_base_type, allocator_param_t, has_allocator_v
-#include <xstd/bits/detail/bidirectional.hpp>        // bidirectional_bit_iterator, bidirectional_bit_reference, direction
 #include <xstd/bits/detail/bit_block_container.hpp>  // bit_block_container, bit_block_container_type
 #include <xstd/bits/detail/borrowed_bits.hpp>        // borrow_bits, borrowable_block, borrowable_blocks, borrowed_bits_t
 #include <xstd/bits/detail/comparisons.hpp>          // numeric_three_way, set_equal, set_three_way
@@ -19,7 +18,7 @@
 #include <xstd/bits/detail/intrin.hpp>               // countl_zero, countr_zero
 #include <xstd/bits/detail/ownership.hpp>            // owned_bits_t, owned_storage, owner_of, owner_reading, set_reading_tag, storage, storage_access, owns
 #include <xstd/bits/detail/shift.hpp>                // shl, shr
-#include <xstd/bits/detail/storage_ptr.hpp>          // storage_ref_t
+#include <xstd/bits/detail/storage_ptr.hpp>          // storage_ptr_t, storage_ref_t
 #include <xstd/bits/detail/zero_width.hpp>           // zero_width
 #include <xstd/bits/from_blocks.hpp>                 // from_blocks_t
 #include <xstd/misc/type_traits/empty_base_type.hpp> // empty_base_type
@@ -30,10 +29,10 @@
 #include <compare>                                   // strong_ordering
 #include <concepts>                                  // constructible_from, convertible_to, invocable, same_as, swappable
 #include <cstddef>                                   // ptrdiff_t, size_t
-#include <format>                                    // format
+#include <format>                                    // format, formatter
 #include <functional>                                // greater, hash, less
 #include <initializer_list>                          // initializer_list
-#include <iterator>                                  // input_iterator, iter_reference_t, make_reverse_iterator, reverse_iterator, sentinel_for
+#include <iterator>                                  // bidirectional_iterator_tag, input_iterator, iter_reference_t, make_reverse_iterator, reverse_iterator, sentinel_for
 #include <ranges>                                    // begin, enable_borrowed_range, enable_view, end, input_range, iota, range_reference_t, from_range_t, subrange, swap, transform
 #include <source_location>                           // source_location
 #include <span>                                      // dynamic_extent
@@ -43,6 +42,13 @@
 
 // The set reading, [set] over a bit_block_container, owning it or referring to it.
 namespace xstd::bits::detail {
+
+// The order a set reading walks its positions in, which is all a comparator can choose.
+enum struct direction : bool
+{
+        ascending,
+        descending,
+};
 
 namespace set {
 
@@ -224,6 +230,49 @@ class set_adaptor : public set::sizes_t<Bits, Store, Derived, Key, KeyTraits, Co
                 }
         }
 
+        // Members rather than templates over Bits or KeyTraits, so ADL looks in the key's namespaces alone.
+        template<class Value = Key>
+        class basic_iterator;
+
+        template<class Value = Key>
+        class basic_reference;
+
+        // The walk's step up, in the comparator's direction; a zero width has no position for a scan to start from.
+        [[nodiscard]] static constexpr auto next_position(storage_ptr_t<bits_type const> const& ptr, std::size_t n) noexcept
+                -> std::size_t
+                requires (not zero_width<Bits>)
+        {
+                assert(n < ptr->size());
+                if constexpr (is_descending) {
+                        return ptr->total_find_prev(n);
+                } else {
+                        return ptr->exclusive_find_next(n);
+                }
+        }
+
+        // Descending, the end is size() as well, so stepping back from it is a step up to the lowest position.
+        [[nodiscard]] static constexpr auto prev_position(storage_ptr_t<bits_type const> const& ptr, std::size_t n) noexcept
+                -> std::size_t
+                requires (not zero_width<Bits>)
+        {
+                if constexpr (not is_descending) {
+                        assert(ptr->find_first() < n);
+                        return ptr->exclusive_find_prev(n);
+                } else if (n == ptr->size()) {
+                        assert(ptr->find_first() < ptr->size());
+                        return ptr->find_first();
+                } else {
+                        assert(ptr->exclusive_find_next(n) < ptr->size());
+                        return ptr->exclusive_find_next(n);
+                }
+        }
+
+        [[nodiscard]] static constexpr auto key_at(std::size_t n) noexcept
+                -> Key
+        {
+                return KeyTraits::from_index(n);
+        }
+
         // The container needs constraints only the vehicle can name; [class.friend]/3 ignores the void a view passes.
         friend Derived;
 
@@ -265,11 +314,11 @@ public:
         using value_compare          = key_compare;
         using pointer                = void;
         using const_pointer          = pointer;
-        using reference              = bidirectional_bit_reference<Bits, Key, KeyTraits, set::direction_of<Compare>>;
+        using reference              = basic_reference<>;
         using const_reference        = reference;
         using size_type              = std::size_t;
         using difference_type        = std::ptrdiff_t;
-        using iterator               = bidirectional_bit_iterator<Bits, Key, KeyTraits, set::direction_of<Compare>>;
+        using iterator               = basic_iterator<>;
         using const_iterator         = iterator;
         using reverse_iterator       = std::reverse_iterator<iterator>;
         using const_reverse_iterator = std::reverse_iterator<const_iterator>;
@@ -1098,6 +1147,154 @@ private:
         }
 };
 
+// A position in the set reading, read-only whatever Bits' qualification: a key is nothing to write through.
+template<bit_block_container_type Bits, storage Store, class Derived, class Key, class KeyTraits, class Compare>
+template<class Value>
+class set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare>::basic_iterator
+{
+        // Value exists only to put the key's namespaces among the associated ones: it is no second axis.
+        static_assert(std::same_as<Value, Key>);
+
+        storage_ptr_t<bits_type const> m_ptr{};
+        std::size_t m_idx{};
+
+        friend set_adaptor;
+
+        friend class basic_reference<Value>;
+
+        [[nodiscard]] constexpr basic_iterator(storage_ptr_t<bits_type const> ptr, std::size_t idx) noexcept
+                : m_ptr(ptr)
+                , m_idx(idx)
+        {
+                assert(m_ptr != nullptr);
+        }
+
+public:
+        using iterator_category = std::bidirectional_iterator_tag;
+        using value_type        = Value;
+        using difference_type   = std::ptrdiff_t;
+        using pointer           = void;
+        using reference         = basic_reference<Value>;
+
+        [[nodiscard]] basic_iterator() = default;
+
+        // A zero width has one position, so every iterator over it is the same one and every loop stops early.
+        [[nodiscard]] friend constexpr auto operator==(basic_iterator lhs, basic_iterator rhs) noexcept
+                -> bool
+        {
+                assert(lhs.m_ptr == rhs.m_ptr);
+                if constexpr (zero_width<Bits>) {
+                        return true;
+                } else {
+                        return lhs.m_idx == rhs.m_idx;
+                }
+        }
+
+        [[nodiscard]] constexpr auto operator*() const noexcept
+                -> reference
+        {
+                assert(m_ptr != nullptr);
+                return {m_ptr, m_idx};
+        }
+
+        constexpr auto operator++() noexcept
+                -> basic_iterator&
+        {
+                assert(m_ptr != nullptr);
+                if constexpr (not zero_width<Bits>) {
+                        m_idx = set_adaptor::next_position(m_ptr, m_idx);
+                }
+                return *this;
+        }
+
+        constexpr auto operator--() noexcept
+                -> basic_iterator&
+        {
+                assert(m_ptr != nullptr);
+                if constexpr (not zero_width<Bits>) {
+                        m_idx = set_adaptor::prev_position(m_ptr, m_idx);
+                }
+                return *this;
+        }
+
+        constexpr auto operator++(int) noexcept
+                -> basic_iterator
+        {
+                auto nrv = *this;
+                ++*this;
+                return nrv;
+        }
+
+        constexpr auto operator--(int) noexcept
+                -> basic_iterator
+        {
+                auto nrv = *this;
+                --*this;
+                return nrv;
+        }
+};
+
+// The key at a position, arriving by conversion; & hands the iterator back, so the pair round-trips.
+template<bit_block_container_type Bits, storage Store, class Derived, class Key, class KeyTraits, class Compare>
+template<class Value>
+class set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare>::basic_reference
+{
+        // Value exists only to put the key's namespaces among the associated ones: it is no second axis.
+        static_assert(std::same_as<Value, Key>);
+
+        storage_ptr_t<bits_type const> m_ptr;
+        std::size_t m_idx;
+
+        friend set_adaptor;
+
+        friend class basic_iterator<Value>;
+
+        [[nodiscard]] constexpr basic_reference(storage_ptr_t<bits_type const> ptr, std::size_t idx) noexcept
+                : m_ptr(ptr)
+                , m_idx(idx)
+        {
+                assert(m_ptr != nullptr);
+        }
+
+public:
+        using value_type   = Value;
+        using iterator     = basic_iterator<Value>;
+        using adaptor_type = set_adaptor;
+
+        // A value, not a handle to rebind: trivially copyable, never assignable, as a reference to a key is.
+        basic_reference(basic_reference const&)                    = default;
+        auto operator=(basic_reference const&) -> basic_reference& = delete;
+
+        [[nodiscard]] constexpr auto operator&() const noexcept
+                -> iterator
+        {
+                return {m_ptr, m_idx};
+        }
+
+        // The one conversion: comparisons are the key's own through it.
+        [[nodiscard]] constexpr explicit(false) operator value_type() const noexcept // NOLINT(misc-explicit-constructor)
+        {
+                return set_adaptor::key_at(m_idx);
+        }
+
+        // What this proxy prints as, said once: our std::formatter calls it unqualified, and fmt finds it by ADL.
+        [[nodiscard]] friend constexpr auto format_as(basic_reference ref) noexcept
+                -> value_type
+        {
+                return ref;
+        }
+};
+
+template<class>
+inline constexpr bool is_set_adaptor = false;
+
+template<bit_block_container_type Bits, storage Store, class Derived, class Key, class KeyTraits, class Compare>
+inline constexpr bool is_set_adaptor<set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare>> = true;
+
+// A proxy some set_adaptor hands out, recognized through the adaptor it names: no deduction reaches into a member.
+template<class R>
+concept set_reference = is_set_adaptor<typename R::adaptor_type> and std::same_as<R, typename R::adaptor_type::reference>;
+
 // The owner's side of the protocol above.
 template<class Bits, class Derived, class Key, class KeyTraits, class Compare>
 struct owned_storage<set_adaptor<Bits, storage::owned, Derived, Key, KeyTraits, Compare>>
@@ -1206,6 +1403,18 @@ struct is_range<xstd::bits::detail::set_adaptor<Bits, Store, Derived, Key, KeyTr
 // NOLINTBEGIN(bugprone-std-namespace-modification): [namespace.std]/2 admits specializing for a program-defined type.
 
 namespace std {
+
+// std::format over the containers, which prints the key as the key's own formatter does.
+template<xstd::bits::detail::set_reference R, class CharT>
+struct formatter<R, CharT> : formatter<typename R::value_type, CharT>
+{
+        template<class Context>
+        [[nodiscard]] constexpr auto format(R ref, Context& ctx) const
+        {
+                // Unqualified, so ADL finds the proxy's own hidden friend.
+                return formatter<typename R::value_type, CharT>::format(format_as(ref), ctx);
+        }
+};
 
 // Owned or viewed, as std::string_view hashes and std::set does not.
 template<class Bits, xstd::bits::detail::storage Store, class Derived, class Key, class KeyTraits, class Compare>
