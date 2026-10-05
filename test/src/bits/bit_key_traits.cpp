@@ -11,8 +11,10 @@
 #include <algorithm>                        // min
 #include <concepts>                         // same_as
 #include <cstddef>                          // size_t
+#include <cstdint>                          // int16_t, int64_t, int8_t, uint8_t
 #include <limits>                           // numeric_limits
 #include <ranges>                           // iota
+#include <tuple>                            // tuple
 
 BOOST_AUTO_TEST_SUITE(BitKeyTraits)
 
@@ -72,6 +74,45 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AnUnsignedKeyIsItsOwnPosition, Key, test::all_bloc
                 BOOST_CHECK_EQUAL(traits::to_index(traits::from_index(i)), i);
                 BOOST_CHECK(i == 0UZ or traits::from_index(i - 1UZ) < traits::from_index(i));
         }
+}
+
+using offset_keys = std::tuple<std::int8_t, std::int16_t, int, std::int64_t, std::uint8_t, unsigned>;
+
+// An offset closes the universe at N keys from First, in order, from the type's most negative value or from any other.
+BOOST_AUTO_TEST_CASE_TEMPLATE(AnOffsetMapsNKeysFromFirstOntoTheFirstNPositions, Key, offset_keys)
+{
+        constexpr auto lowest = std::numeric_limits<Key>::min();
+        using from_lowest     = xstd::bit_offset_traits<Key, lowest, 100UZ>;
+        using from_middle     = xstd::bit_offset_traits<Key, Key(std::numeric_limits<Key>::is_signed ? -50 : 20), 100UZ>;
+        static_assert(has_size<from_lowest> and from_lowest::size == 100UZ);
+        static_assert(xstd::bits::detail::set::admits_width<from_lowest, 100UZ>);
+        static_assert(not xstd::bits::detail::set::admits_width<from_lowest, 99UZ>);
+        static_assert(std::same_as<decltype(from_lowest::to_index(Key())), std::size_t>);
+        static_assert(std::same_as<decltype(from_lowest::from_index(0UZ)), Key>);
+        static_assert(noexcept(from_lowest::to_index(Key())) and noexcept(from_lowest::from_index(0UZ)));
+        static_assert(from_lowest::to_index(lowest) == 0UZ);
+        static_assert(from_lowest::from_index(99UZ) == static_cast<Key>(lowest + 99));
+
+        for (auto const i : std::views::iota(0UZ, 100UZ)) {
+                BOOST_CHECK_EQUAL(from_lowest::to_index(from_lowest::from_index(i)), i);
+                BOOST_CHECK_EQUAL(from_middle::to_index(from_middle::from_index(i)), i);
+                BOOST_CHECK(i == 0UZ or from_middle::from_index(i - 1UZ) < from_middle::from_index(i));
+        }
+        BOOST_CHECK(from_middle::from_index(0UZ) == Key(std::numeric_limits<Key>::is_signed ? -50 : 20));
+}
+
+// The whole of a narrow signed type, and the far end of the widest: the distance from First stays exact.
+BOOST_AUTO_TEST_CASE(AnOffsetFromTheMostNegativeValueSpansTheType)
+{
+        using bytes = xstd::bit_offset_traits<std::int8_t, std::numeric_limits<std::int8_t>::min(), 256UZ>;
+        static_assert(bytes::to_index(-128) == 0UZ and bytes::to_index(0) == 128UZ and bytes::to_index(127) == 255UZ);
+        static_assert(bytes::from_index(0UZ) == -128 and bytes::from_index(255UZ) == 127);
+
+        using words = xstd::bit_offset_traits<std::int64_t, std::numeric_limits<std::int64_t>::min(), 64UZ>;
+        static_assert(words::to_index(std::numeric_limits<std::int64_t>::min() + 63) == 63UZ);
+        static_assert(words::from_index(63UZ) == std::numeric_limits<std::int64_t>::min() + 63);
+
+        BOOST_CHECK(true);
 }
 
 // A strong index type specializes the default, and round-trips through its position preserving order.
