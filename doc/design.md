@@ -2407,6 +2407,42 @@ are ascending keys. Every member that takes a key maps it through `to_index`, an
 exchange work on blocks and never see a key. The views stay keyed by `std::size_t`: a view reads positions it does
 not own, and names no key of its own.
 
+An enumeration is keyed by rank, not by value. Its author declares the values once, beside the enumeration:
+`template<> struct xstd::enum_traits<E> { static constexpr std::array values = {E::a, E::b, ...}; };`, ascending by
+underlying value and each value once, which `bit_enum_traits<E>` checks with a `static_assert`. `bit_enum_traits<E>`
+reads that list: `size` is its length, `from_index(i)` is `values[i]`, and `to_index(e)` is `e`'s place in it. Gaps
+cost nothing, so `{pawn = 1, knight = 3, bishop = 4, rook = 8, queen = 9, king = 100}` takes six bits rather than
+a hundred. Where the list turns out contiguous, each value one above the last, which is decided at compile time,
+`to_index` is a subtraction in the underlying type's unsigned counterpart, so a dense enumeration starting anywhere,
+negative included, pays no search; otherwise it is a search of the list, a handful of compares for the sizes
+enumerations have. A value not in the list ranks at `size` or above, which the set's guard refuses as it refuses any
+key past its width. `bit_key_traits<E>` derives from `bit_enum_traits<E>` for an enumeration that declares its
+values, so `basic_bit_fixed_set<E, Block, N>` with no traits spelled keys it the same way; one that declares nothing
+has no default traits, and so no set.
+
+The count comes from the declaration because C++ has no portable way to count enumerators. A sentinel such as
+`E::MAX` makes the width a value of `E`, which every exhaustive `switch` must then handle and which cannot be added
+to an enumeration someone else owns. Counting by parsing compiler-generated function names, as `magic_enum` does,
+works only within a guessed value range and is no part of the language. `enum_traits<E>` leaves `E` as it is and
+can be declared by whoever needs it; C++26 reflection, `std::meta::enumerators_of(^^E)`, can generate `values`
+later without changing what `bit_enum_traits` reads.
+
+`bit_enum_set<E, Block = smallest_block_t<N>, Traits = bit_enum_traits<E>>` is `basic_bit_fixed_set<E, Block,
+Traits::size, Traits>`. The block defaults to the narrowest of `std::uint8_t` to `std::uint64_t` that holds the
+`N` listed values, since an enum set mostly lives inside other structures as a flag field: a three-value set is one
+byte, not eight. Wider than 64 values, it is several `std::uint64_t`. A field of fixed wire width is
+`bit_enum_set<E, std::uint32_t>`, the block coming before the traits so that overriding it does not mean spelling
+them. `smallest_block_t` is public, in `<xstd/bits/bit_blocks.hpp>`, because the alias's default is spelled by any
+user who sets `Traits`. A deduction guide on the class template, not on the alias, deduces that same type from a
+braced list of enumerators, `basic_bit_fixed_set{E::a, E::b}`; alias deduction is not relied on, being unreliable
+on older compilers. An enumerator meets a set through the set's own type: `|`, `&`, `^` and `-` take a set on one
+side and an enumerator on the other, and `|=`, `&=`, `^=` and `-=` an enumerator on the right, the enumerator acting
+as the one-element set holding it. The value-returning forms are hidden friends of the set, so two enumerators
+never reach them, and nothing is declared on the enumeration: `E::a | E::b` does not compile, and two enumerators
+combine as `bit_enum_set<E>{E::a, E::b}`. Each is constrained to an enumeration `key_type`, so a set of integers
+gains no mixed operator, and with `key_type` an enumeration nothing converts an `int` into one, so `insert(1)`,
+`contains(1)` and `find(1)` do not compile.
+
 `Compare` keeps `std::set`'s place, after the key's traits and before the allocator, and is defaulted because it
 leaves every member signature as it is. Position order is structural, so a comparator can only choose a direction:
 `std::less<Key>` and `std::less<>` ascend, `std::greater<Key>` and `std::greater<>` descend, and any other type is

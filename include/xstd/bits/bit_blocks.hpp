@@ -13,9 +13,10 @@
 #include <array>                                      // array
 #include <concepts>                                   // convertible_to, regular, same_as
 #include <cstddef>                                    // size_t
+#include <cstdint>                                    // uint16_t, uint32_t, uint64_t, uint8_t
 #include <ranges>                                     // contiguous_range, end, range, range_reference_t, range_size_t, range_value_t, sized_range
 #include <span>                                       // dynamic_extent, span
-#include <type_traits>                                // remove_cv_t
+#include <type_traits>                                // conditional_t, remove_cv_t
 
 // What every container and view here presents a packed interface over: bits in contiguous unsigned blocks.
 namespace xstd {
@@ -89,6 +90,14 @@ inline constexpr std::size_t bit_blocks_capacity_v = bit_blocks_extent_v<Bits>;
 template<bit_blocks Bits>
         requires (bit_blocks_extent_v<Bits> == std::dynamic_extent) and resizable_bit_blocks<Bits> and (bits::detail::static_block_capacity<Bits>() != std::dynamic_extent)
 inline constexpr std::size_t bit_blocks_capacity_v<Bits> = bits::detail::static_block_capacity<Bits>() * bit_blocks_extent_v<std::ranges::range_value_t<Bits>>;
+
+// The narrowest fixed-width block holding N bits in one, else std::uint64_t, of which N bits then take several.
+template<std::size_t N>
+using smallest_block_t = std::conditional_t<
+        (N <= bit_blocks_extent_v<std::uint8_t>), std::uint8_t,
+        std::conditional_t<
+                (N <= bit_blocks_extent_v<std::uint16_t>), std::uint16_t,
+                std::conditional_t<(N <= bit_blocks_extent_v<std::uint32_t>), std::uint32_t, std::uint64_t>>>;
 
 } // namespace xstd
 

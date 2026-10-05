@@ -38,7 +38,7 @@
 #include <source_location>                           // source_location
 #include <span>                                      // dynamic_extent
 #include <stdexcept>                                 // out_of_range
-#include <type_traits>                               // conditional_t, false_type, integral_constant, is_invocable_r_v, is_nothrow_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
+#include <type_traits>                               // conditional_t, false_type, integral_constant, is_enum_v, is_invocable_r_v, is_nothrow_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
 #include <utility>                                   // declval, forward, in_place, move, pair
 
 // The set reading, [set] over a bit_block_container, owning it or referring to it.
@@ -807,6 +807,113 @@ public:
         {
                 self.bits() -= other.bits();
                 return self;
+        }
+
+        // An enumerator is the one-element set holding it, so it meets a set without an operator on the enumeration.
+        constexpr auto operator&=(this auto&& self, key_type x) noexcept
+                -> auto&
+                requires std::is_enum_v<key_type> and requires { self.clear(); self.bits().assign(KeyTraits::to_index(x), true); }
+        {
+                auto const kept = self.contains(x);
+                self.clear();
+                if (kept) {
+                        self.bits().assign(KeyTraits::to_index(x), true);
+                }
+                return self;
+        }
+
+        // Not noexcept: an enumerator outside the listed values throws here, as insert does.
+        constexpr auto operator|=(this auto&& self, key_type x)
+                -> auto&
+                requires std::is_enum_v<key_type> and requires { self.insert(x); }
+        {
+                static_cast<void>(self.insert(x));
+                return self;
+        }
+
+        constexpr auto operator^=(this auto&& self, key_type x)
+                -> auto&
+                requires std::is_enum_v<key_type> and requires { self.complement(x); }
+        {
+                self.complement(x);
+                return self;
+        }
+
+        constexpr auto operator-=(this auto&& self, key_type x) noexcept
+                -> auto&
+                requires std::is_enum_v<key_type> and requires { self.erase(x); }
+        {
+                static_cast<void>(self.erase(x));
+                return self;
+        }
+
+        // Hidden friends, so two enumerators never reach them; they copy, and so are the owner's alone.
+        [[nodiscard]] friend constexpr auto operator&(set_adaptor const& lhs, key_type rhs) noexcept(has_static_width)
+                -> derived_type
+                requires is_owner and std::is_enum_v<key_type>
+        {
+                auto nrv = static_cast<derived_type const&>(lhs);
+                nrv &= rhs;
+                return nrv;
+        }
+
+        [[nodiscard]] friend constexpr auto operator&(key_type lhs, set_adaptor const& rhs) noexcept(has_static_width)
+                -> derived_type
+                requires is_owner and std::is_enum_v<key_type>
+        {
+                return rhs & lhs;
+        }
+
+        [[nodiscard]] friend constexpr auto operator|(set_adaptor const& lhs, key_type rhs)
+                -> derived_type
+                requires is_owner and std::is_enum_v<key_type>
+        {
+                auto nrv = static_cast<derived_type const&>(lhs);
+                nrv |= rhs;
+                return nrv;
+        }
+
+        [[nodiscard]] friend constexpr auto operator|(key_type lhs, set_adaptor const& rhs)
+                -> derived_type
+                requires is_owner and std::is_enum_v<key_type>
+        {
+                return rhs | lhs;
+        }
+
+        [[nodiscard]] friend constexpr auto operator^(set_adaptor const& lhs, key_type rhs)
+                -> derived_type
+                requires is_owner and std::is_enum_v<key_type>
+        {
+                auto nrv = static_cast<derived_type const&>(lhs);
+                nrv ^= rhs;
+                return nrv;
+        }
+
+        [[nodiscard]] friend constexpr auto operator^(key_type lhs, set_adaptor const& rhs)
+                -> derived_type
+                requires is_owner and std::is_enum_v<key_type>
+        {
+                return rhs ^ lhs;
+        }
+
+        [[nodiscard]] friend constexpr auto operator-(set_adaptor const& lhs, key_type rhs) noexcept(has_static_width)
+                -> derived_type
+                requires is_owner and std::is_enum_v<key_type>
+        {
+                auto nrv = static_cast<derived_type const&>(lhs);
+                nrv -= rhs;
+                return nrv;
+        }
+
+        // The one-element set less the other: toggling the enumerator in a copy, then keeping only it.
+        [[nodiscard]] friend constexpr auto operator-(key_type lhs, set_adaptor const& rhs)
+                -> derived_type
+                requires is_owner and std::is_enum_v<key_type>
+        {
+                auto nrv = static_cast<derived_type const&>(rhs);
+                nrv ^= lhs;
+                nrv &= lhs;
+                return nrv;
         }
 
         // The shifts translate the set and keep the keys below max_size(); a run-time width grows towards it first.

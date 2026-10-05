@@ -21,8 +21,10 @@
 #include <xstd/bits/bit_subspan.hpp>        // IWYU pragma: export; bit_subspan
 
 // The set reading.
-#include <xstd/bits/bit_key_traits.hpp>  // IWYU pragma: export; bit_key_traits
+#include <xstd/bits/bit_enum_traits.hpp> // IWYU pragma: export; bit_enum_traits, enum_traits
+#include <xstd/bits/bit_key_traits.hpp>  // IWYU pragma: export; bit_key_traits, bit_offset_traits
 #include <xstd/bits/bit_fixed_set.hpp>   // IWYU pragma: export; bit_fixed_set
+#include <xstd/bits/bit_enum_set.hpp>    // IWYU pragma: export; bit_enum_set
 #include <xstd/bits/bit_bounded_set.hpp> // IWYU pragma: export; bit_bounded_set
 #include <xstd/bits/bit_set.hpp>         // IWYU pragma: export; bit_set
 #include <xstd/bits/bit_set_view.hpp>    // IWYU pragma: export; bit_set_view

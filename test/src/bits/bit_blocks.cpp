@@ -6,7 +6,7 @@
 #include <test/inplace_vector.hpp>                  // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
 #include <test/minimal_blocks.hpp>                  // minimal_blocks
 #include <xstd/bits/bit_array.hpp>                  // bit_array
-#include <xstd/bits/bit_blocks.hpp>                 // bit_block, bit_block_range, bit_blocks, bit_blocks_capacity_v, bit_blocks_extent_v, owned_bit_blocks, resizable_bit_blocks
+#include <xstd/bits/bit_blocks.hpp>                 // bit_block, bit_block_range, bit_blocks, bit_blocks_capacity_v, bit_blocks_extent_v, owned_bit_blocks, resizable_bit_blocks, smallest_block_t
 #include <xstd/bits/bit_set.hpp>                    // bit_set
 #include <xstd/bits/bit_set_view.hpp>               // bit_set_view
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
@@ -105,6 +105,22 @@ BOOST_AUTO_TEST_CASE(TheExtentIsTheWidthTheTypeNames)
         static_assert(xstd::bit_blocks_extent_v<std::span<std::uint32_t>> == std::dynamic_extent);
         static_assert(xstd::bit_blocks_extent_v<std::vector<std::size_t>> == std::dynamic_extent);
         static_assert(std::is_same_v<xstd::bit_set_view<std::span<std::uint32_t>>, xstd::bit_set_view<std::span<std::uint32_t>, std::dynamic_extent>>);
+        BOOST_CHECK(true);
+}
+
+// The narrowest fixed-width block holding N bits, the widest taking every N above it in several blocks.
+BOOST_AUTO_TEST_CASE(TheSmallestBlockIsTheNarrowestHoldingTheWidth)
+{
+        static_assert(std::is_same_v<xstd::smallest_block_t<0>, std::uint8_t>);
+        static_assert(std::is_same_v<xstd::smallest_block_t<8>, std::uint8_t>);
+        static_assert(std::is_same_v<xstd::smallest_block_t<9>, std::uint16_t>);
+        static_assert(std::is_same_v<xstd::smallest_block_t<16>, std::uint16_t>);
+        static_assert(std::is_same_v<xstd::smallest_block_t<17>, std::uint32_t>);
+        static_assert(std::is_same_v<xstd::smallest_block_t<32>, std::uint32_t>);
+        static_assert(std::is_same_v<xstd::smallest_block_t<33>, std::uint64_t>);
+        static_assert(std::is_same_v<xstd::smallest_block_t<64>, std::uint64_t>);
+        static_assert(std::is_same_v<xstd::smallest_block_t<65>, std::uint64_t>);
+        static_assert(std::is_same_v<xstd::smallest_block_t<1000>, std::uint64_t>);
         BOOST_CHECK(true);
 }
 
