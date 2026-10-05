@@ -2308,8 +2308,8 @@ one ever should, it belongs beside the containers, where it can be named and its
 
 **If a user never spells it, it lives in `detail/`.** The name or the header, either counts. That is the whole
 rule, and it is a test rather than a judgement: `bit_fixed_set` is spelled, `bit_block_container` is not;
-`bidirectional_bit_reference` is reached only through the `iterator` and `reference` typedefs and is spelled by
-nobody.
+`set_adaptor`'s nested `basic_reference` is reached only through the `iterator` and `reference` typedefs and is
+spelled by nobody.
 
 What the rule keeps on the interface side: **the six containers and the three views**, with the concept they are
 named by (`bit_blocks`), the tag and the conversion. The common vocabulary was here as a public concept, and is a test
@@ -3266,7 +3266,7 @@ Every row is a precondition on both sides, and in every one of them this reading
 does not. `at(n)` is the only checked door, and it is the only row where the counterpart answers too.
 
 The reading hands out two types that name a position, and the rule above -- state it at the member the caller
-named -- reaches both. `random_access_bit_iterator::operator*` says `m_idx < size()`, because this reading's
+named -- reaches both. The sequence iterator's `operator*` says `m_idx < size()`, because this reading's
 proxy reads and writes **through the storage**, so a position it hands out has to be one the storage has. The
 set reading's iterator needs no such guard and has none: its proxy converts to `m_idx` itself, so there the
 position *is* the value and `*end()` is the width rather than a read. Before, `*v.end()` and `v.begin()[100]`
@@ -3292,32 +3292,30 @@ never a bit ([test-not-subscript](#test-not-subscript)), so a fallback would fin
 
 ### the-iterator-is-the-primitive
 
-`bidirectional_bit_iterator` and `random_access_bit_iterator` are a pointer and a position, and they reach the bits
-through the storage alone. Their constructors from a pointer and a position, and their references' too, are
-**private**: a user reaches a proxy through a container and never builds one over storage it cannot see. Two kinds
-of caller may: the adaptor that hands proxies out -- `sequence_adaptor` or `set_adaptor`, which each proxy header
-declares ahead for the purpose -- and the proxy's twin, since the iterator's `*` builds a reference and the
-reference's `&` builds an iterator. So each iterator befriends its reference and its adaptor, and each reference
-its iterator and its adaptor.
+The set and sequence iterators are a pointer and a position, and they reach the bits through the storage alone.
+Their constructors from a pointer and a position, and their references' too, are **private**: a user reaches a
+proxy through a container and never builds one over storage it cannot see. Two kinds of caller may: the adaptor
+that hands proxies out -- `sequence_adaptor` or `set_adaptor`, of which they are members -- and the proxy's twin,
+since the iterator's `*` builds a reference and the reference's `&` builds an iterator. An enclosing class has
+no special access to a nested one's private members, nor one nested class to another's, so each iterator
+befriends its reference and its adaptor, and each reference its iterator and its adaptor.
 
-The pointer is to the **storage** an owner wraps, never to the owner: `bit_fixed_set` hands out
-`bits::detail::bidirectional_bit_iterator<bit_block_container<std::array<B, K>, N>>`, which is why an owner is never itself
-the thing a view or an iterator is parameterized on.
+The pointer is to the **storage** an owner wraps, never to the owner: `bit_fixed_set`'s iterator holds a pointer
+to its `bit_block_container<std::array<B, K>, N>`, which is why an owner is never itself the thing a view is
+parameterized on.
 
-**Where they live, and what they are called.** Both pairs are in `detail/`, one header each --
-`detail/bidirectional.hpp` and `detail/random_access.hpp` -- because nobody spells these names: they are
-reached through a container's `iterator` and `reference` typedefs and through nothing else. The test tree
-mirrors that split rather than taking the exception `detail/` is granted: unnameable is not unobservable, and
-what these types do -- the concepts they model, the round trip, the writes -- is the observable behaviour of
-every container's `iterator`. So the contract is asserted through the containers, and these two sources assert
-white-box what the containers cannot say precisely. The header is
-therefore named after the iterator category rather than after the reading, which is what the two proxies
-differ by; the reading names the container that hands them out, and the category names the iterator itself.
-The `bit_` infix then says what is iterated, as `bit_` says what is stored in the container names
-([the-public-names](#the-public-names)) -- and it is what keeps `bidirectional_bit_iterator` clear of
-`std::bidirectional_iterator`, whose spelling the category alone would have taken. The four names are alias
-templates: the classes themselves are members of `random_access<Bits>` and `bidirectional<Bits, Key, KeyTraits,
-Direction>`, which is what decides the namespaces ADL searches for them ([the-adl-firewall](#the-adl-firewall)).
+**Where they live, and what they are called.** Each pair is a member of the adaptor that hands it out --
+`basic_iterator` and `basic_reference` in both, over a `bool` saying whether the storage is read as const in
+`sequence_adaptor`, and over the key in `set_adaptor` -- and is reached through a container's `iterator` and
+`reference` typedefs and through nothing else; [the-adl-firewall](#the-adl-firewall) says why they are members.
+Every container therefore has iterators of its own, an owner and its view included, as `std::string` and
+`std::string_view` do. The test tree keeps a source for each pair, `detail/random_access.cpp` and
+`detail/bidirectional.cpp`, rather than taking the exception `detail/` is granted: unnameable is not
+unobservable, and what these types do -- the concepts they model, the round trip, the writes -- is the
+observable behaviour of every container's `iterator`. So the contract is asserted through the containers, and
+these two sources assert white-box what the containers cannot say precisely. They are named after the iterator
+category, which is what the two proxies differ by; the reading names the container that hands them out, and the
+category names the iterator itself.
 
 **`operator&` on the proxy answers an iterator**, which is what a proxy can offer in place of an address, and it
 is what keeps a container's subscript tied to its iteration: `&a[n]` is `a.begin() + n`, so `&a[n] == &a[0] + n`
@@ -3369,45 +3367,55 @@ the enclosing template, so its enclosing class's arguments never reach it. A spe
 class template is a specialization, but of that member template, and contributes its own arguments alone.
 GCC 15 and Clang 22 both read it so.
 
-**The shape.** Each header has one enclosing class holding the parameters to keep out, and the iterator and
-the proxy as member class templates on the value type:
+**The shape.** The iterator and the proxy are members of the adaptor that hands them out, so the adaptor's
+template arguments -- the storage, the derived container, the key traits and the comparator -- never reach them:
 
 ```cpp
-template<class Bits>                                                // sets: <Bits, Key, KeyTraits, Direction>
-struct random_access
+class sequence_adaptor          // over Bits, Store, W, Derived, E
 {
-        using value_type = bool;                                    // sets: Key
-        template<class Value> class basic_iterator;                 // * yields basic_reference<Value>
-        template<class Value> class basic_reference;                // & yields basic_iterator<Value>
-        using iterator  = basic_iterator<value_type>;
-        using reference = basic_reference<value_type>;
+        template<bool IsConst> class basic_iterator;      // * yields basic_reference<IsConst>
+        template<bool IsConst> class basic_reference;     // & yields basic_iterator<IsConst>
+        using iterator       = basic_iterator<std::is_const_v<Bits>>;
+        using const_iterator = basic_iterator<true>;
+};
+
+class set_adaptor               // over Bits, Store, Derived, Key, KeyTraits, Compare
+{
+        template<class Value = Key> class basic_iterator; // * yields basic_reference<Value>
+        template<class Value = Key> class basic_reference; // & yields basic_iterator<Value>
+        using iterator = basic_iterator<>;
 };
 ```
 
-Each body asserts `Value` is `value_type`: it is there to be associated, not to be a second axis. The pair is
-closed under `*` and `&` inside one enclosing class, and the const flavour is the same shape over
-`Bits const`. The old names, `random_access_bit_iterator<Bits>` and the rest, stay as alias templates, since
-ADL is decided by the class and never by the alias.
+The pair is closed under `*` and `&` within one adaptor. The sequence pair is a template over a `bool` rather
+than two classes so that over a storage already const, `iterator` and `const_iterator` stay one type, and a
+`bool` brings no namespace. The set pair is a template over the key so that the key, and only the key, is
+associated; each body asserts that `Value` is `Key`, there to be associated rather than to be a second axis.
+What the set iterator does need of the comparator and the key traits -- which way a step goes, and which key a
+position is -- it asks the adaptor, whose private `next_position`, `prev_position` and `key_at` say it once.
 
 **Why not an ADL barrier.** The usual idiom, a class in a namespace of its own that the library re-exports
 with a using-declaration, closes off the namespace the class is declared in. It does nothing for the template
 arguments, which stay associated however the class is reached, and they are the whole problem here.
 
 **What is associated, and what is not.** The storage -- `Bits`, and through it the blocks, the Block and any
-allocator -- the key traits and the direction are **not** associated with a proxy or an iterator. The value
-type **is**, deliberately, so that the proxy compares as its value does: `bool` for the sequence reading,
-which brings no namespace, and the key for the set reading, whose namespace is searched, so `*it == *jt` and
-`*it == 3` reach a class key's own comparisons, hidden friends among them, as a real `Key const&` would.
-Without that, a key whose `operator==` is a hidden friend would not compare through its proxy at all. A
-reading whose value is a character type keeps that type the same way. `xstd::bits::detail` is associated as
-well, through the enclosing class, which is where the proxies' hidden friends live: `swap`, `iter_move`,
-`iter_swap` and `format_as` are found exactly as before.
+allocator -- the derived container, the key traits and the direction are **not** associated with a proxy or an
+iterator. The value type **is**, deliberately, so that the proxy compares as its value does: `bool` for the
+sequence reading, which brings no namespace, and the key for the set reading, whose namespace is searched, so
+`*it == *jt` and `*it == 3` reach a class key's own comparisons, hidden friends among them, as a real
+`Key const&` would. Without that, a key whose `operator==` is a hidden friend would not compare through its
+proxy at all. A reading whose value is a character type keeps that type the same way. `xstd::bits::detail` is
+associated as well, and so is the adaptor itself, being the class the proxy is a member of: its hidden friends
+take adaptors, which a proxy is not, so they join the candidates and are never viable. The proxies' own hidden
+friends -- `swap`, `iter_move`, `iter_swap` and `format_as` -- are found exactly as before.
 
-**What it costs.** No deduction reaches `Bits` through a member of a class template, so the `std::formatter`
-specializations can no longer be written as `formatter<random_access_bit_reference<Bits>>`. Each is a partial
-specialization constrained by a `detail` concept instead, `random_access_reference` or
-`bidirectional_reference`, which recognizes a proxy through the enclosing class it names as
-`enclosing_type`: true for exactly the `reference` some `random_access` or `bidirectional` declares.
+**What it costs.** No deduction reaches the adaptor's arguments through a member, so the `std::formatter`
+specializations cannot be written as `formatter<sequence_adaptor<...>::reference>`. Each is a partial
+specialization constrained by a `detail` concept instead, `sequence_reference` or `set_reference`, which
+recognizes a proxy through the adaptor it names as `adaptor_type`: true for exactly the references some
+adaptor declares. And an owner's iterator is no longer its view's, so code that compared the two, or an
+iterator of a view over a storage with one of a view over the same storage made const, now names one adaptor's
+`iterator` and `const_iterator` throughout.
 
 ### the-set-for-each
 
@@ -3953,9 +3961,10 @@ can go without a separate header to remember. Issue #20 had this waiting on P307
 it: the proxy's formattability was, and that is ours to fix. The same issue records the other half of the
 argument, which this library is the worked example of: a proxy nested inside its container cannot be named by
 either hook, because the template arguments will not deduce through
-`container<T, A>::proxy_reference`. Factoring the reference out into a class of its own is what makes both the
-`format_as` overload and the `formatter` specialization writable at all -- which is what
-`detail/bidirectional.hpp` and `detail/random_access.hpp` are.
+`container<T, A>::proxy_reference`. A hidden `format_as` needs no deduction, being found by ADL on the proxy
+itself, and the `formatter` is a partial specialization constrained by a concept that recognizes the proxy
+through the adaptor it names ([the-adl-firewall](#the-adl-firewall)): that is how the proxies here stay members
+of their adaptors and format all the same.
 
 ### total-lookups-on-the-container
 
@@ -4127,7 +4136,7 @@ class offers only an explicit `operator bool`. Its two neighbours never needed t
 reaching `bool` by a **contextual** conversion, which an explicit operator satisfies.
 
 And the proxies. Both of them convert to their `value_type` and to nothing else — `bool` for the sequence
-proxy in `random_access.hpp`, the key for the set proxy in `bidirectional.hpp` — which is the shape
+proxy, the key for the set proxy — which is the shape
 `std::vector<bool>::reference` has on libstdc++, libc++ and the MSVC STL alike. Neither declares an
 `operator==` or an `operator<=>`: every comparison is the built-in one, or the key's own, reached through that
 one conversion, so it serves two proxies over **different** Blocks exactly as it serves two over the same one.
@@ -4349,7 +4358,8 @@ has no member to put beside it, which is why that rung is ours alone.
 
 ### Why the bidirectional steps guard on a zero width
 
-`detail/bidirectional.hpp` guards both steps on `zero_width<Bits>` rather than asking the storage. The
+`set_adaptor`'s `next_position` and `prev_position`, the set iterator's two steps, guard on `zero_width<Bits>`
+rather than asking the storage. The
 exclusive scans take a position as a precondition and a zero width has none to give, so they assert
 there.
 

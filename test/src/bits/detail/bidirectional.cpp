@@ -15,10 +15,9 @@
 #include <xstd/bits/bit_key_traits.hpp>             // bit_key_traits
 #include <xstd/bits/bit_set.hpp>                    // basic_bit_set
 #include <xstd/bits/bit_set_view.hpp>               // bit_set_view
-#include <xstd/bits/detail/bidirectional.hpp>       // bidirectional_bit_iterator, bidirectional_bit_reference, bidirectional_reference
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
 #include <xstd/bits/detail/ownership.hpp>           // storage
-#include <xstd/bits/detail/set_adaptor.hpp>         // set_adaptor
+#include <xstd/bits/detail/set_adaptor.hpp>         // set_adaptor, set_reference
 #include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <array>                                    // array
@@ -128,8 +127,12 @@ struct slot
 template<class Block>
 using block_bits = test::array_storage<Block, test::digits_v<Block>>;
 
+// The set view over a storage, whose iterator and proxy are the ones under test.
+template<class Bits, class Key = std::size_t, class KeyTraits = xstd::bit_key_traits<Key>>
+using borrowed_set = xstd::bits::detail::set_adaptor<Bits, xstd::bits::detail::storage::borrowed, void, Key, KeyTraits>;
+
 template<class Block>
-using block_reference = xstd::bits::detail::bidirectional_bit_reference<block_bits<Block>>;
+using block_reference = borrowed_set<block_bits<Block>>::reference;
 
 } // namespace
 
@@ -312,21 +315,21 @@ BOOST_AUTO_TEST_CASE(AnIteratorIsAPointerAndAPosition)
 {
         constexpr auto two_pointers = 2UZ * sizeof(void*);
 
-        static_assert(sizeof(xstd::bits::detail::bidirectional_bit_iterator<Bits>) == two_pointers);
-        static_assert(sizeof(xstd::bits::detail::bidirectional_bit_reference<Bits>) == two_pointers);
+        static_assert(sizeof(borrowed_set<Bits>::iterator) == two_pointers);
+        static_assert(sizeof(borrowed_set<Bits>::reference) == two_pointers);
 }
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheSetIteratorIsBidirectional, T, ArrayTypes)
 {
-        static_assert(std::bidirectional_iterator<xstd::bits::detail::bidirectional_bit_iterator<T>>);
+        static_assert(std::bidirectional_iterator<typename borrowed_set<T>::iterator>);
 }
 
 // The set proxy never writes, so nothing distinguishes its const spelling.
 BOOST_AUTO_TEST_CASE(TheSetProxyNeverWrites)
 {
-        static_assert(not std::is_assignable_v<xstd::bits::detail::bidirectional_bit_reference<Bits> const&, std::size_t>);
-        static_assert(std::is_convertible_v<xstd::bits::detail::bidirectional_bit_reference<Bits>, std::size_t>);
-        static_assert(std::is_convertible_v<xstd::bits::detail::bidirectional_bit_reference<Bits const>, std::size_t>);
+        static_assert(not std::is_assignable_v<borrowed_set<Bits>::reference const&, std::size_t>);
+        static_assert(std::is_convertible_v<borrowed_set<Bits>::reference, std::size_t>);
+        static_assert(std::is_convertible_v<borrowed_set<Bits const>::reference, std::size_t>);
 
         BOOST_CHECK(true);
 }
@@ -334,9 +337,9 @@ BOOST_AUTO_TEST_CASE(TheSetProxyNeverWrites)
 // What a container's const_reference must be: trivially copyable, never assignable, comparable by value.
 BOOST_AUTO_TEST_CASE(TheReadOnlyProxiesAreValues)
 {
-        static_assert(test::value_reference<xstd::bits::detail::bidirectional_bit_reference<Bits>>);
-        static_assert(test::value_reference<xstd::bits::detail::bidirectional_bit_reference<Bits const>>);
-        static_assert(std::is_trivially_destructible_v<xstd::bits::detail::bidirectional_bit_iterator<Bits>>);
+        static_assert(test::value_reference<borrowed_set<Bits>::reference>);
+        static_assert(test::value_reference<borrowed_set<Bits const>::reference>);
+        static_assert(std::is_trivially_destructible_v<borrowed_set<Bits>::iterator>);
 
         BOOST_CHECK(true);
 }
@@ -359,12 +362,13 @@ BOOST_AUTO_TEST_CASE(TheProxyFormatsAsItsValue)
 // The key arrives through the traits, in one implicit step; a type the traits do not name is no conversion.
 BOOST_AUTO_TEST_CASE(TheProxyConvertsToTheKeyItsTraitsName)
 {
-        using iterator = xstd::bits::detail::bidirectional_bit_iterator<Bits, key, key_traits>;
+        using set_type = xstd::basic_bit_fixed_set<key, std::uint64_t, 200, key_traits>;
+        using iterator = set_type::iterator;
         static_assert(std::same_as<std::iter_value_t<iterator>, key>);
         static_assert(std::bidirectional_iterator<iterator>);
         static_assert(not std::is_convertible_v<std::iter_reference_t<iterator>, std::size_t>);
 
-        auto s = xstd::basic_bit_fixed_set<key, std::uint64_t, 200, key_traits>();
+        auto s = set_type();
         s.insert(key{42});
         static_assert(std::same_as<decltype(s.begin()), iterator>);
         key const k = *s.begin();
@@ -393,7 +397,7 @@ BOOST_AUTO_TEST_CASE(TheProxyComparesThroughItsOneConversion)
                 static_assert(std::is_convertible_v<reference, std::optional<value_type>>);
 
                 // A user's non-template operator== beside the key traits is no second reading of ours.
-                using user_reference = xstd::bits::detail::bidirectional_bit_reference<block_bits<Block>, std::size_t, user::key_traits>;
+                using user_reference = borrowed_set<block_bits<Block>, std::size_t, user::key_traits>::reference;
                 static_assert(std::equality_comparable<user_reference>);
                 static_assert(std::totally_ordered<user_reference>);
         });
@@ -433,7 +437,7 @@ BOOST_AUTO_TEST_CASE(AKeyTraitsNamespaceIsNotAssociatedWithItsProxies)
 // The key's own namespace is the one a proxy keeps, so comparisons only ADL finds for the key reach the proxy too.
 BOOST_AUTO_TEST_CASE(TheKeysNamespaceIsAssociatedWithItsProxies)
 {
-        using reference = xstd::bits::detail::bidirectional_bit_reference<Bits, key, key_traits>;
+        using reference = borrowed_set<Bits, key, key_traits>::reference;
         static_assert(std::totally_ordered<reference>);
         static_assert(std::totally_ordered_with<reference, key>);
 
@@ -476,14 +480,14 @@ BOOST_AUTO_TEST_CASE(EverySetClosesItsProxyPair)
 // What std::formatter is specialized for: the proxies themselves, which no deduction reaches through the class.
 BOOST_AUTO_TEST_CASE(TheFormatterIsSpecializedForExactlyTheProxies)
 {
-        static_assert(xstd::bits::detail::bidirectional_reference<xstd::bits::detail::bidirectional_bit_reference<Bits>>);
-        static_assert(xstd::bits::detail::bidirectional_reference<xstd::bits::detail::bidirectional_bit_reference<Bits, key, key_traits>>);
-        static_assert(not xstd::bits::detail::bidirectional_reference<xstd::bits::detail::bidirectional_bit_iterator<Bits>>);
-        static_assert(not xstd::bits::detail::bidirectional_reference<std::size_t>);
+        static_assert(xstd::bits::detail::set_reference<borrowed_set<Bits>::reference>);
+        static_assert(xstd::bits::detail::set_reference<borrowed_set<Bits, key, key_traits>::reference>);
+        static_assert(not xstd::bits::detail::set_reference<borrowed_set<Bits>::iterator>);
+        static_assert(not xstd::bits::detail::set_reference<std::size_t>);
 
-        static_assert(std::formattable<xstd::bits::detail::bidirectional_bit_reference<Bits>, char>);
+        static_assert(std::formattable<borrowed_set<Bits>::reference, char>);
         static_assert(std::formattable<std::iter_reference_t<hostile_set::iterator>, char>);
-        static_assert(not std::formattable<xstd::bits::detail::bidirectional_bit_reference<Bits, key, key_traits>, char>);
+        static_assert(not std::formattable<borrowed_set<Bits, key, key_traits>::reference, char>);
 
         BOOST_CHECK(true);
 }
@@ -497,8 +501,10 @@ namespace {
 
 using Viewed = xstd::bits::detail::bit_block_container<std::array<std::uint64_t, 1>, 64>;
 
-using SetIt  = xstd::bits::detail::bidirectional_bit_iterator<Viewed>;
-using SetRef = xstd::bits::detail::bidirectional_bit_reference<Viewed>;
+using SetView = xstd::bit_set_view<std::array<std::uint64_t, 1>>;
+
+using SetIt  = SetView::iterator;
+using SetRef = SetView::reference;
 
 // Dependent, so a type without the member is a substitution failure rather than a hard error.
 template<class R>
@@ -506,10 +512,12 @@ constexpr bool has_address_of = requires (R r) { r.operator&(); };
 
 } // namespace
 
-BOOST_AUTO_TEST_CASE(TheViewIteratesWithTheSharedProxy)
+// Each container has its own pair, as std::string_view's iterator is not std::string's, though both read one storage.
+BOOST_AUTO_TEST_CASE(TheViewIteratesWithItsOwnProxy)
 {
-        static_assert(std::same_as<xstd::bit_set_view<std::array<std::uint64_t, 1>>::iterator, SetIt>);
-        static_assert(std::same_as<xstd::bit_set_view<std::array<std::uint64_t, 1>>::reference, SetRef>);
+        static_assert(not std::same_as<SetIt, borrowed_set<Viewed>::iterator>);
+        static_assert(not std::same_as<SetRef, borrowed_set<Viewed>::reference>);
+        static_assert(not std::same_as<SetIt, xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 64>::iterator>);
 
         BOOST_CHECK(true);
 }
