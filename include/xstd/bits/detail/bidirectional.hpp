@@ -15,7 +15,7 @@
 #include <cstddef>                                  // ptrdiff_t, size_t
 #include <format>                                   // formatter
 #include <iterator>                                 // bidirectional_iterator_tag
-#include <type_traits>                              // is_class_v, is_convertible_v, is_nothrow_constructible_v, remove_const_t
+#include <type_traits>                              // remove_const_t
 
 // The iterator is the primitive: a pointer and a position, reaching the bits through the storage alone.
 namespace xstd::bits::detail {
@@ -173,15 +173,8 @@ public:
                 return {m_ptr, m_idx};
         }
 
+        // The one conversion: comparisons are the key's own through it.
         [[nodiscard]] constexpr explicit(false) operator value_type() const noexcept // NOLINT(misc-explicit-constructor)
-        {
-                return KeyTraits::from_index(m_idx);
-        }
-
-        // As a held key would, the key initializes any class implicitly constructible from it, through KeyTraits.
-        template<class T>
-        [[nodiscard]] constexpr explicit(false) operator T() const noexcept(std::is_nothrow_constructible_v<T, value_type>) // NOLINT(misc-explicit-constructor)
-                requires std::is_class_v<T> and std::is_convertible_v<value_type, T>
         {
                 return KeyTraits::from_index(m_idx);
         }

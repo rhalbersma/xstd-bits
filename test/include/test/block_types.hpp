@@ -91,6 +91,32 @@ using wide_block_types = decltype(std::tuple_cat(
                 >>()
 ));
 
+// Every Block at all, the builtins and the integer classes alike, for the suites that pay a static_assert per type.
+using all_block_types = decltype(std::tuple_cat(
+        std::declval<block_types>(),
+        std::declval<std::tuple<
+#ifdef TEST_HAS_MSVC_INT128
+
+                xstd::uint128
+
+#endif
+                >>(),
+        std::declval<std::tuple<
+#ifdef TEST_HAS_ABSL_INT128
+
+                absl::uint128
+
+#endif
+                >>(),
+        std::declval<std::tuple<
+#ifdef TEST_HAS_BOOST_INT128
+
+                boost::int128::uint128
+
+#endif
+                >>()
+));
+
 // One block's worth of extents: empty, a single bit, and exactly one full block -- the same cost at any width.
 template<template<class, std::size_t> class C, class Block>
 using in_block_extents = std::tuple<C<Block, 0>, C<Block, 1>, C<Block, digits_v<Block>>>;

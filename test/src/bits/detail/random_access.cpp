@@ -4,8 +4,9 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/array_storage.hpp>                   // array_storage
-#include <test/block_types.hpp>                     // graded_extents
+#include <test/block_types.hpp>                     // all_block_types, digits_v, graded_extents
 #include <test/ext_int128.hpp>                      // TEST_HAS_ABSL_INT128, TEST_HAS_BOOST_INT128, uint128
+#include <test/for_each_type.hpp>                   // for_each_type
 #include <test/value_reference.hpp>                 // value_reference
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array
 #include <xstd/bits/bit_span.hpp>                   // bit_span
@@ -17,10 +18,11 @@
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                                // equal, ranges::reverse, ranges::sort, reverse, sort
 #include <array>                                    // array
-#include <concepts>                                 // convertible_to, equality_comparable, random_access_iterator, same_as, sortable
+#include <concepts>                                 // convertible_to, equality_comparable, random_access_iterator, same_as, sortable, totally_ordered, totally_ordered_with
 #include <cstddef>                                  // ptrdiff_t, size_t
-#include <cstdint>                                  // uint64_t
+#include <cstdint>                                  // uint64_t, uint8_t
 #include <iterator>                                 // iter_move, next, prev, reverse_iterator
+#include <optional>                                 // optional
 #include <ranges>                                   // iota, subrange
 #include <type_traits>                              // is_assignable_v, is_constructible_v, is_convertible_v, is_trivially_copy_constructible_v, is_trivially_destructible_v
 #include <utility>                                  // as_const, declval
@@ -28,7 +30,7 @@
 
 namespace {
 
-// A strong type, copy-initialized and never cast: a cast is direct-initialization, which MSVC reads as no route at all.
+// A class implicitly constructible from bool, which a proxy direct-initializes and never copy-initializes.
 struct flag
 {
         bool value;
@@ -50,7 +52,7 @@ auto check_position(Iterator first, std::size_t i, std::vector<bool>& model)
         *it      = (i % 3 == 0);
         model[i] = (i % 3 == 0);
         BOOST_CHECK_EQUAL(static_cast<bool>(*it), model[i]);
-        flag const f = *it;
+        flag const f(*it);
         BOOST_CHECK_EQUAL(f.value, model[i]);
 
         *it      = not *it;
@@ -75,6 +77,37 @@ template<class T>
         }
         return v;
 }
+
+// One full block of each Block, which is all a comparison between two of its proxies asks for.
+template<class Block>
+using block_bits = test::array_storage<Block, test::digits_v<Block>>;
+
+template<class Block>
+using block_reference = xstd::bits::detail::random_access_bit_reference<block_bits<Block>>;
+
+// Dependent, so an ambiguous comparison is a substitution failure rather than a hard error.
+template<class L, class R>
+concept equal_to_with = requires (L const& lhs, R const& rhs) {
+        lhs == rhs;
+        rhs == lhs;
+};
+
+template<class L, class R>
+concept less_than_with = requires (L const& lhs, R const& rhs) {
+        lhs < rhs;
+        rhs < lhs;
+};
+
+// Boost.Int128 declares non-template operator==(uint128, bool) and its mirror, which ADL adds to the built-in one.
+template<class Block>
+constexpr bool ties_with_bool = false;
+
+#ifdef TEST_HAS_BOOST_INT128
+
+template<>
+constexpr bool ties_with_bool<boost::int128::uint128> = true;
+
+#endif
 
 } // namespace
 
@@ -276,6 +309,48 @@ BOOST_AUTO_TEST_CASE(TheProxyFormatsAsItsValue)
         BOOST_CHECK_EQUAL(format_as(*iterator_at(std::as_const(c), 41UZ)), false);
 }
 
+// Every comparison is the built-in one on bool, reached through the one conversion, whatever the Block.
+BOOST_AUTO_TEST_CASE(TheProxyComparesThroughItsOneConversion)
+{
+        test::for_each_type<test::all_block_types>([]<class Block> -> void {
+                using reference       = block_reference<Block>;
+                using const_reference = xstd::bits::detail::random_access_bit_reference<block_bits<Block> const>;
+                using value_type      = reference::value_type;
+
+                static_assert(std::equality_comparable<reference>);
+                static_assert(std::totally_ordered<reference>);
+                static_assert(std::totally_ordered<const_reference>);
+                static_assert(less_than_with<reference, value_type>);
+                if constexpr (ties_with_bool<Block>) {
+                        static_assert(not equal_to_with<reference, value_type>);
+                        static_assert(not equal_to_with<reference, int>);
+                } else {
+                        static_assert(std::totally_ordered_with<reference, value_type>);
+                        static_assert(equal_to_with<reference, int>);
+                }
+
+                static_assert(not std::is_convertible_v<reference, flag>);
+                static_assert(std::is_constructible_v<flag, reference>);
+                static_assert(std::is_convertible_v<reference, std::optional<value_type>>);
+        });
+
+        static_assert(std::totally_ordered_with<block_reference<std::uint8_t>, block_reference<std::uint64_t>>);
+
+#if defined(TEST_HAS_ABSL_INT128) && defined(TEST_HAS_BOOST_INT128)
+
+        static_assert(std::totally_ordered_with<block_reference<absl::uint128>, block_reference<boost::int128::uint128>>);
+
+#endif
+
+        auto narrow = block_bits<std::uint8_t>();
+        auto wide   = block_bits<std::uint64_t>();
+        narrow.set(1);
+        wide.set(1);
+        BOOST_CHECK(*iterator_at(narrow, 1UZ) == *iterator_at(wide, 1UZ));
+        BOOST_CHECK(*iterator_at(narrow, 0UZ) < *iterator_at(wide, 1UZ));
+        BOOST_CHECK(*iterator_at(narrow, 0UZ) != true);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 // The sequence view hands out this proxy and nothing of its own.
@@ -406,7 +481,7 @@ BOOST_AUTO_TEST_CASE(AProxyNeverBecomesAnIntegerBlock)
                 a[256] = true;
                 BOOST_CHECK(a[0] == a[256]);
                 BOOST_CHECK(a[0] != a[1]);
-                BOOST_CHECK(a[0] == true);
+                BOOST_CHECK(a[0] > false);
         }
 
 #endif

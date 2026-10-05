@@ -4,21 +4,25 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/array_storage.hpp>                   // array_storage
-#include <test/block_types.hpp>                     // graded_extents
+#include <test/block_types.hpp>                     // all_block_types, digits_v, graded_extents
+#include <test/ext_int128.hpp>                      // TEST_HAS_ABSL_INT128, TEST_HAS_BOOST_INT128, uint128
+#include <test/for_each_type.hpp>                   // for_each_type
 #include <test/value_reference.hpp>                 // value_reference
 #include <xstd/bits/bit_fixed_set.hpp>              // basic_bit_fixed_set
+#include <xstd/bits/bit_key_traits.hpp>             // bit_key_traits
 #include <xstd/bits/bit_set_view.hpp>               // bit_set_view
 #include <xstd/bits/detail/bidirectional.hpp>       // bidirectional_bit_iterator, bidirectional_bit_reference
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <array>                                    // array
-#include <concepts>                                 // bidirectional_iterator, same_as
+#include <concepts>                                 // bidirectional_iterator, equality_comparable, same_as, totally_ordered, totally_ordered_with
 #include <cstddef>                                  // size_t
-#include <cstdint>                                  // uint64_t
+#include <cstdint>                                  // uint64_t, uint8_t
 #include <iterator>                                 // iter_reference_t, iter_value_t, next, prev
+#include <optional>                                 // optional
 #include <ranges>                                   // iota
 #include <set>                                      // set
-#include <type_traits>                              // is_assignable_v, is_convertible_v, is_trivially_destructible_v
+#include <type_traits>                              // is_assignable_v, is_constructible_v, is_convertible_v, is_trivially_destructible_v
 #include <utility>                                  // declval
 
 namespace {
@@ -44,7 +48,7 @@ struct key_traits
         }
 };
 
-// A class implicitly constructible from the key, which a held key initializes in one step.
+// A class implicitly constructible from the key, which the proxy direct-initializes and never copy-initializes.
 struct holder
 {
         key held;
@@ -63,6 +67,37 @@ struct index
                 : value(v)
         {}
 };
+
+// A user's namespace, associated with the proxy through its key traits, declaring a comparison of its own.
+namespace user {
+
+struct flag
+{
+        std::size_t value;
+
+        // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
+        constexpr explicit(false) flag(std::size_t v) noexcept
+                : value(v)
+        {}
+};
+
+[[nodiscard]] constexpr auto operator==(flag lhs, flag rhs) noexcept
+        -> bool
+{
+        return lhs.value == rhs.value;
+}
+
+struct key_traits : xstd::bit_key_traits<std::size_t>
+{};
+
+} // namespace user
+
+// One full block of each Block, which is all a comparison between two of its proxies asks for.
+template<class Block>
+using block_bits = test::array_storage<Block, test::digits_v<Block>>;
+
+template<class Block>
+using block_reference = xstd::bits::detail::bidirectional_bit_reference<block_bits<Block>>;
 
 template<class T>
 [[nodiscard]] auto make(T const& empty, std::set<std::size_t> const& model)
@@ -224,8 +259,51 @@ BOOST_AUTO_TEST_CASE(TheProxyConvertsToTheKeyItsTraitsName)
         BOOST_CHECK_EQUAL(k.value, 42UZ);
         BOOST_CHECK_EQUAL(format_as(*s.begin()).value, 42UZ);
         BOOST_CHECK_EQUAL(key_traits::to_index(*s.begin()), 42UZ);
-        holder const h = *s.begin();
+        static_assert(not std::is_convertible_v<std::iter_reference_t<iterator>, holder>);
+        static_assert(std::is_constructible_v<holder, std::iter_reference_t<iterator>>);
+        holder const h(*s.begin());
         BOOST_CHECK_EQUAL(h.held.value, 42UZ);
+}
+
+// Every comparison is the key's own, reached through the one conversion, whatever the Block.
+BOOST_AUTO_TEST_CASE(TheProxyComparesThroughItsOneConversion)
+{
+        test::for_each_type<test::all_block_types>([]<class Block> -> void {
+                using reference  = block_reference<Block>;
+                using value_type = reference::value_type;
+
+                static_assert(std::equality_comparable<reference>);
+                static_assert(std::totally_ordered<reference>);
+                static_assert(std::totally_ordered_with<reference, value_type>);
+
+                static_assert(not std::is_convertible_v<reference, user::flag>);
+                static_assert(std::is_constructible_v<user::flag, reference>);
+                static_assert(std::is_convertible_v<reference, std::optional<value_type>>);
+
+                // A user's non-template operator== in an associated namespace is no second reading of ours.
+                using user_reference = xstd::bits::detail::bidirectional_bit_reference<block_bits<Block>, std::size_t, user::key_traits>;
+                static_assert(std::equality_comparable<user_reference>);
+                static_assert(std::totally_ordered<user_reference>);
+        });
+
+        static_assert(std::totally_ordered_with<block_reference<std::uint8_t>, block_reference<std::uint64_t>>);
+
+#if defined(TEST_HAS_ABSL_INT128) && defined(TEST_HAS_BOOST_INT128)
+
+        static_assert(std::totally_ordered_with<block_reference<absl::uint128>, block_reference<boost::int128::uint128>>);
+
+#endif
+
+        auto narrow = block_bits<std::uint8_t>();
+        auto wide   = block_bits<std::uint64_t>();
+        narrow.set(3);
+        wide.set(3);
+        wide.set(5);
+        auto const narrow_view = xstd::bit_set_view(narrow);
+        auto const wide_view   = xstd::bit_set_view(wide);
+        BOOST_CHECK(*narrow_view.begin() == *wide_view.begin());
+        BOOST_CHECK(*narrow_view.begin() < *std::next(wide_view.begin()));
+        BOOST_CHECK(user::flag(*narrow_view.begin()) == user::flag(3));
 }
 
 BOOST_AUTO_TEST_SUITE_END()
