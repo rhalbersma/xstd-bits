@@ -238,28 +238,24 @@ class set_adaptor : public set::sizes_t<Bits, Store, Derived, Key, KeyTraits, Co
         class basic_reference;
 
         // The walk's step up, in the comparator's direction; a zero width has no position for a scan to start from.
-        [[nodiscard]] static constexpr auto next_position(storage_ptr_t<bits_type const> const& ptr [[maybe_unused]], std::size_t n) noexcept
+        [[nodiscard]] static constexpr auto next_position(storage_ptr_t<bits_type const> const& ptr, std::size_t n) noexcept
                 -> std::size_t
+                requires (not zero_width<Bits>)
         {
-                if constexpr (zero_width<Bits>) {
-                        return n;
+                assert(n < ptr->size());
+                if constexpr (is_descending) {
+                        return ptr->total_find_prev(n);
                 } else {
-                        assert(n < ptr->size());
-                        if constexpr (is_descending) {
-                                return ptr->total_find_prev(n);
-                        } else {
-                                return ptr->exclusive_find_next(n);
-                        }
+                        return ptr->exclusive_find_next(n);
                 }
         }
 
         // Descending, the end is size() as well, so stepping back from it is a step up to the lowest position.
-        [[nodiscard]] static constexpr auto prev_position(storage_ptr_t<bits_type const> const& ptr [[maybe_unused]], std::size_t n) noexcept
+        [[nodiscard]] static constexpr auto prev_position(storage_ptr_t<bits_type const> const& ptr, std::size_t n) noexcept
                 -> std::size_t
+                requires (not zero_width<Bits>)
         {
-                if constexpr (zero_width<Bits>) {
-                        return n;
-                } else if constexpr (not is_descending) {
+                if constexpr (not is_descending) {
                         assert(ptr->find_first() < n);
                         return ptr->exclusive_find_prev(n);
                 } else if (n == ptr->size()) {
@@ -1205,7 +1201,9 @@ public:
                 -> basic_iterator&
         {
                 assert(m_ptr != nullptr);
-                m_idx = set_adaptor::next_position(m_ptr, m_idx);
+                if constexpr (not zero_width<Bits>) {
+                        m_idx = set_adaptor::next_position(m_ptr, m_idx);
+                }
                 return *this;
         }
 
@@ -1213,7 +1211,9 @@ public:
                 -> basic_iterator&
         {
                 assert(m_ptr != nullptr);
-                m_idx = set_adaptor::prev_position(m_ptr, m_idx);
+                if constexpr (not zero_width<Bits>) {
+                        m_idx = set_adaptor::prev_position(m_ptr, m_idx);
+                }
                 return *this;
         }
 
