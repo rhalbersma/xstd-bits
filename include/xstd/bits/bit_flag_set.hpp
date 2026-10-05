@@ -333,14 +333,16 @@ public:
                 return nrv;
         }
 
-        // Against the interop enumeration in both orders, exact where the enumeration's own needs a conversion.
+        // Total against the interop enumeration: a value with a bit at or above N equals no flag set.
         [[nodiscard]] friend constexpr auto operator==(Derived const& lhs, interop_param rhs) noexcept
                 -> bool
                 requires has_interop
         {
-                return lhs.bits() == bits_of(rhs);
+                auto const bits = low_bits_of(rhs);
+                return lhs.bits() == bits and static_cast<decltype(word_of(rhs))>(bits) == word_of(rhs);
         }
 
+        // The rest in both orders, exact where the enumeration's own needs a conversion; no bit at or above N.
         [[nodiscard]] friend constexpr auto operator|(Derived const& lhs, interop_param rhs) noexcept
                 -> Derived
                 requires has_interop
@@ -355,18 +357,19 @@ public:
                 return from_bits(bits_of(lhs)) | rhs;
         }
 
+        // Total: truncating the value to N bits is exact, since the flag set has no bit above N for it to keep.
         [[nodiscard]] friend constexpr auto operator&(Derived const& lhs, interop_param rhs) noexcept
                 -> Derived
                 requires has_interop
         {
-                return lhs & from_bits(bits_of(rhs));
+                return lhs & from_bits(low_bits_of(rhs));
         }
 
         [[nodiscard]] friend constexpr auto operator&(interop_param lhs, Derived const& rhs) noexcept
                 -> Derived
                 requires has_interop
         {
-                return from_bits(bits_of(lhs)) & rhs;
+                return from_bits(low_bits_of(lhs)) & rhs;
         }
 
         [[nodiscard]] friend constexpr auto operator^(Derived const& lhs, interop_param rhs) noexcept
@@ -383,11 +386,12 @@ public:
                 return from_bits(bits_of(lhs)) ^ rhs;
         }
 
+        // Total, as & is; the mirror is not, the value's bits above N being what it would keep.
         [[nodiscard]] friend constexpr auto operator-(Derived const& lhs, interop_param rhs) noexcept
                 -> Derived
                 requires has_interop
         {
-                return lhs - from_bits(bits_of(rhs));
+                return lhs - from_bits(low_bits_of(rhs));
         }
 
         [[nodiscard]] friend constexpr auto operator-(interop_param lhs, Derived const& rhs) noexcept
@@ -419,14 +423,26 @@ private:
                 return pos;
         }
 
-        // The enumeration's value read in its unsigned counterpart, which must have no bit at or above N.
+        // The enumeration's value read in its unsigned counterpart.
+        [[nodiscard]] static constexpr auto word_of(interop_param value) noexcept
+        {
+                return static_cast<std::make_unsigned_t<std::underlying_type_t<Interop>>>(std::to_underlying(value));
+        }
+
+        // The value's bits below N, which are all of it that can meet a bit of this word.
+        [[nodiscard]] static constexpr auto low_bits_of(interop_param value) noexcept
+                -> Block
+        {
+                return static_cast<Block>(static_cast<Block>(word_of(value)) & width_mask);
+        }
+
+        // Where a bit of the value would enter the result, it must have none at or above N.
         [[nodiscard]] static constexpr auto bits_of(interop_param value) noexcept
                 -> Block
         {
-                using unsigned_type = std::make_unsigned_t<std::underlying_type_t<Interop>>;
-                auto const word     = static_cast<unsigned_type>(std::to_underlying(value));
-                assert(static_cast<unsigned_type>(static_cast<Block>(word) & width_mask) == word);
-                return static_cast<Block>(word);
+                auto const bits = low_bits_of(value);
+                assert(static_cast<decltype(word_of(value))>(bits) == word_of(value));
+                return bits;
         }
 };
 

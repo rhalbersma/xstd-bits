@@ -2519,7 +2519,8 @@ range, so iteration and `size()` see the named flags alone, and `size()` stays t
 still to visit, so it refers to nothing, and its `*` hands out the key by value: ADL on that searches the rank
 enumeration's namespace, where its `formatter` lives, and `std::format("{}", p)` prints `{owner_write, owner_read}`
 through the standard's range formatter, the flag type having a `key_type`. `N` narrower than the block adds a
-precondition on the conversion in, no bit at or above `N`, checked by an `assert` rather than truncated.
+precondition on the conversion in, no bit at or above `N`, checked by an `assert` rather than truncated. The mixed `&`,
+`-` with the flag type on the left, and `==` need no such precondition: no bit of the flag type is at or above `N`.
 
 **The mixed operators are generated, because hand-writing them goes wrong.** With only the homogeneous operators,
 `p ^ std::filesystem::perms::owner_write` is ambiguous: ours wants a conversion on the right, the enumeration's own
@@ -2560,7 +2561,9 @@ Where it is not drop-in:
 - **A standard function's result keeps the standard type.** `auto q = fs::status(path).permissions();` is a
   `std::filesystem::perms`, with none of the queries until it is assigned to `xfs::perms`.
 - **A value with bits above `N` does not convert in.** `~` on the standard's enumeration sets every bit of its
-  underlying type, so `p & ~fs::perms::group_write` asserts where `p & ~xfs::perms::group_write` does not.
+  underlying type, so `p &= ~fs::perms::group_write` and `p | ~fs::perms::none` assert, the first through the
+  conversion. `p & x`, `x & p` and `p - x` are total, since `p` has no bit above `N` for `x`'s to meet, so truncating
+  `x` is exact and `p & ~fs::perms::group_write` works; `==` is total too, a value with a bit above `N` equalling none.
 - **Each name is written twice**, as an enumerator and as a constant. Reflection can read an enumeration but cannot
   declare members, so nothing generates the constants yet.
 - **Printing** needs a `formatter` for the rank enumeration: a name table today, reflection later.

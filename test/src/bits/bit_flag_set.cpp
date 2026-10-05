@@ -351,6 +351,21 @@ BOOST_AUTO_TEST_CASE(EachOperatorMeetsTheStandardsTypeInBothOrders)
         }
 }
 
+// & and - read the standard's value below sixteen bits, where it can meet a flag, and == finds higher bits unequal.
+BOOST_AUTO_TEST_CASE(AndMinusAndEqualityTakeAValueWithHigherBits)
+{
+        auto const p = xfs::perms::owner_all | xfs::perms::group_write;
+        BOOST_CHECK((p & ~fs::perms::group_write) == xfs::perms::owner_all);
+        BOOST_CHECK((~fs::perms::group_write & p) == xfs::perms::owner_all);
+        BOOST_CHECK((p - ~fs::perms::none) == xfs::perms::none);
+        BOOST_CHECK((p - ~fs::perms::owner_all) == xfs::perms::owner_all);
+        BOOST_CHECK((xfs::perms::unknown & ~fs::perms::none) == xfs::perms::unknown);
+        BOOST_CHECK(not(xfs::perms::unknown == ~fs::perms::none));
+        BOOST_CHECK(not(~fs::perms::none == xfs::perms::unknown));
+        BOOST_CHECK(xfs::perms::unknown != ~fs::perms::none);
+        BOOST_CHECK(xfs::perms::unknown == fs::perms::unknown);
+}
+
 // The same code, once against the standard's type and once respelled, leaves a real file the same way.
 BOOST_AUTO_TEST_CASE(RespelledCodeBehavesAsTheStandardsTypeOnARealFile)
 {
@@ -481,6 +496,11 @@ BOOST_AUTO_TEST_CASE(ANarrowerWidthTakesEveryValueBelowIt)
         BOOST_CHECK_EQUAL(mismatches, 0UZ);
         BOOST_CHECK(~narrow_perms() == fs::perms::mask);
         BOOST_CHECK(fs::perms::mask == ~narrow_perms());
+
+        // Bits above twelve make a value unequal and are dropped by &, where nothing of the flag set meets them.
+        BOOST_CHECK(~narrow_perms() != fs::perms::none);
+        BOOST_CHECK(~narrow_perms() != fs::perms::unknown);
+        BOOST_CHECK((~narrow_perms() & fs::perms::unknown) == fs::perms::mask);
 }
 
 // A mask enumeration keys a flag type directly: iteration yields one-bit values, and the type has no interop.
