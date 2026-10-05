@@ -91,7 +91,6 @@ target_sources(
         include/xstd/bits/bit_vector.hpp
         include/xstd/bits/detail/adapted_bits.hpp
         include/xstd/bits/detail/allocator_base_type.hpp
-        include/xstd/bits/detail/bidirectional.hpp
         include/xstd/bits/detail/bounded_blocks.hpp
         include/xstd/bits/detail/bit_block_container.hpp
         include/xstd/bits/detail/comparisons.hpp
@@ -110,7 +109,6 @@ target_sources(
         include/xstd/bits/detail/bit_convertible.hpp
         include/xstd/bits/detail/static_block_capacity.hpp
         include/xstd/bits/detail/bit_width.hpp
-        include/xstd/bits/detail/random_access.hpp
         include/xstd/bits/detail/range_const_reference.hpp
         include/xstd/bits/detail/shift.hpp
         include/xstd/bits/detail/storage_ptr.hpp

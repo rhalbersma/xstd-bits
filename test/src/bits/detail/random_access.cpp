@@ -5,22 +5,28 @@
 
 #include <test/array_storage.hpp>                   // array_storage
 #include <test/block_types.hpp>                     // all_block_types, digits_v, graded_extents
+#include <test/closed_proxy.hpp>                    // closed_proxies
 #include <test/ext_int128.hpp>                      // TEST_HAS_ABSL_INT128, TEST_HAS_BOOST_INT128, uint128
 #include <test/for_each_type.hpp>                   // for_each_type
+#include <test/minimal_blocks.hpp>                  // minimal_blocks
 #include <test/value_reference.hpp>                 // value_reference
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array
+#include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector
 #include <xstd/bits/bit_span.hpp>                   // bit_span
+#include <xstd/bits/bit_subspan.hpp>                // bit_subspan
+#include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
 #include <xstd/bits/detail/ownership.hpp>           // storage
-#include <xstd/bits/detail/random_access.hpp>       // random_access_bit_iterator, random_access_bit_reference
-#include <xstd/bits/detail/sequence_adaptor.hpp>    // sequence_adaptor
+#include <xstd/bits/detail/sequence_adaptor.hpp>    // sequence_adaptor, sequence_reference
 #include <xstd/bits/detail/storage_ptr.hpp>         // storage_ptr_t
+#include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                                // equal, ranges::reverse, ranges::sort, reverse, sort
 #include <array>                                    // array
 #include <concepts>                                 // convertible_to, equality_comparable, random_access_iterator, same_as, sortable, totally_ordered, totally_ordered_with
 #include <cstddef>                                  // ptrdiff_t, size_t
 #include <cstdint>                                  // uint64_t, uint8_t
+#include <format>                                   // formattable
 #include <iterator>                                 // iter_move, next, prev, reverse_iterator
 #include <optional>                                 // optional
 #include <ranges>                                   // iota, subrange
@@ -60,11 +66,22 @@ auto check_position(Iterator first, std::size_t i, std::vector<bool>& model)
         BOOST_CHECK_EQUAL(static_cast<bool>(first[static_cast<std::ptrdiff_t>(i)]), model[i]);
 }
 
+// The sequence view over a storage, whose iterator and proxy are the ones under test.
+template<class Bits>
+using borrowed_sequence = xstd::bits::detail::sequence_adaptor<Bits, xstd::bits::detail::storage::borrowed>;
+
 // An iterator into the storage at a position, as a view borrowing it hands one out: only a view may build one.
 template<class Bits>
-[[nodiscard]] auto iterator_at(Bits& c, std::size_t n)
+[[nodiscard]] constexpr auto iterator_at(Bits& c, std::size_t n)
 {
-        return xstd::bits::detail::sequence_adaptor<Bits, xstd::bits::detail::storage::borrowed>(c).begin() + static_cast<std::ptrdiff_t>(n);
+        return borrowed_sequence<Bits>(c).begin() + static_cast<std::ptrdiff_t>(n);
+}
+
+// The same view type's const iterator, the one const iterator its own iterators compare with.
+template<class Bits>
+[[nodiscard]] constexpr auto const_iterator_at(Bits& c, std::size_t n)
+{
+        return borrowed_sequence<Bits>(c).cbegin() + static_cast<std::ptrdiff_t>(n);
 }
 
 template<class T>
@@ -83,7 +100,7 @@ template<class Block>
 using block_bits = test::array_storage<Block, test::digits_v<Block>>;
 
 template<class Block>
-using block_reference = xstd::bits::detail::random_access_bit_reference<block_bits<Block>>;
+using block_reference = borrowed_sequence<block_bits<Block>>::reference;
 
 // Dependent, so an ambiguous comparison is a substitution failure rather than a hard error.
 template<class L, class R>
@@ -98,16 +115,53 @@ concept less_than_with = requires (L const& lhs, R const& rhs) {
         rhs < lhs;
 };
 
-// Boost.Int128 declares non-template operator==(uint128, bool) and its mirror, which ADL adds to the built-in one.
+} // namespace
+
+// A namespace whose comparisons take anything exactly, so they decide every comparison ADL brings them into.
+namespace acme {
+
+template<class A, class B>
+[[nodiscard]] constexpr auto operator==(A const& /* lhs */, B const& /* rhs */) noexcept
+        -> bool
+{
+        return false;
+}
+
+template<class A, class B>
+[[nodiscard]] constexpr auto operator<(A const& /* lhs */, B const& /* rhs */) noexcept
+        -> bool
+{
+        return false;
+}
+
+// Storage of acme's own, a template argument of every adaptor over it.
 template<class Block>
-constexpr bool ties_with_bool = false;
+class blocks : public test::minimal_blocks<Block>
+{};
 
-#ifdef TEST_HAS_BOOST_INT128
+} // namespace acme
 
-template<>
-constexpr bool ties_with_bool<boost::int128::uint128> = true;
+namespace {
 
-#endif
+using hostile_bits = xstd::bits::detail::bit_block_container<acme::blocks<std::uint64_t>>;
+
+// The proxies over acme's storage compare as their bools do, and the iterators as their positions do.
+[[nodiscard]] constexpr auto hostile_storage_compares_as_ours()
+        -> bool
+{
+        auto c = hostile_bits(64UZ);
+        c.set(1);
+        auto const first      = iterator_at(c, 0UZ);
+        auto const again      = iterator_at(c, 0UZ);
+        auto const second     = std::next(first);
+        auto const clear      = *first;
+        auto const same       = *again;
+        auto const set        = *second;
+        auto const equalities = clear == same and not(clear != same) and clear != set;
+        // The built-in < is the comparison under test, and it compares the two bools as ints.
+        auto const orderings = not(clear < same) and clear < set; // NOLINT(readability-implicit-bool-conversion)
+        return equalities and orderings and first == again and first != second and first < second;
+}
 
 } // namespace
 
@@ -121,26 +175,26 @@ BOOST_AUTO_TEST_CASE(AnIteratorIsAPointerAndAPosition)
 {
         constexpr auto two_pointers = 2UZ * sizeof(void*);
 
-        static_assert(sizeof(xstd::bits::detail::random_access_bit_iterator<Bits>) == two_pointers);
-        static_assert(sizeof(xstd::bits::detail::random_access_bit_reference<Bits>) == two_pointers);
-        static_assert(sizeof(xstd::bits::detail::random_access_bit_iterator<Bits const>) == two_pointers);
-        static_assert(sizeof(xstd::bits::detail::random_access_bit_reference<Bits const>) == two_pointers);
+        static_assert(sizeof(borrowed_sequence<Bits>::iterator) == two_pointers);
+        static_assert(sizeof(borrowed_sequence<Bits>::reference) == two_pointers);
+        static_assert(sizeof(borrowed_sequence<Bits>::const_iterator) == two_pointers);
+        static_assert(sizeof(borrowed_sequence<Bits>::const_reference) == two_pointers);
 }
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheSequenceIteratorIsRandomAccess, T, ArrayTypes)
 {
-        static_assert(std::random_access_iterator<xstd::bits::detail::random_access_bit_iterator<T>>);
-        static_assert(std::random_access_iterator<xstd::bits::detail::random_access_bit_iterator<T const>>);
+        static_assert(std::random_access_iterator<typename borrowed_sequence<T>::iterator>);
+        static_assert(std::random_access_iterator<typename borrowed_sequence<T>::const_iterator>);
 
-        static_assert(std::sortable<xstd::bits::detail::random_access_bit_iterator<T>>);
-        static_assert(not std::sortable<xstd::bits::detail::random_access_bit_iterator<T const>>);
+        static_assert(std::sortable<typename borrowed_sequence<T>::iterator>);
+        static_assert(not std::sortable<typename borrowed_sequence<T>::const_iterator>);
 }
 
 // Const is in the Bits and nowhere else: the proxy asks the storage, and a const storage has no assign to reach.
 BOOST_AUTO_TEST_CASE(ConstnessLivesInTheBits)
 {
-        using Ref      = xstd::bits::detail::random_access_bit_reference<Bits>;
-        using ConstRef = xstd::bits::detail::random_access_bit_reference<Bits const>;
+        using Ref      = borrowed_sequence<Bits>::reference;
+        using ConstRef = borrowed_sequence<Bits>::const_reference;
 
         static_assert(std::is_assignable_v<Ref const&, bool>);
         static_assert(not std::is_assignable_v<ConstRef const&, bool>);
@@ -154,13 +208,13 @@ BOOST_AUTO_TEST_CASE(ConstnessLivesInTheBits)
 // What a container's const_reference must be: trivially copyable, never assignable, comparable by value.
 BOOST_AUTO_TEST_CASE(TheReadOnlyProxiesAreValues)
 {
-        static_assert(test::value_reference<xstd::bits::detail::random_access_bit_reference<Bits const>>);
+        static_assert(test::value_reference<borrowed_sequence<Bits>::const_reference>);
 
         // The writable proxy is the one exception by design, and trivial to copy and destroy all the same.
-        static_assert(not test::value_reference<xstd::bits::detail::random_access_bit_reference<Bits>>);
-        static_assert(std::is_trivially_copy_constructible_v<xstd::bits::detail::random_access_bit_reference<Bits>>);
-        static_assert(std::is_trivially_destructible_v<xstd::bits::detail::random_access_bit_reference<Bits>>);
-        static_assert(std::is_trivially_destructible_v<xstd::bits::detail::random_access_bit_iterator<Bits>>);
+        static_assert(not test::value_reference<borrowed_sequence<Bits>::reference>);
+        static_assert(std::is_trivially_copy_constructible_v<borrowed_sequence<Bits>::reference>);
+        static_assert(std::is_trivially_destructible_v<borrowed_sequence<Bits>::reference>);
+        static_assert(std::is_trivially_destructible_v<borrowed_sequence<Bits>::iterator>);
 
         BOOST_CHECK(true);
 }
@@ -169,15 +223,15 @@ BOOST_AUTO_TEST_CASE(TheReadOnlyProxiesAreValues)
 BOOST_AUTO_TEST_CASE(OnlyTheLibraryBuildsAProxyFromAPointerAndAPosition)
 {
         using Ptr = xstd::bits::detail::storage_ptr_t<Bits>;
-        static_assert(not std::is_constructible_v<xstd::bits::detail::random_access_bit_iterator<Bits>, Ptr, std::size_t>);
-        static_assert(not std::is_constructible_v<xstd::bits::detail::random_access_bit_reference<Bits>, Ptr, std::size_t>);
+        static_assert(not std::is_constructible_v<borrowed_sequence<Bits>::iterator, Ptr, std::size_t>);
+        static_assert(not std::is_constructible_v<borrowed_sequence<Bits>::reference, Ptr, std::size_t>);
         BOOST_CHECK(true);
 }
 
 BOOST_AUTO_TEST_CASE(AMutableSequenceIteratorConvertsToItsConstTwin)
 {
-        using It      = xstd::bits::detail::random_access_bit_iterator<Bits>;
-        using ConstIt = xstd::bits::detail::random_access_bit_iterator<Bits const>;
+        using It      = borrowed_sequence<Bits>::iterator;
+        using ConstIt = borrowed_sequence<Bits>::const_iterator;
 
         static_assert(std::convertible_to<It, ConstIt>);
         static_assert(not std::convertible_to<ConstIt, It>);
@@ -185,7 +239,7 @@ BOOST_AUTO_TEST_CASE(AMutableSequenceIteratorConvertsToItsConstTwin)
         auto b            = Bits();
         auto const it     = iterator_at(b, 7UZ);
         ConstIt const cit = it;
-        BOOST_CHECK(cit == iterator_at(std::as_const(b), 7UZ));
+        BOOST_CHECK(cit == const_iterator_at(b, 7UZ));
         BOOST_CHECK(*cit == false);
 }
 
@@ -197,7 +251,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheSequenceIteratorReadsAndWritesThroughTheStorage
         // Written through check_position below, which the check cannot see past a dependent call.
         auto model       = std::vector<bool>(N); // NOLINT(misc-const-correctness)
         auto const first = iterator_at(c, 0UZ);
-        BOOST_CHECK(first == iterator_at(std::as_const(c), 0UZ));
+        BOOST_CHECK(first == const_iterator_at(c, 0UZ));
 
         // Nothing to step over at a zero width, so nothing is instantiated for it.
         if constexpr (N != 0UZ) {
@@ -295,7 +349,7 @@ BOOST_AUTO_TEST_CASE(RangesAlgorithmsReachTheBitsThroughIterMoveAndIterSwap)
         BOOST_CHECK(as_vector(c) == model);
 
         // and the const twin is reachable by the reverse adaptor, being a proper bidirectional iterator.
-        auto const rfirst = std::reverse_iterator(xstd::bits::detail::random_access_bit_iterator<Bits const>(last));
+        auto const rfirst = std::reverse_iterator(borrowed_sequence<Bits>::const_iterator(last));
         BOOST_CHECK_EQUAL(static_cast<bool>(*rfirst), model.back());
 }
 
@@ -314,20 +368,15 @@ BOOST_AUTO_TEST_CASE(TheProxyComparesThroughItsOneConversion)
 {
         test::for_each_type<test::all_block_types>([]<class Block> -> void {
                 using reference       = block_reference<Block>;
-                using const_reference = xstd::bits::detail::random_access_bit_reference<block_bits<Block> const>;
+                using const_reference = borrowed_sequence<block_bits<Block>>::const_reference;
                 using value_type      = reference::value_type;
 
                 static_assert(std::equality_comparable<reference>);
                 static_assert(std::totally_ordered<reference>);
                 static_assert(std::totally_ordered<const_reference>);
-                static_assert(less_than_with<reference, value_type>);
-                if constexpr (ties_with_bool<Block>) {
-                        static_assert(not equal_to_with<reference, value_type>);
-                        static_assert(not equal_to_with<reference, int>);
-                } else {
-                        static_assert(std::totally_ordered_with<reference, value_type>);
-                        static_assert(equal_to_with<reference, int>);
-                }
+                static_assert(std::totally_ordered_with<reference, value_type>);
+                static_assert(equal_to_with<reference, int>);
+                static_assert(less_than_with<reference, int>);
 
                 static_assert(not std::is_convertible_v<reference, flag>);
                 static_assert(std::is_constructible_v<flag, reference>);
@@ -351,17 +400,63 @@ BOOST_AUTO_TEST_CASE(TheProxyComparesThroughItsOneConversion)
         BOOST_CHECK(*iterator_at(narrow, 0UZ) != true);
 }
 
+// acme's operators decide a comparison between its own storages, and none between the proxies or iterators over one.
+BOOST_AUTO_TEST_CASE(AStoragesNamespaceIsNotAssociatedWithItsProxies)
+{
+        auto const lhs = acme::blocks<std::uint64_t>();
+        auto const rhs = acme::blocks<std::uint64_t>();
+        BOOST_CHECK(not(lhs == rhs));
+        BOOST_CHECK(not(lhs < rhs));
+
+        static_assert(hostile_storage_compares_as_ours());
+        BOOST_CHECK(hostile_storage_compares_as_ours());
+}
+
+// Every sequence and view hands out a pair that * and & close, over its storage mutable and const.
+BOOST_AUTO_TEST_CASE(EverySequenceClosesItsProxyPair)
+{
+        static_assert(test::closed_proxies<xstd::basic_bit_array<std::uint64_t, 65>>);
+        static_assert(test::closed_proxies<xstd::basic_bit_vector<std::uint64_t>>);
+        static_assert(test::closed_proxies<xstd::basic_bit_bounded_vector<std::uint64_t, 65>>);
+        static_assert(test::closed_proxies<xstd::basic_bit_small_vector<std::uint64_t, 65>>);
+        static_assert(test::closed_proxies<xstd::bit_span<std::array<std::uint64_t, 2>>>);
+        static_assert(test::closed_proxies<xstd::bit_span<std::array<std::uint64_t, 2> const>>);
+        static_assert(test::closed_proxies<xstd::bit_subspan<std::array<std::uint64_t, 2>>>);
+        static_assert(test::closed_proxies<xstd::bit_subspan<std::array<std::uint64_t, 2> const>>);
+        static_assert(test::closed_proxies<xstd::bits::detail::sequence_adaptor<hostile_bits>>);
+
+        BOOST_CHECK(true);
+}
+
+// What std::formatter is specialized for: the proxies themselves, which no deduction reaches through the class.
+BOOST_AUTO_TEST_CASE(TheFormatterIsSpecializedForExactlyTheProxies)
+{
+        static_assert(xstd::bits::detail::sequence_reference<borrowed_sequence<Bits>::reference>);
+        static_assert(xstd::bits::detail::sequence_reference<borrowed_sequence<Bits>::const_reference>);
+        static_assert(not xstd::bits::detail::sequence_reference<borrowed_sequence<Bits>::iterator>);
+        static_assert(not xstd::bits::detail::sequence_reference<bool>);
+        static_assert(not xstd::bits::detail::sequence_reference<std::vector<bool>::reference>);
+
+        static_assert(std::formattable<borrowed_sequence<Bits>::reference, char>);
+        static_assert(std::formattable<borrowed_sequence<hostile_bits>::reference, char>);
+
+        BOOST_CHECK(true);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
-// The sequence view hands out this proxy and nothing of its own.
+// The sequence view hands out a pair of its own, shaped as every other.
 BOOST_AUTO_TEST_SUITE(RandomAccessThroughTheView)
 
 namespace {
 
 using Viewed = xstd::bits::detail::bit_block_container<std::array<std::uint64_t, 1>, 64>;
 
-using ArrIt  = xstd::bits::detail::random_access_bit_iterator<Viewed>;
-using ArrRef = xstd::bits::detail::random_access_bit_reference<Viewed>;
+using Span      = xstd::bit_span<std::array<std::uint64_t, 1>>;
+using ConstSpan = xstd::bit_span<std::array<std::uint64_t, 1> const>;
+
+using ArrIt  = Span::iterator;
+using ArrRef = Span::reference;
 
 // Dependent, so a type without the member is a substitution failure rather than a hard error.
 template<class R>
@@ -369,10 +464,12 @@ constexpr bool has_address_of = requires (R r) { r.operator&(); };
 
 } // namespace
 
-BOOST_AUTO_TEST_CASE(TheViewIteratesWithTheSharedProxy)
+// Each container has its own pair, as std::span's iterator is not std::vector's, though both read the same storage.
+BOOST_AUTO_TEST_CASE(TheViewIteratesWithItsOwnProxy)
 {
-        static_assert(std::same_as<xstd::bit_span<std::array<std::uint64_t, 1>>::iterator, ArrIt>);
-        static_assert(std::same_as<xstd::bit_span<std::array<std::uint64_t, 1>>::reference, ArrRef>);
+        static_assert(not std::same_as<ArrIt, borrowed_sequence<Viewed>::iterator>);
+        static_assert(not std::same_as<ArrRef, borrowed_sequence<Viewed>::reference>);
+        static_assert(not std::same_as<ArrIt, xstd::basic_bit_array<std::uint64_t, 64>::iterator>);
 
         BOOST_CHECK(true);
 }
@@ -397,12 +494,14 @@ BOOST_AUTO_TEST_CASE(AddressOfAProxyYieldsAnIterator)
 // The const path is a proxy too, the same one minus the assignment -- not the plain bool libstdc++ hands back.
 BOOST_AUTO_TEST_CASE(TheConstPathIsAProxyAsWell)
 {
-        using ConstArrRef = xstd::bits::detail::random_access_bit_reference<Viewed const>;
+        using ConstArrRef = Span::const_reference;
 
-        static_assert(std::same_as<xstd::bit_span<std::array<std::uint64_t, 1> const>::reference, ConstArrRef>);
+        static_assert(std::same_as<ConstSpan::reference, ConstSpan::const_reference>);
+        static_assert(std::same_as<ConstSpan::iterator, ConstSpan::const_iterator>);
         static_assert(std::is_convertible_v<ConstArrRef, bool>);
         static_assert(has_address_of<ConstArrRef>);
-        static_assert(std::same_as<decltype(&std::declval<ConstArrRef const&>()), xstd::bits::detail::random_access_bit_iterator<Viewed const>>);
+        static_assert(std::same_as<decltype(&std::declval<ConstArrRef const&>()), Span::const_iterator>);
+        static_assert(not std::is_assignable_v<ConstSpan::reference const&, bool>);
 
         // and it is exactly the assignment that the const one drops.
         static_assert(std::is_assignable_v<ArrRef const&, bool>);
@@ -481,6 +580,8 @@ BOOST_AUTO_TEST_CASE(AProxyNeverBecomesAnIntegerBlock)
                 a[256] = true;
                 BOOST_CHECK(a[0] == a[256]);
                 BOOST_CHECK(a[0] != a[1]);
+                BOOST_CHECK(a[0] == true);
+                BOOST_CHECK(a[0] == 1);
                 BOOST_CHECK(a[0] > false);
         }
 

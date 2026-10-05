@@ -8,7 +8,7 @@
 
 #include <xstd/bits/bit_blocks.hpp>        // bit_blocks_extent_v, owned_bit_blocks
 #include <xstd/bits/detail/bit_layout.hpp> // fixed_bit_blocks
-#include <xstd/bits/detail/ownership.hpp>  // owned_storage
+#include <xstd/bits/detail/ownership.hpp>  // owned_storage, owner, view
 #include <bitset>                          // bitset
 #include <cstddef>                         // size_t
 #include <span>                            // dynamic_extent
@@ -16,20 +16,6 @@
 
 // The width of bit storage a type has, fixed by its type: what xstd::bit_convert matches two fixed widths by.
 namespace xstd::bits::detail {
-
-// One of our owners, of any reading: its storage is named by the owner protocol.
-template<class T>
-concept packed_owner = requires { typename owned_storage<std::remove_const_t<T>>::bits_type; };
-
-// One of our views over the whole width: a window starts inside a block, so its bits are not its storage's.
-template<class T>
-concept packed_view =
-        (not packed_owner<T>) and
-        requires { typename T::adapted_type; } and
-        (not requires { requires T::is_windowed; });
-
-template<class T>
-concept packed = packed_owner<T> or packed_view<T>;
 
 // A foreign type names its width only as std::bitset does, in its type; any other is read where a target supplies one.
 template<class T>
@@ -43,9 +29,10 @@ template<class T>
 [[nodiscard]] consteval auto bit_width_of() noexcept
         -> std::size_t
 {
-        if constexpr (packed_owner<T>) {
+        if constexpr (owner<T>) {
                 return std::remove_const_t<typename owned_storage<std::remove_const_t<T>>::bits_type>::extent;
-        } else if constexpr (packed_view<T>) {
+        } else if constexpr (view<T> and (not requires { requires T::is_windowed; })) {
+                // A window starts inside a block, so its bits are not its storage's, where a whole view's are.
                 return std::remove_const_t<typename T::adapted_type>::extent;
         } else if constexpr (fixed_bit_blocks<T> and (std::is_bounded_array_v<T> or xstd::owned_bit_blocks<std::remove_const_t<T>>)) {
                 // Held by value, so a span of a static extent stays out: it lends its width rather than having it.
