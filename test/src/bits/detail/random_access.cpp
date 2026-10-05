@@ -5,17 +5,22 @@
 
 #include <test/array_storage.hpp>                   // array_storage
 #include <test/block_types.hpp>                     // all_block_types, digits_v, graded_extents
+#include <test/closed_proxy.hpp>                    // closed_proxies
 #include <test/ext_int128.hpp>                      // TEST_HAS_ABSL_INT128, TEST_HAS_BOOST_INT128, uint128
 #include <test/for_each_type.hpp>                   // for_each_type
 #include <test/minimal_blocks.hpp>                  // minimal_blocks
 #include <test/value_reference.hpp>                 // value_reference
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array
+#include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector
 #include <xstd/bits/bit_span.hpp>                   // bit_span
+#include <xstd/bits/bit_subspan.hpp>                // bit_subspan
+#include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
 #include <xstd/bits/detail/ownership.hpp>           // storage
 #include <xstd/bits/detail/random_access.hpp>       // random_access_bit_iterator, random_access_bit_reference, random_access_reference
 #include <xstd/bits/detail/sequence_adaptor.hpp>    // sequence_adaptor
 #include <xstd/bits/detail/storage_ptr.hpp>         // storage_ptr_t
+#include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                                // equal, ranges::reverse, ranges::sort, reverse, sort
 #include <array>                                    // array
@@ -395,6 +400,22 @@ BOOST_AUTO_TEST_CASE(AStoragesNamespaceIsNotAssociatedWithItsProxies)
 
         static_assert(hostile_storage_compares_as_ours());
         BOOST_CHECK(hostile_storage_compares_as_ours());
+}
+
+// Every sequence and view hands out a pair that * and & close, over its storage mutable and const.
+BOOST_AUTO_TEST_CASE(EverySequenceClosesItsProxyPair)
+{
+        static_assert(test::closed_proxies<xstd::basic_bit_array<std::uint64_t, 65>>);
+        static_assert(test::closed_proxies<xstd::basic_bit_vector<std::uint64_t>>);
+        static_assert(test::closed_proxies<xstd::basic_bit_bounded_vector<std::uint64_t, 65>>);
+        static_assert(test::closed_proxies<xstd::basic_bit_small_vector<std::uint64_t, 65>>);
+        static_assert(test::closed_proxies<xstd::bit_span<std::array<std::uint64_t, 2>>>);
+        static_assert(test::closed_proxies<xstd::bit_span<std::array<std::uint64_t, 2> const>>);
+        static_assert(test::closed_proxies<xstd::bit_subspan<std::array<std::uint64_t, 2>>>);
+        static_assert(test::closed_proxies<xstd::bit_subspan<std::array<std::uint64_t, 2> const>>);
+        static_assert(test::closed_proxies<xstd::bits::detail::sequence_adaptor<hostile_bits>>);
+
+        BOOST_CHECK(true);
 }
 
 // What std::formatter is specialized for: the proxies themselves, which no deduction reaches through the class.

@@ -5,23 +5,28 @@
 
 #include <test/array_storage.hpp>                   // array_storage
 #include <test/block_types.hpp>                     // all_block_types, digits_v, graded_extents
+#include <test/closed_proxy.hpp>                    // closed_proxies
 #include <test/ext_int128.hpp>                      // TEST_HAS_ABSL_INT128, TEST_HAS_BOOST_INT128, uint128
 #include <test/for_each_type.hpp>                   // for_each_type
 #include <test/minimal_blocks.hpp>                  // minimal_blocks
 #include <test/value_reference.hpp>                 // value_reference
+#include <xstd/bits/bit_bounded_set.hpp>            // basic_bit_bounded_set
 #include <xstd/bits/bit_fixed_set.hpp>              // basic_bit_fixed_set
 #include <xstd/bits/bit_key_traits.hpp>             // bit_key_traits
+#include <xstd/bits/bit_set.hpp>                    // basic_bit_set
 #include <xstd/bits/bit_set_view.hpp>               // bit_set_view
 #include <xstd/bits/detail/bidirectional.hpp>       // bidirectional_bit_iterator, bidirectional_bit_reference, bidirectional_reference
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
 #include <xstd/bits/detail/ownership.hpp>           // storage
 #include <xstd/bits/detail/set_adaptor.hpp>         // set_adaptor
+#include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <array>                                    // array
 #include <compare>                                  // strong_ordering
 #include <concepts>                                 // bidirectional_iterator, equality_comparable, equality_comparable_with, same_as, totally_ordered, totally_ordered_with
 #include <cstddef>                                  // size_t
 #include <cstdint>                                  // uint64_t, uint8_t
+#include <functional>                               // greater
 #include <format>                                   // formattable
 #include <iterator>                                 // iter_reference_t, iter_value_t, next, prev
 #include <optional>                                 // optional
@@ -449,6 +454,23 @@ BOOST_AUTO_TEST_CASE(AKeysHiddenFriendsDecideBesideAHostileStorageAndKeyTraits)
 
         static_assert(hostile_slot_set_compares_as_its_keys());
         BOOST_CHECK(hostile_slot_set_compares_as_its_keys());
+}
+
+// Every set and view hands out a pair that * and & close, its const_iterator being its iterator.
+BOOST_AUTO_TEST_CASE(EverySetClosesItsProxyPair)
+{
+        static_assert(test::closed_proxies<xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 65>>);
+        static_assert(test::closed_proxies<xstd::basic_bit_set<std::size_t, std::uint64_t>>);
+        static_assert(test::closed_proxies<xstd::basic_bit_bounded_set<std::size_t, std::uint64_t, 65>>);
+        static_assert(test::closed_proxies<xstd::basic_bit_small_set<std::size_t, std::uint64_t, 65>>);
+        static_assert(test::closed_proxies<xstd::basic_bit_fixed_set<key, std::uint64_t, 65, key_traits>>);
+        static_assert(test::closed_proxies<xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 65, xstd::bit_key_traits<std::size_t>, std::greater<std::size_t>>>); // NOLINT(modernize-use-transparent-functors): the descending direction, as a set's comparator names it
+        static_assert(test::closed_proxies<xstd::bit_set_view<std::array<std::uint64_t, 2>>>);
+        static_assert(test::closed_proxies<xstd::bit_set_view<std::array<std::uint64_t, 2> const>>);
+        static_assert(test::closed_proxies<hostile_set>);
+        static_assert(test::closed_proxies<hostile_slot_set>);
+
+        BOOST_CHECK(true);
 }
 
 // What std::formatter is specialized for: the proxies themselves, which no deduction reaches through the class.

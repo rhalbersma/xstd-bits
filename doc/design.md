@@ -3316,8 +3316,30 @@ differ by; the reading names the container that hands them out, and the category
 The `bit_` infix then says what is iterated, as `bit_` says what is stored in the container names
 ([the-public-names](#the-public-names)) -- and it is what keeps `bidirectional_bit_iterator` clear of
 `std::bidirectional_iterator`, whose spelling the category alone would have taken. The four names are alias
-templates: the classes themselves are nested in `random_access<Bits>` and `bidirectional<Bits, KeyTraits,
+templates: the classes themselves are members of `random_access<Bits>` and `bidirectional<Bits, Key, KeyTraits,
 Direction>`, which is what decides the namespaces ADL searches for them ([the-adl-firewall](#the-adl-firewall)).
+
+**`operator&` on the proxy answers an iterator**, which is what a proxy can offer in place of an address, and it
+is what keeps a container's subscript tied to its iteration: `&a[n]` is `a.begin() + n`, so `&a[n] == &a[0] + n`
+holds for `bit_array` and `bit_vector` in iterator arithmetic, exactly where a contiguous range spells it in
+pointer arithmetic. `std::vector<bool>` answers this differently per implementation, and no implementation
+answers it fully. libstdc++'s `_Bit_reference` has no `operator&` at all, so `&v[n]` is ill-formed there on a
+mutable *and* on a const vector. libc++ does have one, but only on `__bit_const_reference`, where it returns
+`__bit_iterator<_Cp, true>`; its mutable `__bit_reference` has none on current main, so `&v[n]` is ill-formed
+there too and only `&cv[n]` on a const vector answers. Ours answers on both, measured rather than assumed.
+
+Random access is nevertheless where the ladder stops, and it stops because of the proxy.
+`std::contiguous_iterator` requires `iter_reference_t<I>` to be a real `iter_value_t<I>&`, which no proxy is, so
+no reading here is a `contiguous_range` and no iterator here is a `contiguous_iterator`. That is asserted as a
+negative, because it is the one place the bits and the blocks part company: the **blocks** are contiguous and
+`owned_bit_blocks` requires precisely that
+([owned-bit-storage](#owned-bit-storage)), while the **bits** are not addressable at all. The
+asymmetry is the reason the vehicle keeps its blocks to itself and hands out proxies above it.
+
+The free functions stay qualified as `bits::detail::shl<Block>(...)` inside `xstd::bits::detail` itself.
+Dropping the qualification would read more naturally and reintroduce exactly the hazard the nesting exists to
+close: an unqualified call with an explicit template argument performs ADL, and the associated namespace of
+the type in play can be `std` or `boost` ([why-nested](#why-nested)).
 
 ### the-adl-firewall
 
@@ -3341,60 +3363,51 @@ exotic. Boost.Int128 declares non-template `operator==(uint128, bool)` and its m
 conversion, and was ambiguous.
 
 **The rule.** The same paragraph associates with a class type the class itself, the class it is a member of,
-and its bases; only when the type *itself* is a class template specialization does it add the template
-arguments. A class nested in a class template is not one -- it is a member of a specialization -- so
-`random_access<Bits>::reference` is associated with `xstd::bits::detail` and with `random_access<Bits>`, a
-struct declaring nothing but the two nested classes, and with nothing of `Bits`. GCC 15 and Clang 22 both
-read it so. The iterator and the reference are nested in one enclosing class per header, and their old names
-stay as alias templates over them, since ADL is decided by the class and never by the alias.
+and its bases; only when the type *itself* is a class template specialization does it add that
+specialization's template arguments. A member of a class template specialization is not a specialization of
+the enclosing template, so its enclosing class's arguments never reach it. A specialization of a *member*
+class template is a specialization, but of that member template, and contributes its own arguments alone.
+GCC 15 and Clang 22 both read it so.
+
+**The shape.** Each header has one enclosing class holding the parameters to keep out, and the iterator and
+the proxy as member class templates on the value type:
+
+```cpp
+template<class Bits>                                                // sets: <Bits, Key, KeyTraits, Direction>
+struct random_access
+{
+        using value_type = bool;                                    // sets: Key
+        template<class Value> class basic_iterator;                 // * yields basic_reference<Value>
+        template<class Value> class basic_reference;                // & yields basic_iterator<Value>
+        using iterator  = basic_iterator<value_type>;
+        using reference = basic_reference<value_type>;
+};
+```
+
+Each body asserts `Value` is `value_type`: it is there to be associated, not to be a second axis. The pair is
+closed under `*` and `&` inside one enclosing class, and the const flavour is the same shape over
+`Bits const`. The old names, `random_access_bit_iterator<Bits>` and the rest, stay as alias templates, since
+ADL is decided by the class and never by the alias.
 
 **Why not an ADL barrier.** The usual idiom, a class in a namespace of its own that the library re-exports
 with a using-declaration, closes off the namespace the class is declared in. It does nothing for the template
 arguments, which stay associated however the class is reached, and they are the whole problem here.
 
-**What stays associated, and what does not.** The rule is exact: the storage -- `Bits`, and through it the
-blocks, the Block and any allocator -- the key traits and the direction are **not** associated with a proxy
-or an iterator; the proxy's value type **is**, deliberately, so that the proxy compares as its value does.
-`xstd::bits::detail` is associated as well, through the enclosing class, which is where the proxies' hidden
-friends live: `swap`, `iter_move`, `iter_swap` and `format_as` are found exactly as before.
+**What is associated, and what is not.** The storage -- `Bits`, and through it the blocks, the Block and any
+allocator -- the key traits and the direction are **not** associated with a proxy or an iterator. The value
+type **is**, deliberately, so that the proxy compares as its value does: `bool` for the sequence reading,
+which brings no namespace, and the key for the set reading, whose namespace is searched, so `*it == *jt` and
+`*it == 3` reach a class key's own comparisons, hidden friends among them, as a real `Key const&` would.
+Without that, a key whose `operator==` is a hidden friend would not compare through its proxy at all. A
+reading whose value is a character type keeps that type the same way. `xstd::bits::detail` is associated as
+well, through the enclosing class, which is where the proxies' hidden friends live: `swap`, `iter_move`,
+`iter_swap` and `format_as` are found exactly as before.
 
-The value type is kept by where it sits. The set proxy is a member *template*, `bidirectional<Bits,
-KeyTraits, Direction>::reference<Key>`, and a specialization of a member class template is a class template
-specialization whose own argument is the key alone, so a class key's namespace is associated and
-`*it == *jt` or `*it == 3` reaches the key's own comparisons, hidden friends among them, as a real
-`Key const&` would. Without that, a key whose `operator==` is a hidden friend would not compare through its
-proxy at all. The set iterator takes the key the same way, one iterator type per storage, traits and
-direction as before. The sequence proxy's value is `bool`, which has no namespace to keep, so its reference
-and iterator are plain nested classes; a reading whose value is a character type would make its reference a
-member template on that type for the same reason the set proxy is one.
-
-**What it costs.** No deduction reaches `Bits` through a nested class, so the `std::formatter` specializations
-can no longer be written as `formatter<random_access_bit_reference<Bits>>`. Each is a partial specialization
-constrained by a `detail` concept instead, `random_access_reference` or `bidirectional_reference`, which
-recognizes a proxy through the enclosing class it names as `enclosing_type`: true for exactly the
-references some `random_access<Bits>` or `bidirectional<Bits, KeyTraits, Direction>` declares.
-
-**`operator&` on the proxy answers an iterator**, which is what a proxy can offer in place of an address, and it
-is what keeps a container's subscript tied to its iteration: `&a[n]` is `a.begin() + n`, so `&a[n] == &a[0] + n`
-holds for `bit_array` and `bit_vector` in iterator arithmetic, exactly where a contiguous range spells it in
-pointer arithmetic. `std::vector<bool>` answers this differently per implementation, and no implementation
-answers it fully. libstdc++'s `_Bit_reference` has no `operator&` at all, so `&v[n]` is ill-formed there on a
-mutable *and* on a const vector. libc++ does have one, but only on `__bit_const_reference`, where it returns
-`__bit_iterator<_Cp, true>`; its mutable `__bit_reference` has none on current main, so `&v[n]` is ill-formed
-there too and only `&cv[n]` on a const vector answers. Ours answers on both, measured rather than assumed.
-
-Random access is nevertheless where the ladder stops, and it stops because of the proxy.
-`std::contiguous_iterator` requires `iter_reference_t<I>` to be a real `iter_value_t<I>&`, which no proxy is, so
-no reading here is a `contiguous_range` and no iterator here is a `contiguous_iterator`. That is asserted as a
-negative, because it is the one place the bits and the blocks part company: the **blocks** are contiguous and
-`owned_bit_blocks` requires precisely that
-([owned-bit-storage](#owned-bit-storage)), while the **bits** are not addressable at all. The
-asymmetry is the reason the vehicle keeps its blocks to itself and hands out proxies above it.
-
-The free functions stay qualified as `bits::detail::shl<Block>(...)` inside `xstd::bits::detail` itself.
-Dropping the qualification would read more naturally and reintroduce exactly the hazard the nesting exists to
-close: an unqualified call with an explicit template argument performs ADL, and the associated namespace of
-the type in play can be `std` or `boost` ([why-nested](#why-nested)).
+**What it costs.** No deduction reaches `Bits` through a member of a class template, so the `std::formatter`
+specializations can no longer be written as `formatter<random_access_bit_reference<Bits>>`. Each is a partial
+specialization constrained by a `detail` concept instead, `random_access_reference` or
+`bidirectional_reference`, which recognizes a proxy through the enclosing class it names as
+`enclosing_type`: true for exactly the `reference` some `random_access` or `bidirectional` declares.
 
 ### the-set-for-each
 
