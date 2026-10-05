@@ -16,9 +16,8 @@
 #include <xstd/bits/detail/hash.hpp>                         // hash_append_bits, std_hash
 #include <xstd/bits/detail/intrin.hpp>                       // countr_zero, popcount
 #include <xstd/bits/detail/ownership.hpp>                    // owned_bits_t, owned_storage, owner_of, owner_reading, sequence_reading_tag, storage, storage_access, owns, window
-#include <xstd/bits/detail/random_access.hpp>                // random_access_bit_iterator, random_access_bit_reference
 #include <xstd/bits/detail/shift.hpp>                        // shl, shr
-#include <xstd/bits/detail/storage_ptr.hpp>                  // storage_ref_t
+#include <xstd/bits/detail/storage_ptr.hpp>                  // storage_ptr_t, storage_ref_t
 #include <xstd/bits/from_blocks.hpp>                         // from_blocks_t
 #include <xstd/misc/type_traits/conditional_data_member.hpp> // XSTD_NO_UNIQUE_ADDRESS, conditional_data_member_t
 #include <xstd/misc/type_traits/empty_base_type.hpp>         // empty_base_type
@@ -30,10 +29,10 @@
 #include <compare>                                           // strong_ordering
 #include <concepts>                                          // constructible_from, invocable, same_as, swap, swappable
 #include <cstddef>                                           // ptrdiff_t, size_t
-#include <format>                                            // format
+#include <format>                                            // format, formatter
 #include <functional>                                        // hash
 #include <initializer_list>                                  // initializer_list
-#include <iterator>                                          // input_iterator, make_reverse_iterator, reverse_iterator, sentinel_for
+#include <iterator>                                          // input_iterator, make_reverse_iterator, random_access_iterator_tag, reverse_iterator, sentinel_for
 #include <limits>                                            // numeric_limits
 #include <new>                                               // bad_alloc
 #include <optional>                                          // nullopt, optional
@@ -42,7 +41,7 @@
 #include <span>                                              // dynamic_extent
 #include <stdexcept>                                         // out_of_range
 #include <tuple>                                             // tuple_element, tuple_size
-#include <type_traits>                                       // bool_constant, conditional_t, false_type, integral_constant, is_nothrow_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
+#include <type_traits>                                       // bool_constant, conditional_t, false_type, integral_constant, is_const_v, is_nothrow_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
 #include <utility>                                           // as_const, declval, forward, in_place, move, pair
 
 // The sequence reading, [array] over a bit_block_container, owning it or referring to it.
@@ -363,11 +362,18 @@ class sequence_adaptor : public sequence::sizes_t<Bits, Store, W, Derived, E>
         template<class Self>
         using storage_t = std::remove_reference_t<decltype(std::declval<Self>().bits())>;
 
-        template<class Self>
-        using iterator_t = random_access_bit_iterator<storage_t<Self>>;
+        // Members rather than templates over Bits, so ADL looks in none of Bits' namespaces for an iterator or a proxy.
+        template<bool IsConst>
+        class basic_iterator;
+
+        template<bool IsConst>
+        class basic_reference;
 
         template<class Self>
-        using reference_t = random_access_bit_reference<storage_t<Self>>;
+        using iterator_t = basic_iterator<std::is_const_v<storage_t<Self>>>;
+
+        template<class Self>
+        using reference_t = basic_reference<std::is_const_v<storage_t<Self>>>;
 
         // A source the blit can read by block, of this storage's own block type.
         template<class S>
@@ -410,12 +416,12 @@ public:
         using value_type             = bool;
         using pointer                = void;
         using const_pointer          = pointer;
-        using reference              = random_access_bit_reference<Bits>;
-        using const_reference        = random_access_bit_reference<Bits const>;
+        using reference              = basic_reference<std::is_const_v<Bits>>;
+        using const_reference        = basic_reference<true>;
         using size_type              = std::size_t;
         using difference_type        = std::ptrdiff_t;
-        using iterator               = random_access_bit_iterator<Bits>;
-        using const_iterator         = random_access_bit_iterator<Bits const>;
+        using iterator               = basic_iterator<std::is_const_v<Bits>>;
+        using const_iterator         = basic_iterator<true>;
         using reverse_iterator       = std::reverse_iterator<iterator>;
         using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
@@ -1354,6 +1360,282 @@ private:
         }
 };
 
+// A position in the sequence reading, through the storage as Bits or, IsConst, as Bits const.
+template<bit_block_container_type Bits, storage Store, window W, class Derived, std::size_t E>
+template<bool IsConst>
+class sequence_adaptor<Bits, Store, W, Derived, E>::basic_iterator
+{
+        using storage_type = std::conditional_t<IsConst, Bits const, Bits>;
+
+        storage_ptr_t<storage_type> m_ptr{};
+        std::size_t m_idx{};
+
+        // The const twin, whose conversion below reads these members; naming itself where this is the const one.
+        friend class basic_iterator<true>;
+
+        friend sequence_adaptor;
+
+        friend class basic_reference<IsConst>;
+
+        [[nodiscard]] constexpr basic_iterator(storage_ptr_t<storage_type> ptr, std::size_t idx) noexcept
+                : m_ptr(ptr)
+                , m_idx(idx)
+        {
+                assert(m_ptr != nullptr);
+        }
+
+public:
+        using iterator_category = std::random_access_iterator_tag;
+        using value_type        = bool;
+        using difference_type   = std::ptrdiff_t;
+        using pointer           = void;
+        using reference         = basic_reference<IsConst>;
+
+        [[nodiscard]] basic_iterator() = default;
+
+        // A mutable iterator converts to its const twin, as a container's iterator converts to its const_iterator.
+        template<bool OtherConst>
+                requires (IsConst and not OtherConst)
+        [[nodiscard]] constexpr explicit(false) basic_iterator(basic_iterator<OtherConst> other) noexcept // NOLINT(misc-explicit-constructor)
+                : m_ptr(other.m_ptr)
+                , m_idx(other.m_idx)
+        {}
+
+        [[nodiscard]] friend constexpr auto operator==(basic_iterator lhs, basic_iterator rhs) noexcept
+                -> bool
+        {
+                assert(lhs.m_ptr == rhs.m_ptr);
+                return lhs.m_idx == rhs.m_idx;
+        }
+
+        [[nodiscard]] friend constexpr auto operator<=>(basic_iterator lhs, basic_iterator rhs) noexcept
+                -> std::strong_ordering
+        {
+                assert(lhs.m_ptr == rhs.m_ptr);
+                return lhs.m_idx <=> rhs.m_idx;
+        }
+
+        // The position has to exist, which end()'s does not: this proxy reads and writes through the storage.
+        [[nodiscard]] constexpr auto operator*() const noexcept
+                -> reference
+        {
+                assert(m_ptr != nullptr);
+                assert(m_idx < m_ptr->size());
+                return {m_ptr, m_idx};
+        }
+
+        constexpr auto operator++() noexcept
+                -> basic_iterator&
+        {
+                ++m_idx;
+                return *this;
+        }
+
+        constexpr auto operator--() noexcept
+                -> basic_iterator&
+        {
+                --m_idx;
+                return *this;
+        }
+
+        constexpr auto operator++(int) noexcept
+                -> basic_iterator
+        {
+                auto nrv = *this;
+                ++*this;
+                return nrv;
+        }
+
+        constexpr auto operator--(int) noexcept
+                -> basic_iterator
+        {
+                auto nrv = *this;
+                --*this;
+                return nrv;
+        }
+
+        constexpr auto operator+=(difference_type n) noexcept
+                -> basic_iterator&
+        {
+                m_idx = static_cast<std::size_t>(static_cast<difference_type>(m_idx) + n);
+                return *this;
+        }
+
+        constexpr auto operator-=(difference_type n) noexcept
+                -> basic_iterator&
+        {
+                m_idx = static_cast<std::size_t>(static_cast<difference_type>(m_idx) - n);
+                return *this;
+        }
+
+        [[nodiscard]] friend constexpr auto operator+(basic_iterator lhs, difference_type n) noexcept
+                -> basic_iterator
+        {
+                auto nrv = lhs;
+                nrv += n;
+                return nrv;
+        }
+
+        [[nodiscard]] friend constexpr auto operator+(difference_type n, basic_iterator rhs) noexcept
+                -> basic_iterator
+        {
+                auto nrv = rhs;
+                nrv += n;
+                return nrv;
+        }
+
+        [[nodiscard]] friend constexpr auto operator-(basic_iterator lhs, difference_type n) noexcept
+                -> basic_iterator
+        {
+                auto nrv = lhs;
+                nrv -= n;
+                return nrv;
+        }
+
+        [[nodiscard]] friend constexpr auto operator-(basic_iterator lhs, basic_iterator rhs) noexcept
+                -> difference_type
+        {
+                assert(lhs.m_ptr == rhs.m_ptr);
+                return static_cast<difference_type>(lhs.m_idx) - static_cast<difference_type>(rhs.m_idx);
+        }
+
+        [[nodiscard]] constexpr auto operator[](difference_type n) const noexcept
+                -> reference
+        {
+                return *(*this + n);
+        }
+
+        // The one ADL exception: std::ranges' own protocol, which is how sort and swap_ranges reach a proxy.
+        [[nodiscard]] friend constexpr auto iter_move(basic_iterator it) noexcept
+                -> value_type
+        {
+                return *it;
+        }
+
+        friend constexpr auto iter_swap(basic_iterator x, basic_iterator y) noexcept
+                -> void
+                requires (not std::is_const_v<storage_type>)
+        {
+                value_type const t = *x;
+                *x                 = *y;
+                *y                 = t;
+        }
+};
+
+// A proxy bool spelled as [vector.bool] spells std::vector<bool>::reference; operator~ is std::bitset's.
+template<bit_block_container_type Bits, storage Store, window W, class Derived, std::size_t E>
+template<bool IsConst>
+class sequence_adaptor<Bits, Store, W, Derived, E>::basic_reference
+{
+public:
+        using value_type   = bool;
+        using iterator     = basic_iterator<IsConst>;
+        using adaptor_type = sequence_adaptor;
+
+private:
+        using storage_type = std::conditional_t<IsConst, Bits const, Bits>;
+
+        storage_ptr_t<storage_type> m_ptr;
+        std::size_t m_idx;
+
+        // Writable where the storage is not const: a const storage has no assign to reach.
+        static constexpr bool is_writable = not std::is_const_v<storage_type> and requires (storage_type& c, std::size_t n, value_type value) { c.assign(n, value); };
+
+        friend sequence_adaptor;
+
+        friend class basic_iterator<IsConst>;
+
+        [[nodiscard]] constexpr basic_reference(storage_ptr_t<storage_type> ptr, std::size_t idx) noexcept
+                : m_ptr(ptr)
+                , m_idx(idx)
+        {
+                assert(m_ptr != nullptr);
+        }
+
+public:
+        // Said out loud: the assignments below are user-provided, which deprecates the implicit copy constructor.
+        basic_reference(basic_reference const&) = default;
+
+        [[nodiscard]] constexpr auto operator&() const noexcept
+                -> iterator
+        {
+                return {m_ptr, m_idx};
+        }
+
+        // The one conversion, as std::vector<bool>::reference has: comparisons are the built-in ones through it.
+        [[nodiscard]] constexpr explicit(false) operator value_type() const noexcept // NOLINT(misc-explicit-constructor)
+        {
+                return m_ptr->test(m_idx);
+        }
+
+        // const-qualified and returning a const reference, the proxy shape P2321R2 gave std::vector<bool>::reference.
+        constexpr auto operator=(value_type value) const noexcept // NOLINT(misc-unconventional-assign-operator)
+                -> basic_reference const&
+                requires is_writable
+        {
+                m_ptr->assign(m_idx, value);
+                return *this;
+        }
+
+        // Assigns the bit, not the proxy: rebinding would break the swaps below.
+        constexpr auto operator=(basic_reference const& other) const noexcept // NOLINT(misc-unconventional-assign-operator,bugprone-unhandled-self-assignment)
+                -> basic_reference const&
+                requires is_writable
+        {
+                return *this = static_cast<value_type>(other);
+        }
+
+        // [vector.bool] has required it of the proxy since C++98, where the const-qualified assignment is C++23.
+        constexpr auto flip() const noexcept
+                -> void
+                requires is_writable
+        {
+                m_ptr->assign(m_idx, not static_cast<value_type>(*this));
+        }
+
+        // The pre-ranges spelling of iter_swap, for std::swap and the algorithms still built on it.
+        friend constexpr auto swap(basic_reference x, basic_reference y) noexcept -> void
+                requires is_writable
+        {
+                value_type const t = x;
+                x                  = y;
+                y                  = t;
+        }
+
+        friend constexpr auto swap(basic_reference x, value_type& y) noexcept -> void
+                requires is_writable
+        {
+                value_type const t = x;
+                x                  = y;
+                y                  = t;
+        }
+
+        friend constexpr auto swap(value_type& x, basic_reference y) noexcept -> void
+                requires is_writable
+        {
+                value_type const t = x;
+                x                  = y;
+                y                  = t;
+        }
+
+        // What this proxy prints as, said once: our std::formatter calls it unqualified, and fmt finds it by ADL.
+        [[nodiscard]] friend constexpr auto format_as(basic_reference ref) noexcept
+                -> value_type
+        {
+                return ref;
+        }
+};
+
+template<class>
+inline constexpr bool is_sequence_adaptor = false;
+
+template<bit_block_container_type Bits, storage Store, window W, class Derived, std::size_t E>
+inline constexpr bool is_sequence_adaptor<sequence_adaptor<Bits, Store, W, Derived, E>> = true;
+
+// A proxy some sequence_adaptor hands out, recognized through the adaptor it names: no deduction reaches into a member.
+template<class R>
+concept sequence_reference = is_sequence_adaptor<typename R::adaptor_type> and (std::same_as<R, typename R::adaptor_type::reference> or std::same_as<R, typename R::adaptor_type::const_reference>);
+
 // The owner's side of the protocol above.
 template<class Bits, class Derived>
 struct owned_storage<sequence_adaptor<Bits, storage::owned, window::all, Derived>>
@@ -1498,6 +1780,18 @@ template<size_t I, class Bits, xstd::bits::detail::storage Store, xstd::bits::de
 struct tuple_element<I, const xstd::bits::detail::sequence_adaptor<Bits, Store, W, Derived, E>>
 {
         using type = xstd::bits::detail::sequence_adaptor<Bits, Store, W, Derived, E>::const_reference;
+};
+
+// std::format over the containers, which needs nothing said about the containers themselves.
+template<xstd::bits::detail::sequence_reference R, class CharT>
+struct formatter<R, CharT> : formatter<bool, CharT>
+{
+        template<class Context>
+        [[nodiscard]] constexpr auto format(R ref, Context& ctx) const
+        {
+                // Unqualified, so ADL finds the proxy's own hidden friend.
+                return formatter<bool, CharT>::format(format_as(ref), ctx);
+        }
 };
 
 // The owner hashes as std::vector<bool> does; a view no more than std::span does.

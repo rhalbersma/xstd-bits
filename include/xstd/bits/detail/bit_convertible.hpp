@@ -8,13 +8,13 @@
 
 #include <xstd/bits/bit_blocks.hpp>        // bit_blocks_capacity_v
 #include <xstd/bits/detail/bit_layout.hpp> // bit_bytes, bit_layout, block_byte, blocks_copy_as_bytes, byte_count, bytes_bits, bytes_per_block, or_block_byte
-#include <xstd/bits/detail/bit_width.hpp>  // bit_width_v, packed, packed_owner, packed_view
-#include <xstd/bits/detail/ownership.hpp>  // owned_bits_t, owner_reading, set_reading_tag, storage_access
+#include <xstd/bits/detail/bit_width.hpp>  // bit_width_v
+#include <xstd/bits/detail/ownership.hpp>  // owned_bits_t, owner, owner_reading, set_reading_tag, storage_access, view
 #include <xstd/bits/from_blocks.hpp>       // bit_constructible_from, from_blocks
 #include <algorithm>                       // copy, min
 #include <array>                           // array
 #include <bit>                             // bit_cast, popcount
-#include <concepts>                        // default_initializable, same_as
+#include <concepts>                        // same_as
 #include <cstddef>                         // byte, size_t
 #include <new>                             // bad_alloc
 #include <ranges>                          // iota, size
@@ -30,19 +30,11 @@ namespace xstd::bits::detail {
 template<class T>
 concept fixed_width =
         bit_width_v<T> != std::dynamic_extent and
-        (packed<T> or bit_layout<T, bit_width_v<T>>);
+        (owner<T> or view<T> or bit_layout<T, bit_width_v<T>>);
 
 // What a fixed width is written into: not a view, which writes bits it does not own, nor an array no function returns.
 template<class T>
-concept fixed_target = fixed_width<T> and (not packed_view<T>) and (not std::is_array_v<T>);
-
-// One of our owners whose width is a value rather than part of its type.
-template<class T>
-concept run_time_owner =
-        packed_owner<T> and
-        (not std::is_const_v<T>) and
-        std::default_initializable<T> and
-        owned_bits_t<T>::has_stored_size;
+concept fixed_target = fixed_width<T> and (not view<T>) and (not std::is_array_v<T>);
 
 // Whether an owner reads its bits as a set, which decides the widths at either end.
 template<class T>
@@ -88,7 +80,7 @@ template<fixed_width T>
 [[nodiscard]] constexpr auto fixed_bytes(T const& from) noexcept
         -> std::array<std::byte, byte_count<bit_width_v<T>>>
 {
-        if constexpr (packed<T>) {
+        if constexpr (owner<T> or view<T>) {
                 return storage_access::bits(from).template to_bytes<byte_count<bit_width_v<T>>>();
         } else {
                 return bit_bytes<bit_width_v<T>>(from);
@@ -103,7 +95,7 @@ template<fixed_target To>
         constexpr auto N = bit_width_v<To>;
         if constexpr (N == 0UZ) {
                 return To();
-        } else if constexpr (packed<To>) {
+        } else if constexpr (owner<To>) {
                 return To(xstd::from_blocks, std::bit_cast<std::array<unsigned char, byte_count<N>>>(bytes));
         } else {
                 return bytes_bits<To, N>(bytes);
@@ -126,7 +118,7 @@ template<class T>
 struct bit_source;
 
 // Our owners, of either reading and any column: a sequence's width is its size, a set's its whole blocks, capped.
-template<packed_owner T>
+template<owner T>
 struct bit_source<T>
 {
         [[nodiscard]] static constexpr auto width(T const& from) noexcept
@@ -161,7 +153,7 @@ struct bit_source<T>
 
 // Anything else of a fixed width, a view or a std::bitset among them, read through its bytes.
 template<class T>
-        requires fixed_width<T> and (not packed_owner<T>)
+        requires fixed_width<T> and (not owner<T>)
 struct bit_source<T>
 {
         static constexpr auto N = bit_width_v<T>;
@@ -202,10 +194,6 @@ concept bit_convert_source = requires (T const& from, std::span<unsigned char> d
         { bit_source<T>::count(from) } -> std::same_as<std::size_t>;
         bit_source<T>::copy(from, dst);
 };
-
-// A source whose blocks are in reach, which a foreign target is built from: ours, and a std::bitset.
-template<class T>
-concept block_source = bit_convert_source<T> and requires (T const& from) { bit_source<T>::blocks(from); };
 
 // A set target covers the source's width in whole blocks, up to the capacity it has; a sequence takes the width.
 template<class To>
@@ -295,24 +283,14 @@ concept foreign_convertible = requires (From const& from) {
         { bit_target<To>::convert(from) } -> std::same_as<To>;
 };
 
-// A source whose width is a value: one of our run-time owners, or a foreign one an extension reads.
-template<class T>
-concept run_time_source = bit_convert_source<T> and (not fixed_width<T>);
-
-// A target whose capacity is the whole of its blocks, so that adopting them can never overfill it.
-template<class To>
-concept holds_whole_blocks =
-        (not owned_bits_t<To>::has_static_capacity) or
-        owned_bits_t<To>::static_capacity() == xstd::bit_blocks_capacity_v<typename owned_bits_t<To>::block_container_type>;
-
-// An rvalue whose blocks To takes as they are, all of them: they move rather than being copied.
+// An rvalue whose blocks To takes as they are, moved rather than copied, into a capacity that holds all of them.
 template<class To, class From>
 concept adopts_from =
         std::is_rvalue_reference_v<From&&> and
         (not std::is_const_v<std::remove_reference_t<From>>) and
         requires (From&& from) { std::forward<From>(from).extract(); } and
         xstd::bit_constructible_from<To, decltype(std::declval<From&&>().extract())> and
-        holds_whole_blocks<To>;
+        ((not owned_bits_t<To>::has_static_capacity) or owned_bits_t<To>::static_capacity() == xstd::bit_blocks_capacity_v<typename owned_bits_t<To>::block_container_type>);
 
 // The blocks move over and the source is left at width zero; adopted whole, a sequence then takes the source's width.
 template<class To, class From>
