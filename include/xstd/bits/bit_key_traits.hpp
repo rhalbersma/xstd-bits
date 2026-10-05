@@ -6,7 +6,8 @@
 #ifndef XSTD_BITS_BIT_KEY_TRAITS_HPP
 #define XSTD_BITS_BIT_KEY_TRAITS_HPP
 
-#include <cstddef> // size_t
+#include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
+#include <cstddef>                                 // size_t
 
 // How a set owner's key maps onto a position and back, as std::char_traits says what a character is.
 namespace xstd {
@@ -15,20 +16,22 @@ namespace xstd {
 template<class Key>
 struct bit_key_traits;
 
-// The identity, with no size: a std::size_t key is its own position, in a universe left open.
-template<>
-struct bit_key_traits<std::size_t>
+// The identity, with no size: an unsigned key is its own position, in a universe left open.
+template<xstd::unsigned_integer Key>
+struct bit_key_traits<Key>
 {
-        [[nodiscard]] static constexpr auto to_index(std::size_t key) noexcept
+        // A key wider than std::size_t must name a position: key <= std::numeric_limits<std::size_t>::max().
+        [[nodiscard]] static constexpr auto to_index(Key key) noexcept
                 -> std::size_t
         {
-                return key;
+                return static_cast<std::size_t>(key);
         }
 
+        // Only a position some key named comes back, so a narrower Key holds it.
         [[nodiscard]] static constexpr auto from_index(std::size_t index) noexcept
-                -> std::size_t
+                -> Key
         {
-                return index;
+                return static_cast<Key>(index);
         }
 };
 

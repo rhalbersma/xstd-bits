@@ -3,10 +3,12 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/block_types.hpp>             // all_block_types
 #include <test/set/strong_index.hpp>        // offset_traits, strong_index
 #include <xstd/bits/bit_key_traits.hpp>     // bit_key_traits
 #include <xstd/bits/detail/set_adaptor.hpp> // admits_width
-#include <boost/test/unit_test.hpp>         // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
+#include <boost/test/unit_test.hpp>         // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
+#include <algorithm>                        // min
 #include <concepts>                         // same_as
 #include <cstddef>                          // size_t
 #include <limits>                           // numeric_limits
@@ -47,6 +49,29 @@ BOOST_AUTO_TEST_CASE(AStdSizeTKeyLeavesTheUniverseOpen)
         static_assert(xstd::bits::detail::set::admits_width<identity, 100UZ>);
 
         BOOST_CHECK(true);
+}
+
+// Every unsigned integer is its own position, from the narrowest key to one wider than std::size_t.
+BOOST_AUTO_TEST_CASE_TEMPLATE(AnUnsignedKeyIsItsOwnPosition, Key, test::all_block_types)
+{
+        using traits = xstd::bit_key_traits<Key>;
+        static_assert(not has_size<traits>);
+        static_assert(std::same_as<decltype(traits::to_index(Key())), std::size_t>);
+        static_assert(std::same_as<decltype(traits::from_index(0UZ)), Key>);
+        static_assert(noexcept(traits::to_index(Key())));
+        static_assert(noexcept(traits::from_index(0UZ)));
+        static_assert(xstd::bits::detail::set::admits_width<traits, 100UZ>);
+
+        // The largest key that names a position: the key's own maximum, or std::size_t's where the key is wider.
+        constexpr auto top = std::numeric_limits<Key>::digits < std::numeric_limits<std::size_t>::digits ? static_cast<std::size_t>(std::numeric_limits<Key>::max()) : std::numeric_limits<std::size_t>::max();
+        static_assert(traits::to_index(traits::from_index(top)) == top);
+        static_assert(traits::from_index(top) == static_cast<Key>(top));
+
+        for (auto const i : std::views::iota(0UZ, std::min(top, 300UZ) + 1UZ)) {
+                BOOST_CHECK(traits::from_index(i) == static_cast<Key>(i));
+                BOOST_CHECK_EQUAL(traits::to_index(traits::from_index(i)), i);
+                BOOST_CHECK(i == 0UZ or traits::from_index(i - 1UZ) < traits::from_index(i));
+        }
 }
 
 // A strong index type specializes the default, and round-trips through its position preserving order.

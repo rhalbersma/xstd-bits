@@ -201,7 +201,7 @@ the adaptor each reading is built on is internal, under `<xstd/bits/detail/>`.
 
 | Header | Additions | Description | Reference |
 | :----- | :-------- | :---------- | :-------- |
-| `<xstd/bits/bit_key_traits.hpp>` | `bit_key_traits` | How a set's key maps onto a position and back, preserving order: the identity for `std::size_t`, specialized for a strong index type | none |
+| `<xstd/bits/bit_key_traits.hpp>` | `bit_key_traits` | How a set's key maps onto a position and back, preserving order: the identity for every unsigned integer key, from `std::uint8_t` to the 128-bit types, specialized for a strong index type | none |
 | `<xstd/bits/bit_fixed_set.hpp>` | `bit_fixed_set` <br> `basic_bit_fixed_set` | Ordered set of `std::size_t`, static size and capacity; the `basic_` form takes the key first, `basic_bit_fixed_set<Key, Block, N, KeyTraits, Compare>`, `Compare` being `std::less` or `std::greater` | [associative.reqmts], [set] |
 | `<xstd/bits/bit_bounded_set.hpp>` | `bit_bounded_set` <br> `basic_bit_bounded_set` | Ordered set, dynamic size within a static capacity; `basic_bit_bounded_set<Key, Block, N, KeyTraits, Compare>` | [associative.reqmts], [set] |
 | `<xstd/bits/bit_set.hpp>` | `bit_set` <br> `basic_bit_set` | Ordered set, dynamic size and capacity; `basic_bit_set<Key, Block, KeyTraits, Compare, Allocator>` | [associative.reqmts], [set] |
