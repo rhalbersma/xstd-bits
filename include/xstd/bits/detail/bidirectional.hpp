@@ -12,6 +12,7 @@
 #include <xstd/bits/detail/storage_ptr.hpp>         // storage_ptr_t
 #include <xstd/bits/detail/zero_width.hpp>          // zero_width
 #include <cassert>                                  // assert
+#include <concepts>                                 // same_as
 #include <cstddef>                                  // ptrdiff_t, size_t
 #include <format>                                   // formatter
 #include <iterator>                                 // bidirectional_iterator_tag
@@ -27,18 +28,40 @@ enum struct direction : bool
         descending,
 };
 
-template<class Bits, class Key = std::size_t, class KeyTraits = bit_key_traits<Key>, direction Direction = direction::ascending>
-class bidirectional_bit_iterator;
+// Member templates of a class template: only Key, their own argument, puts its namespaces in ADL's associated set.
+template<class Bits, class KeyTraits, direction Direction>
+struct bidirectional
+{
+        template<class Key>
+        class iterator;
+
+        template<class Key>
+        class reference;
+};
 
 template<class Bits, class Key = std::size_t, class KeyTraits = bit_key_traits<Key>, direction Direction = direction::ascending>
-class bidirectional_bit_reference;
+using bidirectional_bit_iterator = bidirectional<Bits, KeyTraits, Direction>::template iterator<Key>;
+
+template<class Bits, class Key = std::size_t, class KeyTraits = bit_key_traits<Key>, direction Direction = direction::ascending>
+using bidirectional_bit_reference = bidirectional<Bits, KeyTraits, Direction>::template reference<Key>;
+
+template<class>
+inline constexpr bool is_bidirectional = false;
+
+template<class Bits, class KeyTraits, direction Direction>
+inline constexpr bool is_bidirectional<bidirectional<Bits, KeyTraits, Direction>> = true;
+
+// Recognized through the enclosing class it names, since no deduction reaches Bits through a nested class.
+template<class R>
+concept bidirectional_reference = is_bidirectional<typename R::enclosing_type> and std::same_as<R, typename R::enclosing_type::template reference<typename R::value_type>>;
 
 template<bit_block_container_type Bits, storage Store, class Derived, class Key, class KeyTraits, class Compare>
 class set_adaptor;
 
 // A position in the set reading, read-only whatever Bits' qualification: a key is nothing to write through.
-template<class Bits, class Key, class KeyTraits, direction Direction>
-class bidirectional_bit_iterator
+template<class Bits, class KeyTraits, direction Direction>
+template<class Key>
+class bidirectional<Bits, KeyTraits, Direction>::iterator
 {
         using bits_type = std::remove_const_t<Bits>;
 
@@ -48,9 +71,9 @@ class bidirectional_bit_iterator
         template<bit_block_container_type OtherBits, storage OtherStore, class OtherDerived, class OtherKey, class OtherKeyTraits, class OtherCompare>
         friend class set_adaptor;
 
-        friend class bidirectional_bit_reference<Bits, Key, KeyTraits, Direction>;
+        friend class bidirectional::reference<Key>;
 
-        [[nodiscard]] constexpr bidirectional_bit_iterator(storage_ptr_t<bits_type const> ptr, std::size_t idx) noexcept
+        [[nodiscard]] constexpr iterator(storage_ptr_t<bits_type const> ptr, std::size_t idx) noexcept
                 : m_ptr(ptr)
                 , m_idx(idx)
         {
@@ -62,12 +85,12 @@ public:
         using value_type        = Key;
         using difference_type   = std::ptrdiff_t;
         using pointer           = void;
-        using reference         = bidirectional_bit_reference<Bits, Key, KeyTraits, Direction>;
+        using reference         = bidirectional::reference<Key>;
 
-        [[nodiscard]] bidirectional_bit_iterator() = default;
+        [[nodiscard]] iterator() = default;
 
         // A zero width has one position, so every iterator over it is the same one and every loop stops early.
-        [[nodiscard]] friend constexpr auto operator==(bidirectional_bit_iterator lhs, bidirectional_bit_iterator rhs) noexcept
+        [[nodiscard]] friend constexpr auto operator==(iterator lhs, iterator rhs) noexcept
                 -> bool
         {
                 assert(lhs.m_ptr == rhs.m_ptr);
@@ -87,7 +110,7 @@ public:
 
         // Both steps guarded at a zero width: the exclusive scans take a position it has none to give.
         constexpr auto operator++() noexcept
-                -> bidirectional_bit_iterator&
+                -> iterator&
         {
                 assert(m_ptr != nullptr);
                 if constexpr (not zero_width<Bits>) {
@@ -103,7 +126,7 @@ public:
 
         // Descending, the end is size() as well, so stepping back from it is a step up to the lowest position.
         constexpr auto operator--() noexcept
-                -> bidirectional_bit_iterator&
+                -> iterator&
         {
                 assert(m_ptr != nullptr);
                 if constexpr (not zero_width<Bits>) {
@@ -122,7 +145,7 @@ public:
         }
 
         constexpr auto operator++(int) noexcept
-                -> bidirectional_bit_iterator
+                -> iterator
         {
                 auto nrv = *this;
                 ++*this;
@@ -130,7 +153,7 @@ public:
         }
 
         constexpr auto operator--(int) noexcept
-                -> bidirectional_bit_iterator
+                -> iterator
         {
                 auto nrv = *this;
                 --*this;
@@ -139,8 +162,9 @@ public:
 };
 
 // The key at a position, arriving by conversion through KeyTraits; & hands the iterator back, so the pair round-trips.
-template<class Bits, class Key, class KeyTraits, direction Direction>
-class bidirectional_bit_reference
+template<class Bits, class KeyTraits, direction Direction>
+template<class Key>
+class bidirectional<Bits, KeyTraits, Direction>::reference
 {
         using bits_type = std::remove_const_t<Bits>;
 
@@ -150,9 +174,9 @@ class bidirectional_bit_reference
         template<bit_block_container_type OtherBits, storage OtherStore, class OtherDerived, class OtherKey, class OtherKeyTraits, class OtherCompare>
         friend class set_adaptor;
 
-        friend class bidirectional_bit_iterator<Bits, Key, KeyTraits, Direction>;
+        friend class bidirectional::iterator<Key>;
 
-        [[nodiscard]] constexpr bidirectional_bit_reference(storage_ptr_t<bits_type const> ptr, std::size_t idx) noexcept
+        [[nodiscard]] constexpr reference(storage_ptr_t<bits_type const> ptr, std::size_t idx) noexcept
                 : m_ptr(ptr)
                 , m_idx(idx)
         {
@@ -160,12 +184,13 @@ class bidirectional_bit_reference
         }
 
 public:
-        using value_type = Key;
-        using iterator   = bidirectional_bit_iterator<Bits, Key, KeyTraits, Direction>;
+        using value_type     = Key;
+        using iterator       = bidirectional::iterator<Key>;
+        using enclosing_type = bidirectional;
 
         // A value, not a handle to rebind: trivially copyable, never assignable, as a reference to a key is.
-        bidirectional_bit_reference(bidirectional_bit_reference const&)                    = default;
-        auto operator=(bidirectional_bit_reference const&) -> bidirectional_bit_reference& = delete;
+        reference(reference const&)                    = default;
+        auto operator=(reference const&) -> reference& = delete;
 
         [[nodiscard]] constexpr auto operator&() const noexcept
                 -> iterator
@@ -180,7 +205,7 @@ public:
         }
 
         // What this proxy prints as, said once: our std::formatter calls it unqualified, and fmt finds it by ADL.
-        [[nodiscard]] friend constexpr auto format_as(bidirectional_bit_reference ref) noexcept
+        [[nodiscard]] friend constexpr auto format_as(reference ref) noexcept
                 -> value_type
         {
                 return ref;
@@ -194,14 +219,14 @@ public:
 namespace std {
 
 // std::format over the containers, which prints the key as the key's own formatter does.
-template<class Bits, class Key, class KeyTraits, xstd::bits::detail::direction Direction, class CharT>
-struct formatter<xstd::bits::detail::bidirectional_bit_reference<Bits, Key, KeyTraits, Direction>, CharT> : formatter<Key, CharT>
+template<xstd::bits::detail::bidirectional_reference R, class CharT>
+struct formatter<R, CharT> : formatter<typename R::value_type, CharT>
 {
         template<class Context>
-        [[nodiscard]] constexpr auto format(xstd::bits::detail::bidirectional_bit_reference<Bits, Key, KeyTraits, Direction> ref, Context& ctx) const
+        [[nodiscard]] constexpr auto format(R ref, Context& ctx) const
         {
                 // Unqualified, so ADL finds the proxy's own hidden friend.
-                return formatter<Key, CharT>::format(format_as(ref), ctx);
+                return formatter<typename R::value_type, CharT>::format(format_as(ref), ctx);
         }
 };
 
