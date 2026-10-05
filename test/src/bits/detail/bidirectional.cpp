@@ -11,13 +11,15 @@
 #include <xstd/bits/bit_fixed_set.hpp>              // basic_bit_fixed_set
 #include <xstd/bits/bit_key_traits.hpp>             // bit_key_traits
 #include <xstd/bits/bit_set_view.hpp>               // bit_set_view
-#include <xstd/bits/detail/bidirectional.hpp>       // bidirectional_bit_iterator, bidirectional_bit_reference
+#include <xstd/bits/detail/bidirectional.hpp>       // bidirectional_bit_iterator, bidirectional_bit_reference, bidirectional_reference
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <array>                                    // array
+#include <compare>                                  // strong_ordering
 #include <concepts>                                 // bidirectional_iterator, equality_comparable, same_as, totally_ordered, totally_ordered_with
 #include <cstddef>                                  // size_t
 #include <cstdint>                                  // uint64_t, uint8_t
+#include <format>                                   // formattable
 #include <iterator>                                 // iter_reference_t, iter_value_t, next, prev
 #include <optional>                                 // optional
 #include <ranges>                                   // iota
@@ -31,6 +33,8 @@ namespace {
 struct key
 {
         std::size_t value;
+
+        [[nodiscard]] friend auto operator<=>(key const&, key const&) -> std::strong_ordering = default;
 };
 
 struct key_traits
@@ -68,7 +72,7 @@ struct index
         {}
 };
 
-// A user's namespace, associated with the proxy through its key traits, declaring a comparison of its own.
+// A user's namespace holding the proxy's key traits, and a comparison of its own beside them.
 namespace user {
 
 struct flag
@@ -98,6 +102,51 @@ using block_bits = test::array_storage<Block, test::digits_v<Block>>;
 
 template<class Block>
 using block_reference = xstd::bits::detail::bidirectional_bit_reference<block_bits<Block>>;
+
+} // namespace
+
+// A namespace whose comparisons take anything exactly, so they decide every comparison ADL brings them into.
+namespace acme {
+
+template<class A, class B>
+[[nodiscard]] constexpr auto operator==(A const& /* lhs */, B const& /* rhs */) noexcept
+        -> bool
+{
+        return false;
+}
+
+template<class A, class B>
+[[nodiscard]] constexpr auto operator<(A const& /* lhs */, B const& /* rhs */) noexcept
+        -> bool
+{
+        return false;
+}
+
+// Key traits of acme's own, which makes it a template argument of every proxy handed out under them.
+struct key_traits : xstd::bit_key_traits<std::size_t>
+{};
+
+} // namespace acme
+
+namespace {
+
+using hostile_set = xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 64, acme::key_traits>;
+
+// The proxies under acme's key traits compare as their keys do, and the iterators as their positions do.
+[[nodiscard]] constexpr auto hostile_key_traits_compare_as_ours() noexcept
+        -> bool
+{
+        auto s = hostile_set();
+        s.insert(3UZ);
+        s.insert(5UZ);
+        auto const first  = s.begin();
+        auto const again  = s.begin();
+        auto const second = std::next(first);
+        auto const low    = *first;
+        auto const same   = *again;
+        auto const high   = *second;
+        return low == same and not(low != same) and not(low < same) and low != high and low < high and first == again and first != second;
+}
 
 template<class T>
 [[nodiscard]] auto make(T const& empty, std::set<std::size_t> const& model)
@@ -280,7 +329,7 @@ BOOST_AUTO_TEST_CASE(TheProxyComparesThroughItsOneConversion)
                 static_assert(std::is_constructible_v<user::flag, reference>);
                 static_assert(std::is_convertible_v<reference, std::optional<value_type>>);
 
-                // A user's non-template operator== in an associated namespace is no second reading of ours.
+                // A user's non-template operator== beside the key traits is no second reading of ours.
                 using user_reference = xstd::bits::detail::bidirectional_bit_reference<block_bits<Block>, std::size_t, user::key_traits>;
                 static_assert(std::equality_comparable<user_reference>);
                 static_assert(std::totally_ordered<user_reference>);
@@ -304,6 +353,48 @@ BOOST_AUTO_TEST_CASE(TheProxyComparesThroughItsOneConversion)
         BOOST_CHECK(*narrow_view.begin() == *wide_view.begin());
         BOOST_CHECK(*narrow_view.begin() < *std::next(wide_view.begin()));
         BOOST_CHECK(user::flag(*narrow_view.begin()) == user::flag(3));
+}
+
+// acme's operators decide a comparison between its own key traits, and none between the proxies or iterators under them.
+BOOST_AUTO_TEST_CASE(AKeyTraitsNamespaceIsNotAssociatedWithItsProxies)
+{
+        auto const lhs = acme::key_traits();
+        auto const rhs = acme::key_traits();
+        BOOST_CHECK(not(lhs == rhs));
+        BOOST_CHECK(not(lhs < rhs));
+
+        static_assert(hostile_key_traits_compare_as_ours());
+        BOOST_CHECK(hostile_key_traits_compare_as_ours());
+}
+
+// The key's own namespace is the one a proxy keeps, so comparisons only ADL finds for the key reach the proxy too.
+BOOST_AUTO_TEST_CASE(TheKeysNamespaceIsAssociatedWithItsProxies)
+{
+        using reference = xstd::bits::detail::bidirectional_bit_reference<Bits, key, key_traits>;
+        static_assert(std::totally_ordered<reference>);
+        static_assert(std::totally_ordered_with<reference, key>);
+
+        auto s = xstd::basic_bit_fixed_set<key, std::uint64_t, 200, key_traits>();
+        s.insert(key{3});
+        s.insert(key{5});
+        BOOST_CHECK(*s.begin() == *s.begin());
+        BOOST_CHECK(*s.begin() < *std::next(s.begin()));
+        BOOST_CHECK(*s.begin() == key{3});
+}
+
+// What std::formatter is specialized for: the proxies themselves, which no deduction reaches through the class.
+BOOST_AUTO_TEST_CASE(TheFormatterIsSpecializedForExactlyTheProxies)
+{
+        static_assert(xstd::bits::detail::bidirectional_reference<xstd::bits::detail::bidirectional_bit_reference<Bits>>);
+        static_assert(xstd::bits::detail::bidirectional_reference<xstd::bits::detail::bidirectional_bit_reference<Bits, key, key_traits>>);
+        static_assert(not xstd::bits::detail::bidirectional_reference<xstd::bits::detail::bidirectional_bit_iterator<Bits>>);
+        static_assert(not xstd::bits::detail::bidirectional_reference<std::size_t>);
+
+        static_assert(std::formattable<xstd::bits::detail::bidirectional_bit_reference<Bits>, char>);
+        static_assert(std::formattable<std::iter_reference_t<hostile_set::iterator>, char>);
+        static_assert(not std::formattable<xstd::bits::detail::bidirectional_bit_reference<Bits, key, key_traits>, char>);
+
+        BOOST_CHECK(true);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

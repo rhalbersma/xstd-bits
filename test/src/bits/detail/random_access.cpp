@@ -7,12 +7,13 @@
 #include <test/block_types.hpp>                     // all_block_types, digits_v, graded_extents
 #include <test/ext_int128.hpp>                      // TEST_HAS_ABSL_INT128, TEST_HAS_BOOST_INT128, uint128
 #include <test/for_each_type.hpp>                   // for_each_type
+#include <test/minimal_blocks.hpp>                  // minimal_blocks
 #include <test/value_reference.hpp>                 // value_reference
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array
 #include <xstd/bits/bit_span.hpp>                   // bit_span
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
 #include <xstd/bits/detail/ownership.hpp>           // storage
-#include <xstd/bits/detail/random_access.hpp>       // random_access_bit_iterator, random_access_bit_reference
+#include <xstd/bits/detail/random_access.hpp>       // random_access_bit_iterator, random_access_bit_reference, random_access_reference
 #include <xstd/bits/detail/sequence_adaptor.hpp>    // sequence_adaptor
 #include <xstd/bits/detail/storage_ptr.hpp>         // storage_ptr_t
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
@@ -21,6 +22,7 @@
 #include <concepts>                                 // convertible_to, equality_comparable, random_access_iterator, same_as, sortable, totally_ordered, totally_ordered_with
 #include <cstddef>                                  // ptrdiff_t, size_t
 #include <cstdint>                                  // uint64_t, uint8_t
+#include <format>                                   // formattable
 #include <iterator>                                 // iter_move, next, prev, reverse_iterator
 #include <optional>                                 // optional
 #include <ranges>                                   // iota, subrange
@@ -62,7 +64,7 @@ auto check_position(Iterator first, std::size_t i, std::vector<bool>& model)
 
 // An iterator into the storage at a position, as a view borrowing it hands one out: only a view may build one.
 template<class Bits>
-[[nodiscard]] auto iterator_at(Bits& c, std::size_t n)
+[[nodiscard]] constexpr auto iterator_at(Bits& c, std::size_t n)
 {
         return xstd::bits::detail::sequence_adaptor<Bits, xstd::bits::detail::storage::borrowed>(c).begin() + static_cast<std::ptrdiff_t>(n);
 }
@@ -98,16 +100,50 @@ concept less_than_with = requires (L const& lhs, R const& rhs) {
         rhs < lhs;
 };
 
-// Boost.Int128 declares non-template operator==(uint128, bool) and its mirror, which ADL adds to the built-in one.
+} // namespace
+
+// A namespace whose comparisons take anything exactly, so they decide every comparison ADL brings them into.
+namespace acme {
+
+template<class A, class B>
+[[nodiscard]] constexpr auto operator==(A const& /* lhs */, B const& /* rhs */) noexcept
+        -> bool
+{
+        return false;
+}
+
+template<class A, class B>
+[[nodiscard]] constexpr auto operator<(A const& /* lhs */, B const& /* rhs */) noexcept
+        -> bool
+{
+        return false;
+}
+
+// Storage of acme's own, which makes it a template argument of every proxy handed out over it.
 template<class Block>
-constexpr bool ties_with_bool = false;
+class blocks : public test::minimal_blocks<Block>
+{};
 
-#ifdef TEST_HAS_BOOST_INT128
+} // namespace acme
 
-template<>
-constexpr bool ties_with_bool<boost::int128::uint128> = true;
+namespace {
 
-#endif
+using hostile_bits = xstd::bits::detail::bit_block_container<acme::blocks<std::uint64_t>>;
+
+// The proxies over acme's storage compare as their bools do, and the iterators as their positions do.
+[[nodiscard]] constexpr auto hostile_storage_compares_as_ours() noexcept
+        -> bool
+{
+        auto c = hostile_bits(64UZ);
+        c.set(1);
+        auto const first  = iterator_at(c, 0UZ);
+        auto const again  = iterator_at(c, 0UZ);
+        auto const second = std::next(first);
+        auto const clear  = *first;
+        auto const same   = *again;
+        auto const set    = *second;
+        return clear == same and not(clear != same) and not(clear < same) and clear != set and clear < set and first == again and first != second and first < second;
+}
 
 } // namespace
 
@@ -320,14 +356,9 @@ BOOST_AUTO_TEST_CASE(TheProxyComparesThroughItsOneConversion)
                 static_assert(std::equality_comparable<reference>);
                 static_assert(std::totally_ordered<reference>);
                 static_assert(std::totally_ordered<const_reference>);
-                static_assert(less_than_with<reference, value_type>);
-                if constexpr (ties_with_bool<Block>) {
-                        static_assert(not equal_to_with<reference, value_type>);
-                        static_assert(not equal_to_with<reference, int>);
-                } else {
-                        static_assert(std::totally_ordered_with<reference, value_type>);
-                        static_assert(equal_to_with<reference, int>);
-                }
+                static_assert(std::totally_ordered_with<reference, value_type>);
+                static_assert(equal_to_with<reference, int>);
+                static_assert(less_than_with<reference, int>);
 
                 static_assert(not std::is_convertible_v<reference, flag>);
                 static_assert(std::is_constructible_v<flag, reference>);
@@ -349,6 +380,33 @@ BOOST_AUTO_TEST_CASE(TheProxyComparesThroughItsOneConversion)
         BOOST_CHECK(*iterator_at(narrow, 1UZ) == *iterator_at(wide, 1UZ));
         BOOST_CHECK(*iterator_at(narrow, 0UZ) < *iterator_at(wide, 1UZ));
         BOOST_CHECK(*iterator_at(narrow, 0UZ) != true);
+}
+
+// acme's operators decide a comparison between its own storages, and none between the proxies or iterators over one.
+BOOST_AUTO_TEST_CASE(AStoragesNamespaceIsNotAssociatedWithItsProxies)
+{
+        auto const lhs = acme::blocks<std::uint64_t>();
+        auto const rhs = acme::blocks<std::uint64_t>();
+        BOOST_CHECK(not(lhs == rhs));
+        BOOST_CHECK(not(lhs < rhs));
+
+        static_assert(hostile_storage_compares_as_ours());
+        BOOST_CHECK(hostile_storage_compares_as_ours());
+}
+
+// What std::formatter is specialized for: the proxies themselves, which no deduction reaches through the class.
+BOOST_AUTO_TEST_CASE(TheFormatterIsSpecializedForExactlyTheProxies)
+{
+        static_assert(xstd::bits::detail::random_access_reference<xstd::bits::detail::random_access_bit_reference<Bits>>);
+        static_assert(xstd::bits::detail::random_access_reference<xstd::bits::detail::random_access_bit_reference<Bits const>>);
+        static_assert(not xstd::bits::detail::random_access_reference<xstd::bits::detail::random_access_bit_iterator<Bits>>);
+        static_assert(not xstd::bits::detail::random_access_reference<bool>);
+        static_assert(not xstd::bits::detail::random_access_reference<std::vector<bool>::reference>);
+
+        static_assert(std::formattable<xstd::bits::detail::random_access_bit_reference<Bits>, char>);
+        static_assert(std::formattable<xstd::bits::detail::random_access_bit_reference<hostile_bits>, char>);
+
+        BOOST_CHECK(true);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
@@ -481,6 +539,8 @@ BOOST_AUTO_TEST_CASE(AProxyNeverBecomesAnIntegerBlock)
                 a[256] = true;
                 BOOST_CHECK(a[0] == a[256]);
                 BOOST_CHECK(a[0] != a[1]);
+                BOOST_CHECK(a[0] == true);
+                BOOST_CHECK(a[0] == 1);
                 BOOST_CHECK(a[0] > false);
         }
 
