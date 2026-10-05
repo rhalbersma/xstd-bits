@@ -364,6 +364,19 @@ BOOST_AUTO_TEST_CASE(AndMinusAndEqualityTakeAValueWithHigherBits)
         BOOST_CHECK(not(~fs::perms::none == xfs::perms::unknown));
         BOOST_CHECK(xfs::perms::unknown != ~fs::perms::none);
         BOOST_CHECK(xfs::perms::unknown == fs::perms::unknown);
+
+        // The compound forms, against the standard's own on the same values.
+        auto x      = p;
+        auto theirs = fs::perms(p);
+        x &= ~fs::perms::group_write;
+        theirs &= ~fs::perms::group_write;
+        BOOST_CHECK(x == theirs);
+        BOOST_CHECK(&(x -= ~fs::perms::owner_all) == &x);
+        theirs &= fs::perms::owner_all;
+        BOOST_CHECK(x == theirs);
+        BOOST_CHECK(x == xfs::perms::owner_all);
+        static_assert(std::same_as<decltype(x &= ~fs::perms::none), xfs::perms&>);
+        static_assert(std::same_as<decltype(x -= ~fs::perms::none), xfs::perms&>);
 }
 
 // The same code, once against the standard's type and once respelled, leaves a real file the same way.

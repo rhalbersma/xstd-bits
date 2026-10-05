@@ -287,6 +287,23 @@ public:
                 return self();
         }
 
+        // Total, as the binary & and - are: the value's bits at or above N meet nothing in this word.
+        constexpr auto operator&=(interop_param other) noexcept
+                -> Derived&
+                requires has_interop
+        {
+                m_bits = static_cast<Block>(m_bits & low_bits_of(other));
+                return self();
+        }
+
+        constexpr auto operator-=(interop_param other) noexcept
+                -> Derived&
+                requires has_interop
+        {
+                m_bits = static_cast<Block>(m_bits & static_cast<Block>(~low_bits_of(other)));
+                return self();
+        }
+
         // Hidden friends over Derived itself, so a conversion to the interop enumeration never ties with one.
         [[nodiscard]] friend constexpr auto operator==(Derived const& lhs, Derived const& rhs) noexcept
                 -> bool
