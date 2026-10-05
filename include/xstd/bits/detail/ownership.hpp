@@ -48,6 +48,14 @@ template<class Owner>
 struct owned_storage<Owner> : owned_storage<typename Owner::adaptor_type>
 {};
 
+// One of our owners, of any reading and const or not: its storage is named by the owner protocol.
+template<class T>
+concept owner = requires { typename owned_storage<std::remove_const_t<T>>::bits_type; };
+
+// One of our views, a window included: built on an adaptor, over storage it does not own.
+template<class T>
+concept view = (not owner<T>) and requires { typename T::adapted_type; };
+
 // The storage a view over an owner refers to, const where the owner is.
 template<class Owner>
 using owned_bits_t = std::conditional_t<std::is_const_v<Owner>, typename owned_storage<std::remove_const_t<Owner>>::bits_type const, typename owned_storage<std::remove_const_t<Owner>>::bits_type>;
@@ -73,7 +81,7 @@ struct storage_access
 // Whether a view of reading R may refer into Owner: a refinement of R answers for R.
 template<class Owner, class R>
 concept owner_reading =
-        requires { typename owned_storage<std::remove_const_t<Owner>>::bits_type; } and
+        owner<Owner> and
         std::derived_from<typename owned_storage<std::remove_const_t<Owner>>::reads, R>;
 
 // Whether a view of reading R over Bits can refer into Owner: same storage, const flowing owner to view.

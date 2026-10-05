@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_EXT_BOOST_DETAIL_DYNAMIC_BITSET_HPP
 #define XSTD_BITS_EXT_BOOST_DETAIL_DYNAMIC_BITSET_HPP
 
-#include <xstd/bits/detail/bit_convertible.hpp>    // bit_source, bit_target, block_source, value_bytes
+#include <xstd/bits/detail/bit_convertible.hpp>    // bit_convert_source, bit_source, bit_target, value_bytes
 #include <xstd/bits/detail/bit_layout.hpp>         // block_byte, bytes_per_block, or_block_byte
 #include <boost/dynamic_bitset/dynamic_bitset.hpp> // dynamic_bitset, from_block_range, to_block_range
 #include <algorithm>                               // max, min
@@ -121,7 +121,8 @@ struct bit_target<boost::dynamic_bitset<Block, AllocatorOrContainer>>
         using bitset_type = boost::dynamic_bitset<Block, AllocatorOrContainer>;
 
         // Position i stays i, so the to_string() of the dynamic_bitset made reads reversed, position 0 last.
-        template<block_source From>
+        template<bit_convert_source From>
+                requires requires (From const& from) { bit_source<From>::blocks(from); }
         [[nodiscard]] static constexpr auto convert(From const& from)
                 -> bitset_type
         {
