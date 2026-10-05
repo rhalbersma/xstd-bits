@@ -355,7 +355,7 @@ BOOST_AUTO_TEST_CASE(TheProxyComparesThroughItsOneConversion)
         BOOST_CHECK(user::flag(*narrow_view.begin()) == user::flag(3));
 }
 
-// acme's operators decide a comparison between its own key traits, and none between the proxies or iterators under them.
+// acme's operators decide a comparison between its own key traits, and none between the proxies or iterators using them.
 BOOST_AUTO_TEST_CASE(AKeyTraitsNamespaceIsNotAssociatedWithItsProxies)
 {
         auto const lhs = acme::key_traits();

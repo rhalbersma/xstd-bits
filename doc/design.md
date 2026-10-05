@@ -3315,7 +3315,56 @@ therefore named after the iterator category rather than after the reading, which
 differ by; the reading names the container that hands them out, and the category names the iterator itself.
 The `bit_` infix then says what is iterated, as `bit_` says what is stored in the container names
 ([the-public-names](#the-public-names)) -- and it is what keeps `bidirectional_bit_iterator` clear of
-`std::bidirectional_iterator`, whose spelling the category alone would have taken.
+`std::bidirectional_iterator`, whose spelling the category alone would have taken. The four names are alias
+templates: the classes themselves are nested in `random_access<Bits>` and `bidirectional<Bits, KeyTraits,
+Direction>`, which is what decides the namespaces ADL searches for them ([the-adl-firewall](#the-adl-firewall)).
+
+### the-adl-firewall
+
+**Why.** A proxy specialised over the user's types used to carry every one of their namespaces into each
+comparison it took part in. `[basic.lookup.argdep]/3` makes the namespaces of a class template
+specialization's template type arguments associated with it, recursively, so a sequence proxy over
+`bit_block_container<std::vector<acme::uint128>>` searched `acme`, and a set proxy under `acme::key_traits`
+did too. A namespace declaring one generic comparison is enough to take over:
+
+```cpp
+namespace acme {
+struct uint128 { /* a Block */ };
+template<class A, class B> constexpr auto operator==(A const&, B const&) noexcept -> bool { return false; }
+}
+```
+
+`r == r` on a proxy over `acme::uint128` then answers `false`: the template is an exact match for both
+operands, and the built-in `bool == bool` needs a user-defined conversion on each. Nothing about it is
+exotic. Boost.Int128 declares non-template `operator==(uint128, bool)` and its mirror, so over a
+`boost::int128::uint128` Block `r == true` found that candidate beside the built-in one, each needing one
+conversion, and was ambiguous.
+
+**The rule.** The same paragraph associates with a class type the class itself, the class it is a member of,
+and its bases; only when the type *itself* is a class template specialization does it add the template
+arguments. A class nested in a class template is not one -- it is a member of a specialization -- so
+`random_access<Bits>::reference` is associated with `xstd::bits::detail` and with `random_access<Bits>`, a
+struct declaring nothing but the two nested classes, and with nothing of `Bits`. GCC 15 and Clang 22 both
+read it so. The iterator and the reference are nested in one enclosing class per header, and their old names
+stay as alias templates over them, since ADL is decided by the class and never by the alias.
+
+**Why not an ADL barrier.** The usual idiom, a class in a namespace of its own that the library re-exports
+with a using-declaration, closes off the namespace the class is declared in. It does nothing for the template
+arguments, which stay associated however the class is reached, and they are the whole problem here.
+
+**What stays associated.** `xstd::bits::detail`, through the enclosing class, which is where the proxies'
+hidden friends live -- `swap`, `iter_move`, `iter_swap` and `format_as` are found exactly as before. The set
+proxy keeps one more on purpose: it is a member *template*, `bidirectional<Bits, KeyTraits,
+Direction>::reference<Key>`, a specialization whose only argument is the key, so a class key's namespace is
+associated and `*it == *jt` reaches the key's own comparisons, hidden friends among them, as a real
+`Key const&` would. The storage, its blocks and the key traits are the enclosing class's arguments and are
+not associated. The sequence proxy's value is `bool`, which brings nothing.
+
+**What it costs.** No deduction reaches `Bits` through a nested class, so the `std::formatter` specializations
+can no longer be written as `formatter<random_access_bit_reference<Bits>>`. Each is a partial specialization
+constrained by a `detail` concept instead, `random_access_reference` or `bidirectional_reference`, which
+recognizes a proxy through the enclosing class it names as `enclosing_type`: true for exactly the
+references some `random_access<Bits>` or `bidirectional<Bits, KeyTraits, Direction>` declares.
 
 **`operator&` on the proxy answers an iterator**, which is what a proxy can offer in place of an address, and it
 is what keeps a container's subscript tied to its iteration: `&a[n]` is `a.begin() + n`, so `&a[n] == &a[0] + n`
@@ -4074,10 +4123,10 @@ comparator is no way in: it reaches the proxy only as a direction. The cost of t
 copy-initializing a class from a proxy, `C c = *it;`, which needs two user-defined conversions;
 direct-initialization, `C c(*it);`, needs one and still works.
 
-One exception remains, and it is Boost.Int128's to make. It declares non-template `operator==(uint128, bool)`
-and `operator==(bool, uint128)`, which ADL finds for a sequence proxy over a `boost::int128::uint128` Block, so
-there `r == true` and `r == 1` are ambiguous. The proxy is still `totally_ordered`, two proxies still compare,
-and `r < true` still holds; `static_cast<bool>(r) == true`, or just `r`, says the rest.
+Of the namespaces that list names, only the key's is still associated with a proxy
+([the-adl-firewall](#the-adl-firewall)), and with it went the last exception: Boost.Int128's non-template
+`operator==(uint128, bool)` and its mirror are not found for a sequence proxy over a `boost::int128::uint128`
+Block, so there `r == true` and `r == 1` compile and answer as they do over every other Block.
 
 **Two facts, two flags, because one flag conflated them.** `TEST_HAS_UINT128` names the compiler's 128-bit
 **builtin**: a scalar, and a `std::unsigned_integral`. It feeds `block_types`, which every suite grades over, and
