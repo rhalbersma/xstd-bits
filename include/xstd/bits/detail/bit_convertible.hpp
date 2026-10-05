@@ -26,7 +26,7 @@
 // What xstd::bit_convert asks of its two ends, and the copy between them: position i to position i, at any widths.
 namespace xstd::bits::detail {
 
-// A width fixed by the type: one of our owners or full-width views, a block or an array of them, or a proved field.
+// A width fixed by the type: one of our owners or full-width views, a block or an array of them, or a std::bitset.
 template<class T>
 concept fixed_width =
         bit_width_v<T> != std::dynamic_extent and

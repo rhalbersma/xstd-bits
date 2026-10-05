@@ -7,10 +7,10 @@
 #define XSTD_BITS_DETAIL_BIT_WIDTH_HPP
 
 #include <xstd/bits/bit_blocks.hpp>        // bit_blocks_extent_v, owned_bit_blocks
-#include <xstd/bits/detail/bit_layout.hpp> // container_source, fixed_bit_blocks, has_constant_size
+#include <xstd/bits/detail/bit_layout.hpp> // fixed_bit_blocks
 #include <xstd/bits/detail/ownership.hpp>  // owned_storage
+#include <bitset>                          // bitset
 #include <cstddef>                         // size_t
-#include <iterator>                        // size
 #include <span>                            // dynamic_extent
 #include <type_traits>                     // is_bounded_array_v, remove_const_t
 
@@ -31,6 +31,13 @@ concept packed_view =
 template<class T>
 concept packed = packed_owner<T> or packed_view<T>;
 
+// A foreign type names its width only as std::bitset does, in its type; any other is read where a target supplies one.
+template<class T>
+inline constexpr auto foreign_bit_width = std::dynamic_extent;
+
+template<std::size_t N>
+inline constexpr auto foreign_bit_width<std::bitset<N>> = N;
+
 // The width a type has bit storage of, or dynamic_extent where it has none of a width fixed at compile time.
 template<class T>
 [[nodiscard]] consteval auto bit_width_of() noexcept
@@ -43,14 +50,8 @@ template<class T>
         } else if constexpr (fixed_bit_blocks<T> and (std::is_bounded_array_v<T> or xstd::owned_bit_blocks<std::remove_const_t<T>>)) {
                 // Held by value, so a span of a static extent stays out: it lends its width rather than having it.
                 return xstd::bit_blocks_extent_v<T>;
-        } else if constexpr (has_constant_size<T>) {
-                if constexpr (container_source<T, std::size(T{})>) {
-                        return std::size(T{});
-                } else {
-                        return std::dynamic_extent;
-                }
         } else {
-                return std::dynamic_extent;
+                return foreign_bit_width<std::remove_const_t<T>>;
         }
 }
 

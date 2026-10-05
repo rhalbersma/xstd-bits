@@ -3,14 +3,15 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/detail/bit_layout.hpp> // bit_bytes, bit_layout, bit_layout_holds, byte_count, bytes_bits, container_source, fixed_bit_blocks, fixed_blocks_source
+#include <xstd/bits/detail/bit_layout.hpp> // bit_bytes, bit_layout, byte_count, bytes_bits, container_source, fixed_bit_blocks, fixed_blocks_source
+#include <xstd/bits/detail/bit_width.hpp>  // bit_width_v
 #include <boost/test/unit_test.hpp>        // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <array>                           // array, to_array
 #include <bitset>                          // bitset
 #include <cstddef>                         // byte, size_t
 #include <cstdint>                         // uint8_t, uint16_t, uint32_t, uint64_t
 #include <ranges>                          // iota
-#include <span>                            // span
+#include <span>                            // dynamic_extent, span
 #include <string>                          // string
 #include <vector>                          // vector
 
@@ -24,9 +25,18 @@ namespace {
 using four_words = std::uint64_t[4]; // NOLINT(modernize-avoid-c-arrays): the storage under test
 using four_ints  = int[4];           // NOLINT(modernize-avoid-c-arrays): the storage under test
 
+// Two words with no member a field of bits would be asked for, read only through their object bytes.
+struct raw
+{
+        std::uint64_t lo;
+        std::uint64_t hi;
+
+        [[nodiscard]] friend auto operator==(raw const&, raw const&) noexcept -> bool = default;
+};
+
 } // namespace
 
-// An unsigned integer is its own layout: bit n of the value is 2^n by the language, so nothing is probed.
+// An unsigned integer is its own layout: bit n of the value is 2^n by the language, whatever the byte order.
 BOOST_AUTO_TEST_CASE(AnUnsignedIntegerIsItsOwnLayout)
 {
         static_assert(detail::fixed_blocks_source<unsigned char, 8UZ>);
@@ -42,191 +52,18 @@ BOOST_AUTO_TEST_CASE(AnUnsignedIntegerIsItsOwnLayout)
         static_assert(not detail::fixed_blocks_source<bool, 1UZ>);
 }
 
-// The other family proves what the first states, asserted as a value so a rung where it failed reports one assertion.
-BOOST_AUTO_TEST_CASE(TheLayoutIsProvedOnThisStandardLibrary)
+// The other family is read as its bytes wherever its object has room for the width, as std::bit_cast trusts it.
+BOOST_AUTO_TEST_CASE(AFieldOfBitsIsReadWhereItsObjectHasRoom)
 {
-        static_assert(detail::bit_layout_holds<std::bitset<200UZ>, 200UZ>());
-        static_assert(detail::bit_layout_holds<std::bitset<64UZ>, 64UZ>());
-
         static_assert(detail::container_source<std::bitset<1UZ>, 1UZ>);
         static_assert(detail::container_source<std::bitset<32UZ>, 32UZ>); // the MSVC STL's narrow word type
         static_assert(detail::container_source<std::bitset<33UZ>, 33UZ>); // and its wide one
         static_assert(detail::container_source<std::bitset<200UZ>, 200UZ>);
-
-        // Five fixed positions cost the same at any width, so a large one is no hazard up to 2^20.
         static_assert(detail::container_source<std::bitset<1UZ << 16UZ>, 1UZ << 16UZ>);
-}
 
-// Four layouts that are wrong, one per way, each clearing every structural bound so only the probe refuses it.
-namespace wrong {
-
-// Its default is not all clear, so the first scan refuses it.
-struct dirty_default
-{
-        std::uint64_t w = 1ULL;
-
-        constexpr auto set(std::size_t n) noexcept
-                -> void
-        {
-                w |= 1ULL << n;
-        }
-
-        [[nodiscard]] static constexpr auto count() noexcept
-                -> std::size_t
-        {
-                return 1UZ;
-        }
-
-        [[nodiscard]] static constexpr auto size() noexcept
-                -> std::size_t
-        {
-                return 64UZ;
-        }
-};
-
-// It lights the position it was asked for and one more, so the count refuses it.
-struct miscounting
-{
-        std::uint64_t w = 0ULL;
-
-        constexpr auto set(std::size_t n) noexcept
-                -> void
-        {
-                w |= 1ULL << n;
-        }
-
-        [[nodiscard]] static constexpr auto count() noexcept
-                -> std::size_t
-        {
-                return 2UZ;
-        }
-
-        [[nodiscard]] static constexpr auto size() noexcept
-                -> std::size_t
-        {
-                return 64UZ;
-        }
-};
-
-// It numbers its positions from the other end, which is the reordering the byte check refuses.
-struct reversed
-{
-        std::uint64_t w = 0ULL;
-
-        constexpr auto set(std::size_t n) noexcept
-                -> void
-        {
-                w |= 1ULL << (63UZ - n);
-        }
-
-        [[nodiscard]] static constexpr auto count() noexcept
-                -> std::size_t
-        {
-                return 1UZ;
-        }
-
-        [[nodiscard]] static constexpr auto size() noexcept
-                -> std::size_t
-        {
-                return 64UZ;
-        }
-};
-
-// It is a whole spare block wider than its positions, which is what the size window is for.
-struct spare_block
-{
-        std::uint64_t w      = 0ULL;
-        std::uint64_t unused = 0ULL;
-
-        constexpr auto set(std::size_t n) noexcept
-                -> void
-        {
-                w |= 1ULL << n;
-        }
-
-        [[nodiscard]] static constexpr auto count() noexcept
-                -> std::size_t
-        {
-                return 1UZ;
-        }
-
-        [[nodiscard]] static constexpr auto size() noexcept
-                -> std::size_t
-        {
-                return 64UZ;
-        }
-};
-
-// Its set() is well-formed but not a constant expression, so the probe cannot run at all rather than refusing.
-struct non_constant_set
-{
-        std::uint64_t w = 0ULL;
-
-        auto set(std::size_t n) noexcept -> void // NOLINT(readability-make-member-function-const)
-        {
-                w |= 1ULL << n;
-        }
-
-        [[nodiscard]] static constexpr auto count() noexcept
-                -> std::size_t
-        {
-                return 1UZ;
-        }
-
-        [[nodiscard]] static constexpr auto size() noexcept
-                -> std::size_t
-        {
-                return 64UZ;
-        }
-};
-
-} // namespace wrong
-
-BOOST_AUTO_TEST_CASE(TheProbeRefusesALayoutThatIsWrong)
-{
-        // static_assert and never a run-time call: the probe emits no code and has no coverage slots.
-        static_assert(not detail::bit_layout_holds<wrong::dirty_default, 64UZ>());
-        static_assert(not detail::bit_layout_holds<wrong::miscounting, 64UZ>());
-        static_assert(not detail::bit_layout_holds<wrong::reversed, 64UZ>());
-
-        // A set() that is no constant expression is refused before the probe runs, which is the point of the guard.
-        static_assert(detail::probeable_bits<wrong::non_constant_set>);
-        static_assert(not detail::probe_is_constant<wrong::non_constant_set>);
-        static_assert(not detail::container_source<wrong::non_constant_set, 64UZ>);
-        static_assert(not detail::bit_layout<wrong::non_constant_set, 64UZ>);
-
-        // And the concept refuses all four, the last of them before the probe ever runs.
-        static_assert(not detail::bit_layout<wrong::dirty_default, 64UZ>);
-        static_assert(not detail::bit_layout<wrong::miscounting, 64UZ>);
-        static_assert(not detail::bit_layout<wrong::reversed, 64UZ>);
-        static_assert(not detail::bit_layout<wrong::spare_block, 64UZ>);
-
-        // A right one, built the same way, so the four above are refused for their defect and not their shape.
-        struct right
-        {
-                std::uint64_t w = 0ULL;
-
-                constexpr auto set(std::size_t n) noexcept
-                        -> void
-                {
-                        w |= 1ULL << n;
-                }
-
-                [[nodiscard]] static constexpr auto count() noexcept
-                        -> std::size_t
-                {
-                        return 1UZ;
-                }
-
-                [[nodiscard]] static constexpr auto size() noexcept
-                        -> std::size_t
-                {
-                        return 64UZ;
-                }
-        };
-
-        static_assert(detail::bit_layout_holds<right, 64UZ>());
-        static_assert(detail::bit_layout<right, 64UZ>);
+        // Nothing is asked of its members, so plain words with room for the width are a field of bits too.
+        static_assert(detail::container_source<raw, 100UZ>);
+        static_assert(detail::bit_layout<raw, 128UZ>);
 }
 
 // Neither family: a heap container is not its own bits, and a width the object cannot hold is not a conversion.
@@ -236,6 +73,16 @@ BOOST_AUTO_TEST_CASE(WhatIsRefusedAndWhy)
         static_assert(not detail::bit_layout<std::string, 64UZ>);
         static_assert(not detail::bit_layout<std::bitset<64UZ>, 65UZ>);
         static_assert(not detail::bit_layout<std::uint32_t, 64UZ>);
+        static_assert(not detail::bit_layout<raw, 129UZ>);
+}
+
+// A width is in a foreign type only as std::bitset spells it; any other foreign type takes its width from a target.
+BOOST_AUTO_TEST_CASE(AForeignWidthIsAStdBitsetsOnly)
+{
+        static_assert(detail::bit_width_v<std::bitset<0UZ>> == 0UZ);
+        static_assert(detail::bit_width_v<std::bitset<100UZ>> == 100UZ);
+        static_assert(detail::bit_width_v<std::bitset<100UZ> const> == 100UZ);
+        static_assert(detail::bit_width_v<raw> == std::dynamic_extent);
 }
 
 BOOST_AUTO_TEST_CASE(TheTwoDirectionsAreEachOthersInverse)
@@ -286,7 +133,7 @@ BOOST_AUTO_TEST_CASE(FixedBitBlocksNameTheirWidthByType)
         static_assert(not detail::fixed_bit_blocks<std::vector<std::uint64_t>>);
 }
 
-// A contiguous sequence of blocks is the same stated family over more than one block, and nothing is probed here.
+// A contiguous sequence of blocks is the same stated family over more than one block.
 BOOST_AUTO_TEST_CASE(ASequenceOfBlocksStatesItsLayoutToo)
 {
         static_assert(detail::fixed_blocks_source<std::array<std::uint64_t, 4>, 256UZ>);
@@ -307,10 +154,10 @@ BOOST_AUTO_TEST_CASE(ASequenceOfBlocksStatesItsLayoutToo)
         // Signed blocks are not this family: owned_bit_blocks asks for an unsigned value type.
         static_assert(not detail::fixed_blocks_source<std::array<int, 4>, 64UZ>);
 
-        // A built-in array is read as its std::array, and its signed blocks are refused as theirs are.
+        // A built-in array is read as its std::array; signed blocks state no layout, so theirs is their object bytes.
         static_assert(detail::fixed_blocks_source<four_words, 256UZ> and not detail::fixed_blocks_source<four_words, 257UZ>);
         static_assert(detail::bit_layout<four_words, 256UZ> and not detail::bit_layout<four_words, 257UZ>);
-        static_assert(not detail::fixed_blocks_source<four_ints, 64UZ> and not detail::bit_layout<four_ints, 64UZ>);
+        static_assert(not detail::fixed_blocks_source<four_ints, 64UZ> and detail::container_source<four_ints, 64UZ>);
         static_assert([] -> bool {
                 four_words const blocks = {0x0123'4567'89AB'CDEFULL, 0x0ULL, 0x1ULL, 0x8000'0000'0000'0000ULL};
                 auto const same         = std::array<std::uint64_t, 4>{0x0123'4567'89AB'CDEFULL, 0x0ULL, 0x1ULL, 0x8000'0000'0000'0000ULL};
@@ -412,6 +259,23 @@ BOOST_AUTO_TEST_CASE(TheCopyAndTheShiftsAgree)
                 auto const back_copied     = detail::bytes_bits<Field, N>(folded);
                 BOOST_CHECK(back_copied == back_folded);
                 BOOST_CHECK(back_copied == field);
+        }
+
+        // Plain words at 100 bits cross as their first 13 bytes, and the 3 bytes past those come back zero.
+        {
+                constexpr auto N    = 100UZ;
+                constexpr auto ones = ~0ULL;
+                constexpr auto kept = raw{.lo = ones, .hi = 0xFF'FFFF'FFFFULL};
+
+                constexpr auto words  = raw{.lo = ones, .hi = ones};
+                constexpr auto folded = detail::bit_bytes<N>(words);
+                auto const copied     = detail::bit_bytes<N>(words);
+                BOOST_CHECK(copied == folded);
+
+                constexpr auto back_folded = detail::bytes_bits<raw, N>(folded);
+                auto const back_copied     = detail::bytes_bits<raw, N>(folded);
+                static_assert(back_folded == kept);
+                BOOST_CHECK(back_copied == kept);
         }
 }
 
