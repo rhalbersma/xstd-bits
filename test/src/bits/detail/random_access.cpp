@@ -134,7 +134,7 @@ template<class A, class B>
         return false;
 }
 
-// Storage of acme's own, which makes it a template argument of every proxy handed out over it.
+// Storage of acme's own, a template argument of every adaptor over it.
 template<class Block>
 class blocks : public test::minimal_blocks<Block>
 {};
@@ -445,7 +445,7 @@ BOOST_AUTO_TEST_CASE(TheFormatterIsSpecializedForExactlyTheProxies)
 
 BOOST_AUTO_TEST_SUITE_END()
 
-// The sequence view hands out this proxy and nothing of its own.
+// The sequence view hands out a pair of its own, shaped as every other.
 BOOST_AUTO_TEST_SUITE(RandomAccessThroughTheView)
 
 namespace {

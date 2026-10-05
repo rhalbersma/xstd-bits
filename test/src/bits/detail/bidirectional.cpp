@@ -153,7 +153,7 @@ template<class A, class B>
         return false;
 }
 
-// Key traits of acme's own, which makes it a template argument of every proxy handed out under them.
+// Key traits of acme's own, a template argument of every set adaptor over them.
 struct key_traits : xstd::bit_key_traits<std::size_t>
 {};
 
@@ -173,7 +173,7 @@ struct slot_traits
         }
 };
 
-// Storage of acme's own, which makes it a template argument of every proxy handed out over it.
+// Storage of acme's own, a template argument of every adaptor over it.
 template<class Block>
 class blocks : public test::minimal_blocks<Block>
 {};
@@ -494,7 +494,7 @@ BOOST_AUTO_TEST_CASE(TheFormatterIsSpecializedForExactlyTheProxies)
 
 BOOST_AUTO_TEST_SUITE_END()
 
-// The set view hands out this proxy and nothing of its own.
+// The set view hands out a pair of its own, shaped as every other.
 BOOST_AUTO_TEST_SUITE(BidirectionalThroughTheView)
 
 namespace {
