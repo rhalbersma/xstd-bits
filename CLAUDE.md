@@ -94,7 +94,7 @@ A template declaration is followed by a blank line before whatever comes next, a
 template<bit_block_container_type OtherBits, storage OtherStore, class OtherDerived, class OtherKey, class OtherKeyTraits, class OtherCompare>
 friend class set_adaptor;
 
-friend class bidirectional_bit_reference<Bits, Key, KeyTraits, Direction>;
+friend class basic_reference<Value>;
 ```
 
 `.clang-format` cannot insert this line, so it is yours to keep.
