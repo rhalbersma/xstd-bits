@@ -3352,13 +3352,21 @@ stay as alias templates over them, since ADL is decided by the class and never b
 with a using-declaration, closes off the namespace the class is declared in. It does nothing for the template
 arguments, which stay associated however the class is reached, and they are the whole problem here.
 
-**What stays associated.** `xstd::bits::detail`, through the enclosing class, which is where the proxies'
-hidden friends live -- `swap`, `iter_move`, `iter_swap` and `format_as` are found exactly as before. The set
-proxy keeps one more on purpose: it is a member *template*, `bidirectional<Bits, KeyTraits,
-Direction>::reference<Key>`, a specialization whose only argument is the key, so a class key's namespace is
-associated and `*it == *jt` reaches the key's own comparisons, hidden friends among them, as a real
-`Key const&` would. The storage, its blocks and the key traits are the enclosing class's arguments and are
-not associated. The sequence proxy's value is `bool`, which brings nothing.
+**What stays associated, and what does not.** The rule is exact: the storage -- `Bits`, and through it the
+blocks, the Block and any allocator -- the key traits and the direction are **not** associated with a proxy
+or an iterator; the proxy's value type **is**, deliberately, so that the proxy compares as its value does.
+`xstd::bits::detail` is associated as well, through the enclosing class, which is where the proxies' hidden
+friends live: `swap`, `iter_move`, `iter_swap` and `format_as` are found exactly as before.
+
+The value type is kept by where it sits. The set proxy is a member *template*, `bidirectional<Bits,
+KeyTraits, Direction>::reference<Key>`, and a specialization of a member class template is a class template
+specialization whose own argument is the key alone, so a class key's namespace is associated and
+`*it == *jt` or `*it == 3` reaches the key's own comparisons, hidden friends among them, as a real
+`Key const&` would. Without that, a key whose `operator==` is a hidden friend would not compare through its
+proxy at all. The set iterator takes the key the same way, one iterator type per storage, traits and
+direction as before. The sequence proxy's value is `bool`, which has no namespace to keep, so its reference
+and iterator are plain nested classes; a reading whose value is a character type would make its reference a
+member template on that type for the same reason the set proxy is one.
 
 **What it costs.** No deduction reaches `Bits` through a nested class, so the `std::formatter` specializations
 can no longer be written as `formatter<random_access_bit_reference<Bits>>`. Each is a partial specialization

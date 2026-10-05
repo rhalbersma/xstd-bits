@@ -7,16 +7,19 @@
 #include <test/block_types.hpp>                     // all_block_types, digits_v, graded_extents
 #include <test/ext_int128.hpp>                      // TEST_HAS_ABSL_INT128, TEST_HAS_BOOST_INT128, uint128
 #include <test/for_each_type.hpp>                   // for_each_type
+#include <test/minimal_blocks.hpp>                  // minimal_blocks
 #include <test/value_reference.hpp>                 // value_reference
 #include <xstd/bits/bit_fixed_set.hpp>              // basic_bit_fixed_set
 #include <xstd/bits/bit_key_traits.hpp>             // bit_key_traits
 #include <xstd/bits/bit_set_view.hpp>               // bit_set_view
 #include <xstd/bits/detail/bidirectional.hpp>       // bidirectional_bit_iterator, bidirectional_bit_reference, bidirectional_reference
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
+#include <xstd/bits/detail/ownership.hpp>           // storage
+#include <xstd/bits/detail/set_adaptor.hpp>         // set_adaptor
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <array>                                    // array
 #include <compare>                                  // strong_ordering
-#include <concepts>                                 // bidirectional_iterator, equality_comparable, same_as, totally_ordered, totally_ordered_with
+#include <concepts>                                 // bidirectional_iterator, equality_comparable, equality_comparable_with, same_as, totally_ordered, totally_ordered_with
 #include <cstddef>                                  // size_t
 #include <cstdint>                                  // uint64_t, uint8_t
 #include <format>                                   // formattable
@@ -25,7 +28,7 @@
 #include <ranges>                                   // iota
 #include <set>                                      // set
 #include <type_traits>                              // is_assignable_v, is_constructible_v, is_convertible_v, is_trivially_destructible_v
-#include <utility>                                  // declval
+#include <utility>                                  // cmp_equal, declval
 
 namespace {
 
@@ -94,6 +97,26 @@ struct flag
 struct key_traits : xstd::bit_key_traits<std::size_t>
 {};
 
+// A class key whose comparisons are hidden friends, which only ADL through the key itself finds.
+struct slot
+{
+        std::size_t value;
+
+        [[nodiscard]] friend constexpr auto operator==(slot lhs, slot rhs) noexcept
+                -> bool
+        {
+                return lhs.value == rhs.value;
+        }
+
+        [[nodiscard]] friend constexpr auto operator==(slot lhs, int rhs) noexcept
+                -> bool
+        {
+                return std::cmp_equal(lhs.value, rhs);
+        }
+
+        [[nodiscard]] friend auto operator<=>(slot, slot) -> std::strong_ordering = default;
+};
+
 } // namespace user
 
 // One full block of each Block, which is all a comparison between two of its proxies asks for.
@@ -126,6 +149,27 @@ template<class A, class B>
 struct key_traits : xstd::bit_key_traits<std::size_t>
 {};
 
+// Key traits of acme's own for a key of the user's.
+struct slot_traits
+{
+        [[nodiscard]] static constexpr auto to_index(user::slot key) noexcept
+                -> std::size_t
+        {
+                return key.value;
+        }
+
+        [[nodiscard]] static constexpr auto from_index(std::size_t index) noexcept
+                -> user::slot
+        {
+                return {.value = index};
+        }
+};
+
+// Storage of acme's own, which makes it a template argument of every proxy handed out over it.
+template<class Block>
+class blocks : public test::minimal_blocks<Block>
+{};
+
 } // namespace acme
 
 namespace {
@@ -146,6 +190,20 @@ using hostile_set = xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 64, ac
         auto const same   = *again;
         auto const high   = *second;
         return low == same and not(low != same) and not(low < same) and low != high and low < high and first == again and first != second;
+}
+
+using hostile_slot_set = xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_block_container<acme::blocks<std::uint64_t>>, xstd::bits::detail::storage::owned, void, user::slot, acme::slot_traits>;
+
+// A user's key under acme's storage and key traits: the key's own comparisons decide, and acme's are not found.
+[[nodiscard]] constexpr auto hostile_slot_set_compares_as_its_keys()
+        -> bool
+{
+        auto s = hostile_slot_set();
+        s.insert(user::slot{.value = 3});
+        s.insert(user::slot{.value = 5});
+        auto const first  = s.begin();
+        auto const second = std::next(first);
+        return *first == *s.begin() and *first != *second and *first == 3 and *second == 5 and not(*first == 5) and *first < *second;
 }
 
 template<class T>
@@ -380,6 +438,17 @@ BOOST_AUTO_TEST_CASE(TheKeysNamespaceIsAssociatedWithItsProxies)
         BOOST_CHECK(*s.begin() == *s.begin());
         BOOST_CHECK(*s.begin() < *std::next(s.begin()));
         BOOST_CHECK(*s.begin() == key{3});
+}
+
+// The key's hidden friends reach the proxy, against its own and its mirror's type, whoever owns storage and traits.
+BOOST_AUTO_TEST_CASE(AKeysHiddenFriendsDecideBesideAHostileStorageAndKeyTraits)
+{
+        using reference = std::iter_reference_t<hostile_slot_set::iterator>;
+        static_assert(std::equality_comparable<reference>);
+        static_assert(std::equality_comparable_with<reference, user::slot>);
+
+        static_assert(hostile_slot_set_compares_as_its_keys());
+        BOOST_CHECK(hostile_slot_set_compares_as_its_keys());
 }
 
 // What std::formatter is specialized for: the proxies themselves, which no deduction reaches through the class.
