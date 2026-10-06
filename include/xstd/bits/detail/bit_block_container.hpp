@@ -21,16 +21,16 @@
 #include <xstd/misc/type_traits/conditional_data_member.hpp> // XSTD_NO_UNIQUE_ADDRESS, conditional_data_member_t
 #include <boost/container/container_fwd.hpp>                 // static_vector
 #include <boost/hash2/hash_append_fwd.hpp>                   // hash_append, hash_append_tag
-#include <algorithm>                                         // all_of, any_of, copy, fill, fill_n, find_if, fold_left, max, min, shift_left, shift_right
+#include <algorithm>                                         // all_of, any_of, copy, fill, fill_n, find_if, fold_left, max, min, reverse, rotate, shift_left, shift_right
 #include <array>                                             // array
-#include <bit>                                               // endian
+#include <bit>                                               // endian, has_single_bit
 #include <cassert>                                           // assert
 #include <concepts>                                          // default_initializable, same_as
 #include <cstddef>                                           // byte, ptrdiff_t, size_t, to_integer
 #include <cstring>                                           // memcpy
 #include <format>                                            // format
 #include <functional>                                        // plus
-#include <iterator>                                          // prev
+#include <iterator>                                          // next, prev
 #include <limits>                                            // numeric_limits
 #include <memory>                                            // allocator_traits
 #include <new>                                               // bad_alloc
@@ -300,6 +300,9 @@ private:
         static constexpr auto static_used_bits       = shr(ones, static_num_unused_bits);
         static constexpr auto static_unused_bits     = static_cast<block_type>(~static_used_bits);
         static constexpr bool static_has_unused_bits = has_static_size and static_used_bits != ones;
+
+        // Whether reordering the positions can move a bit: two of them, or a run-time width that can reach two.
+        static constexpr bool can_permute = has_static_size ? N > 1UZ : not has_zero_capacity;
 
         // The width is a size_t unless the blocks out-align one, when it fills what would be padding.
         using width_type = std::conditional_t<(alignof(std::size_t) >= alignof(Blocks)), std::size_t, block_type>;
@@ -1033,6 +1036,48 @@ public:
                 return *this;
         }
 
+        // P3103R2's three for std::bitset, total in n: bit i takes bit (n + i) % size(), and width zero is left alone.
+        constexpr auto rotr(std::size_t n [[maybe_unused]]) noexcept
+                -> bit_block_container&
+        {
+                if constexpr (can_permute) {
+                        rotate_down(modulo_width(n));
+                }
+                return *this;
+        }
+
+        // rotr(size() - n % size()), reduced again so that a whole turn is no turn.
+        constexpr auto rotl(std::size_t n [[maybe_unused]]) noexcept
+                -> bit_block_container&
+        {
+                if constexpr (can_permute) {
+                        rotate_down(modulo_width(size() - modulo_width(n)));
+                }
+                return *this;
+        }
+
+        // Bit i takes bit size() - 1 - i: the blocks end for end, each block's bits too, then the padding rotated out.
+        constexpr auto reverse() noexcept
+                -> bit_block_container&
+        {
+                if constexpr (has_static_size and static_num_blocks == 1) {
+                        m_blocks[0] = shr(reversed(m_blocks[0]), static_num_unused_bits);
+                } else if constexpr (can_permute) {
+                        std::ranges::reverse(m_blocks);
+                        for (auto& block : m_blocks) {
+                                block = reversed(block);
+                        }
+                        if constexpr (static_has_unused_bits) {
+                                rotate_blocks_down(static_num_unused_bits);
+                        } else if constexpr (has_stored_size) {
+                                if (has_unused_bits()) {
+                                        rotate_blocks_down((num_blocks() * bits_per_block) - size());
+                                }
+                        }
+                }
+                return *this;
+        }
+
         constexpr auto set() noexcept
                 -> bit_block_container&
         {
@@ -1551,6 +1596,78 @@ private:
                         shl(m_blocks[index + 1UZ], L_shift) |
                         shr(m_blocks[index], R_shift)
                 );
+        }
+
+        // n modulo the width, where a run-time width of zero takes no modulo and answers zero.
+        [[nodiscard]] constexpr auto modulo_width(std::size_t n) const noexcept
+                -> std::size_t
+        {
+                if constexpr (not has_static_size) {
+                        if (size() == 0UZ) {
+                                return 0UZ;
+                        }
+                }
+                return n % size();
+        }
+
+        // A turn towards position zero by n < size(): whole blocks, the bits within them, then the padding closed.
+        constexpr auto rotate_down(std::size_t n) noexcept
+                -> void
+        {
+                assert(n == 0UZ or is_valid(n));
+                if (n == 0UZ) {
+                        return;
+                }
+                if constexpr (has_static_size and static_num_blocks == 1) {
+                        m_blocks[0] = static_cast<block_type>(shr(m_blocks[0], n) | shl(m_blocks[0], N - n));
+                } else {
+                        auto const [n_blocks, R_shift] = xstd::div(n, bits_per_block);
+                        std::ranges::rotate(m_blocks, std::ranges::next(std::ranges::begin(m_blocks), static_cast<std::ptrdiff_t>(n_blocks)));
+                        if (R_shift != 0UZ) {
+                                rotate_blocks_down(R_shift);
+                        }
+                        if constexpr (static_has_unused_bits) {
+                                close_padding(n);
+                        } else if constexpr (has_stored_size) {
+                                if (has_unused_bits()) {
+                                        close_padding(n);
+                                }
+                        }
+                }
+                erase_unused();
+        }
+
+        // Every block's bits R_shift lower, the lowest of the first block wrapping round into the top of the last.
+        constexpr auto rotate_blocks_down(std::size_t R_shift) noexcept
+                -> void
+        {
+                auto const L_shift = bits_per_block - R_shift;
+                auto const first   = m_blocks[0];
+                for (auto const i : std::views::iota(0UZ, last_block())) {
+                        m_blocks[i] = straddled_block(i, L_shift, R_shift);
+                }
+                m_blocks[last_block()] = static_cast<block_type>(shl(first, L_shift) | shr(m_blocks[last_block()], R_shift));
+        }
+
+        // After all the blocks' bits turn by n, the n that wrapped sit above the clear padding, and move down onto it.
+        constexpr auto close_padding(std::size_t n) noexcept
+                -> void
+        {
+                auto const gap = (num_blocks() * bits_per_block) - size();
+                for_each_block(size() - n, n, [&](std::size_t pos, block_type mask) -> void { block_at(pos, block_at(pos + gap), mask); });
+        }
+
+        // A block's bits end for end, as log2(digits) swaps of ever narrower halves.
+        [[nodiscard]] static constexpr auto reversed(block_type block) noexcept
+                -> block_type
+        {
+                static_assert(std::has_single_bit(bits_per_block));
+                auto mask = shr(ones, bits_per_block / 2UZ);
+                for (auto width = bits_per_block / 2UZ; 0UZ < width; width /= 2UZ) {
+                        block = static_cast<block_type>(static_cast<block_type>(shr(block, width) & mask) | shl(static_cast<block_type>(block & mask), width));
+                        mask  = static_cast<block_type>(mask ^ shl(mask, width / 2UZ));
+                }
+                return block;
         }
 
         [[nodiscard]] constexpr auto last_block() const noexcept

@@ -2107,6 +2107,33 @@ where a bit string's low bit is its right. Exposing the operators would have `v 
 the algorithm whose name the sequence reading already owns. So `flip()` and the three
 compound operators cross to the sequence adaptor and the shifts do not.
 
+### rotation-and-reversal
+
+`rotl`, `rotr` and `reverse` cross where the shifts did not, and the ceiling's two questions say why
+([what-a-sequence-may-add](#what-a-sequence-may-add)). A sequence of `bool` wants them: `std::ranges::rotate` and
+`std::ranges::reverse` are sequence algorithms, and over packed bits each is a pass over the blocks rather than a
+walk of proxy swaps. And the names are not a sequence algorithm's spelled backwards. They are the ones
+[P3103R2](https://wg21.link/P3103R2) gives `std::bitset`, after `std::rotl` and `std::rotr` in `<bit>`, and its
+wording is what they mean: `rotr(n)` replaces bit *i* with bit *(n + i) mod N*, computed without wrapping, `rotl(n)`
+is `rotr(N - n % N)`, and `reverse()` replaces bit *i* with bit *N - 1 - i*. On a sequence, `v.rotr(n)` is
+`std::ranges::rotate(v, v.begin() + n % v.size())`: right is towards the front, as a bit string's low bit is its
+right, and `std::rotate` names no direction for it to contradict. Each returns the sequence by reference, as the
+paper's do. Width zero, where the paper's `% N` would divide by zero, is left as it is.
+
+An owner and a whole view have them and a window does not, as with `flip()`: a window shares its end blocks with
+what lies outside it, and its rotation would be a masked walk of its own. The set reading does not take them
+either; `std::set` has no counterpart, and a rotation of keys has no meaning there that a shift does not already
+give.
+
+The storage does the work, at every width without allocating, so each is `noexcept`. A rotation by
+*n = q · digits + r*, reduced modulo the width first so the shifts' `n < size()` precondition never arises, is
+`std::ranges::rotate` over the blocks by *q*, then a funnel shift by *r* through `straddled_block`, the first block
+wrapping round into the last ([the-funnel-shift](#the-funnel-shift)). Over the blocks' whole width that leaves the
+*n* bits that wrapped sitting above a gap as wide as the padding, so where there is padding one more pass moves
+them down onto it through both sides of `block_at` ([the-blit](#the-blit)). A reversal is the blocks in reverse
+order, each block's bits reversed by log2(digits) masked swaps, and the padding, now at the bottom, rotated out by
+the same funnel shift.
+
 ### the-elementwise-reading
 
 What `&=` means on a sequence of bools is **elementwise logical**, not bitwise: `a &= b` is

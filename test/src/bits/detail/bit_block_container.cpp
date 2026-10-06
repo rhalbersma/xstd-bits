@@ -14,7 +14,7 @@
 #include <xstd/bits/from_blocks.hpp>                  // from_blocks
 #include <xstd/ints/memory.hpp>                       // align_up
 #include <boost/test/unit_test.hpp>                   // BOOST_CHECK_EQUAL, BOOST_CHECK_LE, BOOST_CHECK_LT, BOOST_CHECK_THROW, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
-#include <algorithm>                                  // count, lexicographical_compare_three_way, min
+#include <algorithm>                                  // count, lexicographical_compare_three_way, min, reverse, rotate
 #include <array>                                      // array
 #include <bitset>                                     // bitset
 #include <compare>                                    // strong_ordering
@@ -263,6 +263,48 @@ public:
                 }
         }
 
+        // P3103R2's three against the algorithms: turns in [0, 2 size()], past 64 bits those near a multiple of 16.
+        auto permutations()
+                -> void
+        {
+                for (auto const s : std::views::iota(0UZ, (2UZ * m_n) + 1UZ)) {
+                        if (m_n <= 64UZ or (s + 1UZ) % 16UZ <= 2UZ) {
+                                turn(s);
+                        }
+                }
+                turn(std::numeric_limits<std::size_t>::max());
+
+                auto& a = fresh_x();
+                a.reverse();
+                auto m = m_mx;
+                std::ranges::reverse(m);
+                same(m, a);
+                unequal(a.count(), m_cardinality);
+        }
+
+        // The count is the padding's check: a bit left above the width would be counted.
+        auto turn(std::size_t s)
+                -> void
+        {
+                auto const by = m_n == 0UZ ? 0UZ : s % m_n;
+                {
+                        auto& a = fresh_x();
+                        a.rotr(s);
+                        auto m = m_mx;
+                        std::ranges::rotate(m, m.begin() + static_cast<std::ptrdiff_t>(by));
+                        same(m, a);
+                        unequal(a.count(), m_cardinality);
+                }
+                {
+                        auto& a = fresh_x();
+                        a.rotl(s);
+                        auto m = m_mx;
+                        std::ranges::rotate(m, m.end() - static_cast<std::ptrdiff_t>(by));
+                        same(m, a);
+                        unequal(a.count(), m_cardinality);
+                }
+        }
+
         // One method apiece: combined, GCC 15 at -O3 reports a free-nonheap-object that is not there.
         auto whole_set()
                 -> void
@@ -375,6 +417,7 @@ auto check_ops(BB const& x, BB const& y, int& disagreements)
         c.relational();
         c.bitwise();
         c.shifts();
+        c.permutations();
         c.whole_set();
         c.whole_reset();
         c.whole_flip();
@@ -435,6 +478,21 @@ constexpr auto a_run_time_width_is_constexpr()
         auto b = xstd::bits::detail::bit_block_container<std::vector<std::uint8_t>>(9);
         b.set(8);
         return b.count() == 1 and b.find_first() == 8;
+}
+
+// Bit 8 of nine turned on to 1, then with bit 0 reversed onto 7 and 8, then turned back by more than a whole turn.
+template<class BB>
+constexpr auto it_permutes(BB b)
+        -> bool
+{
+        b.set(8);
+        b.rotl(2);
+        auto const turned = b.test(1) and b.count() == 1;
+        b.set(0);
+        b.reverse();
+        auto const reversed = b.test(7) and b.test(8) and b.count() == 2;
+        b.rotr(16);
+        return turned and reversed and b.test(0) and b.test(1) and b.count() == 2;
 }
 
 } // namespace
@@ -660,6 +718,13 @@ BOOST_AUTO_TEST_CASE(AStaticWidthAddsNothingToItsBlocks)
 
         static_assert(xstd::bits::detail::bit_block_container<std::array<std::size_t, 1>, 64>::has_static_size);
         static_assert(not xstd::bits::detail::bit_block_container<std::vector<std::size_t>>::has_static_size);
+}
+
+// Both widths permute in a constant expression, the run-time one over C++20 constexpr allocation.
+BOOST_AUTO_TEST_CASE(BothWidthsPermuteAtCompileTime)
+{
+        static_assert(it_permutes(xstd::bits::detail::bit_block_container<std::array<std::uint8_t, 2>, 9>()));
+        static_assert(it_permutes(xstd::bits::detail::bit_block_container<std::vector<std::uint8_t>>(9)));
 }
 
 // Both widths in a constant expression; the run-time one needs C++20 constexpr allocation.

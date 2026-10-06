@@ -6,6 +6,7 @@
 #include <test/container/allocator.hpp>             // basic_guarantee, copy_and_swap_propagating, copy_propagating, ledger_allocator, strong_guarantee
 #include <test/sanitizer.hpp>                       // IWYU pragma: keep; TEST_HAS_ADDRESS_SANITIZER
 #include <test/sequence/dense.hpp>                  // yields_every_position
+#include <test/sequence/rotation.hpp>               // permutation_sweep, permutes_ten_bits
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array
 #include <xstd/bits/bit_span.hpp>                   // bit_span
 #include <xstd/bits/bit_vector.hpp>                 // bit_vector
@@ -24,7 +25,7 @@
 #include <ranges>                                   // equal, from_range, iota, transform
 #include <stdexcept>                                // length_error
 #include <type_traits>                              // is_default_constructible_v
-#include <utility>                                  // move
+#include <utility>                                  // declval, move
 #include <vector>                                   // vector
 #include <version>                                  // IWYU pragma: keep; __cpp_lib_containers_ranges
 
@@ -38,6 +39,9 @@ constexpr bool can_grow = requires (X& x) { x.push_back(true); x.resize(1UZ); };
 
 template<class X>
 constexpr bool can_flip = requires (X x) { x.flip(); };
+
+template<class X>
+constexpr bool can_permute = requires (X x) { x.rotl(1UZ); x.rotr(1UZ); x.reverse(); };
 
 template<class X>
 constexpr bool has_range_members = requires (X x, std::vector<bool> const& r) { x.append_range(r); x.insert_range(x.cbegin(), r); x.erase(x.cbegin()); };
@@ -397,6 +401,56 @@ BOOST_AUTO_TEST_CASE(ItDeducesAsStdVectorDoes)
 
         BOOST_CHECK(std::ranges::equal(a, bools) and std::ranges::equal(b, bools) and std::ranges::equal(c, bools));
         BOOST_CHECK(std::ranges::equal(d, bools) and e == b and f == a and g == b);
+}
+
+namespace {
+
+// Every width through three narrow blocks, then whole and partial ones past two wide blocks, through owner or view.
+template<class V, class Through = test::sequence::as_owner>
+[[nodiscard]] auto permutation_sweeps(Through through = {})
+        -> int
+{
+        auto disagreements = 0;
+        for (auto const n : std::views::iota(0UZ, 18UZ)) {
+                disagreements += test::sequence::permutation_sweep(V(n), through);
+        }
+        for (auto const n : {64UZ, 70UZ, 128UZ, 130UZ}) {
+                disagreements += test::sequence::permutation_sweep(V(n), through);
+        }
+        return disagreements;
+}
+
+// The view a test permutes through, named so that each sweep over it is one instantiation.
+struct as_span
+{
+        template<class V>
+        [[nodiscard]] auto operator()(V& v) const noexcept
+        {
+                return xstd::bit_span(v);
+        }
+};
+
+} // namespace
+
+// P3103R2's in-place three, as std::ranges::rotate and std::ranges::reverse move the bools, at every run-time width.
+BOOST_AUTO_TEST_CASE(ItRotatesAndReversesAsTheAlgorithmsDo)
+{
+        static_assert(std::same_as<decltype(std::declval<T&>().rotl(0UZ)), T&>);
+        static_assert(std::same_as<decltype(std::declval<T&>().rotr(0UZ)), T&>);
+        static_assert(std::same_as<decltype(std::declval<T&>().reverse()), T&>);
+        static_assert(noexcept(std::declval<T&>().rotl(0UZ)) and noexcept(std::declval<T&>().rotr(0UZ)) and noexcept(std::declval<T&>().reverse()));
+        static_assert(test::sequence::permutes_ten_bits(T(10)));
+        BOOST_CHECK_EQUAL(permutation_sweeps<T>(), 0);
+        BOOST_CHECK_EQUAL(permutation_sweeps<xstd::basic_bit_vector<std::uint64_t>>(), 0);
+}
+
+// A view rotates and reverses what it views, as it flips it; a window does neither.
+BOOST_AUTO_TEST_CASE(AViewOverItPermutesItAndAWindowDoesNot)
+{
+        BOOST_CHECK_EQUAL(permutation_sweeps<T>(as_span()), 0);
+        static_assert(can_permute<decltype(xstd::bit_span(std::declval<T&>()))>);
+        static_assert(not can_permute<decltype(xstd::bit_span(std::declval<T&>()).first(2))>);
+        static_assert(not can_permute<decltype(xstd::bit_span(std::declval<T const&>()))>);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

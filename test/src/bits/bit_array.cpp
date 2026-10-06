@@ -3,19 +3,21 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/block_types.hpp>     // graded_extents
-#include <test/sequence/dense.hpp>  // yields_every_position
-#include <test/value_reference.hpp> // value_reference
-#include <xstd/bits/bit_array.hpp>  // bit_array
-#include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <concepts>                 // constructible_from, convertible_to, regular, same_as, totally_ordered
-#include <cstddef>                  // ptrdiff_t, size_t
-#include <functional>               // hash
-#include <iterator>                 // contiguous_iterator, random_access_iterator, size
-#include <ranges>                   // begin, contiguous_range, empty, iota, random_access_range, size
-#include <tuple>                    // tuple_cat, tuple_size_v
-#include <type_traits>              // bool_constant, integral_constant
-#include <utility>                  // declval
+#include <test/block_types.hpp>       // graded_extents
+#include <test/sequence/dense.hpp>    // yields_every_position
+#include <test/sequence/rotation.hpp> // permutation_sweep, permutes_ten_bits
+#include <test/value_reference.hpp>   // value_reference
+#include <xstd/bits/bit_array.hpp>    // bit_array
+#include <boost/test/unit_test.hpp>   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <concepts>                   // constructible_from, convertible_to, regular, same_as, totally_ordered
+#include <cstddef>                    // ptrdiff_t, size_t
+#include <cstdint>                    // uint32_t, uint64_t, uint8_t
+#include <functional>                 // hash
+#include <iterator>                   // contiguous_iterator, random_access_iterator, size
+#include <ranges>                     // begin, contiguous_range, empty, iota, random_access_range, size
+#include <tuple>                      // tuple_cat, tuple_size_v
+#include <type_traits>                // bool_constant, integral_constant
+#include <utility>                    // declval, index_sequence, make_index_sequence
 
 BOOST_AUTO_TEST_SUITE(BitArray)
 
@@ -146,6 +148,47 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItYieldsEveryPosition, T, Types)
                 c[n] = (n % 3UZ == 0UZ);
         }
         test::sequence::yields_every_position(c);
+}
+
+namespace {
+
+// One sweep per width, each width its own instantiation of the storage's permutations.
+template<class Block, std::size_t... N>
+[[nodiscard]] auto permutation_sweeps(std::index_sequence<N...>)
+        -> int
+{
+        return (0 + ... + test::sequence::permutation_sweep(xstd::basic_bit_array<Block, N>()));
+}
+
+} // namespace
+
+// P3103R2's in-place three, each handing back the array itself and throwing nothing.
+BOOST_AUTO_TEST_CASE_TEMPLATE(ItsRotationsAndReversalReturnItselfWithoutThrowing, T, Types)
+{
+        static_assert(std::same_as<decltype(std::declval<T&>().rotl(0UZ)), T&>);
+        static_assert(std::same_as<decltype(std::declval<T&>().rotr(0UZ)), T&>);
+        static_assert(std::same_as<decltype(std::declval<T&>().reverse()), T&>);
+        static_assert(noexcept(std::declval<T&>().rotl(0UZ)));
+        static_assert(noexcept(std::declval<T&>().rotr(0UZ)));
+        static_assert(noexcept(std::declval<T&>().reverse()));
+        BOOST_CHECK_EQUAL(test::sequence::permutation_sweep(T()), 0);
+}
+
+// Every width to seventeen, in up to three narrow blocks and in one wider block.
+BOOST_AUTO_TEST_CASE(ItRotatesAndReversesAsTheAlgorithmsDoAtEveryNarrowWidth)
+{
+        static_assert(test::sequence::permutes_ten_bits(xstd::basic_bit_array<std::uint8_t, 10>()));
+        BOOST_CHECK_EQUAL(permutation_sweeps<std::uint8_t>(std::make_index_sequence<18>()), 0);
+        BOOST_CHECK_EQUAL(permutation_sweeps<std::uint32_t>(std::make_index_sequence<18>()), 0);
+}
+
+// Whole and partial blocks past one: a turn by whole blocks, by a part of one, and around the padding.
+BOOST_AUTO_TEST_CASE(ItRotatesAndReversesAsTheAlgorithmsDoAcrossManyBlocks)
+{
+        BOOST_CHECK_EQUAL(test::sequence::permutation_sweep(xstd::basic_bit_array<std::uint8_t, 64>()), 0);
+        BOOST_CHECK_EQUAL(test::sequence::permutation_sweep(xstd::basic_bit_array<std::uint8_t, 70>()), 0);
+        BOOST_CHECK_EQUAL(test::sequence::permutation_sweep(xstd::basic_bit_array<std::uint64_t, 128>()), 0);
+        BOOST_CHECK_EQUAL(test::sequence::permutation_sweep(xstd::basic_bit_array<std::uint64_t, 130>()), 0);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
