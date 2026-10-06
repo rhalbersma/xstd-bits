@@ -6,9 +6,8 @@
 #ifndef XSTD_FILESYSTEM_HPP
 #define XSTD_FILESYSTEM_HPP
 
-#include <xstd/bits/bit_enum_traits.hpp> // enum_traits
 #include <xstd/bits/bit_flag_set.hpp>    // bit_flag_set
-#include <xstd/bits/bit_key_traits.hpp>  // bit_key_traits
+#include <xstd/bits/bit_key_mapping.hpp> // bit_key_mapping, enum_traits
 #include <xstd/bits/from_blocks.hpp>     // from_blocks
 #include <array>                         // array
 #include <cassert>                       // assert
@@ -52,7 +51,7 @@ struct xstd::enum_traits<xstd::filesystem::perm>
 namespace xstd::filesystem {
 
 // Sixteen bits rather than twelve, so that std::filesystem::perms::unknown survives the round trip.
-class perms : public bit_flag_set<perms, perm, std::uint16_t, 16, bit_key_traits<perm>, std::filesystem::perms>
+class perms : public bit_flag_set<perms, perm, std::uint16_t, 16, bit_key_mapping<perm>, std::filesystem::perms>
 {
 public:
         using bit_flag_set::bit_flag_set;

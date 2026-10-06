@@ -12,7 +12,7 @@
 #include <test/value_reference.hpp>                 // value_reference
 #include <xstd/bits/bit_bounded_set.hpp>            // basic_bit_bounded_set
 #include <xstd/bits/bit_fixed_set.hpp>              // basic_bit_fixed_set
-#include <xstd/bits/bit_key_traits.hpp>             // bit_key_traits
+#include <xstd/bits/bit_key_mapping.hpp>            // bit_key_mapping
 #include <xstd/bits/bit_set.hpp>                    // basic_bit_set
 #include <xstd/bits/bit_set_view.hpp>               // bit_set_view
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
@@ -36,7 +36,7 @@
 
 namespace {
 
-// A key the proxy hands out through its traits, and a strong type that takes the size_t only explicitly.
+// A key the proxy hands out through its mapping, and a strong type that takes the size_t only explicitly.
 struct key
 {
         std::size_t value;
@@ -44,7 +44,7 @@ struct key
         [[nodiscard]] friend auto operator<=>(key const&, key const&) -> std::strong_ordering = default;
 };
 
-struct key_traits
+struct key_mapping
 {
         [[nodiscard]] static constexpr auto to_index(key k) noexcept
                 -> std::size_t
@@ -79,7 +79,7 @@ struct index
         {}
 };
 
-// A user's namespace holding the proxy's key traits, and a comparison of its own beside them.
+// A user's namespace holding the proxy's key mapping, and a comparison of its own beside it.
 namespace user {
 
 struct flag
@@ -98,7 +98,7 @@ struct flag
         return lhs.value == rhs.value;
 }
 
-struct key_traits : xstd::bit_key_traits<std::size_t>
+struct key_mapping : xstd::bit_key_mapping<std::size_t>
 {};
 
 // A class key whose comparisons are hidden friends, which only ADL through the key itself finds.
@@ -128,8 +128,8 @@ template<class Block>
 using block_bits = test::array_storage<Block, test::digits_v<Block>>;
 
 // The set view over a storage, whose iterator and proxy are the ones under test.
-template<class Bits, class Key = std::size_t, class KeyTraits = xstd::bit_key_traits<Key>>
-using borrowed_set = xstd::bits::detail::set_adaptor<Bits, xstd::bits::detail::storage::borrowed, void, Key, KeyTraits>;
+template<class Bits, class Key = std::size_t, class KeyMapping = xstd::bit_key_mapping<Key>>
+using borrowed_set = xstd::bits::detail::set_adaptor<Bits, xstd::bits::detail::storage::borrowed, void, Key, KeyMapping>;
 
 template<class Block>
 using block_reference = borrowed_set<block_bits<Block>>::reference;
@@ -153,12 +153,12 @@ template<class A, class B>
         return false;
 }
 
-// Key traits of acme's own, a template argument of every set adaptor over them.
-struct key_traits : xstd::bit_key_traits<std::size_t>
+// Key mapping of acme's own, a template argument of every set adaptor over it.
+struct key_mapping : xstd::bit_key_mapping<std::size_t>
 {};
 
-// Key traits of acme's own for a key of the user's.
-struct slot_traits
+// Key mapping of acme's own for a key of the user's.
+struct slot_mapping
 {
         [[nodiscard]] static constexpr auto to_index(user::slot key) noexcept
                 -> std::size_t
@@ -182,10 +182,10 @@ class blocks : public test::minimal_blocks<Block>
 
 namespace {
 
-using hostile_set = xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 64, acme::key_traits>;
+using hostile_set = xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 64, acme::key_mapping>;
 
-// The proxies under acme's key traits compare as their keys do, and the iterators as their positions do.
-[[nodiscard]] constexpr auto hostile_key_traits_compare_as_ours()
+// The proxies under acme's key mapping compare as their keys do, and the iterators as their positions do.
+[[nodiscard]] constexpr auto hostile_key_mapping_compare_as_ours()
         -> bool
 {
         auto s = hostile_set();
@@ -200,9 +200,9 @@ using hostile_set = xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 64, ac
         return low == same and not(low != same) and not(low < same) and low != high and low < high and first == again and first != second;
 }
 
-using hostile_slot_set = xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_block_container<acme::blocks<std::uint64_t>>, xstd::bits::detail::storage::owned, void, user::slot, acme::slot_traits>;
+using hostile_slot_set = xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_block_container<acme::blocks<std::uint64_t>>, xstd::bits::detail::storage::owned, void, user::slot, acme::slot_mapping>;
 
-// A user's key under acme's storage and key traits: the key's own comparisons decide, and acme's are not found.
+// A user's key under acme's storage and key mapping: the key's own comparisons decide, and acme's are not found.
 [[nodiscard]] constexpr auto hostile_slot_set_compares_as_its_keys()
         -> bool
 {
@@ -359,10 +359,10 @@ BOOST_AUTO_TEST_CASE(TheProxyFormatsAsItsValue)
         BOOST_CHECK_EQUAL(format_as(*xstd::bit_set_view(c).begin()), 42UZ);
 }
 
-// The key arrives through the traits, in one implicit step; a type the traits do not name is no conversion.
-BOOST_AUTO_TEST_CASE(TheProxyConvertsToTheKeyItsTraitsName)
+// The key arrives through the mapping, in one implicit step; a type the mapping does not name is no conversion.
+BOOST_AUTO_TEST_CASE(TheProxyConvertsToTheKeyItsMappingNames)
 {
-        using set_type = xstd::basic_bit_fixed_set<key, std::uint64_t, 200, key_traits>;
+        using set_type = xstd::basic_bit_fixed_set<key, std::uint64_t, 200, key_mapping>;
         using iterator = set_type::iterator;
         static_assert(std::same_as<std::iter_value_t<iterator>, key>);
         static_assert(std::bidirectional_iterator<iterator>);
@@ -374,7 +374,7 @@ BOOST_AUTO_TEST_CASE(TheProxyConvertsToTheKeyItsTraitsName)
         key const k = *s.begin();
         BOOST_CHECK_EQUAL(k.value, 42UZ);
         BOOST_CHECK_EQUAL(format_as(*s.begin()).value, 42UZ);
-        BOOST_CHECK_EQUAL(key_traits::to_index(*s.begin()), 42UZ);
+        BOOST_CHECK_EQUAL(key_mapping::to_index(*s.begin()), 42UZ);
         static_assert(not std::is_convertible_v<std::iter_reference_t<iterator>, holder>);
         static_assert(std::is_constructible_v<holder, std::iter_reference_t<iterator>>);
         holder const h(*s.begin());
@@ -396,8 +396,8 @@ BOOST_AUTO_TEST_CASE(TheProxyComparesThroughItsOneConversion)
                 static_assert(std::is_constructible_v<user::flag, reference>);
                 static_assert(std::is_convertible_v<reference, std::optional<value_type>>);
 
-                // A user's non-template operator== beside the key traits is no second reading of ours.
-                using user_reference = borrowed_set<block_bits<Block>, std::size_t, user::key_traits>::reference;
+                // A user's non-template operator== beside the key mapping is no second reading of ours.
+                using user_reference = borrowed_set<block_bits<Block>, std::size_t, user::key_mapping>::reference;
                 static_assert(std::equality_comparable<user_reference>);
                 static_assert(std::totally_ordered<user_reference>);
         });
@@ -422,26 +422,26 @@ BOOST_AUTO_TEST_CASE(TheProxyComparesThroughItsOneConversion)
         BOOST_CHECK(user::flag(*narrow_view.begin()) == user::flag(3));
 }
 
-// acme's operators decide a comparison between its own key traits, and none between proxies or iterators using them.
-BOOST_AUTO_TEST_CASE(AKeyTraitsNamespaceIsNotAssociatedWithItsProxies)
+// acme's operators decide a comparison between its own key mapping, and none between proxies or iterators using them.
+BOOST_AUTO_TEST_CASE(AKeyMappingNamespaceIsNotAssociatedWithItsProxies)
 {
-        auto const lhs = acme::key_traits();
-        auto const rhs = acme::key_traits();
+        auto const lhs = acme::key_mapping();
+        auto const rhs = acme::key_mapping();
         BOOST_CHECK(not(lhs == rhs));
         BOOST_CHECK(not(lhs < rhs));
 
-        static_assert(hostile_key_traits_compare_as_ours());
-        BOOST_CHECK(hostile_key_traits_compare_as_ours());
+        static_assert(hostile_key_mapping_compare_as_ours());
+        BOOST_CHECK(hostile_key_mapping_compare_as_ours());
 }
 
 // The key's own namespace is the one a proxy keeps, so comparisons only ADL finds for the key reach the proxy too.
 BOOST_AUTO_TEST_CASE(TheKeysNamespaceIsAssociatedWithItsProxies)
 {
-        using reference = borrowed_set<Bits, key, key_traits>::reference;
+        using reference = borrowed_set<Bits, key, key_mapping>::reference;
         static_assert(std::totally_ordered<reference>);
         static_assert(std::totally_ordered_with<reference, key>);
 
-        auto s = xstd::basic_bit_fixed_set<key, std::uint64_t, 200, key_traits>();
+        auto s = xstd::basic_bit_fixed_set<key, std::uint64_t, 200, key_mapping>();
         s.insert(key{3});
         s.insert(key{5});
         BOOST_CHECK(*s.begin() == *s.begin());
@@ -449,8 +449,8 @@ BOOST_AUTO_TEST_CASE(TheKeysNamespaceIsAssociatedWithItsProxies)
         BOOST_CHECK(*s.begin() == key{3});
 }
 
-// The key's hidden friends reach the proxy, against its own and its mirror's type, whoever owns storage and traits.
-BOOST_AUTO_TEST_CASE(AKeysHiddenFriendsDecideBesideAHostileStorageAndKeyTraits)
+// The key's hidden friends reach the proxy, against its own and its mirror's type, whoever owns storage and mapping.
+BOOST_AUTO_TEST_CASE(AKeysHiddenFriendsDecideBesideAHostileStorageAndKeyMapping)
 {
         using reference = std::iter_reference_t<hostile_slot_set::iterator>;
         static_assert(std::equality_comparable<reference>);
@@ -467,8 +467,8 @@ BOOST_AUTO_TEST_CASE(EverySetClosesItsProxyPair)
         static_assert(test::closed_proxies<xstd::basic_bit_set<std::size_t, std::uint64_t>>);
         static_assert(test::closed_proxies<xstd::basic_bit_bounded_set<std::size_t, std::uint64_t, 65>>);
         static_assert(test::closed_proxies<xstd::basic_bit_small_set<std::size_t, std::uint64_t, 65>>);
-        static_assert(test::closed_proxies<xstd::basic_bit_fixed_set<key, std::uint64_t, 65, key_traits>>);
-        static_assert(test::closed_proxies<xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 65, xstd::bit_key_traits<std::size_t>, std::greater<std::size_t>>>); // NOLINT(modernize-use-transparent-functors): the descending direction, as a set's comparator names it
+        static_assert(test::closed_proxies<xstd::basic_bit_fixed_set<key, std::uint64_t, 65, key_mapping>>);
+        static_assert(test::closed_proxies<xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 65, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>>); // NOLINT(modernize-use-transparent-functors): the descending direction, as a set's comparator names it
         static_assert(test::closed_proxies<xstd::bit_set_view<std::array<std::uint64_t, 2>>>);
         static_assert(test::closed_proxies<xstd::bit_set_view<std::array<std::uint64_t, 2> const>>);
         static_assert(test::closed_proxies<hostile_set>);
@@ -481,13 +481,13 @@ BOOST_AUTO_TEST_CASE(EverySetClosesItsProxyPair)
 BOOST_AUTO_TEST_CASE(TheFormatterIsSpecializedForExactlyTheProxies)
 {
         static_assert(xstd::bits::detail::set_reference<borrowed_set<Bits>::reference>);
-        static_assert(xstd::bits::detail::set_reference<borrowed_set<Bits, key, key_traits>::reference>);
+        static_assert(xstd::bits::detail::set_reference<borrowed_set<Bits, key, key_mapping>::reference>);
         static_assert(not xstd::bits::detail::set_reference<borrowed_set<Bits>::iterator>);
         static_assert(not xstd::bits::detail::set_reference<std::size_t>);
 
         static_assert(std::formattable<borrowed_set<Bits>::reference, char>);
         static_assert(std::formattable<std::iter_reference_t<hostile_set::iterator>, char>);
-        static_assert(not std::formattable<borrowed_set<Bits, key, key_traits>::reference, char>);
+        static_assert(not std::formattable<borrowed_set<Bits, key, key_mapping>::reference, char>);
 
         BOOST_CHECK(true);
 }

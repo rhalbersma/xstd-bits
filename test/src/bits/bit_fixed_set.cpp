@@ -6,7 +6,7 @@
 #include <test/bit_exchange.hpp>         // converts_between, exchanges_from_bits
 #include <test/block_types.hpp>          // graded_extents
 #include <test/set/ascending.hpp>        // yields_ascending_keys
-#include <test/set/strong_index.hpp>     // agrees_with_std_set_of_strong_indices, offset_traits, strong_index
+#include <test/set/strong_index.hpp>     // agrees_with_std_set_of_strong_indices, offset_mapping, strong_index
 #include <test/value_reference.hpp>      // value_reference
 #include <xstd/bits/bit/bit_convert.hpp> // bit_convert
 #include <xstd/bits/bit_fixed_set.hpp>   // bit_fixed_set
@@ -260,13 +260,13 @@ BOOST_AUTO_TEST_CASE(RawBlocksCrossOnTheSameRule)
         static_assert(not std::is_constructible_v<Set, Narrow>);
 }
 
-// A traits type of its own closes the universe: keys 10 to 29 at positions 0 to 19, answering as std::set does.
-BOOST_AUTO_TEST_CASE(AStrongIndexWithItsOwnTraitsKeysItAsStdSetIsKeyed)
+// A mapping of its own closes the universe: keys 10 to 29 at positions 0 to 19, answering as std::set does.
+BOOST_AUTO_TEST_CASE(AStrongIndexWithItsOwnMappingKeysItAsStdSetIsKeyed)
 {
-        using traits = test::set::offset_traits<10UZ, 20UZ>;
-        using X      = xstd::basic_bit_fixed_set<test::set::strong_index, std::uint8_t, 20UZ, traits>;
+        using mapping = test::set::offset_mapping<10UZ, 20UZ>;
+        using X       = xstd::basic_bit_fixed_set<test::set::strong_index, std::uint8_t, 20UZ, mapping>;
         static_assert(std::same_as<X::key_type, test::set::strong_index>);
-        static_assert(std::same_as<X::key_traits_type, traits>);
+        static_assert(std::same_as<X::key_mapping_type, mapping>);
         static_assert(std::same_as<std::iter_value_t<X::iterator>, test::set::strong_index>);
         static_assert(X::max_size() == 20UZ);
 

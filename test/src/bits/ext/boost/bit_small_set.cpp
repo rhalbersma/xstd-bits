@@ -4,7 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/set/concepts.hpp>                 // bit_set
-#include <xstd/bits/bit_key_traits.hpp>          // bit_key_traits
+#include <xstd/bits/bit_key_mapping.hpp>         // bit_key_mapping
 #include <xstd/bits/ext/boost/bit_small_set.hpp> // basic_bit_small_set, bit_small_set
 #include <boost/test/unit_test.hpp>              // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                             // ranges::equal
@@ -53,14 +53,14 @@ struct counting_allocator
         [[nodiscard]] friend auto operator==(counting_allocator const&, counting_allocator const&) -> bool = default;
 };
 
-using CountedSet = xstd::basic_bit_small_set<std::size_t, std::size_t, N, xstd::bit_key_traits<std::size_t>, std::less<std::size_t>, counting_allocator<std::size_t>>; // NOLINT(modernize-use-transparent-functors): the default comparator, spelled to reach the allocator
+using CountedSet = xstd::basic_bit_small_set<std::size_t, std::size_t, N, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, counting_allocator<std::size_t>>; // NOLINT(modernize-use-transparent-functors): the default comparator, spelled to reach the allocator
 
 } // namespace
 
 // The short name is the general one at its defaults, and the allocator defaulted to is the storage's own.
 BOOST_AUTO_TEST_CASE(TheShortNameIsTheGeneralOneAtItsDefaults)
 {
-        static_assert(std::same_as<SmallSet, xstd::basic_bit_small_set<std::size_t, std::size_t, N, xstd::bit_key_traits<std::size_t>, std::less<std::size_t>, boost::container::new_allocator<std::size_t>>>); // NOLINT(modernize-use-transparent-functors): the default comparator, spelled to reach the allocator
+        static_assert(std::same_as<SmallSet, xstd::basic_bit_small_set<std::size_t, std::size_t, N, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, boost::container::new_allocator<std::size_t>>>); // NOLINT(modernize-use-transparent-functors): the default comparator, spelled to reach the allocator
         static_assert(test::set::bit_set<SmallSet>);
         static_assert(std::ranges::bidirectional_range<SmallSet>);
         static_assert(std::regular<xstd::basic_bit_small_set<std::size_t, std::uint8_t, 24>>);

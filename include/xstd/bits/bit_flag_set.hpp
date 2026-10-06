@@ -7,11 +7,12 @@
 #define XSTD_BITS_BIT_FLAG_SET_HPP
 
 #include <xstd/bits/bit_blocks.hpp>                 // bit_blocks_extent_v
-#include <xstd/bits/bit_key_traits.hpp>             // bit_key_traits
+#include <xstd/bits/bit_index_mapping.hpp>          // bit_index_mapping, sized_bit_index_mapping
+#include <xstd/bits/bit_key_mapping.hpp>            // bit_key_mapping
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container, num_blocks_v
 #include <xstd/bits/detail/mask_word.hpp>           // low_mask_bits, mask_fits, mask_width, mask_word, to_mask
 #include <xstd/bits/detail/ownership.hpp>           // storage, storage_access
-#include <xstd/bits/detail/set_adaptor.hpp>         // key_direction, set_adaptor, transparent
+#include <xstd/bits/detail/set_adaptor.hpp>         // set_adaptor
 #include <xstd/bits/detail/shift.hpp>               // shl, shr
 #include <xstd/bits/from_blocks.hpp>                // from_blocks_t
 #include <xstd/ints/concepts/unsigned_integer.hpp>  // unsigned_integer
@@ -25,25 +26,22 @@
 // A base for flag types: the set reading over one block, spelled as the bitmask enumeration it replaces.
 namespace xstd {
 
-// BitMask is the flag type, itself a bit_mask; Flag names one flag, a rank or a one-bit value under bit_flag_traits.
-template<class BitMask, class Flag, xstd::unsigned_integer Block, std::size_t N = bit_blocks_extent_v<Block>, class FlagTraits = bit_key_traits<Flag>, class Interop = void, bits::detail::set::key_direction<Flag> Compare = std::greater<Flag>>
-        requires (std::is_void_v<Interop> or bits::detail::mask_word<Interop>) // Interop, unless void, is a bit_mask whose bits can be read: an enumeration, an unsigned integer or a std::bitset.
-class bit_flag_set : public bits::detail::set_adaptor<bits::detail::bit_block_container<std::array<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, BitMask, Flag, FlagTraits, Compare>
+// BitMask is the flag type, itself a bit_mask; Key names one flag, a rank or a one-bit value under bit_flag_mapping.
+template<class BitMask, class Key, xstd::unsigned_integer Block, std::size_t N = bit_blocks_extent_v<Block>, bit_index_mapping<Key> KeyMapping = bit_key_mapping<Key>, class Interop = void>
+        requires (std::is_void_v<Interop> or bits::detail::mask_word<Interop>)                                                                                                                                                  // Interop, unless void, is a bit_mask whose bits can be read: an enumeration, an unsigned integer or a std::bitset.
+class bit_flag_set : public bits::detail::set_adaptor<bits::detail::bit_block_container<std::array<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, BitMask, Key, KeyMapping, std::greater<Key>> // NOLINT(modernize-use-transparent-functors): a transparent comparator would admit contains(K)
 {
-        // Descending, the default, the base's <=> compares blocks as numbers, as the enumeration it replaces does.
-        using base_type = bits::detail::set_adaptor<bits::detail::bit_block_container<std::array<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, BitMask, Flag, FlagTraits, Compare>;
+        // Descending, so the base's <=> compares blocks as numbers, as the enumeration it replaces does.
+        using base_type = bits::detail::set_adaptor<bits::detail::bit_block_container<std::array<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, BitMask, Key, KeyMapping, std::greater<Key>>; // NOLINT(modernize-use-transparent-functors): as the base clause names it
 
         static_assert(N <= bit_blocks_extent_v<Block>);
 
-        // A transparent comparator admits contains(K), which an interop value would reach before contains(BitMask).
-        static_assert(not bits::detail::set::transparent<Compare>);
-
-        // The keys are the universe the traits close, else every position of the block.
+        // The keys are the universe the mapping closes, else every position of the block.
         [[nodiscard]] static consteval auto num_keys() noexcept
                 -> std::size_t
         {
-                if constexpr (requires { FlagTraits::size; }) {
-                        return FlagTraits::size;
+                if constexpr (sized_bit_index_mapping<KeyMapping, Key>) {
+                        return KeyMapping::size;
                 } else {
                         return N;
                 }
@@ -122,7 +120,7 @@ public:
         [[nodiscard]] bit_flag_set() = default;
 
         // One flag, explicit so that a key never meets a flag type through a conversion.
-        [[nodiscard]] constexpr explicit bit_flag_set(Flag key) noexcept
+        [[nodiscard]] constexpr explicit bit_flag_set(Key key) noexcept
         {
                 block() = bits::detail::shl(Block{1}, position_of(key));
         }
@@ -153,10 +151,10 @@ public:
                 x.swap(y);
         }
 
-        // Kept in view beside the all-of overload, which would hide the contains(Flag) the base calls on BitMask.
+        // Kept in view beside the all-of overload, which would hide the contains(Key) the base calls on BitMask.
         using base_type::contains;
 
-        // All of other's flags, as bitflags' and Swift's contains: with one flag it agrees with contains(Flag).
+        // All of other's flags, as bitflags' and Swift's contains: with one flag it agrees with contains(Key).
         [[nodiscard]] constexpr auto contains(BitMask const& other) const noexcept
                 -> bool
         {
@@ -164,13 +162,13 @@ public:
         }
 
         // The key must name a position below the universe's size.
-        [[nodiscard]] constexpr auto operator[](Flag key) noexcept
+        [[nodiscard]] constexpr auto operator[](Key key) noexcept
                 -> reference
         {
                 return {&block(), position_of(key)};
         }
 
-        [[nodiscard]] constexpr auto operator[](Flag key) const noexcept
+        [[nodiscard]] constexpr auto operator[](Key key) const noexcept
                 -> bool
         {
                 return this->contains(key);
@@ -322,10 +320,10 @@ private:
         }
 
         // A key names one position below the universe's size.
-        [[nodiscard]] static constexpr auto position_of(Flag key) noexcept
+        [[nodiscard]] static constexpr auto position_of(Key key) noexcept
                 -> std::size_t
         {
-                auto const pos = FlagTraits::to_index(key);
+                auto const pos = KeyMapping::to_index(key);
                 assert(pos < num_keys());
                 return pos;
         }

@@ -5,9 +5,9 @@
 
 #include <test/ext_int128.hpp>              // TEST_HAS_BOOST_INT128, uint128
 #include <xstd/bits/bit/bit_convert.hpp>    // bit_convert
+#include <xstd/bits/bit_flag_mapping.hpp>   // bit_flag_mapping
 #include <xstd/bits/bit_flag_set.hpp>       // bit_flag_set
-#include <xstd/bits/bit_flag_traits.hpp>    // bit_flag_traits
-#include <xstd/bits/bit_key_traits.hpp>     // bit_key_traits
+#include <xstd/bits/bit_key_mapping.hpp>    // bit_key_mapping
 #include <xstd/bits/detail/mask_word.hpp>   // mask_word
 #include <xstd/bits/detail/set_adaptor.hpp> // intersects
 #include <xstd/bits/from_blocks.hpp>        // from_blocks
@@ -25,7 +25,7 @@
 #include <filesystem>                       // exists, path, perm_options, permissions, perms, remove, status, temp_directory_path
 #include <format>                           // format
 #include <fstream>                          // ofstream
-#include <functional>                       // greater, less, ranges::greater
+#include <functional>                       // greater, ranges::greater
 #include <iterator>                         // bidirectional_iterator, inserter, iter_reference_t, ranges::distance, ranges::next, ranges::prev
 #include <random>                           // random_device
 #include <ranges>                           // bidirectional_range, iota, ranges::swap, sized_range, views::reverse
@@ -48,44 +48,37 @@ enum class mode : std::uint8_t
         exec  = 0x04,
 };
 
-class modes : public xstd::bit_flag_set<modes, mode, std::uint8_t, 3, xstd::bit_flag_traits<mode, 3>>
+class modes : public xstd::bit_flag_set<modes, mode, std::uint8_t, 3, xstd::bit_flag_mapping<mode, 3>>
 {
 public:
         using bit_flag_set::bit_flag_set;
 };
 
 // Twelve bits wide, so a value coming in from the standard's type has no bit above set_uid.
-class narrow_perms : public xstd::bit_flag_set<narrow_perms, xfs::perm, std::uint16_t, 12, xstd::bit_key_traits<xfs::perm>, fs::perms>
+class narrow_perms : public xstd::bit_flag_set<narrow_perms, xfs::perm, std::uint16_t, 12, xstd::bit_key_mapping<xfs::perm>, fs::perms>
 {
 public:
         using bit_flag_set::bit_flag_set;
 };
 
 // The same sixteen positions converting with an unsigned integer and with a bitset rather than the enumeration.
-class word_perms : public xstd::bit_flag_set<word_perms, xfs::perm, std::uint16_t, 16, xstd::bit_key_traits<xfs::perm>, std::uint16_t>
+class word_perms : public xstd::bit_flag_set<word_perms, xfs::perm, std::uint16_t, 16, xstd::bit_key_mapping<xfs::perm>, std::uint16_t>
 {
 public:
         using bit_flag_set::bit_flag_set;
 };
 
-class bitset_perms : public xstd::bit_flag_set<bitset_perms, xfs::perm, std::uint16_t, 16, xstd::bit_key_traits<xfs::perm>, std::bitset<16>>
+class bitset_perms : public xstd::bit_flag_set<bitset_perms, xfs::perm, std::uint16_t, 16, xstd::bit_key_mapping<xfs::perm>, std::bitset<16>>
 {
 public:
         using bit_flag_set::bit_flag_set;
 };
 
 // Twelve bits wide against a sixteen-bit bitset, so a value coming in can have positions the flag type has not.
-class narrow_bitset_perms : public xstd::bit_flag_set<narrow_bitset_perms, xfs::perm, std::uint16_t, 12, xstd::bit_key_traits<xfs::perm>, std::bitset<16>>
+class narrow_bitset_perms : public xstd::bit_flag_set<narrow_bitset_perms, xfs::perm, std::uint16_t, 12, xstd::bit_key_mapping<xfs::perm>, std::bitset<16>>
 {
 public:
         using bit_flag_set::bit_flag_set;
-};
-
-// The sixteen positions walked from the lowest flag up, under the set order rather than the enumeration's.
-class ascending_perms : public xstd::bit_flag_set<ascending_perms, xfs::perm, std::uint16_t, 16, xstd::bit_key_traits<xfs::perm>, fs::perms, std::less<xfs::perm>> // NOLINT(modernize-use-transparent-functors): a flag type's comparator names its key
-{
-public:
-        using bit_flag_set::bit_flag_set; // NOLINT(modernize-use-transparent-functors): the base's name carries the comparator
 };
 
 // Every name [fs.enum.perms] lists, beside the standard's own value of it.
@@ -192,6 +185,48 @@ auto agrees_at_key(xfs::perms const& p, model_type const& model, xfs::perm k)
         BOOST_CHECK(std::ranges::equal(x, without(model, k)));
         x[k] = p[k];
         BOOST_CHECK(x == p);
+}
+
+// One subset, walked both ways, counted, probed past its flags and complemented, then each key against the model.
+auto agrees_on_subset(std::size_t mask)
+        -> void
+{
+        constexpr auto beyond = std::bit_cast<xfs::perm>(std::uint8_t{12});
+        auto const [p, model] = subset(mask);
+        BOOST_CHECK(std::ranges::equal(p, model));
+        BOOST_CHECK(std::ranges::equal(std::views::reverse(p), std::views::reverse(model)));
+        BOOST_CHECK_EQUAL(p.size(), model.size());
+        BOOST_CHECK_EQUAL(xstd::bit_convert<std::uint16_t>(p), mask);
+        BOOST_CHECK(not p.contains(beyond));
+        BOOST_CHECK(not p[beyond]);
+
+        // The complement stays within the sixteen bits, and its named flags are the rest of the twelve.
+        auto const complement = ~p;
+        BOOST_CHECK_EQUAL(xstd::bit_convert<std::uint16_t>(complement), static_cast<std::uint16_t>(~mask));
+        BOOST_CHECK_EQUAL(complement.size(), ranks.size() - model.size());
+        for (auto const k : ranks) {
+                agrees_at_key(p, model, k);
+        }
+}
+
+// The words each 16-bit value is ordered against: the ends, single bits and runs, inside and above the twelve flags.
+constexpr auto order_probes = std::to_array<std::uint16_t>({0x0000, 0x0001, 0x0007, 0x0100, 0x01FF, 0x0800, 0x0FFF, 0x1000, 0xF000, 0xFFFF});
+
+// How many probes the word orders against otherwise than the enumeration: <=> both ways, and the mixed <.
+auto order_mismatches(std::uint16_t word)
+        -> std::size_t
+{
+        auto mismatches = 0UZ;
+        auto const p    = xfs::perms(xstd::from_blocks, word);
+        for (auto const other : order_probes) {
+                auto const q        = xfs::perms(xstd::from_blocks, other);
+                auto const expected = std::to_underlying(fs::perms(p)) <=> std::to_underlying(fs::perms(q));
+                auto const mirrored = std::to_underlying(fs::perms(q)) <=> std::to_underlying(fs::perms(p));
+                if ((p <=> q) != expected or (q <=> p) != mirrored or (p < fs::perms(q)) != std::is_lt(expected)) {
+                        ++mismatches;
+                }
+        }
+        return mismatches;
 }
 
 // Two subsets, queried and combined by each operator and its compound form, against std::set's algorithms.
@@ -320,7 +355,7 @@ BOOST_AUTO_TEST_SUITE(BitFlagSet)
 BOOST_AUTO_TEST_CASE(BothTypesAreBitmaskTypes)
 {
         static_assert(xstd::bit_mask<fs::perms>);
-        static_assert(xstd::bit_mask<xfs::perms> and xstd::bit_mask<ascending_perms>);
+        static_assert(xstd::bit_mask<xfs::perms>);
         static_assert(xstd::bit_mask<modes>);
         static_assert(xstd::bit_mask<narrow_perms> and xstd::bit_mask<narrow_bitset_perms>);
         static_assert(xstd::bit_mask<word_perms> and xstd::bit_mask<bitset_perms>);
@@ -421,23 +456,8 @@ BOOST_AUTO_TEST_CASE(RespelledCodeBehavesAsTheStandardsTypeOnARealFile)
 // Every subset of the twelve flags, walked, counted, probed, complemented and written through p[k] against std::set.
 BOOST_AUTO_TEST_CASE(EverySubsetAgreesWithStdSet)
 {
-        constexpr auto beyond = std::bit_cast<xfs::perm>(std::uint8_t{12});
         for (auto const mask : std::views::iota(0UZ, 1UZ << ranks.size())) {
-                auto const [p, model] = subset(mask);
-                BOOST_CHECK(std::ranges::equal(p, model));
-                BOOST_CHECK(std::ranges::equal(std::views::reverse(p), std::views::reverse(model)));
-                BOOST_CHECK_EQUAL(p.size(), model.size());
-                BOOST_CHECK_EQUAL(xstd::bit_convert<std::uint16_t>(p), mask);
-                BOOST_CHECK(not p.contains(beyond));
-                BOOST_CHECK(not p[beyond]);
-
-                // The complement stays within the sixteen bits, and its named flags are the rest of the twelve.
-                auto const complement = ~p;
-                BOOST_CHECK_EQUAL(xstd::bit_convert<std::uint16_t>(complement), static_cast<std::uint16_t>(~mask));
-                BOOST_CHECK_EQUAL(complement.size(), ranks.size() - model.size());
-                for (auto const k : ranks) {
-                        agrees_at_key(p, model, k);
-                }
+                agrees_on_subset(mask);
         }
 }
 
@@ -570,7 +590,7 @@ BOOST_AUTO_TEST_CASE(MixedOperatorsAreUnambiguous)
 // p[k] is a proxy nested in the flag type, a bool by its one conversion, and compares through the built-in ==.
 BOOST_AUTO_TEST_CASE(TheSubscriptIsANestedProxyForABool)
 {
-        using base_type = xstd::bit_flag_set<xfs::perms, xfs::perm, std::uint16_t, 16, xstd::bit_key_traits<xfs::perm>, fs::perms>;
+        using base_type = xstd::bit_flag_set<xfs::perms, xfs::perm, std::uint16_t, 16, xstd::bit_key_mapping<xfs::perm>, fs::perms>;
         auto p          = xfs::perms::owner_read;
         static_assert(std::same_as<decltype(p[xfs::perm::owner_read]), xfs::perms::reference>);
         static_assert(std::same_as<xfs::perms::reference, base_type::reference>);
@@ -627,37 +647,11 @@ BOOST_AUTO_TEST_CASE(TheFlagTypeIteratesFromTheHighestFlagDown)
 // <=> on two flag values is the enumeration's on their underlying words, and the mixed < through the conversion agrees.
 BOOST_AUTO_TEST_CASE(ThreeWayComparisonIsTheEnumerations)
 {
-        constexpr auto others = std::to_array<std::uint16_t>({0x0000, 0x0001, 0x0007, 0x0100, 0x01FF, 0x0800, 0x0FFF, 0x1000, 0xF000, 0xFFFF});
-        auto mismatches       = 0UZ;
+        auto mismatches = 0UZ;
         for (auto const word : std::views::iota(0U, 0x10000U)) {
-                auto const p = xfs::perms(xstd::from_blocks, static_cast<std::uint16_t>(word));
-                for (auto const other : others) {
-                        auto const q        = xfs::perms(xstd::from_blocks, other);
-                        auto const expected = std::to_underlying(fs::perms(p)) <=> std::to_underlying(fs::perms(q));
-                        auto const mirrored = std::to_underlying(fs::perms(q)) <=> std::to_underlying(fs::perms(p));
-                        if ((p <=> q) != expected or (q <=> p) != mirrored or (p < fs::perms(q)) != std::is_lt(expected)) {
-                                ++mismatches;
-                        }
-                }
+                mismatches += order_mismatches(static_cast<std::uint16_t>(word));
         }
         BOOST_CHECK_EQUAL(mismatches, 0UZ);
-}
-
-// With std::less, the walk runs from the lowest flag up and <=> is the lexicographic set order over it.
-BOOST_AUTO_TEST_CASE(AnAscendingFlagTypeIteratesUpAndOrdersAsASet)
-{
-        static_assert(std::same_as<ascending_perms::key_compare, std::less<xfs::perm>>); // NOLINT(modernize-use-transparent-functors): a flag type's comparator names its key
-        ascending_perms const p = fs::perms::owner_all;
-        BOOST_CHECK(std::ranges::equal(p, std::array{xfs::perm::owner_exec, xfs::perm::owner_write, xfs::perm::owner_read}));
-        BOOST_CHECK_EQUAL(std::format("{}", p), "{owner_exec, owner_write, owner_read}");
-        BOOST_CHECK(std::ranges::equal(ascending_perms(xstd::from_blocks, std::uint16_t{0xF001}), std::array{xfs::perm::others_exec}));
-
-        // {others_exec, set_uid} precedes {others_write} as a set, though its block is the larger one.
-        auto const lower = fs::perms::others_exec | fs::perms::set_uid;
-        auto const upper = fs::perms::others_write;
-        BOOST_CHECK(std::is_lt(ascending_perms(lower) <=> ascending_perms(upper)));
-        BOOST_CHECK(std::is_gt(xfs::perms(lower) <=> xfs::perms(upper)));
-        BOOST_CHECK(lower > upper);
 }
 
 // A width of twelve takes every value whose bits are all below it, and its complement stays within it.
@@ -701,7 +695,7 @@ BOOST_AUTO_TEST_CASE(AMaskEnumerationKeysAFlagTypeDirectly)
 namespace {
 
 // A class-type block, whose namespace declares operator==(uint128, bool) and its mirror.
-class lamps : public xstd::bit_flag_set<lamps, mode, boost::int128::uint128, 128, xstd::bit_flag_traits<mode, 3>>
+class lamps : public xstd::bit_flag_set<lamps, mode, boost::int128::uint128, 128, xstd::bit_flag_mapping<mode, 3>>
 {
 public:
         using bit_flag_set::bit_flag_set;

@@ -6,7 +6,7 @@
 #include <test/sequence/concepts.hpp>               // bit_sequence
 #include <test/set/concepts.hpp>                    // bit_set
 #include <xstd/bits/bit_blocks.hpp>                 // bit_blocks, owned_bit_blocks, resizable_bit_blocks
-#include <xstd/bits/bit_key_traits.hpp>             // bit_key_traits
+#include <xstd/bits/bit_key_mapping.hpp>            // bit_key_mapping
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container, num_blocks_v
 #include <xstd/bits/detail/ownership.hpp>           // owned_bits_t
 #include <xstd/bits/detail/set_adaptor.hpp>         // set_adaptor
@@ -71,9 +71,9 @@ BOOST_AUTO_TEST_CASE(TheMovesAreAsNothrowAsTheSmallVectors)
         static_assert(std::is_nothrow_move_constructible_v<xstd::bit_small_vector<N>> and std::is_nothrow_move_assignable_v<xstd::bit_small_vector<N>>);
 
         using allocator_type = std::pmr::polymorphic_allocator<std::size_t>;
-        static_assert(std::is_nothrow_move_constructible_v<xstd::basic_bit_small_set<std::size_t, std::size_t, N, xstd::bit_key_traits<std::size_t>, std::less<std::size_t>, allocator_type>>); // NOLINT(modernize-use-transparent-functors): the default comparator, spelled to reach the allocator
+        static_assert(std::is_nothrow_move_constructible_v<xstd::basic_bit_small_set<std::size_t, std::size_t, N, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, allocator_type>>); // NOLINT(modernize-use-transparent-functors): the default comparator, spelled to reach the allocator
         static_assert(std::is_nothrow_move_constructible_v<xstd::basic_bit_small_vector<std::size_t, N, allocator_type>>);
-        static_assert(not std::is_nothrow_move_assignable_v<xstd::basic_bit_small_set<std::size_t, std::size_t, N, xstd::bit_key_traits<std::size_t>, std::less<std::size_t>, allocator_type>>); // NOLINT(modernize-use-transparent-functors): the default comparator, spelled to reach the allocator
+        static_assert(not std::is_nothrow_move_assignable_v<xstd::basic_bit_small_set<std::size_t, std::size_t, N, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, allocator_type>>); // NOLINT(modernize-use-transparent-functors): the default comparator, spelled to reach the allocator
         static_assert(not std::is_nothrow_move_assignable_v<xstd::basic_bit_small_vector<std::size_t, N, allocator_type>>);
         BOOST_CHECK(true);
 }

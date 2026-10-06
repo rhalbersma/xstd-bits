@@ -7,8 +7,8 @@
 #define XSTD_BITS_BIT_FIXED_SET_HPP
 
 #include <xstd/bits/bit_blocks.hpp>                          // bit_block, bit_blocks_extent_v, smallest_block_t
-#include <xstd/bits/bit_enum_traits.hpp>                     // bit_enum_traits, enum_traits
-#include <xstd/bits/bit_key_traits.hpp>                      // bit_key_traits
+#include <xstd/bits/bit_index_mapping.hpp>                   // bit_index_mapping, sized_bit_index_mapping
+#include <xstd/bits/bit_key_mapping.hpp>                     // bit_key_mapping
 #include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container, num_blocks_v
 #include <xstd/bits/detail/ownership.hpp>                    // storage
 #include <xstd/bits/detail/set_adaptor.hpp>                  // admits_width, key_direction, set_adaptor
@@ -32,13 +32,13 @@
 namespace xstd {
 
 // The fixed-width set: the basic name leaves the key and the block open, the short one makes both std::size_t.
-template<class Key, xstd::unsigned_integer Block, std::size_t N, class KeyTraits = bit_key_traits<Key>, bits::detail::set::key_direction<Key> Compare = std::less<Key>>
-class basic_bit_fixed_set : public bits::detail::set_adaptor<bits::detail::bit_block_container<std::array<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, basic_bit_fixed_set<Key, Block, N, KeyTraits, Compare>, Key, KeyTraits, Compare>
+template<class Key, xstd::unsigned_integer Block, std::size_t N, bit_index_mapping<Key> KeyMapping = bit_key_mapping<Key>, bits::detail::set::key_direction<Key> Compare = std::less<Key>>
+class basic_bit_fixed_set : public bits::detail::set_adaptor<bits::detail::bit_block_container<std::array<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>, Key, KeyMapping, Compare>
 {
-        using base_type = bits::detail::set_adaptor<bits::detail::bit_block_container<std::array<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, basic_bit_fixed_set<Key, Block, N, KeyTraits, Compare>, Key, KeyTraits, Compare>;
+        using base_type = bits::detail::set_adaptor<bits::detail::bit_block_container<std::array<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>, Key, KeyMapping, Compare>;
 
-        // A traits type that names a size closes the universe, and the width must be that size.
-        static_assert(bits::detail::set::admits_width<KeyTraits, N>);
+        // A mapping that names a size closes the universe, and the width must be that size.
+        static_assert(bits::detail::set::admits_width<KeyMapping, Key, N>);
 
 public:
         using typename base_type::key_compare;
@@ -99,15 +99,15 @@ basic_bit_fixed_set(from_blocks_t, std::array<Block, K>) -> basic_bit_fixed_set<
 template<xstd::bit_block Block, std::size_t K>
 basic_bit_fixed_set(from_blocks_t, Block const (&)[K]) -> basic_bit_fixed_set<std::size_t, Block, bit_blocks_extent_v<std::array<Block, K>>>; // NOLINT(modernize-avoid-c-arrays): a built-in array is what it reads.
 
-// A list of enumerators whose author listed the enumeration's values: the type bit_enum_set<E> names.
-template<class E>
-        requires std::is_enum_v<E> and requires { enum_traits<E>::values; }
-basic_bit_fixed_set(std::initializer_list<E>) -> basic_bit_fixed_set<E, smallest_block_t<bit_enum_traits<E>::size>, bit_enum_traits<E>::size, bit_enum_traits<E>>;
+// A list of enumerators whose default mapping closes the universe: the type bit_enum_set<Enum> names.
+template<class Enum>
+        requires std::is_enum_v<Enum> and sized_bit_index_mapping<bit_key_mapping<Enum>, Enum>
+basic_bit_fixed_set(std::initializer_list<Enum>) -> basic_bit_fixed_set<Enum, smallest_block_t<bit_key_mapping<Enum>::size>, bit_key_mapping<Enum>::size, bit_key_mapping<Enum>>;
 
 namespace aligned {
 
-template<class Key, xstd::unsigned_integer Block, std::size_t N, class KeyTraits = bit_key_traits<Key>, class Compare = std::less<Key>>
-using basic_bit_fixed_set = xstd::basic_bit_fixed_set<Key, Block, xstd::align_up(N, static_cast<std::size_t>(std::numeric_limits<Block>::digits)), KeyTraits, Compare>;
+template<class Key, xstd::unsigned_integer Block, std::size_t N, bit_index_mapping<Key> KeyMapping = bit_key_mapping<Key>, class Compare = std::less<Key>>
+using basic_bit_fixed_set = xstd::basic_bit_fixed_set<Key, Block, xstd::align_up(N, static_cast<std::size_t>(std::numeric_limits<Block>::digits)), KeyMapping, Compare>;
 
 template<std::size_t N>
 using bit_fixed_set = basic_bit_fixed_set<std::size_t, std::size_t, N>;
@@ -119,12 +119,12 @@ using bit_fixed_set = basic_bit_fixed_set<std::size_t, std::size_t, N>;
 namespace boost::container_hash {
 
 // A reading with iterators says it is neither range nor tuple, so Boost hashes it as the value it is.
-template<class Key, class Block, std::size_t N, class KeyTraits, class Compare>
-struct is_range<xstd::basic_bit_fixed_set<Key, Block, N, KeyTraits, Compare>> : std::false_type
+template<class Key, class Block, std::size_t N, class KeyMapping, class Compare>
+struct is_range<xstd::basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>> : std::false_type
 {};
 
-template<class Key, class Block, std::size_t N, class KeyTraits, class Compare>
-struct is_tuple_like<xstd::basic_bit_fixed_set<Key, Block, N, KeyTraits, Compare>> : std::false_type
+template<class Key, class Block, std::size_t N, class KeyMapping, class Compare>
+struct is_tuple_like<xstd::basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>> : std::false_type
 {};
 
 } // namespace boost::container_hash
@@ -133,8 +133,8 @@ struct is_tuple_like<xstd::basic_bit_fixed_set<Key, Block, N, KeyTraits, Compare
 
 namespace std {
 
-template<class Key, class Block, std::size_t N, class KeyTraits, class Compare>
-struct hash<xstd::basic_bit_fixed_set<Key, Block, N, KeyTraits, Compare>> : hash<typename xstd::basic_bit_fixed_set<Key, Block, N, KeyTraits, Compare>::adaptor_type>
+template<class Key, class Block, std::size_t N, class KeyMapping, class Compare>
+struct hash<xstd::basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>> : hash<typename xstd::basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>::adaptor_type>
 {};
 
 } // namespace std

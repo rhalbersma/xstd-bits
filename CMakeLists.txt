@@ -79,10 +79,10 @@ target_sources(
         include/xstd/bits/bit_bounded_set.hpp
         include/xstd/bits/bit_bounded_vector.hpp
         include/xstd/bits/bit_enum_set.hpp
-        include/xstd/bits/bit_enum_traits.hpp
         include/xstd/bits/bit_flag_set.hpp
-        include/xstd/bits/bit_flag_traits.hpp
-        include/xstd/bits/bit_key_traits.hpp
+        include/xstd/bits/bit_flag_mapping.hpp
+        include/xstd/bits/bit_index_mapping.hpp
+        include/xstd/bits/bit_key_mapping.hpp
         include/xstd/bits/bit_set.hpp
         include/xstd/bits/bit_set_view.hpp
         include/xstd/bits/bit_span.hpp
@@ -99,6 +99,7 @@ target_sources(
         include/xstd/bits/detail/hash.hpp
         include/xstd/bits/detail/intrin.hpp
         include/xstd/bits/detail/mask_word.hpp
+        include/xstd/bits/detail/ordinal.hpp
         include/xstd/bits/from_blocks.hpp
         include/xstd/bits/ext/boost.hpp
         include/xstd/bits/ext/boost/bit_small_set.hpp

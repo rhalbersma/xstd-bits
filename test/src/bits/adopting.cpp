@@ -7,7 +7,7 @@
 #include <xstd/bits/bit_array.hpp>                  // bit_array
 #include <xstd/bits/bit_bounded_set.hpp>            // basic_bit_bounded_set
 #include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector
-#include <xstd/bits/bit_key_traits.hpp>             // bit_key_traits
+#include <xstd/bits/bit_key_mapping.hpp>            // bit_key_mapping
 #include <xstd/bits/bit_set.hpp>                    // basic_bit_set, bit_set
 #include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
@@ -124,7 +124,7 @@ BOOST_AUTO_TEST_CASE(InlineBlocksDeduceTheirAlignedCapacity)
 }
 
 // The heap owners over a polymorphic allocator, which two resources make unequal.
-using polymorphic_owners = std::tuple<xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_traits<std::size_t>, std::less<std::size_t>, std::pmr::polymorphic_allocator<std::uint8_t>>, xstd::basic_bit_small_set<std::size_t, std::uint8_t, 16, xstd::bit_key_traits<std::size_t>, std::less<std::size_t>, std::pmr::polymorphic_allocator<std::uint8_t>>>; // NOLINT(modernize-use-transparent-functors): the default comparator, spelled to reach the allocator
+using polymorphic_owners = std::tuple<xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, std::pmr::polymorphic_allocator<std::uint8_t>>, xstd::basic_bit_small_set<std::size_t, std::uint8_t, 16, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, std::pmr::polymorphic_allocator<std::uint8_t>>>; // NOLINT(modernize-use-transparent-functors): the default comparator, spelled to reach the allocator
 
 // Blocks adopted under an unequal allocator are copied into it; storage taken from new and delete would leak.
 BOOST_AUTO_TEST_CASE_TEMPLATE(AdoptionUnderAnUnequalAllocatorCopiesTheBlocks, S, polymorphic_owners)
