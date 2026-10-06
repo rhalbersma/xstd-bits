@@ -90,11 +90,14 @@ constexpr auto named_block(Bits const& c, std::size_t index) noexcept
         auto const block = c[index];
         if constexpr (named == std::dynamic_extent) {
                 return block;
-        } else if (digits * index >= named) {
-                return block_type{};
-        } else if (named - (digits * index) >= digits) {
-                return block;
         } else {
+                // Separate tests, not a chain, whose two whole-block arms bugprone-branch-clone flags as clones.
+                if (digits * index >= named) {
+                        return block_type{};
+                }
+                if (named - (digits * index) >= digits) {
+                        return block;
+                }
                 return static_cast<block_type>(block & static_cast<block_type>(shl(block_type{1}, named - (digits * index)) - block_type{1}));
         }
 }
