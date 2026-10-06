@@ -5,6 +5,7 @@
 
 #include <xstd/bits.hpp>            // the whole bits surface
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE
+#include <array>                    // array
 #include <concepts>                 // same_as
 #include <cstddef>                  // size_t
 #include <cstdint>                  // uint8_t
@@ -12,6 +13,24 @@
 #include <limits>                   // numeric_limits
 #include <memory>                   // allocator
 #include <ranges>                   // bidirectional_range, random_access_range
+
+namespace {
+
+// An enumeration whose author listed its values, which is what an enum set is keyed by.
+enum class perm : std::uint8_t
+{
+        read,
+        write,
+        exec,
+};
+
+} // namespace
+
+template<>
+struct xstd::enum_traits<perm>
+{
+        static constexpr std::array values = {perm::read, perm::write, perm::exec};
+};
 
 // Every entity the umbrella promises, reached through it alone: no leaf test sees the umbrella at all.
 BOOST_AUTO_TEST_CASE(EveryContainerArrivesThroughTheUmbrella)
@@ -36,6 +55,10 @@ BOOST_AUTO_TEST_CASE(EveryContainerArrivesThroughTheUmbrella)
         static_assert(std::same_as<xstd::bit_array<8>, xstd::basic_bit_array<std::size_t, 8>>);
         static_assert(std::same_as<xstd::bit_set, xstd::basic_bit_set<std::size_t, std::size_t, xstd::bit_key_traits<std::size_t>, std::less<std::size_t>, std::allocator<std::size_t>>>); // NOLINT(modernize-use-transparent-functors): the default comparator, spelled to reach the allocator
         static_assert(std::same_as<xstd::bit_vector, xstd::basic_bit_vector<std::size_t, std::allocator<std::size_t>>>);
+
+        // The enum set is the fixed set keyed by an enumeration's ranks, in the smallest block holding them.
+        static_assert(std::same_as<xstd::bit_enum_set<perm>, xstd::basic_bit_fixed_set<perm, std::uint8_t, 3, xstd::bit_enum_traits<perm>>>);
+        static_assert(std::same_as<decltype(xstd::basic_bit_fixed_set{perm::read}), xstd::bit_enum_set<perm>>);
 
         // The bounded column, the third storage point: one name per reading, each a class like the rest.
         static_assert(std::ranges::bidirectional_range<xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 8>>);

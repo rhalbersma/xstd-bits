@@ -78,6 +78,8 @@ target_sources(
         include/xstd/bits/bit_blocks.hpp
         include/xstd/bits/bit_bounded_set.hpp
         include/xstd/bits/bit_bounded_vector.hpp
+        include/xstd/bits/bit_enum_set.hpp
+        include/xstd/bits/bit_enum_traits.hpp
         include/xstd/bits/bit_key_traits.hpp
         include/xstd/bits/bit_set.hpp
         include/xstd/bits/bit_set_view.hpp

@@ -4,12 +4,14 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/block_types.hpp>             // all_block_types
+#include <test/set/enums.hpp>               // perm, piece, undeclared
 #include <test/set/strong_index.hpp>        // offset_traits, strong_index
+#include <xstd/bits/bit_enum_traits.hpp>    // bit_enum_traits
 #include <xstd/bits/bit_key_traits.hpp>     // bit_key_traits
 #include <xstd/bits/detail/set_adaptor.hpp> // admits_width
 #include <boost/test/unit_test.hpp>         // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <algorithm>                        // min
-#include <concepts>                         // same_as
+#include <concepts>                         // derived_from, same_as
 #include <cstddef>                          // size_t
 #include <cstdint>                          // int16_t, int64_t, int8_t, uint8_t
 #include <limits>                           // numeric_limits
@@ -25,6 +27,9 @@ template<class KeyTraits>
 constexpr bool has_size = requires { KeyTraits::size; };
 
 using identity = xstd::bit_key_traits<std::size_t>;
+
+template<class Key>
+constexpr bool has_default_traits = requires (Key key) { xstd::bit_key_traits<Key>::to_index(key); };
 
 } // namespace
 
@@ -142,6 +147,22 @@ BOOST_AUTO_TEST_CASE(ATraitsTypeOfItsOwnMayCloseTheUniverse)
 
         BOOST_CHECK_EQUAL(traits::to_index({.value = 10UZ}), 0UZ);
         BOOST_CHECK(traits::from_index(4UZ) == test::set::strong_index{.value = 14UZ});
+}
+
+// An enumeration whose values are listed ranks by that list, closing the universe at its size; others have no default.
+BOOST_AUTO_TEST_CASE(AListedEnumerationRanksByItsList)
+{
+        using traits = xstd::bit_key_traits<test::set::piece>;
+        static_assert(std::derived_from<traits, xstd::bit_enum_traits<test::set::piece>>);
+        static_assert(has_size<traits> and traits::size == 6UZ);
+        static_assert(xstd::bits::detail::set::admits_width<traits, 6UZ>);
+        static_assert(not xstd::bits::detail::set::admits_width<traits, 101UZ>);
+        static_assert(traits::to_index(test::set::piece::king) == 5UZ);
+        static_assert(xstd::bit_key_traits<test::set::perm>::from_index(2UZ) == test::set::perm::exec);
+        static_assert(has_default_traits<test::set::perm>);
+        static_assert(not has_default_traits<test::set::undeclared>);
+
+        BOOST_CHECK(true);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
