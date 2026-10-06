@@ -29,4 +29,8 @@
 #include <xstd/bits/bit_set.hpp>         // IWYU pragma: export; bit_set
 #include <xstd/bits/bit_set_view.hpp>    // IWYU pragma: export; bit_set_view
 
+// Flag types, a mask word spelled as the bitmask enumeration it replaces.
+#include <xstd/bits/bit_flag_traits.hpp> // IWYU pragma: export; bit_flag_traits
+#include <xstd/bits/bit_flag_set.hpp>    // IWYU pragma: export; bit_flag_set
+
 #endif // XSTD_BITS_HPP
