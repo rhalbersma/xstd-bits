@@ -6,24 +6,30 @@
 #ifndef XSTD_BITS_BIT_FLAG_SET_HPP
 #define XSTD_BITS_BIT_FLAG_SET_HPP
 
-#include <xstd/bits/bit_blocks.hpp>                // bit_blocks_extent_v
-#include <xstd/bits/bit_key_traits.hpp>            // bit_key_traits
-#include <xstd/bits/detail/intrin.hpp>             // countr_zero, popcount
-#include <xstd/bits/detail/mask_word.hpp>          // low_mask_bits, mask_fits, mask_width, mask_word, to_mask
-#include <xstd/bits/detail/shift.hpp>              // shl, shr
-#include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
-#include <cassert>                                 // assert
-#include <cstddef>                                 // ptrdiff_t, size_t
-#include <iterator>                                // forward_iterator_tag, input_iterator_tag
-#include <type_traits>                             // conditional_t, is_void_v
+#include <xstd/bits/bit_blocks.hpp>                 // bit_blocks_extent_v
+#include <xstd/bits/bit_key_traits.hpp>             // bit_key_traits
+#include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container, num_blocks_v
+#include <xstd/bits/detail/mask_word.hpp>           // low_mask_bits, mask_fits, mask_width, mask_word, to_mask
+#include <xstd/bits/detail/ownership.hpp>           // storage, storage_access
+#include <xstd/bits/detail/set_adaptor.hpp>         // set_adaptor
+#include <xstd/bits/detail/shift.hpp>               // shl, shr
+#include <xstd/bits/from_blocks.hpp>                // from_blocks_t
+#include <xstd/ints/concepts/unsigned_integer.hpp>  // unsigned_integer
+#include <array>                                    // array
+#include <cassert>                                  // assert
+#include <concepts>                                 // same_as
+#include <cstddef>                                  // size_t
+#include <type_traits>                              // conditional_t, is_void_v
 
-// A base for flag types: a mask word whose named bits are the keys, spelled as the bitmask enumeration it replaces.
+// A base for flag types: the set reading over one mask word, spelled as the bitmask enumeration it replaces.
 namespace xstd {
 
 // Derived is the flag type, whose constants are its flags; Interop, unless void, is the bit mask it converts with.
 template<class Derived, class Key, xstd::unsigned_integer Block, std::size_t N = bit_blocks_extent_v<Block>, class KeyTraits = bit_key_traits<Key>, class Interop = void>
-class bit_flag_set
+class bit_flag_set : public bits::detail::set_adaptor<bits::detail::bit_block_container<std::array<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, Derived, Key, KeyTraits>
 {
+        using base_type = bits::detail::set_adaptor<bits::detail::bit_block_container<std::array<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, Derived, Key, KeyTraits>;
+
         static_assert(N <= bit_blocks_extent_v<Block>);
         static_assert(std::is_void_v<Interop> or bits::detail::mask_word<Interop>);
 
@@ -39,16 +45,6 @@ class bit_flag_set
         }
 
         static_assert(num_keys() <= N);
-
-        // The lowest n positions, the whole word included.
-        [[nodiscard]] static consteval auto low_bits(std::size_t n) noexcept
-                -> Block
-        {
-                return n == bit_blocks_extent_v<Block> ? static_cast<Block>(~Block{}) : static_cast<Block>(bits::detail::shl(Block{1}, n) - Block{1});
-        }
-
-        static constexpr Block width_mask = low_bits(N);
-        static constexpr Block key_mask   = low_bits(num_keys());
 
         static constexpr bool has_interop = not std::is_void_v<Interop>;
 
@@ -71,17 +67,9 @@ class bit_flag_set
 
         using interop_param = std::conditional_t<has_interop, Interop, no_interop>;
 
-        // Every position below N, named by a key or not; a bit at or above N is never set.
-        Block m_bits{};
-
 public:
-        using key_type        = Key;
-        using value_type      = Key;
-        using size_type       = std::size_t;
-        using difference_type = std::ptrdiff_t;
-        using block_type      = Block;
-        using key_traits_type = KeyTraits;
-        using interop_type    = Interop;
+        using block_type   = Block;
+        using interop_type = Interop;
 
         // p[k]: read as contains(k), written as insert or erase; nested, so ADL on it searches no user's namespace.
         class reference
@@ -125,186 +113,76 @@ public:
                 }
         };
 
-        // The named flags still to visit, lowest first: a copy of the word, so an iterator refers to nothing.
-        class iterator
-        {
-                Block m_rest{};
-
-                friend bit_flag_set;
-
-                [[nodiscard]] constexpr explicit iterator(Block rest) noexcept
-                        : m_rest(rest)
-                {}
-
-        public:
-                using iterator_concept  = std::forward_iterator_tag;
-                using iterator_category = std::input_iterator_tag;
-                using value_type        = Key;
-                using difference_type   = std::ptrdiff_t;
-                using pointer           = void;
-                using reference         = Key;
-
-                [[nodiscard]] iterator() = default;
-
-                [[nodiscard]] friend auto operator==(iterator const&, iterator const&) -> bool = default;
-
-                // The key itself, so its own namespace is the one ADL searches for a formatter or a switch.
-                [[nodiscard]] constexpr auto operator*() const noexcept
-                        -> Key
-                {
-                        assert(m_rest != Block{});
-                        return KeyTraits::from_index(bits::detail::countr_zero(m_rest));
-                }
-
-                constexpr auto operator++() noexcept
-                        -> iterator&
-                {
-                        assert(m_rest != Block{});
-                        m_rest = static_cast<Block>(m_rest & static_cast<Block>(m_rest - Block{1}));
-                        return *this;
-                }
-
-                constexpr auto operator++(int) noexcept
-                        -> iterator
-                {
-                        auto nrv = *this;
-                        ++*this;
-                        return nrv;
-                }
-        };
-
-        using const_iterator = iterator;
-
         // The empty set, which is the zero value [bitmask.types] asks for.
         [[nodiscard]] bit_flag_set() = default;
 
         // One flag, explicit so that a key never meets a flag type through a conversion.
-        [[nodiscard]] constexpr explicit bit_flag_set(key_type key) noexcept
-                : m_bits(bits::detail::shl(Block{1}, position_of(key)))
-        {}
+        [[nodiscard]] constexpr explicit bit_flag_set(Key key) noexcept
+        {
+                word() = bits::detail::shl(Block{1}, position_of(key));
+        }
+
+        // The word as it is, unnamed positions included, which is bitflags' from_bits_retain; no bit at or above N.
+        [[nodiscard]] constexpr bit_flag_set(xstd::from_blocks_t, Block block) noexcept
+        {
+                assert((bits::detail::mask_fits<Block>(block, N)));
+                word() = block;
+        }
 
         // The interop value is the mask word; unconstrained, since MSVC drops a constrained inherited converter.
         [[nodiscard]] constexpr explicit(false) bit_flag_set(interop_param value) noexcept // NOLINT(misc-explicit-constructor)
-                : m_bits(bits_of(value))
-        {}
+        {
+                word() = bits_of(value);
+        }
 
         [[nodiscard]] constexpr explicit(false) operator interop_param() const noexcept // NOLINT(misc-explicit-constructor)
                 requires has_interop
         {
-                return bits::detail::to_mask<Interop>(m_bits);
+                return bits::detail::to_mask<Interop>(word());
         }
 
-        // The word as it is, unnamed positions included, which is bitflags' from_bits_retain; no bit at or above N.
-        [[nodiscard]] static constexpr auto from_bits(block_type bits) noexcept
-                -> Derived
+        // A swap on the base loses to any exact match on the flag type, so the flag type declares its own.
+        friend constexpr auto swap(Derived& x, Derived& y) noexcept(noexcept(x.swap(y)))
+                -> void
         {
-                assert((bits & static_cast<Block>(~width_mask)) == Block{});
-                auto nrv                               = Derived();
-                static_cast<bit_flag_set&>(nrv).m_bits = bits;
-                return nrv;
+                x.swap(y);
         }
 
-        [[nodiscard]] constexpr auto bits() const noexcept
-                -> block_type
-        {
-                return m_bits;
-        }
+        // Kept in view beside the all-of overload, which would hide the contains(Key) the base calls on Derived.
+        using base_type::contains;
 
-        // The named flags, in rank order; a position no key names is in the word but not in the range.
-        [[nodiscard]] constexpr auto begin() const noexcept
-                -> iterator
-        {
-                return iterator(static_cast<Block>(m_bits & key_mask));
-        }
-
-        [[nodiscard]] constexpr auto end() const noexcept
-                -> iterator
-        {
-                return iterator();
-        }
-
-        // How many named flags are set, which is how far begin() is from end().
-        [[nodiscard]] constexpr auto size() const noexcept
-                -> size_type
-        {
-                return bits::detail::popcount(static_cast<Block>(m_bits & key_mask));
-        }
-
-        // Total over key_type, as std::set's is: a key past the universe is in no set.
-        [[nodiscard]] constexpr auto contains(key_type key) const noexcept
-                -> bool
-        {
-                auto const pos = KeyTraits::to_index(key);
-                return pos < num_keys() and (bits::detail::shr(m_bits, pos) & Block{1}) != Block{};
-        }
-
-        // All of other's flags, as bitflags' and Swift's contains: with one flag it agrees with the overload above.
+        // All of other's flags, as bitflags' and Swift's contains: with one flag it agrees with contains(Key).
         [[nodiscard]] constexpr auto contains(Derived const& other) const noexcept
                 -> bool
         {
-                return (other.bits() & static_cast<Block>(~m_bits)) == Block{};
-        }
-
-        // Any of other's flags, asked positively, which is what flags code nearly always asks.
-        [[nodiscard]] constexpr auto intersects(Derived const& other) const noexcept
-                -> bool
-        {
-                return (m_bits & other.bits()) != Block{};
-        }
-
-        [[nodiscard]] constexpr auto is_subset_of(Derived const& other) const noexcept
-                -> bool
-        {
-                return other.contains(self());
+                return other.is_subset_of(*this);
         }
 
         // The key must name a position below the universe's size.
-        [[nodiscard]] constexpr auto operator[](key_type key) noexcept
+        [[nodiscard]] constexpr auto operator[](Key key) noexcept
                 -> reference
         {
-                return {&m_bits, position_of(key)};
+                return {&word(), position_of(key)};
         }
 
-        [[nodiscard]] constexpr auto operator[](key_type key) const noexcept
+        [[nodiscard]] constexpr auto operator[](Key key) const noexcept
                 -> bool
         {
-                return contains(key);
+                return this->contains(key);
         }
 
-        constexpr auto operator|=(Derived const& other) noexcept
-                -> Derived&
-        {
-                m_bits = static_cast<Block>(m_bits | other.bits());
-                return self();
-        }
-
-        constexpr auto operator&=(Derived const& other) noexcept
-                -> Derived&
-        {
-                m_bits = static_cast<Block>(m_bits & other.bits());
-                return self();
-        }
-
-        constexpr auto operator^=(Derived const& other) noexcept
-                -> Derived&
-        {
-                m_bits = static_cast<Block>(m_bits ^ other.bits());
-                return self();
-        }
-
-        constexpr auto operator-=(Derived const& other) noexcept
-                -> Derived&
-        {
-                m_bits = static_cast<Block>(m_bits & static_cast<Block>(~other.bits()));
-                return self();
-        }
+        // The forms over the base and over a key, beside the four over the interop mask below.
+        using base_type::operator&=;
+        using base_type::operator|=;
+        using base_type::operator^=;
+        using base_type::operator-=;
 
         // Total, as the binary & and - are: the value's bits at or above N meet nothing in this word.
         constexpr auto operator&=(interop_param other) noexcept
                 -> Derived&
                 requires has_interop
         {
-                m_bits = static_cast<Block>(m_bits & low_bits_of(other));
+                word() = static_cast<Block>(word() & low_bits_of(other));
                 return self();
         }
 
@@ -312,121 +190,101 @@ public:
                 -> Derived&
                 requires has_interop
         {
-                m_bits = static_cast<Block>(m_bits & static_cast<Block>(~low_bits_of(other)));
+                word() = static_cast<Block>(word() & static_cast<Block>(~low_bits_of(other)));
                 return self();
         }
 
-        // Hidden friends over Derived itself, so a conversion to the interop mask never ties with one.
-        [[nodiscard]] friend constexpr auto operator==(Derived const& lhs, Derived const& rhs) noexcept
-                -> bool
+        // These two would bring the value's bits above N into the word, which they must not have.
+        constexpr auto operator|=(interop_param other) noexcept
+                -> Derived&
+                requires has_interop
         {
-                return lhs.bits() == rhs.bits();
+                word() = static_cast<Block>(word() | bits_of(other));
+                return self();
         }
 
-        // Within N: the complement of none is every position of the word, named or not.
-        [[nodiscard]] friend constexpr auto operator~(Derived const& x) noexcept
-                -> Derived
+        constexpr auto operator^=(interop_param other) noexcept
+                -> Derived&
+                requires has_interop
         {
-                return from_bits(static_cast<Block>(static_cast<Block>(~x.bits()) & width_mask));
+                word() = static_cast<Block>(word() ^ bits_of(other));
+                return self();
         }
 
-        [[nodiscard]] friend constexpr auto operator|(Derived const& lhs, Derived const& rhs) noexcept
-                -> Derived
-        {
-                auto nrv = lhs;
-                nrv |= rhs;
-                return nrv;
-        }
-
-        [[nodiscard]] friend constexpr auto operator&(Derived const& lhs, Derived const& rhs) noexcept
-                -> Derived
-        {
-                auto nrv = lhs;
-                nrv &= rhs;
-                return nrv;
-        }
-
-        [[nodiscard]] friend constexpr auto operator^(Derived const& lhs, Derived const& rhs) noexcept
-                -> Derived
-        {
-                auto nrv = lhs;
-                nrv ^= rhs;
-                return nrv;
-        }
-
-        [[nodiscard]] friend constexpr auto operator-(Derived const& lhs, Derived const& rhs) noexcept
-                -> Derived
-        {
-                auto nrv = lhs;
-                nrv -= rhs;
-                return nrv;
-        }
-
-        // Total against the interop mask: a value with a bit at or above N equals no flag set.
-        [[nodiscard]] friend constexpr auto operator==(Derived const& lhs, interop_param rhs) noexcept
+        // Templates over the mask's exact type, so that a flag type converting to it is never deduced as one.
+        template<std::same_as<interop_param> Mask>
+        [[nodiscard]] friend constexpr auto operator==(Derived const& lhs, Mask rhs) noexcept
                 -> bool
                 requires has_interop
         {
-                return lhs.bits() == low_bits_of(rhs) and bits::detail::mask_fits<Block>(rhs, N);
+                return lhs.word() == low_bits_of(rhs) and bits::detail::mask_fits<Block>(rhs, N);
         }
 
         // The rest in both orders, exact where the mask's own needs a conversion; no bit at or above N.
-        [[nodiscard]] friend constexpr auto operator|(Derived const& lhs, interop_param rhs) noexcept
+        template<std::same_as<interop_param> Mask>
+        [[nodiscard]] friend constexpr auto operator|(Derived const& lhs, Mask rhs) noexcept
                 -> Derived
                 requires has_interop
         {
-                return lhs | from_bits(bits_of(rhs));
+                return lhs | from_word(bits_of(rhs));
         }
 
-        [[nodiscard]] friend constexpr auto operator|(interop_param lhs, Derived const& rhs) noexcept
+        template<std::same_as<interop_param> Mask>
+        [[nodiscard]] friend constexpr auto operator|(Mask lhs, Derived const& rhs) noexcept
                 -> Derived
                 requires has_interop
         {
-                return from_bits(bits_of(lhs)) | rhs;
+                return from_word(bits_of(lhs)) | rhs;
         }
 
         // Total: truncating the value to N bits is exact, since the flag set has no bit above N for it to keep.
-        [[nodiscard]] friend constexpr auto operator&(Derived const& lhs, interop_param rhs) noexcept
+        template<std::same_as<interop_param> Mask>
+        [[nodiscard]] friend constexpr auto operator&(Derived const& lhs, Mask rhs) noexcept
                 -> Derived
                 requires has_interop
         {
-                return lhs & from_bits(low_bits_of(rhs));
+                return lhs & from_word(low_bits_of(rhs));
         }
 
-        [[nodiscard]] friend constexpr auto operator&(interop_param lhs, Derived const& rhs) noexcept
+        template<std::same_as<interop_param> Mask>
+        [[nodiscard]] friend constexpr auto operator&(Mask lhs, Derived const& rhs) noexcept
                 -> Derived
                 requires has_interop
         {
-                return from_bits(low_bits_of(lhs)) & rhs;
+                return from_word(low_bits_of(lhs)) & rhs;
         }
 
-        [[nodiscard]] friend constexpr auto operator^(Derived const& lhs, interop_param rhs) noexcept
+        template<std::same_as<interop_param> Mask>
+        [[nodiscard]] friend constexpr auto operator^(Derived const& lhs, Mask rhs) noexcept
                 -> Derived
                 requires has_interop
         {
-                return lhs ^ from_bits(bits_of(rhs));
+                return lhs ^ from_word(bits_of(rhs));
         }
 
-        [[nodiscard]] friend constexpr auto operator^(interop_param lhs, Derived const& rhs) noexcept
+        template<std::same_as<interop_param> Mask>
+        [[nodiscard]] friend constexpr auto operator^(Mask lhs, Derived const& rhs) noexcept
                 -> Derived
                 requires has_interop
         {
-                return from_bits(bits_of(lhs)) ^ rhs;
+                return from_word(bits_of(lhs)) ^ rhs;
         }
 
         // Total, as & is; the mirror is not, the value's bits above N being what it would keep.
-        [[nodiscard]] friend constexpr auto operator-(Derived const& lhs, interop_param rhs) noexcept
+        template<std::same_as<interop_param> Mask>
+        [[nodiscard]] friend constexpr auto operator-(Derived const& lhs, Mask rhs) noexcept
                 -> Derived
                 requires has_interop
         {
-                return lhs - from_bits(low_bits_of(rhs));
+                return lhs - from_word(low_bits_of(rhs));
         }
 
-        [[nodiscard]] friend constexpr auto operator-(interop_param lhs, Derived const& rhs) noexcept
+        template<std::same_as<interop_param> Mask>
+        [[nodiscard]] friend constexpr auto operator-(Mask lhs, Derived const& rhs) noexcept
                 -> Derived
                 requires has_interop
         {
-                return from_bits(bits_of(lhs)) - rhs;
+                return from_word(bits_of(lhs)) - rhs;
         }
 
 private:
@@ -436,14 +294,30 @@ private:
                 return static_cast<Derived&>(*this);
         }
 
-        [[nodiscard]] constexpr auto self() const noexcept
-                -> Derived const&
+        // The one block, every position below N in it, named by a key or not.
+        [[nodiscard]] constexpr auto word() noexcept
+                -> Block&
         {
-                return static_cast<Derived const&>(*this);
+                return bits::detail::storage_access::bits(*this)[0];
+        }
+
+        [[nodiscard]] constexpr auto word() const noexcept
+                -> Block
+        {
+                return bits::detail::storage_access::bits(*this)[0];
+        }
+
+        // A flag type holding the word, built through the default constructor so Derived need inherit no other.
+        [[nodiscard]] static constexpr auto from_word(Block block) noexcept
+                -> Derived
+        {
+                auto nrv                               = Derived();
+                static_cast<bit_flag_set&>(nrv).word() = block;
+                return nrv;
         }
 
         // A key names one position below the universe's size.
-        [[nodiscard]] static constexpr auto position_of(key_type key) noexcept
+        [[nodiscard]] static constexpr auto position_of(Key key) noexcept
                 -> std::size_t
         {
                 auto const pos = KeyTraits::to_index(key);

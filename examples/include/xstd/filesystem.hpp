@@ -9,6 +9,7 @@
 #include <xstd/bits/bit_enum_traits.hpp> // enum_traits
 #include <xstd/bits/bit_flag_set.hpp>    // bit_flag_set
 #include <xstd/bits/bit_key_traits.hpp>  // bit_key_traits
+#include <xstd/bits/from_blocks.hpp>     // from_blocks
 #include <array>                         // array
 #include <cassert>                       // assert
 #include <cstddef>                       // size_t
@@ -81,8 +82,8 @@ inline constexpr perms perms::all        = owner_all | group_all | others_all;
 inline constexpr perms perms::set_uid{perm::set_uid};
 inline constexpr perms perms::set_gid{perm::set_gid};
 inline constexpr perms perms::sticky_bit{perm::sticky_bit};
-inline constexpr perms perms::mask    = all | set_uid | set_gid | sticky_bit;
-inline constexpr perms perms::unknown = from_bits(0xFFFF);
+inline constexpr perms perms::mask = all | set_uid | set_gid | sticky_bit;
+inline constexpr perms perms::unknown{xstd::from_blocks, 0xFFFF};
 
 } // namespace xstd::filesystem
 

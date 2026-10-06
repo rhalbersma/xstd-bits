@@ -3,31 +3,36 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/ext_int128.hpp>             // TEST_HAS_BOOST_INT128, uint128
-#include <xstd/bits/bit_flag_set.hpp>      // bit_flag_set
-#include <xstd/bits/bit_flag_traits.hpp>   // bit_flag_traits
-#include <xstd/bits/bit_key_traits.hpp>    // bit_key_traits
-#include <xstd/bits/detail/mask_word.hpp>  // mask_word
-#include <xstd/filesystem.hpp>             // enum_traits, perm, perms
-#include <xstd/ints/concepts/bit_mask.hpp> // bit_mask
-#include <boost/test/unit_test.hpp>        // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <algorithm>                       // ranges::all_of, ranges::equal, ranges::includes, ranges::set_difference, ranges::set_intersection, ranges::set_symmetric_difference, ranges::set_union
-#include <array>                           // array, to_array
-#include <bit>                             // bit_cast, popcount
-#include <bitset>                          // bitset
-#include <concepts>                        // convertible_to, same_as
-#include <cstddef>                         // size_t
-#include <cstdint>                         // uint16_t, uint8_t
-#include <filesystem>                      // exists, path, perm_options, permissions, perms, remove, status, temp_directory_path
-#include <format>                          // format
-#include <fstream>                         // ofstream
-#include <iterator>                        // forward_iterator, inserter, iter_reference_t
-#include <random>                          // random_device
-#include <ranges>                          // forward_range, iota, sized_range
-#include <set>                             // set
-#include <string_view>                     // string_view
-#include <utility>                         // as_const, pair, to_underlying
-#include <vector>                          // vector
+#include <test/ext_int128.hpp>              // TEST_HAS_BOOST_INT128, uint128
+#include <xstd/bits/bit/bit_convert.hpp>    // bit_convert
+#include <xstd/bits/bit_flag_set.hpp>       // bit_flag_set
+#include <xstd/bits/bit_flag_traits.hpp>    // bit_flag_traits
+#include <xstd/bits/bit_key_traits.hpp>     // bit_key_traits
+#include <xstd/bits/detail/mask_word.hpp>   // mask_word
+#include <xstd/bits/detail/set_adaptor.hpp> // intersects
+#include <xstd/bits/from_blocks.hpp>        // from_blocks
+#include <xstd/filesystem.hpp>              // enum_traits, perm, perms
+#include <xstd/ints/concepts/bit_mask.hpp>  // bit_mask
+#include <boost/test/unit_test.hpp>         // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
+#include <algorithm>                        // ranges::all_of, ranges::equal, ranges::includes, ranges::set_difference, ranges::set_intersection, ranges::set_symmetric_difference, ranges::set_union
+#include <array>                            // array, to_array
+#include <bit>                              // bit_cast, popcount
+#include <bitset>                           // bitset
+#include <compare>                          // is_gt, is_lt
+#include <concepts>                         // convertible_to, same_as
+#include <cstddef>                          // size_t
+#include <cstdint>                          // uint16_t, uint8_t
+#include <filesystem>                       // exists, path, perm_options, permissions, perms, remove, status, temp_directory_path
+#include <format>                           // format
+#include <fstream>                          // ofstream
+#include <iterator>                         // bidirectional_iterator, inserter, iter_reference_t
+#include <random>                           // random_device
+#include <ranges>                           // bidirectional_range, iota, ranges::swap, sized_range, views::reverse
+#include <set>                              // set
+#include <stdexcept>                        // out_of_range
+#include <string_view>                      // string_view
+#include <utility>                          // as_const, pair, to_underlying
+#include <vector>                           // vector
 
 namespace {
 
@@ -186,7 +191,7 @@ auto agrees_on_pair(std::size_t lhs, std::size_t rhs)
         auto const [b, mb] = subset(rhs);
         BOOST_CHECK_EQUAL(a.contains(b), std::ranges::includes(ma, mb));
         BOOST_CHECK_EQUAL(a.is_subset_of(b), std::ranges::includes(mb, ma));
-        BOOST_CHECK_EQUAL(a.intersects(b), not combined(ma, mb, std::ranges::set_intersection).empty());
+        BOOST_CHECK_EQUAL(intersects(a, b), not combined(ma, mb, std::ranges::set_intersection).empty());
         BOOST_CHECK(std::ranges::equal(a | b, combined(ma, mb, std::ranges::set_union)));
         BOOST_CHECK(std::ranges::equal(a & b, combined(ma, mb, std::ranges::set_intersection)));
         BOOST_CHECK(std::ranges::equal(a ^ b, combined(ma, mb, std::ranges::set_symmetric_difference)));
@@ -307,7 +312,7 @@ BOOST_AUTO_TEST_CASE(BothTypesAreBitmaskTypes)
         static_assert(xstd::bit_mask<xfs::perms>);
         static_assert(xstd::bit_mask<modes>);
         static_assert(xstd::bit_mask<word_perms> and xstd::bit_mask<bitset_perms>);
-        static_assert(xfs::perms{} == xfs::perms::none);
+        static_assert(xstd::bit_convert<std::uint16_t>(xfs::perms{}) == 0U and xstd::bit_convert<std::uint16_t>(xfs::perms::none) == 0U);
 
         BOOST_CHECK(true);
 }
@@ -316,8 +321,8 @@ BOOST_AUTO_TEST_CASE(BothTypesAreBitmaskTypes)
 BOOST_AUTO_TEST_CASE(EveryNameHasTheStandardsValue)
 {
         static_assert(std::ranges::all_of(names, [](auto const& name) noexcept -> bool { return name.first == name.second; }));
-        static_assert(xfs::perms::unknown.bits() == 0xFFFFU);
-        static_assert(xfs::perms::mask.bits() == 07777U);
+        static_assert(xstd::bit_convert<std::uint16_t>(xfs::perms::unknown) == 0xFFFFU);
+        static_assert(xstd::bit_convert<std::uint16_t>(xfs::perms::mask) == 07777U);
         for (auto const& [ours, theirs] : names) {
                 BOOST_CHECK(ours == theirs);
                 BOOST_CHECK(fs::perms(ours) == theirs);
@@ -334,7 +339,7 @@ BOOST_AUTO_TEST_CASE(EverySixteenBitValueRoundTrips)
         for (auto const word : std::views::iota(0U, 0x10000U)) {
                 auto const theirs     = static_cast<fs::perms>(word);
                 xfs::perms const ours = theirs;
-                if (fs::perms(ours) != theirs or ours.bits() != word or ours != xfs::perms::from_bits(static_cast<std::uint16_t>(word))) {
+                if (fs::perms(ours) != theirs or xstd::bit_convert<std::uint16_t>(ours) != word or ours != xfs::perms(xstd::from_blocks, static_cast<std::uint16_t>(word))) {
                         ++mismatches;
                 }
         }
@@ -409,13 +414,13 @@ BOOST_AUTO_TEST_CASE(EverySubsetAgreesWithStdSet)
                 auto const [p, model] = subset(mask);
                 BOOST_CHECK(std::ranges::equal(p, model));
                 BOOST_CHECK_EQUAL(p.size(), model.size());
-                BOOST_CHECK_EQUAL(p.bits(), mask);
+                BOOST_CHECK_EQUAL(xstd::bit_convert<std::uint16_t>(p), mask);
                 BOOST_CHECK(not p.contains(beyond));
                 BOOST_CHECK(not p[beyond]);
 
                 // The complement stays within the sixteen bits, and its named flags are the rest of the twelve.
                 auto const complement = ~p;
-                BOOST_CHECK_EQUAL(complement.bits(), static_cast<std::uint16_t>(~mask));
+                BOOST_CHECK_EQUAL(xstd::bit_convert<std::uint16_t>(complement), static_cast<std::uint16_t>(~mask));
                 BOOST_CHECK_EQUAL(complement.size(), ranks.size() - model.size());
                 for (auto const k : ranks) {
                         agrees_at_key(p, model, k);
@@ -441,7 +446,7 @@ BOOST_AUTO_TEST_CASE(BothContainsAgreeOnASingleFlag)
         BOOST_CHECK(p.contains(xfs::perm::owner_read) and p.contains(xfs::perms::owner_read));
         BOOST_CHECK(not p.contains(xfs::perm::owner_write) and not p.contains(xfs::perms::owner_write));
         BOOST_CHECK(not p.contains(xfs::perms::owner_all));
-        BOOST_CHECK(p.intersects(xfs::perms::owner_all));
+        BOOST_CHECK(intersects(p, xfs::perms::owner_all));
         BOOST_CHECK(p.contains(fs::perms::group_write));
         BOOST_CHECK(xfs::perms::owner_read.is_subset_of(p));
 }
@@ -455,9 +460,91 @@ BOOST_AUTO_TEST_CASE(UnnamedBitsAreKeptButNotIterated)
         BOOST_CHECK(p != xfs::perms::mask);
         BOOST_CHECK(~p == xfs::perms::none);
         BOOST_CHECK(~xfs::perms::none == xfs::perms::unknown);
-        BOOST_CHECK((p - xfs::perms::mask).size() == 0UZ);
+        BOOST_CHECK((p - xfs::perms::mask).empty());
         BOOST_CHECK((p - xfs::perms::mask) != xfs::perms::none);
         BOOST_CHECK(std::ranges::equal(p - xfs::perms::mask, std::array<xfs::perm, 0>()));
+}
+
+// The value sees all sixteen bits: ==, <=>, ~ and the conversions; the range and its lookups see the twelve keys.
+BOOST_AUTO_TEST_CASE(TheValueSeesUnnamedPositionsAndTheRangeDoesNot)
+{
+        constexpr auto beyond = std::bit_cast<xfs::perm>(std::uint8_t{12});
+        auto const high       = xfs::perms(xstd::from_blocks, std::uint16_t{0xF000});
+        static_assert(xfs::perms::max_size() == 12UZ);
+        BOOST_CHECK(high.empty() and high.begin() == high.end() and (high | xfs::perms::owner_read).size() == 1UZ);
+        BOOST_CHECK(high != xfs::perms::none);
+        BOOST_CHECK(std::is_gt(high <=> xfs::perms::none));
+        BOOST_CHECK(std::is_lt(xfs::perms::mask <=> xfs::perms::unknown));
+        BOOST_CHECK(~high == xfs::perms::mask);
+        BOOST_CHECK((high | xfs::perms::mask) == xfs::perms::unknown);
+        BOOST_CHECK(fs::perms(high) == (fs::perms::unknown & ~fs::perms::mask));
+        BOOST_CHECK(not xfs::perms::unknown.contains(beyond));
+        BOOST_CHECK(xfs::perms::unknown.find(beyond) == xfs::perms::unknown.end()); // NOLINT(readability-container-contains): find stopping at the named keys is the check
+        BOOST_CHECK(*xfs::perms::unknown.rbegin() == xfs::perm::set_uid);
+        BOOST_CHECK(xfs::perms::unknown.lower_bound(beyond) == xfs::perms::unknown.end());
+
+        // perms::unknown leaves through the standard's type and comes back unchanged, its four unnamed bits included.
+        xfs::perms const back = fs::perms(xfs::perms::unknown);
+        BOOST_CHECK(back == xfs::perms::unknown);
+        BOOST_CHECK_EQUAL(xstd::bit_convert<std::uint16_t>(back), 0xFFFFU);
+}
+
+// insert refuses a position no key names, as a set refuses a key past its max_size(), and the word is untouched.
+BOOST_AUTO_TEST_CASE(InsertingAnUnnamedPositionThrows)
+{
+        constexpr auto beyond = std::bit_cast<xfs::perm>(std::uint8_t{12});
+        auto p                = xfs::perms::owner_read;
+        BOOST_CHECK_THROW(p.insert(beyond), std::out_of_range);
+        BOOST_CHECK(p == xfs::perms::owner_read);
+}
+
+// The set reading's members come with the base: insert, erase, find, the reverse range, clear and swap.
+BOOST_AUTO_TEST_CASE(TheInheritedSetInterfaceWorks)
+{
+        auto p = xfs::perms(xstd::from_blocks, std::uint16_t{0xF000});
+        BOOST_CHECK(p.insert(xfs::perm::owner_read).second);
+        BOOST_CHECK(not p.insert(xfs::perm::owner_read).second);
+        p.insert(xfs::perm::group_exec);
+        BOOST_CHECK_EQUAL(xstd::bit_convert<std::uint16_t>(p), 0xF108U);
+        BOOST_CHECK(*p.find(xfs::perm::group_exec) == xfs::perm::group_exec);
+        BOOST_CHECK(p.find(xfs::perm::others_read) == p.end()); // NOLINT(readability-container-contains): find is the inherited member under test
+        BOOST_CHECK(*p.rbegin() == xfs::perm::owner_read);
+        BOOST_CHECK(std::ranges::equal(std::views::reverse(p), std::array{xfs::perm::owner_read, xfs::perm::group_exec}));
+        BOOST_CHECK_EQUAL(p.erase(xfs::perm::owner_read), 1UZ);
+        BOOST_CHECK_EQUAL(xstd::bit_convert<std::uint16_t>(p), 0xF008U);
+
+        auto q = xfs::perms::owner_all;
+        swap(p, q);
+        BOOST_CHECK(p == xfs::perms::owner_all and xstd::bit_convert<std::uint16_t>(q) == 0xF008U);
+        std::ranges::swap(p, q);
+        BOOST_CHECK(q == xfs::perms::owner_all);
+        p.clear();
+        BOOST_CHECK(p == xfs::perms::none);
+}
+
+// A key or the interop mask on either side picks one operator, and each returns the flag type.
+BOOST_AUTO_TEST_CASE(MixedOperatorsAreUnambiguous)
+{
+        constexpr auto k = xfs::perm::owner_read;
+        auto const p     = xfs::perms::group_all;
+        static_assert(std::same_as<decltype(p | p), xfs::perms> and std::same_as<decltype(~p), xfs::perms>);
+        static_assert(std::same_as<decltype(p | k), xfs::perms> and std::same_as<decltype(k | p), xfs::perms>);
+        static_assert(std::same_as<decltype(p & k), xfs::perms> and std::same_as<decltype(k & p), xfs::perms>);
+        static_assert(std::same_as<decltype(p ^ k), xfs::perms> and std::same_as<decltype(k ^ p), xfs::perms>);
+        static_assert(std::same_as<decltype(p - k), xfs::perms> and std::same_as<decltype(k - p), xfs::perms>);
+        static_assert(std::same_as<decltype(word_perms() | k), word_perms> and std::same_as<decltype(k - word_perms()), word_perms>);
+        BOOST_CHECK((p | k) == (p | xfs::perms::owner_read) and (k | p) == (p | xfs::perms::owner_read));
+        BOOST_CHECK((p & k) == xfs::perms::none and (k & (p | k)) == xfs::perms::owner_read);
+        BOOST_CHECK((p ^ k) == (k ^ p) and (p - k) == p and (k - p) == xfs::perms::owner_read);
+        BOOST_CHECK((word_perms() | k) == std::uint16_t{0x100});
+
+        // The compound forms take the standard's type as the binary ones do, | and ^ with no bit at or above N.
+        auto x = p;
+        BOOST_CHECK(&(x |= fs::perms::owner_read) == &x and x == (p | xfs::perms::owner_read));
+        BOOST_CHECK(&(x ^= fs::perms::group_all) == &x and x == xfs::perms::owner_read);
+        BOOST_CHECK(&(x |= p) == &x and &(x ^= k) == &x and x == p);
+        static_assert(std::same_as<decltype(x |= fs::perms::none), xfs::perms&>);
+        static_assert(std::same_as<decltype(x ^= fs::perms::none), xfs::perms&>);
 }
 
 // p[k] is a proxy nested in the flag type, a bool by its one conversion, and compares through the built-in ==.
@@ -482,13 +569,14 @@ BOOST_AUTO_TEST_CASE(TheSubscriptIsANestedProxyForABool)
         }
 }
 
-// The flag type is a forward range of its rank enumeration, which yields each key by value.
-BOOST_AUTO_TEST_CASE(TheFlagTypeIsAForwardRangeOfItsKeys)
+// The flag type is a bidirectional range of its rank enumeration, whose read-only proxy converts to each key.
+BOOST_AUTO_TEST_CASE(TheFlagTypeIsABidirectionalRangeOfItsKeys)
 {
-        static_assert(std::forward_iterator<xfs::perms::iterator>);
-        static_assert(std::ranges::forward_range<xfs::perms const>);
+        static_assert(std::bidirectional_iterator<xfs::perms::iterator>);
+        static_assert(std::ranges::bidirectional_range<xfs::perms const>);
         static_assert(std::ranges::sized_range<xfs::perms const>);
-        static_assert(std::same_as<std::iter_reference_t<xfs::perms::iterator>, xfs::perm>);
+        static_assert(std::same_as<std::iter_reference_t<xfs::perms::iterator>, xfs::perms::const_reference>);
+        static_assert(std::convertible_to<xfs::perms::const_reference, xfs::perm>);
 
         auto const p = xfs::perms::owner_all;
         auto it      = p.begin();
@@ -539,7 +627,7 @@ BOOST_AUTO_TEST_CASE(AMaskEnumerationKeysAFlagTypeDirectly)
         BOOST_CHECK(not m.contains(mode::write));
         BOOST_CHECK(not m.contains(std::bit_cast<mode>(std::uint8_t{0x08})));
         BOOST_CHECK(~m == modes(mode::write));
-        BOOST_CHECK(~modes() == modes::from_bits(0x07));
+        BOOST_CHECK(~modes() == modes(xstd::from_blocks, std::uint8_t{0x07}));
 }
 
 #ifdef TEST_HAS_BOOST_INT128
@@ -595,7 +683,7 @@ BOOST_AUTO_TEST_CASE(EverySixteenBitValueRoundTripsThroughAWordAndABitset)
                 auto const bits           = std::bitset<16>(word);
                 word_perms const from_w   = value;
                 bitset_perms const from_b = bits;
-                if (static_cast<std::uint16_t>(from_w) != value or from_w.bits() != value or std::bitset<16>(from_b) != bits or from_b.bits() != value or from_b != bits) {
+                if (static_cast<std::uint16_t>(from_w) != value or xstd::bit_convert<std::uint16_t>(from_w) != value or std::bitset<16>(from_b) != bits or xstd::bit_convert<std::uint16_t>(from_b) != value or from_b != bits) {
                         ++mismatches;
                 }
         }
@@ -605,24 +693,24 @@ BOOST_AUTO_TEST_CASE(EverySixteenBitValueRoundTripsThroughAWordAndABitset)
 // Each operator takes the word or the bitset on either side, and answers as the enumeration does.
 BOOST_AUTO_TEST_CASE(EachOperatorMeetsAWordAndABitsetInBothOrders)
 {
-        auto const p = word_perms::from_bits(0x0F0);
-        auto const q = bitset_perms::from_bits(0x0F0);
-        BOOST_CHECK((p | std::uint16_t{0x00F}).bits() == 0x0FF and (std::uint16_t{0x00F} | p).bits() == 0x0FF);
-        BOOST_CHECK((q | std::bitset<16>(0x00F)).bits() == 0x0FF and (std::bitset<16>(0x00F) | q).bits() == 0x0FF);
-        BOOST_CHECK((p & std::uint16_t{0x030}).bits() == 0x030 and (std::bitset<16>(0x030) & q).bits() == 0x030);
-        BOOST_CHECK((p ^ std::uint16_t{0x0FF}).bits() == 0x00F and (std::bitset<16>(0x0FF) ^ q).bits() == 0x00F);
-        BOOST_CHECK((p - std::uint16_t{0x030}).bits() == 0x0C0 and (q - std::bitset<16>(0x030)).bits() == 0x0C0);
+        auto const p = word_perms(xstd::from_blocks, std::uint16_t{0x0F0});
+        auto const q = bitset_perms(xstd::from_blocks, std::uint16_t{0x0F0});
+        BOOST_CHECK(xstd::bit_convert<std::uint16_t>(p | std::uint16_t{0x00F}) == 0x0FF and xstd::bit_convert<std::uint16_t>(std::uint16_t{0x00F} | p) == 0x0FF);
+        BOOST_CHECK(xstd::bit_convert<std::uint16_t>(q | std::bitset<16>(0x00F)) == 0x0FF and xstd::bit_convert<std::uint16_t>(std::bitset<16>(0x00F) | q) == 0x0FF);
+        BOOST_CHECK(xstd::bit_convert<std::uint16_t>(p & std::uint16_t{0x030}) == 0x030 and xstd::bit_convert<std::uint16_t>(std::bitset<16>(0x030) & q) == 0x030);
+        BOOST_CHECK(xstd::bit_convert<std::uint16_t>(p ^ std::uint16_t{0x0FF}) == 0x00F and xstd::bit_convert<std::uint16_t>(std::bitset<16>(0x0FF) ^ q) == 0x00F);
+        BOOST_CHECK(xstd::bit_convert<std::uint16_t>(p - std::uint16_t{0x030}) == 0x0C0 and xstd::bit_convert<std::uint16_t>(q - std::bitset<16>(0x030)) == 0x0C0);
 }
 
 // Against a sixteen-bit bitset, a twelve-bit flag type reads the low twelve, and finds any higher position unequal.
 BOOST_AUTO_TEST_CASE(ANarrowerWidthReadsTheLowPositionsOfABitset)
 {
         auto const high = std::bitset<16>(0x1001);
-        auto const p    = narrow_bitset_perms::from_bits(0x0FFF);
-        BOOST_CHECK((p & high).bits() == 0x001);
-        BOOST_CHECK((p - high).bits() == 0xFFE);
-        BOOST_CHECK(not(narrow_bitset_perms::from_bits(0x001) == high));
-        BOOST_CHECK(narrow_bitset_perms::from_bits(0x001) == std::bitset<16>(0x001));
+        auto const p    = narrow_bitset_perms(xstd::from_blocks, std::uint16_t{0x0FFF});
+        BOOST_CHECK(std::bitset<16>(p & high) == std::bitset<16>(0x001));
+        BOOST_CHECK(std::bitset<16>(p - high) == std::bitset<16>(0xFFE));
+        BOOST_CHECK(not(narrow_bitset_perms(xstd::from_blocks, std::uint16_t{0x001}) == high));
+        BOOST_CHECK(narrow_bitset_perms(xstd::from_blocks, std::uint16_t{0x001}) == std::bitset<16>(0x001));
         BOOST_CHECK(std::bitset<16>(~narrow_bitset_perms()) == std::bitset<16>(0x0FFF));
 }
 
