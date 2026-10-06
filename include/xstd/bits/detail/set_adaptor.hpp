@@ -16,7 +16,7 @@
 #include <xstd/bits/detail/comparisons.hpp>          // numeric_three_way, set_equal, set_three_way
 #include <xstd/bits/detail/functor.hpp>              // decay_copy
 #include <xstd/bits/detail/hash.hpp>                 // hash_append_bits, hash_append_positions, std_hash
-#include <xstd/bits/detail/intrin.hpp>               // countl_zero, countr_zero, popcount
+#include <xstd/bits/detail/intrin.hpp>               // countl_zero, countr_zero
 #include <xstd/bits/detail/ownership.hpp>            // owned_bits_t, owned_storage, owner_of, owner_reading, set_reading_tag, storage, storage_access, owns
 #include <xstd/bits/detail/shift.hpp>                // shl, shr
 #include <xstd/bits/detail/storage_ptr.hpp>          // storage_ptr_t, storage_ref_t
@@ -66,39 +66,6 @@ inline constexpr bool is_consecutive = false;
 template<class Value, class Bound>
 inline constexpr bool is_consecutive<std::ranges::iota_view<Value, Bound>> = true;
 
-// The positions a closed universe names below a static width it stops short of, else dynamic_extent.
-template<class Key, class KeyMapping, class Bits>
-consteval auto named_positions() noexcept
-        -> std::size_t
-{
-        if constexpr (sized_bit_index_mapping<KeyMapping, Key> and std::remove_const_t<Bits>::extent != std::dynamic_extent) {
-                if constexpr (KeyMapping::size < std::remove_const_t<Bits>::extent) {
-                        // Keys stopping short of the width fit one block, so no walk masks a block past the first.
-                        static_assert(std::remove_const_t<Bits>::extent <= std::remove_const_t<Bits>::bits_per_block);
-                        return KeyMapping::size;
-                }
-        }
-        return std::dynamic_extent;
-}
-
-// Block index's named positions, every one of them where the keys fill the width.
-template<class Key, class KeyMapping, class Bits>
-constexpr auto named_block(Bits const& c, std::size_t index) noexcept
-        -> Bits::block_type
-{
-        using block_type     = Bits::block_type;
-        constexpr auto named = named_positions<Key, KeyMapping, Bits>();
-
-        auto const block = c[index];
-        if constexpr (named == std::dynamic_extent) {
-                return block;
-        } else {
-                // The one block, named positions below the rest, and named below its width.
-                assert(index == 0UZ);
-                return static_cast<block_type>(block & static_cast<block_type>(shl(block_type{1}, named) - block_type{1}));
-        }
-}
-
 // One tier each: sharing a body puts the whole over readability-function-cognitive-complexity.
 
 // Blocks, lowest position first: load once per block, then tzcnt for the position and blsr to drop it.
@@ -110,7 +77,7 @@ constexpr auto walk_blocks_ascending(Bits const& c, F& f)
         constexpr auto digits = Bits::bits_per_block;
 
         for (auto const index : std::views::iota(0UZ, c.num_blocks())) {
-                auto block = named_block<Key, KeyMapping>(c, index);
+                auto block = c[index];
                 while (block != block_type{}) {
                         auto const offset = static_cast<std::size_t>(countr_zero(block));
                         // A functor returning void has no exit to take, so its walk is compiled without one.
@@ -136,7 +103,7 @@ constexpr auto walk_blocks_descending(Bits const& c, F& f)
 
         auto const blocks = c.num_blocks();
         for (auto index = blocks - 1UZ; index < blocks; --index) {
-                auto block = named_block<Key, KeyMapping>(c, index);
+                auto block = c[index];
                 while (block != block_type{}) {
                         auto const offset = digits - 1UZ - static_cast<std::size_t>(countl_zero(block));
                         // A functor returning void has no exit to take, so its walk is compiled without one.
@@ -184,15 +151,13 @@ using members_t = adapted_bits<
         std::conditional_t<owns(Store), allocator_base_type<std::remove_const_t<Bits>, set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>>, xstd::empty_base_type<>>,
         owns(Store) and std::remove_const_t<Bits>::is_structural>;
 
-// The positions an owner can hold where its type fixes them, its named keys, width or capacity, else dynamic_extent.
-template<class Bits, storage Store, class Key, class KeyMapping>
+// The positions an owner can hold where its type fixes them, its width or its capacity, else dynamic_extent.
+template<class Bits, storage Store>
 consteval auto static_max_size() noexcept
         -> std::size_t
 {
         using bits_type = std::remove_const_t<Bits>;
-        if constexpr (owns(Store) and named_positions<Key, KeyMapping, Bits>() != std::dynamic_extent) {
-                return named_positions<Key, KeyMapping, Bits>();
-        } else if constexpr (owns(Store) and bits_type::extent != std::dynamic_extent) {
+        if constexpr (owns(Store) and bits_type::extent != std::dynamic_extent) {
                 return bits_type::extent;
         } else if constexpr (owns(Store) and bits_type::has_static_capacity) {
                 return bits_type::static_capacity();
@@ -236,8 +201,8 @@ struct run_time_max_size : Members
 // The adaptor's base: its storage under max_size() as its column has it, which the adaptor does not declare.
 template<class Bits, storage Store, class Derived, class Key, class KeyMapping, class Compare>
 using sizes_t = std::conditional_t<
-        static_max_size<Bits, Store, Key, KeyMapping>() != std::dynamic_extent,
-        fixed_max_size<members_t<Bits, Store, Derived, Key, KeyMapping, Compare>, static_max_size<Bits, Store, Key, KeyMapping>()>,
+        static_max_size<Bits, Store>() != std::dynamic_extent,
+        fixed_max_size<members_t<Bits, Store, Derived, Key, KeyMapping, Compare>, static_max_size<Bits, Store>()>,
         run_time_max_size<members_t<Bits, Store, Derived, Key, KeyMapping, Compare>, Bits, Store>>;
 
 } // namespace set
@@ -264,26 +229,6 @@ class set_adaptor : public set::sizes_t<Bits, Store, Derived, Key, KeyMapping, C
                 } else {
                         return *self.m_bits;
                 }
-        }
-
-        static constexpr auto named = set::named_positions<Key, KeyMapping, Bits>();
-
-        // One past the last position a key names, where every walk ends: the width, unless the keys stop short of it.
-        [[nodiscard]] static constexpr auto key_end(std::size_t width) noexcept
-                -> std::size_t
-        {
-                if constexpr (named == std::dynamic_extent) {
-                        return width;
-                } else {
-                        return named;
-                }
-        }
-
-        // A scan's answer, ending at key_end where it found nothing or only positions no key names.
-        [[nodiscard]] static constexpr auto named_or_end(std::size_t width, std::size_t pos) noexcept
-                -> std::size_t
-        {
-                return std::ranges::min(pos, key_end(width));
         }
 
         // Members rather than templates over Bits or KeyMapping, so ADL looks in the key's namespaces alone.
@@ -431,11 +376,11 @@ class set_adaptor : public set::sizes_t<Bits, Store, Derived, Key, KeyMapping, C
                 -> std::size_t
                 requires (not zero_width<Bits>)
         {
-                assert(n < key_end(ptr->size()));
+                assert(n < ptr->size());
                 if constexpr (is_descending) {
-                        return named_or_end(ptr->size(), ptr->total_find_prev(n));
+                        return ptr->total_find_prev(n);
                 } else {
-                        return named_or_end(ptr->size(), ptr->exclusive_find_next(n));
+                        return ptr->exclusive_find_next(n);
                 }
         }
 
@@ -447,11 +392,11 @@ class set_adaptor : public set::sizes_t<Bits, Store, Derived, Key, KeyMapping, C
                 if constexpr (not is_descending) {
                         assert(ptr->find_first() < n);
                         return ptr->exclusive_find_prev(n);
-                } else if (n == key_end(ptr->size())) {
-                        assert(ptr->find_first() < key_end(ptr->size()));
+                } else if (n == ptr->size()) {
+                        assert(ptr->find_first() < ptr->size());
                         return ptr->find_first();
                 } else {
-                        assert(ptr->exclusive_find_next(n) < key_end(ptr->size()));
+                        assert(ptr->exclusive_find_next(n) < ptr->size());
                         return ptr->exclusive_find_next(n);
                 }
         }
@@ -709,16 +654,16 @@ public:
                 -> const_iterator
         {
                 if constexpr (is_descending) {
-                        return {&bits(), named_or_end(bits().size(), bits().total_find_prev(key_end(bits().size())))};
+                        return {&bits(), bits().total_find_prev(bits().size())};
                 } else {
-                        return {&bits(), named_or_end(bits().size(), bits().find_first())};
+                        return {&bits(), bits().find_first()};
                 }
         }
 
         [[nodiscard]] constexpr auto end() const noexcept
                 -> const_iterator
         {
-                return {&bits(), key_end(bits().size())};
+                return {&bits(), bits().size()};
         }
 
         [[nodiscard]] constexpr auto rbegin() const noexcept
@@ -799,15 +744,7 @@ public:
         [[nodiscard]] constexpr auto size() const noexcept
                 -> size_type
         {
-                if constexpr (named == std::dynamic_extent) {
-                        return bits().count();
-                } else {
-                        auto n = 0UZ;
-                        for (auto const index : std::views::iota(0UZ, bits().num_blocks())) {
-                                n += static_cast<std::size_t>(popcount(set::named_block<Key, KeyMapping>(bits(), index)));
-                        }
-                        return n;
-                }
+                return bits().count();
         }
 
         using members_type::max_size;
@@ -828,7 +765,7 @@ public:
                 } else if constexpr (is_descending) {
                         return {&bits(), bits().find_first()};
                 } else {
-                        return {&bits(), bits().exclusive_find_prev(key_end(bits().size()))};
+                        return {&bits(), bits().exclusive_find_prev(bits().size())};
                 }
         }
 
@@ -1217,7 +1154,7 @@ public:
                 -> bool
         {
                 auto const pos = KeyMapping::to_index(x);
-                return pos < key_end(bits().size()) and bits().test(pos);
+                return pos < bits().size() and bits().test(pos);
         }
 
         [[nodiscard]] constexpr auto count(key_type const& x) const noexcept
@@ -1239,7 +1176,7 @@ public:
                 if constexpr (is_descending) {
                         // The highest position not above x's, which is the scan below the one past it.
                         auto const pos = KeyMapping::to_index(x);
-                        return {&bits(), named_or_end(bits().size(), bits().total_find_prev(pos < key_end(bits().size()) ? pos + 1UZ : key_end(bits().size())))};
+                        return {&bits(), bits().total_find_prev(pos < bits().size() ? pos + 1UZ : bits().size())};
                 } else {
                         return contains(x) ? const_iterator{&bits(), KeyMapping::to_index(x)} : upper_bound(x);
                 }
@@ -1250,12 +1187,12 @@ public:
         {
                 auto const pos = KeyMapping::to_index(x);
                 if constexpr (is_descending) {
-                        return {&bits(), named_or_end(bits().size(), bits().total_find_prev(std::ranges::min(pos, key_end(bits().size()))))};
+                        return {&bits(), bits().total_find_prev(std::ranges::min(pos, bits().size()))};
                 } else {
-                        if (pos >= key_end(bits().size())) {
+                        if (pos >= bits().size()) {
                                 return end();
                         }
-                        return {&bits(), named_or_end(bits().size(), bits().exclusive_find_next(pos))};
+                        return {&bits(), bits().exclusive_find_next(pos)};
                 }
         }
 
@@ -1305,9 +1242,9 @@ public:
         {
                 auto const [lo, hi] = equivalent_positions(x);
                 if constexpr (is_descending) {
-                        return {&bits(), named_or_end(bits().size(), bits().total_find_prev(hi))};
+                        return {&bits(), bits().total_find_prev(hi)};
                 } else {
-                        return {&bits(), named_or_end(bits().size(), bits().inclusive_find_next(lo))};
+                        return {&bits(), bits().inclusive_find_next(lo)};
                 }
         }
 
@@ -1318,9 +1255,9 @@ public:
         {
                 auto const [lo, hi] = equivalent_positions(x);
                 if constexpr (is_descending) {
-                        return {&bits(), named_or_end(bits().size(), bits().total_find_prev(lo))};
+                        return {&bits(), bits().total_find_prev(lo)};
                 } else {
-                        return {&bits(), named_or_end(bits().size(), bits().inclusive_find_next(hi))};
+                        return {&bits(), bits().inclusive_find_next(hi)};
                 }
         }
 
@@ -1380,7 +1317,7 @@ private:
                 -> std::pair<std::size_t, std::size_t>
         {
                 auto const comp      = key_compare();
-                auto const positions = std::views::iota(0UZ, key_end(bits().size()));
+                auto const positions = std::views::iota(0UZ, bits().size());
                 // Descending, a key orders before x exactly where comp(x, key) holds.
                 auto const below = [&](std::size_t pos) -> bool {
                         if constexpr (is_descending) {

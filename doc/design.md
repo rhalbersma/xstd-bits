@@ -2506,146 +2506,100 @@ is `basic_bit_array<std::uint8_t, 16>`. The bounded column has the same forms, r
 
 ### flag-types
 
-A flag type replaces a bitmask enumeration such as `std::filesystem::perms`: code that names the enumeration compiles
-with the type's name respelled, and the set vocabulary comes on top. `bit_flag_set<BitMask, Key, Block, N, KeyMapping,
-Interop>` is the base it derives from, `BitMask` being the flag type itself, so that every operator returns it.
-That base is the set reading over one block, so the flag type is a set as `bit_fixed_set` is, with the flag vocabulary
-on top. `examples/include/xstd/filesystem.hpp` builds `xstd::filesystem::perms` this way, as the worked case. A flag
-type combines three pieces, and no other library combines all three.
+A flag type replaces a bitmask type such as `std::filesystem::perms`: code written against the mask keeps the
+spelling of its constants, only the variable's type changes, and the set vocabulary comes on top.
+`bit_flag_set<Mask, N, KeyMapping>` is the set of `Mask`'s one-bit values below `N`: its `key_type` is `Mask`
+itself, each key a value with exactly one bit set, and `KeyMapping` defaults to `bit_flag_mapping<Mask, N>`, which
+ranks a one-bit value at its bit. `N` defaults to the mask's width. There is no CRTP and no separate rank
+enumeration: `bit_flag_set` derives from the `set_adaptor` that `basic_bit_fixed_set` derives from, over one block
+of `smallest_block_t<N>`, and passes itself as the type its operators return, as `basic_bit_fixed_set` does.
+`examples/include/xstd/filesystem.hpp` is one line, `using perms = bit_flag_set<std::filesystem::perms, 16>;`,
+sixteen bits rather than the twelve permissions so that `std::filesystem::perms::unknown`, `0xFFFF`, survives the
+round trip; its four high bits are keys like the others.
 
-1. **A rank enumeration names the elements.** `enum class perm : std::uint8_t { others_exec, ..., set_uid }` gives
-   each POSIX permission bit its position as its rank, and `enum_traits<perm>` lists the twelve. It is what iteration
-   yields, so a `switch`, a `formatter` and the set vocabulary all speak it.
-2. **Constants of the flag type itself.** `perms::owner_read`, `perms::owner_all` and `perms::none` are `perms`,
-   so `|` needs no opt-in, a composite is an ordinary value, and the standard's spelling carries over. This is how
-   `[ios.base]` specifies `fmtflags`, and how Rust's `bitflags` and Swift's `OptionSet` declare flags. A class is
-   incomplete inside its own definition, so the constants are declared `static const` in the class and defined
-   `inline constexpr` after it, from where they are usable in constant expressions.
-3. **Implicit conversions to and from the interop mask.** Values from the standard's functions flow in,
-   `xfs::perms p = fs::status(path).permissions();`, and ours flow out, `fs::permissions(path, p)`. Rank `i` is bit
-   `i`, so the block is the mode word and each conversion is a cast.
+`Mask` is an enumeration or a `std::bitset` as wide as a block, one block for now, and an `xstd::bit_mask` either
+way. Its word is the enumeration's underlying type made unsigned, or the block a bitset of that width is, and every
+conversion between the mask and the block goes through that word: `std::to_underlying` and a cast for an
+enumeration, `xstd::bit_convert` for a bitset, position `i` staying position `i`. An unsigned integer is a bit mask
+too, but its one-bit values are not a type of their own, and it is left out.
 
-The flag type is itself an `xstd::bit_mask`, a [bitmask.types] type with `~`, `|`, `&`, `^` and their compound forms
-closed over it; `Key` is not a mask but a rank, or a one-bit value naming one position. The base cannot state that
-as a constraint, `BitMask` being incomplete where the base is instantiated, so it is asserted of each flag type.
+1. **Implicit conversions both ways.** Values from the standard's functions flow in,
+   `xfs::perms p = fs::status(path).permissions();`, and ours flow out, `fs::permissions(path, p)`. The converting
+   constructor takes any value of the mask, so a composite such as `fs::perms::owner_all` is an ordinary argument,
+   and a braced list is the union of its values: `{m}` is the conversion from `m`, and `{a, b}` of two one-bit
+   values is the set of both, which is what [set.cons] makes of it too.
+2. **The mask's constants are the flag type's.** `fs::perms::owner_read | p` is a flag type, so the standard's
+   spelling carries over unchanged and no constant is written twice. This is the split Qt's `QFlags<Enum>` makes, a
+   set type over the enumeration that names its values, where Rust's `bitflags`, Python's `enum.Flag` and Swift's
+   `OptionSet` make the element the type itself.
+3. **The set reading.** Iteration yields the one-bit values, highest first; `contains`, `insert`, `erase`, `find`,
+   the bounds, `rbegin`, `clear`, `swap`, the hash and `max_size()`, which is `N`, come with the adaptor.
 
-Other libraries offer one of an enum set or a flag type, seldom both. The two differ in whether they iterate, and in
-what happens to a bit that no flag names:
+The flag type is itself an `xstd::bit_mask`, a [bitmask.types] type with `~`, `|`, `&`, `^` and their compound
+forms closed over it, which the tests assert of each instantiation.
 
-| Library | Enum set | Flag type | Bits no flag names | Iterates? |
+Other libraries offer one of an enum set or a flag type, seldom both:
+
+| Library | Enum set | Flag type | Element | Iterates? |
 |---|---|---|---|---|
-| xstd-bits | `bit_enum_set<E>` | `bit_flag_set<BitMask, …, Interop>`, implicit conversion to and from an enumeration, unsigned integer or `std::bitset` | kept; iteration and `size()` skip them | both iterate |
-| C++ standard | — (`std::bitset<N>` is indexed, not keyed) | bitmask types ([bitmask.types]: `fs::perms`, `ios_base::fmtflags`) | kept | no |
-| Qt | — | `QFlags<Enum>` | kept | no |
+| xstd-bits | `bit_enum_set<E>`, keyed by rank | `bit_flag_set<Mask, N>`, over an enumeration or a `std::bitset` | the mask's one-bit values | both iterate |
+| C++ standard | — (`std::bitset<N>` is indexed, not keyed) | bitmask types ([bitmask.types]: `fs::perms`, `ios_base::fmtflags`) | — | no |
+| Qt | — | `QFlags<Enum>` | `Enum` | no |
 | Chromium `base` | `EnumSet<E, Min, Max>` | — | — | yes |
-| Rust | `enumset` crate | `bitflags` crate | `bitflags` chooses per call: `from_bits_retain`, `from_bits_truncate`, or `from_bits` rejecting | yes; `bitflags` yields leftover bits as one final value |
-| Python | — (a plain `set` of `Enum` members) | `enum.Flag`, `enum.IntFlag` | chosen per type: `STRICT`, `CONFORM`, `EJECT`, `KEEP` | yes, named members only |
-| Java | `EnumSet<E>` | — | — | yes |
-| Swift | — (a hashed `Set<E>`) | `OptionSet` | kept | no |
-| C# | — (`HashSet<E>`) | `[Flags]` enum | kept | no |
+| Rust | `enumset` crate | `bitflags` crate | `Self` | yes |
+| Python | — (a plain `set` of `Enum` members) | `enum.Flag`, `enum.IntFlag` | `Self` | yes, named members only |
+| Java | `EnumSet<E>`, keyed by ordinal | — | — | yes |
+| Swift | — (a hashed `Set<E>`) | `OptionSet` | `Self` | no |
+| C# | — (`HashSet<E>`) | `[Flags]` enum | — | no |
 
-Only Rust, through two crates, and this library offer both, and here the flag type is the same set reading over one
-block. On ordering, Rust's `bitflags` derives `Ord` over the integer it wraps, which is the order the flag type's
-descending default gives here.
+Java's `EnumSet` keys by ordinal, which is `bit_enum_set`; Qt's `QFlags` keys by the mask's own values, which is
+`bit_flag_set`. Only Rust, through two crates, and this library offer both, and here both are the same set reading.
 
-**The interop mask is any of [bitmask.types]'s three forms.** `Interop` is an `xstd::bit_mask` that is an
-enumeration, an unsigned integer or a `std::bitset`, the forms whose positions can be read and written one by one:
-an enumeration and an integer through their unsigned word, a bitset position by position. A class that is a bit
-mask by its operators alone, a flag type among them, offers no way to reach its bits and is not taken. The mask must
-hold all `N` positions, so the word converts to it whole; a mask wider than `N` meets the flag type as the
-enumeration always has, its positions at or above `N` truncated by `&`, `-` and `==` and precluded on the way in.
+**A value wider than `N` meets the flag type as the enumeration always has.** Its positions at or above `N` are
+truncated by `&`, `-` with the flag type on the left, their compound forms and `==`, which finds such a value
+unequal, and are precluded by an `assert` on the way in: the conversion, `|`, `^`, their compound forms and `-` with
+the mask on the left. `xfs::perms(xstd::from_blocks, 0xFFFF)` takes the block as it is, `bitflags`'
+`from_bits_retain`, and `xstd::bit_convert<std::uint16_t>(p)` reads it back.
 
-**The base is the set reading over one block, whose named keys may stop short of `N`.** `bit_flag_set` derives from
-the `set_adaptor` that `basic_bit_fixed_set` derives from, over a `bit_block_container` of one `Block` holding `N`
-positions, and passes it `BitMask` as the type its operators return. `basic_bit_fixed_set` insists on `N` being the
-mapping's `size`; the adaptor does not, and `perms` wants twelve keys in sixteen bits, so that
-`std::filesystem::perms::unknown`, `0xFFFF`, survives the round trip, as `bitflags`' `from_bits_retain` does. `N` is
-the word's width and the mapping's `size`, where it closes a universe, is the number of named positions, at most `N`.
-`perms(xstd::from_blocks, 0xFFFF)` takes the word as it is, unnamed positions included, and
-`xstd::bit_convert<std::uint16_t>(p)` reads it back, wherever `N` is the block's width; there is no `bits()` member,
-that name being the adaptor's own door to its storage. Everything a set has comes with the base: `insert`, `erase`,
-`find`, the bounds, `rbegin`, `clear`, `swap`, `max_size()` and the bidirectional iterator, whose read-only proxy
-converts to the key. ADL on that proxy searches the rank enumeration's namespace, where its `formatter` lives, and
-`std::format("{}", p)` prints `{owner_read, owner_write}` through the standard's range formatter, the flag type
-having a `key_type`. `N` narrower than the block adds a precondition on the conversion in, no bit at or above `N`,
-checked by an `assert` rather than truncated. The mixed `&`, `-` with the flag type on the left, their compound
-forms, and `==` need no such precondition: no bit of the flag type is at or above `N`.
-
-**The value sees every position below `N`; the range sees the named ones.** The adaptor bounds each walk at the last
-named position, so iteration, `size()`, `empty()`, `max_size()`, `contains(Key)`, `find`, `lower_bound`,
-`upper_bound`, `equal_range` and `for_each` see the named flags alone, and `size()` stays the distance from
-`begin()` to `end()`. `insert` refuses an unnamed position with `std::out_of_range`, as a set refuses a key past its
-`max_size()`. The value is the whole word: `==`, `<=>`, the hash, `~`, `|`, `&`, `^`, `-` and their compound forms,
-`contains(BitMask)`, `is_subset_of`, `intersects`, `clear` and the conversions all take every bit below `N`. So
-`~perms::none` is `perms::unknown`, and `perms::unknown - perms::mask` is empty as a range yet unequal to
-`perms::none` as a value.
-
-**A flag type orders as the enumeration it replaces.** It has no `Compare` parameter: the base always passes
-`std::greater<Key>` to the adaptor, and over a descending set the adaptor's `<=>` is `numeric_three_way`, the block compared as an unsigned number: the order the
-bitmask enumeration's own relational operators give, and the `Ord` that Rust's `bitflags` derives. It stays the
-container's lexicographic comparison over its own iteration, since walking from the highest position down, the first
-difference is the highest bit that differs; the block also holds the unnamed positions, which iteration skips and
-the value does not. So iteration, `front()`, `back()`, the formatter and `lower_bound` run from the highest flag down:
-for `perms`, `set_uid` through `others_exec`, the order in which `ls -l` reads the mode. An ascending flag type would order
-`{others_exec, set_uid}` before `{others_write}` although its word is the larger, which is no longer the order of
-the mask it replaces, and a transparent comparator would turn on the heterogeneous `contains(K)`, which an interop
-value would reach ahead of `contains(BitMask)`; neither is offered.
+**A flag type orders as the mask it replaces, highest flag first.** It has no `Compare` parameter: it always passes
+`std::greater<Mask>` to the adaptor, and over a descending set the adaptor's `<=>` is `numeric_three_way`, the block
+compared as an unsigned number: the order the bitmask enumeration's own relational operators give, the order of a
+bitset's `to_ulong()`, and the `Ord` that Rust's `bitflags` derives. It stays the container's lexicographic
+comparison over its own iteration, since walking from the highest position down, the first difference is the
+highest bit that differs. So iteration, `front()`, `back()` and `lower_bound` run from the highest flag down: for
+`perms`, `set_uid` through `others_exec`, the order in which `ls -l` reads the mode. `std::greater<std::bitset<M>>`
+is never called, a bitset having no `<`: the adaptor orders by position and only hands the comparator out through
+`key_comp()`. A transparent comparator would turn on the heterogeneous `contains(K)`, and is not offered either.
 
 **The mixed operators are generated, because hand-writing them goes wrong.** With only the homogeneous operators,
 `p ^ std::filesystem::perms::owner_write` is ambiguous: ours wants a conversion on the right, the mask's own
-`operator^` one on the left. Given an `Interop`, the base declares `==`, `|`, `&`, `^` and `-` against it in both
-orders, each an exact match for both operands, so it wins outright; `==` is one declaration, its reversed form being
-the language's. The homogeneous operators are the adaptor's, which take `BitMask` through a derived-to-base
-conversion; a mixed operator taking the mask as a plain parameter would tie with them on two flag values, exact on one
-operand and a user conversion on the other. So each mixed operator is a hidden friend template whose mask parameter
-must deduce exactly as `Interop`, and a flag type, converting to the mask, never deduces as one. A key on either side
-reaches the adaptor's own operators over `key_type`, and the mask's compound forms `&=`, `-=`, `|=` and `^=` are
-members beside the adaptor's, which a using-declaration keeps in view. The model this design came from left `^` out
-by hand, which is how the ambiguity was found.
+`operator^` one on the left. The flag type declares `==`, `|`, `&`, `^` and `-` against the mask in both orders,
+each an exact match for both operands, so it wins outright; `==` is one declaration, its reversed form being the
+language's. Each is a hidden friend template whose mask parameter must deduce exactly as `Mask`, so that a flag
+type, converting to the mask, never deduces as one, and each takes the flag type by value, an identity conversion
+that beats the adaptor's key-typed operators, which reach the flag type through its base and would otherwise read a
+multi-bit value as one key. The compound forms against the mask are members beside the set forms, which take the
+adaptor's own type as its binary operators call them.
 
-**`p[k]` is a proxy for a `bool`**, reading as `contains(k)` and assigning as insert or erase: Qt's `setFlag(f, on)`
-and `bitflags`' `set(f, value)`, which a set can offer without becoming a sequence. It takes the sequence proxy's
-shape: `value_type` is `bool`, one implicit `operator value_type()`, const-qualified assignment from `value_type`, and
-a copy assignment that assigns the bit rather than rebinding, with no templated conversion and no `operator==`, so
-`p[k] == true` and `if (p[k])` go through the built-in comparison and contextual conversion. It is a class nested in
-the base, and as `perms::reference` it hides the adaptor's name for the iterator's proxy, which stays
-`perms::const_reference`. It is not a namespace-scope template over the user's types, so ADL on it searches `xstd`
-alone and never the namespaces of `BitMask`, `Block`, `KeyMapping` or `Interop`: a mixed `operator==(bool, T)` there,
-as Boost.Int128 declares for its `uint128`, cannot tie with the built-in comparison. On a `const` flag type `p[k]` is
-`contains(k)`.
+**`contains(k)` is `std::set`'s membership of one flag**, `k` a one-bit value, a value with more bits breaking
+`bit_flag_mapping`'s precondition. All-of is `bit_flag_set(m).is_subset_of(p)` and any-of is `intersects(p, q)`,
+the adaptor's hidden friend, so no member answers two questions under one name. There is no `operator[]` and no
+proxy for a `bool`: a set changes one flag through `insert(k)` and `erase(k)`, as `std::set` does. There is no
+nullary `count()` either: `size()` answers it.
 
-The names follow the vocabulary Rust and Swift already share. `contains(Key)` is `std::set`'s membership and
-`contains(BitMask)` is all-of, as in `bitflags` and Swift, and the two agree on a single flag. Overlap is asked
-positively, `intersects(p, q)`, since flags code nearly always asks whether any flag is set; it is the adaptor's
-hidden friend, as it is for every set. `is_subset_of` is the library's own spelling. There is no nullary `count()`:
-`size()` answers it, and `std::set`'s `count(key)` is membership. The key constructor is `explicit`, so a key meets
-the flag type only through its constant.
-
-**Without a parallel enumeration**, `bit_flag_mapping<Key, N>` keys a set on the mask enumeration itself: `to_index` is
-`countr_zero` of a one-bit value and `from_index(i)` is `Key(1 << i)`, both in the underlying type's unsigned
-counterpart, so an enumerator on a signed type's sign bit is the highest position like any other. Iteration yields
-one-bit values. `to_index` asserts a single bit, so `insert(Key::all)` fails there instead of inserting bit 0. A set
-orders keys by position, which for the sign bit is not the order of the underlying values.
+**A user may still derive a class of their own** from `bit_flag_set` to add names, but its operators then return
+the base type, as a class derived from any standard container's would.
 
 Where it is not drop-in:
 
-- **The type's spelling changes.** `fs::perms` becomes `xfs::perms` where code names it, and the rest of `fs::` is
-  untouched. Re-exporting `std::filesystem` from `xstd::filesystem`, so that only the alias changes, would work, but
-  would make every `fs::` name pass through this library.
+- **The variable's type changes.** `fs::perms p` becomes `xfs::perms p`; the constants, the functions and the rest
+  of `fs::` are untouched.
 - **It is a class, not an enumeration.** `std::to_underlying(p)` and `static_cast<unsigned>(p)` do not compile;
-  `switch (p)` and `fs::perms(p)` do, through the conversion. The relational operators between two flag values
-  compare the blocks as unsigned numbers, and against the standard's value they go through the conversion and
-  compare the enumeration's underlying words, so the two agree.
+  `switch (p)` and `fs::perms(p)` do, through the conversion.
 - **A standard function's result keeps the standard type.** `auto q = fs::status(path).permissions();` is a
   `std::filesystem::perms`, with none of the queries until it is assigned to `xfs::perms`.
-- **A value with bits above `N` does not convert in.** `~` on the standard's enumeration sets every bit of its
-  underlying type, so `p | ~fs::perms::none`, `p ^= ~fs::perms::none` and `~fs::perms::none - p` assert, those bits
-  entering the result. `p & x`, `x & p`, `p - x`, `p &= x` and `p -= x` are total, since `p` has no bit above `N` for
-  `x`'s to meet, so truncating `x` is exact and `p &= ~fs::perms::group_write` works; `==` is total too, a value with
-  a bit above `N` equalling none.
-- **Each name is written twice**, as an enumerator and as a constant. Reflection can read an enumeration but cannot
-  declare members, so nothing generates the constants yet.
-- **Printing** needs a `formatter` for the rank enumeration: a name table today, reflection later.
+- **Printing** needs a `formatter` for the mask, which a user may not specialize for `std::filesystem::perms`; a
+  program-defined mask prints through its own, `{exec, read}`.
 
 ### a-name-by-storage
 

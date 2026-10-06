@@ -6,45 +6,42 @@
 #ifndef XSTD_BITS_BIT_FLAG_MAPPING_HPP
 #define XSTD_BITS_BIT_FLAG_MAPPING_HPP
 
-#include <xstd/bits/detail/shift.hpp> // shl
-#include <bit>                        // countr_zero, has_single_bit
-#include <cassert>                    // assert
-#include <cstddef>                    // size_t
-#include <limits>                     // numeric_limits
-#include <type_traits>                // is_enum_v, make_unsigned_t, underlying_type_t
-#include <utility>                    // to_underlying
+#include <xstd/bits/detail/flag_word.hpp> // flag_mask, flag_width_v, flag_word_t, from_word, to_word
+#include <xstd/bits/detail/shift.hpp>     // shl
+#include <bit>                            // countr_zero, has_single_bit
+#include <cassert>                        // assert
+#include <cstddef>                        // size_t
 
-// A bitmask enumeration keyed on its own one-bit values, so a set of its flags needs no enumeration of ranks.
+// A bitmask type keyed on its own one-bit values, so a set of its flags needs no enumeration of ranks.
 namespace xstd {
 
-// A one-bit value ranks at the position of its bit, and rank i is the value 1 << i, both in the unsigned counterpart.
-template<class Key, std::size_t N = static_cast<std::size_t>(std::numeric_limits<std::make_unsigned_t<std::underlying_type_t<Key>>>::digits)>
-        requires std::is_enum_v<Key>
+// A one-bit value ranks at the position of its bit, and rank i is the value 1 << i: an enumeration or a std::bitset.
+template<class Key, std::size_t N = bits::detail::flag_width_v<Key>>
+        requires bits::detail::flag_mask<Key>
 struct bit_flag_mapping
 {
 private:
-        // Unsigned, so an enumerator on a signed type's sign bit is one bit like the others.
-        using unsigned_type = std::make_unsigned_t<std::underlying_type_t<Key>>;
+        using word_type = bits::detail::flag_word_t<Key>;
 
-        static_assert(N <= static_cast<std::size_t>(std::numeric_limits<unsigned_type>::digits));
+        static_assert(N <= bits::detail::flag_width_v<Key>);
 
 public:
         static constexpr std::size_t size = N;
 
         // The key has exactly one bit set; one at or above N ranks at size or above.
-        [[nodiscard]] static constexpr auto to_index(Key key) noexcept
+        [[nodiscard]] static constexpr auto to_index(Key const& key) noexcept
                 -> std::size_t
         {
-                auto const bits = static_cast<unsigned_type>(std::to_underlying(key));
-                assert(std::has_single_bit(bits));
-                return static_cast<std::size_t>(std::countr_zero(bits));
+                auto const word = bits::detail::to_word(key);
+                assert(std::has_single_bit(word));
+                return static_cast<std::size_t>(std::countr_zero(word));
         }
 
         [[nodiscard]] static constexpr auto from_index(std::size_t index) noexcept
                 -> Key
         {
                 assert(index < N);
-                return static_cast<Key>(bits::detail::shl(unsigned_type{1}, index));
+                return bits::detail::from_word<Key>(bits::detail::shl(word_type{1}, index));
         }
 };
 

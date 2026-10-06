@@ -98,7 +98,7 @@ target_sources(
         include/xstd/bits/detail/functor.hpp
         include/xstd/bits/detail/hash.hpp
         include/xstd/bits/detail/intrin.hpp
-        include/xstd/bits/detail/mask_word.hpp
+        include/xstd/bits/detail/flag_word.hpp
         include/xstd/bits/detail/ordinal.hpp
         include/xstd/bits/from_blocks.hpp
         include/xstd/bits/ext/boost.hpp

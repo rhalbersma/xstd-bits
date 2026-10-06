@@ -3,18 +3,20 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/bit_fixed_set.hpp>    // basic_bit_fixed_set
-#include <xstd/bits/bit_flag_mapping.hpp> // bit_flag_mapping
-#include <xstd/bits/from_blocks.hpp>      // from_blocks
-#include <boost/test/unit_test.hpp>       // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <algorithm>                      // ranges::equal
-#include <array>                          // array
-#include <bit>                            // bit_cast
-#include <concepts>                       // same_as
-#include <cstddef>                        // size_t
-#include <cstdint>                        // int8_t, uint8_t
-#include <ranges>                         // iota
-#include <stdexcept>                      // out_of_range
+#include <xstd/bits/bit_fixed_set.hpp>     // basic_bit_fixed_set
+#include <xstd/bits/bit_flag_mapping.hpp>  // bit_flag_mapping
+#include <xstd/bits/bit_index_mapping.hpp> // sized_bit_index_mapping
+#include <xstd/bits/from_blocks.hpp>       // from_blocks
+#include <boost/test/unit_test.hpp>        // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
+#include <algorithm>                       // ranges::equal
+#include <array>                           // array
+#include <bit>                             // bit_cast
+#include <bitset>                          // bitset
+#include <concepts>                        // same_as
+#include <cstddef>                         // size_t
+#include <cstdint>                         // int8_t, uint8_t
+#include <ranges>                          // iota
+#include <stdexcept>                       // out_of_range
 
 BOOST_AUTO_TEST_SUITE(BitFlagMapping)
 
@@ -109,6 +111,21 @@ BOOST_AUTO_TEST_CASE(AMaskEnumerationKeysASetDirectly)
         using Y      = xstd::basic_bit_fixed_set<signed_flag, std::uint8_t, 8UZ, xstd::bit_flag_mapping<signed_flag>>;
         auto const y = Y(xstd::from_blocks, std::uint8_t{0x81});
         BOOST_CHECK(std::ranges::equal(y, std::array{signed_flag::low, signed_flag::sign}));
+}
+
+// A bitset as wide as a block is keyed the same way: a one-bit bitset ranks at its bit, and rank i is that bitset.
+BOOST_AUTO_TEST_CASE(ABitsetRanksAtItsBitsPosition)
+{
+        using mapping = xstd::bit_flag_mapping<std::bitset<16>>;
+        static_assert(xstd::sized_bit_index_mapping<mapping, std::bitset<16>> and mapping::size == 16UZ);
+        static_assert(xstd::bit_flag_mapping<std::bitset<16>, 12UZ>::size == 12UZ);
+        static_assert(mapping::to_index(std::bitset<16>(0x0400)) == 10UZ);
+        static_assert(mapping::from_index(15UZ) == std::bitset<16>(0x8000));
+        static_assert(not xstd::sized_bit_index_mapping<mapping, std::bitset<8>>);
+        for (auto const i : std::views::iota(0UZ, mapping::size)) {
+                BOOST_CHECK_EQUAL(mapping::to_index(mapping::from_index(i)), i);
+                BOOST_CHECK(mapping::from_index(i).count() == 1UZ and mapping::from_index(i).test(i));
+        }
 }
 
 BOOST_AUTO_TEST_SUITE_END()
