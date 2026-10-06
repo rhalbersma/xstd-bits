@@ -2505,9 +2505,16 @@ combines three pieces, and no other library combines all three.
    `[ios.base]` specifies `fmtflags`, and how Rust's `bitflags` and Swift's `OptionSet` declare flags. A class is
    incomplete inside its own definition, so the constants are declared `static const` in the class and defined
    `inline constexpr` after it, from where they are usable in constant expressions.
-3. **Implicit conversions to and from the interop enumeration.** Values from the standard's functions flow in,
+3. **Implicit conversions to and from the interop mask.** Values from the standard's functions flow in,
    `xfs::perms p = fs::status(path).permissions();`, and ours flow out, `fs::permissions(path, p)`. Rank `i` is bit
    `i`, so the block is the mode word and each conversion is a cast.
+
+**The interop mask is any of [bitmask.types]'s three forms.** `Interop` is an `xstd::bit_mask` that is an
+enumeration, an unsigned integer or a `std::bitset`, the forms whose positions can be read and written one by one:
+an enumeration and an integer through their unsigned word, a bitset position by position. A class that is a bit
+mask by its operators alone, a flag type among them, offers no way to reach its bits and is not taken. The mask must
+hold all `N` positions, so the word converts to it whole; a mask wider than `N` meets the flag type as the
+enumeration always has, its positions at or above `N` truncated by `&`, `-` and `==` and precluded on the way in.
 
 **The base holds one block, not a set.** A `basic_bit_fixed_set<Key, Block, N, KeyTraits>` would insist on `N` being
 the traits' `size`, and `perms` wants twelve keys in sixteen bits, so that `std::filesystem::perms::unknown`,
@@ -2524,7 +2531,7 @@ precondition on the conversion in, no bit at or above `N`, checked by an `assert
 is at or above `N`.
 
 **The mixed operators are generated, because hand-writing them goes wrong.** With only the homogeneous operators,
-`p ^ std::filesystem::perms::owner_write` is ambiguous: ours wants a conversion on the right, the enumeration's own
+`p ^ std::filesystem::perms::owner_write` is ambiguous: ours wants a conversion on the right, the mask's own
 `operator^` one on the left. Given an `Interop`, the base declares `==`, `|`, `&`, `^` and `-` against it in both
 orders, each an exact match for both operands, so it wins outright; `==` is one declaration, its reversed form being
 the language's. All of them are hidden friends taking `Derived` rather than the base, since a derived-to-base

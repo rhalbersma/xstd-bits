@@ -98,6 +98,7 @@ target_sources(
         include/xstd/bits/detail/functor.hpp
         include/xstd/bits/detail/hash.hpp
         include/xstd/bits/detail/intrin.hpp
+        include/xstd/bits/detail/mask_word.hpp
         include/xstd/bits/from_blocks.hpp
         include/xstd/bits/ext/boost.hpp
         include/xstd/bits/ext/boost/bit_small_set.hpp
