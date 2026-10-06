@@ -90,7 +90,8 @@ inline constexpr perms perms::unknown = from_bits(0xFFFF);
 template<>
 struct std::formatter<xstd::filesystem::perm> : std::formatter<std::string_view>
 {
-        static constexpr std::array<std::string_view, 12> names = {"others_exec", "others_write", "others_read", "group_exec", "group_write", "group_read", "owner_exec", "owner_write", "owner_read", "sticky_bit", "set_gid", "set_uid"};
+        // Pointers rather than string_view, whose conversion from a literal here crashes GCC 17 trunk.
+        static constexpr std::array<char const*, 12> names = {"others_exec", "others_write", "others_read", "group_exec", "group_write", "group_read", "owner_exec", "owner_write", "owner_read", "sticky_bit", "set_gid", "set_uid"};
 
         template<class Context>
         [[nodiscard]] auto format(xstd::filesystem::perm key, Context& ctx) const
