@@ -65,7 +65,7 @@ inline constexpr bool is_consecutive = false;
 template<class Value, class Bound>
 inline constexpr bool is_consecutive<std::ranges::iota_view<Value, Bound>> = true;
 
-// The positions a closed universe names below a static width it stops short of; dynamic_extent where keys fill the width.
+// The positions a closed universe names below a static width it stops short of, else dynamic_extent.
 template<class KeyTraits, class Bits>
 consteval auto named_positions() noexcept
         -> std::size_t
