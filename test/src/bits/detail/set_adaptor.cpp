@@ -9,7 +9,7 @@
 #include <xstd/bits/bit/bit_convert.hpp>            // bit_convert
 #include <xstd/bits/bit_bounded_set.hpp>            // basic_bit_bounded_set
 #include <xstd/bits/bit_fixed_set.hpp>              // basic_bit_fixed_set, bit_fixed_set
-#include <xstd/bits/bit_key_traits.hpp>             // bit_key_traits
+#include <xstd/bits/bit_key_mapping.hpp>            // bit_key_mapping
 #include <xstd/bits/bit_set.hpp>                    // basic_bit_set, bit_set
 #include <xstd/bits/bit_set_view.hpp>               // bit_set_view
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
@@ -886,25 +886,25 @@ BOOST_AUTO_TEST_CASE(ASetViewExchangesThroughTheBitsItRefersTo)
 namespace {
 
 template<class Compare, std::size_t N>
-using fixed_by = xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, N, xstd::bit_key_traits<std::size_t>, Compare>;
+using fixed_by = xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, N, xstd::bit_key_mapping<std::size_t>, Compare>;
 
 template<class Compare>
-using dynamic_by = xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_traits<std::size_t>, Compare>;
+using dynamic_by = xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_mapping<std::size_t>, Compare>;
 
 using descending_fixed = fixed_by<std::greater<std::size_t>, 130>;
 
 // Dependent, so a comparator the owners reject is a false rather than a hard error.
 template<class Compare>
-constexpr bool fixed_takes = requires { typename xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 8, xstd::bit_key_traits<std::size_t>, Compare>; }; // NOLINT(readability-redundant-typename): a type-requirement is spelled with it
+constexpr bool fixed_takes = requires { typename xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 8, xstd::bit_key_mapping<std::size_t>, Compare>; }; // NOLINT(readability-redundant-typename): a type-requirement is spelled with it
 
 template<class Compare>
-constexpr bool bounded_takes = requires { typename xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 8, xstd::bit_key_traits<std::size_t>, Compare>; }; // NOLINT(readability-redundant-typename): a type-requirement is spelled with it
+constexpr bool bounded_takes = requires { typename xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 8, xstd::bit_key_mapping<std::size_t>, Compare>; }; // NOLINT(readability-redundant-typename): a type-requirement is spelled with it
 
 template<class Compare>
-constexpr bool small_takes = requires { typename xstd::basic_bit_small_set<std::size_t, std::uint8_t, 8, xstd::bit_key_traits<std::size_t>, Compare>; }; // NOLINT(readability-redundant-typename): a type-requirement is spelled with it
+constexpr bool small_takes = requires { typename xstd::basic_bit_small_set<std::size_t, std::uint8_t, 8, xstd::bit_key_mapping<std::size_t>, Compare>; }; // NOLINT(readability-redundant-typename): a type-requirement is spelled with it
 
 template<class Compare>
-constexpr bool dynamic_takes = requires { typename xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_traits<std::size_t>, Compare>; }; // NOLINT(readability-redundant-typename): a type-requirement is spelled with it
+constexpr bool dynamic_takes = requires { typename xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_mapping<std::size_t>, Compare>; }; // NOLINT(readability-redundant-typename): a type-requirement is spelled with it
 
 template<class Compare>
 constexpr bool every_owner_takes = fixed_takes<Compare> and bounded_takes<Compare> and small_takes<Compare> and dynamic_takes<Compare>;
@@ -1058,7 +1058,7 @@ BOOST_AUTO_TEST_CASE(ADescendingOrderIsTheMasksNumericOrder)
         agrees.template operator()<fixed_by<std::greater<std::size_t>, 17>>(17UZ);
         agrees.template operator()<fixed_by<std::greater<std::size_t>, 64>>(64UZ);
         agrees.template operator()<descending_fixed>(130UZ);
-        agrees.template operator()<xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 17, xstd::bit_key_traits<std::size_t>, std::greater<>>>(17UZ);
+        agrees.template operator()<xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 17, xstd::bit_key_mapping<std::size_t>, std::greater<>>>(17UZ);
 }
 
 // Across two run-time widths a missing high block reads as zero, so the numbers line up at every position.
@@ -1106,7 +1106,7 @@ BOOST_AUTO_TEST_CASE(TheGuidesDeduceTheComparator)
 {
         auto const keys = std::vector<std::size_t>{2UZ, 9UZ, 4UZ};
         auto const s    = xstd::basic_bit_set(keys.begin(), keys.end(), std::greater<std::size_t>()); // NOLINT(modernize-use-transparent-functors): the key-typed form is the one deduced
-        static_assert(std::same_as<decltype(s), xstd::basic_bit_set<std::size_t, std::size_t, xstd::bit_key_traits<std::size_t>, std::greater<std::size_t>> const>);
+        static_assert(std::same_as<decltype(s), xstd::basic_bit_set<std::size_t, std::size_t, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>> const>);
         BOOST_CHECK(std::ranges::equal(s, std::vector<std::size_t>{9UZ, 4UZ, 2UZ}));
 }
 

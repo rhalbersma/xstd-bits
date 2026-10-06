@@ -7,18 +7,19 @@
 #define XSTD_BITS_BIT_ENUM_SET_HPP
 
 #include <xstd/bits/bit_blocks.hpp>                // smallest_block_t
-#include <xstd/bits/bit_enum_traits.hpp>           // bit_enum_traits
 #include <xstd/bits/bit_fixed_set.hpp>             // basic_bit_fixed_set
+#include <xstd/bits/bit_index_mapping.hpp>         // sized_bit_index_mapping
+#include <xstd/bits/bit_key_mapping.hpp>           // bit_key_mapping
 #include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
 #include <type_traits>                             // is_enum_v
 
-// The packed std::set<E> for an enumeration whose author listed its values, as Java's and Chromium's EnumSet are.
+// The packed std::set<Enum> for an enumeration with a sized default mapping, as Java's and Chromium's EnumSet are.
 namespace xstd {
 
-// One bit per listed value in the smallest block that holds them all; another block is the second argument.
-template<class E, xstd::unsigned_integer Block = smallest_block_t<bit_enum_traits<E>::size>, class Traits = bit_enum_traits<E>>
-        requires std::is_enum_v<E>
-using bit_enum_set = basic_bit_fixed_set<E, Block, Traits::size, Traits>;
+// One bit per key of the mapping in the smallest block that holds them all; another block is the second argument.
+template<class Enum, xstd::unsigned_integer Block = smallest_block_t<bit_key_mapping<Enum>::size>>
+        requires std::is_enum_v<Enum> and sized_bit_index_mapping<bit_key_mapping<Enum>, Enum>
+using bit_enum_set = basic_bit_fixed_set<Enum, Block, bit_key_mapping<Enum>::size, bit_key_mapping<Enum>>;
 
 } // namespace xstd
 

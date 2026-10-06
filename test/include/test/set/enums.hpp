@@ -6,7 +6,7 @@
 #ifndef TEST_SET_ENUMS_HPP
 #define TEST_SET_ENUMS_HPP
 
-#include <xstd/bits/bit_enum_traits.hpp> // bit_enum_traits, enum_traits
+#include <xstd/bits/bit_key_mapping.hpp> // bit_key_mapping, enum_traits
 #include <array>                         // array
 #include <cstdint>                       // int16_t, int8_t, uint8_t
 #include <format>                        // format_to, formatter
@@ -96,7 +96,7 @@ enum class nine : std::uint8_t
         v8,
 };
 
-// No values listed, so no traits place it in bits.
+// No values listed, so no mapping places it in bits.
 enum class undeclared : std::uint8_t
 {
         x,
@@ -164,7 +164,7 @@ struct std::formatter<test::set::piece, CharT> : std::formatter<std::string_view
         template<class Context>
         [[nodiscard]] auto format(test::set::piece key, Context& ctx) const
         {
-                return std::format_to(ctx.out(), "{}", names[xstd::bit_enum_traits<test::set::piece>::to_index(key)]);
+                return std::format_to(ctx.out(), "{}", names[xstd::bit_key_mapping<test::set::piece>::to_index(key)]);
         }
 };
 
