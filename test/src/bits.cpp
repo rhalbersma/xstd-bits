@@ -32,6 +32,17 @@ struct xstd::enum_traits<perm>
         static constexpr std::array values = {perm::read, perm::write, perm::exec};
 };
 
+namespace {
+
+// A flag type over the same ranks, its operators returning it.
+class perms : public xstd::bit_flag_set<perms, perm, std::uint8_t, 3>
+{
+public:
+        using bit_flag_set::bit_flag_set;
+};
+
+} // namespace
+
 // Every entity the umbrella promises, reached through it alone: no leaf test sees the umbrella at all.
 BOOST_AUTO_TEST_CASE(EveryContainerArrivesThroughTheUmbrella)
 {
@@ -59,6 +70,11 @@ BOOST_AUTO_TEST_CASE(EveryContainerArrivesThroughTheUmbrella)
         // The enum set is the fixed set keyed by an enumeration's ranks, in the smallest block holding them.
         static_assert(std::same_as<xstd::bit_enum_set<perm>, xstd::basic_bit_fixed_set<perm, std::uint8_t, 3, xstd::bit_enum_traits<perm>>>);
         static_assert(std::same_as<decltype(xstd::basic_bit_fixed_set{perm::read}), xstd::bit_enum_set<perm>>);
+
+        // A flag type iterates its ranks, and a mask enumeration keys a set through its one-bit values.
+        static_assert(std::same_as<perms::iterator::value_type, perm>);
+        static_assert(std::same_as<decltype(perms() | perms()), perms>);
+        static_assert(xstd::bit_flag_traits<perm>::size == 8UZ);
 
         // The bounded column, the third storage point: one name per reading, each a class like the rest.
         static_assert(std::ranges::bidirectional_range<xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 8>>);
