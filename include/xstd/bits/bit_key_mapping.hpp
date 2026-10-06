@@ -14,7 +14,7 @@
 #include <cstddef>                                 // size_t
 #include <functional>                              // ranges::greater_equal, ranges::less
 #include <iterator>                                // ranges::distance
-#include <ranges>                                  // begin, end, range_value_t, size
+#include <ranges>                                  // begin, end, range_difference_t, range_value_t, size
 #include <type_traits>                             // conditional_t, is_enum_v
 
 // How a set owner's key maps onto a position and back: an order-preserving bijection onto the positions [0, N).
@@ -79,7 +79,7 @@ public:
         [[nodiscard]] static constexpr auto from_index(std::size_t index) noexcept
                 -> Key
         {
-                return std::ranges::begin(keys)[index];
+                return std::ranges::begin(keys)[static_cast<std::ranges::range_difference_t<decltype(keys)>>(index)];
         }
 };
 

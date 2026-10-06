@@ -10,7 +10,7 @@
 #include <xstd/ints/type_traits/make_unsigned.hpp> // make_unsigned_t
 #include <algorithm>                               // ranges::all_of
 #include <cstddef>                                 // size_t
-#include <ranges>                                  // begin, iota, range_value_t, size
+#include <ranges>                                  // begin, iota, range_difference_t, range_value_t, size
 #include <type_traits>                             // is_enum_v
 #include <utility>                                 // to_underlying
 
@@ -47,7 +47,7 @@ template<class Keys>
 [[nodiscard]] consteval auto are_consecutive(Keys const& keys) noexcept
         -> bool
 {
-        return std::ranges::all_of(std::views::iota(0UZ, std::ranges::size(keys)), [&](std::size_t i) noexcept -> bool { return detail::key_distance(*std::ranges::begin(keys), std::ranges::begin(keys)[i]) == i; });
+        return std::ranges::all_of(std::views::iota(0UZ, std::ranges::size(keys)), [&](std::size_t i) noexcept -> bool { return detail::key_distance(*std::ranges::begin(keys), std::ranges::begin(keys)[static_cast<std::ranges::range_difference_t<Keys const&>>(i)]) == i; });
 }
 
 } // namespace xstd::bits::detail
