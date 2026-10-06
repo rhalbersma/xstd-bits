@@ -2395,7 +2395,12 @@ The key is spelled wherever the `basic_` form is, because it changes the interfa
 yields, and what `insert`, `find` and `contains` accept. The positions stay the storage, and `KeyTraits` maps a key
 onto one and back: `to_index(key)` and `from_index(index)`, static members as `std::char_traits`' are, and for a
 closed universe a `size`, which an owner with a width or a capacity in its type must equal, checked by a
-`static_assert`. `bit_key_traits<std::size_t>` is the identity with no `size`; a strong index type specializes
+`static_assert`. `bit_key_traits<Key>` is the identity with no `size` for every `xstd::unsigned_integer` key, from
+`std::uint8_t` to the 128-bit types: a key narrower than `std::size_t` names fewer positions, and one wider must name
+a position that fits, as a precondition. A signed key has no default: offsetting by its most negative value would put
+`0` in the middle of the universe, so a `bit_set<int>` holding `{0}` would take 2³¹ bits. It names its range instead,
+through `bit_offset_traits<Key, First, N>`, which maps `First` to position `0` with a `size` of `N`; the arithmetic is
+modular, so `First` may be the type's minimum. A strong index type specializes
 `bit_key_traits` or is given a traits type of its own. `to_index` must preserve order, so that ascending positions
 are ascending keys. Every member that takes a key maps it through `to_index`, and the iterator and its proxy hand out
 `from_index` of the position, so a set formats as its keys do; set algebra, comparison, hashing and the block

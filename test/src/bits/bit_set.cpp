@@ -3,15 +3,17 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/block_types.hpp>                     // all_block_types
 #include <test/set/ascending.hpp>                   // yields_ascending_keys
 #include <test/set/strong_index.hpp>                // agrees_with_std_set_of_strong_indices, strong_index
-#include <xstd/bits/bit_key_traits.hpp>             // bit_key_traits
+#include <xstd/bits/bit_fixed_set.hpp>              // basic_bit_fixed_set
+#include <xstd/bits/bit_key_traits.hpp>             // bit_key_traits, bit_offset_traits
 #include <xstd/bits/bit_set.hpp>                    // bit_set
 #include <xstd/bits/bit_set_view.hpp>               // bit_set_view
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
 #include <xstd/bits/detail/ownership.hpp>           // storage
 #include <xstd/bits/detail/set_adaptor.hpp>         // set_adaptor
-#include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                                // equal, ranges::equal
 #include <array>                                    // array
 #include <bitset>                                   // bitset
@@ -19,11 +21,12 @@
 #include <concepts>                                 // same_as
 #include <cstddef>                                  // size_t
 #include <cstdint>                                  // uint8_t
-#include <functional>                               // hash, less
+#include <format>                                   // format
+#include <functional>                               // greater, hash, less
 #include <initializer_list>                         // initializer_list
 #include <iterator>                                 // iter_value_t
 #include <memory>                                   // allocator
-#include <ranges>                                   // equal, iota, to
+#include <ranges>                                   // equal, iota, reverse, to
 #include <set>                                      // set
 #include <type_traits>                              // is_constructible_v
 #include <utility>                                  // move
@@ -228,6 +231,64 @@ BOOST_AUTO_TEST_CASE(AStrongIndexKeysItAsStdSetIsKeyed)
         test::set::agrees_with_std_set_of_strong_indices<X>({}, 0UZ, 20UZ);
         test::set::agrees_with_std_set_of_strong_indices<X>({0UZ, 7UZ, 8UZ, 19UZ}, 0UZ, 20UZ);
         test::set::agrees_with_std_set_of_strong_indices<X>({3UZ, 5UZ, 300UZ}, 0UZ, 310UZ);
+}
+
+// Any unsigned key, narrower or wider than std::size_t, keys the set as std::set<Key> is keyed, in either direction.
+BOOST_AUTO_TEST_CASE_TEMPLATE(AnUnsignedKeyKeysItAsStdSetIsKeyed, Key, test::all_block_types)
+{
+        using X = xstd::basic_bit_set<Key, std::uint8_t>;
+        using Y = xstd::basic_bit_set<Key, std::uint8_t, xstd::bit_key_traits<Key>, std::greater<>>;
+        static_assert(std::same_as<typename X::key_type, Key>);
+        static_assert(std::same_as<std::iter_value_t<typename X::iterator>, Key>);
+
+        auto const keys  = std::vector<Key>{Key(200), Key(0), Key(7), Key(8), Key(3)};
+        auto const model = std::set<Key>(keys.begin(), keys.end());
+        auto x           = X(std::from_range, keys);
+        BOOST_CHECK(std::ranges::equal(x, model));
+        BOOST_CHECK(std::ranges::equal(Y(std::from_range, keys), model | std::views::reverse));
+        BOOST_CHECK((x | std::ranges::to<std::set<Key>>()) == model);
+
+        for (auto const i : std::views::iota(0UZ, 210UZ)) {
+                auto const k = static_cast<Key>(i);
+                BOOST_CHECK_EQUAL(x.contains(k), model.contains(k));
+                BOOST_CHECK_EQUAL(x.lower_bound(k) == x.end(), model.lower_bound(k) == model.end());
+                BOOST_CHECK(x.lower_bound(k) == x.end() or *x.lower_bound(k) == *model.lower_bound(k));
+        }
+
+        auto m = model;
+        BOOST_CHECK_EQUAL(x.insert(Key(9)).second, m.insert(Key(9)).second);
+        BOOST_CHECK_EQUAL(x.erase(Key(7)), m.erase(Key(7)));
+        BOOST_CHECK_EQUAL(x.erase(Key(7)), m.erase(Key(7)));
+        BOOST_CHECK(std::ranges::equal(x, m));
+}
+
+// A signed key through an offset keys a fixed set as std::set<int> is keyed, negative keys first, in either direction.
+BOOST_AUTO_TEST_CASE(ASignedKeyThroughAnOffsetKeysItAsStdSetIsKeyed)
+{
+        using traits = xstd::bit_offset_traits<int, -50, 100UZ>;
+        using X      = xstd::basic_bit_fixed_set<int, std::uint64_t, 100, traits>;
+        using Y      = xstd::basic_bit_fixed_set<int, std::uint64_t, 100, traits, std::greater<>>;
+        static_assert(std::same_as<X::key_type, int>);
+        static_assert(std::same_as<std::iter_value_t<X::iterator>, int>);
+
+        auto const keys  = std::vector<int>{49, -50, 0, -1, 7, -13};
+        auto const model = std::set<int>(keys.begin(), keys.end());
+        auto x           = X(std::from_range, keys);
+        BOOST_CHECK(std::ranges::equal(x, model));
+        BOOST_CHECK(std::ranges::equal(Y(std::from_range, keys), model | std::views::reverse));
+        BOOST_CHECK(x.front() == -50 and x.back() == 49);
+
+        for (auto const k : std::views::iota(-50, 50)) {
+                BOOST_CHECK_EQUAL(x.contains(k), model.contains(k));
+                BOOST_CHECK_EQUAL(x.lower_bound(k) == x.end(), model.lower_bound(k) == model.end());
+                BOOST_CHECK(x.lower_bound(k) == x.end() or *x.lower_bound(k) == *model.lower_bound(k));
+        }
+
+        auto m = model;
+        BOOST_CHECK_EQUAL(x.insert(-2).second, m.insert(-2).second);
+        BOOST_CHECK_EQUAL(x.erase(-13), m.erase(-13));
+        BOOST_CHECK(std::ranges::equal(x, m));
+        BOOST_CHECK_EQUAL(std::format("{}", x), "{-50, -2, -1, 0, 7, 49}");
 }
 
 BOOST_AUTO_TEST_SUITE_END()
