@@ -22,10 +22,14 @@ template<class E>
 struct enum_traits
 {};
 
+// Left incomplete for a type listing no values, so naming a member of it fails in the immediate context.
+template<class E>
+struct bit_enum_traits;
+
 // The enumerators' ranks in values are their positions, so a gap between two values costs no bit.
 template<class E>
         requires std::is_enum_v<E> and requires { enum_traits<E>::values; }
-struct bit_enum_traits
+struct bit_enum_traits<E>
 {
 private:
         static constexpr auto const& values = enum_traits<E>::values;
