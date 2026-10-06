@@ -231,11 +231,144 @@ class set_adaptor : public set::sizes_t<Bits, Store, Derived, Key, KeyTraits, Co
         }
 
         // Members rather than templates over Bits or KeyTraits, so ADL looks in the key's namespaces alone.
-        template<class Value = Key>
-        class basic_iterator;
-
-        template<class Value = Key>
+        template<class Value>
         class basic_reference;
+
+        // A position in the set reading, read-only whatever Bits' qualification: a key is nothing to write through.
+        template<class Value = Key>
+        class basic_iterator
+        {
+                // Value exists only to put the key's namespaces among the associated ones: it is no second axis.
+                static_assert(std::same_as<Value, Key>);
+
+                storage_ptr_t<bits_type const> m_ptr{};
+                std::size_t m_idx{};
+
+                friend set_adaptor;
+
+                friend class basic_reference<Value>;
+
+                [[nodiscard]] constexpr basic_iterator(storage_ptr_t<bits_type const> ptr, std::size_t idx) noexcept
+                        : m_ptr(ptr)
+                        , m_idx(idx)
+                {
+                        assert(m_ptr != nullptr);
+                }
+
+        public:
+                using iterator_category = std::bidirectional_iterator_tag;
+                using value_type        = Value;
+                using difference_type   = std::ptrdiff_t;
+                using pointer           = void;
+                using reference         = basic_reference<Value>;
+
+                [[nodiscard]] basic_iterator() = default;
+
+                // A zero width has one position, so every iterator over it is the same one and every loop stops early.
+                [[nodiscard]] friend constexpr auto operator==(basic_iterator lhs, basic_iterator rhs) noexcept
+                        -> bool
+                {
+                        assert(lhs.m_ptr == rhs.m_ptr);
+                        if constexpr (zero_width<Bits>) {
+                                return true;
+                        } else {
+                                return lhs.m_idx == rhs.m_idx;
+                        }
+                }
+
+                [[nodiscard]] constexpr auto operator*() const noexcept
+                        -> reference
+                {
+                        assert(m_ptr != nullptr);
+                        return {m_ptr, m_idx};
+                }
+
+                constexpr auto operator++() noexcept
+                        -> basic_iterator&
+                {
+                        assert(m_ptr != nullptr);
+                        if constexpr (not zero_width<Bits>) {
+                                m_idx = set_adaptor::next_position(m_ptr, m_idx);
+                        }
+                        return *this;
+                }
+
+                constexpr auto operator--() noexcept
+                        -> basic_iterator&
+                {
+                        assert(m_ptr != nullptr);
+                        if constexpr (not zero_width<Bits>) {
+                                m_idx = set_adaptor::prev_position(m_ptr, m_idx);
+                        }
+                        return *this;
+                }
+
+                constexpr auto operator++(int) noexcept
+                        -> basic_iterator
+                {
+                        auto nrv = *this;
+                        ++*this;
+                        return nrv;
+                }
+
+                constexpr auto operator--(int) noexcept
+                        -> basic_iterator
+                {
+                        auto nrv = *this;
+                        --*this;
+                        return nrv;
+                }
+        };
+
+        // The key at a position, arriving by conversion; & hands the iterator back, so the pair round-trips.
+        template<class Value = Key>
+        class basic_reference
+        {
+                // Value exists only to put the key's namespaces among the associated ones: it is no second axis.
+                static_assert(std::same_as<Value, Key>);
+
+                storage_ptr_t<bits_type const> m_ptr;
+                std::size_t m_idx;
+
+                friend set_adaptor;
+
+                friend class basic_iterator<Value>;
+
+                [[nodiscard]] constexpr basic_reference(storage_ptr_t<bits_type const> ptr, std::size_t idx) noexcept
+                        : m_ptr(ptr)
+                        , m_idx(idx)
+                {
+                        assert(m_ptr != nullptr);
+                }
+
+        public:
+                using value_type   = Value;
+                using iterator     = basic_iterator<Value>;
+                using adaptor_type = set_adaptor;
+
+                // A value, not a handle to rebind: trivially copyable, never assignable, as a reference to a key is.
+                basic_reference(basic_reference const&)                    = default;
+                auto operator=(basic_reference const&) -> basic_reference& = delete;
+
+                [[nodiscard]] constexpr auto operator&() const noexcept
+                        -> iterator
+                {
+                        return {m_ptr, m_idx};
+                }
+
+                // The one conversion: comparisons are the key's own through it.
+                [[nodiscard]] constexpr explicit(false) operator value_type() const noexcept // NOLINT(misc-explicit-constructor)
+                {
+                        return set_adaptor::key_at(m_idx);
+                }
+
+                // What this proxy prints as, said once: our std::formatter calls it unqualified, fmt finds it by ADL.
+                [[nodiscard]] friend constexpr auto format_as(basic_reference ref) noexcept
+                        -> value_type
+                {
+                        return ref;
+                }
+        };
 
         // The walk's step up, in the comparator's direction; a zero width has no position for a scan to start from.
         [[nodiscard]] static constexpr auto next_position(storage_ptr_t<bits_type const> const& ptr, std::size_t n) noexcept
@@ -1251,144 +1384,6 @@ private:
                 self.guard_key(x);
                 self.bits().growing_insert(x);
                 return {&self.bits(), x};
-        }
-};
-
-// A position in the set reading, read-only whatever Bits' qualification: a key is nothing to write through.
-template<bit_block_container_type Bits, storage Store, class Derived, class Key, class KeyTraits, class Compare>
-template<class Value>
-class set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare>::basic_iterator
-{
-        // Value exists only to put the key's namespaces among the associated ones: it is no second axis.
-        static_assert(std::same_as<Value, Key>);
-
-        storage_ptr_t<bits_type const> m_ptr{};
-        std::size_t m_idx{};
-
-        friend set_adaptor;
-
-        friend class basic_reference<Value>;
-
-        [[nodiscard]] constexpr basic_iterator(storage_ptr_t<bits_type const> ptr, std::size_t idx) noexcept
-                : m_ptr(ptr)
-                , m_idx(idx)
-        {
-                assert(m_ptr != nullptr);
-        }
-
-public:
-        using iterator_category = std::bidirectional_iterator_tag;
-        using value_type        = Value;
-        using difference_type   = std::ptrdiff_t;
-        using pointer           = void;
-        using reference         = basic_reference<Value>;
-
-        [[nodiscard]] basic_iterator() = default;
-
-        // A zero width has one position, so every iterator over it is the same one and every loop stops early.
-        [[nodiscard]] friend constexpr auto operator==(basic_iterator lhs, basic_iterator rhs) noexcept
-                -> bool
-        {
-                assert(lhs.m_ptr == rhs.m_ptr);
-                if constexpr (zero_width<Bits>) {
-                        return true;
-                } else {
-                        return lhs.m_idx == rhs.m_idx;
-                }
-        }
-
-        [[nodiscard]] constexpr auto operator*() const noexcept
-                -> reference
-        {
-                assert(m_ptr != nullptr);
-                return {m_ptr, m_idx};
-        }
-
-        constexpr auto operator++() noexcept
-                -> basic_iterator&
-        {
-                assert(m_ptr != nullptr);
-                if constexpr (not zero_width<Bits>) {
-                        m_idx = set_adaptor::next_position(m_ptr, m_idx);
-                }
-                return *this;
-        }
-
-        constexpr auto operator--() noexcept
-                -> basic_iterator&
-        {
-                assert(m_ptr != nullptr);
-                if constexpr (not zero_width<Bits>) {
-                        m_idx = set_adaptor::prev_position(m_ptr, m_idx);
-                }
-                return *this;
-        }
-
-        constexpr auto operator++(int) noexcept
-                -> basic_iterator
-        {
-                auto nrv = *this;
-                ++*this;
-                return nrv;
-        }
-
-        constexpr auto operator--(int) noexcept
-                -> basic_iterator
-        {
-                auto nrv = *this;
-                --*this;
-                return nrv;
-        }
-};
-
-// The key at a position, arriving by conversion; & hands the iterator back, so the pair round-trips.
-template<bit_block_container_type Bits, storage Store, class Derived, class Key, class KeyTraits, class Compare>
-template<class Value>
-class set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare>::basic_reference
-{
-        // Value exists only to put the key's namespaces among the associated ones: it is no second axis.
-        static_assert(std::same_as<Value, Key>);
-
-        storage_ptr_t<bits_type const> m_ptr;
-        std::size_t m_idx;
-
-        friend set_adaptor;
-
-        friend class basic_iterator<Value>;
-
-        [[nodiscard]] constexpr basic_reference(storage_ptr_t<bits_type const> ptr, std::size_t idx) noexcept
-                : m_ptr(ptr)
-                , m_idx(idx)
-        {
-                assert(m_ptr != nullptr);
-        }
-
-public:
-        using value_type   = Value;
-        using iterator     = basic_iterator<Value>;
-        using adaptor_type = set_adaptor;
-
-        // A value, not a handle to rebind: trivially copyable, never assignable, as a reference to a key is.
-        basic_reference(basic_reference const&)                    = default;
-        auto operator=(basic_reference const&) -> basic_reference& = delete;
-
-        [[nodiscard]] constexpr auto operator&() const noexcept
-                -> iterator
-        {
-                return {m_ptr, m_idx};
-        }
-
-        // The one conversion: comparisons are the key's own through it.
-        [[nodiscard]] constexpr explicit(false) operator value_type() const noexcept // NOLINT(misc-explicit-constructor)
-        {
-                return set_adaptor::key_at(m_idx);
-        }
-
-        // What this proxy prints as, said once: our std::formatter calls it unqualified, and fmt finds it by ADL.
-        [[nodiscard]] friend constexpr auto format_as(basic_reference ref) noexcept
-                -> value_type
-        {
-                return ref;
         }
 };
 
