@@ -75,17 +75,17 @@ gives, because the width moves only after the storage has grown: over any of the
 `resize` on unsigned blocks either completes or changes nothing, a failed growth leaves the owner as it was. A
 storage whose `resize` is `noexcept` never takes that path.
 
-The element clause is `bit_block`, which is `unsigned_integer`, and **not** the wider `bitwise_operators`, which would be the concept
+The element clause is `bit_block`, which is `unsigned_integer`, and **not** the wider `bit_mask`, which would be the concept
 if the operators were all a block is asked for. They are not. Beyond them the body wants the `<bit>` intrinsics
 — `popcount`, `countr_zero` and `countl_zero`, each constrained on `xstd::unsigned_integer` in
 `detail/intrin.hpp` and reached at some thirty sites — a `numeric_limits<block_type>::digits` for
 `bits_per_block`, and block arithmetic: `shl(unit, count) - unit`, and the `block & (block - 1)` step the set
-reading's block walk takes, where `bitwise_operators` omits `-` deliberately, subtraction and set difference
+reading's block walk takes, where `bit_mask` omits `-` deliberately, subtraction and set difference
 being indistinguishable to a concept.
 
 The two agree on every block the library ships, and both refuse `bool`, the character types and every signed
 type, so `std::vector<int>` stays out either way. They part on the class types that are fields of bits without
-being numbers, `std::bitset` among them: `bitwise_operators` admits those and this concept does not, which is
+being numbers, `std::bitset` among them: `bit_mask` admits those and this concept does not, which is
 the point. `std::array<std::bitset<64>, 4>` is asserted refused, a ready-made negative case
 ([concepts-are-tested-on-ready-made-types](#concepts-are-tested-on-ready-made-types)) for exactly the gap
 between the two spellings. Widening the clause would move that refusal from an unsatisfied constraint to a hard
@@ -93,7 +93,7 @@ error inside the template — the failure mode the subscript clause below exists
 reason to accept it on the element clause when the narrower concept states the truth.
 
 The asymmetry it records is the layering, not an accident. `unsigned_integer` goes **in** and the container
-gives the common vocabulary ([the-common-vocabulary](#the-common-vocabulary)) — and, once the non-assigning operators land, `bitwise_operators` — **out**: it
+gives the common vocabulary ([the-common-vocabulary](#the-common-vocabulary)) — and, once the non-assigning operators land, `bit_mask` — **out**: it
 asks more of a block than it offers its own user, consuming numbers and yielding a field of bits, shedding the
 arithmetic on the way up. That is also why nesting cannot work: a `bit_block_container` will have every
 operator and still no `popcount`, no `digits` and no `- 1`.
@@ -280,7 +280,7 @@ library is actually instantiated over, so an assertion about them is an assertio
 What that gives up is the negative cases a shim isolates one clause at a time, and here three of the four
 survive on ready-made types alone: `std::vector<bool>` is not contiguous, `std::vector<int>` is signed, and
 `std::array<std::bitset<64>, 4>` is the field of bits that is not a number — the one that separates
-`unsigned_integer` from `bitwise_operators` ([owned-bit-storage](#owned-bit-storage)). Only the
+`unsigned_integer` from `bit_mask` ([owned-bit-storage](#owned-bit-storage)). Only the
 range-subscript clause has no ready-made counterexample, and it is argued in prose there instead.
 
 `counting_blocks` in `test/src/bits/detail/bit_block_container.cpp` is not an exception to this. It is a
