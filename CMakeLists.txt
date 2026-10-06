@@ -43,7 +43,7 @@ if(NOT xstd-misc_FOUND)
         xstd-misc
         GIT_REPOSITORY https://github.com/rhalbersma/xstd-misc.git
         # Pinned to a commit on xstd-misc's main, not a branch head; move consumption.yml's dependency_repos with it.
-        GIT_TAG 882c1ac2b89c14e5dc8fe41fa00bcb6e53695b60
+        GIT_TAG 1bcb02ad2e6b35c3c574b5249a9dee13bf5d42d0
     )
     FetchContent_MakeAvailable(xstd-misc)
 endif()

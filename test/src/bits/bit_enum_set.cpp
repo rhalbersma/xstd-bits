@@ -3,26 +3,30 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/set/enums.hpp>            // day, listed_enums, nine, perm, piece, wind
-#include <xstd/bits/bit_blocks.hpp>      // smallest_block_t
-#include <xstd/bits/bit_enum_set.hpp>    // bit_enum_set
-#include <xstd/bits/bit_enum_traits.hpp> // bit_enum_traits, enum_traits
-#include <xstd/bits/bit_fixed_set.hpp>   // basic_bit_fixed_set, bit_fixed_set
-#include <xstd/bits/bit_key_traits.hpp>  // bit_key_traits
-#include <xstd/bits/from_blocks.hpp>     // from_blocks
-#include <boost/test/unit_test.hpp>      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <algorithm>                     // ranges::equal
-#include <bit>                           // bit_cast
-#include <concepts>                      // same_as
-#include <cstddef>                       // size_t
-#include <cstdint>                       // uint16_t, uint32_t, uint8_t
-#include <format>                        // format
-#include <functional>                    // greater
-#include <ranges>                        // iota, reverse, size
-#include <set>                           // set
-#include <stdexcept>                     // out_of_range
-#include <utility>                       // pair
-#include <vector>                        // vector
+#include <test/set/enums.hpp>                  // day, listed_enums, nine, perm, piece, wind
+#include <xstd/bits/bit_array.hpp>             // bit_array
+#include <xstd/bits/bit_blocks.hpp>            // smallest_block_t
+#include <xstd/bits/bit_enum_set.hpp>          // bit_enum_set
+#include <xstd/bits/bit_enum_traits.hpp>       // bit_enum_traits, enum_traits
+#include <xstd/bits/bit_fixed_set.hpp>         // basic_bit_fixed_set, bit_fixed_set
+#include <xstd/bits/bit_key_traits.hpp>        // bit_key_traits
+#include <xstd/bits/from_blocks.hpp>           // from_blocks
+#include <xstd/misc/concepts.hpp>              // proxy_iterator, proxy_reference
+#include <xstd/misc/utility/to_underlying.hpp> // to_underlying
+#include <boost/test/unit_test.hpp>            // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
+#include <algorithm>                           // ranges::equal
+#include <bit>                                 // bit_cast
+#include <concepts>                            // same_as
+#include <cstddef>                             // size_t
+#include <cstdint>                             // uint16_t, uint32_t, uint8_t
+#include <format>                              // format
+#include <functional>                          // greater
+#include <ranges>                              // iota, iterator_t, range_reference_t, reverse, size
+#include <set>                                 // set
+#include <stdexcept>                           // out_of_range
+#include <type_traits>                         // underlying_type_t
+#include <utility>                             // pair
+#include <vector>                              // vector
 
 BOOST_AUTO_TEST_SUITE(BitEnumSet)
 
@@ -41,6 +45,9 @@ constexpr bool takes_as_key = requires (X x, K k) { x.insert(k); } or requires (
 
 template<class X, class K>
 constexpr bool meets_a_key = requires (X x, K k) { x | k; } or requires (X x, K k) { k | x; } or requires (X x, K k) { x & k; } or requires (X x, K k) { k & x; } or requires (X x, K k) { x ^ k; } or requires (X x, K k) { k ^ x; } or requires (X x, K k) { x - k; } or requires (X x, K k) { k - x; } or requires (X x, K k) { x |= k; } or requires (X x, K k) { x &= k; } or requires (X x, K k) { x ^= k; } or requires (X x, K k) { x -= k; };
+
+template<class Reference>
+constexpr bool takes_to_underlying = requires (Reference ref) { xstd::to_underlying(ref); };
 
 // The model with one key added, removed or toggled.
 template<class M, class E>
@@ -292,6 +299,44 @@ BOOST_AUTO_TEST_CASE(AnEnumSetFormatsItsEnumeratorsByName)
         BOOST_CHECK_EQUAL(std::format("{}", xstd::bit_enum_set<piece>{piece::king, piece::pawn, piece::bishop}), "{pawn, bishop, king}");
         BOOST_CHECK_EQUAL(std::format("{}", descending_set<piece>{piece::king, piece::pawn}), "{king, pawn}");
         BOOST_CHECK_EQUAL(std::format("{}", xstd::bit_enum_set<piece>()), "{}");
+}
+
+// The element proxy is a proxy reference, so the qualified to_underlying reads the key through it in either order.
+BOOST_AUTO_TEST_CASE(ToUnderlyingReadsTheKeyThroughTheProxy)
+{
+        using test::set::piece;
+        using underlying = std::underlying_type_t<piece>;
+        static_assert(xstd::proxy_iterator<std::ranges::iterator_t<xstd::bit_enum_set<piece>>>);
+        static_assert(xstd::proxy_reference<std::ranges::range_reference_t<xstd::bit_enum_set<piece>>>);
+        static_assert(std::same_as<decltype(xstd::to_underlying(*xstd::bit_enum_set<piece>().begin())), underlying>);
+        static_assert([] -> underlying {
+                auto const s = xstd::bit_enum_set<piece>{piece::king};
+                return xstd::to_underlying(*s.begin());
+        }() == xstd::to_underlying(piece::king));
+
+        auto const keys = std::vector{piece::pawn, piece::bishop, piece::king};
+        auto expected   = std::vector<underlying>();
+        for (auto const key : keys) {
+                expected.push_back(xstd::to_underlying(key));
+        }
+        auto const ascending = xstd::bit_enum_set<piece>{piece::king, piece::pawn, piece::bishop};
+        auto seen            = std::vector<underlying>();
+        for (auto const key : ascending) {
+                seen.push_back(xstd::to_underlying(key));
+        }
+        BOOST_CHECK(seen == expected);
+
+        auto const descending = descending_set<piece>{piece::king, piece::pawn, piece::bishop};
+        seen.clear();
+        for (auto const key : descending) {
+                seen.push_back(xstd::to_underlying(key));
+        }
+        BOOST_CHECK(std::ranges::equal(seen, expected | std::views::reverse));
+
+        // A std::size_t key's proxy and a sequence's bool proxy have no underlying value to give.
+        static_assert(takes_to_underlying<std::ranges::range_reference_t<xstd::bit_enum_set<piece>>>);
+        static_assert(not takes_to_underlying<std::ranges::range_reference_t<xstd::bit_fixed_set<8>>>);
+        static_assert(not takes_to_underlying<std::ranges::range_reference_t<xstd::bit_array<8>>>);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
