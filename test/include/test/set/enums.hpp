@@ -158,7 +158,8 @@ struct xstd::enum_traits<test::set::nine>
 template<class CharT>
 struct std::formatter<test::set::piece, CharT> : std::formatter<std::string_view, CharT>
 {
-        static constexpr std::array<std::string_view, 6> names = {"pawn", "knight", "bishop", "rook", "queen", "king"};
+        // Pointers rather than string_view, whose conversion from a literal here crashes GCC 17 trunk.
+        static constexpr std::array<char const*, 6> names = {"pawn", "knight", "bishop", "rook", "queen", "king"};
 
         template<class Context>
         [[nodiscard]] auto format(test::set::piece key, Context& ctx) const
