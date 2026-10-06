@@ -25,7 +25,8 @@
 #include <filesystem>                       // exists, path, perm_options, permissions, perms, remove, status, temp_directory_path
 #include <format>                           // format
 #include <fstream>                          // ofstream
-#include <iterator>                         // bidirectional_iterator, inserter, iter_reference_t
+#include <functional>                       // greater, less, ranges::greater
+#include <iterator>                         // bidirectional_iterator, inserter, iter_reference_t, ranges::distance, ranges::next, ranges::prev
 #include <random>                           // random_device
 #include <ranges>                           // bidirectional_range, iota, ranges::swap, sized_range, views::reverse
 #include <set>                              // set
@@ -80,6 +81,13 @@ public:
         using bit_flag_set::bit_flag_set;
 };
 
+// The sixteen positions walked from the lowest flag up, under the set order rather than the enumeration's.
+class ascending_perms : public xstd::bit_flag_set<ascending_perms, xfs::perm, std::uint16_t, 16, xstd::bit_key_traits<xfs::perm>, fs::perms, std::less<xfs::perm>> // NOLINT(modernize-use-transparent-functors): a flag type's comparator names its key
+{
+public:
+        using bit_flag_set::bit_flag_set; // NOLINT(modernize-use-transparent-functors): the base's name carries the comparator
+};
+
 // Every name [fs.enum.perms] lists, beside the standard's own value of it.
 constexpr auto names = std::to_array<std::pair<xfs::perms, fs::perms>>({
         {xfs::perms::none, fs::perms::none},
@@ -105,7 +113,8 @@ constexpr auto names = std::to_array<std::pair<xfs::perms, fs::perms>>({
 
 constexpr auto ranks = xstd::enum_traits<xfs::perm>::values;
 
-using model_type = std::set<xfs::perm>;
+// The model orders its keys as the flag type does, the highest flag first.
+using model_type = std::set<xfs::perm, std::greater<>>;
 
 // The flags a twelve-bit mask picks, as the flag type and as the model.
 auto subset(std::size_t mask)
@@ -141,7 +150,7 @@ auto combined(model_type const& a, model_type const& b, Algorithm algorithm)
         -> model_type
 {
         auto nrv = model_type();
-        algorithm(a, b, std::inserter(nrv, nrv.end()));
+        algorithm(a, b, std::inserter(nrv, nrv.end()), std::ranges::greater());
         return nrv;
 }
 
@@ -170,6 +179,8 @@ auto agrees_at_key(xfs::perms const& p, model_type const& model, xfs::perm k)
         BOOST_CHECK_EQUAL(p.contains(k), model.contains(k));
         BOOST_CHECK_EQUAL(p.contains(xfs::perms(k)), model.contains(k));
         BOOST_CHECK_EQUAL(p[k], model.contains(k));
+        BOOST_CHECK_EQUAL(std::ranges::distance(p.begin(), p.lower_bound(k)), std::ranges::distance(model.begin(), model.lower_bound(k)));
+        BOOST_CHECK_EQUAL(std::ranges::distance(p.begin(), p.upper_bound(k)), std::ranges::distance(model.begin(), model.upper_bound(k)));
         BOOST_CHECK_EQUAL((~p).contains(k), not model.contains(k));
 
         auto x = p;
@@ -189,8 +200,8 @@ auto agrees_on_pair(std::size_t lhs, std::size_t rhs)
 {
         auto const [a, ma] = subset(lhs);
         auto const [b, mb] = subset(rhs);
-        BOOST_CHECK_EQUAL(a.contains(b), std::ranges::includes(ma, mb));
-        BOOST_CHECK_EQUAL(a.is_subset_of(b), std::ranges::includes(mb, ma));
+        BOOST_CHECK_EQUAL(a.contains(b), std::ranges::includes(ma, mb, std::ranges::greater()));
+        BOOST_CHECK_EQUAL(a.is_subset_of(b), std::ranges::includes(mb, ma, std::ranges::greater()));
         BOOST_CHECK_EQUAL(intersects(a, b), not combined(ma, mb, std::ranges::set_intersection).empty());
         BOOST_CHECK(std::ranges::equal(a | b, combined(ma, mb, std::ranges::set_union)));
         BOOST_CHECK(std::ranges::equal(a & b, combined(ma, mb, std::ranges::set_intersection)));
@@ -305,12 +316,13 @@ auto adjust_permissions(fs::path const& path)
 
 BOOST_AUTO_TEST_SUITE(BitFlagSet)
 
-// The standard's type meets [bitmask.types], and so does the flag type spelled the same way.
+// The standard's type and every flag type meet [bitmask.types]; the base cannot require it of an incomplete Derived.
 BOOST_AUTO_TEST_CASE(BothTypesAreBitmaskTypes)
 {
         static_assert(xstd::bit_mask<fs::perms>);
-        static_assert(xstd::bit_mask<xfs::perms>);
+        static_assert(xstd::bit_mask<xfs::perms> and xstd::bit_mask<ascending_perms>);
         static_assert(xstd::bit_mask<modes>);
+        static_assert(xstd::bit_mask<narrow_perms> and xstd::bit_mask<narrow_bitset_perms>);
         static_assert(xstd::bit_mask<word_perms> and xstd::bit_mask<bitset_perms>);
         static_assert(xstd::bit_convert<std::uint16_t>(xfs::perms{}) == 0U and xstd::bit_convert<std::uint16_t>(xfs::perms::none) == 0U);
 
@@ -413,6 +425,7 @@ BOOST_AUTO_TEST_CASE(EverySubsetAgreesWithStdSet)
         for (auto const mask : std::views::iota(0UZ, 1UZ << ranks.size())) {
                 auto const [p, model] = subset(mask);
                 BOOST_CHECK(std::ranges::equal(p, model));
+                BOOST_CHECK(std::ranges::equal(std::views::reverse(p), std::views::reverse(model)));
                 BOOST_CHECK_EQUAL(p.size(), model.size());
                 BOOST_CHECK_EQUAL(xstd::bit_convert<std::uint16_t>(p), mask);
                 BOOST_CHECK(not p.contains(beyond));
@@ -456,7 +469,7 @@ BOOST_AUTO_TEST_CASE(UnnamedBitsAreKeptButNotIterated)
 {
         auto const p = xfs::perms::unknown;
         BOOST_CHECK_EQUAL(p.size(), 12UZ);
-        BOOST_CHECK(std::ranges::equal(p, ranks));
+        BOOST_CHECK(std::ranges::equal(p, std::views::reverse(ranks)));
         BOOST_CHECK(p != xfs::perms::mask);
         BOOST_CHECK(~p == xfs::perms::none);
         BOOST_CHECK(~xfs::perms::none == xfs::perms::unknown);
@@ -480,8 +493,15 @@ BOOST_AUTO_TEST_CASE(TheValueSeesUnnamedPositionsAndTheRangeDoesNot)
         BOOST_CHECK(fs::perms(high) == (fs::perms::unknown & ~fs::perms::mask));
         BOOST_CHECK(not xfs::perms::unknown.contains(beyond));
         BOOST_CHECK(xfs::perms::unknown.find(beyond) == xfs::perms::unknown.end()); // NOLINT(readability-container-contains): find stopping at the named keys is the check
-        BOOST_CHECK(*xfs::perms::unknown.rbegin() == xfs::perm::set_uid);
-        BOOST_CHECK(xfs::perms::unknown.lower_bound(beyond) == xfs::perms::unknown.end());
+        BOOST_CHECK(*xfs::perms::unknown.begin() == xfs::perm::set_uid and *xfs::perms::unknown.rbegin() == xfs::perm::others_exec);
+        BOOST_CHECK(xfs::perms::unknown.lower_bound(beyond) == xfs::perms::unknown.begin());
+
+        // Walking down, each scan that finds no named flag below where it starts ends at end(), not at the width.
+        auto const one = high | xfs::perms::owner_read;
+        BOOST_CHECK(std::ranges::equal(one, std::array{xfs::perm::owner_read}));
+        BOOST_CHECK(std::ranges::next(one.begin()) == one.end() and *std::ranges::prev(one.end()) == xfs::perm::owner_read);
+        BOOST_CHECK(one.upper_bound(xfs::perm::owner_read) == one.end() and one.lower_bound(xfs::perm::owner_exec) == one.end());
+        BOOST_CHECK(high.lower_bound(beyond) == high.end() and high.upper_bound(beyond) == high.end());
 
         // perms::unknown leaves through the standard's type and comes back unchanged, its four unnamed bits included.
         xfs::perms const back = fs::perms(xfs::perms::unknown);
@@ -508,8 +528,8 @@ BOOST_AUTO_TEST_CASE(TheInheritedSetInterfaceWorks)
         BOOST_CHECK_EQUAL(xstd::bit_convert<std::uint16_t>(p), 0xF108U);
         BOOST_CHECK(*p.find(xfs::perm::group_exec) == xfs::perm::group_exec);
         BOOST_CHECK(p.find(xfs::perm::others_read) == p.end()); // NOLINT(readability-container-contains): find is the inherited member under test
-        BOOST_CHECK(*p.rbegin() == xfs::perm::owner_read);
-        BOOST_CHECK(std::ranges::equal(std::views::reverse(p), std::array{xfs::perm::owner_read, xfs::perm::group_exec}));
+        BOOST_CHECK(*p.rbegin() == xfs::perm::group_exec);
+        BOOST_CHECK(std::ranges::equal(std::views::reverse(p), std::array{xfs::perm::group_exec, xfs::perm::owner_read}));
         BOOST_CHECK_EQUAL(p.erase(xfs::perm::owner_read), 1UZ);
         BOOST_CHECK_EQUAL(xstd::bit_convert<std::uint16_t>(p), 0xF008U);
 
@@ -580,18 +600,64 @@ BOOST_AUTO_TEST_CASE(TheFlagTypeIsABidirectionalRangeOfItsKeys)
 
         auto const p = xfs::perms::owner_all;
         auto it      = p.begin();
-        BOOST_CHECK(*it++ == xfs::perm::owner_exec);
+        BOOST_CHECK(*it++ == xfs::perm::owner_read);
         BOOST_CHECK(*it == xfs::perm::owner_write);
         BOOST_CHECK(++it != p.end());
         BOOST_CHECK(++it == p.end());
 }
 
-// The set prints as its keys do, through the rank enumeration's own formatter, in rank order.
+// The set prints as its keys do, through the rank enumeration's own formatter, the highest flag first.
 BOOST_AUTO_TEST_CASE(TheFlagTypeFormatsItsFlagsByName)
 {
-        BOOST_CHECK_EQUAL(std::format("{}", xfs::perms::owner_read | xfs::perms::owner_write), "{owner_write, owner_read}");
+        BOOST_CHECK_EQUAL(std::format("{}", xfs::perms::owner_read | xfs::perms::owner_write), "{owner_read, owner_write}");
         BOOST_CHECK_EQUAL(std::format("{}", xfs::perms::none), "{}");
-        BOOST_CHECK_EQUAL(std::format("{}", xfs::perms::set_uid | xfs::perms::others_exec), "{others_exec, set_uid}");
+        BOOST_CHECK_EQUAL(std::format("{}", xfs::perms::set_uid | xfs::perms::others_exec), "{set_uid, others_exec}");
+}
+
+// The walk runs from the highest flag down, as ls -l reads the mode: owner_read first and others_exec last.
+BOOST_AUTO_TEST_CASE(TheFlagTypeIteratesFromTheHighestFlagDown)
+{
+        static_assert(std::same_as<xfs::perms::key_compare, std::greater<xfs::perm>>);
+        constexpr auto rwx = std::to_array({xfs::perm::owner_read, xfs::perm::owner_write, xfs::perm::owner_exec, xfs::perm::group_read, xfs::perm::group_write, xfs::perm::group_exec, xfs::perm::others_read, xfs::perm::others_write, xfs::perm::others_exec});
+        BOOST_CHECK(std::ranges::equal(xfs::perms::all, rwx));
+        BOOST_CHECK(xfs::perms::mask.front() == xfs::perm::set_uid and xfs::perms::mask.back() == xfs::perm::others_exec);
+        BOOST_CHECK_EQUAL(std::format("{}", xfs::perms::all), "{owner_read, owner_write, owner_exec, group_read, group_write, group_exec, others_read, others_write, others_exec}");
+}
+
+// <=> on two flag values is the enumeration's on their underlying words, and the mixed < through the conversion agrees.
+BOOST_AUTO_TEST_CASE(ThreeWayComparisonIsTheEnumerations)
+{
+        constexpr auto others = std::to_array<std::uint16_t>({0x0000, 0x0001, 0x0007, 0x0100, 0x01FF, 0x0800, 0x0FFF, 0x1000, 0xF000, 0xFFFF});
+        auto mismatches       = 0UZ;
+        for (auto const word : std::views::iota(0U, 0x10000U)) {
+                auto const p = xfs::perms(xstd::from_blocks, static_cast<std::uint16_t>(word));
+                for (auto const other : others) {
+                        auto const q        = xfs::perms(xstd::from_blocks, other);
+                        auto const expected = std::to_underlying(fs::perms(p)) <=> std::to_underlying(fs::perms(q));
+                        auto const mirrored = std::to_underlying(fs::perms(q)) <=> std::to_underlying(fs::perms(p));
+                        if ((p <=> q) != expected or (q <=> p) != mirrored or (p < fs::perms(q)) != std::is_lt(expected)) {
+                                ++mismatches;
+                        }
+                }
+        }
+        BOOST_CHECK_EQUAL(mismatches, 0UZ);
+}
+
+// With std::less, the walk runs from the lowest flag up and <=> is the lexicographic set order over it.
+BOOST_AUTO_TEST_CASE(AnAscendingFlagTypeIteratesUpAndOrdersAsASet)
+{
+        static_assert(std::same_as<ascending_perms::key_compare, std::less<xfs::perm>>); // NOLINT(modernize-use-transparent-functors): a flag type's comparator names its key
+        ascending_perms const p = fs::perms::owner_all;
+        BOOST_CHECK(std::ranges::equal(p, std::array{xfs::perm::owner_exec, xfs::perm::owner_write, xfs::perm::owner_read}));
+        BOOST_CHECK_EQUAL(std::format("{}", p), "{owner_exec, owner_write, owner_read}");
+        BOOST_CHECK(std::ranges::equal(ascending_perms(xstd::from_blocks, std::uint16_t{0xF001}), std::array{xfs::perm::others_exec}));
+
+        // {others_exec, set_uid} precedes {others_write} as a set, though its block is the larger one.
+        auto const lower = fs::perms::others_exec | fs::perms::set_uid;
+        auto const upper = fs::perms::others_write;
+        BOOST_CHECK(std::is_lt(ascending_perms(lower) <=> ascending_perms(upper)));
+        BOOST_CHECK(std::is_gt(xfs::perms(lower) <=> xfs::perms(upper)));
+        BOOST_CHECK(lower > upper);
 }
 
 // A width of twelve takes every value whose bits are all below it, and its complement stays within it.
@@ -622,7 +688,7 @@ BOOST_AUTO_TEST_CASE(AMaskEnumerationKeysAFlagTypeDirectly)
         static_assert(not std::convertible_to<modes, mode>);
         static_assert(not std::convertible_to<mode, modes>);
         auto const m = modes(mode::read) | modes(mode::exec);
-        BOOST_CHECK(std::ranges::equal(m, std::array{mode::read, mode::exec}));
+        BOOST_CHECK(std::ranges::equal(m, std::array{mode::exec, mode::read}));
         BOOST_CHECK(m.contains(mode::exec));
         BOOST_CHECK(not m.contains(mode::write));
         BOOST_CHECK(not m.contains(std::bit_cast<mode>(std::uint8_t{0x08})));
@@ -646,6 +712,7 @@ public:
 // p[k] == true is the built-in comparison: the nested proxy brings no block's namespace into ADL to tie with it.
 BOOST_AUTO_TEST_CASE(TheSubscriptComparesWithBoolOverAClassTypeBlock)
 {
+        static_assert(xstd::bit_mask<lamps>);
         auto l         = lamps();
         l[mode::write] = true;
         BOOST_CHECK(l[mode::write] == true);

@@ -72,6 +72,8 @@ consteval auto named_positions() noexcept
 {
         if constexpr (requires { KeyTraits::size; } and std::remove_const_t<Bits>::extent != std::dynamic_extent) {
                 if constexpr (KeyTraits::size < std::remove_const_t<Bits>::extent) {
+                        // Keys stopping short of the width fit one block, so no walk masks a block past the first.
+                        static_assert(std::remove_const_t<Bits>::extent <= std::remove_const_t<Bits>::bits_per_block);
                         return KeyTraits::size;
                 }
         }
@@ -83,22 +85,16 @@ template<class KeyTraits, class Bits>
 constexpr auto named_block(Bits const& c, std::size_t index) noexcept
         -> Bits::block_type
 {
-        using block_type      = Bits::block_type;
-        constexpr auto digits = Bits::bits_per_block;
-        constexpr auto named  = named_positions<KeyTraits, Bits>();
+        using block_type     = Bits::block_type;
+        constexpr auto named = named_positions<KeyTraits, Bits>();
 
         auto const block = c[index];
         if constexpr (named == std::dynamic_extent) {
                 return block;
         } else {
-                // Separate tests, not a chain, whose two whole-block arms bugprone-branch-clone flags as clones.
-                if (digits * index >= named) {
-                        return block_type{};
-                }
-                if (named - (digits * index) >= digits) {
-                        return block;
-                }
-                return static_cast<block_type>(block & static_cast<block_type>(shl(block_type{1}, named - (digits * index)) - block_type{1}));
+                // The one block, named positions below the rest, and named below its width.
+                assert(index == 0UZ);
+                return static_cast<block_type>(block & static_cast<block_type>(shl(block_type{1}, named) - block_type{1}));
         }
 }
 
@@ -282,7 +278,7 @@ class set_adaptor : public set::sizes_t<Bits, Store, Derived, Key, KeyTraits, Co
                 }
         }
 
-        // A scan's answer, ending at key_end where it found only positions no key names.
+        // A scan's answer, ending at key_end where it found nothing or only positions no key names.
         [[nodiscard]] static constexpr auto named_or_end(std::size_t width, std::size_t pos) noexcept
                 -> std::size_t
         {
@@ -436,7 +432,7 @@ class set_adaptor : public set::sizes_t<Bits, Store, Derived, Key, KeyTraits, Co
         {
                 assert(n < key_end(ptr->size()));
                 if constexpr (is_descending) {
-                        return ptr->total_find_prev(n);
+                        return named_or_end(ptr->size(), ptr->total_find_prev(n));
                 } else {
                         return named_or_end(ptr->size(), ptr->exclusive_find_next(n));
                 }
@@ -712,7 +708,7 @@ public:
                 -> const_iterator
         {
                 if constexpr (is_descending) {
-                        return {&bits(), bits().total_find_prev(key_end(bits().size()))};
+                        return {&bits(), named_or_end(bits().size(), bits().total_find_prev(key_end(bits().size())))};
                 } else {
                         return {&bits(), named_or_end(bits().size(), bits().find_first())};
                 }
@@ -1242,7 +1238,7 @@ public:
                 if constexpr (is_descending) {
                         // The highest position not above x's, which is the scan below the one past it.
                         auto const pos = KeyTraits::to_index(x);
-                        return {&bits(), bits().total_find_prev(pos < key_end(bits().size()) ? pos + 1UZ : key_end(bits().size()))};
+                        return {&bits(), named_or_end(bits().size(), bits().total_find_prev(pos < key_end(bits().size()) ? pos + 1UZ : key_end(bits().size())))};
                 } else {
                         return contains(x) ? const_iterator{&bits(), KeyTraits::to_index(x)} : upper_bound(x);
                 }
@@ -1253,7 +1249,7 @@ public:
         {
                 auto const pos = KeyTraits::to_index(x);
                 if constexpr (is_descending) {
-                        return {&bits(), bits().total_find_prev(std::ranges::min(pos, key_end(bits().size())))};
+                        return {&bits(), named_or_end(bits().size(), bits().total_find_prev(std::ranges::min(pos, key_end(bits().size()))))};
                 } else {
                         if (pos >= key_end(bits().size())) {
                                 return end();
@@ -1308,7 +1304,7 @@ public:
         {
                 auto const [lo, hi] = equivalent_positions(x);
                 if constexpr (is_descending) {
-                        return {&bits(), bits().total_find_prev(hi)};
+                        return {&bits(), named_or_end(bits().size(), bits().total_find_prev(hi))};
                 } else {
                         return {&bits(), named_or_end(bits().size(), bits().inclusive_find_next(lo))};
                 }
@@ -1321,7 +1317,7 @@ public:
         {
                 auto const [lo, hi] = equivalent_positions(x);
                 if constexpr (is_descending) {
-                        return {&bits(), bits().total_find_prev(lo)};
+                        return {&bits(), named_or_end(bits().size(), bits().total_find_prev(lo))};
                 } else {
                         return {&bits(), named_or_end(bits().size(), bits().inclusive_find_next(hi))};
                 }
