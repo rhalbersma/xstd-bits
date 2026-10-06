@@ -585,7 +585,7 @@ BOOST_AUTO_TEST_CASE(TheInteropIsAnEnumerationAnUnsignedIntegerOrABitset)
 // Every 16-bit value converts in from an unsigned integer and from a bitset, and back unchanged.
 BOOST_AUTO_TEST_CASE(EverySixteenBitValueRoundTripsThroughAWordAndABitset)
 {
-        static_assert(std::uint16_t(word_perms(std::uint16_t{0x0123})) == 0x0123);
+        static_assert(static_cast<std::uint16_t>(word_perms(std::uint16_t{0x0123})) == 0x0123);
         static_assert(word_perms(std::uint16_t{0x0123}) == std::uint16_t{0x0123});
         static_assert(std::bitset<16>(bitset_perms(std::bitset<16>(0x0123))) == std::bitset<16>(0x0123));
         static_assert(bitset_perms(std::bitset<16>(0x0123)) == std::bitset<16>(0x0123));
@@ -595,7 +595,7 @@ BOOST_AUTO_TEST_CASE(EverySixteenBitValueRoundTripsThroughAWordAndABitset)
                 auto const bits           = std::bitset<16>(word);
                 word_perms const from_w   = value;
                 bitset_perms const from_b = bits;
-                if (std::uint16_t(from_w) != value or from_w.bits() != value or std::bitset<16>(from_b) != bits or from_b.bits() != value or from_b != bits) {
+                if (static_cast<std::uint16_t>(from_w) != value or from_w.bits() != value or std::bitset<16>(from_b) != bits or from_b.bits() != value or from_b != bits) {
                         ++mismatches;
                 }
         }
