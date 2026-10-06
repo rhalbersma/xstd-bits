@@ -448,7 +448,7 @@ BOOST_AUTO_TEST_CASE(ItsStorageIsAContiguousSizedRangeOfUnsignedIntegers)
         static_assert(not xstd::owned_bit_blocks<std::vector<bool>>); // not a contiguous range
         static_assert(not xstd::owned_bit_blocks<std::vector<int>>);  // nor unsigned integers
 
-        // The element clause is unsigned_integer, not bitwise_operators: the <bit> intrinsics want the narrower.
+        // The element clause is unsigned_integer, not bit_mask: the <bit> intrinsics want the narrower.
         static_assert(not xstd::owned_bit_blocks<std::array<std::bitset<64>, 4>>);
 }
 

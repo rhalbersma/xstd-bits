@@ -3,28 +3,31 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/ext_int128.hpp>           // TEST_HAS_BOOST_INT128, uint128
-#include <xstd/bits/bit_flag_set.hpp>    // bit_flag_set
-#include <xstd/bits/bit_flag_traits.hpp> // bit_flag_traits
-#include <xstd/bits/bit_key_traits.hpp>  // bit_key_traits
-#include <xstd/filesystem.hpp>           // enum_traits, perm, perms
-#include <boost/test/unit_test.hpp>      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <algorithm>                     // ranges::all_of, ranges::equal, ranges::includes, ranges::set_difference, ranges::set_intersection, ranges::set_symmetric_difference, ranges::set_union
-#include <array>                         // array, to_array
-#include <bit>                           // bit_cast, popcount
-#include <concepts>                      // convertible_to, same_as
-#include <cstddef>                       // size_t
-#include <cstdint>                       // uint16_t, uint8_t
-#include <filesystem>                    // exists, path, perm_options, permissions, perms, remove, status, temp_directory_path
-#include <format>                        // format
-#include <fstream>                       // ofstream
-#include <iterator>                      // forward_iterator, inserter, iter_reference_t
-#include <random>                        // random_device
-#include <ranges>                        // forward_range, iota, sized_range
-#include <set>                           // set
-#include <string_view>                   // string_view
-#include <utility>                       // as_const, pair, to_underlying
-#include <vector>                        // vector
+#include <test/ext_int128.hpp>             // TEST_HAS_BOOST_INT128, uint128
+#include <xstd/bits/bit_flag_set.hpp>      // bit_flag_set
+#include <xstd/bits/bit_flag_traits.hpp>   // bit_flag_traits
+#include <xstd/bits/bit_key_traits.hpp>    // bit_key_traits
+#include <xstd/bits/detail/mask_word.hpp>  // mask_word
+#include <xstd/filesystem.hpp>             // enum_traits, perm, perms
+#include <xstd/ints/concepts/bit_mask.hpp> // bit_mask
+#include <boost/test/unit_test.hpp>        // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <algorithm>                       // ranges::all_of, ranges::equal, ranges::includes, ranges::set_difference, ranges::set_intersection, ranges::set_symmetric_difference, ranges::set_union
+#include <array>                           // array, to_array
+#include <bit>                             // bit_cast, popcount
+#include <bitset>                          // bitset
+#include <concepts>                        // convertible_to, same_as
+#include <cstddef>                         // size_t
+#include <cstdint>                         // uint16_t, uint8_t
+#include <filesystem>                      // exists, path, perm_options, permissions, perms, remove, status, temp_directory_path
+#include <format>                          // format
+#include <fstream>                         // ofstream
+#include <iterator>                        // forward_iterator, inserter, iter_reference_t
+#include <random>                          // random_device
+#include <ranges>                          // forward_range, iota, sized_range
+#include <set>                             // set
+#include <string_view>                     // string_view
+#include <utility>                         // as_const, pair, to_underlying
+#include <vector>                          // vector
 
 namespace {
 
@@ -52,17 +55,24 @@ public:
         using bit_flag_set::bit_flag_set;
 };
 
-// [bitmask.types]: the three operators, the complement and their compound forms giving back the type, and a zero value.
-template<class T>
-concept bitmask_type = requires (T x, T y) {
-        { x | y } -> std::same_as<T>;
-        { x & y } -> std::same_as<T>;
-        { x ^ y } -> std::same_as<T>;
-        { ~x } -> std::same_as<T>;
-        { x |= y } -> std::same_as<T&>;
-        { x &= y } -> std::same_as<T&>;
-        { x ^= y } -> std::same_as<T&>;
-        { T{} == x } -> std::convertible_to<bool>;
+// The same sixteen positions converting with an unsigned integer and with a bitset rather than the enumeration.
+class word_perms : public xstd::bit_flag_set<word_perms, xfs::perm, std::uint16_t, 16, xstd::bit_key_traits<xfs::perm>, std::uint16_t>
+{
+public:
+        using bit_flag_set::bit_flag_set;
+};
+
+class bitset_perms : public xstd::bit_flag_set<bitset_perms, xfs::perm, std::uint16_t, 16, xstd::bit_key_traits<xfs::perm>, std::bitset<16>>
+{
+public:
+        using bit_flag_set::bit_flag_set;
+};
+
+// Twelve bits wide against a sixteen-bit bitset, so a value coming in can have positions the flag type has not.
+class narrow_bitset_perms : public xstd::bit_flag_set<narrow_bitset_perms, xfs::perm, std::uint16_t, 12, xstd::bit_key_traits<xfs::perm>, std::bitset<16>>
+{
+public:
+        using bit_flag_set::bit_flag_set;
 };
 
 // Every name [fs.enum.perms] lists, beside the standard's own value of it.
@@ -293,9 +303,10 @@ BOOST_AUTO_TEST_SUITE(BitFlagSet)
 // The standard's type meets [bitmask.types], and so does the flag type spelled the same way.
 BOOST_AUTO_TEST_CASE(BothTypesAreBitmaskTypes)
 {
-        static_assert(bitmask_type<fs::perms>);
-        static_assert(bitmask_type<xfs::perms>);
-        static_assert(bitmask_type<modes>);
+        static_assert(xstd::bit_mask<fs::perms>);
+        static_assert(xstd::bit_mask<xfs::perms>);
+        static_assert(xstd::bit_mask<modes>);
+        static_assert(xstd::bit_mask<word_perms> and xstd::bit_mask<bitset_perms>);
         static_assert(xfs::perms{} == xfs::perms::none);
 
         BOOST_CHECK(true);
@@ -557,5 +568,62 @@ BOOST_AUTO_TEST_CASE(TheSubscriptComparesWithBoolOverAClassTypeBlock)
 }
 
 #endif
+
+// The interop is any of [bitmask.types]'s three forms: an enumeration, an unsigned integer or a bitset, and no other.
+BOOST_AUTO_TEST_CASE(TheInteropIsAnEnumerationAnUnsignedIntegerOrABitset)
+{
+        static_assert(xstd::bits::detail::mask_word<fs::perms>);
+        static_assert(xstd::bits::detail::mask_word<std::uint16_t>);
+        static_assert(xstd::bits::detail::mask_word<std::bitset<16>>);
+        static_assert(not xstd::bits::detail::mask_word<int>);
+        static_assert(not xstd::bits::detail::mask_word<modes>);
+        static_assert(std::same_as<word_perms::interop_type, std::uint16_t>);
+        static_assert(std::same_as<bitset_perms::interop_type, std::bitset<16>>);
+        BOOST_CHECK(true);
+}
+
+// Every 16-bit value converts in from an unsigned integer and from a bitset, and back unchanged.
+BOOST_AUTO_TEST_CASE(EverySixteenBitValueRoundTripsThroughAWordAndABitset)
+{
+        static_assert(static_cast<std::uint16_t>(word_perms(std::uint16_t{0x0123})) == 0x0123);
+        static_assert(word_perms(std::uint16_t{0x0123}) == std::uint16_t{0x0123});
+        static_assert(std::bitset<16>(bitset_perms(std::bitset<16>(0x0123))) == std::bitset<16>(0x0123));
+        static_assert(bitset_perms(std::bitset<16>(0x0123)) == std::bitset<16>(0x0123));
+        auto mismatches = 0UZ;
+        for (auto const word : std::views::iota(0U, 0x10000U)) {
+                auto const value          = static_cast<std::uint16_t>(word);
+                auto const bits           = std::bitset<16>(word);
+                word_perms const from_w   = value;
+                bitset_perms const from_b = bits;
+                if (static_cast<std::uint16_t>(from_w) != value or from_w.bits() != value or std::bitset<16>(from_b) != bits or from_b.bits() != value or from_b != bits) {
+                        ++mismatches;
+                }
+        }
+        BOOST_CHECK_EQUAL(mismatches, 0UZ);
+}
+
+// Each operator takes the word or the bitset on either side, and answers as the enumeration does.
+BOOST_AUTO_TEST_CASE(EachOperatorMeetsAWordAndABitsetInBothOrders)
+{
+        auto const p = word_perms::from_bits(0x0F0);
+        auto const q = bitset_perms::from_bits(0x0F0);
+        BOOST_CHECK((p | std::uint16_t{0x00F}).bits() == 0x0FF and (std::uint16_t{0x00F} | p).bits() == 0x0FF);
+        BOOST_CHECK((q | std::bitset<16>(0x00F)).bits() == 0x0FF and (std::bitset<16>(0x00F) | q).bits() == 0x0FF);
+        BOOST_CHECK((p & std::uint16_t{0x030}).bits() == 0x030 and (std::bitset<16>(0x030) & q).bits() == 0x030);
+        BOOST_CHECK((p ^ std::uint16_t{0x0FF}).bits() == 0x00F and (std::bitset<16>(0x0FF) ^ q).bits() == 0x00F);
+        BOOST_CHECK((p - std::uint16_t{0x030}).bits() == 0x0C0 and (q - std::bitset<16>(0x030)).bits() == 0x0C0);
+}
+
+// Against a sixteen-bit bitset, a twelve-bit flag type reads the low twelve, and finds any higher position unequal.
+BOOST_AUTO_TEST_CASE(ANarrowerWidthReadsTheLowPositionsOfABitset)
+{
+        auto const high = std::bitset<16>(0x1001);
+        auto const p    = narrow_bitset_perms::from_bits(0x0FFF);
+        BOOST_CHECK((p & high).bits() == 0x001);
+        BOOST_CHECK((p - high).bits() == 0xFFE);
+        BOOST_CHECK(not(narrow_bitset_perms::from_bits(0x001) == high));
+        BOOST_CHECK(narrow_bitset_perms::from_bits(0x001) == std::bitset<16>(0x001));
+        BOOST_CHECK(std::bitset<16>(~narrow_bitset_perms()) == std::bitset<16>(0x0FFF));
+}
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -9,23 +9,23 @@
 #include <xstd/bits/bit_blocks.hpp>                // bit_blocks_extent_v
 #include <xstd/bits/bit_key_traits.hpp>            // bit_key_traits
 #include <xstd/bits/detail/intrin.hpp>             // countr_zero, popcount
+#include <xstd/bits/detail/mask_word.hpp>          // low_mask_bits, mask_fits, mask_width, mask_word, to_mask
 #include <xstd/bits/detail/shift.hpp>              // shl, shr
 #include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
 #include <cassert>                                 // assert
 #include <cstddef>                                 // ptrdiff_t, size_t
 #include <iterator>                                // forward_iterator_tag, input_iterator_tag
-#include <type_traits>                             // conditional_t, is_enum_v, is_void_v, make_unsigned_t, underlying_type_t
-#include <utility>                                 // to_underlying
+#include <type_traits>                             // conditional_t, is_void_v
 
 // A base for flag types: a mask word whose named bits are the keys, spelled as the bitmask enumeration it replaces.
 namespace xstd {
 
-// Derived is the flag type, whose constants are its flags; Interop, unless void, is the enumeration it converts with.
+// Derived is the flag type, whose constants are its flags; Interop, unless void, is the bit mask it converts with.
 template<class Derived, class Key, xstd::unsigned_integer Block, std::size_t N = bit_blocks_extent_v<Block>, class KeyTraits = bit_key_traits<Key>, class Interop = void>
 class bit_flag_set
 {
         static_assert(N <= bit_blocks_extent_v<Block>);
-        static_assert(std::is_void_v<Interop> or std::is_enum_v<Interop>);
+        static_assert(std::is_void_v<Interop> or bits::detail::mask_word<Interop>);
 
         // The keys are the universe the traits close, else every position of the word.
         [[nodiscard]] static consteval auto num_keys() noexcept
@@ -52,7 +52,20 @@ class bit_flag_set
 
         static constexpr bool has_interop = not std::is_void_v<Interop>;
 
-        // What a conversion with no interop enumeration takes and gives: a type nothing else names.
+        // The interop mask holds every position of the word, so the word converts to it whole.
+        [[nodiscard]] static consteval auto interop_holds_width() noexcept
+                -> bool
+        {
+                if constexpr (has_interop) {
+                        return N <= bits::detail::mask_width<Interop>();
+                } else {
+                        return true;
+                }
+        }
+
+        static_assert(interop_holds_width());
+
+        // What a conversion with no interop mask takes and gives: a type nothing else names.
         struct no_interop
         {};
 
@@ -178,7 +191,7 @@ public:
         [[nodiscard]] constexpr explicit(false) operator interop_param() const noexcept // NOLINT(misc-explicit-constructor)
                 requires has_interop
         {
-                return static_cast<Interop>(static_cast<std::underlying_type_t<Interop>>(m_bits));
+                return bits::detail::to_mask<Interop>(m_bits);
         }
 
         // The word as it is, unnamed positions included, which is bitflags' from_bits_retain; no bit at or above N.
@@ -303,7 +316,7 @@ public:
                 return self();
         }
 
-        // Hidden friends over Derived itself, so a conversion to the interop enumeration never ties with one.
+        // Hidden friends over Derived itself, so a conversion to the interop mask never ties with one.
         [[nodiscard]] friend constexpr auto operator==(Derived const& lhs, Derived const& rhs) noexcept
                 -> bool
         {
@@ -349,16 +362,15 @@ public:
                 return nrv;
         }
 
-        // Total against the interop enumeration: a value with a bit at or above N equals no flag set.
+        // Total against the interop mask: a value with a bit at or above N equals no flag set.
         [[nodiscard]] friend constexpr auto operator==(Derived const& lhs, interop_param rhs) noexcept
                 -> bool
                 requires has_interop
         {
-                auto const bits = low_bits_of(rhs);
-                return lhs.bits() == bits and static_cast<decltype(word_of(rhs))>(bits) == word_of(rhs);
+                return lhs.bits() == low_bits_of(rhs) and bits::detail::mask_fits<Block>(rhs, N);
         }
 
-        // The rest in both orders, exact where the enumeration's own needs a conversion; no bit at or above N.
+        // The rest in both orders, exact where the mask's own needs a conversion; no bit at or above N.
         [[nodiscard]] friend constexpr auto operator|(Derived const& lhs, interop_param rhs) noexcept
                 -> Derived
                 requires has_interop
@@ -439,26 +451,19 @@ private:
                 return pos;
         }
 
-        // The enumeration's value read in its unsigned counterpart.
-        [[nodiscard]] static constexpr auto word_of(interop_param value) noexcept
-        {
-                return static_cast<std::make_unsigned_t<std::underlying_type_t<Interop>>>(std::to_underlying(value));
-        }
-
         // The value's bits below N, which are all of it that can meet a bit of this word.
         [[nodiscard]] static constexpr auto low_bits_of(interop_param value) noexcept
                 -> Block
         {
-                return static_cast<Block>(static_cast<Block>(word_of(value)) & width_mask);
+                return bits::detail::low_mask_bits<Block>(value, N);
         }
 
         // Where a bit of the value would enter the result, it must have none at or above N.
         [[nodiscard]] static constexpr auto bits_of(interop_param value) noexcept
                 -> Block
         {
-                auto const bits = low_bits_of(value);
-                assert(static_cast<decltype(word_of(value))>(bits) == word_of(value));
-                return bits;
+                assert((bits::detail::mask_fits<Block>(value, N)));
+                return low_bits_of(value);
         }
 };
 
