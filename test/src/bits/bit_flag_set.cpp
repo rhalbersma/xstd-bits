@@ -195,8 +195,9 @@ auto agrees_on_pair(std::size_t lhs, std::size_t rhs)
 
 #ifdef __clang__
 
-// Every enumerator has a case, and a value that is none of them falls through, which is the point of the switch.
+// Every standard name has a case; any other value, or an implementation's own enumerator, falls through to "".
 #pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wswitch"
 #pragma clang diagnostic ignored "-Wswitch-default"
 
 #endif
