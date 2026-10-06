@@ -38,7 +38,7 @@ enum class weekday : std::uint8_t
         thu,
         fri,
         sat,
-        sun
+        sun,
 };
 
 } // namespace

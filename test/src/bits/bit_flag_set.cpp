@@ -163,7 +163,7 @@ constexpr auto names = std::to_array<std::pair<std::string_view, fs::perms>>({
 }
 
 // The twelve permission bits, each a one-bit value of the standard's type.
-constexpr auto ranks = []() noexcept -> std::array<fs::perms, 12> {
+constexpr auto ranks = [] noexcept -> std::array<fs::perms, 12> {
         auto nrv = std::array<fs::perms, 12>();
         for (auto const i : std::views::iota(0UZ, nrv.size())) {
                 nrv[i] = bit_at(i);

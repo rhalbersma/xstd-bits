@@ -46,7 +46,7 @@ namespace {
 enum class mode : std::uint8_t
 {
         read  = 0x01,
-        write = 0x02
+        write = 0x02,
 };
 
 // Sorted and gapped keys, found by search.
@@ -56,7 +56,7 @@ constexpr auto ids = std::array{3, 17, 40};
 enum class storey : std::int8_t
 {
         basement = -3,
-        roof     = 4
+        roof     = 4,
 };
 
 } // namespace

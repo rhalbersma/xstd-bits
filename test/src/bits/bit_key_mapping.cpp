@@ -37,7 +37,7 @@ enum class storey : std::int8_t
 {
         basement = -3,
         ground   = 0,
-        roof     = 4
+        roof     = 4,
 };
 
 // Sorted, negative and gapped: an index by search rather than by subtraction.
@@ -47,7 +47,7 @@ constexpr auto ids = std::array{-40, 3, 17, 41, 1000};
 enum class channel : std::uint8_t
 {
         first = 5,
-        last  = 12
+        last  = 12,
 };
 
 } // namespace

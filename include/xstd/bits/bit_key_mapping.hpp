@@ -54,29 +54,32 @@ template<class Key, auto const& Keys>
 struct bit_find_mapping
 {
 private:
+        // The list by name, read once: clang-tidy 24 reports a substituted reference argument as parenthesized.
+        static constexpr auto const& keys = Keys; // NOLINT(readability-redundant-parentheses)
+
         static constexpr auto ordinal = [](Key key) noexcept -> bits::detail::ordinal_t<Key> { return bits::detail::ordinal(key); };
 
         // Strictly ascending, which an order-preserving rank needs and which also rules out a key listed twice.
-        static_assert(std::ranges::adjacent_find(Keys, std::ranges::greater_equal{}, ordinal) == std::ranges::end(Keys));
+        static_assert(std::ranges::adjacent_find(keys, std::ranges::greater_equal{}, ordinal) == std::ranges::end(keys));
 
 public:
-        static constexpr std::size_t size = std::ranges::size(Keys);
+        static constexpr std::size_t size = std::ranges::size(keys);
 
-        // A binary search for the key's rank; a key not in Keys ranks at size.
+        // A binary search for the key's rank; a key not in keys ranks at size.
         [[nodiscard]] static constexpr auto to_index(Key key) noexcept
                 -> std::size_t
         {
-                auto const first = std::ranges::lower_bound(Keys, ordinal(key), std::ranges::less{}, ordinal);
-                if (first == std::ranges::end(Keys) or ordinal(*first) != ordinal(key)) {
+                auto const first = std::ranges::lower_bound(keys, ordinal(key), std::ranges::less{}, ordinal);
+                if (first == std::ranges::end(keys) or ordinal(*first) != ordinal(key)) {
                         return size;
                 }
-                return static_cast<std::size_t>(std::ranges::distance(std::ranges::begin(Keys), first));
+                return static_cast<std::size_t>(std::ranges::distance(std::ranges::begin(keys), first));
         }
 
         [[nodiscard]] static constexpr auto from_index(std::size_t index) noexcept
                 -> Key
         {
-                return std::ranges::begin(Keys)[index];
+                return std::ranges::begin(keys)[index];
         }
 };
 
