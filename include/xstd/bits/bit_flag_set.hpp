@@ -170,9 +170,8 @@ public:
                 : m_bits(bits::detail::shl(Block{1}, position_of(key)))
         {}
 
-        // The interop enumeration's value is the mask word: implicit both ways, with no bit at or above N coming in.
+        // The interop value is the mask word; unconstrained, since MSVC drops a constrained inherited converter.
         [[nodiscard]] constexpr explicit(false) bit_flag_set(interop_param value) noexcept // NOLINT(misc-explicit-constructor)
-                requires has_interop
                 : m_bits(bits_of(value))
         {}
 
