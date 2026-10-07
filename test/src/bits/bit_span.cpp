@@ -4,6 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/sequence/ordering.hpp>               // ordering_agrees_with_vector_bool
+#include <test/sequence/rotation.hpp>               // permutation_sweep, permutes_ten_bits
 #include <xstd/bits/bit_array.hpp>                  // bit_array
 #include <xstd/bits/bit_fixed_set.hpp>              // bit_fixed_set
 #include <xstd/bits/bit_set_view.hpp>               // bit_set_view
@@ -29,6 +30,16 @@ using Blocks  = std::array<std::size_t, 1>;
 
 template<class T>
 using view_of = decltype(xstd::bit_span(std::declval<T&>()));
+
+// The view over whatever a test hands it, blocks or an owner: what the permutations are applied through.
+struct as_span
+{
+        template<class B>
+        [[nodiscard]] auto operator()(B& b) const noexcept
+        {
+                return xstd::bit_span(b);
+        }
+};
 
 // Named rather than a lambda, so the conversion happens at a call boundary the way a caller would meet it.
 constexpr auto takes_a_span(xstd::bit_span<Blocks, 8> v) noexcept
@@ -126,6 +137,22 @@ BOOST_AUTO_TEST_CASE(EveryViewedTypeReadsLikeAVectorBool)
         test::sequence::ordering_agrees_with_vector_bool<std::array<std::uint8_t, 1>>();
         test::sequence::ordering_agrees_with_vector_bool<std::vector<std::uint64_t>>();
         test::sequence::ordering_agrees_with_vector_bool<xstd::bit_array<8>>();
+}
+
+// Rotated and reversed through the view: one block, a static and a run-time count of them, and an owner's padded bits.
+BOOST_AUTO_TEST_CASE(ItRotatesAndReversesWhatItViews)
+{
+        auto block       = std::uint8_t{};
+        auto const whole = xstd::bit_span(block);
+        static_assert(std::same_as<decltype(whole.rotate(0UZ)), decltype(whole)&>);
+        static_assert(noexcept(whole.rotate(0UZ)) and noexcept(whole.reverse()));
+
+        BOOST_CHECK_EQUAL(test::sequence::permutation_sweep(std::uint8_t{}, as_span()), 0);
+        BOOST_CHECK_EQUAL(test::sequence::permutation_sweep(std::array<std::uint8_t, 3>(), as_span()), 0);
+        for (auto const k : std::views::iota(0UZ, 4UZ)) {
+                BOOST_CHECK_EQUAL(test::sequence::permutation_sweep(std::vector<std::uint64_t>(k), as_span()), 0);
+        }
+        BOOST_CHECK_EQUAL(test::sequence::permutation_sweep(xstd::basic_bit_array<std::uint8_t, 13>(), as_span()), 0);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

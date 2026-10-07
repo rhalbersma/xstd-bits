@@ -1426,6 +1426,24 @@ public:
                 self.bits().flip();
         }
 
+        // std::ranges::rotate(*this, begin() + n % size()): bit i takes bit (i + n) % size(), and empty is left alone.
+        constexpr auto rotate(this auto&& self, size_type n) noexcept
+                -> auto&
+                requires (not is_window) and requires { self.bits().rotate(n); }
+        {
+                self.bits().rotate(n);
+                return self;
+        }
+
+        // std::ranges::reverse(*this), a block at a time.
+        constexpr auto reverse(this auto&& self) noexcept
+                -> auto&
+                requires (not is_window) and requires { self.bits().reverse(); }
+        {
+                self.bits().reverse();
+                return self;
+        }
+
         static constexpr auto swap(reference x, reference y) noexcept
                 -> void
         {

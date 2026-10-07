@@ -5,6 +5,7 @@
 
 #include <test/inplace_vector.hpp>                  // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
 #include <test/sequence/dense.hpp>                  // yields_every_position
+#include <test/sequence/rotation.hpp>               // permutation_sweep
 #include <xstd/bits/bit_blocks.hpp>                 // bit_align, bit_least
 #include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector, bit_bounded_vector
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
@@ -161,6 +162,24 @@ BOOST_AUTO_TEST_CASE(ACapacityOfNoughtTakesOnlyAnEmptySource)
         BOOST_CHECK_THROW(z.append_range(some), std::bad_alloc);
         BOOST_CHECK_THROW(z.append_range(some_bits), std::bad_alloc);
         BOOST_CHECK(z.empty());
+}
+
+// rotate and reverse at every width through three blocks, and at whole and partial ones up to the capacity.
+BOOST_AUTO_TEST_CASE(ItRotatesAndReversesAsTheAlgorithmsDo)
+{
+        using V            = xstd::basic_bit_bounded_vector<std::uint8_t, 130>;
+        auto disagreements = 0;
+        for (auto const n : std::views::iota(0UZ, 18UZ)) {
+                disagreements += test::sequence::permutation_sweep(V(n));
+        }
+        for (auto const n : {64UZ, 70UZ, 130UZ}) {
+                disagreements += test::sequence::permutation_sweep(V(n));
+        }
+        BOOST_CHECK_EQUAL(disagreements, 0);
+
+        // A capacity of nought has nothing to move.
+        auto z = xstd::basic_bit_bounded_vector<std::uint8_t, 0>();
+        BOOST_CHECK(z.rotate(1UZ).reverse().empty());
 }
 
 BOOST_AUTO_TEST_SUITE_END()
