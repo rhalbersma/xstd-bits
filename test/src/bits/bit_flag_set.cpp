@@ -824,6 +824,7 @@ BOOST_AUTO_TEST_CASE(AUserMayDeriveAClassOfTheirOwn)
         auto const p = user_perms(fs::perms::owner_all);
         BOOST_CHECK(p.is_private());
         BOOST_CHECK(not user_perms(fs::perms::all).is_private());
+        BOOST_CHECK((user_perms{fs::perms::owner_read, fs::perms::group_read}).size() == 2UZ);
         static_assert(std::same_as<decltype(p | fs::perms::group_read), xfs::perms>);
         BOOST_CHECK((p | fs::perms::group_read).size() == 4UZ);
 }

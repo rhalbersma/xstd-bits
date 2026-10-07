@@ -29,7 +29,7 @@
 #include <initializer_list>                                  // initializer_list
 #include <iterator>                                          // input_iterator
 #include <ranges>                                            // from_range, from_range_t
-#include <type_traits>                                       // false_type, is_enum_v
+#include <type_traits>                                       // conditional_t, false_type, is_enum_v
 #include <utility>                                           // forward
 
 namespace xstd {
@@ -45,6 +45,15 @@ class basic_bit_fixed_set : public bits::detail::set_adaptor<bits::detail::bit_b
 
         // Each value of the key a mask of its one-bit keys, which converts with the set both ways.
         static constexpr bool is_mask = bit_mask_mapping<KeyMapping, Key>;
+
+        // No caller can make one, so the mask constructor taking it is unreachable when Key is no mask.
+        class not_a_mask
+        {
+                not_a_mask() = default;
+        };
+
+        // A type rather than a constraint, since MSVC drops an inherited constructor's requires-clause candidate.
+        using mask_type = std::conditional_t<is_mask, Key, not_a_mask>;
 
 public:
         using typename base_type::key_compare;
@@ -70,17 +79,15 @@ public:
                 : base_type(std::from_range, std::forward<R>(rg))
         {}
 
-        [[nodiscard]] constexpr basic_bit_fixed_set(std::initializer_list<value_type> il, key_compare const& /* comp */ = key_compare())
-                requires (not is_mask)
-                : base_type(il)
-        {}
-
         // A mask's list is the union of its values, so {m} is the conversion from m and {a, b} two one-bit values.
-        [[nodiscard]] constexpr basic_bit_fixed_set(std::initializer_list<value_type> il, key_compare const& /* comp */ = key_compare()) noexcept
-                requires is_mask
+        [[nodiscard]] constexpr basic_bit_fixed_set(std::initializer_list<value_type> il, key_compare const& /* comp */ = key_compare()) noexcept(is_mask)
         {
-                for (auto const& mask : il) {
-                        *this |= mask;
+                if constexpr (is_mask) {
+                        for (auto const& mask : il) {
+                                *this |= mask;
+                        }
+                } else {
+                        this->insert(il.begin(), il.end());
                 }
         }
 
@@ -92,8 +99,7 @@ public:
         {}
 
         // Not in [set.cons]: any value of a mask, as the enumeration it replaces takes it; no bit at or above N.
-        [[nodiscard]] constexpr explicit(false) basic_bit_fixed_set(key_type const& mask) noexcept // NOLINT(misc-explicit-constructor)
-                requires is_mask
+        [[nodiscard]] constexpr explicit(false) basic_bit_fixed_set(mask_type const& mask) noexcept // NOLINT(misc-explicit-constructor)
         {
                 assert(fits(mask));
                 bits::detail::storage_access::bits(*this).assign_bits(KeyMapping::to_block(mask));
