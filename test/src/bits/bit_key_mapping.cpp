@@ -5,22 +5,26 @@
 
 #include <test/block_types.hpp>             // all_block_types
 #include <test/set/enums.hpp>               // day, letter, level, listed_enums, nine, perm, piece, sign, undeclared, wind
+#include <test/set/lookup.hpp>              // lookup_mismatches
 #include <test/set/strong_index.hpp>        // offset_mapping, strong_index
 #include <xstd/bits/bit_fixed_set.hpp>      // basic_bit_fixed_set
 #include <xstd/bits/bit_index_mapping.hpp>  // bit_index_mapping, sized_bit_index_mapping
 #include <xstd/bits/bit_key_mapping.hpp>    // bit_find_mapping, bit_key_mapping, bit_range_mapping, enum_traits
 #include <xstd/bits/detail/set_adaptor.hpp> // admits_width
 #include <boost/test/unit_test.hpp>         // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <algorithm>                        // min
+#include <algorithm>                        // min, ranges::find
 #include <array>                            // array
 #include <bit>                              // bit_cast
 #include <concepts>                         // derived_from, same_as
 #include <cstddef>                          // size_t
 #include <cstdint>                          // int16_t, int64_t, int8_t, uint8_t
+#include <functional>                       // greater
 #include <iterator>                         // next
 #include <limits>                           // numeric_limits
 #include <ranges>                           // iota, size
+#include <set>                              // set
 #include <tuple>                            // tuple
+#include <type_traits>                      // underlying_type_t
 #include <utility>                          // to_underlying
 
 BOOST_AUTO_TEST_SUITE(BitKeyMapping)
@@ -49,6 +53,44 @@ enum class channel : std::uint8_t
         first = 5,
         last  = 12,
 };
+
+// Eight consecutive integers from below zero, and a set over them in either direction.
+using around_zero = xstd::bit_range_mapping<int, -3, 8UZ>;
+
+// The values from lo to hi that lie in the range, which is_key must answer and nothing else.
+template<class Mapping, class Key>
+auto is_key_mismatches(Key lo, Key hi, Key first, Key last)
+        -> std::size_t
+{
+        auto mismatches = 0UZ;
+        for (auto const v : std::views::iota(lo, hi)) {
+                mismatches += static_cast<std::size_t>(Mapping::is_key(v) != (first <= v and v <= last));
+        }
+        return mismatches;
+}
+
+// Every subset of a mapped set's universe against std::set, asked every value from lo to hi, keys and others alike.
+template<class X, class Model>
+auto lookup_mismatches_over_subsets(int lo, int hi)
+        -> std::size_t
+{
+        using mapping   = X::key_mapping_type;
+        auto mismatches = 0UZ;
+        for (auto const mask : std::views::iota(0UZ, 1UZ << mapping::size)) {
+                auto a     = X();
+                auto model = Model();
+                for (auto const i : std::views::iota(0UZ, mapping::size)) {
+                        if (((mask >> i) & 1UZ) != 0UZ) {
+                                a.insert(mapping::from_index(i));
+                                model.insert(mapping::from_index(i));
+                        }
+                }
+                for (auto const v : std::views::iota(lo, hi)) {
+                        mismatches += test::set::lookup_mismatches(a, model, v);
+                }
+        }
+        return mismatches;
+}
 
 } // namespace
 
@@ -100,6 +142,19 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AnUnsignedKeyIsItsOwnPosition, Key, test::all_bloc
         }
 }
 
+// Every unsigned key is a key, except one wider than std::size_t that names no position.
+BOOST_AUTO_TEST_CASE_TEMPLATE(AnUnsignedKeyIsAKeyWhereItNamesAPosition, Key, test::all_block_types)
+{
+        using mapping = xstd::bit_key_mapping<Key>;
+        static_assert(std::same_as<decltype(mapping::is_key(Key())), bool> and noexcept(mapping::is_key(Key())));
+        constexpr auto wider = std::numeric_limits<std::size_t>::digits < std::numeric_limits<Key>::digits;
+
+        BOOST_CHECK(mapping::is_key(Key()));
+        BOOST_CHECK(mapping::is_key(static_cast<Key>(std::numeric_limits<std::size_t>::max())));
+        BOOST_CHECK_EQUAL(mapping::is_key(std::numeric_limits<Key>::max()), not wider);
+        BOOST_CHECK(identity::is_key(std::numeric_limits<std::size_t>::max()));
+}
+
 using range_keys = std::tuple<std::int8_t, std::int16_t, int, std::int64_t, std::uint8_t, unsigned>;
 
 // A range closes the universe at N keys from First, in order, from the type's most negative value or from any other.
@@ -123,6 +178,32 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ARangeMapsNKeysFromFirstOntoTheFirstNPositions, Ke
                 BOOST_CHECK(i == 0UZ or from_middle::from_index(i - 1UZ) < from_middle::from_index(i));
         }
         BOOST_CHECK(from_middle::from_index(0UZ) == Key(std::numeric_limits<Key>::is_signed ? -50 : 20));
+}
+
+// A key of the range is one from First to First + N - 1, below and above it none, wherever First lies in the type.
+BOOST_AUTO_TEST_CASE_TEMPLATE(ARangeHoldsTheNKeysFromFirstAndNoOther, Key, range_keys)
+{
+        constexpr auto lowest = std::numeric_limits<Key>::min();
+        constexpr auto middle = Key(std::numeric_limits<Key>::is_signed ? -50 : 20);
+        using from_lowest     = xstd::bit_range_mapping<Key, lowest, 100UZ>;
+        using from_middle     = xstd::bit_range_mapping<Key, middle, 100UZ>;
+        static_assert(std::same_as<decltype(from_lowest::is_key(Key())), bool> and noexcept(from_lowest::is_key(Key())));
+
+        BOOST_CHECK_EQUAL((is_key_mismatches<from_lowest, Key>(lowest, Key(lowest + 120), lowest, Key(lowest + 99))), 0UZ);
+        BOOST_CHECK_EQUAL((is_key_mismatches<from_middle, Key>(Key(middle - 20), Key(middle + 120), middle, Key(middle + 99))), 0UZ);
+        BOOST_CHECK(not from_lowest::is_key(std::numeric_limits<Key>::max()));
+        BOOST_CHECK(not from_middle::is_key(lowest) and not from_middle::is_key(std::numeric_limits<Key>::max()));
+}
+
+// A range over the whole of a type holds every value, the most negative and the most positive alike.
+BOOST_AUTO_TEST_CASE(ARangeOverTheWholeTypeHoldsEveryValue)
+{
+        using bytes = xstd::bit_range_mapping<std::int8_t, std::numeric_limits<std::int8_t>::min(), 256UZ>;
+        auto keys   = 0UZ;
+        for (auto const v : std::views::iota(-128, 128)) {
+                keys += static_cast<std::size_t>(bytes::is_key(static_cast<std::int8_t>(v)));
+        }
+        BOOST_CHECK_EQUAL(keys, 256UZ);
 }
 
 // The whole of a narrow signed type, and the far end of the widest: the distance from First stays exact.
@@ -158,6 +239,11 @@ BOOST_AUTO_TEST_CASE(ARangeOfAnEnumerationCountsInItsUnderlyingType)
                 BOOST_CHECK_EQUAL(channels::to_index(channels::from_index(i)), i);
         }
 
+        // The range from below zero, and the values just outside it at either end.
+        BOOST_CHECK(storeys::is_key(storey::basement) and storeys::is_key(storey::ground) and storeys::is_key(storey::roof));
+        BOOST_CHECK(not storeys::is_key(std::bit_cast<storey>(std::int8_t{-4})) and not storeys::is_key(std::bit_cast<storey>(std::int8_t{5})));
+        BOOST_CHECK(channels::is_key(channel::last) and not channels::is_key(std::bit_cast<channel>(std::uint8_t{4})) and not channels::is_key(std::bit_cast<channel>(std::uint8_t{13})));
+
         // A set keyed on the range holds every key in it, in the enumeration's order.
         auto const s = xstd::basic_bit_fixed_set<storey, std::uint8_t, 8UZ, storeys>{storey::roof, storey::basement, storey::ground};
         BOOST_CHECK_EQUAL(s.size(), 3UZ);
@@ -192,6 +278,8 @@ BOOST_AUTO_TEST_CASE(AMappingOfItsOwnMayCloseTheUniverse)
 
         BOOST_CHECK_EQUAL(mapping::to_index({.value = 10UZ}), 0UZ);
         BOOST_CHECK(mapping::from_index(4UZ) == test::set::strong_index{.value = 14UZ});
+        BOOST_CHECK(mapping::is_key({.value = 10UZ}) and mapping::is_key({.value = 14UZ}));
+        BOOST_CHECK(not mapping::is_key({.value = 9UZ}) and not mapping::is_key({.value = 15UZ}));
 }
 
 // An enumeration whose values are listed ranks by that list, closing the universe at its size; others have no default.
@@ -282,6 +370,22 @@ BOOST_AUTO_TEST_CASE(AnUnlistedValueRanksAtTheSizeOrAbove)
         BOOST_CHECK_EQUAL(xstd::bit_key_mapping<piece>::to_index(std::bit_cast<piece>(std::uint8_t{2})), 6UZ);
 }
 
+// A listed value is a key and no other is, below, between and above the list, dense or not.
+BOOST_AUTO_TEST_CASE_TEMPLATE(AKeyIsAListedValueAndNoOther, E, test::set::listed_enums)
+{
+        using mapping         = xstd::bit_key_mapping<E>;
+        using underlying      = std::underlying_type_t<E>;
+        constexpr auto values = xstd::enum_traits<E>::values;
+        static_assert(noexcept(mapping::is_key(values[0])));
+
+        auto mismatches = 0UZ;
+        for (auto const v : std::views::iota(int{std::numeric_limits<underlying>::min()}, int{std::numeric_limits<underlying>::max()} + 1)) {
+                auto const e = static_cast<E>(v);
+                mismatches += static_cast<std::size_t>(mapping::is_key(e) != (std::ranges::find(values, e) != values.end()));
+        }
+        BOOST_CHECK_EQUAL(mismatches, 0UZ);
+}
+
 // Sparse integer identifiers, each at its rank in the sorted list, key a set of as many positions as there are ids.
 BOOST_AUTO_TEST_CASE(SparseIdentifiersKeyASetThroughASearch)
 {
@@ -299,6 +403,27 @@ BOOST_AUTO_TEST_CASE(SparseIdentifiersKeyASetThroughASearch)
         for (auto const i : std::views::iota(0UZ, mapping::size)) {
                 BOOST_CHECK_EQUAL(mapping::to_index(mapping::from_index(i)), i);
         }
+        BOOST_CHECK(mapping::is_key(-40) and mapping::is_key(1000));
+        BOOST_CHECK(not mapping::is_key(-41) and not mapping::is_key(18) and not mapping::is_key(1001));
+}
+
+// A value outside the universe is no element: contains, count, find and erase say so, and the bounds place it.
+BOOST_AUTO_TEST_CASE(AValueOutsideTheUniverseIsNoElement)
+{
+        using ascending_range  = xstd::basic_bit_fixed_set<int, std::uint8_t, 8UZ, around_zero>;
+        using descending_range = xstd::basic_bit_fixed_set<int, std::uint8_t, 8UZ, around_zero, std::greater<>>;
+        using ascending_find   = xstd::basic_bit_fixed_set<int, std::uint8_t, 5UZ, xstd::bit_find_mapping<int, ids>>;
+        using descending_find  = xstd::basic_bit_fixed_set<int, std::uint8_t, 5UZ, xstd::bit_find_mapping<int, ids>, std::greater<>>;
+        BOOST_CHECK_EQUAL((lookup_mismatches_over_subsets<ascending_range, std::set<int>>(-20, 20)), 0UZ);
+        BOOST_CHECK_EQUAL((lookup_mismatches_over_subsets<descending_range, std::set<int, std::greater<>>>(-20, 20)), 0UZ);
+        BOOST_CHECK_EQUAL((lookup_mismatches_over_subsets<ascending_find, std::set<int>>(-45, 1005)), 0UZ);
+        BOOST_CHECK_EQUAL((lookup_mismatches_over_subsets<descending_find, std::set<int, std::greater<>>>(-45, 1005)), 0UZ);
+
+        // Below the range, the set's bounds are its first element, where the unsigned distance alone would put it last.
+        auto const s = ascending_range{-3, 0, 4};
+        BOOST_CHECK(s.lower_bound(-4) == s.begin() and s.upper_bound(-100) == s.begin());
+        BOOST_CHECK(s.lower_bound(5) == s.end() and not s.contains(-4));
+        BOOST_CHECK(s.find(5) == s.end()); // NOLINT(readability-container-contains): find is the member under test
 }
 
 BOOST_AUTO_TEST_SUITE_END()

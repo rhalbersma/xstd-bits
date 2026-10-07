@@ -4,6 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/set/enums.hpp>                  // day, listed_enums, nine, perm, piece, wind
+#include <test/set/lookup.hpp>                 // lookup_mismatches
 #include <xstd/bits/bit_array.hpp>             // bit_array
 #include <xstd/bits/bit_blocks.hpp>            // smallest_block_t
 #include <xstd/bits/bit_enum_set.hpp>          // bit_enum_set
@@ -13,18 +14,19 @@
 #include <xstd/misc/concepts.hpp>              // proxy_iterator, proxy_reference
 #include <xstd/misc/utility/to_underlying.hpp> // to_underlying
 #include <boost/test/unit_test.hpp>            // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <algorithm>                           // ranges::equal
+#include <algorithm>                           // max, min, ranges::equal, ranges::includes
 #include <bit>                                 // bit_cast
 #include <concepts>                            // same_as
 #include <cstddef>                             // size_t
 #include <cstdint>                             // uint16_t, uint32_t, uint8_t
+#include <limits>                              // numeric_limits
 #include <format>                              // format
 #include <functional>                          // greater
-#include <ranges>                              // iota, iterator_t, range_reference_t, reverse, size
+#include <ranges>                              // iota, iterator_t, range_reference_t, reverse, size, to, transform
 #include <set>                                 // set
 #include <stdexcept>                           // out_of_range
 #include <type_traits>                         // underlying_type_t
-#include <utility>                             // pair
+#include <utility>                             // pair, to_underlying
 #include <vector>                              // vector
 
 namespace {
@@ -173,6 +175,18 @@ auto split(std::size_t mask)
         return nrv;
 }
 
+// Every value of the underlying type from two below the first listed to two above the last, listed or not.
+template<class E>
+auto probes()
+        -> std::vector<E>
+{
+        using underlying      = std::underlying_type_t<E>;
+        constexpr auto values = xstd::enum_traits<E>::values;
+        auto const lo         = std::max(int{std::to_underlying(values.front())} - 2, int{std::numeric_limits<underlying>::min()});
+        auto const hi         = std::min(int{std::to_underlying(values.back())} + 2, int{std::numeric_limits<underlying>::max()});
+        return std::views::iota(lo, hi + 1) | std::views::transform([](int v) -> E { return static_cast<E>(v); }) | std::ranges::to<std::vector>();
+}
+
 // Every subset of the listed values, built, walked, complemented, probed and modified against std::set.
 template<class X, class M>
 auto agrees_with_std_set_on_every_subset()
@@ -198,7 +212,35 @@ auto agrees_with_std_set_on_every_subset()
                         looks_up_and_modifies_as_std_set(a, model, e);
                         meets_an_enumerator_as_std_set(a, model, e);
                 }
+                auto mismatches = 0UZ;
+                for (auto const v : probes<E>()) {
+                        mismatches += test::set::lookup_mismatches(a, model, v);
+                }
+                BOOST_CHECK_EQUAL(mismatches, 0UZ);
         }
+}
+
+// How often the queries disagree over every pair of subsets, with each other and with std::ranges::includes.
+template<class X, class M>
+auto query_mismatches_over_pairs()
+        -> std::size_t
+{
+        constexpr auto n = std::ranges::size(xstd::enum_traits<typename X::key_type>::values);
+        auto mismatches  = 0UZ;
+        for (auto const lhs : std::views::iota(0UZ, 1UZ << n)) {
+                auto const xm = split<M>(lhs).first;
+                auto const x  = X(xm.begin(), xm.end());
+                for (auto const rhs : std::views::iota(0UZ, 1UZ << n)) {
+                        auto const ym     = split<M>(rhs).first;
+                        auto const y      = X(ym.begin(), ym.end());
+                        auto const all_of = includes(x, y);
+                        mismatches += static_cast<std::size_t>(disjoint(x, y) == intersects(x, y));
+                        mismatches += static_cast<std::size_t>(all_of != y.is_subset_of(x));
+                        mismatches += static_cast<std::size_t>(all_of != std::ranges::includes(x, y, x.key_comp()));
+                        mismatches += static_cast<std::size_t>(all_of != std::ranges::includes(xm, ym, xm.key_comp()));
+                }
+        }
+        return mismatches;
 }
 
 // Every value listed and no other: the whole set walked, counted and compared, padding bits included.
@@ -297,6 +339,17 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(EverySubsetAgreesWithStdSet, E, test::set::listed_
 {
         agrees_with_std_set_on_every_subset<xstd::bit_enum_set<E>, std::set<E>>();
         agrees_with_std_set_on_every_subset<descending_set<E>, std::set<E, std::greater<>>>();
+}
+
+// disjoint is none-of and includes all-of, over every pair of subsets of every enumeration of at most six values.
+BOOST_AUTO_TEST_CASE_TEMPLATE(DisjointIsNotIntersectsAndIncludesIsTheSubsetReadTheOtherWay, E, test::set::listed_enums)
+{
+        if constexpr (std::ranges::size(xstd::enum_traits<E>::values) <= 6UZ) {
+                BOOST_CHECK_EQUAL((query_mismatches_over_pairs<xstd::bit_enum_set<E>, std::set<E>>()), 0UZ);
+                BOOST_CHECK_EQUAL((query_mismatches_over_pairs<descending_set<E>, std::set<E, std::greater<>>>()), 0UZ);
+        } else {
+                BOOST_CHECK(not includes(xstd::bit_enum_set<E>(), ~xstd::bit_enum_set<E>()) and disjoint(xstd::bit_enum_set<E>(), ~xstd::bit_enum_set<E>()));
+        }
 }
 
 // The block's padding stays out of the set: five values in eight bits, eight in eight, nine in sixteen.

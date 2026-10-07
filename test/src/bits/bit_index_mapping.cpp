@@ -9,8 +9,10 @@
 #include <xstd/bits/bit_flag_mapping.hpp>  // bit_flag_mapping
 #include <xstd/bits/bit_index_mapping.hpp> // bit_index_mapping, sized_bit_index_mapping
 #include <xstd/bits/bit_key_mapping.hpp>   // bit_find_mapping, bit_key_mapping, bit_range_mapping
+#include <xstd/bits/detail/is_key.hpp>     // is_key
 #include <boost/test/unit_test.hpp>        // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <array>                           // array
+#include <bit>                             // bit_cast
 #include <cstddef>                         // size_t
 #include <cstdint>                         // int8_t, uint8_t
 
@@ -34,6 +36,15 @@ struct wrong_key
 struct size_only
 {
         static constexpr std::size_t size = 8;
+};
+
+// A mapping with a size that cannot say which values are keys, so it closes no universe.
+struct size_without_is_key
+{
+        static constexpr std::size_t size = 8;
+
+        [[nodiscard]] static auto to_index(std::size_t key) noexcept -> std::size_t;
+        [[nodiscard]] static auto from_index(std::size_t index) noexcept -> std::size_t;
 };
 
 } // namespace nonmapping
@@ -103,8 +114,22 @@ BOOST_AUTO_TEST_CASE(ANonMappingDoesNotModelTheConcept)
         static_assert(not xstd::bit_index_mapping<nonmapping::to_index_only, std::size_t>);
         static_assert(not xstd::bit_index_mapping<nonmapping::wrong_key, std::size_t>);
         static_assert(not xstd::sized_bit_index_mapping<nonmapping::size_only, std::size_t>);
+        static_assert(xstd::bit_index_mapping<nonmapping::size_without_is_key, std::size_t>);
+        static_assert(not xstd::sized_bit_index_mapping<nonmapping::size_without_is_key, std::size_t>);
 
         BOOST_CHECK(true);
+}
+
+// Asked of any mapping, whether a value is a key is the mapping's own answer, and every value where it gives none.
+BOOST_AUTO_TEST_CASE(AMappingWithoutIsKeyHoldsEveryValue)
+{
+        using range = xstd::bit_range_mapping<int, -50, 100UZ>;
+        static_assert(noexcept(xstd::bits::detail::is_key<range>(0)));
+        BOOST_CHECK(xstd::bits::detail::is_key<range>(-50) and not xstd::bits::detail::is_key<range>(50));
+        BOOST_CHECK(xstd::bits::detail::is_key<xstd::bit_flag_mapping<mode>>(mode::write));
+        BOOST_CHECK(not xstd::bits::detail::is_key<xstd::bit_flag_mapping<mode>>(std::bit_cast<mode>(std::uint8_t{0x03})));
+        BOOST_CHECK(xstd::bits::detail::is_key<nonmapping::size_without_is_key>(1000UZ));
+        BOOST_CHECK(xstd::bits::detail::is_key<xstd::bit_key_mapping<test::set::strong_index>>(test::set::strong_index{.value = 1000UZ}));
 }
 
 BOOST_AUTO_TEST_SUITE_END()
