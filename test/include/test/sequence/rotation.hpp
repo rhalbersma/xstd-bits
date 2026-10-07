@@ -6,8 +6,8 @@
 #ifndef TEST_SEQUENCE_ROTATION_HPP
 #define TEST_SEQUENCE_ROTATION_HPP
 
-#include <algorithm> // count, equal, reverse, rotate
-#include <cstddef>   // ptrdiff_t, size_t
+#include <algorithm> // count, equal, reverse
+#include <cstddef>   // size_t
 #include <cstdint>   // uint64_t
 #include <limits>    // numeric_limits
 #include <memory>    // addressof
@@ -114,16 +114,25 @@ template<class S>
         return std::ranges::equal(got, want) and got.count() == static_cast<std::size_t>(std::ranges::count(want, true));
 }
 
+// Bit i takes bit (i + turn) % size(), by index: libstdc++ 15's ranges::rotate loses a vector<bool> bit.
+[[nodiscard]] inline auto turned(std::vector<bool> const& model, std::size_t turn)
+        -> std::vector<bool>
+{
+        auto out = std::vector<bool>(model.size());
+        for (auto const i : std::views::iota(0UZ, model.size())) {
+                out[i] = model[(i + turn) % model.size()];
+        }
+        return out;
+}
+
 // Named, never a temporary: clang 23 crashes on a deducing-this call with an rvalue self.
 template<class O, class Through>
 [[nodiscard]] auto rotation_disagreements(O const& o, std::vector<bool> const& model, std::size_t n, Through through)
         -> int
 {
-        auto const turn = model.empty() ? 0UZ : n % model.size();
-        auto right      = model;
-        std::ranges::rotate(right, right.begin() + static_cast<std::ptrdiff_t>(turn));
-        auto left = model;
-        std::ranges::rotate(left, left.end() - static_cast<std::ptrdiff_t>(turn));
+        auto const turn  = model.empty() ? 0UZ : n % model.size();
+        auto const right = turned(model, turn);
+        auto const left  = turned(model, model.empty() ? 0UZ : model.size() - turn);
 
         auto r               = o;
         auto&& rs            = through(r);

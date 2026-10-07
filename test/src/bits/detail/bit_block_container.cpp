@@ -14,7 +14,7 @@
 #include <xstd/bits/from_blocks.hpp>                  // from_blocks
 #include <xstd/ints/memory.hpp>                       // align_up
 #include <boost/test/unit_test.hpp>                   // BOOST_CHECK_EQUAL, BOOST_CHECK_LE, BOOST_CHECK_LT, BOOST_CHECK_THROW, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
-#include <algorithm>                                  // count, lexicographical_compare_three_way, min, reverse, rotate
+#include <algorithm>                                  // count, lexicographical_compare_three_way, min, reverse
 #include <array>                                      // array
 #include <bitset>                                     // bitset
 #include <compare>                                    // strong_ordering
@@ -287,20 +287,23 @@ public:
                 -> void
         {
                 auto const by = m_n == 0UZ ? 0UZ : s % m_n;
+                // By index, not std::ranges::rotate, which loses a vector<bool> bit under libstdc++ 15.
+                auto right = model(m_n);
+                auto left  = model(m_n);
+                for (auto const i : std::views::iota(0UZ, m_n)) {
+                        right[i]             = m_mx[(i + by) % m_n];
+                        left[(i + by) % m_n] = m_mx[i];
+                }
                 {
                         auto& a = fresh_x();
                         a.rotr(s);
-                        auto m = m_mx;
-                        std::ranges::rotate(m, m.begin() + static_cast<std::ptrdiff_t>(by));
-                        same(m, a);
+                        same(right, a);
                         unequal(a.count(), m_cardinality);
                 }
                 {
                         auto& a = fresh_x();
                         a.rotl(s);
-                        auto m = m_mx;
-                        std::ranges::rotate(m, m.end() - static_cast<std::ptrdiff_t>(by));
-                        same(m, a);
+                        same(left, a);
                         unequal(a.count(), m_cardinality);
                 }
         }
