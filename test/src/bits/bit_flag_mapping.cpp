@@ -213,8 +213,8 @@ BOOST_AUTO_TEST_CASE(AValueThatIsNoKeyIsNoElement)
         // read | write lies between write and exec, and the set erases neither for it.
         auto s                = ascending{mode::read, mode::write, mode::exec};
         auto const read_write = std::bit_cast<mode>(std::uint8_t{0x03});
-        BOOST_CHECK(not s.contains(read_write) and s.count(read_write) == 0UZ);
-        BOOST_CHECK(s.find(read_write) == s.end()); // NOLINT(readability-container-contains): find is the member under test
+        BOOST_CHECK(not s.contains(read_write) and s.count(read_write) == 0UZ); // NOLINT(readability-container-contains): count is the member under test
+        BOOST_CHECK(s.find(read_write) == s.end());                             // NOLINT(readability-container-contains): find is the member under test
         BOOST_CHECK(*s.lower_bound(read_write) == mode::exec and *s.upper_bound(read_write) == mode::exec);
         BOOST_CHECK_EQUAL(s.erase(read_write), 0UZ);
         BOOST_CHECK_EQUAL(s.size(), 3UZ);
