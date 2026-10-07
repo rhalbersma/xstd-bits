@@ -241,8 +241,8 @@ BOOST_AUTO_TEST_CASE(ARangeOfAnEnumerationCountsInItsUnderlyingType)
 
         // The range from below zero, and the values just outside it at either end.
         BOOST_CHECK(storeys::is_key(storey::basement) and storeys::is_key(storey::ground) and storeys::is_key(storey::roof));
-        BOOST_CHECK(not storeys::is_key(static_cast<storey>(-4)) and not storeys::is_key(static_cast<storey>(5)));
-        BOOST_CHECK(channels::is_key(channel::last) and not channels::is_key(static_cast<channel>(4)) and not channels::is_key(static_cast<channel>(13)));
+        BOOST_CHECK(not storeys::is_key(std::bit_cast<storey>(std::int8_t{-4})) and not storeys::is_key(std::bit_cast<storey>(std::int8_t{5})));
+        BOOST_CHECK(channels::is_key(channel::last) and not channels::is_key(std::bit_cast<channel>(std::uint8_t{4})) and not channels::is_key(std::bit_cast<channel>(std::uint8_t{13})));
 
         // A set keyed on the range holds every key in it, in the enumeration's order.
         auto const s = xstd::basic_bit_fixed_set<storey, std::uint8_t, 8UZ, storeys>{storey::roof, storey::basement, storey::ground};
@@ -422,7 +422,8 @@ BOOST_AUTO_TEST_CASE(AValueOutsideTheUniverseIsNoElement)
         // Below the range, the set's bounds are its first element, where the unsigned distance alone would put it last.
         auto const s = ascending_range{-3, 0, 4};
         BOOST_CHECK(s.lower_bound(-4) == s.begin() and s.upper_bound(-100) == s.begin());
-        BOOST_CHECK(s.lower_bound(5) == s.end() and not s.contains(-4) and s.find(5) == s.end());
+        BOOST_CHECK(s.lower_bound(5) == s.end() and not s.contains(-4));
+        BOOST_CHECK(s.find(5) == s.end()); // NOLINT(readability-container-contains): find is the member under test
 }
 
 BOOST_AUTO_TEST_SUITE_END()

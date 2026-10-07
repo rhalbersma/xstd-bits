@@ -185,7 +185,7 @@ BOOST_AUTO_TEST_CASE(AKeyIsAOneBitValueBelowTheSize)
 {
         static_assert(std::same_as<decltype(xstd::bit_flag_mapping<mode>::is_key(mode::read)), bool>);
         static_assert(noexcept(xstd::bit_flag_mapping<mode>::is_key(mode::read)));
-        static_assert(xstd::bit_flag_mapping<mode>::is_key(mode::sock) and not xstd::bit_flag_mapping<mode>::is_key(mode{}));
+        static_assert(xstd::bit_flag_mapping<mode>::is_key(mode::sock) and not xstd::bit_flag_mapping<mode>::is_key(std::bit_cast<mode>(std::uint8_t{0})));
         BOOST_CHECK_EQUAL(mode_mismatches<8UZ>(), 0UZ);
         BOOST_CHECK_EQUAL(mode_mismatches<6UZ>(), 0UZ);
         BOOST_CHECK_EQUAL(mode_mismatches<1UZ>(), 0UZ);
@@ -211,10 +211,12 @@ BOOST_AUTO_TEST_CASE(AValueThatIsNoKeyIsNoElement)
         BOOST_CHECK_EQUAL((mode_lookup_mismatches<descending, std::set<mode, std::greater<>>>()), 0UZ);
 
         // read | write lies between write and exec, and the set erases neither for it.
-        auto s = ascending{mode::read, mode::write, mode::exec};
-        BOOST_CHECK(not s.contains(mode{0x03}) and s.count(mode{0x03}) == 0UZ and s.find(mode{0x03}) == s.end());
-        BOOST_CHECK(*s.lower_bound(mode{0x03}) == mode::exec and *s.upper_bound(mode{0x03}) == mode::exec);
-        BOOST_CHECK_EQUAL(s.erase(mode{0x03}), 0UZ);
+        auto s                = ascending{mode::read, mode::write, mode::exec};
+        auto const read_write = std::bit_cast<mode>(std::uint8_t{0x03});
+        BOOST_CHECK(not s.contains(read_write) and s.count(read_write) == 0UZ);
+        BOOST_CHECK(s.find(read_write) == s.end()); // NOLINT(readability-container-contains): find is the member under test
+        BOOST_CHECK(*s.lower_bound(read_write) == mode::exec and *s.upper_bound(read_write) == mode::exec);
+        BOOST_CHECK_EQUAL(s.erase(read_write), 0UZ);
         BOOST_CHECK_EQUAL(s.size(), 3UZ);
 }
 

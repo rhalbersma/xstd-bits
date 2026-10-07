@@ -547,7 +547,8 @@ BOOST_AUTO_TEST_CASE(AMultiBitValueIsAMaskNotAKey)
         // As a key it names no flag, so the set holds no such element, and erasing it leaves the set as it was.
         auto x = p;
         BOOST_CHECK(not x.contains(fs::perms::group_all) and x.count(fs::perms::group_all) == 0UZ);
-        BOOST_CHECK(x.find(fs::perms::owner_all) == x.end() and x.erase(fs::perms::owner_all) == 0UZ and x == p);
+        BOOST_CHECK(x.find(fs::perms::owner_all) == x.end()); // NOLINT(readability-container-contains): find is the member under test
+        BOOST_CHECK(x.erase(fs::perms::owner_all) == 0UZ and x == p);
         BOOST_CHECK(not x.contains(fs::perms::none) and x.erase(fs::perms::none) == 0UZ and x == p);
 }
 
@@ -788,7 +789,8 @@ BOOST_AUTO_TEST_CASE(ABitsetMaskConvertsAndIterates)
 
         // A bitset of several bits, or of none, is no key: no element, and nothing to erase.
         auto x = p;
-        BOOST_CHECK(not x.contains(std::bitset<16>(0x0005)) and x.count(std::bitset<16>(0x0005)) == 0UZ and x.find(std::bitset<16>()) == x.end());
+        BOOST_CHECK(not x.contains(std::bitset<16>(0x0005)) and x.count(std::bitset<16>(0x0005)) == 0UZ);
+        BOOST_CHECK(x.find(std::bitset<16>()) == x.end()); // NOLINT(readability-container-contains): find is the member under test
         BOOST_CHECK(x.erase(std::bitset<16>(0x0105)) == 0UZ and x == p);
         BOOST_CHECK(includes(p, std::bitset<16>(0x0005)) and disjoint(p, std::bitset<16>(0x0002)));
 }

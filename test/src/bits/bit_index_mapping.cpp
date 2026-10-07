@@ -12,6 +12,7 @@
 #include <xstd/bits/detail/is_key.hpp>     // is_key
 #include <boost/test/unit_test.hpp>        // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <array>                           // array
+#include <bit>                             // bit_cast
 #include <cstddef>                         // size_t
 #include <cstdint>                         // int8_t, uint8_t
 
@@ -126,7 +127,7 @@ BOOST_AUTO_TEST_CASE(AMappingWithoutIsKeyHoldsEveryValue)
         static_assert(noexcept(xstd::bits::detail::is_key<range>(0)));
         BOOST_CHECK(xstd::bits::detail::is_key<range>(-50) and not xstd::bits::detail::is_key<range>(50));
         BOOST_CHECK(xstd::bits::detail::is_key<xstd::bit_flag_mapping<mode>>(mode::write));
-        BOOST_CHECK(not xstd::bits::detail::is_key<xstd::bit_flag_mapping<mode>>(static_cast<mode>(0x03)));
+        BOOST_CHECK(not xstd::bits::detail::is_key<xstd::bit_flag_mapping<mode>>(std::bit_cast<mode>(std::uint8_t{0x03})));
         BOOST_CHECK(xstd::bits::detail::is_key<nonmapping::size_without_is_key>(1000UZ));
         BOOST_CHECK(xstd::bits::detail::is_key<xstd::bit_key_mapping<test::set::strong_index>>(test::set::strong_index{.value = 1000UZ}));
 }
