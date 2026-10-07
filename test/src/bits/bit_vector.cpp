@@ -41,7 +41,7 @@ template<class X>
 constexpr bool can_flip = requires (X x) { x.flip(); };
 
 template<class X>
-constexpr bool can_permute = requires (X x) { x.rotl(1UZ); x.rotr(1UZ); x.reverse(); };
+constexpr bool can_permute = requires (X x) { x.rotate(1UZ); x.reverse(); };
 
 template<class X>
 constexpr bool has_range_members = requires (X x, std::vector<bool> const& r) { x.append_range(r); x.insert_range(x.cbegin(), r); x.erase(x.cbegin()); };
@@ -432,13 +432,12 @@ struct as_span
 
 } // namespace
 
-// P3103R2's in-place three, as std::ranges::rotate and std::ranges::reverse move the bools, at every run-time width.
+// rotate and reverse, as std::ranges::rotate and std::ranges::reverse move the bools, at every run-time width.
 BOOST_AUTO_TEST_CASE(ItRotatesAndReversesAsTheAlgorithmsDo)
 {
-        static_assert(std::same_as<decltype(std::declval<T&>().rotl(0UZ)), T&>);
-        static_assert(std::same_as<decltype(std::declval<T&>().rotr(0UZ)), T&>);
+        static_assert(std::same_as<decltype(std::declval<T&>().rotate(0UZ)), T&>);
         static_assert(std::same_as<decltype(std::declval<T&>().reverse()), T&>);
-        static_assert(noexcept(std::declval<T&>().rotl(0UZ)) and noexcept(std::declval<T&>().rotr(0UZ)) and noexcept(std::declval<T&>().reverse()));
+        static_assert(noexcept(std::declval<T&>().rotate(0UZ)) and noexcept(std::declval<T&>().reverse()));
         static_assert(test::sequence::permutes_ten_bits(T(10)));
         BOOST_CHECK_EQUAL(permutation_sweeps<T>(), 0);
         BOOST_CHECK_EQUAL(permutation_sweeps<xstd::basic_bit_vector<std::uint64_t>>(), 0);

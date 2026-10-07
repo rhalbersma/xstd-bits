@@ -263,7 +263,7 @@ public:
                 }
         }
 
-        // P3103R2's three against the algorithms: turns in [0, 2 size()], past 64 bits those near a multiple of 16.
+        // rotate and reverse against the algorithms: turns in [0, 2 size()], past 64 bits those near a multiple of 16.
         auto permutations()
                 -> void
         {
@@ -288,24 +288,16 @@ public:
         {
                 auto const by = m_n == 0UZ ? 0UZ : s % m_n;
                 // By index, not std::ranges::rotate, which loses a vector<bool> bit under libstdc++ 15.
-                auto right = model(m_n);
-                auto left  = model(m_n);
+                auto turned = model(m_n);
                 for (auto const i : std::views::iota(0UZ, m_n)) {
-                        right[i]             = m_mx[(i + by) % m_n];
-                        left[(i + by) % m_n] = m_mx[i];
+                        turned[i] = m_mx[(i + by) % m_n];
                 }
-                {
-                        auto& a = fresh_x();
-                        a.rotr(s);
-                        same(right, a);
-                        unequal(a.count(), m_cardinality);
-                }
-                {
-                        auto& a = fresh_x();
-                        a.rotl(s);
-                        same(left, a);
-                        unequal(a.count(), m_cardinality);
-                }
+                auto& a = fresh_x();
+                a.rotate(s);
+                same(turned, a);
+                unequal(a.count(), m_cardinality);
+                a.rotate(m_n - by);
+                same(m_mx, a);
         }
 
         // One method apiece: combined, GCC 15 at -O3 reports a free-nonheap-object that is not there.
@@ -489,12 +481,12 @@ constexpr auto it_permutes(BB b)
         -> bool
 {
         b.set(8);
-        b.rotl(2);
+        b.rotate(7);
         auto const turned = b.test(1) and b.count() == 1;
         b.set(0);
         b.reverse();
         auto const reversed = b.test(7) and b.test(8) and b.count() == 2;
-        b.rotr(16);
+        b.rotate(16);
         return turned and reversed and b.test(0) and b.test(1) and b.count() == 2;
 }
 

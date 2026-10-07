@@ -30,7 +30,7 @@ BOOST_AUTO_TEST_CASE(TheShortNameIsTheGeneralOneAtItsDefaults)
         BOOST_CHECK(true);
 }
 
-// P3103R2's three inline and spilled: every width through three blocks, and whole and partial ones past the inline two.
+// rotate and reverse inline and spilled: every width through three blocks, whole and partial ones past the inline two.
 BOOST_AUTO_TEST_CASE(ItRotatesAndReversesAsTheAlgorithmsDo)
 {
         using V            = xstd::basic_bit_small_vector<std::uint8_t, 16>;

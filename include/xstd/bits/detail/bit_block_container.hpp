@@ -1036,22 +1036,12 @@ public:
                 return *this;
         }
 
-        // P3103R2's three for std::bitset, total in n: bit i takes bit (n + i) % size(), and width zero is left alone.
-        constexpr auto rotr(std::size_t n [[maybe_unused]]) noexcept
+        // Bit i takes bit (i + n) % size(), as std::ranges::rotate to begin() + n % size(); width zero is left alone.
+        constexpr auto rotate(std::size_t n [[maybe_unused]]) noexcept
                 -> bit_block_container&
         {
                 if constexpr (can_permute) {
                         rotate_down(modulo_width(n));
-                }
-                return *this;
-        }
-
-        // rotr(size() - n % size()), reduced again so that a whole turn is no turn.
-        constexpr auto rotl(std::size_t n [[maybe_unused]]) noexcept
-                -> bit_block_container&
-        {
-                if constexpr (can_permute) {
-                        rotate_down(modulo_width(size() - modulo_width(n)));
                 }
                 return *this;
         }

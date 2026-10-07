@@ -162,14 +162,12 @@ template<class Block, std::size_t... N>
 
 } // namespace
 
-// P3103R2's in-place three, each handing back the array itself and throwing nothing.
+// rotate and reverse, each handing back the array itself and throwing nothing.
 BOOST_AUTO_TEST_CASE_TEMPLATE(ItsRotationsAndReversalReturnItselfWithoutThrowing, T, Types)
 {
-        static_assert(std::same_as<decltype(std::declval<T&>().rotl(0UZ)), T&>);
-        static_assert(std::same_as<decltype(std::declval<T&>().rotr(0UZ)), T&>);
+        static_assert(std::same_as<decltype(std::declval<T&>().rotate(0UZ)), T&>);
         static_assert(std::same_as<decltype(std::declval<T&>().reverse()), T&>);
-        static_assert(noexcept(std::declval<T&>().rotl(0UZ)));
-        static_assert(noexcept(std::declval<T&>().rotr(0UZ)));
+        static_assert(noexcept(std::declval<T&>().rotate(0UZ)));
         static_assert(noexcept(std::declval<T&>().reverse()));
         BOOST_CHECK_EQUAL(test::sequence::permutation_sweep(T()), 0);
 }

@@ -6,15 +6,15 @@
 #ifndef TEST_SEQUENCE_ROTATION_HPP
 #define TEST_SEQUENCE_ROTATION_HPP
 
-#include <algorithm> // count, equal, reverse
-#include <cstddef>   // size_t
+#include <algorithm> // count, equal, reverse, rotate
+#include <cstddef>   // ptrdiff_t, size_t
 #include <cstdint>   // uint64_t
 #include <limits>    // numeric_limits
 #include <memory>    // addressof
 #include <ranges>    // iota
 #include <vector>    // vector
 
-// P3103R2's rotl, rotr and reverse on a sequence, against std::ranges::rotate and std::ranges::reverse over its bools.
+// rotate and reverse on a sequence, against std::ranges::rotate and std::ranges::reverse over its bits.
 namespace test::sequence {
 
 // Up to the first width every pattern is enumerated, and up to the second every turn; past each, a sample.
@@ -67,19 +67,19 @@ inline constexpr auto every_turn_width          = 64UZ;
         return patterns;
 }
 
-// Bits 0 and 8 of a blank ten: rotr(1) takes them to 9 and 7, rotl(3) on to 2 and 0, and reverse() back to 7 and 9.
+// Bits 0 and 8 of a blank ten: rotate(1) takes them to 9 and 7, rotate(7) on to 2 and 0, and reverse() back to 7 and 9.
 template<class S>
 [[nodiscard]] constexpr auto permutes_ten_bits(S a)
         -> bool
 {
         a[0] = true;
         a[8] = true;
-        a.rotr(1UZ);
-        auto const turned_right = a[9] and a[7] and a.count() == 2UZ;
-        a.rotl(3UZ);
-        auto const turned_left = a[2] and a[0] and a.count() == 2UZ;
+        a.rotate(1UZ);
+        auto const turned_once = a[9] and a[7] and a.count() == 2UZ;
+        a.rotate(7UZ);
+        auto const turned_twice = a[2] and a[0] and a.count() == 2UZ;
         a.reverse();
-        return turned_right and turned_left and a[7] and a[9] and a.count() == 2UZ;
+        return turned_once and turned_twice and a[7] and a[9] and a.count() == 2UZ;
 }
 
 // The object a permutation is applied through: the owner itself, unless a test hands in a view over it.
@@ -125,22 +125,31 @@ template<class S>
         return out;
 }
 
+// The bits as ints, rotated by std::ranges::rotate to begin() + turn, which pins the direction rotate(n) turns.
+[[nodiscard]] inline auto rotated_ints(std::vector<bool> const& model, std::size_t turn)
+        -> std::vector<int>
+{
+        auto ints = std::vector<int>(model.begin(), model.end());
+        std::ranges::rotate(ints, ints.begin() + static_cast<std::ptrdiff_t>(turn));
+        return ints;
+}
+
 // Named, never a temporary: clang 23 crashes on a deducing-this call with an rvalue self.
 template<class O, class Through>
 [[nodiscard]] auto rotation_disagreements(O const& o, std::vector<bool> const& model, std::size_t n, Through through)
         -> int
 {
-        auto const turn  = model.empty() ? 0UZ : n % model.size();
-        auto const right = turned(model, turn);
-        auto const left  = turned(model, model.empty() ? 0UZ : model.size() - turn);
+        auto const turn = model.empty() ? 0UZ : n % model.size();
+        auto const ints = rotated_ints(model, turn);
 
-        auto r               = o;
-        auto&& rs            = through(r);
-        auto l               = o;
-        auto&& ls            = through(l);
-        auto const* const rr = std::addressof(rs.rotr(n));
-        auto const* const lr = std::addressof(ls.rotl(n));
-        return static_cast<int>(not holds(rs, right) or rr != std::addressof(rs)) + static_cast<int>(not holds(ls, left) or lr != std::addressof(ls));
+        auto r              = o;
+        auto&& rs           = through(r);
+        auto const* const p = std::addressof(rs.rotate(n));
+        auto const by_index = holds(rs, turned(model, turn)) and p == std::addressof(rs);
+        auto const as_ints  = std::ranges::equal(rs, ints, {}, [](bool b) noexcept -> int { return static_cast<int>(b); });
+        rs.rotate(model.size() - turn);
+        auto const restored = holds(rs, model);
+        return static_cast<int>(not by_index) + static_cast<int>(not as_ints) + static_cast<int>(not restored);
 }
 
 // Every turn in [0, 2 size()] of a narrow width; of a wider one, those within one of a multiple of sixteen.
@@ -157,7 +166,7 @@ template<class O, class Through>
         return turns;
 }
 
-// Each turn both ways, one that wraps size_t among them, and the reversal twice, each disagreement counted.
+// Each turn and its complement, one that wraps size_t among them, and the reversal twice, each disagreement counted.
 template<class O, class Through>
 [[nodiscard]] auto permutation_disagreements(O const& o, Through through)
         -> int

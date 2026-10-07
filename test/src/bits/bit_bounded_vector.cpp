@@ -162,7 +162,7 @@ BOOST_AUTO_TEST_CASE(ACapacityOfNoughtTakesOnlyAnEmptySource)
         BOOST_CHECK(z.empty());
 }
 
-// P3103R2's three at every width through three blocks, and at whole and partial ones up to the capacity.
+// rotate and reverse at every width through three blocks, and at whole and partial ones up to the capacity.
 BOOST_AUTO_TEST_CASE(ItRotatesAndReversesAsTheAlgorithmsDo)
 {
         using V            = xstd::basic_bit_bounded_vector<std::uint8_t, 130>;
@@ -177,7 +177,7 @@ BOOST_AUTO_TEST_CASE(ItRotatesAndReversesAsTheAlgorithmsDo)
 
         // A capacity of nought has nothing to move.
         auto z = xstd::basic_bit_bounded_vector<std::uint8_t, 0>();
-        BOOST_CHECK(z.rotl(1UZ).rotr(1UZ).reverse().empty());
+        BOOST_CHECK(z.rotate(1UZ).reverse().empty());
 }
 
 BOOST_AUTO_TEST_SUITE_END()

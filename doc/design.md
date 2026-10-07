@@ -2133,16 +2133,23 @@ compound operators cross to the sequence adaptor and the shifts do not.
 
 ### rotation-and-reversal
 
-`rotl`, `rotr` and `reverse` cross where the shifts did not, and the ceiling's two questions say why
+`rotate(n)` and `reverse()` cross where the shifts did not, and the ceiling's two questions say why
 ([what-a-sequence-may-add](#what-a-sequence-may-add)). A sequence of `bool` wants them: `std::ranges::rotate` and
 `std::ranges::reverse` are sequence algorithms, and over packed bits each is a pass over the blocks rather than a
-walk of proxy swaps. And the names are not a sequence algorithm's spelled backwards. They are the ones
-[P3103R2](https://wg21.link/P3103R2) gives `std::bitset`, after `std::rotl` and `std::rotr` in `<bit>`, and its
-wording is what they mean: `rotr(n)` replaces bit *i* with bit *(n + i) mod N*, computed without wrapping, `rotl(n)`
-is `rotr(N - n % N)`, and `reverse()` replaces bit *i* with bit *N - 1 - i*. On a sequence, `v.rotr(n)` is
-`std::ranges::rotate(v, v.begin() + n % v.size())`: right is towards the front, as a bit string's low bit is its
-right, and `std::rotate` names no direction for it to contradict. Each returns the sequence by reference, as the
-paper's do. Width zero, where the paper's `% N` would divide by zero, is left as it is.
+walk of proxy swaps. So each member is named and directed like the algorithm it packs. `v.rotate(n)` has the effect
+of `std::ranges::rotate(v, v.begin() + n % v.size())`: bit *i* takes bit *(i + n) mod N*, computed without wrapping,
+so a whole turn is no turn, and an empty sequence, where `% N` would divide by zero, is left as it is. `v.reverse()`
+has the effect of `std::ranges::reverse(v)`: bit *i* takes bit *N - 1 - i*. Each returns the sequence by reference,
+so the two chain.
+
+[P3103R2](https://wg21.link/P3103R2) is the prior art. It gives `std::bitset` the same `reverse()`, and a rotation
+as the pair `rotl` and `rotr`, after `std::rotl` and `std::rotr` in `<bit>`, which name the direction by bit
+significance: left is towards the high bit. That is the right spelling for a bit string, whose low bit is printed on
+its right, and the wrong one for a sequence, whose low index is its front. In the sequence reading the paper's
+`rotr(n)` is `rotate(n)`, and its `rotl(n)` is `rotate(size() - n % size())`. One member says both, in the
+direction `std::rotate` already fixes, and leaves no left or right for a reader to map onto front and back. It is
+the mismatch that keeps the shift operators off the sequence reading: a direction named for a bit string reads
+backwards on a sequence.
 
 An owner and a whole view have them and a window does not, as with `flip()`: a window shares its end blocks with
 what lies outside it, and its rotation would be a masked walk of its own. The set reading does not take them

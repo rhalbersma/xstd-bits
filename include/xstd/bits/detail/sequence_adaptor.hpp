@@ -1426,20 +1426,12 @@ public:
                 self.bits().flip();
         }
 
-        // P3103R2's three for std::bitset: rotr(n) is ranges::rotate(*this, begin() + n % size()), rotl(n) undoes it.
-        constexpr auto rotl(this auto&& self, size_type n) noexcept
+        // std::ranges::rotate(*this, begin() + n % size()): bit i takes bit (i + n) % size(), and empty is left alone.
+        constexpr auto rotate(this auto&& self, size_type n) noexcept
                 -> auto&
-                requires (not is_window) and requires { self.bits().rotl(n); }
+                requires (not is_window) and requires { self.bits().rotate(n); }
         {
-                self.bits().rotl(n);
-                return self;
-        }
-
-        constexpr auto rotr(this auto&& self, size_type n) noexcept
-                -> auto&
-                requires (not is_window) and requires { self.bits().rotr(n); }
-        {
-                self.bits().rotr(n);
+                self.bits().rotate(n);
                 return self;
         }
 

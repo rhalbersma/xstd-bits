@@ -139,13 +139,13 @@ BOOST_AUTO_TEST_CASE(EveryViewedTypeReadsLikeAVectorBool)
         test::sequence::ordering_agrees_with_vector_bool<xstd::bit_array<8>>();
 }
 
-// P3103R2's three through the view: over one block, a static and a run-time count of them, and an owner's padded bits.
+// Rotated and reversed through the view: one block, a static and a run-time count of them, and an owner's padded bits.
 BOOST_AUTO_TEST_CASE(ItRotatesAndReversesWhatItViews)
 {
         auto block       = std::uint8_t{};
         auto const whole = xstd::bit_span(block);
-        static_assert(std::same_as<decltype(whole.rotr(0UZ)), decltype(whole)&>);
-        static_assert(noexcept(whole.rotl(0UZ)) and noexcept(whole.rotr(0UZ)) and noexcept(whole.reverse()));
+        static_assert(std::same_as<decltype(whole.rotate(0UZ)), decltype(whole)&>);
+        static_assert(noexcept(whole.rotate(0UZ)) and noexcept(whole.reverse()));
 
         BOOST_CHECK_EQUAL(test::sequence::permutation_sweep(std::uint8_t{}, as_span()), 0);
         BOOST_CHECK_EQUAL(test::sequence::permutation_sweep(std::array<std::uint8_t, 3>(), as_span()), 0);
