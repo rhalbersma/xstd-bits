@@ -2131,6 +2131,40 @@ where a bit string's low bit is its right. Exposing the operators would have `v 
 the algorithm whose name the sequence reading already owns. So `flip()` and the three
 compound operators cross to the sequence adaptor and the shifts do not.
 
+### rotation-and-reversal
+
+`rotate(n)` and `reverse()` cross where the shifts did not, and the ceiling's two questions say why
+([what-a-sequence-may-add](#what-a-sequence-may-add)). A sequence of `bool` wants them: `std::ranges::rotate` and
+`std::ranges::reverse` are sequence algorithms, and over packed bits each is a pass over the blocks rather than a
+walk of proxy swaps. So each member is named and directed like the algorithm it packs. `v.rotate(n)` has the effect
+of `std::ranges::rotate(v, v.begin() + n % v.size())`: bit *i* takes bit *(i + n) mod N*, computed without wrapping,
+so a whole turn is no turn, and an empty sequence, where `% N` would divide by zero, is left as it is. `v.reverse()`
+has the effect of `std::ranges::reverse(v)`: bit *i* takes bit *N - 1 - i*. Each returns the sequence by reference,
+so the two chain.
+
+[P3103R2](https://wg21.link/P3103R2) is the prior art. It gives `std::bitset` the same `reverse()`, and a rotation
+as the pair `rotl` and `rotr`, after `std::rotl` and `std::rotr` in `<bit>`, which name the direction by bit
+significance: left is towards the high bit. That is the right spelling for a bit string, whose low bit is printed on
+its right, and the wrong one for a sequence, whose low index is its front. In the sequence reading the paper's
+`rotr(n)` is `rotate(n)`, and its `rotl(n)` is `rotate(size() - n % size())`. One member says both, in the
+direction `std::rotate` already fixes, and leaves no left or right for a reader to map onto front and back. It is
+the mismatch that keeps the shift operators off the sequence reading: a direction named for a bit string reads
+backwards on a sequence.
+
+An owner and a whole view have them and a window does not, as with `flip()`: a window shares its end blocks with
+what lies outside it, and its rotation would be a masked walk of its own. The set reading does not take them
+either; `std::set` has no counterpart, and a rotation of keys has no meaning there that a shift does not already
+give.
+
+The storage does the work, at every width without allocating, so each is `noexcept`. A rotation by
+*n = q · digits + r*, reduced modulo the width first so the shifts' `n < size()` precondition never arises, is
+`std::ranges::rotate` over the blocks by *q*, then a funnel shift by *r* through `straddled_block`, the first block
+wrapping round into the last ([the-funnel-shift](#the-funnel-shift)). Over the blocks' whole width that leaves the
+*n* bits that wrapped sitting above a gap as wide as the padding, so where there is padding one more pass moves
+them down onto it through both sides of `block_at` ([the-blit](#the-blit)). A reversal is the blocks in reverse
+order, each block's bits reversed by log2(digits) masked swaps, and the padding, now at the bottom, rotated out by
+the same funnel shift.
+
 ### the-elementwise-reading
 
 What `&=` means on a sequence of bools is **elementwise logical**, not bitwise: `a &= b` is
