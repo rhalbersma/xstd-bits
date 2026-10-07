@@ -9,7 +9,7 @@
 #include <bitset>                   // bitset
 #include <concepts>                 // same_as
 #include <cstddef>                  // size_t
-#include <cstdint>                  // uint8_t
+#include <cstdint>                  // uint16_t, uint8_t
 #include <functional>               // less
 #include <limits>                   // numeric_limits
 #include <memory>                   // allocator
@@ -79,4 +79,8 @@ BOOST_AUTO_TEST_CASE(EveryContainerArrivesThroughTheUmbrella)
         static_assert(std::same_as<xstd::aligned::bit_array<9>, xstd::bit_array<std::numeric_limits<std::size_t>::digits>>);
         static_assert(std::same_as<xstd::aligned::basic_bit_array<std::uint8_t, 9>, xstd::basic_bit_array<std::uint8_t, 16>>);
         static_assert(std::same_as<xstd::aligned::basic_bit_array<std::uint8_t, 0>, xstd::basic_bit_array<std::uint8_t, 0>>);
+
+        // The fixed set has a least form, its width in the smallest block holding it, and the enum set is that form.
+        static_assert(std::same_as<xstd::least::bit_fixed_set<9>, xstd::basic_bit_fixed_set<std::size_t, std::uint16_t, 9>>);
+        static_assert(std::same_as<xstd::bit_enum_set<perm>, xstd::least::basic_bit_fixed_set<perm, 3, xstd::bit_key_mapping<perm>>>);
 }

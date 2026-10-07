@@ -6,9 +6,8 @@
 #include <test/set/enums.hpp>                  // day, listed_enums, nine, perm, piece, wind
 #include <test/set/lookup.hpp>                 // lookup_mismatches
 #include <xstd/bits/bit_array.hpp>             // bit_array
-#include <xstd/bits/bit_blocks.hpp>            // smallest_block_t
 #include <xstd/bits/bit_enum_set.hpp>          // bit_enum_set
-#include <xstd/bits/bit_fixed_set.hpp>         // basic_bit_fixed_set, bit_fixed_set
+#include <xstd/bits/bit_fixed_set.hpp>         // basic_bit_fixed_set, bit_fixed_set, least::basic_bit_fixed_set
 #include <xstd/bits/bit_key_mapping.hpp>       // bit_key_mapping, bit_range_mapping, enum_traits
 #include <xstd/bits/from_blocks.hpp>           // from_blocks
 #include <xstd/misc/concepts.hpp>              // proxy_iterator, proxy_reference
@@ -56,7 +55,7 @@ namespace {
 
 // The alias's own storage under the descending comparator.
 template<class E>
-using descending_set = xstd::basic_bit_fixed_set<E, xstd::smallest_block_t<xstd::bit_key_mapping<E>::size>, xstd::bit_key_mapping<E>::size, xstd::bit_key_mapping<E>, std::greater<>>;
+using descending_set = xstd::least::basic_bit_fixed_set<E, xstd::bit_key_mapping<E>::size, xstd::bit_key_mapping<E>, std::greater<>>;
 
 // A requires-expression on a concrete type is ill-formed rather than false ([expr.prim.req]/5).
 template<class E>
@@ -266,19 +265,40 @@ auto holds_the_listed_values_and_no_padding()
 
 } // namespace
 
-// The block is the narrowest holding every value, and another block is the alias's second argument.
+// The block is the narrowest holding every value, and another block is the basic form's to spell.
 BOOST_AUTO_TEST_CASE(TheAliasPicksTheSmallestBlock)
 {
         using test::set::perm;
         static_assert(sizeof(xstd::bit_enum_set<perm>) == 1UZ);
-        static_assert(sizeof(xstd::bit_enum_set<perm, std::uint32_t>) == 4UZ);
+        static_assert(sizeof(xstd::basic_bit_fixed_set<perm, std::uint32_t, 3UZ>) == 4UZ);
         static_assert(sizeof(xstd::bit_enum_set<test::set::wind>) == 1UZ);
         static_assert(sizeof(xstd::bit_enum_set<test::set::nine>) == 2UZ);
         static_assert(std::same_as<xstd::bit_enum_set<perm>, xstd::basic_bit_fixed_set<perm, std::uint8_t, 3UZ, xstd::bit_key_mapping<perm>>>);
         static_assert(std::same_as<xstd::bit_enum_set<test::set::nine>, xstd::basic_bit_fixed_set<test::set::nine, std::uint16_t, 9UZ, xstd::bit_key_mapping<test::set::nine>>>);
 
-        auto const s = xstd::bit_enum_set<perm, std::uint32_t>{perm::exec, perm::read};
+        static_assert(std::same_as<xstd::bit_enum_set<perm>, xstd::least::basic_bit_fixed_set<perm, 3UZ, xstd::bit_key_mapping<perm>>>);
+        static_assert(std::same_as<xstd::bit_enum_set<test::set::nine>, xstd::least::basic_bit_fixed_set<test::set::nine, 9UZ>>);
+
+        auto const s = xstd::basic_bit_fixed_set<perm, std::uint32_t, 3UZ>{perm::exec, perm::read};
         BOOST_CHECK(std::ranges::equal(s, std::set<perm>{perm::read, perm::exec}));
+}
+
+// A mapping of its own takes the least form too: five workdays from mon in one byte, the weekend no key.
+BOOST_AUTO_TEST_CASE(TheLeastFormTakesAnEnumerationUnderAMappingOfItsOwn)
+{
+        using workdays = xstd::bit_range_mapping<weekday, weekday::mon, 5UZ>;
+        using X        = xstd::least::basic_bit_fixed_set<weekday, 5UZ, workdays>;
+        static_assert(std::same_as<X, xstd::basic_bit_fixed_set<weekday, std::uint8_t, 5UZ, workdays>>);
+        static_assert(std::same_as<X::key_mapping_type, workdays>);
+        static_assert(sizeof(X) == 1UZ);
+        static_assert(X::max_size() == 5UZ);
+
+        auto x = X{weekday::fri, weekday::mon};
+        BOOST_CHECK(std::ranges::equal(x, std::set<weekday>{weekday::mon, weekday::fri}));
+        BOOST_CHECK(std::ranges::equal(~x, std::set<weekday>{weekday::tue, weekday::wed, weekday::thu}));
+        BOOST_CHECK(not x.contains(weekday::sat));
+        BOOST_CHECK_THROW(static_cast<void>(x.insert(weekday::sun)), std::out_of_range);
+        BOOST_CHECK(std::ranges::equal(x, std::set<weekday>{weekday::mon, weekday::fri}));
 }
 
 // A braced list of enumerators deduces the alias's type, with no mapping or block spelled.

@@ -9,17 +9,21 @@
 #include <test/set/strong_index.hpp>     // agrees_with_std_set_of_strong_indices, offset_mapping, strong_index
 #include <test/value_reference.hpp>      // value_reference
 #include <xstd/bits/bit/bit_convert.hpp> // bit_convert
-#include <xstd/bits/bit_fixed_set.hpp>   // bit_fixed_set
+#include <xstd/bits/bit_fixed_set.hpp>   // basic_bit_fixed_set, bit_fixed_set, least::basic_bit_fixed_set, least::bit_fixed_set
+#include <xstd/bits/bit_key_mapping.hpp> // bit_key_mapping
 #include <xstd/bits/from_blocks.hpp>     // from_blocks
 #include <boost/test/unit_test.hpp>      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <algorithm>                     // ranges::equal
 #include <array>                         // array
 #include <bitset>                        // bitset
 #include <concepts>                      // regular, same_as, totally_ordered
 #include <cstddef>                       // size_t
-#include <cstdint>                       // uint32_t, uint64_t, uint8_t
+#include <cstdint>                       // uint16_t, uint32_t, uint64_t, uint8_t
+#include <functional>                    // greater
 #include <iterator>                      // bidirectional_iterator
 #include <ranges>                        // bidirectional_range, iota, size, to
 #include <stdexcept>                     // out_of_range
+#include <tuple>                         // tuple, tuple_cat
 #include <type_traits>                   // integral_constant, is_constructible_v, is_convertible_v, is_member_function_pointer_v
 #include <utility>                       // declval
 
@@ -29,8 +33,11 @@ BOOST_AUTO_TEST_SUITE(BitFiniteSet)
 template<class Block, std::size_t N>
 using fixed_set_of = xstd::basic_bit_fixed_set<std::size_t, Block, N>;
 
-// Every Block model within one block, and the narrow ones across boundaries.
-using Types = test::graded_extents<fixed_set_of>;
+// The least widths the extents miss: a block with bits to spare, and several of the widest.
+using least_types = std::tuple<xstd::least::bit_fixed_set<3>, xstd::least::bit_fixed_set<9>, xstd::least::bit_fixed_set<17>, xstd::least::bit_fixed_set<100>>;
+
+// Every Block model within one block, the narrow ones across boundaries, and the least widths besides.
+using Types = decltype(std::tuple_cat(std::declval<test::graded_extents<fixed_set_of>>(), std::declval<least_types>()));
 
 // The clauses one at a time, so a failure names which one; the umbrella asserts the composite.
 BOOST_AUTO_TEST_CASE_TEMPLATE(IsRegular, T, Types)
@@ -67,6 +74,33 @@ constexpr bool has_allocator_type = requires { typename X::allocator_type; };
 BOOST_AUTO_TEST_CASE_TEMPLATE(ItHasNoAllocatorType, T, Types)
 {
         static_assert(not has_allocator_type<T>);
+}
+
+// Each least width is the fixed set over the smallest block holding it, several of the widest past sixty-four bits.
+BOOST_AUTO_TEST_CASE(TheLeastFormPicksTheSmallestBlock)
+{
+        static_assert(std::same_as<xstd::least::bit_fixed_set<3>, xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 3>>);
+        static_assert(std::same_as<xstd::least::bit_fixed_set<8>, xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 8>>);
+        static_assert(std::same_as<xstd::least::bit_fixed_set<9>, xstd::basic_bit_fixed_set<std::size_t, std::uint16_t, 9>>);
+        static_assert(std::same_as<xstd::least::bit_fixed_set<16>, xstd::basic_bit_fixed_set<std::size_t, std::uint16_t, 16>>);
+        static_assert(std::same_as<xstd::least::bit_fixed_set<17>, xstd::basic_bit_fixed_set<std::size_t, std::uint32_t, 17>>);
+        static_assert(std::same_as<xstd::least::bit_fixed_set<64>, xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 64>>);
+        static_assert(std::same_as<xstd::least::bit_fixed_set<100>, xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 100>>);
+
+        static_assert(sizeof(xstd::least::bit_fixed_set<3>) == sizeof(std::uint8_t));
+        static_assert(sizeof(xstd::least::bit_fixed_set<8>) == sizeof(std::uint8_t));
+        static_assert(sizeof(xstd::least::bit_fixed_set<9>) == sizeof(std::uint16_t));
+        static_assert(sizeof(xstd::least::bit_fixed_set<16>) == sizeof(std::uint16_t));
+        static_assert(sizeof(xstd::least::bit_fixed_set<17>) == sizeof(std::uint32_t));
+        static_assert(sizeof(xstd::least::bit_fixed_set<64>) == sizeof(std::uint64_t));
+        static_assert(sizeof(xstd::least::bit_fixed_set<100>) == 2UZ * sizeof(std::uint64_t));
+
+        // The basic form keeps the key, its mapping and the direction, and takes only the width.
+        using descending = xstd::least::basic_bit_fixed_set<std::size_t, 9, xstd::bit_key_mapping<std::size_t>, std::greater<>>;
+        static_assert(std::same_as<descending, xstd::basic_bit_fixed_set<std::size_t, std::uint16_t, 9, xstd::bit_key_mapping<std::size_t>, std::greater<>>>);
+        auto const a = descending({0UZ, 8UZ, 3UZ});
+        BOOST_CHECK(std::ranges::equal(a, std::array{8UZ, 3UZ, 0UZ}));
+        BOOST_CHECK_EQUAL((~a).size(), 6UZ);
 }
 
 // The positions there are to hold are the type's, so max_size is a constant; size() and empty() count the keys.

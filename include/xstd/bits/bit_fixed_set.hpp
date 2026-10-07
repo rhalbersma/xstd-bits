@@ -114,6 +114,17 @@ using bit_fixed_set = basic_bit_fixed_set<std::size_t, std::size_t, N>;
 
 } // namespace aligned
 
+namespace least {
+
+// The fixed-width set in the smallest block that holds N bits, as uint_least8_t is the smallest type of at least 8.
+template<class Key, std::size_t N, bit_index_mapping<Key> KeyMapping = bit_key_mapping<Key>, bits::detail::set::key_direction<Key> Compare = std::less<Key>>
+using basic_bit_fixed_set = xstd::basic_bit_fixed_set<Key, smallest_block_t<N>, N, KeyMapping, Compare>;
+
+template<std::size_t N>
+using bit_fixed_set = basic_bit_fixed_set<std::size_t, N>;
+
+} // namespace least
+
 } // namespace xstd
 
 namespace boost::container_hash {
