@@ -32,6 +32,13 @@ struct bit_range_mapping
 {
         static constexpr std::size_t size = N;
 
+        // First <= key < First + N, as the unsigned distance from First, so no bound overflows the key type.
+        [[nodiscard]] static constexpr auto is_key(Key key) noexcept
+                -> bool
+        {
+                return bits::detail::key_distance(First, key) < N;
+        }
+
         // A key outside the range ranks at size or above, a key below First wrapping round to the top.
         [[nodiscard]] static constexpr auto to_index(Key key) noexcept
                 -> std::size_t
@@ -65,6 +72,13 @@ private:
 public:
         static constexpr std::size_t size = std::ranges::size(keys);
 
+        // Listed in keys, by the search that ranks it.
+        [[nodiscard]] static constexpr auto is_key(Key key) noexcept
+                -> bool
+        {
+                return to_index(key) < size;
+        }
+
         // A binary search for the key's rank; a key not in keys ranks at size.
         [[nodiscard]] static constexpr auto to_index(Key key) noexcept
                 -> std::size_t
@@ -91,6 +105,13 @@ struct bit_key_mapping;
 template<xstd::unsigned_integer Key>
 struct bit_key_mapping<Key>
 {
+        // Every key that survives the round trip through std::size_t, which is all of them up to its width.
+        [[nodiscard]] static constexpr auto is_key(Key key) noexcept
+                -> bool
+        {
+                return static_cast<Key>(static_cast<std::size_t>(key)) == key;
+        }
+
         // A key wider than std::size_t must name a position: key <= std::numeric_limits<std::size_t>::max().
         [[nodiscard]] static constexpr auto to_index(Key key) noexcept
                 -> std::size_t

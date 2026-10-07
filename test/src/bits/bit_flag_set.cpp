@@ -3,6 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/set/lookup.hpp>              // lookup_mismatches
 #include <xstd/bits/bit/bit_convert.hpp>    // bit_convert
 #include <xstd/bits/bit_flag_mapping.hpp>   // bit_flag_mapping
 #include <xstd/bits/bit_flag_set.hpp>       // bit_flag_set
@@ -246,7 +247,10 @@ auto agrees_at_key(xfs::perms const& p, model_type const& model, fs::perms k)
         BOOST_CHECK(std::ranges::equal(x, without(model, k)));
 }
 
-// One subset, walked both ways, counted and complemented, then each key against the model.
+// Values of the standard's type that are no key: none, several bits, and every bit.
+constexpr auto non_keys = std::to_array<fs::perms>({fs::perms::none, fs::perms::owner_all, fs::perms::group_all, fs::perms::others_all, fs::perms::all, fs::perms::mask, fs::perms::unknown, fs::perms::owner_read | fs::perms::others_exec});
+
+// One subset, walked both ways, counted and complemented, then each key and each value that is none against the model.
 auto agrees_on_subset(std::size_t mask)
         -> void
 {
@@ -263,6 +267,11 @@ auto agrees_on_subset(std::size_t mask)
         for (auto const k : ranks) {
                 agrees_at_key(p, model, k);
         }
+        auto mismatches = 0UZ;
+        for (auto const v : non_keys) {
+                mismatches += test::set::lookup_mismatches(p, model, v);
+        }
+        BOOST_CHECK_EQUAL(mismatches, 0UZ);
 }
 
 // Two subsets, queried and combined by each operator and its compound form, against std::set's algorithms.
@@ -525,6 +534,12 @@ BOOST_AUTO_TEST_CASE(AMultiBitValueIsAMaskNotAKey)
         BOOST_CHECK(xfs::perms(fs::perms::group_all).is_subset_of(p) and not xfs::perms(fs::perms::owner_all).is_subset_of(p));
         BOOST_CHECK(xfs::perms(fs::perms::none).is_subset_of(p));
         BOOST_CHECK(intersects(p, xfs::perms(fs::perms::owner_all)));
+
+        // As a key it names no flag, so the set holds no such element, and erasing it leaves the set as it was.
+        auto x = p;
+        BOOST_CHECK(not x.contains(fs::perms::group_all) and x.count(fs::perms::group_all) == 0UZ);
+        BOOST_CHECK(x.find(fs::perms::owner_all) == x.end() and x.erase(fs::perms::owner_all) == 0UZ and x == p);
+        BOOST_CHECK(not x.contains(fs::perms::none) and x.erase(fs::perms::none) == 0UZ and x == p);
 }
 
 // & and - read the standard's value below sixteen bits, where it can meet a flag, and == finds higher bits unequal.
@@ -639,6 +654,7 @@ BOOST_AUTO_TEST_CASE(ContainsIsMembershipOfOneFlag)
         BOOST_CHECK(p.contains(fs::perms::owner_read) and not p.contains(fs::perms::owner_write));
         BOOST_CHECK(xfs::perms(fs::perms::owner_read).is_subset_of(p) == p.contains(fs::perms::owner_read));
         BOOST_CHECK(not xfs::perms(fs::perms::owner_all).is_subset_of(p) and intersects(p, xfs::perms(fs::perms::owner_all)));
+        BOOST_CHECK(not p.contains(fs::perms::owner_all));
         p.insert(fs::perms::owner_write);
         BOOST_CHECK(p == (fs::perms::owner_read | fs::perms::owner_write | fs::perms::group_write));
         p.erase(fs::perms::owner_read);
@@ -757,6 +773,11 @@ BOOST_AUTO_TEST_CASE(ABitsetMaskConvertsAndIterates)
         BOOST_CHECK((std::vector<std::bitset<16>>(p.begin(), p.end()) == std::vector{std::bitset<16>(0x0100), std::bitset<16>(0x0004), std::bitset<16>(0x0001)}));
         BOOST_CHECK(bitset_flags(std::bitset<16>(0x0101)).is_subset_of(p) and not bitset_flags(std::bitset<16>(0x0003)).is_subset_of(p));
         BOOST_CHECK(p.contains(std::bitset<16>(0x0004)) and not p.contains(std::bitset<16>(0x0002)));
+
+        // A bitset of several bits, or of none, is no key: no element, and nothing to erase.
+        auto x = p;
+        BOOST_CHECK(not x.contains(std::bitset<16>(0x0005)) and x.count(std::bitset<16>(0x0005)) == 0UZ and x.find(std::bitset<16>()) == x.end());
+        BOOST_CHECK(x.erase(std::bitset<16>(0x0105)) == 0UZ and x == p);
 }
 
 // Each operator takes the bitset on either side, as std::bitset's own do.

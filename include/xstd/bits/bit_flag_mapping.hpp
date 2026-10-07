@@ -28,6 +28,14 @@ private:
 public:
         static constexpr std::size_t size = N;
 
+        // Exactly one bit set, below N: zero and a value of several bits name no position, and are no key.
+        [[nodiscard]] static constexpr auto is_key(Key const& key) noexcept
+                -> bool
+        {
+                auto const word = bits::detail::to_word(key);
+                return std::has_single_bit(word) and static_cast<std::size_t>(std::countr_zero(word)) < N;
+        }
+
         // The key has exactly one bit set; one at or above N ranks at size or above.
         [[nodiscard]] static constexpr auto to_index(Key const& key) noexcept
                 -> std::size_t

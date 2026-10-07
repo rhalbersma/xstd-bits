@@ -17,6 +17,7 @@
 #include <xstd/bits/detail/functor.hpp>              // decay_copy
 #include <xstd/bits/detail/hash.hpp>                 // hash_append_bits, hash_append_positions, std_hash
 #include <xstd/bits/detail/intrin.hpp>               // countl_zero, countr_zero
+#include <xstd/bits/detail/is_key.hpp>               // is_key
 #include <xstd/bits/detail/ownership.hpp>            // owned_bits_t, owned_storage, owner_of, owner_reading, set_reading_tag, storage, storage_access, owns
 #include <xstd/bits/detail/shift.hpp>                // shl, shr
 #include <xstd/bits/detail/storage_ptr.hpp>          // storage_ptr_t, storage_ref_t
@@ -28,7 +29,7 @@
 #include <algorithm>                                 // all_of, find_if, lexicographical_compare_three_way, max, min, partition_point
 #include <cassert>                                   // assert
 #include <compare>                                   // strong_ordering
-#include <concepts>                                  // constructible_from, convertible_to, invocable, same_as, swappable
+#include <concepts>                                  // constructible_from, convertible_to, invocable, same_as, swappable, totally_ordered
 #include <cstddef>                                   // ptrdiff_t, size_t
 #include <format>                                    // format, formatter
 #include <functional>                                // greater, hash, less
@@ -1149,10 +1150,13 @@ public:
                 return {};
         }
 
-        // set operations, total over key_type as std::set's are; the width is the guard, test() the read.
+        // set operations, total over key_type as std::set's are; is_key and the width are the guards, test() the read.
         [[nodiscard]] constexpr auto contains(key_type const& x) const noexcept
                 -> bool
         {
+                if (not detail::is_key<KeyMapping>(x)) {
+                        return false;
+                }
                 auto const pos = KeyMapping::to_index(x);
                 return pos < bits().size() and bits().test(pos);
         }
@@ -1173,6 +1177,11 @@ public:
         [[nodiscard]] constexpr auto lower_bound(key_type const& x) const noexcept
                 -> const_iterator
         {
+                if constexpr (orders_non_keys) {
+                        if (not detail::is_key<KeyMapping>(x)) {
+                                return bound_between(x);
+                        }
+                }
                 if constexpr (is_descending) {
                         // The highest position not above x's, which is the scan below the one past it.
                         auto const pos = KeyMapping::to_index(x);
@@ -1185,6 +1194,11 @@ public:
         [[nodiscard]] constexpr auto upper_bound(key_type const& x) const noexcept
                 -> const_iterator
         {
+                if constexpr (orders_non_keys) {
+                        if (not detail::is_key<KeyMapping>(x)) {
+                                return bound_between(x);
+                        }
+                }
                 auto const pos = KeyMapping::to_index(x);
                 if constexpr (is_descending) {
                         return {&bits(), bits().total_find_prev(std::ranges::min(pos, bits().size()))};
@@ -1311,6 +1325,21 @@ public:
         }
 
 private:
+        // A key type with no order of its own, a std::bitset, has no place between two keys for a value that is no key.
+        static constexpr bool orders_non_keys = std::totally_ordered<key_type>;
+
+        // A value that is no key falls between two keys, where both its bounds are, bisected under key_compare.
+        [[nodiscard]] constexpr auto bound_between(key_type const& x) const
+                -> const_iterator
+        {
+                auto const lo = equivalent_positions(x).first;
+                if constexpr (is_descending) {
+                        return {&bits(), bits().total_find_prev(lo)};
+                } else {
+                        return {&bits(), bits().inclusive_find_next(lo)};
+                }
+        }
+
         // The positions whose keys are equivalent to x, bisected under key_compare, the keys being in position order.
         template<class K>
         [[nodiscard]] constexpr auto equivalent_positions(K const& x) const
@@ -1346,7 +1375,7 @@ private:
                 return static_cast<derived_type&>(*this);
         }
 
-        // The one position a set of this reading can be unable to hold; every other member is total over key_type.
+        // The one key a write can find no room for; a value that is no key of the mapping is a write's precondition.
         constexpr auto guard_key(std::size_t x) const
                 -> void
         {

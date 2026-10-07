@@ -19,10 +19,11 @@ concept bit_index_mapping = requires (Key key, std::size_t index) {
         { Mapping::from_index(index) } -> std::same_as<Key>;
 };
 
-// A mapping that closes its universe: exactly size keys, at positions 0 through size - 1.
+// A mapping that closes its universe: exactly size keys, at positions 0 through size - 1, and is_key says which.
 template<class Mapping, class Key>
-concept sized_bit_index_mapping = bit_index_mapping<Mapping, Key> and requires {
+concept sized_bit_index_mapping = bit_index_mapping<Mapping, Key> and requires (Key key) {
         { Mapping::size } -> std::convertible_to<std::size_t>;
+        { Mapping::is_key(key) } -> std::same_as<bool>;
 };
 
 } // namespace xstd
