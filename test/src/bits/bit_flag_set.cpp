@@ -3,10 +3,11 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/for_each_type.hpp>           // for_each_type
 #include <test/set/enums.hpp>               // perm
 #include <test/set/lookup.hpp>              // lookup_mismatches
 #include <xstd/bits/bit/bit_convert.hpp>    // bit_convert
-#include <xstd/bits/bit_blocks.hpp>         // bit_fast
+#include <xstd/bits/bit_blocks.hpp>         // bit_fast, underlying_block_t
 #include <xstd/bits/bit_enum_set.hpp>       // bit_enum_set
 #include <xstd/bits/bit_fixed_set.hpp>      // basic_bit_fixed_set, bit_fixed_set
 #include <xstd/bits/bit_flag_mapping.hpp>   // bit_flag_mapping
@@ -18,23 +19,27 @@
 #include <boost/test/unit_test.hpp>         // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <algorithm>                        // ranges::equal, ranges::includes, ranges::set_difference, ranges::set_intersection, ranges::set_symmetric_difference, ranges::set_union
 #include <array>                            // array, to_array
-#include <bit>                              // bit_cast, countr_zero, popcount
+#include <bit>                              // bit_cast, bit_floor, countr_zero, has_single_bit, popcount
 #include <bitset>                           // bitset
 #include <compare>                          // is_gt, is_lt
 #include <concepts>                         // convertible_to, same_as
 #include <cstddef>                          // size_t
-#include <cstdint>                          // uint16_t, uint64_t, uint8_t
+#include <cstdint>                          // int64_t, int8_t, uint16_t, uint32_t, uint64_t, uint8_t
 #include <filesystem>                       // exists, path, perm_options, permissions, perms, remove, status, temp_directory_path
 #include <format>                           // format, format_to, formatter
 #include <fstream>                          // ofstream
 #include <functional>                       // greater, hash, ranges::greater
 #include <initializer_list>                 // initializer_list
+#include <ios>                              // ios_base
 #include <iterator>                         // bidirectional_iterator, inserter, iter_reference_t, ranges::distance
+#include <limits>                           // numeric_limits
 #include <random>                           // random_device
 #include <ranges>                           // bidirectional_range, iota, ranges::swap, sized_range, views::reverse
 #include <set>                              // set
+#include <sstream>                          // istringstream, ostringstream
 #include <stdexcept>                        // out_of_range
 #include <string_view>                      // string_view
+#include <tuple>                            // tuple
 #include <type_traits>                      // underlying_type_t
 #include <utility>                          // pair, to_underlying
 #include <vector>                           // vector
@@ -456,6 +461,152 @@ auto adjust_permissions(fs::path const& path)
         fs::permissions(path, fs::perms::owner_all, fs::perm_options::add);
         fs::remove(path);
         return trace;
+}
+
+// Whether Mask keys a flag type at its default width.
+template<class Mask>
+concept names_a_flag_type = requires { typename xstd::bit_flag_set<Mask>; };
+
+// Integer masks: each unsigned width, int and std::int8_t below their sign bits, and twelve of sixteen bits.
+using integer_flags = std::tuple<xstd::bit_flag_set<std::uint8_t>, xstd::bit_flag_set<std::uint16_t>, xstd::bit_flag_set<std::uint32_t>, xstd::bit_flag_set<std::uint64_t>, xstd::bit_flag_set<int>, xstd::bit_flag_set<std::int8_t>, xstd::bit_flag_set<std::uint16_t, 12>>;
+
+// The unsigned word an integer flag type's mask is read as.
+template<class X>
+using word_t = xstd::underlying_block_t<typename X::key_type>;
+
+// The word with every bit below the flag type's width set.
+template<class X>
+[[nodiscard]] constexpr auto low_bits() noexcept
+        -> word_t<X>
+{
+        using word_type = word_t<X>;
+        return static_cast<word_type>(std::numeric_limits<word_type>::max() >> (static_cast<std::size_t>(std::numeric_limits<word_type>::digits) - X::max_size()));
+}
+
+// Words below the width: every one up to sixteen bits, else none, all, two stripes, and each single and adjacent pair.
+template<class X>
+auto probe_words()
+        -> std::vector<word_t<X>>
+{
+        using word_type  = word_t<X>;
+        constexpr auto N = X::max_size();
+        auto nrv         = std::vector<word_type>();
+        if constexpr (N <= 16UZ) {
+                for (auto const w : std::views::iota(0UZ, 1UZ << N)) {
+                        nrv.push_back(static_cast<word_type>(w));
+                }
+        } else {
+                constexpr auto low    = low_bits<X>();
+                constexpr auto stripe = static_cast<word_type>(low / 3U);
+                nrv.insert(nrv.end(), {word_type{}, low, stripe, static_cast<word_type>(low ^ stripe)});
+                for (auto const i : std::views::iota(0UZ, N)) {
+                        nrv.push_back(static_cast<word_type>(word_type{1} << i));
+                }
+                for (auto const i : std::views::iota(1UZ, N)) {
+                        nrv.push_back(static_cast<word_type>(word_type{3} << (i - 1UZ)));
+                }
+        }
+        return nrv;
+}
+
+// How many checks one word of an integer flag type fails: the conversions, the walk from the highest flag, the lookups.
+template<class X>
+auto word_mismatches(word_t<X> w)
+        -> std::size_t
+{
+        using mask_type = X::key_type;
+        using word_type = word_t<X>;
+        auto const m    = static_cast<mask_type>(w);
+        X const x       = m;
+        auto mismatches = 0UZ;
+        if (mask_type(x) != m or x != m or X(xstd::from_blocks, w) != m or x.size() != static_cast<std::size_t>(std::popcount(w))) {
+                ++mismatches;
+        }
+
+        // From the highest flag down, each one bit of the word, which together spell it.
+        auto rest = w;
+        for (auto const k : x) {
+                auto const bit = static_cast<word_type>(mask_type(k));
+                if (not std::has_single_bit(bit) or bit != std::bit_floor(rest) or not x.contains(k)) {
+                        ++mismatches;
+                }
+                rest = static_cast<word_type>(rest ^ bit);
+        }
+
+        // A value of several bits, or of none, is no key even where each of its bits is an element.
+        if (x.contains(m) != std::has_single_bit(w) or x.count(m) != (std::has_single_bit(w) ? 1UZ : 0UZ) or rest != word_type{}) {
+                ++mismatches;
+        }
+        return mismatches;
+}
+
+// How many operators an integer flag type and its mask, on either side, answer otherwise than the mask itself does.
+template<class X>
+auto operator_mismatches(word_t<X> w, typename X::key_type b)
+        -> std::size_t
+{
+        using mask_type = X::key_type;
+        using word_type = word_t<X>;
+        auto const m    = static_cast<mask_type>(w);
+        auto const v    = static_cast<word_type>(b);
+        X const x       = m;
+        auto mismatches = 0UZ;
+        // The mask's own answers, worked in its unsigned word so that a signed mask's bits are read as bits.
+        auto const both   = static_cast<mask_type>(static_cast<word_type>(w | v));
+        auto const common = static_cast<mask_type>(static_cast<word_type>(w & v));
+        auto const either = static_cast<mask_type>(static_cast<word_type>(w ^ v));
+        auto const m_only = static_cast<mask_type>(static_cast<word_type>(w & static_cast<word_type>(~v)));
+        auto const b_only = static_cast<mask_type>(static_cast<word_type>(v & static_cast<word_type>(~w)));
+        mismatches += static_cast<std::size_t>(mask_type(x | b) != both or mask_type(b | x) != both);
+        mismatches += static_cast<std::size_t>(mask_type(x & b) != common or mask_type(b & x) != common);
+        mismatches += static_cast<std::size_t>(mask_type(x ^ b) != either or mask_type(b ^ x) != either);
+        mismatches += static_cast<std::size_t>(mask_type(x - b) != m_only or mask_type(b - x) != b_only);
+        mismatches += static_cast<std::size_t>((x == b) != (m == b) or (x <=> X(b)) != (m <=> b));
+        mismatches += static_cast<std::size_t>(includes(x, b) != ((w & v) == v) or intersects(x, b) != ((w & v) != word_type{}));
+        return mismatches;
+}
+
+// How many checks an integer flag type fails over its probe words, against none, every bit, a stripe and either end.
+template<class X>
+auto integer_mismatches()
+        -> std::size_t
+{
+        using mask_type   = X::key_type;
+        using word_type   = word_t<X>;
+        auto const low    = low_bits<X>();
+        auto const others = std::to_array<mask_type>({mask_type{}, static_cast<mask_type>(low), static_cast<mask_type>(low / 3U), mask_type{1}, static_cast<mask_type>(word_type{1} << (X::max_size() - 1UZ))});
+        auto mismatches   = 0UZ;
+        for (auto const w : probe_words<X>()) {
+                mismatches += word_mismatches<X>(w);
+                for (auto const b : others) {
+                        mismatches += operator_mismatches<X>(w, b);
+                }
+        }
+        return mismatches;
+}
+
+// How many of a stream type's constants a flag type of it converts, counts or looks up otherwise than the mask does.
+template<class Mask>
+auto ios_mismatches(std::initializer_list<Mask> constants)
+        -> std::size_t
+{
+        using X         = xstd::bit_flag_set<Mask>;
+        using word_type = xstd::underlying_block_t<Mask>;
+        auto mismatches = 0UZ;
+        for (auto const c : constants) {
+                X const x    = c;
+                auto const w = static_cast<word_type>(c);
+                if (Mask(x) != c or x != c or x.size() != static_cast<std::size_t>(std::popcount(w)) or x.contains(c) != std::has_single_bit(w) or not includes(x, c)) {
+                        ++mismatches;
+                }
+                for (auto const k : x) {
+                        auto const bit = static_cast<word_type>(Mask(k));
+                        if (not std::has_single_bit(bit) or (bit & w) == word_type{}) {
+                                ++mismatches;
+                        }
+                }
+        }
+        return mismatches;
 }
 
 } // namespace
@@ -894,6 +1045,117 @@ BOOST_AUTO_TEST_CASE(ANarrowerWidthReadsTheLowPositionsOfABitset)
         BOOST_CHECK(narrow_bitset_flags(xstd::from_blocks, std::uint16_t{0x001}) == std::bitset<16>(0x001));
         BOOST_CHECK(std::bitset<16>(~narrow_bitset_flags()) == std::bitset<16>(0x0FFF));
         BOOST_CHECK(intersects(p, narrow_bitset_flags(std::bitset<16>(0x001))));
+}
+
+// An integer type is a bitmask type, [bitmask.types]/1, and keys a flag type below its sign bit; bool and char do not.
+BOOST_AUTO_TEST_CASE(AnIntegerMaskKeysAFlagTypeBelowItsSignBit)
+{
+        static_assert(std::same_as<xstd::bit_flag_set<std::uint8_t>, xstd::basic_bit_fixed_set<std::uint8_t, std::uint8_t, 8, xstd::bit_flag_mapping<std::uint8_t, 8>, std::greater<std::uint8_t>>>); // NOLINT(modernize-use-transparent-functors): the comparator the alias names
+        static_assert(std::same_as<xstd::bit_flag_set<int>, xstd::basic_bit_fixed_set<int, std::uint32_t, 31, xstd::bit_flag_mapping<int, 31>, std::greater<int>>>);                                  // NOLINT(modernize-use-transparent-functors): the comparator the alias names
+        static_assert(std::same_as<xstd::bit_flag_set<std::int8_t>, xstd::basic_bit_fixed_set<std::int8_t, std::uint8_t, 7, xstd::bit_flag_mapping<std::int8_t, 7>, std::greater<std::int8_t>>>);     // NOLINT(modernize-use-transparent-functors): the comparator the alias names
+        static_assert(xstd::bit_flag_set<std::uint16_t>::max_size() == 16UZ and xstd::bit_flag_set<std::uint32_t>::max_size() == 32UZ and xstd::bit_flag_set<std::uint64_t>::max_size() == 64UZ);
+        static_assert(xstd::bit_flag_set<int>::max_size() == 31UZ and xstd::bit_flag_set<std::int8_t>::max_size() == 7UZ and xstd::bit_flag_set<std::int64_t>::max_size() == 63UZ);
+        static_assert(sizeof(xstd::bit_flag_set<int>) == sizeof(int) and sizeof(xstd::bit_flag_set<std::uint16_t, 12>) == sizeof(std::uint16_t) and sizeof(xstd::bit_flag_set<std::uint64_t, 5>) == 1UZ);
+        static_assert(xstd::bit_mask<xstd::bit_flag_set<int>> and xstd::bit_mask<xstd::bit_flag_set<std::uint64_t>> and not xstd::bit_mask<int>);
+        static_assert(std::convertible_to<int, xstd::bit_flag_set<int>> and std::convertible_to<xstd::bit_flag_set<int>, int>);
+        static_assert(names_a_flag_type<std::uint8_t> and names_a_flag_type<std::int64_t> and not names_a_flag_type<bool> and not names_a_flag_type<char>);
+        static_assert(names_a_flag_type<signed char> and names_a_flag_type<unsigned char> and not names_a_flag_type<char8_t> and not names_a_flag_type<char16_t> and not names_a_flag_type<wchar_t>);
+        BOOST_CHECK(true);
+}
+
+// Each integer flag type converts, walks, looks up and combines with its mask on either side as the mask itself does.
+BOOST_AUTO_TEST_CASE(AnIntegerMaskAgreesWithItsOwnOperators)
+{
+        test::for_each_type<integer_flags>([]<class X> -> void {
+                BOOST_CHECK_EQUAL(integer_mismatches<X>(), 0UZ);
+        });
+}
+
+// The flags run from the highest bit down, and contains takes a one-bit value: several bits, or none, are no key.
+BOOST_AUTO_TEST_CASE(AnIntegerFlagTypeIteratesHighestFirstAndContainsOneBitValues)
+{
+        auto const wide = xstd::bit_flag_set<std::uint64_t>(0x8000'0000'0000'0101ULL);
+        BOOST_CHECK(std::ranges::equal(wide, std::to_array<std::uint64_t>({0x8000'0000'0000'0000ULL, 0x100ULL, 0x1ULL})));
+        auto const p = xstd::bit_flag_set<int>(0x4000'0005);
+        BOOST_CHECK(std::ranges::equal(p, std::to_array({0x4000'0000, 4, 1})) and p.front() == 0x4000'0000 and p.back() == 1);
+        BOOST_CHECK(p.contains(4) and p.contains(1) and not p.contains(2) and not p.contains(5) and not p.contains(0));
+        BOOST_CHECK(p.find(5) == p.end() and p.count(5) == 0UZ); // NOLINT(readability-container-contains): find and count are the members under test
+        BOOST_CHECK(includes(p, 5) and intersects(p, 6) and disjoint(p, 2) and not includes(p, 7));
+
+        auto x = p;
+        BOOST_CHECK(x.erase(5) == 0UZ and x == p);
+        BOOST_CHECK(x.insert(2).second and x == 0x4000'0007);
+        BOOST_CHECK(x.erase(2) == 1UZ and x == p);
+        BOOST_CHECK_EQUAL(std::format("{}", xstd::bit_flag_set<std::int8_t>(0x51)), "{64, 16, 1}");
+}
+
+// A signed mask's sign bit is no key: & and - read a value below it, and no write brings it in.
+BOOST_AUTO_TEST_CASE(ASignedFlagTypeRefusesItsSignBit)
+{
+        constexpr auto sign = std::numeric_limits<int>::min();
+        auto p              = xstd::bit_flag_set<int>(5);
+        BOOST_CHECK(int(~xstd::bit_flag_set<int>()) == std::numeric_limits<int>::max());
+        BOOST_CHECK(not p.contains(sign) and not xstd::bit_flag_mapping<int>::is_key(sign));
+        BOOST_CHECK_THROW(static_cast<void>(p.insert(sign)), std::out_of_range);
+        BOOST_CHECK(p == 5);
+
+        // & and - read the value below the width, and == finds a value with the sign bit unequal.
+        BOOST_CHECK((p & -1) == 5 and (p - -1).empty() and (-1 & p) == 5 and p != -1 and -1 != p);
+        BOOST_CHECK(std::int8_t(~xstd::bit_flag_set<std::int8_t>()) == std::numeric_limits<std::int8_t>::max());
+        // A named set: Clang 23's lifetime-safety analysis crashes on an insert into a temporary here.
+        auto q = xstd::bit_flag_set<std::int8_t>();
+        BOOST_CHECK_THROW(static_cast<void>(q.insert(std::numeric_limits<std::int8_t>::min())), std::out_of_range);
+}
+
+// Twelve bits of sixteen, as the permissions are: & and - read the low twelve, and no write brings in a bit above.
+BOOST_AUTO_TEST_CASE(ANarrowerIntegerFlagTypeRefusesTheBitsAboveIt)
+{
+        using narrow    = xstd::bit_flag_set<std::uint16_t, 12>;
+        auto const high = std::uint16_t{0x1001};
+        auto q          = narrow(std::uint16_t{0x0FFF});
+        BOOST_CHECK(std::uint16_t(q & high) == 0x001U and std::uint16_t(q - high) == 0xFFEU and q != std::uint16_t{0xFFFF});
+        BOOST_CHECK(not(narrow(std::uint16_t{0x001}) == high) and std::uint16_t(~narrow()) == 0x0FFFU);
+        BOOST_CHECK(not q.contains(std::uint16_t{0x1000}));
+        BOOST_CHECK_THROW(static_cast<void>(q.insert(std::uint16_t{0x1000})), std::out_of_range);
+        BOOST_CHECK(q == std::uint16_t{0x0FFF});
+}
+
+// [ios.base]'s three bitmask types, an enumeration in one library and an integer in another, round-trip every constant.
+BOOST_AUTO_TEST_CASE(EveryIosBaseConstantRoundTrips)
+{
+        using ios = std::ios_base;
+        BOOST_CHECK_EQUAL(ios_mismatches<ios::fmtflags>({ios::boolalpha, ios::dec, ios::fixed, ios::hex, ios::internal, ios::left, ios::oct, ios::right, ios::scientific, ios::showbase, ios::showpoint, ios::showpos, ios::skipws, ios::unitbuf, ios::uppercase, ios::adjustfield, ios::basefield, ios::floatfield}), 0UZ);
+        BOOST_CHECK_EQUAL(ios_mismatches<ios::iostate>({ios::goodbit, ios::badbit, ios::eofbit, ios::failbit}), 0UZ);
+        BOOST_CHECK_EQUAL(ios_mismatches<ios::openmode>({ios::app, ios::ate, ios::binary, ios::in, ios::out, ios::trunc}), 0UZ);
+        BOOST_CHECK(xstd::bit_flag_set<ios::iostate>(ios::goodbit).empty());
+        BOOST_CHECK(xstd::bit_flag_set<ios::fmtflags>(ios::adjustfield).size() == 3UZ);
+}
+
+// Code written against a stream's flags and state, with only the variable's type respelled, formats and recovers alike.
+BOOST_AUTO_TEST_CASE(AStreamTakesItsFlagsAndStateAsFlagTypes)
+{
+        using ios      = std::ios_base;
+        using fmtflags = xstd::bit_flag_set<ios::fmtflags>;
+        using iostate  = xstd::bit_flag_set<ios::iostate>;
+
+        auto os    = std::ostringstream();
+        fmtflags f = os.flags();
+        f -= ios::basefield;
+        f |= ios::hex;
+        f |= ios::showbase;
+        os.flags(f);
+        os << 255;
+        BOOST_CHECK_EQUAL(os.str(), "0xff");
+        BOOST_CHECK(fmtflags(os.flags()) == f and f.contains(ios::hex) and not f.contains(ios::dec) and not f.contains(ios::basefield));
+
+        auto is = std::istringstream("x");
+        auto n  = 0;
+        is >> n;
+        iostate st = is.rdstate();
+        BOOST_CHECK(st.contains(ios::failbit) and not st.contains(ios::badbit));
+        st -= ios::failbit;
+        is.clear(st);
+        BOOST_CHECK(is.good() and iostate(is.rdstate()).empty());
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -2581,7 +2581,7 @@ its block or its width changed, every other argument passed through:
 | `bit_least<X>` | `least_block_t<N>`: the narrowest of `std::uint8_t` to `std::uint64_t` holding `N`, else `std::uint64_t` | `N` |
 | `bit_fast<X>` | `fast_block_t<N>`: `std::uint_fast8_t` to `std::uint_fast64_t` by the same thresholds | `N` |
 | `bit_align<X>` | `X`'s own | `align_up(N, digits)`, whole blocks of `X`'s block |
-| `bit_underlying<X>` | `underlying_block_t<X::key_type>`: the key enumeration's underlying type made unsigned | `N` |
+| `bit_underlying<X>` | `underlying_block_t<X::key_type>`: the key's underlying type, enumeration or integer, made unsigned | `N` |
 
 `X` is any of `basic_bit_array<Block, N>`, `basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>`,
 `basic_bit_bounded_vector<Block, N>` and `basic_bit_bounded_set<Key, Block, N, KeyMapping, Compare>`, short names
@@ -2593,10 +2593,13 @@ The names are `<cstdint>`'s: `std::uint_least8_t` is the smallest type of at lea
 fastest, and the platform decides how wide that is. glibc on x86-64 makes `std::uint_fast16_t` and
 `std::uint_fast32_t` 64 bits wide where MSVC makes them 32, so `bit_fast` names a block and promises no size.
 
-`bit_underlying<X>` asks more of `X`: a set whose `key_type` is an enumeration with an unsigned counterpart, which
-excludes `enum : bool` and every non-enumeration key, a `std::bitset` mask among them. Its block is the word an
-existing field or ABI already stores that enumeration's flags in, `std::make_unsigned_t` of the underlying type and
-named `underlying_block_t<E>` beside `least_block_t` and `fast_block_t`. That is what a flag set wants at a boundary:
+`bit_underlying<X>` asks more of `X`: a set whose `key_type` is an enumeration or a built-in integer type with an
+unsigned counterpart, which excludes `enum : bool`, `bool`, the character types and every class key, a `std::bitset`
+mask among them. Its block is the word an existing field or ABI already stores those flags in, `std::make_unsigned_t`
+of the enumeration's underlying type or of the integer type itself, and named `underlying_block_t<K>` beside
+`least_block_t` and `fast_block_t`: `underlying_block_t<int>` is `unsigned`, which is what an `int` field of flags
+is read as. The rule is by type, not by mapping, so a set of positions has one too: `bit_fixed_set<N>` is keyed by
+`std::size_t`, whose word is its own, and `bit_underlying<bit_least<bit_fixed_set<9>>>` is `bit_fixed_set<9>` again. That is what a flag set wants at a boundary:
 `bit_underlying<bit_fast<bit_flag_set<E>>>` is back in `E`'s own word, `bit_underlying<bit_flag_set<E, 9>>` holds its
 nine flags in that word rather than the two bytes `bit_least` chose, and either way the set's block is the mask's
 representation bit for bit, so `xstd::bit_convert`, `from_blocks` and `std::bit_cast` to and from that word are copies.
@@ -2647,11 +2650,30 @@ over two bytes, or in ascending order, has all of them.
 sixteen bits rather than the twelve permissions so that `std::filesystem::perms::unknown`, `0xFFFF`, survives the
 round trip; its four high bits are keys like the others.
 
-`Mask` is an enumeration or a `std::bitset` as wide as a block, one block for now, and an `xstd::bit_mask` either
-way. Its word is the enumeration's underlying type made unsigned, or the block a bitset of that width is, and every
-conversion between the mask and the block goes through that word: `std::to_underlying` and a cast for an
-enumeration, `xstd::bit_convert` for a bitset, position `i` staying position `i`. An unsigned integer is a bit mask
-too, but its one-bit values are not a type of their own, and it is left out.
+`Mask` is an enumeration, a built-in integer type or a `std::bitset` as wide as a block, one block for now, the
+three forms [bitmask.types]/1 allows. Its word is the enumeration's underlying type made unsigned, the integer type's
+unsigned counterpart, or the block a bitset of that width is, and every conversion between the mask and the block
+goes through that word: a cast for an enumeration or an integer, `xstd::bit_convert` for a bitset, position `i`
+staying position `i`. `bool` and the character types are integral but no integer type, and are not masks.
+
+**An integer mask keys its one-bit values, not its numbers.** `bit_flag_set<std::uint32_t>`'s keys are `1`, `2`,
+`4`, … `0x8000'0000`, exactly as an enumeration's are; it is `bit_flag_mapping`, not the key type, that decides,
+and `bit_fixed_set<N>`, keyed by the positions `0` to `N - 1` through `bit_key_mapping<std::size_t>`, is a different
+set over the same `std::size_t`. `xstd::bit_mask` admits only the unsigned integer types, but [bitmask.types]/1
+says "an integer type" without a sign, and an implementation picks one: the flag type also takes a signed `Mask`,
+and keeps its sign bit out of the universe. `N` is at most
+`std::numeric_limits<Mask>::digits`, which counts no sign bit, and defaults to it: 31 for `int`, 7 for
+`std::int8_t`, every bit for an unsigned type. So every value a signed flag type gives back is non-negative, and a
+value with the sign bit set is a value wider than `N`, below. The arithmetic is the unsigned counterpart's: a rank
+is its `countr_zero` and rank `i` is `1` shifted left `i` places in that word, cast back, which is why the sign
+bit, the one position a shift there would reach, is excluded rather than handled.
+
+The standard's own bitmask types are the case in point. [ios.base] declares `fmtflags`, `iostate` and `openmode`
+as bitmask types and leaves the rest to the implementation: libstdc++ makes each an enumeration over `int` with the
+operators overloaded, libc++ `unsigned int`, and MSVC `int`, its constants of an unscoped enumeration beside it.
+`bit_flag_set<std::ios_base::fmtflags>` is one spelling for all three, 32 bits wide on the first two and 31 on the
+third, every standard constant below that, and code written against the stream carries over with only the variable's
+type changed: `fmtflags f = os.flags(); f -= ios::basefield; f |= ios::hex; os.flags(f);`.
 
 1. **Implicit conversions both ways.** Values from the standard's functions flow in,
    `xfs::perms p = fs::status(path).permissions();`, and ours flow out, `fs::permissions(path, p)`. The converting
@@ -2672,7 +2694,7 @@ Other libraries offer one of an enum set or a flag type, seldom both:
 
 | Library | Enum set | Flag type | Element | Iterates? |
 |---|---|---|---|---|
-| xstd-bits | `bit_enum_set<E>`, keyed by rank | `bit_flag_set<Mask, N>`, over an enumeration or a `std::bitset` | the mask's one-bit values | both iterate |
+| xstd-bits | `bit_enum_set<E>`, keyed by rank | `bit_flag_set<Mask, N>`, over an enumeration, an integer or a `std::bitset` | the mask's one-bit values | both iterate |
 | C++ standard | — (`std::bitset<N>` is indexed, not keyed) | bitmask types ([bitmask.types]: `fs::perms`, `ios_base::fmtflags`) | — | no |
 | Qt | — | `QFlags<Enum>` | `Enum` | no |
 | Chromium `base` | `EnumSet<E, Min, Max>` | — | — | yes |
@@ -2731,6 +2753,12 @@ Where it is not drop-in:
   of `fs::` are untouched.
 - **It is a class, not an enumeration.** `std::to_underlying(p)` and `static_cast<unsigned>(p)` do not compile;
   `switch (p)` and `fs::perms(p)` do, through the conversion.
+- **An integer mask meets only its own type.** The mixed operators deduce their mask parameter exactly, so an
+  operand of another type, an `int` literal against a `std::uint8_t` mask or MSVC's enumerator constants against its
+  `int` `fmtflags`, takes the built-in operator through the conversion, as the integer code it replaces did:
+  `p | 1` is an `int`, and `p - 1` is a subtraction. The compound forms take any value that converts to `Mask`, so
+  `p -= ios::basefield` is the set's on every implementation. A shift by an `int`, `p << 1`, is ambiguous between
+  the set's shift and the integer's; `p << 1UZ` is the set's.
 - **A standard function's result keeps the standard type.** `auto q = fs::status(path).permissions();` is a
   `std::filesystem::perms`, with none of the queries until it is assigned to `xfs::perms`.
 - **Printing** needs a `formatter` for the mask, which a user may not specialize for `std::filesystem::perms`; a

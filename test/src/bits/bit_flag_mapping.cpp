@@ -6,7 +6,7 @@
 #include <test/set/lookup.hpp>             // lookup_mismatches
 #include <xstd/bits/bit_fixed_set.hpp>     // basic_bit_fixed_set
 #include <xstd/bits/bit_flag_mapping.hpp>  // bit_flag_mapping
-#include <xstd/bits/bit_index_mapping.hpp> // sized_bit_index_mapping
+#include <xstd/bits/bit_index_mapping.hpp> // bit_mask_mapping, sized_bit_index_mapping
 #include <xstd/bits/from_blocks.hpp>       // from_blocks
 #include <boost/test/unit_test.hpp>        // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <algorithm>                       // ranges::equal
@@ -15,8 +15,9 @@
 #include <bitset>                          // bitset
 #include <concepts>                        // same_as
 #include <cstddef>                         // size_t
-#include <cstdint>                         // int8_t, uint8_t
+#include <cstdint>                         // int8_t, uint16_t, uint64_t, uint8_t
 #include <functional>                      // greater
+#include <limits>                          // numeric_limits
 #include <ranges>                          // iota
 #include <set>                             // set
 #include <stdexcept>                       // out_of_range
@@ -92,6 +93,19 @@ auto mode_lookup_mismatches()
                 for (auto const word : std::views::iota(0U, 256U)) {
                         mismatches += test::set::lookup_mismatches(a, model, std::bit_cast<mode>(static_cast<std::uint8_t>(word)));
                 }
+        }
+        return mismatches;
+}
+
+// The bytes whose key-ness an 8-bit integer's mapping misjudges: one bit set, below N, and never the sign bit.
+template<class Mask, std::size_t N>
+auto integer_mismatches()
+        -> std::size_t
+{
+        auto mismatches = 0UZ;
+        for (auto const word : std::views::iota(0U, 256U)) {
+                auto const key = std::has_single_bit(word) and word < (1U << N);
+                mismatches += static_cast<std::size_t>(xstd::bit_flag_mapping<Mask, N>::is_key(static_cast<Mask>(word)) != key);
         }
         return mismatches;
 }
@@ -218,6 +232,26 @@ BOOST_AUTO_TEST_CASE(AValueThatIsNoKeyIsNoElement)
         BOOST_CHECK(*s.lower_bound(read_write) == mode::exec and *s.upper_bound(read_write) == mode::exec);
         BOOST_CHECK_EQUAL(s.erase(read_write), 0UZ);
         BOOST_CHECK_EQUAL(s.size(), 3UZ);
+}
+
+// An integer is keyed the same way, its unsigned counterpart doing the arithmetic, and a signed one below its sign bit.
+BOOST_AUTO_TEST_CASE(AnIntegerRanksAtItsBitsPositionBelowItsSignBit)
+{
+        static_assert(xstd::bit_flag_mapping<std::uint8_t>::size == 8UZ and xstd::bit_flag_mapping<std::uint64_t>::size == 64UZ);
+        static_assert(xstd::bit_flag_mapping<std::int8_t>::size == 7UZ and xstd::bit_flag_mapping<int>::size == 31UZ);
+        static_assert(std::same_as<xstd::bit_flag_mapping<int>::block_type, unsigned> and std::same_as<xstd::bit_flag_mapping<std::int8_t>::block_type, std::uint8_t>);
+        static_assert(xstd::bit_mask_mapping<xstd::bit_flag_mapping<int>, int> and xstd::bit_mask_mapping<xstd::bit_flag_mapping<std::uint16_t, 12UZ>, std::uint16_t>);
+        static_assert(xstd::bit_flag_mapping<int>::to_index(0x4000'0000) == 30UZ and xstd::bit_flag_mapping<int>::from_index(30UZ) == 0x4000'0000);
+        static_assert(xstd::bit_flag_mapping<std::uint64_t>::from_index(63UZ) == 0x8000'0000'0000'0000ULL);
+        static_assert(xstd::bit_flag_mapping<int>::to_block(-1) == 0xFFFF'FFFFU and xstd::bit_flag_mapping<int>::from_block(0x7FFF'FFFFU) == 0x7FFF'FFFF);
+        for (auto const i : std::views::iota(0UZ, xstd::bit_flag_mapping<std::int8_t>::size)) {
+                BOOST_CHECK_EQUAL(xstd::bit_flag_mapping<std::int8_t>::to_index(xstd::bit_flag_mapping<std::int8_t>::from_index(i)), i);
+                BOOST_CHECK(xstd::bit_flag_mapping<std::int8_t>::from_index(i) > 0);
+        }
+        BOOST_CHECK_EQUAL((integer_mismatches<std::uint8_t, 8UZ>()), 0UZ);
+        BOOST_CHECK_EQUAL((integer_mismatches<std::uint8_t, 5UZ>()), 0UZ);
+        BOOST_CHECK_EQUAL((integer_mismatches<std::int8_t, 7UZ>()), 0UZ);
+        BOOST_CHECK(not xstd::bit_flag_mapping<int>::is_key(std::numeric_limits<int>::min()) and not xstd::bit_flag_mapping<int>::is_key(-1));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

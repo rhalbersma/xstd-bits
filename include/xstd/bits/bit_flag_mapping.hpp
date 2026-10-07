@@ -15,7 +15,7 @@
 // A bitmask type keyed on its own one-bit values, so a set of its flags needs no enumeration of ranks.
 namespace xstd {
 
-// A one-bit value ranks at the position of its bit, and rank i is the value 1 << i: an enumeration or a std::bitset.
+// A one-bit value ranks at the position of its bit, and rank i is the value 1 << i: an enumeration, integer or bitset.
 template<class Key, std::size_t N = bits::detail::flag_width_v<Key>>
         requires bits::detail::flag_mask<Key>
 struct bit_flag_mapping
