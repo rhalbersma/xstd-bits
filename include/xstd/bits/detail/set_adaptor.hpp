@@ -7,7 +7,7 @@
 #define XSTD_BITS_DETAIL_SET_ADAPTOR_HPP
 
 #include <xstd/bits/bit_blocks.hpp>                  // bit_blocks
-#include <xstd/bits/bit_index_mapping.hpp>           // bit_index_mapping, sized_bit_index_mapping
+#include <xstd/bits/bit_index_mapping.hpp>           // bit_index_mapping, bit_mask_mapping, sized_bit_index_mapping
 #include <xstd/bits/bit_key_mapping.hpp>             // bit_key_mapping
 #include <xstd/bits/detail/adapted_bits.hpp>         // adapted_bits
 #include <xstd/bits/detail/allocator_base_type.hpp>  // allocator_base_type, allocator_param_t, has_allocator_v
@@ -215,6 +215,9 @@ class set_adaptor : public set::sizes_t<Bits, Store, Derived, Key, KeyMapping, C
 
         static constexpr bool is_owner      = owns(Store);
         static constexpr bool is_descending = (set::direction_of<Compare> == direction::descending);
+
+        // An enumerator stands for the one key it is, except where the mapping reads every value as a mask of keys.
+        static constexpr bool enumerator_is_one_key = std::is_enum_v<Key> and not bit_mask_mapping<KeyMapping, Key>;
 
         using bits_type = std::remove_const_t<Bits>;
 
@@ -996,7 +999,7 @@ public:
         // An enumerator is the one-element set holding it, so it meets a set without an operator on the enumeration.
         constexpr auto operator&=(this auto&& self, key_type x) noexcept
                 -> auto&
-                requires std::is_enum_v<key_type> and requires { self.clear(); self.bits().assign(KeyMapping::to_index(x), true); }
+                requires enumerator_is_one_key and requires { self.clear(); self.bits().assign(KeyMapping::to_index(x), true); }
         {
                 auto const kept = self.contains(x);
                 self.clear();
@@ -1009,7 +1012,7 @@ public:
         // Not noexcept: an enumerator outside the listed values throws here, as insert does.
         constexpr auto operator|=(this auto&& self, key_type x)
                 -> auto&
-                requires std::is_enum_v<key_type> and requires { self.insert(x); }
+                requires enumerator_is_one_key and requires { self.insert(x); }
         {
                 static_cast<void>(self.insert(x));
                 return self;
@@ -1017,7 +1020,7 @@ public:
 
         constexpr auto operator^=(this auto&& self, key_type x)
                 -> auto&
-                requires std::is_enum_v<key_type> and requires { self.complement(x); }
+                requires enumerator_is_one_key and requires { self.complement(x); }
         {
                 self.complement(x);
                 return self;
@@ -1025,7 +1028,7 @@ public:
 
         constexpr auto operator-=(this auto&& self, key_type x) noexcept
                 -> auto&
-                requires std::is_enum_v<key_type> and requires { self.erase(x); }
+                requires enumerator_is_one_key and requires { self.erase(x); }
         {
                 static_cast<void>(self.erase(x));
                 return self;
@@ -1034,7 +1037,7 @@ public:
         // Hidden friends, so two enumerators never reach them; they copy, and so are the owner's alone.
         [[nodiscard]] friend constexpr auto operator&(set_adaptor const& lhs, key_type rhs) noexcept(has_static_width)
                 -> derived_type
-                requires is_owner and std::is_enum_v<key_type>
+                requires is_owner and enumerator_is_one_key
         {
                 auto nrv = static_cast<derived_type const&>(lhs);
                 nrv &= rhs;
@@ -1043,14 +1046,14 @@ public:
 
         [[nodiscard]] friend constexpr auto operator&(key_type lhs, set_adaptor const& rhs) noexcept(has_static_width)
                 -> derived_type
-                requires is_owner and std::is_enum_v<key_type>
+                requires is_owner and enumerator_is_one_key
         {
                 return rhs & lhs;
         }
 
         [[nodiscard]] friend constexpr auto operator|(set_adaptor const& lhs, key_type rhs)
                 -> derived_type
-                requires is_owner and std::is_enum_v<key_type>
+                requires is_owner and enumerator_is_one_key
         {
                 auto nrv = static_cast<derived_type const&>(lhs);
                 nrv |= rhs;
@@ -1059,14 +1062,14 @@ public:
 
         [[nodiscard]] friend constexpr auto operator|(key_type lhs, set_adaptor const& rhs)
                 -> derived_type
-                requires is_owner and std::is_enum_v<key_type>
+                requires is_owner and enumerator_is_one_key
         {
                 return rhs | lhs;
         }
 
         [[nodiscard]] friend constexpr auto operator^(set_adaptor const& lhs, key_type rhs)
                 -> derived_type
-                requires is_owner and std::is_enum_v<key_type>
+                requires is_owner and enumerator_is_one_key
         {
                 auto nrv = static_cast<derived_type const&>(lhs);
                 nrv ^= rhs;
@@ -1075,14 +1078,14 @@ public:
 
         [[nodiscard]] friend constexpr auto operator^(key_type lhs, set_adaptor const& rhs)
                 -> derived_type
-                requires is_owner and std::is_enum_v<key_type>
+                requires is_owner and enumerator_is_one_key
         {
                 return rhs ^ lhs;
         }
 
         [[nodiscard]] friend constexpr auto operator-(set_adaptor const& lhs, key_type rhs) noexcept(has_static_width)
                 -> derived_type
-                requires is_owner and std::is_enum_v<key_type>
+                requires is_owner and enumerator_is_one_key
         {
                 auto nrv = static_cast<derived_type const&>(lhs);
                 nrv -= rhs;
@@ -1092,7 +1095,7 @@ public:
         // The one-element set less the other: toggling the enumerator in a copy, then keeping only it.
         [[nodiscard]] friend constexpr auto operator-(key_type lhs, set_adaptor const& rhs)
                 -> derived_type
-                requires is_owner and std::is_enum_v<key_type>
+                requires is_owner and enumerator_is_one_key
         {
                 auto nrv = static_cast<derived_type const&>(rhs);
                 nrv ^= lhs;

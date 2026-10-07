@@ -7,11 +7,11 @@
 #define XSTD_BITS_DETAIL_FLAG_WORD_HPP
 
 #include <xstd/bits/bit/bit_convert.hpp> // bit_convert
-#include <xstd/bits/bit_blocks.hpp>      // least_block_t
+#include <xstd/bits/bit_blocks.hpp>      // least_block_t, underlying_block_t
 #include <bitset>                        // bitset
 #include <cstddef>                       // size_t
 #include <limits>                        // numeric_limits
-#include <type_traits>                   // is_enum_v, make_unsigned_t, type_identity, underlying_type_t
+#include <type_traits>                   // is_enum_v, type_identity
 #include <utility>                       // to_underlying
 
 // The one block a flag type's mask is read and written as: an enumeration's unsigned word, or a bitset's.
@@ -23,8 +23,8 @@ struct flag_word
 
 // Unsigned, so an enumerator on a signed type's sign bit is one bit like the others.
 template<class Mask>
-        requires std::is_enum_v<Mask>
-struct flag_word<Mask> : std::type_identity<std::make_unsigned_t<std::underlying_type_t<Mask>>>
+        requires requires { typename xstd::underlying_block_t<Mask>; }
+struct flag_word<Mask> : std::type_identity<xstd::underlying_block_t<Mask>>
 {};
 
 // A bitset exactly as wide as a block, which bit_convert maps position for position.

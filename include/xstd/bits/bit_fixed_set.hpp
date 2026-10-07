@@ -7,25 +7,29 @@
 #define XSTD_BITS_BIT_FIXED_SET_HPP
 
 #include <xstd/bits/bit_blocks.hpp>                          // bit_block, bit_blocks_extent_v, least_block_t
-#include <xstd/bits/bit_index_mapping.hpp>                   // bit_index_mapping, sized_bit_index_mapping
+#include <xstd/bits/bit_index_mapping.hpp>                   // bit_index_mapping, bit_mask_mapping, sized_bit_index_mapping
 #include <xstd/bits/bit_key_mapping.hpp>                     // bit_key_mapping
 #include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container, num_blocks_v
-#include <xstd/bits/detail/ownership.hpp>                    // storage
+#include <xstd/bits/detail/bit_layout.hpp>                   // byte_count, bytes_bits
+#include <xstd/bits/detail/ownership.hpp>                    // storage, storage_access
 #include <xstd/bits/detail/rebind.hpp>                       // rebind
-#include <xstd/bits/detail/set_adaptor.hpp>                  // admits_width, key_direction, set_adaptor
+#include <xstd/bits/detail/set_adaptor.hpp>                  // admits_width, disjoint, includes, intersects, key_direction, set_adaptor
+#include <xstd/bits/detail/shift.hpp>                        // shr
 #include <xstd/bits/from_blocks.hpp>                         // from_blocks, from_blocks_t
 #include <xstd/ints/concepts/unsigned_integer.hpp>           // unsigned_integer
+#include <xstd/ints/limits.hpp>                              // numeric_limits
 #include <xstd/misc/concepts/container_compatible_range.hpp> // container_compatible_range
 #include <boost/container_hash/is_range.hpp>                 // is_range
 #include <boost/container_hash/is_tuple_like.hpp>            // is_tuple_like
 #include <array>                                             // array
-#include <concepts>                                          // constructible_from
+#include <cassert>                                           // assert
+#include <concepts>                                          // constructible_from, same_as
 #include <cstddef>                                           // size_t
 #include <functional>                                        // hash, less
 #include <initializer_list>                                  // initializer_list
 #include <iterator>                                          // input_iterator
 #include <ranges>                                            // from_range, from_range_t
-#include <type_traits>                                       // false_type, is_enum_v
+#include <type_traits>                                       // conditional_t, false_type, is_enum_v
 #include <utility>                                           // forward
 
 namespace xstd {
@@ -39,8 +43,21 @@ class basic_bit_fixed_set : public bits::detail::set_adaptor<bits::detail::bit_b
         // A mapping that names a size closes the universe, and the width must be that size.
         static_assert(bits::detail::set::admits_width<KeyMapping, Key, N>);
 
+        // Each value of the key a mask of its one-bit keys, which converts with the set both ways.
+        static constexpr bool is_mask = bit_mask_mapping<KeyMapping, Key>;
+
+        // No caller can make one, so the mask constructor taking it is unreachable when Key is no mask.
+        class not_a_mask
+        {
+                not_a_mask() = default;
+        };
+
+        // A type rather than a constraint, since MSVC drops an inherited constructor's requires-clause candidate.
+        using mask_type = std::conditional_t<is_mask, Key, not_a_mask>;
+
 public:
         using typename base_type::key_compare;
+        using typename base_type::key_type;
         using typename base_type::value_type;
 
         // [set.cons] less its allocator forms, in [set.overview]'s order; key_compare has no state, so comp is dropped.
@@ -62,9 +79,17 @@ public:
                 : base_type(std::from_range, std::forward<R>(rg))
         {}
 
-        [[nodiscard]] constexpr basic_bit_fixed_set(std::initializer_list<value_type> il, key_compare const& /* comp */ = key_compare())
-                : base_type(il)
-        {}
+        // A mask's list is the union of its values, so {m} is the conversion from m and {a, b} two one-bit values.
+        [[nodiscard]] constexpr basic_bit_fixed_set(std::initializer_list<value_type> il, key_compare const& /* comp */ = key_compare()) noexcept(is_mask)
+        {
+                if constexpr (is_mask) {
+                        for (auto const& mask : il) {
+                                *this |= mask;
+                        }
+                } else {
+                        this->insert(il.begin(), il.end());
+                }
+        }
 
         // Not in [set.cons]: blocks that are bit storage, read as this set's positions.
         template<class Bits>
@@ -73,13 +98,180 @@ public:
                 : base_type(from_blocks, b)
         {}
 
+        // Not in [set.cons]: any value of a mask, as the enumeration it replaces takes it; no bit at or above N.
+        [[nodiscard]] constexpr explicit(false) basic_bit_fixed_set(mask_type const& mask) noexcept // NOLINT(misc-explicit-constructor)
+        {
+                assert(fits(mask));
+                bits::detail::storage_access::bits(*this).assign_bits(KeyMapping::to_block(mask));
+        }
+
         using base_type::operator=;
+
+        // The mask with this set's keys, every bit of it at or above N clear.
+        [[nodiscard]] constexpr explicit(false) operator key_type() const noexcept // NOLINT(misc-explicit-constructor)
+                requires is_mask
+        {
+                using mask_block = KeyMapping::block_type;
+                return KeyMapping::from_block(bits::detail::bytes_bits<mask_block, N>(bits::detail::storage_access::bits(*this).template to_bytes<bits::detail::byte_count<N>>()));
+        }
 
         // A swap on the base loses to any exact match on this type, so every container declares its own.
         friend constexpr auto swap(basic_bit_fixed_set& x, basic_bit_fixed_set& y) noexcept(noexcept(x.swap(y)))
                 -> void
         {
                 x.swap(y);
+        }
+
+        // The base's queries again, here so a mask on either side converts: any-of, none-of, and all-of as x holding y.
+        [[nodiscard]] friend constexpr auto intersects(basic_bit_fixed_set const& x, basic_bit_fixed_set const& y) noexcept
+                -> bool
+                requires is_mask
+        {
+                return intersects(static_cast<base_type const&>(x), static_cast<base_type const&>(y));
+        }
+
+        [[nodiscard]] friend constexpr auto disjoint(basic_bit_fixed_set const& x, basic_bit_fixed_set const& y) noexcept
+                -> bool
+                requires is_mask
+        {
+                return disjoint(static_cast<base_type const&>(x), static_cast<base_type const&>(y));
+        }
+
+        [[nodiscard]] friend constexpr auto includes(basic_bit_fixed_set const& x, basic_bit_fixed_set const& y) noexcept
+                -> bool
+                requires is_mask
+        {
+                return includes(static_cast<base_type const&>(x), static_cast<base_type const&>(y));
+        }
+
+        // Total, as the binary & and - are: the value's bits at or above N meet nothing in this set.
+        friend constexpr auto operator&=(basic_bit_fixed_set& lhs, key_type const& rhs) noexcept
+                -> basic_bit_fixed_set&
+                requires is_mask
+        {
+                return lhs &= low_bits_of(rhs);
+        }
+
+        friend constexpr auto operator-=(basic_bit_fixed_set& lhs, key_type const& rhs) noexcept
+                -> basic_bit_fixed_set&
+                requires is_mask
+        {
+                return lhs -= low_bits_of(rhs);
+        }
+
+        // These two would bring the value's bits above N into the set, which they must not have.
+        friend constexpr auto operator|=(basic_bit_fixed_set& lhs, key_type const& rhs) noexcept
+                -> basic_bit_fixed_set&
+                requires is_mask
+        {
+                return lhs |= basic_bit_fixed_set(rhs);
+        }
+
+        friend constexpr auto operator^=(basic_bit_fixed_set& lhs, key_type const& rhs) noexcept
+                -> basic_bit_fixed_set&
+                requires is_mask
+        {
+                return lhs ^= basic_bit_fixed_set(rhs);
+        }
+
+        // Templates over the mask's exact type, so that a set converting to it is never deduced as one.
+        template<std::same_as<key_type> M>
+        [[nodiscard]] friend constexpr auto operator==(basic_bit_fixed_set const& lhs, M const& rhs) noexcept
+                -> bool
+                requires is_mask
+        {
+                return fits(rhs) and lhs == low_bits_of(rhs);
+        }
+
+        // The rest in both orders, exact where the base's would take the value as one key; no bit at or above N.
+        template<std::same_as<key_type> M>
+        [[nodiscard]] friend constexpr auto operator|(basic_bit_fixed_set lhs, M const& rhs) noexcept
+                -> basic_bit_fixed_set
+                requires is_mask
+        {
+                return lhs |= rhs;
+        }
+
+        template<std::same_as<key_type> M>
+        [[nodiscard]] friend constexpr auto operator|(M const& lhs, basic_bit_fixed_set rhs) noexcept
+                -> basic_bit_fixed_set
+                requires is_mask
+        {
+                return rhs |= lhs;
+        }
+
+        // Total: truncating the value to N bits is exact, since the set has no bit above N for it to keep.
+        template<std::same_as<key_type> M>
+        [[nodiscard]] friend constexpr auto operator&(basic_bit_fixed_set lhs, M const& rhs) noexcept
+                -> basic_bit_fixed_set
+                requires is_mask
+        {
+                return lhs &= rhs;
+        }
+
+        template<std::same_as<key_type> M>
+        [[nodiscard]] friend constexpr auto operator&(M const& lhs, basic_bit_fixed_set rhs) noexcept
+                -> basic_bit_fixed_set
+                requires is_mask
+        {
+                return rhs &= lhs;
+        }
+
+        template<std::same_as<key_type> M>
+        [[nodiscard]] friend constexpr auto operator^(basic_bit_fixed_set lhs, M const& rhs) noexcept
+                -> basic_bit_fixed_set
+                requires is_mask
+        {
+                return lhs ^= rhs;
+        }
+
+        template<std::same_as<key_type> M>
+        [[nodiscard]] friend constexpr auto operator^(M const& lhs, basic_bit_fixed_set rhs) noexcept
+                -> basic_bit_fixed_set
+                requires is_mask
+        {
+                return rhs ^= lhs;
+        }
+
+        // Total, as & is; the mirror is not, the value's bits above N being what it would keep.
+        template<std::same_as<key_type> M>
+        [[nodiscard]] friend constexpr auto operator-(basic_bit_fixed_set lhs, M const& rhs) noexcept
+                -> basic_bit_fixed_set
+                requires is_mask
+        {
+                return lhs -= rhs;
+        }
+
+        template<std::same_as<key_type> M>
+        [[nodiscard]] friend constexpr auto operator-(M const& lhs, basic_bit_fixed_set const& rhs) noexcept
+                -> basic_bit_fixed_set
+                requires is_mask
+        {
+                auto nrv = basic_bit_fixed_set(lhs);
+                nrv -= rhs;
+                return nrv;
+        }
+
+private:
+        // Where a write brings a mask's bits into the set, the mask must have none at or above N.
+        [[nodiscard]] static constexpr auto fits(key_type const& mask) noexcept
+                -> bool
+                requires is_mask
+        {
+                using mask_block = KeyMapping::block_type;
+                if constexpr (N < static_cast<std::size_t>(xstd::numeric_limits<mask_block>::digits)) {
+                        return bits::detail::shr(KeyMapping::to_block(mask), N) == mask_block{};
+                } else {
+                        return true;
+                }
+        }
+
+        // The mask's bits below N, all of it that can meet this set.
+        [[nodiscard]] static constexpr auto low_bits_of(key_type const& mask) noexcept
+                -> basic_bit_fixed_set
+                requires is_mask
+        {
+                return basic_bit_fixed_set(from_blocks, KeyMapping::to_block(mask));
         }
 };
 
