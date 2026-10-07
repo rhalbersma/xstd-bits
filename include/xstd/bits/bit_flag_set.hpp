@@ -101,6 +101,25 @@ public:
                 x.swap(y);
         }
 
+        // The base's queries again, here so a mask on either side converts: any-of, none-of, and all-of as x holding y.
+        [[nodiscard]] friend constexpr auto intersects(bit_flag_set const& x, bit_flag_set const& y) noexcept
+                -> bool
+        {
+                return intersects(static_cast<base_type const&>(x), static_cast<base_type const&>(y));
+        }
+
+        [[nodiscard]] friend constexpr auto disjoint(bit_flag_set const& x, bit_flag_set const& y) noexcept
+                -> bool
+        {
+                return disjoint(static_cast<base_type const&>(x), static_cast<base_type const&>(y));
+        }
+
+        [[nodiscard]] friend constexpr auto includes(bit_flag_set const& x, bit_flag_set const& y) noexcept
+                -> bool
+        {
+                return includes(static_cast<base_type const&>(x), static_cast<base_type const&>(y));
+        }
+
         // The set forms, which the mask forms would otherwise hide, over the base as its binary operators call them.
         constexpr auto operator&=(base_type const& other) noexcept
                 -> bit_flag_set&

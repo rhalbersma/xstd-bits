@@ -1324,6 +1324,20 @@ public:
                 }
         }
 
+        // Symmetric, as intersects is, so a friend rather than a member: no element of either is the other's.
+        [[nodiscard]] friend constexpr auto disjoint(set_adaptor const& x, set_adaptor const& y) noexcept
+                -> bool
+        {
+                return not intersects(x, y);
+        }
+
+        // x holds every element of y, in std::ranges::includes(x, y)'s order: is_subset_of read the other way.
+        [[nodiscard]] friend constexpr auto includes(set_adaptor const& x, set_adaptor const& y) noexcept
+                -> bool
+        {
+                return y.is_subset_of(x);
+        }
+
 private:
         // A key type with no order of its own, a std::bitset, has no place between two keys for a value that is no key.
         static constexpr bool orders_non_keys = std::totally_ordered<key_type>;
