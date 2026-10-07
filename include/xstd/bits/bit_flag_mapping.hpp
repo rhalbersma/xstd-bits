@@ -21,11 +21,12 @@ template<class Key, std::size_t N = bits::detail::flag_width_v<Key>>
 struct bit_flag_mapping
 {
 private:
-        using word_type = bits::detail::flag_word_t<Key>;
-
         static_assert(N <= bits::detail::flag_width_v<Key>);
 
 public:
+        // The unsigned word a mask is read and written as, every bit of it at its own position.
+        using block_type = bits::detail::flag_word_t<Key>;
+
         static constexpr std::size_t size = N;
 
         // Exactly one bit set, below N: zero and a value of several bits name no position, and are no key.
@@ -49,7 +50,20 @@ public:
                 -> Key
         {
                 assert(index < N);
-                return bits::detail::from_word<Key>(bits::detail::shl(word_type{1}, index));
+                return bits::detail::from_word<Key>(bits::detail::shl(block_type{1}, index));
+        }
+
+        // Any value of the mask, one-bit or not, as the block holding its bits; from_block reads it back.
+        [[nodiscard]] static constexpr auto to_block(Key const& mask) noexcept
+                -> block_type
+        {
+                return bits::detail::to_word(mask);
+        }
+
+        [[nodiscard]] static constexpr auto from_block(block_type block) noexcept
+                -> Key
+        {
+                return bits::detail::from_word<Key>(block);
         }
 };
 

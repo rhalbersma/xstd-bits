@@ -10,7 +10,7 @@
 #include <concepts>                 // same_as
 #include <cstddef>                  // size_t
 #include <cstdint>                  // uint16_t, uint8_t, uint_fast16_t
-#include <functional>               // less
+#include <functional>               // greater, less
 #include <limits>                   // numeric_limits
 #include <memory>                   // allocator
 #include <ranges>                   // bidirectional_range, random_access_range
@@ -61,7 +61,8 @@ BOOST_AUTO_TEST_CASE(EveryContainerArrivesThroughTheUmbrella)
         static_assert(std::same_as<xstd::bit_enum_set<perm>, xstd::basic_bit_fixed_set<perm, std::uint8_t, 3, xstd::bit_key_mapping<perm>>>);
         static_assert(std::same_as<decltype(xstd::basic_bit_fixed_set{perm::read}), xstd::bit_enum_set<perm>>);
 
-        // A flag type iterates its mask's one-bit values, and an enumeration is keyed the same way through the mapping.
+        // A flag type is the fixed set over the flag mapping, iterating its mask's one-bit values, highest first.
+        static_assert(std::same_as<xstd::bit_flag_set<std::bitset<8>>, xstd::basic_bit_fixed_set<std::bitset<8>, std::uint8_t, 8, xstd::bit_flag_mapping<std::bitset<8>>, std::greater<std::bitset<8>>>>); // NOLINT(modernize-use-transparent-functors): the comparator the alias names
         static_assert(std::same_as<xstd::bit_flag_set<std::bitset<8>>::iterator::value_type, std::bitset<8>>);
         static_assert(std::same_as<decltype(xstd::bit_flag_set<std::bitset<8>>() | xstd::bit_flag_set<std::bitset<8>>()), xstd::bit_flag_set<std::bitset<8>>>);
         static_assert(xstd::bit_flag_mapping<perm>::size == 8UZ);

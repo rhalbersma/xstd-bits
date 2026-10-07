@@ -18,7 +18,7 @@
 #include <cstdint>                                    // uint16_t, uint32_t, uint64_t, uint8_t, uint_fast16_t, uint_fast32_t, uint_fast64_t, uint_fast8_t
 #include <ranges>                                     // contiguous_range, end, range, range_reference_t, range_size_t, range_value_t, sized_range
 #include <span>                                       // dynamic_extent, span
-#include <type_traits>                                // conditional_t, remove_cv_t
+#include <type_traits>                                // conditional_t, is_enum_v, make_unsigned_t, remove_cv_t, underlying_type_t
 
 // What every container and view here presents a packed interface over: bits in contiguous unsigned blocks.
 namespace xstd {
@@ -109,6 +109,11 @@ using fast_block_t = std::conditional_t<
                 (N <= bit_blocks_extent_v<std::uint16_t>), std::uint_fast16_t,
                 std::conditional_t<(N <= bit_blocks_extent_v<std::uint32_t>), std::uint_fast32_t, std::uint_fast64_t>>>;
 
+// An enumeration's underlying type made unsigned, as the block a field or ABI of that enumeration already uses.
+template<class Enum>
+        requires std::is_enum_v<Enum> and (not std::same_as<std::underlying_type_t<Enum>, bool>) and bit_block<std::make_unsigned_t<std::underlying_type_t<Enum>>>
+using underlying_block_t = std::make_unsigned_t<std::underlying_type_t<Enum>>;
+
 // The same bit container in the smallest block that holds its N bits, as uint_least8_t is the smallest of at least 8.
 template<class Bits>
         requires bits::detail::rebindable<Bits>
@@ -123,6 +128,11 @@ using bit_fast = bits::detail::rebind_t<Bits, fast_block_t<bits::detail::rebind_
 template<class Bits>
         requires bits::detail::rebindable<Bits>
 using bit_align = bits::detail::rebind_t<Bits, bits::detail::rebind_block_t<Bits>, xstd::align_up(bits::detail::rebind_width_v<Bits>, bit_blocks_extent_v<bits::detail::rebind_block_t<Bits>>)>;
+
+// The same bit set in its enumeration key's underlying type made unsigned, as an existing field or ABI stores it.
+template<class Bits>
+        requires bits::detail::rebindable<Bits> and requires { typename underlying_block_t<typename Bits::key_type>; }
+using bit_underlying = bits::detail::rebind_t<Bits, underlying_block_t<typename Bits::key_type>, bits::detail::rebind_width_v<Bits>>;
 
 } // namespace xstd
 

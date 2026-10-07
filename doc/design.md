@@ -2383,7 +2383,7 @@ axis tags came along because no adaptor can be named without them. What settled 
 to ask. A container is what it is, and what it *does* -- bidirectional with a `key_type`, or random-access over
 `bool` -- is askable in the standard's own vocabulary, without naming a
 base at all. So the adaptors and their vocabulary went to `xstd::bits::detail`, and what remains in
-`namespace xstd` is nine names, their short aliases, three transformations over them, and one concept.
+`namespace xstd` is nine names, their short aliases, four transformations over them, and one concept.
 
 On the other side, the two that had to be argued. The four proxy types are reached only through container
 typedefs, so no user spells them. `bit_block_container` and its three aliases are the device that turns
@@ -2524,7 +2524,8 @@ on older compilers. An enumerator meets a set through the set's own type: `|`, `
 side and an enumerator on the other, and `|=`, `&=`, `^=` and `-=` an enumerator on the right, the enumerator acting
 as the one-element set holding it. The value-returning forms are hidden friends of the set, so two enumerators
 never reach them, and nothing is declared on the enumeration: `E::a | E::b` does not compile, and two enumerators
-combine as `bit_enum_set<E>{E::a, E::b}`. Each is constrained to an enumeration `key_type`, so a set of integers
+combine as `bit_enum_set<E>{E::a, E::b}`. Each is constrained to an enumeration `key_type` whose mapping is no mask
+mapping ([flag-types](#flag-types)), where a value is a set of keys rather than one, so a set of integers
 gains no mixed operator, and with `key_type` an enumeration nothing converts an `int` into one, so `insert(1)`,
 `contains(1)` and `find(1)` do not compile.
 
@@ -2572,7 +2573,7 @@ header is the name's home and the only place it is spelled; `bits.hpp` includes 
 
 ### block-and-width-transformations
 
-Three type transformations in `<xstd/bits/bit_blocks.hpp>` take a fixed-width owner and return the same owner with
+Four type transformations in `<xstd/bits/bit_blocks.hpp>` take a fixed-width owner and return the same owner with
 its block or its width changed, every other argument passed through:
 
 | Transformation | Block | Width |
@@ -2580,6 +2581,7 @@ its block or its width changed, every other argument passed through:
 | `bit_least<X>` | `least_block_t<N>`: the narrowest of `std::uint8_t` to `std::uint64_t` holding `N`, else `std::uint64_t` | `N` |
 | `bit_fast<X>` | `fast_block_t<N>`: `std::uint_fast8_t` to `std::uint_fast64_t` by the same thresholds | `N` |
 | `bit_align<X>` | `X`'s own | `align_up(N, digits)`, whole blocks of `X`'s block |
+| `bit_underlying<X>` | `underlying_block_t<X::key_type>`: the key enumeration's underlying type made unsigned | `N` |
 
 `X` is any of `basic_bit_array<Block, N>`, `basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>`,
 `basic_bit_bounded_vector<Block, N>` and `basic_bit_bounded_set<Key, Block, N, KeyMapping, Compare>`, short names
@@ -2591,10 +2593,19 @@ The names are `<cstdint>`'s: `std::uint_least8_t` is the smallest type of at lea
 fastest, and the platform decides how wide that is. glibc on x86-64 makes `std::uint_fast16_t` and
 `std::uint_fast32_t` 64 bits wide where MSVC makes them 32, so `bit_fast` names a block and promises no size.
 
+`bit_underlying<X>` asks more of `X`: a set whose `key_type` is an enumeration with an unsigned counterpart, which
+excludes `enum : bool` and every non-enumeration key, a `std::bitset` mask among them. Its block is the word an
+existing field or ABI already stores that enumeration's flags in, `std::make_unsigned_t` of the underlying type and
+named `underlying_block_t<E>` beside `least_block_t` and `fast_block_t`. That is what a flag set wants at a boundary:
+`bit_underlying<bit_fast<bit_flag_set<E>>>` is back in `E`'s own word, `bit_underlying<bit_flag_set<E, 9>>` holds its
+nine flags in that word rather than the two bytes `bit_least` chose, and either way the set's block is the mask's
+representation bit for bit, so `xstd::bit_convert`, `from_blocks` and `std::bit_cast` to and from that word are copies.
+For a flag set at the mask's full width, the default, `bit_least` already chose that word, and `bit_underlying` is the
+identity; it is the transformation that says why, rather than one that happens to agree.
 The precedent for the form is `std::make_unsigned_t<T>`, a type in and a related type out, and C++26's `std::simd`,
 whose `rebind_t<U, V>` changes the element type of a `basic_simd` and `resize_t<N, V>` its width, each keeping the
 other. Each owner specializes one exposition-only trait that names its block, its width and itself over another
-pair; the three aliases are written once against that trait. An earlier design spelled the same choices as
+pair; the four aliases are written once against that trait. An earlier design spelled the same choices as
 namespaces, `aligned::bit_fixed_set<N>` beside `xstd::bit_fixed_set<N>`, each namespace re-declaring every class
 template's parameter list with its own defaults and constraints. Those copies drifted: `aligned::basic_bit_fixed_set`
 took an unconstrained `Compare` where the class takes only a direction, so a misuse surfaced inside the class rather
@@ -2620,11 +2631,18 @@ words. [type_safe](https://github.com/foonathan/type_safe)'s `flag_set<Enum>` st
 
 A flag type replaces a bitmask type such as `std::filesystem::perms`: code written against the mask keeps the
 spelling of its constants, only the variable's type changes, and the set vocabulary comes on top.
-`bit_flag_set<Mask, N, KeyMapping>` is the set of `Mask`'s one-bit values below `N`: its `key_type` is `Mask`
-itself, each key a value with exactly one bit set, and `KeyMapping` defaults to `bit_flag_mapping<Mask, N>`, which
-ranks a one-bit value at its bit. `N` defaults to the mask's width. There is no CRTP and no separate rank
-enumeration: `bit_flag_set` derives from the `set_adaptor` that `basic_bit_fixed_set` derives from, over one block
-of `least_block_t<N>`, and passes itself as the type its operators return, as `basic_bit_fixed_set` does.
+`bit_flag_set<Mask, N>` is the set of `Mask`'s one-bit values below `N`: its `key_type` is `Mask` itself, each key a
+value with exactly one bit set, ranked at its bit by `bit_flag_mapping<Mask, N>`, and `N` defaults to the mask's
+width. It is no class of its own. There is one fixed set, `basic_bit_fixed_set`, and the flag type is an alias of it,
+`bit_least<basic_bit_fixed_set<Mask, std::size_t, N, bit_flag_mapping<Mask, N>, std::greater<Mask>>>`, in the least
+block holding `N` as `bit_enum_set` is. What makes a fixed set a flag type is its mapping. `bit_mask_mapping<M, Key>`
+refines `sized_bit_index_mapping` with `M::to_block`, which takes any value of `Key`, one-bit or not, to the block
+holding its bits at their positions, and `M::from_block`, which reads one back; `bit_flag_mapping` models it and no
+other mapping does. Under that concept alone, `basic_bit_fixed_set` declares the members a flag type has: the
+conversion from the mask and to it, the union of a braced list, the mixed operators, and `includes`, `intersects` and
+`disjoint` over a mask on either side. A set of positions or of listed enumerators has none of them, and a flag set
+over another block, `bit_fast<bit_flag_set<Mask>>` or `basic_bit_fixed_set<Mask, std::uint8_t, 16, bit_flag_mapping<Mask, 16>>`
+over two bytes, or in ascending order, has all of them.
 `examples/include/xstd/filesystem.hpp` is one line, `using perms = bit_flag_set<std::filesystem::perms, 16>;`,
 sixteen bits rather than the twelve permissions so that `std::filesystem::perms::unknown`, `0xFFFF`, survives the
 round trip; its four high bits are keys like the others.
@@ -2671,10 +2689,11 @@ Java's `EnumSet` keys by ordinal, which is `bit_enum_set`; Qt's `QFlags` keys by
 truncated by `&`, `-` with the flag type on the left, their compound forms and `==`, which finds such a value
 unequal, and are precluded by an `assert` on the way in: the conversion, `|`, `^`, their compound forms and `-` with
 the mask on the left. `xfs::perms(xstd::from_blocks, 0xFFFF)` takes the block as it is, `bitflags`'
-`from_bits_retain`, and `xstd::bit_convert<std::uint16_t>(p)` reads it back.
+`from_bits_retain`, and `xstd::bit_convert<std::uint16_t>(p)` reads it back; a block wider than `N` has its bits at or
+above `N` dropped, as every fixed set's `from_blocks` does.
 
-**A flag type orders as the mask it replaces, highest flag first.** It has no `Compare` parameter: it always passes
-`std::greater<Mask>` to the adaptor, and over a descending set the adaptor's `<=>` is `numeric_three_way`, the block
+**A flag type orders as the mask it replaces, highest flag first.** The alias has no `Compare` parameter: it always
+passes `std::greater<Mask>` to the fixed set, and over a descending set the adaptor's `<=>` is `numeric_three_way`, the block
 compared as an unsigned number: the order the bitmask enumeration's own relational operators give, the order of a
 bitset's `to_ulong()`, and the `Ord` that Rust's `bitflags` derives. It stays the container's lexicographic
 comparison over its own iteration, since walking from the highest position down, the first difference is the
@@ -2690,8 +2709,9 @@ each an exact match for both operands, so it wins outright; `==` is one declarat
 language's. Each is a hidden friend template whose mask parameter must deduce exactly as `Mask`, so that a flag
 type, converting to the mask, never deduces as one, and each takes the flag type by value, an identity conversion
 that beats the adaptor's key-typed operators, which reach the flag type through its base and would otherwise read a
-multi-bit value as one key. The compound forms against the mask are members beside the set forms, which take the
-adaptor's own type as its binary operators call them.
+multi-bit value as one key. The adaptor's operators that read an enumerator as the one key it is are constrained off
+wherever the mapping is a mask mapping, so they never compete. The compound forms against the mask are hidden friends
+taking the mask as it is, beside the adaptor's member set forms, which a mask cannot reach and so need no redeclaring.
 
 **`contains(k)` is `std::set`'s membership of one flag.** A value of several bits, or of none, is no key, so it is no
 element either: `contains` answers `false`, `count` zero, `find` `end()` and `erase` zero, and over an enumeration the
@@ -2703,7 +2723,7 @@ proxy for a `bool`: a set changes one flag through `insert(k)` and `erase(k)`, a
 nullary `count()` either: `size()` answers it.
 
 **A user may still derive a class of their own** from `bit_flag_set` to add names, but its operators then return
-the base type, as a class derived from any standard container's would.
+the fixed set, as a class derived from any standard container's would.
 
 Where it is not drop-in:
 

@@ -3,8 +3,12 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/set/enums.hpp>               // perm
 #include <test/set/lookup.hpp>              // lookup_mismatches
 #include <xstd/bits/bit/bit_convert.hpp>    // bit_convert
+#include <xstd/bits/bit_blocks.hpp>         // bit_fast
+#include <xstd/bits/bit_enum_set.hpp>       // bit_enum_set
+#include <xstd/bits/bit_fixed_set.hpp>      // basic_bit_fixed_set, bit_fixed_set
 #include <xstd/bits/bit_flag_mapping.hpp>   // bit_flag_mapping
 #include <xstd/bits/bit_flag_set.hpp>       // bit_flag_set
 #include <xstd/bits/detail/set_adaptor.hpp> // disjoint, includes, intersects
@@ -19,7 +23,7 @@
 #include <compare>                          // is_gt, is_lt
 #include <concepts>                         // convertible_to, same_as
 #include <cstddef>                          // size_t
-#include <cstdint>                          // uint16_t, uint8_t
+#include <cstdint>                          // uint16_t, uint64_t, uint8_t
 #include <filesystem>                       // exists, path, perm_options, permissions, perms, remove, status, temp_directory_path
 #include <format>                           // format, format_to, formatter
 #include <fstream>                          // ofstream
@@ -406,6 +410,24 @@ auto name_of(Perms p)
 
 #endif
 
+// How many 16-bit values a set over the flag mapping converts, compares or combines otherwise than the standard's type.
+template<class X>
+auto conversion_mismatches()
+        -> std::size_t
+{
+        constexpr auto used = static_cast<unsigned>((1UZ << X::max_size()) - 1UZ);
+        auto mismatches     = 0UZ;
+        for (auto const word : std::views::iota(0U, 0x10000U)) {
+                auto const theirs = static_cast<fs::perms>(word);
+                auto const low    = static_cast<fs::perms>(word & used);
+                X const ours      = low;
+                if (fs::perms(ours) != low or ours != low or (ours == theirs) != (low == theirs) or fs::perms(ours & theirs) != low or fs::perms(ours - theirs) != fs::perms::none or fs::perms(ours | low) != low or fs::perms(ours ^ low) != fs::perms::none) {
+                        ++mismatches;
+                }
+        }
+        return mismatches;
+}
+
 // Code written against std::filesystem::perms, run on a fresh file with only the variable's type spelled Perms.
 template<class Perms>
 auto adjust_permissions(fs::path const& path)
@@ -450,6 +472,45 @@ BOOST_AUTO_TEST_CASE(EveryFlagTypeIsABitmaskType)
         static_assert(xstd::bit_convert<std::uint16_t>(xfs::perms{}) == 0U and xstd::bit_convert<std::uint16_t>(xfs::perms(fs::perms::none)) == 0U);
 
         BOOST_CHECK(true);
+}
+
+// The flag type is the fixed set of the mask's one-bit values over the flag mapping, in the least block holding N.
+BOOST_AUTO_TEST_CASE(TheFlagTypeIsTheFixedSetOverTheFlagMapping)
+{
+        static_assert(std::same_as<xfs::perms, xstd::basic_bit_fixed_set<fs::perms, std::uint16_t, 16, xstd::bit_flag_mapping<fs::perms, 16>, std::greater<fs::perms>>>);                 // NOLINT(modernize-use-transparent-functors): the comparator the alias names
+        static_assert(std::same_as<modes, xstd::basic_bit_fixed_set<mode, std::uint8_t, 3, xstd::bit_flag_mapping<mode, 3>, std::greater<mode>>>);                                        // NOLINT(modernize-use-transparent-functors): the comparator the alias names
+        static_assert(std::same_as<bitset_flags, xstd::basic_bit_fixed_set<std::bitset<16>, std::uint16_t, 16, xstd::bit_flag_mapping<std::bitset<16>>, std::greater<std::bitset<16>>>>); // NOLINT(modernize-use-transparent-functors): the comparator the alias names
+
+        BOOST_CHECK(true);
+}
+
+// Only a set over a mask mapping converts with its key: a set of positions or of listed enumerators does not.
+BOOST_AUTO_TEST_CASE(OnlyAMaskMappingMakesASetConvertWithItsKey)
+{
+        static_assert(std::convertible_to<fs::perms, xfs::perms> and std::convertible_to<xfs::perms, fs::perms>);
+        static_assert(not std::convertible_to<std::size_t, xstd::bit_fixed_set<8>> and not std::convertible_to<xstd::bit_fixed_set<8>, std::size_t>);
+        static_assert(not std::convertible_to<test::set::perm, xstd::bit_enum_set<test::set::perm>>);
+        static_assert(not std::convertible_to<xstd::bit_enum_set<test::set::perm>, test::set::perm>);
+
+        // A listed enumerator is the one key it is, so | inserts it and & keeps it alone.
+        auto const s = xstd::bit_enum_set<test::set::perm>{test::set::perm::read};
+        BOOST_CHECK((s | test::set::perm::exec).size() == 2UZ and (s & test::set::perm::read).size() == 1UZ);
+}
+
+// Any block and any order over the flag mapping convert alike: two blocks of a byte, one wider block, ascending keys.
+BOOST_AUTO_TEST_CASE(EveryBlockOverTheFlagMappingConvertsAlike)
+{
+        using byte_blocks        = xstd::basic_bit_fixed_set<fs::perms, std::uint8_t, 16, xstd::bit_flag_mapping<fs::perms, 16>, std::greater<fs::perms>>; // NOLINT(modernize-use-transparent-functors): the flag type's comparator
+        using narrow_byte_blocks = xstd::basic_bit_fixed_set<fs::perms, std::uint8_t, 12, xstd::bit_flag_mapping<fs::perms, 12>>;
+        using wide_block         = xstd::basic_bit_fixed_set<fs::perms, std::uint64_t, 12, xstd::bit_flag_mapping<fs::perms, 12>>;
+        static_assert(sizeof(byte_blocks) == 2UZ and sizeof(xstd::bit_fast<xfs::perms>) == sizeof(std::uint_fast16_t));
+        static_assert(fs::perms(byte_blocks(fs::perms::unknown)) == fs::perms::unknown and byte_blocks{fs::perms::owner_all}.size() == 3UZ);
+        BOOST_CHECK_EQUAL(conversion_mismatches<xfs::perms>(), 0UZ);
+        BOOST_CHECK_EQUAL(conversion_mismatches<byte_blocks>(), 0UZ);
+        BOOST_CHECK_EQUAL(conversion_mismatches<narrow_byte_blocks>(), 0UZ);
+        BOOST_CHECK_EQUAL(conversion_mismatches<wide_block>(), 0UZ);
+        BOOST_CHECK_EQUAL(conversion_mismatches<xstd::bit_fast<xfs::perms>>(), 0UZ);
+        BOOST_CHECK(std::ranges::equal(narrow_byte_blocks(fs::perms::owner_read | fs::perms::set_gid), std::array{fs::perms::owner_read, fs::perms::set_gid}));
 }
 
 // The keys are the mask's one-bit values below N, by bit_flag_mapping, and key_compare is std::greater of the mask.
