@@ -1096,7 +1096,9 @@ BOOST_AUTO_TEST_CASE(ASignedFlagTypeRefusesItsSignBit)
         // & and - read the value below the width, and == finds a value with the sign bit unequal.
         BOOST_CHECK((p & -1) == 5 and (p - -1).empty() and (-1 & p) == 5 and p != -1 and -1 != p);
         BOOST_CHECK(std::int8_t(~xstd::bit_flag_set<std::int8_t>()) == std::numeric_limits<std::int8_t>::max());
-        BOOST_CHECK_THROW(static_cast<void>(xstd::bit_flag_set<std::int8_t>().insert(std::numeric_limits<std::int8_t>::min())), std::out_of_range);
+        // A named set: Clang 23's lifetime-safety analysis crashes on an insert into a temporary here.
+        auto q = xstd::bit_flag_set<std::int8_t>();
+        BOOST_CHECK_THROW(static_cast<void>(q.insert(std::numeric_limits<std::int8_t>::min())), std::out_of_range);
 }
 
 // Twelve bits of sixteen, as the permissions are: & and - read the low twelve, and no write brings in a bit above.
