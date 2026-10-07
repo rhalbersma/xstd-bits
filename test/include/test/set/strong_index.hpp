@@ -35,6 +35,13 @@ struct offset_mapping
 {
         static constexpr auto size = N;
 
+        // First <= key.value < First + N, the unsigned difference wrapping a value below First past N.
+        [[nodiscard]] static constexpr auto is_key(strong_index key) noexcept
+                -> bool
+        {
+                return key.value - First < N;
+        }
+
         [[nodiscard]] static constexpr auto to_index(strong_index key) noexcept
                 -> std::size_t
         {

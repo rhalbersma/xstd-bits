@@ -17,7 +17,7 @@
 #include <xstd/bits/detail/set_adaptor.hpp>         // set_adaptor
 #include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <algorithm>                                // lexicographical_compare_three_way, ranges::equal
+#include <algorithm>                                // lexicographical_compare_three_way, ranges::equal, ranges::includes
 #include <array>                                    // array
 #include <bitset>                                   // bitset
 #include <compare>                                  // strong_ordering
@@ -1124,6 +1124,75 @@ BOOST_AUTO_TEST_CASE(TheTransparentDirectionsLookUpHeterogeneously)
         BOOST_CHECK(narrow.lower_bound(test::set::heterogeneous_key{.value = 50UZ}) == narrow.begin());
         auto const none = dynamic_by<std::less<>>();
         BOOST_CHECK(not none.contains(decade{.tens = 0UZ}));
+}
+
+namespace {
+
+// The subset of the first width positions that mask picks.
+template<class X>
+auto subset_of(std::size_t mask, std::size_t width)
+        -> X
+{
+        auto nrv = X();
+        for (auto const i : std::views::iota(0UZ, width)) {
+                if (((mask >> i) & 1UZ) != 0UZ) {
+                        nrv.insert(i);
+                }
+        }
+        return nrv;
+}
+
+// How often the queries disagree on one pair, with each other and with std::ranges::includes.
+template<class X>
+auto query_mismatches(X const& x, X const& y)
+        -> std::size_t
+{
+        auto const all_of = includes(x, y);
+        return static_cast<std::size_t>(disjoint(x, y) == intersects(x, y)) + static_cast<std::size_t>(all_of != y.is_subset_of(x)) + static_cast<std::size_t>(all_of != std::ranges::includes(x, y, x.key_comp()));
+}
+
+// Every pair of subsets of the first width positions, owned and, where the owner can be viewed, viewed.
+template<class X>
+auto query_mismatches_over_pairs(std::size_t width)
+        -> std::size_t
+{
+        auto mismatches = 0UZ;
+        for (auto const lhs : std::views::iota(0UZ, 1UZ << width)) {
+                auto const x = subset_of<X>(lhs, width);
+                for (auto const rhs : std::views::iota(0UZ, 1UZ << width)) {
+                        auto const y = subset_of<X>(rhs, width);
+                        mismatches += query_mismatches(x, y);
+                        if constexpr (requires { xstd::bit_set_view(x); }) {
+                                mismatches += query_mismatches(xstd::bit_set_view(x), xstd::bit_set_view(y));
+                        }
+                }
+        }
+        return mismatches;
+}
+
+using small_descending_fixed = xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 6, xstd::bit_key_mapping<std::size_t>, std::greater<>>;
+using small_descending_set   = xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_mapping<std::size_t>, std::greater<>>;
+
+} // namespace
+
+// disjoint is none-of and includes all-of, in std::ranges::includes's order, over every pair at every storage.
+BOOST_AUTO_TEST_CASE(DisjointIsNotIntersectsAndIncludesIsTheSubsetReadTheOtherWay)
+{
+        for (auto const width : std::views::iota(0UZ, 7UZ)) {
+                BOOST_CHECK_EQUAL(query_mismatches_over_pairs<xstd::bit_fixed_set<6>>(width), 0UZ);
+                BOOST_CHECK_EQUAL(query_mismatches_over_pairs<small_descending_fixed>(width), 0UZ);
+                BOOST_CHECK_EQUAL(query_mismatches_over_pairs<xstd::bit_bounded_set<6>>(width), 0UZ);
+                BOOST_CHECK_EQUAL(query_mismatches_over_pairs<xstd::bit_set>(width), 0UZ);
+                BOOST_CHECK_EQUAL(query_mismatches_over_pairs<small_descending_set>(width), 0UZ);
+                BOOST_CHECK_EQUAL(query_mismatches_over_pairs<xstd::bit_small_set<6>>(width), 0UZ);
+        }
+
+        // Two widths of one dynamic set, and the empty set, which every set includes and is disjoint from.
+        auto const wide   = xstd::bit_set({1UZ, 100UZ});
+        auto const narrow = xstd::bit_set({1UZ});
+        BOOST_CHECK(includes(wide, narrow) and not includes(narrow, wide) and not disjoint(wide, narrow));
+        BOOST_CHECK(includes(narrow, xstd::bit_set()) and disjoint(narrow, xstd::bit_set()));
+        static_assert(noexcept(disjoint(wide, narrow)) and noexcept(includes(wide, narrow)));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

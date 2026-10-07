@@ -3,6 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/set/lookup.hpp>             // lookup_mismatches
 #include <xstd/bits/bit_fixed_set.hpp>     // basic_bit_fixed_set
 #include <xstd/bits/bit_flag_mapping.hpp>  // bit_flag_mapping
 #include <xstd/bits/bit_index_mapping.hpp> // sized_bit_index_mapping
@@ -10,12 +11,14 @@
 #include <boost/test/unit_test.hpp>        // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <algorithm>                       // ranges::equal
 #include <array>                           // array
-#include <bit>                             // bit_cast
+#include <bit>                             // bit_cast, has_single_bit
 #include <bitset>                          // bitset
 #include <concepts>                        // same_as
 #include <cstddef>                         // size_t
 #include <cstdint>                         // int8_t, uint8_t
+#include <functional>                      // greater
 #include <ranges>                          // iota
+#include <set>                             // set
 #include <stdexcept>                       // out_of_range
 
 BOOST_AUTO_TEST_SUITE(BitFlagMapping)
@@ -43,6 +46,55 @@ enum class signed_flag : std::int8_t
 };
 
 constexpr auto modes = std::array{mode::read, mode::write, mode::exec, mode::dir, mode::link, mode::sock};
+
+// The bytes whose key-ness the mapping misjudges: a key has one bit set, below N.
+template<std::size_t N>
+auto mode_mismatches()
+        -> std::size_t
+{
+        auto mismatches = 0UZ;
+        for (auto const word : std::views::iota(0U, 256U)) {
+                auto const key = std::has_single_bit(word) and word < (1U << N);
+                mismatches += static_cast<std::size_t>(xstd::bit_flag_mapping<mode, N>::is_key(std::bit_cast<mode>(static_cast<std::uint8_t>(word))) != key);
+        }
+        return mismatches;
+}
+
+// The same over every 16-bit bitset, its count() the bits it has set.
+template<std::size_t N>
+auto bitset_mismatches()
+        -> std::size_t
+{
+        auto mismatches = 0UZ;
+        for (auto const word : std::views::iota(0UZ, 1UZ << 16UZ)) {
+                auto const b   = std::bitset<16>(word);
+                auto const key = b.count() == 1UZ and word < (1UZ << N);
+                mismatches += static_cast<std::size_t>(xstd::bit_flag_mapping<std::bitset<16>, N>::is_key(b) != key);
+        }
+        return mismatches;
+}
+
+// Every subset of a set of modes against std::set, asked every byte, the multi-bit and zero values among them.
+template<class X, class Model>
+auto mode_lookup_mismatches()
+        -> std::size_t
+{
+        auto mismatches = 0UZ;
+        for (auto const mask : std::views::iota(0UZ, 1UZ << modes.size())) {
+                auto a     = X();
+                auto model = Model();
+                for (auto const i : std::views::iota(0UZ, modes.size())) {
+                        if (((mask >> i) & 1UZ) != 0UZ) {
+                                a.insert(modes[i]);
+                                model.insert(modes[i]);
+                        }
+                }
+                for (auto const word : std::views::iota(0U, 256U)) {
+                        mismatches += test::set::lookup_mismatches(a, model, std::bit_cast<mode>(static_cast<std::uint8_t>(word)));
+                }
+        }
+        return mismatches;
+}
 
 } // namespace
 
@@ -126,6 +178,46 @@ BOOST_AUTO_TEST_CASE(ABitsetRanksAtItsBitsPosition)
                 BOOST_CHECK_EQUAL(mapping::to_index(mapping::from_index(i)), i);
                 BOOST_CHECK(mapping::from_index(i).count() == 1UZ and mapping::from_index(i).test(i));
         }
+}
+
+// A key has exactly one bit set, below N: zero, a value of several bits, or one bit at or above N is none.
+BOOST_AUTO_TEST_CASE(AKeyIsAOneBitValueBelowTheSize)
+{
+        static_assert(std::same_as<decltype(xstd::bit_flag_mapping<mode>::is_key(mode::read)), bool>);
+        static_assert(noexcept(xstd::bit_flag_mapping<mode>::is_key(mode::read)));
+        static_assert(xstd::bit_flag_mapping<mode>::is_key(mode::sock) and not xstd::bit_flag_mapping<mode>::is_key(std::bit_cast<mode>(std::uint8_t{0})));
+        BOOST_CHECK_EQUAL(mode_mismatches<8UZ>(), 0UZ);
+        BOOST_CHECK_EQUAL(mode_mismatches<6UZ>(), 0UZ);
+        BOOST_CHECK_EQUAL(mode_mismatches<1UZ>(), 0UZ);
+
+        // The sign bit is one bit like the others, and the value with every bit set is none.
+        BOOST_CHECK(xstd::bit_flag_mapping<signed_flag>::is_key(signed_flag::sign));
+        BOOST_CHECK(not xstd::bit_flag_mapping<signed_flag>::is_key(std::bit_cast<signed_flag>(std::int8_t{-1})));
+}
+
+// A bitset likewise: count() is 1, at a position below N.
+BOOST_AUTO_TEST_CASE(ABitsetKeyHasOneBitBelowTheSize)
+{
+        BOOST_CHECK_EQUAL(bitset_mismatches<16UZ>(), 0UZ);
+        BOOST_CHECK_EQUAL(bitset_mismatches<12UZ>(), 0UZ);
+}
+
+// A value that is no key is no element of a set of modes, which bounds it among the keys in either direction.
+BOOST_AUTO_TEST_CASE(AValueThatIsNoKeyIsNoElement)
+{
+        using ascending  = xstd::basic_bit_fixed_set<mode, std::uint8_t, 6UZ, xstd::bit_flag_mapping<mode, 6UZ>>;
+        using descending = xstd::basic_bit_fixed_set<mode, std::uint8_t, 6UZ, xstd::bit_flag_mapping<mode, 6UZ>, std::greater<>>;
+        BOOST_CHECK_EQUAL((mode_lookup_mismatches<ascending, std::set<mode>>()), 0UZ);
+        BOOST_CHECK_EQUAL((mode_lookup_mismatches<descending, std::set<mode, std::greater<>>>()), 0UZ);
+
+        // read | write lies between write and exec, and the set erases neither for it.
+        auto s                = ascending{mode::read, mode::write, mode::exec};
+        auto const read_write = std::bit_cast<mode>(std::uint8_t{0x03});
+        BOOST_CHECK(not s.contains(read_write) and s.count(read_write) == 0UZ); // NOLINT(readability-container-contains): count is the member under test
+        BOOST_CHECK(s.find(read_write) == s.end());                             // NOLINT(readability-container-contains): find is the member under test
+        BOOST_CHECK(*s.lower_bound(read_write) == mode::exec and *s.upper_bound(read_write) == mode::exec);
+        BOOST_CHECK_EQUAL(s.erase(read_write), 0UZ);
+        BOOST_CHECK_EQUAL(s.size(), 3UZ);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
