@@ -713,7 +713,7 @@ names are the same in either base and the adaptors reach them through the same `
 in the library notices which one it got; the public members are not an interface, only what makes the owner
 structural.
 
-That gives `aligned::bit_array` and `aligned::bit_fixed_set` at any width, and the plain owners
+That gives `bit_align<bit_array<N>>` and `bit_align<bit_fixed_set<N>>` at any width, and the plain owners
 at a multiple of the block's digits. Width zero is among them: its blocks are a `std::array<Block, 0>`, structural by
 `[array.overview]/4` like any other extent, with no bit in it to keep clear. The bounded owners cannot follow at any width,
 since neither `std::inplace_vector` nor `boost::container::static_vector` is structural, and the views hold pointers
@@ -2383,7 +2383,7 @@ axis tags came along because no adaptor can be named without them. What settled 
 to ask. A container is what it is, and what it *does* -- bidirectional with a `key_type`, or random-access over
 `bool` -- is askable in the standard's own vocabulary, without naming a
 base at all. So the adaptors and their vocabulary went to `xstd::bits::detail`, and what remains in
-`namespace xstd` is nine names, their short and aligned aliases, and one concept.
+`namespace xstd` is nine names, their short aliases, three transformations over them, and one concept.
 
 On the other side, the two that had to be argued. The four proxy types are reached only through container
 typedefs, so no user spells them. `bit_block_container` and its three aliases are the device that turns
@@ -2509,13 +2509,16 @@ works only within a guessed value range and is no part of the language. `enum_tr
 can be declared by whoever needs it; C++26 reflection, `std::meta::enumerators_of(^^E)`, can generate `values`
 later without changing what `bit_key_mapping` reads.
 
-`bit_enum_set<Enum, Block = smallest_block_t<N>>` is `basic_bit_fixed_set<Enum, Block, N, bit_key_mapping<Enum>>`,
-`N` being the mapping's `size`, for any enumeration whose `bit_key_mapping` models `sized_bit_index_mapping`. The block defaults to the narrowest of `std::uint8_t` to `std::uint64_t` that holds the
-`N` keys, since an enum set mostly lives inside other structures as a flag field: a three-value set is one
-byte, not eight. Wider than 64 values, it is several `std::uint64_t`. A field of fixed wire width is
-`bit_enum_set<E, std::uint32_t>`, the block being the alias's one parameter after the enumeration: a set over
-another mapping of the enumeration is a `basic_bit_fixed_set` and spells the mapping there. `smallest_block_t` is
-public, in `<xstd/bits/bit_blocks.hpp>`, because that user spells the alias's default block too. A deduction guide on the class template, not on the alias, deduces that same type from a
+`bit_enum_set<Enum>` is `bit_least<basic_bit_fixed_set<Enum, std::size_t, N, bit_key_mapping<Enum>>>`, `N` being
+the mapping's `size`, for any enumeration whose `bit_key_mapping` models `sized_bit_index_mapping`. The block is
+`bit_least`'s ([block-and-width-transformations](#block-and-width-transformations)), the narrowest of `std::uint8_t` to
+`std::uint64_t` that holds the `N` keys, since an enum set mostly lives inside other structures as a flag field: a
+three-value set is one byte, not eight. Wider than 64 values, it is several `std::uint64_t`. The alias takes no
+block, so the block policy is stated once, by `bit_least`. A field of fixed wire width is
+`basic_bit_fixed_set<E, std::uint32_t, N>`, whose mapping defaults to the same `bit_key_mapping<E>`, and a set over
+another mapping of the enumeration is `bit_least<basic_bit_fixed_set<E, std::size_t, N, M>>`, which spells the
+mapping and keeps the block policy. `least_block_t` is public, in `<xstd/bits/bit_blocks.hpp>`, so that the policy has
+a name outside the alias. A deduction guide on the class template, not on the alias, deduces that same type from a
 braced list of enumerators, `basic_bit_fixed_set{E::a, E::b}`; alias deduction is not relied on, being unreliable
 on older compilers. An enumerator meets a set through the set's own type: `|`, `&`, `^` and `-` take a set on one
 side and an enumerator on the other, and `|=`, `&=`, `^=` and `-=` an enumerator on the right, the enumerator acting
@@ -2565,11 +2568,53 @@ One header per restricted name, holding its `basic_` form beside it, each over o
 `bit_vector` over `std::vector<Block, Allocator>`, beside `bit_fixed_set` and
 `bit_array` over `std::array<Block, num_blocks_v<Block, N>>`, and `bit_bounded_set` and `bit_bounded_vector`
 over `bounded_blocks<Block, num_blocks_v<Block, N>>` ([the-bounded-column](#the-bounded-column)). The
-header is the name's home and the only place it is spelled; `bits.hpp` includes them all. Each static name has
-an `aligned` form in the namespace of that name, in both layers, its width rounded up to whole blocks so that no
-block carries an unused tail: `aligned::bit_array<9>` is `bit_array<64>` and `aligned::basic_bit_array<std::uint8_t, 9>`
-is `basic_bit_array<std::uint8_t, 16>`. The bounded column has the same forms, rounding its capacity:
-`aligned::bit_bounded_vector<9>` is `bit_bounded_vector<64>`.
+header is the name's home and the only place it is spelled; `bits.hpp` includes them all.
+
+### block-and-width-transformations
+
+Three type transformations in `<xstd/bits/bit_blocks.hpp>` take a fixed-width owner and return the same owner with
+its block or its width changed, every other argument passed through:
+
+| Transformation | Block | Width |
+| :-- | :-- | :-- |
+| `bit_least<X>` | `least_block_t<N>`: the narrowest of `std::uint8_t` to `std::uint64_t` holding `N`, else `std::uint64_t` | `N` |
+| `bit_fast<X>` | `fast_block_t<N>`: `std::uint_fast8_t` to `std::uint_fast64_t` by the same thresholds | `N` |
+| `bit_align<X>` | `X`'s own | `align_up(N, digits)`, whole blocks of `X`'s block |
+
+`X` is any of `basic_bit_array<Block, N>`, `basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>`,
+`basic_bit_bounded_vector<Block, N>` and `basic_bit_bounded_set<Key, Block, N, KeyMapping, Compare>`, short names
+included, the bounded ones rounding their capacity. So `bit_least<bit_fixed_set<9>>` is
+`basic_bit_fixed_set<std::size_t, std::uint16_t, 9>`, two bytes where `bit_fixed_set<9>` is eight, and
+`bit_align<bit_array<9>>` is `bit_array<64>`, whose last block carries no unused tail. A type with no width of its
+own, a run-time owner, a view or a bare block, is rejected by the alias's constraint rather than deep inside it.
+The names are `<cstdint>`'s: `std::uint_least8_t` is the smallest type of at least 8 bits and `std::uint_fast8_t` the
+fastest, and the platform decides how wide that is. glibc on x86-64 makes `std::uint_fast16_t` and
+`std::uint_fast32_t` 64 bits wide where MSVC makes them 32, so `bit_fast` names a block and promises no size.
+
+The precedent for the form is `std::make_unsigned_t<T>`, a type in and a related type out, and C++26's `std::simd`,
+whose `rebind_t<U, V>` changes the element type of a `basic_simd` and `resize_t<N, V>` its width, each keeping the
+other. Each owner specializes one exposition-only trait that names its block, its width and itself over another
+pair; the three aliases are written once against that trait. An earlier design spelled the same choices as
+namespaces, `aligned::bit_fixed_set<N>` beside `xstd::bit_fixed_set<N>`, each namespace re-declaring every class
+template's parameter list with its own defaults and constraints. Those copies drifted: `aligned::basic_bit_fixed_set`
+took an unconstrained `Compare` where the class takes only a direction, so a misuse surfaced inside the class rather
+than at the name. A transformation has no parameter list of its own to keep in step, and so cannot drift; it also
+applies to a type a user has already named, mapping and comparator included, rather than asking for them again.
+
+They compose, and the order matters. `bit_align<bit_least<bit_fixed_set<3>>>` picks the byte first and then fills
+it, `basic_bit_fixed_set<std::size_t, std::uint8_t, 8>` in one byte: least first, then align, is the compact form
+with no padding and no unused tail. `bit_least<bit_align<bit_fixed_set<3>>>` rounds to the 64 bits of the default
+block first, and the least block of 64 bits is `std::uint64_t`, eight bytes. `bit_align<bit_fast<X>>` is the fast
+block filled the same way. Each is idempotent.
+
+Past 64 bits the least block is `std::uint64_t` and the set takes several of them, so a wide set still scans a word
+at a time. The choice has prior art. [N4202](https://wg21.link/n4202), *Strongly Typed Bitset*, proposed a block
+parameter for `std::bitset` and a `small_bitset<N>` over the smallest of `std::uint_least8_t` to `std::uint_least64_t`;
+it chooses by `N % 64`, so a 72-bit `small_bitset` is nine one-byte blocks where `bit_least<bit_fixed_set<72>>` is two
+words. [type_safe](https://github.com/foonathan/type_safe)'s `flag_set<Enum>` stores its flags in the smallest of
+`std::uint_least8_t` to `std::uint_least64_t` that holds them, and takes no more than 64. `bit_enum_set` is
+`bit_least` over an enumeration's fixed set, as above. A fourth transformation, `bit_precise<X>` over C23's
+`unsigned _BitInt(N)` as one block of exactly `N` bits, is planned separately and is not part of this design yet.
 
 ### flag-types
 
@@ -2579,7 +2624,7 @@ spelling of its constants, only the variable's type changes, and the set vocabul
 itself, each key a value with exactly one bit set, and `KeyMapping` defaults to `bit_flag_mapping<Mask, N>`, which
 ranks a one-bit value at its bit. `N` defaults to the mask's width. There is no CRTP and no separate rank
 enumeration: `bit_flag_set` derives from the `set_adaptor` that `basic_bit_fixed_set` derives from, over one block
-of `smallest_block_t<N>`, and passes itself as the type its operators return, as `basic_bit_fixed_set` does.
+of `least_block_t<N>`, and passes itself as the type its operators return, as `basic_bit_fixed_set` does.
 `examples/include/xstd/filesystem.hpp` is one line, `using perms = bit_flag_set<std::filesystem::perms, 16>;`,
 sixteen bits rather than the twelve permissions so that `std::filesystem::perms::unknown`, `0xFFFF`, survives the
 round trip; its four high bits are keys like the others.
@@ -4983,7 +5028,8 @@ Notes:
 4. The variable-size sequence of `bool` is named `xstd::bit_vector` and decoupled from the general `std::vector` class template.
 5. All containers use a dense (single bit per element) representation. Variable-size sparse sets can be provided by `flat_set`, either in [Boost](https://www.boost.org/doc/libs/1_80_0/doc/html/boost/container/flat_set.html) or in [C++ 23](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p1222r4.pdf).
 6. The names above are the short ones, which fix `Block` to `std::size_t` and so take only the width, or nothing at all in the dynamic column where there is no width to give. Each has a `basic_` form that leaves the block open, and for a set the key before it: `xstd::basic_bit_fixed_set<Key, Block, N>`, `xstd::basic_bit_array<Block, N>` and their inplace siblings, and `xstd::basic_bit_set<Key, Block>` and `xstd::basic_bit_vector<Block, Allocator>` down the dynamic column. So `xstd::bit_set` is an alias, not a template, and `xstd::basic_bit_set<std::size_t, std::uint8_t>` is how a block is chosen.
-7. Each static-width name has an `aligned` form in a nested namespace, its width rounded up to whole blocks so that no block carries an unused tail: `xstd::aligned::bit_array<120>` is `xstd::bit_array<128>`. The inplace names have the same, rounding their capacity. That costs nothing in storage at a width already spanning whole blocks, and removes the tail-restoring mask from `fill`, `flip` and the left shift.
+7. Every static-width name takes `xstd::bit_align`, a type transformation rounding its width up to whole blocks so that no block carries an unused tail: `xstd::bit_align<xstd::bit_array<120>>` is `xstd::bit_array<128>`. The inplace names take it too, rounding their capacity. That costs nothing in storage at a width already spanning whole blocks, and removes the tail-restoring mask from `fill`, `flip` and the left shift.
+8. Every static-width name also takes `xstd::bit_least` and `xstd::bit_fast`, which keep the width and store it in the smallest or the fastest block that holds it, as `std::uint_least8_t` and `std::uint_fast8_t` do: `xstd::bit_least<xstd::bit_fixed_set<9>>` is two bytes, a `std::uint16_t`, and past 64 bits it is several `std::uint64_t`. `xstd::bit_enum_set<E>` is `bit_least` over the enumeration's fixed set. Least then align, `bit_align<bit_least<X>>`, is the compact form with no unused tail ([block-and-width-transformations](#block-and-width-transformations)).
 
 The **middle column** is what allocates nothing and yet carries a run-time width. Its blocks are a `std::inplace_vector` where the standard library provides one (`__cpp_lib_inplace_vector`) and a `boost::container::static_vector` elsewhere, so those two names exist everywhere; only over `std::inplace_vector` are they usable in a constant expression, which `XSTD_BITS_HAS_CONSTEXPR_BOUNDED` says.
 
@@ -5281,6 +5327,9 @@ Bit-0 leftmost buys one thing: the bitstring order and the array order agree, wh
 
 **Q**: Can I customize the storage type?  
 **A**: Yes. The alias carrying the default is `template<std::size_t N> using bit_fixed_set = basic_bit_fixed_set<std::size_t, std::size_t, N>`; the underlying `template<class Key, xstd::unsigned_integer Block, std::size_t N, bit_index_mapping<Key> KeyMapping = bit_key_mapping<Key>, class Compare = std::less<Key>> basic_bit_fixed_set` requires the key and the block explicitly. Every cell of the table follows that pattern: a short name that fixes `Block`, and a set's `Key`, to `std::size_t`, and a `basic_` name that does not.
+
+**Q**: Can the block be chosen to fit the width?  
+**A**: Yes. `xstd::bit_least<xstd::bit_fixed_set<N>>` is `basic_bit_fixed_set<std::size_t, least_block_t<N>, N>`, one `std::uint8_t`, `std::uint16_t`, `std::uint32_t` or `std::uint64_t` up to 64 bits and several `std::uint64_t` past them, and `xstd::bit_least` takes any fixed-width owner, its key, mapping and direction kept. `xstd::bit_fast` picks `<cstdint>`'s fastest block instead, and `xstd::bit_align` rounds the width up to whole blocks; `bit_align<bit_least<X>>` does both, in that order.
 
 **Q**: What other storage types can be used as template argument for `Block`?  
 **A**: Any type modelling the Standard Library `unsigned_integral` concept, which includes (for GCC and Clang) `xstd::uint128`.

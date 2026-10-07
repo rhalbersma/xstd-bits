@@ -12,10 +12,10 @@
 #include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container, num_blocks_v
 #include <xstd/bits/detail/bounded_blocks.hpp>               // bounded_blocks
 #include <xstd/bits/detail/ownership.hpp>                    // storage
+#include <xstd/bits/detail/rebind.hpp>                       // rebind
 #include <xstd/bits/detail/set_adaptor.hpp>                  // admits_width, key_direction, set_adaptor
 #include <xstd/bits/from_blocks.hpp>                         // from_blocks, from_blocks_t
 #include <xstd/ints/concepts/unsigned_integer.hpp>           // unsigned_integer
-#include <xstd/ints/memory.hpp>                              // align_up
 #include <xstd/misc/concepts/container_compatible_range.hpp> // container_compatible_range
 #include <boost/container_hash/is_range.hpp>                 // is_range
 #include <boost/container_hash/is_tuple_like.hpp>            // is_tuple_like
@@ -23,7 +23,6 @@
 #include <functional>                                        // hash, less
 #include <initializer_list>                                  // initializer_list
 #include <iterator>                                          // input_iterator
-#include <limits>                                            // numeric_limits
 #include <ranges>                                            // from_range, from_range_t
 #include <type_traits>                                       // false_type
 #include <utility>                                           // forward, move
@@ -89,15 +88,15 @@ using bit_bounded_set = basic_bit_bounded_set<std::size_t, std::size_t, N>;
 template<xstd::unsigned_integer Block, std::size_t K>
 basic_bit_bounded_set(from_blocks_t, bits::detail::bounded_blocks<Block, K>) -> basic_bit_bounded_set<std::size_t, Block, bit_blocks_extent_v<Block> * K>;
 
-namespace aligned {
+template<class Key, class Block, std::size_t N, class KeyMapping, class Compare>
+struct bits::detail::rebind<basic_bit_bounded_set<Key, Block, N, KeyMapping, Compare>>
+{
+        using block_type                   = Block;
+        static constexpr std::size_t width = N;
 
-template<class Key, xstd::unsigned_integer Block, std::size_t N, bit_index_mapping<Key> KeyMapping = bit_key_mapping<Key>, class Compare = std::less<Key>>
-using basic_bit_bounded_set = xstd::basic_bit_bounded_set<Key, Block, xstd::align_up(N, static_cast<std::size_t>(std::numeric_limits<Block>::digits)), KeyMapping, Compare>;
-
-template<std::size_t N>
-using bit_bounded_set = basic_bit_bounded_set<std::size_t, std::size_t, N>;
-
-} // namespace aligned
+        template<class OtherBlock, std::size_t M>
+        using type = basic_bit_bounded_set<Key, OtherBlock, M, KeyMapping, Compare>;
+};
 
 } // namespace xstd
 

@@ -7,13 +7,15 @@
 #define XSTD_BITS_BIT_BLOCKS_HPP
 
 #include <xstd/bits/detail/range_const_reference.hpp> // range_const_reference_t
+#include <xstd/bits/detail/rebind.hpp>                // rebind_block_t, rebind_t, rebind_width_v, rebindable
 #include <xstd/bits/detail/static_block_capacity.hpp> // static_block_capacity
 #include <xstd/ints/concepts/unsigned_integer.hpp>    // unsigned_integer
 #include <xstd/ints/limits.hpp>                       // numeric_limits
+#include <xstd/ints/memory.hpp>                       // align_up
 #include <array>                                      // array
 #include <concepts>                                   // convertible_to, regular, same_as
 #include <cstddef>                                    // size_t
-#include <cstdint>                                    // uint16_t, uint32_t, uint64_t, uint8_t
+#include <cstdint>                                    // uint16_t, uint32_t, uint64_t, uint8_t, uint_fast16_t, uint_fast32_t, uint_fast64_t, uint_fast8_t
 #include <ranges>                                     // contiguous_range, end, range, range_reference_t, range_size_t, range_value_t, sized_range
 #include <span>                                       // dynamic_extent, span
 #include <type_traits>                                // conditional_t, remove_cv_t
@@ -93,11 +95,34 @@ inline constexpr std::size_t bit_blocks_capacity_v<Bits> = bits::detail::static_
 
 // The narrowest fixed-width block holding N bits in one, else std::uint64_t, of which N bits then take several.
 template<std::size_t N>
-using smallest_block_t = std::conditional_t<
+using least_block_t = std::conditional_t<
         (N <= bit_blocks_extent_v<std::uint8_t>), std::uint8_t,
         std::conditional_t<
                 (N <= bit_blocks_extent_v<std::uint16_t>), std::uint16_t,
                 std::conditional_t<(N <= bit_blocks_extent_v<std::uint32_t>), std::uint32_t, std::uint64_t>>>;
+
+// The fastest fixed-width block of at least N bits in one, else std::uint_fast64_t, of which N bits then take several.
+template<std::size_t N>
+using fast_block_t = std::conditional_t<
+        (N <= bit_blocks_extent_v<std::uint8_t>), std::uint_fast8_t,
+        std::conditional_t<
+                (N <= bit_blocks_extent_v<std::uint16_t>), std::uint_fast16_t,
+                std::conditional_t<(N <= bit_blocks_extent_v<std::uint32_t>), std::uint_fast32_t, std::uint_fast64_t>>>;
+
+// The same bit container in the smallest block that holds its N bits, as uint_least8_t is the smallest of at least 8.
+template<class Bits>
+        requires bits::detail::rebindable<Bits>
+using bit_least = bits::detail::rebind_t<Bits, least_block_t<bits::detail::rebind_width_v<Bits>>, bits::detail::rebind_width_v<Bits>>;
+
+// The same bit container in the fastest block of at least its N bits, as uint_fast8_t is the fastest of at least 8.
+template<class Bits>
+        requires bits::detail::rebindable<Bits>
+using bit_fast = bits::detail::rebind_t<Bits, fast_block_t<bits::detail::rebind_width_v<Bits>>, bits::detail::rebind_width_v<Bits>>;
+
+// The same bit container with N rounded up to a whole number of its blocks, so that no block carries an unused tail.
+template<class Bits>
+        requires bits::detail::rebindable<Bits>
+using bit_align = bits::detail::rebind_t<Bits, bits::detail::rebind_block_t<Bits>, xstd::align_up(bits::detail::rebind_width_v<Bits>, bit_blocks_extent_v<bits::detail::rebind_block_t<Bits>>)>;
 
 } // namespace xstd
 

@@ -7,7 +7,7 @@
 #define XSTD_BITS_DETAIL_FLAG_WORD_HPP
 
 #include <xstd/bits/bit/bit_convert.hpp> // bit_convert
-#include <xstd/bits/bit_blocks.hpp>      // smallest_block_t
+#include <xstd/bits/bit_blocks.hpp>      // least_block_t
 #include <bitset>                        // bitset
 #include <cstddef>                       // size_t
 #include <limits>                        // numeric_limits
@@ -29,8 +29,8 @@ struct flag_word<Mask> : std::type_identity<std::make_unsigned_t<std::underlying
 
 // A bitset exactly as wide as a block, which bit_convert maps position for position.
 template<std::size_t M>
-        requires (M == static_cast<std::size_t>(std::numeric_limits<xstd::smallest_block_t<M>>::digits))
-struct flag_word<std::bitset<M>> : std::type_identity<xstd::smallest_block_t<M>>
+        requires (M == static_cast<std::size_t>(std::numeric_limits<xstd::least_block_t<M>>::digits))
+struct flag_word<std::bitset<M>> : std::type_identity<xstd::least_block_t<M>>
 {};
 
 template<class Mask>
