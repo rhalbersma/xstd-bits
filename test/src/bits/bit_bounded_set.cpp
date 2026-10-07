@@ -4,7 +4,8 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/set/ascending.hpp>                   // yields_ascending_keys
-#include <xstd/bits/bit_bounded_set.hpp>            // aligned, basic_bit_bounded_set, bit_bounded_set
+#include <xstd/bits/bit_blocks.hpp>                 // bit_align, bit_least
+#include <xstd/bits/bit_bounded_set.hpp>            // basic_bit_bounded_set, bit_bounded_set
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
 #include <xstd/bits/detail/bounded_blocks.hpp>      // bounded_blocks, XSTD_BITS_HAS_CONSTEXPR_BOUNDED
 #include <xstd/bits/detail/ownership.hpp>           // owned_bits_t, storage
@@ -13,7 +14,7 @@
 #include <algorithm>                                // equal
 #include <concepts>                                 // same_as
 #include <cstddef>                                  // size_t
-#include <cstdint>                                  // uint8_t
+#include <cstdint>                                  // uint16_t, uint8_t
 #include <limits>                                   // numeric_limits
 #include <new>                                      // bad_alloc
 #include <ranges>                                   // iota, size, to
@@ -204,7 +205,9 @@ BOOST_AUTO_TEST_CASE(TheCapacityIsTheRequestedOneExactly)
 {
         using U = xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 9>;
         XSTD_CONSTEXPR_BOUNDED_CHECK_EQUAL(U().max_size(), 9UZ);
-        static_assert(std::same_as<xstd::aligned::basic_bit_bounded_set<std::size_t, std::uint8_t, 9>, xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 16>>);
+        static_assert(std::same_as<xstd::bit_align<U>, xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 16>>);
+        static_assert(std::same_as<xstd::bit_align<xstd::bit_bounded_set<9>>, xstd::bit_bounded_set<std::numeric_limits<std::size_t>::digits>>);
+        static_assert(std::same_as<xstd::bit_least<xstd::bit_bounded_set<9>>, xstd::basic_bit_bounded_set<std::size_t, std::uint16_t, 9>>);
         static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 16>>, xstd::bits::detail::bit_block_container<xstd::bits::detail::bounded_blocks<std::uint8_t, 2>>>);
 
         auto s = U();

@@ -10,10 +10,10 @@
 #include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container
 #include <xstd/bits/detail/bounded_blocks.hpp>               // bounded_blocks, bounded_blocks_for
 #include <xstd/bits/detail/ownership.hpp>                    // storage, window
+#include <xstd/bits/detail/rebind.hpp>                       // rebind
 #include <xstd/bits/detail/sequence_adaptor.hpp>             // sequence_adaptor
 #include <xstd/bits/from_blocks.hpp>                         // from_blocks, from_blocks_t
 #include <xstd/ints/concepts/unsigned_integer.hpp>           // unsigned_integer
-#include <xstd/ints/memory.hpp>                              // align_up
 #include <xstd/misc/concepts/container_compatible_range.hpp> // container_compatible_range
 #include <boost/container_hash/is_range.hpp>                 // is_range
 #include <boost/container_hash/is_tuple_like.hpp>            // is_tuple_like
@@ -21,7 +21,6 @@
 #include <functional>                                        // hash
 #include <initializer_list>                                  // initializer_list
 #include <iterator>                                          // input_iterator
-#include <limits>                                            // numeric_limits
 #include <ranges>                                            // from_range, from_range_t
 #include <type_traits>                                       // false_type
 #include <utility>                                           // forward, move
@@ -85,15 +84,15 @@ using bit_bounded_vector = basic_bit_bounded_vector<std::size_t, N>;
 template<xstd::unsigned_integer Block, std::size_t K>
 basic_bit_bounded_vector(from_blocks_t, bits::detail::bounded_blocks<Block, K>) -> basic_bit_bounded_vector<Block, bit_blocks_extent_v<Block> * K>;
 
-namespace aligned {
+template<class Block, std::size_t N>
+struct bits::detail::rebind<basic_bit_bounded_vector<Block, N>>
+{
+        using block_type                   = Block;
+        static constexpr std::size_t width = N;
 
-template<xstd::unsigned_integer Block, std::size_t N>
-using basic_bit_bounded_vector = xstd::basic_bit_bounded_vector<Block, xstd::align_up(N, static_cast<std::size_t>(std::numeric_limits<Block>::digits))>;
-
-template<std::size_t N>
-using bit_bounded_vector = basic_bit_bounded_vector<std::size_t, N>;
-
-} // namespace aligned
+        template<class OtherBlock, std::size_t M>
+        using type = basic_bit_bounded_vector<OtherBlock, M>;
+};
 
 } // namespace xstd
 

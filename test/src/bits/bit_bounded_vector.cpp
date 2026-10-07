@@ -5,7 +5,8 @@
 
 #include <test/inplace_vector.hpp>                  // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
 #include <test/sequence/dense.hpp>                  // yields_every_position
-#include <xstd/bits/bit_bounded_vector.hpp>         // aligned, basic_bit_bounded_vector, bit_bounded_vector
+#include <xstd/bits/bit_blocks.hpp>                 // bit_align, bit_least
+#include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector, bit_bounded_vector
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
 #include <xstd/bits/detail/bounded_blocks.hpp>      // bounded_blocks
 #include <xstd/bits/detail/ownership.hpp>           // owned_bits_t, storage
@@ -14,7 +15,7 @@
 #include <algorithm>                                // equal
 #include <concepts>                                 // same_as
 #include <cstddef>                                  // size_t
-#include <cstdint>                                  // uint8_t
+#include <cstdint>                                  // uint16_t, uint8_t
 #include <limits>                                   // numeric_limits
 #include <new>                                      // bad_alloc
 #include <ranges>                                   // iota, size
@@ -117,12 +118,13 @@ BOOST_AUTO_TEST_CASE(TheCapacityIsTheRequestedOneExactly)
         BOOST_CHECK_EQUAL(v.size(), 17UZ);
 }
 
-// Distinct capacities are distinct types, and the aligned form rounds up to whole blocks as the static column's does.
+// Distinct capacities are distinct types, and bit_align rounds one up to whole blocks as it does a fixed width.
 BOOST_AUTO_TEST_CASE(TheCapacityIsPartOfTheType)
 {
         static_assert(not std::same_as<xstd::basic_bit_bounded_vector<std::uint8_t, 9>, xstd::basic_bit_bounded_vector<std::uint8_t, 16>>);
-        static_assert(std::same_as<xstd::aligned::basic_bit_bounded_vector<std::uint8_t, 9>, xstd::basic_bit_bounded_vector<std::uint8_t, 16>>);
-        static_assert(std::same_as<xstd::aligned::bit_bounded_vector<9>, xstd::bit_bounded_vector<std::numeric_limits<std::size_t>::digits>>);
+        static_assert(std::same_as<xstd::bit_align<xstd::basic_bit_bounded_vector<std::uint8_t, 9>>, xstd::basic_bit_bounded_vector<std::uint8_t, 16>>);
+        static_assert(std::same_as<xstd::bit_align<xstd::bit_bounded_vector<9>>, xstd::bit_bounded_vector<std::numeric_limits<std::size_t>::digits>>);
+        static_assert(std::same_as<xstd::bit_least<xstd::bit_bounded_vector<9>>, xstd::basic_bit_bounded_vector<std::uint16_t, 9>>);
 
         // Named by its storage alone, the container holds every bit of it: one storage, however it is spelled.
         static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_bounded_vector<std::uint8_t, 16>>, xstd::bits::detail::bit_block_container<xstd::bits::detail::bounded_blocks<std::uint8_t, 2>>>);

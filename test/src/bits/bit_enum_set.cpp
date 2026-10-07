@@ -6,8 +6,9 @@
 #include <test/set/enums.hpp>                  // day, listed_enums, nine, perm, piece, wind
 #include <test/set/lookup.hpp>                 // lookup_mismatches
 #include <xstd/bits/bit_array.hpp>             // bit_array
+#include <xstd/bits/bit_blocks.hpp>            // bit_least
 #include <xstd/bits/bit_enum_set.hpp>          // bit_enum_set
-#include <xstd/bits/bit_fixed_set.hpp>         // basic_bit_fixed_set, bit_fixed_set, least::basic_bit_fixed_set
+#include <xstd/bits/bit_fixed_set.hpp>         // basic_bit_fixed_set, bit_fixed_set
 #include <xstd/bits/bit_key_mapping.hpp>       // bit_key_mapping, bit_range_mapping, enum_traits
 #include <xstd/bits/from_blocks.hpp>           // from_blocks
 #include <xstd/misc/concepts.hpp>              // proxy_iterator, proxy_reference
@@ -18,9 +19,9 @@
 #include <concepts>                            // same_as
 #include <cstddef>                             // size_t
 #include <cstdint>                             // uint16_t, uint32_t, uint8_t
-#include <limits>                              // numeric_limits
 #include <format>                              // format
 #include <functional>                          // greater
+#include <limits>                              // numeric_limits
 #include <ranges>                              // iota, iterator_t, range_reference_t, reverse, size, to, transform
 #include <set>                                 // set
 #include <stdexcept>                           // out_of_range
@@ -55,7 +56,7 @@ namespace {
 
 // The alias's own storage under the descending comparator.
 template<class E>
-using descending_set = xstd::least::basic_bit_fixed_set<E, xstd::bit_key_mapping<E>::size, xstd::bit_key_mapping<E>, std::greater<>>;
+using descending_set = xstd::bit_least<xstd::basic_bit_fixed_set<E, std::size_t, xstd::bit_key_mapping<E>::size, xstd::bit_key_mapping<E>, std::greater<>>>;
 
 // A requires-expression on a concrete type is ill-formed rather than false ([expr.prim.req]/5).
 template<class E>
@@ -276,18 +277,18 @@ BOOST_AUTO_TEST_CASE(TheAliasPicksTheSmallestBlock)
         static_assert(std::same_as<xstd::bit_enum_set<perm>, xstd::basic_bit_fixed_set<perm, std::uint8_t, 3UZ, xstd::bit_key_mapping<perm>>>);
         static_assert(std::same_as<xstd::bit_enum_set<test::set::nine>, xstd::basic_bit_fixed_set<test::set::nine, std::uint16_t, 9UZ, xstd::bit_key_mapping<test::set::nine>>>);
 
-        static_assert(std::same_as<xstd::bit_enum_set<perm>, xstd::least::basic_bit_fixed_set<perm, 3UZ, xstd::bit_key_mapping<perm>>>);
-        static_assert(std::same_as<xstd::bit_enum_set<test::set::nine>, xstd::least::basic_bit_fixed_set<test::set::nine, 9UZ>>);
+        static_assert(std::same_as<xstd::bit_enum_set<perm>, xstd::bit_least<xstd::basic_bit_fixed_set<perm, std::size_t, 3UZ>>>);
+        static_assert(std::same_as<xstd::bit_enum_set<test::set::nine>, xstd::bit_least<xstd::basic_bit_fixed_set<test::set::nine, std::size_t, 9UZ>>>);
 
         auto const s = xstd::basic_bit_fixed_set<perm, std::uint32_t, 3UZ>{perm::exec, perm::read};
         BOOST_CHECK(std::ranges::equal(s, std::set<perm>{perm::read, perm::exec}));
 }
 
-// A mapping of its own takes the least form too: five workdays from mon in one byte, the weekend no key.
-BOOST_AUTO_TEST_CASE(TheLeastFormTakesAnEnumerationUnderAMappingOfItsOwn)
+// bit_least takes a mapping of its own too: five workdays from mon in one byte, the weekend no key.
+BOOST_AUTO_TEST_CASE(BitLeastTakesAnEnumerationUnderAMappingOfItsOwn)
 {
         using workdays = xstd::bit_range_mapping<weekday, weekday::mon, 5UZ>;
-        using X        = xstd::least::basic_bit_fixed_set<weekday, 5UZ, workdays>;
+        using X        = xstd::bit_least<xstd::basic_bit_fixed_set<weekday, std::size_t, 5UZ, workdays>>;
         static_assert(std::same_as<X, xstd::basic_bit_fixed_set<weekday, std::uint8_t, 5UZ, workdays>>);
         static_assert(std::same_as<X::key_mapping_type, workdays>);
         static_assert(sizeof(X) == 1UZ);

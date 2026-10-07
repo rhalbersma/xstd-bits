@@ -6,15 +6,15 @@
 #ifndef XSTD_BITS_BIT_FIXED_SET_HPP
 #define XSTD_BITS_BIT_FIXED_SET_HPP
 
-#include <xstd/bits/bit_blocks.hpp>                          // bit_block, bit_blocks_extent_v, smallest_block_t
+#include <xstd/bits/bit_blocks.hpp>                          // bit_block, bit_blocks_extent_v, least_block_t
 #include <xstd/bits/bit_index_mapping.hpp>                   // bit_index_mapping, sized_bit_index_mapping
 #include <xstd/bits/bit_key_mapping.hpp>                     // bit_key_mapping
 #include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container, num_blocks_v
 #include <xstd/bits/detail/ownership.hpp>                    // storage
+#include <xstd/bits/detail/rebind.hpp>                       // rebind
 #include <xstd/bits/detail/set_adaptor.hpp>                  // admits_width, key_direction, set_adaptor
 #include <xstd/bits/from_blocks.hpp>                         // from_blocks, from_blocks_t
 #include <xstd/ints/concepts/unsigned_integer.hpp>           // unsigned_integer
-#include <xstd/ints/memory.hpp>                              // align_up
 #include <xstd/misc/concepts/container_compatible_range.hpp> // container_compatible_range
 #include <boost/container_hash/is_range.hpp>                 // is_range
 #include <boost/container_hash/is_tuple_like.hpp>            // is_tuple_like
@@ -24,7 +24,6 @@
 #include <functional>                                        // hash, less
 #include <initializer_list>                                  // initializer_list
 #include <iterator>                                          // input_iterator
-#include <limits>                                            // numeric_limits
 #include <ranges>                                            // from_range, from_range_t
 #include <type_traits>                                       // false_type, is_enum_v
 #include <utility>                                           // forward
@@ -102,28 +101,17 @@ basic_bit_fixed_set(from_blocks_t, Block const (&)[K]) -> basic_bit_fixed_set<st
 // A list of enumerators whose default mapping closes the universe: the type bit_enum_set<Enum> names.
 template<class Enum>
         requires std::is_enum_v<Enum> and sized_bit_index_mapping<bit_key_mapping<Enum>, Enum>
-basic_bit_fixed_set(std::initializer_list<Enum>) -> basic_bit_fixed_set<Enum, smallest_block_t<bit_key_mapping<Enum>::size>, bit_key_mapping<Enum>::size, bit_key_mapping<Enum>>;
+basic_bit_fixed_set(std::initializer_list<Enum>) -> basic_bit_fixed_set<Enum, least_block_t<bit_key_mapping<Enum>::size>, bit_key_mapping<Enum>::size, bit_key_mapping<Enum>>;
 
-namespace aligned {
+template<class Key, class Block, std::size_t N, class KeyMapping, class Compare>
+struct bits::detail::rebind<basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>>
+{
+        using block_type                   = Block;
+        static constexpr std::size_t width = N;
 
-template<class Key, xstd::unsigned_integer Block, std::size_t N, bit_index_mapping<Key> KeyMapping = bit_key_mapping<Key>, class Compare = std::less<Key>>
-using basic_bit_fixed_set = xstd::basic_bit_fixed_set<Key, Block, xstd::align_up(N, static_cast<std::size_t>(std::numeric_limits<Block>::digits)), KeyMapping, Compare>;
-
-template<std::size_t N>
-using bit_fixed_set = basic_bit_fixed_set<std::size_t, std::size_t, N>;
-
-} // namespace aligned
-
-namespace least {
-
-// The fixed-width set in the smallest block that holds N bits, as uint_least8_t is the smallest type of at least 8.
-template<class Key, std::size_t N, bit_index_mapping<Key> KeyMapping = bit_key_mapping<Key>, bits::detail::set::key_direction<Key> Compare = std::less<Key>>
-using basic_bit_fixed_set = xstd::basic_bit_fixed_set<Key, smallest_block_t<N>, N, KeyMapping, Compare>;
-
-template<std::size_t N>
-using bit_fixed_set = basic_bit_fixed_set<std::size_t, N>;
-
-} // namespace least
+        template<class OtherBlock, std::size_t M>
+        using type = basic_bit_fixed_set<Key, OtherBlock, M, KeyMapping, Compare>;
+};
 
 } // namespace xstd
 

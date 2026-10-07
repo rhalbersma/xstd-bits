@@ -9,10 +9,10 @@
 #include <xstd/bits/bit_blocks.hpp>                 // bit_block, bit_blocks_extent_v
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container, num_blocks_v
 #include <xstd/bits/detail/ownership.hpp>           // storage, window
+#include <xstd/bits/detail/rebind.hpp>              // rebind
 #include <xstd/bits/detail/sequence_adaptor.hpp>    // sequence_adaptor
 #include <xstd/bits/from_blocks.hpp>                // from_blocks, from_blocks_t
 #include <xstd/ints/concepts/unsigned_integer.hpp>  // unsigned_integer
-#include <xstd/ints/memory.hpp>                     // align_up
 #include <boost/container_hash/is_range.hpp>        // is_range
 #include <boost/container_hash/is_tuple_like.hpp>   // is_tuple_like
 #include <algorithm>                                // copy
@@ -21,7 +21,6 @@
 #include <cstddef>                                  // size_t
 #include <functional>                               // hash
 #include <initializer_list>                         // initializer_list
-#include <limits>                                   // numeric_limits
 #include <tuple>                                    // tuple_element, tuple_size
 #include <type_traits>                              // false_type, remove_cv_t
 #include <utility>                                  // move
@@ -103,15 +102,15 @@ template<class T, std::size_t N>
         return bit_array<N>(std::move(a));
 }
 
-namespace aligned {
+template<class Block, std::size_t N>
+struct bits::detail::rebind<basic_bit_array<Block, N>>
+{
+        using block_type                   = Block;
+        static constexpr std::size_t width = N;
 
-template<xstd::unsigned_integer Block, std::size_t N>
-using basic_bit_array = xstd::basic_bit_array<Block, xstd::align_up(N, static_cast<std::size_t>(std::numeric_limits<Block>::digits))>;
-
-template<std::size_t N>
-using bit_array = basic_bit_array<std::size_t, N>;
-
-} // namespace aligned
+        template<class OtherBlock, std::size_t M>
+        using type = basic_bit_array<OtherBlock, M>;
+};
 
 } // namespace xstd
 

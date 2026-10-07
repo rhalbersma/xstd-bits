@@ -9,7 +9,7 @@
 #include <bitset>                   // bitset
 #include <concepts>                 // same_as
 #include <cstddef>                  // size_t
-#include <cstdint>                  // uint16_t, uint8_t
+#include <cstdint>                  // uint16_t, uint8_t, uint_fast16_t
 #include <functional>               // less
 #include <limits>                   // numeric_limits
 #include <memory>                   // allocator
@@ -71,16 +71,17 @@ BOOST_AUTO_TEST_CASE(EveryContainerArrivesThroughTheUmbrella)
         static_assert(std::ranges::random_access_range<xstd::basic_bit_bounded_vector<std::uint8_t, 8>>);
         static_assert(std::same_as<xstd::bit_bounded_set<8>, xstd::basic_bit_bounded_set<std::size_t, std::size_t, 8>>);
         static_assert(std::same_as<xstd::bit_bounded_vector<8>, xstd::basic_bit_bounded_vector<std::size_t, 8>>);
-        static_assert(std::same_as<xstd::aligned::bit_bounded_set<9>, xstd::bit_bounded_set<std::numeric_limits<std::size_t>::digits>>);
-        static_assert(std::same_as<xstd::aligned::bit_bounded_vector<9>, xstd::bit_bounded_vector<std::numeric_limits<std::size_t>::digits>>);
+        static_assert(std::same_as<xstd::bit_align<xstd::bit_bounded_set<9>>, xstd::bit_bounded_set<std::numeric_limits<std::size_t>::digits>>);
+        static_assert(std::same_as<xstd::bit_align<xstd::bit_bounded_vector<9>>, xstd::bit_bounded_vector<std::numeric_limits<std::size_t>::digits>>);
 
-        // Every name with an N at compile time has an aligned form, the width or capacity rounded up to whole blocks.
-        static_assert(std::same_as<xstd::aligned::bit_fixed_set<9>, xstd::bit_fixed_set<std::numeric_limits<std::size_t>::digits>>);
-        static_assert(std::same_as<xstd::aligned::bit_array<9>, xstd::bit_array<std::numeric_limits<std::size_t>::digits>>);
-        static_assert(std::same_as<xstd::aligned::basic_bit_array<std::uint8_t, 9>, xstd::basic_bit_array<std::uint8_t, 16>>);
-        static_assert(std::same_as<xstd::aligned::basic_bit_array<std::uint8_t, 0>, xstd::basic_bit_array<std::uint8_t, 0>>);
+        // Every name with an N at compile time takes bit_align, the width or capacity rounded up to whole blocks.
+        static_assert(std::same_as<xstd::bit_align<xstd::bit_fixed_set<9>>, xstd::bit_fixed_set<std::numeric_limits<std::size_t>::digits>>);
+        static_assert(std::same_as<xstd::bit_align<xstd::bit_array<9>>, xstd::bit_array<std::numeric_limits<std::size_t>::digits>>);
+        static_assert(std::same_as<xstd::bit_align<xstd::basic_bit_array<std::uint8_t, 9>>, xstd::basic_bit_array<std::uint8_t, 16>>);
+        static_assert(std::same_as<xstd::bit_align<xstd::basic_bit_array<std::uint8_t, 0>>, xstd::basic_bit_array<std::uint8_t, 0>>);
 
-        // The fixed set has a least form, its width in the smallest block holding it, and the enum set is that form.
-        static_assert(std::same_as<xstd::least::bit_fixed_set<9>, xstd::basic_bit_fixed_set<std::size_t, std::uint16_t, 9>>);
-        static_assert(std::same_as<xstd::bit_enum_set<perm>, xstd::least::basic_bit_fixed_set<perm, 3, xstd::bit_key_mapping<perm>>>);
+        // bit_least and bit_fast keep the width in the smallest or fastest block holding it; bit_enum_set is bit_least.
+        static_assert(std::same_as<xstd::bit_least<xstd::bit_fixed_set<9>>, xstd::basic_bit_fixed_set<std::size_t, std::uint16_t, 9>>);
+        static_assert(std::same_as<xstd::bit_fast<xstd::bit_array<9>>, xstd::basic_bit_array<std::uint_fast16_t, 9>>);
+        static_assert(std::same_as<xstd::bit_enum_set<perm>, xstd::bit_least<xstd::basic_bit_fixed_set<perm, std::size_t, 3, xstd::bit_key_mapping<perm>>>>);
 }

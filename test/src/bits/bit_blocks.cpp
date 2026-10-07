@@ -6,7 +6,7 @@
 #include <test/inplace_vector.hpp>                  // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
 #include <test/minimal_blocks.hpp>                  // minimal_blocks
 #include <xstd/bits/bit_array.hpp>                  // bit_array
-#include <xstd/bits/bit_blocks.hpp>                 // bit_block, bit_block_range, bit_blocks, bit_blocks_capacity_v, bit_blocks_extent_v, owned_bit_blocks, resizable_bit_blocks, smallest_block_t
+#include <xstd/bits/bit_blocks.hpp>                 // bit_align, bit_block, bit_block_range, bit_blocks, bit_blocks_capacity_v, bit_blocks_extent_v, bit_fast, bit_least, fast_block_t, least_block_t, owned_bit_blocks, resizable_bit_blocks
 #include <xstd/bits/bit_set.hpp>                    // bit_set
 #include <xstd/bits/bit_set_view.hpp>               // bit_set_view
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
@@ -16,7 +16,7 @@
 #include <array>                                    // array
 #include <bitset>                                   // bitset
 #include <cstddef>                                  // size_t
-#include <cstdint>                                  // uint8_t, uint16_t, uint32_t, uint64_t
+#include <cstdint>                                  // uint16_t, uint32_t, uint64_t, uint8_t, uint_fast16_t, uint_fast32_t, uint_fast64_t, uint_fast8_t
 #include <deque>                                    // deque
 #include <list>                                     // list
 #include <span>                                     // dynamic_extent, span
@@ -41,6 +41,15 @@ concept names_a_view = requires { typename xstd::bit_set_view<W>; };
 
 template<class W, std::size_t N>
 concept holds_extent = requires { typename xstd::bits::detail::bit_block_container<W, N>; };
+
+template<class W>
+concept least_rebinds = requires { typename xstd::bit_least<W>; };
+
+template<class W>
+concept fast_rebinds = requires { typename xstd::bit_fast<W>; };
+
+template<class W>
+concept align_rebinds = requires { typename xstd::bit_align<W>; };
 
 // Built-in arrays of blocks, named once so the storage under test is spelled where the check can be told why.
 using four_words        = std::uint64_t[4];       // NOLINT(modernize-avoid-c-arrays): the storage under test
@@ -109,18 +118,44 @@ BOOST_AUTO_TEST_CASE(TheExtentIsTheWidthTheTypeNames)
 }
 
 // The narrowest fixed-width block holding N bits, the widest taking every N above it in several blocks.
-BOOST_AUTO_TEST_CASE(TheSmallestBlockIsTheNarrowestHoldingTheWidth)
+BOOST_AUTO_TEST_CASE(TheLeastBlockIsTheNarrowestHoldingTheWidth)
 {
-        static_assert(std::is_same_v<xstd::smallest_block_t<0>, std::uint8_t>);
-        static_assert(std::is_same_v<xstd::smallest_block_t<8>, std::uint8_t>);
-        static_assert(std::is_same_v<xstd::smallest_block_t<9>, std::uint16_t>);
-        static_assert(std::is_same_v<xstd::smallest_block_t<16>, std::uint16_t>);
-        static_assert(std::is_same_v<xstd::smallest_block_t<17>, std::uint32_t>);
-        static_assert(std::is_same_v<xstd::smallest_block_t<32>, std::uint32_t>);
-        static_assert(std::is_same_v<xstd::smallest_block_t<33>, std::uint64_t>);
-        static_assert(std::is_same_v<xstd::smallest_block_t<64>, std::uint64_t>);
-        static_assert(std::is_same_v<xstd::smallest_block_t<65>, std::uint64_t>);
-        static_assert(std::is_same_v<xstd::smallest_block_t<1000>, std::uint64_t>);
+        static_assert(std::is_same_v<xstd::least_block_t<0>, std::uint8_t>);
+        static_assert(std::is_same_v<xstd::least_block_t<8>, std::uint8_t>);
+        static_assert(std::is_same_v<xstd::least_block_t<9>, std::uint16_t>);
+        static_assert(std::is_same_v<xstd::least_block_t<16>, std::uint16_t>);
+        static_assert(std::is_same_v<xstd::least_block_t<17>, std::uint32_t>);
+        static_assert(std::is_same_v<xstd::least_block_t<32>, std::uint32_t>);
+        static_assert(std::is_same_v<xstd::least_block_t<33>, std::uint64_t>);
+        static_assert(std::is_same_v<xstd::least_block_t<64>, std::uint64_t>);
+        static_assert(std::is_same_v<xstd::least_block_t<65>, std::uint64_t>);
+        static_assert(std::is_same_v<xstd::least_block_t<1000>, std::uint64_t>);
+        BOOST_CHECK(true);
+}
+
+// The fastest block of at least N bits is <cstdint>'s, whose width the platform chooses, so only its name is fixed.
+BOOST_AUTO_TEST_CASE(TheFastBlockIsTheFastestOfAtLeastTheWidth)
+{
+        static_assert(std::is_same_v<xstd::fast_block_t<0>, std::uint_fast8_t>);
+        static_assert(std::is_same_v<xstd::fast_block_t<8>, std::uint_fast8_t>);
+        static_assert(std::is_same_v<xstd::fast_block_t<9>, std::uint_fast16_t>);
+        static_assert(std::is_same_v<xstd::fast_block_t<16>, std::uint_fast16_t>);
+        static_assert(std::is_same_v<xstd::fast_block_t<17>, std::uint_fast32_t>);
+        static_assert(std::is_same_v<xstd::fast_block_t<32>, std::uint_fast32_t>);
+        static_assert(std::is_same_v<xstd::fast_block_t<33>, std::uint_fast64_t>);
+        static_assert(std::is_same_v<xstd::fast_block_t<64>, std::uint_fast64_t>);
+        static_assert(std::is_same_v<xstd::fast_block_t<65>, std::uint_fast64_t>);
+        static_assert(std::is_same_v<xstd::fast_block_t<1000>, std::uint_fast64_t>);
+        BOOST_CHECK(true);
+}
+
+// The transformations rewrite a width in the type, so a run-time width, a view or a bare block has none to give.
+BOOST_AUTO_TEST_CASE(OnlyAFixedWidthOwnerIsTransformed)
+{
+        static_assert(least_rebinds<xstd::bit_array<9>> and fast_rebinds<xstd::bit_array<9>> and align_rebinds<xstd::bit_array<9>>);
+        static_assert(not least_rebinds<xstd::bit_set> and not fast_rebinds<xstd::bit_set> and not align_rebinds<xstd::bit_set>);
+        static_assert(not least_rebinds<xstd::bit_set_view<std::span<std::uint32_t>>> and not align_rebinds<xstd::bit_set_view<std::span<std::uint32_t>>>);
+        static_assert(not least_rebinds<std::bitset<9>> and not fast_rebinds<std::uint64_t> and not align_rebinds<std::array<std::uint8_t, 2>>);
         BOOST_CHECK(true);
 }
 

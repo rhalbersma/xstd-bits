@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_BIT_FLAG_SET_HPP
 #define XSTD_BITS_BIT_FLAG_SET_HPP
 
-#include <xstd/bits/bit_blocks.hpp>                          // smallest_block_t
+#include <xstd/bits/bit_blocks.hpp>                          // least_block_t
 #include <xstd/bits/bit_flag_mapping.hpp>                    // bit_flag_mapping
 #include <xstd/bits/bit_index_mapping.hpp>                   // sized_bit_index_mapping
 #include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container
@@ -37,11 +37,11 @@ namespace xstd {
 // Mask is an enumeration or a std::bitset of one block; its one-bit values are the keys, highest first, as it orders.
 template<class Mask, std::size_t N = bits::detail::flag_width_v<Mask>, sized_bit_index_mapping<Mask> KeyMapping = bit_flag_mapping<Mask, N>>
         requires xstd::bit_mask<Mask> and bits::detail::flag_mask<Mask>
-class bit_flag_set : public bits::detail::set_adaptor<bits::detail::bit_block_container<std::array<smallest_block_t<N>, 1>, N>, bits::detail::storage::owned, bit_flag_set<Mask, N, KeyMapping>, Mask, KeyMapping, std::greater<Mask>> // NOLINT(modernize-use-transparent-functors): a transparent comparator would admit contains(K)
+class bit_flag_set : public bits::detail::set_adaptor<bits::detail::bit_block_container<std::array<least_block_t<N>, 1>, N>, bits::detail::storage::owned, bit_flag_set<Mask, N, KeyMapping>, Mask, KeyMapping, std::greater<Mask>> // NOLINT(modernize-use-transparent-functors): a transparent comparator would admit contains(K)
 {
         // Descending, so the base's <=> compares the block as a number, as the mask's own order does.
-        using base_type  = bits::detail::set_adaptor<bits::detail::bit_block_container<std::array<smallest_block_t<N>, 1>, N>, bits::detail::storage::owned, bit_flag_set<Mask, N, KeyMapping>, Mask, KeyMapping, std::greater<Mask>>; // NOLINT(modernize-use-transparent-functors): as the base clause names it
-        using block_type = smallest_block_t<N>;
+        using base_type  = bits::detail::set_adaptor<bits::detail::bit_block_container<std::array<least_block_t<N>, 1>, N>, bits::detail::storage::owned, bit_flag_set<Mask, N, KeyMapping>, Mask, KeyMapping, std::greater<Mask>>; // NOLINT(modernize-use-transparent-functors): as the base clause names it
+        using block_type = least_block_t<N>;
         using word_type  = bits::detail::flag_word_t<Mask>;
 
         // One block, every position of it below N a key, so the mapping's universe is the width.
