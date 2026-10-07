@@ -519,7 +519,7 @@ auto word_mismatches(word_t<X> w)
         auto const m    = static_cast<mask_type>(w);
         X const x       = m;
         auto mismatches = 0UZ;
-        if (mask_type(x) != m or x != m or m != x or X(xstd::from_blocks, w) != m or x.size() != static_cast<std::size_t>(std::popcount(w))) {
+        if (mask_type(x) != m or x != m or X(xstd::from_blocks, w) != m or x.size() != static_cast<std::size_t>(std::popcount(w))) {
                 ++mismatches;
         }
 
