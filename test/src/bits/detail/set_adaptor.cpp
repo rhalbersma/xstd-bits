@@ -245,6 +245,7 @@ BOOST_AUTO_TEST_CASE(AViewIsShallow)
         Reader const r(c);
         BOOST_CHECK(r.contains(42UZ) and keys(r) == keys(v));
         BOOST_CHECK(r.is_subset_of(r) and not r.is_proper_subset_of(r) and intersects(r, r));
+        BOOST_CHECK(r.is_superset_of(r) and not r.is_proper_superset_of(r));
 }
 
 BOOST_AUTO_TEST_CASE(TheViewsAnswerEveryReadOverEveryStorage)
@@ -304,12 +305,14 @@ BOOST_AUTO_TEST_CASE(TheSetPredicatesAgreeAcrossStorages)
 
         BOOST_CHECK(x.is_subset_of(y) and not y.is_subset_of(x));
         BOOST_CHECK(x.is_proper_subset_of(y) and not x.is_proper_subset_of(x) and not y.is_proper_subset_of(x));
+        BOOST_CHECK(y.is_superset_of(x) and not x.is_superset_of(y));
+        BOOST_CHECK(y.is_proper_superset_of(x) and not x.is_proper_superset_of(x) and not x.is_proper_superset_of(y));
         BOOST_CHECK(intersects(x, y) and not intersects(x, S(e)));
         BOOST_CHECK(x != y and x < y);
         BOOST_CHECK((x <=> y) == std::strong_ordering::less);
 
         x.insert(3UZ);
-        BOOST_CHECK(x == y and not x.is_proper_subset_of(y));
+        BOOST_CHECK(x == y and not x.is_proper_subset_of(y) and not y.is_proper_superset_of(x));
 }
 
 // The ordering invariant: the block-wise entry and the iterators agree, and the fallback is the invariant itself.
@@ -1147,8 +1150,12 @@ template<class X>
 auto query_mismatches(X const& x, X const& y)
         -> std::size_t
 {
-        auto const all_of = includes(x, y);
-        return static_cast<std::size_t>(disjoint(x, y) == intersects(x, y)) + static_cast<std::size_t>(all_of != y.is_subset_of(x)) + static_cast<std::size_t>(all_of != std::ranges::includes(x, y, x.key_comp()));
+        auto const all_of = x.is_superset_of(y);
+        auto const proper = x.is_proper_superset_of(y);
+        auto mismatches   = static_cast<std::size_t>(disjoint(x, y) == intersects(x, y));
+        mismatches += static_cast<std::size_t>(all_of != y.is_subset_of(x) or all_of != std::ranges::includes(x, y, x.key_comp()));
+        mismatches += static_cast<std::size_t>(proper != y.is_proper_subset_of(x) or proper != (all_of and not std::ranges::equal(x, y)));
+        return mismatches;
 }
 
 // Every pair of subsets of the first width positions, owned and, where the owner can be viewed, viewed.
@@ -1175,8 +1182,8 @@ using small_descending_set   = xstd::basic_bit_set<std::size_t, std::uint8_t, xs
 
 } // namespace
 
-// disjoint is none-of and includes all-of, in std::ranges::includes's order, over every pair at every storage.
-BOOST_AUTO_TEST_CASE(DisjointIsNotIntersectsAndIncludesIsTheSubsetReadTheOtherWay)
+// disjoint is none-of, and is_superset_of all-of in std::ranges::includes's order, over every pair at every storage.
+BOOST_AUTO_TEST_CASE(DisjointIsNotIntersectsAndTheSupersetIsTheSubsetReadTheOtherWay)
 {
         for (auto const width : std::views::iota(0UZ, 7UZ)) {
                 BOOST_CHECK_EQUAL(query_mismatches_over_pairs<xstd::bit_fixed_set<6>>(width), 0UZ);
@@ -1187,12 +1194,15 @@ BOOST_AUTO_TEST_CASE(DisjointIsNotIntersectsAndIncludesIsTheSubsetReadTheOtherWa
                 BOOST_CHECK_EQUAL(query_mismatches_over_pairs<xstd::bit_small_set<6>>(width), 0UZ);
         }
 
-        // Two widths of one dynamic set, and the empty set, which every set includes and is disjoint from.
+        // Two widths of one dynamic set, and the empty set, which every set is a superset of and disjoint from.
         auto const wide   = xstd::bit_set({1UZ, 100UZ});
         auto const narrow = xstd::bit_set({1UZ});
-        BOOST_CHECK(includes(wide, narrow) and not includes(narrow, wide) and not disjoint(wide, narrow));
-        BOOST_CHECK(includes(narrow, xstd::bit_set()) and disjoint(narrow, xstd::bit_set()));
-        static_assert(noexcept(disjoint(wide, narrow)) and noexcept(includes(wide, narrow)));
+        auto const empty  = xstd::bit_set();
+        BOOST_CHECK(wide.is_superset_of(narrow) and not narrow.is_superset_of(wide) and not disjoint(wide, narrow));
+        BOOST_CHECK(wide.is_proper_superset_of(narrow) and not narrow.is_proper_superset_of(wide));
+        BOOST_CHECK(narrow.is_superset_of(empty) and narrow.is_proper_superset_of(empty) and disjoint(narrow, empty));
+        BOOST_CHECK(empty.is_superset_of(empty) and not empty.is_proper_superset_of(empty));
+        static_assert(noexcept(disjoint(wide, narrow)) and noexcept(wide.is_superset_of(narrow)) and noexcept(wide.is_proper_superset_of(narrow)));
 }
 
 BOOST_AUTO_TEST_SUITE_END()
