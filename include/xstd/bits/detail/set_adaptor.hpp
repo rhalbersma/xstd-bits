@@ -1283,10 +1283,10 @@ public:
                 return {lower_bound(x), upper_bound(x)};
         }
 
-        // [associative.reqmts.general]/122: an argument that converts to an iterator still erases at that iterator.
+        // [associative.reqmts.general]/122; a key_type is left to its own overload, which MSVC cannot rank above this.
         template<class K>
-                requires set::transparent<key_compare> and (not std::convertible_to<K &&, iterator>) and (not std::convertible_to<K &&, const_iterator>)
-                                                                                                 constexpr auto erase(this auto&& self, K&& x) -> size_type
+                requires set::transparent<key_compare> and (not std::same_as<std::remove_cvref_t<K>, key_type>) and (not std::convertible_to<K &&, iterator>) and (not std::convertible_to<K &&, const_iterator>)
+                                                                                                                                                          constexpr auto erase(this auto&& self, K&& x) -> size_type
                                  requires requires (std::size_t pos, std::size_t len) { self.bits().set(pos, len, false); }
         {
                 auto const erased   = self.count(x);
