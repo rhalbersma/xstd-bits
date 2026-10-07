@@ -551,10 +551,16 @@ auto operator_mismatches(word_t<X> w, typename X::key_type b)
         auto const v    = static_cast<word_type>(b);
         X const x       = m;
         auto mismatches = 0UZ;
-        mismatches += static_cast<std::size_t>(mask_type(x | b) != static_cast<mask_type>(m | b) or mask_type(b | x) != static_cast<mask_type>(b | m));
-        mismatches += static_cast<std::size_t>(mask_type(x & b) != static_cast<mask_type>(m & b) or mask_type(b & x) != static_cast<mask_type>(b & m));
-        mismatches += static_cast<std::size_t>(mask_type(x ^ b) != static_cast<mask_type>(m ^ b) or mask_type(b ^ x) != static_cast<mask_type>(b ^ m));
-        mismatches += static_cast<std::size_t>(mask_type(x - b) != static_cast<mask_type>(m & ~b) or mask_type(b - x) != static_cast<mask_type>(b & ~m));
+        // The mask's own answers, worked in its unsigned word so that a signed mask's bits are read as bits.
+        auto const both   = static_cast<mask_type>(static_cast<word_type>(w | v));
+        auto const common = static_cast<mask_type>(static_cast<word_type>(w & v));
+        auto const either = static_cast<mask_type>(static_cast<word_type>(w ^ v));
+        auto const m_only = static_cast<mask_type>(static_cast<word_type>(w & static_cast<word_type>(~v)));
+        auto const b_only = static_cast<mask_type>(static_cast<word_type>(v & static_cast<word_type>(~w)));
+        mismatches += static_cast<std::size_t>(mask_type(x | b) != both or mask_type(b | x) != both);
+        mismatches += static_cast<std::size_t>(mask_type(x & b) != common or mask_type(b & x) != common);
+        mismatches += static_cast<std::size_t>(mask_type(x ^ b) != either or mask_type(b ^ x) != either);
+        mismatches += static_cast<std::size_t>(mask_type(x - b) != m_only or mask_type(b - x) != b_only);
         mismatches += static_cast<std::size_t>((x == b) != (m == b) or (x <=> X(b)) != (m <=> b));
         mismatches += static_cast<std::size_t>(includes(x, b) != ((w & v) == v) or intersects(x, b) != ((w & v) != word_type{}));
         return mismatches;
