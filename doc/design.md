@@ -1220,6 +1220,30 @@ and is the whole of what separates the two readings.
 is then free to state preconditions the naive one does not ([the cheapest contract](#the-cheapest-contract));
 what it may not do is answer differently.
 
+### the-set-queries
+
+A set answers one question of a key and four of another set, each a predicate the standard library already names:
+
+| query | true where | spelled | named after |
+| :--- | :--- | :--- | :--- |
+| `contains(k)` | `k` is an element | member | `std::set::contains`, the predicate form of `find` |
+| `includes(x, y)` | every element of `y` is one of `x`'s | free | `std::ranges::includes(x, y)`, the same order of arguments |
+| `intersects(x, y)` | some element is in both | free | `std::ranges::set_intersection`, its result not empty |
+| `disjoint(x, y)` | no element is in both | free | `std::ranges::set_intersection`, its result empty |
+| `x.is_subset_of(y)` | every element of `x` is one of `y`'s | member | `boost::dynamic_bitset`, and [P0125R0](https://wg21.link/p0125r0) for `std::bitset` |
+
+`contains` is total, as `std::set`'s is: a key past the width, and a value that is no key of the mapping at all, are
+no element. The four over two sets are all-of in either direction, any-of and none-of, and they split by symmetry. `intersects` and
+`disjoint` are symmetric, a question about two sets with neither its subject, so they are free functions, hidden
+friends of the adaptor found by ADL. `is_subset_of` is not, and the member spelling says which side is which.
+`includes` is the converse of `is_subset_of`, P0125R0's `is_superset_of`, which that paper proposed for `std::bitset`
+beside it, but it takes the name and the argument order of `std::ranges::includes`, a free algorithm over two ranges,
+for the reason `intersects` takes `set_intersection`'s: the counterpart decides, and `includes(x, y)` answers exactly
+what `std::ranges::includes(x, y)` does over the same keys. No member reads the relation the other way round, so the
+two directions are never a pair of members a reader must tell apart. `disjoint(x, y)` is `not intersects(x, y)` and
+`includes(x, y)` is `y.is_subset_of(x)`: each forwards to the block-wise primitive, at any two widths, and is
+`noexcept` as it is.
+
 ### degenerate-widths
 
 Two widths get their own `if constexpr` arm in the orderings, for the reason in
@@ -2395,11 +2419,16 @@ The key is spelled wherever the `basic_` form is, because it changes the interfa
 yields, and what `insert`, `find` and `contains` accept. The positions stay the storage, and `KeyMapping` is the key's
 *mapping*: an order-preserving bijection from a finite universe of keys onto the positions `[0, N)`, given by two
 static members, `to_index(key)` and `from_index(index)`, and, where the mapping closes the universe, a `size` that is
-that `N`. Two public concepts in `<xstd/bits/bit_index_mapping.hpp>` say so. `bit_index_mapping<M, Key>` asks for
+that `N` and an `is_key(key)` that says whether a value is one of those `N` keys. Two public concepts in `<xstd/bits/bit_index_mapping.hpp>` say so. `bit_index_mapping<M, Key>` asks for
 `M::to_index` taking a `Key` to a `std::size_t` and `M::from_index` giving back exactly a `Key`, and carries what no
 syntax check can see: `a < b` exactly where `to_index(a) < to_index(b)`, and `from_index(to_index(k)) == k` for every
-`k` in the universe. `sized_bit_index_mapping<M, Key>` adds `M::size`, and with it `to_index(k) < size` for every
-key; an owner with a width or a capacity in its type must equal that size, checked by a `static_assert`. Every set
+`k` in the universe. `sized_bit_index_mapping<M, Key>` adds `M::size` and `M::is_key`, returning exactly `bool`, and
+with them `to_index(k) < size` for every key. `is_key(k)` is the universe tested, which is `to_index`'s precondition:
+a range's `First <= k < First + N`, computed as the unsigned distance from `First` so that no bound overflows the key
+type, a list's binary search, the same one `to_index` ranks by, and a flag's one bit set below `N`. The open identity
+has an `is_key` too, true for every key that names a position, which is every key no wider than `std::size_t`, and
+`bits::detail::is_key<M>(k)` asks it of any mapping, answering `true` where the mapping declares none; an unsized
+mapping need not, its universe being open. An owner with a width or a capacity in its type must equal that size, checked by a `static_assert`. Every set
 owner constrains its `KeyMapping` with the first and asks the second wherever the universe bounds the width. The
 family is four templates, each taking its key first. `bit_key_mapping<Key>` is the default an owner takes and the
 customization point, specialized beside a key type as `std::char_traits` is beside a character type.
@@ -2430,7 +2459,11 @@ strictly ascending with a `static_assert`: `size` is its length, `from_index(i)`
 `e`'s rank, found by binary search. Gaps cost nothing, so
 `{pawn = 1, knight = 3, bishop = 4, rook = 8, queen = 9, king = 100}` takes six bits rather than a hundred. A value
 not in the list ranks at `size` or above under either, which the set's guard refuses as it refuses any key past its
-width. `basic_bit_fixed_set<E, Block, N>` with no mapping spelled keys it the same way; an enumeration that declares
+width. A lookup asks `is_key` before `to_index`, so `contains`, `count`, `find` and `erase(k)` answer *absent* for any
+value of the key type, as `std::set`'s do; the bounds of a value that is no key bisect the keys under `key_compare`,
+which puts `First - 1` before a range's first element where the wrapped distance alone would have put it after the
+last, and an unlisted value between two listed ones between them. A key type with no order of its own, a
+`std::bitset`, has no place between two keys to give, and its bounds keep `is_key` as their precondition. `basic_bit_fixed_set<E, Block, N>` with no mapping spelled keys it the same way; an enumeration that declares
 nothing has no default mapping, and so no set, unless its author specializes `bit_key_mapping<E>` directly, say as a
 `bit_range_mapping` from its first enumerator. The same `bit_find_mapping` keys sparse integers, such as identifiers
 drawn from a fixed table, to as many positions as there are identifiers.
@@ -2581,9 +2614,12 @@ that beats the adaptor's key-typed operators, which reach the flag type through 
 multi-bit value as one key. The compound forms against the mask are members beside the set forms, which take the
 adaptor's own type as its binary operators call them.
 
-**`contains(k)` is `std::set`'s membership of one flag**, `k` a one-bit value, a value with more bits breaking
-`bit_flag_mapping`'s precondition. All-of is `bit_flag_set(m).is_subset_of(p)` and any-of is `intersects(p, q)`,
-the adaptor's hidden friend, so no member answers two questions under one name. There is no `operator[]` and no
+**`contains(k)` is `std::set`'s membership of one flag.** A value of several bits, or of none, is no key, so it is no
+element either: `contains` answers `false`, `count` zero, `find` `end()` and `erase` zero, and over an enumeration the
+bounds place it by the mask's order. Writing one stays `bit_flag_mapping`'s precondition, there being no single position to write. All-of
+is `includes(p, m)`, any-of `intersects(p, m)` and none-of `disjoint(p, m)`, the adaptor's hidden friends, which the
+flag type declares again over itself so that a mask converts on either side; no member answers two questions under
+one name. There is no `operator[]` and no
 proxy for a `bool`: a set changes one flag through `insert(k)` and `erase(k)`, as `std::set` does. There is no
 nullary `count()` either: `size()` answers it.
 
