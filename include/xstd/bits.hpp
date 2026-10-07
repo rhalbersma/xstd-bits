@@ -21,16 +21,16 @@
 #include <xstd/bits/bit_subspan.hpp>        // IWYU pragma: export; bit_subspan
 
 // The set reading.
-#include <xstd/bits/bit_enum_traits.hpp> // IWYU pragma: export; bit_enum_traits, enum_traits
-#include <xstd/bits/bit_key_traits.hpp>  // IWYU pragma: export; bit_key_traits, bit_offset_traits
-#include <xstd/bits/bit_fixed_set.hpp>   // IWYU pragma: export; bit_fixed_set
-#include <xstd/bits/bit_enum_set.hpp>    // IWYU pragma: export; bit_enum_set
-#include <xstd/bits/bit_bounded_set.hpp> // IWYU pragma: export; bit_bounded_set
-#include <xstd/bits/bit_set.hpp>         // IWYU pragma: export; bit_set
-#include <xstd/bits/bit_set_view.hpp>    // IWYU pragma: export; bit_set_view
+#include <xstd/bits/bit_index_mapping.hpp> // IWYU pragma: export; bit_index_mapping, sized_bit_index_mapping
+#include <xstd/bits/bit_key_mapping.hpp>   // IWYU pragma: export; bit_find_mapping, bit_key_mapping, bit_range_mapping, enum_traits
+#include <xstd/bits/bit_fixed_set.hpp>     // IWYU pragma: export; bit_fixed_set
+#include <xstd/bits/bit_enum_set.hpp>      // IWYU pragma: export; bit_enum_set
+#include <xstd/bits/bit_bounded_set.hpp>   // IWYU pragma: export; bit_bounded_set
+#include <xstd/bits/bit_set.hpp>           // IWYU pragma: export; bit_set
+#include <xstd/bits/bit_set_view.hpp>      // IWYU pragma: export; bit_set_view
 
 // Flag types, a mask word spelled as the bitmask enumeration it replaces.
-#include <xstd/bits/bit_flag_traits.hpp> // IWYU pragma: export; bit_flag_traits
-#include <xstd/bits/bit_flag_set.hpp>    // IWYU pragma: export; bit_flag_set
+#include <xstd/bits/bit_flag_mapping.hpp> // IWYU pragma: export; bit_flag_mapping
+#include <xstd/bits/bit_flag_set.hpp>     // IWYU pragma: export; bit_flag_set
 
 #endif // XSTD_BITS_HPP

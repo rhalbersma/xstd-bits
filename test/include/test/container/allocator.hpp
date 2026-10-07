@@ -6,7 +6,7 @@
 #ifndef TEST_CONTAINER_ALLOCATOR_HPP
 #define TEST_CONTAINER_ALLOCATOR_HPP
 
-#include <xstd/bits/bit_key_traits.hpp>             // bit_key_traits
+#include <xstd/bits/bit_key_mapping.hpp>            // bit_key_mapping
 #include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
 #include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector
 #include <cstddef>                                  // size_t
@@ -152,7 +152,7 @@ struct user_allocator
 };
 
 template<class Block, std::size_t N, class Compare, class Allocator>
-struct user_allocator<xstd::basic_bit_small_set<std::size_t, Block, N, xstd::bit_key_traits<std::size_t>, Compare, Allocator>>
+struct user_allocator<xstd::basic_bit_small_set<std::size_t, Block, N, xstd::bit_key_mapping<std::size_t>, Compare, Allocator>>
 {
         using type = Allocator;
 };

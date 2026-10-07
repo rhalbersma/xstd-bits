@@ -6,16 +6,16 @@
 #ifndef TEST_SET_STRONG_INDEX_HPP
 #define TEST_SET_STRONG_INDEX_HPP
 
-#include <xstd/bits/bit_key_traits.hpp> // bit_key_traits
-#include <boost/test/unit_test.hpp>     // BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <algorithm>                    // ranges::equal
-#include <compare>                      // strong_ordering
-#include <cstddef>                      // size_t
-#include <format>                       // format, formatter
-#include <ranges>                       // from_range, iota, reverse, to, transform
-#include <set>                          // erase_if, set
-#include <string>                       // string
-#include <vector>                       // vector
+#include <xstd/bits/bit_key_mapping.hpp> // bit_key_mapping
+#include <boost/test/unit_test.hpp>      // BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <algorithm>                     // ranges::equal
+#include <compare>                       // strong_ordering
+#include <cstddef>                       // size_t
+#include <format>                        // format, formatter
+#include <ranges>                        // from_range, iota, reverse, to, transform
+#include <set>                           // erase_if, set
+#include <string>                        // string
+#include <vector>                        // vector
 
 // A key that is not a std::size_t, and the two ways a set owner is told where it goes.
 namespace test::set {
@@ -31,7 +31,7 @@ struct strong_index
 
 // Positions start at the key First, in a universe of N keys: a mapping that is not the identity, and closes.
 template<std::size_t First, std::size_t N>
-struct offset_traits
+struct offset_mapping
 {
         static constexpr auto size = N;
 
@@ -50,9 +50,9 @@ struct offset_traits
 
 } // namespace test::set
 
-// The default traits, specialized for the key, as a strong index type's author would write them.
+// The default mapping, specialized for the key, as a strong index type's author would write it.
 template<>
-struct xstd::bit_key_traits<test::set::strong_index>
+struct xstd::bit_key_mapping<test::set::strong_index>
 {
         [[nodiscard]] static constexpr auto to_index(test::set::strong_index key) noexcept
                 -> std::size_t

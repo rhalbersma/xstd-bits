@@ -7,9 +7,8 @@
 #include <xstd/bits/bit_array.hpp>             // bit_array
 #include <xstd/bits/bit_blocks.hpp>            // smallest_block_t
 #include <xstd/bits/bit_enum_set.hpp>          // bit_enum_set
-#include <xstd/bits/bit_enum_traits.hpp>       // bit_enum_traits, enum_traits
 #include <xstd/bits/bit_fixed_set.hpp>         // basic_bit_fixed_set, bit_fixed_set
-#include <xstd/bits/bit_key_traits.hpp>        // bit_key_traits
+#include <xstd/bits/bit_key_mapping.hpp>       // bit_key_mapping, bit_range_mapping, enum_traits
 #include <xstd/bits/from_blocks.hpp>           // from_blocks
 #include <xstd/misc/concepts.hpp>              // proxy_iterator, proxy_reference
 #include <xstd/misc/utility/to_underlying.hpp> // to_underlying
@@ -28,13 +27,34 @@
 #include <utility>                             // pair
 #include <vector>                              // vector
 
+namespace {
+
+// An enumeration with no list of values, its default mapping specialized as a range instead.
+enum class weekday : std::uint8_t
+{
+        mon,
+        tue,
+        wed,
+        thu,
+        fri,
+        sat,
+        sun,
+};
+
+} // namespace
+
+// Its author names the range of its keys: seven, from mon.
+template<>
+struct xstd::bit_key_mapping<weekday> : xstd::bit_range_mapping<weekday, weekday::mon, 7UZ>
+{};
+
 BOOST_AUTO_TEST_SUITE(BitEnumSet)
 
 namespace {
 
 // The alias's own storage under the descending comparator.
 template<class E>
-using descending_set = xstd::basic_bit_fixed_set<E, xstd::smallest_block_t<xstd::bit_enum_traits<E>::size>, xstd::bit_enum_traits<E>::size, xstd::bit_enum_traits<E>, std::greater<>>;
+using descending_set = xstd::basic_bit_fixed_set<E, xstd::smallest_block_t<xstd::bit_key_mapping<E>::size>, xstd::bit_key_mapping<E>::size, xstd::bit_key_mapping<E>, std::greater<>>;
 
 // A requires-expression on a concrete type is ill-formed rather than false ([expr.prim.req]/5).
 template<class E>
@@ -212,14 +232,14 @@ BOOST_AUTO_TEST_CASE(TheAliasPicksTheSmallestBlock)
         static_assert(sizeof(xstd::bit_enum_set<perm, std::uint32_t>) == 4UZ);
         static_assert(sizeof(xstd::bit_enum_set<test::set::wind>) == 1UZ);
         static_assert(sizeof(xstd::bit_enum_set<test::set::nine>) == 2UZ);
-        static_assert(std::same_as<xstd::bit_enum_set<perm>, xstd::basic_bit_fixed_set<perm, std::uint8_t, 3UZ, xstd::bit_enum_traits<perm>>>);
-        static_assert(std::same_as<xstd::bit_enum_set<test::set::nine>, xstd::basic_bit_fixed_set<test::set::nine, std::uint16_t, 9UZ, xstd::bit_enum_traits<test::set::nine>>>);
+        static_assert(std::same_as<xstd::bit_enum_set<perm>, xstd::basic_bit_fixed_set<perm, std::uint8_t, 3UZ, xstd::bit_key_mapping<perm>>>);
+        static_assert(std::same_as<xstd::bit_enum_set<test::set::nine>, xstd::basic_bit_fixed_set<test::set::nine, std::uint16_t, 9UZ, xstd::bit_key_mapping<test::set::nine>>>);
 
         auto const s = xstd::bit_enum_set<perm, std::uint32_t>{perm::exec, perm::read};
         BOOST_CHECK(std::ranges::equal(s, std::set<perm>{perm::read, perm::exec}));
 }
 
-// A braced list of enumerators deduces the alias's type, with no traits or block spelled.
+// A braced list of enumerators deduces the alias's type, with no mapping or block spelled.
 BOOST_AUTO_TEST_CASE(ABracedListOfEnumeratorsDeducesTheEnumSet)
 {
         using test::set::perm;
@@ -232,6 +252,16 @@ BOOST_AUTO_TEST_CASE(ABracedListOfEnumeratorsDeducesTheEnumSet)
         // The other guides are left as they were: a copy deduces the copy's type, and blocks a width.
         static_assert(std::same_as<decltype(xstd::basic_bit_fixed_set{s}), xstd::bit_enum_set<perm>>);
         static_assert(std::same_as<decltype(xstd::basic_bit_fixed_set(xstd::from_blocks, std::uint8_t())), xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 8UZ>>);
+}
+
+// A specialized default mapping makes an enum set without any list of values.
+BOOST_AUTO_TEST_CASE(ASpecializedMappingNeedsNoListOfValues)
+{
+        static_assert(std::same_as<xstd::bit_enum_set<weekday>, xstd::basic_bit_fixed_set<weekday, std::uint8_t, 7UZ, xstd::bit_key_mapping<weekday>>>);
+        auto const s = xstd::basic_bit_fixed_set{weekday::sun, weekday::mon, weekday::wed};
+        static_assert(std::same_as<decltype(s), xstd::bit_enum_set<weekday> const>);
+        BOOST_CHECK(std::ranges::equal(s, std::set<weekday>{weekday::mon, weekday::wed, weekday::sun}));
+        BOOST_CHECK_EQUAL((~s).size(), 4UZ);
 }
 
 // Gaps cost no bit: the universe is the six pieces, and the complement of none is all six.
@@ -252,12 +282,12 @@ BOOST_AUTO_TEST_CASE(TheUniverseIsTheListedValuesWithoutTheGaps)
         BOOST_CHECK(std::ranges::equal(x, std::set<piece>{piece::pawn}));
 }
 
-// The traits default for a listed enumeration, so the basic form with no traits spelled keys it the same way.
+// The mapping defaults for a listed enumeration, so the basic form with no mapping spelled keys it the same way.
 BOOST_AUTO_TEST_CASE(TheBasicFormDefaultsToTheEnumerationsRanks)
 {
         using test::set::piece;
         using X = xstd::basic_bit_fixed_set<piece, std::uint8_t, 6UZ>;
-        static_assert(std::same_as<X::key_traits_type, xstd::bit_key_traits<piece>>);
+        static_assert(std::same_as<X::key_mapping_type, xstd::bit_key_mapping<piece>>);
         auto const x = X{piece::king, piece::pawn, piece::rook};
         BOOST_CHECK(std::ranges::equal(x, std::set<piece>{piece::pawn, piece::rook, piece::king}));
 }

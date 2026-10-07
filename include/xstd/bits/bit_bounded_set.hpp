@@ -7,7 +7,8 @@
 #define XSTD_BITS_BIT_BOUNDED_SET_HPP
 
 #include <xstd/bits/bit_blocks.hpp>                          // bit_blocks_extent_v
-#include <xstd/bits/bit_key_traits.hpp>                      // bit_key_traits
+#include <xstd/bits/bit_index_mapping.hpp>                   // bit_index_mapping
+#include <xstd/bits/bit_key_mapping.hpp>                     // bit_key_mapping
 #include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container, num_blocks_v
 #include <xstd/bits/detail/bounded_blocks.hpp>               // bounded_blocks
 #include <xstd/bits/detail/ownership.hpp>                    // storage
@@ -30,13 +31,13 @@
 namespace xstd {
 
 // The set reading over a run-time width under a compile-time capacity: bounded by the type, not by the heap.
-template<class Key, xstd::unsigned_integer Block, std::size_t N, class KeyTraits = bit_key_traits<Key>, bits::detail::set::key_direction<Key> Compare = std::less<Key>>
-class basic_bit_bounded_set : public bits::detail::set_adaptor<bits::detail::bit_block_container<bits::detail::bounded_blocks<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, basic_bit_bounded_set<Key, Block, N, KeyTraits, Compare>, Key, KeyTraits, Compare>
+template<class Key, xstd::unsigned_integer Block, std::size_t N, bit_index_mapping<Key> KeyMapping = bit_key_mapping<Key>, bits::detail::set::key_direction<Key> Compare = std::less<Key>>
+class basic_bit_bounded_set : public bits::detail::set_adaptor<bits::detail::bit_block_container<bits::detail::bounded_blocks<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, basic_bit_bounded_set<Key, Block, N, KeyMapping, Compare>, Key, KeyMapping, Compare>
 {
-        using base_type = bits::detail::set_adaptor<bits::detail::bit_block_container<bits::detail::bounded_blocks<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, basic_bit_bounded_set<Key, Block, N, KeyTraits, Compare>, Key, KeyTraits, Compare>;
+        using base_type = bits::detail::set_adaptor<bits::detail::bit_block_container<bits::detail::bounded_blocks<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, basic_bit_bounded_set<Key, Block, N, KeyMapping, Compare>, Key, KeyMapping, Compare>;
 
-        // A traits type that names a size closes the universe, and the width must be that size.
-        static_assert(bits::detail::set::admits_width<KeyTraits, N>);
+        // A mapping that names a size closes the universe, and the width must be that size.
+        static_assert(bits::detail::set::admits_width<KeyMapping, Key, N>);
 
 public:
         using typename base_type::block_container_type;
@@ -90,8 +91,8 @@ basic_bit_bounded_set(from_blocks_t, bits::detail::bounded_blocks<Block, K>) -> 
 
 namespace aligned {
 
-template<class Key, xstd::unsigned_integer Block, std::size_t N, class KeyTraits = bit_key_traits<Key>, class Compare = std::less<Key>>
-using basic_bit_bounded_set = xstd::basic_bit_bounded_set<Key, Block, xstd::align_up(N, static_cast<std::size_t>(std::numeric_limits<Block>::digits)), KeyTraits, Compare>;
+template<class Key, xstd::unsigned_integer Block, std::size_t N, bit_index_mapping<Key> KeyMapping = bit_key_mapping<Key>, class Compare = std::less<Key>>
+using basic_bit_bounded_set = xstd::basic_bit_bounded_set<Key, Block, xstd::align_up(N, static_cast<std::size_t>(std::numeric_limits<Block>::digits)), KeyMapping, Compare>;
 
 template<std::size_t N>
 using bit_bounded_set = basic_bit_bounded_set<std::size_t, std::size_t, N>;
@@ -103,12 +104,12 @@ using bit_bounded_set = basic_bit_bounded_set<std::size_t, std::size_t, N>;
 namespace boost::container_hash {
 
 // A reading with iterators says it is neither range nor tuple, so Boost hashes it as the value it is.
-template<class Key, class Block, std::size_t N, class KeyTraits, class Compare>
-struct is_range<xstd::basic_bit_bounded_set<Key, Block, N, KeyTraits, Compare>> : std::false_type
+template<class Key, class Block, std::size_t N, class KeyMapping, class Compare>
+struct is_range<xstd::basic_bit_bounded_set<Key, Block, N, KeyMapping, Compare>> : std::false_type
 {};
 
-template<class Key, class Block, std::size_t N, class KeyTraits, class Compare>
-struct is_tuple_like<xstd::basic_bit_bounded_set<Key, Block, N, KeyTraits, Compare>> : std::false_type
+template<class Key, class Block, std::size_t N, class KeyMapping, class Compare>
+struct is_tuple_like<xstd::basic_bit_bounded_set<Key, Block, N, KeyMapping, Compare>> : std::false_type
 {};
 
 } // namespace boost::container_hash
@@ -117,8 +118,8 @@ struct is_tuple_like<xstd::basic_bit_bounded_set<Key, Block, N, KeyTraits, Compa
 
 namespace std {
 
-template<class Key, class Block, std::size_t N, class KeyTraits, class Compare>
-struct hash<xstd::basic_bit_bounded_set<Key, Block, N, KeyTraits, Compare>> : hash<typename xstd::basic_bit_bounded_set<Key, Block, N, KeyTraits, Compare>::adaptor_type>
+template<class Key, class Block, std::size_t N, class KeyMapping, class Compare>
+struct hash<xstd::basic_bit_bounded_set<Key, Block, N, KeyMapping, Compare>> : hash<typename xstd::basic_bit_bounded_set<Key, Block, N, KeyMapping, Compare>::adaptor_type>
 {};
 
 } // namespace std

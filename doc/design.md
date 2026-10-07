@@ -1513,13 +1513,13 @@ Two class templates carry the two readings: `set_adaptor` and `sequence_adaptor`
 written against `bit_block_container` and against nothing else, so one adaptor serves
 `bit_block_container` over `std::array`, `std::vector` and the bounded blocks alike, at both widths and
 in both ownerships ([one-storage](#one-storage)). Each takes the parameters its own reading needs and no
-others: `set_adaptor<Bits, Store, Derived, Key, KeyTraits, Compare>` and `sequence_adaptor<Bits, Store, W, Derived>`, the set reading
+others: `set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>` and `sequence_adaptor<Bits, Store, W, Derived>`, the set reading
 never windowed and the only one with a key.
 
 The two are internal: the eight owners and the three views are the public surface, and no public template
 argument list, deduction guide or specialization spells an adaptor. Every public name is a class deriving from
-one of them, passing itself as an argument so that the adaptor names it back: `basic_bit_fixed_set<Key, B, N, KeyTraits, Compare>` derives from
-`set_adaptor<bit_block_container<std::array<B, K>, N>, storage::owned, basic_bit_fixed_set<Key, B, N, KeyTraits, Compare>, Key, KeyTraits, Compare>`. The short layer stays
+one of them, passing itself as an argument so that the adaptor names it back: `basic_bit_fixed_set<Key, B, N, KeyMapping, Compare>` derives from
+`set_adaptor<bit_block_container<std::array<B, K>, N>, storage::owned, basic_bit_fixed_set<Key, B, N, KeyMapping, Compare>, Key, KeyMapping, Compare>`. The short layer stays
 an alias fixing the block, and for a set the key: `bit_fixed_set<N>` and `bit_array<N>` are those at `std::size_t`.
 Deriving is what keeps a value-returning operation -- `& | ^ -`, `operator~`, the shifts, `xstd::bit_convert` --
 handing back the container the caller named rather than the vehicle under it
@@ -2404,13 +2404,13 @@ Two layers of names, over a third nobody spells. The adaptors under `detail/` ca
 storage, the parameters each reading needs and no more ([the-two-adaptors](#the-two-adaptors)). The
 `basic_` layer chooses the storage and leaves the block open, `basic_string`-style:
 `basic_bit_array<Block, N>`, `basic_bit_vector<Block, Allocator>` and their sequence siblings. A set's `basic_` name
-leads with its key, as `std::set<Key>` does, then the storage, then the defaulted policies, the key's traits first:
-`basic_bit_fixed_set<Key, Block, N, KeyTraits, Compare>`, `basic_bit_bounded_set<Key, Block, N, KeyTraits, Compare>`,
-`basic_bit_small_set<Key, Block, N, KeyTraits, Compare, Alloc>` and `basic_bit_set<Key, Block, KeyTraits, Compare, Allocator>`,
-with `KeyTraits` defaulting to `bit_key_traits<Key>` and `Compare` to `std::less<Key>`. The block leads the storage in
+leads with its key, as `std::set<Key>` does, then the storage, then the defaulted policies, the key's mapping first:
+`basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>`, `basic_bit_bounded_set<Key, Block, N, KeyMapping, Compare>`,
+`basic_bit_small_set<Key, Block, N, KeyMapping, Compare, Alloc>` and `basic_bit_set<Key, Block, KeyMapping, Compare, Allocator>`,
+with `KeyMapping` defaulting to `bit_key_mapping<Key>` and `Compare` to `std::less<Key>`. The block leads the storage in
 every column, so a `basic_` name hands its base clause the arguments in the order it was given them --
-`basic_bit_fixed_set<Key, Block, N, KeyTraits, Compare>` derives from `set_adaptor<bit_block_container<std::array<Block, K>, N>,
-storage::owned, basic_bit_fixed_set<Key, Block, N, KeyTraits, Compare>, Key, KeyTraits, Compare>`, straight through. The static and bounded columns used to take `<N, Block>`
+`basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>` derives from `set_adaptor<bit_block_container<std::array<Block, K>, N>,
+storage::owned, basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>, Key, KeyMapping, Compare>`, straight through. The static and bounded columns used to take `<N, Block>`
 and transpose at the call, which
 nothing gained: `Block` carries no default in those columns, so it is free to lead, and leading is what
 `std::array<T, N>`, `std::inplace_vector<T, N>` and `std::span<T, Extent>` all do with the pair. The restricted
@@ -2419,16 +2419,28 @@ parameter, and `bit_set` and `bit_vector` keep none, so the flagship is `xstd::b
 short name fixes its key to `std::size_t` as well: `bit_fixed_set<N>` is `basic_bit_fixed_set<std::size_t, std::size_t, N>`.
 
 The key is spelled wherever the `basic_` form is, because it changes the interface: `key_type`, what iteration
-yields, and what `insert`, `find` and `contains` accept. The positions stay the storage, and `KeyTraits` maps a key
-onto one and back: `to_index(key)` and `from_index(index)`, static members as `std::char_traits`' are, and for a
-closed universe a `size`, which an owner with a width or a capacity in its type must equal, checked by a
-`static_assert`. `bit_key_traits<Key>` is the identity with no `size` for every `xstd::unsigned_integer` key, from
+yields, and what `insert`, `find` and `contains` accept. The positions stay the storage, and `KeyMapping` is the key's
+*mapping*: an order-preserving bijection from a finite universe of keys onto the positions `[0, N)`, given by two
+static members, `to_index(key)` and `from_index(index)`, and, where the mapping closes the universe, a `size` that is
+that `N`. Two public concepts in `<xstd/bits/bit_index_mapping.hpp>` say so. `bit_index_mapping<M, Key>` asks for
+`M::to_index` taking a `Key` to a `std::size_t` and `M::from_index` giving back exactly a `Key`, and carries what no
+syntax check can see: `a < b` exactly where `to_index(a) < to_index(b)`, and `from_index(to_index(k)) == k` for every
+`k` in the universe. `sized_bit_index_mapping<M, Key>` adds `M::size`, and with it `to_index(k) < size` for every
+key; an owner with a width or a capacity in its type must equal that size, checked by a `static_assert`. Every set
+owner constrains its `KeyMapping` with the first and asks the second wherever the universe bounds the width. The
+family is four templates, each taking its key first. `bit_key_mapping<Key>` is the default an owner takes and the
+customization point, specialized beside a key type as `std::char_traits` is beside a character type.
+`bit_range_mapping<Key, First, N>` maps consecutive keys by subtraction, `bit_find_mapping<Key, Keys>` maps a sorted
+list of keys by binary search, and `bit_flag_mapping<Key, N>` maps one-bit values by their bit
+([flag-types](#flag-types)). Only the unsigned identity leaves the universe open. `bit_key_mapping<Key>` is the identity with no `size` for every `xstd::unsigned_integer` key, from
 `std::uint8_t` to the 128-bit types: a key narrower than `std::size_t` names fewer positions, and one wider must name
 a position that fits, as a precondition. A signed key has no default: offsetting by its most negative value would put
 `0` in the middle of the universe, so a `bit_set<int>` holding `{0}` would take 2³¹ bits. It names its range instead,
-through `bit_offset_traits<Key, First, N>`, which maps `First` to position `0` with a `size` of `N`; the arithmetic is
-modular, so `First` may be the type's minimum. A strong index type specializes
-`bit_key_traits` or is given a traits type of its own. `to_index` must preserve order, so that ascending positions
+through `bit_range_mapping<Key, First, N>`: the `N` consecutive keys from `First`, a contiguous range, at positions
+`0` to `N - 1`, with a `size` of `N`. The arithmetic is modular in the key's unsigned counterpart, an enumeration's
+through `std::to_underlying` and its underlying type's, so `First` may be the type's minimum and an enumeration whose
+values run without a gap needs no list. A strong index type specializes
+`bit_key_mapping` or is given a mapping of its own. `to_index` must preserve order, so that ascending positions
 are ascending keys. Every member that takes a key maps it through `to_index`, and the iterator and its proxy hand out
 `from_index` of the position, so a set formats as its keys do; set algebra, comparison, hashing and the block
 exchange work on blocks and never see a key. The views stay keyed by `std::size_t`: a view reads positions it does
@@ -2436,31 +2448,34 @@ not own, and names no key of its own.
 
 An enumeration is keyed by rank, not by value. Its author declares the values once, beside the enumeration:
 `template<> struct xstd::enum_traits<E> { static constexpr std::array values = {E::a, E::b, ...}; };`, ascending by
-underlying value and each value once, which `bit_enum_traits<E>` checks with a `static_assert`. `bit_enum_traits<E>`
-reads that list: `size` is its length, `from_index(i)` is `values[i]`, and `to_index(e)` is `e`'s place in it. Gaps
-cost nothing, so `{pawn = 1, knight = 3, bishop = 4, rook = 8, queen = 9, king = 100}` takes six bits rather than
-a hundred. Where the list turns out contiguous, each value one above the last, which is decided at compile time,
+underlying value and each value once. `enum_traits` only lists; `bit_key_mapping<E>`, specialized for every
+enumeration that declares a list, picks the mapping that reads it. Where the list turns out contiguous, each value one
+above the last, which is decided at compile time, it derives from `bit_range_mapping<E, values[0], size>`, and
 `to_index` is a subtraction in the underlying type's unsigned counterpart, so a dense enumeration starting anywhere,
-negative included, pays no search; otherwise it is a search of the list, a handful of compares for the sizes
-enumerations have. A value not in the list ranks at `size` or above, which the set's guard refuses as it refuses any
-key past its width. `bit_key_traits<E>` derives from `bit_enum_traits<E>` for an enumeration that declares its
-values, so `basic_bit_fixed_set<E, Block, N>` with no traits spelled keys it the same way; one that declares nothing
-has no default traits, and so no set.
+negative included, pays no search. Otherwise it derives from `bit_find_mapping<E, values>`, which checks the list
+strictly ascending with a `static_assert`: `size` is its length, `from_index(i)` is `values[i]`, and `to_index(e)` is
+`e`'s rank, found by binary search. Gaps cost nothing, so
+`{pawn = 1, knight = 3, bishop = 4, rook = 8, queen = 9, king = 100}` takes six bits rather than a hundred. A value
+not in the list ranks at `size` or above under either, which the set's guard refuses as it refuses any key past its
+width. `basic_bit_fixed_set<E, Block, N>` with no mapping spelled keys it the same way; an enumeration that declares
+nothing has no default mapping, and so no set, unless its author specializes `bit_key_mapping<E>` directly, say as a
+`bit_range_mapping` from its first enumerator. The same `bit_find_mapping` keys sparse integers, such as identifiers
+drawn from a fixed table, to as many positions as there are identifiers.
 
 The count comes from the declaration because C++ has no portable way to count enumerators. A sentinel such as
 `E::MAX` makes the width a value of `E`, which every exhaustive `switch` must then handle and which cannot be added
 to an enumeration someone else owns. Counting by parsing compiler-generated function names, as `magic_enum` does,
 works only within a guessed value range and is no part of the language. `enum_traits<E>` leaves `E` as it is and
 can be declared by whoever needs it; C++26 reflection, `std::meta::enumerators_of(^^E)`, can generate `values`
-later without changing what `bit_enum_traits` reads.
+later without changing what `bit_key_mapping` reads.
 
-`bit_enum_set<E, Block = smallest_block_t<N>, Traits = bit_enum_traits<E>>` is `basic_bit_fixed_set<E, Block,
-Traits::size, Traits>`. The block defaults to the narrowest of `std::uint8_t` to `std::uint64_t` that holds the
-`N` listed values, since an enum set mostly lives inside other structures as a flag field: a three-value set is one
+`bit_enum_set<Enum, Block = smallest_block_t<N>>` is `basic_bit_fixed_set<Enum, Block, N, bit_key_mapping<Enum>>`,
+`N` being the mapping's `size`, for any enumeration whose `bit_key_mapping` models `sized_bit_index_mapping`. The block defaults to the narrowest of `std::uint8_t` to `std::uint64_t` that holds the
+`N` keys, since an enum set mostly lives inside other structures as a flag field: a three-value set is one
 byte, not eight. Wider than 64 values, it is several `std::uint64_t`. A field of fixed wire width is
-`bit_enum_set<E, std::uint32_t>`, the block coming before the traits so that overriding it does not mean spelling
-them. `smallest_block_t` is public, in `<xstd/bits/bit_blocks.hpp>`, because the alias's default is spelled by any
-user who sets `Traits`. A deduction guide on the class template, not on the alias, deduces that same type from a
+`bit_enum_set<E, std::uint32_t>`, the block being the alias's one parameter after the enumeration: a set over
+another mapping of the enumeration is a `basic_bit_fixed_set` and spells the mapping there. `smallest_block_t` is
+public, in `<xstd/bits/bit_blocks.hpp>`, because that user spells the alias's default block too. A deduction guide on the class template, not on the alias, deduces that same type from a
 braced list of enumerators, `basic_bit_fixed_set{E::a, E::b}`; alias deduction is not relied on, being unreliable
 on older compilers. An enumerator meets a set through the set's own type: `|`, `&`, `^` and `-` take a set on one
 side and an enumerator on the other, and `|=`, `&=`, `^=` and `-=` an enumerator on the right, the enumerator acting
@@ -2470,10 +2485,10 @@ combine as `bit_enum_set<E>{E::a, E::b}`. Each is constrained to an enumeration 
 gains no mixed operator, and with `key_type` an enumeration nothing converts an `int` into one, so `insert(1)`,
 `contains(1)` and `find(1)` do not compile.
 
-`Compare` keeps `std::set`'s place, after the key's traits and before the allocator, and is defaulted because it
+`Compare` keeps `std::set`'s place, after the key's mapping and before the allocator, and is defaulted because it
 leaves every member signature as it is. Position order is structural, so a comparator can only choose a direction:
 `std::less<Key>` and `std::less<>` ascend, `std::greater<Key>` and `std::greater<>` descend, and any other type is
-rejected by the owners' template heads. The traits come first because the direction is defined over the order
+rejected by the owners' template heads. The mapping comes first because the direction is defined over the order
 `to_index` preserves. Under `std::greater` the set behaves as `std::set<Key, std::greater<Key>>` specifies: `begin()`
 is the highest set position and `++` steps down, `lower_bound` is the largest key not above its argument and
 `upper_bound` the largest below it, `key_comp()` and `value_comp()` return `std::greater`, and `for_each` walks in that
@@ -2518,91 +2533,100 @@ is `basic_bit_array<std::uint8_t, 16>`. The bounded column has the same forms, r
 
 ### flag-types
 
-A flag type replaces a bitmask enumeration such as `std::filesystem::perms`: code that names the enumeration compiles
-with the type's name respelled, and the set vocabulary comes on top. `bit_flag_set<Derived, Key, Block, N, KeyTraits,
-Interop>` is the base it derives from, `Derived` being the flag type itself, so that every operator returns it.
-`examples/include/xstd/filesystem.hpp` builds `xstd::filesystem::perms` this way, as the worked case. A flag type
-combines three pieces, and no other library combines all three.
+A flag type replaces a bitmask type such as `std::filesystem::perms`: code written against the mask keeps the
+spelling of its constants, only the variable's type changes, and the set vocabulary comes on top.
+`bit_flag_set<Mask, N, KeyMapping>` is the set of `Mask`'s one-bit values below `N`: its `key_type` is `Mask`
+itself, each key a value with exactly one bit set, and `KeyMapping` defaults to `bit_flag_mapping<Mask, N>`, which
+ranks a one-bit value at its bit. `N` defaults to the mask's width. There is no CRTP and no separate rank
+enumeration: `bit_flag_set` derives from the `set_adaptor` that `basic_bit_fixed_set` derives from, over one block
+of `smallest_block_t<N>`, and passes itself as the type its operators return, as `basic_bit_fixed_set` does.
+`examples/include/xstd/filesystem.hpp` is one line, `using perms = bit_flag_set<std::filesystem::perms, 16>;`,
+sixteen bits rather than the twelve permissions so that `std::filesystem::perms::unknown`, `0xFFFF`, survives the
+round trip; its four high bits are keys like the others.
 
-1. **A rank enumeration names the elements.** `enum class perm : std::uint8_t { others_exec, ..., set_uid }` gives
-   each POSIX permission bit its position as its rank, and `enum_traits<perm>` lists the twelve. It is what iteration
-   yields, so a `switch`, a `formatter` and the set vocabulary all speak it.
-2. **Constants of the flag type itself.** `perms::owner_read`, `perms::owner_all` and `perms::none` are `perms`,
-   so `|` needs no opt-in, a composite is an ordinary value, and the standard's spelling carries over. This is how
-   `[ios.base]` specifies `fmtflags`, and how Rust's `bitflags` and Swift's `OptionSet` declare flags. A class is
-   incomplete inside its own definition, so the constants are declared `static const` in the class and defined
-   `inline constexpr` after it, from where they are usable in constant expressions.
-3. **Implicit conversions to and from the interop mask.** Values from the standard's functions flow in,
-   `xfs::perms p = fs::status(path).permissions();`, and ours flow out, `fs::permissions(path, p)`. Rank `i` is bit
-   `i`, so the block is the mode word and each conversion is a cast.
+`Mask` is an enumeration or a `std::bitset` as wide as a block, one block for now, and an `xstd::bit_mask` either
+way. Its word is the enumeration's underlying type made unsigned, or the block a bitset of that width is, and every
+conversion between the mask and the block goes through that word: `std::to_underlying` and a cast for an
+enumeration, `xstd::bit_convert` for a bitset, position `i` staying position `i`. An unsigned integer is a bit mask
+too, but its one-bit values are not a type of their own, and it is left out.
 
-**The interop mask is any of [bitmask.types]'s three forms.** `Interop` is an `xstd::bit_mask` that is an
-enumeration, an unsigned integer or a `std::bitset`, the forms whose positions can be read and written one by one:
-an enumeration and an integer through their unsigned word, a bitset position by position. A class that is a bit
-mask by its operators alone, a flag type among them, offers no way to reach its bits and is not taken. The mask must
-hold all `N` positions, so the word converts to it whole; a mask wider than `N` meets the flag type as the
-enumeration always has, its positions at or above `N` truncated by `&`, `-` and `==` and precluded on the way in.
+1. **Implicit conversions both ways.** Values from the standard's functions flow in,
+   `xfs::perms p = fs::status(path).permissions();`, and ours flow out, `fs::permissions(path, p)`. The converting
+   constructor takes any value of the mask, so a composite such as `fs::perms::owner_all` is an ordinary argument,
+   and a braced list is the union of its values: `{m}` is the conversion from `m`, and `{a, b}` of two one-bit
+   values is the set of both, which is what [set.cons] makes of it too.
+2. **The mask's constants are the flag type's.** `fs::perms::owner_read | p` is a flag type, so the standard's
+   spelling carries over unchanged and no constant is written twice. This is the split Qt's `QFlags<Enum>` makes, a
+   set type over the enumeration that names its values, where Rust's `bitflags`, Python's `enum.Flag` and Swift's
+   `OptionSet` make the element the type itself.
+3. **The set reading.** Iteration yields the one-bit values, highest first; `contains`, `insert`, `erase`, `find`,
+   the bounds, `rbegin`, `clear`, `swap`, the hash and `max_size()`, which is `N`, come with the adaptor.
 
-**The base holds one block, not a set.** A `basic_bit_fixed_set<Key, Block, N, KeyTraits>` would insist on `N` being
-the traits' `size`, and `perms` wants twelve keys in sixteen bits, so that `std::filesystem::perms::unknown`,
-`0xFFFF`, survives the round trip, as `bitflags`' `from_bits_retain` does. `N` is the word's width and the traits'
-`size`, where they close a universe, is the number of named positions, at most `N`. Every bit below `N` is kept and
-takes part in `==`, `|`, `&`, `^`, `-`, `~` and the conversions; a bit no key names is in the word but not in the
-range, so iteration and `size()` see the named flags alone, and `size()` stays the distance from `begin()` to `end()`.
-`~` is taken within `N`, so `~perms::none` is `perms::unknown`. The iterator is nested and holds a copy of the word
-still to visit, so it refers to nothing, and its `*` hands out the key by value: ADL on that searches the rank
-enumeration's namespace, where its `formatter` lives, and `std::format("{}", p)` prints `{owner_write, owner_read}`
-through the standard's range formatter, the flag type having a `key_type`. `N` narrower than the block adds a
-precondition on the conversion in, no bit at or above `N`, checked by an `assert` rather than truncated. The mixed `&`,
-`-` with the flag type on the left, their compound forms, and `==` need no such precondition: no bit of the flag type
-is at or above `N`.
+The flag type is itself an `xstd::bit_mask`, a [bitmask.types] type with `~`, `|`, `&`, `^` and their compound
+forms closed over it, which the tests assert of each instantiation.
+
+Other libraries offer one of an enum set or a flag type, seldom both:
+
+| Library | Enum set | Flag type | Element | Iterates? |
+|---|---|---|---|---|
+| xstd-bits | `bit_enum_set<E>`, keyed by rank | `bit_flag_set<Mask, N>`, over an enumeration or a `std::bitset` | the mask's one-bit values | both iterate |
+| C++ standard | — (`std::bitset<N>` is indexed, not keyed) | bitmask types ([bitmask.types]: `fs::perms`, `ios_base::fmtflags`) | — | no |
+| Qt | — | `QFlags<Enum>` | `Enum` | no |
+| Chromium `base` | `EnumSet<E, Min, Max>` | — | — | yes |
+| Rust | `enumset` crate | `bitflags` crate | `Self` | yes |
+| Python | — (a plain `set` of `Enum` members) | `enum.Flag`, `enum.IntFlag` | `Self` | yes, named members only |
+| Java | `EnumSet<E>`, keyed by ordinal | — | — | yes |
+| Swift | — (a hashed `Set<E>`) | `OptionSet` | `Self` | no |
+| C# | — (`HashSet<E>`) | `[Flags]` enum | — | no |
+
+Java's `EnumSet` keys by ordinal, which is `bit_enum_set`; Qt's `QFlags` keys by the mask's own values, which is
+`bit_flag_set`. Only Rust, through two crates, and this library offer both, and here both are the same set reading.
+
+**A value wider than `N` meets the flag type as the enumeration always has.** Its positions at or above `N` are
+truncated by `&`, `-` with the flag type on the left, their compound forms and `==`, which finds such a value
+unequal, and are precluded by an `assert` on the way in: the conversion, `|`, `^`, their compound forms and `-` with
+the mask on the left. `xfs::perms(xstd::from_blocks, 0xFFFF)` takes the block as it is, `bitflags`'
+`from_bits_retain`, and `xstd::bit_convert<std::uint16_t>(p)` reads it back.
+
+**A flag type orders as the mask it replaces, highest flag first.** It has no `Compare` parameter: it always passes
+`std::greater<Mask>` to the adaptor, and over a descending set the adaptor's `<=>` is `numeric_three_way`, the block
+compared as an unsigned number: the order the bitmask enumeration's own relational operators give, the order of a
+bitset's `to_ulong()`, and the `Ord` that Rust's `bitflags` derives. It stays the container's lexicographic
+comparison over its own iteration, since walking from the highest position down, the first difference is the
+highest bit that differs. So iteration, `front()`, `back()` and `lower_bound` run from the highest flag down: for
+`perms`, `set_uid` through `others_exec`, the order in which `ls -l` reads the mode. `std::greater<std::bitset<M>>`
+is never called, a bitset having no `<`: the adaptor orders by position and only hands the comparator out through
+`key_comp()`. A transparent comparator would turn on the heterogeneous `contains(K)`, and is not offered either.
 
 **The mixed operators are generated, because hand-writing them goes wrong.** With only the homogeneous operators,
 `p ^ std::filesystem::perms::owner_write` is ambiguous: ours wants a conversion on the right, the mask's own
-`operator^` one on the left. Given an `Interop`, the base declares `==`, `|`, `&`, `^` and `-` against it in both
-orders, each an exact match for both operands, so it wins outright; `==` is one declaration, its reversed form being
-the language's. All of them are hidden friends taking `Derived` rather than the base, since a derived-to-base
-conversion on one operand against a user conversion on the other would tie as well. The model this design came from
-left `^` out by hand, which is how the ambiguity was found.
+`operator^` one on the left. The flag type declares `==`, `|`, `&`, `^` and `-` against the mask in both orders,
+each an exact match for both operands, so it wins outright; `==` is one declaration, its reversed form being the
+language's. Each is a hidden friend template whose mask parameter must deduce exactly as `Mask`, so that a flag
+type, converting to the mask, never deduces as one, and each takes the flag type by value, an identity conversion
+that beats the adaptor's key-typed operators, which reach the flag type through its base and would otherwise read a
+multi-bit value as one key. The compound forms against the mask are members beside the set forms, which take the
+adaptor's own type as its binary operators call them.
 
-**`p[k]` is a proxy for a `bool`**, reading as `contains(k)` and assigning as insert or erase: Qt's `setFlag(f, on)`
-and `bitflags`' `set(f, value)`, which a set can offer without becoming a sequence. It takes the sequence proxy's
-shape: `value_type` is `bool`, one implicit `operator value_type()`, const-qualified assignment from `value_type`,
-and a copy assignment that assigns the bit rather than rebinding, with no templated conversion and no `operator==`,
-so `p[k] == true` and `if (p[k])` go through the built-in comparison and contextual conversion. It is a class nested in
-the base, not a namespace-scope template over the user's types, so ADL on it searches `xstd` alone and never the
-namespaces of `Derived`, `Block`, `KeyTraits` or `Interop`: a mixed `operator==(bool, T)` there, as Boost.Int128
-declares for its `uint128`, cannot tie with the built-in comparison. On a `const` flag type `p[k]` is `contains(k)`.
+**`contains(k)` is `std::set`'s membership of one flag**, `k` a one-bit value, a value with more bits breaking
+`bit_flag_mapping`'s precondition. All-of is `bit_flag_set(m).is_subset_of(p)` and any-of is `intersects(p, q)`,
+the adaptor's hidden friend, so no member answers two questions under one name. There is no `operator[]` and no
+proxy for a `bool`: a set changes one flag through `insert(k)` and `erase(k)`, as `std::set` does. There is no
+nullary `count()` either: `size()` answers it.
 
-The names follow the vocabulary Rust and Swift already share. `contains(Key)` is `std::set`'s membership and
-`contains(Derived)` is all-of, as in `bitflags` and Swift, and the two agree on a single flag. Overlap is asked
-positively, `intersects`, since flags code nearly always asks whether any flag is set. `is_subset_of` is the
-library's own spelling. There is no nullary `count()`: `size()` answers it, and `std::set`'s `count(key)` is
-membership. The key constructor is `explicit`, so a key meets the flag type only through its constant.
-
-**Without a parallel enumeration**, `bit_flag_traits<E, N>` keys a set on the mask enumeration itself: `to_index` is
-`countr_zero` of a one-bit value and `from_index(i)` is `E(1 << i)`, both in the underlying type's unsigned
-counterpart, so an enumerator on a signed type's sign bit is the highest position like any other. Iteration yields
-one-bit values. `to_index` asserts a single bit, so `insert(E::all)` fails there instead of inserting bit 0. A set
-orders keys by position, which for the sign bit is not the order of the underlying values.
+**A user may still derive a class of their own** from `bit_flag_set` to add names, but its operators then return
+the base type, as a class derived from any standard container's would.
 
 Where it is not drop-in:
 
-- **The type's spelling changes.** `fs::perms` becomes `xfs::perms` where code names it, and the rest of `fs::` is
-  untouched. Re-exporting `std::filesystem` from `xstd::filesystem`, so that only the alias changes, would work, but
-  would make every `fs::` name pass through this library.
+- **The variable's type changes.** `fs::perms p` becomes `xfs::perms p`; the constants, the functions and the rest
+  of `fs::` are untouched.
 - **It is a class, not an enumeration.** `std::to_underlying(p)` and `static_cast<unsigned>(p)` do not compile;
-  `switch (p)`, `fs::perms(p)` and the relational operators do, through the conversion.
+  `switch (p)` and `fs::perms(p)` do, through the conversion.
 - **A standard function's result keeps the standard type.** `auto q = fs::status(path).permissions();` is a
   `std::filesystem::perms`, with none of the queries until it is assigned to `xfs::perms`.
-- **A value with bits above `N` does not convert in.** `~` on the standard's enumeration sets every bit of its
-  underlying type, so `p | ~fs::perms::none`, `p ^= ~fs::perms::none` and `~fs::perms::none - p` assert, those bits
-  entering the result. `p & x`, `x & p`, `p - x`, `p &= x` and `p -= x` are total, since `p` has no bit above `N` for
-  `x`'s to meet, so truncating `x` is exact and `p &= ~fs::perms::group_write` works; `==` is total too, a value with
-  a bit above `N` equalling none.
-- **Each name is written twice**, as an enumerator and as a constant. Reflection can read an enumeration but cannot
-  declare members, so nothing generates the constants yet.
-- **Printing** needs a `formatter` for the rank enumeration: a name table today, reflection later.
+- **Printing** needs a `formatter` for the mask, which a user may not specialize for `std::filesystem::perms`; a
+  program-defined mask prints through its own, `{exec, read}`.
 
 ### a-name-by-storage
 
@@ -3500,7 +3524,7 @@ the type in play can be `std` or `boost` ([why-nested](#why-nested)).
 **Why.** A proxy specialised over the user's types used to carry every one of their namespaces into each
 comparison it took part in. `[basic.lookup.argdep]/3` makes the namespaces of a class template
 specialization's template type arguments associated with it, recursively, so a sequence proxy over
-`bit_block_container<std::vector<acme::uint128>>` searched `acme`, and a set proxy under `acme::key_traits`
+`bit_block_container<std::vector<acme::uint128>>` searched `acme`, and a set proxy under `acme::key_mapping`
 did too. A namespace declaring one generic comparison is enough to take over:
 
 ```cpp
@@ -3524,7 +3548,7 @@ class template is a specialization, but of that member template, and contributes
 GCC 15 and Clang 22 both read it so.
 
 **The shape.** The iterator and the proxy are members of the adaptor that hands them out, so the adaptor's
-template arguments -- the storage, the derived container, the key traits and the comparator -- never reach them:
+template arguments -- the storage, the derived container, the key mapping and the comparator -- never reach them:
 
 ```cpp
 class sequence_adaptor          // over Bits, Store, W, Derived, E
@@ -3535,7 +3559,7 @@ class sequence_adaptor          // over Bits, Store, W, Derived, E
         using const_iterator = basic_iterator<true>;
 };
 
-class set_adaptor               // over Bits, Store, Derived, Key, KeyTraits, Compare
+class set_adaptor               // over Bits, Store, Derived, Key, KeyMapping, Compare
 {
         template<class Value = Key> class basic_iterator; // * yields basic_reference<Value>
         template<class Value = Key> class basic_reference; // & yields basic_iterator<Value>
@@ -3547,7 +3571,7 @@ The pair is closed under `*` and `&` within one adaptor. The sequence pair is a 
 than two classes so that over a storage already const, `iterator` and `const_iterator` stay one type, and a
 `bool` brings no namespace. The set pair is a template over the key so that the key, and only the key, is
 associated; each body asserts that `Value` is `Key`, there to be associated rather than to be a second axis.
-What the set iterator does need of the comparator and the key traits -- which way a step goes, and which key a
+What the set iterator does need of the comparator and the key mapping -- which way a step goes, and which key a
 position is -- it asks the adaptor, whose private `next_position`, `prev_position` and `key_at` say it once.
 
 **Why not an ADL barrier.** The usual idiom, a class in a namespace of its own that the library re-exports
@@ -3555,7 +3579,7 @@ with a using-declaration, closes off the namespace the class is declared in. It 
 arguments, which stay associated however the class is reached, and they are the whole problem here.
 
 **What is associated, and what is not.** The storage -- `Bits`, and through it the blocks, the Block and any
-allocator -- the derived container, the key traits and the direction are **not** associated with a proxy or an
+allocator -- the derived container, the key mapping and the direction are **not** associated with a proxy or an
 iterator. The value type **is**, deliberately, so that the proxy compares as its value does: `bool` for the
 sequence reading, which brings no namespace, and the key for the set reading, whose namespace is searched, so
 `*it == *jt` and `*it == 3` reach a class key's own comparisons, hidden friends among them, as a real
@@ -4299,12 +4323,12 @@ one conversion, so it serves two proxies over **different** Blocks exactly as it
 
 Both proxies used to carry a second, templated implicit conversion, to any class type implicitly constructible
 from the `value_type`. It was removed, because any such class with a non-template `operator==` in a namespace
-associated with the proxy — its Block's, its key's, its key traits' — gives every comparison a second,
+associated with the proxy — its Block's, its key's, its key mapping's — gives every comparison a second,
 equally good reading: convert both sides to the `value_type`, or convert both sides to that class. Two
 user-defined conversions of equal rank tie, and the tie cost `equality_comparable` and with it
 `std::ranges::equal`. The 128-bit integer classes were one instance, the Block naming its own namespace among
 the proxy's template arguments; excluding `xstd::integer` and adding comparisons exact in both operands patched
-that instance and left every other one open, a user's strong type in a key-traits namespace among them. A set's
+that instance and left every other one open, a user's strong type in a key-mapping namespace among them. A set's
 comparator is no way in: it reaches the proxy only as a direction. The cost of the removal is
 copy-initializing a class from a proxy, `C c = *it;`, which needs two user-defined conversions;
 direct-initialization, `C c(*it);`, needs one and still works.
@@ -5213,7 +5237,7 @@ Bit-0 leftmost buys one thing: the bitstring order and the array order agree, wh
 **A**: By default, `xstd::bit_fixed_set` uses an array of `std::size_t` integers.
 
 **Q**: Can I customize the storage type?  
-**A**: Yes. The alias carrying the default is `template<std::size_t N> using bit_fixed_set = basic_bit_fixed_set<std::size_t, std::size_t, N>`; the underlying `template<class Key, xstd::unsigned_integer Block, std::size_t N, class KeyTraits = bit_key_traits<Key>> basic_bit_fixed_set` requires the key and the block explicitly. Every cell of the table follows that pattern: a short name that fixes `Block`, and a set's `Key`, to `std::size_t`, and a `basic_` name that does not.
+**A**: Yes. The alias carrying the default is `template<std::size_t N> using bit_fixed_set = basic_bit_fixed_set<std::size_t, std::size_t, N>`; the underlying `template<class Key, xstd::unsigned_integer Block, std::size_t N, bit_index_mapping<Key> KeyMapping = bit_key_mapping<Key>, class Compare = std::less<Key>> basic_bit_fixed_set` requires the key and the block explicitly. Every cell of the table follows that pattern: a short name that fixes `Block`, and a set's `Key`, to `std::size_t`, and a `basic_` name that does not.
 
 **Q**: What other storage types can be used as template argument for `Block`?  
 **A**: Any type modelling the Standard Library `unsigned_integral` concept, which includes (for GCC and Clang) `xstd::uint128`.

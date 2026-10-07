@@ -16,7 +16,7 @@
 #include <test/uint128.hpp>                         // TEST_HAS_UINT128, uint128
 #include <xstd/bits/bit_bounded_set.hpp>            // basic_bit_bounded_set
 #include <xstd/bits/bit_fixed_set.hpp>              // basic_bit_fixed_set
-#include <xstd/bits/bit_key_traits.hpp>             // bit_key_traits
+#include <xstd/bits/bit_key_mapping.hpp>            // bit_key_mapping
 #include <xstd/bits/bit_set.hpp>                    // basic_bit_set
 #include <xstd/bits/bit_set_view.hpp>               // bit_set_view
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
@@ -67,7 +67,7 @@ using small = std::tuple<xstd::basic_bit_small_set<std::size_t, std::uint8_t, 9>
 using user_storage = std::tuple<xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_block_container<test::minimal_blocks<std::uint8_t>>>>;
 
 // The columns once more under std::greater, std::set's model first: an empty width, across blocks, and growing.
-using descending = std::tuple<std::set<std::size_t, std::greater<std::size_t>>, xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 0, xstd::bit_key_traits<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 17, xstd::bit_key_traits<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 64, xstd::bit_key_traits<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 65, xstd::bit_key_traits<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_traits<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 17, xstd::bit_key_traits<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_small_set<std::size_t, std::uint8_t, 9, xstd::bit_key_traits<std::size_t>, std::greater<std::size_t>>, xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_block_container<test::minimal_blocks<std::uint8_t>>, xstd::bits::detail::storage::owned, void, std::size_t, xstd::bit_key_traits<std::size_t>, std::greater<std::size_t>>>; // NOLINT(modernize-use-transparent-functors): std::set<std::size_t, std::greater<std::size_t>>'s comparator, as written
+using descending = std::tuple<std::set<std::size_t, std::greater<std::size_t>>, xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 0, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 17, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 64, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 65, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 17, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_small_set<std::size_t, std::uint8_t, 9, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>, xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_block_container<test::minimal_blocks<std::uint8_t>>, xstd::bits::detail::storage::owned, void, std::size_t, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>>; // NOLINT(modernize-use-transparent-functors): std::set<std::size_t, std::greater<std::size_t>>'s comparator, as written
 
 // Everything that owns the keys it holds, which is what [container.requirements] and a constructor ask for.
 using owners = decltype(std::tuple_cat(std::declval<models>(), std::declval<fixed>(), std::declval<dynamic>(), std::declval<bounded>(), std::declval<small>(), std::declval<user_storage>(), std::declval<descending>()));
@@ -81,7 +81,7 @@ using all = decltype(std::tuple_cat(std::declval<owners>(), std::declval<views>(
 using const_views = std::tuple<xstd::bit_set_view<std::array<std::uint8_t, 3> const, 17>, xstd::bit_set_view<std::vector<std::uint64_t> const>>;
 
 // The owners that take an allocator, under one that keeps a ledger and refuses on request, std::set first.
-using ledgered = std::tuple<std::set<std::size_t, std::less<>, test::container::non_propagating<std::size_t>>, xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_traits<std::size_t>, std::less<std::size_t>, test::container::non_propagating<std::uint8_t>>, xstd::basic_bit_set<std::size_t, std::uint64_t, xstd::bit_key_traits<std::size_t>, std::less<std::size_t>, test::container::non_propagating<std::uint64_t>>, xstd::basic_bit_small_set<std::size_t, std::uint8_t, 9, xstd::bit_key_traits<std::size_t>, std::less<std::size_t>, test::container::non_propagating<std::uint8_t>>, xstd::basic_bit_small_set<std::size_t, std::uint64_t, 64, xstd::bit_key_traits<std::size_t>, std::less<std::size_t>, test::container::non_propagating<std::uint64_t>>>; // NOLINT(modernize-use-transparent-functors): the default comparator, named to reach the allocator
+using ledgered = std::tuple<std::set<std::size_t, std::less<>, test::container::non_propagating<std::size_t>>, xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, test::container::non_propagating<std::uint8_t>>, xstd::basic_bit_set<std::size_t, std::uint64_t, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, test::container::non_propagating<std::uint64_t>>, xstd::basic_bit_small_set<std::size_t, std::uint8_t, 9, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, test::container::non_propagating<std::uint8_t>>, xstd::basic_bit_small_set<std::size_t, std::uint64_t, 64, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, test::container::non_propagating<std::uint64_t>>>; // NOLINT(modernize-use-transparent-functors): the default comparator, named to reach the allocator
 
 } // namespace test::spec::set
 
@@ -102,7 +102,7 @@ struct view_traits<xstd::bit_set_view<std::array<Block, K>, N>>
 template<class Block, class Allocator>
 struct view_traits<xstd::bit_set_view<std::vector<Block, Allocator>, std::dynamic_extent>>
 {
-        using owner_type = xstd::basic_bit_set<std::size_t, Block, xstd::bit_key_traits<std::size_t>, std::less<std::size_t>, Allocator>; // NOLINT(modernize-use-transparent-functors): the default comparator, named to reach the allocator
+        using owner_type = xstd::basic_bit_set<std::size_t, Block, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, Allocator>; // NOLINT(modernize-use-transparent-functors): the default comparator, named to reach the allocator
 
         [[nodiscard]] static auto view(owner_type& owner, std::size_t)
         {
@@ -128,7 +128,7 @@ inline constexpr auto held_width_v = [] -> std::size_t {
 }();
 
 template<class Block, std::size_t N, class Compare, class Allocator>
-inline constexpr auto held_width_v<xstd::basic_bit_small_set<std::size_t, Block, N, xstd::bit_key_traits<std::size_t>, Compare, Allocator>> = N;
+inline constexpr auto held_width_v<xstd::basic_bit_small_set<std::size_t, Block, N, xstd::bit_key_mapping<std::size_t>, Compare, Allocator>> = N;
 
 #ifdef __clang__
 

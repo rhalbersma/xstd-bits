@@ -6,6 +6,7 @@
 #include <xstd/bits.hpp>            // the whole bits surface
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE
 #include <array>                    // array
+#include <bitset>                   // bitset
 #include <concepts>                 // same_as
 #include <cstddef>                  // size_t
 #include <cstdint>                  // uint8_t
@@ -32,17 +33,6 @@ struct xstd::enum_traits<perm>
         static constexpr std::array values = {perm::read, perm::write, perm::exec};
 };
 
-namespace {
-
-// A flag type over the same ranks, its operators returning it.
-class perms : public xstd::bit_flag_set<perms, perm, std::uint8_t, 3>
-{
-public:
-        using bit_flag_set::bit_flag_set;
-};
-
-} // namespace
-
 // Every entity the umbrella promises, reached through it alone: no leaf test sees the umbrella at all.
 BOOST_AUTO_TEST_CASE(EveryContainerArrivesThroughTheUmbrella)
 {
@@ -64,17 +54,17 @@ BOOST_AUTO_TEST_CASE(EveryContainerArrivesThroughTheUmbrella)
         // The two layers the umbrella shows: basic_ chooses the storage, and the restricted name fixes size_t.
         static_assert(std::same_as<xstd::bit_fixed_set<8>, xstd::basic_bit_fixed_set<std::size_t, std::size_t, 8>>);
         static_assert(std::same_as<xstd::bit_array<8>, xstd::basic_bit_array<std::size_t, 8>>);
-        static_assert(std::same_as<xstd::bit_set, xstd::basic_bit_set<std::size_t, std::size_t, xstd::bit_key_traits<std::size_t>, std::less<std::size_t>, std::allocator<std::size_t>>>); // NOLINT(modernize-use-transparent-functors): the default comparator, spelled to reach the allocator
+        static_assert(std::same_as<xstd::bit_set, xstd::basic_bit_set<std::size_t, std::size_t, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, std::allocator<std::size_t>>>); // NOLINT(modernize-use-transparent-functors): the default comparator, spelled to reach the allocator
         static_assert(std::same_as<xstd::bit_vector, xstd::basic_bit_vector<std::size_t, std::allocator<std::size_t>>>);
 
         // The enum set is the fixed set keyed by an enumeration's ranks, in the smallest block holding them.
-        static_assert(std::same_as<xstd::bit_enum_set<perm>, xstd::basic_bit_fixed_set<perm, std::uint8_t, 3, xstd::bit_enum_traits<perm>>>);
+        static_assert(std::same_as<xstd::bit_enum_set<perm>, xstd::basic_bit_fixed_set<perm, std::uint8_t, 3, xstd::bit_key_mapping<perm>>>);
         static_assert(std::same_as<decltype(xstd::basic_bit_fixed_set{perm::read}), xstd::bit_enum_set<perm>>);
 
-        // A flag type iterates its ranks, and a mask enumeration keys a set through its one-bit values.
-        static_assert(std::same_as<perms::iterator::value_type, perm>);
-        static_assert(std::same_as<decltype(perms() | perms()), perms>);
-        static_assert(xstd::bit_flag_traits<perm>::size == 8UZ);
+        // A flag type iterates its mask's one-bit values, and an enumeration is keyed the same way through the mapping.
+        static_assert(std::same_as<xstd::bit_flag_set<std::bitset<8>>::iterator::value_type, std::bitset<8>>);
+        static_assert(std::same_as<decltype(xstd::bit_flag_set<std::bitset<8>>() | xstd::bit_flag_set<std::bitset<8>>()), xstd::bit_flag_set<std::bitset<8>>>);
+        static_assert(xstd::bit_flag_mapping<perm>::size == 8UZ);
 
         // The bounded column, the third storage point: one name per reading, each a class like the rest.
         static_assert(std::ranges::bidirectional_range<xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 8>>);
