@@ -17,12 +17,12 @@
 #include <xstd/bits/from_blocks.hpp>                // from_blocks
 #include <boost/container/small_vector.hpp>         // small_vector
 #include <boost/container/static_vector.hpp>        // static_vector
-#include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
+#include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <array>                                    // array
 #include <bit>                                      // bit_cast
 #include <bitset>                                   // bitset
 #include <cstddef>                                  // size_t
-#include <cstdint>                                  // int16_t, uint16_t, uint32_t, uint64_t, uint8_t, uint_fast16_t, uint_fast32_t, uint_fast64_t, uint_fast8_t
+#include <cstdint>                                  // int16_t, int64_t, int8_t, uint16_t, uint32_t, uint64_t, uint8_t, uint_fast16_t, uint_fast32_t, uint_fast64_t, uint_fast8_t
 #include <deque>                                    // deque
 #include <functional>                               // greater
 #include <list>                                     // list
@@ -270,13 +270,16 @@ BOOST_AUTO_TEST_CASE(OnlyAFixedWidthOwnerIsTransformed)
         BOOST_CHECK(true);
 }
 
-// An enumeration's underlying type made unsigned is a block; bool has no unsigned counterpart, and a non-enum none.
+// An enumeration's underlying type or an integer type made unsigned is a block; bool, a character type or a class none.
 BOOST_AUTO_TEST_CASE(TheUnderlyingBlockIsTheUnderlyingTypeMadeUnsigned)
 {
         static_assert(std::is_same_v<xstd::underlying_block_t<wire::flag>, std::uint32_t>);
         static_assert(std::is_same_v<xstd::underlying_block_t<wire::signed_flag>, std::uint16_t>);
         static_assert(std::is_same_v<xstd::underlying_block_t<wire::glyph>, unsigned char>);
-        static_assert(not has_underlying_block<wire::yes_no> and not has_underlying_block<std::uint32_t> and not has_underlying_block<std::bitset<8>>);
+        static_assert(std::is_same_v<xstd::underlying_block_t<int>, unsigned> and std::is_same_v<xstd::underlying_block_t<std::int8_t>, std::uint8_t>);
+        static_assert(std::is_same_v<xstd::underlying_block_t<std::uint32_t>, std::uint32_t> and std::is_same_v<xstd::underlying_block_t<std::int64_t>, std::uint64_t>);
+        static_assert(not has_underlying_block<wire::yes_no> and not has_underlying_block<std::bitset<8>>);
+        static_assert(not has_underlying_block<bool> and not has_underlying_block<char> and not has_underlying_block<char8_t> and not has_underlying_block<wchar_t>);
         BOOST_CHECK(true);
 }
 
@@ -303,11 +306,24 @@ BOOST_AUTO_TEST_CASE(TheUnderlyingSetIsInTheEnumerationsOwnWord)
         }
 }
 
-// Only a fixed-width set keyed by an enumeration with an unsigned counterpart has an underlying word to take.
-BOOST_AUTO_TEST_CASE(OnlyASetOfEnumerationKeysHasAnUnderlyingWord)
+// An integer mask's set in the unsigned counterpart: a narrow set of int widened back to the word an int field stores.
+BOOST_AUTO_TEST_CASE(TheUnderlyingSetOfAnIntegerMaskIsInItsUnsignedCounterpart)
+{
+        using narrow = xstd::bit_flag_set<int, 5>;
+        static_assert(std::is_same_v<xstd::bit_underlying<narrow>, xstd::basic_bit_fixed_set<int, unsigned, 5, xstd::bit_flag_mapping<int, 5>, std::greater<int>>>); // NOLINT(modernize-use-transparent-functors): the comparator the alias names
+        static_assert(std::is_same_v<xstd::bit_underlying<xstd::bit_flag_set<std::int8_t>>, xstd::bit_flag_set<std::int8_t>>);
+        static_assert(sizeof(narrow) == 1UZ and sizeof(xstd::bit_underlying<narrow>) == sizeof(int));
+        auto const x = xstd::bit_underlying<narrow>(0b10110);
+        BOOST_CHECK_EQUAL(std::bit_cast<unsigned>(x), 0b10110U);
+        BOOST_CHECK(int(x) == 0b10110 and x == narrow(0b10110));
+}
+
+// Only a fixed-width set keyed by an enumeration or an integer with an unsigned counterpart has an underlying word.
+BOOST_AUTO_TEST_CASE(OnlyASetOfEnumerationOrIntegerKeysHasAnUnderlyingWord)
 {
         static_assert(underlying_rebinds<xstd::bit_flag_set<wire::flag>> and underlying_rebinds<xstd::bit_flag_set<wire::signed_flag, 3>>);
-        static_assert(not underlying_rebinds<xstd::bit_array<9>> and not underlying_rebinds<xstd::bit_fixed_set<9>> and not underlying_rebinds<xstd::bit_set>);
+        static_assert(not underlying_rebinds<xstd::bit_array<9>> and not underlying_rebinds<xstd::bit_set>);
+        static_assert(std::is_same_v<xstd::bit_underlying<xstd::bit_least<xstd::bit_fixed_set<9>>>, xstd::bit_fixed_set<9>>);
         static_assert(not underlying_rebinds<xstd::bit_flag_set<std::bitset<16>>>);
         static_assert(not underlying_rebinds<xstd::basic_bit_fixed_set<wire::yes_no, std::uint8_t, 2, wire::yes_no_mapping>>);
         BOOST_CHECK(true);
