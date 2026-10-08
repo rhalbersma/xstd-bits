@@ -94,12 +94,12 @@ struct directory_options
         static constexpr auto empties   = std::to_array<type>({type::none});
 };
 
-// [re.synopt]'s elements, two of them held as constants: libc++ makes ECMAScript zero, and its ~ drops multiline.
+// [re.synopt]'s elements but multiline, absent from MSVC's STL; ECMAScript is a constant, since libc++ makes it zero.
 struct syntax_option_type
 {
         using type                      = std::regex_constants::syntax_option_type;
         static constexpr auto elements  = std::to_array<type>({std::regex_constants::icase, std::regex_constants::nosubs, std::regex_constants::optimize, std::regex_constants::collate, std::regex_constants::basic, std::regex_constants::extended, std::regex_constants::awk, std::regex_constants::grep, std::regex_constants::egrep});
-        static constexpr auto constants = std::to_array<type>({std::regex_constants::ECMAScript, std::regex_constants::multiline});
+        static constexpr auto constants = std::to_array<type>({std::regex_constants::ECMAScript});
         static constexpr auto empties   = std::array<type, 0>();
 };
 
