@@ -6,15 +6,16 @@
 #ifndef XSTD_BITS_DETAIL_BORROWED_BITS_HPP
 #define XSTD_BITS_DETAIL_BORROWED_BITS_HPP
 
-#include <xstd/bits/bit_blocks.hpp>                 // bit_block, bit_block_range
-#include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
-#include <xstd/ints/concepts/unsigned_integer.hpp>  // unsigned_integer
-#include <cstddef>                                  // size_t
-#include <memory>                                   // addressof
-#include <ranges>                                   // borrowed_range
-#include <span>                                     // dynamic_extent, span
-#include <type_traits>                              // conditional_t, is_const_v, is_lvalue_reference_v, remove_const_t, remove_reference_t
-#include <utility>                                  // declval
+#include <xstd/bits/bit_concepts/bit_block.hpp>       // bit_block
+#include <xstd/bits/bit_concepts/bit_block_range.hpp> // bit_block_range
+#include <xstd/bits/detail/bit_block_container.hpp>   // bit_block_container
+#include <xstd/ints/concepts/unsigned_integer.hpp>    // unsigned_integer
+#include <cstddef>                                    // size_t
+#include <memory>                                     // addressof
+#include <ranges>                                     // borrowed_range
+#include <span>                                       // dynamic_extent, span
+#include <type_traits>                                // conditional_t, is_const_v, is_lvalue_reference_v, remove_const_t, remove_reference_t
+#include <utility>                                    // declval
 
 // Bits in blocks someone else owns, which bit_set_view and bit_span hold by value and read and write in place.
 namespace xstd::bits::detail {

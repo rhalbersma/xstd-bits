@@ -3,25 +3,21 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/uint128.hpp>                 // IWYU pragma: keep; TEST_HAS_UINT128, uint128
-#include <xstd/bits/bit/bit_convert.hpp>    // bit_convert
-#include <xstd/bits/bit_array.hpp>          // basic_bit_array, bit_array
-#include <xstd/bits/bit_bounded_set.hpp>    // bit_bounded_set
-#include <xstd/bits/bit_bounded_vector.hpp> // bit_bounded_vector
-#include <xstd/bits/bit_fixed_set.hpp>      // basic_bit_fixed_set, bit_fixed_set
-#include <xstd/bits/bit_set.hpp>            // bit_set
-#include <xstd/bits/bit_set_view.hpp>       // bit_set_view
-#include <xstd/bits/bit_vector.hpp>         // bit_vector
-#include <xstd/bits/from_blocks.hpp>        // bit_constructible_from, from_blocks, from_blocks_t
-#include <boost/test/unit_test.hpp>         // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
-#include <array>                            // array
-#include <bitset>                           // bitset
-#include <concepts>                         // same_as
-#include <cstddef>                          // size_t
-#include <cstdint>                          // uint8_t, uint16_t, uint32_t, uint64_t
-#include <ranges>                           // iota
-#include <type_traits>                      // is_constructible_v, is_default_constructible_v
-#include <vector>                           // vector
+#include <test/uint128.hpp>                                  // IWYU pragma: keep; TEST_HAS_UINT128, uint128
+#include <xstd/bits/bit/bit_convert.hpp>                     // bit_convert
+#include <xstd/bits/bit_array.hpp>                           // basic_bit_array, bit_array
+#include <xstd/bits/bit_concepts/bit_constructible_from.hpp> // bit_constructible_from
+#include <xstd/bits/bit_fixed_set.hpp>                       // basic_bit_fixed_set, bit_fixed_set
+#include <xstd/bits/bit_vector.hpp>                          // bit_vector
+#include <xstd/bits/from_blocks.hpp>                         // from_blocks, from_blocks_t
+#include <boost/test/unit_test.hpp>                          // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
+#include <array>                                             // array
+#include <bitset>                                            // bitset
+#include <concepts>                                          // same_as
+#include <cstddef>                                           // size_t
+#include <cstdint>                                           // uint8_t, uint16_t, uint32_t, uint64_t
+#include <ranges>                                            // iota
+#include <type_traits>                                       // is_constructible_v, is_default_constructible_v
 
 BOOST_AUTO_TEST_SUITE(FromBlocks)
 
@@ -153,26 +149,6 @@ BOOST_AUTO_TEST_CASE(OnlyWhatIsBitStorageIsReadThroughTheTag)
         static_assert(std::is_constructible_v<xstd::bit_fixed_set<64>, xstd::from_blocks_t, std::array<std::uint32_t, 2>>);
         static_assert(not std::is_constructible_v<xstd::bit_fixed_set<64>, xstd::from_blocks_t, std::bitset<64>>);
         static_assert(not std::is_constructible_v<xstd::bit_fixed_set<64>, xstd::from_blocks_t, xstd::bit_array<64>>);
-        BOOST_CHECK(true);
-}
-
-// Blocks an owner takes as they are: its own container at a run-time width, or a field at a fixed one.
-BOOST_AUTO_TEST_CASE(BitConstructibleFromNamesBlocksTakenAsTheyAre)
-{
-        static_assert(xstd::bit_constructible_from<xstd::bit_vector, std::vector<std::size_t>> and xstd::bit_constructible_from<xstd::bit_set, std::vector<std::size_t>>);
-        static_assert(xstd::bit_constructible_from<xstd::bit_fixed_set<64>, std::array<std::uint64_t, 1>> and xstd::bit_constructible_from<xstd::bit_array<20>, std::array<std::uint8_t, 3>>);
-        static_assert(xstd::bit_constructible_from<xstd::bit_bounded_set<100>, xstd::bit_bounded_set<100>::block_container_type>);
-
-        // Another block type, a field too narrow, and a container a bounded owner does not hold are none of those.
-        static_assert(not xstd::bit_constructible_from<xstd::bit_vector, std::vector<std::uint8_t>>);
-        static_assert(not xstd::bit_constructible_from<xstd::bit_fixed_set<256>, std::array<std::uint64_t, 3>>);
-        static_assert(not xstd::bit_constructible_from<xstd::bit_bounded_set<100>, std::array<std::uint64_t, 2>>);
-        static_assert(not xstd::bit_constructible_from<xstd::bit_bounded_vector<100>, std::vector<std::size_t>>);
-
-        // What has bit storage without being it, and a view, which owns nothing to take blocks into.
-        static_assert(not xstd::bit_constructible_from<xstd::bit_fixed_set<64>, std::bitset<64>>);
-        static_assert(not xstd::bit_constructible_from<xstd::bit_vector, xstd::bit_set>);
-        static_assert(not xstd::bit_constructible_from<xstd::bit_set_view<std::uint64_t>, std::uint64_t>);
         BOOST_CHECK(true);
 }
 

@@ -6,31 +6,35 @@
 #ifndef XSTD_BITS_BIT_FIXED_SET_HPP
 #define XSTD_BITS_BIT_FIXED_SET_HPP
 
-#include <xstd/bits/bit_blocks.hpp>                          // bit_block, bit_blocks_extent_v, least_block_t
-#include <xstd/bits/bit_index_mapping.hpp>                   // bit_index_mapping, bit_mask_mapping, sized_bit_index_mapping
-#include <xstd/bits/bit_key_mapping.hpp>                     // bit_key_mapping
-#include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container, num_blocks_v
-#include <xstd/bits/detail/bit_layout.hpp>                   // byte_count, bytes_bits
-#include <xstd/bits/detail/ownership.hpp>                    // storage, storage_access
-#include <xstd/bits/detail/rebind.hpp>                       // rebind
-#include <xstd/bits/detail/set_adaptor.hpp>                  // admits_width, disjoint, intersects, key_direction, set_adaptor
-#include <xstd/bits/detail/shift.hpp>                        // shr
-#include <xstd/bits/from_blocks.hpp>                         // from_blocks, from_blocks_t
-#include <xstd/ints/concepts/unsigned_integer.hpp>           // unsigned_integer
-#include <xstd/ints/limits.hpp>                              // numeric_limits
-#include <xstd/misc/concepts/container_compatible_range.hpp> // container_compatible_range
-#include <boost/container_hash/is_range.hpp>                 // is_range
-#include <boost/container_hash/is_tuple_like.hpp>            // is_tuple_like
-#include <array>                                             // array
-#include <cassert>                                           // assert
-#include <concepts>                                          // constructible_from, same_as
-#include <cstddef>                                           // size_t
-#include <functional>                                        // hash, less
-#include <initializer_list>                                  // initializer_list
-#include <iterator>                                          // input_iterator
-#include <ranges>                                            // from_range, from_range_t
-#include <type_traits>                                       // conditional_t, false_type, is_enum_v
-#include <utility>                                           // forward
+#include <xstd/bits/bit_concepts/bit_block.hpp>               // bit_block
+#include <xstd/bits/bit_concepts/bit_index_mapping.hpp>       // bit_index_mapping
+#include <xstd/bits/bit_concepts/bit_mask_mapping.hpp>        // bit_mask_mapping
+#include <xstd/bits/bit_concepts/sized_bit_index_mapping.hpp> // sized_bit_index_mapping
+#include <xstd/bits/bit_key_mapping.hpp>                      // bit_key_mapping
+#include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp>    // bit_blocks_extent_v
+#include <xstd/bits/bit_type_traits/bit_least.hpp>            // least_block_t
+#include <xstd/bits/detail/bit_block_container.hpp>           // bit_block_container, num_blocks_v
+#include <xstd/bits/detail/bit_layout.hpp>                    // byte_count, bytes_bits
+#include <xstd/bits/detail/ownership.hpp>                     // storage, storage_access
+#include <xstd/bits/detail/rebind.hpp>                        // rebind
+#include <xstd/bits/detail/set_adaptor.hpp>                   // admits_width, disjoint, intersects, key_direction, set_adaptor
+#include <xstd/bits/detail/shift.hpp>                         // shr
+#include <xstd/bits/from_blocks.hpp>                          // from_blocks, from_blocks_t
+#include <xstd/ints/concepts/unsigned_integer.hpp>            // unsigned_integer
+#include <xstd/ints/limits.hpp>                               // numeric_limits
+#include <xstd/misc/concepts/container_compatible_range.hpp>  // container_compatible_range
+#include <boost/container_hash/is_range.hpp>                  // is_range
+#include <boost/container_hash/is_tuple_like.hpp>             // is_tuple_like
+#include <array>                                              // array
+#include <cassert>                                            // assert
+#include <concepts>                                           // constructible_from, same_as
+#include <cstddef>                                            // size_t
+#include <functional>                                         // hash, less
+#include <initializer_list>                                   // initializer_list
+#include <iterator>                                           // input_iterator
+#include <ranges>                                             // from_range, from_range_t
+#include <type_traits>                                        // conditional_t, false_type, is_enum_v
+#include <utility>                                            // forward
 
 namespace xstd {
 

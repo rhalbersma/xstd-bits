@@ -3,24 +3,25 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/bit_array.hpp>                 // bit_array
-#include <xstd/bits/bit_bounded_set.hpp>           // basic_bit_bounded_set, bit_bounded_set
-#include <xstd/bits/bit_bounded_vector.hpp>        // bit_bounded_vector
-#include <xstd/bits/bit_set.hpp>                   // basic_bit_set, bit_set
-#include <xstd/bits/bit_vector.hpp>                // basic_bit_vector, bit_vector
-#include <xstd/bits/ext/boost/dynamic_bitset.hpp>  // bit_convert, bit_convertible_to
-#include <boost/container/small_vector.hpp>        // small_vector
-#include <boost/dynamic_bitset/dynamic_bitset.hpp> // dynamic_bitset
-#include <boost/test/unit_test.hpp>                // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <boost/version.hpp>                       // BOOST_VERSION
-#include <bitset>                                  // bitset
-#include <cstddef>                                 // size_t
-#include <cstdint>                                 // uint8_t, uint16_t, uint64_t
-#include <new>                                     // bad_alloc
-#include <ranges>                                  // filter, iota, to
-#include <stdexcept>                               // overflow_error
-#include <utility>                                 // move
-#include <vector>                                  // vector
+#include <xstd/bits/bit_array.hpp>                       // bit_array
+#include <xstd/bits/bit_bounded_set.hpp>                 // basic_bit_bounded_set, bit_bounded_set
+#include <xstd/bits/bit_bounded_vector.hpp>              // bit_bounded_vector
+#include <xstd/bits/bit_concepts/bit_convertible_to.hpp> // bit_convertible_to
+#include <xstd/bits/bit_set.hpp>                         // basic_bit_set, bit_set
+#include <xstd/bits/bit_vector.hpp>                      // basic_bit_vector, bit_vector
+#include <xstd/bits/ext/boost/dynamic_bitset.hpp>        // bit_convert
+#include <boost/container/small_vector.hpp>              // small_vector
+#include <boost/dynamic_bitset/dynamic_bitset.hpp>       // dynamic_bitset
+#include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
+#include <boost/version.hpp>                             // BOOST_VERSION
+#include <bitset>                                        // bitset
+#include <cstddef>                                       // size_t
+#include <cstdint>                                       // uint8_t, uint16_t, uint64_t
+#include <new>                                           // bad_alloc
+#include <ranges>                                        // filter, iota, to
+#include <stdexcept>                                     // overflow_error
+#include <utility>                                       // move
+#include <vector>                                        // vector
 
 BOOST_AUTO_TEST_SUITE(ExtBoostDynamicBitset)
 

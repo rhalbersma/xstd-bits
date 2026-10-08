@@ -6,24 +6,25 @@
 #ifndef XSTD_BITS_BIT_ARRAY_HPP
 #define XSTD_BITS_BIT_ARRAY_HPP
 
-#include <xstd/bits/bit_blocks.hpp>                 // bit_block, bit_blocks_extent_v
-#include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container, num_blocks_v
-#include <xstd/bits/detail/ownership.hpp>           // storage, window
-#include <xstd/bits/detail/rebind.hpp>              // rebind
-#include <xstd/bits/detail/sequence_adaptor.hpp>    // sequence_adaptor
-#include <xstd/bits/from_blocks.hpp>                // from_blocks, from_blocks_t
-#include <xstd/ints/concepts/unsigned_integer.hpp>  // unsigned_integer
-#include <boost/container_hash/is_range.hpp>        // is_range
-#include <boost/container_hash/is_tuple_like.hpp>   // is_tuple_like
-#include <algorithm>                                // copy
-#include <array>                                    // array
-#include <concepts>                                 // constructible_from, same_as
-#include <cstddef>                                  // size_t
-#include <functional>                               // hash
-#include <initializer_list>                         // initializer_list
-#include <tuple>                                    // tuple_element, tuple_size
-#include <type_traits>                              // false_type, remove_cv_t
-#include <utility>                                  // move
+#include <xstd/bits/bit_concepts/bit_block.hpp>            // bit_block
+#include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp> // bit_blocks_extent_v
+#include <xstd/bits/detail/bit_block_container.hpp>        // bit_block_container, num_blocks_v
+#include <xstd/bits/detail/ownership.hpp>                  // storage, window
+#include <xstd/bits/detail/rebind.hpp>                     // rebind
+#include <xstd/bits/detail/sequence_adaptor.hpp>           // sequence_adaptor
+#include <xstd/bits/from_blocks.hpp>                       // from_blocks, from_blocks_t
+#include <xstd/ints/concepts/unsigned_integer.hpp>         // unsigned_integer
+#include <boost/container_hash/is_range.hpp>               // is_range
+#include <boost/container_hash/is_tuple_like.hpp>          // is_tuple_like
+#include <algorithm>                                       // copy
+#include <array>                                           // array
+#include <concepts>                                        // constructible_from, same_as
+#include <cstddef>                                         // size_t
+#include <functional>                                      // hash
+#include <initializer_list>                                // initializer_list
+#include <tuple>                                           // tuple_element, tuple_size
+#include <type_traits>                                     // false_type, remove_cv_t
+#include <utility>                                         // move
 
 namespace xstd {
 

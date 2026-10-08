@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_DETAIL_SEQUENCE_ADAPTOR_HPP
 #define XSTD_BITS_DETAIL_SEQUENCE_ADAPTOR_HPP
 
-#include <xstd/bits/bit_blocks.hpp>                          // bit_blocks
+#include <xstd/bits/bit_concepts/bit_blocks.hpp>             // bit_blocks
 #include <xstd/bits/detail/adapted_bits.hpp>                 // adapted_bits
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_base_type, allocator_param_t, has_allocator_v
 #include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container, bit_block_container_type
@@ -15,7 +15,7 @@
 #include <xstd/bits/detail/functor.hpp>                      // invoke_continues
 #include <xstd/bits/detail/hash.hpp>                         // hash_append_bits, std_hash
 #include <xstd/bits/detail/intrin.hpp>                       // countr_zero, popcount
-#include <xstd/bits/detail/ownership.hpp>                    // owned_bits_t, owned_storage, owner_of, owner_reading, sequence_reading_tag, storage, storage_access, owns, window
+#include <xstd/bits/detail/ownership.hpp>                    // owned_bits_t, owned_storage, owner_of, owner_reading, owns, sequence_reading_tag, storage, storage_access, window
 #include <xstd/bits/detail/shift.hpp>                        // shl, shr
 #include <xstd/bits/detail/storage_ptr.hpp>                  // storage_ptr_t, storage_ref_t
 #include <xstd/bits/from_blocks.hpp>                         // from_blocks_t

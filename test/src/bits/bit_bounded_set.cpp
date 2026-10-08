@@ -4,10 +4,11 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/set/ascending.hpp>                   // yields_ascending_keys
-#include <xstd/bits/bit_blocks.hpp>                 // bit_align, bit_least
 #include <xstd/bits/bit_bounded_set.hpp>            // basic_bit_bounded_set, bit_bounded_set
+#include <xstd/bits/bit_type_traits/bit_align.hpp>  // bit_align
+#include <xstd/bits/bit_type_traits/bit_least.hpp>  // bit_least
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
-#include <xstd/bits/detail/bounded_blocks.hpp>      // bounded_blocks, XSTD_BITS_HAS_CONSTEXPR_BOUNDED
+#include <xstd/bits/detail/bounded_blocks.hpp>      // XSTD_BITS_HAS_CONSTEXPR_BOUNDED, bounded_blocks
 #include <xstd/bits/detail/ownership.hpp>           // owned_bits_t, storage
 #include <xstd/bits/detail/set_adaptor.hpp>         // set_adaptor
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW

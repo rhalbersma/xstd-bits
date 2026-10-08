@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_BIT_BOUNDED_VECTOR_HPP
 #define XSTD_BITS_BIT_BOUNDED_VECTOR_HPP
 
-#include <xstd/bits/bit_blocks.hpp>                          // bit_blocks_extent_v
+#include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp>   // bit_blocks_extent_v
 #include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container
 #include <xstd/bits/detail/bounded_blocks.hpp>               // bounded_blocks, bounded_blocks_for
 #include <xstd/bits/detail/ownership.hpp>                    // storage, window

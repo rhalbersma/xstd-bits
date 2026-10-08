@@ -6,10 +6,10 @@
 #include <test/for_each_type.hpp>                   // for_each_type
 #include <test/structural.hpp>                      // structural, value_parameter
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
-#include <xstd/bits/bit_blocks.hpp>                 // bit_align
 #include <xstd/bits/bit_bounded_set.hpp>            // bit_bounded_set
 #include <xstd/bits/bit_bounded_vector.hpp>         // bit_bounded_vector
 #include <xstd/bits/bit_fixed_set.hpp>              // bit_fixed_set
+#include <xstd/bits/bit_type_traits/bit_align.hpp>  // bit_align
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
 #include <xstd/bits/from_blocks.hpp>                // from_blocks
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END

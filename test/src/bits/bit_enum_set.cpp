@@ -3,31 +3,31 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/set/enums.hpp>                  // day, listed_enums, nine, perm, piece, wind
-#include <test/set/lookup.hpp>                 // lookup_mismatches
-#include <xstd/bits/bit_array.hpp>             // bit_array
-#include <xstd/bits/bit_blocks.hpp>            // bit_least
-#include <xstd/bits/bit_enum_set.hpp>          // bit_enum_set
-#include <xstd/bits/bit_fixed_set.hpp>         // basic_bit_fixed_set, bit_fixed_set
-#include <xstd/bits/bit_key_mapping.hpp>       // bit_key_mapping, bit_range_mapping, enum_traits
-#include <xstd/bits/from_blocks.hpp>           // from_blocks
-#include <xstd/misc/concepts.hpp>              // proxy_iterator, proxy_reference
-#include <xstd/misc/utility/to_underlying.hpp> // to_underlying
-#include <boost/test/unit_test.hpp>            // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <algorithm>                           // max, min, ranges::equal, ranges::includes
-#include <bit>                                 // bit_cast
-#include <concepts>                            // same_as
-#include <cstddef>                             // size_t
-#include <cstdint>                             // uint16_t, uint32_t, uint8_t
-#include <format>                              // format
-#include <functional>                          // greater
-#include <limits>                              // numeric_limits
-#include <ranges>                              // iota, iterator_t, range_reference_t, reverse, size, to, transform
-#include <set>                                 // set
-#include <stdexcept>                           // out_of_range
-#include <type_traits>                         // underlying_type_t
-#include <utility>                             // pair, to_underlying
-#include <vector>                              // vector
+#include <test/set/enums.hpp>                      // day, listed_enums, nine, perm, piece, wind
+#include <test/set/lookup.hpp>                     // lookup_mismatches
+#include <xstd/bits/bit_array.hpp>                 // bit_array
+#include <xstd/bits/bit_enum_set.hpp>              // bit_enum_set
+#include <xstd/bits/bit_fixed_set.hpp>             // basic_bit_fixed_set, bit_fixed_set
+#include <xstd/bits/bit_key_mapping.hpp>           // bit_key_mapping, bit_range_mapping, enum_traits
+#include <xstd/bits/bit_type_traits/bit_least.hpp> // bit_least
+#include <xstd/bits/from_blocks.hpp>               // from_blocks
+#include <xstd/misc/concepts.hpp>                  // proxy_iterator, proxy_reference
+#include <xstd/misc/utility/to_underlying.hpp>     // to_underlying
+#include <boost/test/unit_test.hpp>                // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
+#include <algorithm>                               // max, min, ranges::equal, ranges::includes
+#include <bit>                                     // bit_cast
+#include <concepts>                                // same_as
+#include <cstddef>                                 // size_t
+#include <cstdint>                                 // uint16_t, uint32_t, uint8_t
+#include <format>                                  // format
+#include <functional>                              // greater
+#include <limits>                                  // numeric_limits
+#include <ranges>                                  // iota, iterator_t, range_reference_t, reverse, size, to, transform
+#include <set>                                     // set
+#include <stdexcept>                               // out_of_range
+#include <type_traits>                             // underlying_type_t
+#include <utility>                                 // pair, to_underlying
+#include <vector>                                  // vector
 
 namespace {
 

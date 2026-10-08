@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_DETAIL_VIEWS_HPP
 #define XSTD_BITS_DETAIL_VIEWS_HPP
 
-#include <xstd/bits/bit_blocks.hpp>              // bit_blocks
+#include <xstd/bits/bit_concepts/bit_blocks.hpp> // bit_blocks
 #include <xstd/bits/detail/sequence_adaptor.hpp> // blit_source, window_of
 #include <cstddef>                               // size_t
 

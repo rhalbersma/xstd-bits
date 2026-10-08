@@ -6,8 +6,9 @@
 #include <test/inplace_vector.hpp>                  // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
 #include <test/sequence/dense.hpp>                  // yields_every_position
 #include <test/sequence/rotation.hpp>               // permutation_sweep
-#include <xstd/bits/bit_blocks.hpp>                 // bit_align, bit_least
 #include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector, bit_bounded_vector
+#include <xstd/bits/bit_type_traits/bit_align.hpp>  // bit_align
+#include <xstd/bits/bit_type_traits/bit_least.hpp>  // bit_least
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
 #include <xstd/bits/detail/bounded_blocks.hpp>      // bounded_blocks
 #include <xstd/bits/detail/ownership.hpp>           // owned_bits_t, storage

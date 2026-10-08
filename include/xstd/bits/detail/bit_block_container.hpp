@@ -6,7 +6,12 @@
 #ifndef XSTD_BITS_DETAIL_BIT_BLOCK_CONTAINER_HPP
 #define XSTD_BITS_DETAIL_BIT_BLOCK_CONTAINER_HPP
 
-#include <xstd/bits/bit_blocks.hpp>                          // bit_block, bit_block_range, bit_blocks_capacity_v, bit_blocks_extent_v, owned_bit_blocks, resizable_bit_blocks
+#include <xstd/bits/bit_concepts/bit_block.hpp>              // bit_block
+#include <xstd/bits/bit_concepts/bit_block_range.hpp>        // bit_block_range
+#include <xstd/bits/bit_concepts/owned_bit_blocks.hpp>       // owned_bit_blocks
+#include <xstd/bits/bit_concepts/resizable_bit_blocks.hpp>   // resizable_bit_blocks
+#include <xstd/bits/bit_type_traits/bit_blocks_capacity.hpp> // bit_blocks_capacity_v
+#include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp>   // bit_blocks_extent_v
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_base_type, allocator_param_t, has_allocator_v
 #include <xstd/bits/detail/bit_layout.hpp>                   // bit_bytes, bit_layout, container_source, fixed_blocks_source
 #include <xstd/bits/detail/borrowed_block_span.hpp>          // borrowed_block_span

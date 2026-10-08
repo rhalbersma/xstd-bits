@@ -6,9 +6,9 @@
 #ifndef XSTD_BITS_BIT_BOUNDED_SET_HPP
 #define XSTD_BITS_BIT_BOUNDED_SET_HPP
 
-#include <xstd/bits/bit_blocks.hpp>                          // bit_blocks_extent_v
-#include <xstd/bits/bit_index_mapping.hpp>                   // bit_index_mapping
+#include <xstd/bits/bit_concepts/bit_index_mapping.hpp>      // bit_index_mapping
 #include <xstd/bits/bit_key_mapping.hpp>                     // bit_key_mapping
+#include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp>   // bit_blocks_extent_v
 #include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container, num_blocks_v
 #include <xstd/bits/detail/bounded_blocks.hpp>               // bounded_blocks
 #include <xstd/bits/detail/ownership.hpp>                    // storage

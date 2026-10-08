@@ -6,13 +6,14 @@
 #ifndef XSTD_BITS_DETAIL_BIT_WIDTH_HPP
 #define XSTD_BITS_DETAIL_BIT_WIDTH_HPP
 
-#include <xstd/bits/bit_blocks.hpp>        // bit_blocks_extent_v, owned_bit_blocks
-#include <xstd/bits/detail/bit_layout.hpp> // fixed_bit_blocks
-#include <xstd/bits/detail/ownership.hpp>  // owned_storage, owner, view
-#include <bitset>                          // bitset
-#include <cstddef>                         // size_t
-#include <span>                            // dynamic_extent
-#include <type_traits>                     // is_bounded_array_v, remove_const_t
+#include <xstd/bits/bit_concepts/owned_bit_blocks.hpp>     // owned_bit_blocks
+#include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp> // bit_blocks_extent_v
+#include <xstd/bits/detail/bit_layout.hpp>                 // fixed_bit_blocks
+#include <xstd/bits/detail/ownership.hpp>                  // owned_storage, owner, view
+#include <bitset>                                          // bitset
+#include <cstddef>                                         // size_t
+#include <span>                                            // dynamic_extent
+#include <type_traits>                                     // is_bounded_array_v, remove_const_t
 
 // The width of bit storage a type has, fixed by its type: what xstd::bit_convert matches two fixed widths by.
 namespace xstd::bits::detail {

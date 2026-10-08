@@ -6,13 +6,14 @@
 #ifndef XSTD_BITS_DETAIL_FLAG_WORD_HPP
 #define XSTD_BITS_DETAIL_FLAG_WORD_HPP
 
-#include <xstd/bits/bit/bit_convert.hpp> // bit_convert
-#include <xstd/bits/bit_blocks.hpp>      // least_block_t, underlying_block_t
-#include <bitset>                        // bitset
-#include <concepts>                      // integral
-#include <cstddef>                       // size_t
-#include <limits>                        // numeric_limits
-#include <type_traits>                   // conditional_t, is_enum_v, type_identity
+#include <xstd/bits/bit/bit_convert.hpp>                // bit_convert
+#include <xstd/bits/bit_type_traits/bit_least.hpp>      // least_block_t
+#include <xstd/bits/bit_type_traits/bit_underlying.hpp> // underlying_block_t
+#include <bitset>                                       // bitset
+#include <concepts>                                     // integral
+#include <cstddef>                                      // size_t
+#include <limits>                                       // numeric_limits
+#include <type_traits>                                  // conditional_t, is_enum_v, type_identity
 
 // The block a flag type's mask is read and written as: an enumeration's or an integer's unsigned word, or a bitset's.
 namespace xstd::bits::detail {
