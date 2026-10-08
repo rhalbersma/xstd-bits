@@ -23,7 +23,7 @@
 #include <xstd/misc/type_traits/empty_base_type.hpp>         // empty_base_type
 #include <boost/container_hash/is_range.hpp>                 // is_range
 #include <boost/container_hash/is_tuple_like.hpp>            // is_tuple_like
-#include <boost/hash2/hash_append.hpp>                       // hash_append_tag
+#include <boost/hash2/hash_append_fwd.hpp>                   // hash_append_tag
 #include <algorithm>                                         // copy, min, remove_if
 #include <cassert>                                           // assert
 #include <compare>                                           // strong_ordering
@@ -655,11 +655,11 @@ class sequence_adaptor : public sequence::sizes_t<Bits, Store, W, Derived, E>
 
         // The value under the sequence reading, the owner's alone: a view follows span and hashes no more.
         template<class Provider, class Hash, class Flavor>
-        friend constexpr auto tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, sequence_adaptor const* v) noexcept
+        friend constexpr auto tag_invoke(boost::hash2::hash_append_tag const&, Provider const& pr, Hash& h, Flavor const& f, sequence_adaptor const* v) noexcept
                 -> void
                 requires is_owner
         {
-                hash_append_bits(h, f, v->bits());
+                hash_append_bits(pr, h, f, v->bits());
         }
 
 public:

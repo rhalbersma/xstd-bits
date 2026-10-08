@@ -1313,7 +1313,9 @@ under every reading. The cross-cutting protocols -- equality, ordering, formatti
 `std::string` hashing while `std::array`, `std::set` and `std::pair` do not, is history rather than design.
 
 The engine is Boost.Hash2: each adaptor carries a `tag_invoke` hook for `hash_append`, and `std::hash` is
-one detail helper over it, a hash folded by `get_integral_result`.
+one detail helper over it, a hash folded by `get_integral_result`. A hook appends through the provider Hash2
+hands it rather than through `boost::hash2::hash_append` by name, so the adaptor headers need only
+`hash_append_fwd.hpp`.
 
 What a hook appends is the value **itself**, never a storage's own hook: the blocks and the width. So equal
 values hash equal whatever holds them, and no storage's `std::hash` is consulted. Every storage holds its

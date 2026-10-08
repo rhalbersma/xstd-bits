@@ -10,7 +10,7 @@
 #include <boost/hash2/flavor.hpp>              // default_flavor
 #include <boost/hash2/fnv1a.hpp>               // fnv1a_32, fnv1a_64
 #include <boost/hash2/get_integral_result.hpp> // get_integral_result
-#include <boost/hash2/hash_append.hpp>         // hash_append, hash_append_range, hash_append_size
+#include <boost/hash2/hash_append.hpp>         // hash_append
 #include <boost/hash2/xxhash.hpp>              // xxhash_32, xxhash_64
 #include <cstddef>                             // size_t
 #include <cstdint>                             // uint64_t
@@ -20,8 +20,8 @@
 namespace xstd::bits::detail {
 
 // The value: the blocks and the width. Every storage reads by block, so equal values hash equal whatever holds them.
-template<class Hash, class Flavor, class Bits>
-constexpr auto hash_append_bits(Hash& h, Flavor const& f, Bits const& c)
+template<class Provider, class Hash, class Flavor, class Bits>
+constexpr auto hash_append_bits(Provider const& pr, Hash& h, Flavor const& f, Bits const& c)
         -> void
 {
         using block_type  = Bits::block_type;
@@ -30,26 +30,26 @@ constexpr auto hash_append_bits(Hash& h, Flavor const& f, Bits const& c)
                 // A block wider than Hash2 writes, the 128-bit one, goes in as its two halves, low first.
                 constexpr auto half = static_cast<unsigned>(std::numeric_limits<std::uint64_t>::digits);
                 for (auto const b : blocks) {
-                        boost::hash2::hash_append(h, f, static_cast<std::uint64_t>(b));
-                        boost::hash2::hash_append(h, f, static_cast<std::uint64_t>(shr(b, half)));
+                        pr.hash_append(h, f, static_cast<std::uint64_t>(b));
+                        pr.hash_append(h, f, static_cast<std::uint64_t>(shr(b, half)));
                 }
         } else {
                 // Contiguous whole blocks, padding clear: one update writes the bytes a block at a time would.
-                boost::hash2::hash_append_range(h, f, blocks.data(), blocks.data() + blocks.size());
+                pr.hash_append_range(h, f, blocks.data(), blocks.data() + blocks.size());
         }
-        boost::hash2::hash_append_size(h, f, c.size());
+        pr.hash_append_size(h, f, c.size());
 }
 
 // The set reading at a run-time width: the positions held and their count, since equal sets need not share a width.
-template<class Hash, class Flavor, class Bits>
-constexpr auto hash_append_positions(Hash& h, Flavor const& f, Bits const& c)
+template<class Provider, class Hash, class Flavor, class Bits>
+constexpr auto hash_append_positions(Provider const& pr, Hash& h, Flavor const& f, Bits const& c)
         -> void
 {
         for (auto n = c.find_first(); n != c.size(); n = c.exclusive_find_next(n)) {
                 // As the flavor writes a size, so a fixed size_type gives one message on 32- and 64-bit targets.
-                boost::hash2::hash_append(h, f, static_cast<Flavor::size_type>(n));
+                pr.hash_append(h, f, static_cast<Flavor::size_type>(n));
         }
-        boost::hash2::hash_append_size(h, f, c.count());
+        pr.hash_append_size(h, f, c.count());
 }
 
 // The default algorithms at the platform's width: FNV-1a for a short message, xxHash for a longer one.
