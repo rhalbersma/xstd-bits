@@ -113,7 +113,7 @@ BOOST_AUTO_TEST_CASE(ItIsBuiltAndOrderedLikeAStdSet)
         auto t = s;
         t.insert(1);
         BOOST_CHECK(t < s);
-        BOOST_CHECK(s.is_subset_of(t));
+        BOOST_CHECK(s.is_subset_of(t) and t.is_superset_of(s));
         BOOST_CHECK(intersects(t, s));
 
         // The view over it refers into the owner's std::vector of blocks, as over every owner.
@@ -136,6 +136,8 @@ BOOST_AUTO_TEST_CASE(TheWidthIsCapacityNotValue)
         BOOST_CHECK(digest(narrow) != digest(T({1})));
         BOOST_CHECK(narrow.is_subset_of(wide) and wide.is_subset_of(narrow));
         BOOST_CHECK(not narrow.is_proper_subset_of(wide));
+        BOOST_CHECK(narrow.is_superset_of(wide) and wide.is_superset_of(narrow));
+        BOOST_CHECK(not wide.is_proper_superset_of(narrow));
         BOOST_CHECK(intersects(narrow, wide));
 }
 
@@ -159,6 +161,10 @@ BOOST_AUTO_TEST_CASE(TheSetOperationsIgnoreTheWidth)
         BOOST_CHECK(not a.is_subset_of(b));
         BOOST_CHECK(not a.is_proper_subset_of(b));
         BOOST_CHECK(not b.is_proper_subset_of(a));
+        auto const both = a | b;
+        BOOST_CHECK(both.is_proper_superset_of(b) and both.is_superset_of(a));
+        BOOST_CHECK(not a.is_superset_of(b) and not b.is_superset_of(a));
+        BOOST_CHECK(not a.is_proper_superset_of(b) and not b.is_proper_superset_of(a));
         BOOST_CHECK(not intersects(T({5}), a));
         BOOST_CHECK(not intersects(a, T({5})));
 }

@@ -233,9 +233,11 @@ auto query_mismatches_over_pairs()
                 for (auto const rhs : std::views::iota(0UZ, 1UZ << n)) {
                         auto const ym     = split<M>(rhs).first;
                         auto const y      = X(ym.begin(), ym.end());
-                        auto const all_of = includes(x, y);
+                        auto const all_of = x.is_superset_of(y);
                         mismatches += static_cast<std::size_t>(disjoint(x, y) == intersects(x, y));
                         mismatches += static_cast<std::size_t>(all_of != y.is_subset_of(x));
+                        mismatches += static_cast<std::size_t>(x.is_proper_superset_of(y) != (all_of and x != y));
+                        mismatches += static_cast<std::size_t>(x.is_proper_superset_of(y) != y.is_proper_subset_of(x));
                         mismatches += static_cast<std::size_t>(all_of != std::ranges::includes(x, y, x.key_comp()));
                         mismatches += static_cast<std::size_t>(all_of != std::ranges::includes(xm, ym, xm.key_comp()));
                 }
@@ -362,14 +364,16 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(EverySubsetAgreesWithStdSet, E, test::set::listed_
         agrees_with_std_set_on_every_subset<descending_set<E>, std::set<E, std::greater<>>>();
 }
 
-// disjoint is none-of and includes all-of, over every pair of subsets of every enumeration of at most six values.
-BOOST_AUTO_TEST_CASE_TEMPLATE(DisjointIsNotIntersectsAndIncludesIsTheSubsetReadTheOtherWay, E, test::set::listed_enums)
+// disjoint is none-of and is_superset_of all-of, over every pair of subsets of every enumeration of at most six values.
+BOOST_AUTO_TEST_CASE_TEMPLATE(DisjointIsNotIntersectsAndTheSupersetIsTheSubsetReadTheOtherWay, E, test::set::listed_enums)
 {
         if constexpr (std::ranges::size(xstd::enum_traits<E>::values) <= 6UZ) {
                 BOOST_CHECK_EQUAL((query_mismatches_over_pairs<xstd::bit_enum_set<E>, std::set<E>>()), 0UZ);
                 BOOST_CHECK_EQUAL((query_mismatches_over_pairs<descending_set<E>, std::set<E, std::greater<>>>()), 0UZ);
         } else {
-                BOOST_CHECK(not includes(xstd::bit_enum_set<E>(), ~xstd::bit_enum_set<E>()) and disjoint(xstd::bit_enum_set<E>(), ~xstd::bit_enum_set<E>()));
+                auto const none = xstd::bit_enum_set<E>();
+                auto const all  = ~none;
+                BOOST_CHECK(not none.is_superset_of(all) and all.is_proper_superset_of(none) and disjoint(none, all));
         }
 }
 

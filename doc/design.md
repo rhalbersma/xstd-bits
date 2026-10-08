@@ -1157,7 +1157,8 @@ way, reaches the storage's friend directly.
 `is_proper_subset_of` is not the storage's at all: it is `is_subset_of` and a difference, and a difference
 needs an equality, which is a reading's. `set_adaptor` assembles it from the primitive as
 `is_subset_of` and `not set_equal`, since `is_subset_of` answers across two widths and a subset holding the same
-positions at another width is not a proper one.
+positions at another width is not a proper one. Neither superset query is the storage's either: `set_adaptor`
+answers `x.is_superset_of(y)` as `y.is_subset_of(x)`, and the proper one likewise.
 
 Both orderings are answered a block at a time, from two pieces:
 
@@ -1222,27 +1223,33 @@ what it may not do is answer differently.
 
 ### the-set-queries
 
-A set answers one question of a key and four of another set, each a predicate the standard library already names:
+A set answers one question of a key and six of another set, each a predicate the standard library, Boost or a
+proposal for `std::bitset` already names:
 
 | query | true where | spelled | named after |
 | :--- | :--- | :--- | :--- |
 | `contains(k)` | `k` is an element | member | `std::set::contains`, the predicate form of `find` |
-| `includes(x, y)` | every element of `y` is one of `x`'s | free | `std::ranges::includes(x, y)`, the same order of arguments |
 | `intersects(x, y)` | some element is in both | free | `std::ranges::set_intersection`, its result not empty |
 | `disjoint(x, y)` | no element is in both | free | `std::ranges::set_intersection`, its result empty |
 | `x.is_subset_of(y)` | every element of `x` is one of `y`'s | member | `boost::dynamic_bitset`, and [P0125R0](https://wg21.link/p0125r0) for `std::bitset` |
+| `x.is_proper_subset_of(y)` | that, and `y` has an element `x` lacks | member | `boost::dynamic_bitset`, and P0125R0 |
+| `x.is_superset_of(y)` | every element of `y` is one of `x`'s | member | P0125R0, the same question as `std::ranges::includes(x, y)` |
+| `x.is_proper_superset_of(y)` | that, and `x` has an element `y` lacks | member | P0125R0 |
 
 `contains` is total, as `std::set`'s is: a key past the width, and a value that is no key of the mapping at all, are
-no element. The four over two sets are all-of in either direction, any-of and none-of, and they split by symmetry. `intersects` and
-`disjoint` are symmetric, a question about two sets with neither its subject, so they are free functions, hidden
-friends of the adaptor found by ADL. `is_subset_of` is not, and the member spelling says which side is which.
-`includes` is the converse of `is_subset_of`, P0125R0's `is_superset_of`, which that paper proposed for `std::bitset`
-beside it, but it takes the name and the argument order of `std::ranges::includes`, a free algorithm over two ranges,
-for the reason `intersects` takes `set_intersection`'s: the counterpart decides, and `includes(x, y)` answers exactly
-what `std::ranges::includes(x, y)` does over the same keys. No member reads the relation the other way round, so the
-two directions are never a pair of members a reader must tell apart. `disjoint(x, y)` is `not intersects(x, y)` and
-`includes(x, y)` is `y.is_subset_of(x)`: each forwards to the block-wise primitive, at any two widths, and is
-`noexcept` as it is.
+no element. The six over two sets are any-of, none-of, and all-of in either direction with and without equality,
+and they split by symmetry. `intersects` and `disjoint` are symmetric, a question about two sets with neither its
+subject, so they are free functions, hidden friends of the adaptor found by ADL. The four containments are not:
+`a ⊆ b` is not `b ⊆ a`, so each is a member and the spelling says which side holds which. They are the two pairs
+P0125R0 proposes for `std::bitset`, so turning `y.is_subset_of(x)` round reads `x.is_superset_of(y)`, a member
+again, and the two directions never split between a member and a free function a reader must tell apart.
+`disjoint(x, y)` is `not intersects(x, y)`, `x.is_superset_of(y)` is `y.is_subset_of(x)` and
+`x.is_proper_superset_of(y)` is `y.is_proper_subset_of(x)`: each forwards to the block-wise primitive, at any two
+widths, and is `noexcept` as it is.
+
+`includes(x, y)`, the superset question in `std::ranges::includes`'s order of arguments, is deferred to a future
+`bit_algorithms` header, beside the other algorithms over two sets that a bit set answers a block at a time. Among
+the queries each relation has one spelling, and the member already answers this one.
 
 ### degenerate-widths
 
@@ -2650,8 +2657,8 @@ block holding `N` as `bit_enum_set` is. What makes a fixed set a flag type is it
 refines `sized_bit_index_mapping` with `M::to_block`, which takes any value of `Key`, one-bit or not, to the block
 holding its bits at their positions, and `M::from_block`, which reads one back; `bit_flag_mapping` models it and no
 other mapping does. Under that concept alone, `basic_bit_fixed_set` declares the members a flag type has: the
-conversion from the mask and to it, the union of a braced list, the mixed operators, and `includes`, `intersects` and
-`disjoint` over a mask on either side. A set of positions or of listed enumerators has none of them, and a flag set
+conversion from the mask and to it, the union of a braced list, the mixed operators, `intersects` and
+`disjoint` over a mask on either side, and the four containments over a mask as the other set. A set of positions or of listed enumerators has none of them, and a flag set
 over another block, `bit_fast<bit_flag_set<Mask>>` or `basic_bit_fixed_set<Mask, std::uint8_t, 16, bit_flag_mapping<Mask, 16>>`
 over two bytes, or in ascending order, has all of them.
 `examples/include/xstd/filesystem.hpp` is one line, `using perms = bit_flag_set<std::filesystem::perms, 16>;`,
@@ -2745,10 +2752,13 @@ taking the mask as it is, beside the adaptor's member set forms, which a mask ca
 
 **`contains(k)` is `std::set`'s membership of one flag.** A value of several bits, or of none, is no key, so it is no
 element either: `contains` answers `false`, `count` zero, `find` `end()` and `erase` zero, and over an enumeration the
-bounds place it by the mask's order. Writing one stays `bit_flag_mapping`'s precondition, there being no single position to write. All-of
-is `includes(p, m)`, any-of `intersects(p, m)` and none-of `disjoint(p, m)`, the adaptor's hidden friends, which the
-flag type declares again over itself so that a mask converts on either side; no member answers two questions under
-one name. There is no `operator[]` and no
+bounds place it by the mask's order. Writing one stays `bit_flag_mapping`'s precondition, there being no single position to write. Any-of
+is `intersects(p, m)` and none-of `disjoint(p, m)`, the adaptor's hidden friends, which the flag type declares again
+over itself so that a mask converts on either side. All-of is `p.is_superset_of(m)`, and its converse
+`p.is_subset_of(m)`: the four containments are the adaptor's members, which the flag type declares again over itself
+so that a mask converts as the other set, with using-declarations bringing back the adaptor's own, which a member of
+the name would otherwise hide. A mask has no members, so it never stands first, and `m ⊇ p` is `p.is_subset_of(m)`;
+no member answers two questions under one name. There is no `operator[]` and no
 proxy for a `bool`: a set changes one flag through `insert(k)` and `erase(k)`, as `std::set` does. There is no
 nullary `count()` either: `size()` answers it.
 
@@ -3078,7 +3088,7 @@ to throw above it is what has to give. `growing_insert` is the case: a key past 
 which is the one way `insert` on a dynamic extent can refuse ([asking-is-total](#asking-is-total)). The four
 composable checks in the test tree were `noexcept` over `|`, `&`, `-` and `^`, and each builds its expected value
 with `ranges::to`, which inserts -- so the `noexcept` was a promise about a reachable exception, and it went, as
-the test factory's did over `resize`. `includes()` beside them constructs nothing and keeps its. The narrower ceiling stays the blocks' own: `m_blocks.resize` and
+the test factory's did over `resize`. The four containment checks beside them construct nothing and keep theirs. The narrower ceiling stays the blocks' own: `m_blocks.resize` and
 `m_blocks.reserve` are handed a count and answer for it, which is why `resize(max_width)` is `bad_alloc` and
 `resize(max_width + 1)` is `length_error`. `resize` takes that count **before** it writes the last block, so a
 refused growth leaves the width and the bits exactly as they were.
@@ -3214,8 +3224,8 @@ adaptor can default `==` there and nowhere else.
 
 The **storage** answers at any two widths, and the adaptor calls it or the comparisons built on it. `set_equal`,
 `set_three_way`, `is_subset_of` and `intersects` each carry their own width-crossing arm, and
-`is_proper_subset_of` is `is_subset_of` and `not set_equal`, so the four read operations in `set_adaptor` are
-calls with no `same_width` test between them -- only the four compound
+`is_proper_subset_of` is `is_subset_of` and `not set_equal`, and the superset pair is the subset pair with its
+operands swapped, so the read operations in `set_adaptor` are calls with no `same_width` test between them -- only the four compound
 operators still ask, because they mutate. The logic belongs where the blocks and the invariant are, and putting
 it there is also what keeps the adaptors alike, where `sequence_adaptor` had nothing at all. At two run-time widths that differ, `==`,
 `is_subset_of` and `intersects` all ask whole **blocks** rather than walking positions. Only the blocks both
