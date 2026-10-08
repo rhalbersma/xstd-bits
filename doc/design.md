@@ -1313,28 +1313,37 @@ under every reading. The cross-cutting protocols -- equality, ordering, formatti
 `std::string` hashing while `std::array`, `std::set` and `std::pair` do not, is history rather than design.
 
 The engine is Boost.Hash2: each adaptor carries a `tag_invoke` hook for `hash_append`, and `std::hash` is
-one detail helper over it, a hash folded by `get_integral_result`. The algorithm is chosen in exactly one
-place, and it is chosen as a **default rather than a fact**: `std_hash` takes `Hash h = {}` over a defaulted
-`fnv1a_64`, so overriding it is an argument from outside rather than an edit here. Defaulted on the template
-parameter as well as the function parameter, because a default function argument is not a deduced context and
-`std_hash(v)` would otherwise fail to deduce `Hash`; and taken by value rather than by type alone, so a
-seeded instance substitutes and not only a default-constructed one.
+one detail helper over it, a hash folded by `get_integral_result`.
 
-What `std::hash` itself gets is always that default. Its `operator()` takes one argument and has no second to
-forward, so every specialization takes `fnv1a_64` and the parameter is unreachable through them — which
-is why it is asserted directly, in `test/src/bits/detail/hash.cpp`, rather than through a specialization. A
-caller wanting another algorithm has the better door anyway: the adaptors' `hash_append` hooks, reached with
-a hash of their own. What a hook appends is the value
-**itself**, never a storage's own hook: the blocks and the width. So equal values hash equal whatever holds
-them, and no storage's `std::hash` is consulted. Every storage holds its blocks contiguously, with the unused
-bits of the last one clear, so the blocks go in as one `hash_append_range` -- one `update` wherever the flavor's
-byte order is the target's -- and not one call per block: the bytes are the same, but a buffered algorithm such
-as xxHash pays a fixed cost per `update`, and at length that cost is most of its time. A 128-bit block, wider
-than Hash2 writes, goes in as its two halves, low first. The set reading at a run-time
-width appends the positions held and their count instead, since equal sets need not share a width
-([width-is-capacity](#width-is-capacity)). The width and the count go in through `hash_append_size` and each
-position as the flavor's `size_type`, never as a `std::size_t`, so a flavor with a fixed byte order gives one
-message, and one digest, on 32- and 64-bit targets alike.
+What a hook appends is the value **itself**, never a storage's own hook: the blocks and the width. So equal
+values hash equal whatever holds them, and no storage's `std::hash` is consulted. Every storage holds its
+blocks contiguously, with the unused bits of the last one clear, so the blocks go in as one
+`hash_append_range` -- one `update` wherever the flavor's byte order is the target's -- and not one call per
+block: the bytes are the same, but a buffered algorithm such as xxHash pays a fixed cost per `update`, and at
+length that cost is most of its time. A 128-bit block, wider than Hash2 writes, goes in as its two halves,
+low first. The set reading at a run-time width appends the positions held and their count instead, since equal
+sets need not share a width ([width-is-capacity](#width-is-capacity)). The width and the count go in through
+`hash_append_size` and each position as the flavor's `size_type`, never as a `std::size_t`, so a flavor with a
+fixed byte order gives one message, and one digest, on 32- and 64-bit targets alike.
+
+The algorithm is chosen in exactly one place, and it is chosen as a **default rather than a fact**. The
+default switches on the length of the message, the bytes appended ahead of the width or count:
+`num_blocks() * sizeof(Block)` for the bits, `count()` positions of the default flavor's `size_type` for the
+positions. One word or less goes to FNV-1a, which has no setup to amortize over it; anything longer goes to
+xxHash, which takes its input in stripes and is faster from about two words on. Both run at the width of
+`std::size_t`, `fnv1a_64` and `xxhash_64` on a 64-bit target and `fnv1a_32` and `xxhash_32` on a 32-bit one.
+The length follows the value and the block type, never the storage, so equal values in any storage choose the
+same algorithm; at a static width the choice is made at compile time. It does not switch on the block type
+either: two block types give the same message only where their bytes agree, as `std::uint32_t` and
+`std::uint64_t` do under a little-endian flavor at a width that is a multiple of 64, and then they agree on its
+length too.
+
+`std_hash(v, h)` takes the algorithm by value rather than by type alone, so a seeded instance substitutes and
+not only a default-constructed one. What `std::hash` itself gets is always the default: its `operator()` takes
+one argument and has no second to forward, so the parameter is unreachable through it -- which is why it is
+asserted directly, in `test/src/bits/detail/hash.cpp`, rather than through a specialization. A caller wanting
+another algorithm has the better door anyway: the adaptors' `hash_append` hooks, reached with a hash of their
+own.
 
 Who hashes follows [views-follow-their-precedent](#views-follow-their-precedent): the set adaptor owned or
 viewed, as `std::string_view` hashes; the sequence adaptor as an owner alone, as `std::span` does not, so its

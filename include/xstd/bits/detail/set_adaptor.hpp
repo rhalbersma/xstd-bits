@@ -15,7 +15,7 @@
 #include <xstd/bits/detail/borrowed_bits.hpp>        // borrow_bits, borrowable_block, borrowable_blocks, borrowed_bits_t
 #include <xstd/bits/detail/comparisons.hpp>          // numeric_three_way, set_equal, set_three_way
 #include <xstd/bits/detail/functor.hpp>              // decay_copy
-#include <xstd/bits/detail/hash.hpp>                 // hash_append_bits, hash_append_positions, std_hash
+#include <xstd/bits/detail/hash.hpp>                 // hash_append_bits, hash_append_positions, std_hash_bits, std_hash_positions
 #include <xstd/bits/detail/intrin.hpp>               // countl_zero, countr_zero
 #include <xstd/bits/detail/is_key.hpp>               // is_key
 #include <xstd/bits/detail/ownership.hpp>            // owned_bits_t, owned_storage, owner_of, owner_reading, set_reading_tag, storage, storage_access, owns
@@ -1578,7 +1578,12 @@ struct hash<xstd::bits::detail::set_adaptor<Bits, Store, Derived, Key, KeyMappin
         [[nodiscard]] constexpr auto operator()(xstd::bits::detail::set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> const& v) const noexcept
                 -> std::size_t
         {
-                return xstd::bits::detail::std_hash(v);
+                // Chosen by what the hook appends: the bits at a static width, the positions at a run-time one.
+                if constexpr (xstd::bits::detail::set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::has_static_width) {
+                        return xstd::bits::detail::std_hash_bits(v, xstd::bits::detail::storage_access::bits(v));
+                } else {
+                        return xstd::bits::detail::std_hash_positions(v, xstd::bits::detail::storage_access::bits(v));
+                }
         }
 };
 

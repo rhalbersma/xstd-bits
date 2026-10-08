@@ -13,7 +13,7 @@
 #include <xstd/bits/detail/borrowed_bits.hpp>                // borrow_bits, borrowable_block, borrowable_blocks, borrowed_bits_t
 #include <xstd/bits/detail/comparisons.hpp>                  // sequence_three_way
 #include <xstd/bits/detail/functor.hpp>                      // invoke_continues
-#include <xstd/bits/detail/hash.hpp>                         // hash_append_bits, std_hash
+#include <xstd/bits/detail/hash.hpp>                         // hash_append_bits, std_hash_bits
 #include <xstd/bits/detail/intrin.hpp>                       // countr_zero, popcount
 #include <xstd/bits/detail/ownership.hpp>                    // owned_bits_t, owned_storage, owner_of, owner_reading, sequence_reading_tag, storage, storage_access, owns, window
 #include <xstd/bits/detail/shift.hpp>                        // shl, shr
@@ -1814,7 +1814,7 @@ struct hash<xstd::bits::detail::sequence_adaptor<Bits, xstd::bits::detail::stora
         [[nodiscard]] constexpr auto operator()(xstd::bits::detail::sequence_adaptor<Bits, xstd::bits::detail::storage::owned, W, Derived> const& v) const noexcept
                 -> std::size_t
         {
-                return xstd::bits::detail::std_hash(v);
+                return xstd::bits::detail::std_hash_bits(v, xstd::bits::detail::storage_access::bits(v));
         }
 };
 
