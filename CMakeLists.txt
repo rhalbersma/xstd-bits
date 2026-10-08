@@ -43,7 +43,7 @@ if(NOT xstd-misc_FOUND)
         xstd-misc
         GIT_REPOSITORY https://github.com/rhalbersma/xstd-misc.git
         # Pinned to a commit on xstd-misc's main, not a branch head; move consumption.yml's dependency_repos with it.
-        GIT_TAG 88dba732bbb28b4e0d3491397e62c0f7453ee5a7
+        GIT_TAG 647545820938098b0c45d168e4ff31a4152a4a7b
     )
     FetchContent_MakeAvailable(xstd-misc)
 endif()
@@ -87,6 +87,7 @@ target_sources(
         include/xstd/bits/bit_set_view.hpp
         include/xstd/bits/bit_span.hpp
         include/xstd/bits/bit_fixed_set.hpp
+        include/xstd/bits/bit_hasher.hpp
         include/xstd/bits/bit_subspan.hpp
         include/xstd/bits/bit_vector.hpp
         include/xstd/bits/detail/adapted_bits.hpp

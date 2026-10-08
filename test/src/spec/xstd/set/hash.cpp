@@ -5,10 +5,12 @@
 
 #include <test/for_each_type.hpp>   // for_each_type
 #include <test/set/primitives.hpp>  // op_hash
+#include <test/spec/hash.hpp>       // check_hashes_as
 #include <test/spec/input.hpp>      // context
 #include <test/spec/set.hpp>        // all, pairs, sets
 #include <test/spec/view.hpp>       // subject
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <set>                      // set
 
 BOOST_AUTO_TEST_SUITE(Spec)
 BOOST_AUTO_TEST_SUITE(Xstd)
@@ -32,6 +34,19 @@ BOOST_AUTO_TEST_CASE(Hash)
                 for (auto const [from, a, b] : inputs::pairs<T>()) {
                         auto const on_failure = context(from, a, b);
                         op_hash()(subject(a), subject(b));
+                }
+        });
+}
+
+// xstd set: void tag_invoke(hash_append_tag, const Provider&, Hash&, const Flavor&, const X*);
+BOOST_AUTO_TEST_CASE(HashAppend)
+{
+        test::for_each_type<test::spec::set::all>([]<class T> -> void {
+                // std::set<Key, Compare>'s message, the keys in the set's order then their count; a model is its own.
+                for (auto const [from, a] : inputs::sets<T>()) {
+                        auto const on_failure = context(from, a);
+                        auto const x          = subject(a);
+                        test::spec::check_hashes_as(x, std::set<typename T::key_type, typename T::key_compare>(x.begin(), x.end()));
                 }
         });
 }

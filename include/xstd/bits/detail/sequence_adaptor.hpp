@@ -7,13 +7,14 @@
 #define XSTD_BITS_DETAIL_SEQUENCE_ADAPTOR_HPP
 
 #include <xstd/bits/bit_blocks.hpp>                          // bit_blocks
+#include <xstd/bits/bit_hasher.hpp>                          // bit_hasher
 #include <xstd/bits/detail/adapted_bits.hpp>                 // adapted_bits
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_base_type, allocator_param_t, has_allocator_v
 #include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container, bit_block_container_type
 #include <xstd/bits/detail/borrowed_bits.hpp>                // borrow_bits, borrowable_block, borrowable_blocks, borrowed_bits_t
 #include <xstd/bits/detail/comparisons.hpp>                  // sequence_three_way
 #include <xstd/bits/detail/functor.hpp>                      // invoke_continues
-#include <xstd/bits/detail/hash.hpp>                         // hash_append_bits, std_hash_bits
+#include <xstd/bits/detail/hash.hpp>                         // hash_append_bools
 #include <xstd/bits/detail/intrin.hpp>                       // countr_zero, popcount
 #include <xstd/bits/detail/ownership.hpp>                    // owned_bits_t, owned_storage, owner_of, owner_reading, sequence_reading_tag, storage, storage_access, owns, window
 #include <xstd/bits/detail/shift.hpp>                        // shl, shr
@@ -24,6 +25,7 @@
 #include <boost/container_hash/is_range.hpp>                 // is_range
 #include <boost/container_hash/is_tuple_like.hpp>            // is_tuple_like
 #include <boost/hash2/hash_append_fwd.hpp>                   // hash_append_tag
+#include <boost/hash2/xxhash.hpp>                            // xxhash_64
 #include <algorithm>                                         // copy, min, remove_if
 #include <cassert>                                           // assert
 #include <compare>                                           // strong_ordering
@@ -653,13 +655,13 @@ class sequence_adaptor : public sequence::sizes_t<Bits, Store, W, Derived, E>
         // The free functions over every reading, bit_convert among them, reach the storage through this one door.
         friend struct storage_access;
 
-        // The value under the sequence reading, the owner's alone: a view follows span and hashes no more.
+        // The owner's value as its model hashes it, bools then a run-time size; a view follows span and hashes none.
         template<class Provider, class Hash, class Flavor>
         friend constexpr auto tag_invoke(boost::hash2::hash_append_tag const&, Provider const& pr, Hash& h, Flavor const& f, sequence_adaptor const* v) noexcept
                 -> void
                 requires is_owner
         {
-                hash_append_bits(pr, h, f, v->bits());
+                hash_append_bools(pr, h, f, v->bits());
         }
 
 public:
@@ -1807,14 +1809,14 @@ struct formatter<R, CharT> : formatter<bool, CharT>
         }
 };
 
-// The owner hashes as std::vector<bool> does; a view no more than std::span does.
+// The owner's bits, by bit_hasher, where std::vector<bool> has a hash; a view no more than std::span has.
 template<class Bits, xstd::bits::detail::window W, class Derived>
 struct hash<xstd::bits::detail::sequence_adaptor<Bits, xstd::bits::detail::storage::owned, W, Derived>>
 {
         [[nodiscard]] constexpr auto operator()(xstd::bits::detail::sequence_adaptor<Bits, xstd::bits::detail::storage::owned, W, Derived> const& v) const noexcept
                 -> std::size_t
         {
-                return xstd::bits::detail::std_hash_bits(v, xstd::bits::detail::storage_access::bits(v));
+                return xstd::bit_hasher<boost::hash2::xxhash_64>()(v);
         }
 };
 
