@@ -5297,13 +5297,13 @@ Formatting a set needs nothing beyond the standard library: `std::format` and `s
 
 ### 3 Set predicates from `boost::dynamic_bitset`
 
-The set predicates `is_subset`, `is_proper_subset` and `intersects` from `boost::dynamic_bitset` are present in `xstd::bit_fixed_set` with **identical syntax** and **identical semantics**. Note that these set predicates are not present in `std::bitset`. Efficient emulation of these set predicates for `std::bitset` is not possible using **single-pass** and **short-circuiting** semantics.
+The set predicates `is_subset_of` and `is_proper_subset_of` from `boost::dynamic_bitset` are present in `xstd::bit_fixed_set` with **identical syntax** and **identical semantics**, and its member `a.intersects(b)` is the free `intersects(a, b)`, a symmetric question taking neither operand as its object. Note that these set predicates are not present in `std::bitset`. Efficient emulation of these set predicates for `std::bitset` is not possible using **single-pass** and **short-circuiting** semantics.
 
 | `xstd::bit_fixed_set<N>` <br> `boost::dynamic_bitset<>`  | `std::bitset<N>`             |
 | :------------------------------------------------  | :---------------             |
 | `a.is_subset_of(b)`                                | `(a & ~b).none()`            |
 | `a.is_proper_subset_of(b)`                         | `(a & ~b).none() and a != b` |
-| `a.intersects(b)`                                  | `(a & b).any()`              |
+| `intersects(a, b)` <br> `a.intersects(b)`         | `(a & b).any()`              |
 
 ### 4 The bitwise operators from `std::bitset` and `boost::dynamic_bitset` reimagined as set algorithms
 
@@ -5316,7 +5316,7 @@ With the exception of `operator~`, the non-member bitwise operators can be reima
 
 | `xstd::bit_fixed_set<N>`      | `std::set<int>` with the range-v3 set algorithm views                                                |
 | :----------------       | :----------------------------------------------------------------------------------------------------|
-| `a.is_subset_of(b)`     | `std::ranges::includes(a, b)`                                                                        |
+| `a.is_subset_of(b)`     | `std::ranges::includes(b, a)`                                                                        |
 | <code>a &vert; b</code> | <code>ranges::views::set_union(a, b)                &vert; std::ranges::to&lt;std::set&gt;() </code> |
 | `a & b`                 | <code>ranges::views::set_intersection(a, b)         &vert; std::ranges::to&lt;std::set&gt;() </code> |
 | `a - b`                 | <code>ranges::views::set_difference(a, b)           &vert; std::ranges::to&lt;std::set&gt;() </code> |
