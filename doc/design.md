@@ -98,10 +98,10 @@ asks more of a block than it offers its own user, consuming numbers and yielding
 arithmetic on the way up. That is also why nesting cannot work: a `bit_block_container` will have every
 operator and still no `popcount`, no `digits` and no `- 1`.
 
-The concept sits beside `bit_blocks` in `<xstd/bits/bit_blocks.hpp>`, which it refines: the one says what a
-`Blocks` **is**, the container is the vehicle built over it, and a reader asking the first question need not open
-the 1500 lines answering the second. Its includes are `<concepts>`, `<ranges>`, the one xstd-ints concept and the
-alias of [the-const-reference](#the-const-reference). `borrowed_block_span`, the span a view writes through, is
+The concept has a header of its own under `<xstd/bits/bit_concepts/>`, beside `bit_blocks`, which it refines: the
+one says what a `Blocks` **is**, the container is the vehicle built over it, and a reader asking the first question
+need not open the 1500 lines answering the second. Between them those headers include `<concepts>`, `<ranges>`, the
+one xstd-ints concept and the alias of [the-const-reference](#the-const-reference). `borrowed_block_span`, the span a view writes through, is
 left in `detail/borrowed_block_span.hpp`. `num_blocks_v` stays with the vehicle, being a block-count computation
 rather than a statement about what a `Blocks` is.
 
@@ -2460,7 +2460,7 @@ The key is spelled wherever the `basic_` form is, because it changes the interfa
 yields, and what `insert`, `find` and `contains` accept. The positions stay the storage, and `KeyMapping` is the key's
 *mapping*: an order-preserving bijection from a finite universe of keys onto the positions `[0, N)`, given by two
 static members, `to_index(key)` and `from_index(index)`, and, where the mapping closes the universe, a `size` that is
-that `N` and an `is_key(key)` that says whether a value is one of those `N` keys. Two public concepts in `<xstd/bits/bit_index_mapping.hpp>` say so. `bit_index_mapping<M, Key>` asks for
+that `N` and an `is_key(key)` that says whether a value is one of those `N` keys. Two public concepts, each in its own header under `<xstd/bits/bit_concepts/>`, say so. `bit_index_mapping<M, Key>` asks for
 `M::to_index` taking a `Key` to a `std::size_t` and `M::from_index` giving back exactly a `Key`, and carries what no
 syntax check can see: `a < b` exactly where `to_index(a) < to_index(b)`, and `from_index(to_index(k)) == k` for every
 `k` in the universe. `sized_bit_index_mapping<M, Key>` adds `M::size` and `M::is_key`, returning exactly `bool`, and
@@ -2524,7 +2524,7 @@ three-value set is one byte, not eight. Wider than 64 values, it is several `std
 block, so the block policy is stated once, by `bit_least`. A field of fixed wire width is
 `basic_bit_fixed_set<E, std::uint32_t, N>`, whose mapping defaults to the same `bit_key_mapping<E>`, and a set over
 another mapping of the enumeration is `bit_least<basic_bit_fixed_set<E, std::size_t, N, M>>`, which spells the
-mapping and keeps the block policy. `least_block_t` is public, in `<xstd/bits/bit_blocks.hpp>`, so that the policy has
+mapping and keeps the block policy. `least_block_t` is public, in `<xstd/bits/bit_type_traits/bit_least.hpp>`, so that the policy has
 a name outside the alias. A deduction guide on the class template, not on the alias, deduces that same type from a
 braced list of enumerators, `basic_bit_fixed_set{E::a, E::b}`; alias deduction is not relied on, being unreliable
 on older compilers. An enumerator meets a set through the set's own type: `|`, `&`, `^` and `-` take a set on one
@@ -2580,7 +2580,7 @@ header is the name's home and the only place it is spelled; `bits.hpp` includes 
 
 ### block-and-width-transformations
 
-Four type transformations in `<xstd/bits/bit_blocks.hpp>` take a fixed-width owner and return the same owner with
+Four type transformations, one header each under `<xstd/bits/bit_type_traits/>`, take a fixed-width owner and return the same owner with
 its block or its width changed, every other argument passed through:
 
 | Transformation | Block | Width |
@@ -3413,9 +3413,9 @@ with each other about growth, element access and order.
 
 It interoperates instead, through one function for every pair of widths, **`xstd::bit_convert<To>(from)`** in
 `<xstd/bits/bit/bit_convert.hpp>`. Its constraint is `xstd::bit_convertible<From, To>`, over the two types as
-declared; `xstd::bit_convertible_to<From, To>` says the call is valid, and `xstd::bit_constructible_from<To, Blocks>`,
-in `<xstd/bits/from_blocks.hpp>`, that `Blocks` *is* bit storage `To` takes as it is through the tag
-([is-and-has](#is-and-has)).
+declared; `xstd::bit_convertible_to<From, To>` says the call is valid, and `xstd::bit_constructible_from<To, Blocks>`
+that `Blocks` *is* bit storage `To` takes as it is through the tag ([is-and-has](#is-and-has)). Each of the three
+has its own header under `<xstd/bits/bit_concepts/>`.
 
 - **Its two ends.** A target is any owner of either reading at any width and block width, an unsigned integer, a
   `std::array` of blocks, or a `std::bitset<N>`; never a view, which would write bits it does not own. A source is
