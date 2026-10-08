@@ -1328,7 +1328,9 @@ a hash of their own. What a hook appends is the value
 **itself**, never a storage's own hook: the blocks and the width. So equal values hash equal whatever holds
 them, and no storage's `std::hash` is consulted. The set reading at a run-time
 width appends the positions held and their count instead, since equal sets need not share a width
-([width-is-capacity](#width-is-capacity)).
+([width-is-capacity](#width-is-capacity)). The width and the count go in through `hash_append_size` and each
+position as the flavor's `size_type`, never as a `std::size_t`, so a flavor with a fixed byte order gives one
+message, and one digest, on 32- and 64-bit targets alike.
 
 Who hashes follows [views-follow-their-precedent](#views-follow-their-precedent): the set adaptor owned or
 viewed, as `std::string_view` hashes; the sequence adaptor as an owner alone, as `std::span` does not, so its

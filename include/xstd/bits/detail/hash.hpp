@@ -9,7 +9,7 @@
 #include <xstd/bits/detail/shift.hpp>          // shl, shr
 #include <boost/hash2/fnv1a.hpp>               // fnv1a_64
 #include <boost/hash2/get_integral_result.hpp> // get_integral_result
-#include <boost/hash2/hash_append.hpp>         // hash_append
+#include <boost/hash2/hash_append.hpp>         // hash_append, hash_append_size
 #include <cstddef>                             // size_t
 #include <cstdint>                             // uint64_t
 #include <limits>                              // numeric_limits
@@ -39,7 +39,7 @@ constexpr auto hash_append_bits(Hash& h, Flavor const& f, Bits const& c)
         for (auto const i : std::views::iota(0UZ, c.num_blocks())) {
                 hash_append_block(h, f, c[i]);
         }
-        boost::hash2::hash_append(h, f, c.size());
+        boost::hash2::hash_append_size(h, f, c.size());
 }
 
 // The set reading at a run-time width: the positions held and their count, since equal sets need not share a width.
@@ -48,9 +48,10 @@ constexpr auto hash_append_positions(Hash& h, Flavor const& f, Bits const& c)
         -> void
 {
         for (auto n = c.find_first(); n != c.size(); n = c.exclusive_find_next(n)) {
-                boost::hash2::hash_append(h, f, n);
+                // As the flavor writes a size, so a fixed size_type gives one message on 32- and 64-bit targets.
+                boost::hash2::hash_append(h, f, static_cast<Flavor::size_type>(n));
         }
-        boost::hash2::hash_append(h, f, c.count());
+        boost::hash2::hash_append_size(h, f, c.count());
 }
 
 // The one place std::hash chooses an algorithm: fnv1a_64 is a default, and the parameter lets it be overridden.
