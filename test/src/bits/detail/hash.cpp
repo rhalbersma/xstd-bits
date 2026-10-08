@@ -8,9 +8,9 @@
 #include <xstd/bits/bit_vector.hpp>    // basic_bit_vector
 #include <xstd/bits/detail/hash.hpp>   // std_hash
 #include <xstd/bits/from_blocks.hpp>   // from_blocks
-#include <boost/hash2/flavor.hpp>      // little_endian_flavor
+#include <boost/hash2/flavor.hpp>      // default_flavor, little_endian_flavor
 #include <boost/hash2/fnv1a.hpp>       // fnv1a_32, fnv1a_64
-#include <boost/hash2/hash_append.hpp> // hash_append
+#include <boost/hash2/hash_append.hpp> // hash_append, hash_append_size
 #include <boost/hash2/xxhash.hpp>      // xxhash_64
 #include <boost/test/unit_test.hpp>    // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <cstddef>                     // size_t
@@ -37,16 +37,18 @@ using fixed_set   = xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 10>;
 using dynamic_set = xstd::basic_bit_set<std::size_t, std::uint64_t>;
 using sequence    = xstd::basic_bit_vector<std::uint64_t>;
 
-// A hash that keeps the bytes it is given.
+// A hash that keeps the bytes it is given and counts the calls that gave them.
 struct recorder
 {
         std::vector<unsigned char> bytes;
+        std::size_t updates = 0;
 
         auto update(void const* p, std::size_t n)
                 -> void
         {
                 auto const* const first = static_cast<unsigned char const*>(p);
                 bytes.insert(bytes.end(), first, first + n);
+                ++updates;
         }
 };
 
@@ -150,6 +152,20 @@ BOOST_AUTO_TEST_CASE(AFixedFlavorPinsTheDigest)
         BOOST_CHECK_EQUAL(little_endian_digest<boost::hash2::xxhash_64>(dynamic_set({1, 3, 5})), 0x1502'1EF5'D5C1'3C98ULL);
         BOOST_CHECK_EQUAL(little_endian_digest<boost::hash2::fnv1a_64>(alternating(sequence(6))), 0x9E2E'60F0'092F'3F96ULL);
         BOOST_CHECK_EQUAL(little_endian_digest<boost::hash2::xxhash_64>(alternating(sequence(6))), 0x2C1F'1D26'6824'9D6EULL);
+}
+
+// The blocks go in as one range, in the bytes that appending them one at a time writes.
+BOOST_AUTO_TEST_CASE(TheBlocksGoInAsOneRange)
+{
+        auto const value = xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 200>({1, 64, 199});
+        BOOST_CHECK_EQUAL(record<boost::hash2::default_flavor>(value).updates, 2UZ);
+
+        auto one_by_one = recorder();
+        for (auto const block : {std::uint64_t{2}, std::uint64_t{1}, std::uint64_t{0}, std::uint64_t{1} << 7U}) {
+                boost::hash2::hash_append(one_by_one, boost::hash2::little_endian_flavor(), block);
+        }
+        boost::hash2::hash_append_size(one_by_one, boost::hash2::little_endian_flavor(), 200UZ);
+        BOOST_CHECK(record<boost::hash2::little_endian_flavor>(value).bytes == one_by_one.bytes);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

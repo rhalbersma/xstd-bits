@@ -1326,7 +1326,11 @@ is why it is asserted directly, in `test/src/bits/detail/hash.cpp`, rather than 
 caller wanting another algorithm has the better door anyway: the adaptors' `hash_append` hooks, reached with
 a hash of their own. What a hook appends is the value
 **itself**, never a storage's own hook: the blocks and the width. So equal values hash equal whatever holds
-them, and no storage's `std::hash` is consulted. The set reading at a run-time
+them, and no storage's `std::hash` is consulted. Every storage holds its blocks contiguously, with the unused
+bits of the last one clear, so the blocks go in as one `hash_append_range` -- one `update` wherever the flavor's
+byte order is the target's -- and not one call per block: the bytes are the same, but a buffered algorithm such
+as xxHash pays a fixed cost per `update`, and at length that cost is most of its time. A 128-bit block, wider
+than Hash2 writes, goes in as its two halves, low first. The set reading at a run-time
 width appends the positions held and their count instead, since equal sets need not share a width
 ([width-is-capacity](#width-is-capacity)). The width and the count go in through `hash_append_size` and each
 position as the flavor's `size_type`, never as a `std::size_t`, so a flavor with a fixed byte order gives one
