@@ -586,6 +586,45 @@ auto refuses_at_every_door(X const& a, typename X::key_type v)
         BOOST_CHECK(x == a);
 }
 
+// The keys a set holds, as its model holds them.
+template<class Model, class X>
+[[nodiscard]] auto modelled(X const& x)
+        -> Model
+{
+        return Model(x.begin(), x.end());
+}
+
+// Each way a value enters a set, offered a key: each writes it as the model's insert does, and complement toggles it.
+template<class X, class Model>
+auto admits_at_every_door(X const& a, Model const& model, typename X::key_type v)
+        -> void
+{
+        auto with = model;
+        with.insert(v);
+        auto without = model;
+        without.erase(v);
+        auto const one       = std::array{v};
+        auto const writes_it = [&](auto write) -> bool {
+                auto x = a;
+                write(x);
+                return modelled<Model>(x) == with;
+        };
+        BOOST_CHECK(writes_it([&](X& x) -> void { static_cast<void>(x.insert(v)); }));
+        BOOST_CHECK(writes_it([&](X& x) -> void { x.insert(x.begin(), v); }));
+        BOOST_CHECK(writes_it([&](X& x) -> void { static_cast<void>(x.emplace(v)); }));
+        BOOST_CHECK(writes_it([&](X& x) -> void { x.emplace_hint(x.begin(), v); }));
+        BOOST_CHECK(writes_it([&](X& x) -> void { x.insert({v}); }));
+        BOOST_CHECK(writes_it([&](X& x) -> void { x.insert(one.begin(), one.end()); }));
+        BOOST_CHECK(writes_it([&](X& x) -> void { x.insert_range(one); }));
+        auto x = a;
+        x.complement(v);
+        BOOST_CHECK(modelled<Model>(x) == (model.contains(v) ? without : with));
+        auto const from_iterators = X(one.begin(), one.end());
+        auto const from_range     = X(std::from_range, one);
+        BOOST_CHECK(modelled<Model>(from_iterators) == Model{v});
+        BOOST_CHECK(modelled<Model>(from_range) == Model{v});
+}
+
 // An enumerator is a one-element set: the operators that write it refuse it, and the two that only read it answer.
 template<class X>
 auto meets_it_as_an_empty_set_or_refuses(X const& a, typename X::key_type v)
@@ -602,10 +641,38 @@ auto meets_it_as_an_empty_set_or_refuses(X const& a, typename X::key_type v)
         BOOST_CHECK(met.empty() and (a - v) == a);
 }
 
+// An enumerator is a one-element set, and each operator meets a key as the model's set algebra does.
+template<class X, class Model>
+auto meets_it_as_a_one_element_set(X const& a, Model const& model, typename X::key_type v)
+        -> void
+{
+        auto const held = model.contains(v);
+        auto with       = model;
+        with.insert(v);
+        auto without = model;
+        without.erase(v);
+        auto x = a;
+        x |= v;
+        BOOST_CHECK(modelled<Model>(x) == with);
+        auto y = a;
+        y ^= v;
+        BOOST_CHECK(modelled<Model>(y) == (held ? without : with));
+        auto const joined   = a | v;
+        auto const toggled  = v ^ a;
+        auto const rest     = v - a;
+        auto const met      = a & v;
+        auto const remained = a - v;
+        BOOST_CHECK(modelled<Model>(joined) == with);
+        BOOST_CHECK(modelled<Model>(toggled) == (held ? without : with));
+        BOOST_CHECK(modelled<Model>(rest) == (held ? Model{} : Model{v}));
+        BOOST_CHECK(modelled<Model>(met) == (held ? Model{v} : Model{}));
+        BOOST_CHECK(modelled<Model>(remained) == without);
+}
+
 } // namespace
 
-// A value that is no key has no position to take, at a fixed width or a growing one, and asking for it stays total.
-BOOST_AUTO_TEST_CASE(EveryOwnerRefusesAValueThatIsNoKey)
+// A key takes its position and a value that is no key has none, at a fixed width or a growing one; asking stays total.
+BOOST_AUTO_TEST_CASE(EveryOwnerAdmitsAKeyAndRefusesAValueThatIsNoKey)
 {
         test::for_each_type<closed_owners>([]<class X> -> void {
                 using key_type    = X::key_type;
@@ -617,7 +684,12 @@ BOOST_AUTO_TEST_CASE(EveryOwnerRefusesAValueThatIsNoKey)
                         BOOST_TEST_CONTEXT("value: " << int{std::to_underlying(v)})
                         {
                                 BOOST_CHECK_EQUAL(test::set::lookup_mismatches(a, model, v), 0UZ);
-                                if (not key_mapping::is_key(v)) {
+                                if (key_mapping::is_key(v)) {
+                                        admits_at_every_door(a, model, v);
+                                        if constexpr (not xstd::bit_mask_mapping<key_mapping, key_type>) {
+                                                meets_it_as_a_one_element_set(a, model, v);
+                                        }
+                                } else {
                                         refuses_at_every_door(a, v);
                                         if constexpr (not xstd::bit_mask_mapping<key_mapping, key_type>) {
                                                 meets_it_as_an_empty_set_or_refuses(a, v);
