@@ -12,7 +12,7 @@
 #include <xstd/bits/bit_fixed_set.hpp>      // basic_bit_fixed_set, bit_fixed_set
 #include <xstd/bits/bit_flag_mapping.hpp>   // bit_flag_mapping
 #include <xstd/bits/bit_flag_set.hpp>       // bit_flag_set
-#include <xstd/bits/detail/set_adaptor.hpp> // disjoint, includes, intersects
+#include <xstd/bits/detail/set_adaptor.hpp> // disjoint, intersects
 #include <xstd/bits/from_blocks.hpp>        // from_blocks
 #include <xstd/filesystem.hpp>              // perms
 #include <xstd/ints/concepts/bit_mask.hpp>  // bit_mask
@@ -283,24 +283,35 @@ auto agrees_on_subset(std::size_t mask)
         BOOST_CHECK_EQUAL(mismatches, 0UZ);
 }
 
+// Two subsets, queried by each predicate against std::set's algorithms, with the standard's value on either side.
+auto queries_agree_on_pair(xfs::perms const& a, model_type const& ma, xfs::perms const& b, model_type const& mb)
+        -> void
+{
+        BOOST_CHECK_EQUAL(b.is_subset_of(a), std::ranges::includes(ma, mb, std::ranges::greater()));
+        BOOST_CHECK_EQUAL(a.is_subset_of(b), std::ranges::includes(mb, ma, std::ranges::greater()));
+        BOOST_CHECK_EQUAL(intersects(a, b), not combined(ma, mb, std::ranges::set_intersection).empty());
+        BOOST_CHECK_EQUAL(disjoint(a, b), not intersects(a, b));
+        BOOST_CHECK_EQUAL(a.is_superset_of(b), std::ranges::includes(ma, mb, std::ranges::greater()));
+        BOOST_CHECK_EQUAL(a.is_superset_of(b), b.is_subset_of(a));
+        BOOST_CHECK_EQUAL(a.is_proper_superset_of(b), b.is_proper_subset_of(a));
+        BOOST_CHECK_EQUAL(a.is_proper_superset_of(b), a.is_superset_of(b) and ma != mb);
+
+        // The standard's value converts as a containment's other set, and on either side of the rest.
+        BOOST_CHECK_EQUAL(a.is_subset_of(fs::perms(b)), a.is_subset_of(b));
+        BOOST_CHECK_EQUAL(a.is_proper_subset_of(fs::perms(b)), a.is_proper_subset_of(b));
+        BOOST_CHECK_EQUAL(a.is_superset_of(fs::perms(b)), a.is_superset_of(b));
+        BOOST_CHECK_EQUAL(a.is_proper_superset_of(fs::perms(b)), a.is_proper_superset_of(b));
+        BOOST_CHECK_EQUAL(disjoint(a, fs::perms(b)), disjoint(a, b));
+        BOOST_CHECK_EQUAL(intersects(fs::perms(a), b), intersects(a, b));
+}
+
 // Two subsets, queried and combined by each operator and its compound form, against std::set's algorithms.
 auto agrees_on_pair(std::size_t lhs, std::size_t rhs)
         -> void
 {
         auto const [a, ma] = subset(lhs);
         auto const [b, mb] = subset(rhs);
-        BOOST_CHECK_EQUAL(b.is_subset_of(a), std::ranges::includes(ma, mb, std::ranges::greater()));
-        BOOST_CHECK_EQUAL(a.is_subset_of(b), std::ranges::includes(mb, ma, std::ranges::greater()));
-        BOOST_CHECK_EQUAL(intersects(a, b), not combined(ma, mb, std::ranges::set_intersection).empty());
-        BOOST_CHECK_EQUAL(disjoint(a, b), not intersects(a, b));
-        BOOST_CHECK_EQUAL(includes(a, b), std::ranges::includes(ma, mb, std::ranges::greater()));
-        BOOST_CHECK_EQUAL(includes(a, b), b.is_subset_of(a));
-
-        // The standard's value on either side converts, as it does for the operators.
-        BOOST_CHECK_EQUAL(includes(a, fs::perms(b)), includes(a, b));
-        BOOST_CHECK_EQUAL(includes(fs::perms(a), b), includes(a, b));
-        BOOST_CHECK_EQUAL(disjoint(a, fs::perms(b)), disjoint(a, b));
-        BOOST_CHECK_EQUAL(intersects(fs::perms(a), b), intersects(a, b));
+        queries_agree_on_pair(a, ma, b, mb);
         BOOST_CHECK(std::ranges::equal(a | b, combined(ma, mb, std::ranges::set_union)));
         BOOST_CHECK(std::ranges::equal(a & b, combined(ma, mb, std::ranges::set_intersection)));
         BOOST_CHECK(std::ranges::equal(a ^ b, combined(ma, mb, std::ranges::set_symmetric_difference)));
@@ -562,7 +573,9 @@ auto operator_mismatches(word_t<X> w, typename X::key_type b)
         mismatches += static_cast<std::size_t>(mask_type(x ^ b) != either or mask_type(b ^ x) != either);
         mismatches += static_cast<std::size_t>(mask_type(x - b) != m_only or mask_type(b - x) != b_only);
         mismatches += static_cast<std::size_t>((x == b) != (m == b) or (x <=> X(b)) != (m <=> b));
-        mismatches += static_cast<std::size_t>(includes(x, b) != ((w & v) == v) or intersects(x, b) != ((w & v) != word_type{}));
+        mismatches += static_cast<std::size_t>(x.is_superset_of(b) != ((w & v) == v) or intersects(x, b) != ((w & v) != word_type{}));
+        mismatches += static_cast<std::size_t>(x.is_subset_of(b) != ((w & v) == w) or x.is_proper_subset_of(b) != ((w & v) == w and w != v));
+        mismatches += static_cast<std::size_t>(x.is_proper_superset_of(b) != ((w & v) == v and w != v));
         return mismatches;
 }
 
@@ -596,7 +609,7 @@ auto ios_mismatches(std::initializer_list<Mask> constants)
         for (auto const c : constants) {
                 X const x    = c;
                 auto const w = static_cast<word_type>(c);
-                if (Mask(x) != c or x != c or x.size() != static_cast<std::size_t>(std::popcount(w)) or x.contains(c) != std::has_single_bit(w) or not includes(x, c)) {
+                if (Mask(x) != c or x != c or x.size() != static_cast<std::size_t>(std::popcount(w)) or x.contains(c) != std::has_single_bit(w) or not x.is_superset_of(c)) {
                         ++mismatches;
                 }
                 for (auto const k : x) {
@@ -868,7 +881,7 @@ BOOST_AUTO_TEST_CASE(TheInheritedSetInterfaceWorks)
         BOOST_CHECK(p == fs::perms::none);
 }
 
-// contains is std::set's membership of one flag; all-of is includes, any-of intersects and none-of disjoint.
+// contains is std::set's membership of one flag; all-of is is_superset_of, any-of intersects and none-of disjoint.
 BOOST_AUTO_TEST_CASE(ContainsIsMembershipOfOneFlag)
 {
         auto p = xfs::perms(fs::perms::owner_read | fs::perms::group_write);
@@ -876,10 +889,12 @@ BOOST_AUTO_TEST_CASE(ContainsIsMembershipOfOneFlag)
         BOOST_CHECK(p.contains(fs::perms::owner_read) and not p.contains(fs::perms::owner_write));
         BOOST_CHECK(xfs::perms(fs::perms::owner_read).is_subset_of(p) == p.contains(fs::perms::owner_read));
         BOOST_CHECK(not xfs::perms(fs::perms::owner_all).is_subset_of(p) and intersects(p, xfs::perms(fs::perms::owner_all)));
-        BOOST_CHECK(not p.contains(fs::perms::owner_all) and not includes(p, fs::perms::owner_all) and intersects(p, fs::perms::owner_all));
-        BOOST_CHECK(includes(p, fs::perms::owner_read | fs::perms::group_write) and includes(fs::perms::all, p));
+        BOOST_CHECK(not p.contains(fs::perms::owner_all) and not p.is_superset_of(fs::perms::owner_all) and intersects(p, fs::perms::owner_all));
+        BOOST_CHECK(p.is_superset_of(fs::perms::owner_read | fs::perms::group_write) and p.is_subset_of(fs::perms::all));
+        BOOST_CHECK(p.is_proper_subset_of(fs::perms::all) and not p.is_proper_superset_of(fs::perms::owner_read | fs::perms::group_write));
         BOOST_CHECK(disjoint(p, fs::perms::others_all) and not disjoint(fs::perms::group_all, p));
-        static_assert(noexcept(includes(p, p)) and noexcept(disjoint(p, p)) and noexcept(intersects(p, p)));
+        static_assert(noexcept(p.is_superset_of(p)) and noexcept(p.is_superset_of(fs::perms::all)) and noexcept(p.is_proper_subset_of(fs::perms::all)));
+        static_assert(noexcept(disjoint(p, p)) and noexcept(intersects(p, p)));
         p.insert(fs::perms::owner_write);
         BOOST_CHECK(p == (fs::perms::owner_read | fs::perms::owner_write | fs::perms::group_write));
         p.erase(fs::perms::owner_read);
@@ -1005,7 +1020,7 @@ BOOST_AUTO_TEST_CASE(ABitsetMaskConvertsAndIterates)
         BOOST_CHECK(not x.contains(std::bitset<16>(0x0005)) and x.count(std::bitset<16>(0x0005)) == 0UZ); // NOLINT(readability-container-contains): count is the member under test
         BOOST_CHECK(x.find(std::bitset<16>()) == x.end());                                                // NOLINT(readability-container-contains): find is the member under test
         BOOST_CHECK(x.erase(std::bitset<16>(0x0105)) == 0UZ and x == p);
-        BOOST_CHECK(includes(p, std::bitset<16>(0x0005)) and disjoint(p, std::bitset<16>(0x0002)));
+        BOOST_CHECK(p.is_superset_of(std::bitset<16>(0x0005)) and p.is_proper_subset_of(std::bitset<16>(0x0107)) and disjoint(p, std::bitset<16>(0x0002)));
 }
 
 // Each operator takes the bitset on either side, as std::bitset's own do.
@@ -1080,7 +1095,8 @@ BOOST_AUTO_TEST_CASE(AnIntegerFlagTypeIteratesHighestFirstAndContainsOneBitValue
         BOOST_CHECK(std::ranges::equal(p, std::to_array({0x4000'0000, 4, 1})) and p.front() == 0x4000'0000 and p.back() == 1);
         BOOST_CHECK(p.contains(4) and p.contains(1) and not p.contains(2) and not p.contains(5) and not p.contains(0));
         BOOST_CHECK(p.find(5) == p.end() and p.count(5) == 0UZ); // NOLINT(readability-container-contains): find and count are the members under test
-        BOOST_CHECK(includes(p, 5) and intersects(p, 6) and disjoint(p, 2) and not includes(p, 7));
+        BOOST_CHECK(p.is_superset_of(5) and intersects(p, 6) and disjoint(p, 2) and not p.is_superset_of(7));
+        BOOST_CHECK(p.is_proper_subset_of(0x4000'0007) and p.is_proper_superset_of(4) and not p.is_proper_superset_of(0x4000'0005));
 
         auto x = p;
         BOOST_CHECK(x.erase(5) == 0UZ and x == p);
