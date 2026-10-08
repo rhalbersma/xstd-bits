@@ -2215,6 +2215,14 @@ them down onto it through both sides of `block_at` ([the-blit](#the-blit)). A re
 order, each block's bits reversed by log2(digits) masked swaps, and the padding, now at the bottom, rotated out by
 the same funnel shift.
 
+libstdc++ before 16 gives a reason of its own to spell it as the member. Its `std::ranges::rotate` holds the
+element a closing rotation by one displaces as `auto`, which over a proxy reference is a proxy to the position
+about to be overwritten, so at a turn coprime with a width of three or more the bit that should wrap round comes
+out as a copy of its neighbour: `std::vector<bool>` and this library's sequences lose it alike, while `std::rotate`
+and libc++ do not ([GCC PR 121913](https://gcc.gnu.org/PR121913), fixed in 16 and not backported). The member is a
+pass over the blocks that never asks the standard library to move a proxy, so it is exact on every library, and
+the tests build their own rotations by index for the same reason.
+
 ### the-elementwise-reading
 
 What `&=` means on a sequence of bools is **elementwise logical**, not bitwise: `a &= b` is
