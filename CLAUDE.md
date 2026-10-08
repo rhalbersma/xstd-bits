@@ -105,7 +105,8 @@ A template's size parameter is one letter, and the letter is its unit: `N` count
 an extent, which may be `std::dynamic_extent`. So `basic_bit_array<Block, N>` is `N` bits wide, and its guide from
 `std::array<Block, K>` deduces `K` blocks of them. A second count of the same unit takes the next letter, as a
 constructor's `M` beside `N`. A type parameter names what it holds, `Block` for one block, `Blocks` for a range of
-them and `Bits` for either, and takes `Other…` where an enclosing template already has the name.
+them and `Bits` for either, and takes `Other…` where an enclosing template already has the name. A type
+transformation's parameter names what it takes, `Owner` for the owning container whose block or width it changes.
 
 ## What the language already says
 

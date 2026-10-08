@@ -116,24 +116,24 @@ template<class Key>
 using underlying_block_t = std::make_unsigned_t<typename std::conditional_t<std::is_enum_v<Key>, std::underlying_type<Key>, std::type_identity<Key>>::type>;
 
 // The same bit container in the smallest block that holds its N bits, as uint_least8_t is the smallest of at least 8.
-template<class Bits>
-        requires bits::detail::rebindable<Bits>
-using bit_least = bits::detail::rebind_t<Bits, least_block_t<bits::detail::rebind_width_v<Bits>>, bits::detail::rebind_width_v<Bits>>;
+template<class Owner>
+        requires bits::detail::rebindable<Owner>
+using bit_least = bits::detail::rebind_t<Owner, least_block_t<bits::detail::rebind_width_v<Owner>>, bits::detail::rebind_width_v<Owner>>;
 
 // The same bit container in the fastest block of at least its N bits, as uint_fast8_t is the fastest of at least 8.
-template<class Bits>
-        requires bits::detail::rebindable<Bits>
-using bit_fast = bits::detail::rebind_t<Bits, fast_block_t<bits::detail::rebind_width_v<Bits>>, bits::detail::rebind_width_v<Bits>>;
+template<class Owner>
+        requires bits::detail::rebindable<Owner>
+using bit_fast = bits::detail::rebind_t<Owner, fast_block_t<bits::detail::rebind_width_v<Owner>>, bits::detail::rebind_width_v<Owner>>;
 
 // The same bit container with N rounded up to a whole number of its blocks, so that no block carries an unused tail.
-template<class Bits>
-        requires bits::detail::rebindable<Bits>
-using bit_align = bits::detail::rebind_t<Bits, bits::detail::rebind_block_t<Bits>, xstd::align_up(bits::detail::rebind_width_v<Bits>, bit_blocks_extent_v<bits::detail::rebind_block_t<Bits>>)>;
+template<class Owner>
+        requires bits::detail::rebindable<Owner>
+using bit_align = bits::detail::rebind_t<Owner, bits::detail::rebind_block_t<Owner>, xstd::align_up(bits::detail::rebind_width_v<Owner>, bit_blocks_extent_v<bits::detail::rebind_block_t<Owner>>)>;
 
 // The same bit set in its key's underlying block, enumeration or integer, as an existing field or ABI stores it.
-template<class Bits>
-        requires bits::detail::rebindable<Bits> and requires { typename underlying_block_t<typename Bits::key_type>; }
-using bit_underlying = bits::detail::rebind_t<Bits, underlying_block_t<typename Bits::key_type>, bits::detail::rebind_width_v<Bits>>;
+template<class Owner>
+        requires bits::detail::rebindable<Owner> and requires { typename underlying_block_t<typename Owner::key_type>; }
+using bit_underlying = bits::detail::rebind_t<Owner, underlying_block_t<typename Owner::key_type>, bits::detail::rebind_width_v<Owner>>;
 
 } // namespace xstd
 
