@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_DETAIL_HASH_HPP
 #define XSTD_BITS_DETAIL_HASH_HPP
 
-#include <xstd/bits/detail/shift.hpp>          // shr
+#include <xstd/ints/ext/boost/hash2.hpp>       // hash_append_int
 #include <boost/hash2/flavor.hpp>              // default_flavor
 #include <boost/hash2/fnv1a.hpp>               // fnv1a_32, fnv1a_64
 #include <boost/hash2/get_integral_result.hpp> // get_integral_result
@@ -27,11 +27,9 @@ constexpr auto hash_append_bits(Provider const& pr, Hash& h, Flavor const& f, Bi
         using block_type  = Bits::block_type;
         auto const blocks = c.blocks();
         if constexpr (std::numeric_limits<block_type>::digits > std::numeric_limits<std::uint64_t>::digits) {
-                // A block wider than Hash2 writes, the 128-bit one, goes in as its two halves, low first.
-                constexpr auto half = static_cast<unsigned>(std::numeric_limits<std::uint64_t>::digits);
+                // Wider than any integer Hash2 writes: hash_append_int puts each block in as 64-bit words, low first.
                 for (auto const b : blocks) {
-                        pr.hash_append(h, f, static_cast<std::uint64_t>(b));
-                        pr.hash_append(h, f, static_cast<std::uint64_t>(shr(b, half)));
+                        xstd::hash_append_int(h, f, b);
                 }
         } else {
                 // Contiguous whole blocks, padding clear: one update writes the bytes a block at a time would.

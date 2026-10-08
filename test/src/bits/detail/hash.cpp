@@ -3,6 +3,8 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/block_types.hpp>                     // wide_block_types
+#include <test/for_each_type.hpp>                   // for_each_type
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array
 #include <xstd/bits/bit_bounded_set.hpp>            // basic_bit_bounded_set
 #include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector
@@ -202,6 +204,20 @@ BOOST_AUTO_TEST_CASE(TheBlocksGoInAsOneRange)
         }
         boost::hash2::hash_append_size(one_by_one, boost::hash2::little_endian_flavor(), 200UZ);
         BOOST_CHECK(record<boost::hash2::little_endian_flavor>(value).bytes == one_by_one.bytes);
+}
+
+// A block wider than Hash2 writes goes in as its 64-bit words, low first: the message 64-bit blocks of its bits give.
+BOOST_AUTO_TEST_CASE(AWideBlockPinsTheDigestOfItsWords)
+{
+        auto const narrow = xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 200>({1, 64, 199});
+        BOOST_CHECK_EQUAL(little_endian_digest<boost::hash2::fnv1a_64>(narrow), 0x4DCE'2DB6'6171'FAEEULL);
+        BOOST_CHECK_EQUAL(little_endian_digest<boost::hash2::xxhash_64>(narrow), 0xA308'EADD'798A'589FULL);
+        test::for_each_type<test::wide_block_types>([&]<class Block> -> void {
+                auto const wide = xstd::basic_bit_fixed_set<std::size_t, Block, 200>({1, 64, 199});
+                BOOST_CHECK(record<boost::hash2::little_endian_flavor>(wide).bytes == record<boost::hash2::little_endian_flavor>(narrow).bytes);
+                BOOST_CHECK_EQUAL(little_endian_digest<boost::hash2::fnv1a_64>(wide), 0x4DCE'2DB6'6171'FAEEULL);
+                BOOST_CHECK_EQUAL(little_endian_digest<boost::hash2::xxhash_64>(wide), 0xA308'EADD'798A'589FULL);
+        });
 }
 
 // Equal values hash equal under the default whatever holds them, at a short message and at a long one.
