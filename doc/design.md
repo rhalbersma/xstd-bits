@@ -1313,8 +1313,8 @@ under every reading. The cross-cutting protocols -- equality, ordering, formatti
 `std::string` hashing while `std::array`, `std::set` and `std::pair` do not, is history rather than design.
 
 The engine is Boost.Hash2: each adaptor carries a `tag_invoke` hook for `hash_append`, and `std::hash` is
-one detail helper over it, a hash folded by `get_integral_result`. A hook appends through the provider Hash2
-hands it rather than through `boost::hash2::hash_append` by name, so the adaptor headers need only
+xstd-misc's `xstd::hash<T, H>` over it, under an algorithm `H` this library picks. A hook appends through the
+provider Hash2 hands it rather than through `boost::hash2::hash_append` by name, so the adaptor headers need only
 `hash_append_fwd.hpp`.
 
 What a hook appends is the value **itself**, never a storage's own hook: the blocks and the width. So equal
@@ -1322,8 +1322,10 @@ values hash equal whatever holds them, and no storage's `std::hash` is consulted
 blocks contiguously, with the unused bits of the last one clear, so the blocks go in as one
 `hash_append_range` -- one `update` wherever the flavor's byte order is the target's -- and not one call per
 block: the bytes are the same, but a buffered algorithm such as xxHash pays a fixed cost per `update`, and at
-length that cost is most of its time. A 128-bit block, wider than Hash2 writes, goes in as its two halves,
-low first. The set reading at a run-time width appends the positions held and their count instead, since equal
+length that cost is most of its time. A 128-bit block, wider than Hash2 writes, goes in through xstd-ints'
+`hash_append_int`, as its two 64-bit words, low first -- the bytes 64-bit blocks of the same bits give, under
+any flavor. That one call bypasses the provider: `hash_append_int` is a function to call, not a hook Hash2
+finds. The set reading at a run-time width appends the positions held and their count instead, since equal
 sets need not share a width ([width-is-capacity](#width-is-capacity)). The width and the count go in through
 `hash_append_size` and each position as the flavor's `size_type`, never as a `std::size_t`, so a flavor with a
 fixed byte order gives one message, and one digest, on 32- and 64-bit targets alike.
@@ -1333,19 +1335,43 @@ default switches on the length of the message, the bytes appended ahead of the w
 `num_blocks() * sizeof(Block)` for the bits, `count()` positions of the default flavor's `size_type` for the
 positions. One word or less goes to FNV-1a, which has no setup to amortize over it; anything longer goes to
 xxHash, which takes its input in stripes and is faster from about two words on. Both run at the width of
-`std::size_t`, `fnv1a_64` and `xxhash_64` on a 64-bit target and `fnv1a_32` and `xxhash_32` on a 32-bit one.
+`std::size_t`, `fnv1a_64` and `xxhash_64` on a 64-bit target and `fnv1a_32` and `xxhash_32` on a 32-bit one:
+xstd-misc's `xstd::short_hash` and `xstd::long_hash`, which this library does not redefine.
 The length follows the value and the block type, never the storage, so equal values in any storage choose the
 same algorithm; at a static width the choice is made at compile time. It does not switch on the block type
 either: two block types give the same message only where their bytes agree, as `std::uint32_t` and
 `std::uint64_t` do under a little-endian flavor at a width that is a multiple of 64, and then they agree on its
 length too.
 
-`std_hash(v, h)` takes the algorithm by value rather than by type alone, so a seeded instance substitutes and
-not only a default-constructed one. What `std::hash` itself gets is always the default: its `operator()` takes
-one argument and has no second to forward, so the parameter is unreachable through it -- which is why it is
-asserted directly, in `test/src/bits/detail/hash.cpp`, rather than through a specialization. A caller wanting
-another algorithm has the better door anyway: the adaptors' `hash_append` hooks, reached with a hash of their
-own.
+`std::hash` cannot take another algorithm: its `operator()` has one argument and its type no parameter for
+one. The door to another algorithm is `xstd::hash<T, H>` itself, from `<xstd/misc/ext/boost/hash2.hpp>`, which
+hashes any `T` whose `hash_append` Hash2 finds -- every owner here, and every view that hashes -- with the
+algorithm `H` it is given, and seeded where `H` takes a seed. `std::hash<T>` is that hasher at the default, so
+`xstd::hash<T, H>` at the algorithm `std::hash` picks agrees with it digit for digit. At any other algorithm
+the digits differ and the invariant still holds, since it rests on what the hook appends and not on who hashes it.
+
+So a caller chooses as follows. The default, through `std::hash`, is for keys the program makes: it is
+unseeded, and fast at every length. A caller who knows the keys better names the algorithm, `xstd::short_hash`
+for keys of a word or two of bits and `xstd::long_hash` beyond. **Keys an adversary can choose** -- read from
+the network, a file or a user -- need SipHash, seeded per container, which is Hash2's own advice: an unseeded
+algorithm lets an attacker who knows it build a table's worth of colliding keys in advance, and SipHash is a
+keyed function built to make that infeasible without the seed, at a speed a hash table can afford.
+
+```cpp
+#include <xstd/bits/bit_set.hpp>
+#include <xstd/misc/ext/boost/hash2.hpp> // xstd::hash
+#include <boost/hash2/siphash.hpp>       // siphash_64
+#include <cstdint>
+#include <unordered_set>
+
+using hasher = xstd::hash<xstd::bit_set, boost::hash2::siphash_64>;
+
+auto const seed = std::uint64_t{/* drawn at random, per container */};
+auto table      = std::unordered_set<xstd::bit_set, hasher>(0, hasher(seed));
+```
+
+The library adds no hasher of its own beside it: what a bit container hashes is its hook's business, which
+algorithm hashes it is the caller's, and `xstd::hash` already joins the two for every type Hash2 can hash.
 
 Who hashes follows [views-follow-their-precedent](#views-follow-their-precedent): the set adaptor owned or
 viewed, as `std::string_view` hashes; the sequence adaptor as an owner alone, as `std::span` does not, so its

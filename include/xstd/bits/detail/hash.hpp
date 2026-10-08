@@ -6,16 +6,13 @@
 #ifndef XSTD_BITS_DETAIL_HASH_HPP
 #define XSTD_BITS_DETAIL_HASH_HPP
 
-#include <xstd/bits/detail/shift.hpp>          // shr
-#include <boost/hash2/flavor.hpp>              // default_flavor
-#include <boost/hash2/fnv1a.hpp>               // fnv1a_32, fnv1a_64
-#include <boost/hash2/get_integral_result.hpp> // get_integral_result
-#include <boost/hash2/hash_append.hpp>         // hash_append
-#include <boost/hash2/xxhash.hpp>              // xxhash_32, xxhash_64
-#include <cstddef>                             // size_t
-#include <cstdint>                             // uint64_t
-#include <limits>                              // numeric_limits
-#include <type_traits>                         // conditional_t
+#include <xstd/ints/ext/boost/hash2.hpp> // hash_append_int
+#include <xstd/misc/ext/boost/hash2.hpp> // hash, long_hash, short_hash
+#include <boost/hash2/flavor.hpp>        // default_flavor
+#include <cstddef>                       // size_t
+#include <cstdint>                       // uint64_t
+#include <limits>                        // numeric_limits
+#include <type_traits>                   // conditional_t
 
 namespace xstd::bits::detail {
 
@@ -27,11 +24,9 @@ constexpr auto hash_append_bits(Provider const& pr, Hash& h, Flavor const& f, Bi
         using block_type  = Bits::block_type;
         auto const blocks = c.blocks();
         if constexpr (std::numeric_limits<block_type>::digits > std::numeric_limits<std::uint64_t>::digits) {
-                // A block wider than Hash2 writes, the 128-bit one, goes in as its two halves, low first.
-                constexpr auto half = static_cast<unsigned>(std::numeric_limits<std::uint64_t>::digits);
+                // Wider than any integer Hash2 writes: hash_append_int puts each block in as 64-bit words, low first.
                 for (auto const b : blocks) {
-                        pr.hash_append(h, f, static_cast<std::uint64_t>(b));
-                        pr.hash_append(h, f, static_cast<std::uint64_t>(shr(b, half)));
+                        xstd::hash_append_int(h, f, b);
                 }
         } else {
                 // Contiguous whole blocks, padding clear: one update writes the bytes a block at a time would.
@@ -52,20 +47,16 @@ constexpr auto hash_append_positions(Provider const& pr, Hash& h, Flavor const& 
         pr.hash_append_size(h, f, c.count());
 }
 
-// The default algorithms at the platform's width: FNV-1a for a short message, xxHash for a longer one.
-using short_hash = std::conditional_t<sizeof(std::size_t) == sizeof(std::uint64_t), boost::hash2::fnv1a_64, boost::hash2::fnv1a_32>;
-using long_hash  = std::conditional_t<sizeof(std::size_t) == sizeof(std::uint64_t), boost::hash2::xxhash_64, boost::hash2::xxhash_32>;
-
 // One word: FNV-1a has no setup to amortize over it, and xxHash, taking the input in stripes, wins from two on.
 inline constexpr auto short_message_size = sizeof(std::uint64_t);
 
-// What std::hash folds the value to under an algorithm, taken by value so that a seeded one substitutes.
-template<class T, class Hash>
-[[nodiscard]] constexpr auto std_hash(T const& v, Hash h) noexcept
+// What std::hash folds the value to under an algorithm: the public hasher of the value's own type, unseeded.
+template<class Hash, class T>
+[[nodiscard]] constexpr auto std_hash(T const& v) noexcept
         -> std::size_t
 {
-        boost::hash2::hash_append(h, {}, v);
-        return boost::hash2::get_integral_result<std::size_t>(h);
+        auto const hasher = xstd::hash<T, Hash>();
+        return hasher(v);
 }
 
 // The default, by the bytes appended ahead of the width or count, which equal values share whatever holds them.
@@ -74,9 +65,9 @@ template<class T>
         -> std::size_t
 {
         if (message_size <= short_message_size) {
-                return std_hash(v, short_hash());
+                return std_hash<xstd::short_hash>(v);
         }
-        return std_hash(v, long_hash());
+        return std_hash<xstd::long_hash>(v);
 }
 
 // The bit reading's default, by its blocks' bytes, chosen at compile time where the width is static.
@@ -86,14 +77,14 @@ template<class T, class Bits>
 {
         constexpr auto block_size = sizeof(typename Bits::block_type);
         if constexpr (Bits::has_static_size) {
-                using hash_type = std::conditional_t<(Bits::blocks_for(Bits::extent) * block_size <= short_message_size), short_hash, long_hash>;
-                return std_hash(v, hash_type());
+                using hash_type = std::conditional_t<(Bits::blocks_for(Bits::extent) * block_size <= short_message_size), xstd::short_hash, xstd::long_hash>;
+                return std_hash<hash_type>(v);
         } else {
                 return std_hash_by_size(v, c.num_blocks() * block_size);
         }
 }
 
-// The position reading's default, by the bytes its positions take under the flavor std_hash appends with.
+// The position reading's default, by the bytes its positions take under the default flavor, which xstd::hash uses.
 template<class T, class Bits>
 [[nodiscard]] constexpr auto std_hash_positions(T const& v, Bits const& c) noexcept
         -> std::size_t
