@@ -191,6 +191,25 @@ The **segmented** sieve is the one that pays. Base primes below `√n` once, the
 
 All three agree, and the test asserts that rather than the README claiming it.
 
+### Hashing, and choosing the algorithm
+
+Every owner, and every set view, has a `std::hash`, and equal values hash equal whatever holds them. Behind it is [Boost.Hash2](https://www.boost.org/doc/libs/release/libs/hash2/): each type has a `hash_append` hook, so any Hash2 algorithm hashes it, and [xstd-misc](https://github.com/rhalbersma/xstd-misc)'s `xstd::hash<T, H>` puts the algorithm `H` of your choosing, seeded per container, behind an unordered container's hasher. `std::hash<T>` is `xstd::hash<T, xstd::short_hash>` for a value of a word or less and `xstd::hash<T, xstd::long_hash>` beyond: FNV-1a and xxHash at the width of `std::size_t`, unseeded, which suits keys your program makes. For keys an adversary can choose, name SipHash and seed it per container, as Hash2 advises:
+
+```cpp
+#include <xstd/bits/bit_set.hpp>
+#include <xstd/misc/ext/boost/hash2.hpp> // xstd::hash
+#include <boost/hash2/siphash.hpp>       // siphash_64
+#include <cstdint>
+#include <unordered_set>
+
+using hasher = xstd::hash<xstd::bit_set, boost::hash2::siphash_64>;
+
+auto const seed = std::uint64_t{/* drawn at random, per container */};
+auto table      = std::unordered_set<xstd::bit_set, hasher>(0, hasher(seed));
+```
+
+The same spelling works for every other owner and set view, and with `boost::unordered_flat_set` as with `std::unordered_set`. A sequence view hashes no more than `std::span` does. [design.md](doc/design.md#the-hashing-invariant) has what each reading appends and why the default switches on length.
+
 ## Headers
 
 Eight containers: two readings of a block of bits, each over four storages.
@@ -289,7 +308,7 @@ target_link_libraries(my_target PRIVATE xstd::bits)
 
 ### The vcpkg manifest
 
-[`vcpkg.json`](vcpkg.json) is this repository's own manifest, not a published port: it is what `VCPKG_ROOT`-based presets install from when you build **this** library. Its `test` feature — Boost.Test, Boost.Dynamic Bitset, Google Benchmark and range-v3 — is a default feature because building the repository normally means building its tests. The `no-tests-vcpkg` preset turns that off with `VCPKG_MANIFEST_NO_DEFAULT_FEATURES`, so a packaging or install build pays for Boost.Hash2 and nothing else. Consuming the library by any of the three methods above does not read this manifest at all.
+[`vcpkg.json`](vcpkg.json) is this repository's own manifest, not a published port: it is what `VCPKG_ROOT`-based presets install from when you build **this** library. Its `test` feature — Boost.Test, Boost.Dynamic Bitset, Boost.Unordered, Google Benchmark and range-v3 — is a default feature because building the repository normally means building its tests. The `no-tests-vcpkg` preset turns that off with `VCPKG_MANIFEST_NO_DEFAULT_FEATURES`, so a packaging or install build pays for Boost.Hash2 and nothing else. Consuming the library by any of the three methods above does not read this manifest at all.
 
 ## Continuous Integration
 
