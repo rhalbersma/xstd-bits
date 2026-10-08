@@ -1316,6 +1316,19 @@ public:
                 return is_subset_of(other) and not set_equal(bits(), other.bits());
         }
 
+        // P0125R0's converse of is_subset_of: asymmetric, so a member, whose spelling says which side holds which.
+        [[nodiscard]] constexpr auto is_superset_of(set_adaptor const& other) const noexcept
+                -> bool
+        {
+                return other.is_subset_of(*this);
+        }
+
+        [[nodiscard]] constexpr auto is_proper_superset_of(set_adaptor const& other) const noexcept
+                -> bool
+        {
+                return other.is_proper_subset_of(*this);
+        }
+
         // A hidden friend: intersects is to set_intersection what contains is to find.
         [[nodiscard]] friend constexpr auto intersects(set_adaptor const& x, set_adaptor const& y) noexcept
                 -> bool
@@ -1332,13 +1345,6 @@ public:
                 -> bool
         {
                 return not intersects(x, y);
-        }
-
-        // x holds every element of y, in std::ranges::includes(x, y)'s order: is_subset_of read the other way.
-        [[nodiscard]] friend constexpr auto includes(set_adaptor const& x, set_adaptor const& y) noexcept
-                -> bool
-        {
-                return y.is_subset_of(x);
         }
 
 private:

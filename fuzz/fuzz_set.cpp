@@ -365,7 +365,7 @@ auto fuzz_one(fuzz::decoder& in)
                                 break;
                         }
                         case 18: {
-                                check.step("==, <=>, is_subset_of, is_proper_subset_of, intersects, hash");
+                                check.step("==, <=>, is_subset_of, is_proper_subset_of, is_superset_of, is_proper_superset_of, intersects, hash");
                                 check.expect((x == y) == (m == my), "==");
                                 auto const order  = x <=> y;
                                 auto const morder = m <=> my;
@@ -374,6 +374,9 @@ auto fuzz_one(fuzz::decoder& in)
                                 auto const subset = std::ranges::includes(my, m);
                                 check.expect(x.is_subset_of(y) == subset, "is_subset_of");
                                 check.expect(x.is_proper_subset_of(y) == (subset and m != my), "is_proper_subset_of");
+                                auto const superset = std::ranges::includes(m, my);
+                                check.expect(x.is_superset_of(y) == superset, "is_superset_of");
+                                check.expect(x.is_proper_superset_of(y) == (superset and m != my), "is_proper_superset_of");
                                 check.expect(intersects(x, y) == not intersection(m, my).empty(), "intersects");
                                 if (m == my) {
                                         check.expect(std::hash<X>()(x) == std::hash<X>()(y), "equal sets hash alike");

@@ -14,19 +14,53 @@
 
 namespace test::set::composable {
 
-// The four below insert through ranges::to, which past max_size() is std::length_error, so none is noexcept.
+// Each containment is std::ranges::includes(r1, r2), which asks whether r2 lies within r1, read from one side.
 
-struct includes
+struct subset
 {
         template<class X>
         auto operator()(const X& a, const X& b) const noexcept
         {
-                // std::ranges::includes(r1, r2) asks whether r2 lies within r1, so the subset goes second.
                 if constexpr (requires { a.is_subset_of(b); }) {
                         BOOST_CHECK_EQUAL(a.is_subset_of(b), std::ranges::includes(b, a, a.value_comp()));
                 }
         }
 };
+
+struct proper_subset
+{
+        template<class X>
+        auto operator()(const X& a, const X& b) const noexcept
+        {
+                if constexpr (requires { a.is_proper_subset_of(b); }) {
+                        BOOST_CHECK_EQUAL(a.is_proper_subset_of(b), std::ranges::includes(b, a, a.value_comp()) and not std::ranges::includes(a, b, a.value_comp()));
+                }
+        }
+};
+
+struct superset
+{
+        template<class X>
+        auto operator()(const X& a, const X& b) const noexcept
+        {
+                if constexpr (requires { a.is_superset_of(b); }) {
+                        BOOST_CHECK_EQUAL(a.is_superset_of(b), std::ranges::includes(a, b, a.value_comp()));
+                }
+        }
+};
+
+struct proper_superset
+{
+        template<class X>
+        auto operator()(const X& a, const X& b) const noexcept
+        {
+                if constexpr (requires { a.is_proper_superset_of(b); }) {
+                        BOOST_CHECK_EQUAL(a.is_proper_superset_of(b), std::ranges::includes(a, b, a.value_comp()) and not std::ranges::includes(b, a, a.value_comp()));
+                }
+        }
+};
+
+// The four below insert through ranges::to, which past max_size() is std::length_error, so none is noexcept.
 
 struct set_union
 {
