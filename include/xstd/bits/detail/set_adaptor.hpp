@@ -15,7 +15,7 @@
 #include <xstd/bits/detail/borrowed_bits.hpp>        // borrow_bits, borrowable_block, borrowable_blocks, borrowed_bits_t
 #include <xstd/bits/detail/comparisons.hpp>          // numeric_three_way, set_equal, set_three_way
 #include <xstd/bits/detail/functor.hpp>              // decay_copy
-#include <xstd/bits/detail/hash.hpp>                 // hash_append_bits, hash_append_positions, std_hash
+#include <xstd/bits/detail/hash.hpp>                 // hash_append_bits, hash_append_positions, std_hash_bits, std_hash_positions
 #include <xstd/bits/detail/intrin.hpp>               // countl_zero, countr_zero
 #include <xstd/bits/detail/is_key.hpp>               // is_key
 #include <xstd/bits/detail/ownership.hpp>            // owned_bits_t, owned_storage, owner_of, owner_reading, set_reading_tag, storage, storage_access, owns
@@ -25,7 +25,7 @@
 #include <xstd/bits/from_blocks.hpp>                 // from_blocks_t
 #include <xstd/misc/type_traits/empty_base_type.hpp> // empty_base_type
 #include <boost/container_hash/is_range.hpp>         // is_range
-#include <boost/hash2/hash_append.hpp>               // hash_append_tag
+#include <boost/hash2/hash_append_fwd.hpp>           // hash_append_tag
 #include <algorithm>                                 // all_of, find_if, lexicographical_compare_three_way, max, min, partition_point
 #include <cassert>                                   // assert
 #include <compare>                                   // strong_ordering
@@ -423,13 +423,13 @@ class set_adaptor : public set::sizes_t<Bits, Store, Derived, Key, KeyMapping, C
 
         // The value under the set reading: the bits at a static width, the positions at a run-time one.
         template<class Provider, class Hash, class Flavor>
-        friend constexpr auto tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, set_adaptor const* v) noexcept
+        friend constexpr auto tag_invoke(boost::hash2::hash_append_tag const&, Provider const& pr, Hash& h, Flavor const& f, set_adaptor const* v) noexcept
                 -> void
         {
                 if constexpr (has_static_width) {
-                        hash_append_bits(h, f, v->bits());
+                        hash_append_bits(pr, h, f, v->bits());
                 } else {
-                        hash_append_positions(h, f, v->bits());
+                        hash_append_positions(pr, h, f, v->bits());
                 }
         }
 
@@ -1578,7 +1578,12 @@ struct hash<xstd::bits::detail::set_adaptor<Bits, Store, Derived, Key, KeyMappin
         [[nodiscard]] constexpr auto operator()(xstd::bits::detail::set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> const& v) const noexcept
                 -> std::size_t
         {
-                return xstd::bits::detail::std_hash(v);
+                // Chosen by what the hook appends: the bits at a static width, the positions at a run-time one.
+                if constexpr (xstd::bits::detail::set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::has_static_width) {
+                        return xstd::bits::detail::std_hash_bits(v, xstd::bits::detail::storage_access::bits(v));
+                } else {
+                        return xstd::bits::detail::std_hash_positions(v, xstd::bits::detail::storage_access::bits(v));
+                }
         }
 };
 
