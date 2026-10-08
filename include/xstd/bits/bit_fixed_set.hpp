@@ -13,7 +13,7 @@
 #include <xstd/bits/detail/bit_layout.hpp>                   // byte_count, bytes_bits
 #include <xstd/bits/detail/ownership.hpp>                    // storage, storage_access
 #include <xstd/bits/detail/rebind.hpp>                       // rebind
-#include <xstd/bits/detail/set_adaptor.hpp>                  // admits_width, disjoint, includes, intersects, key_direction, set_adaptor
+#include <xstd/bits/detail/set_adaptor.hpp>                  // admits_width, disjoint, intersects, key_direction, set_adaptor
 #include <xstd/bits/detail/shift.hpp>                        // shr
 #include <xstd/bits/from_blocks.hpp>                         // from_blocks, from_blocks_t
 #include <xstd/ints/concepts/unsigned_integer.hpp>           // unsigned_integer
@@ -122,7 +122,7 @@ public:
                 x.swap(y);
         }
 
-        // The base's queries again, here so a mask on either side converts: any-of, none-of, and all-of as x holding y.
+        // The base's queries again, here so a mask converts: on either side of the friends, as the members' argument.
         [[nodiscard]] friend constexpr auto intersects(basic_bit_fixed_set const& x, basic_bit_fixed_set const& y) noexcept
                 -> bool
                 requires is_mask
@@ -137,11 +137,38 @@ public:
                 return disjoint(static_cast<base_type const&>(x), static_cast<base_type const&>(y));
         }
 
-        [[nodiscard]] friend constexpr auto includes(basic_bit_fixed_set const& x, basic_bit_fixed_set const& y) noexcept
+        // A member hides the base's of its name, so these bring the base's set forms back beside the mask ones.
+        using base_type::is_proper_subset_of;
+        using base_type::is_proper_superset_of;
+        using base_type::is_subset_of;
+        using base_type::is_superset_of;
+
+        [[nodiscard]] constexpr auto is_subset_of(basic_bit_fixed_set const& other) const noexcept
                 -> bool
                 requires is_mask
         {
-                return includes(static_cast<base_type const&>(x), static_cast<base_type const&>(y));
+                return base_type::is_subset_of(other);
+        }
+
+        [[nodiscard]] constexpr auto is_proper_subset_of(basic_bit_fixed_set const& other) const noexcept
+                -> bool
+                requires is_mask
+        {
+                return base_type::is_proper_subset_of(other);
+        }
+
+        [[nodiscard]] constexpr auto is_superset_of(basic_bit_fixed_set const& other) const noexcept
+                -> bool
+                requires is_mask
+        {
+                return base_type::is_superset_of(other);
+        }
+
+        [[nodiscard]] constexpr auto is_proper_superset_of(basic_bit_fixed_set const& other) const noexcept
+                -> bool
+                requires is_mask
+        {
+                return base_type::is_proper_superset_of(other);
         }
 
         // Total, as the binary & and - are: the value's bits at or above N meet nothing in this set.
