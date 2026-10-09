@@ -90,8 +90,11 @@ struct bits::detail::rebind<basic_bit_bounded_vector<Block, N>>
         using block_type                   = Block;
         static constexpr std::size_t width = N;
 
-        template<class OtherBlock, std::size_t M>
-        using type = basic_bit_bounded_vector<OtherBlock, M>;
+        template<class OtherBlock>
+        using with_block = basic_bit_bounded_vector<OtherBlock, N>;
+
+        template<std::size_t M>
+        using with_width = basic_bit_bounded_vector<Block, M>;
 };
 
 } // namespace xstd

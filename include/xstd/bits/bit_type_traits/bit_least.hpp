@@ -7,7 +7,8 @@
 #define XSTD_BITS_BIT_TYPE_TRAITS_BIT_LEAST_HPP
 
 #include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp> // bit_blocks_extent_v
-#include <xstd/bits/detail/rebind.hpp>                     // rebind_t, rebind_width_v, rebindable
+#include <xstd/bits/bit_type_traits/bit_rebind.hpp>        // bit_rebind
+#include <xstd/bits/detail/rebind.hpp>                     // rebind_width_v, resizable
 #include <cstddef>                                         // size_t
 #include <cstdint>                                         // uint16_t, uint32_t, uint64_t, uint8_t
 #include <type_traits>                                     // conditional_t
@@ -24,8 +25,8 @@ using least_block_t = std::conditional_t<
 
 // The same bit container in the smallest block that holds its N bits, as uint_least8_t is the smallest of at least 8.
 template<class Owner>
-        requires bits::detail::rebindable<Owner>
-using bit_least = bits::detail::rebind_t<Owner, least_block_t<bits::detail::rebind_width_v<Owner>>, bits::detail::rebind_width_v<Owner>>;
+        requires bits::detail::resizable<Owner>
+using bit_least = bit_rebind<least_block_t<bits::detail::rebind_width_v<Owner>>, Owner>;
 
 } // namespace xstd
 

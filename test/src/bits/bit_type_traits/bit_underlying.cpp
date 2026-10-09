@@ -8,7 +8,7 @@
 #include <xstd/bits/bit_fixed_set.hpp>                  // basic_bit_fixed_set, bit_fixed_set
 #include <xstd/bits/bit_flag_mapping.hpp>               // bit_flag_mapping
 #include <xstd/bits/bit_flag_set.hpp>                   // bit_flag_set
-#include <xstd/bits/bit_set.hpp>                        // bit_set
+#include <xstd/bits/bit_set.hpp>                        // basic_bit_set, bit_set
 #include <xstd/bits/bit_type_traits/bit_align.hpp>      // bit_align
 #include <xstd/bits/bit_type_traits/bit_fast.hpp>       // bit_fast
 #include <xstd/bits/bit_type_traits/bit_least.hpp>      // bit_least
@@ -182,11 +182,12 @@ BOOST_AUTO_TEST_CASE(TheUnderlyingSetOfAnIntegerMaskIsInItsUnsignedCounterpart)
         BOOST_CHECK(int(x) == 0b10110 and x == narrow(0b10110));
 }
 
-// Only a fixed-width set keyed by an enumeration or an integer with an unsigned counterpart has an underlying block.
+// Only a set keyed by an enumeration or an integer with an unsigned counterpart has an underlying block.
 BOOST_AUTO_TEST_CASE(OnlyASetOfEnumerationOrIntegerKeysHasAnUnderlyingBlock)
 {
         static_assert(underlying_rebinds<xstd::bit_flag_set<wire::flag>> and underlying_rebinds<xstd::bit_flag_set<wire::signed_flag, 3>>);
-        static_assert(not underlying_rebinds<xstd::bit_array<9>> and not underlying_rebinds<xstd::bit_set>);
+        static_assert(not underlying_rebinds<xstd::bit_array<9>> and std::is_same_v<xstd::bit_underlying<xstd::bit_set>, xstd::bit_set>);
+        static_assert(std::is_same_v<xstd::bit_underlying<xstd::basic_bit_set<wire::flag, std::uint8_t, xstd::bit_flag_mapping<wire::flag>, std::greater<wire::flag>>>, xstd::basic_bit_set<wire::flag, std::uint32_t, xstd::bit_flag_mapping<wire::flag>, std::greater<wire::flag>>>); // NOLINT(modernize-use-transparent-functors): the comparator the type names
         static_assert(std::is_same_v<xstd::bit_underlying<xstd::bit_least<xstd::bit_fixed_set<9>>>, xstd::bit_fixed_set<9>>);
         static_assert(not underlying_rebinds<xstd::bit_flag_set<std::bitset<16>>>);
         static_assert(not underlying_rebinds<xstd::basic_bit_fixed_set<wire::yes_no, std::uint8_t, 2, wire::yes_no_mapping>>);

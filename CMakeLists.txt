@@ -105,6 +105,8 @@ target_sources(
         include/xstd/bits/bit_type_traits/bit_blocks_extent.hpp
         include/xstd/bits/bit_type_traits/bit_fast.hpp
         include/xstd/bits/bit_type_traits/bit_least.hpp
+        include/xstd/bits/bit_type_traits/bit_rebind.hpp
+        include/xstd/bits/bit_type_traits/bit_resize.hpp
         include/xstd/bits/bit_type_traits/bit_underlying.hpp
         include/xstd/bits/bit_vector.hpp
         include/xstd/bits/detail/adapted_bits.hpp

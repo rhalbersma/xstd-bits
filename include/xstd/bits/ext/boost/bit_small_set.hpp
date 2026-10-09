@@ -10,6 +10,7 @@
 #include <xstd/bits/bit_key_mapping.hpp>                     // bit_key_mapping
 #include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container, num_blocks_v
 #include <xstd/bits/detail/ownership.hpp>                    // storage
+#include <xstd/bits/detail/rebind.hpp>                       // rebind
 #include <xstd/bits/detail/set_adaptor.hpp>                  // admits_width, key_direction, set_adaptor
 #include <xstd/bits/from_blocks.hpp>                         // from_blocks, from_blocks_t
 #include <xstd/ints/concepts/unsigned_integer.hpp>           // unsigned_integer
@@ -22,6 +23,7 @@
 #include <functional>                                        // hash, less
 #include <initializer_list>                                  // initializer_list
 #include <iterator>                                          // input_iterator
+#include <memory>                                            // allocator_traits
 #include <ranges>                                            // from_range, from_range_t
 #include <type_traits>                                       // false_type, is_nothrow_move_constructible_v, type_identity_t
 #include <utility>                                           // forward, move
@@ -114,6 +116,20 @@ public:
 
 template<std::size_t N>
 using bit_small_set = basic_bit_small_set<std::size_t, std::size_t, N>;
+
+// Another block takes the allocator with it, as std::allocator_traits rebinds one; another width keeps it.
+template<class Key, class Block, std::size_t N, class KeyMapping, class Compare, class Alloc>
+struct bits::detail::rebind<basic_bit_small_set<Key, Block, N, KeyMapping, Compare, Alloc>>
+{
+        using block_type                   = Block;
+        static constexpr std::size_t width = N;
+
+        template<class OtherBlock>
+        using with_block = basic_bit_small_set<Key, OtherBlock, N, KeyMapping, Compare, typename std::allocator_traits<Alloc>::template rebind_alloc<OtherBlock>>;
+
+        template<std::size_t M>
+        using with_width = basic_bit_small_set<Key, Block, M, KeyMapping, Compare, Alloc>;
+};
 
 } // namespace xstd
 

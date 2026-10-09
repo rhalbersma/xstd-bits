@@ -7,15 +7,16 @@
 #define XSTD_BITS_BIT_TYPE_TRAITS_BIT_ALIGN_HPP
 
 #include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp> // bit_blocks_extent_v
-#include <xstd/bits/detail/rebind.hpp>                     // rebind_block_t, rebind_t, rebind_width_v, rebindable
+#include <xstd/bits/bit_type_traits/bit_resize.hpp>        // bit_resize
+#include <xstd/bits/detail/rebind.hpp>                     // rebind_block_t, rebind_width_v, resizable
 #include <xstd/ints/memory.hpp>                            // align_up
 
 namespace xstd {
 
 // The same bit container with N rounded up to a whole number of its blocks, so that no block carries an unused tail.
 template<class Owner>
-        requires bits::detail::rebindable<Owner>
-using bit_align = bits::detail::rebind_t<Owner, bits::detail::rebind_block_t<Owner>, xstd::align_up(bits::detail::rebind_width_v<Owner>, bit_blocks_extent_v<bits::detail::rebind_block_t<Owner>>)>;
+        requires bits::detail::resizable<Owner>
+using bit_align = bit_resize<xstd::align_up(bits::detail::rebind_width_v<Owner>, bit_blocks_extent_v<bits::detail::rebind_block_t<Owner>>), Owner>;
 
 } // namespace xstd
 

@@ -2490,7 +2490,7 @@ axis tags came along because no adaptor can be named without them. What settled 
 to ask. A container is what it is, and what it *does* -- bidirectional with a `key_type`, or random-access over
 `bool` -- is askable in the standard's own vocabulary, without naming a
 base at all. So the adaptors and their vocabulary went to `xstd::bits::detail`, and what remains in
-`namespace xstd` is nine names, their short aliases, four transformations over them, and one concept.
+`namespace xstd` is nine names, their short aliases, six transformations over them, and one concept.
 
 On the other side, the two that had to be argued. The four proxy types are reached only through container
 typedefs, so no user spells them. `bit_block_container` and its three aliases are the device that turns
@@ -2690,22 +2690,33 @@ representation, not whether the code is optimized: the hooks behind `xstd::hashe
 
 ### block-and-width-transformations
 
-Four type transformations, one header each under `<xstd/bits/bit_type_traits/>`, take a fixed-width owner and return the same owner with
-its block or its width changed, every other argument passed through:
+Two type transformations, one header each under `<xstd/bits/bit_type_traits/>`, take an owner and return the same
+owner with one argument changed, every other passed through, as `std::simd`'s `rebind_t` and `resize_t` do:
+`bit_rebind<Block, X>` puts it over another block, its allocator rebound with it through
+`std::allocator_traits<A>::rebind_alloc<Block>`, and `bit_resize<N, X>` gives it another width. Four more are named
+choices written through that pair, the block or width computed from `X`'s own:
 
 | Transformation | Block | Width |
 | :-- | :-- | :-- |
+| `bit_rebind<B, X>` | `B` | `X`'s own |
+| `bit_resize<M, X>` | `X`'s own | `M` |
 | `bit_least<X>` | `least_block_t<N>`: the narrowest of `std::uint8_t` to `std::uint64_t` holding `N`, else `std::uint64_t` | `N` |
 | `bit_fast<X>` | `fast_block_t<N>`: `std::uint_fast8_t` to `std::uint_fast64_t` by the same thresholds | `N` |
 | `bit_align<X>` | `X`'s own | `align_up(N, digits)`, whole blocks of `X`'s block |
 | `bit_underlying<X>` | `underlying_block_t<X::key_type>`: the key's underlying type, enumeration or integer, made unsigned | `N` |
 
-`X` is any of `basic_bit_array<Block, N>`, `basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>`,
-`basic_bit_bounded_vector<Block, N>` and `basic_bit_bounded_set<Key, Block, N, KeyMapping, Compare>`, short names
-included, the bounded ones rounding their capacity. So `bit_least<bit_fixed_set<9>>` is
+`bit_rebind` and `bit_underlying` take every owner: `basic_bit_array<Block, N>`,
+`basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>`, `basic_bit_bounded_vector<Block, N>`,
+`basic_bit_bounded_set<Key, Block, N, KeyMapping, Compare>`, `basic_bit_vector<Block, Allocator>`,
+`basic_bit_set<Key, Block, KeyMapping, Compare, Allocator>`, and the Boost extension's
+`basic_bit_small_vector<Block, N, Alloc>` and `basic_bit_small_set<Key, Block, N, KeyMapping, Compare, Alloc>`, short
+names included. `bit_resize`, `bit_least`, `bit_fast` and `bit_align` read or write `N`, so they take the six whose
+type carries one, the bounded and small ones changing their capacity. So `bit_rebind<std::uint8_t, bit_vector>` is
+`basic_bit_vector<std::uint8_t, std::allocator<std::uint8_t>>`, `bit_least<bit_fixed_set<9>>` is
 `basic_bit_fixed_set<std::size_t, std::uint16_t, 9>`, two bytes where `bit_fixed_set<9>` is eight, and
-`bit_align<bit_array<9>>` is `bit_array<64>`, whose last block carries no unused tail. A type with no width of its
-own, a run-time owner, a view or a bare block, is rejected by the alias's constraint rather than deep inside it.
+`bit_align<bit_array<9>>` is `bit_array<64>`, whose last block carries no unused tail. A type with nothing to change,
+a view, a standard bit container or a bare block, and a run-time owner asked for a width, is rejected by the alias's
+constraint rather than deep inside it.
 The names are `<cstdint>`'s: `std::uint_least8_t` is the smallest type of at least 8 bits and `std::uint_fast8_t` the
 fastest, and the platform decides how wide that is. glibc on x86-64 makes `std::uint_fast16_t` and
 `std::uint_fast32_t` 64 bits wide where MSVC makes them 32, so `bit_fast` names a block and promises no size.
@@ -2724,8 +2735,9 @@ For a flag set at the mask's full width, the default, `bit_least` already chose 
 identity; it is the transformation that says why, rather than one that happens to agree.
 The precedent for the form is `std::make_unsigned_t<T>`, a type in and a related type out, and C++26's `std::simd`,
 whose `rebind_t<U, V>` changes the element type of a `basic_simd` and `resize_t<N, V>` its width, each keeping the
-other. Each owner specializes one exposition-only trait that names its block, its width and itself over another
-pair; the four aliases are written once against that trait. An earlier design spelled the same choices as
+other, and `bit_rebind` and `bit_resize` take the names and the argument order of that pair. Each owner specializes
+one exposition-only trait that names its block, its width where its type has one, and itself over another block or
+width; the two aliases are written once against that trait, and the four choices once against the two. An earlier design spelled the same choices as
 namespaces, `aligned::bit_fixed_set<N>` beside `xstd::bit_fixed_set<N>`, each namespace re-declaring every class
 template's parameter list with its own defaults and constraints. Those copies drifted: `aligned::basic_bit_fixed_set`
 took an unconstrained `Compare` where the class takes only a direction, so a misuse surfaced inside the class rather

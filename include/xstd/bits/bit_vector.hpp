@@ -8,6 +8,7 @@
 
 #include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container
 #include <xstd/bits/detail/ownership.hpp>                    // storage, window
+#include <xstd/bits/detail/rebind.hpp>                       // rebind
 #include <xstd/bits/detail/sequence_adaptor.hpp>             // sequence_adaptor
 #include <xstd/bits/from_blocks.hpp>                         // from_blocks, from_blocks_t
 #include <xstd/ints/concepts/unsigned_integer.hpp>           // unsigned_integer
@@ -19,7 +20,7 @@
 #include <functional>                                        // hash
 #include <initializer_list>                                  // initializer_list
 #include <iterator>                                          // input_iterator
-#include <memory>                                            // allocator
+#include <memory>                                            // allocator, allocator_traits
 #include <ranges>                                            // from_range, from_range_t, input_range
 #include <type_traits>                                       // false_type, type_identity_t
 #include <utility>                                           // forward, move
@@ -116,6 +117,16 @@ basic_bit_vector(from_blocks_t, std::vector<Block, Allocator>) -> basic_bit_vect
 
 template<xstd::unsigned_integer Block, class Allocator>
 basic_bit_vector(from_blocks_t, std::vector<Block, Allocator>, Allocator) -> basic_bit_vector<Block, Allocator>;
+
+// Another block takes the allocator with it, as std::allocator_traits rebinds one; the width is a run-time value.
+template<class Block, class Allocator>
+struct bits::detail::rebind<basic_bit_vector<Block, Allocator>>
+{
+        using block_type = Block;
+
+        template<class OtherBlock>
+        using with_block = basic_bit_vector<OtherBlock, typename std::allocator_traits<Allocator>::template rebind_alloc<OtherBlock>>;
+};
 
 } // namespace xstd
 

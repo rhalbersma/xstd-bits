@@ -10,6 +10,7 @@
 #include <xstd/bits/bit_key_mapping.hpp>                     // bit_key_mapping
 #include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container
 #include <xstd/bits/detail/ownership.hpp>                    // storage
+#include <xstd/bits/detail/rebind.hpp>                       // rebind
 #include <xstd/bits/detail/set_adaptor.hpp>                  // key_direction, set_adaptor
 #include <xstd/bits/from_blocks.hpp>                         // from_blocks, from_blocks_t
 #include <xstd/ints/concepts/unsigned_integer.hpp>           // unsigned_integer
@@ -21,7 +22,7 @@
 #include <functional>                                        // hash, less
 #include <initializer_list>                                  // initializer_list
 #include <iterator>                                          // input_iterator
-#include <memory>                                            // allocator
+#include <memory>                                            // allocator, allocator_traits
 #include <ranges>                                            // from_range, from_range_t, input_range
 #include <type_traits>                                       // false_type, type_identity_t
 #include <utility>                                           // forward, move
@@ -141,6 +142,16 @@ basic_bit_set(from_blocks_t, std::vector<Block, Allocator>) -> basic_bit_set<std
 
 template<xstd::unsigned_integer Block, class Allocator>
 basic_bit_set(from_blocks_t, std::vector<Block, Allocator>, Allocator) -> basic_bit_set<std::size_t, Block, bit_key_mapping<std::size_t>, std::less<std::size_t>, Allocator>; // NOLINT(modernize-use-transparent-functors): the default comparator, as the class names it
+
+// Another block takes the allocator with it, as std::allocator_traits rebinds one; the width is a run-time value.
+template<class Key, class Block, class KeyMapping, class Compare, class Allocator>
+struct bits::detail::rebind<basic_bit_set<Key, Block, KeyMapping, Compare, Allocator>>
+{
+        using block_type = Block;
+
+        template<class OtherBlock>
+        using with_block = basic_bit_set<Key, OtherBlock, KeyMapping, Compare, typename std::allocator_traits<Allocator>::template rebind_alloc<OtherBlock>>;
+};
 
 } // namespace xstd
 
