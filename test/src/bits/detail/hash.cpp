@@ -11,7 +11,7 @@
 #include <xstd/bits/bit_set.hpp>                    // basic_bit_set, bit_set
 #include <xstd/bits/bit_set_view.hpp>               // bit_set_view
 #include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
-#include <xstd/bits/detail/intrin.hpp>              // bools_per_word, byte_bools, expand_word, expand_word_by_table
+#include <xstd/bits/detail/intrin.hpp>              // bools_per_block, byte_bools, expand_block, expand_block_by_table
 #include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
 #include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector
 #include <xstd/bits/from_blocks.hpp>                // from_blocks
@@ -244,8 +244,8 @@ BOOST_AUTO_TEST_CASE(TheHooksAppendTheModelsMessage)
         BOOST_CHECK(record<boost::hash2::big_endian_flavor>(dynamic_set({1, 3, 5})).bytes == record<boost::hash2::big_endian_flavor>(keys).bytes);
 }
 
-// Bools go in eight words to an update, the last one stopping at the width.
-BOOST_AUTO_TEST_CASE(TheBoolsGoInEightWordsToAnUpdate)
+// Bools go in eight 64-bit blocks to an update, the last one stopping at the width.
+BOOST_AUTO_TEST_CASE(TheBoolsGoInEightBlocksToAnUpdate)
 {
         auto const value = alternating(sequence(1'000));
         auto const h     = record<boost::hash2::little_endian_flavor>(value);
@@ -262,11 +262,11 @@ BOOST_AUTO_TEST_CASE(EveryExpansionAgrees)
                         BOOST_CHECK_EQUAL(xstd::bits::detail::byte_bools[byte][i], (byte >> i) & 1UZ);
                 }
         }
-        for (auto const word : {std::uint64_t{0}, ~std::uint64_t{0}, std::uint64_t{0x0123'4567'89AB'CDEF}, std::uint64_t{0x8000'0000'0000'0001}}) {
-                auto by_table       = std::array<unsigned char, xstd::bits::detail::bools_per_word>();
-                auto by_instruction = std::array<unsigned char, xstd::bits::detail::bools_per_word>();
-                xstd::bits::detail::expand_word_by_table(word, by_table);
-                xstd::bits::detail::expand_word(word, by_instruction);
+        for (auto const block : {std::uint64_t{0}, ~std::uint64_t{0}, std::uint64_t{0x0123'4567'89AB'CDEF}, std::uint64_t{0x8000'0000'0000'0001}}) {
+                auto by_table       = std::array<unsigned char, xstd::bits::detail::bools_per_block>();
+                auto by_instruction = std::array<unsigned char, xstd::bits::detail::bools_per_block>();
+                xstd::bits::detail::expand_block_by_table(block, by_table);
+                xstd::bits::detail::expand_block(block, by_instruction);
                 BOOST_CHECK(by_table == by_instruction);
         }
 }

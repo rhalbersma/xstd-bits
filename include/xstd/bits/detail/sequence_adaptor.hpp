@@ -9,7 +9,7 @@
 #include <xstd/bits/bit_concepts/bit_blocks.hpp>             // bit_blocks
 #include <xstd/bits/bit_hasher.hpp>                          // bit_hasher
 #include <xstd/bits/detail/adapted_bits.hpp>                 // adapted_bits
-#include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_base_type, allocator_param_t, has_allocator_v
+#include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_aware, allocator_base_type, allocator_param_t
 #include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container, bit_block_container_type
 #include <xstd/bits/detail/borrowed_bits.hpp>                // borrow_bits, borrowable_block, borrowable_blocks, borrowed_bits_t
 #include <xstd/bits/detail/comparisons.hpp>                  // sequence_three_way
@@ -17,7 +17,7 @@
 #include <xstd/bits/detail/hash.hpp>                         // hash_append_bools
 #include <xstd/bits/detail/intrin.hpp>                       // countr_zero, popcount
 #include <xstd/bits/detail/ownership.hpp>                    // owned_bits_t, owned_storage, owner_of, owner_reading, owns, sequence_reading_tag, storage, storage_access, window
-#include <xstd/bits/detail/shift.hpp>                        // shl, shr
+#include <xstd/bits/detail/shift.hpp>                        // partial_block_mask, shl, shr
 #include <xstd/bits/detail/storage_ptr.hpp>                  // storage_ptr_t, storage_ref_t
 #include <xstd/bits/from_blocks.hpp>                         // from_blocks_t
 #include <xstd/misc/type_traits/conditional_data_member.hpp> // XSTD_NO_UNIQUE_ADDRESS, conditional_data_member_t
@@ -35,7 +35,6 @@
 #include <functional>                                        // hash
 #include <initializer_list>                                  // initializer_list
 #include <iterator>                                          // input_iterator, make_reverse_iterator, random_access_iterator_tag, reverse_iterator, sentinel_for
-#include <limits>                                            // numeric_limits
 #include <new>                                               // bad_alloc
 #include <optional>                                          // nullopt, optional
 #include <ranges>                                            // begin, enable_borrowed_range, enable_view, end, from_range_t, input_range, iota, range_reference_t, size, sized_range, subrange
@@ -50,16 +49,6 @@
 namespace xstd::bits::detail {
 
 namespace sequence {
-
-// The bits a window's block holds: every one but for the last block, which holds what is left over.
-template<class Block>
-[[nodiscard]] constexpr auto partial_block_mask(std::size_t count) noexcept
-        -> Block
-{
-        constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<Block>::digits);
-        // No shift by digits, which is undefined: a full block is every bit, spelled without one.
-        return count == digits ? static_cast<Block>(~Block{}) : static_cast<Block>(shl(Block{1}, count) - Block{1});
-}
 
 // Every position, lowest first, a block at a time: the reload is the inner loop's exit test.
 template<class Bits, class F>
@@ -174,7 +163,7 @@ using members_t = adapted_bits<
 
 // Growth is the owner's over storage that grows: a view must never resize what it does not own.
 template<class Bits, storage Store>
-consteval auto can_grow() noexcept
+[[nodiscard]] consteval auto can_grow() noexcept
         -> bool
 {
         using bits_type = std::remove_const_t<Bits>;
@@ -187,7 +176,7 @@ consteval auto can_grow() noexcept
 
 // The width the type fixes, an owner's or a static window's, and dynamic_extent where it is read at run time.
 template<class Bits, storage Store, window W, std::size_t E>
-consteval auto static_size() noexcept
+[[nodiscard]] consteval auto static_size() noexcept
         -> std::size_t
 {
         if constexpr (W == window::sub) {
@@ -600,7 +589,8 @@ class sequence_adaptor : public sequence::sizes_t<Bits, Store, W, Derived, E>
                 }
 
                 // The pre-ranges spelling of iter_swap, for std::swap and the algorithms still built on it.
-                friend constexpr auto swap(basic_reference x, basic_reference y) noexcept -> void
+                friend constexpr auto swap(basic_reference x, basic_reference y) noexcept
+                        -> void
                         requires is_writable
                 {
                         value_type const t = x;
@@ -608,7 +598,8 @@ class sequence_adaptor : public sequence::sizes_t<Bits, Store, W, Derived, E>
                         y                  = t;
                 }
 
-                friend constexpr auto swap(basic_reference x, value_type& y) noexcept -> void
+                friend constexpr auto swap(basic_reference x, value_type& y) noexcept
+                        -> void
                         requires is_writable
                 {
                         value_type const t = x;
@@ -616,7 +607,8 @@ class sequence_adaptor : public sequence::sizes_t<Bits, Store, W, Derived, E>
                         y                  = t;
                 }
 
-                friend constexpr auto swap(value_type& x, basic_reference y) noexcept -> void
+                friend constexpr auto swap(value_type& x, basic_reference y) noexcept
+                        -> void
                         requires is_writable
                 {
                         value_type const t = x;
@@ -690,7 +682,7 @@ public:
 
 private:
         // An allocator argument as [container.alloc.reqmts] takes it: converting, and only where the storage has one.
-        static constexpr bool has_allocator = has_allocator_v<std::remove_const_t<Bits>>;
+        static constexpr bool is_allocator_aware = allocator_aware<std::remove_const_t<Bits>>;
 
         using allocator_param = allocator_param_t<std::remove_const_t<Bits>>;
 
@@ -755,7 +747,7 @@ public:
         {}
 
         [[nodiscard]] constexpr sequence_adaptor(xstd::from_blocks_t, bits_type::block_container_type blocks, allocator_param const& alloc)
-                requires can_grow and bits_type::has_stored_size and has_allocator
+                requires can_grow and bits_type::has_stored_size and is_allocator_aware
                 : members_type(std::in_place, xstd::from_blocks, std::move(blocks), alloc)
         {}
 
@@ -769,17 +761,17 @@ public:
 
         // [vector.bool]'s allocator arguments: converting, and offered only where the storage has an allocator.
         [[nodiscard]] constexpr explicit sequence_adaptor(allocator_param const& alloc) noexcept(std::is_nothrow_constructible_v<bits_type, allocator_param const&>)
-                requires can_grow and has_allocator
+                requires can_grow and is_allocator_aware
                 : members_type(std::in_place, alloc)
         {}
 
         [[nodiscard]] constexpr explicit sequence_adaptor(size_type n, allocator_param const& alloc)
-                requires can_grow and has_allocator
+                requires can_grow and is_allocator_aware
                 : members_type(std::in_place, bits_type::check_addressable_width(n), alloc)
         {}
 
         [[nodiscard]] constexpr sequence_adaptor(size_type n, value_type const& value, allocator_param const& alloc)
-                requires can_grow and has_allocator
+                requires can_grow and is_allocator_aware
                 : members_type(std::in_place, bits_type::check_addressable_width(n), alloc)
         {
                 if (value) {
@@ -788,7 +780,7 @@ public:
         }
 
         template<std::input_iterator I, std::sentinel_for<I> S>
-                requires can_grow and std::constructible_from<value_type, std::iter_reference_t<I>> and has_allocator
+                requires can_grow and std::constructible_from<value_type, std::iter_reference_t<I>> and is_allocator_aware
         [[nodiscard]] constexpr sequence_adaptor(I first, S last, allocator_param const& alloc)
                 : members_type(std::in_place, alloc)
         {
@@ -798,23 +790,23 @@ public:
         }
 
         template<std::ranges::input_range R>
-                requires can_grow and std::constructible_from<value_type, std::ranges::range_reference_t<R>> and has_allocator
+                requires can_grow and std::constructible_from<value_type, std::ranges::range_reference_t<R>> and is_allocator_aware
         [[nodiscard]] constexpr sequence_adaptor(std::from_range_t, R&& rg, allocator_param const& alloc)
                 : sequence_adaptor(std::ranges::begin(rg), std::ranges::end(rg), alloc)
         {}
 
         [[nodiscard]] constexpr sequence_adaptor(sequence_adaptor const& other, allocator_param const& alloc)
-                requires can_grow and has_allocator
+                requires can_grow and is_allocator_aware
                 : members_type(std::in_place, other.m_bits, alloc)
         {}
 
         [[nodiscard]] constexpr sequence_adaptor(sequence_adaptor&& other, allocator_param const& alloc)
-                requires can_grow and has_allocator
+                requires can_grow and is_allocator_aware
                 : members_type(std::in_place, std::move(other.m_bits), alloc)
         {}
 
         [[nodiscard]] constexpr sequence_adaptor(std::initializer_list<value_type> il, allocator_param const& alloc)
-                requires can_grow and has_allocator
+                requires can_grow and is_allocator_aware
                 : sequence_adaptor(il.begin(), il.end(), alloc)
         {}
 
@@ -982,7 +974,7 @@ public:
                         // In place and ascending, each write below every read still to come, so nothing is allocated.
                         for (auto k = 0UZ; k < width - tail; k += digits) {
                                 auto const count = std::ranges::min(digits, width - tail - k);
-                                m_bits.block_at(pos + k, m_bits.block_at(tail + k), sequence::partial_block_mask<block_type>(count));
+                                m_bits.block_at(pos + k, m_bits.block_at(tail + k), partial_block_mask<block_type>(count));
                         }
                 }
                 m_bits.resize(width - (tail - pos));
@@ -1214,25 +1206,29 @@ public:
         }
 
         // Growth, [vector]'s members: the storage computes the ceiling and this reading picks length_error.
-        constexpr auto resize(size_type n) -> void
+        constexpr auto resize(size_type n)
+                -> void
                 requires can_grow
         {
                 m_bits.resize(bits_type::check_addressable_width(n));
         }
 
-        constexpr auto resize(size_type n, value_type const& value) -> void
+        constexpr auto resize(size_type n, value_type const& value)
+                -> void
                 requires can_grow
         {
                 m_bits.resize(bits_type::check_addressable_width(n), value);
         }
 
-        constexpr auto clear() noexcept -> void
+        constexpr auto clear() noexcept
+                -> void
                 requires can_grow
         {
                 m_bits.clear();
         }
 
-        constexpr auto pop_back() noexcept -> void
+        constexpr auto pop_back() noexcept
+                -> void
                 requires can_grow
         {
                 m_bits.pop_back();
@@ -1373,21 +1369,24 @@ public:
         }
 
         // Elementwise logical, as a bitwise operator on a sequence of bools means. Three, not four.
-        constexpr auto operator&=(this auto&& self, sequence_adaptor const& other) noexcept -> auto&
+        constexpr auto operator&=(this auto&& self, sequence_adaptor const& other) noexcept
+                -> auto&
                 requires (not is_window) and requires { self.bits() &= other.bits(); }
         {
                 self.bits() &= other.bits();
                 return self;
         }
 
-        constexpr auto operator|=(this auto&& self, sequence_adaptor const& other) noexcept -> auto&
+        constexpr auto operator|=(this auto&& self, sequence_adaptor const& other) noexcept
+                -> auto&
                 requires (not is_window) and requires { self.bits() |= other.bits(); }
         {
                 self.bits() |= other.bits();
                 return self;
         }
 
-        constexpr auto operator^=(this auto&& self, sequence_adaptor const& other) noexcept -> auto&
+        constexpr auto operator^=(this auto&& self, sequence_adaptor const& other) noexcept
+                -> auto&
                 requires (not is_window) and requires { self.bits() ^= other.bits(); }
         {
                 self.bits() ^= other.bits();
@@ -1398,7 +1397,8 @@ public:
 
         // Bulk on a window of ours against a source read by block: a block at a time at either alignment.
         template<class Other>
-        constexpr auto operator&=(this auto&& self, Other const& other) noexcept -> auto&
+        constexpr auto operator&=(this auto&& self, Other const& other) noexcept
+                -> auto&
                 requires is_window and block_writable and blittable<Other>
         {
                 self.combine(other, [](auto a, auto b) { return static_cast<decltype(a)>(a & b); });
@@ -1406,7 +1406,8 @@ public:
         }
 
         template<class Other>
-        constexpr auto operator|=(this auto&& self, Other const& other) noexcept -> auto&
+        constexpr auto operator|=(this auto&& self, Other const& other) noexcept
+                -> auto&
                 requires is_window and block_writable and blittable<Other>
         {
                 self.combine(other, [](auto a, auto b) { return static_cast<decltype(a)>(a | b); });
@@ -1414,7 +1415,8 @@ public:
         }
 
         template<class Other>
-        constexpr auto operator^=(this auto&& self, Other const& other) noexcept -> auto&
+        constexpr auto operator^=(this auto&& self, Other const& other) noexcept
+                -> auto&
                 requires is_window and block_writable and blittable<Other>
         {
                 self.combine(other, [](auto a, auto b) { return static_cast<decltype(a)>(a ^ b); });
@@ -1422,7 +1424,8 @@ public:
         }
 
         // [vector.bool]'s two: flip every bit, and swap two proxies, which the proxies' own swap does.
-        constexpr auto flip(this auto&& self) noexcept -> void
+        constexpr auto flip(this auto&& self) noexcept
+                -> void
                 requires (not is_window) and requires { self.bits().flip(); }
         {
                 self.bits().flip();
@@ -1462,7 +1465,7 @@ private:
                 return static_cast<derived_type&>(*this);
         }
 
-        // One tier each for the three aggregates above, chosen once by what the target is.
+        // count, any, none and all a tier each: the storage's own on a whole one, the window's blocks on a window.
         [[nodiscard]] constexpr auto count_true() const noexcept
                 -> size_type
         {
@@ -1514,7 +1517,7 @@ private:
                 constexpr auto digits = bits_type::bits_per_block;
                 assert(self.size() == other.size());
                 for (auto k = 0UZ; k < self.size(); k += digits) {
-                        auto const mask   = sequence::partial_block_mask<block_type>(std::ranges::min(digits, self.size() - k));
+                        auto const mask   = partial_block_mask<block_type>(std::ranges::min(digits, self.size() - k));
                         auto const mine   = self.bits().block_at(self.offset() + k);
                         auto const theirs = other.bits().block_at(other.offset() + k);
                         self.bits().block_at(self.offset() + k, f(mine, theirs), mask);
@@ -1557,7 +1560,7 @@ private:
                                 auto const block = src.block_at(pos);
                                 auto const width = size();
                                 m_bits.resize(width + (last - pos));
-                                m_bits.block_at(width, block, sequence::partial_block_mask<block_type>(last - pos));
+                                m_bits.block_at(width, block, partial_block_mask<block_type>(last - pos));
                         }
                 }
         }
@@ -1592,7 +1595,7 @@ private:
                         if (n != 0UZ) {
                                 auto const width = size();
                                 m_bits.resize(width + n);
-                                m_bits.block_at(width, block, sequence::partial_block_mask<block_type>(n));
+                                m_bits.block_at(width, block, partial_block_mask<block_type>(n));
                         }
                 }
         }
@@ -1601,7 +1604,7 @@ private:
         [[nodiscard]] constexpr auto empty_like() const
                 -> sequence_adaptor
         {
-                if constexpr (has_allocator) {
+                if constexpr (is_allocator_aware) {
                         return sequence_adaptor(get_allocator());
                 } else {
                         return sequence_adaptor();
@@ -1630,7 +1633,7 @@ private:
                 return static_cast<size_type>(position - cbegin());
         }
 
-        static constexpr auto out_of_range(std::size_t n, std::size_t width, std::source_location const& loc = std::source_location::current())
+        [[nodiscard]] static constexpr auto out_of_range(std::size_t n, std::size_t width, std::source_location const& loc = std::source_location::current())
         {
                 return std::out_of_range(
                         std::format(
@@ -1651,7 +1654,7 @@ inline constexpr bool is_sequence_adaptor<sequence_adaptor<Bits, Store, W, Deriv
 template<class R>
 concept sequence_reference = is_sequence_adaptor<typename R::adaptor_type> and (std::same_as<R, typename R::adaptor_type::reference> or std::same_as<R, typename R::adaptor_type::const_reference>);
 
-// The owner's side of the protocol above.
+// What a sequence owner wraps, so that a view over it names the same storage and reading.
 template<class Bits, class Derived>
 struct owned_storage<sequence_adaptor<Bits, storage::owned, window::all, Derived>>
 {
@@ -1665,7 +1668,8 @@ struct owned_storage<sequence_adaptor<Bits, storage::owned, window::all, Derived
 
 // Bulk logical not, the value-returning counterpart of flip(): a sequence's width is its own size().
 template<class Bits, storage Store, window W, class Derived, std::size_t E>
-[[nodiscard]] constexpr auto operator~(sequence_adaptor<Bits, Store, W, Derived, E> const& lhs) noexcept -> sequence_adaptor<Bits, Store, W, Derived, E>::derived_type
+[[nodiscard]] constexpr auto operator~(sequence_adaptor<Bits, Store, W, Derived, E> const& lhs) noexcept
+        -> sequence_adaptor<Bits, Store, W, Derived, E>::derived_type
         requires (owns(Store)) and requires (sequence_adaptor<Bits, Store, W, Derived, E> c) { c.flip(); }
 {
         auto nrv = static_cast<sequence_adaptor<Bits, Store, W, Derived, E>::derived_type const&>(lhs);
@@ -1673,9 +1677,10 @@ template<class Bits, storage Store, window W, class Derived, std::size_t E>
         return nrv;
 }
 
-// The binary forms of the three above, on an owner alone: a view's copy refers to the storage it views.
+// Bulk &, | and ^, on an owner alone: a view's copy refers to the storage it views.
 template<class Bits, storage Store, window W, class Derived, std::size_t E>
-[[nodiscard]] constexpr auto operator&(sequence_adaptor<Bits, Store, W, Derived, E> const& lhs, sequence_adaptor<Bits, Store, W, Derived, E> const& rhs) noexcept(noexcept(std::declval<sequence_adaptor<Bits, Store, W, Derived, E>&>() &= rhs)) -> sequence_adaptor<Bits, Store, W, Derived, E>::derived_type
+[[nodiscard]] constexpr auto operator&(sequence_adaptor<Bits, Store, W, Derived, E> const& lhs, sequence_adaptor<Bits, Store, W, Derived, E> const& rhs) noexcept(noexcept(std::declval<sequence_adaptor<Bits, Store, W, Derived, E>&>() &= rhs))
+        -> sequence_adaptor<Bits, Store, W, Derived, E>::derived_type
         requires (owns(Store)) and requires (sequence_adaptor<Bits, Store, W, Derived, E> c) { c &= c; }
 {
         auto nrv = static_cast<sequence_adaptor<Bits, Store, W, Derived, E>::derived_type const&>(lhs);
@@ -1684,7 +1689,8 @@ template<class Bits, storage Store, window W, class Derived, std::size_t E>
 }
 
 template<class Bits, storage Store, window W, class Derived, std::size_t E>
-[[nodiscard]] constexpr auto operator|(sequence_adaptor<Bits, Store, W, Derived, E> const& lhs, sequence_adaptor<Bits, Store, W, Derived, E> const& rhs) noexcept(noexcept(std::declval<sequence_adaptor<Bits, Store, W, Derived, E>&>() |= rhs)) -> sequence_adaptor<Bits, Store, W, Derived, E>::derived_type
+[[nodiscard]] constexpr auto operator|(sequence_adaptor<Bits, Store, W, Derived, E> const& lhs, sequence_adaptor<Bits, Store, W, Derived, E> const& rhs) noexcept(noexcept(std::declval<sequence_adaptor<Bits, Store, W, Derived, E>&>() |= rhs))
+        -> sequence_adaptor<Bits, Store, W, Derived, E>::derived_type
         requires (owns(Store)) and requires (sequence_adaptor<Bits, Store, W, Derived, E> c) { c |= c; }
 {
         auto nrv = static_cast<sequence_adaptor<Bits, Store, W, Derived, E>::derived_type const&>(lhs);
@@ -1693,7 +1699,8 @@ template<class Bits, storage Store, window W, class Derived, std::size_t E>
 }
 
 template<class Bits, storage Store, window W, class Derived, std::size_t E>
-[[nodiscard]] constexpr auto operator^(sequence_adaptor<Bits, Store, W, Derived, E> const& lhs, sequence_adaptor<Bits, Store, W, Derived, E> const& rhs) noexcept(noexcept(std::declval<sequence_adaptor<Bits, Store, W, Derived, E>&>() ^= rhs)) -> sequence_adaptor<Bits, Store, W, Derived, E>::derived_type
+[[nodiscard]] constexpr auto operator^(sequence_adaptor<Bits, Store, W, Derived, E> const& lhs, sequence_adaptor<Bits, Store, W, Derived, E> const& rhs) noexcept(noexcept(std::declval<sequence_adaptor<Bits, Store, W, Derived, E>&>() ^= rhs))
+        -> sequence_adaptor<Bits, Store, W, Derived, E>::derived_type
         requires (owns(Store)) and requires (sequence_adaptor<Bits, Store, W, Derived, E> c) { c ^= c; }
 {
         auto nrv = static_cast<sequence_adaptor<Bits, Store, W, Derived, E>::derived_type const&>(lhs);

@@ -35,10 +35,10 @@ template<class T>
 concept braces_convert = requires { from_braces<T>({}); };
 
 // Built-in arrays of blocks, named once so the storage under test is spelled where the check can be told why.
-using four_words  = std::uint64_t[4];      // NOLINT(modernize-avoid-c-arrays): the storage under test
+using four_blocks = std::uint64_t[4];      // NOLINT(modernize-avoid-c-arrays): the storage under test
 using three_bytes = std::uint8_t const[3]; // NOLINT(modernize-avoid-c-arrays): the storage under test
 using two_halves  = std::uint32_t[2];      // NOLINT(modernize-avoid-c-arrays): the storage under test
-using one_word    = std::uint64_t[1];      // NOLINT(modernize-avoid-c-arrays): the storage under test
+using one_block   = std::uint64_t[1];      // NOLINT(modernize-avoid-c-arrays): the storage under test
 using two_ints    = int[2];                // NOLINT(modernize-avoid-c-arrays): the storage under test
 
 } // namespace
@@ -87,8 +87,8 @@ BOOST_AUTO_TEST_CASE(AnArrayOfBlocksDeducesTheirWidth)
 // A built-in array of blocks reads as the std::array of the same blocks, and deduces the same width.
 BOOST_AUTO_TEST_CASE(ABuiltInArrayReadsAsTheStdArrayOfItsBlocks)
 {
-        static constexpr four_words blocks = {0x8000'0000'0000'0001ULL, 0x0ULL, 0xF0ULL, 0x8000'0000'0000'0000ULL};
-        constexpr auto same                = std::array<std::uint64_t, 4>{0x8000'0000'0000'0001ULL, 0x0ULL, 0xF0ULL, 0x8000'0000'0000'0000ULL};
+        static constexpr four_blocks blocks = {0x8000'0000'0000'0001ULL, 0x0ULL, 0xF0ULL, 0x8000'0000'0000'0000ULL};
+        constexpr auto same                 = std::array<std::uint64_t, 4>{0x8000'0000'0000'0001ULL, 0x0ULL, 0xF0ULL, 0x8000'0000'0000'0000ULL};
 
         constexpr auto a = xstd::basic_bit_array(xstd::from_blocks, blocks);
         static_assert(std::same_as<decltype(a), decltype(xstd::basic_bit_array(xstd::from_blocks, same)) const>);
@@ -116,7 +116,7 @@ BOOST_AUTO_TEST_CASE(ABuiltInArrayReadsAsTheStdArrayOfItsBlocks)
         // A const array deduces too, and no built-in array is storage an owner takes as it is; signed blocks are none.
         static_assert(deduces_from_blocks_of<three_bytes>);
         static_assert(std::is_constructible_v<xstd::bit_fixed_set<64>, xstd::from_blocks_t, two_halves const&>);
-        static_assert(not xstd::bit_constructible_from<xstd::bit_fixed_set<64>, one_word>);
+        static_assert(not xstd::bit_constructible_from<xstd::bit_fixed_set<64>, one_block>);
         static_assert(not deduces_from_blocks_of<two_ints>);
 }
 

@@ -55,9 +55,9 @@ auto mode_mismatches()
         -> std::size_t
 {
         auto mismatches = 0UZ;
-        for (auto const word : std::views::iota(0U, 256U)) {
-                auto const key = std::has_single_bit(word) and word < (1U << N);
-                mismatches += static_cast<std::size_t>(xstd::bit_flag_mapping<mode, N>::is_key(std::bit_cast<mode>(static_cast<std::uint8_t>(word))) != key);
+        for (auto const block : std::views::iota(0U, 256U)) {
+                auto const key = std::has_single_bit(block) and block < (1U << N);
+                mismatches += static_cast<std::size_t>(xstd::bit_flag_mapping<mode, N>::is_key(std::bit_cast<mode>(static_cast<std::uint8_t>(block))) != key);
         }
         return mismatches;
 }
@@ -68,9 +68,9 @@ auto bitset_mismatches()
         -> std::size_t
 {
         auto mismatches = 0UZ;
-        for (auto const word : std::views::iota(0UZ, 1UZ << 16UZ)) {
-                auto const b   = std::bitset<16>(word);
-                auto const key = b.count() == 1UZ and word < (1UZ << N);
+        for (auto const block : std::views::iota(0UZ, 1UZ << 16UZ)) {
+                auto const b   = std::bitset<16>(block);
+                auto const key = b.count() == 1UZ and block < (1UZ << N);
                 mismatches += static_cast<std::size_t>(xstd::bit_flag_mapping<std::bitset<16>, N>::is_key(b) != key);
         }
         return mismatches;
@@ -91,8 +91,8 @@ auto mode_lookup_mismatches()
                                 model.insert(modes[i]);
                         }
                 }
-                for (auto const word : std::views::iota(0U, 256U)) {
-                        mismatches += test::set::lookup_mismatches(a, model, std::bit_cast<mode>(static_cast<std::uint8_t>(word)));
+                for (auto const block : std::views::iota(0U, 256U)) {
+                        mismatches += test::set::lookup_mismatches(a, model, std::bit_cast<mode>(static_cast<std::uint8_t>(block)));
                 }
         }
         return mismatches;
@@ -104,9 +104,9 @@ auto integer_mismatches()
         -> std::size_t
 {
         auto mismatches = 0UZ;
-        for (auto const word : std::views::iota(0U, 256U)) {
-                auto const key = std::has_single_bit(word) and word < (1U << N);
-                mismatches += static_cast<std::size_t>(xstd::bit_flag_mapping<Mask, N>::is_key(static_cast<Mask>(word)) != key);
+        for (auto const block : std::views::iota(0U, 256U)) {
+                auto const key = std::has_single_bit(block) and block < (1U << N);
+                mismatches += static_cast<std::size_t>(xstd::bit_flag_mapping<Mask, N>::is_key(static_cast<Mask>(block)) != key);
         }
         return mismatches;
 }

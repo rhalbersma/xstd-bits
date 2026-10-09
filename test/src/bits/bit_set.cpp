@@ -199,7 +199,7 @@ BOOST_AUTO_TEST_CASE(AStdBitsetIsNoConversionAtARunTimeWidth)
         static_assert(not std::is_constructible_v<std::bitset<64>, xstd::bit_set>);
 }
 
-// std::set's guides: the block from the allocator where one is given, the machine word where none is.
+// std::set's guides: the block from the allocator where one is given, std::size_t where none is.
 BOOST_AUTO_TEST_CASE(ItDeducesAsStdSetDoes)
 {
         auto const keys  = std::vector<std::size_t>{3, 1, 4};

@@ -9,7 +9,7 @@
 #include <xstd/bits/bit_fixed_set.hpp>             // basic_bit_fixed_set
 #include <xstd/bits/bit_flag_mapping.hpp>          // bit_flag_mapping
 #include <xstd/bits/bit_type_traits/bit_least.hpp> // bit_least
-#include <xstd/bits/detail/flag_word.hpp>          // flag_mask, flag_width_v
+#include <xstd/bits/detail/flag_block.hpp>         // flag_mask, flag_width_v
 #include <xstd/ints/concepts/bit_mask.hpp>         // bit_mask
 #include <xstd/ints/concepts/signed_integer.hpp>   // signed_integer
 #include <cstddef>                                 // size_t

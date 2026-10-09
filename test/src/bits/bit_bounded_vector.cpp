@@ -21,7 +21,7 @@
 #include <limits>                                   // numeric_limits
 #include <new>                                      // bad_alloc
 #include <ranges>                                   // iota, size
-#include <type_traits>                              // integral_constant, is_member_function_pointer_v
+#include <type_traits>                              // integral_constant, is_empty_v, is_member_function_pointer_v
 #include <vector>                                   // vector
 
 #ifdef TEST_HAS_INPLACE_VECTOR
@@ -44,6 +44,12 @@ BOOST_AUTO_TEST_CASE(TheBoundedSequenceIsTheSequenceAdaptorOverInlineBlocks)
 {
         static_assert(std::derived_from<T, xstd::bits::detail::sequence_adaptor<xstd::bits::detail::bit_block_container<xstd::bits::detail::bounded_blocks<std::uint8_t, 3>, 24>, xstd::bits::detail::storage::owned, xstd::bits::detail::window::all, T>>);
         static_assert(std::same_as<xstd::bit_bounded_vector<24>, xstd::basic_bit_bounded_vector<std::size_t, 24>>);
+}
+
+// [inplace.vector.overview]/5 makes inplace_vector<T, 0> empty, and the packed one is too, over either storage.
+BOOST_AUTO_TEST_CASE(ACapacityOfNoughtIsAnEmptyType)
+{
+        static_assert(std::is_empty_v<xstd::bit_bounded_vector<0>> and std::is_empty_v<xstd::basic_bit_bounded_vector<std::uint8_t, 0>>);
 }
 
 // The allocator is the storage's, and this storage has none: the synopsis lines that ask for one do not apply.

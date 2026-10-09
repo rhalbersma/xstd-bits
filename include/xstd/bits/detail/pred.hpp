@@ -25,13 +25,6 @@ template<xstd::unsigned_integer Block>
         return (lhs & static_cast<Block>(~rhs)) == static_cast<Block>(0);
 }
 
-template<xstd::unsigned_integer Block>
-[[nodiscard]] constexpr auto not_equal_to(Block lhs, Block rhs) noexcept
-        -> bool
-{
-        return lhs != rhs;
-}
-
 } // namespace xstd::bits::detail
 
 #endif // XSTD_BITS_DETAIL_PRED_HPP

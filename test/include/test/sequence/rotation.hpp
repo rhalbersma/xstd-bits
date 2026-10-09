@@ -22,7 +22,7 @@ inline constexpr auto exhaustive_rotation_width = 12UZ;
 inline constexpr auto every_turn_width          = 64UZ;
 
 // splitmix64, so every standard library draws the same scatter.
-[[nodiscard]] constexpr auto next_word(std::uint64_t& state) noexcept
+[[nodiscard]] constexpr auto next_block(std::uint64_t& state) noexcept
         -> std::uint64_t
 {
         state += 0x9E37'79B9'7F4A'7C15ULL;
@@ -38,10 +38,10 @@ inline constexpr auto every_turn_width          = 64UZ;
 {
         auto patterns = std::vector<std::vector<bool>>();
         if (width <= exhaustive_rotation_width) {
-                for (auto const word : std::views::iota(0UZ, 1UZ << width)) {
+                for (auto const block : std::views::iota(0UZ, 1UZ << width)) {
                         auto& p = patterns.emplace_back(width);
                         for (auto const i : std::views::iota(0UZ, width)) {
-                                p[i] = ((word >> i) & 1UZ) != 0UZ;
+                                p[i] = ((block >> i) & 1UZ) != 0UZ;
                         }
                 }
                 return patterns;
@@ -61,7 +61,7 @@ inline constexpr auto every_turn_width          = 64UZ;
         for ([[maybe_unused]] auto const draw : std::views::iota(0UZ, draws)) {
                 auto& p = patterns.emplace_back(width);
                 for (auto const i : std::views::iota(0UZ, width)) {
-                        p[i] = (next_word(state) & 3U) == 0U;
+                        p[i] = (next_block(state) & 3U) == 0U;
                 }
         }
         return patterns;

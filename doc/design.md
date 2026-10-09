@@ -671,7 +671,8 @@ padding to clear. `used_bits()` is the same mask at a run-time width, asked only
 The width member takes the blocks' alignment where they out-align a `std::size_t`:
 
 ```cpp
-using width_type = std::conditional_t<(alignof(std::size_t) >= alignof(Blocks)), std::size_t, block_type>;
+template<class Blocks>
+using stored_width_t = std::conditional_t<(alignof(std::size_t) >= alignof(Blocks)), std::size_t, std::ranges::range_value_t<Blocks>>;
 ```
 
 Only a storage holding its blocks inline out-aligns a `size_t`, and it does so by the blocks' own alignment, so
@@ -679,7 +680,7 @@ Only a storage holding its blocks inline out-aligns a `size_t`, and it does so b
 `bit_block_container` is then its two members and nothing else, at the same size the padding cost.
 `std::array` reaches none of this, a static width carrying no member at all, and neither does `std::vector`,
 whose alignment is a pointer's whatever it holds; `bit_block_container<std::inplace_vector<xstd::uint128, K>, N>` is the one
-cell that does. The `static_assert` beside the alias holds the two facts that make `block_type` the right
+cell that does. The `static_assert` in `bit_block_container` holds the two facts that make `block_type` the right
 carrier, so a storage over-aligned for some other reason fails loudly rather than truncating a width. Every
 reader goes through `size()`, which converts once, so the arithmetic stays a `size_t`'s.
 
@@ -1119,9 +1120,8 @@ Both orderings are **free functions** over the storage rather than members of it
 two values with neither as its subject, and the member spelling put one of them in a place the operation does
 not have -- the same asymmetry a member `operator<=>` would carry. Each is a template constrained on
 `bit_block_container_type`, in the storage's own namespace, so the adaptors reach it by ordinary lookup and a caller
-holding two storages by ADL. The constraint is also what `set_adaptor` asks for with
-`requires { set_three_way(x.bits(), y.bits()); }`: any other storage fails it, and falls back to
-`std::lexicographical_compare_three_way` over the reading's iterators.
+holding two storages by ADL. Both adaptors are constrained on the same concept, so every storage they adapt has
+these primitives, and `set_adaptor`'s `<=>`, `is_subset_of` and `intersects` call them with no fallback.
 
 They left the storage because they are readings and it is not. What they are built from stays: `first_difference`,
 `any_above`, `any_block_set`, `padded_block`, `padded_first_difference`, `padded_any_above`, `block`, `test` and
@@ -3012,19 +3012,22 @@ that it swaps without throwing over either.
 
 **A capacity of nought holds nothing.** `[inplace.vector.overview]/5` makes `inplace_vector<T, 0>` empty, trivially
 copyable and trivially default constructible, and `static_vector<Block, 0>` is none of these: it keeps a size.
-`bounded_blocks_for<Block, N>` is therefore `no_blocks<Block>` at `N == 0`, on either library, and
-`bounded_blocks<Block, num_blocks_v<Block, N>>` above it. `no_blocks` is an empty contiguous range whose growth
-past nought throws `std::bad_alloc`, as `std::inplace_vector<Block, 0>`'s does; over it `bit_block_container`
-stores no width (`has_zero_capacity`), defaults its moves, and takes the `bit_members` whose two members overlap and
-have no initializer; every adaptor holds the container `[[no_unique_address]]` in its `adapted_bits` base, so
-`basic_bit_bounded_vector<Block, 0>` is an empty type. There the range constructor and both append tiers refuse
-any element up front through one `refuse_any`, and the ordering never compares unequal widths. A loop that cannot go
-round a second time is a branch no test can take, and being trivially destructible the owner compiles to control flow
-no other capacity shares, so gcov counts that branch on its own; it is also code MSVC's C4702 calls unreachable. The
-bounded set, bound by no such paragraph, holds `bounded_blocks<Block, 0>` at `N == 0` rather than `no_blocks`, and
-reaches the same capacity of nought: no width is stored, and every growth past nought throws `std::bad_alloc`. The
-set's left shift takes an arm there, for the same reason the vector's ordering does: with no element to hold, the
-rest of the body is a branch no test can take.
+Both bounded owners therefore hold `bounded_blocks_for<Block, num_blocks_v<Block, N>>`, which is `bounded_blocks` itself
+except at nought where the library's own type is not empty, and `no_blocks<Block>` there. `bounded_blocks` stays a
+plain alias, so the owners' deduction guides deduce its capacity; a `conditional_t` would make that a non-deduced
+context. `no_blocks` is an empty contiguous range whose growth past nought throws `std::bad_alloc`, as
+`std::inplace_vector<Block, 0>`'s does, and it goes with the fallback once every leg ships `<inplace_vector>`. A
+`std::array<Block, 0>` would not do: its layout is the implementation's (one byte in libstdc++, a whole `Block` in
+libc++, and an empty type in neither), and it has no growth members, which would turn the bounded owner into a fixed
+one. Over a capacity of nought `bit_block_container` stores no width (`has_zero_capacity`), defaults its moves, and
+takes the `bit_members` whose two members overlap and have no initializer; every adaptor holds the container
+`[[no_unique_address]]` in its `adapted_bits` base, so `basic_bit_bounded_vector<Block, 0>` and
+`basic_bit_bounded_set<Key, Block, 0>` are empty types. There the vector's range constructor and both append tiers
+refuse any element up front through one `refuse_any`, and the ordering never compares unequal widths. A loop that
+cannot go round a second time is a branch no test can take, and being trivially destructible the owner compiles to
+control flow no other capacity shares, so gcov counts that branch on its own; it is also code MSVC's C4702 calls
+unreachable. The set's left shift takes an arm there, for the same reason the vector's ordering does: with no element
+to hold, the rest of the body is a branch no test can take.
 
 P0843 declined to repeat `vector<bool>`, so `std::inplace_vector<bool, N>` holds real `bool`s and is a model
 only up to its reference. The `[inplace.vector]` clauses assert each declaration on it first where the standard

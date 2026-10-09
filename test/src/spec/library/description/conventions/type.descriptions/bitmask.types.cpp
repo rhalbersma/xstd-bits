@@ -4,7 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/for_each_type.hpp>   // for_each_type
-#include <test/spec/bitmask.hpp>    // all, elements, for_each_pair, masks, union_but, values, word, word_t, zero
+#include <test/spec/bitmask.hpp>    // all, elements, for_each_pair, masks, union_but, values, block, block_t, zero
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <bitset>                   // bitset
 #include <concepts>                 // integral, same_as
@@ -20,10 +20,10 @@ BOOST_AUTO_TEST_SUITE(Conventions)
 BOOST_AUTO_TEST_SUITE(TypeDescriptions)
 BOOST_AUTO_TEST_SUITE(BitmaskTypes)
 
+using test::spec::bitmask::block;
+using test::spec::bitmask::block_t;
 using test::spec::bitmask::for_each_pair;
 using test::spec::bitmask::union_but;
-using test::spec::bitmask::word;
-using test::spec::bitmask::word_t;
 using test::spec::bitmask::zero;
 namespace inputs = test::spec::bitmask::inputs;
 
@@ -67,7 +67,7 @@ BOOST_AUTO_TEST_CASE(BitAnd)
                 using X = C::type;
                 static_assert(requires (X const x, X const y) { { x & y } -> std::same_as<X>; }); // [bitmask.types]/2
                 for_each_pair<C>(inputs::values<C>(), [](X const& x, X const& y) -> void {
-                        BOOST_CHECK(word<C>(x & y) == static_cast<word_t<C>>(word<C>(x) & word<C>(y))); // [bitmask.types]/2
+                        BOOST_CHECK(block<C>(x & y) == static_cast<block_t<C>>(block<C>(x) & block<C>(y))); // [bitmask.types]/2
                 });
         });
 }
@@ -79,7 +79,7 @@ BOOST_AUTO_TEST_CASE(BitOr)
                 using X = C::type;
                 static_assert(requires (X const x, X const y) { { x | y } -> std::same_as<X>; }); // [bitmask.types]/2
                 for_each_pair<C>(inputs::values<C>(), [](X const& x, X const& y) -> void {
-                        BOOST_CHECK(word<C>(x | y) == static_cast<word_t<C>>(word<C>(x) | word<C>(y))); // [bitmask.types]/2
+                        BOOST_CHECK(block<C>(x | y) == static_cast<block_t<C>>(block<C>(x) | block<C>(y))); // [bitmask.types]/2
                 });
         });
 }
@@ -91,7 +91,7 @@ BOOST_AUTO_TEST_CASE(BitXor)
                 using X = C::type;
                 static_assert(requires (X const x, X const y) { { x ^ y } -> std::same_as<X>; }); // [bitmask.types]/2
                 for_each_pair<C>(inputs::values<C>(), [](X const& x, X const& y) -> void {
-                        BOOST_CHECK(word<C>(x ^ y) == static_cast<word_t<C>>(word<C>(x) ^ word<C>(y))); // [bitmask.types]/2
+                        BOOST_CHECK(block<C>(x ^ y) == static_cast<block_t<C>>(block<C>(x) ^ block<C>(y))); // [bitmask.types]/2
                 });
         });
 }
@@ -103,12 +103,12 @@ BOOST_AUTO_TEST_CASE(Complement)
                 using X = C::type;
                 static_assert(requires (X const x) { { ~x } -> std::same_as<X>; }); // [bitmask.types]/2
                 // The empty value's complement holds the bits of int_type: every element, and what else a type keeps.
-                auto const universe = word<C>(~zero<X>());
+                auto const universe = block<C>(~zero<X>());
                 for (auto const& e : inputs::elements<C>()) {
-                        BOOST_CHECK(static_cast<word_t<C>>(universe & word<C>(e)) == word<C>(e)); // [bitmask.types]/2
+                        BOOST_CHECK(static_cast<block_t<C>>(universe & block<C>(e)) == block<C>(e)); // [bitmask.types]/2
                 }
                 for (auto const& x : inputs::values<C>()) {
-                        BOOST_CHECK(word<C>(~x) == static_cast<word_t<C>>(static_cast<word_t<C>>(~word<C>(x)) & universe)); // [bitmask.types]/2
+                        BOOST_CHECK(block<C>(~x) == static_cast<block_t<C>>(static_cast<block_t<C>>(~block<C>(x)) & universe)); // [bitmask.types]/2
                 }
         });
 }

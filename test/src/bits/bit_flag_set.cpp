@@ -329,15 +329,15 @@ auto agrees_on_pair(std::size_t lhs, std::size_t rhs)
         BOOST_CHECK(&(x -= b) == &x and x == (a - b));
 }
 
-// The words each 16-bit value is ordered against: the ends, single bits and runs, inside and above the twelve flags.
+// The blocks each 16-bit value is ordered against: the ends, single bits and runs, inside and above the twelve flags.
 constexpr auto order_probes = std::to_array<std::uint16_t>({0x0000, 0x0001, 0x0007, 0x0100, 0x01FF, 0x0800, 0x0FFF, 0x1000, 0xF000, 0xFFFF});
 
-// How many probes the word orders against otherwise than the enumeration: <=> both ways, and the mixed <.
-auto order_mismatches(std::uint16_t word)
+// How many probes the block orders against otherwise than the enumeration: <=> both ways, and the mixed <.
+auto order_mismatches(std::uint16_t block)
         -> std::size_t
 {
         auto mismatches = 0UZ;
-        auto const p    = xfs::perms(xstd::from_blocks, word);
+        auto const p    = xfs::perms(xstd::from_blocks, block);
         for (auto const other : order_probes) {
                 auto const q        = xfs::perms(xstd::from_blocks, other);
                 auto const expected = std::to_underlying(fs::perms(p)) <=> std::to_underlying(fs::perms(q));
@@ -350,11 +350,11 @@ auto order_mismatches(std::uint16_t word)
 }
 
 // How many probes a bitset flag value orders against otherwise than the numbers its bits spell.
-auto bitset_order_mismatches(std::uint16_t word)
+auto bitset_order_mismatches(std::uint16_t block)
         -> std::size_t
 {
         auto mismatches = 0UZ;
-        auto const p    = bitset_flags(xstd::from_blocks, word);
+        auto const p    = bitset_flags(xstd::from_blocks, block);
         for (auto const other : order_probes) {
                 auto const q = bitset_flags(xstd::from_blocks, other);
                 if ((p <=> q) != (std::bitset<16>(p).to_ulong() <=> std::bitset<16>(q).to_ulong())) {
@@ -434,9 +434,9 @@ auto conversion_mismatches()
 {
         constexpr auto used = static_cast<unsigned>((1UZ << X::max_size()) - 1UZ);
         auto mismatches     = 0UZ;
-        for (auto const word : std::views::iota(0U, 0x10000U)) {
-                auto const theirs = static_cast<fs::perms>(word);
-                auto const low    = static_cast<fs::perms>(word & used);
+        for (auto const block : std::views::iota(0U, 0x10000U)) {
+                auto const theirs = static_cast<fs::perms>(block);
+                auto const low    = static_cast<fs::perms>(block & used);
                 X const ours      = low;
                 if (fs::perms(ours) != low or ours != low or (ours == theirs) != (low == theirs) or fs::perms(ours & theirs) != low or fs::perms(ours - theirs) != fs::perms::none or fs::perms(ours | low) != low or fs::perms(ours ^ low) != fs::perms::none) {
                         ++mismatches;
@@ -482,71 +482,71 @@ concept names_a_flag_type = requires { typename xstd::bit_flag_set<Mask>; };
 // Integer masks: each unsigned width, int and std::int8_t below their sign bits, and twelve of sixteen bits.
 using integer_flags = std::tuple<xstd::bit_flag_set<std::uint8_t>, xstd::bit_flag_set<std::uint16_t>, xstd::bit_flag_set<std::uint32_t>, xstd::bit_flag_set<std::uint64_t>, xstd::bit_flag_set<int>, xstd::bit_flag_set<std::int8_t>, xstd::bit_flag_set<std::uint16_t, 12>>;
 
-// The unsigned word an integer flag type's mask is read as.
+// The unsigned block an integer flag type's mask is read as.
 template<class X>
-using word_t = xstd::underlying_block_t<typename X::key_type>;
+using block_t = xstd::underlying_block_t<typename X::key_type>;
 
-// The word with every bit below the flag type's width set.
+// The block with every bit below the flag type's width set.
 template<class X>
 [[nodiscard]] constexpr auto low_bits() noexcept
-        -> word_t<X>
+        -> block_t<X>
 {
-        using word_type = word_t<X>;
-        return static_cast<word_type>(std::numeric_limits<word_type>::max() >> (static_cast<std::size_t>(std::numeric_limits<word_type>::digits) - X::max_size()));
+        using block_type = block_t<X>;
+        return static_cast<block_type>(std::numeric_limits<block_type>::max() >> (static_cast<std::size_t>(std::numeric_limits<block_type>::digits) - X::max_size()));
 }
 
-// Words below the width: every one up to sixteen bits, else none, all, two stripes, and each single and adjacent pair.
+// Blocks below the width: every one up to sixteen bits, else none, all, two stripes, and each single and adjacent pair.
 template<class X>
-auto probe_words()
-        -> std::vector<word_t<X>>
+auto probe_blocks()
+        -> std::vector<block_t<X>>
 {
-        using word_type  = word_t<X>;
+        using block_type = block_t<X>;
         constexpr auto N = X::max_size();
-        auto nrv         = std::vector<word_type>();
+        auto nrv         = std::vector<block_type>();
         if constexpr (N <= 16UZ) {
                 for (auto const w : std::views::iota(0UZ, 1UZ << N)) {
-                        nrv.push_back(static_cast<word_type>(w));
+                        nrv.push_back(static_cast<block_type>(w));
                 }
         } else {
                 constexpr auto low    = low_bits<X>();
-                constexpr auto stripe = static_cast<word_type>(low / 3U);
-                nrv.insert(nrv.end(), {word_type{}, low, stripe, static_cast<word_type>(low ^ stripe)});
+                constexpr auto stripe = static_cast<block_type>(low / 3U);
+                nrv.insert(nrv.end(), {block_type{}, low, stripe, static_cast<block_type>(low ^ stripe)});
                 for (auto const i : std::views::iota(0UZ, N)) {
-                        nrv.push_back(static_cast<word_type>(word_type{1} << i));
+                        nrv.push_back(static_cast<block_type>(block_type{1} << i));
                 }
                 for (auto const i : std::views::iota(1UZ, N)) {
-                        nrv.push_back(static_cast<word_type>(word_type{3} << (i - 1UZ)));
+                        nrv.push_back(static_cast<block_type>(block_type{3} << (i - 1UZ)));
                 }
         }
         return nrv;
 }
 
-// How many checks one word of an integer flag type fails: the conversions, the walk from the highest flag, the lookups.
+// How many checks one block of an integer flag type fails: the conversions, the walk from the top flag, the lookups.
 template<class X>
-auto word_mismatches(word_t<X> w)
+auto block_mismatches(block_t<X> w)
         -> std::size_t
 {
-        using mask_type = X::key_type;
-        using word_type = word_t<X>;
-        auto const m    = static_cast<mask_type>(w);
-        X const x       = m;
-        auto mismatches = 0UZ;
+        using mask_type  = X::key_type;
+        using block_type = block_t<X>;
+        auto const m     = static_cast<mask_type>(w);
+        X const x        = m;
+        auto mismatches  = 0UZ;
         if (mask_type(x) != m or x != m or X(xstd::from_blocks, w) != m or x.size() != static_cast<std::size_t>(std::popcount(w))) {
                 ++mismatches;
         }
 
-        // From the highest flag down, each one bit of the word, which together spell it.
+        // From the highest flag down, each one bit of the block, which together spell it.
         auto rest = w;
         for (auto const k : x) {
-                auto const bit = static_cast<word_type>(mask_type(k));
+                auto const bit = static_cast<block_type>(mask_type(k));
                 if (not std::has_single_bit(bit) or bit != std::bit_floor(rest) or not x.contains(k)) {
                         ++mismatches;
                 }
-                rest = static_cast<word_type>(rest ^ bit);
+                rest = static_cast<block_type>(rest ^ bit);
         }
 
         // A value of several bits, or of none, is no key even where each of its bits is an element.
-        if (x.contains(m) != std::has_single_bit(w) or x.count(m) != (std::has_single_bit(w) ? 1UZ : 0UZ) or rest != word_type{}) {
+        if (x.contains(m) != std::has_single_bit(w) or x.count(m) != (std::has_single_bit(w) ? 1UZ : 0UZ) or rest != block_type{}) {
                 ++mismatches;
         }
         return mismatches;
@@ -554,44 +554,44 @@ auto word_mismatches(word_t<X> w)
 
 // How many operators an integer flag type and its mask, on either side, answer otherwise than the mask itself does.
 template<class X>
-auto operator_mismatches(word_t<X> w, typename X::key_type b)
+auto operator_mismatches(block_t<X> w, typename X::key_type b)
         -> std::size_t
 {
-        using mask_type = X::key_type;
-        using word_type = word_t<X>;
-        auto const m    = static_cast<mask_type>(w);
-        auto const v    = static_cast<word_type>(b);
-        X const x       = m;
-        auto mismatches = 0UZ;
-        // The mask's own answers, worked in its unsigned word so that a signed mask's bits are read as bits.
-        auto const both   = static_cast<mask_type>(static_cast<word_type>(w | v));
-        auto const common = static_cast<mask_type>(static_cast<word_type>(w & v));
-        auto const either = static_cast<mask_type>(static_cast<word_type>(w ^ v));
-        auto const m_only = static_cast<mask_type>(static_cast<word_type>(w & static_cast<word_type>(~v)));
-        auto const b_only = static_cast<mask_type>(static_cast<word_type>(v & static_cast<word_type>(~w)));
+        using mask_type  = X::key_type;
+        using block_type = block_t<X>;
+        auto const m     = static_cast<mask_type>(w);
+        auto const v     = static_cast<block_type>(b);
+        X const x        = m;
+        auto mismatches  = 0UZ;
+        // The mask's own answers, worked in its unsigned block so that a signed mask's bits are read as bits.
+        auto const both   = static_cast<mask_type>(static_cast<block_type>(w | v));
+        auto const common = static_cast<mask_type>(static_cast<block_type>(w & v));
+        auto const either = static_cast<mask_type>(static_cast<block_type>(w ^ v));
+        auto const m_only = static_cast<mask_type>(static_cast<block_type>(w & static_cast<block_type>(~v)));
+        auto const b_only = static_cast<mask_type>(static_cast<block_type>(v & static_cast<block_type>(~w)));
         mismatches += static_cast<std::size_t>(mask_type(x | b) != both or mask_type(b | x) != both);
         mismatches += static_cast<std::size_t>(mask_type(x & b) != common or mask_type(b & x) != common);
         mismatches += static_cast<std::size_t>(mask_type(x ^ b) != either or mask_type(b ^ x) != either);
         mismatches += static_cast<std::size_t>(mask_type(x - b) != m_only or mask_type(b - x) != b_only);
         mismatches += static_cast<std::size_t>((x == b) != (m == b) or (x <=> X(b)) != (m <=> b));
-        mismatches += static_cast<std::size_t>(x.is_superset_of(b) != ((w & v) == v) or intersects(x, b) != ((w & v) != word_type{}));
+        mismatches += static_cast<std::size_t>(x.is_superset_of(b) != ((w & v) == v) or intersects(x, b) != ((w & v) != block_type{}));
         mismatches += static_cast<std::size_t>(x.is_subset_of(b) != ((w & v) == w) or x.is_proper_subset_of(b) != ((w & v) == w and w != v));
         mismatches += static_cast<std::size_t>(x.is_proper_superset_of(b) != ((w & v) == v and w != v));
         return mismatches;
 }
 
-// How many checks an integer flag type fails over its probe words, against none, every bit, a stripe and either end.
+// How many checks an integer flag type fails over its probe blocks, against none, every bit, a stripe and either end.
 template<class X>
 auto integer_mismatches()
         -> std::size_t
 {
         using mask_type   = X::key_type;
-        using word_type   = word_t<X>;
+        using block_type  = block_t<X>;
         auto const low    = low_bits<X>();
-        auto const others = std::to_array<mask_type>({mask_type{}, static_cast<mask_type>(low), static_cast<mask_type>(low / 3U), mask_type{1}, static_cast<mask_type>(word_type{1} << (X::max_size() - 1UZ))});
+        auto const others = std::to_array<mask_type>({mask_type{}, static_cast<mask_type>(low), static_cast<mask_type>(low / 3U), mask_type{1}, static_cast<mask_type>(block_type{1} << (X::max_size() - 1UZ))});
         auto mismatches   = 0UZ;
-        for (auto const w : probe_words<X>()) {
-                mismatches += word_mismatches<X>(w);
+        for (auto const w : probe_blocks<X>()) {
+                mismatches += block_mismatches<X>(w);
                 for (auto const b : others) {
                         mismatches += operator_mismatches<X>(w, b);
                 }
@@ -604,18 +604,18 @@ template<class Mask>
 auto ios_mismatches(std::initializer_list<Mask> constants)
         -> std::size_t
 {
-        using X         = xstd::bit_flag_set<Mask>;
-        using word_type = xstd::underlying_block_t<Mask>;
-        auto mismatches = 0UZ;
+        using X          = xstd::bit_flag_set<Mask>;
+        using block_type = xstd::underlying_block_t<Mask>;
+        auto mismatches  = 0UZ;
         for (auto const c : constants) {
                 X const x    = c;
-                auto const w = static_cast<word_type>(c);
+                auto const w = static_cast<block_type>(c);
                 if (Mask(x) != c or x != c or x.size() != static_cast<std::size_t>(std::popcount(w)) or x.contains(c) != std::has_single_bit(w) or not x.is_superset_of(c)) {
                         ++mismatches;
                 }
                 for (auto const k : x) {
-                        auto const bit = static_cast<word_type>(Mask(k));
-                        if (not std::has_single_bit(bit) or (bit & w) == word_type{}) {
+                        auto const bit = static_cast<block_type>(Mask(k));
+                        if (not std::has_single_bit(bit) or (bit & w) == block_type{}) {
                                 ++mismatches;
                         }
                 }
@@ -712,10 +712,10 @@ BOOST_AUTO_TEST_CASE(EveryNameRoundTrips)
 BOOST_AUTO_TEST_CASE(EverySixteenBitValueRoundTrips)
 {
         auto mismatches = 0UZ;
-        for (auto const word : std::views::iota(0U, 0x10000U)) {
-                auto const theirs     = static_cast<fs::perms>(word);
+        for (auto const block : std::views::iota(0U, 0x10000U)) {
+                auto const theirs     = static_cast<fs::perms>(block);
                 xfs::perms const ours = theirs;
-                if (fs::perms(ours) != theirs or xstd::bit_convert<std::uint16_t>(ours) != word or ours != xfs::perms(xstd::from_blocks, static_cast<std::uint16_t>(word))) {
+                if (fs::perms(ours) != theirs or xstd::bit_convert<std::uint16_t>(ours) != block or ours != xfs::perms(xstd::from_blocks, static_cast<std::uint16_t>(block))) {
                         ++mismatches;
                 }
         }
@@ -848,7 +848,7 @@ BOOST_AUTO_TEST_CASE(TheHighBitsAreKeysToo)
         BOOST_CHECK(back == unknown);
 }
 
-// insert refuses a one-bit value at or above N, as a set refuses a key past its max_size(), and the word is untouched.
+// insert refuses a one-bit value at or above N, as a set refuses a key past its max_size(), and the block is untouched.
 BOOST_AUTO_TEST_CASE(InsertingAPositionAtOrAboveTheWidthThrows)
 {
         auto p = narrow_perms(fs::perms::owner_read);
@@ -927,12 +927,12 @@ BOOST_AUTO_TEST_CASE(TheFlagTypeIteratesFromTheHighestFlagDown)
         BOOST_CHECK(xfs::perms(fs::perms::mask).front() == fs::perms::set_uid and xfs::perms(fs::perms::mask).back() == fs::perms::others_exec);
 }
 
-// <=> on two flag values is the enumeration's on their underlying words, and the mixed < through the conversion agrees.
+// <=> on two flag values is the enumeration's on their underlying blocks, and the mixed < via the conversion agrees.
 BOOST_AUTO_TEST_CASE(ThreeWayComparisonIsTheEnumerations)
 {
         auto mismatches = 0UZ;
-        for (auto const word : std::views::iota(0U, 0x10000U)) {
-                mismatches += order_mismatches(static_cast<std::uint16_t>(word));
+        for (auto const block : std::views::iota(0U, 0x10000U)) {
+                mismatches += order_mismatches(static_cast<std::uint16_t>(block));
         }
         BOOST_CHECK_EQUAL(mismatches, 0UZ);
 }
@@ -942,10 +942,10 @@ BOOST_AUTO_TEST_CASE(ANarrowerWidthTakesEveryValueBelowIt)
 {
         static_assert(sizeof(narrow_perms) == sizeof(std::uint16_t));
         auto mismatches = 0UZ;
-        for (auto const word : std::views::iota(0U, 0x1000U)) {
-                auto const theirs       = static_cast<fs::perms>(word);
+        for (auto const block : std::views::iota(0U, 0x1000U)) {
+                auto const theirs       = static_cast<fs::perms>(block);
                 narrow_perms const ours = theirs;
-                if (fs::perms(ours) != theirs or ours.size() != static_cast<std::size_t>(std::popcount(word))) {
+                if (fs::perms(ours) != theirs or ours.size() != static_cast<std::size_t>(std::popcount(block))) {
                         ++mismatches;
                 }
         }
@@ -1002,10 +1002,10 @@ BOOST_AUTO_TEST_CASE(ABitsetMaskConvertsAndIterates)
         static_assert(std::bitset<16>(bitset_flags(std::bitset<16>(0x0123))) == std::bitset<16>(0x0123));
         static_assert(bitset_flags(std::bitset<16>(0x0123)) == std::bitset<16>(0x0123));
         auto mismatches = 0UZ;
-        for (auto const word : std::views::iota(0U, 0x10000U)) {
-                auto const bits         = std::bitset<16>(word);
+        for (auto const block : std::views::iota(0U, 0x10000U)) {
+                auto const bits         = std::bitset<16>(block);
                 bitset_flags const ours = bits;
-                if (std::bitset<16>(ours) != bits or xstd::bit_convert<std::uint16_t>(ours) != word or ours != bits) {
+                if (std::bitset<16>(ours) != bits or xstd::bit_convert<std::uint16_t>(ours) != block or ours != bits) {
                         ++mismatches;
                 }
         }
@@ -1044,8 +1044,8 @@ BOOST_AUTO_TEST_CASE(EachOperatorMeetsABitsetInBothOrders)
 BOOST_AUTO_TEST_CASE(ThreeWayComparisonOfABitsetIsNumeric)
 {
         auto mismatches = 0UZ;
-        for (auto const word : std::views::iota(0U, 0x10000U)) {
-                mismatches += bitset_order_mismatches(static_cast<std::uint16_t>(word));
+        for (auto const block : std::views::iota(0U, 0x10000U)) {
+                mismatches += bitset_order_mismatches(static_cast<std::uint16_t>(block));
         }
         BOOST_CHECK_EQUAL(mismatches, 0UZ);
 }

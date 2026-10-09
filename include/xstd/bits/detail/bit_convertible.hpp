@@ -104,7 +104,7 @@ template<fixed_target To>
 }
 
 // The positions a run of bytes holds.
-constexpr auto count_bytes(std::span<unsigned char const> bytes) noexcept
+[[nodiscard]] constexpr auto count_bytes(std::span<unsigned char const> bytes) noexcept
         -> std::size_t
 {
         auto count = 0UZ;

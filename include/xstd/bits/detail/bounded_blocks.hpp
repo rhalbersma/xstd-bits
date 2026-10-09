@@ -6,41 +6,11 @@
 #ifndef XSTD_BITS_DETAIL_BOUNDED_BLOCKS_HPP
 #define XSTD_BITS_DETAIL_BOUNDED_BLOCKS_HPP
 
-#include <xstd/ints/limits.hpp> // numeric_limits
-#include <xstd/ints/memory.hpp> // align_up
-#include <cstddef>              // size_t
-#include <iterator>             // input_iterator
-#include <new>                  // bad_alloc
-#include <type_traits>          // conditional_t, is_const_v, remove_reference_t
-#include <version>              // IWYU pragma: keep; __cpp_lib_inplace_vector
-
-#ifdef __cpp_lib_inplace_vector
-
-#include <inplace_vector> // inplace_vector
-
-// The bounded owners are constant-evaluable exactly where std::inplace_vector holds their blocks.
-#define XSTD_BITS_HAS_CONSTEXPR_BOUNDED 1
-
-namespace xstd::bits::detail {
-
-template<class Block, std::size_t K>
-using bounded_blocks = std::inplace_vector<Block, K>;
-
-} // namespace xstd::bits::detail
-
-#else
-
-#include <boost/container/static_vector.hpp> // static_vector
-
-namespace xstd::bits::detail {
-
-// Inline blocks under a capacity the type carries, as std::inplace_vector's are, but not constant-evaluable.
-template<class Block, std::size_t K>
-using bounded_blocks = boost::container::static_vector<Block, K>;
-
-} // namespace xstd::bits::detail
-
-#endif
+#include <cstddef>     // size_t
+#include <iterator>    // input_iterator
+#include <new>         // bad_alloc
+#include <type_traits> // conditional_t, is_const_v, is_empty_v, remove_reference_t
+#include <version>     // IWYU pragma: keep; __cpp_lib_inplace_vector
 
 namespace xstd::bits::detail {
 
@@ -137,9 +107,41 @@ public:
         {}
 };
 
-// The blocks under a capacity of N bits, and none at all under nought, which leaves the owner an empty type.
-template<class Block, std::size_t N>
-using bounded_blocks_for = std::conditional_t<N == 0UZ, no_blocks<Block>, bounded_blocks<Block, xstd::align_up(N, static_cast<std::size_t>(xstd::numeric_limits<Block>::digits)) / static_cast<std::size_t>(xstd::numeric_limits<Block>::digits)>>;
+} // namespace xstd::bits::detail
+
+#ifdef __cpp_lib_inplace_vector
+
+#include <inplace_vector> // inplace_vector
+
+// The bounded owners are constant-evaluable exactly where std::inplace_vector holds their blocks.
+#define XSTD_BITS_HAS_CONSTEXPR_BOUNDED 1
+
+namespace xstd::bits::detail {
+
+template<class Block, std::size_t K>
+using bounded_blocks = std::inplace_vector<Block, K>;
+
+} // namespace xstd::bits::detail
+
+#else
+
+#include <boost/container/static_vector.hpp> // static_vector
+
+namespace xstd::bits::detail {
+
+// Inline blocks under a capacity the type carries, as std::inplace_vector's are, but not constant-evaluable.
+template<class Block, std::size_t K>
+using bounded_blocks = boost::container::static_vector<Block, K>;
+
+} // namespace xstd::bits::detail
+
+#endif
+
+namespace xstd::bits::detail {
+
+// An owner's K blocks: no_blocks at nought where the library's own type keeps a size, so the owner is an empty type.
+template<class Block, std::size_t K>
+using bounded_blocks_for = std::conditional_t<K == 0UZ and not std::is_empty_v<bounded_blocks<Block, 0>>, no_blocks<Block>, bounded_blocks<Block, K>>;
 
 } // namespace xstd::bits::detail
 

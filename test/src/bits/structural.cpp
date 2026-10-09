@@ -42,7 +42,7 @@ using aligned_owners = std::tuple<
         xstd::bit_align<xstd::bit_fixed_set<64>>,
         xstd::bit_align<xstd::bit_fixed_set<128>>>;
 
-// A width short of its last block by one bit and by all but one, at the machine word and at a byte.
+// A width short of its last block by one bit and by all but one, at a std::size_t block and at a byte.
 using unaligned_owners = std::tuple<
         xstd::bit_array<3>,
         xstd::bit_array<65>,
@@ -97,7 +97,7 @@ struct shape_of<xstd::basic_bit_fixed_set<std::size_t, Block, N>>
 
 // The same bits as blocks: the low bit of the first block and the high bit of the last one.
 template<class T>
-[[nodiscard]] constexpr auto from_words()
+[[nodiscard]] constexpr auto with_blocks()
         -> T
 {
         using block_type      = shape_of<T>::block_type;
@@ -125,10 +125,10 @@ BOOST_AUTO_TEST_CASE(AnAlignedOwnerIsATemplateArgument)
 BOOST_AUTO_TEST_CASE(EqualValuesNameTheSameSpecialization)
 {
         test::for_each_type<aligned_owners>([]<class T> -> void {
-                constexpr auto last     = shape_of<T>::width - 1UZ;
-                constexpr auto by_bits  = with_bits<T>({0UZ, last});
-                constexpr auto by_words = from_words<T>();
-                static_assert(std::same_as<test::value_parameter<by_bits>, test::value_parameter<by_words>>);
+                constexpr auto last      = shape_of<T>::width - 1UZ;
+                constexpr auto by_bits   = with_bits<T>({0UZ, last});
+                constexpr auto by_blocks = with_blocks<T>();
+                static_assert(std::same_as<test::value_parameter<by_bits>, test::value_parameter<by_blocks>>);
                 static_assert(std::same_as<test::value_parameter<T{}>, test::value_parameter<with_bits<T>({})>>);
         });
 }

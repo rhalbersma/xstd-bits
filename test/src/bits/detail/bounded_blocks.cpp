@@ -46,9 +46,10 @@ namespace {
 
 BOOST_AUTO_TEST_CASE(ACapacityOfNoughtHoldsNoBlocks)
 {
-        static_assert(std::same_as<xstd::bits::detail::bounded_blocks_for<std::uint8_t, 0>, Blocks>);
-        static_assert(std::same_as<xstd::bits::detail::bounded_blocks_for<std::uint8_t, 9>, xstd::bits::detail::bounded_blocks<std::uint8_t, 2>>);
-        static_assert(std::same_as<xstd::bits::detail::bounded_blocks_for<std::uint64_t, 64>, xstd::bits::detail::bounded_blocks<std::uint64_t, 1>>);
+        using Nought = xstd::bits::detail::bounded_blocks_for<std::uint8_t, 0>;
+        static_assert(std::is_empty_v<Nought> and std::is_trivially_copyable_v<Nought> and std::is_trivially_default_constructible_v<Nought>);
+        static_assert(xstd::resizable_bit_blocks<Nought> and xstd::bit_blocks_capacity_v<Nought> == 0UZ);
+        static_assert(std::same_as<xstd::bits::detail::bounded_blocks_for<std::uint8_t, 2>, xstd::bits::detail::bounded_blocks<std::uint8_t, 2>>);
         static_assert(xstd::resizable_bit_blocks<Blocks> and xstd::bit_blocks_capacity_v<Blocks> == 0UZ);
         BOOST_CHECK_EQUAL(Blocks::capacity(), 0UZ);
         BOOST_CHECK_EQUAL(Blocks::max_size(), 0UZ);

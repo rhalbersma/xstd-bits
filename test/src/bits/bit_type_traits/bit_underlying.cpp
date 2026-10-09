@@ -27,7 +27,7 @@
 // Named rather than unnamed, as a concept reads these operators and the mapping without calling them.
 namespace wire {
 
-// Flags as an ABI stores them, in a 32-bit word with a flag at either end of it.
+// Flags as an ABI stores them, in a 32-bit block with a flag at either end of it.
 enum class flag : std::uint32_t
 {
         none  = 0x0000'0000,
@@ -129,7 +129,7 @@ concept underlying_rebinds = requires { typename xstd::bit_underlying<W>; };
 template<class Enum>
 concept has_underlying_block = requires { typename xstd::underlying_block_t<Enum>; };
 
-// Values of the ABI's word: none, single flags at either end, and every flag at once.
+// Values of the ABI's block: none, single flags at either end, and every flag at once.
 constexpr auto wire_values = std::array{wire::flag::none, wire::flag::read, wire::flag::exec, wire::flag::high, std::bit_cast<wire::flag>(0x8000'0007U)};
 
 } // namespace
@@ -147,8 +147,8 @@ BOOST_AUTO_TEST_CASE(TheUnderlyingBlockIsTheUnderlyingTypeMadeUnsigned)
         BOOST_CHECK(true);
 }
 
-// A flag set in its enumeration's own word: the block an ABI stores, whatever block or width it was spelled in.
-BOOST_AUTO_TEST_CASE(TheUnderlyingSetIsInTheEnumerationsOwnWord)
+// A flag set in its enumeration's own block: the block an ABI stores, whatever block or width it was spelled in.
+BOOST_AUTO_TEST_CASE(TheUnderlyingSetIsInTheEnumerationsOwnBlock)
 {
         using flags = xstd::bit_flag_set<wire::flag>;
         using fast  = xstd::bit_fast<flags>;
@@ -160,7 +160,7 @@ BOOST_AUTO_TEST_CASE(TheUnderlyingSetIsInTheEnumerationsOwnWord)
         static_assert(std::is_same_v<xstd::bit_underlying<xstd::bit_flag_set<wire::signed_flag>>, xstd::bit_flag_set<wire::signed_flag>>);
         static_assert(sizeof(xstd::bit_underlying<fast>) == sizeof(std::uint32_t) and sizeof(xstd::bit_underlying<xstd::bit_flag_set<wire::flag, 9>>) == sizeof(std::uint32_t));
 
-        // The word is the mask's representation bit for bit, so either way across is a copy.
+        // The block is the mask's representation bit for bit, so either way across is a copy.
         for (auto const mask : wire_values) {
                 auto const x = xstd::bit_underlying<fast>(mask);
                 BOOST_CHECK_EQUAL(xstd::bit_convert<std::uint32_t>(x), std::to_underlying(mask));
@@ -170,7 +170,7 @@ BOOST_AUTO_TEST_CASE(TheUnderlyingSetIsInTheEnumerationsOwnWord)
         }
 }
 
-// An integer mask's set in the unsigned counterpart: a narrow set of int widened back to the word an int field stores.
+// An integer mask's set in the unsigned counterpart: a narrow set of int widened back to the block an int field stores.
 BOOST_AUTO_TEST_CASE(TheUnderlyingSetOfAnIntegerMaskIsInItsUnsignedCounterpart)
 {
         using narrow = xstd::bit_flag_set<int, 5>;
@@ -182,8 +182,8 @@ BOOST_AUTO_TEST_CASE(TheUnderlyingSetOfAnIntegerMaskIsInItsUnsignedCounterpart)
         BOOST_CHECK(int(x) == 0b10110 and x == narrow(0b10110));
 }
 
-// Only a fixed-width set keyed by an enumeration or an integer with an unsigned counterpart has an underlying word.
-BOOST_AUTO_TEST_CASE(OnlyASetOfEnumerationOrIntegerKeysHasAnUnderlyingWord)
+// Only a fixed-width set keyed by an enumeration or an integer with an unsigned counterpart has an underlying block.
+BOOST_AUTO_TEST_CASE(OnlyASetOfEnumerationOrIntegerKeysHasAnUnderlyingBlock)
 {
         static_assert(underlying_rebinds<xstd::bit_flag_set<wire::flag>> and underlying_rebinds<xstd::bit_flag_set<wire::signed_flag, 3>>);
         static_assert(not underlying_rebinds<xstd::bit_array<9>> and not underlying_rebinds<xstd::bit_set>);

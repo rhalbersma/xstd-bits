@@ -22,10 +22,10 @@ namespace detail = xstd::bits::detail;
 namespace {
 
 // Built-in arrays of blocks, named once so the storage under test is spelled where the check can be told why.
-using four_words = std::uint64_t[4]; // NOLINT(modernize-avoid-c-arrays): the storage under test
-using four_ints  = int[4];           // NOLINT(modernize-avoid-c-arrays): the storage under test
+using four_blocks = std::uint64_t[4]; // NOLINT(modernize-avoid-c-arrays): the storage under test
+using four_ints   = int[4];           // NOLINT(modernize-avoid-c-arrays): the storage under test
 
-// Two words with no member a field of bits would be asked for, read only through their object bytes.
+// Two blocks with no member a field of bits would be asked for, read only through their object bytes.
 struct raw
 {
         std::uint64_t lo;
@@ -56,12 +56,12 @@ BOOST_AUTO_TEST_CASE(AnUnsignedIntegerIsItsOwnLayout)
 BOOST_AUTO_TEST_CASE(AFieldOfBitsIsReadWhereItsObjectHasRoom)
 {
         static_assert(detail::container_source<std::bitset<1UZ>, 1UZ>);
-        static_assert(detail::container_source<std::bitset<32UZ>, 32UZ>); // the MSVC STL's narrow word type
+        static_assert(detail::container_source<std::bitset<32UZ>, 32UZ>); // the MSVC STL's narrow block type
         static_assert(detail::container_source<std::bitset<33UZ>, 33UZ>); // and its wide one
         static_assert(detail::container_source<std::bitset<200UZ>, 200UZ>);
         static_assert(detail::container_source<std::bitset<1UZ << 16UZ>, 1UZ << 16UZ>);
 
-        // Nothing is asked of its members, so plain words with room for the width are a field of bits too.
+        // Nothing is asked of its members, so plain blocks with room for the width are a field of bits too.
         static_assert(detail::container_source<raw, 100UZ>);
         static_assert(detail::bit_layout<raw, 128UZ>);
 }
@@ -155,18 +155,18 @@ BOOST_AUTO_TEST_CASE(ASequenceOfBlocksStatesItsLayoutToo)
         static_assert(not detail::fixed_blocks_source<std::array<int, 4>, 64UZ>);
 
         // A built-in array is read as its std::array; signed blocks state no layout, so theirs is their object bytes.
-        static_assert(detail::fixed_blocks_source<four_words, 256UZ> and not detail::fixed_blocks_source<four_words, 257UZ>);
-        static_assert(detail::bit_layout<four_words, 256UZ> and not detail::bit_layout<four_words, 257UZ>);
+        static_assert(detail::fixed_blocks_source<four_blocks, 256UZ> and not detail::fixed_blocks_source<four_blocks, 257UZ>);
+        static_assert(detail::bit_layout<four_blocks, 256UZ> and not detail::bit_layout<four_blocks, 257UZ>);
         static_assert(not detail::fixed_blocks_source<four_ints, 64UZ> and detail::container_source<four_ints, 64UZ>);
         static_assert([] -> bool {
-                four_words const blocks = {0x0123'4567'89AB'CDEFULL, 0x0ULL, 0x1ULL, 0x8000'0000'0000'0000ULL};
-                auto const same         = std::array<std::uint64_t, 4>{0x0123'4567'89AB'CDEFULL, 0x0ULL, 0x1ULL, 0x8000'0000'0000'0000ULL};
+                four_blocks const blocks = {0x0123'4567'89AB'CDEFULL, 0x0ULL, 0x1ULL, 0x8000'0000'0000'0000ULL};
+                auto const same          = std::array<std::uint64_t, 4>{0x0123'4567'89AB'CDEFULL, 0x0ULL, 0x1ULL, 0x8000'0000'0000'0000ULL};
                 return detail::bit_bytes<256UZ>(blocks) == detail::bit_bytes<256UZ>(same);
         }());
 
         // At run time too, where the blocks cross as one copy rather than by shifts.
-        static constexpr four_words words = {0x0123'4567'89AB'CDEFULL, 0x0ULL, 0x1ULL, 0x8000'0000'0000'0000ULL};
-        BOOST_CHECK(detail::bit_bytes<256UZ>(words) == detail::bit_bytes<256UZ>(std::to_array(words)));
+        static constexpr four_blocks blocks = {0x0123'4567'89AB'CDEFULL, 0x0ULL, 0x1ULL, 0x8000'0000'0000'0000ULL};
+        BOOST_CHECK(detail::bit_bytes<256UZ>(blocks) == detail::bit_bytes<256UZ>(std::to_array(blocks)));
 
         // And a scalar is the length-one case of the same family.
         static_assert(detail::fixed_blocks_source<std::uint64_t, 64UZ>);
@@ -261,15 +261,15 @@ BOOST_AUTO_TEST_CASE(TheCopyAndTheShiftsAgree)
                 BOOST_CHECK(back_copied == field);
         }
 
-        // Plain words at 100 bits cross as their first 13 bytes, and the 3 bytes past those come back zero.
+        // Plain blocks at 100 bits cross as their first 13 bytes, and the 3 bytes past those come back zero.
         {
                 constexpr auto N    = 100UZ;
                 constexpr auto ones = ~0ULL;
                 constexpr auto kept = raw{.lo = ones, .hi = 0xFF'FFFF'FFFFULL};
 
-                constexpr auto words  = raw{.lo = ones, .hi = ones};
-                constexpr auto folded = detail::bit_bytes<N>(words);
-                auto const copied     = detail::bit_bytes<N>(words);
+                constexpr auto blocks = raw{.lo = ones, .hi = ones};
+                constexpr auto folded = detail::bit_bytes<N>(blocks);
+                auto const copied     = detail::bit_bytes<N>(blocks);
                 BOOST_CHECK(copied == folded);
 
                 constexpr auto back_folded = detail::bytes_bits<raw, N>(folded);

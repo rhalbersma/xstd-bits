@@ -152,17 +152,17 @@ using flag_sets = std::tuple<flag_set<fmtflags>, flag_set<iostate>, flag_set<ope
 using all = decltype(std::tuple_cat(std::declval<masks>(), std::declval<flag_sets>()));
 
 template<class C>
-using word_t = xstd::underlying_block_t<typename C::names::type>;
+using block_t = xstd::underlying_block_t<typename C::names::type>;
 
-// A value's bits as the mask's word; a flag type's via a bitset, since its complement can leave an enumeration's range.
+// A value's bits as the mask's block; a flag type's via a bitset, as its complement can leave an enumeration's range.
 template<class C>
-[[nodiscard]] auto word(typename C::type const& x)
-        -> word_t<C>
+[[nodiscard]] auto block(typename C::type const& x)
+        -> block_t<C>
 {
         if constexpr (std::same_as<typename C::type, typename C::names::type>) {
-                return static_cast<word_t<C>>(x);
+                return static_cast<block_t<C>>(x);
         } else {
-                return static_cast<word_t<C>>(xstd::bit_convert<std::bitset<C::type::max_size()>>(x).to_ullong());
+                return static_cast<block_t<C>>(xstd::bit_convert<std::bitset<C::type::max_size()>>(x).to_ullong());
         }
 }
 
@@ -235,16 +235,16 @@ template<class C>
 
 } // namespace inputs
 
-// fun called with every pair of values, a failure naming the two as words.
+// fun called with every pair of values, a failure naming the two as blocks.
 template<class C>
 auto for_each_pair(std::vector<typename C::type> const& v, auto fun)
         -> void
 {
-        auto const from = test::spec::edge("named values", static_cast<std::size_t>(std::numeric_limits<word_t<C>>::digits));
+        auto const from = test::spec::edge("named values", static_cast<std::size_t>(std::numeric_limits<block_t<C>>::digits));
         for (auto const& x : v) {
                 for (auto const& y : v) {
-                        auto const wx         = static_cast<std::uint64_t>(word<C>(x));
-                        auto const wy         = static_cast<std::uint64_t>(word<C>(y));
+                        auto const wx         = static_cast<std::uint64_t>(block<C>(x));
+                        auto const wy         = static_cast<std::uint64_t>(block<C>(y));
                         auto const on_failure = test::spec::context(from, wx, wy);
                         fun(x, y);
                 }

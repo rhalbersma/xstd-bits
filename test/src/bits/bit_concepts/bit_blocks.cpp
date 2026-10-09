@@ -37,8 +37,8 @@ template<class W>
 concept names_a_view = requires { typename xstd::bit_set_view<W>; };
 
 // Built-in arrays of blocks, named once so the storage under test is spelled where the check can be told why.
-using four_words        = std::uint64_t[4];       // NOLINT(modernize-avoid-c-arrays): the storage under test
-using three_const_words = std::uint16_t const[3]; // NOLINT(modernize-avoid-c-arrays): the storage under test
+using four_blocks        = std::uint64_t[4];       // NOLINT(modernize-avoid-c-arrays): the storage under test
+using three_const_blocks = std::uint16_t const[3]; // NOLINT(modernize-avoid-c-arrays): the storage under test
 
 } // namespace
 
@@ -49,7 +49,7 @@ BOOST_AUTO_TEST_CASE(BlocksAndContiguousRangesOfBlocksAreBitStorage)
         static_assert(xstd::bit_blocks<std::array<std::uint16_t, 3>>);
         static_assert(xstd::bit_blocks<std::vector<std::size_t>>);
         static_assert(xstd::bit_blocks<std::span<std::uint32_t>> and xstd::bit_blocks<std::span<std::uint32_t const, 2>>);
-        static_assert(xstd::bit_blocks<four_words> and xstd::bit_blocks<three_const_words>);
+        static_assert(xstd::bit_blocks<four_blocks> and xstd::bit_blocks<three_const_blocks>);
 #ifdef TEST_HAS_INPLACE_VECTOR
         static_assert(xstd::bit_blocks<std::inplace_vector<std::uint16_t, 3>>);
 #endif
