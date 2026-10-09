@@ -3024,8 +3024,8 @@ that it swaps without throwing over either.
 
 **A capacity of nought holds nothing.** `[inplace.vector.overview]/5` makes `inplace_vector<T, 0>` empty, trivially
 copyable and trivially default constructible, and `static_vector<Block, 0>` is none of these: it keeps a size.
-Both bounded owners therefore hold `bounded_blocks_for<Block, num_blocks_v<Block, N>>`, which is `bounded_blocks` itself
-except at nought where the library's own type is not empty, and `no_blocks<Block>` there. `bounded_blocks` stays a
+The bounded vector therefore holds `bounded_blocks_for<Block, num_blocks_v<Block, N>>`, which is `bounded_blocks`
+itself except at nought where the library's own type is not empty, and `no_blocks<Block>` there. `bounded_blocks` stays a
 plain alias, so the owners' deduction guides deduce its capacity; a `conditional_t` would make that a non-deduced
 context. `no_blocks` is an empty contiguous range whose growth past nought throws `std::bad_alloc`, as
 `std::inplace_vector<Block, 0>`'s does, and it goes with the fallback once every leg ships `<inplace_vector>`. A
@@ -3033,13 +3033,15 @@ context. `no_blocks` is an empty contiguous range whose growth past nought throw
 libc++, and an empty type in neither), and it has no growth members, which would turn the bounded owner into a fixed
 one. Over a capacity of nought `bit_block_container` stores no width (`has_zero_capacity`), defaults its moves, and
 takes the `bit_members` whose two members overlap and have no initializer; every adaptor holds the container
-`[[no_unique_address]]` in its `adapted_bits` base, so `basic_bit_bounded_vector<Block, 0>` and
-`basic_bit_bounded_set<Key, Block, 0>` are empty types, except under the MSVC ABI, which gives a class whose members
-are all empty a byte of its own. There the vector's range constructor and both append tiers
+`[[no_unique_address]]` in its `adapted_bits` base, so `basic_bit_bounded_vector<Block, 0>` is an empty type, except
+under the MSVC ABI, which gives a class whose members are all empty a byte of its own. There the vector's range constructor and both append tiers
 refuse any element up front through one `refuse_any`, and the ordering never compares unequal widths. A loop that
 cannot go round a second time is a branch no test can take, and being trivially destructible the owner compiles to
 control flow no other capacity shares, so gcov counts that branch on its own; it is also code MSVC's C4702 calls
-unreachable. The set's left shift takes an arm there, for the same reason the vector's ordering does: with no element
+unreachable. The bounded set, bound by no such paragraph, holds `bounded_blocks<Block, 0>` at `N == 0`
+rather than `no_blocks`, and reaches the same capacity of nought: no width is stored, and every growth past nought
+throws `std::bad_alloc`. Over `no_blocks` the set would carry paths of its own that a width of nought never takes,
+its padded equality and its bulk operators across two widths, each a branch no test can reach. The set's left shift takes an arm there, for the same reason the vector's ordering does: with no element
 to hold, the rest of the body is a branch no test can take.
 
 P0843 declined to repeat `vector<bool>`, so `std::inplace_vector<bool, N>` holds real `bool`s and is a model
