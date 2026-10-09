@@ -53,7 +53,10 @@ BOOST_AUTO_TEST_CASE(TheBoundedSetIsTheSetAdaptorOverInlineBlocks)
 // A capacity of nought holds no blocks and stores no width, so the owner is an empty type, as the vector is.
 BOOST_AUTO_TEST_CASE(ACapacityOfNoughtIsAnEmptyType)
 {
+#ifndef _MSC_VER
+        // The MSVC ABI gives a class whose members are all empty a byte of its own.
         static_assert(std::is_empty_v<xstd::bit_bounded_set<0>> and std::is_empty_v<xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 0>>);
+#endif
 }
 
 // A requires-expression failing for a concrete type is ill-formed rather than false ([expr.prim.req]/5).
