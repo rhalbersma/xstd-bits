@@ -281,22 +281,36 @@ BOOST_AUTO_TEST_CASE(TheCopyAndTheShiftsAgree)
         }
 }
 
+namespace {
+
+// Two blocks of a 128-bit class against the same bits in four std::uint64_t blocks, crossing either way.
+template<class Block>
+auto check_class_block()
+        -> void
+{
+        static_assert(not detail::block_copies_as_bytes<Block>);
+        constexpr auto N  = 256UZ;
+        auto const plain  = std::array<std::uint64_t, 4>{0x0123'4567'89AB'CDEFULL, 0xFEDC'BA98'7654'3210ULL, 1ULL, 0x8000'0000'0000'0000ULL};
+        auto const blocks = std::array<Block, 2>{(Block{plain[1]} << 64U) | Block{plain[0]}, (Block{plain[3]} << 64U) | Block{plain[2]}};
+        BOOST_CHECK(detail::bit_bytes<N>(blocks) == detail::bit_bytes<N>(plain));
+        auto const back = detail::bytes_bits<std::array<Block, 2>, N>(detail::bit_bytes<N>(plain));
+        BOOST_CHECK(back == blocks);
+}
+
+} // namespace
+
 // A class block keeps the layout its author chose, so it crosses by its value and spells the bytes built-ins do.
 BOOST_AUTO_TEST_CASE(AClassBlockCrossesByItsValue)
 {
         static_assert(detail::block_copies_as_bytes<std::uint64_t> == (std::endian::native == std::endian::little));
         static_assert(not detail::block_copies_as_bytes<std::bitset<64>>);
-#ifdef TEST_HAS_BOOST_INT128
-        using block = boost::int128::uint128;
-        static_assert(not detail::block_copies_as_bytes<block>);
-
-        constexpr auto N  = 256UZ;
-        auto const plain  = std::array<std::uint64_t, 4>{0x0123'4567'89AB'CDEFULL, 0xFEDC'BA98'7654'3210ULL, 1ULL, 0x8000'0000'0000'0000ULL};
-        auto const blocks = std::array<block, 2>{(block{plain[1]} << 64U) | block{plain[0]}, (block{plain[3]} << 64U) | block{plain[2]}};
-        BOOST_CHECK(detail::bit_bytes<N>(blocks) == detail::bit_bytes<N>(plain));
-        auto const back = detail::bytes_bits<std::array<block, 2>, N>(detail::bit_bytes<N>(plain));
-        BOOST_CHECK(back == blocks);
+#ifdef TEST_HAS_ABSL_INT128
+        check_class_block<absl::uint128>();
 #endif
+#ifdef TEST_HAS_BOOST_INT128
+        check_class_block<boost::int128::uint128>();
+#endif
+        BOOST_CHECK(true);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -106,9 +106,10 @@ constexpr auto or_block_byte(std::span<T, E> blocks, std::size_t j, unsigned cha
         -> void
 {
         constexpr auto per_block = bytes_per_block<std::span<T, E>>;
-        auto const value         = static_cast<T>(byte);
-        auto& block              = blocks[j / per_block];
-        block                    = static_cast<T>(block | shl(value, bits_per_byte * (j % per_block)));
+        // Through unsigned, as an unsigned char would promote to int and choose absl::uint128's signed constructor.
+        auto const value = static_cast<T>(static_cast<unsigned>(byte));
+        auto& block      = blocks[j / per_block];
+        block            = static_cast<T>(block | shl(value, bits_per_byte * (j % per_block)));
 }
 
 template<class Src, class T, std::size_t E>
