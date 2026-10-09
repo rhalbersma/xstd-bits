@@ -3022,7 +3022,8 @@ libc++, and an empty type in neither), and it has no growth members, which would
 one. Over a capacity of nought `bit_block_container` stores no width (`has_zero_capacity`), defaults its moves, and
 takes the `bit_members` whose two members overlap and have no initializer; every adaptor holds the container
 `[[no_unique_address]]` in its `adapted_bits` base, so `basic_bit_bounded_vector<Block, 0>` and
-`basic_bit_bounded_set<Key, Block, 0>` are empty types. There the vector's range constructor and both append tiers
+`basic_bit_bounded_set<Key, Block, 0>` are empty types, except under the MSVC ABI, which gives a class whose members
+are all empty a byte of its own. There the vector's range constructor and both append tiers
 refuse any element up front through one `refuse_any`, and the ordering never compares unequal widths. A loop that
 cannot go round a second time is a branch no test can take, and being trivially destructible the owner compiles to
 control flow no other capacity shares, so gcov counts that branch on its own; it is also code MSVC's C4702 calls
