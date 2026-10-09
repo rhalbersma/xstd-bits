@@ -1251,6 +1251,34 @@ widths, and is `noexcept` as it is.
 `bit_algorithms` header, beside the other algorithms over two sets that a bit set answers a block at a time. Among
 the queries each relation has one spelling, and the member already answers this one.
 
+Other libraries spell the six differently, and a dash marks a question a library has no name for:
+
+| | subset | proper subset | superset | proper superset | overlap | no overlap |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| xstd-bits | `a.is_subset_of(b)` | `a.is_proper_subset_of(b)` | `a.is_superset_of(b)` | `a.is_proper_superset_of(b)` | `intersects(a, b)` | `disjoint(a, b)` |
+| `boost::dynamic_bitset` | `a.is_subset_of(b)` | `a.is_proper_subset_of(b)` | — | — | `a.intersects(b)` | — |
+| `std::bitset` | — | — | — | — | — | — |
+| `std::ranges` | — | — | `includes(a, b)` | — | — | — |
+| Python `set` | `a <= b`, `a.issubset(b)` | `a < b` | `a >= b`, `a.issuperset(b)` | `a > b` | — | `a.isdisjoint(b)` |
+| Rust `HashSet` | `a.is_subset(&b)` | — | `a.is_superset(&b)` | — | — | `a.is_disjoint(&b)` |
+| Swift `Set` | `a.isSubset(of: b)` | `a.isStrictSubset(of: b)` | `a.isSuperset(of: b)` | `a.isStrictSuperset(of: b)` | — | `a.isDisjoint(with: b)` |
+| Rust `bitflags` | — | — | `a.contains(b)` | — | `a.intersects(b)` | — |
+
+Checked against Boost's
+[`dynamic_bitset.hpp`](https://github.com/boostorg/dynamic_bitset/blob/boost-1.92.0/include/boost/dynamic_bitset/dynamic_bitset.hpp)
+in Boost 1.92.0, [[template.bitset]](https://eel.is/c++draft/template.bitset) and
+[[includes]](https://eel.is/c++draft/includes) in the working draft, Python 3.14's
+[set types](https://docs.python.org/3.14/library/stdtypes.html#set-types-set-frozenset), Rust 1.99.0's
+[`HashSet`](https://doc.rust-lang.org/1.99.0/std/collections/struct.HashSet.html), Swift 6.4.0's
+[`Set.swift`](https://github.com/swiftlang/swift/blob/swift-6.4.0-RELEASE/stdlib/public/core/Set.swift) and
+bitflags 2.13.2's [`Flags`](https://docs.rs/bitflags/2.13.2/bitflags/trait.Flags.html).
+
+Boost names the subset direction alone, and `std::ranges::includes` and bitflags' `contains` the superset direction
+alone, each with its operands swapped for the other. The split here falls by symmetry: an asymmetric relation is a
+member and reads as its sentence does, `a.is_subset_of(b)` as *a is a subset of b*, and a symmetric one is free, so
+neither operand is privileged. Boost and bitflags name only the positive overlap and Python, Rust and Swift only the
+negative one; this library names both.
+
 ### degenerate-widths
 
 Two widths get their own `if constexpr` arm in the orderings, for the reason in
@@ -2718,6 +2746,43 @@ words. [type_safe](https://github.com/foonathan/type_safe)'s `flag_set<Enum>` st
 `std::uint_least8_t` to `std::uint_least64_t` that holds them, and takes no more than 64. `bit_enum_set` is
 `bit_least` over an enumeration's fixed set, as above. A fourth transformation, `bit_precise<X>` over C23's
 `unsigned _BitInt(N)` as one block of exactly `N` bits, is planned separately and is not part of this design yet.
+
+Other libraries either pick the block themselves, from the width, or take it from the user as a template argument:
+
+| Library | Who picks the block | Rule | Whole-block width | Changing the block |
+| :--- | :--- | :--- | :--- | :--- |
+| xstd-bits | the user, by transformation or argument | `std::size_t` by default; `bit_least<X>` the least type holding `N`, `bit_fast<X>` the fast one, `bit_underlying<X>` the key's underlying type made unsigned; `bit_enum_set` and `bit_flag_set` are `bit_least` already; any block as the `Block` argument of a `basic_` template | `bit_align<X>` | by transformation, on any fixed-width owner, its key, mapping and order kept; the transformations compose |
+| type_safe `ts::flag_set<Enum>` | the library | `std::uint_least8_t` to `std::uint_least64_t`, the least holding the number of flags; no more than 64 flags | no | no |
+| itsy_bitsy `bitsy::bit_view<Range, Bounds>`, `bitsy::bit_sequence<Container>`, `bitsy::dynamic_bitset<T>` | the user | the value type of the range or container adapted, or `T`, with no default | — | by naming another range, container or `T` |
+| Chromium `base::EnumSet<E, Min, Max>` | the library | `uint8_t`, `uint16_t` or `uint32_t` by the number of values from `Min` to `Max`, and a `std::bitset` past 32 | no | no |
+| Mozilla `mozilla::EnumSet<T, Serialized>` | the user, with a default | `Serialized`, by default the enumeration's underlying type made unsigned, which is `bit_underlying`'s rule; any unsigned type, or a `mozilla::BitSet` | no | by spelling the argument again |
+| MSVC STL `std::bitset<N>` | the library | `unsigned long` up to its 32 bits, else `unsigned long long` | no | no |
+| libstdc++ `std::bitset<N>` | the library | `unsigned long`: 64 bits on LP64 targets, 32 on LLP64 ones such as MinGW | no | no |
+| libc++ `std::bitset<N>` | the library | `std::size_t` | no | no |
+| Boost `boost::dynamic_bitset<Block, AllocatorOrContainer>` | the user, with a default | `Block`, by default `unsigned long` | — | by spelling the argument again |
+| LLVM `llvm::Bitset<NumBits>` | the library | `uintptr_t`, as for `llvm::BitVector` | no | no |
+
+A dash marks a width chosen at run time. Checked against type_safe's
+[`flag_set.hpp`](https://github.com/foonathan/type_safe/blob/292e8c127037e33d92f8f52dab0f1184993942d0/include/type_safe/flag_set.hpp)
+at `292e8c1`, itsy_bitsy's
+[`bit_view.hpp`](https://github.com/ThePhD/itsy_bitsy/blob/d5b6bf9509bb2dff6235452d427f0b1c349d5f8b/include/itsy/bit_view.hpp)
+and [`bit_sequence.hpp`](https://github.com/ThePhD/itsy_bitsy/blob/d5b6bf9509bb2dff6235452d427f0b1c349d5f8b/include/itsy/bit_sequence.hpp)
+at `d5b6bf9`, Chromium's
+[`enum_set.h`](https://github.com/chromium/chromium/blob/b0840fa3d3ce4939cecdb19aa2125bbffbe069ca/base/containers/enum_set.h)
+at `b0840fa`, Firefox's
+[`EnumSet.h`](https://github.com/mozilla-firefox/firefox/blob/3c71a541b0e7ac6e086907b38670dabca9174c45/mfbt/EnumSet.h)
+and [`BitSet.h`](https://github.com/mozilla-firefox/firefox/blob/3c71a541b0e7ac6e086907b38670dabca9174c45/mfbt/BitSet.h)
+at `3c71a54`, MSVC STL's [`<bitset>`](https://github.com/microsoft/STL/blob/da52dc0fcadbd83690cfd1ed32408d2847439493/stl/inc/bitset)
+at `da52dc0`, libstdc++'s [`<bitset>`](https://github.com/gcc-mirror/gcc/blob/releases/gcc-16.2.0/libstdc++-v3/include/std/bitset)
+in GCC 16.2.0, libc++'s [`<bitset>`](https://github.com/llvm/llvm-project/blob/llvmorg-23.1.3/libcxx/include/bitset)
+and LLVM's [`Bitset.h`](https://github.com/llvm/llvm-project/blob/llvmorg-23.1.3/llvm/include/llvm/ADT/Bitset.h) and
+[`BitVector.h`](https://github.com/llvm/llvm-project/blob/llvmorg-23.1.3/llvm/include/llvm/ADT/BitVector.h) in LLVM
+23.1.3, and Boost's
+[`dynamic_bitset.hpp`](https://github.com/boostorg/dynamic_bitset/blob/boost-1.92.0/include/boost/dynamic_bitset/dynamic_bitset.hpp)
+in Boost 1.92.0.
+
+None of the others changes the block of a type already named or rounds a width to whole blocks on request: where the
+block is an argument the type is spelled again with another, and where the library picks it the user cannot.
 
 ### flag-types
 
@@ -5327,13 +5392,13 @@ Formatting a set needs nothing beyond the standard library: `std::format` and `s
 
 ### 3 Set predicates from `boost::dynamic_bitset`
 
-The set predicates `is_subset`, `is_proper_subset` and `intersects` from `boost::dynamic_bitset` are present in `xstd::bit_fixed_set` with **identical syntax** and **identical semantics**. Note that these set predicates are not present in `std::bitset`. Efficient emulation of these set predicates for `std::bitset` is not possible using **single-pass** and **short-circuiting** semantics.
+The set predicates `is_subset_of` and `is_proper_subset_of` from `boost::dynamic_bitset` are present in `xstd::bit_fixed_set` with **identical syntax** and **identical semantics**, and its member `a.intersects(b)` is the free `intersects(a, b)`, a symmetric question taking neither operand as its object. Note that these set predicates are not present in `std::bitset`. Efficient emulation of these set predicates for `std::bitset` is not possible using **single-pass** and **short-circuiting** semantics.
 
 | `xstd::bit_fixed_set<N>` <br> `boost::dynamic_bitset<>`  | `std::bitset<N>`             |
 | :------------------------------------------------  | :---------------             |
 | `a.is_subset_of(b)`                                | `(a & ~b).none()`            |
 | `a.is_proper_subset_of(b)`                         | `(a & ~b).none() and a != b` |
-| `a.intersects(b)`                                  | `(a & b).any()`              |
+| `intersects(a, b)` <br> `a.intersects(b)`         | `(a & b).any()`              |
 
 ### 4 The bitwise operators from `std::bitset` and `boost::dynamic_bitset` reimagined as set algorithms
 
@@ -5346,7 +5411,7 @@ With the exception of `operator~`, the non-member bitwise operators can be reima
 
 | `xstd::bit_fixed_set<N>`      | `std::set<int>` with the range-v3 set algorithm views                                                |
 | :----------------       | :----------------------------------------------------------------------------------------------------|
-| `a.is_subset_of(b)`     | `std::ranges::includes(a, b)`                                                                        |
+| `a.is_subset_of(b)`     | `std::ranges::includes(b, a)`                                                                        |
 | <code>a &vert; b</code> | <code>ranges::views::set_union(a, b)                &vert; std::ranges::to&lt;std::set&gt;() </code> |
 | `a & b`                 | <code>ranges::views::set_intersection(a, b)         &vert; std::ranges::to&lt;std::set&gt;() </code> |
 | `a - b`                 | <code>ranges::views::set_difference(a, b)           &vert; std::ranges::to&lt;std::set&gt;() </code> |
