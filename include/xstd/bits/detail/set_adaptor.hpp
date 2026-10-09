@@ -21,7 +21,7 @@
 #include <xstd/bits/detail/hash.hpp>                          // hash_append_keys
 #include <xstd/bits/detail/intrin.hpp>                        // countl_zero, countr_zero
 #include <xstd/bits/detail/is_key.hpp>                        // is_key
-#include <xstd/bits/detail/ownership.hpp>                     // owned_bits_t, owned_storage, owner_of, owner_reading, set_reading_tag, storage, storage_access, owns
+#include <xstd/bits/detail/ownership.hpp>                     // owned_bits_t, owned_storage, owner_of, owns, reads, set_reading_tag, storage, storage_access
 #include <xstd/bits/detail/shift.hpp>                         // shl, shr
 #include <xstd/bits/detail/storage_ptr.hpp>                   // storage_ptr_t, storage_ref_t
 #include <xstd/bits/detail/zero_width.hpp>                    // zero_width
@@ -1404,24 +1404,15 @@ private:
         }
 };
 
-template<class>
-inline constexpr bool is_set_adaptor = false;
-
-template<bit_block_container_type Bits, storage Store, class Derived, class Key, class KeyMapping, class Compare>
-inline constexpr bool is_set_adaptor<set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>> = true;
-
 // A proxy some set_adaptor hands out, recognized through the adaptor it names: no deduction reaches into a member.
 template<class R>
-concept set_reference = is_set_adaptor<typename R::adaptor_type> and std::same_as<R, typename R::adaptor_type::reference>;
+concept set_reference = reads<typename R::adaptor_type, set_reading_tag> and std::same_as<R, typename R::adaptor_type::reference>;
 
 // What a set owner wraps, so that a view over it names the same storage and reading.
 template<class Bits, class Derived, class Key, class KeyMapping, class Compare>
 struct owned_storage<set_adaptor<Bits, storage::owned, Derived, Key, KeyMapping, Compare>>
 {
         using bits_type = Bits;
-
-        // Committed to the set reading, so only a set view refers into one.
-        using reads = set_reading_tag;
 };
 
 // NOLINTBEGIN(readability-redundant-parentheses): a call is no primary expression, so the clause needs them.

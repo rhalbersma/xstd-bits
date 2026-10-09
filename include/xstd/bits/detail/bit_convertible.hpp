@@ -10,7 +10,7 @@
 #include <xstd/bits/detail/bit_blocks_capacity.hpp>          // bit_blocks_capacity_v
 #include <xstd/bits/detail/bit_layout.hpp>                   // bit_bytes, bit_layout, byte_count, bytes_bits, copy_bits
 #include <xstd/bits/detail/bit_width.hpp>                    // bit_width_v
-#include <xstd/bits/detail/ownership.hpp>                    // owned_bits_t, owner, owner_reading, set_reading_tag, storage_access, view
+#include <xstd/bits/detail/ownership.hpp>                    // owned_bits_t, owner, reads, set_reading_tag, storage_access, view
 #include <xstd/bits/from_blocks.hpp>                         // from_blocks
 #include <algorithm>                                         // min
 #include <array>                                             // array
@@ -35,10 +35,6 @@ concept fixed_width =
 // What a fixed width is written into: not a view, which writes bits it does not own, nor an array no function returns.
 template<class T>
 concept fixed_target = fixed_width<T> and (not view<T>) and (not std::is_array_v<T>);
-
-// Whether an owner reads its bits as a set, which decides the widths at either end.
-template<class T>
-inline constexpr bool reads_as_set = owner_reading<T, set_reading_tag>;
 
 // The bytes of a fixed width, byte j holding the positions [8j, 8j + 8): ours through their storage.
 template<fixed_width T>
@@ -90,7 +86,7 @@ struct bit_source<T>
                 -> std::size_t
         {
                 auto const& bits = storage_access::bits(from);
-                if constexpr (reads_as_set<T>) {
+                if constexpr (reads<T, set_reading_tag>) {
                         return std::ranges::min(bits.num_blocks() * bits.bits_per_block, bits.max_size());
                 } else {
                         return bits.size();
@@ -162,7 +158,7 @@ template<class To>
         -> std::size_t
 {
         using bits_type = owned_bits_t<To>;
-        if constexpr (reads_as_set<To>) {
+        if constexpr (reads<To, set_reading_tag>) {
                 auto const whole = bits_type::blocks_for(width) * bits_type::bits_per_block;
                 if constexpr (bits_type::has_static_capacity) {
                         return std::ranges::min(whole, bits_type::static_capacity());
@@ -195,7 +191,7 @@ template<class To, class From>
         bits.resize(target_width<To>(width));
         source::copy(from, bits.blocks());
         bits.erase_unused();
-        if constexpr (reads_as_set<To> and owned_bits_t<To>::has_static_capacity) {
+        if constexpr (reads<To, set_reading_tag> and owned_bits_t<To>::has_static_capacity) {
                 refuse_lost_keys(bits.size(), bits.count(), width, source::count(from));
         }
         return to;
@@ -260,7 +256,7 @@ template<class To, class From>
 {
         auto const width = bit_source<std::remove_cvref_t<From>>::width(from);
         auto to          = To(xstd::from_blocks, std::forward<From>(from).extract());
-        if constexpr (not reads_as_set<To>) {
+        if constexpr (not reads<To, set_reading_tag>) {
                 storage_access::bits(to).resize(width);
         }
         return to;

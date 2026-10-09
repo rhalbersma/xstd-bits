@@ -16,7 +16,7 @@
 #include <xstd/bits/detail/functor.hpp>                      // invoke_continues
 #include <xstd/bits/detail/hash.hpp>                         // hash_append_bools
 #include <xstd/bits/detail/intrin.hpp>                       // countr_zero, popcount
-#include <xstd/bits/detail/ownership.hpp>                    // owned_bits_t, owned_storage, owner_of, owner_reading, owns, sequence_reading_tag, storage, storage_access, window
+#include <xstd/bits/detail/ownership.hpp>                    // owned_bits_t, owned_storage, owner_of, owns, reads, sequence_reading_tag, storage, storage_access, window
 #include <xstd/bits/detail/shift.hpp>                        // partial_block_mask, shl, shr
 #include <xstd/bits/detail/storage_ptr.hpp>                  // storage_ptr_t, storage_ref_t
 #include <xstd/bits/from_blocks.hpp>                         // from_blocks_t
@@ -671,6 +671,7 @@ public:
 
         // What a trait asks of this vehicle, every container built on it answering alike.
         using adaptor_type = sequence_adaptor;
+        using reads_as     = sequence_reading_tag;
         using adapted_type = Bits;
 
         static constexpr bool is_windowed  = is_window;
@@ -1653,24 +1654,15 @@ private:
         }
 };
 
-template<class>
-inline constexpr bool is_sequence_adaptor = false;
-
-template<bit_block_container_type Bits, storage Store, window W, class Derived, std::size_t E>
-inline constexpr bool is_sequence_adaptor<sequence_adaptor<Bits, Store, W, Derived, E>> = true;
-
 // A proxy some sequence_adaptor hands out, recognized through the adaptor it names: no deduction reaches into a member.
 template<class R>
-concept sequence_reference = is_sequence_adaptor<typename R::adaptor_type> and (std::same_as<R, typename R::adaptor_type::reference> or std::same_as<R, typename R::adaptor_type::const_reference>);
+concept sequence_reference = reads<typename R::adaptor_type, sequence_reading_tag> and (std::same_as<R, typename R::adaptor_type::reference> or std::same_as<R, typename R::adaptor_type::const_reference>);
 
 // What a sequence owner wraps, so that a view over it names the same storage and reading.
 template<class Bits, class Derived>
 struct owned_storage<sequence_adaptor<Bits, storage::owned, window::all, Derived>>
 {
         using bits_type = Bits;
-
-        // Committed to the sequence reading, so only a sequence view refers into one.
-        using reads = sequence_reading_tag;
 };
 
 // NOLINTBEGIN(readability-redundant-parentheses): a call is no primary expression, so the clause needs them.

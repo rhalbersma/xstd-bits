@@ -17,15 +17,21 @@ struct fake_bits
 struct refined_reading_tag : xstd::bits::detail::sequence_reading_tag
 {};
 
-// Owners in name only, each committed to one reading.
+// Owners in name only, each committed to one reading, which an owner states as its adaptor does.
 struct set_owner
-{};
+{
+        using reads_as = xstd::bits::detail::set_reading_tag;
+};
 
 struct sequence_owner
-{};
+{
+        using reads_as = xstd::bits::detail::sequence_reading_tag;
+};
 
 struct refined_owner
-{};
+{
+        using reads_as = refined_reading_tag;
+};
 
 // A view in name only: it adapts a storage and owns none.
 struct fake_view
@@ -37,6 +43,7 @@ struct fake_view
 struct adapting_owner
 {
         using adapted_type = fake_bits;
+        using reads_as     = xstd::bits::detail::sequence_reading_tag;
 };
 
 } // namespace
@@ -45,28 +52,24 @@ template<>
 struct xstd::bits::detail::owned_storage<set_owner>
 {
         using bits_type = fake_bits;
-        using reads     = set_reading_tag;
 };
 
 template<>
 struct xstd::bits::detail::owned_storage<sequence_owner>
 {
         using bits_type = fake_bits;
-        using reads     = sequence_reading_tag;
 };
 
 template<>
 struct xstd::bits::detail::owned_storage<refined_owner>
 {
         using bits_type = fake_bits;
-        using reads     = refined_reading_tag;
 };
 
 template<>
 struct xstd::bits::detail::owned_storage<adapting_owner>
 {
         using bits_type = fake_bits;
-        using reads     = sequence_reading_tag;
 };
 
 BOOST_AUTO_TEST_SUITE(Ownership)
