@@ -2236,6 +2236,14 @@ them down onto it through both sides of `block_at` ([the-blit](#the-blit)). A re
 order, each block's bits reversed by log2(digits) masked swaps, and the padding, now at the bottom, rotated out by
 the same funnel shift.
 
+libstdc++ before 16 gives a reason of its own to spell it as the member. Its `std::ranges::rotate` holds the
+element a closing rotation by one displaces as `auto`, which over a proxy reference is a proxy to the position
+about to be overwritten, so at a turn coprime with a width of three or more the bit that should wrap round comes
+out as a copy of its neighbour: `std::vector<bool>` and this library's sequences lose it alike, while `std::rotate`
+and libc++ do not ([GCC PR 121913](https://gcc.gnu.org/PR121913), fixed in 16 and not backported). The member is a
+pass over the blocks that never asks the standard library to move a proxy, so it is exact on every library, and
+the tests build their own rotations by index for the same reason.
+
 ### the-elementwise-reading
 
 What `&=` means on a sequence of bools is **elementwise logical**, not bitwise: `a &= b` is
@@ -2563,8 +2571,11 @@ negative included, pays no search. Otherwise it derives from `bit_find_mapping<E
 strictly ascending with a `static_assert`: `size` is its length, `from_index(i)` is `values[i]`, and `to_index(e)` is
 `e`'s rank, found by binary search. Gaps cost nothing, so
 `{pawn = 1, knight = 3, bishop = 4, rook = 8, queen = 9, king = 100}` takes six bits rather than a hundred. A value
-not in the list ranks at `size` or above under either, which the set's guard refuses as it refuses any key past its
-width. A lookup asks `is_key` before `to_index`, so `contains`, `count`, `find` and `erase(k)` answer *absent* for any
+not in the list ranks at `size` or above under either, and every owner refuses to write it there with
+`std::out_of_range`: a fixed set because `size` is its width, and a growing one, whose storage could hold the
+position, because `size` closes the universe all the same. A growing owner's `max_size()` is that `size` as well, so
+a left shift drops what it carries past the last key, as it does at a static width. A lookup asks `is_key` before
+`to_index`, so `contains`, `count`, `find` and `erase(k)` answer *absent* for any
 value of the key type, as `std::set`'s do; the bounds of a value that is no key bisect the keys under `key_compare`,
 which puts `First - 1` before a range's first element where the wrapped distance alone would have put it after the
 last, and an unlisted value between two listed ones between them. A key type with no order of its own, a
@@ -3067,6 +3078,7 @@ The **source** of the answer still differs by what can grow:
 |---|---|
 | a width in the type | the storage's `extent` |
 | an owner over growing storage | the storage's answer for that reading, in bits |
+| the same, under a mapping that closes the universe | the smaller of that answer and the mapping's `size` |
 | a view, a window, a static owner | its own width, which it cannot grow |
 
 Nothing above the storage restates the arithmetic, and nothing above it should: a constant at the adaptor drifts
@@ -3347,7 +3359,8 @@ shift's rule, grow and then truncate at `max_size()`: that is the one bound fixe
 the set happened to be stored, and truncating at the current width would give two equal sets two different
 results. `insert` past `max_size()` still throws, since it names one key the set cannot hold, where a shift is a
 set-wide operation with a rule for what it drops, as `std::bitset`'s is. At a static width the width and
-`max_size()` are both `N`, so `bit_fixed_set<N>` shifts as `std::bitset<N>` does.
+`max_size()` are both `N`, so `bit_fixed_set<N>` shifts as `std::bitset<N>` does. A mapping that closes the
+universe caps a growing set's `max_size()` at its `size`, so the shift keeps no position that names no key.
 
 | | who sets the width | operations change it | part of the value | a left shift truncates at |
 | --- | --- | --- | --- | --- |
@@ -3564,6 +3577,16 @@ constant and is never taken; it costs nothing to keep.
 key it would happily have admitted. A key past the width is absent, so the toggle that admits it **is** the
 insert that admits it, and it grows where insert grows.
 
+A value that is no key of a mapping closing the universe is the fourth reason, and it has one answer at every
+extent. It ranks at or past the mapping's `size`, and a static width is that `size`, so a fixed set says
+`out_of_range` for it through the check above. A growing set could grow to the position, and the key it would read
+back there is none, so it asks the same question of `size` before its storage's own ceiling, and says
+`out_of_range` too. The two refusals never meet on one owner: a bounded set over such a mapping has that `size` for
+its capacity, so `bad_alloc` is left to an open universe's key past the capacity, and `length_error` to one past
+what a heap can count. Every door a value comes in through asks it: `insert`, `emplace`, `emplace_hint`, the ranged
+and listed forms, the constructors that insert, `complement`, and an enumerator's `|=` and `^=`. A flag value of
+several bits, or of none, stays `bit_flag_mapping`'s precondition, there being no one position to rank it at.
+
 The element-wise `insert(first, last)` and `insert(ilist)` keep what they inserted before the refused key, which
 is `[set]`'s own behaviour when an allocation throws midway; the consecutive `insert_range` tier guards the
 range's last position before it writes anything, so that one is all or nothing.
@@ -3577,6 +3600,7 @@ Erasing stays total like `contains`: removing what is not there is the no-op ret
 |---|---|---|
 | `contains`, `count`, `find`, `lower_bound`, `upper_bound`, `equal_range`, `erase(key)` | answers | answers |
 | `insert`, `emplace`, `emplace_hint`, `insert(hint, x)`, `complement` | grows | `out_of_range` at a static width, grows at a dynamic one |
+| the same, with a value that is no key of a closed universe | grows | `out_of_range` at every width |
 | `erase(end())` | undefined | `assert(position != end())`, which it already said |
 | `erase(first, last)` reversed | aborts: a free of a pointer never allocated | `assert(*first <= *last)` |
 | `++end()` | undefined | `assert(m_idx < size())` |

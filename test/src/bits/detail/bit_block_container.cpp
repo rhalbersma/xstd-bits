@@ -287,7 +287,7 @@ public:
                 -> void
         {
                 auto const by = m_n == 0UZ ? 0UZ : s % m_n;
-                // By index, not std::ranges::rotate, which loses a vector<bool> bit under libstdc++ 15.
+                // By index, not std::ranges::rotate, which loses a vector<bool> bit under libstdc++ 15: GCC PR 121913.
                 auto turned = model(m_n);
                 for (auto const i : std::views::iota(0UZ, m_n)) {
                         turned[i] = m_mx[(i + by) % m_n];

@@ -4,20 +4,25 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/bit_exchange.hpp>                    // converts_from, converts_to
+#include <test/for_each_type.hpp>                   // for_each_type
+#include <test/set/enums.hpp>                       // day, level, piece, sign
+#include <test/set/lookup.hpp>                      // lookup_mismatches
 #include <test/set/primitives.hpp>                  // heterogeneous_key
 #include <test/spec/random.hpp>                     // engine, seed
 #include <xstd/bits/bit/bit_convert.hpp>            // bit_convert
 #include <xstd/bits/bit_bounded_set.hpp>            // basic_bit_bounded_set
 #include <xstd/bits/bit_fixed_set.hpp>              // basic_bit_fixed_set, bit_fixed_set
-#include <xstd/bits/bit_key_mapping.hpp>            // bit_key_mapping
+#include <xstd/bits/bit_flag_mapping.hpp>           // bit_flag_mapping
+#include <xstd/bits/bit_index_mapping.hpp>          // bit_mask_mapping
+#include <xstd/bits/bit_key_mapping.hpp>            // bit_key_mapping, enum_traits
 #include <xstd/bits/bit_set.hpp>                    // basic_bit_set, bit_set
 #include <xstd/bits/bit_set_view.hpp>               // bit_set_view
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
 #include <xstd/bits/detail/ownership.hpp>           // owned_bits_t, storage
 #include <xstd/bits/detail/set_adaptor.hpp>         // set_adaptor
 #include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
-#include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <algorithm>                                // lexicographical_compare_three_way, ranges::equal, ranges::includes
+#include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_TEST_CONTEXT
+#include <algorithm>                                // lexicographical_compare_three_way, max, min, ranges::all_of, ranges::equal, ranges::includes
 #include <array>                                    // array
 #include <bitset>                                   // bitset
 #include <compare>                                  // strong_ordering
@@ -28,9 +33,12 @@
 #include <initializer_list>                         // initializer_list
 #include <iterator>                                 // ranges::distance
 #include <limits>                                   // numeric_limits
-#include <ranges>                                   // bidirectional_range, iota
+#include <ranges>                                   // bidirectional_range, from_range, iota, ranges::to, transform
 #include <set>                                      // set
 #include <stdexcept>                                // length_error, out_of_range
+#include <tuple>                                    // tuple, tuple_cat
+#include <type_traits>                              // underlying_type_t
+#include <utility>                                  // declval, to_underlying
 #include <vector>                                   // vector
 
 namespace {
@@ -510,6 +518,203 @@ BOOST_AUTO_TEST_CASE(ADynamicWidthAdmitsTheKeyInstead)
         d.complement(1000UZ);
         BOOST_CHECK(not d.contains(1000UZ));
         BOOST_CHECK_EQUAL(d.size(), 1UZ);
+}
+
+namespace {
+
+// One-bit values keying a set by their bit, six of the eight bits of their block.
+enum class flag : std::uint8_t
+{
+        a = 0x01,
+        b = 0x02,
+        c = 0x04,
+        d = 0x08,
+        e = 0x10,
+        f = 0x20,
+};
+
+// Every owning column over one closed mapping, as wide as its keys: a width, the heap, a capacity and inline blocks.
+template<class Key, std::size_t N, class KeyMapping = xstd::bit_key_mapping<Key>>
+using closed_columns = std::tuple<xstd::basic_bit_fixed_set<Key, std::uint8_t, N, KeyMapping>, xstd::basic_bit_set<Key, std::uint8_t, KeyMapping>, xstd::basic_bit_bounded_set<Key, std::uint8_t, N, KeyMapping>, xstd::basic_bit_small_set<Key, std::uint8_t, N, KeyMapping>, xstd::basic_bit_set<Key, std::uint8_t, KeyMapping, std::greater<>>>;
+
+// A range from zero with padding, one from a negative value, a list with gaps, a list across zero, and one-bit values.
+using closed_owners = decltype(std::tuple_cat(std::declval<closed_columns<test::set::day, 5UZ>>(), std::declval<closed_columns<test::set::level, 3UZ>>(), std::declval<closed_columns<test::set::piece, 6UZ>>(), std::declval<closed_columns<test::set::sign, 3UZ>>(), std::declval<closed_columns<flag, 6UZ, xstd::bit_flag_mapping<flag, 6UZ>>>()));
+
+// Every key of the universe, in position order.
+template<class X>
+auto universe()
+        -> std::vector<typename X::key_type>
+{
+        using key_type = X::key_type;
+        using mapping  = X::key_mapping_type;
+        return std::views::iota(0UZ, mapping::size) | std::views::transform([](std::size_t i) -> key_type { return mapping::from_index(i); }) | std::ranges::to<std::vector>();
+}
+
+// The values a write is offered: every one-bit value of a flag, else each value from two below the keys to two above.
+template<class Key>
+auto offered()
+        -> std::vector<Key>
+{
+        if constexpr (std::same_as<Key, flag>) {
+                return std::array<std::uint8_t, 8>{0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80} | std::views::transform([](std::uint8_t v) -> flag { return static_cast<flag>(v); }) | std::ranges::to<std::vector>();
+        } else {
+                using underlying      = std::underlying_type_t<Key>;
+                constexpr auto values = xstd::enum_traits<Key>::values;
+                auto const lo         = std::max(int{std::to_underlying(values.front())} - 2, int{std::numeric_limits<underlying>::min()});
+                auto const hi         = std::min(int{std::to_underlying(values.back())} + 2, int{std::numeric_limits<underlying>::max()});
+                return std::views::iota(lo, hi + 1) | std::views::transform([](int v) -> Key { return static_cast<Key>(v); }) | std::ranges::to<std::vector>();
+        }
+}
+
+// Each way a value enters a set, offered one that is no key: each refuses it as out_of_range and writes nothing.
+template<class X>
+auto refuses_at_every_door(X const& a, typename X::key_type v)
+        -> void
+{
+        auto x         = a;
+        auto const one = std::array{v};
+        check_refuses([&] -> void { static_cast<void>(x.insert(v)); });
+        check_refuses([&] -> void { x.insert(x.begin(), v); });
+        check_refuses([&] -> void { static_cast<void>(x.emplace(v)); });
+        check_refuses([&] -> void { x.emplace_hint(x.begin(), v); });
+        check_refuses([&] -> void { x.insert({v}); });
+        check_refuses([&] -> void { x.insert(one.begin(), one.end()); });
+        check_refuses([&] -> void { x.insert_range(one); });
+        check_refuses([&] -> void { x.complement(v); });
+        check_refuses([&] -> void { static_cast<void>(X(one.begin(), one.end())); });
+        check_refuses([&] -> void { static_cast<void>(X(std::from_range, one)); });
+        BOOST_CHECK(x == a);
+}
+
+// The keys a set holds, as its model holds them.
+template<class Model, class X>
+[[nodiscard]] auto modelled(X const& x)
+        -> Model
+{
+        return Model(x.begin(), x.end());
+}
+
+// Each way a value enters a set, offered a key: each writes it as the model's insert does, and complement toggles it.
+template<class X, class Model>
+auto admits_at_every_door(X const& a, Model const& model, typename X::key_type v)
+        -> void
+{
+        auto with = model;
+        with.insert(v);
+        auto without = model;
+        without.erase(v);
+        auto const one       = std::array{v};
+        auto const writes_it = [&](auto write) -> bool {
+                auto x = a;
+                write(x);
+                return modelled<Model>(x) == with;
+        };
+        BOOST_CHECK(writes_it([&](X& x) -> void { static_cast<void>(x.insert(v)); }));
+        BOOST_CHECK(writes_it([&](X& x) -> void { x.insert(x.begin(), v); }));
+        BOOST_CHECK(writes_it([&](X& x) -> void { static_cast<void>(x.emplace(v)); }));
+        BOOST_CHECK(writes_it([&](X& x) -> void { x.emplace_hint(x.begin(), v); }));
+        BOOST_CHECK(writes_it([&](X& x) -> void { x.insert({v}); }));
+        BOOST_CHECK(writes_it([&](X& x) -> void { x.insert(one.begin(), one.end()); }));
+        BOOST_CHECK(writes_it([&](X& x) -> void { x.insert_range(one); }));
+        auto x = a;
+        x.complement(v);
+        BOOST_CHECK(modelled<Model>(x) == (model.contains(v) ? without : with));
+        auto const from_iterators = X(one.begin(), one.end());
+        auto const from_range     = X(std::from_range, one);
+        BOOST_CHECK(modelled<Model>(from_iterators) == Model{v});
+        BOOST_CHECK(modelled<Model>(from_range) == Model{v});
+}
+
+// An enumerator is a one-element set: the operators that write it refuse it, and the two that only read it answer.
+template<class X>
+auto meets_it_as_an_empty_set_or_refuses(X const& a, typename X::key_type v)
+        -> void
+{
+        auto x = a;
+        check_refuses([&] -> void { x |= v; });
+        check_refuses([&] -> void { x ^= v; });
+        check_refuses([&] -> void { static_cast<void>(x | v); });
+        check_refuses([&] -> void { static_cast<void>(v ^ x); });
+        check_refuses([&] -> void { static_cast<void>(v - x); });
+        BOOST_CHECK(x == a);
+        auto const met = a & v;
+        BOOST_CHECK(met.empty() and (a - v) == a);
+}
+
+// An enumerator is a one-element set, and each operator meets a key as the model's set algebra does.
+template<class X, class Model>
+auto meets_it_as_a_one_element_set(X const& a, Model const& model, typename X::key_type v)
+        -> void
+{
+        auto const held = model.contains(v);
+        auto with       = model;
+        with.insert(v);
+        auto without = model;
+        without.erase(v);
+        auto x = a;
+        x |= v;
+        BOOST_CHECK(modelled<Model>(x) == with);
+        auto y = a;
+        y ^= v;
+        BOOST_CHECK(modelled<Model>(y) == (held ? without : with));
+        auto const joined   = a | v;
+        auto const toggled  = v ^ a;
+        auto const rest     = v - a;
+        auto const met      = a & v;
+        auto const remained = a - v;
+        BOOST_CHECK(modelled<Model>(joined) == with);
+        BOOST_CHECK(modelled<Model>(toggled) == (held ? without : with));
+        BOOST_CHECK(modelled<Model>(rest) == (held ? Model{} : Model{v}));
+        BOOST_CHECK(modelled<Model>(met) == (held ? Model{v} : Model{}));
+        BOOST_CHECK(modelled<Model>(remained) == without);
+}
+
+} // namespace
+
+// A key takes its position and a value that is no key has none, at a fixed width or a growing one; asking stays total.
+BOOST_AUTO_TEST_CASE(EveryOwnerAdmitsAKeyAndRefusesAValueThatIsNoKey)
+{
+        test::for_each_type<closed_owners>([]<class X> -> void {
+                using key_type    = X::key_type;
+                using key_mapping = X::key_mapping_type;
+                auto const keys   = universe<X>();
+                auto const a      = X({keys.front(), keys.back()});
+                auto const model  = std::set<key_type, typename X::key_compare>(a.begin(), a.end());
+                for (auto const v : offered<key_type>()) {
+                        BOOST_TEST_CONTEXT("value: " << int{std::to_underlying(v)})
+                        {
+                                BOOST_CHECK_EQUAL(test::set::lookup_mismatches(a, model, v), 0UZ);
+                                if (key_mapping::is_key(v)) {
+                                        admits_at_every_door(a, model, v);
+                                        if constexpr (not xstd::bit_mask_mapping<key_mapping, key_type>) {
+                                                meets_it_as_a_one_element_set(a, model, v);
+                                        }
+                                } else {
+                                        refuses_at_every_door(a, v);
+                                        if constexpr (not xstd::bit_mask_mapping<key_mapping, key_type>) {
+                                                meets_it_as_an_empty_set_or_refuses(a, v);
+                                        }
+                                }
+                        }
+                }
+        });
+}
+
+// The universe bounds every column alike: max_size() is its size, and a shift keeps only the keys that land in it.
+BOOST_AUTO_TEST_CASE(EveryOwnerHoldsAtMostItsUniverse)
+{
+        test::for_each_type<closed_owners>([]<class X> -> void {
+                using key_type    = X::key_type;
+                using key_mapping = X::key_mapping_type;
+                auto const keys   = universe<X>();
+                auto x            = X(keys.begin(), keys.end());
+                BOOST_CHECK_EQUAL(x.max_size(), key_mapping::size);
+                BOOST_CHECK(x.full());
+                x <<= 1UZ;
+                BOOST_CHECK_EQUAL(x.size(), key_mapping::size - 1UZ);
+                BOOST_CHECK(not x.contains(keys.front()));
+                BOOST_CHECK(std::ranges::all_of(x, [](key_type k) -> bool { return key_mapping::is_key(k); }));
+        });
 }
 
 // The two growths the reading computes by addition, over a size_t the caller names and bounded by no width.

@@ -180,8 +180,8 @@ struct fixed_max_size : Members
         [[nodiscard]] friend auto operator==(fixed_max_size const&, fixed_max_size const&) -> bool = default;
 };
 
-// [container.reqmts]/57, distance(begin(), end()) for the largest container: every position set.
-template<class Members, class Bits, storage Store>
+// [container.reqmts]/57, distance(begin(), end()) for the largest container: every position set that names a key.
+template<class Members, class Bits, storage Store, class Key, class KeyMapping>
 struct run_time_max_size : Members
 {
         using Members::Members;
@@ -191,6 +191,8 @@ struct run_time_max_size : Members
         {
                 if constexpr ((std::remove_const_t<Bits>::extent != std::dynamic_extent)) {
                         return std::remove_const_t<Bits>::extent;
+                } else if constexpr (owns(Store) and sized_bit_index_mapping<KeyMapping, Key>) {
+                        return std::ranges::min(static_cast<std::size_t>(KeyMapping::size), this->m_bits.max_size());
                 } else if constexpr (owns(Store)) {
                         return this->m_bits.max_size();
                 } else {
@@ -206,7 +208,7 @@ template<class Bits, storage Store, class Derived, class Key, class KeyMapping, 
 using sizes_t = std::conditional_t<
         static_max_size<Bits, Store>() != std::dynamic_extent,
         fixed_max_size<members_t<Bits, Store, Derived, Key, KeyMapping, Compare>, static_max_size<Bits, Store>()>,
-        run_time_max_size<members_t<Bits, Store, Derived, Key, KeyMapping, Compare>, Bits, Store>>;
+        run_time_max_size<members_t<Bits, Store, Derived, Key, KeyMapping, Compare>, Bits, Store, Key, KeyMapping>>;
 
 } // namespace set
 
@@ -1396,7 +1398,7 @@ private:
                 return static_cast<derived_type&>(*this);
         }
 
-        // The one key a write can find no room for; a value that is no key of the mapping is a write's precondition.
+        // Where a write is refused: past a closed universe at any width, and past what the storage can ever hold.
         constexpr auto guard_key(std::size_t x) const
                 -> void
         {
@@ -1405,7 +1407,13 @@ private:
                                 throw out_of_range(x);
                         }
                 } else {
-                        // A dynamic width refuses only what it could never grow to, and says length_error.
+                        // A value that is no key ranks at or past the universe's size, as at a static width.
+                        if constexpr (sized_bit_index_mapping<KeyMapping, Key>) {
+                                if (x >= static_cast<std::size_t>(KeyMapping::size)) {
+                                        throw out_of_range(x);
+                                }
+                        }
+                        // Past what a heap can count is length_error here, and past a capacity bad_alloc on growth.
                         static_cast<void>(bits_type::check_width(bits_type::width_sum(x, 1UZ)));
                 }
         }
