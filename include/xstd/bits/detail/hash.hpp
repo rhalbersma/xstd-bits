@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_DETAIL_HASH_HPP
 #define XSTD_BITS_DETAIL_HASH_HPP
 
-#include <xstd/bits/detail/bit_layout.hpp> // bits_per_byte, block_digits, blocks_copy_as_bytes, byte_count, bytes_per_block
+#include <xstd/bits/detail/bit_layout.hpp> // bits_per_byte, block_byte, block_copies_as_bytes, block_digits, byte_count, bytes_per_block
 #include <xstd/bits/detail/intrin.hpp>     // bools_per_block, expand_block
 #include <xstd/bits/detail/ownership.hpp>  // owner, set_reading_tag, storage_access
 #include <xstd/bits/detail/shift.hpp>      // shr
@@ -18,18 +18,10 @@
 #include <cstdint>                         // uint64_t
 #include <ranges>                          // contiguous_range, data, iota, range_value_t, size, sized_range
 #include <span>                            // dynamic_extent, span
-#include <type_traits>                     // is_class_v, remove_cvref_t
+#include <type_traits>                     // remove_cvref_t
 #include <utility>                         // declval
 
 namespace xstd::bits::detail {
-
-// Byte j of the bits, positions [8j, 8j + 8), read by shifts at every block width and byte order.
-template<class Blocks>
-[[nodiscard]] constexpr auto string_byte(Blocks const& blocks, std::size_t j) noexcept
-        -> unsigned char
-{
-        return static_cast<unsigned char>(shr(blocks[j / bytes_per_block<Blocks>], bits_per_byte * (j % bytes_per_block<Blocks>)));
-}
 
 // The model's message, which the hash_append hooks write.
 
@@ -48,7 +40,7 @@ template<class Blocks>
                 auto const last                       = std::ranges::min(first + bytes_per_string_block, std::ranges::size(blocks) * bytes_per_block<Blocks>);
                 auto block                            = std::uint64_t{0};
                 for (auto const j : std::views::iota(first, last)) {
-                        block |= static_cast<std::uint64_t>(string_byte(blocks, j)) << (bits_per_byte * (j - first));
+                        block |= static_cast<std::uint64_t>(block_byte(blocks, j)) << (bits_per_byte * (j - first));
                 }
                 return block;
         }
@@ -100,10 +92,6 @@ constexpr auto hash_append_keys(Provider const& pr, Hash& h, Flavor const& f, Se
 
 // The canonical byte string, which bit_hash_append writes: bit i at bit i % 8 of byte i / 8, unused high bits zero.
 
-// Blocks whose storage is the string: little-endian, every bit a value bit, and a scalar with the language's layout.
-template<class Block>
-inline constexpr bool hashes_storage_bytes = blocks_copy_as_bytes<std::span<Block const>> and not std::is_class_v<Block>;
-
 // The most bytes assembled ahead of an update where the storage is not the string: up to it, a static width takes one.
 inline constexpr auto assembly_bytes = 256UZ;
 
@@ -115,7 +103,7 @@ constexpr auto assemble_bit_bytes(Hash& h, Blocks const& blocks, std::size_t n)
         for (auto first = 0UZ; first < n; first += assembly_bytes) {
                 auto const count = std::ranges::min(assembly_bytes, n - first);
                 for (auto const j : std::views::iota(0UZ, count)) {
-                        buffer[j] = string_byte(blocks, first + j);
+                        buffer[j] = block_byte(blocks, first + j);
                 }
                 h.update(buffer.data(), count);
         }
@@ -129,7 +117,7 @@ constexpr auto update_bit_bytes(Hash& h, Blocks const& blocks, std::size_t n)
         if consteval {
                 assemble_bit_bytes(h, blocks, n);
         } else {
-                if constexpr (hashes_storage_bytes<std::ranges::range_value_t<Blocks>>) {
+                if constexpr (block_copies_as_bytes<std::ranges::range_value_t<Blocks>>) {
                         // No update of nothing: an empty storage need not point at an object.
                         if (n != 0UZ) {
                                 h.update(std::ranges::data(blocks), n);
@@ -241,7 +229,7 @@ struct planes<std::array<T, K>>
 template<class T>
 concept plane_is_its_string =
         owner<T> and
-        hashes_storage_bytes<typename hashed_bits_t<T>::block_type> and
+        block_copies_as_bytes<typename hashed_bits_t<T>::block_type> and
         sizeof(T) == byte_count<hashed_bits_t<T>::extent>;
 
 template<class T>

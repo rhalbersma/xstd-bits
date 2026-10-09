@@ -8,18 +8,17 @@
 
 #include <xstd/bits/bit_concepts/bit_constructible_from.hpp> // bit_constructible_from
 #include <xstd/bits/detail/bit_blocks_capacity.hpp>          // bit_blocks_capacity_v
-#include <xstd/bits/detail/bit_layout.hpp>                   // bit_bytes, bit_layout, block_byte, blocks_copy_as_bytes, byte_count, bytes_bits, bytes_per_block, or_block_byte
+#include <xstd/bits/detail/bit_layout.hpp>                   // bit_bytes, bit_layout, byte_count, bytes_bits, copy_bits
 #include <xstd/bits/detail/bit_width.hpp>                    // bit_width_v
 #include <xstd/bits/detail/ownership.hpp>                    // owned_bits_t, owner, owner_reading, set_reading_tag, storage_access, view
 #include <xstd/bits/from_blocks.hpp>                         // from_blocks
-#include <algorithm>                                         // copy, min
+#include <algorithm>                                         // min
 #include <array>                                             // array
-#include <bit>                                               // bit_cast, popcount
+#include <bit>                                               // popcount
 #include <concepts>                                          // same_as
-#include <cstddef>                                           // byte, size_t
+#include <cstddef>                                           // size_t
 #include <new>                                               // bad_alloc
-#include <ranges>                                            // iota, size
-#include <span>                                              // as_bytes, as_writable_bytes, dynamic_extent, span
+#include <span>                                              // dynamic_extent, span
 #include <stdexcept>                                         // overflow_error
 #include <type_traits>                                       // is_array_v, is_const_v, is_rvalue_reference_v, remove_cvref_t, remove_reference_t
 #include <utility>                                           // declval, forward
@@ -41,45 +40,10 @@ concept fixed_target = fixed_width<T> and (not view<T>) and (not std::is_array_v
 template<class T>
 inline constexpr bool reads_as_set = owner_reading<T, set_reading_tag>;
 
-// The bytes a range of blocks holds as positions, its value bits alone, at every block width.
-template<class Blocks>
-[[nodiscard]] constexpr auto value_bytes(Blocks const& blocks) noexcept
-        -> std::size_t
-{
-        return std::ranges::size(blocks) * bytes_per_block<Blocks>;
-}
-
-template<class Src, class T>
-constexpr auto copy_bytes_by_shifts(Src const& src, std::span<T> dst, std::size_t bytes) noexcept
-        -> void
-{
-        for (auto const j : std::views::iota(0UZ, bytes)) {
-                or_block_byte(dst, j, block_byte(src, j));
-        }
-}
-
-// Blocks to blocks at any two block widths, byte j to byte j, as far as the target reaches; the target starts clear.
-template<class Src, class T>
-constexpr auto copy_bits(Src const& src, std::span<T> dst) noexcept
-        -> void
-{
-        auto const bytes = std::ranges::min(value_bytes(src), value_bytes(dst));
-        if consteval {
-                copy_bytes_by_shifts(src, dst, bytes);
-        } else {
-                if constexpr (blocks_copy_as_bytes<Src> and blocks_copy_as_bytes<std::span<T>>) {
-                        // The object bytes in one copy, as memcpy, but over spans, where a null data() is no argument.
-                        std::ranges::copy(std::as_bytes(std::span(src)).first(bytes), std::as_writable_bytes(dst).begin());
-                } else {
-                        copy_bytes_by_shifts(src, dst, bytes);
-                }
-        }
-}
-
 // The bytes of a fixed width, byte j holding the positions [8j, 8j + 8): ours through their storage.
 template<fixed_width T>
 [[nodiscard]] constexpr auto fixed_bytes(T const& from) noexcept
-        -> std::array<std::byte, byte_count<bit_width_v<T>>>
+        -> std::array<unsigned char, byte_count<bit_width_v<T>>>
 {
         if constexpr (owner<T> or view<T>) {
                 return storage_access::bits(from).template to_bytes<byte_count<bit_width_v<T>>>();
@@ -90,14 +54,14 @@ template<fixed_width T>
 
 // A fixed width out of its bytes, through the tag where it is ours.
 template<fixed_target To>
-[[nodiscard]] constexpr auto from_fixed_bytes(std::array<std::byte, byte_count<bit_width_v<To>>> const& bytes) noexcept
+[[nodiscard]] constexpr auto from_fixed_bytes(std::array<unsigned char, byte_count<bit_width_v<To>>> const& bytes) noexcept
         -> To
 {
         constexpr auto N = bit_width_v<To>;
         if constexpr (N == 0UZ) {
                 return To();
         } else if constexpr (owner<To>) {
-                return To(xstd::from_blocks, std::bit_cast<std::array<unsigned char, byte_count<N>>>(bytes));
+                return To(xstd::from_blocks, bytes);
         } else {
                 return bytes_bits<To, N>(bytes);
         }
@@ -174,11 +138,7 @@ struct bit_source<T>
         [[nodiscard]] static constexpr auto blocks(T const& from) noexcept
                 -> std::array<unsigned char, byte_count<N>>
         {
-                if constexpr (byte_count<N> == 0UZ) {
-                        return {};
-                } else {
-                        return std::bit_cast<std::array<unsigned char, byte_count<N>>>(fixed_bytes(from));
-                }
+                return fixed_bytes(from);
         }
 
         template<class U>
@@ -272,7 +232,7 @@ template<fixed_target To, class From>
                 bytes.back() = static_cast<unsigned char>(bytes.back() & ((1U << (N % bits_per_byte)) - 1U));
         }
         refuse_lost_positions(count_bytes(bytes), source::count(from));
-        return from_fixed_bytes<To>(std::bit_cast<std::array<std::byte, byte_count<N>>>(bytes));
+        return from_fixed_bytes<To>(bytes);
 }
 
 // A foreign target an extension converts into, declared for it to specialize.
