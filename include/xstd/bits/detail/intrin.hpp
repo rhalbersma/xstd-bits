@@ -77,22 +77,22 @@ constexpr auto expand_word_by_table(std::uint64_t word, std::span<unsigned char,
 constexpr auto expand_word(std::uint64_t word, std::span<unsigned char, bools_per_word> bools) noexcept
         -> void
 {
-        if consteval {
-                expand_word_by_table(word, bools);
-        } else {
+#if defined(__AVX512BW__) || defined(__BMI2__)
+        if !consteval {
 #ifdef __AVX512BW__
                 _mm512_storeu_si512(bools.data(), _mm512_and_si512(_mm512_movm_epi8(word), _mm512_set1_epi8(1)));
-#elifdef __BMI2__
+#else
                 // The low bit of each byte: pdep deposits the next source bit at each bit of the mask.
                 constexpr auto low_bits = std::uint64_t{0x0101'0101'0101'0101};
                 for (auto const i : std::views::iota(0UZ, bools_per_word / bools_per_byte)) {
                         auto const spread = static_cast<std::uint64_t>(_pdep_u64(word >> (bools_per_byte * i), low_bits));
                         std::memcpy(bools.subspan(bools_per_byte * i, bools_per_byte).data(), &spread, bools_per_byte);
                 }
-#else
-                expand_word_by_table(word, bools);
 #endif
+                return;
         }
+#endif
+        expand_word_by_table(word, bools);
 }
 
 } // namespace xstd::bits::detail
