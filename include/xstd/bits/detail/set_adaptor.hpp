@@ -17,7 +17,7 @@
 #include <xstd/bits/detail/bit_block_container.hpp>           // bit_block_container, bit_block_container_type
 #include <xstd/bits/detail/borrowed_bits.hpp>                 // borrow_bits, borrowable_block, borrowable_blocks, borrowed_bits_t
 #include <xstd/bits/detail/comparisons.hpp>                   // numeric_three_way, set_equal, set_three_way
-#include <xstd/bits/detail/functor.hpp>                       // invoke_continues
+#include <xstd/bits/detail/functor.hpp>                       // decay_copy
 #include <xstd/bits/detail/hash.hpp>                          // hash_append_keys
 #include <xstd/bits/detail/intrin.hpp>                        // countl_zero, countr_zero
 #include <xstd/bits/detail/is_key.hpp>                        // is_key
@@ -44,7 +44,7 @@
 #include <source_location>                                    // source_location
 #include <span>                                               // dynamic_extent
 #include <stdexcept>                                          // out_of_range
-#include <type_traits>                                        // conditional_t, false_type, integral_constant, is_enum_v, is_nothrow_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
+#include <type_traits>                                        // conditional_t, false_type, integral_constant, is_enum_v, is_invocable_r_v, is_nothrow_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
 #include <utility>                                            // declval, forward, in_place, move, pair
 
 // The set reading, [set] over a bit_block_container, owning it or referring to it.
@@ -66,8 +66,13 @@ constexpr auto walk_blocks_ascending(Bits const& c, F& f)
                 auto block = c[index];
                 while (block != block_type{}) {
                         auto const offset = static_cast<std::size_t>(countr_zero(block));
-                        if (not invoke_continues<F, Key>(f, KeyMapping::from_index((digits * index) + offset))) {
-                                return;
+                        // A functor returning void has no exit to take, so its walk is compiled without one.
+                        if constexpr (std::is_invocable_r_v<bool, F&, Key>) {
+                                if (not f(decay_copy<Key>(KeyMapping::from_index((digits * index) + offset)))) {
+                                        return;
+                                }
+                        } else {
+                                f(decay_copy<Key>(KeyMapping::from_index((digits * index) + offset)));
                         }
                         block = static_cast<block_type>(block & static_cast<block_type>(block - block_type{1}));
                 }
@@ -87,8 +92,13 @@ constexpr auto walk_blocks_descending(Bits const& c, F& f)
                 auto block = c[index];
                 while (block != block_type{}) {
                         auto const offset = digits - 1UZ - static_cast<std::size_t>(countl_zero(block));
-                        if (not invoke_continues<F, Key>(f, KeyMapping::from_index((digits * index) + offset))) {
-                                return;
+                        // A functor returning void has no exit to take, so its walk is compiled without one.
+                        if constexpr (std::is_invocable_r_v<bool, F&, Key>) {
+                                if (not f(decay_copy<Key>(KeyMapping::from_index((digits * index) + offset)))) {
+                                        return;
+                                }
+                        } else {
+                                f(decay_copy<Key>(KeyMapping::from_index((digits * index) + offset)));
                         }
                         block = static_cast<block_type>(block ^ shl(block_type{1}, offset));
                 }
