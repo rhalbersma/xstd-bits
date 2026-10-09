@@ -1268,6 +1268,10 @@ struct mem_static_swap
 struct fn_erase
 {
         template<class X>
+#if defined(__GNUC__) && !defined(__clang__) && __GNUC__ >= 17
+        // GCC 17 trunk's ranger VRP segfaults on this body at -O3 with BMI2 and Intel tuning.
+        [[gnu::optimize("no-tree-vrp")]]
+#endif
         auto operator()(X const& a, bool t) const
         {
                 auto b       = a;
