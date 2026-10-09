@@ -6,19 +6,20 @@
 #ifndef XSTD_BITS_BIT_SPAN_HPP
 #define XSTD_BITS_BIT_SPAN_HPP
 
-#include <xstd/bits/bit_blocks.hpp>                 // bit_blocks, bit_blocks_extent_v
-#include <xstd/bits/bit_subspan.hpp>                // IWYU pragma: keep; bit_subspan, what first, last and subspan hand back
-#include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container, bit_block_container_type
-#include <xstd/bits/detail/blocks.hpp>              // blocks_of_t, blocks_width_v, lent_blocks_t, view_storage_t
-#include <xstd/bits/detail/borrowed_bits.hpp>       // borrowable_block, borrowable_blocks
-#include <xstd/bits/detail/ownership.hpp>           // owned_bits_t, owner_reading, sequence_reading_tag, storage, window
-#include <xstd/bits/detail/sequence_adaptor.hpp>    // sequence_adaptor
-#include <xstd/bits/detail/views.hpp>               // blit_source, window_of
-#include <boost/container_hash/is_range.hpp>        // is_range
-#include <boost/container_hash/is_tuple_like.hpp>   // is_tuple_like
-#include <cstddef>                                  // size_t
-#include <ranges>                                   // enable_borrowed_range, enable_view
-#include <type_traits>                              // conditional_t, false_type, is_const_v
+#include <xstd/bits/bit_concepts/bit_blocks.hpp>           // bit_blocks
+#include <xstd/bits/bit_subspan.hpp>                       // IWYU pragma: keep; bit_subspan, what first, last and subspan hand back
+#include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp> // bit_blocks_extent_v
+#include <xstd/bits/detail/bit_block_container.hpp>        // bit_block_container, bit_block_container_type
+#include <xstd/bits/detail/blocks.hpp>                     // blocks_of_t, blocks_width_v, lent_blocks_t, view_storage_t
+#include <xstd/bits/detail/borrowed_bits.hpp>              // borrowable_block, borrowable_blocks
+#include <xstd/bits/detail/ownership.hpp>                  // owned_bits_t, owner_reading, sequence_reading_tag, storage, window
+#include <xstd/bits/detail/sequence_adaptor.hpp>           // sequence_adaptor
+#include <xstd/bits/detail/views.hpp>                      // blit_source, window_of
+#include <boost/container_hash/is_range.hpp>               // is_range
+#include <boost/container_hash/is_tuple_like.hpp>          // is_tuple_like
+#include <cstddef>                                         // size_t
+#include <ranges>                                          // enable_borrowed_range, enable_view
+#include <type_traits>                                     // conditional_t, false_type, is_const_v
 
 // The sequence reading over bits it does not own: like std::span it neither compares nor orders.
 namespace xstd {

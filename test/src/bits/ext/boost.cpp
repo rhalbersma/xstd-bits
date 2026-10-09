@@ -3,25 +3,27 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/sequence/concepts.hpp>               // bit_sequence
-#include <test/set/concepts.hpp>                    // bit_set
-#include <xstd/bits/bit_blocks.hpp>                 // bit_blocks, owned_bit_blocks, resizable_bit_blocks
-#include <xstd/bits/bit_key_mapping.hpp>            // bit_key_mapping
-#include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container, num_blocks_v
-#include <xstd/bits/detail/ownership.hpp>           // owned_bits_t
-#include <xstd/bits/detail/set_adaptor.hpp>         // set_adaptor
-#include <xstd/bits/ext/boost.hpp>                  // bit_small_set, bit_small_vector
-#include <boost/container/new_allocator.hpp>        // new_allocator
-#include <boost/container/small_vector.hpp>         // small_vector
-#include <boost/container/static_vector.hpp>        // static_vector
-#include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
-#include <concepts>                                 // same_as
-#include <cstddef>                                  // size_t
-#include <cstdint>                                  // uint8_t
-#include <functional>                               // less
-#include <memory_resource>                          // polymorphic_allocator
-#include <ranges>                                   // bidirectional_range, random_access_range
-#include <type_traits>                              // is_nothrow_move_assignable_v, is_nothrow_move_constructible_v
+#include <test/sequence/concepts.hpp>                      // bit_sequence
+#include <test/set/concepts.hpp>                           // bit_set
+#include <xstd/bits/bit_concepts/bit_blocks.hpp>           // bit_blocks
+#include <xstd/bits/bit_concepts/owned_bit_blocks.hpp>     // owned_bit_blocks
+#include <xstd/bits/bit_concepts/resizable_bit_blocks.hpp> // resizable_bit_blocks
+#include <xstd/bits/bit_key_mapping.hpp>                   // bit_key_mapping
+#include <xstd/bits/detail/bit_block_container.hpp>        // bit_block_container, num_blocks_v
+#include <xstd/bits/detail/ownership.hpp>                  // owned_bits_t
+#include <xstd/bits/detail/set_adaptor.hpp>                // set_adaptor
+#include <xstd/bits/ext/boost.hpp>                         // bit_small_set, bit_small_vector
+#include <boost/container/new_allocator.hpp>               // new_allocator
+#include <boost/container/small_vector.hpp>                // small_vector
+#include <boost/container/static_vector.hpp>               // static_vector
+#include <boost/test/unit_test.hpp>                        // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
+#include <concepts>                                        // same_as
+#include <cstddef>                                         // size_t
+#include <cstdint>                                         // uint8_t
+#include <functional>                                      // less
+#include <memory_resource>                                 // polymorphic_allocator
+#include <ranges>                                          // bidirectional_range, random_access_range
+#include <type_traits>                                     // is_nothrow_move_assignable_v, is_nothrow_move_constructible_v
 
 // The one column whose storage comes from outside the standard library, kept off the umbrella so Boost stays opt-in.
 BOOST_AUTO_TEST_SUITE(ExtBoost)

@@ -6,18 +6,21 @@
 #ifndef XSTD_BITS_DETAIL_BIT_LAYOUT_HPP
 #define XSTD_BITS_DETAIL_BIT_LAYOUT_HPP
 
-#include <xstd/bits/bit_blocks.hpp> // bit_block, bit_blocks, bit_blocks_extent_v, owned_bit_blocks
-#include <xstd/ints/limits.hpp>     // numeric_limits
-#include <array>                    // array
-#include <bit>                      // bit_cast, endian
-#include <cstddef>                  // byte, size_t, to_integer
-#include <cstring>                  // memcpy
-#include <iterator>                 // size
-#include <limits>                   // numeric_limits
-#include <memory>                   // addressof
-#include <ranges>                   // data, iota, range_value_t
-#include <span>                     // dynamic_extent, span
-#include <type_traits>              // is_bounded_array_v, is_trivially_copyable_v
+#include <xstd/bits/bit_concepts/bit_block.hpp>            // bit_block
+#include <xstd/bits/bit_concepts/bit_blocks.hpp>           // bit_blocks
+#include <xstd/bits/bit_concepts/owned_bit_blocks.hpp>     // owned_bit_blocks
+#include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp> // bit_blocks_extent_v
+#include <xstd/ints/limits.hpp>                            // numeric_limits
+#include <array>                                           // array
+#include <bit>                                             // bit_cast, endian
+#include <cstddef>                                         // byte, size_t, to_integer
+#include <cstring>                                         // memcpy
+#include <iterator>                                        // size
+#include <limits>                                          // numeric_limits
+#include <memory>                                          // addressof
+#include <ranges>                                          // data, iota, range_value_t
+#include <span>                                            // dynamic_extent, span
+#include <type_traits>                                     // is_bounded_array_v, is_trivially_copyable_v
 
 namespace xstd::bits::detail {
 

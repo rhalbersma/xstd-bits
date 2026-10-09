@@ -3,24 +3,25 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/set/lookup.hpp>             // lookup_mismatches
-#include <xstd/bits/bit_fixed_set.hpp>     // basic_bit_fixed_set
-#include <xstd/bits/bit_flag_mapping.hpp>  // bit_flag_mapping
-#include <xstd/bits/bit_index_mapping.hpp> // bit_mask_mapping, sized_bit_index_mapping
-#include <xstd/bits/from_blocks.hpp>       // from_blocks
-#include <boost/test/unit_test.hpp>        // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <algorithm>                       // ranges::equal
-#include <array>                           // array
-#include <bit>                             // bit_cast, has_single_bit
-#include <bitset>                          // bitset
-#include <concepts>                        // same_as
-#include <cstddef>                         // size_t
-#include <cstdint>                         // int8_t, uint16_t, uint64_t, uint8_t
-#include <functional>                      // greater
-#include <limits>                          // numeric_limits
-#include <ranges>                          // iota
-#include <set>                             // set
-#include <stdexcept>                       // out_of_range
+#include <test/set/lookup.hpp>                                // lookup_mismatches
+#include <xstd/bits/bit_concepts/bit_mask_mapping.hpp>        // bit_mask_mapping
+#include <xstd/bits/bit_concepts/sized_bit_index_mapping.hpp> // sized_bit_index_mapping
+#include <xstd/bits/bit_fixed_set.hpp>                        // basic_bit_fixed_set
+#include <xstd/bits/bit_flag_mapping.hpp>                     // bit_flag_mapping
+#include <xstd/bits/from_blocks.hpp>                          // from_blocks
+#include <boost/test/unit_test.hpp>                           // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
+#include <algorithm>                                          // ranges::equal
+#include <array>                                              // array
+#include <bit>                                                // bit_cast, has_single_bit
+#include <bitset>                                             // bitset
+#include <concepts>                                           // same_as
+#include <cstddef>                                            // size_t
+#include <cstdint>                                            // int8_t, uint16_t, uint64_t, uint8_t
+#include <functional>                                         // greater
+#include <limits>                                             // numeric_limits
+#include <ranges>                                             // iota
+#include <set>                                                // set
+#include <stdexcept>                                          // out_of_range
 
 BOOST_AUTO_TEST_SUITE(BitFlagMapping)
 

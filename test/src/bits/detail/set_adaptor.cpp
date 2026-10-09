@@ -3,43 +3,43 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/bit_exchange.hpp>                    // converts_from, converts_to
-#include <test/for_each_type.hpp>                   // for_each_type
-#include <test/set/enums.hpp>                       // day, level, piece, sign
-#include <test/set/lookup.hpp>                      // lookup_mismatches
-#include <test/set/primitives.hpp>                  // heterogeneous_key
-#include <test/spec/random.hpp>                     // engine, seed
-#include <xstd/bits/bit/bit_convert.hpp>            // bit_convert
-#include <xstd/bits/bit_bounded_set.hpp>            // basic_bit_bounded_set
-#include <xstd/bits/bit_fixed_set.hpp>              // basic_bit_fixed_set, bit_fixed_set
-#include <xstd/bits/bit_flag_mapping.hpp>           // bit_flag_mapping
-#include <xstd/bits/bit_index_mapping.hpp>          // bit_mask_mapping
-#include <xstd/bits/bit_key_mapping.hpp>            // bit_key_mapping, enum_traits
-#include <xstd/bits/bit_set.hpp>                    // basic_bit_set, bit_set
-#include <xstd/bits/bit_set_view.hpp>               // bit_set_view
-#include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
-#include <xstd/bits/detail/ownership.hpp>           // owned_bits_t, storage
-#include <xstd/bits/detail/set_adaptor.hpp>         // set_adaptor
-#include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
-#include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_TEST_CONTEXT
-#include <algorithm>                                // lexicographical_compare_three_way, max, min, ranges::all_of, ranges::equal, ranges::includes
-#include <array>                                    // array
-#include <bitset>                                   // bitset
-#include <compare>                                  // strong_ordering
-#include <concepts>                                 // copyable, equality_comparable, invocable, regular, same_as, totally_ordered
-#include <cstddef>                                  // ptrdiff_t, size_t
-#include <cstdint>                                  // uint8_t, uint32_t, uint64_t
-#include <functional>                               // greater, greater_equal, less, less_equal, ranges::less
-#include <initializer_list>                         // initializer_list
-#include <iterator>                                 // ranges::distance
-#include <limits>                                   // numeric_limits
-#include <ranges>                                   // bidirectional_range, from_range, iota, ranges::to, transform
-#include <set>                                      // set
-#include <stdexcept>                                // length_error, out_of_range
-#include <tuple>                                    // tuple, tuple_cat
-#include <type_traits>                              // underlying_type_t
-#include <utility>                                  // declval, to_underlying
-#include <vector>                                   // vector
+#include <test/bit_exchange.hpp>                       // converts_from, converts_to
+#include <test/for_each_type.hpp>                      // for_each_type
+#include <test/set/enums.hpp>                          // day, level, piece, sign
+#include <test/set/lookup.hpp>                         // lookup_mismatches
+#include <test/set/primitives.hpp>                     // heterogeneous_key
+#include <test/spec/random.hpp>                        // engine, seed
+#include <xstd/bits/bit/bit_convert.hpp>               // bit_convert
+#include <xstd/bits/bit_bounded_set.hpp>               // basic_bit_bounded_set
+#include <xstd/bits/bit_concepts/bit_mask_mapping.hpp> // bit_mask_mapping
+#include <xstd/bits/bit_fixed_set.hpp>                 // basic_bit_fixed_set, bit_fixed_set
+#include <xstd/bits/bit_flag_mapping.hpp>              // bit_flag_mapping
+#include <xstd/bits/bit_key_mapping.hpp>               // bit_key_mapping, enum_traits
+#include <xstd/bits/bit_set.hpp>                       // basic_bit_set, bit_set
+#include <xstd/bits/bit_set_view.hpp>                  // bit_set_view
+#include <xstd/bits/detail/bit_block_container.hpp>    // bit_block_container
+#include <xstd/bits/detail/ownership.hpp>              // owned_bits_t, storage
+#include <xstd/bits/detail/set_adaptor.hpp>            // set_adaptor
+#include <xstd/bits/ext/boost/bit_small_set.hpp>       // basic_bit_small_set
+#include <boost/test/unit_test.hpp>                    // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_TEST_CONTEXT
+#include <algorithm>                                   // lexicographical_compare_three_way, max, min, ranges::all_of, ranges::equal, ranges::includes
+#include <array>                                       // array
+#include <bitset>                                      // bitset
+#include <compare>                                     // strong_ordering
+#include <concepts>                                    // copyable, equality_comparable, invocable, regular, same_as, totally_ordered
+#include <cstddef>                                     // ptrdiff_t, size_t
+#include <cstdint>                                     // uint8_t, uint32_t, uint64_t
+#include <functional>                                  // greater, greater_equal, less, less_equal, ranges::less
+#include <initializer_list>                            // initializer_list
+#include <iterator>                                    // ranges::distance
+#include <limits>                                      // numeric_limits
+#include <ranges>                                      // bidirectional_range, from_range, iota, ranges::to, transform
+#include <set>                                         // set
+#include <stdexcept>                                   // length_error, out_of_range
+#include <tuple>                                       // tuple, tuple_cat
+#include <type_traits>                                 // underlying_type_t
+#include <utility>                                     // declval, to_underlying
+#include <vector>                                      // vector
 
 namespace {
 

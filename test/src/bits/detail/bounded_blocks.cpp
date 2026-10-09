@@ -10,16 +10,17 @@
 
 #endif
 
-#include <xstd/bits/bit_blocks.hpp>            // bit_blocks_capacity_v, resizable_bit_blocks
-#include <xstd/bits/detail/bounded_blocks.hpp> // bounded_blocks, bounded_blocks_for, no_blocks
-#include <boost/test/unit_test.hpp>            // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <array>                               // array
-#include <concepts>                            // same_as
-#include <cstdint>                             // uint8_t, uint64_t
-#include <new>                                 // bad_alloc
-#include <ranges>                              // contiguous_range, empty
-#include <type_traits>                         // is_empty_v, is_trivially_copyable_v, is_trivially_default_constructible_v
-#include <utility>                             // declval
+#include <xstd/bits/bit_concepts/resizable_bit_blocks.hpp>   // resizable_bit_blocks
+#include <xstd/bits/bit_type_traits/bit_blocks_capacity.hpp> // bit_blocks_capacity_v
+#include <xstd/bits/detail/bounded_blocks.hpp>               // bounded_blocks, bounded_blocks_for, no_blocks
+#include <boost/test/unit_test.hpp>                          // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
+#include <array>                                             // array
+#include <concepts>                                          // same_as
+#include <cstdint>                                           // uint8_t, uint64_t
+#include <new>                                               // bad_alloc
+#include <ranges>                                            // contiguous_range, empty
+#include <type_traits>                                       // is_empty_v, is_trivially_copyable_v, is_trivially_default_constructible_v
+#include <utility>                                           // declval
 
 BOOST_AUTO_TEST_SUITE(Detail)
 BOOST_AUTO_TEST_SUITE(BoundedBlocks)

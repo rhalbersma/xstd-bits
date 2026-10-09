@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_BIT_SET_HPP
 #define XSTD_BITS_BIT_SET_HPP
 
-#include <xstd/bits/bit_index_mapping.hpp>                   // bit_index_mapping
+#include <xstd/bits/bit_concepts/bit_index_mapping.hpp>      // bit_index_mapping
 #include <xstd/bits/bit_key_mapping.hpp>                     // bit_key_mapping
 #include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container
 #include <xstd/bits/detail/ownership.hpp>                    // storage

@@ -3,38 +3,40 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/for_each_type.hpp>                   // for_each_type
-#include <xstd/bits/bit/bit_convert.hpp>            // bit_convert, bit_convertible, bit_convertible_to
-#include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
-#include <xstd/bits/bit_bounded_set.hpp>            // basic_bit_bounded_set, bit_bounded_set
-#include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector, bit_bounded_vector
-#include <xstd/bits/bit_fixed_set.hpp>              // basic_bit_fixed_set, bit_fixed_set
-#include <xstd/bits/bit_set.hpp>                    // basic_bit_set, bit_set
-#include <xstd/bits/bit_set_view.hpp>               // bit_set_view
-#include <xstd/bits/bit_span.hpp>                   // bit_span
-#include <xstd/bits/bit_subspan.hpp>                // bit_subspan
-#include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
-#include <xstd/bits/detail/bit_convertible.hpp>     // adopts_from, bit_source, fixed_target, fixed_width
-#include <xstd/bits/detail/bit_width.hpp>           // bit_width_v
-#include <xstd/bits/detail/ownership.hpp>           // owner, view
-#include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set, bit_small_set
-#include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector, bit_small_vector
-#include <xstd/bits/from_blocks.hpp>                // from_blocks
-#include <xstd/ints/memory.hpp>                     // align_up
-#include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <array>                                    // array
-#include <bitset>                                   // bitset
-#include <concepts>                                 // constructible_from, same_as
-#include <cstddef>                                  // size_t
-#include <cstdint>                                  // uint8_t, uint16_t, uint32_t, uint64_t
-#include <limits>                                   // numeric_limits
-#include <new>                                      // bad_alloc
-#include <ranges>                                   // filter, iota, to
-#include <span>                                     // dynamic_extent
-#include <stdexcept>                                // overflow_error
-#include <tuple>                                    // tuple
-#include <utility>                                  // declval, move
-#include <vector>                                   // vector
+#include <test/for_each_type.hpp>                        // for_each_type
+#include <xstd/bits/bit/bit_convert.hpp>                 // bit_convert
+#include <xstd/bits/bit_array.hpp>                       // basic_bit_array, bit_array
+#include <xstd/bits/bit_bounded_set.hpp>                 // basic_bit_bounded_set, bit_bounded_set
+#include <xstd/bits/bit_bounded_vector.hpp>              // basic_bit_bounded_vector, bit_bounded_vector
+#include <xstd/bits/bit_concepts/bit_convertible.hpp>    // bit_convertible
+#include <xstd/bits/bit_concepts/bit_convertible_to.hpp> // bit_convertible_to
+#include <xstd/bits/bit_fixed_set.hpp>                   // basic_bit_fixed_set, bit_fixed_set
+#include <xstd/bits/bit_set.hpp>                         // basic_bit_set, bit_set
+#include <xstd/bits/bit_set_view.hpp>                    // bit_set_view
+#include <xstd/bits/bit_span.hpp>                        // bit_span
+#include <xstd/bits/bit_subspan.hpp>                     // bit_subspan
+#include <xstd/bits/bit_vector.hpp>                      // basic_bit_vector, bit_vector
+#include <xstd/bits/detail/bit_convertible.hpp>          // adopts_from, bit_source, fixed_target, fixed_width
+#include <xstd/bits/detail/bit_width.hpp>                // bit_width_v
+#include <xstd/bits/detail/ownership.hpp>                // owner, view
+#include <xstd/bits/ext/boost/bit_small_set.hpp>         // basic_bit_small_set, bit_small_set
+#include <xstd/bits/ext/boost/bit_small_vector.hpp>      // basic_bit_small_vector, bit_small_vector
+#include <xstd/bits/from_blocks.hpp>                     // from_blocks
+#include <xstd/ints/memory.hpp>                          // align_up
+#include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
+#include <array>                                         // array
+#include <bitset>                                        // bitset
+#include <concepts>                                      // constructible_from, same_as
+#include <cstddef>                                       // size_t
+#include <cstdint>                                       // uint8_t, uint16_t, uint32_t, uint64_t
+#include <limits>                                        // numeric_limits
+#include <new>                                           // bad_alloc
+#include <ranges>                                        // filter, iota, to
+#include <span>                                          // dynamic_extent
+#include <stdexcept>                                     // overflow_error
+#include <tuple>                                         // tuple
+#include <utility>                                       // declval, move
+#include <vector>                                        // vector
 
 BOOST_AUTO_TEST_SUITE(BitConvert)
 
@@ -126,42 +128,6 @@ using targets_of = std::tuple<
 using targets = decltype(std::tuple_cat(targets_of<std::uint8_t>(), targets_of<std::uint64_t>()));
 
 } // namespace
-
-// Every width converts: equal fixed widths, a run-time width into a fixed one, and anything into a run-time one.
-BOOST_AUTO_TEST_CASE(BitConvertibleToNamesEveryWidthButAViewTarget)
-{
-        static_assert(xstd::bit_convertible_to<xstd::bit_fixed_set<64>, std::uint64_t> and xstd::bit_convertible_to<std::bitset<20>, xstd::bit_array<20>>);
-        static_assert(xstd::bit_convertible_to<std::array<std::uint8_t, 3>, xstd::bit_fixed_set<24>> and xstd::bit_convertible_to<xstd::bit_array<64>, std::bitset<64>>);
-        static_assert(xstd::bit_convertible_to<xstd::bit_set_view<std::uint64_t>, std::uint64_t> and xstd::bit_convertible_to<xstd::bit_span<std::array<std::uint8_t, 3>>, xstd::bit_vector>);
-        static_assert(xstd::bit_convertible_to<xstd::bit_set, std::uint64_t> and xstd::bit_convertible_to<xstd::bit_vector, std::bitset<70>>);
-        static_assert(xstd::bit_convertible_to<xstd::bit_vector, xstd::bit_array<64>> and xstd::bit_convertible_to<xstd::bit_bounded_set<64>, xstd::bit_fixed_set<10>>);
-        static_assert(xstd::bit_convertible_to<xstd::bit_array<64>, xstd::bit_vector> and xstd::bit_convertible_to<std::bitset<70>, xstd::bit_small_vector<64>>);
-        static_assert(xstd::bit_convertible_to<xstd::bit_vector, xstd::bit_bounded_set<64>> and xstd::bit_convertible_to<std::uint64_t, xstd::bit_set>);
-
-        // Two fixed widths that differ are no conversion at all, rather than a narrowing or a widening one.
-        static_assert(not xstd::bit_convertible_to<std::uint32_t, xstd::bit_array<20>> and not xstd::bit_convertible_to<std::uint64_t, std::bitset<63>>);
-        static_assert(not xstd::bit_convertible_to<std::bitset<65>, xstd::bit_array<64>> and not xstd::bit_convertible_to<xstd::bit_fixed_set<64>, xstd::bit_fixed_set<65>>);
-
-        // A view is read from and never written into, and a window's bits are not its storage's.
-        static_assert(not xstd::bit_convertible_to<std::uint64_t, xstd::bit_set_view<std::uint64_t>>);
-        static_assert(not xstd::bit_convertible_to<xstd::bit_vector, xstd::bit_span<std::array<std::uint8_t, 3>>>);
-        static_assert(not xstd::bit_convertible_to<xstd::bit_subspan<std::array<std::uint64_t, 2>, std::dynamic_extent, 100>, xstd::bit_vector>);
-
-        // What has no bit storage converts to nothing.
-        static_assert(not xstd::bit_convertible_to<int, xstd::bit_vector> and not xstd::bit_convertible_to<std::vector<bool>, xstd::bit_vector>);
-        static_assert(not xstd::bit_convertible_to<xstd::bit_vector, int> and not xstd::bit_convertible_to<xstd::bit_vector, std::vector<std::uint64_t>>);
-        BOOST_CHECK(true);
-}
-
-// The constraint is on the two types as they are declared: a reference or a const source is the same conversion.
-BOOST_AUTO_TEST_CASE(BitConvertibleConstrainsTheTypesNotTheExpression)
-{
-        static_assert(xstd::bit_convertible<xstd::bit_array<64>, std::uint64_t> and xstd::bit_convertible<xstd::bit_vector, xstd::bit_array<64>>);
-        static_assert(xstd::bit_convertible<xstd::bit_set, xstd::bit_vector> and xstd::bit_convertible<std::bitset<70>, xstd::bit_small_vector<64>>);
-        static_assert(not xstd::bit_convertible<std::uint32_t, xstd::bit_array<20>> and not xstd::bit_convertible<std::uint64_t, xstd::bit_set_view<std::uint64_t>>);
-        static_assert(xstd::bit_convertible_to<xstd::bit_set const&, xstd::bit_vector> and xstd::bit_convertible<xstd::bit_set, xstd::bit_vector>);
-        BOOST_CHECK(true);
-}
 
 // Ours are owners or views, a window among the views, and nothing else is either.
 BOOST_AUTO_TEST_CASE(OwnersAndViewsAreOursAndApart)

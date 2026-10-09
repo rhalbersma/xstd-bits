@@ -3,46 +3,47 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/for_each_type.hpp>           // for_each_type
-#include <test/set/enums.hpp>               // perm
-#include <test/set/lookup.hpp>              // lookup_mismatches
-#include <xstd/bits/bit/bit_convert.hpp>    // bit_convert
-#include <xstd/bits/bit_blocks.hpp>         // bit_fast, underlying_block_t
-#include <xstd/bits/bit_enum_set.hpp>       // bit_enum_set
-#include <xstd/bits/bit_fixed_set.hpp>      // basic_bit_fixed_set, bit_fixed_set
-#include <xstd/bits/bit_flag_mapping.hpp>   // bit_flag_mapping
-#include <xstd/bits/bit_flag_set.hpp>       // bit_flag_set
-#include <xstd/bits/detail/set_adaptor.hpp> // disjoint, intersects
-#include <xstd/bits/from_blocks.hpp>        // from_blocks
-#include <xstd/filesystem.hpp>              // perms
-#include <xstd/ints/concepts/bit_mask.hpp>  // bit_mask
-#include <boost/test/unit_test.hpp>         // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <algorithm>                        // ranges::equal, ranges::includes, ranges::set_difference, ranges::set_intersection, ranges::set_symmetric_difference, ranges::set_union
-#include <array>                            // array, to_array
-#include <bit>                              // bit_cast, bit_floor, countr_zero, has_single_bit, popcount
-#include <bitset>                           // bitset
-#include <compare>                          // is_gt, is_lt
-#include <concepts>                         // convertible_to, same_as
-#include <cstddef>                          // size_t
-#include <cstdint>                          // int64_t, int8_t, uint16_t, uint32_t, uint64_t, uint8_t
-#include <filesystem>                       // exists, path, perm_options, permissions, perms, remove, status, temp_directory_path
-#include <format>                           // format, format_to, formatter
-#include <fstream>                          // ofstream
-#include <functional>                       // greater, hash, ranges::greater
-#include <initializer_list>                 // initializer_list
-#include <ios>                              // ios_base
-#include <iterator>                         // bidirectional_iterator, inserter, iter_reference_t, ranges::distance
-#include <limits>                           // numeric_limits
-#include <random>                           // random_device
-#include <ranges>                           // bidirectional_range, iota, ranges::swap, sized_range, views::reverse
-#include <set>                              // set
-#include <sstream>                          // istringstream, ostringstream
-#include <stdexcept>                        // out_of_range
-#include <string_view>                      // string_view
-#include <tuple>                            // tuple
-#include <type_traits>                      // underlying_type_t
-#include <utility>                          // pair, to_underlying
-#include <vector>                           // vector
+#include <test/for_each_type.hpp>                       // for_each_type
+#include <test/set/enums.hpp>                           // perm
+#include <test/set/lookup.hpp>                          // lookup_mismatches
+#include <xstd/bits/bit/bit_convert.hpp>                // bit_convert
+#include <xstd/bits/bit_enum_set.hpp>                   // bit_enum_set
+#include <xstd/bits/bit_fixed_set.hpp>                  // basic_bit_fixed_set, bit_fixed_set
+#include <xstd/bits/bit_flag_mapping.hpp>               // bit_flag_mapping
+#include <xstd/bits/bit_flag_set.hpp>                   // bit_flag_set
+#include <xstd/bits/bit_type_traits/bit_fast.hpp>       // bit_fast
+#include <xstd/bits/bit_type_traits/bit_underlying.hpp> // underlying_block_t
+#include <xstd/bits/detail/set_adaptor.hpp>             // disjoint, intersects
+#include <xstd/bits/from_blocks.hpp>                    // from_blocks
+#include <xstd/filesystem.hpp>                          // perms
+#include <xstd/ints/concepts/bit_mask.hpp>              // bit_mask
+#include <boost/test/unit_test.hpp>                     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
+#include <algorithm>                                    // ranges::equal, ranges::includes, ranges::set_difference, ranges::set_intersection, ranges::set_symmetric_difference, ranges::set_union
+#include <array>                                        // array, to_array
+#include <bit>                                          // bit_cast, bit_floor, countr_zero, has_single_bit, popcount
+#include <bitset>                                       // bitset
+#include <compare>                                      // is_gt, is_lt
+#include <concepts>                                     // convertible_to, same_as
+#include <cstddef>                                      // size_t
+#include <cstdint>                                      // int64_t, int8_t, uint16_t, uint32_t, uint64_t, uint8_t
+#include <filesystem>                                   // exists, path, perm_options, permissions, perms, remove, status, temp_directory_path
+#include <format>                                       // format, format_to, formatter
+#include <fstream>                                      // ofstream
+#include <functional>                                   // greater, hash, ranges::greater
+#include <initializer_list>                             // initializer_list
+#include <ios>                                          // ios_base
+#include <iterator>                                     // bidirectional_iterator, inserter, iter_reference_t, ranges::distance
+#include <limits>                                       // numeric_limits
+#include <random>                                       // random_device
+#include <ranges>                                       // bidirectional_range, iota, ranges::swap, sized_range, views::reverse
+#include <set>                                          // set
+#include <sstream>                                      // istringstream, ostringstream
+#include <stdexcept>                                    // out_of_range
+#include <string_view>                                  // string_view
+#include <tuple>                                        // tuple
+#include <type_traits>                                  // underlying_type_t
+#include <utility>                                      // pair, to_underlying
+#include <vector>                                       // vector
 
 namespace {
 

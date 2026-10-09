@@ -6,10 +6,10 @@
 #ifndef TEST_VIEWED_HPP
 #define TEST_VIEWED_HPP
 
-#include <xstd/bits/bit_blocks.hpp> // resizable_bit_blocks
-#include <cstddef>                  // size_t
-#include <limits>                   // numeric_limits
-#include <ranges>                   // range_value_t
+#include <xstd/bits/bit_concepts/resizable_bit_blocks.hpp> // resizable_bit_blocks
+#include <cstddef>                                         // size_t
+#include <limits>                                          // numeric_limits
+#include <ranges>                                          // range_value_t
 
 namespace test {
 

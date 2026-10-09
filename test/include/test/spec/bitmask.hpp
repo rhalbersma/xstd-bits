@@ -6,25 +6,25 @@
 #ifndef TEST_SPEC_BITMASK_HPP
 #define TEST_SPEC_BITMASK_HPP
 
-#include <test/spec/input.hpp>           // context, edge
-#include <xstd/bits/bit/bit_convert.hpp> // bit_convert
-#include <xstd/bits/bit_blocks.hpp>      // underlying_block_t
-#include <xstd/bits/bit_flag_set.hpp>    // bit_flag_set
-#include <array>                         // array, to_array
-#include <bitset>                        // bitset
-#include <charconv>                      // chars_format
-#include <concepts>                      // same_as
-#include <cstddef>                       // size_t
-#include <cstdint>                       // uint64_t
-#include <filesystem>                    // copy_options, directory_options, perm_options, perms
-#include <future>                        // launch
-#include <ios>                           // ios_base
-#include <limits>                        // numeric_limits
-#include <ranges>                        // iota
-#include <regex>                         // regex_constants
-#include <tuple>                         // tuple, tuple_cat
-#include <utility>                       // declval
-#include <vector>                        // vector
+#include <test/spec/input.hpp>                          // context, edge
+#include <xstd/bits/bit/bit_convert.hpp>                // bit_convert
+#include <xstd/bits/bit_flag_set.hpp>                   // bit_flag_set
+#include <xstd/bits/bit_type_traits/bit_underlying.hpp> // underlying_block_t
+#include <array>                                        // array, to_array
+#include <bitset>                                       // bitset
+#include <charconv>                                     // chars_format
+#include <concepts>                                     // same_as
+#include <cstddef>                                      // size_t
+#include <cstdint>                                      // uint64_t
+#include <filesystem>                                   // copy_options, directory_options, perm_options, perms
+#include <future>                                       // launch
+#include <ios>                                          // ios_base
+#include <limits>                                       // numeric_limits
+#include <ranges>                                       // iota
+#include <regex>                                        // regex_constants
+#include <tuple>                                        // tuple, tuple_cat
+#include <utility>                                      // declval
+#include <vector>                                       // vector
 
 // The candidates for the bitmask reading, the standard library's types first, and the values a clause checks them over.
 namespace test::spec::bitmask {

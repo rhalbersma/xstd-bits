@@ -6,12 +6,13 @@
 #ifndef XSTD_BITS_DETAIL_BLOCKS_HPP
 #define XSTD_BITS_DETAIL_BLOCKS_HPP
 
-#include <xstd/bits/bit_blocks.hpp>                 // bit_block, bit_blocks_extent_v
-#include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
-#include <xstd/bits/detail/borrowed_bits.hpp>       // block_span_t, borrowable_block, borrowable_blocks, borrowed_bits
-#include <cstddef>                                  // size_t
-#include <span>                                     // span
-#include <type_traits>                              // conditional_t, is_const_v, remove_const_t, remove_reference_t
+#include <xstd/bits/bit_concepts/bit_block.hpp>            // bit_block
+#include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp> // bit_blocks_extent_v
+#include <xstd/bits/detail/bit_block_container.hpp>        // bit_block_container
+#include <xstd/bits/detail/borrowed_bits.hpp>              // block_span_t, borrowable_block, borrowable_blocks, borrowed_bits
+#include <cstddef>                                         // size_t
+#include <span>                                            // span
+#include <type_traits>                                     // conditional_t, is_const_v, remove_const_t, remove_reference_t
 
 // What the public views are named by: the blocks, never the storage built over them.
 namespace xstd::bits::detail {

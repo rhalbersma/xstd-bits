@@ -3,29 +3,30 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/block_types.hpp>             // all_block_types
-#include <test/set/enums.hpp>               // day, letter, level, listed_enums, nine, perm, piece, sign, undeclared, wind
-#include <test/set/lookup.hpp>              // lookup_mismatches
-#include <test/set/strong_index.hpp>        // offset_mapping, strong_index
-#include <xstd/bits/bit_fixed_set.hpp>      // basic_bit_fixed_set
-#include <xstd/bits/bit_index_mapping.hpp>  // bit_index_mapping, sized_bit_index_mapping
-#include <xstd/bits/bit_key_mapping.hpp>    // bit_find_mapping, bit_key_mapping, bit_range_mapping, enum_traits
-#include <xstd/bits/detail/set_adaptor.hpp> // admits_width
-#include <boost/test/unit_test.hpp>         // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <algorithm>                        // min, ranges::find
-#include <array>                            // array
-#include <bit>                              // bit_cast
-#include <concepts>                         // derived_from, same_as
-#include <cstddef>                          // size_t
-#include <cstdint>                          // int16_t, int64_t, int8_t, uint8_t
-#include <functional>                       // greater
-#include <iterator>                         // next
-#include <limits>                           // numeric_limits
-#include <ranges>                           // iota, size
-#include <set>                              // set
-#include <tuple>                            // tuple
-#include <type_traits>                      // underlying_type_t
-#include <utility>                          // to_underlying
+#include <test/block_types.hpp>                               // all_block_types
+#include <test/set/enums.hpp>                                 // day, letter, level, listed_enums, nine, perm, piece, sign, undeclared, wind
+#include <test/set/lookup.hpp>                                // lookup_mismatches
+#include <test/set/strong_index.hpp>                          // offset_mapping, strong_index
+#include <xstd/bits/bit_concepts/bit_index_mapping.hpp>       // bit_index_mapping
+#include <xstd/bits/bit_concepts/sized_bit_index_mapping.hpp> // sized_bit_index_mapping
+#include <xstd/bits/bit_fixed_set.hpp>                        // basic_bit_fixed_set
+#include <xstd/bits/bit_key_mapping.hpp>                      // bit_find_mapping, bit_key_mapping, bit_range_mapping, enum_traits
+#include <xstd/bits/detail/set_adaptor.hpp>                   // admits_width
+#include <boost/test/unit_test.hpp>                           // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <algorithm>                                          // min, ranges::find
+#include <array>                                              // array
+#include <bit>                                                // bit_cast
+#include <concepts>                                           // derived_from, same_as
+#include <cstddef>                                            // size_t
+#include <cstdint>                                            // int16_t, int64_t, int8_t, uint8_t
+#include <functional>                                         // greater
+#include <iterator>                                           // next
+#include <limits>                                             // numeric_limits
+#include <ranges>                                             // iota, size
+#include <set>                                                // set
+#include <tuple>                                              // tuple
+#include <type_traits>                                        // underlying_type_t
+#include <utility>                                            // to_underlying
 
 BOOST_AUTO_TEST_SUITE(BitKeyMapping)
 

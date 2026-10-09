@@ -3,36 +3,36 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/array_storage.hpp>                     // array_storage
-#include <test/block_types.hpp>                       // block_types, digits_v, graded_extents
-#include <test/uint128.hpp>                           // IWYU pragma: keep; TEST_HAS_UINT128, uint128
-#include <xstd/bits/bit_blocks.hpp>                   // owned_bit_blocks
-#include <xstd/bits/detail/bit_block_container.hpp>   // bit_block_container
-#include <xstd/bits/detail/bounded_blocks.hpp>        // bounded_blocks
-#include <xstd/bits/detail/comparisons.hpp>           // sequence_three_way, set_equal, set_three_way
-#include <xstd/bits/detail/range_const_reference.hpp> // fallback::range_const_reference_t, range_const_reference_t
-#include <xstd/bits/from_blocks.hpp>                  // from_blocks
-#include <xstd/ints/memory.hpp>                       // align_up
-#include <boost/test/unit_test.hpp>                   // BOOST_CHECK_EQUAL, BOOST_CHECK_LE, BOOST_CHECK_LT, BOOST_CHECK_THROW, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
-#include <algorithm>                                  // count, lexicographical_compare_three_way, min, reverse
-#include <array>                                      // array
-#include <bitset>                                     // bitset
-#include <compare>                                    // strong_ordering
-#include <concepts>                                   // same_as
-#include <cstddef>                                    // ptrdiff_t, size_t
-#include <cstdint>                                    // uint8_t, uint64_t
-#include <initializer_list>                           // initializer_list
-#include <limits>                                     // numeric_limits
-#include <memory>                                     // addressof, allocator
-#include <version>                                    // IWYU pragma: keep; __cpp_lib_ranges_as_const
-#include <new>                                        // bad_alloc
-#include <ranges>                                     // begin, iota, range_const_reference_t, size
-#include <span>                                       // dynamic_extent
-#include <stdexcept>                                  // length_error
-#include <tuple>                                      // get, tuple
-#include <type_traits>                                // is_nothrow_move_assignable_v, is_nothrow_move_constructible_v, is_trivially_*
-#include <utility>                                    // declval, move
-#include <vector>                                     // vector
+#include <test/array_storage.hpp>                      // array_storage
+#include <test/block_types.hpp>                        // block_types, digits_v, graded_extents
+#include <test/uint128.hpp>                            // IWYU pragma: keep; TEST_HAS_UINT128, uint128
+#include <xstd/bits/bit_concepts/owned_bit_blocks.hpp> // owned_bit_blocks
+#include <xstd/bits/detail/bit_block_container.hpp>    // bit_block_container
+#include <xstd/bits/detail/bounded_blocks.hpp>         // bounded_blocks
+#include <xstd/bits/detail/comparisons.hpp>            // sequence_three_way, set_equal, set_three_way
+#include <xstd/bits/detail/range_const_reference.hpp>  // fallback::range_const_reference_t, range_const_reference_t
+#include <xstd/bits/from_blocks.hpp>                   // from_blocks
+#include <xstd/ints/memory.hpp>                        // align_up
+#include <boost/test/unit_test.hpp>                    // BOOST_CHECK_EQUAL, BOOST_CHECK_LE, BOOST_CHECK_LT, BOOST_CHECK_THROW, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <algorithm>                                   // count, lexicographical_compare_three_way, min, reverse
+#include <array>                                       // array
+#include <bitset>                                      // bitset
+#include <compare>                                     // strong_ordering
+#include <concepts>                                    // same_as
+#include <cstddef>                                     // ptrdiff_t, size_t
+#include <cstdint>                                     // uint8_t, uint64_t
+#include <initializer_list>                            // initializer_list
+#include <limits>                                      // numeric_limits
+#include <memory>                                      // addressof, allocator
+#include <version>                                     // IWYU pragma: keep; __cpp_lib_ranges_as_const
+#include <new>                                         // bad_alloc
+#include <ranges>                                      // begin, iota, range_const_reference_t, size
+#include <span>                                        // dynamic_extent
+#include <stdexcept>                                   // length_error
+#include <tuple>                                       // get, tuple
+#include <type_traits>                                 // is_nothrow_move_assignable_v, is_nothrow_move_constructible_v, is_trivially_*
+#include <utility>                                     // declval, move
+#include <vector>                                      // vector
 
 BOOST_AUTO_TEST_SUITE(BitBlockContainer)
 
