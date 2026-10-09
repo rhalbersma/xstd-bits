@@ -6,12 +6,8 @@
 #ifndef XSTD_BITS_BIT_CONCEPTS_HPP
 #define XSTD_BITS_BIT_CONCEPTS_HPP
 
-// What holds the bits, each concept after the one it refines.
-#include <xstd/bits/bit_concepts/bit_block.hpp>            // IWYU pragma: export; bit_block
-#include <xstd/bits/bit_concepts/bit_block_range.hpp>      // IWYU pragma: export; bit_block_range
-#include <xstd/bits/bit_concepts/bit_blocks.hpp>           // IWYU pragma: export; bit_blocks
-#include <xstd/bits/bit_concepts/owned_bit_blocks.hpp>     // IWYU pragma: export; owned_bit_blocks
-#include <xstd/bits/bit_concepts/resizable_bit_blocks.hpp> // IWYU pragma: export; resizable_bit_blocks
+// What holds the bits: one block, or a sized contiguous range of them.
+#include <xstd/bits/bit_concepts/bit_blocks.hpp> // IWYU pragma: export; bit_blocks
 
 // What a set owner asks of the mapping that places its keys in bits.
 #include <xstd/bits/bit_concepts/bit_index_mapping.hpp>       // IWYU pragma: export; bit_index_mapping

@@ -6,15 +6,15 @@
 #ifndef XSTD_BITS_BIT_CONCEPTS_BIT_BLOCKS_HPP
 #define XSTD_BITS_BIT_CONCEPTS_BIT_BLOCKS_HPP
 
-#include <xstd/bits/bit_concepts/bit_block.hpp>       // bit_block
-#include <xstd/bits/bit_concepts/bit_block_range.hpp> // bit_block_range
+#include <xstd/bits/detail/bit_block_range.hpp>    // bit_block_range
+#include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
 
 // What every container and view here presents a packed interface over: bits in contiguous unsigned blocks.
 namespace xstd {
 
 // One block, or a range of them: what every container and view here holds its bits in.
 template<class Bits>
-concept bit_blocks = bit_block<Bits> or bit_block_range<Bits>;
+concept bit_blocks = xstd::unsigned_integer<Bits> or bits::detail::bit_block_range<Bits>;
 
 } // namespace xstd
 

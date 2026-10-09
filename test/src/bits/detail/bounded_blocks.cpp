@@ -10,17 +10,17 @@
 
 #endif
 
-#include <xstd/bits/bit_concepts/resizable_bit_blocks.hpp>   // resizable_bit_blocks
-#include <xstd/bits/bit_type_traits/bit_blocks_capacity.hpp> // bit_blocks_capacity_v
-#include <xstd/bits/detail/bounded_blocks.hpp>               // bounded_blocks, bounded_blocks_for, no_blocks
-#include <boost/test/unit_test.hpp>                          // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <array>                                             // array
-#include <concepts>                                          // same_as
-#include <cstdint>                                           // uint8_t, uint64_t
-#include <new>                                               // bad_alloc
-#include <ranges>                                            // contiguous_range, empty
-#include <type_traits>                                       // is_empty_v, is_trivially_copyable_v, is_trivially_default_constructible_v
-#include <utility>                                           // declval
+#include <xstd/bits/detail/bit_blocks_capacity.hpp>  // bit_blocks_capacity_v
+#include <xstd/bits/detail/bounded_blocks.hpp>       // bounded_blocks, bounded_blocks_for, no_blocks
+#include <xstd/bits/detail/resizable_bit_blocks.hpp> // resizable_bit_blocks
+#include <boost/test/unit_test.hpp>                  // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
+#include <array>                                     // array
+#include <concepts>                                  // same_as
+#include <cstdint>                                   // uint8_t, uint64_t
+#include <new>                                       // bad_alloc
+#include <ranges>                                    // contiguous_range, empty
+#include <type_traits>                               // is_empty_v, is_trivially_copyable_v, is_trivially_default_constructible_v
+#include <utility>                                   // declval
 
 BOOST_AUTO_TEST_SUITE(Detail)
 BOOST_AUTO_TEST_SUITE(BoundedBlocks)
@@ -48,9 +48,9 @@ BOOST_AUTO_TEST_CASE(ACapacityOfNoughtHoldsNoBlocks)
 {
         using Nought = xstd::bits::detail::bounded_blocks_for<std::uint8_t, 0>;
         static_assert(std::is_empty_v<Nought> and std::is_trivially_copyable_v<Nought> and std::is_trivially_default_constructible_v<Nought>);
-        static_assert(xstd::resizable_bit_blocks<Nought> and xstd::bit_blocks_capacity_v<Nought> == 0UZ);
+        static_assert(xstd::bits::detail::resizable_bit_blocks<Nought> and xstd::bits::detail::bit_blocks_capacity_v<Nought> == 0UZ);
         static_assert(std::same_as<xstd::bits::detail::bounded_blocks_for<std::uint8_t, 2>, xstd::bits::detail::bounded_blocks<std::uint8_t, 2>>);
-        static_assert(xstd::resizable_bit_blocks<Blocks> and xstd::bit_blocks_capacity_v<Blocks> == 0UZ);
+        static_assert(xstd::bits::detail::resizable_bit_blocks<Blocks> and xstd::bits::detail::bit_blocks_capacity_v<Blocks> == 0UZ);
         BOOST_CHECK_EQUAL(Blocks::capacity(), 0UZ);
         BOOST_CHECK_EQUAL(Blocks::max_size(), 0UZ);
 }

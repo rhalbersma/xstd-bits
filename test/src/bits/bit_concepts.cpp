@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/bit_concepts.hpp>     // bit_block, bit_block_range, bit_blocks, bit_constructible_from, bit_convertible, bit_convertible_to, bit_index_mapping, bit_mask_mapping, owned_bit_blocks, resizable_bit_blocks, sized_bit_index_mapping
+#include <xstd/bits/bit_concepts.hpp>     // bit_blocks, bit_constructible_from, bit_convertible, bit_convertible_to, bit_index_mapping, bit_mask_mapping, sized_bit_index_mapping
 #include <xstd/bits/bit_fixed_set.hpp>    // bit_fixed_set
 #include <xstd/bits/bit_flag_mapping.hpp> // bit_flag_mapping
 #include <xstd/bits/bit_key_mapping.hpp>  // bit_key_mapping
@@ -19,8 +19,7 @@ BOOST_AUTO_TEST_SUITE(BitConcepts)
 // The umbrella reaches every concept in one include.
 BOOST_AUTO_TEST_CASE(TheUmbrellaReachesEveryConcept)
 {
-        static_assert(xstd::bit_block<std::uint64_t> and xstd::bit_block_range<std::array<std::uint16_t, 3>> and xstd::bit_blocks<std::uint64_t>);
-        static_assert(xstd::owned_bit_blocks<std::array<std::uint16_t, 3>> and xstd::resizable_bit_blocks<std::vector<std::size_t>>);
+        static_assert(xstd::bit_blocks<std::uint64_t> and xstd::bit_blocks<std::array<std::uint16_t, 3>> and xstd::bit_blocks<std::vector<std::size_t>>);
         static_assert(xstd::bit_index_mapping<xstd::bit_key_mapping<std::size_t>, std::size_t>);
         static_assert(xstd::sized_bit_index_mapping<xstd::bit_flag_mapping<std::uint16_t>, std::uint16_t>);
         static_assert(xstd::bit_mask_mapping<xstd::bit_flag_mapping<std::bitset<16>>, std::bitset<16>>);

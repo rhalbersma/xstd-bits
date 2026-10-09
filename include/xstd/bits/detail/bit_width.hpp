@@ -6,9 +6,9 @@
 #ifndef XSTD_BITS_DETAIL_BIT_WIDTH_HPP
 #define XSTD_BITS_DETAIL_BIT_WIDTH_HPP
 
-#include <xstd/bits/bit_concepts/owned_bit_blocks.hpp>     // owned_bit_blocks
 #include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp> // bit_blocks_extent_v
 #include <xstd/bits/detail/bit_layout.hpp>                 // fixed_bit_blocks
+#include <xstd/bits/detail/owned_bit_blocks.hpp>           // owned_bit_blocks
 #include <xstd/bits/detail/ownership.hpp>                  // owned_storage, owner, view
 #include <bitset>                                          // bitset
 #include <cstddef>                                         // size_t
@@ -35,7 +35,7 @@ template<class T>
         } else if constexpr (view<T> and (not requires { requires T::is_windowed; })) {
                 // A window starts inside a block, so its bits are not its storage's, where a whole view's are.
                 return std::remove_const_t<typename T::adapted_type>::extent;
-        } else if constexpr (fixed_bit_blocks<T> and (std::is_bounded_array_v<T> or xstd::owned_bit_blocks<std::remove_const_t<T>>)) {
+        } else if constexpr (fixed_bit_blocks<T> and (std::is_bounded_array_v<T> or owned_bit_blocks<std::remove_const_t<T>>)) {
                 // Held by value, so a span of a static extent stays out: it lends its width rather than having it.
                 return xstd::bit_blocks_extent_v<T>;
         } else {

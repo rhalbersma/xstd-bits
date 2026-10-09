@@ -6,10 +6,10 @@
 #ifndef XSTD_BITS_DETAIL_BIT_LAYOUT_HPP
 #define XSTD_BITS_DETAIL_BIT_LAYOUT_HPP
 
-#include <xstd/bits/bit_concepts/bit_block.hpp>            // bit_block
 #include <xstd/bits/bit_concepts/bit_blocks.hpp>           // bit_blocks
-#include <xstd/bits/bit_concepts/owned_bit_blocks.hpp>     // owned_bit_blocks
 #include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp> // bit_blocks_extent_v
+#include <xstd/bits/detail/owned_bit_blocks.hpp>           // owned_bit_blocks
+#include <xstd/ints/concepts/unsigned_integer.hpp>         // unsigned_integer
 #include <xstd/ints/limits.hpp>                            // numeric_limits
 #include <array>                                           // array
 #include <bit>                                             // bit_cast, endian
@@ -46,7 +46,7 @@ concept fixed_blocks_source =
         // Fixed first: owned_bit_blocks asks constructible_from, which can re-enter this very constraint.
         fixed_bit_blocks<Bits> and
         // A built-in array is read and never owned.
-        (std::is_bounded_array_v<Bits> or xstd::owned_bit_blocks<Bits>) and
+        (std::is_bounded_array_v<Bits> or owned_bit_blocks<Bits>) and
         xstd::bit_blocks_extent_v<Bits> >= N;
 
 // A copy answers what the shifts do only when every bit of the object is a value bit: digits against sizeof.
@@ -125,7 +125,7 @@ template<std::size_t N, class Bits>
 {
         auto bytes = std::array<std::byte, byte_count<N>>();
         if constexpr (byte_count<N> > 0UZ) {
-                if constexpr (xstd::bit_block<Bits>) {
+                if constexpr (xstd::unsigned_integer<Bits>) {
                         // No copy: memcpy timed at 0.31ns either way, so the branch buys nothing.
                         for (auto const j : std::views::iota(0UZ, std::size(bytes))) {
                                 bytes[j] = static_cast<std::byte>(static_cast<unsigned char>(b >> (bits_per_byte * j)));
@@ -168,7 +168,7 @@ template<class Bits, std::size_t N>
                         // No byte to read, and bit_cast of std::bitset<0> reads uninitialised: zero bytes are cast in.
                         return std::bit_cast<Bits>(std::array<std::byte, sizeof(Bits)>());
                 }
-        } else if constexpr (xstd::bit_block<Bits>) {
+        } else if constexpr (xstd::unsigned_integer<Bits>) {
                 // The shifts alone, for the reason bit_bytes gives: a copy measured the same and said less.
                 auto value = Bits{};
                 for (auto const j : std::views::iota(0UZ, std::size(bytes))) {

@@ -6,7 +6,6 @@
 #ifndef XSTD_BITS_BIT_FIXED_SET_HPP
 #define XSTD_BITS_BIT_FIXED_SET_HPP
 
-#include <xstd/bits/bit_concepts/bit_block.hpp>               // bit_block
 #include <xstd/bits/bit_concepts/bit_index_mapping.hpp>       // bit_index_mapping
 #include <xstd/bits/bit_concepts/bit_mask_mapping.hpp>        // bit_mask_mapping
 #include <xstd/bits/bit_concepts/sized_bit_index_mapping.hpp> // sized_bit_index_mapping
@@ -318,7 +317,7 @@ template<xstd::unsigned_integer Block, std::size_t K>
 basic_bit_fixed_set(from_blocks_t, std::array<Block, K>) -> basic_bit_fixed_set<std::size_t, Block, bit_blocks_extent_v<std::array<Block, K>>>;
 
 // A built-in array of blocks, by reference so it keeps its bound: what the std::array of its blocks deduces.
-template<xstd::bit_block Block, std::size_t K>
+template<xstd::unsigned_integer Block, std::size_t K>
 basic_bit_fixed_set(from_blocks_t, Block const (&)[K]) -> basic_bit_fixed_set<std::size_t, Block, bit_blocks_extent_v<std::array<Block, K>>>; // NOLINT(modernize-avoid-c-arrays): a built-in array is what it reads.
 
 // A list of enumerators whose default mapping closes the universe: the type bit_enum_set<Enum> names.
