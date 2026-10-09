@@ -1312,73 +1312,94 @@ under every reading. The cross-cutting protocols -- equality, ordering, formatti
 -- follow the reading: the standard's own coverage, `std::bitset`, `std::vector<bool>` and
 `std::string` hashing while `std::array`, `std::set` and `std::pair` do not, is history rather than design.
 
-The engine is Boost.Hash2: each adaptor carries a `tag_invoke` hook for `hash_append`, and `std::hash` is
-xstd-misc's `xstd::hash<T, H>` over it, under an algorithm `H` this library picks. A hook appends through the
-provider Hash2 hands it rather than through `boost::hash2::hash_append` by name, so the adaptor headers need only
-`hash_append_fwd.hpp`.
+The engine is Boost.Hash2, and there are two hashers over it, which differ in **what** they hash.
 
-What a hook appends is the value **itself**, never a storage's own hook: the blocks and the width. So equal
-values hash equal whatever holds them, and no storage's `std::hash` is consulted. Every storage holds its
-blocks contiguously, with the unused bits of the last one clear, so the blocks go in as one
-`hash_append_range` -- one `update` wherever the flavor's byte order is the target's -- and not one call per
-block: the bytes are the same, but a buffered algorithm such as xxHash pays a fixed cost per `update`, and at
-length that cost is most of its time. A 128-bit block, wider than Hash2 writes, goes in through xstd-ints'
-`hash_append_int`, as its two 64-bit words, low first -- the bytes 64-bit blocks of the same bits give, under
-any flavor. That one call bypasses the provider: `hash_append_int` is a function to call, not a hook Hash2
-finds. The set reading at a run-time width appends the positions held and their count instead, since equal
-sets need not share a width ([width-is-capacity](#width-is-capacity)). The width and the count go in through
-`hash_append_size` and each position as the flavor's `size_type`, never as a `std::size_t`, so a flavor with a
-fixed byte order gives one message, and one digest, on 32- and 64-bit targets alike.
+**`xstd::hasher<H>` hashes the value**, as its standard model does. It is xstd-misc's, and runs Hash2's
+`hash_append`, which finds each adaptor's `tag_invoke` hook. A hook appends exactly the message Hash2 1.92
+builds for the model, so `xstd::hasher<H>()(x) == xstd::hasher<H>()(model(x))` under every algorithm and every
+flavor, and a bit container hashes inside a user's Hash2-hashed aggregate as the standard container would:
 
-The algorithm is chosen in exactly one place, and it is chosen as a **default rather than a fact**. The
-default switches on the length of the message, the bytes appended ahead of the width or count:
-`num_blocks() * sizeof(Block)` for the bits, `count()` positions of the default flavor's `size_type` for the
-positions. One word or less goes to FNV-1a, which has no setup to amortize over it; anything longer goes to
-xxHash, which takes its input in stripes and is faster from about two words on. Both run at the width of
-`std::size_t`, `fnv1a_64` and `xxhash_64` on a 64-bit target and `fnv1a_32` and `xxhash_32` on a 32-bit one:
-xstd-misc's `xstd::short_hash` and `xstd::long_hash`, which this library does not redefine.
-The length follows the value and the block type, never the storage, so equal values in any storage choose the
-same algorithm; at a static width the choice is made at compile time. It does not switch on the block type
-either: two block types give the same message only where their bytes agree, as `std::uint32_t` and
-`std::uint64_t` do under a little-endian flavor at a width that is a multiple of 64, and then they agree on its
-length too.
+| xstd type | model | message |
+| :--- | :--- | :--- |
+| `bit_array<N>` | `std::array<bool, N>` | N bytes `0x00` or `0x01`, no size; one `'\x00'` when N = 0, Hash2 having every append update |
+| `bit_vector`, `bit_small_vector` | `std::vector<bool>` | N bytes, then `hash_append_size(N)`; an unspecialized `boost::container::vector<bool>` writes the same |
+| `bit_bounded_vector<N>` | `std::inplace_vector<bool, N>` | n bytes, then `hash_append_size(n)`, as `boost::container::static_vector<bool, N>` |
+| every set and set view | `std::set<Key, Compare>` | each key in iteration order, descending under `std::greater`, then `hash_append_size(count)` |
+
+A sequence's bools are not read through its proxies. `detail/hash.hpp` expands each 64-bit word of the bits
+into 64 bytes, through `detail/intrin.hpp`: one `_mm512_movm_epi8` where AVX-512BW is enabled, a `_pdep_u64`
+per byte where BMI2 is, and otherwise, and in a constant expression, a 256-entry table of each byte's eight
+bools. Eight words go to an `update`, and the last stops at the width: no padding bit is ever a bool. Chunking
+does not change a Hash2 digest, so the expansion's grain is free. A set walks its keys, costing what `std::set`
+costs, and appends each as `Key`, so its message follows the platform's `std::size_t` as the model's does.
+`bit_block_container`, which is no reading, keeps its own hook over its blocks.
+
+**`xstd::bit_hasher<H>` hashes the bits**, the representation rather than the model's value. Its message is
+the canonical byte string of the bits: ceil(N / 8) bytes, bit `i` at bit `i % 8` of byte `i / 8`, unused high
+bits zero. A static width appends nothing after it, as `std::array` appends no size: the suffix would carry
+nothing, and equality never crosses types. A run-time width appends `hash_append_size` of the width in bits
+for a sequence. A set of run-time width cannot: equal sets need not share a width
+([width-is-capacity](#width-is-capacity)), so its string stops after the byte holding its last key, and its
+suffix is that byte count. An empty static width appends the one `'\x00'`, by Hash2's rule. Wherever
+`blocks_copy_as_bytes` holds -- a little-endian target, and value bits that fill the block object -- and the
+block is a scalar, the first ceil(N / 8) bytes of the storage **are** that string, whatever the block type,
+since the unused bits are clear; this is the identity `bit_convert` rests on. There the string goes in as one
+`update` over the storage, from `std::uint8_t` blocks to `unsigned __int128` ones. Elsewhere -- a big-endian
+target, a block with padding bits, a class-type 128-bit block whose layout no rule proves, a constant
+expression -- the same bytes are assembled by shifts, up to 256 at a time. Equal values thus hash equal across
+storages **and** block types, which is why `bit_hasher` declares `is_transparent`; `xstd::hasher` cannot, being
+generic, where `42` and `std::int64_t{42}` hash differently.
+
+The same message is public as `xstd::bit_hash_append(h, f, x)`, for a user's own hook. It also takes a
+contiguous range of one static-width container -- a built-in array, a `std::array` or a `std::span`, nested
+arrays flattened -- and appends each element's string in turn, then the count where the range's type fixes
+none. Where each element's object is its string, an owner whose blocks hold no byte past ceil(N / 8), as a
+`bit_fixed_set<64>` in `std::uint64_t` blocks, and a nested `std::array` measures as wide as its elements, the
+whole range is one `update`. A board game's position holding six `bit_fixed_set<64>` planes a side hashes each
+side in one `update` of 48 bytes, and `planes[2][6]` in one of 96. A `bit_fixed_set<50>`, eight bytes for a
+seven-byte string, goes in a plane at a time, to the same digest. The containers are not made trivially
+equality comparable to get this: that would have Hash2 hash their objects and bypass the model hooks.
+
+`std::hash` is `bit_hasher<boost::hash2::xxhash_64>`, which is also `bit_hasher`'s default, and it is a
+**default rather than a fact**. It is xxHash at every length, with no switch to FNV-1a for a short string,
+because FNV-1a does not avalanche: each byte is xored into the low bits and multiplied up, so the high bits of
+the last byte never reach the low bits of the result, and the low bits are what a hash table indexes by. Two
+one-word sets differing only in their top key would land in the same bucket. xxHash mixes every input bit into
+every output bit at the end, at a cost a short string barely notices. It is spelled `boost::hash2::xxhash_64`
+on every target, `std::size_t` taking Hash2's fold of its result where it is narrower.
 
 `std::hash` cannot take another algorithm: its `operator()` has one argument and its type no parameter for
-one. The door to another algorithm is `xstd::hash<T, H>` itself, from `<xstd/misc/ext/boost/hash2.hpp>`, which
-hashes any `T` whose `hash_append` Hash2 finds -- every owner here, and every view that hashes -- with the
-algorithm `H` it is given, and seeded where `H` takes a seed. `std::hash<T>` is that hasher at the default, so
-`xstd::hash<T, H>` at the algorithm `std::hash` picks agrees with it digit for digit. At any other algorithm
-the digits differ and the invariant still holds, since it rests on what the hook appends and not on who hashes it.
+one. The door to another algorithm is `bit_hasher<H>` for the bits and `xstd::hasher<H>` for the value, each
+seeded where `H` takes a seed. `std::hash<T>` is `bit_hasher` at the default, so the two agree digit for digit.
+At any other algorithm the digits differ and the invariant still holds, since it rests on what is appended and
+not on who hashes it.
 
 So a caller chooses as follows. The default, through `std::hash`, is for keys the program makes: it is
-unseeded, and fast at every length. A caller who knows the keys better names the algorithm, `xstd::short_hash`
-for keys of a word or two of bits and `xstd::long_hash` beyond. **Keys an adversary can choose** -- read from
+unseeded, and fast at every length. A caller who knows the keys better names another Hash2 algorithm.
+**Keys an adversary can choose** -- read from
 the network, a file or a user -- need SipHash, seeded per container, which is Hash2's own advice: an unseeded
 algorithm lets an attacker who knows it build a table's worth of colliding keys in advance, and SipHash is a
 keyed function built to make that infeasible without the seed, at a speed a hash table can afford.
 
 ```cpp
+#include <xstd/bits/bit_hasher.hpp> // xstd::bit_hasher
 #include <xstd/bits/bit_set.hpp>
-#include <xstd/misc/ext/boost/hash2.hpp> // xstd::hash
-#include <boost/hash2/siphash.hpp>       // siphash_64
+#include <boost/hash2/siphash.hpp>  // siphash_64
 #include <cstdint>
 #include <unordered_set>
 
-using hasher = xstd::hash<xstd::bit_set, boost::hash2::siphash_64>;
+using hasher = xstd::bit_hasher<boost::hash2::siphash_64>;
 
 auto const seed = std::uint64_t{/* drawn at random, per container */};
 auto table      = std::unordered_set<xstd::bit_set, hasher>(0, hasher(seed));
 ```
-
-The library adds no hasher of its own beside it: what a bit container hashes is its hook's business, which
-algorithm hashes it is the caller's, and `xstd::hash` already joins the two for every type Hash2 can hash.
 
 Who hashes follows [views-follow-their-precedent](#views-follow-their-precedent): the set adaptor owned or
 viewed, as `std::string_view` hashes; the sequence adaptor as an owner alone, as `std::span` does not, so its
 hook is constrained on ownership and a `bit_span` hashes no more than it compares. Both range adaptors tell ContainerHash they are not ranges: Hash2 chooses between its
 range overload and a hook by `enable_if`, a range with a hook is ambiguous, and the range overload could not
 hash the proxy the iterators return anyway. The harness checks the invariant beside `==`, wherever a
-`std::hash` exists.
+`std::hash` exists, and each model's message under three algorithms and both fixed byte orders.
 
 ## Coverage
 
@@ -2631,6 +2652,13 @@ One header per restricted name, holding its `basic_` form beside it, each over o
 `bit_array` over `std::array<Block, num_blocks_v<Block, N>>`, and `bit_bounded_set` and `bit_bounded_vector`
 over `bounded_blocks<Block, num_blocks_v<Block, N>>` ([the-bounded-column](#the-bounded-column)). The
 header is the name's home and the only place it is spelled; `bits.hpp` includes them all.
+
+**What `bit_` names.** The prefix marks what works on the packed bits: the containers, the concepts and
+transformations over blocks (`bit_blocks.hpp`, `bit_align`, `bit_least`), and `bit_hasher`. The unprefixed name
+works on the value as the standard model sees it, as `xstd::hasher` does. So `bit_hasher` is the
+representation-level hash and `hasher` the value-level one. The prefix names **what** is hashed, the packed
+representation, not whether the code is optimized: the hooks behind `xstd::hasher` expand bits to bools with
+`_pdep_u64`, AVX-512 or a table, and are as optimized, yet still append the model's bytes.
 
 ### block-and-width-transformations
 

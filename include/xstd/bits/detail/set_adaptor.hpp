@@ -7,6 +7,7 @@
 #define XSTD_BITS_DETAIL_SET_ADAPTOR_HPP
 
 #include <xstd/bits/bit_blocks.hpp>                  // bit_blocks
+#include <xstd/bits/bit_hasher.hpp>                  // bit_hasher
 #include <xstd/bits/bit_index_mapping.hpp>           // bit_index_mapping, bit_mask_mapping, sized_bit_index_mapping
 #include <xstd/bits/bit_key_mapping.hpp>             // bit_key_mapping
 #include <xstd/bits/detail/adapted_bits.hpp>         // adapted_bits
@@ -15,7 +16,7 @@
 #include <xstd/bits/detail/borrowed_bits.hpp>        // borrow_bits, borrowable_block, borrowable_blocks, borrowed_bits_t
 #include <xstd/bits/detail/comparisons.hpp>          // numeric_three_way, set_equal, set_three_way
 #include <xstd/bits/detail/functor.hpp>              // decay_copy
-#include <xstd/bits/detail/hash.hpp>                 // hash_append_bits, hash_append_positions, std_hash_bits, std_hash_positions
+#include <xstd/bits/detail/hash.hpp>                 // hash_append_keys
 #include <xstd/bits/detail/intrin.hpp>               // countl_zero, countr_zero
 #include <xstd/bits/detail/is_key.hpp>               // is_key
 #include <xstd/bits/detail/ownership.hpp>            // owned_bits_t, owned_storage, owner_of, owner_reading, set_reading_tag, storage, storage_access, owns
@@ -26,6 +27,7 @@
 #include <xstd/misc/type_traits/empty_base_type.hpp> // empty_base_type
 #include <boost/container_hash/is_range.hpp>         // is_range
 #include <boost/hash2/hash_append_fwd.hpp>           // hash_append_tag
+#include <boost/hash2/xxhash.hpp>                    // xxhash_64
 #include <algorithm>                                 // all_of, find_if, lexicographical_compare_three_way, max, min, partition_point
 #include <cassert>                                   // assert
 #include <compare>                                   // strong_ordering
@@ -423,16 +425,12 @@ class set_adaptor : public set::sizes_t<Bits, Store, Derived, Key, KeyMapping, C
         // The free functions over every reading, bit_convert among them, reach the storage through this one door.
         friend struct storage_access;
 
-        // The value under the set reading: the bits at a static width, the positions at a run-time one.
+        // The value as std::set<Key, Compare> hashes it, a view as its owner: the keys in order, then their count.
         template<class Provider, class Hash, class Flavor>
         friend constexpr auto tag_invoke(boost::hash2::hash_append_tag const&, Provider const& pr, Hash& h, Flavor const& f, set_adaptor const* v) noexcept
                 -> void
         {
-                if constexpr (has_static_width) {
-                        hash_append_bits(pr, h, f, v->bits());
-                } else {
-                        hash_append_positions(pr, h, f, v->bits());
-                }
+                hash_append_keys(pr, h, f, *v);
         }
 
 public:
@@ -1579,19 +1577,14 @@ struct formatter<R, CharT> : formatter<typename R::value_type, CharT>
         }
 };
 
-// Owned or viewed, as std::string_view hashes and std::set does not.
+// Owned or viewed, as std::string_view hashes and std::set does not: the bits, by bit_hasher.
 template<class Bits, xstd::bits::detail::storage Store, class Derived, class Key, class KeyMapping, class Compare>
 struct hash<xstd::bits::detail::set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>>
 {
         [[nodiscard]] constexpr auto operator()(xstd::bits::detail::set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> const& v) const noexcept
                 -> std::size_t
         {
-                // Chosen by what the hook appends: the bits at a static width, the positions at a run-time one.
-                if constexpr (xstd::bits::detail::set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::has_static_width) {
-                        return xstd::bits::detail::std_hash_bits(v, xstd::bits::detail::storage_access::bits(v));
-                } else {
-                        return xstd::bits::detail::std_hash_positions(v, xstd::bits::detail::storage_access::bits(v));
-                }
+                return xstd::bit_hasher<boost::hash2::xxhash_64>()(v);
         }
 };
 
