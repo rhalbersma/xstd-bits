@@ -20,7 +20,6 @@
 
 // Blocks an owner takes as they are, and positions converted between any two widths.
 #include <xstd/bits/bit_concepts/bit_constructible_from.hpp> // IWYU pragma: export; bit_constructible_from
-#include <xstd/bits/bit_concepts/bit_convertible.hpp>        // IWYU pragma: export; bit_convertible
 #include <xstd/bits/bit_concepts/bit_convertible_to.hpp>     // IWYU pragma: export; bit_convertible_to
 
 #endif // XSTD_BITS_BIT_CONCEPTS_HPP

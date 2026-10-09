@@ -3567,9 +3567,12 @@ nothing to say that one of those does not say better, and with a contract owed t
 with each other about growth, element access and order.
 
 It interoperates instead, through one function for every pair of widths, **`xstd::bit_convert<To>(from)`** in
-`<xstd/bits/bit/bit_convert.hpp>`. Its constraint is `xstd::bit_convertible<From, To>`, over the two types as
-declared; `xstd::bit_convertible_to<From, To>` says the call is valid, and `xstd::bit_constructible_from<To, Blocks>`
-that `Blocks` *is* bit storage `To` takes as it is through the tag ([is-and-has](#is-and-has)). Each of the three
+`<xstd/bits/bit/bit_convert.hpp>`. Its constraint is a rule table over the two types as declared, kept in
+`detail` as `std::convertible_to` keeps `is_convertible_v` beneath it. The public concepts are two:
+`xstd::bit_convertible_to<From, To>` says the call is valid, taking the source first as `std::convertible_to` does
+so that `bit_convertible_to<To> auto` constrains a source, and `xstd::bit_constructible_from<To, Blocks>` says that
+`Blocks` *is* bit storage `To` takes as it is through the tag ([is-and-has](#is-and-has)). A public concept for the
+rule table as well would accept exactly the types `bit_convertible_to` does, under a second name. Each of the two
 has its own header under `<xstd/bits/bit_concepts/>`.
 
 - **Its two ends.** A target is any owner of either reading at any width and block width, an unsigned integer, a

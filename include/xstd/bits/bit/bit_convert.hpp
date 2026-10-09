@@ -6,17 +6,16 @@
 #ifndef XSTD_BITS_BIT_BIT_CONVERT_HPP
 #define XSTD_BITS_BIT_BIT_CONVERT_HPP
 
-#include <xstd/bits/bit_concepts/bit_convertible.hpp> // IWYU pragma: export; bit_convertible
-#include <xstd/bits/detail/bit_convertible.hpp>       // adopt_blocks, adopts_from, bit_target, convert_fixed, copy_blocks, fixed_width, foreign_convertible, narrow_blocks
-#include <type_traits>                                // remove_cvref_t
-#include <utility>                                    // as_const, forward
+#include <xstd/bits/detail/bit_convertible.hpp> // adopt_blocks, adopts_from, bit_convertible, bit_target, convert_fixed, copy_blocks, fixed_width, foreign_convertible, narrow_blocks
+#include <type_traits>                          // remove_cvref_t
+#include <utility>                              // as_const, forward
 
 // One conversion between everything that has bit storage, at any two widths: position i stays position i.
 namespace xstd {
 
 // The source's positions into To: equal fixed widths, a run-time width into a fixed one, anything into a run-time one.
 template<class To, class From>
-        requires bit_convertible<std::remove_cvref_t<From>, To>
+        requires bits::detail::bit_convertible<std::remove_cvref_t<From>, To>
 [[nodiscard]] constexpr auto bit_convert(From&& from) noexcept(bits::detail::fixed_width<To> and bits::detail::fixed_width<std::remove_cvref_t<From>>)
         -> To
 {
