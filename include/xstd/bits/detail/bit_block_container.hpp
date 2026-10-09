@@ -625,6 +625,31 @@ public:
                 return *this;
         }
 
+        // The ranged queries beside the ranged set, read the same way: a block at a time, masked to [n, n + len).
+        [[nodiscard]] constexpr auto count(std::size_t n, std::size_t len) const noexcept
+                -> std::size_t
+        {
+                assert(n <= size() and len <= size() - n);
+                auto c = 0UZ;
+                for_each_block(n, len, [&](std::size_t pos, block_type mask) -> void { c += popcount(static_cast<block_type>(block_at(pos) & mask)); });
+                return c;
+        }
+
+        [[nodiscard]] constexpr auto any(std::size_t n, std::size_t len) const noexcept
+                -> bool
+        {
+                assert(n <= size() and len <= size() - n);
+                return find_block(n, len, [](block_type block, block_type mask) -> bool { return static_cast<block_type>(block & mask) != zero; });
+        }
+
+        // Not count() == len: a clear position ends it, which is what a block that is not all ones says in one test.
+        [[nodiscard]] constexpr auto all(std::size_t n, std::size_t len) const noexcept
+                -> bool
+        {
+                assert(n <= size() and len <= size() - n);
+                return not find_block(n, len, [](block_type block, block_type mask) -> bool { return static_cast<block_type>(block & mask) != mask; });
+        }
+
         // Its own 0, and the same instructions the hand-written version emitted.
         [[nodiscard]] constexpr auto find_first() const noexcept
                 -> std::size_t
@@ -1557,6 +1582,19 @@ private:
                         auto const count = std::ranges::min(bits_per_block, n + len - pos);
                         f(pos, partial_block_mask<block_type>(count));
                 }
+        }
+
+        // Whether a block of [n, n + len), masked to the range, satisfies pred; the first that does ends the walk.
+        template<class Pred>
+        [[nodiscard]] constexpr auto find_block(std::size_t n, std::size_t len, Pred pred) const noexcept
+                -> bool
+        {
+                for (auto pos = n; pos < n + len; pos += bits_per_block) {
+                        if (pred(block_at(pos), partial_block_mask<block_type>(std::ranges::min(bits_per_block, n + len - pos)))) {
+                                return true;
+                        }
+                }
+                return false;
         }
 
         [[nodiscard]] constexpr auto all_but_last_are_ones() const noexcept
