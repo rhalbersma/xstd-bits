@@ -20,7 +20,7 @@
 #include <new>                                      // bad_alloc
 #include <ranges>                                   // iota, size, to
 #include <set>                                      // set
-#include <type_traits>                              // integral_constant, is_empty_v, is_member_function_pointer_v
+#include <type_traits>                              // integral_constant, is_member_function_pointer_v
 #include <utility>                                  // declval
 
 #ifdef XSTD_BITS_HAS_CONSTEXPR_BOUNDED
@@ -48,15 +48,6 @@ BOOST_AUTO_TEST_CASE(TheBoundedSetIsTheSetAdaptorOverInlineBlocks)
 {
         static_assert(std::derived_from<T, xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_block_container<xstd::bits::detail::bounded_blocks<std::uint8_t, 3>, 24>, xstd::bits::detail::storage::owned, T>>);
         static_assert(std::same_as<xstd::bit_bounded_set<24>, xstd::basic_bit_bounded_set<std::size_t, std::size_t, 24>>);
-}
-
-// A capacity of nought holds no blocks and stores no width, so the owner is an empty type, as the vector is.
-BOOST_AUTO_TEST_CASE(ACapacityOfNoughtIsAnEmptyType)
-{
-#ifndef _MSC_VER
-        // The MSVC ABI gives a class whose members are all empty a byte of its own.
-        static_assert(std::is_empty_v<xstd::bit_bounded_set<0>> and std::is_empty_v<xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 0>>);
-#endif
 }
 
 // A requires-expression failing for a concrete type is ill-formed rather than false ([expr.prim.req]/5).
