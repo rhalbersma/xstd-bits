@@ -8,7 +8,6 @@
 #include <xstd/bits/bit_array.hpp>                       // basic_bit_array, bit_array
 #include <xstd/bits/bit_bounded_set.hpp>                 // basic_bit_bounded_set, bit_bounded_set
 #include <xstd/bits/bit_bounded_vector.hpp>              // basic_bit_bounded_vector, bit_bounded_vector
-#include <xstd/bits/bit_concepts/bit_convertible.hpp>    // bit_convertible
 #include <xstd/bits/bit_concepts/bit_convertible_to.hpp> // bit_convertible_to
 #include <xstd/bits/bit_fixed_set.hpp>                   // basic_bit_fixed_set, bit_fixed_set
 #include <xstd/bits/bit_set.hpp>                         // basic_bit_set, bit_set
@@ -217,10 +216,10 @@ BOOST_AUTO_TEST_CASE(ABuiltInArrayConvertsAsTheStdArrayOfItsBlocks)
         BOOST_CHECK((xstd::bit_convert<std::array<std::uint64_t, 4>>(xstd::bit_convert<xstd::bit_fixed_set<256>>(blocks)) == same));
 
         // Equal widths only, as for a std::array, and never into the array itself.
-        static_assert(xstd::bit_convertible_to<four_words const&, xstd::bit_array<256>> and xstd::bit_convertible<four_words, std::bitset<256>>);
+        static_assert(xstd::bit_convertible_to<four_words const&, xstd::bit_array<256>> and xstd::bit_convertible_to<four_words, std::bitset<256>>);
         static_assert(not xstd::bit_convertible_to<four_words const&, xstd::bit_array<255>>);
         static_assert(not xstd::bit_convertible_to<xstd::bit_array<256>, four_words> and not xstd::bit_convertible_to<std::array<std::uint64_t, 4>, four_words>);
-        static_assert(not xstd::bit_convertible<xstd::bit_vector, four_words>);
+        static_assert(not xstd::bit_convertible_to<xstd::bit_vector, four_words>);
 }
 
 // Nothing throws between fixed widths, and only that pair is noexcept: a run-time end can refuse or allocate.
