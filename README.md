@@ -74,7 +74,7 @@ Everything else is addition rather than subtraction: the bitwise operators, `fin
 
 ### Out of range means what each counterpart means by it
 
-The **set reading** takes a key, and a key outside the domain is a lookup that answers no rather than an error: `contains`, `find`, `count`, `lower_bound`, `upper_bound`, `equal_range` and `erase` are total, as they are on `std::set`. So is a value that is no key at all, an enumerator missing from the list or a flag value of several bits: it is no element, and where the key type has an order of its own, the bounds place it among the keys by that order. A shift names no one key, so `<<=` keeps what lands below `max_size()` and drops the rest, as `std::bitset`'s does past `N`. The **sequence reading** indexes, so out of range is out of bounds there: `at(n)` throws `out_of_range` at every width and through every handle, and everything else is the precondition `std::vector`, `std::array` and `std::span` already make it — stated with an `assert`, at the member you called.
+The **set reading** takes a key, and a key outside the domain is a lookup that answers no rather than an error: `contains`, `find`, `count`, `lower_bound`, `upper_bound`, `equal_range` and `erase` are total, as they are on `std::set`. So is a value that is no key at all, an enumerator missing from the list or a flag value of several bits: it is no element, and where the key type has an order of its own, the bounds place it among the keys by that order. Writing one is refused at every width alike: `insert`, `emplace`, the ranged forms and `complement` throw `out_of_range` for a value its mapping ranks past the last key, on a growing set as on a fixed one, whose `max_size()` is then the mapping's `size`; only a key of an open universe reaches the storage's own limit, `length_error` on the heap and `bad_alloc` past a bounded set's capacity. A shift names no one key, so `<<=` keeps what lands below `max_size()` and drops the rest, as `std::bitset`'s does past `N`. The **sequence reading** indexes, so out of range is out of bounds there: `at(n)` throws `out_of_range` at every width and through every handle, and everything else is the precondition `std::vector`, `std::array` and `std::span` already make it — stated with an `assert`, at the member you called.
 
 `constexpr` is not on that list of advantages, and has not been since [P3372R3](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3372r3.html) made the standard's own containers `constexpr` throughout. It is table stakes now; what the packing buys is density and the bit-parallel operations over it.
 
@@ -191,6 +191,30 @@ The **segmented** sieve is the one that pays. Base primes below `√n` once, the
 
 All three agree, and the test asserts that rather than the README claiming it.
 
+### Hashing, and choosing the algorithm
+
+Every owner, and every set view, hashes, and equal values hash equal whatever holds them. Behind it is [Boost.Hash2](https://www.boost.org/doc/libs/release/libs/hash2/), and there are two hashers, by what they hash:
+
+- **`xstd::hasher<H>` hashes the value**, as its standard model does. It is [xstd-misc](https://github.com/rhalbersma/xstd-misc)'s, and runs Hash2's `hash_append`, which each type here meets through a hook that appends exactly the message Hash2 builds for the model: `std::array<bool, N>` for `bit_array<N>`, `std::vector<bool>` for `bit_vector` and `bit_small_vector`, `std::inplace_vector<bool, N>` for `bit_bounded_vector<N>`, and `std::set<Key, Compare>` for every set. So `xstd::hasher<H>()(x) == xstd::hasher<H>()(model(x))`, and a bit container is a drop-in member of a Hash2-hashed aggregate. It costs what the model costs: a byte per bool, a word per key.
+- **`xstd::bit_hasher<H>` hashes the bits**, from [`<xstd/bits/bit_hasher.hpp>`](include/xstd/bits/bit_hasher.hpp). Its message is the value's bit string as bytes, bit `i` at bit `i % 8` of byte `i / 8` with the unused high bits clear, followed by the width only where the width is a run-time value; a set of run-time width stops at the byte of its last key and appends that byte count instead, since equal sets need not share a width. Wherever the storage already holds those bytes, little-endian blocks of `std::uint8_t` up to `unsigned __int128`, that is one `update` over the storage; elsewhere, and in a constant expression, the same bytes are assembled. The block type is no part of the message, so `bit_hasher` is transparent. `xstd::bit_hash_append(h, f, x)` is the same message for a user's own hook, and also takes a contiguous range of one static-width container, nested arrays included, as the planes of a board game's position: where each plane's object is its bytes, the whole range goes in as one `update`.
+
+`std::hash<T>` is `xstd::bit_hasher<boost::hash2::xxhash_64>`, which is also `bit_hasher`'s default: unseeded, which suits keys your program makes. It is xxHash at every length, never FNV-1a, because FNV-1a does not avalanche: the high bits of the last byte it reads never reach the low bits of its result, which are the bits a hash table indexes by. For keys an adversary can choose, name SipHash and seed it per container, as Hash2 advises:
+
+```cpp
+#include <xstd/bits/bit_hasher.hpp> // xstd::bit_hasher
+#include <xstd/bits/bit_set.hpp>
+#include <boost/hash2/siphash.hpp>  // siphash_64
+#include <cstdint>
+#include <unordered_set>
+
+using hasher = xstd::bit_hasher<boost::hash2::siphash_64>;
+
+auto const seed = std::uint64_t{/* drawn at random, per container */};
+auto table      = std::unordered_set<xstd::bit_set, hasher>(0, hasher(seed));
+```
+
+The same spelling works for every other owner and set view, with `xstd::hasher` in place of `xstd::bit_hasher`, and with `boost::unordered_flat_set` as with `std::unordered_set`. A sequence view hashes no more than `std::span` does. [design.md](doc/design.md#the-hashing-invariant) has what each hasher appends and why the default is xxHash.
+
 ## Headers
 
 Eight containers: two readings of a block of bits, each over four storages.
@@ -216,12 +240,14 @@ the adaptor each reading is built on is internal, under `<xstd/bits/detail/>`.
 | `<xstd/bits/bit_set_view.hpp>` | `bit_set_view` | Set reading of bits another container owns, or of unsigned blocks in place: `bit_set_view(board)` is a `bit_set_view<std::uint64_t>` | none |
 | `<xstd/bits/bit_span.hpp>` <br> `<xstd/bits/bit_subspan.hpp>` | `bit_span` <br> `bit_subspan` | Sequence reading over borrowed bits, whole or sliced, or over unsigned blocks in place: `bit_span(blocks)`; a whole view rotates and reverses what it views as the owners do, a slice does not | [views.span], [P3103R2](https://wg21.link/P3103R2) |
 | `<xstd/bits/bit_blocks.hpp>` | `bit_block` <br> `bit_block_range` <br> `bit_blocks` <br> `owned_bit_blocks` <br> `resizable_bit_blocks` <br> `bit_blocks_extent_v` <br> `least_block_t` <br> `fast_block_t` <br> `underlying_block_t` <br> `bit_least` <br> `bit_fast` <br> `bit_align` <br> `bit_underlying` | What every container and view presents a packed interface over: one unsigned block, or a sized contiguous range of them, in no reading of its own. The views take any of it; the owners hold what can be owned, a regular value read-only through `const`, and at a run-time width only what resizes. A built-in array of blocks is read as the `std::array` of the same blocks and is never owned. Also the width its type names, which the views default to, and the smallest and the fastest block holding `N` bits, `<cstdint>`'s least and fast pair, and an enumeration's underlying type or an integer type made unsigned, `underlying_block_t<Key>`, `bool` and the character types having no such counterpart. Four type transformations take a fixed-width owner, an array, a fixed set or a bounded one, to the same owner over another block or width, every other argument kept, as `std::make_unsigned_t` and `std::simd`'s `rebind_t` and `resize_t` do: `bit_least<X>` and `bit_fast<X>` swap the block for the smallest or the fastest holding `N`, `bit_align<X>` rounds `N` up to whole blocks, and `bit_underlying<X>`, for a set whose key is an enumeration or an integer, swaps the block for `underlying_block_t` of the key, the word an existing field or ABI already stores the flags in, so that the set's block is the mask's representation bit for bit. They compose, least first then align being the compact form with no unused tail: `bit_align<bit_least<bit_fixed_set<3>>>` is one byte, where `bit_least<bit_align<bit_fixed_set<3>>>` is eight | none |
+| `<xstd/bits/bit_hasher.hpp>` | `bit_hasher` <br> `bit_hash_append` | The hash of the bits: their bytes, bit `i` at bit `i % 8` of byte `i / 8`, then a run-time width, whatever the block type; one `update` over the storage where it holds those bytes. `bit_hash_append` appends the same from a user's own `hash_append` hook, of one container or of a contiguous range of static-width ones; `bit_hasher<H>` runs it under the Hash2 algorithm `H`, seeded as `H` is, and is transparent | none |
 | `<xstd/bits/from_blocks.hpp>` | `from_blocks` <br> `from_blocks_t` <br> `bit_constructible_from` | The tag that says an argument's blocks are read as bits, so a static width deduces from them; and the concept for blocks an owner takes as they are | [range.utility.conv] |
 | `<xstd/bits/bit.hpp>` <br> `<xstd/bits/bit/bit_convert.hpp>` | `bit_convert` <br> `bit_convertible` <br> `bit_convertible_to` | Positions from anything that has bit storage into anything else that does, at any two widths: ours, blocks, a `std::bitset`; the constraint on the two types, and the concept for a valid call | none |
 | `<xstd/bits/ext/boost/dynamic_bitset.hpp>` | `bit_convert` | Both ways between `boost::dynamic_bitset` and the owners, by block range; opt-in, outside every umbrella | [`boost::dynamic_bitset`](https://www.boost.org/doc/libs/release/libs/dynamic_bitset/) |
 
 `<xstd/bits.hpp>` exports the whole surface, so one include brings everything above.
 The headers directly under `<xstd/bits/>` are the containers, views and concepts; `<xstd/bits/bit/>` holds free utilities that extend `<bit>`, exported together by `<xstd/bits/bit.hpp>` as in xstd-ints.
+A `bit_` prefix names what works on the packed bits: the containers, the concepts and transformations over blocks, and `bit_hasher`. The unprefixed name works on the value as the standard model sees it, as `xstd::hasher` does. The prefix names *what* is hashed, the packed representation, not whether the code is optimized: the hooks behind `xstd::hasher` expand bits to bools with `_pdep_u64` or AVX-512 where the target has them, and still append the model's bytes.
 The headers under `<xstd/bits/detail/>` are implementation and carry no stability promise.
 
 ## Requirements
@@ -289,7 +315,7 @@ target_link_libraries(my_target PRIVATE xstd::bits)
 
 ### The vcpkg manifest
 
-[`vcpkg.json`](vcpkg.json) is this repository's own manifest, not a published port: it is what `VCPKG_ROOT`-based presets install from when you build **this** library. Its `test` feature — Boost.Test, Boost.Dynamic Bitset, Google Benchmark and range-v3 — is a default feature because building the repository normally means building its tests. The `no-tests-vcpkg` preset turns that off with `VCPKG_MANIFEST_NO_DEFAULT_FEATURES`, so a packaging or install build pays for Boost.Hash2 and nothing else. Consuming the library by any of the three methods above does not read this manifest at all.
+[`vcpkg.json`](vcpkg.json) is this repository's own manifest, not a published port: it is what `VCPKG_ROOT`-based presets install from when you build **this** library. Its `test` feature — Boost.Test, Boost.Dynamic Bitset, Boost.Unordered, Google Benchmark and range-v3 — is a default feature because building the repository normally means building its tests. The `no-tests-vcpkg` preset turns that off with `VCPKG_MANIFEST_NO_DEFAULT_FEATURES`, so a packaging or install build pays for Boost.Hash2 and nothing else. Consuming the library by any of the three methods above does not read this manifest at all.
 
 ## Continuous Integration
 

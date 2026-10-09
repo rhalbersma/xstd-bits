@@ -7,6 +7,7 @@
 #define XSTD_BITS_DETAIL_SET_ADAPTOR_HPP
 
 #include <xstd/bits/bit_blocks.hpp>                  // bit_blocks
+#include <xstd/bits/bit_hasher.hpp>                  // bit_hasher
 #include <xstd/bits/bit_index_mapping.hpp>           // bit_index_mapping, bit_mask_mapping, sized_bit_index_mapping
 #include <xstd/bits/bit_key_mapping.hpp>             // bit_key_mapping
 #include <xstd/bits/detail/adapted_bits.hpp>         // adapted_bits
@@ -15,7 +16,7 @@
 #include <xstd/bits/detail/borrowed_bits.hpp>        // borrow_bits, borrowable_block, borrowable_blocks, borrowed_bits_t
 #include <xstd/bits/detail/comparisons.hpp>          // numeric_three_way, set_equal, set_three_way
 #include <xstd/bits/detail/functor.hpp>              // decay_copy
-#include <xstd/bits/detail/hash.hpp>                 // hash_append_bits, hash_append_positions, std_hash
+#include <xstd/bits/detail/hash.hpp>                 // hash_append_keys
 #include <xstd/bits/detail/intrin.hpp>               // countl_zero, countr_zero
 #include <xstd/bits/detail/is_key.hpp>               // is_key
 #include <xstd/bits/detail/ownership.hpp>            // owned_bits_t, owned_storage, owner_of, owner_reading, set_reading_tag, storage, storage_access, owns
@@ -25,7 +26,8 @@
 #include <xstd/bits/from_blocks.hpp>                 // from_blocks_t
 #include <xstd/misc/type_traits/empty_base_type.hpp> // empty_base_type
 #include <boost/container_hash/is_range.hpp>         // is_range
-#include <boost/hash2/hash_append.hpp>               // hash_append_tag
+#include <boost/hash2/hash_append_fwd.hpp>           // hash_append_tag
+#include <boost/hash2/xxhash.hpp>                    // xxhash_64
 #include <algorithm>                                 // all_of, find_if, lexicographical_compare_three_way, max, min, partition_point
 #include <cassert>                                   // assert
 #include <compare>                                   // strong_ordering
@@ -178,8 +180,8 @@ struct fixed_max_size : Members
         [[nodiscard]] friend auto operator==(fixed_max_size const&, fixed_max_size const&) -> bool = default;
 };
 
-// [container.reqmts]/57, distance(begin(), end()) for the largest container: every position set.
-template<class Members, class Bits, storage Store>
+// [container.reqmts]/57, distance(begin(), end()) for the largest container: every position set that names a key.
+template<class Members, class Bits, storage Store, class Key, class KeyMapping>
 struct run_time_max_size : Members
 {
         using Members::Members;
@@ -189,6 +191,8 @@ struct run_time_max_size : Members
         {
                 if constexpr ((std::remove_const_t<Bits>::extent != std::dynamic_extent)) {
                         return std::remove_const_t<Bits>::extent;
+                } else if constexpr (owns(Store) and sized_bit_index_mapping<KeyMapping, Key>) {
+                        return std::ranges::min(static_cast<std::size_t>(KeyMapping::size), this->m_bits.max_size());
                 } else if constexpr (owns(Store)) {
                         return this->m_bits.max_size();
                 } else {
@@ -204,7 +208,7 @@ template<class Bits, storage Store, class Derived, class Key, class KeyMapping, 
 using sizes_t = std::conditional_t<
         static_max_size<Bits, Store>() != std::dynamic_extent,
         fixed_max_size<members_t<Bits, Store, Derived, Key, KeyMapping, Compare>, static_max_size<Bits, Store>()>,
-        run_time_max_size<members_t<Bits, Store, Derived, Key, KeyMapping, Compare>, Bits, Store>>;
+        run_time_max_size<members_t<Bits, Store, Derived, Key, KeyMapping, Compare>, Bits, Store, Key, KeyMapping>>;
 
 } // namespace set
 
@@ -421,16 +425,12 @@ class set_adaptor : public set::sizes_t<Bits, Store, Derived, Key, KeyMapping, C
         // The free functions over every reading, bit_convert among them, reach the storage through this one door.
         friend struct storage_access;
 
-        // The value under the set reading: the bits at a static width, the positions at a run-time one.
+        // The value as std::set<Key, Compare> hashes it, a view as its owner: the keys in order, then their count.
         template<class Provider, class Hash, class Flavor>
-        friend constexpr auto tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, set_adaptor const* v) noexcept
+        friend constexpr auto tag_invoke(boost::hash2::hash_append_tag const&, Provider const& pr, Hash& h, Flavor const& f, set_adaptor const* v) noexcept
                 -> void
         {
-                if constexpr (has_static_width) {
-                        hash_append_bits(h, f, v->bits());
-                } else {
-                        hash_append_positions(h, f, v->bits());
-                }
+                hash_append_keys(pr, h, f, *v);
         }
 
 public:
@@ -1398,7 +1398,7 @@ private:
                 return static_cast<derived_type&>(*this);
         }
 
-        // The one key a write can find no room for; a value that is no key of the mapping is a write's precondition.
+        // Where a write is refused: past a closed universe at any width, and past what the storage can ever hold.
         constexpr auto guard_key(std::size_t x) const
                 -> void
         {
@@ -1407,7 +1407,13 @@ private:
                                 throw out_of_range(x);
                         }
                 } else {
-                        // A dynamic width refuses only what it could never grow to, and says length_error.
+                        // A value that is no key ranks at or past the universe's size, as at a static width.
+                        if constexpr (sized_bit_index_mapping<KeyMapping, Key>) {
+                                if (x >= static_cast<std::size_t>(KeyMapping::size)) {
+                                        throw out_of_range(x);
+                                }
+                        }
+                        // Past what a heap can count is length_error here, and past a capacity bad_alloc on growth.
                         static_cast<void>(bits_type::check_width(bits_type::width_sum(x, 1UZ)));
                 }
         }
@@ -1571,14 +1577,14 @@ struct formatter<R, CharT> : formatter<typename R::value_type, CharT>
         }
 };
 
-// Owned or viewed, as std::string_view hashes and std::set does not.
+// Owned or viewed, as std::string_view hashes and std::set does not: the bits, by bit_hasher.
 template<class Bits, xstd::bits::detail::storage Store, class Derived, class Key, class KeyMapping, class Compare>
 struct hash<xstd::bits::detail::set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>>
 {
         [[nodiscard]] constexpr auto operator()(xstd::bits::detail::set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> const& v) const noexcept
                 -> std::size_t
         {
-                return xstd::bits::detail::std_hash(v);
+                return xstd::bit_hasher<boost::hash2::xxhash_64>()(v);
         }
 };
 

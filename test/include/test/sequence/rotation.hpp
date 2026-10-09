@@ -114,7 +114,7 @@ template<class S>
         return std::ranges::equal(got, want) and got.count() == static_cast<std::size_t>(std::ranges::count(want, true));
 }
 
-// Bit i takes bit (i + turn) % size(), by index: libstdc++ 15's ranges::rotate loses a vector<bool> bit.
+// Bit i takes bit (i + turn) % size(), by index: libstdc++ 15's ranges::rotate loses a vector<bool> bit, GCC PR 121913.
 [[nodiscard]] inline auto turned(std::vector<bool> const& model, std::size_t turn)
         -> std::vector<bool>
 {
