@@ -25,7 +25,7 @@
 #include <xstd/ints/memory.hpp>                              // align_up
 #include <xstd/misc/type_traits/conditional_data_member.hpp> // XSTD_NO_UNIQUE_ADDRESS, conditional_data_member_t
 #include <boost/container/container_fwd.hpp>                 // static_vector
-#include <boost/hash2/hash_append_fwd.hpp>                   // hash_append, hash_append_tag
+#include <boost/hash2/hash_append_fwd.hpp>                   // hash_append_tag
 #include <algorithm>                                         // all_of, any_of, copy, fill, fill_n, find_if, fold_left, max, min, reverse, rotate, shift_left, shift_right
 #include <array>                                             // array
 #include <bit>                                               // endian, has_single_bit
@@ -478,10 +478,10 @@ public:
         // No operator<=>: the two readings order the same bits differently, so the storage picks none.
 
         template<class Provider, class Hash, class Flavor>
-        friend constexpr auto tag_invoke(boost::hash2::hash_append_tag const&, Provider const&, Hash& h, Flavor const& f, bit_block_container const* v) noexcept
+        friend constexpr auto tag_invoke(boost::hash2::hash_append_tag const&, Provider const& pr, Hash& h, Flavor const& f, bit_block_container const* v) noexcept
                 -> void
         {
-                boost::hash2::hash_append(h, f, v->m_blocks);
+                pr.hash_append(h, f, v->m_blocks);
         }
 
         // Saturated at the top of size_t rather than wrapped: a wrapped sum passes the ceiling it should fail.

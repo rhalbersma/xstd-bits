@@ -13,6 +13,7 @@
 #include <xstd/bits/bit_type_traits.hpp> // IWYU pragma: export; bit_align, bit_blocks_capacity_v, bit_blocks_extent_v, bit_fast, bit_least, bit_underlying, fast_block_t, least_block_t, underlying_block_t
 #include <xstd/bits/from_blocks.hpp>     // IWYU pragma: export; from_blocks, from_blocks_t
 #include <xstd/bits/bit.hpp>             // IWYU pragma: export; bit_convert
+#include <xstd/bits/bit_hasher.hpp>      // IWYU pragma: export; bit_hash_append, bit_hasher
 
 // The sequence reading.
 #include <xstd/bits/bit_array.hpp>          // IWYU pragma: export; bit_array

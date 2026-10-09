@@ -23,6 +23,7 @@
       "dependencies": [
         "boost-test",
         "boost-dynamic-bitset",
+        "boost-unordered",
         "benchmark",
         "range-v3"
       ]
