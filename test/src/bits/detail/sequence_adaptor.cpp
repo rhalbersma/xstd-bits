@@ -6,13 +6,15 @@
 #include <test/bit_exchange.hpp>                    // converts_between, converts_from, converts_to, exchanges_from_bits
 #include <test/block_types.hpp>                     // graded_extents
 #include <xstd/bits/bit/bit_convert.hpp>            // bit_convert
-#include <xstd/bits/bit_array.hpp>                  // bit_array
+#include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
+#include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector
+#include <xstd/bits/bit_set.hpp>                    // bit_set
 #include <xstd/bits/bit_span.hpp>                   // bit_span
 #include <xstd/bits/bit_subspan.hpp>                // bit_subspan
-#include <xstd/bits/bit_vector.hpp>                 // bit_vector
+#include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
 #include <xstd/bits/detail/ownership.hpp>           // owned_bits_t, storage
-#include <xstd/bits/detail/sequence_adaptor.hpp>    // sequence_adaptor
+#include <xstd/bits/detail/sequence_adaptor.hpp>    // blit_source, sequence_adaptor
 #include <xstd/bits/from_blocks.hpp>                // from_blocks
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <algorithm>                                // all_of, any_of, count, equal, lexicographical_compare_three_way, mismatch, none_of
@@ -253,6 +255,20 @@ BOOST_AUTO_TEST_CASE(TheBulkOperatorsAreTheStoragesOwn)
         BOOST_CHECK(c.test(1) and not c.test(2));
         swap(x, y);
         BOOST_CHECK(x[3] and y[1]);
+}
+
+// An owner and a view read by block as their adaptor does, in their own block type alone; a set or a foreign range not.
+BOOST_AUTO_TEST_CASE(ABlitSourceIsASequenceOfTheSameBlockType)
+{
+        using xstd::bits::detail::blit_source;
+        using bytes = xstd::basic_bit_vector<std::uint8_t>;
+        static_assert(blit_source<bytes, std::uint8_t> and blit_source<xstd::basic_bit_array<std::uint8_t, 9>, std::uint8_t>);
+        static_assert(blit_source<xstd::basic_bit_bounded_vector<std::uint8_t, 9>, std::uint8_t>);
+        static_assert(blit_source<xstd::bit_span<std::array<std::uint8_t, 2>>, std::uint8_t>);
+        static_assert(not blit_source<bytes, std::uint64_t>);
+        static_assert(not blit_source<xstd::bit_set, std::size_t> and not blit_source<std::vector<bool>, std::size_t>);
+        static_assert(not blit_source<bytes::reference, std::uint8_t> and not blit_source<bytes::iterator, std::uint8_t>);
+        BOOST_CHECK(true);
 }
 
 // The ordering invariant on the trait's entry, the only ordering an owner has.
