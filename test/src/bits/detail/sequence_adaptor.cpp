@@ -103,6 +103,10 @@ concept le_comparable = requires (T a, T b) { a <= b; };
 template<class T>
 concept ge_comparable = requires (T a, T b) { a >= b; };
 
+// Dependent, so an absent operator is a substitution failure rather than a hard error.
+template<class X>
+concept or_assignable = requires (X x) { x |= x; };
+
 } // namespace
 
 BOOST_AUTO_TEST_SUITE(SequenceAdaptor)
@@ -247,12 +251,7 @@ BOOST_AUTO_TEST_CASE(TheBulkOperatorsAreTheStoragesOwn)
         BOOST_CHECK((~~x) == x);
         BOOST_CHECK(((x & y) | (x ^ y)) == (x | y)); // one identity, over packed bits
 
-        auto c = Storage();
-        auto d = Storage();
-        d.set(1);
-        View const v(c);
-        v |= View(d);
-        BOOST_CHECK(c.test(1) and not c.test(2));
+        static_assert(not or_assignable<View>);
         swap(x, y);
         BOOST_CHECK(x[3] and y[1]);
 }
