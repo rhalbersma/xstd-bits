@@ -13,6 +13,7 @@
 #include <xstd/bits/detail/bit_layout.hpp>                   // bit_bytes, bit_layout, container_source, copy_bits, fixed_blocks_source
 #include <xstd/bits/detail/borrowed_block_span.hpp>          // borrowed_block_span
 #include <xstd/bits/detail/intrin.hpp>                       // countl_zero, countr_zero, popcount
+#include <xstd/bits/detail/num_blocks.hpp>                   // holds_width, num_blocks_v, whole_blocks_width_v
 #include <xstd/bits/detail/owned_bit_blocks.hpp>             // owned_bit_blocks
 #include <xstd/bits/detail/pred.hpp>                         // intersects, is_subset_of
 #include <xstd/bits/detail/resizable_bit_blocks.hpp>         // resizable_bit_blocks
@@ -21,7 +22,6 @@
 #include <xstd/ints/concepts/unsigned_integer.hpp>           // unsigned_integer
 #include <xstd/ints/cstdlib/div.hpp>                         // div, div_result
 #include <xstd/ints/limits.hpp>                              // numeric_limits
-#include <xstd/ints/memory.hpp>                              // align_up
 #include <xstd/misc/type_traits/conditional_data_member.hpp> // XSTD_NO_UNIQUE_ADDRESS, conditional_data_member_t
 #include <boost/container/container_fwd.hpp>                 // static_vector
 #include <boost/hash2/hash_append_fwd.hpp>                   // hash_append_tag
@@ -45,10 +45,6 @@
 #include <utility>                                           // exchange, forward, move, pair
 
 namespace xstd::bits::detail {
-
-// The whole blocks that N bits take, and so none at width zero.
-template<xstd::unsigned_integer Block, std::size_t N>
-inline constexpr std::size_t num_blocks_v = align_up(N, static_cast<std::size_t>(xstd::numeric_limits<Block>::digits)) / static_cast<std::size_t>(xstd::numeric_limits<Block>::digits);
 
 // The width a span of blocks implies: all of its bits, for as long as the span is that long. Above every width.
 inline constexpr auto blocks_extent = std::dynamic_extent - 1UZ;
@@ -209,7 +205,8 @@ using bit_members_t = std::conditional_t<
 
 // The one vehicle: it owns the unused-tail invariant, and has no iterators.
 template<class Blocks, std::size_t N = default_extent_v<Blocks>>
-        requires (bit_block_range<Blocks> and owned_bit_blocks<Blocks> and admits_owner_extent<Blocks, N>()) or (borrowed_block_span<Blocks> and N == default_extent_v<Blocks>)
+        requires ((bit_block_range<Blocks> and owned_bit_blocks<Blocks> and admits_owner_extent<Blocks, N>()) or (borrowed_block_span<Blocks> and N == default_extent_v<Blocks>)) and
+                 holds_width<std::ranges::range_value_t<Blocks>, N>
 class bit_block_container : public bit_members_t<Blocks, N>
 {
         using members_type = bit_members_t<Blocks, N>;
@@ -263,7 +260,7 @@ private:
         // The width is this container's, so a dynamic one answers zero here rather than compute byte_count of SIZE_MAX.
         static constexpr auto bit_extent = has_static_size ? N : 0UZ;
 
-        static constexpr auto static_num_bits   = has_static_size ? align_up(N, bits_per_block) : 0UZ;
+        static constexpr auto static_num_bits   = has_static_size ? whole_blocks_width_v<block_type, N> : 0UZ;
         static constexpr auto static_num_blocks = has_static_size ? static_num_bits / bits_per_block : 0UZ;
         static constexpr auto static_last_block = static_num_blocks - 1UZ;
 
@@ -1554,17 +1551,27 @@ private:
                 for_each_block(size() - n, n, [&](std::size_t pos, block_type mask) -> void { block_at(pos, block_at(pos + gap), mask); });
         }
 
-        // A block's bits end for end, as log2(digits) swaps of ever narrower halves.
+        // A block's bits end for end, as log2(digits) swaps of ever narrower halves where the width has them.
         [[nodiscard]] static constexpr auto reversed(block_type block) noexcept
                 -> block_type
         {
-                static_assert(std::has_single_bit(bits_per_block));
-                auto mask = shr(ones, bits_per_block / 2UZ);
-                for (auto width = bits_per_block / 2UZ; 0UZ < width; width /= 2UZ) {
-                        block = static_cast<block_type>(static_cast<block_type>(shr(block, width) & mask) | shl(static_cast<block_type>(block & mask), width));
-                        mask  = static_cast<block_type>(mask ^ shl(mask, width / 2UZ));
+                if constexpr (std::has_single_bit(bits_per_block)) {
+                        auto mask = shr(ones, bits_per_block / 2UZ);
+                        for (auto width = bits_per_block / 2UZ; 0UZ < width; width /= 2UZ) {
+                                block = static_cast<block_type>(static_cast<block_type>(shr(block, width) & mask) | shl(static_cast<block_type>(block & mask), width));
+                                mask  = static_cast<block_type>(mask ^ shl(mask, width / 2UZ));
+                        }
+                        return block;
+                } else {
+                        // A width with no halves to swap, as a bit-precise block may have: one position at a time.
+                        auto reversed_block = zero;
+                        for (auto const i : std::views::iota(0UZ, bits_per_block)) {
+                                if (bits::detail::intersects(block, shl(unit, i))) {
+                                        reversed_block = static_cast<block_type>(reversed_block | shl(unit, left_bit - i));
+                                }
+                        }
+                        return reversed_block;
                 }
-                return block;
         }
 
         [[nodiscard]] constexpr auto last_block() const noexcept
