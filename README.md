@@ -82,15 +82,7 @@ Three specializations of the fixed set cover the keys a set most often holds:
 
 The block is a separate and later choice. Every name above holds `std::size_t` blocks. `bit_least<X>` and `bit_fast<X>` take the smallest and the fastest block that holds the width, and `bit_align<X>` rounds the width up to whole blocks; `bit_rebind<Block, X>` names any block outright.
 
-**Coming from `std::bitset<N>`**, ask what the code does with it:
-
-| it is used for…                                                          | use                                                    |
-| :----------------------------------------------------------------------- | :----------------------------------------------------- |
-| flags or membership: `set`, `reset`, `test`, `count`, `any`, `&`, `\|`, `<<` | `bit_fixed_set<N>`, which also iterates over what is set |
-| the one-bit values of an enumeration or integer mask                     | `bit_flag_set<Mask, N>`                                |
-| a row of `bool`: `operator[]` by index, `flip`, comparing as a sequence   | `bit_array<N>`                                         |
-| `to_ulong`, `to_ullong` and the `unsigned long long` constructor         | `from_blocks` from a word, and `xstd::bit_convert<Word>(x)` into one as wide as `N`; `bit_align<bit_least<X>>` rounds `N` up to such a word |
-| a `std::bitset` at an API you do not control                             | `xstd::bit_convert` both ways, as a set or as a sequence |
+**Migrating.** `std::vector<bool>` and `std::set<std::size_t>` become `bit_vector` and `bit_set` by changing the type: each answers its counterpart's interface, so the code around it stays. The sources whose interface differs, `std::bitset`, integer flag words, enumeration flags and Qt's `QFlags`, `boost::dynamic_bitset` and itsy_bitsy, each have a before-and-after table in [doc/migration.md](doc/migration.md).
 
 ### Each one is the packing of a standard container, and speaks that container's vocabulary
 
