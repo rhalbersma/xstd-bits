@@ -214,9 +214,9 @@ BOOST_AUTO_TEST_CASE(ARangeFromTheMostNegativeValueSpansTheType)
         static_assert(bytes::to_index(-128) == 0UZ and bytes::to_index(0) == 128UZ and bytes::to_index(127) == 255UZ);
         static_assert(bytes::from_index(0UZ) == -128 and bytes::from_index(255UZ) == 127);
 
-        using words = xstd::bit_range_mapping<std::int64_t, std::numeric_limits<std::int64_t>::min(), 64UZ>;
-        static_assert(words::to_index(std::numeric_limits<std::int64_t>::min() + 63) == 63UZ);
-        static_assert(words::from_index(63UZ) == std::numeric_limits<std::int64_t>::min() + 63);
+        using blocks = xstd::bit_range_mapping<std::int64_t, std::numeric_limits<std::int64_t>::min(), 64UZ>;
+        static_assert(blocks::to_index(std::numeric_limits<std::int64_t>::min() + 63) == 63UZ);
+        static_assert(blocks::from_index(63UZ) == std::numeric_limits<std::int64_t>::min() + 63);
 
         BOOST_CHECK(true);
 }

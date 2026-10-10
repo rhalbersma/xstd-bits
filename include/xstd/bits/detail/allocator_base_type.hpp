@@ -10,9 +10,9 @@
 
 namespace xstd::bits::detail {
 
-// An allocator_type that allocates; boost::container::static_vector names one that only holds the elements inline.
+// [container.alloc.reqmts]: an allocator_type that allocates, which boost::container::static_vector's does not.
 template<class Storage>
-concept allocating_storage = requires (Storage::allocator_type& a, std::size_t n) { a.allocate(n); };
+concept allocator_aware = requires (Storage::allocator_type& a, std::size_t n) { a.allocate(n); };
 
 // The allocator's name where the storage has one, else an empty base; one per owner, so no two compare through it.
 template<class Storage, class Owner = void>
@@ -22,21 +22,13 @@ struct allocator_base_type
 };
 
 template<class Storage, class Owner>
-        requires allocating_storage<Storage>
+        requires allocator_aware<Storage>
 struct allocator_base_type<Storage, Owner>
 {
         using allocator_type = Storage::allocator_type;
 
         [[nodiscard]] friend auto operator==(allocator_base_type const&, allocator_base_type const&) -> bool = default;
 };
-
-// Whether an allocator argument means anything to this storage.
-template<class Storage>
-inline constexpr bool has_allocator_v = false;
-
-template<class Storage>
-        requires allocating_storage<Storage>
-inline constexpr bool has_allocator_v<Storage> = true;
 
 // Stands in for the allocator a storage lacks; explicit, so no argument, {} included, ever becomes one.
 struct no_allocator
@@ -52,7 +44,7 @@ struct allocator_param
 };
 
 template<class Storage>
-        requires has_allocator_v<Storage>
+        requires allocator_aware<Storage>
 struct allocator_param<Storage>
 {
         using type = Storage::allocator_type;

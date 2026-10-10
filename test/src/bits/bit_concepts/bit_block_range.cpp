@@ -18,7 +18,7 @@ BOOST_AUTO_TEST_SUITE(BitBlockRange)
 namespace {
 
 // A built-in array of blocks, named once so the storage under test is spelled where the check can be told why.
-using four_words = std::uint64_t[4]; // NOLINT(modernize-avoid-c-arrays): the storage under test
+using four_blocks = std::uint64_t[4]; // NOLINT(modernize-avoid-c-arrays): the storage under test
 
 } // namespace
 
@@ -26,7 +26,7 @@ using four_words = std::uint64_t[4]; // NOLINT(modernize-avoid-c-arrays): the st
 BOOST_AUTO_TEST_CASE(ARangeOfBlocksIsSizedAndContiguous)
 {
         static_assert(xstd::bit_block_range<std::array<std::uint16_t, 3>> and xstd::bit_block_range<std::span<std::uint32_t const>>);
-        static_assert(xstd::bit_block_range<std::vector<std::size_t>> and xstd::bit_block_range<four_words>);
+        static_assert(xstd::bit_block_range<std::vector<std::size_t>> and xstd::bit_block_range<four_blocks>);
         static_assert(not xstd::bit_block_range<std::uint64_t> and not xstd::bit_block_range<std::deque<std::uint32_t>>);
         BOOST_CHECK(true);
 }

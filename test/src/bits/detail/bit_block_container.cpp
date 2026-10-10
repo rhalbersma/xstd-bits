@@ -123,21 +123,15 @@ public:
                 disagree(m_x == m_y, m_mx == m_my);
         }
 
-        // find_front/find_back assert any(); find_first/find_last are total and answer size().
+        // find_first is total and answers size(); the scan back from size() asserts there is a position.
         auto scans()
                 -> void
         {
                 if (m_cardinality != 0) {
-                        auto front = 0UZ;
-                        while (not m_mx[front]) {
-                                ++front;
-                        }
                         auto back = m_n - 1;
                         while (not m_mx[back]) {
                                 --back;
                         }
-                        unequal(m_x.find_front(), front);
-                        unequal(m_x.find_back(), back);
                         unequal(m_x.exclusive_find_prev(m_n), back);
                 }
 
@@ -146,7 +140,6 @@ public:
                         ++first;
                 }
                 unequal(m_x.find_first(), first);
-                unequal(m_x.find_last(), m_n);
 
                 for (auto const i : std::views::iota(0UZ, m_n)) {
                         auto next = i + 1;
@@ -1161,7 +1154,6 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheStorageAnswersEveryReadingsQuestion, T, test::g
         auto c = T();
 
         BOOST_CHECK_EQUAL(c.size(), N);
-        BOOST_CHECK_EQUAL(c.find_last(), N);
         BOOST_CHECK_EQUAL(c.find_first(), N);
         BOOST_CHECK_EQUAL(c.count(), 0UZ);
 
@@ -1591,15 +1583,15 @@ template<class Blocks>
 concept names_a_bit_block_container = requires { typename xstd::bits::detail::bit_block_container<Blocks>; };
 
 // A built-in array of blocks, named once so the storage under test is spelled where the check can be told why.
-using four_words = std::uint64_t[4]; // NOLINT(modernize-avoid-c-arrays): the storage under test
+using four_blocks = std::uint64_t[4]; // NOLINT(modernize-avoid-c-arrays): the storage under test
 
 } // namespace
 
 // A built-in array is read and never held: it deduces the std::array of its blocks, which holds every bit of it.
 BOOST_AUTO_TEST_CASE(ABuiltInArrayDeducesTheStdArrayOfItsBlocks)
 {
-        static constexpr four_words blocks = {0x8000'0000'0000'0001ULL, 0x0ULL, 0xF0ULL, 0x8000'0000'0000'0000ULL};
-        constexpr auto same                = std::array<std::uint64_t, 4>{0x8000'0000'0000'0001ULL, 0x0ULL, 0xF0ULL, 0x8000'0000'0000'0000ULL};
+        static constexpr four_blocks blocks = {0x8000'0000'0000'0001ULL, 0x0ULL, 0xF0ULL, 0x8000'0000'0000'0000ULL};
+        constexpr auto same                 = std::array<std::uint64_t, 4>{0x8000'0000'0000'0001ULL, 0x0ULL, 0xF0ULL, 0x8000'0000'0000'0000ULL};
 
         constexpr auto c = xstd::bits::detail::bit_block_container(xstd::from_blocks, blocks);
         static_assert(std::same_as<decltype(c), xstd::bits::detail::bit_block_container<std::array<std::uint64_t, 4>> const>);
@@ -1609,8 +1601,8 @@ BOOST_AUTO_TEST_CASE(ABuiltInArrayDeducesTheStdArrayOfItsBlocks)
         for (auto const i : std::views::iota(0UZ, 256UZ)) {
                 BOOST_CHECK_EQUAL(c.test(i), ((same[i / 64UZ] >> (i % 64UZ)) & 1U) != 0U);
         }
-        static_assert(not xstd::owned_bit_blocks<four_words>);
-        static_assert(not names_a_bit_block_container<four_words>);
+        static_assert(not xstd::owned_bit_blocks<four_blocks>);
+        static_assert(not names_a_bit_block_container<four_blocks>);
 }
 
 // One block deduces the array of one block, and an array of blocks deduces itself through the adopting constructor.

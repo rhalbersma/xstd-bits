@@ -19,8 +19,8 @@ BOOST_AUTO_TEST_SUITE(BitBlocksExtent)
 namespace {
 
 // Built-in arrays of blocks, named once so the storage under test is spelled where the check can be told why.
-using four_words        = std::uint64_t[4];       // NOLINT(modernize-avoid-c-arrays): the storage under test
-using three_const_words = std::uint16_t const[3]; // NOLINT(modernize-avoid-c-arrays): the storage under test
+using four_blocks        = std::uint64_t[4];       // NOLINT(modernize-avoid-c-arrays): the storage under test
+using three_const_blocks = std::uint16_t const[3]; // NOLINT(modernize-avoid-c-arrays): the storage under test
 
 } // namespace
 
@@ -30,8 +30,8 @@ BOOST_AUTO_TEST_CASE(TheExtentIsTheWidthTheTypeNames)
         static_assert(xstd::bit_blocks_extent_v<std::uint8_t> == 8 and xstd::bit_blocks_extent_v<std::uint64_t const> == 64);
         static_assert(xstd::bit_blocks_extent_v<std::array<std::uint16_t, 3>> == 48 and xstd::bit_blocks_extent_v<std::array<std::uint16_t, 3> const> == 48);
         static_assert(xstd::bit_blocks_extent_v<std::span<std::uint32_t, 2>> == 64 and xstd::bit_blocks_extent_v<std::span<std::uint32_t const, 2>> == 64);
-        static_assert(xstd::bit_blocks_extent_v<four_words> == 256 and xstd::bit_blocks_extent_v<three_const_words> == 48);
-        static_assert(xstd::bit_blocks_extent_v<four_words> == xstd::bit_blocks_extent_v<std::array<std::uint64_t, 4>>);
+        static_assert(xstd::bit_blocks_extent_v<four_blocks> == 256 and xstd::bit_blocks_extent_v<three_const_blocks> == 48);
+        static_assert(xstd::bit_blocks_extent_v<four_blocks> == xstd::bit_blocks_extent_v<std::array<std::uint64_t, 4>>);
         static_assert(xstd::bit_blocks_extent_v<std::span<std::uint32_t>> == std::dynamic_extent);
         static_assert(xstd::bit_blocks_extent_v<std::vector<std::size_t>> == std::dynamic_extent);
         static_assert(std::is_same_v<xstd::bit_set_view<std::span<std::uint32_t>>, xstd::bit_set_view<std::span<std::uint32_t>, std::dynamic_extent>>);

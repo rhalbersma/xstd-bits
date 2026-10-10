@@ -7,7 +7,7 @@
 #define XSTD_BITS_DETAIL_HASH_HPP
 
 #include <xstd/bits/detail/bit_layout.hpp> // bits_per_byte, block_digits, blocks_copy_as_bytes, byte_count, bytes_per_block
-#include <xstd/bits/detail/intrin.hpp>     // bools_per_word, expand_word
+#include <xstd/bits/detail/intrin.hpp>     // bools_per_block, expand_block
 #include <xstd/bits/detail/ownership.hpp>  // owner, set_reading_tag, storage_access
 #include <xstd/bits/detail/shift.hpp>      // shr
 #include <boost/hash2/hash_append.hpp>     // hash_append, hash_append_size
@@ -33,42 +33,42 @@ template<class Blocks>
 
 // The model's message, which the hash_append hooks write.
 
-// Word w of the bits, positions [64w, 64w + 64), zero past the last block: what the bools are expanded from.
+// Block k of the bit string, positions [64k, 64k + 64), zero past the last block: what the bools are expanded from.
 template<class Blocks>
-[[nodiscard]] constexpr auto bit_word(Blocks const& blocks, std::size_t w) noexcept
+[[nodiscard]] constexpr auto string_block(Blocks const& blocks, std::size_t k) noexcept
         -> std::uint64_t
 {
-        if constexpr (block_digits<Blocks> % bools_per_word == 0UZ) {
-                constexpr auto words_per_block = block_digits<Blocks> / bools_per_word;
-                return static_cast<std::uint64_t>(shr(blocks[w / words_per_block], bools_per_word * (w % words_per_block)));
+        if constexpr (block_digits<Blocks> % bools_per_block == 0UZ) {
+                constexpr auto string_blocks_per_block = block_digits<Blocks> / bools_per_block;
+                return static_cast<std::uint64_t>(shr(blocks[k / string_blocks_per_block], bools_per_block * (k % string_blocks_per_block)));
         } else {
-                // Narrower blocks, or a width such as 24 that divides no word: a byte at a time, value bits only.
-                constexpr auto bytes_per_word = bools_per_word / bits_per_byte;
-                auto const first              = w * bytes_per_word;
-                auto const last               = std::ranges::min(first + bytes_per_word, std::ranges::size(blocks) * bytes_per_block<Blocks>);
-                auto word                     = std::uint64_t{0};
+                // Narrower blocks, or a width such as 24 dividing no 64-bit block: a byte at a time, value bits only.
+                constexpr auto bytes_per_string_block = bools_per_block / bits_per_byte;
+                auto const first                      = k * bytes_per_string_block;
+                auto const last                       = std::ranges::min(first + bytes_per_string_block, std::ranges::size(blocks) * bytes_per_block<Blocks>);
+                auto block                            = std::uint64_t{0};
                 for (auto const j : std::views::iota(first, last)) {
-                        word |= static_cast<std::uint64_t>(string_byte(blocks, j)) << (bits_per_byte * (j - first));
+                        block |= static_cast<std::uint64_t>(string_byte(blocks, j)) << (bits_per_byte * (j - first));
                 }
-                return word;
+                return block;
         }
 }
 
-// The n bools a std::vector<bool> of the same value holds, one byte of 0 or 1 each, updated eight words at a time.
+// The n bools a std::vector<bool> of the same value holds, one byte of 0 or 1 each, eight 64-bit blocks an update.
 template<class Hash, class Blocks>
 constexpr auto update_bools(Hash& h, Blocks const& blocks, std::size_t n)
         -> void
 {
-        constexpr auto words_per_update = 8UZ;
-        auto buffer                     = std::array<unsigned char, words_per_update * bools_per_word>();
-        auto const words                = (n + bools_per_word - 1UZ) / bools_per_word;
-        for (auto first = 0UZ; first < words; first += words_per_update) {
-                auto const last = std::ranges::min(first + words_per_update, words);
-                for (auto const w : std::views::iota(first, last)) {
-                        expand_word(bit_word(blocks, w), std::span(buffer).subspan((w - first) * bools_per_word).template first<bools_per_word>());
+        constexpr auto string_blocks_per_update = 8UZ;
+        auto buffer                             = std::array<unsigned char, string_blocks_per_update * bools_per_block>();
+        auto const string_blocks                = (n + bools_per_block - 1UZ) / bools_per_block;
+        for (auto first = 0UZ; first < string_blocks; first += string_blocks_per_update) {
+                auto const last = std::ranges::min(first + string_blocks_per_update, string_blocks);
+                for (auto const k : std::views::iota(first, last)) {
+                        expand_block(string_block(blocks, k), std::span(buffer).subspan((k - first) * bools_per_block).template first<bools_per_block>());
                 }
                 // Up to position n and no further: the zeros past it are no bool the model holds.
-                h.update(buffer.data(), std::ranges::min(n, last * bools_per_word) - (first * bools_per_word));
+                h.update(buffer.data(), std::ranges::min(n, last * bools_per_block) - (first * bools_per_block));
         }
 }
 

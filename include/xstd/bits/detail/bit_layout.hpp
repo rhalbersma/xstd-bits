@@ -100,7 +100,7 @@ constexpr auto or_block_byte(std::span<T, E> blocks, std::size_t j, std::byte by
         block                    = static_cast<T>(block | static_cast<T>(value << (bits_per_byte * (j % per_block))));
 }
 
-template<std::size_t N, class Blocks, std::size_t E>
+template<class Blocks, std::size_t E>
 constexpr auto block_bytes_by_shifts(Blocks const& b, std::array<std::byte, E>& bytes) noexcept
         -> void
 {
@@ -109,7 +109,7 @@ constexpr auto block_bytes_by_shifts(Blocks const& b, std::array<std::byte, E>& 
         }
 }
 
-template<std::size_t N, class Blocks, std::size_t E>
+template<class Blocks, std::size_t E>
 constexpr auto bytes_blocks_by_shifts(std::array<std::byte, E> const& bytes, Blocks& blocks) noexcept
         -> void
 {
@@ -133,12 +133,12 @@ template<std::size_t N, class Bits>
                 } else if constexpr (fixed_blocks_source<Bits, N>) {
                         // Two alternatives rather than an early return, or MSVC's C4702 calls the shifts unreachable.
                         if consteval {
-                                block_bytes_by_shifts<N>(b, bytes);
+                                block_bytes_by_shifts(b, bytes);
                         } else {
                                 if constexpr (blocks_copy_as_bytes<Bits>) {
                                         std::memcpy(bytes.data(), std::ranges::data(b), std::size(bytes));
                                 } else {
-                                        block_bytes_by_shifts<N>(b, bytes);
+                                        block_bytes_by_shifts(b, bytes);
                                 }
                         }
                 } else {
@@ -180,12 +180,12 @@ template<class Bits, std::size_t N>
                 // Value-initialised first, clearing the blocks above N, so set -> blocks -> set is the identity.
                 auto blocks = Bits{};
                 if consteval {
-                        bytes_blocks_by_shifts<N>(bytes, blocks);
+                        bytes_blocks_by_shifts(bytes, blocks);
                 } else {
                         if constexpr (blocks_copy_as_bytes<Bits>) {
                                 std::memcpy(std::ranges::data(blocks), bytes.data(), std::size(bytes));
                         } else {
-                                bytes_blocks_by_shifts<N>(bytes, blocks);
+                                bytes_blocks_by_shifts(bytes, blocks);
                         }
                 }
                 return blocks;

@@ -13,7 +13,7 @@
 #include <xstd/bits/bit_hasher.hpp>                           // bit_hasher
 #include <xstd/bits/bit_key_mapping.hpp>                      // bit_key_mapping
 #include <xstd/bits/detail/adapted_bits.hpp>                  // adapted_bits
-#include <xstd/bits/detail/allocator_base_type.hpp>           // allocator_base_type, allocator_param_t, has_allocator_v
+#include <xstd/bits/detail/allocator_base_type.hpp>           // allocator_aware, allocator_base_type, allocator_param_t
 #include <xstd/bits/detail/bit_block_container.hpp>           // bit_block_container, bit_block_container_type
 #include <xstd/bits/detail/borrowed_bits.hpp>                 // borrow_bits, borrowable_block, borrowable_blocks, borrowed_bits_t
 #include <xstd/bits/detail/comparisons.hpp>                   // numeric_three_way, set_equal, set_three_way
@@ -26,20 +26,21 @@
 #include <xstd/bits/detail/storage_ptr.hpp>                   // storage_ptr_t, storage_ref_t
 #include <xstd/bits/detail/zero_width.hpp>                    // zero_width
 #include <xstd/bits/from_blocks.hpp>                          // from_blocks_t
+#include <xstd/misc/concepts/specialization_of.hpp>           // specialization_of
 #include <xstd/misc/type_traits/empty_base_type.hpp>          // empty_base_type
 #include <boost/container_hash/is_range.hpp>                  // is_range
 #include <boost/hash2/hash_append_fwd.hpp>                    // hash_append_tag
 #include <boost/hash2/xxhash.hpp>                             // xxhash_64
-#include <algorithm>                                          // all_of, find_if, lexicographical_compare_three_way, max, min, partition_point
+#include <algorithm>                                          // all_of, find_if, max, min, partition_point
 #include <cassert>                                            // assert
 #include <compare>                                            // strong_ordering
-#include <concepts>                                           // constructible_from, convertible_to, invocable, same_as, swappable, totally_ordered
+#include <concepts>                                           // constructible_from, convertible_to, equality_comparable, invocable, same_as, swappable, totally_ordered
 #include <cstddef>                                            // ptrdiff_t, size_t
 #include <format>                                             // format, formatter
 #include <functional>                                         // greater, hash, less
 #include <initializer_list>                                   // initializer_list
 #include <iterator>                                           // bidirectional_iterator_tag, input_iterator, iter_reference_t, make_reverse_iterator, reverse_iterator, sentinel_for
-#include <ranges>                                             // begin, enable_borrowed_range, enable_view, end, input_range, iota, range_reference_t, from_range_t, subrange, swap, transform
+#include <ranges>                                             // begin, enable_borrowed_range, enable_view, end, input_range, iota, iota_view, range_reference_t, from_range_t, subrange, swap, transform
 #include <source_location>                                    // source_location
 #include <span>                                               // dynamic_extent
 #include <stdexcept>                                          // out_of_range
@@ -49,27 +50,7 @@
 // The set reading, [set] over a bit_block_container, owning it or referring to it.
 namespace xstd::bits::detail {
 
-// The order a set reading walks its positions in, which is all a comparator can choose.
-enum struct direction : bool
-{
-        ascending,
-        descending,
-};
-
 namespace set {
-
-// The storage answering equality, named so the constrained overload below subsumes the general one.
-template<class Bits>
-concept equality_comparable_storage = requires (Bits const& a, Bits const& b) {
-        { a == b } -> std::convertible_to<bool>;
-};
-
-// A range of consecutive ascending positions, which is what a block-wise fill needs.
-template<class R>
-inline constexpr bool is_consecutive = false;
-
-template<class Value, class Bound>
-inline constexpr bool is_consecutive<std::ranges::iota_view<Value, Bound>> = true;
 
 // One tier each: sharing a body puts the whole over readability-function-cognitive-complexity.
 
@@ -132,12 +113,6 @@ concept admits_width = (not sized_bit_index_mapping<KeyMapping, Key>) or (KeyMap
 template<class Compare, class Key>
 concept key_direction = std::same_as<Compare, std::less<Key>> or std::same_as<Compare, std::less<>> or std::same_as<Compare, std::greater<Key>> or std::same_as<Compare, std::greater<>>;
 
-template<class Compare>
-inline constexpr auto direction_of = std::same_as<Compare, std::greater<>> ? direction::descending : direction::ascending;
-
-template<class Key>
-inline constexpr auto direction_of<std::greater<Key>> = direction::descending;
-
 // A comparator that lets a key of another type in, as [associative.reqmts.general]/180 has it.
 template<class Compare>
 concept transparent = requires { typename Compare::is_transparent; };
@@ -158,7 +133,7 @@ using members_t = adapted_bits<
 
 // The positions an owner can hold where its type fixes them, its width or its capacity, else dynamic_extent.
 template<class Bits, storage Store>
-consteval auto static_max_size() noexcept
+[[nodiscard]] consteval auto static_max_size() noexcept
         -> std::size_t
 {
         using bits_type = std::remove_const_t<Bits>;
@@ -220,7 +195,7 @@ class set_adaptor : public set::sizes_t<Bits, Store, Derived, Key, KeyMapping, C
         static_assert(set::key_direction<Compare, Key>);
 
         static constexpr bool is_owner      = owns(Store);
-        static constexpr bool is_descending = (set::direction_of<Compare> == direction::descending);
+        static constexpr bool is_descending = std::same_as<Compare, std::greater<Key>> or std::same_as<Compare, std::greater<>>;
 
         // An enumerator stands for the one key it is, except where the mapping reads every value as a mask of keys.
         static constexpr bool enumerator_is_one_key = std::is_enum_v<Key> and not bit_mask_mapping<KeyMapping, Key>;
@@ -468,7 +443,7 @@ public:
 
 private:
         // An allocator argument as [container.alloc.reqmts] takes it: converting, and only where the storage has one.
-        static constexpr bool has_allocator = has_allocator_v<std::remove_const_t<Bits>>;
+        static constexpr bool is_allocator_aware = allocator_aware<std::remove_const_t<Bits>>;
 
         using allocator_param = allocator_param_t<std::remove_const_t<Bits>>;
 
@@ -522,17 +497,17 @@ public:
 
         // [set.cons]'s allocator arguments: converting, and offered only where the storage has an allocator.
         [[nodiscard]] constexpr explicit set_adaptor(allocator_param const& alloc) noexcept(std::is_nothrow_constructible_v<Bits, allocator_param const&>)
-                requires is_owner and has_allocator
+                requires is_owner and is_allocator_aware
                 : members_type(std::in_place, alloc)
         {}
 
         [[nodiscard]] constexpr set_adaptor(key_compare const& /* comp */, allocator_param const& alloc) noexcept(std::is_nothrow_constructible_v<Bits, allocator_param const&>)
-                requires is_owner and has_allocator
+                requires is_owner and is_allocator_aware
                 : members_type(std::in_place, alloc)
         {}
 
         template<std::input_iterator I, std::sentinel_for<I> S>
-                requires is_owner and has_allocator and std::constructible_from<value_type, std::iter_reference_t<I>>
+                requires is_owner and is_allocator_aware and std::constructible_from<value_type, std::iter_reference_t<I>>
         [[nodiscard]] constexpr set_adaptor(I first, S last, allocator_param const& alloc)
                 : members_type(std::in_place, alloc)
         {
@@ -540,40 +515,40 @@ public:
         }
 
         template<std::input_iterator I, std::sentinel_for<I> S>
-                requires is_owner and has_allocator and std::constructible_from<value_type, std::iter_reference_t<I>>
+                requires is_owner and is_allocator_aware and std::constructible_from<value_type, std::iter_reference_t<I>>
         [[nodiscard]] constexpr set_adaptor(I first, S last, key_compare const& /* comp */, allocator_param const& alloc)
                 : set_adaptor(first, last, alloc)
         {}
 
         template<std::ranges::input_range R>
-                requires is_owner and has_allocator and std::constructible_from<value_type, std::ranges::range_reference_t<R>>
+                requires is_owner and is_allocator_aware and std::constructible_from<value_type, std::ranges::range_reference_t<R>>
         [[nodiscard]] constexpr set_adaptor(std::from_range_t, R&& rg, allocator_param const& alloc)
                 : set_adaptor(std::ranges::begin(rg), std::ranges::end(rg), alloc)
         {}
 
         template<std::ranges::input_range R>
-                requires is_owner and has_allocator and std::constructible_from<value_type, std::ranges::range_reference_t<R>>
+                requires is_owner and is_allocator_aware and std::constructible_from<value_type, std::ranges::range_reference_t<R>>
         [[nodiscard]] constexpr set_adaptor(std::from_range_t, R&& rg, key_compare const& /* comp */, allocator_param const& alloc)
                 : set_adaptor(std::ranges::begin(rg), std::ranges::end(rg), alloc)
         {}
 
         [[nodiscard]] constexpr set_adaptor(std::initializer_list<value_type> il, allocator_param const& alloc)
-                requires is_owner and has_allocator
+                requires is_owner and is_allocator_aware
                 : set_adaptor(il.begin(), il.end(), alloc)
         {}
 
         [[nodiscard]] constexpr set_adaptor(std::initializer_list<value_type> il, key_compare const& /* comp */, allocator_param const& alloc)
-                requires is_owner and has_allocator
+                requires is_owner and is_allocator_aware
                 : set_adaptor(il.begin(), il.end(), alloc)
         {}
 
         [[nodiscard]] constexpr set_adaptor(set_adaptor const& other, allocator_param const& alloc)
-                requires is_owner and has_allocator
+                requires is_owner and is_allocator_aware
                 : members_type(std::in_place, other.m_bits, alloc)
         {}
 
         [[nodiscard]] constexpr set_adaptor(set_adaptor&& other, allocator_param const& alloc)
-                requires is_owner and has_allocator
+                requires is_owner and is_allocator_aware
                 : members_type(std::in_place, std::move(other.m_bits), alloc)
         {}
 
@@ -584,7 +559,7 @@ public:
         {}
 
         [[nodiscard]] constexpr set_adaptor(xstd::from_blocks_t, bits_type::block_container_type blocks, allocator_param const& alloc)
-                requires is_owner and bits_type::has_stored_size and has_allocator
+                requires is_owner and bits_type::has_stored_size and is_allocator_aware
                 : members_type(std::in_place, xstd::from_blocks, std::move(blocks), alloc)
         {}
 
@@ -628,7 +603,7 @@ public:
         // A static owner's equality is its one member's: every instance carries the same width.
         [[nodiscard]] friend constexpr auto operator==(set_adaptor const& x, set_adaptor const& y) noexcept
                 -> bool
-                requires set::equality_comparable_storage<bits_type> and is_owner and has_static_width
+                requires std::equality_comparable<bits_type> and is_owner and has_static_width
         {
                 return x.bits() == y.bits();
         }
@@ -636,22 +611,19 @@ public:
         // Everything else: the storage's set equality, which answers at any two widths.
         [[nodiscard]] friend constexpr auto operator==(set_adaptor const& x, set_adaptor const& y) noexcept
                 -> bool
-                requires set::equality_comparable_storage<bits_type>
+                requires std::equality_comparable<bits_type>
         {
                 return set_equal(x.bits(), y.bits());
         }
 
-        // The blockwise set ordering where the storage is a bit_block_container, the standard algorithm otherwise.
+        // The blockwise set order; [associative.reqmts]' order over descending keys is the masks' as unsigned numbers.
         [[nodiscard]] friend constexpr auto operator<=>(set_adaptor const& x, set_adaptor const& y) noexcept
                 -> std::strong_ordering
         {
-                if constexpr (is_descending and requires { numeric_three_way(x.bits(), y.bits()); }) {
-                        // [associative.reqmts]' order over descending keys is the masks' as unsigned numbers.
+                if constexpr (is_descending) {
                         return numeric_three_way(x.bits(), y.bits());
-                } else if constexpr (not is_descending and requires { set_three_way(x.bits(), y.bits()); }) {
-                        return set_three_way(x.bits(), y.bits());
                 } else {
-                        return std::lexicographical_compare_three_way(x.begin(), x.end(), y.begin(), y.end());
+                        return set_three_way(x.bits(), y.bits());
                 }
         }
 
@@ -793,13 +765,15 @@ public:
         }
 
         // [set]'s two overloads by value: a key is kept only as its position, so there is nothing to move.
-        constexpr auto insert(this auto&& self, value_type x) -> std::pair<iterator, bool>
+        constexpr auto insert(this auto&& self, value_type x)
+                -> std::pair<iterator, bool>
                 requires requires { self.bits().growing_insert(KeyMapping::to_index(x)); }
         {
                 return self.do_insert(KeyMapping::to_index(x));
         }
 
-        constexpr auto insert(this auto&& self, const_iterator position, value_type x) -> iterator
+        constexpr auto insert(this auto&& self, const_iterator position, value_type x)
+                -> iterator
                 requires requires { self.bits().growing_insert(KeyMapping::to_index(x)); }
         {
                 return self.do_insert(position, KeyMapping::to_index(x));
@@ -826,7 +800,7 @@ public:
                 if constexpr (requires { self |= rg; }) {
                         // Tier one: another set over the same storage, which is a union done block-wise.
                         self |= rg;
-                } else if constexpr (set::is_consecutive<std::remove_cvref_t<R>> and std::same_as<KeyMapping, bit_key_mapping<std::size_t>> and requires (std::size_t pos, std::size_t len) { self.bits().set(pos, len, true); }) {
+                } else if constexpr (xstd::specialization_of<std::remove_cvref_t<R>, std::ranges::iota_view> and std::same_as<KeyMapping, bit_key_mapping<std::size_t>> and requires (std::size_t pos, std::size_t len) { self.bits().set(pos, len, true); }) {
                         // Tier two: consecutive identity keys, the first and last blocks masked, the rest whole.
                         if (not std::ranges::empty(rg)) {
                                 auto const lo  = static_cast<value_type>(*std::ranges::begin(rg));
@@ -957,7 +931,8 @@ public:
         }
 
         // The whole-set complement, at a static width alone: complementing needs a universe, which N is.
-        constexpr auto complement(this auto&& self) noexcept -> void
+        constexpr auto complement(this auto&& self) noexcept
+                -> void
                 requires has_static_width and requires { self.bits().flip(); }
         {
                 self.bits().flip();
@@ -1300,15 +1275,10 @@ public:
                 return erased;
         }
 
-        // The storage's own member where it has one, its bulk operators otherwise.
         [[nodiscard]] constexpr auto is_subset_of(set_adaptor const& other) const noexcept
                 -> bool
         {
-                if constexpr (requires { bits().is_subset_of(other.bits()); }) {
-                        return bits().is_subset_of(other.bits());
-                } else {
-                        return (bits() & ~other.bits()).none();
-                }
+                return bits().is_subset_of(other.bits());
         }
 
         // A subset missing some position of the other's, at any two widths: set_equal, not the width-first ==.
@@ -1335,11 +1305,7 @@ public:
         [[nodiscard]] friend constexpr auto intersects(set_adaptor const& x, set_adaptor const& y) noexcept
                 -> bool
         {
-                if constexpr (requires { intersects(x.bits(), y.bits()); }) {
-                        return intersects(x.bits(), y.bits());
-                } else {
-                        return (x.bits() & y.bits()).any();
-                }
+                return intersects(x.bits(), y.bits());
         }
 
         // Symmetric, as intersects is, so a friend rather than a member: no element of either is the other's.
@@ -1458,7 +1424,7 @@ inline constexpr bool is_set_adaptor<set_adaptor<Bits, Store, Derived, Key, KeyM
 template<class R>
 concept set_reference = is_set_adaptor<typename R::adaptor_type> and std::same_as<R, typename R::adaptor_type::reference>;
 
-// The owner's side of the protocol above.
+// What a set owner wraps, so that a view over it names the same storage and reading.
 template<class Bits, class Derived, class Key, class KeyMapping, class Compare>
 struct owned_storage<set_adaptor<Bits, storage::owned, Derived, Key, KeyMapping, Compare>>
 {
@@ -1488,7 +1454,8 @@ constexpr auto erase_if(set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compa
 
 // The non-member forms copy, so they are the owner's alone: a copied view would write through.
 template<class Bits, storage Store, class Derived, class Key, class KeyMapping, class Compare>
-[[nodiscard]] constexpr auto operator~(set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> const& lhs) noexcept(set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::has_static_width) -> set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::derived_type
+[[nodiscard]] constexpr auto operator~(set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> const& lhs) noexcept(set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::has_static_width)
+        -> set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::derived_type
         requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> c) { c.complement(); }
 {
         auto nrv = static_cast<set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::derived_type const&>(lhs);
@@ -1497,7 +1464,8 @@ template<class Bits, storage Store, class Derived, class Key, class KeyMapping, 
 }
 
 template<class Bits, storage Store, class Derived, class Key, class KeyMapping, class Compare>
-[[nodiscard]] constexpr auto operator&(set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> const& lhs, set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> const& rhs) noexcept(set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::has_static_width) -> set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::derived_type
+[[nodiscard]] constexpr auto operator&(set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> const& lhs, set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> const& rhs) noexcept(set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::has_static_width)
+        -> set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::derived_type
         requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> c) { c &= c; }
 {
         auto nrv = static_cast<set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::derived_type const&>(lhs);
@@ -1506,7 +1474,8 @@ template<class Bits, storage Store, class Derived, class Key, class KeyMapping, 
 }
 
 template<class Bits, storage Store, class Derived, class Key, class KeyMapping, class Compare>
-[[nodiscard]] constexpr auto operator|(set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> const& lhs, set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> const& rhs) noexcept(set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::has_static_width) -> set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::derived_type
+[[nodiscard]] constexpr auto operator|(set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> const& lhs, set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> const& rhs) noexcept(set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::has_static_width)
+        -> set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::derived_type
         requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> c) { c |= c; }
 {
         auto nrv = static_cast<set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::derived_type const&>(lhs);
@@ -1515,7 +1484,8 @@ template<class Bits, storage Store, class Derived, class Key, class KeyMapping, 
 }
 
 template<class Bits, storage Store, class Derived, class Key, class KeyMapping, class Compare>
-[[nodiscard]] constexpr auto operator^(set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> const& lhs, set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> const& rhs) noexcept(set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::has_static_width) -> set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::derived_type
+[[nodiscard]] constexpr auto operator^(set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> const& lhs, set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> const& rhs) noexcept(set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::has_static_width)
+        -> set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::derived_type
         requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> c) { c ^= c; }
 {
         auto nrv = static_cast<set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::derived_type const&>(lhs);
@@ -1524,7 +1494,8 @@ template<class Bits, storage Store, class Derived, class Key, class KeyMapping, 
 }
 
 template<class Bits, storage Store, class Derived, class Key, class KeyMapping, class Compare>
-[[nodiscard]] constexpr auto operator-(set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> const& lhs, set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> const& rhs) noexcept(set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::has_static_width) -> set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::derived_type
+[[nodiscard]] constexpr auto operator-(set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> const& lhs, set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> const& rhs) noexcept(set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::has_static_width)
+        -> set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::derived_type
         requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> c) { c -= c; }
 {
         auto nrv = static_cast<set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::derived_type const&>(lhs);
@@ -1533,7 +1504,8 @@ template<class Bits, storage Store, class Derived, class Key, class KeyMapping, 
 }
 
 template<class Bits, storage Store, class Derived, class Key, class KeyMapping, class Compare>
-[[nodiscard]] constexpr auto operator<<(set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> const& lhs, std::size_t n) noexcept(set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::has_static_width) -> set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::derived_type
+[[nodiscard]] constexpr auto operator<<(set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> const& lhs, std::size_t n) noexcept(set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::has_static_width)
+        -> set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::derived_type
         requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> c) { c <<= n; }
 {
         auto nrv = static_cast<set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::derived_type const&>(lhs);
@@ -1542,7 +1514,8 @@ template<class Bits, storage Store, class Derived, class Key, class KeyMapping, 
 }
 
 template<class Bits, storage Store, class Derived, class Key, class KeyMapping, class Compare>
-[[nodiscard]] constexpr auto operator>>(set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> const& lhs, std::size_t n) noexcept(set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::has_static_width) -> set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::derived_type
+[[nodiscard]] constexpr auto operator>>(set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> const& lhs, std::size_t n) noexcept(set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::has_static_width)
+        -> set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::derived_type
         requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> c) { c >>= n; }
 {
         auto nrv = static_cast<set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::derived_type const&>(lhs);

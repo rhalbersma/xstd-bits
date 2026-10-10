@@ -78,7 +78,7 @@ template<class S>
 concept can_assign_element = requires (S const& s) { s[0] = true; };
 
 // A built-in array of blocks, named once so the storage under test is spelled where the check can be told why.
-using four_words = std::uint64_t[4]; // NOLINT(modernize-avoid-c-arrays): the storage under test
+using four_blocks = std::uint64_t[4]; // NOLINT(modernize-avoid-c-arrays): the storage under test
 
 } // namespace
 
@@ -130,9 +130,9 @@ BOOST_AUTO_TEST_CASE(ARangeThatDoesNotSubscriptIsNotLent)
 // A built-in array is a static width over its blocks, as std::span deduces span<T, N> from T (&)[N].
 BOOST_AUTO_TEST_CASE(ABuiltInArrayIsAStaticWidth)
 {
-        four_words blocks = {0x8000'0000'0000'0001ULL, 0x0ULL, 0xF0ULL, 0x8000'0000'0000'0000ULL};
-        auto const& view  = blocks;
-        auto same         = std::array<std::uint64_t, 4>{0x8000'0000'0000'0001ULL, 0x0ULL, 0xF0ULL, 0x8000'0000'0000'0000ULL};
+        four_blocks blocks = {0x8000'0000'0000'0001ULL, 0x0ULL, 0xF0ULL, 0x8000'0000'0000'0000ULL};
+        auto const& view   = blocks;
+        auto same          = std::array<std::uint64_t, 4>{0x8000'0000'0000'0001ULL, 0x0ULL, 0xF0ULL, 0x8000'0000'0000'0000ULL};
 
         static_assert(std::same_as<decltype(xstd::bit_span(blocks)), xstd::bit_span<std::span<std::uint64_t, 4>>>);
         static_assert(std::same_as<decltype(xstd::bit_set_view(blocks)), xstd::bit_set_view<std::span<std::uint64_t, 4>>>);

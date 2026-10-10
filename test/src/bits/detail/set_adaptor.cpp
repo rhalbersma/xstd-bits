@@ -1120,19 +1120,19 @@ constexpr bool every_owner_takes = fixed_takes<Compare> and bounded_takes<Compar
 template<class Compare>
 constexpr bool no_owner_takes = not fixed_takes<Compare> and not bounded_takes<Compare> and not small_takes<Compare> and not dynamic_takes<Compare>;
 
-// A set's mask as 64-bit words, lowest first, whatever its block.
+// A set's mask as 64-bit blocks, lowest first, whatever its own block.
 template<class Set>
-[[nodiscard]] auto words_of(Set const& s, std::size_t width)
+[[nodiscard]] auto blocks_of_set(Set const& s, std::size_t width)
         -> std::vector<std::uint64_t>
 {
-        auto words = std::vector<std::uint64_t>((width + 63UZ) / 64UZ);
+        auto blocks = std::vector<std::uint64_t>((width + 63UZ) / 64UZ);
         for (std::size_t const k : s) {
-                words[k / 64UZ] |= std::uint64_t{1} << (k % 64UZ);
+                blocks[k / 64UZ] |= std::uint64_t{1} << (k % 64UZ);
         }
-        return words;
+        return blocks;
 }
 
-// The masks as unsigned numbers: the highest word decides first.
+// The masks as unsigned numbers: the highest block decides first.
 [[nodiscard]] auto numeric_order(std::vector<std::uint64_t> const& x, std::vector<std::uint64_t> const& y)
         -> std::strong_ordering
 {
@@ -1258,7 +1258,7 @@ BOOST_AUTO_TEST_CASE(ADescendingOrderIsTheMasksNumericOrder)
                 for (auto const trial : std::views::iota(0UZ, 200UZ)) {
                         auto const x = drawn<Set>(engine, width, 1U + (trial % 3UZ));
                         auto const y = trial % 5UZ == 0UZ ? x : drawn<Set>(engine, width, 1U + (trial % 2UZ));
-                        BOOST_CHECK((x <=> y) == numeric_order(words_of(x, width), words_of(y, width)));
+                        BOOST_CHECK((x <=> y) == numeric_order(blocks_of_set(x, width), blocks_of_set(y, width)));
                         BOOST_CHECK((x <=> y) == std::lexicographical_compare_three_way(x.begin(), x.end(), y.begin(), y.end()));
                 }
         };

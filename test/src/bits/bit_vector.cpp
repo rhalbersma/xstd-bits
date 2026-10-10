@@ -371,7 +371,7 @@ BOOST_AUTO_TEST_CASE(SortingRandomBitsLeavesThemSorted)
         }
 }
 
-// std::vector's guides: the block from the allocator where one is given, the machine word where none is.
+// std::vector's guides: the block from the allocator where one is given, std::size_t where none is.
 BOOST_AUTO_TEST_CASE(ItDeducesAsStdVectorDoes)
 {
         auto const bools = std::vector<bool>{true, false, true, true};

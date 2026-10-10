@@ -7,7 +7,7 @@
 #define XSTD_BITS_BIT_BOUNDED_VECTOR_HPP
 
 #include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp>   // bit_blocks_extent_v
-#include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container
+#include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container, num_blocks_v
 #include <xstd/bits/detail/bounded_blocks.hpp>               // bounded_blocks, bounded_blocks_for
 #include <xstd/bits/detail/ownership.hpp>                    // storage, window
 #include <xstd/bits/detail/rebind.hpp>                       // rebind
@@ -29,9 +29,9 @@ namespace xstd {
 
 // The packed std::inplace_vector<bool, N> that P0843 declined to write, named after the container it packs.
 template<xstd::unsigned_integer Block, std::size_t N>
-class basic_bit_bounded_vector : public bits::detail::sequence_adaptor<bits::detail::bit_block_container<bits::detail::bounded_blocks_for<Block, N>, N>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_bounded_vector<Block, N>>
+class basic_bit_bounded_vector : public bits::detail::sequence_adaptor<bits::detail::bit_block_container<bits::detail::bounded_blocks_for<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_bounded_vector<Block, N>>
 {
-        using base_type = bits::detail::sequence_adaptor<bits::detail::bit_block_container<bits::detail::bounded_blocks_for<Block, N>, N>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_bounded_vector<Block, N>>;
+        using base_type = bits::detail::sequence_adaptor<bits::detail::bit_block_container<bits::detail::bounded_blocks_for<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_bounded_vector<Block, N>>;
 
 public:
         using typename base_type::block_container_type;
