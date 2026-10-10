@@ -14,19 +14,20 @@
 #include <xstd/bits/from_blocks.hpp>                  // from_blocks
 #include <xstd/ints/memory.hpp>                       // align_up
 #include <boost/test/unit_test.hpp>                   // BOOST_CHECK_EQUAL, BOOST_CHECK_LE, BOOST_CHECK_LT, BOOST_CHECK_THROW, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
-#include <algorithm>                                  // count, lexicographical_compare_three_way, min, reverse
+#include <algorithm>                                  // all_of, any_of, count, lexicographical_compare_three_way, min, reverse
 #include <array>                                      // array
 #include <bitset>                                     // bitset
 #include <compare>                                    // strong_ordering
 #include <concepts>                                   // same_as
 #include <cstddef>                                    // ptrdiff_t, size_t
 #include <cstdint>                                    // uint8_t, uint64_t
+#include <functional>                                 // identity
 #include <initializer_list>                           // initializer_list
 #include <limits>                                     // numeric_limits
 #include <memory>                                     // addressof, allocator
 #include <version>                                    // IWYU pragma: keep; __cpp_lib_ranges_as_const
 #include <new>                                        // bad_alloc
-#include <ranges>                                     // begin, iota, range_const_reference_t, size
+#include <ranges>                                     // begin, iota, range_const_reference_t, size, transform
 #include <span>                                       // dynamic_extent
 #include <stdexcept>                                  // length_error
 #include <tuple>                                      // get, tuple
@@ -1488,6 +1489,12 @@ auto check_ranged_forms(std::size_t n, std::size_t len)
 {
         auto e = block_at_sample<T>();
         auto r = reference(e);
+
+        // The ranged queries first, over the sample's own pattern, against the model's slice of it.
+        auto const slice = std::views::iota(n, n + len) | std::views::transform([&](std::size_t i) -> bool { return r[i]; });
+        BOOST_CHECK_EQUAL(e.count(n, len), static_cast<std::size_t>(std::ranges::count(slice, true)));
+        BOOST_CHECK_EQUAL(e.any(n, len), std::ranges::any_of(slice, std::identity()));
+        BOOST_CHECK_EQUAL(e.all(n, len), std::ranges::all_of(slice, std::identity()));
 
         e.set(n, len, true);
         for (auto const i : std::views::iota(n, n + len)) {
