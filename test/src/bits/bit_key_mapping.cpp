@@ -6,6 +6,7 @@
 #include <test/block_types.hpp>                               // all_block_types
 #include <test/set/enums.hpp>                                 // day, letter, level, listed_enums, nine, perm, piece, sign, undeclared, wind
 #include <test/set/lookup.hpp>                                // lookup_mismatches
+#include <test/set/order_isomorphism.hpp>                     // is_order_isomorphism, is_order_isomorphism_onto
 #include <test/set/strong_index.hpp>                          // offset_mapping, strong_index
 #include <xstd/bits/bit_concepts/bit_index_mapping.hpp>       // bit_index_mapping
 #include <xstd/bits/bit_concepts/sized_bit_index_mapping.hpp> // sized_bit_index_mapping
@@ -425,6 +426,30 @@ BOOST_AUTO_TEST_CASE(AValueOutsideTheUniverseIsNoElement)
         BOOST_CHECK(s.lower_bound(-4) == s.begin() and s.upper_bound(-100) == s.begin());
         BOOST_CHECK(s.lower_bound(5) == s.end() and not s.contains(-4));
         BOOST_CHECK(s.find(5) == s.end()); // NOLINT(readability-container-contains): find is the member under test
+}
+
+// Every mapping here is an order isomorphism from its keys onto its first positions, which makes its sets std::sets.
+BOOST_AUTO_TEST_CASE(EveryMappingIsAnOrderIsomorphismOntoItsPositions)
+{
+        using test::set::is_order_isomorphism;
+        static_assert(test::set::is_order_isomorphism_onto<identity, std::size_t>(256UZ));
+        static_assert(test::set::is_order_isomorphism_onto<xstd::bit_key_mapping<std::uint8_t>, std::uint8_t>(256UZ));
+        static_assert(is_order_isomorphism<around_zero, int>());
+        static_assert(is_order_isomorphism<xstd::bit_range_mapping<storey, storey::basement, 8UZ>, storey>());
+        static_assert(is_order_isomorphism<xstd::bit_range_mapping<channel, channel::first, 8UZ>, channel>());
+        static_assert(is_order_isomorphism<xstd::bit_find_mapping<int, ids>, int>());
+        static_assert(is_order_isomorphism<test::set::offset_mapping<10UZ, 5UZ>, test::set::strong_index>());
+        static_assert([]<class... Enum>(std::tuple<Enum...> const*) -> bool { return (... and is_order_isomorphism<xstd::bit_key_mapping<Enum>, Enum>()); }(static_cast<test::set::listed_enums const*>(nullptr)));
+        BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
+}
+
+// A range from the lowest key and one from the middle, over every key type a range takes.
+BOOST_AUTO_TEST_CASE_TEMPLATE(EveryRangeIsAnOrderIsomorphismOntoItsPositions, Key, range_keys)
+{
+        constexpr auto lowest = std::numeric_limits<Key>::min();
+        static_assert(test::set::is_order_isomorphism<xstd::bit_range_mapping<Key, lowest, 100UZ>, Key>());
+        static_assert(test::set::is_order_isomorphism<xstd::bit_range_mapping<Key, Key(std::numeric_limits<Key>::is_signed ? -50 : 20), 100UZ>, Key>());
+        BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 
 BOOST_AUTO_TEST_SUITE_END()
