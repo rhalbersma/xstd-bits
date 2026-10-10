@@ -16,6 +16,7 @@ namespace xstd {
 template<class Mapping, class Key>
 concept sized_bit_index_mapping = bit_index_mapping<Mapping, Key> and requires (Key key) {
         { Mapping::size } -> std::convertible_to<std::size_t>;
+        // A size does not make every value in range a key: a list of keys with gaps leaves values between them.
         { Mapping::is_key(key) } -> std::same_as<bool>;
 };
 
