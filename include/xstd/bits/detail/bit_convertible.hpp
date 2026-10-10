@@ -11,7 +11,9 @@
 #include <xstd/bits/detail/bit_layout.hpp>                   // bit_bytes, bit_layout, byte_count, bytes_bits, copy_bits
 #include <xstd/bits/detail/bit_width.hpp>                    // bit_width_v
 #include <xstd/bits/detail/ownership.hpp>                    // owned_bits_t, owner, reads, set_reading_tag, storage_access, view
+#include <xstd/bits/detail/shift.hpp>                        // partial_block_mask, shl
 #include <xstd/bits/from_blocks.hpp>                         // from_blocks
+#include <xstd/ints/limits.hpp>                              // numeric_limits
 #include <algorithm>                                         // min
 #include <array>                                             // array
 #include <bit>                                               // popcount
@@ -20,7 +22,7 @@
 #include <new>                                               // bad_alloc
 #include <span>                                              // dynamic_extent, span
 #include <stdexcept>                                         // overflow_error
-#include <type_traits>                                       // is_array_v, is_const_v, is_rvalue_reference_v, remove_cvref_t, remove_reference_t
+#include <type_traits>                                       // is_array_v, is_const_v, is_integral_v, is_rvalue_reference_v, remove_cvref_t, remove_reference_t
 #include <utility>                                           // declval, forward
 
 // What xstd::bit_convert asks of its two ends, and the copy between them: position i to position i, at any widths.
@@ -78,9 +80,13 @@ template<fixed_target To>
 template<class T>
 struct bit_source;
 
+// A view that starts inside its storage, at an offset and a size of its own.
+template<class T>
+concept windowed_view = view<T> and requires { requires T::is_windowed; };
+
 // A whole view of a run-time width: its storage from position zero, which is its owner's, read as that owner reads it.
 template<class T>
-concept run_time_view = view<T> and (not fixed_width<T>) and (not requires { requires T::is_windowed; });
+concept run_time_view = view<T> and (not fixed_width<T>) and (not windowed_view<T>);
 
 // Owners and whole views, of either reading: a sequence's width is its size, a set's its whole blocks, capped.
 template<class T>
@@ -147,6 +153,52 @@ struct bit_source<T>
                 -> void
         {
                 copy_bits(blocks(from), dst);
+        }
+};
+
+// A block as another block type, through unsigned where it would promote to int and choose a signed constructor.
+template<class U, class Block>
+[[nodiscard]] constexpr auto as_block(Block b) noexcept
+        -> U
+{
+        if constexpr (std::is_integral_v<Block> and sizeof(Block) < sizeof(unsigned)) {
+                return static_cast<U>(static_cast<unsigned>(b));
+        } else {
+                return static_cast<U>(b);
+        }
+}
+
+// A window, read a block at a time from its offset, so that position zero of the copy is its first position.
+template<windowed_view T>
+struct bit_source<T>
+{
+        [[nodiscard]] static constexpr auto width(T const& from) noexcept
+                -> std::size_t
+        {
+                return from.size();
+        }
+
+        [[nodiscard]] static constexpr auto count(T const& from) noexcept
+                -> std::size_t
+        {
+                return from.count();
+        }
+
+        // Steps of the narrower block, so that each one lands inside a single target block.
+        template<class U>
+        static constexpr auto copy(T const& from, std::span<U> dst) noexcept
+                -> void
+        {
+                auto const& bits         = storage_access::bits(from);
+                using block_type         = std::remove_cvref_t<decltype(bits)>::block_type;
+                constexpr auto to_digits = static_cast<std::size_t>(xstd::numeric_limits<U>::digits);
+                constexpr auto step      = std::ranges::min(std::remove_cvref_t<decltype(bits)>::bits_per_block, to_digits);
+                auto const n             = std::ranges::min(from.size(), std::size(dst) * to_digits);
+                for (auto p = 0UZ; p < n; p += step) {
+                        auto const chunk = static_cast<block_type>(bits.block_at(storage_access::offset(from) + p) & partial_block_mask<block_type>(std::ranges::min(step, n - p)));
+                        auto& block      = dst[p / to_digits];
+                        block            = static_cast<U>(block | shl(as_block<U>(chunk), p % to_digits));
+                }
         }
 };
 

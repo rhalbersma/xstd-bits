@@ -31,7 +31,7 @@
 #include <cstdint>                                       // uint8_t, uint16_t, uint32_t, uint64_t
 #include <limits>                                        // numeric_limits
 #include <new>                                           // bad_alloc
-#include <ranges>                                        // filter, iota, to
+#include <ranges>                                        // filter, iota, to, transform
 #include <span>                                          // dynamic_extent
 #include <stdexcept>                                     // overflow_error
 #include <tuple>                                         // tuple
@@ -316,6 +316,31 @@ BOOST_AUTO_TEST_CASE(AWholeViewOfARunTimeWidthConvertsAsItsOwner)
         // A view has nothing to extract, so an rvalue one is copied from and its owner keeps every block.
         BOOST_CHECK_EQUAL(xstd::bit_convert<xstd::bit_set>(xstd::bit_set_view(s)).size(), 3UZ);
         BOOST_CHECK_EQUAL(s.size(), 3UZ);
+}
+
+// A window converts from its own first position, at any offset into blocks of any width, into any block width.
+BOOST_AUTO_TEST_CASE(AWindowConvertsFromItsFirstPosition)
+{
+        auto v = make<xstd::basic_bit_vector<std::uint8_t>>(200, {3, 7, 64, 65, 100, 131, 199});
+        for (auto const offset : {0UZ, 1UZ, 7UZ, 8UZ, 63UZ, 64UZ, 65UZ}) {
+                for (auto const length : {0UZ, 1UZ, 9UZ, 64UZ, 65UZ, 135UZ}) {
+                        auto const window = xstd::bit_span(v).subspan(offset, length);
+                        auto const expect = std::views::iota(offset, offset + length) | std::views::filter([&](std::size_t i) -> bool { return v[i]; }) | std::views::transform([&](std::size_t i) -> std::size_t { return i - offset; }) | std::ranges::to<std::vector>();
+                        BOOST_CHECK(positions(xstd::bit_convert<xstd::bit_vector>(window)) == expect);
+                        BOOST_CHECK(positions(xstd::bit_convert<xstd::basic_bit_vector<std::uint16_t>>(window)) == expect);
+                        BOOST_CHECK(positions(xstd::bit_convert<xstd::bit_set>(window)) == expect);
+                        BOOST_CHECK_EQUAL(xstd::bit_convert<xstd::bit_vector>(window).size(), length);
+                }
+        }
+
+        // Into a fixed width: what fits crosses, and a position past it throws as from any run-time width.
+        auto const window = xstd::bit_span(v).subspan(3UZ, 62UZ);
+        BOOST_CHECK(positions(xstd::bit_convert<xstd::bit_array<62>>(window)) == (std::vector<std::size_t>{0, 4, 61}));
+        BOOST_CHECK_THROW(static_cast<void>(xstd::bit_convert<xstd::bit_array<8>>(window)), std::overflow_error);
+        static_assert([] -> bool {
+                auto const wide = xstd::basic_bit_array<std::uint8_t, 16>(xstd::from_blocks, std::array<std::uint8_t, 2>{0x00, 0x05});
+                return xstd::bit_convert<xstd::basic_bit_array<std::uint8_t, 4>>(xstd::bit_span(wide).subspan(8UZ, 4UZ)) == xstd::basic_bit_array<std::uint8_t, 4>(xstd::from_blocks, std::array<std::uint8_t, 1>{0x05});
+        }());
 }
 
 // The same blocks from an rvalue move over whole: the buffer is the one the source had, and the source is left empty.

@@ -554,8 +554,9 @@ the set reading has no need of. A `bit_subspan` is a *window*: a bit offset and 
 does not span, so its position zero is not the storage's and its bytes are not the storage's bytes. Asking
 `has_static_width` alone would wave it through, because a window over a static container reports that
 *container's* extent rather than its own size, and `to_bytes` would then hand back the wrong bits. So
-`bit_convert` reads a view only where it is not windowed (`bit_width_of` asks a `view` for `is_windowed`). A `bit_span`, which
-is not a window, spans the whole container and converts like an owner.
+`bit_convert` reads a window as a run-time width of its own (`bit_width_of` asks a `view` for `is_windowed`),
+a block at a time from its offset through `block_at`, so that its first position is position zero of the copy. A
+`bit_span`, which is not a window, spans the whole container and converts like an owner.
 
 Two block widths over the same `N` are two spellings of one field of bits, so they cross on this rule with
 neither side named: `basic_bit_array<uint8_t, 64>` converts to and from `basic_bit_array<uint64_t, 64>` because the
@@ -5068,12 +5069,13 @@ The vocabulary is the thing to read twice at this reading: `bit_array<32>(xstd::
 array of bool — true, false, true, then twenty-nine more false — and not the set `{0, 2}` that the
 same bits spell one reading over.
 
-**Not on a window**, which is the whole of why `is_window` is asked. A window is a bit offset and a
-size of its own into storage it does not span: its position zero is not the storage's, so its bytes
-are not the storage's bytes and `bit_convert` would hand back the wrong ones. A width test does not catch
-it, since a window over a static container reports the *container's* extent rather than its own size, so
-`bit_convert` asks `is_windowed`. A view that is not a window spans the whole container, so its bytes
-are that container's and it converts.
+**Not through the storage's bytes on a window**, which is the whole of why `is_window` is asked. A window
+is a bit offset and a size of its own into storage it does not span: its position zero is not the
+storage's, so its bytes are not the storage's bytes and reading them would hand back the wrong ones. A width
+test does not catch it, since a window over a static container reports the *container's* extent rather than
+its own size, so `bit_convert` asks `is_windowed` and reads a window from its offset, a block at a time,
+as a run-time width. A view that is not a window spans the whole container, so its bytes are that
+container's and it converts through them.
 
 ### Two places where the coverage gate decides the layout
 

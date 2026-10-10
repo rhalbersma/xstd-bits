@@ -7,6 +7,7 @@
 #define XSTD_BITS_DETAIL_OWNERSHIP_HPP
 
 #include <concepts>    // derived_from, same_as
+#include <cstddef>     // size_t
 #include <type_traits> // conditional_t, is_const_v, remove_const_t
 
 namespace xstd::bits::detail {
@@ -75,6 +76,14 @@ struct storage_access
                 -> auto&
         {
                 return static_cast<Reading::adaptor_type&>(r).bits();
+        }
+
+        // Where a window's position zero sits in that storage.
+        template<class Reading>
+        [[nodiscard]] static constexpr auto offset(Reading const& r) noexcept
+                -> std::size_t
+        {
+                return static_cast<Reading::adaptor_type const&>(r).offset();
         }
 };
 
