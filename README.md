@@ -56,7 +56,41 @@ value and throws `std::overflow_error` for a position the target cannot hold, an
 small or dynamic owner, which adopts the blocks outright from an rvalue holding the same container. Because
 positions are kept, a `std::bitset`'s `to_string()` reads reversed against its positions.
 
-xstd-bits is **six containers**: two readings of a block of bits — an ordered set of `std::size_t` and a sequence of `bool` — over three storages, which differ in whether size and capacity are static or dynamic: both static, a dynamic size within a static capacity, and both dynamic.
+xstd-bits is **eight containers**: two readings of a block of bits — an ordered set of `std::size_t` and a sequence of `bool` — over four storages, which differ in whether size and capacity are static or dynamic: both static, a dynamic size within a static capacity, a dynamic size kept inline up to a static capacity and on the heap past it, and both dynamic. Three views give either reading of bits that something else owns.
+
+### Which one do I want?
+
+`std::bitset` is a Swiss Army knife: one tool that does everything passably. xstd-bits is a set of chef's knives instead, each shaped for one job and all forged from the same block storage, so the choice is made once, where the variable is declared. Three questions make it.
+
+**1. Do you ask *which* positions hold, or *what* each position holds?** Membership, keys, flags and iterating over what is present are the **set** reading, which speaks `std::set`. Indexing, a `bool` at each place, and rotating or reversing a row are the **sequence** reading, which speaks `std::vector<bool>`.
+
+**2. How is the width known?** And **3. Do you own the bits?**
+
+| the width is…                                     | set                     | sequence                             |
+| :------------------------------------------------ | :---------------------- | :----------------------------------- |
+| fixed at compile time                             | `bit_fixed_set<N>`      | `bit_array<N>`                       |
+| at most `N`, never more                           | `bit_bounded_set<N>`    | `bit_bounded_vector<N>`              |
+| usually at most `N`, inline; more on the heap     | `bit_small_set<N>`      | `bit_small_vector<N>`                |
+| known only at run time                            | `bit_set`               | `bit_vector`                         |
+| whatever bits someone else owns                   | `bit_set_view`          | `bit_span`, and `bit_subspan` for a part of it |
+
+Three specializations of the fixed set cover the keys a set most often holds:
+
+- the enumerators of an enumeration, `bit_enum_set<Enum>`;
+- the one-bit values of a bitmask type, such as `std::filesystem::perms`, `bit_flag_set<Mask, N>`, which converts to and from the mask so existing code keeps its constants;
+- a key type of your own, through a `bit_key_mapping` and the `basic_` forms.
+
+The block is a separate and later choice. Every name above holds `std::size_t` blocks. `bit_least<X>` and `bit_fast<X>` take the smallest and the fastest block that holds the width, and `bit_align<X>` rounds the width up to whole blocks; `bit_rebind<Block, X>` names any block outright.
+
+**Coming from `std::bitset<N>`**, ask what the code does with it:
+
+| it is used for…                                                          | use                                                    |
+| :----------------------------------------------------------------------- | :----------------------------------------------------- |
+| flags or membership: `set`, `reset`, `test`, `count`, `any`, `&`, `\|`, `<<` | `bit_fixed_set<N>`, which also iterates over what is set |
+| the one-bit values of an enumeration or integer mask                     | `bit_flag_set<Mask, N>`                                |
+| a row of `bool`: `operator[]` by index, `flip`, comparing as a sequence   | `bit_array<N>`                                         |
+| `to_ulong`, `to_ullong` and the `unsigned long long` constructor         | `from_blocks` from a word, and `xstd::bit_convert<Word>(x)` into one as wide as `N`; `bit_align<bit_least<X>>` rounds `N` up to such a word |
+| a `std::bitset` at an API you do not control                             | `xstd::bit_convert` both ways, as a set or as a sequence |
 
 ### Each one is the packing of a standard container, and speaks that container's vocabulary
 
