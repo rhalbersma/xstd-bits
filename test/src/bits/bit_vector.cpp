@@ -44,6 +44,9 @@ template<class X>
 constexpr bool can_flip = requires (X x) { x.flip(); };
 
 template<class X>
+constexpr bool has_static_swap = requires (X x) { X::swap(x[0], x[0]); };
+
+template<class X>
 constexpr bool can_permute = requires (X x) { xstd::bit_rotate(x, x.begin()); xstd::bit_reverse(x); };
 
 template<class X>
@@ -291,7 +294,7 @@ BOOST_AUTO_TEST_CASE(TheProxiesSwapAndNothingFlips)
         m[0]          = static_cast<bool>(m[1]);
         m[1]          = m0;
         BOOST_CHECK(std::ranges::equal(v, m));
-        static_assert(not requires { T::swap(v[0], v[1]); });
+        static_assert(not has_static_swap<T>);
         static_assert(not can_flip<T>);
         static_assert(not can_flip<decltype(xstd::bit_span(v))>);
         static_assert(not can_flip<decltype(xstd::bit_span(v).first(2))>);

@@ -146,9 +146,9 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(EveryTypeAnswersItsRow, Block, matrix_block_types)
         check_row<Block, set>("bit_set", "1111111..11111111.1");
 
         // Valarrays: elementwise operators with their own type alone, and comparisons answering arrays, so not regular.
-        check_row<Block, xstd::basic_bit_fixed_valarray<Block, N>>("bit_fixed_valarray", "11.1111...1.....111");
-        check_row<Block, xstd::basic_bit_bounded_valarray<Block, N>>("bit_bounded_valarray", "11.1111...1.....111");
-        check_row<Block, xstd::basic_bit_valarray<Block>>("bit_valarray", "11.111....1.....111");
+        check_row<Block, xstd::basic_bit_fixed_valarray<Block, N>>("bit_fixed_valarray", "11.11111..1.....111");
+        check_row<Block, xstd::basic_bit_bounded_valarray<Block, N>>("bit_bounded_valarray", "11.11111..1.....111");
+        check_row<Block, xstd::basic_bit_valarray<Block>>("bit_valarray", "11.1111...1.....111");
 
         // Sequence views: read out by bit_convert, combined and compared never, as span.
         using span = decltype(xstd::bit_span(std::declval<array&>()));
