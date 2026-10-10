@@ -64,9 +64,10 @@ using owned_bits_t = std::conditional_t<std::is_const_v<Owner>, typename owned_s
 // The storage under a reading, for the library's free functions: both adaptors befriend this, and nothing else does.
 struct storage_access
 {
+        // Const where the bits are an owner's; a const view's bits stay writable, as a const span's elements do.
         template<class Reading>
         [[nodiscard]] static constexpr auto bits(Reading const& r) noexcept
-                -> auto const&
+                -> auto&&
         {
                 return static_cast<Reading::adaptor_type const&>(r).bits();
         }

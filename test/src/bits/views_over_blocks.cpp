@@ -3,6 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <xstd/bits/algorithm.hpp>    // bit_all_of, bit_count, bit_none_of
 #include <xstd/bits/bit_set_view.hpp> // bit_set_view
 #include <xstd/bits/bit_span.hpp>     // bit_span
 #include <xstd/bits/bit_subspan.hpp>  // bit_subspan
@@ -62,7 +63,7 @@ template<class W, class R>
                         from_sequence.push_back(n);
                 }
         }
-        return forward == expected and backward == expected and from_sequence == expected and set.size() == expected.size() and seq.count() == expected.size();
+        return forward == expected and backward == expected and from_sequence == expected and set.size() == expected.size() and static_cast<std::size_t>(xstd::bit_count(seq)) == expected.size();
 }
 
 template<class W>
@@ -116,7 +117,7 @@ BOOST_AUTO_TEST_CASE(AnArrayOfBlocksIsAStaticWidth)
 
         xstd::bit_span(four).fill(true);
         BOOST_CHECK(std::ranges::equal(four, std::array<std::uint32_t, 4>{~0U, ~0U, ~0U, ~0U}));
-        BOOST_CHECK(xstd::bit_span(four).all());
+        BOOST_CHECK(xstd::bit_all_of(xstd::bit_span(four)));
 }
 
 // A contiguous range of blocks that does not subscript is no bit storage, so no view lends it.
@@ -198,8 +199,8 @@ BOOST_AUTO_TEST_CASE(NoBlocksIsWidthZero)
         BOOST_CHECK(xstd::bit_set_view(blocks).empty());
         BOOST_CHECK(xstd::bit_set_view(blocks).begin() == xstd::bit_set_view(blocks).end());
         BOOST_CHECK(xstd::bit_span(blocks).empty());
-        BOOST_CHECK(xstd::bit_span(blocks).all());
-        BOOST_CHECK(xstd::bit_span(blocks).none());
+        BOOST_CHECK(xstd::bit_all_of(xstd::bit_span(blocks)));
+        BOOST_CHECK(xstd::bit_none_of(xstd::bit_span(blocks)));
 }
 
 // A view over const blocks reads them and cannot write, and one over the same blocks unqualified sees what it writes.

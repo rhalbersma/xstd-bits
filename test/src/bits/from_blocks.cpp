@@ -4,6 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/uint128.hpp>                                  // IWYU pragma: keep; TEST_HAS_UINT128, uint128
+#include <xstd/bits/algorithm/bit_count.hpp>                 // bit_count
 #include <xstd/bits/bit/bit_convert.hpp>                     // bit_convert
 #include <xstd/bits/bit_array.hpp>                           // basic_bit_array, bit_array
 #include <xstd/bits/bit_concepts/bit_constructible_from.hpp> // bit_constructible_from
@@ -76,7 +77,7 @@ BOOST_AUTO_TEST_CASE(AnArrayOfBlocksDeducesTheirWidth)
 
         constexpr auto a = xstd::basic_bit_array(xstd::from_blocks, blocks);
         static_assert(std::same_as<decltype(a), xstd::basic_bit_array<std::uint8_t, 24> const>);
-        static_assert(a[0] and a[23] and a.count() == 2UZ);
+        static_assert(a[0] and a[23] and xstd::bit_count(a) == 2);
 
         constexpr auto s = xstd::basic_bit_fixed_set(xstd::from_blocks, blocks);
         static_assert(std::same_as<decltype(s), xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 24> const>);
@@ -136,7 +137,7 @@ BOOST_AUTO_TEST_CASE(OnlyAnUnsignedIntegerOrItsArrayDeduces)
         static_assert(deduces_from_blocks_of<xstd::uint128>);
         constexpr auto wide = xstd::basic_bit_array(xstd::from_blocks, xstd::uint128{1} << 100U);
         static_assert(std::same_as<decltype(wide), xstd::basic_bit_array<xstd::uint128, 128> const>);
-        static_assert(wide[100] and wide.count() == 1UZ);
+        static_assert(wide[100] and xstd::bit_count(wide) == 1);
 
 #endif
         BOOST_CHECK(true);
