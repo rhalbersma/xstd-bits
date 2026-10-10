@@ -4,6 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/set/lookup.hpp>                                // lookup_mismatches
+#include <test/set/order_isomorphism.hpp>                     // is_order_isomorphism
 #include <xstd/bits/bit_concepts/bit_mask_mapping.hpp>        // bit_mask_mapping
 #include <xstd/bits/bit_concepts/sized_bit_index_mapping.hpp> // sized_bit_index_mapping
 #include <xstd/bits/bit_fixed_set.hpp>                        // basic_bit_fixed_set
@@ -253,6 +254,17 @@ BOOST_AUTO_TEST_CASE(AnIntegerRanksAtItsBitsPositionBelowItsSignBit)
         BOOST_CHECK_EQUAL((integer_mismatches<std::uint8_t, 5UZ>()), 0UZ);
         BOOST_CHECK_EQUAL((integer_mismatches<std::int8_t, 7UZ>()), 0UZ);
         BOOST_CHECK(not xstd::bit_flag_mapping<int>::is_key(std::numeric_limits<int>::min()) and not xstd::bit_flag_mapping<int>::is_key(-1));
+}
+
+// One-bit values below N, in the order of their bits: an order isomorphism onto the positions, as a std::set needs.
+BOOST_AUTO_TEST_CASE(AFlagMappingIsAnOrderIsomorphismOntoItsPositions)
+{
+        static_assert(test::set::is_order_isomorphism<xstd::bit_flag_mapping<mode>, mode>());
+        static_assert(test::set::is_order_isomorphism<xstd::bit_flag_mapping<mode, 6UZ>, mode>());
+        static_assert(test::set::is_order_isomorphism<xstd::bit_flag_mapping<std::uint16_t>, std::uint16_t>());
+        static_assert(test::set::is_order_isomorphism<xstd::bit_flag_mapping<std::int8_t>, std::int8_t>());
+        static_assert(test::set::is_order_isomorphism<xstd::bit_flag_mapping<std::bitset<16>>, std::bitset<16>>());
+        BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 
 BOOST_AUTO_TEST_SUITE_END()
