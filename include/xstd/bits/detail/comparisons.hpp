@@ -13,7 +13,7 @@
 #include <xstd/bits/detail/shift.hpp>               // shl
 #include <algorithm>                                // equal, max, min
 #include <compare>                                  // strong_ordering
-#include <concepts>                                 // same_as
+#include <concepts>                                 // equality_comparable, same_as
 #include <cstddef>                                  // ptrdiff_t, size_t
 #include <ranges>                                   // begin
 
@@ -25,9 +25,12 @@ template<bit_block_container_type Bits>
 [[nodiscard]] constexpr auto set_equal(Bits const& x, Bits const& y) noexcept
         -> bool
 {
-        if constexpr (Bits::has_static_size) {
+        if constexpr (Bits::has_static_size and std::equality_comparable<Bits>) {
                 // One width, so holding the same positions and being equal are the same statement.
                 return x == y;
+        } else if constexpr (Bits::has_static_size) {
+                // Blocks lent by span, which has no equality of its own: compared a block at a time instead.
+                return std::ranges::equal(x.blocks(), y.blocks());
         } else {
                 // ranges::equal over the shared prefix as an iterator pair, which lowers to a memcmp.
                 auto const shared = static_cast<std::ptrdiff_t>(std::ranges::min(x.num_blocks(), y.num_blocks()));

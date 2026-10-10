@@ -16,7 +16,7 @@
 #include <array>                                    // array
 #include <concepts>                                 // constructible_from, convertible_to, derived_from, equality_comparable, same_as, totally_ordered
 #include <cstddef>                                  // size_t
-#include <cstdint>                                  // uint8_t
+#include <cstdint>                                  // uint64_t, uint8_t
 #include <ranges>                                   // iota
 #include <utility>                                  // as_const, declval
 #include <vector>                                   // vector
@@ -94,6 +94,28 @@ BOOST_AUTO_TEST_CASE(TheViewNeitherComparesNorOrders)
 {
         static_assert(not std::equality_comparable<view_of<Storage>>);
         static_assert(not std::totally_ordered<view_of<Storage>>);
+}
+
+// As std::span, a view of mutable bits is implicitly one of const bits, and a window keeps span's rule between extents.
+BOOST_AUTO_TEST_CASE(AViewOfMutableBitsIsAViewOfConstBits)
+{
+        static_assert(std::convertible_to<xstd::bit_span<Blocks, 8>, xstd::bit_span<Blocks const, 8>>);
+        static_assert(not std::convertible_to<xstd::bit_span<Blocks const, 8>, xstd::bit_span<Blocks, 8>>);
+        static_assert(std::convertible_to<view_of<std::uint64_t>, view_of<std::uint64_t const>>);
+
+        using window              = decltype(std::declval<xstd::bit_span<Blocks, 8>&>().subspan(0UZ, 4UZ));
+        using const_window        = decltype(std::declval<xstd::bit_span<Blocks const, 8>&>().subspan(0UZ, 4UZ));
+        using static_window       = decltype(std::declval<xstd::bit_span<Blocks, 8>&>().subspan<0, 4>());
+        using const_static_window = decltype(std::declval<xstd::bit_span<Blocks const, 8>&>().subspan<0, 4>());
+        static_assert(std::convertible_to<window, const_window> and not std::convertible_to<const_window, window>);
+        static_assert(std::convertible_to<static_window, const_static_window> and std::convertible_to<static_window, const_window>);
+        static_assert(std::constructible_from<const_static_window, window> and not std::convertible_to<window, const_static_window>);
+
+        auto a                                  = xstd::bit_array<8>();
+        a[3]                                    = true;
+        xstd::bit_span<Blocks const, 8> const c = xstd::bit_span(a);
+        const_window const w                    = xstd::bit_span(a).subspan(2UZ, 4UZ);
+        BOOST_CHECK(c[3] and w[1]);
 }
 
 // A view combines with any source of its block type, an owner or another view, where an owner takes only its own type.

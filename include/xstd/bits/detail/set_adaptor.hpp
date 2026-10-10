@@ -595,6 +595,13 @@ public:
                 : members_type(std::in_place, &c.m_bits)
         {}
 
+        // span's qualification conversion: a view of mutable bits is implicitly a view of the same bits as const.
+        template<class OtherDerived>
+                requires (not is_owner) and std::is_const_v<Bits>
+        [[nodiscard]] constexpr explicit(false) set_adaptor(set_adaptor<std::remove_const_t<Bits>, Store, OtherDerived, Key, KeyMapping, Compare> const& other) noexcept // NOLINT(misc-explicit-constructor)
+                : set_adaptor(other.bits())
+        {}
+
         // NOLINTNEXTLINE(misc-unconventional-assign-operator): the container is what [set] and [vector] return here.
         constexpr auto operator=(std::initializer_list<value_type> il)
                 -> derived_type&
@@ -613,10 +620,10 @@ public:
                 return x.bits() == y.bits();
         }
 
-        // Everything else: the storage's set equality, which answers at any two widths.
+        // Everything else: the storage's set equality, which answers at any two widths and over lent blocks.
         [[nodiscard]] friend constexpr auto operator==(set_adaptor const& x, set_adaptor const& y) noexcept
                 -> bool
-                requires std::equality_comparable<bits_type>
+                requires (not(is_owner and has_static_width))
         {
                 return set_equal(x.bits(), y.bits());
         }

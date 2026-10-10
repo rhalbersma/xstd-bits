@@ -1793,7 +1793,10 @@ it, and a view over a `bit_block_container` over `std::vector` must not be able 
 ### views-follow-their-precedent
 
 `bit_set_view` follows `std::string_view`: a value that happens not to own its bytes, so it has `==` and
-`<=>`, and its ordering is exactly `std::set`'s. `bit_span` follows `std::span`, which P1085 stripped of both
+`<=>`, and its ordering is exactly `std::set`'s. As [string.view.comparison] asks, it compares with whatever
+converts to it: its owner, and a view of the same bits that are not const, since both views convert from
+mutable to const bits as `std::span` does. Those are the only mixed comparisons; two owners compare only within
+their own type, as `std::array` and `std::vector` do. `bit_span` follows `std::span`, which P1085 stripped of both
 because "same referent" and "same contents" are both defensible readings of a handle. So `set_adaptor`
 compares and hashes whatever it owns or views, and `sequence_adaptor` compares and hashes only as an owner. The non-member copies
 — `~`, `&`, `|`, `^`, `-`, `<<`, `>>` — are the owner's alone in both readings: a copied view would write

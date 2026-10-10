@@ -301,6 +301,17 @@ class sequence_adaptor : public sequence::sizes_t<Bits, Store, W, Derived, E>
                 : members_type(std::in_place, make_window(ptr, offset, count))
         {}
 
+        // What a view holds to refer to another view's bits: a window's start and size, or a whole view's storage.
+        template<class Other>
+        [[nodiscard]] static constexpr auto handle_of(Other const& other) noexcept
+        {
+                if constexpr (is_window) {
+                        return make_window(&other.bits(), other.offset(), other.size());
+                } else {
+                        return &other.bits();
+                }
+        }
+
         // A static window is handed the count it already has, and asserts that the two agree.
         [[nodiscard]] static constexpr auto make_window(Bits* ptr, std::size_t offset, std::size_t count [[maybe_unused]]) noexcept
                 -> window_ptr
@@ -1006,10 +1017,17 @@ public:
         }
 
         // span's rule between extents: to a dynamic one implicitly, to a static one explicitly and at the same size.
-        template<class OtherDerived, std::size_t OtherE>
-                requires is_window and (OtherE != E) and (E == std::dynamic_extent or OtherE == std::dynamic_extent)
-        [[nodiscard]] constexpr explicit(E != std::dynamic_extent) sequence_adaptor(sequence_adaptor<Bits, Store, W, OtherDerived, OtherE> const& other) noexcept
+        template<class OtherBits, class OtherDerived, std::size_t OtherE>
+                requires is_window and (std::same_as<OtherBits, Bits> or std::same_as<OtherBits const, Bits>) and (OtherE != E) and (E == std::dynamic_extent or OtherE == std::dynamic_extent)
+        [[nodiscard]] constexpr explicit(E != std::dynamic_extent) sequence_adaptor(sequence_adaptor<OtherBits, Store, W, OtherDerived, OtherE> const& other) noexcept
                 : sequence_adaptor(&other.bits(), other.offset(), other.size())
+        {}
+
+        // span's qualification conversion: a view of mutable bits is implicitly a view of the same bits as const.
+        template<class OtherDerived>
+                requires (not is_owner) and std::is_const_v<Bits>
+        [[nodiscard]] constexpr explicit(false) sequence_adaptor(sequence_adaptor<std::remove_const_t<Bits>, Store, W, OtherDerived, E> const& other) noexcept // NOLINT(misc-explicit-constructor)
+                : members_type(std::in_place, handle_of(other))
         {}
 
         // fill: a masked block at a time over a window of ours, one position at a time over any other.

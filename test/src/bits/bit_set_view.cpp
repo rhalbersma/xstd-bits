@@ -14,6 +14,7 @@
 #include <xstd/bits/detail/set_adaptor.hpp>         // set_adaptor
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <array>                                    // array
+#include <compare>                                  // is_eq, is_gt
 #include <concepts>                                 // constructible_from, derived_from, same_as
 #include <cstddef>                                  // size_t
 #include <cstdint>                                  // uint64_t, uint8_t
@@ -22,7 +23,7 @@
 #include <ranges>                                   // borrowed_range, range, range_value_t, view
 #include <set>                                      // set
 #include <tuple>                                    // tuple
-#include <utility>                                  // declval
+#include <utility>                                  // as_const, declval
 #include <vector>                                   // vector
 
 BOOST_AUTO_TEST_SUITE(BitSetView)
@@ -141,6 +142,26 @@ BOOST_AUTO_TEST_CASE(TheViewedTypesAreTheOnesHoldingASetWithoutOfferingIt)
         static_assert(std::ranges::view<view_of<Storage>>);
         static_assert(std::ranges::borrowed_range<view_of<Storage>>);
         static_assert(not std::ranges::view<xstd::bit_fixed_set<8>>);
+}
+
+// As std::string_view, a view compares with what converts to it: its owner, a view of mutable bits, and lent blocks.
+BOOST_AUTO_TEST_CASE(AViewComparesWithWhatConvertsToIt)
+{
+        static_assert(std::convertible_to<view_of<xstd::bit_fixed_set<8>>, view_of<xstd::bit_fixed_set<8> const>>);
+        static_assert(not std::convertible_to<view_of<xstd::bit_fixed_set<8> const>, view_of<xstd::bit_fixed_set<8>>>);
+        static_assert(std::convertible_to<view_of<std::uint64_t>, view_of<std::uint64_t const>>);
+        static_assert(std::three_way_comparable<view_of<std::uint64_t>> and std::three_way_comparable<view_of<std::uint64_t const>>);
+
+        auto s       = xstd::bit_fixed_set<8>{1, 5};
+        auto const v = xstd::bit_set_view(s);
+        auto const c = xstd::bit_set_view(std::as_const(s));
+        BOOST_CHECK(v == c and c == v and c == s and s == c and std::is_eq(v <=> c));
+
+        // Lent blocks compare and order as the owner over them does: {1, 5} after {0, 1, 5}.
+        auto a       = std::uint64_t{0b10'0010};
+        auto const b = std::uint64_t{0b10'0011};
+        BOOST_CHECK(xstd::bit_set_view(a) == xstd::bit_set_view(std::as_const(a)));
+        BOOST_CHECK(xstd::bit_set_view(a) != xstd::bit_set_view(b) and std::is_gt(xstd::bit_set_view(a) <=> xstd::bit_set_view(b)));
 }
 
 // The view hashes what it presents, so the owner's set reading of the same bits hashes the same.
