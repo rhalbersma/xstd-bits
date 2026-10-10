@@ -12,7 +12,7 @@
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_aware, allocator_base_type, allocator_param_t
 #include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container, bit_block_container_type
 #include <xstd/bits/detail/borrowed_bits.hpp>                // borrow_bits, borrowable_block, borrowable_blocks, borrowed_bits_t
-#include <xstd/bits/detail/comparisons.hpp>                  // sequence_three_way
+#include <xstd/bits/detail/comparisons.hpp>                  // three_way
 #include <xstd/bits/detail/functor.hpp>                      // invoke_continues
 #include <xstd/bits/detail/hash.hpp>                         // hash_append_bools
 #include <xstd/bits/detail/intrin.hpp>                       // countr_zero
@@ -1292,9 +1292,9 @@ public:
         // The storage's entry and nothing else, spelled over bits_type, which MSVC completes eagerly here.
         [[nodiscard]] friend constexpr auto operator<=>(sequence_adaptor const& x, sequence_adaptor const& y) noexcept
                 -> std::strong_ordering
-                requires is_owner and requires (bits_type const& b) { sequence_three_way(b, b); }
+                requires is_owner and requires (bits_type const& b) { three_way<sequence_reading_tag>(b, b); }
         {
-                return sequence_three_way(x.bits(), y.bits());
+                return three_way<sequence_reading_tag>(x.bits(), y.bits());
         }
 
         // Elementwise logical, as a bitwise operator on a sequence of bools means. Three, not four.

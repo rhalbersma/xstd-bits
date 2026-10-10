@@ -8,10 +8,12 @@
 
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container_type
 #include <xstd/bits/detail/intrin.hpp>              // countr_zero
+#include <xstd/bits/detail/ownership.hpp>           // sequence_reading_tag, set_reading_tag
 #include <xstd/bits/detail/pred.hpp>                // intersects
 #include <xstd/bits/detail/shift.hpp>               // shl
 #include <algorithm>                                // equal, max, min
 #include <compare>                                  // strong_ordering
+#include <concepts>                                 // same_as
 #include <cstddef>                                  // ptrdiff_t, size_t
 #include <ranges>                                   // begin
 
@@ -38,54 +40,6 @@ template<bit_block_container_type Bits>
         }
 }
 
-// The set ordering across two widths, turning on the lowest position at which the two disagree.
-template<bit_block_container_type Bits>
-[[nodiscard]] constexpr auto padded_set_three_way(Bits const& x, Bits const& y) noexcept
-        -> std::strong_ordering
-{
-        using block_type = Bits::block_type;
-        auto const n     = std::ranges::max(x.num_blocks(), y.num_blocks());
-        auto const index = x.padded_first_difference(y, n);
-        if (index == n) {
-                return std::strong_ordering::equal;
-        }
-        auto const diff   = static_cast<block_type>(x.padded_block(index) ^ y.padded_block(index));
-        auto const offset = static_cast<std::size_t>(bits::detail::countr_zero(diff));
-        if (bits::detail::intersects(x.padded_block(index), shl(block_type{1}, offset))) {
-                return y.padded_any_above(index, offset) ? std::strong_ordering::less : std::strong_ordering::greater;
-        }
-        return x.padded_any_above(index, offset) ? std::strong_ordering::greater : std::strong_ordering::less;
-}
-
-// The set reading a block at a time: std::lexicographical_compare_three_way over the ascending positions.
-template<bit_block_container_type Bits>
-[[nodiscard]] constexpr auto set_three_way(Bits const& x [[maybe_unused]], Bits const& y [[maybe_unused]]) noexcept
-        -> std::strong_ordering
-{
-        using block_type = Bits::block_type;
-        if constexpr (Bits::has_static_size and Bits::extent == 0UZ) {
-                return std::strong_ordering::equal;
-        } else if constexpr (Bits::has_static_size and Bits::extent == 1UZ) {
-                // One position, so the loser is empty and any_above is constantly false.
-                return x.test(0UZ) <=> y.test(0UZ);
-        } else {
-                if constexpr (not Bits::has_static_size) {
-                        if (x.size() != y.size()) {
-                                return padded_set_three_way(x, y);
-                        }
-                }
-                auto const [index, diff] = x.first_difference(y);
-                if (diff == block_type{}) {
-                        return std::strong_ordering::equal;
-                }
-                auto const offset = bits::detail::countr_zero(diff);
-                if (bits::detail::intersects(x[index], shl(block_type{1}, offset))) {
-                        return y.any_above(index, offset) ? std::strong_ordering::less : std::strong_ordering::greater;
-                }
-                return x.any_above(index, offset) ? std::strong_ordering::greater : std::strong_ordering::less;
-        }
-}
-
 // The set ordering over descending positions, [associative.reqmts]' lexicographic one: the masks as unsigned numbers.
 template<bit_block_container_type Bits>
 [[nodiscard]] constexpr auto numeric_three_way(Bits const& x, Bits const& y) noexcept
@@ -101,38 +55,60 @@ template<bit_block_container_type Bits>
         return std::strong_ordering::equal;
 }
 
-// The sequence ordering across two widths: position 0 is the first element, so the lowest disagreement decides alone.
-template<bit_block_container_type Bits>
-[[nodiscard]] constexpr auto padded_sequence_three_way(Bits const& x, Bits const& y) noexcept
+// The order at the lowest position where two readings first differ: a sequence reads it as the most significant.
+template<class Reading, class Bits, class AnyAbove>
+[[nodiscard]] constexpr auto at_first_difference(bool x_holds, Bits const& x [[maybe_unused]], Bits const& y [[maybe_unused]], AnyAbove any_above [[maybe_unused]]) noexcept
+        -> std::strong_ordering
+{
+        if constexpr (std::same_as<Reading, sequence_reading_tag>) {
+                return x_holds ? std::strong_ordering::greater : std::strong_ordering::less;
+        } else if (x_holds) {
+                // A set's keys ascend, so holding the lower key wins unless the other set still holds one above it.
+                return any_above(y) ? std::strong_ordering::less : std::strong_ordering::greater;
+        } else {
+                return any_above(x) ? std::strong_ordering::greater : std::strong_ordering::less;
+        }
+}
+
+// Either ordering across two widths, the shorter padded with zero blocks.
+template<class Reading, bit_block_container_type Bits>
+[[nodiscard]] constexpr auto padded_three_way(Bits const& x, Bits const& y) noexcept
         -> std::strong_ordering
 {
         using block_type = Bits::block_type;
         auto const n     = std::ranges::max(x.num_blocks(), y.num_blocks());
         auto const index = x.padded_first_difference(y, n);
         if (index == n) {
-                // The two answers this can give: the caller arrives only with the sizes differing.
-                return x.size() < y.size() ? std::strong_ordering::less : std::strong_ordering::greater;
+                if constexpr (std::same_as<Reading, sequence_reading_tag>) {
+                        // Equal over the padding, so the shorter sequence is a prefix of the longer.
+                        return x.size() < y.size() ? std::strong_ordering::less : std::strong_ordering::greater;
+                } else {
+                        // The padding holds no key, so the two sets hold the same keys.
+                        return std::strong_ordering::equal;
+                }
         }
         auto const diff   = static_cast<block_type>(x.padded_block(index) ^ y.padded_block(index));
         auto const offset = static_cast<std::size_t>(bits::detail::countr_zero(diff));
-        return bits::detail::intersects(x.padded_block(index), shl(block_type{1}, offset))
-                       ? std::strong_ordering::greater
-                       : std::strong_ordering::less;
+        return at_first_difference<Reading>(bits::detail::intersects(x.padded_block(index), shl(block_type{1}, offset)), x, y, [&](Bits const& b) -> bool { return b.padded_any_above(index, offset); });
 }
 
-// Bools from index 0 a block at a time, for any reading of that order: the holder of the lowest difference is greater.
-template<bit_block_container_type Bits>
-[[nodiscard]] constexpr auto sequence_three_way(Bits const& x [[maybe_unused]], Bits const& y [[maybe_unused]]) noexcept
+// lexicographical_compare_three_way over a set's ascending keys or a sequence's bools, a block at a time.
+template<class Reading, bit_block_container_type Bits>
+        requires std::same_as<Reading, set_reading_tag> or std::same_as<Reading, sequence_reading_tag>
+[[nodiscard]] constexpr auto three_way(Bits const& x [[maybe_unused]], Bits const& y [[maybe_unused]]) noexcept
         -> std::strong_ordering
 {
         using block_type = Bits::block_type;
         if constexpr (Bits::has_static_size and Bits::extent == 0UZ) {
                 return std::strong_ordering::equal;
+        } else if constexpr (Bits::has_static_size and Bits::extent == 1UZ) {
+                // One position, where both readings order false before true.
+                return x.test(0UZ) <=> y.test(0UZ);
         } else {
                 // A capacity of nought holds only width zero, so there both widths are that.
                 if constexpr (not Bits::has_static_size and not Bits::has_zero_capacity) {
                         if (x.size() != y.size()) {
-                                return padded_sequence_three_way(x, y);
+                                return padded_three_way<Reading>(x, y);
                         }
                 }
                 auto const [index, diff] = x.first_difference(y);
@@ -140,9 +116,7 @@ template<bit_block_container_type Bits>
                         return std::strong_ordering::equal;
                 }
                 auto const offset = bits::detail::countr_zero(diff);
-                return bits::detail::intersects(x[index], shl(block_type{1}, offset))
-                               ? std::strong_ordering::greater
-                               : std::strong_ordering::less;
+                return at_first_difference<Reading>(bits::detail::intersects(x[index], shl(block_type{1}, offset)), x, y, [&](Bits const& b) -> bool { return b.any_above(index, offset); });
         }
 }
 

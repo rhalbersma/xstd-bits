@@ -16,7 +16,7 @@
 #include <xstd/bits/detail/allocator_base_type.hpp>           // allocator_aware, allocator_base_type, allocator_param_t
 #include <xstd/bits/detail/bit_block_container.hpp>           // bit_block_container, bit_block_container_type
 #include <xstd/bits/detail/borrowed_bits.hpp>                 // borrow_bits, borrowable_block, borrowable_blocks, borrowed_bits_t
-#include <xstd/bits/detail/comparisons.hpp>                   // numeric_three_way, set_equal, set_three_way
+#include <xstd/bits/detail/comparisons.hpp>                   // numeric_three_way, set_equal, three_way
 #include <xstd/bits/detail/functor.hpp>                       // decay_copy
 #include <xstd/bits/detail/hash.hpp>                          // hash_append_keys
 #include <xstd/bits/detail/intrin.hpp>                        // countl_zero, countr_zero
@@ -626,7 +626,7 @@ public:
                 if constexpr (is_descending) {
                         return numeric_three_way(x.bits(), y.bits());
                 } else {
-                        return set_three_way(x.bits(), y.bits());
+                        return three_way<set_reading_tag>(x.bits(), y.bits());
                 }
         }
 
