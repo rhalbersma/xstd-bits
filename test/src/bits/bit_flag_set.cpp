@@ -569,8 +569,8 @@ auto operator_mismatches(block_t<X> w, typename X::key_type b)
         mismatches += static_cast<std::size_t>(mask_type(x - b) != m_only or mask_type(b - x) != b_only);
         mismatches += static_cast<std::size_t>((x == b) != (m == b) or (x <=> X(b)) != (m <=> b));
         mismatches += static_cast<std::size_t>(xstd::bit_includes(x, b) != ((w & v) == v) or not xstd::bit_disjoint(x, b) != ((w & v) != block_type{}));
-        mismatches += static_cast<std::size_t>(xstd::bit_includes(b, x) != ((w & v) == w) or (xstd::bit_includes(b, x) and not xstd::bit_includes(x, b)) != ((w & v) == w and w != v));
-        mismatches += static_cast<std::size_t>((xstd::bit_includes(x, b) and not xstd::bit_includes(b, x)) != ((w & v) == v and w != v));
+        mismatches += static_cast<std::size_t>(xstd::bit_includes(X(b), x) != ((w & v) == w) or (xstd::bit_includes(X(b), x) and not xstd::bit_includes(x, b)) != ((w & v) == w and w != v));
+        mismatches += static_cast<std::size_t>((xstd::bit_includes(x, b) and not xstd::bit_includes(X(b), x)) != ((w & v) == v and w != v));
         return mismatches;
 }
 
