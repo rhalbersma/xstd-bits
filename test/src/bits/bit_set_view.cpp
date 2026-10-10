@@ -107,8 +107,9 @@ BOOST_AUTO_TEST_CASE(AViewCombinesWithAnySetOverItsStorage)
         BOOST_CHECK((s == xstd::bit_fixed_set<8>{5}));
 
         // Over a growing owner, a union grows the storage the view refers into.
-        auto g = xstd::bit_set{1};
-        xstd::bit_set_view(g) |= xstd::bit_set{100};
+        auto g      = xstd::bit_set{1};
+        auto grower = xstd::bit_set_view(g);
+        grower |= xstd::bit_set{100};
         BOOST_CHECK(g.contains(1UZ) and g.contains(100UZ));
 }
 
