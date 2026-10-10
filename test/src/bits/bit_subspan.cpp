@@ -93,7 +93,7 @@ BOOST_AUTO_TEST_CASE(TheWindowIsTheAdaptorWindowed)
         static_assert(not has_shifts<Sub>);
         static_assert(can_fill<Span>);
         static_assert(has_bulk_ops<Span>);
-        static_assert(not has_shifts<Span>);
+        static_assert(has_shifts<Span>);
 
         // Over a const storage nothing writes: the window's bulk operators ask Bits, not the const-stripped bits_type.
         static_assert(not can_fill<CSub>);

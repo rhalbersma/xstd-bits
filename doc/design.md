@@ -2085,8 +2085,8 @@ same storage and keys, owner or view, through the storage's own operators. A sou
 block type is refused rather than converted behind the operator, which would hide a copy and, over a heap owner,
 an allocation in what is otherwise a `noexcept` pass over the blocks: the caller spells it,
 `w &= xstd::bit_convert<xstd::bit_rebind<Block, Other>>(other)`, a copy as `memcpy` would make it where both
-blocks allow, and the combine then blits. No sequence has shifts,
-window or whole ([no-shifts-on-a-sequence](#no-shifts-on-a-sequence)).
+blocks allow, and the combine then blits. A window has no shifts, and an owner
+or a whole view has `std::bitset`'s ([shifts-on-a-sequence](#shifts-on-a-sequence)).
 
 **A window over a const storage writes nothing, and the predicate has to be asked of the right type to say so.**
 `bits_type` is `Bits` with the const stripped, because a view over a const owner names `Bits const` and the
@@ -2211,9 +2211,8 @@ the name the standard gives it.
 ### what-a-sequence-may-add
 
 The sequence adaptor had only `[the-sequence-contract](#the-sequence-contract)`: *`bit_vector` answers every line of
-`[vector.bool]`'s synopsis*. That is a floor with nothing above it, and a floor is how the shifts arrived --
-declared, never argued for, and spelled backwards
-([no-shifts-on-a-sequence](#no-shifts-on-a-sequence)).
+`[vector.bool]`'s synopsis*. That is a floor with nothing above it, and a floor lets an operation in declared
+rather than argued for.
 
 The ceiling: **the sequence adaptor adds an operation only where the sequence reading is what asks for it,
 and the spelling is the one that reading already uses.** Two questions, and a candidate answers both or it
@@ -2222,16 +2221,17 @@ does not cross:
 - *Does a sequence of `bool` want this?* `flip()` is `[vector.bool]`'s own. The elementwise operators are
   `std::valarray<bool>`'s, the standard's one model for a bulk logical operation over bools
   ([the-elementwise-reading](#the-elementwise-reading)). A **difference** answers no: no standard sequence
-  of bools spells `a and not b`, and `valarray<bool>`'s `operator-=` is arithmetic. A **shift** answers no
-  twice over.
-- *Is this the name that reading gives it?* `<<=` fails here even where the operation is wanted, because a
-  sequence already spells moving elements `std::shift_left` and `std::shift_right`, in the opposite
-  direction.
+  of bools spells `a and not b`, and `valarray<bool>`'s `operator-=` is arithmetic. A **shift** answers yes,
+  through the containers code reaches a row of bools from: `std::bitset` and `boost::dynamic_bitset` both
+  shift one ([shifts-on-a-sequence](#shifts-on-a-sequence)).
+- *Is this the name that reading gives it?* For the shifts it is `std::bitset`'s, because that is the code
+  that arrives with them; `std::shift_left` and `std::shift_right` name the same moves by index, in the
+  opposite sense, and stay the algorithms they are.
 
 Being free is not an argument. Every operation the storage already has is free to forward, which is what
-makes the forwarding tempting and the ceiling necessary: `-=` and the shifts were each one line over a
-storage member that exists regardless, and the cost of a wrong one is not compile time but a caller who
-reads `v <<= 1` as `std::shift_left`. What the storage provides is the **union** of the two readings'
+makes the forwarding tempting and the ceiling necessary: `-=` is one line over a storage member that exists
+regardless, and the cost of a wrong one is not compile time but a caller who reads `v -= w` as
+`valarray<bool>`'s arithmetic. What the storage provides is the **union** of the two readings'
 demands ([the-two-adaptors](#the-two-adaptors)); each adaptor exposes its own reading's share, and the
 shares are not the same set.
 
@@ -2242,22 +2242,33 @@ The four ways a reading answers an operation are all visible in the current surf
 | one name, a different thing per reading | `size()` -- the sequence's element count, the set's **cardinality** |
 | one reading alone | `complement()`, the set's; `count()` the sequence's, where the set answers cardinality with `size()` |
 | one reading spelling it otherwise | `flip()` on the sequence is `complement()` on the set |
-| one reading declining it | `-=` and the shifts on the set, not the sequence |
+| one reading declining it | `-=` on the set, not the sequence |
 
-### no-shifts-on-a-sequence
+### shifts-on-a-sequence
 
-`std::vector<bool>` has no shifts, and neither has any sequence here. The storage keeps `<<=` and `>>=`
-because the set reading asks for them, and means by them what `[bitset.members]`'s truncating shift means:
-`<<=` translates, keeping the keys that land below `max_size()`, and `>>=` empties past the width. The sequence reading is the one with nothing to add. Worse,
-it already spells moving elements, and spells it the other way round: `operator<<=` is implemented with
-`std::shift_right` and `operator>>=` with `std::shift_left`, because a sequence's low index is its front
-where a bit string's low bit is its right. Exposing the operators would have `v <<= 1` mean the opposite of
-the algorithm whose name the sequence reading already owns. So `flip()` and the three
-compound operators cross to the sequence adaptor and the shifts do not.
+`std::vector<bool>` has no shifts, but the two containers most code reaches a row of bools from do:
+`std::bitset` and `boost::dynamic_bitset` shift one in place and by value, and a reading that is their
+migration path takes their spelling with it. `a <<= n` moves position *i* to *i + n* and `a >>= n` moves it to
+*i - n*, the size unchanged, zeros filling the positions vacated and what passes either end dropped, as
+`[bitset.members]` says; an `n` at or past the size clears the row rather than being undefined. That is the set
+reading's shift as well, which translates its keys by the same *n*, so both readings move the same bits the
+same way.
+
+In index order `<<=` is `std::shift_right` and `>>=` is `std::shift_left`, because a sequence's low index is its
+front where a bit string's low bit is its right. The operators keep `bitset`'s sense rather than the algorithms':
+code migrated from `bitset` already says `<<`, and must not change its meaning on the way. The algorithms keep
+theirs, so a reader moving elements by index still has them. `std::valarray<bool>` decides neither way: its `<<=`
+shifts each element's own value, which for a `bool` moves nothing, and its positional shift is the member
+`shift(n)`, towards the front. The sequence takes `valarray<bool>`'s element-wise logical operators
+([the-elementwise-reading](#the-elementwise-reading)) and `bitset`'s shifts, and not `shift(n)` beside them:
+one type with both senses would be worse than either.
+
+An owner and a whole view shift and a window does not, as with `flip()`: a window shares its end blocks with
+what lies outside it. The value forms `<<` and `>>` are an owner's alone, as `~` is.
 
 ### rotation-and-reversal
 
-`rotate(n)` and `reverse()` cross where the shifts did not, and the ceiling's two questions say why
+`rotate(n)` and `reverse()` cross on the ceiling's two questions
 ([what-a-sequence-may-add](#what-a-sequence-may-add)). A sequence of `bool` wants them: `std::ranges::rotate` and
 `std::ranges::reverse` are sequence algorithms, and over packed bits each is a pass over the blocks rather than a
 walk of proxy swaps. So each member is named and directed like the algorithm it packs. `v.rotate(n)` has the effect
@@ -2272,8 +2283,8 @@ significance: left is towards the high bit. That is the right spelling for a bit
 its right, and the wrong one for a sequence, whose low index is its front. In the sequence reading the paper's
 `rotr(n)` is `rotate(n)`, and its `rotl(n)` is `rotate(size() - n % size())`. One member says both, in the
 direction `std::rotate` already fixes, and leaves no left or right for a reader to map onto front and back. It is
-the mismatch that keeps the shift operators off the sequence reading: a direction named for a bit string reads
-backwards on a sequence.
+the mismatch the shift operators accept rather than avoid, keeping `bitset`'s sense for the code that migrates
+with them ([shifts-on-a-sequence](#shifts-on-a-sequence)).
 
 An owner and a whole view have them and a window does not, as with `flip()`: a window shares its end blocks with
 what lies outside it, and its rotation would be a masked walk of its own. The set reading does not take them
@@ -2307,14 +2318,12 @@ the reading costs nothing, which is why the operators sit on the sequence adapto
 `bit_valarray` to be written.
 
 Three, and not the storage's four. A **difference** has no elementwise reading: `valarray<bool>`'s own
-`operator-=` is arithmetic, and `a and not b` is set vocabulary, so `-=` stays on the set adaptor
-and comes off the sequence reading with the shifts
-([no-shifts-on-a-sequence](#no-shifts-on-a-sequence)). The binary `&` `|` `^` are each their compound over a
+`operator-=` is arithmetic, and `a and not b` is set vocabulary, so `-=` stays on the set adaptor. The binary `&` `|` `^` are each their compound over a
 copy and `~` is `flip()`'s value, all four on an **owner** alone: a view's copy refers to the very storage it
 views, so a value returned by one would write through to it.
 
 `bit_vector` is therefore `[vector.bool]`'s synopsis plus `flip()`'s value form, three compound operators,
-three binary ones, `fill`, and the four aggregates -- and nothing that needs a bit to have an address.
+three binary ones, `bitset`'s two shifts in both forms, `fill`, and the four aggregates -- and nothing that needs a bit to have an address.
 
 ### the-sequence-contract
 

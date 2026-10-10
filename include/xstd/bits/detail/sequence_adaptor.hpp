@@ -1340,7 +1340,31 @@ public:
                 return self;
         }
 
-        // No shifts: this reading already spells moving elements std::shift_left and std::shift_right.
+        // std::bitset's shifts at the same size: <<= moves position i to i + n and >>= to i - n, zeros filling in.
+        constexpr auto operator<<=(this auto&& self, size_type n) noexcept
+                -> auto&
+                requires (not is_window) and requires { self.bits() <<= n; self.bits().fill(false); }
+        {
+                // The storage's shift has n < size() as its precondition; past it every position is vacated.
+                if (n < self.size()) {
+                        self.bits() <<= n;
+                } else {
+                        self.bits().fill(false);
+                }
+                return self;
+        }
+
+        constexpr auto operator>>=(this auto&& self, size_type n) noexcept
+                -> auto&
+                requires (not is_window) and requires { self.bits() >>= n; self.bits().fill(false); }
+        {
+                if (n < self.size()) {
+                        self.bits() >>= n;
+                } else {
+                        self.bits().fill(false);
+                }
+                return self;
+        }
 
         // Bulk on a view of ours against any other source read by block: a block at a time at either alignment.
         template<class Other>
@@ -1615,6 +1639,27 @@ template<class Bits, storage Store, window W, class Derived, std::size_t E>
 {
         auto nrv = static_cast<sequence_adaptor<Bits, Store, W, Derived, E>::derived_type const&>(lhs);
         nrv.flip();
+        return nrv;
+}
+
+// The shifts' value forms, on an owner alone, as operator~ is.
+template<class Bits, storage Store, window W, class Derived, std::size_t E>
+[[nodiscard]] constexpr auto operator<<(sequence_adaptor<Bits, Store, W, Derived, E> const& lhs, std::size_t n) noexcept
+        -> sequence_adaptor<Bits, Store, W, Derived, E>::derived_type
+        requires (owns(Store)) and requires (sequence_adaptor<Bits, Store, W, Derived, E> c) { c <<= n; }
+{
+        auto nrv = static_cast<sequence_adaptor<Bits, Store, W, Derived, E>::derived_type const&>(lhs);
+        nrv <<= n;
+        return nrv;
+}
+
+template<class Bits, storage Store, window W, class Derived, std::size_t E>
+[[nodiscard]] constexpr auto operator>>(sequence_adaptor<Bits, Store, W, Derived, E> const& lhs, std::size_t n) noexcept
+        -> sequence_adaptor<Bits, Store, W, Derived, E>::derived_type
+        requires (owns(Store)) and requires (sequence_adaptor<Bits, Store, W, Derived, E> c) { c >>= n; }
+{
+        auto nrv = static_cast<sequence_adaptor<Bits, Store, W, Derived, E>::derived_type const&>(lhs);
+        nrv >>= n;
         return nrv;
 }
 

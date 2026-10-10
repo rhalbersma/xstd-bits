@@ -106,9 +106,8 @@ auto meets = intersects(s, other);
 
 `operator[]` and the whole-row operations stay. The bitwise operators work on the whole container, element by
 element over two rows of one size, as `std::valarray<bool>`'s do; the count and the queries keep their names, and
-rotation is a member rather than two shifts. A sequence has no shift operators, since moving elements is what
-`std::shift_left` and `std::shift_right` already say, and in index order `bitset`'s `<<` moves position `i` to
-`i + n`, which is `std::shift_right`.
+rotation is a member rather than two shifts. The shifts are `bitset`'s, in its sense: `<<` moves position `i` to
+`i + n`, which in index order is what `std::shift_right` does.
 
 <table>
 <tr><th>Before</th><th>After</th></tr>
@@ -151,14 +150,10 @@ b >>= 1;  // position i to i - 1
 </td><td>
 
 ```cpp
-#include <algorithm>
-
 auto r = (a & c) | (a ^ c);
 auto n = ~a;
-std::shift_right(a.begin(), a.end(), 2);
-std::fill_n(a.begin(), 2, false);
-std::shift_left(a.begin(), a.end(), 1);
-a.back() = false;
+a <<= 2;  // position i to i + 2
+a >>= 1;  // position i to i - 1
 ```
 
 </td></tr>
@@ -372,6 +367,7 @@ b.flip();
 b.count();
 b &= c;
 b ^= c;
+b <<= 3;
 auto n = ~b;
 ```
 
@@ -387,6 +383,7 @@ v.flip();
 v.count();
 v &= c;
 v ^= c;
+v <<= 3;
 auto n = ~v;
 ```
 
