@@ -2015,8 +2015,8 @@ Extent, N>`, where the adaptor holds only the storage. So the adaptor asks `wind
 primary answers the adaptor windowed, and `detail/views.hpp` specializes it for both views from declarations of
 their templates, which carry no default arguments since those are given once, on each class. `bit_span.hpp` and
 `bit_subspan.hpp` include it before defining their class -- the specialization has to exist when the base's member
-declarations are instantiated, which is while the view is still incomplete. The same header forwards `blit_source`
-for both views to the adaptor each is built on, so no public header opens `xstd::bits::detail`. That is the hook back into the header above, and it
+declarations are instantiated, which is while the view is still incomplete. `blit_source` needs no entry
+there: whatever derives from its `adaptor_type`, a view or a sequence owner, blits as that adaptor does. That is the hook back into the header above, and it
 replaces the forward declaration of `bit_subspan` the adaptor carried while the views were named by storage.
 
 ### the-views-are-named-by-their-blocks
@@ -2075,7 +2075,11 @@ a window of ours is `bit_block_container::set(pos, len, value)`, a block at a ti
 one position at a time over a window of anything else; `&=`, `|=` and `^=` on a window of ours take a
 source of any shape that reads blocks of the same block type, a window at any other alignment included, reading
 both sides through `block_at` and writing through `block_at` masked to the window ([the-blit](#the-blit)). The
-two must be of one size, and must not overlap short of coinciding, `w ^= w` being fine. No sequence has shifts,
+two must be of one size, and must not overlap short of coinciding, `w ^= w` being fine. A source over another
+block type is refused rather than converted behind the operator, which would hide a copy and, over a heap owner,
+an allocation in what is otherwise a `noexcept` pass over the blocks: the caller spells it,
+`w &= xstd::bit_convert<xstd::bit_rebind<Block, Other>>(other)`, a copy as `memcpy` would make it where both
+blocks allow, and the combine then blits. No sequence has shifts,
 window or whole ([no-shifts-on-a-sequence](#no-shifts-on-a-sequence)).
 
 **A window over a const storage writes nothing, and the predicate has to be asked of the right type to say so.**

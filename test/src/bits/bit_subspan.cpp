@@ -3,13 +3,15 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/bit_array.hpp>                  // bit_array
+#include <xstd/bits/bit/bit_convert.hpp>            // bit_convert
+#include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
 #include <xstd/bits/bit_span.hpp>                   // bit_span
 #include <xstd/bits/bit_subspan.hpp>                // bit_subspan
-#include <xstd/bits/bit_vector.hpp>                 // bit_vector
+#include <xstd/bits/bit_type_traits/bit_rebind.hpp> // bit_rebind
+#include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <algorithm>                                // equal, fill
+#include <algorithm>                                // copy, equal, fill
 #include <array>                                    // array
 #include <concepts>                                 // equality_comparable, same_as
 #include <cstddef>                                  // ptrdiff_t, size_t
@@ -248,6 +250,40 @@ BOOST_AUTO_TEST_CASE(AWindowCombinesWithAnotherAtAnyAlignment)
         BOOST_CHECK(std::ranges::equal(xstd::bit_span(self).first(3), outside));
         static_assert(combinable<decltype(w), decltype(w)>);
         static_assert(combinable<decltype(w), decltype(xstd::bit_span(self))>);
+}
+
+// An owner combines into a window as its whole view does, block by block at the window's alignment.
+BOOST_AUTO_TEST_CASE(AWindowCombinesWithAnOwnerAsWithItsView)
+{
+        using bytes = xstd::basic_bit_vector<std::uint8_t>;
+        for (auto const op : {0, 1, 2}) {
+                auto const vector = bytes(std::from_range, pattern(12, 2));
+                auto array        = xstd::basic_bit_array<std::uint8_t, 12>();
+                std::ranges::copy(pattern(12, 4), array.begin());
+                auto by_owner = bytes(std::from_range, pattern(20, 3));
+                auto by_view  = by_owner;
+                window_op(op, xstd::bit_span(by_owner).subspan(5, 12), vector);
+                window_op(op, xstd::bit_span(by_view).subspan(5, 12), xstd::bit_span(vector));
+                window_op(op, xstd::bit_span(by_owner).subspan(2, 12), array);
+                window_op(op, xstd::bit_span(by_view).subspan(2, 12), xstd::bit_span(array));
+                BOOST_CHECK(by_owner == by_view);
+        }
+        static_assert(combinable<xstd::bit_subspan<std::vector<std::uint8_t>>, bytes>);
+}
+
+// Another block type crosses by an explicit rebind, after which the combine blits as from any owner of the window's.
+BOOST_AUTO_TEST_CASE(AnotherBlockTypeCombinesOnceRebound)
+{
+        using bytes = xstd::basic_bit_vector<std::uint8_t>;
+        using wide  = xstd::basic_bit_vector<std::uint64_t>;
+        for (auto const op : {0, 1, 2}) {
+                auto const source = wide(std::from_range, pattern(12, 2));
+                auto by_rebind    = bytes(std::from_range, pattern(20, 3));
+                auto by_bools     = by_rebind;
+                window_op(op, xstd::bit_span(by_rebind).subspan(5, 12), xstd::bit_convert<xstd::bit_rebind<std::uint8_t, wide>>(source));
+                window_op(op, xstd::bit_span(by_bools).subspan(5, 12), bytes(std::from_range, source));
+                BOOST_CHECK(by_rebind == by_bools);
+        }
 }
 
 namespace {

@@ -29,7 +29,7 @@
 #include <algorithm>                                         // copy, min, remove_if
 #include <cassert>                                           // assert
 #include <compare>                                           // strong_ordering
-#include <concepts>                                          // constructible_from, invocable, same_as, swap, swappable
+#include <concepts>                                          // constructible_from, derived_from, invocable, same_as, swap, swappable
 #include <cstddef>                                           // ptrdiff_t, size_t
 #include <format>                                            // format, formatter
 #include <functional>                                        // hash
@@ -151,6 +151,15 @@ inline constexpr bool blit_source = false;
 
 template<class Bits, storage Store, window W, class Derived, std::size_t E, class Block>
 inline constexpr bool blit_source<sequence_adaptor<Bits, Store, W, Derived, E>, Block> = std::same_as<sequence::block_type_of<Bits>, Block>;
+
+// The adaptor a container is built on, named by an alias so that no template argument spells typename.
+template<class S>
+using adaptor_of_t = S::adaptor_type;
+
+// A container built on an adaptor, an owner or a view, blits as that adaptor does.
+template<class S, class Block>
+        requires std::derived_from<S, adaptor_of_t<S>> and (not std::same_as<S, adaptor_of_t<S>>)
+inline constexpr bool blit_source<S, Block> = blit_source<adaptor_of_t<S>, Block>;
 
 namespace sequence {
 
