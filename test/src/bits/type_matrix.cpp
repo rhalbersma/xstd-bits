@@ -142,12 +142,12 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(EveryTypeAnswersItsRow, Block, matrix_block_types)
         check_row<Block, xstd::basic_bit_small_set<std::size_t, Block, N>>("bit_small_set", "11111111.11.11111.1");
         check_row<Block, set>("bit_set", "1111111..11111111.1");
 
-        // Sequence views: read out by bit_convert and combined with any source of their block, compared never, as span.
+        // Sequence views: read out by bit_convert, and neither combined nor compared, as span.
         using span = decltype(xstd::bit_span(std::declval<array&>()));
-        check_row<Block, span>("bit_span over bit_array", ".1..1.....11....111");
+        check_row<Block, span>("bit_span over bit_array", ".1..1...........111");
         check_row<Block, decltype(xstd::bit_span(std::declval<array const&>()))>("bit_span over const bit_array", ".1..1...........111");
-        check_row<Block, decltype(xstd::bit_span(std::declval<vector&>()))>("bit_span over bit_vector", ".1..1.....11....111");
-        check_row<Block, decltype(std::declval<span&>().subspan(0UZ, 8UZ))>("bit_subspan", ".1..1.....11....111");
+        check_row<Block, decltype(xstd::bit_span(std::declval<vector&>()))>("bit_span over bit_vector", ".1..1...........111");
+        check_row<Block, decltype(std::declval<span&>().subspan(0UZ, 8UZ))>("bit_subspan", ".1..1...........111");
 
         // Set views: values as string_view is, combined with any set over the same storage.
         check_row<Block, decltype(xstd::bit_set_view(std::declval<fixed_set&>()))>("bit_set_view over bit_fixed_set", ".1..1....11.11111.1");
