@@ -8,7 +8,7 @@
 
 #include <xstd/bits/detail/bit_layout.hpp> // bits_per_byte, block_byte, block_copies_as_bytes, block_digits, byte_count, bytes_per_block
 #include <xstd/bits/detail/intrin.hpp>     // bools_per_block, expand_block
-#include <xstd/bits/detail/ownership.hpp>  // owner, set_reading_tag, storage_access
+#include <xstd/bits/detail/ownership.hpp>  // owner, reads, set_reading_tag, storage_access
 #include <xstd/bits/detail/shift.hpp>      // shr
 #include <boost/hash2/hash_append.hpp>     // hash_append, hash_append_size
 #include <algorithm>                       // min
@@ -132,12 +132,9 @@ constexpr auto update_bit_bytes(Hash& h, Blocks const& blocks, std::size_t n)
 template<class T>
 using hashed_bits_t = std::remove_cvref_t<decltype(storage_access::bits(std::declval<T const&>()))>;
 
-template<class T>
-concept set_reading = std::same_as<typename T::reads_as, set_reading_tag>;
-
 // Every set, a view among them, and every sequence that owns its bits, as std::span hashes nothing.
 template<class T>
-concept bit_hashable = std::derived_from<T, typename T::adaptor_type> and (set_reading<T> or T::owns_storage);
+concept bit_hashable = std::derived_from<T, typename T::adaptor_type> and (reads<T, set_reading_tag> or T::owns_storage);
 
 template<class T>
 concept static_bit_hashable = bit_hashable<T> and hashed_bits_t<T>::extent != std::dynamic_extent;
@@ -148,7 +145,7 @@ template<bit_hashable T>
         -> std::size_t
 {
         auto const& c = storage_access::bits(x);
-        if constexpr (set_reading<T> and hashed_bits_t<T>::extent == std::dynamic_extent) {
+        if constexpr (reads<T, set_reading_tag> and hashed_bits_t<T>::extent == std::dynamic_extent) {
                 // Equal sets need not share a width, so no byte past the last key is part of the value.
                 auto const last = c.total_find_prev(c.size());
                 if (last == c.size()) {
@@ -172,7 +169,7 @@ constexpr auto hash_append_bit_string(Hash& h, Flavor const& f, T const& x)
                 auto const n = bit_byte_count(x);
                 update_bit_bytes(h, storage_access::bits(x).blocks(), n);
                 if constexpr (hashed_bits_t<T>::extent == std::dynamic_extent) {
-                        if constexpr (set_reading<T>) {
+                        if constexpr (reads<T, set_reading_tag>) {
                                 boost::hash2::hash_append_size(h, f, n);
                         } else {
                                 boost::hash2::hash_append_size(h, f, storage_access::bits(x).size());

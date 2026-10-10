@@ -2465,9 +2465,10 @@ named. So a set owner admits only `bit_set_view`, a sequence owner only `bit_spa
 Blocks that no owner holds are committed to neither reading, so they admit either view: that is what a view over
 raw storage is for, and `std::bitset<N>` reaches it through `xstd::bit_convert` to its blocks.
 
-The rule is one typedef on the owner's side of the protocol, `owned_storage<Owner>::reads`, naming one of the
-empty tag types `set_reading_tag` and `sequence_reading_tag`, and one clause in `owner_of`,
-asked with `std::derived_from`: the owner's reading is the view's or refines it.
+The rule is one typedef on each adaptor, `reads_as`, naming one of the empty tag types `set_reading_tag` and
+`sequence_reading_tag`, which every owner and view built on it inherits, and one concept over it, `reads<T, R>`,
+asked with `std::derived_from`: the container's reading is `R` or refines it. `owner_of` asks it of the owner
+for the view's reading, and the hash, `bit_convert`'s widths and the proxies' recognition ask the same concept.
 The readings are types rather than enumerators so that the set of them is open: another reading, a string one
 say, declares a tag of its own and touches nothing already there, and one that refines an existing reading
 derives its tag from that one's, so it is accepted wherever its base is asked for. It has to live in the constraint
