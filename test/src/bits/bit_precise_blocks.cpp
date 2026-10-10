@@ -3,19 +3,20 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/bit.hpp>               // bit_convert
-#include <xstd/bits/bit_array.hpp>         // basic_bit_array
-#include <xstd/bits/bit_fixed_set.hpp>     // basic_bit_fixed_set
-#include <xstd/bits/bit_set.hpp>           // basic_bit_set
-#include <xstd/bits/bit_vector.hpp>        // basic_bit_vector
-#include <xstd/ints/cstdint/bit_int.hpp>   // bit_uint
-#include <boost/test/unit_test.hpp>        // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <cstddef>                         // size_t
-#include <cstdint>                         // uint8_t
-#include <functional>                      // hash
-#include <ranges>                          // iota
-#include <tuple>                           // tuple
-#include <type_traits>                     // integral_constant
+#include <xstd/bits/algorithm.hpp>       // bit_count, bit_reverse, bit_rotate
+#include <xstd/bits/bit.hpp>             // bit_convert
+#include <xstd/bits/bit_array.hpp>       // basic_bit_array
+#include <xstd/bits/bit_fixed_set.hpp>   // basic_bit_fixed_set
+#include <xstd/bits/bit_set.hpp>         // basic_bit_set
+#include <xstd/bits/bit_vector.hpp>      // basic_bit_vector
+#include <xstd/ints/cstdint/bit_int.hpp> // bit_uint
+#include <boost/test/unit_test.hpp>      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <cstddef>                       // size_t
+#include <cstdint>                       // uint8_t
+#include <functional>                    // hash
+#include <ranges>                        // iota
+#include <tuple>                         // tuple
+#include <type_traits>                   // integral_constant
 
 BOOST_AUTO_TEST_SUITE(BitPreciseBlocks)
 
@@ -51,23 +52,23 @@ auto check_array()
                 a[i] = in_pattern<N>(i);
                 b[i] = in_pattern<N>(i);
         }
-        BOOST_CHECK_EQUAL(a.count(), b.count());
+        BOOST_CHECK_EQUAL(xstd::bit_count(a), xstd::bit_count(b));
         BOOST_CHECK(xstd::bit_convert<byte>(a) == b);
         BOOST_CHECK(xstd::bit_convert<odd>(b) == a);
         BOOST_CHECK_EQUAL(std::hash<odd>()(a), std::hash<byte>()(b));
 
         auto c = a;
         auto d = b;
-        c[0] = not c[0];
-        d[0] = not d[0];
+        c[0]   = not c[0];
+        d[0]   = not d[0];
         BOOST_CHECK((a <=> c) == (b <=> d));
 
-        a.reverse();
-        b.reverse();
+        xstd::bit_reverse(a);
+        xstd::bit_reverse(b);
         BOOST_CHECK(xstd::bit_convert<byte>(a) == b);
 
-        a.rotate(N / 2UZ);
-        b.rotate(N / 2UZ);
+        xstd::bit_rotate(a, a.begin() + (N / 2UZ));
+        xstd::bit_rotate(b, b.begin() + (N / 2UZ));
         BOOST_CHECK(xstd::bit_convert<byte>(a) == b);
 }
 
