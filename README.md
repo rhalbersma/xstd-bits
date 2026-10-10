@@ -277,7 +277,7 @@ Note that the benchmarks and unit tests depend on [Boost](https://www.boost.io/)
 
 The library is header-only and its CMake target carries everything a consumer needs: the include directories, the `xstd-ints`, `xstd-misc`, `Boost::container` and `Boost::hash2` dependencies, and `cxx_std_23`. Link `xstd::bits` and you are done — there is no `target_include_directories` or `CMAKE_CXX_STANDARD` to set on your side.
 
-All three methods below are built by the [Consumption workflow](.github/workflows/consumption.yml), on every pull request and on every push to `main`, so what is written here is what is tested.
+All three methods below are built by the [Consumption workflow](.github/workflows/consumption.yml), on every pull request, so what is written here is what is tested.
 
 ### `find_package`, against an installed copy
 
