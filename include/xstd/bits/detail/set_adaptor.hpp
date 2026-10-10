@@ -25,7 +25,6 @@
 #include <xstd/bits/detail/ownership.hpp>                     // owned_bits_t, owned_storage, owner_of, owns, reads, set_reading_tag, storage, storage_access
 #include <xstd/bits/detail/shift.hpp>                         // shl, shr
 #include <xstd/bits/detail/storage_ptr.hpp>                   // storage_ptr_t, storage_ref_t
-#include <xstd/bits/detail/zero_width.hpp>                    // zero_width
 #include <xstd/bits/from_blocks.hpp>                          // from_blocks_t
 #include <xstd/misc/concepts/specialization_of.hpp>           // specialization_of
 #include <xstd/misc/type_traits/empty_base_type.hpp>          // empty_base_type
@@ -200,6 +199,9 @@ class set_adaptor : public set::sizes_t<Bits, Store, Derived, Key, KeyMapping, C
         static constexpr bool is_owner      = owns(Store);
         static constexpr bool is_descending = std::same_as<Compare, std::greater<Key>> or std::same_as<Compare, std::greater<>>;
 
+        // A zero width answers zero to every question: the exclusive scans need a position it has none to give.
+        static constexpr bool is_zero_width = (Bits::extent == 0UZ);
+
         // An enumerator stands for the one key it is, except where the mapping reads every value as a mask of keys.
         static constexpr bool enumerator_is_one_key = std::is_enum_v<Key> and not bit_mask_mapping<KeyMapping, Key>;
 
@@ -258,7 +260,7 @@ class set_adaptor : public set::sizes_t<Bits, Store, Derived, Key, KeyMapping, C
                         -> bool
                 {
                         assert(lhs.m_ptr == rhs.m_ptr);
-                        if constexpr (zero_width<Bits>) {
+                        if constexpr (is_zero_width) {
                                 return true;
                         } else {
                                 return lhs.m_idx == rhs.m_idx;
@@ -276,7 +278,7 @@ class set_adaptor : public set::sizes_t<Bits, Store, Derived, Key, KeyMapping, C
                         -> basic_iterator&
                 {
                         assert(m_ptr != nullptr);
-                        if constexpr (not zero_width<Bits>) {
+                        if constexpr (not is_zero_width) {
                                 m_idx = set_adaptor::next_position(m_ptr, m_idx);
                         }
                         return *this;
@@ -286,7 +288,7 @@ class set_adaptor : public set::sizes_t<Bits, Store, Derived, Key, KeyMapping, C
                         -> basic_iterator&
                 {
                         assert(m_ptr != nullptr);
-                        if constexpr (not zero_width<Bits>) {
+                        if constexpr (not is_zero_width) {
                                 m_idx = set_adaptor::prev_position(m_ptr, m_idx);
                         }
                         return *this;
@@ -362,7 +364,7 @@ class set_adaptor : public set::sizes_t<Bits, Store, Derived, Key, KeyMapping, C
         // The walk's step up, in the comparator's direction; a zero width has no position for a scan to start from.
         [[nodiscard]] static constexpr auto next_position(storage_ptr_t<bits_type const> const& ptr, std::size_t n) noexcept
                 -> std::size_t
-                requires (not zero_width<Bits>)
+                requires (not is_zero_width)
         {
                 assert(n < ptr->size());
                 if constexpr (is_descending) {
@@ -375,7 +377,7 @@ class set_adaptor : public set::sizes_t<Bits, Store, Derived, Key, KeyMapping, C
         // Descending, the end is size() as well, so stepping back from it is a step up to the lowest position.
         [[nodiscard]] static constexpr auto prev_position(storage_ptr_t<bits_type const> const& ptr, std::size_t n) noexcept
                 -> std::size_t
-                requires (not zero_width<Bits>)
+                requires (not is_zero_width)
         {
                 if constexpr (not is_descending) {
                         assert(ptr->find_first() < n);
@@ -741,7 +743,7 @@ public:
         [[nodiscard]] constexpr auto back() const noexcept
                 -> const_reference
         {
-                if constexpr (zero_width<bits_type>) {
+                if constexpr (is_zero_width) {
                         return {&bits(), 0UZ};
                 } else if constexpr (is_descending) {
                         return {&bits(), bits().find_first()};

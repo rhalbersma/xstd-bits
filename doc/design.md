@@ -1310,7 +1310,7 @@ Everything wider shares the general arms. A single block still needs the block-l
 one-block instantiation cannot take a loop's exit branch -- which is why `first_difference` and `any_above`
 each spell out the one- and two-block cases the way `find_front` and `intersects` do.
 
-Each caller of a scan carries the width-zero arm ahead of the call, and `zero_width<Bits>` is the one
+Each caller of a scan carries the width-zero arm ahead of the call, and `is_zero_width` is the one
 predicate they all ask: at width zero every answer is zero -- the total answer, `size()` -- and the storage's
 step, which asserts, is never instantiated for it. The set iterator's
 equality takes an arm there too: a zero width has one position, so every iterator over it is the same one,
@@ -4882,7 +4882,7 @@ has no member to put beside it, which is why that rung is ours alone.
 
 ### Why the bidirectional steps guard on a zero width
 
-`set_adaptor`'s `next_position` and `prev_position`, the set iterator's two steps, guard on `zero_width<Bits>`
+`set_adaptor`'s `next_position` and `prev_position`, the set iterator's two steps, guard on `is_zero_width`
 rather than asking the storage. The
 exclusive scans take a position as a precondition and a zero width has none to give, so they assert
 there.
