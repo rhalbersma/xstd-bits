@@ -6,6 +6,8 @@
 #include <test/for_each_type.hpp>                       // for_each_type
 #include <test/set/enums.hpp>                           // perm
 #include <test/set/lookup.hpp>                          // lookup_mismatches
+#include <xstd/bits/algorithm/bit_disjoint.hpp>         // bit_disjoint
+#include <xstd/bits/algorithm/bit_includes.hpp>         // bit_includes
 #include <xstd/bits/bit/bit_convert.hpp>                // bit_convert
 #include <xstd/bits/bit_enum_set.hpp>                   // bit_enum_set
 #include <xstd/bits/bit_fixed_set.hpp>                  // basic_bit_fixed_set, bit_fixed_set
@@ -13,7 +15,6 @@
 #include <xstd/bits/bit_flag_set.hpp>                   // bit_flag_set
 #include <xstd/bits/bit_type_traits/bit_fast.hpp>       // bit_fast
 #include <xstd/bits/bit_type_traits/bit_underlying.hpp> // underlying_block_t
-#include <xstd/bits/detail/set_adaptor.hpp>             // disjoint, intersects
 #include <xstd/bits/from_blocks.hpp>                    // from_blocks
 #include <xstd/filesystem.hpp>                          // perms
 #include <xstd/ints/concepts/bit_mask.hpp>              // bit_mask

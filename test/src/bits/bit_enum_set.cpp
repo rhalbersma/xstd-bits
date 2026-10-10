@@ -5,6 +5,8 @@
 
 #include <test/set/enums.hpp>                      // day, listed_enums, nine, perm, piece, wind
 #include <test/set/lookup.hpp>                     // lookup_mismatches
+#include <xstd/bits/algorithm/bit_disjoint.hpp>    // bit_disjoint
+#include <xstd/bits/algorithm/bit_includes.hpp>    // bit_includes
 #include <xstd/bits/bit_array.hpp>                 // bit_array
 #include <xstd/bits/bit_enum_set.hpp>              // bit_enum_set
 #include <xstd/bits/bit_fixed_set.hpp>             // basic_bit_fixed_set, bit_fixed_set

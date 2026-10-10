@@ -4,6 +4,8 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <fuzz/decoder.hpp>                      // checker, decoder, run, throws
+#include <xstd/bits/algorithm/bit_disjoint.hpp>  // bit_disjoint
+#include <xstd/bits/algorithm/bit_includes.hpp>  // bit_includes
 #include <xstd/bits/bit_bounded_set.hpp>         // basic_bit_bounded_set, bit_bounded_set
 #include <xstd/bits/bit_fixed_set.hpp>           // basic_bit_fixed_set, bit_fixed_set
 #include <xstd/bits/bit_set.hpp>                 // basic_bit_set, bit_set

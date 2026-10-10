@@ -9,6 +9,8 @@
 #include <test/set/lookup.hpp>                         // lookup_mismatches
 #include <test/set/primitives.hpp>                     // heterogeneous_key
 #include <test/spec/random.hpp>                        // engine, seed
+#include <xstd/bits/algorithm/bit_disjoint.hpp>        // bit_disjoint
+#include <xstd/bits/algorithm/bit_includes.hpp>        // bit_includes
 #include <xstd/bits/bit/bit_convert.hpp>               // bit_convert
 #include <xstd/bits/bit_bounded_set.hpp>               // basic_bit_bounded_set
 #include <xstd/bits/bit_concepts/bit_mask_mapping.hpp> // bit_mask_mapping

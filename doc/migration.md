@@ -52,14 +52,14 @@ auto s = xstd::bit_fixed_set<64>();
 s.insert(3);
 s.insert(17);
 s.erase(3);
-s.complement(40);
-s.contains(17);  // true
-s.size();        // 2
-not s.empty();   // true
-s.empty();       // false
-s.full();        // false
-s.fill();        // every position
-s.complement();  // complement
+if (s.contains(40)) { s.erase(40); } else { s.insert(40); }
+s.contains(17);            // true
+s.size();                  // 2
+not s.empty();             // true
+s.empty();                 // false
+s.size() == s.max_size();  // false
+s.fill();                  // every position
+s = ~s;                    // complement
 ```
 
 </td></tr>
@@ -93,10 +93,12 @@ auto meets = (b & other).any();
 </td><td>
 
 ```cpp
+#include <xstd/bits/algorithm.hpp>
+
 auto u = s << 1;
 auto both = s & other;
-auto subset = s.is_subset_of(other);
-auto meets = intersects(s, other);
+auto subset = xstd::bit_includes(other, s);
+auto meets = not xstd::bit_disjoint(s, other);
 ```
 
 </td></tr>
@@ -105,10 +107,11 @@ auto meets = intersects(s, other);
 ## `std::bitset<N>` as a row of `bool`
 
 `operator[]` and the whole-row operations stay. The bitwise operators work on the whole container, element by
-element over two rows of one size, as `std::valarray<bool>`'s do; the count and the queries keep their names, and
-rotation is a member rather than two shifts. A sequence has no shift operators, since moving elements is what
-`std::shift_left` and `std::shift_right` already say, and in index order `bitset`'s `<<` moves position `i` to
-`i + n`, which is `std::shift_right`.
+element over two rows of one size, as `std::valarray<bool>`'s do; the count, the queries and rotation are
+`std::ranges` algorithms run a block at a time, `xstd::bit_count`, `bit_all_of`, `bit_any_of`, `bit_none_of`
+and `bit_rotate`, and a rotation is one call rather than two shifts. A sequence has no shift operators,
+since moving elements is what `std::shift_left` and `std::shift_right` already say, and in index order `bitset`'s
+`<<` moves position `i` to `i + n`, which is `std::shift_right`.
 
 <table>
 <tr><th>Before</th><th>After</th></tr>
@@ -127,14 +130,15 @@ b.to_string();  // "11111101", position 0 last
 </td><td>
 
 ```cpp
+#include <xstd/bits/algorithm.hpp>
 #include <xstd/bits/bit_array.hpp>
 
 auto a = xstd::bit_array<8>();
 a[1] = true;
 a.flip();
-a.count();  // 7
-a.all();    // false
-a.rotate(1);
+xstd::bit_count(a);   // 7
+xstd::bit_all_of(a);  // false
+xstd::bit_rotate(a, a.end() - 1);  // position i to i + 1
 std::format("{}", a);  // "[true, ...]", position 0 first
 ```
 
@@ -269,6 +273,7 @@ fs::permissions(path, p);
 </td><td>
 
 ```cpp
+#include <xstd/bits/algorithm.hpp>
 #include <xstd/bits/bit_flag_set.hpp>
 
 using perms = xstd::bit_flag_set<fs::perms, 16>;
@@ -276,7 +281,7 @@ using perms = xstd::bit_flag_set<fs::perms, 16>;
 auto p = perms{fs::perms::owner_read, fs::perms::owner_write};
 p |= fs::perms::group_read;
 p.contains(fs::perms::owner_write);
-p.is_superset_of(mask);
+xstd::bit_includes(p, mask);
 fs::permissions(path, p);  // converts to fs::perms
 ```
 
@@ -350,6 +355,7 @@ b.intersects(c);
 </td><td>
 
 ```cpp
+#include <xstd/bits/algorithm.hpp>
 #include <xstd/bits/bit_set.hpp>
 
 auto s = xstd::bit_set{3, 70};
@@ -357,8 +363,8 @@ s.insert(500);  // grows
 for (auto i : s) {
         use(i);
 }
-s.is_subset_of(c);
-intersects(s, c);
+xstd::bit_includes(c, s);
+not xstd::bit_disjoint(s, c);
 ```
 
 </td></tr>
@@ -378,13 +384,14 @@ auto n = ~b;
 </td><td>
 
 ```cpp
+#include <xstd/bits/algorithm.hpp>
 #include <xstd/bits/bit_vector.hpp>
 
 auto v = xstd::bit_vector();
 v.push_back(true);
 v.resize(10);
 v.flip();
-v.count();
+xstd::bit_count(v);
 v &= c;
 v ^= c;
 auto n = ~v;
@@ -432,12 +439,13 @@ bits.popcount();
 </td><td>
 
 ```cpp
+#include <xstd/bits/algorithm.hpp>
 #include <xstd/bits/bit_vector.hpp>
 
 auto bits = xstd::bit_vector{false, true, true, false, false};
 bits.push_back(false);
 bits.insert(bits.begin() + 2, {true, true});
-bits.count();
+xstd::bit_count(bits);
 ```
 
 </td></tr>

@@ -6,6 +6,8 @@
 #include <test/block_types.hpp>                     // all_block_types
 #include <test/set/ascending.hpp>                   // yields_ascending_keys
 #include <test/set/strong_index.hpp>                // agrees_with_std_set_of_strong_indices, strong_index
+#include <xstd/bits/algorithm/bit_disjoint.hpp>     // bit_disjoint
+#include <xstd/bits/algorithm/bit_includes.hpp>     // bit_includes
 #include <xstd/bits/bit_fixed_set.hpp>              // basic_bit_fixed_set
 #include <xstd/bits/bit_key_mapping.hpp>            // bit_key_mapping, bit_range_mapping
 #include <xstd/bits/bit_set.hpp>                    // bit_set
