@@ -609,9 +609,6 @@ class sequence_adaptor : public sequence::sizes_t<Bits, Store, W, Derived, E>
         template<class S>
         static constexpr bool blittable = blit_source<S, typename bits_type::block_type>;
 
-        // A storage taking a masked block at any position, asked of Bits so a const window answers no.
-        static constexpr bool block_writable = requires (Bits& b, std::size_t pos, bits_type::block_type w) { b.block_at(pos, w, w); };
-
         // The container needs constraints only the vehicle can name; [class.friend]/3 ignores the void a view passes.
         friend Derived;
 
@@ -1315,10 +1312,10 @@ public:
                 return three_way<sequence_reading_tag>(x.bits(), y.bits());
         }
 
-        // Elementwise logical, as a bitwise operator on a sequence of bools means. Three, not four.
+        // Elementwise logical, as a bitwise operator on a sequence of bools means, on an owner alone. Three, not four.
         constexpr auto operator&=(this auto&& self, sequence_adaptor const& other) noexcept
                 -> auto&
-                requires (not is_window) and requires { self.bits() &= other.bits(); }
+                requires is_owner and requires { self.bits() &= other.bits(); }
         {
                 self.bits() &= other.bits();
                 return self;
@@ -1326,7 +1323,7 @@ public:
 
         constexpr auto operator|=(this auto&& self, sequence_adaptor const& other) noexcept
                 -> auto&
-                requires (not is_window) and requires { self.bits() |= other.bits(); }
+                requires is_owner and requires { self.bits() |= other.bits(); }
         {
                 self.bits() |= other.bits();
                 return self;
@@ -1334,41 +1331,13 @@ public:
 
         constexpr auto operator^=(this auto&& self, sequence_adaptor const& other) noexcept
                 -> auto&
-                requires (not is_window) and requires { self.bits() ^= other.bits(); }
+                requires is_owner and requires { self.bits() ^= other.bits(); }
         {
                 self.bits() ^= other.bits();
                 return self;
         }
 
         // No shifts: this reading already spells moving elements std::shift_left and std::shift_right.
-
-        // Bulk on a view of ours against any other source read by block: a block at a time at either alignment.
-        template<class Other>
-        constexpr auto operator&=(this auto&& self, Other const& other) noexcept
-                -> auto&
-                requires (not is_owner) and block_writable and blittable<Other> and (is_window or not std::derived_from<Other, sequence_adaptor>)
-        {
-                self.combine(other, [](auto a, auto b) -> decltype(a) { return static_cast<decltype(a)>(a & b); });
-                return self;
-        }
-
-        template<class Other>
-        constexpr auto operator|=(this auto&& self, Other const& other) noexcept
-                -> auto&
-                requires (not is_owner) and block_writable and blittable<Other> and (is_window or not std::derived_from<Other, sequence_adaptor>)
-        {
-                self.combine(other, [](auto a, auto b) -> decltype(a) { return static_cast<decltype(a)>(a | b); });
-                return self;
-        }
-
-        template<class Other>
-        constexpr auto operator^=(this auto&& self, Other const& other) noexcept
-                -> auto&
-                requires (not is_owner) and block_writable and blittable<Other> and (is_window or not std::derived_from<Other, sequence_adaptor>)
-        {
-                self.combine(other, [](auto a, auto b) -> decltype(a) { return static_cast<decltype(a)>(a ^ b); });
-                return self;
-        }
 
         // [vector.bool]'s two: flip every bit, and swap two proxies, which the proxies' own swap does.
         constexpr auto flip(this auto&& self) noexcept
@@ -1455,22 +1424,6 @@ private:
                         return bits().all();
                 } else {
                         return bits().all(offset(), size());
-                }
-        }
-
-        // The blocks of this window against another's at its own alignment, masked to what it holds.
-        template<class Other, class F>
-        constexpr auto combine(this auto&& self, Other const& other, F f) noexcept
-                -> void
-        {
-                using block_type      = bits_type::block_type;
-                constexpr auto digits = bits_type::bits_per_block;
-                assert(self.size() == other.size());
-                for (auto k = 0UZ; k < self.size(); k += digits) {
-                        auto const mask   = partial_block_mask<block_type>(std::ranges::min(digits, self.size() - k));
-                        auto const mine   = self.bits().block_at(self.offset() + k);
-                        auto const theirs = other.bits().block_at(other.offset() + k);
-                        self.bits().block_at(self.offset() + k, f(mine, theirs), mask);
                 }
         }
 
