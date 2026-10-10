@@ -5,9 +5,9 @@
 
 #include <test/sequence/ordering.hpp>               // ordering_agrees_with_vector_bool
 #include <test/sequence/rotation.hpp>               // permutation_sweep, permutes_ten_bits
-#include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
 #include <xstd/bits/algorithm/bit_reverse.hpp>      // bit_reverse
 #include <xstd/bits/algorithm/bit_rotate.hpp>       // bit_rotate
+#include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
 #include <xstd/bits/bit_fixed_set.hpp>              // bit_fixed_set
 #include <xstd/bits/bit_set_view.hpp>               // bit_set_view
 #include <xstd/bits/bit_span.hpp>                   // bit_span
@@ -125,6 +125,7 @@ BOOST_AUTO_TEST_CASE(NeitherTheViewNorTheOwnerCombines)
 {
         static_assert(not combines_with<view_of<xstd::bit_array<8>>, xstd::bit_array<8>> and not combines_with<view_of<xstd::bit_array<8>>, view_of<xstd::bit_array<8> const>>);
         static_assert(not combines_with<xstd::bit_array<8>, xstd::bit_array<8>> and not combines_with<view_of<xstd::bit_array<8>>, view_of<xstd::bit_array<8>>>);
+        BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 
 // A view is mutable through: writing a position through the view writes the bit.

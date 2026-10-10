@@ -150,7 +150,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(EveryTypeAnswersItsRow, Block, matrix_block_types)
         check_row<Block, xstd::basic_bit_bounded_valarray<Block, N>>("bit_bounded_valarray", "11.11111..1.....111");
         check_row<Block, xstd::basic_bit_valarray<Block>>("bit_valarray", "11.1111...1.....111");
 
-        // Sequence views: read out by bit_convert, combined and compared never, as span.
+        // Sequence views: read out by bit_convert, and neither combined nor compared, as span.
         using span = decltype(xstd::bit_span(std::declval<array&>()));
         check_row<Block, span>("bit_span over bit_array", ".1..1...........111");
         check_row<Block, decltype(xstd::bit_span(std::declval<array const&>()))>("bit_span over const bit_array", ".1..1...........111");

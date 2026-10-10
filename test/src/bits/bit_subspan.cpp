@@ -16,7 +16,7 @@
 #include <cstdint>                                  // uint8_t
 #include <functional>                               // hash
 #include <iterator>                                 // size
-#include <ranges>                                   // empty, iota, random_access_range, size
+#include <ranges>                                   // empty, random_access_range, size
 #include <span>                                     // dynamic_extent
 #include <tuple>                                    // tuple
 #include <type_traits>                              // false_type, integral_constant, is_default_constructible_v, is_member_function_pointer_v, true_type
@@ -80,7 +80,7 @@ BOOST_AUTO_TEST_CASE(TheWindowIsTheAdaptorWindowed)
         static_assert(has_subspan<Sub>);
         static_assert(not has_subspan<Owner>);
 
-        // Like span it neither compares nor hashes.
+        // Like span it neither compares nor hashes, and the bitwise operators are an owner's.
         static_assert(not std::equality_comparable<Sub>);
         static_assert(not std::is_default_constructible_v<std::hash<Sub>>);
 
