@@ -540,8 +540,8 @@ auto check_logical()
                 check_binary<V>(a, b, [](auto const& x, auto const& y) { return x & y; }, [](bool p, bool q) -> bool { return p and q; });
                 check_binary<V>(a, b, [](auto const& x, auto const& y) { return x | y; }, [](bool p, bool q) -> bool { return p or q; });
                 check_binary<V>(a, b, [](auto const& x, auto const& y) { return x ^ y; }, [](bool p, bool q) -> bool { return p != q; });
-                check_binary<V>(a, b, [](auto const& x, auto const& y) { return x && y; }, [](bool p, bool q) -> bool { return p and q; });
-                check_binary<V>(a, b, [](auto const& x, auto const& y) { return x || y; }, [](bool p, bool q) -> bool { return p or q; });
+                check_binary<V>(a, b, [](auto const& x, auto const& y) { return x and y; }, [](bool p, bool q) -> bool { return p and q; });
+                check_binary<V>(a, b, [](auto const& x, auto const& y) { return x or y; }, [](bool p, bool q) -> bool { return p or q; });
         });
 }
 

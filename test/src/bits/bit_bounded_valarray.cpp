@@ -5,8 +5,8 @@
 
 #include <test/valarray.hpp>                   // check_*
 #include <xstd/bits/bit_bounded_valarray.hpp>  // basic_bit_bounded_valarray, bit_bounded_valarray
-#include <xstd/bits/detail/bounded_blocks.hpp> // XSTD_BITS_HAS_CONSTEXPR_BOUNDED
-#include <boost/test/unit_test.hpp>            // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
+#include <xstd/bits/detail/bounded_blocks.hpp> // IWYU pragma: keep; XSTD_BITS_HAS_CONSTEXPR_BOUNDED
+#include <boost/test/unit_test.hpp>            // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <concepts>                            // same_as
 #include <cstddef>                             // size_t
 #include <cstdint>                             // uint64_t, uint8_t
@@ -147,7 +147,7 @@ BOOST_AUTO_TEST_CASE(PastTheCapacityThrowsBadAlloc)
 // Over std::inplace_vector the blocks are the object, so constant evaluation needs no allocation.
 BOOST_AUTO_TEST_CASE(ItIsUsableInConstantExpressions)
 {
-        static_assert([] {
+        static_assert([] -> bool {
                 auto v = xstd::bit_bounded_valarray<70>{true, false, true};
                 v.resize(68UZ, true);
                 return (v >> 67UZ)[0] and not(v << 68UZ).max();

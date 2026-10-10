@@ -6,7 +6,8 @@
 #include <test/block_types.hpp>       // all_block_types
 #include <test/valarray.hpp>          // check_*
 #include <xstd/bits/bit_valarray.hpp> // basic_bit_valarray, bit_valarray
-#include <boost/test/unit_test.hpp>   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_THROW
+#include <boost/test/unit_test.hpp>   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
+#include <concepts>                   // same_as
 #include <cstddef>                    // size_t
 #include <cstdint>                    // uint8_t
 #include <limits>                     // numeric_limits
@@ -142,10 +143,11 @@ BOOST_AUTO_TEST_CASE(ASizePastTheAddressableOnesThrowsLengthError)
 // Constant evaluation allocates and frees within one expression, as std::vector's does.
 BOOST_AUTO_TEST_CASE(ItIsUsableInConstantExpressions)
 {
-        static_assert([] {
-                auto v = xstd::bit_valarray{true, false, true};
-                auto w = (v.cshift(1) | v) == true;
-                return w.min() and v.sum() and not(v < v).max();
+        static_assert([] -> bool {
+                auto const v = xstd::bit_valarray{true, false, true};
+                auto const u = v;
+                auto const w = (v.cshift(1) | v) == true;
+                return w.min() and v.sum() and not(u < v).max();
         }());
 }
 

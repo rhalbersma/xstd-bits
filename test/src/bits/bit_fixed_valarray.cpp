@@ -7,7 +7,7 @@
 #include <test/structural.hpp>              // structural
 #include <test/valarray.hpp>                // check_*
 #include <xstd/bits/bit_fixed_valarray.hpp> // basic_bit_fixed_valarray, bit_fixed_valarray
-#include <boost/test/unit_test.hpp>         // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
+#include <boost/test/unit_test.hpp>         // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <concepts>                         // constructible_from, convertible_to, same_as
 #include <cstddef>                          // size_t
 #include <cstdint>                          // uint8_t
@@ -141,7 +141,7 @@ BOOST_AUTO_TEST_CASE(ABuiltInArrayOfItsSizeConverts)
 // Every member is constexpr, so an array is computed in a constant expression.
 BOOST_AUTO_TEST_CASE(ItIsUsableInConstantExpressions)
 {
-        static_assert([] {
+        static_assert([] -> bool {
                 auto v = xstd::bit_fixed_valarray<70>{true, false, true};
                 v <<= 64UZ;
                 auto const w = (v >> 64UZ) == xstd::bit_fixed_valarray<70>{true, false, true};
