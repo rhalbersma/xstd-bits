@@ -14,7 +14,7 @@
 #include <xstd/bits/detail/borrowed_bits.hpp>              // borrowable_block, borrowable_blocks
 #include <xstd/bits/detail/ownership.hpp>                  // owned_bits_t, owner_reading, sequence_reading_tag, storage, window
 #include <xstd/bits/detail/sequence_adaptor.hpp>           // sequence_adaptor
-#include <xstd/bits/detail/views.hpp>                      // blit_source, window_of
+#include <xstd/bits/detail/views.hpp>                      // window_of
 #include <boost/container_hash/is_range.hpp>               // is_range
 #include <boost/container_hash/is_tuple_like.hpp>          // is_tuple_like
 #include <cstddef>                                         // size_t
