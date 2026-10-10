@@ -948,7 +948,7 @@ public:
                 return self;
         }
 
-        // A view of ours takes any other set over this storage and these keys, owner or view, by the storage's spelling.
+        // A view of ours takes any other set over this storage and keys, owner or view, by the storage's spelling.
         template<class OtherBits, storage OtherStore, class OtherDerived>
         constexpr auto operator&=(this auto&& self, set_adaptor<OtherBits, OtherStore, OtherDerived, Key, KeyMapping, Compare> const& other) noexcept
                 -> auto&
