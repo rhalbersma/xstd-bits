@@ -6,7 +6,8 @@
 #ifndef XSTD_BITS_EXT_BOOST_BIT_SMALL_VECTOR_HPP
 #define XSTD_BITS_EXT_BOOST_BIT_SMALL_VECTOR_HPP
 
-#include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container, num_blocks_v
+#include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container
+#include <xstd/bits/detail/num_blocks.hpp>                   // num_blocks_v, tiling_block
 #include <xstd/bits/detail/ownership.hpp>                    // storage, window
 #include <xstd/bits/detail/rebind.hpp>                       // rebind
 #include <xstd/bits/detail/sequence_adaptor.hpp>             // sequence_adaptor
@@ -30,6 +31,7 @@ namespace xstd {
 
 // The sequence reading over the small-vector column; the allocator is Boost's own, as that container defaults to it.
 template<xstd::unsigned_integer Block, std::size_t N, class Alloc = boost::container::new_allocator<Block>>
+        requires bits::detail::tiling_block<Block>
 class basic_bit_small_vector : public bits::detail::sequence_adaptor<bits::detail::bit_block_container<boost::container::small_vector<Block, bits::detail::num_blocks_v<Block, N>, Alloc>>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_small_vector<Block, N, Alloc>>
 {
         using base_type = bits::detail::sequence_adaptor<bits::detail::bit_block_container<boost::container::small_vector<Block, bits::detail::num_blocks_v<Block, N>, Alloc>>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_small_vector<Block, N, Alloc>>;

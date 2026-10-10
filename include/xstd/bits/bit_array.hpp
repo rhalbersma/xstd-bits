@@ -7,7 +7,8 @@
 #define XSTD_BITS_BIT_ARRAY_HPP
 
 #include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp> // bit_blocks_extent_v
-#include <xstd/bits/detail/bit_block_container.hpp>        // bit_block_container, num_blocks_v
+#include <xstd/bits/detail/bit_block_container.hpp>        // bit_block_container
+#include <xstd/bits/detail/num_blocks.hpp>                 // holds_width, num_blocks_v
 #include <xstd/bits/detail/ownership.hpp>                  // storage, window
 #include <xstd/bits/detail/rebind.hpp>                     // rebind
 #include <xstd/bits/detail/sequence_adaptor.hpp>           // sequence_adaptor
@@ -29,6 +30,7 @@ namespace xstd {
 
 // The packed std::array<bool, N>, named after the container it packs.
 template<xstd::unsigned_integer Block, std::size_t N>
+        requires bits::detail::holds_width<Block, N>
 class basic_bit_array : public bits::detail::sequence_adaptor<bits::detail::bit_block_container<std::array<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_array<Block, N>>
 {
         using base_type = bits::detail::sequence_adaptor<bits::detail::bit_block_container<std::array<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_array<Block, N>>;
