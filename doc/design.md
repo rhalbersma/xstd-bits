@@ -554,8 +554,9 @@ the set reading has no need of. A `bit_subspan` is a *window*: a bit offset and 
 does not span, so its position zero is not the storage's and its bytes are not the storage's bytes. Asking
 `has_static_width` alone would wave it through, because a window over a static container reports that
 *container's* extent rather than its own size, and `to_bytes` would then hand back the wrong bits. So
-`bit_convert` reads a view only where it is not windowed (`bit_width_of` asks a `view` for `is_windowed`). A `bit_span`, which
-is not a window, spans the whole container and converts like an owner.
+`bit_convert` reads a window as a run-time width of its own (`bit_width_of` asks a `view` for `is_windowed`),
+a block at a time from its offset through `block_at`, so that its first position is position zero of the copy. A
+`bit_span`, which is not a window, spans the whole container and converts like an owner.
 
 Two block widths over the same `N` are two spellings of one field of bits, so they cross on this rule with
 neither side named: `basic_bit_array<uint8_t, 64>` converts to and from `basic_bit_array<uint64_t, 64>` because the
@@ -1792,7 +1793,10 @@ it, and a view over a `bit_block_container` over `std::vector` must not be able 
 ### views-follow-their-precedent
 
 `bit_set_view` follows `std::string_view`: a value that happens not to own its bytes, so it has `==` and
-`<=>`, and its ordering is exactly `std::set`'s. `bit_span` follows `std::span`, which P1085 stripped of both
+`<=>`, and its ordering is exactly `std::set`'s. As [string.view.comparison] asks, it compares with whatever
+converts to it: its owner, and a view of the same bits that are not const, since both views convert from
+mutable to const bits as `std::span` does. Those are the only mixed comparisons; two owners compare only within
+their own type, as `std::array` and `std::vector` do. `bit_span` follows `std::span`, which P1085 stripped of both
 because "same referent" and "same contents" are both defensible readings of a handle. So `set_adaptor`
 compares and hashes whatever it owns or views, and `sequence_adaptor` compares and hashes only as an owner. The non-member copies
 — `~`, `&`, `|`, `^`, `-`, `<<`, `>>` — are the owner's alone in both readings: a copied view would write
@@ -2070,27 +2074,19 @@ have no subviews either; they assert their preconditions rather than throw, and 
 to-the-end sentinel. A window is a view in `std::ranges`' sense and borrowed like `span`, and like `span` it
 neither compares nor hashes ([views-follow-their-precedent](#views-follow-their-precedent)).
 
-A window's end blocks are shared with what lies outside it, so its bulk operations are masked blocks: `fill` over
-a window of ours is `bit_block_container::set(pos, len, value)`, a block at a time through `block_at`, and
-one position at a time over a window of anything else; `&=`, `|=` and `^=` on a window of ours take a
-source of any shape that reads blocks of the same block type, a window at any other alignment included, reading
-both sides through `block_at` and writing through `block_at` masked to the window ([the-blit](#the-blit)). The
-two must be of one size, and must not overlap short of coinciding, `w ^= w` being fine. A source over another
-block type is refused rather than converted behind the operator, which would hide a copy and, over a heap owner,
-an allocation in what is otherwise a `noexcept` pass over the blocks: the caller spells it,
-`w &= xstd::bit_convert<xstd::bit_rebind<Block, Other>>(other)`, a copy as `memcpy` would make it where both
-blocks allow, and the combine then blits. No sequence has shifts,
-window or whole ([no-shifts-on-a-sequence](#no-shifts-on-a-sequence)).
+A window's end blocks are shared with what lies outside it, so its `fill` is masked blocks: over a window of
+ours it is `bit_block_container::set(pos, len, value)`, a block at a time through `block_at`, and one position at
+a time over a window of anything else. A sequence view has none of the bitwise operators, as `std::span` has none:
+`&=`, `|=` and `^=` are an owner's, over its own type alone, as a value's are. A `bit_set_view` keeps the set
+reading's, and takes any set over the same storage and keys, owner or view, through the storage's own operators.
+No sequence has shifts, window or whole ([no-shifts-on-a-sequence](#no-shifts-on-a-sequence)).
 
 **A window over a const storage writes nothing, and the predicate has to be asked of the right type to say so.**
 `bits_type` is `Bits` with the const stripped, because a view over a const owner names `Bits const` and the
-typedef wants the storage's own name. Asking `block_writable` of *that* asks whether a non-const storage takes
-a masked write, which is always yes, so a const window advertised the three bulk operators it could not
-perform -- and the mismatch surfaced inside `combine` as a hard error on a discarded qualifier rather than as
-a constraint that simply failed, so even asking whether the operator existed would not compile. It is asked of
-`Bits` instead, which carries the const, and the operators drop out of overload resolution the way `fill`'s
-already did by constraining through `self.storage()`. `set_adaptor`'s const view was never affected: every one
-of its mutators constrains through the storage expression.
+typedef wants the storage's own name, so a write asked of `bits_type` is always possible. `fill` asks through the
+storage expression instead, which carries the const, and drops out of overload resolution on a const window.
+`set_adaptor`'s const view was never affected: every one of its mutators constrains through the storage
+expression.
 
 ### static-windows
 
@@ -4000,7 +3996,7 @@ convention.
 typing, but a deduced return type has to instantiate the body to be known, so any
 `requires { x.f(); }` that would have been answered from the declaration instead instantiates and can hard
 error where it should have said "no". That is not a stylistic loss; it is the mechanism every detection in the
-tree is built on -- `can_grow`, `block_writable`, `is_writable` and `blittable` all ask exactly that question.
+tree is built on -- `can_grow`, `is_writable` and `blittable` all ask exactly that question.
 Declared return types, trailing or leading, answer it from the declaration.
 
 **Lambdas keep their trailing return inline.** A lambda is an expression inside a statement, so there is no
@@ -4216,7 +4212,7 @@ cannot say no about the call actually made is decoration.
 
 Where the function has the argument, the clause names it -- `*position`, `x`, `*first`, `*ilist.begin()`,
 `value_type(std::forward<Args>(args)...)`, `static_cast<value_type>(*std::ranges::begin(rg))`,
-`b.reserve(blocks_for(n))`. Where there is no call site to borrow from -- `can_grow`, `block_writable`,
+`b.reserve(blocks_for(n))`. Where there is no call site to borrow from -- `can_grow`,
 `blit_source`, the `for_each` block guards, `std::bitset`'s `num_blocks` -- the requires-expression declares
 its own parameters, which is what `std::declval` is for at namespace scope and what C++20 gave
 requires-expressions of their own:
@@ -4792,8 +4788,8 @@ Asking whether a bulk operator accepts a view over a foreign storage -- `ours &=
 a `requires`-expression or written out -- crashes clang 18 and clang 20 alike with an internal error, and it
 did so before the windowed operators existed, so the trigger is the whole view's `&=` seeing a foreign
 `sequence_adaptor` as its argument. gcc rejects the expression as it should. The expression is ill-formed
-either way, since bulk on a window takes a source of the destination's own block type and the whole view's
-takes its own type, so nothing in the library or the tests spells it; the crash is recorded here so nobody
+either way, since a sequence view has no bulk operators and an owner's take its own type alone, so nothing in
+the library or the tests spells it; the crash is recorded here so nobody
 adds the assertion that would.
 
 ### the-coverage-gate
@@ -5066,12 +5062,13 @@ The vocabulary is the thing to read twice at this reading: `bit_array<32>(xstd::
 array of bool — true, false, true, then twenty-nine more false — and not the set `{0, 2}` that the
 same bits spell one reading over.
 
-**Not on a window**, which is the whole of why `is_window` is asked. A window is a bit offset and a
-size of its own into storage it does not span: its position zero is not the storage's, so its bytes
-are not the storage's bytes and `bit_convert` would hand back the wrong ones. A width test does not catch
-it, since a window over a static container reports the *container's* extent rather than its own size, so
-`bit_convert` asks `is_windowed`. A view that is not a window spans the whole container, so its bytes
-are that container's and it converts.
+**Not through the storage's bytes on a window**, which is the whole of why `is_window` is asked. A window
+is a bit offset and a size of its own into storage it does not span: its position zero is not the
+storage's, so its bytes are not the storage's bytes and reading them would hand back the wrong ones. A width
+test does not catch it, since a window over a static container reports the *container's* extent rather than
+its own size, so `bit_convert` asks `is_windowed` and reads a window from its offset, a block at a time,
+as a run-time width. A view that is not a window spans the whole container, so its bytes are that
+container's and it converts through them.
 
 ### Two places where the coverage gate decides the layout
 

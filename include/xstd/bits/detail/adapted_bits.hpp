@@ -6,7 +6,9 @@
 #ifndef XSTD_BITS_DETAIL_ADAPTED_BITS_HPP
 #define XSTD_BITS_DETAIL_ADAPTED_BITS_HPP
 
+#include <xstd/misc/type_traits/empty_base_type.hpp>   // empty_base_type
 #include <xstd/misc/type_traits/no_unique_address.hpp> // XSTD_NO_UNIQUE_ADDRESS
+#include <concepts>                                    // same_as
 #include <type_traits>                                 // is_nothrow_constructible_v
 #include <utility>                                     // forward, in_place_t
 
@@ -29,7 +31,10 @@ public:
                 : m_bits(std::forward<Args>(args)...)
         {}
 
-        [[nodiscard]] friend auto operator==(adapted_bits const&, adapted_bits const&) -> bool = default;
+        // An owner's alone: a view's empty base compares nothing, so two views over one storage find no candidate.
+        // clang-format off: one line, so "= default;" stays where gcovr's branch exclusion looks for it.
+        [[nodiscard]] friend auto operator==(adapted_bits const&, adapted_bits const&) -> bool requires (not std::same_as<Base, xstd::empty_base_type<>>) = default;
+        // clang-format on
 };
 
 // Storage with no unused bits: the member is public only so that the owner is structural, not for direct use.
@@ -46,7 +51,10 @@ struct adapted_bits<Member, Base, true> : Base
                 : m_bits(std::forward<Args>(args)...)
         {}
 
-        [[nodiscard]] friend auto operator==(adapted_bits const&, adapted_bits const&) -> bool = default;
+        // An owner's alone: a view's empty base compares nothing, so two views over one storage find no candidate.
+        // clang-format off: one line, so "= default;" stays where gcovr's branch exclusion looks for it.
+        [[nodiscard]] friend auto operator==(adapted_bits const&, adapted_bits const&) -> bool requires (not std::same_as<Base, xstd::empty_base_type<>>) = default;
+        // clang-format on
 };
 
 } // namespace xstd::bits::detail
