@@ -190,7 +190,7 @@ the code that uses it, and no user spells it. Follow the standard's practice wit
 - **A default template argument is public where a user may set a later parameter,** since that spells every one
   before it: `less<Key>`, `char_traits<charT>`, `allocator<T>`, `dynamic_extent`. The standard's one exception,
   `basic_simd`'s *`native-abi<T>`*, sits on the last parameter, which users reach through the `simd<T, N>` alias.
-- **A constraint becomes a public concept when users have a reason to name it**, as `bit_convertible` names what
+- **A constraint becomes a public concept when users have a reason to name it**, as `bit_convertible_to` names what
   `bit_convert` takes. A public concept carries semantics: do not promote one to keep a `detail` name out of a
   signature, and do not merge two to save a name.
 

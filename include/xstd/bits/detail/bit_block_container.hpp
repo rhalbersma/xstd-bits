@@ -170,6 +170,10 @@ concept zero_capacity = resizable_bit_blocks<Blocks> and N == 0UZ and bit_blocks
 template<class Blocks>
 using stored_width_t = std::conditional_t<(alignof(std::size_t) >= alignof(Blocks)), std::size_t, std::ranges::range_value_t<Blocks>>;
 
+// The width is a size_t unless the blocks out-align one, when it fills what would be padding.
+template<class Blocks>
+using stored_width_t = std::conditional_t<(alignof(std::size_t) >= alignof(Blocks)), std::size_t, std::ranges::range_value_t<Blocks>>;
+
 // The width a vehicle over these blocks stores: one that moves under growth, where it is not always zero.
 template<class Blocks, std::size_t N>
 using width_member_t = conditional_data_member_t<resizable_bit_blocks<Blocks> and not zero_capacity<Blocks, N>, stored_width_t<Blocks>, struct size_tag>;
