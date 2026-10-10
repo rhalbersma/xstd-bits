@@ -35,7 +35,7 @@
 #include <span>                                          // dynamic_extent
 #include <stdexcept>                                     // overflow_error
 #include <tuple>                                         // tuple
-#include <utility>                                       // declval, move
+#include <utility>                                       // as_const, declval, move
 #include <vector>                                        // vector
 
 BOOST_AUTO_TEST_SUITE(BitConvert)
@@ -299,6 +299,23 @@ BOOST_AUTO_TEST_CASE(ASetTargetTakesWholeBlocksOfItsOwn)
         auto const v = make<xstd::bit_vector>(70, {0, 69});
         BOOST_CHECK_EQUAL(xstd::bit_convert<xstd::bit_vector>(xstd::bit_convert<xstd::basic_bit_set<std::size_t, std::uint8_t>>(v)).size(), 72UZ);
         BOOST_CHECK_EQUAL(xstd::bit_convert<xstd::bit_vector>(xstd::bit_convert<xstd::bit_set>(v)).size(), 128UZ);
+}
+
+// A whole view of a run-time width converts as the owner it views: a sequence at its size, a set at its whole blocks.
+BOOST_AUTO_TEST_CASE(AWholeViewOfARunTimeWidthConvertsAsItsOwner)
+{
+        auto v = make<xstd::bit_vector>(70, {0, 69});
+        BOOST_CHECK(xstd::bit_convert<xstd::bit_vector>(xstd::bit_span(v)) == v);
+        BOOST_CHECK(xstd::bit_convert<xstd::bit_set>(xstd::bit_span(v)) == xstd::bit_convert<xstd::bit_set>(v));
+        BOOST_CHECK(xstd::bit_convert<xstd::bit_array<70>>(xstd::bit_span(std::as_const(v))) == xstd::bit_convert<xstd::bit_array<70>>(v));
+
+        auto s = xstd::bit_set{3, 64, 129};
+        BOOST_CHECK(xstd::bit_convert<xstd::bit_set>(xstd::bit_set_view(s)) == s);
+        BOOST_CHECK(xstd::bit_convert<xstd::bit_vector>(xstd::bit_set_view(std::as_const(s))) == xstd::bit_convert<xstd::bit_vector>(s));
+
+        // A view has nothing to extract, so an rvalue one is copied from and its owner keeps every block.
+        BOOST_CHECK_EQUAL(xstd::bit_convert<xstd::bit_set>(xstd::bit_set_view(s)).size(), 3UZ);
+        BOOST_CHECK_EQUAL(s.size(), 3UZ);
 }
 
 // The same blocks from an rvalue move over whole: the buffer is the one the source had, and the source is left empty.

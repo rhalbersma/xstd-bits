@@ -941,6 +941,45 @@ public:
                 return self;
         }
 
+        // A view of ours takes any other set over this storage and these keys, owner or view, by the storage's spelling.
+        template<class OtherBits, storage OtherStore, class OtherDerived>
+        constexpr auto operator&=(this auto&& self, set_adaptor<OtherBits, OtherStore, OtherDerived, Key, KeyMapping, Compare> const& other) noexcept
+                -> auto&
+                requires (not is_owner) and std::same_as<std::remove_const_t<OtherBits>, std::remove_const_t<Bits>> and (not std::same_as<set_adaptor<OtherBits, OtherStore, OtherDerived, Key, KeyMapping, Compare>, set_adaptor>) and requires { self.bits() &= other.bits(); }
+        {
+                self.bits() &= other.bits();
+                return self;
+        }
+
+        template<class OtherBits, storage OtherStore, class OtherDerived>
+        constexpr auto operator|=(this auto&& self, set_adaptor<OtherBits, OtherStore, OtherDerived, Key, KeyMapping, Compare> const& other) noexcept(has_static_width)
+                -> auto&
+                requires (not is_owner) and std::same_as<std::remove_const_t<OtherBits>, std::remove_const_t<Bits>> and (not std::same_as<set_adaptor<OtherBits, OtherStore, OtherDerived, Key, KeyMapping, Compare>, set_adaptor>) and requires { self.bits().grow_to_admit(other.bits()); self.bits() |= other.bits(); }
+        {
+                self.bits().grow_to_admit(other.bits());
+                self.bits() |= other.bits();
+                return self;
+        }
+
+        template<class OtherBits, storage OtherStore, class OtherDerived>
+        constexpr auto operator^=(this auto&& self, set_adaptor<OtherBits, OtherStore, OtherDerived, Key, KeyMapping, Compare> const& other) noexcept(has_static_width)
+                -> auto&
+                requires (not is_owner) and std::same_as<std::remove_const_t<OtherBits>, std::remove_const_t<Bits>> and (not std::same_as<set_adaptor<OtherBits, OtherStore, OtherDerived, Key, KeyMapping, Compare>, set_adaptor>) and requires { self.bits().grow_to_admit(other.bits()); self.bits() ^= other.bits(); }
+        {
+                self.bits().grow_to_admit(other.bits());
+                self.bits() ^= other.bits();
+                return self;
+        }
+
+        template<class OtherBits, storage OtherStore, class OtherDerived>
+        constexpr auto operator-=(this auto&& self, set_adaptor<OtherBits, OtherStore, OtherDerived, Key, KeyMapping, Compare> const& other) noexcept
+                -> auto&
+                requires (not is_owner) and std::same_as<std::remove_const_t<OtherBits>, std::remove_const_t<Bits>> and (not std::same_as<set_adaptor<OtherBits, OtherStore, OtherDerived, Key, KeyMapping, Compare>, set_adaptor>) and requires { self.bits() -= other.bits(); }
+        {
+                self.bits() -= other.bits();
+                return self;
+        }
+
         // An enumerator is the one-element set holding it, so it meets a set without an operator on the enumeration.
         constexpr auto operator&=(this auto&& self, key_type x) noexcept
                 -> auto&

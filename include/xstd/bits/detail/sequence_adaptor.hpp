@@ -1324,31 +1324,31 @@ public:
 
         // No shifts: this reading already spells moving elements std::shift_left and std::shift_right.
 
-        // Bulk on a window of ours against a source read by block: a block at a time at either alignment.
+        // Bulk on a view of ours against any other source read by block: a block at a time at either alignment.
         template<class Other>
         constexpr auto operator&=(this auto&& self, Other const& other) noexcept
                 -> auto&
-                requires is_window and block_writable and blittable<Other>
+                requires (not is_owner) and block_writable and blittable<Other> and (is_window or not std::derived_from<Other, sequence_adaptor>)
         {
-                self.combine(other, [](auto a, auto b) { return static_cast<decltype(a)>(a & b); });
+                self.combine(other, [](auto a, auto b) -> decltype(a) { return static_cast<decltype(a)>(a & b); });
                 return self;
         }
 
         template<class Other>
         constexpr auto operator|=(this auto&& self, Other const& other) noexcept
                 -> auto&
-                requires is_window and block_writable and blittable<Other>
+                requires (not is_owner) and block_writable and blittable<Other> and (is_window or not std::derived_from<Other, sequence_adaptor>)
         {
-                self.combine(other, [](auto a, auto b) { return static_cast<decltype(a)>(a | b); });
+                self.combine(other, [](auto a, auto b) -> decltype(a) { return static_cast<decltype(a)>(a | b); });
                 return self;
         }
 
         template<class Other>
         constexpr auto operator^=(this auto&& self, Other const& other) noexcept
                 -> auto&
-                requires is_window and block_writable and blittable<Other>
+                requires (not is_owner) and block_writable and blittable<Other> and (is_window or not std::derived_from<Other, sequence_adaptor>)
         {
-                self.combine(other, [](auto a, auto b) { return static_cast<decltype(a)>(a ^ b); });
+                self.combine(other, [](auto a, auto b) -> decltype(a) { return static_cast<decltype(a)>(a ^ b); });
                 return self;
         }
 

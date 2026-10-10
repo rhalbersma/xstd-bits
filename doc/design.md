@@ -2072,10 +2072,12 @@ neither compares nor hashes ([views-follow-their-precedent](#views-follow-their-
 
 A window's end blocks are shared with what lies outside it, so its bulk operations are masked blocks: `fill` over
 a window of ours is `bit_block_container::set(pos, len, value)`, a block at a time through `block_at`, and
-one position at a time over a window of anything else; `&=`, `|=` and `^=` on a window of ours take a
-source of any shape that reads blocks of the same block type, a window at any other alignment included, reading
-both sides through `block_at` and writing through `block_at` masked to the window ([the-blit](#the-blit)). The
-two must be of one size, and must not overlap short of coinciding, `w ^= w` being fine. A source over another
+one position at a time over a window of anything else; `&=`, `|=` and `^=` on a view of ours, a window or a
+whole `bit_span`, take a source of any shape that reads blocks of the same block type, an owner or a window at any
+other alignment included, reading both sides through `block_at` and writing through `block_at` masked to the
+view ([the-blit](#the-blit)). The two must be of one size, and must not overlap short of coinciding, `w ^= w`
+being fine. An owner combines with its own type alone, as a value does; a `bit_set_view` takes any set over the
+same storage and keys, owner or view, through the storage's own operators. A source over another
 block type is refused rather than converted behind the operator, which would hide a copy and, over a heap owner,
 an allocation in what is otherwise a `noexcept` pass over the blocks: the caller spells it,
 `w &= xstd::bit_convert<xstd::bit_rebind<Block, Other>>(other)`, a copy as `memcpy` would make it where both
@@ -4792,8 +4794,8 @@ Asking whether a bulk operator accepts a view over a foreign storage -- `ours &=
 a `requires`-expression or written out -- crashes clang 18 and clang 20 alike with an internal error, and it
 did so before the windowed operators existed, so the trigger is the whole view's `&=` seeing a foreign
 `sequence_adaptor` as its argument. gcc rejects the expression as it should. The expression is ill-formed
-either way, since bulk on a window takes a source of the destination's own block type and the whole view's
-takes its own type, so nothing in the library or the tests spells it; the crash is recorded here so nobody
+either way, since bulk on a view takes a source of the destination's own block type, so nothing in the library
+or the tests spells it; the crash is recorded here so nobody
 adds the assertion that would.
 
 ### the-coverage-gate

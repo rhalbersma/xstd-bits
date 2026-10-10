@@ -5,7 +5,7 @@
 
 #include <test/sequence/ordering.hpp>               // ordering_agrees_with_vector_bool
 #include <test/sequence/rotation.hpp>               // permutation_sweep, permutes_ten_bits
-#include <xstd/bits/bit_array.hpp>                  // bit_array
+#include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
 #include <xstd/bits/bit_fixed_set.hpp>              // bit_fixed_set
 #include <xstd/bits/bit_set_view.hpp>               // bit_set_view
 #include <xstd/bits/bit_span.hpp>                   // bit_span
@@ -18,7 +18,7 @@
 #include <cstddef>                                  // size_t
 #include <cstdint>                                  // uint8_t
 #include <ranges>                                   // iota
-#include <utility>                                  // declval
+#include <utility>                                  // as_const, declval
 #include <vector>                                   // vector
 
 BOOST_AUTO_TEST_SUITE(BitSpan)
@@ -30,6 +30,9 @@ using Blocks  = std::array<std::size_t, 1>;
 
 template<class T>
 using view_of = decltype(xstd::bit_span(std::declval<T&>()));
+
+template<class T, class U>
+concept combines_with = requires (T& t, U const& u) { t &= u; t |= u; t ^= u; };
 
 // The view over whatever a test hands it, blocks or an owner: what the permutations are applied through.
 struct as_span
@@ -91,6 +94,34 @@ BOOST_AUTO_TEST_CASE(TheViewNeitherComparesNorOrders)
 {
         static_assert(not std::equality_comparable<view_of<Storage>>);
         static_assert(not std::totally_ordered<view_of<Storage>>);
+}
+
+// A view combines with any source of its block type, an owner or another view, where an owner takes only its own type.
+BOOST_AUTO_TEST_CASE(AViewCombinesWithAnySourceOfItsBlocks)
+{
+        static_assert(combines_with<view_of<xstd::bit_array<8>>, xstd::bit_array<8>> and combines_with<view_of<xstd::bit_array<8>>, view_of<xstd::bit_array<8> const>>);
+        static_assert(not combines_with<xstd::bit_array<8>, view_of<xstd::bit_array<8>>> and not combines_with<view_of<xstd::bit_array<8> const>, xstd::bit_array<8>>);
+        static_assert(not combines_with<view_of<xstd::bit_array<8>>, xstd::basic_bit_array<std::uint8_t, 8>>);
+
+        auto a    = xstd::bit_array<8>();
+        auto b    = xstd::bit_array<8>();
+        a[1]      = true;
+        a[7]      = true;
+        b[1]      = true;
+        b[2]      = true;
+        auto view = xstd::bit_span(a);
+
+        view &= b;
+        BOOST_CHECK(a[1] and not a[2] and not a[7]);
+
+        view |= xstd::bit_span(std::as_const(b));
+        BOOST_CHECK(a[1] and a[2] and not a[7]);
+
+        // A window at another offset lines up position by position.
+        auto c = xstd::bit_array<16>();
+        c[9]   = true;
+        view ^= xstd::bit_span(c).subspan(8UZ, 8UZ);
+        BOOST_CHECK(not a[1] and a[2] and a.count() == 1UZ);
 }
 
 // A view is mutable through: writing a position through the view writes the bit.

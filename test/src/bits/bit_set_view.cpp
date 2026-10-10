@@ -49,6 +49,12 @@ using Blocks  = std::array<std::size_t, 1>;
 template<class T>
 using view_of = decltype(xstd::bit_set_view(std::declval<T&>()));
 
+template<class T, class U>
+concept combines_with = requires (T& t, U const& u) { t &= u; t |= u; t ^= u; t -= u; };
+
+template<class T, class U>
+concept compares_with = requires (T const& t, U const& u) { t == u; };
+
 // Named rather than a lambda, so the conversion happens at a call boundary the way a caller would meet it.
 constexpr auto takes_a_set_view(xstd::bit_set_view<Blocks, 8> v) noexcept
         -> bool
@@ -75,6 +81,35 @@ BOOST_AUTO_TEST_CASE(TheReadingsDoNotMix)
         static_assert(std::same_as<decltype(xstd::bit_span(std::declval<xstd::bit_array<8>&>())), xstd::bit_span<Blocks, 8>>);
         static_assert(std::constructible_from<xstd::bit_set_view<Blocks, 8>, xstd::bit_fixed_set<8>&>);
         static_assert(not std::constructible_from<xstd::bit_set_view<Blocks, 8>, xstd::bit_array<8>&>);
+
+        // Two views over one storage, one of each reading, have no equality between them.
+        static_assert(not compares_with<xstd::bit_set_view<Blocks, 8>, xstd::bit_span<Blocks, 8>> and not compares_with<xstd::bit_span<Blocks, 8>, xstd::bit_set_view<Blocks, 8>>);
+}
+
+// A view combines with any set over its storage and keys, owner or view, where an owner takes only its own type.
+BOOST_AUTO_TEST_CASE(AViewCombinesWithAnySetOverItsStorage)
+{
+        static_assert(combines_with<view_of<xstd::bit_fixed_set<8>>, xstd::bit_fixed_set<8>> and combines_with<view_of<xstd::bit_fixed_set<8>>, view_of<xstd::bit_fixed_set<8> const>>);
+        static_assert(not combines_with<xstd::bit_fixed_set<8>, view_of<xstd::bit_fixed_set<8>>> and not combines_with<view_of<xstd::bit_fixed_set<8> const>, xstd::bit_fixed_set<8>>);
+        static_assert(not combines_with<view_of<xstd::bit_fixed_set<8>>, xstd::bit_fixed_set<16>>);
+
+        auto s       = xstd::bit_fixed_set<8>{1, 2, 3};
+        auto const t = xstd::bit_fixed_set<8>{2, 3, 4};
+        auto view    = xstd::bit_set_view(s);
+
+        view &= t;
+        BOOST_CHECK((s == xstd::bit_fixed_set<8>{2, 3}));
+        view |= xstd::bit_set_view(t);
+        BOOST_CHECK((s == xstd::bit_fixed_set<8>{2, 3, 4}));
+        view ^= xstd::bit_fixed_set<8>{4, 5};
+        BOOST_CHECK((s == xstd::bit_fixed_set<8>{2, 3, 5}));
+        view -= xstd::bit_set_view(t);
+        BOOST_CHECK((s == xstd::bit_fixed_set<8>{5}));
+
+        // Over a growing owner, a union grows the storage the view refers into.
+        auto g = xstd::bit_set{1};
+        xstd::bit_set_view(g) |= xstd::bit_set{100};
+        BOOST_CHECK(g.contains(1UZ) and g.contains(100UZ));
 }
 
 // Viewing an owner is implicit, viewing raw storage is not: the first claims nothing the owner does not carry.

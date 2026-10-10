@@ -78,8 +78,13 @@ template<fixed_target To>
 template<class T>
 struct bit_source;
 
-// Our owners, of either reading and any column: a sequence's width is its size, a set's its whole blocks, capped.
-template<owner T>
+// A whole view of a run-time width: its storage from position zero, which is its owner's, read as that owner reads it.
+template<class T>
+concept run_time_view = view<T> and (not fixed_width<T>) and (not requires { requires T::is_windowed; });
+
+// Owners and whole views, of either reading: a sequence's width is its size, a set's its whole blocks, capped.
+template<class T>
+        requires owner<T> or run_time_view<T>
 struct bit_source<T>
 {
         [[nodiscard]] static constexpr auto width(T const& from) noexcept
