@@ -4,7 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/for_each_type.hpp>       // for_each_type
-#include <test/sequence/primitives.hpp> // fn_swap_reference, mem_flip, mem_reference_assign, mem_reference_flip, ref_copy, ref_destructor, ref_operator_bool
+#include <test/sequence/primitives.hpp> // fn_swap_reference, is_std_vector_bool_v, mem_flip, mem_reference_assign, mem_reference_flip, ref_copy, ref_destructor, ref_operator_bool
 #include <test/set/primitives.hpp>      // op_hash
 #include <test/spec/input.hpp>          // context
 #include <test/spec/sequence.hpp>       // index_pairs, indexed, pairs, sequences, vector_all
@@ -71,10 +71,13 @@ BOOST_AUTO_TEST_CASE(ReferenceBool)
 BOOST_AUTO_TEST_CASE(ReferenceFlip)
 {
         test::for_each_type<test::spec::sequence::vector_all>([]<class T> -> void {
-                static_assert(requires (T c, T::size_type n) { { c[n].flip() } -> std::same_as<void>; });
-                for (auto const [from, a, i] : inputs::indexed<T>()) {
-                        auto const on_failure = context(from, a, i);
-                        mem_reference_flip()(a, i);
+                // std::vector<bool>'s alone: ours negate an element by assignment, and a whole array as a valarray.
+                static_assert(is_std_vector_bool_v<T> == requires (T c, T::size_type n) { { c[n].flip() } -> std::same_as<void>; });
+                if constexpr (is_std_vector_bool_v<T>) {
+                        for (auto const [from, a, i] : inputs::indexed<T>()) {
+                                auto const on_failure = context(from, a, i);
+                                mem_reference_flip()(a, i);
+                        }
                 }
         });
 }
@@ -96,10 +99,13 @@ BOOST_AUTO_TEST_CASE(ReferenceSwap)
 BOOST_AUTO_TEST_CASE(Flip)
 {
         test::for_each_type<test::spec::sequence::vector_all>([]<class T> -> void {
-                static_assert(requires (T c) { c.flip(); });
-                for (auto const [from, a] : inputs::sequences<T>()) {
-                        auto const on_failure = context(from, a);
-                        mem_flip()(a);
+                // std::vector<bool>'s alone: a bulk negation is xstd::bit_valarray's operator!, not a sequence's member.
+                static_assert(is_std_vector_bool_v<T> == requires (T c) { c.flip(); });
+                if constexpr (is_std_vector_bool_v<T>) {
+                        for (auto const [from, a] : inputs::sequences<T>()) {
+                                auto const on_failure = context(from, a);
+                                mem_flip()(a);
+                        }
                 }
         });
 }

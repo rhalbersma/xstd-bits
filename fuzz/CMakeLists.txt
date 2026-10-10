@@ -12,7 +12,7 @@ endif()
 set(${project_option_prefix}_FUZZ_COMPILE_OPTIONS "-fsanitize=fuzzer,address,undefined;-fno-sanitize-recover=undefined;-O1;-g" CACHE STRING "Compile options for the fuzz targets")
 set(${project_option_prefix}_FUZZ_LINK_OPTIONS "-fsanitize=fuzzer,address,undefined" CACHE STRING "Link options for the fuzz targets, which bring in the fuzzing engine")
 
-foreach(target_id fuzz_set fuzz_vector)
+foreach(target_id fuzz_set fuzz_valarray fuzz_vector)
     add_executable(${target_id} ${target_id}.cpp)
 
     target_include_directories(

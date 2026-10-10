@@ -860,6 +860,31 @@ public:
                 return *this;
         }
 
+        // An elementwise kernel over two storages of one width: each block through f, then the padding cleared.
+        template<class F>
+        constexpr auto transform(bit_block_container const& other, F f) noexcept
+                -> bit_block_container&
+        {
+                assert(size() == other.size());
+                for (auto const i : std::views::iota(0UZ, num_blocks())) {
+                        m_blocks[i] = f(m_blocks[i], other.m_blocks[i]);
+                }
+                erase_unused();
+                return *this;
+        }
+
+        // The same against one block, which is how an elementwise kernel meets a scalar.
+        template<class F>
+        constexpr auto transform(F f) noexcept
+                -> bit_block_container&
+        {
+                for (auto const i : std::views::iota(0UZ, num_blocks())) {
+                        m_blocks[i] = f(m_blocks[i]);
+                }
+                erase_unused();
+                return *this;
+        }
+
         constexpr auto operator<<=(std::size_t n [[maybe_unused]]) noexcept
                 -> bit_block_container&
         {

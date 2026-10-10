@@ -280,25 +280,21 @@ BOOST_AUTO_TEST_CASE(InsertingAWindowOfItselfRebuildsAsAStdVectorDoes)
         }
 }
 
-// The static swap of two proxies, and a view that flips what it views where a window does not.
-BOOST_AUTO_TEST_CASE(TheStaticSwapAndTheViewsFlipAreStdVectorBools)
+// Two proxies swap through their own swap, found by ADL; neither the owner nor a view has a static swap or a flip.
+BOOST_AUTO_TEST_CASE(TheProxiesSwapAndNothingFlips)
 {
         auto v = T(std::from_range, pattern(20));
         auto m = pattern(20);
 
-        // Ours is [vector.bool]'s static swap; the model's own is deprecated by C++26 (LWG-3638, P3612R1).
-        T::swap(v[0], v[1]);
+        swap(v[0], v[1]);
         auto const m0 = static_cast<bool>(m[0]);
         m[0]          = static_cast<bool>(m[1]);
         m[1]          = m0;
         BOOST_CHECK(std::ranges::equal(v, m));
-
-        // A view flips what it views, a window does not.
-        xstd::bit_span(v).flip();
-        m.flip();
-        BOOST_CHECK(std::ranges::equal(v, m));
+        static_assert(not requires { T::swap(v[0], v[1]); });
+        static_assert(not can_flip<T>);
+        static_assert(not can_flip<decltype(xstd::bit_span(v))>);
         static_assert(not can_flip<decltype(xstd::bit_span(v).first(2))>);
-        static_assert(can_flip<decltype(xstd::bit_span(v))>);
 }
 
 // The owner hashes as std::vector<bool> does, equal values equal; the view over it no more than std::span does.

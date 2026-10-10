@@ -493,7 +493,7 @@ class sequence_adaptor : public sequence::sizes_t<Bits, Store, W, Derived, E>
                 }
         };
 
-        // A proxy bool spelled as [vector.bool] spells std::vector<bool>::reference; operator~ is std::bitset's.
+        // A proxy bool spelled as [vector.bool] spells std::vector<bool>::reference, less its flip().
         template<bool IsConst>
         class basic_reference
         {
@@ -555,14 +555,6 @@ class sequence_adaptor : public sequence::sizes_t<Bits, Store, W, Derived, E>
                         return *this = static_cast<value_type>(other);
                 }
 
-                // [vector.bool] has required it of the proxy since C++98; the const-qualified assignment is C++23.
-                constexpr auto flip() const noexcept
-                        -> void
-                        requires is_writable
-                {
-                        m_ptr->assign(m_idx, not static_cast<value_type>(*this));
-                }
-
                 // The pre-ranges spelling of iter_swap, for std::swap and the algorithms still built on it.
                 friend constexpr auto swap(basic_reference x, basic_reference y) noexcept
                         -> void
@@ -608,9 +600,6 @@ class sequence_adaptor : public sequence::sizes_t<Bits, Store, W, Derived, E>
         // A source the blit can read by block, of this storage's own block type.
         template<class S>
         static constexpr bool blittable = blit_source<S, typename bits_type::block_type>;
-
-        // A storage taking a masked block at any position, asked of Bits so a const window answers no.
-        static constexpr bool block_writable = requires (Bits& b, std::size_t pos, bits_type::block_type w) { b.block_at(pos, w, w); };
 
         // The container needs constraints only the vehicle can name; [class.friend]/3 ignores the void a view passes.
         friend Derived;
@@ -1270,79 +1259,7 @@ public:
                 return three_way<sequence_reading_tag>(x.bits(), y.bits());
         }
 
-        // Elementwise logical, as a bitwise operator on a sequence of bools means. Three, not four.
-        constexpr auto operator&=(this auto&& self, sequence_adaptor const& other) noexcept
-                -> auto&
-                requires (not is_window) and requires { self.bits() &= other.bits(); }
-        {
-                self.bits() &= other.bits();
-                return self;
-        }
-
-        constexpr auto operator|=(this auto&& self, sequence_adaptor const& other) noexcept
-                -> auto&
-                requires (not is_window) and requires { self.bits() |= other.bits(); }
-        {
-                self.bits() |= other.bits();
-                return self;
-        }
-
-        constexpr auto operator^=(this auto&& self, sequence_adaptor const& other) noexcept
-                -> auto&
-                requires (not is_window) and requires { self.bits() ^= other.bits(); }
-        {
-                self.bits() ^= other.bits();
-                return self;
-        }
-
-        // No shifts: this reading already spells moving elements std::shift_left and std::shift_right.
-
-        // Bulk on a view of ours against any other source read by block: a block at a time at either alignment.
-        template<class Other>
-        constexpr auto operator&=(this auto&& self, Other const& other) noexcept
-                -> auto&
-                requires (not is_owner) and block_writable and blittable<Other> and (is_window or not std::derived_from<Other, sequence_adaptor>)
-        {
-                self.combine(other, [](auto a, auto b) -> decltype(a) { return static_cast<decltype(a)>(a & b); });
-                return self;
-        }
-
-        template<class Other>
-        constexpr auto operator|=(this auto&& self, Other const& other) noexcept
-                -> auto&
-                requires (not is_owner) and block_writable and blittable<Other> and (is_window or not std::derived_from<Other, sequence_adaptor>)
-        {
-                self.combine(other, [](auto a, auto b) -> decltype(a) { return static_cast<decltype(a)>(a | b); });
-                return self;
-        }
-
-        template<class Other>
-        constexpr auto operator^=(this auto&& self, Other const& other) noexcept
-                -> auto&
-                requires (not is_owner) and block_writable and blittable<Other> and (is_window or not std::derived_from<Other, sequence_adaptor>)
-        {
-                self.combine(other, [](auto a, auto b) -> decltype(a) { return static_cast<decltype(a)>(a ^ b); });
-                return self;
-        }
-
-        // [vector.bool]'s two: flip every bit, and swap two proxies, which the proxies' own swap does.
-        constexpr auto flip(this auto&& self) noexcept
-                -> void
-                requires (not is_window) and requires { self.bits().flip(); }
-        {
-                self.bits().flip();
-        }
-
-        // [vector.bool]'s swap of two proxies, beside the owner's swap of two containers that it would otherwise hide.
-        using members_type::swap;
-
-        static constexpr auto swap(reference x, reference y) noexcept
-                -> void
-        {
-                bool const t = x;
-                x            = y;
-                y            = t;
-        }
+        // No bitwise operators, flip() or shifts: std::valarray<bool> combines elements, and std::shift_left moves them.
 
 private:
         // The container built on this vehicle, which is what its value-returning operators hand back.
@@ -1350,22 +1267,6 @@ private:
                 -> derived_type&
         {
                 return static_cast<derived_type&>(*this);
-        }
-
-        // The blocks of this window against another's at its own alignment, masked to what it holds.
-        template<class Other, class F>
-        constexpr auto combine(this auto&& self, Other const& other, F f) noexcept
-                -> void
-        {
-                using block_type      = bits_type::block_type;
-                constexpr auto digits = bits_type::bits_per_block;
-                assert(self.size() == other.size());
-                for (auto k = 0UZ; k < self.size(); k += digits) {
-                        auto const mask   = partial_block_mask<block_type>(std::ranges::min(digits, self.size() - k));
-                        auto const mine   = self.bits().block_at(self.offset() + k);
-                        auto const theirs = other.bits().block_at(other.offset() + k);
-                        self.bits().block_at(self.offset() + k, f(mine, theirs), mask);
-                }
         }
 
         // A capacity of nought takes no element, and says so with the bad_alloc of growth past any capacity.
@@ -1498,52 +1399,6 @@ struct owned_storage<sequence_adaptor<Bits, storage::owned, window::all, Derived
 {
         using bits_type = Bits;
 };
-
-// NOLINTBEGIN(readability-redundant-parentheses): a call is no primary expression, so the clause needs them.
-
-// Bulk logical not, the value-returning counterpart of flip(): a sequence's width is its own size().
-template<class Bits, storage Store, window W, class Derived, std::size_t E>
-[[nodiscard]] constexpr auto operator~(sequence_adaptor<Bits, Store, W, Derived, E> const& lhs) noexcept
-        -> sequence_adaptor<Bits, Store, W, Derived, E>::derived_type
-        requires (owns(Store)) and requires (sequence_adaptor<Bits, Store, W, Derived, E> c) { c.flip(); }
-{
-        auto nrv = static_cast<sequence_adaptor<Bits, Store, W, Derived, E>::derived_type const&>(lhs);
-        nrv.flip();
-        return nrv;
-}
-
-// Bulk &, | and ^, on an owner alone: a view's copy refers to the storage it views.
-template<class Bits, storage Store, window W, class Derived, std::size_t E>
-[[nodiscard]] constexpr auto operator&(sequence_adaptor<Bits, Store, W, Derived, E> const& lhs, sequence_adaptor<Bits, Store, W, Derived, E> const& rhs) noexcept(noexcept(std::declval<sequence_adaptor<Bits, Store, W, Derived, E>&>() &= rhs))
-        -> sequence_adaptor<Bits, Store, W, Derived, E>::derived_type
-        requires (owns(Store)) and requires (sequence_adaptor<Bits, Store, W, Derived, E> c) { c &= c; }
-{
-        auto nrv = static_cast<sequence_adaptor<Bits, Store, W, Derived, E>::derived_type const&>(lhs);
-        nrv &= rhs;
-        return nrv;
-}
-
-template<class Bits, storage Store, window W, class Derived, std::size_t E>
-[[nodiscard]] constexpr auto operator|(sequence_adaptor<Bits, Store, W, Derived, E> const& lhs, sequence_adaptor<Bits, Store, W, Derived, E> const& rhs) noexcept(noexcept(std::declval<sequence_adaptor<Bits, Store, W, Derived, E>&>() |= rhs))
-        -> sequence_adaptor<Bits, Store, W, Derived, E>::derived_type
-        requires (owns(Store)) and requires (sequence_adaptor<Bits, Store, W, Derived, E> c) { c |= c; }
-{
-        auto nrv = static_cast<sequence_adaptor<Bits, Store, W, Derived, E>::derived_type const&>(lhs);
-        nrv |= rhs;
-        return nrv;
-}
-
-template<class Bits, storage Store, window W, class Derived, std::size_t E>
-[[nodiscard]] constexpr auto operator^(sequence_adaptor<Bits, Store, W, Derived, E> const& lhs, sequence_adaptor<Bits, Store, W, Derived, E> const& rhs) noexcept(noexcept(std::declval<sequence_adaptor<Bits, Store, W, Derived, E>&>() ^= rhs))
-        -> sequence_adaptor<Bits, Store, W, Derived, E>::derived_type
-        requires (owns(Store)) and requires (sequence_adaptor<Bits, Store, W, Derived, E> c) { c ^= c; }
-{
-        auto nrv = static_cast<sequence_adaptor<Bits, Store, W, Derived, E>::derived_type const&>(lhs);
-        nrv ^= rhs;
-        return nrv;
-}
-
-// NOLINTEND(readability-redundant-parentheses)
 
 // [vector.erasure], over the owner's own erase: the proxies move and swap, so remove_if runs unchanged.
 template<class Bits, storage Store, window W, class Derived, std::size_t E, class Pred>
