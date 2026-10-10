@@ -715,10 +715,10 @@ BOOST_AUTO_TEST_CASE(TheSequenceExchangeIsNamedBothWays)
         static_assert(not test::converts_from<T, std::bitset<N - 1UZ>>);
 }
 
-// A window is the one shape that must not convert: its position zero is not the storage's.
-BOOST_AUTO_TEST_CASE(AWindowIsNotAFieldOfBitsButAPlainViewIs)
+// A window converts from its own first position, which is not the storage's, so it is read from its offset.
+BOOST_AUTO_TEST_CASE(AWindowConvertsFromItsOffsetAndAPlainViewAsAFieldOfBits)
 {
-        static_assert(not test::converts_to<xstd::bit_subspan<std::array<std::uint64_t, 2>, std::dynamic_extent, 100>, std::bitset<100>>);
+        static_assert(test::converts_to<xstd::bit_subspan<std::array<std::uint64_t, 2>, std::dynamic_extent, 100>, std::bitset<100>>);
         static_assert(test::converts_to<View, std::bitset<100>>);
         static_assert(test::converts_to<Reader, std::bitset<100>>);
 
@@ -731,6 +731,10 @@ BOOST_AUTO_TEST_CASE(AWindowIsNotAFieldOfBitsButAPlainViewIs)
         auto const out              = xstd::bit_convert<std::bitset<100>>(view);
         BOOST_CHECK_EQUAL(out.count(), 2UZ);
         BOOST_CHECK(out.test(0) and out.test(Storage::extent - 1UZ));
+
+        // The window over the last three positions starts at the storage's last position but two.
+        auto const tail = xstd::bit_convert<std::bitset<3>>(view.last(3UZ));
+        BOOST_CHECK(tail.test(2) and tail.count() == 1UZ);
 
         // A view never gains the INBOUND direction, which would write through bits it does not own.
         static_assert(not test::converts_from<View, std::bitset<100>>);
