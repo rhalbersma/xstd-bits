@@ -59,7 +59,7 @@ template<class S>
 constexpr bool can_clear = requires (S s) { s.clear(); };
 
 template<class S>
-constexpr bool can_fill = requires (S s) { s.fill(); s.complement(); s.complement(0UZ); };
+constexpr bool can_fill = requires (S s) { s.fill(); };
 
 template<class S>
 constexpr bool can_swap = requires (S s) { s.swap(s); };
@@ -229,16 +229,10 @@ BOOST_AUTO_TEST_CASE(AViewWritesThroughToWhatItViews)
         BOOST_CHECK(v.erase(v.find(11UZ), v.find(19UZ)) == v.find(19UZ));
         BOOST_CHECK(keys(v) == std::set<std::size_t>({3, 9, 19}));
 
-        v.complement(19UZ);
-        v.complement(20UZ);
-        BOOST_CHECK(keys(v) == std::set<std::size_t>({3, 9, 20}));
-
         v.clear();
         BOOST_CHECK(c.none());
         v.fill();
         BOOST_CHECK(c.all());
-        v.complement();
-        BOOST_CHECK(c.none());
 }
 
 // A view is shallow: a const view writes, a view over const storage does not, and a copy of a view is the same view.
@@ -252,8 +246,7 @@ BOOST_AUTO_TEST_CASE(AViewIsShallow)
 
         Reader const r(c);
         BOOST_CHECK(r.contains(42UZ) and keys(r) == keys(v));
-        BOOST_CHECK(r.is_subset_of(r) and not r.is_proper_subset_of(r) and intersects(r, r));
-        BOOST_CHECK(r.is_superset_of(r) and not r.is_proper_superset_of(r));
+        BOOST_CHECK(xstd::bit_includes(r, r) and not xstd::bit_disjoint(r, r));
 }
 
 BOOST_AUTO_TEST_CASE(TheViewsAnswerEveryReadOverEveryStorage)
@@ -286,9 +279,9 @@ BOOST_AUTO_TEST_CASE(MaxSizeIsThePositionsThereAreToHold)
         auto v          = xstd::bits::detail::bit_block_container<std::vector<std::uint64_t>>(10UZ);
         auto const view = xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_block_container<std::vector<std::uint64_t>>, xstd::bits::detail::storage::borrowed>(v);
         BOOST_CHECK_EQUAL(view.max_size(), 10UZ);
-        BOOST_CHECK(not view.full());
+        BOOST_CHECK(view.size() != view.max_size());
         view.fill();
-        BOOST_CHECK(view.full());
+        BOOST_CHECK(view.size() == view.max_size());
         BOOST_CHECK_EQUAL(view.size(), 10UZ);
 
         // A run-time width, read through the view over it.
@@ -311,16 +304,13 @@ BOOST_AUTO_TEST_CASE(TheSetPredicatesAgreeAcrossStorages)
         auto const x = S(a);
         auto const y = S(b);
 
-        BOOST_CHECK(x.is_subset_of(y) and not y.is_subset_of(x));
-        BOOST_CHECK(x.is_proper_subset_of(y) and not x.is_proper_subset_of(x) and not y.is_proper_subset_of(x));
-        BOOST_CHECK(y.is_superset_of(x) and not x.is_superset_of(y));
-        BOOST_CHECK(y.is_proper_superset_of(x) and not x.is_proper_superset_of(x) and not x.is_proper_superset_of(y));
-        BOOST_CHECK(intersects(x, y) and not intersects(x, S(e)));
+        BOOST_CHECK(xstd::bit_includes(y, x) and not xstd::bit_includes(x, y));
+        BOOST_CHECK(not xstd::bit_disjoint(x, y) and xstd::bit_disjoint(x, S(e)));
         BOOST_CHECK(x != y and x < y);
         BOOST_CHECK((x <=> y) == std::strong_ordering::less);
 
         x.insert(3UZ);
-        BOOST_CHECK(x == y and not x.is_proper_subset_of(y) and not y.is_proper_superset_of(x));
+        BOOST_CHECK(x == y and xstd::bit_includes(x, y) and xstd::bit_includes(y, x));
 }
 
 // The ordering invariant: the block-wise entry and the iterators agree, and the fallback is the invariant itself.
@@ -461,12 +451,11 @@ BOOST_AUTO_TEST_CASE(AKeyAStaticWidthCannotHoldIsOutOfRange)
         check_refuses([&] -> void { static_cast<void>(s.emplace(500UZ)); });
         check_refuses([&] -> void { s.emplace_hint(s.begin(), 500UZ); });
         check_refuses([&] -> void { s.insert(s.begin(), 500UZ); });
-        check_refuses([&] -> void { s.complement(500UZ); });
 
         // A refused key writes nothing, and the last one it can hold is 99, which both writes take.
         BOOST_CHECK_EQUAL(s.size(), 1UZ);
         s.insert(99UZ);
-        s.complement(98UZ);
+        s.insert(98UZ);
         BOOST_CHECK(s.contains(3UZ) and s.contains(99UZ) and s.contains(98UZ));
         BOOST_CHECK_EQUAL(s.size(), 3UZ);
 }
@@ -503,19 +492,18 @@ BOOST_AUTO_TEST_CASE(AKeyPastTheWidthIsStillAskable)
         BOOST_CHECK_EQUAL(s.size(), 1UZ);
 }
 
-// The same key on the other two storages: a dynamic extent grows to admit it, and complement grows where insert grows.
+// The same key on the other two storages: a dynamic extent grows to admit it, and erase lets it go without shrinking.
 BOOST_AUTO_TEST_CASE(ADynamicWidthAdmitsTheKeyInstead)
 {
         auto d = xstd::bit_set();
         d.insert(500UZ);
         BOOST_CHECK(d.contains(500UZ));
 
-        d.complement(1000UZ);
+        static_cast<void>(d.insert(1000UZ));
         BOOST_CHECK(d.contains(1000UZ));
         BOOST_CHECK_EQUAL(d.size(), 2UZ);
 
-        // And toggling it back is the erase, without shrinking.
-        d.complement(1000UZ);
+        BOOST_CHECK_EQUAL(d.erase(1000UZ), 1UZ);
         BOOST_CHECK(not d.contains(1000UZ));
         BOOST_CHECK_EQUAL(d.size(), 1UZ);
 }
@@ -580,7 +568,6 @@ auto refuses_at_every_door(X const& a, typename X::key_type v)
         check_refuses([&] -> void { x.insert({v}); });
         check_refuses([&] -> void { x.insert(one.begin(), one.end()); });
         check_refuses([&] -> void { x.insert_range(one); });
-        check_refuses([&] -> void { x.complement(v); });
         check_refuses([&] -> void { static_cast<void>(X(one.begin(), one.end())); });
         check_refuses([&] -> void { static_cast<void>(X(std::from_range, one)); });
         BOOST_CHECK(x == a);
@@ -594,15 +581,13 @@ template<class Model, class X>
         return Model(x.begin(), x.end());
 }
 
-// Each way a value enters a set, offered a key: each writes it as the model's insert does, and complement toggles it.
+// Each way a value enters a set, offered a key: each writes it as the model's insert does.
 template<class X, class Model>
 auto admits_at_every_door(X const& a, Model const& model, typename X::key_type v)
         -> void
 {
         auto with = model;
         with.insert(v);
-        auto without = model;
-        without.erase(v);
         auto const one       = std::array{v};
         auto const writes_it = [&](auto write) -> bool {
                 auto x = a;
@@ -616,9 +601,6 @@ auto admits_at_every_door(X const& a, Model const& model, typename X::key_type v
         BOOST_CHECK(writes_it([&](X& x) -> void { x.insert({v}); }));
         BOOST_CHECK(writes_it([&](X& x) -> void { x.insert(one.begin(), one.end()); }));
         BOOST_CHECK(writes_it([&](X& x) -> void { x.insert_range(one); }));
-        auto x = a;
-        x.complement(v);
-        BOOST_CHECK(modelled<Model>(x) == (model.contains(v) ? without : with));
         auto const from_iterators = X(one.begin(), one.end());
         auto const from_range     = X(std::from_range, one);
         BOOST_CHECK(modelled<Model>(from_iterators) == Model{v});
@@ -709,7 +691,7 @@ BOOST_AUTO_TEST_CASE(EveryOwnerHoldsAtMostItsUniverse)
                 auto const keys   = universe<X>();
                 auto x            = X(keys.begin(), keys.end());
                 BOOST_CHECK_EQUAL(x.max_size(), key_mapping::size);
-                BOOST_CHECK(x.full());
+                BOOST_CHECK(x.size() == x.max_size());
                 x <<= 1UZ;
                 BOOST_CHECK_EQUAL(x.size(), key_mapping::size - 1UZ);
                 BOOST_CHECK(not x.contains(keys.front()));
@@ -950,27 +932,27 @@ BOOST_AUTO_TEST_CASE(SubsetAndIntersectionAcrossWidthsCompareBlocks)
         auto const wide   = grown_to(300UZ, {1UZ, 5UZ, 59UZ, 280UZ});
 
         // Ours inside theirs: nothing of ours lies above their last block, so the remainder is empty.
-        BOOST_CHECK(narrow.is_subset_of(wide));
+        BOOST_CHECK(xstd::bit_includes(wide, narrow));
 
         // Theirs is not inside ours: 280 lives above our last block, which the remainder check catches.
-        BOOST_CHECK(not wide.is_subset_of(narrow));
+        BOOST_CHECK(not xstd::bit_includes(narrow, wide));
 
         // A wider operand whose remainder IS clear still fails on the shared blocks when it holds more there.
         auto const wide_low = grown_to(300UZ, {1UZ, 5UZ, 59UZ});
-        BOOST_CHECK(not wide_low.is_subset_of(narrow));
-        BOOST_CHECK(narrow.is_subset_of(wide_low));
+        BOOST_CHECK(not xstd::bit_includes(narrow, wide_low));
+        BOOST_CHECK(xstd::bit_includes(wide_low, narrow));
 
         // And succeeds when the shared blocks agree and the remainder is clear.
         auto const wide_same = grown_to(300UZ, {1UZ, 5UZ});
-        BOOST_CHECK(wide_same.is_subset_of(narrow));
+        BOOST_CHECK(xstd::bit_includes(narrow, wide_same));
 
         // Meeting in a shared block, and not meeting at all.
-        BOOST_CHECK(intersects(narrow, wide));
-        BOOST_CHECK(intersects(wide, narrow));
+        BOOST_CHECK(not xstd::bit_disjoint(narrow, wide));
+        BOOST_CHECK(not xstd::bit_disjoint(wide, narrow));
 
         auto const elsewhere = grown_to(300UZ, {7UZ, 280UZ});
-        BOOST_CHECK(not intersects(narrow, elsewhere));
-        BOOST_CHECK(not intersects(elsewhere, narrow));
+        BOOST_CHECK(xstd::bit_disjoint(narrow, elsewhere));
+        BOOST_CHECK(xstd::bit_disjoint(elsewhere, narrow));
 }
 
 // The ordering turns on one position, the lowest at which the two sets disagree, in both operand orders.
@@ -1350,17 +1332,12 @@ auto subset_of(std::size_t mask, std::size_t width)
         return nrv;
 }
 
-// How often the queries disagree on one pair, with each other and with std::ranges::includes.
+// How often bit_includes disagrees on one pair with std::ranges::includes.
 template<class X>
 auto query_mismatches(X const& x, X const& y)
         -> std::size_t
 {
-        auto const all_of = x.is_superset_of(y);
-        auto const proper = x.is_proper_superset_of(y);
-        auto mismatches   = static_cast<std::size_t>(disjoint(x, y) == intersects(x, y));
-        mismatches += static_cast<std::size_t>(all_of != y.is_subset_of(x) or all_of != std::ranges::includes(x, y, x.key_comp()));
-        mismatches += static_cast<std::size_t>(proper != y.is_proper_subset_of(x) or proper != (all_of and not std::ranges::equal(x, y)));
-        return mismatches;
+        return static_cast<std::size_t>(xstd::bit_includes(x, y) != std::ranges::includes(x, y, x.key_comp()));
 }
 
 // Every pair of subsets of the first width positions, owned and, where the owner can be viewed, viewed.
@@ -1403,11 +1380,10 @@ BOOST_AUTO_TEST_CASE(DisjointIsNotIntersectsAndTheSupersetIsTheSubsetReadTheOthe
         auto const wide   = xstd::bit_set({1UZ, 100UZ});
         auto const narrow = xstd::bit_set({1UZ});
         auto const empty  = xstd::bit_set();
-        BOOST_CHECK(wide.is_superset_of(narrow) and not narrow.is_superset_of(wide) and not disjoint(wide, narrow));
-        BOOST_CHECK(wide.is_proper_superset_of(narrow) and not narrow.is_proper_superset_of(wide));
-        BOOST_CHECK(narrow.is_superset_of(empty) and narrow.is_proper_superset_of(empty) and disjoint(narrow, empty));
-        BOOST_CHECK(empty.is_superset_of(empty) and not empty.is_proper_superset_of(empty));
-        static_assert(noexcept(disjoint(wide, narrow)) and noexcept(wide.is_superset_of(narrow)) and noexcept(wide.is_proper_superset_of(narrow)));
+        BOOST_CHECK(xstd::bit_includes(wide, narrow) and not xstd::bit_includes(narrow, wide) and not xstd::bit_disjoint(wide, narrow));
+        BOOST_CHECK(xstd::bit_includes(narrow, empty) and not xstd::bit_includes(empty, narrow) and xstd::bit_disjoint(narrow, empty));
+        BOOST_CHECK(xstd::bit_includes(empty, empty));
+        static_assert(noexcept(xstd::bit_disjoint(wide, narrow)) and noexcept(xstd::bit_includes(wide, narrow)));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

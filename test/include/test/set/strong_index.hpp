@@ -152,11 +152,6 @@ auto modifies_as_std_set(X const& a, std::set<strong_index> const& model, strong
         BOOST_CHECK_EQUAL(x.erase(k), m.erase(k));
         BOOST_CHECK_EQUAL(x.erase(k), m.erase(k));
         BOOST_CHECK(std::ranges::equal(x, m));
-
-        x.complement(k);
-        BOOST_CHECK(x.contains(k));
-        x.complement(k);
-        BOOST_CHECK(not x.contains(k));
 }
 
 // Erasure by iterator, by range and by predicate, the bulk inserts, the list forms, and the key as printed.

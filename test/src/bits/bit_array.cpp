@@ -3,21 +3,23 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/block_types.hpp>       // graded_extents
-#include <test/sequence/dense.hpp>    // yields_every_position
-#include <test/sequence/rotation.hpp> // permutation_sweep, permutes_ten_bits
-#include <test/value_reference.hpp>   // value_reference
-#include <xstd/bits/bit_array.hpp>    // bit_array
-#include <boost/test/unit_test.hpp>   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <concepts>                   // constructible_from, convertible_to, regular, same_as, totally_ordered
-#include <cstddef>                    // ptrdiff_t, size_t
-#include <cstdint>                    // uint32_t, uint64_t, uint8_t
-#include <functional>                 // hash
-#include <iterator>                   // contiguous_iterator, random_access_iterator, size
-#include <ranges>                     // begin, contiguous_range, empty, iota, random_access_range, size
-#include <tuple>                      // tuple_cat, tuple_size_v
-#include <type_traits>                // bool_constant, integral_constant
-#include <utility>                    // declval, index_sequence, make_index_sequence
+#include <test/block_types.hpp>                // graded_extents
+#include <test/sequence/dense.hpp>             // yields_every_position
+#include <test/sequence/rotation.hpp>          // permutation_sweep, permutes_ten_bits
+#include <test/value_reference.hpp>            // value_reference
+#include <xstd/bits/algorithm/bit_reverse.hpp> // bit_reverse
+#include <xstd/bits/algorithm/bit_rotate.hpp>  // bit_rotate
+#include <xstd/bits/bit_array.hpp>             // bit_array
+#include <boost/test/unit_test.hpp>            // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <concepts>                            // constructible_from, convertible_to, regular, same_as, totally_ordered
+#include <cstddef>                             // ptrdiff_t, size_t
+#include <cstdint>                             // uint32_t, uint64_t, uint8_t
+#include <functional>                          // hash
+#include <iterator>                            // contiguous_iterator, random_access_iterator, size
+#include <ranges>                              // begin, contiguous_range, empty, iota, random_access_range, size
+#include <tuple>                               // tuple_cat, tuple_size_v
+#include <type_traits>                         // bool_constant, integral_constant
+#include <utility>                             // declval, index_sequence, make_index_sequence
 
 BOOST_AUTO_TEST_SUITE(BitArray)
 
@@ -162,13 +164,11 @@ template<class Block, std::size_t... N>
 
 } // namespace
 
-// rotate and reverse, each handing back the array itself and throwing nothing.
-BOOST_AUTO_TEST_CASE_TEMPLATE(ItsRotationsAndReversalReturnItselfWithoutThrowing, T, Types)
+// bit_rotate and bit_reverse over it throw nothing.
+BOOST_AUTO_TEST_CASE_TEMPLATE(ItsRotationAndReversalThrowNothing, T, Types)
 {
-        static_assert(std::same_as<decltype(std::declval<T&>().rotate(0UZ)), T&>);
-        static_assert(std::same_as<decltype(std::declval<T&>().reverse()), T&>);
-        static_assert(noexcept(std::declval<T&>().rotate(0UZ)));
-        static_assert(noexcept(std::declval<T&>().reverse()));
+        static_assert(noexcept(xstd::bit_rotate(std::declval<T&>(), std::declval<T&>().begin())));
+        static_assert(noexcept(xstd::bit_reverse(std::declval<T&>())));
         BOOST_CHECK_EQUAL(test::sequence::permutation_sweep(T()), 0);
 }
 

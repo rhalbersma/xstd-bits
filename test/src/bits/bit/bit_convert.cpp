@@ -4,6 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/for_each_type.hpp>                        // for_each_type
+#include <xstd/bits/algorithm/bit_count.hpp>             // bit_count
 #include <xstd/bits/bit/bit_convert.hpp>                 // bit_convert
 #include <xstd/bits/bit_array.hpp>                       // basic_bit_array, bit_array
 #include <xstd/bits/bit_bounded_set.hpp>                 // basic_bit_bounded_set, bit_bounded_set
@@ -420,7 +421,7 @@ BOOST_AUTO_TEST_CASE(TheConversionIsAConstantExpression)
                 auto s             = xstd::basic_bit_set<std::size_t, std::uint8_t>{3, 9, 20};
                 auto const wide    = xstd::bit_convert<xstd::basic_bit_vector<std::uint32_t>>(s);
                 auto const adopted = xstd::bit_convert<xstd::basic_bit_vector<std::uint8_t>>(std::move(s));
-                return wide.size() == 24UZ and wide[20] and adopted.size() == 24UZ and adopted.count() == 3UZ;
+                return wide.size() == 24UZ and wide[20] and adopted.size() == 24UZ and xstd::bit_count(adopted) == 3;
         }());
         static_assert([] -> bool {
                 auto a       = xstd::basic_bit_array<std::uint16_t, 70>();
@@ -428,10 +429,10 @@ BOOST_AUTO_TEST_CASE(TheConversionIsAConstantExpression)
                 a[69]        = true;
                 auto const s = xstd::bit_convert<xstd::bit_set>(a);
                 auto const v = xstd::bit_convert<xstd::basic_bit_vector<std::uint8_t>>(std::bitset<70>(0b1011));
-                return s.contains(69UZ) and s.size() == 2UZ and v.size() == 70UZ and v.count() == 3UZ;
+                return s.contains(69UZ) and s.size() == 2UZ and v.size() == 70UZ and xstd::bit_count(v) == 3;
         }());
 #ifdef XSTD_BITS_HAS_CONSTEXPR_BOUNDED
-        static_assert(xstd::bit_convert<xstd::bit_bounded_vector<100>>(xstd::bit_fixed_set<100>{7, 99}).count() == 2UZ);
+        static_assert(xstd::bit_count(xstd::bit_convert<xstd::bit_bounded_vector<100>>(xstd::bit_fixed_set<100>{7, 99})) == 2);
 #endif
         BOOST_CHECK(true);
 }

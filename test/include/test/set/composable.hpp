@@ -6,56 +6,25 @@
 #ifndef TEST_SET_COMPOSABLE_HPP
 #define TEST_SET_COMPOSABLE_HPP
 
-#include <boost/test/unit_test.hpp>        // BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <range/v3/view/set_algorithm.hpp> // set_difference, set_intersection, set_symmetric_difference, set_union
-#include <algorithm>                       // includes
-#include <cstddef>                         // size_t
-#include <ranges>                          // filter, to, transform
+#include <xstd/bits/algorithm/bit_includes.hpp> // bit_includes
+#include <boost/test/unit_test.hpp>             // BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <range/v3/view/set_algorithm.hpp>      // set_difference, set_intersection, set_symmetric_difference, set_union
+#include <algorithm>                            // includes
+#include <cstddef>                              // size_t
+#include <ranges>                               // filter, to, transform
 
 namespace test::set::composable {
 
-// Each containment is std::ranges::includes(r1, r2), which asks whether r2 lies within r1, read from one side.
+// bit_includes(r1, r2) asks whether r2 lies within r1, so each pair is asked both ways round.
 
-struct subset
+struct includes
 {
         template<class X>
         auto operator()(const X& a, const X& b) const noexcept
         {
-                if constexpr (requires { a.is_subset_of(b); }) {
-                        BOOST_CHECK_EQUAL(a.is_subset_of(b), std::ranges::includes(b, a, a.value_comp()));
-                }
-        }
-};
-
-struct proper_subset
-{
-        template<class X>
-        auto operator()(const X& a, const X& b) const noexcept
-        {
-                if constexpr (requires { a.is_proper_subset_of(b); }) {
-                        BOOST_CHECK_EQUAL(a.is_proper_subset_of(b), std::ranges::includes(b, a, a.value_comp()) and not std::ranges::includes(a, b, a.value_comp()));
-                }
-        }
-};
-
-struct superset
-{
-        template<class X>
-        auto operator()(const X& a, const X& b) const noexcept
-        {
-                if constexpr (requires { a.is_superset_of(b); }) {
-                        BOOST_CHECK_EQUAL(a.is_superset_of(b), std::ranges::includes(a, b, a.value_comp()));
-                }
-        }
-};
-
-struct proper_superset
-{
-        template<class X>
-        auto operator()(const X& a, const X& b) const noexcept
-        {
-                if constexpr (requires { a.is_proper_superset_of(b); }) {
-                        BOOST_CHECK_EQUAL(a.is_proper_superset_of(b), std::ranges::includes(a, b, a.value_comp()) and not std::ranges::includes(b, a, a.value_comp()));
+                if constexpr (requires { xstd::bit_includes(a, b); }) {
+                        BOOST_CHECK_EQUAL(xstd::bit_includes(a, b), std::ranges::includes(a, b, a.value_comp()));
+                        BOOST_CHECK_EQUAL(xstd::bit_includes(b, a), std::ranges::includes(b, a, a.value_comp()));
                 }
         }
 };

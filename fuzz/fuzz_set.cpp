@@ -44,7 +44,7 @@ using model = std::set<std::size_t>;
 
 // A whole-set complement needs a universe, which only a width in the type gives.
 template<class X>
-concept static_width = requires (X& x) { x.complement(); };
+concept static_width = requires (X const& x) { ~x; };
 
 // The keys a dynamic set is fed: past a few blocks, which is where its growth is exercised.
 inline constexpr auto dynamic_keys = 320UZ;
@@ -273,9 +273,13 @@ auto fuzz_one(fuzz::decoder& in)
                                 break;
                         }
                         case 7: {
-                                check.step("complement(k)");
+                                check.step("toggle(k)");
                                 auto const k = in.below(keys);
-                                x.complement(k);
+                                if (x.contains(k)) {
+                                        static_cast<void>(x.erase(k));
+                                } else {
+                                        static_cast<void>(x.insert(k));
+                                }
                                 if (m.erase(k) == 0UZ) {
                                         m.insert(k);
                                 }
@@ -372,12 +376,10 @@ auto fuzz_one(fuzz::decoder& in)
                                 check.expect(std::is_eq(order) == std::is_eq(morder), "<=> equal");
                                 check.expect(std::is_lt(order) == std::is_lt(morder), "<=> less");
                                 auto const subset = std::ranges::includes(my, m);
-                                check.expect(x.is_subset_of(y) == subset, "is_subset_of");
-                                check.expect(x.is_proper_subset_of(y) == (subset and m != my), "is_proper_subset_of");
+                                check.expect(xstd::bit_includes(y, x) == subset, "bit_includes(y, x)");
                                 auto const superset = std::ranges::includes(m, my);
-                                check.expect(x.is_superset_of(y) == superset, "is_superset_of");
-                                check.expect(x.is_proper_superset_of(y) == (superset and m != my), "is_proper_superset_of");
-                                check.expect(intersects(x, y) == not intersection(m, my).empty(), "intersects");
+                                check.expect(xstd::bit_includes(x, y) == superset, "bit_includes(x, y)");
+                                check.expect(xstd::bit_disjoint(x, y) == intersection(m, my).empty(), "bit_disjoint");
                                 if (m == my) {
                                         check.expect(std::hash<X>()(x) == std::hash<X>()(y), "equal sets hash alike");
                                 }
@@ -408,7 +410,7 @@ auto fuzz_one(fuzz::decoder& in)
                                 break;
                         }
                         case 21: {
-                                check.step("erase_if, fill, complement()");
+                                check.step("erase_if, fill, ~");
                                 auto const r    = in.below(keys);
                                 auto const d    = in.below(7UZ) + 1UZ;
                                 auto const pred = [=](std::size_t k) -> bool { return k % d == r % d; };
@@ -419,7 +421,7 @@ auto fuzz_one(fuzz::decoder& in)
                                                 x.fill();
                                                 m = all;
                                         } else {
-                                                x.complement();
+                                                x = ~x;
                                                 m = difference(all, m);
                                         }
                                 }

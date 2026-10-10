@@ -725,12 +725,6 @@ public:
                 return begin() == end();
         }
 
-        [[nodiscard]] constexpr auto full() const noexcept
-                -> bool
-        {
-                return size() == max_size();
-        }
-
         [[nodiscard]] constexpr auto size() const noexcept
                 -> size_type
         {
@@ -886,31 +880,6 @@ public:
                 requires requires { self.bits().fill(false); }
         {
                 self.bits().fill(false);
-        }
-
-        // Toggling one key, growing where insert grows; not noexcept, since growing allocates.
-        constexpr auto complement(this auto&& self, value_type x)
-                -> void
-                requires requires { self.bits().assign(KeyMapping::to_index(x), true); }
-        {
-                auto const pos = KeyMapping::to_index(x);
-                self.guard_key(pos);
-                if constexpr (not has_static_width and requires { self.bits().growing_insert(pos); }) {
-                        if (pos >= self.bits().size()) {
-                                static_cast<void>(self.bits().growing_insert(pos));
-                                return;
-                        }
-                }
-                assert(pos < self.bits().size());
-                self.bits().assign(pos, not self.bits().test(pos));
-        }
-
-        // The whole-set complement, at a static width alone: complementing needs a universe, which N is.
-        constexpr auto complement(this auto&& self) noexcept
-                -> void
-                requires has_static_width and requires { self.bits().flip(); }
-        {
-                self.bits().flip();
         }
 
         // Bulk on the storage's spelling; union and symmetric difference grow, the other two do not.
@@ -1289,47 +1258,32 @@ public:
                 return erased;
         }
 
-        [[nodiscard]] constexpr auto is_subset_of(set_adaptor const& other) const noexcept
-                -> bool
-        {
-                return bits().is_subset_of(other.bits());
-        }
-
-        // A subset missing some position of the other's, at any two widths: set_equal, not the width-first ==.
-        [[nodiscard]] constexpr auto is_proper_subset_of(set_adaptor const& other) const noexcept
-                -> bool
-        {
-                return is_subset_of(other) and not set_equal(bits(), other.bits());
-        }
-
-        // P0125R0's converse of is_subset_of: asymmetric, so a member, whose spelling says which side holds which.
-        [[nodiscard]] constexpr auto is_superset_of(set_adaptor const& other) const noexcept
-                -> bool
-        {
-                return other.is_subset_of(*this);
-        }
-
-        [[nodiscard]] constexpr auto is_proper_superset_of(set_adaptor const& other) const noexcept
-                -> bool
-        {
-                return other.is_proper_subset_of(*this);
-        }
-
-        // A hidden friend: intersects is to set_intersection what contains is to find.
-        [[nodiscard]] friend constexpr auto intersects(set_adaptor const& x, set_adaptor const& y) noexcept
-                -> bool
-        {
-                return intersects(x.bits(), y.bits());
-        }
-
-        // Symmetric, as intersects is, so a friend rather than a member: no element of either is the other's.
-        [[nodiscard]] friend constexpr auto disjoint(set_adaptor const& x, set_adaptor const& y) noexcept
-                -> bool
-        {
-                return not intersects(x, y);
-        }
-
 private:
+        // Toggling one key, growing where insert grows; not noexcept, since growing allocates.
+        constexpr auto complement(this auto&& self, value_type x)
+                -> void
+                requires requires { self.bits().assign(KeyMapping::to_index(x), true); }
+        {
+                auto const pos = KeyMapping::to_index(x);
+                self.guard_key(pos);
+                if constexpr (not has_static_width and requires { self.bits().growing_insert(pos); }) {
+                        if (pos >= self.bits().size()) {
+                                static_cast<void>(self.bits().growing_insert(pos));
+                                return;
+                        }
+                }
+                assert(pos < self.bits().size());
+                self.bits().assign(pos, not self.bits().test(pos));
+        }
+
+        // The whole-set complement, at a static width alone: complementing needs a universe, which N is.
+        constexpr auto complement(this auto&& self) noexcept
+                -> void
+                requires has_static_width and requires { self.bits().flip(); }
+        {
+                self.bits().flip();
+        }
+
         // A key type with no order of its own, a std::bitset, has no place between two keys for a value that is no key.
         static constexpr bool orders_non_keys = std::totally_ordered<key_type>;
 
@@ -1461,10 +1415,10 @@ constexpr auto erase_if(set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compa
 template<class Bits, storage Store, class Derived, class Key, class KeyMapping, class Compare>
 [[nodiscard]] constexpr auto operator~(set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> const& lhs) noexcept(set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::has_static_width)
         -> set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::derived_type
-        requires (owns(Store)) and requires (set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> c) { c.complement(); }
+        requires (owns(Store)) and set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::has_static_width and requires (Bits b) { b.flip(); }
 {
         auto nrv = static_cast<set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::derived_type const&>(lhs);
-        nrv.complement();
+        storage_access::bits(nrv).flip();
         return nrv;
 }
 
